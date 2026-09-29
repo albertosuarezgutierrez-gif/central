@@ -354,11 +354,12 @@ test('se cotiza DE CALLE: sin compañía anterior, sin años asegurado, nunca se
   assert.equal(r.faltan.some((f) => f.campo === 'polizaAnterior'), false)
 })
 
-test('la fecha de efecto es SIEMPRE mañana, y se marca como supuesto', () => {
+test('la fecha de efecto es a 15 días (el presupuesto sigue valiendo al emitir), y se marca como supuesto', () => {
   const r = preNueva()
-  const manana = '2026-09-02'
-  assert.equal(r.datos.fechaEfecto, manana)
-  assert.ok(r.supuestos.some((s) => s.campo === 'fechaEfecto'))
+  assert.equal(r.datos.fechaEfecto, '2026-09-16')
+  assert.match(r.supuestos.find((s) => s.campo === 'fechaEfecto')!.porque, /15 días/)
+  // Moto nueva, igual: con «mañana» la cotización caducaba al día siguiente (29/09/2026).
+  assert.equal(precalificarMotoNueva(CLIENTE, RESUELTOS_MOTO_NUEVA, HOY).datos.fechaEfecto, '2026-09-16')
 })
 
 test('sin matrícula no se puede cotizar: la teclea el corredor, no sale de ninguna póliza', () => {

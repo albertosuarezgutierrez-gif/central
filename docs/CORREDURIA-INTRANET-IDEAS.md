@@ -30,6 +30,15 @@ vencimiento, cuando ya eres tú quien avisa.
 4. **La procedencia se pinta siempre.** `compania` ≠ `calculado` ≠ `declarado`.
 5. **Un aviso de «tengo mejor oferta para ti» es asesoramiento**, no información: arrastra análisis
    objetivo e IPID (RDL 3/2020). Los avisos de servicio son informativos.
+6. **Precio ≠ emisión (Alberto, 29/09/2026).** Para DAR PRECIO no se pregunta lo que no lo mueve o
+   se comprueba después: sexo (del nombre; la prima es unisex por ley), estado civil (soltero),
+   dónde duerme (garaje, nunca la calle), fecha de matriculación (por la matrícula) y efecto (a 15
+   días, para que el presupuesto siga valiendo al emitir sin volver a tarificar). Van como
+   SUPUESTOS declarados y **se confirman con el cliente al EMITIR**, que es donde importan.
+   **Si algún día hacemos tarificador propio, nace con esta regla**: separar los datos que forman
+   el precio de los que forman el contrato, y guardar cuáles fueron supuestos. Hoy vive en
+   `apps/plataforma/lib/supuestos-presupuesto.ts` + `avisoAlEmitir()` (Telegram) y en
+   `DIAS_EFECTO_PRESUPUESTO_NUEVO` (asegura).
 
 ## Ideas, por orden de lo que yo haría
 

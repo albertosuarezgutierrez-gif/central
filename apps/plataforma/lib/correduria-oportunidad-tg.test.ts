@@ -14,14 +14,14 @@ const leida = (o: Partial<Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>
   estado: 'ok', ramo: 'auto', compania: 'Línea Directa', numeroPoliza: '05200000035-00', vence: '2027-02-03', prima: 691.24, ...o,
 })
 
-test('lo leído del documento rellena la oportunidad y el primer paso cae 60 días antes del vencimiento', () => {
+test('lo leído del documento rellena la oportunidad y el primer paso cae 45 días antes del vencimiento', () => {
   const r = prepararAlta({}, [leida()], HOY)
   assert.ok(r.ok)
   assert.equal(r.alta.ramo, 'auto')
   assert.equal(r.alta.aseguradora, 'Línea Directa')
   assert.equal(r.alta.prima, 691.24)
   assert.equal(r.alta.fechaFinVigencia, '2027-02-03')
-  assert.equal(r.alta.fechaTarea, '2026-12-05')
+  assert.equal(r.alta.fechaTarea, '2026-12-20')
   assert.deepEqual(r.alta.documentos, { leidos: 1, fallidos: [] })
 })
 
@@ -48,7 +48,7 @@ test('un vencimiento que ya pasó se proyecta a la siguiente renovación anual y
   assert.ok(r.ok)
   assert.equal(r.alta.venceDescartado, '2025-11-18')
   assert.equal(r.alta.fechaFinVigencia, '2026-11-18')
-  assert.equal(r.alta.fechaTarea, '2026-09-28', 'a menos de 60 días: la llamada es ya')
+  assert.equal(r.alta.fechaTarea, '2026-10-04', '45 días antes del vencimiento proyectado')
   assert.match(textoAlta('X', r.alta), /siguiente renovación, el 18\/11\/2026/)
 })
 
@@ -106,7 +106,7 @@ test('el cuerpo es el del botón «Abrir» de la ficha: nace «por contactar» c
   assert.equal(b.accion, 'crear')
   assert.equal(b.estado, 'competencia')
   assert.equal(b.tipoTarea, 'llamada')
-  assert.equal(b.fechaTarea, '2026-12-05')
+  assert.equal(b.fechaTarea, '2026-12-20')
   assert.match(String(b.nota), /05200000035-00/)
   // El nº viaja aparte: es lo que distingue dos seguros del mismo ramo (dos coches).
   assert.equal(b.numeroPoliza, '05200000035-00')
@@ -409,7 +409,7 @@ test('mañana: las tareas de hoy van dentro del aviso de renovaciones, y «no se
   assert.doesNotMatch(b, /\*Ruiz\*/) // un nombre con * no rompe el Markdown
   const cron = readFileSync(fileURLToPath(new URL('../app/api/cron/correduria-renovaciones/route.ts', import.meta.url)), 'utf8')
   assert.match(cron, /bloqueLlamadasHoy\(/)
-  assert.match(cron, /\[renovaciones, llamadas\]\.filter\(Boolean\)/)
+  assert.match(cron, /\[renovaciones, oportunidades, llamadas\]\.filter\(Boolean\)/)
 })
 
 test('revisión: si el webhook revienta se desmarca el update, y el asistente en after avisa si falla (lee el FUENTE)', () => {

@@ -12,6 +12,8 @@
  */
 import { prisma } from '@/lib/tenant'
 import { mismaPersonaPorNombre } from './misma-persona'
+import { carnetDeNuevaPersona } from './carnet-nueva-persona'
+import { encryptField } from '@central/module-seguros-pii'
 import { altaCliente } from '@/lib/cartera-edicion'
 import { crearRelacion } from '@/lib/cartera-relaciones'
 import { clienteOrigenDe } from '@/lib/cartera-ficha'
@@ -296,9 +298,15 @@ export async function quitarFigura(
 export async function nuevaPersonaEnRiesgo(
   correduriaId: string,
   e: { oportunidadId: string; rol: unknown; tipoRelacion: unknown; persona: Record<string, unknown>; actor: string },
-): Promise<{ ok: true; clienteId: string; existente: boolean } | { ok: false; status: number; motivo: string; conflicto?: unknown }> {
+): Promise<
+  | { ok: true; clienteId: string; existente: boolean; carnet: 'guardado' | 'ya_tenia' | 'no_guardado' | null }
+  | { ok: false; status: number; motivo: string; conflicto?: unknown }
+> {
   if (!UUID.test(e.oportunidadId)) return { ok: false, status: 400, motivo: 'id no válido' }
   if (!esRolFigura(e.rol)) return { ok: false, status: 422, motivo: 'rol desconocido' }
+  // El carné se valida ANTES del alta: uno mal tecleado no puede dejar la ficha creada sin él.
+  const car = carnetDeNuevaPersona(e.persona, new Date().toISOString().slice(0, 10))
+  if (!car.ok) return { ok: false, status: 422, motivo: car.motivo }
   const [op] = await prisma.$queryRaw<Array<{ cliente_id: string }>>`
     select cliente_id::text as cliente_id from seguros.oportunidades
     where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
@@ -341,7 +349,27 @@ export async function nuevaPersonaEnRiesgo(
   }
   const asig = await asignarFigura(correduriaId, { oportunidadId: e.oportunidadId, rol: e.rol, clienteId, actor: e.actor })
   if (!asig.ok) return asig
-  return { ok: true, clienteId, existente }
+
+  // Su carné, en `cliente_carnets_conducir` (cifrado). Uno del mismo tipo que ya esté en la ficha NO
+  // se pisa: lo tecleado aquí no manda sobre lo que trae CIMA o se anotó antes. La persona ya está
+  // dada de alta y asignada; si el carné no se guarda, se dice en vez de fallar el alta entera.
+  let carnet: 'guardado' | 'ya_tenia' | 'no_guardado' | null = null
+  if (car.carnet) {
+    try {
+      const n = await prisma.$executeRaw`
+        insert into seguros.cliente_carnets_conducir (cliente_id, correduria_id, tipo, fecha_carnet)
+        select ${clienteId}::uuid, ${correduriaId}::uuid, ${car.carnet.tipo}, ${encryptField(car.carnet.fecha)}
+        where not exists (
+          select 1 from seguros.cliente_carnets_conducir
+          where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid
+            and upper(replace(tipo, ' ', '')) = ${car.carnet.tipo})`
+      carnet = n > 0 ? 'guardado' : 'ya_tenia'
+    } catch (err) {
+      console.error('[oportunidad-riesgo] carné de la nueva persona sin guardar', err)
+      carnet = 'no_guardado'
+    }
+  }
+  return { ok: true, clienteId, existente, carnet }
 }
 
 /**

@@ -73,8 +73,8 @@ export async function GET(req: Request) {
     const crudos = await proyectosDeCliente(cfg, c.c.dni)
     const ids = crudos.map((p) => p.projectId)
     const enIntranet = ids.length
-      ? await prisma.$queryRaw<{ project_id: string; tarificacion_id: string; oportunidad_id: string | null; solicitado_por: string }[]>`
-          select distinct on (project_id_codeoscopic) project_id_codeoscopic as project_id, id::text as tarificacion_id, oportunidad_id::text as oportunidad_id, solicitado_por
+      ? await prisma.$queryRaw<{ project_id: string; tarificacion_id: string; oportunidad_id: string | null; poliza_id: string | null; solicitado_por: string }[]>`
+          select distinct on (project_id_codeoscopic) project_id_codeoscopic as project_id, id::text as tarificacion_id, oportunidad_id::text as oportunidad_id, poliza_id::text as poliza_id, solicitado_por
           from seguros.tarificaciones
           where correduria_id = ${c.c.correduriaId}::uuid and project_id_codeoscopic = any(${ids}::text[])
           order by project_id_codeoscopic, creado_at`
@@ -86,7 +86,7 @@ export async function GET(req: Request) {
       // `origen`: dónde se TARIFICÓ. Uno traído de la web entra por la puerta del corredor, así que lo
       // delata su `solicitado_por`, que es el que escribe el POST de aquí abajo.
       const intranet = ya
-        ? { tarificacionId: ya.tarificacion_id, oportunidadId: ya.oportunidad_id, origen: ya.solicitado_por.startsWith(SOLICITADO_WEB) ? 'web' : 'plataforma' }
+        ? { tarificacionId: ya.tarificacion_id, oportunidadId: ya.oportunidad_id, polizaId: ya.poliza_id, origen: ya.solicitado_por.startsWith(SOLICITADO_WEB) ? 'web' : 'plataforma' }
         : null
       if (!p.crudo) return { projectId: p.projectId, error: p.error, intranet }
       try {

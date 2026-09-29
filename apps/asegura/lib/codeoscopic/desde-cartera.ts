@@ -37,6 +37,7 @@ import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-mo
 import { partirDireccion, tipoViaDeFicha } from './direccion.ts'
 import { HISTORIAL_MAXIMO, KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
 import { TIPO_CARNET_SUPUESTO, ZONA_CARNET_SUPUESTA } from './persona.ts'
+import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
 export type Supuesto = {
@@ -513,8 +514,9 @@ export function precalificarAutoNueva(
 
   const fechaEfecto = suponer(
     'fechaEfecto',
-    diaSiguiente(hoy),
-    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+    sumarDias(hoy, DIAS_EFECTO_PRESUPUESTO_NUEVO),
+    `presupuesto sin póliza que retarificar: efecto a ${DIAS_EFECTO_PRESUPUESTO_NUEVO} días para que el precio siga ` +
+      'valiendo al emitir (con efecto mañana caducaba al día siguiente y había que volver a pagar); si el cliente lo quiere antes, se pide con su fecha',
   ) as string
 
   // Ver `precalificarAuto()`: si la ficha ya trae una dirección, no se vuelve
@@ -705,8 +707,9 @@ export function precalificarMotoNueva(
 
   const fechaEfecto = suponer(
     'fechaEfecto',
-    diaSiguiente(hoy),
-    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+    sumarDias(hoy, DIAS_EFECTO_PRESUPUESTO_NUEVO),
+    `presupuesto sin póliza que retarificar: efecto a ${DIAS_EFECTO_PRESUPUESTO_NUEVO} días para que el precio siga ` +
+      'valiendo al emitir (con efecto mañana caducaba al día siguiente y había que volver a pagar); si el cliente lo quiere antes, se pide con su fecha',
   ) as string
 
   const experienciaConduccion =
@@ -817,7 +820,7 @@ export function precalificarMoto(
   hoy: string,
 ): PrecalificacionMoto {
   const base = precalificarMotoNueva(cliente, { ...resueltos, matricula: poliza.matricula }, hoy)
-  // La fecha de efecto de «nueva» (mañana) no vale aquí: la decide el vencimiento.
+  // La fecha de efecto de «nueva» (a 15 días) no vale aquí: la decide el vencimiento.
   const supuestos: SupuestoMoto[] = base.supuestos.filter((x) => x.campo !== 'fechaEfecto')
   const suponer = (campo: keyof DatosMoto, valor: unknown, porque: string, optimista = false) => {
     supuestos.push({ campo, valor, porque, optimista })

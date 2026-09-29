@@ -165,7 +165,7 @@ export const HERRAMIENTAS = [
       projectId: { type: 'string', description: 'Número del proyecto de Avant2 (solo cifras)' },
       quoteId: { type: 'string', description: 'Opcional: el precio elegido (Q…) cuando hay varios' },
     }, ['polizaId', 'projectId']),
-  fn('preparar_emision_nueva', 'Prepara la EMISIÓN de una póliza NUEVA de coche o moto (cliente sin póliza que sustituir) con un precio de la ÚLTIMA tarificación guardada del cliente. Confirma el precio con la compañía y le manda a Alberto un resumen con un botón: NO emite, es él quien pulsa. Si varios precios encajan te devuelve la lista para que le preguntes cuál.',
+  fn('preparar_emision_nueva', 'Prepara la EMISIÓN de una póliza NUEVA de coche o moto (cliente sin póliza que sustituir) con un precio de la ÚLTIMA tarificación guardada del cliente. Confirma el precio con la compañía y le manda a Alberto un resumen con un botón: NO emite, es él quien pulsa. Si varios precios encajan te devuelve la lista para que le preguntes cuál. Si Alberto dice con qué fecha de efecto, pásala en fechaEfecto: el precio se confirma con esa fecha.',
     {
       clienteId: { type: 'string', description: 'El clienteId INTERNO (uuid) del TOMADOR, sacado de buscar/ficha_cliente' },
       ramo: { type: 'string', enum: ['moto', 'auto'] },
@@ -174,6 +174,7 @@ export const HERRAMIENTAS = [
       primaEur: { type: 'number', description: 'Opcional: la prima que dice Alberto, para desempatar («la de 200»)' },
       oportunidadId: { type: 'string', description: 'Opcional: la oportunidad (uuid) si la conoces, para coger la tarificación de ese riesgo' },
       tarificacionId: { type: 'string', description: 'Opcional: una tarificación concreta (uuid)' },
+      fechaEfecto: { type: 'string', description: 'Opcional: la fecha de efecto que dice Alberto (aaaa-mm-dd). Obligatoria si la tarificación guardada tiene el efecto ya pasado; nunca la inventes.' },
     }, ['clienteId', 'ramo', 'compania']),
   fn('proponer_correccion', 'Propón CORREGIR la ficha de un cliente con los valores que Alberto te ha DICTADO en esta conversación (dirección, código postal, ciudad, provincia, nombre o apellidos). NO escribe: el sistema le manda el cambio con un botón y es él quien lo aplica. Pasa solo los campos que cambian, tal cual los dijo; nunca inventes ni completes un valor.',
     {
@@ -235,7 +236,7 @@ export const HERRAMIENTAS = [
       marcaId: { type: 'string' }, modeloId: { type: 'string' }, motor: { type: 'string', description: 'id del combustible (de motores)' },
       filtro: { type: 'string', description: 'Lo que dijo Alberto («ibiza», «1.5 tsi»), para acotar' },
     }, ['tipo']),
-  fn('proponer_tarificacion', 'Propón PEDIR PRECIO de COCHE (ramo auto) o MOTO para un cliente o lead de la cartera, con lo que Alberto te ha DICTADO. NO pide nada: el servidor resuelve cada dato contra los catálogos, y si falta algo te devuelve «FALTAN DATOS» con la lista (pregúntaselo a Alberto y vuelve a llamar con TODO lo anterior más lo nuevo). Cuando esté completo, Alberto recibe el resumen con el botón «Pedir precio (0,50€)». Pasa marca/modelo/versión/combustible como ids de vehiculo_catalogo o tal cual los dijo. Si YA se pidió precio antes para ese cliente y ramo (p. ej. para corregir un dato), NO preguntes el vehículo: llámala sin marca/modelo/versión y se reutiliza el de la última petición (misma matrícula). Nunca inventes un dato personal ni el historial.',
+  fn('proponer_tarificacion', 'Propón PEDIR PRECIO de COCHE (ramo auto) o MOTO para un cliente o lead de la cartera, con lo que Alberto te ha DICTADO. NO pide nada: el servidor resuelve cada dato contra los catálogos, y si falta algo te devuelve «FALTAN DATOS» con la lista (pregúntaselo a Alberto y vuelve a llamar con TODO lo anterior más lo nuevo). Cuando esté completo, Alberto recibe el resumen con el botón «Pedir precio (0,50€)». Pasa marca/modelo/versión/combustible como ids de vehiculo_catalogo o tal cual los dijo. Si YA se pidió precio antes para ese cliente y ramo (p. ej. para corregir un dato), NO preguntes el vehículo: llámala sin marca/modelo/versión y se reutiliza el de la última petición (misma matrícula). Nunca inventes un dato personal ni el historial. Sexo, estado civil, dónde duerme, fecha de matriculación y efecto NO se preguntan para dar precio: si no los dice, el servidor los pone como SUPUESTOS y se confirman al emitir. El sexo, si Alberto no lo dice y la ficha no lo tiene, dedúcelo del nombre de pila y pasa sexoDeducido=true; si el nombre no lo deja claro (unisex, extranjero que no conoces), pregúntalo.',
     {
       ramo: { type: 'string', enum: ['auto', 'moto'] },
       clienteId: { type: 'string', description: 'La ficha del TOMADOR (de buscar). Si es un lead nuevo, dale de alta antes con alta_cliente.' },
@@ -244,11 +245,13 @@ export const HERRAMIENTAS = [
       matricula: { type: 'string' },
       kmAnuales: { type: 'integer', description: 'Km al año, solo si Alberto los dice (si no, se supone la media)' },
       fechaMatriculacion: { type: 'string', description: 'Solo si Alberto la dice; si no, se saca de la matrícula' },
-      garaje: { type: 'string', description: 'Solo si Alberto lo dice (si no, se supone vía pública)' },
-      estadoCivil: { type: 'string', description: 'Solo si la ficha no lo trae o Alberto lo dice' },
+      garaje: { type: 'string', description: 'Solo si Alberto lo dice (si no, se supone garaje: nunca la calle)' },
+      estadoCivil: { type: 'string', description: 'Solo si Alberto lo dice (si no, el de la ficha o soltero)' },
+      fechaEfecto: { type: 'string', description: 'dd/mm/aaaa, solo si Alberto la dice (si no, a 15 días para que el presupuesto siga valiendo al emitir). Si el cliente lo necesita ya, pásala.' },
       municipio: { type: 'string', description: 'Municipio donde circula, si el sistema pregunta cuál' },
       dni: { type: 'string' }, nombre: { type: 'string' }, apellido1: { type: 'string' }, apellido2: { type: 'string' },
       sexo: { type: 'string', enum: ['hombre', 'mujer'] },
+      sexoDeducido: { type: 'boolean', description: 'true si el sexo lo has deducido TÚ del nombre (Alberto no lo dijo)' },
       fechaNacimiento: { type: 'string', description: 'dd/mm/aaaa' }, fechaCarnet: { type: 'string', description: 'dd/mm/aaaa' },
       telefono: { type: 'string', description: 'Móvil' },
       companiaAnterior: { type: 'string', description: 'Seguro ACTUAL: compañía. Con él van TODOS: polizaAnterior, aniosAsegurado, aniosEnCompania, aniosSinSiniestros' },
@@ -290,6 +293,8 @@ export const HERRAMIENTAS = [
         properties: {
           nombre: { type: 'string' }, apellidos: { type: 'string' }, dni: { type: 'string' }, fechaNacimiento: { type: 'string', description: 'dd/mm/aaaa' },
           telefono: { type: 'string' }, email: { type: 'string' }, sexo: { type: 'string', enum: ['hombre', 'mujer'] }, estadoCivil: { type: 'string' },
+          fechaCarnet: { type: 'string', description: 'dd/mm/aaaa. Pídela si va a conducir (conductor habitual u ocasional): sin ella no se puede pedir precio' },
+          tipoCarnet: { type: 'string', enum: ['B', 'A', 'A2', 'A1', 'AM'], description: 'Solo moto; en coche es B' },
         },
       },
       quitar: { type: 'boolean' },
@@ -406,11 +411,11 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string, auton
     ...(autonomo ? MODO_AUTONOMO : ['- Tú no mandas mensajes a clientes ni anulas pólizas: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
     '- Oportunidades: puedes PROPONER abrir una con proponer_oportunidad (lead o cliente que tiene un seguro con otra compañía). Si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true. Si ha subido el documento y NO dice de quién es, NO le preguntes el nombre: llama SIN clienteId y con usarDocumentos=true; el sistema lee el tomador, lo busca por su DNI y, si no está en la cartera, le propone crear el lead y abrir la oportunidad con un solo botón. Pregúntale solo si el sistema te lo pide (varias fichas, documento sin DNI o sin tomador). Tú sabes más que él de ese documento: si hay uno reciente y pide una oportunidad —también «otra», «la segunda», «del mismo cliente», «abre oportunidad» a secas— pasa usarDocumentos=true y NO le preguntes ramo, compañía, prima, vencimiento ni si es otro seguro: lo lee el sistema del documento y decide solo si es el mismo seguro que una que ya tenga (por nº de póliza, matrícula y compañía). Si el sistema contesta YA ES NUESTRA, díselo con el enlace: esa póliza ya la llevamos y no se abre nada. NUNCA digas que está abierta ni que el lead está creado: eso solo lo confirma el sistema tras el botón.',
     '- Acciones del día a día (todas con botón que pulsa Alberto): proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro, invitar_portal, enviar_presupuesto («rescata/mándale el presupuesto de la moto»). Úsalas cuando Alberto te lo pida («apunta que…», «llámale el jueves», «ha tenido un golpe con el coche…»). Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy. NUNCA digas que está hecho: eso lo confirma el sistema tras el botón.',
-    '- Pedir precio de COCHE o MOTO: busca al cliente PRIMERO. Si buscar no lo encuentra (lead nuevo, sin ficha), NO consultes el catálogo ni nada más: dile a Alberto que no tiene ficha y que sin ficha no se puede pedir precio desde aquí; que la cree en /correduria/cliente/nuevo (o te mande un documento suyo con el DNI) y te vuelva a escribir; y dile ya qué datos le faltan de los que dictó (nombre y apellidos, sexo, teléfono…). Con ficha: usa vehiculo_catalogo para el vehículo (con filtro; nunca repitas una consulta con los mismos datos; si la versión exacta no sale, pásala tal cual la dijo) y llama a proponer_tarificacion con lo que Alberto dijo. Si contesta FALTAN DATOS, pregúntale a Alberto exactamente eso y vuelve a llamar con todo. El botón cuesta 0,50€ y lo pulsa él; el precio le llega solo a él (nada sale al cliente). NUNCA digas que ya has pedido el precio.',
+    '- Pedir precio de COCHE o MOTO: busca al cliente PRIMERO. Si buscar no lo encuentra (lead nuevo, sin ficha), NO consultes el catálogo ni nada más: dile a Alberto que no tiene ficha y que sin ficha no se puede pedir precio desde aquí; que la cree en /correduria/cliente/nuevo (o te mande un documento suyo con el DNI) y te vuelva a escribir; y dile ya qué datos le faltan de los que dictó (nombre y apellidos, teléfono…). Con ficha: usa vehiculo_catalogo para el vehículo (con filtro; nunca repitas una consulta con los mismos datos; si la versión exacta no sale, pásala tal cual la dijo) y llama a proponer_tarificacion con lo que Alberto dijo. Si contesta FALTAN DATOS, pregúntale a Alberto exactamente eso y vuelve a llamar con todo. El botón cuesta 0,50€ y lo pulsa él; el precio le llega solo a él (nada sale al cliente). NUNCA digas que ya has pedido el precio.',
     ]),
     '- Si un precio trae un aviso de que la compañía dejará la póliza BLOQUEADA, díselo a Alberto ANTES de preparar la emisión y recomiéndale emitir primero la modalidad básica (sin la garantía que bloquea) para que el cliente pueda circular, y pedir después la ampliación como suplemento con la documentación.',
     '- Pedir precio para EMITIR («pide precio de la moto de X y emite Allianz terceros ampliado ≈200»): proponer_tarificacion (con la oportunidadId del riesgo si la hay) y emitirCompania/emitirModalidad/emitirPrimaEur. Cuando el precio llega, el sistema prepara solo la emisión y Alberto recibe el botón «Emitir»: NO llames tú a preparar_emision_nueva en ese caso.',
-    '- Emitir: solo puedes PREPARAR una emisión. Póliza NUEVA de coche o moto (cliente sin póliza que sustituir, precio pedido desde la plataforma) → preparar_emision_nueva con el cliente, el ramo y la compañía (y la modalidad o la prima si las dice). Sustituir una póliza de la cartera con un proyecto hecho en Avant2 → preparar_emision (necesitas la póliza y el número del proyecto; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
+    '- Emitir: solo puedes PREPARAR una emisión. Póliza NUEVA de coche o moto (cliente sin póliza que sustituir, precio pedido desde la plataforma) → preparar_emision_nueva con el cliente, el ramo y la compañía (y la modalidad, la prima o la fecha de efecto si las dice). Sustituir una póliza de la cartera con un proyecto hecho en Avant2 → preparar_emision (necesitas la póliza y el número del proyecto; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos. Si para escribir necesitas un DNI que solo tienes tapado («…115R»), pídeselo a Alberto entero.',
     '- Los ids (clienteId, polizaId, oportunidadId, tareaId, siniestroId) son SIEMPRE los uuid que devuelven las herramientas: el polizaId sale de ficha_cliente (busca primero), nunca es el número de póliza de la compañía.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: se cambian con sus herramientas (contacto_cliente, proponer_correccion) o en la ficha.',
@@ -634,10 +639,15 @@ export function figuraParaIA(status: number, json: unknown, rol: string, quitar:
   if (status === 200 && o.estado === 'ok') {
     if (quitar) return { texto: `HECHO: el papel de ${papel} vuelve a ser el tomador.`, ok: true }
     const nueva = typeof o.clienteId === 'string'
-    return {
-      texto: `HECHO: ${papel} puesto en el riesgo${nueva ? ` (${o.existente === true ? 'ya tenía ficha' : 'ficha nueva creada'}: clienteId=${o.clienteId})` : ''}. Ahora proponer_tarificacion con esta oportunidadId.`,
-      ok: true,
+    const base = `HECHO: ${papel} puesto en el riesgo${nueva ? ` (${o.existente === true ? 'ya tenía ficha' : 'ficha nueva creada'}: clienteId=${o.clienteId})` : ''}.`
+    // El carné tiene su propio desenlace: la persona puede estar puesta y su carné no.
+    if (o.carnet === 'no_guardado') {
+      return { texto: `${base} Pero su CARNÉ NO se ha guardado: NO pidas precio todavía; dile a Alberto que lo añada en su ficha.`, ok: true }
     }
+    const carne = o.carnet === 'guardado' ? ' Carné guardado en su ficha.'
+      : o.carnet === 'ya_tenia' ? ' Su ficha ya tenía un carné de ese tipo y se ha dejado el que había: díselo a Alberto por si la fecha dictada era otra.'
+        : ''
+    return { texto: `${base}${carne} Ahora proponer_tarificacion con esta oportunidadId.`, ok: true }
   }
   if (status === 0 || status >= 500) return { texto: `NO SÉ SI SE HA PUESTO el ${papel} (la cartera no ha contestado bien). Míralo con oportunidades_cliente antes de repetir.`, ok: false }
   const motivo = typeof o.motivo === 'string' ? o.motivo : `HTTP ${status}`

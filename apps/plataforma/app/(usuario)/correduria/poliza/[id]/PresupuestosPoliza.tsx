@@ -17,10 +17,12 @@ import { preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades } 
  * WhatsApp lo manda él desde su móvil (aquí solo se abre con el texto escrito), y por eso
  * «enlazado» no es «enviado» hasta que pulse «Ya lo he mandado».
  */
-export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId }: {
+export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId, titulo = 'Presupuestos' }: {
   polizaId?: string
   clienteId?: string
   ramo?: string | null
+  /** En la ficha del cliente van dentro de «Oportunidades y presupuestos»: ahí se dice qué son. */
+  titulo?: string
   /** Solo ESTE presupuesto: se monta justo tras prepararlo para mandarlo sin salir de la pantalla. */
   soloId?: string
 }) {
@@ -82,7 +84,7 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId }
 
   return (
     <section style={{ display: 'grid', gap: 10, padding: 14, border: '1px solid var(--border)', borderRadius: 12 }}>
-      <strong style={{ fontSize: 15 }}>{soloId ? 'Mandárselo al cliente' : 'Presupuestos'}</strong>
+      <strong style={{ fontSize: 15 }}>{soloId ? 'Mandárselo al cliente' : titulo}</strong>
       {lista.map((p) => {
         const a = accionesPresupuesto(p.estado)
         const libre = ocupado === null
