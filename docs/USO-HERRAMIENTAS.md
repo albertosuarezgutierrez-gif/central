@@ -167,21 +167,21 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 229 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 230 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 224 | 28.638 | 20.848.603 | 0 | 0 |
-| `otro` | 219 | 7.004 | 21.018.466 | 10.382.719 | 0 |
-| `mcp:github` | 204 | 5.173 | 4.366.094 | 49.822.003 | 84 |
-| `lectura-directa` | 199 | 4.973 | 11.705.437 | 0 | 0 |
-| `escritura` | 155 | 3.191 | 45.863.055 | 0 | 0 |
-| `sql` | 141 | 2.761 | 1.295.444 | 2.351.230 | 11 |
-| `mcp:Claude_Code_Remote` | 130 | 1.395 | 293.990 | 5.301.463 | 14 |
+| `bash` | 225 | 28.722 | 20.890.717 | 0 | 0 |
+| `otro` | 220 | 7.014 | 21.047.577 | 10.382.719 | 0 |
+| `mcp:github` | 205 | 5.177 | 4.366.759 | 49.822.626 | 84 |
+| `lectura-directa` | 200 | 4.994 | 11.797.897 | 0 | 0 |
+| `escritura` | 156 | 3.194 | 46.090.236 | 0 | 0 |
+| `sql` | 142 | 2.776 | 1.299.652 | 2.351.230 | 11 |
+| `mcp:Claude_Code_Remote` | 131 | 1.397 | 294.077 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 20 | 564 | 2.370.364 | 0 | 0 |
 | `mcp:Vercel` | 52 | 529 | 782.462 | 198.719 | 14 |
 | `mcp:Gmail` | 25 | 316 | 466.902 | 0 | 9 |
-| `mcp:Supabase` | 91 | 268 | 26.039 | 0 | 2 |
+| `mcp:Supabase` | 92 | 269 | 26.137 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 4 | 209 | 271.466 | 0 | 0 |
 | `agente:general-purpose` | 37 | 126 | 96.685 | 2.320.444 | 0 |
 | `agente:agente-architect` | 31 | 85 | 64.498 | 2.079.859 | 0 |
@@ -194,8 +194,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `agente:Explore` | 24 | 54 | 27.686 | 1.290.967 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
-| `agente:rastreador-codigo` | 24 | 41 | 13.882 | 462.747 | 0 |
-| `agente:agente-mecanico` | 17 | 41 | 42.037 | 803.194 | 0 |
+| `agente:agente-mecanico` | 18 | 43 | 42.111 | 803.194 | 0 |
+| `agente:rastreador-codigo` | 25 | 42 | 14.196 | 462.747 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
