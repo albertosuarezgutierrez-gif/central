@@ -17,11 +17,13 @@ export type ContextoWhatsappDevuelto = Omit<EntradaWhatsappDevuelto, 'importe' |
   quien: string | null
 }
 
-export default function WhatsappReciboDevuelto({ ctx, importe, fechaEfecto, tipoMotivo }: {
+export default function WhatsappReciboDevuelto({ ctx, importe, fechaEfecto, tipoMotivo, grande = false }: {
   ctx: ContextoWhatsappDevuelto
   importe: number | null
   fechaEfecto: string | null
   tipoMotivo: string | null
+  /** Botón con rótulo (el «Siguiente paso» de la ficha) en vez del icono de la tabla de recibos. */
+  grande?: boolean
 }) {
   // El saludo depende de la hora: se calcula en el navegador, no en el servidor.
   const [ahora, setAhora] = useState<Date | null>(null)
@@ -36,7 +38,8 @@ export default function WhatsappReciboDevuelto({ ctx, importe, fechaEfecto, tipo
       <BotonWhatsapp
         telefono={telefono}
         mensaje={mensaje}
-        compacto
+        compacto={!grande}
+        rotulo={grande ? 'WhatsApp' : undefined}
         onAbrir={() => {
           // Sin `await`: WhatsApp se abre aunque la nota tarde o falle.
           const texto = `💬 WhatsApp abierto por el recibo devuelto${importe !== null ? ` de ${eur(importe)}` : ''}${quien ? ` (a ${quien})` : ''}. Pendiente de confirmar que se envió y de su respuesta.`

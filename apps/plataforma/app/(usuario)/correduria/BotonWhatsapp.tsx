@@ -22,8 +22,10 @@ export const VERDE_WHATSAPP = '#25D366'
  * de pulsar) ni un icono apagado (un icono que se ve promete una acción). El
  * teléfono se queda con su `tel:`, que es lo que sí se sabe que funciona.
  */
-export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onAbrir }: {
+export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onAbrir, rotulo }: {
   telefono: string
+  /** Con rótulo se pinta como botón verde con texto (acción principal), no como icono suelto. */
+  rotulo?: string
   /**
    * Abre WhatsApp con el texto ya escrito, para no teclear lo mismo ochenta
    * veces. Lo redacta `mensajeWhatsapp()` de `@central/module-seguros` — aquí
@@ -50,6 +52,25 @@ export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onA
   const url = texto ? enlaceWhatsappConMensaje(telefono, texto) : urlWhatsapp(telefono)
   if (url === null) return null
   const lado = compacto ? 32 : 44
+  if (rotulo) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${rotulo}: abrir WhatsApp con ${telefono}`}
+        title={texto ? 'Abre WhatsApp con el mensaje ya escrito — lo envías tú' : 'Abre WhatsApp'}
+        onClick={onAbrir}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '0 16px',
+          borderRadius: 999, background: VERDE_WHATSAPP, color: '#fff', fontWeight: 600, fontSize: 14,
+          textDecoration: 'none', flex: '0 0 auto',
+        }}
+      >
+        <MessageCircle size={16} strokeWidth={2} aria-hidden /> {rotulo}
+      </a>
+    )
+  }
   return (
     <a
       href={url}
