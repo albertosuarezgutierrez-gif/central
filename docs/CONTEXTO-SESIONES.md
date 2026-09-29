@@ -900,6 +900,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Portal cliente: la campana de avisos no hacía nada al pulsar
+Captura de Alberto (identidad vinculada a Global 2, sin nombre en `portal_identidad`): «Auto · Allianz» ×2 (son dos
+pólizas distintas, ...1421 y ...9613) y un cambio de RC Occident llevaban a `/boveda` —la página en la que ya estaba— y
+nunca se quitaban. Ahora: vencimiento y póliza modificada enlazan a `/boveda/poliza/<id>`; los avisos INFORMATIVOS
+(`TIPOS_AVISO_DESCARTABLES`) se sellan al pulsar en `seguros.portal_aviso_leido` (clave `tipo:id`, creada en prod el
+29/09) y desaparecen; los que piden acción (autorización, datos, firma) siguen hasta resolverse. Pendiente: los dos
+«Auto · Allianz» siguen con el mismo título (el título de la obligación no lleva matrícula ni nº de póliza).
+
 ## (29/09/2026) Correduría: marca «AS» en todos los correos al cliente
 - `conMarcaCorreo()` (`@central/module-seguros`, `correo-marca.ts`): cabecera con logotipo + pie «solo escribimos desde @grupoasegura.es». Se aplica en el punto único `apps/asegura/lib/correo-envio.ts` y en los dos envíos del portal (código, invitación); idempotente (salta si el HTML ya trae el logo).
 - `apps/asegura-web/public/brand/avatar-asegura.png` (512 px). Grosor del «AS» = «opción 2» de Alberto (`stroke-width=1` en ambos `marca-asegura.svg` + `MarcaAsegura.tsx`, cepo en `asegura-web/lib/icono.test.ts`); el logotipo de texto (stroke 6) NO se tocó. El avatar es para el círculo de la bandeja. ⚠️ Ese avatar NO sale del HTML: hay que ponerlo como foto de una cuenta de Google de `hola@grupoasegura.es` (solo Gmail) o vía BIMI (DMARC estricto + VMC/CMC de pago). Pendiente de Alberto.

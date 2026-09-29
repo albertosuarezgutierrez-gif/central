@@ -35,6 +35,8 @@ export type ObligacionVista = {
   procedencia: Procedencia
   /** El aviso ya salió. `false` = todavía no, no «no hace falta». */
   avisada: boolean
+  /** La póliza de la cartera de la que sale (`null` = propia o declarada): el aviso enlaza a su ficha. */
+  polizaId: string | null
 }
 
 /**
@@ -390,6 +392,7 @@ export async function obligacionesDeIdentidad(identidadId: string): Promise<Obli
     fechaAccionable: f.fechaAccionable,
     procedencia: f.procedencia,
     avisada: f.avisadaAt !== null,
+    polizaId: f.polizaId,
   }))
 }
 

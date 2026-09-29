@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 
 import { DIAS_VENTANA_AVISO } from './obligacion.ts'
 
-import { avisosDe, HREF_POR_TIPO, textoGlobo, type AutorizacionParaAviso, type ObligacionParaAviso } from './avisos.ts'
+import { avisosDe, claveAviso, esClaveDescartable, HREF_POR_TIPO, textoGlobo, type AutorizacionParaAviso, type ObligacionParaAviso } from './avisos.ts'
 
 const HOY = new Date('2026-09-08T10:00:00Z')
 const dias = (n: number) => new Date(HOY.getTime() + n * 86_400_000)
@@ -317,4 +317,41 @@ test('una oferta PENDIENTE de hace un año cambia la pregunta, sin duplicar avis
   assert.deepEqual(r.avisos.map((a) => [a.id, a.tipo]), [['vieja', 'autorizacion_sin_aceptar'], ['nueva', 'autorizacion_sin_aceptar']])
   assert.match(r.avisos[0]!.detalle, /hace más de un año/)
   assert.doesNotMatch(r.avisos[1]!.detalle, /hace más de un año/)
+})
+
+// ── Pulsar un aviso informativo lo quita (29/09/2026) ─────────────────────────
+// Caso: la campana enseñaba «Auto · Allianz» dos veces y un cambio de póliza,
+// los tres llevaban a `/boveda` (la página en la que ya estabas) y no se iban.
+
+test('el vencimiento de una póliza de la cartera lleva a SU ficha, no a la bóveda a secas', () => {
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [obl({ id: 'o1', polizaId: 'p-9613' })], peticiones: [], datos: [], carnets: [], hoy: HOY })
+  assert.equal(r.avisos[0]!.href, '/boveda/poliza/p-9613')
+})
+
+test('pulsado (en `leidos`) un aviso informativo deja de salir y baja el número', () => {
+  const obligaciones = [obl({ id: 'o1', polizaId: 'p1' }), obl({ id: 'o2', polizaId: 'p2' })]
+  const base = { autorizaciones: vacias, obligaciones, peticiones: [], datos: [], carnets: [], hoy: HOY }
+  const antes = avisosDe(base)
+  assert.equal(antes.globo, '2')
+  assert.ok(antes.avisos.every((a) => a.descartable), 'un vencimiento es informativo: se tiene que poder descartar')
+  const despues = avisosDe({ ...base, leidos: new Set([claveAviso(antes.avisos[0]!)]) })
+  assert.deepEqual(despues.avisos.map((a) => a.id), ['o2'])
+  assert.equal(despues.globo, '1')
+})
+
+test('🚨 lo que pide una ACCIÓN no se descarta al pulsar: se va al resolverse', () => {
+  const recibidas = [auto({ id: 'a1' })]
+  const leidos = new Set(['autorizacion_pendiente:a1', 'datos_por_revisar:cp_invalido'])
+  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas }, obligaciones: [], peticiones: [], datos: [{ tipo: 'cp_invalido', texto: 'x' }], carnets: [], leidos, hoy: HOY })
+  assert.equal(r.avisos.length, 2, 'una clave sellada ha escondido una autorización o un reparo sin resolver')
+  assert.ok(r.avisos.every((a) => !a.descartable))
+  assert.equal(esClaveDescartable('autorizacion_pendiente:a1'), false, 'la ruta de «leído» aceptaría sellar una autorización')
+  assert.equal(esClaveDescartable('poliza_modificada:c1'), true)
+  assert.equal(esClaveDescartable('poliza_modificada:'), false)
+})
+
+test('sin saber qué se ha leído (`leidos: null`) se enseñan todos', () => {
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [obl({ id: 'o1' })], peticiones: [], datos: [], carnets: [], leidos: null, hoy: HOY })
+  assert.equal(r.avisos.length, 1)
+  assert.deepEqual(r.fuentesIlegibles, [], 'no saber lo leído no es una fuente ilegible: el aviso está')
 })
