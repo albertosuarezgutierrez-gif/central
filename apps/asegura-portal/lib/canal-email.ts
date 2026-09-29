@@ -1,5 +1,5 @@
 import { createMailTransporter } from '@central/core-email'
-import { remitenteCorreo } from '@central/module-seguros'
+import { conMarcaCorreo, remitenteCorreo } from '@central/module-seguros'
 import type { Canal } from './canal'
 import { enlaceDeAcceso } from './enlace-acceso'
 
@@ -66,7 +66,7 @@ export const canalEmail: Canal = {
         ...(replyTo ? { replyTo } : {}),
         subject: `${codigo} es tu código de acceso`,
         text: texto,
-        html,
+        html: conMarcaCorreo(html),
       })
       return true
     } catch (e) {
