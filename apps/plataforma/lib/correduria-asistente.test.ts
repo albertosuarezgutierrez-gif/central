@@ -83,6 +83,19 @@ test('el prompt lleva las reglas aprendidas y la prohibición de inventar', () =
   assert.match(s, /NUNCA digas que una póliza está emitida/)
 })
 
+test('precio de un lead sin ficha: lo dice en vez de gastar las vueltas en el catálogo (29/09/2026)', () => {
+  const s = systemAsistente([], '2026-09-29')
+  assert.match(s, /Si buscar no lo encuentra \(lead nuevo, sin ficha\), NO consultes el catálogo/)
+  assert.match(s, /\/correduria\/cliente\/nuevo/)
+  assert.match(s, /nunca repitas una consulta con los mismos datos/)
+})
+
+test('el bucle no repite una consulta idéntica y cierra con una respuesta, no con el «no he llegado» a secas', () => {
+  const f = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
+  assert.match(f, /yaConsultado\.get\(clave\)/)
+  assert.match(f, /Se han acabado las consultas de esta pregunta/)
+})
+
 test('interruptor de apagado', () => {
   assert.equal(apagado('1'), true)
   assert.equal(apagado('sí'), true)
