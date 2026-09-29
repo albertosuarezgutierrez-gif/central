@@ -5,6 +5,8 @@ import { precalificarAutoNuevaAsegura, catalogoAsegura } from '@/lib/auto-nuevo-
 import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import AutoNuevo from './AutoNuevo'
+import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
+import { paramTexto } from '../../../oportunidad/[id]/variante'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,8 +34,13 @@ export const maxDuration = 180
 export default async function AutoNuevoPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id: clienteId } = await params
   // `?matricula=` la trae el asistente de Telegram, leída de la póliza: no se teclea otra vez.
-  const mq = (await searchParams).matricula
-  const matriculaInicial = typeof mq === 'string' ? mq.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) : ''
+  const sp = await searchParams
+  const mq = sp.matricula
+  // Variante de un riesgo (29/09/2026): `?oportunidad=` cuelga la tarificación de esa oportunidad
+  // y trae sus figuras (propietario, conductores) desde sus fichas.
+  const carga = await cargarVariante(paramTexto(sp.oportunidad), paramTexto(sp.tarificacion), clienteId, 'auto')
+  const matriculaRiesgo = carga.estado === 'ok' ? carga.riesgo.oportunidad.matricula : null
+  const matriculaInicial = (typeof mq === 'string' ? mq : matriculaRiesgo ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)
 
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
@@ -47,8 +54,19 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         ← Ficha del cliente
       </Link>
       <PageHeader titulo="Presupuesto de auto" icono={<Car size={20} strokeWidth={1.75} />} sub={sub} />
+      {carga.estado === 'ok' && <FranjaVariante variante={carga.variante} />}
     </div>
   )
+
+  if (carga.estado === 'error') {
+    return (
+      <Pagina>
+        {cabecera}
+        <ErrorVariante oportunidadId={carga.oportunidadId} mensaje={carga.mensaje} />
+      </Pagina>
+    )
+  }
+  const variante = carga.estado === 'ok' ? carga.variante : null
 
   // Los dos del carnet NO son bloqueantes a propósito: si no se pueden leer,
   // viaja el supuesto de siempre (B, España) y la pantalla lo dice en el hueco
@@ -117,6 +135,7 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         consumo={pre.pre.consumo}
         simulacion={pre.pre.simulacion}
         companias={companias}
+        variante={variante}
       />
     </Pagina>
   )

@@ -135,6 +135,7 @@ test('guardar dos veces se queda con lo último, no acumula', () => {
 test('cada cliente y cada póliza tienen SU clave: un borrador no pisa a otro', () => {
   assert.notEqual(claveBorradorAutoNuevo('aaa'), claveBorradorAutoNuevo('bbb'))
   assert.notEqual(claveBorradorAutoNuevo('x'), claveBorradorRetarificar('x'))
+  assert.notEqual(claveBorradorAutoNuevo('x', 'op1'), claveBorradorAutoNuevo('x'), 'la variante de un riesgo no lee el borrador del cliente')
   // La de retarificar no cambia: ya hay borradores vivos con ese nombre.
   assert.equal(claveBorradorRetarificar('p1'), 'asegura_retarificar_borrador_p1')
 })

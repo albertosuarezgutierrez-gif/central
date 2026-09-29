@@ -231,10 +231,14 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
       </div>
       {/* UN botón por fila (26/09/2026, «muy poco clara y muy extensa»): Corregir,
           Ganada y Descartar viven dentro de «Gestionar», junto al seguimiento. */}
-      <div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" onClick={onAlternar} aria-expanded={desplegada} style={{ ...btnStyle(desplegada ? 'secundario' : 'primario', 'sm'), minHeight: 44 }}>
           {desplegada ? 'Plegar ▴' : 'Gestionar ▾'}
         </button>
+        {/* El riesgo como pantalla (29/09/2026): intervinientes y presupuestos P1…Pn de ESTE riesgo. */}
+        <a href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, color: 'var(--primary)', textDecoration: 'none' }}>
+          Abrir riesgo →
+        </a>
       </div>
 
       {desplegada && <SeguimientoOportunidad id={o.id} telefono={telefono} onCambio={onRecargar} />}
@@ -306,6 +310,7 @@ function FilaCerrada({ o, desplegada, onAlternar, onRecargar }: { o: Oportunidad
       <b>{descartada ? 'Descartada' : ROTULO_ESTADO[o.estado]}</b>
       {cuando && <> el {cuando}</>}
       {o.estado === 'perdida' && !descartada && o.motivoPerdida && <span style={{ color: 'var(--muted)' }}> · {rotuloMotivo(o.motivoPerdida)}{o.competidor ? ` (${o.competidor})` : ''}</span>}
+      {' '}<a href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Abrir riesgo →</a>
       {desplegada && <div style={{ marginTop: 8 }}><SeguimientoOportunidad id={o.id} onCambio={onRecargar} /></div>}
     </li>
   )

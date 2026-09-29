@@ -101,8 +101,9 @@ export function borrarBorrador(
 }
 
 /** Clave del borrador de la pantalla de AUTO NUEVO de un cliente. */
-export function claveBorradorAutoNuevo(clienteId: string): string {
-  return `asegura_auto_nuevo_borrador_${clienteId}`
+export function claveBorradorAutoNuevo(clienteId: string, oportunidadId?: string | null): string {
+  // Una variante va con SU riesgo: el borrador de otro coche del mismo cliente no puede pisarlo.
+  return oportunidadId ? `asegura_auto_nuevo_borrador_${clienteId}_op_${oportunidadId}` : `asegura_auto_nuevo_borrador_${clienteId}`
 }
 
 /** Clave del borrador de la pantalla de RETARIFICAR una póliza. */
