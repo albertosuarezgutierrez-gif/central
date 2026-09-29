@@ -15,9 +15,11 @@
 import {
   agruparPrecios,
   calcularVencimiento,
+  deducirNecesidades,
   elegirPortada,
   estadoPresupuesto,
   nivelCobertura,
+  textoNecesidades,
   validarNecesidades,
   type EstadoPresupuesto,
   type PapelPortada,
@@ -390,6 +392,9 @@ export async function prepararPresupuesto(
     select: { id: true },
   })
 
+  // El cuestionario IDD sale ya contestado con lo que se deduce de lo presupuestado (29/09/2026).
+  await autocompletarNecesidades(correduriaId, creado.id, entrada.actor)
+
   return {
     estado: 'ok',
     // 🔑 El token en claro se devuelve UNA vez y no se guarda: en la BD solo
@@ -633,6 +638,12 @@ export async function listarPresupuestos(
       take: 50,
       include: { opciones: { where: { ocultaAt: null }, orderBy: { orden: 'asc' }, select: { id: true, compania: true, modalidad: true, primaEur: true, garantias: true } } },
     })
+    // Los que se prepararon antes del autorrelleno (o en los que falló): se completan al listarlos.
+    for (const p of filas) {
+      if (p.necesidades === null && p.aceptadoAt === null && p.retiradoAt === null) {
+        p.necesidades = await autocompletarNecesidades(correduriaId, p.id, 'sistema')
+      }
+    }
     return filas.map((p) => ({
       id: p.id,
       estado: estadoPresupuesto(p, hoy),
@@ -698,6 +709,46 @@ export function respuestasAuditables(v: unknown): { respuestas?: Record<string, 
     if (/^[a-z_]{1,30}$/.test(k) && typeof x === 'string' && /^[a-z_]{1,30}$/.test(x)) out[k] = x
   }
   return Object.keys(out).length ? { respuestas: out } : {}
+}
+
+/**
+ * Rellena y GUARDA el cuestionario de exigencias y necesidades de un presupuesto que aún no lo
+ * tiene, deducido de la petición que viajó a la compañía y de la opción recomendada (la primera
+ * visible). Dictado de Alberto (29/09/2026): «que se autorrellene y se guarde, eso no me puede
+ * salir». Solo si está vacío y no aceptado ni retirado: nunca pisa lo que escribió el corredor ni
+ * lo que el cliente firmó. Best-effort: si falla, el presupuesto sigue y el cuestionario queda a
+ * mano, como antes. Devuelve el texto guardado o `null`.
+ */
+export async function autocompletarNecesidades(correduriaId: string, presupuestoId: string, actor: string): Promise<string | null> {
+  try {
+    const db = prismaAsegura()
+    const [fila] = await db.$queryRaw<{ ramo: string | null; peticion: unknown; categoria: string | null; franquicia_eur: string | number | null }[]>`
+      select p.ramo, t.peticion, o.categoria, o.franquicia_eur
+      from presupuesto p
+      left join tarificaciones t on t.id = p.tarificacion_id and t.correduria_id = p.correduria_id
+      left join lateral (
+        select categoria, franquicia_eur from presupuesto_opcion
+        where presupuesto_id = p.id and oculta_at is null order by orden asc limit 1
+      ) o on true
+      where p.id = ${presupuestoId}::uuid and p.correduria_id = ${correduriaId}::uuid
+        and p.necesidades is null and p.aceptado_at is null and p.retirado_at is null`
+    if (!fila) return null
+    const d = deducirNecesidades(fila.ramo, fila.peticion, { categoria: fila.categoria, franquiciaEur: numero(fila.franquicia_eur) })
+    const v = validarNecesidades(textoNecesidades(fila.ramo, d.respuestas, d.otras))
+    if (!v.ok) return null
+    const n = await db.presupuesto.updateMany({
+      where: { id: presupuestoId, correduriaId, necesidades: null, aceptadoAt: null, retiradoAt: null },
+      data: { necesidades: v.valor, necesidadesAt: new Date() },
+    })
+    if (n.count === 0) return null
+    await db.presupuestoEvento.create({
+      data: { presupuestoId, tipo: 'necesidades', origen: 'corredor', detalle: { actor, antes: 'vacío', deducido: true, ...respuestasAuditables(d.respuestas) } },
+    })
+    return v.valor
+  } catch (e) {
+    registrarErrorCartera('presupuesto/necesidades-auto', e)
+    return null
+  }
 }
 
 export type ResultadoNecesidades =

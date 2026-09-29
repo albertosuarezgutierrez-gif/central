@@ -925,6 +925,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (29/09/2026) Correduría: cuestionario IDD autorrellenado + «Emitir» en cada fila de «Qué verá el cliente»
+- Alberto: el cuestionario de necesidades «no me puede salir»: `deducirNecesidades` (module-seguros) lo contesta con la petición y la opción recomendada, y `autocompletarNecesidades` (asegura) lo GUARDA al preparar el presupuesto y, para los viejos, al listarlos. Nunca pisa lo escrito ni lo aceptado; el texto dice «Deducido de lo presupuestado».
+- «De aquí no puedo emitir»: `FiltroGarantias` acepta `emitir` y pinta un botón por fila (moto, coche, hogar); se quitó la lista plegada «¿Ya ha dicho que sí?» en esas tres.
+- Medido: la cotización con Global 2 PROPIETARIA (CIF) funcionó (tarificación 700aeedd, 31 precios); Allianz 106,77€ vs 215,88€ con Manuel propietario. El Submit con owner Cif sigue sin probar.
+
 ## (29/09/2026) Correduría: EMPRESA (CIF) como propietaria del vehículo en moto y auto
 - Desde el riesgo de la oportunidad, una ficha `tipo_persona = juridica` puede ocupar el papel **propietario**: viaja como `JuridicalPerson_V1` (`Cif` + razón social + contacto/dirección de su ficha, `construirEmpresa` en `persona.ts`). CIF validado con dígito de control antes de pagar. Nunca conductor (el vendor solo admite Dni/Nie/Passport ahí): se corta gratis.
 - 🚧 **Sin verificar contra Codeoscopic** qué más exige `owner` jurídico: la primera cotización real (Manuel Antonio Piña + Global 2, oportunidad moto) lo dirá.

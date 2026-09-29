@@ -153,3 +153,80 @@ export function textoNecesidades(ramo: string | null | undefined, respuestas: Re
   if (extra) partes.push(`Además: ${extra}`)
   return partes.join(' ')
 }
+
+/**
+ * Las respuestas DEDUCIDAS de lo que ya se ha presupuestado (29/09/2026, dictado de Alberto: «que
+ * se autorrellene y se guarde, eso no me puede salir»). Sale de la petición que viajó a la compañía
+ * y de la opción que se le recomienda; lo que no se puede leer de ahí toma el valor más neutro
+ * («le es indiferente», «un equilibrio»). Todas las respuestas son válidas para el ramo: el
+ * cuestionario queda completo. El texto dice que es deducido, para que nadie lo lea como una
+ * declaración literal del cliente, y el corredor puede corregirlo mientras no se acepte.
+ */
+export function deducirNecesidades(
+  ramo: string | null | undefined,
+  peticion: unknown,
+  recomendada: { categoria: string | null; franquiciaEur: number | null } | null,
+  hoy: Date = new Date(),
+): { respuestas: Record<string, string>; otras: string } {
+  const g = grupoNecesidades(ramo)
+  const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {})
+  const pet = obj(peticion)
+  const risk = obj(pet.risk)
+  const r: Record<string, string> = { prioridad: 'equilibrio', franquicia: 'indiferente' }
+  const notas: string[] = []
+
+  if (g === 'motor') {
+    const doc = (p: unknown) => {
+      const d = obj(obj(p).identificationDocument)
+      return { tipo: String(obj(d.type).id ?? ''), id: String(d.id ?? '').toUpperCase() }
+    }
+    const tomador = doc(pet.holder)
+    const conductor = doc(risk.primaryDriver)
+    r.uso = tomador.tipo === 'Cif' ? 'profesional' : 'particular'
+    const edad = (p: unknown) => {
+      const f = Date.parse(String(obj(p).birthDate ?? ''))
+      return Number.isFinite(f) ? (hoy.getTime() - f) / (365.25 * 86400000) : null
+    }
+    const carne = (p: unknown) => {
+      const l = Array.isArray(obj(p).drivingLicenses) ? (obj(p).drivingLicenses as unknown[])[0] : null
+      const f = Date.parse(String(obj(l).date ?? ''))
+      return Number.isFinite(f) ? (hoy.getTime() - f) / (365.25 * 86400000) : null
+    }
+    const joven = (p: unknown) => {
+      const e = edad(p)
+      const c = carne(p)
+      return (e !== null && e < 25) || (c !== null && c < 2)
+    }
+    if (joven(risk.primaryDriver) || (risk.secondaryDriver && joven(risk.secondaryDriver))) r.conductores = 'jovenes'
+    else if (risk.secondaryDriver) r.conductores = 'ocasionales'
+    else r.conductores = 'solo_tomador'
+    if (conductor.id && tomador.id && conductor.id !== tomador.id) {
+      notas.push('el conductor habitual es otra persona distinta del tomador')
+      if (r.conductores === 'solo_tomador') r.conductores = 'ocasionales'
+    }
+    const cat = (recomendada?.categoria ?? '').toLowerCase()
+    const conFranquicia = (recomendada?.franquiciaEur ?? 0) > 0 || /franquicia/.test(cat)
+    r.modalidad = /todo\s*riesgo/.test(cat)
+      ? conFranquicia ? 'todo_riesgo_franquicia' : 'todo_riesgo'
+      : /ampliad|plus|complet|lunas|robo|incendio/.test(cat) ? 'terceros_ampliado' : 'terceros'
+    if (r.modalidad === 'todo_riesgo_franquicia') r.franquicia = 'si'
+    r.lunas = 'indiferente'
+    r.asistencia = 'indiferente'
+    r.sustitucion = 'indiferente'
+  } else if (g === 'hogar') {
+    const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+    r.regimen = risk.owner ? 'propietario' : 'inquilino'
+    r.vivienda = 'habitual'
+    const cont = n(risk.buildingsLimit) > 0
+    const cdo = n(risk.contentsLimit) > 0
+    r.que_asegura = cont && cdo ? 'ambos' : cont ? 'continente' : cdo ? 'contenido' : 'ambos'
+    r.hipoteca = 'indiferente'
+    r.objetos_valor = n(risk.highValueItemsLimit) + n(risk.jewelsInSafeBoxLimit) + n(risk.jewelsOutSafeBoxLimit) > 0 ? 'si' : 'no'
+    if ((recomendada?.franquiciaEur ?? 0) > 0) r.franquicia = 'si'
+  }
+
+  const respuestas: Record<string, string> = {}
+  for (const p of preguntasNecesidades(ramo)) if (r[p.id]) respuestas[p.id] = r[p.id]
+  const otras = `Deducido de lo presupuestado${notas.length ? ` (${notas.join('; ')})` : ''}.`
+  return { respuestas, otras }
+}
