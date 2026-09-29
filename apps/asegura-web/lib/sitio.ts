@@ -187,6 +187,8 @@ export const NAV = [
   // 26/09/2026: la herramienta de la carta de baja, por el mismo motivo — el pie
   // es lo que la enlaza desde todas las páginas.
   { href: '/carta-baja-seguro', texto: 'Carta para dar de baja un seguro' },
+  // 29/09/2026: la calculadora del seguro del banco, enlazada desde el pie por lo mismo.
+  { href: '/calculadora-bonificacion-hipoteca', texto: 'Calculadora del seguro de la hipoteca' },
 ] as const
 
 /**
