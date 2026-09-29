@@ -124,3 +124,38 @@ test('Portal test sigue siendo válido con EnlaceMedido', () => {
   // Solo verificar que el test sigue existiendo y que menciona PORTAL_URL
   assert.match(src, /PORTAL_URL/, 'portal.test.ts debe seguir siendo válido')
 })
+
+test('medir() manda el evento a GA4 cuando window.gtag existe, y el lead como generate_lead', () => {
+  const llamadas: unknown[][] = []
+  ;(globalThis as unknown as { window?: { gtag?: (...a: unknown[]) => void } }).window = {
+    gtag: (...a: unknown[]) => {
+      llamadas.push(a)
+    },
+  }
+  try {
+    assert.equal(medir('lead_enviado', { ramo: 'hogar' }), true, 'Con solo GA4 cargado debe devolver true')
+    assert.equal(medir('cta_portal_click', { origen: 'cabecera' }), true)
+    assert.deepEqual(llamadas, [
+      ['event', 'generate_lead', { ramo: 'hogar' }],
+      ['event', 'cta_portal_click', { origen: 'cabecera' }],
+    ])
+  } finally {
+    delete (globalThis as unknown as { window?: unknown }).window
+  }
+})
+
+test('medir() emite a los dos proveedores si los dos están cargados, y un fallo de uno no tapa al otro', () => {
+  const ph: string[] = []
+  const ga: unknown[][] = []
+  ;(globalThis as unknown as { window?: object }).window = {
+    posthog: { capture: (n: string) => { ph.push(n); throw new Error('caído') } },
+    gtag: (...a: unknown[]) => { ga.push(a) },
+  }
+  try {
+    assert.equal(medir('aviso_solicitado', { ramo: 'auto' }), true)
+    assert.deepEqual(ph, ['aviso_solicitado'])
+    assert.deepEqual(ga, [['event', 'aviso_solicitado', { ramo: 'auto' }]])
+  } finally {
+    delete (globalThis as unknown as { window?: unknown }).window
+  }
+})
