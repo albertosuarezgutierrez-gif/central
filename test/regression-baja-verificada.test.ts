@@ -29,6 +29,9 @@ test('dar de baja: cierra la devolución, anula, pierde lo del impago y abre la 
   assert.match(f, /update aprobacion set estado = 'rechazada'[\s\S]*origen = \$\{'recibo_devuelto'\} and estado = 'pendiente'/)
   assert.match(f, /'renovacion', 'competencia',\s+\$\{vence\}::date/)
   assert.match(f, /vencimientoCompetencia\(r\.efecto, r\.vencePoliza, hoy\)/)
+  // La matrícula viaja a la oportunidad: con ella se tarifica y la sustitución automática la casa con la póliza nueva.
+  assert.match(f, /nullif\(trim\(p\.datos_especificos->>'matricula'\), ''\) as matricula/)
+  assert.match(f, /\.\.\.\(r\.matricula \? \{ matricula: r\.matricula \} : \{\}\)/)
   // Un solo sitio de cierre: todo en una transacción.
   assert.match(f, /return prismaAsegura\(\)\.\$transaction\(/)
 })
