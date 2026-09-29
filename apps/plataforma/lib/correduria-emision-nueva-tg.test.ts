@@ -135,3 +135,38 @@ test('el botón de siempre deriva las filas nuevas ANTES de usar su poliza_id (q
   assert.ok(cuerpo.indexOf('esResumenNuevo(fila.resumen)') > 0)
   assert.ok(cuerpo.indexOf('esResumenNuevo(fila.resumen)') < cuerpo.indexOf('urlPoliza(fila.poliza_id)'))
 })
+
+const tarif = tg.slice(tg.indexOf('export async function tarificarDesdeBoton'))
+
+test('botón Tarificar: cotiza con la oportunidad y sus figuras, y SOLO tras «hecha» prepara el botón de emitir', () => {
+  const cot = tarif.slice(tarif.indexOf('const entrada = {'), tarif.indexOf('cotizarMotoNuevaAsegura('))
+  assert.match(cot, /oportunidadId: fila\.cuerpo\?\.oportunidadId/)
+  assert.match(cot, /figuras: fila\.cuerpo\?\.figuras/)
+  const i = tarif.indexOf('prepararEmisionNueva(')
+  assert.ok(i > 0 && tarif.lastIndexOf("fin.estado === 'hecha'", i) > 0)
+})
+
+test('proponer: el objetivo de emisión viaja en la fila y el seguro anterior se hereda antes de pagar', () => {
+  const prop = tg.slice(tg.indexOf('async function proponerTarificacion'), tg.indexOf('async function pedirOProponer'))
+  assert.match(prop, /\.\.\.\(objetivo \? \{ objetivo \} : \{\}\)/)
+  assert.ok(prop.indexOf('historialHeredado(') > 0 && prop.indexOf('historialHeredado(') < prop.indexOf('INSERT INTO correduria_asistente_tarificacion'))
+})
+
+test('elegir precio: la modalidad guardada cuenta («incendio robo» casa aunque no esté en opciones)', () => {
+  const r = elegirPrecioNuevo([{ compania: 'Allianz', producto: 'Allianz Motos', categoria: 'Terceros ampliado', primaEur: 200.2, modalidad: 'Incendio + Robo' }], 'Allianz', 'incendio robo', 200)
+  assert.equal(r.tipo, 'uno')
+})
+
+test('emisión encadenada: solo con proyecto real y SOLO ese proyecto; herencia solo con las dos matrículas iguales', () => {
+  assert.match(tarif, /res\.estado === 'ok' && !res\.simulado \? res\.projectId : null/)
+  assert.match(tarif, /projectIdEsperado: proyectoNuevo/)
+  assert.match(prep, /guardada\.projectId !== projectEsperado/)
+  const her = tg.slice(tg.indexOf('async function historialHeredado'), tg.indexOf('async function historialHeredado') + 800)
+  assert.match(her, /if \(!matricula \|\| !h\.matricula \|\|/)
+})
+
+test('bloqueo anunciado por la compañía: va ARRIBA del resumen, con el consejo de emitir la básica', () => {
+  const t = textoResumenNuevo({ ...R, avisos: ['Observaciones de la compañía: ESTA POLIZA QUEDARÁ BLOQUEADA POR LA SIGUIENTE RAZÓN: INCENDIO-ROBO SIN DAÑOS, Prima calculada'] })
+  assert.ok(t.indexOf('⛔') >= 0 && t.indexOf('⛔') < t.indexOf('Emisión NUEVA'))
+  assert.match(t, /INCENDIO-ROBO SIN DAÑOS.*básica/)
+})

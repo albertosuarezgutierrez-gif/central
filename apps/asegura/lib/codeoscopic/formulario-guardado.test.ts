@@ -84,3 +84,18 @@ test('extraerFormularioAuto no confunde un id numérico con uno de texto', () =>
   assert.equal(f.municipioId, 41091)
   assert.equal(f.garaje, '3')
 })
+
+// ── Seguro anterior guardado (29/09/2026): sin él la bonificación se pierde y el precio se dispara ──
+import { extraerHistorialGuardado } from './formulario-guardado.ts'
+
+test('extraerHistorialGuardado: lee el previousInsurance de la petición pagada; incompleto → null, nunca a medias', () => {
+  const pet = { risk: { registrationPlate: '2121NST', previousInsurance: {
+    previousCompany: { code: 'M0133' }, policyNumber: 'P-1', totalYearsInsured: 6, yearsInPreviousCompany: 3, yearsWithoutAccidents: 6,
+  } } }
+  assert.deepEqual(extraerHistorialGuardado(pet), {
+    companiaCodigo: 'M0133', poliza: 'P-1', aniosAsegurado: 6, aniosEnCompania: 3, aniosSinSiniestros: 6, matricula: '2121NST',
+  })
+  assert.equal(extraerHistorialGuardado({ risk: {} }), null)
+  assert.equal(extraerHistorialGuardado({ risk: { previousInsurance: { ...pet.risk.previousInsurance, yearsWithoutAccidents: undefined } } }), null)
+  assert.equal(extraerHistorialGuardado(null), null)
+})

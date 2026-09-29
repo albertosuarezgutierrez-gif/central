@@ -565,6 +565,8 @@ export type Precio = {
   id?: string
   compania?: string | null
   producto?: string | null
+  /** Modalidad de la compañía («Incendio + Robo»). Solo en una cotización RECUPERADA; ausente = no consta. */
+  modalidad?: string | null
   /** Prima total del periodo, en euros. `null` = la compañía no la dio; NO es 0. */
   primaEur?: number | null
   /**
@@ -1785,6 +1787,7 @@ function leerPreciosGuardados(v: unknown): Precio[] | null {
       ...(x.descuentos === undefined ? {} : { descuentos: leerDescuentos(x.descuentos) }),
       compania: cadenaONulo(x.compania),
       producto: cadenaONulo(x.producto),
+      ...(x.modalidad === undefined ? {} : { modalidad: cadenaONulo(x.modalidad) }),
       categoria: cadenaONulo(x.categoria),
       primaEur: numeroONulo(x.primaEur),
       entradaEur: opcionalPrecio(x.entradaEur, numeroONulo),
@@ -1880,6 +1883,29 @@ export type TarificacionNuevaGuardada = {
   precios: Precio[]
   /** Coche y moto: el vehículo con el que se pidió, para volver a pedir precio sin dictarlo. `null` = no consta. */
   vehiculo: VehiculoGuardado | null
+  /** El último seguro anterior declarado para este cliente y vehículo (de esta u otra variante). `null` = no consta. */
+  historialPrevio: HistorialPrevio | null
+}
+
+export type HistorialPrevio = {
+  companiaCodigo: string
+  poliza: string
+  aniosAsegurado: number
+  aniosEnCompania: number
+  aniosSinSiniestros: number
+  matricula: string | null
+}
+
+/** PURO: el `historialPrevio` de asegura, validado por forma. Completo o `null`, nunca a medias. */
+export function leerHistorialPrevio(v: unknown): HistorialPrevio | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const n = (x: unknown) => (typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 80 ? x : null)
+  const companiaCodigo = cadenaONulo(o.companiaCodigo)
+  const poliza = cadenaONulo(o.poliza)
+  const a = n(o.aniosAsegurado), c = n(o.aniosEnCompania), s = n(o.aniosSinSiniestros)
+  if (!companiaCodigo || !poliza || a === null || c === null || s === null) return null
+  return { companiaCodigo, poliza, aniosAsegurado: a, aniosEnCompania: c, aniosSinSiniestros: s, matricula: cadenaONulo(o.matricula) }
 }
 
 export type VehiculoGuardado = {
@@ -1933,6 +1959,7 @@ export function interpretarTarificacionNueva(status: number, json: unknown): Res
         caducada: r.caducada === true,
         precios,
         vehiculo: leerVehiculoGuardado(r.vehiculo),
+        historialPrevio: leerHistorialPrevio(r.historialPrevio),
       },
     }
   }

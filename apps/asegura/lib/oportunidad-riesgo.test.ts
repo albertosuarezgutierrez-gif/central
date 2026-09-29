@@ -94,3 +94,10 @@ test('moto arma propietario y conductor desde SUS fichas (con su carné de moto)
 test('moto: conductor con fecha de carné y sin tipo se declara B explícito (para cruzarlo con la cilindrada)', () => {
   assert.match(cuerpoDe('prepararVariante'), /e\.ramo === 'moto' && clave === 'conductor' && c\.fechaCarnet && !c\.tipoCarnet\) c\.tipoCarnet = 'B'/)
 })
+
+test('empresa propietaria: su dirección se comprueba ANTES de pagar (el Submit exige tipo de vía y no se puede parchear)', () => {
+  const prep = src.slice(src.indexOf('prepararVariante'))
+  assert.ok(prep.indexOf('faltaDireccionEmpresa(') > 0, 'prepararVariante no mira la dirección de la empresa')
+  const f = src.slice(src.indexOf('export function faltaDireccionEmpresa'), src.indexOf('\n}\n', src.indexOf('export function faltaDireccionEmpresa')))
+  for (const campo of ['municipioResidenciaId', 'tipoVia', 'nombreVia', 'numeroVia']) assert.match(f, new RegExp(`e\\.${campo}`))
+})

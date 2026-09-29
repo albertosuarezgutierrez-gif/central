@@ -10,7 +10,7 @@
 //   `null`      → aún no se han leído sus coberturas: «Leyendo coberturas…», nunca «no incluye».
 //   objeto      → el dato.
 
-import { capitalServicio, type DescuentoComercial, type GarantiasClasificadas, type OpcionFiltrable } from '@central/module-seguros'
+import { bloqueoCompania, capitalServicio, type DescuentoComercial, type GarantiasClasificadas, type OpcionFiltrable } from '@central/module-seguros'
 import type { Precio } from './retarificar-asegura.ts'
 import type { OcultarPresupuesto } from './presupuesto-asegura.ts'
 
@@ -21,6 +21,8 @@ export type OpcionParrilla = OpcionFiltrable & {
   firmeza: string
   /** Decesos: el capital del servicio leído de los avisos. `null` = no viene o no se entiende (nunca 0). */
   capitalServicioEur: number | null
+  /** Motivo con el que la compañía dejará la póliza BLOQUEADA al emitir (`''` sin motivo); `null` = no avisa. */
+  bloqueo?: string | null
   /** Descuentos comerciales con los que se tarificó. `null` = no se sabe (no «sin descuento»). */
   descuentos: DescuentoComercial[] | null
 }
@@ -61,6 +63,7 @@ export function opcionesDeParrilla(precios: readonly Precio[]): { opciones: Opci
       franquiciaEur: typeof p.franquiciaEur === 'number' ? p.franquiciaEur : null,
       firmeza: p.firmeza ?? 'estimado',
       capitalServicioEur: capitalServicio(p.avisos ?? null),
+      bloqueo: bloqueoCompania(p.avisos ?? null),
       descuentos: p.descuentos ?? null,
     })
   }

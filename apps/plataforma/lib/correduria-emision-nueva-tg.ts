@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto'
 import type { CambioFiguras, FiguraExigida, Precio } from './retarificar-asegura.ts'
 import { ETIQUETA_CAMPO_FIGURA } from './figuras-emision-texto.ts'
 import { MINUTOS_PROPUESTA } from './correduria-emision-tg.ts'
+import { bloqueoCompania, textoBloqueoCorredor } from '@central/module-seguros'
 
 export type RamoNuevo = 'auto' | 'moto'
 
@@ -40,7 +41,7 @@ export function elegirPrecioNuevo(precios: Precio[], compania: string, texto: st
   if (t) {
     const palabras = t.split(' ').filter((w) => w.length > 1)
     const conTexto = candidatos.filter((p) => {
-      const hay = normal(`${p.categoria ?? ''} ${p.producto ?? ''} ${(p.opciones ?? []).map((o) => o.valor).join(' ')}`)
+      const hay = normal(`${p.modalidad ?? ''} ${p.categoria ?? ''} ${p.producto ?? ''} ${(p.opciones ?? []).map((o) => o.valor).join(' ')}`)
       return palabras.every((w) => hay.includes(w))
     })
     // Lo que dijo Alberto no se ignora: si no casa con ningún precio, se dice, no se elige otro.
@@ -71,6 +72,8 @@ export interface ResumenEmisionNueva {
   compania: string
   categoria: string
   producto: string | null
+  /** Modalidad de la compañía («Incendio + Robo»), si la tarificación guardada la trae. */
+  modalidad?: string | null
   /** Prima que devolvió la compañía al CONFIRMAR el precio (ReRate), no la de la parrilla. */
   primaEur: number | null
   primaParrillaEur: number | null
@@ -137,12 +140,14 @@ export function textoResumenNuevo(r: ResumenEmisionNueva): string {
         'Al pulsar confirmas que es el riesgo REAL: quien conduce, quién es el dueño y dónde duerme el vehículo (arts. 10 y 89 LCS).',
       ]
     : []
+  const bloqueo = bloqueoCompania(r.avisos)
   return [
+    ...(bloqueo !== null ? [`<b>${esc(textoBloqueoCorredor(bloqueo))}</b>`, ''] : []),
     `🛡️ <b>Emisión NUEVA lista para confirmar</b> · ${r.ramo === 'moto' ? 'moto' : 'coche'}`,
     '',
     `Cliente: ${oNoConsta(r.clienteNombre)} · vehículo <b>${esc(r.matricula)}</b>`,
     `Tarificado ${fecha(r.tarificadaEn)}`,
-    `<b>${esc(r.compania)}</b> · ${esc(r.categoria)}${r.producto ? ` · ${esc(r.producto)}` : ''}`,
+    `<b>${esc(r.compania)}</b> · ${esc(r.categoria)}${r.modalidad ? ` · ${esc(r.modalidad)}` : ''}${r.producto ? ` · ${esc(r.producto)}` : ''}`,
     `Prima confirmada por la compañía: <b>${prima}</b>${cambio} · ${esc(r.firmeza)}`,
     `Efecto ${fecha(r.efecto)} · el precio caduca ${fecha(r.caduca)}`,
     `Cuenta de cargo: ${esc(r.cuenta.enmascarada)}${r.cuenta.descripcion ? ` (${esc(r.cuenta.descripcion)})` : ''}`,

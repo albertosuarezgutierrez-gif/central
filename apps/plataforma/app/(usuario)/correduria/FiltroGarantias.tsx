@@ -16,7 +16,7 @@ import { Check, RefreshCw } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { CeldaCompania } from './CeldaCompania'
 import { eur } from '@/lib/dinero'
-import { diferenciasDeOpcion, etiquetasGarantiasDeLey, filtrarPorGarantias, interruptoresGarantias, preseleccionFija, ramoDeCatalogo } from '@central/module-seguros'
+import { textoBloqueoCorredor, diferenciasDeOpcion, etiquetasGarantiasDeLey, filtrarPorGarantias, interruptoresGarantias, preseleccionFija, ramoDeCatalogo } from '@central/module-seguros'
 import {
   claveCompania,
   ocultarParaPreparar,
@@ -186,6 +186,9 @@ export default function FiltroGarantias({
             </span>
             {textoDescuentos(o.descuentos) && (
               <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>{textoDescuentos(o.descuentos)}</span>
+            )}
+            {typeof o.bloqueo === 'string' && (
+              <span style={{ display: 'block', fontSize: 12, color: 'var(--negative)', fontWeight: 600 }}>{textoBloqueoCorredor(o.bloqueo)}</span>
             )}
             {dif && dif.noIncluye.length > 0 && (
               <span style={{ display: 'block', fontSize: 12 }}>No incluye: {resumirLista(dif.noIncluye)}</span>

@@ -484,7 +484,20 @@ export async function prepararVariante(
       if (deFicha.tipo === 'juridica') {
         // El vendor no admite un CIF de conductor: se corta aquí, gratis, no tras pagar.
         if (rol !== 'propietario') return { ok: false, motivo: 'una empresa solo puede ser propietaria: el conductor tiene que ser una persona' }
-        correcciones[clave] = await empresaParaCotizar(deFicha, soloConValor)
+        const empresa = await empresaParaCotizar(deFicha, soloConValor)
+        // Sin la dirección entera, la compañía la pide al EMITIR y no se puede corregir en un proyecto
+        // ya creado: habría que pagar otra tarificación (29/09/2026, moto de un cliente con su empresa
+        // de propietaria). Se corta aquí, gratis, diciendo qué falta y dónde se arregla.
+        const faltaDir = faltaDireccionEmpresa(empresa)
+        if (faltaDir.length > 0) {
+          return {
+            ok: false,
+            motivo:
+              `la dirección de la empresa propietaria (${empresa.razonSocial || 'sin nombre'}) está incompleta: falta ${faltaDir.join(', ')}. ` +
+              'Corrígela en su ficha, con el tipo de vía delante (p. ej. «Calle Patines, 1»), y vuelve a pedir precio. No se ha gastado nada.',
+          }
+        }
+        correcciones[clave] = empresa
         continue
       }
       correcciones[clave] = { ...deFicha, ...soloConValor }
@@ -530,6 +543,16 @@ async function empresaParaCotizar(f: EmpresaFigura, tecleado: Record<string, unk
     // Catálogo caído: la empresa viaja sin dirección, que es lo mismo que no tenerla.
   }
   return empresa
+}
+
+/** Qué le falta a la dirección de una empresa propietaria para poder EMITIR. Puro. */
+export function faltaDireccionEmpresa(e: Pick<DatosEmpresa, 'municipioResidenciaId' | 'nombreVia' | 'numeroVia' | 'tipoVia'>): string[] {
+  const f: string[] = []
+  if (e.municipioResidenciaId === undefined || e.municipioResidenciaId === null) f.push('el municipio (revisa el código postal)')
+  if (!e.tipoVia) f.push('el tipo de vía')
+  if (!e.nombreVia) f.push('el nombre de la calle')
+  if (!e.numeroVia) f.push('el número')
+  return f
 }
 
 /** Solo roles conocidos y uuids; el tomador siempre es quien cotiza (el cliente de la ruta). */
