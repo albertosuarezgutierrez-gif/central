@@ -340,3 +340,33 @@ export function revisarPropietario(p: DatosPropietario): string[] {
 export function construirPropietario(p: DatosPropietario): Record<string, unknown> {
   return esEmpresa(p) ? construirEmpresa(p) : construirPersona(p)
 }
+
+/**
+ * El TOMADOR empresa (29/09/2026): la ficha de la empresa llega por los mismos campos que una
+ * persona (`dni` = CIF, `nombre` + apellidos = razón social, que en las empresas de la cartera va
+ * entero en `nombre`), y aquí se reinterpreta como `DatosEmpresa`. Lo que la ficha tiene de
+ * contacto y dirección viaja igual; lo que es de persona (nacimiento, sexo, estado civil, carné) no.
+ */
+export function empresaDeTomador(d: Partial<DatosPersona>): DatosEmpresa {
+  return {
+    tipo: 'juridica',
+    cif: String(d.dni ?? '').trim().toUpperCase().replace(/[\s-]/g, ''),
+    razonSocial: [d.nombre, d.apellido1, d.apellido2].filter((x) => texto(x)).map((x) => x!.trim()).join(' '),
+    telefono: d.telefono ?? null,
+    email: d.email ?? null,
+    cpResidencia: d.cpResidencia ?? null,
+    municipioResidenciaId: d.municipioResidenciaId ?? null,
+    nombreVia: d.nombreVia ?? null,
+    numeroVia: d.numeroVia ?? null,
+    tipoVia: d.tipoVia ?? null,
+  }
+}
+
+/** Mismas reglas que `revisarEmpresa`, con el campo con el que la pantalla lo conoce (`dni`, `nombre`). */
+export function revisarTomadorEmpresa(d: Partial<DatosPersona>): ReparoPersona[] {
+  const campo = (c: keyof DatosEmpresa): keyof DatosPersona => (c === 'cif' ? 'dni' : c === 'razonSocial' ? 'nombre' : (c as keyof DatosPersona))
+  return revisarEmpresa(empresaDeTomador(d)).map((x) => ({ campo: campo(x.campo), motivo: x.motivo }))
+}
+
+export const MOTIVO_TOMADOR_EMPRESA_SIN_CONDUCTOR =
+  'el tomador es una empresa y una empresa no conduce: asigna en el riesgo un conductor habitual (una persona)'

@@ -10,8 +10,12 @@
 // contra el entorno real, y están transcritas en docs/CODEOSCOPIC-TRASPASO-MANUEL.md §3.
 
 import {
+  construirEmpresa,
   construirPersona,
   construirPropietario,
+  empresaDeTomador,
+  MOTIVO_TOMADOR_EMPRESA_SIN_CONDUCTOR,
+  revisarTomadorEmpresa,
   documentoDe,
   revisarPersona,
   revisarPropietario,
@@ -120,6 +124,14 @@ export type DatosAuto = DatosPersona & {
   // ── Cotización ──
   fechaEfecto: string
   referenciaExterna?: string | null
+
+  /**
+   * El TOMADOR es una EMPRESA (29/09/2026, ficha `tipo_persona = juridica`): los campos de persona
+   * de arriba traen su CIF (`dni`) y su razón social (`nombre`), y viaja como `JuridicalPerson_V1`
+   * (`empresaDeTomador`). Exige un `conductor` propio: el vendor no admite un CIF conduciendo.
+   * Sin `propietario`, la propietaria es la propia empresa.
+   */
+  tomadorEsEmpresa?: boolean
 }
 
 /** Un problema concreto del formulario, señalando el campo. */
@@ -156,7 +168,13 @@ export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevisi
   const falta = (c: keyof DatosAuto, m = 'hace falta para poder cotizar') => r.push({ campo: c, motivo: m })
 
   // ── La persona: reglas compartidas con hogar ──
-  for (const x of revisarPersona(d)) r.push(x)
+  // Tomador empresa: CIF y razón social en vez de nacimiento/sexo/estado civil, y un conductor aparte.
+  if (d.tomadorEsEmpresa) {
+    for (const x of revisarTomadorEmpresa(d)) r.push(x)
+    if (!d.conductor) r.push({ campo: 'conductor', motivo: MOTIVO_TOMADOR_EMPRESA_SIN_CONDUCTOR })
+  } else {
+    for (const x of revisarPersona(d)) r.push(x)
+  }
 
   // 🚨 Solo auto, no hogar, y solo cuando SE MANDA dirección de residencia: el
   // ReRate exige el nombre de la calle DENTRO de esa dirección (11º 400 real,
@@ -200,7 +218,7 @@ export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevisi
   }
   // `fechaCarnet` del tomador solo hace falta si además va a ser el conductor
   // (el caso normal). Con un `conductor` propio, el carnet que cuenta es el suyo.
-  if (!d.conductor) {
+  if (!d.conductor && !d.tomadorEsEmpresa) {
     if (!texto(d.fechaCarnet)) falta('fechaCarnet')
     else if (!RE_FECHA.test(String(d.fechaCarnet))) r.push({ campo: 'fechaCarnet', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
   }
@@ -370,7 +388,7 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
     tipoCarnet: d.tipoCarnet,
     zonaCarnet: d.zonaCarnet,
   }
-  const tomador = construirPersona(d, d.conductor ? {} : carnetTomador)
+  const tomador = d.tomadorEsEmpresa ? construirEmpresa(empresaDeTomador(d)) : construirPersona(d, d.conductor ? {} : carnetTomador)
   const conductor = d.conductor
     ? construirPersona(d.conductor, {
         fechaCarnet: d.conductor.fechaCarnet,

@@ -241,3 +241,33 @@ test('una empresa sin razón social se corta antes de pagar; con todo, no hay re
   assert.ok(revisarDatosMoto({ ...BASE, propietario: { ...EMPRESA, razonSocial: ' ' } }).some((x) => x.campo === 'propietario'))
   assert.deepEqual(revisarDatosMoto({ ...BASE, propietario: EMPRESA }), [])
 })
+
+// ─── TOMADOR empresa (29/09/2026): la ficha de la empresa llega por los campos de persona ──
+const TOMADOR_EMPRESA: DatosMoto = {
+  ...BASE,
+  tomadorEsEmpresa: true,
+  dni: 'B12345674',
+  nombre: 'Empresa Inventada SL',
+  apellido1: '',
+  fechaNacimiento: '',
+  sexo: undefined as unknown as 'hombre',
+  estadoCivil: '',
+  fechaCarnet: '',
+}
+const CONDUCTOR = { ...BASE, dni: '00000001R', fechaCarnet: '2005-01-01', tipoCarnet: 'A' }
+
+test('tomador empresa sin conductor aparte: se corta antes de pagar', () => {
+  const r = revisarDatosMoto(TOMADOR_EMPRESA)
+  assert.ok(r.some((x) => x.campo === 'conductor'), JSON.stringify(r))
+  assert.ok(!r.some((x) => ['fechaNacimiento', 'sexo', 'estadoCivil', 'apellido1', 'fechaCarnet'].includes(x.campo)), 'a una empresa no se le piden datos de persona')
+})
+
+test('tomador empresa + conductor persona: holder y owner son la empresa (CIF), conduce la persona', () => {
+  const c = construirPeticionMoto({ ...TOMADOR_EMPRESA, conductor: CONDUCTOR }, LINEA) as any
+  assert.deepEqual(c.holder.identificationDocument, { type: { id: 'Cif' }, id: 'B12345674' })
+  assert.equal(c.holder.name, 'Empresa Inventada SL')
+  assert.equal(c.holder.birthDate, undefined)
+  assert.deepEqual(c.risk.owner, c.holder, 'sin propietario aparte, la propietaria es la empresa')
+  assert.equal(c.risk.primaryDriver.identificationDocument.type.id, 'Dni')
+  assert.ok(c.risk.primaryDriver.drivingLicenses?.length > 0, 'el carné es el del conductor')
+})

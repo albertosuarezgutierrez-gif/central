@@ -356,7 +356,11 @@ export default function MotoNuevo({
   // `kilometrosDesdeTexto`, no con `Number()`: «5.000» es 5000, no 5.
   const kmLeidos = kilometrosDesdeTexto(kmAnuales)
   const kmInvalido = kmAnuales.trim() !== '' && kmLeidos === null
-  const faltaCivil = !estadoCivilId
+  // Tomador EMPRESA (29/09/2026): va con su CIF, sin estado civil, y conduce otra ficha del riesgo.
+  const tomadorEmpresa = variante?.empresas.tomador === true
+  const faltaCivil = !estadoCivilId && !tomadorEmpresa
+  // Con un conductor habitual en otra ficha, el «falta conductor» de la precalificación ya está cubierto.
+  const faltanTomador = (faltanInicial ?? []).filter((f) => !(f.campo === 'conductor' && figs.conductor_habitual))
   const faltaMunicipio = !municipioId
   // En modo póliza la matrícula la pone asegura desde la póliza: no se exige aquí.
   const faltaMatricula = !poliza && !matricula.trim()
@@ -404,9 +408,9 @@ export default function MotoNuevo({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matricula])
 
-  const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
+  const aMano = faltanTomador.filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
-  const huerfanos = (faltanInicial ?? []).filter(
+  const huerfanos = faltanTomador.filter(
     // En modo póliza la matrícula NO se resuelve en pantalla (la pone asegura
     // desde la póliza): si falta, es un hueco de la ficha y se enseña como tal.
     (f) =>
@@ -702,12 +706,16 @@ export default function MotoNuevo({
           sub={aMano.length > 0 ? 'Los datos personales NUNCA se suponen: los que falten se teclean aquí.' : 'La ficha trae todo lo personal; solo hay que confirmar estos dos.'}
         />
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Campo etiqueta="Estado civil" falta={faltaCivil} ayuda={estadoCivilMoto ? `Viene de la ficha («${estadoCivilMoto.nombre}»). Se puede cambiar.` : 'La ficha no lo dice o no casa con el catálogo: elígelo.'}>
-            <select value={estadoCivilId} onChange={(e) => setEstadoCivilId(e.target.value)} style={input}>
-              <option value="">Elige estado civil</option>
-              {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
-          </Campo>
+          {tomadorEmpresa ? (
+            <p style={{ fontSize: 13, margin: 0, alignSelf: 'center' }}>Empresa: va con su CIF y su razón social, sin estado civil. Conduce el conductor habitual del riesgo.</p>
+          ) : (
+                    <Campo etiqueta="Estado civil" falta={faltaCivil} ayuda={estadoCivilMoto ? `Viene de la ficha («${estadoCivilMoto.nombre}»). Se puede cambiar.` : 'La ficha no lo dice o no casa con el catálogo: elígelo.'}>
+              <select value={estadoCivilId} onChange={(e) => setEstadoCivilId(e.target.value)} style={input}>
+                <option value="">Elige estado civil</option>
+                {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </Campo>
+          )}
           <Campo
             etiqueta="Municipio"
             falta={faltaMunicipio}

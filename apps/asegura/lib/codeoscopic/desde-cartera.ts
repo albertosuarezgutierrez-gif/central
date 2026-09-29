@@ -386,7 +386,8 @@ export function precalificarAuto(
   const numeroViaDeFicha = direccionPartida?.numero ?? null
 
   const datos: Partial<DatosAuto> = {
-    // ── Persona ──
+    // ── Persona ── (una EMPRESA tomadora llega por los mismos campos: CIF y razón social)
+    ...(cliente.tipoPersona === 'juridica' ? { tomadorEsEmpresa: true } : {}),
     dni: limpio(cliente.dni) ?? undefined,
     nombre: nombreUtil(cliente.nombre) ?? undefined,
     apellido1: primero ?? undefined,
@@ -524,7 +525,8 @@ export function precalificarAutoNueva(
       : null
 
   const datos: Partial<DatosAuto> = {
-    // ── Persona ──
+    // ── Persona ── (una EMPRESA tomadora llega por los mismos campos: CIF y razón social)
+    ...(cliente.tipoPersona === 'juridica' ? { tomadorEsEmpresa: true } : {}),
     dni: limpio(cliente.dni) ?? undefined,
     nombre: nombreUtil(cliente.nombre) ?? undefined,
     apellido1: primero ?? undefined,
@@ -741,7 +743,8 @@ export function precalificarMotoNueva(
   ) as string
 
   const datos: Partial<DatosMoto> = {
-    // ── Persona ──
+    // ── Persona ── (una EMPRESA tomadora llega por los mismos campos: CIF y razón social)
+    ...(cliente.tipoPersona === 'juridica' ? { tomadorEsEmpresa: true } : {}),
     dni: limpio(cliente.dni) ?? undefined,
     nombre: nombreUtil(cliente.nombre) ?? undefined,
     apellido1: primero ?? undefined,

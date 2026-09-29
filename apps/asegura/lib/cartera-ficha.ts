@@ -1221,6 +1221,7 @@ export async function origenRetarificacion(
           saludo: true,
           codigoPostal: true,
           direccion: true,
+          tipoPersona: true,
         },
       },
     },
@@ -1285,6 +1286,7 @@ export async function origenRetarificacion(
     fechaCarnet: normalizarFecha(descifrar(conductor?.fechaCarnet)),
     direccion: descifrar(p.cliente.direccion),
     email,
+    tipoPersona: p.cliente.tipoPersona === null ? null : String(p.cliente.tipoPersona),
   }
   // Moto tarifica con el carné de MOTO (A/A2/A1/AM), que vive en los carnés de
   // la ficha, no en el conductor de la póliza. Solo se lee donde se usa.

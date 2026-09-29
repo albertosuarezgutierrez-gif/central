@@ -154,7 +154,7 @@ export const ROTULO_ROL = ETIQUETA_ROL
 const CAMPO_FALTA: Record<string, string> = {
   dni: 'DNI', nombre: 'nombre', apellido1: 'apellido', fechaNacimiento: 'fecha de nacimiento',
   sexo: 'sexo', telefono: 'móvil', fechaCarnet: 'fecha del carnet', ficha: 'ficha',
-  empresa_no_conduce: 'es una empresa (solo puede ser propietaria, no conducir)',
+  empresa_no_conduce: 'es una empresa y no puede conducir (asigna un conductor habitual persona)',
 }
 export function textoFaltan(f: string[] | null): string | null {
   if (f === null) return 'No se pudo leer su ficha'

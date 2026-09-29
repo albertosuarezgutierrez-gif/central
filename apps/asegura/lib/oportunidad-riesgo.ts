@@ -200,7 +200,11 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
   for (const f of figuras) {
     const p = await personaDeFicha(correduriaId, f.clienteId, op.tipo === 'moto' ? 'moto' : 'auto').catch(() => null)
     // El carné solo cuenta en un riesgo de vehículo: a un tomador de hogar no se le pide.
-    const conduce = (op.tipo === 'auto' || op.tipo === 'moto') && (f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || f.rol === 'tomador')
+    // El tomador solo conduce si no hay un conductor habitual en otra ficha (una empresa tomadora lo necesita).
+    const hayConductor = figuras.some((g) => g.rol === 'conductor_habitual' && g.clienteId !== f.clienteId)
+    const conduce =
+      (op.tipo === 'auto' || op.tipo === 'moto') &&
+      (f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || (f.rol === 'tomador' && !hayConductor))
     f.empresa = p !== null && p.tipo === 'juridica'
     f.faltan = p === null ? null : faltanDeFigura(p, conduce)
   }
