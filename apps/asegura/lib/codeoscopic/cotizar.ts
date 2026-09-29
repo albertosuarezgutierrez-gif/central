@@ -283,7 +283,7 @@ export async function cotizar(
   // 4b — Topes APRENDIDOS del historial del seguro anterior (29/09/2026): el máximo declarado se
   // recorta a lo que el vendor ya rechazó una vez, para que ese 400 no vuelva a salir.
   const topes = deps.topes ?? (deps.guardar ? null : { leer: leerTopesHistorial, guardar: guardarTopesHistorial })
-  const recorte = topes ? aplicarTopesHistorial(p.cuerpo, await topes.leer()) : { cuerpo: p.cuerpo, cambios: [] }
+  const recorte = topes ? aplicarTopesHistorial(p.cuerpo, await topes.leer().catch(() => ({}))) : { cuerpo: p.cuerpo, cambios: [] }
   if (recorte.cambios.length > 0) p = { ...p, cuerpo: recorte.cuerpo }
 
   // 5 — Reserva ANTES de llamar

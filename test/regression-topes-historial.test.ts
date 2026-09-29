@@ -15,6 +15,6 @@ test('el reintento por topes es solo tras un 400 de validación y una sola vez',
 })
 
 test('los topes aprendidos se aplican ANTES de reservar y llamar', () => {
-  const i = fuente.indexOf('aplicarTopesHistorial(p.cuerpo, await topes.leer())')
+  const i = fuente.indexOf('aplicarTopesHistorial(p.cuerpo, await topes.leer().catch(() => ({})))')
   assert.ok(i > 0 && i < fuente.indexOf('// 5 — Reserva ANTES de llamar'))
 })
