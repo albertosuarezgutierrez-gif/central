@@ -80,7 +80,7 @@ export default async function PolizaPage({ params, searchParams }: {
           </span>}
         />
         {/* El riesgo de la póliza (29/09/2026): variantes P1…Pn con las mismas personas o con otro tomador. */}
-        {p.retarificable && !cancelada && (p.retarificacion?.ramo === 'auto' || p.retarificacion?.ramo === 'moto') && (
+        {p.retarificable && !cancelada && (p.retarificacion?.ramo === 'auto' || p.retarificacion?.ramo === 'moto' || p.retarificacion?.ramo === 'hogar') && (
           <div style={{ marginTop: 8 }}><AbrirRiesgo polizaId={p.id} /></div>
         )}
       </div>
