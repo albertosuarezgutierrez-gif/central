@@ -91,6 +91,9 @@ export type VehiculoGuardado = {
   matricula: string | null
   fechaMatriculacion: string | null
   kmAnuales: number | null
+  /** Id del catálogo de garajes (`risk.garageType.id`). Sin él, retomar caía en silencio a «vía
+   *  pública» (29/09/2026: una re-cotización pensada con garaje privado salió con NoGarage). */
+  garaje: string | null
 }
 
 export function extraerVehiculoGuardado(peticion: unknown): VehiculoGuardado | null {
@@ -104,5 +107,6 @@ export function extraerVehiculoGuardado(peticion: unknown): VehiculoGuardado | n
     matricula: str(risk.registrationPlate),
     fechaMatriculacion: str(risk.registrationDate),
     kmAnuales: typeof km === 'number' && Number.isFinite(km) && km >= 0 ? Math.round(km) : null,
+    garaje: idTexto(risk.garageType),
   }
 }

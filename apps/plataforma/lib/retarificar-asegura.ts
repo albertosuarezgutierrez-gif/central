@@ -1794,7 +1794,14 @@ export type TarificacionNuevaGuardada = {
   vehiculo: VehiculoGuardado | null
 }
 
-export type VehiculoGuardado = { codigoVehiculo: string; matricula: string | null; fechaMatriculacion: string | null; kmAnuales: number | null }
+export type VehiculoGuardado = {
+  codigoVehiculo: string
+  matricula: string | null
+  fechaMatriculacion: string | null
+  kmAnuales: number | null
+  /** Id del catálogo de garajes con el que se pidió. `null` = no consta (NO «vía pública»). */
+  garaje: string | null
+}
 
 /** PURO: el `vehiculo` de asegura, validado por forma. Sin código de versión no hay vehículo (nunca a medias). */
 export function leerVehiculoGuardado(v: unknown): VehiculoGuardado | null {
@@ -1808,6 +1815,7 @@ export function leerVehiculoGuardado(v: unknown): VehiculoGuardado | null {
     matricula: cadenaONulo(o.matricula),
     fechaMatriculacion: cadenaONulo(o.fechaMatriculacion),
     kmAnuales: typeof km === 'number' && Number.isFinite(km) && km >= 0 ? km : null,
+    garaje: cadenaONulo(o.garaje),
   }
 }
 
@@ -1845,14 +1853,22 @@ export function interpretarTarificacionNueva(status: number, json: unknown): Res
   return { estado: 'error', motivo: 'asegura_error', mensaje: [cadenaONulo(r.mensaje), detalle].filter((x): x is string => !!x).join(' — ') || `error ${status}` }
 }
 
-/** `GET .../tarificacion?clienteId=&ramo=` — **gratis**, solo lee lo ya pagado. */
+/**
+ * `GET .../tarificacion?clienteId=&ramo=` — **gratis**, solo lee lo ya pagado.
+ * Con `filtro` (29/09/2026, el riesgo como pantalla) busca la del RIESGO (`oportunidadId`) y, si
+ * viene, una variante concreta (`tarificacionId`), no la última del cliente en ese ramo.
+ */
 export async function tarificacionNuevaGuardadaAsegura(
   clienteId: string,
   ramo: 'auto' | 'moto' | 'hogar' | 'decesos' | 'salud' | 'vida',
+  filtro?: { oportunidadId?: string | null; tarificacionId?: string | null },
 ): Promise<RespuestaTarificacionNueva> {
+  const extra =
+    (filtro?.oportunidadId ? `&oportunidadId=${encodeURIComponent(filtro.oportunidadId)}` : '') +
+    (filtro?.tarificacionId ? `&tarificacionId=${encodeURIComponent(filtro.tarificacionId)}` : '')
   try {
     const r = await pedir(
-      `/api/operador/codeoscopic/tarificacion?clienteId=${encodeURIComponent(clienteId)}&ramo=${ramo}`,
+      `/api/operador/codeoscopic/tarificacion?clienteId=${encodeURIComponent(clienteId)}&ramo=${ramo}${extra}`,
       { method: 'GET' },
       TIMEOUT_TARIFICACION_GUARDADA_MS,
     )

@@ -16,13 +16,13 @@
 // calcula esta pantalla en local, exactamente igual que la retarificación de
 // auto ya hace.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
-import { kilometrosDesdeTexto } from '@central/module-seguros'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import {
   borrarBorrador,
@@ -32,7 +32,10 @@ import {
 } from '@/lib/correduria/borrador-local'
 import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 
-import { pedirCatalogo, pedirCotizacionAuto } from './acciones'
+import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } from './acciones'
+import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
+import { ROLES_EXTRA, type RolExtra, type VarianteNueva } from '../../../oportunidad/[id]/variante'
+import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import FiltroGarantias from '../../../FiltroGarantias'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
@@ -140,6 +143,47 @@ function personaParaPuerto(p: PersonaForm, conCarnet: boolean): Record<string, u
   return base
 }
 
+// ── Figuras de una VARIANTE (29/09/2026) ─────────────────────────────────────
+// Con la figura en OTRA ficha, sus datos los pone asegura desde esa ficha. Aquí solo se pide lo
+// que la ficha no trae en forma de compañía: el estado civil (catálogo del vendor) y lo que falte.
+
+/** La clave de `correcciones` que lee el puerto para cada papel. */
+const CLAVE_FIGURA: Record<RolExtra, 'propietario' | 'conductor' | 'conductorOcasional'> = {
+  propietario: 'propietario',
+  conductor_habitual: 'conductor',
+  conductor_ocasional: 'conductorOcasional',
+}
+const ROTULO_FIGURA: Record<RolExtra, string> = {
+  propietario: 'Propietario',
+  conductor_habitual: 'Conductor habitual',
+  conductor_ocasional: 'Conductor ocasional',
+}
+/** Campos de la ficha que se pueden teclear aquí si faltan (`faltanDeFigura` de asegura). */
+const CAMPOS_FIGURA = ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'sexo', 'telefono', 'fechaCarnet'] as const
+type CampoFigura = (typeof CAMPOS_FIGURA)[number]
+const esCampoFigura = (c: string): c is CampoFigura => (CAMPOS_FIGURA as readonly string[]).includes(c)
+
+/**
+ * ¿Se puede cotizar con esta figura? Estado civil elegido + lo que falte en su ficha, tecleado.
+ * `faltan === null` (no se pudo leer la ficha) solo exige el estado civil: si la ficha no se puede
+ * leer, el servidor corta antes de gastar. `ficha` (o un campo que aquí no se teclea) bloquea.
+ */
+export function figuraCompleta(p: PersonaForm, faltan: string[] | null): boolean {
+  if (p.estadoCivil === '') return false
+  if (faltan === null) return true
+  return faltan.every((c) => esCampoFigura(c) && (c === 'sexo' ? p.sexo === 'hombre' || p.sexo === 'mujer' : p[c].trim() !== ''))
+}
+
+/** Solo lo tecleado (con valor) + el estado civil: el resto lo pone asegura desde la ficha. */
+function figuraParaPuerto(p: PersonaForm): Record<string, string> {
+  const out: Record<string, string> = { estadoCivil: p.estadoCivil }
+  for (const k of ['dni', 'nombre', 'apellido1', 'apellido2', 'fechaNacimiento', 'telefono', 'fechaCarnet'] as const) {
+    if (p[k].trim() !== '') out[k] = p[k].trim()
+  }
+  if (p.sexo === 'hombre' || p.sexo === 'mujer') out.sexo = p.sexo
+  return out
+}
+
 type Resultado =
   | { estado: 'idle' }
   | { estado: 'cotizando' }
@@ -174,7 +218,10 @@ export default function AutoNuevo({
   consumo,
   simulacion,
   companias,
+  variante = null,
 }: {
+  /** Variante de un riesgo (29/09/2026): oportunidad, figuras en otras fichas y qué les falta. */
+  variante?: VarianteNueva | null
   clienteId: string
   /** Leída del documento por el asistente de Telegram (`?matricula=`). */
   matriculaInicial?: string
@@ -239,6 +286,9 @@ export default function AutoNuevo({
   const [garaje, setGaraje] = useState(
     () => (garajes.find((g) => /v[ií]a\s+p[uú]blica/i.test(g.nombre)) ?? garajes.find((g) => /\bcalle\b/i.test(g.nombre)))?.id ?? '',
   )
+  // «Vía pública» es un defecto, no una elección: el vehículo guardado de una variante puede traer
+  // su garaje, y sin esto retomar caía en silencio a vía pública (29/09/2026).
+  const garajeElegido = useRef(false)
 
   // ── Los tres datos del coche que hasta hoy viajaban SUPUESTOS ─────────────
   // `kmAnuales`, `fechaCompra` y `remolqueLigero` ya iban en la petición al
@@ -283,6 +333,27 @@ export default function AutoNuevo({
   const [conductorDistinto, setConductorDistinto] = useState(false)
   const [conductor, setConductor] = useState<PersonaForm>(PERSONA_VACIA)
 
+  // ── Variante de un riesgo (29/09/2026) ─────────────────────────────────────
+  // Un papel que ocupa otra ficha NO se teclea: su casilla «distinto» no cuenta aunque un borrador
+  // viejo la traiga marcada, y se piden solo el estado civil y lo que falte en su ficha.
+  const figs: Partial<Record<RolExtra, string>> = variante?.figuras ?? {}
+  const [nota, setNota] = useState('')
+  const [figCorr, setFigCorr] = useState<Record<RolExtra, PersonaForm>>({
+    propietario: PERSONA_VACIA,
+    conductor_habitual: PERSONA_VACIA,
+    conductor_ocasional: PERSONA_VACIA,
+  })
+  const propietarioDistintoEf = !figs.propietario && propietarioDistinto
+  const conductorDistintoEf = !figs.conductor_habitual && conductorDistinto
+  const ocasionalDistintoEf = !figs.conductor_ocasional && ocasionalDistinto
+
+  // La variante guardada de ESTE riesgo (gratis): retomarla sin pagar y, si es el mismo coche,
+  // no volver a dictarlo. Solo en modo variante: sin riesgo, «la última del cliente» podría ser
+  // de otro coche.
+  const [guardada, setGuardada] = useState<TarificacionNuevaGuardada | null>(null)
+  const [previo, setPrevio] = useState<VehiculoGuardado | null>(null)
+  const [usarPrevio, setUsarPrevio] = useState(false)
+
   // ── ¿Tiene seguro EN VIGOR ahora mismo? (18/09/2026, fallo real de Alberto) ──
   // Sin esto la compañía cotiza «de calle»: precio ESTIMADO, no confirmable como
   // real, porque no puede hacer el control de antecedentes. Opt-in (por defecto
@@ -326,7 +397,10 @@ export default function AutoNuevo({
     // Lo que SÍ sale de un catálogo se restaura solo si sigue existiendo en
     // él: un id que ya no está dejaría un desplegable enseñando un valor que
     // el vendor rechazaría, que es peor que el hueco.
-    if (b.garaje && garajes.some((g) => g.id === b.garaje)) setGaraje(b.garaje)
+    if (b.garaje && garajes.some((g) => g.id === b.garaje)) {
+      garajeElegido.current = true
+      setGaraje(b.garaje)
+    }
     if (b.estadoCivilId && civiles.some((c) => c.id === b.estadoCivilId)) setEstadoCivilId(b.estadoCivilId)
     if (b.municipioId && listaMunicipios.some((m) => m.id === b.municipioId)) setMunicipioId(b.municipioId)
 
@@ -473,6 +547,54 @@ export default function AutoNuevo({
     siniestrosUltimos5,
   ])
 
+  useEffect(() => {
+    if (!variante) return
+    let vivo = true
+    pedirTarificacionGuardadaAuto({ clienteId, oportunidadId: variante.oportunidadId, tarificacionId: variante.tarificacionId })
+      .then((r) => {
+        if (!vivo || r.estado !== 'ok') return
+        if (!r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada)
+        const v = r.guardada.vehiculo
+        if (!v) return
+        setPrevio(v)
+        setUsarPrevio(true)
+        setCodigoVehiculo((c) => c || v.codigoVehiculo)
+        if (v.fechaMatriculacion) {
+          setMatriculacion((f) => f || v.fechaMatriculacion!)
+          setMatriculacionEstimada(false)
+        }
+        if (v.matricula) setMatricula((m) => m || v.matricula!)
+        // Los km solo si se DECLARARON (la media supuesta no es un dato del cliente) y el corredor
+        // no ha tecleado otra cifra.
+        if (v.kmAnuales !== null && v.kmAnuales !== KM_ANUALES_SUPUESTOS) {
+          setKmAnuales((k) => (k === String(KM_ANUALES_POR_DEFECTO) ? String(v.kmAnuales) : k))
+        }
+        if (v.garaje && !garajeElegido.current && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
+      })
+      .catch(() => {})
+    return () => { vivo = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteId, variante?.oportunidadId, variante?.tarificacionId])
+
+  function elegirOtroCoche() {
+    setUsarPrevio(false)
+    setCodigoVehiculo('')
+  }
+
+  const retomar = (g: TarificacionNuevaGuardada) =>
+    setResultado({
+      estado: 'ok',
+      coste: '0 € (retomada, ya estaba pagada)',
+      restantesHoy: null,
+      simulado: false,
+      avisoSimulacion: null,
+      resumen: `Tarificación del ${new Date(g.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}${g.fechaEfecto ? ` · efecto ${g.fechaEfecto.split('-').reverse().join('/')}` : ''}`,
+      precios: g.precios,
+      fallos: [],
+      supuestos: [],
+      guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+    })
+
   async function catalogo(qs: string): Promise<Opcion[]> {
     const r = await pedirCatalogo(Object.fromEntries(new URLSearchParams(qs)))
     if (r.estado !== 'ok') throw new Error(r.mensaje)
@@ -588,16 +710,20 @@ export default function AutoNuevo({
     (c) => Boolean(CAMPOS_A_MANO[c]),
   )
 
-  const faltaPropietario = propietarioDistinto && !personaCompleta(propietario, false)
-  const faltaConductor = conductorDistinto && !personaCompleta(conductor, true)
-  const faltaOcasional = ocasionalDistinto && !personaCompleta(ocasional, true)
+  const faltaPropietario = propietarioDistintoEf && !personaCompleta(propietario, false)
+  const faltaConductor = conductorDistintoEf && !personaCompleta(conductor, true)
+  const faltaOcasional = ocasionalDistintoEf && !personaCompleta(ocasional, true)
+  const faltaFigura = ROLES_EXTRA.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null))
+  // La misma ficha de conductor habitual y de ocasional es UN conductor, no dos (y el vendor rechaza
+  // dos personas con el mismo documento, con un 400 que se paga).
+  const figuraRepetida = !!figs.conductor_habitual && figs.conductor_habitual === figs.conductor_ocasional
   // El vendor rechaza dos personas con el mismo DNI y distinto dato, y ese 400
   // se paga. Si el ocasional es el mismo que conduce, lo que hay es un
   // conductor, no dos: se dice aquí, gratis.
   const ocasionalDuplicado =
-    ocasionalDistinto &&
+    ocasionalDistintoEf &&
     ocasional.dni.trim() !== '' &&
-    ocasional.dni.trim().toUpperCase() === (conductorDistinto ? conductor.dni : '').trim().toUpperCase()
+    ocasional.dni.trim().toUpperCase() === (conductorDistintoEf ? conductor.dni : '').trim().toUpperCase()
 
   // Un número mal tecleado NO se manda al vendor: `revisarDatosAuto` lo
   // rechazaría, pero ya habría costado el viaje. Se para aquí, en la pantalla.
@@ -626,7 +752,8 @@ export default function AutoNuevo({
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
-    aManoSinRellenar.length > 0 || faltaPropietario || faltaConductor || faltaHistorial || kmInvalido || compraInvalida || faltaOcasional || ocasionalDuplicado
+    aManoSinRellenar.length > 0 || faltaPropietario || faltaConductor || faltaHistorial || kmInvalido || compraInvalida || faltaOcasional || ocasionalDuplicado ||
+    faltaFigura || figuraRepetida
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
@@ -641,11 +768,15 @@ export default function AutoNuevo({
     // `supuestosVigentes` lo retira en cuanto aquí se elige algo.
     if (zonaCarnet !== '') correccionesFinal.zonaCarnet = zonaCarnet
     if (tipoCarnet !== '') correccionesFinal.tipoCarnet = tipoCarnet
-    if (ocasionalDistinto && !ocasionalDuplicado) {
+    if (ocasionalDistintoEf && !ocasionalDuplicado) {
       correccionesFinal.conductorOcasional = personaParaPuerto(ocasional, true)
     }
-    if (propietarioDistinto) correccionesFinal.propietario = personaParaPuerto(propietario, false)
-    if (conductorDistinto) correccionesFinal.conductor = personaParaPuerto(conductor, true)
+    if (propietarioDistintoEf) correccionesFinal.propietario = personaParaPuerto(propietario, false)
+    if (conductorDistintoEf) correccionesFinal.conductor = personaParaPuerto(conductor, true)
+    // Figuras de la variante: asegura rellena desde su ficha y lo tecleado aquí manda encima.
+    for (const rol of ROLES_EXTRA) {
+      if (figs[rol]) correccionesFinal[CLAVE_FIGURA[rol]] = figuraParaPuerto(figCorr[rol])
+    }
     if (tieneSeguroActual) {
       correccionesFinal.aseguradoAntes = true
       correccionesFinal.companiaAnteriorCodigo = companiaActualElegida
@@ -657,6 +788,9 @@ export default function AutoNuevo({
     }
     const r = await pedirCotizacionAuto({
       clienteId,
+      variante: variante
+        ? { oportunidadId: variante.oportunidadId, figuras: figs as Record<string, string>, nota }
+        : null,
       resueltos: {
         codigoVehiculo,
         garaje,
@@ -713,6 +847,7 @@ export default function AutoNuevo({
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
+      {variante && <NotaVariante nota={nota} onNota={setNota} />}
       {faltanInicial === null && (
         <div style={{ ...cardStyle, borderColor: 'var(--negative)', color: 'var(--negative)', fontSize: 13 }}>
           No se ha podido precalificar la ficha de {etiquetaCliente || 'este cliente'}: no se sabe qué datos
@@ -724,7 +859,17 @@ export default function AutoNuevo({
       <div style={cardStyle}>
         <CardHeader title="1 · El vehículo" sub="Marca, modelo, combustible y versión: todo del catálogo de Codeoscopic, gratis." />
         {fallo && <p style={{ color: 'var(--negative)', fontSize: 13 }}>{fallo}</p>}
+        {usarPrevio && previo && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}>
+            <span>
+              <strong>El mismo vehículo que en la variante guardada</strong>
+              {previo.matricula ? ` · ${previo.matricula}` : ''} · versión {previo.codigoVehiculo}. Corrige solo lo que haya cambiado.
+            </span>
+            <button type="button" onClick={elegirOtroCoche} style={{ ...btnStyle('sutil'), minHeight: 44 }}>Elegir otro vehículo</button>
+          </div>
+        )}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+          {!(usarPrevio && previo) && (<>
           <Campo etiqueta="Marca" falta={false}>
             <SelectorBuscable
               valor={marcaId}
@@ -774,6 +919,7 @@ export default function AutoNuevo({
               style={input}
             />
           </Campo>
+          </>)}
           <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
             <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
           </Campo>
@@ -802,7 +948,7 @@ export default function AutoNuevo({
             />
           </Campo>
           <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda="Lo elige el corredor; viaja marcado como supuesto.">
-            <select value={garaje} onChange={(e) => setGaraje(e.target.value)} style={input}>
+            <select value={garaje} onChange={(e) => { garajeElegido.current = true; setGaraje(e.target.value) }} style={input}>
               <option value="">Elige garaje</option>
               {garajes.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
             </select>
@@ -977,37 +1123,62 @@ export default function AutoNuevo({
       <div style={cardStyle}>
         <CardHeader
           title="2b · ¿Propietario o conductor distintos?"
-          sub="Por defecto se cotiza como si el tomador fuera también el dueño del coche y quien lo conduce. Marca solo lo que sea distinto de verdad."
+          sub={
+            Object.keys(figs).length > 0
+              ? 'Los papeles que el riesgo pone en otra ficha salen de esa ficha: aquí solo se pide su estado civil y lo que falte.'
+              : 'Por defecto se cotiza como si el tomador fuera también el dueño del coche y quien lo conduce. Marca solo lo que sea distinto de verdad.'
+          }
         />
-        <BloquePersona
-          etiqueta="El propietario del coche es otra persona o empresa"
-          activo={propietarioDistinto}
-          onActivo={setPropietarioDistinto}
-          persona={propietario}
-          onPersona={setPropietario}
-          civiles={civiles}
-          conCarnet={false}
-        />
+        {figs.propietario ? (
+          <BloqueFigura rol="propietario" nombre={variante?.nombres.propietario ?? null} faltan={variante?.faltan.propietario ?? null}
+            persona={figCorr.propietario} onPersona={(p) => setFigCorr((f) => ({ ...f, propietario: p }))} civiles={civiles} />
+        ) : (
+          <BloquePersona
+            etiqueta="El propietario del coche es otra persona o empresa"
+            activo={propietarioDistinto}
+            onActivo={setPropietarioDistinto}
+            persona={propietario}
+            onPersona={setPropietario}
+            civiles={civiles}
+            conCarnet={false}
+          />
+        )}
         <div style={{ height: 12 }} />
-        <BloquePersona
-          etiqueta="El conductor habitual es otra persona (hijo, empleado…)"
-          activo={conductorDistinto}
-          onActivo={setConductorDistinto}
-          persona={conductor}
-          onPersona={setConductor}
-          civiles={civiles}
-          conCarnet
-        />
+        {figs.conductor_habitual ? (
+          <BloqueFigura rol="conductor_habitual" nombre={variante?.nombres.conductor_habitual ?? null} faltan={variante?.faltan.conductor_habitual ?? null}
+            persona={figCorr.conductor_habitual} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_habitual: p }))} civiles={civiles} />
+        ) : (
+          <BloquePersona
+            etiqueta="El conductor habitual es otra persona (hijo, empleado…)"
+            activo={conductorDistinto}
+            onActivo={setConductorDistinto}
+            persona={conductor}
+            onPersona={setConductor}
+            civiles={civiles}
+            conCarnet
+          />
+        )}
         <div style={{ height: 12 }} />
-        <BloquePersona
-          etiqueta="Lo conduce también otra persona de forma habitual (conductor ocasional)"
-          activo={ocasionalDistinto}
-          onActivo={setOcasionalDistinto}
-          persona={ocasional}
-          onPersona={setOcasional}
-          civiles={civiles}
-          conCarnet
-        />
+        {figs.conductor_ocasional ? (
+          <BloqueFigura rol="conductor_ocasional" nombre={variante?.nombres.conductor_ocasional ?? null} faltan={variante?.faltan.conductor_ocasional ?? null}
+            persona={figCorr.conductor_ocasional} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_ocasional: p }))} civiles={civiles} />
+        ) : (
+          <BloquePersona
+            etiqueta="Lo conduce también otra persona de forma habitual (conductor ocasional)"
+            activo={ocasionalDistinto}
+            onActivo={setOcasionalDistinto}
+            persona={ocasional}
+            onPersona={setOcasional}
+            civiles={civiles}
+            conCarnet
+          />
+        )}
+        {figuraRepetida && (
+          <p style={{ color: 'var(--negative)', fontSize: 13, margin: '8px 0 0' }}>
+            La misma persona figura como conductor habitual y como ocasional. Quita el ocasional en la pantalla del
+            riesgo: la compañía rechaza dos personas con el mismo documento, y ese rechazo se paga.
+          </p>
+        )}
         {ocasionalDuplicado && (
           <p style={{ color: 'var(--negative)', fontSize: 13, margin: '8px 0 0' }}>
             El conductor ocasional tiene el mismo DNI que el habitual. Si conduce solo él, no declares un
@@ -1123,6 +1294,16 @@ export default function AutoNuevo({
             <ul style={{ fontSize: 13 }}>{resultado.faltan.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}</ul>
           </div>
         )}
+        {guardada && resultado.estado === 'idle' && (
+          <div style={{ ...cardStyle, marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 14 }}>
+              Ya hay una tarificación de {variante?.tarificacionId ? 'esta variante' : 'este riesgo'} ({new Date(guardada.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}, {guardada.precios.length} precios{guardada.fechaEfecto ? `, efecto ${guardada.fechaEfecto.split('-').reverse().join('/')}` : ''}).
+            </span>
+            <button type="button" onClick={() => retomar(guardada)} style={{ ...btnStyle('secundario'), minHeight: 44 }}>
+              Retomarla sin pagar
+            </button>
+          </div>
+        )}
         {resultado.estado === 'error' && (
           <p style={{ color: 'var(--negative)', fontSize: 13, marginTop: 12, whiteSpace: 'pre-wrap' }}>
             {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
@@ -1202,6 +1383,96 @@ function BloquePersona({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Un papel que ocupa OTRA ficha: su nombre, su estado civil y solo lo que falte en su ficha. */
+function BloqueFigura({
+  rol,
+  nombre,
+  faltan,
+  persona,
+  onPersona,
+  civiles,
+}: {
+  rol: RolExtra
+  nombre: string | null
+  /** `null` = no se pudo leer su ficha: se deja teclear todo, y lo tecleado manda. */
+  faltan: string[] | null
+  persona: PersonaForm
+  onPersona: (p: PersonaForm) => void
+  civiles: Opcion[]
+}) {
+  function set<K extends keyof PersonaForm>(campo: K, valor: PersonaForm[K]) {
+    onPersona({ ...persona, [campo]: valor })
+  }
+  const conCarnet = rol !== 'propietario'
+  const pedir = (c: CampoFigura) => (faltan === null ? c !== 'fechaCarnet' || conCarnet : faltan.includes(c))
+  const obligatorio = (c: CampoFigura) => faltan !== null && faltan.includes(c)
+  const sinFicha = faltan !== null && faltan.some((c) => !esCampoFigura(c))
+  return (
+    <div>
+      <p style={{ margin: 0, fontSize: 13 }}>
+        <strong>{ROTULO_FIGURA[rol]}:</strong> {nombre ?? 'sin nombre'} <span style={{ color: 'var(--muted)' }}>(de su ficha)</span>
+      </p>
+      {faltan === null && (
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--warning)' }}>
+          No se ha podido leer qué le falta en su ficha. Lo que teclees aquí manda; si falta algo, el servidor lo dirá sin cobrar.
+        </p>
+      )}
+      {sinFicha && (
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--negative)' }}>
+          Su ficha no se puede usar para cotizar ({faltan!.filter((c) => !esCampoFigura(c)).join(', ')}). Cámbialo en la pantalla del riesgo.
+        </p>
+      )}
+      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 8 }}>
+        <Campo etiqueta="Estado civil" falta={persona.estadoCivil === ''} ayuda="La ficha no lo guarda como lo pide la compañía: elígelo.">
+          <select value={persona.estadoCivil} onChange={(e) => set('estadoCivil', e.target.value)} style={input}>
+            <option value="">Elige estado civil</option>
+            {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+        </Campo>
+        {pedir('dni') && (
+          <Campo etiqueta="DNI/NIF" falta={obligatorio('dni') && !persona.dni.trim()}>
+            <input value={persona.dni} onChange={(e) => set('dni', e.target.value)} style={input} />
+          </Campo>
+        )}
+        {pedir('nombre') && (
+          <Campo etiqueta="Nombre" falta={obligatorio('nombre') && !persona.nombre.trim()}>
+            <input value={persona.nombre} onChange={(e) => set('nombre', e.target.value)} style={input} />
+          </Campo>
+        )}
+        {pedir('apellido1') && (
+          <Campo etiqueta="Primer apellido" falta={obligatorio('apellido1') && !persona.apellido1.trim()}>
+            <input value={persona.apellido1} onChange={(e) => set('apellido1', e.target.value)} style={input} />
+          </Campo>
+        )}
+        {pedir('fechaNacimiento') && (
+          <Campo etiqueta="Fecha de nacimiento" falta={obligatorio('fechaNacimiento') && !persona.fechaNacimiento}>
+            <input type="date" value={persona.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} style={input} />
+          </Campo>
+        )}
+        {pedir('sexo') && (
+          <Campo etiqueta="Sexo" falta={obligatorio('sexo') && persona.sexo === ''}>
+            <select value={persona.sexo} onChange={(e) => set('sexo', e.target.value as PersonaForm['sexo'])} style={input}>
+              <option value="">Elige</option>
+              <option value="hombre">Hombre</option>
+              <option value="mujer">Mujer</option>
+            </select>
+          </Campo>
+        )}
+        {pedir('telefono') && (
+          <Campo etiqueta="Móvil" falta={obligatorio('telefono') && !persona.telefono.trim()}>
+            <input value={persona.telefono} onChange={(e) => set('telefono', e.target.value)} style={input} />
+          </Campo>
+        )}
+        {conCarnet && pedir('fechaCarnet') && (
+          <Campo etiqueta="Fecha del carnet" falta={obligatorio('fechaCarnet') && !persona.fechaCarnet} ayuda="Es SU carnet, no el del tomador.">
+            <input type="date" value={persona.fechaCarnet} onChange={(e) => set('fechaCarnet', e.target.value)} style={input} />
+          </Campo>
+        )}
+      </div>
     </div>
   )
 }
