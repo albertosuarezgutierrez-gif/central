@@ -935,7 +935,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 Hereda el seguro anterior de la última petición pagada del MISMO vehículo (sin él la moto de Manuel Piña pasó de 200 a 360€); `sinSeguroAnterior` lo corta.
 asegura comprueba gratis la dirección de la empresa propietaria (tipo de vía) antes de cobrar. `emitirCompania/Modalidad/PrimaEur` → tras un precio real se prepara la emisión de ESE proyecto y llega el botón «Emitir».
 Lección cara: 7-8 tarificaciones de 0,50€ por campos que se podían ver gratis antes. Toda comprobación posible va ANTES del cobro.
-Allianz avisa «ESTA POLIZA QUEDARÁ BLOQUEADA … INCENDIO-ROBO SIN DAÑOS» ya en el precio; Alberto emitió por Avant2 y quedó bloqueada (desbloqueo con Allianz/sucursal 209).
+Allianz avisa «ESTA POLIZA QUEDARÁ BLOQUEADA … INCENDIO-ROBO SIN DAÑOS» ya en el precio; se emitió por Avant2 y quedó bloqueada (borrador a sucursal 209 + CTS Autos Sur, op. 279136633). REGLA de Alberto: con aviso de bloqueo, emitir primero la básica y ampliar después por suplemento con la documentación. `bloqueoCompania()` (module-seguros) lo enseña ANTES de emitir: en la parrilla, el panel de emisión, Telegram y la comparativa del cliente.
 Con `CORREDURIA_ASISTENTE_AUTONOMO` encendido (#4044) el precio se pide sin botón.
 
 ## (29/09/2026) Correduría: cuestionario IDD autorrellenado + «Emitir» en cada fila de «Qué verá el cliente»

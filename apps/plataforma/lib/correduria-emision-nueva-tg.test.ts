@@ -164,3 +164,9 @@ test('emisión encadenada: solo con proyecto real y SOLO ese proyecto; herencia 
   const her = tg.slice(tg.indexOf('async function historialHeredado'), tg.indexOf('async function historialHeredado') + 800)
   assert.match(her, /if \(!matricula \|\| !h\.matricula \|\|/)
 })
+
+test('bloqueo anunciado por la compañía: va ARRIBA del resumen, con el consejo de emitir la básica', () => {
+  const t = textoResumenNuevo({ ...R, avisos: ['Observaciones de la compañía: ESTA POLIZA QUEDARÁ BLOQUEADA POR LA SIGUIENTE RAZÓN: INCENDIO-ROBO SIN DAÑOS, Prima calculada'] })
+  assert.ok(t.indexOf('⛔') >= 0 && t.indexOf('⛔') < t.indexOf('Emisión NUEVA'))
+  assert.match(t, /INCENDIO-ROBO SIN DAÑOS.*básica/)
+})

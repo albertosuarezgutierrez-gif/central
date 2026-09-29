@@ -392,6 +392,7 @@ utilizable). Reglas que no se negocian al tocar esto:
     reintentar no la arregla) y **429 `tope`**. Ninguno es un rechazo del vendor: las dos frases
     dicen que **no se ha llamado a la compañía**, para que nadie vaya a buscar a Avant2 una póliza
     que no existe. Guardián: `test/regression-asegura-gasto-codeoscopic.test.ts`.
+- ⛔ **Precio que la compañía deja BLOQUEADO al emitir (29/09/2026, regla de Alberto).** Allianz lo anuncia ya en la tarificación («ESTA POLIZA QUEDARÁ BLOQUEADA POR LA SIGUIENTE RAZÓN: INCENDIO-ROBO SIN DAÑOS») y la moto de Manuel Piña se emitió por Avant2 sin verlo venir: quedó bloqueada hasta mandar fotos y documentación (sucursal 209 / CTS Autos Sur, cód. operación 279136633). **Lo normal es emitir primero la básica (sin la garantía que bloquea) para que el cliente pueda circular y pedir después la ampliación como suplemento con la documentación.** El aviso lo detecta UNA regla, `bloqueoCompania()` de `@central/module-seguros` (`bloqueo-compania.ts`), y sale ANTES de emitir: en la parrilla y la lista de precios de plataforma, en el panel de emisión, arriba del resumen de Telegram y, para el cliente, en su comparativa del portal (`textoBloqueoCliente`, pasa `revisarCopy`).
 - **Un solo intento.** `POST /insurances` no es idempotente: reintentar crea otro proyecto y otro
   cargo. La única repetición permitida es re-pedir el token tras un 401 (el vendor no tarificó).
 - **Los precios se pintan con su FIRMEZA.** En el fixture del sandbox ninguno de los 18 era firme, y

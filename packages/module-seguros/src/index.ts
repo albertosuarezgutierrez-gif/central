@@ -1,3 +1,5 @@
+export { bloqueoCompania, textoBloqueoCorredor, textoBloqueoCliente } from './bloqueo-compania.ts'
+
 export {
   KM_ANUALES_SUPUESTOS,
   KM_ANUALES_MAXIMO,
