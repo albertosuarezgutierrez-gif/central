@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-29T10:36:04Z",
-  "sha": "75b55282ce5daa22428bc60ab9fa7673fc376135",
+  "generadoEn": "2026-09-29T11:12:06Z",
+  "sha": "3356064569f9ca36d14f9f0d3e1dfe0e8b7fbfed",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4641,7 +4641,7 @@
           "exportada": true,
           "params": "{ o, caducado }: { o: OpcionCliente; caducado: boolean }",
           "retorno": null,
-          "linea": 107,
+          "linea": 106,
           "resumen": "🚨 Tres cosas que esta tarjeta no puede dejar de hacer: 1. **El distintivo de firmeza va POR TARJETA**, no en una nota al pie que se lee una vez. Hoy el 100 % de los precios son `estimado`, así que de"
         },
         {
@@ -4650,7 +4650,7 @@
           "exportada": true,
           "params": "{ o, actual }: { o: OpcionCliente; actual: ActualCliente | null }",
           "retorno": null,
-          "linea": 176,
+          "linea": 174,
           "resumen": "🚨 CUATRO estados por línea, no dos, y `no_consta` **nunca** se pinta como `igual`: una garantía que no se sabe si está es lo contrario de una que se sabe que está, y pintarlas igual convierte un huec"
         },
         {
@@ -4659,7 +4659,7 @@
           "exportada": true,
           "params": "{ motivo }: { motivo: SinEquivalente | null }",
           "retorno": null,
-          "linea": 222,
+          "linea": 220,
           "resumen": "Los DOS motivos NO se colapsan: llevan a decisiones distintas."
         },
         {
@@ -4668,7 +4668,7 @@
           "exportada": true,
           "params": "{ companiasEnPortada }: { companiasEnPortada: number }",
           "retorno": null,
-          "linea": 242,
+          "linea": 240,
           "resumen": "Art. 19 de la Ley 16/2018 y el «asesoramiento sobre la base de un análisis objetivo» del RDL 3/2020. Todo sale de `MEDIADOR` de `@central/module-seguros`: 🚨 **ni el nombre ni la clave DGSFP se teclea"
         },
         {
@@ -4677,7 +4677,7 @@
           "exportada": true,
           "params": "{ caducado, hayPolizaActual, presupuestoId, puedeNombrar, corredor }: { caducado: boolean; hayPolizaActual: boolean /** Se puede firmar la carta de nombramiento (no retirado ni emitido ni aceptado). */ presupuestoId: string; puedeNombrar: b",
           "retorno": null,
-          "linea": 290,
+          "linea": 288,
           "resumen": "🚨 DOS salidas con el MISMO peso visual, y esa simetría es el punto: si solo se ofrece «me cambio», el que dice que no se va con las manos vacías; con la carta de mediador, el «no» de hoy es el client"
         },
         {
@@ -4686,12 +4686,12 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 337
+          "linea": 335
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "acdf4ccd0862"
+      "hash": "54c64df86f31"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/DatosParaContratar.tsx",
@@ -4725,15 +4725,15 @@
           "nombre": "LogoCompania",
           "kind": "function",
           "exportada": true,
-          "params": "{ nombre, alto = 28 }: { nombre: string; alto?: number }",
+          "params": "{ nombre, alto = 32 }: { nombre: string; alto?: number }",
           "retorno": null,
-          "linea": 8,
-          "resumen": "El logo de la compañía en el presupuesto (mismos ficheros que el parte y la web). Decorativo: el nombre sigue escrito al lado, así que `alt=\"\"`. Sin logo → su inicial, nunca un hueco."
+          "linea": 9,
+          "resumen": "La compañía en el presupuesto: su LOGO, y el nombre escrito solo si no tenemos logo (Alberto, 29/09/2026: «los nombres aparecen dentro del logotipo»). El nombre va en `alt`/`title`, así que el lector "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99b65e913525"
+      "hash": "3ba1e73a8c8f"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/NombrarCorredor.tsx",
@@ -4824,7 +4824,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ed006c9d8d68"
+      "hash": "7fc20e06197a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/RevisaTusDatos.tsx",
@@ -4890,13 +4890,13 @@
           "exportada": false,
           "params": "{ lista, fila }: { lista: OpcionCliente[]; fila: (o: OpcionCliente) => React.ReactNode }",
           "retorno": null,
-          "linea": 258,
+          "linea": 260,
           "resumen": "Las que no dicen si incluyen lo marcado: también paginadas, dentro del plegable perezoso."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a13b0894cb2d"
+      "hash": "7632c5cb450b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/Recordatorios.tsx",
@@ -9707,21 +9707,39 @@
       "ambito": "apps/asegura-portal",
       "resumen": "El logo de cada compañía para la lista plegable del parte (24/09/2026). Los ficheros de `public/logos/` son los MISMOS que sirve la web pública (`apps/asegura-web/public/logos/`, que a su vez vienen del repo `asegura`): no se descarga ni se dibuja ninguno. Fidelidade y Asisa van en PNG porque es lo ",
       "exporta": [
-        "logoCompania"
+        "logoCompania",
+        "escalaLogo"
       ],
       "funciones": [
+        {
+          "nombre": "primeraPalabra",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string",
+          "retorno": "string",
+          "linea": 28
+        },
         {
           "nombre": "logoCompania",
           "kind": "function",
           "exportada": true,
           "params": "nombre: string",
           "retorno": "string | null",
-          "linea": 24
+          "linea": 37
+        },
+        {
+          "nombre": "escalaLogo",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "number",
+          "linea": 43,
+          "resumen": "Multiplicador de altura del logo; 1 si no tiene ajuste o no hay logo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2250e99d412f"
+      "hash": "6c126b7a59a9"
     },
     {
       "ruta": "apps/asegura-portal/lib/mejorar-precio.ts",
@@ -25081,7 +25099,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string | null = 'auto'",
           "retorno": "OpcionProducto[] | null",
-          "linea": 58,
+          "linea": 63,
           "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
         },
         {
@@ -25090,7 +25108,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 87,
+          "linea": 92,
           "resumen": "Lee `{ dtoCap?, dtoVentaCruzada? }` del cuerpo. `null` si no viene nada; lanza nada: lo raro es reparo."
         },
         {
@@ -25099,7 +25117,7 @@
           "exportada": true,
           "params": "base: unknown, pedidos: DescuentosPedidos, origen: 'catalogo' | 'formulario' = 'catalogo',",
           "retorno": "",
-          "linea": 109,
+          "linea": 114,
           "resumen": "PURO. Aplica los descuentos pedidos a las opciones que irán en el ReRate. Solo si esas opciones YA traen el campo (hoy, el catálogo de Allianz auto): meter un `dtoCap` en otra compañía sería declarar "
         },
         {
@@ -25108,7 +25126,7 @@
           "exportada": true,
           "params": "compania: string",
           "retorno": "OpcionProducto[] | null",
-          "linea": 164,
+          "linea": 169,
           "resumen": "Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate: ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo Allianz auto tiene esta captura."
         },
         {
@@ -25117,13 +25135,13 @@
           "exportada": true,
           "params": "campos: Record<string, unknown>, compania: string, opts?: { familiaAllianz?: boolean },",
           "retorno": "Record<string, unknown>",
-          "linea": 183,
+          "linea": 188,
           "resumen": "Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre cualquier default. Puro y testeable aparte de la ru"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "94654ff2e6dc"
+      "hash": "4254696999fd"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -78267,7 +78285,7 @@
           "exportada": false,
           "params": "v: string | string[] | undefined",
           "retorno": "string | null",
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "HogarNuevoPage",
@@ -78275,7 +78293,7 @@
           "exportada": true,
           "params": "{ params, searchParams, }: { params: Promise<{ id: string }> searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 44,
+          "linea": 45,
           "resumen": "**Presupuesto de hogar SIN póliza, DENTRO de `/correduria`.** Hasta el 07/09/2026 el botón «Presupuestar hogar (oportunidad nueva)» saltaba a `apps/asegura` — otro dominio, otro diseño, otra sesión. A"
         },
         {
@@ -78284,13 +78302,13 @@
           "exportada": false,
           "params": "{ clienteId, direccion, municipio, provincia, }: { clienteId: string direccion: string municipio: string provincia: string }",
           "retorno": null,
-          "linea": 181,
+          "linea": 197,
           "resumen": "El buscador de partida: por dirección o por referencia, en GET puro (sin JS)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9102d080b7d7"
+      "hash": "de83de8ea836"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/loading.tsx",
@@ -80284,7 +80302,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1db8f475c6b"
+      "hash": "e1633746a585"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Formacion.tsx",
@@ -82613,7 +82631,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6c515d25e371"
+      "hash": "242eb3f3d31e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/ImportarAvant2.tsx",
@@ -116520,6 +116538,35 @@
       "hash": "85d05886bd99"
     },
     {
+      "ruta": "apps/plataforma/lib/hogar-direccion-ficha.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "La dirección de la FICHA como punto de partida del presupuesto de hogar (29/09/2026). Alberto: «como en todos los de auto tenemos la dirección, le podemos dar precio del hogar». Es un PUNTO DE PARTIDA, no el riesgo: la dirección del tomador no tiene por qué ser la vivienda que se asegura (puede vivi",
+      "exporta": [
+        "direccionDeFicha"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpia",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": "string | null",
+          "linea": 21
+        },
+        {
+          "nombre": "direccionDeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContactoConDireccion | null | undefined",
+          "retorno": "DireccionDeFicha | null",
+          "linea": 26
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "23c2828f42e9"
+    },
+    {
       "ruta": "apps/plataforma/lib/hogar-nuevo-asegura.ts",
       "ambito": "apps/plataforma",
       "resumen": "El cliente del puerto de HOGAR SIN PÓLIZA («oportunidad nueva») de asegura. Hermano de `retarificar-asegura.ts` (auto y hogar CON póliza), con la misma disciplina de dinero: `pedir()` con Bearer, interpretadores PUROS separados de la llamada, y `gastoDesconocido` para no confundir un timeout con «no",
@@ -120324,7 +120371,7 @@
           "exportada": true,
           "params": "e: EstadoPresupuestoLista",
           "retorno": "boolean",
-          "linea": 373,
+          "linea": 374,
           "resumen": "Mientras no esté aceptado, retirado ni caducado, las necesidades se pueden escribir o corregir."
         },
         {
@@ -120333,7 +120380,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PresupuestoEnLista | null",
-          "linea": 380,
+          "linea": 381,
           "resumen": "Una fila ilegible NO se descarta: devuelve `null` y la lista entera se declara ilegible."
         },
         {
@@ -120342,7 +120389,7 @@
           "exportada": true,
           "params": "e: EstadoPresupuestoLista",
           "retorno": "",
-          "linea": 400,
+          "linea": 401,
           "resumen": "Qué se puede hacer con él. `enlazado` NO es `enviado`: se abrió WhatsApp y no consta que saliera, así que se ofrece «Ya lo he mandado» y se deja volver a avisar."
         },
         {
@@ -120351,7 +120398,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "",
-          "linea": 425,
+          "linea": 426,
           "resumen": "La frase del desenlace de «Avisar». Ningún fallo se lee como «ha salido»."
         },
         {
@@ -120360,7 +120407,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 445
+          "linea": 446
         },
         {
           "nombre": "cotizacionIdDe",
@@ -120368,13 +120415,13 @@
           "exportada": true,
           "params": "guardado: unknown",
           "retorno": "string | null",
-          "linea": 472,
+          "linea": 473,
           "resumen": "El id de la cotización guardada (`guardado` de la respuesta de cotizar). `null` = no quedó guardada: sin él no hay de qué preparar un presupuesto ni a qué pedir la emisión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dc3608187b7e"
+      "hash": "807a40cd1fd3"
     },
     {
       "ruta": "apps/plataforma/lib/pricing-calendar.ts",
@@ -158362,6 +158409,8 @@
       "exporta": [
         "claveCobertura",
         "clasificarCoberturas",
+        "esGarantiaDeLey",
+        "etiquetasGarantiasDeLey",
         "garantiasDeOpciones",
         "asistenciaAmpliada",
         "asistenciaHogarAmpliada",
@@ -158399,12 +158448,29 @@
           "resumen": "Lleva las coberturas de UN precio al catálogo del ramo. Todas las claves salen en el resultado: `si` (reconocida e incluida) · `no` (reconocida y marcada NO incluida) · `no_consta` (el resto). Varias "
         },
         {
+          "nombre": "esGarantiaDeLey",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias, clave: string",
+          "retorno": "boolean",
+          "linea": 221
+        },
+        {
+          "nombre": "etiquetasGarantiasDeLey",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias | null",
+          "retorno": "string[]",
+          "linea": 226,
+          "resumen": "Etiquetas de las garantías de ley del ramo, en el orden del catálogo (para «incluida siempre»)."
+        },
+        {
           "nombre": "garantiasDeOpciones",
           "kind": "function",
           "exportada": true,
           "params": "opciones: readonly OpcionProductoLegible[] | null | undefined",
           "retorno": "Record<string, EstadoGarantia>",
-          "linea": 227,
+          "linea": 251,
           "resumen": "PURO. Lo que las opciones afirman de cada garantía; lo que no afirman, no sale (no es un «no»)."
         },
         {
@@ -158413,7 +158479,7 @@
           "exportada": true,
           "params": "lista: readonly CoberturaParaClasificar[] | null, opciones?: readonly OpcionProductoLegible[] | null,",
           "retorno": "EstadoGarantia",
-          "linea": 258,
+          "linea": 282,
           "resumen": "Si el precio lleva asistencia AMPLIADA. PURO. Manda la opción con la que se tarificó (es la elección real); si no la hay, el texto de la cobertura. `no` solo con una señal explícita: la opción dice «E"
         },
         {
@@ -158422,7 +158488,7 @@
           "exportada": false,
           "params": "c: CoberturaParaClasificar",
           "retorno": "boolean",
-          "linea": 285,
+          "linea": 309,
           "resumen": "Una cobertura que el vendor manda SIN decir si va incluida y cuyo texto la declara «(opcional)»: es un extra que no está en este precio (Fidelidade hogar: «TODO RIESGO ACCIDENTAL (OPCIONAL)…», `inclui"
         },
         {
@@ -158431,7 +158497,7 @@
           "exportada": true,
           "params": "lista: readonly CoberturaParaClasificar[] | null",
           "retorno": "EstadoGarantia",
-          "linea": 290,
+          "linea": 314,
           "resumen": "PURO. Asistencia en el hogar ampliada según el texto (Fidelidade: «ASISTENCIA HOGAR AMPLIADA/BÁSICA»)."
         },
         {
@@ -158440,7 +158506,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "",
-          "linea": 309,
+          "linea": 333,
           "resumen": "Las partes de una cobertura cuyo texto las ENUMERA (Occident: «» Animales cinegéticos y domésticos: Incluida. : CONTRATADA.» Fenómenos atmosféricos con franquicia: Franquicia 600 €. : CONTRATADA»). PU"
         },
         {
@@ -158449,7 +158515,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null",
           "retorno": "string[]",
-          "linea": 333,
+          "linea": 357,
           "resumen": "Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones."
         },
         {
@@ -158458,7 +158524,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "RamoGarantias | null",
-          "linea": 340
+          "linea": 364
         },
         {
           "nombre": "descuentosDeOpciones",
@@ -158466,13 +158532,13 @@
           "exportada": true,
           "params": "opciones: readonly OpcionProductoLegible[] | null | undefined",
           "retorno": "DescuentoComercial[] | null",
-          "linea": 353,
+          "linea": 377,
           "resumen": "PURO. Los descuentos comerciales de un precio, leídos de sus opciones (29/09/2026). Medido: Allianz «Descuento comercial % (CAP)» y «(venta cruzada)», Occident y Generali «Descuento comercial». `null`"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4ccd2f772f45"
+      "hash": "c452b018b23b"
     },
     {
       "ruta": "packages/module-seguros/src/cliente-edicion.ts",
@@ -160472,7 +160538,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias | null, interruptores: readonly InterruptorGarantia[]",
           "retorno": "string[]",
-          "linea": 82
+          "linea": 83
         },
         {
           "nombre": "diferenciasDeOpcion",
@@ -160480,13 +160546,13 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, opcion: OpcionFiltrable, opciones: readonly OpcionFiltrable[],",
           "retorno": "DiferenciasOpcion | null",
-          "linea": 98,
+          "linea": 99,
           "resumen": "Qué separa a ESTA opción de las demás de la misma parrilla (29/09/2026): «no incluye» y «sin confirmar» solo en las garantías en las que las opciones NO dicen lo mismo. Sirve para que dos precios que "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0e8eb0367b9"
+      "hash": "5e0792fd9c47"
     },
     {
       "ruta": "packages/module-seguros/src/formacion.ts",
@@ -162494,13 +162560,13 @@
           "exportada": true,
           "params": "p: PresupuestoParaSeguimiento, ahora: Date",
           "retorno": "EtapaSeguimiento | null",
-          "linea": 110,
+          "linea": 111,
           "resumen": "La etapa de la que toca avisar ahora, o `null`. Un aviso por etapa y presupuesto, nunca dos. Solo presupuestos que de verdad salieron (`enviadoAt`; un WhatsApp solo «enlazado» no consta como enviado),"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fe34e77ebd02"
+      "hash": "622c4f36ffac"
     },
     {
       "ruta": "packages/module-seguros/src/presupuesto-cliente.ts",
@@ -169799,7 +169865,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3970,
-    "funciones": 13112
+    "archivos": 3971,
+    "funciones": 13118
   }
 }
