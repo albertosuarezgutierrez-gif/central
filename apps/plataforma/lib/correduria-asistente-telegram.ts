@@ -54,7 +54,7 @@ import {
   textoResumen, urlPoliza, type ResumenEmision,
 } from './correduria-emision-tg'
 import { textoCasillaFigura } from './figuras-emision-texto'
-import { decidirEfecto, elegirPrecioNuevo, esResumenNuevo, fechaEfectoDelPrecio, figurasPendientes, huellaResumenNuevo, leerFechaEfecto, precioCaducado, ramoNuevoValido, textoResumenNuevo, type ResumenEmisionNueva } from './correduria-emision-nueva-tg'
+import { correoDeEmision, decidirEfecto, elegirPrecioNuevo, esResumenNuevo, fechaEfectoDelPrecio, figurasPendientes, huellaResumenNuevo, leerFechaEfecto, precioCaducado, ramoNuevoValido, textoResumenNuevo, type ResumenEmisionNueva } from './correduria-emision-nueva-tg'
 import {
   apagado, clasificarDestino, costeConservador, ERROR_NO_UUID, hoyMadrid, memoriaIds, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
   leerArgumentos, leerClasificacion, MAX_TURNOS_DIA, MAX_VUELTAS, paraIA, preguntaNota, reglaConDatoPersonal,
@@ -582,8 +582,15 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
   if (of.primaEur === null || !ef.efecto) {
     return { texto: `NO SE PUEDE EMITIR por aquí: la compañía no ha devuelto ${of.primaEur === null ? 'la prima' : 'la fecha de efecto'} legible. Míralo en la intranet: ${urlCliente(clienteId)}`, ok: true }
   }
-  const ficha = await fichaAsegura(clienteId).catch(() => null)
+  const [ficha, portal] = await Promise.all([
+    fichaAsegura(clienteId).catch(() => null),
+    // A qué correo irá el aviso de emisión: la misma lectura que el bloque «Portal del cliente» de la ficha.
+    portalAsegura(clienteId)
+      .then((x) => { const p = interpretarPortal(x.status, x.json); return p.estado === 'ok' ? p.portal : null })
+      .catch(() => null),
+  ])
   const revisar = avisoAlEmitir(await supuestosDelPrecio(clienteId, ramo, guardada.projectId))
+  const identidad = ficha?.estado === 'ok' ? ficha.ficha.identidad : null
   const r: ResumenEmisionNueva = {
     tipo: 'nuevo',
     clienteId,
@@ -610,6 +617,13 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     figurasConfirmadas: [],
     cambiosFiguras: [],
     revisarAlEmitir: revisar,
+    tomadorDni: identidad ? identidad.dniEnmascarado : null,
+    fechaMatriculacion: guardada.vehiculo?.fechaMatriculacion ?? null,
+    kmAnuales: guardada.vehiculo?.kmAnuales ?? null,
+    anterior: guardada.historialPrevio
+      ? { companiaCodigo: guardada.historialPrevio.companiaCodigo, aniosAsegurado: guardada.historialPrevio.aniosAsegurado, aniosSinSiniestros: guardada.historialPrevio.aniosSinSiniestros }
+      : null,
+    correo: correoDeEmision(portal),
   }
   return enviarPropuestaNueva(r, turnoId)
 }

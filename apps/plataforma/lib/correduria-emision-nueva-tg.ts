@@ -148,6 +148,38 @@ export interface ResumenEmisionNueva {
   casillasFiguras?: string[]
   /** Lo que el precio SUPUSO y se confirma ahora con el cliente (`avisoAlEmitir`). No es de la compañía. */
   revisarAlEmitir?: string | null
+  /** DNI del tomador enmascarado («*****335B»): con dos homónimos, es lo que dice de QUIÉN es la ficha. */
+  tomadorDni?: string | null
+  /** El vehículo con el que se pidió el precio. `null` = no consta en la tarificación guardada. */
+  fechaMatriculacion?: string | null
+  kmAnuales?: number | null
+  /** El seguro anterior declarado (da el bonus). `null` = no consta. */
+  anterior?: { companiaCodigo: string; aniosAsegurado: number; aniosSinSiniestros: number } | null
+  /** A qué dirección irá el correo de emisión, o por qué no saldrá. `null` = no se ha podido comprobar. */
+  correo?: CorreoEmision | null
+}
+
+/** El correo que manda asegura al emitir: a la dirección con la que el cliente entra al portal, o ninguno. */
+export type CorreoEmision = { destino: string } | { destino: null; motivo: string }
+
+/** «juan@gmail.com» → «j***@gmail.com». Un valor sin forma de correo no se enseña. */
+export function enmascararEmail(email: string): string | null {
+  const m = email.trim().match(/^([^@\s]+)@([^@\s]+\.[^@\s]+)$/)
+  return m ? `${m[1].slice(0, 1)}***@${m[2]}` : null
+}
+
+/**
+ * PURO: la MISMA regla que `tras-emision.ts` de asegura (sale a `emailInvitacion` salvo que su correo no
+ * lleve a SU ficha o no haya). Con `null` (no se pudo leer el portal) se devuelve `null`: no se afirma nada.
+ */
+export function correoDeEmision(portal: { estado: string; emailInvitacion: string | null } | null): CorreoEmision | null {
+  if (!portal) return null
+  if (portal.estado === 'sin_email') return { destino: null, motivo: 'la ficha no tiene correo' }
+  if (portal.estado === 'ilegible') return { destino: null, motivo: 'su correo está cifrado y no se puede leer' }
+  if (portal.estado === 'ambiguo' || portal.estado === 'resuelve_a_otra') return { destino: null, motivo: 'su correo lleva a otra ficha (duplicado sin resolver)' }
+  if (portal.estado === 'no_comprobado' || !portal.emailInvitacion) return null
+  const destino = enmascararEmail(portal.emailInvitacion)
+  return destino ? { destino } : null
 }
 
 function canonico(v: unknown): string {
@@ -206,7 +238,15 @@ export function textoResumenNuevo(r: ResumenEmisionNueva): string {
     ...(bloqueo !== null ? [`<b>${esc(textoBloqueoCorredor(bloqueo))}</b>`, ''] : []),
     `🛡️ <b>Emisión NUEVA lista para confirmar</b> · ${r.ramo === 'moto' ? 'moto' : 'coche'}`,
     '',
-    `Cliente: ${oNoConsta(r.clienteNombre)} · vehículo <b>${esc(r.matricula)}</b>`,
+    `Cliente: ${oNoConsta(r.clienteNombre)}${r.tomadorDni !== undefined ? ` · DNI ${oNoConsta(r.tomadorDni)}` : ''} · vehículo <b>${esc(r.matricula)}</b>`,
+    ...(r.fechaMatriculacion !== undefined
+      ? [`Matriculación <b>${fecha(r.fechaMatriculacion)}</b>${typeof r.kmAnuales === 'number' ? ` · ${r.kmAnuales.toLocaleString('es-ES', { useGrouping: 'always' })} km/año` : ''} <i>(con estos datos se pidió el precio: si no son los reales, no emitas)</i>`]
+      : []),
+    ...(r.anterior !== undefined
+      ? [r.anterior
+        ? `Seguro anterior declarado: compañía ${esc(r.anterior.companiaCodigo)} · ${r.anterior.aniosAsegurado} años asegurado · ${r.anterior.aniosSinSiniestros} sin siniestros`
+        : 'Seguro anterior declarado: <i>no consta</i>']
+      : []),
     `Tarificado ${fecha(r.tarificadaEn)}`,
     `<b>${esc(r.compania)}</b> · ${esc(r.categoria)}${r.modalidad ? ` · ${esc(r.modalidad)}` : ''}${r.producto ? ` · ${esc(r.producto)}` : ''}`,
     `Prima confirmada por la compañía: <b>${prima}</b>${cambio} · ${esc(r.firmeza)}`,
@@ -220,7 +260,13 @@ export function textoResumenNuevo(r: ResumenEmisionNueva): string {
     ...figuras,
     '',
     `Proyecto ${esc(r.projectId)} · precio ${esc(r.offerId)}`,
-    '📧 Al emitir, el cliente recibe un correo con su nuevo seguro (con el PDF si la compañía ya lo ha mandado; si no, le llega después) y lo ve en su portal.',
+    r.correo === undefined
+      ? '📧 Al emitir, el cliente recibe un correo con su nuevo seguro (con el PDF si la compañía ya lo ha mandado; si no, le llega después) y lo ve en su portal.'
+      : r.correo === null
+        ? '📧 <b>No he podido comprobar a qué correo irá el aviso</b>: al emitir puede que se le mande uno con su nuevo seguro.'
+        : 'motivo' in r.correo
+          ? `📧 Al emitir <b>NO</b> se le manda correo: ${esc(r.correo.motivo)}.`
+          : `📧 Al pulsar Emitir le llega un correo a <b>${esc(r.correo.destino)}</b> con compañía, cobertura, efecto y prima (y la póliza en PDF si la compañía ya la ha mandado; si no, después). Pulsar es tu OK a ese correo.`,
     `⚠️ Emitir es IRREVERSIBLE: crea el contrato con la compañía. El botón vale ${MINUTOS_PROPUESTA} minutos y un solo uso.`,
   ].join('\n')
 }
