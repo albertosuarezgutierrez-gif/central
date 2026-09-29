@@ -270,9 +270,11 @@ academias…) que conoce mejor desde el trato diario con clientes.
 > MCP de OpenSEO (mercado España), estimaciones de tráfico, no GSC. `acierto.com` está BLOQUEADO al
 > fetch desde la sesión: su web no se ha leído, solo su huella en Google.
 
-**Quién es.** [Web 29/09] Del grupo alemán **Bauer Media** desde enero de 2021
-([LinkedIn](https://www.linkedin.com/company/acierto-com/)). Es un **comparador-correduría online**,
-no una correduría tradicional con comparador añadido.
+**Quién es.** [Web 29/09] Lo compró el grupo alemán **Bauer Media** a finales de 2020, pero en
+**diciembre de 2024 sus fundadores (Carlos y Mario Brüggemann) lo recompraron**
+([Infobae](https://www.infobae.com/espana/agencias/2024/12/05/los-fundadores-del-comparador-aciertocom-compran-el-negocio-a-bauer-media/)).
+Su LinkedIn aún dice Bauer: está desfasado. Es un **comparador-correduría online**, no una
+correduría tradicional con comparador añadido.
 
 **Huella SEO.** [OpenSEO 29/09] **~436.000 visitas orgánicas/mes estimadas, 17.151 keywords**. De las
 60 que más tráfico le dan (sin su marca):
@@ -329,6 +331,45 @@ Riesgos: el dato es CARO de mantener (cada cambio de condicionado) y un «incluy
 responsabilidad de la correduría → solo con fuente por celda y fecha, y tres estados (incluye / no
 incluye / **sin revisar**), nunca un hueco pintado como «no cubre». Empezar por **un ramo (hogar) y
 las 4-5 compañías reales de la cartera**, no por «todas».
+
+### 2.8 🆕 Rastreator y el resto del tablero de comparadores — 29/09/2026
+
+**Quién ocupa Google en «comparador de seguros»** [OpenSEO 29/09] (12 consultas de comparador y
+«barato» de coche, moto, hogar, salud, vida, decesos, mascotas y comunidades; tráfico estimado que
+cada dominio saca de ESAS consultas, no su tráfico total):
+
+| Dominio | Qué es | Tráfico de esas consultas | Posición típica |
+|---|---|---|---|
+| **acierto.com** | Comparador-correduría (§2.7) | ~17.800 | nº 1 en comparador coche/moto/hogar |
+| **rastreator.com** | Comparador-correduría, RVU (Reino Unido) | ~9.300 | nº 2-3 en todo; nº 4 en «seguro hogar barato» |
+| qualitasauto.com | Aseguradora directa | ~7.000 | nº 1 en «seguro coche barato» |
+| **kelisto.es** | Comparador multiproducto (seguros, finanzas, telco, energía) | ~5.300 | nº 2-3 en comparador genérico y coche |
+| **seguros.check24.es** | Comparador alemán, correduría propia en España desde 2020 | ~3.900 | nº 3-4 en moto/hogar/coche |
+| arpem.com | El comparador más veterano (2002) | ~2.300 | nº 4-5 — pero **en liquidación** según Füture: su hueco queda libre |
+| caser, AXA, Línea Directa, Verti, Mutua, Terránea, El Corte Inglés | Aseguradoras y bancaseguros con su propio «calcula tu precio» | 200-1.900 c/u | 2-20 |
+| doctori, segurojoven, polizamedica, selectra, cleverea, ocu.org, rankia | Nicho (salud, jóvenes), energía o contenido | <600 c/u | 5-50 |
+
+**Rastreator en detalle.** [Web 29/09] Creado en 2009 por Admiral + Mapfre; en 2020-21 lo compró
+**RVU** (grupo ZPG, dueño de Uswitch) por ~560 M€
+([elEconomista](https://www.eleconomista.es/empresas-finanzas/noticias/10966863/12/20/Admiral-y-Mapfre-venden-su-participacion-en-Rastreator-y-otros-comparadores-del-grupo-por-unos-560-millones.html)).
+Es **correduría** y compara también telefonía, préstamos, energía y viajes. [OpenSEO 29/09]
+**~1.215.000 visitas orgánicas/mes estimadas y 29.885 keywords: casi 3 veces Acierto.** Mismo modelo
+(multiproducto, money page por ramo, fichas de marca). El desglose por secciones no se pudo sacar:
+**se agotaron los créditos de OpenSEO** a mitad del estudio.
+
+**Lo que dice el tablero, y lo que NO dice:**
+1. **Es un duopolio en coche/moto/hogar** (Rastreator + Acierto), con Kelisto y Check24 detrás y las
+   aseguradoras directas pujando por su marca. Nada que hacer ahí por SEO, lo que confirma §2.1.
+2. **En hogar compiten ya las aseguradoras con su marca** (Caser nº 2, El Corte Inglés nº 5,
+   Verti nº 6, Mutua nº 3 en «comparador seguro hogar»). Hogar por palabra genérica tampoco se gana:
+   hogar se gana por intención de problema (§2.2), no por «comparador».
+3. De las 12 consultas, **en 6 (salud, vida, decesos, mascotas, comunidades y la variante de hogar
+   «comparar») ningún dominio de la tabla salió posicionado**. Eso NO prueba que no haya comparador
+   de esos ramos (§2.3 ya se equivocó con comunidades): puede ser volumen bajo o que el top-25 sean
+   otros sitios. Es la pista a mirar en la próxima pasada, con créditos.
+4. **Arpem cerrando** deja un dominio veterano con autoridad que desaparecerá del top-5 de
+   «comparador seguros». No es un hueco para nosotros (no tenemos la autoridad para heredarlo), pero
+   sí para Check24 y Kelisto.
 
 ---
 
@@ -411,6 +452,7 @@ si en unos meses (con Search Console dando datos) fontanero no acompaña, el mis
 
 ## Bitácora
 
+- **29/09/2026 (2ª pasada)** — §2.8 nuevo: Rastreator (RVU, ~1,2 M visitas/mes est.) y tablero de comparadores por SERP (Acierto, Rastreator, Kelisto, Check24, Arpem en liquidación, aseguradoras directas). Corregido §2.7: Acierto volvió a sus fundadores en dic/2024, ya no es de Bauer. Créditos de OpenSEO agotados a mitad: falta el desglose por secciones de Rastreator/Kelisto/Check24.
 - **29/09/2026** — §2.7 nuevo: Acierto.com medido con OpenSEO (436k visitas/mes est., 41 % préstamos, hogar ~1 %; patrón copiable = fichas por compañía) y viabilidad del comparador: tarificador web de Avant2 existe pero cuesta 0,50 €/consulta; se recomienda comparador de GARANTÍAS sin precio, empezando por hogar. Proyectos y Seguros (J0067) resulta estar detrás de la OCU (tarificador en marca blanca), no de Acierto.
 - **15/09/2026** — Alberto: «hay que estar abierto a todo, hay que buscar el hueco que dejan las
   grandes». Primera vez que esta sesión usa búsqueda web real (`WebSearch`, no el `Bash` sin
