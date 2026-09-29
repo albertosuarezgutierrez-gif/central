@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-29T19:39:21Z",
-  "sha": "9bc153d9ad8c88a67bf1feac78ad432ac3e1fdf0",
+  "generadoEn": "2026-09-29T20:19:20Z",
+  "sha": "2aed370f381c680ded03ac9408be769bdad62891",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12616,7 +12616,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7c938f6b6878"
+      "hash": "241c84d0abb5"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
@@ -12696,7 +12696,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e0b32e216148"
+      "hash": "d33656be3714"
     },
     {
       "ruta": "apps/asegura-web/app/siniestro/page.tsx",
@@ -13659,7 +13659,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8e27510572ce"
+      "hash": "a6922b875ae8"
     },
     {
       "ruta": "apps/asegura-web/lib/ventana-renovacion.ts",
@@ -83287,7 +83287,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 180
+          "linea": 181
         },
         {
           "nombre": "cuentaDecidida",
@@ -83295,7 +83295,7 @@
           "exportada": false,
           "params": "cuenta: CuentaConocida | null, cuentaOk: boolean, iban: string",
           "retorno": "boolean",
-          "linea": 225,
+          "linea": 226,
           "resumen": "sin cuenta conocida no hay nada que confirmar (si la compañía la exige, su 400 vuelve como hueco y entonces sí se teclea). PURO, para poder verlo fallar."
         },
         {
@@ -83304,7 +83304,7 @@
           "exportada": false,
           "params": "{ cuenta, aviso, obligatoria, cuentaOk, onCuentaOk, iban, onIban, }: { cuenta: CuentaConocida | null aviso: AvisoCuenta | null obligatoria: boolean cuentaOk: boolean onCuentaOk: (v: boolean) => void iban: string onIban: (v: string) => void ",
           "retorno": null,
-          "linea": 238,
+          "linea": 239,
           "resumen": "La cuenta de cargo del recibo. 🚨 «iban importante siempre confirmar» (Alberto, 12/09/2026): la que la ficha ya conoce se pinta ENMASCARADA con su origen y una casilla que el corredor marca a mano; la"
         },
         {
@@ -83313,7 +83313,7 @@
           "exportada": true,
           "params": "{ projectId, offerId }: { projectId: string; offerId: string }",
           "retorno": null,
-          "linea": 322,
+          "linea": 323,
           "resumen": "Coberturas de la oferta confirmada, bajo demanda (25/09/2026). Gratis: es una lectura en el vendor. `incluida: null` NO es «no incluida»: el vendor dice que entonces hay que leer el texto, así que se "
         },
         {
@@ -83322,7 +83322,7 @@
           "exportada": true,
           "params": "{ tarificacionId, compania, categoria, primaEur, producto = null, fechaEfecto = null, ofertaImportada = null, sustituye = true, ramo = null, onCerrar, }: { /** Ausente cuando la oferta viene importada de Avant2: ahí no hay cotización nuestr",
           "retorno": null,
-          "linea": 371
+          "linea": 372
         }
       ],
       "tablas": [
@@ -83330,7 +83330,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "ede8aaea4423"
+      "hash": "74b2aa5ea3d6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/ImportarAvant2.tsx",
@@ -83365,7 +83365,7 @@
           "exportada": true,
           "params": "{ params, searchParams, }: { params: Promise<{ id: string }> searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 48,
+          "linea": 49,
           "resumen": "**Retarificar, DENTRO de `/correduria`.** Hasta el 03/09/2026 esto era un enlace ↗ a `apps/asegura`, que es otro dominio con otra sesión: en producción, `GET /cartera/poliza/9588dad8-… → 307 /login`. "
         },
         {
@@ -83374,7 +83374,7 @@
           "exportada": false,
           "params": "r: RespuestaPrecalificacion",
           "retorno": "string",
-          "linea": 477,
+          "linea": 478,
           "resumen": "Por qué no hay precalificación, en la frase que dice DÓNDE mirar. Nunca se degrada a «la ficha no tiene datos»: la póliza sí trae marca, modelo y código postal — lo que ha fallado es leerlos. El corre"
         },
         {
@@ -83383,7 +83383,7 @@
           "exportada": false,
           "params": "{ supuestos, }: { supuestos: Array<{ campo: string; valor: unknown; porque: string; optimista?: boolean; oculto?: boolean }> }",
           "retorno": null,
-          "linea": 497,
+          "linea": 498,
           "resumen": "Lo que se ha SUPUESTO para poder pedir precio. Va ANTES del botón a propósito: es la letra pequeña de la cifra, y verla después no sirve de nada."
         },
         {
@@ -83392,7 +83392,7 @@
           "exportada": false,
           "params": "garajes: RespuestaCatalogo, civiles: RespuestaCatalogo",
           "retorno": "string | null",
-          "linea": 528,
+          "linea": 529,
           "resumen": "El motivo por el que no se puede cotizar, o `null` si se puede."
         },
         {
@@ -83401,7 +83401,7 @@
           "exportada": false,
           "params": "{ sub, polizaId, clienteId }: { sub: string; polizaId?: string; clienteId?: string }",
           "retorno": null,
-          "linea": 545
+          "linea": 546
         },
         {
           "nombre": "Fila",
@@ -83409,7 +83409,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, nota, }: { etiqueta: string valor: string | null /** La letra pequeña del dato: de dónde sale, o por qué no está. */ nota?: string | null }",
           "retorno": null,
-          "linea": 569
+          "linea": 570
         },
         {
           "nombre": "cadena",
@@ -83417,7 +83417,7 @@
           "exportada": false,
           "params": "v: string | string[] | undefined",
           "retorno": "string | null",
-          "linea": 615,
+          "linea": 616,
           "resumen": "El marco de la pantalla, con **el CSS que el retarificador da por supuesto**. El componente se trajo de `apps/asegura` tal cual (tres pasos, combustible antes de versión, banners, badges) y esas clase"
         },
         {
@@ -83426,7 +83426,7 @@
           "exportada": false,
           "params": "r: { estado: 'ambigua' | 'no_encontrado' | 'direccion_ilegible' } | { estado: 'error'; motivo: string }",
           "retorno": "string",
-          "linea": 620
+          "linea": 621
         },
         {
           "nombre": "Marco",
@@ -83434,15 +83434,12 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 633
+          "linea": 634
         }
       ],
-      "tablas": [
-        "lucide",
-        "next"
-      ],
+      "tablas": [],
       "rutaApi": null,
-      "hash": "2aa2fde46d2a"
+      "hash": "fd43ac2d8499"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/PrepararPresupuesto.tsx",
