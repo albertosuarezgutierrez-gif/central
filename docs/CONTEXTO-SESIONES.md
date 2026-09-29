@@ -924,7 +924,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (29/09/2026) Correduría: EMPRESA (CIF) como propietaria del vehículo en moto y auto
 - Desde el riesgo de la oportunidad, una ficha `tipo_persona = juridica` puede ocupar el papel **propietario**: viaja como `JuridicalPerson_V1` (`Cif` + razón social + contacto/dirección de su ficha, `construirEmpresa` en `persona.ts`). CIF validado con dígito de control antes de pagar. Nunca conductor (el vendor solo admite Dni/Nie/Passport ahí): se corta gratis.
 - 🚧 **Sin verificar contra Codeoscopic** qué más exige `owner` jurídico: la primera cotización real (Manuel Antonio Piña + Global 2, oportunidad moto) lo dirá.
-- **Tomador empresa también** (auto y moto): ficha jurídica en el papel de tomador → `holder` `Cif`, propietaria por defecto la misma empresa, y exige conductor habitual persona en el riesgo (se corta gratis si falta). Así cada papel se puede alternar empresa/particular para comparar precios. Hogar no declara `owner` distinto; vida/salud/decesos, asegurado = persona.
+- Tomador empresa también (auto y moto): ficha jurídica en el papel de tomador → `holder` `Cif`, propietaria por defecto la misma empresa, y exige conductor habitual persona en el riesgo (se corta gratis si falta). Así cada papel se puede alternar empresa/particular para comparar precios. Hogar no declara `owner` distinto; vida/salud/decesos, asegurado = persona.
 
 ## (29/09/2026) Egress Supabase: /correduria ya no baja listas enteras para pintar contadores
 Diff de pg_stat_statements 11:20→12:51 UTC: las dos consultas top eran `leadsCompetencia` (~3.556 filas, ~1,4 MB)
