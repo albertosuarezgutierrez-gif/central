@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, garantiasDeOpciones, noReconocidas } from './catalogo-garantias.ts'
+import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, asistenciaHogarAmpliada, garantiasDeOpciones, noReconocidas } from './catalogo-garantias.ts'
 import { filtrarPorGarantias, interruptoresGarantias } from './filtro-garantias.ts'
 
 // Nombres REALES de coberturas de moto de Codeoscopic (presupuesto de Manuel, 28/09/2026).
@@ -127,4 +127,38 @@ test('opciones del producto: sustitución, retirada de carné y multas, con los 
   assert.equal(g.porClave.vehiculo_sustitucion, 'no')
   assert.equal(g.porClave.conductor, 'si')
   assert.ok(!('vehiculo_sustitucion' in clasificarCoberturas('hogar', null, [{ etiqueta: 'Vehículo de sustitución', valor: 'No' }]).porClave))
+})
+
+test('hogar: todo riesgo, restauración estética, animales y asistencia básica/ampliada con los textos REALES de Allianz y Fidelidade', () => {
+  // Fidelidade: el todo riesgo llega dos veces, una marcada «no» y otra sin marcar con «(OPCIONAL)».
+  const fidelidade = [
+    { nombre: 'Todo Riesgo Accidental', incluida: false, texto: null },
+    { nombre: 'Todo Riesgo Accidental', incluida: null, texto: 'TODO RIESGO ACCIDENTAL (OPCIONAL)  - Franquicia: 150€/siniestro.' },
+    { nombre: 'Restauración estética', incluida: true, texto: 'RESTAURACIÓN ESTÉTICA. Restauración estética continente.' },
+    { nombre: 'Animales domésticos', incluida: true, texto: 'ANIMALES DE COMPAÑÍA (CONTENIDO)' },
+    { nombre: 'Asistencia en el hogar', incluida: true, texto: 'ASISTENCIA HOGAR BÁSICA. Asistencia 24h: reparaciones y emergencias.' },
+    { nombre: 'Asistencia en viaje / Accidentes', incluida: false, texto: null },
+  ]
+  const f = clasificarCoberturas('hogar', fidelidade, [{ etiqueta: 'Todo riesgo accidental', valor: 'No' }])
+  assert.equal(f.porClave.todo_riesgo_accidental, 'no')
+  assert.equal(f.porClave.restauracion_estetica, 'si')
+  assert.equal(f.porClave.animales, 'si')
+  assert.equal(f.porClave.asistencia_hogar, 'si')
+  assert.equal(f.porClave.asistencia_hogar_ampliada, 'no')
+  // Allianz marca el todo riesgo `incluida: true` aunque el texto diga «(opcional)»: manda el vendor.
+  const allianz = clasificarCoberturas('hogar', [
+    { nombre: 'Todo Riesgo Accidental', incluida: true, texto: '•Todo riesgo Accidental (opcional). 3.000€ Franquicia 150€.' },
+    { nombre: 'Todo Riesgo Accidental', incluida: null, texto: '• Paneles Solares' },
+    { nombre: 'Asistencia en el hogar', incluida: true, texto: '• Asistencia y urgencias en el hogar' },
+  ])
+  assert.equal(allianz.porClave.todo_riesgo_accidental, 'si')
+  assert.equal(allianz.porClave.asistencia_hogar_ampliada, 'no_consta')
+  assert.equal(asistenciaHogarAmpliada([{ nombre: 'Asistencia en el hogar', incluida: true, texto: 'ASISTENCIA HOGAR AMPLIADA. Servicio informático' }]), 'si')
+  // 🪤 Solo la «asistencia en viaje» marcada no incluida NO es un «no» de asistencia en el hogar.
+  assert.equal(clasificarCoberturas('hogar', [{ nombre: 'Asistencia en viaje / Accidentes', incluida: false }]).porClave.asistencia_hogar, 'no_consta')
+  // Cada señal sola basta: solo el texto «(OPCIONAL)», o solo la opción de Fidelidade.
+  assert.equal(clasificarCoberturas('hogar', [fidelidade[1]!]).porClave.todo_riesgo_accidental, 'no')
+  assert.equal(clasificarCoberturas('hogar', null, [{ etiqueta: 'Todo riesgo accidental', valor: 'No' }]).porClave.todo_riesgo_accidental, 'no')
+  // «(opcional)» sin paréntesis o con `incluida` marcada no cambia nada.
+  assert.equal(clasificarCoberturas('hogar', [{ nombre: 'Todo riesgo accidental', incluida: null, texto: 'Opcional según capital' }]).porClave.todo_riesgo_accidental, 'no_consta')
 })

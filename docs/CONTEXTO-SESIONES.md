@@ -879,6 +879,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Bug: la re-cotización del «previo» de moto perdía el garaje (216,53€ fue «sin garaje»); ya se restaura.
 - Pendiente: entrega 2 (moto con figuras) y 3 (pedir datos a un tercero, emisión→intervinientes, renovación desde póliza, «Pasar la oportunidad a…»). Al abrir una variante se usan las figuras VIGENTES, no la foto de esa variante.
 
+## (29/09/2026) Garantías de hogar: todo riesgo, restauración estética, animales y asistencia básica/ampliada
+- Catálogo hogar (module-seguros): `todo_riesgo_accidental`, `restauracion_estetica`, `animales`, `asistencia_hogar_ampliada` (texto Fidelidade «ASISTENCIA HOGAR AMPLIADA/BÁSICA»). Opción Fidelidade «Todo riesgo accidental: No» → no.
+- Regla general: cobertura con `incluida` null y texto «(opcional)» → `no`; si el vendor dice `incluida: true`, manda él (Allianz). `asistencia_hogar` excluye «Asistencia en viaje / Accidentes».
+- Decesos, salud y vida: 0 tarificaciones guardadas (medido) → no hay opciones que mapear; la parrilla ya marca diferencias en cualquier ramo. VERSION_CATALOGO = 2.
+
 ## (29/09/2026) Opciones del producto → garantías, «precio no comparable» y opciones en la póliza emitida
 - `garantiasDeOpciones()` (module-seguros): lista CERRADA de etiquetas medidas → sustitución (Allianz «No», Reale «SIN vehículo de sustitución»), retirada de carné (Generali «Sin contratar», Reale «Excluida») y reclamación de multas. La opción manda sobre la lista de coberturas. No se reutilizan los patrones del catálogo: casarían con preguntas («El conductor habitual es hijo de asegurado: No»).
 - `diferenciasDeOpcion()`: «No incluye / Sin confirmar» solo en garantías donde las opciones difieren; en la parrilla (FiltroGarantias) y en el portal (sin repetir lo de «frente a tu seguro actual»).
