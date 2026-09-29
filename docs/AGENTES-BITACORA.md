@@ -14,6 +14,7 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-29 · mercado-booking** · hizo: 236 comps reales en 24/24 ventanas de mercado (eventos ICHNO 19-21/21-23 oct, Gala 9-11 y 17-19 dic, DJ Symphonic 20-22 mar, mes 22-24 may; aforos 2/4/5/12; 4 anuncios propios HOUSE SEVILLANA descartados/desviados a escaparate). Medianas €/noche (aforo 2→12): 19-oct 165→~535, 9-dic 78→~245, 17-dic 105→~340, 20-mar 268→~1.000. dudas: escaparate propio 0/4 otra vez (`hotel_names_no_availability`, 6-10 oct); segundo día seguido malo → alerta a Alberto; el plan seguía sin cubrir 5 fechas de evento caducadas (29-sep, 3/9/12-oct, 18-abr-27) por el tope max=24; fallos: latido ok:false por escaparate; PRs/commits: —
 - **2026-09-28 · trading-analista** · hizo: REPESCA 23:15 UTC (a las 20:15 solo llegó a refrescar el saldo, sin fila
   en `trading_pasadas`). Pasada completa tras el cierre: NAV 33.360,03€ → /saldo, cartera real (VWCE+CVX) → /cartera,
   operaciones (0 nuevas) + latido, 24 símbolos → /analizar (0 aperturas paper), /puntuar (104 puntuadas, 0 cerradas),

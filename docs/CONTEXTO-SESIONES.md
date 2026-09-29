@@ -14,6 +14,8 @@
 >
 **(29/09/2026)** — 🔑 PDF de póliza con contraseña (= DNI del tomador) subido a la ficha: asegura prueba el DNI de ESA ficha (descifrado dentro, nunca sale) con `pdfjs-dist` (`lib/documentos/pdf-contrasena.ts`). Vale en «Subir documento» de la ficha, en la oportunidad del cliente y en el enlace de datos del presupuesto. Sin ficha (subir-poliza, Telegram) no hay DNI que probar: lo dice. Dos trampas medidas: `pdf-parse` no avisa del cifrado de forma fiable (AES-256 → «bad XRef») → se detecta `/Encrypt`; y `workerSrc = ''` rompe pdfjs 4 en Node («fake worker failed») → el reintento con contraseña del PORTAL y la extracción de nóminas de rrhh estaban rotos igual (medido) → corregidos en el mismo PR #3994.
 
+**(29/09/2026)** — 👩‍💼 **rrhh: el gestor edita y borra solicitudes** (petición de Pilar). `/admin/solicitudes` gana Editar (tipo, fechas, motivo y estado, en cualquier estado) y Borrar (con confirmación; se lleva el justificante del storage). `PUT`/`DELETE` en `/api/admin/solicitudes/[id]` → `editarSolicitud`/`borrarSolicitud` (scoped por `empresa_id`). Volver a «solicitada» limpia la resolución; pasar a aprobada/rechazada avisa al empleado. ⚠️ Sin rastro de auditoría: rrhh no tiene log de cambios y el borrado es definitivo.
+
 **(29/09/2026)** — 🚗 Portal: cliente con Mapfre 0005727783313 (Toyota 8022KXY) veía «Renovación sin confirmar». Causa: Mapfre no envía nada a CIMA desde el 23/06 (ticket SAU-24238); de C0058 solo 1 recibo desde mayo (el emitido por nosotros), frente a 8-26 del resto. Corregida A MANO desde el portal de Mapfre (vigente 18/06/2026→18/06/2027, anual, 524,46€ neta / 573,45€ total) + nota en `historial_interno`; SIN recibo (cobro no consta). Un reproceso de un POL viejo lo revertiría. Pendiente: otras 11 Mapfre vivas sin renovación (7 ya vencidas) → reclamar en SAU-24238 o corregir una a una con captura de Mapfre.
 
 **(29/09/2026)** — 🔗 Devolución por correo cuyo recibo aún no ha mandado CIMA (Mapfre, renovación sep/2026): el BEFORE INSERT lo marcaba devuelto pero en un INSERT no podía escribir `recibo_devolucion.recibo_id` → quedaba sin enlace para siempre (sin importe ni comisión en la ficha). Trigger AFTER INSERT `recibo_enlaza_devolucion` (migración `2026-09-29g`, **aplicada**; probado en la BD real con rollback, y en rojo desactivándolo). La de Mapfre se enlazará sola cuando CIMA traiga el recibo.
@@ -899,6 +901,14 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+
+## (29/09/2026) Coberturas: «daños propios» que solo cubre animales, y la tabla en «Mandárselo al cliente»
+- Occident manda en terceros un bloque «Daños propios» incluida cuyo texto enumera SOLO «Animales cinegéticos…» (+ fenómenos): salía «daños propios: sí» en un terceros básico. `clasificarCoberturas` (catálogo v3) lee las partes «» X: … : CONTRATADA» (`subcoberturas()`): manda lo enumerado, no el nombre del bloque; clave nueva `colision_animales` (auto/moto). Una parte solo afirma claves del propio bloque + animales/fenómenos («Rc incendio» no es incendio); «excluida franquicia» no excluye.
+- 48 filas guardadas corregidas en BD (7 `presupuesto_opcion` + 41 `tarificacion_precios`), SQL en `apps/asegura/prisma/sql/2026-09-29_garantias_por_partes.sql`.
+- La tarjeta «Mandárselo al cliente» enseña plegado «Qué cubre cada opción» (logo + ✓/✗/— por garantía); el listado del puerto manda `detalle` de las opciones visibles.
+## (29/09/2026) Correduría: marca «AS» en todos los correos al cliente
+- `conMarcaCorreo()` (`@central/module-seguros`, `correo-marca.ts`): cabecera con logotipo + pie «solo escribimos desde @grupoasegura.es». Se aplica en el punto único `apps/asegura/lib/correo-envio.ts` y en los dos envíos del portal (código, invitación); idempotente (salta si el HTML ya trae el logo).
+- `apps/asegura-web/public/brand/avatar-asegura.png` (512 px). Grosor del «AS» = «opción 2» de Alberto (`stroke-width=1` en ambos `marca-asegura.svg` + `MarcaAsegura.tsx`, cepo en `asegura-web/lib/icono.test.ts`); el logotipo de texto (stroke 6) NO se tocó. El avatar es para el círculo de la bandeja. ⚠️ Ese avatar NO sale del HTML: hay que ponerlo como foto de una cuenta de Google de `hola@grupoasegura.es` (solo Gmail) o vía BIMI (DMARC estricto + VMC/CMC de pago). Pendiente de Alberto.
 
 ## (29/09/2026) Historial de motor al máximo en TODO motor + topes que se aprenden solos
 - auto-nuevo igual que moto (precarga desde la oportunidad + años al máximo plegados). Retarificar de cartera: sin dato,
