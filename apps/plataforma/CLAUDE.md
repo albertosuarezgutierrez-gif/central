@@ -2012,6 +2012,13 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   el puerto `POST /api/operador/cliente`, sin sello) y `figura_riesgo` (`/api/operador/oportunidad/figuras`);
   `proponer_tarificacion` con `oportunidadId` cotiza con las figuras del riesgo (mismo tomador y ramo; figura con ficha
   ilegible = no se cotiza). Una escritura idéntica no se repite en el mismo turno, salga como salga.
+  **Fase 2 (29/09/2026):** gestión sin botón (`estado_oportunidad`, `cerrar_tarea`, `seguir_siniestro`, `contacto_cliente`;
+  lecturas `ver_siniestro`, `ver_riesgo`) en `lib/correduria-gestion-tg.ts`, y **`precio_hogar`** (`lib/correduria-hogar-tg.ts`,
+  puro: lo dictado → `resueltos`/`correcciones` con la MISMA tabla que `hogar-nuevo/Formulario.tsx`, que su test lee; una
+  opción ambigua NO se elige, se pregunta). Entre mensajes, la MISMA escritura no se repite 30 min
+  (`correduria_asistente_huella`, clave primaria = hash sin datos; solo deja huella lo que empieza por HECHO/PEDIDO/NO SÉ SI;
+  `repetir=true` para rehacer). `forzar` en el mismo turno que el conflicto se rechaza. `herramientasPara(autonomo)`
+  reescribe las descripciones: la IA se fía más de la descripción de la herramienta que del prompt.
 - **💶 Pedir precio de COCHE o MOTO (28/09/2026) — `lib/correduria-tarificacion-tg.ts`.** `vehiculo_catalogo` (gratis) +
   `proponer_tarificacion`: el servidor empareja lo dictado con los catálogos (`emparejarOpcion`: con dudas pregunta), devuelve
   «FALTAN DATOS» hasta tenerlo todo y manda el resumen (DNI enmascarado, supuestos optimistas primero, «0,50€, no sale nada al
