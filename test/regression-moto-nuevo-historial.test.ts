@@ -84,6 +84,6 @@ test('MotoNuevo: la moto de la última tarificación se precarga sin pisar lo te
 test('los años del historial nacen en el máximo (o lo leído), no vacíos', () => {
   assert.match(fuente, /useState\(String\(historial\.aniosAsegurado\)\)/)
   assert.match(fuente, /useState\(String\(historial\.aniosSinSiniestros\)\)/)
-  const lib = readFileSync(join(import.meta.dirname, '..', 'apps/plataforma/lib/seguro-anterior.ts'), 'utf8')
+  const lib = readFileSync(join(import.meta.dirname, '..', 'packages/module-seguros/src/historial-maximo.ts'), 'utf8')
   assert.match(lib, /HISTORIAL_MAXIMO = \{ aniosAsegurado: 10, aniosEnCompania: 10, aniosSinSiniestros: 10, siniestrosUltimos5: 0 \}/)
 })

@@ -13,6 +13,7 @@
 // sobre una cotización YA PAGADA. El envío es el PR 3 del §6 de la spec.
 
 import type { EstadoPresupuesto } from '@central/module-seguros'
+import { CATALOGO_GARANTIAS, ramoDeCatalogo } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type OpcionPresupuesto = {
@@ -326,6 +327,46 @@ export type PresupuestoEnLista = {
   desdeEur: number | null
   /** Exigencias y necesidades escritas. `null` = no constan (o asegura aún no las manda): no se puede avisar. */
   necesidades: string | null
+  /** Opciones visibles con sus garantías. `null` = asegura no las manda (versión anterior): no se pintan. */
+  detalle: OpcionEnLista[] | null
+}
+
+export type EstadoGarantiaLista = 'si' | 'no' | 'no_consta'
+
+/** Una opción visible. `garantias: null` = no se clasificó: todo «no consta», nunca «no». */
+export type OpcionEnLista = { id: string; compania: string; modalidad: string | null; primaEur: number | null; garantias: Record<string, EstadoGarantiaLista> | null }
+
+function leerOpcionEnLista(v: unknown): OpcionEnLista | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.id !== 'string' || typeof o.compania !== 'string') return null
+  let garantias: Record<string, EstadoGarantiaLista> | null = null
+  if (o.garantias && typeof o.garantias === 'object' && !Array.isArray(o.garantias)) {
+    garantias = {}
+    for (const [k, e] of Object.entries(o.garantias as Record<string, unknown>)) if (e === 'si' || e === 'no' || e === 'no_consta') garantias[k] = e
+  }
+  return {
+    id: o.id, compania: o.compania,
+    modalidad: typeof o.modalidad === 'string' && o.modalidad !== '' ? o.modalidad : null,
+    primaEur: typeof o.primaEur === 'number' ? o.primaEur : null,
+    garantias,
+  }
+}
+
+/**
+ * La tabla «qué cubre cada opción» del catálogo del ramo: una fila por garantía, una celda por opción.
+ * Se quitan las filas en las que NINGUNA opción dice sí ni no (todo «no consta» no ayuda a elegir).
+ * `null` = el ramo no tiene catálogo.
+ */
+export function filasCoberturas(
+  ramo: string | null,
+  opciones: readonly OpcionEnLista[],
+): { clave: string; etiqueta: string; estados: EstadoGarantiaLista[] }[] | null {
+  const r = ramoDeCatalogo(ramo)
+  if (!r) return null
+  return CATALOGO_GARANTIAS[r]
+    .map((g) => ({ clave: g.clave, etiqueta: g.etiqueta, estados: opciones.map((o) => o.garantias?.[g.clave] ?? 'no_consta') }))
+    .filter((f) => f.estados.some((e) => e !== 'no_consta'))
 }
 
 /** Mientras no esté aceptado, retirado ni caducado, las necesidades se pueden escribir o corregir. */
@@ -348,6 +389,7 @@ export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
     opciones: typeof o.opciones === 'number' ? o.opciones : 0,
     desdeEur: typeof o.desdeEur === 'number' ? o.desdeEur : null,
     necesidades: s(o.necesidades),
+    detalle: Array.isArray(o.detalle) ? o.detalle.map(leerOpcionEnLista).filter((x): x is OpcionEnLista => x !== null) : null,
   }
 }
 

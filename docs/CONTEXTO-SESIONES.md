@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(29/09/2026)** — ✗ **«El cliente se va» desde el recibo devuelto** (ficha de póliza): la póliza pasa a `cancelada` con baja VERIFICADA (columnas propias `polizas.baja_*`, migración `2026-09-29h` **aplicada**; trigger que impide que un «vigente» de CIMA la reabra), cierra la devolución (`manual:baja`), pierde la oportunidad y tareas del impago, rechaza el correo al cliente pendiente y abre una oportunidad de COMPETENCIA para el aniversario del recibo con llamada 60 días antes. Cuando CIMA traiga la baja, el detector la da por explicada (sin retención ni fuga). Historial en la ficha con la fuente (correo/CIMA). Deshacer: solo a mano (`baja_estado_previo`). PR #3993. Revisión architect: si CIMA la sigue dando en vigor se GUARDA (`baja_estado_cima`) y la cabecera avisa «mira si al final pagó»; una oportunidad por PÓLIZA (no por cliente+ramo); candado compartido con la tarea del impago. Seguimiento: la oportunidad lleva la `matricula` de la póliza perdida (`info_riesgo`), así la sustitución automática la casa con la nueva.
+
+**(29/09/2026)** — 🗂️ rrhh `/admin/solicitudes` plegada: se ven las pendientes + la primera resuelta; el resto tras «Ver N más» (montaje perezoso). Petición de Pilar.
+
+**(29/09/2026)** — 👩‍💼 **rrhh: el gestor edita y borra solicitudes** (petición de Pilar). `/admin/solicitudes` gana Editar (tipo, fechas, motivo y estado, en cualquier estado) y Borrar (con confirmación; se lleva el justificante del storage). `PUT`/`DELETE` en `/api/admin/solicitudes/[id]` → `editarSolicitud`/`borrarSolicitud` (scoped por `empresa_id`). Volver a «solicitada» limpia la resolución; pasar a aprobada/rechazada avisa al empleado. ⚠️ Sin rastro de auditoría: rrhh no tiene log de cambios y el borrado es definitivo.
+
+**(29/09/2026)** — 🚗 Portal: cliente con Mapfre 0005727783313 (Toyota 8022KXY) veía «Renovación sin confirmar». Causa: Mapfre no envía nada a CIMA desde el 23/06 (ticket SAU-24238); de C0058 solo 1 recibo desde mayo (el emitido por nosotros), frente a 8-26 del resto. Corregida A MANO desde el portal de Mapfre (vigente 18/06/2026→18/06/2027, anual, 524,46€ neta / 573,45€ total) + nota en `historial_interno`; SIN recibo (cobro no consta). Un reproceso de un POL viejo lo revertiría. Pendiente: otras 11 Mapfre vivas sin renovación (7 ya vencidas) → reclamar en SAU-24238 o corregir una a una con captura de Mapfre.
+
+**(29/09/2026)** — 🔗 Devolución por correo cuyo recibo aún no ha mandado CIMA (Mapfre, renovación sep/2026): el BEFORE INSERT lo marcaba devuelto pero en un INSERT no podía escribir `recibo_devolucion.recibo_id` → quedaba sin enlace para siempre (sin importe ni comisión en la ficha). Trigger AFTER INSERT `recibo_enlaza_devolucion` (migración `2026-09-29g`, **aplicada**; probado en la BD real con rollback, y en rojo desactivándolo). La de Mapfre se enlazará sola cuando CIMA traiga el recibo.
+
 **(29/09/2026)** — 🏦 **Cambio de IBAN desde el portal** (PR #3969): el cliente pide la cuenta nueva en «Mis datos» con un código
 a su correo de ACCESO (canal verificado, código atado a identidad+IBAN); asegura la deja PENDIENTE cifrada en
 `seguros.cambio_cuenta_solicitud` (migración `2026-09-29d`, **aplicada 29/09**) — NO cambia la ficha. Alberto la ve en «Hoy»
@@ -904,6 +914,26 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Arreglo: campo «Matrícula de esa póliza» (`matriculaAnterior`) en auto-nuevo y moto-nuevo; vacío = la actual. Test que falla sin él.
 - El desplegable de moto leía el directorio de la correduría (14); ahora `/motorcycle/insurance-companies` de Avant2 (`companias-anteriores-moto`), como auto desde el 25/09.
 - Pendiente: aviso «bonificación NO verificada» a partir de los avisos de compañía (propuesto, sin hacer).
+
+## (29/09/2026) Coberturas: «daños propios» que solo cubre animales, y la tabla en «Mandárselo al cliente»
+- Occident manda en terceros un bloque «Daños propios» incluida cuyo texto enumera SOLO «Animales cinegéticos…» (+ fenómenos): salía «daños propios: sí» en un terceros básico. `clasificarCoberturas` (catálogo v3) lee las partes «» X: … : CONTRATADA» (`subcoberturas()`): manda lo enumerado, no el nombre del bloque; clave nueva `colision_animales` (auto/moto). Una parte solo afirma claves del propio bloque + animales/fenómenos («Rc incendio» no es incendio); «excluida franquicia» no excluye.
+- 48 filas guardadas corregidas en BD (7 `presupuesto_opcion` + 41 `tarificacion_precios`), SQL en `apps/asegura/prisma/sql/2026-09-29_garantias_por_partes.sql`.
+- La tarjeta «Mandárselo al cliente» enseña plegado «Qué cubre cada opción» (logo + ✓/✗/— por garantía); el listado del puerto manda `detalle` de las opciones visibles.
+## (29/09/2026) Correduría: marca «AS» en todos los correos al cliente
+- `conMarcaCorreo()` (`@central/module-seguros`, `correo-marca.ts`): cabecera con logotipo + pie «solo escribimos desde @grupoasegura.es». Se aplica en el punto único `apps/asegura/lib/correo-envio.ts` y en los dos envíos del portal (código, invitación); idempotente (salta si el HTML ya trae el logo).
+- `apps/asegura-web/public/brand/avatar-asegura.png` (512 px). Grosor del «AS» = «opción 2» de Alberto (`stroke-width=1` en ambos `marca-asegura.svg` + `MarcaAsegura.tsx`, cepo en `asegura-web/lib/icono.test.ts`); el logotipo de texto (stroke 6) NO se tocó. El avatar es para el círculo de la bandeja. ⚠️ Ese avatar NO sale del HTML: hay que ponerlo como foto de una cuenta de Google de `hola@grupoasegura.es` (solo Gmail) o vía BIMI (DMARC estricto + VMC/CMC de pago). Pendiente de Alberto.
+
+## (29/09/2026) Historial de motor al máximo en TODO motor + topes que se aprenden solos
+- auto-nuevo igual que moto (precarga desde la oportunidad + años al máximo plegados). Retarificar de cartera: sin dato,
+  `aniosAsegurado` = 10 (antes 1) y «años en la compañía» = antigüedad real con nosotros. Máximo único: `HISTORIAL_MAXIMO`
+  (`module-seguros/historial-maximo.ts`). Si Codeoscopic da 400 por años altos (NO se cobra), `cotizar()` aprende el tope
+  (`seguros.codeoscopic_topes_historial`, aplicada en prod el 29/09), reintenta UNA vez recortado y lo aplica siempre.
+  Rechazos POR COMPAÑÍA tras cotizar (ya cobrados) NO se aprenden todavía: el formato no está medido.
+
+## (29/09/2026) Riesgo: tres decisiones cerradas (Alberto: «resuelve como veas»)
+- «Volver» del aviso legal al emitir vuelve a la OFERTA (con cuenta/fecha/tecleado), no cierra el panel.
+- «Pasar la oportunidad a…» se BLOQUEA (409) si esa persona ya tiene otra abierta del mismo ramo: una por cliente+ramo es lo que asume el enganche de presupuestos (mismo candado `oportunidad:<cliente>:<ramo>`).
+- «Retarificar hogar» sin ↗: hogar ya es interno desde el 17/09.
 
 ## (29/09/2026) Riesgo, entrega 2+3: moto con figuras, aviso legal al emitir, figuras→póliza, pasar oportunidad, hogar en el riesgo
 - Moto: propietario/conductor distintos del tomador (`peticion-moto.ts`, carné de MOTO del conductor desde su ficha; mismo DNI propietario=conductor → mismo objeto). Sin probar contra el vendor (1ª cotización real, OK de Alberto).

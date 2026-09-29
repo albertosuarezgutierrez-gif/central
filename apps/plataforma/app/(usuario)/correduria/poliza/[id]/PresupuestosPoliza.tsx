@@ -2,11 +2,12 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import {
-  ROTULO_ESTADO_PRESUPUESTO, accionesPresupuesto, fraseDatosEmision, leerPresupuestoEnLista, necesidadesEditables, textoAviso,
-  type PresupuestoEnLista,
+  ROTULO_ESTADO_PRESUPUESTO, accionesPresupuesto, filasCoberturas, fraseDatosEmision, leerPresupuestoEnLista, necesidadesEditables, textoAviso,
+  type EstadoGarantiaLista, type PresupuestoEnLista,
 } from '@/lib/presupuesto-asegura'
 import { eur } from '@/lib/dinero'
 import { btnStyle } from '@/components/ui'
+import { LogoCompaniaEnLinea } from '../../CeldaCompania'
 import { preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades } from '@central/module-seguros'
 
 /**
@@ -95,6 +96,7 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId }
               const d = fraseDatosEmision(datosEmision[p.clienteId])
               return <span style={{ fontSize: 13, color: d.alerta ? 'var(--negative)' : 'var(--muted)' }}>{d.texto}</span>
             })()}
+            {p.detalle && p.detalle.length > 0 && <CoberturasOpciones p={p} ramo={p.ramo ?? ramo ?? null} />}
             <Necesidades p={p} ramo={p.ramo ?? ramo ?? null} deshabilitado={!libre} onGuardar={(texto, respuestas) => void patch(p, { accion: 'necesidades', texto, respuestas })} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {a.avisar && (
@@ -203,5 +205,64 @@ function Necesidades({ p, ramo, deshabilitado, onGuardar }: {
         </button>
       </div>
     </details>
+  )
+}
+
+const MARCA: Record<EstadoGarantiaLista, { txt: string; color: string }> = {
+  si: { txt: '✓', color: 'var(--positive)' },
+  no: { txt: '✗', color: 'var(--negative)' },
+  no_consta: { txt: '—', color: 'var(--muted)' },
+}
+
+/**
+ * Qué cubre cada opción visible, para revisarlo ANTES de mandarlo. Plegado por defecto y montado solo
+ * al abrir. «—» = no consta (la compañía no lo dice o no se ha podido leer), nunca «no cubre».
+ */
+function CoberturasOpciones({ p, ramo }: { p: PresupuestoEnLista; ramo: string | null }) {
+  const [abierto, setAbierto] = useState(false)
+  const opciones = p.detalle ?? []
+  return (
+    <div style={{ display: 'grid', gap: 6 }}>
+      <button type="button" style={{ ...btnStyle('sutil'), justifySelf: 'start' }} aria-expanded={abierto} onClick={() => setAbierto((a) => !a)}>
+        {abierto ? '▾' : '▸'} Qué cubre cada opción
+      </button>
+      {abierto && (() => {
+        const filas = filasCoberturas(ramo, opciones)
+        if (filas === null) return <span style={{ fontSize: 13, color: 'var(--muted)' }}>Este ramo no tiene catálogo de coberturas: míralas en el PDF.</span>
+        if (filas.length === 0) return <span style={{ fontSize: 13, color: 'var(--muted)' }}>No constan las coberturas de estas opciones: míralas en el PDF.</span>
+        return (
+          <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 120 + opciones.length * 96 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '4px 6px' }} />
+                  {opciones.map((o) => (
+                    <th key={o.id} style={{ padding: '4px 6px', textAlign: 'center', verticalAlign: 'bottom', fontWeight: 400 }}>
+                      <div style={{ display: 'grid', gap: 2, justifyItems: 'center' }}>
+                        <LogoCompaniaEnLinea compania={o.compania} />
+                        {o.modalidad && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{o.modalidad}</span>}
+                        {o.primaEur !== null && <strong>{eur(o.primaEur)}</strong>}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map((f) => (
+                  <tr key={f.clave} style={{ borderTop: '1px solid var(--border)' }}>
+                    <td style={{ padding: '4px 6px' }}>{f.etiqueta}</td>
+                    {f.estados.map((e, i) => (
+                      <td key={opciones[i].id} title={e === 'no_consta' ? 'No consta' : e === 'si' ? 'Incluida' : 'No incluida'}
+                        style={{ padding: '4px 6px', textAlign: 'center', color: MARCA[e].color, fontWeight: 700 }}>{MARCA[e].txt}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>✓ incluida · ✗ no incluida · — no consta. El detalle exacto, en el PDF.</span>
+          </div>
+        )
+      })()}
+    </div>
   )
 }

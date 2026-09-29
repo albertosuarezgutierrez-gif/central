@@ -884,7 +884,7 @@ export default function MotoNuevo({
             </summary>
             <p style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
               {sa ? 'Lo leído de su póliza manda; lo que no traía va al máximo.' : 'Se declara el máximo.'} La compañía lo contrasta
-              con SINCO por el nº de póliza y aplica el bonus real.
+              con SINCO por el nº de póliza y aplica el bonus real. Si el sistema rechaza un valor, aprende el tope y lo ajusta solo.
             </p>
             {digitosPolizaSospechosos(polizaActualDigitos) && (
               <p style={{ color: 'var(--negative)', fontSize: 12, fontWeight: 600, margin: '0 0 8px' }}>

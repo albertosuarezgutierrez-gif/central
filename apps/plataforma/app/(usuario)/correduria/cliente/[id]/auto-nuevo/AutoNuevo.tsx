@@ -22,6 +22,7 @@ import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
+import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import {
@@ -168,9 +169,15 @@ export default function AutoNuevo({
   simulacion,
   companias,
   variante = null,
+  anterior = null,
+  anteriorAmbiguo = null,
 }: {
   /** Variante de un riesgo (29/09/2026): oportunidad, figuras en otras fichas y qué les falta. */
   variante?: VarianteNueva | null
+  /** El seguro que tiene hoy, leído de su póliza y guardado en la oportunidad (29/09/2026). */
+  anterior?: AnteriorParaTarificar | null
+  /** Nº de oportunidades de auto abiertas con datos cuando no se sabe cuál: no se precarga ninguna. */
+  anteriorAmbiguo?: number | null
   clienteId: string
   /** Leída del documento por el asistente de Telegram (`?matricula=`). */
   matriculaInicial?: string
@@ -309,15 +316,20 @@ export default function AutoNuevo({
   // apagado, igual que hoy): solo se activa para presupuestos donde compensa
   // preguntar. Si se activa, hacen falta TODOS los campos — el vendor exige el
   // paquete completo o ninguno (`revisarDatosAuto`, `peticion-auto.ts`).
-  const [tieneSeguroActual, setTieneSeguroActual] = useState(false)
-  const [companiaActualCodigo, setCompaniaActualCodigo] = useState('')
-  const [companiaActualLibre, setCompaniaActualLibre] = useState('')
-  const [polizaActualDigitos, setPolizaActualDigitos] = useState('')
+  // Precargado del seguro que tiene hoy (29/09/2026, mismo criterio que moto): lo leído de su
+  // póliza; y los años NO se teclean: el máximo salvo lo leído (la compañía lo contrasta con SINCO).
+  const sa = anterior?.seguroAnterior ?? null
+  const historial = historialDeclarado(sa)
+  const [tieneSeguroActual, setTieneSeguroActual] = useState(anterior !== null)
+  const [companiaActualCodigo, setCompaniaActualCodigo] = useState(() =>
+    anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '')
+  const [companiaActualLibre, setCompaniaActualLibre] = useState(() => (companias === null ? sa?.codigoDgs ?? '' : ''))
+  const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.replace(/\s+/g, '') ?? '')
+  const [aniosAsegurado, setAniosAsegurado] = useState(String(historial.aniosAsegurado))
+  const [aniosEnCompania, setAniosEnCompania] = useState(String(historial.aniosEnCompania))
+  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(String(historial.aniosSinSiniestros))
+  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5))
   const [matriculaAnterior, setMatriculaAnterior] = useState('')
-  const [aniosAsegurado, setAniosAsegurado] = useState('')
-  const [aniosEnCompania, setAniosEnCompania] = useState('')
-  const [aniosSinSiniestros, setAniosSinSiniestros] = useState('')
-  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState('')
 
   // ── Borrador local: lo tecleado NO se pierde al salir de la pantalla ───────
   //
@@ -690,6 +702,8 @@ export default function AutoNuevo({
   const compraInvalida = fechaCompra !== '' && matriculacion !== '' && fechaCompra < matriculacion
 
   const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
+  const faltaAnios = aniosAsegurado.trim() === '' || aniosEnCompania.trim() === '' || aniosSinSiniestros.trim() === ''
+    || (Number(aniosSinSiniestros) < 5 && aniosSinSiniestros !== aniosAsegurado && siniestrosUltimos5.trim() === '')
   const faltaHistorial =
     tieneSeguroActual &&
     (!companiaActualElegida ||
@@ -1156,6 +1170,17 @@ export default function AutoNuevo({
           />
           Sí, tiene un seguro de auto en vigor ahora mismo
         </label>
+        {anterior && (
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: '8px 0 0' }}>
+            Precargado de su póliza actual (oportunidad{anterior.etiqueta ? ` ${anterior.etiqueta}` : ''}): revísalo.
+            {anterior.aseguradora && !companiaActualElegida ? ` La compañía leída es «${anterior.aseguradora}»: elígela en la lista.` : ''}
+          </p>
+        )}
+        {!anterior && anteriorAmbiguo !== null && anteriorAmbiguo > 1 && (
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: '8px 0 0' }}>
+            Tiene {anteriorAmbiguo} oportunidades de auto abiertas con su póliza leída: tarifica desde la oportunidad de ese coche para precargarla.
+          </p>
+        )}
 
         {tieneSeguroActual && (
           <>
@@ -1205,6 +1230,22 @@ export default function AutoNuevo({
                   style={input}
                 />
               </Campo>
+            </div>
+            <details open={faltaAnios || undefined} style={{ marginTop: 10, fontSize: 13 }}>
+              <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>
+                Historial declarado: {aniosAsegurado || '—'} años asegurado · {aniosEnCompania || '—'} en la compañía · {aniosSinSiniestros || '—'} sin siniestros
+                {siniestrosUltimos5 !== '' ? ` · ${siniestrosUltimos5} siniestros en 5 años` : ''} — ajustar
+              </summary>
+              <p style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
+                {sa ? 'Lo leído de su póliza manda; lo que no traía va al máximo.' : 'Se declara el máximo.'} La compañía lo contrasta
+                con SINCO por el nº de póliza y aplica el bonus real. Si el sistema rechaza un valor, aprende el tope y lo ajusta solo.
+              </p>
+              {digitosPolizaSospechosos(polizaActualDigitos) && (
+                <p style={{ color: 'var(--negative)', fontSize: 12, fontWeight: 600, margin: '0 0 8px' }}>
+                  Con este nº de póliza la compañía probablemente no pueda contrastarlo: lo declarado aquí quedaría como dato. Revísalo.
+                </p>
+              )}
+              <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
               <Campo etiqueta="Años asegurado sin interrupción" falta={aniosAsegurado.trim() === ''}>
                 <input type="number" min={0} value={aniosAsegurado} onChange={(e) => setAniosAsegurado(e.target.value)} style={input} />
               </Campo>
@@ -1221,7 +1262,8 @@ export default function AutoNuevo({
               >
                 <input type="number" min={0} value={siniestrosUltimos5} onChange={(e) => setSiniestrosUltimos5(e.target.value)} style={input} />
               </Campo>
-            </div>
+              </div>
+            </details>
           </>
         )}
       </div>

@@ -516,6 +516,42 @@ export async function resolverDevolucionAsegura(reciboId: string, actor: string)
   }
 }
 
+export type BajaDevolucion =
+  | { estado: 'ok'; vence: string | null; llamada: string | null }
+  | { estado: 'sin_configurar' }
+  | { estado: 'rechazado'; motivo: string }
+  | { estado: 'sin_respuesta'; motivo: string }
+
+/**
+ * `PATCH /api/operador/recibos/devolucion {accion:'baja'}` — «el cliente se va». El actor lo pone el
+ * servidor. `sin_respuesta` (red o 5xx) NO es «no se hizo»: la transacción pudo terminar.
+ */
+export async function bajaPorDevolucionAsegura(reciboId: string, motivo: string, nota: string | null, actor: string): Promise<BajaDevolucion> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/recibos/devolucion`, {
+      method: 'PATCH',
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
+      body: JSON.stringify({ reciboId, accion: 'baja', motivo, nota, actor }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
+    const j = ((await res.json().catch(() => null)) ?? {}) as Record<string, unknown>
+    if (res.status === 200 && j.estado === 'ok') {
+      return {
+        estado: 'ok',
+        vence: typeof j.vence === 'string' ? j.vence : null,
+        llamada: typeof j.llamada === 'string' ? j.llamada : null,
+      }
+    }
+    const m = typeof j.motivo === 'string' ? j.motivo : `HTTP ${res.status}`
+    return res.status >= 400 && res.status < 500 ? { estado: 'rechazado', motivo: m } : { estado: 'sin_respuesta', motivo: m }
+  } catch {
+    return { estado: 'sin_respuesta', motivo: 'no se pudo llegar a asegura' }
+  }
+}
+
 export type DescarteRetencion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo?: string }
 
 /**
