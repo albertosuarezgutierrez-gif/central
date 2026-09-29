@@ -20,6 +20,7 @@ import {
   PREFIJO_TAREA_DEVOLUCION,
   clasificarMotivoDevolucion,
   hitoDevolucion,
+  importeEiac,
   normalizarIdRecibo,
   suspensionDesde,
   textoTareaDevolucion,
@@ -105,6 +106,11 @@ export type ResultadoDevolucion = {
   ramo: string | null
   compania: string | null
   importe: number | null
+  /**
+   * Comisión bruta de ESE recibo (la que trae CIMA): lo que la compañía te descuenta si no se cobra.
+   * `null` = el recibo no está en la cartera o CIMA no la da; nunca 0 por no saberla.
+   */
+  comision: number | null
   fechaEfecto: string | null
   suspensionDesde: string | null
   tipoMotivo: TipoMotivoDevolucion | null
@@ -115,7 +121,7 @@ export type ResultadoDevolucion = {
 
 type FilaRecibo = {
   reciboId: string; polizaId: string; clienteId: string; ramo: string | null; compania: string | null
-  numeroPoliza: string | null; efecto: string | null; importe: string | null; vigente: boolean
+  numeroPoliza: string | null; efecto: string | null; importe: string | null; comision: string | null; vigente: boolean
   nombre: string | null; apellidos: string | null
 }
 
@@ -131,6 +137,7 @@ export async function registrarDevoluciones(correduriaId: string, devoluciones: 
         select r.id::text as "reciboId", p.id::text as "polizaId", p.cliente_id::text as "clienteId", p.tipo::text as ramo,
                p.aseguradora as compania, p.numero_poliza as "numeroPoliza",
                to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto, r.prima_total::text as importe,
+               r.comision_bruta::text as comision,
                (p.estado::text = any(${ESTADOS_VIGENTES}::text[]) and p.sustituida_at is null) as vigente,
                c.nombre, c.apellidos, r.situacion::text as situacion,
                to_char(r.fecha_situacion at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "diaCima",
@@ -201,6 +208,7 @@ export async function registrarDevoluciones(correduriaId: string, devoluciones: 
       ramo: r.rec?.ramo ?? null,
       compania: r.rec?.compania ?? null,
       importe: d.importe ?? importeEiacNum(r.rec?.importe ?? null),
+      comision: comisionEnRiesgo(r.rec?.comision ?? null),
       fechaEfecto: efecto,
       suspensionDesde: suspensionDesde(efecto),
       tipoMotivo,
@@ -209,6 +217,12 @@ export async function registrarDevoluciones(correduriaId: string, devoluciones: 
     })
   }
   return out
+}
+
+/** Solo una comisión POSITIVA está en riesgo: una negativa es ya un extorno, y un texto raro no se sabe. */
+export function comisionEnRiesgo(v: string | null): number | null {
+  const n = importeEiac(v)
+  return n !== null && n > 0 ? n : null
 }
 
 function importeEiacNum(v: string | null): number | null {

@@ -113,3 +113,75 @@ test('Occident: fila ya recobrada fuera; columnas corridas o una sola fecha = il
   const corrida = fila.replace('Operación autorizada no conforme', 'ES0000000000000000000099')
   assert.equal(con(corrida)?.devoluciones[0].motivo, null)
 })
+
+// Allianz: el texto que saca el triaje del PDF adjunto (filas, celdas separadas por tabulador), copiado
+// de las cartas reales del 17/06/2026 y del 04/08/2026 con pólizas, recibos, nombres y cuenta cambiados.
+const ALLIANZ_DEVUELTOS = {
+  remitente: 'mediador@allianz.es',
+  asunto: 'Rel. recibos ventanilla',
+  fecha: '2026-06-17T19:53:40Z',
+  texto: [
+    'Hola',
+    'Adjunto a este correo encontrarás el siguiente fichero de clientes: - Rel. recibos ventanilla',
+    'AVISO Relación de recibos bancarios devueltos',
+    'Fecha',
+    '17 de Junio de 2026',
+    'Nº\tPóliza\tRecibo\tTomador\tImporte\tFecha Efecto\tMotivo\tNº Cuenta',
+    'Devolución\tBanco',
+    '1\t040000001\t600000001\tPrueba\t249,34\t01/06/26\tDISCONFORM **** **** **',
+    'Apellido,\tE IMPORTE\t******0000',
+    'Nombre',
+    '0018638',
+  ].join('\n'),
+}
+
+const ALLIANZ_ANULADAS = {
+  remitente: 'mediador@allianz.es',
+  asunto: 'Relacion anulacion polizas por impago',
+  fecha: '2026-08-04T20:50:49Z',
+  texto: [
+    'Anulación de pólizas por impago.',
+    'Fecha',
+    '3 de Agosto de 2026',
+    'Nº\tPóliza\tRecibo\tRamo\tTomador\tImporte\tFecha Efecto\tF. Anulación',
+    '1\t040000001\t600000001\t1234\tPrueba\t249,34\t01/06/2026\t00/00/0000',
+    'Apellido,',
+    'Nombre Otro',
+    '0018638',
+  ].join('\n'),
+}
+
+test('Allianz devueltos: lee la fila del PDF, une el motivo partido en dos líneas y no saca la cuenta', () => {
+  const r = leerCorreoDevolucion(ALLIANZ_DEVUELTOS)
+  assert.ok(r)
+  assert.equal(r.compania, 'allianz')
+  assert.equal(r.ilegibles, 0)
+  assert.deepEqual(r.devoluciones, [{
+    codigoDgs: 'C0109', numeroPoliza: '040000001', idRecibo: '600000001', importe: 249.34,
+    fechaEfecto: '2026-06-01', fechaDevolucion: '2026-06-17',
+    motivo: 'DISCONFORME IMPORTE', tipoMotivo: 'cliente_rechaza',
+  }])
+  assert.doesNotMatch(JSON.stringify(r), /0000\b.*\*|\*{3}|Apellido|Nombre/)
+})
+
+test('Allianz anuladas: la póliza anulada por impago entra con su recibo; 00/00/0000 no es una fecha', () => {
+  const r = leerCorreoDevolucion(ALLIANZ_ANULADAS)
+  assert.ok(r)
+  assert.deepEqual(r.devoluciones, [{
+    codigoDgs: 'C0109', numeroPoliza: '040000001', idRecibo: '600000001', importe: 249.34,
+    fechaEfecto: '2026-06-01', fechaDevolucion: '2026-08-03',
+    motivo: 'Póliza anulada por impago', tipoMotivo: 'otro',
+  }])
+})
+
+test('🪤 Allianz sin el texto del PDF: es un aviso que NO se ha leído, no una carta vacía', () => {
+  const r = leerCorreoDevolucion({ ...ALLIANZ_DEVUELTOS, texto: 'Hola Adjunto a este correo encontrarás el siguiente fichero de clientes: - Rel. recibos ventanilla' })
+  assert.ok(r)
+  assert.equal(r.devoluciones.length, 0)
+  assert.equal(r.ilegibles, 1)
+  // Una fila con forma de tabla que no casa también se cuenta.
+  const rota = leerCorreoDevolucion({ ...ALLIANZ_ANULADAS, texto: ALLIANZ_ANULADAS.texto.replace('249,34', 'N/D') })
+  assert.equal(rota?.ilegibles, 1)
+  // Otros correos de Allianz (Cuenta Agente, Cartera No Vida) no son de devoluciones.
+  assert.equal(leerCorreoDevolucion({ ...ALLIANZ_DEVUELTOS, asunto: 'Cuenta Agente', texto: 'Te adjuntamos la documentación' }), null)
+})

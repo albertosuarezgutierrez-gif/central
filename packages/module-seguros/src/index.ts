@@ -988,6 +988,7 @@ export {
 
 export {
   leerCorreoDevolucion,
+  MOTIVO_POLIZA_ANULADA,
   clasificarMotivoDevolucion,
   normalizarIdRecibo,
   type DevolucionLeida,

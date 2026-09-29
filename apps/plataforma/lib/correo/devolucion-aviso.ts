@@ -10,7 +10,7 @@
 // compañía avisa de un recibo que aún no está en la cartera: se enlazará solo al llegar) y — si el
 // puerto no contestó — «no se pudo registrar», que manda a mirar el correo.
 
-import type { LecturaCorreoDevolucion } from '@central/module-seguros'
+import { MOTIVO_POLIZA_ANULADA, type LecturaCorreoDevolucion } from '@central/module-seguros'
 import { eur } from '../dinero.ts'
 
 export type ResultadoPuertoDevolucion = {
@@ -21,6 +21,8 @@ export type ResultadoPuertoDevolucion = {
   ramo: string | null
   compania: string | null
   importe: number | null
+  /** Comisión bruta del recibo: lo que la compañía descuenta si no se cobra. `null` = no consta. */
+  comision: number | null
   fechaEfecto: string | null
   suspensionDesde: string | null
   tipoMotivo: string | null
@@ -56,6 +58,7 @@ export function leerResultadosPuerto(json: unknown): ResultadoPuertoDevolucion[]
       idRecibo, estado, tarea,
       clienteId: txt(o.clienteId), cliente: txt(o.cliente), ramo: txt(o.ramo), compania: txt(o.compania),
       importe: typeof o.importe === 'number' && Number.isFinite(o.importe) ? o.importe : null,
+      comision: typeof o.comision === 'number' && Number.isFinite(o.comision) && o.comision > 0 ? o.comision : null,
       fechaEfecto: txt(o.fechaEfecto), suspensionDesde: txt(o.suspensionDesde), tipoMotivo: txt(o.tipoMotivo), motivo: txt(o.motivo),
     }]
   })
@@ -71,9 +74,14 @@ export function textoAvisoDevolucion(
   urlFicha: (clienteId: string) => string,
   fallo: { estado: 'rechazado' | 'sin_respuesta'; motivo: string } | null = null,
 ): string {
-  const compania = { reale: 'Reale', occident: 'Occident', mapfre: 'Mapfre' }[lectura.compania]
+  const compania = { reale: 'Reale', occident: 'Occident', mapfre: 'Mapfre', allianz: 'Allianz' }[lectura.compania]
   const n = lectura.devoluciones.length
-  const lineas: string[] = [`🧾 <b>${n === 1 ? 'Recibo DEVUELTO' : `${n} recibos DEVUELTOS`}</b> — ${compania}`]
+  // Allianz manda aparte la carta de pólizas ya ANULADAS por ese impago: no es lo mismo que un devuelto.
+  const anuladas = n > 0 && lectura.devoluciones.every((d) => d.motivo === MOTIVO_POLIZA_ANULADA)
+  const titulo = n === 0 ? 'Aviso de recibos sin leer'
+    : anuladas ? (n === 1 ? 'Póliza ANULADA por impago' : `${n} pólizas ANULADAS por impago`)
+    : n === 1 ? 'Recibo DEVUELTO' : `${n} recibos DEVUELTOS`
+  const lineas: string[] = [`🧾 <b>${titulo}</b> — ${compania}`]
   for (const d of lectura.devoluciones) {
     const r = resultados?.find((x) => x.idRecibo === d.idRecibo) ?? null
     const importe = r?.importe ?? d.importe
@@ -97,6 +105,7 @@ export function textoAvisoDevolucion(
       continue
     }
     if (r.suspensionDesde) lineas.push(`  ⏳ La cobertura queda en suspenso el ${fechaEs(r.suspensionDesde)} si no paga`)
+    if (r.comision !== null) lineas.push(`  💸 Comisión en riesgo: ${eur(r.comision)} (te la descuentan si no se cobra)`)
     const tarea = r.tarea === 'abierta' ? '📞 Llamada creada en «Tareas de hoy»' : r.tarea === 'ya_habia' ? '📞 Ya tenía llamada abierta' : 'ℹ️ Póliza no vigente: sin llamada'
     const nota = r.estado === 'ya_registrada' ? ' · (aviso repetido)' : r.estado === 'ya_en_cima' ? ' · (CIMA ya lo trae devuelto)' : ''
     lineas.push(`  ${tarea}${r.clienteId ? ` · <a href="${esc(urlFicha(r.clienteId))}">ficha</a>` : ''}${nota}`)

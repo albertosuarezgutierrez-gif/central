@@ -60,6 +60,8 @@ export type ReciboExtraFicha = {
   claseComision: string | null
   baseComision: number | null
   retencionIrpf: number | null
+  /** Comisión bruta del recibo (CIMA): la que está en riesgo si se devuelve. `null` = no consta. */
+  comisionBruta: number | null
 }
 
 type Obj = Record<string, unknown>
@@ -128,7 +130,7 @@ export function leerFechasContrato(v: unknown): FechasContratoFicha | null {
 export function leerReciboExtra(o: Obj): ReciboExtraFicha {
   return {
     idRemesa: txt(o.idRemesa), gestionCobro: txt(o.gestionCobro), claseComision: txt(o.claseComision),
-    baseComision: num(o.baseComision), retencionIrpf: num(o.retencionIrpf),
+    baseComision: num(o.baseComision), retencionIrpf: num(o.retencionIrpf), comisionBruta: num(o.comisionBruta),
   }
 }
 
