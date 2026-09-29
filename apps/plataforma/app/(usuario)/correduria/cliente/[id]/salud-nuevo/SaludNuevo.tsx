@@ -69,7 +69,7 @@ export default function SaludNuevo({
   const [capital, setCapital] = useState('')
   const [modalidadDeseada, setModalidadDeseada] = useState('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
-  // Vacía = el servidor pone hoy + 15 días (el precio sigue valiendo al emitir).
+  // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
   const limitesEfecto = limitesFechaEfecto()
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })

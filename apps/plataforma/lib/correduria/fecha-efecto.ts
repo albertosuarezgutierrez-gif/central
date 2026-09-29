@@ -13,6 +13,13 @@ export function limitesFechaEfecto(ahora: Date = new Date()): { min: string; max
   return { min, max: d.toISOString().slice(0, 10) }
 }
 
-/** Texto de ayuda común: vacía = el defecto del servidor (hoy + 15 días). */
+/**
+ * El defecto que pone asegura cuando el campo va vacío. Copia de `DIAS_EFECTO_PRESUPUESTO_NUEVO`
+ * (`apps/asegura/lib/codeoscopic/fecha-efecto.ts`): son dos apps, y `fecha-efecto.test.ts` lee aquel
+ * fuente para que la ayuda no prometa una fecha y el servidor mande otra.
+ */
+export const DIAS_EFECTO_DEFECTO = 15
+
+/** Texto de ayuda común: vacía = el defecto del servidor. */
 export const AYUDA_FECHA_EFECTO =
-  'Vacía = dentro de 15 días, para que el precio siga valiendo al emitir. Pon la del cliente si ya la sabe.'
+  `Vacía = dentro de ${DIAS_EFECTO_DEFECTO} días, para que el precio siga valiendo al emitir. Pon la del cliente si ya la sabe.`

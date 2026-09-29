@@ -261,7 +261,7 @@ export default function AutoNuevo({
   // el precalificador ya usa la de matriculación como compra).
   const [fechaCompra, setFechaCompra] = useState('')
   const [remolqueLigero, setRemolqueLigero] = useState(false)
-  // Vacía = el servidor pone hoy + 15 días (el precio sigue valiendo al emitir).
+  // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
   const limitesEfecto = limitesFechaEfecto()
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
