@@ -16,8 +16,10 @@
 certificación de GLOBAL 2 de 2025, recibo de moto Allianz, dos prestaciones de Occident, comunidad 2024). La ventana de 7 días
 es la del CORREO, no del documento. Nuevo filtro puro `lib/agente-facturas/filtro-pago.ts` (con cepo visto fallar), antes de
 insertar: aparta >90 días, emitida por un titular, a nombre de tercero por NIF y aseguradora no a tu nombre (cuentan como
-`descartados`). Las 6 filas se marcaron `rechazada` en BD. Pendiente: una factura DOMICILIADA sigue ofreciendo «Pagar» (riesgo
-de pago doble); `fecha_vencimiento` nunca se rellena (el extractor no pide ese campo).
+`descartados`). Limpieza 2026 de `facturas_proveedor` (PR #3956): 19 rechazadas (antiguas, correduría, Ariste 33.000€, IS de
+Pilar, duplicados) y 9 pagadas con su cargo en banco; quedan 36 pendientes (3.259€). `conciliarConBanco` ahora concilia también
+'nueva'/'pendiente_revision' por primera palabra del proveedor. Pendiente: una factura DOMICILIADA sigue ofreciendo «Pagar»;
+`fecha_vencimiento` nunca se rellena; el «Pagar todo» semanal paga lo pendiente sin mirar si ya se cobró por tarjeta.
 **(29/09/2026)** 📮 **`envios.grupoasegura.es` retirado de Resend** (OK de Alberto). Todo el correo de Grupo ASegura sale de `hola@grupoasegura.es`
 (muestreo 25-28/09: anulaciones, novedades y códigos, todos desde hola@). Queda borrar sus 3 registros DNS en IONOS
 (`resend._domainkey.envios`, MX y TXT de `send.envios`) — prompt para Claude en Chrome dado a Alberto; NO tocar los sin `.envios`.
