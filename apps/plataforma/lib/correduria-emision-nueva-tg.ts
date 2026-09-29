@@ -43,11 +43,14 @@ export function elegirPrecioNuevo(precios: Precio[], compania: string, texto: st
       const hay = normal(`${p.categoria ?? ''} ${p.producto ?? ''} ${(p.opciones ?? []).map((o) => o.valor).join(' ')}`)
       return palabras.every((w) => hay.includes(w))
     })
-    if (conTexto.length > 0) candidatos = conTexto
+    // Lo que dijo Alberto no se ignora: si no casa con ningún precio, se dice, no se elige otro.
+    if (conTexto.length === 0) return { tipo: 'no', motivo: `ningún precio de ${compania} casa con «${texto}»` }
+    candidatos = conTexto
   }
   if (primaEur !== null && Number.isFinite(primaEur)) {
     const cerca = candidatos.filter((p) => Math.abs((p.primaEur as number) - primaEur) <= Math.max(5, primaEur * 0.03))
-    if (cerca.length > 0) candidatos = cerca
+    if (cerca.length === 0) return { tipo: 'no', motivo: `ningún precio de ${compania} se acerca a ${primaEur}€` }
+    candidatos = cerca
   }
   return candidatos.length === 1 ? { tipo: 'uno', precio: candidatos[0] } : { tipo: 'elegir', precios: candidatos }
 }
@@ -58,6 +61,10 @@ export interface ResumenEmisionNueva {
   clienteId: string
   clienteNombre: string | null
   ramo: RamoNuevo
+  /** Qué vehículo se asegura: sin ella no hay botón (el cliente puede tener dos tarificaciones). */
+  matricula: string
+  /** Cuándo se pidió el precio (de la tarificación guardada). */
+  tarificadaEn: string | null
   tarificacionId: string
   projectId: string
   offerId: string
@@ -75,6 +82,8 @@ export interface ResumenEmisionNueva {
   /** Casillas de figuras que Alberto confirma con ESTE botón (segundo paso tras un 409). */
   figurasConfirmadas: FiguraExigida[]
   cambiosFiguras: CambioFiguras[]
+  /** El texto de cada casilla que se confirma, el mismo que enseña la pantalla. */
+  casillasFiguras?: string[]
 }
 
 function canonico(v: unknown): string {
@@ -124,13 +133,15 @@ export function textoResumenNuevo(r: ResumenEmisionNueva): string {
         '',
         '👥 <b>Esta variante cambia personas o CP respecto a la primera del riesgo:</b>',
         ...r.cambiosFiguras.map((c) => `• ${esc(ETIQUETA_CAMPO_FIGURA[c.campo])}: ${oNoConsta(c.antes)} → ${oNoConsta(c.despues)}`),
+        ...(r.casillasFiguras ?? []).map((c) => `☑️ ${esc(c)}`),
         'Al pulsar confirmas que es el riesgo REAL: quien conduce, quién es el dueño y dónde duerme el vehículo (arts. 10 y 89 LCS).',
       ]
     : []
   return [
     `🛡️ <b>Emisión NUEVA lista para confirmar</b> · ${r.ramo === 'moto' ? 'moto' : 'coche'}`,
     '',
-    `Cliente: ${oNoConsta(r.clienteNombre)}`,
+    `Cliente: ${oNoConsta(r.clienteNombre)} · vehículo <b>${esc(r.matricula)}</b>`,
+    `Tarificado ${fecha(r.tarificadaEn)}`,
     `<b>${esc(r.compania)}</b> · ${esc(r.categoria)}${r.producto ? ` · ${esc(r.producto)}` : ''}`,
     `Prima confirmada por la compañía: <b>${prima}</b>${cambio} · ${esc(r.firmeza)}`,
     `Efecto ${fecha(r.efecto)} · el precio caduca ${fecha(r.caduca)}`,

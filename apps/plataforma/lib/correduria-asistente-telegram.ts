@@ -49,6 +49,7 @@ import {
   ACTOR_EMISION_TG, emisionTgActiva, huellaResumen, MINUTOS_PROPUESTA, prepararResumen, proyectoValido, resultadoEmision,
   textoResumen, urlPoliza, type ResumenEmision,
 } from './correduria-emision-tg'
+import { textoCasillaFigura } from './figuras-emision-texto'
 import { elegirPrecioNuevo, esResumenNuevo, figurasPendientes, huellaResumenNuevo, precioCaducado, ramoNuevoValido, textoResumenNuevo, type ResumenEmisionNueva } from './correduria-emision-nueva-tg'
 import {
   apagado, clasificarDestino, costeConservador, ERROR_NO_UUID, hoyMadrid, memoriaIds, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
@@ -392,13 +393,22 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
   // Un envío anterior de ESTE proyecto que no acabó claro frena el botón (misma regla que la fase 3a).
   const dudoso = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
     SELECT count(*) AS n FROM correduria_asistente_emision
-    WHERE project_id = ${guardada.projectId} AND estado IN ('emitiendo', 'incierta')
+    WHERE project_id = ${guardada.projectId} AND estado IN ('emitiendo', 'incierta', 'emitida')
       AND creada_at > now() - interval '7 days'`).then((f) => Number(f[0]?.n ?? 0)).catch(() => null)
   if (dudoso !== 0) {
     return {
-      texto: `NO SE PUEDE EMITIR: ${dudoso === null ? 'no he podido comprobar los envíos anteriores de este proyecto' : 'hay un envío anterior de este proyecto sin aclarar (puede haberse emitido)'}. Que lo mire en la intranet: ${urlCliente(clienteId)}`,
+      texto: `NO SE PUEDE EMITIR: ${dudoso === null ? 'no he podido comprobar los envíos anteriores de este proyecto' : 'este proyecto ya se emitió o tiene un envío sin aclarar (puede haberse emitido)'}. Que lo mire en la intranet: ${urlCliente(clienteId)}`,
       ok: true,
     }
+  }
+  // Antes del ReRate: el resumen anterior de este proyecto deja de valer YA, no después de pagar el
+  // nuevo (si este corta a medias, el botón viejo apuntaría a una oferta que ya no es la aceptada).
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_emision SET estado = 'caducada', decidida_at = now()
+    WHERE project_id = ${guardada.projectId} AND estado = 'propuesta'`).catch(() => {})
+  const matricula = guardada.vehiculo?.matricula ?? null
+  if (!matricula) {
+    return { texto: `NO SE PUEDE EMITIR por aquí: la tarificación ${guardada.projectId} no trae matrícula legible y sin ella no se puede comprobar qué vehículo se asegura. Emite desde la intranet: ${urlCliente(clienteId)}`, ok: true }
   }
 
   // Confirmar el precio con la compañía (ReRate): es lo que hace «Confirmar precio» en la pantalla.
@@ -422,12 +432,18 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
           : 'la ficha no tiene cuenta de cargo'
     return { texto: `NO SE PUEDE EMITIR por aquí: ${porque}. Que la ponga en la ficha y me lo pida otra vez: ${urlCliente(clienteId)}`, ok: true }
   }
+  // Sin prima o sin efecto no hay botón: Alberto firmaría un contrato cuyo precio o fecha no ha visto.
+  if (of.primaEur === null || !guardada.fechaEfecto) {
+    return { texto: `NO SE PUEDE EMITIR por aquí: la compañía no ha devuelto ${of.primaEur === null ? 'la prima' : 'la fecha de efecto'} legible. Míralo en la intranet: ${urlCliente(clienteId)}`, ok: true }
+  }
   const ficha = await fichaAsegura(clienteId).catch(() => null)
   const r: ResumenEmisionNueva = {
     tipo: 'nuevo',
     clienteId,
     clienteNombre: ficha?.estado === 'ok' ? ficha.ficha.nombre : null,
     ramo,
+    matricula,
+    tarificadaEn: guardada.creadaEn || null,
     tarificacionId: guardada.cotizacionId,
     projectId: of.projectId,
     offerId: of.offerId,
@@ -495,6 +511,7 @@ async function emitirNuevaTrasBoton(id: number, r: ResumenEmisionNueva, huellaGu
       actor: ACTOR_EMISION_TG,
       primaAnual: r.primaEur,
       cuentaConfirmada: r.cuenta.enmascarada,
+      offerIdEsperado: r.offerId,
       ...(r.figurasConfirmadas.length ? { figurasConfirmadas: r.figurasConfirmadas } : {}),
     })
     if (res.estado === 'confirmar_figuras') {
@@ -506,8 +523,11 @@ async function emitirNuevaTrasBoton(id: number, r: ResumenEmisionNueva, huellaGu
         await decir(`✖️ No se ha emitido nada: asegura sigue pidiendo confirmar las figuras. Hazlo en la pantalla de emisión: ${url}`)
         return
       }
-      const siguiente: ResumenEmisionNueva = { ...r, figurasConfirmadas: res.exigidas, cambiosFiguras: res.cambios }
-      const env = await enviarPropuestaNueva(siguiente, null)
+      const siguiente: ResumenEmisionNueva = {
+        ...r, figurasConfirmadas: res.exigidas, cambiosFiguras: res.cambios,
+        casillasFiguras: res.exigidas.map((e) => textoCasillaFigura(e, res.cambios, res.conductorHabitual)),
+      }
+      const env = await enviarPropuestaNueva(siguiente, null).catch(() => ({ ok: false, texto: '' }))
       if (!env.ok) await decir(`✖️ No se ha emitido nada y no he podido mandarte la confirmación de figuras. Emite desde la intranet: ${url}`)
       return
     }

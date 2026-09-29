@@ -34,6 +34,11 @@ test('la prima desempata («la de 200»)', () => {
   assert.equal(r.tipo === 'uno' && r.precio.primaEur, 200.2)
 })
 
+test('lo que dijo Alberto no se ignora: modalidad o prima que no casan → no, nunca otro precio', () => {
+  assert.equal(elegirPrecioNuevo(P, 'Allianz', 'todo riesgo', null).tipo, 'no')
+  assert.equal(elegirPrecioNuevo(P, 'Occident', null, 400).tipo, 'no')
+})
+
 test('un precio sin prima no es elegible, y una compañía que no está se dice', () => {
   assert.equal(elegirPrecioNuevo(P, 'Mapfre', null, null).tipo, 'no')
   assert.equal(elegirPrecioNuevo(P, 'Generali', null, null).tipo, 'no')
@@ -42,6 +47,7 @@ test('un precio sin prima no es elegible, y una compañía que no está se dice'
 
 const R: ResumenEmisionNueva = {
   tipo: 'nuevo', clienteId: '94fa2f31-e135-4ec2-820f-b6c0b6f155a4', clienteNombre: 'Manuel Antonio', ramo: 'moto',
+  matricula: '2121NST', tarificadaEn: '2026-09-29T13:54:54Z',
   tarificacionId: '700aeedd-ce09-411f-8b63-1245e8cc0561', projectId: '40967910', offerId: 'Q1', compania: 'Allianz',
   categoria: 'Terceros ampliado', producto: 'Allianz Motos', primaEur: 200.2, primaParrillaEur: 200.2, firmeza: 'firme',
   efecto: '2026-09-30', caduca: '2026-10-05', avisos: ['ESTA POLIZA QUEDARÁ BLOQUEADA'],
@@ -62,6 +68,7 @@ test('el resumen enseña prima en formato español, cuenta enmascarada, avisos y
   assert.match(t, /ES72…5698/)
   assert.match(t, /BLOQUEADA/)
   assert.match(t, /IRREVERSIBLE/)
+  assert.match(t, /2121NST/)
   assert.doesNotMatch(t, /Esta variante cambia/)
 })
 
@@ -104,6 +111,16 @@ test('preparar: el interruptor se mira antes de nada y el freno de envío dudoso
 test('preparar: sin cuenta legible de la ficha no hay botón (por Telegram no se teclea IBAN)', () => {
   assert.match(prep, /if \(!of\.cuenta\)/)
   assert.doesNotMatch(prep, /iban:/)
+})
+
+test('botón: emite exigiendo la oferta del resumen (si otro ReRate la cambió, asegura no envía nada)', () => {
+  assert.match(boton, /offerIdEsperado: r\.offerId/)
+})
+
+test('preparar: sin matrícula, sin prima o sin efecto no hay botón; el resumen viejo caduca ANTES del ReRate', () => {
+  assert.match(prep, /if \(!matricula\)/)
+  assert.match(prep, /of\.primaEur === null \|\| !guardada\.fechaEfecto/)
+  assert.ok(prep.indexOf("SET estado = 'caducada'") > 0 && prep.indexOf("SET estado = 'caducada'") < prep.indexOf('ofertaAsegura('))
 })
 
 test('botón: huella y caducidad ANTES de emitir; emite con la cuenta del resumen y el actor del asistente', () => {
