@@ -8,6 +8,7 @@
 // reglas que el formulario), nunca el proveedor que respondió.
 import { openrouterVision, cleanJSON } from '@central/core-ai'
 import { iaTexto } from '../ia.ts'
+import { leerPdfProbando, pdfCifrado } from './pdf-contrasena.ts'
 
 const INSTRUCCION = `Eres un lector de documentos españoles para una correduría de seguros:
 Identifica QUÉ documento es y extrae SOLO lo que aparece escrito en él. No inventes: si un dato no está, déjalo en null.
@@ -43,16 +44,34 @@ function aJson(salida: string): unknown {
   }
 }
 
-export async function leerDocSolicitud(buffer: Buffer, mime: string, nombre = ''): Promise<LecturaBruta> {
+/** Texto con `pdf-parse`; `''` si no abre (se dice abajo). */
+async function textoPdfParse(buffer: Buffer): Promise<string> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require('pdf-parse')
+    return (await pdfParse(buffer)).text || ''
+  } catch {
+    return ''
+  }
+}
+
+export async function leerDocSolicitud(
+  buffer: Buffer,
+  mime: string,
+  nombre = '',
+  /** PDF con contraseña: se prueba el DNI de la ficha (29/09/2026). Nunca se devuelve. */
+  opts: { contrasenas?: () => Promise<string[]> } = {},
+): Promise<LecturaBruta> {
   const esPdf = mime === 'application/pdf' || nombre.toLowerCase().endsWith('.pdf')
   if (esPdf) {
     let texto = ''
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdfParse = require('pdf-parse')
-      texto = (await pdfParse(buffer)).text || ''
-    } catch {
-      /* un PDF que no se abre: se dice abajo */
+    if (pdfCifrado(buffer)) {
+      const candidatas = opts.contrasenas ? await opts.contrasenas().catch(() => []) : []
+      const r = await leerPdfProbando(buffer, candidatas)
+      texto = r.ok ? r.texto : r.motivo === 'ilegible' ? await textoPdfParse(buffer) : ''
+      if (!texto.trim()) return { ok: false, motivo: 'El PDF tiene contraseña: guardado, pero para leerlo súbelo sin contraseña o como foto.' }
+    } else {
+      texto = await textoPdfParse(buffer)
     }
     if (!texto.trim()) return { ok: false, motivo: 'El PDF es un escaneo: guardado, pero para leerlo súbelo como foto.' }
     try {
