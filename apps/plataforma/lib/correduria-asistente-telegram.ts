@@ -129,6 +129,11 @@ async function reglasActivas(): Promise<{ id: number; texto: string }[] | null> 
 /** Segundos que puede pensar un turno antes de contestar con lo que tenga (webhook: 300 s; un precio: ≤170 s). */
 const SEGUNDOS_BUCLE = 70
 /** Lo que tarda como mucho una petición de precio (el vendor responde en ≤170 s) + margen, contra los 300 del webhook. */
+/**
+ * El precio (0,50€) va SIEMPRE con el botón de Alberto, también en modo autónomo (29/09/2026: «pide el
+ * precio pero con mi OK»). El camino diferido sin botón se conserva detrás de este interruptor.
+ */
+const PRECIO_SIN_BOTON = false
 const SEGUNDOS_PRECIO = 185
 const SEGUNDOS_WEBHOOK = 285
 
@@ -1454,7 +1459,7 @@ async function precioHogar(args: Record<string, unknown>, ctx: Ctx): Promise<{ t
     return { texto: `FALTAN DATOS (no se ha pedido nada, 0€):\n- ${faltanHogar(p).join('\n- ')}\nPregúntaselo a Alberto y vuelve a llamar con referencia=${referencia} y datos={campo: valor} con TODO lo anterior más lo nuevo.`, ok: true }
   }
   const cuerpo = { referencia, resueltos: resueltosFinales(p, ap.resueltos), correcciones: ap.correcciones }
-  await prisma.$executeRaw(ctx.autonomo
+  await prisma.$executeRaw((ctx.autonomo && PRECIO_SIN_BOTON)
     ? Prisma.sql`UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
         WHERE estado = 'propuesta' AND caduca_at <= now()`
     : Prisma.sql`UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
@@ -1464,7 +1469,7 @@ async function precioHogar(args: Record<string, unknown>, ctx: Ctx): Promise<{ t
     VALUES (${ctx.turnoId}, ${clienteId}::uuid, 'hogar', ${JSON.stringify(cuerpo)}::jsonb, ${null},
             now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
     RETURNING id`)
-  return pedirOProponer(fila.id, textoPropuestaHogar(p, ctx.autonomo, escapeHtml), ctx)
+  return pedirOProponer(fila.id, textoPropuestaHogar(p, (ctx.autonomo && PRECIO_SIN_BOTON), escapeHtml), ctx)
 }
 
 async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Promise<{ texto: string; ok: boolean }> {
@@ -1652,7 +1657,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
 
   // Con botón, una propuesta nueva jubila la anterior del mismo cliente y ramo (dos botones vivos confunden).
   // Sin botón no: la anterior puede estar ya en la cola de este turno o de otro, y se le dijo a Alberto «PEDIDO».
-  await prisma.$executeRaw(ctx.autonomo
+  await prisma.$executeRaw((ctx.autonomo && PRECIO_SIN_BOTON)
     ? Prisma.sql`UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
         WHERE estado = 'propuesta' AND caduca_at <= now()`
     : Prisma.sql`UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
@@ -1669,7 +1674,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
     matricula, fechaMatriculacion, garaje: garaje.nombre, estadoCivil: estadoCivil.nombre, municipio: municipio.nombre,
     persona: e.persona,
     historial: e.historial && companiaAnterior ? { ...e.historial, compania: companiaAnterior.nombre } : null,
-    primaActual: e.primaActual, supuestos: todos, figuras: nombresFig, autonomo: ctx.autonomo,
+    primaActual: e.primaActual, supuestos: todos, figuras: nombresFig, autonomo: (ctx.autonomo && PRECIO_SIN_BOTON),
   })
   const plan = objetivo
     ? `\n🚀 Si sale bien, te preparo la emisión de ${escapeHtml(objetivo.compania)}${objetivo.modalidad ? ` ${escapeHtml(objetivo.modalidad)}` : ''}${objetivo.primaEur ? ` (≈${objetivo.primaEur}€)` : ''} con su botón «Emitir».`
@@ -1684,7 +1689,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
  */
 async function pedirOProponer(filaId: bigint, texto: string, ctx: Ctx): Promise<{ texto: string; ok: boolean }> {
   const fila = { id: filaId }
-  if (ctx.autonomo) {
+  if (ctx.autonomo && PRECIO_SIN_BOTON) {
     // Se pide al terminar el turno (tarda hasta 170 s): el tope diario y el «un solo uso» son los del botón.
     const descartar = () => prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_asistente_tarificacion SET estado = 'descartada', decidida_at = now(), cuerpo = NULL WHERE id = ${fila.id}`).catch(() => {})

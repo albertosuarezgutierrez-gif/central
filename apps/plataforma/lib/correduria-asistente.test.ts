@@ -325,3 +325,12 @@ test('escritura: 503 sin_configurar es «no se hizo», no «no sé»', () => {
   assert.match(escrituraParaIA(503, { estado: 'sin_configurar' }, 'x').texto, /^NO SE HA HECHO/)
   assert.match(escrituraParaIA(502, null, 'x').texto, /^NO SÉ SI/)
 })
+
+test('el precio (0,50€) va SIEMPRE con el botón de Alberto, también en autónomo (29/09/2026)', () => {
+  const f = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
+  assert.match(f, /const PRECIO_SIN_BOTON = false/)
+  const pedir = f.slice(f.indexOf('async function pedirOProponer'), f.indexOf('async function pedirOProponer') + 400)
+  assert.match(pedir, /if \(ctx\.autonomo && PRECIO_SIN_BOTON\)/)
+  assert.ok(!AUTONOMAS_CON_TEXTO_DE_BOTON.includes('proponer_tarificacion'))
+  assert.match(systemAsistente([], '2026-09-29', true), /PRECIO .*SIEMPRE con botón/)
+})
