@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-29T01:03:40Z",
-  "sha": "58790fe02124ede3bb1b464495c568dd2a26eda9",
+  "generadoEn": "2026-09-29T05:37:00Z",
+  "sha": "6718dde41fc9732e0ddd4442d19784b565cd0c2e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4861,13 +4861,13 @@
           "exportada": false,
           "params": "{ lista, fila }: { lista: OpcionCliente[]; fila: (o: OpcionCliente) => React.ReactNode }",
           "retorno": null,
-          "linea": 256,
+          "linea": 258,
           "resumen": "Las que no dicen si incluyen lo marcado: también paginadas, dentro del plegable perezoso."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a7fcf4d0db6a"
+      "hash": "a13b0894cb2d"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/Recordatorios.tsx",
@@ -11536,7 +11536,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "GarantiasClasificadas | null",
-          "linea": 41,
+          "linea": 42,
           "resumen": "Lee el jsonb `{version, porClave: {clave: 'si'|'no'|'no_consta'}}` sin fiarse de su forma. Cualquier cosa que no sea exactamente eso → `null` («no clasificada»), que el filtro trata como `no_consta`. "
         },
         {
@@ -11545,7 +11545,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, coberturas: readonly string[] | null | undefined",
           "retorno": "GarantiasClasificadas | null",
-          "linea": 59,
+          "linea": 60,
           "resumen": "Las coberturas de la póliza actual, llevadas al catálogo. Lo que figura en la póliza es lo que TIENE (`incluida: true`). `null` o `[]` = no hay desglose leído → `null`: sin él no se compara."
         },
         {
@@ -11554,7 +11554,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias | null, necesidades: string | null | undefined, interruptores: readonly InterruptorGarantia[]",
           "retorno": "string[]",
-          "linea": 71,
+          "linea": 72,
           "resumen": "Lo que el cliente pidió, cruzado con los interruptores que existen (los que alguna opción incluye). Marcar una garantía sin interruptor dejaría un filtro que el cliente no ve ni puede quitar. Sale en "
         },
         {
@@ -11563,7 +11563,7 @@
           "exportada": true,
           "params": "marcadas: readonly string[], clave: string, interruptores: readonly InterruptorGarantia[]",
           "retorno": "string[]",
-          "linea": 79,
+          "linea": 80,
           "resumen": "Marca o desmarca una garantía, conservando el orden de los interruptores."
         },
         {
@@ -11572,7 +11572,7 @@
           "exportada": true,
           "params": "lista: readonly T[], cuantas: number",
           "retorno": "Pagina<T>",
-          "linea": 91,
+          "linea": 92,
           "resumen": "Las `cuantas` primeras, cuántas quedan y cuántas se enseñan tras «Ver 10 más»."
         },
         {
@@ -11581,7 +11581,7 @@
           "exportada": true,
           "params": "quedan: number",
           "retorno": "string | null",
-          "linea": 98,
+          "linea": 99,
           "resumen": "Texto del botón: «Ver 10 más» o, si quedan menos, «Ver 3 más». `null` = no queda nada."
         },
         {
@@ -11590,7 +11590,7 @@
           "exportada": true,
           "params": "sel: readonly string[], id: string",
           "retorno": "string[]",
-          "linea": 105,
+          "linea": 106,
           "resumen": "Marca/desmarca una opción para comparar. Con dos elegidas, una tercera no entra."
         },
         {
@@ -11599,16 +11599,16 @@
           "exportada": true,
           "params": "sel: readonly string[], id: string",
           "retorno": "boolean",
-          "linea": 112,
+          "linea": 113,
           "resumen": "La casilla de una opción NO elegida se deshabilita cuando ya hay dos."
         },
         {
           "nombre": "filaDeOpcion",
           "kind": "function",
           "exportada": true,
-          "params": "o: OpcionParaFila, ctx: { ramo: RamoGarantias | null; actual: GarantiasClasificadas | null }",
+          "params": "o: OpcionParaFila, ctx: { ramo: RamoGarantias | null; actual: GarantiasClasificadas | null; todas?: readonly OpcionParaFila[] },",
           "retorno": "FilaOpcion",
-          "linea": 149
+          "linea": 154
         },
         {
           "nombre": "listaY",
@@ -11616,7 +11616,7 @@
           "exportada": true,
           "params": "xs: readonly string[]",
           "retorno": "string",
-          "linea": 188,
+          "linea": 208,
           "resumen": "«Lunas», «Lunas y Robo», «Lunas, Robo y Grúa»."
         },
         {
@@ -11625,7 +11625,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias | null, claves: readonly string[]",
           "retorno": "string[]",
-          "linea": 193
+          "linea": 213
         },
         {
           "nombre": "textoSinDato",
@@ -11633,7 +11633,7 @@
           "exportada": true,
           "params": "n: number, etiquetas: readonly string[]",
           "retorno": "string",
-          "linea": 200,
+          "linea": 220,
           "resumen": "«3 opciones no dicen si incluyen Lunas» / «1 opción no dice si incluye Lunas y Robo»."
         },
         {
@@ -11642,7 +11642,7 @@
           "exportada": true,
           "params": "n: number, cuantasGarantias: number",
           "retorno": "string | null",
-          "linea": 206,
+          "linea": 226,
           "resumen": "«2 no la incluyen» (una garantía) / «2 no incluyen alguna de ellas» (varias). `null` si 0."
         },
         {
@@ -11651,13 +11651,13 @@
           "exportada": true,
           "params": "b: unknown",
           "retorno": "Actividad | null",
-          "linea": 225,
+          "linea": 245,
           "resumen": "Valida el cuerpo de `POST /api/presupuesto/actividad`. `null` = no se reenvía nada. Las claves de garantía son identificadores del catálogo (`[a-z0-9_]`), nunca texto libre; las comparadas, uuids y co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8819c76d4604"
+      "hash": "0ac4a5ab1930"
     },
     {
       "ruta": "apps/asegura-portal/lib/vencimientos.ts",
@@ -14781,7 +14781,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 1022
+          "linea": 1027
         },
         {
           "nombre": "numero",
@@ -14789,7 +14789,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 1027
+          "linea": 1032
         },
         {
           "nombre": "esObjeto",
@@ -14797,7 +14797,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 1031
+          "linea": 1036
         },
         {
           "nombre": "coincideCompania",
@@ -14805,7 +14805,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 1035
+          "linea": 1040
         }
       ],
       "tablas": [
@@ -14816,7 +14816,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "18728841f80d"
+      "hash": "3dc76294883e"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/faltan-producto/route.ts",
@@ -21240,7 +21240,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 143
+          "linea": 146
         },
         {
           "nombre": "clavesDe",
@@ -21248,7 +21248,7 @@
           "exportada": false,
           "params": "raw: unknown",
           "retorno": "",
-          "linea": 146,
+          "linea": 149,
           "resumen": "Solo NOMBRES de claves (nivel 1 y `mainQuote.product`), para diagnosticar la forma sin volcar datos."
         },
         {
@@ -21257,7 +21257,7 @@
           "exportada": true,
           "params": "ids: { correduriaId: string; tarificacionId: string }, deps: Partial<DepsBackfill> = {},",
           "retorno": "Promise<ResumenBackfill>",
-          "linea": 154,
+          "linea": 157,
           "resumen": "Rellena `oferta_id` donde se puede y luego las coberturas. Nunca lanza."
         },
         {
@@ -21266,7 +21266,7 @@
           "exportada": true,
           "params": "correduriaId: string, opts: { limite?: number; presupuestoMs?: number; porTarificacionMs?: number } = {}, deps: { candidatas?: (correduriaId: string, limite: number) => Promise<string[]> backfill?: (ids: { correduriaId: string; tarificacion",
           "retorno": "Promise<ResumenPasada>",
-          "linea": 257,
+          "linea": 260,
           "resumen": "Coge hasta `limite` tarificaciones con filas pendientes (la más reciente primero) y las procesa DE UNA EN UNA dentro de `presupuestoMs`. Una sin tiempo no se empieza."
         },
         {
@@ -21275,7 +21275,7 @@
           "exportada": false,
           "params": "correduriaId: string, limite: number",
           "retorno": "Promise<string[]>",
-          "linea": 297
+          "linea": 300
         },
         {
           "nombre": "depsReales",
@@ -21283,7 +21283,7 @@
           "exportada": false,
           "params": "ids: { correduriaId: string; tarificacionId: string }",
           "retorno": "Promise<DepsBackfill>",
-          "linea": 312
+          "linea": 315
         }
       ],
       "tablas": [
@@ -21291,7 +21291,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "2f8fbdf5cfc9"
+      "hash": "a70121392495"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/buscar-proyectos.ts",
@@ -22155,17 +22155,27 @@
       "ambito": "apps/asegura",
       "resumen": "Coberturas y garantías de CADA precio de una tarificación, leídas GRATIS de Codeoscopic (29/09/2026, entrega 1 de docs/superpowers/plans/2026-09-28-presupuesto-filtro-garantias.md). Tras tarificar, cada fila de `seguros.tarificacion_precios` trae su `oferta_id`. Aquí se hace `GET /insurances/{projec",
       "exporta": [
+        "listaOpciones",
         "completarCoberturasTarificacion",
         "tarificacionACompletar"
       ],
       "funciones": [
+        {
+          "nombre": "listaOpciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "sobre: unknown",
+          "retorno": "OpcionProductoLegible[] | null",
+          "linea": 76,
+          "resumen": "`opciones.lista` del sobre guardado, validada. Cualquier otra forma → `null` («no se sabe»)."
+        },
         {
           "nombre": "vacio",
           "kind": "arrow",
           "exportada": false,
           "params": "",
           "retorno": "ResumenCoberturasTarificacion",
-          "linea": 70
+          "linea": 83
         },
         {
           "nombre": "conTope",
@@ -22173,7 +22183,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 73,
+          "linea": 86,
           "resumen": "Una promesa con tope de tiempo. Pasado el tope, rechaza (y cuenta como `fallo`)."
         },
         {
@@ -22182,7 +22192,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 83
+          "linea": 96
         },
         {
           "nombre": "completarCoberturasTarificacion",
@@ -22190,7 +22200,7 @@
           "exportada": true,
           "params": "ids: { correduriaId: string; tarificacionId: string }, deps: Partial<DepsCoberturasTarificacion> = {},",
           "retorno": "Promise<ResumenCoberturasTarificacion>",
-          "linea": 89,
+          "linea": 102,
           "resumen": "Lee y guarda las coberturas (y sus garantías) de los precios de una tarificación que aún no las tienen. Nunca lanza."
         },
         {
@@ -22199,7 +22209,7 @@
           "exportada": true,
           "params": "r: ResultadoCotizacion, correduriaId: string,",
           "retorno": "",
-          "linea": 166,
+          "linea": 182,
           "resumen": "Qué tarificación hay que completar tras un `cotizar()`: solo una REAL que se guardó. Una simulada o una que no quedó guardada no tiene filas que completar."
         },
         {
@@ -22208,14 +22218,14 @@
           "exportada": false,
           "params": "ids: { correduriaId: string; tarificacionId: string }",
           "retorno": "Promise<DepsCoberturasTarificacion>",
-          "linea": 177
+          "linea": 193
         }
       ],
       "tablas": [
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "7122f3a683f9"
+      "hash": "e84b36054ec3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/coberturas.ts",
@@ -24392,6 +24402,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "407343902f59"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/opciones-emitida.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Las opciones del producto con las que se EMITIÓ (29/09/2026): «Asistencia en Viaje: Estándar», «Vehículo de sustitución: No»… Se leen de la oferta aceptada (GET gratis) y se guardan en la póliza acuñada, porque es lo primero que se pregunta ante un siniestro de grúa y el vendor solo las da en `GET /",
+      "exporta": [
+        "opcionesOfertaAceptada",
+        "lectorOferta"
+      ],
+      "funciones": [
+        {
+          "nombre": "opcionesOfertaAceptada",
+          "kind": "function",
+          "exportada": true,
+          "params": "projectId: string, offerId: string | null, leer: (projectId: string, offerId: string) => Promise<unknown>,",
+          "retorno": "Promise<OpcionLegible[] | null>",
+          "linea": 12
+        },
+        {
+          "nombre": "lectorOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic",
+          "retorno": "(projectId: string, offerId: string)",
+          "linea": 33
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a210eda7499e"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones-producto.ts",
@@ -78528,17 +78568,26 @@
       ],
       "funciones": [
         {
+          "nombre": "resumirLista",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: readonly string[]",
+          "retorno": "string",
+          "linea": 33,
+          "resumen": "«Lunas, Robo y 2 más»: la fila no crece sin límite."
+        },
+        {
           "nombre": "FiltroGarantias",
           "kind": "function",
           "exportada": true,
           "params": "{ ramo, origen, tarificacionId, simulado, }: { /** Ramo de la parrilla (`auto`, `moto`, `hogar`, `decesos`, `salud`, `vida`). Sin catálogo → sin interruptores. */ ramo: string | null /** De dónde se lee lo guardado: la póliza (retarificar) ",
           "retorno": null,
-          "linea": 34
+          "linea": 40
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bfa51a3a8831"
+      "hash": "0394a87d4ffc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Formacion.tsx",
@@ -154958,6 +155007,8 @@
       "exporta": [
         "claveCobertura",
         "clasificarCoberturas",
+        "garantiasDeOpciones",
+        "asistenciaAmpliada",
         "noReconocidas",
         "ramoDeCatalogo"
       ],
@@ -154977,17 +155028,35 @@
           "exportada": false,
           "params": "ramo: RamoGarantias, nombre: string",
           "retorno": "string[]",
-          "linea": 116,
+          "linea": 123,
           "resumen": "Las claves del catálogo que describe UNA cobertura (normalmente una; «Rotura de faro/Casco» → una)."
         },
         {
           "nombre": "clasificarCoberturas",
           "kind": "function",
           "exportada": true,
-          "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null",
+          "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null, opciones?: readonly OpcionProductoLegible[] | null,",
           "retorno": "GarantiasClasificadas",
-          "linea": 132,
+          "linea": 139,
           "resumen": "Lleva las coberturas de UN precio al catálogo del ramo. Todas las claves salen en el resultado: `si` (reconocida e incluida) · `no` (reconocida y marcada NO incluida) · `no_consta` (el resto). Varias "
+        },
+        {
+          "nombre": "garantiasDeOpciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "opciones: readonly OpcionProductoLegible[] | null | undefined",
+          "retorno": "Record<string, EstadoGarantia>",
+          "linea": 178,
+          "resumen": "PURO. Lo que las opciones afirman de cada garantía; lo que no afirman, no sale (no es un «no»)."
+        },
+        {
+          "nombre": "asistenciaAmpliada",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: readonly CoberturaParaClasificar[] | null, opciones?: readonly OpcionProductoLegible[] | null,",
+          "retorno": "EstadoGarantia",
+          "linea": 209,
+          "resumen": "Si el precio lleva asistencia AMPLIADA. PURO. Manda la opción con la que se tarificó (es la elección real); si no la hay, el texto de la cobertura. `no` solo con una señal explícita: la opción dice «E"
         },
         {
           "nombre": "noReconocidas",
@@ -154995,7 +155064,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null",
           "retorno": "string[]",
-          "linea": 145,
+          "linea": 231,
           "resumen": "Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones."
         },
         {
@@ -155004,12 +155073,12 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "RamoGarantias | null",
-          "linea": 152
+          "linea": 238
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ebdccb9a2fab"
+      "hash": "27991c987830"
     },
     {
       "ruta": "packages/module-seguros/src/cliente-edicion.ts",
@@ -156492,7 +156561,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 80
+          "linea": 85
         },
         {
           "nombre": "masUnAnio",
@@ -156500,7 +156569,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 84
+          "linea": 89
         },
         {
           "nombre": "sanearPrima",
@@ -156508,7 +156577,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "",
-          "linea": 90,
+          "linea": 95,
           "resumen": "Prima saneada para `numeric(10,2)`: no-número → null; negativa → 0; fuera de rango → tope. Devuelve aviso si toca."
         },
         {
@@ -156517,7 +156586,7 @@
           "exportada": true,
           "params": "args: { correduriaId: string clienteId: string proyecto: ProyectoEmitido catalogo: readonly CompaniaDgs[] }",
           "retorno": "PreparacionEmision",
-          "linea": 98
+          "linea": 103
         },
         {
           "nombre": "mismaFecha",
@@ -156525,7 +156594,7 @@
           "exportada": false,
           "params": "a: string | null, b: string | null, margenDias: number",
           "retorno": "boolean",
-          "linea": 188
+          "linea": 198
         },
         {
           "nombre": "emparejarConCima",
@@ -156533,7 +156602,7 @@
           "exportada": true,
           "params": "candidatas: readonly PolizaCandidata[], cima: PolizaCima",
           "retorno": "Emparejamiento",
-          "linea": 196
+          "linea": 206
         },
         {
           "nombre": "conciliarConCima",
@@ -156541,7 +156610,7 @@
           "exportada": true,
           "params": "nuestra: NuestraPoliza, cima: CimaPoliza",
           "retorno": "Conciliacion",
-          "linea": 260,
+          "linea": 270,
           "resumen": "Sobre una emitida por nosotros (`emitida_codeoscopic`) que CIMA acaba de traer: CIMA manda en lo suyo, nosotros en el riesgo y en el tomador. Sobre una que NO es nuestra, CIMA manda en todo (como el l"
         },
         {
@@ -156550,7 +156619,7 @@
           "exportada": true,
           "params": "args: { polizaOrigenId: string | null; idPolizaEntidad: string | null }",
           "retorno": "SeguimientoSustitucion",
-          "linea": 314,
+          "linea": 324,
           "resumen": "¿Hace falta seguir esta sustitución, o ya la confirmó CIMA? `polizaOrigenId: null` = esta póliza no viene de una sustitución."
         },
         {
@@ -156559,13 +156628,13 @@
           "exportada": true,
           "params": "origen: { existe: boolean; yaTieneSustituta: boolean } | null",
           "retorno": "ValidacionPolizaOrigen",
-          "linea": 333,
+          "linea": 343,
           "resumen": "Guardián anti-duplicado: una póliza sustituida solo puede tener UNA sustituta. Sin esto, retarificar dos veces la misma póliza (o un reintento que se cuela) dejaría a la vieja con dos «hijas» — la fic"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9c610d854c56"
+      "hash": "b8986d268256"
     },
     {
       "ruta": "packages/module-seguros/src/estado-cliente.ts",
@@ -156784,7 +156853,8 @@
         "estadoDe",
         "filtrarPorGarantias",
         "interruptoresGarantias",
-        "preseleccionFija"
+        "preseleccionFija",
+        "diferenciasDeOpcion"
       ],
       "funciones": [
         {
@@ -156827,11 +156897,20 @@
           "params": "ramo: RamoGarantias | null, interruptores: readonly InterruptorGarantia[]",
           "retorno": "string[]",
           "linea": 82
+        },
+        {
+          "nombre": "diferenciasDeOpcion",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias, opcion: OpcionFiltrable, opciones: readonly OpcionFiltrable[],",
+          "retorno": "DiferenciasOpcion | null",
+          "linea": 98,
+          "resumen": "Qué separa a ESTA opción de las demás de la misma parrilla (29/09/2026): «no incluye» y «sin confirmar» solo en las garantías en las que las opciones NO dicen lo mismo. Sirve para que dos precios que "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a45e9683e216"
+      "hash": "a0e8eb0367b9"
     },
     {
       "ruta": "packages/module-seguros/src/formacion.ts",
@@ -165786,7 +165865,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3892,
-    "funciones": 12779
+    "archivos": 3893,
+    "funciones": 12786
   }
 }
