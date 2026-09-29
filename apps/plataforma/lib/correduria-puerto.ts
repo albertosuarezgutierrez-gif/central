@@ -471,14 +471,24 @@ async function pedirPost(path: string, body: Record<string, unknown>): Promise<{
 
 /**
  * `POST /api/operador/recibos/devolucion` — registra las devoluciones que la compañía avisa por correo.
- * `null` = no se pudo (sin config, red o error del puerto): quien llama lo DICE, no lo da por hecho.
+ * Tres desenlaces: `ok` (con la respuesta) · `rechazado` (asegura contestó que NO: el lote no se
+ * registró, con su motivo) · `sin_respuesta` (config, red o 5xx: no se sabe cuánto se guardó).
  */
-export async function registrarDevolucionesAsegura(devoluciones: unknown[], mensajeId: string | null): Promise<{ status: number; json: unknown } | null> {
+export type RegistroDevoluciones =
+  | { estado: 'ok'; json: unknown }
+  | { estado: 'rechazado'; motivo: string }
+  | { estado: 'sin_respuesta'; motivo: string }
+
+export async function registrarDevolucionesAsegura(devoluciones: unknown[], mensajeId: string | null): Promise<RegistroDevoluciones> {
   try {
     const r = await pedirPost('/api/operador/recibos/devolucion', { devoluciones, mensajeId })
-    return r && r.status === 200 ? r : null
+    if (r === null) return { estado: 'sin_respuesta', motivo: 'falta ASEGURA_OPERADOR_SECRET' }
+    if (r.status === 200) return { estado: 'ok', json: r.json }
+    const j = (r.json ?? {}) as Record<string, unknown>
+    const motivo = typeof j.motivo === 'string' ? j.motivo : `HTTP ${r.status}`
+    return r.status >= 400 && r.status < 500 ? { estado: 'rechazado', motivo } : { estado: 'sin_respuesta', motivo }
   } catch {
-    return null
+    return { estado: 'sin_respuesta', motivo: 'no se pudo llegar a asegura' }
   }
 }
 

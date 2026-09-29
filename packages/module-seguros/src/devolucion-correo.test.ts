@@ -103,3 +103,13 @@ test('normalizarIdRecibo y clasificarMotivoDevolucion', () => {
   assert.equal(clasificarMotivoDevolucion('cualquier cosa'), 'otro')
   assert.equal(clasificarMotivoDevolucion(''), null)
 })
+
+test('Occident: fila ya recobrada fuera; columnas corridas o una sola fecha = ilegible; sin IBAN como motivo', () => {
+  const fila = '| GPAFS0000001 | 400000001 | AUTOS INDIVIDUAL | 573,69 Eur | 1ª | Operación autorizada no conforme | Persona Prueba | ES0000000000000000000000 | 09.09.2026 14.09.2026 | Pendiente |'
+  const con = (f: string) => leerCorreoDevolucion({ ...OCCIDENT, texto: f })
+  assert.equal(con(fila.replace('| Pendiente |', '| Cobrado |'))?.devoluciones.length, 0)
+  assert.equal(con(fila.replace('09.09.2026 14.09.2026', '14.09.2026'))?.ilegibles, 1)
+  assert.equal(con(fila.replace('| 1ª |', '|'))?.ilegibles, 1)
+  const corrida = fila.replace('Operación autorizada no conforme', 'ES0000000000000000000099')
+  assert.equal(con(corrida)?.devoluciones[0].motivo, null)
+})

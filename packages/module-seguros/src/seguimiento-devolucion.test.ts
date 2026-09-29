@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { hitoDevolucion, suspensionDesde, textoTareaDevolucion } from './seguimiento-devolucion.ts'
+import { PREFIJO_TAREA_DEVOLUCION, hitoDevolucion, suspensionDesde, textoTareaDevolucion } from './seguimiento-devolucion.ts'
 
 const hoy = (iso: string) => new Date(`${iso}T10:00:00Z`)
 
@@ -28,4 +28,9 @@ test('el texto de la tarea dice qué preguntar según el motivo', () => {
   assert.match(textoTareaDevolucion({ ...base, tipoMotivo: null, motivo: null }), /ha vendido/)
   assert.match(textoTareaDevolucion({ ...base, hito: 'ultimo_aviso', tipoMotivo: null, motivo: null }), /no puede circular/)
   assert.match(textoTareaDevolucion({ ...base, fechaEfecto: null, tipoMotivo: null, motivo: null }), /portal de la compañía/)
+})
+
+test('toda tarea del seguimiento lleva su marca (y solo esas se cierran al pasar de hito)', () => {
+  const t = textoTareaDevolucion({ hito: 'sin_cobertura', ramo: null, compania: null, importe: null, fechaEfecto: null, tipoMotivo: null, motivo: null })
+  assert.ok(t.startsWith(PREFIJO_TAREA_DEVOLUCION))
 })

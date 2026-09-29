@@ -81,7 +81,15 @@ export function clasificarMotivoDevolucion(motivo: string | null | undefined): T
   return 'otro'
 }
 
-function isoDeFechaEs(s: string): string | null {
+/** Un motivo con pinta de IBAN, de nº largo o larguísimo no es un motivo: no se guarda. */
+function motivoLimpio(s: string | undefined): string | null {
+  const t = (s ?? '').trim()
+  if (t === '' || t.length > 80 || /\b[A-Z]{2}\d{2}[\sA-Z0-9]{10,}/.test(t) || /\d{8,}/.test(t)) return null
+  return t
+}
+
+function isoDeFechaEs(s: string | undefined): string | null {
+  if (!s) return null
   const m = /^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/.exec(s.trim())
   if (!m) return null
   const [d, mes, a] = [Number(m[1]), Number(m[2]), Number(m[3])]
@@ -121,7 +129,7 @@ function leerReale(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
     if (!/^\d{6,}\s+\d{6,}\b/.test(l)) continue
     const m = FILA_REALE.exec(l)
     if (!m) { out.ilegibles++; continue }
-    const motivo = m[6].replace(VALOR_CLIENTE_REALE, '').trim() || null
+    const motivo = motivoLimpio(m[6].replace(VALOR_CLIENTE_REALE, ''))
     out.devoluciones.push({
       codigoDgs: CODIGO.reale,
       numeroPoliza: m[1],
@@ -148,17 +156,22 @@ function leerOccident(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
     const vivas = celdas[0] === '' ? celdas.slice(1) : celdas
     if (vivas.length < 2 || !/^[A-Z0-9]{6,}$/i.test(vivas[0] ?? '') || !/^\d{6,}$/.test(vivas[1] ?? '')) continue
     if (/^n[ºo°]/i.test(vivas[0])) continue
-    // poliza, recibo, producto, total, nº devolución, motivo, titular, iban, fechas, situación
-    const fechas = (vivas[8] ?? '').match(/\d{2}[./-]\d{2}[./-]\d{4}/g) ?? []
-    const fechaDevolucion = isoDeFechaEs(fechas[1] ?? '') ?? isoDeFechaEs(fechas[0] ?? '')
-    if (vivas.length < 9 || fechaDevolucion === null) { out.ilegibles++; continue }
-    const motivo = vivas[5] || null
+    // poliza, recibo, producto, total, nº devolución, motivo, titular, iban, fechas, situación.
+    // Exactamente esas columnas: con celdas corridas el «motivo» podría ser el titular o el IBAN.
+    const celdasTabla = vivas[vivas.length - 1] === '' ? vivas.slice(0, -1) : vivas
+    const fechas = (celdasTabla[8] ?? '').match(/\d{2}[./-]\d{2}[./-]\d{4}/g) ?? []
+    // Envío Y devolución, las dos: con una sola no se sabe cuál es, y el plazo sale de ahí.
+    const fechaDevolucion = fechas.length === 2 ? isoDeFechaEs(fechas[1]) : null
+    if (celdasTabla.length !== 10 || fechaDevolucion === null) { out.ilegibles++; continue }
+    // Una fila ya recobrada o anulada no es una devolución pendiente.
+    if (/cobrad|pagad|anulad|regulariz/i.test(celdasTabla[9] ?? '')) continue
+    const motivo = motivoLimpio(celdasTabla[5])
     out.devoluciones.push({
       codigoDgs: CODIGO.occident,
       numeroPoliza: vivas[0],
       idRecibo: vivas[1],
       importe: importeEs(vivas[3]),
-      fechaEfecto: isoDeFechaEs(fechas[0] ?? ''),
+      fechaEfecto: isoDeFechaEs(fechas[0]),
       fechaDevolucion,
       motivo,
       tipoMotivo: clasificarMotivoDevolucion(motivo),

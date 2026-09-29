@@ -20,6 +20,12 @@ import type { TipoMotivoDevolucion } from './devolucion-correo.ts'
 
 export const ORIGEN_DEVOLUCION = 'recibo_devuelto'
 
+/**
+ * Marca de las tareas que abre este seguimiento. Al pasar de hito se cierran SOLO las que la llevan:
+ * una tarea escrita a mano que diga «devuelto» es de Alberto y no se toca.
+ */
+export const PREFIJO_TAREA_DEVOLUCION = '🧾 '
+
 export const HITOS_DEVOLUCION = ['inicial', 'segunda_llamada', 'ultimo_aviso', 'sin_cobertura'] as const
 export type HitoDevolucion = (typeof HITOS_DEVOLUCION)[number]
 
@@ -71,6 +77,10 @@ const eur = (n: number): string => `${n.toLocaleString('es-ES', { minimumFractio
 
 /** Texto de la tarea para Alberto (no se le manda al cliente). */
 export function textoTareaDevolucion(e: EntradaTareaDevolucion): string {
+  return PREFIJO_TAREA_DEVOLUCION + cuerpoTarea(e)
+}
+
+function cuerpoTarea(e: EntradaTareaDevolucion): string {
   const seguro = [e.ramo ? e.ramo.replace(/_/g, ' ') : 'seguro', e.compania].filter(Boolean).join(' de ')
   const importe = e.importe !== null ? ` de ${eur(e.importe)}` : ''
   const efecto = e.fechaEfecto ? ` (efecto ${fechaEs(e.fechaEfecto)})` : ''

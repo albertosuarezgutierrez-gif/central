@@ -15,6 +15,7 @@
 --   resuelta cuando CIMA trae algo POSTERIOR (un cobro, una anulación): ahí manda CIMA.
 -- · Una devolución sin recibo en cartera (Mapfre no siempre lo ha mandado) se guarda igual; cuando el
 --   recibo entre, el trigger lo marca y los enlaza.
+-- · Esa resolución automática solo si la fecha es la del banco (`resolucion_auto`); si no, a mano.
 -- · El trigger es fail-open: si falla, AVISA (warning) y deja pasar la escritura. Nunca tumba la ingesta.
 
 CREATE TABLE IF NOT EXISTS seguros.recibo_devolucion (
@@ -34,6 +35,10 @@ CREATE TABLE IF NOT EXISTS seguros.recibo_devolucion (
   fuente             text NOT NULL DEFAULT 'correo' CHECK (fuente IN ('correo', 'manual')),
   -- Message-ID del correo: de dónde salió, para poder volver a él.
   mensaje_id         text,
+  -- ¿La fecha de devolución es la del BANCO (Reale, Occident) o la del correo (Mapfre)? Solo con la
+  -- del banco puede el trigger resolverla solo al ver una fecha posterior de CIMA; con la del correo,
+  -- un cobro viejo reescrito con fecha tardía cerraría como cobrado lo que nadie ha pagado.
+  resolucion_auto    boolean NOT NULL DEFAULT false,
   resuelta_at        timestamptz,
   -- 'cima:cobrado', 'cima:anulado', 'manual:cobrado'…
   resuelta_motivo    text,
@@ -84,7 +89,7 @@ BEGIN
   END IF;
 
   dia_cima := (NEW.fecha_situacion AT TIME ZONE 'Europe/Madrid')::date;
-  IF dia_cima IS NOT NULL AND dia_cima > d.fecha_devolucion THEN
+  IF d.resolucion_auto AND dia_cima IS NOT NULL AND dia_cima > d.fecha_devolucion THEN
     -- CIMA sabe algo POSTERIOR a la devolución (un cobro, una anulación): manda CIMA.
     UPDATE seguros.recibo_devolucion
        SET resuelta_at = now(), resuelta_motivo = 'cima:' || NEW.situacion::text, resuelta_por = 'sistema:cima'

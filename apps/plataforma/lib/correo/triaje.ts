@@ -174,9 +174,10 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const res = devolucion.devoluciones.length > 0
               ? await registrarDevolucionesAsegura(devolucion.devoluciones, correo.messageId)
               : null
-            const resultados = res ? leerResultadosPuerto(res.json) : null
+            const resultados = res?.estado === 'ok' ? leerResultadosPuerto(res.json) : null
+            const fallo = res && res.estado !== 'ok' ? res : null
             const avisoId = avisoDeCategoriaCorreo(c.categoria)
-            const texto = textoAvisoDevolucion(devolucion, resultados, (id) => urlFichaCliente(id))
+            const texto = textoAvisoDevolucion(devolucion, resultados, (id) => urlFichaCliente(id), fallo)
             const enviado = avisoId ? await tgAviso(avisoId, texto) : await tgSend(texto)
             if (enviado !== null) stats.avisados++
           } else if (ruta.aviso === 'inmediato') {

@@ -994,6 +994,7 @@ export {
 
 export {
   ORIGEN_DEVOLUCION,
+  PREFIJO_TAREA_DEVOLUCION,
   HITOS_DEVOLUCION,
   hitoDevolucion,
   suspensionDesde,

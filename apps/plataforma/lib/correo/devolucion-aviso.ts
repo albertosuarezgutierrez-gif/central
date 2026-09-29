@@ -15,7 +15,7 @@ import { eur } from '../dinero.ts'
 
 export type ResultadoPuertoDevolucion = {
   idRecibo: string
-  estado: 'registrada' | 'ya_registrada' | 'sin_recibo'
+  estado: 'registrada' | 'ya_registrada' | 'sin_recibo' | 'ya_en_cima' | 'ya_resuelta'
   clienteId: string | null
   cliente: string | null
   ramo: string | null
@@ -47,7 +47,8 @@ export function leerResultadosPuerto(json: unknown): ResultadoPuertoDevolucion[]
   return r.flatMap((x): ResultadoPuertoDevolucion[] => {
     if (typeof x !== 'object' || x === null) return []
     const o = x as Record<string, unknown>
-    const estado = o.estado === 'registrada' || o.estado === 'ya_registrada' || o.estado === 'sin_recibo' ? o.estado : null
+    const estado = o.estado === 'registrada' || o.estado === 'ya_registrada' || o.estado === 'sin_recibo'
+      || o.estado === 'ya_en_cima' || o.estado === 'ya_resuelta' ? o.estado : null
     const idRecibo = txt(o.idRecibo)
     if (!estado || !idRecibo) return []
     const tarea = o.tarea === 'abierta' || o.tarea === 'ya_habia' ? o.tarea : 'no_aplica'
@@ -68,6 +69,7 @@ export function textoAvisoDevolucion(
   lectura: LecturaCorreoDevolucion,
   resultados: ResultadoPuertoDevolucion[] | null,
   urlFicha: (clienteId: string) => string,
+  fallo: { estado: 'rechazado' | 'sin_respuesta'; motivo: string } | null = null,
 ): string {
   const compania = { reale: 'Reale', occident: 'Occident', mapfre: 'Mapfre' }[lectura.compania]
   const n = lectura.devoluciones.length
@@ -86,18 +88,27 @@ export function textoAvisoDevolucion(
     }
     if (resultados === null) continue
     if (!r) { lineas.push('  ⚠️ asegura no devolvió esta fila: míralo en el correo.'); continue }
+    if (r.estado === 'ya_resuelta') {
+      lineas.push('  ✅ CIMA ya trae un movimiento posterior (cobro o anulación): el aviso llegó tarde, no se marca.')
+      continue
+    }
     if (r.estado === 'sin_recibo') {
       lineas.push('  ❔ Ese recibo aún no está en la cartera: queda anotado y se marcará solo cuando llegue.')
       continue
     }
     if (r.suspensionDesde) lineas.push(`  ⏳ La cobertura queda en suspenso el ${fechaEs(r.suspensionDesde)} si no paga`)
     const tarea = r.tarea === 'abierta' ? '📞 Llamada creada en «Tareas de hoy»' : r.tarea === 'ya_habia' ? '📞 Ya tenía llamada abierta' : 'ℹ️ Póliza no vigente: sin llamada'
-    lineas.push(`  ${tarea}${r.clienteId ? ` · <a href="${esc(urlFicha(r.clienteId))}">ficha</a>` : ''}${r.estado === 'ya_registrada' ? ' · (aviso repetido)' : ''}`)
+    const nota = r.estado === 'ya_registrada' ? ' · (aviso repetido)' : r.estado === 'ya_en_cima' ? ' · (CIMA ya lo trae devuelto)' : ''
+    lineas.push(`  ${tarea}${r.clienteId ? ` · <a href="${esc(urlFicha(r.clienteId))}">ficha</a>` : ''}${nota}`)
   }
   if (lectura.incidencias.length > 0) {
     lineas.push(`ℹ️ ${compania} intentó contactar por ${lectura.incidencias.length === 1 ? 'una incidencia' : 'incidencias'} en el recibo ${lectura.incidencias.map((i) => esc(cola(i.idRecibo))).join(', ')} (no dice que esté devuelto).`)
   }
   if (lectura.ilegibles > 0) lineas.push(`⚠️ ${lectura.ilegibles} fila(s) del correo no se han sabido leer: míralo.`)
-  if (resultados === null && n > 0) lineas.push('⚠️ No se pudo registrar en la cartera (asegura no contestó): la ficha y las tareas NO lo saben todavía.')
+  if (resultados === null && n > 0) {
+    lineas.push(fallo?.estado === 'rechazado'
+      ? `⚠️ asegura RECHAZÓ el registro (${esc(fallo.motivo)}): la ficha y las tareas NO lo saben. Anótalo a mano.`
+      : `⚠️ No se pudo confirmar el registro en la cartera (${esc(fallo?.motivo ?? 'asegura no contestó')}): puede que no se haya guardado nada, o solo una parte. Revisa la ficha.`)
+  }
   return lineas.join('\n')
 }

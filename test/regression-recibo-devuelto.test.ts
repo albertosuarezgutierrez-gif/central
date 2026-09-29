@@ -23,7 +23,8 @@ test('la cola de impagos juzga el reloj por la fecha de efecto', () => {
 test('el trigger no tumba la ingesta y solo cede ante un dato de CIMA POSTERIOR a la devolución', () => {
   const sql = leer('apps/asegura/prisma/sql/2026-09-29c_recibo_devolucion.sql')
   assert.match(sql, /EXCEPTION WHEN OTHERS THEN\s+RAISE WARNING[\s\S]*RETURN NEW;/)
-  assert.match(sql, /IF dia_cima IS NOT NULL AND dia_cima > d\.fecha_devolucion THEN/)
+  // Y solo si la fecha es la del BANCO: con la del correo (Mapfre) un cobro viejo reescrito tarde la cerraría.
+  assert.match(sql, /IF d\.resolucion_auto AND dia_cima IS NOT NULL AND dia_cima > d\.fecha_devolucion THEN/)
   assert.match(sql, /BEFORE INSERT OR UPDATE ON seguros\.poliza_recibos/)
   // Por nº de recibo sin ceros, no por uuid: la ingesta puede borrar y reinsertar.
   assert.match(sql, /id_recibo_norm = ltrim\(NEW\.id_recibo, '0'\)/)
@@ -43,4 +44,18 @@ test('las tareas de devolución salen en «Tareas de hoy» y el cierre exige el 
 test('la pasada del detector sigue las devoluciones con su propio punto de guardado', () => {
   const src = leer('apps/asegura/lib/eventos-cartera.ts')
   assert.match(src, /savepoint devoluciones`[\s\S]*seguirDevoluciones\(tx, correduriaId\)[\s\S]*rollback to savepoint devoluciones/)
+})
+
+test('revisión de alto riesgo: guardas que no pueden volver a caer', () => {
+  const src = leer('apps/asegura/lib/devoluciones-recibo.ts')
+  // No se marca devuelto un recibo del que CIMA ya sabe algo posterior.
+  assert.match(src, /\(fecha_situacion is null or \(fecha_situacion at time zone 'Europe\/Madrid'\)::date <= \$\{d\.fechaDevolucion\}::date\)/)
+  // «Cobrado de nuevo» solo resuelve la devolución de ESA compañía.
+  assert.match(src, /\(id_recibo_norm, codigo_entidad_dgs\) = \(select ltrim\(id_recibo, '0'\), codigo_entidad_dgs/)
+  // Al pasar de hito solo se cierran las tareas propias, nunca una manual que diga «devuelto».
+  assert.match(src, /starts_with\(observaciones, \$\{PREFIJO_TAREA_DEVOLUCION\}\)/)
+  assert.doesNotMatch(src, /ilike '%devuelto%'/)
+  // Una oportunidad CERRADA por Alberto no se reabre, y el triaje y la pasada diaria van en fila.
+  assert.match(src, /estado::text in \('ganada', 'perdida'\)/)
+  assert.match(src, /pg_advisory_xact_lock\(hashtext\(\$\{`devolucion:\$\{r\.polizaId\}`\}\)\)/)
 })

@@ -17,6 +17,7 @@
 import {
   ORIGEN_DEVOLUCION,
   POLIZA_ESTADOS_VIGENTES,
+  PREFIJO_TAREA_DEVOLUCION,
   clasificarMotivoDevolucion,
   hitoDevolucion,
   normalizarIdRecibo,
@@ -31,6 +32,16 @@ import { anotarCambio } from './auditoria'
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
 
 const ESTADOS_VIGENTES = [...POLIZA_ESTADOS_VIGENTES] as string[]
+
+/**
+ * ¿La fecha de devolución del correo es la del BANCO? Reale y Occident la dan; Mapfre no (se usa la
+ * del correo). Solo con fecha del banco puede el trigger dar la devolución por resuelta cuando CIMA
+ * trae una fecha posterior: con la del correo, un cobro viejo reescrito con fecha tardía cerraría como
+ * «cobrado» lo que nadie ha pagado. Sin ella se resuelve a mano («Cobrado de nuevo»).
+ */
+function fechaEsDelBanco(codigoDgs: string): boolean {
+  return codigoDgs === 'C0613' || codigoDgs === 'C0468'
+}
 const ACTOR = 'sistema:devolucion'
 
 // ── Entrada del puerto ─────────────────────────────────────────────────────────
@@ -75,8 +86,11 @@ export function validarDevoluciones(b: unknown): { ok: true; devoluciones: Devol
 export type ResultadoDevolucion = {
   idRecibo: string
   codigoDgs: string
-  /** `sin_recibo` = la compañía avisa de un recibo que aún no está en la cartera: se guarda y se enlaza al llegar. */
-  estado: 'registrada' | 'ya_registrada' | 'sin_recibo'
+  /**
+   * `sin_recibo` = aún no está en la cartera: se guarda y se enlaza al llegar · `ya_en_cima` = CIMA ya lo
+   * trae devuelto (la resuelve CIMA) · `ya_resuelta` = CIMA ya sabe algo posterior (cobro o anulación).
+   */
+  estado: 'registrada' | 'ya_registrada' | 'sin_recibo' | 'ya_en_cima' | 'ya_resuelta'
   clienteId: string | null
   cliente: string | null
   polizaId: string | null
@@ -104,19 +118,17 @@ export async function registrarDevoluciones(correduriaId: string, devoluciones: 
     const norm = normalizarIdRecibo(d.idRecibo)
     const tipoMotivo = clasificarMotivoDevolucion(d.motivo)
     const r = await db.$transaction(async (tx) => {
-      const ins = await tx.$queryRaw<{ id: string }[]>`
-        insert into recibo_devolucion (correduria_id, codigo_entidad_dgs, id_recibo, numero_poliza, fecha_devolucion, fecha_efecto, importe, motivo, tipo_motivo, fuente, mensaje_id)
-        values (${correduriaId}::uuid, ${d.codigoDgs}, ${d.idRecibo}, ${d.numeroPoliza}, ${d.fechaDevolucion}::date, ${d.fechaEfecto}::date,
-                ${d.importe}::numeric, ${d.motivo}, ${tipoMotivo}, 'correo', ${mensajeId})
-        on conflict (correduria_id, codigo_entidad_dgs, id_recibo_norm) where resuelta_at is null do nothing
-        returning id::text as id`
-      const nueva = ins.length > 0
-      const [rec] = await tx.$queryRaw<FilaRecibo[]>`
+      // Primero el recibo: lo que CIMA ya sabe decide qué se hace con el aviso.
+      const [rec] = await tx.$queryRaw<(FilaRecibo & { situacion: string; diaCima: string | null; abierta: boolean })[]>`
         select r.id::text as "reciboId", p.id::text as "polizaId", p.cliente_id::text as "clienteId", p.tipo::text as ramo,
                p.aseguradora as compania, p.numero_poliza as "numeroPoliza",
                to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto, r.prima_total::text as importe,
                (p.estado::text = any(${ESTADOS_VIGENTES}::text[]) and p.sustituida_at is null) as vigente,
-               c.nombre, c.apellidos
+               c.nombre, c.apellidos, r.situacion::text as situacion,
+               to_char(r.fecha_situacion at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "diaCima",
+               exists (select 1 from recibo_devolucion x where x.correduria_id = r.correduria_id
+                         and x.codigo_entidad_dgs = r.codigo_entidad_dgs and x.id_recibo_norm = ltrim(r.id_recibo, '0')
+                         and x.resuelta_at is null) as abierta
         from poliza_recibos r
         join polizas p on p.id = r.poliza_id and p.merged_into_poliza_id is null
         left join clientes c on c.id = p.cliente_id
@@ -124,17 +136,37 @@ export async function registrarDevoluciones(correduriaId: string, devoluciones: 
           and ltrim(r.id_recibo, '0') = ${norm}
         order by r.updated_at desc nulls last
         limit 1`
-      if (!rec) return { nueva, rec: null, tarea: 'no_aplica' as const }
-      await tx.$executeRaw`
-        update recibo_devolucion set recibo_id = ${rec.reciboId}::uuid, poliza_id = ${rec.polizaId}::uuid
-        where correduria_id = ${correduriaId}::uuid and codigo_entidad_dgs = ${d.codigoDgs}
-          and id_recibo_norm = ${norm} and resuelta_at is null`
-      // El recibo pasa a `devuelto` con la fecha de la devolución: así la foto del detector ve el
-      // cambio (evento RECIBO_DEVUELTO → borrador al cliente) y el trigger lo protege de la ingesta.
-      await tx.$executeRaw`
-        update poliza_recibos set situacion = 'devuelto',
-               fecha_situacion = (${d.fechaDevolucion}::date::timestamp at time zone 'Europe/Madrid'), updated_at = now()
-        where id = ${rec.reciboId}::uuid and situacion::text <> 'devuelto'`
+      // CIMA ya lo trae devuelto y no hay aviso nuestro: la devolución es de CIMA y la resuelve CIMA.
+      // Registrarla también por correo permitiría un «cobrado» a mano que el siguiente pull deshace.
+      const yaEnCima = !!rec && rec.situacion === 'devuelto' && !rec.abierta
+      // CIMA ya sabe algo POSTERIOR a la devolución (un cobro, una anulación): el aviso llega tarde.
+      const posterior = !!rec && rec.situacion !== 'devuelto' && rec.diaCima !== null && rec.diaCima > d.fechaDevolucion
+      let nueva = false
+      if (!yaEnCima) {
+        const ins = await tx.$queryRaw<{ id: string }[]>`
+          insert into recibo_devolucion (correduria_id, codigo_entidad_dgs, id_recibo, numero_poliza, fecha_devolucion, fecha_efecto,
+                                         importe, motivo, tipo_motivo, fuente, mensaje_id, resolucion_auto, recibo_id, poliza_id,
+                                         resuelta_at, resuelta_motivo, resuelta_por)
+          values (${correduriaId}::uuid, ${d.codigoDgs}, ${d.idRecibo}, ${d.numeroPoliza}, ${d.fechaDevolucion}::date, ${d.fechaEfecto}::date,
+                  ${d.importe}::numeric, ${d.motivo}, ${tipoMotivo}, 'correo', ${mensajeId}, ${fechaEsDelBanco(d.codigoDgs)},
+                  ${rec?.reciboId ?? null}::uuid, ${rec?.polizaId ?? null}::uuid,
+                  ${posterior ? new Date() : null}::timestamptz, ${posterior ? `cima:${rec?.situacion}` : null}, ${posterior ? ACTOR : null})
+          on conflict (correduria_id, codigo_entidad_dgs, id_recibo_norm) where resuelta_at is null do nothing
+          returning id::text as id`
+        nueva = ins.length > 0
+      }
+      if (!rec) return { nueva, rec: null, tarea: 'no_aplica' as const, estado: 'sin_recibo' as const }
+      if (posterior) return { nueva, rec, tarea: 'no_aplica' as const, estado: 'ya_resuelta' as const }
+      if (!yaEnCima) {
+        // El recibo pasa a `devuelto` con la fecha de la devolución: así la foto del detector ve el
+        // cambio (evento RECIBO_DEVUELTO → borrador al cliente) y el trigger lo protege de la ingesta.
+        // Solo si CIMA no sabe nada posterior (la guarda de arriba, repetida por si cambió entre medias).
+        await tx.$executeRaw`
+          update poliza_recibos set situacion = 'devuelto',
+                 fecha_situacion = (${d.fechaDevolucion}::date::timestamp at time zone 'Europe/Madrid'), updated_at = now()
+          where id = ${rec.reciboId}::uuid and situacion::text <> 'devuelto'
+            and (fecha_situacion is null or (fecha_situacion at time zone 'Europe/Madrid')::date <= ${d.fechaDevolucion}::date)`
+      }
       if (nueva) {
         await tx.$executeRaw`
           insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
@@ -148,13 +180,13 @@ export async function registrarDevoluciones(correduriaId: string, devoluciones: 
             importe: d.importe ?? importeEiacNum(rec.importe), tipoMotivo, motivo: d.motivo,
           }, hoy)
         : ('no_aplica' as const)
-      return { nueva, rec, tarea }
+      return { nueva, rec, tarea, estado: yaEnCima ? ('ya_en_cima' as const) : nueva ? ('registrada' as const) : ('ya_registrada' as const) }
     })
     const efecto = r.rec?.efecto ?? d.fechaEfecto
     out.push({
       idRecibo: d.idRecibo,
       codigoDgs: d.codigoDgs,
-      estado: !r.rec ? 'sin_recibo' : r.nueva ? 'registrada' : 'ya_registrada',
+      estado: r.estado,
       clienteId: r.rec?.clienteId ?? null,
       cliente: r.rec ? [r.rec.nombre, r.rec.apellidos].filter(Boolean).join(' ') || null : null,
       polizaId: r.rec?.polizaId ?? null,
@@ -193,19 +225,27 @@ type ReciboSeguido = {
 async function asegurarTareaDevolucion(tx: Tx, correduriaId: string, r: ReciboSeguido, hoy: Date): Promise<'creada' | 'ya_habia' | 'extinguida'> {
   const hito = hitoDevolucion(r.efecto, hoy)
   if (hito === null) return 'extinguida'
+  // En fila por póliza: el triaje y la pasada diaria pueden llegar a la vez sin oportunidad abierta.
+  await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`devolucion:${r.polizaId}`}))`
+  // Una vez por recibo y hito en TODA la correduría, y nunca otra vez si Alberto ya CERRÓ la
+  // oportunidad de este recibo: cerrarla es su decisión, y reabrirla cada día sería ruido.
+  const [visto] = await tx.$queryRaw<{ hito: number; cerrada: number }[]>`
+    select
+      (select count(*)::int from oportunidad_historial
+        where correduria_id = ${correduriaId}::uuid and accion = 'tarea_devolucion'
+          and detalle->>'reciboId' = ${r.reciboId} and detalle->>'hito' = ${hito}) as hito,
+      (select count(*)::int from oportunidades
+        where correduria_id = ${correduriaId}::uuid and estado::text in ('ganada', 'perdida')
+          and (info_riesgo->>'reciboId' = ${r.reciboId}
+               or (info_riesgo->>'polizaId' = ${r.polizaId} and ltrim(coalesce(info_riesgo->>'idRecibo', info_riesgo->>'reciboId', ''), '0') = ${normalizarIdRecibo(r.idRecibo)}))) as cerrada`
+  if ((visto?.hito ?? 0) > 0 || (visto?.cerrada ?? 0) > 0) return 'ya_habia'
   const [abierta] = await tx.$queryRaw<{ id: string; estado: string }[]>`
     select o.id::text as id, o.estado::text as estado from oportunidades o
     where o.correduria_id = ${correduriaId}::uuid and o.info_riesgo->>'polizaId' = ${r.polizaId}
       and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
-    order by o.created_at desc limit 1
-    for update`
+    order by o.created_at desc limit 1`
   let oportunidadId = abierta?.id ?? null
   if (oportunidadId) {
-    const [hecho] = await tx.$queryRaw<{ n: number }[]>`
-      select count(*)::int as n from oportunidad_historial
-      where oportunidad_id = ${oportunidadId}::uuid and accion = 'tarea_devolucion'
-        and detalle->>'reciboId' = ${r.reciboId} and detalle->>'hito' = ${hito}`
-    if ((hecho?.n ?? 0) > 0) return 'ya_habia'
     // Abierta A MANO por esta devolución (antes de este código) y sin ningún hito anotado: su tarea
     // ya es la de hoy. Se anota el hito para no duplicarla y se deja la que escribió Alberto.
     const [manual] = await tx.$queryRaw<{ n: number }[]>`
@@ -240,7 +280,7 @@ async function asegurarTareaDevolucion(tx: Tx, correduriaId: string, r: ReciboSe
     update gestiones set estado = 'cerrada', updated_at = now(),
            observaciones = observaciones || ${'\n— Sustituida por el siguiente paso del recibo devuelto.'}
     where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and estado <> 'cerrada'
-      and poliza_id = ${r.polizaId}::uuid and observaciones ilike '%devuelto%'`
+      and poliza_id = ${r.polizaId}::uuid and starts_with(observaciones, ${PREFIJO_TAREA_DEVOLUCION})`
   await tx.$executeRaw`
     insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, poliza_id, oportunidad_id, origen_trigger)
     values (${correduriaId}::uuid, cast('llamada' as gestion_tipo), 'alta', 'pendiente', ${observaciones},
@@ -344,7 +384,8 @@ export async function resolverDevolucion(correduriaId: string, reciboId: string,
     const resueltas = await tx.$executeRaw`
       update recibo_devolucion set resuelta_at = now(), resuelta_motivo = 'manual:cobrado', resuelta_por = ${actor}
       where correduria_id = ${correduriaId}::uuid and resuelta_at is null
-        and (recibo_id = ${reciboId}::uuid or id_recibo_norm = (select ltrim(id_recibo, '0') from poliza_recibos where id = ${reciboId}::uuid))`
+        and (recibo_id = ${reciboId}::uuid
+             or (id_recibo_norm, codigo_entidad_dgs) = (select ltrim(id_recibo, '0'), codigo_entidad_dgs from poliza_recibos where id = ${reciboId}::uuid))`
     if (resueltas === 0) {
       return { ok: false as const, estado: 'conflicto' as const, motivo: 'Esta devolución la trae CIMA: se da por cobrada cuando CIMA mande el cobro.', status: 409 }
     }

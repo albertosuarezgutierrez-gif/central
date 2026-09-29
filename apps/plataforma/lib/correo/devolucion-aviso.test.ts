@@ -23,10 +23,19 @@ test('registrada: quién, importe español, plazo de suspensión, pista del moti
   assert.doesNotMatch(t, /3021700000001/, 'el nº de póliza no viaja entero')
 })
 
-test('🪤 el puerto no contestó: se dice que NO está registrado, no se da por hecho', () => {
+test('🪤 el puerto no contestó: se dice que NO consta registrado, no se da por hecho', () => {
   const t = textoAvisoDevolucion(lectura, null, url)
-  assert.match(t, /No se pudo registrar/)
+  assert.match(t, /No se pudo confirmar el registro/)
   assert.doesNotMatch(t, /Llamada creada/)
+})
+
+test('asegura rechaza el lote: se dice que lo rechazó y por qué, no que «no contestó»', () => {
+  const t = textoAvisoDevolucion(lectura, null, url, { estado: 'rechazado', motivo: 'idRecibo no válido' })
+  assert.match(t, /RECHAZÓ el registro \(idRecibo no válido\)/)
+})
+
+test('CIMA ya sabía algo posterior: no se marca y se dice', () => {
+  assert.match(textoAvisoDevolucion(lectura, [{ ...ok, estado: 'ya_resuelta', tarea: 'no_aplica' }], url), /llegó tarde/)
 })
 
 test('recibo que aún no está en la cartera: queda anotado, sin enlace inventado', () => {
