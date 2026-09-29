@@ -1,7 +1,6 @@
-import { NextResponse } from 'next/server'
-
 import { leerAdjunto } from '@/lib/adjuntos-parte'
 import { requireIdentidad } from '@/lib/session'
+import { descargaNoEncontrada, descargaSinSesion } from '@/lib/respuesta-descarga'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -24,19 +23,19 @@ type Ctx = { params: Promise<{ id: string; documentoId: string }> }
  * toda persona física, y esta ruta ni siquiera ofrece un camino que parta de un
  * `clienteId` o de un `polizaId`.
  */
-export async function GET(_req: Request, ctx: Ctx) {
+export async function GET(req: Request, ctx: Ctx) {
   let identidad
   try {
     identidad = await requireIdentidad()
   } catch {
-    return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
+    return descargaSinSesion(req, { error: 'sin_sesion' })
   }
 
   const { id, documentoId } = await ctx.params
   const d = await leerAdjunto(identidad.id, id, documentoId)
   // «No existe», «no es tuyo» y «no se puede servir» se responden IGUAL: separar
   // los casos diría qué uuids existen en la base.
-  if (!d) return NextResponse.json({ error: 'no_encontrado' }, { status: 404 })
+  if (!d) return descargaNoEncontrada(req, { error: 'no_encontrado' })
 
   // El nombre va dos veces: en ASCII plano para los clientes viejos y en UTF-8
   // codificado para el resto. Las comillas y los caracteres de control se

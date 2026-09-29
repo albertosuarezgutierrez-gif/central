@@ -3,6 +3,7 @@ import { Home } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { consultarHogar, normalizarReferencia } from '@/lib/correduria-hogar'
 import { precalificarHogarNuevoAsegura } from '@/lib/hogar-nuevo-asegura'
+import { direccionDeFicha } from '@/lib/hogar-direccion-ficha'
 import { Pagina, PageHeader, cardStyle, CardHeader, btnStyle } from '@/components/ui'
 import Formulario from './Formulario'
 
@@ -139,11 +140,26 @@ export default async function HogarNuevoPage({
   }
 
   // ── Sin dirección ni referencia todavía: el buscador ─────────────────────
+  // Sin nada que buscar aún, se parte de la dirección de su ficha (la de auto suele estar): se
+  // PROPONE y se avisa de que puede no ser la vivienda. Consultar el Catastro sigue siendo un clic.
   if (referencia === null) {
+    const deFicha = ficha.estado === 'ok' ? direccionDeFicha(ficha.ficha.contacto) : null
     return (
       <Pagina>
         {cabecera}
-        <FormularioBuscar clienteId={clienteId} direccion="" municipio={municipio} provincia={provincia} />
+        {deFicha && (
+          <p style={{ ...cardStyle, fontSize: 13, marginBottom: 14 }}>
+            📍 Dirección de su ficha. Confírmala al hablar con él: ¿vive ahí? ¿es propietario o inquilino (entonces es contenido)?
+          </p>
+        )}
+        <FormularioBuscar
+          clienteId={clienteId}
+          direccion={deFicha?.direccion ?? ''}
+          // Con dirección de la ficha pero sin municipio, el campo sale VACÍO: el «SEVILLA» por defecto
+          // se leería como dato del cliente junto a su calle.
+          municipio={deFicha ? (deFicha.municipio ?? '') : municipio}
+          provincia={deFicha ? (deFicha.provincia ?? '') : provincia}
+        />
       </Pagina>
     )
   }

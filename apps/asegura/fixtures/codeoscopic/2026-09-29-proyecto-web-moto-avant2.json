@@ -1,0 +1,227 @@
+{
+ "id": 40956228,
+ "externalId": "cliente-00000000-0000-0000-0000-000000000000",
+ "creationDateTime": "2026-09-29T11:14:05+02:00",
+ "effectiveDate": "2026-09-30",
+ "insuranceLine": {
+  "id": "Motorcycle",
+  "path": "motorcycle",
+  "name": "Autos 3ª categoría (Motos)"
+ },
+ "mainQuotes": [
+  {
+   "id": "Q2028439173",
+   "creationDateTime": "2026-09-29T11:14:05+02:00",
+   "effectiveDate": "2026-09-30",
+   "product": {
+    "id": 73,
+    "name": "Allianz Motos",
+    "addon": false,
+    "vendor": {
+     "id": 2,
+     "name": "Allianz"
+    },
+    "modality": {
+     "name": "ALLIANZ MOTO BÁSICO",
+     "description": "ALLIANZ MOTO BÁSICO",
+     "category": {
+      "name": "Terceros"
+     },
+     "rating": 3
+    }
+   },
+   "paymentMethod": {
+    "id": "Company"
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "installments": 1
+   },
+   "messages": [
+    {
+     "type": "info",
+     "text": "Observaciones de la compañía",
+     "description": "Prima calculada con fecha de efecto : 30/09/2026 y fecha de término : 01/09/2027"
+    },
+    {
+     "type": "warning",
+     "text": "Avisos sobre la prima",
+     "description": "Prima anual real: 115.98€"
+    }
+   ],
+   "downPayment": 106.77,
+   "premium": 106.77,
+   "termMonths": 12,
+   "estimate": false,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2028439371",
+   "creationDateTime": "2026-09-29T11:14:05+02:00",
+   "effectiveDate": "2026-09-30",
+   "product": {
+    "id": 189,
+    "name": "Occident GCO Motos 3.0",
+    "addon": false,
+    "vendor": {
+     "id": 29,
+     "name": "Occident"
+    },
+    "modality": {
+     "name": "Terceros básico",
+     "description": "Terceros básico",
+     "category": {
+      "name": "Terceros"
+     },
+     "rating": 3
+    }
+   },
+   "paymentMethod": {
+    "id": "Company"
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "installments": 1
+   },
+   "downPayment": 217.57,
+   "premium": 217.57,
+   "termMonths": 12,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2028439209",
+   "creationDateTime": "2026-09-29T11:14:05+02:00",
+   "effectiveDate": "2026-09-30",
+   "product": {
+    "id": 78,
+    "name": "Mapfre Motos",
+    "addon": false,
+    "vendor": {
+     "id": 10,
+     "name": "Mapfre"
+    },
+    "modality": {
+     "name": "TERCEROS Básico (MOTOS)",
+     "description": "TERCEROS Básico (MOTOS)",
+     "category": {
+      "name": "Terceros"
+     },
+     "rating": 3
+    }
+   },
+   "paymentMethod": {
+    "id": "Company"
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "installments": 1
+   },
+   "messages": [
+    {
+     "type": "info",
+     "text": "Observaciones de la compañía",
+     "description": "01- El cliente identificado no aparece asociado a una póliza de otra compañía."
+    }
+   ],
+   "downPayment": 344.52,
+   "premium": 344.52,
+   "termMonths": 12,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  }
+ ],
+ "addonQuotes": [],
+ "offers": [
+  {
+   "id": 1907521253,
+   "mainQuote": {
+    "$ref": "#/mainQuotes/0",
+    "id": "Q2028439173"
+   },
+   "addonQuotes": [],
+   "totalPremium": 106.77
+  },
+  {
+   "id": 1907521424,
+   "mainQuote": {
+    "$ref": "#/mainQuotes/1",
+    "id": "Q2028439371"
+   },
+   "addonQuotes": [],
+   "totalPremium": 217.57
+  },
+  {
+   "id": 1907521284,
+   "mainQuote": {
+    "$ref": "#/mainQuotes/2",
+    "id": "Q2028439209"
+   },
+   "addonQuotes": [],
+   "totalPremium": 344.52
+  }
+ ],
+ "holder": {
+  "identificationDocument": {
+   "type": {
+    "id": "Dni"
+   },
+   "id": "00000000T"
+  },
+  "name": "Nombre",
+  "surname": "Apellido"
+ },
+ "risk": {
+  "registrationPlate": "0000XXX",
+  "registrationDate": "2026-09-24",
+  "vehicle": {
+   "code": "03152810005"
+  },
+  "kilometersPerYear": 5000,
+  "drivingExperience": {
+   "id": "ThisMotorcycle",
+   "name": "Esta Motocicleta"
+  },
+  "previouslyInsured": true,
+  "previousInsurance": {
+   "previousCompany": {
+    "code": "C0247",
+    "name": "DIVINA PASTORA / CLEVEREA"
+   },
+   "registrationPlate": "0000XXX",
+   "policyNumber": "00000",
+   "totalYearsInsured": 10,
+   "yearsInPreviousCompany": 10,
+   "yearsWithoutAccidents": 10,
+   "lastFiveYearsAccidents": 0
+  }
+ },
+ "appUrls": [
+  {
+   "rel": "Self",
+   "url": "https://app.avant2.es/production/40956228"
+  },
+  {
+   "rel": "Quotes",
+   "url": "https://app.avant2.es/production/40956228/motorbike/quotes"
+  }
+ ]
+}

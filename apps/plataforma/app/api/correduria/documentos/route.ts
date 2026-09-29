@@ -4,7 +4,8 @@ import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { pedirDocumentoAsegura, subirDocumentoAsegura } from '@/lib/documentos-asegura'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// Lo subido a una ficha se lee con IA para abrir su oportunidad: hasta ~2 min.
+export const maxDuration = 120
 
 /**
  * POST /api/correduria/documentos — sube un documento (multipart) o deja

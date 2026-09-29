@@ -11,15 +11,18 @@ const POOLER = 'postgresql://central_asegura.ref:pass@aws-1-eu-central-1.pooler.
 test('al pooler 6543 sin parámetros se le añaden pgbouncer y un connection_limit > 1', () => {
   const r = normalizarUrlPooler(POOLER)
   assert.match(r, /pgbouncer=true/)
-  assert.match(r, /connection_limit=5\b/)
+  assert.match(r, /connection_limit=3\b/)
   assert.doesNotMatch(r, /connection_limit=1\b/)
+  // Con menos conexiones por instancia, más margen en la cola antes de P2024.
+  assert.match(r, /pool_timeout=20\b/)
 })
 
 test('no pisa parámetros ya presentes', () => {
-  // 7 a propósito: distinto del defecto (5), para que el cepo distinga «respetado» de «puesto».
-  const r = normalizarUrlPooler(`${POOLER}?pgbouncer=true&connection_limit=7`)
+  // 7 a propósito: distinto del defecto (3), para que el cepo distinga «respetado» de «puesto».
+  const r = normalizarUrlPooler(`${POOLER}?pgbouncer=true&connection_limit=7&pool_timeout=5`)
   assert.match(r, /connection_limit=7/)
-  assert.doesNotMatch(r, /connection_limit=[15]\b/)
+  assert.doesNotMatch(r, /connection_limit=[13]\b/)
+  assert.match(r, /pool_timeout=5\b/)
 })
 
 test('una URL que no va al 6543 se devuelve intacta (session pooler, directa)', () => {

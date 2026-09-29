@@ -960,6 +960,9 @@ export {
 export { claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type SeguroOportunidad } from './compania-oportunidad.ts'
 export {
   CATALOGO_GARANTIAS,
+  GARANTIAS_DE_LEY,
+  esGarantiaDeLey,
+  etiquetasGarantiasDeLey,
   VERSION_CATALOGO,
   asistenciaAmpliada,
   asistenciaHogarAmpliada,

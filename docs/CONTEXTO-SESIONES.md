@@ -14,7 +14,13 @@
 >
 **(29/09/2026)** — 🔎 Estudio de Acierto.com (recomprado por sus fundadores a Bauer en dic/2024) y Rastreator (RVU, ~1,2 M visitas/mes est.; §2.8 = tablero de comparadores, Arpem en liquidación; créditos OpenSEO agotados): §2.7 de `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`. OpenSEO: ~436k visitas orgánicas/mes est., 41 % del top es préstamos, hogar ~1 %; patrón copiable = fichas por compañía ajena. Comparador: el tarificador web de Avant2 existe pero cuesta 0,50 €/consulta → recomendado comparador de GARANTÍAS sin precio (hogar primero). Proyectos y Seguros (J0067) = motor de los comparadores de la OCU, no de Acierto. Sin código. **Decisiones de Alberto (29/09):** (1) tope de gasto Avant2 en EUROS/mes: aviso Telegram a 60 €, BLOQUEO a 70 € hasta que autorice por botón (+30 €/vez; ReRate/limites/submit cuentan a 0,50 € mientras no se confirme su coste); hoy el guardián solo cuenta consultas y bloquea en silencio. (2) UNA sola regla: toda oportunidad con vencimiento → contacto a 45 días (hoy conviven 60 días en baja/Telegram, 45 en recaptación, 70/45 en aviso-web). A clientes propios NO se les manda precio: solo «dinos cuándo te vence y te avisamos» (= aviso-web; `ASEGURA_AVISOS_WEB_ACTIVOS=1` YA está en producción de central-asegura desde el 24/09, medido en Vercel el 29/09). (3) Calculadora de bonificación hipotecaria en la WEB pública (cálculo en navegador; spec base 2026-09-07). Orden: 1→2→3.
 
+**(29/09/2026)** — 🏠 Venta cruzada de hogar: `hogar-nuevo` propone la dirección de la FICHA del cliente en el buscador del Catastro (gratis) con aviso «confírmala: ¿vive ahí? ¿propietario o inquilino?» (`lib/hogar-direccion-ficha.ts`, cepo visto en rojo). Tarificar hogar SÍ cuesta 0,50 € (Alberto creía que era gratis): el precio lo sigue pidiendo él tras llamar. Alberto descarta retarificar solo al vencimiento: prefiere llamar (cartera pequeña, vender). Pendientes aprobadas: aviso «pierdes X» antes de aceptar (idea 1) y pantalla de qué garantías filtran los clientes (idea 3).
+
+**(29/09/2026)** — 🏷️ Presupuesto por garantías, dictado de Alberto sobre la maqueta: (1) en el PORTAL la compañía va SOLO con su logo (nombre en `alt`/`title`, texto solo si no hay logo; escala óptica como plataforma, `escalaLogo`), igual que ya hacía plataforma desde el 28/09. (2) **RC obligatoria de auto/moto = de ley**: `GARANTIAS_DE_LEY` en `catalogo-garantias.ts` → siempre «sí» al clasificar, fuera de los interruptores, nunca «no incluye/sin confirmar» ni «pierdes», y línea fija «✓ Incluida siempre, por ley» en portal y parrilla. Los precios ya guardados se cubren en lectura (no hay reclasificación por `VERSION_CATALOGO`). Cepo en `filtro-garantias.test.ts` visto en rojo en sus 3 brazos.
+
 **(29/09/2026)** — 🔑 PDF de póliza con contraseña (= DNI del tomador) subido a la ficha: asegura prueba el DNI de ESA ficha (descifrado dentro, nunca sale) con `pdfjs-dist` (`lib/documentos/pdf-contrasena.ts`). Vale en «Subir documento» de la ficha, en la oportunidad del cliente y en el enlace de datos del presupuesto. Sin ficha (subir-poliza, Telegram) no hay DNI que probar: lo dice. Dos trampas medidas: `pdf-parse` no avisa del cifrado de forma fiable (AES-256 → «bad XRef») → se detecta `/Encrypt`; y `workerSrc = ''` rompe pdfjs 4 en Node («fake worker failed») → el reintento con contraseña del PORTAL y la extracción de nóminas de rrhh estaban rotos igual (medido) → corregidos en el mismo PR #3994.
+
+**(29/09/2026)** — 🔌 **BD compartida sin conexiones** (60 máx, ~40 ocupadas por Supabase en reposo): al abrir `/correduria` (~20 llamadas al puerto) Postgres rechazó 1.217 conexiones en 80 min («remaining connection slots…») y los bloques fallaban a ratos. Asegura baja a `connection_limit=3` + `pool_timeout=20` (`lib/asegura-url.ts`). Pendiente de Alberto: bajar el **Pool Size** del pooler en el panel de Supabase (Database → Connection pooling) y, a medio plazo, agrupar las llamadas de `/correduria`.
 
 **(29/09/2026)** — 💬 Ficha del cliente: botón **WhatsApp** junto a «Llamar» en «Siguiente paso» cuando hay recibo devuelto (Alberto prefiere WhatsApp porque queda reflejado). Reutiliza `WhatsappReciboDevuelto` (mismo mensaje de `mensajeReciboDevueltoWhatsapp` y misma nota «WhatsApp abierto» en la ficha); `BotonWhatsapp` gana `rotulo` para pintarse como botón verde.
 
@@ -912,6 +918,17 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Correduría: todo documento de seguro subido abre (o completa) su oportunidad
+- Donde se suba (ficha, portal, enlace de datos, «Subir póliza»), un documento de seguro abre sola la oportunidad: llamada 45 días antes del vencimiento, y si no se lee la fecha, tarea para pedirla. PDF con contraseña: se prueba el DNI de la ficha (PR #3994). PR #4015.
+- Si el documento es de otra persona se crea un lead y se relaciona con la ficha desde la que se subió. La ficha se decide por DNI; por nombre solo con las mismas palabras cuando el documento trae DNI y la ficha no. Los leads sin DNI se reusan por nombre exacto.
+- Portal sin ficha vinculada: nunca escribe en una ficha que ya existe. Solo abre lead nuevo si el documento trae DNI; la nota va «sin verificar».
+- Los ficheros repetidos no se releen. DNI y carnés del enlace de datos tampoco pasan otra vez por la IA.
+- Pendiente: las imágenes van a OpenRouter sin tope de gasto (fuera de `ai_usos`).
+## (29/09/2026) Avant2: presupuestos web ↔ plataforma, indiferente dónde se hagan
+- Ficha cliente → Oportunidades → «Presupuestos en Avant2»: lista los proyectos del tomador (web y plataforma, por DNI, gratis) y trae los de la web como tarificación + oportunidad; desde ahí se comparan/mandan/emiten igual.
+- Asegura `GET|POST /api/operador/codeoscopic/proyectos-cliente` (idempotente, tomador por documento, candado por proyecto). Libro de consumo a coste 0, motivo `importada_web`, excluido de `consumoActual` (cepo en regression-asegura-gasto-codeoscopic).
+- Traer NO re-tarifica. Origen «web (traído)» = `solicitado_por` empieza por `avant2-web`.
+
 ## (29/09/2026) Avant2: el «precio confirmado» es el ReRate, y los descuentos van ahí
 - La web de Avant2 dio 106,77€ en Allianz Motos frente a 216,53€ de nuestra API: 20% + 20% de descuento comercial, ReRate y Divina Pastora bien puesta. Nuestra comparativa enseña precios `estimate: true` sin descuento.
 - Checklist vivo de la conexión (confirmado, descuentos por compañía, lo que hay que mirar en la pantalla): `docs/CODEOSCOPIC-PENDIENTES.md`.
@@ -927,6 +944,18 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Occident manda en terceros un bloque «Daños propios» incluida cuyo texto enumera SOLO «Animales cinegéticos…» (+ fenómenos): salía «daños propios: sí» en un terceros básico. `clasificarCoberturas` (catálogo v3) lee las partes «» X: … : CONTRATADA» (`subcoberturas()`): manda lo enumerado, no el nombre del bloque; clave nueva `colision_animales` (auto/moto). Una parte solo afirma claves del propio bloque + animales/fenómenos («Rc incendio» no es incendio); «excluida franquicia» no excluye.
 - 48 filas guardadas corregidas en BD (7 `presupuesto_opcion` + 41 `tarificacion_precios`), SQL en `apps/asegura/prisma/sql/2026-09-29_garantias_por_partes.sql`.
 - La tarjeta «Mandárselo al cliente» enseña plegado «Qué cubre cada opción» (logo + ✓/✗/— por garantía); el listado del puerto manda `detalle` de las opciones visibles.
+
+## (29/09/2026) Portal cliente: la campana de avisos no hacía nada al pulsar
+Captura de Alberto (identidad vinculada a Global 2, sin nombre en `portal_identidad`): «Auto · Allianz» ×2 (son dos
+pólizas distintas, ...1421 y ...9613) y un cambio de RC Occident llevaban a `/boveda` —la página en la que ya estaba— y
+nunca se quitaban. Ahora: vencimiento y póliza modificada enlazan a `/boveda/poliza/<id>`; los avisos INFORMATIVOS
+(`TIPOS_AVISO_DESCARTABLES`) se sellan al pulsar en `seguros.portal_aviso_leido` (clave `tipo:id`, creada en prod el
+29/09) y desaparecen; los que piden acción (autorización, datos, firma) siguen hasta resolverse. El título del vencimiento ya nombra el bien (o …nº de póliza) y las descargas con sesión
+caducada llevan a la entrada.
+Auditoría de botones del portal (≈85 enlaces, 56 fetch): mismo PR arregla recordatorio sobre póliza donde solo FIGURA
+(403 falso), adjuntos del parte y subir póliza >4,5 MB (corte de Vercel: ahora encoge fotos y avisa), reintento con
+contraseña y retirar supresión mudos al fallar, y el error de desactivar push que ofrecía «activar».
+
 ## (29/09/2026) Correduría: marca «AS» en todos los correos al cliente
 - `conMarcaCorreo()` (`@central/module-seguros`, `correo-marca.ts`): cabecera con logotipo + pie «solo escribimos desde @grupoasegura.es». Se aplica en el punto único `apps/asegura/lib/correo-envio.ts` y en los dos envíos del portal (código, invitación); idempotente (salta si el HTML ya trae el logo).
 - `apps/asegura-web/public/brand/avatar-asegura.png` (512 px). Grosor del «AS» = «opción 2» de Alberto (`stroke-width=1` en ambos `marca-asegura.svg` + `MarcaAsegura.tsx`, cepo en `asegura-web/lib/icono.test.ts`); el logotipo de texto (stroke 6) NO se tocó. El avatar es para el círculo de la bandeja. ⚠️ Ese avatar NO sale del HTML: hay que ponerlo como foto de una cuenta de Google de `hola@grupoasegura.es` (solo Gmail) o vía BIMI (DMARC estricto + VMC/CMC de pago). Pendiente de Alberto.

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { filtrarPorGarantias, interruptoresGarantias, type RamoGarantias } from '@central/module-seguros'
+import { etiquetasGarantiasDeLey, filtrarPorGarantias, interruptoresGarantias, type RamoGarantias } from '@central/module-seguros'
 
 import type { OpcionCliente } from '@/lib/presupuesto'
 import { montarTabla } from '@/lib/tabla-coberturas'
@@ -109,10 +109,9 @@ export function TodasLasOpciones({ presupuestoId, ramo, opciones, necesidades, c
     return (
       <li key={o.id} className="todas-fila" data-recomendada={f.recomendada ? 'si' : undefined}>
         <div className="todas-fila-cabeza">
-          <span className="todas-logo"><LogoCompania nombre={o.compania} alto={28} /></span>
+          <span className="todas-logo"><LogoCompania nombre={o.compania} alto={30} /></span>
           <div className="todas-fila-datos">
             {f.recomendada && <span className="chip acento todas-recomendada">Recomendada</span>}
-            <strong className="todas-compania">{f.compania}</strong>
             <span className="todas-producto">{f.producto}</span>
           </div>
           <div className="todas-precio">
@@ -174,6 +173,9 @@ export function TodasLasOpciones({ presupuestoId, ramo, opciones, necesidades, c
         {interruptores.length > 0 && (
           <div className="todas-filtros">
             <h3 className="todas-filtros-titulo">Qué quieres que incluya</h3>
+            {etiquetasGarantiasDeLey(ramo).length > 0 && (
+              <p className="todas-de-ley">✓ Incluida siempre, por ley: {etiquetasGarantiasDeLey(ramo).join(' y ')}</p>
+            )}
             {inicial.length > 0 && <p className="suave todas-filtros-nota">Hemos marcado lo que nos pediste.</p>}
             <div className="todas-interruptores" role="group" aria-label="Garantías">
               {interruptores.map((i) => {

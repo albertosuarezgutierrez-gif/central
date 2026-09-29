@@ -223,9 +223,12 @@ test('🚨 los contadores están SEPARADOS: el libro de cotizar no cuenta el ReR
   const src = FUENTE_LIBRO('apps/asegura/lib/codeoscopic/consumo.ts')
   assert.match(
     src,
-    /motivo not in \(\$\{MOTIVO_RERATE\}, \$\{MOTIVO_SUBMIT\}, \$\{MOTIVO_LIMITES\}\)/,
-    'consumoActual() (el libro de cotizar) tiene que excluir los motivos de emisión',
+    /motivo not in \(\$\{MOTIVO_RERATE\}, \$\{MOTIVO_SUBMIT\}, \$\{MOTIVO_LIMITES\}, \$\{MOTIVO_IMPORTADA_WEB\}\)/,
+    'consumoActual() (el libro de cotizar) tiene que excluir los motivos de emisión y los traídos de la web',
   )
+  // Un presupuesto traído de la web de Avant2 (29/09/2026) lo pagó la web: contarlo aquí restaría
+  // cotizaciones del tope por traer lo que ya estaba hecho.
+  assert.match(src, /export const MOTIVO_IMPORTADA_WEB = 'importada_web'/)
   assert.match(
     src,
     /export async function consumoEmision\(/,

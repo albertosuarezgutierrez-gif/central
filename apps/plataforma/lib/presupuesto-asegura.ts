@@ -13,7 +13,7 @@
 // sobre una cotización YA PAGADA. El envío es el PR 3 del §6 de la spec.
 
 import type { EstadoPresupuesto } from '@central/module-seguros'
-import { CATALOGO_GARANTIAS, ramoDeCatalogo } from '@central/module-seguros'
+import { CATALOGO_GARANTIAS, esGarantiaDeLey, ramoDeCatalogo } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type OpcionPresupuesto = {
@@ -365,7 +365,8 @@ export function filasCoberturas(
   const r = ramoDeCatalogo(ramo)
   if (!r) return null
   return CATALOGO_GARANTIAS[r]
-    .map((g) => ({ clave: g.clave, etiqueta: g.etiqueta, estados: opciones.map((o) => o.garantias?.[g.clave] ?? 'no_consta') }))
+    // La de ley (RC obligatoria en auto/moto) es «sí» en todas aunque el precio se guardara sin leerla.
+    .map((g) => ({ clave: g.clave, etiqueta: g.etiqueta, estados: opciones.map((o) => (esGarantiaDeLey(r, g.clave) ? 'si' : o.garantias?.[g.clave] ?? 'no_consta')) }))
     .filter((f) => f.estados.some((e) => e !== 'no_consta'))
 }
 
