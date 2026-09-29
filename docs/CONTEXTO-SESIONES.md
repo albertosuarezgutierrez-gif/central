@@ -916,6 +916,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Descuento comercial por defecto al 50 % (Allianz coche)
+- Alberto: «dejamos 50 si no da error, por si la compañía va variando descuentos». Prueba en web (40961885): 50+50 = mismo precio que 20+20 en Allianz, Generali aplica ~12 %, sin error. Catálogo Allianz auto `dtoCap`/`dtoVentaCruzada` 25→50 (`DESCUENTO_POR_DEFECTO`), textos de la pantalla de emisión al día.
+- Pendiente: Allianz moto, Generali y Catalana en moto necesitan el id del campo (traer el 40961885 y leer opciones). No confirmado si el descuento sale de la comisión.
+
 ## (29/09/2026) Correduría: todo documento de seguro subido abre (o completa) su oportunidad
 - Donde se suba (ficha, portal, enlace de datos, «Subir póliza»), un documento de seguro abre sola la oportunidad: llamada 45 días antes del vencimiento, y si no se lee la fecha, tarea para pedirla. PDF con contraseña: se prueba el DNI de la ficha (PR #3994). PR #4015.
 - Si el documento es de otra persona se crea un lead y se relaciona con la ficha desde la que se subió. La ficha se decide por DNI; por nombre solo con las mismas palabras cuando el documento trae DNI y la ficha no. Los leads sin DNI se reusan por nombre exacto.

@@ -425,7 +425,7 @@ export function Emision({
   // cuenta, la fecha y lo tecleado), no cierra el panel entero (decisión 29/09/2026).
   const ofertaAntesDeEmitir = useRef<Extract<EstadoPanel, { paso: 'oferta' }> | null>(null)
   const esAllianz = compania.trim().toLowerCase().includes('allianz')
-  // Descuento comercial en preemisión (29/09/2026). Vacío = el de siempre (25 % y 25 %); asegura
+  // Descuento comercial en preemisión (29/09/2026). Vacío = el de siempre (50 % y 50 %: la compañía aplica su máximo); asegura
   // valida el rango del formulario real (CAP 0-99, venta cruzada 0-100) antes de llamar a nadie.
   const [dtoCap, setDtoCap] = useState('')
   const [dtoVentaCruzada, setDtoVentaCruzada] = useState('')
@@ -788,17 +788,17 @@ export function Emision({
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 <label style={{ flex: '1 1 140px' }}>
                   <span style={{ display: 'block', fontSize: 12 }}>CAP (%) · 0 a 99</span>
-                  <input type="text" inputMode="numeric" placeholder="25" value={dtoCap} aria-invalid={!dtoValido(dtoCap, 99)}
+                  <input type="text" inputMode="numeric" placeholder="50" value={dtoCap} aria-invalid={!dtoValido(dtoCap, 99)}
                     onChange={(e) => setDtoCap(e.target.value)} style={{ minHeight: 44, width: '100%' }} />
                 </label>
                 <label style={{ flex: '1 1 140px' }}>
                   <span style={{ display: 'block', fontSize: 12 }}>Venta cruzada (%) · 0 a 100</span>
-                  <input type="text" inputMode="numeric" placeholder="25" value={dtoVentaCruzada} aria-invalid={!dtoValido(dtoVentaCruzada, 100)}
+                  <input type="text" inputMode="numeric" placeholder="50" value={dtoVentaCruzada} aria-invalid={!dtoValido(dtoVentaCruzada, 100)}
                     onChange={(e) => setDtoVentaCruzada(e.target.value)} style={{ minHeight: 44, width: '100%' }} />
                 </label>
               </div>
               <span className="muted" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-                Vacío = el de siempre (25 % y 25 %). Un descuento mayor abarata el precio y puede salir de tu comisión:
+                Vacío = 50 % y 50 %: la compañía se queda con el máximo que admita. Un descuento abarata el precio y puede salir de tu comisión:
                 la compañía recalcula al confirmar. Si también rellenas el formulario de la compañía, manda lo que pongas aquí.
               </span>
               {descuentoMal && (

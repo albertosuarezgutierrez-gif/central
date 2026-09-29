@@ -97,6 +97,6 @@ exacto de Allianz (prueba con 10 % para ver si baja el precio) y confirmar el pr
 
 ## Pendiente en código
 
-- Aplicar la tabla de máximos de descuento por compañía en el ReRate (hoy solo Allianz auto, 25/25).
+- Descuento por defecto en el ReRate = **50 %** (decisión de Alberto 29/09: la compañía recorta a su máximo y lo va variando). Hoy solo Allianz auto lo lleva; Allianz moto, Generali y Catalana Occidente necesitan el id exacto del campo (traer el 40961885 a plataforma y leer sus opciones).
 - Aviso «bonificación NO verificada» a partir de `messages[]` (p. ej. Mapfre: «el cliente identificado
   no aparece asociado a una póliza de otra compañía»).
