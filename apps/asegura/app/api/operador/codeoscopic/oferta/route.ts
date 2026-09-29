@@ -14,7 +14,7 @@ import {
   completarPersonas,
   type ResultadoCompletar,
 } from '@/lib/codeoscopic/emitir'
-import { opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
+import { conDescuentos, descuentosDelCuerpo, opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import {
   interpretarError400,
   interpretarCamposProducto,
@@ -132,6 +132,14 @@ export const POST = auditado(async (req: Request) => {
   // en `respuesta.ts`): es Codeoscopic quien decide qué lleva cada opción.
   const productOptionsCorredor = Array.isArray(cuerpo.productOptions) ? cuerpo.productOptions : undefined
 
+  // Descuento comercial que el corredor ajusta en preemisión (29/09/2026). Se valida con los
+  // límites del formulario real ANTES de gastar: un valor fuera de rango es un 400 seguro.
+  const lecturaDescuentos = descuentosDelCuerpo(cuerpo.descuentos)
+  if ('reparo' in lecturaDescuentos) {
+    return NextResponse.json({ estado: 'error', causa: 'descuento_invalido', mensaje: lecturaDescuentos.reparo }, { status: 422 })
+  }
+  const descuentosPedidos = lecturaDescuentos.pedidos
+
   // Quién pide el ReRate, para poder explicar la factura línea a línea (igual
   // que `solicitadoPor` en `cotizar()`).
   const actor = cadena(cuerpo.actor) ?? 'plataforma'
@@ -174,6 +182,14 @@ export const POST = auditado(async (req: Request) => {
   // 🚨 Hasta hoy caía a `'auto'`: un hogar nuevo quedaba grabado como auto y se
   // habría acuñado como auto. Lo que no mapea corta AQUÍ, antes del ReRate.
   const producto = t.producto ?? tipoDeRamo(t.ramo)
+  // Descuento pedido en una compañía/ramo sin el campo: se rechaza AQUÍ, antes de tocar el proyecto
+  // del vendor (el PATCH de fecha o de personas invalida sus cotizaciones aunque sea gratis).
+  if (descuentosPedidos && !productOptionsCorredor && !opcionesPorDefecto(compania, producto)) {
+    return NextResponse.json(
+      { estado: 'error', causa: 'descuento_no_disponible', mensaje: 'esta compañía no admite ajustar el descuento en el ReRate (solo Allianz coche lo tiene catalogado)' },
+      { status: 422 },
+    )
+  }
   if (!producto) {
     return NextResponse.json(
       {
@@ -343,6 +359,16 @@ export const POST = auditado(async (req: Request) => {
         // que facture), pero la LÍNEA se abre igual: lo conservador es contarla.
         // Un 400 del vendor es `pruebaQueNoHuboCargo` y el embudo la descarta
         // con evidencia; un 5xx o un corte se quedan contados.
+        const opcionesBase = productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania, producto)
+        let opcionesRerate = opcionesBase
+        if (descuentosPedidos) {
+          const conDto = conDescuentos(opcionesBase, descuentosPedidos, productOptionsCorredor ? 'formulario' : 'catalogo')
+          // Sin llamar a la compañía: el campo no existe para este producto.
+          if (!conDto.ok) {
+            return NextResponse.json({ estado: 'error', causa: 'descuento_no_disponible', mensaje: conDto.motivo }, { status: 422 })
+          }
+          opcionesRerate = conDto.opciones as typeof opcionesBase
+        }
         const gasto = await conLibroDeEmision(
           { correduriaId: t.correduria_id, operacion: 'rerate', solicitadoPor: actor, projectId },
           () =>
@@ -351,7 +377,7 @@ export const POST = auditado(async (req: Request) => {
               projectId,
               precio.id,
               precio.productId,
-              productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania, producto),
+              opcionesRerate,
               fechaEfectoCorregida,
             ),
         )

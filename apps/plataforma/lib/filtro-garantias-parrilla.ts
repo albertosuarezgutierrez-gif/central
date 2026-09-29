@@ -10,7 +10,7 @@
 //   `null`      → aún no se han leído sus coberturas: «Leyendo coberturas…», nunca «no incluye».
 //   objeto      → el dato.
 
-import { capitalServicio, type GarantiasClasificadas, type OpcionFiltrable } from '@central/module-seguros'
+import { capitalServicio, type DescuentoComercial, type GarantiasClasificadas, type OpcionFiltrable } from '@central/module-seguros'
 import type { Precio } from './retarificar-asegura.ts'
 import type { OcultarPresupuesto } from './presupuesto-asegura.ts'
 
@@ -21,6 +21,8 @@ export type OpcionParrilla = OpcionFiltrable & {
   firmeza: string
   /** Decesos: el capital del servicio leído de los avisos. `null` = no viene o no se entiende (nunca 0). */
   capitalServicioEur: number | null
+  /** Descuentos comerciales con los que se tarificó. `null` = no se sabe (no «sin descuento»). */
+  descuentos: DescuentoComercial[] | null
 }
 
 export type EstadoCoberturas =
@@ -59,6 +61,7 @@ export function opcionesDeParrilla(precios: readonly Precio[]): { opciones: Opci
       franquiciaEur: typeof p.franquiciaEur === 'number' ? p.franquiciaEur : null,
       firmeza: p.firmeza ?? 'estimado',
       capitalServicioEur: capitalServicio(p.avisos ?? null),
+      descuentos: p.descuentos ?? null,
     })
   }
   const estado: EstadoCoberturas =
@@ -94,4 +97,15 @@ export function quedaAlgunaVisible(
   ocultas: { companias: ReadonlySet<string>; precios: ReadonlySet<string> },
 ): boolean {
   return opciones.some((o) => o.primaEur !== null && !estaOculta(o, ocultas))
+}
+
+/**
+ * PURO. «Dto. comercial 25 % (CAP) · 25 % (venta cruzada)» para la fila del corredor. `null` si no se
+ * sabe o la compañía no manda descuentos (no se pinta nada: no es «sin descuento»). Todos a 0 → lo dice.
+ */
+export function textoDescuentos(d: readonly DescuentoComercial[] | null): string | null {
+  if (!d || d.length === 0) return null
+  if (d.every((x) => x.pct === 0)) return 'sin descuento comercial'
+  const partes = d.filter((x) => x.pct !== 0).map((x) => `${x.pct.toLocaleString('es-ES')} %${x.etiqueta === 'comercial' ? '' : ` (${x.etiqueta})`}`)
+  return `Dto. comercial ${partes.join(' · ')}`
 }

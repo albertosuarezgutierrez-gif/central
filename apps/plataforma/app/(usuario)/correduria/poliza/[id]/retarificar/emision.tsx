@@ -349,6 +349,7 @@ export function Emision({
   fechaEfecto = null,
   ofertaImportada = null,
   sustituye = true,
+  ramo = null,
   onCerrar,
 }: {
   /** Ausente cuando la oferta viene importada de Avant2: ahí no hay cotización nuestra. */
@@ -366,6 +367,8 @@ export function Emision({
   ofertaImportada?: Omit<Extract<EstadoPanel, { paso: 'oferta' }>, 'paso'> | null
   /** `false` para un cliente NUEVO (sin póliza que sustituir): no hay carta de baja. */
   sustituye?: boolean
+  /** Ramo de la cotización: el ajuste de descuento solo existe para Allianz coche. */
+  ramo?: string | null
   onCerrar: () => void
 }) {
   const [estado, setEstado] = useState<EstadoPanel>(
@@ -390,6 +393,14 @@ export function Emision({
   // es la única forma de decirlo cuando el corredor SÍ lo sabe.
   const [familiaAllianz, setFamiliaAllianz] = useState(false)
   const esAllianz = compania.trim().toLowerCase().includes('allianz')
+  // Descuento comercial en preemisión (29/09/2026). Vacío = el de siempre (25 % y 25 %); asegura
+  // valida el rango del formulario real (CAP 0-99, venta cruzada 0-100) antes de llamar a nadie.
+  const [dtoCap, setDtoCap] = useState('')
+  const [dtoVentaCruzada, setDtoVentaCruzada] = useState('')
+  const admiteDescuento = esAllianz && ramo === 'auto'
+  // Texto y no `type=number`: un «1,5» o un «-» llegaría como '' y se mandaría el de siempre sin avisar.
+  const dtoValido = (v: string, max: number) => v.trim() === '' || (/^\d{1,3}$/.test(v.trim()) && Number(v) <= max)
+  const descuentoMal = admiteDescuento && (!dtoValido(dtoCap, 99) || !dtoValido(dtoVentaCruzada, 100))
   // Lo que el corredor ha guardado del widget de la Product Form Library (el
   // formulario REAL de la compañía, ver `ProductFormWidget`). `null` mientras
   // no se pulse «Guardar»: sin esto no se manda ningún `product.options`
@@ -472,6 +483,14 @@ export function Emision({
       ...(fechaNueva ? { fechaEfectoCorregida: fechaNueva } : {}),
       ...(Object.keys(limpias).length > 0 ? { correcciones: limpias } : {}),
       ...(conProductOptions ? { productOptions: conProductOptions } : {}),
+      ...(admiteDescuento && (dtoCap.trim() !== '' || dtoVentaCruzada.trim() !== '')
+        ? {
+            descuentos: {
+              ...(dtoCap.trim() !== '' ? { dtoCap: Number(dtoCap) } : {}),
+              ...(dtoVentaCruzada.trim() !== '' ? { dtoVentaCruzada: Number(dtoVentaCruzada) } : {}),
+            },
+          }
+        : {}),
     })
     if (r.estado === 'ok') {
       setEstado({
@@ -712,11 +731,37 @@ export function Emision({
                 : 'Déjala vacía para usar la cotizada. Si pones otra, se manda al confirmar el precio y el precio puede variar.'}
             </span>
           </label>
+          {admiteDescuento && (
+            <fieldset style={{ marginTop: 10, border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', minWidth: 0 }}>
+              <legend style={{ fontSize: 13, fontWeight: 600 }}>Descuento comercial (opcional)</legend>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                <label style={{ flex: '1 1 140px' }}>
+                  <span style={{ display: 'block', fontSize: 12 }}>CAP (%) · 0 a 99</span>
+                  <input type="text" inputMode="numeric" placeholder="25" value={dtoCap} aria-invalid={!dtoValido(dtoCap, 99)}
+                    onChange={(e) => setDtoCap(e.target.value)} style={{ minHeight: 44, width: '100%' }} />
+                </label>
+                <label style={{ flex: '1 1 140px' }}>
+                  <span style={{ display: 'block', fontSize: 12 }}>Venta cruzada (%) · 0 a 100</span>
+                  <input type="text" inputMode="numeric" placeholder="25" value={dtoVentaCruzada} aria-invalid={!dtoValido(dtoVentaCruzada, 100)}
+                    onChange={(e) => setDtoVentaCruzada(e.target.value)} style={{ minHeight: 44, width: '100%' }} />
+                </label>
+              </div>
+              <span className="muted" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+                Vacío = el de siempre (25 % y 25 %). Un descuento mayor abarata el precio y puede salir de tu comisión:
+                la compañía recalcula al confirmar. Si también rellenas el formulario de la compañía, manda lo que pongas aquí.
+              </span>
+              {descuentoMal && (
+                <span className="err" role="alert" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+                  Solo números enteros: CAP de 0 a 99 y venta cruzada de 0 a 100.
+                </span>
+              )}
+            </fieldset>
+          )}
           <button
             type="button"
             className="primary"
             onClick={() => confirmarPrecio()}
-            disabled={fechaEfecto != null && fecha === ''}
+            disabled={(fechaEfecto != null && fecha === '') || descuentoMal}
             style={{ marginTop: 8, minHeight: 44 }}
           >
             Confirmar precio con la compañía

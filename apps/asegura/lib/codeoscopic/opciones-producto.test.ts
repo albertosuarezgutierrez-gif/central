@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { opcionesPorDefecto, opcionesEmisionPorDefecto, conProductoPorDefecto } from './opciones-producto.ts'
+import { opcionesPorDefecto, opcionesEmisionPorDefecto, conProductoPorDefecto, conDescuentos, descuentosDelCuerpo } from './opciones-producto.ts'
 
 test('opcionesPorDefecto: Allianz trae las 14 opciones portadas del CRM, con naturalPhenomena=false', () => {
   const o = opcionesPorDefecto('Allianz')
@@ -122,4 +122,36 @@ test('opcionesPorDefecto: las de Allianz son de AUTO; moto u hogar no las hereda
   assert.ok(opcionesPorDefecto('Allianz', null), 'sin ramo conocido se mantiene el comportamiento de auto')
   assert.equal(opcionesPorDefecto('Allianz', 'moto'), null)
   assert.equal(opcionesPorDefecto('Allianz', 'hogar'), null)
+})
+
+test('descuento en preemisión: límites del formulario real (CAP 0-99, venta cruzada 0-100), sin tocar el catálogo', () => {
+  assert.deepEqual(descuentosDelCuerpo(undefined), { pedidos: null })
+  assert.deepEqual(descuentosDelCuerpo({ dtoCap: 10, dtoVentaCruzada: '' }), { pedidos: { dtoCap: 10 } })
+  assert.ok('reparo' in descuentosDelCuerpo({ dtoCap: 100 }))
+  assert.ok('reparo' in descuentosDelCuerpo({ dtoVentaCruzada: -1 }))
+  assert.ok('reparo' in descuentosDelCuerpo({ dtoCap: 12.5 }))
+  assert.ok('reparo' in descuentosDelCuerpo({ comision: 5 }))
+  assert.deepEqual(descuentosDelCuerpo({ dtoVentaCruzada: 100 }), { pedidos: { dtoVentaCruzada: 100 } })
+  // 🪤 Claves del prototipo y valores que Number() aceptaría sin serlo.
+  for (const raro of [{ toString: 5 }, JSON.parse('{"__proto__":5}'), { dtoCap: true }, { dtoCap: '0x10' }, { dtoCap: [5] }, { dtoCap: ' 7 ' }]) {
+    assert.ok('reparo' in descuentosDelCuerpo(raro), JSON.stringify(raro))
+  }
+  assert.deepEqual(descuentosDelCuerpo({ dtoCap: '15' }), { pedidos: { dtoCap: 15 } })
+  // Un formulario del vendor que manda el valor como texto lo conserva como texto; sin el campo, mensaje del formulario.
+  const delFormulario = conDescuentos([{ id: 'dtoCap', value: '25' }], { dtoCap: 10 }, 'formulario')
+  assert.ok(delFormulario.ok && (delFormulario.opciones[0] as { value: unknown }).value === '10')
+  const sinCampo = conDescuentos([{ id: 'otro', value: 1 }], { dtoCap: 10 }, 'formulario')
+  assert.ok(!sinCampo.ok && /formulario/.test(sinCampo.motivo))
+
+  const base = opcionesPorDefecto('Allianz')!
+  const r = conDescuentos(base, { dtoCap: 10, dtoVentaCruzada: 0 })
+  assert.ok(r.ok)
+  const valor = (id: string) => (r.opciones as { id: string; value: unknown }[]).find((o) => o.id === id)?.value
+  assert.equal(valor('dtoCap'), 10)
+  assert.equal(valor('dtoVentaCruzada'), 0)
+  // 🪤 Copia: el catálogo compartido sigue en 25.
+  assert.equal(opcionesPorDefecto('Allianz')!.find((o) => o.id === 'dtoCap')!.value, 25)
+  // Otra compañía (sin el campo) no se inventa la opción: se rechaza antes de gastar.
+  assert.equal(conDescuentos(null, { dtoCap: 10 }).ok, false)
+  assert.equal(conDescuentos([{ id: 'otro', type: 'number', value: 1 }], { dtoCap: 10 }).ok, false)
 })
