@@ -224,3 +224,16 @@ test('emision.tsx avisa si lo guardado del formulario de la compañía choca con
   )
   assert.match(src, /productOptions !== null && yaTraeProduct/)
 })
+
+// 29/09/2026: el panel de emisión se monta también en las altas nuevas (auto,
+// moto, hogar), que no traen el CSS del retarificador. Sin envolverse solo,
+// «Confirmar precio con la compañía» salía como texto plano y no se podía emitir.
+test('el panel de emisión trae su propio CSS y no depende de la página que lo monte', () => {
+  const pantalla = codigo('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx')
+  assert.match(pantalla, /import \{ CSS_RETARIFICADOR \} from '\.\/estilos'/)
+  assert.match(pantalla, /<div className="retarificar">\s*<style>\{CSS_RETARIFICADOR\}<\/style>\s*<div className="card"/, 'Emision tiene que envolverse en .retarificar con su <style>.')
+  const estilos = codigo('../app/(usuario)/correduria/poliza/[id]/retarificar/estilos.ts')
+  for (const sel of ['.retarificar .card', '.retarificar button.primary', '.retarificar button.ghost', '.retarificar .err', '.retarificar .muted']) {
+    assert.ok(estilos.includes(sel), `falta ${sel} en estilos.ts`)
+  }
+})

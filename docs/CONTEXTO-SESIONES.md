@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(29/09/2026)** — 🎨 El panel de emisión (`retarificar/emision.tsx`) salía sin estilo en las altas nuevas (auto, moto, hogar) y en «Traer de Avant2»: su CSS vivía solo en la página de retarificar, y «Confirmar precio con la compañía» parecía texto, así que Alberto no pudo emitir una Reale. El CSS pasa a `retarificar/estilos.ts` y `Emision` se envuelve sola en `.retarificar` con su `<style>`. Test en `lib/retarificar-asegura-emitir.test.ts`, visto en rojo.
+
 **(29/09/2026)** — 🧮 La calculadora del seguro del banco (`/calculadora-bonificacion-hipoteca`, #4041) estaba en producción pero solo enlazada desde el pie, y Alberto no la encontraba. Ahora sale también en la portada (tarjeta bajo «¿Cuándo vence tu seguro?») y en `/seguros/hogar` y `/seguros/vida-y-salud` (bloque con botón). La lista de ramos está en `RAMOS_CON_CALCULADORA_HIPOTECA` (`apps/asegura-web/lib/sitio.ts`). En la cabecera no cabe (medida al límite). Test en `lib/enlazado.test.ts`, visto en rojo al quitar cada enlace. Sin desborde a 320/390/1280 px.
 
 **(29/09/2026)** — ✂️ «Tareas de hoy» con TITULAR corto (captura de Alberto: tareas de 10+ renglones). `resumirTarea()` (`apps/plataforma/lib/correduria/resumen-tarea.ts`, puro + test con los textos reales): 1ª línea o 1er corte natural ≤90; el detalle es el texto entero. Hoy pinta titular (2 líneas máx.) + «Ver detalle» plegado; Inicio y el Telegram de las 08:30 usan el titular. En origen, `textoTareaDevolucion` escribe titular + `\n` + detalle y el asistente de Telegram pide titular ≤80 con el contexto debajo (las tres largas eran suyas/a mano). PR #4073 mergeado.
