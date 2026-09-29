@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-29T19:39:21Z",
-  "sha": "9bc153d9ad8c88a67bf1feac78ad432ac3e1fdf0",
+  "generadoEn": "2026-09-29T20:09:39Z",
+  "sha": "8311ff032f5a52cd2b41e64c06f6cebd3b154838",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12616,7 +12616,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7c938f6b6878"
+      "hash": "241c84d0abb5"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
@@ -12696,7 +12696,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e0b32e216148"
+      "hash": "d33656be3714"
     },
     {
       "ruta": "apps/asegura-web/app/siniestro/page.tsx",
@@ -13659,7 +13659,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8e27510572ce"
+      "hash": "a6922b875ae8"
     },
     {
       "ruta": "apps/asegura-web/lib/ventana-renovacion.ts",
