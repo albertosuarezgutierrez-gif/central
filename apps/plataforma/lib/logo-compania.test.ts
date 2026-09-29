@@ -21,6 +21,10 @@ test('moto y coche nuevos no pintan dos listas de precios abiertas seguidas', ()
   for (const f of ['moto-nuevo/MotoNuevo.tsx', 'auto-nuevo/AutoNuevo.tsx']) {
     const src = readFileSync(new URL(`../app/(usuario)/correduria/cliente/[id]/${f}`, import.meta.url), 'utf8')
     assert.doesNotMatch(src, /<table/, `${f}: la tabla de precios se salía del móvil`)
-    assert.match(src, /<ListaPreciosPlegada/, `${f}: con «Qué verá el cliente» la lista de emitir va plegada`)
+    // Desde el 29/09/2026 se emite en cada fila de «Qué verá el cliente»: ni lista plegada debajo ni
+    // una segunda lista abierta; `ListaPrecios` solo queda para cuando no hay cotización guardada.
+    assert.match(src, /<FiltroGarantias[^>]*emitir=\{/, `${f}: «Qué verá el cliente» emite en cada fila`)
+    assert.doesNotMatch(src, /<ListaPreciosPlegada/, `${f}: la lista plegada de emitir ya no existe`)
+    assert.match(src, /\) : \(\s*<ListaPrecios \{\.\.\.propsLista\} \/>\s*\)\}/, `${f}: la lista abierta solo en la rama SIN cotización`)
   }
 })

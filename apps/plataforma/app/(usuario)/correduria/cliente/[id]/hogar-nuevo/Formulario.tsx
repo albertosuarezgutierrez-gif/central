@@ -21,7 +21,7 @@ import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
 import { CeldaCompania } from '../../../CeldaCompania'
 import FiltroGarantias from '../../../FiltroGarantias'
-import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
+import ListaPrecios from '../../../ListaPrecios'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { eur } from '@/lib/dinero'
@@ -574,15 +574,20 @@ function Precios({ r, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; cl
         Coste de esta consulta: {r.coste}
         {r.restantesHoy !== null && <> · quedan hoy {r.restantesHoy}</>}.
       </p>
-      {cotizacionId !== null ? (
-        <>
-          {puedeEmitir && <ListaPreciosPlegada {...propsLista} />}
-        </>
-      ) : (
-        <ListaPrecios {...propsLista} />
-      )}
-      {cotizacionIdDe(r.guardado) !== null && (
-        <FiltroGarantias ramo="hogar" origen={{ clienteId, ramo: 'hogar' }} tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
+      {cotizacionId === null && <ListaPrecios {...propsLista} />}
+      {cotizacionId !== null && (
+        // Cada fila de «Qué verá el cliente» se emite ahí mismo (29/09/2026): sin segunda lista plegada.
+        <FiltroGarantias ramo="hogar" origen={{ clienteId, ramo: 'hogar' }} tarificacionId={cotizacionId} simulado={r.simulado} emitir={puedeEmitir ? (o, cerrar) => (
+                <Emision
+                  tarificacionId={cotizacionId as string}
+                  compania={o.compania ?? ''}
+                  categoria={o.categoria ?? ''}
+                  primaEur={o.primaEur}
+                  producto={o.producto}
+                  sustituye={false}
+                  onCerrar={cerrar}
+                />
+              ) : undefined} />
       )}
       {r.supuestos.length > 0 && (
         <>
