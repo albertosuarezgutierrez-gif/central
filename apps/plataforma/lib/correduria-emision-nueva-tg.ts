@@ -93,7 +93,15 @@ export type DecisionEfecto =
  * si la cotizada ya pasó (entonces, si no se aplicó la nueva, `/emitir` corta sin enviar nada).
  */
 export function decidirEfecto(p: { pedida: string | null; cotizada: string | null; cotizadaPasada: boolean; devuelta: string | null }): DecisionEfecto {
-  if (!p.pedida) return { tipo: 'ok', efecto: p.cotizada, cotizado: null, devuelto: null }
+  if (!p.pedida) {
+    // Sin fecha pedida el botón enseña la cotizada: si la compañía devuelve otra (un ReRate anterior del mismo
+    // proyecto la movió), el contrato saldría con la devuelta. Sin devuelta no se puede contrastar (como la web).
+    const cotizada = p.cotizada?.slice(0, 10) ?? null
+    if (p.devuelta && p.devuelta !== cotizada) {
+      return { tipo: 'no', motivo: `la compañía ha confirmado el precio con efecto ${p.devuelta}, no con el ${cotizada ?? 'sin fecha'} de la tarificación guardada` }
+    }
+    return { tipo: 'ok', efecto: p.cotizada, cotizado: null, devuelto: null }
+  }
   if (p.devuelta && p.devuelta !== p.pedida) {
     return { tipo: 'no', motivo: `la compañía ha confirmado el precio con efecto ${p.devuelta}, no con el ${p.pedida} que se le pidió` }
   }

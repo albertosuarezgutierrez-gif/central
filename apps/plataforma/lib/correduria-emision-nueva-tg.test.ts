@@ -122,6 +122,10 @@ test('decidirEfecto: la fecha del botón nunca puede ser una que la compañía n
   // Sin fecha pedida: la de la tarificación, como siempre.
   assert.deepEqual(decidirEfecto({ pedida: null, cotizada: '2026-10-01', cotizadaPasada: false, devuelta: '2026-10-01' }),
     { tipo: 'ok', efecto: '2026-10-01', cotizado: null, devuelto: null })
+  // Sin fecha pedida pero la compañía devuelve OTRA (un ReRate anterior la movió): no.
+  assert.equal(decidirEfecto({ pedida: null, cotizada: '2026-10-01', cotizadaPasada: false, devuelta: '2026-10-09' }).tipo, 'no')
+  // Sin fecha pedida y sin devuelta: la cotizada (no se puede contrastar, como en la web).
+  assert.equal(decidirEfecto({ pedida: null, cotizada: '2026-10-01', cotizadaPasada: false, devuelta: null }).tipo, 'ok')
   // Pedida y devuelta igual: confirmada (vigente o pasada da igual).
   for (const cotizadaPasada of [true, false]) {
     assert.deepEqual(decidirEfecto({ pedida: '2026-10-09', cotizada: '2026-09-22', cotizadaPasada, devuelta: '2026-10-09' }),
