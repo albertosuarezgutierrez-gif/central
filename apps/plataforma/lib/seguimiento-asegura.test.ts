@@ -187,9 +187,17 @@ test('lectura para oportunidad: rellena lo leído y deja en null lo que no tiene
     leido: true, ramo: 'hogar', compania: 'MAPFRE', numeroPoliza: '0732400000003',
     fechaVencimiento: '2026-09-25', primaAnual: 312.456,
   })
-  assert.deepEqual(r, { estado: 'ok', ramo: 'hogar', compania: 'MAPFRE', numeroPoliza: '0732400000003', vence: '2026-09-25', prima: 312.46, matricula: null, vehiculo: null, enCartera: null })
+  assert.deepEqual(r, { estado: 'ok', ramo: 'hogar', compania: 'MAPFRE', numeroPoliza: '0732400000003', vence: '2026-09-25', prima: 312.46, matricula: null, vehiculo: null, seguroAnterior: null, enCartera: null })
   const raro = interpretarLecturaOportunidad(200, { leido: true, ramo: 'barco', compania: 'Allianz', fechaVencimiento: '25/09/2026', primaAnual: 0 })
-  assert.deepEqual(raro, { estado: 'ok', ramo: null, compania: 'Allianz', numeroPoliza: null, vence: null, prima: null, matricula: null, vehiculo: null, enCartera: null })
+  assert.deepEqual(raro, { estado: 'ok', ramo: null, compania: 'Allianz', numeroPoliza: null, vence: null, prima: null, matricula: null, vehiculo: null, seguroAnterior: null, enCartera: null })
+})
+
+test('lectura para oportunidad: el bonus de auto/moto viaja saneado', () => {
+  const r = interpretarLecturaOportunidad(200, { leido: true, ramo: 'moto', compania: 'Mapfre', seguroAnterior: { aniosSinSiniestros: 6, siniestrosUltimos5: 0, codigoDgs: 'C0058', fechaEfecto: null } })
+  assert.equal(r.estado === 'ok' && r.seguroAnterior?.aniosSinSiniestros, 6)
+  assert.equal(r.estado === 'ok' && r.seguroAnterior?.siniestrosUltimos5, 0, '0 siniestros es un dato, no un hueco')
+  const basura = interpretarLecturaOportunidad(200, { leido: true, ramo: 'moto', seguroAnterior: { aniosSinSiniestros: 'varios' } })
+  assert.equal(basura.estado === 'ok' && basura.seguroAnterior, null)
 })
 
 test('lectura para oportunidad: nada leído o fallo = error con motivo, nunca un formulario mudo', () => {

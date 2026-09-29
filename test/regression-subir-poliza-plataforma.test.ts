@@ -60,3 +60,23 @@ test('con «subir=poliza» el formulario de Documentos se abre y se trae a la vi
   assert.match(s, /<details ref=\{formRef\} open=\{tipoInicial \? true : undefined\}/)
   assert.match(s, /if \(tipoInicial\) formRef\.current\?\.scrollIntoView\(/)
 })
+
+// 29/09/2026: la póliza subida a la ficha se lee sola y abre oportunidad con su bonus.
+test('Documentos lee con IA SOLO las pólizas de la ficha (cada lectura es de pago)', () => {
+  const s = leer(`${COR}/Documentos.tsx`)
+  assert.match(s, /const leerPoliza = !!clienteId && !polizaId && !siniestroId/)
+  assert.match(s, /if \(tipo === 'poliza' && leerPoliza\) void leerPolizaSubida\(fichero\)/)
+})
+
+test('asegura devuelve el bonus leído y la oportunidad lo guarda', () => {
+  assert.match(leer('apps/asegura/app/api/operador/leer-documento/route.ts'), /seguroAnterior: auto\s*\?\s*seguroAnteriorDe\(/)
+  assert.match(leer('apps/asegura/app/api/operador/oportunidad/route.ts'), /seguroAnterior: b\.seguroAnterior/)
+  assert.match(leer('apps/asegura/lib/oportunidad-seguimiento.ts'), /a\.seguroAnterior \? \{ seguroAnterior: a\.seguroAnterior \}/)
+})
+
+test('con la oportunidad ya abierta, lo leído se guarda en ELLA (no se pierde con el 409)', () => {
+  const s = leer('apps/asegura/lib/oportunidad-seguimiento.ts')
+  const tramo = s.slice(s.indexOf('if (ya) {'), s.indexOf("completada: false }"))
+  assert.match(tramo, /update oportunidades set/)
+  assert.match(tramo, /seguroAnterior: a\.seguroAnterior/)
+})

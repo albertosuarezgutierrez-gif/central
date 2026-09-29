@@ -3,6 +3,8 @@ import { Bike } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { precalificarMotoNuevaAsegura, catalogoAsegura } from '@/lib/moto-nuevo-asegura'
 import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
+import { interpretarOportunidadesCliente, oportunidadesClienteAsegura } from '@/lib/seguimiento-asegura'
+import { anteriorParaTarificar } from '@/lib/seguro-anterior'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import MotoNuevo from './MotoNuevo'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
@@ -69,13 +71,18 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
   }
   const variante = carga.estado === 'ok' ? carga.variante : null
 
-  const [garajes, civiles, pre, companiasResp] = await Promise.all([
+  const [garajes, civiles, pre, companiasResp, ops] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes-moto' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
     precalificarMotoNuevaAsegura({ clienteId }),
     companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
+    // El seguro que tiene hoy, leído de su póliza (29/09/2026). Si no se puede leer, no se precarga: se teclea.
+    oportunidadesClienteAsegura(clienteId).then((r) => interpretarOportunidadesCliente(r.status, r.json)).catch(() => null),
   ])
   const companias = companiasResp.estado === 'ok' ? companiasResp.companias : null
+  const anterior = ops?.estado === 'ok'
+    ? anteriorParaTarificar(ops.oportunidades, { ramo: 'moto', oportunidadId: variante?.oportunidadId ?? null })
+    : null
 
   if (pre.estado !== 'ok') {
     const tono = pre.estado === 'sin_configurar' ? 'var(--muted)' : 'var(--negative)'
@@ -135,6 +142,8 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
         simulacion={pre.pre.simulacion}
         companias={companias}
         variante={variante}
+        anterior={anterior?.estado === 'ok' ? anterior.anterior : null}
+        anteriorAmbiguo={anterior?.estado === 'ambiguo' ? anterior.n : null}
       />
     </Pagina>
   )

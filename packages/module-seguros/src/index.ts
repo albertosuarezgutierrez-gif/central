@@ -792,7 +792,7 @@ export {
 export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
 export {
   ESTADOS_ALTA, MOTIVOS_PERDIDA, MOTIVOS_PERDIDA_VENTA, MOTIVO_DESCARTE, PRIORIDADES_TAREA, RAMOS_OPORTUNIDAD, TIPOS_TAREA, aplicarAccion,
-  validarAltaOportunidad, validarEdicionOportunidad, validarTarea,
+  seguroAnteriorDe, validarAltaOportunidad, validarEdicionOportunidad, validarTarea,
 } from './oportunidad-seguimiento.ts'
 export {
   DIAS_APARCAR_NO_INTERESA, DIAS_PREPARAR_PRECIO, MAX_DIAS_RELLAMADA, PREFIJO_LLAMADA_CONTESTADA, PREFIJO_LLAMADA_SIN_RESPUESTA,
@@ -811,6 +811,7 @@ export type {
   PrioridadTarea,
   RamoOportunidad,
   ResultadoAccion,
+  SeguroAnterior,
   TareaValida,
   TipoTarea,
 } from './oportunidad-seguimiento.ts'
@@ -1011,3 +1012,5 @@ export {
   type EntradaTareaDevolucion,
 } from './seguimiento-devolucion.ts'
 export { ROLES_FIGURA, ETIQUETA_ROL, rolesDelRamo, esRolFigura, limpiarFiguras, diferenciasVariante, resumenDiferencias, type RolFigura, type FigurasVariante, type Diferencia } from './variantes-riesgo.ts'
+
+export { ibanValido, normalizarIban } from './iban.ts'

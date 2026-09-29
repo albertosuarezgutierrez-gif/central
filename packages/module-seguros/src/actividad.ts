@@ -36,6 +36,7 @@ export type TipoActividad =
   | 'acceso'
   | 'acceso_fallido'
   | 'direccion'
+  | 'cuenta'
   | 'sugerencia'
   | 'datos_presupuesto'
   | 'parte'
@@ -78,6 +79,12 @@ export const ACTIVIDADES: readonly Definicion[] = [
     label: 'Cambió su dirección de contacto',
     origen: 'cliente',
     riesgo: 'El domicilio tarifica en hogar y auto: revisa si afecta a alguna de sus pólizas.',
+  },
+  {
+    v: 'cuenta',
+    label: 'Pidió cambiar la cuenta de sus recibos',
+    origen: 'cliente',
+    riesgo: 'La compañía sigue cargando en la cuenta vieja hasta que se la cambies tú: hazlo y márcalo en «Hoy».',
   },
   { v: 'parte', label: 'Abrió un parte de siniestro', origen: 'cliente', riesgo: 'Hay alguien esperando respuesta.' },
   {
