@@ -6,6 +6,8 @@ import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import AnulacionPoliza from './AnulacionPoliza'
 import AvisoEmision from './AvisoEmision'
+import CobradoDeNuevo from './CobradoDeNuevo'
+import WhatsappReciboDevuelto, { type ContextoWhatsappDevuelto } from './WhatsappReciboDevuelto'
 import HistorialRiesgo from './HistorialRiesgo'
 import CimaPoliza from './CimaPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
@@ -475,8 +477,27 @@ function Franquicia({ texto, detalle }: { texto: string | null; detalle: Poliza[
   )
 }
 
+/**
+ * Con quién se abre el WhatsApp de un recibo devuelto: el móvil del tomador y, si no tiene, el de
+ * alguien de su póliza (se dice de quién). `null` = no hay a quién escribir por ahí.
+ */
+function contextoWhatsapp(p: Poliza): ContextoWhatsappDevuelto | null {
+  const ef = contactoEfectivo({ telefono: p.cliente.telefono, email: null }, p.intervinientes)
+  if (!ef.telefono) return null
+  const obj = p.objeto?.estado === 'conocido' ? p.objeto : p.gemela?.objeto?.estado === 'conocido' ? p.gemela.objeto : null
+  const tercero = ef.viaTelefono === 'interviniente'
+  return {
+    clienteId: p.cliente.id, telefono: ef.telefono,
+    quien: tercero && ef.quien ? `${ef.quien.nombre ?? 'otra persona'} (${etiquetaRol(ef.quien.rol).toLowerCase()})` : null,
+    nombre: p.cliente.nombre, aseguradora: p.aseguradora, tipo: p.tipo,
+    riesgo: obj ? { titulo: obj.titulo, detalle: obj.detalle } : null,
+    paraTercero: tercero,
+  }
+}
+
 function Recibos({ p }: { p: Poliza }) {
   const r = p.recibos
+  const wa = contextoWhatsapp(p)
   const titular =
     r === null ? 'asegura no informa recibos'
     : r.total === 0 ? 'la compañía no ha mandado ningún recibo: no se sabe si está pagada'
@@ -492,13 +513,13 @@ function Recibos({ p }: { p: Poliza }) {
   return (
     <Tarjeta titulo={`Recibos${r && r.total ? ` (${r.total})` : ''}`}>
       <p style={{ margin: '0 0 8px', fontSize: 13 }}>{titular}</p>
-      {recientes.length > 0 && <TablaRecibos lista={recientes} />}
+      {recientes.length > 0 && <TablaRecibos lista={recientes} wa={wa} />}
       {/* Los antiguos, plegados y sin montar: una póliza de hace años trae
           decenas de recibos y lo que se consulta es la anualidad en curso. */}
       {antiguos.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <Plegable titulo={`Ver ${antiguos.length} recibo(s) anteriores`}>
-            <TablaRecibos lista={antiguos} />
+            <TablaRecibos lista={antiguos} wa={wa} />
           </Plegable>
         </div>
       )}
@@ -508,7 +529,7 @@ function Recibos({ p }: { p: Poliza }) {
 
 const RECIBOS_VISIBLES = 12
 
-function TablaRecibos({ lista }: { lista: Poliza['listaRecibos'] }) {
+function TablaRecibos({ lista, wa }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null }) {
   // Columnas nuevas solo si ALGÚN recibo las trae: asegura vieja o recibos anteriores a la ingesta nueva no las tienen.
   const hayRemesa = lista.some((x) => x.idRemesa)
   const hayComision = lista.some((x) => x.baseComision !== null || x.claseComision || x.retencionIrpf !== null)
@@ -521,7 +542,19 @@ function TablaRecibos({ lista }: { lista: Poliza['listaRecibos'] }) {
             <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
               <td data-label="Emitido" style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
               <td data-label="Vence" style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
-              <td data-rol="cabeza" style={td}>{ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}</td>
+              <td data-rol="cabeza" style={td}>
+                {ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}
+                {/* Solo en DEVUELTO: un «pendiente» no prueba que el banco lo devolviera. */}
+                {x.situacion === 'devuelto' && wa && (
+                  <> <WhatsappReciboDevuelto ctx={wa} importe={x.importe} fechaEfecto={x.fechaEfecto} tipoMotivo={x.devolucionCorreo?.tipoMotivo ?? null} /></>
+                )}
+                {x.devolucionCorreo && (
+                  <div style={sub}>
+                    <span title="CIMA aún no lo trae: lo avisó la compañía por correo">aviso por correo del {fmt(x.devolucionCorreo.fecha)}{x.devolucionCorreo.motivo ? ` · ${x.devolucionCorreo.motivo}` : ''}</span>
+                    <CobradoDeNuevo reciboId={x.id} />
+                  </div>
+                )}
+              </td>
               <td data-label="Cobro" style={td}>
                 {x.formaPago ?? <span style={muted}>—</span>}
                 {x.gestionCobro && <div style={sub}>{etiquetaGestionCobro(x.gestionCobro)}</div>}

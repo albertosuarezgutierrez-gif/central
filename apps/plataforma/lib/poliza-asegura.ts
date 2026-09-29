@@ -89,11 +89,21 @@ export type ReciboFicha = {
   fechaEmision: string | null
   fechaVencimiento: string | null
   formaPago: string | null
+  /**
+   * La compañía avisó POR CORREO de la devolución y aún no consta el cobro. `null` = no hay aviso
+   * abierto o asegura no lo manda (versión vieja): entonces no se ofrece «cobrado de nuevo».
+   */
+  devolucionCorreo: DevolucionCorreoFicha | null
+  /** Efecto del recibo: desde aquí corre el mes del art. 15 LCS. `null` = asegura no lo manda. */
+  fechaEfecto: string | null
 } & ReciboExtraFicha
+
+export type DevolucionCorreoFicha = { fecha: string; motivo: string | null; tipoMotivo: string | null }
 
 export type Poliza = {
   id: string
-  cliente: { id: string; nombre: string }
+  /** `telefono`: el principal de la ficha. `null` = no consta o asegura (versión vieja) no lo manda. */
+  cliente: { id: string; nombre: string; telefono: string | null }
   tipo: string
   aseguradora: string
   codigoEntidadDgs: string | null
@@ -410,6 +420,8 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       listaRecibos.push({
         id: o.id, situacion: cadena(o.situacion) ?? 'sin_informar', importe: numero(o.importe),
         fechaEmision: cadena(o.fechaEmision), fechaVencimiento: cadena(o.fechaVencimiento), formaPago: cadena(o.formaPago),
+        devolucionCorreo: leerDevolucionCorreo(o.devolucionCorreo),
+        fechaEfecto: fechaIsoOnull(o.fechaEfecto),
         ...leerReciboExtra(o),
       })
     }
@@ -431,7 +443,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
     estado: 'ok',
     poliza: {
       id: p.id,
-      cliente: { id: c.id, nombre: cadena(c.nombre) ?? 'sin nombre' },
+      cliente: { id: c.id, nombre: cadena(c.nombre) ?? 'sin nombre', telefono: cadena(c.telefono) },
       tipo: p.tipo,
       aseguradora: p.aseguradora,
       codigoEntidadDgs: cadena(p.codigoEntidadDgs),
@@ -491,4 +503,19 @@ export async function polizaAsegura(id: string): Promise<RespuestaPoliza> {
   } catch {
     return { estado: 'error', motivo: 'red' }
   }
+}
+
+function leerDevolucionCorreo(v: unknown): DevolucionCorreoFicha | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.fecha)) return null
+  return {
+    fecha: o.fecha,
+    motivo: typeof o.motivo === 'string' && o.motivo !== '' ? o.motivo : null,
+    tipoMotivo: typeof o.tipoMotivo === 'string' && o.tipoMotivo !== '' ? o.tipoMotivo : null,
+  }
+}
+
+function fechaIsoOnull(v: unknown): string | null {
+  return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null
 }

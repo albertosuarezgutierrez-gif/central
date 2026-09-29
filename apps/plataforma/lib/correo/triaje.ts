@@ -20,6 +20,10 @@ import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
 import { pareceContactoPersonal } from './contacto-sugerido'
 import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
+import { leerCorreoDevolucion, type LecturaCorreoDevolucion } from '@central/module-seguros'
+import { leerResultadosPuerto, textoAvisoDevolucion } from './devolucion-aviso'
+import { registrarDevolucionesAsegura } from '@/lib/correduria-puerto'
+import { urlFichaCliente } from '@/lib/leads-web'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -152,6 +156,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           // Aviso inmediato. El de Agoda lleva texto PROPIO: el correo trae el mensaje del huésped
           // dentro, así que se manda tal cual en vez del resumen genérico — y sobre todo dice que
           // NO se contesta desde Smoobu (para Agoda el hilo no llega al huésped) y da el enlace de YCS.
+          let devolucion: LecturaCorreoDevolucion | null = null
           const avisoAgoda = ruta.aviso === 'inmediato' && c.categoria === 'agoda-huespedes'
             // `extracto` es asunto+cuerpo truncado a 1500 chars: el nombre y el texto del mensaje van
             // al PRINCIPIO y siempre sobreviven; el enlace de YCS va al final y puede caerse. El parser
@@ -162,6 +167,19 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const nombre = avisoAgoda.propertyId ? (ACCESO[avisoAgoda.propertyId]?.nombre ?? null) : null
             await tgAviso('correo.agoda', textoAvisoAgoda(avisoAgoda, nombre ?? undefined))
             stats.avisados++
+          } else if (c.categoria === 'correduria-recibo' && (devolucion = leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: correo.texto ?? correo.extracto, fecha: correo.fecha.toISOString() })) !== null) {
+            // Correo de DEVOLUCIÓN que se sabe leer: se registra en la cartera (marca el recibo,
+            // abre la llamada) y el aviso dice quién, cuánto y hasta cuándo. Si el puerto no contesta,
+            // el aviso sale IGUAL con lo leído del correo y declara que no está registrado.
+            const res = devolucion.devoluciones.length > 0
+              ? await registrarDevolucionesAsegura(devolucion.devoluciones, correo.messageId)
+              : null
+            const resultados = res?.estado === 'ok' ? leerResultadosPuerto(res.json) : null
+            const fallo = res && res.estado !== 'ok' ? res : null
+            const avisoId = avisoDeCategoriaCorreo(c.categoria)
+            const texto = textoAvisoDevolucion(devolucion, resultados, (id) => urlFichaCliente(id), fallo)
+            const enviado = avisoId ? await tgAviso(avisoId, texto) : await tgSend(texto)
+            if (enviado !== null) stats.avisados++
           } else if (ruta.aviso === 'inmediato') {
             // Un interruptor POR CATEGORÍA (panel /telegram): «avísame de los leads pero no de cada
             // correo de huéspedes» es la distinción real. Una categoría sin id catalogado avisa

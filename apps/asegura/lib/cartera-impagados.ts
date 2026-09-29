@@ -194,7 +194,10 @@ export async function colaRetencion(
       id: true,
       situacion: true,
       primaTotal: true,
-      fechaVencimiento: true,
+      // El día en que vence la PRIMA: de aquí corre el art. 15 LCS. `fechaVencimiento` es el FIN del
+      // periodo que cubre el recibo (un año después en un anual) y dejaba «en plazo» durante un año
+      // a quien llevaba meses sin cobertura (medido 28/09/2026 en un devuelto de mayo).
+      fechaEfectoActual: true,
       poliza: {
         select: {
           id: true,
@@ -212,7 +215,7 @@ export async function colaRetencion(
         },
       },
     },
-    orderBy: { fechaVencimiento: 'asc' },
+    orderBy: { fechaEfectoActual: 'asc' },
     // Techo con nombre. El orden de la criba es el del RELOJ (el recibo más
     // antiguo primero), así que si algún día muerde se pierde lo menos urgente
     // — pero se pierde igual, y por eso se declara justo debajo.
@@ -226,7 +229,7 @@ export async function colaRetencion(
   let pendientesSinJuzgar = 0
   const accionables = recibos.filter((r) => {
     if (String(r.situacion) === 'devuelto') return true
-    const f = fechaIso(r.fechaVencimiento)
+    const f = fechaIso(r.fechaEfectoActual)
     if (f === null || f >= hoyIso) {
       pendientesSinJuzgar++
       return false
@@ -257,8 +260,8 @@ export async function colaRetencion(
       if (nuevoDevuelto) porPoliza.set(r.poliza.id, r)
       continue
     }
-    if (previo.fechaVencimiento === null) continue
-    if (r.fechaVencimiento === null || r.fechaVencimiento < previo.fechaVencimiento) {
+    if (previo.fechaEfectoActual === null) continue
+    if (r.fechaEfectoActual === null || r.fechaEfectoActual < previo.fechaEfectoActual) {
       porPoliza.set(r.poliza.id, r)
     }
   }
@@ -278,7 +281,7 @@ export async function colaRetencion(
       datos && typeof datos.matricula === 'string' && datos.matricula.trim() !== ''
         ? datos.matricula.trim()
         : null
-    const fecha = fechaIso(r.fechaVencimiento)
+    const fecha = fechaIso(r.fechaEfectoActual)
     // `SITUACIONES_IMPAGO` solo deja pasar estas dos, pero se estrecha aquí en
     // vez de castear: una situación nueva en el enum caería en el lado
     // conservador («no consta»), no en el que afirma que no hay cobertura.

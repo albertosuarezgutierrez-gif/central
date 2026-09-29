@@ -60,7 +60,7 @@ export async function siguientesAcciones(
       : db.polizaRecibo
           .findMany({
             where: { correduriaId, polizaId: { in: idsVivas } },
-            select: { id: true, polizaId: true, situacion: true, primaTotal: true, fechaEmision: true, fechaVencimiento: true, formaPago: true },
+            select: { id: true, polizaId: true, situacion: true, primaTotal: true, fechaEmision: true, fechaVencimiento: true, fechaEfectoActual: true, formaPago: true },
           })
           .catch(() => null),
     db.$queryRaw<{ cliente_id: string; ramo: string | null; compania: string | null; fecha_vencimiento: Date | null }[]>`
@@ -113,6 +113,7 @@ export async function siguientesAcciones(
                     primaTotal: r.primaTotal,
                     fechaEmision: fechaIso(r.fechaEmision),
                     fechaVencimiento: fechaIso(r.fechaVencimiento),
+                    fechaEfecto: fechaIso(r.fechaEfectoActual),
                     formaPago: r.formaPago,
                   })),
                 ),
