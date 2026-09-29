@@ -203,7 +203,13 @@ export function validarRespuestas(
 export const DIAS_SOLICITUD = 14
 
 /** Texto listo para pegar en WhatsApp o en un correo. Sin datos del cliente: solo el enlace. */
-export function mensajeSolicitud(ramo: RamoSolicitud, url: string): string {
+export function mensajeSolicitud(ramo: RamoSolicitud, url: string, tercero = false): string {
+  if (tercero) {
+    // Datos de OTRA persona (un familiar que figurará en el seguro). No se nombra a nadie: el
+    // mensaje se reenvía y puede acabar en cualquier buzón.
+    const que = ramo === 'moto' ? 'la moto' : 'el coche'
+    return `Hola, soy Alberto de Grupo ASegura. Para el presupuesto de ${que} necesito los datos de la persona que figurará en el seguro; son dos minutos: ${url}`
+  }
   const que = ramo === 'moto' ? 'tu moto' : 'tu coche'
   return `Hola, soy Alberto de Grupo ASegura. Para prepararte el presupuesto de ${que} necesito unos datos; te lleva dos minutos: ${url}`
 }

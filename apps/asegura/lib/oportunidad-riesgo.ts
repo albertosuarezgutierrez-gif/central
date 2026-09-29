@@ -129,13 +129,15 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       aceptado_at: Date | null; emitido_at: Date | null; retirado_at: Date | null
     }>
   >`
-    select t.id::text as id, t.creado_at, t.cliente_id::text as cliente_id, c.nombre, c.apellidos, t.nota, t.simulado,
+    select t.id::text as id, t.creado_at, coalesce(t.cliente_id, pol.cliente_id)::text as cliente_id, c.nombre, c.apellidos, t.nota, t.simulado,
            t.fecha_efecto, t.peticion,
            (select count(*)::int from seguros.tarificacion_precios x where x.tarificacion_id = t.id and x.prima_eur is not null) as n_precios,
            m.compania as mejor_compania, m.prima_eur::text as mejor_prima,
            p.id::text as p_id, p.enviado_at, p.visto_at, p.elegido_at, p.aceptado_at, p.emitido_at, p.retirado_at
     from seguros.tarificaciones t
-    left join seguros.clientes c on c.id = t.cliente_id and c.correduria_id = t.correduria_id
+    -- Una retarificación de póliza no guarda cliente_id: el tomador es el de la póliza.
+    left join seguros.polizas pol on pol.id = t.poliza_id and pol.correduria_id = t.correduria_id
+    left join seguros.clientes c on c.id = coalesce(t.cliente_id, pol.cliente_id) and c.correduria_id = t.correduria_id
     left join lateral (
       select x.compania, x.prima_eur from seguros.tarificacion_precios x
       where x.tarificacion_id = t.id and x.prima_eur is not null order by x.prima_eur asc limit 1
@@ -439,4 +441,127 @@ function limpiarFigurasEntrada(v: unknown, tomadorId: string): FigurasVariante |
     }
   }
   return out
+}
+
+// ─── Comparar dos variantes ─────────────────────────────────────────────────
+
+export type PrecioComparado = { primaEur: number; modalidad: string | null } | null
+export type Comparacion = {
+  a: string
+  b: string
+  /** Qué cambia de `a` a `b`. `null` = alguna petición no se puede leer. */
+  cambios: Diferencia[] | null
+  /** Mejor prima de cada compañía en cada variante; `null` = esa compañía no dio precio ahí. */
+  companias: Array<{ compania: string; a: PrecioComparado; b: PrecioComparado }>
+}
+
+/** Dos variantes del MISMO riesgo, campo a campo y compañía a compañía. Gratis, solo lectura. */
+export async function compararVariantes(correduriaId: string, oportunidadId: string, a: string, b: string): Promise<Comparacion | null> {
+  if (![oportunidadId, a, b].every((x) => UUID.test(x)) || a === b) return null
+  const ts = await prisma.$queryRaw<Array<{ id: string; peticion: unknown }>>`
+    select id::text as id, peticion from seguros.tarificaciones
+    where id = any(${[a, b]}::uuid[]) and oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+  const ta = ts.find((t) => t.id === a)
+  const tb = ts.find((t) => t.id === b)
+  if (!ta || !tb) return null
+  const precios = await prisma.$queryRaw<Array<{ tarificacion_id: string; compania: string | null; modalidad: string | null; prima_eur: string }>>`
+    select distinct on (x.tarificacion_id, x.compania) x.tarificacion_id::text as tarificacion_id, x.compania, x.modalidad, x.prima_eur::text as prima_eur
+    from seguros.tarificacion_precios x
+    join seguros.tarificaciones t on t.id = x.tarificacion_id and t.correduria_id = ${correduriaId}::uuid
+    where x.tarificacion_id = any(${[a, b]}::uuid[]) and x.prima_eur is not null
+    order by x.tarificacion_id, x.compania, x.prima_eur asc`
+  const porCompania = new Map<string, { a: PrecioComparado; b: PrecioComparado }>()
+  for (const p of precios) {
+    const nombre = p.compania?.trim() || 'Sin compañía'
+    const fila = porCompania.get(nombre) ?? { a: null, b: null }
+    fila[p.tarificacion_id === a ? 'a' : 'b'] = { primaEur: Number(p.prima_eur), modalidad: p.modalidad }
+    porCompania.set(nombre, fila)
+  }
+  const companias = [...porCompania.entries()]
+    .map(([compania, v]) => ({ compania, ...v }))
+    .sort((x, y) => Math.min(x.a?.primaEur ?? Infinity, x.b?.primaEur ?? Infinity) - Math.min(y.a?.primaEur ?? Infinity, y.b?.primaEur ?? Infinity))
+  return { a, b, cambios: diferenciasVariante(ta.peticion, tb.peticion), companias }
+}
+
+// ─── El riesgo de una póliza (renovación / retención) ───────────────────────
+
+const ROL_DESDE_INTERVINIENTE: Record<string, RolFigura> = {
+  propietario: 'propietario',
+  conductor_habitual: 'conductor_habitual',
+  conductor_ocasional: 'conductor_ocasional',
+}
+
+/**
+ * Abre (o devuelve la abierta) la oportunidad de ESTA póliza para retarificarla, con las figuras que
+ * CIMA/la ficha ya tienen enlazadas a una persona. Gratis. Nunca toca la póliza.
+ */
+export async function abrirRiesgoDePoliza(
+  correduriaId: string,
+  e: { polizaId: string; actor: string },
+): Promise<{ ok: true; oportunidadId: string; nueva: boolean } | { ok: false; status: number; motivo: string }> {
+  if (!UUID.test(e.polizaId)) return { ok: false, status: 400, motivo: 'id no válido' }
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`riesgo-poliza:${e.polizaId}`}))`
+    const [pol] = await tx.$queryRaw<Array<{ cliente_id: string; tipo: string; aseguradora: string | null; datos: Record<string, unknown> | null }>>`
+      select p.cliente_id::text as cliente_id, p.tipo::text as tipo, p.aseguradora, p.datos_especificos as datos
+      from seguros.polizas p
+      join seguros.clientes c on c.id = p.cliente_id and c.correduria_id = p.correduria_id and c.merged_into_cliente_id is null
+      where p.id = ${e.polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null`
+    if (!pol) return { ok: false as const, status: 404, motivo: 'la póliza no es de esta correduría' }
+
+    const [ya] = await tx.$queryRaw<Array<{ id: string }>>`
+      select id::text as id from seguros.oportunidades
+      where correduria_id = ${correduriaId}::uuid and poliza_id = ${e.polizaId}::uuid
+        and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      order by created_at desc limit 1`
+    if (ya) return { ok: true as const, oportunidadId: ya.id, nueva: false }
+
+    const d = pol.datos ?? {}
+    const txt = (k: string) => (typeof d[k] === 'string' && (d[k] as string).trim() !== '' ? (d[k] as string).trim() : null)
+    const info = { origen: 'poliza:riesgo', polizaId: e.polizaId, matricula: txt('matricula'), marca: txt('marca'), modelo: txt('modelo'), aseguradora: pol.aseguradora }
+    const [o] = await tx.$queryRaw<Array<{ id: string }>>`
+      insert into seguros.oportunidades (correduria_id, cliente_id, tipo, fuente, estado, info_riesgo, poliza_id)
+      values (${correduriaId}::uuid, ${pol.cliente_id}::uuid, cast(${pol.tipo} as seguros.tipo_seguro), 'renovacion', 'en_negociacion',
+              ${JSON.stringify(info)}::jsonb, ${e.polizaId}::uuid)
+      returning id::text as id`
+
+    const roles = rolesDelRamo(pol.tipo)
+    const ints = await tx.$queryRaw<Array<{ rol: string; cliente_id: string }>>`
+      select distinct on (pi.rol) pi.rol::text as rol, pi.cliente_id::text as cliente_id
+      from seguros.poliza_intervinientes pi
+      join seguros.clientes c on c.id = pi.cliente_id and c.correduria_id = pi.correduria_id and c.merged_into_cliente_id is null
+      where pi.poliza_id = ${e.polizaId}::uuid and pi.correduria_id = ${correduriaId}::uuid and pi.cliente_id is not null
+      order by pi.rol, (pi.origen::text = 'cima') desc, pi.created_at desc`
+    let figuras = 0
+    for (const i of ints) {
+      const rol = ROL_DESDE_INTERVINIENTE[i.rol]
+      if (!rol || !roles.includes(rol) || i.cliente_id === pol.cliente_id) continue
+      await tx.$executeRaw`
+        insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
+        values (${correduriaId}::uuid, ${o.id}::uuid, ${rol}, ${i.cliente_id}::uuid, ${e.actor})
+        on conflict (oportunidad_id, rol) do nothing`
+      figuras++
+    }
+    await tx.$executeRaw`
+      insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${o.id}::uuid, 'riesgo_desde_poliza', null, 'en_negociacion',
+              ${JSON.stringify({ polizaId: e.polizaId, figuras })}::jsonb, ${e.actor})`
+    return { ok: true as const, oportunidadId: o.id, nueva: true }
+  })
+}
+
+/**
+ * Retarificar la póliza DENTRO de su riesgo: la oportunidad tiene que ser de esta correduría y de
+ * ESTA póliza. Gratis, antes de gastar. Devuelve el contexto que cuelga la tarificación de ella.
+ */
+export async function validarRiesgoDePoliza(
+  correduriaId: string,
+  oportunidadId: string,
+  polizaId: string,
+): Promise<{ ok: true } | { ok: false; motivo: string }> {
+  if (!UUID.test(oportunidadId) || !UUID.test(polizaId)) return { ok: false, motivo: 'ids no válidos' }
+  const [o] = await prisma.$queryRaw<Array<{ id: string }>>`
+    select id::text as id from seguros.oportunidades
+    where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and poliza_id = ${polizaId}::uuid`
+  return o ? { ok: true } : { ok: false, motivo: 'ese riesgo no es de esta póliza' }
 }

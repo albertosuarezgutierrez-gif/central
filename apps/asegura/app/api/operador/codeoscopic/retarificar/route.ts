@@ -8,6 +8,7 @@ import {
   type CuerpoRetarificacion,
 } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
+import { validarRiesgoDePoliza } from '@/lib/oportunidad-riesgo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -128,6 +129,18 @@ export const POST = auditado(async (req: Request) => {
   // esas respuestas llevan `gastado: '0,00€'`.
   if (p.estado === 'corte') {
     return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })
+  }
+
+  // Dentro del RIESGO de la póliza (29/09/2026): la tarificación se cuelga de ESA oportunidad, que
+  // tiene que ser de esta póliza. Gratis y antes de gastar; si no casa, no se pide precio.
+  const oportunidadId = typeof cuerpo.oportunidadId === 'string' ? cuerpo.oportunidadId.trim() : ''
+  if (oportunidadId !== '') {
+    const v = await validarRiesgoDePoliza(p.peticion.correduriaId, oportunidadId, polizaId)
+    if (!v.ok) {
+      return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: v.motivo, gastado: '0,00€' }, { status: 422 })
+    }
+    const nota = typeof cuerpo.nota === 'string' && cuerpo.nota.trim() !== '' ? cuerpo.nota.trim().slice(0, 200) : null
+    if (p.peticion.contexto) p.peticion.contexto = { ...p.peticion.contexto, oportunidadId, nota }
   }
 
   // ── La única línea que cuesta dinero, por el único embudo ────────────────

@@ -8,7 +8,8 @@ type Estado = { tipo: 'editando' } | { tipo: 'enviando' } | { tipo: 'hecho' } | 
 type Subida = { id: number; nombre: string; estado: 'subiendo' | 'ok' | 'fallo'; texto: string }
 
 /** El formulario del enlace de datos. Pinta los campos que manda asegura y nada más. */
-export default function Formulario({ token, campos }: { token: string; campos: CampoSolicitud[] }) {
+export default function Formulario({ token, campos, tercero = false }: { token: string; campos: CampoSolicitud[]; tercero?: boolean }) {
+  const [consiente, setConsiente] = useState(false)
   // DNI y nacimiento llegan rellenos con lo de su ficha (`actual`): los confirma o los corrige.
   const [valores, setValores] = useState<Record<string, string | boolean>>(
     () => Object.fromEntries(campos.flatMap((c) => (c.actual ? [[c.clave, c.actual]] : []))),
@@ -77,7 +78,7 @@ export default function Formulario({ token, campos }: { token: string; campos: C
       const res = await fetch('/api/datos', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token, respuestas: valores }),
+        body: JSON.stringify({ token, respuestas: valores, consentimiento: consiente }),
       })
       status = res.status
       json = (await res.json().catch(() => null)) as Record<string, unknown> | null
@@ -183,12 +184,19 @@ export default function Formulario({ token, campos }: { token: string; campos: C
           </div>
         )
       })}
+      {tercero && (
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', minHeight: 44, fontSize: 15 }}>
+          <input type="checkbox" checked={consiente} onChange={(e) => setConsiente(e.target.checked)} style={{ width: 22, height: 22, marginTop: 2 }} />
+          <span>Soy esa persona, o tengo su permiso para dar sus datos a Grupo ASegura para este presupuesto.</span>
+        </label>
+      )}
+      {tercero && errores.consentimiento && <span className="editor-error" role="alert">{errores.consentimiento}</span>}
       {estado.tipo === 'fallo' && <p className="editor-error" role="alert">{estado.texto}</p>}
       <p className="suave" style={{ margin: 0, fontSize: 13 }}>
         Usamos estos datos solo para prepararte el presupuesto (Grupo ASegura, correduría de seguros).
       </p>
-      <button type="submit" className="boton" style={{ minHeight: 48 }} disabled={estado.tipo === 'enviando' || subiendo}>
-        {estado.tipo === 'enviando' ? 'Enviando…' : subiendo ? 'Leyendo tus documentos…' : 'Enviar mis datos'}
+      <button type="submit" className="boton" style={{ minHeight: 48 }} disabled={estado.tipo === 'enviando' || subiendo || (tercero && !consiente)}>
+        {estado.tipo === 'enviando' ? 'Enviando…' : subiendo ? 'Leyendo los documentos…' : tercero ? 'Enviar los datos' : 'Enviar mis datos'}
       </button>
     </form>
   )
