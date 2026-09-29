@@ -421,6 +421,9 @@ export function Emision({
   const [familiaAllianz, setFamiliaAllianz] = useState(false)
   // Casillas del paso `confirmar_figuras`. Nada preseleccionado: se marcan a mano.
   const [figurasMarcadas, setFigurasMarcadas] = useState<Set<string>>(() => new Set())
+  // La oferta desde la que se pulsó «Emitir»: «Volver» del aviso legal regresa a ELLA (con la
+  // cuenta, la fecha y lo tecleado), no cierra el panel entero (decisión 29/09/2026).
+  const ofertaAntesDeEmitir = useRef<Extract<EstadoPanel, { paso: 'oferta' }> | null>(null)
   const esAllianz = compania.trim().toLowerCase().includes('allianz')
   // Descuento comercial en preemisión (29/09/2026). Vacío = el de siempre (25 % y 25 %); asegura
   // valida el rango del formulario real (CAP 0-99, venta cruzada 0-100) antes de llamar a nadie.
@@ -628,6 +631,7 @@ export function Emision({
     // La máscara que el corredor ha visto y marcado: es lo ÚNICO que autoriza a
     // asegura a mandar la cuenta de la ficha. Un IBAN tecleado la sustituye.
     const cuentaConfirmada = !otraCuenta && cuentaOk && cuenta ? cuenta.enmascarada : null
+    if (estado.paso === 'oferta') ofertaAntesDeEmitir.current = estado
     setEstado({ paso: 'emitiendo' })
     const r = await pedirEmision({
       projectId,
@@ -1319,8 +1323,17 @@ export function Emision({
               >
                 {completas ? `Emitir con ${compania || 'la compañía'}` : 'Marca las casillas para emitir'}
               </button>
-              <button type="button" className="ghost" style={{ minHeight: 44 }} onClick={onCerrar}>
-                Volver
+              <button
+                type="button"
+                className="ghost"
+                style={{ minHeight: 44 }}
+                onClick={() => {
+                  const previa = ofertaAntesDeEmitir.current
+                  if (previa) setEstado(previa)
+                  else onCerrar()
+                }}
+              >
+                {ofertaAntesDeEmitir.current ? 'Volver a la oferta' : 'Volver'}
               </button>
             </div>
             <p className="muted" style={{ margin: 0, fontSize: 12 }}>

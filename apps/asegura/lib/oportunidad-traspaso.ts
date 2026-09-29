@@ -35,8 +35,8 @@ export async function traspasarOportunidad(
   if (!UUID.test(e.oportunidadId) || !UUID.test(e.nuevoClienteId)) return { ok: false, status: 400, motivo: 'ids no válidos' }
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`oportunidad-traspaso:${e.oportunidadId}`}))`
-    const [op] = await tx.$queryRaw<Array<{ cliente_id: string; estado: string }>>`
-      select cliente_id::text as cliente_id, estado::text as estado from seguros.oportunidades
+    const [op] = await tx.$queryRaw<Array<{ cliente_id: string; estado: string; tipo: string | null }>>`
+      select cliente_id::text as cliente_id, estado::text as estado, tipo::text as tipo from seguros.oportunidades
       where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
       for update`
     if (!op) return { ok: false as const, status: 404, motivo: 'la oportunidad no es de esta correduría' }
@@ -49,6 +49,26 @@ export async function traspasarOportunidad(
       select id::text as id from seguros.clientes
       where id = ${e.nuevoClienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
     if (!nuevo) return { ok: false as const, status: 404, motivo: 'ese cliente no es de esta correduría o está fusionado en otra ficha' }
+
+    // 🚨 Una oportunidad ABIERTA por cliente y ramo (29/09/2026, decisión): es lo que asume el
+    // enganche de presupuestos (`oportunidad-presupuesto.ts`); con dos, los precios nuevos se
+    // colgarían de la que no toca sin que nada falle. Mismo candado que ese enganche.
+    if (op.tipo) {
+      await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`oportunidad:${e.nuevoClienteId}:${op.tipo}`}))`
+      const [otra] = await tx.$queryRaw<Array<{ id: string }>>`
+        select id::text as id from seguros.oportunidades
+        where correduria_id = ${correduriaId}::uuid and cliente_id = ${e.nuevoClienteId}::uuid
+          and tipo::text = ${op.tipo} and id <> ${e.oportunidadId}::uuid
+          and estado::text = any(${[...ESTADOS_ABIERTA]}::text[])
+        limit 1`
+      if (otra) {
+        return {
+          ok: false as const,
+          status: 409,
+          motivo: `esa persona ya tiene otra oportunidad abierta de ${op.tipo}: trabaja desde esa o ciérrala antes de pasarle esta`,
+        }
+      }
+    }
 
     const n = await tx.$executeRaw`
       update seguros.oportunidades set cliente_id = ${e.nuevoClienteId}::uuid, updated_at = now()
