@@ -1,8 +1,8 @@
 {
  "sesion": "41ad2a07-c224-528c-a7f8-751825c6928f",
  "inicio": "2026-09-29T09:09:25.222Z",
- "fin": "2026-09-29T10:57:51.982Z",
- "llamadas": 215,
+ "fin": "2026-09-29T12:40:17.284Z",
+ "llamadas": 221,
  "categorias": {
   "lectura-directa": {
    "llamadas": 2,
@@ -17,15 +17,15 @@
    }
   },
   "otro": {
-   "llamadas": 28,
-   "chars_in": 9209,
-   "chars_out": 200418,
+   "llamadas": 30,
+   "chars_in": 9302,
+   "chars_out": 202217,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 53476,
    "tools": {
-    "ToolSearch": 11,
-    "ReadNotifications": 14,
+    "ToolSearch": 12,
+    "ReadNotifications": 15,
     "SubagentHandback": 1,
     "ReportFindings": 1,
     "Skill": 1
@@ -60,14 +60,14 @@
    }
   },
   "sql": {
-   "llamadas": 5,
-   "chars_in": 2687,
-   "chars_out": 4465,
+   "llamadas": 7,
+   "chars_in": 3048,
+   "chars_out": 5548,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 5
+    "mcp__Supabase__execute_sql": 7
    }
   },
   "agente:general-purpose": {
@@ -93,9 +93,9 @@
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 4,
-   "chars_in": 432,
-   "chars_out": 2022,
+   "llamadas": 5,
+   "chars_in": 1626,
+   "chars_out": 5843,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -103,20 +103,22 @@
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
     "mcp__Claude_Code_Remote__send_later": 1,
     "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1,
-    "mcp__Claude_Code_Remote__delete_trigger": 1
+    "mcp__Claude_Code_Remote__delete_trigger": 1,
+    "mcp__Claude_Code_Remote__create_trigger": 1
    }
   },
   "mcp:Vercel": {
-   "llamadas": 6,
-   "chars_in": 784,
-   "chars_out": 16475,
+   "llamadas": 7,
+   "chars_in": 955,
+   "chars_out": 16628,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Vercel__list_deployments": 4,
     "mcp__Vercel__create_deployment": 1,
-    "mcp__Vercel__web_fetch_vercel_url": 1
+    "mcp__Vercel__web_fetch_vercel_url": 1,
+    "mcp__Vercel__get_runtime_logs": 1
    }
   }
  }
