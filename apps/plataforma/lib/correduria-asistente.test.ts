@@ -193,6 +193,11 @@ test('alta dictada: DNI repetido = esa ficha; teléfono repetido = preguntar; 5x
 test('figura: hecho, fallo de red y rechazo se distinguen', () => {
   assert.match(figuraParaIA(200, { estado: 'ok', clienteId: 'c9', existente: false }, 'propietario', false).texto, /ficha nueva creada: clienteId=c9/)
   assert.match(figuraParaIA(200, { estado: 'ok' }, 'conductor_habitual', true).texto, /vuelve a ser el tomador/)
+  // Un carné sin guardar no se calla ni deja pedir precio; uno que ya estaba se dice.
+  const sinCarne = figuraParaIA(200, { estado: 'ok', clienteId: 'c9', existente: false, carnet: 'no_guardado' }, 'conductor_habitual', false).texto
+  assert.match(sinCarne, /CARNÉ NO se ha guardado/)
+  assert.doesNotMatch(sinCarne, /Ahora proponer_tarificacion/)
+  assert.match(figuraParaIA(200, { estado: 'ok', clienteId: 'c9', existente: true, carnet: 'ya_tenia' }, 'conductor_habitual', false).texto, /ya tenía un carné/)
   assert.equal(figuraParaIA(0, null, 'propietario', false).ok, false)
   assert.match(figuraParaIA(409, { estado: 'error', motivo: 'ese DNI ya está en la ficha de X' }, 'propietario', false).texto, /ese DNI ya está/)
 })

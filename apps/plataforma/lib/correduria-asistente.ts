@@ -635,10 +635,15 @@ export function figuraParaIA(status: number, json: unknown, rol: string, quitar:
   if (status === 200 && o.estado === 'ok') {
     if (quitar) return { texto: `HECHO: el papel de ${papel} vuelve a ser el tomador.`, ok: true }
     const nueva = typeof o.clienteId === 'string'
-    return {
-      texto: `HECHO: ${papel} puesto en el riesgo${nueva ? ` (${o.existente === true ? 'ya tenía ficha' : 'ficha nueva creada'}: clienteId=${o.clienteId})` : ''}. Ahora proponer_tarificacion con esta oportunidadId.`,
-      ok: true,
+    const base = `HECHO: ${papel} puesto en el riesgo${nueva ? ` (${o.existente === true ? 'ya tenía ficha' : 'ficha nueva creada'}: clienteId=${o.clienteId})` : ''}.`
+    // El carné tiene su propio desenlace: la persona puede estar puesta y su carné no.
+    if (o.carnet === 'no_guardado') {
+      return { texto: `${base} Pero su CARNÉ NO se ha guardado: NO pidas precio todavía; dile a Alberto que lo añada en su ficha.`, ok: true }
     }
+    const carne = o.carnet === 'guardado' ? ' Carné guardado en su ficha.'
+      : o.carnet === 'ya_tenia' ? ' Su ficha ya tenía un carné de ese tipo y se ha dejado el que había: díselo a Alberto por si la fecha dictada era otra.'
+        : ''
+    return { texto: `${base}${carne} Ahora proponer_tarificacion con esta oportunidadId.`, ok: true }
   }
   if (status === 0 || status >= 500) return { texto: `NO SÉ SI SE HA PUESTO el ${papel} (la cartera no ha contestado bien). Míralo con oportunidades_cliente antes de repetir.`, ok: false }
   const motivo = typeof o.motivo === 'string' ? o.motivo : `HTTP ${status}`
