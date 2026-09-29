@@ -62,6 +62,7 @@ import {
   estadoRecibos,
   resumirRecibos,
   fechaReciboFiable,
+  tonoSituacionRecibo,
   type ReciboHistorial,
   type ResumenRecibos,
   type CamposVisibles,
@@ -72,6 +73,7 @@ import {
   importeEiac,
   interpretarCapital,
   primaConRecibos,
+  devueltoPorSustitucion,
   sustituidasARetirar,
   vencimientoConRecibos,
   vigenciaPoliza,
@@ -857,6 +859,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               primaTotal: true,
               fechaEmision: true,
               fechaVencimiento: true,
+              // Para saber si un devuelto de una póliza sustituida es de un periodo que ya no es suyo.
+              fechaEfectoActual: true,
               // CA/NP: el recibo de anualidad. Allianz manda la prima y la
               // renovación SOLO ahí (27/09/2026). Tiene GRANT desde el 02/09.
               claseRecibo: true,
@@ -1136,6 +1140,21 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       .filter((x): x is PolizaPortal => x !== null)
     // Sustituciones POR LECTOR (caso José Suárez, 23/09/2026): con lo que este lector ve, nunca antes.
     const porId = new Map(suyas.map((p) => [p.id, p]))
+    // El devuelto de la vieja por un periodo que ya cubre su sustituta NO es deuda (José, 29/09/2026:
+    // la renovación Mapfre del Kona llegó devuelta y el portal le pedía pagarla). No cuenta como
+    // pendiente: ni para dejar la vieja en la lista ni para «Tienes un recibo devuelto».
+    const dia = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
+    for (const n of suyas) {
+      const v = n.sustituyeAId === null ? undefined : porId.get(n.sustituyeAId)
+      if (v === undefined || n.vigencia === 'no_vigente' || !v.recibos || v.recibos.devueltos === 0) continue
+      const esperados = (recibosPor.get(v.id) ?? []).filter(
+        (r) =>
+          r.situacion !== null &&
+          tonoSituacionRecibo(String(r.situacion)) === 'devuelto' &&
+          devueltoPorSustitucion(dia(r.fechaEfectoActual), { fechaVencimiento: dia(v.fechaVencimiento) }, { fechaInicio: dia(n.fechaInicio) }),
+      ).length
+      if (esperados > 0) v.recibos = { ...v.recibos, devueltos: Math.max(0, v.recibos.devueltos - esperados) }
+    }
     const retirar = sustituidasARetirar(
       suyas.map((p) => ({
         id: p.id,

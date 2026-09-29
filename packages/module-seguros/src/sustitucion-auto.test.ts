@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { claveRiesgo, detectarSustituciones, solicitudPorSustitucion, sustituidasARetirar, type PolizaParaSustitucion } from './sustitucion-auto.ts'
+import { claveRiesgo, detectarSustituciones, devueltoPorSustitucion, solicitudPorSustitucion, sustituidasARetirar, type PolizaParaSustitucion } from './sustitucion-auto.ts'
 
 function pol(p: Partial<PolizaParaSustitucion> & { id: string }): PolizaParaSustitucion {
   return {
@@ -114,4 +114,25 @@ test('anulación por sustitución: a vencimiento si la nueva entra en los 30 dí
   assert.equal(solicitudPorSustitucion({ vencimiento: '2026-09-20', inicioNueva: '2026-09-19', mismaCompania: false }, '2026-09-23')?.fechaEfecto, '2026-09-19')
   assert.equal(solicitudPorSustitucion({ vencimiento: '2026-09-24', inicioNueva: null, mismaCompania: false }, '2026-09-23'), null)
   assert.equal(solicitudPorSustitucion({ vencimiento: '2026-09-24', inicioNueva: '2026-09-22', mismaCompania: true }, '2026-09-23')?.motivo, 'otro')
+})
+
+test('🚨 José (29/09/2026): el devuelto de la renovación Mapfre posterior al cambio NO es deuda', () => {
+  assert.equal(devueltoPorSustitucion('2026-09-24', { fechaVencimiento: '2026-09-24' }, { fechaInicio: '2026-09-22' }), true)
+})
+
+test('devuelto de la renovación aunque la nueva empiece días DESPUÉS del vencimiento: tampoco es deuda', () => {
+  assert.equal(devueltoPorSustitucion('2026-09-24T00:00:00.000Z', { fechaVencimiento: '2026-09-24' }, { fechaInicio: '2026-10-10' }), true)
+})
+
+test('cambio anticipado: el fraccionado con efecto tras el inicio de la nueva no es deuda', () => {
+  assert.equal(devueltoPorSustitucion('2026-08-24', { fechaVencimiento: '2026-09-24' }, { fechaInicio: '2026-08-01' }), true)
+})
+
+test('un devuelto de un periodo que la vieja SÍ cubrió sigue siendo deuda', () => {
+  assert.equal(devueltoPorSustitucion('2026-03-24', { fechaVencimiento: '2026-09-24' }, { fechaInicio: '2026-09-22' }), false)
+})
+
+test('sin fecha de efecto o sin fechas de corte: ante la duda, sigue pendiente', () => {
+  assert.equal(devueltoPorSustitucion(null, { fechaVencimiento: '2026-09-24' }, { fechaInicio: '2026-09-22' }), false)
+  assert.equal(devueltoPorSustitucion('2026-09-24', { fechaVencimiento: null }, { fechaInicio: null }), false)
 })
