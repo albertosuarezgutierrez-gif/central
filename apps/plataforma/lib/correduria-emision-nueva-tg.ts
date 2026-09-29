@@ -56,6 +56,24 @@ export function elegirPrecioNuevo(precios: Precio[], compania: string, texto: st
   return candidatos.length === 1 ? { tipo: 'uno', precio: candidatos[0] } : { tipo: 'elegir', precios: candidatos }
 }
 
+/**
+ * La fecha de efecto que dice Alberto («con efecto el 9 de octubre»). Solo se lee la FORMA (aaaa-mm-dd o
+ * dd/mm/aaaa, y que exista en el calendario): si cabe o no ([hoy, hoy+90]) lo decide asegura con la misma
+ * regla que la pantalla, gratis y antes de llamar a la compañía. `null` = no la ha dicho.
+ */
+export function leerFechaEfecto(v: unknown): { ok: true; fecha: string | null } | { ok: false; motivo: string } {
+  if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) return { ok: true, fecha: null }
+  const s = typeof v === 'string' ? v.trim() : String(v)
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const es = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  const [a, m, d] = iso ? [+iso[1], +iso[2], +iso[3]] : es ? [+es[3], +es[2], +es[1]] : [NaN, NaN, NaN]
+  const t = new Date(Date.UTC(a, m - 1, d))
+  if (!Number.isFinite(t.getTime()) || t.getUTCFullYear() !== a || t.getUTCMonth() !== m - 1 || t.getUTCDate() !== d) {
+    return { ok: false, motivo: `«${s.slice(0, 20)}» no es una fecha de efecto válida (aaaa-mm-dd)` }
+  }
+  return { ok: true, fecha: `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` }
+}
+
 /** Lo que Alberto confirma para una póliza NUEVA. Todo sale de asegura; la cuenta llega enmascarada. */
 export interface ResumenEmisionNueva {
   tipo: 'nuevo'
@@ -79,6 +97,8 @@ export interface ResumenEmisionNueva {
   primaParrillaEur: number | null
   firmeza: string
   efecto: string | null
+  /** La fecha con la que se COTIZÓ, si Alberto dictó otra y el precio se confirmó con la nueva. */
+  efectoCotizado?: string | null
   caduca: string | null
   avisos: string[]
   cuenta: { enmascarada: string; descripcion: string | null }
@@ -149,7 +169,7 @@ export function textoResumenNuevo(r: ResumenEmisionNueva): string {
     `Tarificado ${fecha(r.tarificadaEn)}`,
     `<b>${esc(r.compania)}</b> · ${esc(r.categoria)}${r.modalidad ? ` · ${esc(r.modalidad)}` : ''}${r.producto ? ` · ${esc(r.producto)}` : ''}`,
     `Prima confirmada por la compañía: <b>${prima}</b>${cambio} · ${esc(r.firmeza)}`,
-    `Efecto ${fecha(r.efecto)} · el precio caduca ${fecha(r.caduca)}`,
+    `Efecto <b>${fecha(r.efecto)}</b>${r.efectoCotizado ? ` <i>(se cotizó con ${fecha(r.efectoCotizado)}; la compañía ha confirmado el precio con la nueva)</i>` : ''} · el precio caduca ${fecha(r.caduca)}`,
     `Cuenta de cargo: ${esc(r.cuenta.enmascarada)}${r.cuenta.descripcion ? ` (${esc(r.cuenta.descripcion)})` : ''}`,
     ...(r.avisos.length ? ['', '⚠️ Avisos de la compañía:', ...r.avisos.map((a) => `• ${esc(a)}`)] : []),
     ...figuras,

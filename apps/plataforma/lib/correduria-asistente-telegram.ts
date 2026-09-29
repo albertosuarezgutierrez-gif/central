@@ -53,7 +53,7 @@ import {
   textoResumen, urlPoliza, type ResumenEmision,
 } from './correduria-emision-tg'
 import { textoCasillaFigura } from './figuras-emision-texto'
-import { elegirPrecioNuevo, esResumenNuevo, figurasPendientes, huellaResumenNuevo, precioCaducado, ramoNuevoValido, textoResumenNuevo, type ResumenEmisionNueva } from './correduria-emision-nueva-tg'
+import { elegirPrecioNuevo, esResumenNuevo, figurasPendientes, huellaResumenNuevo, leerFechaEfecto, precioCaducado, ramoNuevoValido, textoResumenNuevo, type ResumenEmisionNueva } from './correduria-emision-nueva-tg'
 import {
   apagado, clasificarDestino, costeConservador, ERROR_NO_UUID, hoyMadrid, memoriaIds, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
   leerArgumentos, leerClasificacion, MAX_TURNOS_DIA, MAX_VUELTAS, paraIA, preguntaNota, reglaConDatoPersonal,
@@ -495,6 +495,8 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
   const prima = args.primaEur === undefined || args.primaEur === null || !Number.isFinite(primaNum) ? null : primaNum
   const tarificacionPedida = idValido(args.tarificacionId)
   const oportunidadId = idValido(args.oportunidadId)
+  const fe = leerFechaEfecto(args.fechaEfecto)
+  if (!fe.ok) return { texto: `ERROR: ${fe.motivo}. Pregúntale a Alberto la fecha de efecto.`, ok: false }
 
   const g = await tarificacionNuevaGuardadaAsegura(clienteId, ramo, { oportunidadId, tarificacionId: tarificacionPedida })
   if (g.estado === 'ninguna') return { texto: `NO SE PUEDE EMITIR: este cliente no tiene ninguna tarificación de ${ramo} guardada. Hay que pedir precio primero.`, ok: true }
@@ -506,7 +508,12 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
   if (projectEsperado && guardada.projectId !== projectEsperado) {
     return { texto: `NO SE PREPARA: la tarificación guardada (${guardada.projectId}) no es la que se acaba de pedir (${projectEsperado}). Prepárala desde la ficha.`, ok: true }
   }
-  if (guardada.caducada) return { texto: `NO SE PUEDE EMITIR: la tarificación ${guardada.projectId} tiene la fecha de efecto ya pasada. Hay que volver a pedir precio.`, ok: true }
+  // Efecto ya pasado: sin fecha nueva no hay nada que confirmar. Con ella, el ReRate la lleva
+  // (`fechaEfectoCorregida`, lo mismo que la pantalla de emisión) y es la compañía quien dice si rescata el precio.
+  if (guardada.caducada && !fe.fecha) {
+    return { texto: `NO SE PUEDE EMITIR todavía: la tarificación ${guardada.projectId} se pidió con efecto ${guardada.fechaEfecto ?? 'sin fecha'}, ya pasado. Pregúntale a Alberto con qué fecha de efecto la quiere y vuelve a llamar con fechaEfecto (aaaa-mm-dd).`, ok: true }
+  }
+  const fechaCorregida = fe.fecha && fe.fecha !== guardada.fechaEfecto?.slice(0, 10) ? fe.fecha : null
 
   const el = elegirPrecioNuevo(guardada.precios, compania, texto, prima)
   if (el.tipo === 'no') return { texto: `NO SE PUEDE EMITIR: ${el.motivo}. Díselo a Alberto.`, ok: true }
@@ -549,6 +556,7 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     categoria: p.categoria as string,
     ...(p.producto ? { producto: p.producto } : {}),
     ...(typeof p.primaEur === 'number' ? { primaEur: p.primaEur } : {}),
+    ...(fechaCorregida ? { fechaEfectoCorregida: fechaCorregida } : {}),
   })
   if (of.estado !== 'ok') {
     const detalle = of.estado === 'faltan_vendor'
@@ -585,7 +593,8 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     primaEur: of.primaEur,
     primaParrillaEur: typeof p.primaEur === 'number' ? p.primaEur : null,
     firmeza: of.firmeza,
-    efecto: guardada.fechaEfecto,
+    efecto: fechaCorregida ?? guardada.fechaEfecto,
+    efectoCotizado: fechaCorregida ? guardada.fechaEfecto : null,
     caduca: of.caducaEn,
     avisos: [...(p.avisos ?? []), ...of.avisos].filter((a, i, xs) => xs.indexOf(a) === i).slice(0, 6),
     cuenta: { enmascarada: of.cuenta.enmascarada, descripcion: of.cuenta.descripcion },

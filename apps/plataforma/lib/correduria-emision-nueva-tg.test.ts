@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import {
-  elegirPrecioNuevo, esResumenNuevo, figurasPendientes, huellaResumenNuevo, precioCaducado, ramoNuevoValido, textoResumenNuevo,
+  elegirPrecioNuevo, esResumenNuevo, figurasPendientes, huellaResumenNuevo, leerFechaEfecto, precioCaducado, ramoNuevoValido, textoResumenNuevo,
   type ResumenEmisionNueva,
 } from './correduria-emision-nueva-tg.ts'
 import type { Precio } from './retarificar-asegura.ts'
@@ -98,6 +98,27 @@ test('figurasPendientes y ramoNuevoValido', () => {
   assert.equal(ramoNuevoValido('hogar'), null)
 })
 
+test('fecha de efecto dictada: aaaa-mm-dd o dd/mm/aaaa; lo que no es una fecha del calendario se rechaza', () => {
+  assert.deepEqual(leerFechaEfecto(undefined), { ok: true, fecha: null })
+  assert.deepEqual(leerFechaEfecto('  '), { ok: true, fecha: null })
+  assert.deepEqual(leerFechaEfecto('2026-10-09'), { ok: true, fecha: '2026-10-09' })
+  assert.deepEqual(leerFechaEfecto('9/10/2026'), { ok: true, fecha: '2026-10-09' })
+  assert.deepEqual(leerFechaEfecto('09/10/2026'), { ok: true, fecha: '2026-10-09' })
+  // El 31 de septiembre no existe: Date lo pasaría al 1 de octubre sin avisar.
+  assert.equal(leerFechaEfecto('2026-09-31').ok, false)
+  assert.equal(leerFechaEfecto('31/09/2026').ok, false)
+  assert.equal(leerFechaEfecto('9 de octubre').ok, false)
+  assert.equal(leerFechaEfecto('2026/10/09').ok, false)
+})
+
+test('con la fecha cambiada, el resumen dice la nueva y con cuál se cotizó; sin cambio, no', () => {
+  const t = textoResumenNuevo({ ...R, efecto: '2026-10-09', efectoCotizado: '2026-09-22' })
+  assert.match(t, /Efecto <b>09\/10\/2026<\/b>/)
+  assert.match(t, /se cotizó con 22\/09\/2026/)
+  assert.doesNotMatch(textoResumenNuevo(R), /se cotizó con/)
+  assert.notEqual(huellaResumenNuevo(R), huellaResumenNuevo({ ...R, efecto: '2026-10-09', efectoCotizado: '2026-09-30' }))
+})
+
 // ── Cepos sobre el fuente ────────────────────────────────────────────────────────────────────────
 const tg = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
 const prep = tg.slice(tg.indexOf('async function prepararEmisionNueva'), tg.indexOf('async function enviarPropuestaNueva'))
@@ -115,6 +136,15 @@ test('preparar: sin cuenta legible de la ficha no hay botón (por Telegram no se
 
 test('botón: emite exigiendo la oferta del resumen (si otro ReRate la cambió, asegura no envía nada)', () => {
   assert.match(boton, /offerIdEsperado: r\.offerId/)
+})
+
+test('preparar: efecto pasado sin fecha nueva no llega al ReRate; con fecha, viaja al ReRate y al resumen', () => {
+  const corte = prep.indexOf('if (guardada.caducada && !fe.fecha)')
+  assert.ok(corte > 0 && corte < prep.indexOf('ofertaAsegura('))
+  assert.match(prep, /fechaEfectoCorregida: fechaCorregida/)
+  assert.match(prep, /efecto: fechaCorregida \?\? guardada\.fechaEfecto/)
+  // Una fecha mal escrita corta ANTES de leer nada (ni la tarificación ni el ReRate).
+  assert.ok(prep.indexOf('if (!fe.ok)') < prep.indexOf('tarificacionNuevaGuardadaAsegura('))
 })
 
 test('preparar: sin matrícula, sin prima o sin efecto no hay botón; el resumen viejo caduca ANTES del ReRate', () => {
