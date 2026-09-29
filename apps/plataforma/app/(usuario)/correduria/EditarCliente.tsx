@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -8,18 +8,23 @@ import {
   etiquetaEstadoDocumento,
   etiquetaTipoDocumento,
   etiquetasIdentidad,
+  ibanValido,
   provinciaPorCp,
   revisarEdicion,
   nombrePendiente,
   type DocumentoResumen,
   type EdicionCliente,
 } from '@central/module-seguros'
-import { AlertTriangle, CheckCircle2, Clock, HelpCircle, IdCard, Lock, Paperclip, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock, CreditCard, HelpCircle, IdCard, Lock, Paperclip, X } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { Ico, FILA } from './iconos'
 import {
+  interpretarCuentaFicha,
   interpretarEscritura,
+  interpretarPonerCuenta,
   textoMotivo,
+  type CuentaFichaLeida,
+  type ResultadoCuentaFicha,
   type IdentidadFicha,
   type ResultadoEscritura,
 } from '@/lib/cliente-edicion-asegura'
@@ -169,6 +174,118 @@ export function EditarDireccion({ clienteId, contacto }: {
       </form>
       <Aviso r={resultado} ok="Guardado." ocupado={ocupado} />
     </section>
+  )
+}
+
+// ─── Cuenta de cargo ─────────────────────────────────────────────────────────
+
+/**
+ * La cuenta de la FICHA (29/09/2026): la que leen la emisión y el bot de Telegram. Alberto la recibe
+ * en foto o por WhatsApp y hasta hoy no tenía dónde ponerla. Solo se ve enmascarada («**** 0115») y el
+ * IBAN tecleado no se queda en pantalla tras guardarlo.
+ *
+ * Un cliente puede pagar cada seguro de una cuenta distinta: eso vive en cada póliza
+ * (`polizas.cuenta_bancaria`) y esto NO lo toca. La de la ficha es la cuenta por defecto para lo NUEVO.
+ */
+export function CuentaCargo({ clienteId }: { clienteId: string }) {
+  const [leida, setLeida] = useState<CuentaFichaLeida | null>(null)
+  const [abierto, setAbierto] = useState(false)
+  const [iban, setIban] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+  const [resultado, setResultado] = useState<ResultadoCuentaFicha | null>(null)
+
+  useEffect(() => {
+    let vivo = true
+    fetch(`/api/correduria/cliente/cuenta?id=${encodeURIComponent(clienteId)}`, { cache: 'no-store' })
+      .then(async (res) => interpretarCuentaFicha(res.status, await res.json().catch(() => null)))
+      .catch((): CuentaFichaLeida => ({ estado: 'error', motivo: 'red' }))
+      .then((r) => { if (vivo) setLeida(r) })
+    return () => { vivo = false }
+  }, [clienteId])
+
+  const tecleadoValido = ibanValido(iban)
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!tecleadoValido) return setResultado({ estado: 'iban_invalido', motivo: 'Ese IBAN no es válido (revisa los dígitos de control).' })
+    setOcupado(true)
+    try {
+      const res = await fetch('/api/correduria/cliente/cuenta', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: clienteId, iban }),
+      })
+      const r = interpretarPonerCuenta(res.status, await res.json().catch(() => null))
+      setResultado(r)
+      if (r.estado === 'ok') {
+        setIban('')
+        setAbierto(false)
+        setLeida({ estado: 'ok', mascara: r.mascara, ilegible: false, invalida: false })
+      }
+    } catch {
+      setResultado({ estado: 'error', motivo: 'red' })
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  const tiene = leida?.estado === 'ok' && (leida.mascara !== null || leida.ilegible)
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 13, color: 'var(--muted)', minWidth: 0 }}>
+        <CreditCard size={14} strokeWidth={1.75} aria-hidden style={{ flex: '0 0 auto', marginTop: 2 }} />
+        <span style={{ overflowWrap: 'anywhere' }}>
+          {leida === null ? 'Cuenta para pólizas nuevas: consultando…'
+            : leida.estado === 'error' ? `Cuenta para pólizas nuevas: no se ha podido consultar (${textoMotivo(leida.motivo)}). No la leas como «no tiene».`
+              : leida.mascara && leida.invalida ? `Cuenta para pólizas nuevas: ${leida.mascara}, pero NO es un IBAN válido (cuenta antigua): la emisión no la usará. Pon la buena.`
+              : leida.mascara ? `Cuenta para pólizas nuevas: ${leida.mascara}`
+                : leida.ilegible ? 'Cuenta para pólizas nuevas guardada pero cifrada: no se puede leer. Si pones otra, la sustituye.'
+                  : 'Sin cuenta para pólizas nuevas en la ficha (se ha mirado).'}
+        </span>
+      </div>
+      {resultado?.estado === 'ok' && (
+        <div style={{ ...FILA, fontSize: 13, color: 'var(--positive)' }}><Ico i={CheckCircle2} /> Guardada: {resultado.mascara}. Ya la pueden usar la emisión y el bot.</div>
+      )}
+      {resultado?.estado === 'sin_cambios' && (
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>Esa cuenta ya era la de la ficha: no se ha cambiado nada.</div>
+      )}
+      {leida?.estado !== 'error' && (
+        <div>
+          <button type="button" onClick={() => { setAbierto((v) => !v); setResultado(null) }} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
+            {abierto ? 'Cancelar' : tiene ? 'Cambiar cuenta' : 'Poner cuenta'}
+          </button>
+        </div>
+      )}
+      {abierto && (
+        <form onSubmit={guardar} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+          <Campo label="IBAN" mal={resultado?.estado === 'iban_invalido'} ayuda="Es la que se usa al emitir una póliza nueva (también por Telegram). Cada póliza que ya tiene conserva su propia cuenta: esto no la cambia.">
+            <input
+              value={iban}
+              onChange={(e) => { setIban(e.target.value); setResultado(null) }}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="ES00 0000 0000 0000 0000 0000"
+              style={campo}
+            />
+          </Campo>
+          {iban.trim() !== '' && !tecleadoValido && (
+            <div style={{ fontSize: 12, color: 'var(--negative)' }}>Todavía no es un IBAN válido (dígitos de control).</div>
+          )}
+          {resultado?.estado === 'iban_invalido' && (
+            <div style={{ ...FILA, fontSize: 13, color: 'var(--negative)' }}><Ico i={AlertTriangle} /> {resultado.motivo}</div>
+          )}
+          {resultado?.estado === 'presupuesto_firmado' && (
+            <div style={{ ...FILA, fontSize: 13, color: 'var(--negative)' }}><Ico i={AlertTriangle} /> No se ha cambiado: el cliente firmó la cuenta {resultado.mascara} en un presupuesto aceptado que aún no se ha emitido. Emítelo con esa cuenta o retíralo antes.</div>
+          )}
+          {resultado?.estado === 'error' && (
+            <div style={{ ...FILA, fontSize: 13, color: 'var(--negative)' }}><Ico i={AlertTriangle} /> No se ha guardado: {textoMotivo(resultado.motivo)}</div>
+          )}
+          <div>
+            <button type="submit" disabled={ocupado || !tecleadoValido} style={btnStyle('primario')}>{ocupado ? 'Guardando…' : 'Guardar cuenta'}</button>
+          </div>
+        </form>
+      )}
+    </div>
   )
 }
 
