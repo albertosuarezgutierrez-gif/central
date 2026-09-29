@@ -18,8 +18,11 @@ const RUTA = join(
 )
 const fuente = readFileSync(RUTA, 'utf8')
 
-test('el bloque de "seguro en vigor" existe y es OPT-IN (apagado por defecto)', () => {
-  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(false\)/)
+// 29/09/2026: arranca encendido SOLO si hay una póliza suya leída (`anterior`, de su oportunidad);
+// sin ella sigue apagado. Nunca `useState(true)`: cotizar «asegurado antes» sin saberlo es mentir al vendor.
+test('el bloque de "seguro en vigor" existe y es OPT-IN (apagado salvo póliza leída)', () => {
+  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(anterior !== null\)/)
+  assert.match(fuente, /anterior = null,/, 'sin póliza leída, `anterior` es null → apagado')
   assert.match(fuente, /Sí, tiene un seguro de moto en vigor ahora mismo/)
 })
 

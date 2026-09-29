@@ -16,9 +16,11 @@ import {
   rotuloMotivo,
   rotuloRamo,
   textoAltaOportunidad,
+  type LecturaDocumentoOportunidad,
   type OportunidadDeCliente,
   type OportunidadesCliente as Lectura,
 } from '@/lib/seguimiento-asegura'
+import type { SeguroAnterior } from '@central/module-seguros'
 import { fmt } from './piezas'
 import SeguimientoOportunidad from './SeguimientoOportunidad'
 
@@ -316,8 +318,25 @@ function FilaCerrada({ o, desplegada, onAlternar, onRecargar }: { o: Oportunidad
   )
 }
 
-function FormAlta({ clienteId, onCancelar, onHecho }: {
+type LecturaOk = Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>
+
+/** El bonus leído, en una línea: lo que se va a guardar con la oportunidad. */
+export function textoSeguroAnterior(s: SeguroAnterior): string {
+  const partes: string[] = []
+  if (s.aniosSinSiniestros !== null) partes.push(`${s.aniosSinSiniestros} años sin siniestros`)
+  if (s.siniestrosUltimos5 !== null) partes.push(`${s.siniestrosUltimos5} siniestros en 5 años`)
+  if (s.fechaEfecto !== null) partes.push(`efecto ${fmt(s.fechaEfecto)}`)
+  if (s.codigoDgs !== null) partes.push(`DGS ${s.codigoDgs}`)
+  return partes.join(' · ')
+}
+
+/**
+ * `inicial` (29/09/2026): una lectura ya hecha (la póliza subida en Documentos) rellena el
+ * formulario al abrirlo, sin volver a pagar la lectura.
+ */
+export function FormAlta({ clienteId, inicial, onCancelar, onHecho }: {
   clienteId: string
+  inicial?: LecturaOk | null
   onCancelar: () => void
   onHecho: (t: { ok: boolean; texto: string; id?: string | null }) => void
 }) {
@@ -333,7 +352,11 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
   const [error, setError] = useState<string | null>(null)
   const [leyendo, setLeyendo] = useState(false)
   const [lectura, setLectura] = useState<{ ok: boolean; texto: string } | null>(null)
+  // Lo leído que no tiene campo en el formulario pero se guarda con la oportunidad:
+  // el nº de póliza (distingue dos seguros del mismo ramo), la moto y el bonus.
+  const [leido, setLeido] = useState<Pick<LecturaOk, 'numeroPoliza' | 'matricula' | 'vehiculo' | 'seguroAnterior'> | null>(null)
   const fichero = useRef<HTMLInputElement>(null)
+  const aplicado = useRef(false)
 
   // Lo leído RELLENA lo vacío y no pisa lo que Alberto ya ha tecleado: si él escribió
   // la prima que le dijo el cliente, esa manda sobre la del papel.
@@ -357,6 +380,10 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
     setLeyendo(false)
     const l = interpretarLecturaOportunidad(status, json)
     if (l.estado === 'error') { setLectura({ ok: false, texto: `No se ha podido leer: ${l.motivo}. Rellénalo a mano.` }); return }
+    aplicar(l)
+  }
+
+  function aplicar(l: LecturaOk) {
     const puestos: string[] = []
     const respetados: string[] = []
     const poner = (nombre: string, valor: unknown, actual: string, fijar: () => void) => {
@@ -367,13 +394,22 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
     poner('vencimiento', l.vence, vence, () => setVence(l.vence!))
     poner('compañía', l.compania, compania, () => setCompania(l.compania!))
     poner('prima', l.prima, prima, () => setPrima(primaParaCampo(l.prima!)))
-    poner('nº de póliza', l.numeroPoliza, nota, () => setNota(`Póliza actual nº ${l.numeroPoliza}`))
+    setLeido({ numeroPoliza: l.numeroPoliza, matricula: l.matricula ?? null, vehiculo: l.vehiculo ?? null, seguroAnterior: l.seguroAnterior ?? null })
+    if (l.numeroPoliza) puestos.push(`nº de póliza ${l.numeroPoliza}`)
+    if (l.seguroAnterior) puestos.push(textoSeguroAnterior(l.seguroAnterior))
     setLectura({
       ok: true,
       texto: (puestos.length ? `Leído del documento: ${puestos.join(', ')}. Revísalo antes de abrir.` : 'El documento no añade nada a lo que ya habías escrito.')
         + (respetados.length ? ` No he tocado lo que ya habías escrito (${respetados.join(', ')}).` : ''),
     })
   }
+
+  useEffect(() => {
+    if (!inicial || aplicado.current) return
+    aplicado.current = true
+    aplicar(inicial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inicial])
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
@@ -386,6 +422,7 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
       accion: 'crear', clienteId, ramo, estado,
       fechaFinVigencia: vence || null, aseguradora: compania, prima: p,
       tipoTarea, fechaTarea, nota,
+      ...(leido ? { numeroPoliza: leido.numeroPoliza, matricula: leido.matricula, vehiculo: leido.vehiculo, seguroAnterior: leido.seguroAnterior } : {}),
     })
     setOcupado(false)
     const t = textoAltaOportunidad(r.status, r.json)
@@ -407,7 +444,7 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
           {leyendo ? 'Leyendo el documento…' : 'Rellenar desde póliza, recibo o foto'}
         </button>
         {lectura && <div role="status" style={{ color: lectura.ok ? 'var(--positive)' : 'var(--negative)' }}>{lectura.texto}</div>}
-        {!lectura && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento y prima. No se guarda el documento.</div>}
+        {!lectura && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento, prima y, en auto/moto, el bonus. No se guarda el documento.</div>}
       </div>
       {/* Bloqueado mientras lee: lo leído solo rellena lo vacío, y eso se decide con lo que había al pulsar. */}
       <fieldset disabled={leyendo} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'grid', gap: 10 }}>

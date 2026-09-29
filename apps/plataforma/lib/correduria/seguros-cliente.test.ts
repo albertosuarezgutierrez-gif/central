@@ -15,7 +15,7 @@ const pol = (id: string, over: Partial<PolizaFicha> = {}): PolizaFicha => ({
 const opo = (id: string, over: Partial<OportunidadDeCliente> = {}): OportunidadDeCliente => ({
   id, clienteId: 'c', ramo: 'auto', estado: 'competencia', fechaFinVigencia: null, motivoPerdida: null,
   competidor: null, primaCompetidor: null, aparcadaHasta: null, cerradaAt: null,
-  aseguradora: 'Mapfre', numeroPoliza: null, matricula: null, vehiculo: null, prima: null, creada: '2026-09-01', proximaTarea: { tipo: 'llamada', fechaLimite: '2026-09-30' },
+  aseguradora: 'Mapfre', numeroPoliza: null, matricula: null, vehiculo: null, seguroAnterior: null, prima: null, creada: '2026-09-01', proximaTarea: { tipo: 'llamada', fechaLimite: '2026-09-30' },
   ...over,
 })
 

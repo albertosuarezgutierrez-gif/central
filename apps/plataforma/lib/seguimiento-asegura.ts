@@ -21,12 +21,14 @@ import {
   TIPOS_TAREA,
   mensajeRenovacionLeadWhatsapp,
   puedeWhatsappLead,
+  seguroAnteriorDe,
   type CanalLead,
   type ContactoMovil,
   type EstadoOportunidad,
   type MotivoPerdida,
   type PasoLead,
   type RamoOportunidad,
+  type SeguroAnterior,
   type TipoTarea,
   type VentanaLead,
 } from '@central/module-seguros'
@@ -280,6 +282,8 @@ export type OportunidadDeCliente = Oportunidad & {
   /** El coche (auto/moto), si se leyó al abrirla. */
   matricula: string | null
   vehiculo: string | null
+  /** Lo que da el bonus (auto/moto), leído de su póliza al abrirla. `null` = no consta. */
+  seguroAnterior: SeguroAnterior | null
   /** `null` = no consta: nunca 0,00€. */
   prima: number | null
   creada: string
@@ -326,6 +330,7 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
       numeroPoliza: texto(r.numeroPoliza),
       matricula: texto(r.matricula),
       vehiculo: texto(r.vehiculo),
+      seguroAnterior: seguroAnteriorDe(r.seguroAnterior),
       prima: numero(r.prima),
       creada,
       proximaTarea: ptTipo && ptFecha ? { tipo: ptTipo, fechaLimite: ptFecha } : null,
@@ -623,6 +628,8 @@ export type LecturaDocumentoOportunidad =
       /** El coche, si es de auto (`null` = no consta). */
       matricula?: string | null
       vehiculo?: string | null
+      /** Lo que da el bonus (auto/moto): años sin siniestros, siniestros en 5 años… `null` = el documento no lo dice. */
+      seguroAnterior?: SeguroAnterior | null
       /** Pólizas EN VIGOR de nuestra cartera con ese número: con alguna, ya es nuestra. `null` = no se ha podido mirar. */
       enCartera?: PolizaNuestra[] | null
       /** Solo si se pidió (`?tomador=1`). */
@@ -690,6 +697,7 @@ export function interpretarLecturaOportunidad(status: number, json: unknown): Le
   const extra = {
     matricula: txt(o.matricula),
     vehiculo: txt(o.vehiculo),
+    seguroAnterior: seguroAnteriorDe(o.seguroAnterior),
     enCartera: Array.isArray(o.enCartera)
       ? o.enCartera.flatMap((x): PolizaNuestra[] => {
           const p = x !== null && typeof x === 'object' ? (x as Record<string, unknown>) : null

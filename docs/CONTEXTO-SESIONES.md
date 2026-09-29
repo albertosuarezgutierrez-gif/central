@@ -872,6 +872,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) La póliza subida a la ficha se lee sola y su bonus precarga la moto
+- Documentos (ficha): subir tipo «póliza» dispara la lectura IA (y «Leer para oportunidad» en las ya subidas) →
+  «ya es nuestra» o «Abrir oportunidad con estos datos» (`FormAlta` exportado, con `inicial`). El lector ya sacaba
+  años sin siniestros / siniestros 5 años / DGS / efecto; ahora `leer-documento` los devuelve (`seguroAnterior`) y la
+  oportunidad los guarda en `poliza_competencia.seguroAnterior`. Con la oportunidad ya abierta (409) se guardan en ELLA.
+  `moto-nuevo` precarga compañía, nº, años sin siniestros y siniestros (`lib/seguro-anterior.ts`); con 2 motos abiertas
+  no precarga (ambiguo). Pendiente: lo mismo en `auto-nuevo`.
+
 ## (29/09/2026) «Subir póliza» de la ficha parecía no hacer nada
 - El enlace (`?tab=documentos&subir=poliza`, #3921) llegaba bien, pero el formulario seguía en un `<details>` CERRADO
   debajo de las baldosas: en el móvil no cambiaba nada visible. `Documentos.tsx` ahora lo abre y hace `scrollIntoView`

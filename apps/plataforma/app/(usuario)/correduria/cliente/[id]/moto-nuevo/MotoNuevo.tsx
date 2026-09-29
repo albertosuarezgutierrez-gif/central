@@ -23,6 +23,7 @@ import { ConIcono } from '../../../iconos'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
+import { codigoCompania, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
@@ -104,8 +105,14 @@ export default function MotoNuevo({
   companias,
   poliza = null,
   variante = null,
+  anterior = null,
+  anteriorAmbiguo = null,
 }: {
   poliza?: PolizaMoto | null
+  /** El seguro que tiene hoy, leído de su póliza y guardado en la oportunidad (29/09/2026). */
+  anterior?: AnteriorParaTarificar | null
+  /** Nº de oportunidades de moto abiertas con datos cuando no se sabe cuál: no se precarga ninguna. */
+  anteriorAmbiguo?: number | null
   /** Variante de un riesgo (29/09/2026): la tarificación se cuelga de su oportunidad. */
   variante?: VarianteNueva | null
   clienteId: string
@@ -235,14 +242,18 @@ export default function MotoNuevo({
   // ── ¿Tiene seguro EN VIGOR ahora mismo? (fallo real de Alberto, 18/09/2026) ──
   // Igual que en auto: sin esto la compañía cotiza «de calle» y el precio no es
   // confirmable como real. Opt-in, apagado por defecto.
-  const [tieneSeguroActual, setTieneSeguroActual] = useState(false)
-  const [companiaActualCodigo, setCompaniaActualCodigo] = useState('')
-  const [companiaActualLibre, setCompaniaActualLibre] = useState('')
-  const [polizaActualDigitos, setPolizaActualDigitos] = useState('')
+  // Precargado del seguro que tiene hoy (29/09/2026): lo leído de su póliza al abrir la oportunidad.
+  // Solo lo que el documento DICE; lo que no, se queda vacío y se pide como siempre.
+  const sa = anterior?.seguroAnterior ?? null
+  const [tieneSeguroActual, setTieneSeguroActual] = useState(anterior !== null)
+  const [companiaActualCodigo, setCompaniaActualCodigo] = useState(() =>
+    anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '')
+  const [companiaActualLibre, setCompaniaActualLibre] = useState(() => (companias === null ? sa?.codigoDgs ?? '' : ''))
+  const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.replace(/\s+/g, '') ?? '')
   const [aniosAsegurado, setAniosAsegurado] = useState('')
   const [aniosEnCompania, setAniosEnCompania] = useState('')
-  const [aniosSinSiniestros, setAniosSinSiniestros] = useState('')
-  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState('')
+  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(() => (sa?.aniosSinSiniestros != null ? String(sa.aniosSinSiniestros) : ''))
+  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(() => (sa?.siniestrosUltimos5 != null ? String(sa.siniestrosUltimos5) : ''))
 
   useEffect(() => {
     void catalogo('tipo=experiencia-moto')
@@ -752,6 +763,18 @@ export default function MotoNuevo({
           />
           Sí, tiene un seguro de moto en vigor ahora mismo
         </label>
+        {anterior && (
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: '8px 0 0' }}>
+            Precargado de su póliza actual (oportunidad{anterior.etiqueta ? ` ${anterior.etiqueta}` : ''}): revísalo.
+            {anterior.aseguradora && !companiaActualElegida ? ` La compañía leída es «${anterior.aseguradora}»: elígela en la lista.` : ''}
+            {sa === null ? ' Del bonus el documento no decía nada: esos años se teclean.' : ''}
+          </p>
+        )}
+        {!anterior && anteriorAmbiguo !== null && anteriorAmbiguo > 1 && (
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: '8px 0 0' }}>
+            Tiene {anteriorAmbiguo} oportunidades de moto abiertas con su póliza leída: tarifica desde la oportunidad de esa moto para precargar su bonus.
+          </p>
+        )}
 
         {tieneSeguroActual && (
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
