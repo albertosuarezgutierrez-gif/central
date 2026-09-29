@@ -200,10 +200,8 @@ type Resultado =
 // es exactamente lo que pasó con `primaAnual`/`primaEur` en asegura.
 
 /**
- * El resumen honrado de una cotización, a partir de solo sus precios (sin
- * fallos: la cotización GUARDADA no los persiste, ver `apps/asegura/lib/
- * codeoscopic/cotizaciones.ts`). Mismo criterio que `resumirCotizacion()` de
- * asegura, recortado a lo que hay.
+ * El resumen honrado de una cotización, a partir de solo sus precios. Mismo
+ * criterio que `resumirCotizacion()` de asegura, recortado a lo que hay.
  */
 function resumenDePrecios(precios: Precio[]): string {
   const firmes = precios.filter((p) => p.firmeza === 'firme').length
@@ -217,9 +215,9 @@ function resumenDePrecios(precios: Precio[]): string {
  * aparte para «lo que ya había» frente a «lo que se acaba de pagar».
  *
  * 🚨 El `coste` NO dice «0,50€»: sería mentir sobre un cargo que no ha pasado
- * ahora. Y los `fallos` van `null`, no `[]`: no se persisten, así que lo
- * honrado es «no se guardaron», nunca «ninguna compañía rechazó». Los
- * `supuestos` sí van vacíos: son de la petición, no de la respuesta.
+ * ahora. Los `fallos` se guardan desde el 29/09/2026; en una cotización
+ * anterior llegan `null` = «no se guardaron», nunca «ninguna compañía
+ * rechazó». Los `supuestos` sí van vacíos: son de la petición, no de la respuesta.
  */
 function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
   return {
@@ -1999,20 +1997,9 @@ function Precios({
         </p>
       )}
 
-      {/* Las compañías que NO dieron precio: sin ellas, «5 precios» se lee como
-          «esto es el mercado entero». Cerrado por defecto (regla de rendimiento). */}
       {/* Sin esta lista, «5 precios» se lee como «esto es el mercado entero».
-          `null` (recuperada) se DICE: es lo contrario de «ninguna falló». */}
-      {r.fallos === null ? (
-        <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-          De esta cotización recuperada <strong>no se guardó qué compañías no dieron precio</strong>,
-          así que arriba no está el mercado entero: solo lo que sí se guardó. Esa lista —donde la
-          compañía dice cosas como «la matrícula ya está asegurada aquí»— solo existe en el momento
-          de pedirla.
-        </p>
-      ) : (
+          `null` (recuperada sin fallos guardados) lo dice el propio componente. */}
       <FallosTarificacion fallos={r.fallos} />
-      )}
 
       {/* Los supuestos, OTRA VEZ y al lado del precio: son la letra pequeña de
           esa cifra, y verlos antes de pulsar no basta. */}

@@ -13,6 +13,9 @@ import { listaOpciones } from './coberturas-tarificacion.ts'
 import { prisma } from '../tenant.ts'
 import { extraerFormularioAuto, extraerHistorialGuardado, extraerVehiculoGuardado, type FormularioAutoGuardado, type HistorialGuardado, type VehiculoGuardado } from './formulario-guardado.ts'
 import { fechaEfectoCaducada } from './fecha-efecto.ts'
+import { fallosDe, type FalloGuardado } from './fallos-guardados.ts'
+
+export type { FalloGuardado }
 
 export type PrecioGuardado = {
   /** Id de la fila en `tarificacion_precios`: la clave para ocultar/filtrar esa opción. */
@@ -32,6 +35,11 @@ export type PrecioGuardado = {
   /** Descuentos comerciales con los que la compañía tarificó este precio (opciones del producto).
    *  `null` = sus opciones aún no se han leído (no «sin descuento»); `[]` = no manda ninguno. */
   descuentos: DescuentoComercial[] | null
+  /** Forma y frecuencia de pago y duración del periodo tal como las dio el vendor. `null` = no las
+   *  declara o la fila es anterior al 29/09/2026 (no se guardaban): nunca «anual» supuesto. */
+  formaPago: string | null
+  frecuenciaPago: string | null
+  meses: number | null
 }
 
 export type TarificacionGuardada = {
@@ -45,6 +53,11 @@ export type TarificacionGuardada = {
    *  puede cambiar. Recuperar su precio sería ofrecer un botón sin salida. */
   caducada: boolean
   precios: PrecioGuardado[]
+  /**
+   * Los productos que NO dieron precio. 🚨 `null` = NO SE GUARDARON (cotización anterior al
+   * 29/09/2026), que no es «ninguno falló»; `[]` = el vendor no devolvió ningún error.
+   */
+  fallos: FalloGuardado[] | null
   formulario: FormularioAutoGuardado
 }
 
@@ -58,9 +71,9 @@ export async function ultimaTarificacionRealAuto(
   polizaId: string,
 ): Promise<TarificacionGuardada | null> {
   const cabeceras = await prisma.$queryRaw<
-    { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }[]
+    { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown; fallos: unknown }[]
   >`
-    select id::text as id, creado_at, project_id_codeoscopic, peticion
+    select id::text as id, creado_at, project_id_codeoscopic, peticion, fallos
     from tarificaciones
     where correduria_id = ${correduriaId}::uuid
       and poliza_id = ${polizaId}::uuid
@@ -94,9 +107,9 @@ export async function ultimaTarificacionNueva(
   const oportunidadId = filtro.oportunidadId ?? null
   const tarificacionId = filtro.tarificacionId ?? null
   const cabeceras = await prisma.$queryRaw<
-    { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }[]
+    { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown; fallos: unknown }[]
   >`
-    select id::text as id, creado_at, project_id_codeoscopic, peticion
+    select id::text as id, creado_at, project_id_codeoscopic, peticion, fallos
     from tarificaciones
     where correduria_id = ${correduriaId}::uuid
       and cliente_id = ${clienteId}::uuid
@@ -140,7 +153,7 @@ async function ultimoHistorial(correduriaId: string, clienteId: string, ramo: 'a
   return null
 }
 
-async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }): Promise<Omit<TarificacionGuardada, 'formulario'>> {
+async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown; fallos?: unknown }): Promise<Omit<TarificacionGuardada, 'formulario'>> {
   const filasPrecios = await prisma.$queryRaw<
     {
       id: string
@@ -155,10 +168,13 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
       avisos: unknown
       garantias: unknown
       opciones: unknown
+      forma_pago: string | null
+      frecuencia_pago: string | null
+      meses: number | null
     }[]
   >`
     select id::text as id, compania, producto, modalidad, categoria, prima_eur, entrada_eur, franquicia_eur,
-           firmeza, avisos, garantias, opciones
+           firmeza, avisos, garantias, opciones, forma_pago, frecuencia_pago, meses
     from tarificacion_precios
     where tarificacion_id = ${t.id}::uuid
     order by prima_eur asc nulls last
@@ -173,6 +189,7 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
     creadaEn: t.creado_at.toISOString(),
     fechaEfecto,
     caducada: fechaEfectoCaducada(fechaEfecto),
+    fallos: fallosDe(t.fallos),
     precios: filasPrecios.map((p) => ({
       id: p.id,
       compania: p.compania,
@@ -188,6 +205,9 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
       avisos: Array.isArray(p.avisos) ? p.avisos.filter((a): a is string => typeof a === 'string') : [],
       garantias: garantiasDe(p.garantias),
       descuentos: descuentosDeOpciones(listaOpciones(p.opciones)),
+      formaPago: p.forma_pago ?? null,
+      frecuenciaPago: p.frecuencia_pago ?? null,
+      meses: typeof p.meses === 'number' ? p.meses : null,
     })),
   }
 }

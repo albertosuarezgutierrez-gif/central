@@ -92,6 +92,11 @@ export type EntradaCotizacion = {
   simulado: boolean
   /** El cuerpo EXACTO que viajó (o que habría viajado, al simular). */
   peticion: unknown
+  /**
+   * La respuesta ENTERA del vendor, tal cual (29/09/2026). Se guarda para poder contrastar el
+   * parser sin volver a pagar. Ausente/`undefined` = simulada o quien llama no la tiene → NULL.
+   */
+  respuesta?: unknown
   cotizacion: Cotizacion
   solicitadoPor: string
 }
@@ -235,6 +240,8 @@ export async function guardarCotizacion(
   const r = riesgoDePeticion(e.peticion)
   const efecto = fechaEfecto(e)
   const peticionJson = JSON.stringify(e.peticion ?? null)
+  // NULL ≠ []: `fallos` [] solo si el vendor de verdad no devolvió errores. Una simulada no los tiene.
+  const fallosJson = e.simulado ? null : jsonParaPostgres(e.cotizacion.fallos ?? [])
 
   return enTransaccion(async (tx) => {
     const filas = await tx.$queryRaw<{ id: string }[]>`
@@ -243,7 +250,7 @@ export async function guardarCotizacion(
         ramo, puerta, poliza_id, cliente_id, fecha_efecto, peticion,
         codigo_postal, municipio_id, metros_cuadrados, anio_construccion,
         capital_continente, capital_contenido, tipo_vivienda, uso, ocupacion,
-        solicitado_por, figuras, nota
+        solicitado_por, figuras, nota, fallos
       ) values (
         ${e.correduriaId}::uuid,
         ${e.intentoId}::uuid,
@@ -266,7 +273,8 @@ export async function guardarCotizacion(
         ${r.ocupacion},
         ${e.solicitadoPor},
         ${e.contexto.figuras ? JSON.stringify(e.contexto.figuras) : null}::jsonb,
-        ${e.contexto.nota ?? null}
+        ${e.contexto.nota ?? null},
+        ${fallosJson}::jsonb
       )
       returning id::text as id
     `
@@ -286,7 +294,8 @@ export async function guardarCotizacion(
         insert into seguros.tarificacion_precios (
           tarificacion_id, compania, producto, modalidad, categoria,
           prima_eur, entrada_eur, franquicia_eur, firmeza, requiere_rerate,
-          referencia_vendor, avisos, oferta_id, opciones
+          referencia_vendor, avisos, oferta_id, opciones,
+          id_precio, forma_pago, frecuencia_pago, meses
         ) values (
           ${id}::uuid,
           ${p.compania},
@@ -301,13 +310,49 @@ export async function guardarCotizacion(
           ${p.referenciaVendor},
           ${JSON.stringify(p.avisos ?? [])}::jsonb,
           ${p.ofertaId ?? null},
-          ${p.opciones === null ? null : JSON.stringify(sobreOpciones(p.opciones, leidasAt))}::jsonb
+          ${p.opciones === null ? null : JSON.stringify(sobreOpciones(p.opciones, leidasAt))}::jsonb,
+          ${typeof p.id === 'string' && p.id.trim() !== '' ? p.id.trim() : null},
+          ${p.formaPago ?? null},
+          ${p.frecuenciaPago ?? null},
+          ${typeof p.meses === 'number' && Number.isFinite(p.meses) ? Math.round(p.meses) : null}::int
         )
       `
     }
 
     return id
   })
+}
+
+/**
+ * JSON apto para una columna `jsonb`: Postgres rechaza el carácter nulo (`\u0000`) dentro de un
+ * texto, y un solo carácter así tumbaría la escritura entera. Se quita; el resto va tal cual.
+ */
+export function jsonParaPostgres(v: unknown): string {
+  return JSON.stringify(v, (_k, x) => (typeof x === 'string' ? x.replace(/\u0000/g, '') : x))
+}
+
+/**
+ * La respuesta ENTERA del vendor, en una escritura APARTE y que no lanza (29/09/2026). Va fuera de
+ * la transacción de la cotización a propósito: es un respaldo para contrastar el parser, y un fallo
+ * al guardarla no puede dejar sin copia un precio ya pagado. Si falla, se dice en el log.
+ */
+export async function guardarRespuestaCruda(
+  e: { correduriaId: string; cotizacionId: string; respuesta: unknown },
+  enTransaccion: EnTransaccion = transaccionPrisma,
+): Promise<boolean> {
+  if (e.respuesta === undefined) return false
+  try {
+    const json = jsonParaPostgres(e.respuesta)
+    const n = await enTransaccion((tx) => tx.$executeRaw`
+      update seguros.tarificaciones
+      set respuesta = ${json}::jsonb
+      where id = ${e.cotizacionId}::uuid and correduria_id = ${e.correduriaId}::uuid and respuesta is null
+    `)
+    return n > 0
+  } catch (err) {
+    console.warn('[cotizaciones] no se pudo guardar la respuesta cruda del vendor:', motivoDe(err))
+    return false
+  }
 }
 
 /** El texto de un error, sin suponer que sea un `Error`. */
@@ -331,7 +376,11 @@ export async function guardarSinTumbar(
   enTransaccion: EnTransaccion = transaccionPrisma,
 ): Promise<Guardado> {
   try {
-    return { estado: 'guardada', cotizacionId: await guardarCotizacion(e, enTransaccion) }
+    const cotizacionId = await guardarCotizacion(e, enTransaccion)
+    if (!e.simulado && e.respuesta !== undefined) {
+      await guardarRespuestaCruda({ correduriaId: e.correduriaId, cotizacionId, respuesta: e.respuesta }, enTransaccion)
+    }
+    return { estado: 'guardada', cotizacionId }
   } catch (err) {
     return { estado: 'no_guardada', motivo: motivoDe(err) }
   }
