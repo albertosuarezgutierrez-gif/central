@@ -23,6 +23,7 @@ import { AlertTriangle, CheckCircle2, CircleHelp, Info, OctagonAlert, XCircle } 
 import { eur } from '@/lib/dinero'
 import { Ico, FILA } from '../../../iconos'
 import { pedirOferta, pedirEmision, pedirCatalogo, pedirCoberturas } from './acciones'
+import { CSS_RETARIFICADOR } from './estilos'
 import type { RespuestaCoberturas } from '@/lib/retarificar-asegura'
 import { ProductFormWidget } from './ProductFormWidget'
 import type {
@@ -729,6 +730,10 @@ export function Emision({
   }
 
   return (
+    // Se envuelve sola: también la montan las altas nuevas, que no traen el CSS
+    // del retarificador (ver `estilos.ts`).
+    <div className="retarificar">
+    <style>{CSS_RETARIFICADOR}</style>
     <div className="card" style={{ marginTop: 12, borderColor: 'var(--brand)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
@@ -1516,6 +1521,7 @@ export function Emision({
         </div>
         )
       })()}
+    </div>
     </div>
   )
 }
