@@ -5,6 +5,8 @@
 //
 // Reglas puras (sin BD): qué motivo vale, cuándo vence su seguro nuevo y qué día llamarle.
 
+import { DIAS_AVISO_OPORTUNIDAD, fechaAvisoOportunidad } from '@central/module-seguros'
+
 /** Subconjunto de `MOTIVOS_PERDIDA` (`@central/module-seguros`) que tiene sentido para una baja. */
 export const MOTIVOS_BAJA = ['competidor', 'precio', 'cliente_desiste', 'otro'] as const
 export type MotivoBaja = (typeof MOTIVOS_BAJA)[number]
@@ -16,8 +18,8 @@ export const ROTULO_MOTIVO_BAJA: Record<MotivoBaja, string> = {
   otro: 'otro motivo',
 }
 
-/** Días antes del vencimiento en que se le llama para pasarle precio (el mismo criterio que las oportunidades de competencia). */
-export const DIAS_ANTES_LLAMADA = 60
+/** Días antes del vencimiento en que se le llama: la regla única de las oportunidades (`@central/module-seguros`). */
+export const DIAS_ANTES_LLAMADA = DIAS_AVISO_OPORTUNIDAD
 
 export function motivoBajaValido(v: unknown): MotivoBaja | null {
   return typeof v === 'string' && (MOTIVOS_BAJA as readonly string[]).includes(v) ? (v as MotivoBaja) : null
@@ -29,11 +31,6 @@ function isoValida(s: string | null | undefined): string | null {
   return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s ? null : s
 }
 
-function sumarDias(iso: string, dias: number): string {
-  const d = new Date(`${iso}T00:00:00Z`)
-  d.setUTCDate(d.getUTCDate() + dias)
-  return d.toISOString().slice(0, 10)
-}
 
 /**
  * Cuándo renueva el seguro que el cliente contrate fuera: el primer aniversario POSTERIOR a hoy del
@@ -58,8 +55,5 @@ function siguienteAniversario(base: string | null, hoy: string): string | null {
 
 /** La llamada: {@link DIAS_ANTES_LLAMADA} días antes de ese vencimiento, nunca antes de mañana. */
 export function fechaLlamada(vence: string | null, hoy: string): string {
-  const manana = sumarDias(hoy, 1)
-  if (!vence) return manana
-  const antes = sumarDias(vence, -DIAS_ANTES_LLAMADA)
-  return antes > manana ? antes : manana
+  return fechaAvisoOportunidad(vence, hoy)
 }

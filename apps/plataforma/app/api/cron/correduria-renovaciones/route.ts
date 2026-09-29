@@ -19,6 +19,8 @@ import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
 import { interpretarTareasHoy, tareasHoyAsegura } from '@/lib/seguimiento-asegura'
 import { bloqueLlamadasHoy } from '@/lib/correduria/llamadas-hoy'
+import { oportunidadesAvisoAsegura } from '@/lib/correduria-puerto'
+import { bloqueOportunidades, HITO_OPORTUNIDAD, oportunidadesPorAvisar, type OportunidadEnAviso } from '@/lib/correduria/oportunidades-aviso'
 import {
   claveAviso, detalleRenovaciones, emisionesDeHoy, mensajeRenovaciones, type HitoId, type PolizaAviso,
 } from '@/lib/correduria/renovaciones-aviso'
@@ -36,9 +38,10 @@ export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   // En paralelo: en serie, cartera (40 s) + tareas (15 s) rozaban el maxDuration de 60 s.
-  const [cartera, rT] = await Promise.all([
+  const [cartera, rT, lOps] = await Promise.all([
     vencimientosAsegura(DIAS_VENTANA, 40_000),
     tareasHoyAsegura().catch(() => ({ status: 502, json: null })),
+    oportunidadesAvisoAsegura(),
   ])
 
   // «Sin configurar» no es un fallo: el puerto todavía no está conectado. Se
@@ -85,7 +88,20 @@ export async function GET(req: NextRequest) {
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
   const llamadas = tareas.estado === 'sin_configurar' ? null
     : bloqueLlamadasHoy(tareas.estado === 'ok' ? tareas.tareas.filter((t) => t.fechaLimite <= hoy) : null, hoy)
-  const mensaje = [renovaciones, llamadas].filter(Boolean).join('\n\n') || null
+  // Oportunidades a 45 días (regla única, 29/09/2026): una vez por oportunidad y ciclo. Mismo mensaje
+  // por lo mismo que las tareas: Alberto pidió menos avisos.
+  let opsNuevas: OportunidadEnAviso[] = []
+  if (lOps.estado === 'ok' && lOps.oportunidades.length) {
+    const previas = await prisma.$queryRaw<Array<{ poliza_id: string; vencimiento: Date }>>(Prisma.sql`
+      SELECT poliza_id::text, vencimiento FROM correduria_avisos_renovacion
+      WHERE hito = ${HITO_OPORTUNIDAD} AND poliza_id = ANY(${lOps.oportunidades.map(o => o.id)}::uuid[])`)
+    opsNuevas = oportunidadesPorAvisar(
+      lOps.oportunidades,
+      new Set(previas.map(r => `${r.poliza_id}|${r.vencimiento.toISOString().slice(0, 10)}`)),
+    )
+  }
+  const oportunidades = bloqueOportunidades(lOps, opsNuevas)
+  const mensaje = [renovaciones, oportunidades, llamadas].filter(Boolean).join('\n\n') || null
 
   // El orden importa: primero se manda y solo se marca lo que se ha mandado.
   // Al revés, un fallo de Telegram dejaría avisos marcados que nadie ha visto
@@ -111,12 +127,20 @@ export async function GET(req: NextRequest) {
         VALUES (${f.id}::uuid, ${f.venc}::date, ${f.hito}::text)
         ON CONFLICT DO NOTHING`)
     }
+    // En `poliza_id` va el id de la OPORTUNIDAD: el hito la distingue y los uuid no colisionan.
+    for (const o of opsNuevas) {
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO correduria_avisos_renovacion (poliza_id, vencimiento, hito)
+        VALUES (${o.id}::uuid, ${o.vence}::date, ${HITO_OPORTUNIDAD}::text)
+        ON CONFLICT DO NOTHING`)
+    }
   }
 
   const detalle = detalleRenovaciones(polizas.length, emisiones.length, DIAS_VENTANA)
   await registrarLatido(AGENTE, true, detalle)
   return NextResponse.json({
     ok: true, leidas: polizas.length, emitidas: emisiones.length, enviado,
+    oportunidades: lOps.estado === 'ok' ? { enVentana: lOps.oportunidades.length, avisadas: opsNuevas.length } : lOps.estado,
     // La clave de cada aviso viaja en la respuesta para poder auditar a mano
     // qué se marcó sin abrir la BD.
     claves: emisiones.map(e => claveAviso(e.poliza, e.hito)),

@@ -9,6 +9,7 @@ import type { Retarificabilidad, IncidenciaCalidad } from '@central/module-segur
 import { esReglaCalidad } from '@central/module-seguros'
 import { leerRetarificacion } from './ficha-asegura.ts'
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { interpretarOportunidadesAviso, type LecturaOportunidadesAviso } from './correduria/oportunidades-aviso.ts'
 
 export type MotivoPuerto = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
 
@@ -891,6 +892,17 @@ export async function sustitucionesAsegura(): Promise<Sustituciones> {
     const r = await pedir('/api/operador/sustituciones')
     if (r === null) return { estado: 'sin_configurar' }
     return interpretarSustituciones(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Oportunidades a 45 días (regla única, 29/09/2026) ──────────────────────
+export async function oportunidadesAvisoAsegura(): Promise<LecturaOportunidadesAviso> {
+  try {
+    const r = await pedir('/api/operador/oportunidades-aviso')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarOportunidadesAviso(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }

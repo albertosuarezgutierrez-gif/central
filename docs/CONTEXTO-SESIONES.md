@@ -912,6 +912,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Correduría: regla ÚNICA de oportunidades — aviso a Alberto a 45 días del vencimiento
+- `DIAS_AVISO_OPORTUNIDAD = 45` + `fechaAvisoOportunidad`/`vencimientoDelCiclo`/`avisosOportunidadDeHoy` en `@central/module-seguros` (`oportunidad-aviso.ts`). La leen baja por recibo devuelto (era 60), alta por Telegram (era 60), póliza subida, recaptación (ventana), web (aviso 2) y el 1er contacto a leads de competencia (era 60 → antes se escribía al lead a 60 d).
+- Pasada diaria NUEVA: asegura `GET /api/operador/oportunidades-aviso` (abiertas, ≤45 d del vencimiento del ciclo, no aparcadas) → bloque «🎯 Oportunidades a 45 días» dentro del Telegram diario de `correduria-renovaciones` (menos avisos). Idempotente: `correduria_avisos_renovacion` con hito `oportunidad_45` (poliza_id = id de la oportunidad), un aviso por oportunidad y ciclo; marca solo tras enviar. Sin migración.
+- Se quedan a propósito: aviso-web 70 d (correo a quien se apuntó él mismo, solo plazos), `DIAS_COMPANIA`/`DIAS_PREAVISO_ASEGURADOR` 60 (legal), horizonte 90 de la lista de leads (visibilidad), `DIAS_AVISO_RENOVACION`/`SUSTITUCION_DIAS_ANTES` (cartera propia).
+- Cepo `test/regression-oportunidad-45.test.ts` (literal 45/60 en esos ficheros → rojo; visto rojo en 3 roturas). No se tocó `correduria-asistente-telegram.ts` ni el webhook.
+
 ## (29/09/2026) Correduría: todo documento de seguro subido abre (o completa) su oportunidad
 - Donde se suba (ficha, portal, enlace de datos, «Subir póliza»), un documento de seguro abre sola la oportunidad: llamada 45 días antes del vencimiento, y si no se lee la fecha, tarea para pedirla. PDF con contraseña: se prueba el DNI de la ficha (PR #3994). PR #4015.
 - Si el documento es de otra persona se crea un lead y se relaciona con la ficha desde la que se subió. La ficha se decide por DNI; por nombre solo con las mismas palabras cuando el documento trae DNI y la ficha no. Los leads sin DNI se reusan por nombre exacto.

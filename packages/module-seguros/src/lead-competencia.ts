@@ -116,8 +116,10 @@ export function pasoConTarea(
     : { accion: 'tarea', motivo: `${que} (${cuando})`, dentroDeDias: Math.max(0, d) }
 }
 
-/** A cuántos días del aniversario se escribe por primera vez. */
-export const DIAS_PRIMER_CONTACTO = 60
+import { DIAS_AVISO_OPORTUNIDAD } from './oportunidad-aviso.ts'
+
+/** A cuántos días del aniversario se escribe por primera vez: nunca antes del aviso de la oportunidad. */
+export const DIAS_PRIMER_CONTACTO = DIAS_AVISO_OPORTUNIDAD
 export const DIAS_RECORDATORIO = 7
 export const DIAS_LLAMADA = 14
 export const MAX_INTENTOS = 3
@@ -126,7 +128,7 @@ export const MAX_INTENTOS_RESPONDIO = 5
 export const DIAS_ENTRE_LLAMADAS_RESPONDIO = 2
 
 /**
- * Qué toca con un lead, por reglas: primer contacto a 60 días del aniversario,
+ * Qué toca con un lead, por reglas: primer contacto a 45 días del aniversario,
  * recordatorio a los 7 días sin respuesta, llamada a los 14 y, tras 3 intentos
  * sin respuesta, se aparca hasta el año siguiente. `diasDesdeUltimo` = `null`
  * cuando nunca se le contactó. Un lead que ya RESPONDIÓ (abrió o pinchó) no
