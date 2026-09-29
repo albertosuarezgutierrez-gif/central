@@ -290,6 +290,8 @@ export const HERRAMIENTAS = [
         properties: {
           nombre: { type: 'string' }, apellidos: { type: 'string' }, dni: { type: 'string' }, fechaNacimiento: { type: 'string', description: 'dd/mm/aaaa' },
           telefono: { type: 'string' }, email: { type: 'string' }, sexo: { type: 'string', enum: ['hombre', 'mujer'] }, estadoCivil: { type: 'string' },
+          fechaCarnet: { type: 'string', description: 'dd/mm/aaaa. Pídela si va a conducir (conductor habitual u ocasional): sin ella no se puede pedir precio' },
+          tipoCarnet: { type: 'string', enum: ['B', 'A', 'A2', 'A1', 'AM'], description: 'Solo moto; en coche es B' },
         },
       },
       quitar: { type: 'boolean' },
