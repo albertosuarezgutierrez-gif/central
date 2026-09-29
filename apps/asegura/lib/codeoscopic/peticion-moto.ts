@@ -12,6 +12,7 @@
 // comprueba ANTES de gastar, no después.
 
 import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
+import { mismoDni } from './peticion-auto.ts'
 
 /** El carné de quien CONDUCE la moto: fecha + tipo (A, A2, A1, AM o B) + zona, y el B si lo tiene. */
 export type CarnetMoto = {
@@ -210,8 +211,13 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<str
     adicionales: c.fechaCarnetB && c.tipoCarnet && c.tipoCarnet !== 'B' ? [{ tipo: 'B', fecha: c.fechaCarnetB }] : [],
   })
   const persona = construirPersona(d, d.conductor ? {} : carnetDe(d))
-  const propietario = d.propietario ? construirPersona(d.propietario) : persona
   const conductor = d.conductor ? construirPersona(d.conductor, carnetDe(d.conductor)) : persona
+  // Propietario que ES el conductor (mismo DNI): el MISMO objeto, o el vendor rechaza tras cobrar.
+  const propietario = d.propietario
+    ? d.conductor && mismoDni(d.propietario.dni, d.conductor.dni)
+      ? conductor
+      : construirPersona(d.propietario)
+    : persona
 
   const riesgo: Record<string, unknown> = {
     vehicle: { code: d.codigoVehiculo },

@@ -7,21 +7,22 @@ export const ETIQUETA_CAMPO_FIGURA: Record<CampoFigura, string> = {
   tomador: 'Tomador',
   propietario: 'Propietario',
   conductor_habitual: 'Conductor habitual',
+  conductor_ocasional: 'Conductor ocasional',
   cp: 'CP de circulación',
 }
 
 /**
- * El texto de cada casilla. El nombre del conductor es el `despues` del conductor habitual; si ese
- * papel no cambia, el del tomador (en la foto de figuras, sin conductor aparte, conduce el tomador).
- * Si no se sabe el nombre, se dice sin nombre — nunca se inventa uno.
+ * El texto de cada casilla. El conductor es el conductor habitual REAL de la variante que se emite
+ * (`conductorHabitual`, lo manda asegura aunque ese papel no cambie): con otro tomador y el mismo
+ * conductor, «el nuevo tomador conduce» sería confirmar algo falso. Sin nombre, se dice sin nombre.
  */
-export function textoCasillaFigura(exigida: FiguraExigida, cambios: CambioFiguras[]): string {
+export function textoCasillaFigura(exigida: FiguraExigida, cambios: CambioFiguras[], conductorHabitual: string | null = null): string {
   const despues = (campo: CampoFigura) => {
     const v = cambios.find((c) => c.campo === campo)?.despues
     return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
   }
   if (exigida === 'conductor') {
-    const nombre = despues('conductor_habitual') ?? despues('tomador')
+    const nombre = conductorHabitual?.trim() || despues('conductor_habitual')
     return nombre
       ? `${nombre} conduce el vehículo de forma habitual.`
       : 'La persona declarada como conductor habitual conduce el vehículo de forma habitual.'

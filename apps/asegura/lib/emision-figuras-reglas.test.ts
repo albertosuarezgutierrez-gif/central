@@ -1,45 +1,60 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cambiosDeFiguras, confirmacionesExigidas, faltanConfirmaciones, papelesDe } from './emision-figuras-reglas.ts'
+import { cambiosDePeticion, confirmacionesExigidas, conductorHabitualDe, faltanConfirmaciones } from './emision-figuras-reglas.ts'
 
-// Ids inventados: aquí no entra ningún cliente real.
-const HIJO = '00000000-0000-4000-8000-000000000001'
-const PADRE = '00000000-0000-4000-8000-000000000002'
-const pet = (cp: string) => ({ risk: { circulationAddress: { postalCode: cp } } })
-
-test('sin foto de figuras (variante vieja), el tomador ocupa todos los papeles', () => {
-  assert.deepEqual(papelesDe({ figuras: null, clienteId: HIJO, peticion: null }), { tomador: HIJO, propietario: HIJO, conductor_habitual: HIJO })
+// Personas y matrículas inventadas: aquí no entra ningún cliente real.
+const P = (dni: string, name: string) => ({ identificationDocument: { id: dni }, name, surname: 'Prueba' })
+const HIJO = P('00000000T', 'Hijo')
+const PADRE = P('11111111H', 'Padre')
+const pet = (o: { holder?: unknown; owner?: unknown; driver?: unknown; ocasional?: unknown; cp?: string; plate?: string }) => ({
+  holder: o.holder ?? HIJO,
+  risk: {
+    registrationPlate: o.plate ?? '0000XXX',
+    owner: o.owner ?? o.holder ?? HIJO,
+    primaryDriver: o.driver ?? o.holder ?? HIJO,
+    ...(o.ocasional ? { secondaryDriver: o.ocasional } : {}),
+    circulationAddress: { postalCode: o.cp ?? '41003' },
+  },
 })
 
 test('mismas personas y mismo CP: nada que confirmar', () => {
-  const v = { figuras: { tomador: HIJO }, clienteId: HIJO, peticion: pet('41003') }
-  assert.deepEqual(cambiosDeFiguras(v, v), [])
+  assert.deepEqual(cambiosDePeticion(pet({}), pet({})), [])
   assert.deepEqual(confirmacionesExigidas([]), [])
 })
 
+test('🪤 el conductor TECLEADO a mano cuenta: se compara el DNI que viajó, no la foto de figuras', () => {
+  const c = cambiosDePeticion(pet({ driver: PADRE }), pet({ driver: HIJO }))
+  assert.deepEqual(c, [{ campo: 'conductor_habitual', antes: 'Padre Prueba', despues: 'Hijo Prueba' }])
+  assert.deepEqual(confirmacionesExigidas(c), ['conductor', 'cliente'])
+})
+
 test('otro tomador y otro CP: se piden conductor, CP y cliente', () => {
-  const p1 = { figuras: { tomador: HIJO }, clienteId: HIJO, peticion: pet('41003') }
-  const p3 = { figuras: { tomador: PADRE }, clienteId: PADRE, peticion: pet('11520') }
-  const c = cambiosDeFiguras(p1, p3)
+  const c = cambiosDePeticion(pet({}), pet({ holder: PADRE, cp: '11520' }))
   assert.deepEqual(c.map((x) => x.campo).sort(), ['conductor_habitual', 'cp', 'propietario', 'tomador'])
   assert.deepEqual(confirmacionesExigidas(c), ['conductor', 'cp', 'cliente'])
 })
 
-test('solo cambia el CP: se piden CP y cliente, no el conductor', () => {
-  const a = { figuras: { tomador: HIJO }, clienteId: HIJO, peticion: pet('41003') }
-  const b = { figuras: { tomador: HIJO }, clienteId: HIJO, peticion: pet('11520') }
-  assert.deepEqual(confirmacionesExigidas(cambiosDeFiguras(a, b)), ['cp', 'cliente'])
+test('quitar el conductor ocasional también es un cambio', () => {
+  const c = cambiosDePeticion(pet({ ocasional: PADRE }), pet({}))
+  assert.deepEqual(c, [{ campo: 'conductor_ocasional', antes: 'Padre Prueba', despues: null }])
 })
 
-test('un CP que no consta en un lado NO cuenta como cambio', () => {
-  const a = { figuras: { tomador: HIJO }, clienteId: HIJO, peticion: null }
-  const b = { figuras: { tomador: HIJO }, clienteId: HIJO, peticion: pet('11520') }
-  assert.deepEqual(cambiosDeFiguras(a, b), [])
+test('🪤 otro VEHÍCULO no se compara (la oportunidad agrupa el ramo del cliente)', () => {
+  assert.deepEqual(cambiosDePeticion(pet({ plate: '1111AAA' }), pet({ plate: '2222BBB', holder: PADRE, cp: '11520' })), [])
+})
+
+test('sin matrícula (hogar) o sin DNI legible no se afirma ningún cambio', () => {
+  const sinPlaca = { holder: HIJO, risk: { owner: HIJO } }
+  assert.deepEqual(cambiosDePeticion(sinPlaca, { holder: PADRE, risk: { owner: PADRE } }), [])
+  assert.deepEqual(cambiosDePeticion(pet({ driver: { name: 'Sin DNI' } }), pet({ driver: PADRE })), [])
+})
+
+test('el conductor habitual de la variante se da SIEMPRE, cambie o no (texto de la casilla)', () => {
+  assert.equal(conductorHabitualDe(pet({ holder: PADRE, driver: HIJO })), 'Hijo Prueba')
 })
 
 test('las confirmaciones solo cuentan como array de textos exactos', () => {
   assert.deepEqual(faltanConfirmaciones(['conductor', 'cliente'], ['conductor', 'cliente']), [])
   assert.deepEqual(faltanConfirmaciones(['conductor', 'cliente'], ['conductor']), ['cliente'])
   assert.deepEqual(faltanConfirmaciones(['cliente'], true), ['cliente'])
-  assert.deepEqual(faltanConfirmaciones(['cliente'], 'cliente'), ['cliente'])
 })

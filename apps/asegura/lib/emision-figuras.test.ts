@@ -6,8 +6,10 @@ const src = readFileSync(new URL('./emision-figuras.ts', import.meta.url), 'utf8
 const ruta = readFileSync(new URL('../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url), 'utf8')
 
 test('se compara contra la PRIMERA variante del riesgo (las reglas, en emision-figuras-reglas.test.ts)', () => {
-  assert.match(src, /order by t\.creado_at asc limit 1/)
-  assert.match(src, /cambiosDeFiguras\(/)
+  assert.match(src, /order by t\.creado_at asc limit 200/)
+  assert.match(src, /mismoVehiculo\(t\.peticion, esta\.peticion\)/, "la primera del MISMO vehículo")
+  assert.match(src, /cambiosDePeticion\(/)
+  assert.match(src, /if \(n !== 1\) throw/, "sin la fila de historial no se emite")
 })
 
 test('toda lectura y escritura va acotada a la correduría', () => {

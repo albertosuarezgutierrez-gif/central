@@ -449,6 +449,10 @@ export async function prepararVariante(
       const tecleado = typeof correcciones[clave] === 'object' && correcciones[clave] !== null ? (correcciones[clave] as Record<string, unknown>) : {}
       const soloConValor = Object.fromEntries(Object.entries(tecleado).filter(([, v]) => v !== '' && v !== null && v !== undefined))
       correcciones[clave] = { ...deFicha, ...soloConValor }
+      // Moto: un conductor con fecha de carné y sin tipo (tecleada a mano) se declara B EXPLÍCITO,
+      // para que `reparoCarnetMoto` lo cruce con la cilindrada antes de pagar en vez de dejarlo pasar.
+      const c = correcciones[clave] as Record<string, unknown>
+      if (e.ramo === 'moto' && clave === 'conductor' && c.fechaCarnet && !c.tipoCarnet) c.tipoCarnet = 'B'
     }
   }
   return { ok: true, v: { contexto: { oportunidadId, figuras, nota }, correcciones } }

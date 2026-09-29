@@ -139,6 +139,7 @@ type EstadoPanel =
       mensaje: string
       cambios: CambioFiguras[]
       exigidas: FiguraExigida[]
+      conductorHabitual: string | null
       projectId: string
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
@@ -648,6 +649,7 @@ export function Emision({
         mensaje: r.mensaje,
         cambios: r.cambios,
         exigidas: r.exigidas,
+        conductorHabitual: r.conductorHabitual,
         projectId,
         cuenta,
         cuentaAviso: aviso,
@@ -1298,7 +1300,7 @@ export function Emision({
                     }}
                     style={{ width: 22, height: 22, flex: '0 0 auto' }}
                   />
-                  <span style={{ overflowWrap: 'anywhere' }}>{textoCasillaFigura(e, estado.cambios)}</span>
+                  <span style={{ overflowWrap: 'anywhere' }}>{textoCasillaFigura(e, estado.cambios, estado.conductorHabitual)}</span>
                 </label>
               ))}
             </div>

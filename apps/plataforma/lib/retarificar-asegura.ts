@@ -1378,20 +1378,20 @@ export type RespuestaEmitir =
    *  Declarar otro conductor o domicilio para pagar menos es ocultación del riesgo
    *  (arts. 10 y 89 LCS). asegura NO ha enviado nada: se reenvía con
    *  `figurasConfirmadas` conteniendo todas las `exigidas`. */
-  | { estado: 'confirmar_figuras'; mensaje: string; cambios: CambioFiguras[]; exigidas: FiguraExigida[] }
+  | { estado: 'confirmar_figuras'; mensaje: string; cambios: CambioFiguras[]; exigidas: FiguraExigida[]; conductorHabitual: string | null }
 
-export type CampoFigura = 'tomador' | 'propietario' | 'conductor_habitual' | 'cp'
+export type CampoFigura = 'tomador' | 'propietario' | 'conductor_habitual' | 'conductor_ocasional' | 'cp'
 /** `antes`/`despues` son NOMBRES (o el CP), tal y como los manda asegura. */
 export type CambioFiguras = { campo: CampoFigura; antes: string | null; despues: string | null }
 export type FiguraExigida = 'conductor' | 'cp' | 'cliente'
 
-const CAMPOS_FIGURA: readonly CampoFigura[] = ['tomador', 'propietario', 'conductor_habitual', 'cp']
+const CAMPOS_FIGURA: readonly CampoFigura[] = ['tomador', 'propietario', 'conductor_habitual', 'conductor_ocasional', 'cp']
 const FIGURAS_EXIGIBLES: readonly FiguraExigida[] = ['conductor', 'cp', 'cliente']
 
 /** PURO. Todo o nada: si un solo cambio o una sola exigida no tiene forma válida
  *  (o no hay ninguna exigida), devuelve `null` y el 409 degrada a error genérico
  *  — nunca a «emitido» ni a un panel con casillas inventadas. */
-export function leerConfirmarFiguras(r: Record<string, unknown>): { cambios: CambioFiguras[]; exigidas: FiguraExigida[] } | null {
+export function leerConfirmarFiguras(r: Record<string, unknown>): { cambios: CambioFiguras[]; exigidas: FiguraExigida[]; conductorHabitual: string | null } | null {
   const { cambios, exigidas } = r
   if (!Array.isArray(cambios) || !Array.isArray(exigidas) || exigidas.length === 0) return null
   const textoONulo = (v: unknown) => v === null || typeof v === 'string'
@@ -1407,7 +1407,9 @@ export function leerConfirmarFiguras(r: Record<string, unknown>): { cambios: Cam
     if (!FIGURAS_EXIGIBLES.includes(e as FiguraExigida)) return null
     if (!es.includes(e as FiguraExigida)) es.push(e as FiguraExigida)
   }
-  return { cambios: cs, exigidas: es }
+  // El conductor habitual de la variante que se emite (aunque no cambie). Ausente o raro = no se sabe.
+  const conductorHabitual = typeof r.conductorHabitual === 'string' && r.conductorHabitual.trim() !== '' ? r.conductorHabitual.trim() : null
+  return { cambios: cs, exigidas: es, conductorHabitual }
 }
 
 export type CausaDuplicado = 'ya_en_cartera' | 'ya_emitido'

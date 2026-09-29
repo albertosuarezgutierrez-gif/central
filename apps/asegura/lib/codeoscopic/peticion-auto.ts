@@ -357,13 +357,19 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
     zonaCarnet: d.zonaCarnet,
   }
   const tomador = construirPersona(d, d.conductor ? {} : carnetTomador)
-  const propietario = d.propietario ? construirPersona(d.propietario) : tomador
   const conductor = d.conductor
     ? construirPersona(d.conductor, {
         fechaCarnet: d.conductor.fechaCarnet,
         tipoCarnet: d.conductor.tipoCarnet,
         zonaCarnet: d.conductor.zonaCarnet,
       })
+    : tomador
+  // 🚨 Si el propietario ES el conductor (mismo DNI), va el MISMO objeto: construido dos veces
+  // difiere en el carné y el vendor lo rechaza («Two persons… different data») tras cobrar.
+  const propietario = d.propietario
+    ? d.conductor && mismoDni(d.propietario.dni, d.conductor.dni)
+      ? conductor
+      : construirPersona(d.propietario)
     : tomador
 
   const riesgo: Record<string, unknown> = {
@@ -431,4 +437,10 @@ export function exigeDetalleDeSiniestros(d: Partial<DatosAuto>): boolean {
   // sin que nada falle (ver el comentario de `aniosAsegurado` arriba).
   if (d.aniosSinSiniestros === 0 && d.aniosAsegurado === 0) return true
   return d.aniosSinSiniestros !== d.aniosAsegurado
+}
+
+/** Mismo documento, normalizado (mayúsculas, sin espacios ni guiones). */
+export function mismoDni(a: string | null | undefined, b: string | null | undefined): boolean {
+  const n = (x: string | null | undefined) => String(x ?? '').trim().toUpperCase().replace(/[\s-]/g, '')
+  return n(a) !== '' && n(a) === n(b)
 }

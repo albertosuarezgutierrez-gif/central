@@ -1,47 +1,91 @@
 /**
  * Reglas PURAS de «emitir una variante con otras personas» (29/09/2026). Sin BD: las usa
  * `emision-figuras.ts` y se prueban por comportamiento en `emision-figuras-reglas.test.ts`.
+ *
+ * 🚨 Se compara lo que VIAJÓ a la compañía (`tarificaciones.peticion`), no la foto de figuras:
+ * la foto solo guarda personas con ficha, y un conductor tecleado a mano (o una cotización sin
+ * riesgo, con la foto a NULL) se colaría como «el tomador». La identidad es el DNI de cada papel;
+ * el nombre solo se usa para pintarlo. Solo se compara el MISMO vehículo (misma matrícula): una
+ * oportunidad agrupa el ramo del cliente y puede tener dos coches.
  */
-export type RolComparado = 'tomador' | 'propietario' | 'conductor_habitual'
-export type CambioRiesgo =
-  | { campo: RolComparado; antes: string | null; despues: string | null }
-  | { campo: 'cp'; antes: string | null; despues: string | null }
+export type Papel = 'tomador' | 'propietario' | 'conductor_habitual' | 'conductor_ocasional'
+export type CambioRiesgo = { campo: Papel | 'cp'; antes: string | null; despues: string | null }
 
-type Variante = { figuras: unknown; clienteId: string | null; peticion: unknown }
+type Persona = { dni: string; nombre: string | null }
 
 const esObjeto = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
-const id = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+const txt = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
 
-/** Quién ocupa cada papel. Sin foto de figuras (variantes viejas): el tomador en todos, que es lo que se mandó. */
-export function papelesDe(v: Variante): Record<RolComparado, string | null> {
-  const f = esObjeto(v.figuras) ? v.figuras : {}
-  const tomador = id(f.tomador) ?? v.clienteId
+function persona(v: unknown): Persona | null | undefined {
+  if (v === undefined || v === null) return null
+  if (!esObjeto(v)) return undefined
+  const doc = esObjeto(v.identificationDocument) ? v.identificationDocument : null
+  const dni = txt(doc?.id)?.toUpperCase().replace(/[\s-]/g, '') ?? null
+  if (!dni) return undefined
+  const nombre = [txt(v.name), txt(v.surname), txt(v.surname2)].filter(Boolean).join(' ') || null
+  return { dni, nombre }
+}
+
+/**
+ * Quién ocupa cada papel en la petición. `undefined` = no se puede leer (no se compara); `null` =
+ * nadie (solo tiene sentido en el ocasional: declarar uno menos también cambia el riesgo).
+ */
+export function personasDe(peticion: unknown): Record<Papel, Persona | null | undefined> | null {
+  if (!esObjeto(peticion) || !esObjeto(peticion.risk)) return null
+  const r = peticion.risk
   return {
-    tomador,
-    propietario: id(f.propietario) ?? tomador,
-    conductor_habitual: id(f.conductor_habitual) ?? tomador,
+    tomador: persona(peticion.holder) ?? undefined,
+    propietario: persona(r.owner) ?? undefined,
+    conductor_habitual: persona(r.primaryDriver) ?? undefined,
+    conductor_ocasional: persona(r.secondaryDriver),
   }
 }
 
-/** El CP de circulación que viajó al vendor (auto y moto: `risk.circulationAddress.postalCode`). */
+/** La matrícula que viajó, normalizada. `null` = no es un vehículo o no consta: no se compara. */
+export function matriculaDe(peticion: unknown): string | null {
+  const risk = esObjeto(peticion) && esObjeto(peticion.risk) ? peticion.risk : null
+  return txt(risk?.registrationPlate)?.toUpperCase().replace(/[\s-]/g, '') ?? null
+}
+
+/** El CP de circulación que viajó (auto y moto: `risk.circulationAddress.postalCode`). */
 export function cpDe(peticion: unknown): string | null {
   const risk = esObjeto(peticion) && esObjeto(peticion.risk) ? peticion.risk : null
   const dir = risk && esObjeto(risk.circulationAddress) ? risk.circulationAddress : null
-  const cp = dir ? dir.postalCode : null
-  return typeof cp === 'string' && cp.trim() !== '' ? cp.trim() : null
+  return txt(dir?.postalCode)
 }
 
-/** Qué cambia la variante que se emite respecto a la primera del riesgo. Vacío = mismas personas y CP. */
-export function cambiosDeFiguras(primera: Variante, esta: Variante): CambioRiesgo[] {
-  const a = papelesDe(primera)
-  const b = papelesDe(esta)
+/** Nombre del conductor habitual de la petición (para la casilla); `null` si no se sabe. */
+export function conductorHabitualDe(peticion: unknown): string | null {
+  const p = personasDe(peticion)
+  return p?.conductor_habitual?.nombre ?? null
+}
+
+/** ¿Son del mismo vehículo? Sin matrícula en alguna de las dos, NO (no se afirma un cambio). */
+export function mismoVehiculo(a: unknown, b: unknown): boolean {
+  const ma = matriculaDe(a)
+  return ma !== null && ma === matriculaDe(b)
+}
+
+/**
+ * Qué cambia la variante que se emite respecto a la primera del MISMO vehículo. Vacío = mismas
+ * personas y CP, o no se puede comparar (sin matrícula, petición ilegible). Nunca se afirma un
+ * cambio de un papel que en un lado no se puede leer.
+ */
+export function cambiosDePeticion(primera: unknown, esta: unknown): CambioRiesgo[] {
+  if (!mismoVehiculo(primera, esta)) return []
+  const a = personasDe(primera)
+  const b = personasDe(esta)
+  if (!a || !b) return []
   const out: CambioRiesgo[] = []
-  for (const rol of ['tomador', 'propietario', 'conductor_habitual'] as const) {
-    // Un papel que no se sabe en uno de los dos lados no se puede comparar: no se afirma un cambio.
-    if (a[rol] && b[rol] && a[rol] !== b[rol]) out.push({ campo: rol, antes: a[rol], despues: b[rol] })
+  for (const papel of ['tomador', 'propietario', 'conductor_habitual', 'conductor_ocasional'] as const) {
+    const x = a[papel]
+    const y = b[papel]
+    if (x === undefined || y === undefined) continue
+    if ((x?.dni ?? null) === (y?.dni ?? null)) continue
+    out.push({ campo: papel, antes: x ? (x.nombre ?? 'otra persona') : null, despues: y ? (y.nombre ?? 'otra persona') : null })
   }
-  const cpA = cpDe(primera.peticion)
-  const cpB = cpDe(esta.peticion)
+  const cpA = cpDe(primera)
+  const cpB = cpDe(esta)
   if (cpA && cpB && cpA !== cpB) out.push({ campo: 'cp', antes: cpA, despues: cpB })
   return out
 }
@@ -63,4 +107,3 @@ export function faltanConfirmaciones(exigidas: Confirmacion[], enviadas: unknown
   const marcadas = new Set(Array.isArray(enviadas) ? enviadas.filter((x): x is string => typeof x === 'string') : [])
   return exigidas.filter((c) => !marcadas.has(c))
 }
-

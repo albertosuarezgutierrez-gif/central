@@ -163,9 +163,14 @@ test('textos de las casillas: nombre del conductor (o del tomador), CP y cliente
   assert.equal(textoCasillaFigura('conductor', cambios), 'María Pérez Ruiz conduce el vehículo de forma habitual.')
   assert.equal(textoCasillaFigura('cp', cambios), 'El vehículo duerme y circula habitualmente en el CP 41900.')
   assert.equal(textoCasillaFigura('cliente', cambios), 'Se lo he explicado al cliente y lo confirma.')
+  // 🪤 Otro tomador y el MISMO conductor: la casilla nombra al conductor real, nunca al tomador nuevo.
+  assert.equal(
+    textoCasillaFigura('conductor', [{ campo: 'tomador', antes: 'A', despues: 'Pedro Gil' }], 'Ana Conductora'),
+    'Ana Conductora conduce el vehículo de forma habitual.',
+  )
   assert.equal(
     textoCasillaFigura('conductor', [{ campo: 'tomador', antes: 'A', despues: 'Pedro Gil' }]),
-    'Pedro Gil conduce el vehículo de forma habitual.',
+    'La persona declarada como conductor habitual conduce el vehículo de forma habitual.',
   )
   assert.equal(
     textoCasillaFigura('conductor', [{ campo: 'propietario', antes: 'A', despues: 'B' }]),

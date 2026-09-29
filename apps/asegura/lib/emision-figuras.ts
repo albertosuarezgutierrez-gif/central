@@ -10,19 +10,15 @@
  *    es ocultación del riesgo (arts. 10 y 89 LCS): la compañía puede reducir o negar la
  *    indemnización. La confirmación queda en el historial del riesgo (quién, cuándo, qué marcó).
  * 2. **Emisión → intervinientes.** Tras acuñar, las figuras de la variante pasan a
- *    `poliza_intervinientes` (con su `cliente_id`), y la oportunidad queda enlazada a su póliza.
+ *    `poliza_intervinientes` (con su `cliente_id`), y la oportunidad apunta a su póliza GANADA
+ *    (`poliza_ganada_id`; `poliza_id` es la póliza que se retarifica, y no se toca).
  *
  * La decisión es PURA (`cambiosDeFiguras`, `confirmacionesExigidas`, `faltanConfirmaciones`); la BD
  * solo lee y escribe, siempre acotada a la correduría.
  */
 import { prisma } from '@/lib/tenant'
 
-import {
-  cambiosDeFiguras,
-  confirmacionesExigidas,
-  type CambioRiesgo,
-  type Confirmacion,
-} from './emision-figuras-reglas'
+import { cambiosDePeticion, conductorHabitualDe, confirmacionesExigidas, mismoVehiculo, type CambioRiesgo, type Confirmacion } from './emision-figuras-reglas'
 export { faltanConfirmaciones, type CambioRiesgo, type Confirmacion } from './emision-figuras-reglas'
 
 const esObjeto = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -30,51 +26,39 @@ const id = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() 
 
 export type CambiosLeidos = {
   oportunidadId: string
-  cambios: Array<CambioRiesgo & { antesNombre: string | null; despuesNombre: string | null }>
+  cambios: CambioRiesgo[]
   exigidas: Confirmacion[]
+  /** El conductor habitual de la variante que se emite, para la casilla (aunque no cambie). */
+  conductorHabitual: string | null
 }
 
 /**
- * Lee la variante del proyecto y la primera de su riesgo. `null` = la tarificación no cuelga de
- * ningún riesgo (o es la primera): no hay nada que confirmar. Lanza si la BD falla: quien llama
- * NO emite sin saberlo.
+ * Lee la variante del proyecto y la PRIMERA del mismo vehículo en su riesgo, y compara lo que viajó
+ * a la compañía. `null` = no cuelga de ningún riesgo, es la primera o no hay nada que confirmar.
+ * Lanza si la BD falla: quien llama NO emite sin saberlo.
  */
 export async function leerCambiosDeFiguras(correduriaId: string, tarificacionId: string): Promise<CambiosLeidos | null> {
-  const filas = await prisma.$queryRaw<Array<{ id: string; oportunidad_id: string | null; figuras: unknown; cliente_id: string | null; peticion: unknown }>>`
-    select t.id::text as id, t.oportunidad_id::text as oportunidad_id, t.figuras, coalesce(t.cliente_id, pol.cliente_id)::text as cliente_id, t.peticion
+  const filas = await prisma.$queryRaw<Array<{ oportunidad_id: string | null; peticion: unknown }>>`
+    select t.oportunidad_id::text as oportunidad_id, t.peticion
     from seguros.tarificaciones t
-    left join seguros.polizas pol on pol.id = t.poliza_id and pol.correduria_id = t.correduria_id
     where t.id = ${tarificacionId}::uuid and t.correduria_id = ${correduriaId}::uuid`
   const esta = filas[0]
   if (!esta?.oportunidad_id) return null
-  const primeras = await prisma.$queryRaw<Array<{ id: string; figuras: unknown; cliente_id: string | null; peticion: unknown }>>`
-    select t.id::text as id, t.figuras, coalesce(t.cliente_id, pol.cliente_id)::text as cliente_id, t.peticion
+  const anteriores = await prisma.$queryRaw<Array<{ id: string; peticion: unknown }>>`
+    select t.id::text as id, t.peticion
     from seguros.tarificaciones t
-    left join seguros.polizas pol on pol.id = t.poliza_id and pol.correduria_id = t.correduria_id
     where t.oportunidad_id = ${esta.oportunidad_id}::uuid and t.correduria_id = ${correduriaId}::uuid and t.simulado = false
-    order by t.creado_at asc limit 1`
-  const primera = primeras[0]
-  if (!primera || primera.id === esta.id) return null
-  const cambios = cambiosDeFiguras(
-    { figuras: primera.figuras, clienteId: primera.cliente_id, peticion: primera.peticion },
-    { figuras: esta.figuras, clienteId: esta.cliente_id, peticion: esta.peticion },
-  )
+    order by t.creado_at asc limit 200`
+  // La primera cotización del MISMO vehículo: la oportunidad agrupa el ramo y puede tener dos.
+  const primera = anteriores.find((t) => mismoVehiculo(t.peticion, esta.peticion))
+  if (!primera || primera.id === tarificacionId) return null
+  const cambios = cambiosDePeticion(primera.peticion, esta.peticion)
   if (cambios.length === 0) return null
-  const ids = [...new Set(cambios.flatMap((c) => (c.campo === 'cp' ? [] : [c.antes, c.despues])).filter((x): x is string => !!x))]
-  const nombres = ids.length
-    ? await prisma.$queryRaw<Array<{ id: string; nombre: string | null; apellidos: string | null }>>`
-        select id::text as id, nombre, apellidos from seguros.clientes
-        where id = any(${ids}::uuid[]) and correduria_id = ${correduriaId}::uuid`
-    : []
-  const nombreDe = (x: string | null) => {
-    if (!x) return null
-    const n = nombres.find((f) => f.id === x)
-    return n ? [n.nombre, n.apellidos].filter(Boolean).join(' ').trim() || null : null
-  }
   return {
     oportunidadId: esta.oportunidad_id,
-    cambios: cambios.map((c) => (c.campo === 'cp' ? { ...c, antesNombre: null, despuesNombre: null } : { ...c, antesNombre: nombreDe(c.antes), despuesNombre: nombreDe(c.despues) })),
+    cambios,
     exigidas: confirmacionesExigidas(cambios),
+    conductorHabitual: conductorHabitualDe(esta.peticion),
   }
 }
 
@@ -83,17 +67,19 @@ export async function registrarConfirmacion(
   correduriaId: string,
   e: { oportunidadId: string; tarificacionId: string; cambios: CambioRiesgo[]; marcadas: Confirmacion[]; actor: string },
 ): Promise<void> {
-  // Sin nombres ni DNI: ids de ficha y CP bastan para reconstruirlo.
+  // Sin DNI: el papel, los nombres que se enseñaron y el CP, que es lo que se confirmó.
   const detalle = {
     tarificacionId: e.tarificacionId,
     marcadas: e.marcadas,
     cambios: e.cambios.map((c) => ({ campo: c.campo, antes: c.antes, despues: c.despues })),
   }
-  await prisma.$executeRaw`
+  const n = await prisma.$executeRaw`
     insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
     select ${correduriaId}::uuid, o.id, 'figuras_confirmadas', ${JSON.stringify(detalle)}::jsonb, ${e.actor}
     from seguros.oportunidades o
     where o.id = ${e.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`
+  // Sin la fila no hay constancia: quien llama no emite.
+  if (n !== 1) throw new Error(`la confirmación no quedó en el historial (${n} filas)`)
 }
 
 /**
@@ -129,7 +115,7 @@ export async function copiarFigurasAPoliza(
   }
   if (t.oportunidad_id) {
     await prisma.$executeRaw`
-      update seguros.oportunidades set poliza_id = coalesce(poliza_id, ${e.polizaId}::uuid)
+      update seguros.oportunidades set poliza_ganada_id = coalesce(poliza_ganada_id, ${e.polizaId}::uuid)
       where id = ${t.oportunidad_id}::uuid and correduria_id = ${correduriaId}::uuid`
     await prisma.$executeRaw`
       insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)

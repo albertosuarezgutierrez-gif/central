@@ -90,3 +90,7 @@ test('moto arma propietario y conductor desde SUS fichas (con su carné de moto)
   assert.match(c, /e\.ramo === 'moto' && figuras\?\.conductor_ocasional[\s\S]{0,40}return \{ ok: false/)
   assert.match(cuerpoDe('personaDeFicha'), /carnetMotoDeFicha/, 'en moto el carné del conductor es el de moto')
 })
+
+test('moto: conductor con fecha de carné y sin tipo se declara B explícito (para cruzarlo con la cilindrada)', () => {
+  assert.match(cuerpoDe('prepararVariante'), /e\.ramo === 'moto' && clave === 'conductor' && c\.fechaCarnet && !c\.tipoCarnet\) c\.tipoCarnet = 'B'/)
+})

@@ -290,8 +290,9 @@ export const POST = auditado(async (req: Request) => {
             mensaje:
               'Esta variante cambia las personas o el CP del riesgo respecto a la primera. Confirma que es la realidad ' +
               '(arts. 10 y 89 LCS) antes de emitir. No se ha emitido nada.',
-            cambios: leidos.x.cambios.map((c) => ({ campo: c.campo, antes: c.campo === 'cp' ? c.antes : c.antesNombre, despues: c.campo === 'cp' ? c.despues : c.despuesNombre })),
+            cambios: leidos.x.cambios,
             exigidas: leidos.x.exigidas,
+            conductorHabitual: leidos.x.conductorHabitual,
           },
           { status: 409 },
         )

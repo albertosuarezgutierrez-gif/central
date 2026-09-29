@@ -198,3 +198,8 @@ test('una figura a medias no se declara: el propietario incompleto es un reparo'
   const r = revisarDatosMoto({ ...BASE, propietario: { ...OTRA, telefono: '' } })
   assert.ok(r.some((x) => x.campo === 'propietario'))
 })
+
+test('🪤 propietario que ES el conductor (mismo DNI): el MISMO objeto en owner y primaryDriver', () => {
+  const c = construirPeticionMoto({ ...BASE, propietario: OTRA, conductor: { ...OTRA, fechaCarnet: '2010-03-03', tipoCarnet: 'A' } }, LINEA) as any
+  assert.deepEqual(c.risk.owner, c.risk.primaryDriver, 'construido dos veces difiere en el carné: 400 pagado')
+})
