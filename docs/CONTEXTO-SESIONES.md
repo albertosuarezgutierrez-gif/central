@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(29/09/2026)** 🧾 **El escaneo de facturas de Gmail ofrecía «✅ Pagar» sobre documentos que no eran deudas** (Ayamonte 2022,
+certificación de GLOBAL 2 de 2025, recibo de moto Allianz, dos prestaciones de Occident, comunidad 2024). La ventana de 7 días
+es la del CORREO, no del documento. Nuevo filtro puro `lib/agente-facturas/filtro-pago.ts` (con cepo visto fallar), antes de
+insertar: aparta >90 días, emitida por un titular, a nombre de tercero por NIF y aseguradora no a tu nombre (cuentan como
+`descartados`). Las 6 filas se marcaron `rechazada` en BD. Pendiente: una factura DOMICILIADA sigue ofreciendo «Pagar» (riesgo
+de pago doble); `fecha_vencimiento` nunca se rellena (el extractor no pide ese campo).
 **(29/09/2026)** 📮 **`envios.grupoasegura.es` retirado de Resend** (OK de Alberto). Todo el correo de Grupo ASegura sale de `hola@grupoasegura.es`
 (muestreo 25-28/09: anulaciones, novedades y códigos, todos desde hola@). Queda borrar sus 3 registros DNS en IONOS
 (`resend._domainkey.envios`, MX y TXT de `send.envios`) — prompt para Claude en Chrome dado a Alberto; NO tocar los sin `.envios`.
