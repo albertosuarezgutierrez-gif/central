@@ -18,6 +18,14 @@ export const RE_FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/
 /** Lo más lejos que la compañía admite la fecha de efecto (cepo 1, medido 11-12/09/2026). */
 export const MAX_DIAS_VISTA = 90
 
+/**
+ * Efecto por defecto de un presupuesto de negocio NUEVO (auto/moto sin póliza que retarificar), en días
+ * desde hoy (Alberto, 29/09/2026: «el efecto, para usar el presupuesto y no tener que retarificar»). Con
+ * «mañana» la cotización caducaba al día siguiente (cepo 2) y emitir obligaba a pagar otra. 15 días es la
+ * vida habitual de un presupuesto y queda lejos del tope de 90 (cepo 1).
+ */
+export const DIAS_EFECTO_PRESUPUESTO_NUEVO = 15
+
 /** `f` (aaaa-mm-dd) más `n` días, en aaaa-mm-dd. Aritmética en UTC a propósito: sin horas no hay DST. */
 export function sumarDias(f: string, n: number): string {
   const d = new Date(`${f}T00:00:00Z`)
