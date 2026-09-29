@@ -75,8 +75,8 @@ test('ReRate: las opciones por defecto de Allianz AUTO no se mandan a una moto',
 
 test('carné × cilindrada: las dos vías de moto cruzan el carné con la versión antes de pagar', () => {
   const src = leer('apps/asegura/lib/retarificar-cartera.ts')
-  const llamadas = src.match(/reparoCarnetMoto\(\s*cfg\.config,\s*datos\.tipoCarnet,\s*versionMotoElegida\(cuerpo\.resueltos, datos\.codigoVehiculo\),/g) ?? []
-  assert.equal(llamadas.length, 2, 'moto de cartera y moto nueva: sin la versión, un A1 tarifica una 600 cc')
+  const llamadas = src.match(/reparoCarnetMoto\(\s*cfg\.config,\s*\(datos\.conductor \?\? datos\)\.tipoCarnet,[^\n]*\n\s*versionMotoElegida\(cuerpo\.resueltos, datos\.codigoVehiculo\),/g) ?? []
+  assert.equal(llamadas.length, 2, 'moto de cartera y moto nueva: sin la versión, un A1 tarifica una 600 cc (y el carné es el de quien CONDUCE)')
   assert.match(src, /const choque = choqueCarnetVersion\(carnet, motor\)/)
   const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
   assert.equal(

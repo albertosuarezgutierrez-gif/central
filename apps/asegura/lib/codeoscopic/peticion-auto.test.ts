@@ -476,3 +476,9 @@ test('el ocasional con el MISMO DNI que el habitual es un 400 pagado: se para aq
   const faltan = revisarDatosAuto({ ...BASE, conductorOcasional: { ...OCASIONAL, dni: BASE.dni } })
   assert.equal(faltan.some((f) => f.campo === 'conductorOcasional'), true)
 })
+
+test('🪤 propietario que ES el conductor (mismo DNI): el MISMO objeto en owner y primaryDriver', () => {
+  const otra = { dni: '11111111h', nombre: 'Otra', apellido1: 'Persona', fechaNacimiento: '1960-02-02', sexo: 'mujer' as const, estadoCivil: 'Married', telefono: '611111111' }
+  const c = construirPeticionAuto({ ...BASE, propietario: otra, conductor: { ...otra, fechaCarnet: '1990-01-01' } }) as any
+  assert.deepEqual(c.risk.owner, c.risk.primaryDriver)
+})

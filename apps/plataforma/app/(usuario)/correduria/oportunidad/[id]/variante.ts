@@ -53,6 +53,15 @@ export function ramoVariante(ramo: string): 'auto' | 'moto' | null {
   return ramo === 'auto' || ramo === 'moto' ? ramo : null
 }
 
+/**
+ * Retarificar la PÓLIZA dentro de su riesgo (`/poliza/{id}/retarificar?oportunidad=`): auto, moto y
+ * hogar (29/09/2026). Distinto de `ramoVariante`: hogar se retarifica con las mismas personas, pero
+ * no tiene pantalla de «otro tomador» (hogar-nuevo no lee `?oportunidad=`).
+ */
+export function retarificaEnRiesgo(ramo: string): boolean {
+  return ramo === 'auto' || ramo === 'moto' || ramo === 'hogar'
+}
+
 export function rutaVariante(ramo: 'auto' | 'moto', tomadorId: string, oportunidadId: string, tarificacionId?: string | null): string {
   const q = new URLSearchParams({ oportunidad: oportunidadId })
   if (tarificacionId) q.set('tarificacion', tarificacionId)

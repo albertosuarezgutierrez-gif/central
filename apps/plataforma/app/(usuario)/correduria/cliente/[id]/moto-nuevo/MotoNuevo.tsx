@@ -32,7 +32,14 @@ import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
-import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
+import type { RolExtra, VarianteNueva } from '../../../oportunidad/[id]/variante'
+import {
+  PERSONA_VACIA,
+  correccionesDeFiguras,
+  figuraCompleta,
+  type PersonaForm,
+} from '../../../oportunidad/[id]/figuras-form'
+import { BloqueFigura } from '../../../oportunidad/[id]/BloqueFigura'
 import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 
 const input: React.CSSProperties = {
@@ -56,6 +63,12 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
 }
+
+/**
+ * Los papeles que moto admite en otra ficha. SIN conductor ocasional: el vendor no lo admite en
+ * moto (entrega 2 del diseño, 29/09/2026), así que aunque el riesgo lo traiga no se pinta ni viaja.
+ */
+const ROLES_MOTO: readonly RolExtra[] = ['propietario', 'conductor_habitual']
 
 type Resultado =
   | { estado: 'idle' }
@@ -175,6 +188,20 @@ export default function MotoNuevo({
   // guardada puede traer su garaje, y sin esto retomar caía en silencio a vía pública (29/09/2026).
   const garajeElegido = useRef(false)
   const [nota, setNota] = useState('')
+  // ── Figuras de la variante (29/09/2026) ─────────────────────────────────────
+  // Propietario y conductor habitual en OTRA ficha: sus datos los pone asegura desde esa ficha y
+  // aquí solo se pide el estado civil y lo que falte (el carné de moto del conductor incluido).
+  // Retarificando una PÓLIZA van las personas de la póliza: no aplica.
+  const figs: Partial<Record<RolExtra, string>> = {}
+  if (variante && poliza === null) {
+    for (const rol of ROLES_MOTO) if (variante.figuras[rol]) figs[rol] = variante.figuras[rol]
+  }
+  const ocasionalIgnorado = variante !== null && poliza === null && !!variante.figuras.conductor_ocasional
+  const [figCorr, setFigCorr] = useState<Record<RolExtra, PersonaForm>>({
+    propietario: PERSONA_VACIA,
+    conductor_habitual: PERSONA_VACIA,
+    conductor_ocasional: PERSONA_VACIA,
+  })
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
@@ -398,11 +425,14 @@ export default function MotoNuevo({
       aniosEnCompania.trim() === '' ||
       aniosSinSiniestros.trim() === '')
 
+  // Una figura en otra ficha sin estado civil, o con un hueco de su ficha sin teclear, no cotiza.
+  const faltaFigura = ROLES_MOTO.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null))
+
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
-    faltaMotoAnterior || aManoSinRellenar.length > 0 || faltaHistorial || kmInvalido
+    faltaMotoAnterior || aManoSinRellenar.length > 0 || faltaHistorial || kmInvalido || faltaFigura
     // En modo póliza, un hueco que no se arregla aquí (compañía o nº anterior,
     // CP de circulación, matrícula) también apaga el botón: el servidor lo
     // rechazaría igual, y el botón encendido prometería un precio que no llega.
@@ -455,7 +485,7 @@ export default function MotoNuevo({
         })
       : await pedirCotizacionMoto({
       clienteId,
-      variante: variante ? { oportunidadId: variante.oportunidadId, nota } : null,
+      variante: variante ? { oportunidadId: variante.oportunidadId, figuras: figs as Record<string, string>, nota } : null,
       resueltos: {
         ...version,
         codigoVehiculo,
@@ -469,7 +499,8 @@ export default function MotoNuevo({
         // `ThisMotorcycle`. Solo se manda un valor real si se ha elegido.
         experienciaConduccion: experienciaConduccion || undefined,
       },
-      correcciones: correccionesFinal,
+      // Figuras de la variante: asegura rellena desde su ficha y lo tecleado aquí manda encima.
+      correcciones: { ...correccionesFinal, ...correccionesDeFiguras(figs, figCorr, ROLES_MOTO) },
     })
     switch (r.estado) {
       case 'faltan':
@@ -510,20 +541,10 @@ export default function MotoNuevo({
     }
   }
 
-  // En moto, de momento, la misma persona va en todos los papeles (entrega 2 del diseño).
-  // Retarificando una póliza van las personas de la póliza: el aviso no aplica.
-  const figurasDistintas = variante !== null && poliza === null && Object.keys(variante.figuras).length > 0
-
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       {variante && (
-        <NotaVariante nota={nota} onNota={setNota}>
-          {figurasDistintas && (
-            <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--warning)' }}>
-              En moto, de momento, se cotiza con el tomador en todos los papeles.
-            </p>
-          )}
-        </NotaVariante>
+        <NotaVariante nota={nota} onNota={setNota} />
       )}
       {faltanInicial === null && (
         <div style={{ ...cardStyle, borderColor: 'var(--negative)', color: 'var(--negative)', fontSize: 13 }}>
@@ -747,6 +768,26 @@ export default function MotoNuevo({
           </div>
         )}
       </div>
+
+      {(Object.keys(figs).length > 0 || ocasionalIgnorado) && (
+        <div style={cardStyle}>
+          <CardHeader
+            title="2b · Propietario y conductor del riesgo"
+            sub="Los papeles que el riesgo pone en otra ficha salen de esa ficha: aquí solo se pide su estado civil y lo que falte. Los que no, los ocupa el tomador."
+          />
+          {ROLES_MOTO.filter((rol) => figs[rol]).map((rol, i) => (
+            <div key={rol} style={i > 0 ? { marginTop: 12 } : undefined}>
+              <BloqueFigura rol={rol} nombre={variante?.nombres[rol] ?? null} faltan={variante?.faltan[rol] ?? null}
+                persona={figCorr[rol]} onPersona={(p) => setFigCorr((f) => ({ ...f, [rol]: p }))} civiles={civiles} />
+            </div>
+          ))}
+          {ocasionalIgnorado && (
+            <p style={{ color: 'var(--warning)', fontSize: 13, margin: Object.keys(figs).length > 0 ? '12px 0 0' : 0 }}>
+              El riesgo tiene un conductor ocasional, pero en moto la compañía no lo admite: esta cotización no lo declara.
+            </p>
+          )}
+        </div>
+      )}
 
       {poliza ? (
       <div style={cardStyle}>

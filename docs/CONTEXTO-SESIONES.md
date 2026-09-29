@@ -900,6 +900,10 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   (`module-seguros/historial-maximo.ts`). Si Codeoscopic da 400 por años altos (NO se cobra), `cotizar()` aprende el tope
   (`seguros.codeoscopic_topes_historial`, aplicada en prod el 29/09), reintenta UNA vez recortado y lo aplica siempre.
   Rechazos POR COMPAÑÍA tras cotizar (ya cobrados) NO se aprenden todavía: el formato no está medido.
+## (29/09/2026) Riesgo, entrega 2+3: moto con figuras, aviso legal al emitir, figuras→póliza, pasar oportunidad, hogar en el riesgo
+- Moto: propietario/conductor distintos del tomador (`peticion-moto.ts`, carné de MOTO del conductor desde su ficha; mismo DNI propietario=conductor → mismo objeto). Sin probar contra el vendor (1ª cotización real, OK de Alberto).
+- Emitir: 409 `confirmar_figuras` si la variante cambia personas/CP vs la primera del MISMO vehículo, comparando el DNI de lo que VIAJÓ (`emision-figuras-reglas.ts`), no la foto de figuras. Confirmación en historial antes del Submit (fail-closed). Tras acuñar, figuras → `poliza_intervinientes` y `oportunidades.poliza_ganada_id`.
+- «Pasar la oportunidad a…» (`oportunidad-traspaso.ts`); hogar se retarifica dentro de su riesgo (sin «otro tomador»). Revisión architect: 2 bloqueantes + 4 importantes corregidos.
 
 ## (29/09/2026) La póliza subida a la ficha se lee sola y su bonus precarga la moto
 - Documentos (ficha): subir tipo «póliza» dispara la lectura IA (y «Leer para oportunidad» en las ya subidas) →

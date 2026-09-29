@@ -15,7 +15,7 @@ import { mismaPersonaPorNombre } from './misma-persona'
 import { altaCliente } from '@/lib/cartera-edicion'
 import { crearRelacion } from '@/lib/cartera-relaciones'
 import { clienteOrigenDe } from '@/lib/cartera-ficha'
-import { partirApellidos, sexoDeSaludo, carnetBDeFicha } from '@/lib/codeoscopic/desde-cartera'
+import { partirApellidos, sexoDeSaludo, carnetBDeFicha, carnetMotoDeFicha } from '@/lib/codeoscopic/desde-cartera'
 import type { DatosPersona } from '@/lib/codeoscopic/persona'
 import {
   diferenciasVariante,
@@ -192,8 +192,10 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     figuras.unshift({ rol: 'tomador', clienteId: op.cliente_id, nombre: nombreDe(op.nombre, op.apellidos), vinculo: null, porDefecto: true, faltan: null })
   }
   for (const f of figuras) {
-    const p = await personaDeFicha(correduriaId, f.clienteId).catch(() => null)
-    f.faltan = p === null ? null : faltanDeFigura(p, f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || f.rol === 'tomador')
+    const p = await personaDeFicha(correduriaId, f.clienteId, op.tipo === 'moto' ? 'moto' : 'auto').catch(() => null)
+    // El carné solo cuenta en un riesgo de vehículo: a un tomador de hogar no se le pide.
+    const conduce = (op.tipo === 'auto' || op.tipo === 'moto') && (f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || f.rol === 'tomador')
+    f.faltan = p === null ? null : faltanDeFigura(p, conduce)
   }
 
   return {
@@ -355,19 +357,30 @@ export async function validarVariante(
   return { ok: true }
 }
 
-type PersonaFigura = Partial<DatosPersona> & { fechaCarnet?: string }
+type PersonaFigura = Partial<DatosPersona> & { fechaCarnet?: string; tipoCarnet?: string; fechaCarnetB?: string }
 
 /**
  * Los datos de una figura sacados de SU ficha, para armar la petición en el servidor (el DNI no
  * viaja a la pantalla). Lo que la ficha no tiene se queda sin poner y lo completa el corredor: aquí
  * no se supone nada de una persona.
  */
-export async function personaDeFicha(correduriaId: string, clienteId: string): Promise<PersonaFigura | null> {
+export async function personaDeFicha(
+  correduriaId: string,
+  clienteId: string,
+  ramo: 'auto' | 'moto' = 'auto',
+): Promise<PersonaFigura | null> {
   const o = await clienteOrigenDe(correduriaId, clienteId)
   if (!o) return null
   const c = o.cliente
-  const { primero, segundo } = partirApellidos(c.apellidos)
   const limpio = (v: string | null | undefined) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined)
+  // En MOTO el carné que cuenta es el de moto (A > A2 > A1 > AM) si consta; si no, el B con su tipo
+  // declarado, y el servidor corta antes de gastar si esa moto exige carné de moto.
+  const deMoto = ramo === 'moto' ? carnetMotoDeFicha(c.carnets) : null
+  const carnetB = limpio(c.fechaCarnet) ?? carnetBDeFicha(c.carnets) ?? undefined
+  const carnet = deMoto
+    ? { fechaCarnet: deMoto.fecha, tipoCarnet: deMoto.tipo, fechaCarnetB: carnetBDeFicha(c.carnets) ?? undefined }
+    : { fechaCarnet: carnetB, ...(ramo === 'moto' && carnetB ? { tipoCarnet: 'B' } : {}) }
+  const { primero, segundo } = partirApellidos(c.apellidos)
   return {
     dni: limpio(c.dni),
     nombre: limpio(c.nombre),
@@ -376,7 +389,7 @@ export async function personaDeFicha(correduriaId: string, clienteId: string): P
     fechaNacimiento: limpio(c.fechaNacimiento),
     sexo: sexoDeSaludo(c.saludo) ?? undefined,
     telefono: limpio(c.telefono)?.replace(/\s/g, ''),
-    fechaCarnet: limpio(c.fechaCarnet) ?? carnetBDeFicha(c.carnets) ?? undefined,
+    ...carnet,
   }
 }
 
@@ -406,8 +419,8 @@ export type VarianteEntrada = {
 /**
  * Prepara una cotización que es VARIANTE de un riesgo (auto-nuevo / moto-nuevo con `oportunidadId`).
  * Gratis. Si no viene oportunidad, devuelve el cuerpo tal cual: el camino de siempre.
- * Para auto, las figuras distintas del tomador se arman desde sus fichas; moto aún manda la misma
- * persona en todos los papeles (entrega 2), así que ahí solo se guarda la foto.
+ * Las figuras distintas del tomador se arman desde sus fichas, en auto y en moto (entrega 2, 29/09/2026:
+ * en moto, propietario y conductor habitual; el carné del conductor es el de moto de su ficha).
  */
 export async function prepararVariante(
   correduriaId: string,
@@ -420,17 +433,26 @@ export async function prepararVariante(
   if (!val.ok) return val
   const nota = typeof e.cuerpo.nota === 'string' && e.cuerpo.nota.trim() !== '' ? e.cuerpo.nota.trim().slice(0, 200) : null
 
+  // Moto no tiene conductor ocasional (el vendor no lo admite): declararlo sería perderlo en silencio.
+  if (e.ramo === 'moto' && figuras?.conductor_ocasional) {
+    return { ok: false, motivo: 'en moto no hay conductor ocasional: quítalo del riesgo o cotiza sin él' }
+  }
+
   let correcciones = e.correcciones
-  if (e.ramo === 'auto' && figuras) {
+  if (figuras) {
     correcciones = { ...(correcciones ?? {}) }
     for (const [rol, clave] of Object.entries(CLAVE_DATOS) as Array<[RolFigura, string]>) {
       const id = figuras[rol]
       if (!id || id === e.tomadorId) continue
-      const deFicha = await personaDeFicha(correduriaId, id)
+      const deFicha = await personaDeFicha(correduriaId, id, e.ramo)
       if (!deFicha) return { ok: false, motivo: `no se pudo leer la ficha de la figura ${rol}` }
       const tecleado = typeof correcciones[clave] === 'object' && correcciones[clave] !== null ? (correcciones[clave] as Record<string, unknown>) : {}
       const soloConValor = Object.fromEntries(Object.entries(tecleado).filter(([, v]) => v !== '' && v !== null && v !== undefined))
       correcciones[clave] = { ...deFicha, ...soloConValor }
+      // Moto: un conductor con fecha de carné y sin tipo (tecleada a mano) se declara B EXPLÍCITO,
+      // para que `reparoCarnetMoto` lo cruce con la cilindrada antes de pagar en vez de dejarlo pasar.
+      const c = correcciones[clave] as Record<string, unknown>
+      if (e.ramo === 'moto' && clave === 'conductor' && c.fechaCarnet && !c.tipoCarnet) c.tipoCarnet = 'B'
     }
   }
   return { ok: true, v: { contexto: { oportunidadId, figuras, nota }, correcciones } }

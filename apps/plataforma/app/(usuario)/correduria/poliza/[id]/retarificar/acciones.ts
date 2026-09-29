@@ -189,6 +189,8 @@ export async function pedirEmision(entrada: {
   familiaEnAllianz?: boolean
   /** Cliente NUEVO: confirma un 409 `ya_en_cartera`/`ya_emitido`. Ver `emitirAsegura`. */
   duplicadoConfirmado?: boolean
+  /** Casillas marcadas tras un 409 `confirmar_figuras` (arts. 10 y 89 LCS). Ver `emitirAsegura`. */
+  figurasConfirmadas?: string[]
 }): Promise<RespuestaEmitir> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
@@ -202,6 +204,9 @@ export async function pedirEmision(entrada: {
     acunarExistente: entrada.acunarExistente === true,
     familiaEnAllianz: entrada.familiaEnAllianz === true,
     duplicadoConfirmado: entrada.duplicadoConfirmado === true,
+    ...(Array.isArray(entrada.figurasConfirmadas)
+      ? { figurasConfirmadas: entrada.figurasConfirmadas.filter((x): x is string => typeof x === 'string') }
+      : {}),
   })
 }
 

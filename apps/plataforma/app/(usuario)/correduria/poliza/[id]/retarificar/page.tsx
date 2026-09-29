@@ -98,6 +98,24 @@ export default async function RetarificarPage({
       </Marco>
     )
   }
+  // ── Variante del RIESGO de esta póliza (`?oportunidad=`, 29/09/2026) ──────
+  // «Retarificar con las mismas personas» desde la pantalla del riesgo: la tarificación se cuelga
+  // de esa oportunidad. Sin el parámetro, todo igual que siempre. Si el riesgo no se puede leer o
+  // no es de esta póliza, NO se monta el formulario que cuesta 0,50€. Va ANTES de hogar (también
+  // del paso del Catastro, que la arrastra en sus formularios): hogar se cuelga igual que auto/moto.
+  const cargaRiesgo = await cargarRiesgoDePoliza(paramTexto(sp.oportunidad), p.id)
+  if (cargaRiesgo.estado === 'error') {
+    return (
+      <Marco>
+        <Cabecera sub={ramo ? `${sub} · ${ramo}` : sub} polizaId={p.id} clienteId={p.cliente.id} />
+        <ErrorVariante oportunidadId={cargaRiesgo.oportunidadId} mensaje={cargaRiesgo.mensaje} />
+      </Marco>
+    )
+  }
+  const varianteRiesgo = cargaRiesgo.estado === 'ok' ? cargaRiesgo.variante : null
+  const franja = varianteRiesgo ? <FranjaVariante variante={varianteRiesgo} /> : null
+  const oportunidadVariante = varianteRiesgo?.oportunidadId ?? null
+
   // ── HOGAR sin m²/año/CP: el riesgo sale del Catastro (23/09/2026) ────────
   //
   // 22 de las 28 pólizas de hogar vivas no traen el riesgo (ni la póliza ni su
@@ -112,7 +130,12 @@ export default async function RetarificarPage({
   // cambiar de vivienda.
   const cambiandoVivienda = Boolean(cadena(sp.buscar) ?? cadena(sp.direccion) ?? cadena(sp.referencia))
   if (String(p.tipo).toLowerCase() === 'hogar' && !cancelada && (!p.retarificable || cambiandoVivienda)) {
-    const cab = <Cabecera sub={`${sub} · hogar`} polizaId={p.id} clienteId={p.cliente.id} />
+    const cab = (
+      <>
+        <Cabecera sub={`${sub} · hogar`} polizaId={p.id} clienteId={p.cliente.id} />
+        {franja}
+      </>
+    )
     const refParam = cadena(sp.referencia)
     let referencia = refParam ? normalizarReferencia(refParam) : null
     const direccion = cadena(sp.direccion)
@@ -133,13 +156,13 @@ export default async function RetarificarPage({
         referencia = r.referencia
       } else {
         const buscador = (
-          <BuscadorCatastro polizaId={p.id} direccion={direccion} municipio={municipio} provincia={provincia} deCliente={false} />
+          <BuscadorCatastro polizaId={p.id} direccion={direccion} municipio={municipio} provincia={provincia} deCliente={false} oportunidadId={oportunidadVariante} />
         )
         if (r.estado === 'elegir') {
           return (
             <Marco>
               {cab}
-              <ElegirPiso polizaId={p.id} via={r.via} inmuebles={r.inmuebles} />
+              <ElegirPiso polizaId={p.id} via={r.via} inmuebles={r.inmuebles} oportunidadId={oportunidadVariante} />
               {buscador}
             </Marco>
           )
@@ -167,6 +190,7 @@ export default async function RetarificarPage({
             municipio={c?.ciudad ?? municipio}
             provincia={c?.provincia ?? provincia}
             deCliente={Boolean(c?.direccion)}
+            oportunidadId={oportunidadVariante}
           />
         </Marco>
       )
@@ -180,14 +204,19 @@ export default async function RetarificarPage({
           <div className={`card ${preCat.estado === 'no_encontrado' ? 'muted' : 'err'}`}>
             No se ha podido precalificar el hogar con el Catastro: {preCat.mensaje}
           </div>
-          <BuscadorCatastro polizaId={p.id} direccion="" municipio={municipio} provincia={provincia} deCliente={false} />
+          <BuscadorCatastro polizaId={p.id} direccion="" municipio={municipio} provincia={provincia} deCliente={false} oportunidadId={oportunidadVariante} />
         </Marco>
       )
     }
     return (
       <Marco>
         {cab}
-        <RetarificadorHogar polizaId={p.id} preInicial={preCat.pre} referencia={referencia} />
+        <RetarificadorHogar
+          polizaId={p.id}
+          preInicial={preCat.pre}
+          referencia={referencia}
+          variante={oportunidadVariante ? { oportunidadId: oportunidadVariante } : null}
+        />
       </Marco>
     )
   }
@@ -232,26 +261,15 @@ export default async function RetarificarPage({
     return (
       <Marco>
         <Cabecera sub={`${sub} · hogar`} polizaId={p.id} clienteId={p.cliente.id} />
-        <RetarificadorHogar polizaId={p.id} preInicial={preHogar.pre} />
+        {franja}
+        <RetarificadorHogar
+          polizaId={p.id}
+          preInicial={preHogar.pre}
+          variante={oportunidadVariante ? { oportunidadId: oportunidadVariante } : null}
+        />
       </Marco>
     )
   }
-
-  // ── Variante del RIESGO de esta póliza (`?oportunidad=`, 29/09/2026) ──────
-  // «Retarificar con las mismas personas» desde la pantalla del riesgo: la tarificación se cuelga
-  // de esa oportunidad. Sin el parámetro, todo igual que siempre. Si el riesgo no se puede leer o
-  // no es de esta póliza, NO se monta el formulario que cuesta 0,50€.
-  const cargaRiesgo = await cargarRiesgoDePoliza(paramTexto(sp.oportunidad), p.id)
-  if (cargaRiesgo.estado === 'error') {
-    return (
-      <Marco>
-        <Cabecera sub={`${sub} · ${ramo}`} polizaId={p.id} clienteId={p.cliente.id} />
-        <ErrorVariante oportunidadId={cargaRiesgo.oportunidadId} mensaje={cargaRiesgo.mensaje} />
-      </Marco>
-    )
-  }
-  const varianteRiesgo = cargaRiesgo.estado === 'ok' ? cargaRiesgo.variante : null
-  const franja = varianteRiesgo ? <FranjaVariante variante={varianteRiesgo} /> : null
 
   // ── MOTO (23/09/2026) ────────────────────────────────────────────────────
   //

@@ -31,6 +31,7 @@ import type {
 } from '@/lib/hogar-retarificar-asegura'
 import { pedirCotizacion } from './acciones'
 import { pedirLimitesHogar, pedirPrecalificacionHogar } from './acciones-hogar'
+import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import type { RangoCapital, RespuestaLimitesHogar } from '@/lib/retarificar-asegura'
 
 type Grupo = 'donde' | 'como' | 'protecciones' | 'capitales' | 'tomador' | 'cotizacion'
@@ -90,13 +91,17 @@ export default function RetarificadorHogar({
   polizaId,
   preInicial,
   referencia,
+  variante = null,
 }: {
   polizaId: string
   preInicial: PrecalificacionHogar
   /** Referencia catastral del piso elegido (pólizas sin m²/año/CP): viaja en cada llamada. */
   referencia?: string
+  /** Variante del riesgo de esta póliza (`?oportunidad=`, 29/09/2026): igual que auto/moto. `null` = retarificar de siempre. */
+  variante?: { oportunidadId: string } | null
 }) {
   const [pre, setPre] = useState(preInicial)
+  const [nota, setNota] = useState('')
   const [resueltos, setResueltos] = useState<Record<string, unknown>>({})
   const [correcciones, setCorrecciones] = useState<Record<string, unknown>>({})
   const [recalculando, setRecalculando] = useState(false)
@@ -196,7 +201,13 @@ export default function RetarificadorHogar({
     setResultado({ estado: 'cotizando' })
     let r: Awaited<ReturnType<typeof pedirCotizacion>>
     try {
-      r = await pedirCotizacion({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones, referencia })
+      r = await pedirCotizacion({
+        polizaId,
+        resueltos: cuerpoResueltosFinal(),
+        correcciones,
+        referencia,
+        variante: variante ? { oportunidadId: variante.oportunidadId, nota } : null,
+      })
     } catch (e) {
       // Se cortó entre el navegador y plataforma: la cotización pudo llegar a Codeoscopic.
       setResultado({ estado: 'error', mensaje: e instanceof Error ? e.message : String(e), gastoDesconocido: true })
@@ -254,6 +265,7 @@ export default function RetarificadorHogar({
           polizaId={polizaId}
           catastro={pre.catastro}
           m2Poliza={m2DeLaPoliza(pre)}
+          oportunidadId={variante?.oportunidadId ?? null}
         />
       )}
       {pre.primaActual !== null && (
@@ -352,6 +364,8 @@ export default function RetarificadorHogar({
         )
       })}
 
+      {variante && <NotaVariante nota={nota} onNota={setNota} />}
+
       <div className="card">
         <h2>Pedir precio</h2>
         {pre.ramo.estado !== 'disponible' && (
@@ -444,11 +458,14 @@ function ViviendaCatastro({
   polizaId,
   catastro,
   m2Poliza,
+  oportunidadId,
 }: {
   polizaId: string
   catastro: NonNullable<PrecalificacionHogar['catastro']>
   /** Los m² que declara la póliza (compañía o volcado). `null` = no los trae. */
   m2Poliza: number | null
+  /** Variante del riesgo: cambiar de vivienda no la suelta. */
+  oportunidadId: string | null
 }) {
   const [estado, setEstado] = useState<'libre' | 'guardando' | 'guardada' | { error: string }>(
     catastro.guardada ? 'guardada' : 'libre',
@@ -494,7 +511,7 @@ function ViviendaCatastro({
             </button>
           )
         )}
-        <a href={`/correduria/poliza/${polizaId}/retarificar?buscar=1`} style={{ fontSize: 13 }}>
+        <a href={`/correduria/poliza/${polizaId}/retarificar?${new URLSearchParams({ buscar: '1', ...(oportunidadId ? { oportunidad: oportunidadId } : {}) }).toString()}`} style={{ fontSize: 13 }}>
           Cambiar de vivienda
         </a>
       </div>
