@@ -329,6 +329,7 @@ export default function AutoNuevo({
   const [aniosEnCompania, setAniosEnCompania] = useState(String(historial.aniosEnCompania))
   const [aniosSinSiniestros, setAniosSinSiniestros] = useState(String(historial.aniosSinSiniestros))
   const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5))
+  const [matriculaAnterior, setMatriculaAnterior] = useState('')
 
   // ── Borrador local: lo tecleado NO se pierde al salir de la pantalla ───────
   //
@@ -744,6 +745,7 @@ export default function AutoNuevo({
       correccionesFinal.aseguradoAntes = true
       correccionesFinal.companiaAnteriorCodigo = companiaActualElegida
       correccionesFinal.polizaAnterior = polizaActualDigitos.trim()
+      if (matriculaAnterior.trim()) correccionesFinal.matriculaAnterior = matriculaAnterior.trim()
       correccionesFinal.aniosAsegurado = Number(aniosAsegurado)
       correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
@@ -1215,6 +1217,18 @@ export default function AutoNuevo({
                     antecedentes con este número y el precio se quede en estimado.</ConIcono>
                   </p>
                 )}
+              </Campo>
+              <Campo
+                etiqueta="Matrícula de esa póliza"
+                falta={false}
+                ayuda="Solo si la póliza anterior era de OTRO vehículo (coche recién comprado). La compañía busca el historial por esta matrícula: con la del coche nuevo no lo encuentra y no aplica la bonificación. Vacío = la misma matrícula."
+              >
+                <input
+                  value={matriculaAnterior}
+                  onChange={(e) => setMatriculaAnterior(e.target.value)}
+                  placeholder={matricula.trim() ? `La misma (${matricula.trim().toUpperCase()})` : 'La misma'}
+                  style={input}
+                />
               </Campo>
             </div>
             <details open={faltaAnios || undefined} style={{ marginTop: 10, fontSize: 13 }}>

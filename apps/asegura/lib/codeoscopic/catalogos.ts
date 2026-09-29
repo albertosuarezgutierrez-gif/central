@@ -489,6 +489,13 @@ export async function motorDeVersionMoto(
 
 /** `ThisMotorcycle` | `OtherMotorcycle`. Obligatorio en `risk.drivingExperience.id`. */
 /** Garajes de MOTO: catálogo propio `/motorcycle/garage-types` (no el de coche). */
+/** Compañías anteriores de MOTO: catálogo propio `/motorcycle/insurance-companies`. */
+export async function companiasAnterioresMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/insurance-companies')).sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, 'es'),
+  )
+}
+
 export async function tiposDeGarajeMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
   return normalizarOpciones(await catalogo(config, '/motorcycle/garage-types'))
 }

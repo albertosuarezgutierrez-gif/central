@@ -71,15 +71,28 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
   }
   const variante = carga.estado === 'ok' ? carga.variante : null
 
-  const [garajes, civiles, pre, companiasResp, ops] = await Promise.all([
+  const [garajes, civiles, pre, companiasResp, ops, anteriores] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes-moto' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
     precalificarMotoNuevaAsegura({ clienteId }),
     companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
     // El seguro que tiene hoy, leído de su póliza (29/09/2026). Si no se puede leer, no se precarga: se teclea.
     oportunidadesClienteAsegura(clienteId).then((r) => interpretarOportunidadesCliente(r.status, r.json)).catch(() => null),
+    catalogoAsegura({ tipo: 'companias-anteriores-moto' }),
   ])
-  const companias = companiasResp.estado === 'ok' ? companiasResp.companias : null
+  // Compañía anterior: catálogo de MERCADO de Avant2 (`/motorcycle/insurance-companies`), como en auto
+  // — el directorio de la correduría solo trae las 14 con las que trabaja Alberto, y el cliente puede venir
+  // de cualquiera. Su nombre del directorio va de alias para que «Mapfre» leído de una póliza case con el
+  // nombre largo del vendor. Si el catálogo falla, se cae al directorio; si falla también, código a mano.
+  const directorio = companiasResp.estado === 'ok' ? companiasResp.companias : null
+  const companias =
+    anteriores.estado === 'ok' && anteriores.opciones.length > 0
+      ? anteriores.opciones.map((o) => ({
+          codigoDgs: o.id,
+          nombreComun: o.nombre,
+          nombreCima: directorio?.find((c) => c.codigoDgs.toUpperCase() === o.id.toUpperCase())?.nombreComun ?? null,
+        }))
+      : directorio
   const anterior = ops?.estado === 'ok'
     ? anteriorParaTarificar(ops.oportunidades, { ramo: 'moto', oportunidadId: variante?.oportunidadId ?? null })
     : null

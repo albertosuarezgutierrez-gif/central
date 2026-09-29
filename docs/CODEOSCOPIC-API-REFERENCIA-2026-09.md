@@ -165,6 +165,12 @@ Común a los dos: `insuranceLine`*, `effectiveDate`*, `holder`* (`NaturalPerson_
 
 **`previousInsurance`** (`MotorPreviousInsurance_V1`, igual en los dos): `previousCompany.code`* (DGS), `registrationPlate`*, `policyNumber`*, `totalYearsInsured`*, `yearsInPreviousCompany`*, `yearsWithoutAccidents`*, `lastFiveYearsAccidents` (mínimo 0, máximo `totalYearsInsured`, tope 5).
 
+🔎 **Leído en el OpenAPI del portal (29/09/2026, `static/fdb74c4d.yaml`):**
+- `previousInsurance.registrationPlate` = *«The registration plate number of the vehicle insured in the previous policy.»* Es la matrícula del vehículo de la póliza ANTERIOR, no la del riesgo. Los ejemplos repiten la misma (mismo vehículo), y por eso el código la copiaba siempre: con vehículo nuevo la compañía no encuentra el historial y el bonus no se aplica (caso 2121NST, PR #3992 → campo `matriculaAnterior`).
+- La API **no documenta** quién verifica el bonus (ni SINCO, ni TIREA, ni CICOS), ni ningún indicador de «bonus verificado». El rechazo llega como texto libre de cada compañía en `MainQuote_V1.messages[]` (`type` success/info/warning/error). Ejemplo real: Mapfre, «01- El cliente identificado no aparece asociado a una póliza de otra compañía».
+- `MotorPreviousInsurance_V1` no tiene campo de tipo de vehículo: si vale el historial de un coche para una moto no está documentado (pendiente de preguntar a soporteapi@codeoscopic.com).
+- `/car/insurance-companies` y `/motorcycle/insurance-companies` son la misma operación (`motor.getInsuranceCompanies` / `_1`, schema `InsuranceCompany_V1`); `/insurance-companies` = todas las de la DGS.
+
 ### 4.3 Tabla comparativa
 
 | Campo `risk.*` | Coche | Moto | Obligatorio | Valores / formato |
