@@ -864,6 +864,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Filtro de garantías: «asistencia ampliada» como garantía propia
+- `asistencia_ampliada` en el catálogo auto/moto (`catalogo-garantias.ts`, `asistenciaAmpliada()`): manda la opción tarificada (Allianz «Estándar» → no; «Ampliada/Plus» → sí), si no el texto de la cobertura (Occident «amplia: Opcional (no incluida)» → no). Sin señal, no_consta.
+- Reale «SIN vehículo de sustitución» habla del coche, no del nivel → no_consta, no «no».
+- `backfill-coberturas.escribirOpciones` recalcula `garantias` con coberturas+opciones; para las filas viejas se pone `opciones = NULL` y el cron (:17) las relee.
+- Retarificar con ampliada (Allianz/Reale) NO aprobado: pide valores del desplegable y coste sin confirmar.
+
 ## (29/09/2026) Parrilla de precios única, marcar lo que se manda y seguimiento con llamada
 - Todos los ramos (moto, coche, hogar, vida, decesos, salud) usan `ListaPrecios.tsx` (logo, cobertura+franquicia, prima); una sola lista abierta («Qué verá el cliente»), la de emitir plegada.
 - `FiltroGarantias`: se MARCA lo que se manda (antes se ocultaba); atajos 3 más baratas / una por compañía / todas. Tras preparar, correo·WhatsApp·PDF en la misma pantalla.

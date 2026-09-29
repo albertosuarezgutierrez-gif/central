@@ -44,6 +44,13 @@ const DEFENSA: GarantiaCatalogo = { clave: 'defensa_juridica', etiqueta: 'Defens
 const MULTAS: GarantiaCatalogo = { clave: 'defensa_multas', etiqueta: 'Defensa en multas', patrones: [/\bmultas?\b/] }
 const CARNET: GarantiaCatalogo = { clave: 'retirada_carnet', etiqueta: 'Retirada de carné', patrones: [/\bretirada (del |de )?carne?t?\b/, /\bprivacion (temporal )?del? (permiso|carne?t?)\b/] }
 const ASISTENCIA_VIAJE: GarantiaCatalogo = { clave: 'asistencia_viaje', etiqueta: 'Asistencia en viaje y grúa', patrones: [/\basistencia\b/, /\bgrua\b/, /\bremolque\b/], excluye: [/\bjuridica\b/] }
+/**
+ * Asistencia AMPLIADA (29/09/2026). No sale del NOMBRE —todas se llaman «Asistencia en viaje»—, sino del
+ * texto de la cobertura (Occident: «Asistencia en viaje amplia: Opcional (no incluida)») o de la opción
+ * de producto con la que se tarificó (Allianz: «Asistencia en Viaje: Estándar»). Sin patrones: la fija
+ * `asistenciaAmpliada()`. Sin ninguna de las dos señales queda `no_consta`, nunca `no`.
+ */
+const ASISTENCIA_AMPLIADA: GarantiaCatalogo = { clave: 'asistencia_ampliada', etiqueta: 'Asistencia en viaje ampliada', patrones: [] }
 const SUSTITUCION: GarantiaCatalogo = { clave: 'vehiculo_sustitucion', etiqueta: 'Vehículo de sustitución', patrones: [/\bvehiculo (de )?sustitucion\b/, /\bcoche de sustitucion\b/, /\bvehiculo de reemplazo\b/] }
 const CONDUCTOR: GarantiaCatalogo = { clave: 'conductor', etiqueta: 'Seguro del conductor y ocupantes', patrones: [/\bconductor\b/, /\bocupantes\b/, /\baccidentes personales\b/] }
 const INCENDIO_VEH: GarantiaCatalogo = { clave: 'incendio', etiqueta: 'Incendio', patrones: [/\bincendio\b/] }
@@ -54,12 +61,12 @@ const FENOMENOS_VEH: GarantiaCatalogo = { clave: 'fenomenos_atmosfericos', etiqu
 
 export const CATALOGO_GARANTIAS: Record<RamoGarantias, readonly GarantiaCatalogo[]> = {
   auto: [
-    RC_OBLIGATORIA, RC_VOLUNTARIA, DEFENSA, MULTAS, CARNET, ASISTENCIA_VIAJE,
+    RC_OBLIGATORIA, RC_VOLUNTARIA, DEFENSA, MULTAS, CARNET, ASISTENCIA_VIAJE, ASISTENCIA_AMPLIADA,
     { clave: 'lunas', etiqueta: 'Lunas', patrones: [/\blunas?\b/, /\bcristales\b/, /\blunetas?\b/] },
     ROBO_VEH, INCENDIO_VEH, FENOMENOS_VEH, DANOS_PROPIOS, PERDIDA_TOTAL, SUSTITUCION, CONDUCTOR,
   ],
   moto: [
-    RC_OBLIGATORIA, RC_VOLUNTARIA, DEFENSA, MULTAS, CARNET, ASISTENCIA_VIAJE,
+    RC_OBLIGATORIA, RC_VOLUNTARIA, DEFENSA, MULTAS, CARNET, ASISTENCIA_VIAJE, ASISTENCIA_AMPLIADA,
     ROBO_VEH, INCENDIO_VEH, FENOMENOS_VEH, DANOS_PROPIOS, PERDIDA_TOTAL, SUSTITUCION, CONDUCTOR,
     { clave: 'equipamiento', etiqueta: 'Casco y equipamiento', patrones: [/\bcasco\b/, /\bvestimenta\b/, /\bequipamiento\b/, /\bindumentaria\b/] },
     { clave: 'accesorios', etiqueta: 'Accesorios', patrones: [/\baccesorios?\b/] },
@@ -129,7 +136,11 @@ const PESO: Record<EstadoGarantia, number> = { no_consta: 0, no: 1, si: 2 }
  * Varias coberturas sobre la misma clave: gana `si` sobre `no`, y `no` sobre `no_consta`.
  * `lista === null` (no se pudieron leer) → todo `no_consta`.
  */
-export function clasificarCoberturas(ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null): GarantiasClasificadas {
+export function clasificarCoberturas(
+  ramo: RamoGarantias,
+  lista: readonly CoberturaParaClasificar[] | null,
+  opciones?: readonly OpcionProductoLegible[] | null,
+): GarantiasClasificadas {
   const porClave: Record<string, EstadoGarantia> = {}
   for (const g of CATALOGO_GARANTIAS[ramo]) porClave[g.clave] = 'no_consta'
   for (const c of lista ?? []) {
@@ -138,7 +149,42 @@ export function clasificarCoberturas(ramo: RamoGarantias, lista: readonly Cobert
       if (PESO[estado] > PESO[porClave[clave] ?? 'no_consta']) porClave[clave] = estado
     }
   }
+  if ('asistencia_ampliada' in porClave) porClave.asistencia_ampliada = asistenciaAmpliada(lista, opciones)
   return { version: VERSION_CATALOGO, porClave }
+}
+
+/** Una opción de producto legible del vendor (`formattedOptions`: etiqueta + valor). */
+export type OpcionProductoLegible = { etiqueta: string; valor: string }
+
+const AMPLIADA_SI = /\b(ampliad[ao]|amplia|plus|premium|superior|completa|total|extra)\b/
+const AMPLIADA_NO = /\b(estandar|standard|basica|basico|basic)\b/
+
+/**
+ * Si el precio lleva asistencia AMPLIADA. PURO. Manda la opción con la que se tarificó (es la elección
+ * real); si no la hay, el texto de la cobertura. `no` solo con una señal explícita: la opción dice
+ * «Estándar/Básica», o el texto dice que la amplia es opcional / no incluida. Lo demás, `no_consta`.
+ * 🚨 «SIN vehículo de sustitución» (Reale) habla del coche de sustitución, no del nivel de asistencia:
+ * no se lee como «no ampliada».
+ */
+export function asistenciaAmpliada(
+  lista: readonly CoberturaParaClasificar[] | null,
+  opciones?: readonly OpcionProductoLegible[] | null,
+): EstadoGarantia {
+  for (const o of opciones ?? []) {
+    if (!/\basistencia\b/.test(claveCobertura(o.etiqueta))) continue
+    const v = claveCobertura(o.valor)
+    if (AMPLIADA_SI.test(v)) return 'si'
+    if (AMPLIADA_NO.test(v)) return 'no'
+  }
+  for (const c of lista ?? []) {
+    if (!/\basistencia\b/.test(claveCobertura(c.nombre)) || !c.texto) continue
+    const t = claveCobertura(c.texto)
+    const m = /\basistencia (en )?viaje (ampliad[ao]|amplia)\b(.{0,40})/.exec(t)
+    if (!m) continue
+    if (/\b(opcional|no incluid[ao])\b/.test(m[3])) return 'no'
+    if (/\bincluid[ao]\b/.test(m[3])) return 'si'
+  }
+  return 'no_consta'
 }
 
 /** Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones. */
