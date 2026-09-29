@@ -868,6 +868,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Opciones del producto → garantías, «precio no comparable» y opciones en la póliza emitida
+- `garantiasDeOpciones()` (module-seguros): lista CERRADA de etiquetas medidas → sustitución (Allianz «No», Reale «SIN vehículo de sustitución»), retirada de carné (Generali «Sin contratar», Reale «Excluida») y reclamación de multas. La opción manda sobre la lista de coberturas. No se reutilizan los patrones del catálogo: casarían con preguntas («El conductor habitual es hijo de asegurado: No»).
+- `diferenciasDeOpcion()`: «No incluye / Sin confirmar» solo en garantías donde las opciones difieren; en la parrilla (FiltroGarantias) y en el portal (sin repetir lo de «frente a tu seguro actual»).
+- Al emitir, `/emitir` lee la oferta aceptada (GET gratis, tope 6 s) y guarda sus opciones en `datos_especificos.codeoscopic.opciones`. El `accepted_offer_id` es la oferta del ReRate, NO casa con `tarificacion_precios.oferta_id` (medido): por eso se relee.
+- Retarificar con ampliada: sigue sin hacerse (valores del desplegable y coste sin confirmar).
+
 ## (29/09/2026) Filtro de garantías: «asistencia ampliada» como garantía propia
 - `asistencia_ampliada` en el catálogo auto/moto (`catalogo-garantias.ts`, `asistenciaAmpliada()`): manda la opción tarificada (Allianz «Estándar» → no; «Ampliada/Plus» → sí), si no el texto de la cobertura (Occident «amplia: Opcional (no incluida)» → no). Sin señal, no_consta.
 - Reale «SIN vehículo de sustitución» habla del coche, no del nivel → no_consta, no «no».

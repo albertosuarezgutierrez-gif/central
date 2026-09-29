@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, noReconocidas } from './catalogo-garantias.ts'
+import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, garantiasDeOpciones, noReconocidas } from './catalogo-garantias.ts'
 import { filtrarPorGarantias, interruptoresGarantias } from './filtro-garantias.ts'
 
 // Nombres REALES de coberturas de moto de Codeoscopic (presupuesto de Manuel, 28/09/2026).
@@ -103,4 +103,28 @@ test('asistencia ampliada: la opción tarificada manda; el texto de Occident dic
   assert.equal(g.porClave.asistencia_ampliada, 'no')
   assert.equal(g.porClave.asistencia_viaje, 'si')
   assert.ok(!('asistencia_ampliada' in clasificarCoberturas('hogar', null).porClave))
+})
+
+test('opciones del producto: sustitución, retirada de carné y multas, con los valores REALES de cada compañía', () => {
+  // Allianz, Reale, Generali — tal cual vienen en `tarificacion_precios.opciones`.
+  assert.deepEqual(garantiasDeOpciones([{ etiqueta: 'Vehículo de sustitución', valor: 'No' }]), { vehiculo_sustitucion: 'no' })
+  assert.deepEqual(garantiasDeOpciones([{ etiqueta: 'Asistencia en viaje', valor: 'SIN vehículo de sustitución' }]), { vehiculo_sustitucion: 'no' })
+  assert.deepEqual(garantiasDeOpciones([{ etiqueta: 'Asistencia en viaje', valor: 'CON vehículo de sustitución' }]), { vehiculo_sustitucion: 'si' })
+  assert.deepEqual(garantiasDeOpciones([{ etiqueta: 'Retirada de carnet', valor: 'Sin contratar' }]), { retirada_carnet: 'no' })
+  assert.deepEqual(garantiasDeOpciones([{ etiqueta: 'Retirada de carnet', valor: 'Excluida - 0 €' }]), { retirada_carnet: 'no' })
+  assert.deepEqual(garantiasDeOpciones([{ etiqueta: 'Reclamación de multas', valor: 'Excluida' }]), { defensa_multas: 'no' })
+  // 🪤 Preguntas de tarificación que casarían con los patrones del catálogo: NO son garantías.
+  const ruido = [
+    { etiqueta: 'El conductor habitual es hijo de asegurado', valor: 'No' },
+    { etiqueta: 'Puntos carnet conductor habitual', valor: '12' },
+    { etiqueta: 'Aviso y gestión de multas de tráfico', valor: 'No' },
+    { etiqueta: 'Vehículo renting/leasing', valor: 'No' },
+    { etiqueta: 'Asistencia en Viaje', valor: 'Estándar' },
+  ]
+  assert.deepEqual(garantiasDeOpciones(ruido), {})
+  // La opción manda sobre la lista de coberturas, y solo en las claves del ramo.
+  const g = clasificarCoberturas('auto', [{ nombre: 'Vehículo de sustitución', incluida: true }, { nombre: 'Conductor', incluida: true }], ruido.concat([{ etiqueta: 'Vehículo de sustitución', valor: 'No' }]))
+  assert.equal(g.porClave.vehiculo_sustitucion, 'no')
+  assert.equal(g.porClave.conductor, 'si')
+  assert.ok(!('vehiculo_sustitucion' in clasificarCoberturas('hogar', null, [{ etiqueta: 'Vehículo de sustitución', valor: 'No' }]).porClave))
 })

@@ -150,7 +150,47 @@ export function clasificarCoberturas(
     }
   }
   if ('asistencia_ampliada' in porClave) porClave.asistencia_ampliada = asistenciaAmpliada(lista, opciones)
+  // La opción con la que se tarificó manda sobre la lista de coberturas: es la elección real.
+  for (const [clave, estado] of Object.entries(garantiasDeOpciones(opciones))) {
+    if (clave in porClave) porClave[clave] = estado
+  }
   return { version: VERSION_CATALOGO, porClave }
+}
+
+/**
+ * Opciones del producto que dicen SÍ o NO a una garantía del catálogo (29/09/2026). Lista CERRADA de
+ * etiquetas medidas en `tarificacion_precios.opciones`, no los patrones del catálogo: esos casarían
+ * con preguntas de tarificación («El conductor habitual es hijo de asegurado: No») y fabricarían un
+ * «no» falso. Medido: Allianz «Vehículo de sustitución: No», Generali «Retirada de carnet: Sin
+ * contratar», Reale «Retirada de carnet: Excluida - 0 €» y «Reclamación de multas: Excluida».
+ */
+const OPCION_GARANTIA: readonly { clave: string; etiqueta: RegExp }[] = [
+  { clave: 'vehiculo_sustitucion', etiqueta: /^(vehiculo|coche) de sustitucion$/ },
+  { clave: 'retirada_carnet', etiqueta: /^retirada (del |de )?carne?t?$/ },
+  { clave: 'defensa_multas', etiqueta: /^(reclamacion|defensa|recurso) (de |en )?multas$/ },
+]
+const VALOR_NO = /^(no|sin contratar|no contratad[ao]|excluid[ao])\b/
+const VALOR_SI = /^(si|incluid[ao]|contratad[ao])\b/
+/** Valor que habla de OTRA garantía: Reale «Asistencia en viaje: SIN vehículo de sustitución». */
+const VALOR_SUSTITUCION = /^(sin|con) vehiculo de sustitucion\b/
+
+/** PURO. Lo que las opciones afirman de cada garantía; lo que no afirman, no sale (no es un «no»). */
+export function garantiasDeOpciones(opciones: readonly OpcionProductoLegible[] | null | undefined): Record<string, EstadoGarantia> {
+  const r: Record<string, EstadoGarantia> = {}
+  for (const o of opciones ?? []) {
+    const e = claveCobertura(o.etiqueta)
+    const v = claveCobertura(o.valor)
+    const s = VALOR_SUSTITUCION.exec(v)
+    if (s) {
+      r.vehiculo_sustitucion = s[1] === 'sin' ? 'no' : 'si'
+      continue
+    }
+    const g = OPCION_GARANTIA.find((x) => x.etiqueta.test(e))
+    if (!g) continue
+    if (VALOR_NO.test(v)) r[g.clave] = 'no'
+    else if (VALOR_SI.test(v)) r[g.clave] = 'si'
+  }
+  return r
 }
 
 /** Una opción de producto legible del vendor (`formattedOptions`: etiqueta + valor). */

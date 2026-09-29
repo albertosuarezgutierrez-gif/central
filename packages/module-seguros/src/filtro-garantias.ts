@@ -84,3 +84,30 @@ export function preseleccionFija(ramo: RamoGarantias | null, interruptores: read
   const fijas = new Set(GARANTIAS_PRESELECCIONADAS[ramo] ?? [])
   return interruptores.map((i) => i.clave).filter((c) => fijas.has(c))
 }
+
+export type DiferenciasOpcion = { noIncluye: string[]; sinConfirmar: string[] }
+
+/**
+ * Qué separa a ESTA opción de las demás de la misma parrilla (29/09/2026): «no incluye» y «sin
+ * confirmar» solo en las garantías en las que las opciones NO dicen lo mismo. Sirve para que dos
+ * precios que parecen iguales no se lean como iguales (Allianz con asistencia estándar frente a
+ * Mapfre, que no dice qué asistencia trae). Solo cuentan las opciones ya clasificadas: una sin leer
+ * (`garantias === null`) ni aporta ni recibe diferencias (`null`), y eso no es «igual que las demás».
+ * PURO. Etiquetas del catálogo, en su orden.
+ */
+export function diferenciasDeOpcion(
+  ramo: RamoGarantias,
+  opcion: OpcionFiltrable,
+  opciones: readonly OpcionFiltrable[],
+): DiferenciasOpcion | null {
+  if (opcion.garantias === null) return null
+  const leidas = opciones.filter((o) => o.garantias !== null)
+  const r: DiferenciasOpcion = { noIncluye: [], sinConfirmar: [] }
+  for (const g of CATALOGO_GARANTIAS[ramo]) {
+    if (new Set(leidas.map((o) => estadoDe(o, g.clave))).size < 2) continue
+    const e = estadoDe(opcion, g.clave)
+    if (e === 'no') r.noIncluye.push(g.etiqueta)
+    else if (e === 'no_consta') r.sinConfirmar.push(g.etiqueta)
+  }
+  return r
+}

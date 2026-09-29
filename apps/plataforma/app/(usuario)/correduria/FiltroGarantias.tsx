@@ -16,7 +16,7 @@ import { Check, RefreshCw } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { CeldaCompania } from './CeldaCompania'
 import { eur } from '@/lib/dinero'
-import { filtrarPorGarantias, interruptoresGarantias, preseleccionFija, ramoDeCatalogo } from '@central/module-seguros'
+import { diferenciasDeOpcion, filtrarPorGarantias, interruptoresGarantias, preseleccionFija, ramoDeCatalogo } from '@central/module-seguros'
 import {
   claveCompania,
   ocultarParaPreparar,
@@ -28,6 +28,12 @@ import PrepararPresupuesto from './poliza/[id]/retarificar/PrepararPresupuesto'
 import { pedirPreciosGuardados, type RespuestaPreciosGuardados } from './garantias-acciones'
 
 const PAGINA = 50
+
+/** «Lunas, Robo y 2 más»: la fila no crece sin límite. */
+function resumirLista(xs: readonly string[]): string {
+  const vistas = xs.slice(0, 3).map((x) => x.toLowerCase())
+  return xs.length > 3 ? `${vistas.join(', ')} y ${xs.length - 3} más` : vistas.join(', ')
+}
 
 type Carga = { estado: 'cargando' } | RespuestaPreciosGuardados
 
@@ -106,6 +112,11 @@ export default function FiltroGarantias({
     if (fijas.length > 0) setMarcadas((m) => (m.length > 0 ? m : fijas))
   }, [ramoCat, interruptores])
   const filtro = useMemo(() => filtrarPorGarantias(opciones, marcadas), [opciones, marcadas])
+  // Lo que separa a cada precio de los demás: dos precios parecidos no se leen como iguales.
+  const diferencias = useMemo(
+    () => new Map(opciones.map((o) => [o.id, ramoCat ? diferenciasDeOpcion(ramoCat, o, opciones) : null])),
+    [ramoCat, opciones],
+  )
   const ocultas = useMemo(
     () => ({ companias: new Set<string>(), precios: new Set(opciones.filter((o) => !elegidas.has(o.id)).map((o) => o.id)) }),
     [opciones, elegidas],
@@ -128,6 +139,7 @@ export default function FiltroGarantias({
   const fila = (o: OpcionParrilla) => {
     const marcada = elegidas.has(o.id)
     const sinPrima = o.primaEur === null
+    const dif = diferencias.get(o.id) ?? null
     return (
       <li key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
         <button
@@ -163,6 +175,12 @@ export default function FiltroGarantias({
                 o.capitalServicioEur !== null ? <> · capital {eur(o.capitalServicioEur)}</> : <> · capital no consta</>
               )}
             </span>
+            {dif && dif.noIncluye.length > 0 && (
+              <span style={{ display: 'block', fontSize: 12 }}>No incluye: {resumirLista(dif.noIncluye)}</span>
+            )}
+            {dif && dif.sinConfirmar.length > 0 && (
+              <span style={{ display: 'block', fontSize: 12, color: 'var(--warning)' }}>Sin confirmar: {resumirLista(dif.sinConfirmar)}</span>
+            )}
           </span>
           <span style={{ flex: '0 0 auto', textAlign: 'right' }}>
             <strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{sinPrima ? '—' : eur(o.primaEur as number)}</strong>
