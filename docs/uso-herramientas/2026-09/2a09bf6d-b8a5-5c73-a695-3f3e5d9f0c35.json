@@ -1,30 +1,33 @@
 {
  "sesion": "2a09bf6d-b8a5-5c73-a695-3f3e5d9f0c35",
  "inicio": "2026-09-29T10:07:38.156Z",
- "fin": "2026-09-29T10:20:47.133Z",
- "llamadas": 45,
+ "fin": "2026-09-29T10:52:47.043Z",
+ "llamadas": 133,
  "categorias": {
   "otro": {
-   "llamadas": 3,
-   "chars_in": 465,
-   "chars_out": 19922,
+   "llamadas": 30,
+   "chars_in": 6139,
+   "chars_out": 235176,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 6,
+   "chars_citados": 773810,
    "tools": {
     "Artifact": 1,
-    "ToolSearch": 2
+    "ToolSearch": 8,
+    "ReadNotifications": 19,
+    "SubagentHandback": 1,
+    "Skill": 1
    }
   },
   "bash": {
-   "llamadas": 37,
-   "chars_in": 25748,
-   "chars_out": 188343,
+   "llamadas": 68,
+   "chars_in": 41971,
+   "chars_out": 269339,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 37
+    "Bash": 68
    }
   },
   "mcp:Supabase": {
@@ -50,26 +53,57 @@
    }
   },
   "mcp:github": {
-   "llamadas": 2,
-   "chars_in": 1903,
-   "chars_out": 808,
-   "errores": 0,
+   "llamadas": 12,
+   "chars_in": 5155,
+   "chars_out": 38793,
+   "errores": 2,
    "archivos_citados": 1,
    "chars_citados": 2492,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 1
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__add_issue_comment": 1,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__actions_list": 2,
+    "mcp__github__get_job_logs": 3,
+    "mcp__github__get_check_run": 1,
+    "mcp__github__actions_run_trigger": 1
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 1,
-   "chars_in": 73,
-   "chars_out": 239,
+   "llamadas": 2,
+   "chars_in": 298,
+   "chars_out": 347,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 1
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1151,
+   "chars_out": 1371,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 18,
+   "chars_in": 2028,
+   "chars_out": 63318,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Glob": 3,
+    "Grep": 8,
+    "Read": 7
    }
   }
  }
