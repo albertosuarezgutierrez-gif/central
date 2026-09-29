@@ -144,6 +144,16 @@ export const PERFILES: readonly string[] = [
  */
 export const GEO = { latitude: 37.3948384, longitude: -5.9904272 } as const
 
+/**
+ * La calculadora del seguro del banco (29/09/2026). Solo con el enlace del pie
+ * no la encontraba nadie (Alberto: «no veo en la web la calculadora del banco»),
+ * así que también sale en la portada y en los dos ramos que el banco pide con
+ * la hipoteca: hogar (daños del inmueble) y vida. En la cabecera no cabe: está
+ * medida al límite (ver `NAV_CABECERA`).
+ */
+export const CALCULADORA_HIPOTECA = '/calculadora-bonificacion-hipoteca'
+export const RAMOS_CON_CALCULADORA_HIPOTECA: readonly string[] = ['hogar', 'vida-y-salud']
+
 /** Navegación principal. El orden es el de prioridad comercial, no el alfabético. */
 export const NAV = [
   { href: '/seguros/hogar', texto: 'Hogar' },
