@@ -19,7 +19,7 @@
 // 🚨 Nunca lanza: corre en un cron, y una tarificación rota no puede tumbar a las demás.
 // 🔒 `correduria_id` en toda lectura y escritura: con BYPASSRLS, olvidarlo no da error.
 
-import { clasificarCoberturas, ramoDeCatalogo, type CoberturaParaClasificar, type GarantiasClasificadas } from '@central/module-seguros'
+import { clasificarCoberturas, ramoDeCatalogo, VERSION_CATALOGO, type CoberturaParaClasificar, type GarantiasClasificadas } from '@central/module-seguros'
 import { casarPrecio, type SobreCoberturas } from './coberturas-presupuesto.ts'
 import type { ResumenCoberturasTarificacion } from './coberturas-tarificacion.ts'
 import type { Precio } from './respuesta.ts'
@@ -293,6 +293,72 @@ export async function pasadaBackfillCoberturas(
     if (r.omitido === 'sin_vendor') { total.sinTiempo = ids.length - i - 1; break }
   }
   return total
+}
+
+// ─── Reclasificar con el catálogo nuevo (29/09/2026) ─────────────────────────
+// Subir `VERSION_CATALOGO` no cambia lo ya guardado: nadie comparaba la versión. Esto recalcula las
+// `garantias` de las filas con versión vieja desde lo que YA está en la fila (coberturas + opciones),
+// sin llamar al vendor. Una fila sin coberturas escritas no se toca: la completa el backfill.
+
+export type FilaReclasificar = { id: string; ramo: string; coberturas: unknown; opciones: unknown }
+
+const listaDe = (sobre: unknown): unknown[] | null => {
+  const o = sobre && typeof sobre === 'object' ? (sobre as { lista?: unknown }) : null
+  return o && Array.isArray(o.lista) ? o.lista : null
+}
+
+/** Las garantías de una fila con el catálogo actual. PURO. `null` = ramo sin catálogo (no se toca). */
+export function garantiasActuales(f: FilaReclasificar): GarantiasClasificadas | null {
+  const ramo = ramoDeCatalogo(f.ramo)
+  if (!ramo) return null
+  return clasificarCoberturas(ramo, listaDe(f.coberturas) as CoberturaParaClasificar[] | null, listaDe(f.opciones) as OpcionLegible[] | null)
+}
+
+export async function reclasificarGarantiasViejas(
+  correduriaId: string,
+  opts: { limite?: number } = {},
+  deps: {
+    viejas?: (correduriaId: string, limite: number) => Promise<FilaReclasificar[]>
+    escribir?: (correduriaId: string, id: string, g: GarantiasClasificadas) => Promise<number>
+  } = {},
+): Promise<{ revisadas: number; reclasificadas: number }> {
+  const viejas = deps.viejas ?? viejasReales
+  const escribir = deps.escribir ?? escribirReal
+  const filas = await viejas(correduriaId, Math.max(1, Math.min(opts.limite ?? 500, 2000)))
+  let reclasificadas = 0
+  for (const f of filas) {
+    const g = garantiasActuales(f)
+    if (g) reclasificadas += await escribir(correduriaId, f.id, g)
+  }
+  return { revisadas: filas.length, reclasificadas }
+}
+
+async function viejasReales(correduriaId: string, limite: number): Promise<FilaReclasificar[]> {
+  const { prisma } = await import('../tenant.ts')
+  return prisma.$queryRaw<FilaReclasificar[]>`
+    select p.id::text as id, t.ramo, p.coberturas, p.opciones
+    from tarificacion_precios p
+    join tarificaciones t on t.id = p.tarificacion_id
+    where t.correduria_id = ${correduriaId}::uuid
+      and p.coberturas is not null
+      and p.garantias is not null
+      and coalesce((p.garantias->>'version')::int, 0) < ${VERSION_CATALOGO}::int
+    order by t.creado_at desc
+    limit ${limite}::int
+  `
+}
+
+async function escribirReal(correduriaId: string, id: string, g: GarantiasClasificadas): Promise<number> {
+  const { prisma } = await import('../tenant.ts')
+  return prisma.$executeRaw`
+    update tarificacion_precios p
+    set garantias = ${JSON.stringify(g)}::jsonb
+    from tarificaciones t
+    where t.id = p.tarificacion_id
+      and t.correduria_id = ${correduriaId}::uuid
+      and p.id = ${id}::uuid
+      and coalesce((p.garantias->>'version')::int, 0) < ${g.version}::int
+  `
 }
 
 // ─── BD y vendor de verdad ───────────────────────────────────────────────────

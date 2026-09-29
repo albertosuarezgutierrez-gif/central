@@ -1,52 +1,52 @@
 {
  "sesion": "266e451e-ea6a-5914-8b1d-ef2697d3348c",
  "inicio": "2026-09-29T16:41:38.647Z",
- "fin": "2026-09-29T20:00:39.473Z",
- "llamadas": 294,
+ "fin": "2026-09-29T20:40:43.904Z",
+ "llamadas": 504,
  "categorias": {
   "otro": {
-   "llamadas": 43,
-   "chars_in": 8549,
-   "chars_out": 247983,
+   "llamadas": 57,
+   "chars_in": 21986,
+   "chars_out": 394562,
    "errores": 0,
    "archivos_citados": 4,
    "chars_citados": 143256,
    "tools": {
     "Skill": 4,
-    "ToolSearch": 14,
-    "SubagentHandback": 1,
-    "ReadNotifications": 22,
+    "ToolSearch": 17,
+    "SubagentHandback": 3,
+    "ReadNotifications": 31,
     "ReportFindings": 2
    }
   },
   "bash": {
-   "llamadas": 184,
-   "chars_in": 124898,
-   "chars_out": 657623,
+   "llamadas": 333,
+   "chars_in": 209152,
+   "chars_out": 1080492,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 184
+    "Bash": 333
    }
   },
   "mcp:github": {
-   "llamadas": 27,
-   "chars_in": 10305,
-   "chars_out": 86739,
+   "llamadas": 37,
+   "chars_in": 16053,
+   "chars_out": 116965,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 4984,
    "tools": {
     "mcp__github__list_pull_requests": 3,
-    "mcp__github__create_pull_request": 3,
-    "mcp__github__pull_request_read": 13,
-    "mcp__github__update_pull_request": 2,
-    "mcp__github__merge_pull_request": 2,
-    "mcp__github__actions_list": 1,
+    "mcp__github__create_pull_request": 5,
+    "mcp__github__pull_request_read": 15,
+    "mcp__github__update_pull_request": 4,
+    "mcp__github__merge_pull_request": 4,
+    "mcp__github__actions_list": 2,
     "mcp__github__unsubscribe_pr_activity": 1,
     "mcp__github__search_pull_requests": 1,
-    "mcp__github__subscribe_pr_activity": 1
+    "mcp__github__subscribe_pr_activity": 2
    }
   },
   "agente:agente-architect": {
@@ -61,14 +61,14 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 6,
-   "chars_in": 665,
-   "chars_out": 235632,
+   "llamadas": 13,
+   "chars_in": 1276,
+   "chars_out": 338380,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 6
+    "Read": 13
    }
   },
   "mcp:Supabase": {
@@ -83,53 +83,65 @@
    }
   },
   "sql": {
-   "llamadas": 12,
-   "chars_in": 10535,
-   "chars_out": 21448,
+   "llamadas": 26,
+   "chars_in": 14344,
+   "chars_out": 89038,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 12
+    "mcp__Supabase__execute_sql": 26
    }
   },
   "escritura": {
-   "llamadas": 8,
-   "chars_in": 14133,
-   "chars_out": 122671,
+   "llamadas": 15,
+   "chars_in": 30311,
+   "chars_out": 282357,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 3,
-    "Edit": 5
+    "Write": 6,
+    "Edit": 9
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 7,
-   "chars_in": 845,
-   "chars_out": 4026,
+   "llamadas": 9,
+   "chars_in": 1290,
+   "chars_out": 4373,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2,
-    "mcp__Claude_Code_Remote__send_later": 2,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 3,
+    "mcp__Claude_Code_Remote__send_later": 3,
     "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1,
     "mcp__Claude_Code_Remote__delete_trigger": 2
    }
   },
   "mcp:Vercel": {
-   "llamadas": 5,
-   "chars_in": 369,
-   "chars_out": 23673,
+   "llamadas": 10,
+   "chars_in": 925,
+   "chars_out": 26478,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Vercel__list_teams": 1,
     "mcp__Vercel__list_deployments": 2,
-    "mcp__Vercel__get_runtime_errors": 2
+    "mcp__Vercel__get_runtime_errors": 2,
+    "mcp__Vercel__get_runtime_logs": 5
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 7495,
+   "chars_out": 7869,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 67982,
+   "tools": {
+    "Agent": 2
    }
   }
  }

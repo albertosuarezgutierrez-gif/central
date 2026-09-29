@@ -40,6 +40,7 @@ import type {
 import { lineasTrasEmision } from '@/lib/tras-emision-texto'
 import { ETIQUETA_CAMPO_FIGURA, figurasCompletas, textoCasillaFigura } from '@/lib/figuras-emision-texto'
 import { fechaEs } from '@/lib/ficha-asegura'
+import { cambioDePrecio } from '@/lib/correduria/parrilla-coherencia'
 import { bloqueoCompania, textoBloqueoCorredor } from '@central/module-seguros'
 
 type EstadoPanel =
@@ -375,6 +376,7 @@ export function Emision({
   categoria,
   primaEur,
   producto = null,
+  modalidad = null,
   fechaEfecto = null,
   ofertaImportada = null,
   sustituye = true,
@@ -389,6 +391,9 @@ export function Emision({
   /** Producto de la fila pulsada: con varios precios de la misma compañía y nivel
    *  (Reale llegó a 8), asegura desempata por producto y prima (25/09/2026). */
   producto?: string | null
+  /** Modalidad de la compañía («TERCEROS AMPLIADO + Robo + Multas…»): con varios precios de la misma
+   *  compañía y nivel es lo único que dice CUÁL se está emitiendo. `null` = no consta. */
+  modalidad?: string | null
   /** Fecha de efecto con la que se cotizó (aaaa-mm-dd). Arranca el campo de fecha. */
   fechaEfecto?: string | null
   /** Oferta ya aceptada al importar un proyecto hecho en Avant2 (fila 13, 26/09/2026):
@@ -634,11 +639,14 @@ export function Emision({
     // asegura a mandar la cuenta de la ficha. Un IBAN tecleado la sustituye.
     const cuentaConfirmada = !otraCuenta && cuentaOk && cuenta ? cuenta.enmascarada : null
     if (estado.paso === 'oferta') ofertaAntesDeEmitir.current = estado
+    // 29/09/2026: la prima que se registra y se compara con el presupuesto firmado es la que ha
+    // CONFIRMADO la compañía, no la estimada de la parrilla (podían diferir sin que nadie lo viera).
+    const primaConfirmada = ofertaAntesDeEmitir.current?.primaEur ?? null
     setEstado({ paso: 'emitiendo' })
     const r = await pedirEmision({
       projectId,
       campos,
-      primaAnual: primaEur,
+      primaAnual: primaConfirmada ?? primaEur,
       cuentaConfirmada,
       reintentoConfirmado: opciones.reintentoConfirmado === true,
       acunarExistente: opciones.acunarExistente === true,
@@ -738,9 +746,9 @@ export function Emision({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ margin: 0 }}>Emisión · {compania || '—'}</h2>
-          {categoria && (
-            <p className="muted" style={{ margin: '2px 0 0' }}>
-              {categoria}
+          {(categoria || modalidad) && (
+            <p className="muted" style={{ margin: '2px 0 0', overflowWrap: 'anywhere' }}>
+              {[categoria, modalidad && modalidad !== categoria ? modalidad : null].filter(Boolean).join(' · ')}
             </p>
           )}
         </div>
@@ -1038,6 +1046,9 @@ export function Emision({
             Precio confirmado: <strong>{euroODash(estado.primaEur)}</strong>{' '}
             <span className={`badge ${estado.firmeza === 'firme' ? 'ok' : 'warn'}`}>{estado.firmeza}</span>
           </p>
+          {cambioDePrecio(primaEur, estado.primaEur) && (
+            <p style={{ color: 'var(--warning)', fontWeight: 600 }}>{cambioDePrecio(primaEur, estado.primaEur)}</p>
+          )}
           {estado.caducaEn && (
             <p className="muted">
               Válido hasta el {fechaEs(estado.caducaEn)}: después la compañía no lo emite y habría que confirmar

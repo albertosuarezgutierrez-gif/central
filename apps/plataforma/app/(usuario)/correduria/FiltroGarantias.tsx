@@ -25,6 +25,7 @@ import {
   textoDescuentos,
   type OpcionParrilla,
 } from '@/lib/filtro-garantias-parrilla'
+import { avisosCompania, comunesParrilla, partirSinLeer } from '@/lib/correduria/parrilla-coherencia'
 import PrepararPresupuesto from './poliza/[id]/retarificar/PrepararPresupuesto'
 import { pedirPreciosGuardados, type RespuestaPreciosGuardados } from './garantias-acciones'
 
@@ -108,6 +109,23 @@ export default function FiltroGarantias({
     () => (guardada ? opcionesDeParrilla(guardada.precios) : { opciones: [] as OpcionParrilla[], sinId: 0, estado: 'no_manda' as const }),
     [guardada],
   )
+  // Mientras se leen las coberturas, se relee lo guardado SOLO (un GET gratis) cada 3 s, hasta ~30 s:
+  // sin esto, lo que aún no se ha leído se quedaba en pantalla como si la compañía «no dijera».
+  const leyendo = estado === 'leyendo' || estado === 'parcial'
+  const lecturasAuto = useRef(0)
+  // Una cotización nueva en la misma pantalla vuelve a tener sus 10 relecturas.
+  useEffect(() => {
+    lecturasAuto.current = 0
+  }, [tarificacionId])
+  useEffect(() => {
+    if (!leyendo || lecturasAuto.current >= 10) return
+    const t = setTimeout(() => {
+      lecturasAuto.current += 1
+      void leer()
+    }, 3000)
+    return () => clearTimeout(t)
+  }, [leyendo, guardada, leer])
+  const comunes = useMemo(() => comunesParrilla(opciones), [opciones])
   const ramoCat = ramoDeCatalogo(ramo)
   const interruptores = useMemo(() => (ramoCat ? interruptoresGarantias(ramoCat, opciones) : []), [ramoCat, opciones])
   // La grúa (coche y moto) sale ya marcada, igual que en el portal del cliente. Una sola vez: si el
@@ -120,6 +138,8 @@ export default function FiltroGarantias({
     if (fijas.length > 0) setMarcadas((m) => (m.length > 0 ? m : fijas))
   }, [ramoCat, interruptores])
   const filtro = useMemo(() => filtrarPorGarantias(opciones, marcadas), [opciones, marcadas])
+  // Lo que aún no se ha leído NO es «no dice»: va aparte y se coloca solo al leerse.
+  const { leidas: sinDato, sinLeer } = useMemo(() => partirSinLeer(filtro.sinDato), [filtro])
   // Lo que separa a cada precio de los demás: dos precios parecidos no se leen como iguales.
   const diferencias = useMemo(
     () => new Map(opciones.map((o) => [o.id, ramoCat ? diferenciasDeOpcion(ramoCat, o, opciones) : null])),
@@ -148,6 +168,13 @@ export default function FiltroGarantias({
     const marcada = elegidas.has(o.id)
     const sinPrima = o.primaEur === null
     const dif = diferencias.get(o.id) ?? null
+    const av = avisosCompania(o.avisos)
+    const franquicia =
+      o.franquiciaEur === null
+        ? comunes.franquiciaNoDeclaradaEnTodas ? null : 'franquicia no declarada'
+        : o.franquiciaEur === 0 ? 'sin franquicia' : `franquicia ${eur(o.franquiciaEur)}`
+    const capital = ramoCat === 'decesos' ? (o.capitalServicioEur !== null ? `capital ${eur(o.capitalServicioEur)}` : 'capital no consta') : null
+    const lineaFranquicia = [franquicia, capital].filter(Boolean).join(' · ')
     return (
       <li key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
@@ -178,12 +205,10 @@ export default function FiltroGarantias({
           </span>
           <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: 13, lineHeight: 1.3 }}>
             <span style={{ display: 'block', overflowWrap: 'anywhere' }}>{o.categoria ?? <span style={{ color: 'var(--muted)' }}>cobertura sin declarar</span>}</span>
-            <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>
-              {o.franquiciaEur === null ? 'franquicia no declarada' : o.franquiciaEur === 0 ? 'sin franquicia' : `franquicia ${eur(o.franquiciaEur)}`}
-              {ramoCat === 'decesos' && (
-                o.capitalServicioEur !== null ? <> · capital {eur(o.capitalServicioEur)}</> : <> · capital no consta</>
-              )}
-            </span>
+            {o.modalidad && o.modalidad !== o.categoria && (
+              <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, overflowWrap: 'anywhere' }}>{o.modalidad}</span>
+            )}
+            {lineaFranquicia && <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>{lineaFranquicia}</span>}
             {textoDescuentos(o.descuentos) && (
               <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>{textoDescuentos(o.descuentos)}</span>
             )}
@@ -199,7 +224,7 @@ export default function FiltroGarantias({
           </span>
           <span style={{ flex: '0 0 auto', textAlign: 'right' }}>
             <strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{sinPrima ? '—' : eur(o.primaEur as number)}</strong>
-            {o.firmeza !== 'firme' && <span style={{ display: 'block', color: 'var(--muted)', fontSize: 11 }}>{o.firmeza}</span>}
+            {o.firmeza !== 'firme' && comunes.firmezaComun === null && <span style={{ display: 'block', color: 'var(--muted)', fontSize: 11 }}>{o.firmeza}</span>}
           </span>
         </button>
         {emitir && !sinPrima && (
@@ -213,6 +238,18 @@ export default function FiltroGarantias({
           </button>
         )}
         </div>
+        {av.textos.length > 0 && (
+          <details style={{ padding: '0 4px 8px 38px' }}>
+            <summary style={{ cursor: 'pointer', minHeight: 44, paddingTop: 12, fontSize: 12, color: av.revision ? 'var(--warning)' : 'var(--muted)', fontWeight: av.revision ? 600 : 400 }}>
+              {av.revision ? 'La compañía tiene que aceptar o revisar el riesgo' : 'Avisos de la compañía'} ({av.textos.length})
+            </summary>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12 }}>
+              {av.textos.map((t, i) => (
+                <li key={i} style={{ overflowWrap: 'anywhere' }}>{t}</li>
+              ))}
+            </ul>
+          </details>
+        )}
         {emitir && emitiendo === o.id && <div style={{ padding: '4px 0 12px' }}>{emitir(o, () => setEmitiendo(null))}</div>}
       </li>
     )
@@ -289,6 +326,7 @@ export default function FiltroGarantias({
               <button type="button" onClick={recargar} disabled={recargando} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
                 <RefreshCw size={14} /> {recargando ? 'Leyendo…' : 'Recargar'}
               </button>
+              {lecturasAuto.current >= 10 && <span className="muted">Tarda más de lo normal: recarga en un rato.</span>}
             </p>
           )}
           {estado === 'no_manda' && opciones.length > 0 && (
@@ -344,11 +382,24 @@ export default function FiltroGarantias({
                   </button>
                 )}
               </div>
+              {marcadas.length > 0 && sinLeer.length > 0 && (
+                <p style={{ fontSize: 12, color: 'var(--warning)', margin: '6px 0 0' }}>
+                  Los atajos solo eligen entre las que ya se sabe que incluyen {etiquetasMarcadas.join(' y ')}: faltan {sinLeer.length} por leer.
+                </p>
+              )}
             </div>
           )}
 
           {opciones.length > 0 && (
             <>
+              {comunes.franquiciaNoDeclaradaEnTodas && (
+                <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>Ninguna compañía declara franquicia en esta cotización.</p>
+              )}
+              {comunes.firmezaComun !== null && comunes.firmezaComun !== 'firme' && (
+                <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+                  Todos los precios son «{comunes.firmezaComun}»: la compañía confirma el definitivo antes de emitir.
+                </p>
+              )}
               <p style={{ fontSize: 13, margin: '8px 0 0' }}>
                 <strong>{filtro.visibles.length}</strong> {marcadas.length ? `incluyen ${etiquetasMarcadas.join(' y ')}` : 'opciones'}, de la más barata a la más cara ·{' '}
                 <strong>{nElegidas}</strong> marcada{nElegidas === 1 ? '' : 's'} para mandar.
@@ -360,16 +411,25 @@ export default function FiltroGarantias({
                 </button>
               )}
 
-              {marcadas.length > 0 && filtro.sinDato.length > 0 && (
+              {marcadas.length > 0 && sinLeer.length > 0 && (
+                <div style={{ marginTop: 10, borderLeft: '3px solid var(--border)', paddingLeft: 10 }}>
+                  <p style={{ fontSize: 13, margin: '4px 0' }}>
+                    <strong>{sinLeer.length}</strong> aún sin leer sus coberturas: todavía no se sabe si incluye{sinLeer.length === 1 ? '' : 'n'}{' '}
+                    {etiquetasMarcadas.join(' y ')}. {leyendo && lecturasAuto.current < 10 ? 'Se colocan solas en cuanto se lean.' : 'Pulsa «Recargar» en un momento.'}
+                  </p>
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>{sinLeer.slice(0, PAGINA).map(fila)}</ul>
+                </div>
+              )}
+              {marcadas.length > 0 && sinDato.length > 0 && (
                 <div style={{ marginTop: 10, borderLeft: '3px solid var(--warning)', paddingLeft: 10 }}>
                   <button type="button" onClick={() => setVerSinDato((v) => !v)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }} aria-expanded={verSinDato}>
-                    {filtro.sinDato.length} no dice{filtro.sinDato.length === 1 ? '' : 'n'} si incluye{filtro.sinDato.length === 1 ? '' : 'n'} {etiquetasMarcadas.join(' y ')}
+                    {sinDato.length} no dice{sinDato.length === 1 ? '' : 'n'} si incluye{sinDato.length === 1 ? '' : 'n'} {etiquetasMarcadas.join(' y ')}
                     {' '}— {verSinDato ? 'ocultar lista' : 'ver'}
                   </button>
                   {/* Montaje perezoso: la lista solo existe en el DOM si se abre. */}
-                  {verSinDato && <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>{filtro.sinDato.slice(0, PAGINA).map(fila)}</ul>}
-                  {verSinDato && filtro.sinDato.length > PAGINA && (
-                    <p className="muted" style={{ fontSize: 12 }}>Y {filtro.sinDato.length - PAGINA} más: afina el filtro para verlas.</p>
+                  {verSinDato && <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>{sinDato.slice(0, PAGINA).map(fila)}</ul>}
+                  {verSinDato && sinDato.length > PAGINA && (
+                    <p className="muted" style={{ fontSize: 12 }}>Y {sinDato.length - PAGINA} más: afina el filtro para verlas.</p>
                   )}
                 </div>
               )}

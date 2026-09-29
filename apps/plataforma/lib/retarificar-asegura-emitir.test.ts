@@ -237,3 +237,12 @@ test('el panel de emisión trae su propio CSS y no depende de la página que lo 
     assert.ok(estilos.includes(sel), `falta ${sel} en estilos.ts`)
   }
 })
+
+// 29/09/2026: se emitía con la prima ESTIMADA de la parrilla aunque la compañía hubiera confirmado
+// otra. Se emite (y se compara con lo firmado) con la confirmada, y la pantalla dice si cambió.
+test('emision.tsx emite con la prima CONFIRMADA por la compañía y avisa del cambio (lee el fuente)', () => {
+  const src = readFileSync(fileURLToPath(new URL('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx', import.meta.url)), 'utf8')
+  assert.match(src, /primaAnual: primaConfirmada \?\? primaEur/)
+  assert.match(src, /const primaConfirmada = ofertaAntesDeEmitir\.current\?\.primaEur \?\? null/)
+  assert.match(src, /cambioDePrecio\(primaEur, estado\.primaEur\)/)
+})

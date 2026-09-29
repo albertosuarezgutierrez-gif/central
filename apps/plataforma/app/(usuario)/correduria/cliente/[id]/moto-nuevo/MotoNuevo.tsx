@@ -43,6 +43,7 @@ import {
 } from '../../../oportunidad/[id]/figuras-form'
 import { BloqueFigura } from '../../../oportunidad/[id]/BloqueFigura'
 import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
+import { FallosTarificacion } from '../../../FallosTarificacion'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -1106,6 +1107,7 @@ function Precios({
                   categoria={o.categoria ?? ''}
                   primaEur={o.primaEur}
                   producto={o.producto}
+                  modalidad={o.modalidad}
                   sustituye={sustituye}
                   onCerrar={cerrar}
                 />
@@ -1114,21 +1116,7 @@ function Precios({
       ) : (
         <ListaPrecios {...propsLista} />
       )}
-      {r.fallos.length > 0 && (
-        <details style={{ marginTop: 8 }}>
-          <summary style={{ color: 'var(--muted)', cursor: 'pointer', minHeight: 44, fontSize: 12 }}>
-            {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
-          </summary>
-          <ul style={{ margin: '6px 0 0', fontSize: 13 }}>
-            {r.fallos.map((f, i) => (
-              <li key={`${f.compania}-${i}`}>
-                <strong>{f.compania ?? '—'}</strong>{f.producto ? ` · ${f.producto}` : ''}: {f.motivo ?? 'sin motivo declarado'}
-                {f.tambienDioPrecio && <> <Badge tono="positivo">esta compañía sí dio otro precio</Badge></>}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+      <FallosTarificacion fallos={r.fallos} />
       {r.supuestos.length > 0 && (
         <div style={{ marginTop: 12, borderLeft: '3px solid var(--warning)', paddingLeft: 10 }}>
           <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 4px' }}>Este precio sale con estos supuestos. Si alguno no es cierto, la prima real cambia:</p>

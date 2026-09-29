@@ -25,6 +25,10 @@ export type OpcionParrilla = OpcionFiltrable & {
   bloqueo?: string | null
   /** Descuentos comerciales con los que se tarificó. `null` = no se sabe (no «sin descuento»). */
   descuentos: DescuentoComercial[] | null
+  /** Lo que la compañía dice que lleva ESTA opción («TERCEROS AMPLIADO + Robo + …»). `null` = no lo dice. */
+  modalidad: string | null
+  /** Avisos de la compañía tal cual (aceptación del riesgo, consulta Sinco…). `[]` = ninguno. */
+  avisos: string[]
 }
 
 export type EstadoCoberturas =
@@ -65,6 +69,8 @@ export function opcionesDeParrilla(precios: readonly Precio[]): { opciones: Opci
       capitalServicioEur: capitalServicio(p.avisos ?? null),
       bloqueo: bloqueoCompania(p.avisos ?? null),
       descuentos: p.descuentos ?? null,
+      modalidad: typeof p.modalidad === 'string' && p.modalidad.trim() !== '' ? p.modalidad.trim() : null,
+      avisos: Array.isArray(p.avisos) ? p.avisos.filter((a): a is string => typeof a === 'string') : [],
     })
   }
   const estado: EstadoCoberturas =

@@ -3,8 +3,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
+import { VERSION_CATALOGO } from '@central/module-seguros'
 import {
-  backfillCoberturasTarificacion, ofertaDeFila, ofertaParaOpciones, opcionesDeOferta, pasadaBackfillCoberturas, planOfertas,
+  backfillCoberturasTarificacion, garantiasActuales, ofertaDeFila, ofertaParaOpciones, opcionesDeOferta, pasadaBackfillCoberturas, planOfertas,
+  reclasificarGarantiasViejas,
   type CabeceraBackfill, type DepsBackfill, type FilaSinOferta, type ResumenBackfill,
 } from './backfill-coberturas.ts'
 import type { Precio } from './respuesta.ts'
@@ -189,4 +191,25 @@ test('backfill: sin oferta guardada relee el proyecto para encontrarla; sin casa
   await backfillCoberturasTarificacion(IDS, d.deps)
   assert.equal(d.refrescos, 1)
   assert.deepEqual(escritas, [{ id: 'a', estado: 'leidas' }, { id: 'z', estado: 'sin_precio' }])
+})
+
+// 29/09/2026: subir la versión del catálogo no cambiaba lo ya guardado. Se reclasifica desde la fila.
+test('reclasificar: recalcula con el catálogo actual desde coberturas + opciones guardadas', async () => {
+  const reale = { id: 'r1', ramo: 'auto', coberturas: { estado: 'vacias', lista: [] }, opciones: { estado: 'leidas', lista: [{ etiqueta: 'Daños por colisión animal', valor: 'No' }] } }
+  const g = garantiasActuales(reale)
+  assert.equal(g?.version, VERSION_CATALOGO)
+  assert.equal(g?.porClave.colision_animales, 'no')
+  // Un fallo de lectura no se convierte en «no cubre»: sin lista, lo que no dice la ley queda no_consta.
+  const fallo = garantiasActuales({ id: 'f1', ramo: 'auto', coberturas: { estado: 'fallo', lista: null }, opciones: null })
+  assert.ok(fallo && !Object.values(fallo.porClave).includes('no'))
+  // Ramo sin catálogo: no se toca.
+  assert.equal(garantiasActuales({ id: 'x', ramo: 'comercio', coberturas: { lista: [] }, opciones: null }), null)
+
+  const escritas: string[] = []
+  const r = await reclasificarGarantiasViejas('c1', {}, {
+    viejas: async () => [reale, { id: 'x', ramo: 'comercio', coberturas: { lista: [] }, opciones: null }],
+    escribir: async (_c, id) => { escritas.push(id); return 1 },
+  })
+  assert.deepEqual(r, { revisadas: 2, reclasificadas: 1 })
+  assert.deepEqual(escritas, ['r1'])
 })

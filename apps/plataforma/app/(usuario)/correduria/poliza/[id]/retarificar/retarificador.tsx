@@ -47,6 +47,7 @@ import {
 
 import type { ContextoDefensa } from '@/lib/contexto-defensa'
 import { fechaEs } from '@/lib/ficha-asegura'
+import { FallosTarificacion } from '../../../FallosTarificacion'
 export type { ContextoDefensa }
 
 /**
@@ -1968,6 +1969,7 @@ function Precios({
             categoria={p.categoria ?? ''}
             primaEur={p.primaEur ?? null}
             producto={p.producto ?? null}
+            modalidad={p.modalidad ?? null}
             fechaEfecto={r.fechaEfecto}
             ramo={ramo}
             onCerrar={() => setAbierta(null)}
@@ -2009,27 +2011,7 @@ function Precios({
           de pedirla.
         </p>
       ) : (
-      r.fallos.length > 0 && (
-        <details style={{ marginTop: 8 }}>
-          <summary className="muted" style={{ cursor: 'pointer', minHeight: 44, fontSize: 12 }}>
-            {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
-          </summary>
-          <ul style={{ margin: '6px 0 0' }}>
-            {r.fallos.map((f, i) => (
-              <li key={`${f.compania}-${i}`}>
-                <strong>{f.compania ?? '—'}</strong>
-                {f.producto ? ` · ${f.producto}` : ''}: {f.motivo ?? 'sin motivo declarado'}
-                {f.tambienDioPrecio && (
-                  <>
-                    {' '}
-                    <span className="badge ok">esta compañía sí dio otro precio</span>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )
+      <FallosTarificacion fallos={r.fallos} />
       )}
 
       {/* Los supuestos, OTRA VEZ y al lado del precio: son la letra pequeña de
