@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import {
-  decidirEfecto, elegirPrecioNuevo, esResumenNuevo, fechaEfectoDelPrecio, figurasPendientes, huellaResumenNuevo, leerFechaEfecto, precioCaducado, ramoNuevoValido, textoResumenNuevo,
+  correoDeEmision, enmascararEmail, decidirEfecto, elegirPrecioNuevo, esResumenNuevo, fechaEfectoDelPrecio, figurasPendientes, huellaResumenNuevo, leerFechaEfecto, precioCaducado, ramoNuevoValido, textoResumenNuevo,
   type ResumenEmisionNueva,
 } from './correduria-emision-nueva-tg.ts'
 import type { Precio } from './retarificar-asegura.ts'
@@ -239,4 +239,55 @@ test('bloqueo anunciado por la compañía: va ARRIBA del resumen, con el consejo
   const t = textoResumenNuevo({ ...R, avisos: ['Observaciones de la compañía: ESTA POLIZA QUEDARÁ BLOQUEADA POR LA SIGUIENTE RAZÓN: INCENDIO-ROBO SIN DAÑOS, Prima calculada'] })
   assert.ok(t.indexOf('⛔') >= 0 && t.indexOf('⛔') < t.indexOf('Emisión NUEVA'))
   assert.match(t, /INCENDIO-ROBO SIN DAÑOS.*básica/)
+})
+
+// ─── Lo que el botón enseña antes de emitir (29/09/2026, Alberto: «revisa q el botón tiene todos los datos») ──
+const COMPLETO: ResumenEmisionNueva = {
+  ...R, tomadorDni: '*****335B', fechaMatriculacion: '2005-01-01', kmAnuales: 10000,
+  anterior: { companiaCodigo: 'C0613', aniosAsegurado: 5, aniosSinSiniestros: 5 },
+  correo: { destino: 'a***@gmail.com' },
+}
+
+test('el botón enseña DNI, matriculación, km, seguro anterior y a qué correo irá el aviso', () => {
+  const t = textoResumenNuevo(COMPLETO)
+  assert.match(t, /DNI \*\*\*\*\*335B/)
+  assert.match(t, /Matriculación <b>01\/01\/2005<\/b> · 10\.000 km\/año/)
+  assert.match(t, /C0613 · 5 años asegurado · 5 sin siniestros/)
+  assert.match(t, /le llega un correo a <b>a\*\*\*@gmail\.com<\/b>/)
+  assert.doesNotMatch(t, /@gmail\.com.*@gmail/)
+})
+
+test('lo que no consta se dice, nunca se calla: sin DNI, sin fecha, sin anterior, correo sin comprobar', () => {
+  const t = textoResumenNuevo({ ...R, tomadorDni: null, fechaMatriculacion: null, kmAnuales: null, anterior: null, correo: null })
+  assert.match(t, /DNI <i>no consta<\/i>/)
+  assert.match(t, /Matriculación <b>no consta<\/b>/)
+  assert.match(t, /Seguro anterior declarado: <i>no consta<\/i>/)
+  assert.match(t, /No he podido comprobar a qué correo irá el aviso/)
+  assert.match(textoResumenNuevo({ ...R, correo: { destino: null, motivo: 'la ficha no tiene correo' } }), /NO<\/b> se le manda correo: la ficha no tiene correo/)
+})
+
+test('correoDeEmision sigue la regla de asegura: a su correo del portal, o ninguno con motivo; sin lectura, null', () => {
+  assert.deepEqual(correoDeEmision({ estado: 'invitable', emailInvitacion: 'antonio@gmail.com' }), { destino: 'a***@gmail.com' })
+  assert.deepEqual(correoDeEmision({ estado: 'ya_entra', emailInvitacion: 'antonio@gmail.com' }), { destino: 'a***@gmail.com' })
+  assert.equal(correoDeEmision({ estado: 'sin_email', emailInvitacion: null })?.destino, null)
+  assert.equal(correoDeEmision({ estado: 'resuelve_a_otra', emailInvitacion: 'x@y.es' })?.destino, null)
+  assert.equal(correoDeEmision({ estado: 'no_comprobado', emailInvitacion: null }), null)
+  assert.equal(correoDeEmision(null), null)
+  assert.equal(enmascararEmail('no-es-correo'), null)
+})
+
+test('la huella sobrevive al guardado en jsonb con los campos nuevos (ninguno queda undefined)', () => {
+  const ida = JSON.parse(JSON.stringify(COMPLETO)) as ResumenEmisionNueva
+  assert.equal(huellaResumenNuevo(ida), huellaResumenNuevo(COMPLETO))
+  const vacio = { ...R, tomadorDni: null, fechaMatriculacion: null, kmAnuales: null, anterior: null, correo: null }
+  assert.equal(huellaResumenNuevo(JSON.parse(JSON.stringify(vacio))), huellaResumenNuevo(vacio))
+})
+
+test('prepararEmisionNueva rellena los datos del botón desde la tarificación, la ficha y el portal', () => {
+  const f = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  const b = f.slice(f.indexOf('async function prepararEmisionNueva'), f.indexOf('async function supuestosDelPrecio'))
+  // `?? null`: un campo undefined desaparece al guardarse en jsonb y la huella del botón ya no cuadraría.
+  for (const campo of ['tomadorDni:', 'fechaMatriculacion: guardada.vehiculo?.fechaMatriculacion ?? null', 'kmAnuales: guardada.vehiculo?.kmAnuales ?? null', 'anterior:', 'correo: correoDeEmision(portal)']) {
+    assert.ok(b.includes(campo), `falta ${campo}`)
+  }
 })
