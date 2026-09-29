@@ -36,7 +36,7 @@ export const PATCH = auditado(async (req: Request) => {
       const nota = typeof b.nota === 'string' && b.nota.trim() !== '' ? b.nota.trim().slice(0, 500) : null
       const baja = await darDeBajaPorDevolucion(correduriaId, b.reciboId, motivo, nota, actor)
       if (!baja.ok) return NextResponse.json({ estado: baja.estado, motivo: baja.motivo }, { status: baja.status })
-      return NextResponse.json({ estado: 'ok', oportunidadId: baja.oportunidadId, vence: baja.vence, llamada: baja.llamada, oportunidadExistente: baja.oportunidadExistente })
+      return NextResponse.json({ estado: 'ok', oportunidadId: baja.oportunidadId, vence: baja.vence, llamada: baja.llamada })
     }
     const r = await resolverDevolucion(correduriaId, b.reciboId, actor)
     if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })

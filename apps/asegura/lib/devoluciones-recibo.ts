@@ -30,6 +30,7 @@ import {
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { MARCA_CIERRE_AUTOMATICO } from './oportunidad-seguimiento'
 import { ROTULO_MOTIVO_BAJA, fechaLlamada, vencimientoCompetencia, type MotivoBaja } from './baja-devolucion-reglas'
 
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
@@ -251,6 +252,12 @@ async function asegurarTareaDevolucion(tx: Tx, correduriaId: string, r: ReciboSe
   if (hito === null) return 'extinguida'
   // En fila por póliza: el triaje y la pasada diaria pueden llegar a la vez sin oportunidad abierta.
   await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`devolucion:${r.polizaId}`}))`
+  // Tras el candado, la póliza puede haberse dado de baja («el cliente se va») mientras esta pasada
+  // esperaba: ya no se persigue el impago ni se cuelga la llamada de la oportunidad del año que viene.
+  const [viva] = await tx.$queryRaw<{ ok: boolean }[]>`
+    select (estado::text = any(${ESTADOS_VIGENTES}::text[]) and baja_verificada_at is null) as ok
+    from polizas where id = ${r.polizaId}::uuid`
+  if (!viva?.ok) return 'extinguida'
   // Una vez por recibo y hito en TODA la correduría, y nunca otra vez si Alberto ya CERRÓ la
   // oportunidad de este recibo: cerrarla es su decisión, y reabrirla cada día sería ruido.
   const [visto] = await tx.$queryRaw<{ hito: number; cerrada: number }[]>`
@@ -431,7 +438,7 @@ export type { HitoDevolucion }
 // ── «El cliente se va» ────────────────────────────────────────────────────────
 
 export type BajaPorDevolucion =
-  | { ok: true; oportunidadId: string | null; vence: string | null; llamada: string; oportunidadExistente: boolean }
+  | { ok: true; oportunidadId: string; vence: string | null; llamada: string }
   | { ok: false; estado: 'no_encontrado' | 'conflicto' | 'invalido'; motivo: string; status: number }
 
 /**
@@ -469,6 +476,9 @@ export async function darDeBajaPorDevolucion(
       where r.id = ${reciboId}::uuid and r.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null
       for update of p`
     if (!r) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Ese recibo no es de esta correduría.', status: 404 }
+    // El mismo candado que la tarea de devolución (triaje y pasada diaria): o va ella antes y esta
+    // la cierra, o va esta antes y aquella ve la baja y no cuelga nada.
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`devolucion:${r.polizaId}`}))`
     if (r.situacion !== 'devuelto') {
       return { ok: false as const, estado: 'conflicto' as const, motivo: 'Solo se da de baja desde un recibo DEVUELTO.', status: 409 }
     }
@@ -488,7 +498,7 @@ export async function darDeBajaPorDevolucion(
     await tx.$executeRaw`
       update polizas set baja_verificada_at = now(), baja_verificada_por = ${actor}, baja_motivo = ${motivo},
              baja_estado_previo = estado::text, estado = 'cancelada', updated_at = now()
-      where id = ${r.polizaId}::uuid`
+      where id = ${r.polizaId}::uuid and correduria_id = ${correduriaId}::uuid`
     anotarCambio({ entidad: 'poliza', id: r.polizaId, campo: 'estado', antes: r.estado, despues: 'cancelada' })
 
     // 3. Lo que perseguía el impago: oportunidades de ESA póliza, sus tareas y el correo propuesto.
@@ -510,7 +520,7 @@ export async function darDeBajaPorDevolucion(
     }
     await tx.$executeRaw`
       update gestiones set estado = 'cerrada', updated_at = now(),
-             observaciones = observaciones || ${'\n— Cerrada: el cliente se va (baja verificada).'}
+             observaciones = observaciones || ${`\n${MARCA_CIERRE_AUTOMATICO} perdida (el cliente se va: baja verificada).`}
       where correduria_id = ${correduriaId}::uuid and estado <> 'cerrada'
         and (oportunidad_id in (select o.id from oportunidades o where o.estado::text = 'perdida'
                                   and (o.poliza_id = ${r.polizaId}::uuid or o.info_riesgo->>'polizaId' = ${r.polizaId}))
@@ -521,18 +531,15 @@ export async function darDeBajaPorDevolucion(
       where correduria_id = ${correduriaId}::uuid and poliza_id = ${r.polizaId}::uuid
         and origen = ${'recibo_devuelto'} and estado = 'pendiente'`
 
-    // 4. La oportunidad del año que viene. Si ya hay una abierta de ese cliente y ramo, se deja esa.
+    // 4. La oportunidad del año que viene.
     const vence = vencimientoCompetencia(r.efecto, r.vencePoliza, hoy)
     const llamada = fechaLlamada(vence, hoy)
-    const [abierta] = await tx.$queryRaw<{ id: string }[]>`
-      select id::text as id from oportunidades
-      where correduria_id = ${correduriaId}::uuid and cliente_id = ${r.clienteId}::uuid
-        and tipo::text = ${r.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
-      limit 1`
-    let oportunidadId: string | null = abierta?.id ?? null
     const motivoTxt = ROTULO_MOTIVO_BAJA[motivo]
     const cia = r.compania ?? 'la compañía'
-    if (!abierta) {
+    let oportunidadId = ''
+    // Una por PÓLIZA, no por cliente+ramo: con dos motos (o una flota) la oportunidad abierta de la otra
+    // matrícula no cubre esta. Las abiertas de ESTA póliza ya se han perdido arriba.
+    {
       const [o] = await tx.$queryRaw<{ id: string }[]>`
         insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_id, info_riesgo)
         values (${correduriaId}::uuid, ${r.clienteId}::uuid, cast(${r.ramo} as tipo_seguro), 'renovacion', 'competencia',
@@ -565,6 +572,6 @@ export async function darDeBajaPorDevolucion(
     await tx.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
       values (${correduriaId}::uuid, ${r.clienteId}::uuid, ${r.polizaId}::uuid, cast('gestion' as tipo_historial_interno), ${texto})`
-    return { ok: true as const, oportunidadId, vence, llamada, oportunidadExistente: !!abierta }
+    return { ok: true as const, oportunidadId, vence, llamada }
   })
 }

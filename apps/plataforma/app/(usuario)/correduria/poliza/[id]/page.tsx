@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { NECESARIOS_EMISION_AUTO, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
 import type { CapitalAsegurado } from '@central/module-seguros'
+import { esEstadoVigente } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
@@ -70,7 +71,7 @@ export default async function PolizaPage({ params, searchParams }: {
           </>}
           sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <span>{p.bajaVerificada
-              ? `⚪ anulada · baja verificada el ${fmt(p.bajaVerificada.en)}${p.bajaVerificada.por ? ` por ${p.bajaVerificada.por}` : ''} · pendiente de que CIMA la confirme`
+              ? `⚪ anulada · baja verificada el ${fmt(p.bajaVerificada.en)}${p.bajaVerificada.por ? ` por ${p.bajaVerificada.por}` : ''} · ${estadoBajaCima(p.bajaVerificada)}`
               : p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
             {p.situacion && <span title="Situación según la compañía (EIAC)">situación: {p.situacion}</span>}
             {p.retarificable && (
@@ -500,7 +501,7 @@ function contextoWhatsapp(p: Poliza): ContextoWhatsappDevuelto | null {
 
 function Recibos({ p }: { p: Poliza }) {
   // «El cliente se va» solo sobre una póliza que sigue en vigor y que nadie ha dado ya de baja.
-  const puedeBaja = p.viva && p.estado !== 'cancelada' && p.bajaVerificada === null
+  const puedeBaja = p.viva && esEstadoVigente(p.estado) && p.bajaVerificada === null
   const r = p.recibos
   const wa = contextoWhatsapp(p)
   const enRiesgo = comisionEnRiesgo(p.listaRecibos)
@@ -766,6 +767,13 @@ function NoSePudo({ estado }: { estado: { estado: 'sin_configurar' } | { estado:
 
 const tabla: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }
 const muted: React.CSSProperties = { fontSize: 13, color: 'var(--muted)', margin: 0 }
+
+/** Lo que CIMA ha dicho desde que se dio de baja a mano: nada, que la confirma, o que la sigue dando en vigor. */
+function estadoBajaCima(b: NonNullable<Poliza['bajaVerificada']>): string {
+  if (b.estadoCima === null) return 'pendiente de que CIMA la confirme'
+  if (esEstadoVigente(b.estadoCima)) return `⚠️ CIMA la sigue dando en vigor (${b.cimaEn ? fmt(b.cimaEn) : 'sin fecha'}): mira en el portal de la compañía si al final pagó`
+  return `CIMA la confirma (${b.estadoCima.replace(/_/g, ' ')}${b.cimaEn ? `, ${fmt(b.cimaEn)}` : ''})`
+}
 
 function fmt(iso: string): string {
   const [y, m, d] = iso.split('-')

@@ -41,7 +41,11 @@ function sumarDias(iso: string, dias: number): string {
  * vencimiento de la póliza. `null` si no hay ninguna fecha legible: no se inventa un día.
  */
 export function vencimientoCompetencia(efectoRecibo: string | null, vencimientoPoliza: string | null, hoy: string): string | null {
-  const base = isoValida(efectoRecibo) ?? isoValida(vencimientoPoliza)
+  return siguienteAniversario(isoValida(efectoRecibo), hoy) ?? siguienteAniversario(isoValida(vencimientoPoliza), hoy)
+}
+
+/** El primer aniversario de `base` posterior a hoy, en los 3 años siguientes; `null` si no hay base o es más vieja. */
+function siguienteAniversario(base: string | null, hoy: string): string | null {
   if (!base) return null
   const [a, m, d] = base.split('-').map(Number)
   for (let n = 0; n <= 3; n++) {

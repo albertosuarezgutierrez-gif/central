@@ -517,7 +517,7 @@ export async function resolverDevolucionAsegura(reciboId: string, actor: string)
 }
 
 export type BajaDevolucion =
-  | { estado: 'ok'; vence: string | null; llamada: string | null; oportunidadExistente: boolean }
+  | { estado: 'ok'; vence: string | null; llamada: string | null }
   | { estado: 'sin_configurar' }
   | { estado: 'rechazado'; motivo: string }
   | { estado: 'sin_respuesta'; motivo: string }
@@ -543,7 +543,6 @@ export async function bajaPorDevolucionAsegura(reciboId: string, motivo: string,
         estado: 'ok',
         vence: typeof j.vence === 'string' ? j.vence : null,
         llamada: typeof j.llamada === 'string' ? j.llamada : null,
-        oportunidadExistente: j.oportunidadExistente === true,
       }
     }
     const m = typeof j.motivo === 'string' ? j.motivo : `HTTP ${res.status}`

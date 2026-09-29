@@ -9,9 +9,11 @@ const leer = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'u
 
 test('un «vigente» de CIMA no reabre una póliza con la baja verificada', () => {
   const sql = leer('apps/asegura/prisma/sql/2026-09-29h_poliza_baja_verificada.sql')
-  assert.match(sql, /BEFORE UPDATE ON seguros\.polizas/)
-  assert.match(sql, /IF NEW\.baja_verificada_at IS NOT NULL\s+AND NEW\.estado::text IN \('activa', 'en_renovacion', 'en_vigor', 'recibo_devuelto', 'cambio_clave'\) THEN\s+NEW\.estado := 'cancelada';/)
-  assert.match(sql, /EXCEPTION WHEN OTHERS THEN\s+RAISE WARNING/)
+  assert.match(sql, /BEFORE UPDATE OF estado ON seguros\.polizas/)
+  assert.match(sql, /WHEN \(OLD\.baja_verificada_at IS NOT NULL AND NEW\.baja_verificada_at IS NOT NULL\)/)
+  assert.match(sql, /IF NEW\.estado::text IN \('activa', 'en_renovacion', 'en_vigor', 'recibo_devuelto', 'cambio_clave'\) THEN\s+NEW\.estado := 'cancelada';/)
+  // …pero lo que dice CIMA NO se traga: se guarda para que la ficha avise si la sigue dando en vigor.
+  assert.match(sql, /NEW\.baja_estado_cima := NEW\.estado::text;/)
 })
 
 test('dar de baja: cierra la devolución, anula, pierde lo del impago y abre la competencia del aniversario', () => {
@@ -44,6 +46,16 @@ test('cuando CIMA trae la baja, queda explicada: sin retención ni aviso de fuga
 
 test('la ficha solo ofrece «El cliente se va» en un recibo devuelto de una póliza en vigor sin baja', () => {
   const page = leer('apps/plataforma/app/(usuario)/correduria/poliza/[id]/page.tsx')
-  assert.match(page, /const puedeBaja = p\.viva && p\.estado !== 'cancelada' && p\.bajaVerificada === null/)
+  assert.match(page, /const puedeBaja = p\.viva && esEstadoVigente\(p\.estado\) && p\.bajaVerificada === null/)
+  // Si CIMA la sigue dando en vigor tras la baja, la cabecera lo dice.
+  assert.match(page, /CIMA la sigue dando en vigor/)
   assert.match(page, /\{x\.situacion === 'devuelto' && puedeBaja && <ClienteSeVa reciboId=\{x\.id\} \/>\}/)
+})
+
+test('la tarea del impago no se cuelga de una póliza ya dada de baja (mismo candado)', () => {
+  const src = leer('apps/asegura/lib/devoluciones-recibo.ts')
+  const tarea = src.slice(src.indexOf('async function asegurarTareaDevolucion'), src.indexOf('async function anotarHito'))
+  assert.match(tarea, /and baja_verificada_at is null\) as ok/)
+  const baja = src.slice(src.indexOf('export async function darDeBajaPorDevolucion'))
+  assert.match(baja, /pg_advisory_xact_lock\(hashtext\(\$\{`devolucion:\$\{r\.polizaId\}`\}\)\)/)
 })

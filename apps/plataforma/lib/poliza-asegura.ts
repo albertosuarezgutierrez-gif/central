@@ -143,7 +143,8 @@ export type Poliza = {
   /** Devoluciones avisadas por correo. `null` = asegura no la manda o no pudo leerla (≠ `[]`, ninguna). */
   historialDevoluciones: DevolucionHistorialFicha[] | null
   /** Baja verificada por el corredor («el cliente se va»). `null` = no la hay o asegura no la manda. */
-  bajaVerificada: { en: string; por: string | null; motivo: string | null } | null
+  /** `estadoCima`: lo que CIMA dijo DESPUÉS de la baja (`null` = aún nada). */
+  bajaVerificada: { en: string; por: string | null; motivo: string | null; estadoCima: string | null; cimaEn: string | null } | null
   /** `null` = asegura no manda la lista (no es «sin siniestros», que es `[]`). */
   siniestros: SiniestroCartera[] | null
   /**
@@ -563,5 +564,6 @@ export function leerBajaVerificada(v: unknown): Poliza['bajaVerificada'] {
   const o = v as Record<string, unknown>
   const en = typeof o.en === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.en) ? o.en : null
   if (!en) return null
-  return { en, por: typeof o.por === 'string' ? o.por : null, motivo: typeof o.motivo === 'string' ? o.motivo : null }
+  const txt = (x: unknown) => (typeof x === 'string' && x !== '' ? x : null)
+  return { en, por: txt(o.por), motivo: txt(o.motivo), estadoCima: txt(o.estadoCima), cimaEn: txt(o.cimaEn) }
 }

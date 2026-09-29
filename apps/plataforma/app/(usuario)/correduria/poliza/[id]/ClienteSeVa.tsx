@@ -37,12 +37,12 @@ export default function ClienteSeVa({ reciboId }: { reciboId: string }) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ reciboId, accion: 'baja', motivo, nota }),
       })
-      const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string; vence?: string | null; llamada?: string | null; oportunidadExistente?: boolean } | null
+      const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string; vence?: string | null; llamada?: string | null } | null
       if (j?.estado === 'ok') {
-        setHecho(j.oportunidadExistente
-          ? 'Póliza anulada. Ya tenía una oportunidad abierta de ese ramo: se deja esa.'
-          : `Póliza anulada. Oportunidad para ${j.vence ? `el ${fmt(j.vence)}` : 'el año que viene'}${j.llamada ? `, llamada el ${fmt(j.llamada)}` : ''}.`)
+        setHecho(`Póliza anulada. Oportunidad para ${j.vence ? `el ${fmt(j.vence)}` : 'el año que viene'}${j.llamada ? `, llamada el ${fmt(j.llamada)}` : ''}.`)
         router.refresh()
+      } else if (j?.estado === 'sin_configurar') {
+        setError('No está configurado el enlace con la cartera: no se ha anulado nada.')
       } else if (j?.estado === 'sin_respuesta' || r.status >= 500) {
         setError(`${j?.motivo ?? `HTTP ${r.status}`}: no sé si se ha anulado. Recarga antes de repetir.`)
       } else {

@@ -10,6 +10,8 @@ test('su seguro nuevo renueva en el aniversario del recibo que no pagó, el prim
   assert.equal(vencimientoCompetencia(null, '2027-01-15', '2026-09-29'), '2027-01-15')
   // 29 de febrero en un año que no es bisiesto.
   assert.equal(vencimientoCompetencia('2024-02-29', null, '2026-09-29'), '2027-02-28')
+  // Un recibo de hace años no deja sin fecha si la póliza sí la trae.
+  assert.equal(vencimientoCompetencia('2019-05-10', '2027-01-15', '2026-09-29'), '2027-01-15')
 })
 
 test('sin ninguna fecha legible no se inventa el vencimiento', () => {

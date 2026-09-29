@@ -138,7 +138,7 @@ export type FichaPoliza = {
    * Baja VERIFICADA por el corredor desde un recibo devuelto («el cliente se va»), antes de que CIMA
    * la confirme. `null` = no la hay o no se pudo leer (la póliza se pinta con su `estado`).
    */
-  bajaVerificada: { en: string; por: string | null; motivo: string | null } | null
+  bajaVerificada: { en: string; por: string | null; motivo: string | null; estadoCima: string | null; cimaEn: string | null } | null
   /**
    * Fechas del contrato que manda CIMA (asegura#864). Cada una `null` = CIMA
    * aún no la ha mandado para esta póliza, no «no tiene».
@@ -680,8 +680,10 @@ async function devolucionesDePoliza(
 
 async function leerBajaVerificada(db: ReturnType<typeof prismaAsegura>, polizaId: string): Promise<FichaPoliza['bajaVerificada']> {
   try {
-    const [b] = await db.$queryRaw<{ en: string; por: string | null; motivo: string | null }[]>`
-      select to_char(baja_verificada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as en, baja_verificada_por as por, baja_motivo as motivo
+    // `estadoCima` = lo último que CIMA escribió DESPUÉS de la baja (NULL = aún no ha dicho nada).
+    const [b] = await db.$queryRaw<{ en: string; por: string | null; motivo: string | null; estadoCima: string | null; cimaEn: string | null }[]>`
+      select to_char(baja_verificada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as en, baja_verificada_por as por, baja_motivo as motivo,
+             baja_estado_cima as "estadoCima", to_char(baja_cima_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "cimaEn"
       from polizas where id = ${polizaId}::uuid and baja_verificada_at is not null`
     return b ?? null
   } catch (err) {
