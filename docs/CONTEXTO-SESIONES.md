@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(29/09/2026)** 📮 **`envios.grupoasegura.es` retirado de Resend** (OK de Alberto). Todo el correo de Grupo ASegura sale de `hola@grupoasegura.es`
+(muestreo 25-28/09: anulaciones, novedades y códigos, todos desde hola@). Queda borrar sus 3 registros DNS en IONOS
+(`resend._domainkey.envios`, MX y TXT de `send.envios`) — prompt para Claude en Chrome dado a Alberto; NO tocar los sin `.envios`.
+
 **(28/09/2026)** — ⏳ asegura-portal, carga v2: «AS» a 56 px, latido más marcado (opacidad 0,3→1, 1 s) ; «Cargando…» sigue oculto (Alberto: visible «se carga el diseño»). El «Grupo ASegura» que sigue viéndose es la cabecera fija y la pantalla de entrada (esta última pendiente de decidir si pasa a «AS»).
 
 **(28/09/2026)** — ⏳ asegura-portal: el indicador de carga (`CargaAsegura`: `loading.tsx` + `CargandoEnlace`) vuelve al monograma «AS» en línea (`MarcaAsegura`, 40 px) en vez del logotipo «Grupo ASegura» (Alberto: «queda más elegante»). Deshace el cambio del 26/09.
