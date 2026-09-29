@@ -921,6 +921,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) asegura-web: la píldora de la cabecera vuelve a CLARA
+Al hacer scroll la cabecera flotaba en `.oscuro` al 80 % sobre fondo blanco → gris sucio, y el monograma
+azul desaparecía sobre la baldosa oscura. La página es clara desde el 05/09 (una sola banda oscura), así que
+el motivo del oscuro estaba desfasado. Píldora clara (panel 88 % + blur), logo en cobalto; medido con
+Playwright a 1432 y 360 px sin desbordar.
+
 ## (29/09/2026) Descuento comercial por defecto al 50 % (Allianz coche)
 - Alberto: «dejamos 50 si no da error, por si la compañía va variando descuentos». Prueba en web (40961885): 50+50 = mismo precio que 20+20 en Allianz, Generali aplica ~12 %, sin error. Catálogo Allianz auto `dtoCap`/`dtoVentaCruzada` 25→50 (`DESCUENTO_POR_DEFECTO`), textos de la pantalla de emisión al día.
 - Pendiente: Allianz moto, Generali y Catalana en moto necesitan el id del campo (traer el 40961885 y leer opciones). No confirmado si el descuento sale de la comisión.
