@@ -461,9 +461,9 @@ export async function conciliarConBanco(cuentaId: string): Promise<number> {
         AND mb.importe < 0
         AND mb.fecha_operacion BETWEEN fp.ref - 10 AND fp.ref + 30
         AND (
-          upper(mb.concepto)                          LIKE '%' || fp.clave || '%'
-          OR upper(COALESCE(mb.concepto_normalizado, '')) LIKE '%' || fp.clave || '%'
-          OR upper(COALESCE(mb.contraparte, ''))       LIKE '%' || fp.clave || '%'
+          upper(translate(mb.concepto, 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
+          OR upper(translate(COALESCE(mb.concepto_normalizado, ''), 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
+          OR upper(translate(COALESCE(mb.contraparte, ''), 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
         )
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = ${cuentaId}::uuid
       WHERE length(fp.clave) >= 4
@@ -480,6 +480,7 @@ export async function conciliarConBanco(cuentaId: string): Promise<number> {
     SET estado = 'pagada', pago_confirmado_at = NOW()
     FROM coincidencias c
     WHERE f.id = c.factura_id
+      AND f.estado IN ('nueva', 'pendiente_revision', 'aprobada', 'pago_iniciado')
     RETURNING f.id, f.telegram_msg_id
   `)
 
