@@ -20,6 +20,32 @@
 - **Compañía anterior:** hay que elegirla del catálogo de mercado de Avant2, no de nuestras 14. Divina
   Pastora no estaba en nuestra lista de moto (PR #3992).
 
+## Comparación real web ↔ API (29/09/2026, proyectos 40956228 web y 40953692 API)
+
+Mismos datos en los dos proyectos (moto, 5.000 km, `ThisMotorcycle`, matrícula 2121NST también en
+`previousInsurance`). **Solo cambia la compañía anterior:** web `C0247` «DIVINA PASTORA / CLEVEREA»
+póliza 05139; API `C0109` Allianz póliza 8846622.
+
+| Compañía | Web (C0247) | API (C0109) |
+|---|---|---|
+| Allianz Básico | **106,77€, `estimate: false`** (real 115,98€) | 215,88€, `estimate: true` (real 234,51€) |
+| Occident Terceros | 217,57€ | 217,57€ |
+| Reale Básico | 243,78€ | 243,78€ |
+| Mapfre Básico | 344,52€ + «no aparece asociado» | 344,52€ + «no aparece asociado» |
+| Generali Terceros | 510,15€ | 510,15€ |
+
+- **La API ve los proyectos hechos en la web** (misma organización 24683): `GET /insurances/{id}`
+  devuelve el 40956228. Y ya se pueden traer a la intranet con
+  `/api/operador/codeoscopic/importar`.
+- **Solo Allianz verifica el seguro anterior al tarificar:** con la compañía y póliza reales confirma
+  el precio y lo baja a la mitad. Con Allianz como compañía anterior y una póliza que Allianz no tiene,
+  no confirma. Las otras cuatro no cambian el precio.
+- **Mapfre no encuentra el historial ni con la compañía correcta.** Hipótesis sin comprobar: le hace
+  falta la póliza completa, no los 5 últimos dígitos.
+- **La matrícula del seguro anterior NO fue la causa:** la web también manda la actual.
+- No se sabe cuánto del 106,77€ es la bonificación y cuánto el 20% + 20% de descuento comercial: el
+  proyecto no guarda las opciones de producto.
+
 ## Campos de descuento por compañía (lo que han devuelto las compañías en nuestras 311 tarificaciones)
 
 | Compañía | Producto | Campo | Id interno | Máximo |
@@ -40,14 +66,11 @@ Que no haya salido un campo no prueba que no exista: hay que abrir el formulario
    escribir 50 en cada campo de descuento y apuntar a cuánto lo baja (Allianz, Generali, Occident,
    Mapfre, Reale y cualquier otra que tenga el campo; en auto, moto y hogar).
 2. [ ] **Mapfre y Reale:** ¿tienen algún campo de descuento o bonificación en su formulario?
-3. [ ] **Divina Pastora:** su código DGS en el desplegable de «Compañía anterior».
-4. [ ] **«Experiencia: 1»** del PDF: qué texto es en la web (nosotros mandamos `ThisMotorcycle`).
+3. [x] **Divina Pastora:** `C0247` («DIVINA PASTORA / CLEVEREA»).
+4. [x] **«Experiencia: 1»** = `ThisMotorcycle` («Esta Motocicleta»), lo mismo que mandamos.
 5. [ ] **Facturación:** si la web tiene sección de consumo o facturas, comprobar si cada re-tarificación
    (confirmar precio) cuenta como una consulta de 0,50€ o solo cuenta la tarificación.
-6. [ ] **¿La API ve los presupuestos hechos en la web?** Sin comprobar. `GET /insurances?id=40956228`
-   (el presupuesto de Manuel hecho en la web) es gratis, pero no hay botón para lanzarlo: «Traer póliza
-   de Codeoscopic» de `Documentos.tsx` solo sirve para una póliza ya emitida, y el contenedor de las
-   sesiones no tiene credenciales. Hace falta un endpoint de solo lectura o lanzarlo desde Vercel.
+6. [x] **¿La API ve los presupuestos hechos en la web?** Sí (ver la comparación de arriba).
 7. [ ] **Tipo de comisión** (`comissionType`, en Allianz «A»): qué opciones da la web y si afecta a la prima.
 
 ## Para preguntar a Codeoscopic (borradores sin enviar, los manda Alberto)
