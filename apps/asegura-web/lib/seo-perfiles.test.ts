@@ -75,7 +75,15 @@ test('cada perfil vive en un host de perfil conocido', () => {
 test('ningún perfil arrastra parámetros de rastreo ni es una búsqueda', () => {
   for (const p of PERFILES) {
     const u = new URL(p)
-    assert.equal(u.search, '', `${p} lleva parámetros pegados: en sameAs va la URL limpia`)
+    // Única excepción: la ficha de Maps por `?cid=`, su identificador estable.
+    const esFichaMaps = u.hostname === 'www.google.com' && u.pathname === '/maps'
+    const params = [...u.searchParams.keys()]
+    if (esFichaMaps) {
+      assert.deepEqual(params, ['cid'], `${p}: la ficha de Maps va SOLO con ?cid=`)
+      assert.match(u.searchParams.get('cid') ?? '', /^\d+$/, `${p}: cid no es numérico`)
+    } else {
+      assert.equal(u.search, '', `${p} lleva parámetros pegados: en sameAs va la URL limpia`)
+    }
     assert.ok(!u.pathname.startsWith('/search'), `${p} es una búsqueda, no un perfil`)
   }
 })
@@ -98,4 +106,14 @@ test('sameAs se emite con los perfiles, y se OMITE cuando no hay ninguno', () =>
     return
   }
   assert.deepEqual(ficha.sameAs, [...PERFILES], 'sameAs no coincide con PERFILES')
+})
+
+// `geo` = el pin de la ficha de Maps. Solo la ficha del NEGOCIO lo lleva, y en
+// Sevilla: un par de coordenadas cambiado de orden cae en otro continente sin
+// que nada falle.
+test('la ficha del negocio declara el pin de Maps, en Sevilla', () => {
+  const geo = fichaNegocio().geo as { latitude: number; longitude: number } | undefined
+  assert.ok(geo, 'la ficha no declara geo')
+  assert.ok(geo.latitude > 37.3 && geo.latitude < 37.45, `latitud fuera de Sevilla: ${geo.latitude}`)
+  assert.ok(geo.longitude > -6.05 && geo.longitude < -5.9, `longitud fuera de Sevilla: ${geo.longitude}`)
 })
