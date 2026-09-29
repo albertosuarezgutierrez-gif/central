@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSesion, AuthError } from '@/lib/tenant'
-import { resolverSolicitud, editarSolicitud, borrarSolicitud } from '@/lib/solicitudes'
+import { resolverSolicitud, editarSolicitud, borrarSolicitud, ErrorValidacion } from '@/lib/solicitudes'
 import { avisarEmpleado } from '@/lib/notificar'
 import { borrarObjeto } from '@/lib/storage'
 
@@ -31,7 +31,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     let r
     try { r = await editarSolicitud(empresa_id, usuario_id, id, body) }
     catch (e) {
-      if (e instanceof Error && !e.message.includes('no encontrada')) return NextResponse.json({ error: e.message }, { status: 422 })
+      if (e instanceof ErrorValidacion) return NextResponse.json({ error: e.message }, { status: 422 })
       throw e
     }
     // Si el estado final cambia a aprobada/rechazada, el empleado se entera como al resolver.

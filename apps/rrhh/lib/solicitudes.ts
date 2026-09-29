@@ -15,12 +15,15 @@ export const TIPOS_SOLICITUD = IDS_SOLICITUD
 
 type EntradaSolicitud = { tipo: string; fecha_inicio?: string | null; fecha_fin?: string | null; motivo?: string | null; justificante_path?: string | null }
 
-/** Valida y normaliza una solicitud entrante. Lanza Error legible si algo no cuadra. */
+/** Error de datos de entrada: su mensaje es apto para mostrarse al usuario (422). */
+export class ErrorValidacion extends Error {}
+
+/** Valida y normaliza una solicitud entrante. Lanza ErrorValidacion legible si algo no cuadra. */
 export function validarSolicitud(e: EntradaSolicitud) {
-  if (!IDS_SOLICITUD.includes(e.tipo)) throw new Error('Tipo de solicitud no válido')
+  if (!IDS_SOLICITUD.includes(e.tipo)) throw new ErrorValidacion('Tipo de solicitud no válido')
   const ini = e.fecha_inicio || null
   const fin = e.fecha_fin || null
-  if (ini && fin && fin < ini) throw new Error('La fecha fin no puede ser anterior a la de inicio')
+  if (ini && fin && fin < ini) throw new ErrorValidacion('La fecha fin no puede ser anterior a la de inicio')
   return { tipo: e.tipo, fecha_inicio: ini, fecha_fin: fin, motivo: (e.motivo ?? '').trim() || null }
 }
 
@@ -190,27 +193,33 @@ export const ESTADOS_SOLICITUD = ['solicitada', 'aprobada', 'rechazada'] as cons
  */
 export async function editarSolicitud(empresaId: string, usuarioId: string, solicitudId: string, entrada: EntradaSolicitud & { estado?: string }) {
   const v = validarSolicitud(entrada)
-  const estado = entrada.estado ?? 'solicitada'
-  if (!(ESTADOS_SOLICITUD as readonly string[]).includes(estado)) throw new Error('Estado no válido')
+  if (entrada.estado != null && !(ESTADOS_SOLICITUD as readonly string[]).includes(entrada.estado)) throw new ErrorValidacion('Estado no válido')
 
-  const [prev] = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT s.estado, e.email AS empleado_email
-    FROM rrhh.solicitudes s JOIN rrhh.empleados e ON e.id = s.empleado_id
-    WHERE s.id = ${solicitudId}::uuid AND s.empresa_id = ${empresaId}::uuid LIMIT 1`)
-  if (!prev) throw new Error('Solicitud no encontrada')
+  // Lectura y escritura en la misma transacción con la fila bloqueada: el estado anterior
+  // (que decide la firma de la resolución y el aviso al empleado) no puede cambiar en medio.
+  return prisma.$transaction(async tx => {
+    const [prev] = await tx.$queryRaw<any[]>(Prisma.sql`
+      SELECT s.estado, e.email AS empleado_email
+      FROM rrhh.solicitudes s JOIN rrhh.empleados e ON e.id = s.empleado_id
+      WHERE s.id = ${solicitudId}::uuid AND s.empresa_id = ${empresaId}::uuid
+      FOR UPDATE OF s`)
+    if (!prev) throw new Error('Solicitud no encontrada')
 
-  const resolucion = estado === 'solicitada'
-    ? Prisma.sql`resuelta_por = NULL, resuelta_at = NULL`
-    : estado === prev.estado
-      ? Prisma.sql`resuelta_por = resuelta_por`
-      : Prisma.sql`resuelta_por = ${usuarioId}::uuid, resuelta_at = now()`
-  await prisma.$executeRaw(Prisma.sql`
-    UPDATE rrhh.solicitudes
-    SET tipo = ${v.tipo}, fecha_inicio = ${v.fecha_inicio}::date, fecha_fin = ${v.fecha_fin}::date,
-        motivo = ${v.motivo}, estado = ${estado}, ${resolucion}
-    WHERE id = ${solicitudId}::uuid AND empresa_id = ${empresaId}::uuid`)
+    // Sin estado en la petición se conserva el actual (no se «des-resuelve» por omisión).
+    const estado: string = entrada.estado ?? prev.estado
+    const resolucion = estado === 'solicitada'
+      ? Prisma.sql`resuelta_por = NULL, resuelta_at = NULL`
+      : estado === prev.estado
+        ? Prisma.sql`resuelta_por = resuelta_por`
+        : Prisma.sql`resuelta_por = ${usuarioId}::uuid, resuelta_at = now()`
+    await tx.$executeRaw(Prisma.sql`
+      UPDATE rrhh.solicitudes
+      SET tipo = ${v.tipo}, fecha_inicio = ${v.fecha_inicio}::date, fecha_fin = ${v.fecha_fin}::date,
+          motivo = ${v.motivo}, estado = ${estado}, ${resolucion}
+      WHERE id = ${solicitudId}::uuid AND empresa_id = ${empresaId}::uuid`)
 
-  return { estado, estado_anterior: prev.estado as string, empleado_email: prev.empleado_email as string | null, tipo: v.tipo }
+    return { estado, estado_anterior: prev.estado as string, empleado_email: prev.empleado_email as string | null, tipo: v.tipo }
+  })
 }
 
 /** El gestor borra una solicitud. Devuelve el path del justificante (si lo había) para limpiarlo del storage. */
