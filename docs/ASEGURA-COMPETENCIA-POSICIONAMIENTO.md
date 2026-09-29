@@ -296,6 +296,19 @@ Lo que enseña, en tres patrones:
    leads/afiliación financiera; el seguro es una línea más. **Hogar le da ~1 %**: confirma §2.2, en
    hogar la SERP de comparadores está menos peleada.
 
+**Y la correduría que Alberto tenía en mente NO está detrás de Acierto: está detrás de la OCU.**
+[Web 29/09] **Proyectos y Seguros, Correduría de Seguros S.A.** (clave DGSFP **J0067**, Móstoles)
+presta su herramienta de tarificación a **OCU Ediciones** por convenio: los comparadores de moto,
+coche, hogar y salud de `ocu.org` son su motor
+([términos OCU](https://www.ocu.org/fincas-y-casas/gestion/seguros-y-prestamos/terminos-legales)).
+Su web propia es SEO **débil** [OpenSEO 29/09]: ~1.300 visitas/mes y 187 keywords, casi todo su
+propia marca. O sea: **no crece por SEO, crece por prestar el comparador a quien ya tiene la
+audiencia** (marca blanca B2B2C) y lo remata con call center. El `#calcula-seguro` de su web es el
+mismo tarificador. Lección para nosotros: el canal realista no es ganar a Acierto en Google, es
+poner nuestro cotizador dentro de audiencias ajenas (colegios profesionales, asociaciones de
+comerciantes, administradores de fincas) — el «affinity» que el propio tarificador de Avant2
+permite al instalarse en varias URLs.
+
 **El comparador con precio.** [Web 29/09] Ya existe la pieza: Codeoscopic vende **tarificadores web
 HTML de Avant2** para incrustar en la web de la correduría (auto, moto, hogar, comercio)
 ([SegurosNews](https://segurosnews.com/mediacion/codeoscopic-lanza-los-tarificadores-web-html-para-corredurias)).
@@ -398,7 +411,7 @@ si en unos meses (con Search Console dando datos) fontanero no acompaña, el mis
 
 ## Bitácora
 
-- **29/09/2026** — §2.7 nuevo: Acierto.com medido con OpenSEO (436k visitas/mes est., 41 % préstamos, hogar ~1 %; patrón copiable = fichas por compañía) y viabilidad del comparador: tarificador web de Avant2 existe pero cuesta 0,50 €/consulta; se recomienda comparador de GARANTÍAS sin precio, empezando por hogar.
+- **29/09/2026** — §2.7 nuevo: Acierto.com medido con OpenSEO (436k visitas/mes est., 41 % préstamos, hogar ~1 %; patrón copiable = fichas por compañía) y viabilidad del comparador: tarificador web de Avant2 existe pero cuesta 0,50 €/consulta; se recomienda comparador de GARANTÍAS sin precio, empezando por hogar. Proyectos y Seguros (J0067) resulta estar detrás de la OCU (tarificador en marca blanca), no de Acierto.
 - **15/09/2026** — Alberto: «hay que estar abierto a todo, hay que buscar el hueco que dejan las
   grandes». Primera vez que esta sesión usa búsqueda web real (`WebSearch`, no el `Bash` sin
   salida de antes) → nueva etiqueta `[Web 15/09]`. Corrección: §2.3 «no hay comparador de
