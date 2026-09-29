@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { listaY, type AvisoPerdidas } from '@/lib/todas-las-opciones'
 
 /**
  * Aceptar una opción del presupuesto (pieza 4-d).
@@ -37,7 +38,7 @@ function leerCuentaFicha(v: unknown): CuentaFicha {
   }
 }
 
-export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos }: {
+export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos, perdidas = null }: {
   presupuestoId: string
   opcionId: string
   prima: number | null
@@ -45,6 +46,8 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
   corredor: boolean
   /** Por qué no se puede aceptar por los datos (ilegibles o avisados como incorrectos). `null` = se puede. */
   bloqueoDatos: string | null
+  /** Lo que deja de tener frente a su seguro actual (`avisoPerdidas`). `null` = nada que avisar. */
+  perdidas?: AvisoPerdidas | null
 }) {
   const [paso, setPaso] = useState<{ paso: 'inicio' } | PasoCuenta | PasoRev | PasoCodigo | { paso: 'aceptada'; aceptadoEl: string }>({ paso: 'inicio' })
   // La cuenta: «usar la de mi ficha» o «usar otra» (con el IBAN tecleado).
@@ -55,6 +58,9 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
   // «He revisado mis datos…»: sin marcarla no se firma (y el servidor lo vuelve a exigir).
   const [confirma, setConfirma] = useState(false)
   const [ocupado, setOcupado] = useState(false)
+  // Si pierde garantías frente a su póliza actual, lo marca él antes de seguir (29/09/2026).
+  const [asumePerdidas, setAsumePerdidas] = useState(false)
+  const pierde = perdidas !== null && perdidas.pierdes.length > 0
   const [aviso, setAviso] = useState<string | null>(null)
 
   async function enviar(cuerpo: Record<string, unknown>): Promise<{ status: number; j: Record<string, unknown> } | null> {
@@ -235,9 +241,31 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
       ) : (
         <>
           {paso.paso === 'inicio' ? (
-            <button type="button" className="boton" style={{ minHeight: 48 }} disabled={ocupado} onClick={elegir}>
+            <>
+            {perdidas !== null && (
+              <div className="aviso-perdidas" role="note">
+                {pierde && (
+                  <p style={{ margin: 0 }}>
+                    <strong>Con esta opción dejas de tener:</strong> {listaY(perdidas.pierdes)}. Tu seguro actual sí lo incluye.
+                  </p>
+                )}
+                {perdidas.sinDato.length > 0 && (
+                  <p style={{ margin: 0 }} className="suave">
+                    Tu seguro actual incluye {listaY(perdidas.sinDato)} y esta opción no dice si lo incluye: pregúntanos antes de elegirla.
+                  </p>
+                )}
+                {pierde && (
+                  <label className="aviso-perdidas-check">
+                    <input type="checkbox" checked={asumePerdidas} onChange={(e) => setAsumePerdidas(e.target.checked)} />
+                    Lo sé y quiero esta opción igualmente
+                  </label>
+                )}
+              </div>
+            )}
+            <button type="button" className="boton" style={{ minHeight: 48 }} disabled={ocupado || (pierde && !asumePerdidas)} onClick={elegir}>
               {ocupado ? 'Cargando…' : 'Elegir esta opción'}
             </button>
+            </>
           ) : paso.paso === 'cuenta' ? (
             <div style={{ display: 'grid', gap: 10 }}>
               <strong style={{ fontSize: 14 }}>Cuenta para domiciliar los recibos</strong>

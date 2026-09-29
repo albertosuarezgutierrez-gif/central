@@ -12,6 +12,7 @@ import {
   compararDeshabilitado,
   etiquetasDe,
   filaDeOpcion,
+  avisoPerdidas,
   garantiasDeActual,
   listaY,
   paginar,
@@ -156,6 +157,7 @@ export function TodasLasOpciones({ presupuestoId, ramo, opciones, necesidades, c
             compania={o.compania}
             corredor={corredor}
             bloqueoDatos={bloqueoDatos}
+            perdidas={avisoPerdidas(ramo, o.garantias, actual)}
           />
         )}
       </li>
