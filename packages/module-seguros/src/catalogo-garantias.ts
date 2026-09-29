@@ -177,16 +177,23 @@ export function clasificarCoberturas(
     const propias = clavesDe(ramo, c.nombre)
     const admitidas = new Set([...propias, ...CLAVES_DE_PARTE])
     const dentro = new Set<string>()
+    let todasReconocidas = true
     for (const s of subs) {
       const e: EstadoGarantia = estado === 'si' ? s.estado : estado
+      if (clavesDe(ramo, s.nombre).length === 0) todasReconocidas = false
       for (const clave of clavesDe(ramo, s.nombre)) {
         if (!admitidas.has(clave)) continue
         if (s.estado !== 'no_consta') dentro.add(clave)
         anotar(clave, e)
       }
     }
-    // Lo que el nombre promete y la lista no trae: el bloque está y eso no va en él.
-    for (const clave of propias) if (!dentro.has(clave)) anotar(clave, estado === 'si' ? 'no' : estado)
+    // Lo que el nombre promete y la lista no trae: el bloque está y eso no va en él. Solo se afirma
+    // «no» si TODAS las partes son garantías reconocidas; una parte que no se entiende («» Franquicia:
+    // 300 €») podría ser justo lo que falta, y entonces es «no consta».
+    for (const clave of propias) {
+      if (dentro.has(clave)) continue
+      anotar(clave, estado !== 'si' ? estado : todasReconocidas ? 'no' : 'no_consta')
+    }
   }
   if ('asistencia_ampliada' in porClave) porClave.asistencia_ampliada = asistenciaAmpliada(lista, opciones)
   if ('asistencia_hogar_ampliada' in porClave) porClave.asistencia_hogar_ampliada = asistenciaHogarAmpliada(lista)

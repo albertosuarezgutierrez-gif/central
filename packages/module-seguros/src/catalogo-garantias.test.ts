@@ -208,4 +208,7 @@ test('subcoberturas: una parte «NO CONTRATADA» es un no', () => {
   // «excluida franquicia» habla de la franquicia, no excluye la garantía.
   const tr = clasificarCoberturas('auto', [{ nombre: 'Daños propios', incluida: true, texto: '» Fenómenos atmosféricos: Incluida..» Daños propios con franquicia, incendio y robo: Incluida. Franquicia TR con franquicia de 300 euros.   (Robo e incendio excluida franquicia).» Daños propios con franquicia, incendio y robo ampliados: Opcional (no incluida).  ( Robo e incendio excluida franquicia).' }])
   assert.equal(tr.porClave.danos_propios, 'si')
+  // Una parte que no se entiende no permite afirmar la ausencia.
+  const raro = clasificarCoberturas('moto', [{ nombre: 'Daños propios', incluida: true, texto: '» Franquicia: 300 €.  : CONTRATADA' }])
+  assert.equal(raro.porClave.danos_propios, 'no_consta')
 })
