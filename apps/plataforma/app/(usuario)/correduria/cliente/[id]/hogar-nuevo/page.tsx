@@ -155,8 +155,10 @@ export default async function HogarNuevoPage({
         <FormularioBuscar
           clienteId={clienteId}
           direccion={deFicha?.direccion ?? ''}
-          municipio={deFicha?.municipio ?? municipio}
-          provincia={deFicha?.provincia ?? provincia}
+          // Con dirección de la ficha pero sin municipio, el campo sale VACÍO: el «SEVILLA» por defecto
+          // se leería como dato del cliente junto a su calle.
+          municipio={deFicha ? (deFicha.municipio ?? '') : municipio}
+          provincia={deFicha ? (deFicha.provincia ?? '') : provincia}
         />
       </Pagina>
     )
