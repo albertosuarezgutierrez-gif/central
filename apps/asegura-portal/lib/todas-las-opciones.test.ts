@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { interruptoresGarantias, type GarantiasClasificadas } from '@central/module-seguros'
 
 import {
+  avisoPerdidas,
   POR_PAGINA,
   alternarComparar,
   alternarGarantia,
@@ -184,4 +185,17 @@ test('leerActividad: lo que no es clave de catálogo o uuid no se reenvía', () 
   assert.equal(leerActividad({ presupuestoId: UUID_A, garantias: [], comparadas: [UUID_A, UUID_B, UUID_C] }), null)
   assert.equal(leerActividad({ presupuestoId: UUID_A, garantias: [], comparadas: ['nope'] }), null)
   assert.equal(leerActividad({ presupuestoId: UUID_A, comparadas: [] }), null)
+})
+
+test('antes de aceptar: avisa de lo que PIERDE frente a su póliza, y de lo que la opción no dice (29/09/2026)', () => {
+  const g = (porClave: GarantiasClasificadas['porClave']): GarantiasClasificadas => ({ version: 3, porClave })
+  const actual = g({ lunas: 'si', vehiculo_sustitucion: 'si', robo: 'si' })
+  const opcion = g({ lunas: 'si', vehiculo_sustitucion: 'no', robo: 'no_consta' })
+  assert.deepEqual(avisoPerdidas('auto', opcion, actual), { pierdes: ['Vehículo de sustitución'], sinDato: ['Robo'] })
+  // Misma cobertura o mejor: nada que avisar.
+  assert.equal(avisoPerdidas('auto', g({ lunas: 'si', vehiculo_sustitucion: 'si', robo: 'si' }), actual), null)
+  // Sin póliza actual leída, sin garantías de la opción o sin ramo: no se compara (no es «no pierde nada»).
+  assert.equal(avisoPerdidas('auto', opcion, null), null)
+  assert.equal(avisoPerdidas('auto', null, actual), null)
+  assert.equal(avisoPerdidas(null, opcion, actual), null)
 })
