@@ -42,6 +42,8 @@
   **Avant2 Sales Manager (Codeoscopic)** — ver §4.
 
 ## 4. Codeoscopic / Avant2 — LA fuente de tarificación y emisión
+
+> ⛔ **Precio que la compañía deja BLOQUEADO al emitir (29/09/2026, regla de Alberto).** Allianz lo anuncia ya en la tarificación («ESTA POLIZA QUEDARÁ BLOQUEADA POR LA SIGUIENTE RAZÓN: INCENDIO-ROBO SIN DAÑOS») y la moto de Manuel Piña se emitió por Avant2 sin verlo venir: quedó bloqueada hasta mandar fotos y documentación (sucursal 209 / CTS Autos Sur, cód. operación 279136633). **Lo normal es emitir primero la básica (sin la garantía que bloquea) para que el cliente pueda circular y pedir después la ampliación como suplemento con la documentación.** El aviso lo detecta UNA regla, `bloqueoCompania()` de `@central/module-seguros` (`bloqueo-compania.ts`), y sale ANTES de emitir: en la parrilla y la lista de precios de plataforma, en el panel de emisión, arriba del resumen de Telegram y, para el cliente, en su comparativa del portal (`textoBloqueoCliente`, pasa `revisarCopy`).
 - Contrato **Workspace + API REST** firmado el **20/05/2026 a nombre de Alberto** (Grupo
   ASegura). Manuel (hermano) fue solo el integrador; sin relación contractual con
   Codeoscopic (dicho por su DPD, 22/05/2026).

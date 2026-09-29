@@ -1,4 +1,4 @@
-import { MEDIADOR, NO_EXCLUSIVIDAD } from '@central/module-seguros'
+import { MEDIADOR, NO_EXCLUSIVIDAD, bloqueoCompania, textoBloqueoCliente } from '@central/module-seguros'
 
 import { eur } from '@/lib/dinero'
 import { LogoCompania } from './LogoCompania'
@@ -131,6 +131,7 @@ export function Tarjeta({ o, caducado }: { o: OpcionCliente; caducado: boolean }
         <p className="presu-nivel">Cobertura: {o.grupoCobertura}</p>
       )}
 
+      {bloqueoCompania(o.avisos) !== null && <p className="presu-bloqueo">⚠️ {textoBloqueoCliente()}</p>}
       {o.avisos.length > 0 && (
         <ul className="presu-avisos">
           {o.avisos.map((a, i) => (

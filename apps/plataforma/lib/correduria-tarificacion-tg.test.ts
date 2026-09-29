@@ -277,3 +277,31 @@ test('reutilizar la moto anterior solo con la MISMA matrícula (lee el FUENTE)',
   // Solo si Alberto no ha dictado el vehículo: lo dictado manda siempre.
   assert.match(src, /const previo = !e\.marca && !e\.modelo && !e\.version \? await vehiculoPrevio\(/)
 })
+
+test('riesgo con figuras: se dicen propietario y conductor, y el «solo el tomador» desaparece si hay conductor', () => {
+  const base = {
+    ramo: 'auto' as const, cliente: 'Manuel', vehiculo: { marca: 'Volvo', modelo: 'V40', motor: 'Diésel', version: 'D2 Momentum' },
+    matricula: '1234BCD', fechaMatriculacion: '2017-01-01', garaje: 'Vía pública', estadoCivil: 'Soltero', municipio: 'Lleida',
+    persona: {}, historial: null, primaActual: null, kmAnuales: null, vehiculoPrevioDe: null, supuestos: [],
+  }
+  const sin = textoPropuesta(base)
+  assert.match(sin, /solo el tomador, sin ocasionales/)
+  assert.match(sin, /El botón vale 15 minutos/)
+  const con = textoPropuesta({ ...base, figuras: { propietario: 'Manuel Piña', conductor_habitual: 'Ana Piña' }, autonomo: true })
+  assert.match(con, /Propietario: Manuel Piña/)
+  assert.match(con, /Conductor habitual: Ana Piña/)
+  assert.doesNotMatch(con, /solo el tomador, sin ocasionales/)
+  assert.match(con, /Lo pido ya/)
+  assert.doesNotMatch(con, /El botón vale/)
+  const soloProp = textoPropuesta({ ...base, figuras: { propietario: 'Manuel Piña' } })
+  assert.match(soloProp, /solo el tomador, sin ocasionales/)
+})
+
+test('leerEntrada: oportunidadId opcional, y uno mal formado se DICE', () => {
+  assert.equal(leerEntrada({ ramo: 'auto', clienteId: CID }, HOY).entrada.oportunidadId, null)
+  const ok = leerEntrada({ ramo: 'auto', clienteId: CID, oportunidadId: CID }, HOY)
+  assert.equal(ok.entrada.oportunidadId, CID)
+  const mal = leerEntrada({ ramo: 'auto', clienteId: CID, oportunidadId: 'la-de-ayer' }, HOY)
+  assert.equal(mal.entrada.oportunidadId, null)
+  assert.ok(mal.errores.some((e) => e.startsWith('oportunidadId')))
+})

@@ -134,6 +134,8 @@ export type EntradaTarificacion = {
   primaActual: number | null
   /** Km al año dichos. `null` = no se ha dicho (asegura pone la media como supuesto). */
   kmAnuales: number | null
+  /** El riesgo (oportunidad) del que cuelga: con él, propietario y conductores salen de sus figuras. */
+  oportunidadId: string | null
 }
 
 function texto(v: unknown, max = 120): string | null {
@@ -172,6 +174,9 @@ export function leerEntrada(args: Record<string, unknown>, hoy: Date = new Date(
   const cid = texto(args.clienteId, 40)
   const clienteId = cid && UUID.test(cid) ? cid.toLowerCase() : null
   if (!clienteId) errores.push('clienteId: tiene que ser el id interno (uuid) de buscar/ficha_cliente')
+  const oid = texto(args.oportunidadId, 40)
+  const oportunidadId = oid && UUID.test(oid) ? oid.toLowerCase() : null
+  if (oid && !oportunidadId) errores.push('oportunidadId: tiene que ser el id (uuid) de oportunidades_cliente')
 
   let matricula: string | null = null
   const mat = texto(args.matricula, 20)
@@ -263,7 +268,7 @@ export function leerEntrada(args: Record<string, unknown>, hoy: Date = new Date(
       marca: texto(args.marca), modelo: texto(args.modelo), motor: texto(args.motor), version: texto(args.version, 160),
       fechaMatriculacion: fm.valor ?? null,
       garaje: texto(args.garaje), estadoCivil: texto(args.estadoCivil), municipio: texto(args.municipio),
-      persona, historial, primaActual, kmAnuales,
+      persona, historial, primaActual, kmAnuales, oportunidadId,
     },
     errores,
   }
@@ -418,6 +423,10 @@ export type Propuesta = {
   historial: (Omit<HistorialDeclarado, 'compania'> & { compania: string }) | null
   primaActual: number | null
   kmAnuales: number | null
+  /** Quién ocupa cada papel distinto del tomador (nombre), de las figuras del riesgo. Vacío = el tomador en todos. */
+  figuras?: Partial<Record<'propietario' | 'conductor_habitual' | 'conductor_ocasional', string>>
+  /** Sin botón: el precio se pide en cuanto sale este resumen. */
+  autonomo?: boolean
   /** Vehículo reutilizado de una petición anterior: su fecha (dd/mm/aaaa), para decirlo. */
   vehiculoPrevioDe: string | null
   /** Los de asegura (con `optimista`) y los nuestros. */
@@ -447,9 +456,16 @@ export function textoPropuesta(p: Propuesta): string {
     per.fechaCarnet ? `carnet ${fecha(per.fechaCarnet)}` : null,
     per.telefono ? `móvil ${esc(per.telefono)}` : null,
   ].filter(Boolean)
-  // Por Telegram no se declara otro conductor: se dice SIEMPRE, porque si conduce otro (un hijo de 19) el precio sale bajo.
-  const conductor: Supuesto = { campo: 'conductor', valor: 'solo el tomador, sin ocasionales', porque: 'por Telegram no se declara otro conductor; si conduce otra persona, pide el precio en la ficha', optimista: true }
-  const orden = [conductor, ...p.supuestos].sort((a, b) => Number(!!b.optimista) - Number(!!a.optimista))
+  // Sin figura de conductor se dice SIEMPRE que conduce solo el tomador: si conduce otro (un hijo de 19) el precio sale bajo.
+  const fig = p.figuras ?? {}
+  const conductor: Supuesto | null = fig.conductor_habitual || fig.conductor_ocasional ? null
+    : { campo: 'conductor', valor: 'solo el tomador, sin ocasionales', porque: 'no se ha declarado otro conductor en el riesgo; si conduce otra persona, dímelo y lo pongo', optimista: true }
+  const lineasFig = [
+    fig.propietario ? `Propietario: ${esc(fig.propietario)}` : null,
+    fig.conductor_habitual ? `Conductor habitual: ${esc(fig.conductor_habitual)}` : null,
+    fig.conductor_ocasional ? `Conductor ocasional: ${esc(fig.conductor_ocasional)}` : null,
+  ].filter((l): l is string => l !== null)
+  const orden = [...(conductor ? [conductor] : []), ...p.supuestos].sort((a, b) => Number(!!b.optimista) - Number(!!a.optimista))
   const lineasSup = orden.map((s) =>
     `${s.optimista ? '⚠️ <b>puede abaratar</b> · ' : '· '}${esc(ETIQUETA_SUPUESTO[s.campo] ?? s.campo)}: ${esc(valorSupuesto(s))} — <i>${esc(s.porque)}</i>`)
   return [
@@ -462,14 +478,17 @@ export function textoPropuesta(p: Propuesta): string {
     `Duerme: ${esc(p.garaje)} · circula por ${esc(p.municipio)} · ${esc(p.estadoCivil)}`,
     p.kmAnuales !== null ? `Km al año: ${String(p.kmAnuales).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}` : null,
     declarados.length ? `Datos que me has dado: ${declarados.join(' · ')}` : 'Datos del tomador: los de su ficha',
+    ...lineasFig,
     p.historial
       ? `Seguro actual: ${esc(p.historial.compania)} nº ${esc(p.historial.poliza)} · ${p.historial.aniosAsegurado} años asegurado, ${p.historial.aniosEnCompania} en la compañía, ${p.historial.aniosSinSiniestros} sin siniestros`
       : 'Seguro actual: no me lo has dicho → se cotiza «de calle» (sin bonificación: sale más caro)',
     p.primaActual !== null ? `Paga hoy: ${eur(p.primaActual)}` : null,
     ...(lineasSup.length ? ['', '<b>Supuestos</b> (lo que no me has dicho):', ...lineasSup] : []),
     '',
-    '💶 Pedir precio cuesta <b>0,50€</b> reales (Codeoscopic). No sale nada al cliente: el precio te llega solo a ti.',
-    '⏱️ El botón vale 15 minutos y un solo uso.',
+    ...(p.autonomo
+      ? ['💶 Lo pido ya: <b>0,50€</b> reales (Codeoscopic). No sale nada al cliente; el precio te llega en un mensaje aparte en 1-3 minutos.']
+      : ['💶 Pedir precio cuesta <b>0,50€</b> reales (Codeoscopic). No sale nada al cliente: el precio te llega solo a ti.',
+        '⏱️ El botón vale 15 minutos y un solo uso.']),
   ].filter((l): l is string => l !== null).join('\n')
 }
 

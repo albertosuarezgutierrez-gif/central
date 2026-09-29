@@ -45,7 +45,7 @@ import {
   type PersonaForm,
 } from '../../../oportunidad/[id]/figuras-form'
 import { BloqueFigura } from '../../../oportunidad/[id]/BloqueFigura'
-import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
+import ListaPrecios from '../../../ListaPrecios'
 import FiltroGarantias from '../../../FiltroGarantias'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
@@ -1492,10 +1492,20 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
       </p>
       {cotizacionId !== null ? (
         <>
-          {/* «Qué verá el cliente» ya enseña todos los precios, de la más barata a la más cara:
-              la lista de emitir va plegada debajo para no pintar dos listas iguales seguidas. */}
-          <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionId} simulado={r.simulado} />
-          <ListaPreciosPlegada {...propsLista} />
+          {/* «Qué verá el cliente» enseña todos los precios y, desde el 29/09/2026, cada fila se emite
+              ahí mismo: ya no hay una segunda lista plegada debajo para emitir. */}
+          <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionId} simulado={r.simulado} emitir={puedeEmitir ? (o, cerrar) => (
+                <Emision
+                  tarificacionId={cotizacionId as string}
+                  compania={o.compania ?? ''}
+                  categoria={o.categoria ?? ''}
+                  primaEur={o.primaEur}
+                  producto={o.producto}
+                  sustituye={false}
+                  ramo="auto"
+                  onCerrar={cerrar}
+                />
+              ) : undefined} />
         </>
       ) : (
         <ListaPrecios {...propsLista} />

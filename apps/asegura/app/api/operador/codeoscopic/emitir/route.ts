@@ -151,6 +151,20 @@ export const POST = auditado(async (req: Request) => {
       { status: 409 },
     )
   }
+  // La oferta que el llamante ENSEÑÓ (29/09/2026, emisión por Telegram): si otro ReRate del mismo
+  // proyecto cambió la oferta aceptada desde entonces, no se emite — se emitiría una compañía o una
+  // prima que nadie ha visto. Opcional: la pantalla de emisión no lo manda.
+  const offerIdEsperado = cadena(cuerpo.offerIdEsperado)
+  if (offerIdEsperado && offerIdEsperado !== p.accepted_offer_id_codeoscopic) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'oferta_cambiada',
+        mensaje: 'la oferta confirmada del proyecto ya no es la que se enseñó: no se ha enviado nada. Pide el resumen otra vez.',
+      },
+      { status: 409 },
+    )
+  }
 
   // ── De quién es el proyecto (28/09/2026, emisión a clientes NUEVOS) ──────
   // Con `poliza_id` → sustitución de esa póliza (el camino de siempre). Sin ella
