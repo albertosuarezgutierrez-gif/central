@@ -1373,6 +1373,42 @@ export type RespuestaEmitir =
   /** 503 · el interruptor `CODEOSCOPIC_EMISION_NUEVO` está apagado. No es una avería
    *  pasajera: reintentar no sirve hasta que se encienda. */
   | { estado: 'nuevo_apagado'; mensaje: string }
+  /** 409 · la variante que se emite cambia personas (tomador/propietario/conductor
+   *  habitual) o el CP de circulación respecto a la primera del riesgo (29/09/2026).
+   *  Declarar otro conductor o domicilio para pagar menos es ocultación del riesgo
+   *  (arts. 10 y 89 LCS). asegura NO ha enviado nada: se reenvía con
+   *  `figurasConfirmadas` conteniendo todas las `exigidas`. */
+  | { estado: 'confirmar_figuras'; mensaje: string; cambios: CambioFiguras[]; exigidas: FiguraExigida[] }
+
+export type CampoFigura = 'tomador' | 'propietario' | 'conductor_habitual' | 'cp'
+/** `antes`/`despues` son NOMBRES (o el CP), tal y como los manda asegura. */
+export type CambioFiguras = { campo: CampoFigura; antes: string | null; despues: string | null }
+export type FiguraExigida = 'conductor' | 'cp' | 'cliente'
+
+const CAMPOS_FIGURA: readonly CampoFigura[] = ['tomador', 'propietario', 'conductor_habitual', 'cp']
+const FIGURAS_EXIGIBLES: readonly FiguraExigida[] = ['conductor', 'cp', 'cliente']
+
+/** PURO. Todo o nada: si un solo cambio o una sola exigida no tiene forma válida
+ *  (o no hay ninguna exigida), devuelve `null` y el 409 degrada a error genérico
+ *  — nunca a «emitido» ni a un panel con casillas inventadas. */
+export function leerConfirmarFiguras(r: Record<string, unknown>): { cambios: CambioFiguras[]; exigidas: FiguraExigida[] } | null {
+  const { cambios, exigidas } = r
+  if (!Array.isArray(cambios) || !Array.isArray(exigidas) || exigidas.length === 0) return null
+  const textoONulo = (v: unknown) => v === null || typeof v === 'string'
+  const cs: CambioFiguras[] = []
+  for (const c of cambios) {
+    if (typeof c !== 'object' || c === null) return null
+    const o = c as Record<string, unknown>
+    if (!CAMPOS_FIGURA.includes(o.campo as CampoFigura) || !textoONulo(o.antes) || !textoONulo(o.despues)) return null
+    cs.push({ campo: o.campo as CampoFigura, antes: (o.antes as string | null), despues: (o.despues as string | null) })
+  }
+  const es: FiguraExigida[] = []
+  for (const e of exigidas) {
+    if (!FIGURAS_EXIGIBLES.includes(e as FiguraExigida)) return null
+    if (!es.includes(e as FiguraExigida)) es.push(e as FiguraExigida)
+  }
+  return { cambios: cs, exigidas: es }
+}
 
 export type CausaDuplicado = 'ya_en_cartera' | 'ya_emitido'
 export type CausaBloqueo = 'identidad' | 'proyecto_liberado' | 'cliente_distinto' | 'tomador_fusionado'
@@ -1458,6 +1494,19 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
       mensaje: (m ? sinColetillaTecnica(m) : '') || TEXTO_CAUSA_EMITIR[causa],
       polizas: Array.isArray(r.polizas) ? r.polizas.filter((x): x is string => typeof x === 'string') : [],
     }
+  }
+  if (status === 409 && r.causa === 'confirmar_figuras') {
+    const leido = leerConfirmarFiguras(r)
+    if (leido) {
+      return {
+        estado: 'confirmar_figuras',
+        mensaje:
+          cadenaONulo(r.mensaje) ??
+          'Esta variante cambia las personas o el CP del riesgo respecto a la primera. No se ha emitido nada.',
+        ...leido,
+      }
+    }
+    // Forma ilegible: cae al error genérico de abajo (409 → asegura_error), nunca a «emitido».
   }
   if (
     (status === 409 && (r.causa === 'identidad' || r.causa === 'proyecto_liberado' || r.causa === 'cliente_distinto')) ||
@@ -1546,6 +1595,9 @@ export async function emitirAsegura(p: {
   /** Cliente NUEVO: el corredor ha visto el 409 `ya_en_cartera`/`ya_emitido` y
    *  confirma que es otra póliza. Solo se manda cuando es true. */
   duplicadoConfirmado?: boolean
+  /** Las casillas que el corredor ha marcado tras el 409 `confirmar_figuras`
+   *  (`conductor`/`cp`/`cliente`). Solo viaja si viene. */
+  figurasConfirmadas?: string[]
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1564,6 +1616,7 @@ export async function emitirAsegura(p: {
           ...(p.acunarExistente === true ? { acunarExistente: true } : {}),
           ...(p.familiaEnAllianz === true ? { familiaEnAllianz: true } : {}),
           ...(p.duplicadoConfirmado === true ? { duplicadoConfirmado: true } : {}),
+          ...(Array.isArray(p.figurasConfirmadas) ? { figurasConfirmadas: p.figurasConfirmadas } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,

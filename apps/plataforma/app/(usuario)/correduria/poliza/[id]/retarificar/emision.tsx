@@ -27,14 +27,17 @@ import type { RespuestaCoberturas } from '@/lib/retarificar-asegura'
 import { ProductFormWidget } from './ProductFormWidget'
 import type {
   AvisoCuenta,
+  CambioFiguras,
   CausaBloqueo,
   CausaDuplicado,
+  FiguraExigida,
   CuentaConocida,
   Opcion,
   SolicitudEmisionVista,
   TrasEmision,
 } from '@/lib/retarificar-asegura'
 import { lineasTrasEmision } from '@/lib/tras-emision-texto'
+import { ETIQUETA_CAMPO_FIGURA, figurasCompletas, textoCasillaFigura } from '@/lib/figuras-emision-texto'
 import { fechaEs } from '@/lib/ficha-asegura'
 
 type EstadoPanel =
@@ -125,6 +128,22 @@ type EstadoPanel =
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
     }
+  /**
+   * La variante cambia las personas o el CP del riesgo respecto a la primera (29/09/2026,
+   * arts. 10 y 89 LCS). asegura no ha enviado nada; se reenvía con `figurasConfirmadas`
+   * cuando el corredor marca TODAS las casillas exigidas. `opciones` = con qué se llamó,
+   * para que el reenvío no pierda (p. ej.) un `duplicadoConfirmado` ya dado.
+   */
+  | {
+      paso: 'confirmar_figuras'
+      mensaje: string
+      cambios: CambioFiguras[]
+      exigidas: FiguraExigida[]
+      projectId: string
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
+      opciones: OpcionesEmitir
+    }
   /** asegura se niega antes de enviar y no hay nada que confirmar aquí. */
   | { paso: 'bloqueado'; causa: CausaBloqueo; mensaje: string }
   /** Interruptor `CODEOSCOPIC_EMISION_NUEVO` apagado: reintentar no sirve. */
@@ -136,6 +155,13 @@ type EstadoPanel =
       consejo?: string
       reintento?: { projectId: string; cuenta: CuentaConocida | null; cuentaAviso: AvisoCuenta | null }
     }
+
+type OpcionesEmitir = {
+  reintentoConfirmado?: boolean
+  acunarExistente?: boolean
+  duplicadoConfirmado?: boolean
+  figurasConfirmadas?: string[]
+}
 
 const TITULO_DUPLICADO: Record<CausaDuplicado, string> = {
   ya_en_cartera: 'Esta matrícula ya está asegurada en la cartera',
@@ -392,6 +418,8 @@ export function Emision({
   // `false` en asegura (no se inventa un ahorro sin comprobarlo); esta caja
   // es la única forma de decirlo cuando el corredor SÍ lo sabe.
   const [familiaAllianz, setFamiliaAllianz] = useState(false)
+  // Casillas del paso `confirmar_figuras`. Nada preseleccionado: se marcan a mano.
+  const [figurasMarcadas, setFigurasMarcadas] = useState<Set<string>>(() => new Set())
   const esAllianz = compania.trim().toLowerCase().includes('allianz')
   // Descuento comercial en preemisión (29/09/2026). Vacío = el de siempre (25 % y 25 %); asegura
   // valida el rango del formulario real (CAP 0-99, venta cruzada 0-100) antes de llamar a nadie.
@@ -554,7 +582,7 @@ export function Emision({
     projectId: string,
     cuenta: CuentaConocida | null,
     aviso: AvisoCuenta | null,
-    opciones: { reintentoConfirmado?: boolean; acunarExistente?: boolean; duplicadoConfirmado?: boolean } = {},
+    opciones: OpcionesEmitir = {},
   ) {
     let campos: Record<string, unknown>
     try {
@@ -609,7 +637,24 @@ export function Emision({
       acunarExistente: opciones.acunarExistente === true,
       familiaEnAllianz: esAllianz && familiaAllianz,
       duplicadoConfirmado: opciones.duplicadoConfirmado === true,
+      ...(opciones.figurasConfirmadas ? { figurasConfirmadas: opciones.figurasConfirmadas } : {}),
     })
+    if (r.estado === 'confirmar_figuras') {
+      // Un segundo 409 (p. ej. otras exigidas) se repinta con las casillas vacías: lo marcado
+      // antes confirmaba OTRA lista.
+      setFigurasMarcadas(new Set())
+      setEstado({
+        paso: 'confirmar_figuras',
+        mensaje: r.mensaje,
+        cambios: r.cambios,
+        exigidas: r.exigidas,
+        projectId,
+        cuenta,
+        cuentaAviso: aviso,
+        opciones: { ...opciones, figurasConfirmadas: undefined },
+      })
+      return
+    }
     if (r.estado === 'duplicado') {
       setEstado({ paso: 'duplicado', causa: r.causa, mensaje: r.mensaje, polizas: r.polizas, projectId, cuenta, cuentaAviso: aviso })
       return
@@ -1201,6 +1246,87 @@ export function Emision({
           </button>
         </div>
       )}
+
+      {estado.paso === 'confirmar_figuras' && (() => {
+        const completas = figurasCompletas(estado.exigidas, figurasMarcadas)
+        return (
+          <div
+            style={{
+              marginTop: 14,
+              border: '2px solid var(--warning)',
+              background: 'var(--warning-bg)',
+              borderRadius: 10,
+              padding: 12,
+              display: 'grid',
+              gap: 10,
+              minWidth: 0,
+            }}
+          >
+            <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+              <Ico i={AlertTriangle} /> Esta variante cambia las personas del riesgo
+            </p>
+            <p style={{ margin: 0 }}>
+              Declarar a otra persona como conductor habitual, o otro código postal, distinto de la realidad es
+              ocultar el riesgo (arts. 10 y 89 de la Ley de Contrato de Seguro): si hay un siniestro, la compañía
+              puede <strong style={{ color: 'var(--negative)' }}>reducir o negar la indemnización</strong>. No se ha
+              emitido nada.
+            </p>
+            {estado.cambios.length > 0 && (
+              <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+                {estado.cambios.map((c) => (
+                  <li key={c.campo} style={{ overflowWrap: 'anywhere' }}>
+                    <span style={{ fontWeight: 600 }}>{ETIQUETA_CAMPO_FIGURA[c.campo]}:</span>{' '}
+                    <s className="muted">{c.antes ?? '—'}</s> → <strong>{c.despues ?? '—'}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div style={{ display: 'grid', gap: 4 }}>
+              {estado.exigidas.map((e) => (
+                <label
+                  key={e}
+                  style={{ display: 'flex', gap: 10, alignItems: 'center', minHeight: 44, cursor: 'pointer' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={figurasMarcadas.has(e)}
+                    onChange={(ev) => {
+                      const siguiente = new Set(figurasMarcadas)
+                      if (ev.target.checked) siguiente.add(e)
+                      else siguiente.delete(e)
+                      setFigurasMarcadas(siguiente)
+                    }}
+                    style={{ width: 22, height: 22, flex: '0 0 auto' }}
+                  />
+                  <span style={{ overflowWrap: 'anywhere' }}>{textoCasillaFigura(e, estado.cambios)}</span>
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="primary"
+                style={{ minHeight: 44, maxWidth: '100%' }}
+                disabled={!completas}
+                onClick={() =>
+                  emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, {
+                    ...estado.opciones,
+                    figurasConfirmadas: estado.exigidas.filter((e) => figurasMarcadas.has(e)),
+                  })
+                }
+              >
+                {completas ? `Emitir con ${compania || 'la compañía'}` : 'Marca las casillas para emitir'}
+              </button>
+              <button type="button" className="ghost" style={{ minHeight: 44 }} onClick={onCerrar}>
+                Volver
+              </button>
+            </div>
+            <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+              Queda constancia en el historial del riesgo: quién lo confirmó, cuándo y qué casillas marcó.
+            </p>
+          </div>
+        )
+      })()}
 
       {estado.paso === 'bloqueado' && (
         <div className="err" style={{ marginTop: 14 }}>

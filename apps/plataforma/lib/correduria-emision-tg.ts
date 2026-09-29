@@ -9,6 +9,7 @@
 import { createHash } from 'node:crypto'
 import type { OfertaImportable, RespuestaEmitir, VistaImportacion } from './retarificar-asegura.ts'
 import { lineasTrasEmision } from './tras-emision-texto.ts'
+import { ETIQUETA_CAMPO_FIGURA } from './figuras-emision-texto.ts'
 export { lineasTrasEmision }
 
 /** Minutos que vale un resumen: pasado eso, el botón no emite y hay que pedirlo otra vez. */
@@ -257,6 +258,17 @@ export function resultadoEmision(r: RespuestaEmitir, urlIntranet: string): { est
     case 'nuevo_apagado':
       // Los tres últimos son cortes de asegura ANTES del Submit: consta que no salió nada.
       return { estado: 'rechazada', texto: `✖️ No se ha emitido nada: ${esc(r.mensaje)}` }
+    case 'confirmar_figuras':
+      // Corte de asegura ANTES del Submit (arts. 10 y 89 LCS): consta que no salió nada. Las
+      // casillas se marcan en la pantalla, que es donde queda constancia de quién y cuándo:
+      // por Telegram NO se confirma.
+      return {
+        estado: 'rechazada',
+        texto:
+          `✖️ No se ha emitido nada: esta variante cambia las personas o el CP del riesgo respecto a la primera ` +
+          `(${esc(r.cambios.map((c) => ETIQUETA_CAMPO_FIGURA[c.campo]).join(', ') || 'sin detallar')}). ` +
+          `Hay que confirmarlo en la pantalla de emisión, no por aquí: ${urlIntranet}`,
+      }
     case 'en_vuelo':
     case 'reintento_sin_confirmar':
       return { estado: 'incierta', texto: `⚠️ ${esc(r.mensaje)} Puede haberse emitido. ${mirar}` }
