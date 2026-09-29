@@ -371,6 +371,21 @@ Es **correduría** y compara también telefonía, préstamos, energía y viajes.
    «comparador seguros». No es un hueco para nosotros (no tenemos la autoridad para heredarlo), pero
    sí para Check24 y Kelisto.
 
+### 2.9 🆕 «Sube tu póliza y te damos precio» — la idea de Alberto, y quién la tiene ya — 29/09/2026
+
+- **No es inédita:** [poliza.ai](https://poliza.ai/) promete «sube tu póliza y en 30 segundos sabrás
+  si pagas de más» (auto). Según Alberto (29/09), la lleva un corredor chileno (Nicolás Fernández,
+  especialista en flotas, fundador de Rondapp). **[Probable] Hoy apunta a Chile, no a España**:
+  no es competidor directo, pero demuestra que el modelo existe y que otro puede traerlo.
+- **Nuestra ventaja no es la idea, es ser corredor con motor propio:** la lectura de pólizas ya
+  existe (`apps/asegura/lib/documentos/extraer-poliza.ts`, auto/moto/hogar; y la del portal) y la
+  petición a Avant2 también (`apps/asegura/lib/codeoscopic/`). Falta abrirlo al no-cliente.
+- **Coste real = Avant2 (0,50 €/consulta), no la IA.** Por eso: teléfono verificado → lectura →
+  2-3 datos que la póliza no trae (carné y siniestros en auto; m² y año en hogar) → precio.
+  Fase 1 sin Avant2 (la ficha le llega a Alberto y él tarifica); Fase 2 automática con tope diario.
+- Fuera de alcance al inicio: salud y vida (datos de salud, art. 9 RGPD). El copy no promete
+  ahorro («te la revisamos», no «te la mejoramos»).
+
 ---
 
 ## 3. Qué significa esto para la web (y para los textos que no te gustan)
