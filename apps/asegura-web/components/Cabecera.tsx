@@ -36,11 +36,11 @@ export default function Cabecera({ marca }: { marca: string }) {
       <div className="progreso" style={{ transform: `scaleX(${avance})` }} aria-hidden />
       <header className={bajado ? 'hdr bajado' : 'hdr'}>
         <div className="wrap">
-          {/* La píldora flotante va SIEMPRE en oscuro (`oscuro` re-tematiza sus
-                tokens). Blanca se comía media pantalla cada vez que flotaba
-                sobre una sección oscura, que en esta página son la mayoría; en
-                oscuro se integra ahí y sigue destacando sobre las claras. */}
-            <div className={bajado ? 'hdr-caja oscuro' : 'hdr-caja'}>
+          {/* La píldora flotante va CLARA, como la página (clara desde el
+              05/09/2026, con una sola banda oscura). En oscuro al 80 % sobre
+              fondo blanco salía un gris sucio y el monograma azul se perdía
+              sobre la baldosa oscura (29/09/2026). */}
+          <div className="hdr-caja">
             {/* Nav a la izquierda y logo centrado en absoluto, como él. Por
                 debajo de 1024 px la nav se esconde y el logo pasa a la
                 izquierda (regla en globals.css), que es lo que evita que el
