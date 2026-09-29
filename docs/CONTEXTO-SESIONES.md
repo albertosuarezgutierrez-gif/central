@@ -894,6 +894,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Avant2: el «precio confirmado» es el ReRate, y los descuentos van ahí
+- La web de Avant2 dio 106,77€ en Allianz Motos frente a 216,53€ de nuestra API: 20% + 20% de descuento comercial, ReRate y Divina Pastora bien puesta. Nuestra comparativa enseña precios `estimate: true` sin descuento.
+- Checklist vivo de la conexión (confirmado, descuentos por compañía, lo que hay que mirar en la pantalla): `docs/CODEOSCOPIC-PENDIENTES.md`.
+- `previousInsurance` no se corrige por PATCH: tiene que ir bien en la primera tarificación.
+
 ## (29/09/2026) Bonus de moto no aplicado (2121NST): matrícula anterior + lista de compañías de Avant2
 - Medido en `tarificaciones` (3 de Manuel Piña): Mapfre responde «el cliente no aparece asociado a una póliza de otra compañía», Reale ignora el historial, Occident −41% sin verificar. Causa: `previousInsurance.registrationPlate` iba SIEMPRE con la matrícula actual (`peticion-moto.ts`/`peticion-auto.ts`); con vehículo nuevo la compañía no encuentra el historial.
 - Arreglo: campo «Matrícula de esa póliza» (`matriculaAnterior`) en auto-nuevo y moto-nuevo; vacío = la actual. Test que falla sin él.
