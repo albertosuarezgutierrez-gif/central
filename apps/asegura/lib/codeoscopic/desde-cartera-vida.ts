@@ -8,7 +8,8 @@
 // una suposición razonada, no un contrato verificado.
 
 import { revisarDatosVida, type DatosVida, type ReparoVida } from './peticion-vida.ts'
-import { partirApellidos, sexoDeSaludo, diaSiguiente, type ClienteCartera } from './desde-cartera.ts'
+import { partirApellidos, sexoDeSaludo, type ClienteCartera } from './desde-cartera.ts'
+import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
 
 function limpio(v: string | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -57,8 +58,8 @@ export function precalificarVidaNueva(
 
   const fechaEfecto = suponer(
     'fechaEfecto',
-    diaSiguiente(hoy),
-    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+    sumarDias(hoy, DIAS_EFECTO_PRESUPUESTO_NUEVO),
+    `no hay ninguna póliza que retarificar: efecto a ${DIAS_EFECTO_PRESUPUESTO_NUEVO} días para que el precio siga valiendo al emitir (con efecto mañana caducaba al día siguiente); si el cliente lo quiere en otra fecha, se pide con la suya`,
   ) as string
 
   const datos: Partial<DatosVida> = {

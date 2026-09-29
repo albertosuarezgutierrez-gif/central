@@ -300,13 +300,13 @@ function historialDePoliza(
           diaSiguiente(vencimiento),
           `el día siguiente al vencimiento de la póliza actual (${vencimiento})`,
         ) as string)
-      : (suponer(
-          'fechaEfecto',
-          diaSiguiente(hoy),
-          vencimiento
-            ? `la póliza actual venció el ${vencimiento}, así que se pide precio para mañana`
-            : 'la póliza actual no tiene fecha de vencimiento en la ficha, así que se pide precio para mañana',
-        ) as string)
+      : ((vencimiento
+          ? suponer('fechaEfecto', diaSiguiente(hoy), `la póliza actual venció el ${vencimiento}, así que se pide precio para mañana`)
+          : suponer(
+              'fechaEfecto',
+              sumarDias(hoy, DIAS_EFECTO_PRESUPUESTO_NUEVO),
+              `no consta el vencimiento de la póliza actual: efecto a ${DIAS_EFECTO_PRESUPUESTO_NUEVO} días para que el precio siga valiendo al emitir`,
+            )) as string)
 
   // ── Historial: la póliza que estamos retarificando ES la anterior ──────────
   // Esto no es un supuesto: es el motivo por el que se pulsa el botón.

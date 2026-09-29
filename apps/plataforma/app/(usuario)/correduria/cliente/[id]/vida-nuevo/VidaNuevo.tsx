@@ -18,6 +18,7 @@ import { ConIcono } from '../../../iconos'
 import FiltroGarantias from '../../../FiltroGarantias'
 import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import { eur } from '@/lib/dinero'
+import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/vida-nuevo-asegura'
 import { pedirPrecalificacionVida, pedirCotizacionVida } from './acciones'
 import { FallosTarificacion } from '../../../FallosTarificacion'
@@ -76,6 +77,9 @@ export default function VidaNuevo({
   const [capital, setCapital] = useState('')
   const [duracionAnios, setDuracionAnios] = useState('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
+  // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
+  const [fechaEfecto, setFechaEfecto] = useState('')
+  const limitesEfecto = limitesFechaEfecto()
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
   const faltaCivil = !estadoCivilId
@@ -101,7 +105,7 @@ export default function VidaNuevo({
         capital: Number(capital),
         ...(duracionAnios.trim() ? { duracionAnios: Number(duracionAnios) } : {}),
       },
-      correcciones,
+      correcciones: fechaEfecto !== '' ? { ...correcciones, fechaEfecto } : correcciones,
     })
     switch (r.estado) {
       case 'faltan':
@@ -157,6 +161,9 @@ export default function VidaNuevo({
           </Campo>
           <Campo etiqueta="Duración (años)" falta={false} ayuda="Nota para el corredor: NO viaja al vendor (la API de vida no documenta ese campo).">
             <input type="number" min={1} value={duracionAnios} onChange={(e) => setDuracionAnios(e.target.value)} placeholder="10" style={input} />
+          </Campo>
+          <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
+            <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
           </Campo>
         </div>
       </div>

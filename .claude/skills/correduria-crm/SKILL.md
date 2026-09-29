@@ -73,6 +73,27 @@ real medido, orden de trabajo). Después, según lo que toques:
    prevista es el aviso de vencimiento del calendario, que es **informativo** (no asesoramiento) y va
    apagado — regla 13.
 8. `null` ≠ `[]` en recibos, documentos, contactos, relaciones: la pantalla lo dice, no lo colapsa.
+9. **Una oportunidad sin sus tarificaciones enlazadas es una oportunidad a la que no se puede
+   emitir desde la pantalla (29/09/2026).** «Presupuestos de este riesgo» (P1…Pn) y el botón de
+   emitir salen SOLO de `seguros.tarificaciones.oportunidad_id` (`apps/asegura/lib/oportunidad-riesgo.ts`).
+   Apuntar el nº de Avant2 en `info_riesgo.presupuestoCodeoscopic`, o la prima y las ofertas en
+   `prima_bruta`/`info_riesgo.ofertas`, **NO enlaza nada**: la pantalla dice «Aún no se ha pedido precio»
+   y empuja a volver a tarificar, pagando 0,50€ por un precio que ya estaba (0,50€ por cotización).
+   Caso fundacional: la oportunidad `5ca953b0…` del Navara 5655DSM (Antonio Cruz Sánchez) se creó a mano
+   por SQL el 24/09 con el Reale aceptado (40821944) y sus 4 tarificaciones del 21/09 se quedaron con
+   `oportunidad_id = NULL`. Por tanto, **al crear o tocar a mano una oportunidad:** enlaza en el MISMO
+   paso las tarificaciones de ese riesgo
+   (`update seguros.tarificaciones set oportunidad_id = <op> where cliente_id = <cliente> and
+   correduria_id = <corr> and oportunidad_id is null and project_id_codeoscopic in (…)`), y quita de
+   `info_riesgo` cualquier «pendiente» que ya se haya resuelto. Comprobación (tiene que dar 0 filas):
+   `select o.id from seguros.oportunidades o join seguros.tarificaciones t on t.correduria_id = o.correduria_id
+   and t.project_id_codeoscopic::text = o.info_riesgo->>'presupuestoCodeoscopic' where t.oportunidad_id
+   is distinct from o.id`.
+   ✅ (arreglado el mismo día: la cabecera dice «ahora en <compañía>» cuando es la de hoy, campo `aseguradoraActual`) **La cabecera mezclaba dos cosas:** pinta `coalesce(poliza_competencia.aseguradora,
+   aseguradora_ganadora)` al lado de `prima_bruta`. En el caso fundacional salía «Mapfre · 276,69€» cuando
+   Mapfre es la compañía de HOY y 276,69€ es la oferta de **Reale**. Antes de emitir, la compañía se mira en
+   la variante, no en la cabecera. Pendiente de arreglar: el significado de `prima_bruta` no es el mismo
+   en todas las oportunidades, así que no se ha tocado sin mirarlo antes.
 
 ## 🎨 La pantalla son CINCO SECCIONES, no un scroll (03/09/2026)
 
