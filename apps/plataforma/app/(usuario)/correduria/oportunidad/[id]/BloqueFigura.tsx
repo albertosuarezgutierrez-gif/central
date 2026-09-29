@@ -21,6 +21,7 @@ export function BloqueFigura({
   persona,
   onPersona,
   civiles,
+  empresa = false,
 }: {
   rol: RolExtra
   nombre: string | null
@@ -29,6 +30,8 @@ export function BloqueFigura({
   persona: PersonaForm
   onPersona: (p: PersonaForm) => void
   civiles: { id: string; nombre: string }[]
+  /** Su ficha es una EMPRESA: se declara con CIF y razón social, sin estado civil ni nacimiento. */
+  empresa?: boolean
 }) {
   function set<K extends keyof PersonaForm>(campo: K, valor: PersonaForm[K]) {
     onPersona({ ...persona, [campo]: valor })
@@ -40,7 +43,8 @@ export function BloqueFigura({
   return (
     <div>
       <p style={{ margin: 0, fontSize: 13 }}>
-        <strong>{ROTULO_FIGURA[rol]}:</strong> {nombre ?? 'sin nombre'} <span style={{ color: 'var(--muted)' }}>(de su ficha)</span>
+        <strong>{ROTULO_FIGURA[rol]}:</strong> {nombre ?? 'sin nombre'}{' '}
+        <span style={{ color: 'var(--muted)' }}>{empresa ? '(empresa, con su CIF, de su ficha)' : '(de su ficha)'}</span>
       </p>
       {faltan === null && (
         <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--warning)' }}>
@@ -53,33 +57,35 @@ export function BloqueFigura({
         </p>
       )}
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 8 }}>
-        <Campo etiqueta="Estado civil" falta={persona.estadoCivil === ''} ayuda="La ficha no lo guarda como lo pide la compañía: elígelo.">
-          <select value={persona.estadoCivil} onChange={(e) => set('estadoCivil', e.target.value)} style={input}>
-            <option value="">Elige estado civil</option>
-            {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-        </Campo>
+        {!empresa && (
+          <Campo etiqueta="Estado civil" falta={persona.estadoCivil === ''} ayuda="La ficha no lo guarda como lo pide la compañía: elígelo.">
+            <select value={persona.estadoCivil} onChange={(e) => set('estadoCivil', e.target.value)} style={input}>
+              <option value="">Elige estado civil</option>
+              {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </Campo>
+        )}
         {pedir('dni') && (
-          <Campo etiqueta="DNI/NIF" falta={obligatorio('dni') && !persona.dni.trim()}>
+          <Campo etiqueta={empresa ? 'CIF' : 'DNI/NIF'} falta={obligatorio('dni') && !persona.dni.trim()}>
             <input value={persona.dni} onChange={(e) => set('dni', e.target.value)} style={input} />
           </Campo>
         )}
         {pedir('nombre') && (
-          <Campo etiqueta="Nombre" falta={obligatorio('nombre') && !persona.nombre.trim()}>
+          <Campo etiqueta={empresa ? 'Razón social' : 'Nombre'} falta={obligatorio('nombre') && !persona.nombre.trim()}>
             <input value={persona.nombre} onChange={(e) => set('nombre', e.target.value)} style={input} />
           </Campo>
         )}
-        {pedir('apellido1') && (
+        {!empresa && pedir('apellido1') && (
           <Campo etiqueta="Primer apellido" falta={obligatorio('apellido1') && !persona.apellido1.trim()}>
             <input value={persona.apellido1} onChange={(e) => set('apellido1', e.target.value)} style={input} />
           </Campo>
         )}
-        {pedir('fechaNacimiento') && (
+        {!empresa && pedir('fechaNacimiento') && (
           <Campo etiqueta="Fecha de nacimiento" falta={obligatorio('fechaNacimiento') && !persona.fechaNacimiento}>
             <input type="date" value={persona.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} style={input} />
           </Campo>
         )}
-        {pedir('sexo') && (
+        {!empresa && pedir('sexo') && (
           <Campo etiqueta="Sexo" falta={obligatorio('sexo') && persona.sexo === ''}>
             <select value={persona.sexo} onChange={(e) => set('sexo', e.target.value as PersonaForm['sexo'])} style={input}>
               <option value="">Elige</option>
@@ -93,7 +99,7 @@ export function BloqueFigura({
             <input value={persona.telefono} onChange={(e) => set('telefono', e.target.value)} style={input} />
           </Campo>
         )}
-        {conCarnet && pedir('fechaCarnet') && (
+        {!empresa && conCarnet && pedir('fechaCarnet') && (
           <Campo etiqueta="Fecha del carnet" falta={obligatorio('fechaCarnet') && !persona.fechaCarnet} ayuda="Es SU carnet, no el del tomador.">
             <input type="date" value={persona.fechaCarnet} onChange={(e) => set('fechaCarnet', e.target.value)} style={input} />
           </Campo>

@@ -482,3 +482,17 @@ test('🪤 propietario que ES el conductor (mismo DNI): el MISMO objeto en owner
   const c = construirPeticionAuto({ ...BASE, propietario: otra, conductor: { ...otra, fechaCarnet: '1990-01-01' } }) as any
   assert.deepEqual(c.risk.owner, c.risk.primaryDriver)
 })
+
+// ─── TOMADOR empresa (29/09/2026) ──────────────────────────────────────────
+test('auto: tomador empresa exige conductor aparte y viaja como Cif', async () => {
+  const { construirPeticionAuto, revisarDatosAuto } = await import('./peticion-auto.ts')
+  const base = BASE_TOMADOR_EMPRESA()
+  assert.ok(revisarDatosAuto(base).some((x) => x.campo === 'conductor'))
+  const c = construirPeticionAuto({ ...base, conductor: { ...base, dni: '00000001R', nombre: 'Conductor', apellido1: 'Uno', fechaNacimiento: '1980-01-01', sexo: 'hombre', estadoCivil: 'Single', fechaCarnet: '2000-01-01' } } as any) as any
+  assert.equal(c.holder.identificationDocument.type.id, 'Cif')
+  assert.deepEqual(c.risk.owner, c.holder)
+  assert.equal(c.risk.primaryDriver.identificationDocument.type.id, 'Dni')
+})
+function BASE_TOMADOR_EMPRESA(): DatosAuto {
+  return { ...BASE, tomadorEsEmpresa: true, dni: 'B12345674', nombre: 'Empresa Inventada SL', apellido1: '', apellido2: null, fechaNacimiento: '', estadoCivil: '', fechaCarnet: '' } as DatosAuto
+}

@@ -93,6 +93,12 @@ export type ClienteCartera = {
    * principio; si falta, es un hueco que se pide ANTES de pagar.
    */
   email?: string | null
+  /**
+   * `clientes.tipo_persona`: `'juridica'` = empresa (va como propietaria con su
+   * CIF, nunca como conductora). `null`/`undefined` = no consta: se trata como
+   * persona, que es lo que era todo antes de existir el campo.
+   */
+  tipoPersona?: string | null
 }
 
 /**
@@ -380,7 +386,8 @@ export function precalificarAuto(
   const numeroViaDeFicha = direccionPartida?.numero ?? null
 
   const datos: Partial<DatosAuto> = {
-    // ── Persona ──
+    // ── Persona ── (una EMPRESA tomadora llega por los mismos campos: CIF y razón social)
+    ...(cliente.tipoPersona === 'juridica' ? { tomadorEsEmpresa: true } : {}),
     dni: limpio(cliente.dni) ?? undefined,
     nombre: nombreUtil(cliente.nombre) ?? undefined,
     apellido1: primero ?? undefined,
@@ -518,7 +525,8 @@ export function precalificarAutoNueva(
       : null
 
   const datos: Partial<DatosAuto> = {
-    // ── Persona ──
+    // ── Persona ── (una EMPRESA tomadora llega por los mismos campos: CIF y razón social)
+    ...(cliente.tipoPersona === 'juridica' ? { tomadorEsEmpresa: true } : {}),
     dni: limpio(cliente.dni) ?? undefined,
     nombre: nombreUtil(cliente.nombre) ?? undefined,
     apellido1: primero ?? undefined,
@@ -735,7 +743,8 @@ export function precalificarMotoNueva(
   ) as string
 
   const datos: Partial<DatosMoto> = {
-    // ── Persona ──
+    // ── Persona ── (una EMPRESA tomadora llega por los mismos campos: CIF y razón social)
+    ...(cliente.tipoPersona === 'juridica' ? { tomadorEsEmpresa: true } : {}),
     dni: limpio(cliente.dni) ?? undefined,
     nombre: nombreUtil(cliente.nombre) ?? undefined,
     apellido1: primero ?? undefined,

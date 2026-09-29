@@ -921,6 +921,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Correduría: EMPRESA (CIF) como propietaria del vehículo en moto y auto
+- Desde el riesgo de la oportunidad, una ficha `tipo_persona = juridica` puede ocupar el papel **propietario**: viaja como `JuridicalPerson_V1` (`Cif` + razón social + contacto/dirección de su ficha, `construirEmpresa` en `persona.ts`). CIF validado con dígito de control antes de pagar. Nunca conductor (el vendor solo admite Dni/Nie/Passport ahí): se corta gratis.
+- 🚧 **Sin verificar contra Codeoscopic** qué más exige `owner` jurídico: la primera cotización real (Manuel Antonio Piña + Global 2, oportunidad moto) lo dirá.
+- Tomador empresa también (auto y moto): ficha jurídica en el papel de tomador → `holder` `Cif`, propietaria por defecto la misma empresa, y exige conductor habitual persona en el riesgo (se corta gratis si falta). Así cada papel se puede alternar empresa/particular para comparar precios. Hogar no declara `owner` distinto; vida/salud/decesos, asegurado = persona.
+
 ## (29/09/2026) asegura-web: la píldora de la cabecera vuelve a CLARA
 Al hacer scroll la cabecera flotaba en `.oscuro` al 80 % sobre fondo blanco → gris sucio, y el monograma
 azul desaparecía sobre la baldosa oscura. La página es clara desde el 05/09 (una sola banda oscura), así que

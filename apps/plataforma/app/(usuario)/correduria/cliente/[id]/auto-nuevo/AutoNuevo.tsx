@@ -613,7 +613,11 @@ export default function AutoNuevo({
 
   const faltaVersion = !codigoVehiculo
   const faltaGaraje = !garaje
-  const faltaCivil = !estadoCivilId
+  // Tomador EMPRESA (29/09/2026): va con su CIF, sin estado civil, y conduce otra ficha del riesgo.
+  const tomadorEmpresa = variante?.empresas.tomador === true
+  const faltaCivil = !estadoCivilId && !tomadorEmpresa
+  // Con un conductor habitual en otra ficha, el «falta conductor» de la precalificación ya está cubierto.
+  const faltanTomador = (faltanInicial ?? []).filter((f) => !(f.campo === 'conductor' && (figs.conductor_habitual || conductorDistintoEf)))
   const faltaMunicipio = !municipioId
   const faltaMatricula = !matricula.trim()
   const faltaMatriculacion = !matriculacion
@@ -661,21 +665,21 @@ export default function AutoNuevo({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matricula])
 
-  const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
+  const aMano = faltanTomador.filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
   // Cada hueco, a donde de verdad se arregla (`lib/correduria/campos-faltan.ts`).
   // Antes todo lo que no supiera teclear la pantalla se mandaba a la ficha del
   // cliente por descarte, incluidos los seis campos del bloque 3 — que estan
   // AQUI y en la ficha no existen.
   const reparos = clasificarFaltan(
-    (faltanInicial ?? []).map((f) => ({ campo: f.campo as string, motivo: f.motivo })),
+    faltanTomador.map((f) => ({ campo: f.campo as string, motivo: f.motivo })),
     (c) => Boolean(CAMPOS_A_MANO[c]),
   )
 
   const faltaPropietario = propietarioDistintoEf && !personaCompleta(propietario, false)
   const faltaConductor = conductorDistintoEf && !personaCompleta(conductor, true)
   const faltaOcasional = ocasionalDistintoEf && !personaCompleta(ocasional, true)
-  const faltaFigura = ROLES_EXTRA.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null))
+  const faltaFigura = ROLES_EXTRA.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null, variante?.empresas[rol] ?? false))
   // La misma ficha de conductor habitual y de ocasional es UN conductor, no dos (y el vendor rechaza
   // dos personas con el mismo documento, con un 400 que se paga).
   const figuraRepetida = !!figs.conductor_habitual && figs.conductor_habitual === figs.conductor_ocasional
@@ -960,12 +964,16 @@ export default function AutoNuevo({
           sub={aMano.length > 0 ? 'Los datos personales NUNCA se suponen: los que falten se teclean aquí.' : 'La ficha trae todo lo personal; solo hay que confirmar estos dos.'}
         />
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Campo etiqueta="Estado civil" falta={faltaCivil} ayuda={estadoCivilAuto ? `Viene de la ficha («${estadoCivilAuto.nombre}»). Se puede cambiar.` : 'La ficha no lo dice o no casa con el catálogo: elígelo.'}>
-            <select value={estadoCivilId} onChange={(e) => setEstadoCivilId(e.target.value)} style={input}>
-              <option value="">Elige estado civil</option>
-              {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
-          </Campo>
+          {tomadorEmpresa ? (
+            <p style={{ fontSize: 13, margin: 0, alignSelf: 'center' }}>Empresa: va con su CIF y su razón social, sin estado civil. Conduce el conductor habitual del riesgo.</p>
+          ) : (
+                    <Campo etiqueta="Estado civil" falta={faltaCivil} ayuda={estadoCivilAuto ? `Viene de la ficha («${estadoCivilAuto.nombre}»). Se puede cambiar.` : 'La ficha no lo dice o no casa con el catálogo: elígelo.'}>
+              <select value={estadoCivilId} onChange={(e) => setEstadoCivilId(e.target.value)} style={input}>
+                <option value="">Elige estado civil</option>
+                {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </Campo>
+          )}
           <Campo
             etiqueta="Municipio"
             falta={faltaMunicipio}
@@ -1095,7 +1103,7 @@ export default function AutoNuevo({
           }
         />
         {figs.propietario ? (
-          <BloqueFigura rol="propietario" nombre={variante?.nombres.propietario ?? null} faltan={variante?.faltan.propietario ?? null}
+          <BloqueFigura rol="propietario" nombre={variante?.nombres.propietario ?? null} faltan={variante?.faltan.propietario ?? null} empresa={variante?.empresas.propietario ?? false}
             persona={figCorr.propietario} onPersona={(p) => setFigCorr((f) => ({ ...f, propietario: p }))} civiles={civiles} />
         ) : (
           <BloquePersona
@@ -1110,7 +1118,7 @@ export default function AutoNuevo({
         )}
         <div style={{ height: 12 }} />
         {figs.conductor_habitual ? (
-          <BloqueFigura rol="conductor_habitual" nombre={variante?.nombres.conductor_habitual ?? null} faltan={variante?.faltan.conductor_habitual ?? null}
+          <BloqueFigura rol="conductor_habitual" nombre={variante?.nombres.conductor_habitual ?? null} faltan={variante?.faltan.conductor_habitual ?? null} empresa={variante?.empresas.conductor_habitual ?? false}
             persona={figCorr.conductor_habitual} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_habitual: p }))} civiles={civiles} />
         ) : (
           <BloquePersona
@@ -1125,7 +1133,7 @@ export default function AutoNuevo({
         )}
         <div style={{ height: 12 }} />
         {figs.conductor_ocasional ? (
-          <BloqueFigura rol="conductor_ocasional" nombre={variante?.nombres.conductor_ocasional ?? null} faltan={variante?.faltan.conductor_ocasional ?? null}
+          <BloqueFigura rol="conductor_ocasional" nombre={variante?.nombres.conductor_ocasional ?? null} faltan={variante?.faltan.conductor_ocasional ?? null} empresa={variante?.empresas.conductor_ocasional ?? false}
             persona={figCorr.conductor_ocasional} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_ocasional: p }))} civiles={civiles} />
         ) : (
           <BloquePersona
