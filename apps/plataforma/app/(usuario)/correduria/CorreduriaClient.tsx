@@ -28,6 +28,7 @@ import ComisionesPactadas from './ComisionesPactadas'
 import RadarRecibos from './RadarRecibos'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
+import CambiosCuenta from './CambiosCuenta'
 import DiferenciasCima from './DiferenciasCima'
 import Quejas from './Quejas'
 import Bloque from './Bloque'
@@ -175,6 +176,7 @@ export default function CorreduriaClient() {
   const [nPartes, setNPartes] = useState<number | null | undefined>(undefined)
   const [nLeads, setNLeads] = useState<number | null | undefined>(undefined)
   const [nSupresiones, setNSupresiones] = useState<number | null | undefined>(undefined)
+  const [nCambiosCuenta, setNCambiosCuenta] = useState<number | null | undefined>(undefined)
   const [nQuejas, setNQuejas] = useState<number | null | undefined>(undefined)
   const [nCima, setNCima] = useState<number | null | undefined>(undefined)
   const [nDescuadres, setNDescuadres] = useState<number | null | undefined>(undefined)
@@ -296,7 +298,7 @@ export default function CorreduriaClient() {
   // `undefined` mientras cargan; `null` si ninguna se pudo leer. Hasta que
   // contestan todas no se pinta nada: un «0» con colas aún cargando sería una
   // afirmación que nadie ha comprobado.
-  const colasIncid = [nPartes, nSupresiones, nQuejas, nCima, nRetencion, nRenovaciones, nLeads, nSustituciones, nDescuadres]
+  const colasIncid = [nPartes, nSupresiones, nCambiosCuenta, nQuejas, nCima, nRetencion, nRenovaciones, nLeads, nSustituciones, nDescuadres]
   const nIncidencias = colasIncid.some(n => n === undefined) ? undefined : agregarContadores(colasIncid)
 
   const contadores: ContadoresSeccion = {
@@ -410,6 +412,9 @@ export default function CorreduriaClient() {
             porque hasta que existió este bloque ese plazo se incumplía solo, sin
             que nada fallara ni saliera en ninguna pantalla. */}
         <Supresiones onContador={setNSupresiones} />
+        {/* Las cuentas nuevas que piden los clientes en el portal: hasta que se cambian en la
+            compañía, los recibos se siguen cargando en la vieja. */}
+        <CambiosCuenta onContador={setNCambiosCuenta} />
         <Quejas onContador={setNQuejas} />
 
         {/* Datos de la ficha que no coinciden con lo que manda CIMA de esa

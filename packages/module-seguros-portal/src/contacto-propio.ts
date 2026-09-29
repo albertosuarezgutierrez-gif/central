@@ -177,4 +177,10 @@ export const PREFIJO_HISTORIAL_SUGERENCIA = '💡 Sugerencia del cliente desde e
  * (24/09/2026). Lleva prefijo fijo por lo mismo que las dos de arriba: el muro de
  * actividad la clasifica como del cliente y el aviso por Telegram la recoge.
  */
+/**
+ * El cliente pide cambiar la cuenta de domiciliación desde el portal (29/09/2026). El texto lleva
+ * solo la máscara («**** 1234»): el IBAN completo vive cifrado en `cambio_cuenta_solicitud`.
+ */
+export const PREFIJO_HISTORIAL_CUENTA_PROPIA = '🏦 El cliente pidió desde el portal cambiar la cuenta de sus recibos'
+
 export const PREFIJO_HISTORIAL_DATOS_PRESUPUESTO = '📝 El cliente completó los datos para su presupuesto de'

@@ -38,6 +38,7 @@ import {
   PREFIJO_HISTORIAL_CONTACTO_PROPIO,
   PREFIJO_HISTORIAL_SUGERENCIA,
   PREFIJO_HISTORIAL_DATOS_PRESUPUESTO,
+  PREFIJO_HISTORIAL_CUENTA_PROPIA,
 } from '@central/module-seguros-portal'
 
 import { Prisma } from './generated/asegura-client'
@@ -90,6 +91,7 @@ function consultaEventos(
   const prefContacto = `${PREFIJO_HISTORIAL_CONTACTO_PROPIO}%`
   const prefSugerencia = `${PREFIJO_HISTORIAL_SUGERENCIA}%`
   const prefDatos = `${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO}%`
+  const prefCuenta = `${PREFIJO_HISTORIAL_CUENTA_PROPIA}%`
 
   return prismaAsegura().$queryRaw<FilaEvento[]>`
     with vinc as (
@@ -164,7 +166,8 @@ function consultaEventos(
         and h.created_at >= ${desde}
         and h.texto not like ${prefContacto}
         and h.texto not like ${prefSugerencia}
-        and h.texto not like ${prefDatos}`
+        and h.texto not like ${prefDatos}
+        and h.texto not like ${prefCuenta}`
       }
 
       union all
@@ -173,13 +176,14 @@ function consultaEventos(
       -- cliente»: las escribió él, aunque vivan en la tabla de la ficha.
       select h.id::text,
              case when h.texto like ${prefContacto} then 'direccion'
-                  when h.texto like ${prefDatos} then 'datos_presupuesto' else 'sugerencia' end,
+                  when h.texto like ${prefDatos} then 'datos_presupuesto'
+                  when h.texto like ${prefCuenta} then 'cuenta' else 'sugerencia' end,
              h.created_at at time zone 'UTC', h.cliente_id, h.texto
       from historial_interno h
       where h.correduria_id = ${correduriaId}::uuid
         and h.deleted_at is null
         and h.created_at >= ${desde}
-        and (h.texto like ${prefContacto} or h.texto like ${prefSugerencia} or h.texto like ${prefDatos})
+        and (h.texto like ${prefContacto} or h.texto like ${prefSugerencia} or h.texto like ${prefDatos} or h.texto like ${prefCuenta})
     )
     select e.id, e.tipo, e.fecha, e.cliente_id, e.texto,
            c.nombre, c.apellidos,

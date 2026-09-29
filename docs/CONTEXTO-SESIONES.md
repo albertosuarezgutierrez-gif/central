@@ -12,12 +12,18 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(29/09/2026)** — 🧾 Devoluciones, 2ª tanda (PR pendiente de nº): **Allianz** ya se lee — manda la tabla en un PDF adjunto
+**(29/09/2026)** — 🏦 **Cambio de IBAN desde el portal** (PR en borrador): el cliente pide la cuenta nueva en «Mis datos» con un código
+a su correo de ACCESO (canal verificado, código atado a identidad+IBAN); asegura la deja PENDIENTE cifrada en
+`seguros.cambio_cuenta_solicitud` (migración `2026-09-29d`, **aún sin aplicar**) — NO cambia la ficha. Alberto la ve en «Hoy»
+(`CambiosCuenta.tsx`), «Ver IBAN» lo da completo (POST auditado), «Hecha» lo copia a `clientes.cuenta_bancaria`. Aviso
+Telegram por el muro de actividad (tipo `cuenta`). Módulo 97 subido a `module-seguros/iban.ts`. Pendiente: revisión architect.
+
+**(29/09/2026)** — 🧾 Devoluciones, 2ª tanda (**PR #3964 MERGEADO**): **Allianz** ya se lee — manda la tabla en un PDF adjunto
 («Rel. recibos ventanilla» = devueltos; «Relacion anulacion polizas por impago» = anuladas). El triaje guarda los PDF SOLO de
 `allianz.es` (≤2 MB, ≤3) y los lee por filas con celdas (`lib/correo/pdf-filas.ts`: `pdf-parse` a secas pega las columnas);
 sin tabla legible = aviso «sin leer», nunca «carta vacía». «DISCONFORME» → `cliente_rechaza`. **Comisión en riesgo** = `comision_bruta`
 del recibo (CIMA), en el Telegram y en la ficha (null ≠ 0). **Historial de devoluciones** por póliza (abiertas y resueltas).
-Pendiente: **cambio de IBAN desde el portal con aviso a Alberto** (siguiente PR: código al correo + cola en Hoy; alto riesgo).
+IBAN por portal: ver entrada de arriba.
 
 **(29/09/2026)** 📮 **`envios.grupoasegura.es` retirado de Resend** (OK de Alberto). Todo el correo de Grupo ASegura sale de `hola@grupoasegura.es`
 (muestreo 25-28/09: anulaciones, novedades y códigos, todos desde hola@). Queda borrar sus 3 registros DNS en IONOS
