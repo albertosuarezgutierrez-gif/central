@@ -40,6 +40,7 @@ import DeclaradasVencer from './DeclaradasVencer'
 import ListaCartera from './ListaCartera'
 import Recaptacion from './Recaptacion'
 import LeadsWebConversion from './LeadsWebConversion'
+import GarantiasFiltradas from './GarantiasFiltradas'
 import PanelIngesta, { AvisoIngesta } from './Ingesta'
 import Secciones, { type ContadoresSeccion } from './Secciones'
 import HoyCockpit from './HoyCockpit'
@@ -496,6 +497,7 @@ export default function CorreduriaClient() {
             es un embudo COMERCIAL, no calidad de dato, y comparte pestaña con
             Recaptación por el mismo motivo que ella. */}
         {montada('clientes') && <LeadsWebConversion />}
+        {montada('clientes') && <GarantiasFiltradas />}
       </div>
 
       {/* ══ CARTERA ══════════════════════════════════════════════════════════ */}

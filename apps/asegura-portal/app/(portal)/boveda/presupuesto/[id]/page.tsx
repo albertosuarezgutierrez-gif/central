@@ -14,6 +14,7 @@ import { MOTIVO_EN_REVISION, MOTIVO_SIN_DATOS, datosCotizados, datosListosParaAc
 import { MEDIADOR, ramoDeCatalogo, telefonoLegible } from '@central/module-seguros'
 import { datosParaContratar } from '@/lib/datos-emision'
 import { getIdentidad } from '@/lib/session'
+import { avisoPerdidas, garantiasDeActual } from '@/lib/todas-las-opciones'
 
 export const dynamic = 'force-dynamic'
 
@@ -103,6 +104,8 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
     : cotizados?.estado === 'sin_datos' ? cotizados.motivo : MOTIVO_SIN_DATOS
   const portada = p.opciones.filter((o) => o.esPortada)
   const resto = p.opciones.filter((o) => !o.esPortada)
+  const ramoCat = ramoDeCatalogo(p.ramo)
+  const garantiasActual = ramoCat === null ? null : garantiasDeActual(ramoCat, p.actual?.coberturas ?? null)
   const companias = new Set(portada.map((o) => o.compania)).size
   // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones».
   const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
@@ -208,6 +211,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
                 compania={o.compania}
                 corredor={p.vistaDeCorredor}
                 bloqueoDatos={bloqueoDatos}
+                perdidas={avisoPerdidas(ramoCat, o.garantias, garantiasActual)}
               />
             )}
           </section>

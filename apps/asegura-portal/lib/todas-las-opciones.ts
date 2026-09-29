@@ -86,6 +86,27 @@ export function alternarGarantia(marcadas: readonly string[], clave: string, int
 
 // ─── Paginación ──────────────────────────────────────────────────────────────
 
+// ─── Antes de aceptar: lo que PIERDE frente a su seguro actual (29/09/2026) ──
+
+export type AvisoPerdidas = { pierdes: string[]; sinDato: string[] }
+
+/**
+ * Lo que el cliente dejaría de tener si acepta ESTA opción, frente a la póliza que tiene hoy.
+ * `null` = no hay nada que avisar (o no se puede comparar: sin ramo con catálogo, sin desglose de su
+ * póliza o sin garantías leídas de la opción). «Sin dato» es lo que su póliza tiene y esta opción no
+ * dice: no se afirma que lo pierde, se le pide que lo pregunte.
+ */
+export function avisoPerdidas(
+  ramo: RamoGarantias | null,
+  opcion: GarantiasClasificadas | null,
+  actual: GarantiasClasificadas | null,
+): AvisoPerdidas | null {
+  if (ramo === null) return null
+  const c = cambiosFrenteActual(ramo, opcion, actual)
+  if (c === null || (c.pierdes.length === 0 && c.sinDato.length === 0)) return null
+  return { pierdes: c.pierdes, sinDato: c.sinDato }
+}
+
 export type Pagina<T> = { mostradas: T[]; quedan: number; siguiente: number }
 
 /** Las `cuantas` primeras, cuántas quedan y cuántas se enseñan tras «Ver 10 más». */
