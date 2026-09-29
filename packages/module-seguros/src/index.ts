@@ -959,6 +959,8 @@ export { claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type Seg
 export {
   CATALOGO_GARANTIAS,
   VERSION_CATALOGO,
+  asistenciaAmpliada,
+  type OpcionProductoLegible,
   claveCobertura,
   clasificarCoberturas,
   noReconocidas,

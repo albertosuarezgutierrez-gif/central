@@ -19,7 +19,7 @@
 // 🚨 Nunca lanza: corre en un cron, y una tarificación rota no puede tumbar a las demás.
 // 🔒 `correduria_id` en toda lectura y escritura: con BYPASSRLS, olvidarlo no da error.
 
-import { clasificarCoberturas, ramoDeCatalogo, type GarantiasClasificadas } from '@central/module-seguros'
+import { clasificarCoberturas, ramoDeCatalogo, type CoberturaParaClasificar, type GarantiasClasificadas } from '@central/module-seguros'
 import { casarPrecio, type SobreCoberturas } from './coberturas-presupuesto.ts'
 import type { ResumenCoberturasTarificacion } from './coberturas-tarificacion.ts'
 import type { Precio } from './respuesta.ts'
@@ -118,8 +118,11 @@ export type DepsBackfill = {
   sinOpciones?: () => Promise<FilaSinOferta[]>
   /** `GET /insurances/{id}/offers/{offerId}` (gratis). `null`/ausente = no se leen opciones. */
   leerOferta?: ((projectId: string, ofertaId: string) => Promise<unknown>) | null
-  /** `update … set opciones where id = … and opciones is null`. Filas escritas. */
-  escribirOpciones?: (id: string, sobre: SobreOpciones) => Promise<number>
+  /**
+   * `update … set opciones where id = … and opciones is null`, y si la fila ya tiene coberturas
+   * leídas, recalcula su `garantias` con ellas + estas opciones (asistencia ampliada). Filas escritas.
+   */
+  escribirOpciones?: (id: string, sobre: SobreOpciones, ramo: string) => Promise<number>
   /** La pasada normal sobre las filas que ya tienen oferta. */
   completar: (topeMs: number) => Promise<ResumenCoberturasTarificacion>
   ahora?: () => Date
@@ -222,7 +225,7 @@ export async function backfillCoberturasTarificacion(
           const ops = leidas.get(oferta)!
           sobre = ops === 'fallo' ? { estado: 'fallo', lista: null, leidasAt } : sobreOpciones(ops, leidasAt)
         }
-        r.opciones += await d.escribirOpciones(f.id, sobre)
+        r.opciones += await d.escribirOpciones(f.id, sobre, cab.ramo)
       }
     }
 
@@ -403,10 +406,24 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
         primaEur: Number(String(f.prima_eur)), referenciaVendor: f.referencia_vendor, ofertaId: f.oferta_id,
       }))
     },
-    async escribirOpciones(id, sobre) {
+    async escribirOpciones(id, sobre, ramo) {
+      // Las garantías se recalculan con las coberturas ya guardadas de ESA fila + las opciones nuevas:
+      // la asistencia ampliada depende de las dos. Sin coberturas leídas, `garantias` no se toca.
+      const ramoCat = ramoDeCatalogo(ramo)
+      const filas = await prisma.$queryRaw<{ coberturas: unknown }[]>`
+        select p.coberturas from tarificacion_precios p
+        join tarificaciones t on t.id = p.tarificacion_id
+        where p.id = ${id}::uuid and t.correduria_id = ${ids.correduriaId}::uuid
+      `
+      const cob = filas[0]?.coberturas as { estado?: string; lista?: unknown } | null | undefined
+      const lista = cob && Array.isArray(cob.lista) ? (cob.lista as CoberturaParaClasificar[]) : null
+      const garantias = ramoCat && cob && cob.estado !== 'fallo' && cob.estado !== 'sin_oferta'
+        ? clasificarCoberturas(ramoCat, lista, sobre.lista)
+        : null
       return prisma.$executeRaw`
         update tarificacion_precios p
-        set opciones = ${JSON.stringify(sobre)}::jsonb
+        set opciones = ${JSON.stringify(sobre)}::jsonb,
+            garantias = coalesce(${garantias === null ? null : JSON.stringify(garantias)}::jsonb, p.garantias)
         from tarificaciones t
         where t.id = p.tarificacion_id
           and t.correduria_id = ${ids.correduriaId}::uuid

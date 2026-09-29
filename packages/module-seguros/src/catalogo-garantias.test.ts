@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { CATALOGO_GARANTIAS, clasificarCoberturas, noReconocidas } from './catalogo-garantias.ts'
+import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, noReconocidas } from './catalogo-garantias.ts'
 import { filtrarPorGarantias, interruptoresGarantias } from './filtro-garantias.ts'
 
 // Nombres REALES de coberturas de moto de Codeoscopic (presupuesto de Manuel, 28/09/2026).
@@ -14,7 +14,7 @@ const MOTO_REAL = [
 test('moto: cada nombre real cae en su garantía', () => {
   const g = clasificarCoberturas('moto', MOTO_REAL.map((nombre) => ({ nombre, incluida: true })))
   for (const [clave, estado] of Object.entries(g.porClave)) {
-    if (clave === 'fenomenos_atmosfericos') assert.equal(estado, 'no_consta')
+    if (clave === 'fenomenos_atmosfericos' || clave === 'asistencia_ampliada') assert.equal(estado, 'no_consta')
     else assert.equal(estado, 'si', clave)
   }
   assert.deepEqual(noReconocidas('moto', [{ nombre: 'Daños al cargador', incluida: false }, { nombre: 'Robo', incluida: true }]), ['Daños al cargador'])
@@ -84,4 +84,23 @@ test('decesos, salud y vida también tienen catálogo', () => {
   assert.equal(v.porClave.fallecimiento, 'si')
   assert.equal(v.porClave.fallecimiento_accidente, 'no')
   assert.equal(v.porClave.invalidez, 'si')
+})
+
+test('asistencia ampliada: la opción tarificada manda; el texto de Occident dice «no»; sin señal, no_consta', () => {
+  const asist = (texto: string | null) => [{ nombre: 'Asistencia en viaje', incluida: true, texto }]
+  // Allianz: la opción «Estándar» es un NO explícito.
+  assert.equal(asistenciaAmpliada(asist(null), [{ etiqueta: 'Asistencia en Viaje', valor: 'Estándar' }]), 'no')
+  assert.equal(asistenciaAmpliada(asist(null), [{ etiqueta: 'Asistencia en viaje', valor: 'Ampliada' }]), 'si')
+  // Reale: «SIN vehículo de sustitución» no habla del nivel de asistencia.
+  assert.equal(asistenciaAmpliada(asist('» Asistencia Global Incluida'), [{ etiqueta: 'Asistencia en viaje', valor: 'SIN vehículo de sustitución' }]), 'no_consta')
+  // Occident: el texto real de la cobertura.
+  assert.equal(asistenciaAmpliada(asist('» Asistencia en viaje amplia: Opcional (no incluida)..» Asistencia en viaje básica: Incluida.'), null), 'no')
+  assert.equal(asistenciaAmpliada(asist('Asistencia en viaje ampliada: incluida'), null), 'si')
+  assert.equal(asistenciaAmpliada(asist('Desde el Km 0'), null), 'no_consta')
+  assert.equal(asistenciaAmpliada(null, null), 'no_consta')
+  // Entra en la clasificación de auto y moto, no en hogar.
+  const g = clasificarCoberturas('auto', asist(null), [{ etiqueta: 'Asistencia en Viaje', valor: 'Estándar' }])
+  assert.equal(g.porClave.asistencia_ampliada, 'no')
+  assert.equal(g.porClave.asistencia_viaje, 'si')
+  assert.ok(!('asistencia_ampliada' in clasificarCoberturas('hogar', null).porClave))
 })
