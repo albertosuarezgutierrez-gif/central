@@ -896,6 +896,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Coberturas: «daños propios» que solo cubre animales, y la tabla en «Mandárselo al cliente»
+- Occident manda en terceros un bloque «Daños propios» incluida cuyo texto enumera SOLO «Animales cinegéticos…» (+ fenómenos): salía «daños propios: sí» en un terceros básico. `clasificarCoberturas` (catálogo v3) lee las partes «» X: … : CONTRATADA» (`subcoberturas()`): manda lo enumerado, no el nombre del bloque; clave nueva `colision_animales` (auto/moto). Una parte solo afirma claves del propio bloque + animales/fenómenos («Rc incendio» no es incendio); «excluida franquicia» no excluye.
+- 48 filas guardadas corregidas en BD (7 `presupuesto_opcion` + 41 `tarificacion_precios`), SQL en `apps/asegura/prisma/sql/2026-09-29_garantias_por_partes.sql`.
+- La tarjeta «Mandárselo al cliente» enseña plegado «Qué cubre cada opción» (logo + ✓/✗/— por garantía); el listado del puerto manda `detalle` de las opciones visibles.
+
 ## (29/09/2026) Riesgo: tres decisiones cerradas (Alberto: «resuelve como veas»)
 - «Volver» del aviso legal al emitir vuelve a la OFERTA (con cuenta/fecha/tecleado), no cierra el panel.
 - «Pasar la oportunidad a…» se BLOQUEA (409) si esa persona ya tiene otra abierta del mismo ramo: una por cliente+ramo es lo que asume el enganche de presupuestos (mismo candado `oportunidad:<cliente>:<ramo>`).

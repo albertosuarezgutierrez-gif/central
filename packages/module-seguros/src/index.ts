@@ -971,6 +971,7 @@ export {
   clasificarCoberturas,
   noReconocidas,
   ramoDeCatalogo,
+  subcoberturas,
   type CoberturaParaClasificar,
   type EstadoGarantia,
   type GarantiaCatalogo,

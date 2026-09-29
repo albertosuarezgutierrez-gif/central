@@ -31,7 +31,7 @@ export type CoberturaParaClasificar = { nombre: string; incluida: boolean | null
 export type GarantiasClasificadas = { version: number; porClave: Record<string, EstadoGarantia> }
 
 /** Súbelo al cambiar patrones: lo guardado con otra versión se reclasifica desde las coberturas. */
-export const VERSION_CATALOGO = 2
+export const VERSION_CATALOGO = 3
 
 /** Misma normalización que la tabla de coberturas del portal: sin tildes, minúsculas, sin signos. */
 export function claveCobertura(nombre: string): string {
@@ -63,17 +63,19 @@ const INCENDIO_VEH: GarantiaCatalogo = { clave: 'incendio', etiqueta: 'Incendio'
 const ROBO_VEH: GarantiaCatalogo = { clave: 'robo', etiqueta: 'Robo', patrones: [/\brobo\b/, /\bhurto\b/], excluye: [/\baccesorios?\b/, /\bequipaje\b/, /\bobjetos?\b/] }
 const DANOS_PROPIOS: GarantiaCatalogo = { clave: 'danos_propios', etiqueta: 'Daños propios (todo riesgo)', patrones: [/\bdanos propios\b/, /\btodo riesgo\b/, /\bdanos al vehiculo\b/], excluye: [/\bcargador\b/] }
 const PERDIDA_TOTAL: GarantiaCatalogo = { clave: 'perdida_total', etiqueta: 'Pérdida total', patrones: [/\bperdida total\b/, /\bgrandes danos\b/, /\bsiniestro total\b/] }
+/** Choque o atropello de animales (29/09/2026). Occident lo da SUELTO en terceros («Daños propios» con solo esto dentro). */
+const ANIMALES_VEH: GarantiaCatalogo = { clave: 'colision_animales', etiqueta: 'Choque con animales', patrones: [/\banimales\b/, /\bcinegetic/, /\batropello\b/] }
 const FENOMENOS_VEH: GarantiaCatalogo = { clave: 'fenomenos_atmosfericos', etiqueta: 'Fenómenos atmosféricos', patrones: [/\bfenomenos? atmosfericos?\b/, /\bgranizo\b/, /\binundacion\b/] }
 
 export const CATALOGO_GARANTIAS: Record<RamoGarantias, readonly GarantiaCatalogo[]> = {
   auto: [
     RC_OBLIGATORIA, RC_VOLUNTARIA, DEFENSA, MULTAS, CARNET, ASISTENCIA_VIAJE, ASISTENCIA_AMPLIADA,
     { clave: 'lunas', etiqueta: 'Lunas', patrones: [/\blunas?\b/, /\bcristales\b/, /\blunetas?\b/] },
-    ROBO_VEH, INCENDIO_VEH, FENOMENOS_VEH, DANOS_PROPIOS, PERDIDA_TOTAL, SUSTITUCION, CONDUCTOR,
+    ROBO_VEH, INCENDIO_VEH, FENOMENOS_VEH, DANOS_PROPIOS, ANIMALES_VEH, PERDIDA_TOTAL, SUSTITUCION, CONDUCTOR,
   ],
   moto: [
     RC_OBLIGATORIA, RC_VOLUNTARIA, DEFENSA, MULTAS, CARNET, ASISTENCIA_VIAJE, ASISTENCIA_AMPLIADA,
-    ROBO_VEH, INCENDIO_VEH, FENOMENOS_VEH, DANOS_PROPIOS, PERDIDA_TOTAL, SUSTITUCION, CONDUCTOR,
+    ROBO_VEH, INCENDIO_VEH, FENOMENOS_VEH, DANOS_PROPIOS, ANIMALES_VEH, PERDIDA_TOTAL, SUSTITUCION, CONDUCTOR,
     { clave: 'equipamiento', etiqueta: 'Casco y equipamiento', patrones: [/\bcasco\b/, /\bvestimenta\b/, /\bequipamiento\b/, /\bindumentaria\b/] },
     { clave: 'accesorios', etiqueta: 'Accesorios', patrones: [/\baccesorios?\b/] },
   ],
@@ -139,6 +141,9 @@ function clavesDe(ramo: RamoGarantias, nombre: string): string[] {
     .map((g) => g.clave)
 }
 
+/** Garantías que una PARTE de otro bloque puede afirmar por sí sola (su nombre no admite otra lectura). */
+const CLAVES_DE_PARTE: readonly string[] = ['colision_animales', 'fenomenos_atmosfericos']
+
 const PESO: Record<EstadoGarantia, number> = { no_consta: 0, no: 1, si: 2 }
 
 /**
@@ -154,11 +159,34 @@ export function clasificarCoberturas(
 ): GarantiasClasificadas {
   const porClave: Record<string, EstadoGarantia> = {}
   for (const g of CATALOGO_GARANTIAS[ramo]) porClave[g.clave] = 'no_consta'
+  const anotar = (clave: string, estado: EstadoGarantia) => {
+    if (PESO[estado] > PESO[porClave[clave] ?? 'no_consta']) porClave[clave] = estado
+  }
   for (const c of lista ?? []) {
     const estado: EstadoGarantia = c.incluida === true ? 'si' : c.incluida === false || esOpcionalSinMarcar(c) ? 'no' : 'no_consta'
-    for (const clave of clavesDe(ramo, c.nombre)) {
-      if (PESO[estado] > PESO[porClave[clave] ?? 'no_consta']) porClave[clave] = estado
+    const subs = subcoberturas(c.texto)
+    if (subs.length === 0) {
+      for (const clave of clavesDe(ramo, c.nombre)) anotar(clave, estado)
+      continue
     }
+    // El texto enumera lo que lleva DENTRO: manda eso, no el nombre del bloque. Occident llama
+    // «Daños propios» a un bloque que en terceros solo trae animales y fenómenos: por el nombre
+    // salía «daños propios: sí» en un terceros básico.
+    // Una parte solo habla de las garantías del propio bloque y de las que no admiten otra lectura:
+    // «Rc incendio» dentro de la RC obligatoria NO es la garantía de incendio del vehículo.
+    const propias = clavesDe(ramo, c.nombre)
+    const admitidas = new Set([...propias, ...CLAVES_DE_PARTE])
+    const dentro = new Set<string>()
+    for (const s of subs) {
+      const e: EstadoGarantia = estado === 'si' ? s.estado : estado
+      for (const clave of clavesDe(ramo, s.nombre)) {
+        if (!admitidas.has(clave)) continue
+        if (s.estado !== 'no_consta') dentro.add(clave)
+        anotar(clave, e)
+      }
+    }
+    // Lo que el nombre promete y la lista no trae: el bloque está y eso no va en él.
+    for (const clave of propias) if (!dentro.has(clave)) anotar(clave, estado === 'si' ? 'no' : estado)
   }
   if ('asistencia_ampliada' in porClave) porClave.asistencia_ampliada = asistenciaAmpliada(lista, opciones)
   if ('asistencia_hogar_ampliada' in porClave) porClave.asistencia_hogar_ampliada = asistenciaHogarAmpliada(lista)
@@ -263,6 +291,35 @@ export function asistenciaHogarAmpliada(lista: readonly CoberturaParaClasificar[
     if ((m[2] === 'ampliada' && c.incluida === false) || (m[2] === 'basica' && c.incluida === true)) r = 'no'
   }
   return r
+}
+
+/**
+ * Las partes de una cobertura cuyo texto las ENUMERA (Occident: «» Animales cinegéticos y domésticos:
+ * Incluida.  : CONTRATADA.» Fenómenos atmosféricos con franquicia: Franquicia 600 €.  : CONTRATADA»).
+ * PURO. Solo con ese formato (»); un texto en prosa devuelve `[]` y se clasifica por el nombre.
+ * Estado de cada parte: «no contratada / no incluida / excluida» → `no`; «opcional» sin más → `no_consta`; lo demás → `si`.
+ */
+export function subcoberturas(texto: string | null | undefined): { nombre: string; estado: EstadoGarantia }[] {
+  if (typeof texto !== 'string' || !texto.includes('»')) return []
+  return texto
+    .split('»')
+    .map((t) => t.trim())
+    .filter((t) => t.includes(':'))
+    .map((t) => {
+      const nombre = t.slice(0, t.indexOf(':')).trim()
+      const crudo = t.slice(t.indexOf(':') + 1)
+      const resto = claveCobertura(crudo)
+      // El valor es la PRIMERA frase («Incluida», «Opcional (no incluida)») y el sello final («: CONTRATADA»).
+      // «(Robo e incendio excluida franquicia)» más adelante habla de la franquicia, no de la garantía.
+      const valor = claveCobertura(crudo.split('.')[0] ?? '')
+      const sello = claveCobertura(crudo.slice(crudo.lastIndexOf(':') + 1))
+      const NO = /\b(no contratad[ao]|no incluid[ao]|excluid[ao]|sin contratar)\b/
+      const no = NO.test(valor) || (crudo.includes(':') && NO.test(sello))
+      // «Exceso de equipamiento opcional (incendio, robo y daños propios): 1.500 €» es un límite, no una garantía.
+      const opcional = /\bopcional\b/.test(claveCobertura(nombre)) || /\bopcional\b/.test(resto)
+      return { nombre, estado: (no ? 'no' : opcional ? 'no_consta' : 'si') as EstadoGarantia }
+    })
+    .filter((s) => s.nombre !== '')
 }
 
 /** Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones. */
