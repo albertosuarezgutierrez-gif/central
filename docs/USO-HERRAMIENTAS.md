@@ -167,19 +167,19 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 214 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 215 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 209 | 26.936 | 19.403.433 | 0 | 0 |
-| `otro` | 204 | 6.576 | 20.233.442 | 10.155.949 | 0 |
-| `mcp:github` | 191 | 4.968 | 4.203.866 | 48.815.271 | 84 |
-| `lectura-directa` | 184 | 4.792 | 10.472.720 | 0 | 0 |
-| `escritura` | 143 | 3.128 | 45.347.292 | 0 | 0 |
-| `sql` | 132 | 2.620 | 1.224.001 | 2.351.230 | 9 |
-| `mcp:Claude_Code_Remote` | 120 | 1.298 | 274.623 | 4.635.873 | 13 |
+| `bash` | 210 | 27.019 | 19.477.700 | 0 | 0 |
+| `otro` | 205 | 6.652 | 20.379.602 | 10.155.949 | 0 |
+| `mcp:github` | 192 | 4.980 | 4.210.427 | 49.270.985 | 84 |
+| `lectura-directa` | 185 | 4.794 | 10.482.441 | 0 | 0 |
+| `escritura` | 144 | 3.135 | 45.357.390 | 0 | 0 |
+| `sql` | 133 | 2.621 | 1.224.225 | 2.351.230 | 9 |
+| `mcp:Claude_Code_Remote` | 121 | 1.311 | 280.617 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 19 | 540 | 2.272.253 | 0 | 0 |
-| `mcp:Vercel` | 45 | 477 | 712.352 | 198.719 | 11 |
+| `mcp:Vercel` | 46 | 478 | 722.910 | 198.719 | 11 |
 | `mcp:Gmail` | 23 | 306 | 461.557 | 0 | 5 |
 | `mcp:Supabase` | 84 | 249 | 23.826 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 4 | 209 | 271.466 | 0 | 0 |
@@ -188,12 +188,12 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Google-Drive` | 11 | 77 | 76.216 | 0 | 2 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `mcp:Google_Drive` | 11 | 65 | 86.204 | 0 | 14 |
+| `mcp:OpenSEO` | 3 | 62 | 51.007 | 0 | 2 |
 | `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
-| `agente:Explore` | 21 | 51 | 26.443 | 1.276.884 | 0 |
+| `agente:Explore` | 22 | 52 | 26.957 | 1.281.403 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
-| `mcp:OpenSEO` | 2 | 46 | 38.961 | 0 | 0 |
 | `agente:agente-mecanico` | 16 | 40 | 41.045 | 798.811 | 0 |
 | `agente:rastreador-codigo` | 21 | 37 | 12.368 | 391.953 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |

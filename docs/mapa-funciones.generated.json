@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-29T11:23:09Z",
-  "sha": "a904a612adbc1fd50c365867c53e772bfb4f27ba",
+  "generadoEn": "2026-09-29T12:49:02Z",
+  "sha": "7ddaf6da68b53efef0c7413ec8c23a40f63e4d13",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12793,12 +12793,20 @@
       ],
       "funciones": [
         {
+          "nombre": "dispositivoInterno",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 50
+        },
+        {
           "nombre": "Analitica",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 50
+          "linea": 59
         },
         {
           "nombre": "renovarConsentimiento",
@@ -12806,13 +12814,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 116,
+          "linea": 125,
           "resumen": "Reabre el diálogo de preferencias. Lo usa la página de cookies para que el visitante pueda cambiar de opinión: sin una forma visible de retirar el consentimiento, pedirlo no vale (art. 7.3 RGPD)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3532f15b5da"
+      "hash": "fb436710d5df"
     },
     {
       "ruta": "apps/asegura-web/components/BotonCookies.tsx",
@@ -13358,6 +13366,28 @@
       "hash": "ddc152976d9f"
     },
     {
+      "ruta": "apps/asegura-web/lib/interno.ts",
+      "ambito": "apps/asegura-web",
+      "resumen": "Marca un dispositivo como tráfico INTERNO de GA4 (Alberto y su equipo), sin depender de la IP: Alberto navega detrás de Cloudflare WARP/Private Relay (medido 29/09/2026), así que un filtro por IP ni le excluye a él ni es seguro para los demás. Se activa una vez por navegador visitando `grupoasegura.",
+      "exporta": [
+        "esDispositivoInterno"
+      ],
+      "funciones": [
+        {
+          "nombre": "esDispositivoInterno",
+          "kind": "function",
+          "exportada": true,
+          "params": "search: string, almacen: Almacen | null",
+          "retorno": "boolean",
+          "linea": 15,
+          "resumen": "Aplica el `?interno=` de la URL (si lo hay) y devuelve si este navegador es interno. Nunca lanza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f51d595e86ac"
+    },
+    {
       "ruta": "apps/asegura-web/lib/medir.ts",
       "ambito": "apps/asegura-web",
       "resumen": "Lista CERRADA de eventos del embudo. Un evento que no esté aquí no se puede emitir: así el nombre no se teclea distinto en dos sitios.",
@@ -13371,13 +13401,13 @@
           "exportada": true,
           "params": "evento: Evento, props: PropsEvento = {}",
           "retorno": "boolean",
-          "linea": 19,
-          "resumen": "Emite el evento si PostHog está cargado (= hubo consentimiento). Sin PostHog, no hace NADA: ni cola, ni localStorage. Nunca lanza. 🚨 NUNCA mandes datos personales en `props`: ni nombre, ni teléfono, "
+          "linea": 33,
+          "resumen": "Emite el evento a PostHog y a GA4, a cada uno SOLO si está cargado (= hubo consentimiento: `window.gtag` no existe hasta que `cargarGa4()` corre tras aceptar). Sin ninguno, no hace NADA: ni cola, ni l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9ef6b1395d39"
+      "hash": "363eaa9c7715"
     },
     {
       "ruta": "apps/asegura-web/lib/panel-demo.ts",
@@ -149768,7 +149798,7 @@
           "nombre": "cargarGa4",
           "kind": "function",
           "exportada": true,
-          "params": "id: string",
+          "params": "id: string, parametros?: Record<string, unknown>",
           "retorno": "void",
           "linea": 49,
           "resumen": "Carga GA4. Sin función de parada: gtag.js no ofrece un opt_out limpio por script suelto, así que el gate real es no cargar el script — igual que ya asumía asegura-web con PostHog."
@@ -149779,7 +149809,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "void",
-          "linea": 73,
+          "linea": 76,
           "resumen": "Carga Meta Pixel. Mismo criterio que GA4: sin parada limpia, el gate es no cargar."
         },
         {
@@ -149788,7 +149818,7 @@
           "exportada": true,
           "params": "key: string, host: string, alTerminar: () => void",
           "retorno": "void",
-          "linea": 93,
+          "linea": 96,
           "resumen": "Arranca PostHog. Refleja components/Analitica.tsx de asegura-web tal cual: pageview manual (App Router no recarga en la navegación), perfiles anónimos, sin grabación de sesión (los formularios de esta"
         },
         {
@@ -149797,12 +149827,12 @@
           "exportada": true,
           "params": "",
           "retorno": "void",
-          "linea": 112
+          "linea": 115
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f0c4cbe345e8"
+      "hash": "ae3419aa1257"
     },
     {
       "ruta": "packages/core-consent/src/banner.ts",
@@ -170036,7 +170066,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3977,
-    "funciones": 13129
+    "archivos": 3978,
+    "funciones": 13131
   }
 }
