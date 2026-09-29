@@ -85,6 +85,8 @@ export type Riesgo = {
     vehiculo: string | null
     vence: string | null
     aseguradora: string | null
+    /** `true` = `aseguradora` es la de la póliza que tiene HOY (competencia), no la de nuestra oferta. */
+    aseguradoraActual: boolean
     prima: number | null
   }
   roles: readonly RolFigura[]
@@ -101,12 +103,13 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     Array<{
       id: string; cliente_id: string; nombre: string | null; apellidos: string | null; tipo: string; estado: string
       poliza_id: string | null; info_riesgo: Record<string, unknown> | null; fecha_fin_vigencia: Date | null
-      aseguradora: string | null; prima: string | null
+      aseguradora: string | null; aseguradora_actual: boolean; prima: string | null
     }>
   >`
     select o.id::text as id, o.cliente_id::text as cliente_id, c.nombre, c.apellidos, o.tipo::text as tipo,
            o.estado::text as estado, o.poliza_id::text as poliza_id, o.info_riesgo, o.fecha_fin_vigencia,
            coalesce(o.poliza_competencia->>'aseguradora', o.aseguradora_ganadora) as aseguradora,
+           (o.poliza_competencia->>'aseguradora') is not null as aseguradora_actual,
            o.prima_bruta::text as prima
     from seguros.oportunidades o
     join seguros.clientes c on c.id = o.cliente_id and c.correduria_id = o.correduria_id
@@ -223,6 +226,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       vehiculo,
       vence: op.fecha_fin_vigencia ? op.fecha_fin_vigencia.toISOString().slice(0, 10) : null,
       aseguradora: op.aseguradora,
+      aseguradoraActual: op.aseguradora_actual === true,
       prima: op.prima !== null ? Number(op.prima) : null,
     },
     roles: rolesDelRamo(op.tipo),

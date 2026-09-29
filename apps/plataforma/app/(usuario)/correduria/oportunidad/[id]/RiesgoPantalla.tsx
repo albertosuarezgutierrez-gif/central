@@ -62,7 +62,9 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
               {op.vence && <span>Vence {fechaEs(op.vence)}</span>}
               {op.aseguradora && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  · <LogoCompaniaEnLinea compania={op.aseguradora} />{op.prima !== null ? ` · ${eur(op.prima)}` : ''}
+                  {/* La compañía de HOY no es la de nuestra oferta: sin el «ahora en» se leía
+                      «Mapfre · 276,69€» con un precio de Reale (29/09/2026). La oferta está en las variantes. */}
+                  · {op.aseguradoraActual ? 'ahora en ' : ''}<LogoCompaniaEnLinea compania={op.aseguradora} />{op.prima !== null ? ` · ${eur(op.prima)}` : ''}
                 </span>
               )}
               {op.polizaId && (

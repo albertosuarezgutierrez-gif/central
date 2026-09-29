@@ -89,7 +89,7 @@ real medido, orden de trabajo). Después, según lo que toques:
    `select o.id from seguros.oportunidades o join seguros.tarificaciones t on t.correduria_id = o.correduria_id
    and t.project_id_codeoscopic::text = o.info_riesgo->>'presupuestoCodeoscopic' where t.oportunidad_id
    is distinct from o.id`.
-   ⚠️ **La cabecera de la oportunidad mezcla dos cosas:** pinta `coalesce(poliza_competencia.aseguradora,
+   ✅ (arreglado el mismo día: la cabecera dice «ahora en <compañía>» cuando es la de hoy, campo `aseguradoraActual`) **La cabecera mezclaba dos cosas:** pinta `coalesce(poliza_competencia.aseguradora,
    aseguradora_ganadora)` al lado de `prima_bruta`. En el caso fundacional salía «Mapfre · 276,69€» cuando
    Mapfre es la compañía de HOY y 276,69€ es la oferta de **Reale**. Antes de emitir, la compañía se mira en
    la variante, no en la cabecera. Pendiente de arreglar: el significado de `prima_bruta` no es el mismo
