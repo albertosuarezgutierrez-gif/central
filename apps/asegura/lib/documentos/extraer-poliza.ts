@@ -26,6 +26,7 @@
 
 import { openrouterVision, cleanJSON } from '@central/core-ai'
 import { iaTexto } from '../ia.ts'
+import { leerPdfProbando, pdfCifrado } from './pdf-contrasena.ts'
 import {
   normalizarAutoLeido,
   autoLeidoVacio,
@@ -171,21 +172,54 @@ function empaquetar(
   return { ramo, fase: 'contrato_solo', fuente, datos: auto }
 }
 
+/** Texto con `pdf-parse`; `''` si no abre (se dice aguas abajo). */
+async function textoPdfParse(buffer: Buffer): Promise<string> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require('pdf-parse')
+    return (await pdfParse(buffer)).text || ''
+  } catch (e) {
+    console.warn('[asegura] pdf-parse falló:', e)
+    return ''
+  }
+}
+
 export async function leerPoliza(
   buffer: Buffer,
   mimeType: string,
   fileName = '',
+  /** Contraseñas a probar si el PDF está protegido (el DNI del cliente de la ficha). Nunca se devuelven. */
+  opts: { contrasenas?: () => Promise<string[]> } = {},
 ): Promise<ResultadoLecturaPoliza> {
   const esPdf = mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')
 
   if (esPdf) {
     let texto = ''
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdfParse = require('pdf-parse')
-      texto = (await pdfParse(buffer)).text || ''
-    } catch (e) {
-      console.warn('[asegura] pdf-parse falló:', e)
+    if (pdfCifrado(buffer)) {
+      // Las compañías protegen la póliza con el DNI del tomador: se prueba el de la ficha.
+      // `null` = no se ha podido consultar el DNI (BD o clave PII): no es «la ficha no tiene».
+      const candidatas = opts.contrasenas ? await opts.contrasenas().catch(() => null) : []
+      const r = await leerPdfProbando(buffer, candidatas ?? [])
+      const rescate = !r.ok && r.motivo === 'ilegible' ? await textoPdfParse(buffer) : ''
+      if (rescate.trim()) {
+        texto = rescate
+      } else if (!r.ok) {
+        return nadaLeido(
+          !opts.contrasenas && r.motivo !== 'ilegible'
+            ? 'El PDF tiene contraseña. Súbelo desde la ficha del cliente (se prueba su DNI) o sin protección.'
+            : candidatas === null && r.motivo !== 'ilegible'
+            ? 'El PDF tiene contraseña y no se ha podido consultar el DNI de la ficha para probarlo. Vuelve a intentarlo en un momento.'
+            : r.motivo === 'sin_candidatas'
+            ? 'El PDF tiene contraseña y esta ficha no tiene un DNI con el que probar. Guarda el DNI del cliente y vuelve a leerlo.'
+            : r.motivo === 'ninguna_vale'
+              ? 'El PDF tiene contraseña y no es el DNI de este cliente (quizá es el de otro tomador). Ábrelo con su contraseña y súbelo sin protección, o súbelo como foto.'
+              : 'El PDF tiene contraseña y no se ha podido abrir. Súbelo sin protección o como foto.',
+        )
+      } else {
+        texto = r.texto
+      }
+    } else {
+      texto = await textoPdfParse(buffer)
     }
     if (!texto.trim()) {
       return nadaLeido(

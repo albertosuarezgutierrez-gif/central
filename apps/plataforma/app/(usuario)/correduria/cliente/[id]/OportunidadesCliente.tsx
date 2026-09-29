@@ -370,7 +370,7 @@ export function FormAlta({ clienteId, inicial, onCancelar, onHecho }: {
       const res = await fetch('/api/correduria/oportunidad/leer', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName }),
+        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName, clienteId }),
       })
       status = res.status
       json = await res.json().catch(() => null)

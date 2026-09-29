@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, asistenciaHogarAmpliada, descuentosDeOpciones, garantiasDeOpciones, noReconocidas } from './catalogo-garantias.ts'
+import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, asistenciaHogarAmpliada, descuentosDeOpciones, garantiasDeOpciones, noReconocidas, subcoberturas } from './catalogo-garantias.ts'
 import { filtrarPorGarantias, interruptoresGarantias } from './filtro-garantias.ts'
 
 // Nombres REALES de coberturas de moto de Codeoscopic (presupuesto de Manuel, 28/09/2026).
@@ -14,7 +14,7 @@ const MOTO_REAL = [
 test('moto: cada nombre real cae en su garantía', () => {
   const g = clasificarCoberturas('moto', MOTO_REAL.map((nombre) => ({ nombre, incluida: true })))
   for (const [clave, estado] of Object.entries(g.porClave)) {
-    if (clave === 'fenomenos_atmosfericos' || clave === 'asistencia_ampliada') assert.equal(estado, 'no_consta')
+    if (clave === 'fenomenos_atmosfericos' || clave === 'asistencia_ampliada' || clave === 'colision_animales') assert.equal(estado, 'no_consta')
     else assert.equal(estado, 'si', clave)
   }
   assert.deepEqual(noReconocidas('moto', [{ nombre: 'Daños al cargador', incluida: false }, { nombre: 'Robo', incluida: true }]), ['Daños al cargador'])
@@ -177,4 +177,38 @@ test('descuentos comerciales de las opciones: valores REALES; null ≠ [] ≠ 0'
   assert.equal(descuentosDeOpciones(null), null)
   // 🪤 Vacío no es 0.
   assert.deepEqual(descuentosDeOpciones([{ etiqueta: 'Descuento comercial', valor: '  ' }]), [])
+})
+
+// 29/09/2026: Occident «Terceros básico» (moto) manda «Daños propios» incluida con SOLO animales dentro.
+test('un bloque «Daños propios» que enumera solo animales NO es daños propios', () => {
+  const soloAnimales = clasificarCoberturas('moto', [{ nombre: 'Daños propios', incluida: true, texto: '» Animales cinegéticos y domésticos: Incluida.  : CONTRATADA' }])
+  assert.equal(soloAnimales.porClave.danos_propios, 'no')
+  assert.equal(soloAnimales.porClave.colision_animales, 'si')
+  const conFenomenos = clasificarCoberturas('auto', [{ nombre: 'Daños propios', incluida: true, texto: '» Animales cinegéticos y domésticos: Incluida.  : CONTRATADA.» Fenómenos atmosféricos con franquicia: Franquicia 600 €.  : CONTRATADA' }])
+  assert.equal(conFenomenos.porClave.danos_propios, 'no')
+  assert.equal(conFenomenos.porClave.fenomenos_atmosfericos, 'si')
+  const todoRiesgo = clasificarCoberturas('auto', [{ nombre: 'Daños propios', incluida: true, texto: '» Daños propios, incendio y robo con franquicia: Franquicia 600 €.  : CONTRATADA.» Animales cinegéticos y domésticos: Incluida.  : CONTRATADA' }])
+  assert.equal(todoRiesgo.porClave.danos_propios, 'si')
+  assert.equal(todoRiesgo.porClave.robo, 'no_consta', 'el robo lo dice su propia cobertura, no una parte de otra')
+  // «Rc incendio» dentro de la RC obligatoria no es la garantía de incendio.
+  const rc = clasificarCoberturas('moto', [{ nombre: 'Responsabilidad civil obligatoria', incluida: null, texto: '» Rc incendio: 100.000 €.  : CONTRATADA' }, { nombre: 'Incendio', incluida: false }])
+  assert.equal(rc.porClave.incendio, 'no')
+  // En prosa no se trocea: manda el nombre, como siempre.
+  const prosa = clasificarCoberturas('moto', [{ nombre: 'Daños propios', incluida: true, texto: 'Cubre los daños que pueda sufrir la motocicleta asegurada.' }])
+  assert.equal(prosa.porClave.danos_propios, 'si')
+  assert.equal(prosa.porClave.colision_animales, 'no_consta')
+})
+
+test('subcoberturas: una parte «NO CONTRATADA» es un no', () => {
+  const s = subcoberturas('» Lunas: Incluida. : CONTRATADA.» Asistencia ampliada: Opcional. : NO CONTRATADA')
+  assert.deepEqual(s.map((x) => x.estado), ['si', 'no'])
+  // Texto REAL de Occident: el «Exceso de equipamiento opcional (… daños propios)» no afirma daños propios.
+  const t = clasificarCoberturas('auto', [{ nombre: 'Daños propios', incluida: true, texto: '» Fenómenos atmosféricos: Incluida..» Animales cinegéticos y domésticos: Incluida..» Exceso de equipamiento opcional (incendio, robo y daños propios): 1.500 €.' }])
+  assert.equal(t.porClave.danos_propios, 'no')
+  // «excluida franquicia» habla de la franquicia, no excluye la garantía.
+  const tr = clasificarCoberturas('auto', [{ nombre: 'Daños propios', incluida: true, texto: '» Fenómenos atmosféricos: Incluida..» Daños propios con franquicia, incendio y robo: Incluida. Franquicia TR con franquicia de 300 euros.   (Robo e incendio excluida franquicia).» Daños propios con franquicia, incendio y robo ampliados: Opcional (no incluida).  ( Robo e incendio excluida franquicia).' }])
+  assert.equal(tr.porClave.danos_propios, 'si')
+  // Una parte que no se entiende no permite afirmar la ausencia.
+  const raro = clasificarCoberturas('moto', [{ nombre: 'Daños propios', incluida: true, texto: '» Franquicia: 300 €.  : CONTRATADA' }])
+  assert.equal(raro.porClave.danos_propios, 'no_consta')
 })

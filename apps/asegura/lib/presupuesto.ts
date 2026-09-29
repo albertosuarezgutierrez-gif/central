@@ -596,6 +596,17 @@ export type PresupuestoEnLista = {
   necesidades: string | null
   opciones: number
   desdeEur: number | null
+  /** Las opciones VISIBLES, para que el corredor revise qué cubre cada una antes de enviar. */
+  detalle: OpcionEnLista[]
+}
+
+/** Una opción visible del presupuesto. `garantias` = `porClave` guardado; `null` = no se clasificó (≠ «no cubre»). */
+export type OpcionEnLista = {
+  id: string
+  compania: string
+  modalidad: string | null
+  primaEur: number | null
+  garantias: Record<string, string> | null
 }
 
 /**
@@ -620,7 +631,7 @@ export async function listarPresupuestos(
       },
       orderBy: { creadoAt: 'desc' },
       take: 50,
-      include: { opciones: { where: { ocultaAt: null }, select: { primaEur: true } } },
+      include: { opciones: { where: { ocultaAt: null }, orderBy: { orden: 'asc' }, select: { id: true, compania: true, modalidad: true, primaEur: true, garantias: true } } },
     })
     return filas.map((p) => ({
       id: p.id,
@@ -641,11 +652,28 @@ export async function listarPresupuestos(
       necesidades: p.necesidades,
       opciones: p.opciones.length,
       desdeEur: masBarataDeLaLista(p.opciones),
+      detalle: p.opciones.map((o) => ({
+        id: o.id,
+        compania: o.compania,
+        modalidad: o.modalidad,
+        primaEur: numero(o.primaEur as never),
+        garantias: porClaveDe(o.garantias),
+      })),
     }))
   } catch (e) {
     registrarErrorCartera('presupuesto/listar', e)
     return null
   }
+}
+
+/** El `porClave` de `presupuesto_opcion.garantias`, o `null` si no tiene la forma esperada. */
+function porClaveDe(v: unknown): Record<string, string> | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null
+  const pc = (v as Record<string, unknown>).porClave
+  if (!pc || typeof pc !== 'object' || Array.isArray(pc)) return null
+  const r: Record<string, string> = {}
+  for (const [k, e] of Object.entries(pc as Record<string, unknown>)) if (e === 'si' || e === 'no' || e === 'no_consta') r[k] = e
+  return r
 }
 
 /** La prima más baja de las congeladas. `null` si no hay ninguna legible. */

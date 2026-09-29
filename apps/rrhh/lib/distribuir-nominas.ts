@@ -20,9 +20,13 @@ export type ResultadoDistribucion = {
 
 /** Extrae el texto de cada página del PDF usando pdfjs-dist (build legacy, funciona en Node.js). */
 async function extraerTextoPorPagina(bytes: ArrayBuffer): Promise<string[]> {
-  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  // Disable worker thread — not available in Node.js serverless environments
-  pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+  const [pdfjsLib, worker] = await Promise.all([
+    import('pdfjs-dist/legacy/build/pdf.mjs'),
+    import('pdfjs-dist/legacy/build/pdf.worker.mjs'),
+  ])
+  // `workerSrc = ''` rompía pdfjs 4 en Node («Setting up fake worker failed», medido el
+  // 29/09/2026): el fake worker se busca en `globalThis.pdfjsWorker`.
+  ;(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = worker
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes), useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true })
   const doc = await loadingTask.promise
   const paginas: string[] = []

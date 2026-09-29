@@ -6,6 +6,7 @@ import { tomadorDe } from '@/lib/tomador-documento'
 import { correduriaUnica } from '@/lib/cartera'
 import { polizaEnCartera } from '@/lib/poliza-en-cartera'
 import { seguroAnteriorDe } from '@central/module-seguros'
+import { contrasenasDeLaFicha } from '@/lib/documentos/contrasenas-ficha'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,6 +34,9 @@ export const maxDuration = 120
  *   `null` = el documento no dice nada de eso.
  * - `matricula`/`vehiculo`: identifican el coche (dos coches del mismo cliente)
  *   y dan nombre a la oportunidad. Son del riesgo, no de la persona.
+ * - `clienteId` (29/09/2026): si el PDF viene con contraseña, se prueba el DNI de
+ *   ESA ficha (las compañías lo usan de contraseña). Se descifra y se prueba aquí
+ *   dentro: el DNI no sale en la respuesta ni pasa por plataforma.
  * - «No se pudo leer» es 422 con motivo, nunca 200 con todo a null: eso se
  *   pintaría como «el documento no trae nada».
  */
@@ -50,7 +54,10 @@ export const POST = auditado(async (req: Request) => {
   const reparo = revisarFichero({ type: fichero.type, size: fichero.size, name: fichero.name })
   if (reparo) return NextResponse.json({ error: reparo }, { status: 415 })
 
-  const r = await leerPoliza(Buffer.from(await fichero.arrayBuffer()), fichero.type, fichero.name)
+  const clienteId = form.get('clienteId')
+  const r = await leerPoliza(Buffer.from(await fichero.arrayBuffer()), fichero.type, fichero.name, {
+    contrasenas: typeof clienteId === 'string' && clienteId.trim() !== '' ? () => correduriaUnica().then((c) => (c ? contrasenasDeLaFicha(c.id, clienteId.trim()) : [])) : undefined,
+  })
   if (r.fase === 'ninguno') return NextResponse.json({ error: r.motivo }, { status: 422 })
 
   const d = r.datos
@@ -79,4 +86,5 @@ export const POST = auditado(async (req: Request) => {
     primaAnual: d.primaAnual,
   })
 })
+
 
