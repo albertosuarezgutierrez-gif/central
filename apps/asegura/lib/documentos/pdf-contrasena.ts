@@ -43,11 +43,19 @@ export async function leerPdfProbando(buffer: Buffer, candidatas: string[]): Pro
   // `workerSrc = ''` —el patrón de rrhh y del portal— pdfjs 4 falla en Node con
   // «Setting up fake worker failed» (medido el 29/09/2026), y un import estático
   // del worker además hace que el trazado de Vercel lo incluya.
-  const [pdfjsLib, worker] = await Promise.all([
-    import('pdfjs-dist/legacy/build/pdf.mjs'),
-    import('pdfjs-dist/legacy/build/pdf.worker.mjs'),
-  ])
-  ;(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = worker
+  let pdfjsLib: typeof import('pdfjs-dist/legacy/build/pdf.mjs')
+  try {
+    const [lib, worker] = await Promise.all([
+      import('pdfjs-dist/legacy/build/pdf.mjs'),
+      import('pdfjs-dist/legacy/build/pdf.worker.mjs'),
+    ])
+    ;(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = worker
+    pdfjsLib = lib
+  } catch (e) {
+    // Nunca lanza: quien llama tiene que poder decir «no se ha podido abrir» (422), no un 500.
+    console.warn('[asegura] pdfjs-dist no carga:', e)
+    return { ok: false, motivo: 'ilegible' }
+  }
   for (const password of ['', ...candidatas]) {
     try {
       const doc = await pdfjsLib.getDocument({

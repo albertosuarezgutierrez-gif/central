@@ -172,6 +172,18 @@ function empaquetar(
   return { ramo, fase: 'contrato_solo', fuente, datos: auto }
 }
 
+/** Texto con `pdf-parse`; `''` si no abre (se dice aguas abajo). */
+async function textoPdfParse(buffer: Buffer): Promise<string> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require('pdf-parse')
+    return (await pdfParse(buffer)).text || ''
+  } catch (e) {
+    console.warn('[asegura] pdf-parse falló:', e)
+    return ''
+  }
+}
+
 export async function leerPoliza(
   buffer: Buffer,
   mimeType: string,
@@ -188,7 +200,10 @@ export async function leerPoliza(
       // `null` = no se ha podido consultar el DNI (BD o clave PII): no es «la ficha no tiene».
       const candidatas = opts.contrasenas ? await opts.contrasenas().catch(() => null) : []
       const r = await leerPdfProbando(buffer, candidatas ?? [])
-      if (!r.ok) {
+      const rescate = !r.ok && r.motivo === 'ilegible' ? await textoPdfParse(buffer) : ''
+      if (rescate.trim()) {
+        texto = rescate
+      } else if (!r.ok) {
         return nadaLeido(
           !opts.contrasenas && r.motivo !== 'ilegible'
             ? 'El PDF tiene contraseña. Súbelo desde la ficha del cliente (se prueba su DNI) o sin protección.'
@@ -200,16 +215,11 @@ export async function leerPoliza(
               ? 'El PDF tiene contraseña y no es el DNI de este cliente (quizá es el de otro tomador). Ábrelo con su contraseña y súbelo sin protección, o súbelo como foto.'
               : 'El PDF tiene contraseña y no se ha podido abrir. Súbelo sin protección o como foto.',
         )
+      } else {
+        texto = r.texto
       }
-      texto = r.texto
     } else {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const pdfParse = require('pdf-parse')
-        texto = (await pdfParse(buffer)).text || ''
-      } catch (e) {
-        console.warn('[asegura] pdf-parse falló:', e)
-      }
+      texto = await textoPdfParse(buffer)
     }
     if (!texto.trim()) {
       return nadaLeido(

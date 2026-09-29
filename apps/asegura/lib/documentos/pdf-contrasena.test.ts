@@ -32,3 +32,7 @@ test('🪤 un DNI que no es el suyo NO lo abre, y lo dice distinto de «sin DNI�
   assert.deepEqual(await leerPdfProbando(PDF, []), { ok: false, motivo: 'sin_candidatas' })
 })
 
+
+test('🪤 un PDF roto con /Encrypt no lanza: devuelve «ilegible» (el llamador contesta 422, no 500)', async () => {
+  assert.deepEqual(await leerPdfProbando(Buffer.from('%PDF-1.7 /Encrypt basura'), ['12345678Z']), { ok: false, motivo: 'ilegible' })
+})

@@ -44,6 +44,17 @@ function aJson(salida: string): unknown {
   }
 }
 
+/** Texto con `pdf-parse`; `''` si no abre (se dice abajo). */
+async function textoPdfParse(buffer: Buffer): Promise<string> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require('pdf-parse')
+    return (await pdfParse(buffer)).text || ''
+  } catch {
+    return ''
+  }
+}
+
 export async function leerDocSolicitud(
   buffer: Buffer,
   mime: string,
@@ -57,16 +68,10 @@ export async function leerDocSolicitud(
     if (pdfCifrado(buffer)) {
       const candidatas = opts.contrasenas ? await opts.contrasenas().catch(() => []) : []
       const r = await leerPdfProbando(buffer, candidatas)
-      if (!r.ok) return { ok: false, motivo: 'El PDF tiene contraseña: guardado, pero para leerlo súbelo sin contraseña o como foto.' }
-      texto = r.texto
+      texto = r.ok ? r.texto : r.motivo === 'ilegible' ? await textoPdfParse(buffer) : ''
+      if (!texto.trim()) return { ok: false, motivo: 'El PDF tiene contraseña: guardado, pero para leerlo súbelo sin contraseña o como foto.' }
     } else {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const pdfParse = require('pdf-parse')
-        texto = (await pdfParse(buffer)).text || ''
-      } catch {
-        /* un PDF que no se abre: se dice abajo */
-      }
+      texto = await textoPdfParse(buffer)
     }
     if (!texto.trim()) return { ok: false, motivo: 'El PDF es un escaneo: guardado, pero para leerlo súbelo como foto.' }
     try {
