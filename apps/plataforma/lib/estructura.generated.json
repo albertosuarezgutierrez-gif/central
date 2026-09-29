@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-29T11:23:09Z",
+  "generadoEn": "2026-09-29T13:52:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5021,6 +5021,7 @@
       "/api/correduria/companias",
       "/api/correduria/companias/contactado",
       "/api/correduria/contactos-movil",
+      "/api/correduria/contador",
       "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
       "/api/correduria/direccion-confirmar",
@@ -6617,7 +6618,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1531,
+    "apis": 1532,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

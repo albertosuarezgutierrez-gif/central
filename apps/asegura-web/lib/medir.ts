@@ -1,5 +1,6 @@
 /** Lista CERRADA de eventos del embudo. Un evento que no esté aquí no se puede emitir: así el nombre no se teclea distinto en dos sitios. */
 export const EVENTOS = {
+  bonificacion_calculo: 'bonificacion_calculo', // primer resultado completo en la calculadora de bonificación hipotecaria (prop `compensa`)
   calculadora_calculo: 'calculadora_calculo', // la persona pulsó calcular en la calculadora de vencimientos
   cta_portal_click: 'cta_portal_click', // clic en cualquier botón que lleva al portal (prop `origen`)
   lead_enviado: 'lead_enviado', // el formulario de contacto respondió ok (prop `ramo`)
