@@ -1,21 +1,21 @@
 {
  "sesion": "d1431e08-2d8f-529e-bc01-b14218c42092",
  "inicio": "2026-09-28T19:40:12.524Z",
- "fin": "2026-09-28T20:31:02.178Z",
- "llamadas": 231,
+ "fin": "2026-09-29T00:51:06.860Z",
+ "llamadas": 254,
  "categorias": {
   "otro": {
-   "llamadas": 31,
-   "chars_in": 11477,
-   "chars_out": 32942,
+   "llamadas": 35,
+   "chars_in": 17635,
+   "chars_out": 71320,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 2,
-    "ToolSearch": 5,
-    "SubagentHandback": 3,
-    "ReadNotifications": 2,
+    "ToolSearch": 7,
+    "SubagentHandback": 4,
+    "ReadNotifications": 3,
     "TaskCreate": 7,
     "TaskUpdate": 12
    }
@@ -46,15 +46,16 @@
    }
   },
   "mcp:github": {
-   "llamadas": 3,
-   "chars_in": 1220,
-   "chars_out": 2173,
+   "llamadas": 5,
+   "chars_in": 4082,
+   "chars_out": 2355,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 2492,
    "tools": {
     "mcp__github__list_pull_requests": 2,
-    "mcp__github__create_pull_request": 1
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__update_pull_request": 2
    }
   },
   "agente:rastreador-codigo": {
@@ -69,25 +70,25 @@
    }
   },
   "sql": {
-   "llamadas": 22,
-   "chars_in": 11200,
-   "chars_out": 23143,
+   "llamadas": 26,
+   "chars_in": 14528,
+   "chars_out": 27106,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 22
+    "mcp__Supabase__execute_sql": 26
    }
   },
   "bash": {
-   "llamadas": 111,
-   "chars_in": 63294,
-   "chars_out": 334370,
+   "llamadas": 122,
+   "chars_in": 91912,
+   "chars_out": 375789,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 111
+    "Bash": 122
    }
   },
   "mcp:Claude_Code_Remote": {
@@ -114,14 +115,15 @@
    }
   },
   "mcp:Supabase": {
-   "llamadas": 1,
-   "chars_in": 3398,
-   "chars_out": 16,
+   "llamadas": 3,
+   "chars_in": 5220,
+   "chars_out": 423,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__apply_migration": 1
+    "mcp__Supabase__apply_migration": 2,
+    "mcp__Supabase__list_projects": 1
    }
   },
   "agente:agente-architect": {
