@@ -203,7 +203,7 @@ export const HERRAMIENTAS = [
       oportunidadId: { type: 'string', description: 'uuid de la oportunidad (de oportunidades_cliente)' },
       tipo: { type: 'string', enum: ['llamada', 'tarea', 'email', 'whatsapp'] },
       fecha: { type: 'string', description: 'aaaa-mm-dd; calcula la fecha real a partir de «el jueves», «mañana»… con la fecha de hoy' },
-      observaciones: { type: 'string', description: 'Qué hay que hacer, en una frase' },
+      observaciones: { type: 'string', description: 'Primera línea: qué hay que hacer, como un titular de ≤80 caracteres (es lo único que se ve en «Tareas de hoy»). El contexto (importes, motivo, plazos, teléfonos) va en líneas siguientes, separado por \\n.' },
     }, ['oportunidadId', 'fecha', 'observaciones']),
   fn('registrar_llamada', 'Registra el RESULTADO de una llamada a un lead/cliente sobre una oportunidad. El sistema pone solo el siguiente paso (quiere_precio → tarea de preparar precio; otro_dia → nueva llamada; no_contesta → reintento; no_interesa → se aparca). Alberto lo confirma con un botón.',
     {
