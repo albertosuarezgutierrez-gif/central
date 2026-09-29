@@ -135,6 +135,11 @@ export type FichaPoliza = {
    */
   historialDevoluciones: DevolucionHistorial[] | null
   /**
+   * Baja VERIFICADA por el corredor desde un recibo devuelto («el cliente se va»), antes de que CIMA
+   * la confirme. `null` = no la hay o no se pudo leer (la póliza se pinta con su `estado`).
+   */
+  bajaVerificada: { en: string; por: string | null; motivo: string | null; estadoCima: string | null; cimaEn: string | null } | null
+  /**
    * Fechas del contrato que manda CIMA (asegura#864). Cada una `null` = CIMA
    * aún no la ha mandado para esta póliza, no «no tiene».
    */
@@ -524,6 +529,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     : null
   const devolucionesCorreo = await devolucionesCorreoAbiertas(db, correduriaId, p.recibos.map((r) => r.id))
   const historialDevoluciones = await devolucionesDePoliza(db, correduriaId, p.id, p.recibos.map((r) => r.id))
+  const bajaVerificada = await leerBajaVerificada(db, p.id)
   const recibosCrudos = p.recibos.map((r) => ({
     id: r.id, situacion: r.situacion === null ? null : String(r.situacion), primaTotal: r.primaTotal,
     fechaEmision: fechaIso(r.fechaEmision), fechaVencimiento: fechaIso(r.fechaVencimiento), fechaEfecto: fechaIso(r.fechaEfectoActual),
@@ -586,6 +592,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       }
     }),
     historialDevoluciones,
+    bajaVerificada,
     fechasContrato: {
       emision: fechaIso(p.fechaEmision), efectoActual: fechaIso(p.fechaEfectoActual),
       situacion: fechaIso(p.fechaSituacion), solicitud: fechaIso(p.fechaSolicitud),
@@ -667,6 +674,20 @@ async function devolucionesDePoliza(
     return filas.map((f) => ({ ...f, importe: f.importe === null ? null : (Number.isFinite(Number(f.importe)) ? Number(f.importe) : null) }))
   } catch (e) {
     console.error('[cartera-poliza] historial de devoluciones no leído:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+async function leerBajaVerificada(db: ReturnType<typeof prismaAsegura>, polizaId: string): Promise<FichaPoliza['bajaVerificada']> {
+  try {
+    // `estadoCima` = lo último que CIMA escribió DESPUÉS de la baja (NULL = aún no ha dicho nada).
+    const [b] = await db.$queryRaw<{ en: string; por: string | null; motivo: string | null; estadoCima: string | null; cimaEn: string | null }[]>`
+      select to_char(baja_verificada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as en, baja_verificada_por as por, baja_motivo as motivo,
+             baja_estado_cima as "estadoCima", to_char(baja_cima_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "cimaEn"
+      from polizas where id = ${polizaId}::uuid and baja_verificada_at is not null`
+    return b ?? null
+  } catch (err) {
+    console.error('[cartera-poliza] baja verificada no leída:', err instanceof Error ? err.message : err)
     return null
   }
 }

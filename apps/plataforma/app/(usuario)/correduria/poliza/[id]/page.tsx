@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { NECESARIOS_EMISION_AUTO, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
 import type { CapitalAsegurado } from '@central/module-seguros'
+import { esEstadoVigente } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import AnulacionPoliza from './AnulacionPoliza'
 import AvisoEmision from './AvisoEmision'
 import CobradoDeNuevo from './CobradoDeNuevo'
+import ClienteSeVa from './ClienteSeVa'
 import WhatsappReciboDevuelto, { type ContextoWhatsappDevuelto } from './WhatsappReciboDevuelto'
 import HistorialRiesgo from './HistorialRiesgo'
 import CimaPoliza from './CimaPoliza'
@@ -68,7 +70,9 @@ export default async function PolizaPage({ params, searchParams }: {
             {p.numeroPoliza && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · nº {p.numeroPoliza}</span>}
           </>}
           sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <span>{p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
+            <span>{p.bajaVerificada
+              ? `⚪ anulada · baja verificada el ${fmt(p.bajaVerificada.en)}${p.bajaVerificada.por ? ` por ${p.bajaVerificada.por}` : ''} · ${estadoBajaCima(p.bajaVerificada)}`
+              : p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
             {p.situacion && <span title="Situación según la compañía (EIAC)">situación: {p.situacion}</span>}
             {p.retarificable && (
               /* Interna desde el 03/09/2026: la retarificación se pinta en
@@ -496,6 +500,8 @@ function contextoWhatsapp(p: Poliza): ContextoWhatsappDevuelto | null {
 }
 
 function Recibos({ p }: { p: Poliza }) {
+  // «El cliente se va» solo sobre una póliza que sigue en vigor y que nadie ha dado ya de baja.
+  const puedeBaja = p.viva && esEstadoVigente(p.estado) && p.bajaVerificada === null
   const r = p.recibos
   const wa = contextoWhatsapp(p)
   const enRiesgo = comisionEnRiesgo(p.listaRecibos)
@@ -514,13 +520,13 @@ function Recibos({ p }: { p: Poliza }) {
   return (
     <Tarjeta titulo={`Recibos${r && r.total ? ` (${r.total})` : ''}`}>
       <p style={{ margin: '0 0 8px', fontSize: 13 }}>{titular}</p>
-      {recientes.length > 0 && <TablaRecibos lista={recientes} wa={wa} />}
+      {recientes.length > 0 && <TablaRecibos lista={recientes} wa={wa} puedeBaja={puedeBaja} />}
       {/* Los antiguos, plegados y sin montar: una póliza de hace años trae
           decenas de recibos y lo que se consulta es la anualidad en curso. */}
       {antiguos.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <Plegable titulo={`Ver ${antiguos.length} recibo(s) anteriores`}>
-            <TablaRecibos lista={antiguos} wa={wa} />
+            <TablaRecibos lista={antiguos} wa={wa} puedeBaja={puedeBaja} />
           </Plegable>
         </div>
       )}
@@ -541,6 +547,7 @@ function comisionEnRiesgo(lista: Poliza['listaRecibos']): number | null {
 /** `manual:cobrado` (botón «Cobrado de nuevo») o `cima:<situación>` (lo resolvió la ingesta). */
 function comoSeResolvio(m: string | null): string {
   if (m === 'manual:cobrado') return 'cobrado de nuevo (a mano)'
+  if (m === 'manual:baja') return 'el cliente se va: póliza dada de baja (a mano)'
   if (m?.startsWith('cima:')) return `${m.slice(5).replace(/_/g, ' ')} según CIMA`
   return m ?? 'resuelta'
 }
@@ -573,7 +580,7 @@ function HistorialDevoluciones({ lista }: { lista: Poliza['historialDevoluciones
   )
 }
 
-function TablaRecibos({ lista, wa }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null }) {
+function TablaRecibos({ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null; puedeBaja: boolean }) {
   // Columnas nuevas solo si ALGÚN recibo las trae: asegura vieja o recibos anteriores a la ingesta nueva no las tienen.
   const hayRemesa = lista.some((x) => x.idRemesa)
   const hayComision = lista.some((x) => x.baseComision !== null || x.comisionBruta !== null || x.claseComision || x.retencionIrpf !== null)
@@ -601,6 +608,7 @@ function TablaRecibos({ lista, wa }: { lista: Poliza['listaRecibos']; wa: Contex
                     <CobradoDeNuevo reciboId={x.id} />
                   </div>
                 )}
+                {x.situacion === 'devuelto' && puedeBaja && <ClienteSeVa reciboId={x.id} />}
               </td>
               <td data-label="Cobro" style={td}>
                 {x.formaPago ?? <span style={muted}>—</span>}
@@ -759,6 +767,13 @@ function NoSePudo({ estado }: { estado: { estado: 'sin_configurar' } | { estado:
 
 const tabla: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }
 const muted: React.CSSProperties = { fontSize: 13, color: 'var(--muted)', margin: 0 }
+
+/** Lo que CIMA ha dicho desde que se dio de baja a mano: nada, que la confirma, o que la sigue dando en vigor. */
+function estadoBajaCima(b: NonNullable<Poliza['bajaVerificada']>): string {
+  if (b.estadoCima === null) return 'pendiente de que CIMA la confirme'
+  if (esEstadoVigente(b.estadoCima)) return `⚠️ CIMA la sigue dando en vigor (${b.cimaEn ? fmt(b.cimaEn) : 'sin fecha'}): mira en el portal de la compañía si al final pagó`
+  return `CIMA la confirma (${b.estadoCima.replace(/_/g, ' ')}${b.cimaEn ? `, ${fmt(b.cimaEn)}` : ''})`
+}
 
 function fmt(iso: string): string {
   const [y, m, d] = iso.split('-')

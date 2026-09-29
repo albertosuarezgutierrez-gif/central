@@ -178,6 +178,9 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     // decidir retenciones: a quien pidió anularla no se le llama para «retenerle»).
     const anul = await confirmarAnulaciones(tx, correduriaId)
     const anuladas = new Set(anul.explicadas)
+    // Bajas que el corredor ya verificó desde el recibo devuelto («el cliente se va»): su baja en CIMA
+    // llega explicada, sin retención ni aviso de fuga.
+    for (const id of await explicarBajasVerificadas(tx, correduriaId)) anuladas.add(id)
     // En la MISMA transacción que el evento: si la retención no se puede abrir, no se guarda la foto
     // y la próxima pasada lo reintenta (la clave del evento impide abrirla dos veces).
     const retenciones: Retencion[] = []
@@ -297,6 +300,8 @@ async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegu
            to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento, nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima
     from polizas p where p.id = ${polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null
       and p.sustituida_at is null
+      -- Baja verificada por el corredor: ya se sabe que se va, y su oportunidad para el año que viene ya existe.
+      and p.baja_verificada_at is null
       and not exists (select 1 from polizas h where h.merged_into_poliza_id is null and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id))
       -- Con expediente de anulación (lo pidió el cliente y se está tramitando) no hay a quién retener.
       and not exists (select 1 from anulacion a where a.poliza_id = p.id
@@ -332,6 +337,22 @@ async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegu
 }
 
 const ESTADOS_VIGENTES = [...POLIZA_ESTADOS_VIGENTES] as string[]
+
+/**
+ * Las bajas pendientes de revisar cuya póliza ya dio de baja el corredor desde el recibo devuelto:
+ * quedan revisadas como pérdida con SU motivo. Devuelve esas pólizas (no se anuncian como fuga).
+ */
+async function explicarBajasVerificadas(tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string): Promise<string[]> {
+  const filas = await tx.$queryRaw<{ polizaId: string }[]>`
+    update evento e set estado = 'revisado', resolucion = 'perdida', motivo = coalesce(p.baja_motivo, 'otro'),
+           revisado_at = now(), revisado_por = 'sistema:baja_verificada'
+    from polizas p
+    where e.correduria_id = ${correduriaId}::uuid and e.entidad = 'poliza' and e.estado = 'pendiente'
+      and e.tipo in ('POLIZA_BAJA', 'POLIZA_ANULA_AL_VENCIMIENTO', 'POLIZA_DESAPARECIDA')
+      and p.id = e.entidad_id and p.baja_verificada_at is not null
+    returning e.entidad_id::text as "polizaId"`
+  return [...new Set(filas.map((f) => f.polizaId))]
+}
 
 /** Cierra como `ganada` las retenciones abiertas cuya póliza ya no se pierde, y sus tareas. */
 async function cerrarRetencionesResueltas(tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string): Promise<number> {
