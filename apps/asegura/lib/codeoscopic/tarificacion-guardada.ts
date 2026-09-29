@@ -84,7 +84,11 @@ export async function ultimaTarificacionNueva(
   correduriaId: string,
   clienteId: string,
   ramo: RamoRetomable,
+  /** Variante de un riesgo (29/09/2026): la de esa oportunidad, o esa tarificación concreta. */
+  filtro: { oportunidadId?: string | null; tarificacionId?: string | null } = {},
 ): Promise<(Omit<TarificacionGuardada, 'formulario'> & { vehiculo: VehiculoGuardado | null }) | null> {
+  const oportunidadId = filtro.oportunidadId ?? null
+  const tarificacionId = filtro.tarificacionId ?? null
   const cabeceras = await prisma.$queryRaw<
     { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }[]
   >`
@@ -95,6 +99,8 @@ export async function ultimaTarificacionNueva(
       and poliza_id is null
       and simulado = false
       and ramo = ${ramo}
+      and (${oportunidadId}::uuid is null or oportunidad_id = ${oportunidadId}::uuid)
+      and (${tarificacionId}::uuid is null or id = ${tarificacionId}::uuid)
     order by creado_at desc
     limit 1
   `

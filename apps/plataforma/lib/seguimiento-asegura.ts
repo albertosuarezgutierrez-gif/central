@@ -816,3 +816,14 @@ export function solicitudesDatosAsegura(oportunidadId: string): Promise<Reenvio>
 export function accionSolicitudDatosAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/solicitud-datos', { method: 'POST', body: JSON.stringify(body) })
 }
+
+// ─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────
+export function riesgoAsegura(oportunidadId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/oportunidad/riesgo?id=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
+}
+export function figuraAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/figuras', { method: 'POST', body: JSON.stringify(body) })
+}
+export function quitarFiguraAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/figuras', { method: 'DELETE', body: JSON.stringify(body) })
+}

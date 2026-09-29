@@ -30,6 +30,10 @@ export async function GET(req: Request) {
   // Cliente NUEVO (sin póliza): `?clienteId=&ramo=` — la última tarificación de esa oportunidad.
   const clienteId = params.get('clienteId')?.trim() ?? ''
   const ramo = params.get('ramo')?.trim() ?? ''
+  // Variante de un riesgo (29/09/2026): la última de esa oportunidad, o una tarificación concreta.
+  const uuidONull = (v: string | null) => (v && /^[0-9a-f-]{36}$/i.test(v.trim()) ? v.trim() : null)
+  const oportunidadId = uuidONull(params.get('oportunidadId'))
+  const tarificacionId = uuidONull(params.get('tarificacionId'))
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   if (!polizaId && !(UUID.test(clienteId) && (RAMOS_RETOMABLES as readonly string[]).includes(ramo))) {
     return NextResponse.json({ estado: 'error', causa: 'otro', mensaje: 'falta polizaId, o clienteId + ramo (auto|moto|hogar)' }, { status: 400 })
@@ -46,7 +50,7 @@ export async function GET(req: Request) {
   try {
     const t = polizaId
       ? await ultimaTarificacionRealAuto(correduria.id, polizaId)
-      : await ultimaTarificacionNueva(correduria.id, clienteId, ramo as RamoRetomable)
+      : await ultimaTarificacionNueva(correduria.id, clienteId, ramo as RamoRetomable, { oportunidadId, tarificacionId })
     if (!t) return NextResponse.json({ estado: 'ninguna' })
     return NextResponse.json({ estado: 'ok', ...t })
   } catch (e) {

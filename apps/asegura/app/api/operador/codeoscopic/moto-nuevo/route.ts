@@ -4,6 +4,8 @@ import { cotizar } from '@/lib/codeoscopic/cotizar'
 import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
 import { prepararRetarificacionNuevaMoto, respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
+import { correduriaUnica } from '@/lib/cartera'
+import { prepararVariante } from '@/lib/oportunidad-riesgo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -82,12 +84,27 @@ export const POST = auditado(async (req: Request) => {
       ? cuerpo.solicitadoPor.trim()
       : 'plataforma'
 
+  // VARIANTE de un riesgo (29/09/2026): con `oportunidadId` se cuelga de ESA oportunidad y las
+  // figuras (propietario, conductores) se arman desde sus fichas. Gratis, antes de gastar.
+  const correduria = await correduriaUnica().catch(() => null)
+  const variante = correduria
+    ? await prepararVariante(correduria.id, {
+        tomadorId: clienteId,
+        ramo: 'moto',
+        cuerpo,
+        correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      })
+    : { ok: true as const, v: { contexto: null, correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined } }
+  if (!variante.ok) {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: variante.motivo, gastado: '0,00€' }, { status: 422 })
+  }
+
   const p = await prepararRetarificacionNuevaMoto({
     clienteId,
     solicitadoPor,
     cuerpo: {
       resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
-      correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      correcciones: variante.v.correcciones,
     } satisfies CuerpoRetarificacion,
   })
   // Corta ANTES del vendor (422 faltan datos · 404 cliente · 409 moto no
@@ -95,6 +112,10 @@ export const POST = auditado(async (req: Request) => {
   // normal, dado que la cartera viva solo tiene 1 póliza de moto.
   if (p.estado === 'corte') {
     return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })
+  }
+
+  if (variante.v.contexto && p.peticion.contexto) {
+    p.peticion.contexto = { ...p.peticion.contexto, ...variante.v.contexto }
   }
 
   // ── La única línea que cuesta dinero, por el único embudo ────────────────

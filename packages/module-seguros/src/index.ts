@@ -984,3 +984,4 @@ export {
   type EtapaSeguimiento,
   type PresupuestoParaSeguimiento,
 } from './presupuesto-ayudas.ts'
+export { ROLES_FIGURA, ETIQUETA_ROL, rolesDelRamo, esRolFigura, limpiarFiguras, diferenciasVariante, resumenDiferencias, type RolFigura, type FigurasVariante, type Diferencia } from './variantes-riesgo.ts'
