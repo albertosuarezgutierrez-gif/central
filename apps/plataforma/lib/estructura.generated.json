@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-28T20:09:30Z",
+  "generadoEn": "2026-09-29T08:36:35Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 141
+        "evidencias": 146
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 113
+        "evidencias": 114
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 106
+        "evidencias": 116
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 39
+        "evidencias": 40
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2306,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 30
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 87
+        "evidencias": 88
       },
       "asegura-web": {
         "estado": "usado",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 17
+        "evidencias": 18
       },
       "asegura-portal": {
         "presente": false,
@@ -3989,6 +3989,8 @@
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
       "/api/operador/calidad",
+      "/api/operador/cambios-cuenta",
+      "/api/operador/cambios-cuenta/iban",
       "/api/operador/carta-mediador",
       "/api/operador/cartera",
       "/api/operador/cima-sincro",
@@ -4060,8 +4062,13 @@
       "/api/operador/libro-registro",
       "/api/operador/linea-base",
       "/api/operador/oportunidad",
+      "/api/operador/oportunidad/comparar",
+      "/api/operador/oportunidad/de-poliza",
+      "/api/operador/oportunidad/figuras",
       "/api/operador/oportunidad/llamada",
+      "/api/operador/oportunidad/riesgo",
       "/api/operador/oportunidad/tarea",
+      "/api/operador/oportunidad/traspasar",
       "/api/operador/oportunidad/whatsapp",
       "/api/operador/partes",
       "/api/operador/poliza",
@@ -4078,6 +4085,7 @@
       "/api/operador/recaptacion/email",
       "/api/operador/recaptacion/email-lote",
       "/api/operador/recaptacion/whatsapp",
+      "/api/operador/recibos/devolucion",
       "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
       "/api/operador/retencion/descartar",
@@ -4098,6 +4106,7 @@
       "/api/portal/contacto-confirmar",
       "/api/portal/contactos",
       "/api/portal/contactos/[id]",
+      "/api/portal/cuenta",
       "/api/portal/datos-emision",
       "/api/portal/documento",
       "/api/portal/mejorar-precio",
@@ -4137,6 +4146,8 @@
       "/api/mis-datos/confirmar",
       "/api/mis-datos/contactos",
       "/api/mis-datos/contactos/[id]",
+      "/api/mis-datos/cuenta",
+      "/api/mis-datos/cuenta/codigo",
       "/api/peticiones",
       "/api/peticiones/[id]",
       "/api/polizas",
@@ -4979,6 +4990,8 @@
       "/api/correduria/blog",
       "/api/correduria/buscar",
       "/api/correduria/calidad",
+      "/api/correduria/cambios-cuenta",
+      "/api/correduria/cambios-cuenta/iban",
       "/api/correduria/carta-mediador",
       "/api/correduria/cartera",
       "/api/correduria/cartera-lista",
@@ -5026,9 +5039,14 @@
       "/api/correduria/libro-registro",
       "/api/correduria/linea-base",
       "/api/correduria/oportunidad",
+      "/api/correduria/oportunidad/comparar",
+      "/api/correduria/oportunidad/de-poliza",
+      "/api/correduria/oportunidad/figuras",
       "/api/correduria/oportunidad/leer",
       "/api/correduria/oportunidad/llamada",
+      "/api/correduria/oportunidad/riesgo",
       "/api/correduria/oportunidad/tarea",
+      "/api/correduria/oportunidad/traspasar",
       "/api/correduria/oportunidad/whatsapp",
       "/api/correduria/partes",
       "/api/correduria/poliza",
@@ -5041,6 +5059,7 @@
       "/api/correduria/recaptacion",
       "/api/correduria/recaptacion/email",
       "/api/correduria/recaptacion/whatsapp",
+      "/api/correduria/recibo-devolucion",
       "/api/correduria/renovaciones/contacto",
       "/api/correduria/retencion/descartar",
       "/api/correduria/sin-canal",
@@ -5502,6 +5521,7 @@
       "seguros.bot_eval_runs",
       "seguros.bot_eval_scores",
       "seguros.bot_turn_traces",
+      "seguros.cambio_cuenta_solicitud",
       "seguros.carta_mediador",
       "seguros.cartera_foto",
       "seguros.channel_inbound_messages",
@@ -5549,6 +5569,7 @@
       "seguros.mensajes",
       "seguros.ofertas_automaticas",
       "seguros.operational_events",
+      "seguros.oportunidad_figura",
       "seguros.oportunidad_historial",
       "seguros.oportunidades",
       "seguros.peticiones",
@@ -5566,6 +5587,7 @@
       "seguros.presupuesto_evento",
       "seguros.presupuesto_opcion",
       "seguros.queja",
+      "seguros.recibo_devolucion",
       "seguros.recordatorios",
       "seguros.renovacion_contactos",
       "seguros.retencion_descartes",
@@ -6588,7 +6610,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1507,
+    "apis": 1526,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
