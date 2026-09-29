@@ -31,9 +31,14 @@
 
 export type OpcionProducto = { id: string; type: string; value: unknown }
 
+// Descuentos por defecto al 50 (29/09/2026, decisión de Alberto): la compañía recorta al máximo que
+// admite y lo va variando, así que pedir 50 deja siempre el suyo. Medido en la web con la moto de
+// Manuel Piña (40961885): 50 + 50 dio el MISMO precio confirmado que 20 + 20, sin error.
+export const DESCUENTO_POR_DEFECTO = 50
+
 const ALLIANZ_AUTO_320200: OpcionProducto[] = [
-  { id: 'dtoCap', type: 'number', value: 25 },
-  { id: 'dtoVentaCruzada', type: 'number', value: 25 },
+  { id: 'dtoCap', type: 'number', value: DESCUENTO_POR_DEFECTO },
+  { id: 'dtoVentaCruzada', type: 'number', value: DESCUENTO_POR_DEFECTO },
   { id: 'comissionType', type: 'string', value: 'A' },
   { id: 'mesesVencimiento', type: 'string', value: '12' },
   { id: 'under25', type: 'boolean', value: false },

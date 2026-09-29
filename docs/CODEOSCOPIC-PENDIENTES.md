@@ -63,6 +63,19 @@ póliza 05139; API `C0109` Allianz póliza 8846622.
 
 Que no haya salido un campo no prueba que no exista: hay que abrir el formulario de cada compañía.
 
+**Prueba de Alberto en la web (29/09/2026, proyecto 40961885, misma moto que el 40956228):** solo tres
+compañías dejan meter descuento en moto: Allianz (CAP + venta cruzada), Generali y Catalana Occidente
+(Mapfre y Reale no tienen el campo). Metió 50 en todos y todas devolvieron precio. Comparado con el 40956228:
+
+| Compañía | 40956228 | 40961885 (50 en todo) | Lectura |
+|---|---|---|---|
+| Allianz Básico | 106,77€ confirmado (20 % + 20 %) | 106,77€ confirmado | 50 = 20: la compañía NO da más; recorta a su tope (≤ 20 %) |
+| Generali Terceros | 510,15€ (sin descuento) | 449,08€ | aplica ~12 %, no el 50 |
+| Occident Terceros básico | 217,57€ | 217,57€ | sin cambio: estimado, no reconfirmado (sin «precio confirmado») |
+
+Conclusión [Probable]: poner 50 no rompe nada, cada compañía se queda con lo suyo. Falta saber el tope
+exacto de Allianz (prueba con 10 % para ver si baja el precio) y confirmar el precio de Occident.
+
 ## Para comprobar en la pantalla de Avant2 (gratis)
 
 1. [ ] **Máximo de descuento por compañía y ramo:** en el formulario de cada compañía del multitarificador,
@@ -84,6 +97,6 @@ Que no haya salido un campo no prueba que no exista: hay que abrir el formulario
 
 ## Pendiente en código
 
-- Aplicar la tabla de máximos de descuento por compañía en el ReRate (hoy solo Allianz auto, 25/25).
+- Descuento por defecto en el ReRate = **50 %** (decisión de Alberto 29/09: la compañía recorta a su máximo y lo va variando). Hoy solo Allianz auto lo lleva; Allianz moto, Generali y Catalana Occidente necesitan el id exacto del campo (traer el 40961885 a plataforma y leer sus opciones).
 - Aviso «bonificación NO verificada» a partir de `messages[]` (p. ej. Mapfre: «el cliente identificado
   no aparece asociado a una póliza de otra compañía»).

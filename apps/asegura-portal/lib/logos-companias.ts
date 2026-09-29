@@ -21,12 +21,25 @@ const LOGOS: Record<string, string> = {
   reale: '/logos/reale.svg',
 }
 
-export function logoCompania(nombre: string): string | null {
-  const primera = nombre
+// Ajuste ÓPTICO a la misma altura (mismos valores que plataforma y la web): Generali es escudo
+// (1,23 de aspecto) y a la altura común se ve diminuto; Fidelidade es casi todo palabra.
+const ESCALA: Record<string, number> = { mapfre: 1.2, generali: 1.6, fidelidade: 0.7 }
+
+function primeraPalabra(nombre: string): string {
+  return nombre
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .trim()
     .toLowerCase()
-    .split(/[\s,.]+/)[0]
+    .split(/[\s,.]+/)[0] ?? ''
+}
+
+export function logoCompania(nombre: string): string | null {
+  const primera = primeraPalabra(nombre)
   return primera ? (LOGOS[primera] ?? null) : null
+}
+
+/** Multiplicador de altura del logo; 1 si no tiene ajuste o no hay logo. */
+export function escalaLogo(nombre: string): number {
+  return ESCALA[primeraPalabra(nombre)] ?? 1
 }

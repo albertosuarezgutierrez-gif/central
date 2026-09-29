@@ -16,7 +16,7 @@ import { Check, RefreshCw } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { CeldaCompania } from './CeldaCompania'
 import { eur } from '@/lib/dinero'
-import { diferenciasDeOpcion, filtrarPorGarantias, interruptoresGarantias, preseleccionFija, ramoDeCatalogo } from '@central/module-seguros'
+import { diferenciasDeOpcion, etiquetasGarantiasDeLey, filtrarPorGarantias, interruptoresGarantias, preseleccionFija, ramoDeCatalogo } from '@central/module-seguros'
 import {
   claveCompania,
   ocultarParaPreparar,
@@ -280,6 +280,9 @@ export default function FiltroGarantias({
 
           {interruptores.length > 0 && (
             <div style={{ marginBottom: 8 }}>
+              {etiquetasGarantiasDeLey(ramoCat).length > 0 && (
+                <p style={{ fontSize: 12, fontWeight: 600, margin: '4px 0' }}>✓ Incluida siempre, por ley: {etiquetasGarantiasDeLey(ramoCat).join(' y ')}</p>
+              )}
               <p style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0' }}>Garantías que debe incluir:</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {interruptores.map((i) => {

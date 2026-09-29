@@ -4132,10 +4132,13 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
   gap: 6px 12px;
   align-items: center;
 }
-.todas-logo { grid-area: logo; display: flex; align-items: center; max-width: 96px; }
+.aviso-perdidas { display: grid; gap: 8px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--negative); background: var(--negative-bg); font-size: 14px; }
+.aviso-perdidas-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.aviso-perdidas-check input { width: 20px; height: 20px; flex: none; }
+.todas-de-ley { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft, var(--border)); font-size: 14px; font-weight: 600; }
+.todas-logo { grid-area: logo; display: flex; align-items: center; max-width: 120px; }
 .todas-fila-datos { grid-area: datos; display: grid; gap: 2px; min-width: 0; }
 .todas-recomendada { width: fit-content; }
-.todas-compania { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .todas-producto { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
 .todas-precio { grid-area: precio; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
 .todas-prima { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }

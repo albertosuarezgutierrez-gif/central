@@ -56,8 +56,7 @@ export function Actual({ actual }: { actual: ActualCliente | null }) {
   return (
     <section className="seccion">
       <p className="antetitulo">Lo que tienes hoy</p>
-      <LogoCompania nombre={actual.compania} />
-      <h2 style={{ margin: '2px 0 10px' }}>{actual.compania}</h2>
+      <div style={{ margin: '4px 0 10px' }}><LogoCompania nombre={actual.compania} alto={36} /></div>
       <dl className="ficha-datos">
         {actual.bien !== null && (
           <>
@@ -109,8 +108,7 @@ export function Tarjeta({ o, caducado }: { o: OpcionCliente; caducado: boolean }
   return (
     <article className="presu-tarjeta" data-caducado={caducado ? 'si' : undefined}>
       {papel !== null && <p className="presu-papel">{papel}</p>}
-      <LogoCompania nombre={o.compania} />
-      <h3 className="presu-compania">{o.compania}</h3>
+      <div className="presu-compania"><LogoCompania nombre={o.compania} alto={34} /></div>
       <p className="presu-producto">
         {o.producto}
         {o.modalidad !== null && o.modalidad.trim() !== '' ? ` · ${o.modalidad}` : ''}
