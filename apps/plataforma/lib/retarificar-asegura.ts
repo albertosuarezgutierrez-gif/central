@@ -1688,8 +1688,11 @@ function leerGarantias(v: unknown): GarantiasClasificadas | null {
 /** `descuentos` de un precio guardado, validado. `null` = no se han leído; forma rara → `null`. */
 export function leerDescuentos(v: unknown): DescuentoComercial[] | null {
   if (!Array.isArray(v)) return null
-  return v.filter((d): d is DescuentoComercial =>
+  const validos = v.filter((d): d is DescuentoComercial =>
     !!d && typeof (d as DescuentoComercial).etiqueta === 'string' && typeof (d as DescuentoComercial).pct === 'number' && Number.isFinite((d as DescuentoComercial).pct))
+  // Un elemento ilegible convierte la lista en «no se sabe»: pintar solo los legibles
+  // (o «sin descuento comercial» si no queda ninguno) afirmaría algo que no se ha leído.
+  return validos.length === v.length ? validos : null
 }
 
 function leerPreciosGuardados(v: unknown): Precio[] | null {
