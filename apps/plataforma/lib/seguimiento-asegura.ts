@@ -289,6 +289,8 @@ export type OportunidadDeCliente = Oportunidad & {
   creada: string
   /** `null` = no tiene tarea pendiente: una abierta así está huérfana y se dice. */
   proximaTarea: { tipo: string; fechaLimite: string } | null
+  /** La póliza de la que cuelga; `null` = ninguna o asegura aún no lo manda (se casa por ramo). */
+  polizaId?: string | null
 }
 
 export type OportunidadesCliente =
@@ -334,6 +336,7 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
       prima: numero(r.prima),
       creada,
       proximaTarea: ptTipo && ptFecha ? { tipo: ptTipo, fechaLimite: ptFecha } : null,
+      polizaId: texto(r.polizaId),
     })
   }
   return { estado: 'ok', oportunidades, truncado: o.truncado === true, descartadas }

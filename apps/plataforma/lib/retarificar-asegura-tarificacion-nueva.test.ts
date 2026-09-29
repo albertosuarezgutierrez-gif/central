@@ -30,3 +30,13 @@ test('la caducidad viaja: una tarificación con efecto pasado se marca y la pant
   assert.match(fuente, /!r\.guardada\.caducada/)
   assert.match(fuente, /guardado: \{ estado: 'guardada', cotizacionId: g\.cotizacionId \}/)
 })
+
+import { leerHistorialPrevio } from './retarificar-asegura.ts'
+
+test('leerHistorialPrevio: completo o null (un historial a medias quitaría la bonificación sin avisar)', () => {
+  const h = { companiaCodigo: 'M0133', poliza: 'P-1', aniosAsegurado: 6, aniosEnCompania: 3, aniosSinSiniestros: 6, matricula: '2121NST' }
+  assert.deepEqual(leerHistorialPrevio(h), h)
+  assert.equal(leerHistorialPrevio({ ...h, aniosSinSiniestros: -1 }), null)
+  assert.equal(leerHistorialPrevio({ ...h, poliza: '' }), null)
+  assert.equal(leerHistorialPrevio(null), null)
+})

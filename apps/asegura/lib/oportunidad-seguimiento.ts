@@ -755,6 +755,8 @@ export type OportunidadDeCliente = OportunidadSeguimiento & {
   creada: string
   /** La tarea pendiente más próxima; `null` = no tiene ninguna (una abierta así está huérfana). */
   proximaTarea: { tipo: string; fechaLimite: string } | null
+  /** La póliza de la que cuelga (renovación/recaptación), o `null`: casa la oportunidad con SU tarjeta. */
+  polizaId: string | null
 }
 
 const TECHO_POR_CLIENTE = 50
@@ -775,6 +777,7 @@ export async function oportunidadesDeCliente(
     seguroAnterior: unknown
     prima: number | null; fuente: string | null; creada: Date
     proximaTarea: { tipo: string; fechaLimite: string } | null
+    polizaId: string | null
   })[]>(Prisma.sql`
     select o.id::text as id, o.cliente_id::text as "clienteId", o.tipo::text as ramo, o.estado::text as estado,
            o.fecha_fin_vigencia as "fechaFin", o.motivo_perdida as "motivoPerdida",
@@ -787,6 +790,7 @@ export async function oportunidadesDeCliente(
            coalesce(nullif(trim(o.info_riesgo->>'vehiculo'), ''), nullif(trim(concat_ws(' ', o.info_riesgo->>'marca', o.info_riesgo->>'modelo')), '')) as vehiculo,
            o.poliza_competencia->'seguroAnterior' as "seguroAnterior",
            o.prima_bruta::float8 as prima, o.fuente::text as fuente, o.created_at as creada,
+           o.poliza_id::text as "polizaId",
            (select json_build_object('tipo', g.tipo::text,
                      'fechaLimite', to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD'))
               from gestiones g
@@ -810,6 +814,7 @@ export async function oportunidadesDeCliente(
       fuente: f.fuente,
       creada: f.creada.toISOString(),
       proximaTarea: f.proximaTarea,
+      polizaId: f.polizaId,
     })),
     truncado: filas.length > TECHO_POR_CLIENTE,
   }

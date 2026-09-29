@@ -39,6 +39,7 @@ import type {
 import { lineasTrasEmision } from '@/lib/tras-emision-texto'
 import { ETIQUETA_CAMPO_FIGURA, figurasCompletas, textoCasillaFigura } from '@/lib/figuras-emision-texto'
 import { fechaEs } from '@/lib/ficha-asegura'
+import { bloqueoCompania, textoBloqueoCorredor } from '@central/module-seguros'
 
 type EstadoPanel =
   | { paso: 'inicio' }
@@ -1038,6 +1039,9 @@ export function Emision({
               otra vez (o pedir precio de nuevo).
             </p>
           )}
+          {bloqueoCompania(estado.avisos) !== null && (
+            <p style={{ color: 'var(--negative)', fontWeight: 600 }}>{textoBloqueoCorredor(bloqueoCompania(estado.avisos) as string)}</p>
+          )}
           {estado.avisos.length > 0 && (
             <ul>
               {estado.avisos.map((a, i) => (
@@ -1397,12 +1401,12 @@ export function Emision({
         return (
         <div style={{ marginTop: 14, border: '2px solid var(--warn)', borderRadius: 10, padding: 12 }}>
           {viva ? (
-            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--negative)' }}>
               <Ico i={OctagonAlert} /> La compañía ya tiene una solicitud {viva.veredicto === 'aprobada' ? 'APROBADA' : 'en curso'}
               {viva.numeroPoliza ? ` · póliza ${viva.numeroPoliza}` : ''} — NO se reenvía
             </p>
           ) : estado.rastro.length > 0 ? (
-            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--negative)' }}>
               <Ico i={OctagonAlert} /> El proyecto YA cuenta una solicitud de emisión en Codeoscopic
             </p>
           ) : (

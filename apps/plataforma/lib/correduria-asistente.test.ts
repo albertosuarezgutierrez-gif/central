@@ -193,6 +193,11 @@ test('alta dictada: DNI repetido = esa ficha; teléfono repetido = preguntar; 5x
 test('figura: hecho, fallo de red y rechazo se distinguen', () => {
   assert.match(figuraParaIA(200, { estado: 'ok', clienteId: 'c9', existente: false }, 'propietario', false).texto, /ficha nueva creada: clienteId=c9/)
   assert.match(figuraParaIA(200, { estado: 'ok' }, 'conductor_habitual', true).texto, /vuelve a ser el tomador/)
+  // Un carné sin guardar no se calla ni deja pedir precio; uno que ya estaba se dice.
+  const sinCarne = figuraParaIA(200, { estado: 'ok', clienteId: 'c9', existente: false, carnet: 'no_guardado' }, 'conductor_habitual', false).texto
+  assert.match(sinCarne, /CARNÉ NO se ha guardado/)
+  assert.doesNotMatch(sinCarne, /Ahora proponer_tarificacion/)
+  assert.match(figuraParaIA(200, { estado: 'ok', clienteId: 'c9', existente: true, carnet: 'ya_tenia' }, 'conductor_habitual', false).texto, /ya tenía un carné/)
   assert.equal(figuraParaIA(0, null, 'propietario', false).ok, false)
   assert.match(figuraParaIA(409, { estado: 'error', motivo: 'ese DNI ya está en la ficha de X' }, 'propietario', false).texto, /ese DNI ya está/)
 })
@@ -324,4 +329,13 @@ test('huella: con secreto (HMAC) no coincide con el hash a pelo', () => {
 test('escritura: 503 sin_configurar es «no se hizo», no «no sé»', () => {
   assert.match(escrituraParaIA(503, { estado: 'sin_configurar' }, 'x').texto, /^NO SE HA HECHO/)
   assert.match(escrituraParaIA(502, null, 'x').texto, /^NO SÉ SI/)
+})
+
+test('el precio (0,50€) va SIEMPRE con el botón de Alberto, también en autónomo (29/09/2026)', () => {
+  const f = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
+  assert.match(f, /const PRECIO_SIN_BOTON = false/)
+  const pedir = f.slice(f.indexOf('async function pedirOProponer'), f.indexOf('async function pedirOProponer') + 400)
+  assert.match(pedir, /if \(ctx\.autonomo && PRECIO_SIN_BOTON\)/)
+  assert.ok(!AUTONOMAS_CON_TEXTO_DE_BOTON.includes('proponer_tarificacion'))
+  assert.match(systemAsistente([], '2026-09-29', true), /PRECIO .*SIEMPRE con botón/)
 })

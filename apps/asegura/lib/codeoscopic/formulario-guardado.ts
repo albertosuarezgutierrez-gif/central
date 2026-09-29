@@ -110,3 +110,34 @@ export function extraerVehiculoGuardado(peticion: unknown): VehiculoGuardado | n
     garaje: idTexto(risk.garageType),
   }
 }
+
+/**
+ * El seguro anterior declarado en una petición (`risk.previousInsurance`), para no volver a
+ * dictarlo en la siguiente variante del mismo vehículo (29/09/2026: una variante sin él perdió la
+ * bonificación y el precio pasó de 200 a 360€). Completo o `null`: medio historial es un precio que
+ * la compañía corrige al emitir.
+ */
+export type HistorialGuardado = {
+  companiaCodigo: string
+  poliza: string
+  aniosAsegurado: number
+  aniosEnCompania: number
+  aniosSinSiniestros: number
+  matricula: string | null
+}
+
+export function extraerHistorialGuardado(peticion: unknown): HistorialGuardado | null {
+  const risk = obj(obj(peticion).risk)
+  const p = obj(risk.previousInsurance)
+  const codigo = str(obj(p.previousCompany).code)
+  const poliza = typeof p.policyNumber === 'number' ? String(p.policyNumber) : str(p.policyNumber)
+  const n = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 80 ? v : null)
+  const asegurado = n(p.totalYearsInsured)
+  const enCompania = n(p.yearsInPreviousCompany)
+  const sinSiniestros = n(p.yearsWithoutAccidents)
+  if (!codigo || !poliza || asegurado === null || enCompania === null || sinSiniestros === null) return null
+  return {
+    companiaCodigo: codigo, poliza, aniosAsegurado: asegurado, aniosEnCompania: enCompania, aniosSinSiniestros: sinSiniestros,
+    matricula: str(p.registrationPlate) ?? str(risk.registrationPlate),
+  }
+}

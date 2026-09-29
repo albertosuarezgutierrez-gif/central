@@ -12,6 +12,7 @@ import { useState, type ReactNode } from 'react'
 import { Badge, btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { CeldaCompania } from './CeldaCompania'
+import { bloqueoCompania, textoBloqueoCorredor } from '@central/module-seguros'
 
 export type PrecioLista = {
   id?: string
@@ -76,6 +77,9 @@ export default function ListaPrecios<P extends PrecioLista>({
                     <Badge tono="aviso" title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge>
                   )}
                   {simulado && <Badge tono="aviso">simulado</Badge>}
+                  {bloqueoCompania(p.avisos) !== null && (
+                    <div style={{ fontSize: 12, color: 'var(--negative)', fontWeight: 600, marginTop: 4 }}>{textoBloqueoCorredor(bloqueoCompania(p.avisos) as string)}</div>
+                  )}
                 </div>
                 <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
                   <strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{p.primaEur === null || p.primaEur === undefined ? '—' : eur(p.primaEur)}</strong>

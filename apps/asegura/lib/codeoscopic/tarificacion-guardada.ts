@@ -11,7 +11,7 @@
 import { descuentosDeOpciones, type DescuentoComercial, type GarantiasClasificadas } from '@central/module-seguros'
 import { listaOpciones } from './coberturas-tarificacion.ts'
 import { prisma } from '../tenant.ts'
-import { extraerFormularioAuto, extraerVehiculoGuardado, type FormularioAutoGuardado, type VehiculoGuardado } from './formulario-guardado.ts'
+import { extraerFormularioAuto, extraerHistorialGuardado, extraerVehiculoGuardado, type FormularioAutoGuardado, type HistorialGuardado, type VehiculoGuardado } from './formulario-guardado.ts'
 import { fechaEfectoCaducada } from './fecha-efecto.ts'
 
 export type PrecioGuardado = {
@@ -90,7 +90,7 @@ export async function ultimaTarificacionNueva(
   ramo: RamoRetomable,
   /** Variante de un riesgo (29/09/2026): la de esa oportunidad, o esa tarificación concreta. */
   filtro: { oportunidadId?: string | null; tarificacionId?: string | null } = {},
-): Promise<(Omit<TarificacionGuardada, 'formulario'> & { vehiculo: VehiculoGuardado | null }) | null> {
+): Promise<(Omit<TarificacionGuardada, 'formulario'> & { vehiculo: VehiculoGuardado | null; historialPrevio: HistorialGuardado | null }) | null> {
   const oportunidadId = filtro.oportunidadId ?? null
   const tarificacionId = filtro.tarificacionId ?? null
   const cabeceras = await prisma.$queryRaw<
@@ -112,7 +112,32 @@ export async function ultimaTarificacionNueva(
   if (!t || !t.project_id_codeoscopic) return null
   // El vehículo con el que se pidió (coche y moto): para volver a pedir precio sin dictarlo otra vez.
   const vehiculo = ramo === 'auto' || ramo === 'moto' ? extraerVehiculoGuardado(t.peticion) : null
-  return { ...(await cargarPrecios(t)), vehiculo }
+  // El último seguro anterior declarado para este cliente y ramo (de esta u otra variante del MISMO
+  // vehículo): la variante nueva lo hereda en vez de salir «de calle» sin bonificación.
+  const historialPrevio = ramo === 'auto' || ramo === 'moto' ? await ultimoHistorial(correduriaId, clienteId, ramo, oportunidadId, vehiculo?.matricula ?? null) : null
+  return { ...(await cargarPrecios(t)), vehiculo, historialPrevio }
+}
+
+async function ultimoHistorial(correduriaId: string, clienteId: string, ramo: 'auto' | 'moto', oportunidadId: string | null, matricula: string | null): Promise<HistorialGuardado | null> {
+  const filas = await prisma.$queryRaw<{ peticion: unknown }[]>`
+    select peticion from tarificaciones
+    where correduria_id = ${correduriaId}::uuid
+      and cliente_id = ${clienteId}::uuid
+      and simulado = false
+      and ramo = ${ramo}
+      and (${oportunidadId}::uuid is null or oportunidad_id = ${oportunidadId}::uuid)
+      and peticion->'risk'->'previousInsurance' is not null
+    order by creado_at desc
+    limit 5
+  `.catch(() => [] as { peticion: unknown }[])
+  const limpia = (m: string | null) => (m ?? '').replace(/[\s-]/g, '').toUpperCase()
+  for (const f of filas) {
+    const h = extraerHistorialGuardado(f.peticion)
+    if (!h) continue
+    if (!matricula || !h.matricula || limpia(h.matricula) !== limpia(matricula)) continue
+    return h
+  }
+  return null
 }
 
 async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }): Promise<Omit<TarificacionGuardada, 'formulario'>> {

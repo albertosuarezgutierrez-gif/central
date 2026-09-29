@@ -12,6 +12,8 @@
  */
 import { prisma } from '@/lib/tenant'
 import { mismaPersonaPorNombre } from './misma-persona'
+import { carnetDeNuevaPersona } from './carnet-nueva-persona'
+import { encryptField } from '@central/module-seguros-pii'
 import { altaCliente } from '@/lib/cartera-edicion'
 import { crearRelacion } from '@/lib/cartera-relaciones'
 import { clienteOrigenDe } from '@/lib/cartera-ficha'
@@ -296,9 +298,15 @@ export async function quitarFigura(
 export async function nuevaPersonaEnRiesgo(
   correduriaId: string,
   e: { oportunidadId: string; rol: unknown; tipoRelacion: unknown; persona: Record<string, unknown>; actor: string },
-): Promise<{ ok: true; clienteId: string; existente: boolean } | { ok: false; status: number; motivo: string; conflicto?: unknown }> {
+): Promise<
+  | { ok: true; clienteId: string; existente: boolean; carnet: 'guardado' | 'ya_tenia' | 'no_guardado' | null }
+  | { ok: false; status: number; motivo: string; conflicto?: unknown }
+> {
   if (!UUID.test(e.oportunidadId)) return { ok: false, status: 400, motivo: 'id no válido' }
   if (!esRolFigura(e.rol)) return { ok: false, status: 422, motivo: 'rol desconocido' }
+  // El carné se valida ANTES del alta: uno mal tecleado no puede dejar la ficha creada sin él.
+  const car = carnetDeNuevaPersona(e.persona, new Date().toISOString().slice(0, 10))
+  if (!car.ok) return { ok: false, status: 422, motivo: car.motivo }
   const [op] = await prisma.$queryRaw<Array<{ cliente_id: string }>>`
     select cliente_id::text as cliente_id from seguros.oportunidades
     where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
@@ -341,7 +349,27 @@ export async function nuevaPersonaEnRiesgo(
   }
   const asig = await asignarFigura(correduriaId, { oportunidadId: e.oportunidadId, rol: e.rol, clienteId, actor: e.actor })
   if (!asig.ok) return asig
-  return { ok: true, clienteId, existente }
+
+  // Su carné, en `cliente_carnets_conducir` (cifrado). Uno del mismo tipo que ya esté en la ficha NO
+  // se pisa: lo tecleado aquí no manda sobre lo que trae CIMA o se anotó antes. La persona ya está
+  // dada de alta y asignada; si el carné no se guarda, se dice en vez de fallar el alta entera.
+  let carnet: 'guardado' | 'ya_tenia' | 'no_guardado' | null = null
+  if (car.carnet) {
+    try {
+      const n = await prisma.$executeRaw`
+        insert into seguros.cliente_carnets_conducir (cliente_id, correduria_id, tipo, fecha_carnet)
+        select ${clienteId}::uuid, ${correduriaId}::uuid, ${car.carnet.tipo}, ${encryptField(car.carnet.fecha)}
+        where not exists (
+          select 1 from seguros.cliente_carnets_conducir
+          where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid
+            and upper(replace(tipo, ' ', '')) = ${car.carnet.tipo})`
+      carnet = n > 0 ? 'guardado' : 'ya_tenia'
+    } catch (err) {
+      console.error('[oportunidad-riesgo] carné de la nueva persona sin guardar', err)
+      carnet = 'no_guardado'
+    }
+  }
+  return { ok: true, clienteId, existente, carnet }
 }
 
 /**
@@ -484,7 +512,20 @@ export async function prepararVariante(
       if (deFicha.tipo === 'juridica') {
         // El vendor no admite un CIF de conductor: se corta aquí, gratis, no tras pagar.
         if (rol !== 'propietario') return { ok: false, motivo: 'una empresa solo puede ser propietaria: el conductor tiene que ser una persona' }
-        correcciones[clave] = await empresaParaCotizar(deFicha, soloConValor)
+        const empresa = await empresaParaCotizar(deFicha, soloConValor)
+        // Sin la dirección entera, la compañía la pide al EMITIR y no se puede corregir en un proyecto
+        // ya creado: habría que pagar otra tarificación (29/09/2026, moto de un cliente con su empresa
+        // de propietaria). Se corta aquí, gratis, diciendo qué falta y dónde se arregla.
+        const faltaDir = faltaDireccionEmpresa(empresa)
+        if (faltaDir.length > 0) {
+          return {
+            ok: false,
+            motivo:
+              `la dirección de la empresa propietaria (${empresa.razonSocial || 'sin nombre'}) está incompleta: falta ${faltaDir.join(', ')}. ` +
+              'Corrígela en su ficha, con el tipo de vía delante (p. ej. «Calle Patines, 1»), y vuelve a pedir precio. No se ha gastado nada.',
+          }
+        }
+        correcciones[clave] = empresa
         continue
       }
       correcciones[clave] = { ...deFicha, ...soloConValor }
@@ -530,6 +571,16 @@ async function empresaParaCotizar(f: EmpresaFigura, tecleado: Record<string, unk
     // Catálogo caído: la empresa viaja sin dirección, que es lo mismo que no tenerla.
   }
   return empresa
+}
+
+/** Qué le falta a la dirección de una empresa propietaria para poder EMITIR. Puro. */
+export function faltaDireccionEmpresa(e: Pick<DatosEmpresa, 'municipioResidenciaId' | 'nombreVia' | 'numeroVia' | 'tipoVia'>): string[] {
+  const f: string[] = []
+  if (e.municipioResidenciaId === undefined || e.municipioResidenciaId === null) f.push('el municipio (revisa el código postal)')
+  if (!e.tipoVia) f.push('el tipo de vía')
+  if (!e.nombreVia) f.push('el nombre de la calle')
+  if (!e.numeroVia) f.push('el número')
+  return f
 }
 
 /** Solo roles conocidos y uuids; el tomador siempre es quien cotiza (el cliente de la ruta). */
