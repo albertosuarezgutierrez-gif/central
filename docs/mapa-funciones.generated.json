@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T20:31:15Z",
-  "sha": "48abfdf99eb943bc22a7fbc9bfb03965b626beae",
+  "generadoEn": "2026-09-29T01:03:40Z",
+  "sha": "58790fe02124ede3bb1b464495c568dd2a26eda9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11536,7 +11536,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "GarantiasClasificadas | null",
-          "linea": 40,
+          "linea": 41,
           "resumen": "Lee el jsonb `{version, porClave: {clave: 'si'|'no'|'no_consta'}}` sin fiarse de su forma. Cualquier cosa que no sea exactamente eso → `null` («no clasificada»), que el filtro trata como `no_consta`. "
         },
         {
@@ -11545,7 +11545,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, coberturas: readonly string[] | null | undefined",
           "retorno": "GarantiasClasificadas | null",
-          "linea": 58,
+          "linea": 59,
           "resumen": "Las coberturas de la póliza actual, llevadas al catálogo. Lo que figura en la póliza es lo que TIENE (`incluida: true`). `null` o `[]` = no hay desglose leído → `null`: sin él no se compara."
         },
         {
@@ -11554,7 +11554,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias | null, necesidades: string | null | undefined, interruptores: readonly InterruptorGarantia[]",
           "retorno": "string[]",
-          "linea": 70,
+          "linea": 71,
           "resumen": "Lo que el cliente pidió, cruzado con los interruptores que existen (los que alguna opción incluye). Marcar una garantía sin interruptor dejaría un filtro que el cliente no ve ni puede quitar. Sale en "
         },
         {
@@ -11563,7 +11563,7 @@
           "exportada": true,
           "params": "marcadas: readonly string[], clave: string, interruptores: readonly InterruptorGarantia[]",
           "retorno": "string[]",
-          "linea": 77,
+          "linea": 79,
           "resumen": "Marca o desmarca una garantía, conservando el orden de los interruptores."
         },
         {
@@ -11572,7 +11572,7 @@
           "exportada": true,
           "params": "lista: readonly T[], cuantas: number",
           "retorno": "Pagina<T>",
-          "linea": 89,
+          "linea": 91,
           "resumen": "Las `cuantas` primeras, cuántas quedan y cuántas se enseñan tras «Ver 10 más»."
         },
         {
@@ -11581,7 +11581,7 @@
           "exportada": true,
           "params": "quedan: number",
           "retorno": "string | null",
-          "linea": 96,
+          "linea": 98,
           "resumen": "Texto del botón: «Ver 10 más» o, si quedan menos, «Ver 3 más». `null` = no queda nada."
         },
         {
@@ -11590,7 +11590,7 @@
           "exportada": true,
           "params": "sel: readonly string[], id: string",
           "retorno": "string[]",
-          "linea": 103,
+          "linea": 105,
           "resumen": "Marca/desmarca una opción para comparar. Con dos elegidas, una tercera no entra."
         },
         {
@@ -11599,7 +11599,7 @@
           "exportada": true,
           "params": "sel: readonly string[], id: string",
           "retorno": "boolean",
-          "linea": 110,
+          "linea": 112,
           "resumen": "La casilla de una opción NO elegida se deshabilita cuando ya hay dos."
         },
         {
@@ -11608,7 +11608,7 @@
           "exportada": true,
           "params": "o: OpcionParaFila, ctx: { ramo: RamoGarantias | null; actual: GarantiasClasificadas | null }",
           "retorno": "FilaOpcion",
-          "linea": 147
+          "linea": 149
         },
         {
           "nombre": "listaY",
@@ -11616,7 +11616,7 @@
           "exportada": true,
           "params": "xs: readonly string[]",
           "retorno": "string",
-          "linea": 186,
+          "linea": 188,
           "resumen": "«Lunas», «Lunas y Robo», «Lunas, Robo y Grúa»."
         },
         {
@@ -11625,7 +11625,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias | null, claves: readonly string[]",
           "retorno": "string[]",
-          "linea": 191
+          "linea": 193
         },
         {
           "nombre": "textoSinDato",
@@ -11633,7 +11633,7 @@
           "exportada": true,
           "params": "n: number, etiquetas: readonly string[]",
           "retorno": "string",
-          "linea": 198,
+          "linea": 200,
           "resumen": "«3 opciones no dicen si incluyen Lunas» / «1 opción no dice si incluye Lunas y Robo»."
         },
         {
@@ -11642,7 +11642,7 @@
           "exportada": true,
           "params": "n: number, cuantasGarantias: number",
           "retorno": "string | null",
-          "linea": 204,
+          "linea": 206,
           "resumen": "«2 no la incluyen» (una garantía) / «2 no incluyen alguna de ellas» (varias). `null` si 0."
         },
         {
@@ -11651,13 +11651,13 @@
           "exportada": true,
           "params": "b: unknown",
           "retorno": "Actividad | null",
-          "linea": 223,
+          "linea": 225,
           "resumen": "Valida el cuerpo de `POST /api/presupuesto/actividad`. `null` = no se reenvía nada. Las claves de garantía son identificadores del catálogo (`[a-z0-9_]`), nunca texto libre; las comparadas, uuids y co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6328a6b75b00"
+      "hash": "8819c76d4604"
     },
     {
       "ruta": "apps/asegura-portal/lib/vencimientos.ts",
@@ -29366,6 +29366,32 @@
       "hash": "0126037a9e86"
     },
     {
+      "ruta": "apps/asegura/lib/presupuesto-seguimiento-llamada.ts",
+      "ambito": "apps/asegura",
+      "resumen": "La llamada de seguimiento en «Hoy» (28/09/2026). Vive FUERA de presupuesto-seguimiento-servicio.ts a propósito: ese fichero tiene prohibido cualquier `catch` (un fallo de LECTURA tiene que lanzar), y esto es una ESCRITURA best-effort que no puede deshacer el «avisado».",
+      "exporta": [
+        "tareaDeSeguimiento"
+      ],
+      "funciones": [
+        {
+          "nombre": "tareaDeSeguimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, presupuestoId: string, etapa: Etapa",
+          "retorno": "Promise<void>",
+          "linea": 15,
+          "resumen": "y un fallo aquí no deshace el «avisado» (el Telegram ya salió)."
+        }
+      ],
+      "tablas": [
+        "gestiones",
+        "oportunidades",
+        "presupuesto"
+      ],
+      "rutaApi": null,
+      "hash": "749f10f45ad3"
+    },
+    {
       "ruta": "apps/asegura/lib/presupuesto-seguimiento-servicio.ts",
       "ambito": "apps/asegura",
       "resumen": "Seguimiento de presupuestos enviados, con BD: qué presupuestos toca recordarle a Alberto (el cliente no lo ha abierto en 48 h, o lo abrió y no eligió en 72 h) y qué ha hecho el cliente en el portal. Lo sirve `GET /api/operador/presupuesto/seguimiento`; plataforma decide cómo avisar y lo apunta con `",
@@ -29380,7 +29406,7 @@
           "exportada": true,
           "params": "correduriaId: string, ahora = new Date()",
           "retorno": "Promise<Pendiente[]>",
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "marcarSeguimientoAvisado",
@@ -29388,7 +29414,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { id: string; etapa: Etapa; actor: string },",
           "retorno": "Promise<ResultadoAvisado>",
-          "linea": 91,
+          "linea": 92,
           "resumen": "Apunta que Alberto ya fue avisado de esa etapa. Idempotente: si ya consta, `ok` sin escribir otra fila (el libro es append-only; dos filas iguales no dirían nada más)."
         }
       ],
@@ -29397,7 +29423,7 @@
         "presupuesto"
       ],
       "rutaApi": null,
-      "hash": "c787a83e9cad"
+      "hash": "9735bb159ab7"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-seguimiento.ts",
@@ -75897,13 +75923,13 @@
           "exportada": true,
           "params": "{ compania, producto }: { compania: string | null | undefined; producto: string | null | undefined }",
           "retorno": null,
-          "linea": 6,
-          "resumen": "Celda «Aseguradora» de las tablas de precios: logo (o iniciales si no lo hay), nombre de la compañía y, debajo, el producto sin repetir la compañía."
+          "linea": 5,
+          "resumen": "Celda «Aseguradora» de las tablas de precios: el LOGO (el nombre solo si no tenemos logo) y, debajo, el producto cuando dice algo más que el ramo. Con el logo el nombre sobraba (28/09/2026)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "84a2b13e9756"
+      "hash": "28c9a2afb499"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CiudadPorCp.tsx",
@@ -75984,20 +76010,12 @@
       ],
       "funciones": [
         {
-          "nombre": "euroODash",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number | null | undefined",
-          "retorno": "string",
-          "linea": 43
-        },
-        {
           "nombre": "personaCompleta",
           "kind": "function",
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "boolean",
-          "linea": 119,
+          "linea": 114,
           "resumen": "¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor."
         },
         {
@@ -76006,7 +76024,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "Record<string, unknown>",
-          "linea": 133,
+          "linea": 128,
           "resumen": "La forma que espera `DatosAuto.propietario`/`conductor` en el puerto de asegura."
         },
         {
@@ -76015,7 +76033,7 @@
           "exportada": true,
           "params": "{ clienteId, matriculaInicial = '', etiquetaCliente, faltanInicial, garajes, civiles, zonasCarnet, tiposCarnet, municipios, municipiosMotivo, estadoCivilAuto, consumo, simulacion, companias, }: { clienteId: string /** Leída del documento po",
           "retorno": null,
-          "linea": 167
+          "linea": 162
         },
         {
           "nombre": "BloquePersona",
@@ -76023,7 +76041,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onActivo, persona, onPersona, civiles, conCarnet, }: { etiqueta: string activo: boolean onActivo: (v: boolean) => void persona: PersonaForm onPersona: (p: PersonaForm) => void civiles: Opcion[] conCarnet: boolean }",
           "retorno": null,
-          "linea": 1144,
+          "linea": 1139,
           "resumen": "El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador."
         },
         {
@@ -76032,7 +76050,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 1217,
+          "linea": 1212,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -76041,7 +76059,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 1222
+          "linea": 1217
         },
         {
           "nombre": "Campo",
@@ -76049,7 +76067,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1227
+          "linea": 1222
         },
         {
           "nombre": "Contador",
@@ -76057,7 +76075,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 1240
+          "linea": 1235
         },
         {
           "nombre": "Precios",
@@ -76065,7 +76083,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }",
           "retorno": null,
-          "linea": 1259
+          "linea": 1254
         }
       ],
       "tablas": [
@@ -76073,7 +76091,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b16d8b0df698"
+      "hash": "b3cc9df98f71"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/page.tsx",
@@ -76288,20 +76306,12 @@
       ],
       "funciones": [
         {
-          "nombre": "euroODash",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number | null | undefined",
-          "retorno": "string",
-          "linea": 18
-        },
-        {
           "nombre": "DecesosNuevo",
           "kind": "function",
           "exportada": true,
           "params": "{ clienteId, etiquetaCliente, faltanInicial, civiles, estadoCivil, estadoCivilMotivo, consumo, simulacion, }: { clienteId: string etiquetaCliente: string faltanInicial: Reparo[] | null civiles: Opcion[] estadoCivil: Opcion | null estadoCivi",
           "retorno": null,
-          "linea": 52
+          "linea": 48
         },
         {
           "nombre": "Campo",
@@ -76309,7 +76319,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 252
+          "linea": 248
         },
         {
           "nombre": "Contador",
@@ -76317,7 +76327,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 265
+          "linea": 261
         },
         {
           "nombre": "Precios",
@@ -76325,7 +76335,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }",
           "retorno": null,
-          "linea": 284
+          "linea": 280
         }
       ],
       "tablas": [
@@ -76333,7 +76343,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "608dc93e7af5"
+      "hash": "b6317b037e02"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/decesos-nuevo/page.tsx",
@@ -76515,20 +76525,12 @@
       ],
       "funciones": [
         {
-          "nombre": "euroODash",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number | null | undefined",
-          "retorno": "string",
-          "linea": 89
-        },
-        {
           "nombre": "Formulario",
           "kind": "function",
           "exportada": true,
           "params": "{ clienteId, referencia, preInicial, }: { clienteId: string referencia: string preInicial: PrecalificacionHogar }",
           "retorno": null,
-          "linea": 93
+          "linea": 90
         },
         {
           "nombre": "FilaFicha",
@@ -76536,7 +76538,7 @@
           "exportada": false,
           "params": "{ fila, editando, borrador, setBorrador, abrir, cerrar, guardar, deshacer, pre, }: { fila: Fila editando: boolean borrador: string setBorrador: (v: string) => void abrir: () => void cerrar: () => void guardar: () => void deshacer: () => voi",
           "retorno": null,
-          "linea": 359
+          "linea": 356
         },
         {
           "nombre": "ControlCampo",
@@ -76544,7 +76546,7 @@
           "exportada": false,
           "params": "{ fila, borrador, setBorrador, pre, }: { fila: Fila borrador: string setBorrador: (v: string) => void pre: PrecalificacionHogar }",
           "retorno": null,
-          "linea": 448
+          "linea": 445
         },
         {
           "nombre": "aTexto",
@@ -76552,7 +76554,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "string",
-          "linea": 515
+          "linea": 512
         },
         {
           "nombre": "deTexto",
@@ -76560,7 +76562,7 @@
           "exportada": false,
           "params": "f: Fila, t: string",
           "retorno": "unknown",
-          "linea": 522
+          "linea": 519
         },
         {
           "nombre": "Precios",
@@ -76568,7 +76570,7 @@
           "exportada": false,
           "params": "{ r, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; clienteId: string }",
           "retorno": null,
-          "linea": 541
+          "linea": 538
         }
       ],
       "tablas": [
@@ -76576,7 +76578,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "539e7c9a23e8"
+      "hash": "4e4cb6dcded0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/page.tsx",
@@ -76696,20 +76698,12 @@
       ],
       "funciones": [
         {
-          "nombre": "euroODash",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number | null | undefined",
-          "retorno": "string",
-          "linea": 36
-        },
-        {
           "nombre": "MotoNuevo",
           "kind": "function",
           "exportada": true,
           "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, poliza = null, }: { poliza?: PolizaMoto | null clienteId: string etiquetaCliente: string /** `null",
           "retorno": null,
-          "linea": 96
+          "linea": 91
         },
         {
           "nombre": "hoyLocal",
@@ -76717,7 +76711,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 856,
+          "linea": 851,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -76726,7 +76720,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 861
+          "linea": 856
         },
         {
           "nombre": "Campo",
@@ -76734,7 +76728,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 866
+          "linea": 861
         },
         {
           "nombre": "Contador",
@@ -76742,7 +76736,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 879
+          "linea": 874
         },
         {
           "nombre": "Precios",
@@ -76750,7 +76744,7 @@
           "exportada": false,
           "params": "{ r, simulacion, emitible = false, sustituye = true, clienteId, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean clienteId: string /** Desde el 28/09/2026 también sin póliza: asegura emite a un cliente NUEVO con el * proyect",
           "retorno": null,
-          "linea": 898
+          "linea": 893
         }
       ],
       "tablas": [
@@ -76758,7 +76752,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "910f0df3be2a"
+      "hash": "cf087c068012"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/page.tsx",
@@ -77198,20 +77192,12 @@
       ],
       "funciones": [
         {
-          "nombre": "euroODash",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number | null | undefined",
-          "retorno": "string",
-          "linea": 18
-        },
-        {
           "nombre": "SaludNuevo",
           "kind": "function",
           "exportada": true,
           "params": "{ clienteId, etiquetaCliente, faltanInicial, civiles, estadoCivil, estadoCivilMotivo, consumo, simulacion, }: { clienteId: string etiquetaCliente: string faltanInicial: Reparo[] | null civiles: Opcion[] estadoCivil: Opcion | null estadoCivi",
           "retorno": null,
-          "linea": 52
+          "linea": 48
         },
         {
           "nombre": "Campo",
@@ -77219,7 +77205,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 262
+          "linea": 258
         },
         {
           "nombre": "Contador",
@@ -77227,7 +77213,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 275
+          "linea": 271
         },
         {
           "nombre": "Precios",
@@ -77235,7 +77221,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }",
           "retorno": null,
-          "linea": 294
+          "linea": 290
         }
       ],
       "tablas": [
@@ -77243,7 +77229,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "a08e96cf135f"
+      "hash": "437a4a41f97c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/SeguimientoOportunidad.tsx",
@@ -77743,20 +77729,12 @@
       ],
       "funciones": [
         {
-          "nombre": "euroODash",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number | null | undefined",
-          "retorno": "string",
-          "linea": 24
-        },
-        {
           "nombre": "VidaNuevo",
           "kind": "function",
           "exportada": true,
           "params": "{ clienteId, etiquetaCliente, faltanInicial, civiles, estadoCivil, estadoCivilMotivo, consumo, simulacion, }: { clienteId: string etiquetaCliente: string faltanInicial: Reparo[] | null civiles: Opcion[] estadoCivil: Opcion | null estadoCivi",
           "retorno": null,
-          "linea": 59
+          "linea": 55
         },
         {
           "nombre": "Campo",
@@ -77764,7 +77742,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 268
+          "linea": 264
         },
         {
           "nombre": "Contador",
@@ -77772,7 +77750,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 281
+          "linea": 277
         },
         {
           "nombre": "Precios",
@@ -77780,7 +77758,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }",
           "retorno": null,
-          "linea": 300
+          "linea": 296
         }
       ],
       "tablas": [
@@ -77788,7 +77766,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "3bba901ef164"
+      "hash": "4e8a357da475"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/nuevo/page.tsx",
@@ -78560,7 +78538,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3c2b13b6b465"
+      "hash": "bfa51a3a8831"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Formacion.tsx",
@@ -79301,6 +79279,36 @@
       "hash": "2866b93d968b"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/ListaPrecios.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ListaPrecios",
+        "ListaPreciosPlegada"
+      ],
+      "funciones": [
+        {
+          "nombre": "ListaPrecios",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ precios, simulado, puedeEmitir, motivoNoEmitir, emision, detalle, }: { precios: P[] simulado: boolean /** Sin esto no hay botón «Emitir» (p. ej. sin cotización guardada). */ puedeEmitir?: boolean motivoNoEmitir?: string /** El panel de em",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "ListaPreciosPlegada",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titulo, ...props }: Parameters<typeof ListaPrecios<P>>[0] & { titulo?: string }",
+          "retorno": null,
+          "linea": 111,
+          "resumen": "La misma lista, PLEGADA: cuando debajo está «Qué verá el cliente» (que ya enseña todos los precios de la más barata a la más cara), repetirla abierta eran dos listas de 31 filas seguidas. Aquí queda s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "960322d3bafb"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/EscribirIndiceDni.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -80022,7 +80030,7 @@
           "nombre": "PresupuestosPoliza",
           "kind": "function",
           "exportada": true,
-          "params": "{ polizaId, clienteId, ramo }: { polizaId?: string; clienteId?: string; ramo?: string | null }",
+          "params": "{ polizaId, clienteId, ramo, soloId }: { polizaId?: string clienteId?: string ramo?: string | null /** Solo ESTE presupuesto: se monta justo tras prepararlo para mandarlo sin salir de la pantalla. */ soloId?: string }",
           "retorno": null,
           "linea": 19,
           "resumen": "Los presupuestos de esta póliza y su aviso al cliente (spec 2026-09-21, PR 3). Nada sale sin que Alberto pulse, presupuesto a presupuesto. El correo lo manda asegura; el WhatsApp lo manda él desde su "
@@ -80033,7 +80041,7 @@
           "exportada": false,
           "params": "{ p, ramo, deshabilitado, onGuardar }: { p: PresupuestoEnLista; ramo: string | null; deshabilitado: boolean onGuardar: (texto: string, respuestas: Record<string, string>) => void }",
           "retorno": null,
-          "linea": 154,
+          "linea": 160,
           "resumen": "Exigencias y necesidades del cliente (IDD, art. 20 Ley 16/2018). Sin ellas asegura no deja avisarle. Cuestionario cerrado por ramo (`preguntasNecesidades`): se guarda como la declaración de texto de s"
         }
       ],
@@ -80041,7 +80049,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "ced65b72e04f"
+      "hash": "6a287ea555ed"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/acciones-hogar.ts",
@@ -80394,23 +80402,23 @@
           "nombre": "PrepararPresupuesto",
           "kind": "function",
           "exportada": true,
-          "params": "{ tarificacionId, simulado, ocultar, bloqueado, onPreparado, }: { tarificacionId: string /** La cotización de la que sale. Si es simulada, no se podrá enviar nunca. */ simulado: boolean /** Lo que el corredor quita antes de preparar (lo dec",
+          "params": "{ tarificacionId, simulado, ocultar, bloqueado, onPreparado, enviadas, origen, }: { tarificacionId: string /** La cotización de la que sale. Si es simulada, no se podrá enviar nunca. */ simulado: boolean /** Lo que el corredor quita antes d",
           "retorno": null,
-          "linea": 27,
+          "linea": 28,
           "resumen": "«Preparar presupuesto» — PR 1 del §6 de `docs/superpowers/specs/2026-09-21-asegura-presupuesto-al-cliente-design.md`. 🚨 ESTE BOTÓN NO MANDA NADA Y NO CUESTA NADA. Congela en `seguros.presupuesto` lo "
         },
         {
           "nombre": "Preparado",
           "kind": "function",
           "exportada": false,
-          "params": "{ p, token }: { p: PresupuestoPreparado; token: string }",
+          "params": "{ p, token, origen }: { p: PresupuestoPreparado; token: string; origen?: { polizaId: string } | { clienteId: string; ramo?: string } }",
           "retorno": null,
-          "linea": 130
+          "linea": 137
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "144b8908d78e"
+      "hash": "3aaea0e062fd"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/ProductFormWidget.tsx",
@@ -115448,7 +115456,8 @@
       "resumen": "Logo de una aseguradora para las tablas de precios de la correduría (retarificación y presupuestos nuevos). Los SVG/PNG vienen del mismo repo de Alberto que ya los sirve en `apps/asegura-web/public/logos/` (`public/logos/insurers/` allí) — se copiaron tal cual a `apps/plataforma/public/logos/insurer",
       "exporta": [
         "logoCompania",
-        "nombreProductoSinCia"
+        "nombreProductoSinCia",
+        "productoRelevante"
       ],
       "funciones": [
         {
@@ -115476,11 +115485,20 @@
           "retorno": "string | null",
           "linea": 47,
           "resumen": "El nombre del producto SIN repetir el de la compañía delante («Mapfre Autos» → «Autos» cuando la compañía es «Mapfre»). El dato no cambia, solo se deja de pintar dos veces lo mismo en la misma fila."
+        },
+        {
+          "nombre": "productoRelevante",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string | null | undefined, producto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 71,
+          "resumen": "El producto SOLO si dice algo: sin la compañía delante y `null` cuando no es más que el ramo («Mapfre Motos» en la pantalla de moto). Repetido en cada fila era ruido en el móvil (28/09/2026)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b6f18a21bbc2"
+      "hash": "86172b995f8a"
     },
     {
       "ruta": "apps/plataforma/lib/mailer.ts",
@@ -156765,7 +156783,8 @@
       "exporta": [
         "estadoDe",
         "filtrarPorGarantias",
-        "interruptoresGarantias"
+        "interruptoresGarantias",
+        "preseleccionFija"
       ],
       "funciones": [
         {
@@ -156800,11 +156819,19 @@
           "retorno": "InterruptorGarantia[]",
           "linea": 66,
           "resumen": "Los interruptores que tiene sentido enseñar: las garantías del catálogo que ALGUNA opción incluye, con cuántas la incluyen. Una garantía que ninguna opción dice incluir no se ofrece (marcarla dejaría "
+        },
+        {
+          "nombre": "preseleccionFija",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias | null, interruptores: readonly InterruptorGarantia[]",
+          "retorno": "string[]",
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3bc9a8479164"
+      "hash": "a45e9683e216"
     },
     {
       "ruta": "packages/module-seguros/src/formacion.ts",
@@ -165759,7 +165786,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3890,
-    "funciones": 12780
+    "archivos": 3892,
+    "funciones": 12779
   }
 }
