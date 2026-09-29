@@ -222,6 +222,20 @@ test('Mapfre: «Daños propios por atropello… / por fenómenos» en prosa NO e
   assert.equal(g.porClave.fenomenos_atmosfericos, 'si')
 })
 
+test('Todo riesgo en prosa que ENUMERA granizo o animales al final sigue siendo todo riesgo', () => {
+  for (const texto of [
+    'Daños propios por colisión, vuelco, incendio, robo y granizo',
+    'Daños propios por colisión, vuelco, caída de objetos y atropello de animales',
+  ]) {
+    const g = clasificarCoberturas('auto', [{ nombre: 'Daños propios', incluida: true, texto }])
+    assert.equal(g.porClave.danos_propios, 'si', texto)
+  }
+  // Y «por colisión con animales» sí es limitado.
+  const lim = clasificarCoberturas('auto', [{ nombre: 'Daños propios', incluida: true, texto: 'Daños propios por colisión con animales' }])
+  assert.equal(lim.porClave.danos_propios, 'no_consta')
+  assert.equal(lim.porClave.colision_animales, 'si')
+})
+
 test('Occident: «RC peatón» dentro de la RC voluntaria es la propia RC voluntaria', () => {
   for (const nombre of ['RC voluntaria', 'Responsabilidad civil voluntaria']) {
     const g = clasificarCoberturas('auto', [{ nombre, incluida: true, texto: '» RC peatón y ciclista: 100.000 €..» RC incendio: Incluida.' }])

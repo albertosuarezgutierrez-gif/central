@@ -173,7 +173,9 @@ function clavesDeParte(ramo: RamoGarantias, parte: string, propias: readonly str
 function partesDeDanosLimitados(ramo: RamoGarantias, texto: string | null | undefined): string[] | null {
   if (typeof texto !== 'string') return null
   const t = claveCobertura(texto)
-  const causa = /\bdanos propios por (.{1,40})/.exec(t)?.[1]
+  // Solo la PRIMERA causa (hasta 3 palabras): «por colisión, vuelco, incendio, granizo…» es el todo
+  // riesgo, y una ventana más ancha llegaba al «granizo» y lo rebajaba.
+  const causa = /\bdanos propios por ((?:\S+ ){0,2}\S+)/.exec(t)?.[1]
   if (!causa || !clavesDe(ramo, causa).some((k) => CLAVES_DE_PARTE.includes(k))) return null
   return clavesDe(ramo, t).filter((k) => CLAVES_DE_PARTE.includes(k))
 }

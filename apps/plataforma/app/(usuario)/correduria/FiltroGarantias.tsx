@@ -113,6 +113,10 @@ export default function FiltroGarantias({
   // sin esto, lo que aún no se ha leído se quedaba en pantalla como si la compañía «no dijera».
   const leyendo = estado === 'leyendo' || estado === 'parcial'
   const lecturasAuto = useRef(0)
+  // Una cotización nueva en la misma pantalla vuelve a tener sus 10 relecturas.
+  useEffect(() => {
+    lecturasAuto.current = 0
+  }, [tarificacionId])
   useEffect(() => {
     if (!leyendo || lecturasAuto.current >= 10) return
     const t = setTimeout(() => {
