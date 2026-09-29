@@ -1,8 +1,8 @@
 {
  "sesion": "84f76820-3d00-5766-9455-65a996a106a2",
  "inicio": "2026-09-28T09:41:09.781Z",
- "fin": "2026-09-28T20:24:08.164Z",
- "llamadas": 2555,
+ "fin": "2026-09-29T04:51:23.709Z",
+ "llamadas": 2571,
  "categorias": {
   "lectura-directa": {
    "llamadas": 254,
@@ -18,26 +18,26 @@
    }
   },
   "bash": {
-   "llamadas": 1451,
-   "chars_in": 728077,
-   "chars_out": 4979013,
+   "llamadas": 1453,
+   "chars_in": 728289,
+   "chars_out": 4979295,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1451
+    "Bash": 1453
    }
   },
   "otro": {
-   "llamadas": 240,
-   "chars_in": 156720,
-   "chars_out": 2133412,
+   "llamadas": 249,
+   "chars_in": 156738,
+   "chars_out": 2240478,
    "errores": 0,
-   "archivos_citados": 30,
-   "chars_citados": 2636640,
+   "archivos_citados": 32,
+   "chars_citados": 2671253,
    "tools": {
     "ToolSearch": 40,
-    "ReadNotifications": 154,
+    "ReadNotifications": 163,
     "SubagentHandback": 29,
     "Skill": 4,
     "AskUserQuestion": 3,
@@ -48,9 +48,9 @@
    }
   },
   "mcp:github": {
-   "llamadas": 103,
-   "chars_in": 57743,
-   "chars_out": 211017,
+   "llamadas": 104,
+   "chars_in": 57901,
+   "chars_out": 211126,
    "errores": 2,
    "archivos_citados": 11,
    "chars_citados": 1768791,
@@ -59,7 +59,7 @@
     "mcp__github__list_pull_requests": 3,
     "mcp__github__update_pull_request": 6,
     "mcp__github__pull_request_read": 26,
-    "mcp__github__merge_pull_request": 18,
+    "mcp__github__merge_pull_request": 19,
     "mcp__github__add_issue_comment": 5,
     "mcp__github__subscribe_pr_activity": 15,
     "mcp__github__unsubscribe_pr_activity": 3,
@@ -152,14 +152,14 @@
    }
   },
   "sql": {
-   "llamadas": 54,
-   "chars_in": 20069,
-   "chars_out": 87134,
+   "llamadas": 58,
+   "chars_in": 21561,
+   "chars_out": 93038,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 54
+    "mcp__Supabase__execute_sql": 58
    }
   },
   "mcp:Supabase": {
