@@ -154,6 +154,9 @@ test('hogar: todo riesgo, restauración estética, animales y asistencia básica
   assert.equal(allianz.porClave.todo_riesgo_accidental, 'si')
   assert.equal(allianz.porClave.asistencia_hogar_ampliada, 'no_consta')
   assert.equal(asistenciaHogarAmpliada([{ nombre: 'Asistencia en el hogar', incluida: true, texto: 'ASISTENCIA HOGAR AMPLIADA. Servicio informático' }]), 'si')
+  // La ampliada marcada NO incluida es un no explícito, no un «no consta».
+  assert.equal(asistenciaHogarAmpliada([{ nombre: 'Asistencia en el hogar', incluida: false, texto: 'ASISTENCIA HOGAR AMPLIADA.' }]), 'no')
+  assert.equal(asistenciaHogarAmpliada([{ nombre: 'Asistencia en el hogar', incluida: null, texto: 'ASISTENCIA HOGAR AMPLIADA.' }]), 'no_consta')
   // 🪤 Solo la «asistencia en viaje» marcada no incluida NO es un «no» de asistencia en el hogar.
   assert.equal(clasificarCoberturas('hogar', [{ nombre: 'Asistencia en viaje / Accidentes', incluida: false }]).porClave.asistencia_hogar, 'no_consta')
   // Cada señal sola basta: solo el texto «(OPCIONAL)», o solo la opción de Fidelidade.

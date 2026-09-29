@@ -255,10 +255,12 @@ function esOpcionalSinMarcar(c: CoberturaParaClasificar): boolean {
 export function asistenciaHogarAmpliada(lista: readonly CoberturaParaClasificar[] | null): EstadoGarantia {
   let r: EstadoGarantia = 'no_consta'
   for (const c of lista ?? []) {
-    if (c.incluida !== true || !c.texto) continue
+    if (!c.texto) continue
     const m = /^asistencia (en el )?hogar (ampliada|basica)\b/.exec(claveCobertura(c.texto))
-    if (m?.[2] === 'ampliada') return 'si'
-    if (m?.[2] === 'basica') r = 'no'
+    if (!m) continue
+    // La ampliada incluida es un sí; la ampliada marcada NO incluida o la básica incluida, un no.
+    if (m[2] === 'ampliada' && c.incluida === true) return 'si'
+    if ((m[2] === 'ampliada' && c.incluida === false) || (m[2] === 'basica' && c.incluida === true)) r = 'no'
   }
   return r
 }
