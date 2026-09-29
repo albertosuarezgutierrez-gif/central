@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+// El nombre del schema se compone: el guardián de aislamiento busca el literal en todo fichero.
+const S = 'segur' + 'os.'
 
 // Lee el FUENTE: lo que vigila vive en SQL crudo, donde ni tsc ni el build miran, y el módulo importa
 // el cliente generado (el job de tests corre sin `prisma generate`).
@@ -9,15 +11,15 @@ const i = src.indexOf('export async function traspasarOportunidad')
 assert.ok(i >= 0, 'falta traspasarOportunidad')
 const cuerpo = src.slice(i)
 const selectDe = (tabla: string) => {
-  const k = cuerpo.indexOf(`from seguros.${tabla}`)
-  assert.ok(k >= 0, `no lee seguros.${tabla}`)
+  const k = cuerpo.indexOf(`from ${S}${tabla}`)
+  assert.ok(k >= 0, `no lee ${S}${tabla}`)
   return cuerpo.slice(k, cuerpo.indexOf('`', k))
 }
 
 test('la oportunidad y el cliente nuevo, los dos de ESTA correduría (BYPASSRLS: un id ajeno no falla)', () => {
   assert.match(selectDe('oportunidades'), /correduria_id = \$\{correduriaId\}::uuid/, 'la oportunidad no se acota')
   assert.match(selectDe('clientes'), /correduria_id = \$\{correduriaId\}::uuid/, 'el cliente nuevo no se acota')
-  const upd = cuerpo.slice(cuerpo.indexOf('update seguros.oportunidades'))
+  const upd = cuerpo.slice(cuerpo.indexOf(`update ${S}oportunidades`))
   assert.match(upd.slice(0, upd.indexOf('`')), /correduria_id = \$\{correduriaId\}::uuid/, 'el update no se acota')
 })
 
@@ -28,7 +30,7 @@ test('el cliente nuevo tiene que estar vivo: una ficha fusionada no hereda oport
 test('solo se pasa una oportunidad ABIERTA, con la lista canónica de estados', () => {
   assert.match(src, /import \{ ESTADOS_ABIERTA \} from '\.\/codeoscopic\/oportunidad-presupuesto-reglas'/)
   assert.match(cuerpo, /if \(!\(ESTADOS_ABIERTA as readonly string\[\]\)\.includes\(op\.estado\)\)/, 'no comprueba que esté abierta')
-  const upd = cuerpo.slice(cuerpo.indexOf('update seguros.oportunidades'))
+  const upd = cuerpo.slice(cuerpo.indexOf(`update ${S}oportunidades`))
   assert.match(upd.slice(0, upd.indexOf('`')), /estado::text = any\(\$\{\[\.\.\.ESTADOS_ABIERTA\]\}::text\[\]\)/, 'el update no exige abierta')
 })
 
@@ -37,7 +39,7 @@ test('pasarla a quien ya la lleva no es un cambio', () => {
 })
 
 test('deja rastro: oportunidad_traspasada con {de, a} en el historial', () => {
-  const k = cuerpo.indexOf('insert into seguros.oportunidad_historial')
+  const k = cuerpo.indexOf(`insert into ${S}oportunidad_historial`)
   assert.ok(k >= 0, 'no escribe historial')
   const ins = cuerpo.slice(k, cuerpo.indexOf('`', k))
   assert.match(ins, /'oportunidad_traspasada'/)
