@@ -16,6 +16,7 @@
  * El SQL crudo NO prefija `seguros.`: la conexión ya trae `?schema=seguros`.
  */
 import { createHash, randomBytes } from 'node:crypto'
+import { after } from 'next/server'
 import {
   DIAS_SOLICITUD,
   MAX_DOCS_SOLICITUD,
@@ -43,6 +44,7 @@ import { guardarDocumento } from './cartera-documentos'
 import { revisarDocumento } from '@central/module-seguros'
 import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
+import { oportunidadDesdeFichero } from './oportunidad-documento'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TOKEN = /^[A-Za-z0-9_-]{40,60}$/
@@ -332,7 +334,6 @@ export async function subirDocumentoSolicitud(
     subidoPor: 'cliente',
   })
   if (!g.ok) return { ok: false, estado: g.status === 415 ? 'invalido' : 'error', motivo: g.motivo }
-
   await prismaAsegura().$transaction(async (tx) => {
     const [fila] = await tx.$queryRaw<{ lecturas: string | null }[]>(Prisma.sql`
       select lecturas from solicitud_datos where id = ${f.id}::uuid for update`)
@@ -343,6 +344,19 @@ export async function subirDocumentoSolicitud(
     await tx.$executeRaw(Prisma.sql`
       update solicitud_datos set lecturas = ${encryptField(JSON.stringify(nuevas))} where id = ${f.id}::uuid`)
   })
+  // Todo documento de seguro abre o completa su oportunidad (29/09/2026), tras contestar al cliente.
+  // Si es su póliza actual, completa la del presupuesto (misma ficha y ramo: se deduplica). Un DNI,
+  // un carné o los papeles del coche ya están clasificados y no traen datos de seguro: no se relee.
+  if (leido.tipo === 'poliza' || leido.tipo === 'otro') {
+    const { correduriaId, clienteId } = f
+    const fich = { contenido: fichero.contenido, mime: fichero.mime, nombre: fichero.nombre }
+    try {
+      after(() => oportunidadDesdeFichero({ correduriaId, clienteSube: clienteId, origen: 'solicitud', actor: 'el cliente, desde el enlace de datos', fichero: fich }).then(() => undefined))
+    } catch (e) {
+      // Fuera de una petición `after()` lanza: la oportunidad no puede tumbar la subida.
+      console.error('[solicitud-datos] no se pudo programar la oportunidad:', e instanceof Error ? e.message : e)
+    }
+  }
   if (!lectura.ok) console.warn('[solicitud-datos] documento sin leer:', lectura.motivo)
   const aviso = !lectura.ok
     ? 'Guardado. No lo hemos podido leer; rellena los datos a mano.'

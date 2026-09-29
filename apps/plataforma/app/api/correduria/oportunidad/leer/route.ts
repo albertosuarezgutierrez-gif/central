@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'el documento pesa demasiado (máx. ~2,5 MB); sube una foto o un PDF más ligero' }, { status: 413 })
   }
   try {
-    const r = await leerDocumentoOportunidadAsegura({ contenido: Buffer.from(base64, 'base64'), mimeType, nombre: fileName }, { tomador: b?.tomador === true, clienteId: typeof b?.clienteId === 'string' ? b.clienteId : undefined })
+    const r = await leerDocumentoOportunidadAsegura({ contenido: Buffer.from(base64, 'base64'), mimeType, nombre: fileName }, { tomador: b?.tomador === true, clienteId: typeof b?.clienteId === 'string' ? b.clienteId : undefined, crear: b?.crear === true })
     return NextResponse.json(sinSello(r.json) ?? { error: `HTTP ${r.status}` }, { status: r.status })
   } catch (e) {
     const tiempo = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')

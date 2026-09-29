@@ -832,6 +832,47 @@ export async function reactivarPorPoliza(correduriaId: string, clienteId: string
 export type ResultadoAlta = { ok: true; id: string } | Fallo
 
 /**
+ * Lead SIN DNI, teléfono ni email (29/09/2026): el tomador de un documento subido que solo trae su
+ * nombre. `altaCliente` exige uno de los tres para poder volver a encontrar la ficha; aquí se
+ * encuentra por la RELACIÓN con quien subió el documento (la crea quien llama) y por el nombre.
+ * No escribe nada personal más que el nombre: no hay nada que cifrar.
+ */
+export async function altaLeadSinContacto(
+  correduriaId: string,
+  entrada: { nombre: string; apellidos: string; tipoPersona: 'fisica' | 'juridica' | null },
+  actor: string,
+  nota: string,
+): Promise<ResultadoAlta> {
+  const nombre = entrada.nombre.trim().slice(0, 120)
+  if (!nombre) return invalido('Falta el nombre.', 'nombre')
+  try {
+    const id = await prismaAsegura().$transaction(async (tx) => {
+      const creado = await tx.cliente.create({
+        data: {
+          correduriaId,
+          nombre,
+          apellidos: entrada.apellidos.trim().slice(0, 160),
+          tipo: 'lead',
+          segmento: 'prospecto',
+          tipoPersona: entrada.tipoPersona,
+          fuente: 'venta_directa',
+        },
+        select: { id: true },
+      })
+      await tx.$executeRaw`
+        insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+        values (${correduriaId}::uuid, ${creado.id}::uuid, cast('gestion' as tipo_historial_interno),
+                ${`Lead abierto solo desde un documento subido (${nota}), sin DNI ni contacto — por ${actor}`})`
+      anotarCambio({ entidad: 'cliente', id: creado.id, campo: 'activo', antes: null, despues: true })
+      return creado.id
+    })
+    return { ok: true, id }
+  } catch (e) {
+    return fallo(e)
+  }
+}
+
+/**
  * Alta manual = `lead`, `prospecto`. Antes de crear, busca por DNI, teléfono y
  * email: un DNI repetido es la misma persona y NO se crea; un teléfono o email
  * repetidos pueden ser otra persona y se crea solo con `forzar` — y entonces

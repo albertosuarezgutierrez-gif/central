@@ -5,6 +5,7 @@ import { btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { prepararAdjunto } from '@/lib/imagen-cliente'
 import { interpretarLecturaOportunidad, rotuloRamo, type LecturaDocumentoOportunidad, type FichaTomador } from '@/lib/seguimiento-asegura'
+import { interpretarOportunidadDocumento, type AvisoOportunidadDocumento } from '@/lib/oportunidad-documento'
 
 type Lectura = Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>
 
@@ -26,11 +27,14 @@ export default function SubirPoliza() {
   const [leyendo, setLeyendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lectura, setLectura] = useState<Lectura | null>(null)
+  const [oportunidad, setOportunidad] = useState<AvisoOportunidadDocumento | null>(null)
+  const [sinGuardar, setSinGuardar] = useState(false)
 
   async function leer(f: File) {
     setLeyendo(true)
     setError(null)
     setLectura(null)
+    setOportunidad(null)
     let status = 0
     let json: unknown = null
     try {
@@ -38,7 +42,8 @@ export default function SubirPoliza() {
       const res = await fetch('/api/correduria/oportunidad/leer', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName, tomador: true }),
+        // `crear`: abre (o completa) la oportunidad y guarda el fichero en la ficha del tomador (29/09/2026).
+        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName, tomador: true, crear: true }),
       })
       status = res.status
       json = await res.json().catch(() => null)
@@ -49,6 +54,10 @@ export default function SubirPoliza() {
     const l = interpretarLecturaOportunidad(status, json)
     if (l.estado === 'error') { setError(`No se ha podido leer: ${l.motivo}.`); return }
     setLectura(l)
+    const j = json as Record<string, unknown> | null
+    setOportunidad(interpretarOportunidadDocumento(j?.oportunidad))
+    // asegura dice si guardó el fichero; si no lo dice (versión anterior), no se afirma nada.
+    setSinGuardar(j?.oportunidad != null && j?.ficheroGuardado === false)
   }
 
   return (
@@ -71,7 +80,20 @@ export default function SubirPoliza() {
         </button>
         {error && <div role="status" style={{ color: 'var(--negative)' }}>{error}</div>}
       </div>
-      {lectura && <Resultado l={lectura} />}
+      {oportunidad && (
+        <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, color: oportunidad.tono === 'aviso' ? 'var(--negative)' : 'var(--text)' }}>
+          <span>{oportunidad.texto}</span>
+          {oportunidad.clienteId && (
+            <Link href={`/correduria/cliente/${encodeURIComponent(oportunidad.clienteId)}?tab=oportunidades`} style={enlace}>Ver su ficha y la oportunidad →</Link>
+          )}
+        </div>
+      )}
+      {sinGuardar && (
+        <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
+          El fichero NO se ha guardado en ninguna ficha: súbelo desde la ficha del cliente si quieres conservarlo.
+        </p>
+      )}
+      {lectura && <Resultado l={lectura} conOportunidad={Boolean(oportunidad?.clienteId)} />}
     </div>
   )
 }
@@ -97,7 +119,7 @@ function Fichas({ fichas }: { fichas: FichaTomador[] }) {
   )
 }
 
-function Resultado({ l }: { l: Lectura }) {
+function Resultado({ l, conOportunidad }: { l: Lectura; conOportunidad: boolean }) {
   const t = l.tomador
   const nuestra = l.enCartera ?? null
   const altaHref = `/correduria/cliente/nuevo${t?.nombre ? `?q=${encodeURIComponent(t.nombre)}` : ''}`
@@ -113,7 +135,7 @@ function Resultado({ l }: { l: Lectura }) {
         <Dato k="Tomador" v={t?.nombre ?? null} />
       </div>
 
-      {nuestra && nuestra.length > 0 ? (
+      {conOportunidad ? null : nuestra && nuestra.length > 0 ? (
         <div style={{ display: 'grid', gap: 6 }}>
           <strong>Esta póliza ya es nuestra (en vigor):</strong>
           {nuestra.map(p => (
