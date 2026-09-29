@@ -2029,7 +2029,8 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   efecto NO se preguntan para dar precio: sin dictar van como SUPUESTOS declarados — sexo deducido del nombre por la IA
   (`sexoDeducido`; la prima es unisex por ley), **soltero**, **garaje (nunca la calle; comunitario)**, fecha por la matrícula,
   efecto a 15 días (asegura, `DIAS_EFECTO_PRESUPUESTO_NUEVO`; `fechaEfecto` dictado lo tapa). Defectos en
-  `lib/supuestos-presupuesto.ts`, que comparten AutoNuevo/MotoNuevo. Los campos supuestos se guardan en
+  `lib/supuestos-presupuesto.ts`: el garaje también en AutoNuevo/MotoNuevo; el soltero SOLO en el chat (en la pantalla
+  viajaría sin marca de supuesto). Un sexo deducido NO pisa el de la ficha (`aplicarSexoDeducido`). Los campos supuestos se guardan en
   `resultado.alEmitir` (sin valores) y `preparar_emision_nueva` los recuerda con 🔎 antes del botón; sin saberlo, pide
   confirmar todo (`avisoAlEmitir(null)`), nunca calla.
 - **Reparto del texto libre** (`clasificarDestino`, puro y testeado en `lib/correduria-asistente.ts`):

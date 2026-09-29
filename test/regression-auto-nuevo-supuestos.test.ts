@@ -59,7 +59,8 @@ test('los kilómetros nacen en 10.000, visibles y editables', () => {
 
 test('el garaje nace en GARAJE, nunca en la calle (29/09/2026; antes «vía pública»)', () => {
   assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\(\) => garajePorDefecto\(garajes\)\?\.id \?\? ''\)/)
-  assert.doesNotMatch(fuente, /garajes\.find\(\(g\) => \/v\[ií\]a/, 'el defecto viejo no vuelve')
+  assert.doesNotMatch(fuente, /garajes\.find\(\(g\) => \/v\[ií\]a/, 'el defecto viejo no vuelve')  // El «soltero» por defecto es SOLO del asistente: aquí viajaría sin marca de supuesto y se emitiría sin aviso.
+  assert.doesNotMatch(fuente, /estadoCivilPorDefecto/, 'la pantalla no pone estado civil por defecto')
 })
 
 test('la fecha de matriculación se estima por la matrícula, sin pisar la del corredor', () => {

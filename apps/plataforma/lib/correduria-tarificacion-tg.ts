@@ -305,6 +305,20 @@ export function fechaFutura(v: unknown, hoy: Date): { valor?: string; error?: st
   return { valor: iso }
 }
 
+/**
+ * El sexo que la IA DEDUJO del nombre solo vale si la ficha no lo tiene: si lo tiene (reparo `sexo`
+ * ausente), la ficha manda y el deducido se descarta — si no, una deducción errónea pisaría un dato
+ * bueno. Con la ficha sin revisar (`null`) se conserva: `huecosPendientes` ya bloquea ese caso.
+ */
+export function aplicarSexoDeducido(persona: PersonaDeclarada, sexoDeducido: boolean, faltanFicha: readonly Reparo[] | null): { persona: PersonaDeclarada; deducido: boolean } {
+  if (!sexoDeducido || !persona.sexo) return { persona, deducido: false }
+  if (faltanFicha !== null && !faltanFicha.some((r) => r.campo === 'sexo')) {
+    const { sexo: _descartado, ...resto } = persona
+    return { persona: resto, deducido: false }
+  }
+  return { persona, deducido: true }
+}
+
 const ETIQUETA_HISTORIAL: Record<string, string> = {
   compania: 'compañía actual', poliza: 'nº de la póliza actual', aniosAsegurado: 'años asegurado',
   aniosEnCompania: 'años en la compañía', aniosSinSiniestros: 'años sin siniestros', siniestrosUltimos5: 'siniestros en 5 años',
@@ -466,6 +480,8 @@ export type Propuesta = {
   vehiculoPrevioDe: string | null
   /** Efecto dicho por Alberto (ISO). Sin él, el de por defecto sale entre los supuestos. */
   fechaEfecto?: string | null
+  /** El sexo lo dedujo la IA: va entre los supuestos, no entre «los datos que me has dado». */
+  sexoDeducido?: boolean
   /** Los de asegura (con `optimista`) y los nuestros. */
   supuestos: readonly Supuesto[]
 }
@@ -502,7 +518,7 @@ export function textoPropuesta(p: Propuesta): string {
   const declarados = [
     per.dni ? `DNI ${esc(enmascararDni(per.dni) ?? '')}` : null,
     per.nombre || per.apellido1 ? `${esc([per.nombre, per.apellido1, per.apellido2].filter(Boolean).join(' '))}` : null,
-    per.sexo ? per.sexo : null,
+    per.sexo && !p.sexoDeducido ? per.sexo : null,
     per.fechaNacimiento ? `nacimiento ${fecha(per.fechaNacimiento)}` : null,
     per.fechaCarnet ? `carnet ${fecha(per.fechaCarnet)}` : null,
     per.telefono ? `móvil ${esc(per.telefono)}` : null,

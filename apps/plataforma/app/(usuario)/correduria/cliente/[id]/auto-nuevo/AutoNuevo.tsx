@@ -25,7 +25,7 @@ import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
-import { estadoCivilPorDefecto, garajePorDefecto } from '@/lib/supuestos-presupuesto'
+import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import {
   borrarBorrador,
   claveBorradorAutoNuevo,
@@ -260,8 +260,7 @@ export default function AutoNuevo({
   // el precalificador ya usa la de matriculación como compra).
   const [fechaCompra, setFechaCompra] = useState('')
   const [remolqueLigero, setRemolqueLigero] = useState(false)
-  // Sin estado civil en la ficha, soltero (Alberto, 29/09/2026): para el precio basta; se confirma al emitir.
-  const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? estadoCivilPorDefecto(civiles)?.id ?? '')
+  const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})

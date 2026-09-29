@@ -25,7 +25,7 @@ import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
-import { estadoCivilPorDefecto, garajePorDefecto } from '@/lib/supuestos-presupuesto'
+import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
@@ -201,8 +201,7 @@ export default function MotoNuevo({
     conductor_habitual: PERSONA_VACIA,
     conductor_ocasional: PERSONA_VACIA,
   })
-  // Sin estado civil en la ficha, soltero (Alberto, 29/09/2026): para el precio basta; se confirma al emitir.
-  const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? estadoCivilPorDefecto(civiles)?.id ?? '')
+  const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
   const [experiencias, setExperiencias] = useState<Opcion[]>([])

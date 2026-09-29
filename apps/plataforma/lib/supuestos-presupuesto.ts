@@ -1,6 +1,7 @@
 // Los datos que un PRESUPUESTO de coche o moto supone cuando nadie los ha dicho (29/09/2026, Alberto).
-// PURO y sin imports: lo usan el asistente de Telegram y las pantallas AutoNuevo/MotoNuevo (navegador),
-// para que el mismo cliente salga al mismo precio pida donde lo pida.
+// PURO y sin imports: el garaje lo usan el asistente de Telegram y las pantallas AutoNuevo/MotoNuevo
+// (navegador), para que el mismo cliente salga al mismo precio pida donde lo pida. El estado civil por
+// defecto es SOLO del asistente: en la pantalla no viajaría marcado como supuesto y se emitiría sin aviso.
 //
 // La regla de fondo: estos datos NO se preguntan para dar precio, se CONFIRMAN al emitir. El presupuesto
 // sale con el supuesto DECLARADO (nunca como dato del cliente) y la emisión es donde se comprueba.

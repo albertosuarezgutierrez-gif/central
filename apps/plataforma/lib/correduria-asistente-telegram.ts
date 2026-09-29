@@ -26,7 +26,7 @@ import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { estadoCivilPorDefecto, SOLO_PARA_EL_PRECIO } from './supuestos-presupuesto'
 import {
-  avisoAlEmitir, construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, filtrarCatalogo, huecosPendientes, leerEntrada,
+  aplicarSexoDeducido, avisoAlEmitir, construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, filtrarCatalogo, huecosPendientes, leerEntrada,
   MAX_TARIFICACIONES_DIA, MOTORES_MOTO, textoPropuesta, TIPOS_CATALOGO, ventaCruzada,
   type Emparejado, type Pieza, type CampoTarif, type RamoTarif, type TipoCatalogo,
 } from './correduria-tarificacion-tg'
@@ -1611,8 +1611,11 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
   }
 
   // Sexo deducido del nombre por la IA: la prima es unisex por ley (Test-Achats, desde el 21/12/2012), así
-  // que no mueve el precio; pero es un dato del contrato y se DICE que es deducido.
-  if (e.sexoDeducido && e.persona.sexo) {
+  // que no mueve el precio; pero es un dato del contrato y se DICE que es deducido. Si la ficha ya lo
+  // tiene, manda la ficha y el deducido no viaja.
+  const sx = aplicarSexoDeducido(e.persona, e.sexoDeducido, p.faltan)
+  e.persona = sx.persona
+  if (sx.deducido && e.persona.sexo) {
     supuestos.push({ campo: 'sexo', valor: e.persona.sexo, porque: `deducido del nombre (no cambia la prima); ${SOLO_PARA_EL_PRECIO} con su DNI/NIE` })
   }
 
@@ -1670,6 +1673,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
     persona: e.persona,
     historial: e.historial && companiaAnterior ? { ...e.historial, compania: companiaAnterior.nombre } : null,
     primaActual: e.primaActual, supuestos: todos, figuras: nombresFig, autonomo: ctx.autonomo, fechaEfecto: e.fechaEfecto,
+    sexoDeducido: sx.deducido,
   })
   return pedirOProponer(fila.id, texto, ctx)
 }

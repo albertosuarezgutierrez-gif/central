@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  avisoAlEmitir, construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, fechaFutura, huecosPendientes, leerEntrada,
+  aplicarSexoDeducido, avisoAlEmitir, construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, fechaFutura, huecosPendientes, leerEntrada,
   textoPropuesta, ventaCruzada, type Resuelto,
 } from './correduria-tarificacion-tg.ts'
 
@@ -57,6 +57,24 @@ test('leerEntrada: sexo deducido solo con sexo; efecto dicho → corrección que
   assert.equal(leerEntrada({ ramo: 'auto', clienteId: CID, sexoDeducido: true }, HOY).entrada.sexoDeducido, false, 'sin sexo no hay nada deducido')
   assert.equal(leerEntrada({ ramo: 'auto', clienteId: CID, sexo: 'mujer' }, HOY).entrada.sexoDeducido, false, 'dicho por Alberto')
   assert.equal(leerEntrada({ ramo: 'auto', clienteId: CID }, HOY).entrada.fechaEfecto, null)
+})
+
+test('aplicarSexoDeducido: la ficha manda; el deducido no se pinta como dato dado', () => {
+  const persona = { dni: '12345678Z', sexo: 'hombre' as const }
+  // La ficha NO lo tiene (reparo «sexo»): el deducido viaja, como supuesto.
+  assert.deepEqual(aplicarSexoDeducido(persona, true, [{ campo: 'sexo', motivo: '' }]), { persona, deducido: true })
+  // La ficha SÍ lo tiene: el deducido se descarta, no pisa el dato bueno.
+  assert.deepEqual(aplicarSexoDeducido(persona, true, []), { persona: { dni: '12345678Z' }, deducido: false })
+  // Dicho por Alberto: se respeta aunque la ficha lo tenga.
+  assert.deepEqual(aplicarSexoDeducido(persona, false, []), { persona, deducido: false })
+  const t = textoPropuesta({
+    ramo: 'auto', cliente: 'Rafael', vehiculo: { marca: 'VOLVO', modelo: 'V40', motor: 'Diésel', version: 'V1' },
+    matricula: '1234BCD', fechaMatriculacion: '2017-06-01', garaje: 'Garaje comunitario', estadoCivil: 'Soltero', municipio: 'Lleida',
+    persona, historial: null, primaActual: null, kmAnuales: null, vehiculoPrevioDe: null, sexoDeducido: true,
+    supuestos: [{ campo: 'sexo', valor: 'hombre', porque: 'deducido del nombre' }],
+  })
+  assert.doesNotMatch(t.split('\n').find((l) => l.startsWith('Datos que me has dado')) ?? '', /hombre/)
+  assert.match(t, /el sexo \(hombre o mujer\): hombre — <i>deducido del nombre/)
 })
 
 test('avisoAlEmitir: lo supuesto en el precio se recuerda al emitir; sin saberlo, se pide todo; todo dicho, nada', () => {
