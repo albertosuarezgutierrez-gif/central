@@ -1541,6 +1541,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         primaEur={p.primaEur ?? null}
         producto={p.producto ?? null}
         sustituye={false}
+        ramo="auto"
         onCerrar={cerrar}
       />
     ),

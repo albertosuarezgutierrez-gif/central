@@ -21,6 +21,8 @@ export const CAUSAS_ASEGURA: Record<string, string> = {
   esquema: 'falta una tabla o columna en el schema seguros',
   sin_correduria: 'la base responde pero no hay ninguna fila en corredurias',
   otro: 'error no clasificado; mira los logs de central-asegura en Vercel',
+  descuento_invalido: 'el descuento tecleado está fuera de los límites de la compañía; no se ha llamado a nadie',
+  descuento_no_disponible: 'esta compañía o ramo no admite ajustar el descuento; no se ha llamado a nadie',
 }
 
 export function describirCausaAsegura(causa: string | undefined): string | null {

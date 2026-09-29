@@ -40,7 +40,7 @@ import { describirCausaAsegura, MOTIVOS_PUERTO, type MotivoPuerto } from './corr
 // de verdad, y son el contrato de `defensaDeCartera()` — que es quien los va a
 // consumir. Duplicarlos aquí sería crear una segunda definición del argumento de
 // una función que ya se importa de ese mismo sitio.
-import type { CompaniaCatalogo, GarantiasClasificadas, PolizaCliente } from '@central/module-seguros'
+import type { CompaniaCatalogo, DescuentoComercial, GarantiasClasificadas, PolizaCliente } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
@@ -603,6 +603,9 @@ export type Precio = {
    * `null` = todavía no se han leído sus coberturas («no se sabe», NUNCA «no incluye nada»).
    */
   garantias?: GarantiasClasificadas | null
+  /** Descuentos comerciales con los que la compañía tarificó este precio. `undefined` = asegura no
+   *  manda el campo; `null` = sus opciones aún no se han leído; `[]` = la compañía no manda ninguno. */
+  descuentos?: DescuentoComercial[] | null
 }
 
 export type Fallo = {
@@ -728,6 +731,10 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
     }
   }
 
+  if (status === 422 && r.causa === 'variante') {
+    // El riesgo no es de esta póliza: asegura corta ANTES del vendor. No es «faltan datos».
+    return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('Este riesgo no es de esta póliza: no se ha pedido precio.'), gastoDesconocido: !cero }
+  }
   if (status === 422) {
     return { estado: 'faltan', faltan: Array.isArray(r.faltan) ? (r.faltan as Reparo[]) : [] }
   }
@@ -920,6 +927,13 @@ export type PeticionRetarificar = {
    * ese gesto, pedir precio con un proyecto vigente se rechaza sin cobrar.
    */
   forzarNuevo?: boolean
+  /**
+   * Variante del RIESGO de esta póliza (29/09/2026): la tarificación se cuelga de esa oportunidad.
+   * asegura comprueba, antes de gastar, que el riesgo es de esta póliza (422 `causa: 'variante'`).
+   */
+  oportunidadId?: string | null
+  /** Nota libre de la variante (≤200), solo con `oportunidadId`. */
+  nota?: string | null
 }
 
 /**
@@ -956,6 +970,8 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
           ...(p.referencia ? { referencia: p.referencia } : {}),
           // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
           ...(p.forzarNuevo === true ? { forzarNuevo: true } : {}),
+          ...(p.oportunidadId ? { oportunidadId: p.oportunidadId } : {}),
+          ...(p.oportunidadId && p.nota && p.nota.trim() !== '' ? { nota: p.nota.trim().slice(0, 200) } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,
@@ -1178,6 +1194,9 @@ export async function ofertaAsegura(p: {
    *  un `faltan_producto` anterior (`ProductFormWidget::getProductOptions()`,
    *  reenviado TAL CUAL — ver `apps/asegura/.../oferta/route.ts`). */
   productOptions?: unknown[]
+  /** Descuento comercial ajustado por el corredor (Allianz coche). Asegura lo valida con los
+   *  límites del formulario real antes de llamar a la compañía. */
+  descuentos?: { dtoCap?: number; dtoVentaCruzada?: number }
 }): Promise<RespuestaOferta> {
   try {
     const r = await pedir(
@@ -1679,6 +1698,16 @@ function leerGarantias(v: unknown): GarantiasClasificadas | null {
   return { version: o.version, porClave }
 }
 
+/** `descuentos` de un precio guardado, validado. `null` = no se han leído; forma rara → `null`. */
+export function leerDescuentos(v: unknown): DescuentoComercial[] | null {
+  if (!Array.isArray(v)) return null
+  const validos = v.filter((d): d is DescuentoComercial =>
+    !!d && typeof (d as DescuentoComercial).etiqueta === 'string' && typeof (d as DescuentoComercial).pct === 'number' && Number.isFinite((d as DescuentoComercial).pct))
+  // Un elemento ilegible convierte la lista en «no se sabe»: pintar solo los legibles
+  // (o «sin descuento comercial» si no queda ninguno) afirmaría algo que no se ha leído.
+  return validos.length === v.length ? validos : null
+}
+
 function leerPreciosGuardados(v: unknown): Precio[] | null {
   if (!Array.isArray(v)) return null
   return v.map((raw): Precio => {
@@ -1695,6 +1724,7 @@ function leerPreciosGuardados(v: unknown): Precio[] | null {
         ? UUID_PRECIO.test(x.id.trim()) ? { precioId: x.id.trim().toLowerCase() } : { id: x.id.trim() }
         : {}),
       ...(x.garantias === undefined ? {} : { garantias: leerGarantias(x.garantias) }),
+      ...(x.descuentos === undefined ? {} : { descuentos: leerDescuentos(x.descuentos) }),
       compania: cadenaONulo(x.compania),
       producto: cadenaONulo(x.producto),
       categoria: cadenaONulo(x.categoria),

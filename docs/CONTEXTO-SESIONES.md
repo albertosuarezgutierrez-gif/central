@@ -18,6 +18,15 @@ a su correo de ACCESO (canal verificado, código atado a identidad+IBAN); asegur
 (`CambiosCuenta.tsx`), «Ver IBAN» lo da completo (POST auditado), «Hecha» lo copia a `clientes.cuenta_bancaria`. Aviso
 Telegram por el muro de actividad (tipo `cuenta`). Módulo 97 subido a `module-seguros/iban.ts`. Revisión architect hecha: «Hecha» también escribe la cuenta en sus pólizas vigentes; la cola avisa si el acceso que lo pide es reciente (sesión robada → confirmar por teléfono).
 
+**(29/09/2026)** 🧾 **El escaneo de facturas de Gmail ofrecía «✅ Pagar» sobre documentos que no eran deudas** (Ayamonte 2022,
+certificación de GLOBAL 2 de 2025, recibo de moto Allianz, dos prestaciones de Occident, comunidad 2024). La ventana de 7 días
+es la del CORREO, no del documento. Nuevo filtro puro `lib/agente-facturas/filtro-pago.ts` (con cepo visto fallar), antes de
+insertar: aparta >90 días, emitida por un titular, a nombre de tercero por NIF y aseguradora no a tu nombre (cuentan como
+`descartados`). Limpieza 2026 de `facturas_proveedor` (PR #3956): 19 rechazadas (antiguas, correduría, Ariste 33.000€, IS de
+Pilar, duplicados) y 10 pagadas (9 con su cargo en banco + Asecon, pagada a mano por Alberto); quedan 35 pendientes (3.077,97€). `conciliarConBanco` ahora concilia también
+'nueva'/'pendiente_revision' por primera palabra del proveedor. Pendiente: una factura DOMICILIADA sigue ofreciendo «Pagar»;
+`fecha_vencimiento` nunca se rellena; el «Pagar todo» semanal paga lo pendiente sin mirar si ya se cobró por tarjeta.
+
 **(29/09/2026)** — 🧾 Devoluciones, 2ª tanda (**PR #3964 MERGEADO**): **Allianz** ya se lee — manda la tabla en un PDF adjunto
 («Rel. recibos ventanilla» = devueltos; «Relacion anulacion polizas por impago» = anuladas). El triaje guarda los PDF SOLO de
 `allianz.es` (≤2 MB, ≤3) y los lee por filas con celdas (`lib/correo/pdf-filas.ts`: `pdf-parse` a secas pega las columnas);
@@ -890,12 +899,24 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   debajo de las baldosas: en el móvil no cambiaba nada visible. `Documentos.tsx` ahora lo abre y hace `scrollIntoView`
   cuando llega `tipoInicial`. Cepo nuevo en `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo).
 
+## (29/09/2026) Riesgo: comparar presupuestos, renovar desde la póliza y datos de un familiar (PR entrega 1b)
+- Comparar dos variantes (casillas en el historial): qué cambió + mejor prima por compañía (logos, «—» sin precio). Puerto `GET /oportunidad/comparar`.
+- «Abrir el riesgo de esta póliza» (auto/moto): oportunidad con `poliza_id` y figuras desde intervinientes; reutiliza la que abrió una retarificación vieja (`info_riesgo.polizaId`). Retarificar dentro del riesgo manda `oportunidadId`, validado antes de gastar; riesgo cerrado → 422 sin cotizar.
+- Enlace de datos de una FIGURA (tercero): `solicitud_datos.tercero` + `consentimiento_at` (SQL `2026-09-29f`, aplicada, CHECK probado). Sin casilla de permiso no se guarda nada, ni documentos; no se rellena su DNI.
+- Punto 3 (aviso legal al emitir con otras personas): solo maqueta (artifact SXFpF6pgitP9vWYRNzuQS6), pendiente del visto de Alberto. Idea 1 descartada por Alberto.
+- Regla de Alberto: SIEMPRE logo de la compañía en vez del nombre.
+
 ## (29/09/2026) El riesgo como pantalla: figuras, variantes e historial (entrega 1, PR #3955)
 - `/correduria/oportunidad/[id]` deja de redirigir: cabecera del riesgo, intervinientes (tomador/propietario/conductores desde los vínculos o «+ Nueva persona» en línea), historial P1…Pn con «qué cambió» derivado de la `peticion` (`diferenciasVariante`, module-seguros) y «Nueva variante» → auto/moto-nuevo con `?oportunidad=`.
 - BD: `oportunidad_figura`, `oportunidades.poliza_id`, `tarificaciones.figuras/nota` (SQL `2026-09-29e`, aplicada). La variante se cuelga de la oportunidad dada; nunca abre otra.
 - Auto cotiza con figuras de otra ficha (sin verificar contra el vendor: el 1er intento real puede dar un 400 nuevo). Moto sigue con el tomador en todos los papeles (entrega 2).
 - Bug: la re-cotización del «previo» de moto perdía el garaje (216,53€ fue «sin garaje»); ya se restaura.
 - Pendiente: entrega 2 (moto con figuras) y 3 (pedir datos a un tercero, emisión→intervinientes, renovación desde póliza, «Pasar la oportunidad a…»). Al abrir una variante se usan las figuras VIGENTES, no la foto de esa variante.
+
+## (29/09/2026) Descuento comercial: visible en la parrilla y ajustable en preemisión (Allianz coche)
+- Parrilla: cada precio enseña su descuento comercial (opciones del producto: Allianz auto CAP 25 % + venta cruzada 25 %, Occident 30 %, Allianz moto/hogar y Generali 0 %). `null` = no leído ≠ `[]`.
+- Preemisión: `descuentos {dtoCap 0-99, dtoVentaCruzada 0-100}` en `/api/operador/codeoscopic/oferta`; límites del formulario real del vendor (repo `asegura`, `product-form-catalog.data.ts`, stage preissuance). Validado y rechazado con 422 ANTES de tocar el proyecto o gastar el ReRate. Solo Allianz coche.
+- [Probable] el descuento sale de la comisión: sin confirmar con Allianz/Codeoscopic. El endpoint de límites vivo es `GET /insurance-lines/{línea}/product-configs/fields?stage=preissuance&priceId=…` (no cableado).
 
 ## (29/09/2026) Garantías de hogar: todo riesgo, restauración estética, animales y asistencia básica/ampliada
 - Catálogo hogar (module-seguros): `todo_riesgo_accidental`, `restauracion_estetica`, `animales`, `asistencia_hogar_ampliada` (texto Fidelidade «ASISTENCIA HOGAR AMPLIADA/BÁSICA»). Opción Fidelidade «Todo riesgo accidental: No» → no.

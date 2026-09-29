@@ -69,6 +69,65 @@ export function opcionesPorDefecto(compania: string, ramo: string | null = 'auto
   return null
 }
 
+// ── Descuento comercial en preemisión (29/09/2026) ──
+//
+// Límites del formulario REAL de Allianz auto 320200 en el stage `preissuance`, capturado del
+// front en vivo (repo `asegura`, `product-form-catalog.data.ts`): «Descuento comercial % (CAP)»
+// min 0 · max 99 (100 solo en `edit`), «(venta cruzada)» min 0 · max 100, paso 1. Son los
+// límites del VENDOR, no un tope de negocio: se valida aquí para no gastar un ReRate en un
+// 400 seguro. Qué parte de ese % sale de la comisión de la correduría no está confirmado.
+export const LIMITES_DESCUENTO: Readonly<Record<'dtoCap' | 'dtoVentaCruzada', { min: number; max: number }>> = {
+  dtoCap: { min: 0, max: 99 },
+  dtoVentaCruzada: { min: 0, max: 100 },
+}
+
+export type DescuentosPedidos = Partial<Record<keyof typeof LIMITES_DESCUENTO, number>>
+
+/** Lee `{ dtoCap?, dtoVentaCruzada? }` del cuerpo. `null` si no viene nada; lanza nada: lo raro es reparo. */
+export function descuentosDelCuerpo(v: unknown): { pedidos: DescuentosPedidos | null } | { reparo: string } {
+  if (v == null) return { pedidos: null }
+  if (typeof v !== 'object' || Array.isArray(v)) return { reparo: 'descuentos debe ser un objeto { dtoCap?, dtoVentaCruzada? }' }
+  const r: DescuentosPedidos = {}
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    // `hasOwn`, no `in`: `toString`/`constructor` pasarían y se validarían contra límites `undefined`.
+    if (!Object.hasOwn(LIMITES_DESCUENTO, k)) return { reparo: `descuento desconocido: ${k}` }
+    if (val == null || val === '') continue
+    // Solo un número o dígitos: `true`, `[5]`, «0x10» o « 7 » no son un porcentaje tecleado.
+    const n = typeof val === 'number' ? val : typeof val === 'string' && /^\d{1,3}$/.test(val) ? Number(val) : NaN
+    const lim = LIMITES_DESCUENTO[k as keyof typeof LIMITES_DESCUENTO]
+    if (!Number.isInteger(n) || n < lim.min || n > lim.max) return { reparo: `${k} tiene que ser un entero entre ${lim.min} y ${lim.max}` }
+    r[k as keyof typeof LIMITES_DESCUENTO] = n
+  }
+  return { pedidos: Object.keys(r).length > 0 ? r : null }
+}
+
+/**
+ * PURO. Aplica los descuentos pedidos a las opciones que irán en el ReRate. Solo si esas opciones
+ * YA traen el campo (hoy, el catálogo de Allianz auto): meter un `dtoCap` en otra compañía sería
+ * declarar un campo de otro producto. Devuelve una copia; nunca muta la entrada.
+ */
+export function conDescuentos(
+  base: unknown,
+  pedidos: DescuentosPedidos,
+  origen: 'catalogo' | 'formulario' = 'catalogo',
+): { ok: true; opciones: unknown[] } | { ok: false; motivo: string } {
+  const lista = (Array.isArray(base) ? base : []).map((o) => (o && typeof o === 'object' ? { ...(o as Record<string, unknown>) } : o))
+  for (const [id, pct] of Object.entries(pedidos)) {
+    const o = lista.find((x) => x && typeof x === 'object' && (x as { id?: unknown }).id === id) as Record<string, unknown> | undefined
+    if (!o) {
+      return {
+        ok: false,
+        motivo: origen === 'formulario'
+          ? `el formulario de la compañía no trae «${id}»: ajusta el descuento dentro del formulario`
+          : `esta compañía no admite «${id}» en el ReRate (solo Allianz coche lo tiene catalogado)`,
+      }
+    }
+    // Respeta el tipo con el que venía el campo (el formulario del vendor puede mandarlo como texto).
+    o.value = typeof o.value === 'string' ? String(pct) : pct
+  }
+  return { ok: true, opciones: lista }
+}
+
 // ── Consentimientos del Submit (17/09/2026) — DISTINTO del catálogo de arriba ──
 //
 // El de arriba (`ALLIANZ_AUTO_320200`) es para `mainQuote.product.options` en el

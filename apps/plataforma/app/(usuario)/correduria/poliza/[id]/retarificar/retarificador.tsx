@@ -33,6 +33,7 @@ import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import { fechaEfectoInicial, fechaEfectoPorDefecto } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
 import { SelectorBuscable } from '../../../SelectorBuscable'
+import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import {
   agruparPrecios,
   defensaDeCartera,
@@ -336,8 +337,11 @@ export default function Retarificador({
   primaActualEur,
   ramo,
   vencimientoFiable = null,
+  variante = null,
 }: {
   polizaId: string
+  /** Variante del riesgo de esta póliza (`?oportunidad=`, 29/09/2026). `null` = retarificar de siempre. */
+  variante?: { oportunidadId: string } | null
   /**
    * Vencimiento de la póliza actual SOLO si es fiable (viva por CIMA, no
    * cancelada, no emitida nuestra con fecha provisional). `null` = no lo es o no
@@ -425,6 +429,7 @@ export default function Retarificador({
    *  un hogar NO es el de un coche). `null` = no consta. */
   ramo: string | null
 }) {
+  const [nota, setNota] = useState('')
   // Borrador local (localStorage) de esta póliza — ver `leerBorrador`/
   // `guardarBorrador`/`borrarBorrador` arriba.
   const claveBorrador = claveBorradorRetarificar(polizaId)
@@ -853,6 +858,7 @@ export default function Retarificador({
       // por eso `forzarNuevo` es exactamente `guardadaDescartada`, y no un
       // `true` fijo que volvería a permitir el doble cargo por accidente.
       forzarNuevo: guardadaDescartada,
+      variante: variante ? { oportunidadId: variante.oportunidadId, nota } : null,
     })
 
     switch (r.estado) {
@@ -1024,6 +1030,7 @@ export default function Retarificador({
         />
       )}
       {simulacion && <BannerSimulacion />}
+      {variante && <NotaVariante nota={nota} onNota={setNota} />}
 
       {/* ── Paso 1 · el vehículo ───────────────────────────────────────────── */}
       <Paso n={1} titulo="El vehículo" sub="Lo único que hay que elegir es la versión.">
@@ -1962,6 +1969,7 @@ function Precios({
             primaEur={p.primaEur ?? null}
             producto={p.producto ?? null}
             fechaEfecto={r.fechaEfecto}
+            ramo={ramo}
             onCerrar={() => setAbierta(null)}
           />
         )

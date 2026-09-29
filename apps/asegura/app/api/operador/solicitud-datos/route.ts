@@ -44,13 +44,14 @@ export const POST = auditado(async (req: Request) => {
       return NextResponse.json(r.ok ? { estado: 'ok' } : r, { status: r.ok ? 200 : r.status })
     }
     const actor = typeof b?.actor === 'string' && b.actor.trim() ? b.actor.trim().slice(0, 200) : 'plataforma'
-    const r = await crearSolicitud(correduria.id, typeof b?.oportunidadId === 'string' ? b.oportunidadId : '', actor)
+    const personaId = typeof b?.personaId === 'string' && b.personaId.trim() !== '' ? b.personaId.trim() : null
+    const r = await crearSolicitud(correduria.id, typeof b?.oportunidadId === 'string' ? b.oportunidadId : '', actor, personaId)
     if (!r.ok) return NextResponse.json(r, { status: r.status })
     // La URL completa solo existe al crear (el token no se guarda en claro).
     const base = (process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es').replace(/\/+$/, '')
     const url = r.token ? `${base}/datos/${r.token}` : null
     return NextResponse.json(
-      { estado: 'ok', id: r.id, nueva: r.nueva, ramo: r.ramo, caduca: r.caduca, url, mensaje: url ? mensajeSolicitud(r.ramo, url) : null },
+      { estado: 'ok', id: r.id, nueva: r.nueva, ramo: r.ramo, caduca: r.caduca, tercero: r.tercero, url, mensaje: url ? mensajeSolicitud(r.ramo, url, r.tercero) : null },
       { status: r.nueva ? 201 : 200 },
     )
   } catch (e) {

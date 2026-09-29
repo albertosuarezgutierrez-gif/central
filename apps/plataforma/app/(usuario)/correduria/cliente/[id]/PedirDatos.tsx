@@ -1,12 +1,12 @@
 'use client'
-import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Link2 } from 'lucide-react'
+import { Link2 } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { Ico, FILA } from '../../iconos'
-import { interpretarSolicitudesDatos, valorLegible, type SolicitudDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
+import { interpretarSolicitudesDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
 import { enlaceWhatsappConMensaje } from '@/lib/telefono-wa'
 import { fmt } from './piezas'
+import { RespuestasSolicitud } from './RespuestasSolicitud'
 
 /**
  * «Pídele los datos al cliente» (24/09/2026). Genera un enlace para mandarle por
@@ -73,7 +73,9 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
 
   // Al chat del CLIENTE, no a la lista de chats; sin móvil en la ficha se cae al genérico y se dice.
   const waDirecto = nuevo && telefono ? enlaceWhatsappConMensaje(telefono, nuevo.mensaje) : null
-  const solicitudes = lectura?.estado === 'ok' ? lectura.solicitudes : []
+  // Solo las del CLIENTE: las de un familiar del riesgo (`tercero`) se ven en la pantalla del riesgo,
+  // y contarlas aquí pintaría sus respuestas como «el cliente contestó». `null` (asegura vieja) = del cliente.
+  const solicitudes = lectura?.estado === 'ok' ? lectura.solicitudes.filter((s) => s.tercero !== true) : []
   const completada = solicitudes.find((s) => s.estado === 'completada')
   const pendiente = solicitudes.find((s) => s.estado === 'pendiente')
   const tarificar = `/correduria/cliente/${clienteId}/${ramo === 'moto' ? 'moto-nuevo' : 'auto-nuevo'}`
@@ -99,7 +101,7 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
         </div>
       )}
 
-      {completada && <Respuestas s={completada} tarificar={tarificar} ramo={ramo} />}
+      {completada && <RespuestasSolicitud s={completada} quien="El cliente" tarificar={{ href: tarificar, ramo }} />}
 
       {!nuevo && pendiente && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -116,72 +118,6 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
         </div>
       )}
       {aviso && <div role="status" style={{ fontSize: 12 }}>{aviso}</div>}
-    </div>
-  )
-}
-
-function Respuestas({ s, tarificar, ramo }: { s: SolicitudDatos; tarificar: string; ramo: 'moto' | 'auto' }) {
-  return (
-    <details open>
-      <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontWeight: 600, color: 'var(--positive)' }}>
-        El cliente contestó{s.completada ? ` el ${fmt(s.completada.slice(0, 10))}` : ''}
-      </summary>
-      {s.ilegible || !s.respuestas ? (
-        <div style={{ color: 'var(--negative)' }}>Sus respuestas no se pueden descifrar aquí (clave de datos personales).</div>
-      ) : (
-        <dl style={{ margin: '4px 0', display: 'grid', gridTemplateColumns: 'minmax(0, max-content) minmax(0, 1fr)', gap: '4px 12px' }}>
-          {s.campos.filter((c) => s.respuestas && c.clave in s.respuestas).map((c) => (
-            <div key={c.clave} style={{ display: 'contents' }}>
-              <dt style={{ color: 'var(--muted)' }}>{c.etiqueta}</dt>
-              <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{valorLegible(c, s.respuestas?.[c.clave])}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      <Verificacion s={s} />
-      <Link href={tarificar} style={{ ...btnStyle('primario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
-        Tarificar {ramo === 'moto' ? 'moto' : 'coche'} →
-      </Link>
-      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Declarado por el cliente por el enlace: se verifica al emitir.</div>
-    </details>
-  )
-}
-
-const DOC_LEGIBLE: Record<string, string> = {
-  ficha: 'ficha', dni: 'DNI', carnet: 'carné', permiso_circulacion: 'permiso de circulación', ficha_tecnica: 'ficha técnica', poliza: 'póliza', otro: 'documento',
-}
-
-/** Documentos que subió y lo que no casa con ellos. Sin contraste posible se dice; nunca «todo cuadra» por defecto. */
-function Verificacion({ s }: { s: SolicitudDatos }) {
-  if (s.documentos === null) {
-    return <div style={{ margin: '6px 0', fontSize: 13, color: 'var(--muted)' }}>No se ha podido saber qué documentos subió: míralo en Documentos.</div>
-  }
-  const n = s.documentos.length
-  const docs = s.documentos
-  return (
-    <div style={{ margin: '6px 0', display: 'grid', gap: 4, fontSize: 13 }}>
-      <div>
-        {n === 0
-          ? 'No ha subido documentos: todo es declarado.'
-          : `Subió ${n} documento${n === 1 ? '' : 's'} (${docs.map((d) => DOC_LEGIBLE[d.tipo] ?? 'documento').join(', ')}): los tienes en Documentos.`}
-      </div>
-      {n > 0 && s.discrepancias === null && <div style={{ color: 'var(--muted)' }}>No se ha podido contrastar lo declarado con sus documentos.</div>}
-      {n > 0 && s.discrepancias !== null && s.discrepancias.length === 0 && (
-        <div style={{ ...FILA, color: 'var(--positive)' }}><Ico i={Check} size={13} /> Lo declarado coincide con lo leído en sus documentos.</div>
-      )}
-      {s.discrepancias && s.discrepancias.length > 0 && (
-        <div role="alert" style={{ color: 'var(--negative)', display: 'grid', gap: 2 }}>
-          <strong>No casa con sus documentos:</strong>
-          {s.discrepancias.map((d) => {
-            const campo = s.campos.find((c) => c.clave === d.clave) ?? { clave: d.clave, etiqueta: d.clave }
-            return (
-              <span key={d.clave} style={{ overflowWrap: 'anywhere' }}>
-                {campo.etiqueta}: escribió «{valorLegible(campo, d.declarado)}», el {DOC_LEGIBLE[d.tipoDocumento] ?? 'documento'} dice «{valorLegible(campo, d.documento)}».
-              </span>
-            )
-          })}
-        </div>
-      )}
     </div>
   )
 }

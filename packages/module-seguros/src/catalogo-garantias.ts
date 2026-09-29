@@ -255,10 +255,12 @@ function esOpcionalSinMarcar(c: CoberturaParaClasificar): boolean {
 export function asistenciaHogarAmpliada(lista: readonly CoberturaParaClasificar[] | null): EstadoGarantia {
   let r: EstadoGarantia = 'no_consta'
   for (const c of lista ?? []) {
-    if (c.incluida !== true || !c.texto) continue
+    if (!c.texto) continue
     const m = /^asistencia (en el )?hogar (ampliada|basica)\b/.exec(claveCobertura(c.texto))
-    if (m?.[2] === 'ampliada') return 'si'
-    if (m?.[2] === 'basica') r = 'no'
+    if (!m) continue
+    // La ampliada incluida es un sí; la ampliada marcada NO incluida o la básica incluida, un no.
+    if (m[2] === 'ampliada' && c.incluida === true) return 'si'
+    if ((m[2] === 'ampliada' && c.incluida === false) || (m[2] === 'basica' && c.incluida === true)) r = 'no'
   }
   return r
 }
@@ -273,4 +275,30 @@ const RAMOS_CATALOGO: readonly string[] = ['auto', 'moto', 'hogar', 'decesos', '
 
 export function ramoDeCatalogo(ramo: string | null | undefined): RamoGarantias | null {
   return typeof ramo === 'string' && RAMOS_CATALOGO.includes(ramo) ? (ramo as RamoGarantias) : null
+}
+
+/** Un descuento comercial que la compañía aplicó al precio (opción de producto). */
+export type DescuentoComercial = { etiqueta: string; pct: number }
+
+/**
+ * PURO. Los descuentos comerciales de un precio, leídos de sus opciones (29/09/2026). Medido:
+ * Allianz «Descuento comercial % (CAP)» y «(venta cruzada)», Occident y Generali «Descuento comercial».
+ * `null` = no se pudieron leer las opciones (no es «sin descuento»); `[]` = la compañía no manda
+ * ninguno. Un 0 SÍ se devuelve: es un «sin descuento» afirmado por la compañía.
+ */
+export function descuentosDeOpciones(opciones: readonly OpcionProductoLegible[] | null | undefined): DescuentoComercial[] | null {
+  if (opciones == null) return null
+  const r: DescuentoComercial[] = []
+  for (const o of opciones) {
+    const e = claveCobertura(o.etiqueta)
+    if (!/^descuento comercial\b/.test(e)) continue
+    const limpio = String(o.valor).replace(',', '.').replace(/[%\s]/g, '')
+    // Vacío no es 0: sería convertir un «no se sabe» en «sin descuento».
+    if (limpio === '') continue
+    const pct = Number(limpio)
+    if (!Number.isFinite(pct)) continue
+    const sufijo = /\(([^)]+)\)/.exec(o.etiqueta)?.[1]?.trim()
+    r.push({ etiqueta: sufijo ?? 'comercial', pct })
+  }
+  return r
 }

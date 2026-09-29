@@ -54,3 +54,31 @@ test('con oportunidadId y sin correduría legible no se cotiza (503, 0,00€)', 
     assert.match(f, /if \(!correduria && typeof cuerpo\.oportunidadId === 'string'[\s\S]{0,300}status: 503/, r)
   }
 })
+
+test('comparar dos variantes: solo del mismo riesgo y de esta correduría, sin DNI', () => {
+  const c = cuerpoDe('compararVariantes')
+  assert.match(c, /oportunidad_id = \$\{oportunidadId\}::uuid and correduria_id = \$\{correduriaId\}::uuid/)
+  assert.match(c, /t\.correduria_id = \$\{correduriaId\}::uuid/)
+  assert.doesNotMatch(c, /identificationDocument|dni/i)
+})
+
+test('el riesgo de una póliza se abre sobre ESA póliza y retarificar dentro de él lo comprueba antes de gastar', () => {
+  const a = cuerpoDe('abrirRiesgoDePoliza')
+  assert.match(a, /poliza_id = \$\{e\.polizaId\}::uuid/)
+  assert.match(a, /p\.correduria_id = \$\{correduriaId\}::uuid/)
+  assert.match(cuerpoDe('validarRiesgoDePoliza'), /poliza_id = \$\{polizaId\}::uuid/)
+  const r = readFileSync(new URL('../app/api/operador/codeoscopic/retarificar/route.ts', import.meta.url), 'utf8')
+  const i = r.indexOf('validarRiesgoDePoliza(')
+  assert.ok(i > 0 && i < r.indexOf('await cotizar('), 'se valida antes de cotizar')
+  assert.match(r, /gastado: '0,00€' \}, \{ status: 422 \}/)
+})
+
+test('no se pide precio en un riesgo cerrado (ni variante ni retarificación de póliza)', () => {
+  for (const f of ['validarVariante', 'validarRiesgoDePoliza']) {
+    assert.match(cuerpoDe(f), /estado::text in \('competencia', 'en_negociacion', 'pendiente_cliente'\)/, f)
+  }
+})
+
+test('el riesgo de una póliza reutiliza la oportunidad que abrió una retarificación de antes', () => {
+  assert.match(cuerpoDe('abrirRiesgoDePoliza'), /info_riesgo->>'polizaId' = \$\{e\.polizaId\}/)
+})

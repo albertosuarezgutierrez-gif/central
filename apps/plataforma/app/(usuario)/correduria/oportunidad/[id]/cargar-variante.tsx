@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { cardStyle } from '@/components/ui'
 import { riesgoAsegura, rotuloRamo } from '@/lib/seguimiento-asegura'
 import { interpretarRiesgo, type Riesgo } from '@/lib/riesgo-asegura'
-import { varianteDeRiesgo, type VarianteNueva } from './variante'
+import { tomadorDelRiesgo, varianteDeRiesgo, type VarianteNueva } from './variante'
 
 export type CargaVariante =
   | { estado: 'sin' }
@@ -30,6 +30,24 @@ export async function cargarVariante(
     return { estado: 'error', oportunidadId, mensaje: `Este riesgo es de ${rotuloRamo(l.riesgo.oportunidad.ramo).toLowerCase()}, no de ${ramo}.` }
   }
   return { estado: 'ok', variante: varianteDeRiesgo(l.riesgo, tomadorId, tarificacionId), riesgo: l.riesgo }
+}
+
+/**
+ * La pantalla de RETARIFICAR una póliza abierta como variante de su riesgo (`?oportunidad=`, 29/09/2026):
+ * «con las mismas personas» de la póliza. El riesgo tiene que ser DE ESTA póliza; si no casa o no se
+ * puede leer, no se cotiza (asegura también lo corta, pero antes de enseñar el botón que cuesta 0,50€).
+ */
+export async function cargarRiesgoDePoliza(oportunidadId: string | null, polizaId: string): Promise<CargaVariante> {
+  if (!oportunidadId) return { estado: 'sin' }
+  const r = await riesgoAsegura(oportunidadId).catch(() => null)
+  if (!r) return { estado: 'error', oportunidadId, mensaje: 'No se ha podido hablar con central-asegura.' }
+  const l = interpretarRiesgo(r.status, r.json)
+  if (l.estado === 'no_encontrado') return { estado: 'error', oportunidadId, mensaje: 'Esta oportunidad no existe o no es de la correduría.' }
+  if (l.estado === 'error') return { estado: 'error', oportunidadId, mensaje: `No se ha podido leer el riesgo (${l.motivo}).` }
+  if (l.riesgo.oportunidad.polizaId !== polizaId) {
+    return { estado: 'error', oportunidadId, mensaje: 'Este riesgo no es de esta póliza.' }
+  }
+  return { estado: 'ok', variante: varianteDeRiesgo(l.riesgo, tomadorDelRiesgo(l.riesgo), null), riesgo: l.riesgo }
 }
 
 /** La franja de arriba: de qué riesgo es esta variante y cómo volver a él. */

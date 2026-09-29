@@ -8,6 +8,9 @@ import { eur } from '@/lib/dinero'
 import { Prisma } from '@prisma/client'
 import { listarCandidatosConLimite, marcarProcesado, etiquetarCorreo, quitarEtiqueta, type ListadoCandidatos } from './gmail'
 import { ordenarAdjuntosFactura } from './elegir-adjuntos'
+import { decidirAvisoPago } from './filtro-pago'
+import { cargarTitulares } from './titulares'
+import type { Titular } from './receptor'
 import { aiExtractInvoiceDetallado, type FalloExtraccion } from '@/lib/ai-client'
 import { tgAviso, tgAvisoBotones, tgEditMessage } from '@/lib/telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
@@ -107,6 +110,8 @@ export async function escanearNuevasFacturas(
   let encolados = 0
   /** Message-IDs de correos que SÍ se han podido leer en esta pasada. */
   const resueltos: string[] = []
+  /** Se cargan al primer candidato con importe (una consulta por pasada). */
+  let titulares: Titular[] | undefined
 
   for (let i = 0; i < correos.length; i++) {
     if (deadline && Date.now() > deadline) {
@@ -186,6 +191,15 @@ export async function escanearNuevasFacturas(
     const proveedor = (datos.proveedor as string | null) || correo.from.split('<')[0].trim() || 'Proveedor desconocido'
     const importe = typeof datos.total === 'number' ? datos.total : null
     if (!importe || importe <= 0) { descartados++; continue }
+
+    // Leída y con importe, pero ¿es algo que haya que PAGAR? (ver `filtro-pago.ts`)
+    titulares ??= await cargarTitulares()
+    const decision = decidirAvisoPago(datos, titulares)
+    if (!decision.pagar) {
+      console.log(`[facturas] apartada (${decision.motivo}): ${proveedor} · ${importe} — ${decision.detalle}`)
+      descartados++
+      continue
+    }
 
     const ivaPct = typeof datos.iva_porcentaje === 'number' ? datos.iva_porcentaje : 21
     const base = importe / (1 + ivaPct / 100)
@@ -412,38 +426,62 @@ export async function verificarPagosPendientes(): Promise<number> {
 }
 
 // ── Auto-conciliación con movimientos bancarios ───────────────────────────────
-// Cruza facturas_proveedor (aprobadas/pago_iniciado) con v_movimientos_activos
-// por proveedor + importe + fecha ±3 días. Si encuentra coincidencia, marca pagada.
+// Cruza facturas_proveedor sin pagar con v_movimientos_activos por proveedor +
+// importe (±3%) + fecha. Si encuentra el cargo, marca pagada.
+//
+// 🚨 Incluye 'nueva' y 'pendiente_revision', no solo las aprobadas: la mayoría de
+// facturas del buzón (SaaS, suministros, lavandería) se cobran SOLAS por tarjeta o
+// recibo y nunca pasan por «Aprobar». Sin esto se quedaban pendientes para siempre
+// —58 el 29/09/2026— y el «Pagar todo» del resumen semanal las habría pagado dos veces.
+//
+// El proveedor se compara por su PRIMERA PALABRA significativa: el banco escribe
+// «ANTHROPIC IRELAND» y la factura «Anthropic Ireland, Limited», y el nombre entero
+// no casaba nunca. Palabras genéricas (fundación, comunidad…) y claves de <4 letras
+// no se usan: casarían con cargos de otros. Un cargo solo paga UNA factura (la más
+// cercana en fecha).
 
 export async function conciliarConBanco(cuentaId: string): Promise<number> {
   const conciliadas = await prisma.$queryRaw<{ id: string; telegram_msg_id: number | null }[]>(Prisma.sql`
-    WITH coincidencias AS (
-      SELECT
-        fp.id AS factura_id,
-        fp.telegram_msg_id,
-        mb.id AS movimiento_id
-      FROM facturas_proveedor fp
+    WITH fp AS (
+      SELECT f.id, f.telegram_msg_id, f.importe,
+             COALESCE(f.fecha_vencimiento, f.fecha_factura, NOW()::date) AS ref,
+             upper(split_part(trim(regexp_replace(
+               translate(f.proveedor, 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN'), '[^A-Za-z ]', '', 'g')), ' ', 1)) AS clave
+      FROM facturas_proveedor f
+      WHERE f.cuenta_id = ${cuentaId}::uuid
+        AND f.estado IN ('nueva', 'pendiente_revision', 'aprobada', 'pago_iniciado')
+        AND f.importe > 0
+    ),
+    candidatos AS (
+      SELECT fp.id AS factura_id, fp.telegram_msg_id, mb.id AS movimiento_id,
+             ABS(mb.fecha_operacion - fp.ref) AS dist
+      FROM fp
       JOIN v_movimientos_activos mb
         ON ABS(mb.importe) BETWEEN fp.importe * 0.97 AND fp.importe * 1.03
         AND mb.importe < 0
+        AND mb.fecha_operacion BETWEEN fp.ref - 10 AND fp.ref + 30
         AND (
-          mb.concepto_normalizado ILIKE '%' || fp.proveedor || '%'
-          OR mb.concepto          ILIKE '%' || fp.proveedor || '%'
-          OR mb.contraparte       ILIKE '%' || fp.proveedor || '%'
+          upper(translate(mb.concepto, 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
+          OR upper(translate(COALESCE(mb.concepto_normalizado, ''), 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
+          OR upper(translate(COALESCE(mb.contraparte, ''), 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
         )
-      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-      WHERE fp.cuenta_id = ${cuentaId}::uuid
-        AND fp.estado IN ('aprobada', 'pago_iniciado')
-        AND cb.cuenta_id = ${cuentaId}::uuid
-        AND mb.fecha_operacion BETWEEN
-          COALESCE(fp.fecha_vencimiento, fp.fecha_factura, NOW()::date) - INTERVAL '3 days'
-          AND COALESCE(fp.fecha_vencimiento, fp.fecha_factura, NOW()::date) + INTERVAL '7 days'
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = ${cuentaId}::uuid
+      WHERE length(fp.clave) >= 4
+        AND fp.clave NOT IN ('FUNDACION', 'ASOCIACION', 'COMUNIDAD', 'AYUNTAMIENTO', 'SERVICIOS', 'GRUPO')
+    ),
+    -- Cada factura se queda con su cargo más cercano, y cada cargo con su factura más cercana.
+    por_factura AS (
+      SELECT DISTINCT ON (factura_id) * FROM candidatos ORDER BY factura_id, dist
+    ),
+    coincidencias AS (
+      SELECT DISTINCT ON (movimiento_id) * FROM por_factura ORDER BY movimiento_id, dist
     )
-    UPDATE facturas_proveedor fp
+    UPDATE facturas_proveedor f
     SET estado = 'pagada', pago_confirmado_at = NOW()
     FROM coincidencias c
-    WHERE fp.id = c.factura_id
-    RETURNING fp.id, fp.telegram_msg_id
+    WHERE f.id = c.factura_id
+      AND f.estado IN ('nueva', 'pendiente_revision', 'aprobada', 'pago_iniciado')
+    RETURNING f.id, f.telegram_msg_id
   `)
 
   for (const row of conciliadas) {

@@ -111,6 +111,8 @@ export async function pedirCotizacion(entrada: {
   referencia?: string
   /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetarificar.forzarNuevo`. */
   forzarNuevo?: boolean
+  /** Variante del riesgo de esta póliza (`?oportunidad=`): la tarificación se cuelga de él. */
+  variante?: { oportunidadId: string; nota?: string | null } | null
 }): Promise<RespuestaRetarificar> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
@@ -123,6 +125,8 @@ export async function pedirCotizacion(entrada: {
     catastro: entrada.catastro ?? null,
     referencia: entrada.referencia,
     forzarNuevo: entrada.forzarNuevo === true,
+    oportunidadId: entrada.variante?.oportunidadId ?? null,
+    nota: entrada.variante?.nota ?? null,
   })
 }
 
@@ -143,6 +147,8 @@ export async function pedirOferta(entrada: {
   correcciones?: Record<string, string>
   /** Lo guardado del Product Form Library tras un `faltan_producto` anterior. */
   productOptions?: unknown[]
+  /** Descuento comercial ajustado (Allianz coche). */
+  descuentos?: { dtoCap?: number; dtoVentaCruzada?: number }
 }): Promise<RespuestaOferta> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }

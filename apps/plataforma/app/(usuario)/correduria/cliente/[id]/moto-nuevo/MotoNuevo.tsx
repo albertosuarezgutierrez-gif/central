@@ -434,6 +434,8 @@ export default function MotoNuevo({
           resueltos: resueltosPoliza,
           correcciones: correccionesFinal,
           ...(forzarNuevo ? { forzarNuevo: true } : {}),
+          // Retarificar la póliza como variante de SU riesgo («con las mismas personas», 29/09/2026).
+          variante: variante ? { oportunidadId: variante.oportunidadId, nota } : null,
         })
       : await pedirCotizacionMoto({
       clienteId,
@@ -493,7 +495,8 @@ export default function MotoNuevo({
   }
 
   // En moto, de momento, la misma persona va en todos los papeles (entrega 2 del diseño).
-  const figurasDistintas = variante !== null && Object.keys(variante.figuras).length > 0
+  // Retarificando una póliza van las personas de la póliza: el aviso no aplica.
+  const figurasDistintas = variante !== null && poliza === null && Object.keys(variante.figuras).length > 0
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>

@@ -20,6 +20,8 @@ import { BuscadorCatastro, ElegirPiso } from './BuscadorCatastro'
 import { consultarHogar, normalizarReferencia } from '@/lib/correduria-hogar'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import MotoNuevo from '../../../cliente/[id]/moto-nuevo/MotoNuevo'
+import { cargarRiesgoDePoliza, ErrorVariante, FranjaVariante } from '../../../oportunidad/[id]/cargar-variante'
+import { paramTexto } from '../../../oportunidad/[id]/variante'
 
 export const dynamic = 'force-dynamic'
 
@@ -235,6 +237,22 @@ export default async function RetarificarPage({
     )
   }
 
+  // ── Variante del RIESGO de esta póliza (`?oportunidad=`, 29/09/2026) ──────
+  // «Retarificar con las mismas personas» desde la pantalla del riesgo: la tarificación se cuelga
+  // de esa oportunidad. Sin el parámetro, todo igual que siempre. Si el riesgo no se puede leer o
+  // no es de esta póliza, NO se monta el formulario que cuesta 0,50€.
+  const cargaRiesgo = await cargarRiesgoDePoliza(paramTexto(sp.oportunidad), p.id)
+  if (cargaRiesgo.estado === 'error') {
+    return (
+      <Marco>
+        <Cabecera sub={`${sub} · ${ramo}`} polizaId={p.id} clienteId={p.cliente.id} />
+        <ErrorVariante oportunidadId={cargaRiesgo.oportunidadId} mensaje={cargaRiesgo.mensaje} />
+      </Marco>
+    )
+  }
+  const varianteRiesgo = cargaRiesgo.estado === 'ok' ? cargaRiesgo.variante : null
+  const franja = varianteRiesgo ? <FranjaVariante variante={varianteRiesgo} /> : null
+
   // ── MOTO (23/09/2026) ────────────────────────────────────────────────────
   //
   // La pantalla de moto nueva en modo póliza: mismo catálogo de motos, y la
@@ -271,6 +289,7 @@ export default async function RetarificarPage({
     return (
       <Marco>
         <Cabecera sub={`${sub} · moto`} polizaId={p.id} clienteId={p.cliente.id} />
+        {franja}
         {fallosCatalogoM.length > 0 && (
           <div className="card err">
             No se han podido leer los catálogos de garajes o estados civiles de Codeoscopic: sin ellos no hay ids
@@ -297,6 +316,7 @@ export default async function RetarificarPage({
           consumo={pm.consumo}
           simulacion={pm.simulacion}
           companias={null}
+          variante={varianteRiesgo}
         />
       </Marco>
     )
@@ -339,6 +359,7 @@ export default async function RetarificarPage({
   return (
     <Marco>
       <Cabecera sub={`${sub} · auto`} polizaId={p.id} clienteId={p.cliente.id} />
+      {franja}
 
       {falla && <div className="card err">{falla}</div>}
 
@@ -422,6 +443,7 @@ export default async function RetarificarPage({
         // `leerContextoDefensa`: nunca degrada a `[]`.
         contextoDefensa={leerContextoDefensa(pre?.carteraCompanias, p)}
         sinCarteraPorque={pre ? motivoSinCartera(pre.carteraCompanias) : falloPre}
+        variante={varianteRiesgo ? { oportunidadId: varianteRiesgo.oportunidadId } : null}
       />
     </Marco>
   )
