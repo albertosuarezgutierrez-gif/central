@@ -6,7 +6,7 @@
 // seguimiento», que es la verdad: no habrá eventos que enseñar.
 //
 // Todo correo que pasa por aquí deja fila en `correo_envio` (salga bien o mal).
-import { remitenteCorreo } from '@central/module-seguros'
+import { conMarcaCorreo, remitenteCorreo } from '@central/module-seguros'
 import { registrarEnvioCorreo } from './correo-seguimiento'
 import { sinCorreos } from './recaptacion-email'
 import { etiquetaTipo } from './correo-eventos'
@@ -50,12 +50,14 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
   const base = { correduriaId: c.correduriaId, clienteId: c.clienteId, polizaId: c.polizaId ?? null, tipo: c.tipo, asunto: c.asunto, destino: c.to }
   const apiKey = process.env.RESEND_API_KEY?.trim()
+  // La marca va en el punto único: un correo nuevo la lleva sin que su plantilla se acuerde.
+  const html = c.html ? conMarcaCorreo(c.html) : undefined
 
   if (apiKey) {
     try {
       const cuerpo = JSON.stringify({
         from, to: c.to, subject: c.asunto, text: c.texto,
-        ...(c.html ? { html: c.html } : {}),
+        ...(html ? { html } : {}),
         ...(replyTo ? { reply_to: replyTo } : {}),
         ...(c.adjuntos?.length
           ? { attachments: c.adjuntos.map((a) => ({ filename: a.nombre, content: contenidoBase64(a), content_type: a.tipo })) }
@@ -101,7 +103,7 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
   try {
     await transporter.sendMail({
       from, to: c.to, ...(replyTo ? { replyTo } : {}), subject: c.asunto, text: c.texto,
-      ...(c.html ? { html: c.html } : {}),
+      ...(html ? { html } : {}),
       ...(c.adjuntos?.length ? { attachments: c.adjuntos.map((a) => ({ filename: a.nombre, content: a.contenido, contentType: a.tipo })) } : {}),
     })
     await registrarEnvioCorreo({ ...base, resendId: null, proveedor: 'smtp', estado: 'enviado' })
