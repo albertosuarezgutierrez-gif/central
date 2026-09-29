@@ -1,63 +1,86 @@
 {
  "sesion": "ef17b0ef-ecbe-5d70-a469-e40195f040c2",
  "inicio": "2026-09-29T07:21:57.336Z",
- "fin": "2026-09-29T07:25:08.967Z",
- "llamadas": 21,
+ "fin": "2026-09-29T08:00:13.157Z",
+ "llamadas": 152,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 1,
-   "chars_in": 94,
-   "chars_out": 1176,
+   "llamadas": 21,
+   "chars_in": 2188,
+   "chars_out": 59368,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 1
+    "Grep": 9,
+    "Glob": 4,
+    "Read": 8
    }
   },
   "bash": {
-   "llamadas": 16,
-   "chars_in": 6329,
-   "chars_out": 35497,
+   "llamadas": 106,
+   "chars_in": 80513,
+   "chars_out": 346331,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 16
+    "Bash": 106
    }
   },
   "otro": {
-   "llamadas": 1,
-   "chars_in": 67,
-   "chars_out": 126,
+   "llamadas": 12,
+   "chars_in": 2558,
+   "chars_out": 140712,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1
+    "ToolSearch": 3,
+    "ReadNotifications": 7,
+    "SubagentHandback": 1,
+    "Skill": 1
    }
   },
   "mcp:github": {
-   "llamadas": 1,
-   "chars_in": 1063,
-   "chars_out": 91,
+   "llamadas": 7,
+   "chars_in": 3940,
+   "chars_out": 23823,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
    "tools": {
-    "mcp__github__create_pull_request": 1
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__actions_list": 1,
+    "mcp__github__pull_request_read": 1,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__list_pull_requests": 1
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 2,
-   "chars_in": 254,
-   "chars_out": 347,
+   "llamadas": 5,
+   "chars_in": 446,
+   "chars_out": 2143,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
-    "mcp__Claude_Code_Remote__send_later": 1
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2,
+    "mcp__Claude_Code_Remote__send_later": 1,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__delete_trigger": 1
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1422,
+   "chars_out": 1642,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
    }
   }
  }
