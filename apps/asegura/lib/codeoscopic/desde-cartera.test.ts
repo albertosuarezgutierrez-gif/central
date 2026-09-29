@@ -158,10 +158,10 @@ test('si la póliza ya venció, se cotiza para mañana y se dice por qué', () =
   assert.match(s!.porque, /venció el 2026-01-10/)
 })
 
-test('sin vencimiento en la ficha NO se inventa uno: se cotiza para mañana y se explica', () => {
+test('sin vencimiento en la ficha NO se inventa uno: efecto a 15 días (no caduca mañana) y se explica', () => {
   const r = pre({}, { fechaVencimiento: null })
-  assert.equal(r.datos.fechaEfecto, '2026-09-02')
-  assert.match(r.supuestos.find((x) => x.campo === 'fechaEfecto')!.porque, /no tiene fecha de vencimiento/)
+  assert.equal(r.datos.fechaEfecto, '2026-09-16')
+  assert.match(r.supuestos.find((x) => x.campo === 'fechaEfecto')!.porque, /no consta el vencimiento/)
 })
 
 // ─── Los supuestos se ven, que es el punto de todo esto ─────────────────────
