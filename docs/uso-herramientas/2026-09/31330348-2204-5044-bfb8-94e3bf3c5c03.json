@@ -1,19 +1,19 @@
 {
  "sesion": "31330348-2204-5044-bfb8-94e3bf3c5c03",
  "inicio": "2026-09-28T11:34:12.049Z",
- "fin": "2026-09-29T06:15:43.159Z",
- "llamadas": 971,
+ "fin": "2026-09-29T06:45:41.207Z",
+ "llamadas": 1096,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 100,
-   "chars_in": 12294,
-   "chars_out": 2253060,
+   "llamadas": 109,
+   "chars_in": 13425,
+   "chars_out": 2418690,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 43,
-    "Read": 55,
+    "Grep": 45,
+    "Read": 62,
     "Glob": 2
    }
   },
@@ -29,28 +29,29 @@
    }
   },
   "otro": {
-   "llamadas": 131,
-   "chars_in": 44220,
-   "chars_out": 1452069,
+   "llamadas": 143,
+   "chars_in": 56035,
+   "chars_out": 1695119,
    "errores": 0,
-   "archivos_citados": 7,
-   "chars_citados": 205219,
+   "archivos_citados": 18,
+   "chars_citados": 330098,
    "tools": {
-    "SubagentHandback": 10,
-    "Skill": 1,
-    "ToolSearch": 31,
+    "SubagentHandback": 11,
+    "Skill": 2,
+    "ToolSearch": 33,
     "TaskCreate": 3,
     "TaskUpdate": 2,
-    "ReadNotifications": 72,
+    "ReadNotifications": 79,
     "SendUserFile": 4,
     "SendMessage": 1,
-    "Artifact": 7
+    "Artifact": 7,
+    "ReportFindings": 1
    }
   },
   "mcp:github": {
-   "llamadas": 68,
-   "chars_in": 28958,
-   "chars_out": 167516,
+   "llamadas": 70,
+   "chars_in": 34142,
+   "chars_out": 167722,
    "errores": 3,
    "archivos_citados": 12,
    "chars_citados": 1801809,
@@ -59,9 +60,9 @@
     "mcp__github__pull_request_read": 27,
     "mcp__github__create_pull_request": 8,
     "mcp__github__subscribe_pr_activity": 1,
-    "mcp__github__update_pull_request": 6,
+    "mcp__github__update_pull_request": 7,
     "mcp__github__actions_list": 3,
-    "mcp__github__add_issue_comment": 2,
+    "mcp__github__add_issue_comment": 3,
     "mcp__github__merge_pull_request": 7,
     "mcp__github__get_job_logs": 7,
     "mcp__github__get_check_run": 1,
@@ -70,26 +71,26 @@
    }
   },
   "bash": {
-   "llamadas": 570,
-   "chars_in": 346441,
-   "chars_out": 1791211,
+   "llamadas": 661,
+   "chars_in": 426225,
+   "chars_out": 2234512,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 570
+    "Bash": 661
    }
   },
   "escritura": {
-   "llamadas": 39,
-   "chars_in": 149927,
-   "chars_out": 2118724,
+   "llamadas": 49,
+   "chars_in": 188828,
+   "chars_out": 2219537,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 12,
-    "Edit": 27
+    "Write": 21,
+    "Edit": 28
    }
   },
   "sql": {
@@ -115,14 +116,14 @@
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 19,
-   "chars_in": 1928,
-   "chars_out": 7858,
+   "llamadas": 20,
+   "chars_in": 2197,
+   "chars_out": 7966,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 826385,
    "tools": {
-    "mcp__Claude_Code_Remote__send_later": 3,
+    "mcp__Claude_Code_Remote__send_later": 4,
     "mcp__Claude_Code_Remote__delete_trigger": 3,
     "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 4,
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 9
