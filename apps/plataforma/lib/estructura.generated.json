@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-29T15:42:08Z",
+  "generadoEn": "2026-09-29T19:30:06Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 151
+        "evidencias": 154
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 117
+        "evidencias": 121
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 40
+        "evidencias": 41
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3996,6 +3996,7 @@
       "/api/operador/cima-sincro",
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
+      "/api/operador/cliente/cuenta",
       "/api/operador/cliente/dni",
       "/api/operador/cliente/fusion",
       "/api/operador/cliente/historial",
@@ -4071,6 +4072,7 @@
       "/api/operador/oportunidad/tarea",
       "/api/operador/oportunidad/traspasar",
       "/api/operador/oportunidad/whatsapp",
+      "/api/operador/oportunidades-aviso",
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza-documento",
@@ -5005,6 +5007,7 @@
       "/api/correduria/cliente/[id]/dni-codigo",
       "/api/correduria/cliente/[id]/dni-revelar",
       "/api/correduria/cliente/contactos",
+      "/api/correduria/cliente/cuenta",
       "/api/correduria/cliente/fusion",
       "/api/correduria/cliente/nota",
       "/api/correduria/cliente/portal",
@@ -6619,7 +6622,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1532,
+    "apis": 1535,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
