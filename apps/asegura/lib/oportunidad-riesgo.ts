@@ -46,6 +46,8 @@ export type VarianteRiesgo = {
   referencia: string
   creadoAt: string
   tomador: { clienteId: string | null; nombre: string | null }
+  /** La póliza que se retarificó en esta variante (renovación). NULL = presupuesto de cliente nuevo. */
+  polizaId: string | null
   nota: string | null
   simulado: boolean
   fechaEfecto: string | null
@@ -123,13 +125,13 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
   const vars = await prisma.$queryRaw<
     Array<{
       id: string; creado_at: Date; cliente_id: string | null; nombre: string | null; apellidos: string | null
-      nota: string | null; simulado: boolean; fecha_efecto: Date | null; peticion: unknown
+      poliza_id: string | null; nota: string | null; simulado: boolean; fecha_efecto: Date | null; peticion: unknown
       n_precios: number; mejor_compania: string | null; mejor_prima: string | null
       p_id: string | null; enviado_at: Date | null; visto_at: Date | null; elegido_at: Date | null
       aceptado_at: Date | null; emitido_at: Date | null; retirado_at: Date | null
     }>
   >`
-    select t.id::text as id, t.creado_at, coalesce(t.cliente_id, pol.cliente_id)::text as cliente_id, c.nombre, c.apellidos, t.nota, t.simulado,
+    select t.id::text as id, t.creado_at, coalesce(t.cliente_id, pol.cliente_id)::text as cliente_id, c.nombre, c.apellidos, t.poliza_id::text as poliza_id, t.nota, t.simulado,
            t.fecha_efecto, t.peticion,
            (select count(*)::int from seguros.tarificacion_precios x where x.tarificacion_id = t.id and x.prima_eur is not null) as n_precios,
            m.compania as mejor_compania, m.prima_eur::text as mejor_prima,
@@ -155,6 +157,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     referencia: `P${i + 1}`,
     creadoAt: v.creado_at.toISOString(),
     tomador: { clienteId: v.cliente_id, nombre: v.cliente_id ? nombreDe(v.nombre, v.apellidos) : null },
+    polizaId: v.poliza_id,
     nota: v.nota,
     simulado: v.simulado,
     fechaEfecto: v.fecha_efecto ? v.fecha_efecto.toISOString().slice(0, 10) : null,
@@ -338,8 +341,10 @@ export async function validarVariante(
 ): Promise<{ ok: true } | { ok: false; motivo: string }> {
   if (!UUID.test(e.oportunidadId)) return { ok: false, motivo: 'oportunidad no válida' }
   const [op] = await prisma.$queryRaw<Array<{ id: string }>>`
-    select id::text as id from seguros.oportunidades where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
-  if (!op) return { ok: false, motivo: 'la oportunidad no es de esta correduría' }
+    select id::text as id from seguros.oportunidades where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
+      and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')`
+  // Un riesgo ganado o perdido no se sigue: pedir precio ahí es pagar 0,50€ por nada.
+  if (!op) return { ok: false, motivo: 'la oportunidad no es de esta correduría o ya está cerrada' }
   const ids = Object.values(e.figuras ?? {}).filter((x): x is string => typeof x === 'string')
   if (ids.length > 0) {
     const [n] = await prisma.$queryRaw<Array<{ n: number }>>`
@@ -509,12 +514,22 @@ export async function abrirRiesgoDePoliza(
       where p.id = ${e.polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null`
     if (!pol) return { ok: false as const, status: 404, motivo: 'la póliza no es de esta correduría' }
 
-    const [ya] = await tx.$queryRaw<Array<{ id: string }>>`
-      select id::text as id from seguros.oportunidades
-      where correduria_id = ${correduriaId}::uuid and poliza_id = ${e.polizaId}::uuid
+    // La abierta de esta póliza: por `poliza_id` o, si la abrió una retarificación de antes (que solo
+    // anotaba `info_riesgo.polizaId`), esa misma — se le pone el `poliza_id` en vez de abrir otra.
+    const [ya] = await tx.$queryRaw<Array<{ id: string; poliza_id: string | null }>>`
+      select id::text as id, poliza_id::text as poliza_id from seguros.oportunidades
+      where correduria_id = ${correduriaId}::uuid
+        and (poliza_id = ${e.polizaId}::uuid or (poliza_id is null and info_riesgo->>'polizaId' = ${e.polizaId}))
         and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
-      order by created_at desc limit 1`
-    if (ya) return { ok: true as const, oportunidadId: ya.id, nueva: false }
+      order by (poliza_id is not null) desc, created_at desc limit 1`
+    if (ya) {
+      if (ya.poliza_id === null) {
+        await tx.$executeRaw`
+          update seguros.oportunidades set poliza_id = ${e.polizaId}::uuid, updated_at = now()
+          where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid`
+      }
+      return { ok: true as const, oportunidadId: ya.id, nueva: false }
+    }
 
     const d = pol.datos ?? {}
     const txt = (k: string) => (typeof d[k] === 'string' && (d[k] as string).trim() !== '' ? (d[k] as string).trim() : null)
@@ -562,6 +577,7 @@ export async function validarRiesgoDePoliza(
   if (!UUID.test(oportunidadId) || !UUID.test(polizaId)) return { ok: false, motivo: 'ids no válidos' }
   const [o] = await prisma.$queryRaw<Array<{ id: string }>>`
     select id::text as id from seguros.oportunidades
-    where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and poliza_id = ${polizaId}::uuid`
-  return o ? { ok: true } : { ok: false, motivo: 'ese riesgo no es de esta póliza' }
+    where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and poliza_id = ${polizaId}::uuid
+      and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')`
+  return o ? { ok: true } : { ok: false, motivo: 'ese riesgo no es de esta póliza o ya está cerrado' }
 }

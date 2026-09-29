@@ -180,8 +180,13 @@ export async function solicitudesDeOportunidad(correduriaId: string, oportunidad
     }[]>(Prisma.sql`
       select id::text as id, ramo, estado, caduca_at as caduca, completada_at as completada, campos, respuestas, lecturas,
              cliente_id::text as "personaId", tercero
-      from solicitud_datos where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
-      order by created_at desc limit 10`)
+      from (
+        select *, row_number() over (partition by cliente_id order by created_at desc) as n
+        from solicitud_datos where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
+      ) s
+      -- Las últimas de CADA persona: un familiar con varios enlaces no puede esconder la del cliente.
+      where s.n <= 5
+      order by created_at desc`)
     return filas.map((f) => {
       const d = descifrarRespuestas(f.respuestas)
       const lecturas = descifrarLecturas(f.lecturas)
@@ -283,11 +288,21 @@ export type ResultadoDocSolicitud =
 export async function subirDocumentoSolicitud(
   token: string,
   fichero: { nombre: string; mime: string; contenido: Buffer },
+  consentimiento = false,
 ): Promise<ResultadoDocSolicitud> {
   const f = await porToken(token)
   if (!f) return { ok: false, estado: 'muerta' }
   if (f.estado === 'completada') return { ok: false, estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
+  // Documento de un TERCERO (su DNI, su carné): ni se archiva ni lo lee la IA sin su permiso. Se
+  // comprueba ANTES de guardar nada, no solo al enviar el formulario.
+  if (f.tercero && !consentimiento) {
+    return { ok: false, estado: 'invalido', motivo: 'Marca primero la casilla de que eres esa persona o tienes su permiso.' }
+  }
+  if (f.tercero) {
+    await prismaAsegura().$executeRaw(Prisma.sql`
+      update solicitud_datos set consentimiento_at = coalesce(consentimiento_at, now()) where id = ${f.id}::uuid`)
+  }
   const ramo = ramoSolicitud(f.ramo)
   if (!ramo) return { ok: false, estado: 'muerta' }
   // Tipo de fichero ANTES de gastar IA o plaza.

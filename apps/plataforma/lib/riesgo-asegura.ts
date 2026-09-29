@@ -20,6 +20,8 @@ export type VarianteRiesgo = {
   referencia: string
   creadoAt: string
   tomador: { clienteId: string | null; nombre: string | null }
+  /** Póliza retarificada en esta variante (renovación); `null` = presupuesto de cliente nuevo. */
+  polizaId: string | null
   nota: string | null
   simulado: boolean
   fechaEfecto: string | null
@@ -88,6 +90,7 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
       referencia: txt(x.referencia) ?? '—',
       creadoAt: txt(x.creadoAt) ?? '',
       tomador: { clienteId: txt(t.clienteId), nombre: txt(t.nombre) },
+      polizaId: txt(x.polizaId),
       nota: txt(x.nota),
       simulado: x.simulado === true,
       fechaEfecto: txt(x.fechaEfecto),

@@ -47,8 +47,14 @@ export default function HistorialVariantes({ riesgo }: { riesgo: Riesgo }) {
           {vs.map((v, i) => (
             <Fila
               key={v.id} v={v} primera={i === vs.length - 1}
-              abrir={ramo && v.tomador.clienteId === tomadorVigente ? rutaVariante(ramo, tomadorVigente, op.id, v.id) : null}
-              otroTomador={v.tomador.clienteId !== null && v.tomador.clienteId !== tomadorVigente}
+              abrir={
+                // Una retarificación de póliza se reabre en SU pantalla: en la de cliente nuevo saldría
+                // en blanco y pedir precio ahí sería pagar otra vez por un presupuesto sin póliza.
+                v.polizaId
+                  ? `/correduria/poliza/${encodeURIComponent(v.polizaId)}/retarificar?oportunidad=${encodeURIComponent(op.id)}`
+                  : ramo && v.tomador.clienteId === tomadorVigente ? rutaVariante(ramo, tomadorVigente, op.id, v.id) : null
+              }
+              otroTomador={!v.polizaId && v.tomador.clienteId !== null && v.tomador.clienteId !== tomadorVigente}
               comparable={vs.length > 1} marcada={vigentes.includes(v.id)} onMarcar={() => marcar(v.id)}
             />
           ))}

@@ -19,3 +19,10 @@ test('datos de un tercero: sin consentimiento no se guardan, y no se rellena su 
 test('la tarea «Tarificar» va al cliente de la oportunidad, no al tercero', () => {
   assert.match(src, /\$\{o\.clienteId\}::uuid, \$\{f\.oportunidadId\}::uuid, 'central:seguimiento'/)
 })
+
+test('un documento de un tercero no se archiva ni se lee sin su permiso', () => {
+  const i = src.indexOf('export async function subirDocumentoSolicitud')
+  const cuerpo = src.slice(i, src.indexOf('\nexport ', i + 10))
+  const guarda = cuerpo.indexOf('if (f.tercero && !consentimiento)')
+  assert.ok(guarda > 0 && guarda < cuerpo.indexOf('documentos_subidos + 1') && guarda < cuerpo.indexOf('leerDocSolicitud('), 'la guarda va antes de reservar, leer y archivar')
+})

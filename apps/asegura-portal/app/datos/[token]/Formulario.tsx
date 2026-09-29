@@ -10,6 +10,8 @@ type Subida = { id: number; nombre: string; estado: 'subiendo' | 'ok' | 'fallo';
 /** El formulario del enlace de datos. Pinta los campos que manda asegura y nada más. */
 export default function Formulario({ token, campos, tercero = false }: { token: string; campos: CampoSolicitud[]; tercero?: boolean }) {
   const [consiente, setConsiente] = useState(false)
+  const consienteRef = useRef(consiente)
+  consienteRef.current = consiente
   // DNI y nacimiento llegan rellenos con lo de su ficha (`actual`): los confirma o los corrige.
   const [valores, setValores] = useState<Record<string, string | boolean>>(
     () => Object.fromEntries(campos.flatMap((c) => (c.actual ? [[c.clave, c.actual]] : []))),
@@ -43,6 +45,7 @@ export default function Formulario({ token, campos, tercero = false }: { token: 
         const form = new FormData()
         form.set('token', token)
         form.set('documento', fichero, fichero.name)
+        form.set('consentimiento', consienteRef.current ? '1' : '0')
         const res = await fetch('/api/datos/documento', { method: 'POST', body: form })
         status = res.status
         json = await res.json().catch(() => null)
@@ -98,6 +101,14 @@ export default function Formulario({ token, campos, tercero = false }: { token: 
 
   return (
     <form onSubmit={enviar} noValidate style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }}>
+      {/* Arriba: antes de subir un documento o escribir datos de otra persona, su permiso. */}
+      {tercero && (
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', minHeight: 44, fontSize: 15 }}>
+          <input type="checkbox" checked={consiente} onChange={(e) => setConsiente(e.target.checked)} style={{ width: 22, height: 22, marginTop: 2 }} />
+          <span>Soy esa persona, o tengo su permiso para dar sus datos a Grupo ASegura para este presupuesto.</span>
+        </label>
+      )}
+      {tercero && errores.consentimiento && <span className="editor-error" role="alert">{errores.consentimiento}</span>}
       {/* minWidth 0 + overflowWrap: sin ellos el <input type=file> nativo (botón + «Ningún archivo seleccionado»)
           dimensiona la caja con su ancho mínimo y el texto se sale en un móvil de 360 px. */}
       <div className="editor-campo" style={{ border: '1px dashed currentColor', borderRadius: 12, padding: 14, minWidth: 0, overflowWrap: 'anywhere', position: 'relative' }}>
@@ -184,13 +195,6 @@ export default function Formulario({ token, campos, tercero = false }: { token: 
           </div>
         )
       })}
-      {tercero && (
-        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', minHeight: 44, fontSize: 15 }}>
-          <input type="checkbox" checked={consiente} onChange={(e) => setConsiente(e.target.checked)} style={{ width: 22, height: 22, marginTop: 2 }} />
-          <span>Soy esa persona, o tengo su permiso para dar sus datos a Grupo ASegura para este presupuesto.</span>
-        </label>
-      )}
-      {tercero && errores.consentimiento && <span className="editor-error" role="alert">{errores.consentimiento}</span>}
       {estado.tipo === 'fallo' && <p className="editor-error" role="alert">{estado.texto}</p>}
       <p className="suave" style={{ margin: 0, fontSize: 13 }}>
         Usamos estos datos solo para prepararte el presupuesto (Grupo ASegura, correduría de seguros).

@@ -99,7 +99,7 @@ export function interpretarDocSubido(status: number, json: unknown): DocSubido {
 }
 
 /** Reenvía el fichero al puente de asegura (multipart). `null` = el puente no respondió. */
-export async function subirDocPuente(token: string, fichero: File): Promise<{ status: number; json: unknown } | null> {
+export async function subirDocPuente(token: string, fichero: File, consentimiento = false): Promise<{ status: number; json: unknown } | null> {
   const p = puente()
   if (!p) return null
   const control = new AbortController()
@@ -108,6 +108,7 @@ export async function subirDocPuente(token: string, fichero: File): Promise<{ st
     const form = new FormData()
     form.set('token', token)
     form.set('documento', fichero, fichero.name || 'documento')
+    form.set('consentimiento', consentimiento ? '1' : '0')
     const res = await fetch(`${p.base}/api/portal/solicitud-datos/documento`, {
       method: 'POST',
       headers: { authorization: `Bearer ${p.secret}` },

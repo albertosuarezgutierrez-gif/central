@@ -120,3 +120,14 @@ test('comparar: la más antigua va como a, se marque en el orden que se marque',
   assert.equal(ordenarParaComparar(r.riesgo.variantes, ['p5']), null)
   assert.equal(ordenarParaComparar(r.riesgo.variantes, ['p5', 'nada']), null)
 })
+
+test('la variante trae de qué póliza es (null = presupuesto de cliente nuevo)', () => {
+  const r = interpretarRiesgo(200, {
+    estado: 'ok', oportunidad: OP, roles: ['tomador'], figuras: [], vinculos: [],
+    variantes: [variante({ id: 'a', polizaId: 'pol-1' }), variante({ id: 'b' })],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.riesgo.variantes[0].polizaId, 'pol-1')
+  assert.equal(r.riesgo.variantes[1].polizaId, null)
+})

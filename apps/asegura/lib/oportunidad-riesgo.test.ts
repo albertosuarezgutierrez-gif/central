@@ -72,3 +72,13 @@ test('el riesgo de una póliza se abre sobre ESA póliza y retarificar dentro de
   assert.ok(i > 0 && i < r.indexOf('await cotizar('), 'se valida antes de cotizar')
   assert.match(r, /gastado: '0,00€' \}, \{ status: 422 \}/)
 })
+
+test('no se pide precio en un riesgo cerrado (ni variante ni retarificación de póliza)', () => {
+  for (const f of ['validarVariante', 'validarRiesgoDePoliza']) {
+    assert.match(cuerpoDe(f), /estado::text in \('competencia', 'en_negociacion', 'pendiente_cliente'\)/, f)
+  }
+})
+
+test('el riesgo de una póliza reutiliza la oportunidad que abrió una retarificación de antes', () => {
+  assert.match(cuerpoDe('abrirRiesgoDePoliza'), /info_riesgo->>'polizaId' = \$\{e\.polizaId\}/)
+})
