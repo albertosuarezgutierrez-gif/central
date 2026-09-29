@@ -3,6 +3,8 @@ import { Car } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { precalificarAutoNuevaAsegura, catalogoAsegura } from '@/lib/auto-nuevo-asegura'
 import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
+import { interpretarOportunidadesCliente, oportunidadesClienteAsegura } from '@/lib/seguimiento-asegura'
+import { anteriorParaTarificar } from '@/lib/seguro-anterior'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import AutoNuevo from './AutoNuevo'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
@@ -71,7 +73,7 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
   // Los dos del carnet NO son bloqueantes a propósito: si no se pueden leer,
   // viaja el supuesto de siempre (B, España) y la pantalla lo dice en el hueco
   // del campo. Bloquear la cotización por ellos sería peor que el problema.
-  const [garajes, civiles, zonasCarnet, tiposCarnet, pre, companiasResp, anteriores] = await Promise.all([
+  const [garajes, civiles, zonasCarnet, tiposCarnet, pre, companiasResp, anteriores, ops] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
     catalogoAsegura({ tipo: 'zonas-carnet' }),
@@ -79,7 +81,12 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
     precalificarAutoNuevaAsegura({ clienteId }),
     companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
     catalogoAsegura({ tipo: 'companias-anteriores' }),
+    // El seguro que tiene hoy, leído de su póliza (29/09/2026). Si no se puede leer, no se precarga.
+    oportunidadesClienteAsegura(clienteId).then((r) => interpretarOportunidadesCliente(r.status, r.json)).catch(() => null),
   ])
+  const anterior = ops?.estado === 'ok'
+    ? anteriorParaTarificar(ops.oportunidades, { ramo: 'auto', oportunidadId: variante?.oportunidadId ?? null })
+    : null
   // `null` = no se ha podido leer el directorio de compañías (puerto caído o sin
   // configurar): la pantalla lo dice y el corredor teclea el código a mano en
   // vez de ver un desplegable vacío sin explicación.
@@ -136,6 +143,8 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         simulacion={pre.pre.simulacion}
         companias={companias}
         variante={variante}
+        anterior={anterior?.estado === 'ok' ? anterior.anterior : null}
+        anteriorAmbiguo={anterior?.estado === 'ambiguo' ? anterior.n : null}
       />
     </Pagina>
   )
