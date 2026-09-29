@@ -53,6 +53,11 @@ export type ProyectoEmitido = {
   /** El riesgo tarificado (matrícula/versión, o dirección+m²+año): lo que CIMA NO manda. */
   riesgo: Record<string, unknown> | null
   fraccionamiento?: string | null
+  /**
+   * Opciones del producto con las que se emitió («Asistencia en Viaje: Estándar»). `null`/ausente =
+   * no se pudieron leer: no se guarda nada (no es «sin opciones»).
+   */
+  opciones?: readonly { etiqueta: string; valor: string }[] | null
 }
 
 export type PolizaEmitida = {
@@ -152,7 +157,12 @@ export function prepararPolizaEmitida(args: {
       fraccionamiento: proyecto.fraccionamiento ?? null,
       datosEspecificos: {
         ...(proyecto.riesgo ?? {}),
-        codeoscopic: { projectId: proyecto.projectIdCodeoscopic, emitidaEn: emitida.toISOString(), primaOfertada: prima.valor },
+        codeoscopic: {
+          projectId: proyecto.projectIdCodeoscopic,
+          emitidaEn: emitida.toISOString(),
+          primaOfertada: prima.valor,
+          ...(Array.isArray(proyecto.opciones) ? { opciones: proyecto.opciones.map((o) => ({ etiqueta: o.etiqueta, valor: o.valor })) } : {}),
+        },
       },
     },
   }

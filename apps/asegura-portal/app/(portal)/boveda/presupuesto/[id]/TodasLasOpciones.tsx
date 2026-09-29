@@ -103,7 +103,7 @@ export function TodasLasOpciones({ presupuestoId, ramo, opciones, necesidades, c
   const paraIA = pareja.map((o) => ({ id: o.id, compania: o.compania, producto: o.producto, primaEur: o.primaEur, franquiciaEur: o.franquiciaEur, coberturas: o.coberturasDetalle }))
 
   const fila = (o: OpcionCliente) => {
-    const f = filaDeOpcion(o, { ramo, actual })
+    const f = filaDeOpcion(o, { ramo, actual, todas: opciones })
     const marcada = comparadas.includes(o.id)
     const abierta = eligiendo === o.id
     return (
@@ -125,6 +125,8 @@ export function TodasLasOpciones({ presupuestoId, ramo, opciones, necesidades, c
           {f.capital !== null && <li>{f.capital}</li>}
           {f.cambios !== null && <li>{f.cambios}</li>}
           {f.cambiosSinDato !== null && <li className="suave">{f.cambiosSinDato}</li>}
+          {f.noIncluye !== null && <li>{f.noIncluye}</li>}
+          {f.sinConfirmar !== null && <li className="suave">{f.sinConfirmar}</li>}
         </ul>
         <div className="todas-acciones">
           <label className="todas-comparar">

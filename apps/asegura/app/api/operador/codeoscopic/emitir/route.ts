@@ -42,6 +42,7 @@ import { sqlCarteraEnVigor } from '@central/module-seguros'
 import { Prisma } from '@prisma/client'
 import { computeDniLookupHash } from '@central/module-seguros-pii'
 import { archivarDocumentoEmitido } from '@/lib/codeoscopic/archivar-documento'
+import { lectorOferta, opcionesOfertaAceptada } from '@/lib/codeoscopic/opciones-emitida'
 import { trasEmisionConTope } from '@/lib/tras-emision'
 import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
@@ -420,6 +421,7 @@ export const POST = auditado(async (req: Request) => {
         { status: 200 },
       )
     }
+    const opcionesAc = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
     const acunadoAc = await registrarPolizaEmitida(correduria.id, {
       clienteId: ctx.clienteId,
       actor,
@@ -434,6 +436,7 @@ export const POST = auditado(async (req: Request) => {
         emitidaEn: aprobada.creadaEn ?? new Date().toISOString(),
         riesgo: ctx.riesgo,
         fraccionamiento: fraccionamientoAcunado,
+        opciones: opcionesAc,
       },
     })
     console.log(
@@ -976,6 +979,7 @@ export const POST = auditado(async (req: Request) => {
     })
   }
 
+  const opcionesEmitida = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
   const acunado = await registrarPolizaEmitida(correduria.id, {
     clienteId: ctx.clienteId,
     actor,
@@ -990,6 +994,7 @@ export const POST = auditado(async (req: Request) => {
       emitidaEn: new Date().toISOString(),
       riesgo: ctx.riesgo,
       fraccionamiento: fraccionamientoAcunado,
+      opciones: opcionesEmitida,
     },
   })
 

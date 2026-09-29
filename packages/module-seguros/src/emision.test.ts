@@ -125,3 +125,12 @@ test('validarPolizaOrigen: origen que YA tiene otra sustituta → guardián anti
 test('validarPolizaOrigen: origen normal (existe, sin sustituta previa) → válido', () => {
   assert.deepEqual(validarPolizaOrigen({ existe: true, yaTieneSustituta: false }), { valido: true })
 })
+
+test('D2: las opciones de producto con las que se emitió quedan en la póliza; sin leer, no se inventan', () => {
+  const con = prepararPolizaEmitida({ correduriaId: 'c', clienteId: 'k', proyecto: proyecto({ opciones: [{ etiqueta: 'Asistencia en Viaje', valor: 'Estándar' }] }), catalogo })
+  assert.ok(con.ok)
+  assert.deepEqual((con.fila.datosEspecificos.codeoscopic as { opciones?: unknown }).opciones, [{ etiqueta: 'Asistencia en Viaje', valor: 'Estándar' }])
+  const sin = prepararPolizaEmitida({ correduriaId: 'c', clienteId: 'k', proyecto: proyecto({ opciones: null }), catalogo })
+  assert.ok(sin.ok)
+  assert.ok(!('opciones' in (sin.fila.datosEspecificos.codeoscopic as object)))
+})

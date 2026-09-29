@@ -132,6 +132,20 @@ test('fila: cambios frente a la actual solo con la actual leída', () => {
   assert.equal(f.cambiosSinDato, 'Sin dato: Asistencia en viaje y grúa')
 })
 
+test('fila: no incluye / sin confirmar frente a las demás opciones, sin repetir lo de la póliza actual', () => {
+  const allianz = opcion({ id: 'a', garantias: G({ asistencia_viaje: 'si', asistencia_ampliada: 'no', robo: 'no' }) })
+  const mapfre = opcion({ id: 'm', garantias: G({ asistencia_viaje: 'si', asistencia_ampliada: 'no_consta', robo: 'si' }) })
+  const todas = [allianz, mapfre]
+  const fa = filaDeOpcion(allianz, { ramo: 'auto', actual: null, todas })
+  assert.equal(fa.noIncluye, 'No incluye: Asistencia en viaje ampliada y Robo')
+  assert.equal(fa.sinConfirmar, null)
+  assert.equal(filaDeOpcion(mapfre, { ramo: 'auto', actual: null, todas }).sinConfirmar, 'Sin confirmar por la compañía: Asistencia en viaje ampliada')
+  // «− Robo» ya sale frente a la actual: no se repite.
+  assert.equal(filaDeOpcion(allianz, { ramo: 'auto', actual: G({ robo: 'si' }), todas }).noIncluye, 'No incluye: Asistencia en viaje ampliada')
+  // Sin las demás opciones no se afirma nada.
+  assert.equal(filaDeOpcion(allianz, { ramo: 'auto', actual: null }).noIncluye, null)
+})
+
 test('fila: capital del servicio solo en decesos y solo si viene', () => {
   const avisos = ['Capital de servicio por asegurado: 3.600,00 €']
   assert.equal(filaDeOpcion(opcion({ avisos }), { ramo: 'decesos', actual: null }).capital, 'Capital del servicio: 3.600,00€')
