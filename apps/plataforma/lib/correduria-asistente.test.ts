@@ -5,6 +5,7 @@ import {
   costeConservador, rastroArgs, tienePrefijo, apagado, clasificarDestino, diasValidos, enmascarar, idValido, leerArgumentos, leerClasificacion,
   paraIA, reglaConDatoPersonal, sinPrefijo, systemAsistente, turnoDeNota, preguntaNota,
   altaParaIA, autonomoActivo, figuraParaIA, HERRAMIENTAS,
+  herramientasPara, huellaEscritura, dejaHuella, dniEnmascarado, AUTONOMAS_CON_TEXTO_DE_BOTON, HERRAMIENTAS_ESCRITURA,
 } from './correduria-asistente.ts'
 
 test('reparto: el atajo y las palabras de la correduría van al asistente', () => {
@@ -240,4 +241,74 @@ test('revisión del modo autónomo: escrituras sin reintento, un precio por mens
   // Ni fuente ni parentesco se inventan.
   assert.doesNotMatch(f, /campo\('fuente', 30\) \?\?/)
   assert.doesNotMatch(f, /: 'Otra', persona/)
+})
+
+test('autónomo: las herramientas que HACEN no dicen «botón» ni «NO escribe» (la IA se fía de la descripción)', () => {
+  const auto = herramientasPara(true)
+  for (const n of AUTONOMAS_CON_TEXTO_DE_BOTON) {
+    const d = auto.find((h) => h.function.name === n)?.function.description ?? ''
+    assert.ok(d, `falta ${n}`)
+    assert.doesNotMatch(d, /con (un|el) botón|NO escribe|NO pide|Propón/, `${n}: ${d.slice(0, 120)}`)
+  }
+  assert.match(auto.find((h) => h.function.name === 'proponer_tarificacion')!.function.description, /0,50€/)
+  // Con botón, intactas.
+  assert.equal(herramientasPara(false), HERRAMIENTAS)
+  // Lo que sale a terceros sigue diciendo botón también en autónomo.
+  assert.match(auto.find((h) => h.function.name === 'enviar_presupuesto')!.function.description, /botón/)
+})
+
+test('autónomo: repetir solo en las escrituras', () => {
+  for (const h of herramientasPara(true)) {
+    const tiene = 'repetir' in (h.function.parameters.properties as Record<string, unknown>)
+    assert.equal(tiene, HERRAMIENTAS_ESCRITURA.has(h.function.name), h.function.name)
+  }
+  assert.ok(!HERRAMIENTAS.some((h) => 'repetir' in (h.function.parameters.properties as Record<string, unknown>)))
+})
+
+test('huella: misma escritura = misma huella aunque cambien mayúsculas, espacios, orden o repetir; otros datos = otra', () => {
+  const a = huellaEscritura('anotar_nota', { clienteId: 'x', texto: 'Se casa en  junio' })
+  assert.equal(a, huellaEscritura('anotar_nota', { texto: 'se casa en junio ', clienteId: 'x', repetir: true }))
+  assert.notEqual(a, huellaEscritura('anotar_nota', { clienteId: 'x', texto: 'se casa en julio' }))
+  assert.notEqual(a, huellaEscritura('proponer_tarea', { clienteId: 'x', texto: 'se casa en junio' }))
+  assert.match(a, /^[0-9a-f]{64}$/)
+})
+
+test('huella: solo la deja lo que se hizo o pudo hacerse', () => {
+  for (const t of ['HECHO: nota anotada.', 'PEDIDO: el precio…', 'NO SÉ SI SE HA HECHO (x)']) assert.equal(dejaHuella(t), true, t)
+  for (const t of ['FALTAN DATOS (no se ha propuesto nada, 0€)', 'UNO POR MENSAJE: …', 'TOPE: ya van 20', 'NO DISPONIBLE', 'ERROR: x', 'NO SE PUEDE: x', 'YA EXISTE: ese DNI…', 'NO CREADA: x'])
+    assert.equal(dejaHuella(t), false, t)
+})
+
+test('DNI copiado del historial (tapado) no vale para escribir', () => {
+  for (const d of ['…115R', '****115R', '...115R', '•••115R']) assert.equal(dniEnmascarado(d), true, d)
+  for (const d of ['12345678Z', 'X1234567L', undefined, null]) assert.equal(dniEnmascarado(d), false, String(d))
+})
+
+test('rastro: un polizaId que no es uuid (nº de póliza de la compañía) no se guarda', () => {
+  assert.deepEqual(rastroArgs('ficha_poliza', { polizaId: 'C0613-12345' }), { polizaId: '[no es id]' })
+  const u = '3f2b1c9e-8a7d-4e6f-9b1a-2c3d4e5f6a7b'
+  assert.deepEqual(rastroArgs('ficha_poliza', { polizaId: u }), { polizaId: u })
+  assert.equal(rastroArgs('abrir_siniestro', { polizaId: 'C0613-12345', tipo: 'x' }).polizaId, '[no es id]')
+  assert.equal(rastroArgs('vehiculo_catalogo', { tipo: 'versiones', filtro: 'd2' }).filtro, 'd2')
+})
+
+test('prompt: forzar solo tras respuesta en otro mensaje, ids siempre uuid, DNI tapado se pide', () => {
+  const auto = systemAsistente([], '2026-09-29', true)
+  assert.match(auto, /forzar=true .*SOLO después de que Alberto te conteste, en otro mensaje/)
+  assert.match(auto, /repetir=true SOLO si él pide/)
+  assert.match(auto, /Nunca digas que un vehículo o una matrícula «no está en el catálogo»/)
+  assert.match(auto, /usarDocumentos=true y NO le preguntes/)
+  for (const m of [true, false]) {
+    const p = systemAsistente([], '2026-09-29', m)
+    assert.match(p, /polizaId sale de ficha_cliente/)
+    assert.match(p, /pídeselo a Alberto entero/)
+  }
+})
+
+test('bucle: forzar en el mismo turno se para, y las escrituras autónomas pasan por la huella', () => {
+  const src = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
+  assert.match(src, /args\?\.forzar === true && escritasEnTurno\.has\(nombreH\)/)
+  assert.match(src, /escribe && autonomo && args\) \{\s*huella = huellaEscritura/)
+  assert.match(src, /herramientasPara\(autonomo\)/)
+  assert.match(src, /openrouterChatTools\(or, mensajes, herramientas as/)
 })

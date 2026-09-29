@@ -9,6 +9,7 @@
 // - DNI/NIE, IBAN y tarjetas salen ENMASCARADOS hacia Telegram y hacia la IA.
 // - Lo que aprende son PREFERENCIAS de trabajo; los datos de un cliente van a la cartera, no a su memoria.
 
+import { createHash } from 'node:crypto'
 import { TIPOS_RELACION } from '@central/module-seguros'
 
 // ── ¿Es un mensaje para la correduría? ───────────────────────────────────────────────────────────
@@ -132,6 +133,7 @@ export type NombreHerramienta =
   | 'proponer_correccion' | 'proponer_oportunidad' | 'mi_dia' | 'oportunidades_cliente'
   | 'proponer_tarea' | 'registrar_llamada' | 'anotar_nota' | 'abrir_siniestro' | 'invitar_portal' | 'enviar_presupuesto'
   | 'vehiculo_catalogo' | 'proponer_tarificacion' | 'alta_cliente' | 'figura_riesgo'
+  | 'estado_oportunidad' | 'cerrar_tarea' | 'ver_siniestro' | 'seguir_siniestro' | 'contacto_cliente' | 'ver_riesgo' | 'precio_hogar'
 
 const fn = (name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'function',
@@ -245,6 +247,14 @@ export const HERRAMIENTAS = [
       siniestrosUltimos5: { type: 'integer', description: 'Solo si Alberto lo dice' },
       primaActual: { type: 'number', description: 'Lo que paga hoy al año, si lo dice (para comparar)' },
     }, ['ramo', 'clienteId']),
+  fn('precio_hogar', 'Precio de HOGAR (vivienda) para un cliente o lead de la cartera. Con la referencia catastral, o con la dirección completa + municipio + provincia (el sistema la busca en el Catastro; si hay varios pisos te da la lista para preguntar). El sistema rellena la vivienda del Catastro y la ficha y te devuelve «FALTAN DATOS» con cada campo y sus opciones: pregúntaselo a Alberto y vuelve a llamar con la referencia y datos={campo: valor} (TODO lo anterior más lo nuevo). Cuando está completo cuesta 0,50€: el sistema lo pide o le manda el botón a Alberto según el modo, y te lo dice. Nunca inventes un dato de la vivienda.',
+    {
+      clienteId: { type: 'string', description: 'La ficha del TOMADOR (de buscar; si es nuevo, alta_cliente antes)' },
+      referencia: { type: 'string', description: 'Referencia catastral de 20 caracteres, si la tienes' },
+      direccion: { type: 'string', description: 'Calle, número, piso y puerta (si no hay referencia)' },
+      municipio: { type: 'string' }, provincia: { type: 'string' },
+      datos: { type: 'object', description: 'Lo que Alberto ha dicho de la vivienda, por campo (los nombres salen de FALTAN DATOS): {"alarma":"si","tipoVivienda":"piso","material":"ladrillo"}. Solo lo que dijo.' },
+    }, ['clienteId']),
   fn('alta_cliente', 'Da de ALTA una ficha nueva (lead) con lo que Alberto te ha DICTADO (un lead que le ha escrito por WhatsApp, p. ej.). Úsala solo si buscar no lo encuentra. Hace falta el nombre y al menos DNI/NIE, teléfono o email; nunca inventes ninguno. Si el sistema dice que ya existe una ficha con ese DNI, usa esa. Con un teléfono o email que ya tiene otra ficha, el sistema te lo dice: pregúntale a Alberto si es otra persona y solo entonces repite con forzar=true.',
     {
       nombre: { type: 'string' }, apellidos: { type: 'string' },
@@ -270,6 +280,45 @@ export const HERRAMIENTAS = [
       },
       quitar: { type: 'boolean' },
     }, ['oportunidadId', 'rol']),
+  fn('estado_oportunidad', 'Cambia el ESTADO de una oportunidad: interesado, propuesta_enviada, ganar (si ya tiene la póliza nuestra, polizaGanadaId), perder (con motivo; si es contra otra compañía, competidor y su prima), aparcar (hasta una fecha) o reabrir. Sácala de oportunidades_cliente.',
+    {
+      oportunidadId: { type: 'string' },
+      accion: { type: 'string', enum: ['interesado', 'propuesta_enviada', 'ganar', 'perder', 'aparcar', 'reabrir'] },
+      motivo: { type: 'string', enum: ['precio', 'competidor', 'coberturas', 'cliente_desiste', 'sin_respuesta', 'no_contactable', 'ya_asegurado', 'otro', 'error_alta'], description: 'Solo con perder' },
+      detalle: { type: 'string', description: 'Obligatorio con motivo «otro»' },
+      competidor: { type: 'string', description: 'Compañía que se lo lleva (motivo competidor)' },
+      primaCompetidor: { type: 'number' },
+      aparcadaHasta: { type: 'string', description: 'aaaa-mm-dd (aparcar)' },
+      polizaGanadaId: { type: 'string', description: 'La póliza nuestra con la que se ganó, si ya existe' },
+    }, ['oportunidadId', 'accion']),
+  fn('cerrar_tarea', 'Da por HECHA una tarea pendiente de una oportunidad (llamada, email, whatsapp…) con su resultado. El tareaId sale de oportunidades_cliente o de mi_dia.',
+    { tareaId: { type: 'string' }, resultado: { type: 'string', description: 'Qué se hizo o qué pasó, en una frase' } }, ['tareaId']),
+  fn('ver_siniestro', 'Un siniestro entero: estado, seguimiento (tramitador, perito, reserva…), terceros y documentos. El siniestroId sale de ficha_cliente o ficha_poliza.',
+    { siniestroId: { type: 'string' } }, ['siniestroId']),
+  fn('seguir_siniestro', 'Actualiza un siniestro: O su estado (en_tramitacion, cerrado, rechazado; solo los abiertos por nosotros, los de CIMA los fija la compañía) O datos de seguimiento (referencia de la compañía, gravedad, tramitador, perito, reserva, indemnización, nota). Una cosa por llamada.',
+    {
+      siniestroId: { type: 'string' },
+      estado: { type: 'string', enum: ['en_tramitacion', 'cerrado', 'rechazado'] },
+      referencia: { type: 'string', description: 'Nº de siniestro que da la compañía' },
+      gravedad: { type: 'string', enum: ['leve', 'moderado', 'grave', 'muy_grave'] },
+      tramitadorNombre: { type: 'string' }, tramitadorTelefono: { type: 'string' }, tramitadorEmail: { type: 'string' },
+      peritoNombre: { type: 'string' }, peritoTelefono: { type: 'string' }, peritoEmail: { type: 'string' },
+      reservaImporte: { type: 'number' }, indemnizacionImporte: { type: 'number' },
+      nota: { type: 'string', description: 'Se AÑADE al seguimiento con fecha' },
+    }, ['siniestroId']),
+  fn('contacto_cliente', 'Añade un teléfono o email a la ficha de un cliente (accion=anadir), o hace principal uno que ya tiene (accion=principal, con su contactoId de ficha_cliente). Solo con lo que Alberto te dicte.',
+    {
+      clienteId: { type: 'string' },
+      accion: { type: 'string', enum: ['anadir', 'principal'] },
+      tipo: { type: 'string', enum: ['telefono', 'email'] },
+      valor: { type: 'string' },
+      etiqueta: { type: 'string', enum: ['móvil', 'fijo', 'trabajo', 'whatsapp', 'personal', 'otro'] },
+      principal: { type: 'boolean', description: 'Que pase a ser el principal (el que usa todo lo demás)' },
+      contactoId: { type: 'string' },
+      forzar: { type: 'boolean', description: 'SOLO si Alberto confirma que es otra persona distinta de la ficha que ya lo tiene' },
+    }, ['clienteId', 'accion']),
+  fn('ver_riesgo', 'Una oportunidad como RIESGO: quién es tomador, propietario y conductores (figuras), y las variantes con los precios ya pedidos (compañías, primas). Úsala para «¿qué precios salieron?» o antes de cambiar figuras.',
+    { oportunidadId: { type: 'string' } }, ['oportunidadId']),
   fn('enviar_presupuesto', 'Rescata la ÚLTIMA tarificación ya pagada de un cliente SIN póliza (oportunidad nueva) para ese ramo, prepara el presupuesto y le manda el correo para que elija la opción en su portal. Necesitas sus exigencias y necesidades (qué quiere asegurar y qué le importa): si Alberto no las ha dicho, PREGÚNTASELAS, nunca las inventes. Alberto lo manda con un botón: ES UN CORREO AL CLIENTE. Si el cliente avisó desde el portal de que un dato está mal (garaje, km, conductor…), NO la uses para reenviar: esos precios no valen; pide precio otra vez con proponer_tarificacion y el dato corregido, y solo después enviar_presupuesto.',
     {
       clienteId: { type: 'string', description: 'La ficha (sácala de buscar; la matrícula también sirve para buscar)' },
@@ -318,8 +367,13 @@ const MODO_AUTONOMO: readonly string[] = [
   '- Antes de escribir, asegúrate de que tienes los datos: si falta algo imprescindible (el nombre de un lead, qué papel tiene cada persona), pregúntaselo a Alberto en vez de suponerlo. Nunca inventes un DNI, una fecha ni un teléfono.',
   '- Lead nuevo que pide precio de coche o moto: buscar → si no está, alta_cliente con lo dictado (sin nombre no hay alta: pregúntalo) → proponer_oportunidad (clienteId, ramo) → si el propietario o un conductor no es el tomador, figura_riesgo (con la oportunidad) → vehiculo_catalogo (con filtro; nunca repitas una consulta con los mismos datos; si la versión exacta no sale, pásala tal cual la dijo) → proponer_tarificacion con la oportunidadId. Si contesta FALTAN DATOS, pregúntale exactamente eso.',
   '- «Cámbiale el propietario / pon de conductor a X»: oportunidades_cliente para la oportunidad → figura_riesgo → proponer_tarificacion con esa oportunidadId (reutiliza el vehículo si ya se pidió precio). El precio te llega en un mensaje aparte.',
-  '- Oportunidades con documentos: si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true y no le preguntes lo que ya pone. Si el sistema contesta YA ES NUESTRA, díselo con el enlace.',
-  '- Correcciones de la ficha con proponer_correccion: dirección, CP, ciudad, provincia, nombre o apellidos, solo con valores que Alberto te haya dicho. DNI, fecha de nacimiento, teléfonos, emails e IBAN todavía se cambian en la ficha.',
+  '- Oportunidades con documentos: si Alberto habla de un documento que acaba de subir —también «otra», «la segunda», «del mismo cliente», «abre oportunidad» a secas— pasa usarDocumentos=true y NO le preguntes ramo, compañía, prima, vencimiento ni de quién es: si no dice de quién es, llama SIN clienteId y el sistema lee el tomador, lo busca por DNI y si no está crea el lead. Pregúntale solo si el sistema te lo pide. Si contesta YA ES NUESTRA, díselo con el enlace.',
+  '- Antes de escribir, mira si YA está hecho: buscar antes de alta_cliente, oportunidades_cliente antes de abrir otra oportunidad del mismo ramo. Si el sistema dice YA SE HIZO EN UN MENSAJE ANTERIOR, cuéntaselo a Alberto; usa repetir=true SOLO si él pide expresamente hacerlo otra vez.',
+  '- forzar=true (teléfono o email que ya tiene otra ficha) SOLO después de que Alberto te conteste, en otro mensaje, que es otra persona. Nunca lo decidas tú en el mismo turno.',
+  '- Catálogo: para motos, versiones-moto necesita motor (Gasolina casi siempre). Si una consulta devuelve 0 opciones, NO insistas con variaciones: pasa a proponer_tarificacion la versión tal cual la dijo Alberto. Nunca digas que un vehículo o una matrícula «no está en el catálogo».',
+  '- Correcciones de la ficha con proponer_correccion: dirección, CP, ciudad, provincia, nombre o apellidos, solo con valores que Alberto te haya dicho. Teléfonos y emails con contacto_cliente. DNI, fecha de nacimiento e IBAN todavía se cambian en la ficha.',
+  '- Seguimiento: estado_oportunidad («ganada», «perdida contra Mapfre por precio», «apárcala hasta marzo»), cerrar_tarea («ya le he llamado, quiere precio»: cierra la tarea Y registra la llamada si procede), ver_siniestro / seguir_siniestro (tramitador, perito, reserva, cerrarlo), ver_riesgo («¿qué precios salieron?»).',
+  '- Precio de HOGAR: buscar (o alta_cliente) → precio_hogar con la referencia catastral o la dirección completa. Si contesta ELEGIR o FALTAN DATOS, pregúntale a Alberto exactamente eso (con las opciones) y vuelve a llamar con la referencia y todos los datos. Los supuestos que ABARATAN díselos: si el cliente los desmiente, el precio sube.',
   '- Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy.',
 ]
 
@@ -340,7 +394,8 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string, auton
     '- Pedir precio de COCHE o MOTO: busca al cliente PRIMERO. Si buscar no lo encuentra (lead nuevo, sin ficha), NO consultes el catálogo ni nada más: dile a Alberto que no tiene ficha y que sin ficha no se puede pedir precio desde aquí; que la cree en /correduria/cliente/nuevo (o te mande un documento suyo con el DNI) y te vuelva a escribir; y dile ya qué datos le faltan de los que dictó (nombre y apellidos, sexo, teléfono…). Con ficha: usa vehiculo_catalogo para el vehículo (con filtro; nunca repitas una consulta con los mismos datos; si la versión exacta no sale, pásala tal cual la dijo) y llama a proponer_tarificacion con lo que Alberto dijo. Si contesta FALTAN DATOS, pregúntale a Alberto exactamente eso y vuelve a llamar con todo. El botón cuesta 0,50€ y lo pulsa él; el precio le llega solo a él (nada sale al cliente). NUNCA digas que ya has pedido el precio.',
     ]),
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
-    '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',
+    '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos. Si para escribir necesitas un DNI que solo tienes tapado («…115R»), pídeselo a Alberto entero.',
+    '- Los ids (clienteId, polizaId, oportunidadId, tareaId, siniestroId) son SIEMPRE los uuid que devuelven las herramientas: el polizaId sale de ficha_cliente (busca primero), nunca es el número de póliza de la compañía.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: dile que los cambie en la ficha.',
     '- Estilo: español, breve (es un chat de móvil), sin markdown ni tablas. Importes en formato español (2.162,49€). Fechas dd/mm/aaaa.',
   ]
@@ -398,7 +453,7 @@ export function rastroArgs(nombre: string, args: Record<string, unknown> | null)
   }
   // Texto de una nota o de un parte: dato personal del cliente, no va al rastro que sobrevive a la purga.
   if (nombre === 'anotar_nota') return { clienteId: args.clienteId, tipoNota: args.tipoNota ?? 'nota', texto: '[texto]' }
-  if (nombre === 'abrir_siniestro') return { polizaId: args.polizaId, tipo: args.tipo, descripcion: '[texto]' }
+  if (nombre === 'abrir_siniestro') return { polizaId: idRastro(args.polizaId), tipo: args.tipo, descripcion: '[texto]' }
   if (nombre === 'proponer_tarea' || nombre === 'registrar_llamada') {
     return { oportunidadId: args.oportunidadId, tipo: args.tipo, resultado: args.resultado, fecha: args.fecha ?? args.volverEl }
   }
@@ -411,14 +466,30 @@ export function rastroArgs(nombre: string, args: Record<string, unknown> | null)
   if (nombre === 'figura_riesgo') {
     return { oportunidadId: args.oportunidadId, rol: args.rol, clienteId: args.clienteId, quitar: args.quitar === true, nueva: typeof args.persona === 'object' && args.persona !== null }
   }
-  if (nombre === 'vehiculo_catalogo') return { tipo: args.tipo, marcaId: args.marcaId, modeloId: args.modeloId, motor: args.motor }
+  if (nombre === 'contacto_cliente') return { clienteId: args.clienteId, accion: args.accion, tipo: args.tipo, principal: args.principal === true }
+  if (nombre === 'seguir_siniestro') return { siniestroId: args.siniestroId, estado: args.estado, campos: Object.keys(args).filter((k) => k !== 'siniestroId' && k !== 'estado') }
+  if (nombre === 'estado_oportunidad') return { oportunidadId: args.oportunidadId, accion: args.accion, motivo: args.motivo }
+  if (nombre === 'cerrar_tarea') return { tareaId: args.tareaId }
+  if (nombre === 'ver_siniestro') return { siniestroId: args.siniestroId }
+  if (nombre === 'ver_riesgo') return { oportunidadId: args.oportunidadId }
+  // La dirección es un dato personal; la referencia catastral también (identifica la casa). Al rastro, QUÉ se dijo.
+  if (nombre === 'precio_hogar') {
+    return { clienteId: args.clienteId, porReferencia: typeof args.referencia === 'string', campos: typeof args.datos === 'object' && args.datos !== null ? Object.keys(args.datos) : [] }
+  }
+  if (nombre === 'vehiculo_catalogo') return { tipo: args.tipo, marcaId: args.marcaId, modeloId: args.modeloId, motor: args.motor, filtro: args.filtro }
   if (nombre === 'proponer_oportunidad') {
     // El ramo y si usó documentos, sí; compañía, prima o nº de póliza, no (son del contrato de un tercero).
     return { clienteId: args.clienteId, ramo: args.ramo, usarDocumentos: args.usarDocumentos === true, campos: Object.keys(args).filter((k) => k !== 'clienteId') }
   }
   const fuera: Record<string, unknown> = {}
   for (const k of ['clienteId', 'polizaId', 'dias', 'numero', 'projectId', 'quoteId']) if (k in args) fuera[k] = args[k]
+  if ('polizaId' in fuera) fuera.polizaId = idRastro(fuera.polizaId)
   return fuera
+}
+
+/** Un polizaId que no es uuid suele ser el nº de póliza de la compañía (dato de un tercero): al rastro no va. */
+function idRastro(v: unknown): unknown {
+  return v === undefined || v === null || idValido(v) ? v : '[no es id]'
 }
 
 /** Precio por 1.000 tokens cuando el catálogo no conoce el modelo: alto a propósito, para que el tope salte antes. */
@@ -573,4 +644,90 @@ export function textoSinBoton(t: string): string {
 export const HERRAMIENTAS_ESCRITURA: ReadonlySet<string> = new Set([
   'alta_cliente', 'figura_riesgo', 'proponer_correccion', 'proponer_oportunidad', 'proponer_tarea', 'registrar_llamada',
   'anotar_nota', 'abrir_siniestro', 'invitar_portal', 'enviar_presupuesto', 'proponer_tarificacion', 'preparar_emision', 'proponer_regla',
+  'estado_oportunidad', 'cerrar_tarea', 'seguir_siniestro', 'contacto_cliente', 'precio_hogar',
 ])
+
+/**
+ * Respuesta de una escritura del puerto de asegura → lo que lee la IA. Solo 2xx con `estado:'ok'` es
+ * HECHO; sin respuesta o 5xx es «no sé si se ha hecho» (pudo aplicarse), nunca «no se ha hecho».
+ */
+export function escrituraParaIA(status: number, json: unknown, que: string): { texto: string; ok: boolean } {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
+  if (status >= 200 && status < 300 && (o.estado === 'ok' || o.estado === undefined)) return { texto: `HECHO: ${que}.`, ok: true }
+  if (status === 0 || status >= 500) return { texto: `NO SÉ SI SE HA HECHO (${que}): la cartera no ha contestado bien. NO lo repitas; dile a Alberto que lo mire en la ficha.`, ok: false }
+  const motivo = typeof o.motivo === 'string' ? o.motivo : typeof o.estado === 'string' ? o.estado : `HTTP ${status}`
+  return { texto: `NO SE HA HECHO (${que}): ${motivo}.`, ok: true }
+}
+
+// ── Modo autónomo: lo que ve la IA y la memoria entre mensajes ────────────────────────────────────
+
+/**
+ * En modo autónomo estas herramientas HACEN (sin botón). Su descripción base dice «NO escribe / botón»
+ * porque es la del modo con botón, y la IA se fía de la descripción más que del prompt: por eso se
+ * reescribe la frase, no se añade una contradicción al lado.
+ */
+const FRASES_BOTON: readonly (readonly [string, string])[] = [
+  ['NO escribe: el sistema le manda el cambio con un botón y es él quien lo aplica.', 'SE APLICA YA (sin botón); el sistema le manda el cambio a Alberto.'],
+  ['NO escribe: el sistema le manda el resumen con un botón y es él quien la abre.', 'SE ABRE YA (sin botón); el sistema le manda el resumen a Alberto.'],
+  ['Alberto la crea con un botón.', 'Se crea YA (sin botón).'],
+  ['Alberto lo confirma con un botón.', 'Se registra YA (sin botón).'],
+  ['Alberto la confirma con un botón.', 'Se anota YA (sin botón).'],
+  ['Alberto lo abre con un botón.', 'Se abre YA (sin botón).'],
+  ['NO pide nada: el servidor', 'PIDE EL PRECIO DE VERDAD en cuanto esté completo (0,50€, sin botón): el servidor'],
+  ['Cuando esté completo, Alberto recibe el resumen con el botón «Pedir precio (0,50€)».', 'Cuando esté completo se pide YA y el precio le llega a Alberto en un mensaje aparte (tarda hasta 3 minutos).'],
+  ['Propón CORREGIR', 'CORRIGE'], ['Propón ABRIR', 'ABRE'], ['Propón una TAREA', 'Crea una TAREA'], ['Propón PEDIR PRECIO', 'PIDE PRECIO'],
+]
+
+/** Herramientas que en modo autónomo se ejecutan sin botón y cuyo texto habla de botón. */
+export const AUTONOMAS_CON_TEXTO_DE_BOTON: readonly string[] = [
+  'proponer_correccion', 'proponer_oportunidad', 'proponer_tarea', 'registrar_llamada', 'anotar_nota', 'abrir_siniestro', 'proponer_tarificacion',
+]
+
+/** Las herramientas tal como las ve la IA en cada modo. En autónomo, las escrituras admiten `repetir`. */
+export function herramientasPara(autonomo: boolean): readonly (typeof HERRAMIENTAS)[number][] {
+  if (!autonomo) return HERRAMIENTAS
+  return HERRAMIENTAS.map((h) => {
+    const nombre = h.function.name
+    let description = h.function.description
+    if (AUTONOMAS_CON_TEXTO_DE_BOTON.includes(nombre)) for (const [a, b] of FRASES_BOTON) description = description.replace(a, b)
+    if (!HERRAMIENTAS_ESCRITURA.has(nombre)) return { ...h, function: { ...h.function, description } }
+    const properties = {
+      ...h.function.parameters.properties,
+      repetir: { type: 'boolean', description: 'SOLO si Alberto pide EXPLÍCITAMENTE hacer otra vez algo que ya se hizo en un mensaje anterior' },
+    }
+    return { ...h, function: { ...h.function, description, parameters: { ...h.function.parameters, properties } } }
+  })
+}
+
+/** Minutos durante los que la MISMA escritura (misma herramienta, mismos datos) no se repite entre mensajes. */
+export const MINUTOS_HUELLA = 30
+
+function estable(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(estable)
+  if (typeof v === 'string') return v.trim().toLowerCase().replace(/\s+/g, ' ')
+  if (typeof v === 'object' && v !== null) {
+    return Object.fromEntries(Object.keys(v).sort().filter((k) => k !== 'repetir').map((k) => [k, estable((v as Record<string, unknown>)[k])]))
+  }
+  return v
+}
+
+/** Huella de una escritura: hash de la herramienta y sus datos (sin `repetir`, sin mayúsculas ni espacios de más). No guarda el dato. */
+export function huellaEscritura(nombre: string, args: Record<string, unknown>): string {
+  return createHash('sha256').update(`${nombre}\n${JSON.stringify(estable(args))}`).digest('hex')
+}
+
+/**
+ * ¿Deja huella? Solo lo que se hizo (HECHO, PEDIDO) o pudo hacerse (NO SÉ SI). Lista POSITIVA a propósito:
+ * lo que no llegó a intentarse (faltan datos, apagado, tope, uno por mensaje…) no puede bloquear la
+ * llamada completa del mensaje siguiente, y un prefijo nuevo que nadie añada aquí cae en «no deja».
+ */
+export function dejaHuella(texto: string): boolean {
+  return /^(HECHO|PEDIDO|NO SÉ SI)/.test(texto)
+}
+
+/** Un DNI copiado del historial viene enmascarado («…115R», «****115R»): no vale para escribir. */
+export function dniEnmascarado(v: unknown): boolean {
+  return typeof v === 'string' && /[…*•]|\.\.\./.test(v)
+}
+
+export const TEXTO_DNI_ENMASCARADO = 'DNI ENMASCARADO: ese DNI lo has copiado del historial (llega tapado). Pídeselo a Alberto entero otra vez; no lo reconstruyas.'
