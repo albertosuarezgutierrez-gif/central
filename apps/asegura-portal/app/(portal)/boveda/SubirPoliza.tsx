@@ -99,6 +99,11 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     if (!elegido) return
     setMotivoError(null)
     setEstado('subiendo')
+    setResultado(null)
+    setGuardadaAMano(null)
+    setFicheroProtegido(null)
+    setContrasena('')
+    setErrorReintento(null)
     // Vercel corta el cuerpo a 4,5 MB antes de llegar a la ruta (29/09/2026): una foto se
     // encoge aquí, y un PDF que siga pasando de 4 MB se dice claro en vez de mandarlo.
     const f = await encogerSiHaceFalta(elegido)
@@ -106,10 +111,6 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
       setMotivoError(`Pesa ${(f.size / 1024 / 1024).toFixed(1)} MB y el máximo es 4 MB. Escanéala con menos resolución, o añádela a mano.`)
       return setEstado('error')
     }
-    setResultado(null)
-    setGuardadaAMano(null)
-    setFicheroProtegido(null)
-    setContrasena('')
     const body = new FormData()
     body.append('documento', f)
     // Siempre viaja: «propio» si no ha marcado la casilla, «empresa» si sí.

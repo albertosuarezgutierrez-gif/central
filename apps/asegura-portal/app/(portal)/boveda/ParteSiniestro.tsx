@@ -385,7 +385,21 @@ let contadorClaves = 0
 
 /** ¿Merece la pena reintentarlo? Solo si el fichero en sí vale: lo que falló fue el viaje. */
 function reintentable(e: Elegido): boolean {
-  return revisarDocumento({ type: e.fichero.type, size: e.fichero.size, name: e.fichero.name }) === null
+  return reparoSubida(e.fichero) === null
+}
+
+/**
+ * El reparo de un fichero AL ELEGIRLO: el del servidor y, además, el corte de Vercel para lo que no
+ * se puede encoger (29/09/2026). Una foto grande pasa porque se reduce al enviar; un PDF de 6 MB se
+ * dice ya, no después de haber creado el parte y mandado sin él.
+ */
+function reparoSubida(f: File): string | null {
+  const reparo = revisarDocumento({ type: f.type, size: f.size, name: f.name })
+  if (reparo) return reparo
+  if (!f.type.startsWith('image/') && f.size > MAX_BYTES_SUBIDA) {
+    return `Pesa ${(f.size / 1024 / 1024).toFixed(1)} MB y el máximo es ${MAX_MB} MB. Mándalo con menos resolución, o llámanos y te decimos cómo hacérnoslo llegar.`
+  }
+  return null
 }
 
 /**
@@ -949,7 +963,7 @@ export function ParteSiniestro({
     const hueco = Math.max(0, MAX_ADJUNTOS_POR_PARTE - ocupanPlaza(ficheros))
     const entran = nuevos.slice(0, hueco)
     const añadidos: Elegido[] = entran.map((f) => {
-      const reparo = revisarDocumento({ type: f.type, size: f.size, name: f.name })
+      const reparo = reparoSubida(f)
       // Un fichero rechazado nace en `error` CON su motivo, no se descarta:
       // desaparecer de la lista se lee como «ya está subido».
       return {

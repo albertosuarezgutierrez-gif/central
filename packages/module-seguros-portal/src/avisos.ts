@@ -74,6 +74,12 @@ export type Aviso = {
    * los que piden algo en el portal (aceptar, firmar, corregir datos) se van solos al resolverse.
    */
   descartable: boolean
+  /**
+   * Con qué se sella como LEÍDO. Por CICLO en lo que se repite (29/09/2026): la fila de un
+   * vencimiento de cartera o de un carné es la MISMA cada año, así que sellar por `tipo:id` a secas
+   * escondería también el del año que viene.
+   */
+  clave: string
 }
 
 /**
@@ -94,9 +100,13 @@ export const TIPOS_AVISO_DESCARTABLES = [
   'poliza_modificada',
 ] as const satisfies readonly TipoAviso[]
 
-/** La clave con la que se sella un aviso leído: `tipo:id`. El id ya cambia por ciclo o por cambio nuevo. */
-export function claveAviso(a: Pick<Aviso, 'tipo' | 'id'>): string {
-  return `${a.tipo}:${a.id}`
+/**
+ * La clave con la que se sella un aviso leído: `tipo:id`, y con la fecha del ciclo cuando la fila se
+ * reutiliza año tras año (vencimiento de la cartera, carné). Si CIMA corrige la fecha dentro de la
+ * ventana el aviso vuelve a salir una vez: repetirlo es mejor que esconder el del año siguiente.
+ */
+export function claveAviso(a: Pick<Aviso, 'tipo' | 'id'>, ciclo?: string): string {
+  return ciclo ? `${a.tipo}:${a.id}@${ciclo}` : `${a.tipo}:${a.id}`
 }
 
 /** ¿Es una clave de un aviso descartable? La ruta que sella no acepta otra cosa. */
@@ -347,7 +357,7 @@ export function textoGlobo(n: number, ilegibles: number, fuentes: number): strin
 }
 
 export function avisosDe(x: EntradaAvisos): Avisos {
-  const avisos: Omit<Aviso, 'descartable'>[] = []
+  const avisos: (Omit<Aviso, 'descartable' | 'clave'> & { ciclo?: string })[] = []
   const fuentesIlegibles: FuenteAviso[] = []
 
   if (x.peticiones === null) {
@@ -445,6 +455,7 @@ export function avisosDe(x: EntradaAvisos): Avisos {
         id: o.repiteCadaMeses ? `${o.id}:${diaIso(o.fechaAccionable)}` : o.id,
         titulo: o.titulo,
         detalle: `Puedes actuar hasta el ${FECHA.format(o.fechaAccionable)}.`,
+        ciclo: diaIso(o.fechaAccionable),
         href: hrefPoliza(o.polizaId, HREF_POR_TIPO.obligacion_en_ventana),
       })
     }
@@ -478,6 +489,7 @@ export function avisosDe(x: EntradaAvisos): Avisos {
           id: c.id,
           titulo: `Tu carné de conducir (${c.tipo}) caduca pronto`,
           detalle: `Caduca el ${cuando}. Pide cita en la DGT con tiempo.`,
+          ciclo: c.fechaCaducidad.trim().slice(0, 10),
           href: HREF_POR_TIPO.carnet_en_ventana,
         })
         continue
@@ -591,8 +603,8 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     (x.polizasModificadas === undefined ? 1 : 0)
   const descartables = new Set<string>(TIPOS_AVISO_DESCARTABLES)
   const visibles = avisos
-    .map((a) => ({ ...a, descartable: descartables.has(a.tipo) }))
-    .filter((a) => !(a.descartable && x.leidos?.has(claveAviso(a))))
+    .map(({ ciclo, ...a }) => ({ ...a, descartable: descartables.has(a.tipo), clave: claveAviso(a, ciclo) }))
+    .filter((a) => !(a.descartable && x.leidos?.has(a.clave)))
   return {
     avisos: visibles,
     fuentesIlegibles,

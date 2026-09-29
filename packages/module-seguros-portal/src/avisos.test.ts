@@ -334,7 +334,7 @@ test('pulsado (en `leidos`) un aviso informativo deja de salir y baja el número
   const antes = avisosDe(base)
   assert.equal(antes.globo, '2')
   assert.ok(antes.avisos.every((a) => a.descartable), 'un vencimiento es informativo: se tiene que poder descartar')
-  const despues = avisosDe({ ...base, leidos: new Set([claveAviso(antes.avisos[0]!)]) })
+  const despues = avisosDe({ ...base, leidos: new Set([antes.avisos[0]!.clave]) })
   assert.deepEqual(despues.avisos.map((a) => a.id), ['o2'])
   assert.equal(despues.globo, '1')
 })
@@ -354,4 +354,14 @@ test('sin saber qué se ha leído (`leidos: null`) se enseñan todos', () => {
   const r = avisosDe({ autorizaciones: vacias, obligaciones: [obl({ id: 'o1' })], peticiones: [], datos: [], carnets: [], leidos: null, hoy: HOY })
   assert.equal(r.avisos.length, 1)
   assert.deepEqual(r.fuentesIlegibles, [], 'no saber lo leído no es una fuente ilegible: el aviso está')
+})
+
+test('🚨 leído el vencimiento de ESTE año, el del año que viene vuelve a salir (misma fila de obligación)', () => {
+  const este = avisosDe({ autorizaciones: vacias, obligaciones: [obl({ id: 'o1', polizaId: 'p1', fechaAccionable: dias(3) })], peticiones: [], datos: [], carnets: [], hoy: HOY })
+  const leidos = new Set([este.avisos[0]!.clave])
+  const HOY2 = new Date(HOY.getTime() + 365 * 86_400_000)
+  const siguiente = avisosDe({ autorizaciones: vacias, obligaciones: [obl({ id: 'o1', polizaId: 'p1', fechaAccionable: new Date(HOY2.getTime() + 3 * 86_400_000) })], peticiones: [], datos: [], carnets: [], leidos, hoy: HOY2 })
+  assert.equal(siguiente.avisos.length, 1, 'el sello del año pasado ha escondido el vencimiento de este año')
+  assert.equal(esClaveDescartable(este.avisos[0]!.clave), true, 'la ruta de «leído» rechazaría la clave con ciclo')
+  assert.equal(claveAviso({ tipo: 'poliza_modificada', id: 'c1' }), 'poliza_modificada:c1')
 })

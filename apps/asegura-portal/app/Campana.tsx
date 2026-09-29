@@ -113,7 +113,7 @@ export function Campana() {
     void fetch('/api/avisos/leido', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ clave: `${a.tipo}:${a.id}` }),
+      body: JSON.stringify({ clave: a.clave }),
       keepalive: true,
     }).catch(() => {})
   }, [])
