@@ -43,7 +43,7 @@ export type DevolucionLeida = {
 }
 
 export type LecturaCorreoDevolucion = {
-  compania: 'reale' | 'occident' | 'mapfre'
+  compania: 'reale' | 'occident' | 'mapfre' | 'allianz'
   codigoDgs: string
   devoluciones: DevolucionLeida[]
   /**
@@ -64,7 +64,10 @@ export type CorreoDevolucion = {
   fecha: string
 }
 
-const CODIGO = { reale: 'C0613', occident: 'C0468', mapfre: 'C0058' } as const
+/** Motivo con el que entra una fila de la carta de Allianz de pólizas ANULADAS por impago. */
+export const MOTIVO_POLIZA_ANULADA = 'Póliza anulada por impago'
+
+const CODIGO = { reale: 'C0613', occident: 'C0468', mapfre: 'C0058', allianz: 'C0109' } as const
 
 /** Quita ceros a la izquierda: Mapfre escribe `8808116169` y CIMA `08808116169`. */
 export function normalizarIdRecibo(id: string): string {
@@ -75,7 +78,7 @@ export function normalizarIdRecibo(id: string): string {
 export function clasificarMotivoDevolucion(motivo: string | null | undefined): TipoMotivoDevolucion | null {
   const m = (motivo ?? '').trim()
   if (m === '') return null
-  if (/\bMD06\b|no\s+conforme|devoluci[oó]n\s+solicitada|orden\s+del\s+(deudor|cliente|titular)|rechaz/i.test(m)) return 'cliente_rechaza'
+  if (/\bMD06\b|no\s+conforme|disconform|devoluci[oó]n\s+solicitada|orden\s+del\s+(deudor|cliente|titular)|rechaz/i.test(m)) return 'cliente_rechaza'
   if (/\bAM04\b|fondos|saldo/i.test(m)) return 'fondos'
   if (/\bRR0\d\b|raz(ones)?[.\s]*reg|\bAC(0\d|1\d)\b|\bMD01\b|mandato|cuenta|iban|titular|identificaci/i.test(m)) return 'cuenta'
   return 'otro'
@@ -209,7 +212,99 @@ function leerMapfre(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
   return out
 }
 
+// ── Allianz ──────────────────────────────────────────────────────────────────
+// Allianz no escribe la tabla en el correo: la manda en un PDF adjunto (`Allianz_Carta_DDMMAAAA.pdf`)
+// y el triaje le pasa su texto por filas, con las celdas separadas por tabulador. Dos cartas:
+// · «Rel. recibos ventanilla» = «AVISO Relación de recibos bancarios devueltos»:
+//   Nº | Póliza | Recibo | Tomador | Importe | Fecha Efecto | Motivo Devolución | Nº Cuenta Banco
+//   1  043600000  607400000  Apellido  249,34  01/06/26  DISCONFORM  **** **** **
+//      Apellido2,  E IMPORTE  ******0000        ← el motivo y el tomador siguen en la línea de abajo
+// · «Relacion anulacion polizas por impago» = la póliza ya se anuló por ese recibo:
+//   Nº | Póliza | Recibo | Ramo | Tomador | Importe | Fecha Efecto | F. Anulación (00/00/0000 = no la da)
+// La carta no trae la fecha del banco: la devolución se fecha el día de la carta.
+const FILA_ALLIANZ_DEVUELTO = /^\d{1,3}\s+(\d{6,})\s+(\d{6,})\s+(.+?)\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s+(\d{2}\/\d{2}\/\d{2}(?:\d{2})?)\s*(.*)$/
+const FILA_ALLIANZ_ANULADA = /^\d{1,3}\s+(\d{6,})\s+(\d{6,})\s+\d{1,5}\s+(.+?)\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s*$/
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/** `01/06/26` → `2026-06-01`. Allianz escribe el año con dos cifras en la carta de devueltos. */
+function isoDeFechaCorta(s: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(s.trim())
+  return m ? isoDeFechaEs(`${m[1]}/${m[2]}/20${m[3]}`) : isoDeFechaEs(s)
+}
+
+/** «17 de Junio de 2026» (la fecha de la carta). */
+function fechaCartaAllianz(texto: string): string | null {
+  const m = /\b(\d{1,2})\s+de\s+([a-záéíóú]+)\s+de\s+(\d{4})\b/i.exec(texto)
+  if (!m) return null
+  const mes = MESES.indexOf(m[2].toLowerCase())
+  return mes < 0 ? null : isoDeFechaEs(`${m[1]}/${mes + 1}/${m[3]}`)
+}
+
+/** Una celda de continuación del motivo: MAYÚSCULAS, sin asteriscos. */
+const CONTINUA_MOTIVO = /^[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ .]*$/
+
+/**
+ * La segunda línea de una fila de devueltos trae, por columnas, [resto del tomador, resto del motivo,
+ * resto de la cuenta]. Solo con las TRES se sabe que la del medio es el motivo: con dos, la primera
+ * puede ser el tomador («S.L.», un apellido en mayúsculas) y pegarla metería su nombre en el motivo.
+ * Entonces el motivo se queda con lo de la primera línea, que ya basta para clasificarlo.
+ */
+function continuacionMotivo(linea: string | undefined): string | null {
+  if (!linea || /^\d{1,3}\s+\d{6,}/.test(linea)) return null
+  const celdas = linea.split('\t').map((x) => x.trim()).filter(Boolean)
+  if (celdas.length !== 3 || !/^\*[*\d\s]*$/.test(celdas[2])) return null
+  return CONTINUA_MOTIVO.test(celdas[1]) ? celdas[1] : null
+}
+
+/**
+ * «DISCONFORM» + «E IMPORTE» es una palabra partida (sin espacio); «NO» + «CONFORME» son dos. Se
+ * pega sin espacio solo si el trozo de abajo empieza por un resto de 1-2 letras tras una palabra larga.
+ */
+function unirMotivo(arriba: string, abajo: string | null): string {
+  if (!abajo || !arriba) return arriba
+  const ultima = arriba.split(' ').pop() ?? ''
+  const primera = abajo.split(' ')[0] ?? ''
+  return ultima.length >= 6 && primera.length <= 2 ? `${arriba}${abajo}` : `${arriba} ${abajo}`
+}
+
+function leerAllianz(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
+  if (!esDe(c.remitente, 'allianz.es')) return null
+  const anulacion = /anulaci[oó]n\s+(de\s+)?p[oó]lizas\s+por\s+impago/i.test(`${c.asunto}\n${c.texto}`)
+  const devueltos = /recibos\s+ventanilla|recibos\s+bancarios\s+devueltos/i.test(`${c.asunto}\n${c.texto}`)
+  if (!anulacion && !devueltos) return null
+  const out: LecturaCorreoDevolucion = { compania: 'allianz', codigoDgs: CODIGO.allianz, devoluciones: [], incidencias: [], ilegibles: 0 }
+  const ls = lineas(c.texto)
+  // Sin la cabecera de la tabla no se ha leído el PDF (no venía, o no se pudo sacar su texto): es un
+  // aviso que NO se ha sabido leer, no una carta sin recibos.
+  if (!ls.some((l) => /p[oó]liza\s+recibo/i.test(l.replace(/\t/g, ' ')))) { out.ilegibles++; return out }
+  const fechaDevolucion = fechaCartaAllianz(c.texto) ?? c.fecha.slice(0, 10)
+  for (let i = 0; i < ls.length; i++) {
+    const l = ls[i].replace(/\t/g, ' ').replace(/\s+/g, ' ').trim()
+    if (!/^\d{1,3}\s+\d{6,}\s+\d{6,}\b/.test(l)) continue
+    if (anulacion) {
+      const m = FILA_ALLIANZ_ANULADA.exec(l)
+      if (!m) { out.ilegibles++; continue }
+      out.devoluciones.push({
+        codigoDgs: CODIGO.allianz, numeroPoliza: m[1], idRecibo: m[2], importe: importeEs(m[4]),
+        fechaEfecto: isoDeFechaEs(m[5]), fechaDevolucion,
+        motivo: MOTIVO_POLIZA_ANULADA, tipoMotivo: 'otro',
+      })
+      continue
+    }
+    const m = FILA_ALLIANZ_DEVUELTO.exec(l)
+    if (!m) { out.ilegibles++; continue }
+    const motivo = unirMotivo(m[6].replace(/\*+/g, ' ').replace(/\s+/g, ' ').trim(), continuacionMotivo(ls[i + 1]))
+    const limpio = motivoLimpio(motivo)
+    out.devoluciones.push({
+      codigoDgs: CODIGO.allianz, numeroPoliza: m[1], idRecibo: m[2], importe: importeEs(m[4]),
+      fechaEfecto: isoDeFechaCorta(m[5]), fechaDevolucion,
+      motivo: limpio, tipoMotivo: clasificarMotivoDevolucion(limpio),
+    })
+  }
+  return out
+}
+
 /** `null` = no es un correo de devolución que se sepa leer. */
 export function leerCorreoDevolucion(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
-  return leerReale(c) ?? leerOccident(c) ?? leerMapfre(c)
+  return leerReale(c) ?? leerOccident(c) ?? leerMapfre(c) ?? leerAllianz(c)
 }

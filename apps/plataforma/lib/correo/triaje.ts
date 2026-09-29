@@ -7,7 +7,7 @@
 import { prisma } from '@/lib/db'
 import { escapeHtml, tgAviso, tgSend } from '@/lib/telegram'
 import { avisoDeCategoriaCorreo } from '@/lib/telegram/catalogo'
-import { abrirTriaje } from './imap'
+import { abrirTriaje, type CorreoNuevo } from './imap'
 import { clasificar, quizaAutoAprender } from './clasificador'
 import { enrutarHuesped, extraerNumConfirmacion, resolverBookingId } from './huespedes'
 import { esRemitenteDeCanal } from './num-confirmacion'
@@ -20,7 +20,8 @@ import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
 import { pareceContactoPersonal } from './contacto-sugerido'
 import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
-import { leerCorreoDevolucion, type LecturaCorreoDevolucion } from '@central/module-seguros'
+import { MOTIVO_POLIZA_ANULADA, leerCorreoDevolucion, type LecturaCorreoDevolucion } from '@central/module-seguros'
+import { textoPdfPorFilas } from './pdf-filas'
 import { leerResultadosPuerto, textoAvisoDevolucion } from './devolucion-aviso'
 import { registrarDevolucionesAsegura } from '@/lib/correduria-puerto'
 import { urlFichaCliente } from '@/lib/leads-web'
@@ -167,12 +168,16 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const nombre = avisoAgoda.propertyId ? (ACCESO[avisoAgoda.propertyId]?.nombre ?? null) : null
             await tgAviso('correo.agoda', textoAvisoAgoda(avisoAgoda, nombre ?? undefined))
             stats.avisados++
-          } else if (c.categoria === 'correduria-recibo' && (devolucion = leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: correo.texto ?? correo.extracto, fecha: correo.fecha.toISOString() })) !== null) {
+          } else if (c.categoria === 'correduria-recibo' && (devolucion = leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: await textoConPdfs(correo), fecha: correo.fecha.toISOString() })) !== null) {
             // Correo de DEVOLUCIÓN que se sabe leer: se registra en la cartera (marca el recibo,
             // abre la llamada) y el aviso dice quién, cuánto y hasta cuándo. Si el puerto no contesta,
             // el aviso sale IGUAL con lo leído del correo y declara que no está registrado.
-            const res = devolucion.devoluciones.length > 0
-              ? await registrarDevolucionesAsegura(devolucion.devoluciones, correo.messageId)
+            // Las pólizas ya ANULADAS por impago (carta de Allianz) no se registran como devolución:
+            // la anulación la trae CIMA, y una devolución abierta de Allianz (resolución a mano) haría
+            // que el trigger siguiera forzando el recibo a «devuelto» por encima del «anulado».
+            const aRegistrar = devolucion.devoluciones.filter((d) => d.motivo !== MOTIVO_POLIZA_ANULADA)
+            const res = aRegistrar.length > 0
+              ? await registrarDevolucionesAsegura(aRegistrar, correo.messageId)
               : null
             const resultados = res?.estado === 'ok' ? leerResultadosPuerto(res.json) : null
             const fallo = res && res.estado !== 'ok' ? res : null
@@ -318,4 +323,16 @@ export async function resumenSemanal(): Promise<{ total: number }> {
   ].join('\n')
   await tgAviso('correo.resumen-semanal', msg)
   return { total: triados }
+}
+
+/**
+ * Cuerpo del correo + el texto por filas de sus PDF (Allianz manda la tabla de devueltos/anuladas en
+ * un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO
+ * leído (sin cabecera de tabla), en vez de darlo por una carta sin recibos.
+ */
+async function textoConPdfs(correo: CorreoNuevo): Promise<string> {
+  const base = correo.texto ?? correo.extracto
+  if (!correo.pdfs?.length) return base
+  const textos = await Promise.all(correo.pdfs.map((b) => textoPdfPorFilas(b)))
+  return [base, ...textos.filter((t): t is string => !!t)].join('\n')
 }

@@ -129,6 +129,12 @@ export type FichaPoliza = {
   /** Todos, del más reciente al más antiguo. */
   listaRecibos: ReciboFichaPoliza[]
   /**
+   * Devoluciones que avisó la compañía por correo (`recibo_devolucion`), abiertas Y resueltas, de la
+   * más reciente a la más antigua. Las que trae CIMA ya están en `listaRecibos` como `devuelto`.
+   * `null` = no se pudo leer (≠ `[]`, que es «no ha habido ninguna»).
+   */
+  historialDevoluciones: DevolucionHistorial[] | null
+  /**
    * Fechas del contrato que manda CIMA (asegura#864). Cada una `null` = CIMA
    * aún no la ha mandado para esta póliza, no «no tiene».
    */
@@ -198,12 +204,28 @@ export type ReciboFichaPoliza = ReciboResumen & {
   claseComision: string | null
   baseComision: number | null
   retencionIrpf: number | null
+  /** Comisión bruta del recibo según CIMA. `null` = no la da o no se sabe leer (nunca 0 por defecto). */
+  comisionBruta: number | null
   /**
    * La compañía avisó POR CORREO de que el banco lo devolvió y aún no consta el cobro
    * (`recibo_devolucion`). Es lo único que permite marcarlo «cobrado de nuevo» a mano: una devolución
    * que trae CIMA la resuelve CIMA. `null` = no hay aviso abierto o no se pudo leer.
    */
   devolucionCorreo: { fecha: string; motivo: string | null; tipoMotivo: string | null } | null
+}
+
+export type DevolucionHistorial = {
+  /** Nº de recibo tal cual lo escribió la compañía. */
+  idRecibo: string
+  fecha: string
+  fechaEfecto: string | null
+  importe: number | null
+  motivo: string | null
+  tipoMotivo: string | null
+  /** `null` = sigue abierta. */
+  resueltaEn: string | null
+  /** `cobrado` (a mano), `cima:cobrado`, `cima:anulado`… tal cual se guardó. */
+  resueltaComo: string | null
 }
 
 export type PolizaRelacionada = {
@@ -342,7 +364,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       },
       recibos: {
         select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEfectoActual: true, fechaEmision: true, fechaVencimiento: true, formaPago: true,
-          idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true },
+          idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true, comisionBruta: true },
         orderBy: { fechaEmision: 'desc' },
       },
       siniestros: { select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
@@ -501,6 +523,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       })
     : null
   const devolucionesCorreo = await devolucionesCorreoAbiertas(db, correduriaId, p.recibos.map((r) => r.id))
+  const historialDevoluciones = await devolucionesDePoliza(db, correduriaId, p.id, p.recibos.map((r) => r.id))
   const recibosCrudos = p.recibos.map((r) => ({
     id: r.id, situacion: r.situacion === null ? null : String(r.situacion), primaTotal: r.primaTotal,
     fechaEmision: fechaIso(r.fechaEmision), fechaVencimiento: fechaIso(r.fechaVencimiento), fechaEfecto: fechaIso(r.fechaEfectoActual),
@@ -558,10 +581,11 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         id: r.id, situacion: (r.situacion ?? '').trim() || 'sin_informar', importe: importeEiac(r.primaTotal),
         fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, fechaEfecto: r.fechaEfecto ?? null, formaPago: etiquetaFormaPago(r.formaPago),
         idRemesa: texto(x.idRemesa), gestionCobro: texto(x.gestionCobro), claseComision: texto(x.claseComision),
-        baseComision: num(x.baseComision), retencionIrpf: num(x.retencionIrpf),
+        baseComision: num(x.baseComision), retencionIrpf: num(x.retencionIrpf), comisionBruta: importeEiac(x.comisionBruta),
         devolucionCorreo: devolucionesCorreo.get(r.id) ?? null,
       }
     }),
+    historialDevoluciones,
     fechasContrato: {
       emision: fechaIso(p.fechaEmision), efectoActual: fechaIso(p.fechaEfectoActual),
       situacion: fechaIso(p.fechaSituacion), solicitud: fechaIso(p.fechaSolicitud),
@@ -620,4 +644,29 @@ async function devolucionesCorreoAbiertas(
     console.error('[cartera-poliza] devoluciones por correo no leídas:', e instanceof Error ? e.message : e)
   }
   return out
+}
+
+/** Todas las devoluciones avisadas por correo de esta póliza (por póliza o por sus recibos). */
+async function devolucionesDePoliza(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  polizaId: string,
+  reciboIds: string[],
+): Promise<DevolucionHistorial[] | null> {
+  try {
+    const filas = await db.$queryRaw<{ idRecibo: string; fecha: string; fechaEfecto: string | null; importe: string | null; motivo: string | null
+      tipoMotivo: string | null; resueltaEn: string | null; resueltaComo: string | null }[]>`
+      select id_recibo as "idRecibo", to_char(fecha_devolucion, 'YYYY-MM-DD') as fecha, to_char(fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto",
+             importe::text as importe, motivo, tipo_motivo as "tipoMotivo",
+             to_char(resuelta_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "resueltaEn", resuelta_motivo as "resueltaComo"
+      from recibo_devolucion
+      where correduria_id = ${correduriaId}::uuid
+        and (poliza_id = ${polizaId}::uuid or recibo_id = any(${reciboIds}::uuid[]))
+      order by fecha_devolucion desc, created_at desc
+      limit 50`
+    return filas.map((f) => ({ ...f, importe: f.importe === null ? null : (Number.isFinite(Number(f.importe)) ? Number(f.importe) : null) }))
+  } catch (e) {
+    console.error('[cartera-poliza] historial de devoluciones no leído:', e instanceof Error ? e.message : e)
+    return null
+  }
 }

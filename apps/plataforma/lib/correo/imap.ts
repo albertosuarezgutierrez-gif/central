@@ -25,6 +25,27 @@ export interface CorreoNuevo {
    * tablas de los correos de devolución de recibos se leen por líneas (`leerCorreoDevolucion`).
    */
   texto?: string
+  /**
+   * PDFs adjuntos, SOLO de los remitentes de `REMITENTES_CON_PDF` (Allianz manda sus avisos de
+   * recibos devueltos y de pólizas anuladas en un PDF, no en el cuerpo). El resto no los guarda:
+   * una pasada son hasta 50 correos y no se sujetan en memoria adjuntos que nadie va a leer.
+   */
+  pdfs?: Buffer[]
+}
+
+/** Dominios cuyos PDFs adjuntos se conservan para leerlos (ver `CorreoNuevo.pdfs`). */
+const REMITENTES_CON_PDF = ['allianz.es']
+const PDF_MAX_BYTES = 2_000_000
+const PDF_MAX_POR_CORREO = 3
+
+function pdfsDe(from: string, adjuntos: { contentType?: string; filename?: string; content?: Buffer; size?: number }[] | undefined): Buffer[] | undefined {
+  const dominio = from.split('@')[1] ?? ''
+  if (!REMITENTES_CON_PDF.some((d) => dominio === d || dominio.endsWith(`.${d}`))) return undefined
+  const pdfs = (adjuntos ?? [])
+    .filter((a) => (a.contentType === 'application/pdf' || /\.pdf$/i.test(a.filename ?? '')) && a.content && a.content.length <= PDF_MAX_BYTES)
+    .slice(0, PDF_MAX_POR_CORREO)
+    .map((a) => a.content as Buffer)
+  return pdfs.length ? pdfs : undefined
 }
 
 function nuevoCliente(): ImapFlow {
@@ -84,6 +105,7 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
           labels: Array.from((msg.labels as Set<string> | undefined) ?? []),
           extracto: `${subject}\n${cuerpo}`.slice(0, EXTRACTO_MAX),
           texto: (parsed.text || '').slice(0, TEXTO_MAX),
+          pdfs: pdfsDe(from, parsed.attachments),
         })
         if (out.length >= max) break
       }
