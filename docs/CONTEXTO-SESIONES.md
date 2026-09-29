@@ -912,6 +912,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Avant2: presupuestos web ↔ plataforma, indiferente dónde se hagan
+- Ficha cliente → Oportunidades → «Presupuestos en Avant2»: lista los proyectos del tomador (web y plataforma, por DNI, gratis) y trae los de la web como tarificación + oportunidad; desde ahí se comparan/mandan/emiten igual.
+- Asegura `GET|POST /api/operador/codeoscopic/proyectos-cliente` (idempotente, tomador por documento, candado por proyecto). Libro de consumo a coste 0, motivo `importada_web`, excluido de `consumoActual` (cepo en regression-asegura-gasto-codeoscopic).
+- Traer NO re-tarifica. Origen «web (traído)» = `solicitado_por` empieza por `avant2-web`.
+
 ## (29/09/2026) Avant2: el «precio confirmado» es el ReRate, y los descuentos van ahí
 - La web de Avant2 dio 106,77€ en Allianz Motos frente a 216,53€ de nuestra API: 20% + 20% de descuento comercial, ReRate y Divina Pastora bien puesta. Nuestra comparativa enseña precios `estimate: true` sin descuento.
 - Checklist vivo de la conexión (confirmado, descuentos por compañía, lo que hay que mirar en la pantalla): `docs/CODEOSCOPIC-PENDIENTES.md`.
