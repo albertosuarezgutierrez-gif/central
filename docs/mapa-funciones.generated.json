@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-29T11:23:09Z",
-  "sha": "a904a612adbc1fd50c365867c53e772bfb4f27ba",
+  "generadoEn": "2026-09-29T13:13:48Z",
+  "sha": "b9e5617be08cf747b8bd892c87241f71fa9b7411",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12793,12 +12793,20 @@
       ],
       "funciones": [
         {
+          "nombre": "dispositivoInterno",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 50
+        },
+        {
           "nombre": "Analitica",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 50
+          "linea": 59
         },
         {
           "nombre": "renovarConsentimiento",
@@ -12806,13 +12814,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 116,
+          "linea": 125,
           "resumen": "Reabre el diálogo de preferencias. Lo usa la página de cookies para que el visitante pueda cambiar de opinión: sin una forma visible de retirar el consentimiento, pedirlo no vale (art. 7.3 RGPD)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3532f15b5da"
+      "hash": "fb436710d5df"
     },
     {
       "ruta": "apps/asegura-web/components/BotonCookies.tsx",
@@ -12853,7 +12861,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "59bb4bf49ccf"
+      "hash": "20e5f91d2035"
     },
     {
       "ruta": "apps/asegura-web/components/CalculadoraVencimientos.tsx",
@@ -13358,6 +13366,28 @@
       "hash": "ddc152976d9f"
     },
     {
+      "ruta": "apps/asegura-web/lib/interno.ts",
+      "ambito": "apps/asegura-web",
+      "resumen": "Marca un dispositivo como tráfico INTERNO de GA4 (Alberto y su equipo), sin depender de la IP: Alberto navega detrás de Cloudflare WARP/Private Relay (medido 29/09/2026), así que un filtro por IP ni le excluye a él ni es seguro para los demás. Se activa una vez por navegador visitando `grupoasegura.",
+      "exporta": [
+        "esDispositivoInterno"
+      ],
+      "funciones": [
+        {
+          "nombre": "esDispositivoInterno",
+          "kind": "function",
+          "exportada": true,
+          "params": "search: string, almacen: Almacen | null",
+          "retorno": "boolean",
+          "linea": 15,
+          "resumen": "Aplica el `?interno=` de la URL (si lo hay) y devuelve si este navegador es interno. Nunca lanza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f51d595e86ac"
+    },
+    {
       "ruta": "apps/asegura-web/lib/medir.ts",
       "ambito": "apps/asegura-web",
       "resumen": "Lista CERRADA de eventos del embudo. Un evento que no esté aquí no se puede emitir: así el nombre no se teclea distinto en dos sitios.",
@@ -13371,13 +13401,13 @@
           "exportada": true,
           "params": "evento: Evento, props: PropsEvento = {}",
           "retorno": "boolean",
-          "linea": 19,
-          "resumen": "Emite el evento si PostHog está cargado (= hubo consentimiento). Sin PostHog, no hace NADA: ni cola, ni localStorage. Nunca lanza. 🚨 NUNCA mandes datos personales en `props`: ni nombre, ni teléfono, "
+          "linea": 33,
+          "resumen": "Emite el evento a PostHog y a GA4, a cada uno SOLO si está cargado (= hubo consentimiento: `window.gtag` no existe hasta que `cargarGa4()` corre tras aceptar). Sin ninguno, no hace NADA: ni cola, ni l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9ef6b1395d39"
+      "hash": "363eaa9c7715"
     },
     {
       "ruta": "apps/asegura-web/lib/panel-demo.ts",
@@ -79885,7 +79915,7 @@
           "exportada": false,
           "params": "{ id, titulo, Icono, primero = false }: { id: BloqueMas titulo: string Icono: typeof Antenna primero?: boolean }",
           "retorno": null,
-          "linea": 735
+          "linea": 747
         },
         {
           "nombre": "CarteraResumen",
@@ -79893,7 +79923,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 761
+          "linea": 773
         },
         {
           "nombre": "btnMini",
@@ -79901,7 +79931,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 878,
+          "linea": 890,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -79910,12 +79940,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 896
+          "linea": 908
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cc7639c15b65"
+      "hash": "09b3663af007"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -80686,12 +80716,12 @@
           "exportada": false,
           "params": "{ n, titulo, sub, onClick }: { n: N; titulo: string; sub: string; onClick: () => void }",
           "retorno": null,
-          "linea": 249
+          "linea": 250
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "570da8cfed13"
+      "hash": "329366adc0a4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/iconos.tsx",
@@ -92690,6 +92720,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/contactos-movil",
       "hash": "a2b41224f371"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/contador/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/correduria/contador?c=llamadas|recaptacion — solo el número, cacheado 5 min (ver lib/correduria/contadores-cacheados.ts). `n: null` = no se sabe."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/contador",
+      "hash": "4d26118093df"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/declaradas-vencer/route.ts",
@@ -110774,6 +110825,43 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "faa33d6957fa"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/contadores-cacheados.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "esContador",
+        "contadorCacheado"
+      ],
+      "funciones": [
+        {
+          "nombre": "esContador",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: string | null",
+          "retorno": "x is ContadorCacheado",
+          "linea": 22
+        },
+        {
+          "nombre": "contarSinCache",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: ContadorCacheado",
+          "retorno": "Promise<number>",
+          "linea": 26
+        },
+        {
+          "nombre": "contadorCacheado",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContadorCacheado",
+          "retorno": "Promise<number | null>",
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "311901a5968e"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/cuadre.ts",
@@ -149768,7 +149856,7 @@
           "nombre": "cargarGa4",
           "kind": "function",
           "exportada": true,
-          "params": "id: string",
+          "params": "id: string, parametros?: Record<string, unknown>",
           "retorno": "void",
           "linea": 49,
           "resumen": "Carga GA4. Sin función de parada: gtag.js no ofrece un opt_out limpio por script suelto, así que el gate real es no cargar el script — igual que ya asumía asegura-web con PostHog."
@@ -149779,7 +149867,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "void",
-          "linea": 73,
+          "linea": 76,
           "resumen": "Carga Meta Pixel. Mismo criterio que GA4: sin parada limpia, el gate es no cargar."
         },
         {
@@ -149788,7 +149876,7 @@
           "exportada": true,
           "params": "key: string, host: string, alTerminar: () => void",
           "retorno": "void",
-          "linea": 93,
+          "linea": 96,
           "resumen": "Arranca PostHog. Refleja components/Analitica.tsx de asegura-web tal cual: pageview manual (App Router no recarga en la navegación), perfiles anónimos, sin grabación de sesión (los formularios de esta"
         },
         {
@@ -149797,12 +149885,12 @@
           "exportada": true,
           "params": "",
           "retorno": "void",
-          "linea": 112
+          "linea": 115
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f0c4cbe345e8"
+      "hash": "ae3419aa1257"
     },
     {
       "ruta": "packages/core-consent/src/banner.ts",
@@ -170036,7 +170124,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3977,
-    "funciones": 13129
+    "archivos": 3980,
+    "funciones": 13135
   }
 }
