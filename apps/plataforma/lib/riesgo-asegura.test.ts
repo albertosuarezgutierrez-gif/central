@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { interpretarRiesgo, estadoPresupuestoVariante, textoFaltan } from './riesgo-asegura.ts'
+import {
+  interpretarRiesgo, estadoPresupuestoVariante, textoFaltan,
+  interpretarComparacion, mejoresComparacion, diferenciaComparacion, ordenarParaComparar,
+} from './riesgo-asegura.ts'
 
 const OP = { id: 'op-1', clienteId: 'cli-1', clienteNombre: 'Manuel', ramo: 'moto', estado: 'competencia' }
 
@@ -65,4 +68,55 @@ test('estado del presupuesto: null = sin preparar; lo más avanzado manda', () =
   assert.equal(estadoPresupuestoVariante(base), 'Preparado, sin enviar')
   assert.equal(estadoPresupuestoVariante({ ...base, enviadoAt: 'x', vistoAt: 'y' }), 'Enviado · visto')
   assert.equal(estadoPresupuestoVariante({ ...base, enviadoAt: 'x', retiradoAt: 'z' }), 'Retirado')
+})
+
+// ─── Comparar dos variantes ─────────────────────────────────────────────────
+test('comparar: 404 → no_encontrado; fallo → error con motivo, nunca una tabla vacía', () => {
+  assert.deepEqual(interpretarComparacion(404, { estado: 'no_encontrado' }), { estado: 'no_encontrado' })
+  const e = interpretarComparacion(500, { estado: 'error', causa: 'conexion' })
+  assert.equal(e.estado, 'error')
+  assert.equal(e.estado === 'error' && e.motivo, 'conexion')
+  assert.equal(interpretarComparacion(200, { estado: 'ok' }).estado, 'error', 'sin a/b no se inventa la comparación')
+})
+
+test('comparar: cambios null ≠ [] y compañía sin precio en una columna → null, no 0', () => {
+  const r = interpretarComparacion(200, {
+    estado: 'ok', a: 'ta', b: 'tb', cambios: null,
+    companias: [
+      { compania: 'Mapfre', a: { primaEur: 300, modalidad: 'Terceros' }, b: { primaEur: 280.5, modalidad: null } },
+      { compania: 'Allianz', a: null, b: { primaEur: 250 } },
+      { compania: 'Reale', a: { primaEur: '200' }, b: null },
+      { compania: '', a: { primaEur: 1 }, b: null },
+    ],
+  })
+  if (r.estado !== 'ok') return assert.fail('debía leerse')
+  assert.equal(r.comparacion.cambios, null)
+  assert.equal(r.comparacion.companias.length, 2, 'una prima que no es número no cuenta; sin nombre se descarta')
+  assert.equal(r.comparacion.companias[1].a, null)
+  const igual = interpretarComparacion(200, { estado: 'ok', a: 'ta', b: 'tb', cambios: [], companias: [] })
+  assert.deepEqual(igual.estado === 'ok' && igual.comparacion.cambios, [])
+})
+
+test('comparar: la mejor de cada columna, y la diferencia solo con las dos primas', () => {
+  const filas = [
+    { compania: 'Mapfre', a: { primaEur: 300, modalidad: null }, b: { primaEur: 280.5, modalidad: null } },
+    { compania: 'Allianz', a: null, b: { primaEur: 250, modalidad: null } },
+  ]
+  assert.deepEqual(mejoresComparacion(filas), { a: 300, b: 250 })
+  assert.deepEqual(mejoresComparacion([]), { a: null, b: null })
+  assert.equal(diferenciaComparacion(filas[0]), -19.5)
+  assert.equal(diferenciaComparacion(filas[1]), null)
+})
+
+test('comparar: la más antigua va como a, se marque en el orden que se marque', () => {
+  const vs = [
+    { ...variante({ id: 'p5', referencia: 'P5', creadoAt: '2026-09-29T10:00:00Z' }) },
+    { ...variante({ id: 'p2', referencia: 'P2', creadoAt: '2026-09-20T10:00:00Z' }) },
+  ]
+  const r = interpretarRiesgo(200, { estado: 'ok', oportunidad: OP, roles: ['tomador'], figuras: [], vinculos: [], variantes: vs })
+  if (r.estado !== 'ok') return assert.fail('debía leerse')
+  const par = ordenarParaComparar(r.riesgo.variantes, ['p5', 'p2'])
+  assert.deepEqual(par?.map((v) => v.referencia), ['P2', 'P5'])
+  assert.equal(ordenarParaComparar(r.riesgo.variantes, ['p5']), null)
+  assert.equal(ordenarParaComparar(r.riesgo.variantes, ['p5', 'nada']), null)
 })

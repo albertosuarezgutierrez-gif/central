@@ -9,6 +9,7 @@ import AvisoEmision from './AvisoEmision'
 import HistorialRiesgo from './HistorialRiesgo'
 import CimaPoliza from './CimaPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
+import AbrirRiesgo from './AbrirRiesgo'
 import CartaMediadorPoliza from './CartaMediadorPoliza'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
@@ -76,6 +77,10 @@ export default async function PolizaPage({ params, searchParams }: {
             )}
           </span>}
         />
+        {/* El riesgo de la póliza (29/09/2026): variantes P1…Pn con las mismas personas o con otro tomador. */}
+        {p.retarificable && !cancelada && (p.retarificacion?.ramo === 'auto' || p.retarificacion?.ramo === 'moto') && (
+          <div style={{ marginTop: 8 }}><AbrirRiesgo polizaId={p.id} /></div>
+        )}
       </div>
 
       {/* ── Accesos (24/09/2026, Alberto: «pincho en la póliza y me aparecen coberturas,

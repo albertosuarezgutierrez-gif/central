@@ -4,12 +4,15 @@
 // abre su selector: el cliente de la oportunidad, sus vínculos y «+ Nueva persona». Cada persona es
 // una FICHA (cliente_id), nunca texto suelto, y se agrupa por su id — dos homónimos no se funden.
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import { ROTULO_ROL, textoFaltan, type FiguraRiesgo, type Riesgo } from '@/lib/riesgo-asegura'
+import { interpretarSolicitudesDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
 import type { RolFigura } from '@central/module-seguros'
 import NuevaPersona from './NuevaPersona'
+import PedirDatosFigura from './PedirDatosFigura'
 import { llamarFiguras, motivoDe } from './piezas-riesgo'
+import { ramoVariante } from './variante'
 
 type Opcion = { clienteId: string; nombre: string; detalle: string }
 
@@ -23,6 +26,19 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
   const [nueva, setNueva] = useState<RolFigura | null>(null)
   const [enviando, setEnviando] = useState(false)
   const op = riesgo.oportunidad
+  // Los enlaces de datos de este riesgo, UNA lectura para todas las figuras (luego se reparten por persona).
+  const conEnlace = ramoVariante(op.ramo) !== null
+  const [enlaces, setEnlaces] = useState<SolicitudesDatos | null>(null)
+  const leerEnlaces = useCallback(async () => {
+    if (!conEnlace) return
+    try {
+      const res = await fetch(`/api/correduria/solicitud-datos?oportunidadId=${encodeURIComponent(op.id)}`, { cache: 'no-store' })
+      setEnlaces(interpretarSolicitudesDatos(res.status, await res.json().catch(() => null)))
+    } catch {
+      setEnlaces({ estado: 'error', motivo: 'sin conexión' })
+    }
+  }, [conEnlace, op.id])
+  useEffect(() => { void leerEnlaces() }, [leerEnlaces])
 
   // El cliente de la oportunidad y sus vínculos, UNA vez por ficha (identidad = clienteId).
   const opciones: Opcion[] = []
@@ -50,6 +66,12 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
   }
 
   const bloqueado = enviando || ocupado
+  // «Pedirle los datos» va en la PRIMERA tarjeta de cada persona (quien es propietario y conductor sale una vez).
+  const primeraDe = new Map<string, RolFigura>()
+  for (const rol of riesgo.roles) {
+    const f = riesgo.figuras.find((x) => x.rol === rol)
+    if (f && !primeraDe.has(f.clienteId)) primeraDe.set(f.clienteId, rol)
+  }
 
   return (
     <section style={{ ...cardStyle, display: 'grid', gap: 12, minWidth: 0 }}>
@@ -82,6 +104,23 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
               <div style={{ fontWeight: 700, color: f ? 'var(--text)' : 'var(--muted)', overflowWrap: 'anywhere' }}>{nombre}</div>
               {vinculo && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{vinculo}</div>}
               {falta && <div><Badge tono={f?.faltan === null ? 'neutral' : 'aviso'}>{falta}</Badge></div>}
+              {f && conEnlace && f.clienteId !== op.clienteId && primeraDe.get(f.clienteId) === rol && (() => {
+                const suyas = enlaces?.estado === 'ok' ? enlaces.solicitudes.filter((s) => s.personaId === f.clienteId) : []
+                // Se ofrece si le falta algo (o no se pudo leer su ficha), o si ya hay un enlace suyo que enseñar.
+                if (!(f.faltan === null || f.faltan.length > 0 || suyas.length > 0)) return null
+                if (enlaces === null) return <div style={{ fontSize: 12, color: 'var(--muted)' }}>Mirando si ya se le pidieron los datos…</div>
+                return (
+                  <>
+                    {enlaces.estado === 'error' && (
+                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>No se han podido mirar los enlaces de datos ({enlaces.motivo}).</div>
+                    )}
+                    <PedirDatosFigura
+                      oportunidadId={op.id} personaId={f.clienteId} nombre={f.nombre}
+                      solicitudes={suyas} sinLeer={enlaces.estado === 'error'} onCambio={() => void leerEnlaces()}
+                    />
+                  </>
+                )
+              })()}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button type="button" disabled={bloqueado} aria-expanded={abiertoAqui}
                   onClick={() => { setAbierto(abiertoAqui ? null : rol); setNueva(null) }}

@@ -5,11 +5,17 @@
 // «Primera»; `null` es «no se puede comparar» (nunca «igual»); un `nPrecios` o un presupuesto que
 // no se pudo leer se dice como tal, nunca como 0 o «sin enviar».
 
-import { Badge, BtnLink, cardStyle } from '@/components/ui'
+import { useState } from 'react'
+import { Badge, BtnLink, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
-import { estadoPresupuestoVariante, type Riesgo, type VarianteRiesgo } from '@/lib/riesgo-asegura'
+import { estadoPresupuestoVariante, ordenarParaComparar, type Riesgo, type VarianteRiesgo } from '@/lib/riesgo-asegura'
+import { LogoCompaniaEnLinea } from '../../CeldaCompania'
+import CompararVariantes from './CompararVariantes'
 import { fechaEs } from './piezas-riesgo'
 import { ramoVariante, rutaVariante, tomadorDelRiesgo } from './variante'
+
+/** Como mucho dos marcadas: marcar una tercera suelta la más antigua de las marcadas. */
+const MAX_COMPARAR = 2
 
 export default function HistorialVariantes({ riesgo }: { riesgo: Riesgo }) {
   const op = riesgo.oportunidad
@@ -18,6 +24,16 @@ export default function HistorialVariantes({ riesgo }: { riesgo: Riesgo }) {
   // «Abrir» cotiza con los intervinientes VIGENTES del riesgo: solo se ofrece en las variantes cuyo
   // tomador es el vigente, o la pantalla mezclaría el tomador de P1 con las figuras de hoy.
   const tomadorVigente = tomadorDelRiesgo(riesgo)
+  const [marcadas, setMarcadas] = useState<string[]>([])
+  const [comparando, setComparando] = useState<[VarianteRiesgo, VarianteRiesgo] | null>(null)
+  // Solo cuentan las que siguen en el riesgo (tras releerlo, una marcada puede haber desaparecido).
+  const vigentes = marcadas.filter((id) => vs.some((v) => v.id === id))
+  const par = ordenarParaComparar(vs, vigentes)
+  const marcar = (id: string) =>
+    setMarcadas((xs) => {
+      const ys = xs.filter((x) => vs.some((v) => v.id === x))
+      return ys.includes(id) ? ys.filter((x) => x !== id) : [...ys, id].slice(-MAX_COMPARAR)
+    })
   return (
     <section style={{ ...cardStyle, display: 'grid', gap: 10, minWidth: 0 }}>
       <div>
@@ -28,14 +44,38 @@ export default function HistorialVariantes({ riesgo }: { riesgo: Riesgo }) {
         <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Aún no se ha pedido precio para este riesgo.</p>
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
-          {vs.map((v, i) => <Fila key={v.id} v={v} primera={i === vs.length - 1} abrir={ramo && v.tomador.clienteId === tomadorVigente ? rutaVariante(ramo, tomadorVigente, op.id, v.id) : null} otroTomador={v.tomador.clienteId !== null && v.tomador.clienteId !== tomadorVigente} />)}
+          {vs.map((v, i) => (
+            <Fila
+              key={v.id} v={v} primera={i === vs.length - 1}
+              abrir={ramo && v.tomador.clienteId === tomadorVigente ? rutaVariante(ramo, tomadorVigente, op.id, v.id) : null}
+              otroTomador={v.tomador.clienteId !== null && v.tomador.clienteId !== tomadorVigente}
+              comparable={vs.length > 1} marcada={vigentes.includes(v.id)} onMarcar={() => marcar(v.id)}
+            />
+          ))}
         </ul>
+      )}
+      {vs.length > 1 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {par ? (
+            <button type="button" onClick={() => setComparando(par)} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
+              Comparar {par[0].referencia} y {par[1].referencia}
+            </button>
+          ) : (
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Marca «Comparar» en dos presupuestos para verlos lado a lado.</span>
+          )}
+        </div>
+      )}
+      {comparando && (
+        <CompararVariantes oportunidadId={op.id} a={comparando[0]} b={comparando[1]} onCerrar={() => setComparando(null)} />
       )}
     </section>
   )
 }
 
-function Fila({ v, primera, abrir, otroTomador }: { v: VarianteRiesgo; primera: boolean; abrir: string | null; otroTomador: boolean }) {
+function Fila({ v, primera, abrir, otroTomador, comparable, marcada, onMarcar }: {
+  v: VarianteRiesgo; primera: boolean; abrir: string | null; otroTomador: boolean
+  comparable: boolean; marcada: boolean; onMarcar: () => void
+}) {
   const estado = estadoPresupuestoVariante(v.presupuesto)
   return (
     <li style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12, display: 'grid', gap: 6, minWidth: 0 }}>
@@ -46,6 +86,12 @@ function Fila({ v, primera, abrir, otroTomador }: { v: VarianteRiesgo; primera: 
           · Tomador: {v.tomador.nombre ?? <span style={{ color: 'var(--muted)' }}>no consta</span>}
         </span>
         {v.simulado && <Badge tono="aviso">simulado</Badge>}
+        {comparable && (
+          <label style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, minHeight: 44, cursor: 'pointer' }}>
+            <input type="checkbox" checked={marcada} onChange={onMarcar} style={{ width: 20, height: 20 }} />
+            Comparar
+          </label>
+        )}
       </div>
       {v.nota && <div style={{ fontSize: 13, fontStyle: 'normal', color: 'var(--text)' }}>«{v.nota}»</div>}
 
@@ -53,7 +99,7 @@ function Fila({ v, primera, abrir, otroTomador }: { v: VarianteRiesgo; primera: 
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', fontSize: 13 }}>
         {v.mejor
-          ? <span>Mejor prima <strong>{eur(v.mejor.primaEur)}</strong>{v.mejor.compania ? ` (${v.mejor.compania})` : ''}</span>
+          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>Mejor prima <strong>{eur(v.mejor.primaEur)}</strong><LogoCompaniaEnLinea compania={v.mejor.compania} /></span>
           : <span style={{ color: 'var(--muted)' }}>Sin precio</span>}
         <span style={{ color: 'var(--muted)' }}>· {v.nPrecios === null ? '—' : `${v.nPrecios} ${v.nPrecios === 1 ? 'opción' : 'opciones'}`}</span>
         <Badge tono={estado === null ? 'neutral' : estado === 'Retirado' ? 'negativo' : estado === 'Emitido' || estado === 'Aceptado' ? 'positivo' : 'info'}>

@@ -17,3 +17,15 @@ export function CeldaCompania({ compania, producto }: { compania: string | null 
     </div>
   )
 }
+
+/** La compañía EN LÍNEA dentro de una frase («Mejor prima 280,50€ [logo]»): el logo pequeño y, si no
+ *  tenemos logo, el nombre. El nombre va siempre en `alt`/`title` (29/09/2026). */
+export function LogoCompaniaEnLinea({ compania, alto = 16 }: { compania: string | null | undefined; alto?: number }) {
+  if (!compania) return null
+  const logo = logoCompania(compania)
+  if (!logo) return <span style={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{compania}</span>
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={logo.src} alt={compania} title={compania} style={{ height: Math.round(alto * logo.escala), maxWidth: 80, objectFit: 'contain', verticalAlign: 'middle', display: 'inline-block' }} />
+  )
+}

@@ -94,3 +94,20 @@ test('con un precio real ya pagado en pantalla, «Pedir precio» está apagado',
   const puede = /const puedePulsar =[\s\S]*?\n\n/.exec(PANTALLA)?.[0] ?? ''
   assert.match(puede, /!precioPagadoEnPantalla/, '`puedePulsar` tiene que apagar el botón con un precio pagado a la vista.')
 })
+
+// ─── Variante del riesgo de la póliza (29/09/2026) ───────────────────────────
+test('el 422 `causa: variante` es un corte sin gasto con su mensaje, no «faltan datos» vacío', () => {
+  const r = interpretarRetarificacion(422, { estado: 'error', causa: 'variante', mensaje: 'Ese riesgo no es de esta póliza.', gastado: '0,00€' })
+  assert.equal(r.estado, 'error')
+  if (r.estado !== 'error') return
+  assert.equal(r.mensaje, 'Ese riesgo no es de esta póliza.')
+  assert.equal(r.gastoDesconocido, false)
+  // Un 422 normal sigue siendo el de los datos que faltan.
+  assert.equal(interpretarRetarificacion(422, { faltan: [], gastado: '0,00€' }).estado, 'faltan')
+})
+
+test('`oportunidadId` y `nota` viajan en el cuerpo del puerto, la nota solo con riesgo', () => {
+  const cuerpo = LIB.slice(LIB.indexOf('/api/operador/codeoscopic/retarificar'))
+  assert.match(cuerpo, /p\.oportunidadId \? \{ oportunidadId: p\.oportunidadId \}/)
+  assert.match(cuerpo, /p\.oportunidadId && p\.nota/)
+})
