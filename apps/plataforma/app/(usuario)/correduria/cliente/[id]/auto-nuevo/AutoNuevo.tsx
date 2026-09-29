@@ -617,7 +617,7 @@ export default function AutoNuevo({
   const tomadorEmpresa = variante?.empresas.tomador === true
   const faltaCivil = !estadoCivilId && !tomadorEmpresa
   // Con un conductor habitual en otra ficha, el «falta conductor» de la precalificación ya está cubierto.
-  const faltanTomador = (faltanInicial ?? []).filter((f) => !(f.campo === 'conductor' && figs.conductor_habitual))
+  const faltanTomador = (faltanInicial ?? []).filter((f) => !(f.campo === 'conductor' && (figs.conductor_habitual || conductorDistintoEf)))
   const faltaMunicipio = !municipioId
   const faltaMatricula = !matricula.trim()
   const faltaMatriculacion = !matriculacion
