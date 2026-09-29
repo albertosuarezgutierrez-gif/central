@@ -1885,6 +1885,11 @@ export type TarificacionNuevaGuardada = {
   vehiculo: VehiculoGuardado | null
   /** El último seguro anterior declarado para este cliente y vehículo (de esta u otra variante). `null` = no consta. */
   historialPrevio: HistorialPrevio | null
+  /**
+   * Los productos que NO dieron precio. 🚨 `null` = no se guardaron (cotización anterior al
+   * 29/09/2026 o asegura más viejo): NO es «ninguno falló».
+   */
+  fallos: Fallo[] | null
 }
 
 export type HistorialPrevio = {
@@ -1960,6 +1965,7 @@ export function interpretarTarificacionNueva(status: number, json: unknown): Res
         precios,
         vehiculo: leerVehiculoGuardado(r.vehiculo),
         historialPrevio: leerHistorialPrevio(r.historialPrevio),
+        fallos: Array.isArray(r.fallos) ? (r.fallos as Fallo[]) : null,
       },
     }
   }

@@ -15,7 +15,16 @@ type FalloParrilla = {
 
 const ORDEN: readonly TipoFallo[] = ['tecnico', 'rechazo', 'otro']
 
-export function FallosTarificacion({ fallos }: { fallos: readonly FalloParrilla[] }) {
+export function FallosTarificacion({ fallos }: { fallos: readonly FalloParrilla[] | null }) {
+  // `null` = cotización retomada que no guardó qué compañías fallaron: se DICE, no es «ninguna».
+  if (fallos === null) {
+    return (
+      <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+        De esta cotización recuperada <strong>no se guardó qué compañías no dieron precio</strong>: arriba está lo
+        que sí se guardó, no el mercado entero.
+      </p>
+    )
+  }
   if (fallos.length === 0) return null
   const grupos = ORDEN.map((t) => ({ t, xs: fallos.filter((f) => tipoFallo(f.motivo) === t) })).filter((g) => g.xs.length > 0)
   return (

@@ -148,7 +148,8 @@ type Resultado =
       avisoSimulacion: string | null
       resumen: string
       precios: Precio[]
-      fallos: Fallo[]
+      /** `null` = retomada de una cotización que no guardó sus fallos (no es «ninguno falló»). */
+      fallos: Fallo[] | null
       supuestos: Supuesto[]
       /** Qué pasó con la copia guardada: su `cotizacionId` es de lo que sale el presupuesto. */
       guardado?: unknown
@@ -556,7 +557,7 @@ export default function AutoNuevo({
       avisoSimulacion: null,
       resumen: `Tarificación del ${new Date(g.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}${g.fechaEfecto ? ` · efecto ${g.fechaEfecto.split('-').reverse().join('/')}` : ''}`,
       precios: g.precios,
-      fallos: [],
+      fallos: g.fallos,
       supuestos: [],
       guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
     })

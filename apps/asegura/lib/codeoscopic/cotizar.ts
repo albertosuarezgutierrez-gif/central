@@ -107,7 +107,7 @@ export type DepsCotizar = {
 async function anotar(
   deps: DepsCotizar,
   p: PeticionCotizacion,
-  extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean },
+  extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean; respuesta?: unknown },
 ): Promise<Guardado> {
   if (!p.contexto) {
     return {
@@ -321,7 +321,7 @@ export async function cotizar(
     // 8 — La copia de los precios. DESPUÉS del cierre, y nunca antes: si
     // guardar tumbara el paso 7, un cargo real de 0,50€ se quedaría sin apuntar
     // en el libro y el tope contaría de menos justo cuando más falta hace.
-    const guardado = await anotar(deps, p, { cotizacion, intentoId, simulado: false })
+    const guardado = await anotar(deps, p, { cotizacion, intentoId, simulado: false, respuesta: crudo })
 
     return {
       ok: true,

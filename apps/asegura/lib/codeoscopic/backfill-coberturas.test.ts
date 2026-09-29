@@ -210,6 +210,19 @@ test('reclasificar: recalcula con el catálogo actual desde coberturas + opcione
     viejas: async () => [reale, { id: 'x', ramo: 'comercio', coberturas: { lista: [] }, opciones: null }],
     escribir: async (_c, id) => { escritas.push(id); return 1 },
   })
-  assert.deepEqual(r, { revisadas: 2, reclasificadas: 1 })
+  assert.deepEqual(r, { revisadas: 2, reclasificadas: 1, errores: 0 })
   assert.deepEqual(escritas, ['r1'])
+})
+
+test('reclasificar NUNCA lanza: un fallo de lectura o de escritura no tumba el cron del backfill', async () => {
+  const lectura = await reclasificarGarantiasViejas('c1', {}, { viejas: async () => { throw new Error('BD caída') } })
+  assert.equal(lectura.reclasificadas, 0)
+  assert.equal(lectura.errores, 1)
+  assert.match(String(lectura.error), /BD caída/)
+  const fila = { id: 'r1', ramo: 'auto', coberturas: { estado: 'vacias', lista: [] }, opciones: null }
+  const escritura = await reclasificarGarantiasViejas('c1', {}, {
+    viejas: async () => [fila, { ...fila, id: 'r2' }],
+    escribir: async (_c, id) => { if (id === 'r1') throw new Error('bloqueo'); return 1 },
+  })
+  assert.deepEqual(escritura, { revisadas: 2, reclasificadas: 1, errores: 1 })
 })

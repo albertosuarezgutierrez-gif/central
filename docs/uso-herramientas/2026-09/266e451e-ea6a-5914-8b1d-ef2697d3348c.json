@@ -1,120 +1,122 @@
 {
  "sesion": "266e451e-ea6a-5914-8b1d-ef2697d3348c",
  "inicio": "2026-09-29T16:41:38.647Z",
- "fin": "2026-09-29T20:40:43.904Z",
- "llamadas": 504,
+ "fin": "2026-09-29T21:15:23.511Z",
+ "llamadas": 638,
  "categorias": {
   "otro": {
-   "llamadas": 57,
-   "chars_in": 21986,
-   "chars_out": 394562,
+   "llamadas": 70,
+   "chars_in": 22373,
+   "chars_out": 652656,
    "errores": 0,
-   "archivos_citados": 4,
-   "chars_citados": 143256,
+   "archivos_citados": 10,
+   "chars_citados": 860581,
    "tools": {
     "Skill": 4,
-    "ToolSearch": 17,
+    "ToolSearch": 22,
     "SubagentHandback": 3,
-    "ReadNotifications": 31,
+    "ReadNotifications": 39,
     "ReportFindings": 2
    }
   },
   "bash": {
-   "llamadas": 333,
-   "chars_in": 209152,
-   "chars_out": 1080492,
+   "llamadas": 406,
+   "chars_in": 261162,
+   "chars_out": 1443991,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 333
+    "Bash": 406
    }
   },
   "mcp:github": {
-   "llamadas": 37,
-   "chars_in": 16053,
-   "chars_out": 116965,
-   "errores": 0,
+   "llamadas": 54,
+   "chars_in": 20759,
+   "chars_out": 198342,
+   "errores": 1,
    "archivos_citados": 2,
    "chars_citados": 4984,
    "tools": {
     "mcp__github__list_pull_requests": 3,
-    "mcp__github__create_pull_request": 5,
-    "mcp__github__pull_request_read": 15,
-    "mcp__github__update_pull_request": 4,
-    "mcp__github__merge_pull_request": 4,
-    "mcp__github__actions_list": 2,
+    "mcp__github__create_pull_request": 6,
+    "mcp__github__pull_request_read": 20,
+    "mcp__github__update_pull_request": 5,
+    "mcp__github__merge_pull_request": 5,
+    "mcp__github__actions_list": 9,
     "mcp__github__unsubscribe_pr_activity": 1,
     "mcp__github__search_pull_requests": 1,
-    "mcp__github__subscribe_pr_activity": 2
+    "mcp__github__subscribe_pr_activity": 2,
+    "mcp__github__get_job_logs": 2
    }
   },
   "agente:agente-architect": {
-   "llamadas": 1,
-   "chars_in": 2734,
-   "chars_out": 2920,
+   "llamadas": 2,
+   "chars_in": 7073,
+   "chars_out": 7445,
    "errores": 0,
-   "archivos_citados": 1,
-   "chars_citados": 22203,
+   "archivos_citados": 8,
+   "chars_citados": 216819,
    "tools": {
-    "Agent": 1
+    "Agent": 2
    }
   },
   "lectura-directa": {
-   "llamadas": 13,
-   "chars_in": 1276,
-   "chars_out": 338380,
+   "llamadas": 15,
+   "chars_in": 1485,
+   "chars_out": 381484,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 13
+    "Read": 15
    }
   },
   "mcp:Supabase": {
-   "llamadas": 1,
-   "chars_in": 2,
-   "chars_out": 391,
+   "llamadas": 2,
+   "chars_in": 1814,
+   "chars_out": 407,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__list_projects": 1
+    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__apply_migration": 1
    }
   },
   "sql": {
-   "llamadas": 26,
-   "chars_in": 14344,
-   "chars_out": 89038,
+   "llamadas": 50,
+   "chars_in": 27632,
+   "chars_out": 297529,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 26
+    "mcp__Supabase__execute_sql": 50
    }
   },
   "escritura": {
-   "llamadas": 15,
-   "chars_in": 30311,
-   "chars_out": 282357,
+   "llamadas": 16,
+   "chars_in": 31121,
+   "chars_out": 320377,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Write": 6,
-    "Edit": 9
+    "Edit": 10
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 9,
-   "chars_in": 1290,
-   "chars_out": 4373,
+   "llamadas": 11,
+   "chars_in": 1726,
+   "chars_out": 4720,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 3,
-    "mcp__Claude_Code_Remote__send_later": 3,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 4,
+    "mcp__Claude_Code_Remote__send_later": 4,
     "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1,
     "mcp__Claude_Code_Remote__delete_trigger": 2
    }

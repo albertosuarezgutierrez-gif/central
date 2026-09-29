@@ -361,6 +361,49 @@ test('guardarSinTumbar no lanza nunca: devuelve el fallo con su motivo', async (
   assert.deepEqual(bien, { estado: 'guardada', cotizacionId: 'cot-1' })
 })
 
+// ─── 5. «Guarda toda la información» (29/09/2026) ─────────────────────────────
+
+test('se guardan los fallos, el id del precio del vendor y su forma de pago', async () => {
+  const l = libreta()
+  const fallo = { compania: 'Generali', producto: 'Autos 2025', configuracion: null, motivo: 'Error (Código 2115)', tambienDioPrecio: false }
+  await guardarCotizacion(entrada({ cotizacion: { ...COTIZACION, fallos: [fallo] } as never }), l.enTransaccion)
+  assert.deepEqual(JSON.parse(String(l.cabecera().fallos)), [fallo])
+  const [p1, p2] = l.precios()
+  assert.equal(p1.id_precio, 'Q1', 'sin el id del vendor no hay clave estable del precio')
+  assert.equal(p1.meses, 12)
+  assert.equal(p1.forma_pago, null, 'no declarada = NULL, nunca «anual» supuesto')
+  assert.equal(p2.forma_pago, 'Compañía')
+  assert.equal(p2.frecuencia_pago, 'Anual')
+})
+
+test('fallos: [] solo si el vendor no devolvió errores; una simulada los deja NULL', async () => {
+  const real = libreta()
+  await guardarCotizacion(entrada(), real.enTransaccion)
+  assert.equal(real.cabecera().fallos, '[]')
+  const sim = libreta()
+  await guardarCotizacion(entrada({ simulado: true, intentoId: null }), sim.enTransaccion)
+  assert.equal(sim.cabecera().fallos, null, 'una simulada no preguntó a nadie: no es «ninguna falló»')
+})
+
+test('la respuesta cruda se guarda APARTE y su fallo NO deja sin copia el precio pagado', async () => {
+  const bien = libreta()
+  const g = await guardarSinTumbar(entrada({ respuesta: { id: 7601460, errors: [], texto: 'a\u0000b' } }), bien.enTransaccion)
+  assert.deepEqual(g, { estado: 'guardada', cotizacionId: 'cot-1' })
+  const upd = bien.escrituras.find((e) => /set respuesta/.test(e.sql))
+  assert.ok(upd, 'la respuesta cruda tiene que escribirse')
+  assert.ok(!String(upd.valores[0]).includes('\\u0000'), 'el carácter nulo tumbaría el jsonb: se quita')
+  assert.equal(bien.transacciones, 2, 'cabecera+precios en una transacción, la cruda en otra')
+
+  // La 4ª escritura (cabecera, 2 precios, cruda) revienta: el precio YA está guardado.
+  const mal = libreta({ fallarEn: 4 })
+  const g2 = await guardarSinTumbar(entrada({ respuesta: { id: 1 } }), mal.enTransaccion)
+  assert.deepEqual(g2, { estado: 'guardada', cotizacionId: 'cot-1' })
+})
+
+test('cotizar() pasa la respuesta del vendor al guardado (lee el fuente)', () => {
+  assert.match(FUENTE(COTIZAR_TS), /anotar\(deps, p, \{ cotizacion, intentoId, simulado: false, respuesta: crudo \}\)/)
+})
+
 /** Cotiza por la rama de SIMULACIÓN (no toca vendor ni libro) con un doble. */
 async function cotizarSimulando(deps: Parameters<typeof cotizar>[2], contexto = CONTEXTO) {
   return cotizar(
@@ -475,7 +518,7 @@ test('la rama que paga guarda con simulado:false y CON su intentoId', () => {
   const rama = ramaReal()
   assert.match(
     rama,
-    /anotar\(deps,\s*p,\s*\{\s*cotizacion,\s*intentoId,\s*simulado:\s*false\s*\}\)/,
+    /anotar\(deps,\s*p,\s*\{\s*cotizacion,\s*intentoId,\s*simulado:\s*false,\s*respuesta:\s*crudo\s*\}\)/,
     'la cotización real se guarda con su intentoId y sin marcar como simulada',
   )
 })
