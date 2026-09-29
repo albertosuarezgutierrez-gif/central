@@ -872,6 +872,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) «Subir póliza» de la ficha parecía no hacer nada
+- El enlace (`?tab=documentos&subir=poliza`, #3921) llegaba bien, pero el formulario seguía en un `<details>` CERRADO
+  debajo de las baldosas: en el móvil no cambiaba nada visible. `Documentos.tsx` ahora lo abre y hace `scrollIntoView`
+  cuando llega `tipoInicial`. Cepo nuevo en `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo).
+
 ## (29/09/2026) Riesgo: comparar presupuestos, renovar desde la póliza y datos de un familiar (PR entrega 1b)
 - Comparar dos variantes (casillas en el historial): qué cambió + mejor prima por compañía (logos, «—» sin precio). Puerto `GET /oportunidad/comparar`.
 - «Abrir el riesgo de esta póliza» (auto/moto): oportunidad con `poliza_id` y figuras desde intervinientes; reutiliza la que abrió una retarificación vieja (`info_riesgo.polizaId`). Retarificar dentro del riesgo manda `oportunidadId`, validado antes de gastar; riesgo cerrado → 422 sin cotizar.
