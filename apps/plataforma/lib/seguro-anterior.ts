@@ -79,3 +79,30 @@ export function codigoCompania(
     .map(c => c.codigoDgs))]
   return encajan.length === 1 ? encajan[0] : null
 }
+
+/**
+ * El historial que se DECLARA al tarificar cuando no se sabe (29/09/2026, dictado de Alberto): el
+ * máximo. La compañía lo contrasta con SINCO por el nº de póliza y aplica el bonus real; teclear
+ * años a mano no justifica nada y solo mete errores. Lo que SÍ se ha leído de su póliza manda
+ * sobre el máximo: declarar 10 años limpios cuando el papel dice 3 sería mentir sabiéndolo.
+ */
+export const HISTORIAL_MAXIMO = { aniosAsegurado: 10, aniosEnCompania: 10, aniosSinSiniestros: 10, siniestrosUltimos5: 0 } as const
+
+export type HistorialDeclarado = {
+  aniosAsegurado: number
+  aniosEnCompania: number
+  aniosSinSiniestros: number
+  /** `null` = hay que preguntarlo: menos de 5 años limpios leídos y el papel no dice cuántos siniestros. */
+  siniestrosUltimos5: number | null
+}
+
+export function historialDeclarado(sa: SeguroAnterior | null): HistorialDeclarado {
+  const limpios = sa?.aniosSinSiniestros ?? HISTORIAL_MAXIMO.aniosSinSiniestros
+  const siniestros = sa?.siniestrosUltimos5 ?? (limpios >= 5 ? HISTORIAL_MAXIMO.siniestrosUltimos5 : null)
+  return {
+    aniosAsegurado: Math.max(HISTORIAL_MAXIMO.aniosAsegurado, limpios),
+    aniosEnCompania: HISTORIAL_MAXIMO.aniosEnCompania,
+    aniosSinSiniestros: limpios,
+    siniestrosUltimos5: siniestros,
+  }
+}

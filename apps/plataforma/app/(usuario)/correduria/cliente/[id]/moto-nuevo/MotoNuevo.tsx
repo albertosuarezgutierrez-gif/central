@@ -23,7 +23,7 @@ import { ConIcono } from '../../../iconos'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
-import { codigoCompania, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
+import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
@@ -250,10 +250,13 @@ export default function MotoNuevo({
     anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '')
   const [companiaActualLibre, setCompaniaActualLibre] = useState(() => (companias === null ? sa?.codigoDgs ?? '' : ''))
   const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.replace(/\s+/g, '') ?? '')
-  const [aniosAsegurado, setAniosAsegurado] = useState('')
-  const [aniosEnCompania, setAniosEnCompania] = useState('')
-  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(() => (sa?.aniosSinSiniestros != null ? String(sa.aniosSinSiniestros) : ''))
-  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(() => (sa?.siniestrosUltimos5 != null ? String(sa.siniestrosUltimos5) : ''))
+  // Los años NO se teclean (29/09/2026, Alberto): se declara el máximo y la compañía aplica el
+  // bonus real contrastando el nº de póliza con SINCO. Lo leído de su póliza manda sobre el máximo.
+  const historial = historialDeclarado(sa)
+  const [aniosAsegurado, setAniosAsegurado] = useState(String(historial.aniosAsegurado))
+  const [aniosEnCompania, setAniosEnCompania] = useState(String(historial.aniosEnCompania))
+  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(String(historial.aniosSinSiniestros))
+  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5))
 
   useEffect(() => {
     void catalogo('tipo=experiencia-moto')
@@ -385,6 +388,8 @@ export default function MotoNuevo({
 
   const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
   // En modo póliza la tarjeta del toggle no se pinta, así que se queda en false.
+  const faltaAnios = aniosAsegurado.trim() === '' || aniosEnCompania.trim() === '' || aniosSinSiniestros.trim() === ''
+    || (Number(aniosSinSiniestros) < 5 && aniosSinSiniestros !== aniosAsegurado && siniestrosUltimos5.trim() === '')
   const faltaHistorial =
     tieneSeguroActual &&
     (!companiaActualElegida ||
@@ -811,23 +816,42 @@ export default function MotoNuevo({
                 </p>
               )}
             </Campo>
-            <Campo etiqueta="Años asegurado sin interrupción" falta={aniosAsegurado.trim() === ''}>
-              <input type="number" min={0} value={aniosAsegurado} onChange={(e) => setAniosAsegurado(e.target.value)} style={input} />
-            </Campo>
-            <Campo etiqueta="Años en esta compañía" falta={aniosEnCompania.trim() === ''}>
-              <input type="number" min={0} value={aniosEnCompania} onChange={(e) => setAniosEnCompania(e.target.value)} style={input} />
-            </Campo>
-            <Campo etiqueta="Años sin siniestros" falta={aniosSinSiniestros.trim() === ''}>
-              <input type="number" min={0} value={aniosSinSiniestros} onChange={(e) => setAniosSinSiniestros(e.target.value)} style={input} />
-            </Campo>
-            <Campo
-              etiqueta="Siniestros en los últimos 5 años (si aplica)"
-              falta={false}
-              ayuda="Solo hace falta si lleva menos de 5 años sin siniestros: si falta y la compañía lo exige, lo dirá al pedir el precio, sin cobrar nada."
-            >
-              <input type="number" min={0} value={siniestrosUltimos5} onChange={(e) => setSiniestrosUltimos5(e.target.value)} style={input} />
-            </Campo>
           </div>
+        )}
+        {tieneSeguroActual && (
+          <details open={faltaAnios || undefined} style={{ marginTop: 10, fontSize: 13 }}>
+            <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>
+              Historial declarado: {aniosAsegurado || '—'} años asegurado · {aniosEnCompania || '—'} en la compañía · {aniosSinSiniestros || '—'} sin siniestros
+              {siniestrosUltimos5 !== '' ? ` · ${siniestrosUltimos5} siniestros en 5 años` : ''} — ajustar
+            </summary>
+            <p style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
+              {sa ? 'Lo leído de su póliza manda; lo que no traía va al máximo.' : 'Se declara el máximo.'} La compañía lo contrasta
+              con SINCO por el nº de póliza y aplica el bonus real.
+            </p>
+            {digitosPolizaSospechosos(polizaActualDigitos) && (
+              <p style={{ color: 'var(--negative)', fontSize: 12, fontWeight: 600, margin: '0 0 8px' }}>
+                Con este nº de póliza la compañía probablemente no pueda contrastarlo: lo declarado aquí quedaría como dato. Revísalo.
+              </p>
+            )}
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+              <Campo etiqueta="Años asegurado sin interrupción" falta={aniosAsegurado.trim() === ''}>
+                <input type="number" min={0} value={aniosAsegurado} onChange={(e) => setAniosAsegurado(e.target.value)} style={input} />
+              </Campo>
+              <Campo etiqueta="Años en esta compañía" falta={aniosEnCompania.trim() === ''}>
+                <input type="number" min={0} value={aniosEnCompania} onChange={(e) => setAniosEnCompania(e.target.value)} style={input} />
+              </Campo>
+              <Campo etiqueta="Años sin siniestros" falta={aniosSinSiniestros.trim() === ''}>
+                <input type="number" min={0} value={aniosSinSiniestros} onChange={(e) => setAniosSinSiniestros(e.target.value)} style={input} />
+              </Campo>
+              <Campo
+                etiqueta="Siniestros en los últimos 5 años (si aplica)"
+                falta={false}
+                ayuda="Solo hace falta si lleva menos de 5 años sin siniestros: si falta y la compañía lo exige, lo dirá al pedir el precio, sin cobrar nada."
+              >
+                <input type="number" min={0} value={siniestrosUltimos5} onChange={(e) => setSiniestrosUltimos5(e.target.value)} style={input} />
+              </Campo>
+            </div>
+          </details>
         )}
       </div>
       )}

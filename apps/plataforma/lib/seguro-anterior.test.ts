@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { anteriorParaTarificar, codigoCompania } from './seguro-anterior.ts'
+import { anteriorParaTarificar, codigoCompania, historialDeclarado } from './seguro-anterior.ts'
 import type { OportunidadDeCliente } from './seguimiento-asegura.ts'
 
 const op = (x: Partial<OportunidadDeCliente>): OportunidadDeCliente => ({
@@ -45,4 +45,11 @@ test('compañía: por código DGS, si no por nombre; dos que encajan = ninguna',
   assert.equal(codigoCompania(cs, { codigoDgs: null, nombre: 'Reale' }), 'C0124', 'el nombre exacto manda')
   assert.equal(codigoCompania(cs, { codigoDgs: null, nombre: 'Reale Seguros' }), 'C0124')
   assert.equal(codigoCompania(cs, { codigoDgs: null, nombre: 'Seguros' }), null, 'encajan Reale y Seguros Bilbao: no se elige a ojo')
+})
+
+test('historial: sin dato, el máximo; lo leído manda; menos de 5 limpios sin nº de siniestros se pregunta', () => {
+  assert.deepEqual(historialDeclarado(null), { aniosAsegurado: 10, aniosEnCompania: 10, aniosSinSiniestros: 10, siniestrosUltimos5: 0 })
+  assert.deepEqual(historialDeclarado({ ...bonus, aniosSinSiniestros: 12 }), { aniosAsegurado: 12, aniosEnCompania: 10, aniosSinSiniestros: 12, siniestrosUltimos5: 0 })
+  assert.equal(historialDeclarado({ ...bonus, aniosSinSiniestros: 3, siniestrosUltimos5: null }).siniestrosUltimos5, null)
+  assert.equal(historialDeclarado({ ...bonus, aniosSinSiniestros: 3, siniestrosUltimos5: 1 }).siniestrosUltimos5, 1)
 })

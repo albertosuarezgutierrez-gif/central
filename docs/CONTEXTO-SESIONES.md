@@ -878,7 +878,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   años sin siniestros / siniestros 5 años / DGS / efecto; ahora `leer-documento` los devuelve (`seguroAnterior`) y la
   oportunidad los guarda en `poliza_competencia.seguroAnterior`. Con la oportunidad ya abierta (409) se guardan en ELLA.
   `moto-nuevo` precarga compañía, nº, años sin siniestros y siniestros (`lib/seguro-anterior.ts`); con 2 motos abiertas
-  no precarga (ambiguo). Pendiente: lo mismo en `auto-nuevo`.
+  no precarga (ambiguo). Historial de moto (Alberto): los años ya no se teclean, nacen en el MÁXIMO (10/10/10, 0 siniestros;
+  `HISTORIAL_MAXIMO`) salvo lo leído, plegados en «ajustar»; la compañía lo contrasta con SINCO por el nº. Sin reintento
+  automático al fallar (cada cotización 0,50€, no idempotente). Pendiente: lo mismo en `auto-nuevo`.
 
 ## (29/09/2026) «Subir póliza» de la ficha parecía no hacer nada
 - El enlace (`?tab=documentos&subir=poliza`, #3921) llegaba bien, pero el formulario seguía en un `<details>` CERRADO

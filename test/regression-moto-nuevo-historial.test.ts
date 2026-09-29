@@ -78,3 +78,12 @@ test('MotoNuevo: la moto de la última tarificación se precarga sin pisar lo te
   // Se puede volver al catálogo: la moto previa no es una trampa.
   assert.match(src, /Elegir otra moto/)
 })
+
+// 29/09/2026 (Alberto): los años no se teclean. Sin dato se declara el máximo y la compañía lo
+// contrasta con SINCO por el nº de póliza. Si vuelven a nacer vacíos, el botón se apaga y hay que teclearlos.
+test('los años del historial nacen en el máximo (o lo leído), no vacíos', () => {
+  assert.match(fuente, /useState\(String\(historial\.aniosAsegurado\)\)/)
+  assert.match(fuente, /useState\(String\(historial\.aniosSinSiniestros\)\)/)
+  const lib = readFileSync(join(import.meta.dirname, '..', 'apps/plataforma/lib/seguro-anterior.ts'), 'utf8')
+  assert.match(lib, /HISTORIAL_MAXIMO = \{ aniosAsegurado: 10, aniosEnCompania: 10, aniosSinSiniestros: 10, siniestrosUltimos5: 0 \}/)
+})
