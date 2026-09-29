@@ -57,9 +57,14 @@ export type EntradaReciboDevuelto = {
   numeroPoliza: string | null
   /** Importe del recibo en euros; `null` = no consta (no se escribe ninguna cifra). */
   importe: number | null
-  /** Vencimiento del RECIBO, `YYYY-MM-DD`. */
+  /**
+   * Día en que VENCE el recibo (su fecha de efecto), `YYYY-MM-DD`. NO el fin del periodo que cubre:
+   * el mes del art. 15 LCS corre desde aquí.
+   */
   vencimiento: string | null
   hoy: Date
+  /** La compañía dio un motivo de cuenta (IBAN o titular): se le pide revisar la domiciliación. */
+  motivoCuenta?: boolean
 }
 
 /**
@@ -115,6 +120,9 @@ export function borradorReciboDevuelto(e: EntradaReciboDevuelto): Borrador | nul
     )
   } else {
     lineas.push('Si pasa un mes desde el vencimiento sin pagarse, la cobertura queda en suspenso (art. 15 de la Ley de Contrato de Seguro).')
+  }
+  if (e.motivoCuenta) {
+    lineas.push('', 'El banco indica un problema con los datos de la cuenta domiciliada. Si ha cambiado de cuenta o el titular no es el mismo, respóndanos con la cuenta correcta y lo actualizamos con la compañía.')
   }
   lineas.push('', 'Responda a este correo o llámenos y le decimos cómo pagarlo. Si ya lo ha pagado, ignore este mensaje.', '', 'Un saludo,', 'Grupo ASegura')
 

@@ -13,7 +13,7 @@
 //     código Base7 de esa moto anterior, que se teclea a mano (no hay
 //     ninguna ficha de la que sacarlo).
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
@@ -31,6 +31,8 @@ import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
+import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
+import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -101,8 +103,11 @@ export default function MotoNuevo({
   simulacion,
   companias,
   poliza = null,
+  variante = null,
 }: {
   poliza?: PolizaMoto | null
+  /** Variante de un riesgo (29/09/2026): la tarificación se cuelga de su oportunidad. */
+  variante?: VarianteNueva | null
   clienteId: string
   etiquetaCliente: string
   /** `null` = no se ha podido precalificar la persona · `[]` = revisado, nada falta. */
@@ -159,6 +164,10 @@ export default function MotoNuevo({
   const [garaje, setGaraje] = useState(
     () => (garajes.find((g) => /v[ií]a\s+p[uú]blica/i.test(g.nombre)) ?? garajes.find((g) => /\bcalle\b/i.test(g.nombre)))?.id ?? '',
   )
+  // ¿Lo ha elegido el corredor? El «vía pública» de arriba es un defecto, no una elección: la moto
+  // guardada puede traer su garaje, y sin esto retomar caía en silencio a vía pública (29/09/2026).
+  const garajeElegido = useRef(false)
+  const [nota, setNota] = useState('')
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
@@ -180,7 +189,7 @@ export default function MotoNuevo({
   useEffect(() => {
     if (poliza !== null) return
     let vivo = true
-    pedirTarificacionGuardadaMoto({ clienteId })
+    pedirTarificacionGuardadaMoto({ clienteId, oportunidadId: variante?.oportunidadId ?? null, tarificacionId: variante?.tarificacionId ?? null })
       .then((r) => {
         if (!vivo || r.estado !== 'ok') return
         if (!r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada)
@@ -198,10 +207,13 @@ export default function MotoNuevo({
         if (v.kmAnuales !== null && v.kmAnuales !== KM_ANUALES_SUPUESTOS) {
           setKmAnuales((k) => k || String(v.kmAnuales))
         }
+        // El garaje con el que se pidió, si sigue en el catálogo y el corredor no ha elegido otro.
+        if (v.garaje && !garajeElegido.current && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
       })
       .catch(() => {})
     return () => { vivo = false }
-  }, [clienteId, poliza])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteId, poliza, variante?.oportunidadId, variante?.tarificacionId])
   function elegirOtraMoto() {
     setUsarPrevio(false)
     setCodigoVehiculo('')
@@ -425,6 +437,7 @@ export default function MotoNuevo({
         })
       : await pedirCotizacionMoto({
       clienteId,
+      variante: variante ? { oportunidadId: variante.oportunidadId, nota } : null,
       resueltos: {
         ...version,
         codigoVehiculo,
@@ -479,8 +492,20 @@ export default function MotoNuevo({
     }
   }
 
+  // En moto, de momento, la misma persona va en todos los papeles (entrega 2 del diseño).
+  const figurasDistintas = variante !== null && Object.keys(variante.figuras).length > 0
+
   return (
     <div style={{ display: 'grid', gap: 14 }}>
+      {variante && (
+        <NotaVariante nota={nota} onNota={setNota}>
+          {figurasDistintas && (
+            <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--warning)' }}>
+              En moto, de momento, se cotiza con el tomador en todos los papeles.
+            </p>
+          )}
+        </NotaVariante>
+      )}
       {faltanInicial === null && (
         <div style={{ ...cardStyle, borderColor: 'var(--negative)', color: 'var(--negative)', fontSize: 13 }}>
           No se ha podido precalificar la ficha de {etiquetaCliente || 'este cliente'}: no se sabe qué datos
@@ -586,7 +611,7 @@ export default function MotoNuevo({
             />
           </Campo>
           <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda="Lo elige el corredor; viaja marcado como supuesto.">
-            <select value={garaje} onChange={(e) => setGaraje(e.target.value)} style={input}>
+            <select value={garaje} onChange={(e) => { garajeElegido.current = true; setGaraje(e.target.value) }} style={input}>
               <option value="">Elige garaje</option>
               {garajes.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
             </select>
@@ -818,7 +843,7 @@ export default function MotoNuevo({
         {guardada && resultado.estado === 'idle' && (
           <div style={{ ...cardStyle, marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 14 }}>
-              Ya hay una tarificación de moto de este cliente ({new Date(guardada.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}, {guardada.precios.length} precios{guardada.fechaEfecto ? `, efecto ${guardada.fechaEfecto.split('-').reverse().join('/')}` : ''}).
+              Ya hay una tarificación de moto de {variante ? (variante.tarificacionId ? 'esta variante' : 'este riesgo') : 'este cliente'} ({new Date(guardada.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}, {guardada.precios.length} precios{guardada.fechaEfecto ? `, efecto ${guardada.fechaEfecto.split('-').reverse().join('/')}` : ''}).
             </span>
             <button type="button" onClick={() => retomar(guardada)} style={{ ...btnStyle('secundario'), minHeight: 44 }}>
               Retomarla sin pagar

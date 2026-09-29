@@ -31,7 +31,7 @@ export type CoberturaParaClasificar = { nombre: string; incluida: boolean | null
 export type GarantiasClasificadas = { version: number; porClave: Record<string, EstadoGarantia> }
 
 /** Súbelo al cambiar patrones: lo guardado con otra versión se reclasifica desde las coberturas. */
-export const VERSION_CATALOGO = 1
+export const VERSION_CATALOGO = 2
 
 /** Misma normalización que la tabla de coberturas del portal: sin tildes, minúsculas, sin signos. */
 export function claveCobertura(nombre: string): string {
@@ -51,6 +51,12 @@ const ASISTENCIA_VIAJE: GarantiaCatalogo = { clave: 'asistencia_viaje', etiqueta
  * `asistenciaAmpliada()`. Sin ninguna de las dos señales queda `no_consta`, nunca `no`.
  */
 const ASISTENCIA_AMPLIADA: GarantiaCatalogo = { clave: 'asistencia_ampliada', etiqueta: 'Asistencia en viaje ampliada', patrones: [] }
+/**
+ * Asistencia en el hogar AMPLIADA (29/09/2026). Como la de viaje: todas se llaman «Asistencia en el hogar» y
+ * el nivel va en el texto (Fidelidade: «ASISTENCIA HOGAR AMPLIADA…» / «ASISTENCIA HOGAR BÁSICA…»). La fija
+ * `asistenciaHogarAmpliada()`; sin señal, `no_consta`.
+ */
+const ASISTENCIA_HOGAR_AMPLIADA: GarantiaCatalogo = { clave: 'asistencia_hogar_ampliada', etiqueta: 'Asistencia en el hogar ampliada', patrones: [] }
 const SUSTITUCION: GarantiaCatalogo = { clave: 'vehiculo_sustitucion', etiqueta: 'Vehículo de sustitución', patrones: [/\bvehiculo (de )?sustitucion\b/, /\bcoche de sustitucion\b/, /\bvehiculo de reemplazo\b/] }
 const CONDUCTOR: GarantiaCatalogo = { clave: 'conductor', etiqueta: 'Seguro del conductor y ocupantes', patrones: [/\bconductor\b/, /\bocupantes\b/, /\baccidentes personales\b/] }
 const INCENDIO_VEH: GarantiaCatalogo = { clave: 'incendio', etiqueta: 'Incendio', patrones: [/\bincendio\b/] }
@@ -81,7 +87,12 @@ export const CATALOGO_GARANTIAS: Record<RamoGarantias, readonly GarantiaCatalogo
     { clave: 'danos_electricos', etiqueta: 'Daños eléctricos', patrones: [/\bdanos electricos\b/, /\belectric/] },
     { clave: 'fenomenos_atmosfericos', etiqueta: 'Fenómenos atmosféricos', patrones: [/\bfenomenos? atmosfericos?\b/, /\btormenta\b/, /\bviento\b/, /\bgranizo\b/, /\blluvia\b/] },
     { clave: 'incendio', etiqueta: 'Incendio', patrones: [/\bincendio\b/, /\bexplosion\b/] },
-    { clave: 'asistencia_hogar', etiqueta: 'Asistencia en el hogar', patrones: [/\basistencia\b/, /\bmanitas\b/, /\bcerrajer/, /\breparaciones urgentes\b/], excluye: [/\bjuridica\b/, /\binformatica\b/] },
+    // «Asistencia en viaje / Accidentes» (Allianz, Fidelidade) NO es la del hogar: sin el `viaje` su «no incluida» contaba aquí.
+    { clave: 'asistencia_hogar', etiqueta: 'Asistencia en el hogar', patrones: [/\basistencia\b/, /\bmanitas\b/, /\bcerrajer/, /\breparaciones urgentes\b/], excluye: [/\bjuridica\b/, /\binformatica\b/, /\bviaje\b/] },
+    ASISTENCIA_HOGAR_AMPLIADA,
+    { clave: 'todo_riesgo_accidental', etiqueta: 'Todo riesgo accidental', patrones: [/\btodo riesgo\b/, /\bdanos accidentales\b/] },
+    { clave: 'restauracion_estetica', etiqueta: 'Restauración estética', patrones: [/\brestauracion estetica\b/, /\bdanos esteticos\b/] },
+    { clave: 'animales', etiqueta: 'Animales domésticos', patrones: [/\banimales\b/, /\bmascotas?\b/] },
     { clave: 'electrodomesticos', etiqueta: 'Reparación de electrodomésticos', patrones: [/\belectrodomesticos?\b/, /\blinea blanca\b/] },
     { clave: 'joyas', etiqueta: 'Joyas y objetos de valor', patrones: [/\bjoyas?\b/, /\bobjetos de valor\b/] },
     { clave: 'defensa_juridica', etiqueta: 'Defensa jurídica', patrones: [/\bdefensa juridica\b/, /\bproteccion juridica\b/] },
@@ -144,12 +155,13 @@ export function clasificarCoberturas(
   const porClave: Record<string, EstadoGarantia> = {}
   for (const g of CATALOGO_GARANTIAS[ramo]) porClave[g.clave] = 'no_consta'
   for (const c of lista ?? []) {
-    const estado: EstadoGarantia = c.incluida === true ? 'si' : c.incluida === false ? 'no' : 'no_consta'
+    const estado: EstadoGarantia = c.incluida === true ? 'si' : c.incluida === false || esOpcionalSinMarcar(c) ? 'no' : 'no_consta'
     for (const clave of clavesDe(ramo, c.nombre)) {
       if (PESO[estado] > PESO[porClave[clave] ?? 'no_consta']) porClave[clave] = estado
     }
   }
   if ('asistencia_ampliada' in porClave) porClave.asistencia_ampliada = asistenciaAmpliada(lista, opciones)
+  if ('asistencia_hogar_ampliada' in porClave) porClave.asistencia_hogar_ampliada = asistenciaHogarAmpliada(lista)
   // La opción con la que se tarificó manda sobre la lista de coberturas: es la elección real.
   for (const [clave, estado] of Object.entries(garantiasDeOpciones(opciones))) {
     if (clave in porClave) porClave[clave] = estado
@@ -168,6 +180,8 @@ const OPCION_GARANTIA: readonly { clave: string; etiqueta: RegExp }[] = [
   { clave: 'vehiculo_sustitucion', etiqueta: /^(vehiculo|coche) de sustitucion$/ },
   { clave: 'retirada_carnet', etiqueta: /^retirada (del |de )?carne?t?$/ },
   { clave: 'defensa_multas', etiqueta: /^(reclamacion|defensa|recurso) (de |en )?multas$/ },
+  // Hogar, Fidelidade: «Todo riesgo accidental: No».
+  { clave: 'todo_riesgo_accidental', etiqueta: /^todo riesgo accidental$/ },
 ]
 const VALOR_NO = /^(no|sin contratar|no contratad[ao]|excluid[ao])\b/
 const VALOR_SI = /^(si|incluid[ao]|contratad[ao])\b/
@@ -225,6 +239,28 @@ export function asistenciaAmpliada(
     if (/\bincluid[ao]\b/.test(m[3])) return 'si'
   }
   return 'no_consta'
+}
+
+/**
+ * Una cobertura que el vendor manda SIN decir si va incluida y cuyo texto la declara «(opcional)»: es un
+ * extra que no está en este precio (Fidelidade hogar: «TODO RIESGO ACCIDENTAL (OPCIONAL)…», `incluida`
+ * null). Solo con los paréntesis: «Opcional» suelto puede ser parte de otra frase. Si el vendor dice
+ * `incluida: true`, manda él aunque el texto diga «(opcional)» (Allianz lo hace).
+ */
+function esOpcionalSinMarcar(c: CoberturaParaClasificar): boolean {
+  return c.incluida == null && typeof c.texto === 'string' && /\(\s*opcional\s*\)/i.test(c.texto)
+}
+
+/** PURO. Asistencia en el hogar ampliada según el texto (Fidelidade: «ASISTENCIA HOGAR AMPLIADA/BÁSICA»). */
+export function asistenciaHogarAmpliada(lista: readonly CoberturaParaClasificar[] | null): EstadoGarantia {
+  let r: EstadoGarantia = 'no_consta'
+  for (const c of lista ?? []) {
+    if (c.incluida !== true || !c.texto) continue
+    const m = /^asistencia (en el )?hogar (ampliada|basica)\b/.exec(claveCobertura(c.texto))
+    if (m?.[2] === 'ampliada') return 'si'
+    if (m?.[2] === 'basica') r = 'no'
+  }
+  return r
 }
 
 /** Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones. */

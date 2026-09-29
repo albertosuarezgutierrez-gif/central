@@ -37,16 +37,32 @@ export async function pedirCotizacionMoto(entrada: {
   clienteId: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
+  /** Variante de un riesgo (29/09/2026). En moto, de momento, solo la oportunidad y la nota. */
+  variante?: { oportunidadId: string; nota?: string | null } | null
 }): Promise<RespuestaRetarificar> {
   return cotizarMotoNuevaAsegura({
     clienteId: entrada.clienteId,
     solicitadoPor: 'plataforma/correduria',
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
+    oportunidadId: entrada.variante?.oportunidadId ?? null,
+    nota: entrada.variante?.nota ?? null,
   })
 }
 
-/** La última tarificación de moto de este cliente, para retomarla sin pagar otra vez. **Gratis.** */
-export async function pedirTarificacionGuardadaMoto(entrada: { clienteId: string }): Promise<RespuestaTarificacionNueva> {
-  return tarificacionNuevaGuardadaAsegura(entrada.clienteId, 'moto')
+/**
+ * La última tarificación de moto de este cliente, para retomarla sin pagar otra vez. **Gratis.**
+ * Con `oportunidadId` (variante de un riesgo) busca la de ESE riesgo y, con `tarificacionId`,
+ * esa variante concreta — no la última del cliente, que podría ser de otra moto.
+ */
+export async function pedirTarificacionGuardadaMoto(entrada: {
+  clienteId: string
+  oportunidadId?: string | null
+  tarificacionId?: string | null
+}): Promise<RespuestaTarificacionNueva> {
+  return tarificacionNuevaGuardadaAsegura(
+    entrada.clienteId,
+    'moto',
+    entrada.oportunidadId ? { oportunidadId: entrada.oportunidadId, tarificacionId: entrada.tarificacionId ?? null } : undefined,
+  )
 }

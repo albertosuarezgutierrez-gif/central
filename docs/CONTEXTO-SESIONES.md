@@ -17,12 +17,23 @@ certificación de GLOBAL 2 de 2025, recibo de moto Allianz, dos prestaciones de 
 es la del CORREO, no del documento. Nuevo filtro puro `lib/agente-facturas/filtro-pago.ts` (con cepo visto fallar), antes de
 insertar: aparta >90 días, emitida por un titular, a nombre de tercero por NIF y aseguradora no a tu nombre (cuentan como
 `descartados`). Limpieza 2026 de `facturas_proveedor` (PR #3956): 19 rechazadas (antiguas, correduría, Ariste 33.000€, IS de
-Pilar, duplicados) y 9 pagadas con su cargo en banco; quedan 36 pendientes (3.259€). `conciliarConBanco` ahora concilia también
+Pilar, duplicados) y 10 pagadas (9 con su cargo en banco + Asecon, pagada a mano por Alberto); quedan 35 pendientes (3.077,97€). `conciliarConBanco` ahora concilia también
 'nueva'/'pendiente_revision' por primera palabra del proveedor. Pendiente: una factura DOMICILIADA sigue ofreciendo «Pagar»;
 `fecha_vencimiento` nunca se rellena; el «Pagar todo» semanal paga lo pendiente sin mirar si ya se cobró por tarjeta.
+**(29/09/2026)** — 🧾 Devoluciones, 2ª tanda (PR pendiente de nº): **Allianz** ya se lee — manda la tabla en un PDF adjunto
+(«Rel. recibos ventanilla» = devueltos; «Relacion anulacion polizas por impago» = anuladas). El triaje guarda los PDF SOLO de
+`allianz.es` (≤2 MB, ≤3) y los lee por filas con celdas (`lib/correo/pdf-filas.ts`: `pdf-parse` a secas pega las columnas);
+sin tabla legible = aviso «sin leer», nunca «carta vacía». «DISCONFORME» → `cliente_rechaza`. **Comisión en riesgo** = `comision_bruta`
+del recibo (CIMA), en el Telegram y en la ficha (null ≠ 0). **Historial de devoluciones** por póliza (abiertas y resueltas).
+Pendiente: **cambio de IBAN desde el portal con aviso a Alberto** (siguiente PR: código al correo + cola en Hoy; alto riesgo).
+
 **(29/09/2026)** 📮 **`envios.grupoasegura.es` retirado de Resend** (OK de Alberto). Todo el correo de Grupo ASegura sale de `hola@grupoasegura.es`
 (muestreo 25-28/09: anulaciones, novedades y códigos, todos desde hola@). Queda borrar sus 3 registros DNS en IONOS
 (`resend._domainkey.envios`, MX y TXT de `send.envios`) — prompt para Claude en Chrome dado a Alberto; NO tocar los sin `.envios`.
+
+**(29/09/2026)** — 💬 WhatsApp por recibo DEVUELTO desde la fila del recibo (ficha de póliza, PR #3942): solo en `devuelto` (un «pendiente» no prueba devolución). Texto en `module-seguros/mensaje-recibo-devuelto.ts`: saludo por hora de Madrid, importe, compañía, riesgo (marca/modelo+matrícula o dirección), pide según motivo del banco (cuenta→IBAN, rechazo→¿precio o vendido?, fondos→¿repasar?) y fecha de suspensión (efecto+30); sin nº póliza/IBAN/DNI; cepos copy-regulado y tercero vistos en rojo. Móvil = tomador o, si no tiene, interviniente (se avisa «al móvil de X»). Lo envía Alberto; al pulsar se anota nota «WhatsApp abierto». El puerto de póliza manda ya `cliente.telefono` y `devolucionCorreo.tipoMotivo`. **PR #3942 MERGEADO (29/09).** Las dos devoluciones (Reale → `devuelto` 28/09; Mapfre → anotada sin recibo, se marcará cuando CIMA lo traiga) registradas en `recibo_devolucion` por SQL + nota en el historial de cada póliza (las tareas ya existían). 2ª tanda: ver entrada siguiente (arriba).
+
+**(28/09/2026)** — 🧾 Recibos DEVUELTOS: CIMA solo los trae de Occident (C0468); Reale/Mapfre los marca `cobrado` al emitir y la devolución llega solo por CORREO. Lector determinista de esos correos (`devolucion-correo.ts`, Reale/Occident/Mapfre) → puerto `/api/operador/recibos/devolucion` → `seguros.recibo_devolucion` + trigger fail-open en `poliza_recibos` (dato viejo de CIMA no la deshace; uno posterior la resuelve; migración `2026-09-29c` APLICADA y probada con rollback). Seguimiento 0/7/25/30 días desde el EFECTO + cierre como ganada al cobrar; Telegram con cliente/importe/suspensión; botón «Cobrado de nuevo». 🚨 **Todo el sistema contaba el art. 15 desde `fecha_vencimiento` (fin del periodo, +1 año en un anual)**: corregido a `fecha_efecto_actual`. Los 3 devueltos de C0468 no tenían borrador porque entraron antes de la 1ª foto del detector (24/09 12:15), no por bug. Tareas a mano creadas por SQL (Reale e35e511c, Mapfre 6e924882). Pendiente: registrar esas dos devoluciones por el puerto TRAS desplegar (antes, el borrador saldría con la fecha vieja).
 
 **(28/09/2026)** — ⏳ asegura-portal, carga v2: «AS» a 56 px, latido más marcado (opacidad 0,3→1, 1 s) ; «Cargando…» sigue oculto (Alberto: visible «se carga el diseño»). El «Grupo ASegura» que sigue viéndose es la cabecera fija y la pantalla de entrada (esta última pendiente de decidir si pasa a «AS»).
 
@@ -875,6 +886,23 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+
+## (29/09/2026) «Subir póliza» de la ficha parecía no hacer nada
+- El enlace (`?tab=documentos&subir=poliza`, #3921) llegaba bien, pero el formulario seguía en un `<details>` CERRADO
+  debajo de las baldosas: en el móvil no cambiaba nada visible. `Documentos.tsx` ahora lo abre y hace `scrollIntoView`
+  cuando llega `tipoInicial`. Cepo nuevo en `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo).
+
+## (29/09/2026) El riesgo como pantalla: figuras, variantes e historial (entrega 1, PR #3955)
+- `/correduria/oportunidad/[id]` deja de redirigir: cabecera del riesgo, intervinientes (tomador/propietario/conductores desde los vínculos o «+ Nueva persona» en línea), historial P1…Pn con «qué cambió» derivado de la `peticion` (`diferenciasVariante`, module-seguros) y «Nueva variante» → auto/moto-nuevo con `?oportunidad=`.
+- BD: `oportunidad_figura`, `oportunidades.poliza_id`, `tarificaciones.figuras/nota` (SQL `2026-09-29e`, aplicada). La variante se cuelga de la oportunidad dada; nunca abre otra.
+- Auto cotiza con figuras de otra ficha (sin verificar contra el vendor: el 1er intento real puede dar un 400 nuevo). Moto sigue con el tomador en todos los papeles (entrega 2).
+- Bug: la re-cotización del «previo» de moto perdía el garaje (216,53€ fue «sin garaje»); ya se restaura.
+- Pendiente: entrega 2 (moto con figuras) y 3 (pedir datos a un tercero, emisión→intervinientes, renovación desde póliza, «Pasar la oportunidad a…»). Al abrir una variante se usan las figuras VIGENTES, no la foto de esa variante.
+
+## (29/09/2026) Garantías de hogar: todo riesgo, restauración estética, animales y asistencia básica/ampliada
+- Catálogo hogar (module-seguros): `todo_riesgo_accidental`, `restauracion_estetica`, `animales`, `asistencia_hogar_ampliada` (texto Fidelidade «ASISTENCIA HOGAR AMPLIADA/BÁSICA»). Opción Fidelidade «Todo riesgo accidental: No» → no.
+- Regla general: cobertura con `incluida` null y texto «(opcional)» → `no`; si el vendor dice `incluida: true`, manda él (Allianz). `asistencia_hogar` excluye «Asistencia en viaje / Accidentes».
+- Decesos, salud y vida: 0 tarificaciones guardadas (medido) → no hay opciones que mapear; la parrilla ya marca diferencias en cualquier ramo. VERSION_CATALOGO = 2.
 
 ## (29/09/2026) Opciones del producto → garantías, «precio no comparable» y opciones en la póliza emitida
 - `garantiasDeOpciones()` (module-seguros): lista CERRADA de etiquetas medidas → sustitución (Allianz «No», Reale «SIN vehículo de sustitución»), retirada de carné (Generali «Sin contratar», Reale «Excluida») y reclamación de multas. La opción manda sobre la lista de coberturas. No se reutilizan los patrones del catálogo: casarían con preguntas («El conductor habitual es hijo de asegurado: No»).

@@ -6,6 +6,8 @@ import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import AnulacionPoliza from './AnulacionPoliza'
 import AvisoEmision from './AvisoEmision'
+import CobradoDeNuevo from './CobradoDeNuevo'
+import WhatsappReciboDevuelto, { type ContextoWhatsappDevuelto } from './WhatsappReciboDevuelto'
 import HistorialRiesgo from './HistorialRiesgo'
 import CimaPoliza from './CimaPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
@@ -470,12 +472,32 @@ function Franquicia({ texto, detalle }: { texto: string | null; detalle: Poliza[
   )
 }
 
+/**
+ * Con quién se abre el WhatsApp de un recibo devuelto: el móvil del tomador y, si no tiene, el de
+ * alguien de su póliza (se dice de quién). `null` = no hay a quién escribir por ahí.
+ */
+function contextoWhatsapp(p: Poliza): ContextoWhatsappDevuelto | null {
+  const ef = contactoEfectivo({ telefono: p.cliente.telefono, email: null }, p.intervinientes)
+  if (!ef.telefono) return null
+  const obj = p.objeto?.estado === 'conocido' ? p.objeto : p.gemela?.objeto?.estado === 'conocido' ? p.gemela.objeto : null
+  const tercero = ef.viaTelefono === 'interviniente'
+  return {
+    clienteId: p.cliente.id, telefono: ef.telefono,
+    quien: tercero && ef.quien ? `${ef.quien.nombre ?? 'otra persona'} (${etiquetaRol(ef.quien.rol).toLowerCase()})` : null,
+    nombre: p.cliente.nombre, aseguradora: p.aseguradora, tipo: p.tipo,
+    riesgo: obj ? { titulo: obj.titulo, detalle: obj.detalle } : null,
+    paraTercero: tercero,
+  }
+}
+
 function Recibos({ p }: { p: Poliza }) {
   const r = p.recibos
+  const wa = contextoWhatsapp(p)
+  const enRiesgo = comisionEnRiesgo(p.listaRecibos)
   const titular =
     r === null ? 'asegura no informa recibos'
     : r.total === 0 ? 'la compañía no ha mandado ningún recibo: no se sabe si está pagada'
-    : r.devueltos > 0 ? `🔴 ${r.devueltos} devuelto(s)`
+    : r.devueltos > 0 ? `🔴 ${r.devueltos} devuelto(s)${enRiesgo !== null ? ` · ${eur(enRiesgo)} de comisión en riesgo` : ''}`
     : r.pendientes > 0 ? `🟡 ${r.pendientes} al cobro (emitido, aún sin cargar)`
     : r.cobrados === 0 && r.anulados > 0 ? `⚪ todos anulados (${r.anulados})`
     : `🟢 ${r.cobrados} cobrado(s)${r.cobradoEur !== null ? ` · ${eur(r.cobradoEur)}` : ''}`
@@ -487,26 +509,69 @@ function Recibos({ p }: { p: Poliza }) {
   return (
     <Tarjeta titulo={`Recibos${r && r.total ? ` (${r.total})` : ''}`}>
       <p style={{ margin: '0 0 8px', fontSize: 13 }}>{titular}</p>
-      {recientes.length > 0 && <TablaRecibos lista={recientes} />}
+      {recientes.length > 0 && <TablaRecibos lista={recientes} wa={wa} />}
       {/* Los antiguos, plegados y sin montar: una póliza de hace años trae
           decenas de recibos y lo que se consulta es la anualidad en curso. */}
       {antiguos.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <Plegable titulo={`Ver ${antiguos.length} recibo(s) anteriores`}>
-            <TablaRecibos lista={antiguos} />
+            <TablaRecibos lista={antiguos} wa={wa} />
           </Plegable>
         </div>
       )}
+      <HistorialDevoluciones lista={p.historialDevoluciones} />
     </Tarjeta>
   )
 }
 
 const RECIBOS_VISIBLES = 12
 
-function TablaRecibos({ lista }: { lista: Poliza['listaRecibos'] }) {
+/** Suma la comisión de los recibos DEVUELTOS que la traen; `null` si ninguno la trae (no es 0€). */
+function comisionEnRiesgo(lista: Poliza['listaRecibos']): number | null {
+  // Solo la POSITIVA: una comisión negativa ya es un extorno (misma regla que el aviso de asegura).
+  const con = lista.filter((x) => x.situacion === 'devuelto' && x.comisionBruta !== null && x.comisionBruta > 0)
+  return con.length ? con.reduce((a, x) => a + (x.comisionBruta ?? 0), 0) : null
+}
+
+/** `manual:cobrado` (botón «Cobrado de nuevo») o `cima:<situación>` (lo resolvió la ingesta). */
+function comoSeResolvio(m: string | null): string {
+  if (m === 'manual:cobrado') return 'cobrado de nuevo (a mano)'
+  if (m?.startsWith('cima:')) return `${m.slice(5).replace(/_/g, ' ')} según CIMA`
+  return m ?? 'resuelta'
+}
+
+/**
+ * Las devoluciones que avisó la compañía por correo, también las ya resueltas: si un cliente devuelve
+ * recibos a menudo, es aquí donde se ve. `null` = no se pudo leer y se dice; `[]` no pinta nada.
+ */
+function HistorialDevoluciones({ lista }: { lista: Poliza['historialDevoluciones'] }) {
+  if (lista === null) return <p style={{ ...sub, marginTop: 10 }}>Historial de devoluciones por correo: no se ha podido leer.</p>
+  if (lista.length === 0) return null
+  const abiertas = lista.filter((d) => d.resueltaEn === null).length
+  return (
+    <div style={{ marginTop: 10 }}>
+      <Plegable titulo={`Historial de devoluciones (${lista.length}${abiertas ? ` · ${abiertas} abierta${abiertas > 1 ? 's' : ''}` : ''})`}>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+          {lista.map((d, i) => (
+            <li key={`${d.idRecibo}-${d.fecha}-${i}`} style={{ marginBottom: 4 }}>
+              {fmt(d.fecha)} · recibo …{d.idRecibo.slice(-4)}{d.importe !== null ? ` · ${eur(d.importe)}` : ''}
+              {d.motivo ? ` · ${d.motivo}` : ''}
+              <div style={sub}>
+                {d.resueltaEn === null ? '🔴 abierta' : `✅ ${comoSeResolvio(d.resueltaComo)} el ${fmt(d.resueltaEn)}`}
+                {d.fechaEfecto ? ` · efecto ${fmt(d.fechaEfecto)}` : ''}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Plegable>
+    </div>
+  )
+}
+
+function TablaRecibos({ lista, wa }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null }) {
   // Columnas nuevas solo si ALGÚN recibo las trae: asegura vieja o recibos anteriores a la ingesta nueva no las tienen.
   const hayRemesa = lista.some((x) => x.idRemesa)
-  const hayComision = lista.some((x) => x.baseComision !== null || x.claseComision || x.retencionIrpf !== null)
+  const hayComision = lista.some((x) => x.baseComision !== null || x.comisionBruta !== null || x.claseComision || x.retencionIrpf !== null)
   return (
     <div style={{ overflowX: 'auto' }}>
       <table className="tabla-polizas" style={tabla}>
@@ -516,7 +581,22 @@ function TablaRecibos({ lista }: { lista: Poliza['listaRecibos'] }) {
             <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
               <td data-label="Emitido" style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
               <td data-label="Vence" style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
-              <td data-rol="cabeza" style={td}>{ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}</td>
+              <td data-rol="cabeza" style={td}>
+                {ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}
+                {/* Solo en DEVUELTO: un «pendiente» no prueba que el banco lo devolviera. */}
+                {x.situacion === 'devuelto' && wa && (
+                  <> <WhatsappReciboDevuelto ctx={wa} importe={x.importe} fechaEfecto={x.fechaEfecto} tipoMotivo={x.devolucionCorreo?.tipoMotivo ?? null} /></>
+                )}
+                {x.situacion === 'devuelto' && x.comisionBruta !== null && x.comisionBruta > 0 && (
+                  <div style={sub} title="Comisión bruta del recibo según CIMA: si no se cobra, la compañía te la descuenta">💸 {eur(x.comisionBruta)} de comisión en riesgo</div>
+                )}
+                {x.devolucionCorreo && (
+                  <div style={sub}>
+                    <span title="CIMA aún no lo trae: lo avisó la compañía por correo">aviso por correo del {fmt(x.devolucionCorreo.fecha)}{x.devolucionCorreo.motivo ? ` · ${x.devolucionCorreo.motivo}` : ''}</span>
+                    <CobradoDeNuevo reciboId={x.id} />
+                  </div>
+                )}
+              </td>
               <td data-label="Cobro" style={td}>
                 {x.formaPago ?? <span style={muted}>—</span>}
                 {x.gestionCobro && <div style={sub}>{etiquetaGestionCobro(x.gestionCobro)}</div>}
@@ -524,7 +604,9 @@ function TablaRecibos({ lista }: { lista: Poliza['listaRecibos'] }) {
               {hayRemesa && <td data-label="Remesa" style={{ ...td, wordBreak: 'break-all' }}>{x.idRemesa ?? <span style={muted}>—</span>}</td>}
               {hayComision && (
                 <td data-label="Comisión" style={td}>
-                  {x.baseComision !== null ? <span style={{ whiteSpace: 'nowrap' }}>base {eur(x.baseComision)}</span> : <span style={muted}>—</span>}
+                  {x.comisionBruta !== null ? <span style={{ whiteSpace: 'nowrap' }}>{eur(x.comisionBruta)}</span>
+                    : x.baseComision !== null ? <span style={{ whiteSpace: 'nowrap' }}>base {eur(x.baseComision)}</span> : <span style={muted}>—</span>}
+                  {x.comisionBruta !== null && x.baseComision !== null && <div style={sub}>base {eur(x.baseComision)}</div>}
                   {(x.claseComision || x.retencionIrpf !== null) && (
                     <div style={sub}>
                       {x.claseComision && <span title="Clase de comisión (código EIAC)">clase {x.claseComision}</span>}

@@ -4,6 +4,8 @@ import { cotizar } from '@/lib/codeoscopic/cotizar'
 import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
 import { prepararRetarificacionNuevaAuto, respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
+import { correduriaUnica } from '@/lib/cartera'
+import { prepararVariante } from '@/lib/oportunidad-riesgo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -82,18 +84,42 @@ export const POST = auditado(async (req: Request) => {
       ? cuerpo.solicitadoPor.trim()
       : 'plataforma'
 
+  // VARIANTE de un riesgo (29/09/2026): con `oportunidadId` se cuelga de ESA oportunidad y las
+  // figuras (propietario, conductores) se arman desde sus fichas. Gratis, antes de gastar.
+  const correduria = await correduriaUnica().catch(() => null)
+  // Con `oportunidadId` y sin poder leer la correduría NO se cotiza: seguir sería pagar con el
+  // tomador en todos los papeles y colgarlo de otra oportunidad.
+  if (!correduria && typeof cuerpo.oportunidadId === 'string' && cuerpo.oportunidadId.trim() !== '') {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: 'no se pudo comprobar la variante; no se ha pedido precio', gastado: '0,00€' }, { status: 503 })
+  }
+  const variante = correduria
+    ? await prepararVariante(correduria.id, {
+        tomadorId: clienteId,
+        ramo: 'auto',
+        cuerpo,
+        correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      })
+    : { ok: true as const, v: { contexto: null, correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined } }
+  if (!variante.ok) {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: variante.motivo, gastado: '0,00€' }, { status: 422 })
+  }
+
   const p = await prepararRetarificacionNuevaAuto({
     clienteId,
     solicitadoPor,
     cuerpo: {
       resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
-      correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      correcciones: variante.v.correcciones,
     } satisfies CuerpoRetarificacion,
   })
   // Corta ANTES del vendor (422 faltan datos · 404 cliente · 503):
   // esas respuestas llevan `gastado: '0,00€'` y son el caso normal.
   if (p.estado === 'corte') {
     return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })
+  }
+
+  if (variante.v.contexto && p.peticion.contexto) {
+    p.peticion.contexto = { ...p.peticion.contexto, ...variante.v.contexto }
   }
 
   // ── La única línea que cuesta dinero, por el único embudo ────────────────

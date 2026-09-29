@@ -469,6 +469,51 @@ async function pedirPost(path: string, body: Record<string, unknown>): Promise<{
   return { status: res.status, json: await res.json().catch(() => null) }
 }
 
+/**
+ * `POST /api/operador/recibos/devolucion` — registra las devoluciones que la compañía avisa por correo.
+ * Tres desenlaces: `ok` (con la respuesta) · `rechazado` (asegura contestó que NO: el lote no se
+ * registró, con su motivo) · `sin_respuesta` (config, red o 5xx: no se sabe cuánto se guardó).
+ */
+export type RegistroDevoluciones =
+  | { estado: 'ok'; json: unknown }
+  | { estado: 'rechazado'; motivo: string }
+  | { estado: 'sin_respuesta'; motivo: string }
+
+export async function registrarDevolucionesAsegura(devoluciones: unknown[], mensajeId: string | null): Promise<RegistroDevoluciones> {
+  try {
+    const r = await pedirPost('/api/operador/recibos/devolucion', { devoluciones, mensajeId })
+    if (r === null) return { estado: 'sin_respuesta', motivo: 'falta ASEGURA_OPERADOR_SECRET' }
+    if (r.status === 200) return { estado: 'ok', json: r.json }
+    const j = (r.json ?? {}) as Record<string, unknown>
+    const motivo = typeof j.motivo === 'string' ? j.motivo : `HTTP ${r.status}`
+    return r.status >= 400 && r.status < 500 ? { estado: 'rechazado', motivo } : { estado: 'sin_respuesta', motivo }
+  } catch {
+    return { estado: 'sin_respuesta', motivo: 'no se pudo llegar a asegura' }
+  }
+}
+
+export type ResolucionDevolucion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo: string }
+
+/** `PATCH /api/operador/recibos/devolucion` — «cobrado de nuevo» a mano. El actor lo pone el servidor. */
+export async function resolverDevolucionAsegura(reciboId: string, actor: string): Promise<ResolucionDevolucion> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/recibos/devolucion`, {
+      method: 'PATCH',
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
+      body: JSON.stringify({ reciboId, actor }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (res.status === 200) return { estado: 'ok' }
+    const j = ((await res.json().catch(() => null)) ?? {}) as Record<string, unknown>
+    return { estado: 'error', motivo: typeof j.motivo === 'string' ? j.motivo : `HTTP ${res.status}` }
+  } catch {
+    return { estado: 'error', motivo: 'no se pudo llegar a asegura' }
+  }
+}
+
 export type DescarteRetencion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo?: string }
 
 /**

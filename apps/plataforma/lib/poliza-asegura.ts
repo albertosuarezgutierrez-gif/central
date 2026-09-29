@@ -89,11 +89,33 @@ export type ReciboFicha = {
   fechaEmision: string | null
   fechaVencimiento: string | null
   formaPago: string | null
+  /**
+   * La compañía avisó POR CORREO de la devolución y aún no consta el cobro. `null` = no hay aviso
+   * abierto o asegura no lo manda (versión vieja): entonces no se ofrece «cobrado de nuevo».
+   */
+  devolucionCorreo: DevolucionCorreoFicha | null
+  /** Efecto del recibo: desde aquí corre el mes del art. 15 LCS. `null` = asegura no lo manda. */
+  fechaEfecto: string | null
 } & ReciboExtraFicha
+
+export type DevolucionCorreoFicha = { fecha: string; motivo: string | null; tipoMotivo: string | null }
+
+/** Una devolución avisada por correo, abierta o ya resuelta (`resueltaEn`). */
+export type DevolucionHistorialFicha = {
+  idRecibo: string
+  fecha: string
+  fechaEfecto: string | null
+  importe: number | null
+  motivo: string | null
+  tipoMotivo: string | null
+  resueltaEn: string | null
+  resueltaComo: string | null
+}
 
 export type Poliza = {
   id: string
-  cliente: { id: string; nombre: string }
+  /** `telefono`: el principal de la ficha. `null` = no consta o asegura (versión vieja) no lo manda. */
+  cliente: { id: string; nombre: string; telefono: string | null }
   tipo: string
   aseguradora: string
   codigoEntidadDgs: string | null
@@ -118,6 +140,8 @@ export type Poliza = {
   coberturas: CoberturaFicha[]
   recibos: RecibosPoliza | null
   listaRecibos: ReciboFicha[]
+  /** Devoluciones avisadas por correo. `null` = asegura no la manda o no pudo leerla (≠ `[]`, ninguna). */
+  historialDevoluciones: DevolucionHistorialFicha[] | null
   /** `null` = asegura no manda la lista (no es «sin siniestros», que es `[]`). */
   siniestros: SiniestroCartera[] | null
   /**
@@ -410,6 +434,8 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       listaRecibos.push({
         id: o.id, situacion: cadena(o.situacion) ?? 'sin_informar', importe: numero(o.importe),
         fechaEmision: cadena(o.fechaEmision), fechaVencimiento: cadena(o.fechaVencimiento), formaPago: cadena(o.formaPago),
+        devolucionCorreo: leerDevolucionCorreo(o.devolucionCorreo),
+        fechaEfecto: fechaIsoOnull(o.fechaEfecto),
         ...leerReciboExtra(o),
       })
     }
@@ -431,7 +457,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
     estado: 'ok',
     poliza: {
       id: p.id,
-      cliente: { id: c.id, nombre: cadena(c.nombre) ?? 'sin nombre' },
+      cliente: { id: c.id, nombre: cadena(c.nombre) ?? 'sin nombre', telefono: cadena(c.telefono) },
       tipo: p.tipo,
       aseguradora: p.aseguradora,
       codigoEntidadDgs: cadena(p.codigoEntidadDgs),
@@ -457,6 +483,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       coberturas,
       recibos: leerRecibos(p.recibos),
       listaRecibos,
+      historialDevoluciones: leerHistorialDevoluciones(p.historialDevoluciones),
       siniestros,
       historialRiesgo: leerHistorialRiesgo(p.historialRiesgo),
       intervinientes: leerIntervinientes(p.intervinientes),
@@ -491,4 +518,38 @@ export async function polizaAsegura(id: string): Promise<RespuestaPoliza> {
   } catch {
     return { estado: 'error', motivo: 'red' }
   }
+}
+
+/** PURO. Una fila rara se descarta; una lista que no es lista es «no se sabe» (`null`). */
+export function leerHistorialDevoluciones(v: unknown): DevolucionHistorialFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const txt = (x: unknown): string | null => (typeof x === 'string' && x !== '' ? x : null)
+  return v.flatMap((x): DevolucionHistorialFicha[] => {
+    if (typeof x !== 'object' || x === null) return []
+    const o = x as Record<string, unknown>
+    const fecha = fechaIsoOnull(o.fecha)
+    const idRecibo = txt(o.idRecibo)
+    if (!fecha || !idRecibo) return []
+    return [{
+      idRecibo, fecha, fechaEfecto: fechaIsoOnull(o.fechaEfecto),
+      importe: typeof o.importe === 'number' && Number.isFinite(o.importe) ? o.importe : null,
+      motivo: txt(o.motivo), tipoMotivo: txt(o.tipoMotivo),
+      resueltaEn: fechaIsoOnull(o.resueltaEn), resueltaComo: txt(o.resueltaComo),
+    }]
+  })
+}
+
+function leerDevolucionCorreo(v: unknown): DevolucionCorreoFicha | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.fecha)) return null
+  return {
+    fecha: o.fecha,
+    motivo: typeof o.motivo === 'string' && o.motivo !== '' ? o.motivo : null,
+    tipoMotivo: typeof o.tipoMotivo === 'string' && o.tipoMotivo !== '' ? o.tipoMotivo : null,
+  }
+}
+
+function fechaIsoOnull(v: unknown): string | null {
+  return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null
 }

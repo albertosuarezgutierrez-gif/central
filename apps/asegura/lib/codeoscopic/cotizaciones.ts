@@ -52,6 +52,16 @@ export type ContextoCotizacion = {
   /** De dónde salió, si salió de la cartera. `null` = no venía de una póliza. */
   polizaId?: string | null
   clienteId?: string | null
+  /**
+   * El riesgo (oportunidad) del que es VARIANTE esta cotización (29/09/2026). Con él se cuelga de
+   * esa oportunidad aunque el tomador sea otra persona (un familiar). Sin él, la de siempre: la
+   * primera abierta del cliente para ese ramo.
+   */
+  oportunidadId?: string | null
+  /** Foto de figuras de la variante (rol → cliente_id). NULL = no consta. */
+  figuras?: Record<string, string | null> | null
+  /** Etiqueta libre del corredor («a nombre del padre»). */
+  nota?: string | null
 }
 
 /**
@@ -233,7 +243,7 @@ export async function guardarCotizacion(
         ramo, puerta, poliza_id, cliente_id, fecha_efecto, peticion,
         codigo_postal, municipio_id, metros_cuadrados, anio_construccion,
         capital_continente, capital_contenido, tipo_vivienda, uso, ocupacion,
-        solicitado_por
+        solicitado_por, figuras, nota
       ) values (
         ${e.correduriaId}::uuid,
         ${e.intentoId}::uuid,
@@ -254,7 +264,9 @@ export async function guardarCotizacion(
         ${r.tipoVivienda},
         ${r.uso},
         ${r.ocupacion},
-        ${e.solicitadoPor}
+        ${e.solicitadoPor},
+        ${e.contexto.figuras ? JSON.stringify(e.contexto.figuras) : null}::jsonb,
+        ${e.contexto.nota ?? null}
       )
       returning id::text as id
     `
