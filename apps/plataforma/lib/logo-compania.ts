@@ -60,3 +60,16 @@ export function nombreProductoSinCia(compania: string | null | undefined, produc
   }
   return producto
 }
+
+/** Palabras que solo repiten el ramo de la pantalla («Motos», «Autos»…): no distinguen un precio de otro. */
+const PRODUCTO_GENERICO = new Set(['moto', 'motos', 'auto', 'autos', 'coche', 'coches', 'hogar', 'vida', 'salud', 'decesos'])
+
+/**
+ * El producto SOLO si dice algo: sin la compañía delante y `null` cuando no es más que el ramo
+ * («Mapfre Motos» en la pantalla de moto). Repetido en cada fila era ruido en el móvil (28/09/2026).
+ */
+export function productoRelevante(compania: string | null | undefined, producto: string | null | undefined): string | null {
+  const p = nombreProductoSinCia(compania, producto)
+  if (!p) return null
+  return PRODUCTO_GENERICO.has(normalizar(p)) ? null : p
+}

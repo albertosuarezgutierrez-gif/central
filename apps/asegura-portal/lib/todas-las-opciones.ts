@@ -11,9 +11,11 @@
 import {
   CATALOGO_GARANTIAS,
   cambiosFrenteActual,
+  diferenciasDeOpcion,
   capitalServicio,
   clasificarCoberturas,
   garantiasDeNecesidades,
+  preseleccionFija,
   type EstadoGarantia,
   type GarantiasClasificadas,
   type InterruptorGarantia,
@@ -69,7 +71,8 @@ export function garantiasDeActual(ramo: RamoGarantias, coberturas: readonly stri
  */
 export function preseleccion(ramo: RamoGarantias | null, necesidades: string | null | undefined, interruptores: readonly InterruptorGarantia[]): string[] {
   if (ramo === null) return []
-  const pedidas = new Set(garantiasDeNecesidades(ramo, necesidades))
+  // Lo que pidió + lo que sale marcado siempre en su ramo (la grúa en coche y moto).
+  const pedidas = new Set([...garantiasDeNecesidades(ramo, necesidades), ...preseleccionFija(ramo, interruptores)])
   return interruptores.map((i) => i.clave).filter((c) => pedidas.has(c))
 }
 
@@ -142,14 +145,31 @@ export type FilaOpcion = {
   cambiosSinDato: string | null
   /** Solo decesos: «Capital del servicio: 3.600,00€». `null` = no viene o no aplica. */
   capital: string | null
+  /** «No incluye: X» — donde las opciones no dicen lo mismo y ESTA dice que no. `null` = nada. */
+  noIncluye: string | null
+  /** «Sin confirmar por la compañía: X» — donde otras sí lo dicen y esta no. `null` = nada. */
+  sinConfirmar: string | null
 }
 
-export function filaDeOpcion(o: OpcionParaFila, ctx: { ramo: RamoGarantias | null; actual: GarantiasClasificadas | null }): FilaOpcion {
+export function filaDeOpcion(
+  o: OpcionParaFila,
+  ctx: { ramo: RamoGarantias | null; actual: GarantiasClasificadas | null; todas?: readonly OpcionParaFila[] },
+): FilaOpcion {
   const producto = o.modalidad !== null && o.modalidad.trim() !== '' ? `${o.producto} · ${o.modalidad.trim()}` : o.producto
   let cambios: string | null = null
   let cambiosSinDato: string | null = null
+  let noIncluye: string | null = null
+  let sinConfirmar: string | null = null
   if (ctx.ramo !== null) {
     const c = cambiosFrenteActual(ctx.ramo, o.garantias, ctx.actual)
+    // Lo que ya dice «frente a tu seguro actual» no se repite.
+    const d = diferenciasDeOpcion(ctx.ramo, o, ctx.todas ?? [])
+    if (d !== null) {
+      const no = d.noIncluye.filter((x) => !c?.pierdes.includes(x))
+      const sc = d.sinConfirmar.filter((x) => !c?.sinDato.includes(x))
+      if (no.length > 0) noIncluye = `No incluye: ${listaY(no)}`
+      if (sc.length > 0) sinConfirmar = `Sin confirmar por la compañía: ${listaY(sc)}`
+    }
     if (c !== null) {
       const partes: string[] = []
       if (c.ganas.length > 0) partes.push(`+ ${c.ganas.join(', ')}`)
@@ -177,6 +197,8 @@ export function filaDeOpcion(o: OpcionParaFila, ctx: { ramo: RamoGarantias | nul
     cambios,
     cambiosSinDato,
     capital,
+    noIncluye,
+    sinConfirmar,
   }
 }
 

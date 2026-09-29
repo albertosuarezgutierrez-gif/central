@@ -524,7 +524,7 @@ export function precalificarAutoNueva(
     sexo: sexoDeSaludo(cliente.saludo) ?? undefined,
     estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
-    fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+    fechaCarnet: limpio(cliente.fechaCarnet) ?? carnetBDeFicha(cliente.carnets) ?? undefined,
     cpResidencia: limpio(cliente.codigoPostal),
     municipioResidenciaId: resueltos.municipioId,
     nombreVia: nombreViaDeFicha ?? undefined,
@@ -713,15 +713,15 @@ export function precalificarMotoNueva(
   const carnet: Pick<Partial<DatosMoto>, 'fechaCarnet' | 'tipoCarnet' | 'zonaCarnet' | 'fechaCarnetB'> = deMoto
     ? { fechaCarnet: deMoto.fecha, tipoCarnet: deMoto.tipo, fechaCarnetB: carnetBDeFicha(cliente.carnets) }
     : {
-        fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+        fechaCarnet: limpio(cliente.fechaCarnet) ?? carnetBDeFicha(cliente.carnets) ?? undefined,
         tipoCarnet: suponer(
           'tipoCarnet',
           TIPO_CARNET_SUPUESTO,
           cliente.carnets === null
             ? 'no se han podido leer los carnés de la ficha; se declara el B con la fecha del conductor — ' +
                 'compruébalo: una moto de más de 125 cc exige carné de moto'
-            : 'no consta carné de moto (A, A2, A1, AM) con fecha en la ficha; se declara el B con la fecha ' +
-                'del conductor — una moto de más de 125 cc exige carné de moto, añádelo a la ficha',
+            : 'no consta carné de moto (A, A2, A1, AM) con fecha en la ficha; se declara el B (el de la ficha ' +
+                'o el del conductor) — vale hasta 125 cc; una moto mayor exige carné de moto, añádelo a la ficha',
           true,
         ) as string,
       }

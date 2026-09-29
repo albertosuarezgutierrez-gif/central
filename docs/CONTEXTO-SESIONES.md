@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(29/09/2026)** 📮 **`envios.grupoasegura.es` retirado de Resend** (OK de Alberto). Todo el correo de Grupo ASegura sale de `hola@grupoasegura.es`
+(muestreo 25-28/09: anulaciones, novedades y códigos, todos desde hola@). Queda borrar sus 3 registros DNS en IONOS
+(`resend._domainkey.envios`, MX y TXT de `send.envios`) — prompt para Claude en Chrome dado a Alberto; NO tocar los sin `.envios`.
 **(29/09/2026)** — 💬 WhatsApp por recibo DEVUELTO desde la fila del recibo (ficha de póliza, PR #3942): solo en `devuelto` (un «pendiente» no prueba devolución). Texto en `module-seguros/mensaje-recibo-devuelto.ts`: saludo por hora de Madrid, importe, compañía, riesgo (marca/modelo+matrícula o dirección), pide según motivo del banco (cuenta→IBAN, rechazo→¿precio o vendido?, fondos→¿repasar?) y fecha de suspensión (efecto+30); sin nº póliza/IBAN/DNI; cepos copy-regulado y tercero vistos en rojo. Móvil = tomador o, si no tiene, interviniente (se avisa «al móvil de X»). Lo envía Alberto; al pulsar se anota nota «WhatsApp abierto». El puerto de póliza manda ya `cliente.telefono` y `devolucionCorreo.tipoMotivo`.
 
 **(28/09/2026)** — 🧾 Recibos DEVUELTOS: CIMA solo los trae de Occident (C0468); Reale/Mapfre los marca `cobrado` al emitir y la devolución llega solo por CORREO. Lector determinista de esos correos (`devolucion-correo.ts`, Reale/Occident/Mapfre) → puerto `/api/operador/recibos/devolucion` → `seguros.recibo_devolucion` + trigger fail-open en `poliza_recibos` (dato viejo de CIMA no la deshace; uno posterior la resuelve; migración `2026-09-29c` APLICADA y probada con rollback). Seguimiento 0/7/25/30 días desde el EFECTO + cierre como ganada al cobrar; Telegram con cliente/importe/suspensión; botón «Cobrado de nuevo». 🚨 **Todo el sistema contaba el art. 15 desde `fecha_vencimiento` (fin del periodo, +1 año en un anual)**: corregido a `fecha_efecto_actual`. Los 3 devueltos de C0468 no tenían borrador porque entraron antes de la 1ª foto del detector (24/09 12:15), no por bug. Tareas a mano creadas por SQL (Reale e35e511c, Mapfre 6e924882). Pendiente: registrar esas dos devoluciones por el puerto TRAS desplegar (antes, el borrador saldría con la fecha vieja).
@@ -868,6 +871,30 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Opciones del producto → garantías, «precio no comparable» y opciones en la póliza emitida
+- `garantiasDeOpciones()` (module-seguros): lista CERRADA de etiquetas medidas → sustitución (Allianz «No», Reale «SIN vehículo de sustitución»), retirada de carné (Generali «Sin contratar», Reale «Excluida») y reclamación de multas. La opción manda sobre la lista de coberturas. No se reutilizan los patrones del catálogo: casarían con preguntas («El conductor habitual es hijo de asegurado: No»).
+- `diferenciasDeOpcion()`: «No incluye / Sin confirmar» solo en garantías donde las opciones difieren; en la parrilla (FiltroGarantias) y en el portal (sin repetir lo de «frente a tu seguro actual»).
+- Al emitir, `/emitir` lee la oferta aceptada (GET gratis, tope 6 s) y guarda sus opciones en `datos_especificos.codeoscopic.opciones`. El `accepted_offer_id` es la oferta del ReRate, NO casa con `tarificacion_precios.oferta_id` (medido): por eso se relee.
+- Retarificar con ampliada: sigue sin hacerse (valores del desplegable y coste sin confirmar).
+
+## (29/09/2026) Filtro de garantías: «asistencia ampliada» como garantía propia
+- `asistencia_ampliada` en el catálogo auto/moto (`catalogo-garantias.ts`, `asistenciaAmpliada()`): manda la opción tarificada (Allianz «Estándar» → no; «Ampliada/Plus» → sí), si no el texto de la cobertura (Occident «amplia: Opcional (no incluida)» → no). Sin señal, no_consta.
+- Reale «SIN vehículo de sustitución» habla del coche, no del nivel → no_consta, no «no».
+- `backfill-coberturas.escribirOpciones` recalcula `garantias` con coberturas+opciones; para las filas viejas se pone `opciones = NULL` y el cron (:17) las relee.
+- Retarificar con ampliada (Allianz/Reale) NO aprobado: pide valores del desplegable y coste sin confirmar.
+
+## (29/09/2026) Parrilla de precios única, marcar lo que se manda y seguimiento con llamada
+- Todos los ramos (moto, coche, hogar, vida, decesos, salud) usan `ListaPrecios.tsx` (logo, cobertura+franquicia, prima); una sola lista abierta («Qué verá el cliente»), la de emitir plegada.
+- `FiltroGarantias`: se MARCA lo que se manda (antes se ocultaba); atajos 3 más baratas / una por compañía / todas. Tras preparar, correo·WhatsApp·PDF en la misma pantalla.
+- Grúa marcada de serie en coche y moto (corredor y portal): `preseleccionFija()` en module-seguros.
+- Seguimiento de presupuestos (48 h sin abrir / 72 h sin elegir) ya avisaba por Telegram; ahora además crea una LLAMADA para hoy en la oportunidad abierta (`tareaDeSeguimiento`, asegura). Cepo `presupuesto-seguimiento-tarea.test.ts`.
+- El portal del cliente YA tenía el diseño del artefacto «Presupuesto por garantías» (TodasLasOpciones); pendiente unificar la fila de precio en una pieza común.
+
+## (28/09/2026) Precios de moto/coche nuevo legibles en el móvil
+- La tabla de 5-6 columnas se salía por la derecha y repetía «Mapfre · Motos» en cada fila; debajo, «Qué verá el cliente» pintaba OTRA vez los 31 precios.
+- Ahora: `ListaPrecios.tsx` (logo · cobertura+franquicia · prima · Emitir, de barata a cara, el panel de emitir se abre bajo SU fila) y, con cotización guardada, la lista de emitir va plegada («¿Ya ha dicho que sí?»). `CeldaCompania` = solo logo (nombre si no hay logo); `productoRelevante` quita el producto que solo repite el ramo. Filas de `FiltroGarantias` con el mismo formato y ojo de 44 px.
+- Cepo `apps/plataforma/lib/logo-compania.test.ts` (visto en rojo). Manuel ya retarificó: 31 precios, el más barato Allianz Terceros 216,53€.
+
 ## (28/09/2026) «Subir póliza» ya no saca de plataforma
 Los dos botones (ficha y cabecera de /correduria) saltaban a `asegura/cartera/subir` (otra web/sesión).
 Ficha → su pestaña Documentos con tipo «póliza». Cabecera → pantalla propia `/correduria/subir-poliza`
@@ -879,6 +906,7 @@ Telegram: si la oportunidad ya existía («duplicada»), los documentos se guard
 - Avant2 manda `formattedOptions` en cada precio («Asistencia en viaje: Estándar») y se TIRABAN. Nueva columna `seguros.tarificacion_precios.opciones` (sobre `leidas|no_manda|sin_precio|fallo`; NULL = sin intentar), migración `2026-09-28d_…` APLICADA.
 - Se escribe al tarificar y el cron `coberturas-backfill` rellena las viejas releyendo el proyecto (gratis, una relectura compartida).
 - 1ª pasada (19:17): 249/249 `no_manda` — se leía `quote.formattedOptions` y el spec las pone en `quote.product.formattedOptions`. Arreglado (se miran los dos) y las 249 vueltas a NULL para releer.
+- 2ª pasada (20:17): 280/280 siguen `no_manda` — ni la cotización ni `GET /insurances/{id}` traen opciones. Se leen de `GET …/offers/{offerId}` (una lectura por oferta; forma probada `mainQuote.product.formattedOptions`, y si no casa, el log dice las claves). Al tarificar sin opciones se deja NULL, no `no_manda`.
 - Por qué: Occident auto dice «asistencia amplia opcional (no incluida)» y Allianz tarifica con `travelAssistance=STD`; el filtro trata básica y ampliada igual. Siguiente paso: con el dato medido, separar «asistencia ampliada» en el catálogo.
 
 ## (28/09/2026) asegura abría un PrismaClient POR CONSULTA en producción → EMAXCONN en el pooler compartido
@@ -7968,3 +7996,17 @@ Fuera: datos de terceros (cifrados) y `ref_mediador_cima`. ⚠️ Los campos nue
 falta reprocesar los 46 SIN (lote cifrado ya en la rama temporal `cima-lote-sin-2026-09-28` del repo asegura; el
 clasificador bloquea leer la clave → lo lanza Alberto con `scratchpad/cima/clave.txt`). Borrar después ramas
 `cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` y los runs de `cima-rescate-lote`.
+
+## (28/09/2026) Presupuesto en PDF descargable desde la ficha del cliente
+Botón «Descargar PDF» en cada presupuesto (`PresupuestosPoliza`, ficha de cliente y de póliza) → plataforma
+`/api/correduria/presupuesto/pdf` → asegura `GET /api/operador/presupuesto/pdf` (pdf-lib, `lib/presupuesto-pdf.ts` puro +
+`presupuesto-pdf-datos.ts`). Mismas opciones y primas que ve el cliente en el portal (sin ocultas), datos del cálculo
+(matrícula, km, garaje), necesidades y pie legal; SIN DNI/IBAN/dirección, sin avisos internos de la compañía y sin enlace
+con token. Solo descarga: no avisa a nadie. Caso Manuel Piña (moto 2121NST): su único presupuesto (366dbbba) es de la
+tarificación vieja (15.000 km, sin garaje) — hay que retarificar antes de mandarle un PDF.
+Diseño de marca: Quicksand/Nunito Sans embebidas (`@pdf-lib/fontkit`), logotipo y logos de compañía en PNG base64
+(`presupuesto-pdf-recursos.ts`, regenerar al cambiar un logo). Y el carné: cliente NUEVO con carné B en la ficha ya no se
+lo pide el bot (auto y moto caían a la «fecha del conductor», que para una ficha sin póliza es null).
+El PDF abre con «Revisa tus datos» (los mismos grupos que el portal, `leerDatosCotizados`, DNI enmascarado); las
+recomendadas (con papel) van en tarjeta y el resto en tabla compacta (`repartirOpciones`). DNI ENTERO en el PDF (va al propio
+tomador para revisar la emisión; `leerDatosCotizados(..., {documentoCompleto})`, portal y firma siguen enmascarados).

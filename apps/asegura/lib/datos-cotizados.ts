@@ -78,7 +78,7 @@ function garaje(v: unknown): string | null {
 
 type Persona = { nombre: string | null; dni: string | null; dniCrudo: string | null; nacimiento: string | null; carnet: string | null }
 
-function persona(v: unknown): Persona {
+function personaDe(v: unknown, documentoCompleto = false): Persona {
   const p = obj(v)
   const nombre = [str(p.name), str(p.surname), str(p.surname2)].filter(Boolean).join(' ') || null
   const dniCrudo = str(obj(p.identificationDocument).id)
@@ -87,7 +87,7 @@ function persona(v: unknown): Persona {
   const tipo = id(lic.type)
   return {
     nombre,
-    dni: enmascararDocumento(dniCrudo),
+    dni: documentoCompleto ? (dniCrudo ? dniCrudo.replace(/[\s.-]/g, '').toUpperCase() : null) : enmascararDocumento(dniCrudo),
     dniCrudo: dniCrudo ? dniCrudo.replace(/[\s.-]/g, '').toUpperCase() : null,
     nacimiento: fechaEs(p.birthDate),
     carnet: fechaCarnet ? (tipo ? `${fechaCarnet} (carnet ${tipo})` : fechaCarnet) : null,
@@ -106,8 +106,13 @@ function filasPersona(p: Persona, conCarnet: boolean): FilaDato[] {
 const esOtra = (a: Persona, b: Persona) => b.dniCrudo !== null && b.dniCrudo !== a.dniCrudo
 
 /** Lee la petición guardada. `ramo` solo sirve de desempate: manda la FORMA de la petición. */
-export function leerDatosCotizados(peticion: unknown, ramo?: string | null): DatosCotizados {
+/**
+ * `documentoCompleto`: solo para el PDF que Alberto descarga y manda AL PROPIO tomador, para que compruebe
+ * su DNI entero antes de emitir. El portal y la firma siguen enmascarados: su texto y su huella no cambian.
+ */
+export function leerDatosCotizados(peticion: unknown, ramo?: string | null, opts: { documentoCompleto?: boolean } = {}): DatosCotizados {
   const p = obj(peticion)
+  const persona = (v: unknown) => personaDe(v, opts.documentoCompleto === true)
   const tomador = persona(p.holder)
   // Sin nombre y documento del tomador no hay nada que confirmar con sentido.
   if (!tomador.nombre || !tomador.dni) return { estado: 'ilegible', motivo: MOTIVO_ILEGIBLE }

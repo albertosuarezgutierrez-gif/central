@@ -16,26 +16,21 @@
 import { useEffect, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
-import { CeldaCompania } from '../../../CeldaCompania'
+import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import FiltroGarantias from '../../../FiltroGarantias'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { ConIcono } from '../../../iconos'
-import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
-import type { TarificacionNuevaGuardada } from '@/lib/retarificar-asegura'
+import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
-
-function euroODash(n: number | null | undefined): string {
-  return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
-}
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -177,14 +172,40 @@ export default function MotoNuevo({
   // La parrilla vivía solo en memoria: al cerrar la pestaña no había forma de preparar el
   // presupuesto ni de emitir sin volver a pagar. Gratis: solo lee lo ya guardado.
   const [guardada, setGuardada] = useState<TarificacionNuevaGuardada | null>(null)
+  // La moto de la última petición de precio (28/09/2026, Alberto: «ya tienes los datos»): se precarga
+  // para volver a pedir precio corrigiendo solo lo que cambió (garaje, km…). Vale aunque sus precios
+  // hayan caducado: la moto no caduca. Solo rellena lo que el corredor aún no ha tocado.
+  const [previo, setPrevio] = useState<VehiculoGuardado | null>(null)
+  const [usarPrevio, setUsarPrevio] = useState(false)
   useEffect(() => {
     if (poliza !== null) return
     let vivo = true
     pedirTarificacionGuardadaMoto({ clienteId })
-      .then((r) => { if (vivo && r.estado === 'ok' && !r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada) })
+      .then((r) => {
+        if (!vivo || r.estado !== 'ok') return
+        if (!r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada)
+        const v = r.guardada.vehiculo
+        if (!v) return
+        setPrevio(v)
+        setUsarPrevio(true)
+        setCodigoVehiculo((c) => c || v.codigoVehiculo)
+        if (v.matricula) setMatricula((m) => m || v.matricula!)
+        if (v.fechaMatriculacion) {
+          setMatriculacion((f) => f || v.fechaMatriculacion!)
+          setMatriculacionEstimada(false)
+        }
+        // Los km solo si se DECLARARON: la media supuesta no se convierte en un dato del cliente.
+        if (v.kmAnuales !== null && v.kmAnuales !== KM_ANUALES_SUPUESTOS) {
+          setKmAnuales((k) => k || String(v.kmAnuales))
+        }
+      })
       .catch(() => {})
     return () => { vivo = false }
   }, [clienteId, poliza])
+  function elegirOtraMoto() {
+    setUsarPrevio(false)
+    setCodigoVehiculo('')
+  }
   const retomar = (g: TarificacionNuevaGuardada) =>
     setResultado({
       estado: 'ok',
@@ -228,6 +249,7 @@ export default function MotoNuevo({
   }
 
   async function alElegirMarca(id: string) {
+    setUsarPrevio(false)
     setMarcaId(id)
     setModeloId('')
     setCodigoVehiculo('')
@@ -470,7 +492,17 @@ export default function MotoNuevo({
       <div style={cardStyle}>
         <CardHeader title="1 · La moto" sub="Marca, modelo, combustible y versión: todo del catálogo de Codeoscopic, gratis." />
         {fallo && <p style={{ color: 'var(--negative)', fontSize: 13 }}>{fallo}</p>}
+        {usarPrevio && previo && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}>
+            <span>
+              <strong>La misma moto que la última vez</strong>
+              {previo.matricula ? ` · ${previo.matricula}` : ''} · versión {previo.codigoVehiculo}. Corrige solo lo que haya cambiado.
+            </span>
+            <button type="button" onClick={elegirOtraMoto} style={{ ...btnStyle('sutil'), minHeight: 44 }}>Elegir otra moto</button>
+          </div>
+        )}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+          {!(usarPrevio && previo) && (<>
           <Campo etiqueta="Marca" falta={false}>
             <SelectorBuscable
               valor={marcaId}
@@ -519,6 +551,7 @@ export default function MotoNuevo({
               style={input}
             />
           </Campo>
+          </>)}
           {poliza ? (
             <Campo etiqueta="Matrícula" falta={false} ayuda="Sale de la póliza: no se cambia aquí.">
               <input value={matricula || 'La de la póliza'} readOnly style={{ ...input, opacity: 0.8 }} />
@@ -874,9 +907,27 @@ function Precios({
   /** `true` si hay póliza anterior que sustituir (carta de baja); `false` = cliente nuevo. */
   sustituye?: boolean
 }) {
-  const [abierta, setAbierta] = useState<string | null>(null)
   const cotizacionId = cotizacionIdDe(r.guardado)
   const puedeEmitir = emitible && !r.simulado && cotizacionId !== null
+  const propsLista = {
+    precios: r.precios,
+    simulado: r.simulado,
+    puedeEmitir,
+    motivoNoEmitir: r.simulado ? 'Simulado: no hay proyecto real de Codeoscopic' : 'Esta cotización no quedó guardada: no se puede emitir sin su id',
+    emision: emitible
+      ? (p: (typeof r.precios)[number], cerrar: () => void) => (
+          <Emision
+            tarificacionId={cotizacionId as string}
+            compania={p.compania ?? ''}
+            categoria={p.categoria ?? ''}
+            primaEur={p.primaEur ?? null}
+            producto={p.producto ?? null}
+            sustituye={sustituye}
+            onCerrar={cerrar}
+          />
+        )
+      : undefined,
+  }
   return (
     <div style={{ marginTop: 12 }}>
       <EnlaceOportunidad guardado={r.guardado} />
@@ -899,75 +950,15 @@ function Precios({
         Coste de esta consulta: {r.coste}
         {r.restantesHoy !== null ? <> · quedan hoy {r.restantesHoy}.</> : <> · el libro de consumo no se ha mirado (no hacía falta).</>}
       </p>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 460 }}>
-          <thead>
-            <tr>
-              <th style={th}>Aseguradora</th><th style={th}>Cobertura</th>
-              <th style={th}>Prima anual</th><th style={th}>Franquicia</th><th style={th}>Firmeza</th>
-              {emitible && <th style={th}>Emitir</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {r.precios.map((p, i) => (
-              <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}><CeldaCompania compania={p.compania} producto={p.producto} /></td>
-                <td style={td}>{p.categoria ?? <span style={{ color: 'var(--muted)' }}>sin declarar</span>}</td>
-                <td style={td}>
-                  <strong>{euroODash(p.primaEur)}</strong>
-                  {r.simulado && <> <Badge tono="aviso">simulado</Badge></>}
-                </td>
-                <td style={td}>{p.franquiciaEur === null || p.franquiciaEur === undefined ? <span style={{ color: 'var(--muted)' }}>no la declara</span> : euroODash(p.franquiciaEur)}</td>
-                <td style={td}><Badge tono={p.firmeza === 'firme' ? 'positivo' : 'aviso'} title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge></td>
-                {emitible && (
-                  <td style={td}>
-                    <button
-                      type="button"
-                      disabled={!puedeEmitir}
-                      onClick={() => {
-                        const id = `${p.compania}-${p.producto}-${i}`
-                        setAbierta(abierta === id ? null : id)
-                      }}
-                      title={
-                        r.simulado
-                          ? 'Simulado: no hay proyecto real de Codeoscopic'
-                          : cotizacionId === null
-                            ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
-                            : 'Confirmar con la compañía y emitir'
-                      }
-                      style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}
-                    >
-                      {abierta === `${p.compania}-${p.producto}-${i}` ? 'Ocultar' : 'Emitir'}
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {puedeEmitir &&
-        r.precios.map((p, i) => {
-          const id = `${p.compania}-${p.producto}-${i}`
-          if (abierta !== id) return null
-          return (
-            <Emision
-              key={id}
-              tarificacionId={cotizacionId as string}
-              compania={p.compania ?? ''}
-              categoria={p.categoria ?? ''}
-              primaEur={p.primaEur ?? null}
-              producto={p.producto ?? null}
-              sustituye={sustituye}
-              onCerrar={() => setAbierta(null)}
-            />
-          )
-        })}
-      {cotizacionIdDe(r.guardado) !== null && (
-        <FiltroGarantias ramo="moto" origen={{ clienteId, ramo: 'moto' }} tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
-      )}
-      {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
-        <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
+      {cotizacionId !== null ? (
+        <>
+          {/* «Qué verá el cliente» ya enseña todos los precios, de la más barata a la más cara:
+              la lista de emitir va plegada debajo para no pintar dos listas iguales seguidas. */}
+          <FiltroGarantias ramo="moto" origen={{ clienteId, ramo: 'moto' }} tarificacionId={cotizacionId} simulado={r.simulado} />
+          {emitible && <ListaPreciosPlegada {...propsLista} />}
+        </>
+      ) : (
+        <ListaPrecios {...propsLista} />
       )}
       {r.fallos.length > 0 && (
         <details style={{ marginTop: 8 }}>
@@ -1001,8 +992,6 @@ function Precios({
   )
 }
 
-const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', borderBottom: '1px solid var(--border)' }
-const td: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--border)' }
 
 /** Reparos que ESTA pantalla resuelve con un desplegable o una caja. */
 const RESUELTOS_EN_PANTALLA = new Set<string>([

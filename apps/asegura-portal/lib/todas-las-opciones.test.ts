@@ -60,7 +60,10 @@ test('preseleccion: lo pedido ∩ interruptores disponibles, en su orden', () =>
   // Pide grúa, lunas y robo; «robo» no lo incluye ninguna opción → no hay interruptor → no se marca.
   assert.deepEqual(preseleccion('auto', 'Quiero lunas, grúa y robo', inter), ['asistencia_viaje', 'lunas'])
   assert.deepEqual(preseleccion(null, 'Quiero lunas', inter), [])
-  assert.deepEqual(preseleccion('auto', null, inter), [])
+  // Sin necesidades, la grúa sale marcada igual en coche y moto (si alguna opción la incluye).
+  assert.deepEqual(preseleccion('auto', null, inter), ['asistencia_viaje'])
+  assert.deepEqual(preseleccion('moto', null, interruptoresGarantias('moto', ops)), ['asistencia_viaje'])
+  assert.deepEqual(preseleccion('auto', null, interruptoresGarantias('auto', [{ id: 'b', compania: 'X', primaEur: 1, garantias: G({ lunas: 'si' }) }])), [])
 })
 
 test('alternarGarantia: marca y desmarca conservando el orden de los interruptores', () => {
@@ -127,6 +130,20 @@ test('fila: cambios frente a la actual solo con la actual leída', () => {
   const f = filaDeOpcion(o, { ramo: 'auto', actual })
   assert.equal(f.cambios, 'Frente a tu seguro actual: + Lunas · − Robo')
   assert.equal(f.cambiosSinDato, 'Sin dato: Asistencia en viaje y grúa')
+})
+
+test('fila: no incluye / sin confirmar frente a las demás opciones, sin repetir lo de la póliza actual', () => {
+  const allianz = opcion({ id: 'a', garantias: G({ asistencia_viaje: 'si', asistencia_ampliada: 'no', robo: 'no' }) })
+  const mapfre = opcion({ id: 'm', garantias: G({ asistencia_viaje: 'si', asistencia_ampliada: 'no_consta', robo: 'si' }) })
+  const todas = [allianz, mapfre]
+  const fa = filaDeOpcion(allianz, { ramo: 'auto', actual: null, todas })
+  assert.equal(fa.noIncluye, 'No incluye: Asistencia en viaje ampliada y Robo')
+  assert.equal(fa.sinConfirmar, null)
+  assert.equal(filaDeOpcion(mapfre, { ramo: 'auto', actual: null, todas }).sinConfirmar, 'Sin confirmar por la compañía: Asistencia en viaje ampliada')
+  // «− Robo» ya sale frente a la actual: no se repite.
+  assert.equal(filaDeOpcion(allianz, { ramo: 'auto', actual: G({ robo: 'si' }), todas }).noIncluye, 'No incluye: Asistencia en viaje ampliada')
+  // Sin las demás opciones no se afirma nada.
+  assert.equal(filaDeOpcion(allianz, { ramo: 'auto', actual: null }).noIncluye, null)
 })
 
 test('fila: capital del servicio solo en decesos y solo si viene', () => {

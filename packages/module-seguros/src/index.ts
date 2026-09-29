@@ -960,6 +960,9 @@ export { claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type Seg
 export {
   CATALOGO_GARANTIAS,
   VERSION_CATALOGO,
+  asistenciaAmpliada,
+  garantiasDeOpciones,
+  type OpcionProductoLegible,
   claveCobertura,
   clasificarCoberturas,
   noReconocidas,
@@ -970,7 +973,7 @@ export {
   type GarantiasClasificadas,
   type RamoGarantias,
 } from './catalogo-garantias.ts'
-export { estadoDe, filtrarPorGarantias, interruptoresGarantias, type InterruptorGarantia, type OpcionFiltrable, type ResultadoFiltro } from './filtro-garantias.ts'
+export { diferenciasDeOpcion, estadoDe, filtrarPorGarantias, type DiferenciasOpcion, interruptoresGarantias, preseleccionFija, GARANTIAS_PRESELECCIONADAS, type InterruptorGarantia, type OpcionFiltrable, type ResultadoFiltro } from './filtro-garantias.ts'
 export {
   garantiasDeNecesidades,
   capitalServicio,

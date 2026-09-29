@@ -22,7 +22,7 @@
 // Lo que se queda SIN intentar (el tope de 15 s se agotó antes de empezar esa oferta, o no hay
 // credenciales) sigue a NULL = «no se ha intentado», y la red de seguridad lo retoma.
 
-import { clasificarCoberturas, ramoDeCatalogo, type GarantiasClasificadas } from '@central/module-seguros'
+import { clasificarCoberturas, ramoDeCatalogo, type GarantiasClasificadas, type OpcionProductoLegible } from '@central/module-seguros'
 import { prisma } from '../tenant.ts'
 import { leerCoberturas } from './coberturas.ts'
 import type { SobreCoberturas } from './coberturas-presupuesto.ts'
@@ -35,7 +35,12 @@ export const TOPE_COBERTURAS_MS = 15_000
 
 export type CabeceraParaCoberturas = { simulado: boolean; projectId: string | null; ramo: string }
 /** Una fila de `tarificacion_precios` con `coberturas is null`. `ofertaId: null` = sin oferta. */
-export type FilaSinCoberturas = { id: string; ofertaId: string | null }
+export type FilaSinCoberturas = {
+  id: string
+  ofertaId: string | null
+  /** Opciones de producto ya leídas (`opciones.lista`), para la asistencia ampliada. `null` = no se sabe. */
+  opciones?: OpcionProductoLegible[] | null
+}
 
 export type DepsCoberturasTarificacion = {
   /** La cabecera, filtrada por correduría. `null` = no existe en esta correduría. */
@@ -65,6 +70,14 @@ export type ResumenCoberturasTarificacion = {
   sinIntentar: number
   /** Por qué no se hizo nada, si no se hizo nada. */
   omitido?: 'no_existe' | 'simulada' | 'sin_proyecto' | 'sin_vendor' | 'error'
+}
+
+/** `opciones.lista` del sobre guardado, validada. Cualquier otra forma → `null` («no se sabe»). */
+export function listaOpciones(sobre: unknown): OpcionProductoLegible[] | null {
+  const l = sobre && typeof sobre === 'object' ? (sobre as { lista?: unknown }).lista : null
+  if (!Array.isArray(l)) return null
+  return l.filter((o): o is OpcionProductoLegible =>
+    !!o && typeof (o as OpcionProductoLegible).etiqueta === 'string' && typeof (o as OpcionProductoLegible).valor === 'string')
 }
 
 const vacio = (): ResumenCoberturasTarificacion => ({ leidas: 0, fallos: 0, sinOferta: 0, sinIntentar: 0 })
@@ -116,8 +129,11 @@ export async function completarCoberturasTarificacion(
 
     // Agrupar por oferta: varias filas (modalidades, fraccionamientos) comparten oferta → 1 GET.
     const porOferta = new Map<string, string[]>()
+    // Misma oferta = mismas opciones de producto: se toman de la primera fila que las tenga.
+    const opcionesDeOferta = new Map<string, OpcionProductoLegible[]>()
     for (const f of await d.pendientes()) {
       if (!f.ofertaId) { resumen.sinOferta += 1; continue }
+      if (f.opciones && !opcionesDeOferta.has(f.ofertaId)) opcionesDeOferta.set(f.ofertaId, f.opciones)
       const lista = porOferta.get(f.ofertaId)
       if (lista) lista.push(f.id)
       else porOferta.set(f.ofertaId, [f.id])
@@ -139,7 +155,7 @@ export async function completarCoberturasTarificacion(
           // 🚨 `lista: null`, NUNCA `[]`: un fallo pintado como lista vacía diría «no cubre nada».
           sobre = { estado: 'fallo', lista: null, leidasAt: ahora().toISOString() }
         }
-        const garantias = ramoCatalogo ? clasificarCoberturas(ramoCatalogo, sobre.lista) : null
+        const garantias = ramoCatalogo ? clasificarCoberturas(ramoCatalogo, sobre.lista, opcionesDeOferta.get(ofertaId) ?? null) : null
         try {
           await d.guardar(filas, sobre, garantias)
           if (sobre.estado === 'fallo') resumen.fallos += filas.length
@@ -203,15 +219,15 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
       return f ? { simulado: f.simulado, projectId: f.project_id_codeoscopic, ramo: f.ramo } : null
     },
     async pendientes() {
-      const filas = await prisma.$queryRaw<{ id: string; oferta_id: string | null }[]>`
-        select p.id::text as id, p.oferta_id
+      const filas = await prisma.$queryRaw<{ id: string; oferta_id: string | null; opciones: unknown }[]>`
+        select p.id::text as id, p.oferta_id, p.opciones
         from seguros.tarificacion_precios p
         join seguros.tarificaciones t on t.id = p.tarificacion_id
         where p.tarificacion_id = ${ids.tarificacionId}::uuid
           and t.correduria_id = ${ids.correduriaId}::uuid
           and p.coberturas is null
       `
-      return filas.map((f) => ({ id: f.id, ofertaId: f.oferta_id }))
+      return filas.map((f) => ({ id: f.id, ofertaId: f.oferta_id, opciones: listaOpciones(f.opciones) }))
     },
     async guardar(filas, sobre, garantias) {
       return prisma.$executeRaw`

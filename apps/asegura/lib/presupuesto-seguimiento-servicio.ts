@@ -9,6 +9,7 @@
 import { seguimientoPendiente } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { TIPO_ACTIVIDAD } from './presupuesto-actividad'
+import { tareaDeSeguimiento } from './presupuesto-seguimiento-llamada'
 import {
   TIPO_SEGUIMIENTO_AVISADO, agregarActividad, etapasAvisadas, type ActividadResumida, type Etapa,
 } from './presupuesto-seguimiento'
@@ -103,5 +104,6 @@ export async function marcarSeguimientoAvisado(
   await db.presupuestoEvento.create({
     data: { presupuestoId: e.id, tipo: TIPO_SEGUIMIENTO_AVISADO, origen: 'corredor', detalle: { etapa: e.etapa, actor: e.actor } },
   })
+  await tareaDeSeguimiento(correduriaId, e.id, e.etapa)
   return { estado: 'ok', yaConstaba: false }
 }

@@ -533,3 +533,15 @@ test('moto SIN carné de moto en la ficha: B con la fecha del conductor, DECLARA
   assert.match(String(s?.porque), /carné de moto/)
 })
 
+
+test('cliente nuevo sin fecha «del conductor»: el carné B de la ficha se usa, no se pide (auto y moto)', () => {
+  // Caso Manuel Piña (28/09/2026): su ficha tiene el carné B con fecha y el bot se la pedía.
+  const sinConductor = { fechaCarnet: null, carnets: [{ tipo: 'B', fechaExpedicion: '2001-03-15' }] } as Partial<ClienteCartera>
+  const moto = preMoto(sinConductor)
+  assert.equal(moto.datos.fechaCarnet, '2001-03-15')
+  assert.equal(moto.datos.tipoCarnet, 'B')
+  assert.ok(!moto.faltan.includes('fechaCarnet' as never))
+  assert.equal(preNueva(sinConductor).datos.fechaCarnet, '2001-03-15')
+  // Sin carné B con fecha, sigue faltando: no se inventa.
+  assert.equal(preMoto({ fechaCarnet: null, carnets: [] }).datos.fechaCarnet, undefined)
+})

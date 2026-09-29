@@ -266,7 +266,8 @@ export async function guardarCotizacion(
     // `oferta_id` (29/09/2026): la oferta de la que sale el precio. Con ella se leen
     // después sus coberturas GRATIS (`coberturas-tarificacion.ts`). NULL = no la tiene.
     // `opciones` (28/09/2026): con qué opciones tarificó el vendor ESTE precio (asistencia
-    // estándar o ampliada…). Venían en la cotización y se tiraban.
+    // estándar o ampliada…). La cotización casi nunca las trae (medido: 0 de 280); entonces NULL,
+    // y el cron `coberturas-backfill` las lee de la oferta (`GET …/offers/{id}`, gratis).
     const leidasAt = new Date().toISOString()
     for (const p of e.cotizacion.precios) {
       await tx.$executeRaw`
@@ -288,7 +289,7 @@ export async function guardarCotizacion(
           ${p.referenciaVendor},
           ${JSON.stringify(p.avisos ?? [])}::jsonb,
           ${p.ofertaId ?? null},
-          ${JSON.stringify(sobreOpciones(p.opciones, leidasAt))}::jsonb
+          ${p.opciones === null ? null : JSON.stringify(sobreOpciones(p.opciones, leidasAt))}::jsonb
         )
       `
     }
