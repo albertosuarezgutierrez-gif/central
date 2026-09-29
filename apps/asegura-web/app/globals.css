@@ -259,7 +259,7 @@ a {
   padding: 0 var(--e4);
   border-radius: var(--pill);
   border-color: var(--border);
-  background: color-mix(in oklab, var(--panel) 80%, transparent);
+  background: color-mix(in oklab, var(--panel) 88%, transparent);
   box-shadow: var(--shadow-panel);
   backdrop-filter: blur(24px);
 }
@@ -312,7 +312,7 @@ a {
 
 /* Logotipo «Grupo ASegura» (24/09/2026): la palabra entera en el trazo fino
    del monograma, con el «AS» oficial dentro. Mismo truco que `.marca-mono`
-   (`mask` + `currentColor`), así la píldora oscura lo re-tematiza sola. La
+   (`mask` + `currentColor`), así un ámbito `.oscuro` lo re-tematiza solo. La
    proporción es la del viewBox del SVG (6.83:1); si se regenera el fichero,
    se cambia aquí. El nombre lo lee el lector de pantalla del `.sr-marca`. */
 .marca-palabra {
@@ -324,9 +324,9 @@ a {
   mask: url('/brand/logotipo-asegura.svg') center / contain no-repeat;
 }
 
-/* En la píldora oscura el cobalto sobre casi negro se apaga: ahí va en el
-   color de texto del tema, como iba el nombre antes. */
-.oscuro .marca-palabra {
+/* Sobre la portada oscura (cabecera transparente) el cobalto sobre casi negro
+   se apaga: ahí va en el color de texto del tema. */
+body:has(.hero.oscuro) .hdr:not(.bajado) .marca-palabra {
   background: var(--text);
 }
 

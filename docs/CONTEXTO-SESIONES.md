@@ -921,6 +921,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) asegura-web: la píldora de la cabecera vuelve a CLARA
+Al hacer scroll la cabecera flotaba en `.oscuro` al 80 % sobre fondo blanco → gris sucio, y el monograma
+azul desaparecía sobre la baldosa oscura. La página es clara desde el 05/09 (una sola banda oscura), así que
+el motivo del oscuro estaba desfasado. Píldora clara (panel 88 % + blur), logo en cobalto; medido con
+Playwright a 1432 y 360 px sin desbordar.
+
 ## (29/09/2026) Egress Supabase: /correduria ya no baja listas enteras para pintar contadores
 Diff de pg_stat_statements 11:20→12:51 UTC: las dos consultas top eran `leadsCompetencia` (~3.556 filas, ~1,4 MB)
 y `colaRecaptacion` (~2.200 filas, ~0,8 MB), lanzadas en CADA visita a /correduria solo para el contador de
