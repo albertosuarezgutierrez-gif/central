@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(29/09/2026)** — 👩‍💼 **rrhh: el gestor edita y borra solicitudes** (petición de Pilar). `/admin/solicitudes` gana Editar (tipo, fechas, motivo y estado, en cualquier estado) y Borrar (con confirmación; se lleva el justificante del storage). `PUT`/`DELETE` en `/api/admin/solicitudes/[id]` → `editarSolicitud`/`borrarSolicitud` (scoped por `empresa_id`). Volver a «solicitada» limpia la resolución; pasar a aprobada/rechazada avisa al empleado. ⚠️ Sin rastro de auditoría: rrhh no tiene log de cambios y el borrado es definitivo.
+
 **(29/09/2026)** — 🔗 Devolución por correo cuyo recibo aún no ha mandado CIMA (Mapfre, renovación sep/2026): el BEFORE INSERT lo marcaba devuelto pero en un INSERT no podía escribir `recibo_devolucion.recibo_id` → quedaba sin enlace para siempre (sin importe ni comisión en la ficha). Trigger AFTER INSERT `recibo_enlaza_devolucion` (migración `2026-09-29g`, **aplicada**; probado en la BD real con rollback, y en rojo desactivándolo). La de Mapfre se enlazará sola cuando CIMA traiga el recibo.
 
 **(29/09/2026)** — 🏦 **Cambio de IBAN desde el portal** (PR #3969): el cliente pide la cuenta nueva en «Mis datos» con un código

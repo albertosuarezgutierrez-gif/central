@@ -180,3 +180,45 @@ export async function resolverSolicitud(empresaId: string, usuarioId: string, so
 
   return { estado, aviso, empleado_id: sol.empleado_id, empleado_email: sol.empleado_email, tipo: sol.tipo }
 }
+
+export const ESTADOS_SOLICITUD = ['solicitada', 'aprobada', 'rechazada'] as const
+
+/**
+ * El gestor edita una solicitud en cualquier estado (tipo, fechas, motivo y estado).
+ * Volver a 'solicitada' limpia la resolución; pasar a aprobada/rechazada la firma el gestor.
+ * Devuelve el estado anterior para que la ruta decida si avisa al empleado.
+ */
+export async function editarSolicitud(empresaId: string, usuarioId: string, solicitudId: string, entrada: EntradaSolicitud & { estado?: string }) {
+  const v = validarSolicitud(entrada)
+  const estado = entrada.estado ?? 'solicitada'
+  if (!(ESTADOS_SOLICITUD as readonly string[]).includes(estado)) throw new Error('Estado no válido')
+
+  const [prev] = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT s.estado, e.email AS empleado_email
+    FROM rrhh.solicitudes s JOIN rrhh.empleados e ON e.id = s.empleado_id
+    WHERE s.id = ${solicitudId}::uuid AND s.empresa_id = ${empresaId}::uuid LIMIT 1`)
+  if (!prev) throw new Error('Solicitud no encontrada')
+
+  const resolucion = estado === 'solicitada'
+    ? Prisma.sql`resuelta_por = NULL, resuelta_at = NULL`
+    : estado === prev.estado
+      ? Prisma.sql`resuelta_por = resuelta_por`
+      : Prisma.sql`resuelta_por = ${usuarioId}::uuid, resuelta_at = now()`
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE rrhh.solicitudes
+    SET tipo = ${v.tipo}, fecha_inicio = ${v.fecha_inicio}::date, fecha_fin = ${v.fecha_fin}::date,
+        motivo = ${v.motivo}, estado = ${estado}, ${resolucion}
+    WHERE id = ${solicitudId}::uuid AND empresa_id = ${empresaId}::uuid`)
+
+  return { estado, estado_anterior: prev.estado as string, empleado_email: prev.empleado_email as string | null, tipo: v.tipo }
+}
+
+/** El gestor borra una solicitud. Devuelve el path del justificante (si lo había) para limpiarlo del storage. */
+export async function borrarSolicitud(empresaId: string, solicitudId: string): Promise<{ justificante_path: string | null }> {
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+    DELETE FROM rrhh.solicitudes
+    WHERE id = ${solicitudId}::uuid AND empresa_id = ${empresaId}::uuid
+    RETURNING justificante_path`)
+  if (!rows[0]) throw new Error('Solicitud no encontrada')
+  return { justificante_path: rows[0].justificante_path ?? null }
+}
