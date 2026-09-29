@@ -896,6 +896,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Correduría: marca «AS» en todos los correos al cliente
+- `conMarcaCorreo()` (`@central/module-seguros`, `correo-marca.ts`): cabecera con logotipo + pie «solo escribimos desde @grupoasegura.es». Se aplica en el punto único `apps/asegura/lib/correo-envio.ts` y en los dos envíos del portal (código, invitación); idempotente (salta si el HTML ya trae el logo).
+- `apps/asegura-web/public/brand/avatar-asegura.png` (512 px, trazo fino a petición de Alberto) para el círculo de la bandeja. ⚠️ Ese avatar NO sale del HTML: hay que ponerlo como foto de una cuenta de Google de `hola@grupoasegura.es` (solo Gmail) o vía BIMI (DMARC estricto + VMC/CMC de pago). Pendiente de Alberto.
+
 ## (29/09/2026) Riesgo: tres decisiones cerradas (Alberto: «resuelve como veas»)
 - «Volver» del aviso legal al emitir vuelve a la OFERTA (con cuenta/fecha/tecleado), no cierra el panel.
 - «Pasar la oportunidad a…» se BLOQUEA (409) si esa persona ya tiene otra abierta del mismo ramo: una por cliente+ramo es lo que asume el enganche de presupuestos (mismo candado `oportunidad:<cliente>:<ramo>`).
