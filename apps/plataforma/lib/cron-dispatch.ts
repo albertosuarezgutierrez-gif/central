@@ -45,6 +45,9 @@ export const CRON_JOBS: CronJob[] = [
   // renovaciones — comparten sección «Hoy» de /correduria y es cómodo que sus
   // avisos lleguen juntos. Digest diario mientras algo siga sin confirmar CIMA.
   { path: '/api/cron/correduria-sustituciones', schedule: '35 6 * * *' },
+  // Emisiones RETENIDAS por la compañía («riesgo condicionado», 30/09/2026): dos veces al día.
+  // Solo avisa por Telegram si ha CAMBIADO alguna (liberada / rechazada).
+  { path: '/api/cron/correduria-retenidas', schedule: '40 7,13 * * *' },
   // Recaptación por email de leads solo-email (sin teléfono usable): 07:00,
   // antes del vigía de latidos de las 07:45. Manda hasta 25/día por Resend con
   // baja de un clic (LSSI art. 21); a quien tiene teléfono se le sigue

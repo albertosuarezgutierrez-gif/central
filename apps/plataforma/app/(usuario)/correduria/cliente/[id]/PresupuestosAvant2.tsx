@@ -3,7 +3,7 @@ import { useState } from 'react'
 
 import { eur } from '@/lib/dinero'
 import { btnStyle } from '@/components/ui'
-import { leerListaAvant2, origenProyecto, rutaTarificacion, type ListaAvant2, type ProyectoAvant2 } from '@/lib/correduria/avant2-proyectos'
+import { emisionRegistrable, leerListaAvant2, leerResultadoEmision, leerVistaEmision, origenProyecto, rutaTarificacion, textoAccionEmision, type ListaAvant2, type ProyectoAvant2 } from '@/lib/correduria/avant2-proyectos'
 
 /**
  * Los presupuestos del cliente en Avant2, hechos en la web o aquí (29/09/2026). Alberto: «para ser
@@ -27,6 +27,35 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
       setLista(leerListaAvant2(r.status, await r.json().catch(() => null)))
     } catch {
       setLista({ estado: 'error', mensaje: 'se cortó la conexión' })
+    }
+  }
+
+  /** Registrar en la intranet lo emitido en la web de Avant2: vista previa → confirm → POST. */
+  async function registrarEmision(p: ProyectoAvant2) {
+    setOcupado(p.projectId); setAviso(null)
+    try {
+      const qs = new URLSearchParams({ projectId: p.projectId, clienteId })
+      if (p.intranet?.oportunidadId) qs.set('oportunidadId', p.intranet.oportunidadId)
+      const rv = await fetch(`/api/correduria/avant2-emision?${qs.toString()}`, { cache: 'no-store' })
+      const v = leerVistaEmision(rv.status, await rv.json().catch(() => null))
+      if (v.estado === 'error') { setAviso({ ok: false, texto: `No se ha podido preparar el registro: ${v.mensaje}` }); return }
+      if (v.bloqueos.length > 0) {
+        setAviso({ ok: false, texto: `No se puede registrar todavía: ${v.bloqueos.join(' · ')}. ${v.emision.descripcion}` })
+        return
+      }
+      if (v.accion === 'nada') { setAviso({ ok: true, texto: `${v.emision.descripcion} · ${textoAccionEmision('nada')}` }); return }
+      if (!window.confirm(`Proyecto ${p.projectId}\n${v.emision.descripcion}\n\n${textoAccionEmision(v.accion)}\n\n¿Registrar la emisión en la intranet?`)) return
+      const r = await fetch('/api/correduria/avant2-emision', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ clienteId, projectId: p.projectId, oportunidadId: v.oportunidadId }),
+      })
+      const res = leerResultadoEmision(r.status, await r.json().catch(() => null))
+      setAviso({ ok: res.estado !== 'error', texto: res.texto })
+    } catch {
+      setAviso({ ok: false, texto: 'Se cortó la conexión: no sé si se ha registrado. Recarga la lista antes de repetir.' })
+    } finally {
+      setOcupado(null)
+      void cargar()
     }
   }
 
@@ -80,7 +109,7 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
               ? <p style={NOTA}>Nada pendiente de traer.</p>
               : (
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
-                  {sinTraer.map((p) => <Fila key={p.projectId} p={p} clienteId={clienteId} ocupado={ocupado} traer={traer} />)}
+                  {sinTraer.map((p) => <Fila key={p.projectId} p={p} clienteId={clienteId} ocupado={ocupado} traer={traer} registrarEmision={registrarEmision} />)}
                 </ul>
               )}
           </>
@@ -90,7 +119,7 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
   )
 }
 
-function Fila({ p, clienteId, ocupado, traer }: { p: ProyectoAvant2; clienteId: string; ocupado: string | null; traer: (p: ProyectoAvant2) => void }) {
+function Fila({ p, clienteId, ocupado, traer, registrarEmision }: { p: ProyectoAvant2; clienteId: string; ocupado: string | null; traer: (p: ProyectoAvant2) => void; registrarEmision: (p: ProyectoAvant2) => void }) {
   const origen = origenProyecto(p)
   const ruta = rutaTarificacion(clienteId, p.ramo, p.intranet)
   return (
@@ -115,7 +144,13 @@ function Fila({ p, clienteId, ocupado, traer }: { p: ProyectoAvant2; clienteId: 
           </p>
         </>
       )}
+      {p.emision && <p style={{ margin: 0, fontSize: 14 }}>Emisión: {p.emision.descripcion}</p>}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {emisionRegistrable(p.emision) && (
+          <button type="button" style={{ ...btnStyle('primario', 'md'), minHeight: 44 }} disabled={ocupado !== null} onClick={() => registrarEmision(p)}>
+            {ocupado === p.projectId ? 'Mirando…' : 'Registrar emisión en la intranet'}
+          </button>
+        )}
         {!p.intranet && !p.error && p.ramo && ruta && (
           <button type="button" style={btnStyle('primario', 'md')} disabled={ocupado !== null} onClick={() => traer(p)}>
             {ocupado === p.projectId ? 'Trayendo…' : 'Traer a plataforma'}

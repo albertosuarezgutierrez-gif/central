@@ -262,6 +262,17 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
       </div>
       <Resumen o={o} />
       {o.presupuestos && <div>{textoPresupuestos(o.presupuestos)}</div>}
+      {o.emision?.estado === 'riesgo_condicionado' && (
+        <div style={{ color: 'var(--negative)', overflowWrap: 'anywhere' }}>
+          <strong>⛔ Emitida · retenida por {o.emision.compania ?? 'la compañía'}</strong> · desde {fmt(o.emision.desde.slice(0, 10))}.
+          <div style={{ color: 'var(--muted)', fontSize: 13 }}>La póliza no está en vigor hasta que la compañía la libere; se comprueba sola dos veces al día.</div>
+        </div>
+      )}
+      {o.emision?.estado === 'rechazada' && (
+        <div style={{ color: 'var(--negative)', overflowWrap: 'anywhere' }}>
+          <strong>⛔ Rechazada por la compañía</strong>{o.emision.compania ? ` (${o.emision.compania})` : ''} · desde {fmt(o.emision.desde.slice(0, 10))}.
+        </div>
+      )}
       <div style={{ color: o.proximaTarea === null || vencida ? 'var(--negative)' : 'var(--text)' }}>
         {o.proximaTarea === null
           ? (aparcada ? 'Sin paso pendiente (aparcada).' : 'Sin siguiente paso: nadie la va a mirar. Ponle una tarea en «Gestionar».')

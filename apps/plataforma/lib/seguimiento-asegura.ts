@@ -294,6 +294,32 @@ export type OportunidadDeCliente = Oportunidad & {
   polizaId?: string | null
   /** Lo pedido para este riesgo (P1…Pn) y su presupuesto al cliente; `null` = asegura no lo manda. */
   presupuestos?: ResumenPresupuestos | null
+  /**
+   * Emisión hecha FUERA (web de Avant2) que cuelga de esta oportunidad (30/09/2026). `null` = no hay,
+   * o asegura aún no lo manda / forma desconocida: en ese caso la tarjeta no afirma nada nuevo.
+   * `riesgo_condicionado` = emitida pero RETENIDA por la compañía: no está en vigor.
+   */
+  emision?: EmisionOportunidad | null
+}
+
+export type EmisionOportunidad = {
+  projectId: string
+  estado: 'riesgo_condicionado' | 'rechazada' | 'emitida'
+  compania: string | null
+  desde: string
+}
+
+const ESTADOS_EMISION_OPORTUNIDAD = ['riesgo_condicionado', 'rechazada', 'emitida'] as const
+
+/** Puro. Cualquier forma que no se entienda es `null` (nada que pintar), nunca un estado inventado. */
+export function leerEmisionOportunidad(v: unknown): EmisionOportunidad | null {
+  const e = objeto(v)
+  if (!e) return null
+  const projectId = texto(e.projectId)
+  const estado = uno(ESTADOS_EMISION_OPORTUNIDAD, e.estado)
+  const desde = texto(e.desde)
+  if (!projectId || !estado || !desde) return null
+  return { projectId, estado, compania: texto(e.compania), desde }
 }
 
 export type OportunidadesCliente =
@@ -345,6 +371,7 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
       proximaTarea: ptTipo && ptFecha ? { tipo: ptTipo, fechaLimite: ptFecha } : null,
       polizaId: texto(r.polizaId),
       presupuestos: leerResumenPresupuestos(r.presupuestos),
+      emision: leerEmisionOportunidad(r.emision),
     })
   }
   return { estado: 'ok', oportunidades, truncado: o.truncado === true, descartadas, sinOportunidad: leerSinOportunidad(o.sinOportunidad) }
