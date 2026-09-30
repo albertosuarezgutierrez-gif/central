@@ -20,6 +20,7 @@ import {
   type OportunidadDeCliente,
   type OportunidadesCliente as Lectura,
 } from '@/lib/seguimiento-asegura'
+import type { PrecargaAlta } from '@/lib/correduria/seguros-cliente'
 import { rutaSinOportunidad, textoPresupuestos, textoSinOportunidad, type PresupuestoSinOportunidad } from '@/lib/correduria/presupuestos-oportunidad'
 import type { SeguroAnterior } from '@central/module-seguros'
 import { AvisoFechaDudosa, fmt } from './piezas'
@@ -77,9 +78,15 @@ function motivoDe(json: unknown, status: number): string {
   return typeof o?.motivo === 'string' ? o.motivo : `HTTP ${status}`
 }
 
-export default function OportunidadesCliente({ clienteId, telefono = null, polizas }: { clienteId: string; telefono?: string | null; polizas: Poliza[] }) {
+export default function OportunidadesCliente({ clienteId, telefono = null, polizas, precargas = {} }: {
+  clienteId: string; telefono?: string | null; polizas: Poliza[]
+  /** Por id de póliza del volcado: con qué se precarga el alta al crear la oportunidad desde su fila. */
+  precargas?: Record<string, PrecargaAlta>
+}) {
   const [lectura, setLectura] = useState<Lectura | null>(null)
   const [abriendo, setAbriendo] = useState(false)
+  // De qué fila del volcado nace el alta abierta (`?desde=<polizaId>`), si nace de una.
+  const [desde, setDesde] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string; id?: string | null } | null>(null)
   const [verCerradas, setVerCerradas] = useState(false)
   // La oportunidad desplegada. Se gestiona aquí mismo (25/09/2026): la página aparte
@@ -102,16 +109,20 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
   // «sin precio» llega aquí con `?oportunidad=nueva`. Con useSearchParams y no leyendo
   // `window.location` una vez: si ya estás en la ficha, el enlace es una navegación suave que NO
   // remonta este componente, y un efecto de montaje no se enteraría.
-  const pideNueva = useSearchParams().get('oportunidad') === 'nueva'
+  const params = useSearchParams()
+  const pideNueva = params.get('oportunidad') === 'nueva'
+  const pideDesde = params.get('desde')
   useEffect(() => {
     if (!pideNueva) return
     setAviso(null)
+    setDesde(pideDesde && precargas[pideDesde] ? pideDesde : null)
     setAbriendo(true)
     document.getElementById('oportunidades')?.scrollIntoView({ block: 'start' })
     // Se quita el parámetro: si se quedara, un segundo clic en el menú no cambiaría la URL
     // y el formulario ya cerrado no volvería a abrirse.
     const url = new URL(window.location.href)
     url.searchParams.delete('oportunidad')
+    url.searchParams.delete('desde')
     window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
   }, [pideNueva])
 
@@ -173,7 +184,9 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
 
       {abriendo && (
         <FormAlta
+          key={desde ?? 'nueva'}
           clienteId={clienteId}
+          precarga={desde ? precargas[desde] ?? null : null}
           onCancelar={() => setAbriendo(false)}
           onHecho={(t) => { setAviso(t); if (t.ok) setAbriendo(false); void cargar() }}
         />
@@ -382,16 +395,18 @@ export function textoSeguroAnterior(s: SeguroAnterior): string {
  * `inicial` (29/09/2026): una lectura ya hecha (la póliza subida en Documentos) rellena el
  * formulario al abrirlo, sin volver a pagar la lectura.
  */
-export function FormAlta({ clienteId, inicial, onCancelar, onHecho }: {
+export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHecho }: {
   clienteId: string
   inicial?: LecturaOk | null
+  /** Crear desde una fila del volcado: vehículo/aseguradora, y el vencimiento SOLO si es futuro. */
+  precarga?: PrecargaAlta | null
   onCancelar: () => void
   onHecho: (t: { ok: boolean; texto: string; id?: string | null }) => void
 }) {
-  const [ramo, setRamo] = useState('')
-  const [estado, setEstado] = useState<'en_negociacion' | 'competencia'>('en_negociacion')
-  const [vence, setVence] = useState('')
-  const [compania, setCompania] = useState('')
+  const [ramo, setRamo] = useState(precarga?.ramo ?? '')
+  const [estado, setEstado] = useState<'en_negociacion' | 'competencia'>(precarga ? 'competencia' : 'en_negociacion')
+  const [vence, setVence] = useState(precarga?.fechaFinVigencia ?? '')
+  const [compania, setCompania] = useState(precarga?.aseguradora ?? '')
   const [prima, setPrima] = useState('')
   const [tipoTarea, setTipoTarea] = useState('llamada')
   const [fechaTarea, setFechaTarea] = useState(manana())
@@ -402,7 +417,9 @@ export function FormAlta({ clienteId, inicial, onCancelar, onHecho }: {
   const [lectura, setLectura] = useState<{ ok: boolean; texto: string } | null>(null)
   // Lo leído que no tiene campo en el formulario pero se guarda con la oportunidad:
   // el nº de póliza (distingue dos seguros del mismo ramo), la moto y el bonus.
-  const [leido, setLeido] = useState<Pick<LecturaOk, 'numeroPoliza' | 'matricula' | 'vehiculo' | 'seguroAnterior'> | null>(null)
+  const [leido, setLeido] = useState<Pick<LecturaOk, 'numeroPoliza' | 'matricula' | 'vehiculo' | 'seguroAnterior'> | null>(
+    precarga ? { numeroPoliza: precarga.numeroPoliza, matricula: precarga.matricula, vehiculo: precarga.vehiculo, seguroAnterior: null } : null,
+  )
   const fichero = useRef<HTMLInputElement>(null)
   const aplicado = useRef(false)
 
@@ -496,6 +513,35 @@ export function FormAlta({ clienteId, inicial, onCancelar, onHecho }: {
       </div>
       {/* Bloqueado mientras lee: lo leído solo rellena lo vacío, y eso se decide con lo que había al pulsar. */}
       <fieldset disabled={leyendo} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'grid', gap: 10 }}>
+      {leido && (leido.vehiculo || leido.matricula) && (
+        <div style={{ fontSize: 14 }}>
+          <b>{[leido.vehiculo, leido.matricula].filter(Boolean).join(' · ')}</b>
+          <span style={{ color: 'var(--muted)' }}>{leido.numeroPoliza ? ` · nº ${leido.numeroPoliza}` : ''}</span>
+        </div>
+      )}
+      {/* El vencimiento es el eje de una oportunidad: cuándo hay que llamarle. Siempre a la vista. */}
+      <div style={{ display: 'grid', gap: 8, padding: 10, borderRadius: 10, border: '2px solid var(--primary)', background: 'var(--primary-light)' }}>
+        <div style={rejilla}>
+          <label style={{ ...etiqueta, color: 'var(--text)', fontWeight: 700 }}>
+            Vencimiento del seguro que tiene hoy
+            <input type="date" value={vence} onChange={e => setVence(e.target.value)} style={{ ...campo, fontWeight: 600 }} />
+          </label>
+          <label style={{ ...etiqueta, color: 'var(--text)', fontWeight: 700 }}>
+            Compañía actual
+            <input value={compania} onChange={e => setCompania(e.target.value)} maxLength={120} style={campo} placeholder="Opcional" />
+          </label>
+        </div>
+        {precarga?.fechaObsoleta && (
+          <span role="status" style={{ fontSize: 12, color: 'var(--warning)' }}>
+            ⚠️ Fecha del volcado obsoleta (constaba el {fmt(precarga.fechaObsoleta)}): pregunta al cliente cuándo le vence.
+          </span>
+        )}
+        {precarga && !precarga.fechaObsoleta && !precarga.fechaFinVigencia && (
+          <span role="status" style={{ fontSize: 12, color: 'var(--warning)' }}>⚠️ El volcado no trae fecha: pregunta al cliente cuándo le vence.</span>
+        )}
+        <AvisoFechaDudosa fecha={vence} hoy={hoyMadrid()} />
+        {vence === '' && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Sin vencimiento no entra en Vencimientos: nadie sabrá cuándo llamarle. Ponlo en cuanto lo sepas.</span>}
+      </div>
       <div style={rejilla}>
         <label style={etiqueta}>
           Ramo
@@ -510,15 +556,6 @@ export function FormAlta({ clienteId, inicial, onCancelar, onHecho }: {
             <option value="en_negociacion">Interesado</option>
             <option value="competencia">Por contactar</option>
           </select>
-        </label>
-        <label style={etiqueta}>
-          Le vence (si se sabe)
-          <input type="date" value={vence} onChange={e => setVence(e.target.value)} style={campo} />
-          <AvisoFechaDudosa fecha={vence} hoy={hoyMadrid()} />
-        </label>
-        <label style={etiqueta}>
-          Compañía actual
-          <input value={compania} onChange={e => setCompania(e.target.value)} maxLength={120} style={campo} placeholder="Opcional" />
         </label>
         <label style={etiqueta}>
           Prima actual (€)

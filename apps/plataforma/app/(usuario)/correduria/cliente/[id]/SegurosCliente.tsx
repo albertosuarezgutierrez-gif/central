@@ -1,12 +1,16 @@
 import Link from 'next/link'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
-import { ESTADOS_ABIERTOS, estaHuerfana, vencimientoOportunidad, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
+import { ESTADOS_ABIERTOS, estaHuerfana, estadoVencimiento, fechaFutura, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import type { SiniestroCartera } from '@/lib/siniestros-asegura'
 import { eur } from '@/lib/dinero'
+import { urlRetarificar } from '@/lib/ficha-asegura'
+import { btnStyle } from '@/components/ui'
+import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { TIPOS, fmt } from './piezas'
 import EliminarDeOportunidades, { RecuperarLead } from './EliminarDeOportunidades'
 import EditarVencimiento from './EditarVencimiento'
+import DescartarVolcado from './DescartarVolcado'
 
 /**
  * Los seguros del cliente en tres cubos, cada uno una tarjeta que se pincha
@@ -34,7 +38,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
           : <Rejilla>{conNosotros.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} />)}</Rejilla>}
       </Cubo>
 
-      <Cubo titulo={`Oportunidades (${oportunidades.length})`} nota="Lo tiene en otra compañía. Pincha para ver el seguimiento de la venta.">
+      <Cubo titulo={`Oportunidades (${oportunidades.length})`} nota="Otros seguros que se le conocen (otra compañía, volcado antiguo, lo que dice el cliente). Sin vencimiento futuro conocido: pregúntale.">
         {!reparto.oportunidadesLeidas && <Vacio aviso>No se han podido leer sus oportunidades: puede haber más de las que se ven.</Vacio>}
         {!reparto.declaradasLeidas && <Vacio aviso>No se han podido leer las pólizas que aportó desde el portal.</Vacio>}
         {oportunidades.length > 0
@@ -114,13 +118,15 @@ const ESTADO_POLIZA: Record<string, string> = {
   vencida: 'Vencida', competencia: 'En la competencia', fin_riesgo: 'Fin del riesgo',
 }
 
-/** «Le vence …» de un vencimiento anotado; uno de hace más de un año se dice por su próxima renovación. */
-function textoVence(anotado: string | null, hoy: Date): string {
-  const fin = anotado?.slice(0, 10) ?? null
-  const proxima = vencimientoOportunidad(fin, hoy)
-  return fin === null || proxima === null ? 'Vencimiento sin anotar'
-    : proxima === fin ? `Le vence ${fmt(fin)}`
-      : `Le renueva el ${fmt(proxima)} (anotado: ${fmt(fin)})`
+/**
+ * El vencimiento en tres estados (nunca se proyecta una fecha): futuro conocido → «Vence …»;
+ * pasado o sin fecha → «vencimiento desconocido», con lo último que se anotó solo como contexto.
+ */
+function textoVence(fecha: string | null | undefined, hoy: Date, fuente = 'anotado'): string {
+  const e = estadoVencimiento(fecha, hoy)
+  return e.estado === 'futuro'
+    ? `Vence ${fmt(e.fecha)}`
+    : `Vencimiento desconocido — preguntar al cliente${e.ultimaFecha ? ` (${fuente}: ${fmt(e.ultimaFecha)})` : ''}`
 }
 
 function rotuloTarea(t: string): string {
@@ -157,23 +163,18 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     // En «oportunidad», si hay seguimiento abierto la tarjeta lleva a él: eso es lo que se trabaja.
     href = o ? `/correduria/cliente/${ctx.clienteId}?tab=oportunidades&op=${o.id}` : `/correduria/poliza/${p.id}`
     ramo = TIPOS[p.tipo] ?? p.tipo
-    // Del volcado histórico, el estado y el año son de hace una década: lo que vale es que
-    // estuvo con nosotros y el día/mes en que renovaba, que es cuándo hay que llamarle.
-    estado = s.historica ? 'Estuvo con nosotros'
-      : p.confirmadaCima ? ESTADO_POLIZA[p.estado.trim()] ?? p.estado.replace(/_/g, ' ') : 'Pendiente de CIMA'
+    // Del volcado histórico, el estado y el año son de hace una década: sin rótulo de estado
+    // (una fila de 2017 con «activa» leía como en vigor) y con su vencimiento en tres estados.
+    estado = s.historica ? '' : p.confirmadaCima ? ESTADO_POLIZA[p.estado.trim()] ?? p.estado.replace(/_/g, ' ') : 'Pendiente de CIMA'
+    // El modelo va de título y la matrícula debajo, bien visible: citarla al cliente genera confianza.
     titulo = p.objeto?.titulo ?? p.matricula ?? (p.numeroPoliza ? `Póliza nº ${p.numeroPoliza}` : 'Sin detalle del bien')
     // El vencimiento anotado en su seguimiento (corregido a mano) manda sobre el de la póliza.
     const venc = vencimientoPoliza(s, ctx.hoy)
-    const volcado = s.historica && p.fechaVencimiento ? `último dato: vencía ${fmt(p.fechaVencimiento.slice(0, 10))}` : null
+    const fechaBase = venc.delSeguimiento ? o?.fechaFinVigencia ?? null : p.fechaVencimiento
     lineas = [
       `${p.aseguradora}${p.numeroPoliza ? ` · nº ${p.numeroPoliza}` : ''}${s.historica ? ' (volcado histórico)' : ''}`,
-      venc.delSeguimiento
-        ? [textoVence(o?.fechaFinVigencia ?? null, ctx.hoy), volcado ?? (p.prima !== null ? eur(p.prima) : null)].filter(Boolean).join(' · ')
-        : s.historica
-          ? venc.fecha && volcado
-            ? `Renovaría el ${fmt(venc.fecha)} · ${volcado}`
-            : 'Sin fecha de vencimiento: no se sabe cuándo renueva'
-          : [p.fechaVencimiento ? `Vence ${fmt(p.fechaVencimiento.slice(0, 10))}` : 'Sin fecha de vencimiento', p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
+      s.historica && p.matricula && p.objeto?.titulo ? `Matrícula ${p.matricula}` : null,
+      [textoVence(fechaBase, ctx.hoy, venc.delSeguimiento ? 'anotado' : 'volcado'), p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
       // El cambio de compañía va en la tarjeta de la nueva, no en una segunda del mismo bien.
       s.sustituye
         ? `Sustituye a ${s.sustituye.aseguradora}${s.sustituye.numeroPoliza ? ` nº ${s.sustituye.numeroPoliza}` : ''}${s.sustituye.fechaVencimiento ? `, que cubre hasta el ${fmt(s.sustituye.fechaVencimiento.slice(0, 10))}` : ''}`
@@ -197,7 +198,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     if (o) {
       avisos.push({ texto: `Seguimiento: ${ROTULO_ESTADO[o.estado]}`, tono: 'info' })
       avisos.push(...avisosOportunidad(o, ctx.hoy))
-    } else if (!vigente && p.estado.trim() !== 'fin_riesgo') {
+    } else if (!vigente && !s.historica && p.estado.trim() !== 'fin_riesgo') {
       avisos.push({ texto: 'Sin seguimiento abierto', tono: 'aviso' })
     }
   } else if (s.clase === 'oportunidad') {
@@ -226,7 +227,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     titulo = d.bien?.cosa ?? d.matricula ?? (d.compania ? `Seguro en ${d.compania}` : 'Sin detalle del bien')
     lineas = [
       d.compania ?? 'Compañía sin leer',
-      [d.fechaVencimiento ? `Vence ${fmt(d.fechaVencimiento.slice(0, 10))}` : null, d.primaAnual !== null ? eur(d.primaAnual) : null].filter(Boolean).join(' · ') || null,
+      [textoVence(d.fechaVencimiento, ctx.hoy, 'declarado'), d.primaAnual !== null ? eur(d.primaAnual) : null].filter(Boolean).join(' · '),
     ]
     avisos.push({ texto: 'Abrir seguimiento', tono: 'aviso' })
   }
@@ -235,7 +236,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)' }}>
         <span style={{ fontWeight: 700, color: 'var(--text)' }}>{ramo}</span>
-        <span>{estado}</span>
+        {estado !== '' && <span>{estado}</span>}
       </div>
       <div style={{ fontSize: 15, fontWeight: 700 }}>{titulo}</div>
       {lineas.filter(Boolean).map((l, i) => <div key={i} style={{ color: 'var(--muted)' }}>{l}</div>)}
@@ -264,15 +265,39 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
         ? <EditarVencimiento oportunidadId={abierta} vence={vencimientoPoliza(s, ctx.hoy).fecha} proximaLlamada={s.oportunidad?.proximaTarea?.fechaLimite.slice(0, 10) ?? null} />
         : <EditarVencimiento polizaId={s.id} vence={vencimientoPoliza(s, ctx.hoy).fecha} proximaLlamada={null} />
       : s.clase === 'oportunidad' && abierta
-        ? <EditarVencimiento oportunidadId={abierta} vence={vencimientoOportunidad(s.oportunidad.fechaFinVigencia?.slice(0, 10) ?? null, ctx.hoy)} proximaLlamada={s.oportunidad.proximaTarea?.fechaLimite.slice(0, 10) ?? null} />
+        ? <EditarVencimiento oportunidadId={abierta} vence={fechaFutura(s.oportunidad.fechaFinVigencia, ctx.hoy)} proximaLlamada={s.oportunidad.proximaTarea?.fechaLimite.slice(0, 10) ?? null} />
         : null
-  if (!quitar && !vencimiento) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
+  // La derivada del volcado (sin seguimiento): no se escribe nada hasta que Alberto decide. Crear
+  // la oportunidad abre el alta ya existente, precargada; «Descartar» la cierra como perdida.
+  const derivada = s.clase === 'poliza' && s.historica === true && s.oportunidad === null ? s.poliza : null
+  const accionesDerivada = derivada && (
+    <>
+      <Link
+        href={`/correduria/cliente/${ctx.clienteId}?tab=oportunidades&oportunidad=nueva&desde=${encodeURIComponent(derivada.id)}`}
+        prefetch={false}
+        style={{ ...btnStyle('primario', 'sm'), minHeight: 44, textDecoration: 'none' }}
+      >
+        Crear oportunidad
+      </Link>
+      {derivada.retarificable && derivada.estado !== 'cancelada' && (
+        <Link href={urlRetarificar(derivada.id)} prefetch={false} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, textDecoration: 'none' }}>
+          {rotuloRetarificar(derivada.retarificacion)}
+        </Link>
+      )}
+      <DescartarVolcado
+        clienteId={ctx.clienteId} ramo={derivada.tipo} aseguradora={derivada.aseguradora} numeroPoliza={derivada.numeroPoliza}
+        matricula={derivada.matricula} vehiculo={derivada.objeto?.titulo ?? null}
+      />
+    </>
+  )
+  if (!quitar && !vencimiento && !accionesDerivada) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
   return (
     <div style={{ ...tarjetaSeguro, gap: 8 }}>
       <Link href={href} prefetch={false} style={{ display: 'grid', gap: 4, alignContent: 'start', color: 'inherit', textDecoration: 'none' }}>{cuerpo}</Link>
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'start' }}>
-        {vencimiento}
-        {quitar && <div style={{ display: 'grid', flex: '1 1 auto' }}>{quitar}</div>}
+        {accionesDerivada}
+        {!derivada && vencimiento}
+        {!derivada && quitar && <div style={{ display: 'grid', flex: '1 1 auto' }}>{quitar}</div>}
       </div>
     </div>
   )
