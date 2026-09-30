@@ -7,8 +7,8 @@ export const dynamic = 'force-dynamic'
 // POST /api/correduria/renovaciones/contacto — registra que Alberto abrió el
 // enlace de WhatsApp del aviso de renovación (el envío en sí lo hace su
 // propio WhatsApp). `{ clienteId, polizaId, mensaje }`. El `actor` lo pone el
-// servidor, nunca el cuerpo: mismo criterio que `/api/correduria/partes` y
-// `/api/correduria/recaptacion/whatsapp`.
+// servidor, nunca el cuerpo: mismo criterio que `/api/correduria/partes`
+// (y que el antiguo proxy de recaptación por WhatsApp, retirado el 30/09/2026).
 export async function POST(req: NextRequest) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta

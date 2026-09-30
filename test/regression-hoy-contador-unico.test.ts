@@ -9,7 +9,11 @@ import { readFileSync } from 'node:fs'
 const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/CorreduriaClient.tsx', import.meta.url), 'utf8')
 
 test('el badge de «Hoy» se construye desde colasIncid + tareas, no con su propia lista', () => {
-  const hoy = src.slice(src.indexOf('hoy: {'), src.indexOf('clientes: {'))
+  // «Clientes» ya no lleva badge (30/09/2026): el bloque de «hoy» acaba donde empieza «comisiones».
+  const ini = src.indexOf('hoy: {')
+  const fin = src.indexOf('comisiones: {', ini)
+  assert.ok(ini >= 0 && fin > ini, 'no se encontró el bloque de contadores de «hoy»')
+  const hoy = src.slice(ini, fin)
   assert.match(hoy, /contador:\s*agregarContadores\(\[\s*\.\.\.colasIncid,\s*nTareasHoy\s*\]\)/)
 })
 

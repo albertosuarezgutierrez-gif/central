@@ -25,9 +25,10 @@ async function pedirCon(path: string, init: RequestInit, timeoutMs: number = 800
   return { status: res.status, json: await res.json().catch(() => null) }
 }
 
-/** Mismo desenlace que `enviarWhatsappRecaptacionAsegura`: registra que
- *  Alberto abrió el enlace, no que el cliente lo leyó (sin WABA no hay otra
- *  forma). El envío en sí lo hace su propio WhatsApp. */
+/** Registra que Alberto abrió el enlace de WhatsApp, no que el cliente lo
+ *  leyó (sin WABA no hay otra forma); el envío en sí lo hace su propio
+ *  WhatsApp. Reutiliza el contrato de escritura de recaptación
+ *  (`interpretarEscrituraRecaptacion`), cuyo envío manual se quitó el 30/09/2026. */
 export async function registrarContactoRenovacionAsegura(body: {
   clienteId: string
   polizaId: string

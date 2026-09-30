@@ -392,6 +392,8 @@ Tres casos el mismo día (06/09/2026), todos verdes mirando donde no era:
   guarda para el PR, no el diff real. El de tres puntos contra `main` decía otra cosa.
 
 ## 🤖 Trabajo mecánico → SIEMPRE a un agente — regla global permanente
+⚠️ **SUPERADO el 30/09/2026:** desde ese día la sesión principal solo ordena y revisa y TODO lo ejecutan agentes, también la programación normal. Manda la regla del `CLAUDE.md` raíz (sección «Agentes y tokens»).
+
 **Todo lo MECÁNICO se delega a un subagente (`Task`), nunca se hace en la sesión principal.** Cada archivo
 que lee la sesión principal se queda en su contexto para siempre; un agente lo lee, hace el trabajo y
 devuelve solo el informe. Dictado por Alberto (02/09/2026): «todo lo mecánico que hagamos SIEMPRE usas

@@ -583,6 +583,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 07:00, y solo si hubo candidatos o el envío falló',
   },
   {
+    id: 'correduria.recaptacion-fin', categoria: 'correduria',
+    titulo: 'Recaptación por email · fin de campaña',
+    que: 'Ya se ha escrito a todos los leads solo-correo que están en ventana: aperturas acumuladas, cuántas personas esperan todavía su ventana y qué direcciones fallan. Es la señal para analizar la campaña.',
+    cuando: 'Una vez al terminar cada campaña (como mucho 1 cada 60 días)',
+  },
+  {
     id: 'correduria.cima-diferencias', categoria: 'correduria',
     titulo: 'Datos de la ficha distintos de CIMA',
     que: 'Tras rellenar los huecos con lo que manda CIMA, cuántos datos de fichas (nombre, nacimiento, carné, teléfono, email) no coinciden con CIMA y esperan tu decisión en /correduria → Hoy.',

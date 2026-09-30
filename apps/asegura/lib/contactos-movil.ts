@@ -35,7 +35,9 @@ export async function contactosMovil(correduriaId: string): Promise<ContactosMov
     return { clienteId: c.id, nombre: c.nombre, apellidos: c.apellidos, telefono: k?.telefono ?? null, email: k?.email ?? null, grupo: 'cliente' }
   })
 
-  // Los mismos leads que la pestaña Leads de Vencimientos (ventana de 90 días).
+  // Los mismos leads que la pestaña Leads de Vencimientos: los que vencen en
+  // 90 días y, además, los que ya están en conversación (intentos, respondió o
+  // en seguimiento) aunque venzan más lejos (`entraEnHorizonte`).
   const { leads } = await leadsCompetencia(correduriaId, 90)
   const deLeads: ContactoMovil[] = leads.map(l => ({
     // El lead trae el nombre ya compuesto: va entero como «nombre».
