@@ -1,64 +1,64 @@
 {
  "sesion": "266e451e-ea6a-5914-8b1d-ef2697d3348c",
  "inicio": "2026-09-29T16:41:38.647Z",
- "fin": "2026-09-30T03:05:34.941Z",
- "llamadas": 710,
+ "fin": "2026-09-30T03:51:55.604Z",
+ "llamadas": 891,
  "categorias": {
   "otro": {
-   "llamadas": 83,
-   "chars_in": 22458,
-   "chars_out": 750957,
+   "llamadas": 86,
+   "chars_in": 37877,
+   "chars_out": 751398,
    "errores": 0,
    "archivos_citados": 10,
    "chars_citados": 860581,
    "tools": {
     "Skill": 4,
-    "ToolSearch": 23,
-    "SubagentHandback": 3,
+    "ToolSearch": 25,
+    "SubagentHandback": 4,
     "ReadNotifications": 51,
     "ReportFindings": 2
    }
   },
   "bash": {
-   "llamadas": 450,
-   "chars_in": 275332,
-   "chars_out": 1755217,
+   "llamadas": 600,
+   "chars_in": 359044,
+   "chars_out": 2292517,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 450
+    "Bash": 600
    }
   },
   "mcp:github": {
-   "llamadas": 58,
-   "chars_in": 21347,
-   "chars_out": 215065,
+   "llamadas": 60,
+   "chars_in": 25391,
+   "chars_out": 215395,
    "errores": 1,
    "archivos_citados": 2,
    "chars_citados": 4984,
    "tools": {
     "mcp__github__list_pull_requests": 3,
-    "mcp__github__create_pull_request": 6,
+    "mcp__github__create_pull_request": 7,
     "mcp__github__pull_request_read": 23,
     "mcp__github__update_pull_request": 5,
     "mcp__github__merge_pull_request": 6,
     "mcp__github__actions_list": 9,
     "mcp__github__unsubscribe_pr_activity": 1,
     "mcp__github__search_pull_requests": 1,
-    "mcp__github__subscribe_pr_activity": 2,
+    "mcp__github__subscribe_pr_activity": 3,
     "mcp__github__get_job_logs": 2
    }
   },
   "agente:agente-architect": {
-   "llamadas": 3,
-   "chars_in": 10881,
-   "chars_out": 11439,
+   "llamadas": 4,
+   "chars_in": 13029,
+   "chars_out": 13773,
    "errores": 0,
-   "archivos_citados": 10,
-   "chars_citados": 355233,
+   "archivos_citados": 13,
+   "chars_citados": 1287633,
    "tools": {
-    "Agent": 3
+    "Agent": 4
    }
   },
   "lectura-directa": {
@@ -85,14 +85,14 @@
    }
   },
   "sql": {
-   "llamadas": 57,
-   "chars_in": 30395,
-   "chars_out": 319243,
+   "llamadas": 82,
+   "chars_in": 42850,
+   "chars_out": 399426,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 57
+    "mcp__Supabase__execute_sql": 82
    }
   },
   "escritura": {
