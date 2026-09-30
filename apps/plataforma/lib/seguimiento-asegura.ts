@@ -911,6 +911,10 @@ export function accionSolicitudDatosAsegura(body: Record<string, unknown>): Prom
 export function riesgoAsegura(oportunidadId: string): Promise<Reenvio> {
   return llamar(`/api/operador/oportunidad/riesgo?id=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
 }
+/** Edita/confirma los datos del vehículo del riesgo (30/09/2026). Gratis: no pide precio. */
+export function datosVehiculoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/riesgo', { method: 'PATCH', body: JSON.stringify(body) })
+}
 export function figuraAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/figuras', { method: 'POST', body: JSON.stringify(body) })
 }

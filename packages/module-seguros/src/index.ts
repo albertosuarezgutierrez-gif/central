@@ -1045,3 +1045,9 @@ export {
   avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, fechaVencimientoDudosa, MESES_VENCIMIENTO_MAX, planTareaTrasVencimiento, vencimientoDelCiclo,
 } from './oportunidad-aviso.ts'
 export type { AvisoOportunidad, FechaDudosa, OportunidadParaAviso, PlanTareaVencimiento } from './oportunidad-aviso.ts'
+export {
+  CAMPOS_VEHICULO, ETIQUETA_CAMPO_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
+  datosVehiculoVacios, faltanDatosVehiculo, fusionarInfoRiesgo, hoyMadridVehiculo, incoherenciaFechasVehiculo,
+  leerDatosVehiculo, motivoNoConfirmable, textoFaltanVehiculo, validarDatosVehiculoRiesgo,
+} from './datos-vehiculo-riesgo.ts'
+export type { CambioVehiculo, CampoVehiculo, DatosVehiculoRiesgo, ErrorVehiculo, ValidacionVehiculo } from './datos-vehiculo-riesgo.ts'

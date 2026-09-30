@@ -39,3 +39,18 @@ export async function llamarFiguras(method: 'POST' | 'DELETE', body: Record<stri
     return { ok: false, status: 0, json: null }
   }
 }
+
+/** PATCH de los datos del vehículo del riesgo (`/api/correduria/oportunidad/riesgo`). Gratis: no pide precio. */
+export async function llamarDatosVehiculo(body: { oportunidadId: string; datosVehiculo: Record<string, unknown>; confirmar?: boolean }): Promise<Respuesta> {
+  try {
+    const res = await fetch('/api/correduria/oportunidad/riesgo', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    return { ok: res.ok && json?.estado === 'ok', status: res.status, json }
+  } catch {
+    return { ok: false, status: 0, json: null }
+  }
+}

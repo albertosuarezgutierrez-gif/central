@@ -155,6 +155,7 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
         simulacion={pre.pre.simulacion}
         companias={companias}
         variante={variante}
+        datosRiesgo={carga.estado === 'ok' ? carga.riesgo.datosVehiculo : null}
         anterior={anterior?.estado === 'ok' ? anterior.anterior : null}
         anteriorAmbiguo={anterior?.estado === 'ambiguo' ? anterior.n : null}
       />

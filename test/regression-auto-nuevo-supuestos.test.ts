@@ -53,12 +53,14 @@ test('los tres viajan al puerto, y solo cuando el corredor los ha dicho', () => 
 
 test('los kilómetros nacen en 10.000, visibles y editables', () => {
   assert.match(fuente, /const KM_ANUALES_POR_DEFECTO = 10000\b/)
-  assert.match(fuente, /const \[kmAnuales, setKmAnuales\] = useState\(String\(KM_ANUALES_POR_DEFECTO\)\)/)
+  // 30/09/2026: los km del riesgo mandan si los trae; si no, nacen en el defecto.
+  assert.match(fuente, /const \[kmAnuales, setKmAnuales\] = useState\(datosRiesgo\?\.kmAnuales != null \? String\(datosRiesgo\.kmAnuales\) : String\(KM_ANUALES_POR_DEFECTO\)\)/)
   assert.doesNotMatch(fuente, /\b15000\b/, 'el supuesto viejo no vuelve como valor')
 })
 
 test('el garaje nace en GARAJE, nunca en la calle (29/09/2026; antes «vía pública»)', () => {
-  assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\(\) => garajePorDefecto\(garajes\)\?\.id \?\? ''\)/)
+  // 30/09/2026: el garaje del riesgo (si sigue en el catálogo) manda; si no, el defecto GARAJE.
+  assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\(\) => garajeDelRiesgo \?\? garajePorDefecto\(garajes\)\?\.id \?\? ''\)/)
   assert.doesNotMatch(fuente, /garajes\.find\(\(g\) => \/v\[ií\]a/, 'el defecto viejo no vuelve')  // El «soltero» por defecto es SOLO del asistente: aquí viajaría sin marca de supuesto y se emitiría sin aviso.
   assert.doesNotMatch(fuente, /estadoCivilPorDefecto/, 'la pantalla no pone estado civil por defecto')
 })
@@ -96,9 +98,9 @@ test('no se pierden al salir de la pantalla: van en el borrador local', () => {
   for (const campo of ['kmAnuales?: string', 'fechaCompra?: string', 'remolqueLigero?: boolean']) {
     assert.ok(tipo.includes(campo), `el borrador declara ${campo}`)
   }
-  assert.match(fuente, /if \(b\.kmAnuales\) setKmAnuales\(b\.kmAnuales\)/, 'y se restauran al volver')
-  assert.match(fuente, /if \(b\.fechaCompra\) setFechaCompra\(b\.fechaCompra\)/)
-  assert.match(fuente, /if \(b\.remolqueLigero\) setRemolqueLigero\(true\)/)
+  assert.match(fuente, /if \(b\.kmAnuales && datosRiesgo\?\.kmAnuales == null\) setKmAnuales\(b\.kmAnuales\)/, 'y se restauran al volver (salvo que el riesgo ya los traiga)')
+  assert.match(fuente, /if \(b\.fechaCompra && !datosRiesgo\?\.fechaCompra\) setFechaCompra\(b\.fechaCompra\)/)
+  assert.match(fuente, /if \(b\.remolqueLigero && datosRiesgo\?\.remolqueLigero == null\) setRemolqueLigero\(true\)/)
 })
 
 // ── Lo que se PINTA junto al precio tiene que ser lo que VIAJÓ ──────────────

@@ -139,3 +139,26 @@ test('aseguradoraActual: la compañía de HOY se distingue de la de la oferta; s
   const viejo = interpretarRiesgo(200, { ...base, oportunidad: { ...OP, aseguradora: 'Mapfre' } })
   assert.equal(viejo.estado === 'ok' && viejo.riesgo.oportunidad.aseguradoraActual, null, 'asegura anterior: no consta')
 })
+
+test('interpretarRiesgo: datosVehiculo y faltanVehiculo — sin bloque = null, nunca un vehículo vacío que parezca leído', () => {
+  const base = { estado: 'ok', oportunidad: { id: 'o1', clienteId: 'c1', ramo: 'auto' }, figuras: [], roles: [], variantes: [] }
+  const sin = interpretarRiesgo(200, base)
+  assert.equal(sin.estado, 'ok')
+  if (sin.estado === 'ok') {
+    assert.equal(sin.riesgo.datosVehiculo, null)
+    assert.equal(sin.riesgo.faltanVehiculo, null)
+  }
+  const con = interpretarRiesgo(200, {
+    ...base,
+    datosVehiculo: { matricula: '1234BCD', kmAnuales: '10000', fechaMatriculacion: '2019-05-17', confirmadoAt: '2026-09-30T10:00:00Z' },
+    faltanVehiculo: ['codigoVehiculo', 'garaje', 'inventado'],
+  })
+  assert.equal(con.estado, 'ok')
+  if (con.estado === 'ok') {
+    assert.equal(con.riesgo.datosVehiculo?.matricula, '1234BCD')
+    assert.equal(con.riesgo.datosVehiculo?.kmAnuales, null, 'un km con tipo raro es «no se sabe», no un dato')
+    assert.equal(con.riesgo.datosVehiculo?.marca, null)
+    assert.equal(con.riesgo.datosVehiculo?.confirmadoAt, '2026-09-30T10:00:00Z')
+    assert.deepEqual(con.riesgo.faltanVehiculo, ['codigoVehiculo', 'garaje'])
+  }
+})

@@ -5,7 +5,7 @@ import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/c
 import { prepararRetarificacionNuevaMoto, respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
-import { prepararVariante } from '@/lib/oportunidad-riesgo'
+import { anotarVehiculoDeCotizacion, prepararVariante } from '@/lib/oportunidad-riesgo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -125,6 +125,12 @@ export const POST = auditado(async (req: Request) => {
 
   // ── La única línea que cuesta dinero, por el único embudo ────────────────
   const r = await cotizar(p.peticion)
+  // Lo usado para pedir precio se anota en el riesgo (`info_riesgo.datosVehiculo`), DESPUÉS de guardar la
+  // tarificación. Nunca lanza: la cotización ya está pagada (0,50€, no idempotente, regla 20) y un fallo aquí
+  // no puede romperla ni hacer que se repita.
+  if (correduria && variante.v.contexto && r.ok && r.guardado.estado === 'guardada') {
+    await anotarVehiculoDeCotizacion(correduria.id, { oportunidadId: variante.v.contexto.oportunidadId, cuerpo, actor: solicitadoPor })
+  }
   // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
   const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)
   if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => undefined))

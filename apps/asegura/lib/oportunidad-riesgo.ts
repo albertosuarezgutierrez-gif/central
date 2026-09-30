@@ -22,10 +22,23 @@ import type { DatosEmpresa, DatosPersona } from '@/lib/codeoscopic/persona'
 import { resolverConfig } from '@/lib/codeoscopic/config'
 import { municipiosPorCp, tiposDeVia } from '@/lib/codeoscopic/catalogos'
 import { partirDireccion, tipoViaDeFicha } from '@/lib/codeoscopic/direccion'
+import { anotarCambio } from '@/lib/auditoria'
 import {
+  admiteDatosVehiculo,
+  aplicarEdicionVehiculo,
+  datosVehiculoDeCotizacion,
+  datosVehiculoDeInfoRiesgo,
   diferenciasVariante,
   esRolFigura,
+  faltanDatosVehiculo,
+  fusionarInfoRiesgo,
+  incoherenciaFechasVehiculo,
+  leerDatosVehiculo,
+  motivoNoConfirmable,
   rolesDelRamo,
+  validarDatosVehiculoRiesgo,
+  type CampoVehiculo,
+  type DatosVehiculoRiesgo,
   type Diferencia,
   type FigurasVariante,
   type RolFigura,
@@ -93,6 +106,14 @@ export type Riesgo = {
   figuras: FiguraRiesgo[]
   vinculos: Array<{ clienteId: string; nombre: string; tipo: string }>
   variantes: VarianteRiesgo[]
+  /**
+   * Los datos del vehículo (30/09/2026), solo en auto/moto. De `info_riesgo.datosVehiculo`, con
+   * FALLBACK de lectura a las claves antiguas (`matricula`, `vehiculo` texto, `marca`, `modelo`).
+   * `null` = el ramo no es de vehículo. Un campo sin dato es `null`, nunca `''` ni `0`.
+   */
+  datosVehiculo: DatosVehiculoRiesgo | null
+  /** Qué falta para poder pedir precio. `null` = el ramo no es de vehículo. */
+  faltanVehiculo: CampoVehiculo[] | null
 }
 
 const nombreDe = (n: string | null, a: string | null) => `${n ?? ''} ${a ?? ''}`.trim() || 'Sin nombre'
@@ -186,7 +207,12 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
 
   const info = op.info_riesgo ?? {}
   const texto = (k: string) => (typeof info[k] === 'string' && (info[k] as string).trim() !== '' ? (info[k] as string).trim() : null)
-  const vehiculo = texto('vehiculo') ?? ([texto('marca'), texto('modelo')].filter(Boolean).join(' ') || null)
+  const conVehiculo = admiteDatosVehiculo(op.tipo)
+  const datosVehiculo = conVehiculo ? datosVehiculoDeInfoRiesgo(info) : null
+  const propios = conVehiculo ? leerDatosVehiculo(info.datosVehiculo) : null
+  // Lo estructurado manda; la clave `vehiculo` de texto queda como fallback de LECTURA (no se pisa).
+  const deMarcaModelo = [propios?.marca ?? null, propios?.modelo ?? null].filter(Boolean).join(' ')
+  const vehiculo = (deMarcaModelo || null) ?? texto('vehiculo') ?? ([texto('marca'), texto('modelo')].filter(Boolean).join(' ') || null)
 
   const figuras: FiguraRiesgo[] = figs
     .filter((f) => esRolFigura(f.rol))
@@ -222,7 +248,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       ramo: op.tipo,
       estado: op.estado,
       polizaId: op.poliza_id,
-      matricula: texto('matricula'),
+      matricula: propios?.matricula ?? texto('matricula'),
       vehiculo,
       vence: op.fecha_fin_vigencia ? op.fecha_fin_vigencia.toISOString().slice(0, 10) : null,
       aseguradora: op.aseguradora,
@@ -233,6 +259,8 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     figuras,
     vinculos: vinculos.map((v) => ({ clienteId: v.cliente_id, nombre: nombreDe(v.nombre, v.apellidos), tipo: v.tipo })),
     variantes,
+    datosVehiculo,
+    faltanVehiculo: datosVehiculo ? faltanDatosVehiculo(datosVehiculo) : null,
   }
 }
 
@@ -731,4 +759,87 @@ export async function validarRiesgoDePoliza(
     where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and poliza_id = ${polizaId}::uuid
       and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')`
   return o ? { ok: true } : { ok: false, motivo: 'ese riesgo no es de esta póliza o ya está cerrado' }
+}
+
+
+// ─── Datos del vehículo del riesgo (30/09/2026) ─────────────────────────────
+
+export type ResultadoDatosVehiculo =
+  | { ok: true; datosVehiculo: DatosVehiculoRiesgo; faltanVehiculo: CampoVehiculo[]; cambios: number }
+  | { ok: false; status: number; motivo: string; errores?: Array<{ campo: string; motivo: string }> }
+
+/**
+ * Edita (y/o confirma) los datos del vehículo de un riesgo de auto/moto. Se guarda bajo la clave
+ * NUEVA `info_riesgo.datosVehiculo`: el resto de claves se conservan tal cual, y la `vehiculo` de
+ * texto (datos viejos) no se pisa jamás. Con `confirmar` se sella `confirmadoAt`; cualquier edición
+ * sin confirmar lo borra. Fila en `oportunidad_historial` con qué cambió; la de `auditoria` la pone
+ * `auditado()` en la ruta. Lectura + escritura en UNA transacción con la fila bloqueada.
+ */
+export async function editarDatosVehiculo(
+  correduriaId: string,
+  e: { oportunidadId: string; datosVehiculo: unknown; confirmar: boolean; actor: string },
+): Promise<ResultadoDatosVehiculo> {
+  if (!UUID.test(e.oportunidadId)) return { ok: false, status: 400, motivo: 'id no válido' }
+  const val = validarDatosVehiculoRiesgo(e.datosVehiculo ?? {})
+  if (!val.ok) return { ok: false, status: 422, motivo: val.errores.map((x) => x.motivo).join(' '), errores: val.errores }
+  const ahora = new Date().toISOString()
+  return prisma.$transaction(async (tx) => {
+    const [op] = await tx.$queryRaw<Array<{ tipo: string; info_riesgo: Record<string, unknown> | null }>>`
+      select o.tipo::text as tipo, o.info_riesgo from seguros.oportunidades o
+      where o.id = ${e.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid
+      for update`
+    if (!op) return { ok: false as const, status: 404, motivo: 'la oportunidad no es de esta correduría' }
+    if (!admiteDatosVehiculo(op.tipo)) return { ok: false as const, status: 400, motivo: `los datos del vehículo solo se editan en auto y moto, no en ${op.tipo}` }
+    // Se parte de lo ESTRUCTURADO que hay (no del fallback): las claves antiguas no se copian dentro...
+    const actual = leerDatosVehiculo(op.info_riesgo?.datosVehiculo)
+    const valor = { ...val.valor }
+    // ...salvo la matrícula al CONFIRMAR: confirmar es afirmar lo que se ve, y se ve la de la clave antigua.
+    if (e.confirmar && !actual?.matricula && valor.matricula === undefined) {
+      const vista = datosVehiculoDeInfoRiesgo(op.info_riesgo).matricula
+      if (vista) valor.matricula = vista
+    }
+    const { datos, cambios } = aplicarEdicionVehiculo(actual, valor, { confirmar: e.confirmar, ahora })
+    const incoherente = incoherenciaFechasVehiculo(datos)
+    if (incoherente) return { ok: false as const, status: 422, motivo: incoherente }
+    if (e.confirmar) {
+      const no = motivoNoConfirmable(datos)
+      if (no) return { ok: false as const, status: 422, motivo: no }
+    }
+    if (cambios.length === 0 && !e.confirmar) {
+      return { ok: true as const, datosVehiculo: datos, faltanVehiculo: faltanDatosVehiculo(datos), cambios: 0 }
+    }
+    const nueva = fusionarInfoRiesgo(op.info_riesgo, datos)
+    await tx.$executeRaw`
+      update seguros.oportunidades set info_riesgo = ${JSON.stringify(nueva)}::jsonb
+      where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+    await tx.$executeRaw`
+      insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
+      values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${e.confirmar ? 'datos_vehiculo_confirmados' : 'datos_vehiculo_editados'},
+              ${JSON.stringify({ cambios, confirmado: datos.confirmadoAt !== null })}::jsonb, ${e.actor})`
+    for (const c of cambios) anotarCambio({ entidad: 'oportunidad', id: e.oportunidadId, campo: `datos_vehiculo.${c.campo}` })
+    if (e.confirmar) anotarCambio({ entidad: 'oportunidad', id: e.oportunidadId, campo: 'datos_vehiculo.confirmado' })
+    return { ok: true as const, datosVehiculo: datos, faltanVehiculo: faltanDatosVehiculo(datos), cambios: cambios.length }
+  })
+}
+
+/**
+ * Write-back de una cotización con `?oportunidad=`: anota en el riesgo lo que se USÓ para pedir
+ * precio (sin sellar `confirmadoAt`; si algo cambió respecto a lo guardado, el sello se borra).
+ * Solo claves con valor: lo que la cotización no trae no borra lo que ya había.
+ *
+ * 🚨 Se llama DESPUÉS de guardar la tarificación y NUNCA lanza: la cotización ya está pagada
+ * (0,50€, no idempotente, regla 20) y un fallo aquí no puede romperla ni hacer que se repita.
+ */
+export async function anotarVehiculoDeCotizacion(
+  correduriaId: string,
+  e: { oportunidadId: string; cuerpo: unknown; actor: string },
+): Promise<void> {
+  try {
+    const valor = datosVehiculoDeCotizacion(e.cuerpo)
+    if (Object.keys(valor).length === 0) return
+    const r = await editarDatosVehiculo(correduriaId, { oportunidadId: e.oportunidadId, datosVehiculo: valor, confirmar: false, actor: e.actor })
+    if (!r.ok) console.error('[oportunidad-riesgo] write-back del vehículo no guardado:', r.status, r.motivo)
+  } catch (err) {
+    console.error('[oportunidad-riesgo] write-back del vehículo falló (la cotización ya está guardada):', err instanceof Error ? err.message : err)
+  }
 }

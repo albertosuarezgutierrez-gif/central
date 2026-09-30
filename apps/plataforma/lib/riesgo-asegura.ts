@@ -4,7 +4,10 @@
  * degrada a `null` en el campo, nunca a un valor tranquilizador: una variante sin precios leídos no
  * es «0 opciones», es «no se pudo leer».
  */
-import { ETIQUETA_ROL, esRolFigura, type RolFigura, type Diferencia } from '@central/module-seguros'
+import {
+  CAMPOS_VEHICULO, ETIQUETA_ROL, esRolFigura, leerDatosVehiculo,
+  type CampoVehiculo, type DatosVehiculoRiesgo, type RolFigura, type Diferencia,
+} from '@central/module-seguros'
 
 export type FiguraRiesgo = {
   rol: RolFigura
@@ -60,6 +63,13 @@ export type Riesgo = {
   figuras: FiguraRiesgo[]
   vinculos: Array<{ clienteId: string; nombre: string; tipo: string }>
   variantes: VarianteRiesgo[]
+  /**
+   * Datos del vehículo (solo auto/moto; `null` = otro ramo, o una versión de asegura que aún no los manda:
+   * en ese caso NO se enseña el bloque, no se pinta «sin datos»). Un campo sin dato es `null`, nunca `0`.
+   */
+  datosVehiculo: DatosVehiculoRiesgo | null
+  /** Lo que falta para pedir precio. `null` = no aplica o no se sabe. */
+  faltanVehiculo: CampoVehiculo[] | null
 }
 
 export type LecturaRiesgo = { estado: 'ok'; riesgo: Riesgo } | { estado: 'no_encontrado' } | { estado: 'error'; motivo: string }
@@ -131,6 +141,10 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
         return txt(x.clienteId) ? [{ clienteId: x.clienteId as string, nombre: txt(x.nombre) ?? 'Sin nombre', tipo: txt(x.tipo) ?? '' }] : []
       }),
       variantes,
+      datosVehiculo: leerDatosVehiculo(o.datosVehiculo),
+      faltanVehiculo: Array.isArray(o.faltanVehiculo)
+        ? o.faltanVehiculo.filter((c): c is CampoVehiculo => (CAMPOS_VEHICULO as readonly string[]).includes(c as string))
+        : null,
     },
   }
 }

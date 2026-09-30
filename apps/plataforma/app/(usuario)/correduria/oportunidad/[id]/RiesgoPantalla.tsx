@@ -5,13 +5,15 @@
 // lo que asegura tiene, nunca una suposición local de cómo quedó.
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { Badge, BtnLink, PageHeader, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { ROTULO_ESTADO, rotuloRamo } from '@/lib/seguimiento-asegura'
 import type { LecturaRiesgo, Riesgo } from '@/lib/riesgo-asegura'
+import { textoFaltanVehiculo } from '@central/module-seguros'
 import { LogoCompaniaEnLinea } from '../../CeldaCompania'
+import DatosVehiculo from './DatosVehiculo'
 import FigurasRiesgo from './FigurasRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import PasarOportunidad from './PasarOportunidad'
@@ -20,6 +22,9 @@ import { etiquetaRiesgo, ramoVariante, retarificaEnRiesgo, rutaVariante, tomador
 
 export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
+  // Editar una ficha desde el modal de «Editar datos» refresca la página del servidor (router.refresh):
+  // el riesgo que llega de nuevo manda sobre el que había, y el aviso «Falta…» se actualiza solo.
+  useEffect(() => { setRiesgo(inicial) }, [inicial])
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
   const [recargando, setRecargando] = useState(false)
   const op = riesgo.oportunidad
@@ -46,6 +51,8 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   const titulo = [rotuloRamo(op.ramo), etiqueta].filter(Boolean).join(' · ')
   const estado = (ROTULO_ESTADO as Record<string, string>)[op.estado] ?? (op.estado || 'Estado sin leer')
   const ramo = ramoVariante(op.ramo)
+  // Los datos del vehículo que faltan NO bloquean «Nueva variante» (la pantalla de precio los pide), pero se dicen.
+  const faltaVehiculo = ramo ? textoFaltanVehiculo(riesgo.faltanVehiculo) : null
 
   return (
     <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
@@ -85,6 +92,15 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
         </div>
       )}
 
+      {ramo && (
+        <DatosVehiculo
+          riesgo={riesgo}
+          ocupado={recargando}
+          onCambio={(texto) => void recargar(texto)}
+          onError={(texto) => setAviso({ ok: false, texto })}
+        />
+      )}
+
       <FigurasRiesgo
         riesgo={riesgo}
         ocupado={recargando}
@@ -96,6 +112,11 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
 
       <section style={{ ...cardStyle, display: 'grid', gap: 8 }}>
         <div style={{ fontSize: 14, fontWeight: 600 }}>Nueva variante</div>
+        {faltaVehiculo && (
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
+            {faltaVehiculo} Puedes seguir: la pantalla de precio los pedirá.
+          </p>
+        )}
         {retarificaEnRiesgo(op.ramo) && op.polizaId ? (
           <>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
