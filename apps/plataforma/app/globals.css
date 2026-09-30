@@ -766,3 +766,8 @@ em { font-style: normal; }
 .plegable-dato > summary::-webkit-details-marker { display: none; }
 .plegable-dato > summary .chev { transition: transform .12s ease; }
 .plegable-dato[open] > summary .chev { transform: rotate(90deg); }
+
+/* Rótulo de un botón que en móvil se queda en solo icono (el botón lleva aria-label). */
+@media (max-width: 480px) {
+  .rotulo-ancho { display: none; }
+}

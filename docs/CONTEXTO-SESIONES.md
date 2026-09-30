@@ -961,6 +961,15 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (30/09/2026) Correduría: leads de Vencimientos para trabajar por WhatsApp (PR #4109)
+- Acceso directo «Vencimientos» junto a «Subir póliza» (solo icono en móvil, `.rotulo-ancho`). Lista ordenada por vencimiento
+  y en tres pestañas: Por enviar · Esperando respuesta (llámale a los 3 d) · Respondieron; al mandar el WhatsApp el lead cambia de pestaña.
+- Texto nuevo dictado por Alberto: «Hola X, soy Alberto, de GrupoASegura.es. Si no me equivoco, tu seguro de coche vence en…».
+- 🚨 WhatsApp a TODOS con teléfono (antes solo a quien fue cliente): decisión de Alberto asumiendo el riesgo LSSI 21.1 explicado.
+- «¿Qué respondió?»: `planLlamada` con `canal:'whatsapp'` + `numero_equivocado` y `baja` (marca `wa/email_opt_out_at` y aparca).
+- Arreglo: `enlace_abierto` de Recaptación contaba como «respondió» (155 leads). ⏸️ Recaptación NO se quitó: tiene 1.391 antiguos
+  clientes y solo 299 están en Vencimientos → pendiente de que Alberto decida (pasarlos a oportunidades o mantenerla).
+
 ## (30/09/2026) Correduría: al corregir el vencimiento, la llamada se programa o se mueve sola (45 días antes)
 - Cierra el pendiente de #4050: guardar la fecha desde la tarjeta de Oportunidades con `reprogramar` mueve la próxima tarea de
   seguimiento (o crea una llamada si no había) a 45 días antes, con `planTareaTrasVencimiento` (module-seguros, puro, testeado).
