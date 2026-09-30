@@ -403,6 +403,10 @@ utilizable). Reglas que no se negocian al tocar esto:
   `encontrarPrecio()` ya no desempata por «la prima más cercana»: tras un PATCH el vendor re-tarifica y
   la más cercana podía ser otra modalidad o franquicia (el `producto` es igual en todas). Con modalidad:
   una exacta o 409; sin ella (pestaña vieja), solo una prima idéntica. Plataforma manda `modalidad`.
+- 🧾 **Catálogo de garantías v5 (30/09/2026):** `clasificarCoberturas(ramo, lista, opciones, contexto)` recibe la
+  categoría/modalidad de la FILA (las garantías son por fila, no por oferta). En coche/moto con categoría todo riesgo,
+  `danos_propios` = sí siempre; una `perdida_total` «no» contradictoria pasa a «no consta». Coberturas en `fallo` →
+  `garantias` NULL y se reintentan 7 días (antes quedaban todo «no consta» para siempre).
 - **Un solo intento.** `POST /insurances` no es idempotente: reintentar crea otro proyecto y otro
   cargo. La única repetición permitida es re-pedir el token tras un 401 (el vendor no tarificó).
 - **Los precios se pintan con su FIRMEZA.** En el fixture del sandbox ninguno de los 18 era firme, y
