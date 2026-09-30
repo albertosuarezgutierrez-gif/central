@@ -1,0 +1,32 @@
+{
+ "sesion": "2abfcd72-2826-5cef-9c41-9040a55eadee",
+ "inicio": "2026-09-30T09:24:12.127Z",
+ "fin": "2026-09-30T09:26:06.475Z",
+ "llamadas": 20,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 19,
+   "chars_in": 2048,
+   "chars_out": 89597,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 9,
+    "Read": 7,
+    "Glob": 3
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1529,
+   "chars_out": 1723,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 29482,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
