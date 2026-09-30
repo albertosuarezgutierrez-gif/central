@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-30T09:08:05Z",
-  "sha": "c3f98b65be589a13b02459c50b8de25c076e15cd",
+  "generadoEn": "2026-09-30T10:23:24Z",
+  "sha": "2337c104e13ad19d5e5a439aaf00ef290c374bdd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -79164,7 +79164,7 @@
           "nombre": "Cabecera",
           "kind": "function",
           "exportada": true,
-          "params": "{ ficha, resumen }: { ficha: Ficha; resumen: ResumenFicha }",
+          "params": "{ ficha, resumen, seguros }: { ficha: Ficha; resumen: ResumenFicha /** Solo los SEGUROS (cartera en vigor): el volcado y lo que ya no cubre son oportunidades. */ seguros: Ficha['polizas'] }",
           "retorno": null,
           "linea": 29,
           "resumen": "La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto. 🚨 Por qué los contadores viven aquí y no dentro de "
@@ -79173,9 +79173,9 @@
           "nombre": "SiguientePaso",
           "kind": "function",
           "exportada": false,
-          "params": "{ ficha, resumen, tiposVivos }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[] }",
+          "params": "{ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[]; seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 105,
+          "linea": 109,
           "resumen": "── Siguiente paso ────────────────────────────────────────────────────────── UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla vive pura y testeada en `siguientePaso` de "
         },
         {
@@ -79184,7 +79184,7 @@
           "exportada": false,
           "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 157,
+          "linea": 161,
           "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
@@ -79193,7 +79193,7 @@
           "exportada": false,
           "params": "{ resumen }: { resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 176
+          "linea": 180
         },
         {
           "nombre": "ProximoVencimiento",
@@ -79201,7 +79201,7 @@
           "exportada": false,
           "params": "{ proximo, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 222,
+          "linea": 234,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -79210,7 +79210,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 257
+          "linea": 269
         },
         {
           "nombre": "EstadoCabecera",
@@ -79218,7 +79218,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 283
+          "linea": 295
         },
         {
           "nombre": "Acciones",
@@ -79226,7 +79226,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 341
+          "linea": 353
         },
         {
           "nombre": "Contacto",
@@ -79234,7 +79234,7 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 409
+          "linea": 421
         },
         {
           "nombre": "Identidad",
@@ -79242,7 +79242,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 508
+          "linea": 520
         },
         {
           "nombre": "Carnets",
@@ -79250,12 +79250,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 548
+          "linea": 560
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "11700220b11c"
+      "hash": "969d98fb5b02"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -79434,6 +79434,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9ce21a0157eb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/DescartarVolcado.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "DescartarVolcado"
+      ],
+      "funciones": [
+        {
+          "nombre": "enviar",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<",
+          "linea": 13,
+          "resumen": "«Descartar (ya no lo tiene)» en una oportunidad derivada del volcado (30/09/2026). Las filas del volcado no se escriben en la tabla de oportunidades, y esta es la única acción que lo hace: el puerto n"
+        },
+        {
+          "nombre": "DescartarVolcado",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { clienteId: string; ramo: string; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; vehiculo: string | null }",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "93508d781650"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/EditarCarnets.tsx",
@@ -79918,7 +79947,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "hoyMadrid",
@@ -79926,7 +79955,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 58
+          "linea": 59
         },
         {
           "nombre": "enviar",
@@ -79934,7 +79963,7 @@
           "exportada": false,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "motivoDe",
@@ -79942,15 +79971,15 @@
           "exportada": false,
           "params": "json: unknown, status: number",
           "retorno": "string",
-          "linea": 75
+          "linea": 76
         },
         {
           "nombre": "OportunidadesCliente",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId, telefono = null, polizas }: { clienteId: string; telefono?: string | null; polizas: Poliza[] }",
+          "params": "{ clienteId, telefono = null, polizas, precargas = {} }: { clienteId: string; telefono?: string | null; polizas: Poliza[] /** Por id de póliza del volcado: con qué se precarga el alta al crear la oportunidad desde su fila. */ precargas?: Re",
           "retorno": null,
-          "linea": 80
+          "linea": 81
         },
         {
           "nombre": "SinOportunidad",
@@ -79958,7 +79987,7 @@
           "exportada": false,
           "params": "{ clienteId, lista }: { clienteId: string; lista: PresupuestoSinOportunidad[] | null | undefined }",
           "retorno": null,
-          "linea": 191,
+          "linea": 204,
           "resumen": "Lo tarificado que no cuelga de ninguna oportunidad (anterior al 24/09/2026, cuando aún no se enlazaba solo). Va en la misma lista para que no haya precios en un bloque aparte; no se les abre oportunid"
         },
         {
@@ -79967,7 +79996,7 @@
           "exportada": false,
           "params": "{ o }: { o: OportunidadDeCliente }",
           "retorno": null,
-          "linea": 218
+          "linea": 231
         },
         {
           "nombre": "FilaAbierta",
@@ -79975,7 +80004,7 @@
           "exportada": false,
           "params": "{ o, telefono, polizas, desplegada, onAlternar, onRecargar, onHecho }: { o: OportunidadDeCliente telefono: string | null polizas: Poliza[] desplegada: boolean onAlternar: () => void onRecargar: () => void onHecho: (t: { ok: boolean; texto: ",
           "retorno": null,
-          "linea": 229
+          "linea": 242
         },
         {
           "nombre": "FilaCerrada",
@@ -79983,7 +80012,7 @@
           "exportada": false,
           "params": "{ o, desplegada, onAlternar, onRecargar }: { o: OportunidadDeCliente; desplegada: boolean; onAlternar: () => void; onRecargar: () => void }",
           "retorno": null,
-          "linea": 353
+          "linea": 366
         },
         {
           "nombre": "textoSeguroAnterior",
@@ -79991,16 +80020,16 @@
           "exportada": true,
           "params": "s: SeguroAnterior",
           "retorno": "string",
-          "linea": 372,
+          "linea": 385,
           "resumen": "El bonus leído, en una línea: lo que se va a guardar con la oportunidad."
         },
         {
           "nombre": "FormAlta",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId, inicial, onCancelar, onHecho }: { clienteId: string inicial?: LecturaOk | null onCancelar: () => void onHecho: (t: { ok: boolean; texto: string; id?: string | null }) => void }",
+          "params": "{ clienteId, inicial, precarga = null, onCancelar, onHecho }: { clienteId: string inicial?: LecturaOk | null /** Crear desde una fila del volcado: vehículo/aseguradora, y el vencimiento SOLO si es futuro. */ precarga?: PrecargaAlta | null o",
           "retorno": null,
-          "linea": 385,
+          "linea": 398,
           "resumen": "`inicial` (29/09/2026): una lectura ya hecha (la póliza subida en Documentos) rellena el formulario al abrirlo, sin volver a pagar la lectura."
         },
         {
@@ -80009,7 +80038,7 @@
           "exportada": false,
           "params": "{ o, onCancelar, onHecho }: { o: OportunidadDeCliente onCancelar: () => void onHecho: (t: { ok: boolean; texto: string }) => void }",
           "retorno": null,
-          "linea": 555
+          "linea": 592
         }
       ],
       "tablas": [
@@ -80018,7 +80047,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4f8a68028e9a"
+      "hash": "1ffa77f7ea03"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/page.tsx",
@@ -80042,12 +80071,12 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 231
+          "linea": 239
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "587a2ecd6a65"
+      "hash": "89a65507d341"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PedirDatos.tsx",
@@ -80102,7 +80131,7 @@
           "exportada": false,
           "params": "{ lista, polizaIds }: { lista: IntervinienteFicha[] | null; polizaIds: string[] }",
           "retorno": null,
-          "linea": 170,
+          "linea": 174,
           "resumen": "Quién más figura en la póliza (propietario, conductor habitual, contacto…), debajo de qué asegura. Se omite al tomador: ya es el título de la ficha. `null` = asegura no los informa; se calla en vez de"
         },
         {
@@ -80111,7 +80140,7 @@
           "exportada": true,
           "params": "p: PolizaFicha",
           "retorno": "string | null",
-          "linea": 214,
+          "linea": 218,
           "resumen": "Huella de lo que la fila enseña en «Qué asegura», para decidir si dos filas del volcado son la misma. `null` = el volcado no lo informa o viene cifrado — y entonces la fila NO se agrupa con nadie: no "
         },
         {
@@ -80120,7 +80149,7 @@
           "exportada": false,
           "params": "{ grupo }: { grupo: GrupoHistorica<PolizaFicha & { bien: string | null }> }",
           "retorno": null,
-          "linea": 228,
+          "linea": 232,
           "resumen": "«Esto que ves dos veces son dos filas del volcado», dicho en la propia fila. No se esconde ninguna: cada una enlaza a su póliza, y la prima de cada una va en la celda de al lado."
         },
         {
@@ -80129,7 +80158,7 @@
           "exportada": false,
           "params": "{ grupo }: { grupo: GrupoHistorica<PolizaFicha & { bien: string | null }> }",
           "retorno": null,
-          "linea": 251,
+          "linea": 255,
           "resumen": "La prima del grupo. Con varias filas se enseñan TODAS las primas distintas: quedarse con una sería decidir cuál estuvo contratada, que es justo lo que no se sabe. `sin dato` nunca se pinta como 0€."
         },
         {
@@ -80138,7 +80167,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
-          "linea": 269
+          "linea": 273
         },
         {
           "nombre": "CeldaPago",
@@ -80146,7 +80175,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
-          "linea": 311,
+          "linea": 315,
           "resumen": "Forma de pago (Alberto, 02/09/2026): son contratos anuales que la compañía FINANCIA al fraccionar, cobrando por ello. Lo que CIMA da es la periodicidad y la forma de cobro; el recargo se deriva de los"
         },
         {
@@ -80155,7 +80184,7 @@
           "exportada": false,
           "params": "{ vencimiento, viva }: { vencimiento: string | null; viva: boolean }",
           "retorno": null,
-          "linea": 337,
+          "linea": 341,
           "resumen": "La única salida de una póliza es su vencimiento, avisando 30 días antes (LCS art. 22). Se pinta solo en las vivas y solo mientras merece la pena saberlo: cuando el plazo de aviso está cerca o ya ha pa"
         },
         {
@@ -80164,7 +80193,7 @@
           "exportada": true,
           "params": "{ r }: { r: RecibosPoliza | null }",
           "retorno": null,
-          "linea": 356,
+          "linea": 360,
           "resumen": "El estado de cobro de UNA póliza. Cuatro cosas distintas, cuatro pintados: null → asegura no manda el bloque (desplegar). total 0 → la compañía no ha mandado recibos (18 de 109 vivas, medido). devuelt"
         },
         {
@@ -80173,7 +80202,7 @@
           "exportada": false,
           "params": "p: PolizaFicha",
           "retorno": "string",
-          "linea": 383
+          "linea": 387
         },
         {
           "nombre": "PolizasDondeFigura",
@@ -80181,7 +80210,7 @@
           "exportada": true,
           "params": "{ polizas }: { polizas: PolizaFiguraFicha[] | null }",
           "retorno": null,
-          "linea": 408,
+          "linea": 412,
           "resumen": "Pólizas de OTRO tomador donde este cliente figura (28/09/2026). Alberto: «toda persona que entre dentro de la póliza automáticamente le aparece». Caso: la furgoneta de GLOBAL 2 con tomador su conducto"
         },
         {
@@ -80190,7 +80219,7 @@
           "exportada": true,
           "params": "{ declaradas }: { declaradas: PolizaDeclaradaFicha[] | null }",
           "retorno": null,
-          "linea": 460
+          "linea": 464
         },
         {
           "nombre": "etiquetaPoliza",
@@ -80198,7 +80227,7 @@
           "exportada": true,
           "params": "p: PolizaFicha",
           "retorno": "string",
-          "linea": 551,
+          "linea": 555,
           "resumen": "Cómo se nombra una póliza en una frase: la matrícula si la hay."
         },
         {
@@ -80207,7 +80236,7 @@
           "exportada": true,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 555
+          "linea": 559
         },
         {
           "nombre": "fmt",
@@ -80215,7 +80244,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 565,
+          "linea": 569,
           "resumen": "Fecha siempre en español: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -80224,13 +80253,13 @@
           "exportada": true,
           "params": "{ fecha, hoy }: { fecha: string; hoy: string }",
           "retorno": null,
-          "linea": 571,
+          "linea": 575,
           "resumen": "Bajo un campo de vencimiento: avisa si la fecha ya pasó o está a más de un año (escaneo o tecleo con el año mal). No bloquea."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6197a90514d2"
+      "hash": "cc53c04231df"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PonerNombre.tsx",
@@ -80504,7 +80533,7 @@
           "exportada": true,
           "params": "{ reparto, siniestros, clienteId, hoy }: { reparto: RepartoSeguros siniestros: SiniestroCartera[] | null clienteId: string hoy: Date }",
           "retorno": null,
-          "linea": 18,
+          "linea": 22,
           "resumen": "Los seguros del cliente en tres cubos, cada uno una tarjeta que se pincha entera (24/09/2026): «con nosotros» → su póliza; «oportunidad» → su seguimiento de venta; «ya no existe», plegado al final. Lo"
         },
         {
@@ -80513,7 +80542,7 @@
           "exportada": false,
           "params": "{ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 79
+          "linea": 83
         },
         {
           "nombre": "Rejilla",
@@ -80521,7 +80550,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 91
+          "linea": 95
         },
         {
           "nombre": "Vacio",
@@ -80529,7 +80558,7 @@
           "exportada": false,
           "params": "{ children, aviso }: { children: React.ReactNode; aviso?: boolean }",
           "retorno": null,
-          "linea": 95
+          "linea": 99
         },
         {
           "nombre": "dias",
@@ -80537,16 +80566,16 @@
           "exportada": false,
           "params": "iso: string, hoy: Date",
           "retorno": "number",
-          "linea": 105
+          "linea": 109
         },
         {
           "nombre": "textoVence",
           "kind": "function",
           "exportada": false,
-          "params": "anotado: string | null, hoy: Date",
+          "params": "fecha: string | null | undefined, hoy: Date, fuente = 'anotado'",
           "retorno": "string",
-          "linea": 118,
-          "resumen": "«Le vence …» de un vencimiento anotado; uno de hace más de un año se dice por su próxima renovación."
+          "linea": 125,
+          "resumen": "pasado o sin fecha → «vencimiento desconocido», con lo último que se anotó solo como contexto."
         },
         {
           "nombre": "rotuloTarea",
@@ -80554,7 +80583,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string",
-          "linea": 126
+          "linea": 132
         },
         {
           "nombre": "avisosOportunidad",
@@ -80562,7 +80591,7 @@
           "exportada": false,
           "params": "o: OportunidadDeCliente, hoy: Date",
           "retorno": "Aviso[]",
-          "linea": 130
+          "linea": 136
         },
         {
           "nombre": "TarjetaSeguro",
@@ -80570,7 +80599,7 @@
           "exportada": false,
           "params": "{ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: Ctx; eliminable?: boolean }",
           "retorno": null,
-          "linea": 146
+          "linea": 152
         },
         {
           "nombre": "Chip",
@@ -80578,12 +80607,12 @@
           "exportada": false,
           "params": "{ a }: { a: Aviso }",
           "retorno": null,
-          "linea": 281
+          "linea": 306
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "51b22f831a7e"
+      "hash": "5c0fe2ebbd2e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabContactos.tsx",
@@ -80780,12 +80809,12 @@
           "params": "{ porClase, intervinientes, declaradas, figuraEn }: { porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'sustituida' | 'historica', PolizaFicha[]> intervinientes: IntervinienteFicha[] | null declaradas: PolizaDeclaradaFicha[] | nul",
           "retorno": null,
           "linea": 21,
-          "resumen": "históricas → volcado de junio de 2026, para saber qué tuvo. El volcado repite el MISMO riesgo cambiando solo la prima (84 grupos / 188 filas / 77 clientes, medido 21/09/2026: el FORD FOCUS 3935GPY sal"
+          "resumen": "históricas → volcado de junio de 2026: oportunidades, no seguros (solo consulta). El volcado repite el MISMO riesgo cambiando solo la prima (84 grupos / 188 filas / 77 clientes, medido 21/09/2026: el "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99fd526138f0"
+      "hash": "20f9558fc5cb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts",
@@ -80812,7 +80841,7 @@
           "exportada": true,
           "params": "personas: readonly { fichaId: string | null }[] | null, relaciones: readonly { relacionadoId: string }[] | null,",
           "retorno": "number | null",
-          "linea": 72,
+          "linea": 73,
           "resumen": "Cuántas PERSONAS tiene la ficha: las de sus pólizas más los vínculos declarados (familia, empresa…) que no salen ya en una póliza — la misma lista que pinta el bloque «Personas» de Contactos. Hasta el"
         },
         {
@@ -80821,7 +80850,7 @@
           "exportada": false,
           "params": "n: number, uno: string, varios: string",
           "retorno": null,
-          "linea": 82
+          "linea": 83
         },
         {
           "nombre": "detallesAccesos",
@@ -80829,13 +80858,13 @@
           "exportada": true,
           "params": "d: DatosAccesos",
           "retorno": "Partial<Record<TabFicha, DetalleAcceso>>",
-          "linea": 85,
+          "linea": 86,
           "resumen": "El texto corto bajo cada baldosa. Pura: la prueba `regression-ficha-cliente-pestanas`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a830cfe0884b"
+      "hash": "e32936f7207c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/VerDniCompleto.tsx",
@@ -114433,11 +114462,14 @@
       "ruta": "apps/plataforma/lib/correduria/seguros-cliente.ts",
       "ambito": "apps/plataforma",
       "exporta": [
-        "proximoAniversario",
-        "vencimientoOportunidad",
+        "estadoVencimiento",
+        "fechaFutura",
         "vencimientoPoliza",
         "repartirSegurosCliente",
-        "estaHuerfana"
+        "estaHuerfana",
+        "segurosDeReparto",
+        "contarOportunidades",
+        "precargaAlta"
       ],
       "funciones": [
         {
@@ -114457,22 +114489,30 @@
           "linea": 71
         },
         {
-          "nombre": "proximoAniversario",
+          "nombre": "diaIso",
           "kind": "function",
-          "exportada": true,
-          "params": "iso: string | null, hoy: Date",
+          "exportada": false,
+          "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 85,
-          "resumen": "El próximo aniversario (hoy incluido) de una fecha de vencimiento ya pasada: un seguro anual renueva el mismo día cada año, así que un «vence 24/10/2023» anotado hace años dice «le toca el 24/10/2026»"
+          "linea": 90,
+          "resumen": "`YYYY-MM-DD` real (ida y vuelta: un 2026-02-30 no cuenta) o `null`."
         },
         {
-          "nombre": "vencimientoOportunidad",
+          "nombre": "estadoVencimiento",
           "kind": "function",
           "exportada": true,
-          "params": "iso: string | null, hoy: Date",
+          "params": "iso: string | null | undefined, hoy: Date",
+          "retorno": "EstadoVencimiento",
+          "linea": 99,
+          "resumen": "Hoy o después = futuro (vence hoy sigue en vigor hoy)."
+        },
+        {
+          "nombre": "fechaFutura",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string | null | undefined, hoy: Date",
           "retorno": "string | null",
-          "linea": 107,
-          "resumen": "La fecha que se enseña para el vencimiento de una OPORTUNIDAD. Si venció hace menos de un año es una renovación que se acaba de pasar: se deja tal cual (atrasada, que es lo que hay que ver). Si es más"
+          "linea": 106
         },
         {
           "nombre": "vencimientoPoliza",
@@ -114480,7 +114520,7 @@
           "exportada": true,
           "params": "s: Extract<SeguroCliente, { clase: 'poliza' }>, hoy: Date",
           "retorno": "",
-          "linea": 120,
+          "linea": 116,
           "resumen": "El vencimiento que se enseña en la tarjeta de una póliza en Oportunidades: el anotado en su seguimiento MANDA (lo corrige Alberto cuando el escaneo o el volcado traen mal la fecha, y es el que dispara"
         },
         {
@@ -114489,7 +114529,7 @@
           "exportada": false,
           "params": "s: SeguroCliente, hoy: Date",
           "retorno": "string | null",
-          "linea": 127
+          "linea": 122
         },
         {
           "nombre": "repartirSegurosCliente",
@@ -114497,7 +114537,49 @@
           "exportada": true,
           "params": "{ polizas, declaradas, oportunidades, hoy = new Date() }: { polizas: PolizaFicha[] declaradas: PolizaDeclaradaFicha[] | null /** `null` = no se pudieron leer. */ oportunidades: OportunidadDeCliente[] | null /** Por defecto `new Date()`; par",
           "retorno": "RepartoSeguros",
-          "linea": 133
+          "linea": 128
+        },
+        {
+          "nombre": "bienDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PolizaFicha",
+          "retorno": "Bien",
+          "linea": 299
+        },
+        {
+          "nombre": "identificado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "b: Bien",
+          "retorno": null,
+          "linea": 304
+        },
+        {
+          "nombre": "casaBien",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: Bien, b: Bien",
+          "retorno": "'si' | 'no' | 'quiza'",
+          "linea": 307,
+          "resumen": "¿Es el mismo bien? `quiza` = mismo ramo pero sin dato común con que compararlos."
+        },
+        {
+          "nombre": "tieneClaves",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: OportunidadDeCliente",
+          "retorno": "boolean",
+          "linea": 314
+        },
+        {
+          "nombre": "mismoRiesgo",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: OportunidadDeCliente, p: PolizaFicha",
+          "retorno": "boolean",
+          "linea": 319,
+          "resumen": "El MISMO riesgo, por matrícula o nº de póliza (la compañía no basta: cambia al competir)."
         },
         {
           "nombre": "otraMatricula",
@@ -114505,7 +114587,7 @@
           "exportada": false,
           "params": "a: string | null, b: string | null",
           "retorno": "boolean",
-          "linea": 272
+          "linea": 324
         },
         {
           "nombre": "estaHuerfana",
@@ -114513,13 +114595,39 @@
           "exportada": true,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 278,
+          "linea": 330,
           "resumen": "Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover."
+        },
+        {
+          "nombre": "segurosDeReparto",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RepartoSeguros",
+          "retorno": "PolizaFicha[]",
+          "linea": 341,
+          "resumen": "Los SEGUROS del cliente = lo «con nosotros» (póliza en cartera en vigor, o emitida y pendiente de CIMA), con la póliza que sustituyen dentro. Es lo ÚNICO que cuenta en «Pólizas vivas», recibos, próxim"
+        },
+        {
+          "nombre": "contarOportunidades",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RepartoSeguros",
+          "retorno": "number | null",
+          "linea": 350,
+          "resumen": "Cuántas oportunidades hay que trabajar: las abiertas, las derivadas de pólizas de otras casas (volcado, canceladas) y lo que aportó el cliente. Una perdida que se reintentará al vencimiento no es «abi"
+        },
+        {
+          "nombre": "precargaAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaFicha, hoy: Date",
+          "retorno": "PrecargaAlta",
+          "linea": 368
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "30760b6737ac"
+      "hash": "b718f9bac860"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/sustituciones-aviso.ts",
@@ -173224,7 +173332,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4026,
-    "funciones": 13407
+    "archivos": 4027,
+    "funciones": 13418
   }
 }
