@@ -18,7 +18,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { MARCA_ASEGURA } from '../../../packages/brand/src/marcas/asegura.ts'
 import { ARTICULOS, entradasSitemapBlog } from './articulos.ts'
 import { RAMOS } from './ramos.ts'
-import { CALCULADORA_HIPOTECA, INDEXNOW_CLAVE, NAV, NAV_CABECERA, RAMOS_CON_CALCULADORA_HIPOTECA, url } from './sitio.ts'
+import { CALCULADORA_HIPOTECA, HERRAMIENTAS, INDEXNOW_CLAVE, NAV, NAV_CABECERA, RAMOS_CON_CALCULADORA_HIPOTECA, url } from './sitio.ts'
 
 test('ningún ramo se queda sin enlace en el pie (nada huérfano)', () => {
   // `Set<string>` explícito: `NAV` es `as const`, así que su `href` es una unión
@@ -37,12 +37,18 @@ test('la NAV no enlaza ramos que no existen (nada roto)', () => {
   }
 })
 
-// 🚨 Medido, no estético: con seis entradas la cabecera desbordaba y lo que se
-// salía de la pantalla era el botón «Área de clientes». Ver el comentario de
-// `NAV_CABECERA` en `sitio.ts`.
-test('la cabecera no crece más allá de lo medido', () => {
-  assert.ok(NAV_CABECERA.length <= 5, `la cabecera lleva ${NAV_CABECERA.length} entradas; se midió el desborde a partir de 6`)
-  for (const n of NAV_CABECERA) assert.ok(n.href.startsWith('/seguros/'))
+// 🚨 Rediseño 30/09/2026: la cabecera es ahora un desplegable con TODAS las
+// entradas de seguros, más herramientas. El cepo es que las HERRAMIENTAS
+// siempre están presentes y tienen el formato correcto. El desborde se midió
+// con Playwright en 6 anchos: 320, 360, 768, 1024, 1280, 1440 px.
+test('las herramientas de la cabecera están todas presentes y con forma correcta', () => {
+  assert.ok(HERRAMIENTAS.length === 3, `HERRAMIENTAS debe tener exactamente 3 entradas; tiene ${HERRAMIENTAS.length}`)
+  const herramientasRequeridas = new Set(['calculadora', 'vencimiento', 'subir'])
+  for (const h of HERRAMIENTAS) {
+    assert.ok(herramientasRequeridas.has(h.key), `herramienta desconocida: ${h.key}`)
+    assert.ok(h.href, `la herramienta ${h.key} no tiene href`)
+    assert.ok(h.texto, `la herramienta ${h.key} no tiene texto`)
+  }
 })
 
 test('cada página de ramo enlaza a sus hermanas y a cambiar-de-correduria', () => {
