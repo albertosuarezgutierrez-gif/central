@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  planEscaparate, recorrido,
+  planEscaparate, recorrido, ventanaLibre,
   type CandidataEscaparate, type PisoEscaparate,
 } from './escaparate-plan.ts'
 
@@ -164,4 +164,27 @@ test('⏱️ tres ventanas de última hora VIEJAS no bastan: se refresca una', (
 test('🕳️ sin ninguna candidata a ≥7 días se dice que falta la base lejana, no que «ya se midió»', () => {
   const r = planEscaparate([piso([], [{ checkin: '2026-08-22', noches: 2, baseTotal: 950 }])], HOY)
   assert.ok(r.huecos.some(h => h.motivo.includes('≥7 días')), JSON.stringify(r.huecos))
+})
+
+test('ventanaLibre: una noche cogida o bajo la estancia mínima = no reservable', () => {
+  assert.equal(ventanaLibre([1, 0], 2, 1), false)
+  assert.equal(ventanaLibre([1, 1], 2, 3), false)
+  assert.equal(ventanaLibre([1, 1], 2, 2), true)
+  // no consta ≠ ocupada
+  assert.equal(ventanaLibre([1, null], 2, null), null)
+})
+
+test('🚨 una ventana OCUPADA no se pide (el portal diría «sin disponibilidad» y se repetiría cada día)', () => {
+  const candidatas: CandidataEscaparate[] = CANDIDATAS.map(c =>
+    c.checkin === '2026-12-26' ? { ...c, libre: false } : { ...c, libre: true })
+  const plan = planEscaparate([{ ...piso(), candidatas }], HOY)
+  assert.ok(plan.peticiones.length > 0)
+  assert.ok(plan.peticiones.every(p => p.checkin !== '2026-12-26'))
+})
+
+test('si TODAS las candidatas están ocupadas se declara el hueco, no se calla', () => {
+  const candidatas = CANDIDATAS.map(c => ({ ...c, libre: false }))
+  const plan = planEscaparate([{ ...piso(), candidatas }], HOY)
+  assert.equal(plan.peticiones.length, 0)
+  assert.match(plan.huecos[0].motivo, /ocupadas/)
 })
