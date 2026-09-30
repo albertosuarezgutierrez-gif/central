@@ -162,7 +162,7 @@ test('las garantías son de CADA fila: un todo riesgo y un terceros de la misma 
   })
   await completarCoberturasTarificacion(IDS, d.deps)
   const porFila = new Map(d.escrituras.flatMap((e) => e.ids.map((id) => [id, e.garantias?.porClave.danos_propios])))
-  assert.equal(porFila.get('tr'), 'no_consta')
+  assert.equal(porFila.get('tr'), 'si')
   assert.equal(porFila.get('ter'), 'no')
 })
 

@@ -250,7 +250,7 @@ test('Reale: la opción «Daños por colisión animal: No» es un no de choque c
   assert.equal(clasificarCoberturas('auto', [], opciones).porClave.colision_animales, 'no')
 })
 
-test('un TODO RIESGO no dice «no incluye daños propios» ni «pérdida total» aunque la compañía lo marque (30/09/2026)', () => {
+test('un TODO RIESGO de coche o moto INCLUYE daños propios aunque la compañía diga lo contrario (30/09/2026)', () => {
   // Reale, las 31 filas todo riesgo con franquicia: «Daños propios: false» (literal del vendor).
   const reale = [
     { nombre: 'Responsabilidad civil obligatoria', incluida: true },
@@ -258,11 +258,15 @@ test('un TODO RIESGO no dice «no incluye daños propios» ni «pérdida total»
     { nombre: 'Daños propios', incluida: false },
   ]
   const tr = clasificarCoberturas('auto', reale, null, { categoria: 'Todo Riesgo Con Franquicia Media', modalidad: 'Reale Todo Riesgo Franquicia 300 Euros' })
-  assert.equal(tr.porClave.danos_propios, 'no_consta')
+  assert.equal(tr.porClave.danos_propios, 'si')
   assert.notEqual(tr.porClave.perdida_total, 'no')
+  // Aunque la lista ni lo nombre: un todo riesgo es daños propios.
+  assert.equal(clasificarCoberturas('moto', [], null, { categoria: 'Todo Riesgo', modalidad: 'ALLIANZ MOTO DAÑOS' }).porClave.danos_propios, 'si')
   // La misma lista en un terceros sí es «no»: la regla es del todo riesgo, no de Reale.
   assert.equal(clasificarCoberturas('auto', reale, null, { categoria: 'Terceros', modalidad: 'Reale Terceros' }).porClave.danos_propios, 'no')
   assert.equal(clasificarCoberturas('auto', reale).porClave.danos_propios, 'no')
+  // La categoría manda sobre la modalidad: un terceros cuya modalidad nombre «todo riesgo» no lo es.
+  assert.equal(clasificarCoberturas('auto', reale, null, { categoria: 'Terceros ampliado', modalidad: 'Terceros + todo riesgo de lunas' }).porClave.danos_propios, 'no')
 
   // Occident: el bloque «Grandes daños» (incluido) enumera los daños propios y no nombra la pérdida total.
   const occident = [
@@ -270,7 +274,5 @@ test('un TODO RIESGO no dice «no incluye daños propios» ni «pérdida total»
   ]
   const occTr = clasificarCoberturas('auto', occident, null, { categoria: 'Todo Riesgo Con Franquicia Baja', modalidad: 'Todo Riesgo con franquicia 300' })
   assert.equal(occTr.porClave.perdida_total, 'no_consta')
-  assert.notEqual(occTr.porClave.danos_propios, 'no')
-  // Solo mira categoría/modalidad del precio: «Terceros + Robo» no es todo riesgo.
-  assert.equal(clasificarCoberturas('auto', reale, null, { modalidad: 'Seguro a Terceros + Robo' }).porClave.danos_propios, 'no')
+  assert.equal(occTr.porClave.danos_propios, 'si')
 })
