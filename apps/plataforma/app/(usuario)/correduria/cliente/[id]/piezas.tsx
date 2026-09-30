@@ -115,9 +115,13 @@ export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes,
                     // NULL = no se sabe cuándo vence, no «no vence».
                     <span style={{ color: 'var(--muted)' }} title="La compañía no ha informado el vencimiento">sin fecha</span>
                   )}
-                  <div style={{ marginTop: 3 }}>
-                    <Badge tono={TONO_ESTADO[p.estado] ?? 'neutral'}>{p.estado.replace(/_/g, ' ')}</Badge>
-                  </div>
+                  {/* El estado del volcado histórico es de hace una década («activa» sobre una fila de 2017
+                      leía como en vigor): solo una póliza de cartera lleva badge de estado. */}
+                  {p.viva && (
+                    <div style={{ marginTop: 3 }}>
+                      <Badge tono={TONO_ESTADO[p.estado] ?? 'neutral'}>{p.estado.replace(/_/g, ' ')}</Badge>
+                    </div>
+                  )}
                   <Anulacion vencimiento={p.fechaVencimiento} viva={p.viva} />
                 </td>
                 <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }} data-label="Prima">

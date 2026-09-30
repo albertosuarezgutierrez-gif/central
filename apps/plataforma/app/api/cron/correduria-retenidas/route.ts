@@ -2,7 +2,8 @@
 // Revisión de emisiones RETENIDAS por la compañía («riesgo condicionado», 30/09/2026).
 //
 // Dos veces al día pide a asegura que mire en Avant2 las que seguían retenidas y avisa por
-// Telegram SOLO si alguna ha cambiado (liberada → ya en cartera, o rechazada).
+// Telegram si alguna ha cambiado (liberada → ya en cartera, o rechazada). La pasada de la MAÑANA
+// (Madrid < 12) manda además, cada día, la lista de las que SIGUEN bloqueadas aunque no haya cambios.
 //
 // 🚨 Un fallo de lectura NUNCA es «0 retenidas»: el latido se pone en rojo y no se manda nada.
 // Y proyectos que no se pudieron revisar (`errores`) también ponen el latido en rojo.
@@ -12,7 +13,7 @@ import { tgAviso } from '@/lib/telegram'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { retenidasAsegura } from '@/lib/correduria-puerto'
-import { mensajeRetenidas } from '@/lib/correduria/retenidas-aviso'
+import { esPasadaDeManana, mensajeRetenidas } from '@/lib/correduria/retenidas-aviso'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, motivo }, { status: 200 })
   }
 
-  const mensaje = mensajeRetenidas({ cambios: r.cambios, siguen: r.siguen.length, errores: r.errores.length })
+  const mensaje = mensajeRetenidas({ cambios: r.cambios, siguen: r.siguen, errores: r.errores.length, recordatorio: esPasadaDeManana() })
 
   let enviado = false
   if (mensaje) {

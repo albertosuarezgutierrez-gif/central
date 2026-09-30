@@ -19,6 +19,7 @@ import { ErrorCodeoscopic, peticion } from './codeoscopic/cliente'
 import { redactarCrudoVendor } from './codeoscopic/emitir'
 import { documentoTomador, fraccionamientoDeOferta, ramoDeLinea } from './codeoscopic/importar'
 import { riesgoDeTarificacion } from './codeoscopic/contexto-emision'
+import { coincideCompania } from './emision-externa-reglas'
 import { describirEmisionExterna, estadoProyectoDe, leerEmisionExterna, resumenEmision, type EmisionResumen } from './codeoscopic/emision-externa'
 
 /** Igual que `MARGEN_EN_VUELO_MIN` de `codeoscopic/emitir-envio.ts`: mismo candado, misma semántica. */
@@ -68,13 +69,6 @@ export type ResultadoSincronizar =
 
 const fallo = (status: 400 | 404 | 409 | 422 | 502 | 503, mensaje: string, origen: 'entrada' | 'vendor' | 'bd' = 'entrada'): ResultadoSincronizar => ({ ok: false, status, origen, mensaje })
 
-/** La misma coincidencia que `/emitir` (`coincideCompania`): nombre común del catálogo vs el del vendor. */
-function coincideCompania(nombreComun: string, aseguradora: string): boolean {
-  const a = nombreComun.trim().toLowerCase()
-  const b = aseguradora.trim().toLowerCase()
-  return a === b || a.includes(b) || b.includes(a)
-}
-
 function accionDe(estado: ReturnType<typeof leerEmisionExterna>): AccionExterna {
   if (estado.estado === 'aprobada' && estado.solicitud.numeroPoliza) return 'acunar'
   const proyecto = estadoProyectoDe(estado)
@@ -107,7 +101,10 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
       limit 1`
     fila = f ?? null
 
-    if (fila?.estado === 'emitida') return await yaEmitida(correduriaId, projectId, fila)
+    if (fila?.estado === 'emitida') {
+      const ya = await yaEmitida(correduriaId, projectId, fila)
+      return entrada.escribir ? ya : vistaDeYaEmitida(projectId, ya)
+    }
 
     const delCliente = entrada.clienteId ?? null
     if (delCliente && fila?.cliente_id && delCliente.toLowerCase() !== fila.cliente_id.toLowerCase()) {
@@ -200,12 +197,14 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
         updated_at = case when ${estadoProyecto}::text is not null and codeoscopic_projects.estado::text is distinct from ${estadoProyecto}::text
                           then now() else codeoscopic_projects.updated_at end
       where codeoscopic_projects.estado <> 'emitida'
+        and (codeoscopic_projects.cliente_id is null or codeoscopic_projects.cliente_id = excluded.cliente_id)
       returning estado::text as estado`
     if (filas.length === 0) {
-      // Otra petición la acuñó entre la lectura y aquí: no se pisa.
+      // Otra petición la acuñó, o la enlazó a OTRO cliente, entre la lectura y aquí: no se pisa.
       const [otra] = await db.$queryRaw<FilaProyecto[]>`
         select estado::text as estado, poliza_id::text as poliza_id, cliente_id::text as cliente_id, oportunidad_id::text as oportunidad_id, aseguradora
         from codeoscopic_projects where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${projectId} limit 1`
+      if (otra && otra.estado !== 'emitida') return fallo(409, 'ese proyecto se ha enlazado a otro cliente mientras tanto')
       return await yaEmitida(correduriaId, projectId, otra ?? { estado: 'emitida', poliza_id: null, cliente_id: null, oportunidad_id: null, aseguradora: null })
     }
     let despues: string = filas[0].estado
@@ -305,5 +304,27 @@ async function yaEmitida(correduriaId: string, projectId: string, fila: FilaProy
     compania: fila.aseguradora,
     descripcion: `el proyecto ${projectId} ya está emitido en la intranet: no se toca`,
     oportunidadGanada: false,
+  }
+}
+
+/**
+ * Vista previa de un proyecto que YA está emitido en la intranet: no se llama al vendor (no hace falta
+ * y cuesta una petición). `emision` es un resumen mínimo coherente con `EmisionResumen`: estado
+ * 'aprobada' y el nº de la póliza acuñada; lo que solo diría el vendor (modalidad, prima, solicitud)
+ * va a null.
+ */
+function vistaDeYaEmitida(projectId: string, ya: ResultadoSincronizar): ResultadoSincronizar {
+  if (!ya.ok || ya.tipo !== 'escrito') return ya
+  const descripcion = ya.descripcion
+  return {
+    ok: true,
+    tipo: 'vista',
+    projectId,
+    ramo: null,
+    emision: { estado: 'aprobada', compania: ya.compania, modalidad: null, primaEur: null, numeroPoliza: ya.numeroPoliza, solicitudId: null, estadoVendor: null, descripcion },
+    estadoProyecto: null,
+    accion: 'nada',
+    oportunidadId: null,
+    bloqueos: ['este proyecto ya está emitido en la intranet'],
   }
 }

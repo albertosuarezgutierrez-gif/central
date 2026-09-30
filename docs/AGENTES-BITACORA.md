@@ -49,6 +49,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-09-30 · facturas-correo** · hizo: 10 candidatos Gmail (7d); archivadas en 09-Septiembre-2026 Digi 76,00€ (conciliada auto con cargo 29/09, FK escrita), Ionos correo 10,89€ (PayPal, fuera_del_feed) y 2 recibos Anthropic 170€ (#2933-3082, #2525-5445; fuera_del_feed); backlog 4.0 sin filas `sin_revisar`; Vía B sana; el resto ruido (Mapfre/Pactrebol/Holaplace) etiquetado Procesada; dudas: mail de guardería Estrella Polar (Pilar, desglose de cobros jul/sep, sin factura) → `Facturas/Revisar`; fallos: — (nota: `facturas_drive` tiene UNIQUE (proveedor,anio,mes): Ionos correo va como `ionos-correo`); PRs/commits: —
+
 - **2026-09-28 · facturas-correo** · hizo: pasada disparada por trigger. Salud Vía B OK
   (`dias_caido=0`, última copia hoy 28/09 en `_buzon_pdf`); `agente_salud` actualizado
   (`ok=true`). Vía A (`gmail-adjuntos`) sigue `CONNECTION_CLOSED`, no bloquea. Backlog persistente

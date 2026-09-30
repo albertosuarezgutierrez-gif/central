@@ -7,7 +7,8 @@
 // cambios no se manda nada: «siguen igual» no es noticia, y la ficha del cliente ya lo pinta.
 // Todo PURO (sin BD ni red). HTML escapado: `tgAviso` manda con parse_mode HTML.
 // ────────────────────────────────────────────────────────────────────────────
-import type { CambioRetenida } from '../correduria-puerto.ts'
+import type { CambioRetenida, SigueRetenida } from '../correduria-puerto.ts'
+import { esAllianz, RECORDATORIO_ALLIANZ_CORTO } from '@central/module-seguros'
 import { URL_PLATAFORMA_POR_DEFECTO } from '../correduria-emision-tg.ts'
 
 const esc = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -31,10 +32,36 @@ export function tipoCambio(c: Pick<CambioRetenida, 'despues'>): TipoCambioReteni
   return 'otro'
 }
 
+/** Recordatorio corto de Allianz (solo su intranet; sin otra póliza suya, solo la básica). Vacío si no es Allianz. */
+function notaAllianz(compania: string | null): string {
+  return esAllianz(compania) ? `\n   <i>${esc(RECORDATORIO_ALLIANZ_CORTO)}</i>` : ''
+}
+
+/**
+ * ¿Es la pasada de la MAÑANA (hora de Madrid < 12)? Solo en esa se recuerda a diario lo que sigue
+ * retenida aunque no haya cambios; la de la tarde solo avisa si algo cambia.
+ */
+export function esPasadaDeManana(ahora: Date = new Date()): boolean {
+  const h = Number.parseInt(ahora.toLocaleString('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hourCycle: 'h23' }), 10)
+  return Number.isFinite(h) && h < 12
+}
+
+function fechaDesde(d: string | null): string {
+  if (!d) return 'no consta desde cuándo'
+  const t = new Date(d)
+  if (Number.isNaN(t.getTime())) return `desde ${esc(d)}`
+  return `desde el ${t.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' })}`
+}
+
+function lineaSigue(c: SigueRetenida, base: string | undefined): string {
+  const cliente = `<a href="${esc(urlOportunidadesCliente(c.clienteId, base))}">${esc(c.cliente)}</a>`
+  return `⏳ ${cliente} — ${esc(c.compania ?? 'la compañía')} · ${fechaDesde(c.desde)}${notaAllianz(c.compania)}`
+}
+
 function lineaCambio(c: CambioRetenida, base: string | undefined): string {
   const compania = esc(c.compania ?? 'la compañía')
   const cliente = `<a href="${esc(urlOportunidadesCliente(c.clienteId, base))}">${esc(c.cliente)}</a>`
-  const detalle = c.descripcion ? `\n   <i>${esc(c.descripcion)}</i>` : ''
+  const detalle = (c.descripcion ? `\n   <i>${esc(c.descripcion)}</i>` : '') + notaAllianz(c.compania)
   switch (tipoCambio(c)) {
     case 'liberada': {
       const poliza = c.numeroPoliza ? ` nº ${esc(c.numeroPoliza)}` : ' (nº de póliza aún no consta)'
@@ -48,25 +75,39 @@ function lineaCambio(c: CambioRetenida, base: string | undefined): string {
 }
 
 /**
- * El Telegram. `null` = no hay cambios: no se manda nada. `siguen` es solo el recuento de las que
- * continúan retenidas (una línea), no la lista.
+ * El Telegram. `null` = no hay nada que decir: sin cambios y sin recordatorio no se manda nada.
+ * `recordatorio` (pasada de la mañana) manda también SIN cambios si siguen retenidas, con la lista
+ * (una retenida es un bloqueo: Alberto tiene que intervenir en la intranet de la compañía). Sin
+ * recordatorio, `siguen` es solo el recuento de una línea.
  */
 export function mensajeRetenidas(
-  r: { cambios: readonly CambioRetenida[]; siguen: number; errores?: number },
+  r: { cambios: readonly CambioRetenida[]; siguen: readonly SigueRetenida[]; errores?: number; recordatorio: boolean },
   base?: string,
 ): string | null {
-  if (r.cambios.length === 0) return null
-  const partes = [`🛡️ <b>Emisiones retenidas · Grupo ASegura</b>`, `${r.cambios.length} han cambiado:`, '']
-  for (const c of r.cambios.slice(0, 20)) partes.push(lineaCambio(c, base))
-  if (r.cambios.length > 20) partes.push(`… y ${r.cambios.length - 20} más.`)
+  const listar = r.recordatorio && r.siguen.length > 0
+  if (r.cambios.length === 0 && !listar) return null
+  const partes = [`🛡️ <b>Emisiones retenidas · Grupo ASegura</b>`]
+  if (r.cambios.length > 0) {
+    partes.push(`${r.cambios.length} han cambiado:`, '')
+    for (const c of r.cambios.slice(0, 20)) partes.push(lineaCambio(c, base))
+    if (r.cambios.length > 20) partes.push(`… y ${r.cambios.length - 20} más.`)
+  }
   partes.push('')
   const errores = r.errores ?? 0
-  partes.push(
-    // Con proyectos sin revisar, «no queda ninguna» sería afirmar lo que no se ha mirado.
-    r.siguen === 0 && errores === 0
-      ? 'No queda ninguna retenida.'
-      : `⏳ ${r.siguen} sigue${r.siguen === 1 ? '' : 'n'} retenida${r.siguen === 1 ? '' : 's'} por la compañía (no en vigor).`,
-  )
+  const n = r.siguen.length
+  if (listar) {
+    partes.push(`⏳ ${n} sigue${n === 1 ? '' : 'n'} retenida${n === 1 ? '' : 's'} por la compañía (no en vigor):`)
+    for (const c of r.siguen.slice(0, 20)) partes.push(lineaSigue(c, base))
+    if (n > 20) partes.push(`… y ${n - 20} más.`)
+    partes.push('', '⛔ Bloqueada: tienes que intervenir tú en la intranet de la compañía.')
+  } else {
+    partes.push(
+      // Con proyectos sin revisar, «no queda ninguna» sería afirmar lo que no se ha mirado.
+      n === 0 && errores === 0
+        ? 'No queda ninguna retenida.'
+        : `⏳ ${n} sigue${n === 1 ? '' : 'n'} retenida${n === 1 ? '' : 's'} por la compañía (no en vigor).`,
+    )
+  }
   if (errores > 0) partes.push(`⚠️ ${errores} no se ${errores === 1 ? 'ha' : 'han'} podido revisar esta vez: su estado no se sabe.`)
   return partes.join('\n')
 }

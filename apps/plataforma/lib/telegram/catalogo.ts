@@ -571,6 +571,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'A las 07:40 y 13:40, y solo si ha cambiado alguna',
   },
   {
+    id: 'correduria.baja-pue', categoria: 'correduria',
+    titulo: 'Bajas de Allianz para tramitar en el PUE',
+    que: 'Anulaciones firmadas por el cliente de pólizas de Allianz, que no se comunican por correo sino a mano en su extranet (PUE): cliente, póliza, fecha, operativa y enlaces al PUE y a la ficha.',
+    cuando: 'De lunes a viernes a las 07:50, y solo si hay alguna pendiente',
+  },
+  {
     id: 'correduria.recaptacion-lote', categoria: 'correduria',
     titulo: 'Recaptación por email · lote diario',
     que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',

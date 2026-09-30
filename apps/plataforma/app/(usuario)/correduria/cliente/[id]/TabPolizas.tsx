@@ -9,7 +9,7 @@ import { Polizas, PolizasDeclaradas, PolizasDondeFigura } from './piezas'
  *   vivas          → entran por CIMA, confirmadas y sin cancelar;
  *   pendientes     → las emitimos nosotros y CIMA aún no las ha traído;
  *   canceladas     → CIMA las manda canceladas: ya no aseguran nada;
- *   históricas     → volcado de junio de 2026, para saber qué tuvo.
+ *   históricas     → volcado de junio de 2026: oportunidades, no seguros (solo consulta).
  *
  * El volcado repite el MISMO riesgo cambiando solo la prima (84 grupos / 188
  * filas / 77 clientes, medido 21/09/2026: el FORD FOCUS 3935GPY sale a 201€ y
@@ -67,7 +67,7 @@ export default function TabPolizas({ porClase, intervinientes, declaradas, figur
       {porClase.historica.length > 0 && (
         <Polizas
           titulo={`Volcado histórico (${porClase.historica.length})`}
-          nota="Del volcado de junio de 2026, con vencimientos antiguos. Sirven para saber qué tuvo contratado, no para renovar. El volcado repite el mismo riesgo cambiando solo la prima: esas filas van juntas en una línea con todas sus primas, sin borrar ninguna."
+          nota="Del volcado de junio de 2026: no son seguros nuestros sino oportunidades (se trabajan en «Sus seguros» → Oportunidades), con datos de hace años. El volcado repite el mismo riesgo cambiando solo la prima: esas filas van juntas en una línea con todas sus primas, sin borrar ninguna."
           polizas={porClase.historica}
           vacio=""
           plegado

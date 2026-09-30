@@ -1,0 +1,97 @@
+{
+ "sesion": "2abfcd72-2826-5cef-9c41-9040a55eadee",
+ "inicio": "2026-09-30T09:24:12.127Z",
+ "fin": "2026-09-30T10:24:09.101Z",
+ "llamadas": 176,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 68,
+   "chars_in": 8489,
+   "chars_out": 258413,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 35,
+    "Read": 27,
+    "Glob": 6
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1529,
+   "chars_out": 1723,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 29482,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "otro": {
+   "llamadas": 23,
+   "chars_in": 17213,
+   "chars_out": 95219,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "SubagentHandback": 5,
+    "ToolSearch": 5,
+    "SendMessage": 3,
+    "ReadNotifications": 10
+   }
+  },
+  "mcp:github": {
+   "llamadas": 7,
+   "chars_in": 2201,
+   "chars_out": 10758,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 1,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__unsubscribe_pr_activity": 1
+   }
+  },
+  "bash": {
+   "llamadas": 73,
+   "chars_in": 71709,
+   "chars_out": 400501,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 73
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 5735,
+   "chars_out": 6079,
+   "errores": 0,
+   "archivos_citados": 9,
+   "chars_citados": 183442,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 304,
+   "chars_out": 1740,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 1,
+    "mcp__Claude_Code_Remote__delete_trigger": 1
+   }
+  }
+ }
+}

@@ -26,7 +26,11 @@ import { fmt, TIPOS } from './piezas'
  * Cada tile tiene tres estados y nunca dos: `—` = no se ha podido mirar ·
  * `0` = se miró y no hay · el número.
  */
-export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: ResumenFicha }) {
+export default function Cabecera({ ficha, resumen, seguros }: {
+  ficha: Ficha; resumen: ResumenFicha
+  /** Solo los SEGUROS (cartera en vigor): el volcado y lo que ya no cubre son oportunidades. */
+  seguros: Ficha['polizas']
+}) {
   // Solo el cónyuge sube a la cabecera; el resto de vínculos vive en «Contactos».
   const conyuge = ficha.relaciones?.find(r => r.tipo === 'Cónyuge/Pareja de Hecho') ?? null
   // 🚨 El MISMO criterio que el rótulo de estado, calculado una sola vez: CIMA
@@ -34,9 +38,9 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
   // el enum `tipo` no basta. Si el rótulo dice «Cliente» y el WhatsApp le trata
   // de desconocido (o al revés), el fallo se ve en la pantalla y en el chat.
   const esCliente = ficha.tipo === 'cliente' || resumen.conteo.vivas > 0
-  // Ramos con alguna póliza VIVA (no canceladas, no volcado). `ficha.polizas`
-  // siempre es array (nunca null), así que esto no necesita un tercer estado.
-  const tiposVivos = ficha.polizas.filter(p => p.viva).map(p => p.tipo)
+  // Ramos con algún SEGURO en vigor (no canceladas, no volcado). Siempre es array (nunca null),
+  // así que esto no necesita un tercer estado.
+  const tiposVivos = seguros.map(p => p.tipo)
   // Un solo bloque con su propio `gap`: la cabecera, el siguiente paso, las acciones y los titulares
   // van juntos, y el aire grande (24) queda para separarla de lo que viene debajo.
   return (
@@ -89,7 +93,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
         </div>
       </div>
 
-      <SiguientePaso ficha={ficha} resumen={resumen} tiposVivos={tiposVivos} />
+      <SiguientePaso ficha={ficha} resumen={resumen} tiposVivos={tiposVivos} seguros={seguros} />
 
       <Acciones clienteId={ficha.id} />
 
@@ -102,7 +106,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
 // UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla
 // vive pura y testeada en `siguientePaso` de @central/module-seguros; aquí solo se
 // pinta. Sin regla que aplique no se pinta nada (nunca un «todo en orden»).
-function SiguientePaso({ ficha, resumen, tiposVivos }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[] }) {
+function SiguientePaso({ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[]; seguros: Ficha['polizas'] }) {
   const paso = siguientePaso({
     recibosDevueltos: resumen.recibos.devueltos,
     proximo: resumen.proximo,
@@ -114,7 +118,7 @@ function SiguientePaso({ ficha, resumen, tiposVivos }: { ficha: Ficha; resumen: 
   const tel = ef.telefono
   // Con el recibo devuelto, WhatsApp al lado de «Llamar» (Alberto, 29/09/2026: «por WhatsApp queda
   // reflejado»). Mismo mensaje y misma nota en la ficha que el botón del recibo en la póliza.
-  const devuelta = paso.accion.tipo === 'llamar' ? ficha.polizas.find(p => p.viva && p.recibos?.ultimo?.situacion === 'devuelto') ?? null : null
+  const devuelta = paso.accion.tipo === 'llamar' ? seguros.find(p => p.recibos?.ultimo?.situacion === 'devuelto') ?? null : null
   const tercero = ef.viaTelefono === 'interviniente'
   const whatsapp = devuelta && tel ? (
     <WhatsappReciboDevuelto
@@ -177,13 +181,20 @@ function Titulares({ resumen }: { resumen: ResumenFicha }) {
   const { conteo, recibos, siniestrosAbiertos: abiertos, proximo } = resumen
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 12 }}>
-      <Kpi label="Pólizas vivas" valor={String(conteo.vivas)} sub={`${conteo.total} en total`} />
+      {/* Solo seguros en vigor: el volcado histórico son oportunidades y no entra en ningún contador. */}
+      <Kpi
+        label="Pólizas vivas"
+        valor={String(conteo.vivas)}
+        sub={conteo.pendientesCima > 0 ? `+ ${conteo.pendientesCima} pendiente(s) de CIMA` : conteo.vivas === 0 ? 'ningún seguro en vigor' : 'en vigor'}
+      />
       <Kpi
         label="Recibos devueltos"
         valor={recibos.devueltos === null ? '—' : String(recibos.devueltos)}
         color={recibos.devueltos ? 'var(--negative)' : undefined}
         sub={
-          recibos.devueltos === null
+          conteo.total === 0
+            ? 'sin seguros en vigor'
+            : recibos.devueltos === null
             ? 'sin recibos informados'
             : recibos.devueltos > 0 ? 'hay que reclamar el cobro' : 'ninguno devuelto'
         }
@@ -193,7 +204,8 @@ function Titulares({ resumen }: { resumen: ResumenFicha }) {
         valor={recibos.pendientes === null ? '—' : String(recibos.pendientes)}
         color={recibos.pendientes ? 'var(--warning)' : undefined}
         sub={
-          recibos.polizasSinRecibos > 0 ? `${recibos.polizasSinRecibos} póliza(s) sin recibos informados`
+          conteo.total === 0 ? 'sin seguros en vigor'
+          : recibos.polizasSinRecibos > 0 ? `${recibos.polizasSinRecibos} póliza(s) sin recibos informados`
             : recibos.pendientes ? 'emitidos y aún sin cargar: no es deuda'
               : 'sobre los recibos informados'
         }

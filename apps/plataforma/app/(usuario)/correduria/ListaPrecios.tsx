@@ -12,7 +12,7 @@ import { useState, type ReactNode } from 'react'
 import { Badge, btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { CeldaCompania } from './CeldaCompania'
-import { bloqueoCompania, reparosPorFila, textoBloqueoCorredor } from '@central/module-seguros'
+import { bloqueoCompania, emisionEscalonadaRecomendada, reparosPorFila, textoBloqueoCorredor, textoEmisionEscalonada } from '@central/module-seguros'
 
 export type PrecioLista = {
   id?: string
@@ -81,8 +81,10 @@ export default function ListaPrecios<P extends PrecioLista>({
                     <Badge tono="aviso" title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge>
                   )}
                   {simulado && <Badge tono="aviso">simulado</Badge>}
-                  {bloqueoCompania(p.avisos) !== null && (
-                    <div style={{ fontSize: 12, color: 'var(--negative)', fontWeight: 600, marginTop: 4 }}>{textoBloqueoCorredor(bloqueoCompania(p.avisos) as string)}</div>
+                  {bloqueoCompania(p.avisos) !== null ? (
+                    <div style={{ fontSize: 12, color: 'var(--negative)', fontWeight: 600, marginTop: 4 }}>{textoBloqueoCorredor(bloqueoCompania(p.avisos) as string, p.compania)}</div>
+                  ) : emisionEscalonadaRecomendada({ categoria: p.categoria, modalidad: p.modalidad }) && (
+                    <div style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 600, marginTop: 4 }}>⚠️ {textoEmisionEscalonada()}</div>
                   )}
                   {reparosFila.map((m) => (
                     <div key={m} style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 600, marginTop: 4, overflowWrap: 'anywhere' }}>⚠️ {m}</div>
