@@ -1,18 +1,20 @@
 {
  "sesion": "e42b3fd1-aed2-50c6-9fa0-0e847c34f1dc",
  "inicio": "2026-09-30T10:02:42.534Z",
- "fin": "2026-09-30T10:04:39.658Z",
- "llamadas": 12,
+ "fin": "2026-09-30T10:36:14.567Z",
+ "llamadas": 102,
  "categorias": {
   "otro": {
-   "llamadas": 2,
-   "chars_in": 287,
-   "chars_out": 566,
+   "llamadas": 9,
+   "chars_in": 19659,
+   "chars_out": 1361,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 2
+    "ToolSearch": 4,
+    "SubagentHandback": 4,
+    "Skill": 1
    }
   },
   "mcp:Google_Drive": {
@@ -29,36 +31,94 @@
    }
   },
   "bash": {
-   "llamadas": 1,
-   "chars_in": 9685,
-   "chars_out": 3575,
+   "llamadas": 30,
+   "chars_in": 18034,
+   "chars_out": 178161,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1
+    "Bash": 30
    }
   },
   "sql": {
-   "llamadas": 3,
-   "chars_in": 594,
-   "chars_out": 3776,
+   "llamadas": 26,
+   "chars_in": 18404,
+   "chars_out": 76206,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase_asegura__execute_sql": 3
+    "mcp__Supabase_asegura__execute_sql": 6,
+    "mcp__Supabase__execute_sql": 20
    }
   },
   "agente:general-purpose": {
-   "llamadas": 1,
-   "chars_in": 2325,
-   "chars_out": 2496,
+   "llamadas": 2,
+   "chars_in": 4406,
+   "chars_out": 4749,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
+    "Agent": 2
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 4075,
+   "chars_out": 4261,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 33788,
+   "tools": {
     "Agent": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 4,
+   "chars_out": 782,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 2
+   }
+  },
+  "mcp:Supabase_asegura": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 50,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__get_project_url": 1
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1683,
+   "chars_out": 1878,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 11585,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 25,
+   "chars_in": 2292,
+   "chars_out": 133583,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 10,
+    "Read": 7,
+    "Glob": 8
    }
   }
  }
