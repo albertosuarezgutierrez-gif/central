@@ -1849,8 +1849,11 @@ Cuatro PRs de pulido sobre lo ya construido, sin tocar arquitectura: **lotes 1-2
 44px táctiles, bloques vacíos en una línea en vez de card completa, filas resumidas en varias tablas y fix
 del bug de alta de auto; **`Relaciones.tsx`** (`b6d2504`) — personas de la ficha con resumen por fila y
 gestión plegada (antes la lista de relaciones ocupaba la ficha entera aunque solo hubiera un cónyuge);
-**lotes 3-4** (`2b546ad`) — en Clientes el badge cuenta solo la recaptación (el total del listado no es
-trabajo); en Cartera las renovaciones a 90 días se pliegan (ya viven en Vencimientos y las urgentes en
+**lotes 3-4** (`2b546ad`) — en Clientes el badge contaba solo la recaptación (⚠️ desde el 30/09/2026 el
+bloque Recaptación ya no existe: esos antiguos clientes son oportunidades —`import_ref`
+`recaptacion:<poliza>`— y se trabajan en `/correduria/vencimientos`; el correo automático diario de
+recaptación SIGUE —cron `recaptacion-email-lote`— y avisa por Telegram cuando ya se ha escrito a todos
+los solo-correo en ventana); en Cartera las renovaciones a 90 días se pliegan (ya viven en Vencimientos y las urgentes en
 Hoy); en «Más» se agrupa Formación/IPID/RGPD bajo «Cumplimiento» y Compañías/radar bajo «Referencia»; en
 la ficha del cliente, DNI/nacimiento/carnés se pliegan tras «DNI y carnés» (se abre solo si un carné
 caduca); y **«Siguiente paso»** — una frase y un botón bajo el nombre del cliente, derivados de lo que la
