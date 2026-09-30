@@ -1,8 +1,8 @@
 {
  "sesion": "266e451e-ea6a-5914-8b1d-ef2697d3348c",
  "inicio": "2026-09-29T16:41:38.647Z",
- "fin": "2026-09-30T05:08:08.246Z",
- "llamadas": 1020,
+ "fin": "2026-09-30T05:41:23.704Z",
+ "llamadas": 1129,
  "categorias": {
   "otro": {
    "llamadas": 103,
@@ -21,25 +21,25 @@
    }
   },
   "bash": {
-   "llamadas": 692,
-   "chars_in": 403510,
-   "chars_out": 2574802,
+   "llamadas": 790,
+   "chars_in": 487177,
+   "chars_out": 2890512,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 692
+    "Bash": 790
    }
   },
   "mcp:github": {
-   "llamadas": 67,
-   "chars_in": 26292,
-   "chars_out": 232865,
+   "llamadas": 68,
+   "chars_in": 26375,
+   "chars_out": 247072,
    "errores": 1,
-   "archivos_citados": 2,
-   "chars_citados": 4984,
+   "archivos_citados": 9,
+   "chars_citados": 1021190,
    "tools": {
-    "mcp__github__list_pull_requests": 3,
+    "mcp__github__list_pull_requests": 4,
     "mcp__github__create_pull_request": 7,
     "mcp__github__pull_request_read": 28,
     "mcp__github__update_pull_request": 6,
@@ -52,14 +52,14 @@
    }
   },
   "agente:agente-architect": {
-   "llamadas": 4,
-   "chars_in": 13029,
-   "chars_out": 13773,
+   "llamadas": 5,
+   "chars_in": 16746,
+   "chars_out": 17675,
    "errores": 0,
-   "archivos_citados": 13,
-   "chars_citados": 1287633,
+   "archivos_citados": 18,
+   "chars_citados": 1499254,
    "tools": {
-    "Agent": 4
+    "Agent": 5
    }
   },
   "lectura-directa": {
@@ -86,25 +86,25 @@
    }
   },
   "sql": {
-   "llamadas": 91,
-   "chars_in": 46082,
-   "chars_out": 407146,
+   "llamadas": 98,
+   "chars_in": 48369,
+   "chars_out": 431459,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 91
+    "mcp__Supabase__execute_sql": 98
    }
   },
   "escritura": {
-   "llamadas": 16,
-   "chars_in": 31121,
-   "chars_out": 320377,
+   "llamadas": 18,
+   "chars_in": 41860,
+   "chars_out": 342472,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 6,
+    "Write": 8,
     "Edit": 10
    }
   },
