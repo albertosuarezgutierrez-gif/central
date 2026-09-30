@@ -18,6 +18,7 @@ import {
   pasoConTarea,
   siguientePasoLead,
   PREFIJO_LLAMADA_CONTESTADA,
+  PREFIJO_WHATSAPP_RESPONDIDO,
   sqlCarteraEnVigor,
   ventanaDe,
   type CanalLead,
@@ -159,12 +160,15 @@ export async function leadsCompetencia(
             and g.updated_at > now() - interval '12 months')
       ) as "ultimoEnvioAt",
       (exists (
+        -- 'enlace_abierto' NO: es el WhatsApp que abrió Alberto (se registra al pulsar), no una
+        -- respuesta del cliente. Contarlo ponía como «respondió» a los 155 de Recaptación.
         select 1 from recaptacion_envios r
-        where r.cliente_id = c.id and r.estado::text in ('enlace_abierto', 'abierto', 'pinchado')
+        where r.cliente_id = c.id and r.estado::text in ('abierto', 'pinchado')
       ) or coalesce((
         -- Una llamada que COGIÓ también es haber respondido, pero solo si es el
         -- ÚLTIMO contacto: tras varios «no contesta» vuelve a ser uno más.
-        select starts_with(g.observaciones, ${PREFIJO_LLAMADA_CONTESTADA}) from gestiones g
+        select (starts_with(g.observaciones, ${PREFIJO_LLAMADA_CONTESTADA})
+                or starts_with(g.observaciones, ${PREFIJO_WHATSAPP_RESPONDIDO})) from gestiones g
         where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
           and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
           and g.tipo::text in ('llamada', 'email', 'whatsapp')

@@ -98,34 +98,60 @@ export function mensajePresentacionWhatsapp(nombre: string): string {
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
 /**
- * El WhatsApp de SEGUIMIENTO a un lead de Vencimientos (Alberto, 23/09/2026:
- * «la vía de contacto preferente es WhatsApp; no automático, pero sí
- * contactos»). Lo abre Alberto con un clic y lo envía él: nada sale solo.
+ * El WhatsApp de SEGUIMIENTO a un lead de Vencimientos. Lo abre Alberto con un
+ * clic y lo envía él desde su teléfono: nada sale solo.
  *
- * Distinto de `mensajePresentacionWhatsapp`: aquel presenta la intranet; este
- * va a lo que toca — su seguro renueva pronto — y ofrece mirarlo.
+ * Texto dictado por Alberto el 30/09/2026 («Hola {nombre}, soy Alberto, de
+ * GrupoASegura.es. Si no me equivoco, tu seguro de {coche} vence en
+ * {noviembre}. ¿Te preparo un estudio sin compromiso?…»). Sustituye al del
+ * 23/09 y al de Recaptación, que llevaba la web.
  *
- * 🚨 Dos cosas que no se negocian:
- *   · No promete precio ni ahorro («te miro si hay algo mejor», no «te lo
- *     bajo»): lo vigila `copy-regulado`.
- *   · Lleva la BAJA en el propio mensaje. WhatsApp es comunicación
- *     electrónica (LSSI art. 21) y cada envío comercial tiene que ofrecer
- *     una forma sencilla de no recibir más.
+ * 🚨 Tres cosas que no se negocian:
+ *   · «Si no me equivoco»: la fecha del lead es ESTIMADA (aniversario de una
+ *     póliza antigua), así que no se afirma.
+ *   · No promete precio ni ahorro («te preparo un estudio», no «te lo bajo»):
+ *     lo vigila `copy-regulado`.
+ *   · Lleva la BAJA en el propio mensaje. WhatsApp es comunicación electrónica
+ *     (LSSI art. 21) y cada envío comercial tiene que ofrecer una forma
+ *     sencilla de no recibir más.
  *
- * `mesAniversario` es 1-12 o `null`; la fecha del lead es ESTIMADA
- * (aniversario de una póliza antigua), así que se pregunta, no se afirma.
+ * «GrupoASegura.es» sale de `MEDIADOR` (marca sin espacios + el dominio de su
+ * web), no de un literal: el nombre comercial está protegido en un solo sitio.
+ * WhatsApp lo pinta como enlace; Alberto lo sabe y lo quiere así.
  */
 export function mensajeRenovacionLeadWhatsapp(d: { nombre: string | null; ramo: string | null; mesAniversario: number | null }): string {
   const pila = nombreDePila(d.nombre)
-  const ramo = d.ramo ? d.ramo.replace(/_/g, ' ').toLowerCase() : null
+  const ramo = ramoColoquial(d.ramo)
   const mes = d.mesAniversario !== null && d.mesAniversario >= 1 && d.mesAniversario <= 12 ? MESES[d.mesAniversario - 1] : null
-  const seguro = ramo ? `el seguro de ${ramo}` : 'tu seguro'
-  const pregunta = mes ? `¿Te renueva ${seguro} por ${mes}?` : `¿Cuándo te renueva ${seguro}?`
-  return [
-    pila ? `Hola ${pila}, soy ${FIRMA}, corredor de seguros.` : `Hola, soy ${FIRMA}, corredor de seguros.`,
-    '',
-    `${pregunta} Si quieres, antes de que se renueve lo miro con las compañías con las que trabajo y te digo si hay algo que te encaje mejor, sin compromiso.`,
-    '',
-    'Si prefieres que no te escriba más, dímelo y no lo vuelvo a hacer.',
-  ].join('\n')
+  const seguro = ramo ? `tu seguro de ${ramo}` : 'tu seguro'
+  const cuando = mes ? `vence en ${mes}` : 'vence pronto'
+  return `${pila ? `Hola ${pila}` : 'Hola'}, soy ${NOMBRE_PILA_MEDIADOR}, de ${MARCA_WEB}. ` +
+    `Si no me equivoco, ${seguro} ${cuando}. ¿Te preparo un estudio sin compromiso? ` +
+    'Si no quieres que te escriba más, dímelo y no lo vuelvo a hacer. ¡Gracias!'
+}
+
+/** «Alberto»: el nombre de pila del mediador, sin apellidos. */
+const NOMBRE_PILA_MEDIADOR = MEDIADOR.identidad.nombre.split(' ')[0]
+
+/** «GrupoASegura.es»: la marca sin espacios y el dominio de primer nivel de su web. */
+const MARCA_WEB = `${MEDIADOR.marca.replace(/\s+/g, '')}.${new URL(MEDIADOR.identidad.web).hostname.split('.').pop()}`
+
+/**
+ * El ramo como lo dice la gente: «tu seguro de coche», no «de auto». Un ramo que
+ * no se sabe decir en corto devuelve `null` y el mensaje dice «tu seguro».
+ */
+const RAMO_COLOQUIAL: Record<string, string> = {
+  auto: 'coche',
+  moto: 'moto',
+  hogar: 'casa',
+  vida: 'vida',
+  salud: 'salud',
+  comercio: 'negocio',
+  responsabilidad_civil: 'responsabilidad civil',
+  decesos: 'decesos',
+}
+
+export function ramoColoquial(ramo: string | null): string | null {
+  if (!ramo) return null
+  return RAMO_COLOQUIAL[ramo.trim().toLowerCase().replace(/[\s-]+/g, '_')] ?? null
 }

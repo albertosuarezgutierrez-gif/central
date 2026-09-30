@@ -396,7 +396,7 @@ export async function cerrarTarea(
 export async function registrarLlamada(
   correduriaId: string,
   oportunidadId: string,
-  datos: { resultado?: unknown; nota?: unknown; volverEl?: unknown; motivo?: unknown },
+  datos: { resultado?: unknown; nota?: unknown; volverEl?: unknown; motivo?: unknown; canal?: unknown },
   actor: string,
   hoy: Date = hoyUtc(),
 ): Promise<{ ok: true; resultado: string; siguienteTareaId: string | null } | Fallo> {
@@ -425,11 +425,23 @@ export async function registrarLlamada(
       where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
         and origen_trigger = 'central:seguimiento' and tipo::text = 'llamada' and estado <> 'cerrada'
         and fecha_limite <= (${hoyIso}::date + time '23:59:59') at time zone 'Europe/Madrid'`)
+    // La respuesta queda como gestión CERRADA del canal por el que llegó (llamada o WhatsApp).
     await tx.$executeRaw(Prisma.sql`
       insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
-      values (${correduriaId}::uuid, 'llamada', 'media', 'cerrada', ${plan.registro},
+      values (${correduriaId}::uuid, cast(${plan.canal} as gestion_tipo), 'media', 'cerrada', ${plan.registro},
               (${hoyIso}::date + time '23:59:59') at time zone 'Europe/Madrid',
               ${antes.clienteId}::uuid, ${oportunidadId}::uuid, 'central:seguimiento')`)
+    if (plan.optOut) {
+      // La baja que pidió: sin WhatsApp (la lista de leads deja de ver su teléfono) y sin correo.
+      // `coalesce`: una baja anterior conserva su fecha y su origen.
+      await tx.$executeRaw(Prisma.sql`
+        update clientes set
+          wa_opt_out_at = coalesce(wa_opt_out_at, now()),
+          wa_opt_out_source = coalesce(wa_opt_out_source, ${`respuesta_${plan.canal}`}),
+          email_opt_out_at = coalesce(email_opt_out_at, now()),
+          email_opt_out_source = coalesce(email_opt_out_source, ${`respuesta_${plan.canal}`})
+        where id = ${antes.clienteId}::uuid and correduria_id = ${correduriaId}::uuid`)
+    }
     let siguienteTareaId: string | null = null
     if (plan.siguiente) {
       const t = plan.siguiente
@@ -443,13 +455,14 @@ export async function registrarLlamada(
     }
     await tx.$executeRaw(Prisma.sql`
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
-      values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'llamada',
+      values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${plan.canal},
               cast(${antes.estado} as estado_comercial), cast(${despues.estado} as estado_comercial),
-              ${JSON.stringify({ resultado: plan.resultado, siguienteTareaId, fechaSiguiente: plan.siguiente?.fechaLimite ?? null })}::jsonb, ${actor})`)
-    return { ok: true as const, clienteId: antes.clienteId, registro: plan.resultado, siguienteTareaId }
+              ${JSON.stringify({ resultado: plan.resultado, canal: plan.canal, optOut: plan.optOut, siguienteTareaId, fechaSiguiente: plan.siguiente?.fechaLimite ?? null })}::jsonb, ${actor})`)
+    return { ok: true as const, clienteId: antes.clienteId, registro: plan.resultado, canal: plan.canal, siguienteTareaId }
   })
   if (!r.ok) return r
-  await anotarEnFicha(correduriaId, r.clienteId, `${ETIQUETA_LLAMADA[r.registro] ?? 'Llamada'} — por ${actor}`)
+  const etiqueta = ETIQUETA_LLAMADA[r.registro] ?? 'Llamada'
+  await anotarEnFicha(correduriaId, r.clienteId, `${r.canal === 'whatsapp' ? etiqueta.replace(/^Llamada/, 'WhatsApp') : etiqueta} — por ${actor}`)
   return { ok: true, resultado: r.registro, siguienteTareaId: r.siguienteTareaId }
 }
 
@@ -509,6 +522,8 @@ const ETIQUETA_LLAMADA: Record<string, string> = {
   otro_dia: 'Llamada: pide que le llamen otro día',
   no_contesta: 'Llamada: no contesta',
   no_interesa: 'Llamada: no le interesa (aparcada hasta el año que viene)',
+  numero_equivocado: 'Llamada: número equivocado (aparcada hasta el año que viene; corrige el teléfono)',
+  baja: 'Llamada: pidió no recibir más mensajes (baja de WhatsApp y correo; aparcada)',
 }
 
 export type TareaDeHoy = {

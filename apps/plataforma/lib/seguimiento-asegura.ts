@@ -511,13 +511,16 @@ export function colaLlamadas(leads: readonly LeadVencimiento[]): LeadVencimiento
 
 /**
  * El WhatsApp de seguimiento de un lead, o `null` si no se le puede escribir
- * por ahí (Alberto, 23/09/2026: es la vía preferente; lo abre y lo envía él).
- * Mismo régimen que el correo (LSSI art. 21): solo a quien FUE cliente. Que
- * el número sea un móvil lo decide `BotonWhatsapp`, que no pinta nada si no.
+ * por ahí. Lo abre Alberto y lo envía él desde su teléfono.
+ *
+ * 🚨 A TODOS con teléfono desde el 30/09/2026 (decisión de Alberto, asumiendo
+ * el riesgo LSSI art. 21 que se le explicó; ver `puedeWhatsappLead`). Quien
+ * pidió la baja ya llega sin teléfono (`wa_opt_out_at` lo quita en asegura).
+ * Que el número sea un móvil lo decide `BotonWhatsapp`, que no pinta nada si no.
  */
 export function whatsappDeLead(l: LeadVencimiento): { telefono: string; mensaje: string } | null {
   if (l.telefono === null || l.canal === 'sin_canal_permitido') return null
-  if (!puedeWhatsappLead({ fueCliente: l.fueCliente, tieneTelefono: true })) return null
+  if (!puedeWhatsappLead({ tieneTelefono: true })) return null
   const mes = Number(l.vencimientoEstimado.slice(5, 7))
   return {
     telefono: l.telefono,
@@ -550,6 +553,42 @@ export const RESULTADOS_LLAMADA_UI = [
   { valor: 'no_interesa', rotulo: 'No le interesa' },
 ] as const
 export type ResultadoLlamadaUI = (typeof RESULTADOS_LLAMADA_UI)[number]['valor']
+
+/**
+ * Las respuestas a un WhatsApp de seguimiento (30/09/2026). Se registran por el
+ * mismo camino que una llamada (`canal: 'whatsapp'`): una transacción que deja
+ * el registro, cambia el estado y pone la siguiente tarea.
+ */
+export const RESPUESTAS_WHATSAPP_UI = [
+  { valor: 'quiere_precio', rotulo: 'Quiere estudio' },
+  { valor: 'otro_dia', rotulo: 'Que le llame' },
+  { valor: 'no_interesa', rotulo: 'No le interesa / ya renovó' },
+  { valor: 'numero_equivocado', rotulo: 'Número equivocado' },
+  { valor: 'baja', rotulo: 'Pidió la baja' },
+] as const
+export type RespuestaWhatsappUI = (typeof RESPUESTAS_WHATSAPP_UI)[number]['valor']
+
+/** En qué punto está un lead para quien le escribe por WhatsApp. */
+export type TramoLead = 'por_enviar' | 'esperando' | 'respondio'
+
+/**
+ * Por enviar = nadie le ha escrito ni llamado en este ciclo · Esperando = se le
+ * contactó y no hay respuesta registrada · Respondió = contestó, o ya está
+ * interesado / con propuesta. Así, al mandarle el WhatsApp sale de «Por
+ * enviar» y la lista principal solo tiene a quien falta.
+ */
+export function tramoLead(l: Pick<LeadVencimiento, 'intentos' | 'respondioAntes' | 'estado'>): TramoLead {
+  if (l.respondioAntes || l.estado === 'en_negociacion' || l.estado === 'pendiente_cliente') return 'respondio'
+  return l.intentos > 0 ? 'esperando' : 'por_enviar'
+}
+
+/** Días desde el último contacto (`null` = no consta). A partir de 3 sin respuesta, toca llamar. */
+export const DIAS_SIN_RESPUESTA_LLAMAR = 3
+export function diasSinRespuesta(ultimoContactoEn: string | null, ahora: Date = new Date()): number | null {
+  if (!ultimoContactoEn) return null
+  const t = Date.parse(ultimoContactoEn)
+  return Number.isNaN(t) ? null : Math.max(0, Math.floor((ahora.getTime() - t) / 86_400_000))
+}
 
 // ─── Red (solo desde rutas API de plataforma) ────────────────────────────────
 

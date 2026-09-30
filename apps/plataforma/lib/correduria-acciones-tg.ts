@@ -142,6 +142,8 @@ const ROTULO_RESULTADO: Record<(typeof RESULTADOS_LLAMADA)[number], string> = {
   otro_dia: 'que le llame otro día',
   no_contesta: 'no contesta (se reintenta sola)',
   no_interesa: 'no le interesa (se aparca)',
+  numero_equivocado: 'número equivocado (se aparca; corrige el teléfono)',
+  baja: 'pidió la baja (no se le vuelve a escribir; se aparca)',
 }
 
 /** El mensaje con el botón. `quien` es lo que identifica la ficha (nombre, póliza, ramo…). */
