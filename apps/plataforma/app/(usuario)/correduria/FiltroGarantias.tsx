@@ -215,6 +215,9 @@ export default function FiltroGarantias({
             {typeof o.bloqueo === 'string' && (
               <span style={{ display: 'block', fontSize: 12, color: 'var(--negative)', fontWeight: 600 }}>{textoBloqueoCorredor(o.bloqueo)}</span>
             )}
+            {o.reparos.map((m) => (
+              <span key={m} style={{ display: 'block', fontSize: 12, color: 'var(--warning)', fontWeight: 600, overflowWrap: 'anywhere' }}>⚠️ {m}</span>
+            ))}
             {dif && dif.noIncluye.length > 0 && (
               <span style={{ display: 'block', fontSize: 12 }}>No incluye: {resumirLista(dif.noIncluye)}</span>
             )}

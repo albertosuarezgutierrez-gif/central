@@ -230,3 +230,10 @@ orden en §9.
     - Cotización RECUPERADA: fallos y supuestos no guardados se DICEN (`null`), nunca `[]`.
     - Antes de afirmar un dato del vendor, mídelo en `seguros.tarificacion_precios` (coberturas crudas y
       `tarificaciones.respuesta`): el parser puede estar leyendo bien un dato que la compañía manda mal.
+    - **Y por encima de la modalidad, el `id` del vendor** (`idPrecio`, 30/09/2026 tarde): si el proyecto
+      aún lo trae, se emite ESE. Toda pantalla que abre `<Emision>` le pasa `idPrecio` (cepo en
+      `test/regression-rerate-fecha-y-desempate.test.ts`).
+    - **Nada de IA decidiendo precios o coberturas en vivo.** Las incoherencias las marcan reglas fijas
+      (`revisarCoherenciaCotizacion`, en pantalla + Telegram) y un cambio del lector se prueba gratis con
+      `GET /api/operador/codeoscopic/reproceso` sobre respuestas reales. El vocabulario de coberturas de
+      Codeoscopic es cerrado: un nombre nuevo sale en `coberturasNuevas` y se decide a mano.

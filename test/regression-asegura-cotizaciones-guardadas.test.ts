@@ -65,6 +65,7 @@ type EntradaCotizacion = Parameters<Cotizaciones['guardarCotizacion']>[0]
 type EnTransaccion = Parameters<Cotizaciones['guardarCotizacion']>[1] & object
 
 const { cotizar } = await import('../apps/asegura/lib/codeoscopic/cotizar.ts')
+const { PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE } = await import('../packages/module-seguros/src/coherencia-cotizacion.ts')
 const { ENV_SIMULACION } = await import('../apps/asegura/lib/codeoscopic/config.ts')
 
 // ─── El doble de la BD ───────────────────────────────────────────────────────
@@ -397,6 +398,34 @@ test('la respuesta cruda se guarda APARTE y su fallo NO deja sin copia el precio
   // La 4ª escritura (cabecera, 2 precios, cruda) revienta: el precio YA está guardado.
   const mal = libreta({ fallarEn: 4 })
   const g2 = await guardarSinTumbar(entrada({ respuesta: { id: 1 } }), mal.enTransaccion)
+  assert.deepEqual(g2, { estado: 'guardada', cotizacionId: 'cot-1' })
+})
+
+test('30/09/2026: precios que no cuadran → UNA nota en la ficha (aparte), y si falla el precio sigue guardado', async () => {
+  // Coherente (el fixture de siempre): ni nota ni transacción de más.
+  const limpia = libreta()
+  await guardarSinTumbar(entrada(), limpia.enTransaccion)
+  assert.equal(limpia.escrituras.some((e) => /historial_interno/.test(e.sql)), false, 'sin reparos no se anota nada')
+
+  const precioMal = { ...COTIZACION.precios[0], primaEur: 0 }
+  const mala = { ...COTIZACION, precios: [precioMal, ...COTIZACION.precios.slice(1)] }
+  const l = libreta()
+  const g = await guardarSinTumbar(entrada({ cotizacion: mala as never }), l.enTransaccion)
+  assert.deepEqual(g, { estado: 'guardada', cotizacionId: 'cot-1' })
+  const nota = l.escrituras.find((e) => /insert into seguros\.historial_interno/.test(e.sql))
+  assert.ok(nota, 'una cotización con reparos tiene que dejar nota en la ficha (de ahí sale el Telegram)')
+  assert.ok(nota.valores.some((v) => typeof v === 'string' && v.startsWith(PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE)),
+    'sin el prefijo compartido el muro de actividad no la reconoce y no hay Telegram')
+  assert.match(nota.sql, /where q\.cliente_id is not null/, 'sin ficha no se inserta una nota huérfana')
+
+  // Una simulada no preguntó a nadie: no se anota.
+  const sim = libreta()
+  await guardarSinTumbar(entrada({ simulado: true, intentoId: null, cotizacion: mala as never }), sim.enTransaccion)
+  assert.equal(sim.escrituras.some((e) => /historial_interno/.test(e.sql)), false)
+
+  // La nota revienta (3ª escritura: cabecera, 2 precios… y la nota): el precio pagado sigue guardado.
+  const rota = libreta({ fallarEn: 4 })
+  const g2 = await guardarSinTumbar(entrada({ cotizacion: mala as never }), rota.enTransaccion)
   assert.deepEqual(g2, { estado: 'guardada', cotizacionId: 'cot-1' })
 })
 

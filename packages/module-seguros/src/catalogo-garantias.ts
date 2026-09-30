@@ -31,7 +31,7 @@ export type CoberturaParaClasificar = { nombre: string; incluida: boolean | null
 export type GarantiasClasificadas = { version: number; porClave: Record<string, EstadoGarantia> }
 
 /** Súbelo al cambiar patrones: lo guardado con otra versión se reclasifica desde las coberturas. */
-export const VERSION_CATALOGO = 5
+export const VERSION_CATALOGO = 6
 
 /** Misma normalización que la tabla de coberturas del portal: sin tildes, minúsculas, sin signos. */
 export function claveCobertura(nombre: string): string {
@@ -65,7 +65,7 @@ const DANOS_PROPIOS: GarantiaCatalogo = { clave: 'danos_propios', etiqueta: 'Da�
 const PERDIDA_TOTAL: GarantiaCatalogo = { clave: 'perdida_total', etiqueta: 'Pérdida total', patrones: [/\bperdida total\b/, /\bgrandes danos\b/, /\bsiniestro total\b/] }
 /** Choque o atropello de animales (29/09/2026). Occident lo da SUELTO en terceros («Daños propios» con solo esto dentro). */
 const ANIMALES_VEH: GarantiaCatalogo = { clave: 'colision_animales', etiqueta: 'Choque con animales', patrones: [/\banimales\b/, /\bcinegetic/, /\batropello\b/] }
-const FENOMENOS_VEH: GarantiaCatalogo = { clave: 'fenomenos_atmosfericos', etiqueta: 'Fenómenos atmosféricos', patrones: [/\bfenomenos? atmosfericos?\b/, /\bgranizo\b/, /\binundacion\b/] }
+const FENOMENOS_VEH: GarantiaCatalogo = { clave: 'fenomenos_atmosfericos', etiqueta: 'Fenómenos atmosféricos', patrones: [/\bfenomenos? atmosfericos?\b/, /\bmeteorologic/, /\bgranizo\b/, /\binundacion\b/] }
 
 export const CATALOGO_GARANTIAS: Record<RamoGarantias, readonly GarantiaCatalogo[]> = {
   auto: [
@@ -87,7 +87,8 @@ export const CATALOGO_GARANTIAS: Record<RamoGarantias, readonly GarantiaCatalogo
     { clave: 'robo', etiqueta: 'Robo', patrones: [/\brobo\b/, /\bexpoliacion\b/, /\bhurto\b/], excluye: [/\bfuera del hogar\b/] },
     { clave: 'cristales', etiqueta: 'Rotura de cristales', patrones: [/\bcristales\b/, /\blunas\b/, /\bvitroceramica\b/, /\bespejos\b/] },
     { clave: 'danos_electricos', etiqueta: 'Daños eléctricos', patrones: [/\bdanos electricos\b/, /\belectric/] },
-    { clave: 'fenomenos_atmosfericos', etiqueta: 'Fenómenos atmosféricos', patrones: [/\bfenomenos? atmosfericos?\b/, /\btormenta\b/, /\bviento\b/, /\bgranizo\b/, /\blluvia\b/] },
+    // v6 (30/09/2026): Codeoscopic lo llama «Daños por fenómenos meteorológicos.» en hogar, y no casaba.
+    { clave: 'fenomenos_atmosfericos', etiqueta: 'Fenómenos atmosféricos', patrones: [/\bfenomenos? atmosfericos?\b/, /\bmeteorologic/, /\btormenta\b/, /\bviento\b/, /\bgranizo\b/, /\blluvia\b/] },
     { clave: 'incendio', etiqueta: 'Incendio', patrones: [/\bincendio\b/, /\bexplosion\b/] },
     // «Asistencia en viaje / Accidentes» (Allianz, Fidelidade) NO es la del hogar: sin el `viaje` su «no incluida» contaba aquí.
     { clave: 'asistencia_hogar', etiqueta: 'Asistencia en el hogar', patrones: [/\basistencia\b/, /\bmanitas\b/, /\bcerrajer/, /\breparaciones urgentes\b/], excluye: [/\bjuridica\b/, /\binformatica\b/, /\bviaje\b/] },
@@ -419,6 +420,28 @@ export function subcoberturas(texto: string | null | undefined): { nombre: strin
       return { nombre, estado: (no ? 'no' : opcional ? 'no_consta' : 'si') as EstadoGarantia }
     })
     .filter((s) => s.nombre !== '')
+}
+
+/**
+ * Nombres del vendor que NO van al catálogo a propósito (30/09/2026). Codeoscopic normaliza los nombres
+ * de cobertura a un vocabulario CERRADO (medido: 16 en auto, 16 en moto, 15 en hogar sobre 396 precios),
+ * así que un nombre nuevo es raro y se ve: `nombresNuevosSinCatalogo()` solo devuelve los que no son ni
+ * garantía reconocida ni de esta lista. No se clasifican con IA en vivo: con un vocabulario cerrado, cada
+ * nombre nuevo se decide una vez, a mano, y queda como patrón con su test.
+ */
+export const FUERA_DE_CATALOGO: Partial<Record<RamoGarantias, readonly string[]>> = {
+  // Seguro de la carga y préstamo/reembolso de la reparación: no son garantías que se filtren al elegir.
+  auto: ['danos al cargador', 'prestamo reparacion seguro reembolso'],
+  moto: ['danos al cargador', 'prestamo reparacion seguro reembolso'],
+  // Cajones del vendor sin una garantía concreta detrás (o con varias): se ven en el detalle, no en el filtro.
+  hogar: ['vehiculos maquinaria autopropulsada en reposo', 'otras garantias extension garantias', 'asistencia en viaje accidentes'],
+}
+
+/** Nombres que el catálogo no reconoce y que tampoco están en `FUERA_DE_CATALOGO`: lo NUEVO. */
+export function nombresNuevosSinCatalogo(ramo: RamoGarantias, nombres: readonly string[]): string[] {
+  const fuera = new Set(FUERA_DE_CATALOGO[ramo] ?? [])
+  const lista = nombres.map((nombre) => ({ nombre, incluida: null }))
+  return [...new Set(noReconocidas(ramo, lista))].filter((n) => !fuera.has(claveCobertura(n)))
 }
 
 /** Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones. */

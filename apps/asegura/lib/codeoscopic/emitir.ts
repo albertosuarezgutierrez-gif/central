@@ -95,12 +95,30 @@ export function encontrarPrecio(
   cotizacion: Cotizacion,
   compania: string,
   categoria: string,
-  pista: { producto?: string | null; primaEur?: number | null; modalidad?: string | null } = {},
+  pista: { producto?: string | null; primaEur?: number | null; modalidad?: string | null; idPrecio?: string | null } = {},
 ): Precio | null {
   const norm = (s: string | null | undefined) => (s ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
   const candidatos = cotizacion.precios.filter(
     (p) => norm(p.compania) === norm(compania) && norm(p.categoria) === norm(categoria),
   )
+  // 🔑 30/09/2026: el `id` del vendor (el `mainQuote.id` guardado en `tarificacion_precios.id_precio`)
+  // es la IDENTIDAD del precio; compañía + nivel + modalidad solo lo describen. Si el proyecto
+  // aún lo trae, es ese y ningún otro — siempre que sea de la compañía y el nivel pedidos: un id
+  // que apunta a otra fila es una incoherencia, y se falla cerrado. Si ya no está (el vendor
+  // re-tarificó tras un PATCH y renumeró), se cae a la llave descriptiva de abajo, y la pantalla
+  // enseña el cambio de prima antes de emitir.
+  const idPrecio = (pista.idPrecio ?? '').trim()
+  if (idPrecio !== '') {
+    const porId = cotizacion.precios.filter((p) => p.id === idPrecio)
+    if (porId.length === 1) {
+      const p = porId[0]
+      // Un id que no es de esta compañía/nivel, o cuya modalidad no es la pulsada, no se emite.
+      if (!candidatos.includes(p)) return null
+      if (norm(pista.modalidad) !== '' && norm(p.modalidad) !== norm(pista.modalidad)) return null
+      return p
+    }
+    // Id repetido (no debería pasar): no identifica nada, decide la llave descriptiva de abajo.
+  }
   if (norm(pista.modalidad) !== '') {
     const exactos = candidatos.filter((p) => norm(p.modalidad) === norm(pista.modalidad))
     if (exactos.length <= 1) return exactos[0] ?? null

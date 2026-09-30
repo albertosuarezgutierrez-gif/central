@@ -40,6 +40,9 @@ export type PrecioGuardado = {
   formaPago: string | null
   frecuenciaPago: string | null
   meses: number | null
+  /** 🔑 `mainQuote.id` del vendor («Q7601460»): con él se confirma EXACTAMENTE esta opción
+   *  (`encontrarPrecio`). `null` = fila anterior al 29/09/2026, cuando no se guardaba. */
+  idVendor: string | null
 }
 
 export type TarificacionGuardada = {
@@ -171,10 +174,11 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
       forma_pago: string | null
       frecuencia_pago: string | null
       meses: number | null
+      id_precio: string | null
     }[]
   >`
     select id::text as id, compania, producto, modalidad, categoria, prima_eur, entrada_eur, franquicia_eur,
-           firmeza, avisos, garantias, opciones, forma_pago, frecuencia_pago, meses
+           firmeza, avisos, garantias, opciones, forma_pago, frecuencia_pago, meses, id_precio
     from tarificacion_precios
     where tarificacion_id = ${t.id}::uuid
     order by prima_eur asc nulls last
@@ -208,6 +212,7 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
       formaPago: p.forma_pago ?? null,
       frecuenciaPago: p.frecuencia_pago ?? null,
       meses: typeof p.meses === 'number' ? p.meses : null,
+      idVendor: typeof p.id_precio === 'string' && p.id_precio.trim() !== '' ? p.id_precio.trim() : null,
     })),
   }
 }

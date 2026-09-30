@@ -554,6 +554,7 @@ function Precios({ r, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; cl
             primaEur={p.primaEur ?? null}
             producto={p.producto ?? null}
             modalidad={p.modalidad ?? null}
+            idPrecio={p.id ?? null}
             sustituye={false}
             onCerrar={cerrar}
           />
@@ -586,6 +587,7 @@ function Precios({ r, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; cl
                   primaEur={o.primaEur}
                   producto={o.producto}
                   modalidad={o.modalidad}
+                  idPrecio={o.idVendor}
                   sustituye={false}
                   onCerrar={cerrar}
                 />

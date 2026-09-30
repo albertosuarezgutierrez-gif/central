@@ -12,13 +12,14 @@ import { useState, type ReactNode } from 'react'
 import { Badge, btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { CeldaCompania } from './CeldaCompania'
-import { bloqueoCompania, textoBloqueoCorredor } from '@central/module-seguros'
+import { bloqueoCompania, reparosPorFila, textoBloqueoCorredor } from '@central/module-seguros'
 
 export type PrecioLista = {
   id?: string
   compania?: string | null
   producto?: string | null
   categoria?: string | null
+  modalidad?: string | null
   primaEur?: number | null
   franquiciaEur?: number | null
   firmeza?: string
@@ -46,8 +47,11 @@ export default function ListaPrecios<P extends PrecioLista>({
   const [abierta, setAbierta] = useState<string | null>(null)
   // De la más barata a la más cara; sin prima, al final. La clave es el id del vendor o la
   // posición ORIGINAL (nunca la posición tras ordenar: señalaría otra fila).
+  // Lo que no cuadra de cada opción (prima, franquicia, identidad): se calcula sobre la lista
+  // ORIGINAL, antes de ordenar, para que cada reparo caiga en su fila.
+  const reparos = reparosPorFila(precios)
   const filas = precios
-    .map((p, i) => ({ p, clave: p.id ?? `i${i}` }))
+    .map((p, i) => ({ p, clave: p.id ?? `i${i}`, reparos: reparos[i] ?? [] }))
     .sort((a, b) => (a.p.primaEur ?? Infinity) - (b.p.primaEur ?? Infinity))
   const todasEstimadas = !simulado && precios.length > 0 && precios.every((p) => p.firmeza !== 'firme')
 
@@ -59,7 +63,7 @@ export default function ListaPrecios<P extends PrecioLista>({
         </p>
       )}
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-        {filas.map(({ p, clave }) => {
+        {filas.map(({ p, clave, reparos: reparosFila }) => {
           const abiertaEsta = abierta === clave
           return (
             <li key={clave} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -80,6 +84,9 @@ export default function ListaPrecios<P extends PrecioLista>({
                   {bloqueoCompania(p.avisos) !== null && (
                     <div style={{ fontSize: 12, color: 'var(--negative)', fontWeight: 600, marginTop: 4 }}>{textoBloqueoCorredor(bloqueoCompania(p.avisos) as string)}</div>
                   )}
+                  {reparosFila.map((m) => (
+                    <div key={m} style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 600, marginTop: 4, overflowWrap: 'anywhere' }}>⚠️ {m}</div>
+                  ))}
                 </div>
                 <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
                   <strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{p.primaEur === null || p.primaEur === undefined ? '—' : eur(p.primaEur)}</strong>

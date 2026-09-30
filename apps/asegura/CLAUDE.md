@@ -403,6 +403,23 @@ utilizable). Reglas que no se negocian al tocar esto:
   `encontrarPrecio()` ya no desempata por «la prima más cercana»: tras un PATCH el vendor re-tarifica y
   la más cercana podía ser otra modalidad o franquicia (el `producto` es igual en todas). Con modalidad:
   una exacta o 409; sin ella (pestaña vieja), solo una prima idéntica. Plataforma manda `modalidad`.
+  🔑 **Y por encima, el `id` del vendor (30/09/2026, tarde):** plataforma manda `idPrecio` (el `mainQuote.id`,
+  guardado en `tarificacion_precios.id_precio` y servido como `idVendor` en la guardada). Si el proyecto aún lo
+  trae es ESE, siempre que sea de la compañía y nivel pedidos (si no, 409); si ya no está (el vendor renumeró
+  tras un PATCH), cae a la llave descriptiva y el panel enseña el cambio de prima antes de emitir.
+- 🧪 **Coherencia al recibir cada cotización (30/09/2026):** `revisarCoherenciaCotizacion()` de module-seguros
+  (prima no válida, franquicia del nombre ≠ la declarada, «con franquicia» sin importe, id repetido, llave
+  repetida sin id). Los reparos salen en la parrilla y en la lista de precios, delante de los avisos en el panel
+  de emisión (`/oferta`) y como UNA nota en la ficha con `PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE` → el muro la
+  clasifica `cotizacion_incoherente` → Telegram por `correduria-actividad`. Nota aparte y que no lanza.
+- 🔁 **Re-proceso GRATIS de respuestas reales: `GET /api/operador/codeoscopic/reproceso?limite=`.** Vuelve a leer
+  `tarificaciones.respuesta` con el lector de HOY y lo compara con lo guardado (`lib/codeoscopic/reproceso.ts`):
+  tras tocar `respuesta.ts`, las diferencias son lo que el cambio hará distinto en pantalla. Devuelve también
+  `coberturasNuevas`: nombres de cobertura que el catálogo no reconoce ni excluye (`FUERA_DE_CATALOGO`). El
+  vocabulario de Codeoscopic es CERRADO (~47 nombres, medido 30/09/2026): uno nuevo se decide a mano con su
+  patrón y test, **no con una IA en vivo**. Las cotizaciones anteriores al 29/09/2026 no tienen respuesta (`sinRespuesta`).
+- 🧾 **Catálogo v6 (30/09/2026, tarde):** «Daños por fenómenos meteorológicos» (el nombre de hogar del vendor) ya es
+  `fenomenos_atmosfericos`; antes no casaba.
 - 🧾 **Catálogo de garantías v5 (30/09/2026):** `clasificarCoberturas(ramo, lista, opciones, contexto)` recibe la
   categoría/modalidad de la FILA (las garantías son por fila, no por oferta). En coche/moto con categoría todo riesgo,
   `danos_propios` = sí siempre; una `perdida_total` «no» contradictoria pasa a «no consta». Coberturas en `fallo` →

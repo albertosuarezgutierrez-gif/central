@@ -558,6 +558,7 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     ...(p.producto ? { producto: p.producto } : {}),
     ...(typeof p.primaEur === 'number' ? { primaEur: p.primaEur } : {}),
     ...(p.modalidad ? { modalidad: p.modalidad } : {}),
+    ...(typeof p.id === 'string' && p.id ? { idPrecio: p.id } : {}),
     ...(fechaCorregida ? { fechaEfectoCorregida: fechaCorregida } : {}),
   })
   if (of.estado !== 'ok') {
@@ -613,7 +614,12 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     efectoCotizado: ef.cotizado,
     efectoDevuelto: ef.devuelto,
     caduca: of.caducaEn,
-    avisos: [...(p.avisos ?? []), ...of.avisos].filter((a, i, xs) => xs.indexOf(a) === i).slice(0, 6),
+    // Los de la compañía primero y enteros (un «quedará bloqueada» no puede caer del corte); los
+    // reparos de coherencia (⚠️, los antepone asegura) van detrás y son los que se recortan.
+    avisos: [
+      ...[...(p.avisos ?? []), ...of.avisos.filter((a) => !a.startsWith('⚠️'))].filter((a, i, xs) => xs.indexOf(a) === i),
+      ...of.avisos.filter((a) => a.startsWith('⚠️')).slice(0, 3),
+    ],
     cuenta: { enmascarada: of.cuenta.enmascarada, descripcion: of.cuenta.descripcion },
     figurasConfirmadas: [],
     cambiosFiguras: [],

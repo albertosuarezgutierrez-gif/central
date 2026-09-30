@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { reparosPorFila } from '@central/module-seguros'
 import { NextResponse } from 'next/server'
 import { cuentaDeFicha, describirOrigenCuenta } from '@/lib/codeoscopic/cuenta-ficha'
 import { ibanEnmascarado } from '@/lib/codeoscopic/emitir-iban'
@@ -325,12 +326,16 @@ export const POST = auditado(async (req: Request) => {
     // `sugeridos`, para que el corredor lo teclee y esta ruta lo escriba.
     let oferta: Awaited<ReturnType<typeof reRate>> | null = null
     let reparadoDesdeFicha = false
+    // 30/09/2026: lo que no cuadra de la opción elegida viaja con la oferta, delante de los avisos
+    // de la compañía: el panel de emisión es el último sitio donde se puede ver antes de emitir.
+    let reparosElegido: string[] = []
     while (oferta === null) {
       const modalidad = cadena(cuerpo.modalidad)
       const precio = encontrarPrecio(cotizacion, compania, categoria, {
         producto: cadena(cuerpo.producto),
         primaEur: typeof cuerpo.primaEur === 'number' ? cuerpo.primaEur : null,
         modalidad,
+        idPrecio: cadena(cuerpo.idPrecio),
       })
       if (!precio) {
         // 30/09/2026: `null` ya no es solo «caducó»: también «hay varias y no sé cuál es la
@@ -346,6 +351,7 @@ export const POST = auditado(async (req: Request) => {
           { status: 409 },
         )
       }
+      reparosElegido = reparosPorFila(cotizacion.precios)[cotizacion.precios.indexOf(precio)] ?? []
 
       try {
         // El vendor nunca devuelve `product.options` al cotizar (ver
@@ -508,7 +514,7 @@ export const POST = auditado(async (req: Request) => {
     return NextResponse.json({
       estado: 'ok',
       projectId: projectId,
-      oferta,
+      oferta: reparosElegido.length > 0 ? { ...oferta, avisos: [...reparosElegido.map((m) => `⚠️ ${m}`), ...oferta.avisos] } : oferta,
       // TRES formas, no dos: la cuenta (enmascarada) · un aviso de por qué no
       // hay una utilizable (`ilegible` / `invalida` / `no_comprobada`) · null =
       // se miró y no hay ninguna guardada.

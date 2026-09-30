@@ -1,4 +1,11 @@
 export { bloqueoCompania, textoBloqueoCorredor, textoBloqueoCliente } from './bloqueo-compania.ts'
+export {
+  franquiciaDelTexto,
+  revisarCoherenciaCotizacion,
+  reparosPorFila,
+  PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE,
+} from './coherencia-cotizacion.ts'
+export type { PrecioParaCoherencia, ReparoCotizacion, TipoReparoCotizacion } from './coherencia-cotizacion.ts'
 
 export {
   KM_ANUALES_SUPUESTOS,
@@ -978,6 +985,8 @@ export {
   esTodoRiesgo,
   type ContextoGarantias,
   noReconocidas,
+  nombresNuevosSinCatalogo,
+  FUERA_DE_CATALOGO,
   ramoDeCatalogo,
   subcoberturas,
   type CoberturaParaClasificar,
