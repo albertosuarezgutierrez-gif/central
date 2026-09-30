@@ -347,8 +347,7 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .marca-palabra {
   font-size: 0.875rem;
 }
 
-/* 1120 y no 1024: MEDIDO. A 1024 la marca, los seis enlaces y el botón suman
-   más que el contenedor y el botón se salía por la derecha de la pantalla. */
+/* Solo en escritorio: por debajo la sustituye la fila de chips. */
 @media (min-width: 1024px) {
   .hdr-nav {
     display: flex;
@@ -397,6 +396,168 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .marca-palabra {
   display: flex;
   align-items: center;
   gap: var(--e2);
+}
+
+/* ── Seguros ▾, ¿Siniestro?, panel y chips (30/09/2026) ─────────────────────
+   La nav ya no son ramos sino accesos a herramientas. «Seguros» abre un panel
+   con todos los ramos y la ayuda; el panel es el MISMO en escritorio y en
+   móvil (lo abre el botón de la nav o el primer chip). */
+.hdr-seguros {
+  font: inherit;
+  font-family: var(--display);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  padding: var(--e2) 10px;
+  border-radius: var(--pill);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.hdr-seguros:hover,
+.hdr-seguros[aria-expanded='true'] {
+  color: var(--text);
+}
+
+/* Urgencia sin rojo de alarma: contorno de marca sobre su tono suave.
+   MEDIDO (Playwright, 30/09/2026): a 1024 px marca + nav + este botón + «Mis
+   seguros» desbordaban ~60 px y lo que se salía era «Mis seguros». Por debajo
+   de 1200 px vive en el panel (Ayuda) y, en móvil, en su chip. `.hdr-dcha`
+   delante porque `.btn` (más abajo) pone su propio `display` y ganaría. */
+.hdr-dcha .btn-siniestro {
+  display: none;
+  background: var(--brand-soft);
+  color: var(--brand);
+  border: 1px solid color-mix(in oklab, var(--brand) 45%, transparent);
+}
+
+@media (min-width: 1200px) {
+  .hdr-dcha .btn-siniestro {
+    display: inline-flex;
+  }
+}
+
+.hdr-panel {
+  position: absolute;
+  top: calc(100% - var(--e2));
+  left: var(--e3);
+  right: var(--e3);
+  display: grid;
+  gap: var(--e4);
+  padding: var(--e4);
+  max-height: calc(100dvh - 8rem);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-panel);
+}
+
+.hdr-panel[hidden] {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .hdr-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hdr-panel {
+    right: auto;
+    width: 560px;
+  }
+}
+
+.hdr-grupo {
+  display: grid;
+  align-content: start;
+}
+
+.hdr-grupo-titulo {
+  margin: 0 0 var(--e1);
+  font-family: var(--display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hdr-item {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px var(--e2);
+  border-radius: var(--r-md);
+  font-family: var(--display);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.hdr-item:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+/* Fila de chips bajo la píldora (<1024 px). Desliza en horizontal si no cabe:
+   el scroll vive en la fila, no en la página. */
+.hdr-chips {
+  display: flex;
+  gap: var(--e2);
+  padding: 0 var(--e1) var(--e2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hdr-chips::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .hdr-chips {
+    display: none;
+  }
+}
+
+.hdr-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--e4);
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
+  background: color-mix(in oklab, var(--panel) 92%, transparent);
+  backdrop-filter: blur(12px);
+  font: inherit;
+  font-family: var(--display);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.hdr-chip-urgente {
+  color: var(--brand);
+  border-color: color-mix(in oklab, var(--brand) 45%, transparent);
+}
+
+/* La fila de chips hace más alta la cabecera fija en móvil: el hueco que
+   reservan `.pagina` y la portada crece lo mismo, o el primer contenido
+   quedaría DEBAJO de los chips (un fixed no desborda, se pone encima). */
+@media (max-width: 1023px) {
+  .pagina {
+    padding-top: calc(4.75rem + 3.25rem + var(--e7));
+  }
 }
 
 /* En móvil el logo centrado se pisaría con el botón, así que ahí va a la
@@ -627,6 +788,13 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
   /* Arriba: los 76 px de la cabecera flotante + aire. Sin esto el titular
      queda debajo de la nav. */
   padding: calc(4.75rem + var(--e7)) 0 var(--e8);
+}
+
+/* Más la fila de chips de la cabecera en móvil (ver `.hdr-chips`). */
+@media (max-width: 1023px) {
+  .hero {
+    padding-top: calc(4.75rem + 3.25rem + var(--e7));
+  }
 }
 
 /* 🚨 Abajo, en móvil, hay DOS burbujas fijas —el botón de WhatsApp a la derecha

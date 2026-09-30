@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible } from './seguimiento-asegura.ts'
+import { colaLlamadas, diasSinRespuesta, guionLlamada, tramoLead, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -123,18 +123,28 @@ test('tareas de hoy: error no es «no hay», y una fila rota se cuenta', () => {
   assert.equal(r.tareas[0].cliente, null)
 })
 
-test('🪤 WhatsApp de seguimiento solo a quien fue cliente, y con el mes del aniversario', () => {
+test('🪤 WhatsApp de seguimiento a TODOS con teléfono (Alberto, 30/09/2026), con el mes del aniversario', () => {
   const r = interpretarLeads(200, { estado: 'ok', leads: [lead, { ...lead, oportunidadId: 'o2', fueCliente: true, canal: 'telefono_y_correo' }], porVentana: {} })
   assert.ok(r.estado === 'ok')
-  // Nunca fue cliente: WhatsApp es comunicación electrónica como el correo (LSSI 21.2).
-  assert.equal(whatsappDeLead(r.leads[0]), null)
-  const wa = whatsappDeLead(r.leads[1])
-  assert.ok(wa)
-  assert.equal(wa.telefono, '600')
-  assert.match(wa.mensaje, /por noviembre\?/)
-  // Sin teléfono, nada; y con fueCliente desconocido tampoco se abre la puerta.
+  // Nunca fue cliente: también (decisión de Alberto asumiendo el riesgo LSSI 21.1).
+  const nunca = whatsappDeLead(r.leads[0])
+  assert.ok(nunca)
+  assert.equal(nunca.telefono, '600')
+  assert.match(nunca.mensaje, /vence en noviembre\. ¿Te preparo un estudio sin compromiso\?/)
+  assert.ok(whatsappDeLead(r.leads[1]))
+  // Sin teléfono o sin canal (pidió la baja), nada.
   assert.equal(whatsappDeLead({ ...r.leads[1], telefono: null }), null)
-  assert.equal(whatsappDeLead({ ...r.leads[1], fueCliente: null }), null)
+  assert.equal(whatsappDeLead({ ...r.leads[1], canal: 'sin_canal_permitido' }), null)
+})
+
+test('tramo del lead: por enviar → esperando (tras el WhatsApp) → respondió', () => {
+  const base = { intentos: 0, respondioAntes: false, estado: 'competencia' as const }
+  assert.equal(tramoLead(base), 'por_enviar')
+  assert.equal(tramoLead({ ...base, intentos: 1 }), 'esperando')
+  assert.equal(tramoLead({ ...base, intentos: 1, respondioAntes: true }), 'respondio')
+  assert.equal(tramoLead({ ...base, estado: 'en_negociacion' }), 'respondio')
+  assert.equal(diasSinRespuesta(null), null)
+  assert.equal(diasSinRespuesta('2026-09-27T10:00:00Z', new Date('2026-09-30T11:00:00Z')), 3)
 })
 
 test('🪤 contactos del móvil: un fallo NO da una lista vacía (se importaría como «no tienes a nadie»)', () => {

@@ -1,23 +1,36 @@
 'use client'
-// Cabecera del sitio público.
+// Cabecera del sitio público (rediseño 30/09/2026).
 //
 // Reproduce el gesto de la landing de `app.grupoasegura.com`: arriba del todo
 // es transparente y alta (76 px); en cuanto se baja de 24 px se encoge a 56 px
 // y se convierte en una PÍLDORA flotante con borde, sombra y desenfoque. Es lo
 // que hace que la página se sienta «viva» sin animar nada más.
 //
-// Es cliente por eso y solo por eso: hace falta leer `scrollY`. El resto del
-// layout sigue siendo servidor.
-import { useEffect, useState } from 'react'
+// 30/09/2026 (Alberto: «la gente no entra a ver tipos de seguro»): la cabecera
+// deja de ser un catálogo de ramos y pasa a ser accesos a las herramientas.
+// Escritorio: Marca · Seguros ▾ · herramientas · ¿Siniestro? · Mis seguros.
+// Móvil: Marca · Mis seguros, y debajo una fila de chips con lo mismo.
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { NAV_CABECERA, PORTAL_URL } from '@/lib/sitio'
+import { NAV, HERRAMIENTAS, PORTAL_URL } from '@/lib/sitio'
 import EnlaceMedido from '@/components/EnlaceMedido'
 
-/** Enlaces internos de la nav. En su web la nav son anclas de la propia home;
- *  aquí son las páginas de ramo, que es lo que esta web tiene que posicionar. */
+/** Ayuda: lo que se busca con prisa o una vez al año. Va en el panel, no en la fila. */
+const AYUDA = [
+  { href: '/siniestro', texto: 'Tengo un siniestro', key: 'siniestro_menu' },
+  { href: '/telefonos-siniestros', texto: 'Teléfonos para dar parte', key: 'telefonos' },
+  { href: '/carta-baja-seguro', texto: 'Carta para dar de baja un seguro', key: 'baja' },
+  { href: '/seguro-hipoteca-banco-obligatorio', texto: '¿Es obligatorio el seguro del banco?', key: 'ley_banco' },
+  { href: '/cambiar-de-correduria', texto: 'Cambiar de correduría', key: 'cambiar' },
+] as const
+
+const RAMOS = NAV.filter((n) => n.href.startsWith('/seguros/'))
+
 export default function Cabecera({ marca }: { marca: string }) {
   const [bajado, setBajado] = useState(false)
   const [avance, setAvance] = useState(0)
+  const [abierto, setAbierto] = useState(false)
+  const raiz = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const alScroll = () => {
@@ -30,29 +43,30 @@ export default function Cabecera({ marca }: { marca: string }) {
     return () => window.removeEventListener('scroll', alScroll)
   }, [])
 
+  // Esc y clic fuera de la cabecera cierran el panel. El «fuera» es la cabecera
+  // entera: así el botón de escritorio y el chip del móvil no se pisan.
+  useEffect(() => {
+    if (!abierto) return
+    const alTecla = (e: KeyboardEvent) => e.key === 'Escape' && setAbierto(false)
+    const alClic = (e: MouseEvent) => {
+      if (raiz.current && !raiz.current.contains(e.target as Node)) setAbierto(false)
+    }
+    window.addEventListener('keydown', alTecla)
+    document.addEventListener('click', alClic)
+    return () => {
+      window.removeEventListener('keydown', alTecla)
+      document.removeEventListener('click', alClic)
+    }
+  }, [abierto])
+
+  const alternar = () => setAbierto((a) => !a)
+
   return (
     <>
-      {/* Barra de progreso de lectura, como la suya. */}
       <div className="progreso" style={{ transform: `scaleX(${avance})` }} aria-hidden />
-      <header className={bajado ? 'hdr bajado' : 'hdr'}>
+      <header ref={raiz} className={bajado ? 'hdr bajado' : 'hdr'}>
         <div className="wrap">
-          {/* La píldora flotante va CLARA, como la página (clara desde el
-              05/09/2026, con una sola banda oscura). En oscuro al 80 % sobre
-              fondo blanco salía un gris sucio y el monograma azul se perdía
-              sobre la baldosa oscura (29/09/2026). */}
           <div className="hdr-caja">
-            {/* Nav a la izquierda y logo centrado en absoluto, como él. Por
-                debajo de 1024 px la nav se esconde y el logo pasa a la
-                izquierda (regla en globals.css), que es lo que evita que el
-                botón le pise encima en el móvil. */}
-            <nav className="hdr-nav" aria-label="Secciones">
-              {NAV_CABECERA.map((n) => (
-                <Link key={n.href} href={n.href}>
-                  {n.texto}
-                </Link>
-              ))}
-            </nav>
-
             <Link href="/" className="hdr-marca">
               <span className="marca-tile" aria-hidden="true">
                 <span className="marca-mono" />
@@ -61,17 +75,85 @@ export default function Cabecera({ marca }: { marca: string }) {
               <span className="sr-marca">{marca}</span>
             </Link>
 
-            <div className="hdr-dcha">
-              {/* Único acceso de la web: la intranet. Es <a> y no <Link>
-                  porque es otro dominio. No hay «acceso corredor» a propósito:
-                  Alberto entra por plataforma.
+            {/* Escritorio: Seguros ▾ + las herramientas. Se esconde <1024 px
+                (lo sustituye la fila de chips de abajo). */}
+            <nav className="hdr-nav" aria-label="Accesos">
+              <button
+                type="button"
+                className="hdr-seguros"
+                onClick={alternar}
+                aria-expanded={abierto}
+                aria-controls="hdr-panel"
+              >
+                Seguros <span aria-hidden="true">▾</span>
+              </button>
+              {HERRAMIENTAS.map((h) => (
+                <EnlaceMedido key={h.key} href={h.href} origen={`cabecera_${h.key}`}>
+                  {h.texto}
+                </EnlaceMedido>
+              ))}
+            </nav>
 
-                  🚨 Se llamaba «Área de clientes» hasta el 07/09/2026. La
-                  palabra «clientes» era una puerta cerrada: se entra con un
-                  correo verificado, se sea cliente o no. */}
+            <div className="hdr-dcha">
+              <EnlaceMedido href="/siniestro" origen="cabecera_siniestro" className="btn btn-siniestro btn-sm">
+                ¿Siniestro?
+              </EnlaceMedido>
+              {/* Único acceso a la intranet. Es <a> y no <Link> porque es otro
+                  dominio. `origen="cabecera"` se conserva: es la serie histórica
+                  del embudo del portal en PostHog. */}
               <EnlaceMedido href={PORTAL_URL} origen="cabecera" className="btn btn-brand btn-sm">
                 Mis seguros
               </EnlaceMedido>
+            </div>
+          </div>
+
+          {/* Móvil/tablet (<1024 px): la nav de arriba no cabe; los mismos
+              accesos van en una fila deslizable bajo la píldora. */}
+          <div className="hdr-chips" aria-label="Accesos rápidos">
+            <button
+              type="button"
+              className="hdr-chip"
+              onClick={alternar}
+              aria-expanded={abierto}
+              aria-controls="hdr-panel"
+            >
+              Seguros ▾
+            </button>
+            {HERRAMIENTAS.map((h) => (
+              <EnlaceMedido key={h.key} href={h.href} origen={`cabecera_${h.key}`} className="hdr-chip">
+                {h.texto}
+              </EnlaceMedido>
+            ))}
+            <EnlaceMedido href="/siniestro" origen="cabecera_siniestro" className="hdr-chip hdr-chip-urgente">
+              ¿Siniestro?
+            </EnlaceMedido>
+          </div>
+
+          {/* 🚨 El panel está SIEMPRE en el HTML (`hidden` cuando está cerrado),
+              no se monta al abrir: la cabecera es el enlace que sale en todas
+              las páginas y reparte el peso interno a las páginas de ramo. Montado
+              perezoso, Google dejaría de ver esos enlaces. */}
+          <div id="hdr-panel" className="hdr-panel" hidden={!abierto}>
+            <div className="hdr-grupo">
+              <p className="hdr-grupo-titulo">Seguros</p>
+              {RAMOS.map((n) => (
+                <EnlaceMedido
+                  key={n.href}
+                  href={n.href}
+                  origen={`cabecera_ramo_${n.href.replace('/seguros/', '')}`}
+                  className="hdr-item"
+                >
+                  {n.texto}
+                </EnlaceMedido>
+              ))}
+            </div>
+            <div className="hdr-grupo">
+              <p className="hdr-grupo-titulo">Ayuda</p>
+              {AYUDA.map((a) => (
+                <EnlaceMedido key={a.href} href={a.href} origen={`cabecera_${a.key}`} className="hdr-item">
+                  {a.texto}
+                </EnlaceMedido>
+              ))}
             </div>
           </div>
         </div>

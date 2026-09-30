@@ -806,9 +806,9 @@ export {
 } from './oportunidad-seguimiento.ts'
 export {
   DIAS_APARCAR_NO_INTERESA, DIAS_PREPARAR_PRECIO, MAX_DIAS_RELLAMADA, PREFIJO_LLAMADA_CONTESTADA, PREFIJO_LLAMADA_SIN_RESPUESTA,
-  RESULTADOS_LLAMADA, planLlamada,
+  RESULTADOS_LLAMADA, planLlamada, PREFIJO_WHATSAPP_RESPONDIDO, CANALES_RESPUESTA,
 } from './llamada-resultado.ts'
-export type { PlanLlamada, ResultadoLlamada } from './llamada-resultado.ts'
+export type { CanalRespuesta, PlanLlamada, ResultadoLlamada } from './llamada-resultado.ts'
 export type {
   AccionOportunidad,
   AltaValida as AltaOportunidadValida,
