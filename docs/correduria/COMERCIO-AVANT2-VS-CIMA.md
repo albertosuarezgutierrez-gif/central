@@ -114,6 +114,8 @@ cosas: mejor un campo de coberturas aparte (§3).
 
 ## 3. Huecos: qué añadir a `datosComercio` para tarificar como Avant2
 
+> Actualizado con las capturas del formulario real: ver §5 (lista corregida de huecos, campos COMUNES vs PROPIOS de compañía).
+
 Ordenados por importancia para el precio. «CIMA» = ¿existe ruta EIAC?
 
 | Prioridad | Campo nuevo propuesto | Tipo | ¿En CIMA? | Nota |
@@ -137,6 +139,8 @@ Los huecos 1-9 **no existen en CIMA** salvo lo señalado: son datos para tarific
 no habrá ruta EIAC donde volcarlos (irán a `datos_especificos` con clave propia, sin afirmar que vengan de CIMA).
 
 ## 4. Borrador del formulario para el cliente de comercio
+
+> Preguntas nuevas y correcciones que confirman las capturas: §5.3.
 
 Lenguaje llano; solo lo imprescindible para tarificar. `→` indica el campo destino (`nuevo` = a añadir, §3).
 
@@ -181,3 +185,164 @@ Lenguaje llano; solo lo imprescindible para tarificar. `→` indica el campo des
 Notas para quien lo monte: los tres estados de las listas (`null` · `[]` · filas) se aplican también a `garantiasDeseadas`;
 las preguntas de «sí/no» necesitan «No lo sé» para no guardar un `no` que nadie afirmó; los datos personales del tomador
 van en su ficha, no en este formulario.
+
+## 5. Formulario real de Avant2 (capturas)
+
+Fuente: 5 capturas del alta de comercio (pasos Comercio · Personas · Seguro · Productos con Occident y con Reale). Solo
+nombres de campo, tipo y opciones visibles; sin datos del cliente. `*` = obligatorio. «Propio» = campo/estructura de
+`DatosComercioRiesgo`. «CIMA» = ruta EIAC de `RiesgoComercios`/`DatosCoberturas` (ver §1-§2); «no» = no existe ruta.
+
+**Regla de lectura:** los pasos Comercio y Seguro son **COMUNES** (se piden igual sea cual sea la compañía; son lo que
+debe preguntar nuestro formulario). El paso Productos es **PROPIO de cada compañía**: Avant2 muestra un bloque distinto
+por compañía elegida (Occident, Reale) y solo lo pide al cotizar con ella.
+
+### 5.1 Comunes
+
+**Paso Comercio: Actividad**
+
+| Campo Avant2 | Ob. | Tipo / opciones | Campo nuestro | ¿CIMA? |
+|---|---|---|---|---|
+| Familia | * | select (catálogo; visto: Hostelería y restauración) | FALTA | no |
+| Actividad | * | select dependiente de la familia (catálogo) | `actividad` (texto libre, sin catálogo) | sí |
+| Número de empleados | * | entero | FALTA | no |
+| Facturación estimada | * | importe € | FALTA | no |
+| Régimen del tomador | * | select (visto: Inquilino) | `regimenLocal` | no |
+
+**Paso Comercio: Descripción**
+
+| Campo Avant2 | Ob. | Tipo / opciones | Campo nuestro | ¿CIMA? |
+|---|---|---|---|---|
+| Situación | * | select (visto: Núcleo urbano) | FALTA | no |
+| Tipo de edificio | * | select (visto: Planta baja de viviendas y/o efectiva) | FALTA | no |
+| ¿Sólo tiene planta baja? | | interruptor sí/no | FALTA | no |
+| Superficie total efectiva | * | número m² | `metrosCuadrados` (y `superficieTotal`) | sí |
+| Año de construcción | * | año | `anioConstruccion` | sí (`Antiguedad`) |
+| ¿Ha sido reformado? | | interruptor sí/no (probable año al activarlo; no visible) | FALTA (`anioReforma`) | no |
+| Materiales | * | select (visto: Incombustibles) | FALTA | no |
+| Calidad de construcción | * | select (visto: Normal) | FALTA | no |
+| Buen estado de conservación | * | sí/no | FALTA | no |
+| Instalación eléctrica revisada | * | sí/no | FALTA | no |
+
+**Paso Comercio: Dirección**
+
+| Campo Avant2 | Ob. | Tipo / opciones | Campo nuestro | ¿CIMA? |
+|---|---|---|---|---|
+| Código postal (autocompleta población) | * | texto + select de población | `cp`, `localidad` | sí |
+| Tipo de vía | * | select (visto: Avenida) | parcial: dentro de `direccion` (texto) | sí (`NombreVia`) |
+| Nombre de vía | * | texto | `direccion` | sí |
+| Número | * | texto | parcial: dentro de `direccion` | sí |
+| Localización (bloque, escalera, piso, puerta) + otros datos | | 4 textos cortos + texto | `otrosDatosVia` (sin desglosar) | sí (`OtrosDatosVia`) |
+
+**Paso Comercio: Seguridad** (13 preguntas; todas `*`; en CIMA existe `MedidasProteccion.Proteccion`, en nuestro código
+`medidasProteccion[{medida,valor}]` en texto libre, sin catálogo)
+
+| Campo Avant2 | Tipo / opciones vistas |
+|---|---|
+| Puerta principal | select (visto: Puerta simple) |
+| Cierre puerta principal | select (visto: cierre de tijerilla, articulados, balaústres, rejas o similares) |
+| Puerta secundaria | select (visto: No existe) |
+| Escaparates | select (visto: No existe) |
+| Ventanas y otros huecos | select (visto: Cristal normal) |
+| Cierre ventanas y otros huecos | select (visto: No existen) |
+| Alarma | select (visto: Sin alarma) |
+| Vigilancia permanente | sí/no |
+| Bocas de incendio equipadas | sí/no |
+| Detectores de incendio | sí/no |
+| Rociadores automáticos | sí/no |
+| Columnas hidrantes | sí/no |
+| Extintores | sí/no |
+
+**Paso Seguro (Datos complementarios, Capitales, Garantías)**
+
+| Campo Avant2 | Ob. | Tipo / opciones | Campo nuestro | ¿CIMA? |
+|---|---|---|---|---|
+| Fecha de efecto | * | fecha (aviso: usar la definitiva) | dato de la oportunidad, no del riesgo | n/a |
+| Modalidad de continente | * | select (visto: Valor de reposición) | `capitales[CONTINENTE].modalidad` | sí |
+| Continente | | importe € | `capitales[CONTINENTE]` | sí |
+| Mobiliario | | importe € | `capitales[CONTENIDO]` + `descripcion` | sí |
+| Maquinaria | | importe € | `capitales[CONTENIDO]` + `descripcion` | sí |
+| Mercancías | | importe € | `capitales[MERCADERIAS]` | sí |
+| Responsabilidad civil | | importe € | `capitales[RC]` | sí |
+| Avería de maquinaria | | importe € (0 por defecto) | débil: `capitales[OTROS]` (mejor `garantiasDeseadas`) | parcial |
+| Avería de equipos electrónicos | | importe € | ídem | parcial |
+| Deterioro de bienes refrigerados | | importe € | ídem | parcial |
+
+**Paso Personas (tomador)**, todos `*`: Identificación (tipo de documento select + número) · Nombre (nombre y dos
+apellidos) · Teléfono principal · Fecha de nacimiento. No son del riesgo: van en la ficha del cliente (`clientes`),
+FALTA en `DatosComercioRiesgo` a propósito. CIMA los trae en el bloque de tomador.
+
+### 5.2 Propias de compañía (paso Productos)
+
+Ninguna existe en `DatosComercioRiesgo`. Son datos de tarificación de esa compañía: si no se cotiza con ella, no se
+piden. Encaje en CIMA: casi todas salen como `Cobertura`/`Limite` (§2), no como dato del riesgo.
+
+**Occident** (17 campos)
+
+| Campo Avant2 | Ob. | Tipo / opciones | Campo nuestro |
+|---|---|---|---|
+| Descuento | | número (visto: 50) | FALTA (dato comercial) |
+| ¿Forma parte de un colectivo con condiciones especiales? | * | sí/no | FALTA |
+| Actividad secundaria | * | sí/no | FALTA |
+| ¿Basculantes con anclajes laterales y cerradura de seguridad, con puerta peatonal? / sin puerta peatonal? (2, bloque «Seguridad adicional») | * | sí/no | FALTA |
+| Actividad de temporada | * | sí/no | FALTA |
+| Aforo máximo autorizado (local y terraza) | | entero | FALTA |
+| Contratar robo del contenido | * | sí/no | FALTA (garantía) |
+| Superficie de local | | m² | `metrosCuadrados` |
+| Superficie de zona exterior | | m² | FALTA |
+| Superficie de almacenamiento | | m² | FALTA |
+| Superficie de zona común | | m² | FALTA |
+| ¿Bienes de terceros incluidos en los capitales? | * | sí/no | FALTA |
+| Capital de objetos de valor | | importe € | `capitales[OVJ]` |
+| ¿Tiene períodos de mercancías? | * | sí/no | FALTA |
+| Forma de aseguramiento (zona exterior) | * | select (visto: No contestado) | FALTA |
+| Capital de arbolado, jardines y plantas | | select (visto: No contestado) | FALTA |
+
+(La fila de basculantes agrupa 2 preguntas: 17 campos en total.)
+
+**Reale** (21 campos)
+
+| Campo Avant2 | Ob. | Tipo / opciones | Campo nuestro |
+|---|---|---|---|
+| Campaña comercial | | select (sin campañas disponibles) | FALTA (dato comercial) |
+| ¿Tiene sótano? | * | sí/no | FALTA |
+| ¿Tiene almacén? | * | sí/no | FALTA |
+| Aforo | * | entero | FALTA |
+| Huecos a más de 5 m de altura o sin huecos accesibles | * | sí/no | FALTA |
+| Ubicado en centro comercial | * | sí/no | FALTA |
+| Franquicia | * | select (visto: Sin franquicia) | FALTA (garantía) |
+| Capital robo continente a primer riesgo / Capital | * | sí/no + importe € | FALTA (garantía) |
+| Desperfectos por robo al continente | * | sí/no | FALTA (garantía) |
+| Robo contenido | * | sí/no | FALTA (garantía) |
+| Tipo de cobertura de robo | * | select (visto: Valor total) | FALTA |
+| Capital robo y expoliación de metálico fuera de caja | * | importe € | débil: `capitales[OTROS]` |
+| Capital robo y expoliación de metálico en caja fuerte | * | importe € | débil: `capitales[OTROS]` |
+| Capital de expoliación durante transporte de fondos | * | importe € | débil: `capitales[OTROS]` |
+| RC intoxicaciones alimenticias | * | sí/no | FALTA (garantía) |
+| Indemnización diaria a primer riesgo | * | sí/no | FALTA (garantía) |
+| Capital RC objetos confiados | * | select (visto: 0) | FALTA |
+| RC trabajos fuera | * | sí/no | FALTA (garantía) |
+| Capital daños estéticos | | importe € | FALTA (garantía) |
+| Capital de transporte de mercancías | * | sí/no | FALTA (garantía) |
+
+### 5.3 Correcciones a §1-§4 y huecos confirmados
+
+- **Fraccionamiento:** las capturas NO lo muestran en el paso Seguro (solo fecha de efecto). Quitarlo de «datos de la operación» hasta verlo.
+- **Cierres de escaparates y de puerta secundaria:** el formulario tiene «Escaparates» y «Puerta secundaria» sin campo de cierre propio (§1 filas 22 y 24 sobraban); los cierres solo existen para puerta principal y ventanas. Seguridad = 13 preguntas, no 15.
+- **Año de reforma:** Avant2 pregunta primero «¿Ha sido reformado?» (sí/no); el año, si existe, sale detrás. Modelar `reformado` (sí/no/`null`) + `anioReforma`.
+- **Dirección:** Avant2 la desglosa (tipo de vía, nombre, número, bloque/escalera/piso/puerta). Nuestro `direccion` es una sola cadena: suficiente para tarificar (manda el CP), no para volcar 1 a 1.
+- **Empleados:** confirmado obligatorio (`*`) en Avant2 → reabrir la decisión del 30/09 (§3, prioridad 4): sin él no hay precio.
+- **Los huecos 1-9 de §3 se confirman**, con dos matices: `familiaActividad`/`actividad` es un par de selects de catálogo (obligatorios) y `garantiasDeseadas` no es un solo bloque: el paso Seguro común solo pide 4 capitales + RC + 3 averías, y el resto de garantías (robo, RC especiales, metálico, franquicia) las pide cada compañía en Productos.
+- **Nuevo (COMÚN):** ninguno más; todo lo común queda cubierto por los huecos de §3. **Nuevos (PROPIOS):** los de §5.2, guardarlos en un bloque `datosCompania[{compania, clave, valor}]` (tres estados) y no en `datosComercio`, para no mezclar dato de riesgo con dato de una tarifa concreta.
+- **Borrador del formulario (§4):** añadir a «Sobre tu negocio» la pregunta de aforo (solo si hay terraza o local de público) y, en «Sobre el local», «¿tiene sótano o almacén? ¿cuántos m²?»; el resto de preguntas propias (basculantes, temporada, colectivo, objetos confiados, centro comercial) se lanzan solo si se cotiza con Occident o Reale.
+
+### 5.4 Recuento
+
+| Grupo | Campos | Con sitio hoy | Débil / parcial | FALTA |
+|---|---|---|---|---|
+| Comunes (Comercio + Seguro) | 44 | 26 (7 propios + modalidad + 5 capitales + 13 medidas en texto libre) | 6 (3 de dirección desglosada + 3 averías) | 11 |
+| Personas (tomador) | 4 | 0 (van a la ficha del cliente) | 0 | 4 |
+| Occident | 17 | 2 | 0 | 15 |
+| Reale | 21 | 0 | 3 | 18 |
+
+Nota: en «Comunes» la fecha de efecto (1) es dato de operación, fuera de la tabla: 26 + 6 + 11 + 1 = 44. Las 13
+medidas de seguridad solo tienen sitio como texto libre (sin catálogo).
