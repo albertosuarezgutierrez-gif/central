@@ -269,6 +269,8 @@ test('buscador de leads (30/09/2026): nombre sin tildes, varias palabras, teléf
   assert.equal(leadCoincide(l, '600 12'), true)
   assert.equal(leadCoincide(l, '600123456'), true)
   assert.equal(leadCoincide(l, '999'), false)
+  assert.equal(leadCoincide(l, 'maria 600'), true)
+  assert.equal(leadCoincide(l, 'allianz 600'), false, 'con palabras, el número no basta')
   assert.equal(leadCoincide(l, 'maria.g@'), true)
   assert.equal(leadCoincide(l, 'reale'), false)
   // Sin teléfono ni nombre no revienta, y un número no casa por accidente.

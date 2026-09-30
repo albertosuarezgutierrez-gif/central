@@ -630,8 +630,10 @@ export function leadCoincide(
   if (q === '') return true
   const texto = normalizarBusqueda([l.cliente, l.aseguradora, l.ramo, l.ramo ? rotuloRamo(l.ramo) : null, l.email].filter(Boolean).join(' '))
   const digitosTel = (l.telefono ?? '').replace(/\D/g, '')
+  // Los dígitos juntos («600 12» → «60012») solo si la consulta es SOLO un número: con
+  // palabras («garcía 600») cada una tiene que aparecer, o casaría cualquiera con ese 600.
   const digitosQ = consulta.replace(/\D/g, '')
-  if (digitosQ.length >= 3 && digitosTel.includes(digitosQ)) return true
+  if (/^[\d\s+().-]+$/.test(consulta.trim()) && digitosQ.length >= 3 && digitosTel.includes(digitosQ)) return true
   return q.split(' ').every((palabra) => texto.includes(palabra) || (/^\d{3,}$/.test(palabra) && digitosTel.includes(palabra)))
 }
 
