@@ -103,13 +103,24 @@ export function encontrarPrecio(
   )
   if (norm(pista.modalidad) !== '') {
     const exactos = candidatos.filter((p) => norm(p.modalidad) === norm(pista.modalidad))
-    return exactos.length === 1 ? exactos[0] : null
+    if (exactos.length <= 1) return exactos[0] ?? null
+    // Cada ReRate deja en el proyecto OTRO mainQuote con la misma modalidad, ya con caducidad
+    // (fixture real 2026-09-26: Allianz 435,37€ sin caducidad + 432,82€ y 520,97€ confirmados).
+    // El de la parrilla es el de la tarificación, el que NO la trae. Sin esto, confirmar dos veces
+    // el mismo precio (cerrar el panel y volver, o Telegram tras la pantalla) daba 409 siempre.
+    const originales = exactos.filter((p) => p.expiraEn == null)
+    if (originales.length === 1) return originales[0]
+    return primaIdentica(originales.length > 1 ? originales : exactos, pista.primaEur)
   }
   if (candidatos.length <= 1) return candidatos[0] ?? null
   const mismoProducto = norm(pista.producto) !== '' ? candidatos.filter((p) => norm(p.producto) === norm(pista.producto)) : []
   const pool = mismoProducto.length > 0 ? mismoProducto : candidatos
   if (pool.length === 1) return pool[0]
-  const prima = pista.primaEur
+  return primaIdentica(pool, pista.primaEur)
+}
+
+/** El único precio con la prima exacta al céntimo, o `null` (varios o ninguno: no se adivina). */
+function primaIdentica(pool: readonly Precio[], prima: number | null | undefined): Precio | null {
   if (prima == null || !Number.isFinite(prima)) return null
   const iguales = pool.filter((p) => p.primaEur != null && Math.abs(p.primaEur - prima) < 0.005)
   return iguales.length === 1 ? iguales[0] : null

@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { leerOferta, encontrarPrecio, redactarPersona, redactarCrudoVendor, huecosPersonaParaEmitir, direccionIncompleta } from './emitir.ts'
-import type { Cotizacion } from './respuesta.ts'
+import { leerCotizacion, type Cotizacion } from './respuesta.ts'
+import { readFileSync } from 'node:fs'
 
 // `leerOferta` es defensiva a propósito: la forma de `POST .../offers` no
 // está verificada contra el fabricante (sin fixture, sin sandbox). Estos
@@ -297,4 +298,15 @@ test('encontrarPrecio: tras re-tarificar (+1 %) sigue siendo la MODALIDAD elegid
   assert.equal(encontrarPrecio(cotizacion, 'Mapfre', cat, { modalidad: 'TERCEROS AMPLIADO – Franquicia 300€' }), null)
   // Mayúsculas y espacios de más no cambian la llave.
   assert.equal(encontrarPrecio(cotizacion, 'mapfre', cat, { modalidad: '  terceros ampliado –  franquicia 600€ ' })?.id, 'F600')
+})
+
+test('encontrarPrecio: confirmar DOS veces el mismo precio no da 409 (fixture real con los mainQuotes del ReRate, 30/09/2026)', () => {
+  const crudo = JSON.parse(readFileSync(new URL('../../fixtures/codeoscopic/2026-09-26-proyecto-web-avant2.json', import.meta.url), 'utf8'))
+  const c = leerCotizacion(crudo)
+  // Tres «Allianz Terceros Ampliado»: el de la tarificación (sin caducidad) y dos que dejó el ReRate.
+  assert.equal(c.precios.filter((p) => p.compania === 'Allianz' && p.modalidad === 'Allianz Terceros Ampliado').length, 3)
+  const p = encontrarPrecio(c, 'Allianz', 'Terceros Ampliado', { producto: 'Allianz Autos 2025', primaEur: 435.37, modalidad: 'Allianz Terceros Ampliado' })
+  assert.equal(p?.id, 'Q2024306544')
+  // Aunque no llegue la prima: el de la tarificación es el único sin caducidad.
+  assert.equal(encontrarPrecio(c, 'Allianz', 'Terceros Ampliado', { modalidad: 'Allianz Terceros Ampliado' })?.id, 'Q2024306544')
 })

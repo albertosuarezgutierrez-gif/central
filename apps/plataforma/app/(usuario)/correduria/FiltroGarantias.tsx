@@ -415,7 +415,9 @@ export default function FiltroGarantias({
                 <div style={{ marginTop: 10, borderLeft: '3px solid var(--border)', paddingLeft: 10 }}>
                   <p style={{ fontSize: 13, margin: '4px 0' }}>
                     <strong>{sinLeer.length}</strong> aún sin leer sus coberturas: todavía no se sabe si incluye{sinLeer.length === 1 ? '' : 'n'}{' '}
-                    {etiquetasMarcadas.join(' y ')}. {leyendo && lecturasAuto.current < 10 ? 'Se colocan solas en cuanto se lean.' : 'Pulsa «Recargar» en un momento.'}
+                    {etiquetasMarcadas.join(' y ')}. {leyendo && lecturasAuto.current < 10
+                      ? 'Se colocan solas en cuanto se lean.'
+                      : 'Si la compañía no las devuelve, se reintenta sola unos días; mientras tanto, compruébalo en su ficha de producto antes de prometerlo.'}
                   </p>
                   <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>{sinLeer.slice(0, PAGINA).map(fila)}</ul>
                 </div>

@@ -31,6 +31,8 @@ export type FilaSinOferta = {
   compania: string
   producto: string
   modalidad: string | null
+  /** Nivel del vendor: un todo riesgo sin oferta sigue siendo daños propios (30/09/2026). */
+  categoria?: string | null
   primaEur: number
   referenciaVendor: string | null
   /** La oferta ya guardada de la fila (solo la trae `sinOpciones`). */
@@ -174,7 +176,6 @@ export async function backfillCoberturasTarificacion(
     // Sin vendor no se toca NADA: las filas siguen a NULL («no intentado»), no pasan a `fallo`.
     if (!d.refrescar) return { ...r, omitido: 'sin_vendor' }
     const ramo = ramoDeCatalogo(cab.ramo)
-    const garantiasSinLista = ramo ? clasificarCoberturas(ramo, null) : null
 
     const filas = await d.sinOferta()
     const filasOpciones = d.sinOpciones && d.escribirOpciones && d.leerOferta ? await d.sinOpciones() : []
@@ -197,7 +198,19 @@ export async function backfillCoberturasTarificacion(
         const plan = planOfertas(filas, precios)
         for (const a of plan.asignar) r.ofertasRecuperadas += await d.asignarOferta(a.id, a.ofertaId)
         if (plan.sinOferta.length > 0) {
-          r.sinOferta += await d.marcar(plan.sinOferta, { estado: 'sin_oferta', lista: null, leidasAt: ahora().toISOString() }, garantiasSinLista)
+          // Sin lista, pero con su categoría: un todo riesgo sin oferta sigue incluyendo daños propios.
+          const porId = new Map(filas.map((f) => [f.id, f]))
+          const grupos = new Map<string, { ids: string[]; g: GarantiasClasificadas | null }>()
+          for (const id of plan.sinOferta) {
+            const f = porId.get(id)
+            const g = ramo ? clasificarCoberturas(ramo, null, null, { categoria: f?.categoria ?? null, modalidad: f?.modalidad ?? null }) : null
+            const k = JSON.stringify(g)
+            const e = grupos.get(k)
+            if (e) e.ids.push(id)
+            else grupos.set(k, { ids: [id], g })
+          }
+          const sobre = { estado: 'sin_oferta' as const, lista: null, leidasAt: ahora().toISOString() }
+          for (const e of grupos.values()) r.sinOferta += await d.marcar(e.ids, sobre, e.g)
         }
       }
     }
@@ -440,9 +453,9 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
     },
     async sinOferta() {
       const filas = await prisma.$queryRaw<{
-        id: string; compania: string; producto: string; modalidad: string | null; prima_eur: unknown; referencia_vendor: string | null
+        id: string; compania: string; producto: string; modalidad: string | null; categoria: string | null; prima_eur: unknown; referencia_vendor: string | null
       }[]>`
-        select p.id::text as id, p.compania, p.producto, p.modalidad, p.prima_eur, p.referencia_vendor
+        select p.id::text as id, p.compania, p.producto, p.modalidad, p.categoria, p.prima_eur, p.referencia_vendor
         from tarificacion_precios p
         join tarificaciones t on t.id = p.tarificacion_id
         where p.tarificacion_id = ${ids.tarificacionId}::uuid
@@ -451,7 +464,7 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
           and p.oferta_id is null
       `
       return filas.map((f) => ({
-        id: f.id, compania: f.compania, producto: f.producto, modalidad: f.modalidad,
+        id: f.id, compania: f.compania, producto: f.producto, modalidad: f.modalidad, categoria: f.categoria,
         primaEur: Number(String(f.prima_eur)), referenciaVendor: f.referencia_vendor,
       }))
     },
