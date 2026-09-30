@@ -41,7 +41,7 @@ import { lineasTrasEmision } from '@/lib/tras-emision-texto'
 import { ETIQUETA_CAMPO_FIGURA, figurasCompletas, textoCasillaFigura } from '@/lib/figuras-emision-texto'
 import { fechaEs } from '@/lib/ficha-asegura'
 import { cambioDePrecio } from '@/lib/correduria/parrilla-coherencia'
-import { bloqueoCompania, textoBloqueoCorredor } from '@central/module-seguros'
+import { bloqueoCompania, emisionEscalonadaRecomendada, textoBloqueoCorredor, textoEmisionEscalonada } from '@central/module-seguros'
 
 type EstadoPanel =
   | { paso: 'inicio' }
@@ -1061,8 +1061,10 @@ export function Emision({
               otra vez (o pedir precio de nuevo).
             </p>
           )}
-          {bloqueoCompania(estado.avisos) !== null && (
-            <p style={{ color: 'var(--negative)', fontWeight: 600 }}>{textoBloqueoCorredor(bloqueoCompania(estado.avisos) as string)}</p>
+          {bloqueoCompania(estado.avisos) !== null ? (
+            <p style={{ color: 'var(--negative)', fontWeight: 600 }}>{textoBloqueoCorredor(bloqueoCompania(estado.avisos) as string, compania)}</p>
+          ) : emisionEscalonadaRecomendada({ categoria, modalidad }) && (
+            <p style={{ color: 'var(--warning)', fontWeight: 600 }}>⚠️ {textoEmisionEscalonada()}</p>
           )}
           {estado.avisos.length > 0 && (
             <ul>

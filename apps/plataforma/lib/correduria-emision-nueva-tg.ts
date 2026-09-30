@@ -10,7 +10,7 @@ import { createHash } from 'node:crypto'
 import type { CambioFiguras, FiguraExigida, Precio } from './retarificar-asegura.ts'
 import { ETIQUETA_CAMPO_FIGURA } from './figuras-emision-texto.ts'
 import { MINUTOS_PROPUESTA } from './correduria-emision-tg.ts'
-import { bloqueoCompania, textoBloqueoCorredor } from '@central/module-seguros'
+import { bloqueoCompania, emisionEscalonadaRecomendada, textoBloqueoCorredor, textoEmisionEscalonada } from '@central/module-seguros'
 
 export type RamoNuevo = 'auto' | 'moto'
 
@@ -235,7 +235,11 @@ export function textoResumenNuevo(r: ResumenEmisionNueva): string {
     : []
   const bloqueo = bloqueoCompania(r.avisos)
   return [
-    ...(bloqueo !== null ? [`<b>${esc(textoBloqueoCorredor(bloqueo))}</b>`, ''] : []),
+    ...(bloqueo !== null
+      ? [`<b>${esc(textoBloqueoCorredor(bloqueo, r.compania))}</b>`, '']
+      : emisionEscalonadaRecomendada({ categoria: r.categoria, modalidad: r.modalidad })
+        ? [`⚠️ <b>${esc(textoEmisionEscalonada())}</b>`, '']
+        : []),
     `🛡️ <b>Emisión NUEVA lista para confirmar</b> · ${r.ramo === 'moto' ? 'moto' : 'coche'}`,
     '',
     `Cliente: ${oNoConsta(r.clienteNombre)}${r.tomadorDni !== undefined ? ` · DNI ${oNoConsta(r.tomadorDni)}` : ''} · vehículo <b>${esc(r.matricula)}</b>`,

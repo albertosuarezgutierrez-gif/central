@@ -16,6 +16,7 @@ import PerdidasCartera from './PerdidasCartera'
 import Aprobaciones from './Aprobaciones'
 import Anulaciones from './Anulaciones'
 import CartasMediador from './CartasMediador'
+import BajasPue from './BajasPue'
 
 /**
  * El cockpit de «Hoy» (pieza 1-4 de ASegura OS, maqueta aprobada el
@@ -68,6 +69,7 @@ export default function HoyCockpit({
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nAprobaciones, setNAprobaciones] = useState<N>(undefined)
+  const [nBajasPue, setNBajasPue] = useState<N>(undefined)
   // El bloque del portal va PLEGADO y se lee al abrirlo: es la consulta más pesada de Hoy
   // (feed + embudo) y no pide ninguna acción; lo accionable ya llega por Telegram y por las colas.
   const [verPortal, setVerPortal] = useState(false)
@@ -119,7 +121,7 @@ export default function HoyCockpit({
 
   const hoy = hoyMadrid()
   const nTareas: N = tareas === null ? undefined : tareas.estado === 'ok' ? tareas.tareas.length : null
-  const nOk = nRecaptacion === undefined || nBlog === undefined || nAprobaciones === undefined ? undefined : agregarContadores([nRecaptacion, nBlog, nAprobaciones])
+  const nOk = nRecaptacion === undefined || nBlog === undefined || nAprobaciones === undefined || nBajasPue === undefined ? undefined : agregarContadores([nRecaptacion, nBlog, nAprobaciones, nBajasPue])
   const estado = lineaEstadoIngesta(ingesta)
   const colorEstado = estado.tono === 'ok' ? 'var(--positive)' : estado.tono === 'malo' ? 'var(--negative)' : estado.tono === 'aviso' ? 'var(--warning)' : 'var(--muted)'
   const vencidas = tareas?.estado === 'ok' ? tareas.tareas.filter(t => cuandoTarea(t.fechaLimite, hoy).vencida).length : 0
@@ -204,6 +206,7 @@ export default function HoyCockpit({
       <PerdidasCartera />
       <Anulaciones />
       <CartasMediador />
+      <BajasPue onContador={setNBajasPue} />
 
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}
       <section id="esperan-ok" style={{ display: 'grid', gap: 6 }}>
