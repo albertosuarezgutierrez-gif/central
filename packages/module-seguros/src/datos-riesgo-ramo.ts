@@ -6,7 +6,8 @@
  *   auto, moto                → `datosVehiculo`   (datos-vehiculo-riesgo.ts)
  *   hogar                     → `datosVivienda`   (datos-vivienda-riesgo.ts)
  *   vida, salud, decesos      → `datosCapital`    (datos-capital-riesgo.ts)
- *   RC, comercio, comunidades, otros → `datosRiesgoLibre` (datos-riesgo-libre.ts; sin tarifa, para el expediente)
+ *   comercio                  → `datosComercio`   (datos-comercio-riesgo.ts; los campos de CIMA + régimen del local)
+ *   RC, comunidades, otros    → `datosRiesgoLibre` (datos-riesgo-libre.ts; sin tarifa, para el expediente)
  *
  * Todo PURO: entra el `info_riesgo` que hay, la edición y el instante; sale lo que hay que escribir y qué cambió.
  * La transacción, la fila de `oportunidad_historial` y la auditoría las pone el puerto de asegura.
@@ -44,6 +45,15 @@ import {
   validarDatosCapitalRiesgo,
 } from './datos-capital-riesgo.ts'
 import {
+  admiteDatosComercio,
+  aplicarEdicionComercio,
+  faltanDatosComercio,
+  leerDatosComercio,
+  motivoNoConfirmableComercio,
+  precargaComercioDePoliza,
+  validarDatosComercioRiesgo,
+} from './datos-comercio-riesgo.ts'
+import {
   aplicarEdicionLibre,
   leerDatosRiesgoLibre,
   motivoNoConfirmableLibre,
@@ -51,7 +61,7 @@ import {
   validarDatosRiesgoLibre,
 } from './datos-riesgo-libre.ts'
 
-export const CLAVES_DATOS_RIESGO = ['datosVehiculo', 'datosVivienda', 'datosCapital', 'datosRiesgoLibre'] as const
+export const CLAVES_DATOS_RIESGO = ['datosVehiculo', 'datosVivienda', 'datosCapital', 'datosComercio', 'datosRiesgoLibre'] as const
 export type ClaveDatosRiesgo = (typeof CLAVES_DATOS_RIESGO)[number]
 
 export function esClaveDatosRiesgo(x: unknown): x is ClaveDatosRiesgo {
@@ -63,12 +73,16 @@ export function claveDatosDeRamo(ramo: unknown): ClaveDatosRiesgo {
   if (admiteDatosVehiculo(ramo)) return 'datosVehiculo'
   if (admiteDatosVivienda(ramo)) return 'datosVivienda'
   if (admiteDatosCapital(ramo)) return 'datosCapital'
+  if (admiteDatosComercio(ramo)) return 'datosComercio'
   return 'datosRiesgoLibre'
 }
 
-/** Este ramo se puede tarificar por Codeoscopic desde el riesgo (los libres se cotizan fuera). */
+/**
+ * Este ramo se puede tarificar por Codeoscopic desde el riesgo (los libres se cotizan fuera). El comercio tiene
+ * bloque propio y «qué falta para tarificar», pero SE COTIZA FUERA todavía: tener clave propia no es tener tarifa.
+ */
 export function ramoTarificable(ramo: unknown): boolean {
-  return claveDatosDeRamo(ramo) !== 'datosRiesgoLibre'
+  return claveDatosDeRamo(ramo) !== 'datosRiesgoLibre' && !admiteDatosComercio(ramo)
 }
 
 type Obj = Record<string, unknown>
@@ -83,7 +97,7 @@ export function fusionarInfoRiesgoClave(info: unknown, clave: ClaveDatosRiesgo, 
 /**
  * La precarga desde la póliza de la que nace la oportunidad (`polizas.datos_especificos` + el objeto asegurado).
  * Vehículo: matrícula/marca/modelo (lo que ya copiaba `abrirRiesgoDePoliza`, sin cambios de comportamiento: va
- * suelto en `info_riesgo`, no en `datosVehiculo`). Vivienda y libre: lo que haya. Capital: nada (no es un bien).
+ * suelto en `info_riesgo`, no en `datosVehiculo`). Vivienda, comercio y libre: lo que haya. Capital: nada (no es un bien).
  * `null` = nada que precargar.
  */
 export function precargaDePoliza(
@@ -95,6 +109,10 @@ export function precargaDePoliza(
   if (clave === 'datosVivienda') {
     const v = precargaViviendaDePoliza(datos)
     return Object.keys(v).length > 0 ? { clave, valor: v } : null
+  }
+  if (clave === 'datosComercio') {
+    const v = precargaComercioDePoliza(datos)
+    return Object.keys(v).length > 0 ? { clave, valor: v as Obj } : null
   }
   if (clave === 'datosRiesgoLibre') {
     const v = precargaLibreDePoliza(objeto, datos)
@@ -132,6 +150,11 @@ export function leerBloqueDeRamo(ramo: string, info: unknown, precarga?: Obj | n
   if (clave === 'datosCapital') {
     const d = leerDatosCapital(i.datosCapital) ?? { capital: null, duracionAnios: null, modalidadDeseada: null, confirmadoAt: null }
     return { clave, datos: d as unknown as Obj, faltan: faltanDatosCapital(d, ramo as 'vida' | 'salud' | 'decesos'), dePoliza: false }
+  }
+  if (clave === 'datosComercio') {
+    const propios = leerDatosComercio(i.datosComercio)
+    const base = propios ?? aplicarEdicionComercio(null, (precarga ?? {}) as never, { confirmar: false, ahora: '' }).datos
+    return { clave, datos: base as unknown as Obj, faltan: faltanDatosComercio(base), dePoliza: propios === null && precarga != null && Object.keys(precarga).length > 0 }
   }
   const propios = leerDatosRiesgoLibre(i.datosRiesgoLibre)
   const base = propios ?? aplicarEdicionLibre(null, (precarga ?? {}) as never, { confirmar: false, ahora: '' }).datos
@@ -225,6 +248,18 @@ export function calcularEdicionRiesgo(e: {
       if (no) return ko([{ campo: 'capital', motivo: no }])
     }
     return cierre(datos, faltanDatosCapital(datos, e.ramo as 'vida' | 'salud' | 'decesos'), cambios)
+  }
+
+  if (e.clave === 'datosComercio') {
+    const val = validarDatosComercioRiesgo(e.parcial ?? {}, { hoy: e.hoy })
+    if (!val.ok) return ko(val.errores)
+    const actual = leerDatosComercio(info.datosComercio) ?? (e.precarga ? aplicarEdicionComercio(null, e.precarga as never, op0()).datos : null)
+    const { datos, cambios } = aplicarEdicionComercio(actual, val.valor, op)
+    if (e.confirmar) {
+      const no = motivoNoConfirmableComercio(datos)
+      if (no) return ko([{ campo: 'actividad', motivo: no }])
+    }
+    return cierre(datos, faltanDatosComercio(datos), cambios)
   }
 
   const val = validarDatosRiesgoLibre(e.parcial ?? {}, { hoy: e.hoy })

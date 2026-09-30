@@ -38,7 +38,7 @@ export async function GET(req: Request) {
  *   { correduriaId?, oportunidadId, <clave>: {…parcial…}, confirmar?: boolean, actor? }
  *
  * `<clave>` es EXACTAMENTE UNA de: `datosVehiculo` (auto, moto) · `datosVivienda` (hogar) · `datosCapital`
- * (vida, salud, decesos) · `datosRiesgoLibre` (RC, comercio, comunidades, otros). Tiene que corresponder al tipo
+ * (vida, salud, decesos) · `datosComercio` (comercio) · `datosRiesgoLibre` (RC, comunidades, otros). Tiene que corresponder al tipo
  * de la oportunidad: si no, 400. Sin clave, o con dos, 400.
  *
  * - Se guarda en esa clave NUEVA de `info_riesgo`: el resto de claves se conservan y la `vehiculo` de texto no se

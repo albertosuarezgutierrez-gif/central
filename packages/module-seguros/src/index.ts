@@ -1076,6 +1076,16 @@ export {
 } from './datos-riesgo-libre.ts'
 export type { CampoRiesgoLibre, DatosRiesgoLibre, ValidacionLibre } from './datos-riesgo-libre.ts'
 export {
+  AVISO_COMERCIO, BIENES_COMERCIO, CAMPOS_COMERCIO, ESPEC_COMERCIO, ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_REGIMEN_LOCAL,
+  MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, admiteDatosComercio, aplicarEdicionComercio, datosComercioVacios,
+  faltanDatosComercio, leerDatosComercio, motivoNoConfirmableComercio, precargaComercioDePoliza, textoCapitalesComercio,
+  textoFaltanComercio, textoMedidasComercio, validarCapitalesComercio, validarDatosComercioRiesgo, validarMedidasComercio,
+} from './datos-comercio-riesgo.ts'
+export type {
+  BienComercio, CampoComercio, CampoFaltaComercio, CapitalComercio, DatosComercioRiesgo, MedidaComercio, RegimenLocal,
+  ValidacionComercio, ValorEdicionComercio,
+} from './datos-comercio-riesgo.ts'
+export {
   CLAVES_DATOS_RIESGO, calcularEdicionRiesgo, claveDatosDeRamo, esClaveDatosRiesgo, fusionarInfoRiesgoClave,
   leerBloqueDeRamo, precargaDePoliza, ramoTarificable,
 } from './datos-riesgo-ramo.ts'

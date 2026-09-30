@@ -8,21 +8,28 @@
 //   hogar                     → datosVivienda    (los selectores usan los MISMOS catálogos de Codeoscopic que
 //                                                 hogar-nuevo: `CATALOGO_HOGAR_DE_CAMPO`, sin listas propias)
 //   vida · salud · decesos    → datosCapital
-//   RC · comercio · comunidades · otros → datosRiesgoLibre (se cotiza fuera: los datos son para el expediente)
+//   comercio                  → datosComercio    (los campos de CIMA + régimen del local; capitales y medidas en listas)
+//   RC · comunidades · otros  → datosRiesgoLibre (se cotiza fuera: los datos son para el expediente)
 //
 // 🚨 Un campo sin dato se pinta «sin dato» (nunca «0» ni vacío); lo que falta para pedir precio se dice.
 
 import { useEffect, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import {
-  AVISO_RIESGO_LIBRE, CATALOGO_HOGAR_DE_CAMPO, ESPEC_CAPITAL, ESPEC_LIBRE, ESPEC_VIVIENDA, ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_LIBRE,
-  ETIQUETA_CAMPO_VIVIENDA, camposCapitalDelRamo, soloLoQueCambia, textoFaltanCapital, textoFaltanVivienda,
-  type CampoCapital, type CampoVivienda, type EspecCampo, type RamoCapital,
+  AVISO_COMERCIO, AVISO_RIESGO_LIBRE, BIENES_COMERCIO, CATALOGO_HOGAR_DE_CAMPO, ESPEC_CAPITAL, ESPEC_COMERCIO, ESPEC_LIBRE, ESPEC_VIVIENDA,
+  ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_CAMPO_LIBRE, ETIQUETA_CAMPO_VIVIENDA, ETIQUETA_REGIMEN_LOCAL,
+  MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, camposCapitalDelRamo, soloLoQueCambia, textoFaltanCapital, textoFaltanComercio,
+  textoFaltanVivienda,
+  type CampoCapital, type CampoFaltaComercio, type CampoVivienda, type CapitalComercio, type EspecCampo, type MedidaComercio, type RamoCapital,
 } from '@central/module-seguros'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
 import { fechaEs, llamarDatosRiesgo, motivoDe } from './piezas-riesgo'
+import {
+  capitalesDeFilas, filaCapitalVacia, filaMedidaVacia, filasDeCapitales, filasDeMedidas, listaAMandar, medidasDeFilas,
+  type FilaCapital, type FilaMedida,
+} from './piezas-comercio'
 import type { Riesgo } from '@/lib/riesgo-asegura'
 
 const campoCss: React.CSSProperties = {
@@ -116,7 +123,7 @@ function Marco({ titulo, ayuda, confirmadoAt, dePoliza, aviso, nota, editando, b
 }
 
 /** Estado y acciones comunes: editar, guardar solo lo que cambió, confirmar. */
-function useEdicion(clave: 'datosVivienda' | 'datosCapital' | 'datosRiesgoLibre', { riesgo, ocupado, onCambio, onError }: Props, spec: readonly EspecCampo[], datos: Record<string, unknown>, nombre: string) {
+function useEdicion(clave: 'datosVivienda' | 'datosCapital' | 'datosComercio' | 'datosRiesgoLibre', { riesgo, ocupado, onCambio, onError }: Props, spec: readonly EspecCampo[], datos: Record<string, unknown>, nombre: string) {
   const [editando, setEditando] = useState(false)
   const [form, setForm] = useState<Form>(() => aForm(spec, datos))
   const [enviando, setEnviando] = useState(false)
@@ -359,7 +366,187 @@ function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: strin
   )
 }
 
-// ─── Riesgo libre (RC, comercio, comunidades, otros) ─────────────────────────
+// ─── Comercio ────────────────────────────────────────────────────────────────
+
+const GRUPOS_COMERCIO: Array<{ titulo: string; campos: Array<(typeof ESPEC_COMERCIO)[number]['clave']> }> = [
+  { titulo: 'Qué hace', campos: ['actividad'] },
+  { titulo: 'Dónde está', campos: ['direccion', 'otrosDatosVia', 'cp', 'localidad', 'provincia'] },
+  { titulo: 'Cómo es', campos: ['metrosCuadrados', 'superficieTotal', 'anioConstruccion', 'zona', 'regimenLocal'] },
+]
+const M2_COMERCIO = new Set<string>(['metrosCuadrados', 'superficieTotal'])
+const subtituloCss: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: 'var(--muted)' }
+const listaCss: React.CSSProperties = { margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }
+
+function DatosComercio(props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }) {
+  const { d, faltan, dePoliza } = props
+  const E = useEdicion('datosComercio', props, ESPEC_COMERCIO, d, 'los datos del comercio')
+  const guardadosCap = d.capitales as CapitalComercio[] | null
+  const guardadasMed = d.medidasProteccion as MedidaComercio[] | null
+  const [caps, setCaps] = useState<FilaCapital[]>(() => filasDeCapitales(guardadosCap))
+  const [meds, setMeds] = useState<FilaMedida[]>(() => filasDeMedidas(guardadasMed))
+
+  const abrir = () => { setCaps(filasDeCapitales(guardadosCap)); setMeds(filasDeMedidas(guardadasMed)); E.abrir() }
+  const enviar = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Solo lo que DIFIERE de lo guardado, listas incluidas: una lista sin tocar no se reenvía.
+    const cambios = soloLoQueCambia(d, deForm(ESPEC_COMERCIO, E.form))
+    const c = listaAMandar(guardadosCap, capitalesDeFilas(caps))
+    if (c !== undefined) cambios.capitales = c
+    const m = listaAMandar(guardadasMed, medidasDeFilas(meds))
+    if (m !== undefined) cambios.medidasProteccion = m
+    if (Object.keys(cambios).length === 0) { E.setEditando(false); return }
+    void E.guardar(cambios, false)
+  }
+  const setCap = (i: number, k: keyof FilaCapital) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setCaps((l) => l.map((f, j) => (j === i ? { ...f, [k]: e.target.value } : f)))
+  const setMed = (i: number, k: keyof FilaMedida) => (e: React.ChangeEvent<HTMLInputElement>) => setMeds((l) => l.map((f, j) => (j === i ? { ...f, [k]: e.target.value } : f)))
+
+  function valorLegible(k: (typeof ESPEC_COMERCIO)[number]['clave']): React.ReactNode {
+    const v = d[k]
+    if (v === null || v === undefined) return sinDato
+    if (M2_COMERCIO.has(k) && typeof v === 'number') return `${v.toLocaleString('es-ES')} m²`
+    if (k === 'regimenLocal') return ETIQUETA_REGIMEN_LOCAL[v as keyof typeof ETIQUETA_REGIMEN_LOCAL] ?? String(v)
+    return String(v)
+  }
+
+  return (
+    <Marco
+      titulo="Datos del comercio"
+      ayuda="Lo que manda la compañía por CIMA (actividad, situación, superficie, capitales, protección) y si el local es tuyo o alquilado."
+      nota={AVISO_COMERCIO}
+      confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
+      aviso={textoFaltanComercio(faltan as CampoFaltaComercio[])}
+      editando={E.editando} bloqueado={E.bloqueado} enviando={E.enviando} errorForm={E.errorForm}
+      onEditar={abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={enviar} onCancelar={() => E.setEditando(false)}
+      lectura={
+        <div style={{ display: 'grid', gap: 12 }}>
+          {GRUPOS_COMERCIO.map((g) => (
+            <div key={g.titulo} style={{ display: 'grid', gap: 6 }}>
+              <div style={subtituloCss}>{g.titulo}</div>
+              <dl style={{ ...REJILLA, margin: 0 }}>
+                {g.campos.map((k) => (
+                  <div key={k} style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+                    <dt style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{ETIQUETA_CAMPO_COMERCIO[k]}</dt>
+                    <dd style={{ margin: 0, fontWeight: 600, overflowWrap: 'anywhere' }}>{valorLegible(k)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div style={subtituloCss}>{ETIQUETA_CAMPO_COMERCIO.capitales}</div>
+            {guardadosCap === null ? sinDato : guardadosCap.length === 0 ? <span style={{ color: 'var(--muted)' }}>Revisado: sin capitales</span> : (
+              <ul style={listaCss}>
+                {guardadosCap.map((c, i) => (
+                  <li key={i} style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', fontWeight: 600, overflowWrap: 'anywhere' }}>
+                    <span>{ETIQUETA_BIEN_COMERCIO[c.bien]}{c.descripcion ? ` · ${c.descripcion}` : ''}</span>
+                    <span>{eur(c.importe)}</span>
+                    {c.modalidad && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>valoración {c.modalidad}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div style={subtituloCss}>{ETIQUETA_CAMPO_COMERCIO.medidasProteccion}</div>
+            {guardadasMed === null ? sinDato : guardadasMed.length === 0 ? <span style={{ color: 'var(--muted)' }}>Revisado: sin medidas</span> : (
+              <ul style={listaCss}>
+                {guardadasMed.map((m, i) => (
+                  <li key={i} style={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
+                    {m.medida}{m.valor ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · {m.valor}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      }
+      formulario={
+        <div style={{ display: 'grid', gap: 14 }}>
+          {GRUPOS_COMERCIO.map((g) => (
+            <div key={g.titulo} style={{ display: 'grid', gap: 8 }}>
+              <div style={subtituloCss}>{g.titulo}</div>
+              <div style={REJILLA}>
+                {g.campos.map((k) => {
+                  const c = ESPEC_COMERCIO.find((x) => x.clave === k)!
+                  if (k === 'regimenLocal') {
+                    return (
+                      <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_COMERCIO[k]}
+                        <select value={E.form[k] ?? ''} onChange={E.set(k)} style={campoCss}>
+                          <option value="">Sin dato</option>
+                          {REGIMENES_LOCAL.map((r) => <option key={r} value={r}>{ETIQUETA_REGIMEN_LOCAL[r]}</option>)}
+                        </select>
+                      </label>
+                    )
+                  }
+                  const numerico = c.tipo.t === 'entero' || c.tipo.t === 'numero'
+                  return (
+                    <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_COMERCIO[k]}
+                      <input value={E.form[k] ?? ''} onChange={E.set(k)} inputMode={numerico ? 'decimal' : k === 'cp' ? 'numeric' : undefined}
+                        maxLength={c.tipo.t === 'texto' ? c.tipo.max : undefined} style={campoCss} />
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={subtituloCss}>{ETIQUETA_CAMPO_COMERCIO.capitales}</div>
+            {caps.length === 0 && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Sin filas se guarda como «sin dato».</span>}
+            {caps.map((f, i) => (
+              <div key={i} style={{ ...REJILLA, padding: 10, border: '1px solid var(--border)', borderRadius: 8, alignItems: 'end' }}>
+                <label style={etiquetaCss}>De qué es
+                  <select value={f.bien} onChange={setCap(i, 'bien')} style={campoCss}>
+                    <option value="">Elige…</option>
+                    {BIENES_COMERCIO.map((b) => <option key={b} value={b}>{ETIQUETA_BIEN_COMERCIO[b]}</option>)}
+                  </select>
+                </label>
+                <label style={etiquetaCss}>Importe (€)
+                  <input inputMode="decimal" value={f.importe} onChange={setCap(i, 'importe')} placeholder="p. ej. 20.000" style={campoCss} />
+                </label>
+                <label style={etiquetaCss}>Valoración (opcional)
+                  <input value={f.modalidad} onChange={setCap(i, 'modalidad')} maxLength={40} placeholder="p. ej. VP" style={campoCss} />
+                </label>
+                <label style={etiquetaCss}>Descripción{f.bien === 'OTROS' ? ' (obligatoria)' : ''}
+                  <input value={f.descripcion} onChange={setCap(i, 'descripcion')} maxLength={120} style={campoCss} />
+                </label>
+                <button type="button" disabled={E.bloqueado} onClick={() => setCaps((l) => l.filter((_, j) => j !== i))} aria-label={`Quitar el capital ${i + 1}`}
+                  style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Quitar</button>
+              </div>
+            ))}
+            <div>
+              <button type="button" disabled={E.bloqueado || caps.length >= MAX_CAPITALES_COMERCIO} onClick={() => setCaps((l) => [...l, filaCapitalVacia()])}
+                style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Añadir capital</button>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={subtituloCss}>{ETIQUETA_CAMPO_COMERCIO.medidasProteccion}</div>
+            {meds.length === 0 && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Sin filas se guarda como «sin dato».</span>}
+            {meds.map((f, i) => (
+              <div key={i} style={{ ...REJILLA, padding: 10, border: '1px solid var(--border)', borderRadius: 8, alignItems: 'end' }}>
+                <label style={etiquetaCss}>Medida
+                  <input value={f.medida} onChange={setMed(i, 'medida')} maxLength={120} placeholder="p. ej. Alarma conectada" style={campoCss} />
+                </label>
+                <label style={etiquetaCss}>Valor (opcional)
+                  <input value={f.valor} onChange={setMed(i, 'valor')} maxLength={80} style={campoCss} />
+                </label>
+                <button type="button" disabled={E.bloqueado} onClick={() => setMeds((l) => l.filter((_, j) => j !== i))} aria-label={`Quitar la medida ${i + 1}`}
+                  style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Quitar</button>
+              </div>
+            ))}
+            <div>
+              <button type="button" disabled={E.bloqueado || meds.length >= MAX_MEDIDAS_COMERCIO} onClick={() => setMeds((l) => [...l, filaMedidaVacia()])}
+                style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Añadir medida</button>
+            </div>
+          </div>
+        </div>
+      }
+    />
+  )
+}
+
+// ─── Riesgo libre (RC, comunidades, otros) ─────────────────────────
 
 function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boolean }) {
   const { d, dePoliza } = props
@@ -410,5 +597,6 @@ export default function DatosRiesgo(props: Props) {
   const d = b.datos as unknown as Record<string, unknown>
   if (b.clave === 'datosVivienda') return <DatosVivienda {...props} d={d} faltan={b.faltan} dePoliza={b.dePoliza} />
   if (b.clave === 'datosCapital') return <DatosCapital {...props} d={d} faltan={b.faltan} dePoliza={b.dePoliza} />
+  if (b.clave === 'datosComercio') return <DatosComercio {...props} d={d} faltan={b.faltan} dePoliza={b.dePoliza} />
   return <DatosLibre {...props} d={d} dePoliza={b.dePoliza} />
 }

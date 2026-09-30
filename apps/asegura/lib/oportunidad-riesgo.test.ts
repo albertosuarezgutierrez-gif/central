@@ -117,7 +117,7 @@ test('la precarga desde la póliza va acotada a la correduría y una lectura que
   const c = src.slice(i, src.indexOf('\n}\n', i))
   assert.match(c, /correduria_id = \$\{correduriaId\}::uuid/)
   assert.match(c, /catch \(err\) \{[\s\S]*return null/)
-  assert.match(c, /clave !== 'datosVivienda' && clave !== 'datosRiesgoLibre'\) return null/, 'solo vivienda y libres: el bien de un coche no se lee así')
+  assert.match(c, /clave !== 'datosVivienda' && clave !== 'datosComercio' && clave !== 'datosRiesgoLibre'\) return null/, 'solo vivienda, comercio y libres: el bien de un coche no se lee así')
 })
 
 test('abrir el riesgo de una póliza precarga el bien en la clave nueva de su ramo, sin confirmar', () => {

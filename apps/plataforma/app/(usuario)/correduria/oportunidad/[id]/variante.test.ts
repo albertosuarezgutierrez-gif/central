@@ -39,6 +39,8 @@ test('la vivienda y el capital del riesgo se sacan de su bloque, y de ningún ot
 test('la etiqueta del riesgo de hogar/libre sale de lo que se sabe; sin nada, null', () => {
   assert.equal(etiquetaRiesgo(riesgo('hogar', { clave: 'datosVivienda', datos: { nombreVia: 'Socorro', numeroVia: '24' }, faltan: [] })), 'Socorro 24')
   assert.equal(etiquetaRiesgo(riesgo('hogar', { clave: 'datosVivienda', datos: { direccion: 'Calle Socorro 24' }, faltan: [] })), 'Calle Socorro 24')
+  assert.equal(etiquetaRiesgo(riesgo('comercio', { clave: 'datosComercio', datos: { actividad: 'Bar de Antonio', direccion: 'Calle A 1' } as never, faltan: [], dePoliza: false, tarifica: false })), 'Bar de Antonio')
+  assert.equal(etiquetaRiesgo(riesgo('comercio', { clave: 'datosComercio', datos: { actividad: null, direccion: 'Calle A 1' } as never, faltan: [], dePoliza: false, tarifica: false })), 'Calle A 1')
   assert.equal(etiquetaRiesgo(riesgo('comercio', { clave: 'datosRiesgoLibre', datos: { descripcion: 'Bar de Antonio' }, faltan: [], tarifica: false })), 'Bar de Antonio')
   assert.equal(etiquetaRiesgo(riesgo('hogar')), null)
   assert.equal(etiquetaRiesgo(riesgo('auto', undefined, { matricula: '1234BCD', vehiculo: 'SEAT Ibiza' })), '1234BCD · SEAT Ibiza')

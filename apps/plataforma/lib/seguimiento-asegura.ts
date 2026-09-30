@@ -913,7 +913,7 @@ export function riesgoAsegura(oportunidadId: string): Promise<Reenvio> {
 }
 /**
  * Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de
- * datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosRiesgoLibre`). Gratis: no pide precio.
+ * datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`). Gratis: no pide precio.
  */
 export function datosRiesgoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/riesgo', { method: 'PATCH', body: JSON.stringify(body) })

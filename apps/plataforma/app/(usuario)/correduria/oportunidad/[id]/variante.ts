@@ -33,6 +33,7 @@ export function etiquetaRiesgo(r: Riesgo): string | null {
     const via = [d.datos.nombreVia, d.datos.numeroVia].filter((x): x is string => typeof x === 'string' && x !== '').join(' ')
     return d.datos.direccion ?? (via !== '' ? via : null)
   }
+  if (d?.clave === 'datosComercio') return d.datos.actividad ?? d.datos.direccion
   if (d?.clave === 'datosRiesgoLibre') return d.datos.descripcion ?? d.datos.direccion
   return null
 }

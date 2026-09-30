@@ -108,6 +108,23 @@ test('los selectores de la vivienda salen de los catálogos de hogar-nuevo (mapa
   assert.doesNotMatch(r, /'MiddleFloor'|'Owner'|'MainResidence'|'Replacement'/, 'ninguna opción de catálogo escrita a mano')
 })
 
+test('🪤 comercio tiene bloque PROPIO (datosComercio), no el libre, y se enchufa en las tres puntas', () => {
+  const ramo = activas(leer(join(RAIZ, 'packages/module-seguros/src/datos-riesgo-ramo.ts')))
+  assert.match(ramo, /'datosCapital', 'datosComercio', 'datosRiesgoLibre'\]/, 'la clave está en CLAVES_DATOS_RIESGO (el PATCH del proxy la acepta)')
+  assert.match(ramo, /if \(admiteDatosComercio\(ramo\)\) return 'datosComercio'/, 'el ramo comercio elige su clave ANTES de caer en la libre')
+  assert.match(ramo, /return claveDatosDeRamo\(ramo\) !== 'datosRiesgoLibre' && !admiteDatosComercio\(ramo\)/, 'clave propia no es tarifa: el comercio se cotiza fuera')
+  const libre = activas(leer(join(RAIZ, 'packages/module-seguros/src/datos-riesgo-libre.ts')))
+  assert.match(libre, /'decesos', 'comercio'\]\.includes\(ramo\)/, 'el riesgo libre ya no admite comercio')
+  const ui = activas(leer(join(CORR, 'oportunidad/[id]/DatosRiesgo.tsx')))
+  assert.match(ui, /b\.clave === 'datosComercio'\) return <DatosComercio /, 'la pantalla monta el formulario del comercio')
+  assert.match(ui, /listaAMandar\(guardadosCap, capitalesDeFilas\(caps\)\)/, 'las listas solo se mandan si cambian')
+  const lector = activas(leer(join(P, 'lib/riesgo-asegura.ts')))
+  assert.match(lector, /case 'datosComercio':/, 'plataforma lee el bloque que manda asegura')
+  const puerto = activas(leer(join(RAIZ, 'apps/asegura/lib/oportunidad-riesgo.ts')))
+  assert.match(puerto, /datosComercio: 'datos_comercio'/, 'historial y auditoría con su prefijo')
+  assert.match(puerto, /tarifica: ramoTarificable\(op\.tipo\)/, 'la marca «tarifica» sale del ramo, no de la clave')
+})
+
 // ─── Tramo SERVIDOR (asegura): se lee el FUENTE, sin importar módulos con Prisma ───────────────────────────
 const A = join(RAIZ, 'apps/asegura')
 const RUTAS_NUEVO = [

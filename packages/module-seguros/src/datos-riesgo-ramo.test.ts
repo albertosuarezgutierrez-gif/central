@@ -22,9 +22,11 @@ test('cada ramo tiene su clave y los libres se cotizan fuera', () => {
   assert.equal(claveDatosDeRamo('moto'), 'datosVehiculo')
   assert.equal(claveDatosDeRamo('hogar'), 'datosVivienda')
   for (const r of ['vida', 'salud', 'decesos']) assert.equal(claveDatosDeRamo(r), 'datosCapital', r)
-  for (const r of ['responsabilidad_civil', 'comercio', 'comunidades', 'otros', 'accidentes', 'cualquier-cosa']) assert.equal(claveDatosDeRamo(r), 'datosRiesgoLibre', r)
+  assert.equal(claveDatosDeRamo('comercio'), 'datosComercio', 'el comercio tiene bloque propio')
+  for (const r of ['responsabilidad_civil', 'comunidades', 'otros', 'accidentes', 'cualquier-cosa']) assert.equal(claveDatosDeRamo(r), 'datosRiesgoLibre', r)
   assert.equal(ramoTarificable('hogar'), true)
-  assert.equal(ramoTarificable('comercio'), false)
+  assert.equal(ramoTarificable('comercio'), false, 'clave propia no es tarifa: el comercio se cotiza fuera')
+  assert.equal(ramoTarificable('otros'), false)
 })
 
 // ─── Vivienda ────────────────────────────────────────────────────────────────
@@ -107,7 +109,7 @@ test('CEPO fusión: la clave nueva se pone y NO se pisa ninguna vieja (ni las de
 
 test('discriminante: la clave tiene que ser la del ramo (400), en los cuatro sentidos', () => {
   const p = { x: 1 }
-  for (const [ramo, clave] of [['hogar', 'datosVehiculo'], ['auto', 'datosVivienda'], ['vida', 'datosVivienda'], ['comercio', 'datosCapital'], ['hogar', 'datosRiesgoLibre'], ['moto', 'datosCapital']] as const) {
+  for (const [ramo, clave] of [['hogar', 'datosVehiculo'], ['auto', 'datosVivienda'], ['vida', 'datosVivienda'], ['comercio', 'datosCapital'], ['comercio', 'datosRiesgoLibre'], ['otros', 'datosComercio'], ['hogar', 'datosRiesgoLibre'], ['moto', 'datosCapital']] as const) {
     const r = calcularEdicionRiesgo({ ramo, clave, info: {}, parcial: p, confirmar: false, ahora: AHORA })
     assert.equal(r.ok, false, `${ramo}/${clave}`)
     assert.ok(!r.ok && r.status === 400)
@@ -125,8 +127,9 @@ test('precarga de póliza: solo lo que hay, sin cifrado ni valores de cajón; nu
   assert.equal(bloque.datos.anioConstruccion, null, 'sin dato = null, no 0')
   assert.equal(precargaDePoliza('vida', { capital: 5 }), null)
   assert.ok(precargaDePoliza('hogar', { cp: '41003' }))
-  const libre = precargaDePoliza('comercio', { direccion: 'Calle A 1' }, { titulo: 'Bar', detalle: 'Hostelería' })
+  const libre = precargaDePoliza('otros', { direccion: 'Calle A 1' }, { titulo: 'Bar', detalle: 'Hostelería' })
   assert.deepEqual(libre?.valor, { descripcion: 'Bar · Hostelería', direccion: 'Calle A 1' })
+  assert.equal(precargaDePoliza('comercio', { direccion: 'Calle A 1' })?.clave, 'datosComercio')
 })
 
 test('editar con precarga: el resto de lo que se veía no desaparece, y solo se anota lo tocado', () => {
@@ -226,7 +229,7 @@ test('libre: sin «faltan» (no hay tarifa); confirmable solo con algo; 0 es dat
   assert.ok(v.ok)
   assert.equal(v.valor.capital, 0)
   assert.equal(v.valor.notas, null)
-  const r = calcularEdicionRiesgo({ ramo: 'comercio', clave: 'datosRiesgoLibre', info: { otra: 1 }, parcial: { descripcion: 'Bar', capital: 50000 }, confirmar: true, ahora: AHORA, hoy: HOY })
+  const r = calcularEdicionRiesgo({ ramo: 'comunidades', clave: 'datosRiesgoLibre', info: { otra: 1 }, parcial: { descripcion: 'Bar', capital: 50000 }, confirmar: true, ahora: AHORA, hoy: HOY })
   assert.ok(r.ok && r.faltan.length === 0 && r.infoNueva.otra === 1)
   assert.equal(calcularEdicionRiesgo({ ramo: 'otros', clave: 'datosRiesgoLibre', info: {}, parcial: {}, confirmar: true, ahora: AHORA }).ok, false)
   assert.equal(aplicarEdicionLibre(null, { descripcion: 'x' }, { confirmar: false, ahora: AHORA }).datos.confirmadoAt, null)

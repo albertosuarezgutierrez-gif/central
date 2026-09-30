@@ -186,6 +186,17 @@ test('interpretarRiesgo: datosRiesgo de cada ramo — clave rara o datos ilegibl
   }
   const c = leer({ clave: 'datosCapital', datos: { capital: 0, duracionAnios: null }, faltan: ['capital'], tarifica: true })
   assert.equal(c?.clave === 'datosCapital' && c.datos.capital, 0, 'un 0 declarado es un dato')
+  const k = leer({ clave: 'datosComercio', datos: { actividad: 'Bar', regimenLocal: 'inquilino', capitales: [{ bien: 'CONTENIDO', importe: 0 }], medidasProteccion: null }, faltan: ['capitales', 4], dePoliza: true, tarifica: false })
+  assert.equal(k?.clave, 'datosComercio')
+  if (k?.clave === 'datosComercio') {
+    assert.equal(k.datos.regimenLocal, 'inquilino')
+    assert.deepEqual(k.datos.capitales, [{ bien: 'CONTENIDO', importe: 0, modalidad: null, descripcion: null }], 'un importe de 0 es un dato')
+    assert.equal(k.datos.medidasProteccion, null, 'sin mirar ≠ vacío')
+    assert.equal(k.datos.metrosCuadrados, null)
+    assert.deepEqual(k.faltan, ['capitales'])
+    assert.equal(k.tarifica, false)
+  }
+  assert.equal(leer({ clave: 'datosComercio', datos: 'x', faltan: [] }), null)
   const l = leer({ clave: 'datosRiesgoLibre', datos: { descripcion: 'Bar', capital: 5000 }, faltan: [], tarifica: false })
   assert.equal(l?.clave === 'datosRiesgoLibre' && l.tarifica, false)
   assert.equal(l?.clave === 'datosRiesgoLibre' && l.datos.notas, null)

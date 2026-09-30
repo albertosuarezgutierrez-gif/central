@@ -38,6 +38,7 @@ import {
   leerDatosVehiculo,
   objetoAsegurado,
   precargaDePoliza,
+  ramoTarificable,
   rolesDelRamo,
   type CampoVehiculo,
   type ClaveDatosRiesgo,
@@ -120,7 +121,7 @@ export type Riesgo = {
   faltanVehiculo: CampoVehiculo[] | null
   /**
    * Los datos del riesgo de CUALQUIER ramo (30/09/2026), con el mismo patrón que el vehículo: qué clave de
-   * `info_riesgo` es (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosRiesgoLibre`), los datos
+   * `info_riesgo` es (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`), los datos
    * (`null` = no se sabe, nunca `''`/`0`), los campos que faltan para pedir precio (vacío en los ramos sin
    * tarifa) y si lo que se ve es la PRECARGA de la póliza de la que nace (`dePoliza`, nunca confirmada).
    */
@@ -133,7 +134,7 @@ type ConsultaSql = { $queryRaw: typeof prisma.$queryRaw }
 
 /**
  * La precarga del bloque de datos desde la póliza de la que nace la oportunidad (`datos_especificos` + objeto
- * asegurado): solo para los ramos donde el bien vive ahí (vivienda y libres) y solo si la oportunidad tiene
+ * asegurado): solo para los ramos donde el bien vive ahí (vivienda, comercio y libres) y solo si la oportunidad tiene
  * póliza. Una lectura que falla es «sin precarga» (`null`), nunca un dato inventado ni un error de pantalla.
  */
 async function precargaDePolizaDeOportunidad(
@@ -144,7 +145,7 @@ async function precargaDePolizaDeOportunidad(
 ): Promise<Record<string, unknown> | null> {
   if (!polizaId || !UUID.test(polizaId)) return null
   const clave = claveDatosDeRamo(ramo)
-  if (clave !== 'datosVivienda' && clave !== 'datosRiesgoLibre') return null
+  if (clave !== 'datosVivienda' && clave !== 'datosComercio' && clave !== 'datosRiesgoLibre') return null
   try {
     const [p] = await db.$queryRaw<Array<{ datos: Record<string, unknown> | null }>>`
       select datos_especificos as datos from seguros.polizas
@@ -304,7 +305,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     variantes,
     datosVehiculo,
     faltanVehiculo: datosVehiculo ? faltanDatosVehiculo(datosVehiculo) : null,
-    datosRiesgo: { clave: bloque.clave, datos: bloque.datos, faltan: bloque.faltan, dePoliza: bloque.dePoliza, tarifica: claveRamo !== 'datosRiesgoLibre' },
+    datosRiesgo: { clave: bloque.clave, datos: bloque.datos, faltan: bloque.faltan, dePoliza: bloque.dePoliza, tarifica: ramoTarificable(op.tipo) },
   }
 }
 
@@ -826,12 +827,13 @@ const PREFIJO_HISTORIAL: Record<ClaveDatosRiesgo, string> = {
   datosVehiculo: 'datos_vehiculo',
   datosVivienda: 'datos_vivienda',
   datosCapital: 'datos_capital',
+  datosComercio: 'datos_comercio',
   datosRiesgoLibre: 'datos_riesgo_libre',
 }
 
 /**
  * Edita (y/o confirma) los datos del riesgo de una oportunidad, de CUALQUIER ramo. `clave` dice qué bloque
- * (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosRiesgoLibre`) y TIENE que ser el del ramo de la
+ * (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`) y TIENE que ser el del ramo de la
  * oportunidad (400 si no). Se guarda bajo esa clave NUEVA de `info_riesgo`: el resto de claves se conservan tal
  * cual (la `vehiculo` de texto, `presupuestoCodeoscopic`…). Con `confirmar` se sella `confirmadoAt`; cualquier
  * edición sin confirmar lo borra. Fila en `oportunidad_historial` con qué cambió; la de `auditoria` la pone

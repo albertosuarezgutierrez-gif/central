@@ -5,8 +5,8 @@
  * es «0 opciones», es «no se pudo leer».
  */
 import {
-  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda,
-  type CampoVehiculo, type ClaveDatosRiesgo, type DatosCapitalRiesgo, type DatosRiesgoLibre, type DatosVehiculoRiesgo, type DatosViviendaRiesgo,
+  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda,
+  type CampoVehiculo, type ClaveDatosRiesgo, type DatosCapitalRiesgo, type DatosComercioRiesgo, type DatosRiesgoLibre, type DatosVehiculoRiesgo, type DatosViviendaRiesgo,
   type RolFigura, type Diferencia,
 } from '@central/module-seguros'
 
@@ -84,6 +84,7 @@ export type DatosRiesgoDeRamo =
   | { clave: 'datosVehiculo'; datos: DatosVehiculoRiesgo; faltan: string[]; dePoliza: boolean; tarifica: boolean }
   | { clave: 'datosVivienda'; datos: DatosViviendaRiesgo; faltan: string[]; dePoliza: boolean; tarifica: boolean }
   | { clave: 'datosCapital'; datos: DatosCapitalRiesgo; faltan: string[]; dePoliza: boolean; tarifica: boolean }
+  | { clave: 'datosComercio'; datos: DatosComercioRiesgo; faltan: string[]; dePoliza: boolean; tarifica: boolean }
   | { clave: 'datosRiesgoLibre'; datos: DatosRiesgoLibre; faltan: string[]; dePoliza: boolean; tarifica: boolean }
 
 /** Lee `datosRiesgo` sin fiarse: una clave rara o unos datos ilegibles son `null` («no se sabe»), no un bloque vacío. */
@@ -97,6 +98,7 @@ export function leerDatosRiesgoDeRamo(bruto: unknown): DatosRiesgoDeRamo | null 
     case 'datosVehiculo': { const d = leerDatosVehiculo(o.datos); return d ? { clave: 'datosVehiculo', datos: d, ...comunes } : null }
     case 'datosVivienda': { const d = leerDatosVivienda(o.datos); return d ? { clave: 'datosVivienda', datos: d, ...comunes } : null }
     case 'datosCapital': { const d = leerDatosCapital(o.datos); return d ? { clave: 'datosCapital', datos: d, ...comunes } : null }
+    case 'datosComercio': { const d = leerDatosComercio(o.datos); return d ? { clave: 'datosComercio', datos: d, ...comunes } : null }
     case 'datosRiesgoLibre': { const d = leerDatosRiesgoLibre(o.datos); return d ? { clave: 'datosRiesgoLibre', datos: d, ...comunes } : null }
   }
 }

@@ -44,7 +44,7 @@ export async function llamarFiguras(method: 'POST' | 'DELETE', body: Record<stri
 
 /**
  * PATCH de los datos del riesgo de cualquier ramo (`/api/correduria/oportunidad/riesgo`). El cuerpo lleva
- * exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosRiesgoLibre`).
+ * exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`).
  * Gratis: no pide precio.
  */
 export async function llamarDatosRiesgo(body: { oportunidadId: string; confirmar?: boolean } & Partial<Record<ClaveDatosRiesgo, Record<string, unknown>>>): Promise<Respuesta> {

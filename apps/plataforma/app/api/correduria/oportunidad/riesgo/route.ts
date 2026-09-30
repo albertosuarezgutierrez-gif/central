@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 /**
  * PATCH { oportunidadId, <clave>: {…parcial…}, confirmar?: boolean } — edita y/o confirma los datos del riesgo
  * (cualquier ramo). `<clave>` es EXACTAMENTE UNA de `datosVehiculo` | `datosVivienda` | `datosCapital` |
- * `datosRiesgoLibre`; asegura comprueba que es la del ramo de la oportunidad (400 si no). Reenvía al puerto; el
+ * `datosComercio` | `datosRiesgoLibre`; asegura comprueba que es la del ramo de la oportunidad (400 si no). Reenvía al puerto; el
  * `actor` lo pone el servidor y va el ÚLTIMO (nada del navegador puede suplantarlo).
  *
  * Validación de la forma aquí, antes de hablar con asegura: `confirmar` solo booleano (422) y el cuerpo de datos,

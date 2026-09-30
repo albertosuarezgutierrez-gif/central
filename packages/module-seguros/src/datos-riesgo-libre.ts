@@ -1,5 +1,5 @@
 /**
- * El riesgo LIBRE (30/09/2026): responsabilidad civil, comercio, comunidades y otros ramos que NO tarifican por
+ * El riesgo LIBRE (30/09/2026): responsabilidad civil, comunidades y otros ramos (el comercio tiene el suyo: datos-comercio-riesgo.ts) que NO tarifican por
  * Codeoscopic. Se cotizan fuera; estos datos son para el EXPEDIENTE: `info_riesgo.datosRiesgoLibre`
  * {descripcion, direccion, capital, notas}. No hay «faltan» (no hay tarifa a la que pedir nada).
  *
@@ -31,9 +31,9 @@ export const ETIQUETA_CAMPO_LIBRE: Record<CampoRiesgoLibre, string> = {
   notas: 'Notas',
 }
 
-/** Ramos que se cotizan fuera y llevan este bloque (todos los que no son vehículo, hogar ni personas con tarifa). */
+/** Ramos que se cotizan fuera y llevan este bloque (todos los que no son vehículo, hogar, personas ni comercio). */
 export function admiteDatosRiesgoLibre(ramo: unknown): boolean {
-  return typeof ramo === 'string' && !['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos'].includes(ramo)
+  return typeof ramo === 'string' && !['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'comercio'].includes(ramo)
 }
 
 export function datosRiesgoLibreVacios(): DatosRiesgoLibre {
