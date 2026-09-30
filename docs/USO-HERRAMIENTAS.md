@@ -167,25 +167,25 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 234 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 236 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 229 | 30.300 | 22.389.857 | 0 | 0 |
-| `otro` | 224 | 7.283 | 21.520.371 | 10.913.724 | 0 |
-| `mcp:github` | 209 | 5.291 | 4.446.279 | 50.087.421 | 88 |
-| `lectura-directa` | 203 | 5.178 | 12.290.703 | 0 | 0 |
+| `bash` | 230 | 30.304 | 22.390.471 | 0 | 0 |
+| `otro` | 225 | 7.289 | 21.520.556 | 10.913.724 | 0 |
+| `mcp:github` | 210 | 5.292 | 4.446.302 | 50.087.421 | 88 |
+| `lectura-directa` | 205 | 5.199 | 12.323.815 | 0 | 0 |
 | `escritura` | 158 | 3.287 | 47.076.438 | 0 | 0 |
-| `sql` | 146 | 2.953 | 1.446.495 | 2.351.230 | 11 |
+| `sql` | 147 | 2.962 | 1.450.523 | 2.351.230 | 11 |
 | `mcp:Claude_Code_Remote` | 134 | 1.451 | 301.300 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 20 | 564 | 2.370.364 | 0 | 0 |
 | `mcp:Vercel` | 53 | 537 | 785.009 | 198.719 | 14 |
-| `mcp:Gmail` | 25 | 316 | 466.902 | 0 | 9 |
+| `mcp:Gmail` | 26 | 331 | 482.584 | 0 | 11 |
 | `mcp:Supabase` | 94 | 274 | 26.532 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
 | `agente:general-purpose` | 41 | 146 | 116.777 | 3.010.787 | 0 |
 | `agente:agente-architect` | 33 | 91 | 71.591 | 2.517.480 | 0 |
-| `mcp:Google-Drive` | 11 | 77 | 76.216 | 0 | 2 |
+| `mcp:Google-Drive` | 12 | 88 | 83.888 | 0 | 2 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `mcp:Google_Drive` | 13 | 72 | 101.947 | 0 | 14 |
 | `mcp:OpenSEO` | 3 | 62 | 51.007 | 0 | 2 |
@@ -193,7 +193,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `agente:Explore` | 24 | 54 | 27.686 | 1.290.967 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
-| `agente:rastreador-codigo` | 28 | 48 | 16.985 | 628.982 | 0 |
+| `agente:rastreador-codigo` | 29 | 49 | 17.415 | 636.352 | 0 |
 | `agente:agente-mecanico` | 20 | 46 | 45.081 | 823.536 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
