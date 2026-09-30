@@ -31,7 +31,7 @@ export type CoberturaParaClasificar = { nombre: string; incluida: boolean | null
 export type GarantiasClasificadas = { version: number; porClave: Record<string, EstadoGarantia> }
 
 /** Súbelo al cambiar patrones: lo guardado con otra versión se reclasifica desde las coberturas. */
-export const VERSION_CATALOGO = 4
+export const VERSION_CATALOGO = 5
 
 /** Misma normalización que la tabla de coberturas del portal: sin tildes, minúsculas, sin signos. */
 export function claveCobertura(nombre: string): string {
@@ -192,6 +192,7 @@ export function clasificarCoberturas(
   ramo: RamoGarantias,
   lista: readonly CoberturaParaClasificar[] | null,
   opciones?: readonly OpcionProductoLegible[] | null,
+  contexto?: ContextoGarantias | null,
 ): GarantiasClasificadas {
   const porClave: Record<string, EstadoGarantia> = {}
   for (const g of CATALOGO_GARANTIAS[ramo]) porClave[g.clave] = 'no_consta'
@@ -243,7 +244,25 @@ export function clasificarCoberturas(
     if (clave in porClave) porClave[clave] = estado
   }
   for (const clave of GARANTIAS_DE_LEY[ramo] ?? []) porClave[clave] = 'si'
+  // Un TODO RIESGO que «no incluye daños propios» o «no incluye pérdida total» se contradice a sí
+  // mismo (30/09/2026, medido): Reale manda «Daños propios: false» en sus 31 todo riesgo con
+  // franquicia, y el bloque «Grandes daños» de Occident enumera los daños propios y no nombra la
+  // pérdida total. Pintar «no incluye daños propios» en un todo riesgo es la afirmación falsa que más
+  // cuesta; el dato contradictorio se declara «no consta».
+  if (esTodoRiesgo(contexto)) {
+    for (const clave of CLAVES_DE_TODO_RIESGO) if (porClave[clave] === 'no') porClave[clave] = 'no_consta'
+  }
   return { version: VERSION_CATALOGO, porClave }
+}
+
+/** La categoría y la modalidad que el vendor le da al precio: dicen qué producto ES (30/09/2026). */
+export type ContextoGarantias = { categoria?: string | null; modalidad?: string | null }
+
+const CLAVES_DE_TODO_RIESGO = ['danos_propios', 'perdida_total'] as const
+
+/** PURO. ¿El precio es un todo riesgo según su propia categoría o modalidad? */
+export function esTodoRiesgo(contexto: ContextoGarantias | null | undefined): boolean {
+  return [contexto?.categoria, contexto?.modalidad].some((t) => typeof t === 'string' && /\btodo riesgo\b/.test(claveCobertura(t)))
 }
 
 /**

@@ -47,6 +47,9 @@ test('tipoFallo: el fallo técnico de Avant2 no es un rechazo; «vehículo no pe
   assert.equal(tipoFallo('Error: Vehículo no permitido.'), 'rechazo')
   assert.equal(tipoFallo('La matrícula ya está asegurada en la compañía'), 'otro')
   assert.equal(tipoFallo(null), 'otro')
+  // 30/09/2026: una negativa de la compañía no se rotula «fallo técnico» (invitaría a pagar otra vez).
+  assert.notEqual(tipoFallo('Producto no disponible en esta provincia'), 'tecnico')
+  assert.equal(tipoFallo('Error interno: riesgo no asegurable'), 'rechazo')
   assert.match(titularFallo('tecnico'), /no es un rechazo/)
   assert.notEqual(titularFallo('tecnico'), titularFallo('rechazo'))
 })

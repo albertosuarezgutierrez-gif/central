@@ -46,6 +46,12 @@ test('leerOferta: sin estimate pero con avisos → condicionado', () => {
   assert.deepEqual(o.avisos, ['riesgo condicionado'])
 })
 
+test('leerOferta: un mensaje solo informativo no condiciona el precio (misma regla que la parrilla, 30/09/2026)', () => {
+  const o = leerOferta({ mainQuote: { id: 'OF1', estimate: false, messages: [{ type: 'info', text: 'Precio válido 30 días' }] } })
+  assert.equal(o.firmeza, 'firme')
+  assert.deepEqual(o.avisos, ['Precio válido 30 días'])
+})
+
 test('leerOferta: sin id reconocible, lanza con el crudo en el mensaje', () => {
   assert.throws(() => leerOferta({ foo: 'bar' }), /codeoscopic_oferta_sin_id/)
 })
@@ -260,6 +266,35 @@ test('encontrarPrecio: con varios precios del mismo nivel desempata por producto
     ],
   }
   assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { producto: 'Reale Auto Plus', primaEur: 330 })?.id, 'C')
-  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { primaEur: 305 })?.id, 'B')
-  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros')?.id, 'A')
+  // 30/09/2026: sin modalidad ya no se adivina por «la prima más cercana» ni se coge la primera.
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { primaEur: 305 }), null)
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros'), null)
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { producto: 'Reale Auto Básico' })?.id, 'A')
+})
+
+test('encontrarPrecio: tras re-tarificar (+1 %) sigue siendo la MODALIDAD elegida, no la de prima más cercana (Mapfre moto, 30/09/2026)', () => {
+  const base = {
+    franquiciaEur: null, entradaEur: null, meses: null, formaPago: null,
+    frecuenciaPago: null, referenciaVendor: null, firmeza: 'estimado' as const, avisos: [],
+    requiereReRate: true, productId: 1, productOptions: null, expiraEn: null, opciones: null, ofertaId: null, quoteCrudo: null,
+  }
+  const cat = 'Terceros Ampliado'
+  const fila = (id: string, modalidad: string, primaEur: number) =>
+    ({ ...base, id, compania: 'Mapfre', producto: 'Mapfre Motos', categoria: cat, modalidad, primaEur })
+  // Primas reales del 28-29/09 subidas un 1 % (lo que hace el vendor tras un PATCH del proyecto).
+  const cotizacion: Cotizacion = {
+    projectId: '1', fechaEfecto: null, insuranceLineId: 'Motorcycle', fallos: [],
+    precios: [
+      fila('F450', 'TERCEROS AMPLIADO – Franquicia 450€', 453.75),
+      fila('F600', 'TERCEROS AMPLIADO – Franquicia 600€', 451.24),
+    ],
+  }
+  const elegida = { producto: 'Mapfre Motos', primaEur: 449.26, modalidad: 'TERCEROS AMPLIADO – Franquicia 450€' }
+  assert.equal(encontrarPrecio(cotizacion, 'Mapfre', cat, elegida)?.id, 'F450')
+  // Sin modalidad, la prima (449,26€) no casa con ninguna: no se confirma la de 600€ en su lugar.
+  assert.equal(encontrarPrecio(cotizacion, 'Mapfre', cat, { producto: 'Mapfre Motos', primaEur: 449.26 }), null)
+  // Una modalidad que ya no está en el proyecto tampoco se sustituye por otra.
+  assert.equal(encontrarPrecio(cotizacion, 'Mapfre', cat, { modalidad: 'TERCEROS AMPLIADO – Franquicia 300€' }), null)
+  // Mayúsculas y espacios de más no cambian la llave.
+  assert.equal(encontrarPrecio(cotizacion, 'mapfre', cat, { modalidad: '  terceros ampliado –  franquicia 600€ ' })?.id, 'F600')
 })

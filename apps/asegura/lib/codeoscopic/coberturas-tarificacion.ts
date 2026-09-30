@@ -12,17 +12,19 @@
 //
 // 🚨 Tres reglas que no se negocian:
 //   1. Un fallo de red se guarda como `fallo` con `lista: null` — NUNCA `[]`: una lista vacía
-//      diría «no cubre nada», y eso es afirmar una ausencia que nadie ha mirado. Sus garantías
-//      salen todas `no_consta`.
-//   2. Idempotente: se escribe con `where coberturas is null`. Una fila ya leída no se toca, y dos
-//      ejecuciones a la vez (la de `after()` y la red de seguridad al preparar) no se pisan.
+//      diría «no cubre nada», y eso es afirmar una ausencia que nadie ha mirado. Sus garantías se
+//      quedan a NULL (30/09/2026): con todo `no_consta` la parrilla la contaba como LEÍDA y decía
+//      «no dice si incluye grúa»; NULL es «aún sin leer», que es la verdad. Y se REINTENTA: una fila
+//      en `fallo` vuelve a ser pendiente (antes quedaba así para siempre).
+//   2. Idempotente: se escribe con `where coberturas is null` (o en `fallo`). Una fila ya leída no
+//      se toca, y dos ejecuciones a la vez (la de `after()` y la red de seguridad) no se pisan.
 //   3. Nunca lanza. Corre en `after()` y al preparar un presupuesto: ninguno de los dos puede
 //      caerse por un extra. Devuelve un resumen.
 //
 // Lo que se queda SIN intentar (el tope de 15 s se agotó antes de empezar esa oferta, o no hay
 // credenciales) sigue a NULL = «no se ha intentado», y la red de seguridad lo retoma.
 
-import { clasificarCoberturas, ramoDeCatalogo, type GarantiasClasificadas, type OpcionProductoLegible } from '@central/module-seguros'
+import { clasificarCoberturas, ramoDeCatalogo, type ContextoGarantias, type GarantiasClasificadas, type OpcionProductoLegible } from '@central/module-seguros'
 import { prisma } from '../tenant.ts'
 import { leerCoberturas } from './coberturas.ts'
 import type { SobreCoberturas } from './coberturas-presupuesto.ts'
@@ -40,6 +42,8 @@ export type FilaSinCoberturas = {
   ofertaId: string | null
   /** Opciones de producto ya leídas (`opciones.lista`), para la asistencia ampliada. `null` = no se sabe. */
   opciones?: OpcionProductoLegible[] | null
+  /** Categoría y modalidad del precio: un todo riesgo no puede salir «sin daños propios» (30/09/2026). */
+  contexto?: ContextoGarantias | null
 }
 
 export type DepsCoberturasTarificacion = {
@@ -128,15 +132,15 @@ export async function completarCoberturasTarificacion(
     const ramoCatalogo = ramoDeCatalogo(cab.ramo)
 
     // Agrupar por oferta: varias filas (modalidades, fraccionamientos) comparten oferta → 1 GET.
-    const porOferta = new Map<string, string[]>()
+    const porOferta = new Map<string, FilaSinCoberturas[]>()
     // Misma oferta = mismas opciones de producto: se toman de la primera fila que las tenga.
     const opcionesDeOferta = new Map<string, OpcionProductoLegible[]>()
     for (const f of await d.pendientes()) {
       if (!f.ofertaId) { resumen.sinOferta += 1; continue }
       if (f.opciones && !opcionesDeOferta.has(f.ofertaId)) opcionesDeOferta.set(f.ofertaId, f.opciones)
       const lista = porOferta.get(f.ofertaId)
-      if (lista) lista.push(f.id)
-      else porOferta.set(f.ofertaId, [f.id])
+      if (lista) lista.push(f)
+      else porOferta.set(f.ofertaId, [f])
     }
 
     const cola = [...porOferta.entries()]
@@ -155,15 +159,28 @@ export async function completarCoberturasTarificacion(
           // 🚨 `lista: null`, NUNCA `[]`: un fallo pintado como lista vacía diría «no cubre nada».
           sobre = { estado: 'fallo', lista: null, leidasAt: ahora().toISOString() }
         }
-        const garantias = ramoCatalogo ? clasificarCoberturas(ramoCatalogo, sobre.lista, opcionesDeOferta.get(ofertaId) ?? null) : null
-        try {
-          await d.guardar(filas, sobre, garantias)
-          if (sobre.estado === 'fallo') resumen.fallos += filas.length
-          else resumen.leidas += filas.length
-        } catch (e) {
-          // No se escribió: las filas siguen a NULL, que es la verdad («no intentado»).
-          console.warn(`[coberturas-tarificacion] oferta ${ofertaId}: no se pudo guardar:`, mensaje(e))
-          resumen.sinIntentar += filas.length
+        // Las garantías son de CADA fila: comparten oferta, pero no categoría (un todo riesgo y un
+        // terceros pueden salir de la misma). Sin lista leída, NULL = «aún sin leer», no «no dice».
+        const grupos = new Map<string, { ids: string[]; garantias: GarantiasClasificadas | null }>()
+        for (const f of filas) {
+          const garantias = ramoCatalogo && sobre.estado !== 'fallo'
+            ? clasificarCoberturas(ramoCatalogo, sobre.lista, opcionesDeOferta.get(ofertaId) ?? null, f.contexto ?? null)
+            : null
+          const clave = JSON.stringify(garantias)
+          const g = grupos.get(clave)
+          if (g) g.ids.push(f.id)
+          else grupos.set(clave, { ids: [f.id], garantias })
+        }
+        for (const g of grupos.values()) {
+          try {
+            await d.guardar(g.ids, sobre, g.garantias)
+            if (sobre.estado === 'fallo') resumen.fallos += g.ids.length
+            else resumen.leidas += g.ids.length
+          } catch (e) {
+            // No se escribió: las filas siguen como estaban, que es la verdad («no intentado»).
+            console.warn(`[coberturas-tarificacion] oferta ${ofertaId}: no se pudo guardar:`, mensaje(e))
+            resumen.sinIntentar += g.ids.length
+          }
         }
       }
     }
@@ -219,15 +236,18 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
       return f ? { simulado: f.simulado, projectId: f.project_id_codeoscopic, ramo: f.ramo } : null
     },
     async pendientes() {
-      const filas = await prisma.$queryRaw<{ id: string; oferta_id: string | null; opciones: unknown }[]>`
-        select p.id::text as id, p.oferta_id, p.opciones
+      const filas = await prisma.$queryRaw<{ id: string; oferta_id: string | null; opciones: unknown; categoria: string | null; modalidad: string | null }[]>`
+        select p.id::text as id, p.oferta_id, p.opciones, p.categoria, p.modalidad
         from seguros.tarificacion_precios p
         join seguros.tarificaciones t on t.id = p.tarificacion_id
         where p.tarificacion_id = ${ids.tarificacionId}::uuid
           and t.correduria_id = ${ids.correduriaId}::uuid
-          and p.coberturas is null
+          and (p.coberturas is null or p.coberturas->>'estado' = 'fallo')
       `
-      return filas.map((f) => ({ id: f.id, ofertaId: f.oferta_id, opciones: listaOpciones(f.opciones) }))
+      return filas.map((f) => ({
+        id: f.id, ofertaId: f.oferta_id, opciones: listaOpciones(f.opciones),
+        contexto: { categoria: f.categoria, modalidad: f.modalidad },
+      }))
     },
     async guardar(filas, sobre, garantias) {
       return prisma.$executeRaw`
@@ -239,7 +259,7 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
           and t.correduria_id = ${ids.correduriaId}::uuid
           and p.tarificacion_id = ${ids.tarificacionId}::uuid
           and p.id = any(${filas}::uuid[])
-          and p.coberturas is null
+          and (p.coberturas is null or p.coberturas->>'estado' = 'fallo')
       `
     },
   }

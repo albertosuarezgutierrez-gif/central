@@ -1186,6 +1186,9 @@ export async function ofertaAsegura(p: {
    *  precios del mismo nivel (`encontrarPrecio` de asegura, 25/09/2026). */
   producto?: string
   primaEur?: number
+  /** Modalidad de la fila pulsada: compañía + nivel + modalidad es la llave única del precio.
+   *  Sin ella asegura solo casa una prima idéntica (30/09/2026, ver `encontrarPrecio`). */
+  modalidad?: string
   /** Fecha de efecto NUEVA (aaaa-mm-dd). Desde el 25/09/2026 viaja en el propio
    *  ReRate (`mainQuote.effectiveDate`, la vía documentada por el vendor). */
   fechaEfectoCorregida?: string

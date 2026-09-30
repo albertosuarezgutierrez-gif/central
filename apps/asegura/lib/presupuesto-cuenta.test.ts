@@ -133,6 +133,8 @@ test('🪤 emitir OTRA opción que la firmada (compañía o prima) se para; la m
   assert.equal(discrepanciaConElegida(base), null)
   assert.match(discrepanciaConElegida({ ...base, companiaProyecto: 'Mapfre' }) ?? '', /firmó REALE/)
   assert.match(discrepanciaConElegida({ ...base, primaEnviada: 350 }) ?? '', /prima/)
+  // Formato español (30/09/2026): «300,40€», nunca «300.40 €».
+  assert.match(discrepanciaConElegida({ ...base, primaEnviada: 350 }) ?? '', /300,40€ y se va a emitir con 350,00€/)
   assert.match(discrepanciaConElegida({ ...base, primaEnviada: null }) ?? '', /no llega la prima/)
   const emitir = readFileSync(fileURLToPath(new URL('../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url)), 'utf8')
   const guarda = emitir.indexOf('discrepanciaConElegida({')

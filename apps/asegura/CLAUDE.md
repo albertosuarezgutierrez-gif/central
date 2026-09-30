@@ -399,6 +399,10 @@ utilizable). Reglas que no se negocian al tocar esto:
   `tarificaciones.fallos` = los productos sin precio (NULL = cotización anterior, ≠ `[]`) y, por precio,
   `id_precio` (el `mainQuote.id`), `forma_pago`, `frecuencia_pago` y `meses`. La cruda NO sale por el
   puerto (lleva datos personales); es para contrastar el parser sin volver a pagar.
+- 🎯 **El precio que se confirma y emite se casa por compañía + categoría + MODALIDAD (30/09/2026).**
+  `encontrarPrecio()` ya no desempata por «la prima más cercana»: tras un PATCH el vendor re-tarifica y
+  la más cercana podía ser otra modalidad o franquicia (el `producto` es igual en todas). Con modalidad:
+  una exacta o 409; sin ella (pestaña vieja), solo una prima idéntica. Plataforma manda `modalidad`.
 - **Un solo intento.** `POST /insurances` no es idempotente: reintentar crea otro proyecto y otro
   cargo. La única repetición permitida es re-pedir el token tras un 401 (el vendor no tarificó).
 - **Los precios se pintan con su FIRMEZA.** En el fixture del sandbox ninguno de los 18 era firme, y

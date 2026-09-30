@@ -975,6 +975,8 @@ export {
   type OpcionProductoLegible,
   claveCobertura,
   clasificarCoberturas,
+  esTodoRiesgo,
+  type ContextoGarantias,
   noReconocidas,
   ramoDeCatalogo,
   subcoberturas,

@@ -169,7 +169,8 @@ type Resultado =
        * que es la defensa de cartera dicha por la propia compañía.
        */
       fallos: Fallo[] | null
-      supuestos: Supuesto[]
+      /** `null` = cotización recuperada: los supuestos no se guardan con ella (30/09/2026). */
+      supuestos: Supuesto[] | null
       /** Qué pasó con la COPIA en `seguros.tarificaciones`. Sin `cotizacionId`
        *  (dentro, si `estado==='guardada'`) no hay a qué proyecto pedirle el
        *  ReRate/Submit reales: `cotizacionIdDe()` lo extrae con cuidado. */
@@ -204,9 +205,15 @@ type Resultado =
  * criterio que `resumirCotizacion()` de asegura, recortado a lo que hay.
  */
 function resumenDePrecios(precios: Precio[]): string {
-  const firmes = precios.filter((p) => p.firmeza === 'firme').length
-  const noFirmes = precios.length - firmes
-  return `${precios.length} precios (${firmes} en firme${noFirmes > 0 ? `, ${noFirmes} con reparos)` : ')'}`
+  const n = (f: string) => precios.filter((p) => p.firmeza === f).length
+  const estimados = n('estimado')
+  const condicionados = n('condicionado')
+  const detalle = [
+    `${n('firme')} en firme`,
+    estimados > 0 ? `${estimados} ${estimados === 1 ? 'estimado' : 'estimados'}` : null,
+    condicionados > 0 ? `${condicionados} ${condicionados === 1 ? 'condicionado' : 'condicionados'} por la compañía` : null,
+  ].filter(Boolean).join(', ')
+  return `${precios.length} precios (${detalle})`
 }
 
 /**
@@ -229,7 +236,7 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
     resumen: resumenDePrecios(g.precios),
     precios: g.precios,
     fallos: g.fallos,
-    supuestos: [],
+    supuestos: null,
     guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
     projectId: g.projectId,
     fechaEfecto: g.fechaEfecto,
@@ -1819,6 +1826,7 @@ function Precios({
                     const id = `${p.compania}-${p.producto}-${fila.indice}`
                     const logo = logoCompania(p.compania)
                     const producto = nombreProductoSinCia(p.compania, p.producto)
+                    const modalidad = r.precios[fila.indice]?.modalidad ?? null
                     const abrirCierra = abierta === id
                     const emisionDeshabilitada =
                       r.simulado || cotizacionIdDe(r.guardado) === null
@@ -1844,6 +1852,11 @@ function Precios({
                                 <div className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
                                   {producto}
                                 </div>
+                              )}
+                              {/* 30/09/2026: con tres Mapfre «Autos» en la misma fila de nivel, la
+                                  modalidad es lo único que dice CUÁL es (y es lo que se emite). */}
+                              {modalidad && modalidad !== p.categoria && (
+                                <div style={{ fontSize: 11, overflowWrap: 'anywhere' }}>{modalidad}</div>
                               )}
                             </div>
                           </div>
@@ -2003,7 +2016,13 @@ function Precios({
 
       {/* Los supuestos, OTRA VEZ y al lado del precio: son la letra pequeña de
           esa cifra, y verlos antes de pulsar no basta. */}
-      {r.supuestos.length > 0 && (
+      {r.supuestos === null && (
+        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+          De esta cotización recuperada <strong>no se guardaron los supuestos</strong> con los que se pidió el precio
+          (garaje, historial, código postal…): compruébalos con el cliente antes de prometer la prima.
+        </p>
+      )}
+      {r.supuestos !== null && r.supuestos.length > 0 && (
         <div
           style={{
             marginTop: 12,

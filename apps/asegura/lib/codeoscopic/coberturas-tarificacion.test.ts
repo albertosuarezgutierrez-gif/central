@@ -53,7 +53,7 @@ function doble(o: {
   const vendor = o.vendor === undefined ? async () => [{ name: 'Lunas', included: true }] : o.vendor
   const deps: Deps = {
     cabecera: async () => ({ simulado: o.simulado ?? false, projectId: o.projectId === undefined ? 'P1' : o.projectId, ramo: o.ramo ?? 'auto' }),
-    pendientes: async () => bd.filter((f) => f.coberturas === null).map((f) => ({ id: f.id, ofertaId: f.ofertaId })),
+    pendientes: async () => bd.filter((f) => f.coberturas === null).map((f) => ({ id: f.id, ofertaId: f.ofertaId, contexto: f.contexto })),
     coberturas: vendor
       ? async (_p, ofertaId) => {
           llamadas.push(ofertaId)
@@ -137,18 +137,33 @@ test('sin project o sin vendor → 0 llamadas', async () => {
   assert.equal(sinVendor.escrituras.length, 0, 'sin vendor la fila se queda a NULL («no intentado»)')
 })
 
-test('🚨 fallo de red → estado `fallo`, lista NULL (nunca []) y garantías todas no_consta', async () => {
+test('🚨 fallo de red → estado `fallo`, lista NULL (nunca []) y garantías NULL («aún sin leer», 30/09/2026)', async () => {
   const d = doble({ filas: [{ id: 'a', ofertaId: 'OF-A' }], vendor: async () => { throw new Error('ECONNRESET') } })
   const r = await completarCoberturasTarificacion(IDS, d.deps)
   assert.equal(r.fallos, 1)
   const e = d.escrituras[0]
   assert.equal(e.sobre.estado, 'fallo')
   assert.equal(e.sobre.lista, null)
-  assert.ok(e.garantias)
-  // Todo «no consta» salvo lo que da la LEY (RC obligatoria en auto/moto), que no depende de la compañía.
-  const { rc_obligatoria, ...resto } = e.garantias!.porClave
-  assert.equal(rc_obligatoria, 'si')
-  assert.deepEqual([...new Set(Object.values(resto))], ['no_consta'], 'un fallo no puede decir «no incluye» nada')
+  // Con todo `no_consta` la parrilla la contaba como LEÍDA («no dice si incluye grúa»).
+  assert.equal(e.garantias, null, 'un fallo es «aún sin leer», no «la compañía no dice»')
+})
+
+test('las garantías son de CADA fila: un todo riesgo y un terceros de la misma oferta no se mezclan (30/09/2026)', async () => {
+  const lista = [
+    { nombre: 'Responsabilidad civil obligatoria', incluida: true },
+    { nombre: 'Daños propios', incluida: false },
+  ]
+  const d = doble({
+    filas: [
+      { id: 'tr', ofertaId: 'OF-A', contexto: { categoria: 'Todo Riesgo Con Franquicia Media', modalidad: 'Reale Todo Riesgo Franquicia 300 Euros' } },
+      { id: 'ter', ofertaId: 'OF-A', contexto: { categoria: 'Terceros', modalidad: 'Reale Terceros' } },
+    ],
+    vendor: async () => lista.map((c) => ({ name: c.nombre, included: c.incluida })),
+  })
+  await completarCoberturasTarificacion(IDS, d.deps)
+  const porFila = new Map(d.escrituras.flatMap((e) => e.ids.map((id) => [id, e.garantias?.porClave.danos_propios])))
+  assert.equal(porFila.get('tr'), 'no_consta')
+  assert.equal(porFila.get('ter'), 'no')
 })
 
 test('lista vacía del vendor es `vacias` (un dato), no `fallo`', async () => {

@@ -190,7 +190,9 @@ export async function backfillCoberturasTarificacion(
     if (filas.length > 0) {
       if (precios === null) {
         // 🚨 `lista: null`, NUNCA `[]`: un fallo pintado como lista vacía diría «no cubre nada».
-        r.falloProyecto += await d.marcar(filas.map((f) => f.id), { estado: 'fallo', lista: null, leidasAt: ahora().toISOString() }, garantiasSinLista)
+        // Garantías NULL = «aún sin leer» (30/09/2026): con todo `no_consta` la parrilla las daba por
+        // leídas («no dice si incluye grúa»). La fila en `fallo` se reintenta en la pasada siguiente.
+        r.falloProyecto += await d.marcar(filas.map((f) => f.id), { estado: 'fallo', lista: null, leidasAt: ahora().toISOString() }, null)
       } else {
         const plan = planOfertas(filas, precios)
         for (const a of plan.asignar) r.ofertasRecuperadas += await d.asignarOferta(a.id, a.ofertaId)
@@ -300,7 +302,11 @@ export async function pasadaBackfillCoberturas(
 // `garantias` de las filas con versión vieja desde lo que YA está en la fila (coberturas + opciones),
 // sin llamar al vendor. Una fila sin coberturas escritas no se toca: la completa el backfill.
 
-export type FilaReclasificar = { id: string; ramo: string; coberturas: unknown; opciones: unknown }
+export type FilaReclasificar = {
+  id: string; ramo: string; coberturas: unknown; opciones: unknown
+  /** Categoría y modalidad del precio (30/09/2026): un todo riesgo no sale «sin daños propios». */
+  categoria?: string | null; modalidad?: string | null
+}
 
 const listaDe = (sobre: unknown): unknown[] | null => {
   const o = sobre && typeof sobre === 'object' ? (sobre as { lista?: unknown }) : null
@@ -311,7 +317,9 @@ const listaDe = (sobre: unknown): unknown[] | null => {
 export function garantiasActuales(f: FilaReclasificar): GarantiasClasificadas | null {
   const ramo = ramoDeCatalogo(f.ramo)
   if (!ramo) return null
-  return clasificarCoberturas(ramo, listaDe(f.coberturas) as CoberturaParaClasificar[] | null, listaDe(f.opciones) as OpcionLegible[] | null)
+  return clasificarCoberturas(ramo, listaDe(f.coberturas) as CoberturaParaClasificar[] | null, listaDe(f.opciones) as OpcionLegible[] | null, {
+    categoria: f.categoria ?? null, modalidad: f.modalidad ?? null,
+  })
 }
 
 export async function reclasificarGarantiasViejas(
@@ -350,7 +358,7 @@ export async function reclasificarGarantiasViejas(
 async function viejasReales(correduriaId: string, limite: number): Promise<FilaReclasificar[]> {
   const { prisma } = await import('../tenant.ts')
   return prisma.$queryRaw<FilaReclasificar[]>`
-    select p.id::text as id, t.ramo, p.coberturas, p.opciones
+    select p.id::text as id, t.ramo, p.coberturas, p.opciones, p.categoria, p.modalidad
     from tarificacion_precios p
     join tarificaciones t on t.id = p.tarificacion_id
     where t.correduria_id = ${correduriaId}::uuid
@@ -385,7 +393,10 @@ async function candidatasReales(correduriaId: string, limite: number): Promise<s
     where t.correduria_id = ${correduriaId}::uuid
       and t.simulado = false
       and t.project_id_codeoscopic is not null
-      and exists (select 1 from tarificacion_precios p where p.tarificacion_id = t.id and (p.coberturas is null or p.opciones is null))
+      and exists (select 1 from tarificacion_precios p where p.tarificacion_id = t.id and (
+        p.coberturas is null or p.opciones is null
+        -- Un fallo de lectura se reintenta, pero no para siempre: una semana (30/09/2026).
+        or (p.coberturas->>'estado' = 'fallo' and t.creado_at > now() - interval '7 days')))
     order by t.creado_at desc
     limit ${limite}
   `
@@ -436,7 +447,7 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
         join tarificaciones t on t.id = p.tarificacion_id
         where p.tarificacion_id = ${ids.tarificacionId}::uuid
           and t.correduria_id = ${ids.correduriaId}::uuid
-          and p.coberturas is null
+          and (p.coberturas is null or p.coberturas->>'estado' = 'fallo')
           and p.oferta_id is null
       `
       return filas.map((f) => ({
@@ -454,7 +465,7 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
           and p.tarificacion_id = ${ids.tarificacionId}::uuid
           and p.id = ${id}::uuid
           and p.oferta_id is null
-          and p.coberturas is null
+          and (p.coberturas is null or p.coberturas->>'estado' = 'fallo')
       `
     },
     async marcar(filas, sobre, garantias) {
@@ -467,7 +478,7 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
           and t.correduria_id = ${ids.correduriaId}::uuid
           and p.tarificacion_id = ${ids.tarificacionId}::uuid
           and p.id = any(${filas}::uuid[])
-          and p.coberturas is null
+          and (p.coberturas is null or p.coberturas->>'estado' = 'fallo')
       `
     },
     async sinOpciones() {
@@ -490,15 +501,15 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
       // Las garantías se recalculan con las coberturas ya guardadas de ESA fila + las opciones nuevas:
       // la asistencia ampliada depende de las dos. Sin coberturas leídas, `garantias` no se toca.
       const ramoCat = ramoDeCatalogo(ramo)
-      const filas = await prisma.$queryRaw<{ coberturas: unknown }[]>`
-        select p.coberturas from tarificacion_precios p
+      const filas = await prisma.$queryRaw<{ coberturas: unknown; categoria: string | null; modalidad: string | null }[]>`
+        select p.coberturas, p.categoria, p.modalidad from tarificacion_precios p
         join tarificaciones t on t.id = p.tarificacion_id
         where p.id = ${id}::uuid and t.correduria_id = ${ids.correduriaId}::uuid
       `
       const cob = filas[0]?.coberturas as { estado?: string; lista?: unknown } | null | undefined
       const lista = cob && Array.isArray(cob.lista) ? (cob.lista as CoberturaParaClasificar[]) : null
       const garantias = ramoCat && cob && cob.estado !== 'fallo' && cob.estado !== 'sin_oferta'
-        ? clasificarCoberturas(ramoCat, lista, sobre.lista)
+        ? clasificarCoberturas(ramoCat, lista, sobre.lista, { categoria: filas[0]?.categoria ?? null, modalidad: filas[0]?.modalidad ?? null })
         : null
       return prisma.$executeRaw`
         update tarificacion_precios p

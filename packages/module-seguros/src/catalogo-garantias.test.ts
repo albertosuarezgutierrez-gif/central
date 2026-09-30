@@ -249,3 +249,28 @@ test('Reale: la opción «Daños por colisión animal: No» es un no de choque c
   assert.deepEqual(garantiasDeOpciones(opciones), { colision_animales: 'no' })
   assert.equal(clasificarCoberturas('auto', [], opciones).porClave.colision_animales, 'no')
 })
+
+test('un TODO RIESGO no dice «no incluye daños propios» ni «pérdida total» aunque la compañía lo marque (30/09/2026)', () => {
+  // Reale, las 31 filas todo riesgo con franquicia: «Daños propios: false» (literal del vendor).
+  const reale = [
+    { nombre: 'Responsabilidad civil obligatoria', incluida: true },
+    { nombre: 'Grandes daños / Pérdida total', incluida: true, texto: '• Garantiza una indemnización exclusivamente cuando el vehículo sufra daños cuya reparación sea de tal magnitud que se consideren como Siniestro total.' },
+    { nombre: 'Daños propios', incluida: false },
+  ]
+  const tr = clasificarCoberturas('auto', reale, null, { categoria: 'Todo Riesgo Con Franquicia Media', modalidad: 'Reale Todo Riesgo Franquicia 300 Euros' })
+  assert.equal(tr.porClave.danos_propios, 'no_consta')
+  assert.notEqual(tr.porClave.perdida_total, 'no')
+  // La misma lista en un terceros sí es «no»: la regla es del todo riesgo, no de Reale.
+  assert.equal(clasificarCoberturas('auto', reale, null, { categoria: 'Terceros', modalidad: 'Reale Terceros' }).porClave.danos_propios, 'no')
+  assert.equal(clasificarCoberturas('auto', reale).porClave.danos_propios, 'no')
+
+  // Occident: el bloque «Grandes daños» (incluido) enumera los daños propios y no nombra la pérdida total.
+  const occident = [
+    { nombre: 'Grandes daños / Pérdida total', incluida: true, texto: '» Daños propios con franquicia, incendio y robo: Incluida. Franquicia TR con franquicia de 300 euros (240 euros en AutoPresto)..» Daños propios con franquicia, incendio y robo ampliados: Opcional (no incluida).  ( Robo e incendio excluida franquicia)' },
+  ]
+  const occTr = clasificarCoberturas('auto', occident, null, { categoria: 'Todo Riesgo Con Franquicia Baja', modalidad: 'Todo Riesgo con franquicia 300' })
+  assert.equal(occTr.porClave.perdida_total, 'no_consta')
+  assert.notEqual(occTr.porClave.danos_propios, 'no')
+  // Solo mira categoría/modalidad del precio: «Terceros + Robo» no es todo riesgo.
+  assert.equal(clasificarCoberturas('auto', reale, null, { modalidad: 'Seguro a Terceros + Robo' }).porClave.danos_propios, 'no')
+})
