@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
+import { tgAviso } from '@/lib/telegram'
+import { urlOportunidadesCliente } from '@/lib/correduria/retenidas-aviso'
+import { esAllianz, RECORDATORIO_ALLIANZ_CORTO } from '@central/module-seguros'
 import { emisionExternaRegistrar, emisionExternaVista } from '@/lib/correduria-puerto'
 
 export const dynamic = 'force-dynamic'
@@ -32,5 +35,31 @@ export async function POST(req: NextRequest) {
   const oportunidadId = typeof cuerpo.oportunidadId === 'string' && cuerpo.oportunidadId.trim() ? cuerpo.oportunidadId.trim() : null
   if (!projectId || !clienteId) return NextResponse.json({ estado: 'error', mensaje: 'faltan projectId y clienteId' }, { status: 400 })
   const r = await emisionExternaRegistrar({ projectId, clienteId, oportunidadId, actor: guarda.session.email })
+  await avisarSiQuedaRetenida(r, clienteId)
   return NextResponse.json(r.json, { status: r.status })
+}
+
+const esc = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/**
+ * Registrada una emisión que la compañía deja en «riesgo condicionado» → Telegram inmediato: hay que
+ * entrar en su intranet. Best-effort: un fallo aquí no cambia la respuesta (el cron de retenidas
+ * lo recordará cada mañana).
+ */
+async function avisarSiQuedaRetenida(r: { status: number; json: unknown }, clienteId: string): Promise<void> {
+  try {
+    const j = r.json as Record<string, unknown> | null
+    if (r.status >= 300 || !j || typeof j !== 'object' || j.despues !== 'riesgo_condicionado') return
+    const compania = typeof j.compania === 'string' ? j.compania : null
+    const detalle = typeof j.descripcion === 'string' && j.descripcion.trim() ? ` (${j.descripcion.trim()})` : ''
+    const partes = [
+      '🛡️ <b>Emisión retenida por la compañía</b>',
+      `<a href="${esc(urlOportunidadesCliente(clienteId))}">Ver cliente</a> — ${esc(compania ?? 'la compañía')}${esc(detalle)}: riesgo condicionado, no está en vigor.`,
+      '⛔ Bloqueada: tienes que intervenir tú en la intranet de la compañía.',
+    ]
+    if (esAllianz(compania)) partes.push(`<i>${esc(RECORDATORIO_ALLIANZ_CORTO)}</i>`)
+    await tgAviso('correduria.emision-retenida', partes.join('\n'))
+  } catch {
+    // best-effort
+  }
 }

@@ -10,7 +10,7 @@
 //   `null`      → aún no se han leído sus coberturas: «Leyendo coberturas…», nunca «no incluye».
 //   objeto      → el dato.
 
-import { bloqueoCompania, capitalServicio, reparosPorFila, type DescuentoComercial, type GarantiasClasificadas, type OpcionFiltrable } from '@central/module-seguros'
+import { bloqueoCompania, capitalServicio, emisionEscalonadaRecomendada, reparosPorFila, type DescuentoComercial, type GarantiasClasificadas, type OpcionFiltrable } from '@central/module-seguros'
 import type { Precio } from './retarificar-asegura.ts'
 import type { OcultarPresupuesto } from './presupuesto-asegura.ts'
 
@@ -23,6 +23,8 @@ export type OpcionParrilla = OpcionFiltrable & {
   capitalServicioEur: number | null
   /** Motivo con el que la compañía dejará la póliza BLOQUEADA al emitir (`''` sin motivo); `null` = no avisa. */
   bloqueo?: string | null
+  /** Todo riesgo o con robo: aviso preventivo de emitir primero la básica (`emisionEscalonadaRecomendada`). */
+  escalonada?: boolean
   /** Descuentos comerciales con los que se tarificó. `null` = no se sabe (no «sin descuento»). */
   descuentos: DescuentoComercial[] | null
   /** Lo que la compañía dice que lleva ESTA opción («TERCEROS AMPLIADO + Robo + …»). `null` = no lo dice. */
@@ -75,6 +77,7 @@ export function opcionesDeParrilla(precios: readonly Precio[]): { opciones: Opci
       firmeza: p.firmeza ?? 'estimado',
       capitalServicioEur: capitalServicio(p.avisos ?? null),
       bloqueo: bloqueoCompania(p.avisos ?? null),
+      escalonada: emisionEscalonadaRecomendada({ categoria: p.categoria, modalidad: p.modalidad }),
       descuentos: p.descuentos ?? null,
       modalidad: typeof p.modalidad === 'string' && p.modalidad.trim() !== '' ? p.modalidad.trim() : null,
       avisos: Array.isArray(p.avisos) ? p.avisos.filter((a): a is string => typeof a === 'string') : [],
