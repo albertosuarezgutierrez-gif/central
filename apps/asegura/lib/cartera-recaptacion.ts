@@ -32,7 +32,13 @@ import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { decidirDestinatarioRecaptacion, enviarEmailResend } from './recaptacion-email'
 import { estadoEmailDeFicha } from './email-ficha'
 import { urlBaja, urlPublicaAsegura } from './recaptacion-baja'
-import { candidatosLoteEmail, LIMITE_LOTE_POR_DEFECTO } from './recaptacion-lote'
+import {
+  candidatosLoteEmail,
+  contarEnEsperaVentanaSoloCorreo,
+  contarPendientesPrimerEnvio,
+  contarPrimerosEnviados,
+  LIMITE_LOTE_POR_DEFECTO,
+} from './recaptacion-lote'
 import { dentroVentanaAntiguo } from './recaptacion-ventana'
 import { esLeadSilencioso, SEGUIMIENTO_EMAIL_DESDE, UMBRAL_SILENCIO } from './recaptacion-silencio'
 import { descartarCliente } from './cartera-edicion'
@@ -128,8 +134,16 @@ export type ContadoresRecaptacion = {
    * perdidos ni descartados: `totalCandidatos` los excluye a propósito
    * (mandarles ahora no tendría motivo real detrás) y este número es lo que
    * evita que esa exclusión se lea como "solo hay esto en toda la cartera".
+   * Cuenta PÓLIZAS de todos los canales.
    */
   enEsperaVentana: number
+  /**
+   * PERSONAS (por cliente) solo-correo (`email` sí, `telefono` no) con la
+   * ventana aún cerrada y ninguna otra póliza ya dentro de ella
+   * (`contarEnEsperaVentanaSoloCorreo`): lo que el lote de correo tiene por
+   * delante cuando su cola se vacía. `null` = no se ha podido leer la cola.
+   */
+  enEsperaVentanaSoloCorreo: number | null
 }
 
 export type ColaRecaptacion = { leads: LeadRecaptacion[]; contadores: ContadoresRecaptacion }
@@ -159,6 +173,7 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
     contadores: {
       totalCandidatos: 0, contactadosSemana: 0, conAperturaORespuestaSemana: 0,
       emailEnviadosTotal: null, emailAbiertosTotal: null, enEsperaVentana: 0,
+      enEsperaVentanaSoloCorreo: null,
     },
   }
   if (!aseguraConfigurada()) return vacia
@@ -261,17 +276,24 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
   // por este filtro: nunca tuvo fecha a la que anclar una ventana.
   // 🚨 Si el mes/día no se pudo leer, se trata como CONTACTABLE (el lado que
   // no esconde trabajo) en vez de exigir un dato que puede faltar.
-  const leadsEnVentana = leads.filter((l) => {
-    if (l.origen !== 'vencimiento_antiguo') return true
-    if (l.mesVencimientoAntiguo === null || l.diaVencimientoAntiguo === null) return true
-    return dentroVentanaAntiguo(l.mesVencimientoAntiguo, l.diaVencimientoAntiguo, hoy)
-  })
-  const enEsperaVentana = leads.length - leadsEnVentana.length
+  const leadsEnVentana: LeadRecaptacion[] = []
+  const leadsEnEspera: LeadRecaptacion[] = []
+  for (const l of leads) {
+    const enVentana =
+      l.origen !== 'vencimiento_antiguo' ||
+      l.mesVencimientoAntiguo === null ||
+      l.diaVencimientoAntiguo === null ||
+      dentroVentanaAntiguo(l.mesVencimientoAntiguo, l.diaVencimientoAntiguo, hoy)
+    if (enVentana) leadsEnVentana.push(l)
+    else leadsEnEspera.push(l)
+  }
+  const enEsperaVentana = leadsEnEspera.length
+  const enEsperaVentanaSoloCorreo = contarEnEsperaVentanaSoloCorreo(leadsEnEspera, leadsEnVentana)
 
   const [semana, historicoEmail] = await Promise.all([contadoresSemana(correduriaId), contadoresEmailHistorico(correduriaId)])
   return {
     leads: leadsEnVentana,
-    contadores: { ...semana, ...historicoEmail, totalCandidatos: leadsEnVentana.length, enEsperaVentana },
+    contadores: { ...semana, ...historicoEmail, totalCandidatos: leadsEnVentana.length, enEsperaVentana, enEsperaVentanaSoloCorreo },
   }
 }
 
@@ -548,6 +570,31 @@ export type ResumenLoteEmail = {
   detalleFallos: string[]
   /** Leads descartados ESTA pasada por `descartarLeadsSilenciosos` (ver abajo). */
   descartadosPorSilencio: number
+  /**
+   * Personas solo-correo de la cola (mismo criterio que `candidatosLoteEmail`)
+   * que siguen SIN primer envío tras esta pasada (`contarPendientesPrimerEnvio`:
+   * descuenta a quien se ha INTENTADO en esta pasada, enviado o fallido).
+   * 0 = «ya se ha escrito a todos»; `null` = no se ha podido calcular. Nunca un
+   * 0 por defecto.
+   */
+  pendientesPrimerEnvio: number | null
+  /**
+   * De los `enviados` de ESTA pasada, cuántas personas recibían su PRIMER correo
+   * (`ultimoContactoEn === null` antes de enviar; `contarPrimerosEnviados`). El
+   * resto son recordatorios. `null` = no se leyó la cola.
+   */
+  primerosEnviados: number | null
+  /**
+   * Acumulados de email de recaptación tal cual los trae `cola.contadores`: se
+   * leen ANTES de enviar, así que NO suman los `enviados` de esta pasada.
+   * `null` = no se pudo leer (nunca 0).
+   */
+  emailEnviadosTotal: number | null
+  emailAbiertosTotal: number | null
+  /** `cola.contadores.enEsperaVentana`: PÓLIZAS (todos los canales) con fecha pero ventana aún cerrada. `null` = no leído. */
+  enEsperaVentana: number | null
+  /** `cola.contadores.enEsperaVentanaSoloCorreo`: PERSONAS solo-correo con la ventana aún cerrada. `null` = no leído. */
+  enEsperaVentanaSoloCorreo: number | null
 }
 
 const ACTOR_CRON_SILENCIO = 'cron (recaptación: sin apertura tras varios intentos)'
@@ -603,7 +650,12 @@ export async function enviarLoteEmail(
   correduriaId: string,
   opts: { limite?: number; actor: string },
 ): Promise<ResumenLoteEmail> {
-  const vacio: ResumenLoteEmail = { candidatos: 0, enviados: 0, fallidos: 0, detalleFallos: [], descartadosPorSilencio: 0 }
+  const vacio: ResumenLoteEmail = {
+    candidatos: 0, enviados: 0, fallidos: 0, detalleFallos: [], descartadosPorSilencio: 0,
+    // Sin cola leída no se sabe nada de ella: `null`, no 0 («ya está todo escrito»).
+    pendientesPrimerEnvio: null, primerosEnviados: null,
+    emailEnviadosTotal: null, emailAbiertosTotal: null, enEsperaVentana: null, enEsperaVentanaSoloCorreo: null,
+  }
   if (!aseguraConfigurada()) return vacio
 
   // Antes de elegir a quién escribir: sacar de la cola a quien lleva
@@ -612,14 +664,31 @@ export async function enviarLoteEmail(
   const descartadosPorSilencio = await descartarLeadsSilenciosos(correduriaId)
 
   const cola = await colaRecaptacion(correduriaId)
+  const deLaCola = {
+    emailEnviadosTotal: cola.contadores.emailEnviadosTotal,
+    emailAbiertosTotal: cola.contadores.emailAbiertosTotal,
+    enEsperaVentana: cola.contadores.enEsperaVentana,
+    enEsperaVentanaSoloCorreo: cola.contadores.enEsperaVentanaSoloCorreo,
+  }
   const candidatos = candidatosLoteEmail(cola.leads, opts.limite ?? LIMITE_LOTE_POR_DEFECTO)
-  if (candidatos.length === 0) return { ...vacio, candidatos: 0, descartadosPorSilencio }
+  if (candidatos.length === 0) {
+    return {
+      ...vacio, candidatos: 0, descartadosPorSilencio, ...deLaCola,
+      pendientesPrimerEnvio: contarPendientesPrimerEnvio(cola.leads),
+      // Cola leída y nada enviado: 0 primeros es un hecho, no un «no se sabe».
+      primerosEnviados: 0,
+    }
+  }
 
   const db = prismaAsegura()
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
   const baseUrl = urlPublicaAsegura()
 
   let enviados = 0
+  // La cola se leyó antes de enviar y aún trae sin contactar a todos estos.
+  // Intentados = enviados + fallidos (clientes); enviados = envío + registro.
+  const intentadosAhora: string[] = []
+  const enviadosAhora: LeadRecaptacion[] = []
   const detalleFallos: string[] = []
   for (const lead of candidatos) {
     if (!lead.email) continue
@@ -630,6 +699,7 @@ export async function enviarLoteEmail(
       { bajaUrl },
     )
     const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;white-space:pre-line">${escaparHtmlLote(texto)}</div>`
+    intentadosAhora.push(lead.clienteId)
     try {
       const resultado = await enviarEmailResend({ from, to: lead.email, asunto, texto, html })
       if (!resultado.ok) {
@@ -640,6 +710,7 @@ export async function enviarLoteEmail(
         insert into recaptacion_envios (id, correduria_id, cliente_id, poliza_id, canal, estado, mensaje, resend_message_id, creado_por)
         values (${envioId}::uuid, ${correduriaId}::uuid, ${lead.clienteId}::uuid, ${lead.polizaId}::uuid, 'email', 'enviado', ${texto}, ${resultado.resendMessageId}, ${opts.actor})
       `)
+      enviadosAhora.push(lead)
       await anotar(correduriaId, lead.clienteId, `Recaptación: email de lote enviado por ${opts.actor}`)
       enviados++
     } catch (e) {
@@ -647,7 +718,12 @@ export async function enviarLoteEmail(
     }
   }
 
-  return { candidatos: candidatos.length, enviados, fallidos: candidatos.length - enviados, detalleFallos, descartadosPorSilencio }
+  return {
+    candidatos: candidatos.length, enviados, fallidos: candidatos.length - enviados, detalleFallos, descartadosPorSilencio,
+    ...deLaCola,
+    pendientesPrimerEnvio: contarPendientesPrimerEnvio(cola.leads, intentadosAhora),
+    primerosEnviados: contarPrimerosEnviados(enviadosAhora),
+  }
 }
 
 function escaparHtmlLote(s: string): string {

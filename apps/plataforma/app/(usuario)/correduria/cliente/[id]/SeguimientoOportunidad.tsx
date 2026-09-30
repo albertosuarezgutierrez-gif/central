@@ -63,6 +63,10 @@ async function enviar(url: string, metodo: 'POST' | 'PATCH', body: Record<string
 const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   creada_mano: 'Abierta a mano desde la ficha',
   creada_portal: 'Pedida por el cliente desde su portal',
+  // SQL 2026-09-30_recaptacion_a_oportunidades: las pólizas antiguas de Recaptación pasadas a oportunidad.
+  creada_recaptacion: 'Creada desde Recaptación (póliza antigua)',
+  // Mismo SQL, rellenando `fecha_fin_vigencia` de una oportunidad ya abierta sin fecha.
+  fecha_desde_recaptacion: 'Fecha estimada desde Recaptación (póliza antigua)',
   editada: 'Corregida (ramo, vencimiento, compañía o prima)',
   tarea_creada: 'Tarea creada',
   tarea_cerrada: 'Tarea cerrada',
