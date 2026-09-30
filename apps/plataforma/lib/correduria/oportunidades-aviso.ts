@@ -7,7 +7,7 @@
 // qué mandar y la idempotencia: una vez por oportunidad y ciclo (clave `id|vence`, hito
 // `oportunidad_45` en `correduria_avisos_renovacion`). Todo PURO: sin BD, sin red.
 // ────────────────────────────────────────────────────────────────────────────
-import { claveAvisoOportunidad, DIAS_AVISO_OPORTUNIDAD } from '@central/module-seguros'
+import { claveAvisoOportunidad, DIAS_AVISO_OPORTUNIDAD, DIAS_PREAVISO_TOMADOR } from '@central/module-seguros'
 import { rotuloRamo } from '../seguimiento-asegura.ts'
 
 /** Hito con el que se marca en `correduria_avisos_renovacion` (la PK es id + vencimiento + hito). */
@@ -71,6 +71,20 @@ function fechaEs(iso: string): string {
 }
 
 /**
+ * Qué nombres van arriba. Primero las que aún llegan al preaviso de un mes del tomador (LCS art. 22), las
+ * que antes lo pierden delante; detrás, las que ya no llegan este año. No se quita ninguna: con cientos
+ * del volcado antiguo entrando a la vez, lo que cambia es que los nombres a la vista sean los que todavía
+ * pueden cambiarse de compañía.
+ */
+export function ordenAviso(ops: readonly OportunidadEnAviso[]): { aTiempo: OportunidadEnAviso[]; tarde: OportunidadEnAviso[] } {
+  const porDias = [...ops].sort((a, b) => a.dias - b.dias)
+  return {
+    aTiempo: porDias.filter((o) => o.dias >= DIAS_PREAVISO_TOMADOR),
+    tarde: porDias.filter((o) => o.dias < DIAS_PREAVISO_TOMADOR),
+  }
+}
+
+/**
  * El bloque del mensaje diario. `null` = nada nuevo que avisar. Si asegura no se pudo leer, se DICE
  * (una lista vacía no autoriza a callar un fallo).
  */
@@ -81,13 +95,20 @@ export function bloqueOportunidades(l: LecturaOportunidadesAviso, nuevas: readon
       'Esto NO significa que no haya ninguna: hoy no se ha podido mirar.'
   }
   if (nuevas.length === 0 && !l.truncado) return null
+  const { aTiempo, tarde } = ordenAviso(nuevas)
   const partes = [`🎯 *Oportunidades a ${DIAS_AVISO_OPORTUNIDAD} días de su vencimiento* — toca llamar:`]
-  for (const o of nuevas.slice(0, 25)) {
+  if (tarde.length) {
+    partes.push(`${aTiempo.length} aún a tiempo de dar la baja a su compañía (preaviso de un mes); ` +
+      `${tarde.length} con el plazo de baja ya pasado: la llamada es para el próximo vencimiento.`)
+  }
+  const orden = [...aTiempo, ...tarde]
+  for (const o of orden.slice(0, 25)) {
     const compania = o.aseguradora ? plano(o.aseguradora) : 'compañía no consta'
     const propio = o.fueCliente ? ' · cliente propio: llamar, sin mandar precio antes' : ''
-    partes.push(`• ${plano(o.cliente)} — ${rotuloRamo(o.ramo)} en ${compania}, vence el ${fechaEs(o.vence)} (${o.dias} d)${propio}`)
+    const plazo = o.dias < DIAS_PREAVISO_TOMADOR ? ' · plazo de baja pasado' : ''
+    partes.push(`• ${plano(o.cliente)} — ${rotuloRamo(o.ramo)} en ${compania}, vence el ${fechaEs(o.vence)} (${o.dias} d)${plazo}${propio}`)
   }
-  if (nuevas.length > 25) partes.push(`…y ${nuevas.length - 25} más en /correduria.`)
+  if (orden.length > 25) partes.push(`…y ${orden.length - 25} más en /correduria/vencimientos.`)
   if (l.truncado) partes.push('⚠️ La lectura llegó al tope de filas: puede haber más que no salen aquí.')
   return partes.join('\n')
 }

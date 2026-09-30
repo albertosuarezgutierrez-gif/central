@@ -52,6 +52,17 @@ test('un vencimiento que ya pasó se proyecta a la siguiente renovación anual y
   assert.match(textoAlta('X', r.alta), /siguiente renovación, el 18\/11\/2026/)
 })
 
+test('un vencimiento a más de 13 meses (año mal escaneado o dictado) se avisa, sin corregirlo', () => {
+  const r = prepararAlta({}, [leida({ vence: '2028-02-03' })], HOY)
+  assert.ok(r.ok)
+  assert.equal(r.alta.fechaFinVigencia, '2028-02-03', 'no se adivina el año bueno')
+  assert.match(textoAlta('X', r.alta), /⚠️ El vencimiento \(03\/02\/2028\) está a más de 13 meses/)
+  const bien = prepararAlta({}, [leida()], HOY)
+  assert.ok(bien.ok)
+  assert.equal(bien.alta.avisoVence, null)
+  assert.doesNotMatch(textoAlta('X', bien.alta), /más de 13 meses/)
+})
+
 test('siguienteRenovacion: aniversario siguiente, 29/02 cae en 28/02, y más de dos años sin papel no se adivina', async () => {
   const { siguienteRenovacion } = await import('./correduria-oportunidad-tg.ts')
   assert.equal(siguienteRenovacion('2026-02-03', HOY), '2027-02-03')

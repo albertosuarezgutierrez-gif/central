@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Phone, Lock, RefreshCw } from 'lucide-react'
-import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
+import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, fechaVencimientoDudosa, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type PolizaFiguraFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
@@ -565,4 +565,10 @@ export function Tarjeta({ titulo, children }: { titulo: string; children: React.
 export function fmt(iso: string): string {
   const [y, m, d] = iso.split('-')
   return d && m && y ? `${d}/${m}/${y}` : iso
+}
+
+/** Bajo un campo de vencimiento: avisa si la fecha ya pasó o está a más de un año (escaneo o tecleo con el año mal). No bloquea. */
+export function AvisoFechaDudosa({ fecha, hoy }: { fecha: string; hoy: string }) {
+  const d = fechaVencimientoDudosa(fecha, hoy)
+  return d ? <span role="status" style={{ fontSize: 12, color: 'var(--warning)' }}>⚠️ {d.texto}</span> : null
 }

@@ -25,6 +25,7 @@ import {
   estadoPresupuesto,
   mismoSeguro,
   planLlamada,
+  planTareaTrasVencimiento,
   seguroAnteriorDe,
   validarAltaOportunidad,
   validarEdicionOportunidad,
@@ -680,7 +681,10 @@ export async function editarOportunidad(
   id: string,
   datos: Parameters<typeof validarEdicionOportunidad>[0],
   actor: string,
-): Promise<{ ok: true; oportunidad: OportunidadSeguimiento } | Fallo> {
+  // `reprogramar`: al cambiar el vencimiento, la próxima tarea de seguimiento va a 45 días antes
+  // (`planTareaTrasVencimiento`). Opcional: la corrección de otros campos no toca las tareas.
+  opciones: { reprogramar?: boolean; hoy?: Date } = {},
+): Promise<{ ok: true; oportunidad: OportunidadSeguimiento; tarea: { accion: 'crear' | 'mover'; fecha: string } | null } | Fallo> {
   if (!UUID.test(id)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
   const v = validarEdicionOportunidad(datos)
   if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
@@ -718,7 +722,7 @@ export async function editarOportunidad(
     if (c.fechaFinVigencia !== undefined && c.fechaFinVigencia !== finAntes) detalle.fechaFinVigencia = { antes: finAntes, despues: c.fechaFinVigencia }
     if (c.prima !== undefined && c.prima !== fila.prima) detalle.prima = { antes: fila.prima, despues: c.prima }
     if (c.aseguradora !== undefined && c.aseguradora !== fila.aseguradora) detalle.aseguradora = { cambiado: true, vacio: c.aseguradora === null }
-    if (Object.keys(detalle).length === 0) return { ok: true as const, sinCambios: true as const, clienteId: fila.clienteId }
+    if (Object.keys(detalle).length === 0) return { ok: true as const, sinCambios: true as const, clienteId: fila.clienteId, tarea: null }
     await tx.$executeRaw(Prisma.sql`
       update oportunidades set
         tipo = case when ${c.ramo !== undefined} then cast(${c.ramo ?? null} as tipo_seguro) else tipo end,
@@ -730,17 +734,48 @@ export async function editarOportunidad(
           else jsonb_set(coalesce(poliza_competencia, '{}'::jsonb), '{aseguradora}', to_jsonb(${c.aseguradora ?? ''}::text)) end,
         updated_at = now()
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+    let tarea: { accion: 'crear' | 'mover'; fecha: string } | null = null
+    if (opciones.reprogramar && detalle.fechaFinVigencia) {
+      // La próxima de seguimiento (la misma que enseña la tarjeta). Se MUEVE, no se cierra: una
+      // llamada cerrada cuenta como intento en `planLlamada`.
+      const [prox] = await tx.$queryRaw<{ id: string; fecha: string }[]>(Prisma.sql`
+        select id::text as id, to_char(fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD') as fecha
+        from gestiones
+        where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
+          and origen_trigger = 'central:seguimiento' and estado::text <> 'cerrada' and fecha_limite is not null
+        order by fecha_limite limit 1 for update`)
+      const plan = planTareaTrasVencimiento(c.fechaFinVigencia, prox ?? null, dia(opciones.hoy ?? hoyUtc())!)
+      if (plan.accion === 'mover') {
+        await tx.$executeRaw(Prisma.sql`
+          update gestiones set fecha_limite = (${plan.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid', updated_at = now()
+          where id = ${plan.tareaId}::uuid and correduria_id = ${correduriaId}::uuid`)
+        detalle.tarea = { tareaId: plan.tareaId, antes: plan.desde, despues: plan.fecha }
+        tarea = { accion: 'mover', fecha: plan.fecha }
+      } else if (plan.accion === 'crear') {
+        const [nueva] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+          insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
+          values (${correduriaId}::uuid, cast('llamada' as gestion_tipo), cast('media' as gestion_prioridad), 'pendiente',
+                  ${`Llamar antes del vencimiento (${c.fechaFinVigencia})`}, (${plan.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid',
+                  ${fila.clienteId}::uuid, ${id}::uuid, 'central:seguimiento')
+          returning id::text as id`)
+        detalle.tarea = { tareaId: nueva.id, creada: plan.fecha }
+        tarea = { accion: 'crear', fecha: plan.fecha }
+      }
+    }
     await tx.$executeRaw(Prisma.sql`
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
       values (${correduriaId}::uuid, ${id}::uuid, 'editada', cast(${fila.estado} as estado_comercial), cast(${fila.estado} as estado_comercial),
               ${JSON.stringify(detalle)}::jsonb, ${actor})`)
-    return { ok: true as const, sinCambios: false as const, clienteId: fila.clienteId, campos: Object.keys(detalle) }
+    return { ok: true as const, sinCambios: false as const, clienteId: fila.clienteId, campos: Object.keys(detalle).filter(k => k !== 'tarea'), tarea }
   })
   if (!r.ok) return r
-  if (!r.sinCambios) await anotarEnFicha(correduriaId, r.clienteId, `Oportunidad corregida (${r.campos.join(', ')}) — por ${actor}`)
+  if (!r.sinCambios) {
+    const extra = r.tarea ? `; llamada ${r.tarea.accion === 'mover' ? 'movida' : 'programada'} al ${r.tarea.fecha}` : ''
+    await anotarEnFicha(correduriaId, r.clienteId, `Oportunidad corregida (${r.campos.join(', ')})${extra} — por ${actor}`)
+  }
   const leida = await leerOportunidad(correduriaId, id)
   if (!leida) return { ok: false, estado: 'no_encontrado', motivo: 'Esa oportunidad no es de esta correduría.', status: 404 }
-  return { ok: true, oportunidad: leida.oportunidad }
+  return { ok: true, oportunidad: leida.oportunidad, tarea: r.tarea }
 }
 
 export type OportunidadDeCliente = OportunidadSeguimiento & {

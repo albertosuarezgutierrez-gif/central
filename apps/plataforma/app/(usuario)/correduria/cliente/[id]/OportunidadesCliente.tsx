@@ -22,7 +22,7 @@ import {
 } from '@/lib/seguimiento-asegura'
 import { rutaSinOportunidad, textoPresupuestos, textoSinOportunidad, type PresupuestoSinOportunidad } from '@/lib/correduria/presupuestos-oportunidad'
 import type { SeguroAnterior } from '@central/module-seguros'
-import { fmt } from './piezas'
+import { AvisoFechaDudosa, fmt } from './piezas'
 import SeguimientoOportunidad from './SeguimientoOportunidad'
 
 /**
@@ -503,6 +503,7 @@ export function FormAlta({ clienteId, inicial, onCancelar, onHecho }: {
         <label style={etiqueta}>
           Le vence (si se sabe)
           <input type="date" value={vence} onChange={e => setVence(e.target.value)} style={campo} />
+          <AvisoFechaDudosa fecha={vence} hoy={hoyMadrid()} />
         </label>
         <label style={etiqueta}>
           Compañía actual
@@ -584,6 +585,7 @@ function FormEdicion({ o, onCancelar, onHecho }: {
         <label style={etiqueta}>
           Le vence
           <input type="date" value={vence} onChange={e => setVence(e.target.value)} style={campo} />
+          <AvisoFechaDudosa fecha={vence} hoy={hoyMadrid()} />
         </label>
         <label style={etiqueta}>
           Compañía actual

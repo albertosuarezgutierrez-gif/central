@@ -261,10 +261,10 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
   const vencimiento = !eliminable ? null
     : s.clase === 'poliza'
       ? abierta
-        ? <EditarVencimiento oportunidadId={abierta} vence={vencimientoPoliza(s, ctx.hoy).fecha} />
-        : <EditarVencimiento polizaId={s.id} vence={vencimientoPoliza(s, ctx.hoy).fecha} />
+        ? <EditarVencimiento oportunidadId={abierta} vence={vencimientoPoliza(s, ctx.hoy).fecha} proximaLlamada={s.oportunidad?.proximaTarea?.fechaLimite.slice(0, 10) ?? null} />
+        : <EditarVencimiento polizaId={s.id} vence={vencimientoPoliza(s, ctx.hoy).fecha} proximaLlamada={null} />
       : s.clase === 'oportunidad' && abierta
-        ? <EditarVencimiento oportunidadId={abierta} vence={vencimientoOportunidad(s.oportunidad.fechaFinVigencia?.slice(0, 10) ?? null, ctx.hoy)} />
+        ? <EditarVencimiento oportunidadId={abierta} vence={vencimientoOportunidad(s.oportunidad.fechaFinVigencia?.slice(0, 10) ?? null, ctx.hoy)} proximaLlamada={s.oportunidad.proximaTarea?.fechaLimite.slice(0, 10) ?? null} />
         : null
   if (!quitar && !vencimiento) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
   return (
