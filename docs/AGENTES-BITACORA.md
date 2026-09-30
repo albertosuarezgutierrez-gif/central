@@ -49,6 +49,7 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-09-30 · psd2-health-check** · hizo: frescura PSD2 OK (último mov 29/09, mov_30d 46 vs 41 previos, psd2_sin_fecha 0); latido enviado; dudas: —; fallos: —; PRs/commits: —
 - **2026-09-28 · facturas-correo** · hizo: pasada disparada por trigger. Salud Vía B OK
   (`dias_caido=0`, última copia hoy 28/09 en `_buzon_pdf`); `agente_salud` actualizado
   (`ok=true`). Vía A (`gmail-adjuntos`) sigue `CONNECTION_CLOSED`, no bloquea. Backlog persistente
