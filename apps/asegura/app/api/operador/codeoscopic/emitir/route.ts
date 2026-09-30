@@ -29,6 +29,7 @@ import {
 import { cuentaDeFicha, origenCuentaAceptada, presupuestoAceptadoDe, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
 import { cuentaDistintaDeLaFirmada, discrepanciaConElegida, polizaParaCuenta } from '@/lib/presupuesto-cuenta'
 import { marcarEmitido } from '@/lib/envio-presupuesto'
+import { cerrarPresupuestosPorEmision } from '@/lib/presupuesto-referencia'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { documentoTomador, fraccionamientoDeOferta, matriculaProyecto } from '@/lib/codeoscopic/importar'
 import {
@@ -262,11 +263,19 @@ export const POST = auditado(async (req: Request) => {
       )
     }
   }
-  /** Cierra el presupuesto aceptado al acuñar la póliza. Best-effort: la póliza ya existe. */
-  const cerrarPresupuesto = async () => {
-    if (!aceptado) return
-    await marcarEmitido(correduria.id, { id: aceptado.id, actor }).catch((e: unknown) =>
-      console.error('[emitir] póliza acuñada pero el presupuesto no se marcó emitido:', e instanceof Error ? e.message : e),
+  /**
+   * Cierra el presupuesto aceptado al acuñar la póliza y, desde el 30/09/2026, ata la póliza
+   * (`poliza_emitida_id`) a los presupuestos de ESTA tarificación que enseñaban esa compañía —también
+   * los emitidos desde su referencia sin firma en el portal. Best-effort: la póliza ya existe.
+   */
+  const cerrarPresupuesto = async (polizaId: string) => {
+    if (aceptado) {
+      await marcarEmitido(correduria.id, { id: aceptado.id, actor }).catch((e: unknown) =>
+        console.error('[emitir] póliza acuñada pero el presupuesto no se marcó emitido:', e instanceof Error ? e.message : e),
+      )
+    }
+    await cerrarPresupuestosPorEmision(correduria.id, { tarificacionId: p.tarificacion_id, polizaId, compania: p.aseguradora, actor }).catch((e: unknown) =>
+      console.error('[emitir] póliza acuñada pero no se ató a su presupuesto:', e instanceof Error ? e.message : e),
     )
   }
   /** Tras acuñar: las figuras de la variante pasan a la póliza (29/09/2026). Best-effort: la póliza ya existe. */
@@ -522,7 +531,7 @@ export const POST = auditado(async (req: Request) => {
     // Best-effort: el PDF de la póliza puede venir ya en `issuedDocuments[]` del
     // proyecto que se acaba de leer (`crudoPrevio`) — sin gastar un GET extra.
     if (acunadoAc.ok) {
-      await cerrarPresupuesto()
+      await cerrarPresupuesto(acunadoAc.polizaId)
       await figurasAPoliza(acunadoAc.polizaId)
     }
     const archivadoAc = acunadoAc.ok
@@ -1081,7 +1090,7 @@ export const POST = auditado(async (req: Request) => {
   // respuesta (`envio.crudo`) — se descarga y archiva sin gastar otro GET.
   // Un fallo aquí nunca deshace el acuñado que ya se hizo arriba.
   if (acunado.ok) {
-    await cerrarPresupuesto()
+    await cerrarPresupuesto(acunado.polizaId)
     await figurasAPoliza(acunado.polizaId)
   }
   const archivado = acunado.ok

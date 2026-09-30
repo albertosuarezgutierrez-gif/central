@@ -37,6 +37,7 @@ import { refrescarProyecto } from './codeoscopic/emitir'
 import { leerCoberturasDeOpciones, sobreReutilizable, type SobreCoberturas } from './codeoscopic/coberturas-presupuesto'
 import { completarCoberturasTarificacion } from './codeoscopic/coberturas-tarificacion'
 import { OCULTAR_VACIO, estaOculta, ordenResto, type Ocultar } from './presupuesto-ocultar'
+import { conjuntoEnDocumento, elegirReutilizable } from '@central/module-seguros/referencia-presupuesto'
 
 /**
  * Por qué no se ha podido situar la cobertura que el cliente tiene HOY.
@@ -80,6 +81,10 @@ export type OpcionPreparada = {
 
 export type PresupuestoPreparado = {
   id: string
+  /** Referencia propia `AS-AA-NNNN` (la pone la BD). `null` = la BD aún no la tiene (migración sin aplicar). */
+  referencia: string | null
+  /** `true` = ya había uno vigente con EXACTAMENTE las mismas opciones en documento: es ése, no otro. */
+  reutilizado: boolean
   estado: EstadoPresupuesto
   clienteId: string
   polizaId: string | null
@@ -105,7 +110,9 @@ export type PresupuestoPreparado = {
 }
 
 export type ResultadoPreparar =
-  | { estado: 'ok'; presupuesto: PresupuestoPreparado; token: string }
+  /** `token` = `null` al REUTILIZAR: el del enlace ya existente no se guarda en claro y rotarlo
+   *  rompería un enlace que el cliente quizá ya tiene. El aviso genera uno nuevo cuando toca. */
+  | { estado: 'ok'; presupuesto: PresupuestoPreparado; token: string | null }
   | {
       estado: 'error'
       motivo:
@@ -317,6 +324,42 @@ export async function prepararPresupuesto(
     }
   }
 
+  // 🔁 ¿Ya hay uno vigente con EXACTAMENTE lo mismo en documento? Entonces es ése (misma
+  // referencia): preparar dos veces lo mismo no crea dos presupuestos (caso Antonio Cruz, 29 y
+  // 30/09/2026). Se mira aquí, antes de leer coberturas, y otra vez bajo cerrojo al insertar.
+  const enDocumento = conjuntoEnDocumento(aCongelar.map((o) => ({ precioId: o.precioId, oculta: o.oculta })))
+  const nOcultasPrevio = aCongelar.filter((o) => o.oculta).length
+  const respuestaReutilizada = (previo: { id: string; referencia: string | null; venceEl: Date; creadoAt: Date; sellos: Parameters<typeof estadoPresupuesto>[0] }): ResultadoPreparar => ({
+    estado: 'ok',
+    token: null,
+    presupuesto: {
+      id: previo.id,
+      referencia: previo.referencia,
+      reutilizado: true,
+      estado: estadoPresupuesto(previo.sellos, new Date()),
+      clienteId: cab.clienteId,
+      polizaId: cab.polizaId,
+      ramo: cab.ramo,
+      tarificacionId: cab.id,
+      venceEl: previo.venceEl,
+      fuenteVencimiento: 'guardado',
+      creadoAt: previo.creadoAt,
+      simulado: cab.simulado,
+      lecturaActual,
+      motivoSinEquivalente: portada.motivoSinEquivalente,
+      avisoEscala: portada.avisoEscala,
+      opciones: aCongelar.slice(0, nPortada),
+      preciosTotales: filas.length,
+      enLista: aCongelar.length - nPortada - nOcultasPrevio,
+      ocultas: nOcultasPrevio,
+    },
+  })
+  const previo = await buscarReutilizable(db, correduriaId, cab.id, enDocumento)
+  if (previo) {
+    await anotarReutilizado(db, previo.id, entrada.actor)
+    return respuestaReutilizada(previo)
+  }
+
   const creadoAt = new Date()
   const { venceEl, fuente } = calcularVencimiento({
     creadoAt,
@@ -339,58 +382,70 @@ export async function prepararPresupuesto(
     faltan.forEach((o, i) => { o.coberturas = sobres?.[i] ?? null })
   }
 
-  const nOcultas = aCongelar.filter((o) => o.oculta).length
+  const nOcultas = nOcultasPrevio
   const token = generarTokenVista()
   const tokenHash = await hashTokenVista(token)
 
-  const creado = await db.presupuesto.create({
-    data: {
-      correduriaId,
-      clienteId: cab.clienteId,
-      polizaId: cab.polizaId,
-      ramo: cab.ramo,
-      tarificacionId: cab.id,
-      tokenHash,
-      venceEl,
-      creadoAt,
-      creadoPor: entrada.actor,
-      opciones: {
-        create: aCongelar.map((o) => ({
-          orden: o.orden,
-          compania: o.compania,
-          producto: o.producto,
-          modalidad: o.modalidad,
-          categoria: o.categoria,
-          grupoCobertura: o.grupoCobertura,
-          primaEur: o.primaEur,
-          entradaEur: o.entradaEur,
-          franquiciaEur: o.franquiciaEur,
-          firmeza: o.firmeza,
-          requiereRerate: o.requiereRerate,
-          referenciaVendor: o.referenciaVendor,
-          avisos: o.avisos,
-          papeles: o.papeles,
-          precioId: o.precioId,
-          ...(o.garantias !== null ? { garantias: o.garantias as object } : {}),
-          ocultaAt: o.oculta ? creadoAt : null,
-          // Sin intento se deja el default (`[]` desnudo = «no se intentó»); con intento, el SOBRE.
-          ...(o.coberturas ? { coberturas: o.coberturas } : {}),
-        })),
+  // Bajo cerrojo por tarificación: dos «Preparar» a la vez con lo mismo no crean dos presupuestos.
+  const hecho = await db.$transaction(async (tx) => {
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`presupuesto:${correduriaId}:${cab.id}`}))`
+    const otro = await buscarReutilizable(tx, correduriaId, cab.id, enDocumento)
+    if (otro) return { tipo: 'otro' as const, otro }
+    const creado = await tx.presupuesto.create({
+      data: {
+        correduriaId,
+        clienteId: cab.clienteId,
+        polizaId: cab.polizaId,
+        ramo: cab.ramo,
+        tarificacionId: cab.id,
+        tokenHash,
+        venceEl,
+        creadoAt,
+        creadoPor: entrada.actor,
+        opciones: {
+          create: aCongelar.map((o) => ({
+            orden: o.orden,
+            compania: o.compania,
+            producto: o.producto,
+            modalidad: o.modalidad,
+            categoria: o.categoria,
+            grupoCobertura: o.grupoCobertura,
+            primaEur: o.primaEur,
+            entradaEur: o.entradaEur,
+            franquiciaEur: o.franquiciaEur,
+            firmeza: o.firmeza,
+            requiereRerate: o.requiereRerate,
+            referenciaVendor: o.referenciaVendor,
+            avisos: o.avisos,
+            papeles: o.papeles,
+            precioId: o.precioId,
+            ...(o.garantias !== null ? { garantias: o.garantias as object } : {}),
+            ocultaAt: o.oculta ? creadoAt : null,
+            // Sin intento se deja el default (`[]` desnudo = «no se intentó»); con intento, el SOBRE.
+            ...(o.coberturas ? { coberturas: o.coberturas } : {}),
+          })),
+        },
+        eventos: {
+          // Lo ocultado queda en el evento (trazabilidad IDD): qué se decidió no enseñar y cuánto.
+          create: [{
+            tipo: 'preparado',
+            origen: 'corredor',
+            detalle: {
+              actor: entrada.actor,
+              ...(nOcultas > 0 ? { ocultas: { n: nOcultas, companias: ocultar.companias, precios: ocultar.precios } } : {}),
+            },
+          }],
+        },
       },
-      eventos: {
-        // Lo ocultado queda en el evento (trazabilidad IDD): qué se decidió no enseñar y cuánto.
-        create: [{
-          tipo: 'preparado',
-          origen: 'corredor',
-          detalle: {
-            actor: entrada.actor,
-            ...(nOcultas > 0 ? { ocultas: { n: nOcultas, companias: ocultar.companias, precios: ocultar.precios } } : {}),
-          },
-        }],
-      },
-    },
-    select: { id: true },
+      select: { id: true, referencia: true },
+    })
+    return { tipo: 'creado' as const, creado }
   })
+  if (hecho.tipo === 'otro') {
+    await anotarReutilizado(db, hecho.otro.id, entrada.actor)
+    return respuestaReutilizada(hecho.otro)
+  }
+  const creado = hecho.creado
 
   // El cuestionario IDD sale ya contestado con lo que se deduce de lo presupuestado (29/09/2026).
   await autocompletarNecesidades(correduriaId, creado.id, entrada.actor)
@@ -402,6 +457,8 @@ export async function prepararPresupuesto(
     token,
     presupuesto: {
       id: creado.id,
+      referencia: creado.referencia,
+      reutilizado: false,
       estado: estadoPresupuesto({ venceEl }, creadoAt),
       clienteId: cab.clienteId,
       polizaId: cab.polizaId,
@@ -420,6 +477,39 @@ export async function prepararPresupuesto(
       ocultas: nOcultas,
     },
   }
+}
+
+type Db = ReturnType<typeof prismaAsegura>
+type Tx = Parameters<Parameters<Db['$transaction']>[0]>[0]
+
+/**
+ * El presupuesto ya preparado sobre ESTA tarificación que se reutiliza (ni retirado ni emitido,
+ * vigente y con el mismo conjunto de opciones en documento = `oculta_at IS NULL`). `null` = no hay.
+ * La decisión es PURA (`elegirReutilizable` de @central/module-seguros, con test).
+ */
+async function buscarReutilizable(db: Db | Tx, correduriaId: string, tarificacionId: string, enDocumento: string[] | null) {
+  if (enDocumento === null) return null
+  // oculta-exenta: se leen también las ocultas para saber EXACTAMENTE qué quedó fuera del documento.
+  const candidatos = await db.presupuesto.findMany({
+    where: { correduriaId, tarificacionId, retiradoAt: null, emitidoAt: null, venceEl: { gte: new Date() } },
+    orderBy: { creadoAt: 'desc' },
+    take: 20,
+    include: { opciones: { select: { precioId: true, ocultaAt: true } } },
+  })
+  const elegido = elegirReutilizable(
+    candidatos.map((c) => ({ ...c, opciones: c.opciones.map((o) => ({ precioId: o.precioId, oculta: o.ocultaAt !== null })) })),
+    enDocumento,
+    new Date(),
+  )
+  if (!elegido) return null
+  return { id: elegido.id, referencia: elegido.referencia, venceEl: elegido.venceEl, creadoAt: elegido.creadoAt, sellos: elegido }
+}
+
+/** Deja rastro de que se volvió a preparar lo mismo (append-only). */
+async function anotarReutilizado(db: Db, presupuestoId: string, actor: string): Promise<void> {
+  await db.presupuestoEvento
+    .create({ data: { presupuestoId, tipo: 'preparado_reutilizado', origen: 'corredor', detalle: { actor } } })
+    .catch((e: unknown) => registrarErrorCartera('presupuesto/reutilizado', e))
 }
 
 type Cabecera = {
@@ -581,6 +671,10 @@ function numero(v: string | number | null | { toString(): string }): number | nu
 
 export type PresupuestoEnLista = {
   id: string
+  /** Referencia propia `AS-AA-NNNN`. `null` = la BD aún no la tiene. */
+  referencia: string | null
+  /** Primer PDF descargado. NO es «enviado». `null` = no consta. */
+  documentoDescargadoAt: Date | null
   estado: EstadoPresupuesto
   clienteId: string
   polizaId: string | null
@@ -646,6 +740,8 @@ export async function listarPresupuestos(
     }
     return filas.map((p) => ({
       id: p.id,
+      referencia: p.referencia ?? null,
+      documentoDescargadoAt: p.documentoDescargadoAt ?? null,
       estado: estadoPresupuesto(p, hoy),
       clienteId: p.clienteId,
       polizaId: p.polizaId,

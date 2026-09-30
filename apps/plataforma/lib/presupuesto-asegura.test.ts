@@ -119,6 +119,20 @@ test('un «ok» SIN token es un error: un enlace que no existe no se puede ense�
   assert.equal(r.estado, 'error')
 })
 
+test('REUTILIZADO: sin token vale solo si asegura dice que es uno ya preparado, con su referencia', () => {
+  const { token: _fuera, ...sinToken } = OK
+  const r = interpretarPreparado(200, { ...sinToken, presupuesto: { ...OK.presupuesto, reutilizado: true, referencia: 'AS-26-0042' } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.token, null)
+  assert.equal(r.presupuesto.reutilizado, true)
+  assert.equal(r.presupuesto.referencia, 'AS-26-0042')
+  // Una asegura anterior no manda referencia: `null`, nunca un texto inventado.
+  const v = interpretarPreparado(200, OK)
+  assert.equal(v.estado === 'ok' && v.presupuesto.referencia, null)
+  assert.equal(v.estado === 'ok' && v.presupuesto.reutilizado, false)
+})
+
 test('la franquicia NO declarada sigue siendo null, jamás 0', () => {
   const r = interpretarPreparado(200, OK)
   assert.equal(r.estado, 'ok')

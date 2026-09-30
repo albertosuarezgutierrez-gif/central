@@ -6,6 +6,8 @@ import { cardStyle, btnStyle, btnIcono, Badge, type Tono } from '@/components/ui
 import BotonWhatsapp from './BotonWhatsapp'
 import { resumenOportunidades } from '@/lib/correduria/oportunidades-buscador'
 import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados, type Hallazgo, type Contacto } from '@/lib/correduria-puerto'
+import { enlaceEmision, lineaOpcion, type BusquedaReferencia } from '@/lib/referencia-presupuesto-asegura'
+import { eur } from '@/lib/dinero'
 
 /**
  * Un solo cuadro para encontrar a cualquiera: nombre, matrícula, nº de póliza,
@@ -51,7 +53,7 @@ const ETIQUETAS: Record<string, string> = {
 type Estado =
   | { fase: 'quieto' }
   | { fase: 'buscando' }
-  | { fase: 'hecho'; r: Busqueda }
+  | { fase: 'hecho'; r: Busqueda; ref: BusquedaReferencia | null }
 
 export default function BuscadorCartera() {
   const [q, setQ] = useState('')
@@ -66,9 +68,12 @@ export default function BuscadorCartera() {
     try {
       const res = await fetch(`/api/correduria/buscar?q=${encodeURIComponent(termino)}`)
       const r = await res.json()
-      if (turno.current === mio) setEstado({ fase: 'hecho', r })
+      // Lo tecleado con forma de referencia (AS-26-0042) trae además su presupuesto, aparte.
+      const ref = r && typeof r === 'object' && r.presupuestoRef && typeof r.presupuestoRef.estado === 'string'
+        ? (r.presupuestoRef as BusquedaReferencia) : null
+      if (turno.current === mio) setEstado({ fase: 'hecho', r, ref })
     } catch {
-      if (turno.current === mio) setEstado({ fase: 'hecho', r: { estado: 'error', motivo: 'red' } })
+      if (turno.current === mio) setEstado({ fase: 'hecho', r: { estado: 'error', motivo: 'red' }, ref: null })
     }
   }, [])
 
@@ -163,6 +168,7 @@ export default function BuscadorCartera() {
         )}
       </form>
 
+      {estado.fase === 'hecho' && estado.ref && estado.ref.estado !== 'no_aplica' && <TarjetaReferencia b={estado.ref} />}
       <Resultado estado={estado} termino={q.trim()} />
     </div>
   )
@@ -288,6 +294,81 @@ function Resultado({ estado, termino }: { estado: Estado; termino: string }) {
           {a.texto}
         </Nota>
       ))}
+    </Superficie>
+  )
+}
+
+/**
+ * El presupuesto buscado por su REFERENCIA (AS-26-0042, 30/09/2026): lo que se le mandó al cliente
+ * (solo las opciones que iban en el documento), su estado y el camino a la pantalla EXISTENTE que lo
+ * emite. Caducado → se dice y NO se ofrece emitir con ese precio. «No se ha podido mirar» nunca se
+ * pinta como «no existe».
+ */
+function TarjetaReferencia({ b }: { b: BusquedaReferencia }) {
+  if (b.estado === 'no_aplica') return null
+  if (b.estado === 'error') {
+    return (
+      <Superficie>
+        <Nota color="var(--negative)" icono={<TriangleAlert size={14} strokeWidth={1.75} aria-hidden />}>
+          No se ha podido buscar el presupuesto <strong>{b.referencia}</strong> ({b.motivo}). <strong>No lo leas como
+          «esa referencia no existe».</strong>
+        </Nota>
+      </Superficie>
+    )
+  }
+  if (b.estado === 'no_encontrado') {
+    return (
+      <Superficie>
+        <Nota>Ningún presupuesto con la referencia <strong>{b.referencia}</strong> en esta correduría.</Nota>
+      </Superficie>
+    )
+  }
+  const p = b.presupuesto
+  const enlace = enlaceEmision(p)
+  const tono: Tono = p.estado === 'caducado' || p.estado === 'retirado' ? 'negativo' : p.estado === 'emitido' ? 'positivo' : 'info'
+  const vence = new Date(p.venceEl).toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })
+  return (
+    <Superficie>
+      <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>Presupuesto</span>
+          <strong style={{ fontSize: 16 }}>{p.referencia}</strong>
+          <Badge tono={tono}>{p.rotuloEstado}</Badge>
+        </div>
+        <div style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
+          <Link href={`/correduria/cliente/${encodeURIComponent(p.clienteId)}`} style={{ fontWeight: 600 }}>{p.cliente}</Link>
+          <span style={{ color: 'var(--muted)' }}> · vence el {vence}</span>
+        </div>
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 4 }}>
+          {p.opciones.map((o) => (
+            <li key={o.id} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'space-between', fontSize: 13, minWidth: 0 }}>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{lineaOpcion(o)}</span>
+              <strong>{o.primaEur === null ? '—' : eur(o.primaEur)}</strong>
+            </li>
+          ))}
+        </ul>
+        {p.estado === 'caducado' ? (
+          <Nota color="var(--negative)" icono={<TriangleAlert size={14} strokeWidth={1.75} aria-hidden />}>
+            Caducado: este precio ya no se puede emitir, hay que re-tarificar.
+          </Nota>
+        ) : p.emitible ? (
+          <div style={{ display: 'grid', gap: 6 }}>
+            {p.opciones.length > 1 && (
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                El documento llevaba {p.opciones.length} opciones: elige en la pantalla de emisión la que quiere el cliente.
+              </span>
+            )}
+            {enlace.tipo === 'ficha' && (
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Su cotización no está enlazada a ninguna oportunidad, así que no hay pantalla que la emita desde aquí.
+              </span>
+            )}
+            <Link href={enlace.href} style={{ ...btnStyle(enlace.tipo === 'ficha' ? 'secundario' : 'primario'), display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, width: 'fit-content', maxWidth: '100%' }}>
+              {enlace.texto}
+            </Link>
+          </div>
+        ) : null}
+      </div>
     </Superficie>
   )
 }

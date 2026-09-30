@@ -16,7 +16,7 @@ import { Check, RefreshCw } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { CeldaCompania } from './CeldaCompania'
 import { eur } from '@/lib/dinero'
-import { textoBloqueoCorredor, textoEmisionEscalonada, diferenciasDeOpcion, etiquetasGarantiasDeLey, filtrarPorGarantias, interruptoresGarantias, preseleccionFija, ramoDeCatalogo } from '@central/module-seguros'
+import { textoBloqueoCorredor, diferenciasDeOpcion, etiquetasGarantiasDeLey, filtrarPorGarantias, interruptoresGarantias, preseleccionFija, ramoDeCatalogo } from '@central/module-seguros'
 import {
   claveCompania,
   ocultarParaPreparar,
@@ -212,10 +212,8 @@ export default function FiltroGarantias({
             {textoDescuentos(o.descuentos) && (
               <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>{textoDescuentos(o.descuentos)}</span>
             )}
-            {typeof o.bloqueo === 'string' ? (
+            {typeof o.bloqueo === 'string' && (
               <span style={{ display: 'block', fontSize: 12, color: 'var(--negative)', fontWeight: 600 }}>{textoBloqueoCorredor(o.bloqueo, o.compania)}</span>
-            ) : o.escalonada && (
-              <span style={{ display: 'block', fontSize: 12, color: 'var(--warning)', fontWeight: 600 }}>⚠️ {textoEmisionEscalonada()}</span>
             )}
             {o.reparos.map((m) => (
               <span key={m} style={{ display: 'block', fontSize: 12, color: 'var(--warning)', fontWeight: 600, overflowWrap: 'anywhere' }}>⚠️ {m}</span>

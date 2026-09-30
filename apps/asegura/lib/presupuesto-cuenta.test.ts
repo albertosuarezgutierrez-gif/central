@@ -140,5 +140,5 @@ test('🪤 emitir OTRA opción que la firmada (compañía o prima) se para; la m
   const guarda = emitir.indexOf('discrepanciaConElegida({')
   const submit = emitir.indexOf('solicitadoPor: actor')
   assert.ok(guarda > 0 && guarda < submit, 'la comprobación va ANTES de mandar nada a la compañía')
-  assert.equal((emitir.match(/if \(acunado(Ac)?\.ok\) (\{\s*)?await cerrarPresupuesto\(\)/g) ?? []).length, 2, 'los dos caminos de acuñado cierran el presupuesto')
+  assert.equal((emitir.match(/if \(acunado(Ac)?\.ok\) (\{\s*)?await cerrarPresupuesto\(acunado(Ac)?\.polizaId\)/g) ?? []).length, 2, 'los dos caminos de acuñado cierran el presupuesto')
 })

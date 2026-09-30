@@ -1,9 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { coberturasIncluidas, nombreFicheroPresupuesto, pdfPresupuesto, repartirOpciones, type DatosPdfPresupuesto } from './presupuesto-pdf.ts'
+import { coberturasIncluidas, nombreFicheroPresupuesto, pdfPresupuesto, repartirOpciones, textosReferencia, type DatosPdfPresupuesto } from './presupuesto-pdf.ts'
 
 const base: DatosPdfPresupuesto = {
+  referencia: null,
   cliente: 'Manuel Antonio Piña Franco',
   ramo: 'moto',
   creadoAt: new Date('2026-09-28T19:00:00Z'),
@@ -41,6 +42,17 @@ test('tarjetas = las recomendadas; sin ninguna, las 3 primeras; el orden no se t
 
 test('nombre del fichero sin tildes ni espacios', () => {
   assert.equal(nombreFicheroPresupuesto(base), 'presupuesto-moto-Manuel-Antonio-Pina-Franco-2026-09-28.pdf')
+})
+
+test('la referencia propia: en la cabecera, en la frase para el cliente y en el nombre del fichero', async () => {
+  assert.deepEqual(textosReferencia('AS-26-0042'), {
+    cabecera: 'Referencia AS-26-0042',
+    cita: 'Para contratar o preguntarnos por este presupuesto, cita la referencia AS-26-0042.',
+  })
+  assert.equal(textosReferencia(null), null)
+  assert.equal(nombreFicheroPresupuesto({ ...base, referencia: 'AS-26-0042' }), 'presupuesto-AS-26-0042-moto-Manuel-Antonio-Pina-Franco-2026-09-28.pdf')
+  const bytes = await pdfPresupuesto({ ...base, referencia: 'AS-26-0042' })
+  assert.equal(Buffer.from(bytes.slice(0, 5)).toString(), '%PDF-')
 })
 
 test('genera un PDF con prima nula, franquicia y caracteres fuera de WinAnsi', async () => {
