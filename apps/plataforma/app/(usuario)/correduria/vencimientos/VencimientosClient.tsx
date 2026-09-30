@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CalendarClock, Phone, TriangleAlert } from 'lucide-react'
+import { CalendarClock, Phone, Search, TriangleAlert } from 'lucide-react'
 import { textoPasoLead } from '@central/module-seguros'
 import { Badge, PageHeader, btnStyle, type Tono } from '@/components/ui'
 import { eur } from '@/lib/dinero'
@@ -12,6 +12,7 @@ import {
   ROTULO_VENTANA,
   colaLlamadas,
   diasSinRespuesta,
+  leadCoincide,
   rotuloCanal,
   tramoLead,
   whatsappDeLead,
@@ -109,23 +110,27 @@ function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
   const [ventana, setVentana] = useState<VentanaLead | null>(null)
   const [tramo, setTramo] = useState<TramoLead>('por_enviar')
   const [mostrar, setMostrar] = useState(POR_PAGINA)
+  const [busqueda, setBusqueda] = useState('')
   // Copia local: al registrar un WhatsApp o una respuesta, el lead cambia de pestaña al momento
   // sin volver a pedir la lista entera al puerto.
   const [leads, setLeads] = useState<LeadVencimiento[]>([])
   useEffect(() => { setLeads(datos?.estado === 'ok' ? datos.leads : []) }, [datos])
 
+  // Con algo en el buscador, los contadores de las pestañas cuentan solo lo que coincide: así se ve
+  // en qué pestaña está la persona buscada sin tener que ir mirando una a una.
+  const coinciden = useMemo(() => leads.filter(l => leadCoincide(l, busqueda)), [leads, busqueda])
   const porTramo = useMemo(() => {
     const n: Record<TramoLead, number> = { por_enviar: 0, esperando: 0, respondio: 0 }
-    for (const l of leads) n[tramoLead(l)]++
+    for (const l of coinciden) n[tramoLead(l)]++
     return n
-  }, [leads])
+  }, [coinciden])
 
   // Ordenadas por fecha de vencimiento (Alberto, 30/09/2026): primero lo que vence antes.
   const filtrados = useMemo(
-    () => leads
+    () => coinciden
       .filter(l => tramoLead(l) === tramo && (ventana === null || l.ventana === ventana))
       .sort((a, b) => a.dias - b.dias || b.puntuacion - a.puntuacion),
-    [leads, tramo, ventana],
+    [coinciden, tramo, ventana],
   )
 
   const hoyPorTelefono = useMemo(() => colaLlamadas(leads).length, [leads])
@@ -170,6 +175,18 @@ function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
         </Link>
       )}
 
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', maxWidth: 480 }}>
+        <Search size={18} strokeWidth={1.75} aria-hidden style={{ color: 'var(--muted)', flex: '0 0 auto' }} />
+        <input
+          type="search"
+          value={busqueda}
+          onChange={e => { setBusqueda(e.target.value); setMostrar(POR_PAGINA) }}
+          placeholder="Buscar por nombre, teléfono, correo o compañía"
+          aria-label="Buscar lead"
+          style={{ flex: '1 1 auto', minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 15, color: 'var(--text)', minHeight: 42 }}
+        />
+      </label>
+
       <div role="tablist" aria-label="En qué punto está" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {TRAMOS.map(t => (
           <Chip key={t.valor} activo={tramo === t.valor} onClick={() => { setTramo(t.valor); setMostrar(POR_PAGINA) }}>
@@ -190,7 +207,9 @@ function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
 
       {filtrados.length === 0 ? (
         <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
-          {tramo === 'por_enviar' ? 'No queda nadie por enviar en esta ventana.' : tramo === 'esperando' ? 'Nadie esperando respuesta en esta ventana.' : 'Nadie ha respondido todavía en esta ventana.'}
+          {busqueda.trim() !== ''
+            ? `Nadie coincide con «${busqueda.trim()}» en esta pestaña y ventana${coinciden.length > 0 ? ': mira las otras pestañas (el número dice cuántos hay en cada una).' : '.'}`
+            : tramo === 'por_enviar' ? 'No queda nadie por enviar en esta ventana.' : tramo === 'esperando' ? 'Nadie esperando respuesta en esta ventana.' : 'Nadie ha respondido todavía en esta ventana.'}
         </p>
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>

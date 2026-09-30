@@ -611,6 +611,30 @@ export function tramoLead(l: Pick<LeadVencimiento, 'intentos' | 'respondioAntes'
 
 /** Días desde el último contacto (`null` = no consta). A partir de 3 sin respuesta, toca llamar. */
 export const DIAS_SIN_RESPUESTA_LLAMAR = 3
+/** Minúsculas, sin tildes ni signos: «Gutiérrez-Alcalá» casa con «gutierrez alcala». */
+function normalizarBusqueda(t: string): string {
+  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9ñ@.]+/g, ' ').trim()
+}
+
+/**
+ * ¿Casa el lead con lo tecleado en el buscador? (30/09/2026, Alberto: «un buscador aquí»).
+ * Busca en nombre, compañía, ramo, correo y teléfono; cada palabra tiene que aparecer en alguno
+ * («maria mapfre» = María con Mapfre). El teléfono se compara solo por dígitos y a partir de 3,
+ * para que «600 12» encuentre «+34 600123456». Vacío = todos.
+ */
+export function leadCoincide(
+  l: Pick<LeadVencimiento, 'cliente' | 'aseguradora' | 'ramo' | 'email' | 'telefono'>,
+  consulta: string,
+): boolean {
+  const q = normalizarBusqueda(consulta)
+  if (q === '') return true
+  const texto = normalizarBusqueda([l.cliente, l.aseguradora, l.ramo, l.ramo ? rotuloRamo(l.ramo) : null, l.email].filter(Boolean).join(' '))
+  const digitosTel = (l.telefono ?? '').replace(/\D/g, '')
+  const digitosQ = consulta.replace(/\D/g, '')
+  if (digitosQ.length >= 3 && digitosTel.includes(digitosQ)) return true
+  return q.split(' ').every((palabra) => texto.includes(palabra) || (/^\d{3,}$/.test(palabra) && digitosTel.includes(palabra)))
+}
+
 export function diasSinRespuesta(ultimoContactoEn: string | null, ahora: Date = new Date()): number | null {
   if (!ultimoContactoEn) return null
   const t = Date.parse(ultimoContactoEn)

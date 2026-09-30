@@ -257,3 +257,20 @@ test('solicitudes de datos: se leen las válidas y las respuestas se pintan legi
   assert.equal(c.solicitudes[0].documentos?.length, 1, 'un documento sin id no se pinta')
   assert.equal(c.solicitudes[0].discrepancias?.[0].documento, '1234ABC')
 })
+
+test('buscador de leads (30/09/2026): nombre sin tildes, varias palabras, teléfono por dígitos, correo y compañía', async () => {
+  const { leadCoincide } = await import('./seguimiento-asegura.ts')
+  const l = { cliente: 'María Gutiérrez-Alcalá', aseguradora: 'Mapfre', ramo: 'auto', email: 'maria.g@gmail.com', telefono: '+34 600 123 456' }
+  assert.equal(leadCoincide(l, ''), true)
+  assert.equal(leadCoincide(l, '   '), true)
+  assert.equal(leadCoincide(l, 'gutierrez alcala'), true)
+  assert.equal(leadCoincide(l, 'MARIA mapfre'), true)
+  assert.equal(leadCoincide(l, 'maria allianz'), false, 'todas las palabras tienen que aparecer')
+  assert.equal(leadCoincide(l, '600 12'), true)
+  assert.equal(leadCoincide(l, '600123456'), true)
+  assert.equal(leadCoincide(l, '999'), false)
+  assert.equal(leadCoincide(l, 'maria.g@'), true)
+  assert.equal(leadCoincide(l, 'reale'), false)
+  // Sin teléfono ni nombre no revienta, y un número no casa por accidente.
+  assert.equal(leadCoincide({ cliente: null, aseguradora: null, ramo: null, email: null, telefono: null }, '600'), false)
+})
