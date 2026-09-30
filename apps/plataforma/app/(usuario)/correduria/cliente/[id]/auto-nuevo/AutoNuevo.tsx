@@ -20,10 +20,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
+import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
-import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
@@ -174,9 +175,16 @@ export default function AutoNuevo({
   simulacion,
   companias,
   variante = null,
+  datosRiesgo = null,
   anterior = null,
   anteriorAmbiguo = null,
 }: {
+  /**
+   * Los datos del vehículo del RIESGO (30/09/2026, `info_riesgo.datosVehiculo`): se PRECARGAN aquí y lo que
+   * se use al pedir precio se anota de vuelta. Prioridad: variante retomada (`?tarificacion=`) > riesgo >
+   * borrador local. `null` = sin riesgo o sin datos: pantalla como siempre.
+   */
+  datosRiesgo?: DatosVehiculoRiesgo | null
   /** Variante de un riesgo (29/09/2026): oportunidad, figuras en otras fichas y qué les falta. */
   variante?: VarianteNueva | null
   /** El seguro que tiene hoy, leído de su póliza y guardado en la oportunidad (29/09/2026). */
@@ -234,7 +242,7 @@ export default function AutoNuevo({
   }, [])
 
   const [matricula, setMatricula] = useState(matriculaInicial)
-  const [matriculacion, setMatriculacion] = useState('')
+  const [matriculacion, setMatriculacion] = useState(datosRiesgo?.fechaMatriculacion ?? '')
   // true = la fecha la ha puesto la ESTIMACIÓN por matrícula, no el corredor:
   // se pinta como tal y se recalcula si cambia la matrícula. En cuanto el
   // corredor toca la fecha, pasa a ser suya.
@@ -244,10 +252,12 @@ export default function AutoNuevo({
   const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
   // Por defecto en GARAJE, nunca en la calle (Alberto, 29/09/2026; sustituye a «vía pública» del
   // 25/09): es un dato de EMISIÓN, no de precio — viaja como supuesto y se confirma al emitir.
-  const [garaje, setGaraje] = useState(() => garajePorDefecto(garajes)?.id ?? '')
+  // Del riesgo, si trae uno que siga en el catálogo; si no, el defecto (que no es una elección).
+  const garajeDelRiesgo = datosRiesgo?.garaje && garajes.some((g) => g.id === datosRiesgo.garaje) ? datosRiesgo.garaje : null
+  const [garaje, setGaraje] = useState(() => garajeDelRiesgo ?? garajePorDefecto(garajes)?.id ?? '')
   // El garaje por defecto no es una elección: el vehículo guardado de una variante puede traer
   // su garaje, y sin esto retomar caía en silencio al defecto (29/09/2026).
-  const garajeElegido = useRef(false)
+  const garajeElegido = useRef(garajeDelRiesgo !== null)
 
   // ── Los tres datos del coche que hasta hoy viajaban SUPUESTOS ─────────────
   // `kmAnuales`, `fechaCompra` y `remolqueLigero` ya iban en la petición al
@@ -259,11 +269,11 @@ export default function AutoNuevo({
   // con el supuesto convertiría un «no lo sé» en un dato afirmado.
   // Por defecto 10.000 km/año y compra = matriculación (Alberto, 25/09/2026):
   // se ven en pantalla y el corredor los cambia si el cliente dice otra cosa.
-  const [kmAnuales, setKmAnuales] = useState(String(KM_ANUALES_POR_DEFECTO))
+  const [kmAnuales, setKmAnuales] = useState(datosRiesgo?.kmAnuales != null ? String(datosRiesgo.kmAnuales) : String(KM_ANUALES_POR_DEFECTO))
   // Vacío = sigue a la matriculación (se pinta esa fecha y no se manda nada:
   // el precalificador ya usa la de matriculación como compra).
-  const [fechaCompra, setFechaCompra] = useState('')
-  const [remolqueLigero, setRemolqueLigero] = useState(false)
+  const [fechaCompra, setFechaCompra] = useState(datosRiesgo?.fechaCompra ?? '')
+  const [remolqueLigero, setRemolqueLigero] = useState(datosRiesgo?.remolqueLigero === true)
   // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
   const limitesEfecto = limitesFechaEfecto()
@@ -348,24 +358,77 @@ export default function AutoNuevo({
   // Vive en el navegador, no en `seguros.*`: un borrador no es una cotización.
   const claveBorrador = claveBorradorAutoNuevo(clienteId, variante?.oportunidadId)
 
+  // ── Precarga desde el riesgo (30/09/2026) ───────────────────────────────────
+  // Prioridad: variante RETOMADA (`?tarificacion=`, lo pagado manda) > riesgo > borrador local.
+  // El vehículo del riesgo solo se precarga entero (versión + ids del catálogo): con la versión sola no se
+  // puede repoblar el selector, y media cascada confunde más que ayuda.
+  const retomada = (variante?.tarificacionId ?? null) !== null
+  const riesgoManda =
+    !retomada && !!(datosRiesgo?.codigoVehiculo && datosRiesgo.marcaId && datosRiesgo.modeloId && datosRiesgo.motorId)
+
+  /** Rehace la cascada marca → modelo+motor → versión (gratis) para que `codigoVehiculo` sea uno que el catálogo reconoce. */
+  async function poblarCascada(v: { marcaId: string; modeloId?: string; motorId?: string; codigoVehiculo?: string }, vivo: () => boolean) {
+    try {
+      setCargando('modelos')
+      const [ms, mt] = await Promise.all([
+        catalogo(`tipo=modelos&marcaId=${encodeURIComponent(v.marcaId)}`),
+        catalogo('tipo=motores'),
+      ])
+      if (!vivo()) return
+      setMarcaId(v.marcaId)
+      setModelos(ms)
+      setMotores(mt)
+      if (v.modeloId && ms.some((m) => m.id === v.modeloId)) setModeloId(v.modeloId)
+      if (v.motorId && mt.some((m) => m.id === v.motorId)) setMotorId(v.motorId)
+      if (v.modeloId && v.motorId && ms.some((m) => m.id === v.modeloId)) {
+        setCargando('versiones')
+        const vs = await catalogo(
+          `tipo=versiones&marcaId=${encodeURIComponent(v.marcaId)}` +
+            `&modeloId=${encodeURIComponent(v.modeloId)}&motor=${encodeURIComponent(v.motorId)}`,
+        )
+        if (!vivo()) return
+        setVersiones(vs)
+        if (v.codigoVehiculo && vs.some((x) => x.id === v.codigoVehiculo)) setCodigoVehiculo(v.codigoVehiculo)
+      }
+    } catch {
+      // Restaurar el coche es una comodidad: si el catálogo falla, se elige a mano. NO se pinta el error de
+      // `fallo`, que está reservado a lo que el corredor acaba de pedir.
+    } finally {
+      if (vivo()) setCargando(null)
+    }
+  }
+
+  useEffect(() => {
+    if (!riesgoManda || !datosRiesgo) return
+    let vivo = true
+    void poblarCascada(
+      { marcaId: datosRiesgo.marcaId!, modeloId: datosRiesgo.modeloId!, motorId: datosRiesgo.motorId!, codigoVehiculo: datosRiesgo.codigoVehiculo! },
+      () => vivo,
+    )
+    return () => { vivo = false }
+    // Una vez, al abrir la pantalla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     const b = leerBorrador<BorradorAutoNuevo>(claveBorrador)
     if (!b) return
     let vivo = true
 
     // Lo que no depende de ningún catálogo se restaura tal cual.
-    if (b.matricula) setMatricula(b.matricula)
-    if (b.matriculacion) setMatriculacion(b.matriculacion)
-    if (b.matriculacionEstimada) setMatriculacionEstimada(true)
-    if (b.kmAnuales) setKmAnuales(b.kmAnuales)
-    if (b.fechaCompra) setFechaCompra(b.fechaCompra)
-    if (b.remolqueLigero) setRemolqueLigero(true)
+    // Lo que el RIESGO ya trae manda sobre el borrador (30/09/2026).
+    if (b.matricula && !datosRiesgo?.matricula) setMatricula(b.matricula)
+    if (b.matriculacion && !datosRiesgo?.fechaMatriculacion) setMatriculacion(b.matriculacion)
+    if (b.matriculacionEstimada && !datosRiesgo?.fechaMatriculacion) setMatriculacionEstimada(true)
+    if (b.kmAnuales && datosRiesgo?.kmAnuales == null) setKmAnuales(b.kmAnuales)
+    if (b.fechaCompra && !datosRiesgo?.fechaCompra) setFechaCompra(b.fechaCompra)
+    if (b.remolqueLigero && datosRiesgo?.remolqueLigero == null) setRemolqueLigero(true)
     if (b.correcciones) setCorrecciones(b.correcciones)
 
     // Lo que SÍ sale de un catálogo se restaura solo si sigue existiendo en
     // él: un id que ya no está dejaría un desplegable enseñando un valor que
     // el vendor rechazaría, que es peor que el hueco.
-    if (b.garaje && garajes.some((g) => g.id === b.garaje)) {
+    if (b.garaje && !garajeDelRiesgo && garajes.some((g) => g.id === b.garaje)) {
       garajeElegido.current = true
       setGaraje(b.garaje)
     }
@@ -401,40 +464,8 @@ export default function AutoNuevo({
     // es una llamada al catálogo, gratis. Se rehace entera para que el
     // desplegable de versión llegue poblado y `codigoVehiculo` siga siendo un
     // código que el catálogo reconoce, no una cadena suelta del borrador.
-    if (b.marcaId) {
-      void (async () => {
-        try {
-          setCargando('modelos')
-          const [ms, mt] = await Promise.all([
-            catalogo(`tipo=modelos&marcaId=${encodeURIComponent(b.marcaId!)}`),
-            catalogo('tipo=motores'),
-          ])
-          if (!vivo) return
-          setMarcaId(b.marcaId!)
-          setModelos(ms)
-          setMotores(mt)
-          if (b.modeloId && ms.some((m) => m.id === b.modeloId)) setModeloId(b.modeloId)
-          if (b.motorId && mt.some((m) => m.id === b.motorId)) setMotorId(b.motorId)
-          if (b.modeloId && b.motorId && ms.some((m) => m.id === b.modeloId)) {
-            setCargando('versiones')
-            const vs = await catalogo(
-              `tipo=versiones&marcaId=${encodeURIComponent(b.marcaId!)}` +
-                `&modeloId=${encodeURIComponent(b.modeloId)}&motor=${encodeURIComponent(b.motorId)}`,
-            )
-            if (!vivo) return
-            setVersiones(vs)
-            if (b.codigoVehiculo && vs.some((v) => v.id === b.codigoVehiculo)) {
-              setCodigoVehiculo(b.codigoVehiculo)
-            }
-          }
-        } catch {
-          // Restaurar el coche es una comodidad: si el catálogo falla, se
-          // elige a mano. NO se pinta el error de `fallo`, que está reservado
-          // a lo que el corredor acaba de pedir.
-        } finally {
-          if (vivo) setCargando(null)
-        }
-      })()
+    if (b.marcaId && !riesgoManda) {
+      void poblarCascada({ marcaId: b.marcaId, modeloId: b.modeloId, motorId: b.motorId, codigoVehiculo: b.codigoVehiculo }, () => vivo)
     }
 
     return () => {
@@ -524,20 +555,23 @@ export default function AutoNuevo({
         if (!r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada)
         const v = r.guardada.vehiculo
         if (!v) return
-        setPrevio(v)
-        setUsarPrevio(true)
-        setCodigoVehiculo((c) => c || v.codigoVehiculo)
+        // Con el vehículo del riesgo ya cargado (y sin variante retomada) la última tarificación no lo pisa.
+        if (!riesgoManda) {
+          setPrevio(v)
+          setUsarPrevio(true)
+          setCodigoVehiculo((c) => (retomada ? v.codigoVehiculo : c || v.codigoVehiculo))
+        }
         if (v.fechaMatriculacion) {
-          setMatriculacion((f) => f || v.fechaMatriculacion!)
+          setMatriculacion((f) => (retomada ? v.fechaMatriculacion! : f || v.fechaMatriculacion!))
           setMatriculacionEstimada(false)
         }
-        if (v.matricula) setMatricula((m) => m || v.matricula!)
+        if (v.matricula) setMatricula((m) => (retomada ? v.matricula! : m || v.matricula!))
         // Los km solo si se DECLARARON (la media supuesta no es un dato del cliente) y el corredor
         // no ha tecleado otra cifra.
         if (v.kmAnuales !== null && v.kmAnuales !== KM_ANUALES_SUPUESTOS) {
-          setKmAnuales((k) => (k === String(KM_ANUALES_POR_DEFECTO) ? String(v.kmAnuales) : k))
+          setKmAnuales((k) => (retomada || k === String(KM_ANUALES_POR_DEFECTO) ? String(v.kmAnuales) : k))
         }
-        if (v.garaje && !garajeElegido.current && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
+        if (v.garaje && (retomada || !garajeElegido.current) && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
       })
       .catch(() => {})
     return () => { vivo = false }
@@ -775,6 +809,23 @@ export default function AutoNuevo({
         matricula: matricula.trim().toUpperCase(),
         fechaMatriculacion: matriculacion,
         garajeEsSupuesto: true,
+        // Lo que se ha usado, para anotarlo en el riesgo (`info_riesgo.datosVehiculo`): asegura ignora esta
+        // clave al cotizar. Km y garaje solo si son un dato declarado (no el supuesto de la pantalla), y sin
+        // nombres ni ids si el coche viene de una variante guardada (la cascada de aquí no lo describe).
+        ...(variante
+          ? {
+              vehiculoRiesgo: {
+                marca: usarPrevio && previo ? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
+                modelo: usarPrevio && previo ? null : modelos.find((m) => m.id === modeloId)?.nombre ?? null,
+                version: usarPrevio && previo ? null : versiones.find((x) => x.id === codigoVehiculo)?.nombre ?? null,
+                marcaId: usarPrevio && previo ? null : marcaId || null,
+                modeloId: usarPrevio && previo ? null : modeloId || null,
+                motorId: usarPrevio && previo ? null : motorId || null,
+                kmAnuales: kmLeidos !== null && (datosRiesgo?.kmAnuales != null || kmAnuales !== String(KM_ANUALES_POR_DEFECTO)) ? kmLeidos : null,
+                garaje: garajeElegido.current ? garaje : null,
+              },
+            }
+          : {}),
       },
       correcciones: correccionesFinal,
     })
@@ -1485,6 +1536,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
   }
   return (
     <div style={{ marginTop: 12 }}>
+      <EnlaceOportunidad guardado={r.guardado} />
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
           <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>

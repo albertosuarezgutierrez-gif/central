@@ -101,3 +101,40 @@ test('empresa propietaria: su dirección se comprueba ANTES de pagar (el Submit 
   const f = src.slice(src.indexOf('export function faltaDireccionEmpresa'), src.indexOf('\n}\n', src.indexOf('export function faltaDireccionEmpresa')))
   for (const campo of ['municipioResidenciaId', 'tipoVia', 'nombreVia', 'numeroVia']) assert.match(f, new RegExp(`e\\.${campo}`))
 })
+
+// ─── Datos del riesgo por ramo (30/09/2026) ──────────────────────────────────
+
+test('leerRiesgo manda los datos del riesgo de CUALQUIER ramo y la precarga de la póliza solo si no hay nada guardado', () => {
+  const c = cuerpoDe('leerRiesgo')
+  assert.match(c, /leerBloqueDeRamo\(op\.tipo, info, precarga\)/)
+  assert.match(c, /info\[claveRamo\] === undefined \? await precargaDePolizaDeOportunidad\(/, 'lo estructurado manda sobre la precarga')
+  assert.match(c, /datosRiesgo: \{ clave: bloque\.clave/)
+})
+
+test('la precarga desde la póliza va acotada a la correduría y una lectura que falla es «sin precarga», no un error', () => {
+  const i = src.indexOf('async function precargaDePolizaDeOportunidad')
+  assert.ok(i > 0)
+  const c = src.slice(i, src.indexOf('\n}\n', i))
+  assert.match(c, /correduria_id = \$\{correduriaId\}::uuid/)
+  assert.match(c, /catch \(err\) \{[\s\S]*return null/)
+  assert.match(c, /clave !== 'datosVivienda' && clave !== 'datosComercio' && clave !== 'datosRiesgoLibre'\) return null/, 'solo vivienda, comercio y libres: el bien de un coche no se lee así')
+})
+
+test('abrir el riesgo de una póliza precarga el bien en la clave nueva de su ramo, sin confirmar', () => {
+  const c = cuerpoDe('abrirRiesgoDePoliza')
+  assert.match(c, /precargaDePoliza\(pol\.tipo, d, objetoAsegurado\(/)
+  assert.match(c, /\[pre\.clave\]: \{ \.\.\.pre\.valor, confirmadoAt: null \}/)
+})
+
+test('fuera de auto/moto la variante solo lleva al tomador y ningún rol de más se cuela', () => {
+  const c = cuerpoDe('prepararVariante')
+  assert.match(c, /limpiarFigurasEntrada\(e\.cuerpo\.figuras, e\.tomadorId, !admiteDatosVehiculo\(e\.ramo\)\)/)
+  assert.match(c, /ramo: e\.ramo \}\)/, 'y la oportunidad tiene que ser de ese ramo')
+})
+
+test('a hogar, vida, salud y decesos no se les pide fecha de carné (solo conduce quien conduce en auto/moto)', () => {
+  const c = cuerpoDe('leerRiesgo')
+  assert.match(c, /\(op\.tipo === 'auto' \|\| op\.tipo === 'moto'\) &&/)
+  assert.match(c, /faltanDeFigura\(p, conduce\)/)
+  assert.match(src, /if \(conCarnet && !p\.fechaCarnet\) f\.push\('fechaCarnet'\)/, 'el carné solo se exige si conCarnet')
+})

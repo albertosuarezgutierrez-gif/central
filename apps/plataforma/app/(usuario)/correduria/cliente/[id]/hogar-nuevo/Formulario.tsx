@@ -19,6 +19,7 @@ import { useState } from 'react'
 import { FlaskConical, Loader2, Pencil, X } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
+import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import { CeldaCompania } from '../../../CeldaCompania'
 import FiltroGarantias from '../../../FiltroGarantias'
 import ListaPrecios from '../../../ListaPrecios'
@@ -35,6 +36,7 @@ import type {
   Supuesto,
 } from '@/lib/hogar-nuevo-asegura'
 import { pedirCotizacionHogar, pedirPrecalificacionHogar } from './acciones'
+import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
 
 type Grupo = 'donde' | 'como' | 'protecciones' | 'capitales' | 'tomador' | 'cotizacion'
 
@@ -91,14 +93,20 @@ export default function Formulario({
   clienteId,
   referencia,
   preInicial,
+  variante = null,
+  iniciales = null,
 }: {
   clienteId: string
   referencia: string
   preInicial: PrecalificacionHogar
+  /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
+  variante?: VarianteNueva | null
+  /** Lo que el riesgo ya sabe de la vivienda (la precalificación de `preInicial` ya lo incluye). */
+  iniciales?: { resueltos: Record<string, unknown>; correcciones: Record<string, unknown> } | null
 }) {
   const [pre, setPre] = useState(preInicial)
-  const [resueltos, setResueltos] = useState<Record<string, unknown>>({})
-  const [correcciones, setCorrecciones] = useState<Record<string, unknown>>({})
+  const [resueltos, setResueltos] = useState<Record<string, unknown>>(iniciales?.resueltos ?? {})
+  const [correcciones, setCorrecciones] = useState<Record<string, unknown>>(iniciales?.correcciones ?? {})
   const [recalculando, setRecalculando] = useState(false)
   const [editando, setEditando] = useState<string | null>(null)
   const [borrador, setBorrador] = useState('')
@@ -173,6 +181,7 @@ export default function Formulario({
       referencia,
       resueltos: cuerpoResueltosFinal(),
       correcciones,
+      variante: variante ? { oportunidadId: variante.oportunidadId, nota: null } : null,
     })
     switch (r.estado) {
       case 'faltan':
@@ -563,6 +572,7 @@ function Precios({ r, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; cl
   }
   return (
     <div style={{ marginTop: 12 }}>
+      <EnlaceOportunidad guardado={r.guardado} />
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
           <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>

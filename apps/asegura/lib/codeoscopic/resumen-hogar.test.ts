@@ -154,3 +154,13 @@ test('los nueve desplegables llevan su catálogo pegado, y no falta ningún grup
   const gruposUsados = new Set(r.filas.map((f) => f.grupo))
   for (const g of GRUPOS) assert.ok(gruposUsados.has(g.id), `el grupo ${g.id} se quedó vacío`)
 })
+
+test('el mapa campo → catálogo de la pantalla del riesgo (module-seguros) es el mismo que el de esta pantalla', async () => {
+  const { CATALOGO_HOGAR_DE_CAMPO } = await import('@central/module-seguros')
+  const { CATALOGO_DE_CAMPO } = await import('./resumen-hogar.ts')
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(CATALOGO_HOGAR_DE_CAMPO).sort()),
+    Object.fromEntries(Object.entries(CATALOGO_DE_CAMPO).sort()),
+    'si se añade un desplegable a hogar-nuevo, tiene que añadirse también a los datos de la vivienda del riesgo',
+  )
+})

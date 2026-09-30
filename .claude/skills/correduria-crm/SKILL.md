@@ -249,3 +249,10 @@ orden en §9.
       (`revisarCoherenciaCotizacion`, en pantalla + Telegram) y un cambio del lector se prueba gratis con
       `GET /api/operador/codeoscopic/reproceso` sobre respuestas reales. El vocabulario de coberturas de
       Codeoscopic es cerrado: un nombre nuevo sale en `coberturasNuevas` y se decide a mano.
+
+22. **Los datos del riesgo viven en info_riesgo por CLAVE DE RAMO (30/09/2026, PR #4127).** En la oportunidad se editan
+    y confirman POR RAMO: `datosVehiculo` (auto/moto), `datosVivienda` (hogar), `datosCapital` (vida/salud/decesos),
+    `datosRiesgoLibre` (RC/comercio/comunidades/otros). Cada clave guarda el campo confirmado (se sella al confirmar,
+    se borra al editar). Se pide precio desde la oportunidad en los 6 ramos tarificables; personas editan datos sin salir
+    (carné si conductor). Catálogo de versión solo en pantalla de precio; editar marca/modelo/versión borra codigoVehiculo.
+    Precarga desde polizas.datos_especificos sin confirmar.

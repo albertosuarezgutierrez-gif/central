@@ -10,9 +10,10 @@ import { ROTULO_ROL, textoFaltan, type FiguraRiesgo, type Riesgo } from '@/lib/r
 import { interpretarSolicitudesDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
 import type { RolFigura } from '@central/module-seguros'
 import NuevaPersona from './NuevaPersona'
+import EditarFichaModal from './EditarFichaModal'
 import PedirDatosFigura from './PedirDatosFigura'
 import { llamarFiguras, motivoDe } from './piezas-riesgo'
-import { ramoVariante } from './variante'
+import { ramoConEnlaceDatos } from './variante'
 
 type Opcion = { clienteId: string; nombre: string; detalle: string }
 
@@ -34,10 +35,11 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
 }) {
   const [abierto, setAbierto] = useState<RolFigura | null>(null)
   const [nueva, setNueva] = useState<RolFigura | null>(null)
+  const [editando, setEditando] = useState<RolFigura | null>(null)
   const [enviando, setEnviando] = useState(false)
   const op = riesgo.oportunidad
   // Los enlaces de datos de este riesgo, UNA lectura para todas las figuras (luego se reparten por persona).
-  const conEnlace = ramoVariante(op.ramo) !== null
+  const conEnlace = ramoConEnlaceDatos(op.ramo)
   const [enlaces, setEnlaces] = useState<SolicitudesDatos | null>(null)
   const leerEnlaces = useCallback(async () => {
     if (!conEnlace) return
@@ -137,6 +139,11 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
                   style={{ ...btnStyle(abiertoAqui ? 'secundario' : 'sutil', 'sm'), minHeight: 44, color: 'var(--primary)' }}>
                   {abiertoAqui ? 'Cerrar' : 'Cambiar'}
                 </button>
+                {f && (
+                  <button type="button" disabled={bloqueado} onClick={() => setEditando(rol)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, color: 'var(--primary)' }}>
+                    Editar datos
+                  </button>
+                )}
                 {puedeQuitar && f && (
                   <button type="button" disabled={bloqueado} onClick={() => void quitar(rol, f)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
                     Quitar
@@ -170,6 +177,18 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
           )
         })}
       </div>
+
+      {editando && (() => {
+        const f = riesgo.figuras.find((x) => x.rol === editando)
+        if (!f) return null
+        return (
+          <EditarFichaModal
+            oportunidadId={op.id} clienteId={f.clienteId} nombre={f.nombre}
+            conduce={riesgo.figuras.some((g) => g.clienteId === f.clienteId && conduceEnRiesgo(g.rol, op.ramo, riesgo.figuras))}
+            refresco={riesgo} onCerrar={() => setEditando(null)}
+          />
+        )
+      })()}
 
       {nueva && (
         <NuevaPersona
