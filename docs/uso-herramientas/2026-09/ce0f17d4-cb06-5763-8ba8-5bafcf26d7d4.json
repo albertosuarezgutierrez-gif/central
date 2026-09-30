@@ -1,30 +1,79 @@
 {
  "sesion": "ce0f17d4-cb06-5763-8ba8-5bafcf26d7d4",
  "inicio": "2026-09-30T10:27:00.308Z",
- "fin": "2026-09-30T10:27:12.616Z",
- "llamadas": 5,
+ "fin": "2026-09-30T10:37:16.813Z",
+ "llamadas": 19,
  "categorias": {
   "otro": {
-   "llamadas": 1,
-   "chars_in": 84,
-   "chars_out": 162,
+   "llamadas": 5,
+   "chars_in": 935,
+   "chars_out": 695,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1
+    "ToolSearch": 4,
+    "SubagentHandback": 1
    }
   },
   "mcp:Gmail": {
-   "llamadas": 4,
-   "chars_in": 323,
-   "chars_out": 46980,
+   "llamadas": 8,
+   "chars_in": 3313,
+   "chars_out": 47724,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Gmail__search_threads": 2,
-    "mcp__Gmail__get_thread": 2
+    "mcp__Gmail__get_thread": 2,
+    "mcp__Gmail__create_draft": 2,
+    "mcp__Gmail__update_draft": 1,
+    "mcp__Gmail__delete_draft": 1
+   }
+  },
+  "mcp:Google_Drive": {
+   "llamadas": 2,
+   "chars_in": 188,
+   "chars_out": 2498,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 1,
+    "mcp__Google_Drive__read_file_content": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 142,
+   "chars_out": 21983,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 2
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1081,
+   "chars_out": 891424,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 1353,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
    }
   }
  }
