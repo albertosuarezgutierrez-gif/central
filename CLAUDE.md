@@ -85,12 +85,21 @@ y los `module-*` de cada vertical.
 - **Los cambios que ROMPEN se hacen AHORA**, mientras no hay clientes en producción.
 
 ## Agentes y tokens
-- **Mecánico → agente** (mismo patrón en ≥3 archivos, boilerplate, renombrados, >~80 líneas sin criterio):
-  `agente-mecanico` (económico). Nunca para auth/pagos/RLS/multi-tenant/migraciones. Reparto por archivos,
-  con la lista explícita de lo que puede tocar; ningún agente commitea ni empuja; verifica antes de informar.
-- **Reparto:** mecánico → `agente-mecanico` · localizar → `rastreador-codigo` · afirmar una ausencia/estado caro o
-  validar un cepo → `verificador-esceptico` (sonnet, **revisor por defecto**) · alto riesgo (emisión, pagos, datos de
-  clientes, RLS, migraciones) → `agente-architect` (Opus), con moderación.
+- 🧭 **La sesión principal ORDENA y REVISA; los AGENTES EJECUTAN — siempre, en toda sesión** (Alberto, 30/09/2026:
+  «todo lo hacen los agentes, tú solo ordenar y revisar; esto se hace siempre», y que no tenga que repetirlo).
+  - **Sesión principal:** entiende el encargo, decide, reparte (qué agente, qué archivos PUEDE y cuáles NO), revisa lo
+    que devuelve cada agente (diff, tests, cifras) y da el resumen a Alberto. Commitear, empujar y abrir/mergear PRs
+    siguen en la sesión (es el control del conjunto).
+  - **Todo lo demás, un agente:** explorar/leer código, escribir código y tests, SQL y cambios de datos, docs y
+    memoria, diagnosticar CI. **Sin umbral de tamaño**: también el cambio de 1-2 archivos.
+  - **Qué agente:** mecánico/bajo riesgo → `agente-mecanico` · código normal → `general-purpose` con `model: sonnet` ·
+    localizar → `rastreador-codigo` · afirmar una ausencia/estado o validar un cepo → `verificador-esceptico` ·
+    alto riesgo (datos de clientes, emisión, pagos, RLS, migraciones) → `agente-architect`.
+    Si sonnet/haiku devuelven 429 de límite semanal, relanza con `model: opus`.
+  - **En paralelo** cuando no se pisen archivos; lista explícita de archivos en cada prompt. Si dos agentes tocan
+    apps con Prisma a la vez, ninguno corre `prisma generate`/`tsc`: la verificación final la hace UN agente después.
+  - Única excepción: consultas de estado triviales (git status, estado de CI de un PR, leer notificaciones), que
+    cuestan menos que el prompt de un agente. Ningún agente commitea ni empuja; verifica antes de informar.
 - **Ahorro:** pide a cada agente un informe de **≤15 líneas sin volcar código**; en la sesión lee solo el tramo que
   necesitas (offset/limit, `grep`), nunca un JSON o log entero; los logs grandes, a fichero y `grep`.
 - **Antes de sacar un PR de draft:** pasada de `code-review` (o `agente-architect` si es alto riesgo).

@@ -77,7 +77,7 @@ export default function VencimientosClient() {
         <PageHeader
           titulo="Vencimientos"
           icono={<CalendarClock size={20} strokeWidth={1.75} />}
-          sub="Lo que renueva en los próximos 90 días: tus clientes y los leads con su seguro en otra compañía. Nada sale a nadie sin tu OK."
+          sub="Tus clientes que renuevan en los próximos 90 días y los leads con su seguro en otra compañía (a quien ya escribiste lo sigues viendo, venza cuando venza). Nada sale a nadie sin tu OK."
         />
       </div>
 
@@ -126,11 +126,14 @@ function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
   }, [coinciden])
 
   // Ordenadas por fecha de vencimiento (Alberto, 30/09/2026): primero lo que vence antes.
+  // «Vence en» solo filtra «Por enviar»: a quien ya se escribió se le sigue la
+  // respuesta venza cuando venza (30/09/2026).
+  const filtraVentana = tramo === 'por_enviar'
   const filtrados = useMemo(
     () => coinciden
-      .filter(l => tramoLead(l) === tramo && (ventana === null || l.ventana === ventana))
+      .filter(l => tramoLead(l) === tramo && (!filtraVentana || ventana === null || l.ventana === ventana))
       .sort((a, b) => a.dias - b.dias || b.puntuacion - a.puntuacion),
-    [coinciden, tramo, ventana],
+    [coinciden, tramo, ventana, filtraVentana],
   )
 
   const hoyPorTelefono = useMemo(() => colaLlamadas(leads).length, [leads])
@@ -195,21 +198,23 @@ function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 13, color: 'var(--muted)' }}>Vence en</span>
-        <Chip activo={ventana === null} onClick={() => { setVentana(null); setMostrar(POR_PAGINA) }}>Todos</Chip>
-        {VENTANAS_FILTRO.map(v => (
-          <Chip key={v} activo={ventana === v} onClick={() => { setVentana(v); setMostrar(POR_PAGINA) }}>
-            {ROTULO_VENTANA[v]}
-          </Chip>
-        ))}
-      </div>
+      {filtraVentana && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>Vence en</span>
+          <Chip activo={ventana === null} onClick={() => { setVentana(null); setMostrar(POR_PAGINA) }}>Todos</Chip>
+          {VENTANAS_FILTRO.map(v => (
+            <Chip key={v} activo={ventana === v} onClick={() => { setVentana(v); setMostrar(POR_PAGINA) }}>
+              {ROTULO_VENTANA[v]}
+            </Chip>
+          ))}
+        </div>
+      )}
 
       {filtrados.length === 0 ? (
         <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
           {busqueda.trim() !== ''
-            ? `Nadie coincide con «${busqueda.trim()}» en esta pestaña y ventana${coinciden.length > 0 ? ': mira las otras pestañas (el número dice cuántos hay en cada una).' : '.'}`
-            : tramo === 'por_enviar' ? 'No queda nadie por enviar en esta ventana.' : tramo === 'esperando' ? 'Nadie esperando respuesta en esta ventana.' : 'Nadie ha respondido todavía en esta ventana.'}
+            ? `Nadie coincide con «${busqueda.trim()}» en esta pestaña${filtraVentana ? ' y ventana' : ''}${coinciden.length > 0 ? ': mira las otras pestañas (el número dice cuántos hay en cada una).' : '.'}`
+            : tramo === 'por_enviar' ? 'No queda nadie por enviar en esta ventana.' : tramo === 'esperando' ? 'Nadie esperando respuesta.' : 'Nadie ha respondido todavía.'}
         </p>
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>

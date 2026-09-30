@@ -34,3 +34,4 @@
 | 29/09/2026 | campo «Fecha de efecto» en 5 pantallas de pedir precio | agente-mecanico | fallo: dos lanzamientos seguidos devolvieron «no hay tarea» sin tocar nada (perdió el prompt). Hecho por la sesión |
 | 30/09/2026 | asegura-web: cabecera con herramientas + chips móvil | agente-mecanico | fallo: montaba el panel solo al abrir (SEO), el chip móvil no abría nada, CSS con tokens inexistentes, no midió con Playwright y cambió el origen histórico del portal. Rehecho por la sesión |
 | 30/09/2026 | asegura-web: «siguiente paso» en 4 herramientas | agente-mecanico | ok parcial: anclas a formularios inexistentes (#presupuesto en páginas sin él, PORTAL_URL como «que me llamen») y quitó el bloque «Guardar mis pólizas». Corregido por la sesión |
+| 30/09/2026 | regla sesión ordena / agentes ejecutan en CLAUDE.md | agente-mecanico | ok |
