@@ -171,20 +171,20 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 227 | 29.258 | 21.379.567 | 0 | 0 |
-| `otro` | 222 | 7.092 | 21.210.480 | 10.839.748 | 0 |
-| `mcp:github` | 207 | 5.227 | 4.411.706 | 49.829.732 | 85 |
-| `lectura-directa` | 202 | 5.026 | 11.913.254 | 0 | 0 |
-| `escritura` | 156 | 3.202 | 46.139.663 | 0 | 0 |
-| `sql` | 145 | 2.867 | 1.406.519 | 2.351.230 | 11 |
-| `mcp:Claude_Code_Remote` | 132 | 1.410 | 295.703 | 5.301.463 | 14 |
+| `bash` | 227 | 29.570 | 21.610.030 | 0 | 0 |
+| `otro` | 222 | 7.140 | 21.330.828 | 10.889.155 | 0 |
+| `mcp:github` | 207 | 5.252 | 4.430.876 | 50.085.552 | 88 |
+| `lectura-directa` | 202 | 5.038 | 11.938.589 | 0 | 0 |
+| `escritura` | 156 | 3.204 | 46.145.186 | 0 | 0 |
+| `sql` | 145 | 2.894 | 1.418.117 | 2.351.230 | 11 |
+| `mcp:Claude_Code_Remote` | 132 | 1.423 | 297.465 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 20 | 564 | 2.370.364 | 0 | 0 |
-| `mcp:Vercel` | 52 | 534 | 783.163 | 198.719 | 14 |
+| `mcp:Vercel` | 53 | 537 | 785.009 | 198.719 | 14 |
 | `mcp:Gmail` | 25 | 316 | 466.902 | 0 | 9 |
-| `mcp:Supabase` | 93 | 271 | 26.239 | 0 | 2 |
+| `mcp:Supabase` | 93 | 273 | 26.434 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
-| `agente:general-purpose` | 38 | 128 | 98.653 | 2.337.440 | 0 |
-| `agente:agente-architect` | 31 | 88 | 67.212 | 2.396.217 | 0 |
+| `agente:general-purpose` | 38 | 129 | 98.861 | 2.337.440 | 0 |
+| `agente:agente-architect` | 31 | 89 | 68.187 | 2.449.122 | 0 |
 | `mcp:Google-Drive` | 11 | 77 | 76.216 | 0 | 2 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `mcp:Google_Drive` | 13 | 72 | 101.947 | 0 | 14 |
@@ -194,7 +194,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `agente:Explore` | 24 | 54 | 27.686 | 1.290.967 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
-| `agente:rastreador-codigo` | 26 | 43 | 14.569 | 472.184 | 0 |
+| `agente:rastreador-codigo` | 27 | 44 | 15.389 | 508.557 | 0 |
 | `agente:agente-mecanico` | 18 | 43 | 42.111 | 803.194 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |

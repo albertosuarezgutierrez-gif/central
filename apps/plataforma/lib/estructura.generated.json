@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-30T04:10:46Z",
+  "generadoEn": "2026-09-30T06:20:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 155
+        "evidencias": 159
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4031,6 +4031,7 @@
       "/api/operador/codeoscopic/product-form",
       "/api/operador/codeoscopic/proyecto",
       "/api/operador/codeoscopic/proyectos-cliente",
+      "/api/operador/codeoscopic/reproceso",
       "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
@@ -6624,7 +6625,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1537,
+    "apis": 1538,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
