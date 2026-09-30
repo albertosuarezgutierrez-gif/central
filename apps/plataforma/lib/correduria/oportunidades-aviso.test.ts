@@ -34,3 +34,17 @@ test('el bloque: cliente, ramo, compañía actual y vencimiento; nada nuevo → 
   assert.match(bloqueOportunidades({ estado: 'error', motivo: 'red' }, []) ?? '', /NO significa que no haya/)
   assert.equal(bloqueOportunidades({ estado: 'sin_configurar' }, []), null)
 })
+
+test('volcado antiguo: arriba las que aún llegan al preaviso, ninguna se quita', () => {
+  // 30 tarde (0-29 d) y 5 a tiempo (30-34 d): con orden por días a secas, los 25 nombres a la vista
+  // serían todos de plazo de baja pasado.
+  const tarde = Array.from({ length: 30 }, (_, i) => op({ id: `t${i}`, cliente: `Tarde${i}`, dias: i }))
+  const aTiempo = Array.from({ length: 5 }, (_, i) => op({ id: `a${i}`, cliente: `ATiempo${i}`, dias: 34 - i }))
+  const todas = [...tarde, ...aTiempo]
+  const b = bloqueOportunidades({ estado: 'ok', oportunidades: todas, truncado: false }, todas) ?? ''
+  const nombres = [...b.matchAll(/^• (\S+) —/gm)].map((m) => m[1])
+  assert.deepEqual(nombres.slice(0, 5), ['ATiempo4', 'ATiempo3', 'ATiempo2', 'ATiempo1', 'ATiempo0'])
+  assert.match(b, /5 aún a tiempo de dar la baja.*30 con el plazo de baja ya pasado/)
+  assert.match(b, /Tarde0 — .*plazo de baja pasado/)
+  assert.match(b, /…y 10 más en \/correduria\/vencimientos\./)
+})

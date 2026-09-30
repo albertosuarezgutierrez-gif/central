@@ -965,7 +965,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Fecha dudosa (`fechaVencimientoDudosa`: ya pasada o a >13 meses) → aviso bajo el campo en alta/edición de oportunidad y
   «Cambiar vencimiento», y en Telegram `proponer_oportunidad` (la pasada ya se proyecta; ahí solo avisa la lejana). No bloquea.
 - Descartadas en la revisión (sin datos que las justifiquen): cola «pídele la fecha», procedencia de la fecha, editar declaradas.
-- ⏸️ Pendiente de Alberto: limitar el aviso de 45 días (#4019) — 567 oportunidades en ventana hoy, 566 del volcado legacy.
+- Aviso de 45 días (#4019) SIN límite (Alberto: «hay que trabajar la BBDD antigua»): 567 en ventana el 30/09, 566 del volcado;
+  solo 174 aún llegan al preaviso de un mes. El Telegram las pone arriba (`ordenAviso`); el resto, en /correduria/vencimientos.
+  ⚠️ Llamar al volcado = interés legítimo + Lista Robinson, y NINGÚN código consulta Robinson hoy.
 
 ## (29/09/2026) CIMA: devuelto de póliza SUSTITUIDA ya no se pide pagar en el portal (PR #4088, mergeado)
 - CIMA del día OK (4 ficheros, 0 cuarentena). Mapfre mandó su 1.er POL diario el 28/09.
