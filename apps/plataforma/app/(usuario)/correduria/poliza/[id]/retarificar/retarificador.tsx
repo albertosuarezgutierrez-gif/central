@@ -1981,6 +1981,7 @@ function Precios({
             primaEur={p.primaEur ?? null}
             producto={p.producto ?? null}
             modalidad={p.modalidad ?? null}
+            idPrecio={p.id ?? null}
             fechaEfecto={r.fechaEfecto}
             ramo={ramo}
             onCerrar={() => setAbierta(null)}

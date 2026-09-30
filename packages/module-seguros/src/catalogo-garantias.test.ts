@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, asistenciaHogarAmpliada, descuentosDeOpciones, garantiasDeOpciones, noReconocidas, subcoberturas } from './catalogo-garantias.ts'
+import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, asistenciaHogarAmpliada, descuentosDeOpciones, garantiasDeOpciones, noReconocidas, nombresNuevosSinCatalogo, subcoberturas } from './catalogo-garantias.ts'
 import { filtrarPorGarantias, interruptoresGarantias } from './filtro-garantias.ts'
 
 // Nombres REALES de coberturas de moto de Codeoscopic (presupuesto de Manuel, 28/09/2026).
@@ -275,4 +275,25 @@ test('un TODO RIESGO de coche o moto INCLUYE daños propios aunque la compañía
   const occTr = clasificarCoberturas('auto', occident, null, { categoria: 'Todo Riesgo Con Franquicia Baja', modalidad: 'Todo Riesgo con franquicia 300' })
   assert.equal(occTr.porClave.perdida_total, 'no_consta')
   assert.equal(occTr.porClave.danos_propios, 'si')
+})
+
+// 30/09/2026: el vocabulario REAL de Codeoscopic (medido en `tarificacion_precios.coberturas`, 396
+// precios). Es cerrado: cada nombre o es una garantía reconocida o está en `FUERA_DE_CATALOGO`.
+const VOCABULARIO_VENDOR: Record<'auto' | 'moto' | 'hogar', string[]> = {
+  auto: ['Vehículo de sustitución', 'Grandes daños / Pérdida total', 'Robo', 'Responsabilidad civil obligatoria', 'Asistencia en viaje', 'Seguro del conductor/ocupantes', 'Defensa jurídica', 'Préstamo reparación/Seguro Reembolso', 'Retirada de carné', 'Incendio', 'Lunas', 'Responsabilidad civil voluntaria', 'Daños al cargador', 'Daños propios', 'Defensa en multas'],
+  moto: ['Retirada de carné', 'Daños propios', 'Asistencia en viaje', 'Robo', 'Daños al cargador', 'Préstamo reparación/Seguro Reembolso', 'Vehículo de sustitución', 'Grandes daños / Pérdida total', 'Accesorios', 'Responsabilidad civil obligatoria', 'Responsabilidad civil voluntaria', 'Defensa jurídica', 'Rotura del faro/Casco o  Vestimenta', 'Incendio', 'Seguro del conductor/ocupantes', 'Defensa en multas'],
+  hogar: ['Robo', 'Responsabilidad civil', 'Cristales', 'Vehículos/maquinaria autopropulsada en reposo.', 'Asistencia en el hogar', 'Todo Riesgo Accidental', 'Daños eléctricos', 'Daños por fenómenos meteorológicos.', 'Otras garantías / Extensión garantías.', 'Incendio', 'Defensa jurídica', 'Asistencia en viaje / Accidentes', 'Restauración estética', 'Daños por agua', 'Animales domésticos'],
+}
+
+test('vocabulario del vendor: ningún nombre real queda sin decidir', () => {
+  for (const [ramo, nombres] of Object.entries(VOCABULARIO_VENDOR)) {
+    assert.deepEqual(nombresNuevosSinCatalogo(ramo as 'auto', nombres), [], `${ramo}: hay nombres sin garantía ni exclusión`)
+  }
+  // Y uno inventado sí se señala como nuevo.
+  assert.deepEqual(nombresNuevosSinCatalogo('hogar', ['Cobertura inventada xyz']), ['Cobertura inventada xyz'])
+})
+
+test('v6: «Daños por fenómenos meteorológicos» de hogar es la garantía de fenómenos atmosféricos', () => {
+  const g = clasificarCoberturas('hogar', [{ nombre: 'Daños por fenómenos meteorológicos.', incluida: true }])
+  assert.equal(g.porClave.fenomenos_atmosfericos, 'si')
 })

@@ -310,3 +310,31 @@ test('encontrarPrecio: confirmar DOS veces el mismo precio no da 409 (fixture re
   // Aunque no llegue la prima: el de la tarificación es el único sin caducidad.
   assert.equal(encontrarPrecio(c, 'Allianz', 'Terceros Ampliado', { modalidad: 'Allianz Terceros Ampliado' })?.id, 'Q2024306544')
 })
+
+test('encontrarPrecio: el id del vendor MANDA sobre la descripción, y uno ajeno no se acepta (30/09/2026)', () => {
+  const base = {
+    franquiciaEur: null, entradaEur: null, meses: null, formaPago: null,
+    frecuenciaPago: null, referenciaVendor: null, firmeza: 'estimado' as const, avisos: [],
+    requiereReRate: true, productId: 1, productOptions: null, expiraEn: null, opciones: null, ofertaId: null, quoteCrudo: null,
+  }
+  const fila = (id: string, compania: string, categoria: string, modalidad: string, primaEur: number) =>
+    ({ ...base, id, compania, producto: `${compania} Autos`, categoria, modalidad, primaEur })
+  const cotizacion: Cotizacion = {
+    projectId: '1', fechaEfecto: null, insuranceLineId: 'Car', fallos: [],
+    precios: [
+      // Dos filas con la MISMA descripción: sin el id no hay forma de saber cuál se pulsó.
+      fila('Q1', 'Reale', 'Terceros', 'Terceros Básico', 300),
+      fila('Q2', 'Reale', 'Terceros', 'Terceros Básico', 320),
+      fila('Q9', 'Mapfre', 'Terceros', 'Terceros Básico', 280),
+    ],
+  }
+  const desc = { modalidad: 'Terceros Básico' }
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', desc), null)
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { ...desc, idPrecio: 'Q2' })?.id, 'Q2')
+  // La prima re-tarificada no importa: el id es la identidad.
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { ...desc, idPrecio: 'Q1', primaEur: 999 })?.id, 'Q1')
+  // Un id que es de OTRA compañía es una incoherencia: no se emite ni ese ni otro.
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { ...desc, idPrecio: 'Q9' }), null)
+  // Un id que el proyecto ya no trae (el vendor renumeró) cae a la llave descriptiva.
+  assert.equal(encontrarPrecio(cotizacion, 'Mapfre', 'Terceros', { ...desc, idPrecio: 'Q404' })?.id, 'Q9')
+})

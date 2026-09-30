@@ -39,6 +39,7 @@ export type TipoActividad =
   | 'cuenta'
   | 'sugerencia'
   | 'datos_presupuesto'
+  | 'cotizacion_incoherente'
   | 'parte'
   | 'poliza_declarada'
   | 'supresion'
@@ -98,6 +99,12 @@ export const ACTIVIDADES: readonly Definicion[] = [
     label: 'Completó los datos para su presupuesto',
     origen: 'cliente',
     riesgo: 'Está esperando precio: tarifícalo hoy.',
+  },
+  {
+    v: 'cotizacion_incoherente',
+    label: 'Cotización con precios que no cuadran',
+    origen: 'ficha',
+    riesgo: 'Revisa las opciones marcadas en la parrilla antes de ofrecerlas o emitirlas.',
   },
   { v: 'poliza_declarada', label: 'Subió una póliza de otra compañía', origen: 'cliente', riesgo: null },
   { v: 'sugerencia', label: 'Escribió una sugerencia', origen: 'cliente', riesgo: null },

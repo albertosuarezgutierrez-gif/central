@@ -377,6 +377,7 @@ export function Emision({
   primaEur,
   producto = null,
   modalidad = null,
+  idPrecio = null,
   fechaEfecto = null,
   ofertaImportada = null,
   sustituye = true,
@@ -394,6 +395,9 @@ export function Emision({
   /** Modalidad de la compañía («TERCEROS AMPLIADO + Robo + Multas…»): con varios precios de la misma
    *  compañía y nivel es lo único que dice CUÁL se está emitiendo. `null` = no consta. */
   modalidad?: string | null
+  /** 🔑 `mainQuote.id` del vendor de la fila pulsada: la identidad del precio (ver `encontrarPrecio`
+   *  de asegura). `null` = no consta; entonces manda la llave compañía + nivel + modalidad. */
+  idPrecio?: string | null
   /** Fecha de efecto con la que se cotizó (aaaa-mm-dd). Arranca el campo de fecha. */
   fechaEfecto?: string | null
   /** Oferta ya aceptada al importar un proyecto hecho en Avant2 (fila 13, 26/09/2026):
@@ -520,6 +524,7 @@ export function Emision({
       producto: producto ?? undefined,
       primaEur: primaEur ?? undefined,
       modalidad: modalidad ?? undefined,
+      idPrecio: idPrecio ?? undefined,
       ...(fechaNueva ? { fechaEfectoCorregida: fechaNueva } : {}),
       ...(Object.keys(limpias).length > 0 ? { correcciones: limpias } : {}),
       ...(conProductOptions ? { productOptions: conProductOptions } : {}),

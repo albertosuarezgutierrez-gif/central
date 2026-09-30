@@ -91,3 +91,19 @@ test('textoDescuentos: lo que la compañía dice; sin dato no se pinta nada', ()
   const { opciones } = opcionesDeParrilla([{ precioId: '11111111-1111-4111-8111-111111111111', compania: 'Allianz', primaEur: 300, descuentos: [{ etiqueta: 'CAP', pct: 25 }] } as never])
   assert.deepEqual(opciones[0]!.descuentos, [{ etiqueta: 'CAP', pct: 25 }])
 })
+
+test('30/09/2026: el id del vendor de una guardada (`idVendor`) llega a la opción, y los reparos a su fila', () => {
+  const precios = guardada([
+    { id: U(1), idVendor: 'Q7601460', compania: 'Mapfre', categoria: 'Terceros ampliado', modalidad: 'TERCEROS AMPLIADO - Franquicia 450€', primaEur: 449.26, franquiciaEur: 600 },
+    { id: U(2), idVendor: 'Q7601461', compania: 'Mapfre', categoria: 'Terceros ampliado', modalidad: 'TERCEROS AMPLIADO - Franquicia 600€', primaEur: 446.77, franquiciaEur: 600 },
+    // Un uuid colado como id del vendor no se toma por tal.
+    { id: U(3), idVendor: U(4), compania: 'Reale', primaEur: 300 },
+  ])
+  assert.equal(precios[0]!.id, 'Q7601460')
+  assert.equal(precios[2]!.id, undefined)
+  const { opciones } = opcionesDeParrilla(precios)
+  assert.equal(opciones[0]!.idVendor, 'Q7601460')
+  assert.equal(opciones[2]!.idVendor, null)
+  assert.match(opciones[0]!.reparos.join(' '), /franquicia de 450€ y la compañía declara 600€/)
+  assert.deepEqual(opciones[1]!.reparos, [])
+})

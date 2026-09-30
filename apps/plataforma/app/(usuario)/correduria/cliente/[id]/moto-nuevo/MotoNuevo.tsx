@@ -1071,6 +1071,7 @@ function Precios({
             primaEur={p.primaEur ?? null}
             producto={p.producto ?? null}
             modalidad={p.modalidad ?? null}
+            idPrecio={p.id ?? null}
             sustituye={sustituye}
             onCerrar={cerrar}
           />
@@ -1111,6 +1112,7 @@ function Precios({
                   primaEur={o.primaEur}
                   producto={o.producto}
                   modalidad={o.modalidad}
+                  idPrecio={o.idVendor}
                   sustituye={sustituye}
                   onCerrar={cerrar}
                 />

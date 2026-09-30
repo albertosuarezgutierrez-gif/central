@@ -1189,6 +1189,9 @@ export async function ofertaAsegura(p: {
   /** Modalidad de la fila pulsada: compañía + nivel + modalidad es la llave única del precio.
    *  Sin ella asegura solo casa una prima idéntica (30/09/2026, ver `encontrarPrecio`). */
   modalidad?: string
+  /** 🔑 `mainQuote.id` del vendor de la fila pulsada: la IDENTIDAD del precio. Si el proyecto aún
+   *  lo trae, asegura confirma ESE; si no (re-tarificado), cae a compañía + nivel + modalidad. */
+  idPrecio?: string
   /** Fecha de efecto NUEVA (aaaa-mm-dd). Desde el 25/09/2026 viaja en el propio
    *  ReRate (`mainQuote.effectiveDate`, la vía documentada por el vendor). */
   fechaEfectoCorregida?: string
@@ -1785,6 +1788,11 @@ function leerPreciosGuardados(v: unknown): Precio[] | null {
       // `precioId`, nunca a `id` (el del vendor, que es el que se manda al ReRate).
       ...(typeof x.id === 'string' && x.id.trim() !== ''
         ? UUID_PRECIO.test(x.id.trim()) ? { precioId: x.id.trim().toLowerCase() } : { id: x.id.trim() }
+        : {}),
+      // 30/09/2026: una cotización RECUPERADA trae el del vendor aparte (`idVendor`, de
+      // `tarificacion_precios.id_precio`), porque su `id` es ya el uuid de la fila.
+      ...(typeof x.idVendor === 'string' && x.idVendor.trim() !== '' && !UUID_PRECIO.test(x.idVendor.trim())
+        ? { id: x.idVendor.trim() }
         : {}),
       ...(x.garantias === undefined ? {} : { garantias: leerGarantias(x.garantias) }),
       ...(x.descuentos === undefined ? {} : { descuentos: leerDescuentos(x.descuentos) }),

@@ -29,6 +29,7 @@
 import { prisma } from '../tenant.ts'
 import type { Cotizacion } from './respuesta.ts'
 import { sobreOpciones } from './coberturas.ts'
+import { PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE, revisarCoherenciaCotizacion } from '@central/module-seguros'
 
 /** Por qué puerta entró la cotización. Es el CHECK de la tabla, en TypeScript. */
 export type PuertaCotizacion = 'corredor' | 'agente' | 'web'
@@ -380,10 +381,48 @@ export async function guardarSinTumbar(
     if (!e.simulado && e.respuesta !== undefined) {
       await guardarRespuestaCruda({ correduriaId: e.correduriaId, cotizacionId, respuesta: e.respuesta }, enTransaccion)
     }
+    if (!e.simulado) await anotarIncoherencias(e, enTransaccion)
     return { estado: 'guardada', cotizacionId }
   } catch (err) {
     return { estado: 'no_guardada', motivo: motivoDe(err) }
   }
+}
+
+/**
+ * 30/09/2026: si los precios que acaban de llegar no cuadran (`revisarCoherenciaCotizacion`),
+ * se deja UNA nota en la ficha con el prefijo que el muro de actividad reconoce, y de ahí sale
+ * el Telegram (`correduria-actividad`). Como la respuesta cruda: escritura aparte que NO lanza —
+ * un fallo aquí no puede dejar sin copia un precio ya pagado. Sin ficha (ni la de la póliza) no
+ * hay dónde anotarla: queda en el log y la parrilla la sigue marcando.
+ */
+export async function anotarIncoherencias(
+  e: Pick<EntradaCotizacion, 'correduriaId' | 'contexto' | 'cotizacion'>,
+  enTransaccion: EnTransaccion = transaccionPrisma,
+): Promise<number> {
+  const reparos = revisarCoherenciaCotizacion(e.cotizacion.precios)
+  if (reparos.length === 0) return 0
+  const lineas = reparos.slice(0, 6).map((r) => `• ${r.mensaje}`)
+  if (reparos.length > 6) lineas.push(`• … y ${reparos.length - 6} más`)
+  const textoNota = `${PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE} (proyecto ${e.cotizacion.projectId}):\n${lineas.join('\n')}`
+  try {
+    await enTransaccion(async (tx) => {
+      await tx.$executeRaw`
+        insert into seguros.historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
+        select ${e.correduriaId}::uuid, q.cliente_id, ${e.contexto.polizaId ?? null}::uuid,
+               cast('gestion' as seguros.tipo_historial_interno), ${textoNota}
+        from (
+          select coalesce(${e.contexto.clienteId ?? null}::uuid,
+                          (select p.cliente_id from seguros.polizas p
+                           where p.id = ${e.contexto.polizaId ?? null}::uuid and p.correduria_id = ${e.correduriaId}::uuid)) as cliente_id
+        ) q
+        where q.cliente_id is not null
+      `
+    })
+  } catch (err) {
+    console.warn('[cotizaciones] no se pudo anotar la cotización incoherente:', motivoDe(err))
+  }
+  console.warn(`[cotizaciones] proyecto ${e.cotizacion.projectId}: ${reparos.length} reparo(s) de coherencia`)
+  return reparos.length
 }
 
 /** Firma de lo que el embudo llama. Existe para poder doblarla en un test. */

@@ -10,7 +10,7 @@
 //   `null`      → aún no se han leído sus coberturas: «Leyendo coberturas…», nunca «no incluye».
 //   objeto      → el dato.
 
-import { bloqueoCompania, capitalServicio, type DescuentoComercial, type GarantiasClasificadas, type OpcionFiltrable } from '@central/module-seguros'
+import { bloqueoCompania, capitalServicio, reparosPorFila, type DescuentoComercial, type GarantiasClasificadas, type OpcionFiltrable } from '@central/module-seguros'
 import type { Precio } from './retarificar-asegura.ts'
 import type { OcultarPresupuesto } from './presupuesto-asegura.ts'
 
@@ -29,6 +29,10 @@ export type OpcionParrilla = OpcionFiltrable & {
   modalidad: string | null
   /** Avisos de la compañía tal cual (aceptación del riesgo, consulta Sinco…). `[]` = ninguno. */
   avisos: string[]
+  /** 🔑 `mainQuote.id` del vendor: con él se emite exactamente ESTA opción. `null` = no consta. */
+  idVendor: string | null
+  /** Lo que no cuadra de esta opción (`revisarCoherenciaCotizacion`). `[]` = revisada y sin reparos. */
+  reparos: string[]
 }
 
 export type EstadoCoberturas =
@@ -49,7 +53,10 @@ export function opcionesDeParrilla(precios: readonly Precio[]): { opciones: Opci
   let sinId = 0
   let conCampo = 0
   let leidas = 0
-  for (const p of precios) {
+  // Sobre la lista ENTERA (también las que no entran por no tener `precioId`): la llave repetida
+  // y el id repetido se juzgan entre todas.
+  const reparos = reparosPorFila(precios)
+  for (const [i, p] of precios.entries()) {
     if (!p.precioId) {
       sinId++
       continue
@@ -71,6 +78,8 @@ export function opcionesDeParrilla(precios: readonly Precio[]): { opciones: Opci
       descuentos: p.descuentos ?? null,
       modalidad: typeof p.modalidad === 'string' && p.modalidad.trim() !== '' ? p.modalidad.trim() : null,
       avisos: Array.isArray(p.avisos) ? p.avisos.filter((a): a is string => typeof a === 'string') : [],
+      idVendor: typeof p.id === 'string' && p.id.trim() !== '' ? p.id.trim() : null,
+      reparos: reparos[i] ?? [],
     })
   }
   const estado: EstadoCoberturas =

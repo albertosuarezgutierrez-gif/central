@@ -27,10 +27,24 @@ test('la pantalla de emisión manda producto, prima y la fecha elegida', () => {
   assert.match(src, /primaEur: primaEur \?\? undefined/)
   // 30/09/2026: la modalidad es la llave del precio (ver `encontrarPrecio`).
   assert.match(src, /modalidad: modalidad \?\? undefined/)
+  // 30/09/2026 (tarde): y el id del vendor, que es la IDENTIDAD del precio.
+  assert.match(src, /idPrecio: idPrecio \?\? undefined/)
   assert.match(src, /fechaEfectoCorregida: fechaNueva/)
   const ruta = leer('apps/asegura/app/api/operador/codeoscopic/oferta/route.ts')
   assert.match(ruta, /encontrarPrecio\(cotizacion, compania, categoria, \{/)
-  assert.match(ruta, /modalidad,\n\s*\}\)/)
+  assert.match(ruta, /modalidad,\n\s*idPrecio: cadena\(cuerpo\.idPrecio\),\n\s*\}\)/)
   const lib = leer('apps/plataforma/lib/retarificar-asegura.ts')
   assert.match(lib, /modalidad\?: string/)
+  assert.match(lib, /idPrecio\?: string/)
+  // Cada pantalla que abre el panel de emisión le pasa el id de la fila pulsada.
+  for (const f of [
+    'apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/retarificador.tsx',
+    'apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/AutoNuevo.tsx',
+    'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx',
+    'apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/Formulario.tsx',
+  ]) {
+    const usos = leer(f).split('<Emision').length - 1
+    const conId = (leer(f).match(/idPrecio=\{/g) ?? []).length
+    assert.equal(conId, usos, `${f}: ${usos} paneles de emisión y ${conId} con idPrecio`)
+  }
 })
