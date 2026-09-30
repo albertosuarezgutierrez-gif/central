@@ -107,25 +107,27 @@ test('saluda por el nombre de pila, y sin nombre cuando no lo hay', () => {
 import { mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
 import { puedeWhatsappLead, textoPasoLead } from './lead-competencia.ts'
 
-test('seguimiento: pregunta por la renovación con el mes estimado, sin afirmarlo', () => {
-  const m = mensajeRenovacionLeadWhatsapp({ nombre: 'Mari Angeles Pérez', ramo: 'hogar', mesAniversario: 11 })
-  assert.match(m, /^Hola Mari/)
-  assert.match(m, /¿Te renueva el seguro de hogar por noviembre\?/)
-  const sinMes = mensajeRenovacionLeadWhatsapp({ nombre: null, ramo: null, mesAniversario: null })
-  assert.match(sinMes, /¿Cuándo te renueva tu seguro\?/)
+test('seguimiento (texto de Alberto, 30/09/2026): «si no me equivoco», ramo coloquial y mes', () => {
+  const m = mensajeRenovacionLeadWhatsapp({ nombre: 'Mari Angeles Pérez', ramo: 'auto', mesAniversario: 11 })
+  assert.equal(m, 'Hola Mari, soy Alberto, de GrupoASegura.es. Si no me equivoco, tu seguro de coche vence en noviembre. ' +
+    '¿Te preparo un estudio sin compromiso? Si no quieres que te escriba más, dímelo y no lo vuelvo a hacer. ¡Gracias!')
+  assert.match(mensajeRenovacionLeadWhatsapp({ nombre: 'Ana', ramo: 'hogar', mesAniversario: 3 }), /tu seguro de casa vence en marzo/)
+  // Lo que no se sabe no se inventa: sin nombre, sin ramo reconocible y sin mes.
+  const sinDatos = mensajeRenovacionLeadWhatsapp({ nombre: null, ramo: 'otros', mesAniversario: null })
+  assert.match(sinDatos, /^Hola, soy Alberto, de GrupoASegura\.es\. Si no me equivoco, tu seguro vence pronto\./)
+  assert.doesNotMatch(sinDatos, /undefined|null|de otros/)
 })
 
-test('🪤 seguimiento: no promete precio ni ahorro y lleva la baja (LSSI art. 21)', () => {
+test('🪤 seguimiento: no promete precio ni ahorro, lleva la baja (LSSI art. 21) y no lleva la web entera', () => {
   const m = mensajeRenovacionLeadWhatsapp({ nombre: 'Ana', ramo: 'auto', mesAniversario: 3 })
   assert.deepEqual(revisarCopy(m), [], explicarInfracciones(revisarCopy(m)))
-  assert.match(m, /no te escriba más/)
+  assert.match(m, /Si no quieres que te escriba más, dímelo/)
+  assert.doesNotMatch(m, /https?:\/\/|intranet/)
 })
 
-test('🪤 WhatsApp a un lead solo si FUE cliente: es comunicación electrónica como el correo', () => {
-  assert.equal(puedeWhatsappLead({ fueCliente: true, tieneTelefono: true }), true)
-  assert.equal(puedeWhatsappLead({ fueCliente: false, tieneTelefono: true }), false)
-  assert.equal(puedeWhatsappLead({ fueCliente: null, tieneTelefono: true }), false)
-  assert.equal(puedeWhatsappLead({ fueCliente: true, tieneTelefono: false }), false)
+test('🪤 WhatsApp a un lead: a todos los que tengan teléfono (Alberto, 30/09/2026, asumiendo el riesgo LSSI)', () => {
+  assert.equal(puedeWhatsappLead({ tieneTelefono: true }), true)
+  assert.equal(puedeWhatsappLead({ tieneTelefono: false }), false)
 })
 
 test('con WhatsApp permitido el primer contacto y el recordatorio son por WhatsApp; la llamada sigue siendo llamada', () => {

@@ -969,7 +969,16 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Cada herramienta acaba en `SiguientePaso` (WhatsApp con el resultado + «que me llame un corredor»), sin promesas de ahorro (`lib/siguiente-paso.test.ts`).
 - Nuevo evento `acceso_click` (EnlaceMedido): `cta_portal_click` queda SOLO para el portal; `origen="cabecera"` del portal se conserva.
 - Portada: 3 tarjetas de herramienta bajo el h1, bloque «corredor de verdad · 24 h laborables» y enlace a reseñas de Google. Página nueva `/seguro-hipoteca-banco-obligatorio` (Ley 5/2019).
-- ⚠️ Pendiente: el titular del aviso por correo solo sale con `NEXT_PUBLIC_AVISOS_CORREO=1` en Vercel `asegura-web` — sin comprobar.
+- ⚠️ Pendiente: el titular del aviso por correo solo sale con `NEXT_PUBLIC_AVISOS_CORREO=1` en Vercel `asegura-web` (Alberto confirma que está puesta). PR #4115.
+
+## (30/09/2026) Correduría: leads de Vencimientos para trabajar por WhatsApp (PR #4109)
+- Acceso directo «Vencimientos» junto a «Subir póliza» (solo icono en móvil, `.rotulo-ancho`). Lista ordenada por vencimiento
+  y en tres pestañas: Por enviar · Esperando respuesta (llámale a los 3 d) · Respondieron; al mandar el WhatsApp el lead cambia de pestaña.
+- Texto nuevo dictado por Alberto: «Hola X, soy Alberto, de GrupoASegura.es. Si no me equivoco, tu seguro de coche vence en…».
+- 🚨 WhatsApp a TODOS con teléfono (antes solo a quien fue cliente): decisión de Alberto asumiendo el riesgo LSSI 21.1 explicado.
+- «¿Qué respondió?»: `planLlamada` con `canal:'whatsapp'` + `numero_equivocado` y `baja` (marca `wa/email_opt_out_at` y aparca).
+- Arreglo: `enlace_abierto` de Recaptación contaba como «respondió» (155 leads). ⏸️ Recaptación NO se quitó: tiene 1.391 antiguos
+  clientes y solo 299 están en Vencimientos → pendiente de que Alberto decida (pasarlos a oportunidades o mantenerla).
 
 ## (30/09/2026) Correduría: al corregir el vencimiento, la llamada se programa o se mueve sola (45 días antes)
 - Cierra el pendiente de #4050: guardar la fecha desde la tarjeta de Oportunidades con `reprogramar` mueve la próxima tarea de
