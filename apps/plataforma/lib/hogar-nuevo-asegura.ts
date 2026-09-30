@@ -346,6 +346,13 @@ export async function cotizarHogarNuevoAsegura(entrada: {
   solicitadoPor?: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
+  /**
+   * VARIANTE de un riesgo (30/09/2026): con `oportunidadId` la tarificación se cuelga de ESA oportunidad
+   * (regla 9) y asegura anota lo usado de vuelta en el riesgo. Sin él, el flujo es el de siempre. `nota` es la
+   * etiqueta libre (≤200).
+   */
+  oportunidadId?: string | null
+  nota?: string | null
 }): Promise<RespuestaRetarificar> {
   try {
     const r = await pedir(
@@ -361,6 +368,8 @@ export async function cotizarHogarNuevoAsegura(entrada: {
           solicitadoPor: entrada.solicitadoPor ?? 'plataforma',
           ...(entrada.resueltos ? { resueltos: entrada.resueltos } : {}),
           ...(entrada.correcciones ? { correcciones: entrada.correcciones } : {}),
+          ...(entrada.oportunidadId ? { oportunidadId: entrada.oportunidadId } : {}),
+          ...(entrada.oportunidadId && entrada.nota && entrada.nota.trim() !== '' ? { nota: entrada.nota.trim().slice(0, 200) } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,

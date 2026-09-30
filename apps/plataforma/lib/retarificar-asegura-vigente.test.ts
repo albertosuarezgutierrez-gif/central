@@ -151,9 +151,11 @@ test('asegura valida el riesgo de la póliza antes de gastar SIN mirar el ramo (
   assert.match(tramo, /contexto = \{ \.\.\.p\.peticion\.contexto, oportunidadId, nota \}/)
 })
 
-test('el riesgo de una póliza de hogar se retarifica dentro de él, pero sin «otro tomador»', () => {
+test('el riesgo de una póliza de hogar se retarifica dentro de él Y hogar-nuevo ya cuelga su presupuesto del riesgo', () => {
   for (const r of ['auto', 'moto', 'hogar']) assert.equal(retarificaEnRiesgo(r), true, r)
   for (const r of ['vida', 'decesos', '']) assert.equal(retarificaEnRiesgo(r), false, r)
-  // hogar-nuevo no lee `?oportunidad=`: «Con otro tomador» sería un presupuesto suelto, sin riesgo.
-  assert.equal(ramoVariante('hogar'), null)
+  // 30/09/2026: hogar-nuevo lee `?oportunidad=` (y vida/salud/decesos también): «Con otro tomador» y «Nueva
+  // variante» cuelgan la tarificación del riesgo (regla 9). Solo los ramos que se cotizan fuera quedan sin ruta.
+  for (const r of ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos']) assert.equal(ramoVariante(r), r, r)
+  for (const r of ['responsabilidad_civil', 'comercio', 'comunidades', 'otros', '']) assert.equal(ramoVariante(r), null, r)
 })

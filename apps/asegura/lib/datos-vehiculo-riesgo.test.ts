@@ -12,7 +12,7 @@ const RAIZ = new URL('..', import.meta.url).pathname
 const sinComentarios = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
 const leer = (rel: string) => sinComentarios(readFileSync(join(RAIZ, rel), 'utf8'))
 const cuerpoDe = (src: string, nombre: string) => {
-  const i = src.indexOf(`export async function ${nombre}`)
+  const i = src.search(new RegExp(`(export )?async function ${nombre}\\b`))
   assert.ok(i >= 0, `falta ${nombre}`)
   const j = src.indexOf('\nexport ', i + 10)
   return src.slice(i, j < 0 ? undefined : j)
@@ -42,40 +42,63 @@ test('editar borra confirmadoAt; confirmar lo sella', () => {
   assert.equal(aplicarEdicionVehiculo(sellado, {}, { confirmar: true, ahora: 'T' }).datos.confirmadoAt, 'T')
 })
 
-test('editarDatosVehiculo: acotada a la correduría, fila bloqueada, fusiona con la función pura y deja historial', () => {
-  const c = cuerpoDe(leer('lib/oportunidad-riesgo.ts'), 'editarDatosVehiculo')
+test('editarDatosRiesgo: acotada a la correduría, fila bloqueada, usa la función pura y deja historial', () => {
+  const c = cuerpoDe(leer('lib/oportunidad-riesgo.ts'), 'editarDatosRiesgo')
   assert.match(c, /correduria_id = \$\{correduriaId\}::uuid/)
   assert.match(c, /for update/, 'lectura y escritura en una transacción con la fila bloqueada')
-  assert.match(c, /validarDatosVehiculoRiesgo\(/)
-  assert.match(c, /aplicarEdicionVehiculo\(/)
-  assert.match(c, /fusionarInfoRiesgo\(/, 'la fusión que se testea es la que se escribe')
+  assert.match(c, /calcularEdicionRiesgo\(/, 'la lógica que se testea (validar, aplicar, sello, fusión) es la que se escribe')
+  assert.match(c, /r\.infoNueva/, 'se escribe el info_riesgo que devuelve la función pura')
   assert.match(c, /oportunidad_historial/)
-  assert.match(c, /admiteDatosVehiculo\(op\.tipo\)/, 'solo auto y moto')
-  assert.match(c, /status: 400/)
+  assert.match(c, /precargaDePolizaDeOportunidad\(/, 'sin nada guardado se parte de la precarga de la póliza')
 })
 
-test('el PATCH del riesgo va con auditado(), correduría única y 403 si el cuerpo trae otra', () => {
+test('el PATCH del riesgo va con auditado(), correduría única, 403 si el cuerpo trae otra y UNA clave de datos', () => {
   const r = leer('app/api/operador/oportunidad/riesgo/route.ts')
   assert.match(r, /export const PATCH = auditado\(/)
   assert.match(r, /operadorAutorizado\(req\)/)
   assert.match(r, /correduriaUnica\(\)/)
   assert.match(r, /status: 403/)
-  assert.match(r, /editarDatosVehiculo\(correduria\.id/)
+  assert.match(r, /editarDatosRiesgo\(correduria\.id/)
+  assert.match(r, /CLAVES_DATOS_RIESGO\.filter/, 'el discriminante sale de la lista cerrada de claves')
+  assert.match(r, /claves\.length !== 1/, 'ni sin clave ni con dos')
 })
 
 test('el write-back nunca lanza y se hace tras guardar la tarificación, sin repetir la cotización', () => {
-  const c = cuerpoDe(leer('lib/oportunidad-riesgo.ts'), 'anotarVehiculoDeCotizacion')
+  const c = cuerpoDe(leer('lib/oportunidad-riesgo.ts'), 'anotarBloqueDeCotizacion')
   assert.match(c, /try \{[\s\S]*\} catch/)
   assert.match(c, /console\.error/)
   assert.match(c, /confirmar: false/, 'una cotización no confirma nada')
-  for (const ruta of ['auto-nuevo', 'moto-nuevo']) {
+  const anotadores: Record<string, string> = {
+    'auto-nuevo': 'anotarVehiculoDeCotizacion', 'moto-nuevo': 'anotarVehiculoDeCotizacion', 'hogar-nuevo': 'anotarViviendaDeCotizacion',
+    'vida-nuevo': 'anotarCapitalDeCotizacion', 'salud-nuevo': 'anotarCapitalDeCotizacion', 'decesos-nuevo': 'anotarCapitalDeCotizacion',
+  }
+  for (const [ruta, anotador] of Object.entries(anotadores)) {
     const r = leer(`app/api/operador/codeoscopic/${ruta}/route.ts`)
     const iCotizar = r.indexOf('await cotizar(p.peticion)')
-    const iAnotar = r.indexOf('anotarVehiculoDeCotizacion(')
+    const iAnotar = r.indexOf(`${anotador}(`, iCotizar)
     assert.ok(iCotizar > 0 && iAnotar > iCotizar, `${ruta}: el write-back va DESPUÉS de cotizar`)
     assert.equal((r.match(/await cotizar\(/g) ?? []).length, 1, `${ruta}: una sola llamada que cuesta dinero`)
     assert.match(r.slice(iCotizar, iAnotar + 200), /guardado\.estado === 'guardada'/, `${ruta}: solo con la tarificación ya guardada`)
   }
+})
+
+// Regla 9 (29/09/2026): una oportunidad sin sus tarificaciones enlazadas es una a la que no se puede emitir. Las seis
+// pantallas de «pedir precio» del riesgo cuelgan la tarificación de la oportunidad con `contexto.oportunidadId`.
+test('CEPO regla 9: hogar, vida, salud y decesos también cuelgan la tarificación de la oportunidad (como auto y moto)', () => {
+  for (const [ruta, ramo] of [['auto-nuevo', 'auto'], ['moto-nuevo', 'moto'], ['hogar-nuevo', 'hogar'], ['vida-nuevo', 'vida'], ['salud-nuevo', 'salud'], ['decesos-nuevo', 'decesos']] as const) {
+    const r = leer(`app/api/operador/codeoscopic/${ruta}/route.ts`)
+    assert.match(r, new RegExp(`prepararVariante\\(correduria\\.id, \\{[\\s\\S]*?ramo: '${ramo}'`), `${ruta}: prepara la variante con su ramo`)
+    assert.match(r, /p\.peticion\.contexto = \{ \.\.\.p\.peticion\.contexto, \.\.\.variante\.v\.contexto \}/, `${ruta}: la oportunidad viaja en el contexto de la cotización`)
+    assert.ok(r.indexOf('p.peticion.contexto = ') < r.indexOf('await cotizar(p.peticion)'), `${ruta}: el contexto se completa ANTES de pagar`)
+    assert.match(r, /correcciones: variante\.v\.correcciones/, `${ruta}: las correcciones son las de la variante`)
+  }
+  // Y la variante solo se cuelga de una oportunidad de su ramo.
+  assert.match(cuerpoDe(leer('lib/oportunidad-riesgo.ts'), 'validarVariante'), /tipo::text = \$\{e\.ramo/, 'el ramo de la variante es el de la oportunidad')
+})
+
+test('la clave del bloque es la del ramo: una sola fuente de verdad (module-seguros)', () => {
+  const c = cuerpoDe(leer('lib/oportunidad-riesgo.ts'), 'editarDatosRiesgo')
+  assert.doesNotMatch(c, /datosVehiculo|datosVivienda|datosCapital|datosRiesgoLibre/, 'la ruta no decide qué clave toca a cada ramo: lo hace claveDatosDeRamo')
 })
 
 // El cepo: nadie escribe la clave `vehiculo` (texto) de info_riesgo. Es el dato viejo, y los nuevos van en `datosVehiculo`.
@@ -93,7 +116,7 @@ test('CEPO: ningún fuente de asegura escribe la clave `vehiculo` de info_riesgo
   }
   // En el código nuevo, ni como clave de objeto que acabe en info_riesgo.
   const nuevo = leer('lib/oportunidad-riesgo.ts')
-  for (const f of ['editarDatosVehiculo', 'anotarVehiculoDeCotizacion']) {
+  for (const f of ['editarDatosRiesgo', 'anotarVehiculoDeCotizacion']) {
     const c = cuerpoDe(nuevo, f)
     if (/(?<![\w.])vehiculo\s*:/.test(c) || /['"`]vehiculo['"`]/.test(c)) culpables.push(`lib/oportunidad-riesgo.ts ${f}: escribe la clave vehiculo`)
   }

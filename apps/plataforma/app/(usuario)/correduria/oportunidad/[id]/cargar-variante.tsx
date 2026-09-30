@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { cardStyle } from '@/components/ui'
 import { riesgoAsegura, rotuloRamo } from '@/lib/seguimiento-asegura'
 import { interpretarRiesgo, type Riesgo } from '@/lib/riesgo-asegura'
-import { tomadorDelRiesgo, varianteDeRiesgo, type VarianteNueva } from './variante'
+import { tomadorDelRiesgo, varianteDeRiesgo, type RamoVarianteNuevo, type VarianteNueva } from './variante'
 
 export type CargaVariante =
   | { estado: 'sin' }
@@ -18,7 +18,7 @@ export async function cargarVariante(
   oportunidadId: string | null,
   tarificacionId: string | null,
   tomadorId: string,
-  ramo: 'auto' | 'moto',
+  ramo: RamoVarianteNuevo,
 ): Promise<CargaVariante> {
   if (!oportunidadId) return { estado: 'sin' }
   const r = await riesgoAsegura(oportunidadId).catch(() => null)

@@ -11,11 +11,11 @@
 
 import { useEffect, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
-import { ETIQUETA_CAMPO_VEHICULO, textoFaltanVehiculo, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { ETIQUETA_CAMPO_VEHICULO, soloLoQueCambia, textoFaltanVehiculo, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada, normalizarMatricula } from '@central/module-seguros/matricula'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
-import { fechaEs, llamarDatosVehiculo, motivoDe } from './piezas-riesgo'
+import { fechaEs, llamarDatosRiesgo, motivoDe } from './piezas-riesgo'
 import type { Riesgo } from '@/lib/riesgo-asegura'
 
 const campo: React.CSSProperties = {
@@ -84,7 +84,7 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError }: {
   async function guardar(datosVehiculo: Record<string, unknown>, confirmar: boolean) {
     setEnviando(true)
     setErrorForm(null)
-    const r = await llamarDatosVehiculo({ oportunidadId: op.id, datosVehiculo, ...(confirmar ? { confirmar: true } : {}) })
+    const r = await llamarDatosRiesgo({ oportunidadId: op.id, datosVehiculo, ...(confirmar ? { confirmar: true } : {}) })
     setEnviando(false)
     if (!r.ok) {
       const m = motivoDe(r)
@@ -98,8 +98,12 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError }: {
 
   function enviarEdicion(e: React.FormEvent) {
     e.preventDefault()
-    // Todo el formulario: lo que no cambió no cuenta como cambio en asegura; vacío = borrar ese dato.
-    void guardar({ ...form }, false)
+    // Solo lo que DIFIERE del estado inicial: no se copia el texto de fallback («vehiculo») a `marca`, no se
+    // pisan escrituras concurrentes de campos que aquí no se tocaron, y editar marca/modelo/versión a mano hace
+    // que asegura suelte el código del catálogo (un precio de otro coche no se queda pegado). Vacío = borrar.
+    const cambios = soloLoQueCambia(d as unknown as Record<string, unknown>, form)
+    if (Object.keys(cambios).length === 0) { setEditando(false); return }
+    void guardar(cambios, false)
   }
 
   async function consultarMatricula() {
@@ -197,7 +201,7 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError }: {
             </label>
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-            Un campo vacío se guarda como «sin dato». La versión exacta del catálogo (necesaria para el precio) se elige en la pantalla de pedir precio y queda recordada aquí.
+            Un campo vacío se guarda como «sin dato». Si cambias marca, modelo o versión a mano, se olvida la versión del catálogo ya elegida y habrá que elegirla otra vez al pedir precio. La versión exacta del catálogo (necesaria para el precio) se elige en la pantalla de pedir precio y queda recordada aquí.
             {garajes === null && ' No se ha podido leer el catálogo de garajes ahora.'}
           </div>
           {errorForm && <div role="alert" style={{ fontSize: 13, color: 'var(--negative)' }}>{errorForm}</div>}

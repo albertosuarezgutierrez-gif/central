@@ -296,7 +296,28 @@ export function aplicarEdicionVehiculo(
   const previo = actual ?? datosVehiculoVacios()
   const datos: DatosVehiculoRiesgo = { ...previo }
   const cambios: CambioVehiculo[] = []
+  const trae = (k: CampoVehiculo) => Object.prototype.hasOwnProperty.call(valor, k)
+  // El código de versión, los ids del catálogo y los textos marca/modelo/versión describen EL MISMO vehículo:
+  //  - cambia el código sin ids nuevos → los ids y los textos de catálogo viejos ya no son de esta versión;
+  //  - se teclea a mano marca/modelo/versión (con otro texto) sin código nuevo → el código y los ids viejos
+  //    apuntan a otro coche. Mejor «sin versión elegida» que un precio de un coche que ya no es.
+  const IDS_Y_TEXTOS: readonly CampoVehiculo[] = ['marcaId', 'modeloId', 'motorId', 'marca', 'modelo', 'version']
+  const cambiaCodigo = trae('codigoVehiculo') && (valor.codigoVehiculo ?? null) !== previo.codigoVehiculo
+  const aBorrar = new Set<CampoVehiculo>()
+  if (cambiaCodigo) {
+    for (const k of IDS_Y_TEXTOS) if (!trae(k)) aBorrar.add(k)
+  } else if (!trae('codigoVehiculo') && !trae('marcaId') && !trae('modeloId') && !trae('motorId')) {
+    const aMano = (['marca', 'modelo', 'version'] as const).some((k) => trae(k) && (valor[k] ?? null) !== previo[k])
+    if (aMano) for (const k of ['codigoVehiculo', 'marcaId', 'modeloId', 'motorId'] as const) aBorrar.add(k)
+  }
   for (const k of CAMPOS_VEHICULO) {
+    if (aBorrar.has(k)) {
+      if (previo[k] !== null) {
+        cambios.push({ campo: k, antes: previo[k], despues: null })
+        ;(datos as Record<string, unknown>)[k] = null
+      }
+      continue
+    }
     if (!Object.prototype.hasOwnProperty.call(valor, k)) continue
     const nuevo = (valor[k] ?? null) as DatosVehiculoRiesgo[CampoVehiculo]
     if (nuevo === previo[k]) continue

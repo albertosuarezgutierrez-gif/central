@@ -162,3 +162,31 @@ test('interpretarRiesgo: datosVehiculo y faltanVehiculo — sin bloque = null, n
     assert.deepEqual(con.riesgo.faltanVehiculo, ['codigoVehiculo', 'garaje'])
   }
 })
+
+test('interpretarRiesgo: datosRiesgo de cada ramo — clave rara o datos ilegibles = null, nunca un bloque vacío que parezca leído', () => {
+  const base = { estado: 'ok', oportunidad: { id: 'o1', clienteId: 'c1', ramo: 'hogar' }, figuras: [], roles: [], variantes: [] }
+  const leer = (datosRiesgo: unknown) => {
+    const r = interpretarRiesgo(200, { ...base, datosRiesgo })
+    assert.equal(r.estado, 'ok')
+    return r.estado === 'ok' ? r.riesgo.datosRiesgo : undefined
+  }
+  assert.equal(leer(undefined), null, 'asegura vieja: no se enseña el bloque')
+  assert.equal(leer({ clave: 'otraCosa', datos: {}, faltan: [] }), null)
+  assert.equal(leer({ clave: 'datosVivienda', datos: 'x', faltan: [] }), null)
+  const v = leer({ clave: 'datosVivienda', datos: { cp: '41003', habitaciones: '3', metrosCuadrados: 90, ventanasSeguras: false }, faltan: ['uso', 7], dePoliza: true, tarifica: true })
+  assert.equal(v?.clave, 'datosVivienda')
+  if (v?.clave === 'datosVivienda') {
+    assert.equal(v.datos.cp, '41003')
+    assert.equal(v.datos.habitaciones, null, 'un número como texto es «no se sabe»')
+    assert.equal(v.datos.metrosCuadrados, 90)
+    assert.equal(v.datos.ventanasSeguras, false, 'false es un dato')
+    assert.equal(v.datos.vigilante, null)
+    assert.deepEqual(v.faltan, ['uso'])
+    assert.equal(v.dePoliza, true)
+  }
+  const c = leer({ clave: 'datosCapital', datos: { capital: 0, duracionAnios: null }, faltan: ['capital'], tarifica: true })
+  assert.equal(c?.clave === 'datosCapital' && c.datos.capital, 0, 'un 0 declarado es un dato')
+  const l = leer({ clave: 'datosRiesgoLibre', datos: { descripcion: 'Bar', capital: 5000 }, faltan: [], tarifica: false })
+  assert.equal(l?.clave === 'datosRiesgoLibre' && l.tarifica, false)
+  assert.equal(l?.clave === 'datosRiesgoLibre' && l.datos.notas, null)
+})

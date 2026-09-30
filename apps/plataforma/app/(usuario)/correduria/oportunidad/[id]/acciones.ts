@@ -4,6 +4,7 @@
 // «Editar datos» (EditarCliente + EditarCarnets, los mismos de la ficha del cliente). Solo lectura.
 // El DNI sale enmascarado (regla 4): la ficha ya lo trae así del puerto.
 
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { fichaAsegura, type CarnetFicha } from '@/lib/ficha-asegura'
 import { riesgoAsegura } from '@/lib/seguimiento-asegura'
 import { interpretarRiesgo } from '@/lib/riesgo-asegura'
@@ -27,6 +28,10 @@ export type FichaParaEditar =
  * riesgo (cliente de la oportunidad o figura asignada): el id no es un pase para leer otra ficha.
  */
 export async function pedirFichaParaEditar(entrada: { oportunidadId: string; clienteId: string }): Promise<FichaParaEditar> {
+  // Una acción de servidor es un POST público: no la protege el middleware de las páginas. Sin sesión de la
+  // correduría no se lee ninguna ficha (identidad, DNI enmascarado, carnés), aunque se conozca el id.
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return { estado: 'error', mensaje: 'No tienes acceso a la correduría.' }
   const r = await riesgoAsegura(entrada.oportunidadId).catch(() => null)
   const l = r ? interpretarRiesgo(r.status, r.json) : null
   if (!l || l.estado !== 'ok') return { estado: 'error', mensaje: 'No se ha podido comprobar el riesgo.' }

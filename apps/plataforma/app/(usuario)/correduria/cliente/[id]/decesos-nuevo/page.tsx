@@ -4,6 +4,8 @@ import { fichaAsegura } from '@/lib/ficha-asegura'
 import { precalificarDecesosNuevaAsegura, catalogoAsegura } from '@/lib/decesos-nuevo-asegura'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
+import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
+import { capitalDeRiesgo, paramTexto } from '../../../oportunidad/[id]/variante'
 import DecesosNuevo from './DecesosNuevo'
 
 export const dynamic = 'force-dynamic'
@@ -16,8 +18,11 @@ export const maxDuration = 180
  * SOLO cubre al tomador (sin cobertura familiar, ver
  * `apps/asegura/lib/codeoscopic/peticion-decesos.ts`).
  */
-export default async function DecesosNuevoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DecesosNuevoPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id: clienteId } = await params
+  // Variante de un riesgo (30/09/2026): `?oportunidad=` cuelga la tarificación de esa oportunidad y precarga su capital.
+  const sp = await searchParams
+  const carga = await cargarVariante(paramTexto(sp.oportunidad), null, clienteId, 'decesos')
 
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
@@ -31,6 +36,7 @@ export default async function DecesosNuevoPage({ params }: { params: Promise<{ i
         ← Ficha del cliente
       </Link>
       <PageHeader titulo="Presupuesto de decesos" icono={<Flower2 size={20} strokeWidth={1.75} />} sub={sub} />
+      {carga.estado === 'ok' && <FranjaVariante variante={carga.variante} />}
       <div
         style={{
           ...cardStyle,
@@ -47,6 +53,17 @@ export default async function DecesosNuevoPage({ params }: { params: Promise<{ i
       </div>
     </div>
   )
+
+  if (carga.estado === 'error') {
+    return (
+      <Pagina>
+        {cabecera}
+        <ErrorVariante oportunidadId={carga.oportunidadId} mensaje={carga.mensaje} />
+      </Pagina>
+    )
+  }
+  const variante = carga.estado === 'ok' ? carga.variante : null
+  const c = carga.estado === 'ok' ? capitalDeRiesgo(carga.riesgo) : null
 
   const [civiles, pre] = await Promise.all([
     catalogoAsegura({ tipo: 'estados-civiles' }),
@@ -98,6 +115,8 @@ export default async function DecesosNuevoPage({ params }: { params: Promise<{ i
       )}
       <DecesosNuevo
         clienteId={clienteId}
+        variante={variante}
+        inicial={c ? { capital: c.capital } : null}
         etiquetaCliente={pre.pre.etiquetaCliente}
         faltanInicial={pre.pre.faltan}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}

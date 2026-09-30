@@ -13,7 +13,7 @@ import NuevaPersona from './NuevaPersona'
 import EditarFichaModal from './EditarFichaModal'
 import PedirDatosFigura from './PedirDatosFigura'
 import { llamarFiguras, motivoDe } from './piezas-riesgo'
-import { ramoVariante } from './variante'
+import { ramoConEnlaceDatos } from './variante'
 
 type Opcion = { clienteId: string; nombre: string; detalle: string }
 
@@ -39,7 +39,7 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
   const [enviando, setEnviando] = useState(false)
   const op = riesgo.oportunidad
   // Los enlaces de datos de este riesgo, UNA lectura para todas las figuras (luego se reparten por persona).
-  const conEnlace = ramoVariante(op.ramo) !== null
+  const conEnlace = ramoConEnlaceDatos(op.ramo)
   const [enlaces, setEnlaces] = useState<SolicitudesDatos | null>(null)
   const leerEnlaces = useCallback(async () => {
     if (!conEnlace) return

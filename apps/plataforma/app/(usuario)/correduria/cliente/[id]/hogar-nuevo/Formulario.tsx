@@ -35,6 +35,7 @@ import type {
   Supuesto,
 } from '@/lib/hogar-nuevo-asegura'
 import { pedirCotizacionHogar, pedirPrecalificacionHogar } from './acciones'
+import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
 
 type Grupo = 'donde' | 'como' | 'protecciones' | 'capitales' | 'tomador' | 'cotizacion'
 
@@ -91,14 +92,20 @@ export default function Formulario({
   clienteId,
   referencia,
   preInicial,
+  variante = null,
+  iniciales = null,
 }: {
   clienteId: string
   referencia: string
   preInicial: PrecalificacionHogar
+  /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
+  variante?: VarianteNueva | null
+  /** Lo que el riesgo ya sabe de la vivienda (la precalificación de `preInicial` ya lo incluye). */
+  iniciales?: { resueltos: Record<string, unknown>; correcciones: Record<string, unknown> } | null
 }) {
   const [pre, setPre] = useState(preInicial)
-  const [resueltos, setResueltos] = useState<Record<string, unknown>>({})
-  const [correcciones, setCorrecciones] = useState<Record<string, unknown>>({})
+  const [resueltos, setResueltos] = useState<Record<string, unknown>>(iniciales?.resueltos ?? {})
+  const [correcciones, setCorrecciones] = useState<Record<string, unknown>>(iniciales?.correcciones ?? {})
   const [recalculando, setRecalculando] = useState(false)
   const [editando, setEditando] = useState<string | null>(null)
   const [borrador, setBorrador] = useState('')
@@ -173,6 +180,7 @@ export default function Formulario({
       referencia,
       resueltos: cuerpoResueltosFinal(),
       correcciones,
+      variante: variante ? { oportunidadId: variante.oportunidadId, nota: null } : null,
     })
     switch (r.estado) {
       case 'faltan':

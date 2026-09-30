@@ -175,3 +175,40 @@ test('write-back: con km y garaje declarados van; un campo inválido se descarta
   assert.deepEqual(datosVehiculoDeCotizacion(null), {})
   assert.deepEqual(datosVehiculoDeCotizacion({ resueltos: { matricula: '' } }), {})
 })
+
+test('D1: cambia el código de versión SIN ids nuevos → ids y textos de catálogo viejos se anulan', () => {
+  const previo = { ...datosVehiculoVacios(), codigoVehiculo: '111', marcaId: 'M1', modeloId: 'MO1', motorId: 'MT1', marca: 'SEAT', modelo: 'Ibiza', version: '1.0 TSI', matricula: '1234BCD' }
+  const r = aplicarEdicionVehiculo(previo, { codigoVehiculo: '222' }, { confirmar: false, ahora: 'T' })
+  assert.equal(r.datos.codigoVehiculo, '222')
+  for (const k of ['marcaId', 'modeloId', 'motorId', 'marca', 'modelo', 'version'] as const) assert.equal(r.datos[k], null, k)
+  assert.equal(r.datos.matricula, '1234BCD', 'lo que no es de catálogo no se toca')
+  assert.ok(r.cambios.some((c) => c.campo === 'marcaId' && c.antes === 'M1' && c.despues === null), 'el cambio queda anotado para el historial')
+})
+
+test('D1: cambia el código CON ids y textos nuevos → se ponen los nuevos', () => {
+  const previo = { ...datosVehiculoVacios(), codigoVehiculo: '111', marcaId: 'M1', marca: 'SEAT' }
+  const r = aplicarEdicionVehiculo(previo, { codigoVehiculo: '222', marcaId: 'M2', modeloId: 'MO2', motorId: 'MT2', marca: 'FORD', modelo: 'Fiesta', version: '1.1' }, { confirmar: false, ahora: 'T' })
+  assert.deepEqual([r.datos.marcaId, r.datos.marca, r.datos.modelo, r.datos.version], ['M2', 'FORD', 'Fiesta', '1.1'])
+})
+
+test('D1: el mismo código de siempre no borra nada', () => {
+  const previo = { ...datosVehiculoVacios(), codigoVehiculo: '111', marcaId: 'M1', marca: 'SEAT' }
+  const r = aplicarEdicionVehiculo(previo, { codigoVehiculo: '111', kmAnuales: 9000 }, { confirmar: false, ahora: 'T' })
+  assert.equal(r.datos.marcaId, 'M1')
+  assert.equal(r.datos.marca, 'SEAT')
+})
+
+test('D2: teclear a mano marca/modelo/versión sin código nuevo → se borran el código y los ids del catálogo', () => {
+  const previo = { ...datosVehiculoVacios(), codigoVehiculo: '111', marcaId: 'M1', modeloId: 'MO1', motorId: 'MT1', marca: 'SEAT', modelo: 'Ibiza' }
+  const r = aplicarEdicionVehiculo(previo, { modelo: 'Leon' }, { confirmar: false, ahora: 'T' })
+  assert.equal(r.datos.modelo, 'Leon')
+  for (const k of ['codigoVehiculo', 'marcaId', 'modeloId', 'motorId'] as const) assert.equal(r.datos[k], null, k)
+  assert.equal(r.datos.marca, 'SEAT')
+})
+
+test('D2: repetir el mismo texto de marca/modelo no rompe el catálogo elegido', () => {
+  const previo = { ...datosVehiculoVacios(), codigoVehiculo: '111', marcaId: 'M1', marca: 'SEAT', modelo: 'Ibiza' }
+  const r = aplicarEdicionVehiculo(previo, { marca: 'SEAT', modelo: 'Ibiza' }, { confirmar: false, ahora: 'T' })
+  assert.equal(r.datos.codigoVehiculo, '111')
+  assert.equal(r.cambios.length, 0)
+})

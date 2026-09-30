@@ -15,6 +15,7 @@ import { eur } from '@/lib/dinero'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/salud-nuevo-asegura'
 import { pedirCotizacionSalud } from './acciones'
+import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
 import { FallosTarificacion } from '../../../FallosTarificacion'
 
 const input: React.CSSProperties = {
@@ -56,6 +57,8 @@ export default function SaludNuevo({
   estadoCivilMotivo,
   consumo,
   simulacion,
+  variante = null,
+  inicial = null,
 }: {
   clienteId: string
   etiquetaCliente: string
@@ -65,10 +68,14 @@ export default function SaludNuevo({
   estadoCivilMotivo: string | null
   consumo: ConsumoPuerto
   simulacion: boolean
+  /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
+  variante?: VarianteNueva | null
+  /** Lo que el riesgo ya sabe (`info_riesgo.datosCapital`): precarga; `null` = no se sabe, nunca 0. */
+  inicial?: { capital: number | null; modalidadDeseada: string | null } | null
 }) {
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
-  const [capital, setCapital] = useState('')
-  const [modalidadDeseada, setModalidadDeseada] = useState('')
+  const [capital, setCapital] = useState(inicial?.capital != null ? String(inicial.capital) : '')
+  const [modalidadDeseada, setModalidadDeseada] = useState(inicial?.modalidadDeseada ?? '')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
@@ -95,11 +102,14 @@ export default function SaludNuevo({
       resueltos: {
         estadoCivilId,
         ...(Number(capital) > 0 ? { capital: Number(capital) } : {}),
+        // Solo para el expediente (se anota en el riesgo): asegura no la manda al vendor.
+        ...(modalidadDeseada.trim() !== '' ? { modalidadDeseada: modalidadDeseada.trim() } : {}),
         // 🔒 `modalidadDeseada` NUNCA viaja al vendor: no hay campo confirmado
         // donde ponerla. Solo se manda como CORRECCIÓN informativa, que asegura
         // también descarta al construir la petición.
       },
       correcciones: fechaEfecto !== '' ? { ...correcciones, fechaEfecto } : correcciones,
+      variante: variante ? { oportunidadId: variante.oportunidadId, nota: null } : null,
     })
     switch (r.estado) {
       case 'faltan':
