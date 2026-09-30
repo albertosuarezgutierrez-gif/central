@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-30T06:20:45Z",
+  "generadoEn": "2026-09-30T08:41:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 159
+        "evidencias": 160
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2206,7 +2206,7 @@
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 30
+        "evidencias": 32
       },
       "housesevillana": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 41
+        "evidencias": 42
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4012,6 +4012,7 @@
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
       "/api/operador/codeoscopic/documentos",
+      "/api/operador/codeoscopic/emision-externa",
       "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/faltan-producto",
       "/api/operador/codeoscopic/hogar-nuevo",
@@ -4033,6 +4034,7 @@
       "/api/operador/codeoscopic/proyectos-cliente",
       "/api/operador/codeoscopic/reproceso",
       "/api/operador/codeoscopic/retarificar",
+      "/api/operador/codeoscopic/retenidas",
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
       "/api/operador/codeoscopic/tarificacion",
@@ -4992,6 +4994,7 @@
       "/api/correduria/anulaciones",
       "/api/correduria/anulaciones/justificante",
       "/api/correduria/aprobaciones",
+      "/api/correduria/avant2-emision",
       "/api/correduria/avant2-proyectos",
       "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
@@ -5103,6 +5106,7 @@
       "/api/cron/correduria-ingesta",
       "/api/cron/correduria-partes",
       "/api/cron/correduria-renovaciones",
+      "/api/cron/correduria-retenidas",
       "/api/cron/correduria-seguimiento-presupuestos",
       "/api/cron/correduria-siniestros",
       "/api/cron/correduria-sustituciones",
@@ -6625,7 +6629,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1538,
+    "apis": 1542,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
