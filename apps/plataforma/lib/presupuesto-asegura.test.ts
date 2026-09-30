@@ -296,7 +296,7 @@ test('sello de descarga: si asegura no contesta, se rinde en su tope y dice «no
   const { marcarDescargadoAsegura, SELLO_DESCARGA_MS } = await import('./presupuesto-asegura.ts')
   assert.ok(SELLO_DESCARGA_MS <= 3_000, 'el tope del sello es corto: el PDF espera por él')
   const previo = { fetch: globalThis.fetch, secret: process.env.ASEGURA_OPERADOR_SECRET }
-  process.env.ASEGURA_OPERADOR_SECRET = 'secreto-de-prueba-0123456789abcdef'
+  process.env.ASEGURA_OPERADOR_SECRET = 'test-secreto'
   // Un asegura colgado: solo suelta si le abortan la señal.
   globalThis.fetch = ((_u: unknown, init?: RequestInit) =>
     new Promise((_res, rej) => init?.signal?.addEventListener('abort', () => rej(new Error('abortado'))))) as typeof fetch
