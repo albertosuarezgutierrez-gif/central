@@ -31,7 +31,7 @@ export type CoberturaParaClasificar = { nombre: string; incluida: boolean | null
 export type GarantiasClasificadas = { version: number; porClave: Record<string, EstadoGarantia> }
 
 /** Súbelo al cambiar patrones: lo guardado con otra versión se reclasifica desde las coberturas. */
-export const VERSION_CATALOGO = 4
+export const VERSION_CATALOGO = 5
 
 /** Misma normalización que la tabla de coberturas del portal: sin tildes, minúsculas, sin signos. */
 export function claveCobertura(nombre: string): string {
@@ -192,6 +192,7 @@ export function clasificarCoberturas(
   ramo: RamoGarantias,
   lista: readonly CoberturaParaClasificar[] | null,
   opciones?: readonly OpcionProductoLegible[] | null,
+  contexto?: ContextoGarantias | null,
 ): GarantiasClasificadas {
   const porClave: Record<string, EstadoGarantia> = {}
   for (const g of CATALOGO_GARANTIAS[ramo]) porClave[g.clave] = 'no_consta'
@@ -243,7 +244,31 @@ export function clasificarCoberturas(
     if (clave in porClave) porClave[clave] = estado
   }
   for (const clave of GARANTIAS_DE_LEY[ramo] ?? []) porClave[clave] = 'si'
+  // Un TODO RIESGO de coche o moto INCLUYE los daños propios: es lo que lo define (la franquicia
+  // se aplica justo a ellos). Reale manda «Daños propios: false» en sus todo riesgo con franquicia
+  // (31 filas, 30/09/2026): es un dato contradictorio del vendor y no puede pintar «no incluye».
+  // La pérdida total es otra cosa: el bloque «Grandes daños» de Occident es una garantía propia
+  // (indemnización mejorada) y el todo riesgo cubre el siniestro total por daños propios, así que
+  // su «no» contradictorio queda «no consta», sin afirmar ni negar la mejora.
+  if ((ramo === 'auto' || ramo === 'moto') && esTodoRiesgo(contexto)) {
+    if ('danos_propios' in porClave) porClave.danos_propios = 'si'
+    if (porClave.perdida_total === 'no') porClave.perdida_total = 'no_consta'
+  }
   return { version: VERSION_CATALOGO, porClave }
+}
+
+/** La categoría y la modalidad que el vendor le da al precio: dicen qué producto ES (30/09/2026). */
+export type ContextoGarantias = { categoria?: string | null; modalidad?: string | null }
+
+/**
+ * PURO. ¿El precio es un todo riesgo? Lo dice su CATEGORÍA (el nivel que da el vendor: «Todo Riesgo
+ * con Franquicia»…). La modalidad solo cuenta si no hay categoría: Allianz llama «MOTO DAÑOS» a un
+ * todo riesgo, y una modalidad puede nombrar un extra («todo riesgo accidental» de hogar).
+ */
+export function esTodoRiesgo(contexto: ContextoGarantias | null | undefined): boolean {
+  const cat = contexto?.categoria
+  const texto = typeof cat === 'string' && cat.trim() !== '' ? cat : contexto?.modalidad
+  return typeof texto === 'string' && /\btodo riesgo\b/.test(claveCobertura(texto))
 }
 
 /**

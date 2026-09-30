@@ -557,6 +557,7 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     categoria: p.categoria as string,
     ...(p.producto ? { producto: p.producto } : {}),
     ...(typeof p.primaEur === 'number' ? { primaEur: p.primaEur } : {}),
+    ...(p.modalidad ? { modalidad: p.modalidad } : {}),
     ...(fechaCorregida ? { fechaEfectoCorregida: fechaCorregida } : {}),
   })
   if (of.estado !== 'ok') {

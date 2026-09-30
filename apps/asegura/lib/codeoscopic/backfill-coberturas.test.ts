@@ -226,3 +226,19 @@ test('reclasificar NUNCA lanza: un fallo de lectura o de escritura no tumba el c
   })
   assert.deepEqual(escritura, { revisadas: 2, reclasificadas: 1, errores: 1 })
 })
+
+test('backfill: un TODO RIESGO sin oferta sigue incluyendo daños propios; un terceros, no consta (30/09/2026)', async () => {
+  const escritas: { ids: string[]; dp: string | undefined }[] = []
+  const d = doble({
+    filas: [
+      fila({ id: 'tr', compania: 'Nadie', categoria: 'Todo Riesgo Con Franquicia Media', modalidad: 'Reale Todo Riesgo Franquicia 300 Euros' }),
+      fila({ id: 'ter', compania: 'Nadie', categoria: 'Terceros', modalidad: 'Reale Terceros' }),
+    ],
+    precios: [],
+  })
+  d.deps.marcar = async (ids, _sobre, g) => { escritas.push({ ids, dp: g?.porClave.danos_propios }); return ids.length }
+  await backfillCoberturasTarificacion(IDS, d.deps)
+  const porId = new Map(escritas.flatMap((e) => e.ids.map((id) => [id, e.dp])))
+  assert.equal(porId.get('tr'), 'si')
+  assert.equal(porId.get('ter'), 'no_consta')
+})

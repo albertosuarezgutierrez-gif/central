@@ -25,7 +25,12 @@ test('la pantalla de emisión manda producto, prima y la fecha elegida', () => {
   const src = leer('apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx')
   assert.match(src, /producto: producto \?\? undefined/)
   assert.match(src, /primaEur: primaEur \?\? undefined/)
+  // 30/09/2026: la modalidad es la llave del precio (ver `encontrarPrecio`).
+  assert.match(src, /modalidad: modalidad \?\? undefined/)
   assert.match(src, /fechaEfectoCorregida: fechaNueva/)
   const ruta = leer('apps/asegura/app/api/operador/codeoscopic/oferta/route.ts')
   assert.match(ruta, /encontrarPrecio\(cotizacion, compania, categoria, \{/)
+  assert.match(ruta, /modalidad,\n\s*\}\)/)
+  const lib = leer('apps/plataforma/lib/retarificar-asegura.ts')
+  assert.match(lib, /modalidad\?: string/)
 })

@@ -519,6 +519,7 @@ export function Emision({
       categoria,
       producto: producto ?? undefined,
       primaEur: primaEur ?? undefined,
+      modalidad: modalidad ?? undefined,
       ...(fechaNueva ? { fechaEfectoCorregida: fechaNueva } : {}),
       ...(Object.keys(limpias).length > 0 ? { correcciones: limpias } : {}),
       ...(conProductOptions ? { productOptions: conProductOptions } : {}),

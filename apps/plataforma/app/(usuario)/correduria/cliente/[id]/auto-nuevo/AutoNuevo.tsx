@@ -150,7 +150,8 @@ type Resultado =
       precios: Precio[]
       /** `null` = retomada de una cotización que no guardó sus fallos (no es «ninguno falló»). */
       fallos: Fallo[] | null
-      supuestos: Supuesto[]
+      /** `null` = cotización recuperada: los supuestos no se guardan con ella (30/09/2026). */
+      supuestos: Supuesto[] | null
       /** Qué pasó con la copia guardada: su `cotizacionId` es de lo que sale el presupuesto. */
       guardado?: unknown
     }
@@ -558,7 +559,7 @@ export default function AutoNuevo({
       resumen: `Tarificación del ${new Date(g.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}${g.fechaEfecto ? ` · efecto ${g.fechaEfecto.split('-').reverse().join('/')}` : ''}`,
       precios: g.precios,
       fallos: g.fallos,
-      supuestos: [],
+      supuestos: null,
       guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
     })
 
@@ -1474,6 +1475,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         categoria={p.categoria ?? ''}
         primaEur={p.primaEur ?? null}
         producto={p.producto ?? null}
+        modalidad={p.modalidad ?? null}
         sustituye={false}
         ramo="auto"
         onCerrar={cerrar}
@@ -1523,7 +1525,13 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         <ListaPrecios {...propsLista} />
       )}
       <FallosTarificacion fallos={r.fallos} />
-      {r.supuestos.length > 0 && (
+      {r.supuestos === null && (
+        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+          De esta cotización recuperada <strong>no se guardaron los supuestos</strong> con los que se pidió el precio
+          (garaje, historial, código postal…): compruébalos con el cliente antes de prometer la prima.
+        </p>
+      )}
+      {r.supuestos !== null && r.supuestos.length > 0 && (
         <div style={{ marginTop: 12, borderLeft: '3px solid var(--warning)', paddingLeft: 10 }}>
           <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 4px' }}>Este precio sale con estos supuestos. Si alguno no es cierto, la prima real cambia:</p>
           <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>

@@ -326,18 +326,24 @@ export const POST = auditado(async (req: Request) => {
     let oferta: Awaited<ReturnType<typeof reRate>> | null = null
     let reparadoDesdeFicha = false
     while (oferta === null) {
+      const modalidad = cadena(cuerpo.modalidad)
       const precio = encontrarPrecio(cotizacion, compania, categoria, {
         producto: cadena(cuerpo.producto),
         primaEur: typeof cuerpo.primaEur === 'number' ? cuerpo.primaEur : null,
+        modalidad,
       })
       if (!precio) {
+        // 30/09/2026: `null` ya no es solo «caducó»: también «hay varias y no sé cuál es la
+        // elegida». No se confirma otra en su lugar (ver `encontrarPrecio`).
         return NextResponse.json(
           {
             estado: 'error',
             causa: 'otro',
-            mensaje: `el proyecto ${projectId} ya no trae un precio de «${compania}» / «${categoria}» — puede haber caducado`,
+            mensaje:
+              `el proyecto ${projectId} ya no trae exactamente el precio elegido (${[compania, categoria, modalidad].filter(Boolean).join(' · ')}). ` +
+              'Puede haber caducado o haber cambiado al actualizar los datos del proyecto. No se confirma otro en su lugar: vuelve a pedir precio.',
           },
-          { status: 404 },
+          { status: 409 },
         )
       }
 

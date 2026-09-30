@@ -174,6 +174,12 @@ test('el resumen NO nombra a Reale como «sin precio»: sería falso', () => {
   assert.ok(!/sin precio:[^·]*Reale/.test(r), 'Reale dio 8 precios: no puede figurar como sin precio')
 })
 
+test('el resumen separa estimados de condicionados: un precio estimado no tiene «reparos» (30/09/2026)', () => {
+  const r = resumirCotizacion(leerCotizacion(CRUDO))
+  assert.doesNotMatch(r, /reparos/)
+  assert.match(r, /\d+ estimados?|\d+ condicionados? por la compañía/)
+})
+
 test('leerCotizacion: cada precio lleva la oferta que lo contiene (offers[] → $ref), o null', () => {
   const base = { product: { name: 'P', vendor: { name: 'Reale' } } }
   const c = leerCotizacion({

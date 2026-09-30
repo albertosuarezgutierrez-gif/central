@@ -50,7 +50,9 @@ export function avisosCompania(avisos: readonly string[] | null | undefined): { 
 
 export type TipoFallo = 'tecnico' | 'rechazo' | 'otro'
 
-const RE_TECNICO = /c[oó]digo\s*\d+|se ha producido un error|soporte|timeout|tiempo de espera|no disponible|error interno/i
+// Sin «soporte» ni «no disponible» a secas (30/09/2026): «Producto no disponible en esta provincia» es
+// una respuesta de la compañía, y rotularla fallo técnico invitaba a pagar otros 0,50€ por lo mismo.
+const RE_TECNICO = /c[oó]digo\s*\d+|se ha producido un error|timeout|tiempo de espera|error interno/i
 const RE_RECHAZO = /no permitid|no asegurable|no se admite|fuera de norma|rechaz|no se puede asegurar|no cumple/i
 
 /**
@@ -61,8 +63,9 @@ const RE_RECHAZO = /no permitid|no asegurable|no se admite|fuera de norma|rechaz
 export function tipoFallo(motivo: string | null | undefined): TipoFallo {
   const m = (motivo ?? '').trim()
   if (m === '') return 'otro'
-  if (RE_TECNICO.test(m)) return 'tecnico'
+  // El rechazo manda: una respuesta de la compañía no se convierte en «vuelve a intentarlo».
   if (RE_RECHAZO.test(m)) return 'rechazo'
+  if (RE_TECNICO.test(m)) return 'tecnico'
   return 'otro'
 }
 

@@ -214,3 +214,19 @@ orden en §9.
     otro proyecto y otro cargo. **Ningún botón público ni vigilancia periódica lo dispara.** Se
     vigila la FECHA (gratis) y se tarifica **una vez**, contra el cupo y el motivo de
     `seguros.codeoscopic_consumo`.
+
+21. **Los datos de una cotización se leen con su LLAVE y su NIVEL, no a ojo (30/09/2026, PR #4103).**
+    - **El precio que se confirma y emite se identifica por compañía + categoría + MODALIDAD**
+      (`encontrarPrecio`, única en las 396 filas medidas). El `producto` NO distingue (tres Mapfre
+      «Autos»; moto 450€/600€ a 2,49€) y «la prima más cercana» tampoco: tras un PATCH el vendor
+      re-tarifica. Sin modalidad exacta → 409, nunca otra en su lugar. Todo llamador de la oferta manda
+      `modalidad`.
+    - **Un TODO RIESGO de coche/moto INCLUYE daños propios** (Alberto: «un todo riesgo sí incluye daños
+      propios»). Lo decide la CATEGORÍA del vendor (`esTodoRiesgo`), y manda sobre su lista de coberturas
+      (Reale marca «Daños propios: false» en sus TR). La «Pérdida total» es una garantía aparte:
+      contradictoria → «no consta».
+    - `garantias` NULL = «aún sin leer» (también si la lectura FALLÓ; se reintenta 7 días), nunca todo
+      `no_consta`: eso la parrilla lo lee como «la compañía no dice».
+    - Cotización RECUPERADA: fallos y supuestos no guardados se DICEN (`null`), nunca `[]`.
+    - Antes de afirmar un dato del vendor, mídelo en `seguros.tarificacion_precios` (coberturas crudas y
+      `tarificaciones.respuesta`): el parser puede estar leyendo bien un dato que la compañía manda mal.

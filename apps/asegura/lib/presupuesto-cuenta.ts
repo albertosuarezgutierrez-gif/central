@@ -13,6 +13,7 @@
 
 import { ibanValido, normalizarIban } from './codeoscopic/emitir-iban.ts'
 import { TEXTO_CONFIRMACION_DATOS } from './datos-cotizados.ts'
+import { eur } from './dinero.ts'
 
 /** Lo único que un humano (cliente, Alberto) ve de la cuenta: los 4 últimos caracteres. */
 export function mascaraCuenta(v: unknown): string | null {
@@ -130,7 +131,7 @@ export function discrepanciaConElegida(e: {
   // Sin prima no se puede comprobar lo firmado: fail-closed, no «no hay nada que comparar».
   if (e.primaEnviada === null) return 'no llega la prima con la que se va a emitir, así que no se puede comprobar contra la firmada'
   if (e.primaElegida > 0 && Math.abs(e.primaEnviada - e.primaElegida) / e.primaElegida > TOLERANCIA_PRIMA) {
-    return `el cliente firmó una prima de ${e.primaElegida.toFixed(2)} € y se va a emitir con ${e.primaEnviada.toFixed(2)} €`
+    return `el cliente firmó una prima de ${eur(e.primaElegida)} y se va a emitir con ${eur(e.primaEnviada)}`
   }
   return null
 }
