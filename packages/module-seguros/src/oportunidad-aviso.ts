@@ -139,7 +139,7 @@ export const MESES_VENCIMIENTO_MAX = 13
 export type FechaDudosa = { motivo: 'pasada' | 'lejana'; texto: string }
 
 /**
- * Un vencimiento LEÍDO de un documento que no cuadra (30/09/2026, «por si se escanea mal»): ya pasado
+ * Un vencimiento que no cuadra, leído de un documento o tecleado (30/09/2026, «por si se escanea mal»): ya pasado
  * (la póliza del documento es vieja o se leyó mal el año) o a más de {@link MESES_VENCIMIENTO_MAX}
  * meses. `null` = cuadra, o no hay fecha legible (eso es «sin fecha», otra cosa). No corrige nada:
  * solo dice que hay que mirarla antes de dar la llamada por buena.
@@ -149,10 +149,10 @@ export function fechaVencimientoDudosa(fecha: string | null | undefined, hoy: st
   const h = valida(hoy)
   if (!f || !h) return null
   const dd = `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}`
-  if (f < h) return { motivo: 'pasada', texto: `La fecha leída (${dd}) ya ha pasado: compruébala con el cliente o con la póliza.` }
+  if (f < h) return { motivo: 'pasada', texto: `El vencimiento (${dd}) ya ha pasado: compruébalo con el cliente o con la póliza.` }
   const [a, m, d] = h.split('-').map(Number)
   const tope = new Date(Date.UTC(a, m - 1 + MESES_VENCIMIENTO_MAX, 1))
   tope.setUTCDate(Math.min(d, new Date(Date.UTC(tope.getUTCFullYear(), tope.getUTCMonth() + 1, 0)).getUTCDate()))
-  if (f > tope.toISOString().slice(0, 10)) return { motivo: 'lejana', texto: `La fecha leída (${dd}) está a más de ${MESES_VENCIMIENTO_MAX} meses: seguramente es otro año, compruébala.` }
+  if (f > tope.toISOString().slice(0, 10)) return { motivo: 'lejana', texto: `El vencimiento (${dd}) está a más de ${MESES_VENCIMIENTO_MAX} meses: seguramente es otro año, compruébalo.` }
   return null
 }

@@ -8,7 +8,7 @@
 // Mismo principio que la corrección de ficha: la IA PROPONE, el servidor junta lo dictado con lo leído
 // de los documentos recientes, lo enseña y Alberto lo abre con un botón de un solo uso. La escritura va
 // por el mismo puerto que el botón «Abrir» de la ficha (`accion: 'crear'`), que vuelve a validar.
-import { DIAS_AVISO_OPORTUNIDAD, fechaAvisoOportunidad, mismoSeguro, RAMOS_OPORTUNIDAD, type RamoOportunidad } from '@central/module-seguros'
+import { DIAS_AVISO_OPORTUNIDAD, fechaAvisoOportunidad, fechaVencimientoDudosa, mismoSeguro, RAMOS_OPORTUNIDAD, type RamoOportunidad } from '@central/module-seguros'
 import { rotuloRamo, textoAltaOportunidad, type LecturaDocumentoOportunidad, type TomadorLeido } from './seguimiento-asegura.ts'
 import { eur } from './dinero.ts'
 
@@ -38,6 +38,8 @@ export type Alta = {
   matricula?: string | null
   vehiculo?: string | null
   fechaTarea: string
+  /** El vencimiento está tan lejos que seguramente se leyó o dictó mal el año; se avisa, no se corrige. */
+  avisoVence?: string | null
   /** Vencimiento leído que ya pasó (un recibo del periodo anterior). `fechaFinVigencia` es entonces su
    *  siguiente aniversario, porque la póliza renueva cada año; se dice en el mensaje. */
   venceDescartado: string | null
@@ -143,6 +145,8 @@ export function prepararAlta(
       vehiculo: primero('vehiculo'),
       fechaTarea: pasoDictado ?? fechaPrimerPaso(vence, hoy),
       venceDescartado,
+      // Lo pasado ya se ha proyectado a la siguiente renovación: aquí solo puede quedar «lejana».
+      avisoVence: fechaVencimientoDudosa(vence, hoy)?.texto ?? null,
       documentos: lecturas === null ? null : {
         leidos: leidas.length,
         fallidos: lecturas.flatMap((l) => (l.estado === 'error' ? [l.motivo] : [])),
@@ -183,6 +187,7 @@ export function textoAlta(nombreCliente: string, a: Alta): string {
       ? `ℹ️ El documento es del periodo que acabó el ${fechaEs(a.venceDescartado)}. Renueva cada año, así que pongo la siguiente renovación, el ${fechaEs(a.fechaFinVigencia)}. Si cambió de compañía o la anuló, corrígelo en la ficha.`
       : `⚠️ El documento dice que vencía el ${fechaEs(a.venceDescartado)}: hace más de dos renovaciones, así que no pongo vencimiento. Corrígelo en la ficha cuando lo sepas.`)
   }
+  if (a.avisoVence) l.push(`⚠️ ${escapar(a.avisoVence)}`)
   if (a.documentos) {
     if (a.documentos.leidos > 0) l.push(`📎 Datos leídos de ${a.documentos.leidos} documento${a.documentos.leidos === 1 ? '' : 's'} que subiste. Revísalos antes de abrir.`)
     for (const m of a.documentos.fallidos) l.push(`⚠️ Un documento no se ha podido leer: ${escapar(m)}.`)

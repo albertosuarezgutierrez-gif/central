@@ -962,6 +962,10 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   seguimiento (o crea una llamada si no había) a 45 días antes, con `planTareaTrasVencimiento` (module-seguros, puro, testeado).
 - Se MUEVE, no se cierra: una llamada cerrada cuenta como intento en `planLlamada`. Queda en el historial (`editada`, `detalle.tarea`).
 - La tarjeta lo enseña antes de guardar con una casilla que se puede desmarcar; solo actúa si la fecha CAMBIA.
+- Fecha dudosa (`fechaVencimientoDudosa`: ya pasada o a >13 meses) → aviso bajo el campo en alta/edición de oportunidad y
+  «Cambiar vencimiento», y en Telegram `proponer_oportunidad` (la pasada ya se proyecta; ahí solo avisa la lejana). No bloquea.
+- Descartadas en la revisión (sin datos que las justifiquen): cola «pídele la fecha», procedencia de la fecha, editar declaradas.
+- ⏸️ Pendiente de Alberto: limitar el aviso de 45 días (#4019) — 567 oportunidades en ventana hoy, 566 del volcado legacy.
 
 ## (29/09/2026) CIMA: devuelto de póliza SUSTITUIDA ya no se pide pagar en el portal (PR #4088, mergeado)
 - CIMA del día OK (4 ficheros, 0 cuarentena). Mapfre mandó su 1.er POL diario el 28/09.

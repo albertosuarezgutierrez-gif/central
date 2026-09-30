@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { planTareaTrasVencimiento } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
+import { AvisoFechaDudosa } from './piezas'
 
 /**
  * Corregir el vencimiento desde la tarjeta de Oportunidades (29/09/2026): es la fecha con la que
@@ -32,10 +33,11 @@ export default function EditarVencimiento(props: { vence: string | null; proxima
   const [error, setError] = useState<string | null>(null)
   const [reprogramar, setReprogramar] = useState(true)
   const sinSeguimiento = !('oportunidadId' in props)
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
   // El mismo plan que aplica asegura al guardar, para decirlo antes y no después. Asegura solo
   // reprograma si la fecha CAMBIA; sin seguimiento no había ninguna, así que cualquiera cambia.
   const plan = /^\d{4}-\d{2}-\d{2}$/.test(fecha) && (sinSeguimiento || fecha !== props.vence)
-    ? planTareaTrasVencimiento(fecha, props.proximaLlamada ? { id: '', fecha: props.proximaLlamada } : null, new Date().toISOString().slice(0, 10))
+    ? planTareaTrasVencimiento(fecha, props.proximaLlamada ? { id: '', fecha: props.proximaLlamada } : null, hoy)
     : null
   const textoPlan = plan?.accion === 'crear' ? `Programar su llamada el ${fmt(plan.fecha)} (45 días antes)`
     : plan?.accion === 'mover' ? `Mover su llamada del ${fmt(plan.desde)} al ${fmt(plan.fecha)} (45 días antes)`
