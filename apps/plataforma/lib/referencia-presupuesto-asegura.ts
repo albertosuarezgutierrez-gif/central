@@ -20,6 +20,8 @@ export type OpcionReferencia = {
   categoria: string | null
   /** `null` = no se pudo leer: se pinta «—», nunca 0. */
   primaEur: number | null
+  /** Fila de `tarificacion_precios` de la que sale: la IDENTIDAD del precio al emitir. `null` = no consta. */
+  precioId: string | null
 }
 
 export type PresupuestoReferencia = {
@@ -69,7 +71,7 @@ function leerOpcion(v: unknown): OpcionReferencia | null {
   const o = v as Record<string, unknown>
   const id = cad(o.id), compania = cad(o.compania)
   if (!id || !compania) return null
-  return { id, compania, producto: cad(o.producto) ?? '', modalidad: cad(o.modalidad), categoria: cad(o.categoria), primaEur: num(o.primaEur) }
+  return { id, compania, producto: cad(o.producto) ?? '', modalidad: cad(o.modalidad), categoria: cad(o.categoria), primaEur: num(o.primaEur), precioId: cad(o.precioId) }
 }
 
 /** PURO. La respuesta del puerto → algo pintable. Lo que no se entiende es `error`, nunca «no existe». */

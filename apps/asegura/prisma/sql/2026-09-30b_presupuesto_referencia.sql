@@ -4,10 +4,12 @@
 -- `/correduria` rescata EXACTAMENTE la propuesta enviada y emite desde ahí. El nº de proyecto de
 -- Avant2/Codeoscopic NO se le enseña al cliente (es del vendor y cambia al re-tarificar).
 --
--- ⛔ NO APLICADA. Se aplica ANTES de desplegar el código que la nombra (asegura declara
+-- ✅ APLICADA en producción (30/09/2026). Idempotente y en UNA transacción: si algo falla a medias,
+--    no queda un contador movido sin referencias ni columnas a medio rellenar.
+--    (Se aplicó ANTES de desplegar el código que la nombra (asegura declara
 --    `referencia` y `documento_descargado_at` en su schema Prisma: un `findFirst` sin `select`
 --    sobre `presupuesto` fallaría en producción con la columna aún sin crear). Orden de la casa:
---    primero la BD, después el puerto.
+--    primero la BD, después el puerto.)
 --
 -- Qué hace (todo aditivo, nada se borra):
 --   1. `presupuesto.referencia` (text) — la pone la BD, NUNCA la app, con un contador por
@@ -27,6 +29,8 @@
 -- sitio donde decir lo mismo, o sea un sitio donde contradecirse.
 --
 -- Se deshace con: drop trigger ×2, drop function ×3, drop table del contador, drop column ×2.
+BEGIN;
+
 SET search_path = seguros, public;
 
 
@@ -144,6 +148,9 @@ GRANT SELECT, INSERT, UPDATE ON seguros.presupuesto_referencia_contador TO prism
 GRANT EXECUTE ON FUNCTION seguros.siguiente_referencia_presupuesto(uuid, timestamptz) TO prisma_seguros;
 -- 🚫 El portal (prisma_asegura_portal) no recibe nada aquí: lee por COLUMNAS y hoy no pinta la
 -- referencia. Dársela es un PR con su cepo en test/regression-portal-aislamiento.test.ts.
+
+
+COMMIT;
 
 
 -- ════════════════════════════════════════════════════════════════════════════

@@ -289,3 +289,27 @@ test('filasCoberturas: una fila por garantía con dato; sin clasificar = no cons
   assert.equal(filasCoberturas('responsabilidad_civil', p!.detalle!), null)
   assert.equal(leerPresupuestoEnLista({ id: 'a', estado: 'borrador', creadoAt: 'x', venceEl: 'y' })?.detalle, null)
 })
+
+// ─── El sello de descarga NO retiene el PDF (30/09/2026, revisión PR #4133) ────
+
+test('sello de descarga: si asegura no contesta, se rinde en su tope y dice «no consta»', async () => {
+  const { marcarDescargadoAsegura, SELLO_DESCARGA_MS } = await import('./presupuesto-asegura.ts')
+  assert.ok(SELLO_DESCARGA_MS <= 3_000, 'el tope del sello es corto: el PDF espera por él')
+  const previo = { fetch: globalThis.fetch, secret: process.env.ASEGURA_OPERADOR_SECRET }
+  process.env.ASEGURA_OPERADOR_SECRET = 'secreto-de-prueba-0123456789abcdef'
+  // Un asegura colgado: solo suelta si le abortan la señal.
+  globalThis.fetch = ((_u: unknown, init?: RequestInit) =>
+    new Promise((_res, rej) => init?.signal?.addEventListener('abort', () => rej(new Error('abortado'))))) as typeof fetch
+  // `AbortSignal.timeout` no retiene el bucle de eventos: sin esto, node --test acaba antes del aborto.
+  const vivo = setTimeout(() => {}, 2_000)
+  try {
+    const t0 = Date.now()
+    assert.equal(await marcarDescargadoAsegura('id', 'alberto', 50), false)
+    assert.ok(Date.now() - t0 < 1_000, 'el sello no puede quedarse esperando')
+  } finally {
+    clearTimeout(vivo)
+    globalThis.fetch = previo.fetch
+    if (previo.secret === undefined) delete process.env.ASEGURA_OPERADOR_SECRET
+    else process.env.ASEGURA_OPERADOR_SECRET = previo.secret
+  }
+})

@@ -28,7 +28,8 @@ export async function GET(req: Request) {
   if (!r.ok || r.headers.get('content-type')?.split(';')[0]?.trim() !== 'application/pdf') {
     return NextResponse.json({ error: `asegura respondió ${r.status}` }, { status: r.ok ? 502 : r.status })
   }
-  // Se sella solo cuando el PDF de verdad sale (tras comprobar que lo es).
+  // Se sella solo cuando el PDF de verdad sale (tras comprobar que lo es). Con tope corto
+  // (`SELLO_DESCARGA_MS`, 3 s, abortado por señal) y sin lanzar: el sello NUNCA retiene el PDF.
   await marcarDescargadoAsegura(id, guarda.session.email).catch(() => false)
   const nombre = (r.headers.get('content-disposition')?.match(/filename="([^"]+)"/)?.[1] ?? 'presupuesto.pdf')
     // eslint-disable-next-line no-control-regex

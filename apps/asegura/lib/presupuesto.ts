@@ -38,6 +38,7 @@ import { leerCoberturasDeOpciones, sobreReutilizable, type SobreCoberturas } fro
 import { completarCoberturasTarificacion } from './codeoscopic/coberturas-tarificacion'
 import { OCULTAR_VACIO, estaOculta, ordenResto, type Ocultar } from './presupuesto-ocultar'
 import { conjuntoEnDocumento, elegirReutilizable } from '@central/module-seguros/referencia-presupuesto'
+import { opcionesReutilizadas } from './presupuesto-reutilizado'
 
 /**
  * Por qué no se ha podido situar la cobertura que el cliente tiene HOY.
@@ -329,31 +330,41 @@ export async function prepararPresupuesto(
   // 30/09/2026). Se mira aquí, antes de leer coberturas, y otra vez bajo cerrojo al insertar.
   const enDocumento = conjuntoEnDocumento(aCongelar.map((o) => ({ precioId: o.precioId, oculta: o.oculta })))
   const nOcultasPrevio = aCongelar.filter((o) => o.oculta).length
-  const respuestaReutilizada = (previo: { id: string; referencia: string | null; venceEl: Date; creadoAt: Date; sellos: Parameters<typeof estadoPresupuesto>[0] }): ResultadoPreparar => ({
-    estado: 'ok',
-    token: null,
-    presupuesto: {
-      id: previo.id,
-      referencia: previo.referencia,
-      reutilizado: true,
-      estado: estadoPresupuesto(previo.sellos, new Date()),
-      clienteId: cab.clienteId,
-      polizaId: cab.polizaId,
-      ramo: cab.ramo,
-      tarificacionId: cab.id,
-      venceEl: previo.venceEl,
-      fuenteVencimiento: 'guardado',
-      creadoAt: previo.creadoAt,
-      simulado: cab.simulado,
-      lecturaActual,
-      motivoSinEquivalente: portada.motivoSinEquivalente,
-      avisoEscala: portada.avisoEscala,
-      opciones: aCongelar.slice(0, nPortada),
-      preciosTotales: filas.length,
-      enLista: aCongelar.length - nPortada - nOcultasPrevio,
-      ocultas: nOcultasPrevio,
-    },
-  })
+  // 🔁 Al REUTILIZAR, lo que se devuelve es lo que ESE presupuesto congeló (portada, papeles, lista y
+  // ocultas), leído de la BD: recalcularlo podría no coincidir con el documento que ya tiene el cliente.
+  const respuestaReutilizada = async (previo: { id: string; referencia: string | null; venceEl: Date; creadoAt: Date; sellos: Parameters<typeof estadoPresupuesto>[0] }): Promise<ResultadoPreparar> => {
+    const guardadas = await db.presupuestoOpcion.findMany({
+      // oculta-exenta: se leen también las ocultas para CONTARLAS; la portada solo toma `ocultaAt === null`.
+      where: { presupuestoId: previo.id },
+      orderBy: { orden: 'asc' },
+    })
+    const leidas = opcionesReutilizadas(guardadas)
+    return {
+      estado: 'ok',
+      token: null,
+      presupuesto: {
+        id: previo.id,
+        referencia: previo.referencia,
+        reutilizado: true,
+        estado: estadoPresupuesto(previo.sellos, new Date()),
+        clienteId: cab.clienteId,
+        polizaId: cab.polizaId,
+        ramo: cab.ramo,
+        tarificacionId: cab.id,
+        venceEl: previo.venceEl,
+        fuenteVencimiento: 'guardado',
+        creadoAt: previo.creadoAt,
+        simulado: cab.simulado,
+        lecturaActual,
+        motivoSinEquivalente: portada.motivoSinEquivalente,
+        avisoEscala: portada.avisoEscala,
+        opciones: leidas.opciones,
+        preciosTotales: filas.length,
+        enLista: leidas.enLista,
+        ocultas: leidas.ocultas,
+      },
+    }
+  }
   const previo = await buscarReutilizable(db, correduriaId, cab.id, enDocumento)
   if (previo) {
     await anotarReutilizado(db, previo.id, entrada.actor)
@@ -440,7 +451,8 @@ export async function prepararPresupuesto(
       select: { id: true, referencia: true },
     })
     return { tipo: 'creado' as const, creado }
-  })
+    // El tope por defecto de Prisma (5 s) se queda corto con 30+ opciones y la espera del cerrojo.
+  }, { timeout: 20_000, maxWait: 10_000 })
   if (hecho.tipo === 'otro') {
     await anotarReutilizado(db, hecho.otro.id, entrada.actor)
     return respuestaReutilizada(hecho.otro)

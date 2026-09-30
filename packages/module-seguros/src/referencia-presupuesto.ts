@@ -7,7 +7,7 @@
  * no dice nada a quien lo lee.
  *
  * La numeración la da la BD (contador por correduría + año, sin carreras:
- * `apps/asegura/prisma/sql/2026-09-30c_presupuesto_referencia.sql`). Aquí solo vive lo PURO:
+ * `apps/asegura/prisma/sql/2026-09-30b_presupuesto_referencia.sql`). Aquí solo vive lo PURO:
  * reconocer lo que teclea una persona, el estado que se enseña junto a la referencia y la
  * igualdad del conjunto de opciones que van en el documento (lo que decide si un presupuesto
  * se REUTILIZA en vez de crear otro idéntico).

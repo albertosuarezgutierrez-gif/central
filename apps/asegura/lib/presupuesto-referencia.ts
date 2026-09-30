@@ -23,6 +23,8 @@ export type OpcionEnDocumento = {
   categoria: string | null
   /** `null` = no se pudo leer; se pinta «—», nunca 0. */
   primaEur: number | null
+  /** Fila de `tarificacion_precios` de la que sale (identidad del precio para emitir). `null` = no consta. */
+  precioId: string | null
 }
 
 export type PresupuestoPorReferencia = {
@@ -75,7 +77,7 @@ export async function buscarPresupuestoPorReferencia(
       opciones: {
         where: { ocultaAt: null },
         orderBy: { orden: 'asc' },
-        select: { id: true, orden: true, compania: true, producto: true, modalidad: true, categoria: true, primaEur: true },
+        select: { id: true, orden: true, compania: true, producto: true, modalidad: true, categoria: true, primaEur: true, precioId: true },
       },
     },
   })
@@ -115,6 +117,7 @@ export async function buscarPresupuestoPorReferencia(
         modalidad: o.modalidad,
         categoria: o.categoria,
         primaEur: numero(o.primaEur),
+        precioId: o.precioId,
       })),
     },
   }
@@ -153,7 +156,9 @@ export async function marcarDocumentoDescargado(
  * solo se le ata la póliza. Best-effort para quien llama: la póliza ya existe.
  *
  * Casa por COMPAÑÍA (sin mayúsculas ni espacios) porque el Submit no trae la modalidad; una
- * tarificación sin presupuesto, o uno retirado, no se toca.
+ * tarificación sin presupuesto, o uno RETIRADO, no se toca (`retirado_at is null` en el mismo UPDATE:
+ * con READ COMMITTED, un retirado a la vez se re-evalúa bajo el cerrojo de fila y queda fuera).
+ * El UPDATE y sus eventos van en UNA transacción: o se sella con su rastro, o no se sella.
  */
 export async function cerrarPresupuestosPorEmision(
   correduriaId: string,
@@ -161,24 +166,31 @@ export async function cerrarPresupuestosPorEmision(
 ): Promise<number> {
   if (!entrada.tarificacionId || !entrada.compania?.trim()) return 0
   const db = prismaAsegura()
-  const filas = await db.$queryRaw<{ id: string }[]>`
-    update presupuesto p
-       set emitido_at = coalesce(p.emitido_at, now()),
-           poliza_emitida_id = ${entrada.polizaId}::uuid
-     where p.correduria_id = ${correduriaId}::uuid
-       and p.tarificacion_id = ${entrada.tarificacionId}::uuid
-       and p.retirado_at is null
-       and p.poliza_emitida_id is null
-       and exists (
-         select 1 from presupuesto_opcion o
-          where o.presupuesto_id = p.id and o.oculta_at is null
-            and lower(regexp_replace(trim(o.compania), '\\s+', ' ', 'g'))
-              = lower(regexp_replace(trim(${entrada.compania}), '\\s+', ' ', 'g')))
-    returning p.id::text as id`
-  for (const f of filas) {
-    await db.presupuestoEvento.create({
-      data: { presupuestoId: f.id, tipo: 'poliza_emitida', origen: 'sistema', detalle: { actor: entrada.actor, polizaId: entrada.polizaId, via: 'emitir' } },
-    })
-  }
-  return filas.length
+  return db.$transaction(async (tx) => {
+    const filas = await tx.$queryRaw<{ id: string }[]>`
+      update presupuesto p
+         set emitido_at = coalesce(p.emitido_at, now()),
+             poliza_emitida_id = ${entrada.polizaId}::uuid
+       where p.correduria_id = ${correduriaId}::uuid
+         and p.tarificacion_id = ${entrada.tarificacionId}::uuid
+         and p.retirado_at is null
+         and p.poliza_emitida_id is null
+         and exists (
+           select 1 from presupuesto_opcion o
+            where o.presupuesto_id = p.id and o.oculta_at is null
+              and lower(regexp_replace(trim(o.compania), '\\s+', ' ', 'g'))
+                = lower(regexp_replace(trim(${entrada.compania}), '\\s+', ' ', 'g')))
+      returning p.id::text as id`
+    if (filas.length > 0) {
+      await tx.presupuestoEvento.createMany({
+        data: filas.map((f) => ({
+          presupuestoId: f.id,
+          tipo: 'poliza_emitida',
+          origen: 'sistema',
+          detalle: { actor: entrada.actor, polizaId: entrada.polizaId, via: 'emitir' },
+        })),
+      })
+    }
+    return filas.length
+  }, { timeout: 15_000, maxWait: 5_000 })
 }

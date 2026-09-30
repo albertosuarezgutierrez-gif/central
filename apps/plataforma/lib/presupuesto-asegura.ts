@@ -199,7 +199,7 @@ function urlAsegura(): string {
 
 export type Reenvio = { status: number; json: unknown }
 
-async function puerto(init: RequestInit, query = ''): Promise<Reenvio> {
+async function puerto(init: RequestInit, query = '', topeMs = 30_000): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
@@ -207,7 +207,7 @@ async function puerto(init: RequestInit, query = ''): Promise<Reenvio> {
       ...init,
       headers: { ...(init.headers ?? {}), ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(topeMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {
@@ -215,17 +215,20 @@ async function puerto(init: RequestInit, query = ''): Promise<Reenvio> {
   }
 }
 
+/** Tope del sello de descarga: el PDF ya está listo y Alberto esperando; el sello no lo bloquea. */
+export const SELLO_DESCARGA_MS = 3_000
+
 /**
  * Sella en asegura que se ha descargado el PDF para el cliente (`documento_descargado_at` + evento).
- * NO es «enviado». `false` = no consta que se haya sellado (sin secreto, red o error): quien llama
- * sirve el PDF igual —el documento es correcto— y el sello simplemente no consta.
+ * NO es «enviado». `false` = no consta que se haya sellado (sin secreto, red, error o tope agotado):
+ * quien llama sirve el PDF igual —el documento es correcto— y el sello simplemente no consta.
  */
-export async function marcarDescargadoAsegura(id: string, actor: string): Promise<boolean> {
+export async function marcarDescargadoAsegura(id: string, actor: string, topeMs = SELLO_DESCARGA_MS): Promise<boolean> {
   const r = await puerto({
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ id, accion: 'documento_descargado', actor }),
-  })
+  }, '', topeMs)
   return r.status === 200
 }
 
