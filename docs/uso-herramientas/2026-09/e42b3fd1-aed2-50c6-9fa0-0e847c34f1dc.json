@@ -1,0 +1,65 @@
+{
+ "sesion": "e42b3fd1-aed2-50c6-9fa0-0e847c34f1dc",
+ "inicio": "2026-09-30T10:02:42.534Z",
+ "fin": "2026-09-30T10:04:39.658Z",
+ "llamadas": 12,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 287,
+   "chars_out": 566,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2
+   }
+  },
+  "mcp:Google_Drive": {
+   "llamadas": 5,
+   "chars_in": 399,
+   "chars_out": 20038,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 3,
+    "mcp__Google_Drive__list_recent_files": 1,
+    "mcp__Google_Drive__download_file_content": 1
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 9685,
+   "chars_out": 3575,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  },
+  "sql": {
+   "llamadas": 3,
+   "chars_in": 594,
+   "chars_out": 3776,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__execute_sql": 3
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2325,
+   "chars_out": 2496,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
