@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-30T09:08:05Z",
+  "generadoEn": "2026-09-30T11:29:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 161
+        "evidencias": 166
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 125
+        "evidencias": 134
       },
       "rrhh": {
         "estado": "no",
@@ -4088,6 +4088,7 @@
       "/api/operador/presupuesto",
       "/api/operador/presupuesto/garantias-filtradas",
       "/api/operador/presupuesto/pdf",
+      "/api/operador/presupuesto/referencia",
       "/api/operador/presupuesto/seguimiento",
       "/api/operador/quejas",
       "/api/operador/recaptacion",
@@ -5603,6 +5604,7 @@
       "seguros.presupuesto",
       "seguros.presupuesto_evento",
       "seguros.presupuesto_opcion",
+      "seguros.presupuesto_referencia_contador",
       "seguros.queja",
       "seguros.recibo_devolucion",
       "seguros.recordatorios",
@@ -6629,7 +6631,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1542,
+    "apis": 1543,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
