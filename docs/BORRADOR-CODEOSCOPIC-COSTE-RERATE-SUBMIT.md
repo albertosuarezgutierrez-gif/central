@@ -1,3 +1,5 @@
+> 🔀 **ABSORBIDO por `docs/BORRADOR-CODEOSCOPIC-ALTA-CLIENTE.md` (30/09/2026): las preguntas de coste van ahora en ese único correo. No enviar este por separado.**
+
 # Borrador — correo a Codeoscopic sobre el coste del ReRate y del Submit
 
 > 🚨 **SIN ENVIAR.** Lo manda Alberto, no un agente (regla de comunicaciones salientes de
