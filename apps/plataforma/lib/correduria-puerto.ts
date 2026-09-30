@@ -897,6 +897,131 @@ export async function sustitucionesAsegura(): Promise<Sustituciones> {
   }
 }
 
+// ── Emisiones RETENIDAS por la compañía («riesgo condicionado», 30/09/2026) ──
+//
+// Alberto emite a veces desde la WEB de Avant2 y la compañía deja la póliza retenida. asegura
+// revisa las que siguen así (`POST /api/operador/codeoscopic/retenidas`) y devuelve qué ha
+// cambiado. 🚨 Un fallo de lectura NUNCA es «0 retenidas»: es `error`, y el cron lo pone en rojo.
+
+export type CambioRetenida = {
+  projectId: string
+  clienteId: string
+  cliente: string
+  compania: string | null
+  antes: string | null
+  despues: string | null
+  numeroPoliza: string | null
+  polizaId: string | null
+  descripcion: string
+}
+
+export type SigueRetenida = { projectId: string; clienteId: string; cliente: string; compania: string | null; desde: string | null }
+
+export type Retenidas =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto | string }
+  | {
+      estado: 'ok'
+      revisadas: number
+      cambios: CambioRetenida[]
+      siguen: SigueRetenida[]
+      errores: { projectId: string; mensaje: string }[]
+    }
+
+export function interpretarRetenidas(status: number, json: unknown): Retenidas {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  const o = typeof json === 'object' && json !== null && !Array.isArray(json) ? (json as Record<string, unknown>) : null
+  if (o?.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (status !== 200 || !o) {
+    return { estado: 'error', motivo: cadena(o?.mensaje) ?? (status === 200 ? 'respuesta_ilegible' : 'asegura_error') }
+  }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: cadena(o.mensaje) ?? 'asegura_error' }
+  // Sin las tres listas no se sabe qué pasó: una respuesta a medias no es «no ha cambiado nada».
+  if (!Array.isArray(o.cambios) || !Array.isArray(o.siguen) || entero(o.revisadas) === null) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  const obj = (v: unknown): Record<string, unknown> | null =>
+    typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
+  const errores: { projectId: string; mensaje: string }[] = Array.isArray(o.errores)
+    ? o.errores.flatMap((e) => {
+        const x = obj(e)
+        return x ? [{ projectId: cadena(x.projectId) ?? '?', mensaje: cadena(x.mensaje) ?? 'sin detalle' }] : []
+      })
+    : []
+  const cambios: CambioRetenida[] = []
+  for (const c of o.cambios) {
+    const x = obj(c)
+    const projectId = cadena(x?.projectId)
+    const clienteId = cadena(x?.clienteId)
+    // Un cambio ilegible no se calla: pasa a errores, para que el aviso no lo pierda en silencio.
+    if (!x || !projectId || !clienteId) {
+      errores.push({ projectId: projectId ?? '?', mensaje: 'cambio con forma desconocida' })
+      continue
+    }
+    cambios.push({
+      projectId,
+      clienteId,
+      cliente: cadena(x.cliente) ?? '(sin nombre)',
+      compania: cadena(x.compania),
+      antes: cadena(x.antes),
+      despues: cadena(x.despues),
+      numeroPoliza: cadena(x.numeroPoliza),
+      polizaId: cadena(x.polizaId),
+      descripcion: cadena(x.descripcion) ?? '',
+    })
+  }
+  const siguen: SigueRetenida[] = o.siguen.flatMap((c) => {
+    const x = obj(c)
+    const projectId = cadena(x?.projectId)
+    const clienteId = cadena(x?.clienteId)
+    if (!x || !projectId || !clienteId) return []
+    return [{ projectId, clienteId, cliente: cadena(x.cliente) ?? '(sin nombre)', compania: cadena(x.compania), desde: cadena(x.desde) }]
+  })
+  // Una fila de `siguen` ilegible no se pierde del recuento: se cuenta con lo que haya.
+  const sinForma = o.siguen.length - siguen.length
+  for (let i = 0; i < sinForma; i++) errores.push({ projectId: '?', mensaje: 'retenida con forma desconocida' })
+  return { estado: 'ok', revisadas: entero(o.revisadas) as number, cambios, siguen, errores }
+}
+
+/** Revisa en Avant2 las emisiones retenidas. POST sin cuerpo (lee Avant2, no tarifica). */
+export async function retenidasAsegura(): Promise<Retenidas> {
+  try {
+    const r = await pedirPost('/api/operador/codeoscopic/retenidas', {}, 55_000)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarRetenidas(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** Vista previa (GET, gratis) de registrar en la intranet una emisión hecha en la web de Avant2. */
+export async function emisionExternaVista(
+  q: { projectId: string; clienteId: string; oportunidadId?: string | null },
+): Promise<{ status: number; json: unknown }> {
+  const qs = new URLSearchParams({ projectId: q.projectId, clienteId: q.clienteId })
+  if (q.oportunidadId) qs.set('oportunidadId', q.oportunidadId)
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/emision-externa?${qs.toString()}`, 45_000)
+    return r ?? { status: 503, json: { estado: 'error', mensaje: 'falta ASEGURA_OPERADOR_SECRET' } }
+  } catch {
+    return { status: 502, json: { estado: 'error', mensaje: 'no se pudo llegar a asegura' } }
+  }
+}
+
+/** Registra la emisión externa. `actor` lo pone el servidor con la sesión. */
+export async function emisionExternaRegistrar(
+  b: { projectId: string; clienteId: string; oportunidadId?: string | null; actor: string },
+): Promise<{ status: number; json: unknown }> {
+  const body: Record<string, unknown> = { projectId: b.projectId, clienteId: b.clienteId, confirmado: true, actor: b.actor }
+  if (b.oportunidadId) body.oportunidadId = b.oportunidadId
+  try {
+    const r = await pedirPost('/api/operador/codeoscopic/emision-externa', body, 45_000)
+    return r ?? { status: 503, json: { estado: 'error', mensaje: 'falta ASEGURA_OPERADOR_SECRET' } }
+  } catch {
+    return { status: 502, json: { estado: 'error', mensaje: 'se cortó la conexión con asegura: no sé si se ha registrado. Recarga la lista antes de repetir' } }
+  }
+}
+
 // ── Oportunidades a 45 días (regla única, 29/09/2026) ──────────────────────
 export async function oportunidadesAvisoAsegura(): Promise<LecturaOportunidadesAviso> {
   try {

@@ -565,6 +565,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 06:35, y solo si hay alguna pendiente',
   },
   {
+    id: 'correduria.emision-retenida', categoria: 'correduria',
+    titulo: 'Emisiones retenidas por la compañía (riesgo condicionado)',
+    que: 'Pólizas emitidas desde Avant2 que la compañía dejó retenidas y que han cambiado: liberadas (ya en cartera) o rechazadas, más cuántas siguen retenidas.',
+    cuando: 'A las 07:40 y 13:40, y solo si ha cambiado alguna',
+  },
+  {
     id: 'correduria.recaptacion-lote', categoria: 'correduria',
     titulo: 'Recaptación por email · lote diario',
     que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',

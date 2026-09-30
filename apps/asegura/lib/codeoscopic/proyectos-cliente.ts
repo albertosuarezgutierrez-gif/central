@@ -16,6 +16,7 @@ import { peticion } from './cliente.ts'
 import type { ConfigCodeoscopic } from './config.ts'
 import { idsDeBusqueda, normalizarDni } from './buscar-proyectos.ts'
 import { leerCotizacion } from './respuesta.ts'
+import { leerEmisionExterna, resumenEmision, type EmisionResumen } from './emision-externa.ts'
 
 type Json = Record<string, unknown>
 const obj = (v: unknown): Json => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Json) : {})
@@ -44,6 +45,8 @@ export type ResumenProyecto = {
   /** Cuántos precios vienen ya confirmados por la compañía (`estimate: false`). */
   confirmados: number
   avant2Url: string | null
+  /** La emisión que cuenta el proyecto (hecha en la web o aquí). `null` = no cuenta ninguna. */
+  emision: EmisionResumen | null
 }
 
 function ramo(crudo: unknown): string | null {
@@ -73,6 +76,7 @@ export function resumenProyecto(crudo: unknown): ResumenProyecto {
   const mejor = conPrima.length
     ? conPrima.reduce((a, b) => ((b.primaEur as number) < (a.primaEur as number) ? b : a))
     : null
+  const emision = leerEmisionExterna(crudo)
   const self = arr(r.appUrls).map(obj).find((u) => str(u.rel) === 'Self')
   return {
     projectId: c.projectId,
@@ -88,6 +92,7 @@ export function resumenProyecto(crudo: unknown): ResumenProyecto {
       : null,
     confirmados: c.precios.filter((p) => confirmado(p.firmeza)).length,
     avant2Url: self ? str(self.url) : null,
+    emision: emision.estado === 'sin_solicitud' ? null : resumenEmision(emision),
   }
 }
 

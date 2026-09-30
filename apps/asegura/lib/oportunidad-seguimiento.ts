@@ -796,6 +796,12 @@ export type OportunidadDeCliente = OportunidadSeguimiento & {
   polizaId: string | null
   /** Sus precios pedidos (P1…Pn) y el último presupuesto al cliente. `variantes: 0` = aún no se ha pedido precio. */
   presupuestos: ResumenPresupuestos
+  /**
+   * La emisión más reciente de esta oportunidad en Avant2 que sigue retenida, se rechazó o se
+   * acuñó (`codeoscopic_projects`). `null` = ningún proyecto emitido cuelga de ella. Una
+   * `riesgo_condicionado` es «retenida» DERIVADA: proyecto sin póliza (no hay estado propio).
+   */
+  emision: { projectId: string; estado: 'riesgo_condicionado' | 'rechazada' | 'emitida'; compania: string | null; desde: string } | null
 }
 
 /**
@@ -876,6 +882,7 @@ export async function oportunidadesDeCliente(
     proximaTarea: { tipo: string; fechaLimite: string } | null
     polizaId: string | null
     presupuestos: JsonResumen
+    emision: OportunidadDeCliente['emision']
   })[]>(Prisma.sql`
     select o.id::text as id, o.cliente_id::text as "clienteId", o.tipo::text as ramo, o.estado::text as estado,
            o.fecha_fin_vigencia as "fechaFin", o.motivo_perdida as "motivoPerdida",
@@ -903,7 +910,14 @@ export async function oportunidadesDeCliente(
                      'presupuesto', ${sqlHitos(Prisma.sql`t2.oportunidad_id = o.id and pr.correduria_id = o.correduria_id`)})
               from tarificaciones t
               left join tarificacion_precios x on x.tarificacion_id = t.id and x.prima_eur is not null
-             where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id) as presupuestos
+             where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id) as presupuestos,
+           (select json_build_object('projectId', cp.project_id_codeoscopic, 'estado', cp.estado::text,
+                     'compania', cp.aseguradora,
+                     'desde', to_char(cp.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
+              from codeoscopic_projects cp
+             where cp.oportunidad_id = o.id and cp.correduria_id = o.correduria_id
+               and cp.estado::text in ('riesgo_condicionado', 'rechazada', 'emitida')
+             order by cp.updated_at desc limit 1) as emision
     from oportunidades o
     where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid
     order by (o.estado::text in ('ganada', 'perdida')), o.cerrada_at desc nulls last, o.created_at desc
@@ -922,6 +936,7 @@ export async function oportunidadesDeCliente(
       proximaTarea: f.proximaTarea,
       polizaId: f.polizaId,
       presupuestos: resumenPresupuestos(f.presupuestos),
+      emision: f.emision ?? null,
     })),
     truncado: filas.length > TECHO_POR_CLIENTE,
   }

@@ -172,3 +172,9 @@ test('emitir/route.ts: el Submit rellena product.options por defecto y lo usa en
   assert.equal(usos.length, 2)
   assert.doesNotMatch(src, /campos: camposEnvio,/)
 })
+
+test('veredictoSolicitud: «ConditionedRisk» (riesgo condicionado de Avant2) es pendiente, viva', () => {
+  assert.equal(veredictoSolicitud('ConditionedRisk'), 'pendiente')
+  assert.equal(veredictoSolicitud('RIESGO CONDICIONADO'), 'pendiente')
+  assert.equal(solicitudViva(solicitudesEmision({ id: 1, policyApplications: [{ id: 'PA', status: { id: 'ConditionedRisk' } }] }))?.id, 'PA')
+})

@@ -97,3 +97,33 @@ export function describirEmisionExterna(e: EmisionExterna): string {
   if (e.estado === 'rechazada') return `RECHAZADA${de}${literal}`
   return `en un estado que no se reconoce${literal}: se mira en Avant2`
 }
+
+/** Lo que cruza el puerto hacia plataforma: la emisión, plana y sin el crudo del vendor. */
+export type EmisionResumen = {
+  estado: 'sin_solicitud' | VeredictoSolicitud
+  compania: string | null
+  modalidad: string | null
+  primaEur: number | null
+  numeroPoliza: string | null
+  solicitudId: string | null
+  /** El literal del vendor (`status.name` o, sin él, `status.id`), tal cual. */
+  estadoVendor: string | null
+  descripcion: string
+}
+
+export function resumenEmision(e: EmisionExterna): EmisionResumen {
+  const descripcion = describirEmisionExterna(e)
+  if (e.estado === 'sin_solicitud') {
+    return { estado: 'sin_solicitud', compania: null, modalidad: null, primaEur: null, numeroPoliza: null, solicitudId: null, estadoVendor: null, descripcion }
+  }
+  return {
+    estado: e.estado,
+    compania: e.compania,
+    modalidad: e.modalidad,
+    primaEur: e.primaEur,
+    numeroPoliza: e.solicitud.numeroPoliza,
+    solicitudId: e.solicitud.id,
+    estadoVendor: e.solicitud.estadoNombre ?? e.solicitud.estadoId,
+    descripcion,
+  }
+}
