@@ -122,7 +122,9 @@ export function veredictoSolicitud(estadoId: string | null | undefined): Veredic
   const s = estadoId.trim().toLowerCase()
   if (/^(approved|accepted|issued|emitida?)$/.test(s)) return 'aprobada'
   if (/^(rejected|denied|refused|cancel+ed|rechazada?)$/.test(s)) return 'rechazada'
-  if (/pending|review|held|hold|manual|revised|waiting|process/.test(s)) return 'pendiente'
+  // «Riesgo condicionado» (lo que pinta Avant2 cuando la compañía retiene la póliza, 30/09/2026)
+  // también es una solicitud VIVA: reenviarla sería la segunda póliza del mismo riesgo.
+  if (/pending|review|held|hold|manual|revised|waiting|process|condition|condicion/.test(s)) return 'pendiente'
   return 'desconocido'
 }
 
