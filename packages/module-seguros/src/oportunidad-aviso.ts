@@ -107,3 +107,28 @@ export function avisosOportunidadDeHoy(
 export function claveAvisoOportunidad(id: string, vence: string): string {
   return `${id}|${vence}`
 }
+
+export type PlanTareaVencimiento =
+  | { accion: 'nada'; motivo: 'sin_vencimiento' | 'ya_esta' }
+  | { accion: 'crear'; fecha: string }
+  | { accion: 'mover'; tareaId: string; desde: string; fecha: string }
+
+/**
+ * Al corregir el vencimiento de una oportunidad abierta (29/09/2026: el escaneo o el volcado lo
+ * traían mal), dónde queda su próxima tarea: {@link DIAS_AVISO_OPORTUNIDAD} días antes del
+ * vencimiento del ciclo, nunca antes de mañana. Sin tarea pendiente se crea (si no, la tarjeta
+ * dice «Sin próximo paso» y nadie la mueve); con una, se MUEVE — no se cierra: una llamada
+ * cerrada cuenta como intento y falsearía el plan de llamadas.
+ */
+export function planTareaTrasVencimiento(
+  vence: string | null | undefined,
+  proxima: { id: string; fecha: string } | null,
+  hoy: string,
+): PlanTareaVencimiento {
+  const ciclo = vencimientoDelCiclo(vence, hoy)
+  if (!ciclo) return { accion: 'nada', motivo: 'sin_vencimiento' }
+  const fecha = fechaAvisoOportunidad(ciclo, hoy)
+  if (!proxima) return { accion: 'crear', fecha }
+  if (proxima.fecha === fecha) return { accion: 'nada', motivo: 'ya_esta' }
+  return { accion: 'mover', tareaId: proxima.id, desde: proxima.fecha, fecha }
+}
