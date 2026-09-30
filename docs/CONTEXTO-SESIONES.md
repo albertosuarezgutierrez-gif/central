@@ -971,6 +971,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (30/09/2026) Correduría: ficha = Seguro (en vigor) vs Oportunidad; el vencimiento manda (PR #4128)
+- Decisión de Alberto: solo hay DOS cosas. Seguro = con nosotros en vigor (solo eso hace cliente). Todo lo demás (volcado, competencia) = Oportunidad; «recuperable» NO existe.
+- El volcado es el gancho comercial (citar matrículas da confianza): se pinta como oportunidad derivada (sin escribir en BD), sin badge «activa», con matrícula visible.
+- Vencimiento en 3 estados; una fecha pasada NUNCA se proyecta («preguntar al cliente»). Alta con bloque vencimiento+compañía siempre visible.
+- «Descartar (ya no lo tiene)» = crear + perder (dos POST; reintento solo del 2º). Dedupe contra cualquier oportunidad del riesgo.
+- Pendiente fuera de alcance: `apps/asegura/lib/leads-competencia.ts` sigue proyectando aniversarios (recaptación).
+
 ## (30/09/2026) asegura-web: cabecera de HERRAMIENTAS, no de ramos + «siguiente paso» en cada herramienta
 - Alberto: «la gente entra y no hace nada». Cabecera = Seguros ▾ (panel con TODOS los ramos + Ayuda, siempre en el HTML por SEO) · ¿Seguro del banco? · ¿Cuándo vence? · Sube tu póliza · ¿Siniestro? (≥1200 px) · Mis seguros. Móvil: fila de chips (antes <1024 px NO había nav).
 - Medido con Playwright 320→1440: sin desborde; `.pagina`/`.hero` reservan +3,25rem en móvil por los chips. Cepo `lib/cabecera.test.ts`.

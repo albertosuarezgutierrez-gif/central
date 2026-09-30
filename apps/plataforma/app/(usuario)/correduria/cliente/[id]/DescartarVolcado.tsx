@@ -28,24 +28,33 @@ export default function DescartarVolcado(p: {
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Id de la oportunidad ya creada si el 2º paso falló: reintentar SOLO «perder» (no otro alta).
+  const [creada, setCreada] = useState<string | null>(null)
+
   async function confirmar() {
+    if (ocupado) return
     setOcupado(true); setError(null)
-    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
-    const alta = await enviar({
-      accion: 'crear', clienteId: p.clienteId, ramo: p.ramo, estado: 'competencia',
-      aseguradora: p.aseguradora, numeroPoliza: p.numeroPoliza, matricula: p.matricula, vehiculo: p.vehiculo,
-      tipoTarea: 'llamada', fechaTarea: hoy, nota: 'Descartada desde el volcado: ya no lo tiene.',
-    })
-    if (!alta.ok || alta.id === null) {
-      setOcupado(false)
-      setError(`No se ha descartado: ${alta.motivo}`)
-      return
+    let id = creada
+    if (id === null) {
+      const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+      const alta = await enviar({
+        accion: 'crear', clienteId: p.clienteId, ramo: p.ramo, estado: 'competencia',
+        aseguradora: p.aseguradora, numeroPoliza: p.numeroPoliza, matricula: p.matricula, vehiculo: p.vehiculo,
+        tipoTarea: 'llamada', fechaTarea: hoy, nota: 'Descartada desde el volcado: ya no lo tiene.',
+      })
+      if (!alta.ok || alta.id === null) {
+        setOcupado(false)
+        setError(`No se ha descartado: ${alta.motivo}`)
+        return
+      }
+      id = alta.id
+      setCreada(id)
     }
-    const perdida = await enviar({ id: alta.id, accion: 'perder', motivo: 'cliente_desiste', detalle: 'Ya no lo tiene (descartada desde el volcado).' })
+    const perdida = await enviar({ id, accion: 'perder', motivo: 'cliente_desiste', detalle: 'Ya no lo tiene (descartada desde el volcado).' })
     setOcupado(false)
     if (!perdida.ok) {
-      setError(`Se abrió su oportunidad pero no se ha podido cerrar (${perdida.motivo}). Ábrela en la pestaña Oportunidades y márcala perdida.`)
-      router.refresh()
+      // Sin refresh: desmontaría el componente y el error (y el reintento) se perderían.
+      setError(`Se abrió su oportunidad pero no se ha podido cerrar (${perdida.motivo}). Reintenta el cierre.`)
       return
     }
     setAbierto(false)
@@ -65,7 +74,7 @@ export default function DescartarVolcado(p: {
       {error && <span role="alert" style={{ color: 'var(--negative)' }}>{error}</span>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" disabled={ocupado} onClick={() => void confirmar()} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
-          {ocupado ? 'Descartando…' : 'Sí, descartar'}
+          {ocupado ? 'Descartando…' : creada ? 'Reintentar cierre' : 'Sí, descartar'}
         </button>
         <button type="button" disabled={ocupado} onClick={() => { setAbierto(false); setError(null) }} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Cancelar</button>
       </div>

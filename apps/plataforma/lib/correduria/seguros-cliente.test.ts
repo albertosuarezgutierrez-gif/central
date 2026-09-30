@@ -386,3 +386,33 @@ test('precarga del alta desde una fila del volcado: vencimiento solo si es futur
   assert.equal(sin.fechaFinVigencia, null)
   assert.equal(sin.fechaObsoleta, null)
 })
+
+test('una póliza o fila SIN matrícula ni título no se come dos coches distintos del mismo ramo', () => {
+  const coche = (id: string, m: string, f: string) => pol(id, { viva: false, matricula: m, fechaVencimiento: f })
+  // Fila del volcado sin datos + dos coches identificados: la sin datos NO se funde con ninguno.
+  const r = repartirSegurosCliente({
+    polizas: [coche('a', '1111BBB', '2016-01-01'), coche('b', '2222CCC', '2015-01-01'), pol('sin', { viva: false, fechaVencimiento: '2014-01-01' })],
+    declaradas: [], oportunidades: [], hoy: hoy30,
+  })
+  assert.deepEqual(ids(r.oportunidades).sort(), ['a', 'b', 'sin'])
+  // Con UN solo coche identificado, la sin datos se une a él.
+  const u = repartirSegurosCliente({ polizas: [coche('a', '1111BBB', '2016-01-01'), pol('sin', { viva: false, fechaVencimiento: '2014-01-01' })], declaradas: [], oportunidades: [], hoy: hoy30 })
+  assert.deepEqual(ids(u.oportunidades), ['a'])
+  // Una póliza viva sin claves no oculta dos derivadas distintas del ramo…
+  const v = repartirSegurosCliente({ polizas: [pol('vivo'), coche('a', '1111BBB', '2016-01-01'), coche('b', '2222CCC', '2015-01-01')], declaradas: [], oportunidades: [], hoy: hoy30 })
+  assert.deepEqual(ids(v.oportunidades).sort(), ['a', 'b'])
+  // …ni una perdida sin claves.
+  const p = repartirSegurosCliente({ polizas: [coche('a', '1111BBB', '2016-01-01'), coche('b', '2222CCC', '2015-01-01')], declaradas: [], oportunidades: [opo('x', { estado: 'perdida', motivoPerdida: 'precio', proximaTarea: null })], hoy: hoy30 })
+  assert.deepEqual(ids(p.oportunidades).sort(), ['a', 'b'])
+})
+
+test('estadoVencimiento usa el día de Madrid: a las 00:30 del 30/09 el 29/09 ya es pasado', () => {
+  const hoyMad = new Date('2026-09-29T22:30:00Z') // 30/09 00:30 en Madrid
+  assert.deepEqual(estadoVencimiento('2026-09-29', hoyMad), { estado: 'desconocido', ultimaFecha: '2026-09-29' })
+  assert.deepEqual(estadoVencimiento('2026-09-30', hoyMad), { estado: 'futuro', fecha: '2026-09-30' })
+})
+
+test('precarga: un ramo que el alta no admite queda vacío', () => {
+  assert.equal(precargaAlta(pol('x', { tipo: 'inventado' }), hoy30).ramo, '')
+  assert.equal(precargaAlta(pol('y', { tipo: 'hogar' }), hoy30).ramo, 'hogar')
+})

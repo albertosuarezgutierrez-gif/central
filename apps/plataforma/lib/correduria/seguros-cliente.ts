@@ -1,6 +1,6 @@
 import type { PolizaDeclaradaFicha, PolizaFicha } from '../ficha-asegura'
 import type { OportunidadDeCliente } from '../seguimiento-asegura'
-import { claveMatricula, claveNumeroPoliza } from '@central/module-seguros'
+import { RAMOS_OPORTUNIDAD, claveMatricula, claveNumeroPoliza } from '@central/module-seguros'
 
 /**
  * Los seguros de un cliente en los TRES cubos con los que trabaja una
@@ -99,7 +99,8 @@ function diaIso(iso: string | null | undefined): string | null {
 export function estadoVencimiento(iso: string | null | undefined, hoy: Date): EstadoVencimiento {
   const dia = diaIso(iso)
   if (dia === null) return { estado: 'desconocido', ultimaFecha: null }
-  return dia >= hoy.toISOString().slice(0, 10) ? { estado: 'futuro', fecha: dia } : { estado: 'desconocido', ultimaFecha: dia }
+  // Hoy de MADRID, como el resto de la ficha: entre 00:00 y 02:00 el día UTC sigue siendo ayer.
+  return dia >= hoy.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) ? { estado: 'futuro', fecha: dia } : { estado: 'desconocido', ultimaFecha: dia }
 }
 
 export function fechaFutura(iso: string | null | undefined, hoy: Date): string | null {
@@ -186,22 +187,36 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
   // ramo ocuparía su sitio y «Eliminar» parecería no haber hecho nada.
   const descartadas = [...vivasDescartadas, ...historicas.filter(p => p.leadDescartado)]
   const bienesDescartados = descartadas.map(bienDe)
+  // Agrupar: primero los que TIENEN matrícula o título (esos sí se distinguen); una fila sin
+  // ninguno de los dos solo se une si el ramo tiene UN único grupo identificado. Con varios
+  // (o ninguno) queda como grupo propio: no puede ser «el mismo» de dos coches a la vez.
   const grupos: { rep: PolizaFicha; filas: PolizaFicha[] }[] = []
-  const candidatas = historicas
-    .filter(p => {
-      if (p.leadDescartado || p.estado.trim() === 'fin_riesgo') return false
-      const b = bienDe(p)
-      return !coberturas.some(c => mismoBien(c, b)) && !bienesDescartados.some(d => mismoBien(d, b))
-    })
+  const filas = historicas
+    .filter(p => !p.leadDescartado && p.estado.trim() !== 'fin_riesgo')
     // La más reciente primero; sin fecha, al final.
     .sort((x, y) => (y.fechaVencimiento ?? '').localeCompare(x.fechaVencimiento ?? ''))
-  for (const p of candidatas) {
-    const g = grupos.find(g => mismoBien(bienDe(g.rep), bienDe(p)))
+  for (const p of filas.filter(p => identificado(bienDe(p)))) {
+    const g = grupos.find(g => g.filas.some(f => casaBien(bienDe(f), bienDe(p)) === 'si'))
     if (g) g.filas.push(p)
     else grupos.push({ rep: p, filas: [p] })
   }
+  for (const p of filas.filter(p => !identificado(bienDe(p)))) {
+    const delRamo = grupos.filter(g => g.rep.tipo === p.tipo)
+    const propio = delRamo.find(g => g.filas.every(f => !identificado(bienDe(f))))
+    const g = delRamo.length === 1 && identificado(bienDe(delRamo[0].rep)) ? delRamo[0] : propio
+    if (g) g.filas.push(p)
+    else grupos.push({ rep: p, filas: [p] })
+  }
+  // ¿Esta cobertura/descarte tapa a este grupo? Con bien identificado, solo su bien; sin él,
+  // solo si es la ÚNICA candidata del ramo (si hay varias, no se sabe cuál es y no oculta ninguna).
+  const tapa = (c: Bien, g: { filas: PolizaFicha[] }) => {
+    const r = g.filas.map(f => casaBien(c, bienDe(f)))
+    if (r.includes('si')) return true
+    return r.includes('quiza') && grupos.filter(x => x.rep.tipo === g.filas[0].tipo).length === 1
+  }
+  const visibles = grupos.filter(g => !coberturas.some(c => tapa(c, g)) && !bienesDescartados.some(d => tapa(d, g)))
   const reales = (oportunidades ?? []).filter(o => !(o.estado === 'perdida' && o.motivoPerdida === 'error_alta'))
-  const representante = grupos
+  const representante = visibles
     .filter(g => !reales.some(o => (o.ramo === null || o.ramo === g.rep.tipo) && g.filas.some(f => mismoRiesgo(o, f))))
     .map(g => g.rep)
   for (const p of representante) {
@@ -286,12 +301,14 @@ function bienDe(p: PolizaFicha): Bien {
   return { tipo: p.tipo, matricula: claveMatricula(p.matricula), titulo: t === '' ? null : t }
 }
 
-/** Mismo ramo y sin datos que los contradigan: otra matrícula u otro título = otro bien. */
-function mismoBien(a: Bien, b: Bien): boolean {
-  if (a.tipo !== b.tipo) return false
-  if (a.matricula && b.matricula) return a.matricula === b.matricula
-  if (a.titulo && b.titulo) return a.titulo === b.titulo
-  return true
+const identificado = (b: Bien) => b.matricula !== null || b.titulo !== null
+
+/** ¿Es el mismo bien? `quiza` = mismo ramo pero sin dato común con que compararlos. */
+function casaBien(a: Bien, b: Bien): 'si' | 'no' | 'quiza' {
+  if (a.tipo !== b.tipo) return 'no'
+  if (a.matricula && b.matricula) return a.matricula === b.matricula ? 'si' : 'no'
+  if (a.titulo && b.titulo) return a.titulo === b.titulo ? 'si' : 'no'
+  return 'quiza'
 }
 
 function tieneClaves(o: OportunidadDeCliente): boolean {
@@ -351,7 +368,8 @@ export type PrecargaAlta = {
 export function precargaAlta(p: PolizaFicha, hoy: Date): PrecargaAlta {
   const v = estadoVencimiento(p.fechaVencimiento, hoy)
   return {
-    ramo: p.tipo,
+    // Un ramo que el alta no admite queda vacío (coherente con el select: «Elige…»).
+    ramo: (RAMOS_OPORTUNIDAD as readonly string[]).includes(p.tipo) ? p.tipo : '',
     aseguradora: p.aseguradora,
     numeroPoliza: p.numeroPoliza,
     matricula: p.matricula,
