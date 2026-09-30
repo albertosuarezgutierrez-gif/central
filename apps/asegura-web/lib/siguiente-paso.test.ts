@@ -116,7 +116,7 @@ test('el whatsapp de ventana incluye el ramo', () => {
     dias: 20,
     fase: 'ventana',
   })
-  assert.match(paso.whatsappTexto, /Moto/, 'ventana debe mencionar el ramo específico')
+  assert.match(paso.whatsappTexto, /tu seguro de moto/, 'ventana debe mencionar el ramo específico')
 })
 
 test('el whatsapp de carta incluye que es una baja y el ramo', () => {
@@ -184,4 +184,24 @@ test('las etiquetas de los botones son legibles y cortas', () => {
   assert.ok(paso.etiquetaLlamada.length > 0 && paso.etiquetaLlamada.length <= 50, `llamada: "${paso.etiquetaLlamada}"`)
   assert.ok(!paso.etiquetaWhatsapp.includes('\n'), 'etiqueta WhatsApp no debe tener saltos')
   assert.ok(!paso.etiquetaLlamada.includes('\n'), 'etiqueta llamada no debe tener saltos')
+})
+
+// Revisión 30/09/2026: 0 días es el ÚLTIMO día válido (no «cerrado»), el ramo
+// va por su nombre y los euros llevan el € detrás.
+test('ventana: con 0 días dice que hoy es el último día, no que se cerró', () => {
+  const p = siguientePaso({ tipo: 'ventana', ramo: 'Hogar', dias: 0, fase: 'ventana' })
+  assert.match(p.mensaje, /Hoy es el último día/)
+  assert.doesNotMatch(p.mensaje + p.whatsappTexto, /se cerró|ya pasó/)
+  assert.match(p.whatsappTexto, /tu seguro de hogar/)
+})
+
+test('ventana: sin ramo no deja «sobre.» ni «de .» colgando', () => {
+  const p = siguientePaso({ tipo: 'ventana', ramo: '', dias: 12, fase: 'ventana' })
+  assert.match(p.mensaje, /quedan 12 días para decidir si renuevas tu seguro\./)
+  assert.doesNotMatch(p.whatsappTexto, /sobre\.| de \./)
+})
+
+test('bonificación: el importe del WhatsApp lleva el € detrás', () => {
+  const p = siguientePaso({ tipo: 'bonificacion', compensa: false, costeReal: 2162.49 })
+  assert.match(p.whatsappTexto, /2\.162,49€/)
 })

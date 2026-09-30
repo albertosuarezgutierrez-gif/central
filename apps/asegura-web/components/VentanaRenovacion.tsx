@@ -73,6 +73,9 @@ export default function VentanaRenovacion({ ramo: ramoFijo, opciones }: Props) {
   // «Otro seguro» (patinete, mascota, viaje…): no tiene página propia, así que se escribe cuál.
   const [cual, setCual] = useState('')
   const ramo = ramoFijo ?? ramoElegido
+  // Nombre legible para el «siguiente paso» (el slug suelto sale como «de responsabilidad-civil»).
+  // En página de ramo no llegan nombres: se omite antes que inventarlo.
+  const ramoNombre = ramo === RAMO_OTRO ? cual : (opciones?.find((o) => o.slug === ramo)?.nombre ?? '')
   const origen = `ramo_ventana_${ramoFijo ?? 'portada'}`
   const [vence, setVence] = useState('')
   const [hoy, setHoy] = useState<Date | null>(null)
@@ -194,11 +197,11 @@ export default function VentanaRenovacion({ ramo: ramoFijo, opciones }: Props) {
                 <SiguientePaso
                   contexto={{
                     tipo: 'ventana',
-                    ramo,
+                    ramo: ramoNombre,
                     dias: v.diasHastaLimite,
                     fase: v.fase,
                   }}
-                  anclaFormulario={PORTAL_URL}
+                  anclaFormulario="#presupuesto"
                 />
               </div>
             </>
@@ -206,11 +209,11 @@ export default function VentanaRenovacion({ ramo: ramoFijo, opciones }: Props) {
             <SiguientePaso
               contexto={{
                 tipo: 'ventana',
-                ramo,
+                ramo: ramoNombre,
                 dias: v.diasHastaLimite,
                 fase: v.fase,
               }}
-              anclaFormulario={PORTAL_URL}
+              anclaFormulario="#presupuesto"
             />
           )}
         </div>

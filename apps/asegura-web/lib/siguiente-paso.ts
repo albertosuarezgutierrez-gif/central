@@ -105,14 +105,23 @@ function vencimientos(ctx: ContextoVencimientos): SiguientePaso {
 }
 
 function ventana(ctx: ContextoVentana): SiguientePaso {
-  const ramoNombre = ctx.ramo ? ` de ${ctx.ramo}` : ''
-  const diasTexto =
-    ctx.dias === null ? 'Tu ventana para decidir es' : ctx.dias <= 0 ? 'Tu ventana para decidir ya se cerró' : `Te quedan ${ctx.dias} días para decidir`
+  // `ramo` llega como NOMBRE legible («hogar», «patinete»), nunca el slug: lo
+  // traduce el componente. Vacío = no se sabe, y la frase no lo menciona.
+  const deRamo = ctx.ramo.trim() ? ` de ${ctx.ramo.trim().toLowerCase()}` : ''
+  // 0 días = HOY es el último día válido (así lo pinta el propio widget), no «cerrado».
+  const plazo =
+    ctx.fase === 'tarde' || (ctx.dias !== null && ctx.dias < 0)
+      ? `El plazo de este año para no renovar tu seguro${deRamo} ya pasó`
+      : ctx.dias === 0
+        ? `Hoy es el último día para decidir si renuevas tu seguro${deRamo}`
+        : ctx.dias === null
+          ? `Ya sabes hasta cuándo puedes decidir sobre tu seguro${deRamo}`
+          : `Te ${ctx.dias === 1 ? 'queda 1 día' : `quedan ${ctx.dias} días`} para decidir si renuevas tu seguro${deRamo}`
 
   return {
-    mensaje: `${diasTexto}${ramoNombre}. Un corredor puede revisar si te compensa mantenerlo o buscar alternativa.`,
+    mensaje: `${plazo}. Un corredor puede revisar si te compensa mantenerlo o buscar alternativa.`,
     etiquetaWhatsapp: 'Enviar por WhatsApp',
-    whatsappTexto: `Acabo de calcular mi ventana para decidir sobre${ramoNombre}. Me gustaría que alguien me ayude a revisar las opciones.`,
+    whatsappTexto: `${plazo}. Me gustaría que alguien me ayude a revisar las opciones.`,
     etiquetaLlamada: 'Que me llame un corredor',
   }
 }
@@ -127,14 +136,13 @@ function carta(ctx: ContextoCarta): SiguientePaso {
   }
 }
 
-/**
- * Formatea un número como euros españoles: `2.162,49€`.
- * Para usar en el WhatsApp, sin el símbolo.
- */
+/** Euros en formato español con el € detrás: `2.162,49€`. */
 function formatEur(numero: number): string {
-  return numero.toLocaleString('es-ES', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    useGrouping: 'always',
-  })
+  return (
+    numero.toLocaleString('es-ES', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: 'always',
+    }) + '€'
+  )
 }
