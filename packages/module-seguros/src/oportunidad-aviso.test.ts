@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  DIAS_AVISO_OPORTUNIDAD, avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, planTareaTrasVencimiento, vencimientoDelCiclo,
+  DIAS_AVISO_OPORTUNIDAD, avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, fechaVencimientoDudosa, planTareaTrasVencimiento, vencimientoDelCiclo,
 } from './oportunidad-aviso.ts'
 import { DIAS_PRIMER_CONTACTO, siguientePasoLead } from './lead-competencia.ts'
 
@@ -62,4 +62,16 @@ test('vencimiento corregido: sin tarea se crea a 45 días; con una, se mueve; si
   // Sin fecha legible no se inventa ninguna.
   assert.deepEqual(planTareaTrasVencimiento(null, { id: 't1', fecha: '2026-12-01' }, HOY), { accion: 'nada', motivo: 'sin_vencimiento' })
   assert.deepEqual(planTareaTrasVencimiento('2027-02-30', null, HOY), { accion: 'nada', motivo: 'sin_vencimiento' })
+})
+
+test('fecha leída que no cuadra: pasada o a más de 13 meses; la del año que viene, no', () => {
+  assert.equal(fechaVencimientoDudosa('2027-03-08', HOY), null)
+  assert.equal(fechaVencimientoDudosa(HOY, HOY), null)
+  assert.equal(fechaVencimientoDudosa('2027-10-29', HOY), null, '13 meses justos todavía vale')
+  assert.equal(fechaVencimientoDudosa('2027-10-30', HOY)?.motivo, 'lejana')
+  assert.equal(fechaVencimientoDudosa('2018-03-08', HOY)?.motivo, 'pasada')
+  assert.match(fechaVencimientoDudosa('2018-03-08', HOY)!.texto, /08\/03\/2018/)
+  // Sin fecha legible no es «dudosa»: es «sin fecha», y se dice en otro sitio.
+  assert.equal(fechaVencimientoDudosa(null, HOY), null)
+  assert.equal(fechaVencimientoDudosa('2027-02-30', HOY), null)
 })
