@@ -22,7 +22,7 @@ import SegurosCliente from './SegurosCliente'
 import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
 import { Pagina } from '@/components/ui'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
-import { ESTADOS_ABIERTOS, repartirSegurosCliente } from '@/lib/correduria/seguros-cliente'
+import { contarOportunidades, precargaAlta, repartirSegurosCliente, segurosDeReparto } from '@/lib/correduria/seguros-cliente'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,15 +75,22 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   for (const p of ficha.polizas) porClase[clasificarPolizaFicha(p)].push(p)
 
   const oportunidades: OportunidadDeCliente[] | null = ops.estado === 'ok' ? ops.oportunidades : null
-  const reparto = repartirSegurosCliente({ polizas: ficha.polizas, declaradas: ficha.declaradas, oportunidades })
-  const abiertas = oportunidades === null ? null : oportunidades.filter(o => (ESTADOS_ABIERTOS as readonly string[]).includes(o.estado)).length
+  const hoy = new Date()
+  const reparto = repartirSegurosCliente({ polizas: ficha.polizas, declaradas: ficha.declaradas, oportunidades, hoy })
+  // Seguro = póliza en cartera en vigor; TODO lo demás (volcado, canceladas, lo que dice el cliente)
+  // es oportunidad. Los contadores de la ficha cuentan solo seguros; las oportunidades, las abiertas
+  // más las derivadas de otras casas. `null` = no se pudieron leer: no se pinta un número.
+  const seguros = segurosDeReparto(reparto)
+  const nOportunidades = contarOportunidades(reparto)
+  // Con qué se precarga el alta al crear la oportunidad desde una fila del volcado.
+  const precargas = Object.fromEntries(reparto.oportunidades.flatMap(s => (s.clase === 'poliza' && s.historica ? [[s.id, precargaAlta(s.poliza, hoy)] as const] : [])))
 
   // Pólizas de CARTERA VIVA de la ficha (`esCarteraViva` en asegura). Es la
   // guarda del descarte: con una sola viva, la persona es un cliente de hoy.
   const vivas = ficha.polizas.filter(p => p.viva).length
 
   const resumen = resumenFicha({
-    polizas: ficha.polizas,
+    polizas: seguros,
     siniestros: ficha.siniestros,
     documentos: ficha.documentos,
   })
@@ -127,7 +134,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           a `null` (asegura sin el campo) no pinta nada — no se afirma. */}
       <DescartarCliente zona="aviso" clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
 
-      <Cabecera ficha={ficha} resumen={resumen} />
+      <Cabecera ficha={ficha} resumen={resumen} seguros={seguros} />
 
       {/* La misma persona en otra ficha (mismo DNI): se avisa y se ofrece fusionar eligiendo campo a campo. */}
       <FichasDuplicadas clienteId={ficha.id} />
@@ -135,7 +142,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {/* Los seguros primero (Alberto: «vendemos seguros»): tres cubos de tarjetas que se
           pinchan enteras. Los accesos van debajo en la ficha y arriba en cada sección. */}
       {tab === 'resumen' && (
-        <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={new Date()} />
+        <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={hoy} />
       )}
 
       <FichaTabs
@@ -143,9 +150,9 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         activa={tab}
         detalles={detallesAccesos({
           conNosotros: reparto.conNosotros.length,
-          oportunidadesAbiertas: abiertas,
+          oportunidadesAbiertas: nOportunidades,
           pendiente: accion.estado === 'accion' ? { estado: 'accion', urgente: accion.urgente } : accion,
-          polizas: ficha.polizas.length,
+          polizas: seguros.length,
           telefonos: ficha.contactos === null ? null : ficha.contactos.telefonos.length,
           emails: ficha.contactos === null ? null : ficha.contactos.emails.length,
           personas: contarPersonas(personas, ficha.relaciones),
@@ -164,6 +171,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           <OportunidadesCliente
             clienteId={ficha.id}
             telefono={contacto.telefono ?? null}
+            precargas={precargas}
             polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
           />
           <PresupuestosPoliza clienteId={ficha.id} titulo="Presupuestos al cliente" />

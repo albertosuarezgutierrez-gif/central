@@ -20,7 +20,7 @@ const leer = (f: string) => readFileSync(path.join(DIR, f), 'utf8')
 test('la cabecera se monta FUERA de las pestañas y lleva los contadores de alarma', () => {
   const page = leer('page.tsx')
   // Montada sin condición de pestaña: se ve en las siete.
-  assert.match(page, /<Cabecera ficha=\{ficha\} resumen=\{resumen\} \/>/)
+  assert.match(page, /<Cabecera ficha=\{ficha\} resumen=\{resumen\}[^>]*\/>/)
   assert.doesNotMatch(page, /tab === '\w+' && \(?\s*<Cabecera/, 'la cabecera no puede colgar de una pestaña')
 
   const cab = leer('Cabecera.tsx')

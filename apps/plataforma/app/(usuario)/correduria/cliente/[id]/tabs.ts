@@ -48,6 +48,7 @@ export type DatosAccesos = {
   oportunidadesAbiertas: number | null
   /** `siguienteAccion`: `accion` (con urgencia), `nada` o `sin_comprobar`. */
   pendiente: { estado: 'accion'; urgente: boolean } | { estado: 'nada' } | { estado: 'sin_comprobar' }
+  /** Seguros en vigor (no todas las filas de la ficha). */
   polizas: number
   telefonos: number | null
   emails: number | null
@@ -90,7 +91,8 @@ export function detallesAccesos(d: DatosAccesos): Partial<Record<TabFicha, Detal
   }
   if (d.pendiente.estado === 'accion') r.pendiente = d.pendiente.urgente ? { texto: 'urgente', tono: 'malo' } : { texto: 'hay algo que hacer', tono: 'aviso' }
   else if (d.pendiente.estado === 'nada') r.pendiente = { texto: 'al día' }
-  r.polizas = { texto: d.polizas === 0 ? 'ninguna' : `${d.polizas} en total` }
+  // Solo los SEGUROS (cartera en vigor): las filas del volcado son oportunidades, no pólizas.
+  r.polizas = { texto: d.polizas === 0 ? 'ninguna en vigor' : `${d.polizas} en vigor` }
 
   // Contactos: teléfonos, correos y personas. Lo que no se pudo leer se OMITE,
   // no se cuenta como cero.
