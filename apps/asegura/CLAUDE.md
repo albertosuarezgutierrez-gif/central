@@ -110,6 +110,11 @@
   `portal_aviso_enviado`, el correo nunca dice el TÍTULO del aviso) · `avisos-web` (08:30, APAGADO) ·
   `felicitaciones` (APAGADO) · `polizas-pdf` (horario).
 - Un aviso a un tercero (persona de referencia) nunca se manda como si fuera al tomador (`textoAviso`, `paraTercero`).
+- **Bloqueos y emisión escalonada (30/09/2026):** un bloqueo de la compañía («riesgo condicionado») lo levanta
+  SOLO Alberto; Allianz contesta únicamente por su intranet (no por correo) y sin otra póliza suya no admite robo
+  ni daños (solo la básica). Todo riesgo o modalidad con robo → emitir primero la BÁSICA y añadir el resto por
+  suplemento. Textos en `@central/module-seguros` (`bloqueo-compania.ts`); recordatorio diario por el cron
+  `correduria-retenidas` de plataforma. Ver regla 22 de la skill `correduria-crm`.
 - Correo de emisión tras acuñar (`trasEmision`): resumen sin nº de póliza, matrícula, IBAN ni DNI; póliza adjunta.
 - Anulación firmada por el cliente sale sola SOLO con buzón de bajas recordado (`anulacionSeEnviaSola`); el resto
   de correos a compañías pasan por la cola de aprobaciones (`seguros.aprobacion`).
