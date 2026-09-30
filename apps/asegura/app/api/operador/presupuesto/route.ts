@@ -11,6 +11,7 @@ import { avisarPresupuesto, confirmarWhatsapp, marcarEmitido, type FalloEnvio } 
 import { datosParaEmitir } from '@/lib/datos-emision'
 import { marcarSeguimientoAvisado } from '@/lib/presupuesto-seguimiento-servicio'
 import { esEtapa } from '@/lib/presupuesto-seguimiento'
+import { marcarDocumentoDescargado } from '@/lib/presupuesto-referencia'
 import type { DatosParaEmitir } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +31,8 @@ const STATUS_FALLO: Record<FalloEnvio, number> = {
  *   PATCH { id, accion:'avisar', canal:'email'|'whatsapp_enlace', actor } → avisa al cliente (PR 3)
  *   PATCH { id, accion:'confirmar_whatsapp', actor } → Alberto dice que el WhatsApp ya salió
  *   PATCH { id, accion:'emitido', actor } → la compañía ya emitió la póliza del presupuesto aceptado
+ *   PATCH { id, accion:'documento_descargado', actor } → se descargó el PDF para el cliente (sella
+ *         `documento_descargado_at` la 1ª vez + evento). NO es «enviado»: descargar no prueba que saliera.
  *   PATCH { id, accion:'necesidades', texto, actor } → anota las exigencias y necesidades del cliente (IDD)
  *   PATCH { id, accion:'ocultar'|'mostrar', opcionId, actor } → quita/devuelve una opción ANTES de avisar
  *   PATCH { id, accion:'seguimiento_avisado', etapa:'sin_abrir'|'sin_elegir', actor } → ya se avisó a Alberto
@@ -152,6 +155,10 @@ export const PATCH = auditado(async (req: Request) => {
     if (cuerpo?.accion === 'seguimiento_avisado') {
       if (!esEtapa(cuerpo.etapa)) return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
       const r = await marcarSeguimientoAvisado(correduria.id, { id, etapa: cuerpo.etapa, actor })
+      return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : 404 })
+    }
+    if (cuerpo?.accion === 'documento_descargado') {
+      const r = await marcarDocumentoDescargado(correduria.id, { id, actor })
       return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : 404 })
     }
     if (cuerpo?.accion === 'emitido') {

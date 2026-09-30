@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { bloqueoCompania, textoBloqueoCliente, textoBloqueoCorredor, emisionEscalonadaRecomendada, textoEmisionEscalonada, esAllianz } from './bloqueo-compania.ts'
+import { bloqueoCompania, textoBloqueoCliente, textoBloqueoCorredor, esAllianz } from './bloqueo-compania.ts'
 import { revisarCopy } from './copy-regulado.ts'
 
 // Literal de la tarificación real de Allianz Motos (29/09/2026).
@@ -31,19 +31,4 @@ test('Allianz añade el aviso de la intranet; otra compañía o sin compañía, 
   assert.match(a, /no admite robo ni daños: pide la básica/)
   assert.equal(esAllianz('Allianz'), true)
   assert.equal(esAllianz(null), false)
-})
-
-test('emisión escalonada: todo riesgo (con/sin franquicia) o robo → true', () => {
-  for (const t of ['Todo Riesgo con Franquicia', 'TODO RIESGO - Franquicia 450€', 'Seguro Todo Riesgo con Franquicia 300', 'Todo Riesgo', 'Seguro a Terceros + Robo', 'Terceros Completo (Asistencia, Robo e In…']) {
-    assert.equal(emisionEscalonadaRecomendada({ modalidad: t }), true, t)
-    assert.equal(emisionEscalonadaRecomendada({ categoria: t }), true, t)
-  }
-})
-
-test('emisión escalonada: terceros básico/ampliado sin robo, null y vacío → false', () => {
-  assert.equal(emisionEscalonadaRecomendada({ categoria: 'Terceros básico', modalidad: 'Terceros ampliado' }), false)
-  assert.equal(emisionEscalonadaRecomendada({ categoria: 'Terceros Completo (Asistencia, Lunas)' }), false)
-  assert.equal(emisionEscalonadaRecomendada({}), false)
-  assert.equal(emisionEscalonadaRecomendada({ categoria: null, modalidad: undefined }), false)
-  assert.match(textoEmisionEscalonada(), /emitir primero la BÁSICA.*suplemento/)
 })

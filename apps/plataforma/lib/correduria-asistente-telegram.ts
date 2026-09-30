@@ -54,6 +54,8 @@ import {
   textoResumen, urlPoliza, type ResumenEmision,
 } from './correduria-emision-tg'
 import { textoCasillaFigura } from './figuras-emision-texto'
+import { precioDeOpcion, resolverReferenciaEmision, type ResolucionReferencia } from './correduria-emision-referencia-tg'
+import { buscarReferenciaAsegura } from '@/lib/referencia-presupuesto-asegura'
 import { correoDeEmision, decidirEfecto, elegirPrecioNuevo, esResumenNuevo, fechaEfectoDelPrecio, figurasPendientes, huellaResumenNuevo, leerFechaEfecto, precioCaducado, ramoNuevoValido, textoResumenNuevo, type ResumenEmisionNueva } from './correduria-emision-nueva-tg'
 import {
   apagado, clasificarDestino, costeConservador, ERROR_NO_UUID, hoyMadrid, memoriaIds, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
@@ -479,30 +481,62 @@ async function cerrarEmision(id: number, estado: string, resultado: Record<strin
 // se reconoce por `resumen.tipo = 'nuevo'` y lleva `poliza_id` NULL.
 
 async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: number | null): Promise<{ texto: string; ok: boolean }> {
-  const clienteId = idValido(args.clienteId)
+  const referenciaPedida = typeof args.referencia === 'string' && args.referencia.trim() ? args.referencia.trim().slice(0, 30) : null
   if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    const cId = idValido(args.clienteId)
     return {
-      texto: `NO DISPONIBLE: la emisión por Telegram está apagada (${INTERRUPTOR_EMISION}). Dile a Alberto que emita desde la intranet${clienteId ? `: ${urlCliente(clienteId)}` : ' (/correduria)'}.`,
+      texto: `NO DISPONIBLE: la emisión por Telegram está apagada (${INTERRUPTOR_EMISION}). Dile a Alberto que emita desde la intranet${cId ? `: ${urlCliente(cId)}` : ' (/correduria)'}.`,
       ok: true,
     }
   }
-  if (!clienteId) return { texto: ERROR_NO_UUID, ok: false }
-  const ramo = ramoNuevoValido(args.ramo)
-  if (!ramo) return { texto: 'ERROR: ramo tiene que ser "moto" o "auto".', ok: false }
-  const compania = typeof args.compania === 'string' ? args.compania.trim().slice(0, 60) : ''
-  if (!compania) return { texto: 'ERROR: falta la compañía (p. ej. Allianz). Pregúntasela a Alberto.', ok: false }
-  const texto = typeof args.modalidad === 'string' ? args.modalidad.trim().slice(0, 80) : null
   const primaNum = Number(args.primaEur)
-  const prima = args.primaEur === undefined || args.primaEur === null || !Number.isFinite(primaNum) ? null : primaNum
-  const tarificacionPedida = idValido(args.tarificacionId)
-  const oportunidadId = idValido(args.oportunidadId)
+  const primaDicha = args.primaEur === undefined || args.primaEur === null || !Number.isFinite(primaNum) ? null : primaNum
+  const modalidadDicha = typeof args.modalidad === 'string' && args.modalidad.trim() ? args.modalidad.trim().slice(0, 80) : null
+  const companiaDicha = typeof args.compania === 'string' && args.compania.trim() ? args.compania.trim().slice(0, 60) : null
+
+  // 🔖 «Emite AS-26-0005»: la referencia manda. Presupuesto → su tarificación → la opción EN DOCUMENTO.
+  // Luego sigue el MISMO camino de siempre (re-tarificar + resumen + botón de un uso).
+  let porReferencia: Extract<ResolucionReferencia, { tipo: 'ok' }> | null = null
+  if (referenciaPedida) {
+    const r = resolverReferenciaEmision(await buscarReferenciaAsegura(referenciaPedida), { compania: companiaDicha, modalidad: modalidadDicha, primaEur: primaDicha })
+    if (r.tipo === 'no') return r.error ? { texto: `ERROR: ${r.motivo}.`, ok: false } : { texto: `NO SE PUEDE EMITIR: ${r.motivo}. Díselo a Alberto.`, ok: true }
+    if (r.tipo === 'elegir') {
+      return {
+        ok: true,
+        texto: `El presupuesto ${r.referencia} lleva ${r.opciones.length} opciones en el documento; pregúntale a Alberto cuál y vuelve a llamar con la misma referencia y compania/modalidad (y primaEur si hace falta): ${paraIA(r.opciones.map((o) => ({
+          compania: o.compania, modalidad: o.modalidad, categoria: o.categoria, primaEur: o.primaEur,
+        })))}`,
+      }
+    }
+    porReferencia = r
+  }
+
+  const clienteId = porReferencia?.clienteId ?? idValido(args.clienteId)
+  if (!clienteId) return { texto: ERROR_NO_UUID, ok: false }
+  const ramo = porReferencia?.ramo ?? ramoNuevoValido(args.ramo)
+  if (!ramo) return { texto: 'ERROR: ramo tiene que ser "moto" o "auto".', ok: false }
+  const compania = porReferencia?.opcion.compania ?? companiaDicha ?? ''
+  if (!compania) return { texto: 'ERROR: falta la compañía (p. ej. Allianz). Pregúntasela a Alberto.', ok: false }
+  const texto = porReferencia ? null : modalidadDicha
+  const prima = porReferencia ? null : primaDicha
+  const tarificacionPedida = porReferencia?.tarificacionId ?? idValido(args.tarificacionId)
+  const oportunidadId = porReferencia ? porReferencia.oportunidadId : idValido(args.oportunidadId)
   const fe = leerFechaEfecto(args.fechaEfecto)
   if (!fe.ok) return { texto: `ERROR: ${fe.motivo}. Pregúntale a Alberto la fecha de efecto.`, ok: false }
 
   const g = await tarificacionNuevaGuardadaAsegura(clienteId, ramo, { oportunidadId, tarificacionId: tarificacionPedida })
-  if (g.estado === 'ninguna') return { texto: `NO SE PUEDE EMITIR: este cliente no tiene ninguna tarificación de ${ramo} guardada. Hay que pedir precio primero.`, ok: true }
+  if (g.estado === 'ninguna') {
+    return { texto: porReferencia
+      ? `NO SE PUEDE EMITIR: la tarificación del presupuesto ${porReferencia.referencia} no se encuentra. Díselo a Alberto.`
+      : `NO SE PUEDE EMITIR: este cliente no tiene ninguna tarificación de ${ramo} guardada. Hay que pedir precio primero.`, ok: true }
+  }
   if (g.estado !== 'ok') return { texto: `ERROR: no he podido leer la tarificación guardada (${g.mensaje}). No digas que no la hay.`, ok: false }
   const guardada = g.guardada
+  // La tarificación leída tiene que ser LA del presupuesto: si asegura devolvió otra, el botón confirmaría
+  // un precio distinto del que se le enseñó al cliente.
+  if (porReferencia && guardada.cotizacionId !== porReferencia.tarificacionId) {
+    return { texto: `NO SE PREPARA: la tarificación leída (${guardada.cotizacionId}) no es la del presupuesto ${porReferencia.referencia}. Que lo emita desde la intranet: ${urlCliente(clienteId)}`, ok: true }
+  }
   // Encadenada tras un precio: solo ESE proyecto. Si la copia leída es otra (simulada, sin copia, otra
   // variante), no se prepara nada: el botón confirmaría un precio distinto del que Alberto acaba de ver.
   const projectEsperado = typeof args.projectIdEsperado === 'string' ? args.projectIdEsperado : null
@@ -516,7 +550,7 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     return { texto: `NO SE PUEDE EMITIR todavía: la tarificación ${guardada.projectId} se pidió con efecto ${guardada.fechaEfecto ?? 'sin fecha'}, ya pasado. Pregúntale a Alberto con qué fecha de efecto (a partir de hoy) la quiere y vuelve a llamar con fechaEfecto (aaaa-mm-dd).`, ok: true }
   }
 
-  const el = elegirPrecioNuevo(guardada.precios, compania, texto, prima)
+  const el = porReferencia ? precioDeOpcion(guardada.precios, porReferencia.opcion) : elegirPrecioNuevo(guardada.precios, compania, texto, prima)
   if (el.tipo === 'no') return { texto: `NO SE PUEDE EMITIR: ${el.motivo}. Díselo a Alberto.`, ok: true }
   if (el.tipo === 'elegir') {
     return {

@@ -11,6 +11,7 @@
 
 import { createHash, createHmac } from 'node:crypto'
 import { TIPOS_RELACION } from '@central/module-seguros'
+import { PATRON_REFERENCIA_TEXTO } from './correduria-emision-referencia-tg.ts'
 
 // ── ¿Es un mensaje para la correduría? ───────────────────────────────────────────────────────────
 
@@ -49,6 +50,8 @@ export function clasificarDestino(texto: string): Destino {
   if (!t) return 'contable'
   if (PREFIJO.test(t)) return 'correduria'
   if (PROPIAS.test(t)) return 'correduria'
+  // La referencia propia de un presupuesto (`AS-26-0005`) solo existe en la correduría.
+  if (PATRON_REFERENCIA_TEXTO.test(t)) return 'correduria'
   // Un gasto propio («factura del seguro del coche, precio 320€») sigue siendo del contable.
   if (PIDE_PRECIO.test(t) && OBJETO_SEGURO.test(t) && !GASTO_PROPIO.test(t)) return 'correduria'
   // «Presupuesto» es también del contable; con matrícula o un ramo de seguro al lado es de la correduría.
@@ -165,17 +168,18 @@ export const HERRAMIENTAS = [
       projectId: { type: 'string', description: 'Número del proyecto de Avant2 (solo cifras)' },
       quoteId: { type: 'string', description: 'Opcional: el precio elegido (Q…) cuando hay varios' },
     }, ['polizaId', 'projectId']),
-  fn('preparar_emision_nueva', 'Prepara la EMISIÓN de una póliza NUEVA de coche o moto (cliente sin póliza que sustituir) con un precio de la ÚLTIMA tarificación guardada del cliente. Confirma el precio con la compañía y le manda a Alberto un resumen con un botón: NO emite, es él quien pulsa. Si varios precios encajan te devuelve la lista para que le preguntes cuál. Si Alberto dice con qué fecha de efecto, pásala en fechaEfecto: el precio se confirma con esa fecha.',
+  fn('preparar_emision_nueva', 'Prepara la EMISIÓN de una póliza NUEVA de coche o moto (cliente sin póliza que sustituir) con un precio de la tarificación guardada del cliente. Confirma el precio con la compañía y le manda a Alberto un resumen con un botón: NO emite, es él quien pulsa. Si varios precios encajan te devuelve la lista para que le preguntes cuál. Si Alberto dice con qué fecha de efecto, pásala en fechaEfecto: el precio se confirma con esa fecha. Si Alberto da la REFERENCIA de un presupuesto (AS-AA-NNNN, p. ej. «emite AS-26-0005 con efecto 2026-10-10»), pásala en referencia y NO busques al cliente ni la tarificación: el sistema saca de ella el cliente, el ramo, la tarificación y la opción del documento (si el documento lleva varias, te devuelve la lista para que le preguntes cuál; si está caducado o retirado, no se emite).',
     {
-      clienteId: { type: 'string', description: 'El clienteId INTERNO (uuid) del TOMADOR, sacado de buscar/ficha_cliente' },
-      ramo: { type: 'string', enum: ['moto', 'auto'] },
-      compania: { type: 'string', description: 'Compañía tal cual la dice Alberto (Allianz, Mapfre…)' },
+      referencia: { type: 'string', description: 'Opcional: la referencia del presupuesto que dice Alberto, con forma AS-AA-NNNN (AS-26-0005). Con ella sobran clienteId, ramo y tarificacionId; compania/modalidad/primaEur solo sirven para elegir entre las opciones del documento.' },
+      clienteId: { type: 'string', description: 'El clienteId INTERNO (uuid) del TOMADOR, sacado de buscar/ficha_cliente. Obligatorio si no hay referencia.' },
+      ramo: { type: 'string', enum: ['moto', 'auto'], description: 'Obligatorio si no hay referencia.' },
+      compania: { type: 'string', description: 'Compañía tal cual la dice Alberto (Allianz, Mapfre…). Obligatoria si no hay referencia.' },
       modalidad: { type: 'string', description: 'Opcional: palabras de la modalidad o categoría («terceros ampliado», «incendio robo», «todo riesgo»)' },
       primaEur: { type: 'number', description: 'Opcional: la prima que dice Alberto, para desempatar («la de 200»)' },
       oportunidadId: { type: 'string', description: 'Opcional: la oportunidad (uuid) si la conoces, para coger la tarificación de ese riesgo' },
       tarificacionId: { type: 'string', description: 'Opcional: una tarificación concreta (uuid)' },
       fechaEfecto: { type: 'string', description: 'Opcional: la fecha de efecto que dice Alberto (aaaa-mm-dd). Obligatoria si la tarificación guardada tiene el efecto ya pasado; nunca la inventes.' },
-    }, ['clienteId', 'ramo', 'compania']),
+    }),
   fn('proponer_correccion', 'Propón CORREGIR la ficha de un cliente con los valores que Alberto te ha DICTADO en esta conversación (dirección, código postal, ciudad, provincia, nombre o apellidos). NO escribe: el sistema le manda el cambio con un botón y es él quien lo aplica. Pasa solo los campos que cambian, tal cual los dijo; nunca inventes ni completes un valor.',
     {
       clienteId: { type: 'string', description: 'La ficha a corregir (sácala de buscar o ficha_cliente)' },
@@ -415,7 +419,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string, auton
     ]),
     '- Si un precio trae un aviso de que la compañía dejará la póliza BLOQUEADA, díselo a Alberto ANTES de preparar la emisión y recomiéndale emitir primero la modalidad básica (sin la garantía que bloquea) para que el cliente pueda circular, y pedir después la ampliación como suplemento con la documentación.',
     '- Pedir precio para EMITIR («pide precio de la moto de X y emite Allianz terceros ampliado ≈200»): proponer_tarificacion (con la oportunidadId del riesgo si la hay) y emitirCompania/emitirModalidad/emitirPrimaEur. Cuando el precio llega, el sistema prepara solo la emisión y Alberto recibe el botón «Emitir»: NO llames tú a preparar_emision_nueva en ese caso.',
-    '- Emitir: solo puedes PREPARAR una emisión. Póliza NUEVA de coche o moto (cliente sin póliza que sustituir, precio pedido desde la plataforma) → preparar_emision_nueva con el cliente, el ramo y la compañía (y la modalidad, la prima o la fecha de efecto si las dice). Sustituir una póliza de la cartera con un proyecto hecho en Avant2 → preparar_emision (necesitas la póliza y el número del proyecto; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
+    '- Emitir: solo puedes PREPARAR una emisión. Póliza NUEVA de coche o moto (cliente sin póliza que sustituir, precio pedido desde la plataforma) → preparar_emision_nueva con el cliente, el ramo y la compañía (y la modalidad, la prima o la fecha de efecto si las dice). Si Alberto da la referencia de un presupuesto (forma AS-AA-NNNN, p. ej. «emite AS-26-0005 con efecto 2026-10-10») → preparar_emision_nueva con referencia (y fechaEfecto si la dice), sin buscar al cliente antes. Sustituir una póliza de la cartera con un proyecto hecho en Avant2 → preparar_emision (necesitas la póliza y el número del proyecto; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos. Si para escribir necesitas un DNI que solo tienes tapado («…115R»), pídeselo a Alberto entero.',
     '- Los ids (clienteId, polizaId, oportunidadId, tareaId, siniestroId) son SIEMPRE los uuid que devuelven las herramientas: el polizaId sale de ficha_cliente (busca primero), nunca es el número de póliza de la compañía.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: se cambian con sus herramientas (contacto_cliente, proponer_correccion) o en la ficha.',

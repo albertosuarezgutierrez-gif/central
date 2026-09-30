@@ -230,18 +230,17 @@ orden en §9.
     - Cotización RECUPERADA: fallos y supuestos no guardados se DICEN (`null`), nunca `[]`.
     - Antes de afirmar un dato del vendor, mídelo en `seguros.tarificacion_precios` (coberturas crudas y
       `tarificaciones.respuesta`): el parser puede estar leyendo bien un dato que la compañía manda mal.
-22. **Bloqueos de compañía y emisión escalonada (30/09/2026, dictado de Alberto).** Una moto de Manuel Piña se
+22. **Bloqueos de compañía (30/09/2026, dictado de Alberto).** Una moto de Manuel Piña se
     emitió en Allianz desde la web de Avant2 y Allianz la BLOQUEÓ («riesgo condicionado»).
     - **Todo bloqueo exige que intervenga Alberto.** Allianz contesta SOLO por su intranet (ni correo ni nada):
       tiene que entrar él. Y no admite robo ni daños si el cliente no tiene OTRA póliza en Allianz: solo la básica.
     - **Toda retenida Allianz → recordatorio por Telegram**, con esas dos advertencias: cron
       `correduria-retenidas` (pasada de la MAÑANA, Madrid < 12, manda la lista aunque no haya cambios; la
       tarde solo si hay cambios) y aviso inmediato al registrar en `/api/correduria/avant2-emision`.
-    - **Emisión escalonada:** todo riesgo (con/sin franquicia) o cualquier modalidad con robo puede acabar
-      bloqueada aunque la compañía no lo anuncie → emitir primero la BÁSICA y añadir las coberturas por
-      SUPLEMENTO. Aviso preventivo ámbar (`emisionEscalonadaRecomendada`, no repite el del bloqueo anunciado).
-    - Viven en `packages/module-seguros/src/bloqueo-compania.ts` (`textoBloqueoCorredor(motivo, compania)`,
-      `emisionEscalonadaRecomendada`, `textoEmisionEscalonada`) y `apps/plataforma/lib/correduria/retenidas-aviso.ts`.
+    - **Solo es bloqueante si la compañía YA nos lo anuncia** (Allianz con la moto de Manuel Piña Franco). Si no
+      avisa, no se recomienda emitir la básica ni ampliar por suplemento: se emite y ya está, hasta que ocurra
+      (Alberto, 30/09/2026). Retirado el aviso preventivo; guardián `test/regression-sin-aviso-emision-escalonada.test.ts`.
+    - Viven en `packages/module-seguros/src/bloqueo-compania.ts` (`textoBloqueoCorredor(motivo, compania)`) y `apps/plataforma/lib/correduria/retenidas-aviso.ts`.
     - **Y por encima de la modalidad, el `id` del vendor** (`idPrecio`, 30/09/2026 tarde): si el proyecto
       aún lo trae, se emite ESE. Toda pantalla que abre `<Emision>` le pasa `idPrecio` (cepo en
       `test/regression-rerate-fecha-y-desempate.test.ts`).

@@ -30,6 +30,8 @@ export async function datosPdfPresupuesto(correduriaId: string, id: string): Pro
   const leidos = leerDatosCotizados(tarif?.peticion, p.ramo, { documentoCompleto: true })
 
   return {
+    // La referencia PROPIA; nunca el nº de proyecto de Avant2 ni la del vendor (no se leen aquí).
+    referencia: p.referencia ?? null,
     cliente: [cliente?.nombre, cliente?.apellidos].map((s) => s?.trim()).filter(Boolean).join(' ') || 'Cliente',
     ramo: p.ramo,
     creadoAt: p.creadoAt,

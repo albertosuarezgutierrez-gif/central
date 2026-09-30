@@ -6,6 +6,11 @@
 // 🚨 Va al PROPIO tomador para que compruebe los datos de la emisión (Alberto, 28/09/2026): por eso lleva
 // su DNI entero y, en hogar, la dirección del riesgo. Lo que NO lleva: IBAN, las observaciones internas de
 // la compañía (`avisos`: «esta póliza quedará bloqueada…» es para el corredor) ni ningún enlace con token.
+//
+// 🔖 Lleva la REFERENCIA PROPIA (`AS-26-0042`, 30/09/2026) en la cabecera y le pide al cliente que la cite:
+// con ella cualquiera de la correduría rescata este documento en el buscador y emite. 🚨 NUNCA el nº de
+// proyecto de Avant2/Codeoscopic ni la referencia de la oferta del vendor: `DatosPdfPresupuesto` no los
+// trae a propósito (lo vigila test/regression-presupuesto-referencia.test.ts).
 
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
@@ -28,6 +33,8 @@ export type OpcionPdf = {
 }
 
 export type DatosPdfPresupuesto = {
+  /** Referencia propia `AS-AA-NNNN`. `null` = la BD aún no la tiene: el PDF sale sin ella, no con otra. */
+  referencia: string | null
   cliente: string
   ramo: string
   creadoAt: Date
@@ -70,10 +77,20 @@ export function fechaCorta(d: Date): string {
 }
 
 /** El nombre del fichero: sin tildes ni espacios, para que no se rompa en ningún correo. */
-export function nombreFicheroPresupuesto(d: Pick<DatosPdfPresupuesto, 'cliente' | 'ramo' | 'creadoAt'>): string {
+export function nombreFicheroPresupuesto(d: Pick<DatosPdfPresupuesto, 'cliente' | 'ramo' | 'creadoAt'> & { referencia?: string | null }): string {
   const limpio = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
   const f = d.creadoAt.toISOString().slice(0, 10)
-  return `presupuesto-${limpio(RAMOS[d.ramo] ?? d.ramo)}-${limpio(d.cliente) || 'cliente'}-${f}.pdf`
+  const ref = d.referencia ? `${limpio(d.referencia)}-` : ''
+  return `presupuesto-${ref}${limpio(RAMOS[d.ramo] ?? d.ramo)}-${limpio(d.cliente) || 'cliente'}-${f}.pdf`
+}
+
+/** Las dos frases de la referencia: la de la cabecera y la que le pide al cliente que la cite. `null` sin referencia. */
+export function textosReferencia(referencia: string | null): { cabecera: string; cita: string } | null {
+  if (!referencia) return null
+  return {
+    cabecera: `Referencia ${referencia}`,
+    cita: `Para contratar o preguntarnos por este presupuesto, cita la referencia ${referencia}.`,
+  }
 }
 
 /** Lo que la fuente no tiene (un emoji) se cambia por «?» en vez de romper el PDF. */
@@ -181,8 +198,14 @@ export async function pdfPresupuesto(d: DatosPdfPresupuesto): Promise<Uint8Array
   // ── Cabecera ──
   const altoLogo = 26
   pagina.drawImage(logotipo, { x: M, y: y - altoLogo, width: (logotipo.width / logotipo.height) * altoLogo, height: altoLogo })
+  const ref = textosReferencia(d.referencia)
   const fechaTxt = `Presupuesto · ${fechaCorta(d.creadoAt)}`
-  linea(fechaTxt, A4[0] - M - f.normal.widthOfTextAtSize(fechaTxt, 9), y - 17, f.normal, 9, TENUE)
+  if (ref) {
+    linea(ref.cabecera, A4[0] - M - f.negrita.widthOfTextAtSize(paraFuente(f.negrita, ref.cabecera), 11), y - 9, f.negrita, 11, PRIMARIO)
+    linea(fechaTxt, A4[0] - M - f.normal.widthOfTextAtSize(fechaTxt, 9), y - 23, f.normal, 9, TENUE)
+  } else {
+    linea(fechaTxt, A4[0] - M - f.normal.widthOfTextAtSize(fechaTxt, 9), y - 17, f.normal, 9, TENUE)
+  }
   y -= altoLogo + 12
   pagina.drawRectangle({ x: M, y, width: ancho, height: 2, color: PRIMARIO })
   y -= 26
@@ -193,6 +216,10 @@ export async function pdfPresupuesto(d: DatosPdfPresupuesto): Promise<Uint8Array
   y -= 1
   linea(`Precios válidos hasta el ${fechaCorta(d.venceEl)}`, M, y - 9.5, f.normal, 9.5, TENUE)
   y -= 22
+  if (ref) {
+    parrafo(ref.cita, f.negrita, 9.5, PRIMARIO)
+    y -= 10
+  }
 
   // ── Revisa tus datos (lo mismo que el cliente ve primero en el portal) ──
   if (d.datosCalculo === null || d.datosCalculo.length === 0) {

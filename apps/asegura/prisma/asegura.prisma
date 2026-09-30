@@ -1348,6 +1348,11 @@ model Presupuesto {
   /// Exigencias y necesidades del cliente (art. 20 Ley 16/2018), escritas por el corredor. NULL = no constan.
   necesidades      String?
   necesidadesAt    DateTime? @map("necesidades_at") @db.Timestamptz(6)
+  /// Referencia propia AS-AA-NNNN que se le da al cliente (nunca el nº de Avant2). La pone la BD
+  /// al insertar (trigger, contador por correduría + año) y no se reescribe. 2026-09-30b_presupuesto_referencia.sql
+  referencia       String?   @default(dbgenerated())
+  /// Primer PDF descargado para el cliente. NO prueba que se enviara (no es enviadoAt). NULL = no consta.
+  documentoDescargadoAt DateTime? @map("documento_descargado_at") @db.Timestamptz(6)
 
   opciones PresupuestoOpcion[]
   eventos  PresupuestoEvento[]

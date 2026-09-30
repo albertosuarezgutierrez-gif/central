@@ -33,21 +33,6 @@ export function esAllianz(compania: string | null | undefined): boolean {
   return typeof compania === 'string' && /allianz/i.test(compania)
 }
 
-/**
- * Aviso PREVENTIVO (aunque la compañía no anuncie bloqueo): todo riesgo (con o sin franquicia) o
- * cualquier modalidad con robo puede acabar bloqueada. `null`/vacío → false (no se sabe: no se avisa).
- */
-export function emisionEscalonadaRecomendada(
-  { categoria, modalidad }: { categoria?: string | null; modalidad?: string | null },
-): boolean {
-  return [categoria, modalidad].some((t) => typeof t === 'string' && /todo\s+riesgo|robo/i.test(t))
-}
-
-export function textoEmisionEscalonada(): string {
-  return 'Todo riesgo o con robo: la compañía puede bloquearla al emitir. '
-    + 'Lo recomendable: emitir primero la BÁSICA y añadir después estas coberturas por suplemento.'
-}
-
 /** Lo que ve el cliente en su comparativa. Sin promesas de precio ni de plazo. */
 export function textoBloqueoCliente(): string {
   return 'Esta opción no queda activa al contratarla: la compañía la revisa antes con la documentación del vehículo (fotos, factura…). '

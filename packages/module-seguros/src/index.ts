@@ -1,4 +1,4 @@
-export { bloqueoCompania, textoBloqueoCorredor, textoBloqueoCliente, emisionEscalonadaRecomendada, textoEmisionEscalonada, esAllianz, RECORDATORIO_ALLIANZ_CORTO } from './bloqueo-compania.ts'
+export { bloqueoCompania, textoBloqueoCorredor, textoBloqueoCliente, esAllianz, RECORDATORIO_ALLIANZ_CORTO } from './bloqueo-compania.ts'
 export {
   franquiciaDelTexto,
   revisarCoherenciaCotizacion,

@@ -30,6 +30,10 @@ export type OpcionPresupuesto = {
 
 export type PresupuestoPreparado = {
   id: string
+  /** Referencia propia `AS-AA-NNNN` que se le da al cliente. `null` = asegura no la manda (versión anterior o migración sin aplicar). */
+  referencia: string | null
+  /** `true` = ya había uno vigente con las mismas opciones en documento y es ése (misma referencia). */
+  reutilizado: boolean
   estado: EstadoPresupuesto
   venceEl: string
   /** 🚨 El precio no lo ha dado ninguna compañía: NO se puede enviar. */
@@ -48,7 +52,8 @@ export type PresupuestoPreparado = {
 }
 
 export type RespuestaPreparar =
-  | { estado: 'ok'; presupuesto: PresupuestoPreparado; token: string }
+  /** `token` = `null` cuando se REUTILIZA uno ya preparado (su enlace no se rota). */
+  | { estado: 'ok'; presupuesto: PresupuestoPreparado; token: string | null }
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string; detalle?: string }
 
@@ -111,7 +116,9 @@ export function interpretarPreparado(status: number, json: unknown): RespuestaPr
 
   const p = o.presupuesto
   const token = cadena(o.token)
-  if (typeof p !== 'object' || p === null || token === null) {
+  const reutilizado = typeof p === 'object' && p !== null && (p as Record<string, unknown>).reutilizado === true
+  // Sin token solo vale si asegura dice que REUTILIZA uno ya preparado (su enlace no se rota).
+  if (typeof p !== 'object' || p === null || (token === null && !reutilizado)) {
     return { estado: 'error', motivo: 'respuesta_ilegible', detalle: 'Falta el presupuesto o su enlace.' }
   }
   const q = p as Record<string, unknown>
@@ -131,6 +138,8 @@ export function interpretarPreparado(status: number, json: unknown): RespuestaPr
     token,
     presupuesto: {
       id,
+      referencia: cadena(q.referencia),
+      reutilizado,
       estado: (cadena(q.estado) ?? 'borrador') as EstadoPresupuesto,
       venceEl,
       simulado: q.simulado === true,
@@ -190,7 +199,7 @@ function urlAsegura(): string {
 
 export type Reenvio = { status: number; json: unknown }
 
-async function puerto(init: RequestInit, query = ''): Promise<Reenvio> {
+async function puerto(init: RequestInit, query = '', topeMs = 30_000): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
@@ -198,12 +207,29 @@ async function puerto(init: RequestInit, query = ''): Promise<Reenvio> {
       ...init,
       headers: { ...(init.headers ?? {}), ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(topeMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {
     return { status: 502, json: { estado: 'error', motivo: 'red' } }
   }
+}
+
+/** Tope del sello de descarga: el PDF ya está listo y Alberto esperando; el sello no lo bloquea. */
+export const SELLO_DESCARGA_MS = 3_000
+
+/**
+ * Sella en asegura que se ha descargado el PDF para el cliente (`documento_descargado_at` + evento).
+ * NO es «enviado». `false` = no consta que se haya sellado (sin secreto, red, error o tope agotado):
+ * quien llama sirve el PDF igual —el documento es correcto— y el sello simplemente no consta.
+ */
+export async function marcarDescargadoAsegura(id: string, actor: string, topeMs = SELLO_DESCARGA_MS): Promise<boolean> {
+  const r = await puerto({
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id, accion: 'documento_descargado', actor }),
+  }, '', topeMs)
+  return r.status === 200
 }
 
 /** El PDF del presupuesto (bytes en streaming). `null` = sin secreto configurado. */
@@ -313,6 +339,10 @@ export type EstadoPresupuestoLista =
 
 export type PresupuestoEnLista = {
   id: string
+  /** Referencia propia `AS-AA-NNNN`. `null` = asegura no la manda (versión anterior). */
+  referencia: string | null
+  /** Primer PDF descargado (NO es «enviado»). `null` = no consta. */
+  documentoDescargadoAt: string | null
   estado: EstadoPresupuestoLista
   /** `null` si la versión de asegura desplegada no lo manda: entonces no se cruzan los datos para emitir. */
   clienteId: string | null
@@ -385,7 +415,8 @@ export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
   const id = s(o.id), estado = s(o.estado), creadoAt = s(o.creadoAt), venceEl = s(o.venceEl)
   if (!id || !estado || !creadoAt || !venceEl || !ESTADOS.includes(estado as EstadoPresupuestoLista)) return null
   return {
-    id, estado: estado as EstadoPresupuestoLista, clienteId: s(o.clienteId), ramo: s(o.ramo), creadoAt, venceEl,
+    id, referencia: s(o.referencia), documentoDescargadoAt: s(o.documentoDescargadoAt),
+    estado: estado as EstadoPresupuestoLista, clienteId: s(o.clienteId), ramo: s(o.ramo), creadoAt, venceEl,
     enviadoAt: s(o.enviadoAt), enlaceGeneradoAt: s(o.enlaceGeneradoAt), vistoAt: s(o.vistoAt),
     opciones: typeof o.opciones === 'number' ? o.opciones : 0,
     desdeEur: typeof o.desdeEur === 'number' ? o.desdeEur : null,
