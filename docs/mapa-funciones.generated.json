@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-30T07:51:12Z",
-  "sha": "ca11caa2101a4ba4ad20e01fd44f5d8dce00c1d4",
+  "generadoEn": "2026-09-30T08:23:33Z",
+  "sha": "974a3d2c9c7bcfce685434e46bd5e573657547c6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12611,12 +12611,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 139
+          "linea": 172
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "241c84d0abb5"
+      "hash": "b5df778b201e"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
@@ -12658,6 +12658,26 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "aa899f0f7b15"
+    },
+    {
+      "ruta": "apps/asegura-web/app/seguro-hipoteca-banco-obligatorio/page.tsx",
+      "ambito": "apps/asegura-web",
+      "exporta": [
+        "SeguroHipotecaBancoObligatorio"
+      ],
+      "funciones": [
+        {
+          "nombre": "SeguroHipotecaBancoObligatorio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 61
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "31093df0c129"
     },
     {
       "ruta": "apps/asegura-web/app/seguros/[ramo]/page.tsx",
@@ -12736,7 +12756,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a37fafeb5813"
+      "hash": "55d915f576d3"
     },
     {
       "ruta": "apps/asegura-web/app/telefonos-siniestros/contacto/[slug]/route.ts",
@@ -12875,13 +12895,12 @@
           "exportada": true,
           "params": "{ marca }: { marca: string }",
           "retorno": null,
-          "linea": 18,
-          "resumen": "aquí son las páginas de ramo, que es lo que esta web tiene que posicionar."
+          "linea": 29
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "20e5f91d2035"
+      "hash": "545adeb358be"
     },
     {
       "ruta": "apps/asegura-web/components/CalculadoraBonificacion.tsx",
@@ -12896,12 +12915,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "56e2e4a058ba"
+      "hash": "5d1bffffb64e"
     },
     {
       "ruta": "apps/asegura-web/components/CalculadoraVencimientos.tsx",
@@ -12916,12 +12935,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ce65f6fa9cb9"
+      "hash": "86eff4cc68e4"
     },
     {
       "ruta": "apps/asegura-web/components/CanjeAviso.tsx",
@@ -12956,14 +12975,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 38
+          "linea": 39
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "176324dd0e64"
+      "hash": "fd70b0f47b1d"
     },
     {
       "ruta": "apps/asegura-web/components/Cifras.tsx",
@@ -12997,22 +13016,31 @@
       "ruta": "apps/asegura-web/components/EnlaceMedido.tsx",
       "ambito": "apps/asegura-web",
       "exporta": [
+        "eventoDeEnlace",
         "EnlaceMedido"
       ],
       "funciones": [
+        {
+          "nombre": "eventoDeEnlace",
+          "kind": "function",
+          "exportada": true,
+          "params": "href: string",
+          "retorno": "'cta_portal_click' | 'acceso_click'",
+          "linea": 22,
+          "resumen": "Un `<a>` que captura el evento de clic y lo mide con PostHog antes de navegar. Props soportadas: `className`, `href`, `style`, `children`, `target`, `rel`, `origen`. Al portal → `cta_portal_click` (el"
+        },
         {
           "nombre": "EnlaceMedido",
           "kind": "function",
           "exportada": true,
           "params": "{ href, origen, onClick, ...props }: EnlaceMedidoProps",
           "retorno": null,
-          "linea": 17,
-          "resumen": "Un `<a>` que captura el evento de clic y lo mide con PostHog antes de navegar. Props soportadas: `className`, `href`, `style`, `children`, `target`, `rel`, `origen`."
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4eb5bae7aba5"
+      "hash": "74250b2c4f5d"
     },
     {
       "ruta": "apps/asegura-web/components/Escaneo.tsx",
@@ -13086,6 +13114,27 @@
       "hash": "07aa38300355"
     },
     {
+      "ruta": "apps/asegura-web/components/SiguientePaso.tsx",
+      "ambito": "apps/asegura-web",
+      "exporta": [
+        "SiguientePaso"
+      ],
+      "funciones": [
+        {
+          "nombre": "SiguientePaso",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ contexto, anclaFormulario = '#presupuesto', whatsappMensajePersonalizado, }: SiguientePasoProps",
+          "retorno": null,
+          "linea": 34,
+          "resumen": "Bloque de \"siguiente paso\" que aparece tras un resultado en una herramienta. Muestra un mensaje contextual y dos acciones: WhatsApp + llamada de corredor. Los estilos usan clases existentes (`btn`, `b"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b9e507ca8ab1"
+    },
+    {
       "ruta": "apps/asegura-web/components/VentanaRenovacion.tsx",
       "ambito": "apps/asegura-web",
       "exporta": [
@@ -13098,7 +13147,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "Mensaje",
@@ -13106,7 +13155,7 @@
           "exportada": false,
           "params": "{ v }: { v: Ventana }",
           "retorno": null,
-          "linea": 42
+          "linea": 43
         },
         {
           "nombre": "VentanaRenovacion",
@@ -13114,7 +13163,7 @@
           "exportada": true,
           "params": "{ ramo: ramoFijo, opciones }: Props",
           "retorno": null,
-          "linea": 70
+          "linea": 71
         },
         {
           "nombre": "AvisoPorCorreo",
@@ -13122,7 +13171,7 @@
           "exportada": false,
           "params": "{ ramo, cual, vence, origen }: { ramo: string; cual: string; vence: string; origen: string }",
           "retorno": null,
-          "linea": 208,
+          "linea": 232,
           "resumen": "Paso 2: «¿Te lo recordamos?». Nombre, correo y un consentimiento que va SIN marcar (una casilla premarcada no es consentimiento). Lo que sale de aquí es un correo de confirmación: hasta que la persona"
         }
       ],
@@ -13131,7 +13180,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f9bd2a5a48e3"
+      "hash": "336e66f055c7"
     },
     {
       "ruta": "apps/asegura-web/components/Whatsapp.tsx",
@@ -13480,13 +13529,13 @@
           "exportada": true,
           "params": "evento: Evento, props: PropsEvento = {}",
           "retorno": "boolean",
-          "linea": 34,
+          "linea": 35,
           "resumen": "Emite el evento a PostHog y a GA4, a cada uno SOLO si está cargado (= hubo consentimiento: `window.gtag` no existe hasta que `cargarGa4()` corre tras aceptar). Sin ninguno, no hace NADA: ni cola, ni l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6aaff6e371d7"
+      "hash": "1ef58b1e0e60"
     },
     {
       "ruta": "apps/asegura-web/lib/panel-demo.ts",
@@ -13641,6 +13690,69 @@
       "hash": "0bf13c55e317"
     },
     {
+      "ruta": "apps/asegura-web/lib/siguiente-paso.ts",
+      "ambito": "apps/asegura-web",
+      "resumen": "Lógica pura de los mensajes de \"siguiente paso\" por herramienta y resultado. Genera textos adaptados a lo que la herramienta acaba de mostrar, sin promesas de ahorro ni superlativos de precio. /",
+      "exporta": [
+        "siguientePaso"
+      ],
+      "funciones": [
+        {
+          "nombre": "siguientePaso",
+          "kind": "function",
+          "exportada": true,
+          "params": "ctx: Contexto",
+          "retorno": "SiguientePaso",
+          "linea": 73,
+          "resumen": "Genera el bloque de \"siguiente paso\" adaptado a la herramienta y resultado. Los textos NO contienen promesas de ahorro ni superlativos sobre el precio."
+        },
+        {
+          "nombre": "bonificacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "ctx: ContextoBonificacion",
+          "retorno": "SiguientePaso",
+          "linea": 86
+        },
+        {
+          "nombre": "vencimientos",
+          "kind": "function",
+          "exportada": false,
+          "params": "ctx: ContextoVencimientos",
+          "retorno": "SiguientePaso",
+          "linea": 97
+        },
+        {
+          "nombre": "ventana",
+          "kind": "function",
+          "exportada": false,
+          "params": "ctx: ContextoVentana",
+          "retorno": "SiguientePaso",
+          "linea": 107
+        },
+        {
+          "nombre": "carta",
+          "kind": "function",
+          "exportada": false,
+          "params": "ctx: ContextoCarta",
+          "retorno": "SiguientePaso",
+          "linea": 129
+        },
+        {
+          "nombre": "formatEur",
+          "kind": "function",
+          "exportada": false,
+          "params": "numero: number",
+          "retorno": "string",
+          "linea": 140,
+          "resumen": "Euros en formato español con el € detrás: `2.162,49€`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3aad6d9d2ce5"
+    },
+    {
       "ruta": "apps/asegura-web/lib/sitio.ts",
       "ambito": "apps/asegura-web",
       "resumen": "Configuración del sitio público de Grupo ASegura. 🚨 Esta app es la ÚNICA superficie de marketing de la correduría y no toca la base de datos: no tiene Prisma, ni rol de BD, ni secreto de sesión. Lo único que sale de aquí es el formulario de leads, y sale por `/api/lead`, que reenvía al puerto públi",
@@ -13659,7 +13771,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a6922b875ae8"
+      "hash": "e355a12ed611"
     },
     {
       "ruta": "apps/asegura-web/lib/ventana-renovacion.ts",
@@ -172387,7 +172499,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4010,
-    "funciones": 13339
+    "archivos": 4013,
+    "funciones": 13348
   }
 }
