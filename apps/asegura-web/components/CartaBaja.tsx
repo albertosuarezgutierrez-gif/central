@@ -23,6 +23,7 @@ import {
 import { PORTAL_URL } from '@/lib/sitio'
 import { medir } from '@/lib/medir'
 import EnlaceMedido from '@/components/EnlaceMedido'
+import SiguientePaso from '@/components/SiguientePaso'
 
 const CAMPOS: { id: keyof DatosCarta; etiqueta: string; auto?: string; tipo?: string; max: number }[] = [
   { id: 'tomador', etiqueta: 'Nombre y apellidos del tomador', auto: 'name', max: 90 },
@@ -195,6 +196,18 @@ export default function CartaBaja() {
           Descargar
         </button>
       </div>
+
+      {carta && (
+        <SiguientePaso
+          contexto={{
+            tipo: 'carta',
+            ramo: datos.ramo,
+            plazo: plazo?.estado ?? 'en_plazo',
+            dias: plazo?.dias ?? null,
+          }}
+          anclaFormulario="/#presupuesto"
+        />
+      )}
 
       <div style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
         <p style={{ margin: '0 0 10px', fontSize: 15 }}>

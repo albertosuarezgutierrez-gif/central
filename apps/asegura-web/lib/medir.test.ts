@@ -101,9 +101,11 @@ test('Todos los archivos del punto 3 contienen origen=', () => {
   }
 })
 
-test('EnlaceMedido captura cta_portal_click con origen correcto', () => {
+// 30/09/2026: los accesos internos (herramientas, ramos, WhatsApp) van a
+// `acceso_click`; solo el portal cuenta como `cta_portal_click`.
+test('EnlaceMedido separa el clic al portal del resto de accesos', () => {
   const src = readFileSync(join(RAIZ, 'components', 'EnlaceMedido.tsx'), 'utf8')
-  assert.match(src, /medir\('cta_portal_click'/, 'EnlaceMedido debe capturar cta_portal_click')
+  assert.match(src, /href\.startsWith\(PORTAL_URL\) \? 'cta_portal_click' : 'acceso_click'/, 'EnlaceMedido debe distinguir portal / acceso')
   assert.match(src, /origen/i, 'EnlaceMedido debe usar el prop origen')
 })
 

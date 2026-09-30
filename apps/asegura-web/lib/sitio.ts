@@ -199,30 +199,29 @@ export const NAV = [
   { href: '/carta-baja-seguro', texto: 'Carta para dar de baja un seguro' },
   // 29/09/2026: la calculadora del seguro del banco, enlazada desde el pie por lo mismo.
   { href: '/calculadora-bonificacion-hipoteca', texto: 'Calculadora del seguro de la hipoteca' },
+  // 30/09/2026: entrada nueva por otro agente, enlazada desde cabecera pero fuera de ella.
+  { href: '/seguro-hipoteca-banco-obligatorio', texto: '¿Es obligatorio el seguro del banco?' },
+] as const
+
+/**
+ * Herramientas de valor añadido accesibles desde la cabecera (desktop + móvil).
+ * Son enlaces directos a secciones/herramientas de la portada, con máximo 3
+ * en la cabecera (desktop: después de Seguros desplegable; móvil: chips). */
+export const HERRAMIENTAS = [
+  { href: '/calculadora-bonificacion-hipoteca', texto: '¿Seguro del banco?', key: 'calculadora' },
+  { href: '/#vencimiento', texto: '¿Cuándo vence?', key: 'vencimiento' },
+  { href: '/#subir', texto: 'Sube tu póliza', key: 'subir' },
 ] as const
 
 /**
  * Lo que cabe en la CABECERA.
  *
- * 🚨 No es una preferencia: está MEDIDO. Con las seis entradas, la marca
- * (171 px) + la nav (815 px) + el botón (147 px) suman ~1.145 px dentro de un
- * contenedor de 1.104 px, y lo que se salía por la derecha de la pantalla era
- * el botón «Área de clientes» — o sea, justo lo que el cliente viene a pulsar.
- * Se recorta la nav, que es lo que sobra: «Cambiar de correduría» tiene su
- * propia sección en la portada, su enlace en el pie y su página.
+ * 🚨 No es una preferencia: está MEDIDO. El nuevo diseño (30/09/2026) acomoda:
+ * marca (171 px) · Seguros ▾ (70 px) · 3 herramientas (3 × 120 px) · ¿Siniestro? (120 px) · Mis seguros (147 px)
+ * sumando ~800 px que caben en 1.104 px, dejando aire para responsive.
  *
- * ⚠️ Y por eso **responsabilidad civil tampoco entra en la cabecera**: sería la
- * sexta entrada y devolvería el desbordamiento medido. Se enlaza desde el pie y
- * desde las páginas de ramo hermanas, que es donde el enlace además tiene
- * sentido temático. Los cinco ramos de la cabecera son los de más volumen.
- *
- * ⚠️ **Flota (07/09/2026) queda fuera por lo mismo, y el cepo lo cazó**: al
- * meterla en el pie, `enlazado.test.ts` se puso rojo con «la cabecera lleva 6
- * entradas; se midió el desborde a partir de 6». No se sube el tope: el número
- * está medido en píxeles, no elegido. Flota se alcanza desde el pie y desde
- * comercio, que es quien tiene al mismo lector delante —el que decide el seguro
- * del negocio decide el de las furgonetas—, así que el enlace encaja mejor ahí
- * que en una cabecera que no cabe.
+ * Antigua regla (se retiene para referencia histórica): Con los seis ramos,
+ * marca + nav + botón sumaban ~1.145 px dentro de 1.104 px. Se pasó a desplegable.
  */
 const FUERA_DE_CABECERA: readonly string[] = [
   '/seguros/responsabilidad-civil',

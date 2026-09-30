@@ -32,3 +32,5 @@
 - (26/09/2026) lote 1 UX correduría, fichas (bug «3»→«2c», PII, 44 px) — agente-mecanico — ok parcial: hizo el bug, la PII y los 44 px; dejó sin tocar todos los textos (TabContactos, DatosCompania, Documentos, Siniestros…). Completado por la sesión.
 | 28/09/2026 | envolver 7 páginas de correduría en <Pagina> | agente-mecanico | ok |
 | 29/09/2026 | campo «Fecha de efecto» en 5 pantallas de pedir precio | agente-mecanico | fallo: dos lanzamientos seguidos devolvieron «no hay tarea» sin tocar nada (perdió el prompt). Hecho por la sesión |
+| 30/09/2026 | asegura-web: cabecera con herramientas + chips móvil | agente-mecanico | fallo: montaba el panel solo al abrir (SEO), el chip móvil no abría nada, CSS con tokens inexistentes, no midió con Playwright y cambió el origen histórico del portal. Rehecho por la sesión |
+| 30/09/2026 | asegura-web: «siguiente paso» en 4 herramientas | agente-mecanico | ok parcial: anclas a formularios inexistentes (#presupuesto en páginas sin él, PORTAL_URL como «que me llamen») y quitó el bloque «Guardar mis pólizas». Corregido por la sesión |

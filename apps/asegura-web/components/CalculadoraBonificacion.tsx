@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { calcularBonificacion, type EntradaBonificacion } from '@/lib/bonificacion-hipoteca'
 import { eur } from '@/lib/panel-demo'
 import { medir } from '@/lib/medir'
+import SiguientePaso from '@/components/SiguientePaso'
 
 const CAMPOS: { id: keyof EntradaBonificacion; etiqueta: string; ayuda?: string }[] = [
   { id: 'capital', etiqueta: 'Capital pendiente de la hipoteca (€)' },
@@ -118,10 +119,17 @@ export default function CalculadoraBonificacion() {
           )}
         </div>
 
-        <a href="#contacto" className="btn btn-brand" style={{ justifySelf: 'start', minHeight: 48 }}>
-          ¿Te lo miramos?
-        </a>
-        <div className="tenue" style={{ fontSize: 13, lineHeight: 1.5 }}>
+        {r && (
+          <SiguientePaso
+            contexto={{
+              tipo: 'bonificacion',
+              compensa: r.compensa,
+              costeReal: r.costeReal,
+            }}
+            anclaFormulario="#contacto"
+          />
+        )}
+        <div className="tenue" style={{ fontSize: 13, lineHeight: 1.5, marginTop: r ? 16 : 0 }}>
           Cálculo orientativo con tus datos de hoy. No incluye cambios futuros del capital ni de las primas.
         </div>
       </div>
