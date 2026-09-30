@@ -109,8 +109,15 @@ export function encontrarPrecio(
   // enseña el cambio de prima antes de emitir.
   const idPrecio = (pista.idPrecio ?? '').trim()
   if (idPrecio !== '') {
-    const porId = cotizacion.precios.find((p) => p.id === idPrecio)
-    if (porId) return candidatos.includes(porId) ? porId : null
+    const porId = cotizacion.precios.filter((p) => p.id === idPrecio)
+    if (porId.length === 1) {
+      const p = porId[0]
+      // Un id que no es de esta compañía/nivel, o cuya modalidad no es la pulsada, no se emite.
+      if (!candidatos.includes(p)) return null
+      if (norm(pista.modalidad) !== '' && norm(p.modalidad) !== norm(pista.modalidad)) return null
+      return p
+    }
+    // Id repetido (no debería pasar): no identifica nada, decide la llave descriptiva de abajo.
   }
   if (norm(pista.modalidad) !== '') {
     const exactos = candidatos.filter((p) => norm(p.modalidad) === norm(pista.modalidad))

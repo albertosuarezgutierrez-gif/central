@@ -51,3 +51,9 @@ test('identidad: id repetido, llave repetida SIN id, y sin id cuando las demás 
   // Los precios que dejó un ReRate (con caducidad) no cuentan para la llave.
   assert.deepEqual(tipos([{ ...f, primaEur: 300 }, { ...f, primaEur: 320, expiraEn: '2026-10-30' }]), [])
 })
+
+test('franquicia con céntimos y «días» no dan reparos falsos', () => {
+  assert.equal(franquiciaDelTexto('Franquicia 450,90€'), 450.9)
+  assert.equal(franquiciaDelTexto('franquicia de 90 días'), null)
+  assert.deepEqual(reparosPorFila([{ id: 'Q1', compania: 'X', categoria: 'TR', modalidad: 'Franquicia 450,90€', primaEur: 300, franquiciaEur: 450.9 }]), [[]])
+})

@@ -52,9 +52,9 @@ const norm = (s: string | null | undefined) => (s ?? '').trim().replace(/\s+/g, 
 export function franquiciaDelTexto(texto: string | null | undefined): number | null {
   // Con o sin unidad: los nombres reales dicen «Franquicia 450€», «franquicia de 1200» y
   // «Franquicia 1200 Euros» (medido en `tarificacion_precios`, 30/09/2026).
-  const m = /franquicia\D{0,20}?(\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?(?!\d)/i.exec(texto ?? '')
+  const m = /franquicia\D{0,20}?(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?(?!\d)(?!\s*d[ií]as?\b)/i.exec(texto ?? '')
   if (!m) return null
-  const n = Number(m[1].replace(/\./g, ''))
+  const n = Number(m[1].replace(/\./g, '')) + (m[2] ? Number(m[2].padEnd(2, '0')) / 100 : 0)
   // Por debajo de 50€ no es una franquicia de coche/hogar sino otro número («Franquicia 2»).
   return Number.isFinite(n) && n >= 50 ? n : null
 }

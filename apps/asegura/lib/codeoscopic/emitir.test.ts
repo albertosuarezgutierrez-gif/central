@@ -338,3 +338,17 @@ test('encontrarPrecio: el id del vendor MANDA sobre la descripción, y uno ajeno
   // Un id que el proyecto ya no trae (el vendor renumeró) cae a la llave descriptiva.
   assert.equal(encontrarPrecio(cotizacion, 'Mapfre', 'Terceros', { ...desc, idPrecio: 'Q404' })?.id, 'Q9')
 })
+
+test('encontrarPrecio: un id repetido no desempata; y un id cuya modalidad no es la pulsada no se emite', () => {
+  const base = {
+    franquiciaEur: null, entradaEur: null, meses: null, formaPago: null,
+    frecuenciaPago: null, referenciaVendor: null, firmeza: 'estimado' as const, avisos: [],
+    requiereReRate: true, productId: 1, productOptions: null, expiraEn: null, opciones: null, ofertaId: null, quoteCrudo: null,
+  }
+  const fila = (id: string, modalidad: string, primaEur: number) =>
+    ({ ...base, id, compania: 'Mapfre', producto: 'Mapfre Motos', categoria: 'TA', modalidad, primaEur })
+  const c: Cotizacion = { projectId: '1', fechaEfecto: null, insuranceLineId: 'Motorcycle', fallos: [], precios: [fila('Q1', 'F450', 450), fila('Q1', 'F600', 440)] }
+  assert.equal(encontrarPrecio(c, 'Mapfre', 'TA', { idPrecio: 'Q1', modalidad: 'F600' })?.modalidad, 'F600')
+  const c2: Cotizacion = { ...c, precios: [fila('Q1', 'F450', 450), fila('Q2', 'F600', 440)] }
+  assert.equal(encontrarPrecio(c2, 'Mapfre', 'TA', { idPrecio: 'Q1', modalidad: 'F600' }), null)
+})
