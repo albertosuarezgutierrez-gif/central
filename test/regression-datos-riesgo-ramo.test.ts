@@ -107,3 +107,53 @@ test('los selectores de la vivienda salen de los catálogos de hogar-nuevo (mapa
   assert.match(r, /tipo: 'hogar', nombre/)
   assert.doesNotMatch(r, /'MiddleFloor'|'Owner'|'MainResidence'|'Replacement'/, 'ninguna opción de catálogo escrita a mano')
 })
+
+// ─── Tramo SERVIDOR (asegura): se lee el FUENTE, sin importar módulos con Prisma ───────────────────────────
+const A = join(RAIZ, 'apps/asegura')
+const RUTAS_NUEVO = [
+  { ramo: 'hogar', anota: 'anotarViviendaDeCotizacion' },
+  { ramo: 'vida', anota: 'anotarCapitalDeCotizacion' },
+  { ramo: 'salud', anota: 'anotarCapitalDeCotizacion' },
+  { ramo: 'decesos', anota: 'anotarCapitalDeCotizacion' },
+] as const
+
+for (const x of RUTAS_NUEVO) {
+  test(`🪤 asegura ${x.ramo}-nuevo: la oportunidad entra en el contexto ANTES de cotizar y el write-back va tras la guarda «guardada»`, () => {
+    const r = activas(leer(join(A, `app/api/operador/codeoscopic/${x.ramo}-nuevo/route.ts`)))
+    const iMerge = r.search(/p\.peticion\.contexto = \{ \.\.\.p\.peticion\.contexto, \.\.\.variante\.v\.contexto \}/)
+    const iCotizar = r.indexOf('await cotizar(p.peticion)')
+    assert.ok(iMerge > 0, 'la oportunidad se mezcla en el contexto de la petición')
+    assert.ok(iCotizar > iMerge, 'y se hace ANTES de cotizar (si no, el precio no cuelga de la oportunidad)')
+    const iGuarda = r.search(/if \(correduria && variante\.v\.contexto && r\.ok && r\.guardado\.estado === 'guardada'\) \{\s*await /)
+    assert.ok(iGuarda > iCotizar, 'el write-back va tras cotizar, con la guarda «guardada»')
+    assert.ok(r.indexOf(`await ${x.anota}(`) > iGuarda, 'y la anotación solo se llama DENTRO de esa guarda')
+    assert.equal((r.match(new RegExp(`${x.anota}\\(`, 'g')) ?? []).length, 1, 'una sola llamada de write-back')
+  })
+
+  test(`🪤 asegura ${x.ramo}-nuevo: correduriaUnica() solo se lee con oportunidad (sin ella, flujo idéntico a main)`, () => {
+    const r = activas(leer(join(A, `app/api/operador/codeoscopic/${x.ramo}-nuevo/route.ts`)))
+    assert.match(r, /const correduria = oportunidadPedida \? await correduriaUnica\(\)\.catch\(\(\) => null\) : null/)
+    assert.equal((r.match(/correduriaUnica\(\)/g) ?? []).length, 1)
+  })
+}
+
+test('🪤 editarDatosRiesgo: el SELECT y el UPDATE filtran por correduria_id (aislamiento por código)', () => {
+  const s = activas(leer(join(A, 'lib/oportunidad-riesgo.ts')))
+  const cuerpo = s.slice(s.indexOf('export async function editarDatosRiesgo('), s.indexOf('async function anotarBloqueDeCotizacion('))
+  assert.match(cuerpo, /from seguros\.oportunidades o\s+where o\.id = \$\{e\.oportunidadId\}::uuid and o\.correduria_id = \$\{correduriaId\}::uuid\s+for update/, 'el SELECT ... FOR UPDATE')
+  assert.match(cuerpo, /update seguros\.oportunidades set info_riesgo = [^\n]+\s+where id = \$\{e\.oportunidadId\}::uuid and correduria_id = \$\{correduriaId\}::uuid/, 'el UPDATE')
+})
+
+test('🪤 el aviso «no se pudo enlazar a la oportunidad» se pinta en las 6 pantallas de precio de cliente nuevo', () => {
+  for (const [dir, f] of [['auto-nuevo', 'AutoNuevo.tsx'], ['moto-nuevo', 'MotoNuevo.tsx'], ['hogar-nuevo', 'Formulario.tsx'], ['vida-nuevo', 'VidaNuevo.tsx'], ['salud-nuevo', 'SaludNuevo.tsx'], ['decesos-nuevo', 'DecesosNuevo.tsx']]) {
+    const p = activas(leer(join(CORR, 'cliente/[id]', dir, f)))
+    assert.match(p, /<EnlaceOportunidad guardado=\{r\.guardado\} \/>/, `${dir} pinta el enlace/aviso`)
+  }
+  const c = activas(leer(join(CORR, 'EnlaceOportunidad.tsx')))
+  assert.match(c, /e\.estado === 'fallo'[\s\S]{0,200}No se ha podido anotar en su oportunidad/, 'y dice el fallo, no lo calla')
+})
+
+test('salud: `modalidadDeseada` solo viaja con oportunidad', () => {
+  const s = activas(leer(join(CORR, 'cliente/[id]/salud-nuevo/SaludNuevo.tsx')))
+  assert.match(s, /\.\.\.\(variante && modalidadDeseada\.trim\(\) !== ''/)
+})

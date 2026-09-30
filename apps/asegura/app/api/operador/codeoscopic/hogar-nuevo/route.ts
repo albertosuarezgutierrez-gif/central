@@ -137,8 +137,9 @@ export const POST = auditado(async (req: Request) => {
   // VARIANTE de un riesgo (30/09/2026): con `oportunidadId` la tarificación se cuelga de ESA oportunidad (regla 9:
   // sin ese enlace la pantalla dice «aún no se ha pedido precio» y empuja a pagar otra vez). Gratis, antes de gastar.
   // Sin `oportunidadId` el camino es el de siempre, idéntico.
-  const correduria = await correduriaUnica().catch(() => null)
-  if (!correduria && typeof cuerpo.oportunidadId === 'string' && cuerpo.oportunidadId.trim() !== '') {
+  const oportunidadPedida = typeof cuerpo.oportunidadId === 'string' && cuerpo.oportunidadId.trim() !== ''
+  const correduria = oportunidadPedida ? await correduriaUnica().catch(() => null) : null
+  if (!correduria && oportunidadPedida) {
     return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: 'no se pudo comprobar la variante; no se ha pedido precio', gastado: '0,00€' }, { status: 503 })
   }
   const variante = correduria

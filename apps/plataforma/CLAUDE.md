@@ -1566,6 +1566,11 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   `retarificabilidad()` de `@central/module-seguros`); `null` si asegura es más viejo → se cae al
   booleano de antes. `motivo` es la frase del `title` cuando no se puede (ya no vive aquí duplicada).
   Hogar exige m² + año + CP en la póliza o en su copia gemela del volcado — CIMA no los manda.
+- **📝 Datos del riesgo de oportunidades (PR #4127).** En `/correduria/oportunidad/[id]`, tarjeta «📝 Datos del riesgo»
+  edita datos por ramo: `datosVehiculo` (auto/moto), `datosVivienda` (hogar), `datosCapital` (vida/salud/decesos),
+  `datosRiesgoLibre` (RC/comercio/comunidades/otros). Módulo puro `@central/module-seguros/datos-riesgo-{generico,ramo,vivienda,capital,libre}`
+  con validación `calcularEdicionRiesgo()`; PATCH `/api/operador/oportunidad/riesgo` edita una clave (400 si no es del ramo).
+  Precarga desde `polizas.datos_especificos` (nunca confirmada). Write-back tras guardar en regla 9 (`hogar/vida/salud/decesos-nuevo`).
 - **📎 Documentos en la ficha del cliente y de la póliza (02/09/2026, tarde):** `Documentos.tsx` (client) sobre
   `/api/correduria/documentos` (POST multipart = subir · POST json `{pedir:true}` = anotar pedido) y
   `/api/correduria/documentos/[id]` (GET = el fichero en streaming · PATCH revisar · DELETE), que reenvían al puerto
