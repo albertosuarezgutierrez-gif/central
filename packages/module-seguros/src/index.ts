@@ -321,6 +321,7 @@ export {
   normalizarTelefono,
   normalizarEmail,
   normalizarContacto,
+  seraPrincipalAlAnadir,
   normalizarDni,
   etiquetasIdentidad,
   enmascararDni,
@@ -531,6 +532,28 @@ export {
 } from './ficha-historicas.ts'
 export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type CarnetRevisado, type TipoCarnet } from './carnet-ficha.ts'
+// Lo que una póliza subida sabe del TOMADOR y la ficha no: parche que solo rellena huecos (03/10/2026).
+export {
+  CLAVES_EXTRACCION_GUARDABLES,
+  CLAVES_PERSONALES_EXTRACCION,
+  DIAS_VENCIMIENTO_URGENTE,
+  companiaLegible,
+  extraccionSinPii,
+  contactoTomadorVacio,
+  emailNormalizado,
+  normalizarContactoTomador,
+  parcheFichaDesdePoliza,
+  parcheVacio,
+  polizaFinanciada,
+  telefonoEspanol,
+  vencimientoUrgente,
+  type ContactoTomadorLeido,
+  type ExtraccionFicha,
+  type FichaActual,
+  type MotivoParche,
+  type ParcheFicha,
+  type ResultadoParche,
+} from './datos-ficha-de-poliza.ts'
 export { anioCumpleanos, diaMadrid, esCumpleanos } from './cumpleanos.ts'
 export { ordenarHistorialRiesgo, type EslabonHistorial, type EslabonRiesgo } from './historial-riesgo.ts'
 export { agruparCalidad, esReglaCalidad, ORDEN_REGLAS, REGLAS_CALIDAD, type GrupoCalidad, type IncidenciaCalidad, type ReglaCalidad } from './calidad-dato.ts'

@@ -24,6 +24,7 @@ import {
   tipoHistorial,
   tipoHistorialAlta,
   textoHistorialAlta,
+  seraPrincipalAlAnadir,
 } from './cliente-edicion.ts'
 import type { DocumentoResumen } from './documentos.ts'
 
@@ -229,4 +230,12 @@ test('ficha SIN NOMBRE: poner nombre y apellidos no exige documento; lo demás, 
   assert.deepEqual(revisarEdicion({ identidad: { nombre: 'Eduardo', fechaNacimiento: '1/1/1980' } }, { fichaSinNombre: true }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
   // Solo apellidos dejaría el marcador de nombre: documento.
   assert.deepEqual(revisarEdicion({ identidad: { apellidos: 'Santos' } }, { fichaSinNombre: true }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
+})
+
+test('🪤 un contacto «nuncaPrincipal» no asciende aunque la ficha no tenga principal (toma de cuenta del portal)', () => {
+  assert.equal(seraPrincipalAlAnadir({ pedido: false, nuncaPrincipal: true, hayPrincipal: false }), false)
+  assert.equal(seraPrincipalAlAnadir({ pedido: true, nuncaPrincipal: true, hayPrincipal: false }), false)
+  assert.equal(seraPrincipalAlAnadir({ pedido: false, nuncaPrincipal: false, hayPrincipal: false }), true)
+  assert.equal(seraPrincipalAlAnadir({ pedido: false, nuncaPrincipal: false, hayPrincipal: true }), false)
+  assert.equal(seraPrincipalAlAnadir({ pedido: true, nuncaPrincipal: false, hayPrincipal: true }), true)
 })

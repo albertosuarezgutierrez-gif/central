@@ -127,3 +127,40 @@ export function decidirFicha(e: {
   if (e.clienteSube && mismoNombre(e.tomador, e.nombreFicha)) return { tipo: 'ficha', clienteId: e.clienteSube, porque: 'nombre' }
   return { tipo: 'lead' }
 }
+
+/**
+ * Sin ficha por DNI, las fichas que comparten su teléfono o email son POSIBLES DUPLICADOS, y nada
+ * más (03/10/2026, revisión del PR #4147): no se asigna la póliza a ninguna ni se le escribe el DNI.
+ *
+ * 🚨 Un móvil identifica un HOGAR, no a una persona (740 números compartidos por 1.599 fichas; caso
+ * fundacional del 21/09/2026: el hijo trae la póliza del padre con SU teléfono). Asignar por
+ * contacto fundiría a dos personas para siempre; duplicar se ve y se arregla fusionando por SQL con
+ * lote y guarda de identidad. Se abre el lead y se deja la nota «posible duplicado de <id>».
+ */
+export function posiblesDuplicadosPorContacto(candidatos: { id: string }[], excepto?: string | null): string[] {
+  return [...new Set(candidatos.map((c) => c.id))].filter((id) => id !== excepto)
+}
+
+/** Orígenes donde quien sube el documento es el CLIENTE (no el corredor). */
+export const ORIGENES_DEL_CLIENTE: readonly string[] = ['portal', 'solicitud']
+
+/**
+ * ¿Se vuelcan a la ficha los datos personales que trae el documento? (03/10/2026, revisión PR #4147)
+ *
+ * 🚨 Desde el PORTAL (o el enlace de datos) sube el cliente, y el email que se vuelque puede acabar
+ * enlazando la sesión del portal: subir la póliza de OTRA persona con tu email sería tomar su cuenta.
+ * Ahí solo se vuelca si la ficha destino es la PROPIA de quien sube. Nunca sin verificar, ni sin
+ * tomador (no se sabe de quién son los datos).
+ */
+export function puedeVolcarEnFicha(e: {
+  origen: string
+  verificado: boolean
+  hayTomador: boolean
+  porqueFicha: string | null
+  clienteId: string
+  clienteSube: string | null
+}): boolean {
+  if (!e.verificado || !e.hayTomador || e.porqueFicha === 'sin_tomador') return false
+  if (ORIGENES_DEL_CLIENTE.includes(e.origen)) return e.clienteSube !== null && e.clienteId === e.clienteSube
+  return true
+}
