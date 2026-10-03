@@ -312,6 +312,19 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.correduria_actividad.',
   },
   {
+    id: 'correduria_tope_avant2',
+    vigiladoDesde: '2026-10-03',
+    etiqueta: '💶 Tope de gasto de Avant2 — aviso 60 € y bloqueo con botón por Telegram (cron cada 5 min)',
+    // Cada 5 min → 1 h de margen, como `correduria_actividad`.
+    maxHoras: 1,
+    nota:
+      'Manda el aviso de 60 € y el BLOQUEO de tarificar (70 € o el tope ampliado) con el botón ' +
+      '«Autorizar +30 €». Lee el `detalle`: «NO se ha podido mirar» es el puerto, el secreto o la BD de ' +
+      'asegura (y entonces asegura TAMPOCO tarifica: sin gasto legible no llama, fail-closed); ' +
+      '«SILENCIADOS» es que el aviso está apagado en /telegram y el botón no llega. ' +
+      'Huella: agente_latidos.correduria_tope_avant2.',
+  },
+  {
     id: 'correduria_eventos',
     vigiladoDesde: '2026-09-23',
     etiqueta: '📉 Detector de cambios de la cartera — pérdidas por Telegram (06:15 y 12:15 UTC)',
