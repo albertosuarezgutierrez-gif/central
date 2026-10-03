@@ -170,6 +170,9 @@ export type FichaPoliza = {
    * que se leyera, 24/09/2026), NO «la compañía no lo manda».
    */
   datosCompania: DatosCompaniaCima | null
+  /** `datos_especificos.cimaExtra` tal cual (sin PII, denegada en origen). `null` = clave ausente (aún no leído) ≠ `[]`. */
+  cimaExtra: Array<{ ruta: string; valor: string }> | null
+  cimaExtraTruncado: boolean
   /** `retarificacion.retarificable`, mantenido por compatibilidad con quien ya lo lee. */
   retarificable: boolean
   /** Por qué ramo se puede pedir precio (auto/hogar), o por qué no, mirando también la gemela. */
@@ -333,6 +336,18 @@ function descifrar(v: string | null | undefined): string | null {
 function ilegible(v: string | null | undefined): boolean {
   return typeof v === 'string' && v.startsWith('v1:') && descifrar(v) === null
 }
+/** `cimaExtra` de `datos_especificos`: `null` si la clave no está (null ≠ []); solo pares {ruta, valor} de texto. */
+function leerCimaExtra(datos: unknown): Array<{ ruta: string; valor: string }> | null {
+  if (!esObjetoPlano(datos) || !Array.isArray(datos.cimaExtra)) return null
+  const out: Array<{ ruta: string; valor: string }> = []
+  for (const it of datos.cimaExtra) {
+    if (it && typeof it === 'object' && typeof (it as { ruta?: unknown }).ruta === 'string' && typeof (it as { valor?: unknown }).valor === 'string') {
+      out.push({ ruta: (it as { ruta: string }).ruta, valor: (it as { valor: string }).valor })
+    }
+  }
+  return out
+}
+
 function esObjetoPlano(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
@@ -613,6 +628,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     contrato: contratoCima(p.datosEspecificos, descifrar),
     siniestros: p.siniestros.map(mapSiniestro),
     datosCompania: leerDatosCompaniaCima(p.datosEspecificos),
+    cimaExtra: leerCimaExtra(p.datosEspecificos),
+    cimaExtraTruncado: esObjetoPlano(p.datosEspecificos) && p.datosEspecificos.cimaExtraTruncado === true,
     evolucionPrima: evolucionPrima({
       fechaInicio: fechaIso(p.fechaInicio),
       fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
