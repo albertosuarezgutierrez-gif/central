@@ -128,6 +128,24 @@ async function getPendiente(bookingId: string): Promise<Pendiente | null> {
   return rows[0] || null
 }
 
+/**
+ * Reclamo ATÓMICO del pendiente (doble pulsación / reintento de Telegram): el primero que borra la
+ * fila gana y es el único que envía; el segundo recibe `null`. Si luego el envío no sale, quien
+ * reclamó DEBE devolverlo con `restaurarPendiente` para que los botones sigan valiendo.
+ */
+async function reclamarPendiente(bookingId: string): Promise<(Pendiente & Record<string, unknown>) | null> {
+  const rows = await prisma.$queryRaw<(Pendiente & Record<string, unknown>)[]>(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId} RETURNING *`)
+  return rows[0] || null
+}
+
+async function restaurarPendiente(p: Pendiente & Record<string, unknown>): Promise<void> {
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, esperando_retoque, idioma, pregunta, hueco_guia, no_requiere_respuesta)
+    VALUES (${p.booking_id}, ${p.property_id}, ${p.borrador}, ${p.categoria}, ${p.tg_message_id}, ${p.esperando_edit === true}, ${p.esperando_retoque === true}, ${p.idioma}, ${p.pregunta}, ${p.hueco_guia === true}, ${p.no_requiere_respuesta === true})
+    ON CONFLICT (booking_id) DO NOTHING
+  `).catch((e) => console.error('[tg] no pude restaurar el pendiente', p.booking_id, e))
+}
+
 export async function POST(req: NextRequest) {
   if (!verifyTelegramWebhook(req.headers.get('x-telegram-bot-api-secret-token'))) {
     return NextResponse.json({ ok: false }, { status: 401 })
@@ -959,20 +977,26 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
     if (action === 'chsi' || action === 'chhasta') {
       const hora = horaDeCallback(args[1])
       if (!hora) { await tgAnswerCallback(cb.id, 'Hora no válida'); return NextResponse.json({ ok: true }) }
-      const r = await aceptarCambioHorario(pend, hora)
-      await tgAnswerCallback(cb.id, r.toast)
+      // Reclamo atómico ANTES de enviar: dos pulsaciones seguidas no mandan dos mensajes al huésped.
+      const reclamado = await reclamarPendiente(bookingId)
+      if (!reclamado) { await tgAnswerCallback(cb.id, 'Ya se está gestionando').catch(() => {}); return NextResponse.json({ ok: true }) }
+      let r: Awaited<ReturnType<typeof aceptarCambioHorario>>
+      try { r = await aceptarCambioHorario(reclamado, hora) } catch (e) { await restaurarPendiente(reclamado); throw e }
+      await tgAnswerCallback(cb.id, r.toast).catch(() => {})
       if (r.fallo) {
+        await restaurarPendiente(reclamado)
         await tgSend(avisoFalloEnvio(r.fallo.motivo), { html: true })
         return NextResponse.json({ ok: false, sent: false, motivo: r.fallo.motivo.clase })
       }
       if (!r.ok) {
+        await restaurarPendiente(reclamado)
         await tgSend(r.aviso, { html: true }).catch(() => {})
         return NextResponse.json({ ok: false, sent: false })
       }
-      await confirmarEnviado(pend.tg_message_id, r.enviado || '')
-      await marcarEnviadoLog(bookingId, r.enviado || '')
+      // El mensaje YA salió: nada de lo que sigue puede devolver 500 (Telegram reintentaría el update).
+      await confirmarEnviado(reclamado.tg_message_id, r.enviado || '').catch(() => {})
+      await marcarEnviadoLog(bookingId, r.enviado || '').catch(() => {})
       await tgSend(r.aviso, { html: true }).catch(() => {})
-      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
       return NextResponse.json({ ok: true, cambioHorario: action })
     }
     if (action === 'chno') {
@@ -982,15 +1006,18 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         await tgSend('🛑 <b>No se ha enviado nada:</b> el «no» no está en el idioma del huésped. Usa ✏️ Modificar.', { html: true }).catch(() => {})
         return NextResponse.json({ ok: false, sent: false })
       }
-      const res = await enviarAlHuespedDetallado(bookingId, pend.borrador || '')
-      await tgAnswerCallback(cb.id, res.ok ? 'Enviado ✅' : (res.motivo.reintentable ? 'No se pudo enviar — reintenta' : 'No se pudo enviar — mira el aviso'))
+      const reclamado = await reclamarPendiente(bookingId)
+      if (!reclamado) { await tgAnswerCallback(cb.id, 'Ya se está gestionando').catch(() => {}); return NextResponse.json({ ok: true }) }
+      let res: Awaited<ReturnType<typeof enviarAlHuespedDetallado>>
+      try { res = await enviarAlHuespedDetallado(bookingId, reclamado.borrador || '') } catch (e) { await restaurarPendiente(reclamado); throw e }
+      await tgAnswerCallback(cb.id, res.ok ? 'Enviado ✅' : (res.motivo.reintentable ? 'No se pudo enviar — reintenta' : 'No se pudo enviar — mira el aviso')).catch(() => {})
       if (!res.ok) {
+        await restaurarPendiente(reclamado)
         await tgSend(avisoFalloEnvio(res.motivo), { html: true })
         return NextResponse.json({ ok: false, sent: false, motivo: res.motivo.clase })
       }
-      await confirmarEnviado(pend.tg_message_id, pend.borrador || '')
-      await marcarEnviadoLog(bookingId, pend.borrador || '')
-      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
+      await confirmarEnviado(reclamado.tg_message_id, reclamado.borrador || '').catch(() => {})
+      await marcarEnviadoLog(bookingId, reclamado.borrador || '').catch(() => {})
       return NextResponse.json({ ok: true, cambioHorario: 'no' })
     }
     if (action === 'chlimp') {

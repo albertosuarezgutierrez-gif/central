@@ -11,7 +11,7 @@ import { enviarAlHuespedDetallado, type ResultadoEnvio } from './enviar'
 import { crearTareaIntranet } from '@/lib/sivra/extras/orden-limpieza'
 import {
   peticionCambioHorario, resolverTipo, evaluarCambioHorario, extraerHoraPedida, botonesCambioHorario,
-  textoNegativa, textoAceptacion, tareaLimpieza, mencionaMaletas,
+  textoNegativa, textoAceptacion, tareaLimpieza, mencionaMaletas, asegurarCallback,
   type PeticionHorario, type ReservaHorario, type Semaforo,
 } from './cambio-horario'
 
@@ -228,7 +228,7 @@ export async function cargarReservasPropiedad(propertyId: string): Promise<Reser
       WHERE i."propertyId" = ${propertyId}
         AND i."reservationId" IS NOT NULL
         AND NOT EXISTS (SELECT 1 FROM reservas_canceladas rc WHERE rc.reservation_id = i."reservationId")
-      ORDER BY i."reservationId"
+      ORDER BY i."reservationId", i."createdAt" DESC, i."id" DESC
     `)
   } catch { return null }
 }
@@ -288,8 +288,8 @@ async function proponerCambioHorario(ctx: Contexto, pregunta: string, dec: Decis
   const botones: Boton[][] = botonesCambioHorario({ bookingId: ctx.bookingId, tipo, semaforo: ev.semaforo, horaPedida })
   // Salida de emergencia (no es decisión de las cuatro acciones): redactar a mano o cerrar si ya está contestado.
   botones.push([
-    { texto: '✏️ Modificar', callback: `hsp_edit:${ctx.bookingId}` },
-    { texto: '✋ Ya respondido', callback: `hsp_done:${ctx.bookingId}` },
+    { texto: '✏️ Modificar', callback: asegurarCallback(`hsp_edit:${ctx.bookingId}`) },
+    { texto: '✋ Ya respondido', callback: asegurarCallback(`hsp_done:${ctx.bookingId}`) },
   ])
   const mid = await tgAvisoBotones('huespedes.borrador', `${cabecera}\n\n${cuerpo}`, botones)
   // `borrador` = el «no» (lo que enviaría ❌ No y lo que Modificar/Retocar tomarían como base).
@@ -343,9 +343,13 @@ export async function aceptarCambioHorario(pend: PendCambio, hora: string): Prom
 
   const t = tareaLimpieza({ tipo, hora, checkIn: res.checkIn, checkOut: res.checkOut, huesped: res.guestName, reservationId: bookingId })
   // `crearTareaIntranet` toma la fecha de `checkIn`: aquí es la fecha de la tarea (salida o entrada).
-  const tareaId = t.fecha
-    ? await crearTareaIntranet({ piso: propertyId, checkIn: t.fecha, titulo: t.texto, instruccion: t.texto, huesped: res.guestName || undefined, propertyId })
-    : null
+  // El mensaje YA salió: un fallo aquí no puede propagarse; se declara con el aviso de «tarea NO creada».
+  let tareaId: string | null = null
+  if (t.fecha) {
+    try {
+      tareaId = await crearTareaIntranet({ piso: propertyId, checkIn: t.fecha, titulo: t.texto, instruccion: t.texto, huesped: res.guestName || undefined, propertyId })
+    } catch { tareaId = null }
+  }
   const aviso = tareaId
     ? `🧹 Tarea creada para la limpieza el ${fmtFecha(t.fecha || '')}: <i>${escapeHtml(t.texto)}</i>`
     : `⚠️ <b>El mensaje salió, pero la tarea NO se ha creado</b> — la limpieza no lo ve. Créala a mano (🧹 Limpiadoras → Tareas): <i>${escapeHtml(t.texto)}</i>`

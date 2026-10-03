@@ -104,9 +104,14 @@ export function evaluarCambioHorario(p: {
 
 // ───────────────────────────── DETECCIÓN (ES / EN / IT / FR / DE) ─────────────────────────────
 
+// Hora explícita en inglés («3pm», «15:00», «noon»). Una cifra suelta («until 5 October») NO cuenta.
+const HORA_EN = String.raw`\d{1,2}(?::\d{2}|\s*(?:am|pm|a\.m|p\.m|h\b|uhr|o.?clock))|noon|midday`
+
 const RE_ENTRADA = new RegExp([
   'early\\s*check.?in', 'check.?in\\s*(earlier|early|anticipad[oa]|anticipato|plus\\s*t[oô]t)',
-  '(enter|get\\s*in|arrive|arrival|come)\\s*(a\\s*bit\\s*|a\\s*little\\s*)?(earlier|early)',
+  '(enter|get\\s*in)\\s*(a\\s*bit\\s*|a\\s*little\\s*)?(earlier|early)',
+  // «arrive early» a secas es ambiguo (llegar temprano ≠ pedir entrar antes): exige una hora o contexto de check-in.
+  `(arrive|arrival|come)\\s*(a\\s*bit\\s*|a\\s*little\\s*)?(earlier|early)(?=[^.?!]{0,60}(${HORA_EN}|check.?in|room|apartment|flat|access))`,
   'entrada\\s*anticipad', 'entrar\\s*(un\\s*poco\\s*)?antes', 'adelantar\\s*(la\\s*)?(entrada|llegada|check)',
   '(llegar|llegamos)\\s*(un\\s*poco\\s*)?antes.{0,40}(entrar|check|dejar|equipaje|maleta)',
   'arriv[eé]e\\s*anticip', 'arriver\\s*plus\\s*t[oô]t', 'entrer\\s*plus\\s*t[oô]t', 'enregistrement\\s*anticip',
@@ -117,20 +122,24 @@ const RE_ENTRADA = new RegExp([
 const RE_SALIDA = new RegExp([
   'late\\s*check.?out', 'later\\s*check.?out', 'late\\s*departure', 'salida\\s*tard[ií]a',
   '(salir|irnos|marcharnos|dejar\\s*(el\\s*)?(apartamento|piso|alojamiento))\\s*(un\\s*poco\\s*)?(m[aá]s\\s*tarde|despu[eé]s)',
-  'quedar(nos)?\\s*(un\\s*poco\\s*)?(m[aá]s|hasta)', '(ampliar|retrasar|alargar)\\s*(la\\s*)?(salida|estancia)',
-  '(leave|check\\s*out|checkout|stay)\\s*(a\\s*bit\\s*|a\\s*little\\s*)?(later|longer|until|till|past)',
-  'stay\\s*(until|till)', 'd[eé]part\\s*tardif', 'partir\\s*plus\\s*tard', 'check.?out\\s*(plus\\s*tard|tardif)',
-  'rester\\s*(plus\\s*longtemps|jusqu)', 'prolonger\\s*(le\\s*)?s[eé]jour',
+  'quedar(nos)?\\s*(un\\s*poco\\s*)?m[aá]s\\s*(de\\s*)?(tiempo|tarde|rato)', 'quedar(nos)?\\s*hasta\\s*las?\\s*\\d{1,2}', 'quedar(nos)?\\s*hasta\\s*\\d{1,2}\\s*(:|h\\b|horas|pm|am|de\\s*la)', '(ampliar|retrasar|alargar)\\s*(la\\s*)?(salida|estancia)',
+  '(leave|check\\s*out|checkout|stay)\\s*(a\\s*bit\\s*|a\\s*little\\s*)?(later|longer|past)',
+  `(leave|check\\s*out|checkout|stay)\\s*(until|till)\\s*(${HORA_EN})`, 'd[eé]part\\s*tardif', 'partir\\s*plus\\s*tard', 'check.?out\\s*(plus\\s*tard|tardif)',
+  'rester\\s*plus\\s*longtemps', 'rester\\s*jusqu.{0,3}\\d', 'prolonger\\s*(le\\s*)?s[eé]jour',
   'sp[aä]ter(es)?\\s*(aus)?check.?out', 'sp[aä]ter\\s*(abreisen|ausziehen|auschecken)', 'l[aä]nger\\s*bleiben',
   'sp[aä]te(r|s)?\\s*abreise', 'check.?out\\s*(tardivo|posticipato)', 'partire\\s*pi[uù]\\s*tardi',
-  'uscire\\s*pi[uù]\\s*tardi', 'restare\\s*(pi[uù]\\s*a\\s*lungo|fino)', 'posticipare\\s*(il\\s*)?(check.?out|partenza)',
+  'uscire\\s*pi[uù]\\s*tardi', 'restare\\s*pi[uù]\\s*a\\s*lungo', 'restare\\s*fino\\s*alle?\\s*\\d', 'posticipare\\s*(il\\s*)?(check.?out|partenza)',
 ].join('|'), 'iu')
 
 // «hasta las 15 … el día de salida»: una hora límite junto a una referencia a la salida.
 const RE_HASTA_HORA = /(hasta|until|till|bis|jusqu|fino\s*a|by)\s*(las?|les|l'|alle|ore|um)?\s*\d{1,2}/iu
 const RE_CTX_SALIDA = /salida|check.?out|d[ií]a\s*que\s*(nos\s*)?(vamos|salimos|nos\s*fuimos)|departure|abreise|d[eé]part|partenza|ultimo\s*d[ií]a/iu
 
-const RE_EQUIPAJE = /maleta|equipaje|luggage|baggage|\bbags?\b|suitcase|consigna|locker|valig|bagagl|bagage|valise|gep[aä]ck|koffer|guardar\s*(las\s*|mis\s*)?(cosas|bolsas)/iu
+// Maletas SOLO con un verbo de dejar/guardar cerca («¿hay ascensor para las maletas?» NO es una petición).
+const VERBO_MALETAS = String.raw`dej\w*|guard\w*|deposit\w*|d[eé]pos\w*|laiss\w*|lasci\w*|lass\w*|abstell\w*|aufbewahr\w*|leav\w*|left|keep\w*|stor\w*|drop\w*`
+const NOMBRE_MALETAS = String.raw`maleta\w*|equipaje\w*|luggage|baggage|bags?|suitcase\w*|valig\w*|bagagl\w*|bagage\w*|valise\w*|gep[aä]ck|koffer\w*`
+const RE_EQUIPAJE = new RegExp(
+  `\\b(?:${VERBO_MALETAS})\\b[^.?!]{0,40}?\\b(?:${NOMBRE_MALETAS})\\b|\\b(?:${NOMBRE_MALETAS})\\b[^.?!]{0,40}?\\b(?:${VERBO_MALETAS})\\b`, 'iu')
 
 export type PeticionHorario = { tipo: 'entrada' | 'salida' | 'equipaje' }
 
@@ -210,6 +219,12 @@ export function contraoferta(tipo: TipoCambio, horaPedida: string | null): numbe
 export type BotonCH = { texto: string; callback: string }
 export const LIMITE_CALLBACK = 64
 
+/** Telegram rechaza un `callback_data` > 64 BYTES (y el aviso entero falla): se comprueba al construir. */
+export function asegurarCallback(cb: string): string {
+  if (Buffer.byteLength(cb, 'utf8') > LIMITE_CALLBACK) throw new Error(`callback_data > ${LIMITE_CALLBACK} bytes: ${cb}`)
+  return cb
+}
+
 /**
  * Botones de la propuesta. Prefijo `hsp_` (mismo emisor autorizado que el resto): `hsp_chsi:<id>:<HHMM>`,
  * `hsp_chhasta:<id>:<HH>`, `hsp_chno:<id>`, `hsp_chlimp:<id>`. En ROJO no se ofrecen los «sí»: el piso
@@ -228,6 +243,7 @@ export function botonesCambioHorario(p: {
   }
   filas.push([{ texto: '❌ No', callback: `hsp_chno:${p.bookingId}` }])
   filas.push([{ texto: '🧹 Consultar limpieza', callback: `hsp_chlimp:${p.bookingId}` }])
+  for (const b of filas.flat()) asegurarCallback(b.callback)
   return filas
 }
 

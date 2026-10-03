@@ -73,6 +73,17 @@ test('detección multilingüe ES/EN/IT/FR/DE', () => {
   assert.equal(peticionCambioHorario('Muchas gracias por todo', 'general'), null)
 })
 
+test('detección: falsos positivos descartados y variantes con verbo detectadas', () => {
+  assert.equal(peticionCambioHorario('¿hay ascensor para las maletas?', null), null)
+  assert.equal(peticionCambioHorario('we stay until Sunday', null), null)
+  assert.equal(peticionCambioHorario('We will arrive early in the morning to Seville', null), null)
+  assert.equal(peticionCambioHorario('nos quedamos hasta el domingo', null), null)
+  assert.ok(peticionCambioHorario('can we leave our bags until 3pm', null))
+  assert.ok(peticionCambioHorario('¿podemos guardar las maletas?', null))
+  assert.ok(peticionCambioHorario('we arrive early, can we get into the room at 10am?', null))
+  assert.ok(peticionCambioHorario('¿podemos quedarnos hasta las 15?', null))
+})
+
 test('las categorías early_checkin / late_checkout / equipaje siempre cuentan', () => {
   assert.equal(peticionCambioHorario('ok', 'early_checkin')?.tipo, 'entrada')
   assert.equal(peticionCambioHorario('ok', 'late_checkout')?.tipo, 'salida')
@@ -82,7 +93,7 @@ test('las categorías early_checkin / late_checkout / equipaje siempre cuentan',
 test('decidirAutoEnvio NO envía solo una petición de horario aunque todo lo demás esté en verde', () => {
   const dec: Decision = { reply: 'Claro, sin problema.', confidence: 0.9, needs_human: false, requiere_respuesta: true, es_cortesia: false, apoyada_en_fuente: true, categoria: 'equipaje', sentimiento: 'neutro', motivo: '', fuente: 'ia' }
   assert.deepEqual(decidirAutoEnvio(dec, '¿Podemos dejar el equipaje hasta las 15:00?'), { auto: false, via: null })
-  assert.deepEqual(decidirAutoEnvio({ ...dec, categoria: 'equipaje' }), { auto: false, via: null })
+  assert.deepEqual(decidirAutoEnvio({ ...dec, categoria: 'equipaje' }, ''), { auto: false, via: null })
   // …y una pregunta normal sigue pudiendo salir sola (la compuerta no se lo lleva todo)
   assert.equal(decidirAutoEnvio({ ...dec, categoria: 'wifi' }, '¿Cuál es el wifi?').auto, true)
 })
@@ -113,6 +124,7 @@ test('botones: prefijo hsp_, callback ≤ 64 bytes, sin «solo maletas», rojo s
     for (const b of filas.flat()) {
       assert.ok(b.callback.startsWith('hsp_'), b.callback)
       assert.ok(Buffer.byteLength(b.callback, 'utf8') <= LIMITE_CALLBACK, b.callback)
+      assert.ok(Buffer.byteLength(b.callback, 'utf8') <= 64, b.callback)
       assert.ok(!/maletas/i.test(b.texto), b.texto)
     }
     const textos = filas.flat().map(b => b.texto)
