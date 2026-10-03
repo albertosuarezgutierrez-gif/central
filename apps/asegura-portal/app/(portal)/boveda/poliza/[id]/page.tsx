@@ -355,17 +355,16 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
             un seguro concreto no debería tener que volver a encontrarlo en un
             desplegable con las demás. */}
         <p style={{ margin: 0 }}>
-          {/* Sin el alcance `partes`, una póliza de otro solo da sus teléfonos: el
-              parte no se le ofrece porque la ruta lo rechazaría (`polizasParaParte`). */}
-          {polizasParaParte(cartera).has(p.id) ? (
-            <Link className="boton auto" href={`/boveda?vista=siniestro&poliza=cartera:${p.id}`}>
-              Ver los teléfonos de {p.compania} y dar parte
-            </Link>
-          ) : (
-            <Link className="boton auto" href="/boveda?vista=siniestro">
-              Ver los teléfonos de {p.compania}
-            </Link>
-          )}
+          {/* 03/10/2026: el enlace lleva SIEMPRE `?poliza=`, sea la póliza propia
+              o ajena, con o sin alcance para dar partes. Antes, sin el alcance,
+              iba a la pestaña general y salían las compañías de toda la cartera.
+              Qué se puede hacer allí (parte o solo teléfono) lo decide la
+              pantalla con `puedeParte`, y la ruta lo vuelve a comprobar (403). */}
+          <Link className="boton auto" href={`/boveda?vista=siniestro&poliza=cartera:${p.id}`}>
+            {polizasParaParte(cartera).has(p.id)
+              ? `Ver los teléfonos de ${p.compania} y dar parte`
+              : `Ver los teléfonos de ${p.compania}`}
+          </Link>
         </p>
       </section>
 

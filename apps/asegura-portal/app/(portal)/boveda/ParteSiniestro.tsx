@@ -10,8 +10,7 @@ import {
   LUGAR_MAX,
   ZONAS_VEHICULO,
   bloqueDatosVehiculo,
-  canalesConCompaniaPrimero,
-  canalesDeLasPolizas,
+  entradaValida,
   componerDescripcion,
   ETIQUETA_TIPO_SINIESTRO,
   opcionesTipoSiniestro,
@@ -21,6 +20,8 @@ import {
   type CanalCompania,
   type DatosParteWhatsapp,
   type ViaCanal,
+  type VistaParte,
+  vistaDelParte,
 } from '@central/module-seguros-portal'
 // Del módulo puro, que no importa `node:*` ni red: se puede cargar desde un
 // componente de cliente. La revisión del fichero es LA MISMA que hace el
@@ -91,6 +92,14 @@ export type PolizaOpcionParte = {
    * peor posible para esperar a una petición.
    */
   canal: CanalCompania
+  /**
+   * Si esta identidad puede DAR PARTE de esta póliza. Lo decide el servidor con
+   * `polizasParaParte` (la misma fuente que la ruta, que devuelve 403 si no). Es
+   * la ÚNICA diferencia entre pólizas en esta pantalla: propia, ajena, donde
+   * figura o aportada siguen el mismo camino (03/10/2026). `false` = solo se
+   * enseñan los teléfonos de su compañía.
+   */
+  puedeParte: boolean
   /**
    * El código de ramo tal cual lo guarda la BD (`'auto'`, `'hogar'`…), no la
    * etiqueta traducida. `null`/`undefined` = no se conoce (pasa con alguna
@@ -465,73 +474,47 @@ const ESTADO_FICHERO: Record<EstadoFichero, { texto: string; clase: string }> = 
 /**
  * El PRIMER camino: la compañía.
  *
- * ── Por qué esto está fuera del formulario, y arriba ────────────────────────
- *
  * Decisión de Alberto (05/09/2026): «los siniestros mejor intentar llamen a la
  * compañía; nosotros nos enteramos por CIMA y hacemos el seguimiento». Y el
  * motivo jurídico está en la cabecera de este fichero: **un parte que nos llega
- * a nosotros no es un siniestro comunicado a la entidad.** Si el camino que sí
- * lo comunica estuviera detrás de «Dar parte» → desplegar → elegir póliza,
- * estaría escondido justo para quien tiene prisa.
+ * a nosotros no es un siniestro comunicado a la entidad.** Por eso este bloque
+ * va ARRIBA, antes del formulario.
  *
- * Por eso el CONTENIDO no depende de la póliza elegida: se pintan las compañías
- * de TODAS sus pólizas. Con una sola compañía es un bloque; con cuatro son
- * cuatro.
- *
- * 🚨 Lo que sí depende de ella, desde el 19/09/2026, es el ORDEN: la de la
- * póliza elegida va primera y marcada, porque el botón de la ficha promete un
- * teléfono concreto («Ver los teléfonos de Allianz y dar parte») y con tres
- * compañías debajo podía ser el tercero. **Ordenar no es recortar**: quien
- * tiene prisa puede haber llegado desde la póliza equivocada —el coche de su
- * padre, el piso en vez del local— y una lista de una sola compañía le diría
- * que no hay nadie más a quien llamar.
+ * 🚨 Desde el 03/10/2026 enseña la compañía de UNA póliza, la elegida o la de
+ * la ficha desde la que se llegó (Alberto: «debe ver el teléfono de ESA compañía
+ * y debajo el formulario de ESA póliza»). Qué se pinta lo decide el helper puro
+ * `vistaDelParte` (con test), igual para cualquier póliza:
+ *   · con póliza → su canal; si su compañía no casa con el catálogo, «pídenoslo»
+ *     y el teléfono de la correduría, nunca la lista entera en su lugar;
+ *   · sin póliza → se pide elegir el seguro.
+ * Las DEMÁS compañías siguen detrás de un botón: plegar no es borrar, quien ha
+ * llegado desde la póliza equivocada tiene que poder llegar al otro teléfono.
  */
 function CanalesCompania({
-  polizas,
-  destacada,
+  vista,
+  noSabe,
+  corredor,
 }: {
-  polizas: readonly PolizaOpcionParte[]
-  /**
-   * La compañía de la póliza que hay elegida ahora mismo (o la que venía en el
-   * enlace de su ficha), para ponerla DELANTE. `null` = ninguna elegida, y
-   * entonces el orden es el de siempre.
-   */
-  destacada?: string | null
+  vista: VistaParte
+  /** Eligió «No sé cuál»: el texto de la caja sin póliza no le pide elegir otra vez. */
+  noSabe?: boolean
+  corredor?: { tel: string; numero: string }
 }) {
   const [busca, setBusca] = useState('')
-  // Para QUÉ compañía elegida se han desplegado las demás: al cambiar de póliza
-  // se vuelven a plegar solas, sin un efecto que lo sincronice.
+  // Para QUÉ póliza se han desplegado las demás: al cambiar de póliza se vuelven
+  // a plegar solas, sin un efecto que lo sincronice.
   const [otrasAbiertasPara, setOtrasAbiertasPara] = useState<string | null>(null)
-  // Una compañía en blanco (una póliza aportada de la que la IA no leyó cuál
-  // era) es «no lo sabemos», no una compañía: ni ordena ni marca nada.
-  const quien = typeof destacada === 'string' && destacada.trim() !== '' ? destacada.trim() : null
-  const canales = canalesConCompaniaPrimero(canalesDeLasPolizas(polizas.map((p) => p.canal)), quien)
-  if (canales.length === 0) return null
-  const clave = quien === null ? null : quien.toLowerCase()
-
-  // Plegado por compañía (24/09/2026): con tres compañías abiertas, el número
-  // de la que busca quedaba a dos pantallazos. Nace abierta SOLO la de la póliza
-  // elegida, o la única que haya. El buscador aparece a partir de cinco: con
-  // menos, las cabeceras plegadas ya caben de un vistazo y un campo más estorba.
-  // Filtrar aquí lo decide QUIEN MIRA, no el código: `canales` sigue entero, y
-  // si nada coincide se dice en vez de pintar una lista vacía.
-  //
-  // 🚨 Con una póliza elegida (25/09/2026, Alberto: «si sabes que la póliza es
-  // de una compañía, ¿por qué salen todas?») se ENSEÑA solo la suya y las demás
-  // quedan detrás de un botón que dice cuántas son. Plegar no es borrar:
-  // `canales` sigue entero y el botón está siempre, porque quien llega desde la
-  // póliza equivocada —el coche de su padre, el piso en vez del local— tiene
-  // que poder llegar al otro teléfono.
-  const hayElegida = clave !== null && canales.some((c) => c.nombre.trim().toLowerCase() === clave)
-  const otrasPlegadas = hayElegida && canales.length > 1 && otrasAbiertasPara !== clave
-  const numOtras = canales.length - 1
-  const conBuscador = !otrasPlegadas && canales.length >= 5
+  const principal = vista.modo === 'poliza' ? vista.principal : null
+  const otras = vista.otras
+  if (principal === null && otras.length === 0) return null
+  const claveVista = vista.modo === 'poliza' ? vista.valor : ''
+  const otrasAbiertas = otrasAbiertasPara === claveVista
+  // El buscador aparece a partir de cinco: con menos, las cabeceras plegadas ya
+  // caben de un vistazo. Filtrar aquí lo decide QUIEN MIRA, no el código.
+  const conBuscador = otrasAbiertas && otras.length >= 5
   const q = busca.trim().toLowerCase()
-  const vistos = otrasPlegadas
-    ? canales.filter((c) => c.nombre.trim().toLowerCase() === clave)
-    : q === ''
-      ? canales
-      : canales.filter((c) => c.nombre.toLowerCase().includes(q))
+  const vistos = q === '' ? otras : otras.filter((c) => c.nombre.toLowerCase().includes(q))
+  const n = otras.length
 
   return (
     <div className="canal-caja">
@@ -540,6 +523,35 @@ function CanalesCompania({
           avise, se quede tranquilo y no haga nada más. Dice qué abre el
           siniestro y qué no, sin prometer rapidez. */}
       <p className="editor-ayuda">Su aviso es el que abre el siniestro; el nuestro no. Haz los dos: nosotros te hacemos el seguimiento.</p>
+      {principal !== null ? (
+        <div className="canal-lista">
+          <BloqueCanal key={claveVista} canal={principal} deLaElegida abierto corredor={corredor} />
+        </div>
+      ) : (
+        <p className="editor-ayuda">
+          {noSabe
+            ? 'Si no sabes de qué seguro es, aquí abajo tienes las compañías de tus seguros.'
+            : 'Elige de qué seguro es y te enseñamos el teléfono de su compañía.'}
+        </p>
+      )}
+      {n > 0 && (
+        <button
+          type="button"
+          className="canal-ver-otras"
+          aria-expanded={otrasAbiertas}
+          onClick={() => setOtrasAbiertasPara(otrasAbiertas ? null : claveVista)}
+        >
+          {otrasAbiertas
+            ? 'Plegar las demás compañías'
+            : principal === null
+              ? n === 1
+                ? 'Ver el teléfono de la compañía de tus seguros'
+                : `Ver los teléfonos de las ${n} compañías de tus seguros`
+              : n === 1
+                ? 'Ver la otra compañía de tus seguros'
+                : `Ver las otras ${n} compañías de tus seguros`}
+        </button>
+      )}
       {conBuscador && (
         <input
           className="canal-buscar"
@@ -550,36 +562,31 @@ function CanalesCompania({
           onChange={(e) => setBusca(e.target.value)}
         />
       )}
-      {vistos.length === 0 && <p className="editor-ayuda">Ninguna de tus compañías se llama así.</p>}
-      <div className="canal-lista">
-        {vistos.map((c) => {
-          // 🚨 Se compara con la MISMA normalización que usó el helper puro
-          // para ordenar. Con dos criterios distintos, el bloque marcado y el
-          // que va primero podrían no ser el mismo.
-          const elegida = clave !== null && c.nombre.trim().toLowerCase() === clave
-          return (
-            <BloqueCanal
-              // La clave incluye si es la elegida: al cambiar de póliza, el
-              // bloque se vuelve a montar y se abre el de la nueva compañía.
-              key={`${c.nombre}-${elegida ? 'e' : ''}`}
-              canal={c}
-              deLaElegida={elegida}
-              abierto={elegida || canales.length === 1}
-            />
-          )
-        })}
-      </div>
-      {otrasPlegadas && (
-        <button type="button" className="canal-ver-otras" onClick={() => setOtrasAbiertasPara(clave)}>
-          {numOtras === 1 ? 'Ver la otra compañía de tus seguros' : `Ver las otras ${numOtras} compañías de tus seguros`}
-        </button>
+      {otrasAbiertas && vistos.length === 0 && <p className="editor-ayuda">Ninguna de tus compañías se llama así.</p>}
+      {otrasAbiertas && (
+        <div className="canal-lista">
+          {vistos.map((c) => (
+            <BloqueCanal key={c.nombre} canal={c} abierto={n === 1} corredor={corredor} />
+          ))}
+        </div>
       )}
     </div>
   )
 }
 
-function BloqueCanal({ canal, deLaElegida, abierto }: { canal: CanalCompania; deLaElegida?: boolean; abierto: boolean }) {
-  const logo = logoCompania(canal.nombre)
+function BloqueCanal({
+  canal,
+  deLaElegida,
+  abierto,
+  corredor,
+}: {
+  canal: CanalCompania
+  deLaElegida?: boolean
+  abierto: boolean
+  corredor?: { tel: string; numero: string }
+}) {
+  const nombre = canal.nombre.trim()
+  const logo = nombre === '' ? null : logoCompania(canal.nombre)
   return (
     <details className="canal-bloque" data-elegida={deLaElegida ? 'si' : undefined} open={abierto}>
       <summary className="canal-cabecera">
@@ -589,22 +596,32 @@ function BloqueCanal({ canal, deLaElegida, abierto }: { canal: CanalCompania; de
           <img className="canal-logo" src={logo} alt={canal.nombre} />
         ) : (
           <span className="canal-logo canal-inicial" aria-hidden="true">
-            {canal.nombre.trim().charAt(0).toUpperCase()}
+            {nombre === '' ? '?' : nombre.charAt(0).toUpperCase()}
           </span>
         )}
         <span className="canal-compania">
-          {logo === null && canal.nombre}
+          {/* Una compañía en blanco es «no la sabemos», y se dice así. */}
+          {logo === null && (nombre === '' ? 'Compañía sin identificar' : canal.nombre)}
           {/* El cartel solo dice de QUÉ póliza es esta compañía. Va en texto y
               no solo en color: el filete no se lo lee nadie por teléfono. */}
-          {deLaElegida === true && <span className="canal-elegida">La de la póliza elegida</span>}
+          {deLaElegida === true && <span className="canal-elegida">La de este seguro</span>}
         </span>
         <span className="canal-ver">Teléfonos</span>
       </summary>
       {canal.sinDatos ? (
         // 🚨 «No lo hemos verificado», NUNCA «esta compañía no tiene». El texto
         // vive en el módulo puro con su test para que no se convierta en un
-        // hueco en blanco, que es como se lee un «no hay».
-        <p className="editor-ayuda">{TEXTO_SIN_CANAL}</p>
+        // hueco en blanco, que es como se lee un «no hay». Y debajo, a quién
+        // llamar AHORA: la correduría (su número sale de `MEDIADOR`, no se teclea).
+        <>
+          <p className="editor-ayuda">{TEXTO_SIN_CANAL}</p>
+          {corredor && (
+            <a className="canal-via" href={`tel:${corredor.tel}`}>
+              <span className="canal-via-que">Llámanos</span>
+              <span className="canal-via-num">{corredor.numero}</span>
+            </a>
+          )}
+        </>
       ) : (
         <>
           {canal.vias.map((v) => (
@@ -670,32 +687,34 @@ function ViaCanalEnlace({ via }: { via: ViaCanal }) {
 }
 
 export function ParteSiniestro({
-  polizas,
-  soloTelefonos = [],
+  polizas: opciones,
   corredor,
   partes,
   polizaInicial,
   identidadId,
 }: {
-  polizas: readonly PolizaOpcionParte[]
-  /** Solo para la clave del borrador local: dos personas en el mismo móvil no comparten borrador. */
-  identidadId?: string
   /**
-   * Pólizas AUTORIZADAS sin el alcance `partes`: se pintan sus teléfonos de
+   * TODAS las pólizas de esta sesión (propias, ajenas, donde figura, aportadas),
+   * cada una con `puedeParte`. Las de `puedeParte: false` dan sus teléfonos de
    * compañía (llamar a la grúa no es actuar en nombre de nadie), pero NO se
    * pueden elegir para dar un parte — la ruta las rechazaría con 403.
    */
-  soloTelefonos?: readonly PolizaOpcionParte[]
+  polizas: readonly PolizaOpcionParte[]
+  /** Solo para la clave del borrador local: dos personas en el mismo móvil no comparten borrador. */
+  identidadId?: string
   /** El teléfono del corredor, del servidor (`MEDIADOR`), para que «llámanos» se pueda pulsar. */
   corredor?: { tel: string; numero: string }
   partes: readonly ParteEnviado[]
   /**
-   * El `valor` (`cartera:<id>`) de la póliza desde cuya ficha se llegó aquí
-   * (botón «Dar parte de esta póliza»), o `null`/`undefined` si se entró por
-   * la pestaña de siniestros a secas. Solo cuenta si sigue estando en
-   * `polizas` —la lista ya acotada a esta identidad—, así que un valor
-   * manipulado en la URL simplemente no preselecciona nada; nunca abre una
-   * póliza que esta sesión no tuviera ya delante.
+   * El `valor` (`cartera:<id>`) de la póliza desde cuya ficha se llegó aquí,
+   * o `null`/`undefined` si se entró por la pestaña de siniestros a secas. Solo
+   * cuenta si sigue estando en `polizas` —la lista ya acotada a esta
+   * identidad—, así que un valor manipulado en la URL simplemente no fija nada;
+   * nunca abre una póliza que esta sesión no tuviera ya delante.
+   *
+   * 🚨 Con una póliza de entrada la pantalla queda FIJADA a ella (03/10/2026):
+   * el teléfono de su compañía y, si `puedeParte`, el parte de esa póliza sin
+   * selector. Igual para cualquier póliza: no hay rama por tipo.
    */
   polizaInicial?: string | null
 }) {
@@ -708,7 +727,13 @@ export function ParteSiniestro({
   // la ficha de una póliza, el formulario nace ABIERTO y con esa póliza ya
   // puesta, incluida su matrícula autorrellenada — el mismo camino que
   // `seleccionarPoliza()`, para no duplicar esa regla.
-  const polizaValida = polizaInicial && polizas.some((p) => p.valor === polizaInicial) ? polizaInicial : null
+  // Las que admiten parte: el formulario, el selector y el borrador solo ven estas.
+  const polizas = opciones.filter((p) => p.puedeParte)
+  // La póliza de ENTRADA (desde su ficha), si está de verdad en la lista. Fija la pantalla.
+  const entrada = entradaValida(opciones, polizaInicial)
+  const polizaValida = entrada !== null && polizas.some((p) => p.valor === entrada) ? entrada : null
+  /** La póliza que se está mirando sin formulario abierto: una de solo teléfonos, o la del último parte. */
+  const [consulta, setConsulta] = useState<string | null>(entrada)
   const [abierto, setAbierto] = useState(() => polizaValida !== null)
   /**
    * Dos pasos: primero QUÉ seguro, luego qué ha pasado. La póliza decide qué se
@@ -792,7 +817,9 @@ export function ParteSiniestro({
     if (pendiente === null) return
     abrir()
     // Una póliza que ya no está en la lista (quitada, o autorización retirada) no se recupera.
-    const poliza = polizas.some((p) => p.valor === pendiente.form.poliza) ? pendiente.form.poliza : ''
+    // Con la pantalla fijada, el parte es de ESA póliza (el borrador solo se ofrece si encaja).
+    const poliza =
+      polizaValida !== null ? polizaValida : polizas.some((p) => p.valor === pendiente.form.poliza) ? pendiente.form.poliza : ''
     // Y un tipo que no encaja con el ramo que queda tampoco: viajaría sin que el cliente lo viera.
     const ramo = polizas.find((p) => p.valor === poliza)?.ramo
     const tipoSiniestro = (opcionesTipoSiniestro(ramo) as readonly string[]).includes(pendiente.form.tipoSiniestro)
@@ -871,6 +898,15 @@ export function ParteSiniestro({
     setPaso(polizas.length === 0 ? 'datos' : 'poliza')
     setAbierto(true)
     sesionRef.current += 1
+    // Con la pantalla fijada a una póliza, el parte nuevo es de esa póliza: sin selector.
+    if (polizaValida !== null) elegirPoliza(polizaValida)
+  }
+
+  /** Desde las tarjetas de la pestaña general: elegir el seguro ES empezar su parte. `''` = «No sé cuál». */
+  function empezarCon(valor: string) {
+    setConsulta(null)
+    abrir()
+    elegirPoliza(valor)
   }
 
   /**
@@ -1181,6 +1217,8 @@ export function ParteSiniestro({
         )
         setEstado('enviado')
         setAbierto(false)
+        // El teléfono de la compañía de ESE parte sigue arriba: es el siguiente paso.
+        setConsulta(form.poliza || null)
         setForm(VACIO)
         if (claveBorr !== null) borrador.borrar(claveBorr)
 
@@ -1252,17 +1290,36 @@ export function ParteSiniestro({
 
   const restantes = DESCRIPCION_MIN - form.descripcion.trim().length
 
-  // La compañía de la póliza elegida AHORA (la del enlace de su ficha al
-  // entrar, y la que se elija después en el paso 1). Solo decide el ORDEN
-  // del bloque de canales: las demás compañías siguen enteras debajo, porque
-  // quien tiene prisa puede haber llegado desde la póliza equivocada.
-  const companiaElegida = polizas.find((p) => p.valor === form.poliza)?.canal.nombre ?? null
+  // QUÉ póliza manda en la pantalla, por este orden: la de entrada (fijada), la
+  // del formulario abierto, o la que se está mirando sin formulario. El mismo
+  // helper puro para todas (`vistaDelParte`, con test): no hay rama por tipo.
+  const polizaVista = entrada ?? (abierto ? form.poliza : consulta)
+  const vista = vistaDelParte(opciones, polizaVista)
+  const noSabe = abierto && form.poliza === '' && paso === 'datos'
+  // Mirando una póliza de la que NO se puede dar parte: su teléfono, y se dice por qué no hay formulario.
+  const soloTelefono = vista.modo === 'poliza' && !vista.puedeParte
+  // Un borrador de otra visita se ofrece en la pestaña general; fijada a una
+  // póliza, solo si es de ESA (o de «No sé cuál»): nunca se cuelga un relato a
+  // la póliza equivocada. Si no encaja, se queda guardado, sin tocarlo.
+  const borradorOfrecible =
+    pendiente !== null &&
+    (entrada === null || (polizaValida !== null && (pendiente.form.poliza === '' || pendiente.form.poliza === polizaValida)))
 
   return (
     <section className="seccion" aria-labelledby={`${uid}-titulo`}>
       <h2 id={`${uid}-titulo`}>Un siniestro</h2>
 
-      <CanalesCompania polizas={[...polizas, ...soloTelefonos]} destacada={companiaElegida} />
+      <CanalesCompania vista={vista} noSabe={noSabe} corredor={corredor} />
+
+      {soloTelefono && (
+        // 🚨 No se relaja nada: sin el alcance de dar partes la ruta devuelve 403.
+        // Aquí solo se dice, ANTES de que nadie rellene un formulario para nada.
+        <p className="editor-ayuda" role="note" style={{ marginBottom: 10 }}>
+          Con el permiso que te han dado puedes ver los teléfonos de este seguro, pero <strong>no puedes dar el parte
+          desde aquí</strong>: lo tiene que dar su titular, o pedirle que te dé un permiso que incluya dar partes. Si es
+          urgente, {corredor ? <a href={`tel:${corredor.tel}`}>llámanos al {corredor.numero}</a> : 'llámanos'}.
+        </p>
+      )}
 
       {/* La confirmación vive FUERA del formulario, así sigue en pantalla cuando
           el formulario ya se ha cerrado. */}
@@ -1327,16 +1384,50 @@ export function ParteSiniestro({
 
       {!abierto && (
         <>
-          <p className="editor-ayuda" style={{ marginBottom: 10 }}>
-            Cuéntanoslo aquí y lo tramitamos con tu compañía. No hace falta que sepas qué póliza lo cubre.
-          </p>
-          {soloTelefonos.length > 0 && (
+          {entrada === null && opciones.length > 0 && (
+            // Pestaña general (03/10/2026, Alberto): PRIMERO se elige el seguro, y
+            // con él salen el teléfono de su compañía y su parte. Las de solo
+            // teléfonos se pueden elegir para ver su número, no para el parte.
+            <fieldset className="editor-campo grupo parte-paso-poliza">
+              <legend>¿De qué seguro es?</legend>
+              <p className="editor-ayuda">
+                Te enseñamos el teléfono de su compañía y lo que hace falta para el parte. Si no lo tienes claro,
+                elige <strong>«No sé cuál»</strong>: saber qué póliza lo cubre es trabajo nuestro, no tuyo.
+              </p>
+              <div className="poliza-tarjetas">
+                {opciones.map((p) => (
+                  <button
+                    key={p.valor}
+                    type="button"
+                    className={consulta === p.valor ? 'poliza-tarjeta elegida' : 'poliza-tarjeta'}
+                    onClick={() => (p.puedeParte ? empezarCon(p.valor) : setConsulta(p.valor))}
+                  >
+                    {p.etiqueta}
+                    {!p.puedeParte && ' · solo teléfonos'}
+                  </button>
+                ))}
+                {polizas.length > 0 && (
+                  <button type="button" className="poliza-tarjeta no-se" onClick={() => empezarCon('')}>
+                    No sé cuál / puede que varias
+                  </button>
+                )}
+              </div>
+            </fieldset>
+          )}
+          {entrada === null && opciones.length === 0 && (
             <p className="editor-ayuda" style={{ marginBottom: 10 }}>
-              Los seguros que otra persona comparte contigo salen arriba para que tengas sus teléfonos, pero el
-              parte de esos lo tiene que dar su titular.
+              Cuéntanoslo aquí y lo tramitamos con tu compañía. No hace falta que sepas qué póliza lo cubre.
             </p>
           )}
-          {pendiente !== null && (
+          {/* Fijada a una póliza de solo teléfonos: no hay formulario, hay salida. */}
+          {entrada !== null && soloTelefono && (
+            <p style={{ margin: '0 0 10px' }}>
+              <a className="boton secundario" href="/boveda?vista=siniestro">
+                Dar parte de otro de tus seguros
+              </a>
+            </p>
+          )}
+          {pendiente !== null && borradorOfrecible && (
             <div className="parte-borrador" role="status">
               <p>
                 Tienes un parte <strong>a medias</strong> del {new Date(pendiente.guardadoEn).toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}
@@ -1353,9 +1444,12 @@ export function ParteSiniestro({
               </div>
             </div>
           )}
-          <button type="button" className={pendiente !== null ? 'boton secundario' : 'boton'} onClick={abrir}>
-            {pendiente !== null ? 'Empezar uno nuevo' : 'Dar parte de un siniestro'}
-          </button>
+          {/* Fijada a una póliza con parte (tras enviar o cancelar), o sin ninguna póliza: el botón de siempre. */}
+          {(polizaValida !== null || opciones.length === 0) && (
+            <button type="button" className={pendiente !== null ? 'boton secundario' : 'boton'} onClick={abrir}>
+              {pendiente !== null ? 'Empezar uno nuevo' : polizaValida !== null ? 'Dar parte de este seguro' : 'Dar parte de un siniestro'}
+            </button>
+          )}
         </>
       )}
 
@@ -1413,14 +1507,17 @@ export function ParteSiniestro({
                   <strong>No sé cuál — lo miramos nosotros</strong>
                 )}
               </p>
-              <button
-                type="button"
-                className="boton secundario"
-                onClick={() => setPaso('poliza')}
-                disabled={enviando}
-              >
-                Cambiar
-              </button>
+              {/* Fijada desde la ficha de una póliza: el parte es de ESA, sin cambiarla aquí. */}
+              {polizaValida === null && (
+                <button
+                  type="button"
+                  className="boton secundario"
+                  onClick={() => setPaso('poliza')}
+                  disabled={enviando}
+                >
+                  Cambiar
+                </button>
+              )}
               {errores.poliza && (
                 <p className="editor-error" role="alert">
                   {errores.poliza}

@@ -85,9 +85,12 @@ test('la compañía SIN teléfono verificado sigue apareciendo, y dice «pídeno
 
 test('la lista de compañías se compone con el helper puro, no a ojo en el JSX', () => {
   const src = codigoSinComentarios(PANTALLA)
+  // Desde el 03/10/2026 la compone `vistaDelParte` (que llama a
+  // `canalesDeLasPolizas` y tiene su propio test con una `sinDatos` dentro).
+  const composer = src.includes('vistaDelParte(') ? 'vistaDelParte(' : 'canalesDeLasPolizas('
   assert.match(
     src,
-    /canalesDeLasPolizas\(/,
+    /vistaDelParte\(|canalesDeLasPolizas\(/,
     'Deduplicar y decidir qué compañías se enseñan es una regla con test propio (las `sinDatos` se ' +
       'quedan, las sin nombre se caen). Rehacerla en el JSX la deja sin cepo.',
   )
@@ -97,7 +100,7 @@ test('la lista de compañías se compone con el helper puro, no a ojo en el JSX'
   // seguían en verde, mientras las compañías sin teléfono verificado
   // desaparecían de la pantalla en silencio. Un cepo que no se ha visto morder
   // es una suposición.
-  const tras = src.slice(src.indexOf('canalesDeLasPolizas('))
+  const tras = src.slice(src.indexOf(composer))
   assert.doesNotMatch(
     tras.slice(0, 200),
     /\.filter\(/,

@@ -283,6 +283,8 @@ export type { DatosAvisoParteNuevo } from './aviso-parte-nuevo.ts'
 export type { DatosParteWhatsapp } from './parte-whatsapp.ts'
 export type { FilaCompania, LineaAsistenciaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania.ts'
+export { vistaDelParte, entradaValida } from './parte-entrada.ts'
+export type { OpcionEntradaParte, VistaParte } from './parte-entrada.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
 // (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
 // existen en la BD pero NO se escriben: no hay pantalla que los pida.
