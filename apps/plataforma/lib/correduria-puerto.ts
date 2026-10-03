@@ -10,6 +10,7 @@ import { esReglaCalidad } from '@central/module-seguros'
 import { leerRetarificacion } from './ficha-asegura.ts'
 import { cabecerasPuerto } from './puerto-actor.ts'
 import { interpretarOportunidadesAviso, type LecturaOportunidadesAviso } from './correduria/oportunidades-aviso.ts'
+import { interpretarCola, interpretarResolucion, type ColaRevision, type Resolucion as ResolucionRevision } from './correduria/emisiones-revision.ts'
 
 export type MotivoPuerto = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
 
@@ -1002,6 +1003,32 @@ export async function retenidasAsegura(): Promise<Retenidas> {
  */
 export async function descubrirEmisionesAsegura(): Promise<{ status: number; json: unknown } | null> {
   return pedirPost('/api/operador/codeoscopic/descubrir-emisiones', {}, 280_000)
+}
+
+/**
+ * Cola de REVISIÓN del descubrimiento (03/10/2026): las emisiones de Avant2 que no se pudieron registrar
+ * solas. La lectura de la respuesta es PURA (`lib/correduria/emisiones-revision.ts`); un fallo es
+ * `error`, nunca «cola vacía».
+ */
+export async function emisionesRevisionAsegura(limite = 50, desde = 0): Promise<ColaRevision> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/emisiones-revision?limite=${limite}&desde=${desde}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarCola(r.status, r.json, desde)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** «Marcar revisada»: idempotente en asegura (`resuelta`/`ya_resuelta`). El actor viaja en `x-actor`. */
+export async function resolverEmisionRevisionAsegura(id: string, nota: string | null): Promise<ResolucionRevision> {
+  try {
+    const r = await pedirPost(`/api/operador/codeoscopic/emisiones-revision/${encodeURIComponent(id)}/resolver`, nota ? { nota } : {})
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarResolucion(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
 }
 
 /** Vista previa (GET, gratis) de registrar en la intranet una emisión hecha en la web de Avant2. */
