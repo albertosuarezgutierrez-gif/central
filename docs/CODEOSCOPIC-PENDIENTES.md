@@ -86,12 +86,15 @@ exacto de Allianz (prueba con 10 % para ver si baja el precio) y confirmar el pr
 4. [x] **«Experiencia: 1»** = `ThisMotorcycle` («Esta Motocicleta»), lo mismo que mandamos.
 5. [ ] **Facturación:** si la web tiene sección de consumo o facturas, comprobar si cada re-tarificación
    (confirmar precio) cuenta como una consulta de 0,50€ o solo cuenta la tarificación.
+   Resuelto por inferencia del correo de Codeoscopic 02/10/2026 (se factura 0,50 € por cada `POST /insurances` con
+   HTTP 200; ReRate y Submit no aparecen como facturables); confirmación explícita no pedida.
 6. [x] **¿La API ve los presupuestos hechos en la web?** Sí (ver la comparación de arriba).
 7. [ ] **Tipo de comisión** (`comissionType`, en Allianz «A»): qué opciones da la web y si afecta a la prima.
 
 ## Para preguntar a Codeoscopic (borradores sin enviar, los manda Alberto)
 
-- ¿El ReRate y el Submit se facturan? → `docs/BORRADOR-CODEOSCOPIC-COSTE-RERATE-SUBMIT.md`.
+- ¿El ReRate y el Submit se facturan? → `docs/BORRADOR-CODEOSCOPIC-COSTE-RERATE-SUBMIT.md`. **Resuelto por
+  inferencia del correo 02/10/2026 (no aparecen como facturables); confirmación explícita no pedida.**
 - ¿Vale el historial de un coche para asegurar una moto? ¿Hay algún código estructurado de «bonus
   verificado» o solo texto en `messages[]`? (soporteapi@codeoscopic.com)
 
