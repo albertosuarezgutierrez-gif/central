@@ -352,7 +352,7 @@ export {
 export type { EstadoSiniestro, SiniestroHistorial, ExplicacionSiniestro } from './siniestro-historial.ts'
 export { tramitacionSiniestro, importeNumero } from './siniestro-tramitacion.ts'
 export type { PasoTramitacion, TramitacionSiniestro } from './siniestro-tramitacion.ts'
-export { detalleSiniestroCompania, descripcionRiesgoLegible } from './siniestro-detalle.ts'
+export { detalleSiniestroCompania, descripcionRiesgoLegible, normalizarCodigoCoberturaNumerico } from './siniestro-detalle.ts'
 export type { DetalleSiniestroCompania, ContactoGestion } from './siniestro-detalle.ts'
 export {
   SITUACIONES_RECIBO,

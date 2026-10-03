@@ -62,7 +62,7 @@ export type CapitalVista =
 /** El capital que SE AFIRMA de una cobertura (ver la cabecera). Una sola fuente para la ficha y la lista. */
 export function capitalDeCobertura(c: { descripcion?: string | null; capitalAsegurado: string | null; datosExtra?: unknown }): CapitalVista {
   const limites = extraerDetalleCobertura(c.datosExtra)?.limites ?? null
-  const lim = limites ? (limites.find(l => l.clase === 'PS' && l.maximo !== null) ?? limites.find(l => l.maximo !== null)) : null
+  const lim = limites ? (limites.find(l => l.clase === 'PS' && l.maximo !== null) ?? limites.find(l => l.maximo !== null) ?? null) : null
   const cap = interpretarCapital(c.capitalAsegurado)
   const rcObl = esRcObligatoria(c.descripcion)
   if (lim !== null && lim.clase === 'PS') {
