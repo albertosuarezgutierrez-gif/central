@@ -322,8 +322,10 @@ export type DesenlaceProyecto =
 
 /**
  * Minutos durante los que una solicitud RECIÉN creada en un proyecto que ya tiene fila se deja en
- * paz: `/emitir` suelta su candado (`cerrarEnvio`) ANTES de acuñar, y en ese hueco esta pasada
- * podría acuñar la misma póliza (la guarda «ya acuñada» de `registrarPolizaEmitida` no es atómica).
+ * paz, para que la acuñe `/emitir` (con su póliza de origen y su correo al cliente). Desde el
+ * 03/10/2026 ya NO es lo que impide la doble póliza: eso lo garantiza la BD (compuerta atómica de
+ * `registrarPolizaEmitida`, `lib/acunado-unico.ts`) y `/emitir` mantiene su candado hasta acuñar.
+ * Queda como cortesía: decide QUIÉN acuña, no CUÁNTAS veces.
  */
 export const MINUTOS_EN_VUELO = 15
 

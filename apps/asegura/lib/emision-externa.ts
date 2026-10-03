@@ -227,8 +227,9 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
           ? `«${compania}» no tiene código DGS en companias_dgs: acuña la póliza nº ${numeroPoliza} a mano.`
           : `el proyecto no dice la compañía: acuña la póliza nº ${numeroPoliza} a mano.`
       } else {
-        // Candado de `/emitir` (`submit_in_flight_at`): sin él, el cron de retenidas y el botón podrían
-        // acuñar dos pólizas del mismo proyecto (la guarda «ya acuñada» de `registrarPolizaEmitida` no es atómica).
+        // Candado de `/emitir` (`submit_in_flight_at`). La exclusión del acuñado la da ya la BD
+        // (compuerta atómica de `registrarPolizaEmitida`, `lib/acunado-unico.ts`); el candado sirve para
+        // que, si `/emitir` está a medias, acuñe ÉL (con su póliza de origen y su correo al cliente).
         const reclamada = await db.$queryRaw<{ id: string }[]>`
           update codeoscopic_projects set submit_in_flight_at = now()
           where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${projectId}
@@ -259,6 +260,13 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
               fraccionamiento: fraccionamientoDeOferta(crudo, emision.quoteId),
             },
           })
+          if (!acunado.ok && acunado.estado === 'ya_acunada') {
+            // Otra operación (botón, webhook, otra pasada) lo acuñó mientras tanto: idempotente, ya está.
+            const [ahora] = await db.$queryRaw<FilaProyecto[]>`
+              select estado::text as estado, poliza_id::text as poliza_id, cliente_id::text as cliente_id, oportunidad_id::text as oportunidad_id, aseguradora
+              from codeoscopic_projects where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${projectId} limit 1`
+            return await yaEmitida(correduriaId, projectId, ahora ?? { estado: 'emitida', poliza_id: acunado.polizaId, cliente_id: null, oportunidad_id: null, aseguradora: null })
+          }
           if (!acunado.ok) {
             estado = 'emitido_sin_acunar'
             mensaje = `La compañía ya tiene la póliza nº ${numeroPoliza} pero no se ha podido registrar en la cartera: ${acunado.motivo}`

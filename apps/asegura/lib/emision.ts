@@ -16,6 +16,8 @@ import { prepararPolizaEmitida, validarPolizaOrigen, type CompaniaDgs, type Proy
 import { prismaAsegura } from './asegura-db'
 import { reactivarPorPoliza } from './cartera-edicion'
 import { anotarCambio } from './auditoria'
+import { acunarUnaVez } from './acunado-unico'
+import type { Prisma } from './generated/asegura-client'
 
 /** Catálogo de compañías por código DGS. `null` = no se pudo leer (no es «vacío»). */
 export async function catalogoCompanias(): Promise<CompaniaDgs[] | null> {
@@ -30,6 +32,23 @@ export async function catalogoCompanias(): Promise<CompaniaDgs[] | null> {
 export type ResultadoEmision =
   | { ok: true; polizaId: string; avisos: string[] }
   | { ok: false; estado: 'invalido' | 'no_encontrado' | 'conflicto' | 'error'; motivo: string; status: 404 | 409 | 422 | 500 }
+  /**
+   * Resultado IDEMPOTENTE: otra operación (cron, webhook, botón) ya acuñó este proyecto. No se ha
+   * creado nada; `polizaId` es la póliza que ya existe. Va por `ok: false` A PROPÓSITO: los callers
+   * hacen tras un `ok` cosas que no se repiten (correo al cliente, baja de la anterior, PDF), y eso
+   * ya lo hizo —o lo hará— quien acuñó. Nunca es «no se ha podido registrar»: no se acuña a mano.
+   */
+  | { ok: false; estado: 'ya_acunada'; polizaId: string | null; motivo: string; status: 409 }
+
+function yaAcunada(polizaId: string | null): ResultadoEmision {
+  return {
+    ok: false,
+    estado: 'ya_acunada',
+    polizaId,
+    motivo: `Ese proyecto ya tiene póliza acuñada${polizaId ? ` (${polizaId})` : ''}: no se acuña otra.`,
+    status: 409,
+  }
+}
 
 export async function registrarPolizaEmitida(
   correduriaId: string,
@@ -63,11 +82,13 @@ export async function registrarPolizaEmitida(
   // 12/09/2026 `/oferta` deja ahí la póliza que se RETARIFICA, así que con esa
   // guarda ningún proyecto de la cartera podía acuñarse jamás (medido el
   // 13/09/2026 en `code-review`: `conflicto` en el 100 % de los casos).
-  const yaAcunada = await db.$queryRaw<{ estado: string }[]>`
-    select estado::text as estado from codeoscopic_projects
+  // Esta lectura es solo un ATAJO para no trabajar en balde: la garantía es la
+  // compuerta atómica de dentro de la transacción (`acunarUnaVez`, 03/10/2026).
+  const yaAcunadaLeida = await db.$queryRaw<{ estado: string; poliza_id: string | null }[]>`
+    select estado::text as estado, poliza_id::text as poliza_id from codeoscopic_projects
     where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${entrada.proyecto.projectIdCodeoscopic}
-    limit 1`.catch(() => [] as { estado: string }[])
-  if (yaAcunada[0]?.estado === 'emitida') return { ok: false, estado: 'conflicto', motivo: 'Ese proyecto ya tiene póliza acuñada.', status: 409 }
+    limit 1`.catch(() => [] as { estado: string; poliza_id: string | null }[])
+  if (yaAcunadaLeida[0]?.estado === 'emitida') return yaAcunada(yaAcunadaLeida[0].poliza_id)
 
   // La sustitución solo cuenta si la póliza de origen es de ESTA correduría, no
   // es la misma que se va a crear, y no tiene YA otra sustituta (el guardián
@@ -88,7 +109,15 @@ export async function registrarPolizaEmitida(
   if (!validacionOrigen.valido) r.avisos.push(validacionOrigen.aviso)
 
   const f = r.fila
-  const polizaId = await db.$transaction(async (tx) => {
+  // 🔒 La PRIMERA escritura de la transacción reclama el proyecto (`estado <> 'emitida'` → `emitida`)
+  // y bloquea su fila hasta el COMMIT: dos acuñados concurrentes del mismo proyecto se serializan
+  // ahí y el segundo sale por `ya_acunada` sin crear nada. Ver `lib/acunado-unico.ts`.
+  const desenlace = await acunarUnaVez<Prisma.TransactionClient>((fn) => db.$transaction(fn), {
+    correduriaId,
+    projectIdCodeoscopic: entrada.proyecto.projectIdCodeoscopic,
+    producto: f.tipo,
+    clienteId: cliente.id,
+  }, async (tx) => {
     const creada = await tx.poliza.create({
       data: {
         correduriaId: f.correduriaId,
@@ -110,7 +139,7 @@ export async function registrarPolizaEmitida(
       },
       select: { id: true },
     })
-    // El proyecto pasa a apuntar a la póliza EMITIDA y se marca `emitida`. Hasta
+    // El proyecto pasa a apuntar a la póliza EMITIDA (`emitida` ya lo puso la compuerta). Hasta
     // aquí `poliza_id` era la póliza RETARIFICADA (la pone `/oferta`); una vez
     // emitido, la fila es de la póliza nueva — que es lo que la conciliación con
     // CIMA (`emparejarConCima`) y el historial necesitan encontrar. El enlace con
@@ -118,7 +147,7 @@ export async function registrarPolizaEmitida(
     // consultable), no solo en el texto de `historial_interno`.
     await tx.$executeRaw`
       update codeoscopic_projects
-      set poliza_id = ${creada.id}::uuid, estado = 'emitida', error_mensaje = null, updated_at = now()
+      set poliza_id = ${creada.id}::uuid, updated_at = now()
       where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${entrada.proyecto.projectIdCodeoscopic}`
     await tx.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
@@ -140,6 +169,8 @@ export async function registrarPolizaEmitida(
     }
     return creada.id
   })
+  if (desenlace.tipo === 'ya_acunada') return yaAcunada(desenlace.polizaId)
+  const polizaId = desenlace.polizaId
   anotarCambio({ entidad: 'poliza', id: polizaId, campo: 'estado', antes: null, despues: f.estado })
   if (f.numeroPoliza) {
     anotarCambio({ entidad: 'poliza', id: polizaId, campo: 'numero_poliza', antes: null, despues: f.numeroPoliza })
