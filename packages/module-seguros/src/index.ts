@@ -538,6 +538,7 @@ export {
   CLAVES_PERSONALES_EXTRACCION,
   DIAS_VENCIMIENTO_URGENTE,
   companiaLegible,
+  companiaPorNombre,
   extraccionSinPii,
   contactoTomadorVacio,
   emailNormalizado,

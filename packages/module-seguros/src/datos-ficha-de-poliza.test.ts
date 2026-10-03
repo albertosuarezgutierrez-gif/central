@@ -4,6 +4,7 @@ import {
   CLAVES_EXTRACCION_GUARDABLES,
   CLAVES_PERSONALES_EXTRACCION,
   companiaLegible,
+  companiaPorNombre,
   extraccionSinPii,
   contactoTomadorVacio,
   normalizarContactoTomador,
@@ -165,6 +166,23 @@ test('compañía: «P.P.» no es una compañía; se usa la del código DGS', () 
   assert.equal(companiaLegible('P.P.', 'Mapfre'), 'Mapfre')
   assert.equal(companiaLegible('S.A.', null), null)
   assert.equal(companiaLegible(null, null), null)
+})
+
+test('compañía por nombre: exacta tras normalizar, nunca subcadena; «P.P.» o ambigua = null', () => {
+  const cat = [
+    { codigoDgs: 'C0058', nombreComun: 'Mapfre', nombreCima: 'Mapfre' },
+    { codigoDgs: 'C0072', nombreComun: 'Generali', nombreCima: 'GENERALI ESPAÑA, S.A. DE SEGUROS Y REASEGUROS' },
+    { codigoDgs: 'C0009', nombreComun: 'P.P.', nombreCima: null },
+    { codigoDgs: 'C0001', nombreComun: 'Allianz', nombreCima: null },
+    { codigoDgs: 'C0002', nombreComun: 'Allianz', nombreCima: null },
+  ]
+  assert.deepEqual(companiaPorNombre('MAPFRE, S.A.', cat), { codigoDgs: 'C0058', nombre: 'Mapfre' })
+  assert.deepEqual(companiaPorNombre('Generali España S.A. de Seguros y Reaseguros', cat), { codigoDgs: 'C0072', nombre: 'Generali' })
+  assert.deepEqual(companiaPorNombre('MAPFRE ESPAÑA', cat), { codigoDgs: 'C0058', nombre: 'Mapfre' })
+  assert.equal(companiaPorNombre('Mapfre Vida', cat), null) // subcadena: no casa
+  assert.equal(companiaPorNombre('P.P.', cat), null)
+  assert.equal(companiaPorNombre('Allianz', cat), null)
+  assert.equal(companiaPorNombre(null, cat), null)
 })
 
 test('vencimiento ≤15 días = urgente; sin fecha no se inventa prisa', () => {

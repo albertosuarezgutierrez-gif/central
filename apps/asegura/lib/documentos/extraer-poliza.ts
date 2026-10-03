@@ -96,7 +96,7 @@ export type ResultadoLecturaPoliza =
 
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas, de CUALQUIER ramo.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"ramo":string|null,"compania":string|null,"codigoEntidadDgs":string|null,"numeroPoliza":string|null,
+{"ramo":string|null,"compania":string|null,"cifCompania":string|null,"codigoEntidadDgs":string|null,"numeroPoliza":string|null,
 "fechaEfecto":"YYYY-MM-DD"|null,"fechaVencimiento":"YYYY-MM-DD"|null,"primaAnual":number|null,
 "tomador":string|null,"dni":string|null,"fechaNacimiento":"YYYY-MM-DD"|null,
 "matricula":string|null,"marca":string|null,"modelo":string|null,"version":string|null,
@@ -114,9 +114,13 @@ Reglas, por orden de importancia:
 - Si un dato NO aparece en el documento, pon null. NUNCA lo inventes, lo deduzcas
   ni lo copies de otro campo parecido.
 - NO escribas "no consta", "desconocido", "N/A" ni similares: eso es null.
-- "compania" es el NOMBRE de la aseguradora (p. ej. "MAPFRE ESPAÑA", "Allianz"), como sale en el
-  membrete o en el pie legal. NUNCA unas siglas sueltas de firma ("P.P.", "S.A.") ni el nombre
-  del agente o de la oficina. Si no lo ves, null.
+- "compania" es la compañía ASEGURADORA: la que asume el riesgo, como sale en el MEMBRETE o en
+  la RAZÓN SOCIAL del pie legal (p. ej. "MAPFRE ESPAÑA", "Allianz"). NO es el mediador (corredor,
+  agente, oficina o banco que la vende) NI la antefirma: "P.P." significa "por poder" y va delante
+  de la firma de un apoderado; nunca es la compañía, ni tampoco unas siglas sueltas ("S.A."). Si
+  no ves la aseguradora, null.
+- "cifCompania" es el CIF de esa MISMA aseguradora tal como sale junto a su razón social (p. ej.
+  "A28141935"), sin espacios ni guiones. NO el del mediador ni el del tomador. Si no aparece, null.
 - "codigoEntidadDgs" es el código DGS de la aseguradora con la forma C0058. Si el
   documento no lo trae literalmente, null (NO lo deduzcas del nombre).
 - "primaAnual" es lo que cuesta el seguro un AÑO, en euros y solo el número.

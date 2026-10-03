@@ -138,3 +138,10 @@ test('un entero escrito como texto sí se acepta', () => {
   assert.equal(normalizarAutoLeido({ siniestrosUltimos5: '2' }).siniestrosUltimos5, 2)
   assert.equal(normalizarAutoLeido({ siniestrosUltimos5: ' 0 ' }).siniestrosUltimos5, 0)
 })
+
+test('cifCompania: el CIF de la aseguradora, limpio; lo que no tiene forma de CIF es null', () => {
+  assert.equal(normalizarAutoLeido({ cifCompania: 'A-28141935' }).cifCompania, 'A28141935')
+  assert.equal(normalizarAutoLeido({ cifCompania: 'P.P.' }).cifCompania, null)
+  assert.equal(normalizarAutoLeido({ cifCompania: '12345678Z' }).cifCompania, null) // un DNI no es un CIF
+  assert.equal(normalizarAutoLeido({}).cifCompania, null)
+})
