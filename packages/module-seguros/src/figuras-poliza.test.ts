@@ -55,9 +55,12 @@ test('🪤 normalizador: DNI con letra mala → null, sin nombre fuera, nada de 
     fechaCarnet: null,
     claseCarnet: null,
     esTomador: false,
+    cif: null,
   })
-  // Un CIF no es el DNI de una persona.
-  assert.equal(normalizarFigurasLeidas({ figuras: [{ rol: 'propietario', nombre: 'X Y', dni: CIF }] })[0].dni, null)
+  // Un CIF no es el DNI de una persona: se guarda aparte (`cif`) para descartarla en el plan.
+  const conCif = normalizarFigurasLeidas({ figuras: [{ rol: 'propietario', nombre: 'X Y', dni: 'ES' + CIF }] })[0]
+  assert.equal(conCif.dni, null)
+  assert.equal(conCif.cif, CIF)
   assert.equal(normalizarFigurasLeidas({ figuras: [{ rol: 'propietario', nombre: 'X Y', dni: DNI_A.toLowerCase() }] })[0].dni, DNI_A)
 })
 
@@ -146,7 +149,22 @@ test('🪤 plan: el tomador se descarta (por DNI, por «esTomador», por nombre,
   assert.equal(q.tomadorConduce, true)
 })
 
-test('🪤 plan: un tomador EMPRESA nunca es una figura (aunque el modelo diga esTomador)', () => {
+test('🪤 plan: la SL tomadora puesta de propietaria NO se duplica como lead (por CIF o por razón social)', () => {
+  const porNombre = planFiguras(lectura([
+    { rol: 'propietario', nombre: 'EJEMPLO VIAJES, S.L.' },
+    { rol: 'conductor_habitual', nombre: 'Pedro Prueba Ficticio' },
+  ]), empresa, 'auto')
+  assert.deepEqual(porNombre.personas.map((x) => x.nombre), ['Pedro Prueba Ficticio'])
+  const porCif = planFiguras(lectura([{ rol: 'propietario', nombre: 'Otro Rótulo Comercial', dni: 'ES' + CIF }]), empresa, 'auto')
+  assert.equal(porCif.personas.length, 0)
+  // Otra empresa (la financiera) con CIF tampoco es una persona: fuera, y el rol queda ocupado.
+  const financiera = planFiguras(lectura([
+    { rol: 'propietario', nombre: 'Financiera Ejemplo SA', dni: 'A28141935' },
+    { rol: 'propietario', nombre: 'Juan Segundo Propietario' },
+  ]), persona, 'auto')
+  assert.equal(financiera.personas.length, 1)
+  assert.deepEqual(financiera.personas[0].roles, [])
+  // Una persona física sigue siendo figura aunque el modelo diga «esTomador» de una empresa.
   const p = planFiguras(lectura([{ rol: 'conductor_habitual', nombre: 'Pedro Prueba Ficticio', esTomador: true }]), empresa, 'auto')
   assert.equal(p.personas.length, 1)
   assert.deepEqual(p.personas[0].roles, ['conductor_habitual'])
@@ -217,7 +235,10 @@ test('🪤 lead sin DNI: solo se reutiliza un lead sin DNI, mismo nombre exacto 
   assert.equal(leadSinDniReutilizable([{ ...base, tieneDni: true }], 'Lucía Otra Persona'), null)
   assert.equal(leadSinDniReutilizable([{ ...base, tipo: 'cliente' }], 'Lucía Otra Persona'), null)
   assert.equal(leadSinDniReutilizable([base], 'Lucía Otra'), null) // no exacto
-  assert.equal(leadSinDniReutilizable([{ ...base, nombre: 'Lucía', apellidos: '' }], 'Lucía'), null) // una palabra no identifica
+  // Una sola palabra: vale si es EXACTAMENTE la misma (el universo ya es lo vinculado a este tomador).
+  assert.equal(leadSinDniReutilizable([{ ...base, nombre: 'Lucía', apellidos: '' }], 'LUCIA'), 'l1')
+  assert.equal(leadSinDniReutilizable([{ ...base, nombre: 'Lucía', apellidos: '' }], 'Lucía Otra'), null)
+  assert.equal(leadSinDniReutilizable([base], ''), null)
 })
 
 // ─── Lo que va a la ficha de la figura ───────────────────────────────────────

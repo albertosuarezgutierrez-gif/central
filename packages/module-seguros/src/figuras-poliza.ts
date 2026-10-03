@@ -68,6 +68,11 @@ export type FiguraLeida = {
   claseCarnet: TipoCarnet | null
   /** Lo que dice el documento: `true` = es el tomador; `null` = no lo dice. */
   esTomador: boolean | null
+  /**
+   * El identificador leído es el CIF de una PERSONA JURÍDICA (una SL de propietaria, una
+   * financiera…). No es una persona: el plan la descarta. `null` = no trae CIF.
+   */
+  cif: string | null
 }
 
 function booleano(v: unknown): boolean | null {
@@ -115,6 +120,7 @@ function figura(v: unknown, rolPorDefecto: RolFiguraLeido | null = null): Figura
     fechaCarnet: fechaReal(car) ? car : null,
     claseCarnet: (TIPOS_CARNET as readonly string[]).includes(clase) ? (clase as TipoCarnet) : null,
     esTomador: booleano(o.esTomador),
+    cif: id && id.tipoPersona === 'juridica' ? id.valor : null,
   }
 }
 
@@ -149,6 +155,17 @@ export function conductorHabitualLeido(raw: unknown): { nombre: string; fechaNac
 const VACIAS = new Set(['de', 'del', 'la', 'las', 'los', 'y'])
 const palabrasNombre = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9ñ]+/).filter((x) => x.length >= 2 && !VACIAS.has(x))
+
+/** Formas jurídicas que no cuentan al comparar una razón social («Ejemplo Viajes, S.L.» = «Ejemplo Viajes SL»). */
+const FORMAS_JURIDICAS = new Set(['sl', 'slu', 'sa', 'sau', 'sll', 'slne', 'sc', 'scp', 'cb', 'sociedad', 'limitada', 'anonima', 'unipersonal', 'cooperativa', 'coop'])
+
+/** La razón social normalizada: sin tildes, puntos, forma jurídica ni orden. */
+export function claveRazonSocial(nombre: string): string {
+  const t = nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    // «S.L.», «S. A. U.» → «sl», «sau»: se juntan las siglas antes de partir en palabras.
+    .replace(/\b([a-z])\.\s*(?=[a-z]\b\.?)/g, '$1').replace(/\./g, '')
+  return t.split(/[^a-z0-9ñ]+/).filter((x) => x.length >= 2 && !VACIAS.has(x) && !FORMAS_JURIDICAS.has(x)).sort().join(' ')
+}
 
 /** El nombre normalizado para comparar «exactamente igual»: sin tildes, mayúsculas ni orden. */
 export function claveNombre(nombre: string): string {
@@ -232,8 +249,16 @@ export function planFiguras(l: LecturaFiguras, t: TomadorFiguras, ramo: string):
     return a && a.tipoPersona === 'fisica' ? a.valor : null
   })()
 
+  const cifTomador = (() => {
+    const a = identificadorFiscal(t.dni)
+    return a && a.tipoPersona === 'juridica' ? a.valor : null
+  })()
+  const claveEmpresa = t.empresa && t.nombre ? claveRazonSocial(t.nombre) : ''
+
   const esElTomador = (f: FiguraLeida): boolean => {
-    if (t.empresa) return false
+    // Tomador EMPRESA (revisión 03/10/2026): la SL puesta de propietaria por la IA es el tomador,
+    // no un lead nuevo. Se reconoce por su CIF o por su razón social (sin la forma jurídica).
+    if (t.empresa) return (f.cif !== null && f.cif === cifTomador) || (claveEmpresa !== '' && claveRazonSocial(f.nombre) === claveEmpresa)
     if (f.dni && dniTomador) return f.dni === dniTomador
     if (f.esTomador === true) return true
     // «Conductor habitual: el tomador» sin DNI que lo contradiga.
@@ -247,6 +272,12 @@ export function planFiguras(l: LecturaFiguras, t: TomadorFiguras, ramo: string):
   let datosTomador: { fechaNacimiento: string | null; fechaCarnet: string | null } = { fechaNacimiento: null, fechaCarnet: null }
 
   for (const f of l.figuras.slice(0, MAX_FIGURAS)) {
+    // Una figura con CIF es una persona JURÍDICA (otra empresa: la financiera, el renting): no se le
+    // abre ficha de persona. El rol queda ocupado (lo tiene ella, no el siguiente de la lista).
+    if (f.cif !== null && !esElTomador(f)) {
+      ocupados.add(f.rol)
+      continue
+    }
     if (esElTomador(f)) {
       // Su rol queda «el mismo que el tomador» (sin fila en `oportunidad_figura`): ocupa el sitio.
       ocupados.add(f.rol)
@@ -341,13 +372,15 @@ export type CandidatoLeadSinDni = {
 
 /**
  * Una figura SIN DNI solo reutiliza un lead que (1) es `lead`, (2) no tiene DNI, (3) se llama
- * EXACTAMENTE igual y (4) YA está relacionado con este tomador. Nunca una ficha de cliente ni una
+ * EXACTAMENTE igual (sin tildes, mayúsculas ni orden; una sola palabra vale si es la misma) y
+ * (4) YA está relacionado con este tomador. Nunca una ficha de cliente ni una
  * con DNI, ni el «Juan Pérez» de otra familia: el nombre solo no identifica. Si hay varios, el
  * primero (más antiguo, como los trae la app). Ninguno → `null` (se abre uno nuevo).
  */
 export function leadSinDniReutilizable(candidatos: readonly CandidatoLeadSinDni[], nombre: string): string | null {
   const clave = claveNombre(nombre)
-  if (clave.split(' ').filter(Boolean).length < 2) return null
+  // Una sola palabra también vale (revisión 03/10/2026): el universo ya es solo lo vinculado a ESTE tomador.
+  if (clave === '') return null
   const c = candidatos.find(
     (x) => x.tipo === 'lead' && !x.tieneDni && x.relacionadoConTomador && claveNombre(`${x.nombre ?? ''} ${x.apellidos ?? ''}`) === clave,
   )

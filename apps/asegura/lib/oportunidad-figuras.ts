@@ -83,7 +83,11 @@ export async function figurasDesdePoliza(e: {
           actor: e.actor,
         }).catch(() => null)
         if (!rel || (!rel.ok && rel.estado !== 'conflicto')) {
-          avisos.push(`${que}: ficha ${creada ? 'creada' : 'encontrada'}, pero no se ha podido vincular al tomador`)
+          // `altaLeadSinContacto`/`altaCliente` y `crearRelacion` no comparten transacción: el lead
+          // recién abierto queda suelto y se dice cuál, para no perderlo en silencio.
+          avisos.push(creada
+            ? `${que}: se ha abierto la ficha ${clienteId}, pero no se ha podido vincular al tomador: vincúlala a mano o descártala`
+            : `${que}: ficha encontrada (${clienteId}), pero no se ha podido vincular al tomador`)
           figuras.push({ rol: null, clienteId, creada })
           continue
         }
@@ -96,7 +100,8 @@ export async function figurasDesdePoliza(e: {
         const otro = yaAsignadas.get(rol)
         if (otro === clienteId) { asignados.push(rol); continue }
         if (otro) { avisos.push(`${DETALLE_ROL_FIGURA[rol as keyof typeof DETALLE_ROL_FIGURA] ?? rol}: la oportunidad ya tenía otra persona en ese rol; no se ha cambiado`); continue }
-        const a = await asignarFigura(e.correduriaId, { oportunidadId: e.oportunidadId, rol, clienteId, actor: e.actor }).catch(() => null)
+        // `soloSiLibre`: si otro (Alberto, otra subida a la vez) lo ha asignado entre medias, no se pisa.
+        const a = await asignarFigura(e.correduriaId, { oportunidadId: e.oportunidadId, rol, clienteId, actor: e.actor, soloSiLibre: true }).catch(() => null)
         if (a?.ok) { asignados.push(rol); yaAsignadas.set(rol, clienteId) }
         else avisos.push(`${que}: no se ha podido asignar a la oportunidad${a && !a.ok ? ` (${a.motivo})` : ''}`)
       }
@@ -140,7 +145,10 @@ async function fichaDeFigura(
     return { aviso: `no se ha podido abrir su ficha (${alta.motivo})` }
   }
   // Sin DNI: solo un lead sin DNI, con el mismo nombre EXACTO y ya relacionado con este tomador.
-  const previo = leadSinDniReutilizable(await candidatosSinDni(e.correduriaId, e.tomadorId, p.nombre), p.nombre)
+  // `null` = no se pudo mirar: no se abre otro (sería un duplicado), se dice.
+  const candidatos = await candidatosSinDni(e.correduriaId, e.tomadorId)
+  if (candidatos === null) return { aviso: 'no se han podido consultar sus leads ya vinculados al tomador; no se ha abierto ficha' }
+  const previo = leadSinDniReutilizable(candidatos, p.nombre)
   if (previo) return previo === e.tomadorId ? { aviso: null } : { clienteId: previo, creada: false }
   const lead = await altaLeadSinContacto(e.correduriaId, { nombre: p.nombre, apellidos: '', tipoPersona: null }, e.actor, `${e.origen}, ${queEs(p).toLowerCase()} de la póliza`)
   if (lead.ok) return { clienteId: lead.id, creada: true }
@@ -155,27 +163,31 @@ function fichaPorDni(tomadorId: string, f: { id: string; nombre: string }, p: Pe
   return { clienteId: f.id, creada: false }
 }
 
-/** Leads con el mismo primer nombre, con si tienen DNI y si están relacionados con el tomador. La regla, en `leadSinDniReutilizable`. */
-async function candidatosSinDni(correduriaId: string, tomadorId: string, nombre: string): Promise<CandidatoLeadSinDni[]> {
-  const primera = nombre.replace(/[,]/g, ' ').trim().split(/\s+/)[0]?.replace(/[%_\\]/g, '')
-  if (!primera) return []
-  const patron = `%${primera}%`
+/**
+ * Los leads SIN DNI ya relacionados con ESTE tomador (en cualquier sentido de la relación): los
+ * únicos que una figura sin DNI puede reutilizar. El nombre se compara en JS (`leadSinDniReutilizable`,
+ * sin tildes ni mayúsculas). `null` = no se ha podido consultar (no es «no hay ninguno»).
+ */
+async function candidatosSinDni(correduriaId: string, tomadorId: string): Promise<CandidatoLeadSinDni[] | null> {
   return prismaAsegura()
     .$queryRaw<CandidatoLeadSinDni[]>(Prisma.sql`
       select c.id::text as id, c.nombre, c.apellidos, c.tipo::text as tipo,
              (nullif(trim(coalesce(c.dni, '')), '') is not null) as "tieneDni",
-             exists (
-               select 1 from cliente_relaciones r
-               where r.correduria_id = c.correduria_id
-                 and ((r.cliente_a_id = ${tomadorId}::uuid and r.cliente_b_id = c.id)
-                   or (r.cliente_b_id = ${tomadorId}::uuid and r.cliente_a_id = c.id))
-             ) as "relacionadoConTomador"
+             true as "relacionadoConTomador"
       from clientes c
       where c.correduria_id = ${correduriaId}::uuid and c.merged_into_cliente_id is null and c.tipo::text = 'lead'
-        and (c.nombre ilike ${patron} or c.apellidos ilike ${patron})
+        and nullif(trim(coalesce(c.dni, '')), '') is null
+        and exists (
+          select 1 from cliente_relaciones r
+          where r.correduria_id = c.correduria_id
+            and ((r.cliente_a_id = ${tomadorId}::uuid and r.cliente_b_id = c.id)
+              or (r.cliente_b_id = ${tomadorId}::uuid and r.cliente_a_id = c.id)))
       order by c.created_at asc
       limit 200`)
-    .catch(() => [])
+    .catch((err) => {
+      console.error('[oportunidad-figuras] no se pudieron leer los leads vinculados al tomador:', err instanceof Error ? err.message : err)
+      return null
+    })
 }
 
 /**

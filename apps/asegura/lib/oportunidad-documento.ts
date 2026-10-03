@@ -36,6 +36,7 @@ import { volcarPolizaEnFicha, type VolcadoFicha } from './ficha-desde-poliza'
 import { anotarConductorJoven, figurasDesdePoliza, type FiguraResultado } from './oportunidad-figuras'
 import {
   planTomador,
+  puedeAbrirFiguras,
   puedeVolcarEnFicha,
   esDocumentoDeSeguro,
   fechaLlamada,
@@ -224,14 +225,15 @@ export async function oportunidadDesdeLectura(
     // documento es el de la ficha (o ella no tiene); quién puede volcar, en `puedeVolcarEnFicha`
     // (desde el portal, solo en la ficha propia de quien sube).
     const hoy = e.hoy ?? new Date()
-    const identificado = puedeVolcarEnFicha({
+    const quienSube = {
       origen: e.origen,
       verificado,
       hayTomador: alta !== null,
       porqueFicha: decision.tipo === 'ficha' ? decision.porque : null,
       clienteId,
       clienteSube,
-    })
+    }
+    const identificado = puedeVolcarEnFicha(quienSube)
     const volcado = identificado
       ? await volcarPolizaEnFicha({
           correduriaId: e.correduriaId,
@@ -293,7 +295,8 @@ export async function oportunidadDesdeLectura(
 
     // Motor (03/10/2026): cada persona de la póliza que no es el tomador tiene su ficha, su rol en la
     // oportunidad y su relación con el tomador (`oportunidad-figuras.ts`). Solo con la ficha del
-    // tomador identificada (`puedeVolcarEnFicha`: el portal sin verificar no abre a nadie). Una
+    // tomador identificada y solo si sube el CORREDOR (`puedeAbrirFiguras`: desde el portal o el
+    // enlace de datos nunca, ni a su propia ficha). Una
     // figura que falla no tumba la oportunidad: va a `avisosFiguras`.
     let figuras: FiguraResultado[] | null = null
     let avisosFiguras: string[] = []
@@ -310,7 +313,7 @@ export async function oportunidadDesdeLectura(
         { nombre: alta ? `${alta.nombre} ${alta.apellidos}`.trim() : null, dni: alta?.dni ?? null, empresa },
         datos.ramo,
       )
-      if (identificado) {
+      if (puedeAbrirFiguras(quienSube)) {
         const f = await figurasDesdePoliza({
           correduriaId: e.correduriaId, oportunidadId: opId, tomadorId: clienteId, ramo: datos.ramo, plan,
           numeroPoliza: datos.numeroPoliza, actor: e.actor, origen: e.origen, hoy,
