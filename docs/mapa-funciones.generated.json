@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T07:45:23Z",
-  "sha": "fc293e9fcc56571c26d32dd135aa24f8b447afff",
+  "generadoEn": "2026-10-03T08:30:36Z",
+  "sha": "7a456c6bc1e130ecc4f1289eb2f8dc683c02593e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -26906,7 +26906,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "52147a0473c7"
+      "hash": "902ef9f528b2"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/reproceso.ts",
