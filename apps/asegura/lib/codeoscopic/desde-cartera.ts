@@ -719,6 +719,7 @@ export function precalificarMotoNueva(
       'ThisMotorcycle',
       'no se ha preguntado si el conductor viene de otra moto; se supone que ya ha llevado ESTA — ' +
         'corrígelo si no es el caso',
+      true,
     ) as string)
 
   // ── El carné: el de MOTO de la ficha, si consta. Tarificar una moto con la

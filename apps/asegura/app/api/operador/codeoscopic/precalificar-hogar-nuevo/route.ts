@@ -104,6 +104,7 @@ export async function GET(req: Request) {
       anioConstruccion: datos.anioConstruccion,
       codigoPostal: datos.codigoPostal,
       uso: datos.uso,
+      referencia,
       direccion: direccionDesdeCatastro(paramsDnploc(datos.direccion)),
     }
   } catch (e) {

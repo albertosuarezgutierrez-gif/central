@@ -6,12 +6,14 @@ import {
   exigeDetalleDeSiniestrosMoto,
 } from './peticion-moto.ts'
 import type { DatosMoto } from './peticion-moto.ts'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
 
 // Datos mínimos válidos. Persona inventada: aquí no entra ningún cliente real.
 const BASE: DatosMoto = {
   dni: '00000000t',
   nombre: 'Nombre',
   apellido1: 'Apellido',
+  apellido2: 'Segundo',
   fechaNacimiento: '1985-01-01',
   sexo: 'hombre',
   estadoCivil: 'Single',
@@ -25,7 +27,7 @@ const BASE: DatosMoto = {
   municipioCirculacionId: 12345,
   garaje: 'CommunalParking',
   experienciaConduccion: 'ThisMotorcycle',
-  fechaEfecto: '2026-09-15',
+  fechaEfecto: sumarDias(hoyEnMadrid(), 15),
 }
 const LINEA = 'Motorcycle'
 
@@ -169,6 +171,7 @@ const OTRA = {
   dni: '11111111h',
   nombre: 'Otra',
   apellido1: 'Persona',
+  apellido2: 'Segundo',
   fechaNacimiento: '1960-02-02',
   sexo: 'mujer' as const,
   estadoCivil: 'Married',
@@ -249,6 +252,7 @@ const TOMADOR_EMPRESA: DatosMoto = {
   dni: 'B12345674',
   nombre: 'Empresa Inventada SL',
   apellido1: '',
+  apellido2: null,
   fechaNacimiento: '',
   sexo: undefined as unknown as 'hombre',
   estadoCivil: '',
@@ -270,4 +274,15 @@ test('tomador empresa + conductor persona: holder y owner son la empresa (CIF), 
   assert.deepEqual(c.risk.owner, c.holder, 'sin propietario aparte, la propietaria es la empresa')
   assert.equal(c.risk.primaryDriver.identificationDocument.type.id, 'Dni')
   assert.ok(c.risk.primaryDriver.drivingLicenses?.length > 0, 'el carné es el del conductor')
+})
+
+test('🪤 fecha de efecto de moto: ni pasada ni a más de 90 días (el mismo cepo que auto, antes de pagar)', () => {
+  const hoy = hoyEnMadrid()
+  const mal = (f: string) => revisarDatosMoto({ ...BASE, fechaEfecto: f }).filter((x) => x.campo === 'fechaEfecto')
+  assert.equal(mal(sumarDias(hoy, -1)).length, 1)
+  assert.match(mal(sumarDias(hoy, -1))[0].motivo, /anterior a hoy/)
+  assert.equal(mal(sumarDias(hoy, 91)).length, 1)
+  assert.match(mal(sumarDias(hoy, 91))[0].motivo, /90 días/)
+  assert.equal(mal(hoy).length, 0)
+  assert.equal(mal(sumarDias(hoy, 90)).length, 0)
 })

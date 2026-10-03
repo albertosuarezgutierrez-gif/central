@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { resumen, CATALOGOS_PANTALLA, CAMPO_DE_CATALOGO, GRUPOS } from './resumen-hogar.ts'
 import { precalificarHogarCartera, type HogarCartera, type ResueltosHogar } from './desde-cartera-hogar.ts'
 import type { ClienteCartera } from './desde-cartera.ts'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
 
 // Persona inventada. Ningún cliente real aquí.
 const CLIENTE: ClienteCartera = {
@@ -54,9 +55,9 @@ const CATALOGOS = {
 function ficha(extra: Partial<ResueltosHogar> = {}, opts = {}) {
   const pre = precalificarHogarCartera(
     CLIENTE,
-    { numeroPoliza: 'X1', fechaVencimiento: '2027-09-30', hogar: GEMELA },
+    { numeroPoliza: 'X1', fechaVencimiento: sumarDias(hoyEnMadrid(), 30), hogar: GEMELA },
     { ...RESUELTOS, ...extra },
-    '2026-09-02',
+    hoyEnMadrid(),
   )
   return resumen(pre, {
     catalogos: CATALOGOS,
