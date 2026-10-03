@@ -1,21 +1,23 @@
 {
  "sesion": "37aca910-053d-534d-9313-f156b35b609c",
  "inicio": "2026-10-03T07:07:57.400Z",
- "fin": "2026-10-03T07:15:23.851Z",
- "llamadas": 54,
+ "fin": "2026-10-03T08:20:31.717Z",
+ "llamadas": 619,
  "categorias": {
   "otro": {
-   "llamadas": 5,
-   "chars_in": 200,
-   "chars_out": 4481,
+   "llamadas": 72,
+   "chars_in": 59617,
+   "chars_out": 190188,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 1008758,
    "tools": {
-    "Skill": 1,
-    "ToolSearch": 2,
+    "Skill": 4,
+    "ToolSearch": 14,
     "ExitPlanMode": 1,
-    "ReadNotifications": 1
+    "ReadNotifications": 27,
+    "SubagentHandback": 20,
+    "SendMessage": 6
    }
   },
   "agente:Explore": {
@@ -30,27 +32,28 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 22,
-   "chars_in": 3027,
-   "chars_out": 96625,
+   "llamadas": 58,
+   "chars_in": 6155,
+   "chars_out": 382143,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 13,
-    "Read": 9
+    "Read": 43,
+    "Glob": 2
    }
   },
   "sql": {
-   "llamadas": 17,
-   "chars_in": 5595,
-   "chars_out": 40182,
-   "errores": 0,
+   "llamadas": 70,
+   "chars_in": 25826,
+   "chars_out": 132869,
+   "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 1,
-    "mcp__Supabase__execute_sql": 16
+    "mcp__Supabase__execute_sql": 69
    }
   },
   "mcp:Supabase": {
@@ -65,49 +68,103 @@
    }
   },
   "escritura": {
-   "llamadas": 1,
-   "chars_in": 4058,
-   "chars_out": 4135,
+   "llamadas": 19,
+   "chars_in": 29373,
+   "chars_out": 1183003,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 1
+    "Write": 1,
+    "Edit": 18
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 3,
-   "chars_in": 178,
-   "chars_out": 4600,
+   "llamadas": 9,
+   "chars_in": 612,
+   "chars_out": 5804,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__list_repos": 1,
     "mcp__claude-code-remote__add_repo": 1,
-    "mcp__claude-code-remote__register_repo_root": 1
+    "mcp__claude-code-remote__register_repo_root": 1,
+    "mcp__claude-code-remote__subscribe_pr_activity": 4,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 2
    }
   },
   "bash": {
-   "llamadas": 3,
-   "chars_in": 740,
-   "chars_out": 8893,
+   "llamadas": 345,
+   "chars_in": 261999,
+   "chars_out": 1323837,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3
+    "Bash": 345
    }
   },
   "agente:general-purpose": {
-   "llamadas": 1,
-   "chars_in": 1840,
-   "chars_out": 2037,
+   "llamadas": 11,
+   "chars_in": 28728,
+   "chars_out": 30720,
+   "errores": 0,
+   "archivos_citados": 32,
+   "chars_citados": 1410457,
+   "tools": {
+    "Agent": 11
+   }
+  },
+  "mcp:github": {
+   "llamadas": 23,
+   "chars_in": 12369,
+   "chars_out": 67939,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__create_pull_request": 4,
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__pull_request_read": 7,
+    "mcp__github__update_pull_request": 4,
+    "mcp__github__merge_pull_request": 4,
+    "mcp__github__actions_run_trigger": 1,
+    "mcp__github__actions_list": 2
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 4,
+   "chars_in": 5119,
+   "chars_out": 6007,
+   "errores": 0,
+   "archivos_citados": 9,
+   "chars_citados": 979468,
+   "tools": {
+    "Agent": 4
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 2,
+   "chars_in": 242,
+   "chars_out": 3814,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 1
+    "mcp__Vercel__list_deployments": 2
+   }
+  },
+  "mcp:Google_Drive": {
+   "llamadas": 4,
+   "chars_in": 253,
+   "chars_out": 6180,
+   "errores": 3,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 1,
+    "mcp__Google_Drive__read_file_content": 3
    }
   }
  }
