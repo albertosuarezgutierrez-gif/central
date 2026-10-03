@@ -122,7 +122,7 @@ function SiguientePaso({ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; 
     ramosVivos: tiposVivos,
   })
   if (!paso) return null
-  const ef = contactoEfectivo({ telefono: ficha.contacto.telefono, email: ficha.contacto.email }, ficha.intervinientes)
+  const ef = contactoEfectivo({ telefono: esTelefonoComodin(ficha.contacto.telefono) ? null : ficha.contacto.telefono, email: ficha.contacto.email }, ficha.intervinientes?.map(i => esTelefonoComodin(i.telefono) ? { ...i, telefono: null } : i) ?? null)
   const tel = ef.telefono
   // Con el recibo devuelto, WhatsApp al lado de «Llamar» (Alberto, 29/09/2026: «por WhatsApp queda
   // reflejado»). Mismo mensaje y misma nota en la ficha que el botón del recibo en la póliza.
@@ -472,9 +472,14 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
       </span>
     ) : via === 'interviniente' && quien ? (
       <span style={{ fontSize: 11 }}>
-        {' '}({ef.quien?.fichaId ? <Link href={`/correduria/cliente/${ef.quien.fichaId}`}>{quien}</Link> : quien})
+        {' '}· contacto: {ef.quien?.fichaId ? <Link href={`/correduria/cliente/${ef.quien.fichaId}`}>{quien}</Link> : quien}
       </span>
     ) : null
+  // Su teléfono/email de ficha ES el de la correduría (la compañía lo exigía): no es del cliente.
+  const canalTag = <span style={{ fontSize: 11, color: 'var(--muted)' }} title="En su ficha consta el canal de la correduría (la compañía exigía uno). No es un dato del cliente: no se le avisa ahí."> · canal de la correduría</span>
+  // Con delegado, se dice que lo propio falta: «sin email propio · contacto: María López (hija)».
+  const sinPropio = (via: ContactoEfectivo['viaTelefono'], falta: string) =>
+    via === 'interviniente' ? <span style={{ fontSize: 11, color: 'var(--muted)' }}> · {falta} propio</span> : null
   // Sin intervinientes que mirar, «sin teléfono» solo habla del tomador.
   const coletilla = ef.intervinientesSinMirar ? ' · intervinientes sin comprobar' : ''
   // 🚨 SOLO al que todavía no es cliente. A un cliente se le invita al portal
@@ -497,25 +502,29 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
               lado ya llama, y el número repetido como enlace con su 📞 era la
               misma acción dos veces seguidas. */}
           <span style={{ userSelect: 'all' }}>{ef.telefono}</span>
+          {sinPropio(ef.viaTelefono, 'sin teléfono')}
           {deOtro(ef.viaTelefono)}
+          {ef.canalCorreduria.telefono ? canalTag : null}
           {mas(masTel)}
         </span>
       ) : (
         // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
         // en sitios distintos (la clave PII vs. pedírselo al cliente).
-        <span style={FILA} title={c.telefonoIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
-          <Ico i={c.telefonoIlegible ? Lock : Phone} />{c.telefonoIlegible ? 'cifrado' : `sin teléfono${coletilla}`}
+        <span style={FILA} title={c.telefonoIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : ef.canalCorreduria.telefono ? `En su ficha consta el teléfono de la correduría, no uno propio${ef.intervinientesSinMirar ? ' (intervinientes sin comprobar)' : ''}` : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
+          <Ico i={c.telefonoIlegible ? Lock : Phone} />{c.telefonoIlegible ? 'cifrado' : ef.canalCorreduria.telefono ? `sin teléfono propio${coletilla}` : `sin teléfono${coletilla}`}{ef.canalCorreduria.telefono && !c.telefonoIlegible ? canalTag : null}
         </span>
       )}
       {ef.email ? (
         <span>
           <span style={{ userSelect: 'all', overflowWrap: 'anywhere' }}>{ef.email}</span>
+          {sinPropio(ef.viaEmail, 'sin email')}
           {deOtro(ef.viaEmail)}
+          {ef.canalCorreduria.email ? canalTag : null}
           {mas(masEmail)}
         </span>
       ) : (
         <span style={FILA} title={c.emailIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : 'No consta email'}>
-          <Ico i={c.emailIlegible ? Lock : Mail} />{c.emailIlegible ? 'cifrado' : 'sin email'}
+          <Ico i={c.emailIlegible ? Lock : Mail} />{c.emailIlegible ? 'cifrado' : ef.canalCorreduria.email ? 'sin email propio' : 'sin email'}{ef.canalCorreduria.email && !c.emailIlegible ? canalTag : null}
         </span>
       )}
       {sitio && <span style={FILA}><Ico i={MapPin} />{sitio}</span>}
