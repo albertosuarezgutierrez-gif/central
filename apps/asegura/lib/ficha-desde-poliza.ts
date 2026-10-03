@@ -16,6 +16,7 @@ import {
   parcheFigura,
   provinciaPorCp,
   type ContactoTomadorLeido,
+  type DomicilioFigura,
   type PersonaFigura,
   type ResultadoParche,
 } from '@central/module-seguros'
@@ -39,6 +40,74 @@ export type DatosTomadorLeidos = {
 }
 
 const hoyIso = (d: Date) => d.toISOString().slice(0, 10)
+
+// ─── Huecos de la ficha: UNA sentencia, fila bloqueada (tomador y figuras) ──────────────────────
+// Cada columna se escribe SOLO si estaba vacía, y el RETURNING dice cuáles lo estaban de verdad (la
+// fila se bloquea y se lee en la misma sentencia): la nota del historial y la auditoría cuentan lo
+// ESCRITO, no lo propuesto. Dos subidas a la vez no se pisan ni se atribuyen lo ajeno.
+
+/** Una columna a rellenar: `cuando` se evalúa contra la fila bloqueada (`a.a_*`). */
+type Hueco = { flag: string; etiqueta: string | null; auditoria: string | null; cuando: Prisma.Sql; sets: Prisma.Sql[] }
+const vacio = (col: string) => Prisma.raw(`nullif(trim(coalesce(${col}, '')), '') is null`)
+
+function huecoFechaNacimiento(fecha: string, aConfirmar: boolean): Hueco {
+  return {
+    flag: 'fecha_nacimiento',
+    etiqueta: aConfirmar ? 'fecha de nacimiento (01/01, a confirmar)' : 'fecha de nacimiento',
+    auditoria: 'fecha_nacimiento',
+    cuando: Prisma.sql`${vacio('a.a_fn')}`,
+    sets: [Prisma.sql`fecha_nacimiento = case when ${vacio('a.a_fn')} then ${encryptField(fecha)} else c.fecha_nacimiento end`],
+  }
+}
+
+/**
+ * El domicilio (calle cifrada; CP, población y provincia en claro, como siempre). CP, población y
+ * provincia van con la calle: solo si la calle estaba vacía (y ellos también), para no casar el CP de
+ * una dirección con la calle de otra. Sin provincia leída, la del CP (solo junto a calle y CP).
+ */
+function huecosDomicilio(d: { direccion: string | null; codigoPostal: string | null; ciudad: string | null; provincia: string | null }): Hueco[] {
+  const out: Hueco[] = []
+  if (d.direccion) {
+    out.push({
+      flag: 'direccion', etiqueta: 'domicilio', auditoria: 'direccion', cuando: Prisma.sql`${vacio('a.a_dir')}`,
+      sets: [Prisma.sql`direccion = case when ${vacio('a.a_dir')} then ${encryptField(d.direccion)} else c.direccion end`],
+    })
+  }
+  const conCalle = (col: string, alias: string, v: string, etiqueta: string) =>
+    out.push({
+      flag: col, etiqueta, auditoria: col,
+      cuando: Prisma.sql`${vacio(`a.${alias}`)} and ${vacio('a.a_dir')}`,
+      sets: [Prisma.sql`${Prisma.raw(col)} = case when ${vacio(`a.${alias}`)} and ${vacio('a.a_dir')} then ${v} else ${Prisma.raw(`c.${col}`)} end`],
+    })
+  if (d.codigoPostal) conCalle('codigo_postal', 'a_cp', d.codigoPostal, 'código postal')
+  if (d.ciudad) conCalle('ciudad', 'a_ciudad', d.ciudad.slice(0, 100), 'población')
+  const provincia = d.provincia ?? (d.direccion && d.codigoPostal ? provinciaPorCp(d.codigoPostal) : null)
+  if (provincia) conCalle('provincia', 'a_prov', provincia.slice(0, 100), 'provincia')
+  return out
+}
+
+/** Escribe los huecos en UNA sentencia (UPDATE … RETURNING sobre la fila bloqueada). Devuelve las etiquetas de lo ESCRITO. */
+async function escribirHuecos(correduriaId: string, clienteId: string, campos: Hueco[]): Promise<string[]> {
+  if (campos.length === 0) return []
+  const filas = await prismaAsegura().$queryRaw<Record<string, boolean>[]>(Prisma.sql`
+    with a as (
+      select id, dni as a_dni, fecha_nacimiento as a_fn, direccion as a_dir, codigo_postal as a_cp, ciudad as a_ciudad, provincia as a_prov
+      from clientes
+      where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null
+      for update
+    )
+    update clientes c set ${Prisma.join(campos.flatMap((x) => x.sets), ', ')}, updated_at = now()
+    from a where c.id = a.id
+    returning ${Prisma.join(campos.map((x) => Prisma.sql`(${x.cuando}) as ${Prisma.raw(`"${x.flag}"`)}`), ', ')}`)
+  const escrito = filas[0]
+  const hechos: string[] = []
+  for (const x of campos) {
+    if (escrito?.[x.flag] !== true) continue
+    if (x.etiqueta) hechos.push(x.etiqueta)
+    if (x.auditoria) anotarCambio({ entidad: 'cliente', id: clienteId, campo: x.auditoria })
+  }
+  return hechos
+}
 
 export async function volcarPolizaEnFicha(e: {
   correduriaId: string
@@ -105,12 +174,7 @@ export async function volcarPolizaEnFicha(e: {
       else if (otros.length > 0) avisos.push(`el ${etiquetaId} ya está en otra ficha (${otros.map((o) => o.id).join(', ')}): no se ha copiado, posible duplicado`)
       else dni = { cifrado: encryptField(p.dni), hash: computeDniLookupHash(p.dni) }
     }
-    // Cada columna se escribe SOLO si estaba vacía, y el RETURNING dice cuáles lo estaban de verdad
-    // (la fila se bloquea y se lee en la misma sentencia): la nota del historial y la auditoría
-    // cuentan lo ESCRITO, no lo propuesto. Dos subidas a la vez no se pisan ni se atribuyen lo ajeno.
-    const vacio = (col: string) => Prisma.raw(`nullif(trim(coalesce(${col}, '')), '') is null`)
-    type Campo = { flag: string; etiqueta: string | null; auditoria: string | null; cuando: Prisma.Sql; sets: Prisma.Sql[] }
-    const campos: Campo[] = []
+    const campos: Hueco[] = []
     if (dni) {
       campos.push({
         flag: 'dni', etiqueta: etiquetaId, auditoria: 'dni', cuando: Prisma.sql`${vacio('a.a_dni')}`,
@@ -120,51 +184,9 @@ export async function volcarPolizaEnFicha(e: {
         ],
       })
     }
-    if (p.fechaNacimiento) {
-      campos.push({
-        flag: 'fecha_nacimiento',
-        etiqueta: p.fechaNacimientoAConfirmar ? 'fecha de nacimiento (01/01, a confirmar)' : 'fecha de nacimiento',
-        auditoria: 'fecha_nacimiento',
-        cuando: Prisma.sql`${vacio('a.a_fn')}`,
-        sets: [Prisma.sql`fecha_nacimiento = case when ${vacio('a.a_fn')} then ${encryptField(p.fechaNacimiento)} else c.fecha_nacimiento end`],
-      })
-    }
-    if (p.direccion) {
-      campos.push({
-        flag: 'direccion', etiqueta: 'domicilio', auditoria: 'direccion', cuando: Prisma.sql`${vacio('a.a_dir')}`,
-        sets: [Prisma.sql`direccion = case when ${vacio('a.a_dir')} then ${encryptField(p.direccion)} else c.direccion end`],
-      })
-    }
-    // CP, población y provincia van con la calle: solo si la calle estaba vacía (y ellos también),
-    // para no casar el CP de una dirección con la calle de otra.
-    const conCalle = (col: string, alias: string, v: string, etiqueta: string) =>
-      campos.push({
-        flag: col, etiqueta, auditoria: col,
-        cuando: Prisma.sql`${vacio(`a.${alias}`)} and ${vacio('a.a_dir')}`,
-        sets: [Prisma.sql`${Prisma.raw(col)} = case when ${vacio(`a.${alias}`)} and ${vacio('a.a_dir')} then ${v} else ${Prisma.raw(`c.${col}`)} end`],
-      })
-    if (p.codigoPostal) conCalle('codigo_postal', 'a_cp', p.codigoPostal, 'código postal')
-    if (p.ciudad) conCalle('ciudad', 'a_ciudad', p.ciudad.slice(0, 100), 'población')
-    const provincia = p.provincia ?? (p.direccion && p.codigoPostal ? provinciaPorCp(p.codigoPostal) : null)
-    if (provincia) conCalle('provincia', 'a_prov', provincia.slice(0, 100), 'provincia')
-    if (campos.length > 0) {
-      const filas = await db.$queryRaw<Record<string, boolean>[]>(Prisma.sql`
-        with a as (
-          select id, dni as a_dni, fecha_nacimiento as a_fn, direccion as a_dir, codigo_postal as a_cp, ciudad as a_ciudad, provincia as a_prov
-          from clientes
-          where id = ${e.clienteId}::uuid and correduria_id = ${e.correduriaId}::uuid and merged_into_cliente_id is null
-          for update
-        )
-        update clientes c set ${Prisma.join(campos.flatMap((x) => x.sets), ', ')}, updated_at = now()
-        from a where c.id = a.id
-        returning ${Prisma.join(campos.map((x) => Prisma.sql`(${x.cuando}) as ${Prisma.raw(`"${x.flag}"`)}`), ', ')}`)
-      const escrito = filas[0]
-      for (const x of campos) {
-        if (escrito?.[x.flag] !== true) continue
-        if (x.etiqueta) hechos.push(x.etiqueta)
-        if (x.auditoria) anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: x.auditoria })
-      }
-    }
+    if (p.fechaNacimiento) campos.push(huecoFechaNacimiento(p.fechaNacimiento, p.fechaNacimientoAConfirmar))
+    campos.push(...huecosDomicilio(p))
+    hechos.push(...(await escribirHuecos(e.correduriaId, e.clienteId, campos)))
 
     // 2. Teléfono y email: por la misma puerta que la ficha (sin duplicar en la ficha; si otra
     //    ficha ya lo tiene NO se fuerza: un móvil identifica un hogar, no a una persona).
@@ -212,15 +234,16 @@ export async function volcarPolizaEnFicha(e: {
 }
 
 /**
- * Fecha de nacimiento y carné de una FIGURA de la póliza (propietario, conductor) a SU ficha
- * (03/10/2026). Solo HUECOS (`parcheFigura`, puro). Quien llama ya ha comprobado que la ficha es
- * de esa persona (su DNI, o el lead recién abierto / ya vinculado al tomador con su nombre exacto).
- * Nunca lanza: devuelve lo escrito (nombres de campo) y los avisos.
+ * Fecha de nacimiento, domicilio y carné de una FIGURA de la póliza (propietario, conductor) a SU
+ * ficha (03/10/2026). Solo HUECOS (`parcheFigura`, puro); fecha y domicilio en UNA sentencia con la
+ * fila bloqueada (`escribirHuecos`, la misma que el tomador). Quien llama ya ha comprobado que la
+ * ficha es de esa persona (su DNI, o el lead recién abierto / ya vinculado al tomador con su nombre
+ * exacto). Nunca lanza: devuelve lo escrito (nombres de campo) y los avisos.
  */
 export async function volcarFiguraEnFicha(e: {
   correduriaId: string
   clienteId: string
-  persona: Pick<PersonaFigura, 'fechaNacimiento' | 'fechaCarnet' | 'claseCarnet'>
+  persona: Pick<PersonaFigura, 'fechaNacimiento' | 'fechaCarnet' | 'claseCarnet'> & Partial<DomicilioFigura>
   ramo: string
   /** Cómo figura en la póliza («Conductor habitual»…), para la nota del historial. */
   queEs: string
@@ -231,33 +254,34 @@ export async function volcarFiguraEnFicha(e: {
   const campos: string[] = []
   const avisos: string[] = []
   try {
-    if (!e.persona.fechaNacimiento && !e.persona.fechaCarnet) return { campos, avisos }
+    if (!e.persona.fechaNacimiento && !e.persona.fechaCarnet && !e.persona.domicilioVia) return { campos, avisos }
     const db = prismaAsegura()
     const c = await db.cliente.findFirst({
       where: { id: e.clienteId, correduriaId: e.correduriaId, mergedIntoClienteId: null },
-      select: { fechaNacimiento: true },
+      select: { fechaNacimiento: true, direccion: true, codigoPostal: true, ciudad: true, provincia: true },
     })
     if (!c) return { campos, avisos: ['no se encontró su ficha para rellenarla'] }
+    const lleno = (v: string | null) => typeof v === 'string' && v.trim() !== ''
     const carnets = await db.clienteCarnetConducir.count({ where: { clienteId: e.clienteId, correduriaId: e.correduriaId } }).catch(() => null)
     const p = parcheFigura(
-      { tieneFechaNacimiento: typeof c.fechaNacimiento === 'string' && c.fechaNacimiento.trim() !== '', carnets },
+      {
+        tieneFechaNacimiento: lleno(c.fechaNacimiento),
+        carnets,
+        tieneDireccion: lleno(c.direccion),
+        tieneCodigoPostal: lleno(c.codigoPostal),
+        tieneCiudad: lleno(c.ciudad),
+        tieneProvincia: lleno(c.provincia),
+      },
       e.persona,
       e.ramo,
       hoyIso(e.hoy ?? new Date()),
     )
     if (p.rellenado.length === 0) return { campos, avisos }
-    if (p.fechaNacimiento) {
-      // Solo si sigue vacía AHORA (la misma sentencia lo comprueba): dos subidas a la vez no se pisan.
-      const filas = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
-        update clientes set fecha_nacimiento = ${encryptField(p.fechaNacimiento)}, updated_at = now()
-        where id = ${e.clienteId}::uuid and correduria_id = ${e.correduriaId}::uuid and merged_into_cliente_id is null
-          and nullif(trim(coalesce(fecha_nacimiento, '')), '') is null
-        returning id::text as id`)
-      if (filas.length > 0) {
-        campos.push(p.fechaNacimientoAConfirmar ? 'fecha de nacimiento (01/01, a confirmar)' : 'fecha de nacimiento')
-        anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: 'fecha_nacimiento' })
-      }
-    }
+    // Fecha y domicilio: solo si siguen vacíos AHORA (la misma sentencia lo comprueba).
+    const huecos: Hueco[] = []
+    if (p.fechaNacimiento) huecos.push(huecoFechaNacimiento(p.fechaNacimiento, p.fechaNacimientoAConfirmar))
+    huecos.push(...huecosDomicilio(p))
+    campos.push(...(await escribirHuecos(e.correduriaId, e.clienteId, huecos)))
     if (p.carnet) {
       const ya = await db.clienteCarnetConducir.count({ where: { clienteId: e.clienteId, correduriaId: e.correduriaId } }).catch(() => null)
       if (ya === 0) {
