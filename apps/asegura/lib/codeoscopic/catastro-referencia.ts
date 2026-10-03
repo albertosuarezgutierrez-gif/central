@@ -33,6 +33,7 @@ export async function catastroPorReferencia(valor: string): Promise<CatastroPorR
         anioConstruccion: datos.anioConstruccion,
         codigoPostal: datos.codigoPostal,
         uso: datos.uso,
+        referencia,
         direccion: direccionDesdeCatastro(paramsDnploc(datos.direccion)),
         vivienda: caracterizarVivienda(datos),
       },

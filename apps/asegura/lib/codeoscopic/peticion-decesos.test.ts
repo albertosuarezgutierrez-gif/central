@@ -7,6 +7,7 @@ const BASE: DatosDecesos = {
   dni: '00000000t',
   nombre: 'Nombre',
   apellido1: 'Apellido',
+  apellido2: 'Segundo',
   fechaNacimiento: '1985-01-01',
   sexo: 'hombre',
   estadoCivil: 'Single',

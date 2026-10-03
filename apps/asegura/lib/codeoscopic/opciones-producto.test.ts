@@ -180,3 +180,14 @@ test('descuento en preemisión: límites del formulario real (CAP 0-99, venta cr
   assert.equal(conDescuentos(null, { dtoCap: 10 }).ok, false)
   assert.equal(conDescuentos([{ id: 'otro', type: 'number', value: 1 }], { dtoCap: 10 }).ok, false)
 })
+
+test('🪤 consentimientos del Submit: solo Allianz AUTO; en moto/hogar no se firma nada por defecto', () => {
+  assert.ok(opcionesEmisionPorDefecto('Allianz', 'auto'))
+  assert.ok(opcionesEmisionPorDefecto('Allianz'), 'sin ramo = auto, como siempre')
+  assert.equal(opcionesEmisionPorDefecto('Allianz', 'moto'), null)
+  assert.equal(opcionesEmisionPorDefecto('Allianz', 'hogar'), null)
+  const campos = { quote: { id: 'Q1' } }
+  assert.deepEqual(conProductoPorDefecto(campos, 'Allianz', { ramo: 'hogar' }), campos)
+  assert.deepEqual(conProductoPorDefecto(campos, 'Allianz', { ramo: 'moto' }), campos)
+  assert.ok((conProductoPorDefecto(campos, 'Allianz', { ramo: 'auto' }) as any).product)
+})

@@ -14,6 +14,7 @@ const DATOS: DatosAuto = {
   dni: '12345678z',
   nombre: 'Pilar',
   apellido1: 'Franco Ruz',
+  apellido2: 'Segundo',
   fechaNacimiento: '1980-05-10',
   sexo: 'mujer',
   estadoCivil: 'Married',

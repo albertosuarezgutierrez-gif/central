@@ -51,9 +51,29 @@ export type DatosPersona = {
    * catálogo vivo — si no hay match, no se manda nada inventado.
    */
   tipoVia?: string | null
+  /**
+   * `nationality.code` (ISO alpha-3, p. ej. `ESP`, `MAR`). El vendor lo exige
+   * con `Nie` o `Passport` (docs/CODEOSCOPIC-API-REFERENCIA-2026-09.md § personas).
+   * Si la ficha no lo tiene, `revisarPersona` lo devuelve como dato que falta:
+   * nunca se inventa.
+   */
+  nacionalidad?: string | null
 }
 
-export const RE_TELEFONO = /^[67][0-9]{8}$/
+/** Móvil o fijo español: 9 dígitos empezando por 6-9 (patrón del esquema del vendor). */
+export const RE_TELEFONO = /^[6-9][0-9]{8}$/
+
+export type TipoDocumento = 'Dni' | 'Nie' | 'Passport'
+const RE_DNI = /^\d{8}[A-Z]$/
+const RE_NIE = /^[XYZ]\d{7}[A-Z]$/
+
+/** Tipo de documento por FORMATO: DNI (8 cifras + letra), NIE (X/Y/Z + 7 cifras + letra), si no, `Passport`. */
+export function tipoDocumento(doc: string | null | undefined): TipoDocumento {
+  const c = String(doc ?? '').trim().toUpperCase().replace(/[\s-]/g, '')
+  if (RE_DNI.test(c)) return 'Dni'
+  if (RE_NIE.test(c)) return 'Nie'
+  return 'Passport'
+}
 export const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 /** Forma mínima de un correo: algo@algo.algo. El vendor valida el suyo; esto solo evita pagar por una errata. */
 export const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -108,10 +128,18 @@ export function revisarPersona(d: Partial<DatosPersona>): ReparoPersona[] {
   else if (!RE_FECHA.test(String(d.fechaNacimiento)))
     r.push({ campo: 'fechaNacimiento', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
   if (d.sexo !== 'hombre' && d.sexo !== 'mujer') falta('sexo')
-  // El vendor valida el móvil: mejor rechazarlo aquí que pagar por un 400.
+  // El vendor valida el teléfono: mejor rechazarlo aquí que pagar por un 400.
   if (!texto(d.telefono)) falta('telefono')
   else if (!RE_TELEFONO.test(String(d.telefono).replace(/\s/g, '')))
-    r.push({ campo: 'telefono', motivo: 'tiene que ser un móvil español: 9 dígitos empezando por 6 o 7' })
+    r.push({ campo: 'telefono', motivo: 'tiene que ser un teléfono español: 9 dígitos empezando por 6, 7, 8 o 9' })
+  // Documento: `surname2` es obligatorio con Dni; `nationality.code` con Nie o Passport.
+  if (texto(d.dni)) {
+    const tipo = tipoDocumento(d.dni)
+    if (tipo === 'Dni' && !texto(d.apellido2))
+      falta('apellido2', 'el segundo apellido es obligatorio con DNI para el vendor')
+    if (tipo !== 'Dni' && !texto(d.nacionalidad))
+      falta('nacionalidad', `la nacionalidad (código ISO de 3 letras, p. ej. ESP) es obligatoria con ${tipo === 'Nie' ? 'NIE' : 'pasaporte'}`)
+  }
   // Residencia: si va uno, va el otro (lo exige el vendor).
   if (numero(d.municipioResidenciaId) && !texto(d.cpResidencia))
     r.push({ campo: 'cpResidencia', motivo: 'si mandas el municipio de residencia, el código postal es obligatorio' })
@@ -160,7 +188,7 @@ export type CarnetExtra = {
  */
 export function construirPersona(d: DatosPersona, extra: CarnetExtra = {}): Record<string, unknown> {
   const persona: Record<string, unknown> = {
-    identificationDocument: { type: { id: 'Dni' }, id: d.dni.trim().toUpperCase() },
+    identificationDocument: { type: { id: tipoDocumento(d.dni) }, id: d.dni.trim().toUpperCase() },
     name: d.nombre.trim(),
     surname: d.apellido1.trim(),
     birthDate: d.fechaNacimiento,
@@ -188,6 +216,7 @@ export function construirPersona(d: DatosPersona, extra: CarnetExtra = {}): Reco
     }
   }
   if (texto(d.apellido2)) persona.surname2 = d.apellido2!.trim()
+  if (tipoDocumento(d.dni) !== 'Dni' && texto(d.nacionalidad)) persona.nationality = { code: d.nacionalidad!.trim().toUpperCase() }
   // El correo, si la ficha lo tiene — como `emails[]`, igual que `phones[]`.
   if (texto(d.email)) persona[CLAVE_EMAIL_VENDOR] = [elementoEmail(d.email!)]
 
