@@ -63,7 +63,7 @@ export async function candidatasSeguroAnterior(correduriaId: string, clienteId: 
                coalesce(p.fecha_efecto_inicial, p.fecha_inicio) as efecto,
                nullif(trim(p.datos_especificos->>'matricula'), '') as matricula,
                nullif(trim(concat_ws(' ', p.datos_especificos->>'marca', p.datos_especificos->>'modelo')), '') as vehiculo,
-               (select count(*)::int from siniestros s where s.poliza_id = p.id and s.correduria_id = p.correduria_id) as siniestros
+               (select count(*)::int from siniestros s where s.poliza_id = p.id and s.correduria_id = p.correduria_id and s.fusionado_en_siniestro_id is null) as siniestros
         from polizas p
         where p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid
           and p.merged_into_poliza_id is null and p.tipo::text in ('auto', 'moto')

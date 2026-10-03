@@ -582,11 +582,19 @@ model Siniestro {
   refMediadorCima           String?   @map("ref_mediador_cima") @db.VarChar(50)
   descripcionCima           String?   @map("descripcion_cima")
   contactoObservacionesCima String?   @map("contacto_observaciones_cima")
+  /// Alta manual unida al siniestro de CIMA que llegó después (`siniestro-vinculo.ts`,
+  /// SQL 2026-10-03d). La fila se CONSERVA; toda lectura de ficha/portal filtra `null`.
+  fusionadoEnSiniestroId    String?   @map("fusionado_en_siniestro_id") @db.Uuid
+  fusionadoAt               DateTime? @map("fusionado_at") @db.Timestamptz(6)
 
   correduria      Correduria               @relation(fields: [correduriaId], references: [id])
   cliente         Cliente                  @relation(fields: [clienteId], references: [id])
   poliza          Poliza                   @relation(fields: [polizaId], references: [id])
   intervinientes  SiniestroInterviniente[]
+  fusionadoEn     Siniestro?               @relation("SiniestroFusion", fields: [fusionadoEnSiniestroId], references: [id])
+  fusionados      Siniestro[]              @relation("SiniestroFusion")
+  /// Partes del portal vinculados (FK desde el 03/10/2026).
+  partesPortal    PortalParteSiniestro[]
 
   @@map("siniestros")
 }
@@ -896,8 +904,13 @@ model PortalParteSiniestro {
   /// en UN sobre AES-256-GCM `v1:` con `PII_ENCRYPTION_KEY`. Nunca en `datosRamo` (CHECK en BD). `null` = no dio ninguno.
   datosRamoCifrado    String?           @map("datos_ramo_cifrado")
   estado              PortalParteEstado @default(enviado)
-  /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
+  /// El siniestro REAL al que se vincula. Ojo: vinculado ≠ comunicado; eso lo dice `estado`
+  /// (`abierto_en_compania`). Un alta manual sin nº de la compañía se vincula en `recibido`.
   siniestroId         String?           @map("siniestro_id") @db.Uuid
+  /// Cómo se vinculó: `alta_desde_parte` · `manual` · `auto_cima`. `null` con `siniestroId` = antes del 03/10/2026.
+  siniestroVinculo    String?           @map("siniestro_vinculo")
+  siniestroVinculadoAt DateTime?        @map("siniestro_vinculado_at") @db.Timestamptz(6)
+  siniestro           Siniestro?        @relation(fields: [siniestroId], references: [id])
   recibidoAt          DateTime?         @map("recibido_at") @db.Timestamptz(6)
   abiertoEnCompaniaAt DateTime?         @map("abierto_en_compania_at") @db.Timestamptz(6)
   descartadoAt        DateTime?         @map("descartado_at") @db.Timestamptz(6)

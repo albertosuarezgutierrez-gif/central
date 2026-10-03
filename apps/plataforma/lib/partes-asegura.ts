@@ -129,6 +129,47 @@ export type ParteSiniestro = {
   creadoEn: string | null
   /** `null` = asegura no lo calculó (o llegó con forma rara): «sin calcular», nunca 0 días. */
   plazo: PlazoParte | null
+  /**
+   * Con qué siniestro PODRÍA ser (misma póliza, fecha ±3 días). Solo propone.
+   * `null` = no aplica, no se pudo calcular o un asegura antiguo no lo manda —
+   * NUNCA «no hay siniestro».
+   */
+  sugerencia: SugerenciaVinculo | null
+}
+
+export type CandidatoVinculo = {
+  id: string
+  referencia: string | null
+  /** `YYYY-MM-DD`; `null` = no se sabe cuándo pasó. */
+  fecha: string | null
+  origen: 'cima' | 'gestionado_correduria'
+  estado: string
+  tipo: string | null
+}
+
+export type SugerenciaVinculo = { tipo: 'fuerte' | 'ambiguo' | 'ninguno'; candidatos: CandidatoVinculo[] }
+
+/** `sugerencia` del puerto, o `null` si no tiene forma (no se supone «ninguno»). */
+export function leerSugerencia(v: unknown): SugerenciaVinculo | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (o.tipo !== 'fuerte' && o.tipo !== 'ambiguo' && o.tipo !== 'ninguno') return null
+  if (!Array.isArray(o.candidatos)) return null
+  const candidatos: CandidatoVinculo[] = o.candidatos.flatMap((x) => {
+    if (typeof x !== 'object' || x === null) return []
+    const c = x as Record<string, unknown>
+    const id = cadena(c.id)
+    if (id === null) return []
+    return [{
+      id,
+      referencia: cadena(c.referencia),
+      fecha: cadena(c.fecha),
+      origen: c.origen === 'cima' ? 'cima' as const : 'gestionado_correduria' as const,
+      estado: cadena(c.estado) ?? 'desconocido',
+      tipo: cadena(c.tipo),
+    }]
+  })
+  return { tipo: o.tipo, candidatos }
 }
 
 function cadena(v: unknown): string | null {
@@ -227,6 +268,7 @@ export function leerParte(v: unknown): ParteSiniestro | null {
     polizaDesligadaEn: cadena(p.polizaDesligadaEn),
     creadoEn: cadena(p.creadoEn),
     plazo: plazo(p.plazo),
+    sugerencia: leerSugerencia(p.sugerencia),
   }
 }
 
@@ -352,6 +394,12 @@ export function textoMotivoParte(motivo: string): string {
       return 'ese cambio ya no es posible sobre este parte (alguien lo movió antes). Recarga la página.'
     case 'datos_invalidos':
       return 'asegura no ha aceptado los datos del cambio.'
+    case 'ya_vinculado':
+      return 'ese parte ya está vinculado a un siniestro. Recarga la página.'
+    case 'no_vinculable':
+      return 'ese parte está descartado o ya abierto en la compañía: no se vincula.'
+    case 'poliza_distinta':
+      return 'el parte va sobre otra póliza que ese siniestro: no se vinculan.'
     default:
       return motivo
   }

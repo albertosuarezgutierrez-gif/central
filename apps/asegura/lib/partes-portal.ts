@@ -56,6 +56,7 @@ import { prismaAsegura } from './asegura-db'
 // la hacen ahora dos pantallas, y la decisión sobre los vínculos múltiples no
 // puede tener dos copias que puedan divergir.
 import { identidadesDeCliente, vinculosPorIdentidad } from './vinculos-portal'
+import { sugerenciasDePartes, type SugerenciaParte } from './siniestros-vinculo'
 
 /** La ficha de la cartera detrás de un parte. `null` en la salida = no la sabemos. */
 export type ClienteDelParte = {
@@ -162,6 +163,14 @@ export type PartePortal = {
    * como hace la lectura de la cartera.
    */
   adjuntos: AdjuntoDelParte[] | null
+  /**
+   * Con qué siniestro de la cartera PODRÍA ser (misma póliza, fecha ±3 días):
+   * `fuerte` = un único candidato con fecha; `ambiguo` = varios o alguno sin
+   * fecha (decide Alberto); `ninguno`. Solo propone, nunca vincula.
+   * `null` = no aplica (ya vinculado, sin póliza de cartera) o la consulta falló
+   * — en ningún caso significa «no hay siniestro».
+   */
+  sugerencia: SugerenciaParte | null
 }
 
 export type FiltrosPartes = {
@@ -368,6 +377,8 @@ function aParte(
     nombres: Map<string, string | null>
     /** `null` = la consulta de documentos falló para TODO el lote. */
     adjuntos: Map<string, AdjuntoDelParte[]> | null
+    /** `null` = la consulta de sugerencias falló para el lote. */
+    sugerencias: Map<string, SugerenciaParte> | null
     hoy: Date
   },
 ): PartePortal {
@@ -423,6 +434,7 @@ function aParte(
     // `null` del lote entero ⇒ `null` en este parte: «no se ha podido mirar».
     // Un parte sin ficheros da `[]`, que es «se miró y no hay».
     adjuntos: ctx.adjuntos === null ? null : ctx.adjuntos.get(p.id) ?? [],
+    sugerencia: ctx.sugerencias?.get(p.id) ?? null,
   }
 }
 
@@ -455,7 +467,12 @@ async function completar(correduriaId: string, filas: FilaParte[], hoy: Date): P
   const nombres = await nombresDeClientes(correduriaId, idsFicha)
   // Una sola consulta para el lote entero, nunca una por parte.
   const adjuntos = await adjuntosPorParte(correduriaId, filas.map((f) => f.id))
-  return filas.map((f) => aParte(f, { vinculos, titulares, nombres, adjuntos, hoy }))
+  // Best-effort como los adjuntos: una sugerencia que falla no tumba la bandeja.
+  const sugerencias = await sugerenciasDePartes(correduriaId, filas).catch((e: unknown) => {
+    console.error('[partes-portal] no se pudieron calcular las sugerencias de vínculo:', e instanceof Error ? e.message : e)
+    return null
+  })
+  return filas.map((f) => aParte(f, { vinculos, titulares, nombres, adjuntos, sugerencias, hoy }))
 }
 
 /**

@@ -1088,6 +1088,9 @@ model Siniestro {
   gravedad           SiniestroGravedad?
   createdAt          DateTime           @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime           @map("updated_at") @db.Timestamptz(6)
+  /// Alta manual unida a un siniestro de CIMA (SQL 2026-10-03d de apps/asegura, con su GRANT).
+  /// La lectura del portal filtra `null`: si no, el cliente vería el mismo siniestro dos veces.
+  fusionadoEnSiniestroId String?        @map("fusionado_en_siniestro_id") @db.Uuid
 
   @@map("siniestros")
   @@schema("seguros")

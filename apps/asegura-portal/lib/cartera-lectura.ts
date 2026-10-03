@@ -903,7 +903,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             // siniestros de la cartera viva el portal enseñaba 7 y los 60
             // CERRADOS no los veía nadie. El historial es lo que un cliente
             // pregunta al renovar.
-            where: { polizaId: { in: polizaIds } },
+            // Sin las altas manuales ya FUSIONADAS en el siniestro de CIMA (03/10/2026):
+            // son el mismo siniestro y el cliente lo vería dos veces.
+            where: { polizaId: { in: polizaIds }, fusionadoEnSiniestroId: null },
             select: {
               id: true,
               polizaId: true,

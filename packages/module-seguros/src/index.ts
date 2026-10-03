@@ -446,6 +446,22 @@ export {
 } from './siniestros.ts'
 
 export {
+  DIAS_VENTANA_VINCULO,
+  candidatosDeParte,
+  cambiosDeFusion,
+  conocidoPorCompania,
+  diasEntre,
+  emparejarManualConCima,
+  emparejarParte,
+  fusionesAutomaticas,
+  normalizarNumeroSiniestro,
+  vinculosAutomaticos,
+  type CamposCorredor,
+  type EmparejamientoSiniestro,
+  type ParteParaVincular,
+  type SiniestroCandidato,
+} from './siniestro-vinculo.ts'
+export {
   EIAC_TIPOLOGIA_SINIESTRO,
   descripcionEiacSiniestro,
 } from './eiac-siniestros.ts'

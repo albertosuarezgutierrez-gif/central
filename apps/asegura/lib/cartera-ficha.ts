@@ -340,6 +340,21 @@ export type SiniestroFicha = {
    * NUNCA «no hay ninguno» — mismo criterio que `intervinientes` de la ficha.
    */
   terceros: SiniestroIntervinienteFicha[] | null
+  /**
+   * Partes del portal VINCULADOS a este siniestro (lo que contó el cliente). `[]` =
+   * se miró y no hay ninguno. `comunicado` sale de `comunicadoACompania()`.
+   * `vinculo` null = vinculado antes del 03/10/2026 (no consta cómo).
+   */
+  partes: {
+    id: string
+    fechaHecho: string
+    horaAproximada: string | null
+    descripcion: string
+    estado: string
+    comunicado: boolean
+    vinculo: 'alta_desde_parte' | 'manual' | 'auto_cima' | null
+    creadoEn: string
+  }[]
 }
 
 /** Un tercero o testigo de un siniestro, ya descifrado para la pantalla del corredor. */
@@ -779,7 +794,8 @@ export async function fichaCliente(
           orderBy: { fechaEmision: 'desc' },
         }),
     db.siniestro.findMany({
-      where: { correduriaId, clienteId },
+      // Un alta manual ya fusionada en su siniestro de CIMA no se pinta: es el mismo (siniestro-vinculo.ts).
+      where: { correduriaId, clienteId, fusionadoEnSiniestroId: null },
       select: SELECT_SINIESTRO,
       orderBy: { fechaHora: 'desc' },
     }),
@@ -1233,7 +1249,7 @@ export async function origenRetarificacion(
   // la traen, así que en la mayoría de pólizas seguirá faltando — y faltar es
   // exactamente lo que la pantalla debe decir, en vez de inventarse una.
   const [siniestros, conductor, email] = await Promise.all([
-    db.siniestro.count({ where: { correduriaId, polizaId: p.id } }),
+    db.siniestro.count({ where: { correduriaId, polizaId: p.id, fusionadoEnSiniestroId: null } }),
     db.polizaInterviniente.findFirst({
       where: { polizaId: p.id, correduriaId, rol: 'conductor_habitual' },
       select: { fechaCarnet: true },

@@ -203,7 +203,7 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
           where: { ...basePoliza, estado: { in: estadosVigentes }, fechaVencimiento: null },
         }),
         db.poliza.count({ where: basePoliza }),
-        db.siniestro.count({ where: { correduriaId, estado: { in: ['abierto', 'en_tramitacion'] } } }),
+        db.siniestro.count({ where: { correduriaId, fusionadoEnSiniestroId: null, estado: { in: ['abierto', 'en_tramitacion'] } } }),
         db.poliza.count({
           where: {
             ...basePoliza, estado: { in: estadosVigentes }, sustituidaAt: null,

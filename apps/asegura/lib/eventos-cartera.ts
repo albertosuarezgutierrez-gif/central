@@ -54,7 +54,7 @@ export async function fotoActual(correduriaId: string, db: Consultor = prismaAse
       where p.correduria_id = ${correduriaId}::uuid and ${viva}`,
     db.$queryRaw<{ id: string; cliente_id: string; poliza_id: string | null; estado: string }[]>`
       select s.id, s.cliente_id, s.poliza_id, s.estado::text as estado
-      from siniestros s where s.correduria_id = ${correduriaId}::uuid`,
+      from siniestros s where s.correduria_id = ${correduriaId}::uuid and s.fusionado_en_siniestro_id is null`,
   ])
   return {
     polizas: Object.fromEntries(polizas.map((p) => [p.id, { id: p.id, clienteId: p.cliente_id, estado: p.estado, vencimiento: p.vencimiento, sustituida: p.sustituida, fusionada: p.fusionada }])),

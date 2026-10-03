@@ -98,6 +98,45 @@ export type SiniestroCartera = {
    * `gestionado_correduria`.
    */
   terceros: TerceroCartera[] | null
+  /**
+   * Partes del portal VINCULADOS (lo que contó el cliente), en orden de llegada.
+   * `null` = asegura no lo manda (versión anterior) — NUNCA «no hay parte», que es `[]`.
+   */
+  partes: ParteVinculadoCartera[] | null
+}
+
+/** Un parte del portal ya vinculado a un siniestro. */
+export type ParteVinculadoCartera = {
+  id: string
+  fechaHecho: string | null
+  horaAproximada: string | null
+  descripcion: string | null
+  estado: string
+  /** 🚨 Solo `true` si el puerto lo afirma (`comunicadoACompania`). Ausente → `false`, el conservador. */
+  comunicado: boolean
+  vinculo: 'alta_desde_parte' | 'manual' | 'auto_cima' | null
+  creadoEn: string | null
+}
+
+function partesVinculadas(v: unknown): ParteVinculadoCartera[] | null {
+  if (!Array.isArray(v)) return null
+  return v.flatMap((x) => {
+    if (typeof x !== 'object' || x === null) return []
+    const p = x as Record<string, unknown>
+    const id = cadena(p.id)
+    if (!id) return []
+    const vinculo = p.vinculo === 'alta_desde_parte' || p.vinculo === 'manual' || p.vinculo === 'auto_cima' ? p.vinculo : null
+    return [{
+      id,
+      fechaHecho: cadena(p.fechaHecho),
+      horaAproximada: cadena(p.horaAproximada),
+      descripcion: cadena(p.descripcion),
+      estado: cadena(p.estado) ?? 'desconocido',
+      comunicado: p.comunicado === true,
+      vinculo,
+      creadoEn: cadena(p.creadoEn),
+    }]
+  })
 }
 
 /** Un tercero o testigo tal y como lo sirve el puerto de asegura. */
@@ -220,6 +259,7 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     tramitacionCima: tramitacionDe(s.tramitacionCima),
     detalleCima: leerDetalleCima(s.detalleCima),
     terceros: terceros(s.terceros),
+    partes: partesVinculadas(s.partes),
   }
 }
 
@@ -311,6 +351,8 @@ export type RespuestaSiniestro =
   | { estado: 'ok'; siniestro: SiniestroCartera; aviso: string | null; ignorados: string[] }
   | { estado: 'invalido'; motivo: string }
   | { estado: 'no_encontrado'; motivo: string | null }
+  /** El alta manual ya la mandó la compañía por CIMA: no se crea otra; `siniestroId` es ese. */
+  | { estado: 'duplicado'; motivo: string; siniestroId: string }
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string }
 
@@ -318,6 +360,11 @@ export function interpretarSiniestro(status: number, json: unknown): RespuestaSi
   if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
   const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
   if (o.estado === 'sin_configurar' || status === 503) return { estado: 'sin_configurar' }
+  if (o.estado === 'duplicado' && cadena(o.siniestroId)) {
+    return { estado: 'duplicado', motivo: cadena(o.motivo) ?? 'ya está en CIMA', siniestroId: cadena(o.siniestroId) as string }
+  }
+  // El parte desde el que se registraba no se pudo vincular: nada se creó.
+  if (o.estado === 'parte_no_vinculable') return { estado: 'invalido', motivo: cadena(o.motivo) ?? 'el parte no se puede vincular' }
   if (status === 404 || o.estado === 'no_encontrado') return { estado: 'no_encontrado', motivo: cadena(o.motivo) }
   if (status === 422 || o.estado === 'invalido') return { estado: 'invalido', motivo: cadena(o.motivo) ?? 'datos no válidos' }
   if (status === 200 && o.estado === 'ok') {
