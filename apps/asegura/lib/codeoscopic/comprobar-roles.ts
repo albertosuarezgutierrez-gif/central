@@ -77,6 +77,7 @@ export function unirFaltanConRoles(
 ): { campo: string; motivo: string }[] {
   const out = propios.map((f) => ({ campo: String(f.campo), motivo: f.motivo }))
   if (roles.estado === 'no_disponible') return [...out, { campo: 'person-roles', motivo: roles.motivo }]
-  for (const f of roles.faltan) if (!out.some((o) => o.campo === f.campo)) out.push(f)
+  // `aseguradosAdicionales` puede venir varias veces (uno por asegurado): se deduplica por campo+motivo.
+  for (const f of roles.faltan) if (!out.some((o) => o.campo === f.campo && (o.campo !== 'aseguradosAdicionales' || o.motivo === f.motivo))) out.push(f)
   return out
 }

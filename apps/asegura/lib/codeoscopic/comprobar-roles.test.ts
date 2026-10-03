@@ -88,3 +88,14 @@ test('🎯 la ruta de pago (vida/salud/decesos-nuevo) pasa por comprobarRolesRam
   assert.ok(i > 0 && j > i, 'la comprobación de roles tiene que ir antes de construir')
   assert.match(src.slice(i, j), /no_disponible[\s\S]*503/)
 })
+
+test('unirFaltanConRoles conserva un hueco por cada asegurado adicional', () => {
+  const r = unirFaltanConRoles([], {
+    estado: 'ok',
+    faltan: [
+      { campo: 'aseguradosAdicionales', motivo: 'asegurado adicional 1: sexo — falta' },
+      { campo: 'aseguradosAdicionales', motivo: 'asegurado adicional 2: sexo — falta' },
+    ],
+  })
+  assert.equal(r.filter((f) => f.campo === 'aseguradosAdicionales').length, 2)
+})
