@@ -27,7 +27,7 @@ import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
-import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
@@ -542,9 +542,10 @@ export default function MotoNuevo({
       correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
       if (siniestrosUltimos5.trim() !== '') correccionesFinal.siniestrosUltimos5 = Number(siniestrosUltimos5)
-      // De dónde salen los años sin siniestros (03/10/2026): sin esto asegura los trata como SUPUESTOS.
-      if (aniosSinSiniestros !== String(historial.aniosSinSiniestros)) correccionesFinal.bonusOrigen = 'corredor'
-      else if (sa?.aniosSinSiniestros != null) correccionesFinal.bonusOrigen = 'documento'
+      // De dónde salen los años (03/10/2026, criterio conservador): solo cuentan como DATO si no pasan de
+      // lo que acredita su póliza leída — la MISMA regla que la imputación automática. Lo precargado al
+      // máximo o tecleado por encima va SUPUESTO y la emisión pedirá verificarlo.
+      Object.assign(correccionesFinal, origenesHistorialManual({ seguro: sa, aniosAsegurado: Number(aniosAsegurado), aniosSinSiniestros: Number(aniosSinSiniestros), hoy: limitesFechaEfecto().min }))
     }
     // marca/modelo/motor no viajan al vendor: asegura los usa para releer la versión
     // del catálogo (gratis) y cruzar su cilindrada y kW con el carné antes de pagar.

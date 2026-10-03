@@ -307,6 +307,38 @@ export function maximoAniosSinSiniestros(fechaCarnet: string | null | undefined,
   return { valor: HISTORIAL_MAXIMO.aniosSinSiniestros, porque: `el máximo (${HISTORIAL_MAXIMO.aniosSinSiniestros})` }
 }
 
+/**
+ * Los años ASEGURADO que acreditan los datos de una póliza: los años desde su efecto y los años
+ * limpios leídos (nadie lleva más años sin siniestros que asegurado). Es una COTA INFERIOR: lo que
+ * no consta no suma (no es «no hay»), y todo lo que se declare por encima es supuesto.
+ */
+export function aniosAseguradoAcreditados(
+  s: { fechaEfecto?: string | null; aniosSinSiniestros?: number | null },
+  hoy: string,
+): number {
+  return Math.max(aniosCompletos(s.fechaEfecto ?? null, hoy) ?? 0, s.aniosSinSiniestros ?? 0)
+}
+
+/**
+ * De dónde salen unos años declarados A MANO (pantalla de vehículo nuevo con «tiene seguro»), con la
+ * MISMA regla que `historialParaImputar`: `'documento'` solo si no pasan de lo que acreditan los datos
+ * leídos de su póliza; si no (precargados al máximo, o tecleados por encima), `null` = supuesto, y la
+ * emisión pedirá verificarlos. Así la ruta manual y la automática dan lo mismo con los mismos datos.
+ */
+export function origenesHistorialManual(e: {
+  seguro: { fechaEfecto?: string | null; aniosSinSiniestros?: number | null } | null
+  aniosAsegurado: number
+  aniosSinSiniestros: number
+  hoy: string
+}): { bonusOrigen?: 'documento'; aniosAseguradoOrigen?: 'documento' } {
+  const s = e.seguro ?? {}
+  const dentro = (v: number, tope: number) => Number.isFinite(v) && v >= 0 && v <= tope
+  return {
+    ...(dentro(e.aniosSinSiniestros, s.aniosSinSiniestros ?? 0) ? { bonusOrigen: 'documento' as const } : {}),
+    ...(dentro(e.aniosAsegurado, aniosAseguradoAcreditados(s, e.hoy)) ? { aniosAseguradoOrigen: 'documento' as const } : {}),
+  }
+}
+
 export type CampoHistorial = 'aniosAsegurado' | 'aniosEnCompania' | 'aniosSinSiniestros' | 'siniestrosUltimos5'
 
 export type HistorialImputado = {
@@ -322,7 +354,14 @@ export type HistorialImputado = {
     aniosSinSiniestros: number
     siniestrosUltimos5: number
   }
-  supuestos: { campo: CampoHistorial; valor: number; porque: string; optimista: boolean }[]
+  supuestos: {
+    campo: CampoHistorial
+    valor: number
+    porque: string
+    optimista: boolean
+    /** `true` = ESTE supuesto es el que pone `bonusSupuesto` (condiciona el precio y la emisión). */
+    condiciona?: boolean
+  }[]
   /** `true` = los años sin siniestros y/o los años asegurado NO se saben y se ha declarado el máximo: hay que verificarlo antes de emitir. */
   bonusSupuesto: boolean
 }
@@ -362,6 +401,7 @@ export function historialParaImputar(
     supuestos.push({
       campo: 'aniosSinSiniestros',
       valor: maximo.valor,
+      condiciona: true,
       porque: `no consta en su póliza: ${maximo.porque}. Precio CONDICIONADO a verificación (SINCO o certificado de siniestralidad) antes de emitir`,
       optimista: true,
     })
@@ -372,12 +412,13 @@ export function historialParaImputar(
   // todo lo que el máximo pone por encima es SUPUESTO y también condiciona el precio (`bonusSupuesto`).
   const techo = Math.max(maximo.valor, aniosSinSiniestros)
   const aniosAsegurado = Math.max(techo, desdeEfecto ?? 0)
-  const sabidos = Math.max(desdeEfecto ?? 0, c.seguro.aniosSinSiniestros ?? 0)
+  const sabidos = aniosAseguradoAcreditados(c.seguro, contexto.hoy)
   if (aniosAsegurado > sabidos) {
     bonusSupuesto = true
     supuestos.push({
       campo: 'aniosAsegurado',
       valor: aniosAsegurado,
+      condiciona: true,
       porque: `solo constan ${sabidos} año(s): se declara el máximo; la compañía lo contrasta con SINCO por el nº de póliza y aplica el real. Precio CONDICIONADO a verificación antes de emitir`,
       optimista: true,
     })
@@ -401,7 +442,20 @@ export function historialParaImputar(
   let siniestrosUltimos5: number
   if (c.seguro.siniestrosUltimos5 !== null) siniestrosUltimos5 = c.seguro.siniestrosUltimos5
   else if ((c.siniestrosAnotados ?? 0) > 0) siniestrosUltimos5 = c.siniestrosAnotados as number
-  else {
+  else if (aniosSinSiniestros < 5 && aniosSinSiniestros < aniosAsegurado) {
+    // Menos años limpios que asegurado, y menos de 5: hubo AL MENOS un siniestro en los últimos 5 años
+    // (es lo que dicen sus propios datos). Declarar 0 sería mentir sabiéndolo; cuántos, no consta →
+    // se declara el mínimo implícito (1) y el precio queda condicionado a verificación.
+    siniestrosUltimos5 = 1
+    bonusSupuesto = true
+    supuestos.push({
+      campo: 'siniestrosUltimos5',
+      valor: 1,
+      condiciona: true,
+      porque: `constan ${aniosSinSiniestros} año(s) sin siniestros de ${aniosAsegurado} asegurado: hubo al menos uno en los últimos 5 y no consta cuántos. Precio CONDICIONADO a verificación antes de emitir`,
+      optimista: true,
+    })
+  } else {
     siniestrosUltimos5 = 0
     supuestos.push({
       campo: 'siniestrosUltimos5',

@@ -139,14 +139,20 @@ export async function imputarConLectura(entrada: {
   }
 }
 
-/** Orígenes de unos años sin siniestros tecleados que cuentan como DATO (no supuesto). */
-const ORIGENES_DATO = new Set(['documento', 'corredor', 'verificado'])
+/**
+ * Orígenes de unos años tecleados que cuentan como DATO (no supuesto). `'corredor'` NO está (03/10/2026,
+ * criterio conservador): un número tecleado por encima de lo que acreditan los datos se verifica antes
+ * de emitir. La pantalla manda `'documento'` con `origenesHistorialManual()` (module-seguros), la misma
+ * regla que `historialParaImputar`.
+ */
+const ORIGENES_DATO = new Set(['documento', 'verificado'])
 
 /**
- * ¿El bonus que de verdad viaja está supuesto? Se decide con los datos FINALES (tras las
- * correcciones del corredor). Fail-closed: unos años sin siniestros que llegan por corrección sin
- * decir de dónde salen (`bonusOrigen`) cuentan como supuestos — la pantalla precargaba el máximo
- * cuando no constaban, y eso no es un dato.
+ * ¿El bonus que de verdad viaja está supuesto? Se decide con los datos FINALES (tras las correcciones
+ * del corredor), campo a campo: años sin siniestros (`bonusOrigen`) y años ASEGURADO
+ * (`aniosAseguradoOrigen`). Fail-closed: un campo tecleado sin decir que sale del documento cuenta
+ * como supuesto (la pantalla precarga el máximo cuando no consta, y eso no es un dato). Lo que no se
+ * teclea manda la imputación automática (`historial`); sin ella, supuesto.
  */
 export function bonusSupuestoFinal(
   datos: { aseguradoAntes?: boolean | null },
@@ -156,10 +162,17 @@ export function bonusSupuestoFinal(
   if (datos.aseguradoAntes !== true) return false
   const c = correcciones ?? {}
   const tecleado = (v: unknown) => v !== undefined && v !== null && v !== ''
-  if (tecleado(c.aniosSinSiniestros) || tecleado(c.aniosAsegurado)) {
-    return !(typeof c.bonusOrigen === 'string' && ORIGENES_DATO.has(c.bonusOrigen))
-  }
-  return historial ? historial.bonusSupuesto : true
+  const esDato = (o: unknown) => typeof o === 'string' && ORIGENES_DATO.has(o)
+  const tecleaLimpios = tecleado(c.aniosSinSiniestros)
+  const tecleaAsegurado = tecleado(c.aniosAsegurado)
+  if (!tecleaLimpios && !tecleaAsegurado) return historial ? historial.bonusSupuesto : true
+  // Lo no tecleado lo decide la imputación: ¿supuso ESE campo (o el nº de siniestros implícito)?
+  const supusoHistorial = (campo: string) =>
+    historial ? historial.supuestos.some((s) => s.campo === campo && s.condiciona === true) : true
+  const limpios = tecleaLimpios ? !esDato(c.bonusOrigen) : supusoHistorial('aniosSinSiniestros')
+  const asegurado = tecleaAsegurado ? !esDato(c.aniosAseguradoOrigen) : supusoHistorial('aniosAsegurado')
+  const siniestros = !tecleado(c.siniestrosUltimos5) && historial !== null && supusoHistorial('siniestrosUltimos5')
+  return limpios || asegurado || siniestros
 }
 
 /** Para la precalificación (gratis): un fallo al imputar no tumba la pantalla, se dice. */

@@ -24,7 +24,7 @@ import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
-import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
@@ -820,10 +820,10 @@ export default function AutoNuevo({
       correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
       if (siniestrosUltimos5.trim() !== '') correccionesFinal.siniestrosUltimos5 = Number(siniestrosUltimos5)
-      // De dónde salen los años sin siniestros (03/10/2026): sin esto asegura los trata como SUPUESTOS
-      // (el máximo precargado no es un dato) y la emisión pedirá verificarlos.
-      if (aniosSinSiniestros !== String(historial.aniosSinSiniestros)) correccionesFinal.bonusOrigen = 'corredor'
-      else if (sa?.aniosSinSiniestros != null) correccionesFinal.bonusOrigen = 'documento'
+      // De dónde salen los años (03/10/2026, criterio conservador): solo cuentan como DATO si no pasan de
+      // lo que acredita su póliza leída — la MISMA regla que la imputación automática. Lo precargado al
+      // máximo o tecleado por encima va SUPUESTO y la emisión pedirá verificarlo.
+      Object.assign(correccionesFinal, origenesHistorialManual({ seguro: sa, aniosAsegurado: Number(aniosAsegurado), aniosSinSiniestros: Number(aniosSinSiniestros), hoy: limitesFechaEfecto().min }))
     }
     const r = await pedirCotizacionAuto({
       clienteId,

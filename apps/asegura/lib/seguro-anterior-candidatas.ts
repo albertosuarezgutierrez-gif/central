@@ -153,6 +153,8 @@ export function imputarSeguroAnterior(entrada: Omit<Parameters<typeof imputarCon
 
 /**
  * Anota en la tarificación ya guardada qué seguro anterior se declaró y si el bonus fue supuesto.
+ * 🔒 `porque` describe esa póliza (compañía, últimas cifras del nº, matrícula y modelo del vehículo):
+ * es dato del riesgo vinculable al cliente, no un texto anónimo.
  * NUNCA lanza: la cotización ya está pagada. Si no se puede escribir (columna sin migrar), la
  * emisión lo leerá como NULL = «no se sabe» y pedirá verificación: el fallo es conservador.
  */

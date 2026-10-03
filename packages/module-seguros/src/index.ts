@@ -1177,6 +1177,8 @@ export {
   historialParaImputar,
   maximoAniosSinSiniestros,
   aniosCompletos,
+  aniosAseguradoAcreditados,
+  origenesHistorialManual,
   candidataPublica,
   decidirBloqueoBonus,
   verificacionBonusDe,

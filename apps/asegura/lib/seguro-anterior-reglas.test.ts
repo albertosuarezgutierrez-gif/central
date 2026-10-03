@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { bonusSupuestoFinal, carnetMasAntiguo, imputarConLectura as imputarSeguroAnterior, type LecturaCandidatas } from './seguro-anterior-reglas.ts'
-import type { CandidataSeguroAnterior } from '@central/module-seguros'
+import { historialParaImputar, origenesHistorialManual, type CandidataSeguroAnterior } from '@central/module-seguros'
 
 const HOY = '2026-10-03'
 const C1 = '11111111-1111-1111-1111-111111111111'
@@ -65,4 +65,30 @@ test('bonus final: por corrección sin origen cuenta como SUPUESTO (la pantalla 
 test('el carné más antiguo de la ficha es el techo del bonus', () => {
   assert.equal(carnetMasAntiguo({ fechaCarnet: '2010-01-01', carnets: [{ tipo: 'A', fechaExpedicion: '2003-02-02' }, { tipo: 'B', fechaExpedicion: null }] }), '2003-02-02')
   assert.equal(carnetMasAntiguo({ fechaCarnet: null, carnets: null }), null)
+})
+
+test('años ASEGURADO también son bonus: precargados al máximo o por encima de lo acreditado → supuesto, aunque bonusOrigen sea documento', () => {
+  // Pantalla manual: 4 limpios leídos del PDF (dato) y los años asegurado precargados al máximo (10).
+  assert.equal(bonusSupuestoFinal({ aseguradoAntes: true }, { aniosAsegurado: 10, aniosSinSiniestros: 4, bonusOrigen: 'documento' }, null), true)
+  // Dentro de lo acreditado y dicho de dónde sale: dato.
+  assert.equal(bonusSupuestoFinal({ aseguradoAntes: true }, { aniosAsegurado: 4, aniosSinSiniestros: 4, bonusOrigen: 'documento', aniosAseguradoOrigen: 'documento' }, null), false)
+  // «corredor» ya no basta: un número tecleado por encima de los datos se verifica antes de emitir.
+  assert.equal(bonusSupuestoFinal({ aseguradoAntes: true }, { aniosAsegurado: 4, aniosSinSiniestros: 4, bonusOrigen: 'corredor', aniosAseguradoOrigen: 'documento' }, null), true)
+})
+
+test('misma póliza, mismos datos: la pantalla manual y la imputación automática dan el mismo bonusSupuesto', () => {
+  const casos = [
+    { fechaEfecto: '2024-09-01', aniosSinSiniestros: 4 }, // 4 limpios leídos, asegurado al máximo → supuesto
+    { fechaEfecto: '2014-09-01', aniosSinSiniestros: 10 }, // todo acreditado → dato
+    { fechaEfecto: '2022-09-01', aniosSinSiniestros: null }, // limpios no constan → supuesto
+  ]
+  for (const sa of casos) {
+    const c = cand({ id: 'poliza:x', siniestrosAnotados: 0, seguro: { codigoDgs: 'C0058', siniestrosUltimos5: 0, numeroPoliza: '5000000001', ...sa } })
+    const auto = historialParaImputar({ ...c, faltan: [], conSiniestrosConocidos: false }, { fechaCarnet: '2001-01-01', hoy: HOY })
+    // Lo que precarga la pantalla manual (`historialDeclarado`): lo leído, y el máximo (10) en lo que no.
+    const limpios = sa.aniosSinSiniestros ?? 10
+    const asegurado = Math.max(10, limpios)
+    const correcciones = { aniosAsegurado: asegurado, aniosSinSiniestros: limpios, siniestrosUltimos5: 0, ...origenesHistorialManual({ seguro: sa, aniosAsegurado: asegurado, aniosSinSiniestros: limpios, hoy: HOY }) }
+    assert.equal(bonusSupuestoFinal({ aseguradoAntes: true }, correcciones, null), auto.bonusSupuesto, JSON.stringify(sa))
+  }
 })

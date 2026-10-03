@@ -129,6 +129,22 @@ test('años SABIDOS mandan; si el máximo pone años asegurado por encima de lo 
   assert.equal(h2.datos.siniestrosUltimos5, 2)
 })
 
+test('años limpios SABIDOS < 5 y < asegurado: hubo un siniestro en 5 años → nunca se declaran 0 y se condiciona', () => {
+  // Carné de hace 4 años (máximo = 4), póliza con efecto hace 4 años y el PDF dice 2 años limpios
+  // pero no cuántos siniestros: 4 asegurado y 2 limpios implican al menos UNO en los últimos 5.
+  const joven = cand({ id: 'poliza:j', seguro: seguro({ fechaEfecto: '2022-09-01', aniosSinSiniestros: 2 }) })
+  const h = historialParaImputar({ ...joven, faltan: [], conSiniestrosConocidos: false }, { fechaCarnet: '2022-06-01', hoy: HOY })
+  assert.equal(h.datos.aniosAsegurado, 4)
+  assert.equal(h.datos.aniosSinSiniestros, 2)
+  assert.ok(h.datos.siniestrosUltimos5 >= 1, 'declarar 0 contradice los años leídos')
+  assert.equal(h.bonusSupuesto, true, 'el nº de siniestros no consta: no se emite sin verificar')
+  // Sin contradicción (tantos limpios como asegurado) se mantiene el 0 de siempre.
+  const limpio = cand({ id: 'poliza:k', seguro: seguro({ fechaEfecto: '2022-09-01', aniosSinSiniestros: 4 }) })
+  const h2 = historialParaImputar({ ...limpio, faltan: [], conSiniestrosConocidos: false }, { fechaCarnet: '2022-06-01', hoy: HOY })
+  assert.equal(h2.datos.siniestrosUltimos5, 0)
+  assert.equal(h2.bonusSupuesto, false)
+})
+
 test('el máximo: menor entre años de carné y 10; sin carné, 10 y se dice', () => {
   assert.equal(maximoAniosSinSiniestros('2020-10-04', HOY).valor, 5)
   assert.equal(maximoAniosSinSiniestros('1990-01-01', HOY).valor, 10)
