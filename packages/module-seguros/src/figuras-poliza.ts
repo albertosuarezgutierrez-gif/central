@@ -16,12 +16,17 @@
 //  - Una persona por rol (`oportunidad_figura`), y los roles del ramo (`rolesDelRamo`: moto no
 //    tiene conductor ocasional). Lo que no cabe sigue siendo una persona, sin rol y marcada `extra`.
 //  - Fecha de nacimiento 01/01 = casi siempre «solo sé el año»: se guarda, marcada «a confirmar».
+//  - Una figura con rol pero SIN nombre no abre ficha (`figurasSinNombre`): una línea en el historial
+//    de la oportunidad, y sus fechas cuentan para «conductor joven o novel».
+//  - La «persona de contacto» de un tomador EMPRESA que es una de las personas del plan (mismo nombre,
+//    o uno contenido en el otro con 2+ palabras) se marca: recibe también el teléfono y el email del
+//    tomador (la empresa los conserva).
 
 import { MARCADORES_SIN_DATO } from './documento-auto.ts'
 import { identificadorFiscal } from './poliza-de-documento.ts'
 import { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type TipoCarnet } from './carnet-ficha.ts'
 import { fechaTextoAIso } from './fecha-texto.ts'
-import { normalizarFechaNacimiento } from './cliente-edicion.ts'
+import { normalizarCp, normalizarFechaNacimiento } from './cliente-edicion.ts'
 import { rolesDelRamo, type RolFigura } from './variantes-riesgo.ts'
 
 const SIN_DATO = new Set(MARCADORES_SIN_DATO)
@@ -73,6 +78,25 @@ export type FiguraLeida = {
    * financiera…). No es una persona: el plan la descarta. `null` = no trae CIF.
    */
   cif: string | null
+} & DomicilioFigura
+
+/** Domicilio de ESA persona (calle y nº / CP / población / provincia); `null` = no figura junto a ella. */
+export type DomicilioFigura = {
+  domicilioVia: string | null
+  domicilioCp: string | null
+  domicilioPoblacion: string | null
+  domicilioProvincia: string | null
+}
+
+function domicilio(o: Record<string, unknown>): DomicilioFigura {
+  const cp = texto(o.domicilioCp, 10)
+  const cpOk = cp ? normalizarCp(cp) : null
+  return {
+    domicilioVia: texto(o.domicilioVia, 255),
+    domicilioCp: cpOk && cpOk.ok ? cpOk.valor : null,
+    domicilioPoblacion: texto(o.domicilioPoblacion, 100),
+    domicilioProvincia: texto(o.domicilioProvincia, 100),
+  }
 }
 
 function booleano(v: unknown): boolean | null {
@@ -121,7 +145,51 @@ function figura(v: unknown, rolPorDefecto: RolFiguraLeido | null = null): Figura
     claseCarnet: (TIPOS_CARNET as readonly string[]).includes(clase) ? (clase as TipoCarnet) : null,
     esTomador: booleano(o.esTomador),
     cif: id && id.tipoPersona === 'juridica' ? id.valor : null,
+    ...domicilio(o),
   }
+}
+
+/** Una figura con rol y SIN nombre («Conductor adicional» con solo su fecha de nacimiento). */
+export type FiguraSinNombre = { rol: RolFiguraLeido; fechaNacimiento: string | null; fechaCarnet: string | null }
+
+/**
+ * Las figuras con rol pero sin nombre: no abren ficha (sin nombre no hay persona que dar de alta),
+ * pero existen. Solo con algún dato propio (fecha o DNI): un rol suelto sin nada es casi siempre
+ * ruido del modelo. Ni las que dicen ser el tomador. Nunca lanza.
+ */
+export function figurasSinNombre(raw: unknown): FiguraSinNombre[] {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return []
+  const lista = (raw as Record<string, unknown>).figuras
+  if (!Array.isArray(lista)) return []
+  return lista.slice(0, 20).flatMap((v): FiguraSinNombre[] => {
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) return []
+    const o = v as Record<string, unknown>
+    const rol = rolLeido(o.rol)
+    if (!rol || texto(o.nombre, 200) || booleano(o.esTomador) === true) return []
+    const nac = fechaTextoAIso(texto(o.fechaNacimiento, 40))
+    const car = fechaTextoAIso(texto(o.fechaCarnet, 40))
+    const fn = fechaReal(nac) ? nac : null
+    const fc = fechaReal(car) ? car : null
+    if (!fn && !fc && !identificadorFiscal(o.dni)) return []
+    return [{ rol, fechaNacimiento: fn, fechaCarnet: fc }]
+  }).slice(0, MAX_FIGURAS)
+}
+
+/** Cómo se dice el rol de una figura sin nombre en el historial («conductor adicional», como en la póliza). */
+const ROL_SIN_NOMBRE: Record<RolFiguraLeido, string> = {
+  propietario: 'propietario del vehículo',
+  conductor_habitual: 'conductor habitual',
+  conductor_ocasional: 'conductor adicional',
+}
+
+/** La línea del historial de la oportunidad. Sin datos personales (el historial no se borra). */
+export function notaFiguraSinNombre(rol: RolFiguraLeido): string {
+  return `Hay un ${ROL_SIN_NOMBRE[rol]} sin nombre en la póliza: complétalo a mano.`
+}
+
+/** La `accion` de esa línea (una por rol: la misma póliza subida dos veces no la repite). Plataforma la rotula. */
+export function accionFiguraSinNombre(rol: RolFiguraLeido): string {
+  return { propietario: 'propietario_sin_nombre', conductor_habitual: 'conductor_habitual_sin_nombre', conductor_ocasional: 'conductor_adicional_sin_nombre' }[rol]
 }
 
 /**
@@ -153,6 +221,17 @@ export function conductorHabitualLeido(raw: unknown): { nombre: string; fechaNac
 // ─── ¿Es el tomador? ────────────────────────────────────────────────────────
 
 const VACIAS = new Set(['de', 'del', 'la', 'las', 'los', 'y'])
+/** ¿La persona de contacto es esta persona? Mismo nombre normalizado, o las palabras de uno dentro
+ * del otro con al menos 2 («Fermin Bueno» en «Fermín Bueno Rodríguez»). Una sola palabra no basta. */
+export function esPersonaDeContacto(contacto: string | null | undefined, nombre: string | null | undefined): boolean {
+  if (!contacto || !nombre) return false
+  const a = new Set(palabrasNombre(contacto))
+  const b = new Set(palabrasNombre(nombre))
+  const [corto, largo] = a.size <= b.size ? [a, b] : [b, a]
+  if (corto.size < 2) return false
+  return [...corto].every((x) => largo.has(x))
+}
+
 const palabrasNombre = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9ñ]+/).filter((x) => x.length >= 2 && !VACIAS.has(x))
 
@@ -178,6 +257,8 @@ export type TomadorFiguras = {
   /** Su DNI/NIE (o CIF): solo un DNI/NIE de persona física cuenta para comparar. */
   dni: string | null
   empresa: boolean
+  /** La «persona de contacto» de un tomador EMPRESA (solo el nombre); `null`/ausente = no figura. */
+  personaContacto?: string | null
 }
 
 /**
@@ -209,6 +290,8 @@ export type LecturaFiguras = {
   fechaCarnet: string | null
   claseCarnet: TipoCarnet | null
   tomadorEsConductorHabitual: boolean | null
+  /** Figuras con rol y sin nombre (`figurasSinNombre`). Ausente = no se han leído. */
+  sinNombre?: readonly FiguraSinNombre[]
 }
 
 export type PersonaFigura = {
@@ -224,7 +307,9 @@ export type PersonaFigura = {
   roles: RolFigura[]
   /** Algún rol leído no se le ha podido asignar (ya lo tenía otro, o el ramo no lo tiene). */
   extra: boolean
-}
+  /** Es la «persona de contacto» del tomador empresa: recibe también su teléfono y email. */
+  personaContacto: boolean
+} & DomicilioFigura
 
 export type PlanFiguras = {
   personas: PersonaFigura[]
@@ -232,6 +317,8 @@ export type PlanFiguras = {
   tomadorConduce: boolean
   /** Fechas del tomador como conductor; `null` = no conduce o no se sabe. */
   tomadorConductor: { fechaNacimiento: string | null; fechaCarnet: string | null } | null
+  /** Figuras con rol y sin nombre: sin ficha, una línea en el historial; sus fechas cuentan. */
+  sinNombre: FiguraSinNombre[]
 }
 
 const ES_CONDUCTOR = (r: RolFiguraLeido) => r === 'conductor_habitual' || r === 'conductor_ocasional'
@@ -241,7 +328,7 @@ const ES_CONDUCTOR = (r: RolFiguraLeido) => r === 'conductor_habitual' || r === 
  * otro ramo → plan vacío.
  */
 export function planFiguras(l: LecturaFiguras, t: TomadorFiguras, ramo: string): PlanFiguras {
-  const vacio: PlanFiguras = { personas: [], tomadorConduce: false, tomadorConductor: null }
+  const vacio: PlanFiguras = { personas: [], tomadorConduce: false, tomadorConductor: null, sinNombre: [] }
   if (ramo !== 'auto' && ramo !== 'moto') return vacio
   const delRamo = rolesDelRamo(ramo)
   const dniTomador = (() => {
@@ -303,6 +390,13 @@ export function planFiguras(l: LecturaFiguras, t: TomadorFiguras, ramo: string):
       }
       p.fechaCarnet ??= f.fechaCarnet
       p.claseCarnet ??= f.claseCarnet
+      // El domicilio va en BLOQUE (una calle con el CP de otra dirección no existe).
+      if (!p.domicilioVia && f.domicilioVia) {
+        p.domicilioVia = f.domicilioVia
+        p.domicilioCp = f.domicilioCp
+        p.domicilioPoblacion = f.domicilioPoblacion
+        p.domicilioProvincia = f.domicilioProvincia
+      }
       if (!p.rolesLeidos.includes(f.rol)) p.rolesLeidos.push(f.rol)
     } else {
       p = {
@@ -315,6 +409,11 @@ export function planFiguras(l: LecturaFiguras, t: TomadorFiguras, ramo: string):
         rolesLeidos: [f.rol],
         roles: [],
         extra: false,
+        personaContacto: false,
+        domicilioVia: f.domicilioVia,
+        domicilioCp: f.domicilioCp,
+        domicilioPoblacion: f.domicilioPoblacion,
+        domicilioProvincia: f.domicilioProvincia,
       }
       personas.push(p)
     }
@@ -326,6 +425,9 @@ export function planFiguras(l: LecturaFiguras, t: TomadorFiguras, ramo: string):
   }
   // `extra` = algún rol leído que no se le ha asignado (otro lo tenía, o el ramo no lo tiene).
   for (const p of personas) p.extra = p.rolesLeidos.some((r) => !p.roles.includes(r))
+  // Persona de contacto de una empresa: solo si casa con UNA persona (con dos, no se elige).
+  const deContacto = t.empresa ? personas.filter((p) => esPersonaDeContacto(t.personaContacto, p.nombre)) : []
+  if (deContacto.length === 1) deContacto[0].personaContacto = true
 
   // Carné (y, de una empresa, la fecha de nacimiento) de arriba del documento son del CONDUCTOR
   // HABITUAL: si no es el tomador, van a su ficha (antes se tiraban con un tomador empresa).
@@ -345,15 +447,19 @@ export function planFiguras(l: LecturaFiguras, t: TomadorFiguras, ramo: string):
         fechaCarnet: datosTomador.fechaCarnet ?? (l.tomadorEsConductorHabitual === true ? l.fechaCarnet : null),
       }
     : null
-  return { personas, tomadorConduce, tomadorConductor }
+  return { personas, tomadorConduce, tomadorConductor, sinNombre: (l.sinNombre ?? []).slice(0, MAX_FIGURAS).map((x) => ({ ...x })) }
 }
 
-/** «Propietario del vehículo y conductor habitual (póliza 123)»: el detalle de la relación con el tomador. */
-export function detalleRelacionFigura(roles: readonly RolFiguraLeido[], numeroPoliza: string | null): string {
+/**
+ * «Propietario del vehículo y conductor habitual (póliza 123)»: el detalle de la relación con el
+ * tomador. Si es además su persona de contacto: «Persona de contacto · Conductor habitual (póliza 123)».
+ */
+export function detalleRelacionFigura(roles: readonly RolFiguraLeido[], numeroPoliza: string | null, personaContacto = false): string {
   const partes = roles.map((r, i) => (i === 0 ? DETALLE_ROL_FIGURA[r] : DETALLE_ROL_FIGURA[r].toLowerCase()))
   const que = partes.length <= 1 ? (partes[0] ?? 'Figura de la póliza') : `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`
   const num = texto(numeroPoliza, 60)
-  return num ? `${que} (póliza ${num})` : que
+  const conContacto = personaContacto ? `Persona de contacto · ${que}` : que
+  return num ? `${conContacto} (póliza ${num})` : conContacto
 }
 
 // ─── Reutilizar un lead SIN DNI ─────────────────────────────────────────────
@@ -392,6 +498,11 @@ export function leadSinDniReutilizable(candidatos: readonly CandidatoLeadSinDni[
 export type ParcheFigura = {
   fechaNacimiento: string | null
   fechaNacimientoAConfirmar: boolean
+  /** Domicilio, en bloque: solo si la ficha no tiene calle; CP, población y provincia rellenan su hueco detrás. */
+  direccion: string | null
+  codigoPostal: string | null
+  ciudad: string | null
+  provincia: string | null
   carnet: { tipo: TipoCarnet; fecha: string } | null
   /** Qué se rellenaría, en palabras (para el historial; nunca valores). */
   rellenado: string[]
@@ -404,12 +515,20 @@ export type ParcheFigura = {
  * se adivina. `carnets: null` = no se pudo mirar → no se escribe carné.
  */
 export function parcheFigura(
-  ficha: { tieneFechaNacimiento: boolean; carnets: number | null },
-  p: Pick<PersonaFigura, 'fechaNacimiento' | 'fechaCarnet' | 'claseCarnet'>,
+  ficha: {
+    tieneFechaNacimiento: boolean
+    carnets: number | null
+    /** Columnas del domicilio en bruto (un cifrado que no abre también «tiene»). Ausente = tiene (no se escribe). */
+    tieneDireccion?: boolean
+    tieneCodigoPostal?: boolean
+    tieneCiudad?: boolean
+    tieneProvincia?: boolean
+  },
+  p: Pick<PersonaFigura, 'fechaNacimiento' | 'fechaCarnet' | 'claseCarnet'> & Partial<DomicilioFigura>,
   ramo: string,
   hoyIso: string,
 ): ParcheFigura {
-  const out: ParcheFigura = { fechaNacimiento: null, fechaNacimientoAConfirmar: false, carnet: null, rellenado: [] }
+  const out: ParcheFigura = { fechaNacimiento: null, fechaNacimientoAConfirmar: false, direccion: null, codigoPostal: null, ciudad: null, provincia: null, carnet: null, rellenado: [] }
   if (!ficha.tieneFechaNacimiento && p.fechaNacimiento) {
     const r = normalizarFechaNacimiento(p.fechaNacimiento, new Date(`${hoyIso}T23:59:59Z`))
     if (r.ok) {
@@ -417,6 +536,14 @@ export function parcheFigura(
       out.fechaNacimientoAConfirmar = r.valor.endsWith('-01-01')
       out.rellenado.push(out.fechaNacimientoAConfirmar ? 'fecha de nacimiento (01/01, a confirmar)' : 'fecha de nacimiento')
     }
+  }
+  // Mismo criterio que el tomador (`parcheFichaDesdePoliza`): el domicilio va en BLOQUE.
+  if (ficha.tieneDireccion === false && p.domicilioVia) {
+    out.direccion = p.domicilioVia
+    out.rellenado.push('domicilio')
+    if (ficha.tieneCodigoPostal === false && p.domicilioCp) { out.codigoPostal = p.domicilioCp; out.rellenado.push('código postal') }
+    if (ficha.tieneCiudad === false && p.domicilioPoblacion) { out.ciudad = p.domicilioPoblacion; out.rellenado.push('población') }
+    if (ficha.tieneProvincia === false && p.domicilioProvincia) { out.provincia = p.domicilioProvincia; out.rellenado.push('provincia') }
   }
   if (ficha.carnets === 0 && fechaReal(p.fechaCarnet)) {
     const tipo: TipoCarnet | null = p.claseCarnet ?? (ramo === 'auto' ? 'B' : null)
@@ -462,11 +589,46 @@ export function hayConductorJovenONovel(
   })
 }
 
-/** Los conductores del plan (habituales y ocasionales leídos, y el tomador si conduce), con sus fechas. */
+/**
+ * Los conductores del plan (habituales y ocasionales leídos —también los SIN nombre— y el tomador
+ * si conduce), con sus fechas.
+ */
 export function conductoresDelPlan(plan: PlanFiguras): { fechaNacimiento: string | null; fechaCarnet: string | null }[] {
   const out = plan.personas
     .filter((p) => p.rolesLeidos.some(ES_CONDUCTOR))
     .map((p) => ({ fechaNacimiento: p.fechaNacimiento, fechaCarnet: p.fechaCarnet }))
+  for (const s of plan.sinNombre ?? []) if (ES_CONDUCTOR(s.rol)) out.push({ fechaNacimiento: s.fechaNacimiento, fechaCarnet: s.fechaCarnet })
   if (plan.tomadorConductor) out.push(plan.tomadorConductor)
   return out
+}
+
+// ─── Lo que falta de un conductor ───────────────────────────────────────────
+
+/** El texto de la tarea, sin nombre (la tarea va colgada de su ficha). */
+export function tareaPedirDniYCarne(p: Pick<PersonaFigura, 'rolesLeidos'>): string | null {
+  if (p.rolesLeidos.includes('conductor_habitual')) return 'Pedir DNI y carné del conductor habitual'
+  if (p.rolesLeidos.includes('conductor_ocasional')) return 'Pedir DNI y carné del conductor ocasional'
+  return null
+}
+
+/**
+ * ¿Hay que pedirle DNI y carné? Solo si se SABE que falta alguno (su ficha sin DNI, o sin ningún
+ * carné). `null` = no se pudo mirar: no se afirma que falte (no se crea la tarea).
+ */
+export function faltaDniOCarne(f: { tieneDni: boolean | null; carnets: number | null }): boolean {
+  return f.tieneDni === false || f.carnets === 0
+}
+
+/** Lo que la pantalla dice de cada figura: qué tiene su ficha (`null` = no se pudo mirar). Nunca valores. */
+export const CAMPOS_FIGURA = ['nombre', 'nacimiento', 'domicilio', 'telefono', 'email', 'carne', 'dni'] as const
+export type CampoFigura = (typeof CAMPOS_FIGURA)[number]
+export type CamposFigura = Record<CampoFigura, boolean | null>
+
+/**
+ * Teléfono y email del TOMADOR que se añaden a la ficha de su persona de contacto. Si otra ficha ya
+ * los tiene, no se fuerza NUNCA, salvo que esa otra sea SOLO el propio tomador (los acaba de recibir
+ * él de la misma póliza): `coincidencias` = ids de las OTRAS fichas con ese valor; `null` = no se pudo mirar.
+ */
+export function contactoSoloDelTomador(coincidencias: readonly string[] | null, tomadorId: string): boolean {
+  return coincidencias !== null && coincidencias.length > 0 && coincidencias.every((id) => id === tomadorId)
 }

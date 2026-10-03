@@ -12,6 +12,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { leadSinDniReutilizable, type CandidatoLeadSinDni } from '../packages/module-seguros/src/figuras-poliza.ts'
+import { partirNombre } from '../packages/module-seguros/src/poliza-de-documento.ts'
 import { puedeAbrirFiguras } from '../apps/asegura/lib/oportunidad-documento-reglas.ts'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -58,4 +59,41 @@ test('🪤 portal y enlace de datos NUNCA abren fichas ni relaciones de figuras 
   const s = sinComentarios(DOCUMENTO)
   assert.match(s, /if \(puedeAbrirFiguras\(quienSube\)\) \{\s*const f = await figurasDesdePoliza\(/, 'figurasDesdePoliza ya no va detrás de puedeAbrirFiguras')
   assert.equal(s.match(/figurasDesdePoliza\(/g)?.length, 1, 'hay otra llamada a figurasDesdePoliza sin la guarda')
+})
+
+// 03/10/2026: las figuras nacen con el nombre PARTIDO (`partirNombre`). Los leads que ya se abrieron
+// con TODO el nombre en `nombre` (y `apellidos` vacío) tienen que seguir reutilizándose: si no, cada
+// póliza re-subida abriría un duplicado del mismo conductor.
+test('🪤 un lead ANTIGUO con el nombre entero en `nombre` se sigue reutilizando (y el nuevo, partido, también)', () => {
+  const viejo = lead({ id: 'viejo', nombre: 'Fermin Prueba Ficticio', apellidos: '' })
+  assert.equal(leadSinDniReutilizable([viejo], 'Fermín Prueba Ficticio'), 'viejo')
+  assert.equal(leadSinDniReutilizable([lead({ id: 'viejo', nombre: 'Fermin Prueba Ficticio', apellidos: null })], 'FERMIN PRUEBA FICTICIO'), 'viejo')
+  const partido = partirNombre('Fermín Prueba Ficticio')
+  assert.deepEqual(partido, { nombre: 'Fermín', apellidos: 'Prueba Ficticio' })
+  assert.equal(leadSinDniReutilizable([lead({ id: 'nuevo', ...partido })], 'Fermin Prueba Ficticio'), 'nuevo')
+})
+
+test('🪤 la orquestación parte el nombre al dar de alta y el SQL de candidatos trae nombre Y apellidos', () => {
+  const s = sinComentarios(ORQUESTA)
+  assert.doesNotMatch(s, /apellidos: ''/, 'una figura vuelve a nacer con apellidos vacíos')
+  assert.equal(s.match(/\.\.\.partirNombre\(p\.nombre\)/g)?.length, 2, 'el alta con DNI y el lead sin DNI no parten el nombre')
+  assert.match(s, /select c\.id::text as id, c\.nombre, c\.apellidos,/, 'el candidato sin apellidos no puede compararse por nombre entero')
+})
+
+// El teléfono/email del tomador a su persona de contacto: nunca principal y sin forzar contra un TERCERO.
+test('🪤 contacto del tomador a su persona de contacto: nunca principal, y solo pasa por encima del propio tomador', () => {
+  const s = sinComentarios(ORQUESTA)
+  assert.match(s, /nuncaPrincipal: true, forzar: soloTomador/)
+  assert.match(s, /const soloTomador = contactoSoloDelTomador\(otros, e\.tomadorId\)/)
+  assert.match(s, /if \(otros\.length > 0 && !soloTomador\) \{/)
+})
+
+// Figura con rol y sin nombre: UNA línea, sin ficha; la tarea de pedir DNI y carné, una sola vez.
+test('🪤 figura sin nombre no abre ficha y su línea no se repite; la tarea «Pedir DNI y carné» tampoco', () => {
+  const s = sinComentarios(ORQUESTA)
+  assert.doesNotMatch(s, /sinNombre[^\n]*(altaCliente|altaLeadSinContacto)/)
+  assert.match(s, /where not exists \(\s*select 1 from oportunidad_historial\s*where oportunidad_id = \$\{e\.oportunidadId\}::uuid and correduria_id = \$\{e\.correduriaId\}::uuid and accion = \$\{accion\}\)/)
+  assert.match(s, /and g\.origen_trigger = 'central:seguimiento' and g\.observaciones = \$\{e\.texto\}\)/, 'la tarea se repetiría al re-subir la póliza')
+  const d = sinComentarios(DOCUMENTO)
+  assert.match(d, /await anotarFigurasSinNombre\(/)
 })

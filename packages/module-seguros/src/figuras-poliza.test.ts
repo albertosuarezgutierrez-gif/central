@@ -7,11 +7,18 @@ import {
   conductoresDelPlan,
   detalleRelacionFigura,
   esOtraPersona,
+  contactoSoloDelTomador,
+  esPersonaDeContacto,
+  faltaDniOCarne,
+  figurasSinNombre,
   hayConductorJovenONovel,
   leadSinDniReutilizable,
   normalizarFigurasLeidas,
+  notaFiguraSinNombre,
+  accionFiguraSinNombre,
   parcheFigura,
   planFiguras,
+  tareaPedirDniYCarne,
   type CandidatoLeadSinDni,
   type LecturaFiguras,
   type TomadorFiguras,
@@ -56,6 +63,10 @@ test('🪤 normalizador: DNI con letra mala → null, sin nombre fuera, nada de 
     claseCarnet: null,
     esTomador: false,
     cif: null,
+    domicilioVia: null,
+    domicilioCp: null,
+    domicilioPoblacion: null,
+    domicilioProvincia: null,
   })
   // Un CIF no es el DNI de una persona: se guarda aparte (`cif`) para descartarla en el plan.
   const conCif = normalizarFigurasLeidas({ figuras: [{ rol: 'propietario', nombre: 'X Y', dni: 'ES' + CIF }] })[0]
@@ -276,4 +287,113 @@ test('🪤 conductor joven/novel: cuenta el tomador si conduce, y los ocasionale
   // El tomador sin decir que conduce: no se le cuenta (no se sabe).
   const noSeSabe = planFiguras(lectura([], { fechaNacimiento: '2005-05-05' }), persona, 'auto')
   assert.equal(hayConductorJovenONovel(conductoresDelPlan(noSeSabe), HOY), false)
+})
+
+// ─── Caso Qover (03/10/2026): tomador SL, persona de contacto = conductor principal, adicional sin nombre ──
+
+const QOVER = {
+  tomador: 'Ejemplo Viajes SL',
+  tomadorEsEmpresa: true,
+  personaContactoTomador: 'Fermin Prueba',
+  figuras: [
+    { rol: 'conductor_habitual', nombre: 'Fermin Prueba Ficticio', fechaNacimiento: '2 de jul. de 1971', domicilioVia: 'Calle Inventada 17', domicilioCp: '41003', domicilioPoblacion: 'Sevilla', domicilioProvincia: null, dni: null },
+    { rol: 'conductor_adicional', nombre: null, fechaNacimiento: '1974-05-04' },
+  ],
+}
+
+test('🪤 Qover: el domicilio de la figura se lee (CP normalizado) y el adicional sin nombre no es persona', () => {
+  const [f, ...resto] = normalizarFigurasLeidas(QOVER)
+  assert.equal(resto.length, 0)
+  assert.equal(f.domicilioVia, 'Calle Inventada 17')
+  assert.equal(f.domicilioCp, '41003')
+  assert.equal(f.domicilioPoblacion, 'Sevilla')
+  assert.equal(f.domicilioProvincia, null)
+  assert.equal(normalizarFigurasLeidas({ figuras: [{ rol: 'propietario', nombre: 'X Y', domicilioCp: '99999' }] })[0].domicilioCp, null)
+  assert.deepEqual(figurasSinNombre(QOVER), [{ rol: 'conductor_ocasional', fechaNacimiento: '1974-05-04', fechaCarnet: null }])
+  // Un rol suelto sin ningún dato es ruido; el que dice ser el tomador, tampoco.
+  assert.deepEqual(figurasSinNombre({ figuras: [{ rol: 'conductor_ocasional', nombre: null }, { rol: 'conductor_ocasional', fechaNacimiento: '1974-05-04', esTomador: true }] }), [])
+  assert.deepEqual(figurasSinNombre(null), [])
+})
+
+test('🪤 Qover: la persona de contacto es UNA figura (2+ palabras); el adicional sin nombre cuenta para joven/novel', () => {
+  const c = normalizarContactoTomador(QOVER)
+  assert.equal(c.personaContacto, 'Fermin Prueba')
+  // Con un tomador persona física no hay «persona de contacto».
+  assert.equal(normalizarContactoTomador({ ...QOVER, tomadorEsEmpresa: false, tomador: 'Ana Ruiz', dni: DNI_TOMADOR }).personaContacto, null)
+  const p = planFiguras(
+    { ...lectura(QOVER.figuras), sinNombre: figurasSinNombre(QOVER) },
+    { ...empresa, personaContacto: c.personaContacto },
+    'auto',
+  )
+  assert.equal(p.personas.length, 1)
+  assert.equal(p.personas[0].personaContacto, true)
+  assert.equal(p.personas[0].domicilioCp, '41003')
+  assert.equal(detalleRelacionFigura(p.personas[0].rolesLeidos, 'Q-1', p.personas[0].personaContacto), 'Persona de contacto · Conductor habitual (póliza Q-1)')
+  assert.deepEqual(p.sinNombre, [{ rol: 'conductor_ocasional', fechaNacimiento: '1974-05-04', fechaCarnet: null }])
+  assert.equal(notaFiguraSinNombre('conductor_ocasional'), 'Hay un conductor adicional sin nombre en la póliza: complétalo a mano.')
+  assert.doesNotMatch(notaFiguraSinNombre('conductor_ocasional'), /\d/)
+  assert.deepEqual(['propietario', 'conductor_habitual', 'conductor_ocasional'].map((r) => accionFiguraSinNombre(r as 'propietario')), ['propietario_sin_nombre', 'conductor_habitual_sin_nombre', 'conductor_adicional_sin_nombre'])
+  // El adicional sin nombre joven SÍ cuenta (y uno de 1974 no).
+  assert.equal(hayConductorJovenONovel(conductoresDelPlan(p), HOY), false)
+  const joven = planFiguras({ ...lectura([]), sinNombre: [{ rol: 'conductor_ocasional', fechaNacimiento: '2005-05-05', fechaCarnet: null }] }, empresa, 'auto')
+  assert.equal(hayConductorJovenONovel(conductoresDelPlan(joven), HOY), true)
+  // Otro ramo: ni sin nombre.
+  assert.deepEqual(planFiguras({ ...lectura([]), sinNombre: figurasSinNombre(QOVER) }, empresa, 'hogar').sinNombre, [])
+  // Sin persona de contacto, o con una que casa con dos personas, no se marca a nadie.
+  assert.equal(planFiguras(lectura(QOVER.figuras), empresa, 'auto').personas[0].personaContacto, false)
+  const dos = planFiguras(lectura([
+    { rol: 'conductor_habitual', nombre: 'Fermin Prueba Uno', dni: DNI_A },
+    { rol: 'conductor_ocasional', nombre: 'Fermin Prueba Dos', dni: DNI_B },
+  ]), { ...empresa, personaContacto: 'Fermin Prueba' }, 'auto')
+  assert.deepEqual(dos.personas.map((x) => x.personaContacto), [false, false])
+})
+
+test('🪤 persona de contacto: mismo nombre o uno dentro del otro, mínimo 2 palabras', () => {
+  assert.equal(esPersonaDeContacto('Fermin Prueba', 'Fermín Prueba Ficticio'), true)
+  assert.equal(esPersonaDeContacto('PRUEBA FICTICIO, FERMÍN', 'Fermín Prueba Ficticio'), true)
+  assert.equal(esPersonaDeContacto('Fermin', 'Fermín Prueba Ficticio'), false) // una palabra no basta
+  assert.equal(esPersonaDeContacto('Fermin Otro', 'Fermín Prueba Ficticio'), false)
+  assert.equal(esPersonaDeContacto(null, 'Fermín Prueba'), false)
+})
+
+test('🪤 contacto del tomador a la persona de contacto: solo se pasa por encima si la otra ficha es SOLO el tomador', () => {
+  assert.equal(contactoSoloDelTomador(['t1'], 't1'), true)
+  assert.equal(contactoSoloDelTomador(['t1', 'otro'], 't1'), false)
+  assert.equal(contactoSoloDelTomador([], 't1'), false) // nadie lo tiene: no hace falta
+  assert.equal(contactoSoloDelTomador(null, 't1'), false) // no se pudo mirar
+})
+
+test('🪤 parche de la figura: domicilio en BLOQUE, solo si la ficha no tiene calle', () => {
+  const dom = { domicilioVia: 'Calle Inventada 17', domicilioCp: '41003', domicilioPoblacion: 'Sevilla', domicilioProvincia: null }
+  const base = { fechaNacimiento: null, fechaCarnet: null, claseCarnet: null, ...dom }
+  const vacia = { tieneFechaNacimiento: true, carnets: 1, tieneDireccion: false, tieneCodigoPostal: false, tieneCiudad: false, tieneProvincia: false }
+  const p = parcheFigura(vacia, base, 'auto', HOY)
+  assert.equal(p.direccion, 'Calle Inventada 17')
+  assert.equal(p.codigoPostal, '41003')
+  assert.equal(p.ciudad, 'Sevilla')
+  assert.equal(p.provincia, null)
+  assert.deepEqual(p.rellenado, ['domicilio', 'código postal', 'población'])
+  // Con calle en la ficha, ni CP ni población del papel.
+  const conCalle = parcheFigura({ ...vacia, tieneDireccion: true }, base, 'auto', HOY)
+  assert.deepEqual([conCalle.direccion, conCalle.codigoPostal, conCalle.ciudad], [null, null, null])
+  // Sin saber qué tiene la ficha (ausente), no se escribe.
+  assert.equal(parcheFigura({ tieneFechaNacimiento: true, carnets: 1 }, base, 'auto', HOY).direccion, null)
+})
+
+test('🪤 tarea «Pedir DNI y carné»: sin nombre, solo de conductores, y solo si SE SABE que falta', () => {
+  assert.equal(tareaPedirDniYCarne({ rolesLeidos: ['propietario', 'conductor_habitual'] }), 'Pedir DNI y carné del conductor habitual')
+  assert.equal(tareaPedirDniYCarne({ rolesLeidos: ['conductor_ocasional'] }), 'Pedir DNI y carné del conductor ocasional')
+  assert.equal(tareaPedirDniYCarne({ rolesLeidos: ['propietario'] }), null)
+  assert.equal(faltaDniOCarne({ tieneDni: false, carnets: 1 }), true)
+  assert.equal(faltaDniOCarne({ tieneDni: true, carnets: 0 }), true)
+  assert.equal(faltaDniOCarne({ tieneDni: true, carnets: 1 }), false)
+  assert.equal(faltaDniOCarne({ tieneDni: null, carnets: null }), false) // no se pudo mirar ≠ falta
+})
+
+test('🪤 lead sin DNI: el lead ANTIGUO con el nombre entero en `nombre` y el nuevo partido casan igual', () => {
+  const viejo: CandidatoLeadSinDni = { id: 'viejo', nombre: 'Fermin Prueba Ficticio', apellidos: '', tipo: 'lead', tieneDni: false, relacionadoConTomador: true }
+  const nuevo: CandidatoLeadSinDni = { ...viejo, id: 'nuevo', nombre: 'Fermín', apellidos: 'Prueba Ficticio' }
+  assert.equal(leadSinDniReutilizable([viejo], 'Fermín Prueba Ficticio'), 'viejo')
+  assert.equal(leadSinDniReutilizable([nuevo], 'FERMIN PRUEBA FICTICIO'), 'nuevo')
+  assert.equal(leadSinDniReutilizable([{ ...viejo, apellidos: null }], 'Fermín Prueba Ficticio'), 'viejo')
 })

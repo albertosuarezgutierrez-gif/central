@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { btnStyle, cardStyle } from '@/components/ui'
 import { prepararAdjunto } from '@/lib/imagen-cliente'
 import { interpretarLecturaOportunidad, type LecturaDocumentoOportunidad } from '@/lib/seguimiento-asegura'
-import { interpretarFichaDocumento, interpretarFigurasDocumento, interpretarOportunidadDocumento, textoFichaDocumento, textoFiguraDocumento, type AvisoOportunidadDocumento, type FichaDocumento, type FigurasDocumento } from '@/lib/oportunidad-documento'
+import { interpretarFichaDocumento, interpretarFigurasDocumento, interpretarOportunidadDocumento, textoCamposFigura, textoFichaDocumento, textoFiguraDocumento, type AvisoOportunidadDocumento, type FichaDocumento, type FiguraDocumento, type FigurasDocumento } from '@/lib/oportunidad-documento'
 
 /**
  * UNA sola lectura de documento para toda la correduría (03/10/2026): la pantalla general
@@ -166,15 +166,21 @@ function FichaTomadorResultado({ f, guardado }: { f: FichaDocumento; guardado: b
   )
 }
 
-/** Las otras personas de la póliza (propietario, conductores): una línea por ficha, con su enlace. */
+/**
+ * Las otras personas de la póliza (propietario, conductores): una línea por ficha, con su enlace y
+ * qué tiene / qué le falta a su ficha (solo NOMBRES de campo; los valores nunca llegan aquí).
+ */
 function FigurasResultado({ f }: { f: FigurasDocumento }) {
   return (
     <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
       <strong>Figuras de la póliza</strong>
       {f.figuras.map(x => (
-        <Link key={x.clienteId} href={`/correduria/cliente/${encodeURIComponent(x.clienteId)}`} style={{ ...enlaceStyle, overflowWrap: 'anywhere', whiteSpace: 'normal', textAlign: 'left' }}>
-          {textoFiguraDocumento(x)} →
-        </Link>
+        <div key={x.clienteId} style={{ display: 'grid', gap: 4, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+          <Link href={`/correduria/cliente/${encodeURIComponent(x.clienteId)}`} style={{ ...enlaceStyle, overflowWrap: 'anywhere', whiteSpace: 'normal', textAlign: 'left' }}>
+            {textoFiguraDocumento(x)} →
+          </Link>
+          <CamposFigura x={x} />
+        </div>
       ))}
       {f.avisos.length > 0 && (
         <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4, fontSize: 13, color: 'var(--negative)' }}>
@@ -182,5 +188,18 @@ function FigurasResultado({ f }: { f: FigurasDocumento }) {
         </ul>
       )}
     </div>
+  )
+}
+
+/** «Tiene: …» / «Falta: …» de la ficha de una figura. Una respuesta anterior (sin `campos`) no pinta nada. */
+function CamposFigura({ x }: { x: FiguraDocumento }) {
+  const t = textoCamposFigura(x.campos)
+  if (!t) return null
+  return (
+    <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 2, fontSize: 13 }}>
+      {t.tiene.length > 0 && <li style={{ overflowWrap: 'anywhere' }}>Tiene: {t.tiene.join(', ')}</li>}
+      {t.falta.length > 0 && <li style={{ overflowWrap: 'anywhere', color: 'var(--negative)' }}>Falta: {t.falta.join(', ')}</li>}
+      {t.sinComprobar.length > 0 && <li style={{ overflowWrap: 'anywhere', color: 'var(--muted)' }}>Sin comprobar: {t.sinComprobar.join(', ')}</li>}
+    </ul>
   )
 }
