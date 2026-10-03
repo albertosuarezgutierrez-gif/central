@@ -167,26 +167,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 241 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 242 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 235 | 31.023 | 23.254.380 | 0 | 0 |
-| `otro` | 231 | 7.420 | 21.667.428 | 11.288.056 | 0 |
-| `lectura-directa` | 210 | 5.437 | 12.640.666 | 0 | 0 |
-| `mcp:github` | 214 | 5.321 | 4.459.571 | 50.089.913 | 88 |
-| `escritura` | 163 | 3.313 | 47.707.702 | 0 | 0 |
-| `sql` | 151 | 3.032 | 1.504.612 | 2.351.230 | 11 |
+| `bash` | 236 | 31.241 | 23.433.647 | 0 | 0 |
+| `otro` | 232 | 7.494 | 21.742.425 | 11.288.056 | 0 |
+| `lectura-directa` | 211 | 5.474 | 12.703.218 | 0 | 0 |
+| `mcp:github` | 216 | 5.342 | 4.479.268 | 50.090.536 | 88 |
+| `escritura` | 164 | 3.324 | 47.963.367 | 0 | 0 |
+| `sql` | 151 | 3.060 | 1.520.417 | 2.351.230 | 11 |
 | `mcp:Claude_Code_Remote` | 138 | 1.463 | 302.492 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 20 | 564 | 2.370.364 | 0 | 0 |
-| `mcp:Vercel` | 53 | 537 | 785.009 | 198.719 | 14 |
-| `mcp:Gmail` | 27 | 339 | 494.515 | 0 | 11 |
+| `mcp:Vercel` | 54 | 538 | 785.628 | 198.719 | 14 |
+| `mcp:Gmail` | 28 | 346 | 531.519 | 0 | 13 |
 | `mcp:Supabase` | 98 | 281 | 27.122 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
-| `agente:general-purpose` | 46 | 160 | 127.867 | 3.575.947 | 0 |
+| `agente:general-purpose` | 47 | 172 | 133.909 | 4.089.353 | 0 |
 | `agente:agente-architect` | 35 | 96 | 75.616 | 2.621.397 | 0 |
 | `mcp:Google-Drive` | 12 | 88 | 83.888 | 0 | 2 |
-| `mcp:Google_Drive` | 15 | 79 | 107.581 | 0 | 14 |
+| `mcp:Google_Drive` | 16 | 82 | 108.695 | 0 | 16 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `mcp:OpenSEO` | 3 | 62 | 51.007 | 0 | 2 |
 | `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
@@ -194,18 +194,18 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `agente:rastreador-codigo` | 31 | 54 | 19.275 | 649.514 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
-| `agente:agente-mecanico` | 22 | 48 | 46.068 | 1.125.410 | 0 |
+| `agente:agente-mecanico` | 24 | 52 | 47.049 | 1.354.841 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `agente:general` | 8 | 12 | 8.332 | 512.187 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
+| `mcp:claude-code-remote` | 2 | 9 | 1.419 | 0 | 0 |
 | `mcp:Supabase_asegura` | 6 | 6 | 1.960 | 0 | 0 |
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:openrouter` | 2 | 5 | 14.639 | 0 | 0 |
-| `mcp:claude-code-remote` | 1 | 3 | 1.150 | 0 | 0 |
 | `mcp:ccd_session` | 2 | 2 | 175 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
