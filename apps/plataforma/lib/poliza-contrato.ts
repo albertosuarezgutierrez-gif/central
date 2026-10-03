@@ -47,6 +47,14 @@ export type ContratoFicha = {
   regularizable: boolean | null
   riesgos: RiesgoFicha[]
   beneficiarios: BeneficiarioFicha[]
+  /** Importes en texto EIAC («150.00»), tal cual los manda el puerto. */
+  desglosePrima: { clase: string | null; descripcion: string | null; importe: string | null }[]
+  capitalAgregado: string | null
+  comisionAnual: string | null
+  comisiones: { clase: string | null; bruta: string | null }[]
+  comercializacion: { id: string | null; clase: string | null; descripcion: string | null }[]
+  origenContratacion: { clase: string | null; descripcionClase: string | null; descripcionCentro: string | null }[]
+  suspensiones: { numeroOrden: string | null; fecha: string | null }[]
   primaAnualDudosa: boolean | null
   primaTotalFichero: string | null
 }
@@ -78,6 +86,10 @@ function bool(v: unknown): boolean | null {
 }
 function num(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null
+}
+/** Lista de objetos → filas leídas con `fn`; lo que no es objeto o queda vacío se descarta. `[]` = no consta. */
+function lista<T extends Obj>(v: unknown, fn: (o: Obj) => T): T[] {
+  return Array.isArray(v) ? v.filter(esObj).map(fn).filter((x) => algo(x)) : []
 }
 const algo = (o: Obj) => Object.values(o).some((x) => x !== null && x !== false)
 
@@ -113,6 +125,13 @@ export function leerContrato(v: unknown): ContratoFicha | null {
     beneficiarios: Array.isArray(v.beneficiarios)
       ? v.beneficiarios.filter(esObj).map((b) => ({ orden: txt(b.orden), descripcion: txt(b.descripcion), prestamo: txt(b.prestamo) })).filter((b) => algo(b))
       : [],
+    desglosePrima: lista(v.desglosePrima, (o) => ({ clase: txt(o.clase), descripcion: txt(o.descripcion), importe: txt(o.importe) })),
+    capitalAgregado: txt(v.capitalAgregado),
+    comisionAnual: txt(v.comisionAnual),
+    comisiones: lista(v.comisiones, (o) => ({ clase: txt(o.clase), bruta: txt(o.bruta) })),
+    comercializacion: lista(v.comercializacion, (o) => ({ id: txt(o.id), clase: txt(o.clase), descripcion: txt(o.descripcion) })),
+    origenContratacion: lista(v.origenContratacion, (o) => ({ clase: txt(o.clase), descripcionClase: txt(o.descripcionClase), descripcionCentro: txt(o.descripcionCentro) })),
+    suspensiones: lista(v.suspensiones, (o) => ({ numeroOrden: txt(o.numeroOrden), fecha: txt(o.fecha) })),
     primaAnualDudosa: bool(v.primaAnualDudosa),
     primaTotalFichero: txt(v.primaTotalFichero),
   }
@@ -245,4 +264,51 @@ export function lugarRiesgo(r: RiesgoFicha): string | null {
   const vehiculo = [r.matricula, [r.marca, r.modelo].filter(Boolean).join(' ') || null].filter(Boolean).join(' · ')
   const sitio = [r.direccion, [r.cp, r.localidad].filter(Boolean).join(' ') || null].filter(Boolean).join(', ')
   return [vehiculo || null, sitio || null].filter(Boolean).join(' · ') || null
+}
+
+export type BloqueCima = { titulo: string; filas: Fila[] }
+
+/** Importe EIAC → `2.162,49€`. Si no tiene la forma medida (o la moneda no es euro) sale el texto crudo: nunca una cifra inventada. */
+function importeFila(texto: string | null, moneda: string | null): string {
+  if (texto === null) return '—'
+  if (moneda !== null && moneda.toUpperCase() !== 'EUR') return texto
+  const n = importeEiac(texto)
+  return n === null ? texto : eur(n)
+}
+
+/**
+ * Bloques económicos/comerciales del contrato (solo operador): desglose de la
+ * prima, capital, comisiones, comercialización, origen y suspensiones. Un bloque
+ * sin filas no existe; `[]` = no hay nada que pintar. Fila con importe ausente = «—», nunca 0.
+ */
+export function bloquesContratoCima(c: ContratoFicha | null): BloqueCima[] {
+  if (c === null) return []
+  const m = c.moneda
+  const out: BloqueCima[] = []
+  const add = (titulo: string, filas: Fila[]) => { if (filas.length > 0) out.push({ titulo, filas }) }
+
+  add('Desglose de la prima', c.desglosePrima.map((d) => ({
+    etiqueta: d.descripcion ?? d.clase ?? 'Concepto',
+    valor: importeFila(d.importe, m),
+    ...(d.descripcion && d.clase ? { nota: `clase ${d.clase}` } : {}),
+  })))
+  add('Capital', c.capitalAgregado !== null ? [{ etiqueta: 'Capital agregado', valor: importeFila(c.capitalAgregado, m) }] : [])
+  add('Comisiones', [
+    ...(c.comisionAnual !== null ? [{ etiqueta: 'Comisión anual', valor: importeFila(c.comisionAnual, m) }] : []),
+    ...c.comisiones.map((k) => ({ etiqueta: k.clase ? `Comisión clase ${k.clase}` : 'Comisión', valor: importeFila(k.bruta, m), nota: 'bruta' })),
+  ])
+  add('Comercialización', c.comercializacion.map((k) => ({
+    etiqueta: k.clase ?? 'Canal',
+    valor: k.descripcion ?? k.clase ?? k.id ?? '—',
+    ...(k.id ? { nota: `id ${k.id}` } : {}),
+  })))
+  add('Origen de la contratación', c.origenContratacion.map((o) => ({
+    etiqueta: o.clase ?? 'Origen',
+    valor: [o.descripcionClase, o.descripcionCentro].filter(Boolean).join(' · ') || o.clase || '—',
+  })))
+  add('Suspensiones', c.suspensiones.map((s, i) => ({
+    etiqueta: s.numeroOrden ? `Suspensión ${s.numeroOrden}` : `Suspensión ${i + 1}`,
+    valor: s.fecha ? fecha(s.fecha) : '—',
+  })))
+  return out
 }

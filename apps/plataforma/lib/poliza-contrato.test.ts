@@ -119,3 +119,70 @@ test('interpretarPoliza: recibo con remesa y comisión; un IBAN colado en el con
   assert.equal(r.poliza.listaRecibos[0].idRemesa, 'R-77')
   assert.equal(r.poliza.listaRecibos[0].baseComision, 100.5)
 })
+
+/* ─── Datos económicos y comerciales del contrato (desglose, comisiones, origen…) ─── */
+
+import { bloquesContratoCima } from './poliza-contrato.ts'
+
+const CONTRATO_PUERTO = {
+  desglosePrima: [
+    { clase: 'PN', descripcion: 'Prima neta', importe: '150.00' },
+    { clase: 'CO', descripcion: 'Consorcio', importe: '2.50' },
+    { clase: 'IM', descripcion: null, importe: '9.99' },
+    { clase: 'XX', descripcion: 'Raro', importe: '1.234,56' },
+    { clase: null, descripcion: null, importe: null },
+  ],
+  capitalAgregado: '300000.00',
+  comisionAnual: '24.30',
+  comisiones: [{ clase: 'N', bruta: '12.15' }, { clase: 'R', bruta: null }],
+  comercializacion: [{ id: '7', clase: 'VE', descripcion: 'Venta directa' }],
+  origenContratacion: [{ clase: 'OF', descripcionClase: 'Oficina', descripcionCentro: 'Sevilla Centro' }],
+  suspensiones: [{ numeroOrden: '1', fecha: '2026-03-01' }],
+}
+
+test('leerContrato lee desglose, capital, comisiones, comercialización, origen y suspensiones', () => {
+  const c = leerContrato(CONTRATO_PUERTO)!
+  assert.equal(c.desglosePrima.length, 4, 'el concepto vacío no cuenta')
+  assert.deepEqual(c.desglosePrima[0], { clase: 'PN', descripcion: 'Prima neta', importe: '150.00' })
+  assert.equal(c.capitalAgregado, '300000.00')
+  assert.equal(c.comisionAnual, '24.30')
+  assert.deepEqual(c.comisiones[1], { clase: 'R', bruta: null })
+  assert.deepEqual(c.comercializacion, [{ id: '7', clase: 'VE', descripcion: 'Venta directa' }])
+  assert.equal(c.origenContratacion[0].descripcionCentro, 'Sevilla Centro')
+  assert.deepEqual(c.suspensiones, [{ numeroOrden: '1', fecha: '2026-03-01' }])
+})
+
+test('leerContrato tolera claves ausentes, formas raras y cifrados: [] / null, nunca 0', () => {
+  const c = leerContrato({ formaPago: 'CC', desglosePrima: 'x', comisiones: [1, null, { bruta: 'v1:zzz' }], suspensiones: {}, capitalAgregado: 0, comisionAnual: undefined })!
+  assert.deepEqual(c.desglosePrima, [])
+  assert.deepEqual(c.comisiones, [])
+  assert.deepEqual(c.suspensiones, [])
+  assert.deepEqual(c.comercializacion, [])
+  assert.deepEqual(c.origenContratacion, [])
+  assert.equal(c.capitalAgregado, null)
+  assert.equal(c.comisionAnual, null)
+  assert.equal(leerContrato({ desglosePrima: [], comisiones: [] }), null)
+})
+
+test('bloquesContratoCima: euros en formato español; lo ilegible sale tal cual, no como cifra', () => {
+  const b = bloquesContratoCima(leerContrato(CONTRATO_PUERTO))
+  const por = Object.fromEntries(b.map((x) => [x.titulo, x.filas]))
+  assert.deepEqual(por['Desglose de la prima'].slice(0, 3).map((f) => [f.etiqueta, f.valor]),
+    [['Prima neta', '150,00€'], ['Consorcio', '2,50€'], ['IM', '9,99€']])
+  assert.equal(por['Desglose de la prima'][3].valor, '1.234,56', 'importe con forma no medida: crudo, sin inventar')
+  assert.deepEqual(por['Comisiones'].find((f) => f.etiqueta === 'Comisión anual'), { etiqueta: 'Comisión anual', valor: '24,30€' })
+  assert.equal(por['Comisiones'].find((f) => f.etiqueta === 'Comisión clase N')?.valor, '12,15€')
+  assert.equal(por['Comisiones'].find((f) => f.etiqueta === 'Comisión clase R')?.valor, '—')
+  assert.equal(por['Capital'][0].valor, '300.000,00€')
+  assert.equal(por['Comercialización'][0].valor, 'Venta directa')
+  assert.equal(por['Origen de la contratación'][0].valor, 'Oficina · Sevilla Centro')
+  assert.equal(por['Suspensiones'][0].valor, '01/03/2026')
+})
+
+test('bloquesContratoCima: sin datos → [] (no se pinta ningún bloque); no-EUR no se lee como euros', () => {
+  assert.deepEqual(bloquesContratoCima(null), [])
+  assert.deepEqual(bloquesContratoCima(leerContrato({ formaPago: 'CC' })), [])
+  const usd = bloquesContratoCima(leerContrato({ moneda: 'USD', comisionAnual: '24.30' }))
+  assert.equal(usd[0].filas[0].valor, '24.30')
+  assert.ok(!usd[0].filas[0].valor.includes('€'))
+})

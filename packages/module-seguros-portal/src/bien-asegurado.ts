@@ -47,7 +47,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { textoConDato } from './poliza-leida.ts'
-import { formatCapitales } from '@central/module-seguros'
+import { fichaObjeto, formatCapitales } from '@central/module-seguros'
 
 /** La cosa asegurada, ya legible y ya troceada por quién puede ver cada parte. */
 export interface BienAsegurado {
@@ -191,6 +191,14 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
     ? d.capitales.filter((c) => !esPartidaDeCobertura(c))
     : d.capitales
   detalles.push(...(formatCapitales({ ...d, capitales }) ?? []))
+  // Ficha de CIMA (valor, combustible, uso, zona…): solo lo informado, códigos
+  // crudos. 🔒 `fichaObjeto` NO incluye el bastidor (VIN): es solo del operador y
+  // no hay ninguna ruta de este fichero que lo lea (cepo en bien-asegurado.test.ts).
+  const esVehiculo = RAMOS_VEHICULO.has(r) || campo(d, 'matricula') !== null
+  for (const f of fichaObjeto(esVehiculo ? 'auto' : r, d) ?? []) {
+    // El mismo filtro anti-cifrado que el resto de campos del portal.
+    if (!VERSION_CIFRADO.test(f.valor)) detalles.push(`${f.etiqueta}: ${f.valor}`)
+  }
 
   // ── Vehículo ──────────────────────────────────────────────────────────────
   if (RAMOS_VEHICULO.has(r) || campo(d, 'matricula') !== null) {

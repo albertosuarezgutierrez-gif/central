@@ -200,6 +200,11 @@ En este orden, y **sin saltarse el paso 0**:
   está en `operational_events` (`webhook_signature_invalid`, con `authUserPresente`). La señal
   `emisionesSinAviso` del vigía cruza proyectos `emitida` contra `codeoscopic_webhook_events` y lo delata.
 
+- 🧱 **`riesgo_sin_bloque` no quiere decir que falte el riesgo (03/10/2026).** Allianz trajo el riesgo en
+  `OtrosRiesgos` (bloque genérico EIAC) y el lector solo miraba hijos `Riesgo*`. Para saber QUÉ trae un fichero
+  cifrado, mira `cima_cobertura_campos` por `primera_vez` = fecha del fichero: las rutas nuevas son su forma.
+  Desde asegura#868 un bloque desconocido sale con su nombre (`riesgo_no_reconocido:<X>`).
+
 ## Lo que la pantalla enseña (y lo que NO alarma a propósito)
 
 `/correduria` de plataforma pinta cuatro señales de la ingesta, y **solo cuando

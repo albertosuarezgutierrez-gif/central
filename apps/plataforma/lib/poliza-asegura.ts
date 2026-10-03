@@ -96,6 +96,14 @@ export type ReciboFicha = {
   devolucionCorreo: DevolucionCorreoFicha | null
   /** Efecto del recibo: desde aquí corre el mes del art. 15 LCS. `null` = asegura no lo manda. */
   fechaEfecto: string | null
+  /** `clase_recibo` CIMA (CA/NP/SU…). `null` = no consta o asegura no lo manda. */
+  clase: string | null
+  /** Día en que pasó a su situación actual. `null` = no consta. */
+  fechaSituacion: string | null
+  /** Prima neta (operador). `null` = no consta: nunca 0. */
+  primaNeta: number | null
+  /** Comisión líquida (operador). `null` = no consta: nunca 0. */
+  comisionLiquida: number | null
 } & ReciboExtraFicha
 
 export type DevolucionCorreoFicha = { fecha: string; motivo: string | null; tipoMotivo: string | null }
@@ -439,6 +447,8 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
         fechaEmision: cadena(o.fechaEmision), fechaVencimiento: cadena(o.fechaVencimiento), formaPago: cadena(o.formaPago),
         devolucionCorreo: leerDevolucionCorreo(o.devolucionCorreo),
         fechaEfecto: fechaIsoOnull(o.fechaEfecto),
+        clase: cadena(o.clase), fechaSituacion: fechaIsoOnull(o.fechaSituacion),
+        primaNeta: numero(o.primaNeta), comisionLiquida: numero(o.comisionLiquida),
         ...leerReciboExtra(o),
       })
     }
