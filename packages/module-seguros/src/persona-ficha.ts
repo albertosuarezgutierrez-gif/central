@@ -1,10 +1,5 @@
-// ¿Persona física o jurídica? Lo que decide si la ficha pide DNI + nacimiento + carnés
-// (física) o solo el CIF (jurídica: comunidades de propietarios, sociedades…).
-//
-// 🚨 La ficha solo recibe el documento ENMASCARADO («*****9313»): la letra inicial del CIF no
-// cruza el puerto. Lo que SÍ distingue es la cola: un DNI/NIE acaba SIEMPRE en letra; un CIF de
-// comunidad/sociedad (A-H, J, U, V) acaba en dígito. Acabar en letra es ambiguo (CIF de P, Q, R,
-// S, N, W) y NO autoriza a decir «física». Tres estados: `null` = no se sabe → se pinta lo de siempre.
+// ¿Persona física o jurídica? `tipoPersona` guardado manda; sin él, documento + segmento deciden.
+// Dígito sin segmento jurídico → null; letra → null; sin documento, solo segmento manda.
 import type { TipoPersona } from './cliente-edicion.ts'
 
 const SEGMENTO_JURIDICO = /(^|[^\p{L}])(comunidad|empresa|sociedad|asociaci[oó]n|fundaci[oó]n|persona\s+jur[ií]dica)(?![\p{L}])/iu
@@ -18,9 +13,8 @@ function leerTipo(v: string | null | undefined): TipoPersona | null {
 }
 
 /**
- * El documento manda (`tipoPersona` guardado al validar el DNI/NIE/CIF; si no, la cola del
- * documento enmascarado); el segmento («Comunidad», «Empresa») solo desempata cuando el
- * documento no habla. Nunca convierte en jurídica a quien el documento dice física.
+ * `tipoPersona` guardado manda. Sin él: documento enmascarado acaba en dígito → 'juridica'
+ * solo si segmento es jurídico (acaba en letra → null siempre; sin documento → segmento decide).
  */
 export function personaDeFicha(f: {
   tipoPersona?: string | null
@@ -30,9 +24,20 @@ export function personaDeFicha(f: {
   const t = leerTipo(f.tipoPersona)
   if (t) return t
   const d = typeof f.dniEnmascarado === 'string' ? f.dniEnmascarado.trim() : ''
-  if (d !== '' && /\d$/.test(d)) return 'juridica'
-  if (typeof f.segmento === 'string' && SEGMENTO_JURIDICO.test(f.segmento)) return 'juridica'
-  return null
+  const esSegmentoJuridico = typeof f.segmento === 'string' && SEGMENTO_JURIDICO.test(f.segmento)
+
+  if (d !== '') {
+    if (/\d$/.test(d)) {
+      // Documento enmascarado acaba en dígito → 'juridica' solo si segmento es jurídico
+      return esSegmentoJuridico ? 'juridica' : null
+    } else if (/[a-zA-Z]$/.test(d)) {
+      // Documento acaba en letra → null siempre
+      return null
+    }
+  }
+
+  // Sin documento (o sin caracteres reconocibles) → 'juridica' si segmento es jurídico
+  return esSegmentoJuridico ? 'juridica' : null
 }
 
 /**
