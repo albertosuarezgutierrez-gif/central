@@ -6,9 +6,9 @@
 //  - Consigna como servicio: NO existe (eso lo dice `equipaje.ts`).
 //  - PERO el día de salida, si NO entra nadie ese mismo día, pueden QUEDARSE en el apartamento
 //    hasta las 12:00 sin coste — y por tanto también dejar dentro las maletas hasta esa hora.
-//  - Más tarde de las 12:00 sí es posible, pero hay que reorganizar a la empresa de limpieza y eso
-//    TIENE COSTE, variable según la hora. El agente lo OFRECE, nunca pone precio: dice que lo
-//    consulta y Alberto confirma.
+//  - Más tarde de las 12:00 también es GRATIS (Alberto, 03/10/2026: no existe ningún coste), pero
+//    NO se promete: depende de que no haya entrada/salida ese día y de la limpieza. El agente dice
+//    que lo consulta y se lo confirman; lo decide Alberto (nunca se auto-envía).
 // Aplica igual a los cuatro pisos.
 //
 // Por qué vive aquí y se inyecta en la `ficha` (mismo patrón que `llegada.ts` / `equipaje.ts`): la
@@ -53,7 +53,7 @@ export function bloqueSalida(horaCheckOut = '11:00', propertyId = ''): string {
   const salida = horaCheckOut || '11:00'
   return [
     `SALIDA / QUEDARSE MÁS TARDE: la salida oficial es a las ${salida}. Si el día de la salida NO entra ningún huésped nuevo, se pueden quedar en el apartamento hasta las ${SALIDA_FLEX_HASTA} SIN COSTE, y eso incluye dejar el equipaje dentro y volver a por él antes de esa hora. Esta es la respuesta a "¿dónde dejamos las maletas el día que nos vamos?" cuando el piso queda libre: no hace falta ninguna consigna de pago.`,
-    `Más allá de las ${SALIDA_FLEX_HASTA} también se puede, pero hay que reorganizar a la empresa de limpieza y TIENE UN COSTE que depende de la hora de salida. Puedes ofrecérselo, pero NUNCA des un precio ni digas que es gratis: dile que lo consultas y se lo confirmas.`,
+    `Más allá de las ${SALIDA_FLEX_HASTA} no hay ningún coste, pero depende de que ese día no haya entrada ni salida y de la limpieza: NO lo prometas, dile que lo consultas con el equipo y se lo confirmas. No menciones coste ni precio.`,
     `Esta flexibilidad depende de que el piso quede libre ese día: si entra otro huésped, no es posible y la salida es a las ${salida} (ahí sí valen las consignas del bloque anterior).`,
     `ANTES DE ENTRAR es distinto: si la noche anterior está ocupada NO se puede dejar el equipaje dentro (el piso está ocupado y luego hay que limpiarlo); ahí la respuesta es la consigna hasta la hora de entrada.`,
     llavesAlSalir(propertyId),
@@ -80,9 +80,9 @@ export function bloqueSalidaTardia(opts: {
 }): string {
   const salida = opts.horaCheckOut || '11:00'
   const coste =
-    `Si necesita MÁS TARDE de las ${SALIDA_FLEX_HASTA}, dile que también es posible pero que tiene un coste ` +
-    `(hay que reorganizar a la empresa de limpieza) que depende de la hora, y que lo consultas y se lo confirmas. ` +
-    `NUNCA le des un importe ni se lo des por gratis.`
+    `Si necesita MÁS TARDE de las ${SALIDA_FLEX_HASTA}, no lo prometas: dile que lo consultas con el equipo ` +
+    `(depende de la limpieza y de que no haya otra entrada o salida ese día) y se lo confirmas. ` +
+    `No menciones ningún coste ni importe: no existe.`
 
   if (!opts.chequeado) {
     return `SALIDA TARDÍA: ahora mismo NO hemos podido comprobar si el piso queda libre el día de su salida. Si pide salir más tarde de las ${salida} o pregunta dónde dejar las maletas ese día, NO se lo confirmes NI se lo niegues: dile con amabilidad que lo verificas y se lo confirmas en breve. NUNCA inventes disponibilidad. ${UNA_POSTURA}`
@@ -96,10 +96,10 @@ export function bloqueSalidaTardia(opts: {
   return `SALIDA TARDÍA: ahora mismo no hay ninguna entrada programada para el día de su salida, así que EN PRINCIPIO SÍ van a poder quedarse hasta las ${SALIDA_FLEX_HASTA} sin coste (y dejar dentro el equipaje hasta esa hora). Como pueden entrar reservas de última hora, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis EL DÍA ANTES de la salida (la víspera), que es cuando se cierra la limpieza y ya no caben reservas de última hora. ${UNA_POSTURA} ${coste}`
 }
 
-// ¿El huésped pide QUEDARSE MÁS ALLÁ de la ventana gratuita? Si nombra una hora posterior a las
-// 12:00 estamos en el terreno del coste de la limpieza, que decide Alberto: eso NUNCA se auto-envía.
+// ¿El huésped pide QUEDARSE MÁS ALLÁ de la ventana confirmable? Si nombra una hora posterior a las
+// 12:00 depende de la limpieza y del calendario, y lo decide Alberto: eso NUNCA se auto-envía.
 // Conservador por diseño: ante una hora ambigua se responde `true` (escala), porque el error caro es
-// mandar solo un mensaje que promete algo que cuesta dinero.
+// mandar solo un mensaje que promete un horario que luego no se puede dar.
 const RE_HORA = /\b(\d{1,2})(?:[:.](\d{2}))?\s*(h|hs|horas?|am|pm|a\.?m\.?|p\.?m\.?)?\b/gi
 
 export function pideMasAllaDeLaVentana(texto: string, hasta = SALIDA_FLEX_HASTA): boolean {

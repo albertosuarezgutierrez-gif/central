@@ -1,0 +1,87 @@
+{
+ "sesion": "05d57e09-2b32-5501-b2b1-c5a22703227a",
+ "inicio": "2026-10-03T18:33:18.461Z",
+ "fin": "2026-10-03T19:10:12.156Z",
+ "llamadas": 48,
+ "categorias": {
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 5905,
+   "chars_out": 6274,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 16306,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1014,
+   "chars_out": 1234,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 12381,
+   "chars_out": 352,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "SubagentHandback": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 28,
+   "chars_in": 3662,
+   "chars_out": 129752,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 17,
+    "Read": 11
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 120,
+   "chars_out": 127,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  },
+  "sql": {
+   "llamadas": 12,
+   "chars_in": 6096,
+   "chars_out": 20152,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 12
+   }
+  }
+ }
+}
