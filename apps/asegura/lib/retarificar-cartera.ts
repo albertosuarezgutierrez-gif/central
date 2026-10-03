@@ -128,6 +128,7 @@ import {
   estadosCiviles,
   municipiosPorCp,
   lineasDeSeguro,
+  profesiones,
   hogarDisponible,
   motoDisponible,
   catalogoHogar,
@@ -157,6 +158,8 @@ import {
   type DisponibilidadDecesos,
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
+import { comprobarRolesRamo } from '@/lib/codeoscopic/comprobar-roles'
+import { leerAseguradosAdicionales } from '@/lib/codeoscopic/asegurados'
 import { resumirCrudo, type ResumenCrudo } from '@/lib/codeoscopic/crudo'
 import { choqueCarnetVersion } from '@/lib/codeoscopic/carnet-moto'
 import type { PeticionCotizacion, ResultadoCotizacion } from '@/lib/codeoscopic/cotizar'
@@ -1223,6 +1226,39 @@ async function prepararRetarificacionNuevaGenerica<D, S>(entrada: {
     }
   }
 
+  // 🚨 Lo que el vendor EXIGE de verdad (`GET /{ramo}/person-roles`, gratis), antes de gastar los 0,50€.
+  // Fail-closed: si no se puede leer, no se cotiza. Lo que pida y no sepamos mandar sale como «dato que falta».
+  const roles = await comprobarRolesRamo(cfg.config, ramo, {
+    datos: datos as Record<string, unknown>,
+    adicionales: Array.isArray((datos as { aseguradosAdicionales?: unknown }).aseguradosAdicionales)
+      ? ((datos as { aseguradosAdicionales: Record<string, unknown>[] }).aseguradosAdicionales)
+      : [],
+  })
+  if (roles.estado === 'no_disponible') {
+    return { estado: 'corte', respuesta: sinGasto({ error: roles.motivo, causa: 'person_roles' }, 503) }
+  }
+  if (roles.faltan.length > 0) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: roles.faltan }, 422) }
+  }
+
+  // La profesión (solo vida) se valida contra el catálogo del vendor: un código que no está es un 400 pagado.
+  const profesion = (datos as { profesion?: unknown }).profesion
+  if (ramo === 'vida' && typeof profesion === 'string' && profesion.trim() !== '') {
+    const catalogoProfesiones = await profesiones(cfg.config).catch(() => null)
+    if (catalogoProfesiones === null || catalogoProfesiones.length === 0) {
+      return {
+        estado: 'corte',
+        respuesta: sinGasto({ error: 'no se ha podido leer el catálogo de profesiones (CNO-11): no se valida la profesión y no se cotiza', causa: 'profesiones' }, 503),
+      }
+    }
+    if (!catalogoProfesiones.some((p) => p.id === profesion.trim())) {
+      return {
+        estado: 'corte',
+        respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: [{ campo: 'profesion', motivo: `el código «${profesion.trim()}» no está en el catálogo de profesiones del vendor` }] }, 422),
+      }
+    }
+  }
+
   let peticion: Record<string, unknown>
   try {
     peticion = construir(datos, linea.id)
@@ -1257,6 +1293,8 @@ export function prepararRetarificacionNuevaVida(entrada: {
     estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
     capital: numero(entrada.cuerpo.resueltos?.capital),
     duracionAnios: numero(entrada.cuerpo.resueltos?.duracionAnios),
+    profesion: cadena(entrada.cuerpo.resueltos?.profesion),
+    fumador: booleano(entrada.cuerpo.resueltos?.fumador),
   }
   return prepararRetarificacionNuevaGenerica<ResueltosVidaNueva, SupuestoVida>({
     clienteId: entrada.clienteId,
@@ -1280,6 +1318,7 @@ export function prepararRetarificacionNuevaSalud(entrada: {
     estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
     capital: numero(entrada.cuerpo.resueltos?.capital),
     modalidadDeseada: cadena(entrada.cuerpo.resueltos?.modalidadDeseada),
+    asegurados: leerAseguradosAdicionales(entrada.cuerpo.resueltos?.asegurados),
   }
   return prepararRetarificacionNuevaGenerica<ResueltosSaludNueva, SupuestoSalud>({
     clienteId: entrada.clienteId,
@@ -1302,6 +1341,7 @@ export function prepararRetarificacionNuevaDecesos(entrada: {
   const resueltos: ResueltosDecesosNueva = {
     estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
     capital: numero(entrada.cuerpo.resueltos?.capital),
+    asegurados: leerAseguradosAdicionales(entrada.cuerpo.resueltos?.asegurados),
   }
   return prepararRetarificacionNuevaGenerica<ResueltosDecesosNueva, SupuestoDecesos>({
     clienteId: entrada.clienteId,

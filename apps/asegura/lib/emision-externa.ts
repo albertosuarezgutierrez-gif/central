@@ -159,7 +159,7 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
 
   // ── Bloqueos (fail-closed) ──
   const ramo = ramoDeLinea(crudo)
-  if (!ramo) bloqueos.push('solo se registran emisiones de auto y moto')
+  if (!ramo) bloqueos.push('ramo del proyecto no reconocido (solo auto, moto, hogar, vida, salud y decesos): no se registra')
   const doc = documentoTomador(crudo)
   const hashTomador = doc ? computeDniLookupHash(doc) : null
   if (!hashTomador) bloqueos.push('el proyecto no trae documento del tomador: no se demuestra de quién es')

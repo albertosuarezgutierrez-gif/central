@@ -62,3 +62,34 @@ test('el ramo va con el id EXACTO que se le pasa, y la referencia nuestra solo s
   const con = construirPeticionVida({ ...BASE, referenciaExterna: 'cot-000000' }, LINEA) as any
   assert.equal(con.externalId, 'cot-000000')
 })
+
+// ─── Profesión y fumador en el asegurado (03/10/2026) ────────────────────────
+test('la profesión viaja como insured.economicOccupation.code y el tabaco como insured.smoker, solo en el asegurado', () => {
+  const c = construirPeticionVida({ ...BASE, profesion: '2612', fumador: false }, LINEA) as any
+  assert.deepEqual(c.risk.insured.economicOccupation, { code: '2612' })
+  assert.equal(c.risk.insured.smoker, false, 'fumador=false es una respuesta y se manda')
+  assert.equal(c.holder.economicOccupation, undefined, 'el tomador no lleva profesión')
+  assert.equal(c.holder.smoker, undefined)
+  assert.equal(c.risk.insured.name, c.holder.name, 'sigue siendo la misma persona base')
+})
+
+test('sin profesión ni fumador (null/ausente) no se manda NADA: jamás un «no fuma» por defecto', () => {
+  for (const extra of [{}, { profesion: null, fumador: null }, { profesion: '  ' }]) {
+    const c = construirPeticionVida({ ...BASE, ...extra }, LINEA) as any
+    assert.equal('economicOccupation' in c.risk.insured, false)
+    assert.equal('smoker' in c.risk.insured, false)
+  }
+  assert.deepEqual(construirPeticionVida(BASE, LINEA).holder, (construirPeticionVida(BASE, LINEA) as any).risk.insured)
+})
+
+test('la profesión tiene que ser un código CNO-11 de 1 a 4 cifras; fumador, sí/no', () => {
+  assert.ok(revisarDatosVida({ ...BASE, profesion: 'médico' }).some((x) => x.campo === 'profesion'))
+  assert.ok(revisarDatosVida({ ...BASE, profesion: '26120' }).some((x) => x.campo === 'profesion'))
+  assert.deepEqual(revisarDatosVida({ ...BASE, profesion: '2612' }), [])
+  assert.ok(revisarDatosVida({ ...BASE, fumador: 'si' as never }).some((x) => x.campo === 'fumador'))
+})
+
+test('peso y altura NO viajan (formato sin documentar), aunque lleguen en los datos', () => {
+  const c = construirPeticionVida({ ...BASE, peso: 80, altura: 180, weight: 80, height: 180 } as any, LINEA) as any
+  for (const k of ['weight', 'height', 'peso', 'altura']) assert.equal(k in c.risk.insured, false, k)
+})

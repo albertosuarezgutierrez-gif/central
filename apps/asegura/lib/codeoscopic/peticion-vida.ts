@@ -31,9 +31,20 @@ export type DatosVida = DatosPersona & {
    * cubra la póliza si fallece dentro del plazo. */
   capital: number
 
-  /** Duración del seguro temporal, en años. 🚧 Opcional y SIN VERIFICAR: puede
-   * que el vendor lo exija con otro nombre o forma (fecha de fin, por ejemplo). */
+  /** Duración del seguro temporal, en años. ⚠️ NOTA del corredor: NO viaja (`TermLifeRisk_V1` no
+   * documenta campo de duración). Se conserva en el tipo solo por compatibilidad con lo ya anotado
+   * en el riesgo de la oportunidad; la pantalla ya no lo pide. */
   duracionAnios?: number | null
+
+  /** Profesión del asegurado: código CNO-11 (`GET /economic-occupations`, ej. `2612`). Viaja como
+   * `insured.economicOccupation.code`. `null`/ausente = no se sabe: no se manda nada. */
+  profesion?: string | null
+
+  /** ¿Fuma? Viaja como `insured.smoker` (boolean). `null`/ausente = no se sabe: no se manda nada
+   * (jamás `false` por defecto: un «no fuma» inventado abarata el precio). 🚧 `smoker` es un id de
+   * campo de rol documentado; su TIPO (boolean) no lo está: si el vendor contesta otra cosa, se
+   * corrige aquí. */
+  fumador?: boolean | null
 
   fechaEfecto: string
   referenciaExterna?: string | null
@@ -42,6 +53,7 @@ export type DatosVida = DatosPersona & {
 export type ReparoVida = { campo: keyof DatosVida; motivo: string }
 
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
+const RE_CNO = /^\d{1,4}$/
 
 function texto(v: unknown): boolean {
   return typeof v === 'string' && v.trim() !== ''
@@ -73,6 +85,12 @@ export function revisarDatosVida(d: Partial<DatosVida>): ReparoVida[] {
     r.push({ campo: 'duracionAnios', motivo: 'tiene que ser un número de años' })
   }
 
+  // CNO-11: el catálogo `/economic-occupations` tiene niveles 1-4, o sea códigos de 1 a 4 cifras.
+  if (texto(d.profesion) && !RE_CNO.test(String(d.profesion).trim()))
+    r.push({ campo: 'profesion', motivo: 'tiene que ser el código CNO-11 de la profesión (de 1 a 4 cifras, p. ej. 2612)' })
+  if (d.fumador !== undefined && d.fumador !== null && typeof d.fumador !== 'boolean')
+    r.push({ campo: 'fumador', motivo: 'tiene que ser sí o no' })
+
   return r
 }
 
@@ -102,8 +120,16 @@ export function construirPeticionVida(d: DatosVida, lineaId: string): Record<str
   // número [Probable: la referencia no fija el tipo]; si el vendor quiere otra
   // forma contesta 400, que no se cobra. La duración NO viaja: no hay campo
   // documentado y mandar uno inventado es lo que tenía bloqueado el ramo.
+  // El asegurado lleva además lo que SOLO tiene sentido en él (profesión y tabaco); el tomador
+  // (`holder`) sigue siendo la persona básica, así que con estos datos ya no son idénticos.
+  const asegurado: Record<string, unknown> = { ...persona }
+  if (texto(d.profesion)) asegurado.economicOccupation = { code: String(d.profesion).trim() }
+  if (typeof d.fumador === 'boolean') asegurado.smoker = d.fumador
+  // 🔒 Peso y altura NO viajan: el vendor los conoce (`weight`, `height` en `person-roles`) pero ni
+  // su unidad ni su forma están documentadas. Si el rol los exige, salen como «dato que falta».
+
   const riesgo: Record<string, unknown> = {
-    insured: persona,
+    insured: asegurado,
     deathBenefit: d.capital,
   }
 

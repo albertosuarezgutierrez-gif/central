@@ -285,8 +285,8 @@ test('documento sin hash (falta la clave): es un ERROR de la pasada, no «no es 
   assert.equal(b.revisiones.size, 0)
 })
 
-test('ramo que no se acuña (hogar) emitido con nº: «ramo_sin_acunar», sin sincronizar', async () => {
-  vendorCon({ '41000006': proyecto({ linea: 'Home' }) })
+test('ramo que no se acuña (uno que RAMO_DE_LINEA no conoce) emitido con nº: «ramo_sin_acunar», sin sincronizar', async () => {
+  vendorCon({ '41000006': proyecto({ linea: 'Pets' }) })
   const b = bd({ 'h:12345678Z': ['c1'] })
   await descubrirEmisiones({}, b.deps())
   assert.equal(b.syncs.length, 0)
@@ -294,6 +294,18 @@ test('ramo que no se acuña (hogar) emitido con nº: «ramo_sin_acunar», sin si
   assert.equal(rev?.motivo, 'ramo_sin_acunar')
   assert.equal(rev?.clienteId, 'c1')
   assert.equal(rev?.numeroPoliza, 'POL-1')
+})
+
+test('vida, salud, decesos y hogar emitidos fuera SÍ se sincronizan (se acuñan), ya no van a «ramo_sin_acunar»', async () => {
+  for (const [i, linea] of ['TermLife', 'Health', 'Burial', 'Home'].entries()) {
+    const id = `4100010${i}`
+    vendorCon({ [id]: proyecto({ linea }) })
+    const b = bd({ 'h:12345678Z': ['c1'] })
+    await descubrirEmisiones({}, b.deps())
+    assert.equal(b.syncs.length, 1, linea)
+    assert.equal(b.syncs[0].projectId, id, linea)
+    assert.equal(b.revisiones.get(id)?.motivo, undefined, linea)
+  }
 })
 
 test('estado de la solicitud desconocido: a revisión y contado como desconocido nuevo', async () => {

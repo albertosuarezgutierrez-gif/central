@@ -344,3 +344,27 @@ test('oferta/route: sin literal auto de relleno, y graba cliente_id + tarificaci
   // (buscado por regex y no como literal: el cepo del libro de gasto confunde el literal con una llamada)
   assert.ok(OFERTA.indexOf("causa: 'ramo_desconocido'") < OFERTA.search(/\breRate\s*\(/))
 })
+
+// ─── Vida, salud y decesos: el riesgo ya no sale null (03/10/2026) ───────────
+const PERSONA = { name: 'N', surname: 'A', birthDate: '1985-01-01' }
+
+test('vida guarda el capital tarificado y que hay un asegurado, sin datos personales', () => {
+  const r = riesgoDeTarificacion('vida', { risk: { insured: PERSONA, deathBenefit: 30000 } })
+  assert.deepEqual(r, { capitalAsegurado: 30000, numeroAsegurados: 1 })
+  assert.ok(!JSON.stringify(r).includes('1985'), 'la fecha de nacimiento no se guarda')
+})
+
+test('salud y decesos guardan cuántos asegurados se tarificaron (insureds[])', () => {
+  for (const ramo of ['salud', 'decesos']) {
+    assert.deepEqual(riesgoDeTarificacion(ramo, { risk: { insureds: [PERSONA, PERSONA, PERSONA] } }), { numeroAsegurados: 3 }, ramo)
+  }
+})
+
+test('vida/salud/decesos sin dato válido siguen en null: nada inventado', () => {
+  assert.equal(riesgoDeTarificacion('vida', { risk: { deathBenefit: -5 } }), null)
+  assert.equal(riesgoDeTarificacion('vida', { risk: { deathBenefit: 'x' } }), null)
+  assert.equal(riesgoDeTarificacion('vida', { risk: { deathBenefit: null } }), null)
+  assert.equal(riesgoDeTarificacion('salud', { risk: { insureds: [] } }), null)
+  assert.equal(riesgoDeTarificacion('decesos', { risk: { insureds: [{}] } }), null)
+  assert.equal(riesgoDeTarificacion('salud', {}), null)
+})
