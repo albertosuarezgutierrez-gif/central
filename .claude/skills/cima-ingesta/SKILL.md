@@ -227,6 +227,10 @@ Las claves oficiales están en `packages/module-seguros/src/claves-eiac.ts`. Sit
 anulada, **ES** en suspenso, **EV** en vigor, **EX** extinguida, **PR** propuesta. Un código que no está en la
 tabla se pinta crudo. Uso del vehículo no tiene tabla en el estándar (remite a RGV).
 
+Situación de recibo §13.3.33: PE, CO, DE, AN, **LI** liquidado (→ cobrado), **RE** rehabilitado (→ pendiente). Hasta asegura#876 (03/10/2026) el mapper REC no tenía LI/RE y mandaba a cuarentena; el reason ya trae el código: `estado_recibo_desconocido:<COD>`.
+
+🔢 **Allianz (C0109) numera con cero delante en CIMA y sin él en cartera** (061048939 vs 61048939): póliza (desde 28/09) y recibo (asegura#877) reintentan sin ceros; siniestro y CEF aún no. Y `reprocesar-cuarentena` solo sella si TODOS los objetos se guardaron (antes sellaba un REC con 0 pólizas).
+
 ## 🗓️ Fechas de relleno
 
 Fechas como `2000-01-01`, `1900-01-01` y `9999-12-31` se guardan como `null`. Un parche de datos nunca las guarda
