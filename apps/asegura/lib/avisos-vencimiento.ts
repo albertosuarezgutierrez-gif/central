@@ -112,7 +112,7 @@ function diaUtc(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
 }
 
-import { descifrar, pareceEmail, destinatarioDeCliente, type ClienteConEmails } from './avisos-vencimiento-reglas.ts'
+import { descifrar, pareceEmail, emailAvisable, destinatarioDeCliente, type ClienteConEmails } from './avisos-vencimiento-reglas.ts'
 export { destinatarioDeCliente, type ClienteConEmails }
 
 // ── Persona de referencia (19/09/2026) ───────────────────────────────────────
@@ -154,7 +154,7 @@ async function leerIntervinientesDePoliza(
       const deFicha = f.cliente ? `${f.cliente.nombre} ${f.cliente.apellidos}`.trim() || null : null
       // 🚨 `descifrar()` solo comprueba que el cifrado se abrió, no que lo de
       // dentro TENGA FORMA de email — a diferencia de `destinatarioDeCliente`,
-      // que pasa todo por `pareceEmail()` antes de devolverlo. Esta fila puede
+      // que pasa todo por `emailAvisable()` antes de devolverlo. Esta fila puede
       // acabar como destinatario de un `sendMail`, así que se valida aquí
       // también: un valor que no parece email es tan «sin canal» como uno vacío.
       // Y si el interviniente está enlazado a SU PROPIA ficha de cliente y esa
@@ -165,7 +165,7 @@ async function leerIntervinientesDePoliza(
       // habría probado el de la ficha, que puede ser el bueno.
       const emailPropio = descifrar(f.email)
       const emailDeFicha = f.cliente && !f.cliente.emailOptOutAt ? descifrar(f.cliente.email) : null
-      const email = pareceEmail(emailPropio) ? emailPropio : pareceEmail(emailDeFicha) ? emailDeFicha : null
+      const email = emailAvisable(emailPropio) ? emailPropio : emailAvisable(emailDeFicha) ? emailDeFicha : null
       return {
         id: f.id, polizaId: f.polizaId, rol: String(f.rol),
         nombre: propio ?? deFicha, nombreIlegible: false,

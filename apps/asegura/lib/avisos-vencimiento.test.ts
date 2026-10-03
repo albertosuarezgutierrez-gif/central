@@ -1,10 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { MEDIADOR } from '@central/module-seguros'
-import { destinatarioDeCliente, type ClienteConEmails } from './avisos-vencimiento-reglas.ts'
+import { destinatarioDeCliente, emailAvisable, type ClienteConEmails } from './avisos-vencimiento-reglas.ts'
 
 const CANAL = MEDIADOR.identidad.email
 const f = (c: Partial<ClienteConEmails>): ClienteConEmails => ({ emailOptOutAt: null, email: null, emails: [], ...c }) as ClienteConEmails
+
+test('emailAvisable rechaza el canal de la correduría', () => {
+  assert.equal(emailAvisable(CANAL), false)
+  assert.equal(emailAvisable('ana@example.com'), true)
+  assert.equal(emailAvisable('no-parece-email'), false)
+  assert.equal(emailAvisable(null), false)
+})
 
 test('el canal de la correduría no es destinatario (ni suelto ni en cliente_emails)', () => {
   assert.equal(destinatarioDeCliente(f({ email: CANAL })), null)

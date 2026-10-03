@@ -23,6 +23,13 @@ export function pareceEmail(v: string | null): v is string {
   return typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 }
 
+/**
+ * Email que puede recibir un aviso: debe tener forma de email Y no ser un canal de la correduría.
+ */
+export function emailAvisable(v: string | null): v is string {
+  return pareceEmail(v) && !esCanalCorreduria(v)
+}
+
 export type ClienteConEmails = {
   emailOptOutAt: Date | null
   email: string | null
@@ -42,9 +49,9 @@ export function destinatarioDeCliente(c: ClienteConEmails): string | null {
   })
   for (const e of orden) {
     const claro = descifrar(e.email)
-    if (pareceEmail(claro) && !esCanalCorreduria(claro)) return claro
+    if (emailAvisable(claro)) return claro
   }
   const suelto = descifrar(c.email)
-  return pareceEmail(suelto) && !esCanalCorreduria(suelto) ? suelto : null
+  return emailAvisable(suelto) ? suelto : null
 }
 
