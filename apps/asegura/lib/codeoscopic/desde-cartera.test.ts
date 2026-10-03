@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { hoyEnMadrid } from './fecha-efecto.ts'
 import {
   precalificarAuto,
   precalificarAutoNueva,
@@ -393,7 +394,7 @@ const RESUELTOS_MOTO_NUEVA: ResueltosMotoNueva = {
 }
 
 function preMoto(c: Partial<ClienteCartera> = {}, r: Partial<ResueltosMotoNueva> = {}) {
-  return precalificarMotoNueva({ ...CLIENTE, ...c }, { ...RESUELTOS_MOTO_NUEVA, ...r }, HOY)
+  return precalificarMotoNueva({ ...CLIENTE, ...c }, { ...RESUELTOS_MOTO_NUEVA, ...r }, hoyEnMadrid())
 }
 
 test('moto: sin póliza previa, con todo resuelto no falta nada', () => {
@@ -413,6 +414,8 @@ test('moto: sin experiencia de conducción, se supone ThisMotorcycle y se marca 
   const r = preMoto()
   assert.equal(r.datos.experienciaConduccion, 'ThisMotorcycle')
   assert.ok(r.supuestos.some((s) => s.campo === 'experienciaConduccion'))
+  // Suponer «ya ha llevado ESTA moto» abarata: es un supuesto OPTIMISTA, como el carnet B.
+  assert.equal(r.supuestos.find((s) => s.campo === 'experienciaConduccion')!.optimista, true)
   assert.equal(r.faltan.length, 0)
 })
 

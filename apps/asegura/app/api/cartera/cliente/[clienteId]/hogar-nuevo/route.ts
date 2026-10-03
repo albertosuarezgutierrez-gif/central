@@ -76,6 +76,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ clienteId: str
       anioConstruccion: datos.anioConstruccion,
       codigoPostal: datos.codigoPostal,
       uso: datos.uso,
+      referencia,
       direccion: direccionDesdeCatastro(paramsDnploc(datos.direccion)),
     }
   } catch (e) {

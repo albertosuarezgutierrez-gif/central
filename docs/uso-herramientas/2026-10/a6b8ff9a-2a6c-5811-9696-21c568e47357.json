@@ -1,0 +1,83 @@
+{
+ "sesion": "a6b8ff9a-2a6c-5811-9696-21c568e47357",
+ "inicio": "2026-10-03T13:09:17.891Z",
+ "fin": "2026-10-03T13:12:52.266Z",
+ "llamadas": 33,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 436,
+   "chars_out": 3456,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 867239,
+   "tools": {
+    "ReadNotifications": 1,
+    "ToolSearch": 1
+   }
+  },
+  "mcp:OpenSEO": {
+   "llamadas": 10,
+   "chars_in": 2251,
+   "chars_out": 26747,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__OpenSEO__run_site_audit": 1,
+    "mcp__OpenSEO__get_keyword_metrics": 1,
+    "mcp__OpenSEO__get_search_console_performance": 2,
+    "mcp__OpenSEO__get_google_analytics_key_events": 1,
+    "mcp__OpenSEO__get_google_analytics_organic_landing_pages": 1,
+    "mcp__OpenSEO__get_google_analytics_traffic_acquisition": 1,
+    "mcp__OpenSEO__get_business_profile": 1,
+    "mcp__OpenSEO__find_serp_competitors": 1,
+    "mcp__OpenSEO__get_audit_status": 1
+   }
+  },
+  "bash": {
+   "llamadas": 7,
+   "chars_in": 3771,
+   "chars_out": 42294,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 7
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 6,
+   "chars_in": 458,
+   "chars_out": 88689,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 6
+   }
+  },
+  "escritura": {
+   "llamadas": 7,
+   "chars_in": 9255,
+   "chars_out": 659418,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 7
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 4072,
+   "chars_out": 4268,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 1026908,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

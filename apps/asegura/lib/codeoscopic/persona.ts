@@ -51,9 +51,62 @@ export type DatosPersona = {
    * catálogo vivo — si no hay match, no se manda nada inventado.
    */
   tipoVia?: string | null
+  /**
+   * `nationality.code` (ISO alpha-3, p. ej. `ESP`, `MAR`). El vendor lo exige
+   * con `Nie` o `Passport` (docs/CODEOSCOPIC-API-REFERENCIA-2026-09.md § personas).
+   * Si la ficha no lo tiene, `revisarPersona` lo devuelve como dato que falta:
+   * nunca se inventa.
+   */
+  nacionalidad?: string | null
 }
 
-export const RE_TELEFONO = /^[67][0-9]{8}$/
+/** Móvil o fijo español: 9 dígitos empezando por 6-9 (patrón del esquema del vendor). */
+export const RE_TELEFONO = /^[6-9][0-9]{8}$/
+
+export type TipoDocumento = 'Dni' | 'Nie' | 'Passport'
+// Letras del juego del vendor (sin I, O, U): fuera de él, el vendor devuelve 400.
+const LETRAS_VENDOR = 'A-HJ-NP-TV-Z'
+const RE_DNI = new RegExp(`^\\d{8}[${LETRAS_VENDOR}]$`)
+const RE_NIE = new RegExp(`^[XYZ]\\d{7}[${LETRAS_VENDOR}]$`)
+// Forma de DNI/NIE con CUALQUIER letra final: lo que parece documento español aunque la letra sobre.
+const RE_DNI_FORMA = /^\d{8}[A-Z]$/
+const RE_NIE_FORMA = /^[XYZ]\d{7}[A-Z]$/
+const LETRAS_CONTROL = 'TRWAGMYFPDXBNJZSQVHLCKE'
+
+/**
+ * Documento normalizado: mayúsculas, sin espacios, guiones ni puntos, y un DNI de 1-7 cifras + letra
+ * (los de CIMA suelen perder el cero inicial: `1234567L`) rellenado con ceros hasta 8 cifras.
+ */
+export function normalizarDocumento(doc: string | null | undefined): string {
+  const c = String(doc ?? '').trim().toUpperCase().replace(/[\s.-]/g, '')
+  return /^\d{1,7}[A-Z]$/.test(c) ? c.padStart(9, '0') : c
+}
+
+/** Letra de control de un DNI (8 cifras) o NIE (X/Y/Z + 7 cifras) normalizado; `null` si no tiene esa forma. */
+function letraControl(c: string): string | null {
+  if (RE_DNI_FORMA.test(c)) return LETRAS_CONTROL[Number(c.slice(0, 8)) % 23]
+  if (RE_NIE_FORMA.test(c)) return LETRAS_CONTROL[Number('XYZ'.indexOf(c[0]) + c.slice(1, 8)) % 23]
+  return null
+}
+
+/**
+ * ¿Parece un DNI/NIE pero no lo es? (letra fuera del juego del vendor o de control que no cuadra.)
+ * Un pasaporte, que no tiene esa forma, nunca se marca aquí.
+ */
+export function documentoEspanolInvalido(doc: string | null | undefined): boolean {
+  const c = normalizarDocumento(doc)
+  const esperada = letraControl(c)
+  return esperada !== null && (c[c.length - 1] !== esperada || !LETRAS_VENDOR_RE.test(c[c.length - 1]))
+}
+const LETRAS_VENDOR_RE = new RegExp(`^[${LETRAS_VENDOR}]$`)
+
+/** Tipo de documento por FORMATO: DNI (8 cifras + letra), NIE (X/Y/Z + 7 cifras + letra), si no, `Passport`. */
+export function tipoDocumento(doc: string | null | undefined): TipoDocumento {
+  const c = normalizarDocumento(doc)
+  if (RE_DNI.test(c)) return 'Dni'
+  if (RE_NIE.test(c)) return 'Nie'
+  return 'Passport'
+}
 export const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 /** Forma mínima de un correo: algo@algo.algo. El vendor valida el suyo; esto solo evita pagar por una errata. */
 export const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -108,10 +161,23 @@ export function revisarPersona(d: Partial<DatosPersona>): ReparoPersona[] {
   else if (!RE_FECHA.test(String(d.fechaNacimiento)))
     r.push({ campo: 'fechaNacimiento', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
   if (d.sexo !== 'hombre' && d.sexo !== 'mujer') falta('sexo')
-  // El vendor valida el móvil: mejor rechazarlo aquí que pagar por un 400.
+  // El vendor valida el teléfono: mejor rechazarlo aquí que pagar por un 400.
   if (!texto(d.telefono)) falta('telefono')
   else if (!RE_TELEFONO.test(String(d.telefono).replace(/\s/g, '')))
-    r.push({ campo: 'telefono', motivo: 'tiene que ser un móvil español: 9 dígitos empezando por 6 o 7' })
+    r.push({ campo: 'telefono', motivo: 'tiene que ser un teléfono español: 9 dígitos empezando por 6, 7, 8 o 9' })
+  // Documento: `surname2` es obligatorio con Dni; `nationality.code` con Nie o Passport.
+  if (texto(d.dni)) {
+    const tipo = tipoDocumento(d.dni)
+    // Letra de control (módulo 23): un DNI/NIE que no cuadra es un 400 del vendor tras cobrar.
+    if (documentoEspanolInvalido(d.dni))
+      r.push({ campo: 'dni', motivo: 'la letra del DNI/NIE no es correcta: revisa el documento' })
+    if (tipo === 'Dni' && !texto(d.apellido2))
+      falta('apellido2', 'el segundo apellido es obligatorio con DNI para el vendor')
+    if (tipo !== 'Dni' && !texto(d.nacionalidad))
+      falta('nacionalidad', `la nacionalidad (código ISO de 3 letras, p. ej. ESP) es obligatoria con ${tipo === 'Nie' ? 'NIE' : 'pasaporte'}`)
+    else if (tipo !== 'Dni' && !/^[A-Za-z]{3}$/.test(String(d.nacionalidad).trim()))
+      r.push({ campo: 'nacionalidad', motivo: 'tiene que ser el código ISO de 3 letras (p. ej. ESP, MAR)' })
+  }
   // Residencia: si va uno, va el otro (lo exige el vendor).
   if (numero(d.municipioResidenciaId) && !texto(d.cpResidencia))
     r.push({ campo: 'cpResidencia', motivo: 'si mandas el municipio de residencia, el código postal es obligatorio' })
@@ -160,7 +226,7 @@ export type CarnetExtra = {
  */
 export function construirPersona(d: DatosPersona, extra: CarnetExtra = {}): Record<string, unknown> {
   const persona: Record<string, unknown> = {
-    identificationDocument: { type: { id: 'Dni' }, id: d.dni.trim().toUpperCase() },
+    identificationDocument: { type: { id: tipoDocumento(d.dni) }, id: normalizarDocumento(d.dni) },
     name: d.nombre.trim(),
     surname: d.apellido1.trim(),
     birthDate: d.fechaNacimiento,
@@ -188,6 +254,7 @@ export function construirPersona(d: DatosPersona, extra: CarnetExtra = {}): Reco
     }
   }
   if (texto(d.apellido2)) persona.surname2 = d.apellido2!.trim()
+  if (tipoDocumento(d.dni) !== 'Dni' && texto(d.nacionalidad)) persona.nationality = { code: d.nacionalidad!.trim().toUpperCase() }
   // El correo, si la ficha lo tiene — como `emails[]`, igual que `phones[]`.
   if (texto(d.email)) persona[CLAVE_EMAIL_VENDOR] = [elementoEmail(d.email!)]
 
@@ -270,7 +337,7 @@ export function esEmpresa(p: unknown): p is DatosEmpresa {
 export function documentoDe(p: Partial<DatosPersona> | Partial<DatosEmpresa> | null | undefined): string {
   if (!p) return ''
   const v = esEmpresa(p) ? p.cif : (p as Partial<DatosPersona>).dni
-  return String(v ?? '').trim().toUpperCase().replace(/[\s-]/g, '')
+  return normalizarDocumento(v)
 }
 
 const LETRAS_CIF = 'ABCDEFGHJNPQRSUVW'

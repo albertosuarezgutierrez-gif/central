@@ -198,6 +198,7 @@ const ETIQUETAS_HUECO: Record<string, { etiqueta: string; tipo: string; pista?: 
   nombre: { etiqueta: 'Nombre', tipo: 'text' },
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
   sexo: { etiqueta: 'Sexo (hombre/mujer)', tipo: 'text' },
   estadoCivil: { etiqueta: 'Estado civil', tipo: 'text' },
   telefono: { etiqueta: 'Teléfono móvil', tipo: 'tel' },
