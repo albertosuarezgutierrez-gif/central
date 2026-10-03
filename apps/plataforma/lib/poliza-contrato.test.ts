@@ -205,3 +205,26 @@ test('bloquesContratoCima: comisión clase ME traducida', () => {
   const c = leerContrato({ comisiones: [{ clase: 'ME', bruta: '10.00' }] })!
   assert.equal(bloquesContratoCima(c)[0].filas[0].etiqueta, 'Comisión · Mediador: Comisión por producto')
 })
+
+test('interpretarPoliza: cimaExtra por recibo — null ≠ [] ≠ lista, y la lista se agrupa', () => {
+  const r = interpretarPoliza(200, {
+    estado: 'ok',
+    poliza: {
+      id: 'p1', cliente: { id: 'c1', nombre: 'X' }, tipo: 'auto', aseguradora: 'Occident',
+      listaRecibos: [
+        { id: 'r1', situacion: 'cobrado', importe: 10 },
+        { id: 'r2', situacion: 'cobrado', importe: 10, cimaExtra: [] },
+        { id: 'r3', situacion: 'cobrado', importe: 10, cimaExtra: [{ ruta: 'Recibo.Desglose.FechaLiquidacion', valor: '2026-09-17' }], cimaExtraTruncado: true },
+      ],
+    },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  const l = r.poliza.listaRecibos
+  assert.equal(l[0].cimaExtra, null)
+  assert.deepEqual(l[1].cimaExtra, [])
+  assert.equal(l[2].cimaExtra?.[0].titulo, 'Desglose')
+  assert.equal(l[2].cimaExtra?.[0].filas[0].valor, '17/09/2026')
+  assert.equal(l[2].cimaExtraTruncado, true)
+  assert.equal(l[0].cimaExtraTruncado, false)
+})

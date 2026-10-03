@@ -184,6 +184,7 @@ export type SenalIngesta = {
     | 'caja_negra'
     | 'emisiones_sin_aviso'
     | 'cobertura'
+    | 'cobertura_descartada'
     | 'parciales'
     | 'renovaciones'
   tipo: 'perdida' | 'hueco'
@@ -454,6 +455,15 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       detalle:
         (peor ? `Sobre todo en ${peor.tipoObjeto} (${peor.nuncaLeidas}). ` : '') + alcance +
         'No es una avería: es lo que se está dejando sin aprovechar.',
+    })
+  }
+
+  // «Descartado por privacidad» ≠ «sin leer»: se excluye a propósito y se muestra aparte.
+  if (s.cobertura !== null && (s.cobertura.rutasDescartadas ?? 0) > 0) {
+    out.push({
+      clave: 'cobertura_descartada', tipo: 'hueco', n: s.cobertura.rutasDescartadas ?? null,
+      titulo: `${s.cobertura.rutasDescartadas} campos descartados por privacidad`,
+      detalle: 'Se excluyen a propósito (datos personales): no cuentan como «sin leer» ni hay que mapearlos.',
     })
   }
 

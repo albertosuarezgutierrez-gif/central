@@ -1070,3 +1070,21 @@ test('firma: una firma de siete tramos (antes del 28/09) se lee como «ninguna»
   assert.equal(normalizarFirmaIngesta(vieja), hoy)
   assert.equal(suena(normalizarFirmaIngesta(vieja)!, firmaAvisoIngesta(conEmis([allianzEmitida]))), true)
 })
+
+test('cobertura: «descartados por privacidad» va aparte y NO es «sin leer»', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: { rutas: 100, rutasNuncaLeidas: 10, rutasDescartadas: 7, entidadesObservadas: 3, porTipo: [{ tipoObjeto: 'POL', rutas: 100, nuncaLeidas: 10 }] },
+  })
+  assert.equal(s.estado, 'ok')
+  assert.ok(s.motivos.some(m => m.includes('10 no se leen nunca')))
+  assert.ok(s.motivos.some(m => m.includes('7 campo(s) descartados por privacidad')))
+})
+
+test('cobertura: sin `rutasDescartadas` (columna aún sin aplicar) no inventa un descartado', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: { rutas: 100, rutasNuncaLeidas: 10, entidadesObservadas: 3, porTipo: [] },
+  })
+  assert.ok(!s.motivos.some(m => m.includes('descartados')))
+})

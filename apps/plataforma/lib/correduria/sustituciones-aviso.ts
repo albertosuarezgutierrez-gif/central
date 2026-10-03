@@ -35,3 +35,35 @@ export function mensajeSustituciones(filas: readonly SustitucionAviso[]): string
   const pie = filas.length > 20 ? `\n\n… y ${filas.length - 20} más. Lista completa en /correduria.` : ''
   return cabecera + lineas + pie
 }
+
+/**
+ * Avisos de «póliza sustituida que sigue viva». `null` = nada que avisar. Sin PII: solo el texto de la señal
+ * (nº de póliza + compañía) que ya compuso `avisoDobleSeguro`.
+ */
+export function mensajeDobleSeguro(avisos: readonly { texto: string }[]): string | null {
+  if (avisos.length === 0) return null
+  const lineas = avisos.slice(0, 20).map((a) => `• ${a.texto}`).join('\n')
+  const pie = avisos.length > 20 ? `\n… y ${avisos.length - 20} más.` : ''
+  return `⚠️ *Posible doble seguro · Grupo ASegura*\n${avisos.length} póliza(s) sustituida(s) siguen vivas:\n\n${lineas}${pie}`
+}
+
+/**
+ * Envía varios avisos de forma INDEPENDIENTE: un fallo de uno no impide los demás. Los errores se agregan.
+ * `mensaje === null` = nada que enviar (no cuenta).
+ */
+export async function enviarAvisosIndependientes(
+  envios: ReadonlyArray<{ id: string; mensaje: string | null; enviar: (mensaje: string) => Promise<unknown> }>,
+): Promise<{ enviados: number; errores: string[] }> {
+  let enviados = 0
+  const errores: string[] = []
+  for (const e of envios) {
+    if (e.mensaje === null) continue
+    try {
+      await e.enviar(e.mensaje)
+      enviados++
+    } catch (err) {
+      errores.push(`${e.id}: ${String(err).slice(0, 120)}`)
+    }
+  }
+  return { enviados, errores }
+}

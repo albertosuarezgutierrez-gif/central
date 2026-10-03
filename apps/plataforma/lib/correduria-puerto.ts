@@ -845,10 +845,14 @@ export type SustitucionPendiente = {
   polizaNueva: { id: string; aseguradora: string; numeroPoliza: string | null } | null
 }
 
+/** Póliza sustituida que sigue viva (posible doble seguro). Sin datos personales. */
+export type DobleSeguroPendiente = { polizaViejaId: string; polizaNuevaId: string; texto: string }
+
 export type Sustituciones =
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: MotivoPuerto }
-  | { estado: 'ok'; filas: SustitucionPendiente[] }
+  /** `dobleSeguro`: `null` = asegura no lo manda o no pudo leerlo (≠ `[]`, ninguno). */
+  | { estado: 'ok'; filas: SustitucionPendiente[]; dobleSeguro: DobleSeguroPendiente[] | null }
 
 function leerRelacionadaPuerto(v: unknown): { id: string; aseguradora: string; numeroPoliza: string | null } | null {
   if (typeof v !== 'object' || v === null) return null
@@ -885,7 +889,15 @@ export function interpretarSustituciones(status: number, json: unknown): Sustitu
         })
         .filter((x): x is SustitucionPendiente => x !== null)
     : []
-  return { estado: 'ok', filas }
+  const dobleSeguro = Array.isArray(o.dobleSeguro)
+    ? o.dobleSeguro.flatMap((f): DobleSeguroPendiente[] => {
+        if (typeof f !== 'object' || f === null) return []
+        const x = f as Record<string, unknown>
+        const polizaViejaId = cadena(x.polizaViejaId), polizaNuevaId = cadena(x.polizaNuevaId), texto = cadena(x.texto)
+        return polizaViejaId && polizaNuevaId && texto ? [{ polizaViejaId, polizaNuevaId, texto }] : []
+      })
+    : null
+  return { estado: 'ok', filas, dobleSeguro }
 }
 
 export async function sustitucionesAsegura(): Promise<Sustituciones> {

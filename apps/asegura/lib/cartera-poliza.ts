@@ -228,6 +228,9 @@ export type ReciboFichaPoliza = ReciboResumen & {
    * que trae CIMA la resuelve CIMA. `null` = no hay aviso abierto o no se pudo leer.
    */
   devolucionCorreo: { fecha: string; motivo: string | null; tipoMotivo: string | null } | null
+  /** `datos_extra.cimaExtra` del recibo (sin PII, denegada en origen). `null` = clave ausente (aún no leído) ≠ `[]`. Solo operador. */
+  cimaExtra: Array<{ ruta: string; valor: string }> | null
+  cimaExtraTruncado: boolean
 }
 
 export type DevolucionHistorial = {
@@ -393,7 +396,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       recibos: {
         select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEfectoActual: true, fechaEmision: true, fechaVencimiento: true, formaPago: true,
           idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true, comisionBruta: true,
-          fechaSituacion: true, comisionLiquida: true },
+          fechaSituacion: true, comisionLiquida: true, datosExtra: true },
         orderBy: { fechaEmision: 'desc' },
       },
       siniestros: { select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
@@ -617,6 +620,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         clase: texto(x.claseRecibo), fechaSituacion: fechaIso(x.fechaSituacion),
         primaNeta: importeEiac(x.primaNeta), comisionLiquida: importeEiac(x.comisionLiquida),
         devolucionCorreo: devolucionesCorreo.get(r.id) ?? null,
+        cimaExtra: leerCimaExtra(x.datosExtra),
+        cimaExtraTruncado: esObjetoPlano(x.datosExtra) && x.datosExtra.cimaExtraTruncado === true,
       }
     }),
     historialDevoluciones,

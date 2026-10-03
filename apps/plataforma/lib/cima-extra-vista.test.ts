@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { cimaExtraTruncado, etiquetaCampo, valorCampo, vistaCimaExtra } from './cima-extra-vista.ts'
+import { hayMasDatos, cimaExtraTruncado, etiquetaCampo, valorCampo, vistaCimaExtra } from './cima-extra-vista.ts'
 
 test('null ≠ []: ausente/no array → null; vacío → []', () => {
   assert.equal(vistaCimaExtra(undefined), null)
@@ -52,4 +52,11 @@ test('truncado solo si es literalmente true', () => {
   assert.equal(cimaExtraTruncado(true), true)
   assert.equal(cimaExtraTruncado('true'), false)
   assert.equal(cimaExtraTruncado(undefined), false)
+})
+
+test('hayMasDatos: null y [] no pintan fila; con datos sí', () => {
+  assert.equal(hayMasDatos(null), false)
+  assert.equal(hayMasDatos([]), false)
+  assert.equal(hayMasDatos([{ titulo: 'x', filas: [] }]), false)
+  assert.equal(hayMasDatos([{ titulo: 'x', filas: [{ etiqueta: 'a', valor: 'b' }] }]), true)
 })

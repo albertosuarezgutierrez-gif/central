@@ -105,6 +105,9 @@ export type ReciboFicha = {
   primaNeta: number | null
   /** Comisión líquida (operador). `null` = no consta: nunca 0. */
   comisionLiquida: number | null
+  /** «Más datos de CIMA» del recibo (solo operador). `null` = aún no leído o asegura no lo manda: no se dice «sin datos». */
+  cimaExtra: GrupoCimaExtra[] | null
+  cimaExtraTruncado: boolean
 } & ReciboExtraFicha
 
 export type DevolucionCorreoFicha = { fecha: string; motivo: string | null; tipoMotivo: string | null }
@@ -457,6 +460,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
         fechaEfecto: fechaIsoOnull(o.fechaEfecto),
         clase: cadena(o.clase), fechaSituacion: fechaIsoOnull(o.fechaSituacion),
         primaNeta: numero(o.primaNeta), comisionLiquida: numero(o.comisionLiquida),
+        cimaExtra: vistaCimaExtra(o.cimaExtra), cimaExtraTruncado: cimaExtraTruncado(o.cimaExtraTruncado),
         ...leerReciboExtra(o),
       })
     }

@@ -436,3 +436,24 @@ test('🚨 el titular del Telegram usa la MISMA función que el título de la pa
   assert.match(ruta, /sinFicheroAtascado\(perdidas\)/)
   assert.match(ruta, /El webhook de Codeoscopic no avisa de las emisiones/)
 })
+
+test('cobertura: los descartados por privacidad salen aparte, no dentro de «sin leer»', () => {
+  const s = senalesIngesta({
+    ...saludBase,
+    cobertura: { rutas: 300, rutasNuncaLeidas: 20, rutasDescartadas: 9, entidadesObservadas: 3, porTipo: [{ tipoObjeto: 'POL', rutas: 300, nuncaLeidas: 20 }] },
+  })
+  assert.equal(s.find(v => v.clave === 'cobertura')?.n, 20)
+  const d = s.find(v => v.clave === 'cobertura_descartada')
+  assert.equal(d?.n, 9)
+  assert.equal(d?.tipo, 'hueco')
+})
+
+test('cobertura: sin descartadas (null o ausente) no hay fila de descartados', () => {
+  for (const rutasDescartadas of [null, undefined, 0]) {
+    const s = senalesIngesta({
+      ...saludBase,
+      cobertura: { rutas: 300, rutasNuncaLeidas: 20, rutasDescartadas, entidadesObservadas: 3, porTipo: [] },
+    })
+    assert.ok(!s.some(v => v.clave === 'cobertura_descartada'))
+  }
+})

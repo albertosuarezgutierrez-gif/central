@@ -15,7 +15,7 @@ import { tgAviso } from '@/lib/telegram'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { sustitucionesAsegura } from '@/lib/correduria-puerto'
-import { mensajeSustituciones } from '@/lib/correduria/sustituciones-aviso'
+import { enviarAvisosIndependientes, mensajeDobleSeguro, mensajeSustituciones } from '@/lib/correduria/sustituciones-aviso'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -44,17 +44,20 @@ export async function GET(req: NextRequest) {
     })),
   )
 
-  let enviado = false
-  if (mensaje) {
-    try {
-      await tgAviso('correduria.sustitucion-seguimiento', mensaje)
-      enviado = true
-    } catch (e) {
-      await registrarLatido(AGENTE, false, `Telegram falló: ${String(e).slice(0, 120)}`)
-      return NextResponse.json({ ok: false, motivo: 'telegram', pendientes: r.filas.length }, { status: 200 })
-    }
+  const mensajeDoble = r.dobleSeguro === null ? null : mensajeDobleSeguro(r.dobleSeguro)
+
+  // Envíos independientes: un Telegram caído en uno no tapa el otro.
+  const { enviados, errores } = await enviarAvisosIndependientes([
+    { id: 'doble-seguro', mensaje: mensajeDoble, enviar: (m) => tgAviso('correduria.sustitucion-doble-seguro', m) },
+    { id: 'seguimiento', mensaje, enviar: (m) => tgAviso('correduria.sustitucion-seguimiento', m) },
+  ])
+  const enviado = enviados > 0
+  const nDoble = r.dobleSeguro?.length ?? 0
+  if (errores.length > 0) {
+    await registrarLatido(AGENTE, false, `Telegram falló: ${errores.join(' | ')}`)
+    return NextResponse.json({ ok: false, motivo: 'telegram', errores, pendientes: r.filas.length, dobleSeguro: nDoble, enviado }, { status: 200 })
   }
 
-  await registrarLatido(AGENTE, true, `${r.filas.length} sustitución(es) pendiente(s) de confirmar`)
-  return NextResponse.json({ ok: true, pendientes: r.filas.length, enviado })
+  await registrarLatido(AGENTE, true, `${r.filas.length} sustitución(es) pendiente(s) de confirmar · ${r.dobleSeguro === null ? 'doble seguro sin leer' : `${nDoble} posible(s) doble seguro`}`)
+  return NextResponse.json({ ok: true, pendientes: r.filas.length, dobleSeguro: r.dobleSeguro === null ? null : nDoble, enviado })
 }
