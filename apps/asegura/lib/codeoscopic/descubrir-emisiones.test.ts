@@ -14,7 +14,9 @@ import {
   listarPresentadas,
   nuevoPresupuesto,
   planificar,
+  posicionEnAnillo,
   procesarProyecto,
+  rotarNuevos,
   sincronizarTrasWebhook,
   type DepsPasada,
   type EstadoLocal,
@@ -365,6 +367,44 @@ test('tope de llamadas: lo que no se miró se cuenta como pendiente, no como rev
 })
 
 // ─── Planificación ────────────────────────────────────────────────────────────
+
+test('inanición: 60 no accionables delante de 1 accionable — en pasadas acotadas se acuña igual', async () => {
+  // 60 hogares sin nº (desenlace «ramo_no_vigilado», no dejan fila) y, al FINAL de la lista, un auto
+  // acuñable. Con orden fijo los 39 primeros se comían el tope en cada pasada y el auto no se miraba nunca.
+  const detalle: Record<string, unknown> = {}
+  for (let i = 0; i < 60; i++) detalle[String(50_000_000 + i)] = proyecto({ linea: 'Home', poliza: null })
+  detalle['50000060'] = proyecto()
+  vendorCon(detalle)
+  const b = bd({ 'h:12345678Z': ['c1'] })
+  let pasadas = 0
+  for (; pasadas < 12 && b.polizas.length === 0; pasadas++) {
+    const r = await descubrirEmisiones({}, b.deps())
+    assert.ok(r.pendientesPorTope > 0, 'con 61 en la ventana no caben todos: se cuenta, no se calla')
+    b.avanzar(0.5) // el cron pasa cada 30 min
+  }
+  assert.deepEqual(b.polizas, [{ projectId: '50000060', clienteId: 'c1' }], `no se acuñó en ${pasadas} pasadas`)
+  assert.equal(b.revisiones.size, 0, 'los hogares sin nº no van a la cola')
+})
+
+test('rotación: en una vuelta (12 pasadas) todos los nuevos van alguna vez en cabeza', () => {
+  const ids = Array.from({ length: 200 }, (_, i) => String(60_000_000 + i))
+  const vistos = new Set<string>()
+  const t0 = new Date('2026-10-03T05:10:00Z').getTime()
+  for (let k = 0; k < 12; k++) for (const id of rotarNuevos(ids, new Date(t0 + k * 1_800_000)).slice(0, 39)) vistos.add(id)
+  assert.equal(vistos.size, ids.length)
+  // Posición estable: no depende de qué otros ids haya.
+  assert.equal(posicionEnAnillo('50000060'), posicionEnAnillo('50000060'))
+  assert.deepEqual(rotarNuevos(['b', 'a'], new Date(t0)).sort(), ['a', 'b'])
+})
+
+test('planificar: los nuevos no dejan sin tope a los proyectos vivos de la intranet (por turnos)', () => {
+  const ahora = new Date('2026-10-03T08:00:00Z')
+  const locales = new Map<string, EstadoLocal>([['9', { proyecto: { estado: 'preemision', clienteId: 'c', revisadoAt: null }, revision: null }]])
+  const nuevos = Array.from({ length: 50 }, (_, i) => String(70_000_000 + i))
+  const p = planificar([...nuevos, '9'], locales, ahora)
+  assert.ok(p.aProcesar.findIndex((x) => x.projectId === '9') < 2, 'el vivo entra en el primer turno')
+})
+
 
 test('planificar: salta lo acuñado (estado emitida, no poliza_id) y pone primero lo nuevo', () => {
   const ahora = new Date('2026-10-03T08:00:00Z')

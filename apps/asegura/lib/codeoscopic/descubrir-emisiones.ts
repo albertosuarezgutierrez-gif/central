@@ -170,11 +170,69 @@ export type Plan = {
 const TERMINALES = new Set(['rechazada', 'vencida'])
 const horasDesde = (d: Date | null, ahora: Date) => (d ? (ahora.getTime() - d.getTime()) / 3_600_000 : Infinity)
 
+// ─── Rotación de los NUEVOS (sin persistencia) ────────────────────────────────
+//
+// Un proyecto cuyo desenlace no deja fila (`ramo_no_vigilado`, `sin_solicitud`, `en_vuelo` sin
+// fila…) vuelve a ser «nuevo» en cada pasada. Con un orden fijo, si hay más de los que caben en el
+// tope (~38), los mismos de cabeza se comían el tope SIEMPRE y los de detrás no se miraban nunca
+// (inanición). Sin tabla nueva: cada id tiene una posición ESTABLE en un anillo (hash del id) y cada
+// pasada arranca en un punto que gira con la hora (una vuelta cada `HORAS_VUELTA_NUEVOS`). Con el
+// cron cada 30 min, en una vuelta (12 pasadas) se recorre el anillo entero siempre que quepan
+// ~1/12 de los nuevos por pasada (≈450 con el tope de 40). Lo que no cabe, sigue contándose en
+// `pendientesPorTope` (y el latido de plataforma se pone en rojo si se sostiene).
+
+/** Una vuelta completa del anillo de los nuevos. 12 pasadas del cron (cada 30 min). */
+export const HORAS_VUELTA_NUEVOS = 6
+const ANILLO = 2 ** 32
+
 /**
- * Qué se mira en esta pasada y en qué orden: primero los NUEVOS (nadie los ha visto), luego los
- * proyectos vivos de la intranet (los de revisión más antigua primero) y por último las filas en
- * revisión. «Ya acuñado» = `estado = 'emitida'` (NO `poliza_id`: ahí puede estar la póliza
- * RETARIFICADA que se sustituye).
+ * Posición estable de un id en el anillo: FNV-1a de 32 bits + mezcla final (fmix32 de murmur3). Sin
+ * la mezcla, ids consecutivos (como los de Avant2) caen todos en un arco del ~4 % y se pierde el reparto.
+ * No depende de cuántos ids haya.
+ */
+export function posicionEnAnillo(id: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  h ^= h >>> 16
+  h = Math.imul(h, 0x85ebca6b)
+  h ^= h >>> 13
+  h = Math.imul(h, 0xc2b2ae35)
+  h ^= h >>> 16
+  return h >>> 0
+}
+
+/** Punto del anillo por el que empieza la pasada de `ahora`. Gira una vuelta cada `horas`. */
+export function arranqueRotacion(ahora: Date, horas = HORAS_VUELTA_NUEVOS): number {
+  const periodo = horas * 3_600_000
+  const fase = ((ahora.getTime() % periodo) + periodo) % periodo
+  return Math.floor((fase / periodo) * ANILLO)
+}
+
+/** Los nuevos en el orden de esta pasada: desde el arranque, siguiendo el anillo. */
+export function rotarNuevos(ids: string[], ahora: Date): string[] {
+  const inicio = arranqueRotacion(ahora)
+  return ids
+    .map((id) => ({ id, k: (posicionEnAnillo(id) - inicio + ANILLO) % ANILLO }))
+    .sort((a, b) => a.k - b.k || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((x) => x.id)
+}
+
+/** Reparto por turnos (uno de cada lista): ningún grupo deja sin tope a los otros. */
+function intercalar<T>(listas: T[][]): T[] {
+  const out: T[] = []
+  const largo = Math.max(0, ...listas.map((l) => l.length))
+  for (let i = 0; i < largo; i++) for (const l of listas) if (i < l.length) out.push(l[i])
+  return out
+}
+
+/**
+ * Qué se mira en esta pasada y en qué orden: por TURNOS un nuevo (en el orden rotado del anillo),
+ * un proyecto vivo de la intranet (revisión más antigua primero) y una fila en revisión (la más
+ * antigua primero), para que ningún grupo deje sin tope a los otros. «Ya acuñado» =
+ * `estado = 'emitida'` (NO `poliza_id`: ahí puede estar la póliza RETARIFICADA que se sustituye).
  */
 export function planificar(ids: string[], locales: Map<string, EstadoLocal>, ahora: Date): Plan {
   const saltados = { yaEmitida: 0, descartadaPorPersona: 0, reciente: 0 }
@@ -199,11 +257,11 @@ export function planificar(ids: string[], locales: Map<string, EstadoLocal>, aho
   }
   const porAntiguedad = (a: { at: Date | null }, b: { at: Date | null }) => (a.at?.getTime() ?? 0) - (b.at?.getTime() ?? 0)
   return {
-    aProcesar: [
-      ...nuevos.map((projectId) => ({ projectId, tipo: 'nuevo' as const })),
-      ...vivos.sort(porAntiguedad).map((v) => ({ projectId: v.id, tipo: 'proyecto' as const })),
-      ...revision.sort(porAntiguedad).map((v) => ({ projectId: v.id, tipo: 'revision' as const })),
-    ],
+    aProcesar: intercalar<Plan['aProcesar'][number]>([
+      rotarNuevos(nuevos, ahora).map((projectId) => ({ projectId, tipo: 'nuevo' as const })),
+      vivos.sort(porAntiguedad).map((v) => ({ projectId: v.id, tipo: 'proyecto' as const })),
+      revision.sort(porAntiguedad).map((v) => ({ projectId: v.id, tipo: 'revision' as const })),
+    ]),
     saltados,
   }
 }

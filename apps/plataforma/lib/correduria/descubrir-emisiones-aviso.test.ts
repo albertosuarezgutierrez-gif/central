@@ -5,11 +5,13 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import {
+  PASADAS_PENDIENTES_ROJO,
   PREFIJO_CREDENCIALES,
   decidirDescubrimiento,
   esPrimeraPasadaDelDia,
   interpretarDescubrimiento,
   type Descubrimiento,
+  type LatidoPrevio,
 } from './descubrir-emisiones-aviso.ts'
 
 const BASE = 'https://plataforma.test'
@@ -111,4 +113,24 @@ test('la ruta del cron emite el id catalogado y deja latido', () => {
   const src = readFileSync(new URL('../../app/api/cron/correduria-descubrir-emisiones/route.ts', import.meta.url), 'utf8')
   assert.match(src, /tgAviso\('correduria\.emisiones-descubiertas'/)
   assert.match(src, /registrarLatido\(AGENTE_DESCUBRIR/)
+})
+
+test('pendientes por tope SOSTENIDOS: el latido deja de ser verde y se avisa UNA vez, sin PII', () => {
+  // Pasadas encadenadas: cada una lee el detalle que dejó la anterior.
+  let previo = null as LatidoPrevio
+  const decisiones = []
+  for (let i = 0; i < PASADAS_PENDIENTES_ROJO + 1; i++) {
+    const d = decidirDescubrimiento({ r: ok({ pendientesPorTope: 22 }), previo, ahora: MEDIODIA, base: BASE })
+    decisiones.push(d)
+    previo = { ok: d.latidoOk, detalle: d.latidoDetalle, ultimoAt: MEDIODIA, ultimoOkAt: d.latidoOk ? MEDIODIA : (previo as LatidoPrevio)?.ultimoOkAt ?? null }
+  }
+  assert.equal(decisiones[0].latidoOk, true, 'una pasada suelta con pendientes es normal')
+  assert.equal(decisiones[PASADAS_PENDIENTES_ROJO - 1].latidoOk, false)
+  assert.equal(decisiones[PASADAS_PENDIENTES_ROJO].latidoOk, false, 'sigue en rojo mientras dure')
+  assert.match(decisiones[PASADAS_PENDIENTES_ROJO - 1].mensaje ?? '', /pasadas seguidas dejando proyectos sin mirar/)
+  assert.equal(decisiones[PASADAS_PENDIENTES_ROJO].mensaje, null, 'no repite el aviso cada media hora')
+  assert.doesNotMatch(decisiones[PASADAS_PENDIENTES_ROJO - 1].mensaje ?? '', /\d{8}[A-Z]|POL-/)
+  // Una pasada sin pendientes rompe la racha y vuelve el verde.
+  const limpia = decidirDescubrimiento({ r: ok(), previo, ahora: MEDIODIA, base: BASE })
+  assert.equal(limpia.latidoOk, true)
 })
