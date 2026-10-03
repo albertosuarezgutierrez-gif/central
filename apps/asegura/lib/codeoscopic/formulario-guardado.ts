@@ -58,6 +58,8 @@ export function extraerFormularioAuto(peticion: unknown): FormularioAutoGuardado
   poner('dni', str(obj(holder.identificationDocument).id))
   poner('nombre', str(holder.name))
   poner('apellido1', str(holder.surname))
+  poner('apellido2', str(holder.surname2))
+  poner('nacionalidad', str(obj(holder.nationality).code))
   poner('telefono', telefono)
   poner('fechaNacimiento', str(holder.birthDate))
   poner('fechaCarnet', str(carnet.date))

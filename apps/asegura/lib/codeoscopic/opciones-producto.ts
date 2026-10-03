@@ -182,9 +182,12 @@ const ALLIANZ_SUBMIT_CONSENTIMIENTOS: OpcionProducto[] = [
 /**
  * Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate:
  * ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo
- * Allianz auto tiene esta captura.
+ * Allianz AUTO tiene esta captura (los 4 consentimientos son del formulario de
+ * Allianz auto; en moto/hogar no hay captura, así que no se firma nada por defecto).
+ * Sin ramo se asume auto, como `opcionesPorDefecto`.
  */
-export function opcionesEmisionPorDefecto(compania: string): OpcionProducto[] | null {
+export function opcionesEmisionPorDefecto(compania: string, ramo: string | null = 'auto'): OpcionProducto[] | null {
+  if ((ramo ?? 'auto') !== 'auto') return null
   const c = compania.trim().toLowerCase()
   if (c.includes('allianz')) return ALLIANZ_SUBMIT_CONSENTIMIENTOS.map((o) => ({ ...o }))
   return null
@@ -206,12 +209,12 @@ export function opcionesEmisionPorDefecto(compania: string): OpcionProducto[] | 
 export function conProductoPorDefecto(
   campos: Record<string, unknown>,
   compania: string,
-  opts?: { familiaAllianz?: boolean },
+  opts?: { familiaAllianz?: boolean; ramo?: string | null },
 ): Record<string, unknown> {
   if (typeof campos.product === 'object' && campos.product !== null && !Array.isArray(campos.product)) {
     return campos
   }
-  const base = opcionesEmisionPorDefecto(compania)
+  const base = opcionesEmisionPorDefecto(compania, opts?.ramo)
   if (!base) return campos
   const opciones = opts?.familiaAllianz
     ? base.map((o) => (o.id === 'insuredFamilyInAllianz' ? { ...o, value: true } : o))

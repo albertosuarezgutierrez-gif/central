@@ -14,6 +14,7 @@ const DATOS: DatosAuto = {
   dni: '12345678z',
   nombre: 'Pilar',
   apellido1: 'Franco Ruz',
+  apellido2: 'Segundo',
   fechaNacimiento: '1980-05-10',
   sexo: 'mujer',
   estadoCivil: 'Married',
@@ -102,4 +103,12 @@ test('extraerHistorialGuardado: lee el previousInsurance de la petición pagada;
   assert.equal(extraerHistorialGuardado({ risk: {} }), null)
   assert.equal(extraerHistorialGuardado({ risk: { previousInsurance: { ...pet.risk.previousInsurance, yearsWithoutAccidents: undefined } } }), null)
   assert.equal(extraerHistorialGuardado(null), null)
+})
+
+test('guarda segundo apellido y nacionalidad para no volver a pedirlos', () => {
+  const f = extraerFormularioAuto(
+    construirPeticionAuto({ ...DATOS, dni: 'X1234567L', nacionalidad: 'mar' }),
+  )
+  assert.equal(f.correcciones.apellido2, 'Segundo')
+  assert.equal(f.correcciones.nacionalidad, 'MAR')
 })

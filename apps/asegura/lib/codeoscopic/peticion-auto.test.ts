@@ -13,6 +13,7 @@ const BASE: DatosAuto = {
   dni: '00000000t',
   nombre: 'Nombre',
   apellido1: 'Apellido',
+  apellido2: 'Segundo',
   fechaNacimiento: '1985-01-01',
   sexo: 'hombre',
   estadoCivil: 'Single',
@@ -216,13 +217,15 @@ test('unos datos válidos no dan ningún reparo', () => {
 })
 
 test('el móvil se valida aquí para no pagar un 400 del vendor', () => {
-  for (const malo of ['912345678', '60000000', '6000000000', 'seiscientos']) {
+  for (const malo of ['512345678', '60000000', '6000000000', 'seiscientos']) {
     assert.ok(
       revisarDatosAuto({ ...BASE, telefono: malo }).some((x) => x.campo === 'telefono'),
       `${malo} debería dar reparo`,
     )
   }
   assert.deepEqual(revisarDatosAuto({ ...BASE, telefono: '600 00 00 00' }), [])
+  // El esquema del vendor admite 6-9 (fijos incluidos).
+  for (const bueno of ['912345678', '812345678', '712345678']) assert.deepEqual(revisarDatosAuto({ ...BASE, telefono: bueno }), [], bueno)
 })
 
 test('el municipio de circulación se pide por ID, y falta con un mensaje que dice qué hacer', () => {
@@ -262,6 +265,7 @@ const OTRA_PERSONA = {
   dni: '11111111h',
   nombre: 'Otra',
   apellido1: 'Persona',
+  apellido2: 'Segundo',
   fechaNacimiento: '1990-05-05',
   sexo: 'mujer' as const,
   estadoCivil: 'Single',
@@ -440,6 +444,7 @@ const OCASIONAL = {
   dni: '11111111h',
   nombre: 'Hija',
   apellido1: 'Apellido',
+  apellido2: 'Segundo',
   fechaNacimiento: '2004-03-02',
   sexo: 'mujer' as const,
   estadoCivil: 'Single',
@@ -478,7 +483,7 @@ test('el ocasional con el MISMO DNI que el habitual es un 400 pagado: se para aq
 })
 
 test('🪤 propietario que ES el conductor (mismo DNI): el MISMO objeto en owner y primaryDriver', () => {
-  const otra = { dni: '11111111h', nombre: 'Otra', apellido1: 'Persona', fechaNacimiento: '1960-02-02', sexo: 'mujer' as const, estadoCivil: 'Married', telefono: '611111111' }
+  const otra = { dni: '11111111h', nombre: 'Otra', apellido1: 'Persona', apellido2: 'Otra', fechaNacimiento: '1960-02-02', sexo: 'mujer' as const, estadoCivil: 'Married', telefono: '611111111' }
   const c = construirPeticionAuto({ ...BASE, propietario: otra, conductor: { ...otra, fechaCarnet: '1990-01-01' } }) as any
   assert.deepEqual(c.risk.owner, c.risk.primaryDriver)
 })
@@ -488,7 +493,7 @@ test('auto: tomador empresa exige conductor aparte y viaja como Cif', async () =
   const { construirPeticionAuto, revisarDatosAuto } = await import('./peticion-auto.ts')
   const base = BASE_TOMADOR_EMPRESA()
   assert.ok(revisarDatosAuto(base).some((x) => x.campo === 'conductor'))
-  const c = construirPeticionAuto({ ...base, conductor: { ...base, dni: '00000001R', nombre: 'Conductor', apellido1: 'Uno', fechaNacimiento: '1980-01-01', sexo: 'hombre', estadoCivil: 'Single', fechaCarnet: '2000-01-01' } } as any) as any
+  const c = construirPeticionAuto({ ...base, conductor: { ...base, dni: '00000001R', nombre: 'Conductor', apellido1: 'Uno', apellido2: 'Dos', fechaNacimiento: '1980-01-01', sexo: 'hombre', estadoCivil: 'Single', fechaCarnet: '2000-01-01' } } as any) as any
   assert.equal(c.holder.identificationDocument.type.id, 'Cif')
   assert.deepEqual(c.risk.owner, c.holder)
   assert.equal(c.risk.primaryDriver.identificationDocument.type.id, 'Dni')
@@ -496,3 +501,32 @@ test('auto: tomador empresa exige conductor aparte y viaja como Cif', async () =
 function BASE_TOMADOR_EMPRESA(): DatosAuto {
   return { ...BASE, tomadorEsEmpresa: true, dni: 'B12345674', nombre: 'Empresa Inventada SL', apellido1: '', apellido2: null, fechaNacimiento: '', estadoCivil: '', fechaCarnet: '' } as DatosAuto
 }
+
+// ── Documento: tipo por formato, segundo apellido y nacionalidad (auditoría 03/10/2026) ──
+test('el tipo de documento sale del FORMATO: Dni, Nie o Passport', () => {
+  const tipo = (dni: string, extra = {}) =>
+    ((construirPeticionAuto({ ...BASE, dni, ...extra }) as any).holder.identificationDocument.type.id)
+  assert.equal(tipo('00000000t'), 'Dni')
+  assert.equal(tipo('X1234567l', { nacionalidad: 'MAR' }), 'Nie')
+  assert.equal(tipo('y1234567x', { nacionalidad: 'MAR' }), 'Nie')
+  assert.equal(tipo('AB123456', { nacionalidad: 'GBR' }), 'Passport')
+})
+
+test('Nie/Passport: viaja nationality.code; con Dni no viaja', () => {
+  const h = (dni: string, extra = {}) => (construirPeticionAuto({ ...BASE, dni, ...extra }) as any).holder
+  assert.deepEqual(h('X1234567L', { nacionalidad: 'mar' }).nationality, { code: 'MAR' })
+  assert.equal('nationality' in h('00000000T', { nacionalidad: 'ESP' }), false)
+})
+
+test('Nie/Passport sin nacionalidad: se pide, no se inventa', () => {
+  const r = revisarDatosAuto({ ...BASE, dni: 'X1234567L' })
+  assert.ok(r.some((x) => x.campo === 'nacionalidad'))
+  assert.ok(revisarDatosAuto({ ...BASE, dni: 'AB123456' }).some((x) => x.campo === 'nacionalidad'))
+  assert.equal(revisarDatosAuto({ ...BASE, dni: 'X1234567L', nacionalidad: 'MAR' }).some((x) => x.campo === 'nacionalidad'), false)
+})
+
+test('segundo apellido: obligatorio con Dni; con Nie no', () => {
+  assert.ok(revisarDatosAuto({ ...BASE, apellido2: null }).some((x) => x.campo === 'apellido2'))
+  assert.ok(revisarDatosAuto({ ...BASE, apellido2: '  ' }).some((x) => x.campo === 'apellido2'))
+  assert.equal(revisarDatosAuto({ ...BASE, dni: 'X1234567L', nacionalidad: 'MAR', apellido2: null }).some((x) => x.campo === 'apellido2'), false)
+})
