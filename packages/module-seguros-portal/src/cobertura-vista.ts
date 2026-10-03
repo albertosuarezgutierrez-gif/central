@@ -1,4 +1,4 @@
-import { interpretarCapital, importeEiac } from '@central/module-seguros'
+import { interpretarCapital, importeEiac, extraerDetalleCobertura } from '@central/module-seguros'
 
 /**
  * Cómo ve el CLIENTE una cobertura: capital, franquicia y vigencia propia.
@@ -7,7 +7,13 @@ import { interpretarCapital, importeEiac } from '@central/module-seguros'
  *
  * Capital (misma lectura que el operador, `interpretarCapital`):
  *  - importe → `2.162,49€`; `0` → «sin capital propio» (pintar «0€» es mentir: está cubierto);
- *  - `INF` → «ilimitado»; NULL / texto que no sabemos leer → `null` (no se pinta).
+ *  - `INF` → «ilimitado» (solo si es explícito); NULL / texto que no sabemos leer → `null` (no se pinta);
+ *  - RC obligatoria → «Límites legales del seguro obligatorio» (nunca «ilimitado»); «RC Explotación»
+ *    con INF → `null`;
+ *  - 🚨 si `datos_extra` trae un límite POR SINIESTRO (`ClaseLimite` PS), ESE es el de la cobertura:
+ *    `capital_asegurado` es entonces el capital del riesgo entero repetido en cada línea (medido
+ *    03/10/2026: un Clio de 11.800€ traía 77.202 en Cristales/Incendio/Robo). Un límite ≤ 1 no es dinero
+ *    (Mapfre manda «1.00» en Fenómenos de la naturaleza) → `null`, nunca el capital heredado.
  * Franquicia: solo un importe > 0 (el 0 no se afirma como «sin franquicia»).
  * Vigencia: solo si DIFIERE del periodo de la póliza (Mapfre repite la anualidad en cada línea).
  */
@@ -36,13 +42,54 @@ function diaUtc(d: Date | null | undefined): string | null {
 
 const es = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 
+/** Erratas conocidas de las compañías en el NOMBRE de la garantía («Fenónemos Naturaleza», Mapfre auto). */
+export function nombreCobertura(n: string): string {
+  return n.replace(/Fen[oó]nemos/g, 'Fenómenos').replace(/fen[oó]nemos/g, 'fenómenos')
+}
+
+export const LIMITES_LEGALES = 'Límites legales del seguro obligatorio'
+
+const esRcObligatoria = (n: string | null | undefined) => /(^|\b)(r\.?\s?c\.?|responsabilidad civil)\b.*obligatori/i.test(n ?? '')
+const esRcExplotacion = (n: string | null | undefined) => /(r\.?\s?c\.?|responsabilidad civil)\b.*explotaci/i.test(n ?? '')
+
+export type CapitalVista =
+  | { tipo: 'importe'; importe: number }
+  | { tipo: 'sin_capital' }
+  | { tipo: 'ilimitado' }
+  | { tipo: 'legal' }
+  | { tipo: 'nada' }
+
+/** El capital que SE AFIRMA de una cobertura (ver la cabecera). Una sola fuente para la ficha y la lista. */
+export function capitalDeCobertura(c: { descripcion?: string | null; capitalAsegurado: string | null; datosExtra?: unknown }): CapitalVista {
+  const lim = extraerDetalleCobertura(c.datosExtra)?.limites.find((l) => l.maximo !== null) ?? null
+  const cap = interpretarCapital(c.capitalAsegurado)
+  const rcObl = esRcObligatoria(c.descripcion)
+  if (lim !== null && lim.clase === 'PS') {
+    return lim.maximo !== null && lim.maximo > 1 ? { tipo: 'importe', importe: lim.maximo } : { tipo: 'nada' }
+  }
+  if (cap.tipo === 'importe') return { tipo: 'importe', importe: cap.importe }
+  if (rcObl) return { tipo: 'legal' }
+  if (cap.tipo === 'sin_capital') return { tipo: 'sin_capital' }
+  if (cap.tipo === 'ilimitado') return esRcExplotacion(c.descripcion) ? { tipo: 'nada' } : { tipo: 'ilimitado' }
+  if (lim !== null && lim.maximo !== null && lim.maximo > 1) return { tipo: 'importe', importe: lim.maximo }
+  return { tipo: 'nada' }
+}
+
 export function vistaCobertura(
-  c: { capitalAsegurado: string | null; franquicia: string | null; fechaInicio: Date | null; fechaFin: Date | null },
+  c: { descripcion?: string | null; capitalAsegurado: string | null; franquicia: string | null; fechaInicio: Date | null; fechaFin: Date | null; datosExtra?: unknown },
   periodoPoliza?: { inicio: Date | null; fin: Date | null },
 ): CoberturaVista {
-  const cap = interpretarCapital(c.capitalAsegurado)
+  const cap = capitalDeCobertura(c)
   const capital =
-    cap.tipo === 'importe' ? eur(cap.importe) : cap.tipo === 'sin_capital' ? 'sin capital propio' : cap.tipo === 'ilimitado' ? 'ilimitado' : null
+    cap.tipo === 'importe'
+      ? eur(cap.importe)
+      : cap.tipo === 'sin_capital'
+        ? 'sin capital propio'
+        : cap.tipo === 'ilimitado'
+          ? 'ilimitado'
+          : cap.tipo === 'legal'
+            ? LIMITES_LEGALES
+            : null
 
   const f = importeEiac(c.franquicia)
   const franquicia = f !== null && f > 0 ? eur(f) : null

@@ -74,7 +74,8 @@ export type EntradaDetalle = {
 const CULPA: Record<string, string> = {
   CU: 'Con culpa del asegurado',
   RE: 'Sin culpa: tu compañía reclama al contrario',
-  IN: 'Culpa todavía sin determinar',
+  // `IN` (indeterminada) NO se pinta: en siniestros ya pagados decía «culpa sin determinar», que
+  // es ruido y suena a que falta algo. «Sin determinar» es «no consta»: no se afirma nada.
 }
 
 const PAPEL: Record<string, string> = {
@@ -116,7 +117,26 @@ function contacto(c: EntradaDetalle['tramitador']): ContactoGestion | null {
   return r.nombre === null && r.telefono === null && r.email === null ? null : r
 }
 
-export function detalleSiniestroCompania(e: EntradaDetalle): DetalleSiniestroCompania | null {
+/**
+ * Un código interno delante del nombre («1219-Allianz Auto Terceros») no es para el cliente:
+ * se quita el prefijo numérico. Si solo quedara el código, `null`.
+ */
+export function descripcionRiesgoLegible(v: unknown): string | null {
+  const t = textoClaro(v)
+  if (t === null) return null
+  const limpio = t.replace(/^\d{2,}\s*[-–:]\s*/, '').trim()
+  return limpio === '' || /^\d+$/.test(limpio) ? null : limpio
+}
+
+/**
+ * `nombresCobertura`: código de cobertura de la PÓLIZA → su nombre. La reserva por cobertura
+ * llega con el código («16: 171,31€»); un código numérico sin nombre que lo traduzca NO se pinta
+ * (no dice nada al cliente); un texto ya legible sí.
+ */
+export function detalleSiniestroCompania(
+  e: EntradaDetalle,
+  nombresCobertura: Readonly<Record<string, string>> = {},
+): DetalleSiniestroCompania | null {
   const cod = (v: unknown) => textoClaro(v)?.toUpperCase() ?? null
   const posicion = cod(e.posicion)
   const papel = cod(e.responsabilidad)
@@ -125,7 +145,10 @@ export function detalleSiniestroCompania(e: EntradaDetalle): DetalleSiniestroCom
   const reservaPorCobertura = rd
     ? noVacia(
         objetos(rd.coberturas)
-          .map((c) => ({ cobertura: textoClaro(c.cobertura), importe: importe(c.importe) }))
+          .map((c) => {
+            const cod = textoClaro(c.cobertura)
+            return { cobertura: cod === null ? null : Object.hasOwn(nombresCobertura, cod) ? nombresCobertura[cod] : /^[\d\s./-]+$/.test(cod) ? null : cod, importe: importe(c.importe) }
+          })
           .filter((c): c is { cobertura: string; importe: number | null } => c.cobertura !== null),
       )
     : null
@@ -136,8 +159,9 @@ export function detalleSiniestroCompania(e: EntradaDetalle): DetalleSiniestroCom
         .map((c) => ({ descripcion: textoClaro(c.descripcion), capital: importe(c.capital) }))
         .filter((c) => c.descripcion !== null || c.capital !== null)
     : []
-  const riesgo = ri && (textoClaro(ri.descripcion) !== null || riCob.length > 0)
-    ? { descripcion: textoClaro(ri.descripcion), coberturas: riCob }
+  const riesgoDesc = ri ? descripcionRiesgoLegible(ri.descripcion) : null
+  const riesgo = ri && (riesgoDesc !== null || riCob.length > 0)
+    ? { descripcion: riesgoDesc, coberturas: riCob }
     : null
 
   const ve = obj(e.vehiculo)

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
-import { contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { alertaVencimiento, contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
@@ -179,8 +179,9 @@ function RamosContratados({ tiposVivos }: { tiposVivos: string[] }) {
 
 function Titulares({ resumen }: { resumen: ResumenFicha }) {
   const { conteo, recibos, siniestrosAbiertos: abiertos, proximo } = resumen
+  // Flex que envuelve y estira: una 5.ª tarjeta no se queda sola y pequeña en su fila.
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 12 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
       {/* Solo seguros en vigor: el volcado histórico son oportunidades y no entra en ningún contador. */}
       <Kpi
         label="Pólizas vivas"
@@ -248,20 +249,24 @@ function ProximoVencimiento({ proximo, vivas, sinFecha }: {
       />
     )
   }
-  const vencido = proximo.diasHastaVencimiento < 0
+  // UNA lectura (`alertaVencimiento`): vencido → solo «Venció el …» (sin fecha de aviso, que sería
+  // anterior a hoy); con vencimiento futuro, la fecha de aviso solo si aún se puede avisar, y si no,
+  // «aviso pasado» dicho con todas las letras.
+  const a = alertaVencimiento(proximo.vencimiento)
+  if (a.estado === 'vencido') {
+    return <Kpi label="Venció el" valor={fmt(proximo.vencimiento)} pequeno color="var(--warning)" sub="renovación sin recibir de la compañía" />
+  }
+  if (a.estado === 'desconocido') return <Kpi label="Vencimiento" valor="desconocido" pequeno sub="la compañía no informa la fecha" />
+  if (a.estado === 'aviso_pasado') {
+    return <Kpi label="Aviso pasado el" valor={fmt(a.limiteAviso as string)} pequeno color="var(--muted)" sub={`renueva otro año · vence el ${fmt(proximo.vencimiento)}`} />
+  }
   return (
     <Kpi
       label="Hay que avisar antes del"
-      valor={fmt(proximo.limiteAviso)}
+      valor={fmt(a.limiteAviso as string)}
       pequeno
-      color={proximo.enPlazo && proximo.diasHastaLimiteAviso <= 30 ? 'var(--warning)' : !proximo.enPlazo ? 'var(--muted)' : undefined}
-      sub={
-        proximo.enPlazo
-          ? `quedan ${proximo.diasHastaLimiteAviso} día(s) · vence el ${fmt(proximo.vencimiento)}`
-          : vencido
-            ? `venció el ${fmt(proximo.vencimiento)}`
-            : `plazo pasado: renueva otro año · vence el ${fmt(proximo.vencimiento)}`
-      }
+      color={(a.diasParaAvisar ?? 99) <= 30 ? 'var(--warning)' : undefined}
+      sub={`quedan ${a.diasParaAvisar} día(s) · vence el ${fmt(proximo.vencimiento)}`}
     />
   )
 }
@@ -278,7 +283,7 @@ function Kpi({ label, valor, sub, color, pequeno }: {
     // Superficie de `cardStyle` (fondo + sombra, sin borde) desde el 28/09/2026: con el borde fino a
     // mano eran la única caja de la ficha que no se parecía a las tarjetas de debajo ni a las del
     // resto de plataforma. Sigue siendo compacta (padding 12/14, no los 20 de `KpiCard`).
-    <div title={sub ? `${label}: ${valor} · ${sub}` : undefined} style={{ ...cardStyle, padding: '12px 14px', minWidth: 0 }}>
+    <div title={sub ? `${label}: ${valor} · ${sub}` : undefined} style={{ ...cardStyle, padding: '12px 14px', minWidth: 0, flex: '1 1 150px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
         <span style={{ fontSize: pequeno ? 14 : 18, fontWeight: 800, color: color ?? 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</span>

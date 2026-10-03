@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Phone, Lock, RefreshCw } from 'lucide-react'
-import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, fechaVencimientoDudosa, lineaFichaObjeto, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
+import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, fechaVencimientoDudosa, lineaFichaObjeto, alertaVencimiento, fechaPintable, type GrupoHistorica } from '@central/module-seguros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type PolizaFiguraFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
@@ -342,11 +342,14 @@ function CeldaPago({ p }: { p: PolizaFicha }) {
  */
 function Anulacion({ vencimiento, viva }: { vencimiento: string | null; viva: boolean }) {
   if (!viva) return null
-  const v = ventanaAnulacion(vencimiento)
-  if (v === null || v.diasParaAvisar > 60) return null
+  // Una sola lectura (`alertaVencimiento`): con el vencimiento ya pasado o desconocido NO hay plazo de
+  // aviso que contar (antes salía «Vence 05/06/2026 · renueva otro año» sobre una póliza vencida).
+  const a = alertaVencimiento(vencimiento)
+  if (a.estado === 'vencido') return <div style={{ ...sub, color: 'var(--muted)' }}>{a.titular}</div>
+  if (a.estado === 'desconocido' || a.nota === null || (a.diasParaAvisar ?? 0) > 60) return null
   return (
-    <div style={{ ...sub, color: v.enPlazo ? 'var(--warning)' : 'var(--muted)' }} title="Contrato anual: solo se anula al vencimiento, con 30 días de preaviso">
-      {v.enPlazo ? `avisar antes del ${fmt(v.limiteAviso)} para no renovar` : 'plazo de aviso pasado: renueva otro año'}
+    <div style={{ ...sub, color: a.estado === 'en_plazo' ? 'var(--warning)' : 'var(--muted)' }} title="Contrato anual: solo se anula al vencimiento, con 30 días de preaviso">
+      {a.nota}
     </div>
   )
 }
@@ -569,8 +572,8 @@ export function Tarjeta({ titulo, children }: { titulo: string; children: React.
 
 /** Fecha siempre en español: "2026-06-03" → "03/06/2026". */
 export function fmt(iso: string): string {
-  const [y, m, d] = iso.split('-')
-  return d && m && y ? `${d}/${m}/${y}` : iso
+  // Centinela (1900-01-01, 9999-12-31) o ilegible: no es una fecha → «—».
+  return fechaPintable(iso) ?? '—'
 }
 
 /** Bajo un campo de vencimiento: avisa si la fecha ya pasó o está a más de un año (escaneo o tecleo con el año mal). No bloquea. */

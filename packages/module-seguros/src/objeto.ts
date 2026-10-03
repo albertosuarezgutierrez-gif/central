@@ -1,4 +1,5 @@
 import { etiquetaClave } from './claves-eiac.ts'
+import { fechaPintable } from './fecha-pintable.ts'
 
 /**
  * QUÉ asegura cada póliza — el «objeto asegurado».
@@ -191,9 +192,16 @@ function miles(n: number): string {
 
 function fechaEs(v: unknown): string | null {
   const t = claro(v)
-  const m = t === null ? null : /^(\d{4})-(\d{2})-(\d{2})/.exec(t)
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : null
+  return fechaPintable(t)
 }
+
+/**
+ * Uso del vehículo (EIAC «tabla RGV-Servicio», externa): no hay tabla transcrita, así que se enseña
+ * el dato crudo y la ETIQUETA dice que es de la compañía. Nada se adivina. La potencia son CV
+ * (medido: 1.5 dCi 109, 1.9 TDI 90).
+ */
+export const ETIQUETA_USO_VEHICULO = 'Uso (código de la compañía)'
+export const ETIQUETA_POTENCIA = 'Potencia'
 
 /** 🔒 Bastidor (VIN) — SOLO para el operador. Nunca lo llames desde el portal. */
 export function bastidorOperador(d: Record<string, unknown>): string | null {
@@ -205,7 +213,7 @@ export function bastidorOperador(d: Record<string, unknown>): string | null {
  * portal del cliente). Códigos (combustible, uso, clase, categoría, clase/uso de
  * inmueble, zona) CRUDOS: el repo no documenta su significado (CIMA-CAMPOS.md
  * solo lista los campos) y el mapper los guarda «tal cual, sin traducir».
- * Potencia sin unidad por lo mismo. `null` si no hay ningún dato.
+ * Potencia en CV (medido sobre modelos reales). `null` si no hay ningún dato.
  */
 export function fichaObjeto(tipoRamo: string, d: Record<string, unknown>): DatoObjeto[] | null {
   const tipo = (tipoRamo || '').toLowerCase()
@@ -220,9 +228,9 @@ export function fichaObjeto(tipoRamo: string, d: Record<string, unknown>): DatoO
     add('Matriculación', fechaEs(d.fechaMatriculacion))
     add('Clase', etiquetaClave('claseVehiculo', claro(d.claseVehiculo)))
     add('Categoría', etiquetaClave('categoriaVehiculo', claro(d.categoriaVehiculo)))
-    add('Uso', claro(d.usoVehiculo))
+    add(ETIQUETA_USO_VEHICULO, claro(d.usoVehiculo))
     add('Combustible', etiquetaClave('combustible', claro(d.combustible)))
-    add('Potencia', num(d.potencia, miles))
+    add(ETIQUETA_POTENCIA, num(d.potencia, n => `${miles(n)} CV`))
     add('Cilindrada', num(d.cilindrada, n => `${miles(n)} cm³`))
     add('Plazas', num(d.plazas, miles))
     add('PMA', num(d.pma, n => `${miles(n)} kg`))

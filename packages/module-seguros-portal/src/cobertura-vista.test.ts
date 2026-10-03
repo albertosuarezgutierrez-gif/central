@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { vistaCobertura } from './cobertura-vista.ts'
+import { vistaCobertura, nombreCobertura } from './cobertura-vista.ts'
 
 const base = { capitalAsegurado: null, franquicia: null, fechaInicio: null, fechaFin: null }
 const d = (iso: string) => new Date(iso)
@@ -42,4 +42,42 @@ test('vigencia: medianoche de Madrid guardada como timestamptz cuenta como ese d
 test('fechas imposibles (centinelas) no se pintan', () => {
   assert.equal(vistaCobertura({ ...base, fechaInicio: d('0001-01-01T00:00:00Z') }).vigencia, null)
   assert.equal(vistaCobertura({ ...base, fechaInicio: new Date('x') }).vigencia, null)
+})
+
+const ps = (max: string) => ({ DatosLimitesAsegurados: { Limite: { ClaseLimite: 'PS', LimiteMaximo: max, LimiteMinimo: max, DescripcionLimite: 'Por siniestro' } } })
+
+test('🚨 capital: el límite por siniestro manda sobre el capital del riesgo repetido (Clio 11.800€ ≠ 77.202€)', () => {
+  const v = (descripcion: string, datosExtra: unknown) => vistaCobertura({ ...base, descripcion, capitalAsegurado: '77202.00', datosExtra }).capital
+  assert.equal(v('Cristales', ps('11800.00')), '11.800,00€')
+  assert.equal(v('Robo', ps('11800.00')), '11.800,00€')
+  // «1.00» no es dinero: nunca cae al 77.202 heredado.
+  assert.equal(v('Fenómenos Naturaleza', ps('1.00')), null)
+  // Sin límite en datos_extra se conserva el capital informado.
+  assert.equal(v('Cristales', null), '77.202,00€')
+})
+
+test('capital: sin capital pero con límite → el límite; sin nada → no se pinta', () => {
+  const n = { ...base, descripcion: 'R.C. Patronal' }
+  assert.equal(vistaCobertura({ ...n, datosExtra: { DatosLimitesAsegurados: { Limite: { ClaseLimite: 'NI', LimiteMaximo: '309000.00' } } } }).capital, '309.000,00€')
+  assert.equal(vistaCobertura(n).capital, null)
+})
+
+test('🚨 RC obligatoria = límites legales (aunque venga INF); «RC Explotación» con INF no se pinta; INF explícito en otra = ilimitado', () => {
+  assert.equal(vistaCobertura({ ...base, descripcion: 'RC Obligatoria', capitalAsegurado: 'INF' }).capital, 'Límites legales del seguro obligatorio')
+  assert.equal(vistaCobertura({ ...base, descripcion: 'RC Obligatoria', capitalAsegurado: null }).capital, 'Límites legales del seguro obligatorio')
+  assert.equal(vistaCobertura({ ...base, descripcion: 'Responsabilidad Civil Obligatoria', capitalAsegurado: '0' }).capital, 'Límites legales del seguro obligatorio')
+  assert.equal(vistaCobertura({ ...base, descripcion: 'RC Explotación', capitalAsegurado: 'INF' }).capital, null)
+  assert.equal(vistaCobertura({ ...base, descripcion: 'RC Explotación', capitalAsegurado: null }).capital, null)
+  assert.equal(vistaCobertura({ ...base, descripcion: 'Defensa Jurídica', capitalAsegurado: 'INF' }).capital, 'ilimitado')
+  assert.equal(vistaCobertura({ ...base, descripcion: 'Defensa Jurídica', capitalAsegurado: null }).capital, null)
+})
+
+test('la prima de datos_extra no se cuela en la vista', () => {
+  const x = vistaCobertura({ ...base, descripcion: 'Robo', capitalAsegurado: '1', datosExtra: { ...ps('500'), DatosImportes: { PrimaNeta: '123.45', PrimaTotal: '130.00' } } })
+  assert.ok(!JSON.stringify(x).includes('123'))
+})
+
+test('errata «Fenónemos» → «Fenómenos»', () => {
+  assert.equal(nombreCobertura('Fenónemos Naturaleza'), 'Fenómenos Naturaleza')
+  assert.equal(nombreCobertura('Robo'), 'Robo')
 })

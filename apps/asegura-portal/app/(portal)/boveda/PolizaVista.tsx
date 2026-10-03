@@ -12,6 +12,7 @@ import {
   type DetalleSiniestroCompania,
   tonoSituacionRecibo,
   etiquetaSituacionRecibo,
+  fechaDeCobro,
 } from '@central/module-seguros-portal'
 
 import Link from 'next/link'
@@ -372,7 +373,9 @@ export function lineaRecibos(p: PolizaPortal): string | null {
     else partes.push('Tienes un recibo pendiente')
   }
   if (r.ultimoCobrado) {
-    const cuando = fechaEs(r.ultimoCobrado.fechaEmision)
+    // 🚨 La fecha del COBRO (`fecha_situacion`), no la de emisión (se emitió el 21/05 y se cobró el 13/07).
+    // Sin fecha de cobro no se dice ninguna.
+    const cuando = fechaEs(fechaDeCobro(r.ultimoCobrado))
     const importe = r.ultimoCobrado.importe
     if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
     else if (cuando) partes.push(`último cobrado el ${cuando}`)

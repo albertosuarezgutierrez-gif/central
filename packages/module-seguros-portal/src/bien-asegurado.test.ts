@@ -280,3 +280,13 @@ test('🔒 el bastidor (VIN) NUNCA llega a la forma del portal; la ficha CIMA s�
   assert.ok(!JSON.stringify(h).includes(VIN))
   assert.ok(h.detalles.includes('Zona: Zona poblada'))
 })
+
+test('ficha del vehículo para el cliente: uso oculto, potencia en CV, PMA solo si es creíble', () => {
+  const a = describirBien('auto', { marca: 'RENAULT', modelo: 'CLIO', matricula: '1234ABC', usoVehiculo: 'PA', potencia: '65', pma: '7' })
+  assert.ok(!a.detalles.some((x) => x.startsWith('Uso')), 'sin tabla oficial el uso no se pinta ni se traduce')
+  assert.ok(a.detalles.includes('Potencia: 65 CV'))
+  assert.ok(!a.detalles.some((x) => x.includes('PMA') || x.includes('Masa máxima')), 'PMA de 7 kg no es un dato')
+  const b = describirBien('auto', { matricula: '1234ABC', usoVehiculo: 'ZZ', pma: '1820' })
+  assert.ok(!b.detalles.some((x) => x.startsWith('Uso')), 'un código de uso que no sabemos leer no se pinta')
+  assert.ok(b.detalles.includes('Masa máxima autorizada (PMA): 1.820 kg'))
+})

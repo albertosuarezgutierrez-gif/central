@@ -185,3 +185,9 @@ export function etiquetaClave(
   const mapa: Readonly<Record<string, string>> = CLAVES_EIAC[tabla]
   return Object.prototype.hasOwnProperty.call(mapa, codigo) ? mapa[codigo] : codigo
 }
+
+/** ¿Está el código en la tabla oficial? (`false` = se enseña crudo y hay que decir que es de la compañía.) */
+export function claveEiacConocida(tabla: TablaClaveEiac, codigo: string | null | undefined): boolean {
+  if (codigo == null || codigo === '') return false
+  return Object.prototype.hasOwnProperty.call(CLAVES_EIAC[tabla], codigo)
+}

@@ -429,7 +429,9 @@ input, select, textarea, button { font: inherit; }
     border-radius: calc(var(--radius) * 1.8);
     box-shadow: var(--shadow);
     margin: 8px 8px 8px 0;
-    padding: 40px 32px 72px;
+    /* A la derecha 80 px, no 32: el botón flotante de WhatsApp (56 px + 16 de margen, sobre una isla con 8 de
+     * margen) tapaba el borde de las tarjetas en escritorio (03/10/2026). */
+    padding: 40px 80px 72px 32px;
     /* La atmósfera de marca es un `::before` absoluto: sin esto se sale por las
      * esquinas redondeadas de la isla y se ve un rectángulo azul asomando. */
     overflow: clip;

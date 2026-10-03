@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { descripcionDias, enCooldownRenovacion, lineaFichaObjeto, textoAvisoRenovacionWhatsapp, textoPlazoOposicion, DIAS_PREAVISO_TOMADOR, type Retarificabilidad } from '@central/module-seguros'
+import { fechaPintable, descripcionDias, enCooldownRenovacion, lineaFichaObjeto, textoAvisoRenovacionWhatsapp, textoPlazoOposicion, DIAS_PREAVISO_TOMADOR, type Retarificabilidad } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge, BtnLink, btnStyle, type Tono } from '@/components/ui'
 import { TriangleAlert } from 'lucide-react'
@@ -142,8 +142,8 @@ export type RespVencimientos =
 // Fecha siempre en formato español día/mes/año: "2026-06-03" → "03/06/2026".
 function fmtFecha(iso: string): string {
   if (!iso) return ''
-  const [y, m, d] = iso.split('-')
-  return d && m && y ? `${d}/${m}/${y}` : iso
+  // Centinela (1900-01-01, 9999-12-31) o ilegible: no es una fecha.
+  return fechaPintable(iso) ?? '—'
 }
 
 /**

@@ -310,10 +310,10 @@ test('auto: ficha con dinero en español, fecha dd/mm/aaaa y códigos EIAC tradu
   assert.equal(m['Valor del vehículo'], '12.345,50€')
   assert.equal(m['Matriculación'], '07/03/2019')
   assert.equal(m['Combustible'], 'Gasolina')
-  assert.equal(m['Uso'], 'PA')
+  assert.equal(m['Uso (código de la compañía)'], 'PA')
   assert.equal(m['Clase'], 'Turismo')
   assert.equal(m['Categoría'], 'Turismos')
-  assert.equal(m['Potencia'], '85')
+  assert.equal(m['Potencia'], '85 CV')
   assert.equal(m['Cilindrada'], '1.598 cm³')
   assert.equal(m['PMA'], '1.850 kg')
   assert.equal(m['Remolque'], 'No')
@@ -361,4 +361,14 @@ test('comunidad: clase de comunidad se traduce desde EIAC', () => {
   const f = fichaObjeto('comunidades', { localidad: 'Madrid', claseComunidad: 'EV' }) ?? []
   const m = Object.fromEntries(f.map(x => [x.etiqueta, x.valor]))
   assert.equal(m['Clase de comunidad'], 'Edificio viviendas')
+})
+
+test('auto: PMA en kg con miles españoles, potencia con etiqueta que dice que la unidad es de la compañía, matriculación centinela no se pinta', () => {
+  const f = fichaObjeto('auto', { pma: '1850', potencia: '120', fechaMatriculacion: '1900-01-01', usoVehiculo: 'PA' }) ?? []
+  const m = Object.fromEntries(f.map((x) => [x.etiqueta, x.valor]))
+  assert.equal(m['PMA'], '1.850 kg')
+  assert.equal(m['Potencia'], '120 CV')
+  assert.equal(m['Matriculación'], undefined)
+  assert.equal(m['Uso (código de la compañía)'], 'PA')
+  assert.equal(m['Uso'], undefined)
 })

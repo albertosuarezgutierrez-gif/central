@@ -1,14 +1,16 @@
 import { Building2, Waves } from 'lucide-react'
-import { rotuloAnulacionCima, type DatosCompaniaCima } from '@central/module-seguros'
+import { fechaPintable, rotuloAnulacionCima, type DatosCompaniaCima } from '@central/module-seguros'
 import { ConIcono } from '@/app/(usuario)/correduria/iconos'
+import { rotuloClave, type RotuloClave } from '@/lib/recibo-etiquetas'
 import { bloquesContratoCima, type ContratoFicha } from '@/lib/poliza-contrato'
 
 /**
  * Lo que la compañía dice de esta póliza por CIMA y no es el objeto asegurado
  * (24/09/2026): anulación, póliza a la que sustituye, suplementos, la ficha
- * del inmueble o de la embarcación y sus «otros datos». Todo es tal cual lo
- * manda la compañía: los códigos (PP, HA, EX…) no se traducen porque no hay
- * catálogo; donde manda texto, se pinta el texto.
+ * del inmueble o de la embarcación y sus «otros datos». Los códigos EIAC con
+ * tabla oficial (`claves-eiac.ts`: clase de inmueble, uso, zona, comunidad) se
+ * traducen; los que no la tienen se enseñan crudos DICIENDO que son «código de
+ * la compañía». Donde manda texto, se pinta el texto.
  *
  * `null` no se pinta como «la compañía no manda nada»: se dice que no consta,
  * porque las pólizas ingeridas antes del 24/09/2026 no lo tienen leído.
@@ -30,10 +32,10 @@ export default function CimaPoliza({ d, vigente, contrato = null }: { d: DatosCo
   const inm = d.inmueble
   const filasInmueble: Array<[string, string]> = inm
     ? ([
-        ['Clase de inmueble', inm.claseInmueble],
-        ['Uso', inm.usoInmueble],
-        ['Zona', inm.zona],
-        ['Clase de comunidad', inm.claseComunidad],
+        ['Clase de inmueble', clave('claseInmueble', inm.claseInmueble)],
+        ['Uso', clave('usoInmueble', inm.usoInmueble)],
+        ['Zona', clave('zona', inm.zona)],
+        ['Clase de comunidad', clave('claseComunidad', inm.claseComunidad)],
         ['Año / antigüedad', inm.antiguedad],
         ['Actividad', inm.actividad],
       ].filter((f): f is [string, string] => f[1] !== null) as Array<[string, string]>)
@@ -42,7 +44,7 @@ export default function CimaPoliza({ d, vigente, contrato = null }: { d: DatosCo
   const filasEmb: Array<[string, string]> = emb
     ? ([
         ['Nombre', emb.nombre], ['Matrícula', emb.matricula], ['Marca', emb.marca], ['Modelo', emb.modelo],
-        ['Eslora', emb.eslora], ['Potencia', emb.potencia], ['Plazas', emb.plazas], ['Puerto base', emb.puertoBase],
+        ['Eslora', emb.eslora], ['Potencia (unidad según la compañía)', emb.potencia], ['Plazas', emb.plazas], ['Puerto base', emb.puertoBase],
         ['Año', emb.anio],
       ].filter((f): f is [string, string] => f[1] !== null) as Array<[string, string]>)
     : []
@@ -86,7 +88,7 @@ export default function CimaPoliza({ d, vigente, contrato = null }: { d: DatosCo
               <li key={`${s.id ?? ''}-${i}`} style={item}>
                 <strong>{s.detalle ?? s.descripcionClase ?? `Suplemento ${s.id ?? ''}`}</strong>
                 <span style={muted}>
-                  {[s.fechaEfecto && `efecto ${s.fechaEfecto}`, s.fechaEmision && `emitido ${s.fechaEmision}`, s.descripcionClase && s.detalle ? s.descripcionClase : null]
+                  {[fechaPintable(s.fechaEfecto) && `efecto ${fechaPintable(s.fechaEfecto)}`, fechaPintable(s.fechaEmision) && `emitido ${fechaPintable(s.fechaEmision)}`, s.descripcionClase && s.detalle ? s.descripcionClase : null]
                     .filter(Boolean)
                     .join(' · ')}
                 </span>
@@ -104,6 +106,12 @@ export default function CimaPoliza({ d, vigente, contrato = null }: { d: DatosCo
       )}
     </section>
   )
+}
+
+/** Traducción oficial; fuera de tabla, el código crudo con «(código de la compañía)». `null` = no consta. */
+function clave(tabla: Parameters<typeof rotuloClave>[0], codigo: string | null): string | null {
+  const r: RotuloClave | null = rotuloClave(tabla, codigo)
+  return r === null ? null : r.desconocido ? `${r.texto} (código de la compañía)` : r.texto
 }
 
 function BloquesContrato({ bloques }: { bloques: ReturnType<typeof bloquesContratoCima> }) {

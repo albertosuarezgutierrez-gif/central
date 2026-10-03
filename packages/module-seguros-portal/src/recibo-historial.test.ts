@@ -12,6 +12,7 @@ import {
   fechaDeRecibo,
   estadoRecibos,
   resumirRecibos,
+  fechaDeCobro,
   type ReciboHistorial,
 } from './recibo-historial.ts'
 
@@ -148,4 +149,20 @@ test('un devuelto cuenta como devuelto y no se pierde entre los cobrados', () =>
   const r = resumirRecibos(ordenarRecibos(crudos), 0)
   assert.equal(r.devueltos, 1)
   assert.equal(r.total, 2)
+})
+
+test('🚨 último cobrado: manda la fecha de COBRO (fecha_situacion), nunca la de emisión', () => {
+  const crudos = [
+    recibo({ situacion: 'cobrado', importe: 65.51, fechaEmision: d('2026-05-21T00:00:00Z'), fechaSituacion: d('2026-07-13T00:00:00Z') }),
+    recibo({ situacion: 'cobrado', importe: 60, fechaEmision: d('2026-06-01T00:00:00Z'), fechaSituacion: d('2026-06-20T00:00:00Z') }),
+  ]
+  const r = resumirRecibos(ordenarRecibos(crudos), 0)
+  assert.equal(r.ultimoCobrado?.importe, 65.51)
+  assert.equal(fechaDeCobro(r.ultimoCobrado!)?.toISOString().slice(0, 10), '2026-07-13')
+})
+
+test('último cobrado sin fecha de cobro: no se inventa la de emisión', () => {
+  const r = resumirRecibos(ordenarRecibos([recibo({ situacion: 'cobrado', importe: 10, fechaEmision: d('2026-05-21T00:00:00Z'), fechaSituacion: null })]), 0)
+  assert.equal(fechaDeCobro(r.ultimoCobrado!), null)
+  assert.equal(fechaDeCobro(recibo({ situacion: 'pendiente', fechaSituacion: d('2026-07-13T00:00:00Z') })), null)
 })

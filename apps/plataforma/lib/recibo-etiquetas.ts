@@ -1,3 +1,5 @@
+import { claveEiacConocida, etiquetaClave, type TablaClaveEiac } from '@central/module-seguros'
+
 /**
  * Rótulos de un recibo CIMA. Puro: lo usa la tabla de recibos de la póliza.
  * `null` = «no consta» (se pinta «—»), nunca un valor de cajón.
@@ -13,7 +15,28 @@ const CLASES: Record<string, string> = {
 export function etiquetaClaseRecibo(clase: string | null | undefined): string {
   const c = (clase ?? '').trim()
   if (c === '') return '—'
-  return CLASES[c.toUpperCase()] ?? c
+  return CLASES[c.toUpperCase()] ?? etiquetaClave('claseRecibo', c.toUpperCase()) ?? c
+}
+
+/** Un código EIAC listo para pintar: `texto` traducido si el estándar lo trae; si no, el código CRUDO y `desconocido`. */
+export type RotuloClave = { texto: string; desconocido: boolean }
+
+export const TITULO_CODIGO_COMPANIA = 'Código de la compañía: el estándar EIAC transcrito en el repo no lo documenta'
+
+/** Quita el punto final de las glosas del estándar («Mediador: Comisión por producto.»). */
+const sinPunto = (t: string) => t.replace(/\.$/, '')
+
+/** Traduce con la tabla oficial. `null` = no consta (no se pinta). Código fuera de tabla → crudo + `desconocido`. */
+export function rotuloClave(tabla: TablaClaveEiac, codigo: string | null | undefined): RotuloClave | null {
+  const c = (codigo ?? '').trim()
+  if (c === '') return null
+  const t = claveEiacConocida(tabla, c) ? etiquetaClave(tabla, c) : claveEiacConocida(tabla, c.toUpperCase()) ? etiquetaClave(tabla, c.toUpperCase()) : null
+  return t !== null ? { texto: sinPunto(t), desconocido: false } : { texto: c, desconocido: true }
+}
+
+/** «1 cobrado» / «2 cobrados». */
+export function conteoPlural(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`
 }
 
 const VERBO: Record<string, string> = { cobrado: 'cobrado', devuelto: 'devuelto', anulado: 'anulado' }
