@@ -37,6 +37,7 @@ real medido, orden de trabajo). Después, según lo que toques:
    - **Etiquetas de códigos CIMA (03/10/2026):** siempre `etiquetaClave()` de `module-seguros` (nunca un
      mapa a mano en la pantalla). Portal: comisiones, prima neta, mediador, bastidor, IBAN y DNI nunca;
      beneficiarios solo con nivel iban; el texto libre de suplementos no sale (lleva datos bancarios).
+   - **Duplicados vivos (03/10/2026):** vigía `/api/operador/duplicados/vivos` (señal `duplicados_vivos`, comodines fuera con `esNumeroPolizaComodin`) y bandeja `/correduria/revision` (casos en `operational_events`: `poliza_revision_manual` abre, `poliza_revision_resuelta` cierra). «Son la misma» solo registra: la fusión es por CTE, con OK de Alberto.
 1. **Dos caras, dos apps.** Corredor en `apps/plataforma` (`/correduria`); cliente en
    `apps/asegura-portal` (rol `prisma_asegura_portal` sin BYPASSRLS, secreto propio). Nunca una
    pantalla compartida con permisos. En el portal el aislamiento **lo da el código**, no RLS.

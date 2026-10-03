@@ -31,6 +31,7 @@ import type {
   CampoImportanteSinLeer,
   RenovacionSinLlegar,
   EmisionSinAviso,
+  DuplicadosVivos,
 } from '@central/module-seguros'
 import {
   DIAS_GRACIA_RENOVACION,
@@ -39,6 +40,8 @@ import {
   sqlCarteraEnVigor,
 } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { correduriaUnica } from './cartera'
+import { duplicadosVivos } from './cartera-duplicados'
 
 export type EstadoIngestaPuerto =
   | { estado: 'sin_configurar' }
@@ -98,6 +101,11 @@ export type EstadoIngestaPuerto =
        * no hay; `null` = no se pudo mirar.
        */
       emisionesSinAviso: EmisionSinAviso[] | null
+      /**
+       * Vigía de duplicados vivos (03/10/2026, `cartera-duplicados.ts`). `null` = no se pudo
+       * medir (hueco en pantalla, nunca 0); `{ total: 0 }` = se miró y no hay.
+       */
+      duplicadosVivos: DuplicadosVivos | null
     }
 
 /** Crudo EIAC guardado por una incidencia y todavía sin reprocesar. */
@@ -734,8 +742,15 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       }))
     })
 
+    // 10. 🧬 Duplicados vivos. `duplicadosVivos()` ya devuelve `null` si la consulta falla.
+    const duplicados = await leerONull<DuplicadosVivos | null>(async () => {
+      const c = await correduriaUnica()
+      return c ? duplicadosVivos(c.id) : null
+    })
+
     const fila = huerfanasRaw[0]
     return {
+      duplicadosVivos: duplicados,
       emisionesSinAviso,
       renovacionesSinLlegar,
       crudo,

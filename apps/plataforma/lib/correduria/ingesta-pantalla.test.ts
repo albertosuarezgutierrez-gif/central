@@ -457,3 +457,15 @@ test('cobertura: sin descartadas (null o ausente) no hay fila de descartados', (
     assert.ok(!s.some(v => v.clave === 'cobertura_descartada'))
   }
 })
+
+test('duplicados vivos: solo se pinta con total > 0; 0 no pinta; null/undefined NO son 0', () => {
+  const con = senalesIngesta({ ...saludBase, duplicadosVivos: { total: 30, muestra: [{ numero: 'A1', filas: 2, dgs: null }] } })
+  const d = con.find(v => v.clave === 'duplicados_vivos')
+  assert.equal(d?.n, 30)
+  assert.equal(d?.tipo, 'hueco')
+  assert.ok(!senalesIngesta({ ...saludBase, duplicadosVivos: { total: 0, muestra: [] } }).some(v => v.clave === 'duplicados_vivos'))
+  assert.ok(!senalesIngesta({ ...saludBase, duplicadosVivos: undefined }).some(v => v.clave === 'duplicados_vivos'))
+  const nula = senalesIngesta({ ...saludBase, duplicadosVivos: null }).find(v => v.clave === 'duplicados_vivos')
+  assert.equal(nula?.n, null)
+  assert.match(nula?.titulo ?? '', /Sin comprobar/)
+})
