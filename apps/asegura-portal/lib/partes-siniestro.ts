@@ -25,7 +25,14 @@
 // no un borrador, y el rol de BD tampoco tiene esos GRANT. Los sellos de estado
 // (`recibido_at`, `abierto_en_compania_at`) los pone el corredor desde su app.
 import { Prisma } from '@prisma/client'
-import { comunicadoACompania, type ParteEstado, type ParteNormalizado } from '@central/module-seguros-portal'
+import { requireSecret } from '@central/core-identity'
+import { cifrarJsonEstricto } from '@central/module-seguros-pii'
+import {
+  comunicadoACompania,
+  partirDatosRamoParte,
+  type ParteEstado,
+  type ParteNormalizado,
+} from '@central/module-seguros-portal'
 
 import { adjuntosPorParte, type AdjuntoParte } from './adjuntos-parte'
 import { prisma } from './db'
@@ -152,6 +159,19 @@ export async function partesDeSesion(): Promise<PartePortal[] | null> {
  * siniestro que no existe en ninguna parte.
  */
 export async function crearParte(identidadId: string, valor: ParteNormalizado): Promise<{ id: string }> {
+  // 🔒 Los datos personales de TERCEROS (contrarios, heridos, afectados) se
+  // separan y se cifran ANTES de tocar la BD; en `datos_ramo` solo va lo no
+  // personal. Sin `PII_ENCRYPTION_KEY` esto LANZA (`requireSecret` sin
+  // fallback + `cifrarJsonEstricto`): preferible un 500 —el borrador del móvil
+  // conserva el formulario— a guardar el nombre de un tercero en claro. Solo
+  // se exige la clave si HAY datos de terceros que cifrar.
+  const { claro, pii } = partirDatosRamoParte(valor.datosRamo)
+  let datosRamoCifrado: string | null = null
+  if (pii !== null) {
+    requireSecret('PII_ENCRYPTION_KEY')
+    datosRamoCifrado = cifrarJsonEstricto(pii)
+  }
+
   const parte = await prisma.portalParteSiniestro.create({
     data: {
       identidadId,
@@ -166,7 +186,8 @@ export async function crearParte(identidadId: string, valor: ParteNormalizado): 
       tipoSiniestro: valor.tipoSiniestro,
       // Ya filtrado por el ramo de la póliza AUTORIZADA (`aplicarRamoAlParte`).
       // `null` → SQL NULL («nada contestado»), no un `{}` que parezca respondido.
-      datosRamo: valor.datosRamo === null ? Prisma.DbNull : (valor.datosRamo as Prisma.InputJsonObject),
+      datosRamo: claro === null ? Prisma.DbNull : (claro as Prisma.InputJsonObject),
+      datosRamoCifrado,
       // `enviado` es el default de la BD y se deja explícito: nace SIN estar
       // comunicado a la compañía, y ningún camino del portal lo asciende.
       estado: 'enviado',

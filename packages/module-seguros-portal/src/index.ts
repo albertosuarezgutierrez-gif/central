@@ -111,6 +111,10 @@ export {
   normalizarDatosRamoParte,
   lineasDatosRamoParte,
   datosClaveParte,
+  CLAVES_PII_PARTE,
+  esClavePiiParte,
+  partirDatosRamoParte,
+  unirDatosRamoParte,
 } from './parte-ramo.ts'
 export type {
   CampoParte,

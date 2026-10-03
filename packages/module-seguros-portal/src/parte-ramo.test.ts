@@ -9,6 +9,9 @@ import {
   datosClaveParte,
   lineasDatosRamoParte,
   normalizarDatosRamoParte,
+  partirDatosRamoParte,
+  unirDatosRamoParte,
+  CLAVES_PII_PARTE,
 } from './parte-ramo.ts'
 import { aplicarRamoAlParte, normalizarParte } from './parte-siniestro.ts'
 
@@ -130,4 +133,64 @@ test('lectura legible y datos clave sin nombres ni teléfonos', () => {
 test('camposParteDeRamo acepta «comunidad» y devuelve [] para lo desconocido', () => {
   assert.ok(camposParteDeRamo('comunidad').length > 0)
   assert.equal(camposParteDeRamo('xyz').length, 0)
+})
+
+// ── 🔒 Datos personales de terceros: cifrados, nunca en `datos_ramo` en claro ──
+
+/** Un parte con TODAS las respuestas posibles de un ramo, PII incluida. */
+function parteCompleto(ramo: string) {
+  const entrada: Record<string, unknown> = {}
+  for (const c of camposParteDeRamo(ramo)) {
+    if (c.tipo === 'lista') {
+      entrada[c.id] = [Object.fromEntries(c.subcampos.map((s) => [s.id, s.tipo === 'triestado' ? 'si' : s.tipo === 'opcion' ? s.opciones![0].valor : s.tipo === 'telefono' ? '600111222' : 'Pepa Ruiz']))]
+    } else if (c.tipo === 'multiopcion') entrada[c.id] = [c.opciones[0].valor]
+    else if (c.tipo === 'triestado') entrada[c.id] = 'si'
+    else if ('opciones' in c && c.opciones && c.opciones.length > 0) entrada[c.id] = c.opciones[0].valor
+    else if (c.tipo === 'dinero') entrada[c.id] = 100
+    else entrada[c.id] = 'Pepa Ruiz'
+  }
+  return normalizarDatosRamoParte(ramo, entrada, { hayHeridos: true, hayTerceros: true, tipoSiniestro: 'robo' })
+}
+
+test('🚨 CEPO: ninguna clave de datos personales queda en la mitad EN CLARO, en ningún ramo', () => {
+  for (const r of TIPOS_SEGURO) {
+    const datos = parteCompleto(r)
+    const { claro, pii } = partirDatosRamoParte(datos)
+    for (const k of Object.keys(claro ?? {})) assert.equal(CLAVES_PII_PARTE.has(k), false, `${r}: «${k}» en claro`)
+    // Y el texto de una persona («Pepa Ruiz», su teléfono) no aparece en claro por otra clave.
+    const enClaro = JSON.stringify(claro ?? {})
+    assert.doesNotMatch(enClaro, /Pepa Ruiz|600111222/, `${r}: un nombre o teléfono se ha quedado en claro`)
+    // Lo que sí es dato del parte se conserva entero entre las dos mitades.
+    assert.deepEqual(unirDatosRamoParte(claro, pii), datos ?? {}, r)
+  }
+})
+
+test('🚨 CEPO: toda LISTA del catálogo es PII y todo texto libre suelto está decidido', () => {
+  // Texto libre suelto que NO es de una persona. Uno nuevo que no esté aquí ni en
+  // CLAVES_PII_PARTE rompe este test: hay que decidir si nombra a alguien.
+  const TEXTO_NO_PERSONAL = new Set<string>([])
+  for (const r of TIPOS_SEGURO)
+    for (const c of CAMPOS_PARTE_POR_RAMO[r]) {
+      if (c.tipo === 'lista') assert.ok(CLAVES_PII_PARTE.has(c.id), `${r}/${c.id}: lista sin cifrar`)
+      if (c.tipo === 'texto') assert.ok(CLAVES_PII_PARTE.has(c.id) || TEXTO_NO_PERSONAL.has(c.id), `${r}/${c.id}: texto libre sin decidir`)
+    }
+})
+
+test('partir: mitades vacías son null (nunca `{}`), y null entra null sale', () => {
+  assert.deepEqual(partirDatosRamoParte(null), { claro: null, pii: null })
+  assert.deepEqual(partirDatosRamoParte({ averiaActiva: true }), { claro: { averiaActiva: true }, pii: null })
+  assert.deepEqual(partirDatosRamoParte({ personaAfectada: 'X' }), { claro: null, pii: { personaAfectada: 'X' } })
+})
+
+test('unir: una clave PII colada en claro NO se pinta; basura de la BD se ignora', () => {
+  assert.deepEqual(unirDatosRamoParte({ averiaActiva: true, lesionados: [{ nombre: 'colado' }] }, null), { averiaActiva: true })
+  assert.deepEqual(unirDatosRamoParte('x', [1]), {})
+  assert.deepEqual(unirDatosRamoParte(null, { personaAfectada: 'Ana', averiaActiva: true }), { personaAfectada: 'Ana' })
+})
+
+test('🔒 Telegram: ni listas ni `personaAfectada` salen con nombre en los datos clave', () => {
+  const d = normalizarDatosRamoParte('accidentes', { personaAfectada: 'Pepa Ruiz', bajaMedica: 'si' }, CTX)
+  const clave = datosClaveParte(d, 10)
+  assert.ok(clave.length > 0)
+  assert.doesNotMatch(clave.join(' | '), /Pepa/)
 })

@@ -870,7 +870,11 @@ export function ParteSiniestro({
     const tipoSiniestro = (opcionesTipoSiniestro(ramo) as readonly string[]).includes(pendiente.form.tipoSiniestro)
       ? pendiente.form.tipoSiniestro
       : ''
-    setForm({ ...pendiente.form, poliza, tipoSiniestro, datosRamo: {} })
+    // Las respuestas por ramo vuelven solo si sigue siendo la MISMA póliza (mismo
+    // ramo): las de otro ramo no tendrían dónde pintarse. El catálogo y las
+    // condiciones las vuelven a filtrar la pantalla y el servidor.
+    const datosRamo = poliza !== '' && poliza === pendiente.form.poliza ? pendiente.form.datosRamo : {}
+    setForm({ ...pendiente.form, poliza, tipoSiniestro, datosRamo })
     setPaso('datos')
     setPendiente(null)
   }

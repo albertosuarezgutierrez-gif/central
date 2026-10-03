@@ -44,10 +44,13 @@ import {
   esTipoSiniestro,
   lineasDatosRamoParte,
   plazoComunicacion,
+  unirDatosRamoParte,
   type ParteEstado,
   type PlazoComunicacion,
 } from '@central/module-seguros-portal'
 import { estadoDocumento, tipoDocumento, type EstadoDocumento, type TipoDocumento } from '@central/module-seguros'
+import { requireSecret } from '@central/core-identity'
+import { descifrarJsonEstricto } from '@central/module-seguros-pii'
 import { prismaAsegura } from './asegura-db'
 // Los dos viven en `vinculos-portal.ts` desde el 07/09/2026: la misma pregunta
 // la hacen ahora dos pantallas, y la decisión sobre los vínculos múltiples no
@@ -218,6 +221,7 @@ type FilaParte = {
   hayTerceros: boolean | null
   tipoSiniestro: string | null
   datosRamo: unknown
+  datosRamoCifrado: string | null
   estado: ParteEstado
   siniestroId: string | null
   polizaDesligadaAt: Date | null
@@ -240,6 +244,7 @@ const SELECT_PARTE = {
   hayTerceros: true,
   tipoSiniestro: true,
   datosRamo: true,
+  datosRamoCifrado: true,
   estado: true,
   siniestroId: true,
   polizaDesligadaAt: true,
@@ -309,6 +314,47 @@ async function adjuntosPorParte(
   }
 }
 
+/** La línea que se pinta cuando hay datos de terceros guardados que no se han podido abrir. */
+export const LINEA_TERCEROS_ILEGIBLES = {
+  etiqueta: 'Datos de terceros',
+  valor: 'Guardados cifrados, pero no se han podido descifrar aquí (PII_ENCRYPTION_KEY). No se han perdido.',
+} as const
+
+/**
+ * `datos_ramo` (en claro) + `datos_ramo_cifrado` (terceros, sobre `v1:`) →
+ * líneas para la ficha. Se descifra AQUÍ, en el servidor del corredor, y solo
+ * para devolverlo por el puerto de operador a `/correduria`.
+ *
+ * 🚨 Tres estados también aquí: sin columna cifrada = el cliente no dio datos
+ * de terceros; columna que no se abre = HAY datos y no se pueden leer, y se
+ * DICE con una línea (`LINEA_TERCEROS_ILEGIBLES`) — callarlo pintaría un parte
+ * con heridos como si nadie hubiera dado sus nombres. Un fallo aquí no tumba
+ * la bandeja. El log no lleva el contenido.
+ */
+export function lineasDatosRamoDelParte(
+  datosRamo: unknown,
+  cifrado: string | null,
+  descifrar: (sobre: string) => unknown = descifrarTerceros,
+): { etiqueta: string; valor: string }[] {
+  let pii: unknown = null
+  let ilegible = false
+  if (cifrado !== null) {
+    try {
+      pii = descifrar(cifrado)
+    } catch (e) {
+      ilegible = true
+      console.error('[partes-portal] datos de terceros ilegibles:', e instanceof Error ? e.message : 'error')
+    }
+  }
+  const lineas = lineasDatosRamoParte(unirDatosRamoParte(datosRamo, pii)).map((l) => ({ etiqueta: l.etiqueta, valor: l.valor }))
+  return ilegible ? [...lineas, { ...LINEA_TERCEROS_ILEGIBLES }] : lineas
+}
+
+function descifrarTerceros(sobre: string): unknown {
+  requireSecret('PII_ENCRYPTION_KEY')
+  return descifrarJsonEstricto(sobre)
+}
+
 /**
  * Monta la salida del puerto. `titulares` trae el dueño de cada `polizaId` que
  * había que comparar; que falte una que se pidió es un error de quien llama, no
@@ -371,7 +417,7 @@ function aParte(
     ),
     polizaDesligadaEn: p.polizaDesligadaAt?.toISOString() ?? null,
     creadoEn: p.creadoEn.toISOString(),
-    datosRamo: lineasDatosRamoParte(p.datosRamo).map((l) => ({ etiqueta: l.etiqueta, valor: l.valor })),
+    datosRamo: lineasDatosRamoDelParte(p.datosRamo, p.datosRamoCifrado),
     plazo: plazoComunicacion({ fechaHecho: p.fechaHecho, hoy: ctx.hoy }),
     titularDistinto,
     // `null` del lote entero ⇒ `null` en este parte: «no se ha podido mirar».

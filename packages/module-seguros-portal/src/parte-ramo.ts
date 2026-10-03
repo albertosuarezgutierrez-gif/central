@@ -417,6 +417,70 @@ export function normalizarDatosRamoParte(ramo: string | null | undefined, entrad
   return Object.keys(datos).length === 0 ? null : datos
 }
 
+// ── Datos personales de TERCEROS: van CIFRADOS, nunca en `datos_ramo` ───────
+//
+// 🔒 (03/10/2026, decisión de Alberto) Nombres, teléfonos, matrículas,
+// aseguradora y póliza del contrario, heridos y afectados son datos de
+// personas que NO son clientes ni han aceptado nada. Se guardan aparte, en
+// `datos_ramo_cifrado` (AES-256-GCM, `PII_ENCRYPTION_KEY`, el mismo sobre
+// `v1:` que el resto de PII de la correduría). En `datos_ramo` (jsonb en
+// claro, consultable) solo queda lo NO personal: triestados, opciones,
+// importes.
+//
+// Qué es PII se decide por CAMPO, no por subcampo: una lista entera (aunque
+// lleve un `papel` o un `atendido` sueltos) viaja cifrada, porque esos datos
+// solo significan algo pegados a la persona. Las listas son PII SIEMPRE (todas
+// son personas o vehículos de terceros); de los campos sueltos, los que nombran
+// a alguien se declaran en `CAMPOS_SUELTOS_PII`. Un campo de texto libre nuevo
+// tiene que decidirse aquí: lo obliga el cepo de `parte-ramo.test.ts`.
+
+/** Campos sueltos (no listas) que nombran a una persona. */
+const CAMPOS_SUELTOS_PII: ReadonlySet<string> = new Set(['personaAfectada'])
+
+/** Todas las claves de `datos_ramo` que son datos personales de terceros. */
+export const CLAVES_PII_PARTE: ReadonlySet<string> = (() => {
+  const s = new Set<string>(CAMPOS_SUELTOS_PII)
+  for (const lista of Object.values(CAMPOS_PARTE_POR_RAMO)) for (const c of lista) if (c.tipo === 'lista') s.add(c.id)
+  return s
+})()
+
+export function esClavePiiParte(id: string): boolean {
+  return CLAVES_PII_PARTE.has(id)
+}
+
+/**
+ * Parte lo YA normalizado en lo que va en claro (`datos_ramo`) y lo que va
+ * cifrado (`datos_ramo_cifrado`). Cada mitad es `null` si se queda vacía: un
+ * `{}` en la BD parecería «contestado sin nada».
+ */
+export function partirDatosRamoParte(datos: DatosRamoParte | null): {
+  claro: DatosRamoParte | null
+  pii: DatosRamoParte | null
+} {
+  if (datos === null) return { claro: null, pii: null }
+  const claro: DatosRamoParte = {}
+  const pii: DatosRamoParte = {}
+  for (const [k, v] of Object.entries(datos)) (esClavePiiParte(k) ? pii : claro)[k] = v
+  return {
+    claro: Object.keys(claro).length === 0 ? null : claro,
+    pii: Object.keys(pii).length === 0 ? null : pii,
+  }
+}
+
+/**
+ * Vuelve a juntar las dos mitades para pintarlas. Sin fiarse de la forma
+ * (sale de la BD): lo que no es un objeto se ignora. De `claro` se DESCARTA
+ * cualquier clave PII que se hubiera colado (no se pinta como si fuera dato
+ * legítimo), y de `pii` todo lo que no sea PII.
+ */
+export function unirDatosRamoParte(claro: unknown, pii: unknown): Record<string, unknown> {
+  const fuera: Record<string, unknown> = {}
+  const esObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x)
+  if (esObj(claro)) for (const [k, v] of Object.entries(claro)) if (!esClavePiiParte(k)) fuera[k] = v
+  if (esObj(pii)) for (const [k, v] of Object.entries(pii)) if (esClavePiiParte(k)) fuera[k] = v
+  return fuera
+}
+
 // ── Lectura para la ficha del corredor y el aviso ────────────────────────────
 
 /** Todas las definiciones por id (la primera gana: un mismo id es el mismo campo en todos los ramos). */
@@ -455,7 +519,13 @@ function textoElemento(s: readonly SubcampoLista[], e: unknown): string | null {
   return partes.length === 0 ? null : partes.join(' · ')
 }
 
-export type LineaDatoRamo = { etiqueta: string; valor: string; esLista: boolean }
+export type LineaDatoRamo = {
+  etiqueta: string
+  valor: string
+  esLista: boolean
+  /** Dato personal de un tercero (`CLAVES_PII_PARTE`): nunca sale por un chat. */
+  pii: boolean
+}
 
 /**
  * `datos_ramo` (tal cual sale de la BD, sin fiarse de su forma) → líneas
@@ -473,7 +543,7 @@ export function lineasDatosRamoParte(datos: unknown): LineaDatoRamo[] {
       if (!Array.isArray(v)) continue
       v.forEach((e, i) => {
         const t = textoElemento(campo.subcampos, e)
-        if (t !== null) lineas.push({ etiqueta: `${campo.elemento} ${i + 1}`, valor: t, esLista: true })
+        if (t !== null) lineas.push({ etiqueta: `${campo.elemento} ${i + 1}`, valor: t, esLista: true, pii: esClavePiiParte(id) })
       })
       continue
     }
@@ -489,7 +559,7 @@ export function lineasDatosRamoParte(datos: unknown): LineaDatoRamo[] {
     else if (campo.tipo === 'opcion') t = etiquetaOpcion(campo.opciones, v)
     else if (campo.tipo === 'dinero' && typeof v === 'number') t = eurEs(v)
     else if (typeof v === 'string' || typeof v === 'number') t = String(v)
-    if (t !== null) lineas.push({ etiqueta: campo.etiqueta, valor: t, esLista: false })
+    if (t !== null) lineas.push({ etiqueta: campo.etiqueta, valor: t, esLista: false, pii: esClavePiiParte(id) })
   }
   return lineas
 }
@@ -501,7 +571,8 @@ export function lineasDatosRamoParte(datos: unknown): LineaDatoRamo[] {
  */
 export function datosClaveParte(datos: unknown, max = 3): string[] {
   const lineas = lineasDatosRamoParte(datos)
-  const sueltas = lineas.filter((l) => !l.esLista).map((l) => `${l.etiqueta} ${l.valor}`)
+  // 🔒 `personaAfectada` es una respuesta SUELTA pero es un nombre: fuera.
+  const sueltas = lineas.filter((l) => !l.esLista && !l.pii).map((l) => `${l.etiqueta} ${l.valor}`)
   const cuentas: string[] = []
   if (typeof datos === 'object' && datos !== null && !Array.isArray(datos)) {
     for (const [id, campo] of DEFINICION_POR_ID) {
