@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T16:27:21Z",
-  "sha": "2e917c2efe7b4ade8644981d52315d1e0a86de85",
+  "generadoEn": "2026-10-03T17:12:29Z",
+  "sha": "8a112b39cb8afa95a1c5e2ce8b6c50f40817c4fa",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -117869,7 +117869,7 @@
           "exportada": false,
           "params": "from: string, adjuntos: { contentType?: string; filename?: string; content?: Buffer; size?: number }[] | undefined",
           "retorno": "Buffer[] | undefined",
-          "linea": 41
+          "linea": 43
         },
         {
           "nombre": "nuevoCliente",
@@ -117877,7 +117877,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 51
+          "linea": 53
         },
         {
           "nombre": "abrirTriaje",
@@ -117885,12 +117885,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SesionTriaje>",
-          "linea": 72
+          "linea": 74
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6a4ab8ed3791"
+      "hash": "9ebaa7e9d86b"
     },
     {
       "ruta": "apps/plataforma/lib/correo/keywords.ts",
@@ -118286,7 +118286,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 32,
+          "linea": 34,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -118295,7 +118295,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 34
+          "linea": 36
         },
         {
           "nombre": "fmtFecha",
@@ -118303,7 +118303,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 40
+          "linea": 42
         },
         {
           "nombre": "mensajeAviso",
@@ -118311,7 +118311,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 46,
+          "linea": 48,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -118320,7 +118320,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 63
+          "linea": 65
         },
         {
           "nombre": "pasadaTriaje",
@@ -118328,7 +118328,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 75
+          "linea": 77
         },
         {
           "nombre": "digestTriaje",
@@ -118336,7 +118336,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 266,
+          "linea": 280,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -118345,7 +118345,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 306,
+          "linea": 320,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         },
         {
@@ -118354,7 +118354,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<string>",
-          "linea": 333,
+          "linea": 347,
           "resumen": "Cuerpo del correo + el texto por filas de sus PDF (Allianz manda la tabla de devueltos/anuladas en un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO leí"
         }
       ],
@@ -118364,7 +118364,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "2904c9f1c6e3"
+      "hash": "82b50c579a56"
     },
     {
       "ruta": "apps/plataforma/lib/correos-cliente.ts",
@@ -134253,6 +134253,196 @@
       "hash": "04f2b383123d"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/factura-cuadre-correo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/factura-cuadre-correo.ts — borde sucio del cuadre de la factura de Sique Brilla. Lo llama el triaje de correo (`lib/correo/triaje.ts`) cuando llega un correo de limpiezascruzz@gmail.com con asunto de factura: PDF → texto por filas → cuadre puro (`factura-cuadre.ts`) → `limpieza_facturas` (",
+      "exporta": [
+        "salidasDelPeriodo",
+        "reservasSinSalida",
+        "procesarCorreoFacturaSique"
+      ],
+      "funciones": [
+        {
+          "nombre": "salidasDelPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "Promise<Salida[]>",
+          "linea": 31,
+          "resumen": "Salidas (checkouts) del mes de servicio de reservas NO canceladas, en fecha civil de Madrid. Excluye lo que figure en `reservas_canceladas` (por si una cancelación tardía sigue en `incomes`)."
+        },
+        {
+          "nombre": "reservasSinSalida",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "Promise<SinSalida[]>",
+          "linea": 51,
+          "resumen": "Reservas NO canceladas sin `checkOut` cuyo `checkIn` cae antes del fin del mes facturado: podrían haber salido ese mes y no se sabe. Se cuentan para que el cuadre no pueda ser un ✅ limpio."
+        },
+        {
+          "nombre": "cuentaDeFacturas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 68,
+          "resumen": "Cuenta dueña de las facturas: la de las ya guardadas (o `SIVRA_CUENTA_ID`). Sin sesión en un cron."
+        },
+        {
+          "nombre": "procesarCorreoFacturaSique",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: { subject: string fecha: Date pdfs?: Buffer[] }",
+          "retorno": "Promise<SalidaProcesoFactura>",
+          "linea": 86,
+          "resumen": "Procesa el correo de la factura. Idempotente por nº de factura (guardarFactura hace upsert). Nunca lanza por un PDF ilegible: avisa «no he podido leer la factura»."
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "limpieza_facturas",
+        "reservas_canceladas"
+      ],
+      "rutaApi": null,
+      "hash": "f26951f396da"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/factura-cuadre.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/factura-cuadre.ts — cuadre de la factura mensual de Sique Brilla contra las salidas (puro). La factura llega por correo (limpiezascruzz@gmail.com, PDF VeriFactu) con una línea por piso («LUXURY / DUPLEX / CASA SOCORRO / BUSTOS REFORMA», Unidades = nº de cambios) y una de lavandería («SERVI",
+      "exporta": [
+        "esCorreoFacturaSique",
+        "parsearFacturaSique",
+        "periodoFacturado",
+        "limitesDelPeriodo",
+        "comprobarAritmetica",
+        "cuadrarFactura",
+        "esGuardable",
+        "mesLegible",
+        "mensajeCuadre"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "numEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "number",
+          "linea": 30,
+          "resumen": "«1.128,48» → 1128.48"
+        },
+        {
+          "nombre": "esCorreoFacturaSique",
+          "kind": "function",
+          "exportada": true,
+          "params": "from: string, subject: string",
+          "retorno": "boolean",
+          "linea": 55,
+          "resumen": "Remitente exacto de la factura (no el dominio: gmail.com es de todo el mundo)."
+        },
+        {
+          "nombre": "parsearFacturaSique",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "FacturaLeida | null",
+          "linea": 65,
+          "resumen": "Lee la factura del texto por filas del PDF. `null` = no se ha podido leer (falta número, fecha, importes del pie o ninguna línea): quien llama debe decir «no he podido leerla», no «cuadra»."
+        },
+        {
+          "nombre": "periodoFacturado",
+          "kind": "function",
+          "exportada": true,
+          "params": "asunto: string, fechaFactura: string",
+          "retorno": "string",
+          "linea": 106,
+          "resumen": "Mes de SERVICIO ('YYYY-MM'): el del asunto («FACTURA LIMPIEZAS SEPTIEMBRE») con el año de la fecha de emisión (si el mes cae después de la emisión, es del año anterior: diciembre facturado en enero). "
+        },
+        {
+          "nombre": "limitesDelPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "",
+          "linea": 124,
+          "resumen": "Límites [desde, hasta) del mes en fecha civil de Madrid, para filtrar `checkOut::date` en SQL."
+        },
+        {
+          "nombre": "ddmm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 166
+        },
+        {
+          "nombre": "comprobarAritmetica",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FacturaLeida",
+          "retorno": "string[]",
+          "linea": 169,
+          "resumen": "Aritmética de la factura: unidades×precio, base, IVA 21 %, total."
+        },
+        {
+          "nombre": "cuadrarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "leida: FacturaLeida | null, periodo: string | null, salidas: Salida[], sinSalida: SinSalida[] = []",
+          "retorno": "ResultadoCuadre",
+          "linea": 199,
+          "resumen": "Cuadra unidades facturadas por piso con las salidas del mes. `leida: null` → no cuadra."
+        },
+        {
+          "nombre": "esGuardable",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoCuadre",
+          "retorno": "boolean",
+          "linea": 236,
+          "resumen": "¿Se puede guardar en `limpieza_facturas`? Solo si su aritmética es sana y no hay líneas desconocidas: el P&L usa el desglose para repartir el gasto, y uno con la aritmética rota lo contaminaría. Una d"
+        },
+        {
+          "nombre": "mesLegible",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string | null",
+          "retorno": "string",
+          "linea": 241,
+          "resumen": "Nombre del mes en español con mayúscula: '2026-09' → 'Septiembre 2026'."
+        },
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 247
+        },
+        {
+          "nombre": "mensajeCuadre",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoCuadre",
+          "retorno": "string",
+          "linea": 250,
+          "resumen": "Texto del aviso de Telegram (HTML). Importes en formato español."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4456738d23b4"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza-lectura.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/factura-limpieza-lectura.ts — leer la factura de Si que Brilla y guardarla si cuadra. El LAYOUT lo lee la IA, nunca una expresión regular escrita de memoria (ver la cabecera de `factura-limpieza.ts`). Este módulo es el borde sucio: PDF → texto o visión → JSON → validación aritmética → BD. ",
@@ -134282,7 +134472,7 @@
           "nombre": "guardarFactura",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, factura: FacturaLimpieza, fuente: 'pdf_ia' | 'manual', avisos: string[], nombreFichero: string | null = null,",
+          "params": "cuentaId: string, factura: FacturaLimpieza, fuente: 'pdf_ia' | 'manual' | 'correo_pdf', avisos: string[], nombreFichero: string | null = null,",
           "retorno": "Promise<void>",
           "linea": 131,
           "resumen": "Guarda una factura ya validada. Reimportar la misma NUNCA duplica: sería gasto doble en el P&L. 🚨 Dos caminos porque Postgres no puede deduplicar el segundo: con número, el índice único parcial y `ON"
@@ -134312,7 +134502,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "fb6fb7d27fe0"
+      "hash": "48f356e22bb7"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza.ts",
@@ -140149,7 +140339,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 715
+          "linea": 721
         },
         {
           "nombre": "avisosDe",
@@ -140157,7 +140347,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 720,
+          "linea": 726,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -140166,13 +140356,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 730,
+          "linea": 736,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "de1fa02f8856"
+      "hash": "53c3f3a188be"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -178744,7 +178934,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4093,
-    "funciones": 13911
+    "archivos": 4095,
+    "funciones": 13928
   }
 }
