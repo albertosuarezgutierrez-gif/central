@@ -15,6 +15,7 @@
 **(03/10/2026, early/late check-in y maletas)** — Compuerta: early/late/maletas NUNCA auto-envío, siempre propuesta por Telegram. Semáforo puro `cambio-horario.ts` (rojo/amarillo/verde; dato desconocido = amarillo); botones `hsp_chsi`/`hsp_chhasta`/`hsp_chno`/`hsp_chlimp`.
 Política Alberto: GRATIS (también más allá de las 12:00, `salida.ts`: se consulta y confirma según limpieza/calendario) y SIN pedir reseña (Booking/Airbnb prohíben incentivar). «No» en rojo ofrece consignas de `CONSIGNA_POR_ZONA`.
 Pendiente: la nota de 🧹 Consultar limpieza no persiste (sin columna); bloqueos manuales del calendario quedan fuera de `incomes`, el semáforo no los ve.
+PR #4212 MERGEADO (03/10). Caso origen: Massimo (reserva 154375571) avisado por Alberto fuera del log; el 05/09 la IA le negó entrar antes con la noche previa vacía (hoy sería 🟢).
 
 **(03/10/2026, tope Avant2 €)** — PR #4192 MERGEADO (fase 1): tope en euros/mes de Avant2 — aviso Telegram a 60 €, bloqueo a 70 €, +30 € por botón `cas_tope:` (idempotente); cron plataforma `correduria-tope-avant2` cada 5 min recoge los avisos por el puerto `/api/operador/codeoscopic/tope`. Fail-closed: sin leer el gasto no se llama a Avant2. Migración `2026-10-03b_codeoscopic_tope_euros.sql` APLICADA en prod (tabla `seguros.codeoscopic_tope_evento`, grants a `prisma_seguros` verificados). ReRate/Submit/límites cuentan a 0,50 € mientras no se confirme su coste. La lectura del gasto vive en `consumo.ts` (`gastadoMesCents`): el guardián `regression-simulacion-codeoscopic` solo deja tocar `codeoscopic_consumo` ahí.
 
