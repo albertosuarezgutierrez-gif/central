@@ -1,18 +1,18 @@
 {
  "sesion": "a6b8ff9a-2a6c-5811-9696-21c568e47357",
  "inicio": "2026-10-03T13:09:17.891Z",
- "fin": "2026-10-03T13:46:40.562Z",
- "llamadas": 187,
+ "fin": "2026-10-03T14:45:53.734Z",
+ "llamadas": 199,
  "categorias": {
   "otro": {
-   "llamadas": 23,
-   "chars_in": 11300,
-   "chars_out": 226135,
+   "llamadas": 26,
+   "chars_in": 11306,
+   "chars_out": 265492,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 867239,
    "tools": {
-    "ReadNotifications": 16,
+    "ReadNotifications": 19,
     "ToolSearch": 2,
     "SubagentHandback": 4,
     "SendMessage": 1
@@ -39,14 +39,14 @@
    }
   },
   "bash": {
-   "llamadas": 114,
-   "chars_in": 61390,
-   "chars_out": 495316,
+   "llamadas": 122,
+   "chars_in": 63739,
+   "chars_out": 515741,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 114
+    "Bash": 122
    }
   },
   "lectura-directa": {
@@ -111,15 +111,15 @@
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 2,
-   "chars_in": 254,
-   "chars_out": 2793,
+   "llamadas": 3,
+   "chars_in": 482,
+   "chars_out": 2901,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Claude_Code_Remote__get_session": 1,
-    "mcp__Claude_Code_Remote__send_later": 1
+    "mcp__Claude_Code_Remote__send_later": 2
    }
   },
   "agente:agente-architect": {
