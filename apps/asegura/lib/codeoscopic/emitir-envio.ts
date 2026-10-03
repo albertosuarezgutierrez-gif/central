@@ -112,12 +112,20 @@ async function cerrarEnvio(
    * emitido si no se limpiara aquí.
    */
   mensaje: string | null = null,
+  /**
+   * `true` (03/10/2026) solo en el Submit ACEPTADO: se apunta el desenlace pero el candado sigue
+   * puesto hasta que `/emitir` acuñe (`soltarCandadoEnvio`). Si se soltara aquí, el cron de
+   * descubrimiento o el webhook podrían acuñar en ese hueco con SUS datos (sin póliza de origen ni
+   * correo al cliente). Si `/emitir` muere antes de soltarlo, caduca solo a los
+   * `MARGEN_EN_VUELO_MIN` minutos, como cualquier candado.
+   */
+  mantenerCandado = false,
 ): Promise<void> {
   const errorMensaje = estado === 'error' && mensaje ? mensaje.slice(0, 2000) : null
   await prisma.$executeRaw`
     update codeoscopic_projects
     set estado = ${estado}::codeoscopic_project_estado,
-        submit_in_flight_at = null,
+        submit_in_flight_at = case when ${mantenerCandado}::boolean then submit_in_flight_at else null end,
         error_mensaje = ${errorMensaje}::text
     where correduria_id = ${correduriaId}::uuid
       and project_id_codeoscopic = ${projectId}
@@ -125,10 +133,25 @@ async function cerrarEnvio(
   `
 }
 
+/**
+ * Suelta el candado de un Submit ACEPTADO, cuando `/emitir` ya ha intentado acuñar (haya acuñado o
+ * no). Solo el del MISMO intento (`submit_attempt_id`) y sin tocar `estado`: a estas alturas puede
+ * ser ya `emitida`. Nunca lanza: un candado que no se suelta caduca solo.
+ */
+export async function soltarCandadoEnvio(correduriaId: string, projectId: string, attemptId: string): Promise<void> {
+  await prisma.$executeRaw`
+    update codeoscopic_projects set submit_in_flight_at = null
+    where correduria_id = ${correduriaId}::uuid
+      and project_id_codeoscopic = ${projectId}
+      and submit_attempt_id = ${attemptId}::uuid
+  `.catch(() => undefined)
+}
+
 // ─── Submit: la emisión de verdad ────────────────────────────────────────────
 
 export type ResultadoEnvio =
-  | { ok: true; referenciaVendor: string | null; crudo: unknown }
+  /** `attemptId`: el candado SIGUE puesto; quien acuña lo suelta con `soltarCandadoEnvio`. */
+  | { ok: true; referenciaVendor: string | null; crudo: unknown; attemptId: string }
   | {
       ok: false
       /**
@@ -321,8 +344,8 @@ export async function enviarEmision(
       str((crudo as Record<string, unknown> | null)?.referenceFromVendor) ??
       solicitudesEmision(crudo).find((s) => s.numeroPoliza)?.numeroPoliza ??
       null
-    await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'preemision')
-    return { ok: true, referenciaVendor, crudo }
+    await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'preemision', null, true)
+    return { ok: true, referenciaVendor, crudo, attemptId }
   } catch (e) {
     // No sabemos si el vendor llegó a procesar la petición antes de que se
     // cortara la conexión: el candado se libera igual (para no dejar el

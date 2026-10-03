@@ -15,7 +15,7 @@ import {
 } from '@/lib/codeoscopic/emitir'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada, fechaEfectoDeOferta } from '@/lib/codeoscopic/fecha-efecto'
 import { consejoTrasFallo, intentoQuizaEmitido, rastroSolicitudEmision, solicitudViva, solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
-import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
+import { enviarEmision, soltarCandadoEnvio } from '@/lib/codeoscopic/emitir-envio'
 import {
   conCuentaBancaria,
   decidirCuentaEnvio,
@@ -543,7 +543,11 @@ export const POST = auditado(async (req: Request) => {
       estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
       trasEmision: trasAc,
       // Aquí no se ha enviado nada: si no se acuña, el motivo real es lo único útil.
-      ...(acunadoAc.ok ? {} : { mensaje: `La compañía ya tiene la póliza${aprobada.numeroPoliza ? ` nº ${aprobada.numeroPoliza}` : ''} pero no se ha podido registrar en la cartera: ${acunadoAc.motivo}` }),
+      ...(acunadoAc.ok
+        ? {}
+        : acunadoAc.estado === 'ya_acunada'
+          ? { mensaje: YA_ACUNADA_POR_OTRA_VIA }
+          : { mensaje: `La compañía ya tiene la póliza${aprobada.numeroPoliza ? ` nº ${aprobada.numeroPoliza}` : ''} pero no se ha podido registrar en la cartera: ${acunadoAc.motivo}` }),
       referenciaVendor: aprobada.numeroPoliza,
       acunado: acunadoAc,
       cuenta: null,
@@ -1036,55 +1040,65 @@ export const POST = auditado(async (req: Request) => {
     )
   }
 
-  // ── El vendor aceptó: se acuña la póliza en NUESTRA BD ──────────────────
-  // Persiste la respuesta CRUDA del Submit (incluido `issuedDocuments[]`, si
-  // el vendor lo manda aquí) en `quote_data` — hasta el 17/09/2026 se
-  // descartaba tras esta petición y no había forma de saber qué documentos
-  // había devuelto una emisión ya pasada. Best-effort: nunca bloquea el acuñado.
-  // 🚨 SIEMPRE `redactarCrudoVendor` antes de guardar: `crudo` trae IBAN/DNI/
-  // email/teléfono del tomador en texto plano (`quote`/`payment`/persona), y
-  // `quote_data` es jsonb sin cifrar (a diferencia de `clientes.iban/dni`).
-  await prisma.$executeRaw`
-    update codeoscopic_projects set quote_data = ${JSON.stringify(redactarCrudoVendor(envio.crudo))}::jsonb
-    where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
-  `.catch((e: unknown) => {
-    console.log(`[emitir] no se pudo guardar quote_data del proyecto ${projectId} —`, e instanceof Error ? e.message : String(e))
-  })
-
-  const catalogo = await catalogoCompanias()
-  const codigoDgs = catalogo?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
-  if (!codigoDgs) {
-    // El vendor YA aceptó el Submit: esto NO se pierde. Se deja constancia del
-    // aviso y de la respuesta cruda para que se acuñe a mano — un dato de
-    // nuestro catálogo que falta no puede borrar una emisión real.
-    return NextResponse.json({
-      estado: 'emitido_sin_acunar',
-      mensaje:
-        `Codeoscopic aceptó la emisión pero «${p.aseguradora}» no tiene código DGS en companias_dgs: ` +
-        'la póliza NO se ha acuñado sola. Añade el código y acúñala a mano con este `crudo`.',
-      referenciaVendor: envio.referenciaVendor,
-      crudo: redactarCrudoVendor(envio.crudo),
+  // 🔒 El candado del Submit (`submit_in_flight_at`) sigue puesto hasta aquí abajo (03/10/2026): así
+  // el cron de descubrimiento y el webhook no acuñan este proyecto en el hueco entre el Submit y el
+  // acuñado. La exclusión DURA del acuñado es de la BD (`lib/acunado-unico.ts`); esto decide QUIÉN
+  // acuña: el botón, con su póliza de origen y su correo al cliente.
+  const attemptIdEnvio = envio.attemptId
+  let acunado: Awaited<ReturnType<typeof registrarPolizaEmitida>>
+  try {
+    // ── El vendor aceptó: se acuña la póliza en NUESTRA BD ──────────────────
+    // Persiste la respuesta CRUDA del Submit (incluido `issuedDocuments[]`, si
+    // el vendor lo manda aquí) en `quote_data` — hasta el 17/09/2026 se
+    // descartaba tras esta petición y no había forma de saber qué documentos
+    // había devuelto una emisión ya pasada. Best-effort: nunca bloquea el acuñado.
+    // 🚨 SIEMPRE `redactarCrudoVendor` antes de guardar: `crudo` trae IBAN/DNI/
+    // email/teléfono del tomador en texto plano (`quote`/`payment`/persona), y
+    // `quote_data` es jsonb sin cifrar (a diferencia de `clientes.iban/dni`).
+    await prisma.$executeRaw`
+      update codeoscopic_projects set quote_data = ${JSON.stringify(redactarCrudoVendor(envio.crudo))}::jsonb
+      where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
+    `.catch((e: unknown) => {
+      console.log(`[emitir] no se pudo guardar quote_data del proyecto ${projectId} —`, e instanceof Error ? e.message : String(e))
     })
-  }
 
-  const opcionesEmitida = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
-  const acunado = await registrarPolizaEmitida(correduria.id, {
-    clienteId: ctx.clienteId,
-    actor,
-    catalogo: catalogo ?? undefined,
-    polizaOrigenId: ctx.polizaOrigenId,
-    proyecto: {
-      projectIdCodeoscopic: projectId,
-      producto: ctx.tipo,
-      codigoDgs,
-      numeroPoliza: envio.referenciaVendor,
-      primaAnual: numero(cuerpo.primaAnual),
-      emitidaEn: new Date().toISOString(),
-      riesgo: ctx.riesgo,
-      fraccionamiento: fraccionamientoAcunado,
-      opciones: opcionesEmitida,
-    },
-  })
+    const catalogo = await catalogoCompanias()
+    const codigoDgs = catalogo?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
+    if (!codigoDgs) {
+      // El vendor YA aceptó el Submit: esto NO se pierde. Se deja constancia del
+      // aviso y de la respuesta cruda para que se acuñe a mano — un dato de
+      // nuestro catálogo que falta no puede borrar una emisión real.
+      return NextResponse.json({
+        estado: 'emitido_sin_acunar',
+        mensaje:
+          `Codeoscopic aceptó la emisión pero «${p.aseguradora}» no tiene código DGS en companias_dgs: ` +
+          'la póliza NO se ha acuñado sola. Añade el código y acúñala a mano con este `crudo`.',
+        referenciaVendor: envio.referenciaVendor,
+        crudo: redactarCrudoVendor(envio.crudo),
+      })
+    }
+
+    const opcionesEmitida = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
+    acunado = await registrarPolizaEmitida(correduria.id, {
+      clienteId: ctx.clienteId,
+      actor,
+      catalogo: catalogo ?? undefined,
+      polizaOrigenId: ctx.polizaOrigenId,
+      proyecto: {
+        projectIdCodeoscopic: projectId,
+        producto: ctx.tipo,
+        codigoDgs,
+        numeroPoliza: envio.referenciaVendor,
+        primaAnual: numero(cuerpo.primaAnual),
+        emitidaEn: new Date().toISOString(),
+        riesgo: ctx.riesgo,
+        fraccionamiento: fraccionamientoAcunado,
+        opciones: opcionesEmitida,
+      },
+    })
+  } finally {
+    await soltarCandadoEnvio(correduria.id, projectId, attemptIdEnvio)
+  }
 
   // Best-effort: el propio Submit puede traer ya `issuedDocuments[]` en su
   // respuesta (`envio.crudo`) — se descarga y archiva sin gastar otro GET.
@@ -1104,6 +1118,7 @@ export const POST = auditado(async (req: Request) => {
   return NextResponse.json({
     estado: acunado.ok ? 'ok' : 'emitido_sin_acunar',
     trasEmision: tras,
+    ...(!acunado.ok && acunado.estado === 'ya_acunada' ? { mensaje: YA_ACUNADA_POR_OTRA_VIA } : {}),
     referenciaVendor: envio.referenciaVendor,
     acunado,
     // Con qué cuenta se ha emitido (enmascarada) y de dónde salió: la póliza
@@ -1114,6 +1129,11 @@ export const POST = auditado(async (req: Request) => {
     crudo: redactarCrudoVendor(envio.crudo),
   })
 })
+
+/** `registrarPolizaEmitida` → `ya_acunada`: otra vía (cron, webhook, otro clic) ganó la carrera. NO acuñar a mano. */
+const YA_ACUNADA_POR_OTRA_VIA =
+  'La póliza de este proyecto YA está acuñada en la cartera (la registró otra vía a la vez: descubrimiento o webhook). ' +
+  'No se ha creado otra ni hay que acuñarla a mano; el correo al cliente y la baja de la anterior no se han lanzado desde aquí: revísalos en la ficha.'
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
