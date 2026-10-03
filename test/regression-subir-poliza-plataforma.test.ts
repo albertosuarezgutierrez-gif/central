@@ -18,6 +18,7 @@ const leer = (p: string) => readFileSync(join(ROOT, p), 'utf8')
 const COR = 'apps/plataforma/app/(usuario)/correduria'
 const PAGINA = `${COR}/subir-poliza/page.tsx`
 const PANTALLA = `${COR}/subir-poliza/SubirPoliza.tsx`
+const LECTOR = `${COR}/LeerPoliza.tsx`
 const CABECERA_FICHA = `${COR}/cliente/[id]/Cabecera.tsx`
 const RUTA_LEER = 'apps/plataforma/app/api/correduria/oportunidad/leer/route.ts'
 
@@ -29,7 +30,8 @@ test('/correduria/subir-poliza es una pantalla, no un redirect a asegura', () =>
 })
 
 test('la pantalla lee por la ruta de plataforma, no por asegura', () => {
-  const s = leer(PANTALLA)
+  // Desde el 03/10/2026 la lectura vive en LeerPoliza (compartida con la ficha): se vigilan las dos.
+  const s = leer(PANTALLA) + '\n' + leer(LECTOR)
   assert.match(s, /['"]\/api\/correduria\/oportunidad\/leer['"]/)
   assert.doesNotMatch(s, /central-asegura|ASEGURA_URL|cartera\/subir/)
 })

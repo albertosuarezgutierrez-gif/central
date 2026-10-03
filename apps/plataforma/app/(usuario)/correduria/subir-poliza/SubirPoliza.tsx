@@ -1,78 +1,27 @@
 'use client'
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
-import { prepararAdjunto } from '@/lib/imagen-cliente'
-import { interpretarLecturaOportunidad, rotuloRamo, type LecturaDocumentoOportunidad, type FichaTomador } from '@/lib/seguimiento-asegura'
-import { interpretarFichaDocumento, interpretarOportunidadDocumento, textoFichaDocumento, type AvisoOportunidadDocumento, type FichaDocumento } from '@/lib/oportunidad-documento'
-
-type Lectura = Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>
+import { rotuloRamo, type FichaTomador } from '@/lib/seguimiento-asegura'
+import { AvisosLectura, enlaceStyle as enlace, useLeerPoliza, type LecturaOk as Lectura } from '../LeerPoliza'
 
 function fecha(iso: string): string {
   const [a, m, d] = iso.split('-')
   return `${d}/${m}/${a}`
 }
 
-const enlace = { ...btnStyle('secundario', 'sm'), minHeight: 44, textDecoration: 'none', justifyContent: 'flex-start' } as const
-
 /**
  * Lee el documento por `/api/correduria/oportunidad/leer` (puerto `leer-documento`
  * de asegura) y enseña adónde ir: la póliza si ya es nuestra, la ficha del
  * tomador si la tiene, o el alta. Tres estados en cada dato: `null` = no se ha
- * leído (y se dice), nunca un «no hay».
+ * leído (y se dice), nunca un «no hay». La lectura y los avisos son los de
+ * `../LeerPoliza`, los mismos de la ficha del cliente.
  */
 export default function SubirPoliza() {
   const fichero = useRef<HTMLInputElement>(null)
-  const [leyendo, setLeyendo] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [lectura, setLectura] = useState<Lectura | null>(null)
-  const [oportunidad, setOportunidad] = useState<AvisoOportunidadDocumento | null>(null)
-  const [sinGuardar, setSinGuardar] = useState(false)
-  // La oportunidad falló: no se sabe si la ficha se llegó a tocar (no se afirma que no).
-  const [fichaIncierta, setFichaIncierta] = useState(false)
-  // `null` = no se ha tocado ninguna ficha; `undefined` = asegura no lo dice (no se afirma nada).
-  const [ficha, setFicha] = useState<FichaDocumento | null | undefined>(undefined)
-
-  async function leer(f: File) {
-    setLeyendo(true)
-    setError(null)
-    setLectura(null)
-    setOportunidad(null)
-    setFicha(undefined)
-    setSinGuardar(false)
-    setFichaIncierta(false)
-    let status = 0
-    let json: unknown = null
-    try {
-      const a = await prepararAdjunto(f)
-      const res = await fetch('/api/correduria/oportunidad/leer', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        // `crear`: abre (o completa) la oportunidad y guarda el fichero en la ficha del tomador (29/09/2026).
-        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName, tomador: true, crear: true }),
-      })
-      status = res.status
-      json = await res.json().catch(() => null)
-    } catch {
-      json = { error: 'sin conexión' }
-    }
-    setLeyendo(false)
-    const l = interpretarLecturaOportunidad(status, json)
-    if (l.estado === 'error') { setError(`No se ha podido leer: ${l.motivo}.`); return }
-    setLectura(l)
-    const j = json as Record<string, unknown> | null
-    const bruta = j?.oportunidad as { estado?: unknown; clienteId?: unknown } | null | undefined
-    const falloOportunidad = bruta != null && typeof bruta === 'object' && bruta.estado === 'error'
-    const aviso = interpretarOportunidadDocumento(j?.oportunidad)
-    // En un error, asegura puede devolver la ficha que ya estaba elegida o creada: se enlaza.
-    const idFicha = falloOportunidad && typeof bruta?.clienteId === 'string' && bruta.clienteId.trim() !== '' ? bruta.clienteId.trim() : null
-    setOportunidad(aviso && idFicha ? { ...aviso, clienteId: idFicha } : aviso)
-    setFichaIncierta(falloOportunidad)
-    // asegura dice si guardó el fichero; si no lo dice (versión anterior), no se afirma nada.
-    setSinGuardar(j?.oportunidad != null && j?.ficheroGuardado === false)
-    setFicha(j?.oportunidad != null ? interpretarFichaDocumento(j?.ficha) : undefined)
-  }
+  // Sin `clienteId`: aquí no hay ficha de partida. `crear` abre la oportunidad y guarda el fichero (29/09/2026).
+  const { leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta, conOportunidad } = useLeerPoliza({ tomador: true, crear: true })
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -90,52 +39,12 @@ export default function SubirPoliza() {
           onClick={() => fichero.current?.click()}
           style={{ ...btnStyle('primario'), minHeight: 44, justifySelf: 'start' }}
         >
-          {leyendo ? 'Leyendo el documento…' : lectura || error ? 'Leer otro documento' : 'Elegir PDF o foto'}
+          {leyendo ? 'Leyendo el documento…' : lectura || motivoError ? 'Leer otro documento' : 'Elegir PDF o foto'}
         </button>
-        {error && <div role="status" style={{ color: 'var(--negative)' }}>{error}</div>}
+        {motivoError && <div role="status" style={{ color: 'var(--negative)' }}>No se ha podido leer: {motivoError}.</div>}
       </div>
-      {oportunidad && (
-        <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, color: oportunidad.tono === 'aviso' ? 'var(--negative)' : 'var(--text)' }}>
-          <span>{oportunidad.texto}</span>
-          {oportunidad.clienteId && (
-            <Link href={`/correduria/cliente/${encodeURIComponent(oportunidad.clienteId)}?tab=oportunidades`} style={enlace}>Ver su ficha y la oportunidad →</Link>
-          )}
-        </div>
-      )}
-      {ficha && <FichaTomadorResultado f={ficha} guardado={!sinGuardar} />}
-      {fichaIncierta && !oportunidad?.clienteId && (
-        <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
-          No se ha podido confirmar si se ha tocado alguna ficha: mírala en el buscador antes de volver a subirlo.
-        </p>
-      )}
-      {ficha === null && !fichaIncierta && (
-        <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
-          No se ha tocado ninguna ficha{sinGuardar ? ' ni se ha guardado el documento. Si sabes de quién es, súbelo desde su ficha → Documentos' : ''}.
-        </p>
-      )}
-      {sinGuardar && ficha !== null && (
-        <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
-          El fichero NO se ha guardado en ninguna ficha: súbelo desde la ficha del cliente si quieres conservarlo.
-        </p>
-      )}
-      {lectura && <Resultado l={lectura} conOportunidad={Boolean(oportunidad?.clienteId || ficha)} />}
-    </div>
-  )
-}
-
-function FichaTomadorResultado({ f, guardado }: { f: FichaDocumento; guardado: boolean }) {
-  return (
-    <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-      <strong>Ficha del tomador</strong>
-      <span style={{ overflowWrap: 'anywhere' }}>{textoFichaDocumento(f)}{guardado ? ' El documento queda guardado en su ficha → Documentos.' : ''}</span>
-      {f.avisos.length > 0 && (
-        <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4, fontSize: 13, color: 'var(--negative)' }}>
-          {f.avisos.map((a, i) => <li key={i} style={{ overflowWrap: 'anywhere' }}>{a}</li>)}
-        </ul>
-      )}
-      <Link href={`/correduria/cliente/${encodeURIComponent(f.clienteId)}`} style={enlace}>
-        {f.creada ? 'Abrir el lead nuevo →' : 'Abrir su ficha →'}
-      </Link>
+      <AvisosLectura oportunidad={oportunidad} ficha={ficha} sinGuardar={sinGuardar} fichaIncierta={fichaIncierta} />
+      {lectura && <Resultado l={lectura} conOportunidad={conOportunidad} />}
     </div>
   )
 }

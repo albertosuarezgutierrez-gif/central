@@ -4,12 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Trophy } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
-import { prepararAdjunto } from '@/lib/imagen-cliente'
 import {
   RAMOS_OPORTUNIDAD_UI,
   ROTULO_ESTADO,
   TIPOS_TAREA_UI,
-  interpretarLecturaOportunidad,
   interpretarOportunidadesCliente,
   parsearPrima,
   primaParaCampo,
@@ -25,6 +23,7 @@ import { rutaSinOportunidad, textoPresupuestos, textoSinOportunidad, type Presup
 import type { SeguroAnterior } from '@central/module-seguros'
 import { AvisoFechaDudosa, fmt } from './piezas'
 import SeguimientoOportunidad from './SeguimientoOportunidad'
+import { AvisosLectura, useLeerPoliza } from '../../LeerPoliza'
 
 /**
  * Las oportunidades de ESTE cliente, en su ficha (Fase 1 del rediseño, 24/09/2026). Hasta hoy solo
@@ -413,7 +412,6 @@ export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHe
   const [nota, setNota] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [leyendo, setLeyendo] = useState(false)
   const [lectura, setLectura] = useState<{ ok: boolean; texto: string } | null>(null)
   // Lo leído que no tiene campo en el formulario pero se guarda con la oportunidad:
   // el nº de póliza (distingue dos seguros del mismo ramo), la moto y el bonus.
@@ -424,28 +422,15 @@ export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHe
   const aplicado = useRef(false)
 
   // Lo leído RELLENA lo vacío y no pisa lo que Alberto ya ha tecleado: si él escribió
-  // la prima que le dijo el cliente, esa manda sobre la del papel.
-  async function leerDocumento(f: File) {
-    setLeyendo(true)
+  // la prima que le dijo el cliente, esa manda sobre la del papel. La lectura (POST, helpers y
+  // avisos de oportunidad/ficha) es la de `../../LeerPoliza`, la misma de «Subir póliza».
+  // Aquí solo viaja `clienteId`: no se cambia lo que se manda al servidor.
+  const lector = useLeerPoliza({ clienteId, onLectura: l => aplicar(l) })
+  const leyendo = lector.leyendo
+  const lecturaVista = lector.motivoError !== null ? { ok: false, texto: `No se ha podido leer: ${lector.motivoError}. Rellénalo a mano.` } : lectura
+  function leerDocumento(f: File) {
     setLectura(null)
-    let status = 0
-    let json: unknown = null
-    try {
-      const a = await prepararAdjunto(f)
-      const res = await fetch('/api/correduria/oportunidad/leer', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName, clienteId }),
-      })
-      status = res.status
-      json = await res.json().catch(() => null)
-    } catch {
-      json = { error: 'sin conexión' }
-    }
-    setLeyendo(false)
-    const l = interpretarLecturaOportunidad(status, json)
-    if (l.estado === 'error') { setLectura({ ok: false, texto: `No se ha podido leer: ${l.motivo}. Rellénalo a mano.` }); return }
-    aplicar(l)
+    void lector.leer(f)
   }
 
   function aplicar(l: LecturaOk) {
@@ -508,8 +493,10 @@ export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHe
         <button type="button" disabled={leyendo} onClick={() => fichero.current?.click()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, justifySelf: 'start' }}>
           {leyendo ? 'Leyendo el documento…' : 'Rellenar desde póliza, recibo o foto'}
         </button>
-        {lectura && <div role="status" style={{ color: lectura.ok ? 'var(--positive)' : 'var(--negative)' }}>{lectura.texto}</div>}
-        {!lectura && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento, prima y, en auto/moto, el bonus. No se guarda el documento.</div>}
+        {lecturaVista && <div role="status" style={{ color: lecturaVista.ok ? 'var(--positive)' : 'var(--negative)' }}>{lecturaVista.texto}</div>}
+        {!lecturaVista && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento, prima y, en auto/moto, el bonus. No se guarda el documento.</div>}
+        {/* Si la respuesta trae oportunidad/ficha (no es el caso sin `crear`), se enseñan igual que en «Subir póliza». */}
+        <AvisosLectura oportunidad={lector.oportunidad} ficha={lector.ficha} sinGuardar={lector.sinGuardar} fichaIncierta={lector.fichaIncierta} />
       </div>
       {/* Bloqueado mientras lee: lo leído solo rellena lo vacío, y eso se decide con lo que había al pulsar. */}
       <fieldset disabled={leyendo} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'grid', gap: 10 }}>
