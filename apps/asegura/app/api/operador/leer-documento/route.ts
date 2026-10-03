@@ -9,6 +9,7 @@ import { seguroAnteriorDe } from '@central/module-seguros'
 import { contrasenasDeLaFicha } from '@/lib/documentos/contrasenas-ficha'
 import { guardarExtraccion, oportunidadDesdeLectura, type ResultadoOportunidadDocumento } from '@/lib/oportunidad-documento'
 import { guardarDocumento } from '@/lib/cartera-documentos'
+import { fichaDelDocumento, type FichaDelDocumento } from '@/lib/oportunidad-documento-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -76,15 +77,18 @@ export const POST = auditado(async (req: Request) => {
   ])
   let oportunidad: ResultadoOportunidadDocumento | undefined
   let ficheroGuardado = false
+  let ficha: FichaDelDocumento | null = null
   if (form.get('crear') === '1') {
     const c = await correduriaUnica().catch(() => null)
     if (c) {
       const sube = typeof clienteId === 'string' && clienteId.trim() !== '' ? clienteId.trim() : null
       oportunidad = await oportunidadDesdeLectura({ correduriaId: c.id, clienteSube: sube, lectura: r, origen: 'subir-poliza', actor: req.headers.get('x-actor') ?? 'corredor' })
-      // El fichero va a la ficha de la oportunidad, o a la póliza si ya es nuestra. En los demás
-      // desenlaces NO se guarda, y se dice (`ficheroGuardado: false`): que nadie crea que está.
-      const destino = oportunidad.estado === 'creada' || oportunidad.estado === 'actualizada'
-        ? { clienteId: oportunidad.clienteId }
+      // El fichero va a la ficha del tomador (la de la oportunidad, o la ya resuelta si la oportunidad
+      // falló), o a la póliza si ya es nuestra. En los demás desenlaces (sin tomador legible, no es un
+      // seguro) NO se guarda ni se toca ficha alguna, y se dice (`ficheroGuardado: false`).
+      ficha = fichaDelDocumento(oportunidad)
+      const destino = ficha
+        ? { clienteId: ficha.clienteId }
         : oportunidad.estado === 'ya_nuestra' && enCartera?.[0]
           ? { polizaId: enCartera[0].polizaId }
           : null
@@ -99,7 +103,9 @@ export const POST = auditado(async (req: Request) => {
   const auto = r.fase === 'auto' ? r.datos : null
   const vehiculo = auto ? [auto.marca, auto.modelo].filter(Boolean).join(' ').trim() || null : null
   return NextResponse.json({
-    ...(oportunidad ? { oportunidad, ficheroGuardado } : {}),
+    // `ficha` (03/10/2026): la ficha del tomador resultante —id, si se creó, NOMBRES de lo rellenado
+    // y avisos—; `null` = no se ha tocado ninguna ficha.
+    ...(oportunidad ? { oportunidad, ficheroGuardado, ficha } : {}),
     enCartera,
     matricula: auto?.matricula ?? null,
     vehiculo,

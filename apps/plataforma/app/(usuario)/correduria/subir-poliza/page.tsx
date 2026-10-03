@@ -27,9 +27,12 @@ export default function SubirPolizaPage() {
       />
       <SubirPoliza />
       <div style={{ ...cardStyle, fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
-        <strong style={{ color: 'var(--text)' }}>Qué pasa con el documento:</strong> se lee y se descarta,
-        no se guarda ni se toca ninguna ficha. Para guardarlo en la de un cliente, súbelo desde su ficha →
-        Documentos.
+        <strong style={{ color: 'var(--text)' }}>Qué pasa con el documento:</strong> lo mismo que al subirlo
+        desde la ficha → Documentos. Se busca la ficha del tomador SOLO por su DNI o CIF; si no está, se abre
+        un lead con su DNI o CIF. Se rellenan los huecos de esa ficha con lo que trae la póliza (nunca se
+        pisa nada), se guarda el documento en ella y se abre o completa la oportunidad. Si otra ficha solo
+        comparte el teléfono o el email, no se le asigna: queda una nota de posible duplicado. Si la póliza
+        ya es nuestra, se guarda en la póliza; sin tomador legible, no se toca ninguna ficha.
       </div>
     </div>
   )

@@ -23,7 +23,8 @@ export function interpretarOportunidadDocumento(v: unknown): AvisoOportunidadDoc
       const vence = fecha(o.vence)
       const llamada = fecha(o.llamada)
       const quien = o.clienteNuevo === true
-        ? ' para un lead NUEVO (el documento era de otra persona)'
+        // «De otra persona» solo si se subió desde OTRA ficha (en «Subir póliza» no hay ficha de partida).
+        ? ` para un lead NUEVO${o.relacionado === true ? ' (el documento era de otra persona)' : ''}`
         : o.relacionado === true ? ' en la ficha del tomador (el documento era de otra persona)' : ''
       const cuando = vence
         ? `vence el ${vence}; llamada el ${llamada ?? '—'}`
@@ -48,4 +49,32 @@ export function interpretarOportunidadDocumento(v: unknown): AvisoOportunidadDoc
     default:
       return null
   }
+}
+
+// ─── La ficha del tomador tras «Subir póliza» (03/10/2026) ──────────────────────────────────────
+// asegura devuelve `ficha`: a qué ficha ha ido el documento, si se ha abierto ahora, qué HUECOS ha
+// rellenado (solo nombres de campo, nunca valores) y los avisos. `null` = no se ha tocado ninguna.
+
+export type FichaDocumento = { clienteId: string; creada: boolean; rellenados: string[]; avisos: string[] }
+
+const lista = (v: unknown, max = 20) =>
+  Array.isArray(v) ? v.flatMap(x => (typeof x === 'string' && x.trim() !== '' ? [x.trim().slice(0, 300)] : [])).slice(0, max) : []
+
+/** `undefined` = asegura no dice nada de la ficha (versión anterior): no se afirma nada. */
+export function interpretarFichaDocumento(v: unknown): FichaDocumento | null | undefined {
+  if (v === undefined) return undefined
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  const clienteId = txt(o.clienteId)
+  if (!clienteId) return null
+  return { clienteId, creada: o.creada === true, rellenados: lista(o.rellenados), avisos: lista(o.avisos) }
+}
+
+/** Una frase con lo que de verdad ha pasado en la ficha. */
+export function textoFichaDocumento(f: FichaDocumento): string {
+  const quien = f.creada ? 'Se ha abierto un lead nuevo para el tomador' : 'El documento es de una ficha que ya existía'
+  const que = f.rellenados.length > 0
+    ? `rellenado: ${f.rellenados.join(', ')}`
+    : 'no se ha rellenado ningún dato (no había huecos o no se pudo)'
+  return `${quien}; ${que}.`
 }

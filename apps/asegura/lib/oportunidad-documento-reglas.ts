@@ -164,3 +164,110 @@ export function puedeVolcarEnFicha(e: {
   if (ORIGENES_DEL_CLIENTE.includes(e.origen)) return e.clienteSube !== null && e.clienteId === e.clienteSube
   return true
 }
+
+/** El tomador tal como sale del documento para abrir su lead. `dni` = su DNI/NIE o, de una empresa, su CIF. */
+export type AltaTomador = { nombre: string; apellidos: string; dni: string | null; tipoPersona: 'fisica' | 'juridica' | null }
+
+export type PlanTomador =
+  | { tipo: 'ficha'; clienteId: string; porque: 'dni_ficha' | 'dni_cartera' | 'nombre' | 'sin_tomador' }
+  /** Lead nuevo CON su DNI/CIF si lo trae (`alta.dni`), sin él si no; y las fichas que solo comparten contacto. */
+  | { tipo: 'lead'; alta: AltaTomador; posiblesDuplicados: string[] }
+  | { tipo: 'sin_persona' }
+
+/**
+ * ¿De quién es el documento? (03/10/2026, «Subir póliza» = lo mismo que la ficha → Documentos.)
+ * Une `decidirFicha` y `posiblesDuplicadosPorContacto` sobre UNA búsqueda en la cartera
+ * (`encontradas`: lo que devuelve `coincidencias()` con el DNI/CIF, el teléfono y el email del
+ * documento; `null` = no se pudo buscar ≠ `[]`).
+ *
+ * 🚨 Solo el DNI/CIF (índice ciego) asigna una ficha. Una ficha que comparte el teléfono o el email
+ * NUNCA se elige (un móvil es un hogar): sale en `posiblesDuplicados` para la nota del lead nuevo.
+ * Sin ficha de contexto y sin coincidencia por identidad, el lead nace con el DNI/CIF del documento;
+ * sin ninguno, sin identificador.
+ */
+export function planTomador(e: {
+  clienteSube: string | null
+  nombreFicha: string | null
+  dniFicha: string | null
+  alta: AltaTomador | null
+  encontradas: { id: string; por: string }[] | null
+}): PlanTomador {
+  const porIdentidad = e.encontradas === null
+    ? null
+    : [...new Set(e.encontradas.filter((x) => x.por === 'dni').map((x) => x.id))].map((id) => ({ id, activo: true }))
+  const d = decidirFicha({
+    clienteSube: e.clienteSube,
+    nombreFicha: e.nombreFicha,
+    dniFicha: e.dniFicha,
+    tomador: e.alta ? `${e.alta.nombre} ${e.alta.apellidos}`.trim() : null,
+    dniDocumento: e.alta?.dni ?? null,
+    coincidencias: porIdentidad,
+  })
+  if (d.tipo !== 'lead') return d
+  if (!e.alta) return { tipo: 'sin_persona' }
+  const identidad = new Set((porIdentidad ?? []).map((c) => c.id))
+  const porContacto = (e.encontradas ?? []).filter((x) => (x.por === 'telefono' || x.por === 'email') && !identidad.has(x.id))
+  return { tipo: 'lead', alta: e.alta, posiblesDuplicados: posiblesDuplicadosPorContacto(porContacto) }
+}
+
+/** Lo que la pantalla necesita saber de la ficha tras subir un documento SIN ficha de contexto. */
+export type FichaDelDocumento = {
+  clienteId: string
+  /** `true` = lead abierto ahora con este documento; `false` = ya existía. */
+  creada: boolean
+  /** Campos rellenados (solo sus NOMBRES: «fecha de nacimiento», «domicilio», «CIF»…). */
+  rellenados: string[]
+  avisos: string[]
+}
+
+type VolcadoResumible =
+  | { estado: 'rellenada'; campos: string[]; avisos: string[] }
+  | { estado: 'nada_que_rellenar'; avisos: string[] }
+  | { estado: 'no_tocada'; motivo: string }
+  | { estado: 'error'; motivo: string }
+  | null
+
+const POR_QUE_NO_TOCADA: Record<string, string> = {
+  dni_distinto: 'el DNI/CIF del documento no es el de la ficha: no se ha rellenado nada',
+  sin_dni_documento: 'el documento no trae DNI ni CIF legible: no se ha rellenado nada de la ficha',
+  dni_ficha_ilegible: 'el DNI de la ficha no se ha podido leer: no se ha rellenado nada',
+  sin_ficha: 'la ficha no se ha encontrado al rellenarla',
+}
+
+/**
+ * La ficha resultante de un documento subido, para la respuesta del puerto: id, si se creó, los
+ * NOMBRES de lo rellenado y los avisos. Sin un solo valor personal. `null` = no se tocó ninguna
+ * ficha (ya nuestra, sin tomador, no es un seguro, no se leyó).
+ */
+export function fichaDelDocumento(o: {
+  estado: string
+  clienteId?: string
+  clienteNuevo?: boolean
+  ficha?: VolcadoResumible
+  posiblesDuplicados?: string[]
+  conIdentificador?: boolean
+}): FichaDelDocumento | null {
+  if (!o.clienteId) return null
+  const avisos: string[] = []
+  const creada = o.clienteNuevo === true
+  if (creada && o.conIdentificador === false) avisos.push('el documento no trae DNI ni CIF legible: el lead se ha abierto sin identificador')
+  const v = o.ficha ?? null
+  let rellenados: string[] = []
+  if (v === null) {
+    if (o.estado === 'creada' || o.estado === 'actualizada') avisos.push('no se ha intentado rellenar la ficha')
+  } else if (v.estado === 'rellenada') {
+    rellenados = v.campos
+    avisos.push(...v.avisos)
+  } else if (v.estado === 'nada_que_rellenar') {
+    avisos.push(...v.avisos)
+  } else if (v.estado === 'no_tocada') {
+    // Lead sin identificador: ya se ha dicho arriba, no se repite.
+    if (!(creada && o.conIdentificador === false && v.motivo === 'sin_dni_documento')) avisos.push(POR_QUE_NO_TOCADA[v.motivo] ?? `no se ha rellenado la ficha (${v.motivo})`)
+  } else {
+    avisos.push('no se ha podido rellenar la ficha')
+  }
+  const dup = o.posiblesDuplicados ?? []
+  if (dup.length > 0) avisos.push(`${dup.length === 1 ? 'una ficha comparte' : `${dup.length} fichas comparten`} su teléfono o email: posible duplicado (anotado en la ficha, no se ha fundido ni asignado)`)
+  if (o.estado === 'error') avisos.push('la oportunidad no se ha podido abrir: ábrela a mano')
+  return { clienteId: o.clienteId, creada, rellenados, avisos }
+}

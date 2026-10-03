@@ -5,7 +5,7 @@ import { btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { prepararAdjunto } from '@/lib/imagen-cliente'
 import { interpretarLecturaOportunidad, rotuloRamo, type LecturaDocumentoOportunidad, type FichaTomador } from '@/lib/seguimiento-asegura'
-import { interpretarOportunidadDocumento, type AvisoOportunidadDocumento } from '@/lib/oportunidad-documento'
+import { interpretarFichaDocumento, interpretarOportunidadDocumento, textoFichaDocumento, type AvisoOportunidadDocumento, type FichaDocumento } from '@/lib/oportunidad-documento'
 
 type Lectura = Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>
 
@@ -29,12 +29,16 @@ export default function SubirPoliza() {
   const [lectura, setLectura] = useState<Lectura | null>(null)
   const [oportunidad, setOportunidad] = useState<AvisoOportunidadDocumento | null>(null)
   const [sinGuardar, setSinGuardar] = useState(false)
+  // `null` = no se ha tocado ninguna ficha; `undefined` = asegura no lo dice (no se afirma nada).
+  const [ficha, setFicha] = useState<FichaDocumento | null | undefined>(undefined)
 
   async function leer(f: File) {
     setLeyendo(true)
     setError(null)
     setLectura(null)
     setOportunidad(null)
+    setFicha(undefined)
+    setSinGuardar(false)
     let status = 0
     let json: unknown = null
     try {
@@ -58,6 +62,7 @@ export default function SubirPoliza() {
     setOportunidad(interpretarOportunidadDocumento(j?.oportunidad))
     // asegura dice si guardó el fichero; si no lo dice (versión anterior), no se afirma nada.
     setSinGuardar(j?.oportunidad != null && j?.ficheroGuardado === false)
+    setFicha(j?.oportunidad != null ? interpretarFichaDocumento(j?.ficha) : undefined)
   }
 
   return (
@@ -88,12 +93,35 @@ export default function SubirPoliza() {
           )}
         </div>
       )}
-      {sinGuardar && (
+      {ficha && <FichaTomadorResultado f={ficha} guardado={!sinGuardar} />}
+      {ficha === null && (
+        <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
+          No se ha tocado ninguna ficha{sinGuardar ? ' ni se ha guardado el documento. Si sabes de quién es, súbelo desde su ficha → Documentos' : ''}.
+        </p>
+      )}
+      {sinGuardar && ficha !== null && (
         <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
           El fichero NO se ha guardado en ninguna ficha: súbelo desde la ficha del cliente si quieres conservarlo.
         </p>
       )}
-      {lectura && <Resultado l={lectura} conOportunidad={Boolean(oportunidad?.clienteId)} />}
+      {lectura && <Resultado l={lectura} conOportunidad={Boolean(oportunidad?.clienteId || ficha)} />}
+    </div>
+  )
+}
+
+function FichaTomadorResultado({ f, guardado }: { f: FichaDocumento; guardado: boolean }) {
+  return (
+    <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+      <strong>Ficha del tomador</strong>
+      <span style={{ overflowWrap: 'anywhere' }}>{textoFichaDocumento(f)}{guardado ? ' El documento queda guardado en su ficha → Documentos.' : ''}</span>
+      {f.avisos.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4, fontSize: 13, color: 'var(--negative)' }}>
+          {f.avisos.map((a, i) => <li key={i} style={{ overflowWrap: 'anywhere' }}>{a}</li>)}
+        </ul>
+      )}
+      <Link href={`/correduria/cliente/${encodeURIComponent(f.clienteId)}`} style={enlace}>
+        {f.creada ? 'Abrir el lead nuevo →' : 'Abrir su ficha →'}
+      </Link>
     </div>
   )
 }
