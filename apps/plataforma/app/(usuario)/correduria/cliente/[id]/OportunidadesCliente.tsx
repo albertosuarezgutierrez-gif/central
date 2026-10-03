@@ -21,6 +21,7 @@ import {
 import type { PrecargaAlta } from '@/lib/correduria/seguros-cliente'
 import { rutaSinOportunidad, textoPresupuestos, textoSinOportunidad, type PresupuestoSinOportunidad } from '@/lib/correduria/presupuestos-oportunidad'
 import type { SeguroAnterior } from '@central/module-seguros'
+import { vistaCompetencia } from '@/lib/correduria/competencia-oportunidad'
 import { AvisoFechaDudosa, fmt } from './piezas'
 import SeguimientoOportunidad from './SeguimientoOportunidad'
 import { AvisosLectura, useLeerPoliza } from '../../LeerPoliza'
@@ -235,8 +236,24 @@ function Resumen({ o }: { o: OportunidadDeCliente }) {
   if (coche) partes.push(coche)
   if (o.aseguradora) partes.push(`con ${o.aseguradora}`)
   if (o.prima !== null) partes.push(eur(o.prima))
-  partes.push(o.fechaFinVigencia ? `vence ${fmt(o.fechaFinVigencia)}` : 'sin fecha de vencimiento (no entra en Vencimientos)')
-  return <span style={{ color: 'var(--muted)' }}>{partes.join(' · ')}</span>
+  // Aviso a 45 días (03/10/2026): sin vencimiento NO se avisa y se dice; con él, cuándo suena.
+  const v = vistaCompetencia({ seguroAnterior: o.seguroAnterior, prima: o.prima, fechaFinVigencia: o.fechaFinVigencia, hoy: hoyMadrid() })
+  if (o.fechaFinVigencia && v.aviso.estado === 'desconocido') partes.push(`vence ${fmt(o.fechaFinVigencia)} (fecha ilegible)`)
+  else if (!o.fechaFinVigencia) partes.push('vencimiento desconocido: no se avisa (tampoco entra en Vencimientos)')
+  else partes.push(`vence ${fmt(o.fechaFinVigencia)}`)
+  return (
+    <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+      <span style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}>{partes.join(' · ')}</span>
+      {o.fechaFinVigencia && v.aviso.estado !== 'desconocido' && (
+        <span style={{ color: 'var(--muted)', fontSize: 12 }}>{v.aviso.texto}</span>
+      )}
+      {v.etiquetaPrioritaria && (
+        <span style={{ justifySelf: 'start', fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: 'var(--warning-bg)', color: 'var(--warning)', overflowWrap: 'anywhere' }}>
+          ★ {v.etiquetaPrioritaria}
+        </span>
+      )}
+    </div>
+  )
 }
 
 function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar, onHecho }: {

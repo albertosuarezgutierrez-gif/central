@@ -14,6 +14,7 @@ import {
   companiaLegible,
   companiaPorNombre,
   extraccionSinPii,
+  figurasSinNombre,
   normalizarContactoTomador,
   normalizarFigurasLeidas,
   planFiguras,
@@ -33,7 +34,7 @@ import { polizaEnCartera } from './poliza-en-cartera'
 import { leerPoliza, type ResultadoLecturaPoliza } from './documentos/extraer-poliza'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
 import { volcarPolizaEnFicha, type VolcadoFicha } from './ficha-desde-poliza'
-import { anotarConductorJoven, figurasDesdePoliza, type FiguraResultado } from './oportunidad-figuras'
+import { anotarConductorJoven, anotarFigurasSinNombre, figurasDesdePoliza, type FiguraResultado } from './oportunidad-figuras'
 import {
   planTomador,
   puedeAbrirFiguras,
@@ -278,7 +279,16 @@ export async function oportunidadDesdeLectura(
       matricula: txt(d.matricula, 20),
       vehiculo,
       seguroAnterior: r.fase === 'auto'
-        ? seguroAnteriorDe({ codigoDgs: d.codigoEntidadDgs, fechaEfecto: d.fechaEfecto, aniosSinSiniestros: d.aniosSinSiniestros, siniestrosUltimos5: d.siniestrosUltimos5 })
+        ? seguroAnteriorDe({
+            codigoDgs: d.codigoEntidadDgs, fechaEfecto: d.fechaEfecto, aniosSinSiniestros: d.aniosSinSiniestros, siniestrosUltimos5: d.siniestrosUltimos5,
+            // Identificación de esa póliza (03/10/2026): con ella se imputa el bonus a un vehículo NUEVO.
+            numeroPoliza: d.numeroPoliza, matricula: d.matricula, canal: contacto.mediador, cesionDerechos: contacto.cesionDerechos,
+            modalidad: ('bruto' in leida && leida.bruto ? (leida.bruto as Record<string, unknown>).modalidad : undefined) ?? d.modalidad,
+            // Plurianual (03/10/2026): el periodo efecto→vencimiento TAL COMO LO DICE EL DOCUMENTO (la fecha de la
+            // oportunidad se corre de año en año) y si se pagó de una vez: con ellos se anualiza la prima.
+            pagoUnico: 'bruto' in leida && leida.bruto ? (leida.bruto as Record<string, unknown>).pagoUnicoPlurianual : undefined,
+            fechaVencimiento: d.fechaVencimiento,
+          })
         : null,
       tipoTarea: 'llamada',
       // Vence en ≤15 días: la llamada es URGENTE (la prioridad más alta de `gestion_prioridad`).
@@ -311,20 +321,24 @@ export async function oportunidadDesdeLectura(
             fechaCarnet: txt(d.fechaCarnet, 10),
             claseCarnet: contacto.claseCarnet,
             tomadorEsConductorHabitual: contacto.tomadorEsConductorHabitual,
+            // Con rol y sin nombre («Conductor adicional» con solo su fecha): sin ficha, pero cuentan.
+            sinNombre: ('figurasSinNombre' in leida && leida.figurasSinNombre) || figurasSinNombre(d),
           },
-          { nombre: alta ? `${alta.nombre} ${alta.apellidos}`.trim() : null, dni: alta?.dni ?? null, empresa },
+          { nombre: alta ? `${alta.nombre} ${alta.apellidos}`.trim() : null, dni: alta?.dni ?? null, empresa, personaContacto: contacto.personaContacto },
           datos.ramo,
         )
         if (puedeAbrirFiguras(quienSube)) {
           const f = await figurasDesdePoliza({
             correduriaId: e.correduriaId, oportunidadId: opId, tomadorId: clienteId, ramo: datos.ramo, plan,
             numeroPoliza: datos.numeroPoliza, actor: e.actor, origen: e.origen, hoy,
+            contactoTomador: { telefono: contacto.telefono, email: contacto.email }, fechaTarea: llamada,
           })
           figuras = f.figuras
           avisosFiguras = f.avisos
         }
-        // Sin datos personales en la línea: vale también sin verificar (es del riesgo, no de nadie).
+        // Sin datos personales en las líneas: valen también sin verificar (son del riesgo, no de nadie).
         await anotarConductorJoven({ correduriaId: e.correduriaId, oportunidadId: opId, plan, hoy, actor: e.actor })
+        await anotarFigurasSinNombre({ correduriaId: e.correduriaId, oportunidadId: opId, plan, actor: e.actor })
       } catch (err) {
         console.error('[oportunidad-documento] figuras:', err instanceof Error ? err.message : err)
         avisosFiguras = [...avisosFiguras, 'No se han podido revisar las figuras de la póliza; revísalas a mano en la oportunidad.']

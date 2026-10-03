@@ -310,6 +310,27 @@ export type SeguroAnterior = {
   fechaEfecto: string | null
   aniosSinSiniestros: number | null
   siniestrosUltimos5: number | null
+  // ── Identificación de esa póliza (03/10/2026, imputar el bonus a un vehículo NUEVO) ──
+  // Opcionales a propósito: ausente o `null` = «no se sabe» (nunca «no hay»). Lo guardado antes
+  // de esta fecha no los trae y sigue siendo válido.
+  /** Nº de la póliza: con él la compañía nueva contrasta el historial en SINCO. */
+  numeroPoliza?: string | null
+  /** Matrícula del vehículo de ESA póliza (no la del vehículo nuevo), normalizada. */
+  matricula?: string | null
+  /** Canal por el que se contrató: agente, banco o financiera tal cual se lee («RCI BANQUE»). */
+  canal?: string | null
+  /** `true` = cesión de derechos / beneficiario preferente a favor de una financiera; `false` = dice que no. */
+  cesionDerechos?: boolean | null
+  /** Modalidad leída (terceros, terceros ampliado, todo riesgo…), texto tal cual. */
+  modalidad?: string | null
+  // ── Plurianual (03/10/2026): para anualizar la prima y marcar el objetivo prioritario ──
+  /** `true` = póliza de varios años pagada de una vez (pago único); `false` = dice que no; ausente/`null` = no se sabe. */
+  pagoUnico?: boolean | null
+  /**
+   * Fin del periodo TAL COMO LO DICE EL DOCUMENTO (aaaa-mm-dd). No es `oportunidades.fecha_fin_vigencia`,
+   * que se corre de año en año hasta el próximo ciclo: con esa, el periodo efecto→vencimiento mentiría.
+   */
+  fechaVencimiento?: string | null
 }
 
 function entero(v: unknown, max: number): number | null {
@@ -328,7 +349,23 @@ export function seguroAnteriorDe(v: unknown): SeguroAnterior | null {
     aniosSinSiniestros: entero(o.aniosSinSiniestros, 70),
     siniestrosUltimos5: entero(o.siniestrosUltimos5, 50),
   }
-  return Object.values(s).every(x => x === null) ? null : s
+  // Los campos de identificación solo viajan si se saben: lo guardado antes del 03/10/2026 (y sus
+  // tests) siguen teniendo exactamente las cuatro claves de siempre.
+  const extra: Partial<SeguroAnterior> = {}
+  const numeroPoliza = texto(o.numeroPoliza, 60)
+  if (numeroPoliza) extra.numeroPoliza = numeroPoliza
+  const matricula = claveMatricula(texto(o.matricula, 20))
+  if (matricula) extra.matricula = matricula
+  const canal = texto(o.canal, 120)
+  if (canal) extra.canal = canal
+  if (typeof o.cesionDerechos === 'boolean') extra.cesionDerechos = o.cesionDerechos
+  const modalidad = texto(o.modalidad, 60)
+  if (modalidad) extra.modalidad = modalidad
+  if (typeof o.pagoUnico === 'boolean') extra.pagoUnico = o.pagoUnico
+  const fechaVencimiento = fechaIso(o.fechaVencimiento)
+  if (fechaVencimiento) extra.fechaVencimiento = fechaVencimiento
+  const todo: SeguroAnterior = { ...s, ...extra }
+  return Object.values(todo).every(x => x === null) ? null : todo
 }
 
 export type EdicionValida = {

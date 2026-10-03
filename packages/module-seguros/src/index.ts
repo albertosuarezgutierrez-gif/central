@@ -1007,7 +1007,7 @@ export {
   type DniFusion,
   type RevisionElecciones,
 } from './fusion-fichas.ts'
-export { claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type SeguroOportunidad } from './compania-oportunidad.ts'
+export { claveCompania, claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type SeguroOportunidad } from './compania-oportunidad.ts'
 export {
   CATALOGO_GARANTIAS,
   GARANTIAS_DE_LEY,
@@ -1078,16 +1078,28 @@ export {
   MAX_FIGURAS,
   NOTA_CONDUCTOR_JOVEN_NOVEL,
   ROLES_FIGURA_LEIDOS,
+  CAMPOS_FIGURA,
+  accionFiguraSinNombre,
   conductoresDelPlan,
+  contactoSoloDelTomador,
   detalleRelacionFigura,
   esOtraPersona,
+  esPersonaDeContacto,
+  faltaDniOCarne,
+  figurasSinNombre,
   hayConductorJovenONovel,
   leadSinDniReutilizable,
   normalizarFigurasLeidas,
+  notaFiguraSinNombre,
   parcheFigura,
   planFiguras,
+  tareaPedirDniYCarne,
+  type CampoFigura,
+  type CamposFigura,
   type CandidatoLeadSinDni,
+  type DomicilioFigura,
   type FiguraLeida,
+  type FiguraSinNombre,
   type LecturaFiguras,
   type ParcheFigura,
   type PersonaFigura,
@@ -1109,7 +1121,21 @@ export {
   DIAS_AVISO_OPORTUNIDAD, ESTADOS_OPORTUNIDAD_ABIERTA,
   avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, fechaVencimientoDudosa, MESES_VENCIMIENTO_MAX, planTareaTrasVencimiento, vencimientoDelCiclo,
 } from './oportunidad-aviso.ts'
-export type { AvisoOportunidad, FechaDudosa, OportunidadParaAviso, PlanTareaVencimiento } from './oportunidad-aviso.ts'
+export type { AvisoOportunidad, EstadoAvisoVencimiento, FechaDudosa, OportunidadParaAviso, PlanTareaVencimiento } from './oportunidad-aviso.ts'
+export { estadoAvisoVencimiento } from './oportunidad-aviso.ts'
+export {
+  CANALES_FINANCIERA,
+  ahorroFrenteActual,
+  esCanalFinanciera,
+  esMismaCompaniaQueLaActual,
+  objetivoPrioritario,
+  periodoEnAnios,
+  periodoEnMeses,
+  primaActualAnualizada,
+} from './competencia-poliza.ts'
+export type { AhorroFrenteActual, MotivoPrioritario, ObjetivoPrioritario, PrimaAnualizada } from './competencia-poliza.ts'
+export { costePack, cuadroPack, decidirFamiliaAllianz, tienePolizaAllianzEnVigor } from './pack-vehiculos.ts'
+export type { CuadroPack, DecisionFamiliaAllianz, FilaPack, LadoPack, PolizaParaFamilia, PrecioPack } from './pack-vehiculos.ts'
 export {
   CAMPOS_VEHICULO, ETIQUETA_CAMPO_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
   datosVehiculoVacios, faltanDatosVehiculo, fusionarInfoRiesgo, hoyMadridVehiculo, incoherenciaFechasVehiculo,
@@ -1156,3 +1182,34 @@ export {
   leerBloqueDeRamo, precargaDePoliza, ramoTarificable,
 } from './datos-riesgo-ramo.ts'
 export type { BloqueDatos, CambioRiesgo, ClaveDatosRiesgo, ResultadoEdicionRiesgo } from './datos-riesgo-ramo.ts'
+
+// Imputar el bonus del conductor a un vehículo NUEVO desde sus otras pólizas de motor (03/10/2026).
+export {
+  elegirSeguroAnteriorParaImputar,
+  historialParaImputar,
+  maximoAniosSinSiniestros,
+  aniosCompletos,
+  aniosAseguradoAcreditados,
+  origenesHistorialManual,
+  candidataPublica,
+  decidirBloqueoBonus,
+  verificacionBonusDe,
+  codigoDgsPorNombre,
+  FUENTES_VERIFICACION_BONUS,
+} from './imputar-seguro-anterior.ts'
+export type {
+  TipoVehiculoNuevo,
+  TipoVehiculoCandidata,
+  OrigenCandidata,
+  CandidataSeguroAnterior,
+  CandidataEvaluada,
+  CandidataPublica,
+  FaltaDeclarar,
+  ImputacionSeguroAnterior,
+  ErrorImputacion,
+  HistorialImputado,
+  CampoHistorial,
+  FuenteVerificacionBonus,
+  VerificacionBonus,
+  BloqueoBonus,
+} from './imputar-seguro-anterior.ts'

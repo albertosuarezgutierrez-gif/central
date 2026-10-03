@@ -85,7 +85,18 @@ export function textoFichaDocumento(f: FichaDocumento): string {
 // pudo hacer. Una respuesta anterior (sin `figuras`) no pinta nada.
 
 export type RolFiguraDocumento = 'propietario' | 'conductor_habitual' | 'conductor_ocasional' | 'tomador'
-export type FiguraDocumento = { clienteId: string; roles: (RolFiguraDocumento | null)[]; creada: boolean }
+/** Qué tiene la ficha de la figura tras la subida (`campos` de asegura). Solo booleanos: nunca valores. */
+export const CAMPOS_FIGURA_DOCUMENTO = ['nombre', 'nacimiento', 'domicilio', 'telefono', 'email', 'carne', 'dni'] as const
+export type CampoFiguraDocumento = (typeof CAMPOS_FIGURA_DOCUMENTO)[number]
+/** `true` = lo tiene; `false` = le falta; `null` = no se pudo mirar. */
+export type CamposFiguraDocumento = Record<CampoFiguraDocumento, boolean | null>
+export type FiguraDocumento = {
+  clienteId: string
+  roles: (RolFiguraDocumento | null)[]
+  creada: boolean
+  /** `null` = asegura no lo dice (respuesta anterior): no se pinta. */
+  campos: CamposFiguraDocumento | null
+}
 export type FigurasDocumento = { figuras: FiguraDocumento[]; avisos: string[] }
 
 const ROTULO_ROL: Record<RolFiguraDocumento, string> = {
@@ -95,6 +106,24 @@ const ROTULO_ROL: Record<RolFiguraDocumento, string> = {
   conductor_ocasional: 'Conductor ocasional',
 }
 const esRol = (v: unknown): v is RolFiguraDocumento => typeof v === 'string' && v in ROTULO_ROL
+
+const ROTULO_CAMPO: Record<CampoFiguraDocumento, string> = {
+  nombre: 'nombre', nacimiento: 'nacimiento', domicilio: 'domicilio', telefono: 'teléfono', email: 'email', carne: 'carné', dni: 'DNI',
+}
+
+/** Solo booleanos (o `null`): cualquier otra cosa —un valor que se colara— cuenta como «no se sabe». */
+function camposFigura(v: unknown): CamposFiguraDocumento | null {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  return Object.fromEntries(CAMPOS_FIGURA_DOCUMENTO.map(k => [k, typeof o[k] === 'boolean' ? o[k] : null])) as CamposFiguraDocumento
+}
+
+/** «Tiene: nombre, nacimiento · Falta: domicilio, DNI · Sin comprobar: email». `null` = nada que decir. */
+export function textoCamposFigura(c: CamposFiguraDocumento | null): { tiene: string[]; falta: string[]; sinComprobar: string[] } | null {
+  if (!c) return null
+  const de = (x: boolean | null) => CAMPOS_FIGURA_DOCUMENTO.filter(k => c[k] === x).map(k => ROTULO_CAMPO[k])
+  return { tiene: de(true), falta: de(false), sinComprobar: de(null) }
+}
 
 /**
  * Las figuras, agrupadas por ficha (la misma persona puede ser propietaria y conductora). `null` =
@@ -111,11 +140,13 @@ export function interpretarFigurasDocumento(oportunidad: unknown): FigurasDocume
     const clienteId = txt(f.clienteId)
     if (!clienteId) continue
     const rol = esRol(f.rol) ? f.rol : null
+    const campos = camposFigura(f.campos)
     const ya = porFicha.get(clienteId)
     if (ya) {
       if (!ya.roles.includes(rol)) ya.roles.push(rol)
       ya.creada ||= f.creada === true
-    } else porFicha.set(clienteId, { clienteId, roles: [rol], creada: f.creada === true })
+      ya.campos ??= campos
+    } else porFicha.set(clienteId, { clienteId, roles: [rol], creada: f.creada === true, campos })
   }
   // Un rol conocido manda sobre el «sin rol» de la misma ficha.
   for (const f of porFicha.values()) if (f.roles.some(r => r !== null)) f.roles = f.roles.filter(r => r !== null)

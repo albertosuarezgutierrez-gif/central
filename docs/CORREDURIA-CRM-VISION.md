@@ -151,6 +151,22 @@ Lo que pasará sin cambiar nada, en orden de probabilidad:
 5. Hasta que exista esto, la ficha ya distingue «viva (CIMA)» de lo demás; una emitida sin confirmar
    se enseñará como **«pendiente de confirmación por CIMA»**, nunca como viva.
 
+## 5.1 Tarificación de vehículo nuevo con bonificación imputada (03/10/2026)
+
+Al tarificar un vehículo nuevo, se imputa bonificación del **conductor** (no del vehículo). Descubrimiento:
+auto/moto-nuevo descartaban `seguroAnterior`, asumiendo erróneamente sin histórico.
+
+**Decisiones Alberto:** (a) elegir póliza a imputar (turismo > moto, efecto antiguo sin siniestros, override
+corredor); (b) años desconocidos → PRESUPUESTO tarifica máximo «bonusSupuesto», EMISIÓN bloqueada sin
+verificar (art. 10 LCS); (c) leer-documento completa nº póliza/matrícula/canal/cesión/modalidad.
+
+**PR1** (agente-architect, rama ccr-7156a8bc-i5qt5c): imputación + bloqueo + extracción.
+
+**PR2 pendiente (tras PR1):** aviso 45 días vencimientos competencia, plurianuales RCI como objetivo, «pagas
+X → Y» anualizado (sin ahorro si no asegura), pack coche+moto opcional (interruptor, desactivado).
+
+**Codeoscopic:** 0,50€/riesgo, 90 días vista, Allianz vinculación (insuredFamilyInAllianz, dtoVentaCruzada).
+
 ## 6. Leads: cómo entran y cómo se convierten
 
 - **Nace** con nombre + teléfono (o email o DNI: sin uno de los tres no se crea, para que se pueda

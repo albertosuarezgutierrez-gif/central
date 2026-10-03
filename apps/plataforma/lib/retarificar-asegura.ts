@@ -34,6 +34,7 @@
 //    Y por lo mismo: **NO se reintenta automáticamente**. `POST /insurances` no
 //    es idempotente; un reintento crea otro proyecto y otro cargo.
 
+import { leerSeguroAnteriorImputado, type SeguroAnteriorImputado } from './correduria/seguro-anterior-imputado.ts'
 import { describirCausaAsegura, MOTIVOS_PUERTO, type MotivoPuerto } from './correduria-puerto.ts'
 // `PolizaCliente` y `CompaniaCatalogo` SÍ se importan (no se copian como `Precio`
 // y compañía): viven en `@central/module-seguros`, que es el paquete compartido
@@ -670,6 +671,9 @@ export type RespuestaRetarificar =
       guardado: unknown
       /** Proyecto del vendor (para leer coberturas por oferta). `null` = no vino. */
       projectId: string | null
+      /** Vehículo NUEVO (03/10/2026): qué póliza del cliente se declaró como seguro anterior y si el
+       *  bonus va SUPUESTO (condicionado a SINCO/certificado). `null` = no aplica o asegura no lo mandó. */
+      seguroAnterior?: SeguroAnteriorImputado | null
     }
 
 /**
@@ -730,9 +734,15 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
       supuestos: Array.isArray(r.supuestos) ? (r.supuestos as Supuesto[]) : [],
       guardado: r.guardado ?? null,
       projectId: typeof r.projectId === 'string' || typeof r.projectId === 'number' ? String(r.projectId) : null,
+      seguroAnterior: leerSeguroAnteriorImputado(r.seguroAnterior),
     }
   }
 
+  // Vehículo NUEVO (03/10/2026): la póliza elegida como seguro anterior no vale, o no se pudieron leer
+  // sus pólizas. asegura corta ANTES del vendor: no es «faltan datos» ni «sin configurar».
+  if ((status === 422 && (r.causa === 'elegida_desconocida' || r.causa === 'elegida_no_declarable')) || (status === 503 && r.causa === 'seguro_anterior_no_disponible')) {
+    return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('No se ha podido decidir el seguro anterior: no se ha pedido precio.'), gastoDesconocido: !cero }
+  }
   if (status === 422 && r.causa === 'variante') {
     // El riesgo no es de esta póliza: asegura corta ANTES del vendor. No es «faltan datos».
     return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('Este riesgo no es de esta póliza: no se ha pedido precio.'), gastoDesconocido: !cero }
@@ -1621,6 +1631,9 @@ export async function emitirAsegura(p: {
   figurasConfirmadas?: string[]
   /** La oferta que se ENSEÑÓ (Telegram): si la aceptada del proyecto ya es otra, asegura no envía nada (409). */
   offerIdEsperado?: string
+  /** Vehículo NUEVO con bonus SUPUESTO (03/10/2026): cómo lo ha verificado el corredor. Sin él, asegura
+   *  contesta 422 `bonus_sin_verificar` (`estado: 'error'`, `causa`) sin enviar nada. */
+  bonusVerificado?: { fuente: 'certificado' | 'sinco' | 'dato_confirmado'; nota?: string | null } | null
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1641,6 +1654,7 @@ export async function emitirAsegura(p: {
           ...(p.duplicadoConfirmado === true ? { duplicadoConfirmado: true } : {}),
           ...(Array.isArray(p.figurasConfirmadas) ? { figurasConfirmadas: p.figurasConfirmadas } : {}),
           ...(p.offerIdEsperado ? { offerIdEsperado: p.offerIdEsperado } : {}),
+          ...(p.bonusVerificado ? { bonusVerificado: p.bonusVerificado } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,

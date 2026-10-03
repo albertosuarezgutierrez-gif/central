@@ -28,6 +28,8 @@ import {
 import { avisosCompania, comunesParrilla, partirSinLeer } from '@/lib/correduria/parrilla-coherencia'
 import PrepararPresupuesto from './poliza/[id]/retarificar/PrepararPresupuesto'
 import { pedirPreciosGuardados, type RespuestaPreciosGuardados } from './garantias-acciones'
+import type { PrimaActualLista } from './ListaPrecios'
+import { textoPagasProponemos } from '@/lib/correduria/competencia-oportunidad'
 
 const PAGINA = 50
 
@@ -45,7 +47,10 @@ export default function FiltroGarantias({
   tarificacionId,
   simulado,
   emitir,
+  actual = null,
 }: {
+  /** «Pagas X → te proponemos Y» (03/10/2026): lo que paga hoy en la competencia, anualizado. `null` = no se enseña comparación. */
+  actual?: PrimaActualLista | null
   /** Ramo de la parrilla (`auto`, `moto`, `hogar`, `decesos`, `salud`, `vida`). Sin catálogo → sin interruptores. */
   ramo: string | null
   /** De dónde se lee lo guardado: la póliza (retarificar) o el cliente + ramo (cliente nuevo). */
@@ -209,6 +214,9 @@ export default function FiltroGarantias({
               <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, overflowWrap: 'anywhere' }}>{o.modalidad}</span>
             )}
             {lineaFranquicia && <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>{lineaFranquicia}</span>}
+            {actual && textoPagasProponemos(actual.anual, o.primaEur) && (
+              <span style={{ display: 'block', fontSize: 12, overflowWrap: 'anywhere' }}>{textoPagasProponemos(actual.anual, o.primaEur)}</span>
+            )}
             {textoDescuentos(o.descuentos) && (
               <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>{textoDescuentos(o.descuentos)}</span>
             )}
@@ -287,6 +295,11 @@ export default function FiltroGarantias({
         Marca las opciones que le quieres mandar. Leer esto es gratis: no vuelve a cotizar.
       </p>
 
+      {actual && (
+        actual.anual !== null
+          ? <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>Hoy paga {eur(actual.anual)}/año{actual.compania ? ` con ${actual.compania}` : ''}: cada opción lo compara.</p>
+          : actual.motivo && <p style={{ fontSize: 12, marginTop: 0, color: 'var(--warning)', overflowWrap: 'anywhere' }}>{actual.motivo}</p>
+      )}
       {carga.estado === 'cargando' && <p className="muted">Leyendo la cotización guardada…</p>}
       {carga.estado === 'error' && (
         <p className="err">

@@ -26,7 +26,8 @@ export type OportunidadEnAviso = {
 export type LecturaOportunidadesAviso =
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string }
-  | { estado: 'ok'; oportunidades: OportunidadEnAviso[]; truncado: boolean }
+  /** `sinVencimiento`: abiertas sin fecha (no se avisan). `null`/ausente = no se sabe (asegura viejo o recuento fallido), nunca 0. */
+  | { estado: 'ok'; oportunidades: OportunidadEnAviso[]; truncado: boolean; sinVencimiento?: number | null }
 
 const txt = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
 
@@ -51,7 +52,9 @@ export function interpretarOportunidadesAviso(status: number, json: unknown): Le
       fueCliente: x.fueCliente === true,
     }]
   })
-  return { estado: 'ok', oportunidades, truncado: o.truncado === true }
+  const sin = o.sinVencimiento
+  const sinVencimiento = typeof sin === 'number' && Number.isInteger(sin) && sin >= 0 ? sin : null
+  return { estado: 'ok', oportunidades, truncado: o.truncado === true, sinVencimiento }
 }
 
 /** Las que aún no se han avisado en este ciclo. `yaAvisadas` = claves `id|vence`. */
@@ -84,6 +87,11 @@ export function ordenAviso(ops: readonly OportunidadEnAviso[]): { aTiempo: Oport
   }
 }
 
+/** Las oportunidades abiertas sin vencimiento no entran en el aviso de 45 días: se dice cuántas hay. */
+export function textoSinVencimiento(n: number): string {
+  return `📭 ${n} oportunidad${n === 1 ? '' : 'es'} abierta${n === 1 ? '' : 's'} con vencimiento desconocido: no se avisa${n === 1 ? '' : 'n'} hasta que alguien lo pida al cliente.`
+}
+
 /**
  * El bloque del mensaje diario. `null` = nada nuevo que avisar. Si asegura no se pudo leer, se DICE
  * (una lista vacía no autoriza a callar un fallo).
@@ -110,5 +118,7 @@ export function bloqueOportunidades(l: LecturaOportunidadesAviso, nuevas: readon
   }
   if (orden.length > 25) partes.push(`…y ${orden.length - 25} más en /correduria/vencimientos.`)
   if (l.truncado) partes.push('⚠️ La lectura llegó al tope de filas: puede haber más que no salen aquí.')
+  // Las que no tienen fecha no se avisan: se dice (no se callan), solo cuando ya hay mensaje que mandar.
+  if (typeof l.sinVencimiento === 'number' && l.sinVencimiento > 0) partes.push(textoSinVencimiento(l.sinVencimiento))
   return partes.join('\n')
 }
