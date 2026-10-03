@@ -249,6 +249,8 @@ hay algo que mirar** (regla de Alberto: el panel enseña errores). Lógica pura 
   cientos de campos y siempre habrá alguno que no leamos: si encendiera el rojo
   estaría encendido para siempre, que es como muere una alarma. Se informa como
   hueco.
+- **`excluido_motivo` (0106):** una ruta descartada a propósito por privacidad no cuenta como «sin leer»; vuelve a NULL si se pasa a leer.
+- **`siniestros.cima_extra`:** el resto del SIN se guarda y se pinta solo para el operador, nunca en el portal (guardián `regression-portal-sin-cimaextra`).
 - **`undefined` no es `null`.** «El llamante no pide la señal» y «la pidió y
   falló» son cosas distintas; se normaliza en la frontera HTTP, que es donde el
   tipo miente (`esSalud` tolera campos nuevos, así que una `apps/asegura` vieja

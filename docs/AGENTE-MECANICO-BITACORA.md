@@ -12,6 +12,7 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- 03/10/2026 · memoria+skill cierre CIMA (LOO-806) · ok
 - (03/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (migración 0105 cierre CIMA), SKILL.md cima-ingesta (rescate sinConfirmarTirea, recorte de lote, limpieza) — sesión — ok
 
 - (03/10/2026, tarde) actualización de memoria: CONTEXTO-SESIONES.md (estándares EIAC), SKILL.md cima-ingesta (📏 campos huecos + 🔑 Claves EIAC + 🗓️ Fechas de relleno), SKILL.md correduria-crm (etiquetas CIMA) — sesión — ok
