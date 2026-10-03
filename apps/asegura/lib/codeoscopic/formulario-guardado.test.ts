@@ -104,3 +104,11 @@ test('extraerHistorialGuardado: lee el previousInsurance de la petición pagada;
   assert.equal(extraerHistorialGuardado({ risk: { previousInsurance: { ...pet.risk.previousInsurance, yearsWithoutAccidents: undefined } } }), null)
   assert.equal(extraerHistorialGuardado(null), null)
 })
+
+test('guarda segundo apellido y nacionalidad para no volver a pedirlos', () => {
+  const f = extraerFormularioAuto(
+    construirPeticionAuto({ ...DATOS, dni: 'X1234567L', nacionalidad: 'mar' }),
+  )
+  assert.equal(f.correcciones.apellido2, 'Segundo')
+  assert.equal(f.correcciones.nacionalidad, 'MAR')
+})
