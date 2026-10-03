@@ -48,6 +48,10 @@ export type ObjetoFicha = {
   nota: string | null
   /** El desglose entero (RC/comercio/otros); `null` en el resto de ramos. */
   coberturas: string[] | null
+  /** Ficha del bien (vehículo/inmueble) de CIMA: solo lo informado; códigos EIAC crudos. Opcional: asegura viejo no lo manda. */
+  ficha?: Array<{ etiqueta: string; valor: string }> | null
+  /** 🔒 Solo operador (VIN). Nunca se reenvía al portal del cliente. */
+  bastidor?: string | null
 }
 
 /** El recargo por fraccionar: TRES estados. `sin_datos` nunca se pinta como 0€. */

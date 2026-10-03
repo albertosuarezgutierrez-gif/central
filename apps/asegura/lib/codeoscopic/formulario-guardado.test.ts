@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import { extraerFormularioAuto } from './formulario-guardado.ts'
 import { construirPeticionAuto, type DatosAuto } from './peticion-auto.ts'
 
+// Fecha de efecto siempre futura: el validador rechaza efectos anteriores a hoy.
+const FECHA_EFECTO_FUTURA = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)
+
 // El fixture sale del propio constructor real (`construirPeticionAuto`), no
 // se escribe a mano: así el test no puede divergir en silencio del formato
 // que de verdad se guarda en `seguros.tarificaciones.peticion`.
@@ -22,7 +25,7 @@ const DATOS: DatosAuto = {
   cpCirculacion: '41003',
   municipioCirculacionId: 41091,
   garaje: 'Garage',
-  fechaEfecto: '2026-10-01',
+  fechaEfecto: FECHA_EFECTO_FUTURA,
 }
 
 test('recupera el tipo de vía (catálogo) y la calle completa + correo tecleados (12/09/2026)', () => {

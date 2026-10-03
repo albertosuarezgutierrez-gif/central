@@ -51,7 +51,22 @@ export type ObjetoAsegurado = {
    * el estado no es `conocido` (no se enseña un desglose sin bien identificado).
    */
   capitalAsegurado?: string[] | null
+  /**
+   * Ficha del bien (vehículo / inmueble) que CIMA ya guarda en `datos_especificos`:
+   * pares etiqueta/valor listos para pintar. Solo lo informado (NULL/ausente → no
+   * hay fila, nunca un 0). Los códigos EIAC sin catálogo en el repo van CRUDOS.
+   * Es la parte apta para el cliente: NO lleva el bastidor.
+   */
+  ficha?: DatoObjeto[] | null
+  /**
+   * 🔒 SOLO OPERADOR. Bastidor (VIN) del vehículo. Campo aparte a propósito: el
+   * portal del cliente no usa `objetoAsegurado()` (usa `describirBien` de
+   * `module-seguros-portal`, que llama a `fichaObjeto` y nunca a esto).
+   */
+  bastidor?: string | null
 }
+
+export type DatoObjeto = { etiqueta: string; valor: string }
 
 /** Prefijo del cifrado del CRM de origen (AES-256-GCM, `v1:iv:cipher:tag`). */
 const PREFIJO_CIFRADO = 'v1:'
@@ -151,7 +166,89 @@ export function objetoAsegurado(entrada: EntradaObjeto): ObjetoAsegurado {
   const resultado = calcularObjeto(tipo, d, entrada.coberturas)
   if (resultado.estado !== 'conocido') return resultado
   const capitalAsegurado = formatCapitales(d)
-  return capitalAsegurado === null ? resultado : { ...resultado, capitalAsegurado }
+  const ficha = fichaObjeto(tipo, d)
+  const bastidor = RAMOS_VEHICULO.has(tipo) ? bastidorOperador(d) : null
+  return {
+    ...resultado,
+    ...(capitalAsegurado === null ? {} : { capitalAsegurado }),
+    ...(ficha === null ? {} : { ficha }),
+    ...(bastidor === null ? {} : { bastidor }),
+  }
+}
+
+const RAMOS_VEHICULO = new Set(['auto', 'moto'])
+const RAMOS_INMUEBLE = new Set(['hogar', 'comunidad', 'comunidades'])
+
+function eur(n: number): string {
+  return `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`
+}
+
+function miles(n: number): string {
+  return n.toLocaleString('es-ES', { maximumFractionDigits: 2, useGrouping: 'always' })
+}
+
+function fechaEs(v: unknown): string | null {
+  const t = claro(v)
+  const m = t === null ? null : /^(\d{4})-(\d{2})-(\d{2})/.exec(t)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : null
+}
+
+/** 🔒 Bastidor (VIN) — SOLO para el operador. Nunca lo llames desde el portal. */
+export function bastidorOperador(d: Record<string, unknown>): string | null {
+  return claro(d.bastidor)
+}
+
+/**
+ * Ficha del bien desde `datos_especificos`, SIN el bastidor (apta para el
+ * portal del cliente). Códigos (combustible, uso, clase, categoría, clase/uso de
+ * inmueble, zona) CRUDOS: el repo no documenta su significado (CIMA-CAMPOS.md
+ * solo lista los campos) y el mapper los guarda «tal cual, sin traducir».
+ * Potencia sin unidad por lo mismo. `null` si no hay ningún dato.
+ */
+export function fichaObjeto(tipoRamo: string, d: Record<string, unknown>): DatoObjeto[] | null {
+  const tipo = (tipoRamo || '').toLowerCase()
+  const out: DatoObjeto[] = []
+  const add = (etiqueta: string, valor: string | null) => { if (valor !== null) out.push({ etiqueta, valor }) }
+  const num = (v: unknown, f: (n: number) => string): string | null => {
+    const n = numero(v)
+    return n === null ? null : f(n)
+  }
+  if (RAMOS_VEHICULO.has(tipo)) {
+    add('Valor del vehículo', num(d.valorVehiculo, eur))
+    add('Matriculación', fechaEs(d.fechaMatriculacion))
+    add('Clase', claro(d.claseVehiculo))
+    add('Categoría', claro(d.categoriaVehiculo))
+    add('Uso', claro(d.usoVehiculo))
+    add('Combustible', claro(d.combustible))
+    add('Potencia', num(d.potencia, miles))
+    add('Cilindrada', num(d.cilindrada, n => `${miles(n)} cm³`))
+    add('Plazas', num(d.plazas, miles))
+    add('PMA', num(d.pma, n => `${miles(n)} kg`))
+    // `false` es un dato (CIMA dice que no lleva); ausente no se pinta.
+    if (typeof d.remolque === 'boolean') add('Remolque', d.remolque ? 'Sí' : 'No')
+  } else if (RAMOS_INMUEBLE.has(tipo)) {
+    add('Clase de inmueble', claro(d.claseInmueble))
+    add('Uso', claro(d.usoInmueble))
+    add('Zona', claro(d.zona))
+    add('Clase de comunidad', claro(d.claseComunidad))
+    // `antiguedadCima` solo si no hay un año ya mostrado en el detalle.
+    if (numero(d.anioConstruccion) === null && numero(d.anioConstruccionCima) === null) {
+      add('Antigüedad', claro(d.antiguedadCima))
+    }
+    if (Array.isArray(d.medidasProteccion)) {
+      const medidas: string[] = []
+      for (const m of d.medidasProteccion) {
+        if (m === null || typeof m !== 'object') continue
+        const o = m as Record<string, unknown>
+        const nombre = claro(o.medida)
+        if (nombre === null) continue
+        const valor = claro(o.valor)
+        medidas.push(valor !== null ? `${nombre} (${valor})` : nombre)
+      }
+      add('Medidas de protección', medidas.length > 0 ? medidas.join('; ') : null)
+    }
+  }
+  return out.length > 0 ? out : null
 }
 
 function calcularObjeto(

@@ -292,3 +292,60 @@ test('«comunidades» (el enum de la BD) se describe como inmueble y lee la dire
   const sin = objetoAsegurado({ tipo: 'comunidades', datos: { nViviendas: 12 }, coberturas: null })
   assert.equal(sin.titulo, 'Comunidad')
 })
+
+// ── Ficha del bien (CIMA) y bastidor operador-only ──────────────────────────
+
+import { fichaObjeto, bastidorOperador } from './objeto.ts'
+
+const AUTO_CIMA = {
+  marca: 'SEAT', modelo: 'IBIZA', matricula: '1234ABC', bastidor: 'VSSZZZ6JZ9R123456',
+  valorVehiculo: '12345.5', fechaMatriculacion: '2019-03-07', potencia: '85', cilindrada: '1598',
+  combustible: 'GA', usoVehiculo: 'PA', claseVehiculo: 'TU', categoriaVehiculo: 'M1',
+  plazas: '5', pma: '1850', remolque: false,
+}
+
+test('auto: ficha con dinero en español, fecha dd/mm/aaaa y códigos CRUDOS', () => {
+  const f = objetoAsegurado({ tipo: 'auto', datos: AUTO_CIMA }).ficha ?? []
+  const m = Object.fromEntries(f.map(x => [x.etiqueta, x.valor]))
+  assert.equal(m['Valor del vehículo'], '12.345,50€')
+  assert.equal(m['Matriculación'], '07/03/2019')
+  assert.equal(m['Combustible'], 'GA')
+  assert.equal(m['Uso'], 'PA')
+  assert.equal(m['Clase'], 'TU')
+  assert.equal(m['Categoría'], 'M1')
+  assert.equal(m['Potencia'], '85')
+  assert.equal(m['Cilindrada'], '1.598 cm³')
+  assert.equal(m['PMA'], '1.850 kg')
+  assert.equal(m['Remolque'], 'No')
+})
+
+test('auto: ausente/0/cajón no se pinta y sin datos no hay ficha', () => {
+  const f = fichaObjeto('auto', { valorVehiculo: '0', pma: '0', potencia: null, combustible: 'N/A' })
+  assert.equal(f, null)
+  assert.equal(objetoAsegurado({ tipo: 'auto', datos: { marca: 'SEAT', modelo: 'IBIZA' } }).ficha, undefined)
+})
+
+test('🔒 bastidor: campo aparte para el operador, nunca en ficha/titulo/detalle', () => {
+  const o = objetoAsegurado({ tipo: 'auto', datos: AUTO_CIMA })
+  assert.equal(o.bastidor, 'VSSZZZ6JZ9R123456')
+  assert.equal(bastidorOperador(AUTO_CIMA), 'VSSZZZ6JZ9R123456')
+  const { bastidor: _b, ...resto } = o
+  assert.ok(!JSON.stringify(resto).includes('VSSZZZ'), 'el bastidor se ha colado fuera de `bastidor`')
+  assert.ok(!JSON.stringify(fichaObjeto('auto', AUTO_CIMA)).includes('VSSZZZ'))
+  assert.equal(objetoAsegurado({ tipo: 'hogar', datos: { bastidor: 'X1234567890123456' } }).bastidor, undefined)
+})
+
+test('hogar: clase/uso/zona crudos, medidas de protección y antigüedad solo sin año', () => {
+  const d = {
+    localidad: 'Sevilla', claseInmueble: 'PI', usoInmueble: 'VP', zona: 'Z1', antiguedadCima: '199001',
+    medidasProteccion: [{ medida: 'NO HAY ALARMA INSTALADA' }, { medida: 'Puerta', valor: 'blindada' }],
+  }
+  const m = Object.fromEntries((objetoAsegurado({ tipo: 'hogar', datos: d }).ficha ?? []).map(x => [x.etiqueta, x.valor]))
+  assert.equal(m['Clase de inmueble'], 'PI')
+  assert.equal(m['Uso'], 'VP')
+  assert.equal(m['Zona'], 'Z1')
+  assert.equal(m['Antigüedad'], '199001')
+  assert.equal(m['Medidas de protección'], 'NO HAY ALARMA INSTALADA; Puerta (blindada)')
+  const conAnio = fichaObjeto('hogar', { ...d, anioConstruccionCima: 1990 }) ?? []
+  assert.ok(!conAnio.some(x => x.etiqueta === 'Antigüedad'))
+})

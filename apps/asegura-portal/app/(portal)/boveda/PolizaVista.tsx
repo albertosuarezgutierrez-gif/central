@@ -19,6 +19,7 @@ import Link from 'next/link'
 import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
+import { etiquetaClaseRecibo, textoSituacionConFecha } from '@/lib/recibo-etiquetas'
 
 /**
  * Las piezas con las que se pinta una póliza, compartidas por la LISTA
@@ -462,6 +463,9 @@ export function RecibosDePoliza({
           const tono = tonoSituacionRecibo(rec.situacion)
           const emision = fechaEs(rec.fechaEmision)
           const vence = fechaEs(rec.fechaVencimiento)
+          const clase = etiquetaClaseRecibo(rec.clase)
+          const efecto = fechaEs(rec.fechaEfecto)
+          const situacionFecha = textoSituacionConFecha(rec.situacion, fechaEs(rec.fechaSituacion))
           return (
             // La `key` es el índice porque `poliza_recibos.id` NO se pide al
             // `select`: traerlo solo para esto sería sacar un identificador de
@@ -483,6 +487,9 @@ export function RecibosDePoliza({
                   : emision
                     ? `Emitido el ${emision}`
                     : 'Sin fecha'}
+                {clase && ` · ${clase}`}
+                {efecto && ` · Efecto el ${efecto}`}
+                {situacionFecha && ` · ${situacionFecha}`}
               </span>
             </li>
           )

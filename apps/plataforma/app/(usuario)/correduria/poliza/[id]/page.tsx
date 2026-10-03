@@ -26,6 +26,7 @@ import { bloqueCobro, etiquetaGestionCobro, filasContrato, lugarRiesgo, primaPar
 import { PageHeader, Pagina } from '@/components/ui'
 // Un solo estilo de panel para toda la correduría: el de la ficha del cliente.
 import { Tarjeta, tarjeta, th, td, sub } from '../../cliente/[id]/piezas'
+import { etiquetaClaseRecibo, textoFechaSituacion } from '@/lib/recibo-etiquetas'
 import Plegable from './Plegable'
 import { PanelAccesos, type Acceso } from '../../Accesos'
 
@@ -263,7 +264,7 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
       id: 'cima', icono: '🔗', titulo: 'CIMA y referencias',
       contenido: (
         <Tarjeta titulo="Lo que dice la compañía por CIMA">
-          <CimaPoliza d={p.datosCompania} vigente={!cancelada} />
+          <CimaPoliza d={p.datosCompania} vigente={!cancelada} contrato={p.contrato} />
           <div style={{ ...muted, display: 'grid', gap: 4, marginTop: 12 }}>
             <div>Código DGS de la entidad: {p.codigoEntidadDgs ?? '—'}</div>
             <div>Id de póliza en la entidad: {p.idPolizaEntidad ?? '—'}</div>
@@ -287,6 +288,27 @@ const TIPOS: Record<string, string> = {
  * de las 109 vivas: la casa de Rota está en la copia de junio), se enseña la
  * gemela y se dice de dónde sale. Sin gemela informada, no se afirma que no exista.
  */
+function FichaBien({ o }: { o: ObjetoFicha | null | undefined }) {
+  const ficha = o?.estado === 'conocido' ? (o.ficha ?? []) : []
+  if (ficha.length === 0 && !o?.bastidor) return null
+  return (
+    <dl style={{ margin: '6px 0 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 150px), 1fr))', gap: '6px 12px', fontSize: 12 }}>
+      {ficha.map(f => (
+        <div key={f.etiqueta} style={{ minWidth: 0 }}>
+          <dt style={muted}>{f.etiqueta}</dt>
+          <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{f.valor}</dd>
+        </div>
+      ))}
+      {o?.bastidor && (
+        <div style={{ minWidth: 0 }}>
+          <dt style={muted}>Bastidor (solo correduría)</dt>
+          <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{o.bastidor}</dd>
+        </div>
+      )}
+    </dl>
+  )
+}
+
 function Objeto({ p }: { p: Poliza }) {
   const propio = p.objeto
   const conocido = propio !== null && propio.estado === 'conocido' && (propio.titulo || propio.detalle)
@@ -300,7 +322,7 @@ function Objeto({ p }: { p: Poliza }) {
   return (
     <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
       {conocido ? (
-        <div><strong>{propio.titulo}</strong>{propio.detalle && <div style={muted}>{propio.detalle}</div>}{propio.nota && <div style={muted}>{propio.nota}</div>}</div>
+        <div><strong>{propio.titulo}</strong>{propio.detalle && <div style={muted}>{propio.detalle}</div>}{propio.nota && <div style={muted}>{propio.nota}</div>}<FichaBien o={propio} /></div>
       ) : propio?.estado === 'cifrado' ? (
         <div style={muted}>🔒 {propio.nota ?? 'La dirección viene cifrada del CRM y aquí no hay clave para leerla.'}</div>
       ) : (
@@ -308,7 +330,7 @@ function Objeto({ p }: { p: Poliza }) {
       )}
       {!conocido && gemConocida && p.gemela && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-          <div><strong>{gem.titulo}</strong>{gem.detalle && <div style={muted}>{gem.detalle}</div>}</div>
+          <div><strong>{gem.titulo}</strong>{gem.detalle && <div style={muted}>{gem.detalle}</div>}<FichaBien o={gem} /></div>
           <div style={muted}>
             Sale de la copia de esta misma póliza en el volcado de junio (<Link href={`/correduria/poliza/${p.gemela.polizaId}`}>ver</Link>
             {p.gemela.clienteId !== p.cliente.id && <> · cuelga de <Link href={`/correduria/cliente/${p.gemela.clienteId}`}>otra ficha</Link></>}
@@ -583,18 +605,22 @@ function HistorialDevoluciones({ lista }: { lista: Poliza['historialDevoluciones
 function TablaRecibos({ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null; puedeBaja: boolean }) {
   // Columnas nuevas solo si ALGÚN recibo las trae: asegura vieja o recibos anteriores a la ingesta nueva no las tienen.
   const hayRemesa = lista.some((x) => x.idRemesa)
+  const hayNeta = lista.some((x) => x.primaNeta !== null || x.comisionLiquida !== null)
   const hayComision = lista.some((x) => x.baseComision !== null || x.comisionBruta !== null || x.claseComision || x.retencionIrpf !== null)
   return (
     <div style={{ overflowX: 'auto' }}>
       <table className="tabla-polizas" style={tabla}>
-        <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Emitido</th><th style={th}>Vence</th><th style={th}>Situación</th><th style={th}>Cobro</th>{hayRemesa && <th style={th}>Remesa</th>}{hayComision && <th style={th}>Comisión</th>}<th style={{ ...th, textAlign: 'right' }}>Importe</th></tr></thead>
+        <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Emitido</th><th style={th}>Vence</th><th style={th}>Efecto</th><th style={th}>Clase</th><th style={th}>Situación</th><th style={th}>Cobro</th>{hayRemesa && <th style={th}>Remesa</th>}{hayComision && <th style={th}>Comisión</th>}{hayNeta && <th style={{ ...th, textAlign: 'right' }}>Prima neta</th>}<th style={{ ...th, textAlign: 'right' }}>Importe</th></tr></thead>
         <tbody>
           {lista.map(x => (
             <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
               <td data-label="Emitido" style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
               <td data-label="Vence" style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
+              <td data-label="Efecto" style={td}>{x.fechaEfecto ? fmt(x.fechaEfecto) : '—'}</td>
+              <td data-label="Clase" style={td}>{etiquetaClaseRecibo(x.clase)}</td>
               <td data-rol="cabeza" style={td}>
                 {ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}
+                {textoFechaSituacion(x.situacion, x.fechaSituacion) && <div style={sub}>{textoFechaSituacion(x.situacion, x.fechaSituacion)}</div>}
                 {/* Solo en DEVUELTO: un «pendiente» no prueba que el banco lo devolviera. */}
                 {x.situacion === 'devuelto' && wa && (
                   <> <WhatsappReciboDevuelto ctx={wa} importe={x.importe} fechaEfecto={x.fechaEfecto} tipoMotivo={x.devolucionCorreo?.tipoMotivo ?? null} /></>
@@ -627,6 +653,12 @@ function TablaRecibos({ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos'];
                       {x.retencionIrpf !== null && <span style={{ whiteSpace: 'nowrap' }}>IRPF {eur(x.retencionIrpf)}</span>}
                     </div>
                   )}
+                </td>
+              )}
+              {hayNeta && (
+                <td data-label="Prima neta" style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {x.primaNeta === null ? <span style={muted}>—</span> : eur(x.primaNeta)}
+                  <div style={sub}>com. líquida {x.comisionLiquida === null ? '—' : eur(x.comisionLiquida)}</div>
                 </td>
               )}
               <td data-label="Importe" style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>{x.importe === null ? <span style={muted} title="Importe con forma inesperada en el EIAC">ilegible</span> : eur(x.importe)}</td>

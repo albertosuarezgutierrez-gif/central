@@ -100,7 +100,14 @@ import { getIdentidad } from './session'
  * exactamente el mismo fallo que pintar «Tipo 1107» en un siniestro. No se pide
  * al `select`, así que no hay nada que se pueda colar en pantalla por descuido.
  */
-export type ReciboPortal = ReciboHistorial
+export type ReciboPortal = ReciboHistorial & {
+  /** `clase_recibo` EIAC (CA/NP/SU…) tal cual; `null` = no consta. */
+  clase: string | null
+  /** Efecto del recibo (`fecha_efecto_actual`); `null` = no consta o centinela. */
+  fechaEfecto: Date | null
+  /** Día en que pasó a su situación actual; `null` = no consta o centinela. */
+  fechaSituacion: Date | null
+}
 
 export type RecibosPortal = ResumenRecibos & {
   /**
@@ -864,6 +871,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               // CA/NP: el recibo de anualidad. Allianz manda la prima y la
               // renovación SOLO ahí (27/09/2026). Tiene GRANT desde el 02/09.
               claseRecibo: true,
+              // Para «cobrado el…». Tiene GRANT desde el 02/09. NUNCA comisiones ni prima neta aquí.
+              fechaSituacion: true,
               // 🚨 `formaPago` NO se pide: es un código del EIAC (`CC`/`OF`/`TA`).
               // Ver la cabecera de `ReciboPortal`.
             },
@@ -1334,6 +1343,9 @@ type ReciboFila = {
   primaTotal: string | null
   fechaEmision: Date | null
   fechaVencimiento: Date | null
+  fechaEfectoActual?: Date | null
+  claseRecibo?: string | null
+  fechaSituacion?: Date | null
 }
 
 /**
@@ -1377,6 +1389,9 @@ function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
     // `fecha_emision` 0001-01-01, que es un «no lo sé» con forma de dato.
     fechaEmision: fechaReciboFiable(r.fechaEmision),
     fechaVencimiento: fechaReciboFiable(r.fechaVencimiento),
+    clase: (r.claseRecibo ?? '').trim() || null,
+    fechaEfecto: fechaReciboFiable(r.fechaEfectoActual),
+    fechaSituacion: fechaReciboFiable(r.fechaSituacion),
   }))
   const historial = ordenarRecibos(crudos)
   return {
