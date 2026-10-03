@@ -190,6 +190,12 @@ export const AVISOS: AvisoTelegram[] = [
 
   // ── 🧾 Facturas y pagos ───────────────────────────────────────────────────
   {
+    id: 'facturas.siquebrilla-cuadre', categoria: 'facturas',
+    titulo: 'Factura mensual de Sique Brilla: cuadre',
+    que: 'Cuando llega su factura por correo la leo, cuadro los cambios por piso con las salidas del mes y te digo si cuadra o dónde está la discrepancia.',
+    cuando: 'Al llegar la factura (1 vez al mes)',
+  },
+  {
     id: 'facturas.bandeja', categoria: 'facturas',
     titulo: 'Facturas nuevas por revisar',
     que: 'Cuántas facturas han entrado en la bandeja de revisión y de quién.',
