@@ -24,7 +24,7 @@ import { anadirContacto, anotarHistorialCliente, coincidencias, descifrarCampo, 
 
 export type VolcadoFicha =
   | { estado: 'rellenada'; campos: string[]; fechaNacimientoAConfirmar: boolean; avisos: string[] }
-  | { estado: 'nada_que_rellenar' }
+  | { estado: 'nada_que_rellenar'; avisos: string[] }
   | { estado: 'no_tocada'; motivo: Exclude<ResultadoParche['motivo'], 'ok'> | 'sin_ficha' }
   | { estado: 'error'; motivo: string }
 
@@ -85,7 +85,7 @@ export async function volcarPolizaEnFicha(e: {
       hoyIso(e.hoy ?? new Date()),
     )
     if (r.motivo !== 'ok') return { estado: 'no_tocada', motivo: r.motivo }
-    if (r.rellenado.length === 0) return { estado: 'nada_que_rellenar' }
+    if (r.rellenado.length === 0) return { estado: 'nada_que_rellenar', avisos: [] }
 
     const p = r.parche
     const hechos: string[] = []
@@ -187,7 +187,7 @@ export async function volcarPolizaEnFicha(e: {
       }
     }
 
-    if (hechos.length === 0 && avisos.length === 0) return { estado: 'nada_que_rellenar' }
+    if (hechos.length === 0 && avisos.length === 0) return { estado: 'nada_que_rellenar', avisos }
     const partes = [
       hechos.length > 0 ? `Rellenado desde la póliza subida (${e.origen}): ${hechos.join(', ')}.` : `Póliza subida (${e.origen}): no se ha rellenado nada.`,
       p.fechaNacimiento && p.fechaNacimientoAConfirmar && hechos.some((h) => h.startsWith('fecha de nacimiento'))
@@ -199,7 +199,8 @@ export async function volcarPolizaEnFicha(e: {
     await anotarHistorialCliente(e.correduriaId, e.clienteId, 'gestion', partes.join(' ').slice(0, 2000)).catch(() => null)
     return hechos.length > 0
       ? { estado: 'rellenada', campos: hechos, fechaNacimientoAConfirmar: hechos.includes('fecha de nacimiento (01/01, a confirmar)'), avisos }
-      : { estado: 'nada_que_rellenar' }
+      // Sin nada escrito, los avisos (DNI en otra ficha, teléfono que no se guardó…) siguen viajando.
+      : { estado: 'nada_que_rellenar', avisos }
   } catch (err) {
     console.error('[ficha-desde-poliza] no se pudo volcar la póliza en la ficha:', err instanceof Error ? err.message : err)
     return { estado: 'error', motivo: err instanceof Error ? err.message : String(err) }

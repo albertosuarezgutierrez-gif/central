@@ -32,3 +32,12 @@ test('🪤 por teléfono o email no se asigna ficha: solo nota de posible duplic
   assert.doesNotMatch(orquesta, /clienteId\s*=\s*[^\n;]*(compartenContacto|fichasPorContacto|porContacto|usar)/)
   assert.doesNotMatch(orquesta, /'usar' in lead/)
 })
+
+test('🪤 sin nada escrito, los avisos NO se pierden: «nada_que_rellenar» los lleva', () => {
+  const retornos = volcado.match(/\{ estado: 'nada_que_rellenar'[^}]*\}/g) ?? []
+  assert.ok(retornos.length >= 3, 'esperaba el tipo y los retornos de «nada_que_rellenar»')
+  for (const r of retornos) assert.match(r, /avisos/, `«nada_que_rellenar» sin avisos: ${r}`)
+  // El retorno final (hechos vacío) debe llevar los avisos RECOGIDOS, no una lista vacía.
+  const fin = volcado.slice(volcado.indexOf("? { estado: 'rellenada'"))
+  assert.match(fin, /: \{ estado: 'nada_que_rellenar', avisos \}/)
+})
