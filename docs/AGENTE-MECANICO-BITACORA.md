@@ -12,6 +12,8 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (03/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (migración 0105 cierre CIMA), SKILL.md cima-ingesta (rescate sinConfirmarTirea, recorte de lote, limpieza) — sesión — ok
+
 - (03/10/2026, tarde) actualización de memoria: CONTEXTO-SESIONES.md (estándares EIAC), SKILL.md cima-ingesta (📏 campos huecos + 🔑 Claves EIAC + 🗓️ Fechas de relleno), SKILL.md correduria-crm (etiquetas CIMA) — sesión — ok
 
 - (03/10/2026) verificación: apps/asegura prisma generate (2 schemas) + tsc ✓; apps/plataforma tsc 379 errors; apps/asegura-portal tsc 548 errors; root pnpm test 10969 pass (1296 tap + 3817 plataforma + 53 vitest + others), 0 fail — verificación — ok (uncommitted changes detectadas pero no modificadas)

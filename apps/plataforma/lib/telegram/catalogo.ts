@@ -571,6 +571,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'A las 07:40 y 13:40, y solo si ha cambiado alguna',
   },
   {
+    id: 'correduria.emisiones-descubiertas', categoria: 'correduria',
+    titulo: 'Emisiones de Avant2 descubiertas solas',
+    que: 'Pólizas emitidas en Avant2 que se han registrado solas en la cartera, emisiones nuevas que no se pueden registrar sin ti (tomador sin ficha o con varias, ramo que no se acuña, estado desconocido) y averías del descubrimiento (credenciales rechazadas, más de 6 h sin una pasada buena). Sin datos personales: solo cifras.',
+    cuando: 'Cada 30 min de 7 a 23 h, solo si hay algo nuevo o se rompe; recordatorio a las 7:10 si la cola sigue con algo',
+  },
+  {
     id: 'correduria.baja-pue', categoria: 'correduria',
     titulo: 'Bajas de Allianz para tramitar en el PUE',
     que: 'Anulaciones firmadas por el cliente de pólizas de Allianz, que no se comunican por correo sino a mano en su extranet (PUE): cliente, póliza, fecha, operativa y enlaces al PUE y a la ficha.',
