@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T19:38:57Z",
-  "sha": "534468a30e863b0950d6799ef049025ff298780d",
+  "generadoEn": "2026-10-03T20:20:34Z",
+  "sha": "f9f6ef299a4ed134f6a7279d9a500a206cf4fbb2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -80996,7 +80996,7 @@
           "exportada": false,
           "params": "{ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[]; seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 109,
+          "linea": 117,
           "resumen": "── Siguiente paso ────────────────────────────────────────────────────────── UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla vive pura y testeada en `siguientePaso` de "
         },
         {
@@ -81005,7 +81005,7 @@
           "exportada": false,
           "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 161,
+          "linea": 169,
           "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
@@ -81014,7 +81014,7 @@
           "exportada": false,
           "params": "{ resumen }: { resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 180
+          "linea": 188
         },
         {
           "nombre": "ProximoVencimiento",
@@ -81022,7 +81022,7 @@
           "exportada": false,
           "params": "{ proximo, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 235,
+          "linea": 243,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -81031,7 +81031,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 274
+          "linea": 282
         },
         {
           "nombre": "EstadoCabecera",
@@ -81039,7 +81039,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 300
+          "linea": 308
         },
         {
           "nombre": "Acciones",
@@ -81047,7 +81047,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 358
+          "linea": 366
         },
         {
           "nombre": "Contacto",
@@ -81055,15 +81055,15 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 426
+          "linea": 434
         },
         {
           "nombre": "Identidad",
           "kind": "function",
           "exportada": false,
-          "params": "{ identidad, clienteId, dePolizas }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null }",
+          "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 525
+          "linea": 533
         },
         {
           "nombre": "Carnets",
@@ -81071,12 +81071,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 565
+          "linea": 573
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "89a87218ab1f"
+      "hash": "840c768a40c1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -171878,6 +171878,46 @@
       "hash": "19ad12d909ad"
     },
     {
+      "ruta": "packages/module-seguros/src/persona-ficha.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "¿Persona física o jurídica? `tipoPersona` guardado manda; sin él, documento + segmento deciden. Dígito sin segmento jurídico → null; letra → null; sin documento, solo segmento manda.",
+      "exporta": [
+        "personaDeFicha",
+        "esTelefonoComodin"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerTipo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "TipoPersona | null",
+          "linea": 7
+        },
+        {
+          "nombre": "personaDeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { tipoPersona?: string | null dniEnmascarado?: string | null segmento?: string | null }",
+          "retorno": "TipoPersona | null",
+          "linea": 19,
+          "resumen": "`tipoPersona` guardado manda. Sin él: documento enmascarado acaba en dígito → 'juridica' solo si segmento es jurídico (acaba en letra → null siempre; sin documento → segmento decide)."
+        },
+        {
+          "nombre": "esTelefonoComodin",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "Teléfono «comodín»: todo ceros o un solo dígito repetido («000000000», «999999999»), lo que algunas compañías mandan cuando no hay teléfono. Con prefijo (+34/0034) también."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7b38b24c444f"
+    },
+    {
       "ruta": "packages/module-seguros/src/personas-ficha.ts",
       "ambito": "packages/module-seguros",
       "resumen": "UNA sola lista de personas por ficha: las que salen en sus pólizas (lo que dice CIMA) y las que tienen un vínculo declarado (lo que hemos anotado nosotros), fundidas por IDENTIDAD. Por qué se juntan: las dos tarjetas contestaban la MISMA pregunta —«¿a quién llamo y con qué derecho?»— y obligaban a l",
@@ -179512,7 +179552,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4101,
-    "funciones": 13982
+    "archivos": 4102,
+    "funciones": 13985
   }
 }
