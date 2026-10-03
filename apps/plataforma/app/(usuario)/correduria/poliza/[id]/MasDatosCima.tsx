@@ -25,7 +25,7 @@ export default function MasDatosCima({ grupos, truncado }: { grupos: GrupoCimaEx
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
       {total === 0 && <p style={muted}>CIMA no trae más datos de esta póliza.</p>}
-      {truncado && <p style={{ ...muted, color: 'var(--warning, #b45309)' }}>La lista está cortada a 400 campos: CIMA manda más de los que se guardan.</p>}
+      {truncado && <p style={{ ...muted, color: 'var(--warning)' }}>La lista está cortada a 400 campos: CIMA manda más de los que se guardan.</p>}
       {visibles.map((g) => (
         <section key={g.titulo} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4 }}>
           <h3 style={{ fontSize: 13, margin: 0, fontWeight: 700 }}>{g.titulo}</h3>
