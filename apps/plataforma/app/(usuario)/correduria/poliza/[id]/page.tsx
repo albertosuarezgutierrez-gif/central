@@ -49,7 +49,7 @@ export default async function PolizaPage({ params, searchParams }: {
   const p = r.poliza
   const cancelada = p.estado === 'cancelada'
   // UNA sola lectura del vencimiento (ver `alertaVencimiento`): nunca «venció» + «avisar antes de» a la vez.
-  const venc = cancelada ? null : alertaVencimiento(p.fechaVencimiento)
+  const venc = p.viva && !cancelada ? alertaVencimiento(p.fechaVencimiento) : null
   const prima = primaParaPintar(p, p.contrato)
 
   return (
@@ -101,7 +101,8 @@ export default async function PolizaPage({ params, searchParams }: {
           ancho que queda en vez de quedarse sola y pequeña. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         {venc === null
-          ? <Dato label="Vence" valor={null} nota="cancelada" />
+          // Cancelada, o fila del volcado histórico (no viva): fecha tal cual, sin aviso de renovación.
+          ? <Dato label="Vence" valor={p.fechaVencimiento ? fmt(p.fechaVencimiento) : null} nota={cancelada ? 'cancelada' : undefined} />
           : venc.estado === 'desconocido'
             ? <Dato label="Vencimiento" valor="desconocido" />
             : <Dato

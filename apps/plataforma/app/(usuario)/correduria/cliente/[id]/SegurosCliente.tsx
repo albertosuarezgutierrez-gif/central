@@ -128,7 +128,7 @@ function textoVence(fecha: string | null | undefined, hoy: Date, fuente = 'anota
   if (e.estado === 'futuro') return `Vence ${fmt(e.fecha)}`
   // Una póliza viva de la compañía con la fecha pasada: se dice UNA cosa («Venció el …»), no «desconocido»
   // a la vez que otros avisos hablan de esa misma fecha. Sin fecha utilizable (o centinela): desconocido.
-  const a = alertaVencimiento(e.ultimaFecha)
+  const a = alertaVencimiento(e.ultimaFecha, hoy)
   if (opciones.vencidaSiPasada && a.estado === 'vencido') return a.titular
   return `Vencimiento desconocido — preguntar al cliente${e.ultimaFecha && a.estado !== 'desconocido' ? ` (${fuente}: ${fmt(e.ultimaFecha)})` : ''}`
 }
