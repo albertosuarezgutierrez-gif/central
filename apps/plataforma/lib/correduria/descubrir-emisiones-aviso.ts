@@ -7,6 +7,7 @@
 // deja el resto en una cola de revisión. Aquí se decide qué se cuenta a Alberto:
 //   · 🔴 Codeoscopic rechaza las credenciales (401/403) — una vez por avería, no cada media hora.
 //   · 🔴 más de 6 h sin una pasada buena — una vez, al cruzar el umbral.
+//   · 🟠 varias pasadas seguidas dejando proyectos sin mirar por el tope — una vez; el latido, en rojo.
 //   · 🟡 estado de solicitud desconocido NUEVO, o cola de revisión con algo NUEVO — resumen.
 //   · ✅ pólizas registradas solas — resumen.
 //   · Recordatorio diario (pasada de las 07:10 de Madrid) si la cola sigue con algo.
@@ -17,6 +18,21 @@ import { URL_PLATAFORMA_POR_DEFECTO } from '../correduria-emision-tg.ts'
 
 export const AGENTE_DESCUBRIR = 'correduria_descubrir_emisiones'
 export const HORAS_SIN_EXITO = 6
+/**
+ * Pasadas SEGUIDAS dejando proyectos sin mirar por el tope de llamadas a partir de las cuales el
+ * latido va en rojo. Una suelta es normal (la rotación de asegura los coge en la siguiente); varias
+ * seguidas = la ventana trae más de lo que cabe y una emisión puede tardar horas en verse.
+ */
+export const PASADAS_PENDIENTES_ROJO = 3
+/** Marca del detalle del latido con la racha (se lee de la pasada anterior, como el prefijo de credenciales). */
+const RE_RACHA_PENDIENTES = /pendientes por tope en (\d+) pasada\(s\) seguida\(s\)/
+
+/** Cuántas pasadas seguidas (contando esta) dejan pendientes por tope. Latido anterior ilegible = empieza en 1. */
+export function rachaPendientes(pendientesPorTope: number, previo: LatidoPrevio): number {
+  if (pendientesPorTope <= 0) return 0
+  const m = (previo?.detalle ?? '').match(RE_RACHA_PENDIENTES)
+  return (m ? Number(m[1]) : 0) + 1
+}
 /** El detalle del latido empieza así cuando la avería es de credenciales (para no repetir el aviso). */
 export const PREFIJO_CREDENCIALES = 'credenciales de Codeoscopic rechazadas'
 
@@ -138,12 +154,18 @@ export function decidirDescubrimiento(p: {
     latidoOk = false
     latidoDetalle = `no se pudo leer la lista de Avant2${r.motivo ? `: ${r.motivo}` : ''}`
   } else {
-    latidoOk = r.errores === 0 && !r.truncado
+    const racha = rachaPendientes(r.pendientesPorTope, previo)
+    latidoOk = r.errores === 0 && !r.truncado && racha < PASADAS_PENDIENTES_ROJO
     const partes = [`${r.revisados} revisado(s)`, `${r.acunadas} acuñada(s)`, `${r.colaAbierta} en revisión`]
     if (r.errores > 0) partes.push(`${r.errores} sin poder revisar`)
     if (r.truncado) partes.push('lista TRUNCADA (no se vio entera)')
-    if (r.pendientesPorTope > 0) partes.push(`${r.pendientesPorTope} para la próxima pasada`)
+    if (r.pendientesPorTope > 0) partes.push(`${r.pendientesPorTope} para la próxima pasada (pendientes por tope en ${racha} pasada(s) seguida(s))`)
     latidoDetalle = partes.join(', ')
+
+    // Se avisa UNA vez, al llegar al umbral (no cada media hora mientras dure).
+    if (racha === PASADAS_PENDIENTES_ROJO) {
+      lineas.push(`🟠 El descubrimiento lleva <b>${racha}</b> pasadas seguidas dejando proyectos sin mirar por el tope de llamadas (${r.pendientesPorTope} esta vez): una emisión puede tardar horas en verse.`)
+    }
 
     if (r.acunadas > 0) lineas.push(`✅ <b>${r.acunadas}</b> póliza(s) emitida(s) en Avant2 registrada(s) sola(s) en la cartera.`)
     if (r.desconocidosNuevos > 0) lineas.push(`🟡 <b>${r.desconocidosNuevos}</b> emisión(es) con un estado que no se reconoce: hay que mirarlas en Avant2.`)
