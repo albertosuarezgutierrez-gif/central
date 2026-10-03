@@ -22,6 +22,7 @@
 import { ETIQUETA_TIPO_SINIESTRO, type TipoSiniestro } from './tipo-siniestro.ts'
 import { escaparHtml } from './sugerencia.ts'
 import { etiquetaRamo } from './poliza-leida.ts'
+import { datosClaveParte } from './parte-ramo.ts'
 
 export type DatosAvisoParteNuevo = {
   parteId: string
@@ -46,6 +47,12 @@ export type DatosAvisoParteNuevo = {
   ramo?: string | null
   /** URL absoluta a la ficha en plataforma (`/correduria/...`). `null` = no hay base configurada. */
   enlace?: string | null
+  /**
+   * `datos_ramo` del parte (03/10/2026). Del aviso salen 2-3 datos CLAVE
+   * (`datosClaveParte`): respuestas sueltas y recuentos de listas, NUNCA
+   * nombres ni teléfonos de terceros.
+   */
+  datosRamo?: unknown
 }
 
 function triestado(v: boolean | null): string {
@@ -74,11 +81,13 @@ export function textoAvisoParteNuevo(d: DatosAvisoParteNuevo): string {
     d.enlace && /^https:\/\//.test(d.enlace)
       ? `<a href="${escaparHtml(d.enlace).replace(/"/g, '&quot;')}">Abrir en /correduria</a>`
       : 'míralo en /correduria'
+  const clave = datosClaveParte(d.datosRamo ?? null)
   const lineas = [
     `${d.hayHeridos === true ? '🚑 CON HERIDOS · ' : ''}📋 Parte nuevo en el portal: ${cabecera}`,
     ...(datosPoliza.length > 0 ? [datosPoliza.join(' · ')] : []),
     `${tipo} · ${fecha} · ${poliza}`,
     `Heridos: ${triestado(d.hayHeridos)} · Terceros: ${triestado(d.hayTerceros)}`,
+    ...(clave.length > 0 ? [escaparHtml(clave.join(' · '))] : []),
     `Parte ${d.parteId.slice(0, 8)} — ${enlace}`,
   ]
   return lineas.join('\n')

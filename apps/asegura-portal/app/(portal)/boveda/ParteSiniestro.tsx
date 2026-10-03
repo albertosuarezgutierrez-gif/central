@@ -14,6 +14,15 @@ import {
   componerDescripcion,
   ETIQUETA_TIPO_SINIESTRO,
   opcionesTipoSiniestro,
+  campoAplica,
+  camposParteDeRamo,
+  lineasDatosRamoParte,
+  normalizarDatosRamoParte,
+  MAX_TELEFONO,
+  MAX_TEXTO_LISTA,
+  type CampoParte,
+  type CampoParteLista,
+  type ContextoParte,
   TEXTO_SIN_CANAL,
   textoSoloRamos,
   whatsappParaRamo,
@@ -30,6 +39,7 @@ import {
 import {
   MAX_ADJUNTOS_POR_PARTE,
   MAX_BYTES_DOCUMENTO,
+  MAX_TEXTO_RAMO_SINIESTRO,
   MIMES_DOCUMENTO,
   revisarDocumento,
 } from '@central/module-seguros'
@@ -218,7 +228,18 @@ type Formulario = {
    * escrito si cambia de póliza o de respuesta y vuelve atrás.
    */
   vehiculo: FormVehiculo
+  /**
+   * Respuestas por RAMO (`parte-ramo.ts`). Triestado como `'si'|'no'|'nolose'`,
+   * opción/texto como `string` (`''` = sin contestar), selección múltiple como
+   * `string[]`, listas como filas de `string`. Solo viajan las del ramo de la
+   * póliza elegida y las que aplican (`campoAplica`); el servidor lo repite con
+   * el ramo que lee él.
+   */
+  datosRamo: Record<string, ValorRamoForm>
 }
+
+type FilaLista = Record<string, string>
+type ValorRamoForm = string | string[] | FilaLista[]
 
 const VEHICULO_VACIO: FormVehiculo = {
   matriculaPropia: '',
@@ -241,6 +262,7 @@ const VACIO: Formulario = {
   hayTerceros: 'nolose',
   tipoSiniestro: '',
   vehiculo: VEHICULO_VACIO,
+  datosRamo: {},
 }
 
 /**
@@ -367,6 +389,29 @@ function aTriestado(v: Triestado): boolean | null {
   if (v === 'si') return true
   if (v === 'no') return false
   return null
+}
+
+/** Lo ya contestado del parte común, para decidir qué campos del ramo se enseñan. */
+function contextoDelForm(f: Formulario): ContextoParte {
+  return { hayHeridos: aTriestado(f.hayHeridos), hayTerceros: aTriestado(f.hayTerceros), tipoSiniestro: f.tipoSiniestro || null }
+}
+
+/**
+ * Los valores del ramo que viajan: solo los campos de ESE ramo que aplican con
+ * lo contestado, y sin huecos (`''`, `'nolose'`, listas vacías). «No lo sé» no
+ * viaja: en el servidor es la clave AUSENTE, nunca un `false`.
+ */
+function datosRamoVisibles(ramo: string | null | undefined, f: Formulario): Record<string, unknown> | null {
+  const ctx = contextoDelForm(f)
+  const fuera: Record<string, unknown> = {}
+  for (const c of camposParteDeRamo(ramo)) {
+    if (!campoAplica(c, ctx)) continue
+    const v = f.datosRamo[c.id]
+    if (v === undefined || v === '' || v === 'nolose') continue
+    if (Array.isArray(v) && v.length === 0) continue
+    fuera[c.id] = v
+  }
+  return Object.keys(fuera).length === 0 ? null : fuera
 }
 
 /**
@@ -825,7 +870,7 @@ export function ParteSiniestro({
     const tipoSiniestro = (opcionesTipoSiniestro(ramo) as readonly string[]).includes(pendiente.form.tipoSiniestro)
       ? pendiente.form.tipoSiniestro
       : ''
-    setForm({ ...pendiente.form, poliza, tipoSiniestro })
+    setForm({ ...pendiente.form, poliza, tipoSiniestro, datosRamo: {} })
     setPaso('datos')
     setPendiente(null)
   }
@@ -1155,8 +1200,12 @@ export function ParteSiniestro({
     // este envío. Sin este corte, cambiar de una póliza de auto (con terceros
     // y una matrícula ya escrita) a una de hogar mandaría esa matrícula igual
     // — un dato que la persona ya no ve en pantalla, colado en el texto.
-    const bloqueVehiculo = mostrarVehiculo ? bloqueDatosVehiculo(form.vehiculo) : null
-    const descripcionFinal = bloqueVehiculo === null ? descripcion : componerDescripcion(descripcion, form.vehiculo)
+    // Desde el 03/10/2026 los datos del OTRO vehículo van en la lista repetible
+    // `contrarios` (`datosRamo`): de este bloque solo viajan los del PROPIO. Un
+    // borrador antiguo con matrícula del contrario no se cuela por aquí.
+    const vehiculoPropio = { matriculaPropia: form.vehiculo.matriculaPropia, zonasDano: form.vehiculo.zonasDano }
+    const bloqueVehiculo = mostrarVehiculo ? bloqueDatosVehiculo(vehiculoPropio) : null
+    const descripcionFinal = bloqueVehiculo === null ? descripcion : componerDescripcion(descripcion, vehiculoPropio)
     // 🚨 El aviso solo dispara si de verdad HABRÍA recorte (por eso se mide
     // ANTES de componer, no el resultado ya recortado — `componerDescripcion`
     // siempre cabe en `DESCRIPCION_MAX` por construcción). Comparar el
@@ -1168,6 +1217,15 @@ export function ParteSiniestro({
       setErrores({ descripcion: mensaje('descripcion', 'larga') })
       return
     }
+
+    // Solo lo del ramo de ESTA póliza y lo que aplica con lo contestado: un
+    // dato que la persona ya no ve en pantalla no viaja (mismo motivo que el
+    // corte del bloque de vehículo de arriba).
+    const datosRamoParaEnviar = datosRamoVisibles(polizaSeleccionada?.ramo, form)
+    // Lo mismo, ya normalizado con la función del servidor, para el texto a la compañía.
+    const lineasRamo = lineasDatosRamoParte(
+      normalizarDatosRamoParte(polizaSeleccionada?.ramo, datosRamoParaEnviar, contextoDelForm(form)),
+    ).map((l) => `- ${l.etiqueta}: ${l.valor}`)
 
     setEstado('enviando')
     try {
@@ -1185,6 +1243,7 @@ export function ParteSiniestro({
           hayHeridos: aTriestado(form.hayHeridos),
           hayTerceros: aTriestado(form.hayTerceros),
           tipoSiniestro: form.tipoSiniestro || null,
+          datosRamo: datosRamoParaEnviar,
         }),
       })
 
@@ -1206,7 +1265,7 @@ export function ParteSiniestro({
                   fechaHecho: form.fechaHecho,
                   horaAproximada: form.horaAproximada || null,
                   lugar: form.lugar.trim() || null,
-                  descripcion: descripcionFinal,
+                  descripcion: lineasRamo.length > 0 ? `${descripcionFinal}\n\n${lineasRamo.join('\n')}` : descripcionFinal,
                   hayHeridos: aTriestado(form.hayHeridos),
                   hayTerceros: aTriestado(form.hayTerceros),
                 },
@@ -1688,6 +1747,15 @@ export function ParteSiniestro({
             onCambio={(v) => responder('hayTerceros', v)}
           />
 
+          <CamposDelRamo
+            uid={uid}
+            campos={camposParteDeRamo(polizaSeleccionada?.ramo)}
+            ctx={contextoDelForm(form)}
+            valores={form.datosRamo}
+            deshabilitado={enviando}
+            onCambio={(id, v) => setForm((f) => ({ ...f, datosRamo: { ...f.datosRamo, [id]: v } }))}
+          />
+
           {esVehiculoAMotor(polizaSeleccionada?.ramo) && form.hayTerceros === 'si' && (
             <ParteAmistoso
               uid={uid}
@@ -1756,7 +1824,7 @@ function Triple({
   uid: string
   nombre: string
   etiqueta: string
-  ayuda: string
+  ayuda?: string
   valor: Triestado
   deshabilitado: boolean
   onCambio: (v: Triestado) => void
@@ -1771,11 +1839,13 @@ function Triple({
   ]
 
   return (
-    <fieldset className="editor-campo grupo" aria-describedby={`${grupo}-ayuda`}>
+    <fieldset className="editor-campo grupo" aria-describedby={ayuda ? `${grupo}-ayuda` : undefined}>
       <legend>{etiqueta}</legend>
-      <p className="editor-ayuda" id={`${grupo}-ayuda`}>
-        {ayuda}
-      </p>
+      {ayuda && (
+        <p className="editor-ayuda" id={`${grupo}-ayuda`}>
+          {ayuda}
+        </p>
+      )}
       <div className="opciones">
         {opciones.map(([v, texto]) => (
           <label key={v} className="opcion">
@@ -1796,18 +1866,13 @@ function Triple({
 }
 
 /**
- * «Datos de los vehículos» (el tuyo y el del otro) — solo para auto, y solo con terceros de por
- * medio (ver `mostrarVehiculo` en `ParteSiniestro`).
+ * «Tu vehículo»: tu matrícula y la zona del daño — solo para auto/moto, y solo
+ * con terceros de por medio (ver `mostrarVehiculo` en `ParteSiniestro`). Los
+ * datos del OTRO vehículo van en la lista repetible «Otros vehículos
+ * implicados» (`contrarios`, `parte-ramo.ts`), que admite varios.
  *
- * 🚨 Los cinco campos son OPCIONALES: ninguno lleva `required`. Con el coche
- * todavía en la cuneta, lo normal es saber la matrícula del otro y no su
- * aseguradora, o al revés. Exigir los cinco para poder enviar el parte sería
- * el mismo fallo que un checkbox de heridos, un piso más abajo — convertir
- * «no lo sé todavía» en un obstáculo para avisar.
- *
- * No tienen su propio `editor-error`: no hay nada que validar aquí (cualquier
- * texto vale, `componerDescripcion` los pliega tal cual), así que un error de
- * formato no puede aparecer.
+ * 🚨 OPCIONALES: ninguno lleva `required`. Con el coche todavía en la cuneta,
+ * exigirlos sería convertir «no lo sé todavía» en un obstáculo para avisar.
  */
 function VehiculoOtro({
   uid,
@@ -1824,7 +1889,7 @@ function VehiculoOtro({
 }) {
   return (
     <fieldset className="editor-campo grupo">
-      <legend>Datos de los vehículos</legend>
+      <legend>Tu vehículo</legend>
       <p className="editor-ayuda">
         Si los tienes a mano, nos ayuda a tramitarlo — pero nada de esto es obligatorio: el parte se
         manda igual con lo que sepas.
@@ -1839,63 +1904,6 @@ function VehiculoOtro({
           value={valor.matriculaPropia}
           onChange={(e) => onCambio('matriculaPropia', e.target.value)}
           placeholder="1234 ABC"
-          autoComplete="off"
-          maxLength={CAMPO_VEHICULO_MAX}
-          disabled={deshabilitado}
-        />
-      </div>
-
-      <div className="editor-campo">
-        <label htmlFor={`${uid}-veh-tercero`}>Matrícula del otro vehículo</label>
-        <input
-          id={`${uid}-veh-tercero`}
-          className="campo"
-          type="text"
-          value={valor.matriculaTercero}
-          onChange={(e) => onCambio('matriculaTercero', e.target.value)}
-          placeholder="9999 XYZ"
-          autoComplete="off"
-          maxLength={CAMPO_VEHICULO_MAX}
-          disabled={deshabilitado}
-        />
-      </div>
-
-      <div className="editor-campo">
-        <label htmlFor={`${uid}-veh-conductor`}>Conductor del otro vehículo</label>
-        <input
-          id={`${uid}-veh-conductor`}
-          className="campo"
-          type="text"
-          value={valor.conductorTercero}
-          onChange={(e) => onCambio('conductorTercero', e.target.value)}
-          autoComplete="off"
-          maxLength={CAMPO_VEHICULO_MAX}
-          disabled={deshabilitado}
-        />
-      </div>
-
-      <div className="editor-campo">
-        <label htmlFor={`${uid}-veh-aseguradora`}>Aseguradora del otro vehículo</label>
-        <input
-          id={`${uid}-veh-aseguradora`}
-          className="campo"
-          type="text"
-          value={valor.aseguradoraTercero}
-          onChange={(e) => onCambio('aseguradoraTercero', e.target.value)}
-          autoComplete="off"
-          maxLength={CAMPO_VEHICULO_MAX}
-          disabled={deshabilitado}
-        />
-      </div>
-
-      <div className="editor-campo">
-        <label htmlFor={`${uid}-veh-telefono`}>Teléfono del otro conductor</label>
-        <input
-          id={`${uid}-veh-telefono`}
-          className="campo"
-          type="tel"
-          value={valor.telefonoTercero}
-          onChange={(e) => onCambio('telefonoTercero', e.target.value)}
           autoComplete="off"
           maxLength={CAMPO_VEHICULO_MAX}
           disabled={deshabilitado}
@@ -2043,9 +2051,10 @@ function AyudaUrgente({
 }
 
 /**
- * Qué tipo de siniestro es, en botones, SOLO si el ramo tiene catálogo. Opcional:
- * se puede no marcar nada, y volver a tocar el marcado lo desmarca. Es una
- * clasificación para el corredor; lo que cuenta sigue siendo «Qué ha pasado».
+ * Qué tipo de siniestro es: un desplegable con la lista del RAMO de la póliza
+ * (`tipo-siniestro.ts`), solo si el ramo tiene catálogo. Opcional: «Sin marcar»
+ * es la opción de salida y viaja como `null` (no es «otro»). Los códigos EIAC
+ * que lleva cada tipo son mapeo interno: aquí solo se pinta la etiqueta.
  */
 function TipoDeSiniestro({
   uid,
@@ -2062,29 +2071,266 @@ function TipoDeSiniestro({
 }) {
   if (opciones.length === 0) return null
   return (
-    <fieldset className="editor-campo grupo" aria-describedby={`${uid}-tipo-ayuda`}>
-      <legend>¿Qué tipo de siniestro es? <span className="opcional">(si lo tienes claro)</span></legend>
+    <div className="editor-campo">
+      <label htmlFor={`${uid}-tipo`}>
+        ¿Qué tipo de siniestro es? <span className="opcional">(si lo tienes claro)</span>
+      </label>
       <p className="editor-ayuda" id={`${uid}-tipo-ayuda`}>
         Nos ayuda a moverlo más rápido. Si no encaja ninguno, déjalo sin marcar.
       </p>
-      <div className="opciones">
+      <select
+        id={`${uid}-tipo`}
+        className="campo"
+        aria-describedby={`${uid}-tipo-ayuda`}
+        value={valor}
+        disabled={deshabilitado}
+        onChange={(e) => onCambio(e.target.value)}
+      >
+        <option value="">Sin marcar</option>
         {opciones.map((t) => (
-          <button
-            key={t}
-            type="button"
-            className="opcion"
-            aria-pressed={valor === t}
-            disabled={deshabilitado}
-            onClick={() => onCambio(valor === t ? '' : t)}
-          >
+          <option key={t} value={t}>
             {ETIQUETA_TIPO_SINIESTRO[t]}
-          </button>
+          </option>
         ))}
-      </div>
+      </select>
       {valor === 'averia' && (
         <p className="editor-ayuda" style={{ marginTop: 6 }}>
           Si necesitas <strong>grúa</strong>, llama antes a la asistencia de tu compañía (arriba): el parte no la manda.
         </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Los campos del RAMO de la póliza (`parte-ramo.ts`), con las MISMAS piezas del
+ * resto del formulario: `Triple` para sí/no/no lo sé, `<select className="campo">`
+ * para una opción, `button.opcion[aria-pressed]` para varias, `<input
+ * className="campo">` para texto, y `fieldset.editor-campo.grupo` + `boton
+ * secundario` para las listas repetibles. Nada es obligatorio. Un campo cuya
+ * condición no se cumple (p. ej. heridos sin «Sí» a «¿Hay heridos?») no se pinta
+ * y tampoco viaja (`datosRamoVisibles`).
+ */
+function CamposDelRamo({
+  uid,
+  campos,
+  ctx,
+  valores,
+  deshabilitado,
+  onCambio,
+}: {
+  uid: string
+  campos: readonly CampoParte[]
+  ctx: ContextoParte
+  valores: Record<string, ValorRamoForm>
+  deshabilitado: boolean
+  onCambio: (id: string, v: ValorRamoForm) => void
+}) {
+  const visibles = campos.filter((c) => campoAplica(c, ctx))
+  if (visibles.length === 0) return null
+  return (
+    <>
+      {visibles.map((c) => {
+        const v = valores[c.id]
+        const id = `${uid}-ramo-${c.id}`
+        if (c.tipo === 'lista') {
+          return (
+            <ListaRepetible
+              key={c.id}
+              uid={id}
+              campo={c}
+              filas={Array.isArray(v) ? (v.filter((x) => typeof x === 'object') as FilaLista[]) : []}
+              deshabilitado={deshabilitado}
+              onCambio={(filas) => onCambio(c.id, filas)}
+            />
+          )
+        }
+        if (c.tipo === 'triestado') {
+          return (
+            <Triple
+              key={c.id}
+              uid={uid}
+              nombre={`ramo-${c.id}`}
+              etiqueta={c.etiqueta}
+              ayuda={c.ayuda}
+              valor={v === 'si' || v === 'no' ? v : 'nolose'}
+              deshabilitado={deshabilitado}
+              onCambio={(x) => onCambio(c.id, x)}
+            />
+          )
+        }
+        if (c.tipo === 'multiopcion') {
+          const marcados = Array.isArray(v) ? (v.filter((x) => typeof x === 'string') as string[]) : []
+          return (
+            <fieldset key={c.id} className="editor-campo grupo" aria-describedby={c.ayuda ? `${id}-ayuda` : undefined}>
+              <legend>{c.etiqueta}</legend>
+              {c.ayuda && (
+                <p className="editor-ayuda" id={`${id}-ayuda`}>
+                  {c.ayuda}
+                </p>
+              )}
+              <div className="opciones">
+                {c.opciones.map((o) => {
+                  const pulsado = marcados.includes(o.valor)
+                  return (
+                    <button
+                      key={o.valor}
+                      type="button"
+                      className="opcion"
+                      aria-pressed={pulsado}
+                      disabled={deshabilitado}
+                      onClick={() => onCambio(c.id, pulsado ? marcados.filter((x) => x !== o.valor) : [...marcados, o.valor])}
+                    >
+                      {o.etiqueta}
+                    </button>
+                  )
+                })}
+              </div>
+            </fieldset>
+          )
+        }
+        const texto = typeof v === 'string' ? v : ''
+        return (
+          <div key={c.id} className="editor-campo">
+            <label htmlFor={id}>
+              {c.etiqueta} <span className="opcional">(opcional)</span>
+            </label>
+            {c.ayuda && (
+              <p className="editor-ayuda" id={`${id}-ayuda`}>
+                {c.ayuda}
+              </p>
+            )}
+            {c.tipo === 'opcion' ? (
+              <select
+                id={id}
+                className="campo"
+                value={texto}
+                disabled={deshabilitado}
+                aria-describedby={c.ayuda ? `${id}-ayuda` : undefined}
+                onChange={(e) => onCambio(c.id, e.target.value)}
+              >
+                <option value="">Sin contestar</option>
+                {(c.opciones ?? []).map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id={id}
+                className="campo"
+                type={c.tipo === 'fecha' ? 'date' : 'text'}
+                inputMode={c.tipo === 'numero' || c.tipo === 'dinero' ? 'decimal' : undefined}
+                value={texto}
+                maxLength={MAX_TEXTO_RAMO_SINIESTRO}
+                autoComplete="off"
+                disabled={deshabilitado}
+                aria-describedby={c.ayuda ? `${id}-ayuda` : undefined}
+                onChange={(e) => onCambio(c.id, e.target.value)}
+              />
+            )}
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+/**
+ * Una lista repetible (afectados, vehículos contrarios, heridos): cada fila es un
+ * `fieldset.editor-campo.grupo` con sus campos y un «Quitar»; debajo, «Añadir».
+ * El tope de filas es el del servidor (`maxElementos`): al llegar, el botón se va.
+ */
+function ListaRepetible({
+  uid,
+  campo,
+  filas,
+  deshabilitado,
+  onCambio,
+}: {
+  uid: string
+  campo: CampoParteLista
+  filas: FilaLista[]
+  deshabilitado: boolean
+  onCambio: (filas: FilaLista[]) => void
+}) {
+  const cambiar = (i: number, sub: string, valor: string) =>
+    onCambio(filas.map((f, k) => (k === i ? { ...f, [sub]: valor } : f)))
+  return (
+    <fieldset className="editor-campo grupo" aria-describedby={campo.ayuda ? `${uid}-ayuda` : undefined}>
+      <legend>{campo.etiqueta}</legend>
+      {campo.ayuda && (
+        <p className="editor-ayuda" id={`${uid}-ayuda`}>
+          {campo.ayuda}
+        </p>
+      )}
+      {filas.map((f, i) => (
+        <fieldset key={i} className="editor-campo grupo">
+          <legend>
+            {campo.elemento} {i + 1}
+          </legend>
+          {campo.subcampos.map((sc) => {
+            const id = `${uid}-${i}-${sc.id}`
+            const v = f[sc.id] ?? ''
+            if (sc.tipo === 'triestado') {
+              return (
+                <Triple
+                  key={sc.id}
+                  uid={uid}
+                  nombre={`${i}-${sc.id}`}
+                  etiqueta={sc.etiqueta}
+                  valor={v === 'si' || v === 'no' ? v : 'nolose'}
+                  deshabilitado={deshabilitado}
+                  onCambio={(x) => cambiar(i, sc.id, x)}
+                />
+              )
+            }
+            return (
+              <div key={sc.id} className="editor-campo">
+                <label htmlFor={id}>{sc.etiqueta}</label>
+                {sc.tipo === 'opcion' ? (
+                  <select id={id} className="campo" value={v} disabled={deshabilitado} onChange={(e) => cambiar(i, sc.id, e.target.value)}>
+                    <option value="">Sin contestar</option>
+                    {(sc.opciones ?? []).map((o) => (
+                      <option key={o.valor} value={o.valor}>
+                        {o.etiqueta}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    id={id}
+                    className="campo"
+                    type={sc.tipo === 'telefono' ? 'tel' : 'text'}
+                    value={v}
+                    maxLength={sc.tipo === 'telefono' ? MAX_TELEFONO : (sc.max ?? MAX_TEXTO_LISTA)}
+                    autoComplete="off"
+                    disabled={deshabilitado}
+                    onChange={(e) => cambiar(i, sc.id, e.target.value)}
+                  />
+                )}
+              </div>
+            )
+          })}
+          <div className="editor-acciones">
+            <button
+              type="button"
+              className="boton secundario"
+              disabled={deshabilitado}
+              onClick={() => onCambio(filas.filter((_, k) => k !== i))}
+            >
+              Quitar
+            </button>
+          </div>
+        </fieldset>
+      ))}
+      {filas.length < campo.maxElementos && (
+        <div className="editor-acciones">
+          <button type="button" className="boton secundario" disabled={deshabilitado} onClick={() => onCambio([...filas, {}])}>
+            {filas.length === 0 ? `Añadir ${campo.elemento.toLowerCase()}` : 'Añadir otro'}
+          </button>
+        </div>
       )}
     </fieldset>
   )

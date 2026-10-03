@@ -24,6 +24,7 @@
 // `portalParteSiniestro`, y no es un olvido — lo declarado es una comunicación,
 // no un borrador, y el rol de BD tampoco tiene esos GRANT. Los sellos de estado
 // (`recibido_at`, `abierto_en_compania_at`) los pone el corredor desde su app.
+import { Prisma } from '@prisma/client'
 import { comunicadoACompania, type ParteEstado, type ParteNormalizado } from '@central/module-seguros-portal'
 
 import { adjuntosPorParte, type AdjuntoParte } from './adjuntos-parte'
@@ -163,6 +164,9 @@ export async function crearParte(identidadId: string, valor: ParteNormalizado): 
       hayHeridos: valor.hayHeridos,
       hayTerceros: valor.hayTerceros,
       tipoSiniestro: valor.tipoSiniestro,
+      // Ya filtrado por el ramo de la póliza AUTORIZADA (`aplicarRamoAlParte`).
+      // `null` → SQL NULL («nada contestado»), no un `{}` que parezca respondido.
+      datosRamo: valor.datosRamo === null ? Prisma.DbNull : (valor.datosRamo as Prisma.InputJsonObject),
       // `enviado` es el default de la BD y se deja explícito: nace SIN estar
       // comunicado a la compañía, y ningún camino del portal lo asciende.
       estado: 'enviado',

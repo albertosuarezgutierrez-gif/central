@@ -17,7 +17,7 @@ const BASE: DatosAvisoParteNuevo = {
 test('lleva quién, qué, cuándo y el id corto, con el nombre escapado', () => {
   const t = textoAvisoParteNuevo(BASE)
   assert.match(t, /Parte nuevo en el portal: Ana &lt;Pérez&gt;/)
-  assert.match(t, /Choque o golpe · 26\/09\/2026 · póliza de cartera/)
+  assert.match(t, /Choque con otro vehículo · 26\/09\/2026 · póliza de cartera/)
   assert.match(t, /Heridos: no · Terceros: sí/)
   assert.match(t, /Parte 01234567/)
 })
@@ -61,4 +61,18 @@ test('el titular que da su propio parte no sale como «autorizado»; sin base, s
   assert.match(t, /míralo en \/correduria/)
   // Un enlace que no es https no se pinta como enlace.
   assert.doesNotMatch(textoAvisoParteNuevo({ ...BASE, enlace: 'javascript:alert(1)' }), /<a /)
+})
+
+test('lleva 2-3 datos clave del ramo, sin nombres ni teléfonos de terceros', () => {
+  const t = textoAvisoParteNuevo({
+    ...BASE,
+    datosRamo: {
+      existeDeclaracionAmistosa: true,
+      existeAtestado: false,
+      contrarios: [{ conductor: 'Luis <Pérez>', telefono: '600112233' }],
+    },
+  })
+  assert.match(t, /Otros vehículos implicados: 1 · ¿Habéis rellenado el parte amistoso\? Sí/)
+  assert.ok(!t.includes('Luis') && !t.includes('600112233'))
+  assert.ok(!textoAvisoParteNuevo({ ...BASE, datosRamo: null }).includes('implicados'))
 })

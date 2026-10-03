@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { tgSend } from '@central/core-telegram'
-import { normalizarParte, plazoComunicacion, textoAvisoParteNuevo, type ParteEntrada } from '@central/module-seguros-portal'
+import { aplicarRamoAlParte, normalizarParte, plazoComunicacion, textoAvisoParteNuevo, type ParteEntrada } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, polizasParaParte } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
@@ -75,6 +75,17 @@ function datosDelAviso(
   }
 }
 
+/** El ramo de una póliza que YA está en la cartera autorizada de esta identidad. `null` si no aparece. */
+function ramoDePolizaAutorizada(cartera: Awaited<ReturnType<typeof carteraDeIdentidad>>, polizaId: string): string | null {
+  for (const titulares of [cartera.propias, cartera.autorizadas, cartera.intervinientes]) {
+    for (const t of titulares) {
+      const p = t.polizas.find((x) => x.id === polizaId)
+      if (p) return p.ramo
+    }
+  }
+  return null
+}
+
 export async function POST(req: Request) {
   // La identidad SIEMPRE sale de la cookie, nunca del cuerpo de la petición:
   // es lo único que separa la bóveda de una persona de la de otra.
@@ -105,7 +116,7 @@ export async function POST(req: Request) {
   if (!normalizado.ok) {
     return NextResponse.json({ error: 'datos_invalidos', errores: normalizado.errores }, { status: 400 })
   }
-  const valor = normalizado.valor
+  let valor = normalizado.valor
 
   // ─── 3. Pertenencia ────────────────────────────────────────────────────────
   // Sin esto, cualquiera con sesión cuelga un parte de la póliza de otro
@@ -144,6 +155,19 @@ export async function POST(req: Request) {
     }
   }
 
+  // ─── 3b. Ramo ──────────────────────────────────────────────────────────────
+  // El tipo y los campos por ramo se aceptan SOLO con el ramo de la póliza ya
+  // autorizada arriba (cartera leída por identidad o declarada filtrada por
+  // identidad), nunca con un ramo que diga el cuerpo. Sin póliza → sin ramo →
+  // `tipoSiniestro` y `datosRamo` a `null`.
+  const ramo =
+    declarada !== null
+      ? declarada.ramo
+      : valor.polizaId !== null && cartera !== null
+        ? ramoDePolizaAutorizada(cartera, valor.polizaId)
+        : null
+  valor = aplicarRamoAlParte(valor, ramo, entrada)
+
   // Sin `try/catch`: si la BD falla, que salga como error. Un `{ ok: true }` de
   // consuelo dejaría al cliente creyendo que ha declarado un siniestro que no
   // existe en ninguna parte, que es la peor mentira que puede contar el portal.
@@ -163,6 +187,7 @@ export async function POST(req: Request) {
         parteId: id,
         nombre: identidad.nombre ?? null,
         tipoSiniestro: valor.tipoSiniestro,
+        datosRamo: valor.datosRamo,
         fechaHecho: valor.fechaHecho,
         hayHeridos: valor.hayHeridos,
         hayTerceros: valor.hayTerceros,

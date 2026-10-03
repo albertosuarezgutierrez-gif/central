@@ -1017,7 +1017,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Causa: autorizado sin alcance `total` → la ficha mandaba a `vista=siniestro` sin `?poliza=` → salían TODAS las compañías (caso Alberto→póliza hogar de José). No es fallo de permisos (regla 24/09): sigue el 403.
 - Helper puro `vistaDelParte` (`module-seguros-portal/src/parte-entrada.ts`): desde una póliza, solo su compañía + formulario fijado si `puedeParte`; sin póliza, primero elegir seguro; sin catálogo → «Llámanos» MEDIADOR.
 - Telegram del parte: titular, quién lo da, compañía, ramo, nº póliza y enlace a `/correduria/poliza/<id>` vía `PLATAFORMA_URL` (falta darla de alta en Vercel del portal).
-- Pendiente: campos de parte por ramo según EIAC/CIMA (propuesta hecha: catálogo `EIAC_TIPOLOGIA_SINIESTRO` 182 códigos + `siniestro-ramo.ts`), a decidir con Alberto. El MCP `Supabase_asegura` apunta a OTRA BD: usar la de `central`.
+- Campos de parte por ramo (`parte-ramo.ts`, 36 tipos con códigos EIAC ocultos, listas de contrarios/afectados/heridos, triestado) + vista en /correduria. 🚨 Aplicar ANTES de desplegar `apps/asegura-portal/prisma/sql/2026-10-03_portal_parte_datos_ramo.sql` (si no, 42703 y no entran partes).
+- Monte Carmelo 68 (Generali): no hay SIN de CIMA desde 28/09; check-in programado 10/10.
+- Antes pendiente: campos de parte por ramo según EIAC/CIMA (propuesta hecha: catálogo `EIAC_TIPOLOGIA_SINIESTRO` 182 códigos + `siniestro-ramo.ts`), a decidir con Alberto. El MCP `Supabase_asegura` apunta a OTRA BD: usar la de `central`.
 
 ## (03/10/2026) Sique Brilla: factura de septiembre cuadrada y cuadre automático por correo
 - Factura 2025/421 (1.128,48 €): 18 cambios = 18 salidas (Luxury 4, Duplex 5, Socorro 6, Reform 3) + lavandería 56,25 kg; cargada en `limpieza_facturas` (fuente `manual`).

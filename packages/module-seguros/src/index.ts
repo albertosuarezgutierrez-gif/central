@@ -449,6 +449,7 @@ export {
   MAX_TEXTO_RAMO_SINIESTRO,
   camposDeRamoSiniestro,
   normalizarDatosRamoSiniestro,
+  normalizarValorCampoSiniestro,
   type TipoCampo as TipoCampoRamoSiniestro,
   type OpcionCampo as OpcionCampoRamoSiniestro,
   type CampoRamoSiniestro,

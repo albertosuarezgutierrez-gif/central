@@ -42,6 +42,7 @@ import {
   comunicadoACompania,
   describirPolizaDesligada,
   esTipoSiniestro,
+  lineasDatosRamoParte,
   plazoComunicacion,
   type ParteEstado,
   type PlazoComunicacion,
@@ -120,6 +121,12 @@ export type PartePortal = {
   polizaDesligadaEn: string | null
   /** ISO-8601. */
   creadoEn: string
+  /**
+   * `datos_ramo` del parte, ya en texto (`lineasDatosRamoParte`): lo que el
+   * CLIENTE contestó por ramo. Es su DECLARACIÓN (la culpa incluida), no lo que
+   * diga la compañía. `[]` = no contestó nada.
+   */
+  datosRamo: { etiqueta: string; valor: string }[]
   plazo: PlazoComunicacion
   /**
    * El parte va sobre una póliza que NO es de la ficha de quien lo mandó — se le
@@ -210,6 +217,7 @@ type FilaParte = {
   hayHeridos: boolean | null
   hayTerceros: boolean | null
   tipoSiniestro: string | null
+  datosRamo: unknown
   estado: ParteEstado
   siniestroId: string | null
   polizaDesligadaAt: Date | null
@@ -231,6 +239,7 @@ const SELECT_PARTE = {
   hayHeridos: true,
   hayTerceros: true,
   tipoSiniestro: true,
+  datosRamo: true,
   estado: true,
   siniestroId: true,
   polizaDesligadaAt: true,
@@ -362,6 +371,7 @@ function aParte(
     ),
     polizaDesligadaEn: p.polizaDesligadaAt?.toISOString() ?? null,
     creadoEn: p.creadoEn.toISOString(),
+    datosRamo: lineasDatosRamoParte(p.datosRamo).map((l) => ({ etiqueta: l.etiqueta, valor: l.valor })),
     plazo: plazoComunicacion({ fechaHecho: p.fechaHecho, hoy: ctx.hoy }),
     titularDistinto,
     // `null` del lote entero ⇒ `null` en este parte: «no se ha podido mirar».

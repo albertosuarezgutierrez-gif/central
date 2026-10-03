@@ -102,6 +102,12 @@ export type ParteSiniestro = {
   hayTerceros: boolean | null
   /** Tipo que marcó el cliente, ya en texto («Agua o fuga»). `null` = no marcó nada o no llegó. */
   tipoSiniestro: string | null
+  /**
+   * Lo que el cliente contestó por RAMO, ya en texto (lo compone asegura con
+   * `lineasDatosRamoParte`). Es su DECLARACIÓN —la culpa incluida—, no lo que
+   * diga la compañía. `[]` = no contestó nada o un asegura antiguo no lo manda.
+   */
+  datosRamo: { etiqueta: string; valor: string }[]
   estado: ParteEstado
   /** 🚨 La ÚNICA fuente de «la compañía ya lo sabe». Ver la cabecera. */
   comunicado: boolean
@@ -144,6 +150,17 @@ function entero(v: unknown): number | null {
  */
 export function triestado(v: unknown): boolean | null {
   return typeof v === 'boolean' ? v : null
+}
+
+/** Solo pares `{etiqueta, valor}` de texto; cualquier otra forma se ignora (no lanza). */
+function lineasRamo(v: unknown): { etiqueta: string; valor: string }[] {
+  if (!Array.isArray(v)) return []
+  return v.flatMap((x) => {
+    if (typeof x !== 'object' || x === null) return []
+    const etiqueta = cadena((x as Record<string, unknown>).etiqueta)
+    const valor = cadena((x as Record<string, unknown>).valor)
+    return etiqueta !== null && valor !== null ? [{ etiqueta, valor }] : []
+  })
 }
 
 function persona(v: unknown): PersonaParte | null {
@@ -194,6 +211,7 @@ export function leerParte(v: unknown): ParteSiniestro | null {
     hayHeridos: triestado(p.hayHeridos),
     hayTerceros: triestado(p.hayTerceros),
     tipoSiniestro: cadena(p.tipoSiniestroTexto),
+    datosRamo: lineasRamo(p.datosRamo),
     estado: estado as ParteEstado,
     // Conservador a propósito: si el campo no llega, NO se afirma que la
     // compañía lo sepa. El error caro es el contrario — decir «comunicado» de

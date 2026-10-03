@@ -411,6 +411,9 @@ model PortalParteSiniestro {
   hayTerceros         Boolean?          @map("hay_terceros")
   /// Opcional; lista cerrada = `TIPOS_SINIESTRO` de `@central/module-seguros-portal`. `null` = no lo marcó.
   tipoSiniestro       String?           @map("tipo_siniestro")
+  /// Respuestas por RAMO del cliente (`parte-ramo.ts` de `@central/module-seguros-portal`). `null` = nada contestado.
+  /// Clave ausente = «no lo sé». `culpaPropiaDeclarada` es DECLARACIÓN: nunca pisa la posición de la compañía.
+  datosRamo           Json?             @map("datos_ramo")
   estado              PortalParteEstado @default(enviado)
   /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
   siniestroId         String?           @map("siniestro_id") @db.Uuid

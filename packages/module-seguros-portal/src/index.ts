@@ -92,8 +92,38 @@ export type {
 } from './avisos.ts'
 export { CORTE_AVISO_POLIZA_NUEVA, DIAS_AVISO_POLIZA_NUEVA, polizasNuevasParaAviso } from './poliza-nueva.ts'
 export { DIAS_AVISO_PARTE, partesParaAviso } from './parte-aviso.ts'
-export { TIPOS_SINIESTRO, ETIQUETA_TIPO_SINIESTRO, opcionesTipoSiniestro, esTipoSiniestro } from './tipo-siniestro.ts'
-export type { TipoSiniestro } from './tipo-siniestro.ts'
+export {
+  TIPOS_SINIESTRO,
+  ETIQUETA_TIPO_SINIESTRO,
+  TIPOS_POR_RAMO,
+  opcionesTipoSiniestro,
+  esTipoSiniestro,
+  ramoDelParte,
+  codigosEiacSugeridos,
+} from './tipo-siniestro.ts'
+export type { TipoSiniestro, TipoDeRamo } from './tipo-siniestro.ts'
+export {
+  CAMPOS_PARTE_POR_RAMO,
+  MAX_TEXTO_LISTA,
+  MAX_TELEFONO,
+  camposParteDeRamo,
+  campoAplica,
+  normalizarDatosRamoParte,
+  lineasDatosRamoParte,
+  datosClaveParte,
+} from './parte-ramo.ts'
+export type {
+  CampoParte,
+  CampoParteSimple,
+  CampoParteMulti,
+  CampoParteLista,
+  SubcampoLista,
+  ElementoLista,
+  ValorParte,
+  DatosRamoParte,
+  ContextoParte,
+  LineaDatoRamo,
+} from './parte-ramo.ts'
 export type { ParteFilaAviso, ParteParaAviso } from './parte-aviso.ts'
 export type { FilaPolizaNueva, PolizaNuevaParaAviso } from './poliza-nueva.ts'
 export {
@@ -149,6 +179,7 @@ export {
   parsearFechaHecho,
   plazoComunicacion,
   normalizarParte,
+  aplicarRamoAlParte,
   bloqueDatosVehiculo,
   componerDescripcion,
   ZONAS_VEHICULO,

@@ -338,8 +338,14 @@ function esCajon(texto: string): boolean {
 
 const RE_FECHA_RAMO_SINIESTRO = /^\d{4}-\d{2}-\d{2}$/
 
-/** `undefined` = no se escribe la clave · `'invalido'` = error con nombre del campo. */
-function normalizarValor(campo: CampoRamoSiniestro, valor: unknown): string | number | boolean | undefined | 'invalido' {
+/**
+ * `undefined` = no se escribe la clave · `'invalido'` = error con nombre del campo.
+ *
+ * Exportada (como `normalizarValorCampoSiniestro`) para el parte del PORTAL
+ * (`@central/module-seguros-portal`, `parte-ramo.ts`), que usa estas mismas
+ * claves pero descarta campo a campo en vez de rechazar el parte entero.
+ */
+export function normalizarValorCampoSiniestro(campo: CampoRamoSiniestro, valor: unknown): string | number | boolean | undefined | 'invalido' {
   if (campo.tipo === 'triestado') {
     if (typeof valor === 'boolean') return valor
     const t = String(valor).trim().toLowerCase()
@@ -397,7 +403,7 @@ export function normalizarDatosRamoSiniestro(ramo: string | null | undefined, en
     const valor = bruto[campo.id]
     if (valor === null || valor === undefined) continue
 
-    const normalizado = normalizarValor(campo, valor)
+    const normalizado = normalizarValorCampoSiniestro(campo, valor)
     if (normalizado === 'invalido') return { ok: false, error: `campo_invalido:${campo.id}` }
     if (normalizado === undefined) continue
     datos[campo.id] = normalizado
