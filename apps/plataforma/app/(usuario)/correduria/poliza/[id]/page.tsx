@@ -28,6 +28,7 @@ import { PageHeader, Pagina } from '@/components/ui'
 import { Tarjeta, tarjeta, th, td, sub } from '../../cliente/[id]/piezas'
 import { conteoPlural, etiquetaClaseRecibo, rotuloClave, textoFechaSituacion, TITULO_CODIGO_COMPANIA } from '@/lib/recibo-etiquetas'
 import Plegable from './Plegable'
+import MasDatosCima from './MasDatosCima'
 import { PanelAccesos, type Acceso } from '../../Accesos'
 
 export const dynamic = 'force-dynamic'
@@ -278,6 +279,13 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
       contenido: (
         <Tarjeta titulo="Lo que dice la compañía por CIMA">
           <CimaPoliza d={p.datosCompania} vigente={!cancelada} contrato={p.contrato} />
+          {p.cimaExtra !== null && (
+            <div style={{ marginTop: 12 }}>
+              <Plegable titulo="Más datos de CIMA" resumen={`${p.cimaExtra.reduce((n, g) => n + g.filas.length, 0)} campos`}>
+                <MasDatosCima grupos={p.cimaExtra} truncado={p.cimaExtraTruncado} />
+              </Plegable>
+            </div>
+          )}
           <div style={{ ...muted, display: 'grid', gap: 4, marginTop: 12 }}>
             <div>Código DGS de la entidad: {p.codigoEntidadDgs ?? '—'}</div>
             <div>Id de póliza en la entidad: {p.idPolizaEntidad ?? '—'}</div>
