@@ -102,10 +102,8 @@
   `x-client-app`/`x-user-email`).
 - La API REST solo cubre auto, moto, hogar, salud, decesos y vida. **RC, comercios y comunidades: no hay endpoint**
   (se llama a la compañía).
-- El webhook de Codeoscopic apunta aún al CRM de Manuel; el receptor propio (`/api/webhooks/codeoscopic`) guarda y
-  no acuña. Repuntarlo es gestión de Alberto.
-  Al repuntarlo hay que pedir a Codeoscopic que confíe en el certificado del nuevo dominio (tienen el nuestro en su
-  keystore, actualizado 30/09/2026). Reintentan cada ~30 min hasta HTTP 200/204; no hay id de notificación.
+- **Descubrimiento autónomo de emisiones:** plataforma corre cron `correduria-descubrir-emisiones` (`10,40 5-21 * * *` UTC) que consulta GET /insurances (gratis), acuña por hash de DNI, y pone pendientes en cola `seguros.codeoscopic_emisiones_revision`. Rotación en anillo: tope 40 llamadas/pasada, latido rojo tras 3 pasadas seguidas con pendientes por tope. **Acuñar solo por `registrarPolizaEmitida` (compuerta atómica `ya_acunada`)**, nunca por otro camino.
+- **Webhook nuevo en `https://api.grupoasegura.es/api/webhooks/codeoscopic`** (Vercel central-asegura, CNAME IONOS): guarda, no acuña. Contacto: `soporteapi@codeoscopic.com` / Juan Manuel. PENDIENTE: Codeoscopic cambie URL (confía en certificado 30/09/2026; reintentan ~30 min hasta 200/204).
 
 ## ✉️ Correos y crons (todos con cerrojos)
 - Tres cerrojos: `CRON_SECRET` Bearer, **modo cuenta por defecto** (`ASEGURA_AVISOS_ACTIVOS=1` para enviar;

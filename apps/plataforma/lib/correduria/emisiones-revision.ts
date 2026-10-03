@@ -177,6 +177,16 @@ export function colaDeProxy(status: number, json: unknown): ColaRevision {
   return { estado: 'error', motivo: 'respuesta_ilegible' }
 }
 
+/** Deduplica filas por `id` cuando se concatenan resultados de «Ver más». Conserva el orden. */
+export function deduplicarFilas(filas: FilaRevision[]): FilaRevision[] {
+  const vistas = new Set<string>()
+  return filas.filter((f) => {
+    if (vistas.has(f.id)) return false
+    vistas.add(f.id)
+    return true
+  })
+}
+
 /** Motivo de un fallo de lectura, en castellano llano. */
 export function textoErrorCola(motivo: string): string {
   switch (motivo) {

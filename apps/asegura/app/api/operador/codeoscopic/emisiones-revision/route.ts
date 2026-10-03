@@ -10,8 +10,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Cola de revisión del descubrimiento de emisiones de Avant2 (03/10/2026): las ABIERTAS, las de
- * actividad más reciente primero. `GET ?limite=50&desde=0`. Solo lectura, sin PII (la tabla no
- * guarda nombre ni documento). Fail-closed: un fallo es 5xx con `estado: 'error'`, nunca una lista vacía.
+ * actividad más reciente primero. `GET ?limite=50&desde=0`. Solo lectura, sin datos personales (número de póliza y compañía son dato de negocio). Fail-closed: un fallo es 5xx con `estado: 'error'`, nunca una lista vacía.
  */
 
 type Fila = {

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import {
-  MOTIVOS_REVISION, colaDeProxy, contadorCola, interpretarCola, interpretarResolucion, pantallaCola,
+  MOTIVOS_REVISION, colaDeProxy, contadorCola, deduplicarFilas, interpretarCola, interpretarResolucion, pantallaCola,
   textoCoincidencias, textoMotivo,
 } from './emisiones-revision.ts'
 
@@ -89,6 +89,15 @@ test('resolver es idempotente: resuelta y ya_resuelta son ok; 404, 5xx y respues
   assert.equal(interpretarResolucion(500, null).estado, 'error')
   assert.equal(interpretarResolucion(200, { estado: 'algo' }).estado, 'error')
   assert.equal(interpretarResolucion(401, null).estado, 'error')
+})
+
+test('deduplicarFilas conserva orden y elimina duplicados por id', () => {
+  const a = fila({ id: 'A' })
+  const b = fila({ id: 'B' })
+  const c = fila({ id: 'C' })
+  assert.deepEqual(deduplicarFilas([a, b, a, c, b, a]), [a, b, c])
+  assert.deepEqual(deduplicarFilas([a, b, c]), [a, b, c])
+  assert.deepEqual(deduplicarFilas([]), [])
 })
 
 test('la pantalla no inventa un enlace a Avant2 y el botón sigue ≥44px', () => {

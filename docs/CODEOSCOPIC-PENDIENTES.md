@@ -93,13 +93,15 @@ exacto de Allianz (prueba con 10 % para ver si baja el precio) y confirmar el pr
 
 ## Para preguntar a Codeoscopic (borradores sin enviar, los manda Alberto)
 
-- ¿El ReRate y el Submit se facturan? → `docs/BORRADOR-CODEOSCOPIC-COSTE-RERATE-SUBMIT.md`. **Resuelto por
-  inferencia del correo 02/10/2026 (no aparecen como facturables); confirmación explícita no pedida.**
-- ¿Vale el historial de un coche para asegurar una moto? ¿Hay algún código estructurado de «bonus
-  verificado» o solo texto en `messages[]`? (soporteapi@codeoscopic.com)
+- ¿El ReRate y el Submit se facturan? → **Resuelto por inferencia (no aparecen como facturables); confirmación explícita no pedida.**
+- ¿Vale el historial de un coche para asegurar una moto? ¿Hay algún código estructurado de «bonus verificado» o solo texto en `messages[]`?
+- **Paginación de GET /insurances:** ¿`pageNumber` cómo funciona? ¿Hay límite de resultados/página?
+- **Filtros de fecha:** ¿`fromDate`/`toDate` filtran por qué fecha (emisión, efecto, modificación)?
+- **`x-user-email`:** ¿restringe el listado a emisiones de ese usuario? ¿Es obligatorio?
 
 ## Pendiente en código
 
-- Descuento por defecto en el ReRate = **50 %** (decisión de Alberto 29/09: la compañía recorta a su máximo y lo va variando). Hoy solo Allianz auto lo lleva; Allianz moto, Generali y Catalana Occidente necesitan el id exacto del campo (traer el 40961885 a plataforma y leer sus opciones).
-- Aviso «bonificación NO verificada» a partir de `messages[]` (p. ej. Mapfre: «el cliente identificado
-  no aparece asociado a una póliza de otra compañía»).
+- Descuento por defecto en el ReRate = **50 %**. Hoy solo Allianz auto lo lleva; Allianz moto, Generali y Catalana Occidente necesitan el id exacto del campo.
+- Aviso «bonificación NO verificada» a partir de `messages[]`.
+- ✅ **Descubrimiento autónomo:** cron `correduria-descubrir-emisiones` implementado (plataforma, `10,40 5-21 * * *` UTC); cola de revisión `seguros.codeoscopic_emisiones_revision` activa; rotación en anillo 40 llamadas/pasada. Acuñado atómico vía `registrarPolizaEmitida` (PR pendiente de revisión). URL del webhook cambiada a `api.grupoasegura.es` (PENDIENTE que Codeoscopic actualice de su lado).
+- Paginación y filtros de fecha de GET /insurances (preguntas a Codeoscopic).

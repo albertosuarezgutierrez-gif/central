@@ -6,7 +6,7 @@ import { Badge, btnStyle } from '@/components/ui'
 import Bloque from './Bloque'
 import { ConIcono } from './iconos'
 import {
-  colaDeProxy, contadorCola, pantallaCola, textoCoincidencias, textoErrorCola, textoMotivo,
+  colaDeProxy, contadorCola, deduplicarFilas, pantallaCola, textoCoincidencias, textoErrorCola, textoMotivo,
   type ColaRevision, type FilaRevision,
 } from '@/lib/correduria/emisiones-revision'
 
@@ -24,7 +24,9 @@ const POR_PAGINA = 50
 const pMuted = { fontSize: 13, color: 'var(--muted)', margin: 0 } as const
 
 function fecha(iso: string | null): string {
-  return iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—'
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' }).format(d)
 }
 
 export default function EmisionesRevision({ onContador, primero }: {
@@ -65,7 +67,7 @@ export default function EmisionesRevision({ onContador, primero }: {
     const c = await leer(filas.length)
     setCargandoMas(false)
     if (c.estado === 'ok') {
-      setFilas((f) => [...f, ...c.filas])
+      setFilas((f) => deduplicarFilas([...f, ...c.filas]))
       setCola(c)
     } else {
       setErrorCierre(`No se han podido cargar más: ${c.estado === 'error' ? textoErrorCola(c.motivo) : 'asegura no está conectado.'}`)
@@ -83,7 +85,15 @@ export default function EmisionesRevision({ onContador, primero }: {
       if (!r.ok || !j || j.estado !== 'ok') {
         setErrorCierre(`No se ha podido marcar como revisada (no se ha cerrado nada): ${textoErrorCola(j?.motivo ?? 'asegura_error')}`)
       } else {
-        await recargar()
+        // Quita la fila del estado local en vez de recargar la página
+        setFilas((filas) => filas.filter((fila) => fila.id !== f.id))
+        // Decrementa el total y contador si es un número
+        if (cola?.estado === 'ok') {
+          const nueva = { ...cola, total: Math.max(0, cola.total - 1) }
+          setCola(nueva)
+          const n = contadorCola(nueva)
+          if (n !== undefined) avisar.current?.(n)
+        }
       }
     } catch {
       setErrorCierre('No se ha podido marcar como revisada: no se pudo llegar al servidor. No se ha cerrado nada.')
@@ -177,7 +187,7 @@ export default function EmisionesRevision({ onContador, primero }: {
       </ul>
       {hayMas && (
         <button type="button" disabled={cargandoMas} onClick={() => void verMas()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, marginTop: 10 }}>
-          {cargandoMas ? 'Cargando…' : `Ver más (${Math.min(POR_PAGINA, total - filas.length)} de ${total - filas.length} restantes)`}
+          {cargandoMas ? 'Cargando…' : `Ver más (${total - filas.length} restantes)`}
         </button>
       )}
     </Bloque>
