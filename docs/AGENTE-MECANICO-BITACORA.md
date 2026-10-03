@@ -12,6 +12,12 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (03/10/2026, tarde) actualización de memoria: CONTEXTO-SESIONES.md (estándares EIAC), SKILL.md cima-ingesta (📏 campos huecos + 🔑 Claves EIAC + 🗓️ Fechas de relleno), SKILL.md correduria-crm (etiquetas CIMA) — sesión — ok
+
+- (03/10/2026) verificación: apps/asegura prisma generate (2 schemas) + tsc ✓; apps/plataforma tsc 379 errors; apps/asegura-portal tsc 548 errors; root pnpm test 10969 pass (1296 tap + 3817 plataforma + 53 vitest + others), 0 fail — verificación — ok (uncommitted changes detectadas pero no modificadas)
+
+- (03/10/2026) wire etiquetaClave (EIAC) a fichaObjeto + bien-asegurado; traducir combustible/clase/categoría/uso/zona/inmueble/comunidad en 3 ficheros — agente-mecanico — ok (41 tests objeto.test.ts, 6 ficha-objeto-linea.test.ts, 32 bien-asegurado.test.ts all pass; unknown codes stay raw)
+
 - (03/10/2026) actualizar fechaEfecto en fixtures (2026-10-01 → 2026-11-02) en formulario-guardado.test.ts + peticion-hogar.test.ts — agente-mecanico — ok (3 tests fallidos; todos verdes tras fix; 1168 tests de asegura pasan)
 
 - (03/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (auditoría CIMA Allianz POL 131), SKILL.md cima-ingesta (riesgo_sin_bloque), AGENTE-MECANICO-BITACORA.md — sesión — ok

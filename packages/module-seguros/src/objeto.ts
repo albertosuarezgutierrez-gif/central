@@ -1,3 +1,5 @@
+import { etiquetaClave } from './claves-eiac.ts'
+
 /**
  * QUÉ asegura cada póliza — el «objeto asegurado».
  *
@@ -216,10 +218,10 @@ export function fichaObjeto(tipoRamo: string, d: Record<string, unknown>): DatoO
   if (RAMOS_VEHICULO.has(tipo)) {
     add('Valor del vehículo', num(d.valorVehiculo, eur))
     add('Matriculación', fechaEs(d.fechaMatriculacion))
-    add('Clase', claro(d.claseVehiculo))
-    add('Categoría', claro(d.categoriaVehiculo))
+    add('Clase', etiquetaClave('claseVehiculo', claro(d.claseVehiculo)))
+    add('Categoría', etiquetaClave('categoriaVehiculo', claro(d.categoriaVehiculo)))
     add('Uso', claro(d.usoVehiculo))
-    add('Combustible', claro(d.combustible))
+    add('Combustible', etiquetaClave('combustible', claro(d.combustible)))
     add('Potencia', num(d.potencia, miles))
     add('Cilindrada', num(d.cilindrada, n => `${miles(n)} cm³`))
     add('Plazas', num(d.plazas, miles))
@@ -227,10 +229,10 @@ export function fichaObjeto(tipoRamo: string, d: Record<string, unknown>): DatoO
     // `false` es un dato (CIMA dice que no lleva); ausente no se pinta.
     if (typeof d.remolque === 'boolean') add('Remolque', d.remolque ? 'Sí' : 'No')
   } else if (RAMOS_INMUEBLE.has(tipo)) {
-    add('Clase de inmueble', claro(d.claseInmueble))
-    add('Uso', claro(d.usoInmueble))
-    add('Zona', claro(d.zona))
-    add('Clase de comunidad', claro(d.claseComunidad))
+    add('Clase de inmueble', etiquetaClave('claseInmueble', claro(d.claseInmueble)))
+    add('Uso', etiquetaClave('usoInmueble', claro(d.usoInmueble)))
+    add('Zona', etiquetaClave('zona', claro(d.zona)))
+    add('Clase de comunidad', etiquetaClave('claseComunidad', claro(d.claseComunidad)))
     // `antiguedadCima` solo si no hay un año ya mostrado en el detalle.
     if (numero(d.anioConstruccion) === null && numero(d.anioConstruccionCima) === null) {
       add('Antigüedad', claro(d.antiguedadCima))

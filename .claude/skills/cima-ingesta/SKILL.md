@@ -205,6 +205,21 @@ En este orden, y **sin saltarse el paso 0**:
   cifrado, mira `cima_cobertura_campos` por `primera_vez` = fecha del fichero: las rutas nuevas son su forma.
   Desde asegura#868 un bloque desconocido sale con su nombre (`riesgo_no_reconocido:<X>`).
 
+- 📏 **`cima_cobertura_campos.ultima_vez_leido IS NULL` mintió (03/10/2026).** Filas duplicadas con prefijo
+  `ProcesosEIAC.` (anteriores al 28/09) hacían mentir la consulta. La cifra real (03/10): **487 de 947 hojas sin
+  guardar**, casi todo contexto. Inventario en `docs/CIMA-CAMPOS-HUECOS.md`. El Monitor decía 1016.
+
+## 🔑 Claves EIAC (estándar V07.1 §13.3)
+
+Las claves oficiales están en `packages/module-seguros/src/claves-eiac.ts`. Situación de póliza: **AN**
+anulada, **ES** en suspenso, **EV** en vigor, **EX** extinguida, **PR** propuesta. Un código que no está en la
+tabla se pinta crudo. Uso del vehículo no tiene tabla en el estándar (remite a RGV).
+
+## 🗓️ Fechas de relleno
+
+Fechas como `2000-01-01`, `1900-01-01` y `9999-12-31` se guardan como `null`. Un parche de datos nunca las guarda
+como fecha literal.
+
 ## Lo que la pantalla enseña (y lo que NO alarma a propósito)
 
 `/correduria` de plataforma pinta cuatro señales de la ingesta, y **solo cuando

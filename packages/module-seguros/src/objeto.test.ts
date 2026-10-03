@@ -300,19 +300,19 @@ import { fichaObjeto, bastidorOperador } from './objeto.ts'
 const AUTO_CIMA = {
   marca: 'SEAT', modelo: 'IBIZA', matricula: '1234ABC', bastidor: 'VSSZZZ6JZ9R123456',
   valorVehiculo: '12345.5', fechaMatriculacion: '2019-03-07', potencia: '85', cilindrada: '1598',
-  combustible: 'GA', usoVehiculo: 'PA', claseVehiculo: 'TU', categoriaVehiculo: 'M1',
+  combustible: 'GA', usoVehiculo: 'PA', claseVehiculo: 'TU', categoriaVehiculo: 'TU',
   plazas: '5', pma: '1850', remolque: false,
 }
 
-test('auto: ficha con dinero en español, fecha dd/mm/aaaa y códigos CRUDOS', () => {
+test('auto: ficha con dinero en español, fecha dd/mm/aaaa y códigos EIAC traducidos', () => {
   const f = objetoAsegurado({ tipo: 'auto', datos: AUTO_CIMA }).ficha ?? []
   const m = Object.fromEntries(f.map(x => [x.etiqueta, x.valor]))
   assert.equal(m['Valor del vehículo'], '12.345,50€')
   assert.equal(m['Matriculación'], '07/03/2019')
-  assert.equal(m['Combustible'], 'GA')
+  assert.equal(m['Combustible'], 'Gasolina')
   assert.equal(m['Uso'], 'PA')
-  assert.equal(m['Clase'], 'TU')
-  assert.equal(m['Categoría'], 'M1')
+  assert.equal(m['Clase'], 'Turismo')
+  assert.equal(m['Categoría'], 'Turismos')
   assert.equal(m['Potencia'], '85')
   assert.equal(m['Cilindrada'], '1.598 cm³')
   assert.equal(m['PMA'], '1.850 kg')
@@ -335,17 +335,30 @@ test('🔒 bastidor: campo aparte para el operador, nunca en ficha/titulo/detall
   assert.equal(objetoAsegurado({ tipo: 'hogar', datos: { bastidor: 'X1234567890123456' } }).bastidor, undefined)
 })
 
-test('hogar: clase/uso/zona crudos, medidas de protección y antigüedad solo sin año', () => {
+test('hogar: clase/uso/zona traducidos de EIAC, medidas de protección y antigüedad solo sin año', () => {
   const d = {
-    localidad: 'Sevilla', claseInmueble: 'PI', usoInmueble: 'VP', zona: 'Z1', antiguedadCima: '199001',
+    localidad: 'Sevilla', claseInmueble: 'PI', usoInmueble: 'HA', zona: 'PO', antiguedadCima: '199001',
     medidasProteccion: [{ medida: 'NO HAY ALARMA INSTALADA' }, { medida: 'Puerta', valor: 'blindada' }],
   }
   const m = Object.fromEntries((objetoAsegurado({ tipo: 'hogar', datos: d }).ficha ?? []).map(x => [x.etiqueta, x.valor]))
-  assert.equal(m['Clase de inmueble'], 'PI')
-  assert.equal(m['Uso'], 'VP')
-  assert.equal(m['Zona'], 'Z1')
+  assert.equal(m['Clase de inmueble'], 'Piso intermedio')
+  assert.equal(m['Uso'], 'Habitual')
+  assert.equal(m['Zona'], 'Zona poblada')
   assert.equal(m['Antigüedad'], '199001')
   assert.equal(m['Medidas de protección'], 'NO HAY ALARMA INSTALADA; Puerta (blindada)')
   const conAnio = fichaObjeto('hogar', { ...d, anioConstruccionCima: 1990 }) ?? []
   assert.ok(!conAnio.some(x => x.etiqueta === 'Antigüedad'))
+})
+
+test('códigos EIAC desconocidos se muestran raw (nunca se adivinan)', () => {
+  const auto = fichaObjeto('auto', { combustible: 'XX', claseVehiculo: 'ZZ' }) ?? []
+  const m = Object.fromEntries(auto.map(x => [x.etiqueta, x.valor]))
+  assert.equal(m['Combustible'], 'XX')
+  assert.equal(m['Clase'], 'ZZ')
+})
+
+test('comunidad: clase de comunidad se traduce desde EIAC', () => {
+  const f = fichaObjeto('comunidades', { localidad: 'Madrid', claseComunidad: 'EV' }) ?? []
+  const m = Object.fromEntries(f.map(x => [x.etiqueta, x.valor]))
+  assert.equal(m['Clase de comunidad'], 'Edificio viviendas')
 })

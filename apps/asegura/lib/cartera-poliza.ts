@@ -394,7 +394,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         orderBy: [{ rol: 'asc' }, { id: 'asc' }],
         select: {
           id: true, polizaId: true, rol: true, clienteId: true, origen: true, nombre: true, apellidos: true, telefono: true, email: true,
-          nifLookupHash: true,
+          nifLookupHash: true, fechaCarnet: true, fechaNacimiento: true,
           cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
         },
       })
@@ -417,6 +417,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
             emailIlegible: email === null && (ilegible(f.email) || ilegible(f.cliente?.email)),
             fichaId: f.clienteId ?? null, esTomador: f.clienteId === p.cliente.id, origen: String(f.origen),
             personaClave: f.nifLookupHash ? claves.get(f.nifLookupHash) ?? null : null,
+            // Cifrados en la BD: solo salen si se abren (operador); ilegible → `null`, no «sin carné».
+            fechaCarnet: descifrar(f.fechaCarnet), fechaNacimiento: descifrar(f.fechaNacimiento),
           }
         })
       })

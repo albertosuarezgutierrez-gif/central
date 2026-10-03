@@ -518,3 +518,4 @@ export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } fro
 export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'
 export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima } from './avisos-cima.ts'
 export type { EventoCima, PlanAvisos, PolizaParaAviso, TipoAvisoCima } from './avisos-cima.ts'
+export { vistaCobertura, type CoberturaVista } from './cobertura-vista.ts'

@@ -103,6 +103,7 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   const dc = p.datosCompania
   const emitida = fechaEs(p.fechaEmision)
   const efectoActual = fechaEs(p.fechaEfectoActual)
+  const solicitada = fechaEs(p.fechaSolicitud)
 
   return (
     <>
@@ -181,6 +182,7 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
           {/* Fechas del EIAC: `null` = la compañía no la ha mandado, y no se pinta. */}
           {emitida && <Dato etiqueta="Fecha de emisión" valor={emitida} />}
           {efectoActual && <Dato etiqueta="Periodo actual desde" valor={efectoActual} />}
+          {solicitada && <Dato etiqueta="Fecha de solicitud" valor={solicitada} />}
           {/* Sin vencimiento no hay calendario: se dice, porque el silencio
               aquí se lee como «ya te avisaremos» y no vamos a poder. */}
           <Dato
@@ -237,6 +239,39 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
                       <li key={i} style={{ overflowWrap: 'anywhere' }}>
                         {[tipo, r.descripcion].filter(Boolean).join(' · ') || 'Riesgo'}
                         {vig && <span className="suave" style={{ display: 'block', fontSize: 13 }}>{vig}</span>}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </dd>
+            </>
+          )}
+          {/* Beneficiarios (nivel `iban`: son datos de personas): orden, nombre y préstamo. Nunca DNI. */}
+          {dc.beneficiarios !== null && dc.beneficiarios.length > 0 && (
+            <>
+              <dt>{dc.beneficiarios.length === 1 ? 'Beneficiario' : 'Beneficiarios'}</dt>
+              <dd>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
+                  {dc.beneficiarios.map((b, i) => (
+                    <li key={i} style={{ overflowWrap: 'anywhere' }}>
+                      {[b.nombre, b.prestamo && `préstamo ${b.prestamo.toLowerCase()}`].filter(Boolean).join(' · ')}
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </>
+          )}
+          {/* Suplementos (nivel `coberturas`): número, fecha y clase. El texto libre no se enseña. */}
+          {dc.suplementos !== null && dc.suplementos.length > 0 && (
+            <>
+              <dt>{dc.suplementos.length === 1 ? 'Suplemento' : 'Suplementos'}</dt>
+              <dd>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
+                  {dc.suplementos.map((sp, i) => {
+                    const f = sp.fecha ? fechaEs(new Date(`${sp.fecha}T00:00:00Z`)) : null
+                    return (
+                      <li key={i} style={{ overflowWrap: 'anywhere' }}>
+                        {[sp.numero && `Nº ${sp.numero}`, f, sp.descripcion].filter(Boolean).join(' · ')}
                       </li>
                     )
                   })}

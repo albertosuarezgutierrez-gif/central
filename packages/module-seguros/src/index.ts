@@ -96,6 +96,9 @@ export {
   type EstadoObjeto,
   type EntradaObjeto,
 } from './objeto.ts'
+export { lineaFichaObjeto, lineaConductor } from './ficha-objeto-linea.ts'
+
+export { etiquetaClave, CLAVES_EIAC, type TablaClaveEiac } from './claves-eiac.ts'
 
 export {
   MODALIDADES_RC,
