@@ -98,3 +98,13 @@ test('ningún paso manda mirar una foto que no está', () => {
       rotos.map(r => `${r.propertyId}#${r.paso}`).join(', '),
   )
 })
+
+test('Dúplex: el llavero lleva DOS llaves (zonas comunes + apartamento); sin tres llaves, ascensor con llave ni foto LIFT', () => {
+  const a = ACCESO.prop_duplex_center
+  const texto = a.pasos.join('\n')
+  assert.match(texto, /DOS llaves/)
+  assert.match(texto, /ZONAS COMUNES/)
+  assert.match(texto, /APARTAMENTO/)
+  assert.doesNotMatch(texto, /tres llaves|LIFT|llave del ascensor|PORTAL del edificio y la del/i)
+  assert.ok(!texto.includes('61122cdc1c4c4'), 'la foto del llavero rotulada LIFT ya no va')
+})
