@@ -1,5 +1,5 @@
 'use client'
-import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock } from 'lucide-react'
+import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, ClipboardCheck } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 
 /**
@@ -114,6 +114,12 @@ export default function AccionesCabecera() {
             style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
           >
             <Wrench size={15} strokeWidth={1.75} aria-hidden /> Mantenimiento
+          </a>
+          <a
+            href="/correduria/revision"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <ClipboardCheck size={15} strokeWidth={1.75} aria-hidden /> Revisión manual
           </a>
         </div>
       </details>

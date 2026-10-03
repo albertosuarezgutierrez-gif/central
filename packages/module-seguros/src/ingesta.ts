@@ -121,6 +121,16 @@ export type CrudoPendiente = {
 }
 
 /**
+ * Números de póliza repetidos entre filas VIVAS (`merged_into_poliza_id IS NULL`), sin comodines
+ * (`esNumeroPolizaComodin`). Sin nombres ni DNI: solo número, nº de filas y compañía DGS.
+ * `total` cuenta GRUPOS; `muestra` trae como mucho 50. `dgs: null` = filas del volcado, sin compañía.
+ */
+export type DuplicadosVivos = {
+  total: number
+  muestra: Array<{ numero: string; filas: number; dgs: string | null }>
+}
+
+/**
  * Campos que CIMA manda frente a los que el mapper no lee NUNCA (mig 0097).
  *
  * 🚨 La unidad es la RUTA, no la fila. `cima_cobertura_campos` es única por
@@ -411,6 +421,11 @@ export type EntradaSalud = {
    * Mismos tres estados que `renovacionesSinLlegar`.
    */
   emisionesSinAviso?: EmisionSinAviso[] | null
+  /**
+   * Duplicados vivos (ver `DuplicadosVivos`). `undefined` = no se pide · `null` = se pidió y no se
+   * pudo medir (hueco, NUNCA 0) · `{total: 0}` = se miró y no hay. No degrada: es calidad de dato.
+   */
+  duplicadosVivos?: DuplicadosVivos | null
 }
 
 export type SaludIngesta = {
@@ -487,6 +502,8 @@ export type SaludIngesta = {
   renovacionesSinLlegar?: RenovacionSinLlegar[] | null
   /** Emisiones sin aviso del webhook. Mismos tres estados que `renovacionesSinLlegar`. */
   emisionesSinAviso?: EmisionSinAviso[] | null
+  /** Duplicados vivos. Mismos tres estados que en la entrada. */
+  duplicadosVivos?: DuplicadosVivos | null
 }
 
 /** `2026-06-18` → `18/06`. Una fecha ilegible no se inventa: `null`. */
@@ -589,6 +606,7 @@ export function saludIngesta(
       avisosImportantes: [],
       renovacionesSinLlegar: null,
       emisionesSinAviso: null,
+      duplicadosVivos: null,
     }
   }
 
@@ -847,6 +865,17 @@ export function saludIngesta(
     hueco('No se ha podido comprobar si las emisiones de Codeoscopic reciben el aviso de su webhook.')
   }
 
+  // 🧬 Duplicados vivos: no degrada (es calidad de dato, no pérdida) pero se dice. `null` = hueco, no 0.
+  const duplicadosVivos = e.duplicadosVivos
+  if (duplicadosVivos != null && duplicadosVivos.total > 0) {
+    motivos.push(
+      `${duplicadosVivos.total} número(s) de póliza duplicados entre filas vivas (sin contar comodines): ` +
+      'hay que decidir si son la misma póliza',
+    )
+  } else if (duplicadosVivos === null) {
+    hueco('No se ha podido medir si hay números de póliza duplicados entre filas vivas.')
+  }
+
   const hayPerdida =
     (emisionesSinAviso !== undefined && emisionesSinAviso !== null && emisionesSinAviso.length > 0) ||
     (renovacionesSinLlegar !== undefined && renovacionesSinLlegar !== null && renovacionesSinLlegar.length > 0) ||
@@ -886,6 +915,7 @@ export function saludIngesta(
     avisosImportantes,
     renovacionesSinLlegar,
     emisionesSinAviso,
+    duplicadosVivos,
   }
 }
 

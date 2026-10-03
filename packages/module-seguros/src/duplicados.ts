@@ -33,6 +33,17 @@ export function normalizarNumeroPoliza(n: string | null | undefined): string | n
   return s === '' ? null : s
 }
 
+const NUMEROS_COMODIN = new Set(['PENDIENTE', 'NOSE', 'NOSABE', '0', '1', 'SN', 'SINNUMERO', 'NOLOSE', '12345', '5'])
+
+/**
+ * Número de póliza que NO identifica nada: vacío, `PENDIENTE`, «no sé»/«no lo sé», `0`, `1`, `S/N`, «sin número».
+ * Dos filas con un comodín no son un duplicado (03/10/2026). Se compara sobre el número normalizado.
+ */
+export function esNumeroPolizaComodin(n: string | null | undefined): boolean {
+  const norm = normalizarNumeroPoliza(typeof n === 'string' ? n.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : n)
+  return norm === null || NUMEROS_COMODIN.has(norm)
+}
+
 /**
  * Agrupa las VIVAS y NO canceladas por número + compañía. Las históricas del
  * volcado no cuentan: su «copia gemela» es un dato útil (trae la dirección del

@@ -187,6 +187,7 @@ export type SenalIngesta = {
     | 'cobertura_descartada'
     | 'parciales'
     | 'renovaciones'
+    | 'duplicados_vivos'
   tipo: 'perdida' | 'hueco'
   titulo: string
   detalle: string
@@ -392,6 +393,13 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       detalle: 'No significa que lleguen: significa que hoy no se ha podido mirar.',
     })
   }
+  if (s.duplicadosVivos === null) {
+    out.push({
+      clave: 'duplicados_vivos', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar si hay números de póliza duplicados entre filas vivas',
+      detalle: 'No significa que no haya ninguno: significa que hoy no se ha podido medir.',
+    })
+  }
   if (s.huerfanas !== null && s.huerfanas > 0 && s.huerfanasReparto === null) {
     out.push({
       clave: 'huerfanas', tipo: 'hueco', n: null,
@@ -464,6 +472,18 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       clave: 'cobertura_descartada', tipo: 'hueco', n: s.cobertura.rutasDescartadas ?? null,
       titulo: `${s.cobertura.rutasDescartadas} campos descartados por privacidad`,
       detalle: 'Se excluyen a propósito (datos personales): no cuentan como «sin leer» ni hay que mapearlos.',
+    })
+  }
+
+  // 🧬 Duplicados vivos: SOLO con total > 0. `null`/`undefined` = no se pudo medir y NO se pinta como 0
+  // (el hueco, si lo hay, ya lo declara `s.huecos`); `{ total: 0 }` = se miró y no hay: nada que pintar.
+  if (s.duplicadosVivos != null && s.duplicadosVivos.total > 0) {
+    const d = s.duplicadosVivos
+    out.push({
+      clave: 'duplicados_vivos', tipo: 'hueco', n: d.total,
+      titulo: `${d.total} número(s) de póliza duplicados entre filas vivas`,
+      detalle: 'Sin contar comodines (PENDIENTE, 0, 1, S/N…). Hay que decidir si son la misma póliza: ' +
+        'se revisa en /correduria/revision; la fusión no es automática.',
     })
   }
 

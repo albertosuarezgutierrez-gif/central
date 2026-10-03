@@ -26,6 +26,7 @@ import {
   type CampoImportanteSinLeer,
   type RenovacionSinLlegar,
   type EmisionSinAviso,
+  type DuplicadosVivos,
 } from '@central/module-seguros'
 import { cabecerasPuerto } from '../puerto-actor.ts'
 
@@ -305,6 +306,16 @@ function esListaEmisionesSinAviso(v: unknown): boolean {
   return Array.isArray(v) && v.every(esEmisionSinAviso)
 }
 
+/** Duplicados vivos: `{ total, muestra[] }` con la forma completa o `null` (todo-o-nada). */
+function esDuplicadosVivos(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return entero(o.total) && Array.isArray(o.muestra) && o.muestra.every(m =>
+    typeof m === 'object' && m !== null &&
+    typeof (m as Record<string, unknown>).numero === 'string' && entero((m as Record<string, unknown>).filas) &&
+    ((m as Record<string, unknown>).dgs === null || typeof (m as Record<string, unknown>).dgs === 'string'))
+}
+
 function esCajaNegra(v: unknown): boolean {
   if (typeof v !== 'object' || v === null) return false
   const o = v as Record<string, unknown>
@@ -393,6 +404,9 @@ export function interpretarIngesta(
       // 📭 Mismos tres estados: ausente (`central-asegura` anterior al 28/09/2026)
       // no se pide; `null`/ilegible = hueco; `[]` = se miró y no hay.
       emisionesSinAviso: señal<EmisionSinAviso[]>(r, 'emisionesSinAviso', esListaEmisionesSinAviso),
+      // 🧬 Vigía de duplicados vivos (03/10/2026): ausente = puerto viejo, no se pide; `null`/ilegible
+      // = hueco (NUNCA 0); `{ total: 0 }` = se miró y no hay.
+      duplicadosVivos: señal<DuplicadosVivos>(r, 'duplicadosVivos', esDuplicadosVivos),
     }),
     huerfanasTruncadas: huerfanas.estado === 'ok' && huerfanas.truncado,
     huerfanasSinAmbito: huerfanas.estado === 'ok' ? huerfanas.ocultasOtroAmbito : null,

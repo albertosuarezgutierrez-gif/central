@@ -1088,3 +1088,29 @@ test('cobertura: sin `rutasDescartadas` (columna aún sin aplicar) no inventa un
   })
   assert.ok(!s.motivos.some(m => m.includes('descartados')))
 })
+
+// ── Vigía de duplicados vivos (03/10/2026) ────────────────────────────────────
+test('duplicados vivos: total > 0 se dice, SIN degradar la ingesta (no es pérdida de datos)', () => {
+  const s = saludIngesta({ cuarentena: [], duplicadosVivos: { total: 30, muestra: [{ numero: 'X1', filas: 2, dgs: 'C0058' }] } })
+  assert.equal(s.estado, 'ok')
+  assert.equal(s.duplicadosVivos?.total, 30)
+  assert.ok(s.motivos.some(m => /30 número\(s\) de póliza duplicados/.test(m)))
+})
+
+test('duplicados vivos: total 0 es «se miró y no hay», sin motivo ni hueco', () => {
+  const s = saludIngesta({ cuarentena: [], duplicadosVivos: { total: 0, muestra: [] } })
+  assert.equal(s.estado, 'ok')
+  assert.equal(s.motivos.length, 0)
+  assert.equal(s.duplicadosVivos?.total, 0)
+})
+
+test('duplicados vivos: `null` (no se pudo medir) es hueco, nunca 0; `undefined` no pide la señal', () => {
+  const nula = saludIngesta({ cuarentena: [], duplicadosVivos: null })
+  assert.equal(nula.estado, 'parcial')
+  assert.equal(nula.duplicadosVivos, null)
+  assert.ok(nula.huecos.some(h => /duplicados/.test(h)))
+  const sinPedir = saludIngesta({ cuarentena: [] })
+  assert.equal(sinPedir.estado, 'ok')
+  assert.equal(sinPedir.duplicadosVivos, undefined)
+  assert.equal(saludIngesta({ cuarentena: null }).duplicadosVivos, null)
+})

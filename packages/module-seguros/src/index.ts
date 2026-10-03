@@ -161,6 +161,7 @@ export {
   type CampoImportanteSinLeer,
   type RenovacionSinLlegar,
   type EmisionSinAviso,
+  type DuplicadosVivos,
 } from './ingesta.ts'
 export {
   veredictoEntidad,
@@ -406,6 +407,7 @@ export {
 } from './personas-ficha.ts'
 export {
   normalizarNumeroPoliza,
+  esNumeroPolizaComodin,
   polizasDuplicadas,
   type PolizaParaDuplicados,
   type GrupoDuplicado,
@@ -989,6 +991,9 @@ export {
   esPolizaDeCoche,
   huellaDecisionCima,
   esCampoCima,
+  fechaIsoFlexible,
+  mismoValorNormalizado,
+  motivoCopiadoCima,
   type CampoCima,
   type FichaParaCima,
   type DatosCima,
