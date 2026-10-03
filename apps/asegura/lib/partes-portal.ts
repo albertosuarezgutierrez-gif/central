@@ -538,7 +538,7 @@ export type EntradaMoverParte = {
 
 export type ResultadoMoverParte =
   | { ok: true; parte: PartePortal }
-  | { ok: false; error: 'datos_invalidos' | 'no_encontrado' | 'siniestro_requerido' | 'motivo_requerido' | 'transicion_invalida'; status: 400 | 404 | 409 }
+  | { ok: false; error: 'datos_invalidos' | 'no_encontrado' | 'siniestro_requerido' | 'motivo_requerido' | 'transicion_invalida' | 'siniestro_fusionado' | 'ya_vinculado'; status: 400 | 404 | 409 }
 
 const fallo = (error: Exclude<ResultadoMoverParte, { ok: true }>['error'], status: 400 | 404 | 409): ResultadoMoverParte => ({ ok: false, error, status })
 
@@ -599,10 +599,19 @@ export async function moverParte(correduriaId: string, entrada: EntradaMoverPart
     // se arreglan igual (poner el siniestro bueno) y distinguirlas diría si un
     // uuid ajeno existe o no en la cartera.
     if (siniestroId === null || !esUuid(siniestroId)) return fallo('siniestro_requerido', 400)
-    const s = await db.siniestro.findFirst({ where: { id: siniestroId, correduriaId }, select: { id: true } })
+    const s = await db.siniestro.findFirst({ where: { id: siniestroId, correduriaId }, select: { id: true, fusionadoEnSiniestroId: true } })
     if (s === null) return fallo('siniestro_requerido', 400)
+    // Un siniestro fusionado ya no es visible: el parte colgaría de una ficha oculta.
+    if (s.fusionadoEnSiniestroId !== null) return fallo('siniestro_fusionado', 409)
+    // Un parte ya vinculado a OTRO siniestro no se re-vincula en silencio: hay que desvincularlo explícitamente.
+    if (actual.siniestroId !== null && actual.siniestroId !== siniestroId) return fallo('ya_vinculado', 409)
     data.siniestroId = siniestroId
     data.abiertoEnCompaniaAt = new Date()
+    if (actual.siniestroId === null) {
+      // Mismo registro que el vínculo manual (vincularParteEn): quién/cómo/cuándo.
+      data.siniestroVinculo = 'manual'
+      data.siniestroVinculadoAt = new Date()
+    }
   }
 
   if (nuevo === 'descartado') {

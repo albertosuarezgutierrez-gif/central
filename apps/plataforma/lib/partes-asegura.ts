@@ -398,6 +398,8 @@ export function textoMotivoParte(motivo: string): string {
       return 'ese parte ya está vinculado a un siniestro. Recarga la página.'
     case 'no_vinculable':
       return 'ese parte está descartado o ya abierto en la compañía: no se vincula.'
+    case 'siniestro_fusionado':
+      return 'ese siniestro se fusionó con otro de la compañía: elige el siniestro vigente.'
     case 'poliza_distinta':
       return 'el parte va sobre otra póliza que ese siniestro: no se vinculan.'
     default:

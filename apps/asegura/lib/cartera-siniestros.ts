@@ -29,7 +29,7 @@ import {
 } from '@central/module-seguros'
 import { encryptField, encryptFieldNullable, decryptField, decryptFieldNullable } from '@central/module-seguros-pii'
 import { comunicadoACompania, type ParteEstado } from '@central/module-seguros-portal'
-import { duplicadoEnCima, promoverPartesComunicados, vincularParteEn, type ResultadoVincular } from './siniestros-vinculo'
+import { anotarHistorial as anotarHistorialVinculo, duplicadoEnCima, promoverPartesComunicados, vincularParteEn, type ResultadoVincular } from './siniestros-vinculo'
 import { SELECT_DETALLE_CIMA, detalleCimaDeFila, type FilaDetalleCima } from './siniestro-detalle-cima'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
@@ -362,9 +362,9 @@ export async function abrirSiniestro(
     // Alta + vínculo en UNA transacción: si el parte no se puede vincular, no queda un siniestro suelto.
     const r = await db.$transaction(async (tx) => {
       const nuevo = await crear(tx)
-      const v = await vincularParteEn(tx, correduriaId, { parteId, siniestroId: nuevo.id, vinculo: 'alta_desde_parte', actor: entrada.actor })
+      const v = await vincularParteEn(tx, correduriaId, { parteId, siniestroId: nuevo.id, vinculo: 'alta_desde_parte', actor: entrada.actor, diferirHistorial: true })
       if (!v.ok) throw new ParteNoVinculable(v)
-      return tx.siniestro.findFirstOrThrow({ where: { id: nuevo.id }, select: SELECT_SINIESTRO })
+      return { fila: await tx.siniestro.findFirstOrThrow({ where: { id: nuevo.id }, select: SELECT_SINIESTRO }), nota: v.nota ?? null }
     }).catch((e: unknown) => {
       if (e instanceof ParteNoVinculable) return e
       throw e
@@ -379,7 +379,9 @@ export async function abrirSiniestro(
       }
       return { ok: false, estado: 'parte_no_vinculable', error: r.fallo.error, motivo: motivos[r.fallo.error] ?? r.fallo.error, status: r.fallo.status }
     }
-    creado = r
+    creado = r.fila
+    // Best-effort TRAS el commit: dentro de la transacción un fallo del historial la dejaría abortada.
+    if (r.nota) await anotarHistorialVinculo(db, correduriaId, r.nota.clienteId, r.nota.texto)
   }
   anotarCambio({ entidad: 'siniestro', id: creado.id, campo: 'estado', antes: null, despues: 'abierto' })
   await anotarHistorial(

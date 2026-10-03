@@ -50,11 +50,11 @@ async function detalleAnterior(): Promise<string | null> {
 }
 
 /**
- * Alerta de CORTE DE SINIESTROS (SIN sin novedades > 72 h mientras POL/REC sí llegan).
+ * Alerta de CORTE DE SINIESTROS (SIN sin novedades > 7 días mientras POL/REC sí llegan).
  * Va aquí porque este cron corre 3 veces al día y ya lee la ingesta. Como mucho UN aviso
  * por día de Madrid: la marca vive en el latido `cima_siniestros_corte` (detalle `alerta AAAA-MM-DD`).
  * Sin dato (`sin_dato`) no avisa ni se da por bueno: queda en el latido como no-ok.
- * Granularidad: `diasSinPersistir` va en días enteros (×24 h), el umbral de 72 h = 3 días.
+ * Granularidad: `diasSinPersistir` va en días enteros (×24 h), el umbral de 7 días = 168 h (`DIAS_CORTE_SINIESTROS`).
  */
 async function avisarCorteSiniestros(
   dias: Record<string, number | null> | null | undefined,

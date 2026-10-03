@@ -72,11 +72,12 @@ function aCandidato(s: FilaCandidato): SiniestroCandidato {
     origen: String(s.origen) === 'cima' ? 'cima' : 'gestionado_correduria',
     idSiniestroEntidad: s.idSiniestroEntidad,
     referencia: s.referencia,
+    tipo: s.tipo,
   }
 }
 
 
-async function anotarHistorial(db: Db | Tx, correduriaId: string, clienteId: string, texto: string): Promise<void> {
+export async function anotarHistorial(db: Db | Tx, correduriaId: string, clienteId: string, texto: string): Promise<void> {
   try {
     await db.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
@@ -169,7 +170,7 @@ export async function duplicadoEnCima(
 // ─── Vincular un parte ───────────────────────────────────────────────────────
 
 export type ResultadoVincular =
-  | { ok: true; parteId: string; siniestroId: string; estado: 'abierto_en_compania' | 'recibido' }
+  | { ok: true; parteId: string; siniestroId: string; estado: 'abierto_en_compania' | 'recibido'; /** Solo con `diferirHistorial`: la nota que el llamador anota TRAS el commit. */ nota?: { clienteId: string; texto: string } }
   | { ok: false; error: 'datos_invalidos' | 'no_encontrado' | 'ya_vinculado' | 'no_vinculable' | 'poliza_distinta'; status: 400 | 404 | 409 | 422 }
 
 /**
@@ -180,7 +181,11 @@ export type ResultadoVincular =
 export async function vincularParteEn(
   db: Db | Tx,
   correduriaId: string,
-  e: { parteId: string; siniestroId: string; vinculo: VinculoParte; actor: string },
+  e: {
+    parteId: string; siniestroId: string; vinculo: VinculoParte; actor: string
+    /** Dentro de una transacción: no anota el historial aquí (un error tragado dentro de la tx la deja abortada); devuelve `nota`. */
+    diferirHistorial?: boolean
+  },
 ): Promise<ResultadoVincular> {
   if (!UUID.test(e.parteId) || !UUID.test(e.siniestroId)) return { ok: false, error: 'datos_invalidos', status: 400 }
   const s = await db.siniestro.findFirst({
@@ -225,13 +230,11 @@ export async function vincularParteEn(
   anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'parte_portal' })
   const dia = p.fechaHecho.toISOString().slice(0, 10).split('-').reverse().join('/')
   const como = e.vinculo === 'auto_cima' ? 'automáticamente (misma póliza y fecha, único candidato)' : e.vinculo === 'alta_desde_parte' ? 'al registrar el siniestro desde él' : 'a mano'
-  await anotarHistorial(
-    db,
-    correduriaId,
-    s.clienteId,
-    `Parte del portal del ${dia} vinculado al siniestro${s.referencia ? ` ${s.referencia}` : ''} ${como}${comunicado ? '' : ' (aún sin nº de la compañía: el cliente lo sigue viendo como recibido)'} por ${e.actor}`,
-  )
-  return { ok: true, parteId: p.id, siniestroId: s.id, estado: comunicado ? 'abierto_en_compania' : 'recibido' }
+  const texto = `Parte del portal del ${dia} vinculado al siniestro${s.referencia ? ` ${s.referencia}` : ''} ${como}${comunicado ? '' : ' (aún sin nº de la compañía: el cliente lo sigue viendo como recibido)'} por ${e.actor}`
+  const estado = comunicado ? 'abierto_en_compania' : 'recibido'
+  if (e.diferirHistorial) return { ok: true, parteId: p.id, siniestroId: s.id, estado, nota: { clienteId: s.clienteId, texto } }
+  await anotarHistorial(db, correduriaId, s.clienteId, texto)
+  return { ok: true, parteId: p.id, siniestroId: s.id, estado }
 }
 
 export async function vincularParte(

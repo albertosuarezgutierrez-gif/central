@@ -45,6 +45,8 @@ export type SiniestroCandidato = {
   idSiniestroEntidad?: string | null
   /** Referencia anotada (en los nuestros, el nº que dio la compañía). */
   referencia?: string | null
+  /** Tipo de siniestro. `null`/ausente = no se sabe (no vale como «mismo tipo»). */
+  tipo?: string | null
 }
 
 export type ParteParaVincular = {
@@ -150,6 +152,21 @@ function numerosDe(s: SiniestroCandidato): Set<string> {
   return out
 }
 
+const tipoNorm = (s: SiniestroCandidato): string | null => {
+  const t = typeof s.tipo === 'string' ? s.tipo.trim().toLowerCase() : ''
+  return t === '' ? null : t
+}
+/** Los dos tipos constan y son distintos. */
+function tiposDistintos(a: SiniestroCandidato, b: SiniestroCandidato): boolean {
+  const x = tipoNorm(a), y = tipoNorm(b)
+  return x !== null && y !== null && x !== y
+}
+/** Los dos tipos constan y coinciden (un tipo desconocido NO es compatible). */
+function tiposCompatibles(a: SiniestroCandidato, b: SiniestroCandidato): boolean {
+  const x = tipoNorm(a), y = tipoNorm(b)
+  return x !== null && x === y
+}
+
 /**
  * ¿Qué siniestro de CIMA es el mismo que este alta manual? `cimas` = los de
  * CIMA candidatos (sin fusionar). Por nº primero; por fecha solo si el nº no
@@ -171,11 +188,15 @@ export function emparejarManualConCima(
   const porFecha = misma.filter((c) => {
     const suyos = numerosDe(c)
     if (nuestros.size > 0 && suyos.size > 0) return false // dos nº distintos = dos siniestros
+    if (nuestros.size === 0 && suyos.size === 0 && tiposDistintos(manual, c)) return false // sin nº, otro tipo = otro siniestro
     const d = diasEntre(manual.fechaHora, c.fechaHora)
     return d === null || d <= dias
   })
   if (porFecha.length === 0) return { tipo: 'ninguno' }
-  if (porFecha.length === 1 && diasEntre(manual.fechaHora, porFecha[0].fechaHora) !== null) {
+  // Sin nº en NINGUNO de los dos, la fecha sola no basta: exige además el MISMO tipo
+  // (conocido en ambos). Un tipo que falta → solo sugerencia, nunca fusión automática.
+  const sinNumeros = nuestros.size === 0 && numerosDe(porFecha[0]).size === 0
+  if (porFecha.length === 1 && diasEntre(manual.fechaHora, porFecha[0].fechaHora) !== null && (!sinNumeros || tiposCompatibles(manual, porFecha[0]))) {
     return { tipo: 'fuerte', siniestroId: porFecha[0].id }
   }
   return { tipo: 'ambiguo', candidatos: porFecha.map((c) => c.id) }

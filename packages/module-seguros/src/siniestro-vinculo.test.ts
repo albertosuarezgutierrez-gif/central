@@ -14,7 +14,7 @@ import {
 } from './siniestro-vinculo.ts'
 
 const sin = (id: string, x: Partial<SiniestroCandidato> = {}): SiniestroCandidato => ({
-  id, polizaId: 'p1', fechaHora: '2026-09-10T10:00:00Z', origen: 'cima', idSiniestroEntidad: null, referencia: null, ...x,
+  id, polizaId: 'p1', fechaHora: '2026-09-10T10:00:00Z', origen: 'cima', idSiniestroEntidad: null, referencia: null, tipo: 'robo', ...x,
 })
 const parte = (id: string, fechaHecho = '2026-09-10', polizaId: string | null = 'p1') => ({ id, polizaId, fechaHecho })
 
@@ -119,4 +119,16 @@ test('comunicado: solo CIMA o un nº de la compañía autorizan «abierto en la 
   assert.equal(conocidoPorCompania({ origen: 'gestionado_correduria', idSiniestroEntidad: null, referencia: 'SN-1' }), true)
   assert.equal(conocidoPorCompania({ origen: 'gestionado_correduria', idSiniestroEntidad: null, referencia: '  ' }), false)
   assert.equal(conocidoPorCompania({ origen: 'gestionado_correduria', idSiniestroEntidad: null, referencia: null }), false)
+})
+
+test('manual↔CIMA sin nº en ninguno: mismo tipo → fuerte; tipo desconocido → solo ambiguo; tipo distinto → ninguno', () => {
+  const m = sin('m', { origen: 'gestionado_correduria', tipo: 'robo' })
+  assert.deepEqual(emparejarManualConCima(m, [sin('c1', { tipo: 'ROBO ' })]), { tipo: 'fuerte', siniestroId: 'c1' })
+  assert.deepEqual(emparejarManualConCima(m, [sin('c1', { tipo: null })]), { tipo: 'ambiguo', candidatos: ['c1'] })
+  assert.deepEqual(emparejarManualConCima({ ...m, tipo: null }, [sin('c1')]), { tipo: 'ambiguo', candidatos: ['c1'] })
+  assert.deepEqual(emparejarManualConCima(m, [sin('c1', { tipo: 'agua' })]), { tipo: 'ninguno' })
+  assert.deepEqual(fusionesAutomaticas([{ ...m, tipo: null }], [sin('c1')]), [])
+  // con nº coincidente el tipo no se exige
+  const mn = sin('m', { origen: 'gestionado_correduria', tipo: null, referencia: '61048939' })
+  assert.deepEqual(emparejarManualConCima(mn, [sin('c1', { idSiniestroEntidad: '061048939', tipo: null })]), { tipo: 'fuerte', siniestroId: 'c1' })
 })

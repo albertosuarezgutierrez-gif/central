@@ -10,13 +10,18 @@
  *  - `sin_dato`: no se sabe (SIN o la referencia viva no constan). NO es «va bien».
  *  - `ok`: SIN dentro del umbral, o los hermanos tampoco llegan (parada general:
  *    la cubre el vigía del cron, no esta señal).
- *  - `alerta`: SIN lleva > 72 h callado y POL o REC SÍ han llegado en ese periodo.
+ *  - `alerta`: SIN lleva > 7 días (168 h) callado y POL o REC SÍ han llegado en ese periodo.
  *
  * Puro: decide con horas, sin BD ni red. Una fecha ausente es `null`/`undefined`,
  * jamás 0 (0 h = «acaba de llegar»).
  */
 
-export const HORAS_CORTE_SINIESTROS = 72
+/**
+ * 7 días: SIN llega solo de vez en cuando y los huecos normales llegan a ~5 días; con 72 h
+ * saltaba la alerta en falso. Solo un hueco > 7 días con POL/REC vivos es un corte.
+ */
+export const DIAS_CORTE_SINIESTROS = 7
+export const HORAS_CORTE_SINIESTROS = DIAS_CORTE_SINIESTROS * 24
 
 /** Horas desde el último fichero de un tipo. `null`/`undefined` = no consta. */
 export type HorasPorTipo = Record<string, number | null | undefined>
@@ -82,7 +87,7 @@ export function textoCorteSiniestros(c: Extract<CorteSiniestros, { estado: 'aler
   const f = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit' }).format(desde).replace(/\b(\d)\//, '0$1/').replace(/\/(\d)$/, '/0$1')
   const dias = Math.floor(c.horasSin / 24)
   const hermanos = c.vivos.map(v => v.tipo === 'POL' ? 'pólizas' : 'recibos').join('/')
-  let t = `⚠️ CIMA: no entra ningún fichero de siniestros desde ${f} (${dias} días) y sí ${hermanos}. Revisar con Manuel/Codeoscopic.`
+  let t = `⚠️ CIMA: no entra ningún fichero de siniestros desde ${f} (${dias} días, más de ${DIAS_CORTE_SINIESTROS} sin novedades) y sí ${hermanos}. Revisar con Manuel/Codeoscopic.`
   if (c.entidades.length > 0) {
     t += '\nCompañías: ' + c.entidades.slice(0, 8).map(x =>
       `${x.entidad}${x.horasSin === null ? ' (nunca)' : ` (${Math.floor(x.horasSin / 24)} d)`}`).join(' · ')
