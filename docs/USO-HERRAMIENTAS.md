@@ -167,23 +167,23 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 248 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 249 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 242 | 33.385 | 25.678.535 | 0 | 0 |
-| `otro` | 238 | 7.990 | 22.490.450 | 11.797.921 | 0 |
-| `lectura-directa` | 216 | 5.775 | 16.994.656 | 0 | 0 |
-| `mcp:github` | 221 | 5.481 | 4.552.294 | 50.336.389 | 89 |
+| `bash` | 243 | 33.399 | 25.686.505 | 0 | 0 |
+| `otro` | 239 | 7.997 | 22.490.641 | 11.797.921 | 0 |
+| `lectura-directa` | 217 | 5.783 | 17.005.841 | 0 | 0 |
+| `mcp:github` | 222 | 5.482 | 4.552.316 | 50.336.389 | 89 |
 | `escritura` | 169 | 3.477 | 50.583.922 | 0 | 0 |
-| `sql` | 155 | 3.277 | 1.622.510 | 2.351.230 | 13 |
+| `sql` | 156 | 3.287 | 1.629.575 | 2.351.230 | 13 |
 | `mcp:Claude_Code_Remote` | 139 | 1.469 | 303.140 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 21 | 588 | 2.475.618 | 0 | 0 |
 | `mcp:Vercel` | 56 | 560 | 813.164 | 201.411 | 14 |
 | `mcp:Gmail` | 29 | 367 | 568.888 | 0 | 15 |
-| `mcp:Supabase` | 100 | 287 | 27.521 | 0 | 2 |
+| `mcp:Supabase` | 101 | 288 | 27.619 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
-| `agente:general-purpose` | 50 | 215 | 158.113 | 4.996.172 | 0 |
+| `agente:general-purpose` | 51 | 217 | 158.187 | 4.996.172 | 0 |
 | `agente:agente-architect` | 39 | 124 | 93.391 | 3.950.521 | 0 |
 | `mcp:Google-Drive` | 13 | 95 | 88.235 | 0 | 2 |
 | `mcp:Google_Drive` | 16 | 87 | 110.438 | 0 | 19 |
@@ -195,7 +195,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
-| `mcp:claude-code-remote` | 4 | 48 | 4.294 | 0 | 0 |
+| `mcp:claude-code-remote` | 5 | 49 | 4.354 | 0 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
@@ -206,7 +206,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:openrouter` | 2 | 5 | 14.639 | 0 | 0 |
-| `agente:verificador-esceptico` | 3 | 3 | 1.369 | 1.923 | 0 |
+| `agente:verificador-esceptico` | 4 | 4 | 1.406 | 1.923 | 0 |
 | `agente:Plan` | 2 | 2 | 1.832 | 12.062 | 0 |
 | `mcp:ccd_session` | 2 | 2 | 175 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |

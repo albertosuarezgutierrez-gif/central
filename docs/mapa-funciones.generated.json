@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T15:38:00Z",
-  "sha": "a13ab4055bee29d3e77f306870f38258376db73a",
+  "generadoEn": "2026-10-03T16:12:12Z",
+  "sha": "8fbb47101e716a3eaebefe5ce632aa16cb935fd0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -130725,7 +130725,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "13c37a7ca6de"
+      "hash": "86b3d198687e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/aprender.ts",
