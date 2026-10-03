@@ -180,3 +180,20 @@ test('suplementos: visibles con `coberturas`; sin él null; sin datos [] (se mir
   assert.equal(datosPolizaCima(CON_BENEF, { recibos: true, iban: true, coberturas: false, bien: true }).suplementos, null)
   assert.deepEqual(datosPolizaCima(CIMA, TODO).suplementos, [])
 })
+
+test('suplementos: se ordena por fecha desc ANTES de recortar (el más reciente se conserva) y sin fecha va al final', () => {
+  const muchos = Array.from({ length: 25 }, (_, i) => ({ id: String(i + 1).padStart(4, '0'), descripcionClase: 'CC', fechaEfecto: `2010-01-${String(i + 1).padStart(2, '0')}` }))
+  const nuevo = { id: '9999', descripcionClase: 'CC', fechaEfecto: '2026-05-01' }
+  const mezclados = [...muchos.slice(10), { id: '8888', descripcionClase: 'CC' }, nuevo, ...muchos.slice(0, 10)].reverse()
+  const r = datosPolizaCima({ ...CIMA, suplementos: mezclados }, TODO).suplementos!
+  assert.equal(r.length, 20)
+  assert.equal(r[0].numero, '9999')
+  assert.ok(r.every((s, i) => i === 0 || (s.fecha ?? '') <= (r[i - 1].fecha ?? 'z')))
+  assert.ok(!r.some((s) => s.numero === '8888'), 'sin fecha, al final: recortado')
+})
+
+test('suplementos: ni `descripcion` ni `detalle` con datos bancarios llegan a la salida', () => {
+  const r = datosPolizaCima({ ...CIMA, suplementos: [{ id: '1', descripcion: 'BANCO-CUENTA: 2038/1234', detalle: 'BANCO-CUENTA: 2038/1234', descripcionClase: 'Modificación general', fechaEfecto: '2025-01-01' }] }, TODO)
+  assert.ok(!JSON.stringify(r).includes('2038/1234') && !JSON.stringify(r).includes('BANCO-CUENTA'))
+  assert.equal(r.suplementos![0].descripcion, 'Modificación general')
+})

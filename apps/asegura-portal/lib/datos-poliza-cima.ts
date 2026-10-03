@@ -171,15 +171,17 @@ function beneficiarios(x: unknown): BeneficiarioPortal[] {
  */
 function suplementos(x: unknown): SuplementoPortal[] {
   if (!Array.isArray(x)) return []
-  const out: SuplementoPortal[] = []
-  for (const s of x.slice(0, MAX_RIESGOS)) {
+  const todos: SuplementoPortal[] = []
+  for (const s of x) {
     const o = objeto(s)
     if (!o) continue
     const item: SuplementoPortal = { numero: texto(o.id), fecha: fechaIso(o.fechaEfecto), descripcion: texto(o.descripcionClase) }
     if (item.numero === null && item.fecha === null && item.descripcion === null) continue
-    out.push(item)
+    todos.push(item)
   }
-  return out.sort((a, b) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))
+  // Primero ordenar (fecha desc, sin fecha al final) y DESPUÉS recortar: si no, el más reciente puede caerse.
+  todos.sort((a, b) => (a.fecha === null ? 1 : 0) - (b.fecha === null ? 1 : 0) || (b.fecha ?? '').localeCompare(a.fecha ?? ''))
+  return todos.slice(0, MAX_RIESGOS)
 }
 
 function producto(x: unknown): string | null {
