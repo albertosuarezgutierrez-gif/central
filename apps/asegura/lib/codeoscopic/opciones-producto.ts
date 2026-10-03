@@ -53,6 +53,16 @@ const ALLIANZ_AUTO_320200: OpcionProducto[] = [
   { id: 'vehicleUseFrequency', type: 'number', value: 1 },
 ]
 
+// Moto y hogar (ids = `name` del campo, leídos el 03/10/2026 del formulario real de Avant2).
+// Allianz: mismos dos campos que en auto; `comissionType` NO se manda jamás (toca la comisión).
+const ALLIANZ_DESCUENTOS: OpcionProducto[] = [
+  { id: 'dtoCap', type: 'number', value: DESCUENTO_POR_DEFECTO },
+  { id: 'dtoVentaCruzada', type: 'number', value: DESCUENTO_POR_DEFECTO },
+]
+// Generali: la compañía recorta sola (~12 % en moto, 29/09) y no da error.
+const GENERALI_DESCUENTO: OpcionProducto[] = [{ id: 'commercialDiscountNumber', type: 'number', value: DESCUENTO_POR_DEFECTO }]
+// PENDIENTE: Occident (`commercialDiscount` moto, `discount` hogar; ya traen 30) y Fidelidade (`discount` hogar): máximos sin medir.
+
 /**
  * Opciones por defecto para una compañía, por nombre (contains normalizado,
  * como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO
@@ -65,8 +75,14 @@ export function opcionesPorDefecto(compania: string, ramo: string | null = 'auto
   // Mandárselas al ReRate de Allianz Motos sería declarar opciones de otro
   // producto (auditoría 23/09/2026, plan punto 7). Sin ramo se asume auto,
   // que es el comportamiento de siempre.
-  if ((ramo ?? 'auto') !== 'auto') return null
+  const r = ramo ?? 'auto'
   const c = compania.trim().toLowerCase()
+  if (r === 'moto' || r === 'hogar') {
+    if (c.includes('allianz')) return ALLIANZ_DESCUENTOS.map((o) => ({ ...o }))
+    if (c.includes('generali')) return GENERALI_DESCUENTO.map((o) => ({ ...o }))
+    return null
+  }
+  if (r !== 'auto') return null
   // Copia defensiva: el array de arriba es un módulo compartido entre invocaciones
   // (proceso Node reutilizado en serverless) — devolver la misma referencia dejaría
   // una mutación accidental del caller filtrarse a la siguiente petición.
@@ -81,9 +97,11 @@ export function opcionesPorDefecto(compania: string, ramo: string | null = 'auto
 // min 0 · max 99 (100 solo en `edit`), «(venta cruzada)» min 0 · max 100, paso 1. Son los
 // límites del VENDOR, no un tope de negocio: se valida aquí para no gastar un ReRate en un
 // 400 seguro. Qué parte de ese % sale de la comisión de la correduría no está confirmado.
-export const LIMITES_DESCUENTO: Readonly<Record<'dtoCap' | 'dtoVentaCruzada', { min: number; max: number }>> = {
+export const LIMITES_DESCUENTO: Readonly<Record<'dtoCap' | 'dtoVentaCruzada' | 'commercialDiscountNumber', { min: number; max: number }>> = {
   dtoCap: { min: 0, max: 99 },
   dtoVentaCruzada: { min: 0, max: 100 },
+  // Generali moto/hogar (03/10/2026): sin límite medido en el formulario; 0-100 es el tope seguro de un %.
+  commercialDiscountNumber: { min: 0, max: 100 },
 }
 
 export type DescuentosPedidos = Partial<Record<keyof typeof LIMITES_DESCUENTO, number>>
@@ -124,7 +142,7 @@ export function conDescuentos(
         ok: false,
         motivo: origen === 'formulario'
           ? `el formulario de la compañía no trae «${id}»: ajusta el descuento dentro del formulario`
-          : `esta compañía no admite «${id}» en el ReRate (solo Allianz coche lo tiene catalogado)`,
+          : `esta compañía no admite «${id}» en el ReRate (solo Allianz y Generali lo tienen catalogado)`,
       }
     }
     // Respeta el tipo con el que venía el campo (el formulario del vendor puede mandarlo como texto).
