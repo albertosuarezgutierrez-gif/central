@@ -18,6 +18,7 @@ const leer = (p: string) => readFileSync(join(ROOT, p), 'utf8')
 const COR = 'apps/plataforma/app/(usuario)/correduria'
 const PAGINA = `${COR}/subir-poliza/page.tsx`
 const PANTALLA = `${COR}/subir-poliza/SubirPoliza.tsx`
+const LECTOR = `${COR}/LeerPoliza.tsx`
 const CABECERA_FICHA = `${COR}/cliente/[id]/Cabecera.tsx`
 const RUTA_LEER = 'apps/plataforma/app/api/correduria/oportunidad/leer/route.ts'
 
@@ -29,7 +30,8 @@ test('/correduria/subir-poliza es una pantalla, no un redirect a asegura', () =>
 })
 
 test('la pantalla lee por la ruta de plataforma, no por asegura', () => {
-  const s = leer(PANTALLA)
+  // Desde el 03/10/2026 la lectura vive en LeerPoliza (compartida con la ficha): se vigilan las dos.
+  const s = leer(PANTALLA) + '\n' + leer(LECTOR)
   assert.match(s, /['"]\/api\/correduria\/oportunidad\/leer['"]/)
   assert.doesNotMatch(s, /central-asegura|ASEGURA_URL|cartera\/subir/)
 })
@@ -84,4 +86,31 @@ test('con la oportunidad ya abierta, lo leído se guarda en ELLA (no se pierde c
   const tramo = s.slice(s.indexOf('if (ya) {'), s.indexOf("completada: false }"))
   assert.match(tramo, /update oportunidades set/)
   assert.match(tramo, /seguroAnterior: a\.seguroAnterior/)
+})
+
+// 03/10/2026, Alberto: subir un documento desde la ficha abre la oportunidad sola, como «Subir póliza».
+// Si no, el formulario se rellenaba y la oportunidad dependía de un clic más; y si se abre sola y el
+// formulario sigue ahí, el clic la duplica.
+test('FormAlta manda clienteId + crear al leer, y no pide el tomador', () => {
+  const s = leer(`${COR}/cliente/[id]/OportunidadesCliente.tsx`)
+  assert.match(s, /useLeerPoliza\(\{ clienteId, crear: true,/)
+  assert.doesNotMatch(s, /useLeerPoliza\(\{[^)]*tomador/)
+})
+
+test('con la oportunidad ya abierta, FormAlta sustituye el formulario y refresca la lista', () => {
+  const s = leer(`${COR}/cliente/[id]/OportunidadesCliente.tsx`)
+  const i = s.indexOf('if (abierta) {')
+  assert.ok(i > 0, 'FormAlta ya no distingue la oportunidad abierta por el servidor')
+  const tramo = s.slice(i, s.indexOf('<form onSubmit={guardar}'))
+  assert.match(tramo, /<AvisosLectura\b/)
+  assert.doesNotMatch(tramo, /type="submit"/)
+  assert.match(s, /if \(abierta\) onRecargar\?\.\(\)/)
+})
+
+test('el lector solo da por abierta una oportunidad creada/actualizada que trae su id', () => {
+  const s = leer(LECTOR)
+  assert.match(s, /o\.estado !== 'creada' && o\.estado !== 'actualizada'\) return null/)
+  assert.match(s, /if \(!id\) return null/)
+  // Un fallo de lectura no tapa una oportunidad que el servidor dice haber abierto.
+  assert.match(s, /l\.estado === 'error' && !yaAbierta/)
 })

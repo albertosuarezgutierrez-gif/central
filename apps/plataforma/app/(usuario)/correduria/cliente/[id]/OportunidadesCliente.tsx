@@ -4,12 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Trophy } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
-import { prepararAdjunto } from '@/lib/imagen-cliente'
 import {
   RAMOS_OPORTUNIDAD_UI,
   ROTULO_ESTADO,
   TIPOS_TAREA_UI,
-  interpretarLecturaOportunidad,
   interpretarOportunidadesCliente,
   parsearPrima,
   primaParaCampo,
@@ -25,6 +23,7 @@ import { rutaSinOportunidad, textoPresupuestos, textoSinOportunidad, type Presup
 import type { SeguroAnterior } from '@central/module-seguros'
 import { AvisoFechaDudosa, fmt } from './piezas'
 import SeguimientoOportunidad from './SeguimientoOportunidad'
+import { AvisosLectura, useLeerPoliza } from '../../LeerPoliza'
 
 /**
  * Las oportunidades de ESTE cliente, en su ficha (Fase 1 del rediseño, 24/09/2026). Hasta hoy solo
@@ -189,6 +188,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
           precarga={desde ? precargas[desde] ?? null : null}
           onCancelar={() => setAbriendo(false)}
           onHecho={(t) => { setAviso(t); if (t.ok) setAbriendo(false); void cargar() }}
+          onRecargar={() => void cargar()}
         />
       )}
     </div>
@@ -395,13 +395,15 @@ export function textoSeguroAnterior(s: SeguroAnterior): string {
  * `inicial` (29/09/2026): una lectura ya hecha (la póliza subida en Documentos) rellena el
  * formulario al abrirlo, sin volver a pagar la lectura.
  */
-export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHecho }: {
+export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHecho, onRecargar }: {
   clienteId: string
   inicial?: LecturaOk | null
   /** Crear desde una fila del volcado: vehículo/aseguradora, y el vencimiento SOLO si es futuro. */
   precarga?: PrecargaAlta | null
   onCancelar: () => void
   onHecho: (t: { ok: boolean; texto: string; id?: string | null }) => void
+  /** Refresca la lista sin cerrar el formulario (el documento ya abrió la oportunidad por su cuenta). */
+  onRecargar?: () => void
 }) {
   const [ramo, setRamo] = useState(precarga?.ramo ?? '')
   const [estado, setEstado] = useState<'en_negociacion' | 'competencia'>(precarga ? 'competencia' : 'en_negociacion')
@@ -413,7 +415,6 @@ export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHe
   const [nota, setNota] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [leyendo, setLeyendo] = useState(false)
   const [lectura, setLectura] = useState<{ ok: boolean; texto: string } | null>(null)
   // Lo leído que no tiene campo en el formulario pero se guarda con la oportunidad:
   // el nº de póliza (distingue dos seguros del mismo ramo), la moto y el bonus.
@@ -424,28 +425,22 @@ export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHe
   const aplicado = useRef(false)
 
   // Lo leído RELLENA lo vacío y no pisa lo que Alberto ya ha tecleado: si él escribió
-  // la prima que le dijo el cliente, esa manda sobre la del papel.
-  async function leerDocumento(f: File) {
-    setLeyendo(true)
+  // la prima que le dijo el cliente, esa manda sobre la del papel. La lectura (POST, helpers y
+  // avisos de oportunidad/ficha) es la de `../../LeerPoliza`, la misma de «Subir póliza».
+  // Viaja `clienteId` + `crear` (03/10/2026, como «Subir póliza»): el servidor abre la oportunidad en
+  // la ficha del tomador y guarda el documento; si no la abre, el formulario se rellena como siempre.
+  const lector = useLeerPoliza({ clienteId, crear: true, onLectura: l => aplicar(l) })
+  const leyendo = lector.leyendo
+  const abierta = lector.abierta
+  // Una vez por lectura: la lista se refresca porque la oportunidad ya existe.
+  useEffect(() => {
+    if (abierta) onRecargar?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierta])
+  const lecturaVista = lector.motivoError !== null ? { ok: false, texto: `No se ha podido leer: ${lector.motivoError}. Rellénalo a mano.` } : lectura
+  function leerDocumento(f: File) {
     setLectura(null)
-    let status = 0
-    let json: unknown = null
-    try {
-      const a = await prepararAdjunto(f)
-      const res = await fetch('/api/correduria/oportunidad/leer', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName, clienteId }),
-      })
-      status = res.status
-      json = await res.json().catch(() => null)
-    } catch {
-      json = { error: 'sin conexión' }
-    }
-    setLeyendo(false)
-    const l = interpretarLecturaOportunidad(status, json)
-    if (l.estado === 'error') { setLectura({ ok: false, texto: `No se ha podido leer: ${l.motivo}. Rellénalo a mano.` }); return }
-    aplicar(l)
+    void lector.leer(f)
   }
 
   function aplicar(l: LecturaOk) {
@@ -495,6 +490,29 @@ export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHe
     onHecho(t)
   }
 
+  // La oportunidad ya está abierta: el formulario sobra (crearla otra vez la duplicaría) y se sustituye por lo que ha pasado.
+  if (abierta) {
+    const enEstaFicha = abierta.clienteId === clienteId
+    return (
+      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)', border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+        <AvisosLectura oportunidad={lector.oportunidad} ficha={lector.ficha} sinGuardar={lector.sinGuardar} fichaIncierta={lector.fichaIncierta} />
+        {!enEstaFicha && (
+          <div role="status" style={{ overflowWrap: 'anywhere' }}>
+            La oportunidad está en {abierta.clienteId ? 'la ficha del tomador del documento' : 'otra ficha'}, no en esta: aquí no aparecerá en la lista.
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {enEstaFicha && (
+            <button type="button" onClick={() => onHecho({ ok: true, texto: lector.oportunidad?.texto ?? 'Oportunidad abierta desde el documento.', id: abierta.oportunidadId })} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
+              Ver la oportunidad
+            </button>
+          )}
+          <button type="button" onClick={onCancelar} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Cerrar</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={guardar} style={{ display: 'grid', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
       <div style={{ display: 'grid', gap: 6 }}>
@@ -506,10 +524,12 @@ export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHe
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void leerDocumento(f) }}
         />
         <button type="button" disabled={leyendo} onClick={() => fichero.current?.click()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, justifySelf: 'start' }}>
-          {leyendo ? 'Leyendo el documento…' : 'Rellenar desde póliza, recibo o foto'}
+          {leyendo ? 'Leyendo el documento…' : 'Subir póliza, recibo o foto'}
         </button>
-        {lectura && <div role="status" style={{ color: lectura.ok ? 'var(--positive)' : 'var(--negative)' }}>{lectura.texto}</div>}
-        {!lectura && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento, prima y, en auto/moto, el bonus. No se guarda el documento.</div>}
+        {lecturaVista && <div role="status" style={{ color: lecturaVista.ok ? 'var(--positive)' : 'var(--negative)' }}>{lecturaVista.texto}</div>}
+        {!lecturaVista && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento, prima y, en auto/moto, el bonus; abre la oportunidad sola y guarda el documento en la ficha del tomador.</div>}
+        {/* Si no se abrió sola (error, ya es nuestra…), el aviso se enseña aquí y el formulario queda para abrirla a mano. */}
+        <AvisosLectura oportunidad={lector.oportunidad} ficha={lector.ficha} sinGuardar={lector.sinGuardar} fichaIncierta={lector.fichaIncierta} />
       </div>
       {/* Bloqueado mientras lee: lo leído solo rellena lo vacío, y eso se decide con lo que había al pulsar. */}
       <fieldset disabled={leyendo} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'grid', gap: 10 }}>

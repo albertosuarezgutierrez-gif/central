@@ -27,3 +27,19 @@ test('🪤 «actualizada» solo dice que completó algo si de verdad lo hizo', (
   assert.match(interpretarOportunidadDocumento({ estado: 'actualizada', clienteId: 'c1', vence: null, llamada: '2026-09-30', completada: true })!.texto, /completado/)
   assert.doesNotMatch(interpretarOportunidadDocumento({ estado: 'actualizada', clienteId: 'c1', vence: null, llamada: '2026-09-30', completada: false })!.texto, /completado/)
 })
+
+import { interpretarFichaDocumento, textoFichaDocumento } from './oportunidad-documento.ts'
+
+test('🪤 la ficha resultante: lead nuevo vs. ya existía, con lo rellenado por su nombre', () => {
+  const f = interpretarFichaDocumento({ clienteId: 'c9', creada: true, rellenados: ['CIF', 'domicilio'], avisos: ['posible duplicado'] })
+  assert.deepEqual(f, { clienteId: 'c9', creada: true, rellenados: ['CIF', 'domicilio'], avisos: ['posible duplicado'] })
+  assert.match(textoFichaDocumento(f!), /lead nuevo.*rellenado: CIF, domicilio/)
+  const ya = interpretarFichaDocumento({ clienteId: 'c1', creada: false, rellenados: [], avisos: [] })
+  assert.match(textoFichaDocumento(ya!), /ya existía.*no se ha rellenado/)
+})
+
+test('🪤 ficha null = no se ha tocado ninguna; ausente = asegura no lo dice (no se afirma nada)', () => {
+  assert.equal(interpretarFichaDocumento(null), null)
+  assert.equal(interpretarFichaDocumento({ creada: true }), null)
+  assert.equal(interpretarFichaDocumento(undefined), undefined)
+})

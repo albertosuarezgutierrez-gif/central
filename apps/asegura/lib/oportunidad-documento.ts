@@ -33,8 +33,7 @@ import { leerPoliza, type ResultadoLecturaPoliza } from './documentos/extraer-po
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
 import { volcarPolizaEnFicha, type VolcadoFicha } from './ficha-desde-poliza'
 import {
-  decidirFicha,
-  posiblesDuplicadosPorContacto,
+  planTomador,
   puedeVolcarEnFicha,
   esDocumentoDeSeguro,
   fechaLlamada,
@@ -63,12 +62,20 @@ export type ResultadoOportunidadDocumento =
       ficha: VolcadoFicha | null
       /** Póliza de concesionario / financiada: el motivo; `null` = no consta. */
       financiada: string | null
+      /**
+       * Lead nuevo: fichas que comparten su teléfono o email (solo ids; NO se ha asignado ninguna, queda
+       * la nota «posible duplicado»). `[]` en una ficha que ya existía.
+       */
+      posiblesDuplicados: string[]
+      /** Lead nuevo: ¿nació con su DNI/CIF? `false` = el documento no traía ninguno legible. */
+      conIdentificador: boolean
     }
   | { estado: 'ya_nuestra' }
   | { estado: 'no_es_seguro' }
   | { estado: 'sin_lectura'; motivo: string }
   | { estado: 'sin_persona' }
-  | { estado: 'error'; motivo: string }
+  /** `clienteId`: la ficha ya estaba resuelta (y quizá creada) cuando falló la oportunidad. */
+  | { estado: 'error'; motivo: string; clienteId?: string }
 
 export type EntradaOportunidadDocumento = {
   correduriaId: string
@@ -111,6 +118,9 @@ export async function oportunidadDesdeFichero(
 export async function oportunidadDesdeLectura(
   e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },
 ): Promise<ResultadoOportunidadDocumento> {
+  // Fuera del `try`: si algo falla DESPUÉS de elegir o crear la ficha, el `catch` devuelve su id
+  // (no se afirma que no se tocó ninguna ficha).
+  let clienteId: string | undefined
   try {
     const leida = e.lectura
     if ('fase' in leida && leida.fase === 'ninguno') return { estado: 'sin_lectura', motivo: leida.motivo }
@@ -142,41 +152,41 @@ export async function oportunidadDesdeLectura(
         })
       : null
     const clienteSube = ficha?.id ?? null
-    const cs = alta?.dni
-      ? await coincidencias(e.correduriaId, { dni: alta.dni })
-          .then((xs) => xs.filter((x) => x.por === 'dni').map((x) => ({ id: x.id, activo: true })))
-          .catch(() => null)
-      : null
-    const decision = decidirFicha({
+    // UNA búsqueda por índice ciego con el DNI/CIF, el teléfono y el email del documento. Solo el
+    // DNI/CIF asigna ficha; el contacto solo deja «posible duplicado» (`planTomador`).
+    const hayClave = Boolean(alta?.dni || contacto.telefono || contacto.email)
+    const encontradas = hayClave
+      ? await coincidencias(e.correduriaId, { dni: alta?.dni ?? null, telefono: contacto.telefono, email: contacto.email }).catch(() => null)
+      : []
+    const decision = planTomador({
       clienteSube,
       nombreFicha: ficha ? `${ficha.nombre ?? ''} ${ficha.apellidos ?? ''}` : null,
       dniFicha: ficha ? descifrarCampo(ficha.dni) : null,
-      tomador: alta ? `${alta.nombre} ${alta.apellidos}` : null,
-      dniDocumento: alta?.dni ?? null,
-      coincidencias: cs,
+      alta: alta ? { nombre: alta.nombre, apellidos: alta.apellidos, dni: alta.dni ?? null, tipoPersona: alta.tipoPersona ?? null } : null,
+      encontradas,
     })
     if (decision.tipo === 'sin_persona') return { estado: 'sin_persona' }
     const verificado = e.verificado !== false
     if (!verificado && decision.tipo === 'lead' && !alta?.dni) return { estado: 'sin_persona' }
 
-    let clienteId: string
     let clienteNuevo = false
     let compartenContacto: string[] = []
     if (decision.tipo === 'ficha') {
       clienteId = decision.clienteId
     } else {
-      if (!alta) return { estado: 'sin_persona' }
+      // El lead nace con el DNI/CIF del documento (o sin identificador si no trae): lo decide `planTomador`.
+      const nuevo = decision.alta
       // Sin DNI, el mismo recibo subido dos veces (o reintentado) no puede abrir dos leads: se reusa
       // el lead sin DNI que se llama EXACTAMENTE igual.
-      const previo = alta.dni ? null : await leadMismoNombre(e.correduriaId, `${alta.nombre} ${alta.apellidos}`)
+      const previo = nuevo.dni ? null : await leadMismoNombre(e.correduriaId, `${nuevo.nombre} ${nuevo.apellidos}`)
       // Las fichas con su teléfono o email NO se usan (un móvil es un hogar): se anotan en el lead
-      // como posibles duplicados (`posiblesDuplicadosPorContacto`).
-      if (!previo) compartenContacto = await fichasPorContacto(e.correduriaId, contacto)
+      // como posibles duplicados (`planTomador`).
+      if (!previo) compartenContacto = decision.posiblesDuplicados
       const lead = previo
         ? { ok: true as const, id: previo }
-        : alta.dni
-        ? await altaCliente(e.correduriaId, { nombre: alta.nombre, apellidos: alta.apellidos, dni: alta.dni, fuente: 'venta_directa' }, e.actor)
-        : await altaLeadSinContacto(e.correduriaId, { nombre: alta.nombre, apellidos: alta.apellidos, tipoPersona: alta.tipoPersona ?? null }, e.actor, e.origen)
+        : nuevo.dni
+        ? await altaCliente(e.correduriaId, { nombre: nuevo.nombre, apellidos: nuevo.apellidos, dni: nuevo.dni, fuente: 'venta_directa' }, e.actor)
+        : await altaLeadSinContacto(e.correduriaId, { nombre: nuevo.nombre, apellidos: nuevo.apellidos, tipoPersona: nuevo.tipoPersona }, e.actor, e.origen)
       if (lead.ok) {
         clienteId = lead.id
         clienteNuevo = !previo
@@ -272,12 +282,15 @@ export async function oportunidadDesdeLectura(
         : `Pedir la fecha de vencimiento: el documento subido (${e.origen}) no la trae legible${sinVerificar}`) + avisoFinanciada,
     }
     const o = await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`)
-    if (o.ok) return { estado: 'creada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada, completada: false, ficha: volcado, financiada }
-    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada, completada: o.completada, ficha: volcado, financiada }
-    return { estado: 'error', motivo: o.motivo }
+    const posiblesDuplicados = clienteNuevo ? compartenContacto.filter((id) => id !== clienteId) : []
+    const conIdentificador = decision.tipo === 'lead' ? Boolean(decision.alta.dni) : Boolean(alta?.dni)
+    const comun = { clienteId, clienteNuevo, relacionado, vence, llamada, ficha: volcado, financiada, posiblesDuplicados, conIdentificador }
+    if (o.ok) return { estado: 'creada', oportunidadId: o.id, completada: false, ...comun }
+    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, completada: o.completada, ...comun }
+    return { estado: 'error', motivo: o.motivo, clienteId }
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo abrir la oportunidad:', err instanceof Error ? err.message : err)
-    return { estado: 'error', motivo: err instanceof Error ? err.message : String(err) }
+    return { estado: 'error', motivo: err instanceof Error ? err.message : String(err), ...(clienteId ? { clienteId } : {}) }
   }
 }
 
@@ -351,13 +364,6 @@ async function catalogoCompanias(): Promise<{ codigoDgs: string; nombreComun: st
   return prismaAsegura()
     .companiaDgs.findMany({ select: { codigoDgs: true, nombreComun: true, nombreCima: true } })
     .catch(() => [])
-}
-
-/** Ids de las fichas con el teléfono o el email de la póliza. `[]` si no trae o no se pudo buscar. */
-async function fichasPorContacto(correduriaId: string, contacto: ContactoTomadorLeido): Promise<string[]> {
-  if (!contacto.telefono && !contacto.email) return []
-  const cs = await coincidencias(correduriaId, { telefono: contacto.telefono, email: contacto.email }).catch(() => null)
-  return cs ? posiblesDuplicadosPorContacto(cs) : []
 }
 
 /**
