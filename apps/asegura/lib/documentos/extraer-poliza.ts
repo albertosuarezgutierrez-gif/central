@@ -33,7 +33,9 @@ import {
   normalizarHogarLeido,
   hogarLeidoVacio,
   normalizarContactoTomador,
+  normalizarFigurasLeidas,
   type AutoLeido,
+  type FiguraLeida,
   type ContactoTomadorLeido,
   type HogarLeido,
 } from '@central/module-seguros'
@@ -83,10 +85,11 @@ export const RAMOS_CON_LECTURA_EXTENDIDA = Object.keys(
 /**
  * Lo leído además de los datos del ramo (03/10/2026): el contacto y domicilio del TOMADOR, la clase
  * de carné, el mediador y la cesión de derechos (`contacto`, ya normalizado: `null` = no lo dice), y
- * el JSON tal cual lo devolvió la IA (`bruto`, que se guarda con el documento). Opcionales para no
+ * el JSON tal cual lo devolvió la IA (`bruto`, que se guarda con el documento). En motor, además,
+ * las `figuras` que no son (necesariamente) el tomador: propietario y conductores. Opcionales para no
  * romper a quien construye un resultado a mano (tests, Telegram).
  */
-type Extra = { contacto?: ContactoTomadorLeido; bruto?: Record<string, unknown> | null }
+type Extra = { contacto?: ContactoTomadorLeido; figuras?: FiguraLeida[]; bruto?: Record<string, unknown> | null }
 
 export type ResultadoLecturaPoliza =
   | { fase: 'ninguno'; motivo: string }
@@ -108,7 +111,8 @@ Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
 "domicilioPoblacion":string|null,"domicilioProvincia":string|null,"claseCarnet":string|null,
 "mediador":string|null,"cesionDerechos":boolean|null,"tomadorEsConductorHabitual":boolean|null,
 "tomadorEsEmpresa":boolean|null,"cifTomador":string|null,
-"conductorPrincipal":{"nombre":string,"fechaNacimiento":"YYYY-MM-DD"|null,"dni":string|null}|null}
+"figuras":[{"rol":"propietario"|"conductor_habitual"|"conductor_ocasional","nombre":string,"dni":string|null,
+"fechaNacimiento":"YYYY-MM-DD"|null,"fechaCarnet":"YYYY-MM-DD"|null,"claseCarnet":string|null,"esTomador":boolean|null}]}
 
 Reglas, por orden de importancia:
 - "ramo" es de qué es la póliza: uno de auto, moto, hogar, vida, salud, decesos,
@@ -153,10 +157,13 @@ Reglas, por orden de importancia:
   Cópialo tal cual aparece. Si el tomador es persona física, null.
 - "dni" es el DNI/NIE del tomador PERSONA FÍSICA. Si el tomador es una empresa, "dni" es null (NO
   pongas el de la persona de contacto ni el del conductor).
-- "conductorPrincipal": la persona que figura como "Conductor principal" / "conductor habitual" en
-  los detalles de los conductores: su "nombre" (nombre y apellidos), su "fechaNacimiento" y su "dni"
-  (null si no aparece). Si la póliza no detalla conductores, null. No metas aquí conductores
-  adicionales u ocasionales.
+- "figuras" (solo auto o moto; en otro ramo, []): cada PERSONA que la póliza nombra como
+  "propietario" (titular del vehículo), "conductor_habitual" (conductor principal/habitual) o
+  "conductor_ocasional" (conductor adicional/ocasional), una entrada por rol y persona, como mucho 6.
+  También si es el propio tomador (entonces "esTomador": true; si es otra persona, false; si no se
+  sabe, null). "nombre" con nombre y apellidos; "dni", "fechaNacimiento", "fechaCarnet" y
+  "claseCarnet" ("B", "A2"…) de ESA persona, null si no aparecen junto a ella. Si la póliza no
+  nombra a nadie en esos papeles, [].
 - Los datos de CONTACTO son SOLO del TOMADOR (no de la compañía, ni de la oficina, ni del agente,
   ni el teléfono de asistencia): "telefono" (el suyo, móvil o fijo), "email" (el suyo). Si el
   tomador es una empresa, son los que figuran en el bloque del titular (aunque sean los de su
@@ -166,7 +173,7 @@ Reglas, por orden de importancia:
   ("Calle Mayor 17 41003 Sevilla"), sepáralo en sus partes. NO son la dirección de la
   vivienda asegurada (esa va en "direccion"/"cp"/"localidad"): aunque coincidan, rellena las dos.
 - "fechaNacimiento" es la del TOMADOR persona física (o del conductor principal si es la misma
-  persona). Si el tomador es una empresa, null: la del conductor va en "conductorPrincipal".
+  persona). Si el tomador es una empresa, null: la del conductor va en su entrada de "figuras".
 - "fechaCarnet" y "claseCarnet" son del CONDUCTOR HABITUAL (el permiso que figura en la póliza).
 - "tomadorEsConductorHabitual": true SOLO si el documento dice que el tomador es también el
   conductor habitual/principal (p. ej. "Conductor habitual: el tomador", o el mismo nombre y DNI en
@@ -186,6 +193,13 @@ Reglas, por orden de importancia:
 
 const PETICION = 'Extrae los datos de esta póliza de seguro.'
 
+/**
+ * Tope de salida de la IA (texto y visión). 1.700 bastaban para los campos sueltos; con `figuras`
+ * (hasta 6 personas con 7 claves cada una) el JSON crece, y uno cortado no parsea y se queda en
+ * «nada leído» (03/10/2026).
+ */
+const MAX_TOKENS = 2400
+
 function nadaLeido(motivo: string): ResultadoLecturaPoliza {
   return { fase: 'ninguno', motivo }
 }
@@ -198,7 +212,7 @@ function mensaje(e: unknown): string {
  * Un JSON que no parsea produce TODOS los campos a `null`, nunca campos a
  * medias: media extracción pintada como póliza es peor que ninguna.
  */
-function parsear(salida: string): { ramo: Ramo | null; auto: AutoLeido; hogar: HogarLeido; contacto: ContactoTomadorLeido; bruto: Record<string, unknown> | null } {
+function parsear(salida: string): { ramo: Ramo | null; auto: AutoLeido; hogar: HogarLeido; contacto: ContactoTomadorLeido; figuras: FiguraLeida[]; bruto: Record<string, unknown> | null } {
   let bruto: unknown
   try {
     bruto = JSON.parse(cleanJSON(salida))
@@ -211,19 +225,21 @@ function parsear(salida: string): { ramo: Ramo | null; auto: AutoLeido; hogar: H
     auto: normalizarAutoLeido(bruto),
     hogar: normalizarHogarLeido(bruto),
     contacto: normalizarContactoTomador(bruto),
+    figuras: normalizarFigurasLeidas(bruto),
     bruto: Object.keys(o).length > 0 ? o : null,
   }
 }
 
 function empaquetar(
-  { ramo, auto, hogar, contacto, bruto }: ReturnType<typeof parsear>,
+  { ramo, auto, hogar, contacto, figuras, bruto }: ReturnType<typeof parsear>,
   fuente: 'texto' | 'vision',
 ): ResultadoLecturaPoliza {
   // La ÚNICA fuente de qué ramo tiene lectura extendida es `FASE_POR_RAMO_EXTENDIDO`:
   // si un ramo no está ahí (incluido "no reconocido"), no hay `fase` que mirar.
   const fase = ramo !== null ? FASE_POR_RAMO_EXTENDIDO[ramo as keyof typeof FASE_POR_RAMO_EXTENDIDO] : undefined
   if (fase === 'hogar') return { ramo, fase, fuente, datos: hogar, contacto, bruto }
-  if (fase === 'auto') return { ramo, fase, fuente, datos: auto, contacto, bruto }
+  // Las figuras (propietario, conductores) solo se leen de motor.
+  if (fase === 'auto') return { ramo, fase, fuente, datos: auto, contacto, figuras, bruto }
   // Ramo sin lectura extendida (o no reconocido): se enseña el contrato con la
   // misma forma que auto (comparte todos esos campos), sin el vehículo — que
   // ya llega a `null` porque el modelo no debía rellenarlo para ese ramo.
@@ -285,7 +301,7 @@ export async function leerPoliza(
       )
     }
     try {
-      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1700, timeoutMs: 55_000, privado: true })
+      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: MAX_TOKENS, timeoutMs: 55_000, privado: true })
       return empaquetar(parsear(salida), 'texto')
     } catch (e) {
       console.warn('[asegura] lectura de texto por IA falló:', e)
@@ -304,6 +320,7 @@ export async function leerPoliza(
         INSTRUCCION,
         [{ data: buffer.toString('base64'), mediaType: mimeType }],
         PETICION,
+        { maxTokens: MAX_TOKENS },
       )
       return empaquetar(parsear(salida), 'vision')
     } catch (e) {

@@ -9,7 +9,6 @@ import {
   extraccionSinPii,
   contactoTomadorVacio,
   normalizarContactoTomador,
-  notaConductorPrincipal,
   parcheFichaDesdePoliza,
   polizaFinanciada,
   telefonoEspanol,
@@ -332,39 +331,19 @@ test('🪤 empresa: un CIF distinto en la ficha (o una persona) no toca NADA', (
   assert.equal(parcheFichaDesdePoliza(fichaVacia(), { ...sinCif, dni: DNI }, null, HOY).motivo, 'sin_dni_documento')
 })
 
-test('🪤 conductor principal ≠ tomador empresa: solo una nota con el NOMBRE (sin fecha, sin DNI)', () => {
-  const c = leidaEmpresa().contacto
-  const nota = notaConductorPrincipal(c, 'Ejemplo Viajes SL', CIF)
-  assert.equal(nota, 'Conductor principal en la póliza: Pedro Prueba Ficticio. Crear/vincular su ficha a mano.')
-  assert.equal(nota?.includes('1971'), false)
-  // Persona física que es su propio conductor principal: nada que sugerir.
-  const fisica = normalizarContactoTomador({ tomador: 'Pedro Prueba Ficticio', conductorPrincipal: { nombre: 'PRUEBA FICTICIO, PEDRO' } })
-  assert.equal(notaConductorPrincipal(fisica, 'Pedro Prueba Ficticio', null), null)
-  const otro = normalizarContactoTomador({ tomador: 'Ana Ruiz Gil', conductorPrincipal: { nombre: 'Pedro Prueba Ficticio' } })
-  assert.ok(notaConductorPrincipal(otro, 'Ana Ruiz Gil', null))
-  assert.equal(notaConductorPrincipal(leida().contacto, 'Ana Ruiz', DNI), null) // sin conductor leído
-})
-
-test('🪤 lista blanca: ni el conductor principal ni el CIF del tomador se guardan en claro', () => {
+test('🪤 lista blanca: ni el conductor principal, ni las figuras, ni el CIF del tomador se guardan en claro', () => {
   const r = extraccionSinPii({
     compania: 'Qover', tomadorEsEmpresa: true, cifTomador: 'ES' + CIF, tomador: 'Ejemplo Viajes SL',
     conductorPrincipal: { nombre: 'Pedro Prueba Ficticio', fechaNacimiento: '1971-07-02', dni: DNI },
+    figuras: [{ rol: 'propietario', nombre: 'Lucía Otra Persona', dni: '87654321X', fechaNacimiento: '1990-03-04' }],
   })
   assert.ok(r)
   const enTexto = JSON.stringify(r)
-  for (const v of ['Pedro', 'Ficticio', '1971', CIF, DNI, 'Ejemplo Viajes']) assert.equal(enTexto.includes(v), false, `${v} no se guarda`)
+  for (const v of ['Pedro', 'Ficticio', '1971', CIF, DNI, 'Ejemplo Viajes', 'Lucía', '87654321X', '1990']) assert.equal(enTexto.includes(v), false, `${v} no se guarda`)
+  assert.equal(r.leidos.figuras, true)
   assert.equal(r.datos.tomadorEsEmpresa, true)
   assert.equal(r.leidos.conductorPrincipal, true)
   assert.equal(r.leidos.cifTomador, true)
-})
-
-test('🪤 conductor con nombre contenido en el del tomador (o al revés) NO es otra persona', () => {
-  const sola = normalizarContactoTomador({ tomador: 'Ana Ruiz Gil', conductorPrincipal: { nombre: 'Ana' } })
-  assert.equal(notaConductorPrincipal(sola, 'Ana Ruiz Gil', null), null)
-  const larga = normalizarContactoTomador({ tomador: 'Ana Ruiz', conductorPrincipal: { nombre: 'Ana Ruiz Gil' } })
-  assert.equal(notaConductorPrincipal(larga, 'Ana Ruiz', null), null)
-  const otra = normalizarContactoTomador({ tomador: 'Ana Ruiz Gil', conductorPrincipal: { nombre: 'Pedro' } })
-  assert.ok(notaConductorPrincipal(otra, 'Ana Ruiz Gil', null))
 })
 
 test('🪤 un «SA» en el nombre con DNI físico válido no hace empresa al tomador (no se pierde el DNI)', () => {

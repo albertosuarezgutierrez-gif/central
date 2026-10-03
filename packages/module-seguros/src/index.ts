@@ -544,11 +544,9 @@ export {
   companiaLegible,
   companiaPorNombre,
   cifDeEmpresa,
-  conductorEsOtraPersona,
   esTomadorEmpresa,
   extraccionSinPii,
   identificadorFiscal,
-  notaConductorPrincipal,
   contactoTomadorVacio,
   emailNormalizado,
   normalizarContactoTomador,
@@ -1072,6 +1070,31 @@ export {
   type HitoDevolucion,
   type EntradaTareaDevolucion,
 } from './seguimiento-devolucion.ts'
+// Las figuras de una póliza de motor que no son el tomador: quién, con qué rol, y qué lead se reutiliza (03/10/2026).
+export {
+  ANIOS_CONDUCTOR_NOVEL,
+  DETALLE_ROL_FIGURA,
+  EDAD_CONDUCTOR_JOVEN,
+  MAX_FIGURAS,
+  NOTA_CONDUCTOR_JOVEN_NOVEL,
+  ROLES_FIGURA_LEIDOS,
+  conductoresDelPlan,
+  detalleRelacionFigura,
+  esOtraPersona,
+  hayConductorJovenONovel,
+  leadSinDniReutilizable,
+  normalizarFigurasLeidas,
+  parcheFigura,
+  planFiguras,
+  type CandidatoLeadSinDni,
+  type FiguraLeida,
+  type LecturaFiguras,
+  type ParcheFigura,
+  type PersonaFigura,
+  type PlanFiguras,
+  type RolFiguraLeido,
+  type TomadorFiguras,
+} from './figuras-poliza.ts'
 export { ROLES_FIGURA, ETIQUETA_ROL, rolesDelRamo, esRolFigura, limpiarFiguras, diferenciasVariante, resumenDiferencias, type RolFigura, type FigurasVariante, type Diferencia } from './variantes-riesgo.ts'
 
 export { ibanValido, normalizarIban } from './iban.ts'

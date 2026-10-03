@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarOportunidadDocumento } from './oportunidad-documento.ts'
+import { interpretarFigurasDocumento, interpretarOportunidadDocumento, textoFigurasDocumento } from './oportunidad-documento.ts'
 
 test('creada: dice cuándo vence y cuándo se llama', () => {
   const a = interpretarOportunidadDocumento({ estado: 'creada', clienteId: 'c1', vence: '2026-12-31', llamada: '2026-11-16', clienteNuevo: false, relacionado: false })
@@ -42,4 +42,29 @@ test('🪤 ficha null = no se ha tocado ninguna; ausente = asegura no lo dice (n
   assert.equal(interpretarFichaDocumento(null), null)
   assert.equal(interpretarFichaDocumento({ creada: true }), null)
   assert.equal(interpretarFichaDocumento(undefined), undefined)
+})
+
+test('🪤 figuras: una respuesta antigua (sin `figuras`) no pinta nada', () => {
+  assert.equal(interpretarFigurasDocumento({ estado: 'creada', clienteId: 'c1' }), null)
+  assert.equal(interpretarFigurasDocumento({ estado: 'creada', figuras: null }), null)
+  assert.equal(interpretarFigurasDocumento({ estado: 'creada', figuras: [], avisosFiguras: [] }), null)
+  assert.equal(interpretarFigurasDocumento(null), null)
+})
+
+test('🪤 figuras: se agrupan por ficha y se dice si se crearon o ya existían', () => {
+  const f = interpretarFigurasDocumento({
+    estado: 'creada',
+    figuras: [
+      { rol: 'propietario', clienteId: 'p1', creada: true },
+      { rol: 'conductor_habitual', clienteId: 'p1', creada: true },
+      { rol: 'conductor_ocasional', clienteId: 'p2', creada: false },
+      { rol: null, clienteId: 'p3', creada: true },
+      { rol: 'raro', clienteId: '' },
+    ],
+    avisosFiguras: ['Conductor ocasional: figura de más'],
+  })
+  assert.ok(f)
+  assert.equal(f.figuras.length, 3)
+  assert.equal(textoFigurasDocumento(f), 'Figuras: Propietario y conductor habitual (creada) · Conductor ocasional (ya existía) · Figura sin rol (creada)')
+  assert.deepEqual(f.avisos, ['Conductor ocasional: figura de más'])
 })
