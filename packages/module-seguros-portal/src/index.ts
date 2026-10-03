@@ -92,8 +92,42 @@ export type {
 } from './avisos.ts'
 export { CORTE_AVISO_POLIZA_NUEVA, DIAS_AVISO_POLIZA_NUEVA, polizasNuevasParaAviso } from './poliza-nueva.ts'
 export { DIAS_AVISO_PARTE, partesParaAviso } from './parte-aviso.ts'
-export { TIPOS_SINIESTRO, ETIQUETA_TIPO_SINIESTRO, opcionesTipoSiniestro, esTipoSiniestro } from './tipo-siniestro.ts'
-export type { TipoSiniestro } from './tipo-siniestro.ts'
+export {
+  TIPOS_SINIESTRO,
+  ETIQUETA_TIPO_SINIESTRO,
+  TIPOS_POR_RAMO,
+  opcionesTipoSiniestro,
+  esTipoSiniestro,
+  ramoDelParte,
+  codigosEiacSugeridos,
+} from './tipo-siniestro.ts'
+export type { TipoSiniestro, TipoDeRamo } from './tipo-siniestro.ts'
+export {
+  CAMPOS_PARTE_POR_RAMO,
+  MAX_TEXTO_LISTA,
+  MAX_TELEFONO,
+  camposParteDeRamo,
+  campoAplica,
+  normalizarDatosRamoParte,
+  lineasDatosRamoParte,
+  datosClaveParte,
+  CLAVES_PII_PARTE,
+  esClavePiiParte,
+  partirDatosRamoParte,
+  unirDatosRamoParte,
+} from './parte-ramo.ts'
+export type {
+  CampoParte,
+  CampoParteSimple,
+  CampoParteMulti,
+  CampoParteLista,
+  SubcampoLista,
+  ElementoLista,
+  ValorParte,
+  DatosRamoParte,
+  ContextoParte,
+  LineaDatoRamo,
+} from './parte-ramo.ts'
 export type { ParteFilaAviso, ParteParaAviso } from './parte-aviso.ts'
 export type { FilaPolizaNueva, PolizaNuevaParaAviso } from './poliza-nueva.ts'
 export {
@@ -149,6 +183,7 @@ export {
   parsearFechaHecho,
   plazoComunicacion,
   normalizarParte,
+  aplicarRamoAlParte,
   bloqueDatosVehiculo,
   componerDescripcion,
   ZONAS_VEHICULO,
@@ -283,6 +318,8 @@ export type { DatosAvisoParteNuevo } from './aviso-parte-nuevo.ts'
 export type { DatosParteWhatsapp } from './parte-whatsapp.ts'
 export type { FilaCompania, LineaAsistenciaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania.ts'
+export { vistaDelParte, entradaValida } from './parte-entrada.ts'
+export type { OpcionEntradaParte, VistaParte } from './parte-entrada.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
 // (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
 // existen en la BD pero NO se escriben: no hay pantalla que los pida.
@@ -350,6 +387,14 @@ export {
   explicarSiniestro,
 } from './siniestro-historial.ts'
 export type { EstadoSiniestro, SiniestroHistorial, ExplicacionSiniestro } from './siniestro-historial.ts'
+export { seguimientoDeParte, indemnizadoDe, peritoAsignadoDe, PASOS_PARTE } from './parte-seguimiento.ts'
+export type {
+  SeguimientoParte,
+  SiniestroParaSeguimiento,
+  PasoVisibleParte,
+  ClavePasoParte,
+  EntradaSeguimientoParte,
+} from './parte-seguimiento.ts'
 export { tramitacionSiniestro, importeNumero } from './siniestro-tramitacion.ts'
 export type { PasoTramitacion, TramitacionSiniestro } from './siniestro-tramitacion.ts'
 export { detalleSiniestroCompania, descripcionRiesgoLegible, normalizarCodigoCoberturaNumerico } from './siniestro-detalle.ts'

@@ -50,7 +50,7 @@ export async function detectarCambiosPolizas(correduriaId: string): Promise<Resu
         primaBruta: true,
         fraccionamiento: true,
         coberturasRel: { select: { codigo: true, capitalAsegurado: true, franquicia: true } },
-        siniestros: { select: { id: true, estado: true } },
+        siniestros: { where: { fusionadoEnSiniestroId: null }, select: { id: true, estado: true } },
       },
     })
     resumen.polizas = polizas.length

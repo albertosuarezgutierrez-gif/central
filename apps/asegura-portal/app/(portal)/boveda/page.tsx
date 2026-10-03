@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 
 import {
   canalDeCompania,
+  entradaValida,
   plazoComunicacion,
   type FilaCompania,
 } from '@central/module-seguros-portal'
@@ -21,6 +22,7 @@ import { pendientesDeTi } from '@/lib/pendiente-de-ti'
 import { presupuestosPendientesDeIdentidad } from '@/lib/presupuesto'
 import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
+import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
@@ -97,7 +99,7 @@ export default async function Boveda({
   const parametros = await searchParams
   const vista = vistaDeBoveda(parametros.vista)
   // El botón «Dar parte de esta póliza» de la ficha llega con esto en la URL.
-  // Es solo una SUGERENCIA de selección dentro de `polizasParte`, que ya está
+  // Es solo una SUGERENCIA de selección dentro de `opcionesParte`, que ya está
   // acotada a esta identidad — nunca una clave de consulta: `ParteSiniestro`
   // la ignora si no está en esa lista.
   const polizaInicial = typeof parametros.poliza === 'string' ? parametros.poliza : null
@@ -326,32 +328,30 @@ export default async function Boveda({
   const cuentaPropias =
     (bloqueMias?.titulares ?? []).reduce((n, t) => n + t.polizas.length, 0) + declaradas.length
 
-  // Lo que se le ofrece elegir al dar un parte: lo MISMO que acepta la ruta, ni
-  // más (403 tras rellenar el formulario) ni menos. La lista sale SIEMPRE de la
-  // cartera ya leída para esta identidad: ningún id de póliza entra desde la request.
+  // Lo que se le ofrece al dar un parte. La lista sale SIEMPRE de la cartera ya
+  // leída para esta identidad: ningún id de póliza entra desde la request.
   //
-  // 🚨 De las AUTORIZADAS solo entran las que traen el alcance `partes`
+  // 🚨 De las AUTORIZADAS solo admiten parte las que traen el alcance
   // (`polizasParaParte`, la misma fuente que usa la ruta): ver una póliza no da
   // derecho a declarar un siniestro en nombre de su tomador (decisión de Alberto,
-  // 24/09/2026). Las demás siguen dando sus TELÉFONOS (`telefonosAjenos`): llamar
-  // a la grúa del coche de tu padre no es actuar en su nombre.
+  // 24/09/2026). Las demás siguen dando sus TELÉFONOS (`puedeParte: false`):
+  // llamar a la grúa del coche de tu padre no es actuar en su nombre.
+  //
+  // 🚨 03/10/2026 (Alberto): UNA sola lista y UN solo camino para cualquier póliza
+  // —propia, ajena, donde figura, aportada—. Cada opción lleva `puedeParte`, que sale
+  // de `polizasParaParte` (la misma fuente que la ruta, que sigue devolviendo 403).
+  // La pantalla no tiene ramas por tipo de póliza: solo mira ese booleano.
   const conParte = polizasParaParte(cartera)
-  const opcionesAutorizadas = cartera.autorizadas.flatMap((t) =>
-    t.polizas.map((p) => ({ id: p.id, opcion: opcionCartera(p, companias, t.nombre, t.nombre) })),
-  )
-  const telefonosAjenos = opcionesAutorizadas.filter((o) => !conParte.has(o.id)).map((o) => o.opcion)
-  // Las pólizas donde FIGURA (propietario, conductor…): figurar da derecho a dar
-  // parte (27/09/2026). Se filtran igual por `conParte` para que la lista y la
-  // ruta no puedan divergir.
-  const opcionesInterviniente = cartera.intervinientes.flatMap((t) =>
-    t.polizas.filter((p) => conParte.has(p.id)).map((p) => opcionCartera(p, companias, t.nombre, t.nombre)),
-  )
-  const polizasParte: PolizaOpcionParte[] = [
-    ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p, companias, undefined, t.nombre))),
-    ...opcionesAutorizadas.filter((o) => conParte.has(o.id)).map((o) => o.opcion),
-    ...opcionesInterviniente,
+  const opcionDe = (p: PolizaPortal, titular?: string, titularPoliza?: string | null): PolizaOpcionParte =>
+    opcionCartera(p, companias, conParte.has(p.id), titular, titularPoliza)
+  const opcionesParte: PolizaOpcionParte[] = [
+    ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionDe(p, undefined, t.nombre))),
+    ...cartera.autorizadas.flatMap((t) => t.polizas.map((p) => opcionDe(p, t.nombre, t.nombre))),
+    ...cartera.intervinientes.flatMap((t) => t.polizas.map((p) => opcionDe(p, t.nombre, t.nombre))),
     ...declaradas.map((p) => ({
       valor: `declarada:${p.id}`,
+      // La ruta comprueba que la aportada sea de esta identidad: siempre lo es aquí.
+      puedeParte: true,
       // 🚨 El cruce es por nombre EXACTO y aquí es donde más falla, a propósito:
       // el nombre de una póliza aportada lo leyó una IA de un PDF («MAPFRE
       // ESPAÑA S.A.»), así que muchas caerán en «pídenoslo». Es el degradado
@@ -385,8 +385,7 @@ export default async function Boveda({
   // cuenta (ahí decide si preselecciona), y se repite aquí porque de esto
   // depende además el ORDEN de la pantalla: un id inventado en la barra de
   // direcciones no puede reordenar nada ni sugerir que hay una póliza detrás.
-  const polizaEnLista =
-    polizaInicial !== null && polizasParte.some((p) => p.valor === polizaInicial) ? polizaInicial : null
+  const polizaEnLista = entradaValida(opcionesParte, polizaInicial)
 
   // El plazo del art. 16 LCS se calcula AQUÍ, en el servidor, y no en el
   // componente de cliente: `plazoComunicacion` necesita un «hoy», y un «hoy»
@@ -436,8 +435,11 @@ export default async function Boveda({
   // «Buenas tardes, cliente» delata que no sabemos quién ha entrado.
   const saludo = saludoPorHora(hoy, 'Europe/Madrid')
   const pila = nombreDePila(identidad.nombre)
+  // Estado del siniestro de cada parte, cruzado DENTRO de la cartera ya autorizada (sin lectura nueva).
+  const seguimientos = seguimientosDePartes(partes, cartera)
   const partesEnviados: ParteEnviado[] = partes.map((p: PartePortal) => ({
     id: p.id,
+    seguimiento: seguimientos.get(p.id) ?? null,
     // Columna `date`: llega como medianoche UTC, así que el ISO recortado es
     // exactamente el día que declaró la persona, sin desfase de zona.
     fechaHecho: p.fechaHecho.toISOString().slice(0, 10),
@@ -737,7 +739,7 @@ export default async function Boveda({
           PRIMERO y el historial detrás. Sin él —quien entra por la pestaña— se
           conserva el orden de siempre: mirar es mayoría.
 
-          `polizaEnLista` se comprueba contra `polizasParte`, que ya está
+          `polizaEnLista` se comprueba contra `opcionesParte`, que ya está
           acotada a esta identidad: un id manipulado en la URL no cambia el
           orden de nada ni abre ninguna póliza ajena. */}
       {vista === 'siniestro' && (
@@ -747,8 +749,7 @@ export default async function Boveda({
               plegado, así que el historial sigue a un paso de scroll; lo que no
               puede quedar debajo es el teléfono de quien acaba de tener un golpe. */}
           <ParteSiniestro
-            polizas={polizasParte}
-            soloTelefonos={telefonosAjenos}
+            polizas={opcionesParte}
             corredor={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }}
             partes={partesEnviados}
             polizaInicial={polizaEnLista}
@@ -767,7 +768,7 @@ export default async function Boveda({
       {vista === 'recordatorios' && (
         <Recordatorios
           recordatorios={recordatorios}
-          polizas={[...polizasParte, ...telefonosAjenos]}
+          polizas={opcionesParte}
           precargas={precargas.precargas}
           carnetsIlegibles={precargas.carnetsIlegibles}
         />
@@ -853,12 +854,15 @@ function Titular({
 function opcionCartera(
   p: PolizaPortal,
   companias: readonly FilaCompania[],
+  /** De `polizasParaParte`: la única fuente de si se puede dar parte de ella. */
+  puedeParte: boolean,
   titular?: string,
   /** El titular tal como figura, para el mensaje a la compañía (propias incluidas). */
   titularPoliza?: string | null,
 ): PolizaOpcionParte {
   return {
     valor: `cartera:${p.id}`,
+    puedeParte,
     // A quién acude el asegurado de ESA compañía. Viaja pegado a la opción para
     // que la pantalla pueda cambiarlo al cambiar de póliza sin volver al
     // servidor: el momento en el que alguien abre esto es justo el peor para

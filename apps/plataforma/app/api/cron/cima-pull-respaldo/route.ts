@@ -27,13 +27,14 @@ import { tgAviso } from '@/lib/telegram'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { leerIngestaCima } from '@/lib/correduria/ingesta-cima'
-import { decidirRespaldoPull } from '@central/module-seguros'
+import { decidirRespaldoPull, corteSiniestros, textoCorteSiniestros } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 // El pull espera al adaptador Java (~200 s). El dispatch corta a los 280 s.
 export const maxDuration = 300
 
 const AGENTE = 'cima_pull_respaldo'
+const AGENTE_CORTE = 'cima_siniestros_corte'
 const URL_POR_DEFECTO = 'https://app.grupoasegura.com/api/crons/cima-pull'
 
 /** Lo que dejó la pasada anterior, para no repetir el mismo aviso dos veces al día. */
@@ -48,11 +49,45 @@ async function detalleAnterior(): Promise<string | null> {
   }
 }
 
+/**
+ * Alerta de CORTE DE SINIESTROS (SIN sin novedades > 7 días mientras POL/REC sí llegan).
+ * Va aquí porque este cron corre 3 veces al día y ya lee la ingesta. Como mucho UN aviso
+ * por día de Madrid: la marca vive en el latido `cima_siniestros_corte` (detalle `alerta AAAA-MM-DD`).
+ * Sin dato (`sin_dato`) no avisa ni se da por bueno: queda en el latido como no-ok.
+ * Granularidad: `diasSinPersistir` va en días enteros (×24 h), el umbral de 7 días = 168 h (`DIAS_CORTE_SINIESTROS`).
+ */
+async function avisarCorteSiniestros(
+  dias: Record<string, number | null> | null | undefined,
+): Promise<string> {
+  const porTipo = dias ? Object.fromEntries(Object.entries(dias).map(([k, v]) => [k, v === null ? null : v * 24])) : null
+  const corte = corteSiniestros({ porTipo })
+  if (corte.estado === 'sin_dato') {
+    await registrarLatido(AGENTE_CORTE, false, `sin dato: ${corte.motivo}`)
+    return 'sin_dato'
+  }
+  if (corte.estado === 'ok') {
+    await registrarLatido(AGENTE_CORTE, true, 'ok')
+    return 'ok'
+  }
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date())
+  const marca = `alerta ${hoy}`
+  try {
+    const filas = await prisma.$queryRaw<Array<{ detalle: string | null }>>(Prisma.sql`
+      SELECT detalle FROM agente_latidos WHERE agente = ${AGENTE_CORTE}`)
+    if (filas[0]?.detalle?.startsWith(marca)) return 'alerta_ya_avisada'
+  } catch { /* si no se puede leer, se avisa igual: perder el aviso es peor que duplicarlo */ }
+  await tgAviso('correduria.cima-siniestros-corte', textoCorteSiniestros(corte)).catch(() => {})
+  await registrarLatido(AGENTE_CORTE, false, `${marca} · SIN ${Math.floor(corte.horasSin / 24)} d`)
+  return 'alerta'
+}
+
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const ingesta = await leerIngestaCima()
   const ultimoPull = ingesta.estado === 'ok' ? ingesta.salud.ultimoPull : null
+  // Antes de decidir el respaldo: la alerta no depende de que haya que lanzar el pull.
+  await avisarCorteSiniestros(ingesta.estado === 'ok' ? ingesta.salud.diasSinPersistir : null).catch(() => {})
   // Franja FIJA (`?franja=…`, 25/09/2026): CIMA recomienda descargar a las 16:00 y a las
   // 20:30 de Madrid, que es cuando las compañías ya han dejado sus ficheros. Esas pasadas
   // no dependen de Actions: disparan siempre, y su éxito no se avisa (es lo normal).

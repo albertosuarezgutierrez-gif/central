@@ -411,6 +411,12 @@ model PortalParteSiniestro {
   hayTerceros         Boolean?          @map("hay_terceros")
   /// Opcional; lista cerrada = `TIPOS_SINIESTRO` de `@central/module-seguros-portal`. `null` = no lo marcó.
   tipoSiniestro       String?           @map("tipo_siniestro")
+  /// Respuestas por RAMO del cliente (`parte-ramo.ts` de `@central/module-seguros-portal`). `null` = nada contestado.
+  /// Clave ausente = «no lo sé». `culpaPropiaDeclarada` es DECLARACIÓN: nunca pisa la posición de la compañía.
+  datosRamo           Json?             @map("datos_ramo")
+  /// 🔒 Datos personales de TERCEROS del parte (`CLAVES_PII_PARTE`: contrarios, heridos, afectados, persona afectada),
+  /// en UN sobre AES-256-GCM `v1:` con `PII_ENCRYPTION_KEY`. Nunca en `datosRamo` (CHECK en BD). `null` = no dio ninguno.
+  datosRamoCifrado    String?           @map("datos_ramo_cifrado")
   estado              PortalParteEstado @default(enviado)
   /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
   siniestroId         String?           @map("siniestro_id") @db.Uuid
@@ -1082,6 +1088,9 @@ model Siniestro {
   gravedad           SiniestroGravedad?
   createdAt          DateTime           @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime           @map("updated_at") @db.Timestamptz(6)
+  /// Alta manual unida a un siniestro de CIMA (SQL 2026-10-03d de apps/asegura, con su GRANT).
+  /// La lectura del portal filtra `null`: si no, el cliente vería el mismo siniestro dos veces.
+  fusionadoEnSiniestroId String?        @map("fusionado_en_siniestro_id") @db.Uuid
 
   @@map("siniestros")
   @@schema("seguros")
