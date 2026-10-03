@@ -543,7 +543,12 @@ export {
   DIAS_VENCIMIENTO_URGENTE,
   companiaLegible,
   companiaPorNombre,
+  cifDeEmpresa,
+  conductorEsOtraPersona,
+  esTomadorEmpresa,
   extraccionSinPii,
+  identificadorFiscal,
+  notaConductorPrincipal,
   contactoTomadorVacio,
   emailNormalizado,
   normalizarContactoTomador,
@@ -552,6 +557,7 @@ export {
   polizaFinanciada,
   telefonoEspanol,
   vencimientoUrgente,
+  type ConductorPrincipalLeido,
   type ContactoTomadorLeido,
   type ExtraccionFicha,
   type FichaActual,
@@ -559,6 +565,7 @@ export {
   type ParcheFicha,
   type ResultadoParche,
 } from './datos-ficha-de-poliza.ts'
+export { fechaTextoAIso } from './fecha-texto.ts'
 export { anioCumpleanos, diaMadrid, esCumpleanos } from './cumpleanos.ts'
 export { ordenarHistorialRiesgo, type EslabonHistorial, type EslabonRiesgo } from './historial-riesgo.ts'
 export { agruparCalidad, esReglaCalidad, ORDEN_REGLAS, REGLAS_CALIDAD, type GrupoCalidad, type IncidenciaCalidad, type ReglaCalidad } from './calidad-dato.ts'

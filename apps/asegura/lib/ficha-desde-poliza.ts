@@ -93,12 +93,14 @@ export async function volcarPolizaEnFicha(e: {
 
     // 1. Columnas de la ficha, cada una SOLO si sigue vacía en el momento de escribir.
     let dni: { cifrado: string; hash: string | null } | null = null
+    const etiquetaId = p.esEmpresa ? 'CIF' : 'DNI'
     if (p.dni) {
       // Un DNI que ya está en otra ficha no se copia aquí: serían dos fichas de la misma persona, y
-      // eso se resuelve fusionando (por SQL con lote), no escribiendo.
+      // eso se resuelve fusionando (por SQL con lote), no escribiendo. El CIF de una empresa va en la
+      // MISMA columna, con el mismo cifrado y el mismo índice ciego (`dni_lookup_hash`).
       const otros = await coincidencias(e.correduriaId, { dni: p.dni }, e.clienteId).catch(() => null)
-      if (otros === null) avisos.push('no se pudo comprobar si el DNI ya estaba en otra ficha: no se ha guardado')
-      else if (otros.length > 0) avisos.push(`el DNI ya está en otra ficha (${otros.map((o) => o.id).join(', ')}): no se ha copiado, posible duplicado`)
+      if (otros === null) avisos.push(`no se pudo comprobar si el ${etiquetaId} ya estaba en otra ficha: no se ha guardado`)
+      else if (otros.length > 0) avisos.push(`el ${etiquetaId} ya está en otra ficha (${otros.map((o) => o.id).join(', ')}): no se ha copiado, posible duplicado`)
       else dni = { cifrado: encryptField(p.dni), hash: computeDniLookupHash(p.dni) }
     }
     // Cada columna se escribe SOLO si estaba vacía, y el RETURNING dice cuáles lo estaban de verdad
@@ -109,7 +111,7 @@ export async function volcarPolizaEnFicha(e: {
     const campos: Campo[] = []
     if (dni) {
       campos.push({
-        flag: 'dni', etiqueta: 'DNI', auditoria: 'dni', cuando: Prisma.sql`${vacio('a.a_dni')}`,
+        flag: 'dni', etiqueta: etiquetaId, auditoria: 'dni', cuando: Prisma.sql`${vacio('a.a_dni')}`,
         sets: [
           Prisma.sql`dni = case when ${vacio('a.a_dni')} then ${dni.cifrado} else c.dni end`,
           Prisma.sql`dni_lookup_hash = case when ${vacio('a.a_dni')} then ${dni.hash} else c.dni_lookup_hash end`,

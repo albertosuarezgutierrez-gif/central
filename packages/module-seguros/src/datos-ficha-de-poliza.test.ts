@@ -3,11 +3,13 @@ import assert from 'node:assert/strict'
 import {
   CLAVES_EXTRACCION_GUARDABLES,
   CLAVES_PERSONALES_EXTRACCION,
+  cifDeEmpresa,
   companiaLegible,
   companiaPorNombre,
   extraccionSinPii,
   contactoTomadorVacio,
   normalizarContactoTomador,
+  notaConductorPrincipal,
   parcheFichaDesdePoliza,
   polizaFinanciada,
   telefonoEspanol,
@@ -83,7 +85,7 @@ test('🪤 NO PISA: lo que la ficha ya tiene se queda como está', () => {
   const r = parcheFichaDesdePoliza(llena, leida(), DNI, HOY)
   assert.equal(r.motivo, 'ok')
   for (const [k, v] of Object.entries(r.parche)) {
-    if (k === 'fechaNacimientoAConfirmar') assert.equal(v, false, k)
+    if (k === 'fechaNacimientoAConfirmar' || k === 'esEmpresa') assert.equal(v, false, k)
     else assert.equal(v, null, `${k} no se pisa`)
   }
   assert.deepEqual(r.rellenado, [])
@@ -119,7 +121,7 @@ test('🪤 DNI distinto = otra persona: parche VACÍO aunque la ficha esté vac�
   const r = parcheFichaDesdePoliza(fichaVacia(), leida(), '87654321X', HOY)
   assert.equal(r.motivo, 'dni_distinto')
   assert.deepEqual(r.rellenado, [])
-  assert.ok(Object.entries(r.parche).every(([k, v]) => (k === 'fechaNacimientoAConfirmar' ? v === false : v === null)))
+  assert.ok(Object.entries(r.parche).every(([k, v]) => (k === 'fechaNacimientoAConfirmar' || k === 'esEmpresa' ? v === false : v === null)))
 })
 
 test('sin DNI en el documento, o DNI de la ficha ilegible: no se toca nada', () => {
@@ -238,4 +240,137 @@ test('extracción: cifCompania solo si tiene forma de CIF de sociedad; un DNI o 
   assert.equal(extraccionSinPii({ cifCompania: 12345678 })?.datos.cifCompania, null)
   assert.equal(extraccionSinPii({ cifCompania: 'A-28141935' })?.datos.cifCompania, 'A28141935')
   assert.equal(extraccionSinPii({ cifCompania: 'A28141935' })?.datos.cifCompania, 'A28141935')
+})
+
+// ─── Tomador EMPRESA (póliza Qover a nombre de una SL, 03/10/2026). Datos ficticios. ─────────────
+
+const CIF = 'B12345674'
+const leidaEmpresa = (extra: Record<string, unknown> = {}): ExtraccionFicha => ({
+  ramo: 'auto',
+  dni: null,
+  // Lo que el modelo pueda haber puesto aquí es del CONDUCTOR, no de la empresa.
+  fechaNacimiento: '1971-07-02',
+  fechaCarnet: '1990-01-15',
+  contacto: normalizarContactoTomador({
+    tomador: 'Ejemplo Viajes SL',
+    tomadorEsEmpresa: true,
+    cifTomador: 'ES' + CIF,
+    telefono: '+34600111222',
+    email: 'contacto@ejemplo-viajes.es',
+    domicilioVia: 'Calle Falsa 1',
+    domicilioCp: '41001',
+    domicilioPoblacion: 'Sevilla',
+    tomadorEsConductorHabitual: true,
+    conductorPrincipal: { nombre: 'Pedro Prueba Ficticio', fechaNacimiento: '2 de jul. de 1971', dni: null },
+    ...extra,
+  }),
+})
+
+test('🪤 CIF con prefijo «ES» (Número de IVA / NIF-IVA): se quita y se valida; un DNI no es CIF', () => {
+  assert.equal(cifDeEmpresa('ES' + CIF), CIF)
+  assert.equal(cifDeEmpresa('ES-B-12345674'), CIF)
+  assert.equal(cifDeEmpresa(CIF), CIF)
+  assert.equal(cifDeEmpresa('ES12345678Z'), null) // NIF-IVA de persona física: no es una empresa
+  assert.equal(cifDeEmpresa('ESX1234567'), null)
+  assert.equal(cifDeEmpresa('N/A'), null)
+  const c = leidaEmpresa().contacto
+  assert.equal(c.cifTomador, CIF)
+  assert.equal(c.tomadorEsEmpresa, true)
+  // El modelo dejó el NIF-IVA en `dni` y no dijo nada: también es empresa, con su CIF.
+  const enDni = normalizarContactoTomador({ tomador: 'Algo Distinto', dni: 'ES' + CIF })
+  assert.equal(enDni.cifTomador, CIF)
+  assert.equal(enDni.tomadorEsEmpresa, true)
+  // Forma societaria en el nombre, sin CIF: empresa, pero sin identidad.
+  assert.equal(normalizarContactoTomador({ tomador: 'Ejemplo Viajes S.L.' }).tomadorEsEmpresa, true)
+  assert.equal(normalizarContactoTomador({ tomador: 'Ana Ruiz', dni: DNI }).tomadorEsEmpresa, null)
+})
+
+test('🪤 conductor principal: fecha en texto español a ISO, DNI solo de persona física', () => {
+  const cp = leidaEmpresa().contacto.conductorPrincipal
+  assert.deepEqual(cp, { nombre: 'Pedro Prueba Ficticio', fechaNacimiento: '1971-07-02', dni: null })
+  assert.equal(normalizarContactoTomador({ conductorPrincipal: { nombre: 'X Y', dni: CIF } }).conductorPrincipal?.dni, null)
+  assert.equal(normalizarContactoTomador({ conductorPrincipal: { nombre: 'N/A' } }).conductorPrincipal, null)
+})
+
+test('🪤 empresa: rellena CIF, domicilio, teléfono y email; NUNCA fecha de nacimiento ni carné', () => {
+  const r = parcheFichaDesdePoliza(fichaVacia(), leidaEmpresa(), null, HOY)
+  assert.equal(r.motivo, 'ok')
+  assert.equal(r.parche.esEmpresa, true)
+  assert.equal(r.parche.dni, CIF)
+  assert.equal(r.parche.direccion, 'Calle Falsa 1')
+  assert.equal(r.parche.codigoPostal, '41001')
+  assert.equal(r.parche.ciudad, 'Sevilla')
+  assert.equal(r.parche.telefono, '600111222')
+  assert.equal(r.parche.email, 'contacto@ejemplo-viajes.es')
+  assert.equal(r.parche.fechaNacimiento, null)
+  assert.equal(r.parche.carnet, null)
+  assert.ok(r.rellenado.includes('CIF'))
+  assert.ok(!r.rellenado.some((x) => x.startsWith('fecha') || x.startsWith('carné')))
+})
+
+test('🪤 empresa: no pisa lo que la ficha ya tiene (mismo CIF)', () => {
+  const llena = { ...fichaVacia(), tieneDni: true, tieneDireccion: true, telefonos: ['600111222'], emails: ['contacto@ejemplo-viajes.es'] }
+  const r = parcheFichaDesdePoliza(llena, leidaEmpresa(), CIF, HOY)
+  assert.equal(r.motivo, 'ok')
+  assert.equal(r.parche.dni, null)
+  assert.equal(r.parche.direccion, null)
+  assert.equal(r.parche.codigoPostal, null)
+  assert.equal(r.parche.telefono, null)
+  assert.equal(r.parche.email, null)
+  assert.deepEqual(r.rellenado, [])
+})
+
+test('🪤 empresa: un CIF distinto en la ficha (o una persona) no toca NADA', () => {
+  const r = parcheFichaDesdePoliza({ ...fichaVacia(), tieneDni: true }, leidaEmpresa(), 'B87654320', HOY)
+  assert.equal(r.motivo, 'dni_distinto')
+  assert.deepEqual(r.rellenado, [])
+  assert.equal(r.parche.direccion, null)
+  assert.equal(r.parche.telefono, null)
+  assert.equal(parcheFichaDesdePoliza({ ...fichaVacia(), tieneDni: true }, leidaEmpresa(), DNI, HOY).motivo, 'dni_distinto')
+  // Empresa sin CIF: el DNI que traiga es el de la persona de contacto, no la identifica.
+  const sinCif = leidaEmpresa({ cifTomador: null })
+  assert.equal(parcheFichaDesdePoliza(fichaVacia(), { ...sinCif, dni: DNI }, null, HOY).motivo, 'sin_dni_documento')
+})
+
+test('🪤 conductor principal ≠ tomador empresa: solo una nota con el NOMBRE (sin fecha, sin DNI)', () => {
+  const c = leidaEmpresa().contacto
+  const nota = notaConductorPrincipal(c, 'Ejemplo Viajes SL', CIF)
+  assert.equal(nota, 'Conductor principal en la póliza: Pedro Prueba Ficticio. Crear/vincular su ficha a mano.')
+  assert.equal(nota?.includes('1971'), false)
+  // Persona física que es su propio conductor principal: nada que sugerir.
+  const fisica = normalizarContactoTomador({ tomador: 'Pedro Prueba Ficticio', conductorPrincipal: { nombre: 'PRUEBA FICTICIO, PEDRO' } })
+  assert.equal(notaConductorPrincipal(fisica, 'Pedro Prueba Ficticio', null), null)
+  const otro = normalizarContactoTomador({ tomador: 'Ana Ruiz Gil', conductorPrincipal: { nombre: 'Pedro Prueba Ficticio' } })
+  assert.ok(notaConductorPrincipal(otro, 'Ana Ruiz Gil', null))
+  assert.equal(notaConductorPrincipal(leida().contacto, 'Ana Ruiz', DNI), null) // sin conductor leído
+})
+
+test('🪤 lista blanca: ni el conductor principal ni el CIF del tomador se guardan en claro', () => {
+  const r = extraccionSinPii({
+    compania: 'Qover', tomadorEsEmpresa: true, cifTomador: 'ES' + CIF, tomador: 'Ejemplo Viajes SL',
+    conductorPrincipal: { nombre: 'Pedro Prueba Ficticio', fechaNacimiento: '1971-07-02', dni: DNI },
+  })
+  assert.ok(r)
+  const enTexto = JSON.stringify(r)
+  for (const v of ['Pedro', 'Ficticio', '1971', CIF, DNI, 'Ejemplo Viajes']) assert.equal(enTexto.includes(v), false, `${v} no se guarda`)
+  assert.equal(r.datos.tomadorEsEmpresa, true)
+  assert.equal(r.leidos.conductorPrincipal, true)
+  assert.equal(r.leidos.cifTomador, true)
+})
+
+test('🪤 conductor con nombre contenido en el del tomador (o al revés) NO es otra persona', () => {
+  const sola = normalizarContactoTomador({ tomador: 'Ana Ruiz Gil', conductorPrincipal: { nombre: 'Ana' } })
+  assert.equal(notaConductorPrincipal(sola, 'Ana Ruiz Gil', null), null)
+  const larga = normalizarContactoTomador({ tomador: 'Ana Ruiz', conductorPrincipal: { nombre: 'Ana Ruiz Gil' } })
+  assert.equal(notaConductorPrincipal(larga, 'Ana Ruiz', null), null)
+  const otra = normalizarContactoTomador({ tomador: 'Ana Ruiz Gil', conductorPrincipal: { nombre: 'Pedro' } })
+  assert.ok(notaConductorPrincipal(otra, 'Ana Ruiz Gil', null))
+})
+
+test('🪤 un «SA» en el nombre con DNI físico válido no hace empresa al tomador (no se pierde el DNI)', () => {
+  const c = normalizarContactoTomador({ tomador: 'Juan Pérez SA', dni: DNI })
+  assert.notEqual(c.tomadorEsEmpresa, true)
+  const r = parcheFichaDesdePoliza(fichaVacia(), { ...leida(), contacto: c }, null, HOY)
+  assert.equal(r.parche.dni, DNI)
+  assert.equal(r.parche.esEmpresa, false)
 })

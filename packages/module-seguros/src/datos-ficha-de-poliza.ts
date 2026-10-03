@@ -11,6 +11,9 @@
 //  - Solo con IDENTIDAD: el documento trae DNI y es el de la ficha (o la ficha no tiene ninguno).
 //    Un DNI distinto es otra persona (el padre, el cuñado: caso de 21/09/2026) → parche VACÍO.
 //    Sin DNI en el documento tampoco se toca nada: el nombre no identifica.
+//  - Tomador EMPRESA (póliza Qover a nombre de una SL, 03/10/2026): la identidad es su CIF (también
+//    escrito como NIF-IVA «ESB…»), con el mismo criterio; y en su ficha nunca van fecha de
+//    nacimiento ni carné (son del conductor, otra persona: solo se SUGIERE en el historial).
 //  - `null` = «no se sabe». Nada de `''`, `'N/A'` ni valores de cajón: se anulan aquí.
 //  - Fecha de nacimiento 01/01 = casi siempre «solo sé el año» (lo hacen varias compañías y CIMA):
 //    se escribe (mejor que nada para tarificar) pero marcada «a confirmar».
@@ -21,6 +24,8 @@ import { MARCADORES_SIN_DATO, cifCompania } from './documento-auto.ts'
 import { resolverCompania, type CompaniaCatalogo } from './defensa-cartera.ts'
 import { normalizarCp, normalizarDni, normalizarEmail, normalizarFechaNacimiento, normalizarTelefono } from './cliente-edicion.ts'
 import { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type TipoCarnet } from './carnet-ficha.ts'
+import { fechaTextoAIso } from './fecha-texto.ts'
+import { cifDeEmpresa, esTomadorEmpresa, identificadorFiscal } from './poliza-de-documento.ts'
 
 const SIN_DATO = new Set(MARCADORES_SIN_DATO)
 
@@ -53,6 +58,25 @@ export type ContactoTomadorLeido = {
    * de una póliza de auto es la del CONDUCTOR: sin esto no se sabe de quién es, y no se vuelca.
    */
   tomadorEsConductorHabitual: boolean | null
+  /**
+   * `true` = el tomador («titular de la póliza», «policyholder», «contratante») es una PERSONA
+   * JURÍDICA (03/10/2026, póliza Qover a nombre de una SL). Entonces su identidad es el CIF, y ni
+   * fecha de nacimiento ni carné son suyos. `null` = no se sabe.
+   */
+  tomadorEsEmpresa: boolean | null
+  /** CIF del tomador empresa, sin el prefijo «ES» del NIF-IVA y validado. Solo de persona jurídica. */
+  cifTomador: string | null
+  /** El conductor principal que figura en la póliza (puede no ser el tomador). `null` = no figura. */
+  conductorPrincipal: ConductorPrincipalLeido | null
+}
+
+/** El conductor principal de la póliza. Es OTRA persona cuando el tomador es una empresa. */
+export type ConductorPrincipalLeido = {
+  nombre: string
+  /** ISO; las fechas en texto español («2 de jul. de 1971») ya vienen convertidas. */
+  fechaNacimiento: string | null
+  /** DNI/NIE de persona física con la letra comprobada; `null` = no figura o no cuadra. */
+  dni: string | null
 }
 
 export function contactoTomadorVacio(): ContactoTomadorLeido {
@@ -67,6 +91,26 @@ export function contactoTomadorVacio(): ContactoTomadorLeido {
     mediador: null,
     cesionDerechos: null,
     tomadorEsConductorHabitual: null,
+    tomadorEsEmpresa: null,
+    cifTomador: null,
+    conductorPrincipal: null,
+  }
+}
+
+// `identificadorFiscal`/`cifDeEmpresa`/`esTomadorEmpresa` viven en `poliza-de-documento.ts` (los
+// usa también el alta del lead); se re-exportan aquí.
+export { cifDeEmpresa, esTomadorEmpresa, identificadorFiscal }
+
+function conductorPrincipal(v: unknown): ConductorPrincipalLeido | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  const nombre = texto(o.nombre, 200)
+  if (!nombre) return null
+  const id = identificadorFiscal(o.dni)
+  return {
+    nombre,
+    fechaNacimiento: fechaTextoAIso(texto(o.fechaNacimiento, 40)),
+    dni: id && id.tipoPersona === 'fisica' ? id.valor : null,
   }
 }
 
@@ -113,7 +157,21 @@ export function normalizarContactoTomador(raw: unknown): ContactoTomadorLeido {
     mediador: texto(o.mediador, 200),
     cesionDerechos: booleano(o.cesionDerechos),
     tomadorEsConductorHabitual: booleano(o.tomadorEsConductorHabitual),
+    ...tomadorEmpresa(o),
+    conductorPrincipal: conductorPrincipal(o.conductorPrincipal),
   }
+}
+
+/**
+ * ¿Es empresa el tomador, y cuál es su CIF? El CIF se busca en `cifTomador` y, si el modelo lo dejó
+ * en `dni`, también ahí (solo si es de persona JURÍDICA: un DNI nunca pasa por CIF). Quién es
+ * empresa lo decide `esTomadorEmpresa` (un DNI físico válido manda sobre la forma del nombre).
+ */
+function tomadorEmpresa(o: Record<string, unknown>): Pick<ContactoTomadorLeido, 'tomadorEsEmpresa' | 'cifTomador'> {
+  const cif = cifDeEmpresa(o.cifTomador) ?? cifDeEmpresa(o.dni)
+  const dicho = booleano(o.tomadorEsEmpresa)
+  const empresa = esTomadorEmpresa({ tomador: texto(o.tomador), dni: o.dni, cifTomador: o.cifTomador, tomadorEsEmpresa: dicho })
+  return { tomadorEsEmpresa: empresa ? true : dicho, cifTomador: cif }
 }
 
 // ─── Póliza de concesionario / financiada ───────────────────────────────────
@@ -208,7 +266,10 @@ export type ExtraccionFicha = {
 
 /** Cada campo: el valor a ESCRIBIR, o `null` = no se toca. */
 export type ParcheFicha = {
+  /** El identificador a escribir en `clientes.dni`: el DNI, o el CIF si `esEmpresa`. */
   dni: string | null
+  /** El tomador es persona jurídica: `dni` es su CIF y nunca hay fecha de nacimiento ni carné. */
+  esEmpresa: boolean
   fechaNacimiento: string | null
   /** La fecha escrita es 01/01: solo se sabe el año. Va con nota «a confirmar». */
   fechaNacimientoAConfirmar: boolean
@@ -233,6 +294,7 @@ export type ResultadoParche = {
 export function parcheVacio(): ParcheFicha {
   return {
     dni: null,
+    esEmpresa: false,
     fechaNacimiento: null,
     fechaNacimientoAConfirmar: false,
     direccion: null,
@@ -265,25 +327,34 @@ export function parcheFichaDesdePoliza(
   hoyIso: string,
 ): ResultadoParche {
   const vacio = (motivo: MotivoParche): ResultadoParche => ({ parche: parcheVacio(), rellenado: [], motivo })
-  const dniDoc = ext.dni ? normalizarDni(ext.dni) : null
-  if (!dniDoc || !dniDoc.ok) return vacio('sin_dni_documento')
+  const c = ext.contacto
+  // Tomador EMPRESA (03/10/2026): su identidad es el CIF, con el MISMO criterio que el DNI (solo
+  // huecos, nunca pisar, y uno distinto del de la ficha = nada). Un DNI de persona física no
+  // identifica a una empresa (sería el de la persona de contacto): sin CIF, nada.
+  const empresaDicha = c.tomadorEsEmpresa === true
+  const idDoc = identificadorFiscal(empresaDicha ? (c.cifTomador ?? ext.dni) : ext.dni)
+  if (!idDoc) return vacio('sin_dni_documento')
+  const esEmpresa = idDoc.tipoPersona === 'juridica'
+  if (empresaDicha && !esEmpresa) return vacio('sin_dni_documento')
   if (dniFicha === undefined || (ficha.tieneDni && !dniFicha)) return vacio('dni_ficha_ilegible')
   if (dniFicha) {
     const f = normalizarDni(dniFicha)
     const clave = f.ok ? f.valor.valor : dniFicha.toUpperCase().replace(/[^0-9A-Z]/g, '')
-    if (clave !== dniDoc.valor.valor) return vacio('dni_distinto')
+    if (clave !== idDoc.valor) return vacio('dni_distinto')
   }
 
   const p = parcheVacio()
+  p.esEmpresa = esEmpresa
   const rellenado: string[] = []
-  const c = ext.contacto
 
   if (!ficha.tieneDni) {
-    p.dni = dniDoc.valor.valor
-    rellenado.push('DNI')
+    p.dni = idDoc.valor
+    rellenado.push(esEmpresa ? 'CIF' : 'DNI')
   }
 
-  if (!ficha.tieneFechaNacimiento && ext.fechaNacimiento) {
+  // 🚨 Fecha de nacimiento y carné son de una PERSONA: en la ficha de una empresa no se escriben
+  // nunca (la que trae la póliza es la del conductor, que es otra persona).
+  if (!esEmpresa && !ficha.tieneFechaNacimiento && ext.fechaNacimiento) {
     const r = normalizarFechaNacimiento(ext.fechaNacimiento, new Date(`${hoyIso}T23:59:59Z`))
     if (r.ok) {
       p.fechaNacimiento = r.valor
@@ -326,7 +397,7 @@ export function parcheFichaDesdePoliza(
   // si el documento dice que el tomador ES el conductor habitual: la fecha de carné de la póliza es
   // la del conductor, que puede ser el hijo. Sin clase en el documento, una póliza de AUTO es el B
   // (la misma regla que la sincro de CIMA); de otro ramo (moto: A, A2, A1…) no se adivina.
-  if (ficha.carnets === 0 && c.tomadorEsConductorHabitual === true && fechaReal(ext.fechaCarnet)) {
+  if (!esEmpresa && ficha.carnets === 0 && c.tomadorEsConductorHabitual === true && fechaReal(ext.fechaCarnet)) {
     const tipo: TipoCarnet | null = c.claseCarnet ?? (ext.ramo === 'auto' ? 'B' : null)
     if (tipo) {
       const r = revisarCarnet({ tipo, fecha: ext.fechaCarnet, fechaNacimiento: p.fechaNacimiento ?? ext.fechaNacimiento, hoy: hoyIso })
@@ -338,6 +409,46 @@ export function parcheFichaDesdePoliza(
   }
 
   return { parche: p, rellenado, motivo: 'ok' }
+}
+
+// ─── El conductor principal: solo una SUGERENCIA ────────────────────────────
+
+const palabrasNombre = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9ñ]+/).filter((x) => x.length >= 2 && !['de', 'del', 'la', 'las', 'los', 'y'].includes(x))
+
+/**
+ * ¿El conductor principal es OTRA persona que el tomador? Con un tomador empresa, siempre. Si no:
+ * el documento dice que el tomador conduce → no; DNI de los dos → si difieren; si no, por nombre
+ * (las mismas palabras = la misma persona). Sin tomador legible no se sabe → `false` (no se sugiere).
+ */
+export function conductorEsOtraPersona(c: Pick<ContactoTomadorLeido, 'conductorPrincipal' | 'tomadorEsEmpresa' | 'tomadorEsConductorHabitual'>, tomador: string | null, dniTomador: string | null): boolean {
+  const cp = c.conductorPrincipal
+  if (!cp) return false
+  if (c.tomadorEsEmpresa === true) return true
+  if (c.tomadorEsConductorHabitual === true) return false
+  const a = identificadorFiscal(dniTomador)
+  if (cp.dni && a) return cp.dni !== a.valor
+  if (!tomador) return false
+  const pt = new Set(palabrasNombre(tomador))
+  const pc = new Set(palabrasNombre(cp.nombre))
+  const [corto, largo] = pt.size <= pc.size ? [pt, pc] : [pc, pt]
+  // Un nombre contenido en el otro («Ana» en «Ana Ruiz Gil») es la MISMA persona: ante la duda no se
+  // sugiere crear otra ficha (revisión PR 4168). Sin palabras legibles no se sabe → no se sugiere.
+  if (corto.size === 0) return false
+  return ![...corto].every((x) => largo.has(x))
+}
+
+/**
+ * La nota del historial que SUGIERE crear/vincular la ficha del conductor principal. Nunca se crea
+ * la ficha ni la relación solas: el nombre no identifica, y fundir a dos personas no se deshace.
+ *
+ * 🚨 Solo el NOMBRE, sin la fecha de nacimiento ni el DNI: `historial_interno` va en claro y no se
+ * puede borrar (supresión RGPD; mismo criterio que `solicitud-datos.ts` y la nota de la ficha, que
+ * lleva los nombres de los campos y no sus valores), y el conductor es un TERCERO sin ficha.
+ */
+export function notaConductorPrincipal(c: Pick<ContactoTomadorLeido, 'conductorPrincipal' | 'tomadorEsEmpresa' | 'tomadorEsConductorHabitual'>, tomador: string | null, dniTomador: string | null): string | null {
+  if (!c.conductorPrincipal || !conductorEsOtraPersona(c, tomador, dniTomador)) return null
+  return `Conductor principal en la póliza: ${c.conductorPrincipal.nombre.slice(0, 120)}. Crear/vincular su ficha a mano.`
 }
 
 // ─── Lo que se guarda con el documento ──────────────────────────────────────
@@ -371,6 +482,7 @@ export const CLAVES_EXTRACCION_GUARDABLES = [
   'capitalContenido',
   'cesionDerechos',
   'tomadorEsConductorHabitual',
+  'tomadorEsEmpresa',
 ] as const
 
 /** Claves personales conocidas: de estas solo consta SI se leyeron (`leidos`), nunca el valor. */
@@ -391,6 +503,8 @@ export const CLAVES_PERSONALES_EXTRACCION = [
   'localidad',
   'matricula',
   'mediador',
+  'cifTomador',
+  'conductorPrincipal',
 ] as const
 
 /**

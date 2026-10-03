@@ -53,6 +53,9 @@ export type EntradaPolizaDocumento = {
   forzar?: boolean
   fichero: { nombre: string; mime: string; contenido: Buffer }
   actor: string
+  /** Lo que el lector supo del tomador empresa (`contacto`): se da de alta con SU CIF, nunca con el DNI del contacto. */
+  tomadorEsEmpresa?: boolean | null
+  cifTomador?: string | null
 }
 
 export type ResultadoPolizaDocumento =
@@ -111,7 +114,11 @@ export async function guardarPolizaDeDocumento(
   correduriaId: string,
   entrada: EntradaPolizaDocumento,
 ): Promise<ResultadoPolizaDocumento> {
-  const { alta, avisos: avisosAlta } = prepararAltaDesdeDocumento(entrada.lectura)
+  // Una empresa se da de alta con SU CIF, nunca con el DNI de su contacto (revisión PR 4168).
+  const { alta, avisos: avisosAlta } = prepararAltaDesdeDocumento(entrada.lectura, {
+    tomadorEsEmpresa: entrada.tomadorEsEmpresa ?? null,
+    cifTomador: entrada.cifTomador ?? null,
+  })
   const { declarada, avisos: avisosPoliza } = prepararDeclaradaDesdeDocumento(entrada.lectura)
   const avisos = [...avisosAlta, ...avisosPoliza]
 

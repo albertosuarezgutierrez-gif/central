@@ -97,6 +97,17 @@ test('la fecha de nacimiento de una empresa no se arrastra', () => {
   assert.equal(r.alta?.fechaNacimiento, null)
 })
 
+test('🪤 un CIF (o el lector diciendo «empresa») hace jurídica a la empresa aunque el nombre no lo delate', () => {
+  const porCif = prepararAltaDesdeDocumento(lectura({ tomador: 'Ejemplo Viajes', dni: 'B12345674', fechaNacimiento: '1971-07-02' }))
+  assert.equal(porCif.alta?.tipoPersona, 'juridica')
+  assert.equal(porCif.alta?.nombre, 'Ejemplo Viajes')
+  assert.equal(porCif.alta?.apellidos, '')
+  assert.equal(porCif.alta?.fechaNacimiento, null)
+  const dicho = prepararAltaDesdeDocumento(lectura({ tomador: 'Ejemplo Viajes', dni: null }), { tomadorEsEmpresa: true })
+  assert.equal(dicho.alta?.tipoPersona, 'juridica')
+  assert.equal(prepararAltaDesdeDocumento(lectura({ tomador: 'Juan Pérez Gil', dni: '12345678Z' })).alta?.tipoPersona, 'fisica')
+})
+
 // ─── El canal queda marcado: llegó directamente al corredor ─────────────────
 
 test('la fuente es venta directa, no web ni portal', () => {
@@ -321,4 +332,31 @@ test('sin coincidencias los dos cajones están vacíos, no nulos', () => {
   // `[]` aquí sí es «se miró y no hay»: la consulta se hizo.
   const r = clasificarCoincidencias([])
   assert.deepEqual(r, { mismaPersona: [], mismoContacto: [] })
+})
+
+test('🪤 un «Sa», «Sc» o «Cb» suelto es un apellido; las siglas cuentan con puntos o al final', () => {
+  assert.equal(tipoPersonaDeNombre('Juan Sa Pérez'), 'fisica')
+  assert.equal(tipoPersonaDeNombre('María Cb Ruiz'), 'fisica')
+  assert.equal(tipoPersonaDeNombre('Ejemplo Viajes SL'), 'juridica')
+  assert.equal(tipoPersonaDeNombre('Ejemplo Viajes, SLU'), 'juridica')
+  assert.equal(tipoPersonaDeNombre('Talleres S.A. del Sur'), 'juridica')
+  assert.equal(tipoPersonaDeNombre('Hermanos Ruiz C.B.'), 'juridica')
+  assert.equal(tipoPersonaDeNombre('Asociación Vecinal Ejemplo'), 'juridica')
+})
+
+test('🪤 con un DNI/NIE válido de persona física NO es empresa, diga lo que diga el nombre', () => {
+  const r = prepararAltaDesdeDocumento(lectura({ tomador: 'Juan Sa Pérez', dni: '12345678Z' }))
+  assert.equal(r.alta?.tipoPersona, 'fisica')
+  assert.equal(r.alta?.dni, '12345678Z')
+  assert.equal(prepararAltaDesdeDocumento(lectura({ tomador: 'Juan Pérez SA', dni: '12345678Z' })).alta?.tipoPersona, 'fisica')
+})
+
+test('🪤 una empresa se da de alta con SU CIF, nunca con el DNI del contacto', () => {
+  const contacto = prepararAltaDesdeDocumento(lectura({ tomador: 'Ejemplo Viajes', dni: '12345678Z' }), { tomadorEsEmpresa: true })
+  assert.equal(contacto.alta?.tipoPersona, 'juridica')
+  assert.equal(contacto.alta?.dni, null)
+  assert.ok(contacto.avisos.includes('sin_dni'))
+  const conCif = prepararAltaDesdeDocumento(lectura({ tomador: 'Ejemplo Viajes', dni: '12345678Z' }), { tomadorEsEmpresa: true, cifTomador: 'ESB12345674' })
+  assert.equal(conCif.alta?.dni, 'B12345674')
+  assert.equal(prepararAltaDesdeDocumento(lectura({ tomador: 'Ejemplo Viajes', cifTomador: 'ESB12345674' })).alta?.dni, 'B12345674')
 })
