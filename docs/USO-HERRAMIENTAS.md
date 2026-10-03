@@ -167,23 +167,23 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 251 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 252 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 244 | 33.545 | 25.819.781 | 0 | 0 |
-| `otro` | 241 | 8.058 | 22.619.703 | 12.026.588 | 0 |
-| `lectura-directa` | 219 | 5.809 | 17.031.814 | 0 | 0 |
+| `bash` | 245 | 33.546 | 25.819.813 | 0 | 0 |
+| `otro` | 242 | 8.061 | 22.619.791 | 12.026.588 | 0 |
+| `lectura-directa` | 220 | 5.837 | 17.064.252 | 0 | 0 |
 | `mcp:github` | 224 | 5.492 | 4.556.292 | 50.346.138 | 89 |
 | `escritura` | 170 | 3.491 | 51.075.027 | 0 | 0 |
-| `sql` | 157 | 3.296 | 1.632.267 | 2.351.230 | 13 |
+| `sql` | 158 | 3.308 | 1.637.305 | 2.351.230 | 13 |
 | `mcp:Claude_Code_Remote` | 140 | 1.475 | 303.946 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 21 | 588 | 2.475.618 | 0 | 0 |
 | `mcp:Vercel` | 56 | 560 | 813.164 | 201.411 | 14 |
 | `mcp:Gmail` | 29 | 367 | 568.888 | 0 | 15 |
-| `mcp:Supabase` | 102 | 289 | 27.717 | 0 | 2 |
+| `mcp:Supabase` | 103 | 290 | 27.815 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
-| `agente:general-purpose` | 54 | 222 | 159.724 | 5.001.285 | 0 |
+| `agente:general-purpose` | 55 | 224 | 161.292 | 5.005.361 | 0 |
 | `agente:agente-architect` | 40 | 125 | 94.122 | 4.251.259 | 0 |
 | `mcp:Google-Drive` | 13 | 95 | 88.235 | 0 | 2 |
 | `mcp:Google_Drive` | 16 | 87 | 110.438 | 0 | 19 |
@@ -191,7 +191,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
 | `agente:agente-mecanico` | 28 | 68 | 54.289 | 2.838.502 | 0 |
 | `agente:Explore` | 28 | 65 | 32.709 | 1.503.946 | 0 |
-| `agente:rastreador-codigo` | 33 | 58 | 19.423 | 649.514 | 0 |
+| `agente:rastreador-codigo` | 34 | 59 | 19.732 | 649.514 | 0 |
 | `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
