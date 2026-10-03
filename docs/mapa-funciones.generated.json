@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T17:12:29Z",
-  "sha": "8a112b39cb8afa95a1c5e2ce8b6c50f40817c4fa",
+  "generadoEn": "2026-10-03T19:06:35Z",
+  "sha": "93fef63680badec2d4f7638c0c2a04af9480cef6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -16407,6 +16407,27 @@
       "hash": "31eea4d95e54"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/tope/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 35,
+          "resumen": "Tope de gasto de Avant2 en EUROS por mes (decisión de Alberto, 29/09/2026). Puerto para plataforma, que es quien tiene el bot de Telegram. GET → { estado:'ok', mes, gastadoCents, topeCents, pendientes"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/tope",
+      "hash": "641f12e39a6a"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/vida-nuevo/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -24030,7 +24051,8 @@
         "reservarEmision",
         "cerrarEmisionFacturable",
         "cerrarFacturable",
-        "cerrarDescartado"
+        "cerrarDescartado",
+        "gastadoMesCents"
       ],
       "funciones": [
         {
@@ -24104,6 +24126,15 @@
           "retorno": "Promise<void>",
           "linea": 231,
           "resumen": "Cierra como NO facturable. Exige evidencia por contrato (y por CHECK en BD). Solo hay tres evidencias admisibles, y todas significan que el vendor no llegó a tarificar: fallo de autenticación (401/403"
+        },
+        {
+          "nombre": "gastadoMesCents",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, costes: { rerate: number; submit: number; limites: number },",
+          "retorno": "Promise<number | null>",
+          "linea": 256,
+          "resumen": "Lo gastado este mes natural (Madrid) en el libro, en céntimos. Lo lee el tope en euros (`tope-euros-bd.ts`), que no toca la tabla: el libro solo se mira desde aquí. Las líneas de ReRate/Submit/límites"
         }
       ],
       "tablas": [
@@ -24111,7 +24142,7 @@
         "ventana"
       ],
       "rutaApi": null,
-      "hash": "44d60502175f"
+      "hash": "e12742b59f0b"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/contador.ts",
@@ -24481,7 +24512,7 @@
           "exportada": false,
           "params": "deps: DepsCotizar, p: PeticionCotizacion, extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean; respuesta?: unknown },",
           "retorno": "Promise<Guardado>",
-          "linea": 107,
+          "linea": 108,
           "resumen": "Guarda la cotización sin poder tumbarla. 🚨 El orden y el `try` de aquí son la decisión de diseño del módulo: cuando se llega a este punto el cliente YA ha pagado los 0,50€ y YA tiene su precio. Perde"
         },
         {
@@ -24490,7 +24521,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined> = process.env,",
           "retorno": "Promise<",
-          "linea": 161,
+          "linea": 162,
           "resumen": "Sonda GRATIS: pide solo el token OAuth2. Sirve para verificar host y credenciales sin gastar una cotización — que es como hay que estrenar la integración, porque no hay sandbox utilizable. Un fallo de"
         },
         {
@@ -24499,7 +24530,7 @@
           "exportada": true,
           "params": "correduriaId: string, env: Record<string, string | undefined> = process.env,",
           "retorno": null,
-          "linea": 188,
+          "linea": 189,
           "resumen": "Lo consumido y lo que queda. Para pintarlo antes de que nadie pulse nada."
         },
         {
@@ -24508,12 +24539,12 @@
           "exportada": true,
           "params": "p: PeticionCotizacion, env: Record<string, string | undefined> = process.env, deps: DepsCotizar = {},",
           "retorno": "Promise<ResultadoCotizacion>",
-          "linea": 217
+          "linea": 218
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9960eef7e206"
+      "hash": "446e38c49e71"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/crudo.ts",
@@ -26138,7 +26169,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "948e1d9b50da"
+      "hash": "825f0f42038e"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/horquilla.ts",
@@ -26486,13 +26517,13 @@
           "exportada": true,
           "params": "p: { correduriaId: string operacion: OperacionEmision solicitadoPor: string /** Para poder explicar la factura línea a línea. Puede no conocerse aún. */ projectId: string | null }, llamada: () => Promise<T>, opciones: { evidenciaSinCargo?: ",
           "retorno": "Promise<GastoEmision<T>>",
-          "linea": 62,
+          "linea": 63,
           "resumen": "Envuelve UNA llamada al vendor con su línea en el libro. `llamada` se invoca **una sola vez** y su excepción se propaga tal cual: el caller (la cascada de reparación de `/oferta` y `/emitir`) necesita"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c96ef2e24a4f"
+      "hash": "a45744f0fee1"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/limites-hogar.ts",
@@ -28158,6 +28189,177 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "84fad552ecff"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/tope-euros-bd.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Tope de gasto en EUROS de Avant2: la parte que toca la BD. La decisión vive en `tope-euros.ts` (pura y probada); aquí solo se lee el gasto del mes y se anotan los eventos. Lo llaman los DOS embudos que gastan, antes de su reserva: `cotizar()` (POST /insurances) y `conLibroDeEmision()` (ReRate, Submi",
+      "exporta": [
+        "leerGastoMes",
+        "comprobarTopeEuros",
+        "eventosPendientes",
+        "marcarNotificados",
+        "ampliarTope"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerGastoMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, env: Env = process.env",
+          "retorno": "Promise<GastoMes>",
+          "linea": 37,
+          "resumen": "Lo gastado este mes natural (Madrid) y lo ampliado. NO atrapa errores: quien llama decide, y la decisión correcta ante un fallo es no llamar al vendor. Las líneas de ReRate/Submit/límites escritas cua"
+        },
+        {
+          "nombre": "comprobarTopeEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, costeCents: number, env: Env = process.env,",
+          "retorno": "Promise<ComprobacionTope>",
+          "linea": 62,
+          "resumen": "La guarda de los dos embudos. Fail-closed: si no se puede leer el gasto, NO se llama. Anotar el aviso o el bloqueo es best-effort: si falla, la decisión no cambia (un bloqueo sigue bloqueando) y el me"
+        },
+        {
+          "nombre": "anotarEvento",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, tipo: 'aviso' | 'bloqueo', nivelCents: number, gastadoCents: number,",
+          "retorno": "Promise<boolean>",
+          "linea": 96,
+          "resumen": "Inserta un evento una sola vez por (correduría, mes, tipo, nivel). `false` si no se pudo escribir."
+        },
+        {
+          "nombre": "eventosPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<EventoPendiente[]>",
+          "linea": 121,
+          "resumen": "Lo que plataforma tiene que mandar por Telegram: avisos y bloqueos del mes EN CURSO sin notificar. Un bloqueo cuyo nivel ya se amplió no se manda (llegaría un botón que no hace nada)."
+        },
+        {
+          "nombre": "marcarNotificados",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ids: string[]",
+          "retorno": "Promise<number>",
+          "linea": 143
+        },
+        {
+          "nombre": "ampliarTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, pedida: { mes: string; nivelCents: number }, autor: { autorizadoPor: string; callbackId: string | null },",
+          "retorno": "Promise<ResultadoAmpliar>",
+          "linea": 162,
+          "resumen": "+30 € para el mes en curso, desde el nivel en el que se bloqueó. Idempotente: la clave única (correduría, mes, 'ampliacion', nivel) hace que el mismo botón pulsado dos veces sume una sola."
+        }
+      ],
+      "tablas": [
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "ce5eb2f506eb"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/tope-euros.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Tope de gasto de Codeoscopic / Avant2 en EUROS por mes natural. Lógica PURA (sin BD, sin red). ─── Decisión de Alberto (29/09/2026) ──────────────────────────────────────── - Cada llamada que cuesta (cotizar, ReRate, recomendación de capital, Submit) cuenta 0,50 € mientras el coste de las tres últim",
+      "exporta": [
+        "topeDelMes",
+        "decidirTopeEuros",
+        "mesClave",
+        "callbackAmpliar",
+        "leerArgAmpliar",
+        "validarAmpliacion",
+        "textoAviso",
+        "textoBloqueo",
+        "eur"
+      ],
+      "funciones": [
+        {
+          "nombre": "topeDelMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "ampliadoCents: number",
+          "retorno": "number",
+          "linea": 45,
+          "resumen": "Tope vigente del mes: el base más lo que Alberto haya autorizado."
+        },
+        {
+          "nombre": "decidirTopeEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "g: GastoMes, costeCents: number",
+          "retorno": "DecisionTope",
+          "linea": 55,
+          "resumen": "¿Se puede hacer UNA llamada más que cuesta `costeCents`? Se permite si, sumándola, el mes no pasa del tope: con 69,50 € gastados entra la que deja el mes en 70,00 € justos, y la siguiente se bloquea. "
+        },
+        {
+          "nombre": "mesClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 94,
+          "resumen": "Mes natural en Madrid como `AAAA-MM`. Es la clave del botón y de los eventos."
+        },
+        {
+          "nombre": "callbackAmpliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, nivelCents: number",
+          "retorno": "string",
+          "linea": 109
+        },
+        {
+          "nombre": "leerArgAmpliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "arg: string",
+          "retorno": "",
+          "linea": 114,
+          "resumen": "Lee el argumento del botón (lo que va detrás de `cas_tope:`). `null` si no tiene forma."
+        },
+        {
+          "nombre": "validarAmpliacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedida: { mes: string; nivelCents: number }, ctx: { mesActual: string; bloqueoEnEseNivel: boolean },",
+          "retorno": "",
+          "linea": 127,
+          "resumen": "¿Vale esta ampliación? Pura: el llamante le pasa lo que hay en BD. Solo se amplía el mes EN CURSO y desde un nivel en el que de verdad se bloqueó."
+        },
+        {
+          "nombre": "textoAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "gastadoCents: number, mes: string",
+          "retorno": "string",
+          "linea": 142
+        },
+        {
+          "nombre": "textoBloqueo",
+          "kind": "function",
+          "exportada": true,
+          "params": "gastadoCents: number, topeCents: number, mes: string",
+          "retorno": "string",
+          "linea": 150
+        },
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": true,
+          "params": "cents: number",
+          "retorno": "string",
+          "linea": 159,
+          "resumen": "Formato español de la casa: `2.162,49€`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c29b11f5e6d0"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/topes-historial.ts",
@@ -97897,7 +98099,7 @@
           "exportada": false,
           "params": "ag: { id: string; etiqueta: string; maxHoras: number; nota: string }, evaluadoAt: Date, alerta: boolean, horas: number | null, motivo: string, sondaError: string | null,",
           "retorno": "Promise<void>",
-          "linea": 271,
+          "linea": 274,
           "resumen": "Persiste el veredicto de UN agente en `agente_veredicto` para que lo pueda leer una pantalla. 🚨 NO es `agente_salud` (05/09/2026): esa tabla ya existía desde julio con otro esquema —el badge que el p"
         },
         {
@@ -97906,7 +98108,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 292
+          "linea": 295
         }
       ],
       "tablas": [
@@ -97921,7 +98123,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "0568fd543405"
+      "hash": "140eae5bc817"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -98642,6 +98844,35 @@
       "tablas": [],
       "rutaApi": "/api/cron/correduria-sustituciones",
       "hash": "f88573ef8adb"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/correduria-tope-avant2/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Tope de gasto de Avant2 en EUROS (decisión de Alberto, 29/09/2026): el mensajero. asegura anota en `seguros.codeoscopic_tope_evento` el aviso de 60 € y cada bloqueo (70 €, y los niveles siguientes tras ampliar). Este cron, ",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": false,
+          "params": "cents: number",
+          "retorno": "string",
+          "linea": 23
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 27
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/correduria-tope-avant2",
+      "hash": "7ccb12d6eb28"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correo-digest/route.ts",
@@ -103320,7 +103551,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 52,
+          "linea": 53,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -103329,7 +103560,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 69,
+          "linea": 70,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -103338,7 +103569,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 95
+          "linea": 96
         },
         {
           "nombre": "getPendiente",
@@ -103346,7 +103577,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 125
+          "linea": 126
         },
         {
           "nombre": "POST",
@@ -103354,7 +103585,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 130
+          "linea": 131
         },
         {
           "nombre": "procesarUpdate",
@@ -103362,7 +103593,7 @@
           "exportada": false,
           "params": "req: NextRequest, body: any",
           "retorno": "Promise<Response>",
-          "linea": 156
+          "linea": 157
         },
         {
           "nombre": "enrutarTextoLibre",
@@ -103370,7 +103601,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1179,
+          "linea": 1194,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -103379,7 +103610,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1186,
+          "linea": 1201,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -103388,7 +103619,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1198
+          "linea": 1213
         },
         {
           "nombre": "correduriaSegura",
@@ -103396,7 +103627,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "Promise<void>",
-          "linea": 1204,
+          "linea": 1219,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -103426,7 +103657,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "1a35f0a577fb"
+      "hash": "f65863693670"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -117511,6 +117742,91 @@
       "hash": "7fe9c60c7ef1"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/tope-avant2.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Tope de gasto de Avant2 en EUROS (decisión de Alberto, 29/09/2026): el lado de plataforma. asegura decide y anota (aviso a 60 €, bloqueo a 70 €, ampliaciones de +30 €) en `seguros.codeoscopic_tope_evento`; plataforma tiene el bot. Este fichero: - lee por el puerto los avisos/bloqueos pendientes, con",
+      "exporta": [
+        "interpretarLecturaTope",
+        "resultadoAmpliar",
+        "leerTopeAvant2",
+        "marcarTopeNotificado",
+        "ampliarTopeAvant2"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown>",
+          "linea": 27
+        },
+        {
+          "nombre": "interpretarLecturaTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaTope",
+          "linea": 32,
+          "resumen": "PURO. Interpreta la respuesta del GET del puerto."
+        },
+        {
+          "nombre": "resultadoAmpliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "",
+          "linea": 69,
+          "resumen": "PURO. El toast y la línea que se añade al mensaje tras pulsar «Autorizar»."
+        },
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": false,
+          "params": "cents: number",
+          "retorno": "string",
+          "linea": 88
+        },
+        {
+          "nombre": "base",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 92
+        },
+        {
+          "nombre": "leerTopeAvant2",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<LecturaTope>",
+          "linea": 96
+        },
+        {
+          "nombre": "marcarTopeNotificado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: string[]",
+          "retorno": "Promise<boolean>",
+          "linea": 112,
+          "resumen": "Marca como mandados. Si falla, el evento se vuelve a mandar en la pasada siguiente."
+        },
+        {
+          "nombre": "ampliarTopeAvant2",
+          "kind": "function",
+          "exportada": true,
+          "params": "arg: string, autorizadoPor: string, callbackId: string",
+          "retorno": "Promise<",
+          "linea": 130,
+          "resumen": "El botón «Autorizar +30 €». Nunca lanza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e0a88147a318"
+    },
+    {
       "ruta": "apps/plataforma/lib/correo/agoda-mensajes.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/agoda-mensajes.ts — parser PURO del aviso «New messages from your guests» de Agoda. POR QUÉ EXISTE (medido el 31/08/2026 contra Smoobu, 8 reservas de Agoda del histórico): el canal de Agoda es de UNA SOLA DIRECCIÓN. Smoobu ENTREGA nuestros mensajes al huésped por el alias `…@agoda-messagi",
@@ -118481,7 +118797,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 248,
+          "linea": 252,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -118490,7 +118806,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 278,
+          "linea": 282,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -118499,7 +118815,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 300
+          "linea": 304
         },
         {
           "nombre": "ventanaMinutos",
@@ -118507,7 +118823,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 308,
+          "linea": 312,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -118516,13 +118832,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 320,
+          "linea": 324,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "06c0c9f83948"
+      "hash": "e1f08e7c539d"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -124640,7 +124956,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e04a10cf6596"
+      "hash": "d18beb9685b5"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -140339,7 +140655,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 721
+          "linea": 727
         },
         {
           "nombre": "avisosDe",
@@ -140347,7 +140663,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 726,
+          "linea": 732,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -140356,13 +140672,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 736,
+          "linea": 742,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53c3f3a188be"
+      "hash": "aab075e14ce9"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -178934,7 +179250,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4095,
-    "funciones": 13928
+    "archivos": 4100,
+    "funciones": 13955
   }
 }
