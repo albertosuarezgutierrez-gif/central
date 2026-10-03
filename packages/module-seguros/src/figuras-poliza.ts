@@ -19,7 +19,7 @@
 //  - Una figura con rol pero SIN nombre no abre ficha (`figurasSinNombre`): una línea en el historial
 //    de la oportunidad, y sus fechas cuentan para «conductor joven o novel».
 //  - La «persona de contacto» de un tomador EMPRESA que es una de las personas del plan (mismo nombre,
-//    o uno contenido en el otro con 2+ palabras) se marca: recibe también el teléfono y el email del
+//    o uno dentro del otro si el más corto tiene 3+ palabras) se marca: recibe también el teléfono y el email del
 //    tomador (la empresa los conserva).
 
 import { MARCADORES_SIN_DATO } from './documento-auto.ts'
@@ -221,15 +221,17 @@ export function conductorHabitualLeido(raw: unknown): { nombre: string; fechaNac
 // ─── ¿Es el tomador? ────────────────────────────────────────────────────────
 
 const VACIAS = new Set(['de', 'del', 'la', 'las', 'los', 'y'])
-/** ¿La persona de contacto es esta persona? Mismo nombre normalizado, o las palabras de uno dentro
- * del otro con al menos 2 («Fermin Bueno» en «Fermín Bueno Rodríguez»). Una sola palabra no basta. */
+/** ¿La persona de contacto es esta persona? Mismo nombre normalizado (sin tildes, mayúsculas ni
+ * orden). Uno contenido en el otro solo si el MÁS CORTO tiene 3+ palabras: «Fermín Bueno» NO es
+ * «Fermín Bueno García» (podría ser su padre); ante la duda no se copia contacto. */
 export function esPersonaDeContacto(contacto: string | null | undefined, nombre: string | null | undefined): boolean {
   if (!contacto || !nombre) return false
   const a = new Set(palabrasNombre(contacto))
   const b = new Set(palabrasNombre(nombre))
   const [corto, largo] = a.size <= b.size ? [a, b] : [b, a]
-  if (corto.size < 2) return false
-  return [...corto].every((x) => largo.has(x))
+  if (corto.size === 0) return false
+  if (claveNombre(contacto) === claveNombre(nombre)) return true
+  return corto.size >= 3 && [...corto].every((x) => largo.has(x))
 }
 
 const palabrasNombre = (s: string) =>

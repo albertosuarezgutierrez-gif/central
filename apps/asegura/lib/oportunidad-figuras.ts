@@ -333,15 +333,15 @@ async function contactoDelTomador(
  * UNA tarea pendiente «Pedir DNI y carné del conductor …» en la oportunidad (`gestiones`, la de
  * siempre: `central:seguimiento`), colgada de la ficha de la figura (`cliente_id`) y con su línea
  * `tarea_creada` en el historial. Sin nombre. La misma póliza subida otra vez no la repite (ni si
- * ya se cerró: misma oportunidad, mismo texto). Una oportunidad ganada o perdida no recibe tareas.
+ * ya se cerró: misma oportunidad, misma persona y mismo texto: dos ocasionales tienen una cada uno). Una oportunidad ganada o perdida no recibe tareas.
  * No envía nada a nadie. `true` = creada; `false` = ya estaba (o la oportunidad está cerrada);
  * `null` = no se pudo.
  */
 async function tareaDeFigura(e: { correduriaId: string; oportunidadId: string; clienteId: string; texto: string; fecha: string; actor: string }): Promise<boolean | null> {
   try {
     return await prismaAsegura().$transaction(async (tx) => {
-      // Dos subidas a la vez: en fila por oportunidad + texto (el `not exists` solo no basta).
-      await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`tarea-figura:${e.oportunidadId}:${e.texto}`}))`)
+      // Dos subidas a la vez: en fila por oportunidad + persona + texto (el `not exists` solo no basta).
+      await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`tarea-figura:${e.oportunidadId}:${e.clienteId}:${e.texto}`}))`)
       const n = await tx.$executeRaw(Prisma.sql`
         with o as (
           select id, estado from oportunidades
@@ -350,6 +350,7 @@ async function tareaDeFigura(e: { correduriaId: string; oportunidadId: string; c
             and not exists (
               select 1 from gestiones g
               where g.oportunidad_id = ${e.oportunidadId}::uuid and g.correduria_id = ${e.correduriaId}::uuid
+                and g.cliente_id = ${e.clienteId}::uuid
                 and g.origen_trigger = 'central:seguimiento' and g.observaciones = ${e.texto})
         ), nueva as (
           insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)

@@ -294,7 +294,7 @@ test('🪤 conductor joven/novel: cuenta el tomador si conduce, y los ocasionale
 const QOVER = {
   tomador: 'Ejemplo Viajes SL',
   tomadorEsEmpresa: true,
-  personaContactoTomador: 'Fermin Prueba',
+  personaContactoTomador: 'Fermin Prueba Ficticio',
   figuras: [
     { rol: 'conductor_habitual', nombre: 'Fermin Prueba Ficticio', fechaNacimiento: '2 de jul. de 1971', domicilioVia: 'Calle Inventada 17', domicilioCp: '41003', domicilioPoblacion: 'Sevilla', domicilioProvincia: null, dni: null },
     { rol: 'conductor_adicional', nombre: null, fechaNacimiento: '1974-05-04' },
@@ -317,7 +317,7 @@ test('🪤 Qover: el domicilio de la figura se lee (CP normalizado) y el adicion
 
 test('🪤 Qover: la persona de contacto es UNA figura (2+ palabras); el adicional sin nombre cuenta para joven/novel', () => {
   const c = normalizarContactoTomador(QOVER)
-  assert.equal(c.personaContacto, 'Fermin Prueba')
+  assert.equal(c.personaContacto, 'Fermin Prueba Ficticio')
   // Con un tomador persona física no hay «persona de contacto».
   assert.equal(normalizarContactoTomador({ ...QOVER, tomadorEsEmpresa: false, tomador: 'Ana Ruiz', dni: DNI_TOMADOR }).personaContacto, null)
   const p = planFiguras(
@@ -327,6 +327,8 @@ test('🪤 Qover: la persona de contacto es UNA figura (2+ palabras); el adicion
   )
   assert.equal(p.personas.length, 1)
   assert.equal(p.personas[0].personaContacto, true)
+  // Caso Qover real: «Fermin Bueno» contra «Fermin Bueno Rodriguez» (2 palabras) ya NO casa: sin contacto copiado.
+  assert.equal(planFiguras(lectura(QOVER.figuras), { ...empresa, personaContacto: 'Fermin Prueba' }, 'auto').personas[0].personaContacto, false)
   assert.equal(p.personas[0].domicilioCp, '41003')
   assert.equal(detalleRelacionFigura(p.personas[0].rolesLeidos, 'Q-1', p.personas[0].personaContacto), 'Persona de contacto · Conductor habitual (póliza Q-1)')
   assert.deepEqual(p.sinNombre, [{ rol: 'conductor_ocasional', fechaNacimiento: '1974-05-04', fechaCarnet: null }])
@@ -342,14 +344,16 @@ test('🪤 Qover: la persona de contacto es UNA figura (2+ palabras); el adicion
   // Sin persona de contacto, o con una que casa con dos personas, no se marca a nadie.
   assert.equal(planFiguras(lectura(QOVER.figuras), empresa, 'auto').personas[0].personaContacto, false)
   const dos = planFiguras(lectura([
-    { rol: 'conductor_habitual', nombre: 'Fermin Prueba Uno', dni: DNI_A },
-    { rol: 'conductor_ocasional', nombre: 'Fermin Prueba Dos', dni: DNI_B },
-  ]), { ...empresa, personaContacto: 'Fermin Prueba' }, 'auto')
+    { rol: 'conductor_habitual', nombre: 'Fermin Prueba Ficticio Uno', dni: DNI_A },
+    { rol: 'conductor_ocasional', nombre: 'Fermin Prueba Ficticio Dos', dni: DNI_B },
+  ]), { ...empresa, personaContacto: 'Fermin Prueba Ficticio' }, 'auto')
   assert.deepEqual(dos.personas.map((x) => x.personaContacto), [false, false])
 })
 
-test('🪤 persona de contacto: mismo nombre o uno dentro del otro, mínimo 2 palabras', () => {
-  assert.equal(esPersonaDeContacto('Fermin Prueba', 'Fermín Prueba Ficticio'), true)
+test('🪤 persona de contacto: mismo nombre exacto; uno dentro del otro solo si el corto tiene 3+ palabras', () => {
+  assert.equal(esPersonaDeContacto('Fermin Prueba', 'Fermín Prueba Ficticio'), false) // 2 palabras: podría ser otro
+  assert.equal(esPersonaDeContacto('Fermin Prueba', 'FERMÍN PRUEBA'), true)
+  assert.equal(esPersonaDeContacto('Fermin Prueba Ficticio', 'Fermín Prueba Ficticio Segundo'), true)
   assert.equal(esPersonaDeContacto('PRUEBA FICTICIO, FERMÍN', 'Fermín Prueba Ficticio'), true)
   assert.equal(esPersonaDeContacto('Fermin', 'Fermín Prueba Ficticio'), false) // una palabra no basta
   assert.equal(esPersonaDeContacto('Fermin Otro', 'Fermín Prueba Ficticio'), false)

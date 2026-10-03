@@ -94,6 +94,9 @@ test('🪤 figura sin nombre no abre ficha y su línea no se repite; la tarea «
   assert.doesNotMatch(s, /sinNombre[^\n]*(altaCliente|altaLeadSinContacto)/)
   assert.match(s, /where not exists \(\s*select 1 from oportunidad_historial\s*where oportunidad_id = \$\{e\.oportunidadId\}::uuid and correduria_id = \$\{e\.correduriaId\}::uuid and accion = \$\{accion\}\)/)
   assert.match(s, /and g\.origen_trigger = 'central:seguimiento' and g\.observaciones = \$\{e\.texto\}\)/, 'la tarea se repetiría al re-subir la póliza')
+  // Por PERSONA: dos conductores ocasionales tienen cada uno su tarea (mismo texto, otra ficha).
+  assert.match(s, /and g\.cliente_id = \$\{e\.clienteId\}::uuid\s*and g\.origen_trigger/, 'la tarea no se deduplica por persona')
+  assert.match(s, /tarea-figura:\$\{e\.oportunidadId\}:\$\{e\.clienteId\}:/, 'el cerrojo no incluye a la persona')
   const d = sinComentarios(DOCUMENTO)
   assert.match(d, /await anotarFigurasSinNombre\(/)
 })
