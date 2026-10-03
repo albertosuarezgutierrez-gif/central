@@ -171,31 +171,31 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 246 | 33.560 | 25.844.580 | 0 | 0 |
-| `otro` | 243 | 8.062 | 22.619.822 | 12.026.588 | 0 |
-| `lectura-directa` | 220 | 5.837 | 17.064.252 | 0 | 0 |
-| `mcp:github` | 225 | 5.493 | 4.557.039 | 50.346.761 | 89 |
-| `escritura` | 170 | 3.491 | 51.075.027 | 0 | 0 |
-| `sql` | 158 | 3.308 | 1.637.305 | 2.351.230 | 13 |
+| `bash` | 246 | 33.701 | 26.030.248 | 0 | 0 |
+| `otro` | 243 | 8.107 | 22.702.083 | 12.063.419 | 0 |
+| `lectura-directa` | 221 | 5.839 | 17.065.308 | 0 | 0 |
+| `mcp:github` | 226 | 5.511 | 4.565.986 | 50.346.761 | 89 |
+| `escritura` | 172 | 3.499 | 51.108.373 | 0 | 0 |
+| `sql` | 158 | 3.312 | 1.639.018 | 2.351.230 | 13 |
 | `mcp:Claude_Code_Remote` | 140 | 1.475 | 303.946 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 21 | 588 | 2.475.618 | 0 | 0 |
 | `mcp:Vercel` | 56 | 560 | 813.164 | 201.411 | 14 |
 | `mcp:Gmail` | 29 | 367 | 568.888 | 0 | 15 |
 | `mcp:Supabase` | 103 | 290 | 27.815 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
-| `agente:general-purpose` | 56 | 225 | 162.082 | 5.011.206 | 0 |
+| `agente:general-purpose` | 56 | 229 | 164.417 | 5.243.307 | 0 |
 | `agente:agente-architect` | 40 | 125 | 94.122 | 4.251.259 | 0 |
 | `mcp:Google-Drive` | 13 | 95 | 88.235 | 0 | 2 |
 | `mcp:Google_Drive` | 16 | 87 | 110.438 | 0 | 19 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
-| `agente:agente-mecanico` | 28 | 68 | 54.289 | 2.838.502 | 0 |
+| `agente:agente-mecanico` | 29 | 69 | 54.326 | 2.838.502 | 0 |
 | `agente:Explore` | 28 | 65 | 32.709 | 1.503.946 | 0 |
 | `agente:rastreador-codigo` | 34 | 59 | 19.732 | 649.514 | 0 |
 | `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
+| `mcp:claude-code-remote` | 8 | 58 | 5.756 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
-| `mcp:claude-code-remote` | 6 | 53 | 5.514 | 0 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |

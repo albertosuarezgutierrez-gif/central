@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T20:20:34Z",
-  "sha": "f9f6ef299a4ed134f6a7279d9a500a206cf4fbb2",
+  "generadoEn": "2026-10-03T20:51:52Z",
+  "sha": "cc0d1123d785930e85d7d0e4f75a09867525a20d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -19488,13 +19488,64 @@
       "hash": "cdee22ff28ea"
     },
     {
+      "ruta": "apps/asegura/lib/avisos-vencimiento-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Destinatario de un aviso: regla pura (sin BD).",
+      "exporta": [
+        "descifrar",
+        "pareceEmail",
+        "emailAvisable",
+        "destinatarioDeCliente"
+      ],
+      "funciones": [
+        {
+          "nombre": "descifrar",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 10,
+          "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa: `null` significa «no se ha podido leer», y quien llama lo cuenta como «sin canal» en vez de como «este cliente no tiene email». Mismo criter"
+        },
+        {
+          "nombre": "pareceEmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null",
+          "retorno": "v is string",
+          "linea": 22,
+          "resumen": "Una dirección que no tiene forma de dirección no es un canal: es basura con forma de dato."
+        },
+        {
+          "nombre": "emailAvisable",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null",
+          "retorno": "v is string",
+          "linea": 29,
+          "resumen": "Email que puede recibir un aviso: debe tener forma de email Y no ser un canal de la correduría."
+        },
+        {
+          "nombre": "destinatarioDeCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ClienteConEmails",
+          "retorno": "string | null",
+          "linea": 43,
+          "resumen": "El email al que escribir: principal → el más antiguo de `cliente_emails` → la columna suelta de la ficha. `null` = no hay a quién escribir (o está de baja)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b6139564321f"
+    },
+    {
       "ruta": "apps/asegura/lib/avisos-vencimiento.ts",
       "ambito": "apps/asegura",
       "resumen": "Aviso de vencimiento del calendario del portal — el ENVÍO, que vive aquí y no en `apps/asegura-portal`. 🚨 Por qué aquí: el portal guarda **solo hashes**. `portal_canal.valor_hash` es un SHA-256 con pimienta y el `ClienteEmail` de su schema solo declara `email_lookup_hash`; su rol (`prisma_asegura_p",
       "exporta": [
         "avisosActivos",
         "esSoloContar",
-        "destinatarioDeCliente",
         "ejecutarAvisosVencimiento"
       ],
       "funciones": [
@@ -19504,7 +19555,7 @@
           "exportada": true,
           "params": "env: string | undefined = process.env.ASEGURA_AVISOS_ACTIVOS",
           "retorno": "boolean",
-          "linea": 102,
+          "linea": 101,
           "resumen": "El interruptor, puro y aparte para poder razonarlo de un vistazo: cualquier valor que no sea exactamente `'1'` (incluido `undefined`, `'true'` o `'0'`) deja el cron en modo cuenta. La ambigüedad se re"
         },
         {
@@ -19513,7 +19564,7 @@
           "exportada": true,
           "params": "p: { activos: boolean; forzarContar: boolean }",
           "retorno": "boolean",
-          "linea": 107,
+          "linea": 106,
           "resumen": "`?contar=1` fuerza el ensayo aunque los avisos estén activos."
         },
         {
@@ -19522,35 +19573,8 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 112,
+          "linea": 111,
           "resumen": "Medianoche UTC: las columnas `date` de Postgres llegan así."
-        },
-        {
-          "nombre": "descifrar",
-          "kind": "function",
-          "exportada": false,
-          "params": "v: string | null | undefined",
-          "retorno": "string | null",
-          "linea": 121,
-          "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa: `null` significa «no se ha podido leer», y quien llama lo cuenta como «sin canal» en vez de como «este cliente no tiene email». Mismo criter"
-        },
-        {
-          "nombre": "pareceEmail",
-          "kind": "function",
-          "exportada": false,
-          "params": "v: string | null",
-          "retorno": "v is string",
-          "linea": 133,
-          "resumen": "Una dirección que no tiene forma de dirección no es un canal: es basura con forma de dato."
-        },
-        {
-          "nombre": "destinatarioDeCliente",
-          "kind": "function",
-          "exportada": true,
-          "params": "c: ClienteConEmails",
-          "retorno": "string | null",
-          "linea": 147,
-          "resumen": "El email al que escribir: principal → el más antiguo de `cliente_emails` → la columna suelta de la ficha. `null` = no hay a quién escribir (o está de baja)."
         },
         {
           "nombre": "leerIntervinientesDePoliza",
@@ -19558,7 +19582,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, polizaId: string,",
           "retorno": "Promise<IntervinienteFicha[] | null>",
-          "linea": 175,
+          "linea": 131,
           "resumen": "Los intervinientes de ESTA póliza, ya descifrados, en la forma que espera `contactoEfectivo()`. Copia deliberadamente acotada de `leerIntervinientes` de `cartera-ficha.ts` (no exportada desde allí): a"
         },
         {
@@ -19567,7 +19591,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string,",
           "retorno": "Promise<",
-          "linea": 236,
+          "linea": 192,
           "resumen": "Las personas de referencia declaradas en `cliente_relaciones` del tomador, con SU PROPIO email ya resuelto (mismas reglas que `destinatarioDeCliente`: baja de correo respetada, principal primero). Exc"
         },
         {
@@ -19576,13 +19600,13 @@
           "exportada": true,
           "params": "opts: { hoy?: Date forzarContar?: boolean /** Presupuesto de envío en ms. Por debajo del `maxDuration` de la ruta. */ presupuestoMs?: number /** Reloj inyectable (tests). Por defecto `Date.now`. */ ahoraMs?: () => number } = {}",
           "retorno": "Promise<ResumenAvisos>",
-          "linea": 291,
+          "linea": 247,
           "resumen": "Una pasada del cron. Lanza (no devuelve un resumen tranquilizador) cuando el proceso NO puede hacer su trabajo —sin cartera, sin proveedor de correo, sin remitente—, para que el endpoint responda 503 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c0b438f2e96d"
+      "hash": "8c3be076f821"
     },
     {
       "ruta": "apps/asegura/lib/backfill-contacto.ts",
@@ -30280,6 +30304,28 @@
       "hash": "da896239e635"
     },
     {
+      "ruta": "apps/asegura/lib/email-ficha-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Regla pura (sin BD ni cifrado propio) de qué dirección usar entre las guardadas de una ficha.",
+      "exporta": [
+        "elegirEmailGuardado"
+      ],
+      "funciones": [
+        {
+          "nombre": "elegirEmailGuardado",
+          "kind": "function",
+          "exportada": true,
+          "params": "guardados: string[], { campoIlegible, descifrarCampo }: { campoIlegible: (v: string) => boolean; descifrarCampo: (v: string) => string | null },",
+          "retorno": "EstadoEmailGuardado",
+          "linea": 9,
+          "resumen": "Pura (sin BD): de las direcciones cifradas de la ficha, el desenlace."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3120b8b80211"
+    },
+    {
       "ruta": "apps/asegura/lib/email-ficha.ts",
       "ambito": "apps/asegura",
       "resumen": "A qué dirección se le escribe a una ficha de la cartera. UNA regla, un sitio. 🚨 Se extrajo el 05/09/2026 de `aviso-acceso.ts`, cuando la invitación al portal necesitó exactamente lo mismo. Dos copias de «cuál es el correo de este cliente» divergen sin que nada falle: un correo saldría a la direcció",
@@ -30294,7 +30340,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<EmailDeFicha>",
-          "linea": 47,
+          "linea": 48,
           "resumen": "El correo al que se escribiría a esta ficha, con los cinco desenlaces separados. Quien solo necesite la dirección puede usar `emailDeFicha`."
         },
         {
@@ -30303,13 +30349,13 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 75,
+          "linea": 70,
           "resumen": "La dirección a secas. `null` = no hay ninguna utilizable, por el motivo que sea."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db3cbd5d3e88"
+      "hash": "c04b139ee72c"
     },
     {
       "ruta": "apps/asegura/lib/emision-externa-reglas.ts",
@@ -81063,7 +81109,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 533
+          "linea": 542
         },
         {
           "nombre": "Carnets",
@@ -81071,12 +81117,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 573
+          "linea": 582
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "840c768a40c1"
+      "hash": "77e40e237395"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -124221,7 +124267,7 @@
           "exportada": true,
           "params": "d: DatosMensajeWhatsapp",
           "retorno": "string",
-          "linea": 95,
+          "linea": 96,
           "resumen": "por WhatsApp es justo el dato que falta para poder entrar. 🚨 Y nada más que eso. Ni compañía, ni póliza, ni matrícula, ni prima, ni DNI, ni cuántos seguros tiene: el número lo ha tecleado Alberto y p"
         },
         {
@@ -124230,12 +124276,12 @@
           "exportada": true,
           "params": "{ accion, portal, enlace, telefonos, nombre }: { accion: AccionPortal portal: PortalCartera enlace: string | null telefonos: readonly (string | null | undefined)[] nombre: string | null },",
           "retorno": "CanalWhatsapp",
-          "linea": 137
+          "linea": 138
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b94179822939"
+      "hash": "63ebe11d750d"
     },
     {
       "ruta": "apps/plataforma/lib/ipid-asegura.ts",
@@ -165569,6 +165615,44 @@
       "hash": "99ff2f5e22d9"
     },
     {
+      "ruta": "packages/module-seguros/src/canal-correduria.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Canal de la CORREDURÍA ≠ dato del cliente. Cuando una compañía EXIGE email/móvil y el titular no tiene (típico: un familiar lleva sus seguros), se pone el de la correduría (Alberto, 03/10/2026). Esos datos NO son del cliente: no se pintan como suyos, no se usan para avisarle ni para agrupar/fundir f",
+      "exporta": [
+        "esCanalCorreduria"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarEmail",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 9
+        },
+        {
+          "nombre": "normalizarTelefono",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 17
+        },
+        {
+          "nombre": "esCanalCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 25,
+          "resumen": "`true` si el valor (email o teléfono) es un canal de la correduría. `null`/vacío → false."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3199eac05fda"
+    },
+    {
       "ruta": "packages/module-seguros/src/carnet-ficha.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Puro: el carné de conducir que Alberto teclea en la ficha del cliente (29/09/2026, «añadir o modificar fecha de carnet»). La fecha es la de EXPEDICIÓN o última renovación: la antigüedad es lo que tarifica, y de ella se DERIVA la caducidad (`caducidadCarnet`), que no se teclea ni se guarda.",
@@ -170412,7 +170496,7 @@
           "exportada": true,
           "params": "rol: string",
           "retorno": "string",
-          "linea": 72
+          "linea": 74
         },
         {
           "nombre": "contactoEfectivo",
@@ -170420,7 +170504,7 @@
           "exportada": true,
           "params": "tomador: { telefono: string | null; email: string | null }, intervinientes: IntervinienteFicha[] | null,",
           "retorno": "ContactoEfectivo",
-          "linea": 115,
+          "linea": 120,
           "resumen": "A quién se llama. Manda la ficha del tomador; si no tiene, **su propio dato colgado de la póliza**; y solo después el primer interviniente (por prioridad de rol) que sí tenga. `intervinientes === null"
         },
         {
@@ -170429,7 +170513,7 @@
           "exportada": false,
           "params": "rol: string",
           "retorno": "number",
-          "linea": 157
+          "linea": 167
         },
         {
           "nombre": "filasIntervinientes",
@@ -170437,7 +170521,7 @@
           "exportada": true,
           "params": "tomador: { polizaId: string; fichaId: string | null; nombre: string | null }, lista: IntervinienteFicha[] | null,",
           "retorno": "FilasIntervinientes",
-          "linea": 185
+          "linea": 195
         },
         {
           "nombre": "personasDePolizas",
@@ -170445,7 +170529,7 @@
           "exportada": true,
           "params": "intervinientes: IntervinienteFicha[] | null, polizas: readonly { id: string; etiqueta: string }[], relaciones: readonly { relacionadoId: string; tipo: string }[] | null,",
           "retorno": "PersonaDePolizas[] | null",
-          "linea": 276
+          "linea": 286
         },
         {
           "nombre": "normalizarNombre",
@@ -170453,7 +170537,7 @@
           "exportada": false,
           "params": "n: string | null",
           "retorno": "string | undefined",
-          "linea": 349,
+          "linea": 359,
           "resumen": "Un nombre para compararlo con otro: sin espacios de más, sin tildes, en minúsculas."
         },
         {
@@ -170462,13 +170546,13 @@
           "exportada": false,
           "params": "lista: PersonaDePolizas[]",
           "retorno": "void",
-          "linea": 366,
+          "linea": 376,
           "resumen": "Marca las filas que comparten nombre con otra. 🚨 Caso fundacional (03/09/2026, ficha de José Suárez Salas): «María Antonia Gutiérrez Alcalá» salía DOS veces, con las mismas tres matrículas. No era un"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "062e80f45415"
+      "hash": "9e9d066a05dc"
     },
     {
       "ruta": "packages/module-seguros/src/ipid.ts",
@@ -179552,7 +179636,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4102,
-    "funciones": 13985
+    "archivos": 4105,
+    "funciones": 13990
   }
 }
