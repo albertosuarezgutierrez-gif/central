@@ -733,6 +733,9 @@ em { font-style: normal; }
   .tabla-polizas td[data-rol="accion"] { padding-top: 8px !important; border-top: 1px solid var(--border); margin-top: 6px; }
   /* Una celda de acción vacía (fila sin botón) no pinta una raya suelta en la tarjeta. */
   .tabla-polizas td:empty { display: none; }
+  /* Fila hija (p. ej. «Más datos de CIMA» de un recibo): continúa la tarjeta de arriba, no es otra. */
+  .tabla-polizas tr:has(+ tr.fila-hija) { margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: 0 !important; }
+  .tabla-polizas tr.fila-hija { border-top: 0 !important; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 0; }
 }
 
 /* === Armazón como el portal del cliente (24/09/2026) =======================================

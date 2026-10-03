@@ -24,7 +24,8 @@ export type ViejaParaDobleSeguro = {
   /** Efecto (`YYYY-MM-DD`) del recibo más tardío de la vieja que NO está anulado ni devuelto. `null` = ninguno/no consta. */
   fechaEfectoUltimoRecibo: string | null
 }
-export type NuevaParaDobleSeguro = { fechaEfecto: string | null }
+/** `estado` de la nueva: si no está vigente (anulada, rechazada…) no hay doble seguro. */
+export type NuevaParaDobleSeguro = { fechaEfecto: string | null; estado: string }
 
 export type AvisoDobleSeguro = {
   motivos: Array<'vencimiento_posterior' | 'recibo_posterior'>
@@ -41,7 +42,7 @@ function dia(iso: string | null): number | null {
 
 export function avisoDobleSeguro(vieja: ViejaParaDobleSeguro, nueva: NuevaParaDobleSeguro): AvisoDobleSeguro | null {
   const efecto = dia(nueva.fechaEfecto)
-  if (efecto === null || !esEstadoVigente(vieja.estado)) return null
+  if (efecto === null || !esEstadoVigente(vieja.estado) || !esEstadoVigente(nueva.estado)) return null
   const corte = efecto + DOBLE_SEGURO_DIAS_TOLERANCIA
   const motivos: AvisoDobleSeguro['motivos'] = []
   const venc = dia(vieja.fechaVencimiento)

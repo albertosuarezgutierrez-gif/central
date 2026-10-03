@@ -12,7 +12,7 @@
 // confirmación (no es instantáneo) y meter aquí lo de esta misma mañana solo
 // añadiría ruido a una lista que se supone que hay que trabajar.
 
-import { avisoDobleSeguro } from '@central/module-seguros'
+import { POLIZA_ESTADOS_VIGENTES, avisoDobleSeguro } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 const DIAS_GRACIA = 3
@@ -94,24 +94,26 @@ export async function dobleSeguroEnSeguimiento(correduriaId: string): Promise<Do
     const filas = await db.$queryRaw<
       {
         vieja_id: string; nueva_id: string; aseguradora: string; numero: string | null; estado: string
-        vence: string | null; efecto_recibo: string | null; efecto_nueva: string | null
+        vence: string | null; efecto_recibo: string | null; efecto_nueva: string | null; estado_nueva: string
       }[]
     >`
-      select v.id::text as vieja_id, n.id::text as nueva_id, v.aseguradora, v.numero_poliza as numero, v.estado::text as estado,
-             to_char(v.fecha_vencimiento, 'YYYY-MM-DD') as vence,
+      select distinct on (v.id) v.id::text as vieja_id, n.id::text as nueva_id, v.aseguradora, v.numero_poliza as numero, v.estado::text as estado,
+             to_char(v.fecha_vencimiento::timestamptz at time zone 'Europe/Madrid', 'YYYY-MM-DD') as vence,
              to_char((select max(r.fecha_efecto_actual) from poliza_recibos r
-                      where r.poliza_id = v.id and coalesce(r.situacion::text, '') not in ('anulado', 'devuelto')), 'YYYY-MM-DD') as efecto_recibo,
-             to_char(coalesce(n.fecha_efecto_inicial, n.fecha_inicio), 'YYYY-MM-DD') as efecto_nueva
+                      where r.poliza_id = v.id and coalesce(r.situacion::text, '') not in ('anulado', 'devuelto')) at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto_recibo,
+             to_char(coalesce(n.fecha_efecto_inicial, n.fecha_inicio)::timestamptz at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto_nueva,
+             n.estado::text as estado_nueva
       from polizas v
       join polizas n on n.poliza_origen_id = v.id
       where v.correduria_id = ${correduriaId}::uuid and v.sustituida_at is not null
-      order by v.sustituida_at asc
+      -- Con 2 nuevas, una sola fila por vieja: la vigente primero, y entre ellas la más reciente.
+      order by v.id, (n.estado::text = any(${[...POLIZA_ESTADOS_VIGENTES]}::text[])) desc, coalesce(n.fecha_efecto_inicial, n.fecha_inicio) desc nulls last
       limit 500`
     const out: DobleSeguroAviso[] = []
     for (const f of filas) {
       const a = avisoDobleSeguro(
         { aseguradora: f.aseguradora, numeroPoliza: f.numero, estado: f.estado, fechaVencimiento: f.vence, fechaEfectoUltimoRecibo: f.efecto_recibo },
-        { fechaEfecto: f.efecto_nueva },
+        { fechaEfecto: f.efecto_nueva, estado: f.estado_nueva },
       )
       if (a) out.push({ polizaViejaId: f.vieja_id, polizaNuevaId: f.nueva_id, motivos: a.motivos, texto: a.texto })
     }

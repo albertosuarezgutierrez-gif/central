@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mensajeDobleSeguro, mensajeSustituciones, type SustitucionAviso } from './sustituciones-aviso.ts'
+import { enviarAvisosIndependientes, mensajeDobleSeguro, mensajeSustituciones, type SustitucionAviso } from './sustituciones-aviso.ts'
 
 test('mensajeSustituciones: lista vacía → null, nunca un mensaje de «0 pendientes»', () => {
   assert.equal(mensajeSustituciones([]), null)
@@ -54,4 +54,17 @@ test('interpretarSustituciones: dobleSeguro ausente → null (≠ []), presente 
   assert.deepEqual(vacio.estado === 'ok' && vacio.dobleSeguro, [])
   const con = interpretarSustituciones(200, { ...base, dobleSeguro: [{ polizaViejaId: 'a', polizaNuevaId: 'b', texto: 't' }, { texto: 'sin ids' }, 7] })
   assert.deepEqual(con.estado === 'ok' && con.dobleSeguro, [{ polizaViejaId: 'a', polizaNuevaId: 'b', texto: 't' }])
+})
+
+test('enviarAvisosIndependientes: el fallo del primero NO impide el segundo y se agrega', async () => {
+  const enviados: string[] = []
+  const r = await enviarAvisosIndependientes([
+    { id: 'doble', mensaje: 'a', enviar: async () => { throw new Error('tg caído') } },
+    { id: 'seguimiento', mensaje: 'b', enviar: async (m) => { enviados.push(m) } },
+    { id: 'vacio', mensaje: null, enviar: async () => { throw new Error('no debe llamarse') } },
+  ])
+  assert.deepEqual(enviados, ['b'])
+  assert.equal(r.enviados, 1)
+  assert.equal(r.errores.length, 1)
+  assert.match(r.errores[0], /^doble: /)
 })

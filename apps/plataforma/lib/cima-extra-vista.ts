@@ -82,3 +82,8 @@ export function vistaCimaExtra(extra: unknown): GrupoCimaExtra[] | null {
 export function cimaExtraTruncado(v: unknown): boolean {
   return v === true
 }
+
+/** ¿Hay algo que pintar? `null` (aún no leído) y `[]` (CIMA no trae más) → no: la fila de un recibo solo sale CON datos. */
+export function hayMasDatos(grupos: GrupoCimaExtra[] | null): grupos is GrupoCimaExtra[] {
+  return grupos !== null && grupos.some((g) => g.filas.length > 0)
+}

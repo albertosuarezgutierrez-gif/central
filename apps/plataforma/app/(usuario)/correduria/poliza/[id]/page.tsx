@@ -19,6 +19,7 @@ import CartaMediadorPoliza from './CartaMediadorPoliza'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
+import { hayMasDatos } from '@/lib/cima-extra-vista'
 import type { ObjetoFicha } from '@/lib/ficha-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
@@ -695,9 +696,9 @@ function TablaRecibos({ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos'];
                 </td>
               )}
             </tr>
-            {/* «Más datos de CIMA» del recibo: plegado; `null` = aún no leído → no hay fila (no se dice «sin datos»). */}
-            {x.cimaExtra !== null && (
-              <tr>
+            {/* «Más datos de CIMA» del recibo: plegado y SOLO con datos (null y [] no pintan). En móvil es la parte baja de la misma tarjeta (`.fila-hija`). */}
+            {hayMasDatos(x.cimaExtra) && (
+              <tr className="fila-hija">
                 <td colSpan={6 + (hayComision ? 1 : 0) + (hayNeta ? 1 : 0)} style={{ ...td, paddingTop: 0 }}>
                   <Plegable titulo="Más datos de CIMA" resumen={`${x.cimaExtra.reduce((n, g) => n + g.filas.length, 0)} campos`}>
                     <MasDatosCima grupos={x.cimaExtra} truncado={x.cimaExtraTruncado} />

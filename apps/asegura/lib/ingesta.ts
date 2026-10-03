@@ -22,6 +22,7 @@
  * de póliza NO salen por aquí — para eso está la pantalla del corredor, que va
  * detrás de sesión.
  */
+import { esColumnaAusente } from './pg-error'
 import type {
   EntradaRechazada,
   EntidadIngesta,
@@ -460,7 +461,11 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       `)
       let r: Fila[]
       let conColumna = true
-      try { r = await consulta(true) } catch { conColumna = false; r = await consulta(false) }
+      try { r = await consulta(true) } catch (e) {
+        // Solo «columna ausente» (42703) cae a la consulta vieja; cualquier otro fallo se propaga como siempre.
+        if (!esColumnaAusente(e)) throw e
+        conColumna = false; r = await consulta(false)
+      }
       // Cero filas = todavía no se ha medido NADA. Devolver `{rutas:0,
       // rutasNuncaLeidas:0}` diría «los leemos todos», que es justo la
       // afirmación tranquilizadora y falsa que la mig 0097 existe para impedir.

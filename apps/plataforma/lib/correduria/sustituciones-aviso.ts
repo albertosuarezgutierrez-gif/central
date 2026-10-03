@@ -46,3 +46,24 @@ export function mensajeDobleSeguro(avisos: readonly { texto: string }[]): string
   const pie = avisos.length > 20 ? `\n… y ${avisos.length - 20} más.` : ''
   return `⚠️ *Posible doble seguro · Grupo ASegura*\n${avisos.length} póliza(s) sustituida(s) siguen vivas:\n\n${lineas}${pie}`
 }
+
+/**
+ * Envía varios avisos de forma INDEPENDIENTE: un fallo de uno no impide los demás. Los errores se agregan.
+ * `mensaje === null` = nada que enviar (no cuenta).
+ */
+export async function enviarAvisosIndependientes(
+  envios: ReadonlyArray<{ id: string; mensaje: string | null; enviar: (mensaje: string) => Promise<unknown> }>,
+): Promise<{ enviados: number; errores: string[] }> {
+  let enviados = 0
+  const errores: string[] = []
+  for (const e of envios) {
+    if (e.mensaje === null) continue
+    try {
+      await e.enviar(e.mensaje)
+      enviados++
+    } catch (err) {
+      errores.push(`${e.id}: ${String(err).slice(0, 120)}`)
+    }
+  }
+  return { enviados, errores }
+}
