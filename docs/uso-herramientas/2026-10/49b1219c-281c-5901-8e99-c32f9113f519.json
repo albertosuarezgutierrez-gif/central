@@ -1,0 +1,116 @@
+{
+ "sesion": "49b1219c-281c-5901-8e99-c32f9113f519",
+ "inicio": "2026-10-03T07:27:37.509Z",
+ "fin": "2026-10-03T07:56:45.473Z",
+ "llamadas": 131,
+ "categorias": {
+  "agente:general-purpose": {
+   "llamadas": 5,
+   "chars_in": 6545,
+   "chars_out": 4358,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 928307,
+   "tools": {
+    "Agent": 5
+   }
+  },
+  "otro": {
+   "llamadas": 36,
+   "chars_in": 18587,
+   "chars_out": 200739,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 5,
+    "SubagentHandback": 7,
+    "ReadNotifications": 24
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 19,
+   "chars_in": 1789,
+   "chars_out": 155270,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Glob": 1,
+    "Grep": 6,
+    "Read": 12
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 7,
+   "chars_in": 811,
+   "chars_out": 148017,
+   "errores": 2,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 3,
+    "mcp__Gmail__get_thread": 4
+   }
+  },
+  "bash": {
+   "llamadas": 50,
+   "chars_in": 20853,
+   "chars_out": 160035,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 50
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 2,
+   "chars_in": 2302,
+   "chars_out": 296,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 6,
+   "chars_in": 1495,
+   "chars_out": 21407,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__get_job_logs": 2,
+    "mcp__github__pull_request_read": 2,
+    "mcp__github__update_pull_request": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 2,
+   "chars_in": 243,
+   "chars_out": 347,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1,
+    "mcp__claude-code-remote__send_later": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 4,
+   "chars_in": 2250,
+   "chars_out": 53092,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 4
+   }
+  }
+ }
+}

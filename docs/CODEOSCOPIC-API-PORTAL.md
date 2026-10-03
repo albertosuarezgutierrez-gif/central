@@ -38,8 +38,9 @@
 > Y el texto del propio endpoint: *"If you think any line of insurance is missing, please contact the
 > support team for its activation."* → **`apisupport@codeoscopic.com`** es el canal para pedir que
 > activen un ramo que falte. Otros contactos del portal, para no confundir: `soporteapi@codeoscopic.com`
-> (soporte API general) y `soporteapi@avant2.es` (alta de credenciales nuevas, client_id/secret) son
-> soporte técnico; `comercial@codeoscopic.com` es comercial. Ninguno de los tres se usa sin decisión
+> (soporte API general) son soporte técnico. Las credenciales nuevas (client_id/secret) las crea y entrega
+> Juan Manuel Fernández, Product Manager API (`juan.fernandez@codeoscopic.com`, 91 075 84 98 ext. 606);
+> `soporteapi@avant2.es` **rebota desde 2026 (timeout); no usar**; `comercial@codeoscopic.com` es comercial. Ninguno de los tres se usa sin decisión
 > explícita de Alberto — es la regla de comunicaciones salientes del `CLAUDE.md` raíz.
 
 ## 🚨 Lo que esto CORRIGE de lo que dábamos por sabido
@@ -371,6 +372,10 @@ offers whose quotes have the action `ReRate` as required». O sea: para un preci
 una segunda llamada obligatoria. El CRM de Manuel trata ese re-rate como **facturable y no
 idempotente** (`noRetry` siempre), así que **un precio firme de hogar probablemente cuesta el
 doble**. Sin medir todavía: se mide en la primera cotización real.
+**Actualización (correo de Codeoscopic 02/10/2026, hilo «Duda»):** se factura 0,50 € por cada `POST /insurances`
+con HTTP 200 (aunque sea el mismo riesgo; 4xx/5xx no cuentan), solo en producción; septiembre = 28 llamadas
+facturables. ReRate (`/offers`) y Submit (`/policy-applications`) no aparecen como facturables: resuelto por
+inferencia del correo 02/10; confirmación explícita no pedida.
 
 ### Lo que cada compañía exige y no se puede anticipar
 
@@ -659,7 +664,7 @@ requestId `0d65134e-161833`). Lo que cambia lo que dábamos por sabido:
   the operation in a few minutes»; 503 → «The API is temporarily out of service. Please, try again…»;
   504 → «There was a timeout error with an insurance vendor. Please, try again…». Para el POST de
   policy-applications solo están documentados **200 y 403**. `consejoTrasFallo()` traduce cada código.
-- **Soporte:** los enlaces «API support team» del cuerpo apuntan a `mailto:soporteapi@avant2.es`; la
+- **Soporte:** los enlaces «API support team» del cuerpo apuntan a `mailto:soporteapi@avant2.es` (rebota desde 2026; no usar); la
   cabecera del spec (`info.contact.email`) dice `soporteapi@codeoscopic.com`. El portal no aclara cuál;
   el esquema de error que piden adjuntar es `{path, requestId, error, message, status, timestamp}`.
 - **`#overview--request-timeouts`, literal:** «Some operations may take a while to complete because they
@@ -692,6 +697,9 @@ Respuesta de Manuel (su Claude, medido contra su BD de producción) a las cinco 
   sin persistir el cuerpo — solo metadato en `operational_events` (`rootKeys: ["insurance"]`, 1.671
   rechazos desde el 25/06/2026, anteriores a cualquier emisión nuestra). Receptor nuevo en
   `apps/asegura` (ver su `CLAUDE.md`).
+  **Al repuntar el webhook de `app.grupoasegura.com` al receptor de `apps/asegura`, hay que pedir a Codeoscopic
+  que confíe en el certificado del nuevo dominio** (tienen el nuestro en su keystore, actualizado 30/09/2026).
+  Reintentan cada ~30 min hasta recibir HTTP 200/204; no hay id de notificación (correo oct 2026).
 - **`issuedDocuments[]`:** su código lo ignoraba a propósito (solo persistía `policyNumber`);
   `codeoscopic_documents` nunca tuvo writer (épica LOO-151). **La forma exacta del tag `File` se lee del
   OpenAPI vivo, autenticado con nuestro token OAuth2: `GET {CODEOSCOPIC_BASE_URL}/openapi.json`**
@@ -700,7 +708,7 @@ Respuesta de Manuel (su Claude, medido contra su BD de producción) a las cinco 
 - **Contactos y tiempos:** Juan Manuel Fernández (PM API, `juan.fernandez@codeoscopic.com`) — preciso
   en reunión, **latencia alta por email (hasta 14 días)**; `soporteapi@codeoscopic.com` — SLA de facto
   mismo día laborable, 2 días máximo; sin status page (los cortes van por email a integradores).
-  **Escalado:** Ángel Blesa Jarque, Director General (`comercial@codeoscopic.com`), firmante del
+  **Escalado:** Ángel Blesa Jarque, CEO (`angel.blesa@codeoscopic.com`; también `comercial@codeoscopic.com`), firmante del
   contrato — si hay silencio dos días. DPO: `dpd@codeoscopic.com`.
 
 ## Cabeceras y detalles de cableado que faltaban
@@ -765,4 +773,4 @@ en el markdown que lo generó; aquí solo lo que cambia lo que `central` puede d
 
 Para resolver lo que sigue como «NO DOCUMENTADO» (catálogos completos de moto, unidad de
 `deathBenefit`, facturación): llamar al catálogo real en INT con credenciales, o preguntar a
-`soporteapi@avant2.es`.
+`soporteapi@codeoscopic.com` (el `@avant2.es` rebota desde 2026; no usar).
