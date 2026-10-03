@@ -24,7 +24,7 @@ const MS_DIA = 86_400_000
  * Ramos donde NO se pinta: vida y salud tienen reglas de renovación propias y
  * el esquema de los dos plazos no se da por aplicable sin revisarlo.
  */
-export const RAMOS_SIN_VENTANA: readonly string[] = ['vida-y-salud']
+export const RAMOS_SIN_VENTANA: readonly string[] = ['vida-y-salud', 'salud-sin-copago']
 
 export function ramoTieneVentana(slug: string): boolean {
   return !RAMOS_SIN_VENTANA.includes(slug)
