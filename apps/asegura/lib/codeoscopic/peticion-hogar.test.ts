@@ -10,6 +10,10 @@ import {
   type DatosHogar,
 } from './peticion-hogar.ts'
 import { construirPeticionAuto, type DatosAuto } from './peticion-auto.ts'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
+
+// Fecha de efecto válida SIEMPRE (ni pasada ni a >90 días): relativa a hoy, no cableada.
+const FECHA_EFECTO = sumarDias(hoyEnMadrid(), 15)
 
 // Persona inventada: aquí no entra ningún cliente real.
 const BASE: DatosHogar = {
@@ -45,14 +49,14 @@ const BASE: DatosHogar = {
   propietarioEsTomador: true,
   capitalContinente: 61000,
   capitalContenido: 7000,
-  fechaEfecto: '2026-10-01',
+  fechaEfecto: FECHA_EFECTO,
 }
 
 test('con los datos mínimos no hay reparos y el cuerpo es EXACTAMENTE el HomeRisk del portal', () => {
   assert.deepEqual(revisarDatosHogar(BASE), [])
   const c = construirPeticionHogar(BASE, 'Home') as any
   assert.deepEqual(c.insuranceLine, { id: 'Home' })
-  assert.equal(c.effectiveDate, '2026-10-01')
+  assert.equal(c.effectiveDate, FECHA_EFECTO)
   assert.deepEqual(c.risk.address, {
     postalCode: '41002',
     town: { id: 12345 },
