@@ -1156,3 +1156,32 @@ export {
   leerBloqueDeRamo, precargaDePoliza, ramoTarificable,
 } from './datos-riesgo-ramo.ts'
 export type { BloqueDatos, CambioRiesgo, ClaveDatosRiesgo, ResultadoEdicionRiesgo } from './datos-riesgo-ramo.ts'
+
+// Imputar el bonus del conductor a un vehículo NUEVO desde sus otras pólizas de motor (03/10/2026).
+export {
+  elegirSeguroAnteriorParaImputar,
+  historialParaImputar,
+  maximoAniosSinSiniestros,
+  aniosCompletos,
+  candidataPublica,
+  decidirBloqueoBonus,
+  verificacionBonusDe,
+  codigoDgsPorNombre,
+  FUENTES_VERIFICACION_BONUS,
+} from './imputar-seguro-anterior.ts'
+export type {
+  TipoVehiculoNuevo,
+  TipoVehiculoCandidata,
+  OrigenCandidata,
+  CandidataSeguroAnterior,
+  CandidataEvaluada,
+  CandidataPublica,
+  FaltaDeclarar,
+  ImputacionSeguroAnterior,
+  ErrorImputacion,
+  HistorialImputado,
+  CampoHistorial,
+  FuenteVerificacionBonus,
+  VerificacionBonus,
+  BloqueoBonus,
+} from './imputar-seguro-anterior.ts'

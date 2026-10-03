@@ -145,6 +145,7 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
       <MotoNuevo
         clienteId={clienteId}
         etiquetaCliente={pre.pre.etiquetaCliente}
+        seguroImputado={pre.pre.seguroAnterior}
         faltanInicial={pre.pre.faltan}
         garajes={garajes.estado === 'ok' ? garajes.opciones : []}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}

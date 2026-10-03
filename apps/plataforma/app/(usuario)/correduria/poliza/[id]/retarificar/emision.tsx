@@ -148,6 +148,11 @@ type EstadoPanel =
       cuentaAviso: AvisoCuenta | null
       opciones: OpcionesEmitir
     }
+  /**
+   * Vehículo NUEVO (03/10/2026): el bonus se tarificó SUPUESTO (años sin siniestros al máximo porque no
+   * constaban) y asegura no emite sin verificarlo. No ha enviado nada; se reenvía con `bonusVerificado`.
+   */
+  | { paso: 'bonus_sin_verificar'; mensaje: string; projectId: string; cuenta: CuentaConocida | null; cuentaAviso: AvisoCuenta | null; opciones: OpcionesEmitir }
   /** asegura se niega antes de enviar y no hay nada que confirmar aquí. */
   | { paso: 'bloqueado'; causa: CausaBloqueo; mensaje: string }
   /** Interruptor `CODEOSCOPIC_EMISION_NUEVO` apagado: reintentar no sirve. */
@@ -165,7 +170,15 @@ type OpcionesEmitir = {
   acunarExistente?: boolean
   duplicadoConfirmado?: boolean
   figurasConfirmadas?: string[]
+  bonusVerificado?: { fuente: FuenteBonus }
 }
+
+type FuenteBonus = 'certificado' | 'sinco' | 'dato_confirmado'
+const FUENTES_BONUS: { id: FuenteBonus; nombre: string }[] = [
+  { id: 'certificado', nombre: 'Certificado de siniestralidad de la compañía anterior' },
+  { id: 'sinco', nombre: 'Consulta SINCO hecha' },
+  { id: 'dato_confirmado', nombre: 'Dato confirmado por el cliente (por escrito)' },
+]
 
 const TITULO_DUPLICADO: Record<CausaDuplicado, string> = {
   ya_en_cartera: 'Esta matrícula ya está asegurada en la cartera',
@@ -433,6 +446,8 @@ export function Emision({
   const [familiaAllianz, setFamiliaAllianz] = useState(false)
   // Casillas del paso `confirmar_figuras`. Nada preseleccionado: se marcan a mano.
   const [figurasMarcadas, setFigurasMarcadas] = useState<Set<string>>(() => new Set())
+  // Vehículo nuevo con bonus SUPUESTO (03/10/2026): cómo lo ha verificado el corredor antes de emitir.
+  const [fuenteBonus, setFuenteBonus] = useState<FuenteBonus | ''>('')
   // La oferta desde la que se pulsó «Emitir»: «Volver» del aviso legal regresa a ELLA (con la
   // cuenta, la fecha y lo tecleado), no cierra el panel entero (decisión 29/09/2026).
   const ofertaAntesDeEmitir = useRef<Extract<EstadoPanel, { paso: 'oferta' }> | null>(null)
@@ -660,7 +675,12 @@ export function Emision({
       familiaEnAllianz: esAllianz && familiaAllianz,
       duplicadoConfirmado: opciones.duplicadoConfirmado === true,
       ...(opciones.figurasConfirmadas ? { figurasConfirmadas: opciones.figurasConfirmadas } : {}),
+      ...(opciones.bonusVerificado ? { bonusVerificado: opciones.bonusVerificado } : {}),
     })
+    if (r.estado === 'error' && r.causa === 'bonus_sin_verificar') {
+      setEstado({ paso: 'bonus_sin_verificar', mensaje: r.mensaje, projectId, cuenta, cuentaAviso: aviso, opciones })
+      return
+    }
     if (r.estado === 'confirmar_figuras') {
       // Un segundo 409 (p. ej. otras exigidas) se repinta con las casillas vacías: lo marcado
       // antes confirmaba OTRA lista.
@@ -1276,6 +1296,33 @@ export function Emision({
             }}
           >
             Emitir igualmente
+          </button>
+        </div>
+      )}
+
+      {estado.paso === 'bonus_sin_verificar' && (
+        <div style={{ marginTop: 14, border: '2px solid var(--warning)', background: 'var(--warning-bg)', borderRadius: 10, padding: 12, display: 'grid', gap: 10, minWidth: 0 }}>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+            <Ico i={AlertTriangle} /> Bonus supuesto: hay que verificarlo antes de emitir
+          </p>
+          <p style={{ margin: 0 }}>{estado.mensaje}</p>
+          <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>
+            ¿Cómo lo has verificado?
+            <select value={fuenteBonus} onChange={(e) => setFuenteBonus(e.target.value as FuenteBonus | '')} style={{ minHeight: 44, maxWidth: '100%' }}>
+              <option value="">Elige cómo</option>
+              {FUENTES_BONUS.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={fuenteBonus === ''}
+            style={{ minHeight: 44 }}
+            onClick={() => {
+              if (fuenteBonus === '') return
+              emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { ...estado.opciones, bonusVerificado: { fuente: fuenteBonus } })
+            }}
+          >
+            Emitir con el bonus verificado
           </button>
         </div>
       )}

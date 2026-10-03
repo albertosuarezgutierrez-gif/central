@@ -278,7 +278,12 @@ export async function oportunidadDesdeLectura(
       matricula: txt(d.matricula, 20),
       vehiculo,
       seguroAnterior: r.fase === 'auto'
-        ? seguroAnteriorDe({ codigoDgs: d.codigoEntidadDgs, fechaEfecto: d.fechaEfecto, aniosSinSiniestros: d.aniosSinSiniestros, siniestrosUltimos5: d.siniestrosUltimos5 })
+        ? seguroAnteriorDe({
+            codigoDgs: d.codigoEntidadDgs, fechaEfecto: d.fechaEfecto, aniosSinSiniestros: d.aniosSinSiniestros, siniestrosUltimos5: d.siniestrosUltimos5,
+            // Identificación de esa póliza (03/10/2026): con ella se imputa el bonus a un vehículo NUEVO.
+            numeroPoliza: d.numeroPoliza, matricula: d.matricula, canal: contacto.mediador, cesionDerechos: contacto.cesionDerechos,
+            modalidad: ('bruto' in leida && leida.bruto ? (leida.bruto as Record<string, unknown>).modalidad : undefined) ?? d.modalidad,
+          })
         : null,
       tipoTarea: 'llamada',
       // Vence en ≤15 días: la llamada es URGENTE (la prioridad más alta de `gestion_prioridad`).

@@ -363,8 +363,9 @@ test('la fecha de efecto es a 15 días (el presupuesto sigue valiendo al emitir)
   assert.equal(precalificarMotoNueva(CLIENTE, RESUELTOS_MOTO_NUEVA, HOY).datos.fechaEfecto, '2026-09-16')
 })
 
-test('sin matrícula no se puede cotizar: la teclea el corredor, no sale de ninguna póliza', () => {
-  assert.ok(preNueva({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'))
+test('vehículo NUEVO sin matrícula (03/10/2026): se cotiza con versión + matriculación prevista; sin versión, falta', () => {
+  assert.equal(preNueva({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'), false)
+  assert.ok(preNueva({}, { matricula: null, codigoVehiculo: null }).faltan.some((f) => f.campo === 'matricula'))
 })
 
 test('el garaje solo se marca como supuesto si de verdad lo es', () => {
@@ -427,8 +428,9 @@ test('moto: con experiencia elegida, NO se supone nada', () => {
   assert.ok(r.faltan.some((f) => f.campo === 'motoAnteriorCodigo'))
 })
 
-test('moto: sin matrícula no se puede cotizar', () => {
-  assert.ok(preMoto({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'))
+test('moto NUEVA sin matrícula (03/10/2026): se cotiza con versión + matriculación prevista; sin versión, falta', () => {
+  assert.equal(preMoto({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'), false)
+  assert.ok(preMoto({}, { matricula: null, codigoVehiculo: null }).faltan.some((f) => f.campo === 'matricula'))
 })
 
 test('moto: NINGÚN supuesto rellena un dato personal', () => {

@@ -15,6 +15,8 @@ import {
 } from '@/lib/codeoscopic/catalogos'
 import { sanearSupuestos, sanearReparos, type SupuestoPublico, type ReparoPublico } from '@/lib/codeoscopic/precalificar-publica'
 import { registrarErrorCartera } from '@/lib/error-cartera'
+import { imputarSeguroAnterior, seguroAnteriorNoDisponible } from '@/lib/seguro-anterior-candidatas'
+import { revisarDatosMoto } from '@/lib/codeoscopic/peticion-moto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -139,10 +141,23 @@ export async function GET(req: Request) {
   }
   const pre = precalificarMotoNueva(origen.cliente, resueltos, hoyIso())
 
+  // 🚗 Vehículo NUEVO, historial del CONDUCTOR (03/10/2026): se propone como seguro anterior la mejor
+  // póliza de motor suya que conocemos (`?seguroAnteriorId=` elige otra; `?sinSeguroAnterior=1` la apaga).
+  // Gratis: solo BD. Un fallo aquí no tumba la pantalla: sale `seguroAnterior.estado = 'no_disponible'`.
+  const sp = new URL(req.url).searchParams
+  const imp = await imputarSeguroAnterior({
+    correduriaId, clienteId, tipoNuevo: 'moto', cliente: origen.cliente,
+    cuerpo: { seguroAnteriorId: sp.get('seguroAnteriorId') ?? undefined, sinSeguroAnterior: sp.get('sinSeguroAnterior') === '1' },
+    correcciones: undefined, hoy: hoyIso(),
+  })
+  const historial = imp.ok ? imp.historial : null
+  const datosPre = { ...pre.datos, ...(historial?.datos ?? {}) }
+  const seguroAnterior = imp.ok ? imp.publico : seguroAnteriorNoDisponible(imp.mensaje)
+
   const consumo = await estadoConsumo(correduriaId)
 
-  const supuestos: SupuestoPublico[] = sanearSupuestos(pre.supuestos)
-  const faltan: ReparoPublico[] = sanearReparos(pre.faltan)
+  const supuestos: SupuestoPublico[] = sanearSupuestos([...pre.supuestos, ...(historial?.supuestos ?? [])])
+  const faltan: ReparoPublico[] = sanearReparos(historial ? revisarDatosMoto(datosPre, { hoy: hoyIso(), vehiculoNuevo: true }) : pre.faltan)
 
   return NextResponse.json(
     {
@@ -150,6 +165,7 @@ export async function GET(req: Request) {
       etiquetaCliente: origen.etiqueta,
       faltan,
       supuestos,
+      seguroAnterior,
       municipios: muni,
       municipiosMotivo,
       estadoCivil: estadoCivilMoto,

@@ -44,6 +44,8 @@ import {
 import { BloqueFigura } from '../../../oportunidad/[id]/BloqueFigura'
 import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import { FallosTarificacion } from '../../../FallosTarificacion'
+import { AvisoBonusSupuesto, PanelSeguroImputado, eleccionParaCotizar } from '../../../SeguroAnteriorImputado'
+import { describirCandidata, type SeguroAnteriorImputado } from '@/lib/correduria/seguro-anterior-imputado'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -91,6 +93,8 @@ type Resultado =
       supuestos: Supuesto[] | null
       /** Qué pasó con la copia guardada: su `cotizacionId` es lo que permite emitir. */
       guardado?: unknown
+      /** Seguro anterior declarado y si el bonus va SUPUESTO (03/10/2026). `null`/ausente = no consta. */
+      seguroAnterior?: SeguroAnteriorImputado | null
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; proyectoVigente?: boolean }
@@ -127,7 +131,10 @@ export default function MotoNuevo({
   datosRiesgo: datosRiesgoProp = null,
   anterior = null,
   anteriorAmbiguo = null,
+  seguroImputado = null,
 }: {
+  /** Vehículo NUEVO (03/10/2026): la póliza de motor del cliente que asegura propone como seguro anterior. */
+  seguroImputado?: SeguroAnteriorImputado | null
   /**
    * Los datos del vehículo del RIESGO (30/09/2026, `info_riesgo.datosVehiculo`): se PRECARGAN aquí y lo que se
    * use al pedir precio se anota de vuelta. Prioridad: variante retomada (`?tarificacion=`) > riesgo. Esta
@@ -336,6 +343,8 @@ export default function MotoNuevo({
   const [companiaActualLibre, setCompaniaActualLibre] = useState(() => (companias === null ? sa?.codigoDgs ?? '' : ''))
   const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.replace(/\s+/g, '') ?? '')
   const [matriculaAnterior, setMatriculaAnterior] = useState('')
+  // Vehículo NUEVO (03/10/2026): qué póliza suya se declara como seguro anterior si no se teclea a mano.
+  const [eleccionAnterior, setEleccionAnterior] = useState(() => seguroImputado?.elegida?.id ?? '')
   // Los años NO se teclean (29/09/2026, Alberto): se declara el máximo y la compañía aplica el
   // bonus real contrastando el nº de póliza con SINCO. Lo leído de su póliza manda sobre el máximo.
   const historial = historialDeclarado(sa)
@@ -421,7 +430,9 @@ export default function MotoNuevo({
   const faltanTomador = (faltanInicial ?? []).filter((f) => !(f.campo === 'conductor' && figs.conductor_habitual))
   const faltaMunicipio = !municipioId
   // En modo póliza la matrícula la pone asegura desde la póliza: no se exige aquí.
-  const faltaMatricula = !poliza && !matricula.trim()
+  // Vehículo NUEVO (03/10/2026): la matrícula ya no es obligatoria — un vehículo recién comprado se tarifica
+  // antes de matricularse con la versión y la fecha de matriculación PREVISTA (≤ 90 días). Lo valida asegura.
+  const faltaMatricula = false
   const faltaMatriculacion = !matriculacion
   const faltaMotoAnterior = experienciaConduccion === 'OtherMotorcycle' && !motoAnteriorCodigo.trim()
   const estimacion = poliza ? null : fechaMatriculacionEstimada(matricula, hoyLocal())
@@ -525,6 +536,9 @@ export default function MotoNuevo({
       correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
       if (siniestrosUltimos5.trim() !== '') correccionesFinal.siniestrosUltimos5 = Number(siniestrosUltimos5)
+      // De dónde salen los años sin siniestros (03/10/2026): sin esto asegura los trata como SUPUESTOS.
+      if (aniosSinSiniestros !== String(historial.aniosSinSiniestros)) correccionesFinal.bonusOrigen = 'corredor'
+      else if (sa?.aniosSinSiniestros != null) correccionesFinal.bonusOrigen = 'documento'
     }
     // marca/modelo/motor no viajan al vendor: asegura los usa para releer la versión
     // del catálogo (gratis) y cruzar su cilindrada y kW con el carné antes de pagar.
@@ -550,6 +564,7 @@ export default function MotoNuevo({
         })
       : await pedirCotizacionMoto({
       clienteId,
+      ...(tieneSeguroActual ? {} : eleccionParaCotizar(seguroImputado, eleccionAnterior)),
       variante: variante ? { oportunidadId: variante.oportunidadId, figuras: figs as Record<string, string>, nota } : null,
       resueltos: {
         ...version,
@@ -614,6 +629,7 @@ export default function MotoNuevo({
           fallos: r.fallos,
           supuestos: r.supuestos,
           guardado: r.guardado,
+          seguroAnterior: r.seguroAnterior ?? null,
         })
         return
       default: {
@@ -704,7 +720,7 @@ export default function MotoNuevo({
               <input value={matricula || 'La de la póliza'} readOnly style={{ ...input, opacity: 0.8 }} />
             </Campo>
           ) : (
-            <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
+            <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="La teclea el corredor. Si el vehículo aún no está matriculado, déjala vacía y pon la fecha de matriculación prevista (máx. 90 días); con seguro anterior hará falta la matrícula de esa póliza.">
               <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
             </Campo>
           )}
@@ -912,6 +928,9 @@ export default function MotoNuevo({
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: '8px 0 0' }}>
             Tiene {anteriorAmbiguo} oportunidades de moto abiertas con su póliza leída: tarifica desde la oportunidad de esa moto para precargar su bonus.
           </p>
+        )}
+        {!tieneSeguroActual && seguroImputado && (
+          <PanelSeguroImputado s={seguroImputado} valor={eleccionAnterior} onCambio={setEleccionAnterior} />
         )}
 
         {tieneSeguroActual && (
@@ -1150,6 +1169,10 @@ function Precios({
   return (
     <div style={{ marginTop: 12 }}>
       <EnlaceOportunidad guardado={r.guardado} />
+      {r.seguroAnterior?.elegida && (
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '6px 0' }}>Seguro anterior declarado: {describirCandidata(r.seguroAnterior.elegida)}</p>
+      )}
+      {r.seguroAnterior?.bonusSupuesto && <AvisoBonusSupuesto condicion={r.seguroAnterior.condicion} />}
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
           <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>

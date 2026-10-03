@@ -131,6 +131,7 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         clienteId={clienteId}
         matriculaInicial={matriculaInicial}
         etiquetaCliente={pre.pre.etiquetaCliente}
+        seguroImputado={pre.pre.seguroAnterior}
         faltanInicial={pre.pre.faltan}
         garajes={garajes.estado === 'ok' ? garajes.opciones : []}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}
