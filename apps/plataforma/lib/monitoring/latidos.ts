@@ -263,6 +263,22 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'ninguna póliza cruzó un hito. Huella: agente_latidos.correduria_renovaciones.',
   },
   {
+    id: 'correduria_descubrir_emisiones',
+    vigiladoDesde: '2026-10-03',
+    etiqueta: '🛡️ Descubrimiento de emisiones de Avant2 (cron cada 30 min, 7-23 h)',
+    // Solo corre de 05:10 a 21:40 UTC: la noche son ~8 h sin pasada legítima, y el vigía mira a las
+    // 07:45. Con 12 h salta si se pierde la tarde entera y no por la noche normal.
+    maxHoras: 12,
+    nota:
+      'Nadie está mirando en Avant2 las emisiones hechas fuera de la intranet: una póliza emitida en la ' +
+      'web no entra en la cartera ni en los avisos. Lee el `detalle`: «credenciales de Codeoscopic ' +
+      'rechazadas» es el CLIENT_ID/SECRET de Codeoscopic en central-asegura; «no se pudo mirar» con ' +
+      '`secreto_rechazado` es ASEGURA_OPERADOR_SECRET (mismo valor en plataforma y central-asegura); ' +
+      '«N sin poder revisar» son proyectos sueltos que fallaron (la próxima pasada los reintenta). ' +
+      'Un «0 acuñadas» con ok NO es un fallo: es que no había emisiones nuevas. ' +
+      'Huella: agente_latidos.correduria_descubrir_emisiones.',
+  },
+  {
     id: 'correduria_ingesta',
     vigiladoDesde: '2026-09-01',
     etiqueta: '🛡️ Ingesta de CIMA — que los datos de las compañías entren (cron diario 06:45)',

@@ -37,6 +37,11 @@ export type EntradaSincronizar = {
   actor: string
   /** `false` = vista previa: lee el vendor y decide, sin tocar la BD. */
   escribir: boolean
+  /**
+   * El `GET /insurances/{id}` YA leído (el descubrimiento lo lee para casar el tomador y no lo
+   * repite). Sin él se lee aquí. Solo cambia de dónde sale el crudo: las comprobaciones son las mismas.
+   */
+  crudo?: unknown
 }
 
 export type ResultadoSincronizar =
@@ -146,7 +151,7 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
   if (cfg.estado !== 'lista') return fallo(503, 'Codeoscopic no está configurado', 'vendor')
   let crudo: unknown
   try {
-    crudo = await peticion(cfg.config, { metodo: 'GET', path: `/insurances/${projectId}`, timeoutMs: cfg.config.timeoutGenericoMs })
+    crudo = entrada.crudo !== undefined ? entrada.crudo : await peticion(cfg.config, { metodo: 'GET', path: `/insurances/${projectId}`, timeoutMs: cfg.config.timeoutGenericoMs })
   } catch (e) {
     const causa = e instanceof ErrorCodeoscopic ? `vendor:${e.clase}${e.status ? ` ${e.status}` : ''}` : `vendor: ${e instanceof Error ? e.message : String(e)}`
     return fallo(502, causa, 'vendor')
