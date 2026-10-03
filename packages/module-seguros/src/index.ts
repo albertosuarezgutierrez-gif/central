@@ -163,6 +163,13 @@ export {
   type EmisionSinAviso,
 } from './ingesta.ts'
 export {
+  corteSiniestros,
+  textoCorteSiniestros,
+  HORAS_CORTE_SINIESTROS,
+  type CorteSiniestros,
+  type EntradaCorte,
+} from './corte-siniestros.ts'
+export {
   veredictoEntidad,
   silencioPorEntidad,
   motivosSilencio,

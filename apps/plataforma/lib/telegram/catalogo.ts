@@ -625,6 +625,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'A las 09:00, 14:00 y 18:30 UTC, solo si Actions no ha traído CIMA',
   },
   {
+    id: 'correduria.cima-siniestros-corte', categoria: 'correduria',
+    titulo: 'CIMA: se cortan los siniestros',
+    que: 'No entra ningún fichero de siniestros (SIN) desde hace más de 72 h mientras pólizas o recibos sí llegan: algo falla en el envío de siniestros.',
+    cuando: 'Como mucho una vez al día, en la pasada del respaldo de CIMA (09:00, 14:00, 18:30 UTC)',
+  },
+  {
     id: 'correduria.cima-liq', categoria: 'correduria',
     titulo: 'Liquidaciones de comisiones (CIMA)',
     que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',
