@@ -93,3 +93,7 @@ test('peso y altura NO viajan (formato sin documentar), aunque lleguen en los da
   const c = construirPeticionVida({ ...BASE, peso: 80, altura: 180, weight: 80, height: 180 } as any, LINEA) as any
   for (const k of ['weight', 'height', 'peso', 'altura']) assert.equal(k in c.risk.insured, false, k)
 })
+
+test('CNO: solo 4 cifras (catálogo level=4)', () => {
+  for (const p of ['1', '26', '261']) assert.ok(revisarDatosVida({ ...BASE, profesion: p }).some((x) => x.campo === 'profesion'), p)
+})

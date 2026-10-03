@@ -47,3 +47,38 @@ test('revisarAseguradosAdicionales numera a cada asegurado y no dice nada si tod
   assert.equal(m.length, 1)
   assert.match(m[0], /^asegurado adicional 2:/)
 })
+
+import { errorAseguradosAdicionales, errorAseguradosEnCuerpo } from './asegurados.ts'
+
+test('validar: más del tope se RECHAZA con mensaje claro, no se recorta', () => {
+  const muchos = Array.from({ length: MAX_ADICIONALES_CORDURA + 1 }, () => OK)
+  assert.match(errorAseguradosAdicionales(muchos) ?? '', /máximo/)
+  assert.equal(errorAseguradosAdicionales(muchos.slice(0, MAX_ADICIONALES_CORDURA)), null)
+})
+
+test('validar: tiene que ser array de objetos', () => {
+  assert.notEqual(errorAseguradosAdicionales('x'), null)
+  assert.notEqual(errorAseguradosAdicionales({}), null)
+  assert.notEqual(errorAseguradosAdicionales([OK, null]), null)
+  assert.notEqual(errorAseguradosAdicionales([7]), null)
+  assert.notEqual(errorAseguradosAdicionales([[]]), null)
+  assert.equal(errorAseguradosAdicionales(undefined), null)
+  assert.equal(errorAseguradosAdicionales([]), null)
+})
+
+test('cuerpo: correcciones.aseguradosAdicionales null o de tipo equivocado se rechaza; [] y lista válida pasan', () => {
+  assert.notEqual(errorAseguradosEnCuerpo({}, { aseguradosAdicionales: null }), null)
+  assert.notEqual(errorAseguradosEnCuerpo({}, { aseguradosAdicionales: 'x' }), null)
+  assert.notEqual(errorAseguradosEnCuerpo({}, { aseguradosAdicionales: [null] }), null)
+  assert.notEqual(errorAseguradosEnCuerpo({}, { aseguradosAdicionales: Array.from({ length: 50 }, () => OK) }), null)
+  assert.equal(errorAseguradosEnCuerpo({}, { aseguradosAdicionales: [] }), null)
+  assert.equal(errorAseguradosEnCuerpo({}, { aseguradosAdicionales: [OK] }), null)
+  assert.equal(errorAseguradosEnCuerpo({}, undefined), null)
+  assert.equal(errorAseguradosEnCuerpo({}, { otra: 1 }), null)
+})
+
+test('cuerpo: resueltos.asegurados también se valida', () => {
+  assert.notEqual(errorAseguradosEnCuerpo({ asegurados: Array.from({ length: 21 }, () => OK) }, undefined), null)
+  assert.notEqual(errorAseguradosEnCuerpo({ asegurados: 'x' }, undefined), null)
+  assert.equal(errorAseguradosEnCuerpo({ asegurados: [OK] }, undefined), null)
+})

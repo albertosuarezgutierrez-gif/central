@@ -159,7 +159,7 @@ import {
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
 import { comprobarRolesRamo } from '@/lib/codeoscopic/comprobar-roles'
-import { leerAseguradosAdicionales } from '@/lib/codeoscopic/asegurados'
+import { errorAseguradosEnCuerpo, leerAseguradosAdicionales } from '@/lib/codeoscopic/asegurados'
 import { resumirCrudo, type ResumenCrudo } from '@/lib/codeoscopic/crudo'
 import { choqueCarnetVersion } from '@/lib/codeoscopic/carnet-moto'
 import type { PeticionCotizacion, ResultadoCotizacion } from '@/lib/codeoscopic/cotizar'
@@ -1182,6 +1182,10 @@ async function prepararRetarificacionNuevaGenerica<D, S>(entrada: {
   disponible: (lineas: Opcion[]) => DisponibilidadVida | DisponibilidadSalud | DisponibilidadDecesos
 }): Promise<PreparadoRetarificacion> {
   const { clienteId, solicitadoPor, ramo, resueltos, correcciones, precalificar, revisar, construir, disponible } = entrada
+
+  // Validación de forma ANTES de tocar nada: un 422 claro, nunca un 500 ni una lista recortada en silencio.
+  const malAsegurados = errorAseguradosEnCuerpo(resueltos, correcciones)
+  if (malAsegurados) return { estado: 'corte', respuesta: sinGasto({ error: malAsegurados }, 422) }
 
   const correduria = await correduriaUnica().catch(() => null)
   if (!correduria) {

@@ -107,7 +107,7 @@ export default function VidaNuevo({
   // Lo que el vendor exige del asegurado (person-roles) llega como hueco con el nombre de NUESTRO campo.
   const exigeProfesion = (faltanInicial ?? []).some((f) => f.campo === 'profesion')
   const exigeFumador = (faltanInicial ?? []).some((f) => f.campo === 'fumador')
-  const profesionMal = profesion.trim() !== '' && !/^\d{1,4}$/.test(profesion.trim())
+  const profesionMal = profesion.trim() !== '' && !/^\d{4}$/.test(profesion.trim())
   const faltaProfesion = (exigeProfesion && profesion.trim() === '') || profesionMal
   const faltaFumador = exigeFumador && fumador === ''
 
@@ -218,8 +218,8 @@ export default function VidaNuevo({
             <Campo
               etiqueta="Profesión (código CNO-11)"
               falta={faltaProfesion}
-              faltaTexto={profesionMal ? 'de 1 a 4 cifras' : exigeProfesion ? 'la exige el vendor' : undefined}
-              ayuda="Código CNO-11 de 1 a 4 cifras, p. ej. 2612. El servidor lo valida contra el catálogo del vendor (gratis) antes de gastar."
+              faltaTexto={profesionMal ? '4 cifras' : exigeProfesion ? 'la exige el vendor' : undefined}
+              ayuda="Código CNO-11 de 4 cifras (nivel 4 del catálogo), p. ej. 2612. El servidor lo valida contra el catálogo del vendor (gratis) antes de gastar."
             >
               <input inputMode="numeric" value={profesion} onChange={(e) => setProfesion(e.target.value)} placeholder="2612" style={input} />
             </Campo>

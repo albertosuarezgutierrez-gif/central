@@ -33,6 +33,36 @@ export type AseguradoAdicional = {
 /** Tope de cordura contra un cuerpo absurdo; el máximo REAL lo dice `max` del rol en `person-roles`. */
 export const MAX_ADICIONALES_CORDURA = 20
 
+/**
+ * Valida la lista de adicionales ANTES de leerla: tiene que ser un array de objetos y no pasar del
+ * tope. `null`/`undefined` = «no hay adicionales» (se valida con `obligatorio: false`); en una
+ * corrección explícita `null` es un error. Devuelve el mensaje de validación (422) o `null` si vale.
+ * Nada se descarta en silencio: lo que sobra se rechaza.
+ */
+export function errorAseguradosAdicionales(v: unknown, donde = 'asegurados adicionales'): string | null {
+  if (v === undefined || v === null) return null
+  if (!Array.isArray(v)) return `${donde}: tiene que ser una lista de personas`
+  if (v.length > MAX_ADICIONALES_CORDURA) return `${donde}: máximo ${MAX_ADICIONALES_CORDURA} asegurados adicionales (llegaron ${v.length}); no se descarta ninguno en silencio`
+  const i = v.findIndex((x) => typeof x !== 'object' || x === null || Array.isArray(x))
+  return i >= 0 ? `${donde}: el elemento ${i + 1} no es un objeto con los datos del asegurado` : null
+}
+
+/**
+ * `resueltos.asegurados` (lo que manda la pantalla) y `correcciones.aseguradosAdicionales` (lo que
+ * pisa lo supuesto): ambos tienen que ser una lista de objetos con tope. En la corrección, `null` o
+ * un tipo equivocado se RECHAZA (no se ignora): llegaría a `revisarAseguradosAdicionales` y daría 500.
+ */
+export function errorAseguradosEnCuerpo(resueltos: unknown, correcciones: unknown): string | null {
+  const r = errorAseguradosAdicionales((resueltos as { asegurados?: unknown } | null)?.asegurados, 'asegurados')
+  if (r) return r
+  if (correcciones && typeof correcciones === 'object' && !Array.isArray(correcciones) && 'aseguradosAdicionales' in correcciones) {
+    const v = (correcciones as Record<string, unknown>).aseguradosAdicionales
+    if (v === null || v === undefined) return 'correcciones.aseguradosAdicionales: tiene que ser una lista (para quitar adicionales manda [])'
+    return errorAseguradosAdicionales(v, 'correcciones.aseguradosAdicionales')
+  }
+  return null
+}
+
 function limpio(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
 }

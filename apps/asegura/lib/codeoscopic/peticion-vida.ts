@@ -53,7 +53,7 @@ export type DatosVida = DatosPersona & {
 export type ReparoVida = { campo: keyof DatosVida; motivo: string }
 
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
-const RE_CNO = /^\d{1,4}$/
+const RE_CNO = /^\d{4}$/
 
 function texto(v: unknown): boolean {
   return typeof v === 'string' && v.trim() !== ''
@@ -85,9 +85,9 @@ export function revisarDatosVida(d: Partial<DatosVida>): ReparoVida[] {
     r.push({ campo: 'duracionAnios', motivo: 'tiene que ser un número de años' })
   }
 
-  // CNO-11: el catálogo `/economic-occupations` tiene niveles 1-4, o sea códigos de 1 a 4 cifras.
+  // CNO-11 al nivel más fino: el catálogo se pide con `level=4` (`GET /economic-occupations?level=4`), códigos de 4 cifras.
   if (texto(d.profesion) && !RE_CNO.test(String(d.profesion).trim()))
-    r.push({ campo: 'profesion', motivo: 'tiene que ser el código CNO-11 de la profesión (de 1 a 4 cifras, p. ej. 2612)' })
+    r.push({ campo: 'profesion', motivo: 'tiene que ser el código CNO-11 de la profesión (4 cifras, p. ej. 2612)' })
   if (d.fumador !== undefined && d.fumador !== null && typeof d.fumador !== 'boolean')
     r.push({ campo: 'fumador', motivo: 'tiene que ser sí o no' })
 
