@@ -357,3 +357,20 @@ test('🪤 lista blanca: ni el conductor principal ni el CIF del tomador se guar
   assert.equal(r.leidos.conductorPrincipal, true)
   assert.equal(r.leidos.cifTomador, true)
 })
+
+test('🪤 conductor con nombre contenido en el del tomador (o al revés) NO es otra persona', () => {
+  const sola = normalizarContactoTomador({ tomador: 'Ana Ruiz Gil', conductorPrincipal: { nombre: 'Ana' } })
+  assert.equal(notaConductorPrincipal(sola, 'Ana Ruiz Gil', null), null)
+  const larga = normalizarContactoTomador({ tomador: 'Ana Ruiz', conductorPrincipal: { nombre: 'Ana Ruiz Gil' } })
+  assert.equal(notaConductorPrincipal(larga, 'Ana Ruiz', null), null)
+  const otra = normalizarContactoTomador({ tomador: 'Ana Ruiz Gil', conductorPrincipal: { nombre: 'Pedro' } })
+  assert.ok(notaConductorPrincipal(otra, 'Ana Ruiz Gil', null))
+})
+
+test('🪤 un «SA» en el nombre con DNI físico válido no hace empresa al tomador (no se pierde el DNI)', () => {
+  const c = normalizarContactoTomador({ tomador: 'Juan Pérez SA', dni: DNI })
+  assert.notEqual(c.tomadorEsEmpresa, true)
+  const r = parcheFichaDesdePoliza(fichaVacia(), { ...leida(), contacto: c }, null, HOY)
+  assert.equal(r.parche.dni, DNI)
+  assert.equal(r.parche.esEmpresa, false)
+})

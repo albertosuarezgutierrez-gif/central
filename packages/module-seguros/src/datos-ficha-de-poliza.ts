@@ -25,7 +25,7 @@ import { resolverCompania, type CompaniaCatalogo } from './defensa-cartera.ts'
 import { normalizarCp, normalizarDni, normalizarEmail, normalizarFechaNacimiento, normalizarTelefono } from './cliente-edicion.ts'
 import { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type TipoCarnet } from './carnet-ficha.ts'
 import { fechaTextoAIso } from './fecha-texto.ts'
-import { tipoPersonaDeNombre } from './poliza-de-documento.ts'
+import { cifDeEmpresa, esTomadorEmpresa, identificadorFiscal } from './poliza-de-documento.ts'
 
 const SIN_DATO = new Set(MARCADORES_SIN_DATO)
 
@@ -97,27 +97,9 @@ export function contactoTomadorVacio(): ContactoTomadorLeido {
   }
 }
 
-/**
- * El identificador fiscal tal como lo escriben las pólizas: DNI, NIE o CIF, también como NIF-IVA
- * con el prefijo de país («ESB12345674», «Número de IVA»). Se quita el «ES» y se valida con el
- * validador de siempre (`normalizarDni`). Lo que no cuadre → `null`.
- */
-export function identificadorFiscal(v: unknown): { valor: string; tipoPersona: 'fisica' | 'juridica' } | null {
-  const t = texto(v, 30)
-  if (!t) return null
-  const directo = normalizarDni(t)
-  if (directo.ok) return directo.valor
-  const limpio = t.toUpperCase().replace(/[^A-Z0-9]/g, '')
-  if (!limpio.startsWith('ES')) return null
-  const sinPais = normalizarDni(limpio.slice(2))
-  return sinPais.ok ? sinPais.valor : null
-}
-
-/** El CIF de una persona JURÍDICA (con o sin «ES» delante); un DNI o NIE aquí → `null`. */
-export function cifDeEmpresa(v: unknown): string | null {
-  const r = identificadorFiscal(v)
-  return r && r.tipoPersona === 'juridica' ? r.valor : null
-}
+// `identificadorFiscal`/`cifDeEmpresa`/`esTomadorEmpresa` viven en `poliza-de-documento.ts` (los
+// usa también el alta del lead); se re-exportan aquí.
+export { cifDeEmpresa, esTomadorEmpresa, identificadorFiscal }
 
 function conductorPrincipal(v: unknown): ConductorPrincipalLeido | null {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
@@ -182,16 +164,14 @@ export function normalizarContactoTomador(raw: unknown): ContactoTomadorLeido {
 
 /**
  * ¿Es empresa el tomador, y cuál es su CIF? El CIF se busca en `cifTomador` y, si el modelo lo dejó
- * en `dni`, también ahí (solo si es de persona JURÍDICA: un DNI nunca pasa por CIF). Empresa = lo
- * dice el modelo, o hay CIF, o el nombre lleva forma societaria. `false` solo si el modelo lo dice y
- * nada lo contradice. Equivocarse hacia «empresa» es conservador: sin CIF no se escribe nada.
+ * en `dni`, también ahí (solo si es de persona JURÍDICA: un DNI nunca pasa por CIF). Quién es
+ * empresa lo decide `esTomadorEmpresa` (un DNI físico válido manda sobre la forma del nombre).
  */
 function tomadorEmpresa(o: Record<string, unknown>): Pick<ContactoTomadorLeido, 'tomadorEsEmpresa' | 'cifTomador'> {
   const cif = cifDeEmpresa(o.cifTomador) ?? cifDeEmpresa(o.dni)
   const dicho = booleano(o.tomadorEsEmpresa)
-  const nombre = texto(o.tomador)
-  const porNombre = nombre !== null && tipoPersonaDeNombre(nombre) === 'juridica'
-  return { tomadorEsEmpresa: dicho === true || cif !== null || porNombre ? true : dicho, cifTomador: cif }
+  const empresa = esTomadorEmpresa({ tomador: texto(o.tomador), dni: o.dni, cifTomador: o.cifTomador, tomadorEsEmpresa: dicho })
+  return { tomadorEsEmpresa: empresa ? true : dicho, cifTomador: cif }
 }
 
 // ─── Póliza de concesionario / financiada ───────────────────────────────────
@@ -452,7 +432,10 @@ export function conductorEsOtraPersona(c: Pick<ContactoTomadorLeido, 'conductorP
   const pt = new Set(palabrasNombre(tomador))
   const pc = new Set(palabrasNombre(cp.nombre))
   const [corto, largo] = pt.size <= pc.size ? [pt, pc] : [pc, pt]
-  return !(corto.size >= 2 && [...corto].every((x) => largo.has(x)))
+  // Un nombre contenido en el otro («Ana» en «Ana Ruiz Gil») es la MISMA persona: ante la duda no se
+  // sugiere crear otra ficha (revisión PR 4168). Sin palabras legibles no se sabe → no se sugiere.
+  if (corto.size === 0) return false
+  return ![...corto].every((x) => largo.has(x))
 }
 
 /**

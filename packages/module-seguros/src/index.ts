@@ -545,6 +545,7 @@ export {
   companiaPorNombre,
   cifDeEmpresa,
   conductorEsOtraPersona,
+  esTomadorEmpresa,
   extraccionSinPii,
   identificadorFiscal,
   notaConductorPrincipal,

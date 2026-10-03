@@ -71,7 +71,7 @@ export const POST = auditado(async (req: Request) => {
 
   const d = r.datos
   const [tomador, enCartera] = await Promise.all([
-    new URL(req.url).searchParams.get('tomador') === '1' ? tomadorDe({ ramo: r.ramo, tipoLectura: r.fase, datos: r.datos as unknown as Record<string, string | number | null> }) : undefined,
+    new URL(req.url).searchParams.get('tomador') === '1' ? tomadorDe({ ramo: r.ramo, tipoLectura: r.fase, datos: r.datos as unknown as Record<string, string | number | null> }, { tomadorEsEmpresa: r.contacto?.tomadorEsEmpresa, cifTomador: r.contacto?.cifTomador }) : undefined,
     correduriaUnica().then((c) => (c ? polizaEnCartera(c.id, d.numeroPoliza) : null)).catch(() => null),
   ])
   let oportunidad: ResultadoOportunidadDocumento | undefined

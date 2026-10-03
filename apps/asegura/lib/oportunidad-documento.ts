@@ -130,9 +130,9 @@ export async function oportunidadDesdeLectura(
     // lector saca del «Número de IVA»/NIF-IVA sin el «ES»), y el DNI o la fecha de nacimiento que
     // traiga el documento son de una PERSONA (contacto o conductor): no van a la empresa. Sin CIF,
     // el lead se abre sin identificador, como antes.
-    const empresa = contacto.tomadorEsEmpresa === true
-    const l = { ramo: r.ramo, tipoLectura: r.fase, datos: empresa ? { ...d, dni: contacto.cifTomador, fechaNacimiento: null } : d } as LecturaPoliza
-    const { alta } = prepararAltaDesdeDocumento(l, { tomadorEsEmpresa: contacto.tomadorEsEmpresa })
+    const l = { ramo: r.ramo, tipoLectura: r.fase, datos: d } as LecturaPoliza
+    const { alta } = prepararAltaDesdeDocumento(l, { tomadorEsEmpresa: contacto.tomadorEsEmpresa, cifTomador: contacto.cifTomador })
+    const empresa = contacto.tomadorEsEmpresa === true || alta?.tipoPersona === 'juridica'
 
     const db = prismaAsegura()
     const ficha = e.clienteSube
