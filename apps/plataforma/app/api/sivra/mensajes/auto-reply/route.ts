@@ -5,6 +5,7 @@ import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
 import { decidir } from '@/lib/sivra/agente-huesped/decidir'
 import { detectLang, detectCategory, esAutomatico } from '@/lib/sivra/agente-huesped/reglas'
+import { decidirAutoEnvio } from '@/lib/sivra/agente-huesped/auto'
 import { idiomaConocido } from '@/lib/sivra/agente-huesped/idiomas'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
@@ -83,8 +84,8 @@ export async function GET(req: NextRequest) {
         categoria: dec.categoria, needs_human: dec.needs_human, apoyada_en_fuente: !!dec.apoyada_en_fuente,
         sentimiento: dec.sentimiento, motivo: dec.motivo,
       },
-      seEnviariaSolo: !dec.needs_human && !!dec.reply && dec.sentimiento !== 'negativo'
-        && dec.requiere_respuesta !== false && (!!dec.apoyada_en_fuente || dec.es_cortesia === true),
+      // Misma regla que el envío real (incluida la compuerta de horario/maletas), no una copia.
+      seEnviariaSolo: decidirAutoEnvio(dec, pregunta).auto,
       borrador: dec.reply,
     })
   }

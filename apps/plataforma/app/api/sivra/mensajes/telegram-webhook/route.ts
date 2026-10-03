@@ -12,7 +12,8 @@ import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
 import { tgAvisoBotones } from '@/lib/telegram'
 import { reponerVentanaPin } from '@/lib/domotica/reponer-ventana'
 import { PREFIJO_CALLBACK_DOMOTICA, ACCION_VENTANA, textoResultadoReponer } from '@/lib/domotica/reponer-ventana-puro'
-import { confirmarEnviado, confirmarDescartado, confirmarRespondidoFuera, confirmarEsMio, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
+import { confirmarEnviado, confirmarDescartado, confirmarRespondidoFuera, confirmarEsMio, reproponerBorrador, aceptarCambioHorario, negativaListaParaEnviar } from '@/lib/sivra/agente-huesped/telegram-msg'
+import { horaDeCallback } from '@/lib/sivra/agente-huesped/cambio-horario'
 import { aprenderCorreccion, marcarEnviadoLog } from '@/lib/sivra/agente-huesped/aprender'
 import { resolverHecho } from '@/lib/sivra/agente-huesped/hechos'
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
@@ -946,11 +947,58 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       // propuesta DUPLICADA ya resuelta (mismo mensaje del huésped propuesto dos veces). En vez del
       // críptico "Ya no está disponible", avisamos claro y RETIRAMOS los botones del mensaje pulsado
       // (editar el texto sin reply_markup quita el teclado) para que no vuelva a inducir a error.
-      const eraEnvio = action === 'send' || action === 'grant'
+      const eraEnvio = action === 'send' || action === 'grant' || action === 'chsi' || action === 'chhasta' || action === 'chno'
       await tgAnswerCallback(cb.id, eraEnvio ? 'Ese borrador ya se envió o se gestionó' : 'Ya no está disponible')
       const staleId = cb.message?.message_id
       if (staleId) await tgEditMessage(staleId, '☑️ <i>Este borrador ya se gestionó (enviado o descartado en otro aviso).</i>').catch(() => {})
       return NextResponse.json({ ok: true })
+    }
+
+    // ── Entrada anticipada / salida tardía / maletas (propuesta con semáforo, `cambio-horario.ts`).
+    // Mismo emisor autorizado que el resto de `hsp_` (se comprueba arriba, antes del enrutado).
+    if (action === 'chsi' || action === 'chhasta') {
+      const hora = horaDeCallback(args[1])
+      if (!hora) { await tgAnswerCallback(cb.id, 'Hora no válida'); return NextResponse.json({ ok: true }) }
+      const r = await aceptarCambioHorario(pend, hora)
+      await tgAnswerCallback(cb.id, r.toast)
+      if (r.fallo) {
+        await tgSend(avisoFalloEnvio(r.fallo.motivo), { html: true })
+        return NextResponse.json({ ok: false, sent: false, motivo: r.fallo.motivo.clase })
+      }
+      if (!r.ok) {
+        await tgSend(r.aviso, { html: true }).catch(() => {})
+        return NextResponse.json({ ok: false, sent: false })
+      }
+      await confirmarEnviado(pend.tg_message_id, r.enviado || '')
+      await marcarEnviadoLog(bookingId, r.enviado || '')
+      await tgSend(r.aviso, { html: true }).catch(() => {})
+      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
+      return NextResponse.json({ ok: true, cambioHorario: action })
+    }
+    if (action === 'chno') {
+      // El «no» ya redactado (guardado en `borrador`). Si salió en español con un huésped de otro idioma, no se manda.
+      if (!negativaListaParaEnviar(pend)) {
+        await tgAnswerCallback(cb.id, 'El texto no está en su idioma')
+        await tgSend('🛑 <b>No se ha enviado nada:</b> el «no» no está en el idioma del huésped. Usa ✏️ Modificar.', { html: true }).catch(() => {})
+        return NextResponse.json({ ok: false, sent: false })
+      }
+      const res = await enviarAlHuespedDetallado(bookingId, pend.borrador || '')
+      await tgAnswerCallback(cb.id, res.ok ? 'Enviado ✅' : (res.motivo.reintentable ? 'No se pudo enviar — reintenta' : 'No se pudo enviar — mira el aviso'))
+      if (!res.ok) {
+        await tgSend(avisoFalloEnvio(res.motivo), { html: true })
+        return NextResponse.json({ ok: false, sent: false, motivo: res.motivo.clase })
+      }
+      await confirmarEnviado(pend.tg_message_id, pend.borrador || '')
+      await marcarEnviadoLog(bookingId, pend.borrador || '')
+      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
+      return NextResponse.json({ ok: true, cambioHorario: 'no' })
+    }
+    if (action === 'chlimp') {
+      // Solo una NOTA: pendiente de limpieza. No envía nada al huésped y el pendiente sigue vivo
+      // (los botones del aviso original siguen valiendo cuando la limpieza conteste).
+      await tgAnswerCallback(cb.id, 'Anotado: pendiente de limpieza')
+      await tgSend(`🧹 <b>Pendiente de limpieza</b> — reserva ${escapeHtml(bookingId)}\nFalta el OK de la limpieza. <i>No se ha enviado nada al huésped.</i> Cuando te contesten, decide con los botones del aviso original.`, { html: true }).catch(() => {})
+      return NextResponse.json({ ok: true, cambioHorario: 'limpieza' })
     }
 
     if (action === 'send' || action === 'grant') {
