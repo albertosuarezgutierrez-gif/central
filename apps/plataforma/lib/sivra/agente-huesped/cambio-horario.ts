@@ -29,7 +29,12 @@ export type Colindante = ReservaHorario & { relacion: 'entra_mismo_dia' | 'sale_
 export type EvaluacionHorario = { semaforo: Semaforo; motivo: string; colindante?: Colindante }
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
-const fechaOk = (f: string | null | undefined): f is string => typeof f === 'string' && FECHA.test(f)
+// Además del formato, la fecha debe existir en el calendario ("2026-13-45" haría lanzar a toISOString).
+const fechaOk = (f: string | null | undefined): f is string => {
+  if (typeof f !== 'string' || !FECHA.test(f)) return false
+  const d = new Date(`${f}T00:00:00Z`)
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === f
+}
 
 function diaAnterior(fecha: string): string {
   const d = new Date(`${fecha}T00:00:00Z`)

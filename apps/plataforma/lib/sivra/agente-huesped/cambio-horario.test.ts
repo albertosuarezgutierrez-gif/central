@@ -41,6 +41,7 @@ test('DESCONOCIDO → amarillo, jamás verde (lista null, fecha null o reserva c
   assert.equal(evaluarCambioHorario({ tipo: 'entrada', reserva: mia, reservasMismaPropiedad: null }).semaforo, 'amarillo')
   assert.equal(evaluarCambioHorario({ tipo: 'salida', reserva: mia, reservasMismaPropiedad: null }).semaforo, 'amarillo')
   assert.equal(evaluarCambioHorario({ tipo: 'entrada', reserva: R('100', null, null), reservasMismaPropiedad: [] }).semaforo, 'amarillo')
+  assert.equal(evaluarCambioHorario({ tipo: 'entrada', reserva: R('100', '2026-13-45', '2026-13-50'), reservasMismaPropiedad: [R('200', '2026-10-01', '2026-10-04')] }).semaforo, 'amarillo')
   assert.equal(evaluarCambioHorario({ tipo: 'entrada', reserva: mia, reservasMismaPropiedad: [R('9', null, '2026-09-30')] }).semaforo, 'amarillo')
   assert.equal(evaluarCambioHorario({ tipo: 'salida', reserva: mia, reservasMismaPropiedad: [R('9', null, null)] }).semaforo, 'amarillo')
 })
