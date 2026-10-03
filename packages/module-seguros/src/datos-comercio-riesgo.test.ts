@@ -267,3 +267,21 @@ test('precarga de póliza: ninguno de los campos nuevos viene de CIMA (no se pre
   const p = precargaComercioDePoliza({ actividad: 'Bar', aforo: 40, numeroEmpleados: 3, familiaActividad: 'x', facturacionAnual: 100, porCompania: { occident: { aforoMaximo: 3 } } })
   assert.deepEqual(p, { actividad: 'Bar' })
 })
+
+test('porCompania: un bloque con todas las claves null NO es dato (se poda al fusionar y al leer; no deja confirmar)', () => {
+  const lleno = aplicarEdicionComercio(null, ok({ porCompania: { occident: { aforoMaximo: 60 } } }), OP)
+  assert.equal(lleno.datos.porCompania!.occident!.aforoMaximo, 60)
+  const vaciado = aplicarEdicionComercio(lleno.datos, ok({ porCompania: { occident: { aforoMaximo: null } } }), OP)
+  assert.equal(vaciado.datos.porCompania, null, 'sin compañías con dato -> null')
+  // con otra compañía con dato, solo desaparece la vacía
+  const dos = aplicarEdicionComercio(lleno.datos, ok({ porCompania: { reale: { sotano: true } } }), OP)
+  const resto = aplicarEdicionComercio(dos.datos, ok({ porCompania: { occident: { aforoMaximo: null } } }), OP)
+  assert.equal(resto.datos.porCompania!.occident, undefined)
+  assert.equal(resto.datos.porCompania!.reale!.sotano, true)
+  // ya guardado como bloque todo-null: la lectura lo ignora
+  const guardado = leerDatosComercio({ porCompania: { occident: { aforoMaximo: null, descuento: null } } })!
+  assert.equal(guardado.porCompania, null)
+  // y el motivo sigue diciendo que falta
+  assert.match(motivoNoConfirmableComercio({ ...guardado, porCompania: { occident: { aforoMaximo: null } } as never })!, /sin ningún dato/)
+  assert.match(motivoNoConfirmableComercio(vaciado.datos)!, /sin ningún dato/)
+})

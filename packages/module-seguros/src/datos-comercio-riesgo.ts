@@ -243,6 +243,14 @@ function leerMedidas(bruto: unknown): MedidaComercio[] | null {
  * Lo guardado en `porCompania`: solo las compañías conocidas, cada bloque leído sin fiarse (campo de otro tipo =
  * `null`). `null` si no es un objeto. Una compañía ausente sigue ausente (no se inventa un bloque de `null`s).
  */
+/** Un bloque con todas las claves `null` no es dato («no se sabe» ≠ revisado): se descarta. Sin compañías, `null`. */
+const bloqueVacio = (b: unknown): boolean => !esObj(b) || Object.values(b).every((v) => v === null || v === undefined)
+function podarPorCompania(o: Record<string, unknown>): PorCompaniaComercio | null {
+  const out: Record<string, unknown> = {}
+  for (const c of COMPANIAS_COMERCIO) if (c in o && !bloqueVacio(o[c])) out[c] = o[c]
+  return Object.keys(out).length === 0 ? null : (out as PorCompaniaComercio)
+}
+
 function leerPorCompania(bruto: unknown): PorCompaniaComercio | null {
   if (!esObj(bruto)) return null
   const out: Record<string, unknown> = {}
@@ -251,7 +259,7 @@ function leerPorCompania(bruto: unknown): PorCompaniaComercio | null {
     const { confirmadoAt: _ignorado, ...bloque } = leerBloque(ESPEC_POR_COMPANIA[c], bruto[c]) as Record<string, ValorBloque>
     out[c] = bloque
   }
-  return out as PorCompaniaComercio
+  return podarPorCompania(out)
 }
 
 export function datosComercioVacios(): DatosComercioRiesgo {
@@ -482,7 +490,7 @@ export function aplicarEdicionComercio(
         toco = true
         cambios.push(...r.cambios.map((x) => ({ ...x, campo: `porCompania.${c}.${x.campo}` })))
       }
-      if (toco) datos.porCompania = nuevo as PorCompaniaComercio
+      if (toco) datos.porCompania = podarPorCompania(nuevo)
     }
   }
   // Mismo sello que el resto: se confirma → `ahora`; cualquier cambio sin confirmar (también de las listas) → se borra.
@@ -493,7 +501,7 @@ export function aplicarEdicionComercio(
 
 /** Sin nada que afirmar no hay nada que confirmar. Una lista `[]` (revisada, vacía) sí es algo que afirmar. */
 export function motivoNoConfirmableComercio(d: DatosComercioRiesgo): string | null {
-  return CAMPOS_COMERCIO.some((k) => d[k] !== null) ? null : 'No se puede confirmar un comercio sin ningún dato.'
+  return CAMPOS_COMERCIO.some((k) => (k === 'porCompania' ? d.porCompania !== null && podarPorCompania(d.porCompania) !== null : d[k] !== null)) ? null : 'No se puede confirmar un comercio sin ningún dato.'
 }
 
 // ─── Precarga desde la póliza ────────────────────────────────────────────────
