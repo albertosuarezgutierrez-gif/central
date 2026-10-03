@@ -302,27 +302,33 @@ export async function oportunidadDesdeLectura(
     let avisosFiguras: string[] = []
     const opId = o.ok ? o.id : o.estado === 'duplicada' && 'id' in o ? o.id : null
     if (opId && (datos.ramo === 'auto' || datos.ramo === 'moto')) {
-      const plan = planFiguras(
-        {
-          figuras: ('figuras' in leida && leida.figuras) || normalizarFigurasLeidas(d),
-          fechaNacimiento: txt(d.fechaNacimiento, 10),
-          fechaCarnet: txt(d.fechaCarnet, 10),
-          claseCarnet: contacto.claseCarnet,
-          tomadorEsConductorHabitual: contacto.tomadorEsConductorHabitual,
-        },
-        { nombre: alta ? `${alta.nombre} ${alta.apellidos}`.trim() : null, dni: alta?.dni ?? null, empresa },
-        datos.ramo,
-      )
-      if (puedeAbrirFiguras(quienSube)) {
-        const f = await figurasDesdePoliza({
-          correduriaId: e.correduriaId, oportunidadId: opId, tomadorId: clienteId, ramo: datos.ramo, plan,
-          numeroPoliza: datos.numeroPoliza, actor: e.actor, origen: e.origen, hoy,
-        })
-        figuras = f.figuras
-        avisosFiguras = f.avisos
+      // La oportunidad ya existe: si las figuras fallan, no se devuelve `error`, se avisa.
+      try {
+        const plan = planFiguras(
+          {
+            figuras: ('figuras' in leida && leida.figuras) || normalizarFigurasLeidas(d),
+            fechaNacimiento: txt(d.fechaNacimiento, 10),
+            fechaCarnet: txt(d.fechaCarnet, 10),
+            claseCarnet: contacto.claseCarnet,
+            tomadorEsConductorHabitual: contacto.tomadorEsConductorHabitual,
+          },
+          { nombre: alta ? `${alta.nombre} ${alta.apellidos}`.trim() : null, dni: alta?.dni ?? null, empresa },
+          datos.ramo,
+        )
+        if (puedeAbrirFiguras(quienSube)) {
+          const f = await figurasDesdePoliza({
+            correduriaId: e.correduriaId, oportunidadId: opId, tomadorId: clienteId, ramo: datos.ramo, plan,
+            numeroPoliza: datos.numeroPoliza, actor: e.actor, origen: e.origen, hoy,
+          })
+          figuras = f.figuras
+          avisosFiguras = f.avisos
+        }
+        // Sin datos personales en la línea: vale también sin verificar (es del riesgo, no de nadie).
+        await anotarConductorJoven({ correduriaId: e.correduriaId, oportunidadId: opId, plan, hoy, actor: e.actor })
+      } catch (err) {
+        console.error('[oportunidad-documento] figuras:', err instanceof Error ? err.message : err)
+        avisosFiguras = [...avisosFiguras, 'No se han podido revisar las figuras de la póliza; revísalas a mano en la oportunidad.']
       }
-      // Sin datos personales en la línea: vale también sin verificar (es del riesgo, no de nadie).
-      await anotarConductorJoven({ correduriaId: e.correduriaId, oportunidadId: opId, plan, hoy, actor: e.actor })
     }
 
     const comun = { clienteId, clienteNuevo, relacionado, vence, llamada, ficha: volcado, financiada, posiblesDuplicados, conIdentificador, figuras, avisosFiguras }
