@@ -35,12 +35,14 @@ export interface CorreoNuevo {
 
 /** Dominios cuyos PDFs adjuntos se conservan para leerlos (ver `CorreoNuevo.pdfs`). */
 const REMITENTES_CON_PDF = ['allianz.es']
+/** Direcciones EXACTAS (el dominio sería gmail.com, de todo el mundo): la factura mensual de Sique Brilla. */
+const DIRECCIONES_CON_PDF = ['limpiezascruzz@gmail.com']
 const PDF_MAX_BYTES = 2_000_000
 const PDF_MAX_POR_CORREO = 3
 
 function pdfsDe(from: string, adjuntos: { contentType?: string; filename?: string; content?: Buffer; size?: number }[] | undefined): Buffer[] | undefined {
   const dominio = from.split('@')[1] ?? ''
-  if (!REMITENTES_CON_PDF.some((d) => dominio === d || dominio.endsWith(`.${d}`))) return undefined
+  if (!DIRECCIONES_CON_PDF.includes(from) && !REMITENTES_CON_PDF.some((d) => dominio === d || dominio.endsWith(`.${d}`))) return undefined
   const pdfs = (adjuntos ?? [])
     .filter((a) => (a.contentType === 'application/pdf' || /\.pdf$/i.test(a.filename ?? '')) && a.content && a.content.length <= PDF_MAX_BYTES)
     .slice(0, PDF_MAX_POR_CORREO)

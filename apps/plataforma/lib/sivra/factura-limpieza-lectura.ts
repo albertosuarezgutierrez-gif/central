@@ -131,7 +131,7 @@ async function leerConIa(contenido: { texto?: string | null; pdf?: Buffer | null
 export async function guardarFactura(
   cuentaId: string,
   factura: FacturaLimpieza,
-  fuente: 'pdf_ia' | 'manual',
+  fuente: 'pdf_ia' | 'manual' | 'correo_pdf',
   avisos: string[],
   nombreFichero: string | null = null,
 ): Promise<void> {
