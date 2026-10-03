@@ -26,6 +26,7 @@ import {
 } from './persona.ts'
 import { mismoDni } from './peticion-auto.ts'
 import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
+import { reparosMatricula, tieneMatricula } from './matricula-nueva.ts'
 
 /** El carné de quien CONDUCE la moto: fecha + tipo (A, A2, A1, AM o B) + zona, y el B si lo tiene. */
 export type CarnetMoto = {
@@ -120,7 +121,8 @@ const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
  * Devuelve la lista de reparos: vacía significa que se puede cotizar. No lanza,
  * porque la UI tiene que poder pintar TODOS los problemas a la vez y no uno a uno.
  */
-export function revisarDatosMoto(d: Partial<DatosMoto>): ReparoMoto[] {
+/** `vehiculoNuevo` (moto-nuevo, 03/10/2026): la matrícula deja de ser obligatoria (`reparosMatricula`). */
+export function revisarDatosMoto(d: Partial<DatosMoto>, opciones: { vehiculoNuevo?: boolean; hoy?: string } = {}): ReparoMoto[] {
   const r: ReparoMoto[] = []
   const falta = (c: keyof DatosMoto, m = 'hace falta para poder cotizar') => r.push({ campo: c, motivo: m })
 
@@ -134,9 +136,10 @@ export function revisarDatosMoto(d: Partial<DatosMoto>): ReparoMoto[] {
   }
 
   // ── Obligatorios sin matiz ──
-  for (const c of ['codigoVehiculo', 'matricula', 'garaje', 'experienciaConduccion'] as const) {
+  for (const c of ['codigoVehiculo', 'garaje', 'experienciaConduccion'] as const) {
     if (!texto(d[c])) falta(c)
   }
+  for (const x of reparosMatricula(d, opciones)) r.push(x)
   // El carné del tomador solo cuenta si además conduce (el caso normal).
   for (const c of [...(d.conductor || d.tomadorEsEmpresa ? [] : (['fechaCarnet'] as const)), 'fechaMatriculacion', 'fechaEfecto'] as const) {
     if (!texto(d[c])) falta(c)
@@ -230,8 +233,8 @@ function numero(v: unknown): boolean {
  *
  * Lanza si los datos no pasan `revisarDatosMoto`.
  */
-export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<string, unknown> {
-  const reparos = revisarDatosMoto(d)
+export function construirPeticionMoto(d: DatosMoto, lineaId: string, opciones: { vehiculoNuevo?: boolean } = {}): Record<string, unknown> {
+  const reparos = revisarDatosMoto(d, { vehiculoNuevo: opciones.vehiculoNuevo })
   if (reparos.length > 0) {
     throw new Error(
       `codeoscopic_datos_incompletos: ${reparos.map((x) => `${x.campo} (${x.motivo})`).join(' · ')}`,
@@ -258,7 +261,8 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<str
 
   const riesgo: Record<string, unknown> = {
     vehicle: { code: d.codigoVehiculo },
-    registrationPlate: d.matricula.toUpperCase().replace(/\s/g, ''),
+    // Sin matrícula (moto nueva) el campo se OMITE: ver `matricula-nueva.ts`.
+    ...(tieneMatricula(d) ? { registrationPlate: d.matricula.toUpperCase().replace(/\s/g, '') } : {}),
     registrationDate: d.fechaMatriculacion,
     purchaseDate: d.fechaCompra || d.fechaMatriculacion,
     kilometersPerYear: d.kmAnuales,

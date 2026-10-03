@@ -33,7 +33,8 @@ export const maxDuration = 120
  *   y viaja solo cifrado: plataforma nunca lo ve en claro.
  * - `enCartera` (27/09/2026): las pólizas EN VIGOR con ese mismo número. Con
  *   alguna, no es una oportunidad: ya es nuestra. `null` = no se ha podido mirar.
- * - `seguroAnterior` (auto/moto): código DGS, efecto, años sin siniestros y siniestros en 5 años.
+ * - `seguroAnterior` (auto/moto): código DGS, efecto, años sin siniestros y siniestros en 5 años; y desde el
+ *   03/10/2026 nº de póliza, matrícula, canal (mediador/financiera), cesión de derechos y modalidad.
  *   `null` = el documento no dice nada de eso.
  * - `matricula`/`vehiculo`: identifican el coche (dos coches del mismo cliente)
  *   y dan nombre a la oportunidad. Son del riesgo, no de la persona.
@@ -112,7 +113,13 @@ export const POST = auditado(async (req: Request) => {
     // Lo que da el bonus (29/09/2026): se guarda con la oportunidad y precarga la tarificación.
     // Son datos del RIESGO: nada de la persona sale por aquí.
     seguroAnterior: auto
-      ? seguroAnteriorDe({ codigoDgs: auto.codigoEntidadDgs, fechaEfecto: auto.fechaEfecto, aniosSinSiniestros: auto.aniosSinSiniestros, siniestrosUltimos5: auto.siniestrosUltimos5 })
+      ? seguroAnteriorDe({
+          codigoDgs: auto.codigoEntidadDgs, fechaEfecto: auto.fechaEfecto, aniosSinSiniestros: auto.aniosSinSiniestros, siniestrosUltimos5: auto.siniestrosUltimos5,
+          // 03/10/2026: identifica ESA póliza para imputar el bonus a un vehículo nuevo (todo opcional; null = no lo dice).
+          numeroPoliza: auto.numeroPoliza, matricula: auto.matricula, canal: r.contacto?.mediador ?? null,
+          cesionDerechos: r.contacto?.cesionDerechos ?? null, modalidad: r.bruto?.modalidad ?? null,
+          pagoUnico: r.bruto?.pagoUnicoPlurianual, fechaVencimiento: d.fechaVencimiento,
+        })
       : null,
     ...(tomador ? { tomador } : {}),
     leido: true,

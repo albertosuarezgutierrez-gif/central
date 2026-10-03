@@ -62,6 +62,12 @@ import {
 } from '@/lib/codeoscopic/desde-cartera-hogar'
 import { supuestosVigentes } from '@central/module-seguros'
 import {
+  CONDICION_BONUS_SUPUESTO,
+  bonusSupuestoFinal,
+  imputarSeguroAnterior,
+  type SeguroAnteriorPublico,
+} from '@/lib/seguro-anterior-candidatas'
+import {
   construirPeticionAuto,
   revisarDatosAuto,
   type DatosAuto,
@@ -180,6 +186,11 @@ export type CuerpoRetarificacion = {
    *  ya haya un proyecto vigente sin emitir. Solo para cuando de verdad hace
    *  falta una cotización nueva (los datos del riesgo cambiaron). */
   forzarNuevo?: boolean
+  /** Vehículo NUEVO (auto/moto): la póliza del cliente que el corredor elige como seguro anterior
+   *  (`poliza:<uuid>` · `oportunidad:<uuid>`). Sin ella, la propone la regla. */
+  seguroAnteriorId?: string
+  /** Vehículo NUEVO: `true` = no declarar seguro anterior (de calle). */
+  sinSeguroAnterior?: boolean
 }
 
 export type ProyectoVigente = {
@@ -385,6 +396,8 @@ export type PreparadoRetarificacion =
       peticion: PeticionCotizacion
       supuestos: Supuesto[] | SupuestoHogar[] | SupuestoMoto[] | SupuestoVida[] | SupuestoSalud[] | SupuestoDecesos[]
       fuenteRiesgo?: 'poliza' | 'gemela' | 'catastro' | null
+      /** Vehículo NUEVO: qué seguro anterior se ha imputado (o por qué ninguno) y si el bonus es supuesto. */
+      seguroAnterior?: SeguroAnteriorPublico
     }
   /** Ya hay respuesta y NO se ha llamado al vendor: se devuelve tal cual. */
   | { estado: 'corte'; respuesta: ResultadoRetarificar }
@@ -442,6 +455,9 @@ export function respuestaRetarificacion(
       // la fuga ya existía aquí antes de la mudanza.
       supuestos: sanearSupuestos(preparado.supuestos),
       ...(preparado.fuenteRiesgo !== undefined ? { fuenteRiesgo: preparado.fuenteRiesgo } : {}),
+      // Vehículo NUEVO (03/10/2026): qué póliza se imputó como seguro anterior y por qué, y si el
+      // bonus va SUPUESTO (precio condicionado a SINCO/certificado; no se emite sin verificar).
+      ...(preparado.seguroAnterior ? { seguroAnterior: preparado.seguroAnterior, bonusSupuesto: preparado.seguroAnterior.bonusSupuesto } : {}),
     },
   }
 }
@@ -1003,21 +1019,34 @@ export async function prepararRetarificacionNuevaAuto(entrada: {
 
   const pre = precalificarAutoNueva(origen.cliente, resueltos, hoyIso())
 
+  // 🚗 El vehículo es NUEVO, el historial es del CONDUCTOR (03/10/2026): se declara como seguro
+  // anterior la mejor póliza de motor suya que conocemos (o la que elija el corredor).
+  const imp = await imputarSeguroAnterior({
+    correduriaId: correduria.id, clienteId, tipoNuevo: 'auto', cliente: origen.cliente,
+    cuerpo: { seguroAnteriorId: cuerpo.seguroAnteriorId, sinSeguroAnterior: cuerpo.sinSeguroAnterior },
+    correcciones: cuerpo.correcciones, hoy: hoyIso(),
+  })
+  if (!imp.ok) return { estado: 'corte', respuesta: sinGasto({ error: imp.mensaje, causa: imp.causa }, imp.status) }
+  const supuestosBase: Supuesto[] = [...pre.supuestos, ...(imp.historial?.supuestos ?? [])]
+
   // Las correcciones del corredor mandan sobre lo supuesto: es una persona
   // diciendo el dato de verdad. Se revisa OTRA VEZ con el resultado, porque una
   // corrección puede arreglar un hueco y también puede romper otra regla.
   const datos: Partial<DatosAuto> = {
     ...pre.datos,
+    ...(imp.historial?.datos ?? {}),
     ...limpiarCorrecciones<DatosAuto>(cuerpo.correcciones),
   }
-  const faltan = revisarDatosAuto(datos)
+  const seguroAnterior = conBonusFinal(imp.publico, bonusSupuestoFinal(datos, cuerpo.correcciones, imp.historial))
+  // Vehículo NUEVO: la matrícula puede no existir aún (`matricula-nueva.ts`).
+  const faltan = revisarDatosAuto(datos, { vehiculoNuevo: true })
   if (faltan.length > 0) {
-    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan }, 422) }
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan, seguroAnterior }, 422) }
   }
 
   let peticion: Record<string, unknown>
   try {
-    peticion = construirPeticionAuto(datos as DatosAuto)
+    peticion = construirPeticionAuto(datos as DatosAuto, { vehiculoNuevo: true })
   } catch (e) {
     return {
       estado: 'corte',
@@ -1039,8 +1068,9 @@ export async function prepararRetarificacionNuevaAuto(entrada: {
       // ficha — misma jugada que hogar sin póliza.
       contexto: { ramo: 'auto', puerta: 'corredor', polizaId: null, clienteId },
     },
-    supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones),
+    supuestos: supuestosVigentes(supuestosBase, cuerpo.correcciones),
     fuenteRiesgo: null,
+    seguroAnterior,
   }
 }
 
@@ -1098,13 +1128,25 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
 
   const pre = precalificarMotoNueva(origen.cliente, resueltos, hoyIso())
 
+  // 🏍️ Igual que auto (03/10/2026): el historial es del conductor, no de la moto.
+  const imp = await imputarSeguroAnterior({
+    correduriaId: correduria.id, clienteId, tipoNuevo: 'moto', cliente: origen.cliente,
+    cuerpo: { seguroAnteriorId: cuerpo.seguroAnteriorId, sinSeguroAnterior: cuerpo.sinSeguroAnterior },
+    correcciones: cuerpo.correcciones, hoy: hoyIso(),
+  })
+  if (!imp.ok) return { estado: 'corte', respuesta: sinGasto({ error: imp.mensaje, causa: imp.causa }, imp.status) }
+  const supuestosBase: SupuestoMoto[] = [...pre.supuestos, ...(imp.historial?.supuestos ?? [])]
+
   const datos: Partial<DatosMoto> = {
     ...pre.datos,
+    ...(imp.historial?.datos ?? {}),
     ...limpiarCorrecciones<DatosMoto>(cuerpo.correcciones),
   }
-  const faltan = revisarDatosMoto(datos)
+  const seguroAnterior = conBonusFinal(imp.publico, bonusSupuestoFinal(datos, cuerpo.correcciones, imp.historial))
+  // Vehículo NUEVO: la matrícula puede no existir aún (`matricula-nueva.ts`).
+  const faltan = revisarDatosMoto(datos, { vehiculoNuevo: true })
   if (faltan.length > 0) {
-    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan }, 422) }
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan, seguroAnterior }, 422) }
   }
 
   // ── El id del ramo: de `/insurance-lines` (gratis), nunca escrito a mano ──
@@ -1134,7 +1176,7 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
 
   let peticion: Record<string, unknown>
   try {
-    peticion = construirPeticionMoto(datos as DatosMoto, moto.id)
+    peticion = construirPeticionMoto(datos as DatosMoto, moto.id, { vehiculoNuevo: true })
   } catch (e) {
     return {
       estado: 'corte',
@@ -1152,8 +1194,9 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       solicitadoPor,
       contexto: { ramo: 'moto', puerta: 'corredor', polizaId: null, clienteId },
     },
-    supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones),
+    supuestos: supuestosVigentes(supuestosBase, cuerpo.correcciones),
     fuenteRiesgo: null,
+    seguroAnterior,
   }
 }
 
@@ -1606,6 +1649,11 @@ export async function resolverCatalogoCrudo(params: URLSearchParams): Promise<Re
 }
 
 // ─── Utilidades ──────────────────────────────────────────────────────────────
+
+/** El seguro anterior público con la marca de bonus decidida sobre los datos FINALES (tras correcciones). */
+function conBonusFinal(p: SeguroAnteriorPublico, bonusSupuesto: boolean): SeguroAnteriorPublico {
+  return { ...p, bonusSupuesto, condicion: bonusSupuesto ? CONDICION_BONUS_SUPUESTO : null }
+}
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null

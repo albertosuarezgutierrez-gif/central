@@ -156,3 +156,26 @@ export function fechaVencimientoDudosa(fecha: string | null | undefined, hoy: st
   if (f > tope.toISOString().slice(0, 10)) return { motivo: 'lejana', texto: `El vencimiento (${dd}) está a más de ${MESES_VENCIMIENTO_MAX} meses: seguramente es otro año, compruébalo.` }
   return null
 }
+
+export type EstadoAvisoVencimiento =
+  | { estado: 'desconocido'; texto: string }
+  | { estado: 'programado'; vence: string; fechaAviso: string; texto: string }
+  | { estado: 'en_ventana'; vence: string; dias: number; texto: string }
+
+const fechaEs = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+
+/**
+ * Qué pasa con el aviso de una oportunidad (03/10/2026): sin vencimiento, NO se avisa y se dice
+ * («vencimiento desconocido», no «sin aviso» a secas); con él, el aviso sale
+ * {@link DIAS_AVISO_OPORTUNIDAD} días antes (preaviso de un mes del tomador) o ya está en ventana.
+ */
+export function estadoAvisoVencimiento(fecha: string | null | undefined, hoy: string): EstadoAvisoVencimiento {
+  const vence = vencimientoDelCiclo(fecha, hoy)
+  if (!vence) return { estado: 'desconocido', texto: 'Vencimiento desconocido: no se avisa. Pídeselo al cliente.' }
+  const dias = diasEntre(hoy, vence)
+  if (dias <= DIAS_AVISO_OPORTUNIDAD) {
+    return { estado: 'en_ventana', vence, dias, texto: `Vence el ${fechaEs(vence)} (${dias} d): ya toca avisarle.` }
+  }
+  const fechaAviso = sumarDias(vence, -DIAS_AVISO_OPORTUNIDAD)
+  return { estado: 'programado', vence, fechaAviso, texto: `Vence el ${fechaEs(vence)}: te aviso el ${fechaEs(fechaAviso)} (${DIAS_AVISO_OPORTUNIDAD} días antes).` }
+}

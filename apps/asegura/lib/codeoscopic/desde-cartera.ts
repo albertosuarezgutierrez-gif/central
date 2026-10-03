@@ -605,7 +605,7 @@ export function precalificarAutoNueva(
     })
   }
 
-  return { datos, supuestos, faltan: revisarDatosAuto(datos, { hoy }) }
+  return { datos, supuestos, faltan: revisarDatosAuto(datos, { hoy, vehiculoNuevo: true }) }
 }
 
 /**
@@ -800,7 +800,7 @@ export function precalificarMotoNueva(
     })
   }
 
-  return { datos, supuestos, faltan: revisarDatosMoto(datos) }
+  return { datos, supuestos, faltan: revisarDatosMoto(datos, { hoy, vehiculoNuevo: true }) }
 }
 
 // ─── MOTO, retarificar una póliza de la cartera ─────────────────────────────

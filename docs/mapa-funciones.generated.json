@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T13:58:26Z",
-  "sha": "a73ea7c91c67dd4b6b487f70c1381bc205866a34",
+  "generadoEn": "2026-10-03T14:38:26Z",
+  "sha": "18add9fc89a2fd74d623da23dada2312aee44623",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -29892,7 +29892,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Ramo | null",
-          "linea": 61
+          "linea": 63
         },
         {
           "nombre": "nadaLeido",
@@ -29900,7 +29900,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "ResultadoLecturaPoliza",
-          "linea": 203
+          "linea": 214
         },
         {
           "nombre": "mensaje",
@@ -29908,7 +29908,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 207
+          "linea": 218
         },
         {
           "nombre": "parsear",
@@ -29916,16 +29916,16 @@
           "exportada": false,
           "params": "salida: string",
           "retorno": "",
-          "linea": 215,
+          "linea": 226,
           "resumen": "Un JSON que no parsea produce TODOS los campos a `null`, nunca campos a medias: media extracción pintada como póliza es peor que ninguna."
         },
         {
           "nombre": "empaquetar",
           "kind": "function",
           "exportada": false,
-          "params": "{ ramo, auto, hogar, contacto, figuras, bruto }: ReturnType<typeof parsear>, fuente: 'texto' | 'vision',",
+          "params": "{ ramo, auto, hogar, contacto, figuras, sinNombre, bruto }: ReturnType<typeof parsear>, fuente: 'texto' | 'vision',",
           "retorno": "ResultadoLecturaPoliza",
-          "linea": 233
+          "linea": 245
         },
         {
           "nombre": "textoPdfParse",
@@ -29933,7 +29933,7 @@
           "exportada": false,
           "params": "buffer: Buffer",
           "retorno": "Promise<string>",
-          "linea": 250,
+          "linea": 262,
           "resumen": "Texto con `pdf-parse`; `''` si no abre (se dice aguas abajo)."
         },
         {
@@ -29942,12 +29942,12 @@
           "exportada": true,
           "params": "buffer: Buffer, mimeType: string, fileName = '', /** Contraseñas a probar si el PDF está protegido (el DNI del cliente de la ficha). Nunca se devuelven. */ opts: { contrasenas?: () => Promise<string[]> } = {},",
           "retorno": "Promise<ResultadoLecturaPoliza>",
-          "linea": 261
+          "linea": 273
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "51e628c63c12"
+      "hash": "1e714bd448df"
     },
     {
       "ruta": "apps/asegura/lib/documentos/leer-doc-solicitud.ts",
@@ -30814,7 +30814,41 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 41
+          "linea": 42
+        },
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "col: string",
+          "retorno": null,
+          "linea": 51
+        },
+        {
+          "nombre": "huecoFechaNacimiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string, aConfirmar: boolean",
+          "retorno": "Hueco",
+          "linea": 53
+        },
+        {
+          "nombre": "huecosDomicilio",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: { direccion: string | null; codigoPostal: string | null; ciudad: string | null; provincia: string | null }",
+          "retorno": "Hueco[]",
+          "linea": 68,
+          "resumen": "El domicilio (calle cifrada; CP, población y provincia en claro, como siempre). CP, población y provincia van con la calle: solo si la calle estaba vacía (y ellos también), para no casar el CP de una "
+        },
+        {
+          "nombre": "escribirHuecos",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, campos: Hueco[]",
+          "retorno": "Promise<string[]>",
+          "linea": 90,
+          "resumen": "Escribe los huecos en UNA sentencia (UPDATE … RETURNING sobre la fila bloqueada). Devuelve las etiquetas de lo ESCRITO."
         },
         {
           "nombre": "volcarPolizaEnFicha",
@@ -30822,23 +30856,23 @@
           "exportada": true,
           "params": "e: { correduriaId: string clienteId: string leido: DatosTomadorLeidos actor: string origen: string hoy?: Date }",
           "retorno": "Promise<VolcadoFicha>",
-          "linea": 43
+          "linea": 112
         },
         {
           "nombre": "volcarFiguraEnFicha",
           "kind": "function",
           "exportada": true,
-          "params": "e: { correduriaId: string clienteId: string persona: Pick<PersonaFigura, 'fechaNacimiento' | 'fechaCarnet' | 'claseCarnet'> ramo: string /** Cómo figura en la póliza («Conductor habitual»…), para la nota del historial. */ queEs: string acto",
+          "params": "e: { correduriaId: string clienteId: string persona: Pick<PersonaFigura, 'fechaNacimiento' | 'fechaCarnet' | 'claseCarnet'> & Partial<DomicilioFigura> ramo: string /** Cómo figura en la póliza («Conductor habitual»…), para la nota del histo",
           "retorno": "Promise<",
-          "linea": 220,
-          "resumen": "Fecha de nacimiento y carné de una FIGURA de la póliza (propietario, conductor) a SU ficha (03/10/2026). Solo HUECOS (`parcheFigura`, puro). Quien llama ya ha comprobado que la ficha es de esa persona"
+          "linea": 243,
+          "resumen": "Fecha de nacimiento, domicilio y carné de una FIGURA de la póliza (propietario, conductor) a SU ficha (03/10/2026). Solo HUECOS (`parcheFigura`, puro); fecha y domicilio en UNA sentencia con la fila b"
         }
       ],
       "tablas": [
         "clientes"
       ],
       "rutaApi": null,
-      "hash": "2c929d524dd4"
+      "hash": "124aea410183"
     },
     {
       "ruta": "apps/asegura/lib/formacion.ts",
@@ -31854,7 +31888,7 @@
           "exportada": false,
           "params": "v: unknown, max = 120",
           "retorno": null,
-          "linea": 108
+          "linea": 109
         },
         {
           "nombre": "fmt",
@@ -31862,7 +31896,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 109
+          "linea": 110
         },
         {
           "nombre": "oportunidadDesdeFichero",
@@ -31870,7 +31904,7 @@
           "exportada": true,
           "params": "e: EntradaOportunidadDocumento & { fichero: { contenido: Buffer; mime: string; nombre: string } },",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
-          "linea": 112,
+          "linea": 113,
           "resumen": "Lee el fichero (probando el DNI de la ficha si el PDF tiene contraseña) y sigue con lo leído."
         },
         {
@@ -31879,7 +31913,7 @@
           "exportada": true,
           "params": "e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
-          "linea": 129,
+          "linea": 130,
           "resumen": "Con el documento ya leído (p. ej. `subir-poliza`, que lo leyó antes de guardar)."
         },
         {
@@ -31888,7 +31922,7 @@
           "exportada": false,
           "params": "correduriaId: string, nombreCompleto: string",
           "retorno": "Promise<string | null>",
-          "linea": 346,
+          "linea": 351,
           "resumen": "El lead SIN DNI que se llama exactamente igual (el más antiguo), o null. Solo leads: una ficha de cliente o con DNI no se toma por nombre."
         },
         {
@@ -31897,7 +31931,7 @@
           "exportada": true,
           "params": "correduriaId: string, documentoId: string, bruto: Record<string, unknown> | null",
           "retorno": "Promise<void>",
-          "linea": 370,
+          "linea": 375,
           "resumen": "Guarda con el documento lo leído por la IA (`documentos.extraccion`, 03/10/2026) SIN datos personales: DNI, teléfono, email, fechas de nacimiento/carné y domicilio no se guardan en claro en un campo S"
         },
         {
@@ -31906,7 +31940,7 @@
           "exportada": false,
           "params": "codigo: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 383,
+          "linea": 388,
           "resumen": "El nombre de la compañía por su código DGS (C0058 → Mapfre), o null."
         },
         {
@@ -31915,7 +31949,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 391,
+          "linea": 396,
           "resumen": "El catálogo DGS para casar un nombre leído. `[]` si no se pudo leer: entonces no se resuelve nada."
         },
         {
@@ -31924,7 +31958,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, nombre: string | null, compartenContacto: string[], actor: string",
           "retorno": "Promise<void>",
-          "linea": 402,
+          "linea": 407,
           "resumen": "En un lead RECIÉN abierto: «posible duplicado de <id>» por cada ficha que se llama exactamente igual, y las que comparten su teléfono/email. NO se funde nada (duplicar se ve; mezclar a dos personas, n"
         },
         {
@@ -31933,7 +31967,7 @@
           "exportada": false,
           "params": "correduriaId: string, nombreCompleto: string",
           "retorno": "Promise<string[]>",
-          "linea": 418,
+          "linea": 423,
           "resumen": "Fichas vivas (no lápidas) que se llaman EXACTAMENTE igual, sin orden. Hasta 5."
         }
       ],
@@ -31941,7 +31975,7 @@
         "documentos"
       ],
       "rutaApi": null,
-      "hash": "d58de1379ef5"
+      "hash": "41b6c23aefea"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-figuras.ts",
@@ -31949,7 +31983,8 @@
       "resumen": "Las FIGURAS de una póliza de motor subida (03/10/2026, Alberto): cada persona que no es el tomador —propietario, conductor habitual, conductores ocasionales— tiene su ficha (lead), queda vinculada a la oportunidad con su rol y al tomador con una relación. Sustituye a la nota «Conductor principal en ",
       "exporta": [
         "figurasDesdePoliza",
-        "anotarConductorJoven"
+        "anotarConductorJoven",
+        "anotarFigurasSinNombre"
       ],
       "funciones": [
         {
@@ -31958,15 +31993,15 @@
           "exportada": false,
           "params": "p: PersonaFigura",
           "retorno": null,
-          "linea": 40
+          "linea": 56
         },
         {
           "nombre": "figurasDesdePoliza",
           "kind": "function",
           "exportada": true,
-          "params": "e: { correduriaId: string oportunidadId: string /** La ficha del tomador (la de la oportunidad). */ tomadorId: string ramo: string plan: PlanFiguras numeroPoliza: string | null actor: string origen: string hoy: Date }",
+          "params": "e: { correduriaId: string oportunidadId: string /** La ficha del tomador (la de la oportunidad). */ tomadorId: string ramo: string plan: PlanFiguras numeroPoliza: string | null actor: string origen: string hoy: Date /** Teléfono y email del",
           "retorno": "Promise<ResultadoFiguras>",
-          "linea": 42
+          "linea": 58
         },
         {
           "nombre": "fichaDeFigura",
@@ -31974,7 +32009,7 @@
           "exportada": false,
           "params": "e: { correduriaId: string; tomadorId: string; actor: string; origen: string }, p: PersonaFigura,",
           "retorno": "Promise<",
-          "linea": 130,
+          "linea": 162,
           "resumen": "`null` = es el propio tomador, no hay nada que decir)."
         },
         {
@@ -31983,7 +32018,7 @@
           "exportada": false,
           "params": "tomadorId: string, f: { id: string; nombre: string }, p: PersonaFigura",
           "retorno": "",
-          "linea": 158
+          "linea": 190
         },
         {
           "nombre": "candidatosSinDni",
@@ -31991,8 +32026,8 @@
           "exportada": false,
           "params": "correduriaId: string, tomadorId: string",
           "retorno": "Promise<CandidatoLeadSinDni[] | null>",
-          "linea": 171,
-          "resumen": "Los leads SIN DNI ya relacionados con ESTE tomador (en cualquier sentido de la relación): los únicos que una figura sin DNI puede reutilizar. El nombre se compara en JS (`leadSinDniReutilizable`, sin "
+          "linea": 205,
+          "resumen": "Los leads SIN DNI ya relacionados con ESTE tomador (en cualquier sentido de la relación): los únicos que una figura sin DNI puede reutilizar. El SQL no filtra por nombre: trae `nombre` y `apellidos` y"
         },
         {
           "nombre": "anotarConductorJoven",
@@ -32000,18 +32035,56 @@
           "exportada": true,
           "params": "e: { correduriaId: string; oportunidadId: string; plan: PlanFiguras; hoy: Date; actor: string }",
           "retorno": "Promise<boolean>",
-          "linea": 197,
+          "linea": 231,
           "resumen": "«Hay un conductor joven/novel» en el historial de la OPORTUNIDAD, una sola vez (la misma póliza subida dos veces no lo repite). Solo con fechas conocidas; sin datos personales. Nunca lanza."
+        },
+        {
+          "nombre": "anotarFigurasSinNombre",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { correduriaId: string; oportunidadId: string; plan: PlanFiguras; actor: string }",
+          "retorno": "Promise<number>",
+          "linea": 252,
+          "resumen": "Una línea por cada figura con rol y SIN nombre («Hay un conductor adicional sin nombre en la póliza: complétalo a mano.»), una sola vez por oportunidad y rol (el patrón de `anotarConductorJoven`). Sin"
+        },
+        {
+          "nombre": "estadoFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<",
+          "linea": 274,
+          "resumen": "Lo que tiene la ficha de la figura tras la subida: booleanos por campo (`null` = no se pudo mirar) y, para la tarea, si tiene DNI y cuántos carnés. Nunca valores. Nunca lanza."
+        },
+        {
+          "nombre": "contactoDelTomador",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: { correduriaId: string; tomadorId: string; actor: string }, clienteId: string, contacto: { telefono: string | null; email: string | null },",
+          "retorno": "Promise<string[]>",
+          "linea": 308,
+          "resumen": "Teléfono y email del TOMADOR a la ficha de su persona de contacto, por la puerta de siempre (`anadirContacto`): sin duplicar en la ficha, nunca principales (el email principal enlaza el portal; un pap"
+        },
+        {
+          "nombre": "tareaDeFigura",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: { correduriaId: string; oportunidadId: string; clienteId: string; texto: string; fecha: string; actor: string }",
+          "retorno": "Promise<boolean | null>",
+          "linea": 340,
+          "resumen": "`null` = no se pudo."
         }
       ],
       "tablas": [
         "cliente_relaciones",
         "clientes",
+        "gestiones",
         "oportunidad_figura",
-        "oportunidad_historial"
+        "oportunidad_historial",
+        "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "64028bdf1e08"
+      "hash": "f26ed7f2af74"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-riesgo.ts",
@@ -81835,7 +81908,7 @@
           "exportada": true,
           "params": "{ id, telefono = null, onCambio }: { id: string; telefono?: string | null; onCambio?: () => void }",
           "retorno": null,
-          "linea": 90
+          "linea": 94
         },
         {
           "nombre": "FormPerder",
@@ -81843,7 +81916,7 @@
           "exportada": false,
           "params": "{ enviando, onEnviar, onCancelar }: { enviando: boolean; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
           "retorno": null,
-          "linea": 221
+          "linea": 225
         },
         {
           "nombre": "FormAparcar",
@@ -81851,7 +81924,7 @@
           "exportada": false,
           "params": "{ enviando, hoy, onEnviar, onCancelar }: { enviando: boolean; hoy: string; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
           "retorno": null,
-          "linea": 261
+          "linea": 265
         },
         {
           "nombre": "Tareas",
@@ -81859,7 +81932,7 @@
           "exportada": false,
           "params": "{ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, onCambio }: { oportunidadId: string; tareas: TareaSeguimiento[]; descartadas: number; fueCliente: boolean | null; cerrada: boolean; hoy: string; onCambio: () => void }",
           "retorno": null,
-          "linea": 291
+          "linea": 295
         }
       ],
       "tablas": [
@@ -81868,7 +81941,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "5ced33801a3c"
+      "hash": "10b5154ca2f0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/SegurosCliente.tsx",
@@ -83833,13 +83906,22 @@
           "exportada": false,
           "params": "{ f }: { f: FigurasDocumento }",
           "retorno": null,
-          "linea": 170,
-          "resumen": "Las otras personas de la póliza (propietario, conductores): una línea por ficha, con su enlace."
+          "linea": 173,
+          "resumen": "Las otras personas de la póliza (propietario, conductores): una línea por ficha, con su enlace y qué tiene / qué le falta a su ficha (solo NOMBRES de campo; los valores nunca llegan aquí)."
+        },
+        {
+          "nombre": "CamposFigura",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ x }: { x: FiguraDocumento }",
+          "retorno": null,
+          "linea": 195,
+          "resumen": "«Tiene: …» / «Falta: …» de la ficha de una figura. Una respuesta anterior (sin `campos`) no pinta nada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ca1152a362c0"
+      "hash": "7ae333df5404"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/LineaBase.tsx",
@@ -124510,6 +124592,7 @@
         "interpretarOportunidadDocumento",
         "interpretarFichaDocumento",
         "textoFichaDocumento",
+        "textoCamposFigura",
         "interpretarFigurasDocumento",
         "textoFiguraDocumento",
         "textoFigurasDocumento"
@@ -124572,7 +124655,25 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is RolFiguraDocumento",
-          "linea": 97
+          "linea": 108
+        },
+        {
+          "nombre": "camposFigura",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "CamposFiguraDocumento | null",
+          "linea": 115,
+          "resumen": "Solo booleanos (o `null`): cualquier otra cosa —un valor que se colara— cuenta como «no se sabe»."
+        },
+        {
+          "nombre": "textoCamposFigura",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CamposFiguraDocumento | null",
+          "retorno": "",
+          "linea": 122,
+          "resumen": "«Tiene: nombre, nacimiento · Falta: domicilio, DNI · Sin comprobar: email». `null` = nada que decir."
         },
         {
           "nombre": "interpretarFigurasDocumento",
@@ -124580,7 +124681,7 @@
           "exportada": true,
           "params": "oportunidad: unknown",
           "retorno": "FigurasDocumento | null",
-          "linea": 103,
+          "linea": 132,
           "resumen": "Las figuras, agrupadas por ficha (la misma persona puede ser propietaria y conductora). `null` = asegura no dice nada (versión anterior, otro ramo o sin verificar) o no hay nada que enseñar."
         },
         {
@@ -124589,7 +124690,7 @@
           "exportada": true,
           "params": "f: FiguraDocumento",
           "retorno": "string",
-          "linea": 128,
+          "linea": 159,
           "resumen": "«Propietario y conductor habitual (creada)» / «Figura sin rol (ya existía)»."
         },
         {
@@ -124598,13 +124699,13 @@
           "exportada": true,
           "params": "fs: FigurasDocumento",
           "retorno": "string",
-          "linea": 135,
+          "linea": 166,
           "resumen": "«Figuras: Propietario (creada) · Conductor habitual (ya existía)»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1a6e8ce5ebcd"
+      "hash": "1e2c28290305"
     },
     {
       "ruta": "apps/plataforma/lib/partes-asegura.ts",
@@ -165935,7 +166036,7 @@
           "exportada": true,
           "params": "",
           "retorno": "ContactoTomadorLeido",
-          "linea": 86
+          "linea": 92
         },
         {
           "nombre": "conductorPrincipal",
@@ -165943,7 +166044,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "ConductorPrincipalLeido | null",
-          "linea": 108
+          "linea": 115
         },
         {
           "nombre": "telefonoEspanol",
@@ -165951,7 +166052,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 122,
+          "linea": 129,
           "resumen": "Teléfono ESPAÑOL de 9 dígitos (6-9…), sin prefijo. Uno extranjero o raro → `null`."
         },
         {
@@ -165960,7 +166061,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 130,
+          "linea": 137,
           "resumen": "Email en minúsculas y con forma de email; si no, `null`."
         },
         {
@@ -165969,7 +166070,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 137
+          "linea": 144
         },
         {
           "nombre": "normalizarContactoTomador",
@@ -165977,7 +166078,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "ContactoTomadorLeido",
-          "linea": 147,
+          "linea": 154,
           "resumen": "Convierte lo que devuelva el modelo en `ContactoTomadorLeido`. Nunca lanza."
         },
         {
@@ -165986,7 +166087,7 @@
           "exportada": false,
           "params": "o: Record<string, unknown>",
           "retorno": "Pick<ContactoTomadorLeido, 'tomadorEsEmpresa' | 'cifTomador'>",
-          "linea": 175,
+          "linea": 185,
           "resumen": "¿Es empresa el tomador, y cuál es su CIF? El CIF se busca en `cifTomador` y, si el modelo lo dejó en `dni`, también ahí (solo si es de persona JURÍDICA: un DNI nunca pasa por CIF). Quién es empresa lo"
         },
         {
@@ -165995,7 +166096,7 @@
           "exportada": true,
           "params": "c: Pick<ContactoTomadorLeido, 'mediador' | 'cesionDerechos'>",
           "retorno": "",
-          "linea": 195,
+          "linea": 205,
           "resumen": "¿Es una póliza de concesionario / financiada? `true` con su motivo; `false` si se sabe que no (hay mediador y no es financiera, y no hay cesión); `null` = el documento no dice lo bastante."
         },
         {
@@ -166004,7 +166105,7 @@
           "exportada": true,
           "params": "leida: string | null | undefined, nombrePorDgs: string | null | undefined",
           "retorno": "string | null",
-          "linea": 211,
+          "linea": 221,
           "resumen": "La compañía que se guarda en la oportunidad. Lo leído de la póliza manda, salvo que sea basura (03/10/2026: una póliza MAPFRE dejó «P.P.» —la antefirma «por poder»— como compañía): siglas sueltas o si"
         },
         {
@@ -166013,7 +166114,7 @@
           "exportada": true,
           "params": "leida: string | null | undefined, catalogo: readonly CompaniaCatalogo[]",
           "retorno": "",
-          "linea": 224,
+          "linea": 234,
           "resumen": "La compañía del catálogo DGS a la que corresponde el nombre leído, por la MISMA normalización que la defensa de cartera (`resolverCompania`: igualdad exacta tras quitar forma jurídica, «España», «segu"
         },
         {
@@ -166022,7 +166123,7 @@
           "exportada": true,
           "params": "vence: string | null, hoyIso: string, dias = DIAS_VENCIMIENTO_URGENTE",
           "retorno": "boolean",
-          "linea": 236,
+          "linea": 246,
           "resumen": "¿Vence en ≤15 días (y no ha vencido ya)? Sin fecha no se sabe → `false` (no se inventa prisa)."
         },
         {
@@ -166031,7 +166132,7 @@
           "exportada": true,
           "params": "",
           "retorno": "ParcheFicha",
-          "linea": 299
+          "linea": 309
         },
         {
           "nombre": "fechaReal",
@@ -166039,7 +166140,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "v is string",
-          "linea": 315
+          "linea": 325
         },
         {
           "nombre": "parcheFichaDesdePoliza",
@@ -166047,7 +166148,7 @@
           "exportada": true,
           "params": "ficha: FichaActual, ext: ExtraccionFicha, dniFicha: string | null | undefined, hoyIso: string,",
           "retorno": "ResultadoParche",
-          "linea": 328,
+          "linea": 338,
           "resumen": "El parche que rellena los HUECOS de la ficha con lo leído de la póliza, y nada más. `dniFicha`: el DNI de la ficha descifrado; `null` = la ficha no tiene; `undefined` = no se ha podido leer (cifrado q"
         },
         {
@@ -166056,13 +166157,13 @@
           "exportada": true,
           "params": "bruto: Record<string, unknown> | null | undefined,",
           "retorno": "",
-          "linea": 480,
+          "linea": 491,
           "resumen": "Lo leído, listo para guardar: solo las claves de la lista blanca (`datos`) y, de las personales conocidas, si el documento las traía (`leidos`, booleanos). `null` si no hay nada que guardar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0a8aac5cc01e"
+      "hash": "3544031f6cbd"
     },
     {
       "ruta": "packages/module-seguros/src/datos-para-emitir.ts",
@@ -167795,8 +167896,12 @@
       "ambito": "packages/module-seguros",
       "resumen": "Las FIGURAS de una póliza de motor que no son el tomador (03/10/2026, Alberto): propietario del vehículo, conductor habitual y conductores ocasionales. Cada una tiene su ficha (lead) y queda vinculada a la oportunidad con su rol y al tomador con una relación. Sustituye a la nota «Conductor principal",
       "exporta": [
+        "figurasSinNombre",
+        "notaFiguraSinNombre",
+        "accionFiguraSinNombre",
         "normalizarFigurasLeidas",
         "conductorHabitualLeido",
+        "esPersonaDeContacto",
         "claveRazonSocial",
         "claveNombre",
         "esOtraPersona",
@@ -167805,7 +167910,10 @@
         "leadSinDniReutilizable",
         "parcheFigura",
         "hayConductorJovenONovel",
-        "conductoresDelPlan"
+        "conductoresDelPlan",
+        "tareaPedirDniYCarne",
+        "faltaDniOCarne",
+        "contactoSoloDelTomador"
       ],
       "funciones": [
         {
@@ -167814,7 +167922,7 @@
           "exportada": false,
           "params": "v: unknown, max = 200",
           "retorno": "string | null",
-          "linea": 29
+          "linea": 34
         },
         {
           "nombre": "fechaReal",
@@ -167822,7 +167930,15 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "v is string",
-          "linea": 36
+          "linea": 41
+        },
+        {
+          "nombre": "domicilio",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: Record<string, unknown>",
+          "retorno": "DomicilioFigura",
+          "linea": 91
         },
         {
           "nombre": "booleano",
@@ -167830,7 +167946,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 78
+          "linea": 102
         },
         {
           "nombre": "rolLeido",
@@ -167838,7 +167954,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "RolFiguraLeido | null",
-          "linea": 96
+          "linea": 120
         },
         {
           "nombre": "figura",
@@ -167846,8 +167962,35 @@
           "exportada": false,
           "params": "v: unknown, rolPorDefecto: RolFiguraLeido | null = null",
           "retorno": "FiguraLeida | null",
-          "linea": 103,
+          "linea": 127,
           "resumen": "Una persona leída; sin nombre (o con un rol desconocido) no existe → `null`."
+        },
+        {
+          "nombre": "figurasSinNombre",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "FiguraSinNombre[]",
+          "linea": 160,
+          "resumen": "Las figuras con rol pero sin nombre: no abren ficha (sin nombre no hay persona que dar de alta), pero existen. Solo con algún dato propio (fecha o DNI): un rol suelto sin nada es casi siempre ruido de"
+        },
+        {
+          "nombre": "notaFiguraSinNombre",
+          "kind": "function",
+          "exportada": true,
+          "params": "rol: RolFiguraLeido",
+          "retorno": "string",
+          "linea": 186,
+          "resumen": "La línea del historial de la oportunidad. Sin datos personales (el historial no se borra)."
+        },
+        {
+          "nombre": "accionFiguraSinNombre",
+          "kind": "function",
+          "exportada": true,
+          "params": "rol: RolFiguraLeido",
+          "retorno": "string",
+          "linea": 191,
+          "resumen": "La `accion` de esa línea (una por rol: la misma póliza subida dos veces no la repite). Plataforma la rotula."
         },
         {
           "nombre": "normalizarFigurasLeidas",
@@ -167855,7 +167998,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "FiguraLeida[]",
-          "linea": 132,
+          "linea": 200,
           "resumen": "Las figuras de lo que devolvió el lector (`raw` = el JSON entero). Lee `figuras`; si no trae ninguna válida, el `conductorPrincipal` de siempre cuenta como conductor habitual (lecturas anteriores). Va"
         },
         {
@@ -167864,8 +168007,17 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "",
-          "linea": 142,
+          "linea": 210,
           "resumen": "El conductor habitual leído en `figuras` (que no sea el tomador), para el `conductorPrincipal` de siempre."
+        },
+        {
+          "nombre": "esPersonaDeContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "contacto: string | null | undefined, nombre: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 227,
+          "resumen": "¿La persona de contacto es esta persona? Mismo nombre normalizado (sin tildes, mayúsculas ni orden). Uno contenido en el otro solo si el MÁS CORTO tiene 3+ palabras: «Fermín Bueno» NO es «Fermín Bueno"
         },
         {
           "nombre": "palabrasNombre",
@@ -167873,7 +168025,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 156
+          "linea": 237
         },
         {
           "nombre": "claveRazonSocial",
@@ -167881,7 +168033,7 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "string",
-          "linea": 163,
+          "linea": 244,
           "resumen": "La razón social normalizada: sin tildes, puntos, forma jurídica ni orden."
         },
         {
@@ -167890,7 +168042,7 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "string",
-          "linea": 171,
+          "linea": 252,
           "resumen": "El nombre normalizado para comparar «exactamente igual»: sin tildes, mayúsculas ni orden."
         },
         {
@@ -167899,7 +168051,7 @@
           "exportada": true,
           "params": "p: { nombre: string; dni: string | null }, t: TomadorFiguras",
           "retorno": "boolean",
-          "linea": 188,
+          "linea": 271,
           "resumen": "¿Esta persona es OTRA que el tomador? Con un tomador empresa, siempre. DNI de los dos → si difieren. Si no, por nombre: uno contenido en el otro («Ana» en «Ana Ruiz Gil») es la MISMA persona (ante la "
         },
         {
@@ -167908,7 +168060,7 @@
           "exportada": false,
           "params": "r: RolFiguraLeido",
           "retorno": null,
-          "linea": 237
+          "linea": 326
         },
         {
           "nombre": "planFiguras",
@@ -167916,17 +168068,17 @@
           "exportada": true,
           "params": "l: LecturaFiguras, t: TomadorFiguras, ramo: string",
           "retorno": "PlanFiguras",
-          "linea": 243,
+          "linea": 332,
           "resumen": "Quién hay en la póliza, además del tomador, y qué rol lleva cada uno. Solo motor (auto/moto): otro ramo → plan vacío."
         },
         {
           "nombre": "detalleRelacionFigura",
           "kind": "function",
           "exportada": true,
-          "params": "roles: readonly RolFiguraLeido[], numeroPoliza: string | null",
+          "params": "roles: readonly RolFiguraLeido[], numeroPoliza: string | null, personaContacto = false",
           "retorno": "string",
-          "linea": 352,
-          "resumen": "«Propietario del vehículo y conductor habitual (póliza 123)»: el detalle de la relación con el tomador."
+          "linea": 459,
+          "resumen": "«Propietario del vehículo y conductor habitual (póliza 123)»: el detalle de la relación con el tomador. Si es además su persona de contacto: «Persona de contacto · Conductor habitual (póliza 123)»."
         },
         {
           "nombre": "leadSinDniReutilizable",
@@ -167934,16 +168086,16 @@
           "exportada": true,
           "params": "candidatos: readonly CandidatoLeadSinDni[], nombre: string",
           "retorno": "string | null",
-          "linea": 380,
+          "linea": 488,
           "resumen": "Una figura SIN DNI solo reutiliza un lead que (1) es `lead`, (2) no tiene DNI, (3) se llama EXACTAMENTE igual (sin tildes, mayúsculas ni orden; una sola palabra vale si es la misma) y (4) YA está rela"
         },
         {
           "nombre": "parcheFigura",
           "kind": "function",
           "exportada": true,
-          "params": "ficha: { tieneFechaNacimiento: boolean; carnets: number | null }, p: Pick<PersonaFigura, 'fechaNacimiento' | 'fechaCarnet' | 'claseCarnet'>, ramo: string, hoyIso: string,",
+          "params": "ficha: { tieneFechaNacimiento: boolean carnets: number | null /** Columnas del domicilio en bruto (un cifrado que no abre también «tiene»). Ausente = tiene (no se escribe). */ tieneDireccion?: boolean tieneCodigoPostal?: boolean tieneCiudad",
           "retorno": "ParcheFigura",
-          "linea": 406,
+          "linea": 519,
           "resumen": "Fecha de nacimiento y carné de la figura a SU ficha, solo HUECOS (mismo criterio que el tomador: `parcheFichaDesdePoliza`). La identidad (DNI, o el lead recién abierto / ya vinculado) la ha comprobado"
         },
         {
@@ -167952,7 +168104,7 @@
           "exportada": false,
           "params": "desde: string, hasta: string",
           "retorno": "number",
-          "linea": 442,
+          "linea": 571,
           "resumen": "Años cumplidos entre dos fechas ISO."
         },
         {
@@ -167961,7 +168113,7 @@
           "exportada": true,
           "params": "conductores: readonly { fechaNacimiento: string | null; fechaCarnet: string | null }[], hoyIso: string,",
           "retorno": "boolean",
-          "linea": 453,
+          "linea": 582,
           "resumen": "¿Algún conductor tiene menos de 25 años o menos de 2 de carné? Solo con fechas CONOCIDAS: sin fecha no se afirma nada (`false`). Una nacimiento 01/01 («solo el año») da la edad MÁXIMA posible, así que"
         },
         {
@@ -167970,13 +168122,40 @@
           "exportada": true,
           "params": "plan: PlanFiguras",
           "retorno": "",
-          "linea": 466,
-          "resumen": "Los conductores del plan (habituales y ocasionales leídos, y el tomador si conduce), con sus fechas."
+          "linea": 598,
+          "resumen": "Los conductores del plan (habituales y ocasionales leídos —también los SIN nombre— y el tomador si conduce), con sus fechas."
+        },
+        {
+          "nombre": "tareaPedirDniYCarne",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Pick<PersonaFigura, 'rolesLeidos'>",
+          "retorno": "string | null",
+          "linea": 610,
+          "resumen": "El texto de la tarea, sin nombre (la tarea va colgada de su ficha)."
+        },
+        {
+          "nombre": "faltaDniOCarne",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { tieneDni: boolean | null; carnets: number | null }",
+          "retorno": "boolean",
+          "linea": 620,
+          "resumen": "¿Hay que pedirle DNI y carné? Solo si se SABE que falta alguno (su ficha sin DNI, o sin ningún carné). `null` = no se pudo mirar: no se afirma que falte (no se crea la tarea)."
+        },
+        {
+          "nombre": "contactoSoloDelTomador",
+          "kind": "function",
+          "exportada": true,
+          "params": "coincidencias: readonly string[] | null, tomadorId: string",
+          "retorno": "boolean",
+          "linea": 634,
+          "resumen": "Teléfono y email del TOMADOR que se añaden a la ficha de su persona de contacto. Si otra ficha ya los tiene, no se fuerza NUNCA, salvo que esa otra sea SOLO el propio tomador (los acaba de recibir él "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "63d268aae792"
+      "hash": "61a549c8d217"
     },
     {
       "ruta": "packages/module-seguros/src/filtro-cartera.ts",
@@ -177731,6 +177910,6 @@
   ],
   "resumen": {
     "archivos": 4081,
-    "funciones": 13819
+    "funciones": 13838
   }
 }
