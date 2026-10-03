@@ -175,8 +175,8 @@ export function solicitudViva(solicitudes: readonly SolicitudEmision[]): Solicit
 
 /** El buzón que enlaza la fila del 500 en la tabla de errores del portal
  *  («report the issue, including the full response, to the API support team»).
- *  La cabecera del spec dice `soporteapi@codeoscopic.com`; el portal no aclara cuál. */
-export const SOPORTE_API_CODEOSCOPIC = 'soporteapi@avant2.es'
+ *  La cabecera del spec dice `soporteapi@codeoscopic.com` (avant2.es rebota desde oct-2026). */
+export const SOPORTE_API_CODEOSCOPIC = 'soporteapi@codeoscopic.com'
 
 export type ConsejoTrasFallo = { tipo: 'reportar' | 'reintentar_en_minutos'; texto: string }
 
