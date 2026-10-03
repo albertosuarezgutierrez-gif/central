@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T10:39:48Z",
-  "sha": "5daa5eb7a1aff027fe46db7b2e8a4d8bf3b471e5",
+  "generadoEn": "2026-10-03T11:19:56Z",
+  "sha": "2e7d464077931b7f8d345173c29639e08e70d235",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -16935,7 +16935,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/leer-documento",
-      "hash": "b60fbb4d77df"
+      "hash": "03cb5f3311ad"
     },
     {
       "ruta": "apps/asegura/app/api/operador/libro-registro/route.ts",
@@ -26426,7 +26426,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string | null = 'auto'",
           "retorno": "OpcionProducto[] | null",
-          "linea": 63,
+          "linea": 73,
           "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
         },
         {
@@ -26435,7 +26435,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 92,
+          "linea": 110,
           "resumen": "Lee `{ dtoCap?, dtoVentaCruzada? }` del cuerpo. `null` si no viene nada; lanza nada: lo raro es reparo."
         },
         {
@@ -26444,7 +26444,7 @@
           "exportada": true,
           "params": "base: unknown, pedidos: DescuentosPedidos, origen: 'catalogo' | 'formulario' = 'catalogo',",
           "retorno": "",
-          "linea": 114,
+          "linea": 132,
           "resumen": "PURO. Aplica los descuentos pedidos a las opciones que irán en el ReRate. Solo si esas opciones YA traen el campo (hoy, el catálogo de Allianz auto): meter un `dtoCap` en otra compañía sería declarar "
         },
         {
@@ -26453,7 +26453,7 @@
           "exportada": true,
           "params": "compania: string",
           "retorno": "OpcionProducto[] | null",
-          "linea": 169,
+          "linea": 187,
           "resumen": "Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate: ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo Allianz auto tiene esta captura."
         },
         {
@@ -26462,13 +26462,13 @@
           "exportada": true,
           "params": "campos: Record<string, unknown>, compania: string, opts?: { familiaAllianz?: boolean },",
           "retorno": "Record<string, unknown>",
-          "linea": 188,
+          "linea": 206,
           "resumen": "Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre cualquier default. Puro y testeable aparte de la ru"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4254696999fd"
+      "hash": "6a1e0b9f3e6d"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -31365,7 +31365,9 @@
         "mismoNombre",
         "decidirFicha",
         "posiblesDuplicadosPorContacto",
-        "puedeVolcarEnFicha"
+        "puedeVolcarEnFicha",
+        "planTomador",
+        "fichaDelDocumento"
       ],
       "funciones": [
         {
@@ -31471,11 +31473,29 @@
           "retorno": "boolean",
           "linea": 155,
           "resumen": "¿Se vuelcan a la ficha los datos personales que trae el documento? (03/10/2026, revisión PR #4147) 🚨 Desde el PORTAL (o el enlace de datos) sube el cliente, y el email que se vuelque puede acabar enl"
+        },
+        {
+          "nombre": "planTomador",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { clienteSube: string | null nombreFicha: string | null dniFicha: string | null alta: AltaTomador | null encontradas: { id: string; por: string }[] | null }",
+          "retorno": "PlanTomador",
+          "linea": 188,
+          "resumen": "sin ninguno, sin identificador."
+        },
+        {
+          "nombre": "fichaDelDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: { estado: string clienteId?: string clienteNuevo?: boolean ficha?: VolcadoResumible posiblesDuplicados?: string[] conIdentificador?: boolean }",
+          "retorno": "FichaDelDocumento | null",
+          "linea": 242,
+          "resumen": "La ficha resultante de un documento subido, para la respuesta del puerto: id, si se creó, los NOMBRES de lo rellenado y los avisos. Sin un solo valor personal. `null` = no se tocó ninguna ficha (ya nu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "765253aadd5d"
+      "hash": "97ae88235008"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-documento.ts",
@@ -31493,7 +31513,7 @@
           "exportada": false,
           "params": "v: unknown, max = 120",
           "retorno": null,
-          "linea": 90
+          "linea": 97
         },
         {
           "nombre": "fmt",
@@ -31501,7 +31521,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 91
+          "linea": 98
         },
         {
           "nombre": "oportunidadDesdeFichero",
@@ -31509,7 +31529,7 @@
           "exportada": true,
           "params": "e: EntradaOportunidadDocumento & { fichero: { contenido: Buffer; mime: string; nombre: string } },",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
-          "linea": 94,
+          "linea": 101,
           "resumen": "Lee el fichero (probando el DNI de la ficha si el PDF tiene contraseña) y sigue con lo leído."
         },
         {
@@ -31518,7 +31538,7 @@
           "exportada": true,
           "params": "e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
-          "linea": 111,
+          "linea": 118,
           "resumen": "Con el documento ya leído (p. ej. `subir-poliza`, que lo leyó antes de guardar)."
         },
         {
@@ -31527,7 +31547,7 @@
           "exportada": false,
           "params": "correduriaId: string, nombreCompleto: string",
           "retorno": "Promise<string | null>",
-          "linea": 286,
+          "linea": 299,
           "resumen": "El lead SIN DNI que se llama exactamente igual (el más antiguo), o null. Solo leads: una ficha de cliente o con DNI no se toma por nombre."
         },
         {
@@ -31536,7 +31556,7 @@
           "exportada": true,
           "params": "correduriaId: string, documentoId: string, bruto: Record<string, unknown> | null",
           "retorno": "Promise<void>",
-          "linea": 310,
+          "linea": 323,
           "resumen": "Guarda con el documento lo leído por la IA (`documentos.extraccion`, 03/10/2026) SIN datos personales: DNI, teléfono, email, fechas de nacimiento/carné y domicilio no se guardan en claro en un campo S"
         },
         {
@@ -31545,7 +31565,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, nota: string | null, actor: string",
           "retorno": "Promise<void>",
-          "linea": 327,
+          "linea": 340,
           "resumen": "Deja la nota «Conductor principal en la póliza: …» en la ficha, una sola vez (la misma póliza subida dos veces no la repite). Solo el nombre: el historial va en claro y no se borra. Best-effort: la op"
         },
         {
@@ -31554,7 +31574,7 @@
           "exportada": false,
           "params": "codigo: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 342,
+          "linea": 355,
           "resumen": "El nombre de la compañía por su código DGS (C0058 → Mapfre), o null."
         },
         {
@@ -31563,17 +31583,8 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 350,
+          "linea": 363,
           "resumen": "El catálogo DGS para casar un nombre leído. `[]` si no se pudo leer: entonces no se resuelve nada."
-        },
-        {
-          "nombre": "fichasPorContacto",
-          "kind": "function",
-          "exportada": false,
-          "params": "correduriaId: string, contacto: ContactoTomadorLeido",
-          "retorno": "Promise<string[]>",
-          "linea": 357,
-          "resumen": "Ids de las fichas con el teléfono o el email de la póliza. `[]` si no trae o no se pudo buscar."
         },
         {
           "nombre": "notaPosiblesDuplicados",
@@ -31581,7 +31592,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, nombre: string | null, compartenContacto: string[], actor: string",
           "retorno": "Promise<void>",
-          "linea": 368,
+          "linea": 374,
           "resumen": "En un lead RECIÉN abierto: «posible duplicado de <id>» por cada ficha que se llama exactamente igual, y las que comparten su teléfono/email. NO se funde nada (duplicar se ve; mezclar a dos personas, n"
         },
         {
@@ -31590,7 +31601,7 @@
           "exportada": false,
           "params": "correduriaId: string, nombreCompleto: string",
           "retorno": "Promise<string[]>",
-          "linea": 384,
+          "linea": 390,
           "resumen": "Fichas vivas (no lápidas) que se llaman EXACTAMENTE igual, sin orden. Hasta 5."
         }
       ],
@@ -31599,7 +31610,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "306bf7ed8bfa"
+      "hash": "bb4878f46dd2"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-riesgo.ts",
@@ -80815,7 +80826,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 54
+          "linea": 53
         },
         {
           "nombre": "hoyMadrid",
@@ -80823,7 +80834,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 59
+          "linea": 58
         },
         {
           "nombre": "enviar",
@@ -80831,7 +80842,7 @@
           "exportada": false,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 63
+          "linea": 62
         },
         {
           "nombre": "motivoDe",
@@ -80839,7 +80850,7 @@
           "exportada": false,
           "params": "json: unknown, status: number",
           "retorno": "string",
-          "linea": 76
+          "linea": 75
         },
         {
           "nombre": "OportunidadesCliente",
@@ -80847,7 +80858,7 @@
           "exportada": true,
           "params": "{ clienteId, telefono = null, polizas, precargas = {} }: { clienteId: string; telefono?: string | null; polizas: Poliza[] /** Por id de póliza del volcado: con qué se precarga el alta al crear la oportunidad desde su fila. */ precargas?: Re",
           "retorno": null,
-          "linea": 81
+          "linea": 80
         },
         {
           "nombre": "SinOportunidad",
@@ -80895,7 +80906,7 @@
           "nombre": "FormAlta",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId, inicial, precarga = null, onCancelar, onHecho }: { clienteId: string inicial?: LecturaOk | null /** Crear desde una fila del volcado: vehículo/aseguradora, y el vencimiento SOLO si es futuro. */ precarga?: PrecargaAlta | null o",
+          "params": "{ clienteId, inicial, precarga = null, onCancelar, onHecho, onRecargar }: { clienteId: string inicial?: LecturaOk | null /** Crear desde una fila del volcado: vehículo/aseguradora, y el vencimiento SOLO si es futuro. */ precarga?: PrecargaA",
           "retorno": null,
           "linea": 398,
           "resumen": "`inicial` (29/09/2026): una lectura ya hecha (la póliza subida en Documentos) rellena el formulario al abrirlo, sin volver a pagar la lectura."
@@ -80906,7 +80917,7 @@
           "exportada": false,
           "params": "{ o, onCancelar, onHecho }: { o: OportunidadDeCliente onCancelar: () => void onHecho: (t: { ok: boolean; texto: string }) => void }",
           "retorno": null,
-          "linea": 592
+          "linea": 612
         }
       ],
       "tablas": [
@@ -80915,7 +80926,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "1ffa77f7ea03"
+      "hash": "20f96b3c53f8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/page.tsx",
@@ -83302,6 +83313,53 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e16270b272e4"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/LeerPoliza.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "useLeerPoliza",
+        "AvisosLectura"
+      ],
+      "funciones": [
+        {
+          "nombre": "oportunidadAbierta",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "OportunidadAbierta | null",
+          "linea": 31,
+          "resumen": "Solo con estado `creada`/`actualizada` Y un id: cualquier otra cosa no afirma que haya oportunidad."
+        },
+        {
+          "nombre": "useLeerPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId, tomador, crear, onLectura }: OpcionesLeerPoliza = {}",
+          "retorno": null,
+          "linea": 43
+        },
+        {
+          "nombre": "AvisosLectura",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ oportunidad, ficha, sinGuardar, fichaIncierta }: Pick<ReturnType<typeof useLeerPoliza>, 'oportunidad' | 'ficha' | 'sinGuardar' | 'fichaIncierta'>",
+          "retorno": null,
+          "linea": 116,
+          "resumen": "Lo que asegura dice de la oportunidad y de la ficha del tomador. No pinta nada si no dice nada."
+        },
+        {
+          "nombre": "FichaTomadorResultado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ f, guardado }: { f: FichaDocumento; guardado: boolean }",
+          "retorno": null,
+          "linea": 147
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2c7776f52fe6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/LineaBase.tsx",
@@ -86905,7 +86963,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7dbe82d5c105"
+      "hash": "360348c744aa"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/subir-poliza/SubirPoliza.tsx",
@@ -86920,7 +86978,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 12
+          "linea": 9
         },
         {
           "nombre": "SubirPoliza",
@@ -86928,7 +86986,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 25,
+          "linea": 21,
           "resumen": "Lee el documento por `/api/correduria/oportunidad/leer` (puerto `leer-documento` de asegura) y enseña adónde ir: la póliza si ya es nuestra, la ficha del tomador si la tiene, o el alta. Tres estados e"
         },
         {
@@ -86937,7 +86995,7 @@
           "exportada": false,
           "params": "{ k, v }: { k: string; v: string | null }",
           "retorno": null,
-          "linea": 101
+          "linea": 52
         },
         {
           "nombre": "Fichas",
@@ -86945,7 +87003,7 @@
           "exportada": false,
           "params": "{ fichas }: { fichas: FichaTomador[] }",
           "retorno": null,
-          "linea": 110
+          "linea": 61
         },
         {
           "nombre": "Resultado",
@@ -86953,12 +87011,12 @@
           "exportada": false,
           "params": "{ l, conOportunidad }: { l: Lectura; conOportunidad: boolean }",
           "retorno": null,
-          "linea": 122
+          "linea": 73
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eedf378a665e"
+      "hash": "4c2f2585f3c7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Supresiones.tsx",
@@ -123910,7 +123968,9 @@
       "ambito": "apps/plataforma",
       "resumen": "Qué se le dice a Alberto tras subir un documento (29/09/2026): asegura abre SOLA la oportunidad de todo documento de seguro, y devuelve el desenlace en `oportunidad`. Cada desenlace se dice distinto porque se actúa distinto: no es lo mismo «ya es nuestra» que «no se ha podido leer».",
       "exporta": [
-        "interpretarOportunidadDocumento"
+        "interpretarOportunidadDocumento",
+        "interpretarFichaDocumento",
+        "textoFichaDocumento"
       ],
       "funciones": [
         {
@@ -123937,11 +123997,37 @@
           "retorno": "AvisoOportunidadDocumento | null",
           "linea": 16,
           "resumen": "`null` = la respuesta no trae desenlace (subida a una póliza, o un asegura anterior a esto)."
+        },
+        {
+          "nombre": "lista",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, max = 20",
+          "retorno": null,
+          "linea": 60
+        },
+        {
+          "nombre": "interpretarFichaDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "FichaDocumento | null | undefined",
+          "linea": 64,
+          "resumen": "`undefined` = asegura no dice nada de la ficha (versión anterior): no se afirma nada."
+        },
+        {
+          "nombre": "textoFichaDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FichaDocumento",
+          "retorno": "string",
+          "linea": 74,
+          "resumen": "Una frase con lo que de verdad ha pasado en la ficha."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e115625459d8"
+      "hash": "fe8ae756ade8"
     },
     {
       "ruta": "apps/plataforma/lib/partes-asegura.ts",
@@ -176843,7 +176929,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4071,
-    "funciones": 13737
+    "archivos": 4072,
+    "funciones": 13745
   }
 }
