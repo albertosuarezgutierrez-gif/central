@@ -387,6 +387,14 @@ export {
   explicarSiniestro,
 } from './siniestro-historial.ts'
 export type { EstadoSiniestro, SiniestroHistorial, ExplicacionSiniestro } from './siniestro-historial.ts'
+export { seguimientoDeParte, indemnizadoDe, peritoAsignadoDe, PASOS_PARTE } from './parte-seguimiento.ts'
+export type {
+  SeguimientoParte,
+  SiniestroParaSeguimiento,
+  PasoVisibleParte,
+  ClavePasoParte,
+  EntradaSeguimientoParte,
+} from './parte-seguimiento.ts'
 export { tramitacionSiniestro, importeNumero } from './siniestro-tramitacion.ts'
 export type { PasoTramitacion, TramitacionSiniestro } from './siniestro-tramitacion.ts'
 export { detalleSiniestroCompania, descripcionRiesgoLegible, normalizarCodigoCoberturaNumerico } from './siniestro-detalle.ts'

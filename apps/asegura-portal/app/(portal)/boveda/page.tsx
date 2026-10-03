@@ -22,6 +22,7 @@ import { pendientesDeTi } from '@/lib/pendiente-de-ti'
 import { presupuestosPendientesDeIdentidad } from '@/lib/presupuesto'
 import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
+import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
@@ -434,8 +435,11 @@ export default async function Boveda({
   // «Buenas tardes, cliente» delata que no sabemos quién ha entrado.
   const saludo = saludoPorHora(hoy, 'Europe/Madrid')
   const pila = nombreDePila(identidad.nombre)
+  // Estado del siniestro de cada parte, cruzado DENTRO de la cartera ya autorizada (sin lectura nueva).
+  const seguimientos = seguimientosDePartes(partes, cartera)
   const partesEnviados: ParteEnviado[] = partes.map((p: PartePortal) => ({
     id: p.id,
+    seguimiento: seguimientos.get(p.id) ?? null,
     // Columna `date`: llega como medianoche UTC, así que el ISO recortado es
     // exactamente el día que declaró la persona, sin desfase de zona.
     fechaHecho: p.fechaHecho.toISOString().slice(0, 10),

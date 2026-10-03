@@ -8,8 +8,11 @@ import { vigenciaRiesgo } from '@/lib/datos-poliza-cima'
 import { documentosDePoliza } from '@/lib/documentos-poliza'
 import { fechaEs } from '@/lib/fechas'
 import { rolesLegibles } from '@/lib/intervinientes'
+import { partesDeIdentidad } from '@/lib/partes-siniestro'
+import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { getIdentidad } from '@/lib/session'
 
+import { SeguimientoDeParte } from '../../SeguimientoParte'
 import {
   AvisoReciboDevuelto,
   textoSustitucion,
@@ -96,6 +99,18 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   const p = poliza
   // Solo las propias: `documentosDePoliza` lo vuelve a comprobar contra la cartera, no se fía de `deOtro`.
   const documentos = deOtro ? null : await documentosDePoliza(identidad.id, p.id)
+  // Partes de ESTA póliza con su estado. Se cruzan con la cartera ya leída arriba (sin lectura
+  // nueva de siniestros); sin alcance de ver siniestros (`null`) no sale nada. Si los partes no se
+  // pueden leer, la sección se calla: la ficha no se cae por esto y no se afirma nada.
+  const partesPoliza = await partesDeIdentidad(identidad.id).then(
+    (l) => l.filter((x) => x.polizaId === p.id),
+    () => [],
+  )
+  const seguimientos = seguimientosDePartes(partesPoliza, cartera)
+  const partesConEstado = partesPoliza.flatMap((x) => {
+    const seg = seguimientos.get(x.id) ?? null
+    return seg ? [{ id: x.id, fecha: fechaEs(x.fechaHecho), seg }] : []
+  })
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = RAMO[p.ramo] ?? p.ramo
   // Lo que CIMA manda del contrato, ya filtrado por nivel y por lista blanca
@@ -332,6 +347,20 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
         <section className="seccion" aria-labelledby="siniestros-titulo">
           <h2 id="siniestros-titulo">Tus siniestros de esta póliza</h2>
           <HistorialSiniestros p={p} />
+        </section>
+      )}
+
+      {partesConEstado.length > 0 && (
+        <section className="seccion" aria-labelledby="partes-titulo">
+          <h2 id="partes-titulo">Partes que nos has dado de esta póliza</h2>
+          <ul className="cartera">
+            {partesConEstado.map((x) => (
+              <li key={x.id} className="cartera-card">
+                <h3>{x.fecha ? `Siniestro del ${x.fecha}` : 'Siniestro'}</h3>
+                <SeguimientoDeParte s={x.seg} />
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

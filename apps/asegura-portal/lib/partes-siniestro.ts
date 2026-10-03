@@ -67,6 +67,8 @@ export type PartePortal = {
   polizaId: string | null
   /** Póliza que el propio cliente aportó al portal. */
   polizaDeclaradaId: string | null
+  /** Siniestro vinculado (CIMA o alta manual). Solo sirve para cruzar en servidor con la cartera autorizada; no baja al cliente. `null` = sin vínculo. */
+  siniestroId: string | null
   creadoEn: Date
   /**
    * Los ficheros que adjuntó (fotos, el PDF del amistoso).
@@ -115,6 +117,7 @@ export async function partesDeIdentidad(identidadId: string): Promise<PartePorta
       estado: true,
       polizaId: true,
       polizaDeclaradaId: true,
+      siniestroId: true,
       creadoEn: true,
       // Ni `motivoDescarte` ni los sellos de gestión: son notas del corredor,
       // no dato del cliente (regla de visibilidad del portal, 03/09/2026).

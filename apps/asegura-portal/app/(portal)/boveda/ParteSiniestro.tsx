@@ -44,6 +44,8 @@ import {
   revisarDocumento,
 } from '@central/module-seguros'
 
+import type { SeguimientoParte } from '@central/module-seguros-portal'
+
 import { fechaEs } from '@/lib/fechas'
 import * as borrador from '@/lib/parte-borrador'
 import { logoCompania } from '@/lib/logos-companias'
@@ -51,6 +53,7 @@ import { logoCompania } from '@/lib/logos-companias'
 import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
 
 import { EnviarACompania } from './EnviarACompania'
+import { SeguimientoDeParte } from './SeguimientoParte'
 
 /**
  * «Dar parte de un siniestro» — el formulario que abre el CLIENTE desde su móvil,
@@ -154,6 +157,11 @@ export type ParteEnviado = {
   /** 🚨 La ÚNICA fuente de «tu compañía ya lo sabe». Ver la cabecera. */
   comunicado: boolean
   estado?: string
+  /**
+   * En qué punto está el siniestro (`lib/parte-seguimiento.ts`). `undefined`/`null` = no se
+   * enseña estado (sin alcance de ver siniestros, póliza no visible): cae al chip de siempre.
+   */
+  seguimiento?: SeguimientoParte | null
   plazo: Plazo
   /**
    * Los ficheros que mandó con este parte.
@@ -2648,8 +2656,10 @@ function ListaPartes({ partes }: { partes: readonly ParteEnviado[] }) {
               <div className="chips">
                 {/* 🚨 El chip verde SOLO cuando `comunicado` es `true`. No se
                     deduce de `estado !== 'enviado'`: ver la cabecera. */}
-                <span className={enCompania ? 'chip ok' : 'chip aviso'}>{texto}</span>
+                {/* Con seguimiento, la línea de pasos sustituye al chip: dice lo mismo y más. */}
+                {!p.seguimiento && <span className={enCompania ? 'chip ok' : 'chip aviso'}>{texto}</span>}
               </div>
+              {p.seguimiento && <SeguimientoDeParte s={p.seguimiento} />}
               {/* Sin tramitador, sin perito y sin referencia interna: eso es
                   gestión del corredor y no va en la vista del cliente (regla de
                   visibilidad, `CLAUDE.md` de la app). No están «vacíos»: no se
