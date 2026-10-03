@@ -231,3 +231,11 @@ test('🪤 carné: solo si el documento dice que el tomador ES el conductor habi
   assert.equal(parcheFichaDesdePoliza(fichaVacia(), otro, null, HOY).parche.carnet, null)
   assert.deepEqual(parcheFichaDesdePoliza(fichaVacia(), leida(), null, HOY).parche.carnet, { tipo: 'B', fecha: '1999-03-02' })
 })
+
+test('extracción: cifCompania solo si tiene forma de CIF de sociedad; un DNI o NIE no se guarda', () => {
+  assert.equal(extraccionSinPii({ cifCompania: '12345678Z' })?.datos.cifCompania, null)
+  assert.equal(extraccionSinPii({ cifCompania: 'X1234567L' })?.datos.cifCompania, null)
+  assert.equal(extraccionSinPii({ cifCompania: 12345678 })?.datos.cifCompania, null)
+  assert.equal(extraccionSinPii({ cifCompania: 'A-28141935' })?.datos.cifCompania, 'A28141935')
+  assert.equal(extraccionSinPii({ cifCompania: 'A28141935' })?.datos.cifCompania, 'A28141935')
+})

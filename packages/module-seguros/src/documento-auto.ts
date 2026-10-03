@@ -211,7 +211,6 @@ function documentoIdentidad(v: unknown): string | null {
   return limpio
 }
 
-/** Código DGS de entidad: `C` + 4 dígitos (C0058 Mapfre, C0109 Allianz…). */
 /** CIF de persona jurídica con forma válida (letra + 7 dígitos + control), o null. No valida el dígito. */
 export function cifCompania(v: unknown): string | null {
   const t = texto(v)
@@ -220,6 +219,7 @@ export function cifCompania(v: unknown): string | null {
   return /^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(limpio) ? limpio : null
 }
 
+/** Código DGS de entidad: `C` + 4 dígitos (C0058 Mapfre, C0109 Allianz…). */
 function codigoDgs(v: unknown): string | null {
   const t = texto(v)
   if (t === null) return null

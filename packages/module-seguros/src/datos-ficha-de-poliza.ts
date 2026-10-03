@@ -17,7 +17,7 @@
 //  - Un dato que no se ha podido LEER de la ficha (cifrado que no abre, lista de contactos que no
 //    cargó) cuenta como ocupado: el estado conservador es no escribir.
 
-import { MARCADORES_SIN_DATO } from './documento-auto.ts'
+import { MARCADORES_SIN_DATO, cifCompania } from './documento-auto.ts'
 import { resolverCompania, type CompaniaCatalogo } from './defensa-cartera.ts'
 import { normalizarCp, normalizarDni, normalizarEmail, normalizarFechaNacimiento, normalizarTelefono } from './cliente-edicion.ts'
 import { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type TipoCarnet } from './carnet-ficha.ts'
@@ -404,6 +404,9 @@ export function extraccionSinPii(
   const datos: Record<string, unknown> = {}
   for (const k of CLAVES_EXTRACCION_GUARDABLES) {
     const v = bruto[k]
+    // El CIF de la aseguradora solo con forma de CIF de SOCIEDAD: un DNI o NIE metido ahí por la IA
+    // sería PII en claro en un jsonb consultable (revisión PR 4160).
+    if (k === 'cifCompania') { if (v !== undefined) datos[k] = cifCompania(v); continue }
     // Solo valores planos: un objeto anidado podría esconder cualquier cosa.
     if (v === null || typeof v === 'number' || typeof v === 'boolean') datos[k] = v
     else if (typeof v === 'string') datos[k] = texto(v)
