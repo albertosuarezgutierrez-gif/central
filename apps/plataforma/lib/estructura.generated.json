@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-30T11:29:01Z",
+  "generadoEn": "2026-10-03T10:35:07Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 166
+        "evidencias": 169
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 134
+        "evidencias": 136
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 44
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4012,8 +4012,11 @@
       "/api/operador/codeoscopic/coberturas",
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/descubrir-emisiones",
       "/api/operador/codeoscopic/documentos",
       "/api/operador/codeoscopic/emision-externa",
+      "/api/operador/codeoscopic/emisiones-revision",
+      "/api/operador/codeoscopic/emisiones-revision/[id]/resolver",
       "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/faltan-producto",
       "/api/operador/codeoscopic/hogar-nuevo",
@@ -5041,6 +5044,8 @@
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
       "/api/correduria/emision-aviso",
+      "/api/correduria/emisiones-revision",
+      "/api/correduria/emisiones-revision/[id]/resolver",
       "/api/correduria/export-rgpd",
       "/api/correduria/formacion",
       "/api/correduria/formacion/baja",
@@ -5103,6 +5108,7 @@
       "/api/cron/contable-proactivo",
       "/api/cron/correduria-actividad",
       "/api/cron/correduria-bajas-pue",
+      "/api/cron/correduria-descubrir-emisiones",
       "/api/cron/correduria-eventos",
       "/api/cron/correduria-ingesta",
       "/api/cron/correduria-partes",
@@ -5552,6 +5558,7 @@
       "seguros.clientes",
       "seguros.codeoscopic_consumo",
       "seguros.codeoscopic_documents",
+      "seguros.codeoscopic_emisiones_revision",
       "seguros.codeoscopic_offers",
       "seguros.codeoscopic_participants",
       "seguros.codeoscopic_prices",
@@ -6631,7 +6638,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1543,
+    "apis": 1549,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
