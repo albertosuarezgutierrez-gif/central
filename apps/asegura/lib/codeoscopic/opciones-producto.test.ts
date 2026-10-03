@@ -120,8 +120,32 @@ test('conProductoPorDefecto: familiaAllianz sin marcar (u omitido) sigue en fals
 test('opcionesPorDefecto: las de Allianz son de AUTO; moto u hogar no las heredan', () => {
   assert.ok(opcionesPorDefecto('Allianz', 'auto'))
   assert.ok(opcionesPorDefecto('Allianz', null), 'sin ramo conocido se mantiene el comportamiento de auto')
-  assert.equal(opcionesPorDefecto('Allianz', 'moto'), null)
-  assert.equal(opcionesPorDefecto('Allianz', 'hogar'), null)
+  // Moto/hogar: solo los dos campos de descuento, no las 14 de auto.
+  assert.equal(opcionesPorDefecto('Allianz', 'moto')!.length, 2)
+  assert.equal(opcionesPorDefecto('Allianz', 'hogar')!.length, 2)
+})
+
+const ids = (o: { id: string; value: unknown }[] | null) => Object.fromEntries((o ?? []).map((x) => [x.id, x.value]))
+
+test('opcionesPorDefecto: Allianz moto → dtoCap y dtoVentaCruzada a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Allianz', 'moto')), { dtoCap: 50, dtoVentaCruzada: 50 })
+})
+test('opcionesPorDefecto: Allianz hogar → dtoCap y dtoVentaCruzada a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Allianz', 'hogar')), { dtoCap: 50, dtoVentaCruzada: 50 })
+})
+test('opcionesPorDefecto: Generali moto → commercialDiscountNumber a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Generali', 'moto')), { commercialDiscountNumber: 50 })
+})
+test('opcionesPorDefecto: Generali hogar → commercialDiscountNumber a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Generali Seguros', 'hogar')), { commercialDiscountNumber: 50 })
+})
+test('opcionesPorDefecto: Occident y Fidelidade siguen sin catálogo en moto/hogar; comissionType nunca', () => {
+  for (const c of ['Occident', 'Catalana Occidente', 'Fidelidade'])
+    for (const r of ['moto', 'hogar']) assert.equal(opcionesPorDefecto(c, r), null, `${c} ${r}`)
+  assert.equal(opcionesPorDefecto('Generali', 'auto'), null)
+  for (const c of ['Allianz', 'Generali', 'Occident', 'Fidelidade'])
+    for (const r of ['moto', 'hogar'])
+      assert.equal((opcionesPorDefecto(c, r) ?? []).some((o) => o.id === 'comissionType'), false, `${c} ${r}`)
 })
 
 test('descuento en preemisión: límites del formulario real (CAP 0-99, venta cruzada 0-100), sin tocar el catálogo', () => {

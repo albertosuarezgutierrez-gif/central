@@ -54,14 +54,14 @@ póliza 05139; API `C0109` Allianz póliza 8846622.
 | Compañía | Ramo | Campos disponibles | Id interno | Máximo |
 |---|---|---|---|---|
 | Allianz | Autos | Descuento comercial % (CAP) / (venta cruzada) + Tipo de comisión (A) | `dtoCap` / `dtoVentaCruzada` | Vendor permite 0-99 / 0-100; recorta a su tope (≤20%) |
-| Allianz | Motos | Descuento comercial % (CAP) / (venta cruzada) + Tipo de comisión (A) | no consta (probablemente iguales) | Tope real desconocido (web 50 devuelve igual precio) |
-| Allianz | Hogar | Descuento comercial % (CAP) / (venta cruzada) | no consta | 0/0 (no envía descuento) |
-| Generali | Motos | Descuento comercial % | no consta | 0 |
-| Generali | Hogar | Descuento comercial % + Código Flota | no consta | 0 |
+| Allianz | Motos | Descuento comercial % (CAP) / (venta cruzada) + Tipo de comisión (A) | `dtoCap` / `dtoVentaCruzada` (03/10) | ✅ Se manda 50; tope real desconocido (web 50 devuelve igual precio) |
+| Allianz | Hogar | Descuento comercial % (CAP) / (venta cruzada) | `dtoCap` / `dtoVentaCruzada` (03/10) | ✅ Se manda 50; antes 0/0 |
+| Generali | Motos | Descuento comercial % | `commercialDiscountNumber` (03/10) | ✅ Se manda 50; la compañía recorta sola (~12 %), sin error |
+| Generali | Hogar | Descuento comercial % + Código Flota | `commercialDiscountNumber` (03/10) | ✅ Se manda 50 (Código Flota no se toca) |
 | Occident | Autos | Descuento comercial + Colectivo | no consta | 30 por defecto (estimado, sin confirmar) |
-| Occident | Motos | Descuento comercial + Colectivo | no consta | 30 por defecto (estimado, sin confirmar) |
-| Occident | Hogar | Descuento comercial + Colectivo | no consta | 30 por defecto |
-| Fidelidade | Hogar | Descuento (vacío) | no consta | no disponible |
+| Occident | Motos | Descuento comercial + Colectivo | `commercialDiscount` (03/10) | NO se manda: trae 30 de serie, máximo sin medir |
+| Occident | Hogar | Descuento comercial + Colectivo | `discount` (03/10) | NO se manda: trae 30 de serie, máximo sin medir |
+| Fidelidade | Hogar | Descuento (vacío) | `discount` (03/10) | NO se manda: máximo sin medir |
 | Mapfre | Autos | sin campo de descuento | — | no disponible |
 | Mapfre | Motos | sin campo de descuento | — | no disponible |
 | Reale | Autos | sin descuento manual; solo Campaña comercial (no disponibles) | — | no disponible |
@@ -124,6 +124,6 @@ exacto de Allianz (prueba con 10 % para ver si baja el precio) y confirmar el pr
 
 ## Pendiente en código
 
-- Descuento por defecto en el ReRate = **50 %**. Hoy solo Allianz auto lo lleva; Allianz moto, Generali y Catalana Occidente necesitan el id exacto del campo.
+- Descuento por defecto en el ReRate = **50 %**. ✅ Ya lo llevan Allianz auto/moto/hogar y Generali moto/hogar (ids leídos el 03/10/2026). Pendiente: Occident y Fidelidade (máximos sin medir). `comissionType` no se manda nunca.
 - Aviso «bonificación NO verificada» a partir de `messages[]`.
 - ✅ **Descubrimiento autónomo:** cron `correduria-descubrir-emisiones` implementado (plataforma, `10,40 5-21 * * *` UTC); cola de revisión `seguros.codeoscopic_emisiones_revision` activa; rotación en anillo 40 llamadas/pasada. Acuñado atómico vía `registrarPolizaEmitida` (PR #4158, mergeado). URL del webhook cambiada a `api.grupoasegura.es` (PENDIENTE que Codeoscopic actualice de su lado).
