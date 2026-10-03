@@ -29,6 +29,8 @@ export default function SubirPoliza() {
   const [lectura, setLectura] = useState<Lectura | null>(null)
   const [oportunidad, setOportunidad] = useState<AvisoOportunidadDocumento | null>(null)
   const [sinGuardar, setSinGuardar] = useState(false)
+  // La oportunidad falló: no se sabe si la ficha se llegó a tocar (no se afirma que no).
+  const [fichaIncierta, setFichaIncierta] = useState(false)
   // `null` = no se ha tocado ninguna ficha; `undefined` = asegura no lo dice (no se afirma nada).
   const [ficha, setFicha] = useState<FichaDocumento | null | undefined>(undefined)
 
@@ -39,6 +41,7 @@ export default function SubirPoliza() {
     setOportunidad(null)
     setFicha(undefined)
     setSinGuardar(false)
+    setFichaIncierta(false)
     let status = 0
     let json: unknown = null
     try {
@@ -59,7 +62,13 @@ export default function SubirPoliza() {
     if (l.estado === 'error') { setError(`No se ha podido leer: ${l.motivo}.`); return }
     setLectura(l)
     const j = json as Record<string, unknown> | null
-    setOportunidad(interpretarOportunidadDocumento(j?.oportunidad))
+    const bruta = j?.oportunidad as { estado?: unknown; clienteId?: unknown } | null | undefined
+    const falloOportunidad = bruta != null && typeof bruta === 'object' && bruta.estado === 'error'
+    const aviso = interpretarOportunidadDocumento(j?.oportunidad)
+    // En un error, asegura puede devolver la ficha que ya estaba elegida o creada: se enlaza.
+    const idFicha = falloOportunidad && typeof bruta?.clienteId === 'string' && bruta.clienteId.trim() !== '' ? bruta.clienteId.trim() : null
+    setOportunidad(aviso && idFicha ? { ...aviso, clienteId: idFicha } : aviso)
+    setFichaIncierta(falloOportunidad)
     // asegura dice si guardó el fichero; si no lo dice (versión anterior), no se afirma nada.
     setSinGuardar(j?.oportunidad != null && j?.ficheroGuardado === false)
     setFicha(j?.oportunidad != null ? interpretarFichaDocumento(j?.ficha) : undefined)
@@ -94,7 +103,12 @@ export default function SubirPoliza() {
         </div>
       )}
       {ficha && <FichaTomadorResultado f={ficha} guardado={!sinGuardar} />}
-      {ficha === null && (
+      {fichaIncierta && !oportunidad?.clienteId && (
+        <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
+          No se ha podido confirmar si se ha tocado alguna ficha: mírala en el buscador antes de volver a subirlo.
+        </p>
+      )}
+      {ficha === null && !fichaIncierta && (
         <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
           No se ha tocado ninguna ficha{sinGuardar ? ' ni se ha guardado el documento. Si sabes de quién es, súbelo desde su ficha → Documentos' : ''}.
         </p>

@@ -118,6 +118,9 @@ export async function oportunidadDesdeFichero(
 export async function oportunidadDesdeLectura(
   e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },
 ): Promise<ResultadoOportunidadDocumento> {
+  // Fuera del `try`: si algo falla DESPUÉS de elegir o crear la ficha, el `catch` devuelve su id
+  // (no se afirma que no se tocó ninguna ficha).
+  let clienteId: string | undefined
   try {
     const leida = e.lectura
     if ('fase' in leida && leida.fase === 'ninguno') return { estado: 'sin_lectura', motivo: leida.motivo }
@@ -166,7 +169,6 @@ export async function oportunidadDesdeLectura(
     const verificado = e.verificado !== false
     if (!verificado && decision.tipo === 'lead' && !alta?.dni) return { estado: 'sin_persona' }
 
-    let clienteId: string
     let clienteNuevo = false
     let compartenContacto: string[] = []
     if (decision.tipo === 'ficha') {
@@ -288,7 +290,7 @@ export async function oportunidadDesdeLectura(
     return { estado: 'error', motivo: o.motivo, clienteId }
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo abrir la oportunidad:', err instanceof Error ? err.message : err)
-    return { estado: 'error', motivo: err instanceof Error ? err.message : String(err) }
+    return { estado: 'error', motivo: err instanceof Error ? err.message : String(err), ...(clienteId ? { clienteId } : {}) }
   }
 }
 
