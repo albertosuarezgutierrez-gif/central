@@ -18,7 +18,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Cuerpo del POST. `casoId` es el id del evento que abrió el caso. */
 export const resolverSchema = z.object({
-  casoId: z.string().regex(UUID),
+  // Minúsculas: `source_event_id` (idempotencia) y `payload->>'caso_id'` se comparan como texto contra `e.id::text`.
+  casoId: z.string().regex(UUID).transform((s) => s.toLowerCase()),
   decision: z.enum(DECISIONES),
   nota: z.string().trim().max(500).optional(),
 })

@@ -16,6 +16,9 @@
 Nuevo: `esNumeroPolizaComodin` (module-seguros), vigía `/api/operador/duplicados/vivos` (+ señal `duplicados_vivos` en la ingesta, sin degradar; `null` = hueco) y bandeja `/correduria/revision`
 (casos en `operational_events`: `poliza_revision_manual` / `poliza_revision_resuelta`; «misma» NO fusiona, la fusión va por CTE con OK de Alberto). Sin commitear al cierre.
 Pendiente: las 309 pólizas activas con el vencimiento pasado; la SIEMBRA de casos en la bandeja (otra sesión, con OK de Alberto).
+PR #4183 (sin commitear): Graphify — `casoId` de la bandeja a minúsculas (Zod); recuento «sin leer» ilegible = `null`; el cero delante de letras («0A12») NO se reprodujo (SQL = helper; gap menor: el SQL quita tildes y el helper no).
+Avisos CIMA↔ficha: `compararConCima` normaliza antes de avisar (`mismoValorNormalizado`; fecha en otro formato → acción `normalizar`, motivo `formato`); el cron registra `cima_sincro_resumen` (sin PII) y lista «campo · nº póliza» (≤10) en Telegram.
+Vigía diario de duplicados NUEVOS en `correduria-sustituciones` (`gruposDuplicadosNuevos`; lo visto = evento `duplicados_vivos_visto` vía `/api/operador/duplicados/vistos`). Pendiente: commit/push y verlo en prod.
 
 **(03/10/2026, CIMA «todo guardado y pintado»)** — asegura#874 (LOO-806): el resto del SIN (sin PII) se guarda en `siniestros.cima_extra`; un SIN más viejo solo rellena huecos. El medidor guarda `cima_cobertura_campos.excluido_motivo` y separa «descartado por privacidad» de «sin leer». El resto del SIN solo cuenta como leído si la columna existe. Lista de excluidos ampliada (DNI/NIF/CIF, matrícula, cuentas, perceptor, implicados, lesiones, fallecidos).
 DDL 0106 aplicado en prod (`seguros.`) el 03/10 tras CI verde y OK de Alberto. Audit en operational_events `e9eb789b`. El portal no tiene grant sobre la columna.

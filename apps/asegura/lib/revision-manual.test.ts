@@ -22,3 +22,9 @@ test('payload de un caso: todo-o-nada con los ids', () => {
   assert.equal(leerPayloadCaso({ poliza_ids: [] }), null)
   assert.equal(leerPayloadCaso('x'), null)
 })
+
+test('casoId en MAYÚSCULAS se normaliza a minúsculas (si no, salta el filtro de caso abierto y la idempotencia)', () => {
+  const r = validarResolver({ casoId: ID.toUpperCase(), decision: 'misma' })
+  assert.equal(r.ok && r.datos.casoId, ID)
+  assert.deepEqual(payloadResolucion((r as { ok: true; datos: Parameters<typeof payloadResolucion>[0] }).datos), { caso_id: ID, decision: 'misma' })
+})

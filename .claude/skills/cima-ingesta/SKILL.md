@@ -256,6 +256,8 @@ hay algo que mirar** (regla de Alberto: el panel enseña errores). Lógica pura 
   tipo miente (`esSalud` tolera campos nuevos, así que una `apps/asegura` vieja
   los manda como `undefined`).
 
+- **Ficha ↔ CIMA, normalizar antes de avisar (03/10/2026):** `compararConCima` iguala nombre (conjunto de palabras sin tildes), fecha (ISO), teléfono (sin 34) y email (minúsculas) antes de declarar conflicto; el mismo dato en otro formato se copia con motivo `formato`. El cron `cima-sincro` registra `cima_sincro_resumen` en `operational_events` (`{copiados:[{poliza,campo,motivo}], conflictos:[{poliza,campo,tipo}]}`, sin valores ni PII) para diagnosticar el aviso.
+
 ## 📦 La caja negra del webhook de Codeoscopic
 
 Webhook nuevo en `https://api.grupoasegura.es/api/webhooks/codeoscopic` (Vercel central-asegura): guarda el cuerpo de lo que se rechaza (`invalid_json` / `invalid_payload`) para saber **qué** nos mandan. **Descubrimiento autónomo** sin dependencia del webhook: cron `correduria-descubrir-emisiones` (plataforma, `10,40 5-21 * * *` UTC) consulta GET /insurances gratis, acuña por hash DNI, pone pendientes en cola de revisión. Contacto soporte: `soporteapi@codeoscopic.com` / Juan Manuel Fernández.

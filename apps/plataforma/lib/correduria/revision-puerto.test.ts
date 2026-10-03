@@ -17,3 +17,13 @@ test('revisión: lo ilegible es error (nunca «no hay casos»)', () => {
   assert.equal(interpretarRevision(401, null).estado, 'error')
   assert.equal(interpretarRevision(200, { estado: 'sin_configurar' }).estado, 'sin_configurar')
 })
+
+test('revisión: si el recuento de pólizas sin leer no llega, es null («no se pudo medir»), nunca 0', () => {
+  const base = { casoId: 'c1', numero: 'A1', motivo: 'm', abiertoAt: '2026-10-03', polizas: [poliza] }
+  const sin = interpretarRevision(200, { estado: 'ok', casos: [base] })
+  assert.equal(sin.estado === 'ok' && sin.casos[0].polizasNoLeidas, null)
+  const malo = interpretarRevision(200, { estado: 'ok', casos: [{ ...base, polizasNoLeidas: 'x' }] })
+  assert.equal(malo.estado === 'ok' && malo.casos[0].polizasNoLeidas, null)
+  const dos = interpretarRevision(200, { estado: 'ok', casos: [{ ...base, polizasNoLeidas: 2 }] })
+  assert.equal(dos.estado === 'ok' && dos.casos[0].polizasNoLeidas, 2)
+})

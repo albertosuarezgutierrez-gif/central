@@ -81,7 +81,12 @@ function CasoCard({ caso, onResuelto }: { caso: CasoRevision; onResuelto: (id: s
       <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 230px), 1fr))' }}>
         {caso.polizas.map((p) => <PolizaCard key={p.id} p={p} />)}
       </div>
-      {caso.polizasNoLeidas > 0 && (
+      {caso.polizasNoLeidas === null && (
+        <div style={{ fontSize: 12, color: 'var(--warning)' }}>
+          No se ha podido medir cuántas pólizas del caso quedan sin leer: no significa que se hayan leído todas.
+        </div>
+      )}
+      {caso.polizasNoLeidas !== null && caso.polizasNoLeidas > 0 && (
         <div style={{ fontSize: 12, color: 'var(--warning)' }}>
           {caso.polizasNoLeidas} póliza(s) del caso no se han podido leer (puede que ya estén fusionadas): no significa que no existan.
         </div>
