@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { decidirFicha, esDocumentoDeSeguro, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad } from './oportunidad-documento-reglas.ts'
+import { decidirFicha, elegirFichaPorContacto, esDocumentoDeSeguro, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad } from './oportunidad-documento-reglas.ts'
 
 const HOY = new Date('2026-09-29T10:00:00Z')
 
@@ -57,4 +57,18 @@ test('decidir ficha sin DNI en el documento: por nombre; otra persona = lead', (
   assert.deepEqual(decidirFicha({ ...base, tomador: null }), { tipo: 'ficha', clienteId: 'yo', porque: 'sin_tomador' })
   assert.deepEqual(decidirFicha({ ...base, clienteSube: null, tomador: null }), { tipo: 'sin_persona' })
   assert.deepEqual(decidirFicha({ ...base, clienteSube: null }), { tipo: 'lead' })
+})
+
+test('🪤 ficha por contacto: solo una, sin DNI y con el MISMO nombre; el hijo no se queda la del padre', () => {
+  const tomador = 'RUIZ GARCIA ANA MARIA'
+  const ana = { id: 'ana', nombre: 'Ana María Ruiz García', tieneDni: false }
+  assert.deepEqual(elegirFichaPorContacto({ candidatos: [ana, { ...ana }], tomador }), { tipo: 'usar', clienteId: 'ana' })
+  // Mismo teléfono, otra persona de la casa (nombre más corto): NO se funde.
+  const hijo = { id: 'hijo', nombre: 'Manuel Piña', tieneDni: false }
+  assert.deepEqual(elegirFichaPorContacto({ candidatos: [hijo], tomador: 'Manuel Piña Ruiz' }), { tipo: 'lead', compartenContacto: ['hijo'] })
+  // Con DNI (otro, si no la habría encontrado el DNI): no.
+  assert.deepEqual(elegirFichaPorContacto({ candidatos: [{ ...ana, tieneDni: true }], tomador }), { tipo: 'lead', compartenContacto: ['ana'] })
+  // Dos fichas que podrían ser ella: no se adivina.
+  assert.deepEqual(elegirFichaPorContacto({ candidatos: [ana, { ...ana, id: 'ana2' }], tomador }), { tipo: 'lead', compartenContacto: ['ana', 'ana2'] })
+  assert.deepEqual(elegirFichaPorContacto({ candidatos: [], tomador }), { tipo: 'lead', compartenContacto: [] })
 })

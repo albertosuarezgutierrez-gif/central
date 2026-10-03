@@ -127,3 +127,25 @@ export function decidirFicha(e: {
   if (e.clienteSube && mismoNombre(e.tomador, e.nombreFicha)) return { tipo: 'ficha', clienteId: e.clienteSube, porque: 'nombre' }
   return { tipo: 'lead' }
 }
+
+/**
+ * Sin ficha por DNI, ¿hay una por CONTACTO? (03/10/2026). Candidatas: fichas con el mismo teléfono o
+ * email que trae la póliza. Se usa una SOLO si es exactamente una, SIN DNI (si tiene otro DNI es
+ * otra persona; si tiene el mismo, ya la habría encontrado el DNI) y con EXACTAMENTE el mismo nombre.
+ *
+ * 🚨 El nombre exacto no es un capricho: un móvil identifica un HOGAR, no a una persona (740
+ * números compartidos por 1.599 fichas; caso fundacional del 21/09/2026: el hijo trae la póliza
+ * del padre con SU teléfono). Sin esta guarda, la póliza de «Manuel Piña Ruiz» (con DNI) caería en
+ * la ficha del hijo «Manuel Piña» (sin DNI, mismo móvil) y le escribiría el DNI del padre: dos
+ * personas fundidas para siempre. Las que comparten contacto sin ser ella se devuelven para dejar
+ * nota en el lead nuevo.
+ */
+export function elegirFichaPorContacto(e: {
+  candidatos: { id: string; nombre: string; tieneDni: boolean }[]
+  tomador: string | null
+}): { tipo: 'usar'; clienteId: string } | { tipo: 'lead'; compartenContacto: string[] } {
+  const unicos = [...new Map(e.candidatos.map((c) => [c.id, c])).values()]
+  const ella = unicos.filter((c) => !c.tieneDni && mismoNombre(c.nombre, e.tomador, { exacto: true }))
+  if (ella.length === 1) return { tipo: 'usar', clienteId: ella[0].id }
+  return { tipo: 'lead', compartenContacto: unicos.map((c) => c.id) }
+}

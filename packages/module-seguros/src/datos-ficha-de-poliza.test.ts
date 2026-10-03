@@ -1,0 +1,198 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  CLAVES_PII_EXTRACCION,
+  companiaLegible,
+  extraccionSinPii,
+  contactoTomadorVacio,
+  normalizarContactoTomador,
+  parcheFichaDesdePoliza,
+  polizaFinanciada,
+  telefonoEspanol,
+  vencimientoUrgente,
+  type ExtraccionFicha,
+  type FichaActual,
+} from './datos-ficha-de-poliza.ts'
+
+const HOY = '2026-10-03'
+const DNI = '12345678Z'
+
+const fichaVacia = (): FichaActual => ({
+  tieneDni: false,
+  tieneFechaNacimiento: false,
+  tieneDireccion: false,
+  tieneCodigoPostal: false,
+  tieneCiudad: false,
+  tieneProvincia: false,
+  telefonos: [],
+  emails: [],
+  carnets: 0,
+})
+
+// La clienta de las dos pólizas MAPFRE: todo legible.
+const leida = (extra: Partial<ExtraccionFicha> = {}): ExtraccionFicha => ({
+  ramo: 'auto',
+  dni: DNI,
+  fechaNacimiento: '1980-05-14',
+  fechaCarnet: '1999-03-02',
+  contacto: normalizarContactoTomador({
+    telefono: '+34 612 34 56 78',
+    email: 'Clienta.Ejemplo@Gmail.COM',
+    domicilioVia: 'C/ Feria 12, 3ºB',
+    domicilioCp: '41003',
+    domicilioPoblacion: 'Sevilla',
+    domicilioProvincia: 'Sevilla',
+    claseCarnet: null,
+    mediador: 'MAPFRE OFICINA DIRECTA',
+    cesionDerechos: false,
+  }),
+  ...extra,
+})
+
+test('🪤 ficha vacía + póliza legible → rellena todos los huecos, normalizado', () => {
+  const r = parcheFichaDesdePoliza(fichaVacia(), leida(), DNI, HOY)
+  assert.equal(r.motivo, 'ok')
+  assert.equal(r.parche.dni, DNI)
+  assert.equal(r.parche.fechaNacimiento, '1980-05-14')
+  assert.equal(r.parche.fechaNacimientoAConfirmar, false)
+  assert.equal(r.parche.direccion, 'C/ Feria 12, 3ºB')
+  assert.equal(r.parche.codigoPostal, '41003')
+  assert.equal(r.parche.ciudad, 'Sevilla')
+  assert.equal(r.parche.provincia, 'Sevilla')
+  assert.equal(r.parche.telefono, '612345678')
+  assert.equal(r.parche.email, 'clienta.ejemplo@gmail.com')
+  assert.deepEqual(r.parche.carnet, { tipo: 'B', fecha: '1999-03-02' })
+  assert.ok(r.rellenado.includes('teléfono') && r.rellenado.includes('carné B'))
+})
+
+test('🪤 NO PISA: lo que la ficha ya tiene se queda como está', () => {
+  const llena: FichaActual = {
+    tieneDni: true,
+    tieneFechaNacimiento: true,
+    tieneDireccion: true,
+    tieneCodigoPostal: true,
+    tieneCiudad: true,
+    tieneProvincia: true,
+    telefonos: ['612345678'],
+    emails: ['clienta.ejemplo@gmail.com'],
+    carnets: 1,
+  }
+  const r = parcheFichaDesdePoliza(llena, leida(), DNI, HOY)
+  assert.equal(r.motivo, 'ok')
+  for (const [k, v] of Object.entries(r.parche)) {
+    if (k === 'fechaNacimientoAConfirmar') assert.equal(v, false, k)
+    else assert.equal(v, null, `${k} no se pisa`)
+  }
+  assert.deepEqual(r.rellenado, [])
+})
+
+test('no pisa el domicilio a medias: con calle en la ficha, ni CP ni población del papel', () => {
+  const f = { ...fichaVacia(), tieneDni: true, tieneDireccion: true }
+  const r = parcheFichaDesdePoliza(f, leida(), DNI, HOY)
+  assert.equal(r.parche.direccion, null)
+  assert.equal(r.parche.codigoPostal, null)
+  assert.equal(r.parche.ciudad, null)
+  // …pero el resto de huecos sí.
+  assert.equal(r.parche.telefono, '612345678')
+})
+
+test('un teléfono distinto se AÑADE (no sustituye); uno igual no se duplica', () => {
+  const f = { ...fichaVacia(), telefonos: ['954000000'] }
+  assert.equal(parcheFichaDesdePoliza(f, leida(), null, HOY).parche.telefono, '612345678')
+  const g = { ...fichaVacia(), telefonos: ['612345678'], emails: ['CLIENTA.EJEMPLO@gmail.com'] }
+  const r = parcheFichaDesdePoliza(g, leida(), null, HOY)
+  assert.equal(r.parche.telefono, null)
+  assert.equal(r.parche.email, null)
+})
+
+test('🪤 fecha de nacimiento 01/01 se escribe, pero marcada «a confirmar»', () => {
+  const r = parcheFichaDesdePoliza(fichaVacia(), leida({ fechaNacimiento: '1975-01-01' }), null, HOY)
+  assert.equal(r.parche.fechaNacimiento, '1975-01-01')
+  assert.equal(r.parche.fechaNacimientoAConfirmar, true)
+  assert.ok(r.rellenado.includes('fecha de nacimiento (01/01, a confirmar)'))
+})
+
+test('🪤 DNI distinto = otra persona: parche VACÍO aunque la ficha esté vacía', () => {
+  const r = parcheFichaDesdePoliza(fichaVacia(), leida(), '87654321X', HOY)
+  assert.equal(r.motivo, 'dni_distinto')
+  assert.deepEqual(r.rellenado, [])
+  assert.ok(Object.entries(r.parche).every(([k, v]) => (k === 'fechaNacimientoAConfirmar' ? v === false : v === null)))
+})
+
+test('sin DNI en el documento, o DNI de la ficha ilegible: no se toca nada', () => {
+  assert.equal(parcheFichaDesdePoliza(fichaVacia(), leida({ dni: null }), null, HOY).motivo, 'sin_dni_documento')
+  assert.equal(parcheFichaDesdePoliza(fichaVacia(), leida({ dni: '12345678A' }), null, HOY).motivo, 'sin_dni_documento')
+  assert.equal(parcheFichaDesdePoliza(fichaVacia(), leida(), undefined, HOY).motivo, 'dni_ficha_ilegible')
+  // La columna tiene algo pero no se ha podido descifrar: tampoco.
+  assert.equal(parcheFichaDesdePoliza({ ...fichaVacia(), tieneDni: true }, leida(), null, HOY).motivo, 'dni_ficha_ilegible')
+})
+
+test('🪤 null ≠ \'\': un hueco del documento (o un valor de cajón) no escribe nada', () => {
+  const c = normalizarContactoTomador({ telefono: '', email: 'N/A', domicilioVia: 'no consta', domicilioCp: '', domicilioPoblacion: '-', mediador: 'desconocido', cesionDerechos: '' })
+  assert.deepEqual(c, contactoTomadorVacio())
+  const r = parcheFichaDesdePoliza(fichaVacia(), leida({ fechaNacimiento: null, fechaCarnet: null, contacto: c }), null, HOY)
+  assert.deepEqual(r.rellenado, ['DNI'])
+  for (const k of ['direccion', 'codigoPostal', 'ciudad', 'provincia', 'telefono', 'email', 'fechaNacimiento', 'carnet'] as const) {
+    assert.equal(r.parche[k], null, k)
+  }
+})
+
+test('contactos que no se pudieron leer (null) = no se añade ninguno; carnés sin mirar, tampoco', () => {
+  const f = { ...fichaVacia(), telefonos: null, emails: null, carnets: null }
+  const r = parcheFichaDesdePoliza(f, leida(), null, HOY)
+  assert.equal(r.parche.telefono, null)
+  assert.equal(r.parche.email, null)
+  assert.equal(r.parche.carnet, null)
+})
+
+test('carné: clase leída manda; de moto sin clase no se adivina', () => {
+  const conClase = leida({ contacto: { ...leida().contacto, claseCarnet: 'A2' }, ramo: 'moto' })
+  assert.deepEqual(parcheFichaDesdePoliza(fichaVacia(), conClase, null, HOY).parche.carnet, { tipo: 'A2', fecha: '1999-03-02' })
+  assert.equal(parcheFichaDesdePoliza(fichaVacia(), leida({ ramo: 'moto' }), null, HOY).parche.carnet, null)
+})
+
+test('teléfono: solo español de 9 dígitos', () => {
+  assert.equal(telefonoEspanol('0034 699 111 222'), '699111222')
+  assert.equal(telefonoEspanol('+44 7700 900123'), null)
+  assert.equal(telefonoEspanol('12345'), null)
+  assert.equal(telefonoEspanol(''), null)
+})
+
+test('compañía: «P.P.» no es una compañía; se usa la del código DGS', () => {
+  assert.equal(companiaLegible('MAPFRE ESPAÑA', null), 'MAPFRE ESPAÑA')
+  assert.equal(companiaLegible('P.P.', 'Mapfre'), 'Mapfre')
+  assert.equal(companiaLegible('S.A.', null), null)
+  assert.equal(companiaLegible(null, null), null)
+})
+
+test('vencimiento ≤15 días = urgente; sin fecha no se inventa prisa', () => {
+  assert.equal(vencimientoUrgente('2026-10-10', HOY), true)
+  assert.equal(vencimientoUrgente('2026-10-18', HOY), true)
+  assert.equal(vencimientoUrgente('2026-10-19', HOY), false)
+  assert.equal(vencimientoUrgente(null, HOY), false)
+})
+
+test('póliza de concesionario/financiada: RCI, Mobilize, banco o cesión de derechos', () => {
+  assert.equal(polizaFinanciada({ mediador: 'RCI BANQUE SA', cesionDerechos: null }).financiada, true)
+  assert.equal(polizaFinanciada({ mediador: 'Mobilize Financial Services', cesionDerechos: null }).financiada, true)
+  assert.equal(polizaFinanciada({ mediador: 'Oficina Mapfre', cesionDerechos: true }).financiada, true)
+  assert.equal(polizaFinanciada({ mediador: 'Oficina Mapfre', cesionDerechos: false }).financiada, false)
+  assert.equal(polizaFinanciada({ mediador: null, cesionDerechos: null }).financiada, null)
+})
+
+test('🪤 la extracción que se guarda NO lleva datos personales en claro: solo si se leyeron', () => {
+  const bruto = {
+    compania: 'MAPFRE', numeroPoliza: '0123', tomador: 'ANA RUIZ', dni: DNI, telefono: '612345678',
+    email: 'a@b.es', fechaNacimiento: '1980-05-14', fechaCarnet: '1999-03-02', domicilioVia: 'C/ Feria 12',
+    domicilioCp: '41003', domicilioPoblacion: 'Sevilla', domicilioProvincia: 'Sevilla', direccion: 'C/ Feria 12',
+  }
+  const r = extraccionSinPii(bruto)
+  assert.ok(r)
+  for (const k of CLAVES_PII_EXTRACCION) assert.equal(k in r.datos, false, `${k} no se guarda`)
+  const enTexto = JSON.stringify(r)
+  for (const v of [DNI, '612345678', 'a@b.es', '1980-05-14', 'C/ Feria 12']) assert.equal(enTexto.includes(v), false, v)
+  assert.equal(r.datos.compania, 'MAPFRE')
+  assert.equal(r.leidos.dni, true)
+  assert.equal(extraccionSinPii({ compania: 'X', email: 'N/A', telefono: null })?.leidos.email, false)
+  assert.equal(extraccionSinPii(null), null)
+})
