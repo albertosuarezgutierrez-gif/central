@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T11:27:20Z",
-  "sha": "1dc9efee0cb044c4e3cbfb681202071777b56099",
+  "generadoEn": "2026-10-03T13:19:27Z",
+  "sha": "5919da629dcaf13992e140a7f8e362da38fd9905",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -83968,12 +83968,21 @@
           "linea": 324
         },
         {
+          "nombre": "legiblePC",
+          "kind": "function",
+          "exportada": false,
+          "params": "etiqueta: string, v: unknown",
+          "retorno": "React.ReactNode",
+          "linea": 382,
+          "resumen": "Valor de una pregunta de compañía: `null` = «sin dato» (nunca No ni 0); € y m² por la etiqueta."
+        },
+        {
           "nombre": "DatosComercio",
           "kind": "function",
           "exportada": false,
           "params": "props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }",
           "retorno": null,
-          "linea": 380
+          "linea": 390
         },
         {
           "nombre": "DatosLibre",
@@ -83981,7 +83990,7 @@
           "exportada": false,
           "params": "props: Props & { d: Record<string, unknown>; dePoliza: boolean }",
           "retorno": null,
-          "linea": 551
+          "linea": 619
         },
         {
           "nombre": "DatosRiesgo",
@@ -83989,7 +83998,7 @@
           "exportada": true,
           "params": "props: Props",
           "retorno": null,
-          "linea": 594,
+          "linea": 662,
           "resumen": "El bloque de datos del riesgo de los ramos que NO son de vehículo. `null` = asegura no lo manda: no se inventa."
         }
       ],
@@ -83997,7 +84006,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "be72a0edc539"
+      "hash": "220aa6a0751c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/DatosVehiculo.tsx",
@@ -84299,7 +84308,9 @@
         "filasDeMedidas",
         "capitalesDeFilas",
         "medidasDeFilas",
-        "listaAMandar"
+        "listaAMandar",
+        "formDeCompanias",
+        "porCompaniaAMandar"
       ],
       "funciones": [
         {
@@ -84308,7 +84319,7 @@
           "exportada": true,
           "params": "",
           "retorno": "FilaCapital",
-          "linea": 12
+          "linea": 15
         },
         {
           "nombre": "filaMedidaVacia",
@@ -84316,7 +84327,7 @@
           "exportada": true,
           "params": "",
           "retorno": "FilaMedida",
-          "linea": 13
+          "linea": 16
         },
         {
           "nombre": "filasDeCapitales",
@@ -84324,7 +84335,7 @@
           "exportada": true,
           "params": "c: readonly CapitalComercio[] | null | undefined",
           "retorno": "FilaCapital[]",
-          "linea": 16,
+          "linea": 19,
           "resumen": "Lo guardado como filas de formulario: `null` (sin mirar) y `[]` (revisado, vacío) son las dos «sin filas»."
         },
         {
@@ -84333,7 +84344,7 @@
           "exportada": true,
           "params": "m: readonly MedidaComercio[] | null | undefined",
           "retorno": "FilaMedida[]",
-          "linea": 19
+          "linea": 22
         },
         {
           "nombre": "t",
@@ -84341,7 +84352,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 23
+          "linea": 26
         },
         {
           "nombre": "vacia",
@@ -84349,7 +84360,7 @@
           "exportada": false,
           "params": "f: FilaCapital",
           "retorno": null,
-          "linea": 24
+          "linea": 27
         },
         {
           "nombre": "capitalesDeFilas",
@@ -84357,7 +84368,7 @@
           "exportada": true,
           "params": "filas: readonly FilaCapital[]",
           "retorno": "Array<Record<string, unknown>>",
-          "linea": 27,
+          "linea": 30,
           "resumen": "Filas con algo escrito, tal como las entiende el servidor (el importe, ya como número si se puede leer)."
         },
         {
@@ -84366,7 +84377,7 @@
           "exportada": true,
           "params": "filas: readonly FilaMedida[]",
           "retorno": "Array<Record<string, unknown>>",
-          "linea": 35
+          "linea": 38
         },
         {
           "nombre": "listaAMandar",
@@ -84374,13 +84385,31 @@
           "exportada": true,
           "params": "guardado: readonly T[] | null, enviar: Array<Record<string, unknown>>",
           "retorno": "Array<Record<string, unknown>> | undefined",
-          "linea": 43,
+          "linea": 46,
           "resumen": "¿Hay que mandar la lista? `undefined` = no (mismo contenido: no se toca). Sin filas sobre un `null` guardado tampoco es un cambio (no se inventa un «revisado, vacío»); sin filas sobre una lista con da"
+        },
+        {
+          "nombre": "formDeCompanias",
+          "kind": "function",
+          "exportada": true,
+          "params": "pc: PorCompaniaComercio | null | undefined",
+          "retorno": "FormCompanias",
+          "linea": 56,
+          "resumen": "Lo guardado como texto de formulario: `null`/sin bloque → '' (nunca «0» ni «No»); sí/no → 'si' | 'no'."
+        },
+        {
+          "nombre": "porCompaniaAMandar",
+          "kind": "function",
+          "exportada": true,
+          "params": "guardado: PorCompaniaComercio | null | undefined, form: FormCompanias",
+          "retorno": "EdicionPorCompania | undefined",
+          "linea": 74,
+          "resumen": "Solo las claves que DIFIEREN de lo guardado (nunca el formulario entero: no pisa una escritura concurrente ni inventa un bloque de `null`s). `undefined` = nada que mandar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "838c9a5a3291"
+      "hash": "b3faea52cced"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/piezas-riesgo.ts",
@@ -165074,6 +165103,7 @@
         "leerDatosComercio",
         "validarCapitalesComercio",
         "validarMedidasComercio",
+        "validarPorCompania",
         "validarDatosComercioRiesgo",
         "faltanDatosComercio",
         "textoFaltanComercio",
@@ -165090,7 +165120,7 @@
           "exportada": true,
           "params": "ramo: unknown",
           "retorno": "ramo is 'comercio'",
-          "linea": 35,
+          "linea": 40,
           "resumen": "Ramos que llevan este bloque."
         },
         {
@@ -165099,7 +165129,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Obj",
-          "linea": 107
+          "linea": 205
         },
         {
           "nombre": "compactar",
@@ -165107,7 +165137,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 109
+          "linea": 207
         },
         {
           "nombre": "textoLeido",
@@ -165115,7 +165145,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 110
+          "linea": 208
         },
         {
           "nombre": "regimenLeido",
@@ -165123,7 +165153,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "RegimenLocal | null",
-          "linea": 111
+          "linea": 209
         },
         {
           "nombre": "bienLeido",
@@ -165131,7 +165161,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "BienComercio | null",
-          "linea": 112
+          "linea": 210
         },
         {
           "nombre": "leerCapitales",
@@ -165139,7 +165169,7 @@
           "exportada": false,
           "params": "bruto: unknown",
           "retorno": "CapitalComercio[] | null",
-          "linea": 119
+          "linea": 217
         },
         {
           "nombre": "leerMedidas",
@@ -165147,7 +165177,32 @@
           "exportada": false,
           "params": "bruto: unknown",
           "retorno": "MedidaComercio[] | null",
-          "linea": 132
+          "linea": 230
+        },
+        {
+          "nombre": "bloqueVacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "b: unknown",
+          "retorno": "boolean",
+          "linea": 247,
+          "resumen": "Un bloque con todas las claves `null` no es dato («no se sabe» ≠ revisado): se descarta. Sin compañías, `null`."
+        },
+        {
+          "nombre": "podarPorCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: Record<string, unknown>",
+          "retorno": "PorCompaniaComercio | null",
+          "linea": 248
+        },
+        {
+          "nombre": "leerPorCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "bruto: unknown",
+          "retorno": "PorCompaniaComercio | null",
+          "linea": 254
         },
         {
           "nombre": "datosComercioVacios",
@@ -165155,7 +165210,7 @@
           "exportada": true,
           "params": "",
           "retorno": "DatosComercioRiesgo",
-          "linea": 144
+          "linea": 265
         },
         {
           "nombre": "leerDatosComercio",
@@ -165163,7 +165218,7 @@
           "exportada": true,
           "params": "bruto: unknown",
           "retorno": "DatosComercioRiesgo | null",
-          "linea": 149,
+          "linea": 270,
           "resumen": "Lo guardado en `info_riesgo.datosComercio`. Un campo de otro tipo es «no se sabe»; lo que no se reconoce se ignora."
         },
         {
@@ -165172,7 +165227,7 @@
           "exportada": false,
           "params": "v: unknown, max: number",
           "retorno": "string | null | 'invalido'",
-          "linea": 165
+          "linea": 287
         },
         {
           "nombre": "validarCapitalesComercio",
@@ -165180,7 +165235,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 174,
+          "linea": 296,
           "resumen": "Valida la lista de capitales entera. Cada fila con su motivo; `null` = borrar (sin mirar)."
         },
         {
@@ -165189,7 +165244,16 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 198
+          "linea": 320
+        },
+        {
+          "nombre": "validarPorCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "",
+          "linea": 339,
+          "resumen": "Valida `porCompania`: `null` = borrar todo; por compañía, `null` = borrar su bloque u objeto parcial de sus claves."
         },
         {
           "nombre": "validarDatosComercioRiesgo",
@@ -165197,7 +165261,7 @@
           "exportada": true,
           "params": "parcial: unknown, opciones: { hoy?: string } = {}",
           "retorno": "ValidacionComercio",
-          "linea": 220,
+          "linea": 360,
           "resumen": "Valida una edición PARCIAL (solo las claves que vienen). Vacío/`null` = borrar ese dato. Las claves que no son del bloque se ignoran (no se cuelan al JSON guardado)."
         },
         {
@@ -165206,8 +165270,8 @@
           "exportada": true,
           "params": "datos: Partial<DatosComercioRiesgo> | null | undefined",
           "retorno": "CampoFaltaComercio[]",
-          "linea": 259,
-          "resumen": "Lo que FALTA para tarificar un comercio: actividad, situación (calle + CP + población), superficie construida, régimen del local y al menos un capital. `null` (sin ficha) = «falta todo». Un capital de"
+          "linea": 407,
+          "resumen": "Lo que FALTA para tarificar un comercio: actividad, familia, empleados, situación (calle + CP + población), superficie construida, régimen del local, al menos un capital y la modalidad si hay continen"
         },
         {
           "nombre": "textoFaltanComercio",
@@ -165215,7 +165279,7 @@
           "exportada": true,
           "params": "faltan: readonly CampoFaltaComercio[] | null | undefined",
           "retorno": "string | null",
-          "linea": 270
+          "linea": 423
         },
         {
           "nombre": "eurTexto",
@@ -165223,7 +165287,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 277
+          "linea": 430
         },
         {
           "nombre": "textoCapitalesComercio",
@@ -165231,7 +165295,7 @@
           "exportada": true,
           "params": "c: readonly CapitalComercio[] | null",
           "retorno": "string | null",
-          "linea": 280,
+          "linea": 433,
           "resumen": "Una lista como texto corto para el historial de cambios («ninguno» = revisada y vacía; `null` = sin mirar)."
         },
         {
@@ -165240,7 +165304,7 @@
           "exportada": true,
           "params": "m: readonly MedidaComercio[] | null",
           "retorno": "string | null",
-          "linea": 285
+          "linea": 438
         },
         {
           "nombre": "aplicarEdicionComercio",
@@ -165248,7 +165312,7 @@
           "exportada": true,
           "params": "actual: DatosComercioRiesgo | null, valor: ValorEdicionComercio, opciones: { confirmar: boolean; ahora: string },",
           "retorno": "",
-          "linea": 291
+          "linea": 444
         },
         {
           "nombre": "motivoNoConfirmableComercio",
@@ -165256,7 +165320,7 @@
           "exportada": true,
           "params": "d: DatosComercioRiesgo",
           "retorno": "string | null",
-          "linea": 324,
+          "linea": 503,
           "resumen": "Sin nada que afirmar no hay nada que confirmar. Una lista `[]` (revisada, vacía) sí es algo que afirmar."
         },
         {
@@ -165265,13 +165329,13 @@
           "exportada": true,
           "params": "datos: unknown",
           "retorno": "ValorEdicionComercio",
-          "linea": 338,
+          "linea": 517,
           "resumen": "Precarga desde `polizas.datos_especificos` cuando la oportunidad nace de una póliza (lo que escribe el mapper de CIMA). Sin inventar: lo que no hay, no se pone; el cifrado (`v1:`) y los valores de caj"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b40f99b2f92c"
+      "hash": "8218e296d338"
     },
     {
       "ruta": "packages/module-seguros/src/datos-compania-cima.ts",
@@ -177022,6 +177086,6 @@
   ],
   "resumen": {
     "archivos": 4074,
-    "funciones": 13752
+    "funciones": 13759
   }
 }

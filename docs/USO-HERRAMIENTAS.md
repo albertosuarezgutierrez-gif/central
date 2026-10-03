@@ -171,10 +171,10 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 238 | 32.507 | 24.712.886 | 0 | 0 |
-| `otro` | 234 | 7.833 | 22.224.660 | 11.494.037 | 0 |
+| `bash` | 238 | 32.515 | 24.719.971 | 0 | 0 |
+| `otro` | 234 | 7.838 | 22.239.564 | 11.494.037 | 0 |
 | `lectura-directa` | 213 | 5.633 | 14.807.629 | 0 | 0 |
-| `mcp:github` | 218 | 5.442 | 4.530.681 | 50.091.159 | 89 |
+| `mcp:github` | 218 | 5.444 | 4.530.731 | 50.091.159 | 89 |
 | `escritura` | 166 | 3.438 | 49.599.992 | 0 | 0 |
 | `sql` | 154 | 3.238 | 1.597.115 | 2.351.230 | 13 |
 | `mcp:Claude_Code_Remote` | 138 | 1.463 | 302.492 | 5.301.463 | 14 |
@@ -196,7 +196,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
-| `mcp:claude-code-remote` | 3 | 39 | 3.813 | 0 | 0 |
+| `mcp:claude-code-remote` | 3 | 40 | 3.873 | 0 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
