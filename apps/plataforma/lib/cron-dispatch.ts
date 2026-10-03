@@ -48,6 +48,10 @@ export const CRON_JOBS: CronJob[] = [
   // Emisiones RETENIDAS por la compañía («riesgo condicionado», 30/09/2026): dos veces al día.
   // Solo avisa por Telegram si ha CAMBIADO alguna (liberada / rechazada).
   { path: '/api/cron/correduria-retenidas', schedule: '40 7,13 * * *' },
+  // Descubrimiento AUTOMÁTICO de emisiones de Avant2 (03/10/2026): cada 30 min de 05:10 a 21:40 UTC
+  // (07:10-23:40 en verano, 06:10-22:40 en invierno). Solo LEE el vendor (gratis): registra lo que se
+  // puede demostrar por documento y deja el resto en revisión. Avisa solo si hay algo nuevo o si se rompe.
+  { path: '/api/cron/correduria-descubrir-emisiones', schedule: '10,40 5-21 * * *' },
   // Bajas de ALLIANZ pendientes de tramitar en el PUE (30/09/2026): Allianz no las recibe por correo.
   // Solo avisa por Telegram si hay alguna `firmada` sin tramitar. Ver docs/ALLIANZ-PUE.md.
   { path: '/api/cron/correduria-bajas-pue', schedule: '50 7 * * 1-5' },

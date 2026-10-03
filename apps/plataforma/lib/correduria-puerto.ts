@@ -994,6 +994,16 @@ export async function retenidasAsegura(): Promise<Retenidas> {
   }
 }
 
+/**
+ * Descubrimiento AUTOMÁTICO de emisiones de Avant2 (03/10/2026). Solo lee el vendor (gratis); asegura
+ * registra lo que puede demostrar y deja el resto en revisión. La lectura de la respuesta es PURA y
+ * vive en `lib/correduria/descubrir-emisiones-aviso.ts`. Timeout largo: asegura puede tardar hasta
+ * ~4 min (su `maxDuration` es 300 y corta su propia pasada a los 240 s).
+ */
+export async function descubrirEmisionesAsegura(): Promise<{ status: number; json: unknown } | null> {
+  return pedirPost('/api/operador/codeoscopic/descubrir-emisiones', {}, 280_000)
+}
+
 /** Vista previa (GET, gratis) de registrar en la intranet una emisión hecha en la web de Avant2. */
 export async function emisionExternaVista(
   q: { projectId: string; clienteId: string; oportunidadId?: string | null },

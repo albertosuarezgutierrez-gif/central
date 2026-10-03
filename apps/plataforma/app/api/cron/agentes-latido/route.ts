@@ -33,6 +33,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   correduria_renovaciones: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_renovaciones'`,
+  correduria_descubrir_emisiones: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_descubrir_emisiones'`,
   // Ingesta de CIMA. La huella NO puede ser `cima_ficheros` ni ninguna tabla de datos: si la
   // ingesta se atasca, esas tablas dejan de crecer y el silencio se lee igual que un día sin
   // ficheros. Es la pasada del vigía lo que se vigila.
