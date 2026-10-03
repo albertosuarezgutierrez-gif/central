@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(03/10/2026, tope Avant2 €)** — PR #4192 (fase 1): tope en euros/mes de Avant2 (aviso 60 €, bloqueo 70 €, +30 € por botón de Telegram `cas_tope:`; cron plataforma `correduria-tope-avant2` cada 5 min). Fail-closed: **la migración `apps/asegura/prisma/sql/2026-10-03b_codeoscopic_tope_euros.sql` tiene que estar aplicada ANTES de desplegar**, o se bloquea toda tarificación. Pendiente del sí de Alberto para aplicarla. La lectura del gasto vive en `consumo.ts` (`gastadoMesCents`): el guardián `regression-simulacion-codeoscopic` solo deja tocar `codeoscopic_consumo` ahí.
+
 **(03/10/2026, SEO)** — 🔎 Pasada SEO mensual (OpenSEO, rutina trig_015R…): keywords en seo-asegura/references/keywords.md §5; mejora CTR de 2 artículos del blog (preaviso 363 impr/0 clics → título más específico; como-dar-de-baja 202 impr/1 clic → descripción más operativa). Pendiente de Alberto: marcar generate_lead como evento clave en GA4, gestionar reseñas (1), 301 de /mejoramos-tu-seguro/.
 
 **(03/10/2026, CIMA «todo guardado y pintado»)** — asegura#874 (LOO-806): el resto del SIN (sin PII) se guarda en `siniestros.cima_extra`; un SIN más viejo solo rellena huecos. El medidor guarda `cima_cobertura_campos.excluido_motivo` y separa «descartado por privacidad» de «sin leer». El resto del SIN solo cuenta como leído si la columna existe. Lista de excluidos ampliada (DNI/NIF/CIF, matrícula, cuentas, perceptor, implicados, lesiones, fallecidos).

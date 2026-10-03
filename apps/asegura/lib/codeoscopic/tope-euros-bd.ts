@@ -12,8 +12,8 @@
 // 🔒 Aislamiento: todo filtra por correduría (`lib/tenant`), como el libro.
 
 import { prisma } from '../tenant.ts'
-import { MOTIVO_IMPORTADA_WEB } from './consumo.ts'
-import { costeEmisionCents, MOTIVO_LIMITES, MOTIVO_RERATE, MOTIVO_SUBMIT } from './gasto-emision.ts'
+import { gastadoMesCents } from './consumo.ts'
+import { costeEmisionCents } from './gasto-emision.ts'
 import {
   AMPLIACION_CENTS,
   AVISO_CENTS,
@@ -38,32 +38,18 @@ export async function leerGastoMes(correduriaId: string, env: Env = process.env)
   const rerate = costeEmisionCents('rerate', env)
   const submit = costeEmisionCents('submit', env)
   const limites = costeEmisionCents('limites_hogar', env)
-  const filas = await prisma.$queryRaw<{ gastado: bigint; ampliado: bigint }[]>`
-    with mes as (
-      select (date_trunc('month', now() at time zone 'Europe/Madrid') at time zone 'Europe/Madrid') as desde,
-             date_trunc('month', now() at time zone 'Europe/Madrid')::date as clave
-    )
+  const gastadoCents = await gastadoMesCents(correduriaId, { rerate, submit, limites })
+  const filas = await prisma.$queryRaw<{ ampliado: bigint }[]>`
     select
-      (select coalesce(sum(case
-                when c.motivo = ${MOTIVO_IMPORTADA_WEB} then 0
-                when c.motivo = ${MOTIVO_RERATE} then greatest(c.coste_cents, ${rerate})
-                when c.motivo = ${MOTIVO_SUBMIT} then greatest(c.coste_cents, ${submit})
-                when c.motivo = ${MOTIVO_LIMITES} then greatest(c.coste_cents, ${limites})
-                else c.coste_cents end), 0)
-         from seguros.codeoscopic_consumo c, mes
-        where c.correduria_id = ${correduriaId}::uuid
-          and c.estado in ('reservado', 'facturable')
-          and c.creado_at >= mes.desde)::bigint as gastado,
       (select coalesce(sum(e.importe_cents), 0)
-         from seguros.codeoscopic_tope_evento e, mes
+         from seguros.codeoscopic_tope_evento e
         where e.correduria_id = ${correduriaId}::uuid
           and e.tipo = 'ampliacion'
-          and e.mes = mes.clave)::bigint as ampliado
+          and e.mes = date_trunc('month', now() at time zone 'Europe/Madrid')::date)::bigint as ampliado
   `
   const f = filas[0]
   // Sin fila no hay cifra: eso es «no se sabe», no 0 €.
-  if (!f) return { gastadoCents: null, ampliadoCents: null }
-  return { gastadoCents: Number(f.gastado), ampliadoCents: Number(f.ampliado) }
+  return { gastadoCents, ampliadoCents: f ? Number(f.ampliado) : null }
 }
 
 export type ComprobacionTope = { ok: true } | { ok: false; razon: 'sin-libro' | 'tope'; mensaje: string }
