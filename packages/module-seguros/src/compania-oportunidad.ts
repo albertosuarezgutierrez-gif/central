@@ -39,7 +39,7 @@ export function claveMatricula(s: string | null | undefined): string | null {
 
 const RELLENO = new Set(['seguros', 'seguro', 'mutua', 'compania', 'de', 'y', 'reaseguros', 'aseguradora', 'sa', 's', 'a', 'la', 'el', 'grupo'])
 
-function claveCompania(s: string | null): string | null {
+export function claveCompania(s: string | null): string | null {
   const t = (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter((w) => w && !RELLENO.has(w))
   return t[0] ?? null

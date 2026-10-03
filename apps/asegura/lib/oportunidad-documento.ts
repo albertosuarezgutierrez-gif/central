@@ -283,6 +283,10 @@ export async function oportunidadDesdeLectura(
             // Identificación de esa póliza (03/10/2026): con ella se imputa el bonus a un vehículo NUEVO.
             numeroPoliza: d.numeroPoliza, matricula: d.matricula, canal: contacto.mediador, cesionDerechos: contacto.cesionDerechos,
             modalidad: ('bruto' in leida && leida.bruto ? (leida.bruto as Record<string, unknown>).modalidad : undefined) ?? d.modalidad,
+            // Plurianual (03/10/2026): el periodo efecto→vencimiento TAL COMO LO DICE EL DOCUMENTO (la fecha de la
+            // oportunidad se corre de año en año) y si se pagó de una vez: con ellos se anualiza la prima.
+            pagoUnico: 'bruto' in leida && leida.bruto ? (leida.bruto as Record<string, unknown>).pagoUnicoPlurianual : undefined,
+            fechaVencimiento: d.fechaVencimiento,
           })
         : null,
       tipoTarea: 'llamada',

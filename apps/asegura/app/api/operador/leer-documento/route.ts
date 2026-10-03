@@ -118,6 +118,7 @@ export const POST = auditado(async (req: Request) => {
           // 03/10/2026: identifica ESA póliza para imputar el bonus a un vehículo nuevo (todo opcional; null = no lo dice).
           numeroPoliza: auto.numeroPoliza, matricula: auto.matricula, canal: r.contacto?.mediador ?? null,
           cesionDerechos: r.contacto?.cesionDerechos ?? null, modalidad: r.bruto?.modalidad ?? null,
+          pagoUnico: r.bruto?.pagoUnicoPlurianual, fechaVencimiento: d.fechaVencimiento,
         })
       : null,
     ...(tomador ? { tomador } : {}),

@@ -5,6 +5,7 @@ import { precalificarMotoNuevaAsegura, catalogoAsegura } from '@/lib/moto-nuevo-
 import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura } from '@/lib/seguimiento-asegura'
 import { anteriorParaTarificar } from '@/lib/seguro-anterior'
+import { otroVehiculoDelCliente } from '@/lib/correduria/pack-otro-vehiculo'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import MotoNuevo from './MotoNuevo'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
@@ -159,6 +160,8 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
         datosRiesgo={carga.estado === 'ok' ? carga.riesgo.datosVehiculo : null}
         anterior={anterior?.estado === 'ok' ? anterior.anterior : null}
         anteriorAmbiguo={anterior?.estado === 'ambiguo' ? anterior.n : null}
+        // Pack coche + moto (03/10/2026): el coche del cliente. `null` = no se han podido leer sus oportunidades.
+        otroVehiculo={ops?.estado === 'ok' ? otroVehiculoDelCliente(ops.oportunidades, 'moto') : null}
       />
     </Pagina>
   )

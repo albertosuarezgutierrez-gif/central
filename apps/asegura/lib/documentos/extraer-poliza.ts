@@ -109,7 +109,7 @@ Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
 "anioConstruccion":number|null,"capitalContinente":number|null,"capitalContenido":number|null,
 "telefono":string|null,"email":string|null,"domicilioVia":string|null,"domicilioCp":string|null,
 "domicilioPoblacion":string|null,"domicilioProvincia":string|null,"claseCarnet":string|null,
-"mediador":string|null,"cesionDerechos":boolean|null,"modalidad":string|null,"tomadorEsConductorHabitual":boolean|null,
+"mediador":string|null,"cesionDerechos":boolean|null,"modalidad":string|null,"pagoUnicoPlurianual":boolean|null,"tomadorEsConductorHabitual":boolean|null,
 "tomadorEsEmpresa":boolean|null,"cifTomador":string|null,
 "figuras":[{"rol":"propietario"|"conductor_habitual"|"conductor_ocasional","nombre":string,"dni":string|null,
 "fechaNacimiento":"YYYY-MM-DD"|null,"fechaCarnet":"YYYY-MM-DD"|null,"claseCarnet":string|null,"esTomador":boolean|null}]}
@@ -184,6 +184,9 @@ Reglas, por orden de importancia:
 - "cesionDerechos": true si la póliza recoge una cesión de derechos o un beneficiario
   preferente a favor de un banco o financiera; false si dice expresamente que no; si no dice
   nada, null.
+- "pagoUnicoPlurianual": true si el seguro es de VARIOS años (plurianual) y el documento dice que se paga
+  de una sola vez (pago único, prima única del periodo completo); false si dice que se paga por años,
+  fraccionado o anual; si no lo dice, null. NO lo deduzcas de las fechas.
 - "modalidad" (solo auto o moto) es la modalidad de cobertura tal como la nombra la póliza ("Terceros",
   "Terceros ampliado", "Todo riesgo con franquicia de 300 €"…). Si no la nombra, null.
 - "matricula" tal y como aparezca, sin espacios ni guiones.

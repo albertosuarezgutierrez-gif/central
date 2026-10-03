@@ -56,6 +56,10 @@ import { SelectorBuscable } from '../../../SelectorBuscable'
 import { FallosTarificacion } from '../../../FallosTarificacion'
 import { AvisoBonusSupuesto, PanelSeguroImputado, eleccionParaCotizar } from '../../../SeguroAnteriorImputado'
 import { describirCandidata, type SeguroAnteriorImputado } from '@/lib/correduria/seguro-anterior-imputado'
+import { decidirFamiliaAllianz } from '@central/module-seguros'
+import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
+import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
+import PackVehiculos from '../PackVehiculos'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -184,7 +188,13 @@ export default function AutoNuevo({
   anterior = null,
   anteriorAmbiguo = null,
   seguroImputado = null,
+  otroVehiculo = null,
+  carteraAllianz = null,
 }: {
+  /** Pack coche + moto (03/10/2026): la otra oportunidad del cliente. `null` = no se han podido leer sus oportunidades. */
+  otroVehiculo?: OtroVehiculo | null
+  /** `true` = tiene una póliza en vigor en Allianz (cartera); `null` = no se pudo mirar. Solo cuenta con el pack encendido. */
+  carteraAllianz?: boolean | null
   /** Vehículo NUEVO (03/10/2026): la póliza de motor del cliente que asegura propone como seguro anterior. */
   seguroImputado?: SeguroAnteriorImputado | null
   /**
@@ -356,6 +366,8 @@ export default function AutoNuevo({
   const [matriculaAnterior, setMatriculaAnterior] = useState('')
   // Vehículo NUEVO (03/10/2026): qué póliza suya se declara como seguro anterior si no se teclea a mano.
   // '' = la que proponga asegura al cotizar.
+  // Pack coche + moto: apagado por defecto; sin tocarlo, la pantalla es la de siempre.
+  const [pack, setPack] = useState({ activo: false, tarificado: false })
   const [eleccionAnterior, setEleccionAnterior] = useState(() => seguroImputado?.elegida?.id ?? '')
 
   // ── Borrador local: lo tecleado NO se pierde al salir de la pantalla ───────
@@ -1361,6 +1373,19 @@ export default function AutoNuevo({
         )}
       </div>
 
+      <PackVehiculos
+        clienteId={clienteId}
+        ramoActual="auto"
+        otro={otroVehiculo}
+        estadoCivilId={estadoCivilId}
+        municipioId={municipioId}
+        fechaEfecto={fechaEfecto}
+        preciosActuales={resultado.estado === 'ok' && !resultado.simulado ? resultado.precios : null}
+        puedePedir={simulacion || consumoPermite}
+        llamadasHechas={resultado.estado === 'ok' && !resultado.simulado ? 1 : 0}
+        onPack={setPack}
+      />
+
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
@@ -1408,7 +1433,18 @@ export default function AutoNuevo({
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} clienteId={clienteId} />}
+        {resultado.estado === 'ok' && (
+          <Precios
+            r={resultado}
+            simulacion={simulacion}
+            clienteId={clienteId}
+            actual={primaActualParaLista(anterior)}
+            familiaAllianz={(() => {
+              const d = decidirFamiliaAllianz({ packActivo: pack.activo, packTarificado: pack.tarificado, carteraAllianz })
+              return d.familia === true ? { valor: true as const, motivo: d.motivo } : null
+            })()}
+          />
+        )}
       </div>
     </div>
   )
@@ -1530,7 +1566,15 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
   )
 }
 
-function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }) {
+function Precios({ r, simulacion, clienteId, actual, familiaAllianz }: {
+  r: Extract<Resultado, { estado: 'ok' }>
+  simulacion: boolean
+  clienteId: string
+  /** «Pagas X → te proponemos Y»: lo que paga hoy, anualizado. `null` = sin oportunidad de la que sacarlo. */
+  actual: ReturnType<typeof primaActualParaLista>
+  /** `insuredFamilyInAllianz` de partida (pack encendido + cartera Allianz o pack tarifado). `null` = no se toca. */
+  familiaAllianz: { valor: true; motivo: string } | null
+}) {
   // Emitir a un cliente NUEVO (28/09/2026): asegura enlazó el proyecto a la ficha y a
   // esta tarificación al confirmar el precio, así que no hace falta póliza previa.
   const cotizacionId = cotizacionIdDe(r.guardado)
@@ -1552,9 +1596,11 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         idPrecio={p.id ?? null}
         sustituye={false}
         ramo="auto"
+        familiaAllianz={familiaAllianz}
         onCerrar={cerrar}
       />
     ),
+    actual,
   }
   return (
     <div style={{ marginTop: 12 }}>
@@ -1586,7 +1632,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         <>
           {/* «Qué verá el cliente» enseña todos los precios y, desde el 29/09/2026, cada fila se emite
               ahí mismo: ya no hay una segunda lista plegada debajo para emitir. */}
-          <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionId} simulado={r.simulado} emitir={puedeEmitir ? (o, cerrar) => (
+          <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionId} simulado={r.simulado} actual={actual} emitir={puedeEmitir ? (o, cerrar) => (
                 <Emision
                   tarificacionId={cotizacionId as string}
                   compania={o.compania ?? ''}
@@ -1597,6 +1643,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
                   idPrecio={o.idVendor}
                   sustituye={false}
                   ramo="auto"
+                  familiaAllianz={familiaAllianz}
                   onCerrar={cerrar}
                 />
               ) : undefined} />

@@ -1007,7 +1007,7 @@ export {
   type DniFusion,
   type RevisionElecciones,
 } from './fusion-fichas.ts'
-export { claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type SeguroOportunidad } from './compania-oportunidad.ts'
+export { claveCompania, claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type SeguroOportunidad } from './compania-oportunidad.ts'
 export {
   CATALOGO_GARANTIAS,
   GARANTIAS_DE_LEY,
@@ -1109,7 +1109,21 @@ export {
   DIAS_AVISO_OPORTUNIDAD, ESTADOS_OPORTUNIDAD_ABIERTA,
   avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, fechaVencimientoDudosa, MESES_VENCIMIENTO_MAX, planTareaTrasVencimiento, vencimientoDelCiclo,
 } from './oportunidad-aviso.ts'
-export type { AvisoOportunidad, FechaDudosa, OportunidadParaAviso, PlanTareaVencimiento } from './oportunidad-aviso.ts'
+export type { AvisoOportunidad, EstadoAvisoVencimiento, FechaDudosa, OportunidadParaAviso, PlanTareaVencimiento } from './oportunidad-aviso.ts'
+export { estadoAvisoVencimiento } from './oportunidad-aviso.ts'
+export {
+  CANALES_FINANCIERA,
+  ahorroFrenteActual,
+  esCanalFinanciera,
+  esMismaCompaniaQueLaActual,
+  objetivoPrioritario,
+  periodoEnAnios,
+  periodoEnMeses,
+  primaActualAnualizada,
+} from './competencia-poliza.ts'
+export type { AhorroFrenteActual, MotivoPrioritario, ObjetivoPrioritario, PrimaAnualizada } from './competencia-poliza.ts'
+export { costePack, cuadroPack, decidirFamiliaAllianz, tienePolizaAllianzEnVigor } from './pack-vehiculos.ts'
+export type { CuadroPack, DecisionFamiliaAllianz, FilaPack, LadoPack, PolizaParaFamilia, PrecioPack } from './pack-vehiculos.ts'
 export {
   CAMPOS_VEHICULO, ETIQUETA_CAMPO_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
   datosVehiculoVacios, faltanDatosVehiculo, fusionarInfoRiesgo, hoyMadridVehiculo, incoherenciaFechasVehiculo,

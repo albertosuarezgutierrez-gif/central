@@ -396,8 +396,15 @@ export function Emision({
   ofertaImportada = null,
   sustituye = true,
   ramo = null,
+  familiaAllianz: familiaAllianzPrevia = null,
   onCerrar,
 }: {
+  /**
+   * Pack coche + moto (03/10/2026): `{ valor: true, motivo }` marca de partida «familiares asegurados en Allianz»
+   * (el cliente tiene póliza viva en Allianz o se ha tarifado el pack). `null` = como siempre: sin marcar.
+   * Sigue siendo una casilla que el corredor puede quitar.
+   */
+  familiaAllianz?: { valor: true; motivo: string } | null
   /** Ausente cuando la oferta viene importada de Avant2: ahí no hay cotización nuestra. */
   tarificacionId?: string
   compania: string
@@ -443,7 +450,7 @@ export function Emision({
   // secas, lleva descuento (bonificación de cartera). Por defecto sigue en
   // `false` en asegura (no se inventa un ahorro sin comprobarlo); esta caja
   // es la única forma de decirlo cuando el corredor SÍ lo sabe.
-  const [familiaAllianz, setFamiliaAllianz] = useState(false)
+  const [familiaAllianz, setFamiliaAllianz] = useState(familiaAllianzPrevia?.valor === true)
   // Casillas del paso `confirmar_figuras`. Nada preseleccionado: se marcan a mano.
   const [figurasMarcadas, setFigurasMarcadas] = useState<Set<string>>(() => new Set())
   // Vehículo nuevo con bonus SUPUESTO (03/10/2026): cómo lo ha verificado el corredor antes de emitir.
@@ -1111,6 +1118,7 @@ export function Emision({
               />
               <span style={{ fontSize: 13 }}>
                 El tomador ya tiene familiares asegurados en Allianz (aplica el descuento)
+                {familiaAllianzPrevia && <span className="muted" style={{ display: 'block', fontSize: 12 }}>Marcado de partida: {familiaAllianzPrevia.motivo}.</span>}
               </span>
             </label>
           )}

@@ -46,6 +46,9 @@ import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import { FallosTarificacion } from '../../../FallosTarificacion'
 import { AvisoBonusSupuesto, PanelSeguroImputado, eleccionParaCotizar } from '../../../SeguroAnteriorImputado'
 import { describirCandidata, type SeguroAnteriorImputado } from '@/lib/correduria/seguro-anterior-imputado'
+import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
+import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
+import PackVehiculos from '../PackVehiculos'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -127,6 +130,7 @@ export default function MotoNuevo({
   simulacion,
   companias,
   poliza = null,
+  otroVehiculo = null,
   variante = null,
   datosRiesgo: datosRiesgoProp = null,
   anterior = null,
@@ -142,6 +146,8 @@ export default function MotoNuevo({
    */
   datosRiesgo?: DatosVehiculoRiesgo | null
   poliza?: PolizaMoto | null
+  /** Pack coche + moto (03/10/2026): la otra oportunidad del cliente (el coche). `null` = no se han podido leer sus oportunidades. */
+  otroVehiculo?: OtroVehiculo | null
   /** El seguro que tiene hoy, leído de su póliza y guardado en la oportunidad (29/09/2026). */
   anterior?: AnteriorParaTarificar | null
   /** Nº de oportunidades de moto abiertas con datos cuando no se sabe cuál: no se precarga ninguna. */
@@ -1020,6 +1026,22 @@ export default function MotoNuevo({
       </div>
       )}
 
+      {/* Pack coche + moto (03/10/2026): apagado por defecto; solo al tarificar una moto NUEVA (no al retarificar una póliza). */}
+      {poliza === null && (
+        <PackVehiculos
+          clienteId={clienteId}
+          ramoActual="moto"
+          otro={otroVehiculo}
+          estadoCivilId={estadoCivilId}
+          municipioId={municipioId}
+          fechaEfecto={fechaEfecto}
+          preciosActuales={resultado.estado === 'ok' && !resultado.simulado ? resultado.precios : null}
+          puedePedir={simulacion || consumoPermite}
+          llamadasHechas={resultado.estado === 'ok' && !resultado.simulado ? 1 : 0}
+          onPack={() => undefined}
+        />
+      )}
+
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
@@ -1077,7 +1099,7 @@ export default function MotoNuevo({
             {simulacion ? 'Descartar y simular de cero' : 'Descartar y pedir precio de cero — cuesta 0,50€'}
           </button>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible sustituye={poliza !== null} clienteId={clienteId} />}
+        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible sustituye={poliza !== null} clienteId={clienteId} actual={poliza === null ? primaActualParaLista(anterior) : null} />}
       </div>
     </div>
   )
@@ -1132,7 +1154,10 @@ function Precios({
   emitible = false,
   sustituye = true,
   clienteId,
+  actual = null,
 }: {
+  /** «Pagas X → te proponemos Y» (03/10/2026): lo que paga hoy, anualizado. `null` = sin comparación. */
+  actual?: ReturnType<typeof primaActualParaLista>
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
   clienteId: string
@@ -1150,6 +1175,7 @@ function Precios({
     simulado: r.simulado,
     puedeEmitir,
     motivoNoEmitir: r.simulado ? 'Simulado: no hay proyecto real de Codeoscopic' : 'Esta cotización no quedó guardada: no se puede emitir sin su id',
+    actual,
     emision: emitible
       ? (p: (typeof r.precios)[number], cerrar: () => void) => (
           <Emision
@@ -1196,7 +1222,7 @@ function Precios({
         <>
           {/* «Qué verá el cliente» enseña todos los precios y, desde el 29/09/2026, cada fila se emite
               ahí mismo: ya no hay una segunda lista plegada debajo para emitir. */}
-          <FiltroGarantias ramo="moto" origen={{ clienteId, ramo: 'moto' }} tarificacionId={cotizacionId} simulado={r.simulado} emitir={puedeEmitir ? (o, cerrar) => (
+          <FiltroGarantias ramo="moto" origen={{ clienteId, ramo: 'moto' }} tarificacionId={cotizacionId} simulado={r.simulado} actual={actual} emitir={puedeEmitir ? (o, cerrar) => (
                 <Emision
                   tarificacionId={cotizacionId as string}
                   compania={o.compania ?? ''}

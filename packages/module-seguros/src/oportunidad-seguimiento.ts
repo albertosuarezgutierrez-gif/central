@@ -323,6 +323,14 @@ export type SeguroAnterior = {
   cesionDerechos?: boolean | null
   /** Modalidad leída (terceros, terceros ampliado, todo riesgo…), texto tal cual. */
   modalidad?: string | null
+  // ── Plurianual (03/10/2026): para anualizar la prima y marcar el objetivo prioritario ──
+  /** `true` = póliza de varios años pagada de una vez (pago único); `false` = dice que no; ausente/`null` = no se sabe. */
+  pagoUnico?: boolean | null
+  /**
+   * Fin del periodo TAL COMO LO DICE EL DOCUMENTO (aaaa-mm-dd). No es `oportunidades.fecha_fin_vigencia`,
+   * que se corre de año en año hasta el próximo ciclo: con esa, el periodo efecto→vencimiento mentiría.
+   */
+  fechaVencimiento?: string | null
 }
 
 function entero(v: unknown, max: number): number | null {
@@ -353,6 +361,9 @@ export function seguroAnteriorDe(v: unknown): SeguroAnterior | null {
   if (typeof o.cesionDerechos === 'boolean') extra.cesionDerechos = o.cesionDerechos
   const modalidad = texto(o.modalidad, 60)
   if (modalidad) extra.modalidad = modalidad
+  if (typeof o.pagoUnico === 'boolean') extra.pagoUnico = o.pagoUnico
+  const fechaVencimiento = fechaIso(o.fechaVencimiento)
+  if (fechaVencimiento) extra.fechaVencimiento = fechaVencimiento
   const todo: SeguroAnterior = { ...s, ...extra }
   return Object.values(todo).every(x => x === null) ? null : todo
 }
