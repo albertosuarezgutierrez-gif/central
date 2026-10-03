@@ -256,9 +256,7 @@ hay algo que mirar** (regla de Alberto: el panel enseña errores). Lógica pura 
 
 ## 📦 La caja negra del webhook de Codeoscopic
 
-Guarda el cuerpo de lo que se rechaza (`invalid_json` / `invalid_payload`) para
-poder saber **qué** nos están mandando, porque el contador de «138 inválidos en 7
-días» del panel del vendor no dice ni una palabra de la forma.
+Webhook nuevo en `https://api.grupoasegura.es/api/webhooks/codeoscopic` (Vercel central-asegura): guarda el cuerpo de lo que se rechaza (`invalid_json` / `invalid_payload`) para saber **qué** nos mandan. **Descubrimiento autónomo** sin dependencia del webhook: cron `correduria-descubrir-emisiones` (plataforma, `10,40 5-21 * * *` UTC) consulta GET /insurances gratis, acuña por hash DNI, pone pendientes en cola de revisión. Contacto soporte: `soporteapi@codeoscopic.com` / Juan Manuel Fernández.
 
 - **El cuerpo se guarda CIFRADO** y la `forma` (lista de rutas, sin valores) en
   claro. 🚨 `encryptField` **devuelve el texto plano si no hay clave**: hay una

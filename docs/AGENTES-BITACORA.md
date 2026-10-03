@@ -49,6 +49,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-03 · facturas-correo** · hizo: Vía B sana (copia de hoy); backlog 4.0 sin filas `sin_revisar`; 3 facturas Booking sept (1664562699 Socorro 117,76€ · 1664514892 Bustos 152,16€ · 1664465127 Villasís 312,35€) leídas y etiquetadas Procesada, NO conciliadas (Booking nunca auto; se deducen del payout / domiciliación ~17/10) y sin copiar a carpeta de mes (no existe `10-Octubre-2026`; en septiembre tampoco se copiaron, quedan en `_buzon_pdf`); Petroprix/Stripe/Asecon ya estaban Procesada; Reale liquidación comisiones (ingreso, no gasto) sin tocar; dudas: ¿archivar las Booking en carpeta de mes? ; fallos: gmail-adjuntos (Vía A) CONNECTION_CLOSED, no necesaria; PRs/commits: —
+
 - **2026-09-30 · facturas-correo** · hizo: 10 candidatos Gmail (7d); archivadas en 09-Septiembre-2026 Digi 76,00€ (conciliada auto con cargo 29/09, FK escrita), Ionos correo 10,89€ (PayPal, fuera_del_feed) y 2 recibos Anthropic 170€ (#2933-3082, #2525-5445; fuera_del_feed); backlog 4.0 sin filas `sin_revisar`; Vía B sana; el resto ruido (Mapfre/Pactrebol/Holaplace) etiquetado Procesada; dudas: mail de guardería Estrella Polar (Pilar, desglose de cobros jul/sep, sin factura) → `Facturas/Revisar`; fallos: — (nota: `facturas_drive` tiene UNIQUE (proveedor,anio,mes): Ionos correo va como `ionos-correo`); PRs/commits: —
 
 - **2026-09-28 · facturas-correo** · hizo: pasada disparada por trigger. Salud Vía B OK

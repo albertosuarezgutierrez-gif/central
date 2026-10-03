@@ -251,6 +251,11 @@ export type AltaValida = {
   seguroAnterior: SeguroAnterior | null
   /** El primer paso: nace con él, o no nace. */
   tarea: TareaValida
+  /**
+   * Póliza de concesionario / financiada (03/10/2026): el motivo leído («mediador RCI…», «cesión
+   * de derechos»). `null` = no consta que lo sea (no «se sabe que no»).
+   */
+  financiada: string | null
 }
 
 /**
@@ -261,7 +266,7 @@ export type AltaValida = {
  * de Vencimientos: eso lo dice la pantalla, no se inventa una fecha.
  */
 export function validarAltaOportunidad(
-  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; matricula?: unknown; vehiculo?: unknown; seguroAnterior?: unknown; tipoTarea?: unknown; fechaTarea?: unknown; nota?: unknown },
+  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; matricula?: unknown; vehiculo?: unknown; seguroAnterior?: unknown; tipoTarea?: unknown; prioridadTarea?: unknown; fechaTarea?: unknown; nota?: unknown; financiada?: unknown },
   hoy: Date,
 ): { ok: true; alta: AltaValida } | { ok: false; motivo: string } {
   const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
@@ -272,7 +277,7 @@ export function validarAltaOportunidad(
   if (!campos.ok) return campos
   const nota = texto(d.nota, 2000)
   const t = validarTarea(
-    { tipo: d.tipoTarea ?? 'llamada', prioridad: 'media', observaciones: nota ?? `Primer contacto: ${ramo.replace('_', ' ')}`, fechaLimite: d.fechaTarea },
+    { tipo: d.tipoTarea ?? 'llamada', prioridad: d.prioridadTarea ?? 'media', observaciones: nota ?? `Primer contacto: ${ramo.replace('_', ' ')}`, fechaLimite: d.fechaTarea },
     hoy,
   )
   if (!t.ok) return { ok: false, motivo: `Primer paso: ${t.motivo}` }
@@ -289,6 +294,7 @@ export function validarAltaOportunidad(
       vehiculo: texto(d.vehiculo, 80),
       seguroAnterior: seguroAnteriorDe(d.seguroAnterior),
       tarea: t.tarea,
+      financiada: texto(d.financiada, 200),
     },
   }
 }

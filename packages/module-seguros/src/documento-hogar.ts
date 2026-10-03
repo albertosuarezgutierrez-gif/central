@@ -17,7 +17,7 @@
  *  - Nada se inventa ni se deduce. Lo que no encaje con su forma se anula.
  */
 
-import { MARCADORES_SIN_DATO } from './documento-auto.ts'
+import { MARCADORES_SIN_DATO, cifCompania } from './documento-auto.ts'
 
 const SET_MARCADORES = new Set(MARCADORES_SIN_DATO)
 
@@ -25,6 +25,8 @@ const SET_MARCADORES = new Set(MARCADORES_SIN_DATO)
 export type HogarLeido = {
   // ── Identificación de la póliza ──
   compania: string | null
+  /** CIF de la ASEGURADORA (03/10/2026): `companias_dgs` aún no lo tiene; se guarda para cuando lo tenga. */
+  cifCompania: string | null
   codigoEntidadDgs: string | null
   numeroPoliza: string | null
   fechaEfecto: string | null
@@ -52,6 +54,7 @@ export const CAMPOS_PERSONALES_HOGAR: readonly (keyof HogarLeido)[] = ['tomador'
 export function hogarLeidoVacio(): HogarLeido {
   return {
     compania: null,
+    cifCompania: null,
     codigoEntidadDgs: null,
     numeroPoliza: null,
     fechaEfecto: null,
@@ -171,6 +174,7 @@ export function normalizarHogarLeido(raw: unknown): HogarLeido {
   const o = raw as Record<string, unknown>
   return {
     compania: texto(o.compania),
+    cifCompania: cifCompania(o.cifCompania),
     codigoEntidadDgs: codigoDgs(o.codigoEntidadDgs),
     numeroPoliza: texto(o.numeroPoliza),
     fechaEfecto: fechaIso(o.fechaEfecto),

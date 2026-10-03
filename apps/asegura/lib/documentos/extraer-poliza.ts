@@ -32,7 +32,9 @@ import {
   autoLeidoVacio,
   normalizarHogarLeido,
   hogarLeidoVacio,
+  normalizarContactoTomador,
   type AutoLeido,
+  type ContactoTomadorLeido,
   type HogarLeido,
 } from '@central/module-seguros'
 import { revisarFichero, TIPOS_ACEPTADOS, TAMANO_MAXIMO_BYTES } from './fichero.ts'
@@ -78,22 +80,33 @@ export const RAMOS_CON_LECTURA_EXTENDIDA = Object.keys(
   FASE_POR_RAMO_EXTENDIDO,
 ) as (keyof typeof FASE_POR_RAMO_EXTENDIDO)[]
 
+/**
+ * Lo leído además de los datos del ramo (03/10/2026): el contacto y domicilio del TOMADOR, la clase
+ * de carné, el mediador y la cesión de derechos (`contacto`, ya normalizado: `null` = no lo dice), y
+ * el JSON tal cual lo devolvió la IA (`bruto`, que se guarda con el documento). Opcionales para no
+ * romper a quien construye un resultado a mano (tests, Telegram).
+ */
+type Extra = { contacto?: ContactoTomadorLeido; bruto?: Record<string, unknown> | null }
+
 export type ResultadoLecturaPoliza =
   | { fase: 'ninguno'; motivo: string }
-  | { ramo: Ramo | null; fase: 'auto'; fuente: 'texto' | 'vision'; datos: AutoLeido }
-  | { ramo: Ramo | null; fase: 'hogar'; fuente: 'texto' | 'vision'; datos: HogarLeido }
-  | { ramo: Ramo | null; fase: 'contrato_solo'; fuente: 'texto' | 'vision'; datos: AutoLeido }
+  | ({ ramo: Ramo | null; fase: 'auto'; fuente: 'texto' | 'vision'; datos: AutoLeido } & Extra)
+  | ({ ramo: Ramo | null; fase: 'hogar'; fuente: 'texto' | 'vision'; datos: HogarLeido } & Extra)
+  | ({ ramo: Ramo | null; fase: 'contrato_solo'; fuente: 'texto' | 'vision'; datos: AutoLeido } & Extra)
 
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas, de CUALQUIER ramo.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"ramo":string|null,"compania":string|null,"codigoEntidadDgs":string|null,"numeroPoliza":string|null,
+{"ramo":string|null,"compania":string|null,"cifCompania":string|null,"codigoEntidadDgs":string|null,"numeroPoliza":string|null,
 "fechaEfecto":"YYYY-MM-DD"|null,"fechaVencimiento":"YYYY-MM-DD"|null,"primaAnual":number|null,
 "tomador":string|null,"dni":string|null,"fechaNacimiento":"YYYY-MM-DD"|null,
 "matricula":string|null,"marca":string|null,"modelo":string|null,"version":string|null,
 "fechaMatriculacion":"YYYY-MM-DD"|null,"fechaCarnet":"YYYY-MM-DD"|null,
 "aniosSinSiniestros":number|null,"siniestrosUltimos5":number|null,
 "direccion":string|null,"cp":string|null,"localidad":string|null,"metrosCuadrados":number|null,
-"anioConstruccion":number|null,"capitalContinente":number|null,"capitalContenido":number|null}
+"anioConstruccion":number|null,"capitalContinente":number|null,"capitalContenido":number|null,
+"telefono":string|null,"email":string|null,"domicilioVia":string|null,"domicilioCp":string|null,
+"domicilioPoblacion":string|null,"domicilioProvincia":string|null,"claseCarnet":string|null,
+"mediador":string|null,"cesionDerechos":boolean|null,"tomadorEsConductorHabitual":boolean|null}
 
 Reglas, por orden de importancia:
 - "ramo" es de qué es la póliza: uno de auto, moto, hogar, vida, salud, decesos,
@@ -101,6 +114,13 @@ Reglas, por orden de importancia:
 - Si un dato NO aparece en el documento, pon null. NUNCA lo inventes, lo deduzcas
   ni lo copies de otro campo parecido.
 - NO escribas "no consta", "desconocido", "N/A" ni similares: eso es null.
+- "compania" es la compañía ASEGURADORA: la que asume el riesgo, como sale en el MEMBRETE o en
+  la RAZÓN SOCIAL del pie legal (p. ej. "MAPFRE ESPAÑA", "Allianz"). NO es el mediador (corredor,
+  agente, oficina o banco que la vende) NI la antefirma: "P.P." significa "por poder" y va delante
+  de la firma de un apoderado; nunca es la compañía, ni tampoco unas siglas sueltas ("S.A."). Si
+  no ves la aseguradora, null.
+- "cifCompania" es el CIF de esa MISMA aseguradora tal como sale junto a su razón social (p. ej.
+  "A28141935"), sin espacios ni guiones. NO el del mediador ni el del tomador. Si no aparece, null.
 - "codigoEntidadDgs" es el código DGS de la aseguradora con la forma C0058. Si el
   documento no lo trae literalmente, null (NO lo deduzcas del nombre).
 - "primaAnual" es lo que cuesta el seguro un AÑO, en euros y solo el número.
@@ -120,6 +140,22 @@ Reglas, por orden de importancia:
 - Los campos de VIVIENDA (direccion, cp, localidad, metrosCuadrados,
   anioConstruccion, capitalContinente, capitalContenido) solo tienen sentido si
   el ramo es hogar: en cualquier otro caso, todos a null.
+- Los datos de CONTACTO son SOLO del TOMADOR (no de la compañía, ni de la oficina, ni del agente,
+  ni el teléfono de asistencia): "telefono" (el suyo, móvil o fijo), "email" (el suyo).
+- "domicilioVia", "domicilioCp", "domicilioPoblacion", "domicilioProvincia" son el DOMICILIO DEL
+  TOMADOR (calle y número / código postal / población / provincia). NO son la dirección de la
+  vivienda asegurada (esa va en "direccion"/"cp"/"localidad"): aunque coincidan, rellena las dos.
+- "fechaNacimiento" es la del TOMADOR (o del conductor principal si es la misma persona).
+- "fechaCarnet" y "claseCarnet" son del CONDUCTOR HABITUAL (el permiso que figura en la póliza).
+- "tomadorEsConductorHabitual": true SOLO si el documento dice que el tomador es también el
+  conductor habitual/principal (p. ej. "Conductor habitual: el tomador", o el mismo nombre y DNI en
+  los dos sitios); false si el conductor habitual es otra persona; si no lo dice, null.
+- "claseCarnet" la clase del permiso de conducir ("B", "A2"…) solo si el documento la escribe.
+- "mediador" es el agente, corredor, oficina o entidad que figura como mediador/canal de la póliza
+  (p. ej. "RCI BANQUE", "Mobilize Financial Services", "Oficina 1234"). null si no aparece.
+- "cesionDerechos": true si la póliza recoge una cesión de derechos o un beneficiario
+  preferente a favor de un banco o financiera; false si dice expresamente que no; si no dice
+  nada, null.
 - "matricula" tal y como aparezca, sin espacios ni guiones.
 - "cp" el código postal tal y como aparezca, con sus 5 dígitos (aunque empiece por 0).
 - "aniosSinSiniestros" y "siniestrosUltimos5" solo si el documento los dice.
@@ -140,7 +176,7 @@ function mensaje(e: unknown): string {
  * Un JSON que no parsea produce TODOS los campos a `null`, nunca campos a
  * medias: media extracción pintada como póliza es peor que ninguna.
  */
-function parsear(salida: string): { ramo: Ramo | null; auto: AutoLeido; hogar: HogarLeido } {
+function parsear(salida: string): { ramo: Ramo | null; auto: AutoLeido; hogar: HogarLeido; contacto: ContactoTomadorLeido; bruto: Record<string, unknown> | null } {
   let bruto: unknown
   try {
     bruto = JSON.parse(cleanJSON(salida))
@@ -152,24 +188,24 @@ function parsear(salida: string): { ramo: Ramo | null; auto: AutoLeido; hogar: H
     ramo: ramoDetectado(o.ramo),
     auto: normalizarAutoLeido(bruto),
     hogar: normalizarHogarLeido(bruto),
+    contacto: normalizarContactoTomador(bruto),
+    bruto: Object.keys(o).length > 0 ? o : null,
   }
 }
 
 function empaquetar(
-  ramo: Ramo | null,
-  auto: AutoLeido,
-  hogar: HogarLeido,
+  { ramo, auto, hogar, contacto, bruto }: ReturnType<typeof parsear>,
   fuente: 'texto' | 'vision',
 ): ResultadoLecturaPoliza {
   // La ÚNICA fuente de qué ramo tiene lectura extendida es `FASE_POR_RAMO_EXTENDIDO`:
   // si un ramo no está ahí (incluido "no reconocido"), no hay `fase` que mirar.
   const fase = ramo !== null ? FASE_POR_RAMO_EXTENDIDO[ramo as keyof typeof FASE_POR_RAMO_EXTENDIDO] : undefined
-  if (fase === 'hogar') return { ramo, fase, fuente, datos: hogar }
-  if (fase === 'auto') return { ramo, fase, fuente, datos: auto }
+  if (fase === 'hogar') return { ramo, fase, fuente, datos: hogar, contacto, bruto }
+  if (fase === 'auto') return { ramo, fase, fuente, datos: auto, contacto, bruto }
   // Ramo sin lectura extendida (o no reconocido): se enseña el contrato con la
   // misma forma que auto (comparte todos esos campos), sin el vehículo — que
   // ya llega a `null` porque el modelo no debía rellenarlo para ese ramo.
-  return { ramo, fase: 'contrato_solo', fuente, datos: auto }
+  return { ramo, fase: 'contrato_solo', fuente, datos: auto, contacto, bruto }
 }
 
 /** Texto con `pdf-parse`; `''` si no abre (se dice aguas abajo). */
@@ -227,9 +263,8 @@ export async function leerPoliza(
       )
     }
     try {
-      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1100, timeoutMs: 55_000, privado: true })
-      const { ramo, auto, hogar } = parsear(salida)
-      return empaquetar(ramo, auto, hogar, 'texto')
+      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1400, timeoutMs: 55_000, privado: true })
+      return empaquetar(parsear(salida), 'texto')
     } catch (e) {
       console.warn('[asegura] lectura de texto por IA falló:', e)
       return nadaLeido(`No se ha podido leer el documento: ${mensaje(e)}`)
@@ -248,8 +283,7 @@ export async function leerPoliza(
         [{ data: buffer.toString('base64'), mediaType: mimeType }],
         PETICION,
       )
-      const { ramo, auto, hogar } = parsear(salida)
-      return empaquetar(ramo, auto, hogar, 'vision')
+      return empaquetar(parsear(salida), 'vision')
     } catch (e) {
       console.warn('[asegura] openrouterVision falló:', e)
       return nadaLeido(`No se ha podido leer la imagen: ${mensaje(e)}`)

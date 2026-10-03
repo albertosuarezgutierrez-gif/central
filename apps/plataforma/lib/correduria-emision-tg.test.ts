@@ -241,3 +241,12 @@ test('tras emitir: baja ya en marcha, tope de tiempo y corte con el proveedor se
   assert.match(lineasTrasEmision({ baja: 'abierta', correo: 'no_resuelve' }), /no le lleva a SU ficha/)
   assert.deepEqual(leerTrasEmision({ baja: null, correo: null, enCurso: true }), { baja: null, correo: null, enCurso: true })
 })
+
+test('Telegram: ya_acunada no dice «no se ha podido registrar sola» (invitaría a acuñar a mano)', () => {
+  const url = 'https://x/correduria/poliza/1'
+  const r = resultadoEmision({ estado: 'emitido_sin_acunar', mensaje: 'ya la registró el descubrimiento automático', yaAcunada: true }, url)
+  assert.equal(r.estado, 'emitida')
+  assert.doesNotMatch(r.texto, /no se ha podido registrar/)
+  assert.match(r.texto, /ya la registró el descubrimiento automático/)
+  assert.match(resultadoEmision({ estado: 'emitido_sin_acunar', mensaje: 'sin DGS' }, url).texto, /no se ha podido registrar sola/)
+})

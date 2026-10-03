@@ -13,7 +13,7 @@ description: >
 **Lee primero `docs/CORREDURIA-CRM-VISION.md`** (visión dictada por Alberto el 02/09/2026, estado
 real medido, orden de trabajo). Después, según lo que toques:
 
-- Puerto y trastienda → `apps/asegura/CLAUDE.md` («El puerto que sirve la pantalla», «Codeoscopic»).
+- Puerto y trastienda → `apps/asegura/CLAUDE.md` («El puerto que sirve la pantalla», «Codeoscopic»; descubrimiento autónomo de emisiones, cola de revisión, webhook en api.grupoasegura.es).
 - Pantallas → `apps/plataforma/CLAUDE.md` («La correduría se trabaja DESDE AQUÍ»).
 - **Portal del cliente → `apps/asegura-portal/CLAUDE.md`** (es la fuente de verdad de esa app:
   aislamiento por código, lectura por columnas, calendario). Diseño del calendario en

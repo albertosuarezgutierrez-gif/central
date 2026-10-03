@@ -7,7 +7,7 @@ import { correduriaUnica } from '@/lib/cartera'
 import { polizaEnCartera } from '@/lib/poliza-en-cartera'
 import { seguroAnteriorDe } from '@central/module-seguros'
 import { contrasenasDeLaFicha } from '@/lib/documentos/contrasenas-ficha'
-import { oportunidadDesdeLectura, type ResultadoOportunidadDocumento } from '@/lib/oportunidad-documento'
+import { guardarExtraccion, oportunidadDesdeLectura, type ResultadoOportunidadDocumento } from '@/lib/oportunidad-documento'
 import { guardarDocumento } from '@/lib/cartera-documentos'
 
 export const runtime = 'nodejs'
@@ -41,6 +41,9 @@ export const maxDuration = 120
  *   dentro: el DNI no sale en la respuesta ni pasa por plataforma.
  * - `crear=1` (29/09/2026, pantalla «Subir póliza»): además ABRE la oportunidad (o la completa) y
  *   guarda el fichero en la ficha a la que va: un documento de seguro subido no se puede perder.
+ *   Desde el 03/10/2026 también rellena los HUECOS de la ficha del tomador con lo que trae la póliza
+ *   (fecha de nacimiento, domicilio, teléfono, email, carné; `volcarPolizaEnFicha`) y guarda lo
+ *   leído SIN datos personales con el documento. En la respuesta va QUÉ se rellenó (nombres de campo), nunca los valores.
  *   Sin él, sigue siendo solo lectura (el alta a mano y Telegram deciden ellos).
  * - «No se pudo leer» es 422 con motivo, nunca 200 con todo a null: eso se
  *   pintaría como «el documento no trae nada».
@@ -88,6 +91,8 @@ export const POST = auditado(async (req: Request) => {
       if (destino) {
         const g = await guardarDocumento(c.id, { ...destino, tipo: 'poliza', nombre: fichero.name, mime: fichero.type, contenido, subidoPor: 'corredor', notas: 'Subida desde «Subir póliza»' }).catch(() => null)
         ficheroGuardado = g?.ok === true
+        // Lo leído (sin datos personales: `extraccionSinPii`) se queda con el documento.
+        if (g?.ok) await guardarExtraccion(c.id, g.documento.id, r.bruto ?? null)
       }
     }
   }

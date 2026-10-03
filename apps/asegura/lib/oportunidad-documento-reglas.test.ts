@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { decidirFicha, esDocumentoDeSeguro, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad } from './oportunidad-documento-reglas.ts'
+import { decidirFicha, esDocumentoDeSeguro, posiblesDuplicadosPorContacto, puedeVolcarEnFicha, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad } from './oportunidad-documento-reglas.ts'
 
 const HOY = new Date('2026-09-29T10:00:00Z')
 
@@ -57,4 +57,23 @@ test('decidir ficha sin DNI en el documento: por nombre; otra persona = lead', (
   assert.deepEqual(decidirFicha({ ...base, tomador: null }), { tipo: 'ficha', clienteId: 'yo', porque: 'sin_tomador' })
   assert.deepEqual(decidirFicha({ ...base, clienteSube: null, tomador: null }), { tipo: 'sin_persona' })
   assert.deepEqual(decidirFicha({ ...base, clienteSube: null }), { tipo: 'lead' })
+})
+
+test('🪤 por contacto NUNCA se asigna ficha: solo posibles duplicados (el hijo no se queda la del padre)', () => {
+  // Aunque sea una sola, sin DNI y con el mismo nombre: no se usa, se anota.
+  assert.deepEqual(posiblesDuplicadosPorContacto([{ id: 'ana' }, { id: 'ana' }, { id: 'hijo' }]), ['ana', 'hijo'])
+  assert.deepEqual(posiblesDuplicadosPorContacto([{ id: 'nuevo' }, { id: 'hijo' }], 'nuevo'), ['hijo'])
+  assert.deepEqual(posiblesDuplicadosPorContacto([]), [])
+})
+
+test('🪤 desde el PORTAL solo se vuelca en la ficha PROPIA de quien sube (toma de cuenta por email)', () => {
+  const b = { origen: 'portal', verificado: true, hayTomador: true, porqueFicha: 'dni_ficha', clienteId: 'yo', clienteSube: 'yo' }
+  assert.equal(puedeVolcarEnFicha(b), true)
+  assert.equal(puedeVolcarEnFicha({ ...b, clienteId: 'otro', porqueFicha: 'dni_cartera' }), false)
+  assert.equal(puedeVolcarEnFicha({ ...b, clienteSube: null }), false)
+  assert.equal(puedeVolcarEnFicha({ ...b, origen: 'solicitud', clienteId: 'otro' }), false)
+  // El corredor sí rellena la ficha del tomador aunque la subiera desde otra.
+  assert.equal(puedeVolcarEnFicha({ ...b, origen: 'ficha', clienteId: 'otro' }), true)
+  assert.equal(puedeVolcarEnFicha({ ...b, origen: 'ficha', verificado: false }), false)
+  assert.equal(puedeVolcarEnFicha({ ...b, origen: 'ficha', porqueFicha: 'sin_tomador' }), false)
 })

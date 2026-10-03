@@ -10,16 +10,31 @@
 // - Una póliza en vigor con nosotros no es una oportunidad (`ya_nuestra`).
 // - La deduplicación es la de `crearOportunidad`: el mismo seguro ya abierto se COMPLETA, no se repite.
 // - El DNI del documento no sale de aquí.
-import { prepararAltaDesdeDocumento, seguroAnteriorDe, type LecturaPoliza } from '@central/module-seguros'
+import {
+  companiaLegible,
+  companiaPorNombre,
+  extraccionSinPii,
+  normalizarContactoTomador,
+  polizaFinanciada,
+  prepararAltaDesdeDocumento,
+  seguroAnteriorDe,
+  vencimientoUrgente,
+  type ContactoTomadorLeido,
+  type LecturaPoliza,
+} from '@central/module-seguros'
+import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
-import { altaCliente, altaLeadSinContacto, coincidencias, descifrarCampo } from './cartera-edicion'
+import { altaCliente, altaLeadSinContacto, anotarHistorialCliente, coincidencias, descifrarCampo } from './cartera-edicion'
 import { crearRelacion } from './cartera-relaciones'
 import { crearOportunidad } from './oportunidad-seguimiento'
 import { polizaEnCartera } from './poliza-en-cartera'
 import { leerPoliza, type ResultadoLecturaPoliza } from './documentos/extraer-poliza'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
+import { volcarPolizaEnFicha, type VolcadoFicha } from './ficha-desde-poliza'
 import {
   decidirFicha,
+  posiblesDuplicadosPorContacto,
+  puedeVolcarEnFicha,
   esDocumentoDeSeguro,
   fechaLlamada,
   mismoNombre,
@@ -40,6 +55,13 @@ export type ResultadoOportunidadDocumento =
       llamada: string
       /** `actualizada`: se rellenó algún hueco de la que ya había (false = ya lo tenía todo). */
       completada: boolean
+      /**
+       * Lo que la póliza sabía del tomador y se volcó a SU ficha (03/10/2026). `null` = no se intentó
+       * (subida sin verificar, o documento sin tomador): no es «no había nada».
+       */
+      ficha: VolcadoFicha | null
+      /** Póliza de concesionario / financiada: el motivo; `null` = no consta. */
+      financiada: string | null
     }
   | { estado: 'ya_nuestra' }
   | { estado: 'no_es_seguro' }
@@ -59,6 +81,8 @@ export type EntradaOportunidadDocumento = {
    * abre lead (sería uno por subida) y lo que caiga en una ficha que ya existe se marca «sin verificar».
    */
   verificado?: boolean
+  /** Documento ya guardado del que sale esta lectura: se le guarda el JSON leído (`extraccion`). */
+  documentoId?: string | null
   hoy?: Date
 }
 
@@ -74,6 +98,7 @@ export async function oportunidadDesdeFichero(
     const lectura = await leerPoliza(e.fichero.contenido, e.fichero.mime, e.fichero.nombre, {
       contrasenas: clienteSube ? () => contrasenasDeLaFicha(e.correduriaId, clienteSube) : undefined,
     })
+    if (e.documentoId && lectura.fase !== 'ninguno') await guardarExtraccion(e.correduriaId, e.documentoId, lectura.bruto ?? null)
     return await oportunidadDesdeLectura({ ...e, lectura })
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo leer el documento:', err instanceof Error ? err.message : err)
@@ -93,6 +118,9 @@ export async function oportunidadDesdeLectura(
       : { ramo: leida.ramo, fase: leida.fase, datos: leida.datos as unknown as Record<string, unknown> }
     const d = r.datos
     if (!esDocumentoDeSeguro(d)) return { estado: 'no_es_seguro' }
+    // Contacto, domicilio, carné y mediador del tomador: ya normalizados si vienen del lector; de una
+    // lectura a mano (`LecturaPoliza`), se normalizan aquí de las mismas claves.
+    const contacto: ContactoTomadorLeido = ('contacto' in leida && leida.contacto) || normalizarContactoTomador(d)
 
     const nuestra = await polizaEnCartera(e.correduriaId, txt(d.numeroPoliza, 60)).catch(() => null)
     if (nuestra && nuestra.length > 0) return { estado: 'ya_nuestra' }
@@ -127,6 +155,7 @@ export async function oportunidadDesdeLectura(
 
     let clienteId: string
     let clienteNuevo = false
+    let compartenContacto: string[] = []
     if (decision.tipo === 'ficha') {
       clienteId = decision.clienteId
     } else {
@@ -134,6 +163,9 @@ export async function oportunidadDesdeLectura(
       // Sin DNI, el mismo recibo subido dos veces (o reintentado) no puede abrir dos leads: se reusa
       // el lead sin DNI que se llama EXACTAMENTE igual.
       const previo = alta.dni ? null : await leadMismoNombre(e.correduriaId, `${alta.nombre} ${alta.apellidos}`)
+      // Las fichas con su teléfono o email NO se usan (un móvil es un hogar): se anotan en el lead
+      // como posibles duplicados (`posiblesDuplicadosPorContacto`).
+      if (!previo) compartenContacto = await fichasPorContacto(e.correduriaId, contacto)
       const lead = previo
         ? { ok: true as const, id: previo }
         : alta.dni
@@ -162,17 +194,55 @@ export async function oportunidadDesdeLectura(
       relacionado = rel?.ok === true || rel?.estado === 'conflicto'
     }
 
+    // Lo que la póliza sabe del TOMADOR va a SU ficha (03/10/2026): solo huecos, solo si el DNI del
+    // documento es el de la ficha (o ella no tiene); quién puede volcar, en `puedeVolcarEnFicha`
+    // (desde el portal, solo en la ficha propia de quien sube).
     const hoy = e.hoy ?? new Date()
+    const identificado = puedeVolcarEnFicha({
+      origen: e.origen,
+      verificado,
+      hayTomador: alta !== null,
+      porqueFicha: decision.tipo === 'ficha' ? decision.porque : null,
+      clienteId,
+      clienteSube,
+    })
+    const volcado = identificado
+      ? await volcarPolizaEnFicha({
+          correduriaId: e.correduriaId,
+          clienteId,
+          actor: e.actor,
+          origen: e.origen,
+          hoy,
+          leido: {
+            ramo: r.ramo,
+            dni: alta?.dni ?? null,
+            fechaNacimiento: txt(d.fechaNacimiento, 10),
+            fechaCarnet: txt(d.fechaCarnet, 10),
+            contacto,
+          },
+        })
+      : null
+    if (clienteNuevo) await notaPosiblesDuplicados(e.correduriaId, clienteId, alta ? `${alta.nombre} ${alta.apellidos}` : null, compartenContacto, e.actor)
+
     const vence = proximoVencimiento(txt(d.fechaVencimiento, 10), hoy)
     const llamada = fechaLlamada(vence, hoy)
     const prima = typeof d.primaAnual === 'number' && Number.isFinite(d.primaAnual) && d.primaAnual > 0 && d.primaAnual < 1_000_000 ? d.primaAnual : null
     const vehiculo = [txt(d.marca, 40), txt(d.modelo, 40)].filter(Boolean).join(' ') || null
     const sinVerificar = verificado ? '' : ' — subido desde el portal por alguien sin ficha: SIN VERIFICAR'
+    // La compañía (03/10/2026): lo leído si es un nombre; si es basura («P.P.») o no está, la del código DGS.
+    // Sin DGS, el nombre leído se casa EXACTO (normalizado) con el catálogo y se guarda su nombre común;
+    // si no casa o casa con varias, se queda lo leído (o null). `companias_dgs` no tiene CIF.
+    const porDgs = await nombrePorDgs(txt(d.codigoEntidadDgs, 10))
+    const porNombre = porDgs || !txt(d.compania) ? null : companiaPorNombre(txt(d.compania), await catalogoCompanias())
+    const aseguradora = porNombre?.nombre ?? companiaLegible(txt(d.compania), porDgs)
+    const { motivo: financiada } = polizaFinanciada(contacto)
+    const urgente = vencimientoUrgente(vence, hoy.toISOString().slice(0, 10))
+    const avisoFinanciada = financiada ? ` · Póliza de concesionario/financiada (${financiada}): mira si está atada a la financiación antes de proponer el cambio.` : ''
     const datos = {
       ramo: ramoOportunidad(r.ramo),
       estado: 'competencia',
       fechaFinVigencia: vence,
-      aseguradora: txt(d.compania),
+      aseguradora,
       prima,
       numeroPoliza: txt(d.numeroPoliza, 60),
       matricula: txt(d.matricula, 20),
@@ -181,14 +251,17 @@ export async function oportunidadDesdeLectura(
         ? seguroAnteriorDe({ codigoDgs: d.codigoEntidadDgs, fechaEfecto: d.fechaEfecto, aniosSinSiniestros: d.aniosSinSiniestros, siniestrosUltimos5: d.siniestrosUltimos5 })
         : null,
       tipoTarea: 'llamada',
+      // Vence en ≤15 días: la llamada es URGENTE (la prioridad más alta de `gestion_prioridad`).
+      prioridadTarea: urgente ? 'alta' : 'media',
       fechaTarea: llamada,
-      nota: vence
-        ? `Llamar para su renovación: vence el ${fmt(vence)} (documento subido: ${e.origen})${sinVerificar}`
-        : `Pedir la fecha de vencimiento: el documento subido (${e.origen}) no la trae legible${sinVerificar}`,
+      financiada,
+      nota: (vence
+        ? `${urgente ? 'URGENTE — ' : ''}Llamar para su renovación: vence el ${fmt(vence)} (documento subido: ${e.origen})${sinVerificar}`
+        : `Pedir la fecha de vencimiento: el documento subido (${e.origen}) no la trae legible${sinVerificar}`) + avisoFinanciada,
     }
     const o = await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`)
-    if (o.ok) return { estado: 'creada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada, completada: false }
-    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada, completada: o.completada }
+    if (o.ok) return { estado: 'creada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada, completada: false, ficha: volcado, financiada }
+    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada, completada: o.completada, ficha: volcado, financiada }
     return { estado: 'error', motivo: o.motivo }
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo abrir la oportunidad:', err instanceof Error ? err.message : err)
@@ -214,4 +287,81 @@ async function leadMismoNombre(correduriaId: string, nombreCompleto: string): Pr
     take: 200,
   }).catch(() => [])
   return candidatos.find((c) => mismoNombre(`${c.nombre ?? ''} ${c.apellidos ?? ''}`, nombreCompleto, { exacto: true }))?.id ?? null
+}
+
+/**
+ * Guarda con el documento lo leído por la IA (`documentos.extraccion`, 03/10/2026) SIN datos
+ * personales: DNI, teléfono, email, fechas de nacimiento/carné y domicilio no se guardan en claro en
+ * un campo SQL (en `clientes` van cifrados); de esos solo consta si se leyeron (`leidos`).
+ * Best-effort: si falla (p. ej. la migración aún sin aplicar), el documento y la oportunidad siguen.
+ */
+export async function guardarExtraccion(correduriaId: string, documentoId: string, bruto: Record<string, unknown> | null): Promise<void> {
+  const limpio = extraccionSinPii(bruto)
+  if (!limpio) return
+  try {
+    await prismaAsegura().$executeRaw(Prisma.sql`
+      update documentos set extraccion = ${JSON.stringify(limpio)}::jsonb
+      where id = ${documentoId}::uuid and correduria_id = ${correduriaId}::uuid`)
+  } catch (err) {
+    console.error('[oportunidad-documento] no se pudo guardar la extracción del documento:', err instanceof Error ? err.message : err)
+  }
+}
+
+/** El nombre de la compañía por su código DGS (C0058 → Mapfre), o null. */
+async function nombrePorDgs(codigo: string | null): Promise<string | null> {
+  const c = codigo?.toUpperCase().replace(/\s/g, '') ?? ''
+  if (!/^C\d{4}$/.test(c)) return null
+  const f = await prismaAsegura().companiaDgs.findUnique({ where: { codigoDgs: c }, select: { nombreComun: true } }).catch(() => null)
+  return f?.nombreComun?.trim() || null
+}
+
+/** El catálogo DGS para casar un nombre leído. `[]` si no se pudo leer: entonces no se resuelve nada. */
+async function catalogoCompanias(): Promise<{ codigoDgs: string; nombreComun: string; nombreCima: string | null }[]> {
+  return prismaAsegura()
+    .companiaDgs.findMany({ select: { codigoDgs: true, nombreComun: true, nombreCima: true } })
+    .catch(() => [])
+}
+
+/** Ids de las fichas con el teléfono o el email de la póliza. `[]` si no trae o no se pudo buscar. */
+async function fichasPorContacto(correduriaId: string, contacto: ContactoTomadorLeido): Promise<string[]> {
+  if (!contacto.telefono && !contacto.email) return []
+  const cs = await coincidencias(correduriaId, { telefono: contacto.telefono, email: contacto.email }).catch(() => null)
+  return cs ? posiblesDuplicadosPorContacto(cs) : []
+}
+
+/**
+ * En un lead RECIÉN abierto: «posible duplicado de <id>» por cada ficha que se llama exactamente
+ * igual, y las que comparten su teléfono/email. NO se funde nada (duplicar se ve; mezclar a dos
+ * personas, no): la fusión es por SQL con lote y guarda de identidad.
+ */
+async function notaPosiblesDuplicados(correduriaId: string, clienteId: string, nombre: string | null, compartenContacto: string[], actor: string): Promise<void> {
+  try {
+    const mismos = nombre ? (await fichasMismoNombre(correduriaId, nombre)).filter((id) => id !== clienteId) : []
+    const contacto = compartenContacto.filter((id) => id !== clienteId && !mismos.includes(id))
+    const partes = [
+      mismos.length > 0 ? `Posible duplicado de ${mismos.join(', ')} (mismo nombre; sin DNI común que lo confirme): no se ha fundido.` : null,
+      contacto.length > 0 ? `Posible duplicado de ${contacto.join(', ')} (comparte teléfono o email; puede ser otra persona de la casa): no se ha fundido ni se le ha escrito el DNI.` : null,
+    ].filter(Boolean)
+    if (partes.length === 0) return
+    await anotarHistorialCliente(correduriaId, clienteId, 'gestion', `${partes.join(' ')} — por ${actor}`)
+  } catch (err) {
+    console.error('[oportunidad-documento] no se pudo anotar el posible duplicado:', err instanceof Error ? err.message : err)
+  }
+}
+
+/** Fichas vivas (no lápidas) que se llaman EXACTAMENTE igual, sin orden. Hasta 5. */
+async function fichasMismoNombre(correduriaId: string, nombreCompleto: string): Promise<string[]> {
+  const primera = nombreCompleto.trim().split(/\s+/)[0]
+  if (!primera) return []
+  const candidatos = await prismaAsegura().cliente.findMany({
+    where: {
+      correduriaId,
+      mergedIntoClienteId: null,
+      OR: [{ nombre: { contains: primera, mode: 'insensitive' } }, { apellidos: { contains: primera, mode: 'insensitive' } }],
+    },
+    select: { id: true, nombre: true, apellidos: true },
+    orderBy: { createdAt: 'asc' },
+    take: 300,
+  }).catch(() => [])
+  return candidatos.filter((c) => mismoNombre(`${c.nombre ?? ''} ${c.apellidos ?? ''}`, nombreCompleto, { exacto: true })).map((c) => c.id).slice(0, 5)
 }
