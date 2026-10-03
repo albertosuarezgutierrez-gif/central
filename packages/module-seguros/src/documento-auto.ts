@@ -60,6 +60,8 @@ const SET_MARCADORES = new Set(MARCADORES_SIN_DATO)
 export type AutoLeido = {
   // ── Identificación de la póliza ──
   compania: string | null
+  /** CIF de la ASEGURADORA (03/10/2026): `companias_dgs` aún no lo tiene; se guarda para cuando lo tenga. */
+  cifCompania: string | null
   /** Código DGS de la entidad, si el documento lo trae (lo llevan muchas). */
   codigoEntidadDgs: string | null
   numeroPoliza: string | null
@@ -97,6 +99,7 @@ export const CAMPOS_PERSONALES: readonly (keyof AutoLeido)[] = [
 export function autoLeidoVacio(): AutoLeido {
   return {
     compania: null,
+    cifCompania: null,
     codigoEntidadDgs: null,
     numeroPoliza: null,
     fechaEfecto: null,
@@ -208,6 +211,14 @@ function documentoIdentidad(v: unknown): string | null {
   return limpio
 }
 
+/** CIF de persona jurídica con forma válida (letra + 7 dígitos + control), o null. No valida el dígito. */
+export function cifCompania(v: unknown): string | null {
+  const t = texto(v)
+  if (t === null) return null
+  const limpio = t.toUpperCase().replace(/[\s.-]/g, '')
+  return /^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(limpio) ? limpio : null
+}
+
 /** Código DGS de entidad: `C` + 4 dígitos (C0058 Mapfre, C0109 Allianz…). */
 function codigoDgs(v: unknown): string | null {
   const t = texto(v)
@@ -228,6 +239,7 @@ export function normalizarAutoLeido(raw: unknown): AutoLeido {
   const o = raw as Record<string, unknown>
   return {
     compania: texto(o.compania),
+    cifCompania: cifCompania(o.cifCompania),
     codigoEntidadDgs: codigoDgs(o.codigoEntidadDgs),
     numeroPoliza: texto(o.numeroPoliza),
     fechaEfecto: fechaIso(o.fechaEfecto),

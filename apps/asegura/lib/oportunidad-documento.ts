@@ -12,6 +12,7 @@
 // - El DNI del documento no sale de aquí.
 import {
   companiaLegible,
+  companiaPorNombre,
   extraccionSinPii,
   normalizarContactoTomador,
   polizaFinanciada,
@@ -229,7 +230,11 @@ export async function oportunidadDesdeLectura(
     const vehiculo = [txt(d.marca, 40), txt(d.modelo, 40)].filter(Boolean).join(' ') || null
     const sinVerificar = verificado ? '' : ' — subido desde el portal por alguien sin ficha: SIN VERIFICAR'
     // La compañía (03/10/2026): lo leído si es un nombre; si es basura («P.P.») o no está, la del código DGS.
-    const aseguradora = companiaLegible(txt(d.compania), await nombrePorDgs(txt(d.codigoEntidadDgs, 10)))
+    // Sin DGS, el nombre leído se casa EXACTO (normalizado) con el catálogo y se guarda su nombre común;
+    // si no casa o casa con varias, se queda lo leído (o null). `companias_dgs` no tiene CIF.
+    const porDgs = await nombrePorDgs(txt(d.codigoEntidadDgs, 10))
+    const porNombre = porDgs || !txt(d.compania) ? null : companiaPorNombre(txt(d.compania), await catalogoCompanias())
+    const aseguradora = porNombre?.nombre ?? companiaLegible(txt(d.compania), porDgs)
     const { motivo: financiada } = polizaFinanciada(contacto)
     const urgente = vencimientoUrgente(vence, hoy.toISOString().slice(0, 10))
     const avisoFinanciada = financiada ? ` · Póliza de concesionario/financiada (${financiada}): mira si está atada a la financiación antes de proponer el cambio.` : ''
@@ -308,6 +313,13 @@ async function nombrePorDgs(codigo: string | null): Promise<string | null> {
   if (!/^C\d{4}$/.test(c)) return null
   const f = await prismaAsegura().companiaDgs.findUnique({ where: { codigoDgs: c }, select: { nombreComun: true } }).catch(() => null)
   return f?.nombreComun?.trim() || null
+}
+
+/** El catálogo DGS para casar un nombre leído. `[]` si no se pudo leer: entonces no se resuelve nada. */
+async function catalogoCompanias(): Promise<{ codigoDgs: string; nombreComun: string; nombreCima: string | null }[]> {
+  return prismaAsegura()
+    .companiaDgs.findMany({ select: { codigoDgs: true, nombreComun: true, nombreCima: true } })
+    .catch(() => [])
 }
 
 /** Ids de las fichas con el teléfono o el email de la póliza. `[]` si no trae o no se pudo buscar. */

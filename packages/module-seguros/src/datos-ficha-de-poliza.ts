@@ -17,7 +17,8 @@
 //  - Un dato que no se ha podido LEER de la ficha (cifrado que no abre, lista de contactos que no
 //    cargó) cuenta como ocupado: el estado conservador es no escribir.
 
-import { MARCADORES_SIN_DATO } from './documento-auto.ts'
+import { MARCADORES_SIN_DATO, cifCompania } from './documento-auto.ts'
+import { resolverCompania, type CompaniaCatalogo } from './defensa-cartera.ts'
 import { normalizarCp, normalizarDni, normalizarEmail, normalizarFechaNacimiento, normalizarTelefono } from './cliente-edicion.ts'
 import { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type TipoCarnet } from './carnet-ficha.ts'
 
@@ -149,6 +150,18 @@ export function companiaLegible(leida: string | null | undefined, nombrePorDgs: 
   const valida = t !== null && /\p{L}{3,}/u.test(t) && !/^(\p{L}\.?\s*){1,4}$/u.test(t)
   if (valida) return t
   return texto(nombrePorDgs, 120)
+}
+
+/**
+ * La compañía del catálogo DGS a la que corresponde el nombre leído, por la MISMA normalización
+ * que la defensa de cartera (`resolverCompania`: igualdad exacta tras quitar forma jurídica,
+ * «España», «seguros»…; nunca subcadena). `seguros.companias_dgs` no tiene CIF (03/10/2026), así
+ * que el nombre es la única llave. Varias entidades posibles o ninguna → `null`: no se elige.
+ */
+export function companiaPorNombre(leida: string | null | undefined, catalogo: readonly CompaniaCatalogo[]): { codigoDgs: string; nombre: string } | null {
+  if (!companiaLegible(leida, null)) return null // «P.P.», «S.A.»: siglas de firma, no un nombre
+  const r = resolverCompania(catalogo, leida)
+  return r.estado === 'resuelta' ? { codigoDgs: r.codigoDgs, nombre: r.nombre } : null
 }
 
 // ─── Urgencia ───────────────────────────────────────────────────────────────
@@ -340,6 +353,7 @@ export function parcheFichaDesdePoliza(
 export const CLAVES_EXTRACCION_GUARDABLES = [
   'ramo',
   'compania',
+  'cifCompania',
   'codigoEntidadDgs',
   'numeroPoliza',
   'fechaEfecto',
@@ -390,6 +404,9 @@ export function extraccionSinPii(
   const datos: Record<string, unknown> = {}
   for (const k of CLAVES_EXTRACCION_GUARDABLES) {
     const v = bruto[k]
+    // El CIF de la aseguradora solo con forma de CIF de SOCIEDAD: un DNI o NIE metido ahí por la IA
+    // sería PII en claro en un jsonb consultable (revisión PR 4160).
+    if (k === 'cifCompania') { if (v !== undefined) datos[k] = cifCompania(v); continue }
     // Solo valores planos: un objeto anidado podría esconder cualquier cosa.
     if (v === null || typeof v === 'number' || typeof v === 'boolean') datos[k] = v
     else if (typeof v === 'string') datos[k] = texto(v)
