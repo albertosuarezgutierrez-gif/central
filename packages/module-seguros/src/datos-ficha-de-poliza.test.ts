@@ -335,11 +335,17 @@ test('🪤 lista blanca: ni el conductor principal, ni las figuras, ni el CIF de
   const r = extraccionSinPii({
     compania: 'Qover', tomadorEsEmpresa: true, cifTomador: 'ES' + CIF, tomador: 'Ejemplo Viajes SL',
     conductorPrincipal: { nombre: 'Pedro Prueba Ficticio', fechaNacimiento: '1971-07-02', dni: DNI },
-    figuras: [{ rol: 'propietario', nombre: 'Lucía Otra Persona', dni: '87654321X', fechaNacimiento: '1990-03-04' }],
+    personaContactoTomador: 'Fermín Vigía',
+    figuras: [
+      { rol: 'propietario', nombre: 'Lucía Otra Persona', dni: '87654321X', fechaNacimiento: '1990-03-04', domicilioVia: 'Calle Inventada 17', domicilioCp: '41003', domicilioPoblacion: 'Villaprueba' },
+      { rol: 'conductor_adicional', nombre: null, fechaNacimiento: '1974-05-04' },
+    ],
   })
   assert.ok(r)
   const enTexto = JSON.stringify(r)
-  for (const v of ['Pedro', 'Ficticio', '1971', CIF, DNI, 'Ejemplo Viajes', 'Lucía', '87654321X', '1990']) assert.equal(enTexto.includes(v), false, `${v} no se guarda`)
+  for (const v of ['Pedro', 'Ficticio', '1971', CIF, DNI, 'Ejemplo Viajes', 'Lucía', '87654321X', '1990', 'Fermín', 'Vigía', 'Inventada', '41003', 'Villaprueba', '1974']) assert.equal(enTexto.includes(v), false, `${v} no se guarda`)
+  assert.equal(r.leidos.personaContactoTomador, true)
+  assert.equal('personaContactoTomador' in r.datos, false)
   assert.equal(r.leidos.figuras, true)
   assert.equal(r.datos.tomadorEsEmpresa, true)
   assert.equal(r.leidos.conductorPrincipal, true)

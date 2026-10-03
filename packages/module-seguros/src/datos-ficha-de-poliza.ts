@@ -72,6 +72,12 @@ export type ContactoTomadorLeido = {
    * Las figuras completas (propietario, ocasionales…) van en `normalizarFigurasLeidas`.
    */
   conductorPrincipal: ConductorPrincipalLeido | null
+  /**
+   * La «persona de contacto» de un tomador EMPRESA (solo el nombre). `null` = no figura, o el tomador
+   * no es empresa. Si es una de las figuras, recibe también el teléfono y el email del tomador
+   * (`planFiguras`). Es un dato personal: nunca se guarda con el documento.
+   */
+  personaContacto: string | null
 }
 
 /** El conductor principal de la póliza. Es OTRA persona cuando el tomador es una empresa. */
@@ -98,6 +104,7 @@ export function contactoTomadorVacio(): ContactoTomadorLeido {
     tomadorEsEmpresa: null,
     cifTomador: null,
     conductorPrincipal: null,
+    personaContacto: null,
   }
 }
 
@@ -150,6 +157,7 @@ export function normalizarContactoTomador(raw: unknown): ContactoTomadorLeido {
   const cp = texto(o.domicilioCp, 10)
   const cpOk = cp ? normalizarCp(cp) : null
   const clase = claveTipoCarnet(texto(o.claseCarnet, 10) ?? '')
+  const empresa = tomadorEmpresa(o)
   return {
     telefono: telefonoEspanol(o.telefono),
     email: emailNormalizado(o.email),
@@ -161,9 +169,11 @@ export function normalizarContactoTomador(raw: unknown): ContactoTomadorLeido {
     mediador: texto(o.mediador, 200),
     cesionDerechos: booleano(o.cesionDerechos),
     tomadorEsConductorHabitual: booleano(o.tomadorEsConductorHabitual),
-    ...tomadorEmpresa(o),
+    ...empresa,
     // El de siempre o, si el lector ya devuelve `figuras` (03/10/2026), su conductor habitual.
     conductorPrincipal: conductorPrincipal(o.conductorPrincipal) ?? conductorHabitualLeido(o),
+    // Solo de una EMPRESA: con un tomador persona, «persona de contacto» no es otra figura.
+    personaContacto: empresa.tomadorEsEmpresa === true ? texto(o.personaContactoTomador, 200) : null,
   }
 }
 
@@ -471,6 +481,7 @@ export const CLAVES_PERSONALES_EXTRACCION = [
   'cifTomador',
   'conductorPrincipal',
   'figuras',
+  'personaContactoTomador',
 ] as const
 
 /**
