@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T10:39:48Z",
-  "sha": "5daa5eb7a1aff027fe46db7b2e8a4d8bf3b471e5",
+  "generadoEn": "2026-10-03T11:10:38Z",
+  "sha": "ba975b8ca6d26644671e74834f5f5f3156f2fbe5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -26426,7 +26426,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string | null = 'auto'",
           "retorno": "OpcionProducto[] | null",
-          "linea": 63,
+          "linea": 73,
           "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
         },
         {
@@ -26435,7 +26435,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 92,
+          "linea": 110,
           "resumen": "Lee `{ dtoCap?, dtoVentaCruzada? }` del cuerpo. `null` si no viene nada; lanza nada: lo raro es reparo."
         },
         {
@@ -26444,7 +26444,7 @@
           "exportada": true,
           "params": "base: unknown, pedidos: DescuentosPedidos, origen: 'catalogo' | 'formulario' = 'catalogo',",
           "retorno": "",
-          "linea": 114,
+          "linea": 132,
           "resumen": "PURO. Aplica los descuentos pedidos a las opciones que irán en el ReRate. Solo si esas opciones YA traen el campo (hoy, el catálogo de Allianz auto): meter un `dtoCap` en otra compañía sería declarar "
         },
         {
@@ -26453,7 +26453,7 @@
           "exportada": true,
           "params": "compania: string",
           "retorno": "OpcionProducto[] | null",
-          "linea": 169,
+          "linea": 187,
           "resumen": "Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate: ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo Allianz auto tiene esta captura."
         },
         {
@@ -26462,13 +26462,13 @@
           "exportada": true,
           "params": "campos: Record<string, unknown>, compania: string, opts?: { familiaAllianz?: boolean },",
           "retorno": "Record<string, unknown>",
-          "linea": 188,
+          "linea": 206,
           "resumen": "Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre cualquier default. Puro y testeable aparte de la ru"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4254696999fd"
+      "hash": "6a1e0b9f3e6d"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
