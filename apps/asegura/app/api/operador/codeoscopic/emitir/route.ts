@@ -48,6 +48,8 @@ import { trasEmisionConTope } from '@/lib/tras-emision'
 import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 import { copiarFigurasAPoliza, faltanConfirmaciones, leerCambiosDeFiguras, registrarConfirmacion, type Confirmacion } from '@/lib/emision-figuras'
+import { decidirBloqueoBonus, verificacionBonusDe, FUENTES_VERIFICACION_BONUS } from '@central/module-seguros'
+import { guardarVerificacionBonus, leerBonusTarificacion } from '@/lib/seguro-anterior-candidatas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -74,6 +76,9 @@ export const maxDuration = 240
  *   `reintento_sin_confirmar`): el corredor ha mirado el proyecto y no hay póliza.
  *   `acunarExistente: true` cuando el proyecto YA cuenta una `policyApplication` aprobada con
  *   nº de póliza (`solicitudes[]` del 409): se acuña ESA en la cartera y NO se envía nada.
+ *   `bonusVerificado: { fuente: 'certificado'|'sinco'|'dato_confirmado', nota? }` (03/10/2026): el bonus
+ *   de un vehículo nuevo se declaró SUPUESTO (o no consta) y el corredor ya lo ha verificado. Sin él → 422
+ *   `bonus_sin_verificar`, antes de llamar a nadie.
  *   `duplicadoConfirmado: true` (solo cliente NUEVO, 28/09/2026): el corredor ha visto el 409
  *   `ya_en_cartera`/`ya_emitido` y confirma que es otra póliza. Queda en el log.
  *
@@ -236,6 +241,29 @@ export const POST = auditado(async (req: Request) => {
     return NextResponse.json({ estado: 'error', causa: resuelto.causa, mensaje: resuelto.mensaje }, { status: resuelto.status })
   }
   const ctx = resuelto.ctx
+
+  // 🚗 Bonus SUPUESTO de un vehículo nuevo (03/10/2026): si al tarificar se declararon al MÁXIMO
+  // unos años sin siniestros que no constaban, no se emite sin verificarlos (certificado, SINCO o dato
+  // confirmado por el cliente). Fail-closed: NULL (tarificación anterior a la marca, o no se pudo
+  // leer) es «no se sabe», no «no se supuso». Acuñar una solicitud YA aprobada no envía nada: no se corta.
+  if (modoNuevo && tar && p.tarificacion_id && cuerpo.acunarExistente !== true) {
+    const riesgo = esObjeto(tar.peticion) && esObjeto(tar.peticion.risk) ? tar.peticion.risk : null
+    const previamenteAsegurado = riesgo && typeof riesgo.previouslyInsured === 'boolean' ? riesgo.previouslyInsured : null
+    const marca = await leerBonusTarificacion(correduria.id, p.tarificacion_id)
+    const deCuerpo = verificacionBonusDe(cuerpo.bonusVerificado)
+    const verificacion = deCuerpo ?? verificacionBonusDe(marca.verificacion)
+    const bloqueo = decidirBloqueoBonus({ ramo: tar.ramo, previamenteAsegurado, bonusSupuesto: marca.bonusSupuesto, verificacion })
+    if (bloqueo.bloquea) {
+      return NextResponse.json(
+        { estado: 'error', causa: bloqueo.causa, mensaje: bloqueo.mensaje, bonusSupuesto: marca.bonusSupuesto, fuentes: FUENTES_VERIFICACION_BONUS },
+        { status: 422 },
+      )
+    }
+    if (deCuerpo && marca.bonusSupuesto !== false) {
+      console.log(`[emitir] proyecto ${projectId}: bonus verificado por ${actor} (${deCuerpo.fuente}) — se sigue`)
+      await guardarVerificacionBonus(correduria.id, p.tarificacion_id, deCuerpo, actor)
+    }
+  }
 
   // 🚨 Si el cliente aceptó en el portal un presupuesto de ESTA tarificación, lo que se emite tiene
   // que ser la opción que FIRMÓ (compañía y prima). Fail-closed: si no se puede mirar, no se emite.

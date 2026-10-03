@@ -25,6 +25,7 @@ import {
   type CarnetExtra,
 } from './persona.ts'
 import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
+import { reparosMatricula, tieneMatricula } from './matricula-nueva.ts'
 
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
 export type DatosAuto = DatosPersona & {
@@ -155,6 +156,8 @@ export type OpcionesRevision = {
   paraEmitir?: boolean
   /** «Hoy» para la regla de la fecha de efecto (aaaa-mm-dd). Por defecto, hoy en Madrid; inyectable en tests. */
   hoy?: string
+  /** Vehículo NUEVO (auto-nuevo, 03/10/2026): la matrícula deja de ser obligatoria (`reparosMatricula`). */
+  vehiculoNuevo?: boolean
 }
 
 /**
@@ -209,9 +212,10 @@ export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevisi
   }
 
   // ── Obligatorios sin matiz ──
-  for (const c of ['codigoVehiculo', 'matricula', 'garaje'] as const) {
+  for (const c of ['codigoVehiculo', 'garaje'] as const) {
     if (!texto(d[c])) falta(c)
   }
+  for (const x of reparosMatricula(d, { vehiculoNuevo: opciones.vehiculoNuevo, hoy: opciones.hoy })) r.push(x)
   for (const c of ['fechaMatriculacion', 'fechaEfecto'] as const) {
     if (!texto(d[c])) falta(c)
     else if (!RE_FECHA.test(String(d[c]))) r.push({ campo: c, motivo: 'la fecha tiene que ser aaaa-mm-dd' })
@@ -363,8 +367,8 @@ function numero(v: unknown): boolean {
  * Lanza si los datos no pasan `revisarDatosAuto`: preferimos fallar aquí, gratis,
  * a mandar una petición que el vendor rechazará después de facturarla.
  */
-export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
-  const reparos = revisarDatosAuto(d)
+export function construirPeticionAuto(d: DatosAuto, opciones: Pick<OpcionesRevision, 'vehiculoNuevo'> = {}): Record<string, unknown> {
+  const reparos = revisarDatosAuto(d, { vehiculoNuevo: opciones.vehiculoNuevo })
   if (reparos.length > 0) {
     throw new Error(
       `codeoscopic_datos_incompletos: ${reparos.map((x) => `${x.campo} (${x.motivo})`).join(' · ')}`,
@@ -406,7 +410,8 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
 
   const riesgo: Record<string, unknown> = {
     vehicle: { code: d.codigoVehiculo },
-    registrationPlate: d.matricula.toUpperCase().replace(/\s/g, ''),
+    // Sin matrícula (vehículo nuevo) el campo se OMITE: ver `matricula-nueva.ts`.
+    ...(tieneMatricula(d) ? { registrationPlate: d.matricula.toUpperCase().replace(/\s/g, '') } : {}),
     registrationDate: d.fechaMatriculacion,
     // El vendor la exige. Por defecto, la de matriculación: es lo cierto salvo
     // que el coche sea de segunda mano, y en ese caso lo dice el formulario.

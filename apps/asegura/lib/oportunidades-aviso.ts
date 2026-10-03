@@ -47,7 +47,7 @@ const dia = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
 export async function oportunidadesEnAviso(
   correduriaId: string,
   hoy: string,
-): Promise<{ oportunidades: OportunidadAviso[]; truncado: boolean }> {
+): Promise<{ oportunidades: OportunidadAviso[]; truncado: boolean; sinVencimiento: number | null }> {
   const filas = await prismaAsegura().$queryRaw<Fila[]>(Prisma.sql`
     select o.id::text as id, c.id::text as "clienteId",
            nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente,
@@ -63,6 +63,16 @@ export async function oportunidadesEnAviso(
       and o.fecha_fin_vigencia is not null
     order by o.id
     limit ${MAX_FILAS + 1}`)
+  // Las abiertas SIN vencimiento no se avisan (no hay día del que restar 45): se cuentan para decirlo en el
+  // aviso en vez de callarlas. Si el recuento falla, `null` = no se sabe (nunca 0).
+  const sinVencimiento = await prismaAsegura()
+    .$queryRaw<{ n: bigint }[]>(Prisma.sql`
+      select count(*)::bigint as n from oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid
+        and o.estado::text in (${Prisma.join([...ESTADOS_OPORTUNIDAD_ABIERTA])})
+        and o.fecha_fin_vigencia is null`)
+    .then((r) => Number(r[0]?.n ?? 0))
+    .catch(() => null)
   const truncado = filas.length > MAX_FILAS
   const porId = new Map(filas.slice(0, MAX_FILAS).map((f) => [f.id, f]))
   const avisos = avisosOportunidadDeHoy(
@@ -78,5 +88,5 @@ export async function oportunidadesEnAviso(
       aseguradora: aseg, vence: a.vence, dias: a.dias, fueCliente: f.fueCliente,
     }
   })
-  return { oportunidades, truncado }
+  return { oportunidades, truncado, sinVencimiento }
 }
