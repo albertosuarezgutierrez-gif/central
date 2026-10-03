@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Fragment } from 'react'
 import { NECESARIOS_EMISION_AUTO, alertaVencimiento, fechaPintable, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, lineaConductor } from '@central/module-seguros'
 import type { CapitalAsegurado } from '@central/module-seguros'
 import { esEstadoVigente } from '@central/module-seguros'
@@ -641,7 +642,8 @@ function TablaRecibos({ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos'];
             const efecto = x.fechaEfecto ? fechaPintable(x.fechaEfecto) : null
             const vence = x.fechaVencimiento ? fechaPintable(x.fechaVencimiento) : null
             return (
-            <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
+            <Fragment key={x.id}>
+            <tr style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
               <td data-label="Emitido" style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
               <td data-label="Importe" style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 600 }}>{x.importe === null ? <span style={muted} title="Importe con forma inesperada en el EIAC">ilegible</span> : eur(x.importe)}</td>
               <td data-rol="cabeza" style={td}>
@@ -693,6 +695,17 @@ function TablaRecibos({ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos'];
                 </td>
               )}
             </tr>
+            {/* «Más datos de CIMA» del recibo: plegado; `null` = aún no leído → no hay fila (no se dice «sin datos»). */}
+            {x.cimaExtra !== null && (
+              <tr>
+                <td colSpan={6 + (hayComision ? 1 : 0) + (hayNeta ? 1 : 0)} style={{ ...td, paddingTop: 0 }}>
+                  <Plegable titulo="Más datos de CIMA" resumen={`${x.cimaExtra.reduce((n, g) => n + g.filas.length, 0)} campos`}>
+                    <MasDatosCima grupos={x.cimaExtra} truncado={x.cimaExtraTruncado} />
+                  </Plegable>
+                </td>
+              </tr>
+            )}
+            </Fragment>
             )
           })}
         </tbody>

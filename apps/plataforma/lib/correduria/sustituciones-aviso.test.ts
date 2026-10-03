@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mensajeSustituciones, type SustitucionAviso } from './sustituciones-aviso.ts'
+import { mensajeDobleSeguro, mensajeSustituciones, type SustitucionAviso } from './sustituciones-aviso.ts'
 
 test('mensajeSustituciones: lista vacía → null, nunca un mensaje de «0 pendientes»', () => {
   assert.equal(mensajeSustituciones([]), null)
@@ -37,4 +37,21 @@ test('mensajeSustituciones: más de 20 filas, se trunca con recuento del resto',
   }))
   const msg = mensajeSustituciones(filas)
   assert.ok(msg?.includes('y 5 más'))
+})
+
+test('mensajeDobleSeguro: vacío → null; con avisos lista el texto sin datos personales', () => {
+  assert.equal(mensajeDobleSeguro([]), null)
+  const msg = mensajeDobleSeguro([{ texto: 'posible doble seguro: pedir anulación de GPAFS0900547 a C0468' }])
+  assert.ok(msg?.includes('pedir anulación de GPAFS0900547 a C0468'))
+})
+
+test('interpretarSustituciones: dobleSeguro ausente → null (≠ []), presente se lee y lo ilegible se descarta', async () => {
+  const { interpretarSustituciones } = await import('../correduria-puerto.ts')
+  const base = { estado: 'ok', sustituciones: [] }
+  const sin = interpretarSustituciones(200, base)
+  assert.equal(sin.estado === 'ok' && sin.dobleSeguro, null)
+  const vacio = interpretarSustituciones(200, { ...base, dobleSeguro: [] })
+  assert.deepEqual(vacio.estado === 'ok' && vacio.dobleSeguro, [])
+  const con = interpretarSustituciones(200, { ...base, dobleSeguro: [{ polizaViejaId: 'a', polizaNuevaId: 'b', texto: 't' }, { texto: 'sin ids' }, 7] })
+  assert.deepEqual(con.estado === 'ok' && con.dobleSeguro, [{ polizaViejaId: 'a', polizaNuevaId: 'b', texto: 't' }])
 })

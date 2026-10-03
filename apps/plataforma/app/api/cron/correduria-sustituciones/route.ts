@@ -15,7 +15,7 @@ import { tgAviso } from '@/lib/telegram'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { sustitucionesAsegura } from '@/lib/correduria-puerto'
-import { mensajeSustituciones } from '@/lib/correduria/sustituciones-aviso'
+import { mensajeDobleSeguro, mensajeSustituciones } from '@/lib/correduria/sustituciones-aviso'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -44,7 +44,18 @@ export async function GET(req: NextRequest) {
     })),
   )
 
+  const mensajeDoble = r.dobleSeguro === null ? null : mensajeDobleSeguro(r.dobleSeguro)
+
   let enviado = false
+  if (mensajeDoble) {
+    try {
+      await tgAviso('correduria.sustitucion-doble-seguro', mensajeDoble)
+      enviado = true
+    } catch (e) {
+      await registrarLatido(AGENTE, false, `Telegram falló: ${String(e).slice(0, 120)}`)
+      return NextResponse.json({ ok: false, motivo: 'telegram', dobleSeguro: r.dobleSeguro?.length ?? 0 }, { status: 200 })
+    }
+  }
   if (mensaje) {
     try {
       await tgAviso('correduria.sustitucion-seguimiento', mensaje)

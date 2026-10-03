@@ -35,3 +35,14 @@ export function mensajeSustituciones(filas: readonly SustitucionAviso[]): string
   const pie = filas.length > 20 ? `\n\n… y ${filas.length - 20} más. Lista completa en /correduria.` : ''
   return cabecera + lineas + pie
 }
+
+/**
+ * Avisos de «póliza sustituida que sigue viva». `null` = nada que avisar. Sin PII: solo el texto de la señal
+ * (nº de póliza + compañía) que ya compuso `avisoDobleSeguro`.
+ */
+export function mensajeDobleSeguro(avisos: readonly { texto: string }[]): string | null {
+  if (avisos.length === 0) return null
+  const lineas = avisos.slice(0, 20).map((a) => `• ${a.texto}`).join('\n')
+  const pie = avisos.length > 20 ? `\n… y ${avisos.length - 20} más.` : ''
+  return `⚠️ *Posible doble seguro · Grupo ASegura*\n${avisos.length} póliza(s) sustituida(s) siguen vivas:\n\n${lineas}${pie}`
+}

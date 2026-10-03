@@ -565,6 +565,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 06:35, y solo si hay alguna pendiente',
   },
   {
+    id: 'correduria.sustitucion-doble-seguro', categoria: 'correduria',
+    titulo: 'Póliza sustituida que sigue viva (posible doble seguro)',
+    que: 'Pólizas ya sustituidas por otra de otra compañía cuya vieja sigue en vigor (vencimiento o recibos posteriores al efecto de la nueva): hay que pedir su anulación.',
+    cuando: 'Todos los días a las 06:35, junto al seguimiento de sustituciones, y solo si hay alguna',
+  },
+  {
     id: 'correduria.emision-retenida', categoria: 'correduria',
     titulo: 'Emisiones retenidas por la compañía (riesgo condicionado)',
     que: 'Pólizas emitidas desde Avant2 que la compañía dejó retenidas y que han cambiado: liberadas (ya en cartera) o rechazadas, más cuántas siguen retenidas.',
