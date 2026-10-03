@@ -15,13 +15,27 @@ import { interpretarFichaDocumento, interpretarOportunidadDocumento, textoFichaD
  */
 export type LecturaOk = Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>
 
-/** Qué se manda además del fichero. SubirPoliza: `{tomador, crear}`; FormAlta: `{clienteId}`. */
+/** Qué se manda además del fichero. SubirPoliza: `{tomador, crear}`; FormAlta: `{clienteId, crear}`. */
 export type OpcionesLeerPoliza = {
   clienteId?: string
   tomador?: boolean
   crear?: boolean
   /** Se llama con la lectura buena, antes de que la pantalla repinte (FormAlta rellena sus campos). */
   onLectura?: (l: LecturaOk) => void
+}
+
+/** La oportunidad que el servidor dice haber abierto (o encontrado ya abierta) con `crear`. */
+export type OportunidadAbierta = { oportunidadId: string; estado: 'creada' | 'actualizada'; clienteId: string | null }
+
+/** Solo con estado `creada`/`actualizada` Y un id: cualquier otra cosa no afirma que haya oportunidad. */
+function oportunidadAbierta(v: unknown): OportunidadAbierta | null {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  if (o.estado !== 'creada' && o.estado !== 'actualizada') return null
+  const id = typeof o.oportunidadId === 'string' ? o.oportunidadId.trim() : ''
+  if (!id) return null
+  const cli = typeof o.clienteId === 'string' && o.clienteId.trim() !== '' ? o.clienteId.trim() : null
+  return { oportunidadId: id, estado: o.estado, clienteId: cli }
 }
 
 export const enlaceStyle = { ...btnStyle('secundario', 'sm'), minHeight: 44, textDecoration: 'none', justifyContent: 'flex-start' } as const
@@ -37,6 +51,8 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
   const [fichaIncierta, setFichaIncierta] = useState(false)
   // `null` = no se ha tocado ninguna ficha; `undefined` = asegura no lo dice (no se afirma nada).
   const [ficha, setFicha] = useState<FichaDocumento | null | undefined>(undefined)
+  // Con `crear`: la oportunidad que el servidor ha abierto o encontrado ya abierta (`null` = no consta).
+  const [abierta, setAbierta] = useState<OportunidadAbierta | null>(null)
 
   async function leer(f: File) {
     setLeyendo(true)
@@ -46,6 +62,7 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
     setFicha(undefined)
     setSinGuardar(false)
     setFichaIncierta(false)
+    setAbierta(null)
     let status = 0
     let json: unknown = null
     try {
@@ -69,9 +86,12 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
     }
     setLeyendo(false)
     const l = interpretarLecturaOportunidad(status, json)
-    if (l.estado === 'error') { setMotivoError(l.motivo); return }
-    setLectura(l)
     const j = json as Record<string, unknown> | null
+    const yaAbierta = oportunidadAbierta(j?.oportunidad)
+    // Un fallo de lectura no tapa una oportunidad que el servidor sí dice haber abierto.
+    if (l.estado === 'error' && !yaAbierta) { setMotivoError(l.motivo); return }
+    if (l.estado === 'ok') setLectura(l)
+    setAbierta(yaAbierta)
     const bruta = j?.oportunidad as { estado?: unknown; clienteId?: unknown } | null | undefined
     const falloOportunidad = bruta != null && typeof bruta === 'object' && bruta.estado === 'error'
     const aviso = interpretarOportunidadDocumento(j?.oportunidad)
@@ -82,11 +102,11 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
     // asegura dice si guardó el fichero; si no lo dice (versión anterior), no se afirma nada.
     setSinGuardar(j?.oportunidad != null && j?.ficheroGuardado === false)
     setFicha(j?.oportunidad != null ? interpretarFichaDocumento(j?.ficha) : undefined)
-    onLectura?.(l)
+    if (l.estado === 'ok') onLectura?.(l)
   }
 
   return {
-    leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta,
+    leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta, abierta,
     /** La oportunidad o la ficha ya llevan al usuario a un sitio: el resto de salidas sobra. */
     conOportunidad: Boolean(oportunidad?.clienteId || ficha),
   }
