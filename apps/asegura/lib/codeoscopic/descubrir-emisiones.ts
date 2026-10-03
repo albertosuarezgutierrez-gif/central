@@ -8,7 +8,7 @@
 //      ventana de los últimos N días (por defecto 14).
 //   2. Por cada id: ¿ya está acuñado en la intranet? → se salta. Si no, `GET /insurances/{id}`
 //      (gratis) y se decide:
-//        · auto/moto con UNA sola ficha cuyo hash de documento casa con el del tomador →
+//        · auto/moto/hogar/vida/salud/decesos con UNA sola ficha cuyo hash de documento casa con el del tomador →
 //          `sincronizarEmisionExterna()` (la misma que el botón y `/retenidas`: crea/actualiza la
 //          fila y acuña si Avant2 ya da nº de póliza, con su candado y su comprobación de tomador).
 //        · 0 o varias fichas, sin documento, ramo que no se acuña, estado desconocido, bloqueo →
@@ -413,7 +413,7 @@ export async function procesarProyecto(
   return { tipo: 'registrada', estado: r.despues }
 }
 
-/** Hogar, salud, vida, decesos…: la intranet no los acuña sola. Emitida con nº → «emitida sin acuñar». */
+/** Un ramo que `RAMO_DE_LINEA` no conoce (RC, comercio, mascotas…): la intranet no lo acuña sola. Emitida con nº → «emitida sin acuñar». */
 async function emisionNoAcunable(
   emision: EmisionExterna,
   encolar: (m: MotivoRevision, extra?: Partial<Pick<ItemRevision, 'coincidencias' | 'clienteId' | 'detalle'>>) => Promise<DesenlaceProyecto>,

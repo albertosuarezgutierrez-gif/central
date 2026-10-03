@@ -46,8 +46,8 @@ export default async function DecesosNuevoPage({ params, searchParams }: { param
           marginTop: 10,
         }}
       >
-        <ConIcono i={Construction}>El contrato de este ramo con Codeoscopic <strong>no está verificado</strong>, y hoy solo cubre
-        al tomador como único asegurado (sin cobertura familiar). El primer intento real puede fallar con
+        <ConIcono i={Construction}>El contrato de este ramo con Codeoscopic <strong>no está verificado</strong>. Cubre al tomador y a los
+        asegurados adicionales que añadas (sin parentesco ni capital por persona: no existen en la API). El primer intento real puede fallar con
         un mensaje que pida un campo que hoy no se manda; no reintentes varias veces seguidas — cada
         intento cuesta 0,50€ reales.</ConIcono>
       </div>
