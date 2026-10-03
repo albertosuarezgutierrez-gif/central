@@ -7,7 +7,7 @@
 //   1. Config          → si está apagada o incompleta, no hay llamada.
 //   2. Ámbito          → sin correduría no hay libro contra el que contar.
 //   3. Libro           → si no se puede leer, NO se cotiza (fail closed).
-//   4. Tope            → decisión pura, ya probada.
+//   4. Tope            → decisión pura, ya probada (consultas/día y EUROS/mes).
 //   5. Reserva         → se escribe ANTES de llamar.
 //   6. Llamada         → un solo intento.
 //   7. Cierre          → facturable, o descartado CON evidencia.
@@ -31,6 +31,7 @@ import { cotizacionSimulada } from './simulacion.ts'
 import { enlazarPresupuestoConOportunidad } from './oportunidad-presupuesto.ts'
 import { aniosDelCuerpo, aplicarTopesHistorial, topesDelMensaje, type TopesHistorial } from '@central/module-seguros'
 import { guardarTopesHistorial, leerTopesHistorial } from './topes-historial.ts'
+import { comprobarTopeEuros } from './tope-euros-bd.ts'
 import {
   guardarSinTumbar,
   type ContextoCotizacion,
@@ -279,6 +280,11 @@ export async function cotizar(
   // 4 — Tope
   const veredicto = puedeCotizar(consumo, config.topes)
   if (!veredicto.permitido) return { ok: false, razon: 'tope', mensaje: veredicto.explicacion }
+
+  // 4a — Tope en EUROS del mes (decisión de Alberto, 29/09/2026): aviso a 60 €, bloqueo a 70 € hasta
+  // que amplíe por Telegram. Fail-closed: sin poder leer el gasto del mes, no se llama.
+  const euros = await comprobarTopeEuros(p.correduriaId, COSTE_COTIZACION_CENTS, env)
+  if (!euros.ok) return { ok: false, razon: euros.razon, mensaje: euros.mensaje }
 
   // 4b — Topes APRENDIDOS del historial del seguro anterior (29/09/2026): el máximo declarado se
   // recorta a lo que el vendor ya rechazó una vez, para que ese 400 no vuelva a salir.

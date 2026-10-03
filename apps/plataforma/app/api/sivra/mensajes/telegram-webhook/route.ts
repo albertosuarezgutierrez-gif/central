@@ -28,6 +28,7 @@ import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocume
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
 import { esPreguntaPatrimonio, esComandoPatrimonio } from '@/lib/patrimonio-chat'
 import { decidirBlogPr } from '@/lib/correduria/blog-pr'
+import { ACCION_BOTON_TOPE, ampliarTopeAvant2 } from '@/lib/correduria/tope-avant2'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -796,6 +797,20 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       // el id del chat es el de la persona.
       if ((action === 'emitir' || action === 'corregir' || action === 'oport' || action === 'acc' || action === 'guardar' || action === 'actualizar' || action === 'tarif') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
         await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
+        return NextResponse.json({ ok: true })
+      }
+      // «Autorizar +30 €» del tope de gasto de Avant2 (`cas_tope:<AAAAMM>-<nivel>`). Mueve el tope de
+      // gasto: solo la PERSONA autorizada, como emitir. Idempotente en asegura (mismo botón = +30 € una vez).
+      if (action === ACCION_BOTON_TOPE) {
+        if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+          await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
+          return NextResponse.json({ ok: true })
+        }
+        const r = await ampliarTopeAvant2(args[0] || '', String(cb.from?.id ?? ''), String(cb.id))
+        await tgAnswerCallback(cb.id, r.toast)
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id, `${escapeHtml(cb.message.text ?? '')}\n\n${r.linea}`).catch(() => {})
+        }
         return NextResponse.json({ ok: true })
       }
       if (action === 'emitir') {
