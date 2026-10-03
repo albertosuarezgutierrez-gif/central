@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  ESPEC_COMERCIO, aplicarEdicionComercio, faltanDatosComercio, leerDatosComercio, motivoNoConfirmableComercio,
+  COMPANIAS_COMERCIO, ESPEC_COMERCIO, ESPEC_OCCIDENT, ESPEC_REALE, aplicarEdicionComercio, faltanDatosComercio, leerDatosComercio, motivoNoConfirmableComercio,
   precargaComercioDePoliza, textoFaltanComercio, validarDatosComercioRiesgo,
 } from './datos-comercio-riesgo.ts'
 import { calcularEdicionRiesgo, fusionarInfoRiesgoClave, leerBloqueDeRamo } from './datos-riesgo-ramo.ts'
@@ -11,23 +11,33 @@ const AHORA = '2026-09-30T10:00:00.000Z'
 const OP = { confirmar: false, ahora: AHORA }
 
 const completo = {
-  actividad: 'Bar con cocina', direccion: 'Calle Socorro 24', cp: '41003', localidad: 'Sevilla', provincia: 'Sevilla',
+  actividad: 'Bar con cocina', familiaActividad: 'Hostelería y restauración', numeroEmpleados: 3, direccion: 'Calle Socorro 24', cp: '41003', localidad: 'Sevilla', provincia: 'Sevilla',
   metrosCuadrados: 85, regimenLocal: 'inquilino', capitales: [{ bien: 'CONTENIDO', importe: 20000 }],
 }
 const ok = (p: unknown) => { const v = validarDatosComercioRiesgo(p, { hoy: HOY }); assert.ok(v.ok, JSON.stringify(v)); return v.valor }
 const errores = (p: unknown) => { const v = validarDatosComercioRiesgo(p, { hoy: HOY }); assert.equal(v.ok, false); return v.ok ? [] : v.errores.map((e) => e.campo) }
 
-test('la especificación escalar es EXACTAMENTE la de CIMA + regimenLocal (nada de cocina, aforo ni empleados)', () => {
+test('la especificación escalar es EXACTAMENTE la de CIMA + regimenLocal + los comunes de Avant2 (nada de cocina)', () => {
   assert.deepEqual(ESPEC_COMERCIO.map((c) => c.clave), [
     'actividad', 'direccion', 'otrosDatosVia', 'cp', 'localidad', 'provincia', 'metrosCuadrados', 'superficieTotal', 'anioConstruccion', 'zona', 'regimenLocal',
+    'familiaActividad', 'numeroEmpleados', 'facturacionAnual', 'situacion', 'tipoEdificio', 'soloPlantaBaja', 'reformado', 'anioReforma',
+    'materiales', 'calidadConstruccion', 'conservacionBuena', 'instalacionElectricaRevisada', 'aforo', 'superficieExterior',
   ])
-  const v = ok({ actividad: 'Bar', aforo: 40, empleados: 3, cocina: true })
+  const v = ok({ actividad: 'Bar', empleados: 3, cocina: true })
   assert.deepEqual(v, { actividad: 'Bar' }, 'lo que no es del bloque no se cuela al JSON guardado')
 })
 
-test('faltan para tarificar: actividad, situación, superficie, régimen y al menos un capital (>0); sin ficha = falta todo', () => {
-  assert.deepEqual(faltanDatosComercio(null), ['actividad', 'situacion', 'superficie', 'regimenLocal', 'capitales'])
+test('faltan para tarificar: actividad, familia, empleados, situación, superficie, régimen, capital (>0) y modalidad si hay continente; sin ficha = falta todo', () => {
+  assert.deepEqual(faltanDatosComercio(null), ['actividad', 'familiaActividad', 'numeroEmpleados', 'situacion', 'superficie', 'regimenLocal', 'capitales'])
   const d = aplicarEdicionComercio(null, ok(completo), OP).datos
+  assert.deepEqual(faltanDatosComercio({ ...d, familiaActividad: null }), ['familiaActividad'])
+  assert.deepEqual(faltanDatosComercio({ ...d, numeroEmpleados: null }), ['numeroEmpleados'])
+  assert.deepEqual(faltanDatosComercio({ ...d, numeroEmpleados: 0 }), [], '0 empleados es un dato')
+  const cont = (modalidad: string | null, importe = 90000) => [{ bien: 'CONTINENTE' as const, importe, modalidad, descripcion: null }]
+  assert.deepEqual(faltanDatosComercio({ ...d, capitales: cont(null) }), ['modalidadContinente'])
+  assert.deepEqual(faltanDatosComercio({ ...d, capitales: cont('Valor de reposición') }), [])
+  assert.deepEqual(faltanDatosComercio({ ...d, capitales: [...cont(null, 0), ...(d.capitales ?? [])] }), [], 'continente de 0: no se exige modalidad')
+  assert.deepEqual(faltanDatosComercio({ ...d, porCompania: { occident: { descuento: null } as never } }), [], 'lo de cada compañía no cuenta')
   assert.deepEqual(faltanDatosComercio(d), [])
   assert.deepEqual(faltanDatosComercio({ ...d, direccion: null }), ['situacion'])
   assert.deepEqual(faltanDatosComercio({ ...d, cp: null }), ['situacion'])
@@ -81,7 +91,7 @@ test('tres estados en las listas y en el sello: null ≠ [] ≠ con filas; edita
   const vacio = leerBloqueDeRamo('comercio', {})
   assert.equal(vacio.datos.capitales, null)
   assert.equal(vacio.datos.medidasProteccion, null)
-  assert.deepEqual(vacio.faltan, ['actividad', 'situacion', 'superficie', 'regimenLocal', 'capitales'])
+  assert.deepEqual(vacio.faltan, ['actividad', 'familiaActividad', 'numeroEmpleados', 'situacion', 'superficie', 'regimenLocal', 'capitales'])
   const a = aplicarEdicionComercio(null, ok({ actividad: 'Bar', capitales: [] }), OP)
   assert.deepEqual(a.datos.capitales, [])
   assert.deepEqual(a.cambios.map((c) => [c.campo, c.antes, c.despues]), [['actividad', null, 'Bar'], ['capitales', null, 'ninguno']])
@@ -108,7 +118,7 @@ test('confirmar: sin ningún dato no; con una lista revisada vacía sí (es algo
   assert.equal(motivoNoConfirmableComercio(aplicarEdicionComercio(null, { capitales: [] }, OP).datos), null)
   assert.equal(calcularEdicionRiesgo({ ramo: 'comercio', clave: 'datosComercio', info: {}, parcial: {}, confirmar: true, ahora: AHORA }).ok, false)
   const r = calcularEdicionRiesgo({ ramo: 'comercio', clave: 'datosComercio', info: {}, parcial: { actividad: 'Bar' }, confirmar: true, ahora: AHORA, hoy: HOY })
-  assert.ok(r.ok && r.datos.confirmadoAt === AHORA && r.faltan.length === 4)
+  assert.ok(r.ok && r.datos.confirmadoAt === AHORA && r.faltan.length === 6)
 })
 
 test('lectura tolerante: un tipo raro es «no se sabe»; lo que no se reconoce se ignora', () => {
@@ -170,4 +180,108 @@ test('precarga de póliza: lo que escribe el mapper de CIMA, sin cifrado ni caj�
   assert.equal(s.datos.actividad, 'Tienda')
   assert.equal(s.datos.direccion, null)
   assert.equal(s.dePoliza, false)
+})
+
+test('comunes de Avant2: sí/no son boolean|null (nunca false por defecto), números sin ?? 0, texto libre, rangos', () => {
+  const vacio = leerDatosComercio({})!
+  for (const k of ['soloPlantaBaja', 'reformado', 'conservacionBuena', 'instalacionElectricaRevisada', 'numeroEmpleados', 'facturacionAnual', 'aforo', 'superficieExterior', 'anioReforma', 'familiaActividad', 'situacion', 'tipoEdificio', 'materiales', 'calidadConstruccion'] as const) {
+    assert.equal(vacio[k], null, k)
+  }
+  assert.equal(vacio.porCompania, null)
+  const v = ok({ familiaActividad: 'Hostelería y restauración', numeroEmpleados: '3', facturacionAnual: '120.000,50', soloPlantaBaja: false, reformado: true, anioReforma: 2015, conservacionBuena: true, instalacionElectricaRevisada: null, aforo: 40, superficieExterior: 0 })
+  assert.deepEqual(v, { familiaActividad: 'Hostelería y restauración', numeroEmpleados: 3, facturacionAnual: 120000.5, soloPlantaBaja: false, reformado: true, anioReforma: 2015, conservacionBuena: true, instalacionElectricaRevisada: null, aforo: 40, superficieExterior: 0 })
+  assert.deepEqual(errores({ soloPlantaBaja: 'si' }), ['soloPlantaBaja'])
+  assert.deepEqual(errores({ reformado: 1 }), ['reformado'])
+  assert.deepEqual(errores({ numeroEmpleados: 2.5 }), ['numeroEmpleados'])
+  assert.deepEqual(errores({ numeroEmpleados: -1 }), ['numeroEmpleados'])
+  assert.deepEqual(errores({ facturacionAnual: -5 }), ['facturacionAnual'])
+  assert.deepEqual(errores({ aforo: 0 }), ['aforo'])
+  assert.deepEqual(errores({ anioReforma: 1400 }), ['anioReforma'])
+  assert.deepEqual(errores({ situacion: 'x'.repeat(81) }), ['situacion'])
+  // `false` es un dato y cuenta para confirmar; `null` borra el sí/no.
+  const d = aplicarEdicionComercio(null, ok({ reformado: false }), OP)
+  assert.equal(d.datos.reformado, false)
+  assert.equal(motivoNoConfirmableComercio(d.datos), null)
+  assert.deepEqual(d.cambios.map((c) => [c.campo, c.antes, c.despues]), [['reformado', null, false]])
+  assert.equal(aplicarEdicionComercio(d.datos, ok({ reformado: null }), OP).datos.reformado, null)
+  // Leer: un tipo raro es «no se sabe».
+  const r = leerDatosComercio({ reformado: 'si', soloPlantaBaja: 0, numeroEmpleados: '3', aforo: 40, conservacionBuena: false })!
+  assert.equal(r.reformado, null)
+  assert.equal(r.soloPlantaBaja, null)
+  assert.equal(r.numeroEmpleados, null)
+  assert.equal(r.aforo, 40)
+  assert.equal(r.conservacionBuena, false)
+})
+
+test('porCompania: Occident 17 + Reale 21, tres estados, fusión por clave, sin pisar lo ajeno ni confirmar de más', () => {
+  assert.equal(ESPEC_OCCIDENT.length, 17)
+  assert.equal(ESPEC_REALE.length, 21)
+  assert.deepEqual(COMPANIAS_COMERCIO, ['occident', 'reale'])
+  // Validación
+  assert.deepEqual(errores({ porCompania: [] }), ['porCompania'])
+  assert.deepEqual(errores({ porCompania: { occident: { aforoMaximo: 0, colectivo: 'si' } } }), ['porCompania.occident.colectivo', 'porCompania.occident.aforoMaximo'])
+  assert.deepEqual(errores({ porCompania: { reale: { capitalRoboContinente: -1 } } }), ['porCompania.reale.capitalRoboContinente'])
+  assert.deepEqual(ok({ porCompania: { axa: { x: 1 }, occident: { actividadTemporada: false, descuento: '50', inventada: 1 } } }), { porCompania: { occident: { actividadTemporada: false, descuento: 50 } } })
+  assert.deepEqual(ok({ porCompania: null }), { porCompania: null })
+  // Aplicar: crea el bloque con TODAS las claves (null = no se sabe), solo la compañía editada
+  const a = aplicarEdicionComercio(null, ok({ porCompania: { occident: { aforoMaximo: 60, sotano: true } } }), OP)
+  assert.equal(a.datos.porCompania?.reale, undefined, 'la otra compañía no se inventa')
+  assert.equal(Object.keys(a.datos.porCompania!.occident!).length, 17)
+  assert.equal(a.datos.porCompania!.occident!.aforoMaximo, 60)
+  assert.equal(a.datos.porCompania!.occident!.actividadTemporada, null, 'sin mirar = null, no false')
+  assert.deepEqual(a.cambios.map((c) => [c.campo, c.antes, c.despues]), [['porCompania.occident.aforoMaximo', null, 60]])
+  // Segunda edición: fusiona claves y compañías sin pisar lo que ya había
+  const sellado = aplicarEdicionComercio(a.datos, {}, { confirmar: true, ahora: AHORA }).datos
+  const b = aplicarEdicionComercio(sellado, ok({ porCompania: { occident: { descuento: 10 }, reale: { sotano: false, aforo: 30 } } }), OP)
+  assert.equal(b.datos.porCompania!.occident!.aforoMaximo, 60)
+  assert.equal(b.datos.porCompania!.occident!.descuento, 10)
+  assert.equal(b.datos.porCompania!.reale!.sotano, false)
+  assert.equal(Object.keys(b.datos.porCompania!.reale!).length, 21)
+  assert.equal(b.datos.confirmadoAt, null, 'editar lo de una compañía borra el sello')
+  // Sin cambios reales: ni cambio ni sello borrado ni bloque nuevo
+  const c = aplicarEdicionComercio(sellado, ok({ porCompania: { occident: { aforoMaximo: 60 }, reale: { sotano: null } } }), OP)
+  assert.equal(c.cambios.length, 0)
+  assert.equal(c.datos.confirmadoAt, AHORA)
+  assert.equal(c.datos.porCompania!.reale, undefined)
+  // Borrar el bloque de una compañía / todo
+  const d = aplicarEdicionComercio(b.datos, { porCompania: { reale: null } }, OP)
+  assert.equal(d.datos.porCompania!.reale, undefined)
+  assert.ok(d.datos.porCompania!.occident)
+  assert.equal(aplicarEdicionComercio(b.datos, { porCompania: null }, OP).datos.porCompania, null)
+  // Lectura tolerante + round trip por el puerto: clave ajena de info_riesgo y de otras compañías intactas
+  const l = leerDatosComercio({ porCompania: { occident: { aforoMaximo: '60', colectivo: true, confirmadoAt: 'x' }, axa: { z: 1 } } })!
+  assert.equal(l.porCompania!.occident!.aforoMaximo, null)
+  assert.equal(l.porCompania!.occident!.colectivo, true)
+  assert.equal('axa' in l.porCompania!, false)
+  assert.equal('confirmadoAt' in l.porCompania!.occident!, false)
+  assert.equal(leerDatosComercio({ porCompania: 'x' })!.porCompania, null)
+  const viejo = { origen: 'x', datosComercio: { actividad: 'Bar' } }
+  const r = calcularEdicionRiesgo({ ramo: 'comercio', clave: 'datosComercio', info: viejo, parcial: { porCompania: { reale: { aforo: 20 } } }, confirmar: false, ahora: AHORA, hoy: HOY })
+  assert.ok(r.ok)
+  assert.equal(r.infoNueva.origen, 'x')
+  assert.equal((r.infoNueva.datosComercio as { actividad: string }).actividad, 'Bar')
+  assert.equal(r.faltan.includes('familiaActividad'), true)
+})
+
+test('precarga de póliza: ninguno de los campos nuevos viene de CIMA (no se precarga nada de ellos)', () => {
+  const p = precargaComercioDePoliza({ actividad: 'Bar', aforo: 40, numeroEmpleados: 3, familiaActividad: 'x', facturacionAnual: 100, porCompania: { occident: { aforoMaximo: 3 } } })
+  assert.deepEqual(p, { actividad: 'Bar' })
+})
+
+test('porCompania: un bloque con todas las claves null NO es dato (se poda al fusionar y al leer; no deja confirmar)', () => {
+  const lleno = aplicarEdicionComercio(null, ok({ porCompania: { occident: { aforoMaximo: 60 } } }), OP)
+  assert.equal(lleno.datos.porCompania!.occident!.aforoMaximo, 60)
+  const vaciado = aplicarEdicionComercio(lleno.datos, ok({ porCompania: { occident: { aforoMaximo: null } } }), OP)
+  assert.equal(vaciado.datos.porCompania, null, 'sin compañías con dato -> null')
+  // con otra compañía con dato, solo desaparece la vacía
+  const dos = aplicarEdicionComercio(lleno.datos, ok({ porCompania: { reale: { sotano: true } } }), OP)
+  const resto = aplicarEdicionComercio(dos.datos, ok({ porCompania: { occident: { aforoMaximo: null } } }), OP)
+  assert.equal(resto.datos.porCompania!.occident, undefined)
+  assert.equal(resto.datos.porCompania!.reale!.sotano, true)
+  // ya guardado como bloque todo-null: la lectura lo ignora
+  const guardado = leerDatosComercio({ porCompania: { occident: { aforoMaximo: null, descuento: null } } })!
+  assert.equal(guardado.porCompania, null)
+  // y el motivo sigue diciendo que falta
+  assert.match(motivoNoConfirmableComercio({ ...guardado, porCompania: { occident: { aforoMaximo: null } } as never })!, /sin ningún dato/)
+  assert.match(motivoNoConfirmableComercio(vaciado.datos)!, /sin ningún dato/)
 })

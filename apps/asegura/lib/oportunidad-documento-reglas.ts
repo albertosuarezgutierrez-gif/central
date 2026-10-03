@@ -165,6 +165,17 @@ export function puedeVolcarEnFicha(e: {
   return true
 }
 
+/**
+ * ¿Se abren fichas y relaciones para las FIGURAS de la póliza (propietario, conductores)? Solo si
+ * sube el CORREDOR (03/10/2026, revisión): desde el portal o el enlace de datos sube el cliente, y
+ * una relación «Otra» nueva aparece en sus sugerencias del portal (nombre de un tercero y una puerta
+ * para pedir acceso a sus pólizas). Además, lo mismo que `puedeVolcarEnFicha`.
+ */
+export function puedeAbrirFiguras(e: Parameters<typeof puedeVolcarEnFicha>[0]): boolean {
+  if (ORIGENES_DEL_CLIENTE.includes(e.origen)) return false
+  return puedeVolcarEnFicha(e)
+}
+
 /** El tomador tal como sale del documento para abrir su lead. `dni` = su DNI/NIE o, de una empresa, su CIF. */
 export type AltaTomador = { nombre: string; apellidos: string; dni: string | null; tipoPersona: 'fisica' | 'juridica' | null }
 

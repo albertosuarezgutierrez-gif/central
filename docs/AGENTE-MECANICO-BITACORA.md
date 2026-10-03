@@ -12,6 +12,7 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (03/10/2026) pasada SEO: CTR 2 artículos (preaviso 363 impr/0 clics, como-dar-de-baja 202 impr/1 clic) + keywords.md §5 — sesión — ok (189 tests articulos + ramos pass, 0 fail; tsc 0 errores)
 - 03/10/2026 · memoria+skill cierre CIMA (LOO-806) · ok
 - (03/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (migración 0105 cierre CIMA), SKILL.md cima-ingesta (rescate sinConfirmarTirea, recorte de lote, limpieza) — sesión — ok
 
@@ -48,3 +49,4 @@
 | 30/09/2026 | asegura-web: cabecera con herramientas + chips móvil | agente-mecanico | fallo: montaba el panel solo al abrir (SEO), el chip móvil no abría nada, CSS con tokens inexistentes, no midió con Playwright y cambió el origen histórico del portal. Rehecho por la sesión |
 | 30/09/2026 | asegura-web: «siguiente paso» en 4 herramientas | agente-mecanico | ok parcial: anclas a formularios inexistentes (#presupuesto en páginas sin él, PORTAL_URL como «que me llamen») y quitó el bloque «Guardar mis pólizas». Corregido por la sesión |
 | 30/09/2026 | regla sesión ordena / agentes ejecutan en CLAUDE.md | agente-mecanico | ok |
+| 03/10/2026 | asegura-web: ramo `salud-sin-copago` + noindex/robots de asegura-portal | general-purpose | ok parcial: la 301 de /mejoramos-tu-seguro ya existía hacia /cambiar-de-correduria (decisión documentada) y no se cambió a / |

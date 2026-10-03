@@ -728,6 +728,7 @@ export const POST = auditado(async (req: Request) => {
   // asume por defecto, ver comentario de `conProductoPorDefecto`.
   const camposConProducto = conProductoPorDefecto(camposEnvio, p.aseguradora, {
     familiaAllianz: cuerpo.familiaEnAllianz === true,
+    ramo: ctx.tipo,
   })
 
   // GRATIS: lo que el vendor dice que hace falta. Informativo — no bloquea el

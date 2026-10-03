@@ -187,7 +187,7 @@ export const POST = auditado(async (req: Request) => {
   // del vendor (el PATCH de fecha o de personas invalida sus cotizaciones aunque sea gratis).
   if (descuentosPedidos && !productOptionsCorredor && !opcionesPorDefecto(compania, producto)) {
     return NextResponse.json(
-      { estado: 'error', causa: 'descuento_no_disponible', mensaje: 'esta compañía no admite ajustar el descuento en el ReRate (solo Allianz coche lo tiene catalogado)' },
+      { estado: 'error', causa: 'descuento_no_disponible', mensaje: 'esta compañía no admite ajustar el descuento en el ReRate (solo está catalogado en Allianz coche, moto y hogar, y en Generali moto y hogar)' },
       { status: 422 },
     )
   }
