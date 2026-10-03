@@ -1,31 +1,34 @@
 {
  "sesion": "828c47fb-3a9d-51d9-817a-2656d5c98ffd",
  "inicio": "2026-10-03T14:14:49.949Z",
- "fin": "2026-10-03T14:16:53.041Z",
- "llamadas": 23,
+ "fin": "2026-10-03T14:50:25.348Z",
+ "llamadas": 242,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 18,
-   "chars_in": 2136,
-   "chars_out": 7165631,
+   "llamadas": 81,
+   "chars_in": 9575,
+   "chars_out": 7535488,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 9,
-    "Grep": 7,
-    "Glob": 2
+    "Read": 32,
+    "Grep": 37,
+    "Glob": 12
    }
   },
   "otro": {
-   "llamadas": 2,
-   "chars_in": 5779,
-   "chars_out": 122,
+   "llamadas": 12,
+   "chars_in": 21107,
+   "chars_out": 67633,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 2
+    "SubagentHandback": 6,
+    "ToolSearch": 3,
+    "ReadNotifications": 2,
+    "SendMessage": 1
    }
   },
   "agente:general": {
@@ -40,25 +43,82 @@
    }
   },
   "bash": {
-   "llamadas": 1,
-   "chars_in": 229,
-   "chars_out": 861,
+   "llamadas": 129,
+   "chars_in": 87072,
+   "chars_out": 493156,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1
+    "Bash": 129
    }
   },
   "agente:rastreador-codigo": {
+   "llamadas": 3,
+   "chars_in": 3064,
+   "chars_out": 444,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 3
+   }
+  },
+  "mcp:github": {
+   "llamadas": 2,
+   "chars_in": 1533,
+   "chars_out": 1125,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  },
+  "agente:agente-architect": {
    "llamadas": 1,
-   "chars_in": 889,
+   "chars_in": 4350,
+   "chars_out": 4536,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 38674,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 11,
+   "chars_in": 77525,
+   "chars_out": 1097041,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 9,
+    "Edit": 2
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 2111,
    "chars_out": 148,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Agent": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 1,
+   "chars_in": 73,
+   "chars_out": 239,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1
    }
   }
  }
