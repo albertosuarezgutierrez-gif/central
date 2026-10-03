@@ -12,7 +12,7 @@
 //  - 🚨 `primaAnualDudosa`: la prima del fichero es la del RECIBO (periodo), no
 //    la anual. No se presenta como anual ni se multiplica por las fracciones.
 
-import { etiquetaFormaPago, importeEiac } from '@central/module-seguros'
+import { etiquetaClave, etiquetaFormaPago, fechaPintable, importeEiac } from '@central/module-seguros'
 import { eur } from './dinero.ts'
 
 export type RiesgoFicha = {
@@ -173,18 +173,19 @@ export function cuentaEnmascarada(ultimos4: string | null): string | null {
 
 export type Fila = { etiqueta: string; valor: string; nota?: string }
 
-function fecha(iso: string): string {
-  const [y, m, d] = iso.slice(0, 10).split('-')
-  return y && m && d ? `${d}/${m}/${y}` : iso
+/** `dd/mm/aaaa`. Una centinela (1900-01-01, 9999-12-31) o una basura NO es fecha: `null`, no se pinta. */
+function fecha(iso: string): string | null {
+  return fechaPintable(iso)
 }
 
 /** Filas del bloque «Contrato». `[]` = no hay nada que pintar → el bloque se omite. */
 export function filasContrato(c: ContratoFicha | null, f: FechasContratoFicha | null): Fila[] {
   const out: Fila[] = []
-  if (f?.emision) out.push({ etiqueta: 'Emisión', valor: fecha(f.emision) })
-  if (f?.efectoActual) out.push({ etiqueta: 'Efecto actual', valor: fecha(f.efectoActual) })
-  if (f?.situacion) out.push({ etiqueta: 'Fecha de situación', valor: fecha(f.situacion) })
-  if (f?.solicitud) out.push({ etiqueta: 'Solicitud', valor: fecha(f.solicitud) })
+  // Centinela o ilegible = «no consta»: la fila no existe (nunca «Solicitud 01/01/1900»).
+  for (const [etiqueta, v] of [['Emisión', f?.emision], ['Efecto actual', f?.efectoActual], ['Fecha de situación', f?.situacion], ['Solicitud', f?.solicitud]] as const) {
+    const d = v ? fecha(v) : null
+    if (d) out.push({ etiqueta, valor: d })
+  }
   if (c?.producto) {
     const p = c.producto
     const valor = p.descripcion ?? p.modalidad ?? p.descripcionRamo ?? p.ramoEntidad
@@ -195,8 +196,13 @@ export function filasContrato(c: ContratoFicha | null, f: FechasContratoFicha | 
     }
   }
   // Duración y clase son códigos EIAC sin tabla oficial en el repo: tal cual.
-  if (c?.duracion) out.push({ etiqueta: 'Duración', valor: c.duracion, nota: 'código CIMA' })
-  if (c?.clasePoliza) out.push({ etiqueta: 'Clase de póliza', valor: c.clasePoliza, nota: 'código CIMA' })
+  if (c?.duracion) out.push({ etiqueta: 'Duración', valor: c.duracion, nota: 'código de la compañía' })
+  if (c?.clasePoliza) {
+    const t = etiquetaClave('clasePoliza', c.clasePoliza.trim().toUpperCase())
+    const conocida = t !== null && t !== c.clasePoliza.trim().toUpperCase()
+    // «Nueva producción (Póliza que se encuentra en el primer año…)»: la glosa larga sobra en una fila.
+    out.push({ etiqueta: 'Clase de póliza', valor: conocida ? t.replace(/\s*\(.*\)\s*$/, '') : c.clasePoliza, nota: conocida ? `código ${c.clasePoliza}` : 'código de la compañía' })
+  }
   if (c?.mediador) {
     const m = c.mediador
     const valor = m.nombre ?? m.codigoInterno ?? m.clase
@@ -255,8 +261,8 @@ export function primaParaPintar(
 
 /** «01/01/2026 → 01/01/2027», o `null` si no hay ninguna de las dos. */
 export function vigenciaRiesgo(r: RiesgoFicha): string | null {
-  if (!r.inicio && !r.fin) return null
-  return `${r.inicio ? fecha(r.inicio) : '?'} → ${r.fin ? fecha(r.fin) : '?'}`
+  if (!(r.inicio && fecha(r.inicio)) && !(r.fin && fecha(r.fin))) return null
+  return `${(r.inicio && fecha(r.inicio)) || '?'} → ${(r.fin && fecha(r.fin)) || '?'}`
 }
 
 /** Dónde está / qué es el bien del riesgo, sin nada cifrado. `null` = no consta. */
@@ -264,6 +270,13 @@ export function lugarRiesgo(r: RiesgoFicha): string | null {
   const vehiculo = [r.matricula, [r.marca, r.modelo].filter(Boolean).join(' ') || null].filter(Boolean).join(' · ')
   const sitio = [r.direccion, [r.cp, r.localidad].filter(Boolean).join(' ') || null].filter(Boolean).join(', ')
   return [vehiculo || null, sitio || null].filter(Boolean).join(' · ') || null
+}
+
+/** Clase de comisión (EIAC §13.3.5): traducida; fuera de tabla, «clase XX (código de la compañía)». */
+export function etiquetaClaseComision(clase: string): string {
+  const c = clase.trim().toUpperCase()
+  const t = etiquetaClave('claseComision', c)
+  return t !== null && t !== c ? t.replace(/\.$/, '') : `clase ${clase} (código de la compañía)`
 }
 
 export type BloqueCima = { titulo: string; filas: Fila[] }
@@ -295,7 +308,7 @@ export function bloquesContratoCima(c: ContratoFicha | null): BloqueCima[] {
   add('Capital', c.capitalAgregado !== null ? [{ etiqueta: 'Capital agregado', valor: importeFila(c.capitalAgregado, m) }] : [])
   add('Comisiones', [
     ...(c.comisionAnual !== null ? [{ etiqueta: 'Comisión anual', valor: importeFila(c.comisionAnual, m) }] : []),
-    ...c.comisiones.map((k) => ({ etiqueta: k.clase ? `Comisión clase ${k.clase}` : 'Comisión', valor: importeFila(k.bruta, m), nota: 'bruta' })),
+    ...c.comisiones.map((k) => ({ etiqueta: k.clase ? `Comisión · ${etiquetaClaseComision(k.clase)}` : 'Comisión', valor: importeFila(k.bruta, m), nota: 'bruta' })),
   ])
   add('Comercialización', c.comercializacion.map((k) => ({
     etiqueta: k.clase ?? 'Canal',
@@ -308,7 +321,7 @@ export function bloquesContratoCima(c: ContratoFicha | null): BloqueCima[] {
   })))
   add('Suspensiones', c.suspensiones.map((s, i) => ({
     etiqueta: s.numeroOrden ? `Suspensión ${s.numeroOrden}` : `Suspensión ${i + 1}`,
-    valor: s.fecha ? fecha(s.fecha) : '—',
+    valor: (s.fecha && fecha(s.fecha)) || '—',
   })))
   return out
 }

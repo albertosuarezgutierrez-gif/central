@@ -29,10 +29,7 @@ Regla de Alberto (24/09/2026): **todo desarrollo de CIMA empieza en la carpeta �
   `26-06-26a24-09-26.zip`; POL, REC, SIN, CEF). Sirven para validar el lector contra ficheros REALES
   (no fixtures escritos a mano) y para reprocesar con `cima-rescate-lote` cuando el lector aprende un campo.
 
-⚠️ **Reprocesar SIN viejos después de uno más nuevo RETROCEDE el siniestro**: `persist-siniestro` pisa
-los campos mutables (estado, fecha, tipo, lugar, daños) sin mirar la fecha del fichero. El lote va en
-orden (fecha del dato, luego 311 < 361 < 399) y, si la BD tiene SIN posteriores al último zip
-(`cima_ficheros`), esos siniestros se restauran a mano al terminar.
+✅ **Un SIN más viejo ya no retrocede el siniestro** (asegura#872, 03/10/2026): `persist-siniestro` compara la clave del nombre `_SIN_<proceso>_<n>_<AAAAMMDD>_<seq>` (fecha, luego seq; el proceso 311<361<399 solo desempata) con la última aplicada (`operational_events` cima_siniestro_persisted/actualizado, respaldo `cima_ficheros` por hash). Si el fichero es más viejo, solo RELLENA huecos (`coalesce(guardado, nuevo)`) y en el historial gana lo guardado. Ya se puede reprocesar el archivo de Drive en cualquier orden.
 
 🚫 **Los siniestros van SOLO de la compañía a nosotros.** TIREA (accesos.cima@tirea.es, 03/09/2026):
 el proceso **841 «alta de nuevos siniestros» (mediador → entidad) NO está disponible por CIMA**, las
@@ -95,6 +92,7 @@ duplicadas que se fusionaron el 17/09; su crudo no existe. **Rescatados el 24/09
 zips más grandes, rama temporal con el zip cifrado (openssl aes-256-cbc -pbkdf2) y
 la clave como input. Tras usarlo: **borrar el run entero y la rama** (los inputs
 llevan datos personales; borrar solo los logs no basta).
+🔑 Desde el 03/10/2026 la clave del lote vive en el secret `CIMA_LOTE_CLAVE` del repo `asegura` (la crea Alberto); el input `clave` queda solo de emergencia. Una clave pasada por input ya usada se da por expuesta: no se reutiliza.
 
 🚫📮 **Desde asegura#871 (03/10/2026) el rescate (`ingerir-manual`) NO llama a 
 confirmarDescarga** (`CIMA_INGERIR_MANUAL_OPTS.sinConfirmarTirea`); antes sí confirmaba. 
@@ -122,6 +120,7 @@ de Mapfre, ticket SAU-24238). Hasta entonces sus 14 ficheros eran solo la carga 
 26/05 entre 19:30:25 y 19:30:28 (el «23/06» de la BD es cuando NOSOTROS los cargamos). Primeros diarios:
 REC 261 + SIN 311 el 25/09 a las 18:31 UTC, código mediador 5239640, ambos auto y casados sin cuarentena.
 **POL y el resto de ramos aún no han llegado**: si siguen sin llegar, reclamarlo en ese mismo ticket.
+03/10/2026: CIMA respondió (30/09) que lo anterior al envío diario NO lo recarga CIMA: se pide como **carga masiva** en el portal de mediadores de Mapfre (código 5239640). El POL del 28/09 trajo 1 póliza y ninguna de las 10 renovaciones EV pendientes (nota en docs/borradores/2026-10-03-mapfre-sau-24238.md).
 **Antes de reprocesar un `sin_poliza_en_cartera`, busca duplicados vivos**
 (mismo número normalizado + DGS, `merged_into_poliza_id IS NULL`): el 23/09 quedaban
 3 parejas que solo diferían en la puntuación (`HR G`/`HR-G`, `/ 045981539`).

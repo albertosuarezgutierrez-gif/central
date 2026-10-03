@@ -98,7 +98,11 @@ export {
 } from './objeto.ts'
 export { lineaFichaObjeto, lineaConductor } from './ficha-objeto-linea.ts'
 
-export { etiquetaClave, CLAVES_EIAC, type TablaClaveEiac } from './claves-eiac.ts'
+export { etiquetaClave, claveEiacConocida, CLAVES_EIAC, type TablaClaveEiac } from './claves-eiac.ts'
+export { fechaPintable, diaIsoPintable } from './fecha-pintable.ts'
+export { alertaVencimiento, hoyMadrid } from './alerta-vencimiento.ts'
+export type { AlertaVencimiento, EstadoAlertaVencimiento } from './alerta-vencimiento.ts'
+export { ETIQUETA_POTENCIA, ETIQUETA_USO_VEHICULO } from './objeto.ts'
 
 export {
   MODALIDADES_RC,

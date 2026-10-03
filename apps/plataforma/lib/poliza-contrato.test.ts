@@ -171,8 +171,8 @@ test('bloquesContratoCima: euros en formato español; lo ilegible sale tal cual,
     [['Prima neta', '150,00€'], ['Consorcio', '2,50€'], ['IM', '9,99€']])
   assert.equal(por['Desglose de la prima'][3].valor, '1.234,56', 'importe con forma no medida: crudo, sin inventar')
   assert.deepEqual(por['Comisiones'].find((f) => f.etiqueta === 'Comisión anual'), { etiqueta: 'Comisión anual', valor: '24,30€' })
-  assert.equal(por['Comisiones'].find((f) => f.etiqueta === 'Comisión clase N')?.valor, '12,15€')
-  assert.equal(por['Comisiones'].find((f) => f.etiqueta === 'Comisión clase R')?.valor, '—')
+  assert.equal(por['Comisiones'].find((f) => f.etiqueta === 'Comisión · clase N (código de la compañía)')?.valor, '12,15€')
+  assert.equal(por['Comisiones'].find((f) => f.etiqueta === 'Comisión · clase R (código de la compañía)')?.valor, '—')
   assert.equal(por['Capital'][0].valor, '300.000,00€')
   assert.equal(por['Comercialización'][0].valor, 'Venta directa')
   assert.equal(por['Origen de la contratación'][0].valor, 'Oficina · Sevilla Centro')
@@ -185,4 +185,23 @@ test('bloquesContratoCima: sin datos → [] (no se pinta ningún bloque); no-EUR
   const usd = bloquesContratoCima(leerContrato({ moneda: 'USD', comisionAnual: '24.30' }))
   assert.equal(usd[0].filas[0].valor, '24.30')
   assert.ok(!usd[0].filas[0].valor.includes('€'))
+})
+
+test('filasContrato: fechas centinela (1900-01-01, 9999-12-31) no generan fila', () => {
+  const f = filasContrato(null, { emision: '2026-01-02', efectoActual: '9999-12-31', situacion: null, solicitud: '1900-01-01' })
+  assert.deepEqual(f.map((x) => x.etiqueta), ['Emisión'])
+})
+
+test('filasContrato: clase de póliza CA traducida; fuera de tabla, código de la compañía', () => {
+  const base = leerContrato({ clasePoliza: 'CA' })!
+  assert.deepEqual(filasContrato(base, null).find((x) => x.etiqueta === 'Clase de póliza'), { etiqueta: 'Clase de póliza', valor: 'Cartera', nota: 'código CA' })
+  const np = leerContrato({ clasePoliza: 'NP' })!
+  assert.equal(filasContrato(np, null).find((x) => x.etiqueta === 'Clase de póliza')?.valor, 'Nueva producción')
+  const raro = leerContrato({ clasePoliza: 'ZZ' })!
+  assert.equal(filasContrato(raro, null).find((x) => x.etiqueta === 'Clase de póliza')?.nota, 'código de la compañía')
+})
+
+test('bloquesContratoCima: comisión clase ME traducida', () => {
+  const c = leerContrato({ comisiones: [{ clase: 'ME', bruta: '10.00' }] })!
+  assert.equal(bloquesContratoCima(c)[0].filas[0].etiqueta, 'Comisión · Mediador: Comisión por producto')
 })

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { alertaVencimiento } from '@central/module-seguros'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
 import { ESTADOS_ABIERTOS, estaHuerfana, estadoVencimiento, fechaFutura, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
@@ -122,11 +123,14 @@ const ESTADO_POLIZA: Record<string, string> = {
  * El vencimiento en tres estados (nunca se proyecta una fecha): futuro conocido → «Vence …»;
  * pasado o sin fecha → «vencimiento desconocido», con lo último que se anotó solo como contexto.
  */
-function textoVence(fecha: string | null | undefined, hoy: Date, fuente = 'anotado'): string {
+function textoVence(fecha: string | null | undefined, hoy: Date, fuente = 'anotado', opciones: { vencidaSiPasada?: boolean } = {}): string {
   const e = estadoVencimiento(fecha, hoy)
-  return e.estado === 'futuro'
-    ? `Vence ${fmt(e.fecha)}`
-    : `Vencimiento desconocido — preguntar al cliente${e.ultimaFecha ? ` (${fuente}: ${fmt(e.ultimaFecha)})` : ''}`
+  if (e.estado === 'futuro') return `Vence ${fmt(e.fecha)}`
+  // Una póliza viva de la compañía con la fecha pasada: se dice UNA cosa («Venció el …»), no «desconocido»
+  // a la vez que otros avisos hablan de esa misma fecha. Sin fecha utilizable (o centinela): desconocido.
+  const a = alertaVencimiento(e.ultimaFecha, hoy)
+  if (opciones.vencidaSiPasada && a.estado === 'vencido') return a.titular
+  return `Vencimiento desconocido — preguntar al cliente${e.ultimaFecha && a.estado !== 'desconocido' ? ` (${fuente}: ${fmt(e.ultimaFecha)})` : ''}`
 }
 
 function rotuloTarea(t: string): string {
@@ -174,7 +178,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     lineas = [
       `${p.aseguradora}${p.numeroPoliza ? ` · nº ${p.numeroPoliza}` : ''}${s.historica ? ' (volcado histórico)' : ''}`,
       s.historica && p.matricula && p.objeto?.titulo ? `Matrícula ${p.matricula}` : null,
-      [textoVence(fechaBase, ctx.hoy, venc.delSeguimiento ? 'anotado' : 'volcado'), p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
+      [textoVence(fechaBase, ctx.hoy, venc.delSeguimiento ? 'anotado' : 'volcado', { vencidaSiPasada: p.viva && !venc.delSeguimiento }), p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
       // El cambio de compañía va en la tarjeta de la nueva, no en una segunda del mismo bien.
       s.sustituye
         ? `Sustituye a ${s.sustituye.aseguradora}${s.sustituye.numeroPoliza ? ` nº ${s.sustituye.numeroPoliza}` : ''}${s.sustituye.fechaVencimiento ? `, que cubre hasta el ${fmt(s.sustituye.fechaVencimiento.slice(0, 10))}` : ''}`

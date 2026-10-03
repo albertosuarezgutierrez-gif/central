@@ -63,6 +63,9 @@ import {
   resumirRecibos,
   fechaReciboFiable,
   vistaCobertura,
+  capitalDeCobertura,
+  nombreCobertura,
+  normalizarCodigoCoberturaNumerico,
   type CoberturaVista,
   tonoSituacionRecibo,
   type ReciboHistorial,
@@ -867,6 +870,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             select: {
               polizaId: true, descripcion: true, codigo: true, numeroOrden: true, capitalAsegurado: true,
               franquicia: true, fechaInicio: true, fechaFin: true,
+              // Solo para leer el LÍMITE por siniestro (`capitalDeCobertura`); la prima y demás NO salen de la lectura.
+              datosExtra: true,
             },
             orderBy: { numeroOrden: 'asc' },
           }),
@@ -970,6 +975,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const aPortal = (p: (typeof polizas)[number], ve: CamposVisibles): PolizaPortal => {
     const cobs = coberturasPor.get(p.id) ?? []
     const recs = recibosPor.get(p.id) ?? []
+    // Código de cobertura de ESTA póliza → nombre (la reserva de un siniestro llega por código).
+    const nombresPorCodigo: Record<string, string> = {}
+    for (const c of cobs) {
+      const n = nombreCobertura((c.descripcion ?? '').trim())
+      const k = normalizarCodigoCoberturaNumerico(c.codigo ?? '')
+      if (k !== null && n !== '') nombresPorCodigo[k] = n
+    }
     // Allianz no manda prima en la póliza ni avanza su vencimiento al renovar:
     // solo el recibo anual (27/09/2026). Los recibos son los de ESTA póliza,
     // ya leídos arriba bajo el mismo `polizaIds` autorizado: no se amplía nada.
@@ -1030,7 +1042,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               descripcion: x.descripcionCima,
               tramitador: { nombre: x.tramitadorNombre, telefono: x.tramitadorTelefono, email: x.tramitadorEmail },
               perito: { nombre: x.peritoNombre, telefono: x.peritoTelefono, email: x.peritoEmail },
-            }),
+            }, nombresPorCodigo),
           })),
         )
       : null
@@ -1385,6 +1397,7 @@ function listaCoberturas(
     franquicia: string | null
     fechaInicio: Date | null
     fechaFin: Date | null
+    datosExtra?: unknown
   }>,
   periodoPoliza: { inicio: Date | null; fin: Date | null },
 ): { lista: string[]; capitales: (number | 'ilimitado' | null)[]; detalle: CoberturaVista[] } {
@@ -1392,11 +1405,11 @@ function listaCoberturas(
   const capitales: (number | 'ilimitado' | null)[] = []
   const detalle: CoberturaVista[] = []
   for (const c of cobs) {
-    const nombre = (c.descripcion ?? c.codigo ?? '').trim()
+    const nombre = nombreCobertura((c.descripcion ?? c.codigo ?? '').trim())
     if (!nombre) continue
     // El MISMO lector que el resto de la cartera: un «1.500» o un texto raro
     // no se adivina (sale `null`), y «INF» es ilimitado, no «sin importe».
-    const cap = interpretarCapital(c.capitalAsegurado)
+    const cap = capitalDeCobertura(c)
     lista.push(nombre)
     capitales.push(cap.tipo === 'importe' && cap.importe > 0 ? cap.importe : cap.tipo === 'ilimitado' ? 'ilimitado' : null)
     detalle.push(vistaCobertura(c, periodoPoliza))

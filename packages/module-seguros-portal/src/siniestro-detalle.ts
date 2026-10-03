@@ -74,7 +74,8 @@ export type EntradaDetalle = {
 const CULPA: Record<string, string> = {
   CU: 'Con culpa del asegurado',
   RE: 'Sin culpa: tu compañía reclama al contrario',
-  IN: 'Culpa todavía sin determinar',
+  // `IN` (indeterminada) NO se pinta: en siniestros ya pagados decía «culpa sin determinar», que
+  // es ruido y suena a que falta algo. «Sin determinar» es «no consta»: no se afirma nada.
 }
 
 const PAPEL: Record<string, string> = {
@@ -111,12 +112,46 @@ const objetos = (v: unknown): Record<string, unknown>[] =>
 
 const noVacia = <T>(xs: T[]): T[] | null => (xs.length > 0 ? xs : null)
 
+/**
+ * Normaliza códigos numéricos eliminando ceros a la izquierda.
+ * «016» ≡ «16» para poder casar códigos en búsquedas.
+ */
+export function normalizarCodigoCoberturaNumerico(codigo: string | null): string | null {
+  if (codigo === null) return null
+  const trimmed = codigo.trim()
+  if (trimmed === '') return null
+  // Si es un código numérico, elimina ceros a la izquierda
+  if (/^\d+$/.test(trimmed)) {
+    return String(Number(trimmed))
+  }
+  return trimmed
+}
+
 function contacto(c: EntradaDetalle['tramitador']): ContactoGestion | null {
   const r = { nombre: textoClaro(c.nombre), telefono: textoClaro(c.telefono), email: textoClaro(c.email) }
   return r.nombre === null && r.telefono === null && r.email === null ? null : r
 }
 
-export function detalleSiniestroCompania(e: EntradaDetalle): DetalleSiniestroCompania | null {
+/**
+ * Un código interno delante del nombre («1219-Allianz Auto Terceros») no es para el cliente:
+ * se quita el prefijo numérico. Si solo quedara el código, `null`.
+ */
+export function descripcionRiesgoLegible(v: unknown): string | null {
+  const t = textoClaro(v)
+  if (t === null) return null
+  const limpio = t.replace(/^\d{2,}\s*[-–:]\s*/, '').trim()
+  return limpio === '' || /^\d+$/.test(limpio) ? null : limpio
+}
+
+/**
+ * `nombresCobertura`: código de cobertura de la PÓLIZA → su nombre. La reserva por cobertura
+ * llega con el código («16: 171,31€»); un código numérico sin nombre que lo traduzca NO se pinta
+ * (no dice nada al cliente); un texto ya legible sí.
+ */
+export function detalleSiniestroCompania(
+  e: EntradaDetalle,
+  nombresCobertura: Readonly<Record<string, string>> = {},
+): DetalleSiniestroCompania | null {
   const cod = (v: unknown) => textoClaro(v)?.toUpperCase() ?? null
   const posicion = cod(e.posicion)
   const papel = cod(e.responsabilidad)
@@ -125,7 +160,11 @@ export function detalleSiniestroCompania(e: EntradaDetalle): DetalleSiniestroCom
   const reservaPorCobertura = rd
     ? noVacia(
         objetos(rd.coberturas)
-          .map((c) => ({ cobertura: textoClaro(c.cobertura), importe: importe(c.importe) }))
+          .map((c) => {
+            const cod = textoClaro(c.cobertura)
+            const codNormalizado = cod ? normalizarCodigoCoberturaNumerico(cod) : null
+            return { cobertura: codNormalizado === null ? null : Object.hasOwn(nombresCobertura, codNormalizado) ? nombresCobertura[codNormalizado] : /^[\d\s./-]+$/.test(codNormalizado) ? null : codNormalizado, importe: importe(c.importe) }
+          })
           .filter((c): c is { cobertura: string; importe: number | null } => c.cobertura !== null),
       )
     : null
@@ -136,8 +175,9 @@ export function detalleSiniestroCompania(e: EntradaDetalle): DetalleSiniestroCom
         .map((c) => ({ descripcion: textoClaro(c.descripcion), capital: importe(c.capital) }))
         .filter((c) => c.descripcion !== null || c.capital !== null)
     : []
-  const riesgo = ri && (textoClaro(ri.descripcion) !== null || riCob.length > 0)
-    ? { descripcion: textoClaro(ri.descripcion), coberturas: riCob }
+  const riesgoDesc = ri ? descripcionRiesgoLegible(ri.descripcion) : null
+  const riesgo = ri && (riesgoDesc !== null || riCob.length > 0)
+    ? { descripcion: riesgoDesc, coberturas: riCob }
     : null
 
   const ve = obj(e.vehiculo)
