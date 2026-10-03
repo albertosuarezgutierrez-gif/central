@@ -95,13 +95,15 @@ exacto de Allianz (prueba con 10 % para ver si baja el precio) y confirmar el pr
 
 - ¿El ReRate y el Submit se facturan? → **Resuelto por inferencia (no aparecen como facturables); confirmación explícita no pedida.**
 - ¿Vale el historial de un coche para asegurar una moto? ¿Hay algún código estructurado de «bonus verificado» o solo texto en `messages[]`?
-- **Paginación de GET /insurances:** ¿`pageNumber` cómo funciona? ¿Hay límite de resultados/página?
-- **Filtros de fecha:** ¿`fromDate`/`toDate` filtran por qué fecha (emisión, efecto, modificación)?
-- **`x-user-email`:** ¿restringe el listado a emisiones de ese usuario? ¿Es obligatorio?
+- ✅ **GET /insurances, resuelto con la especificación OpenAPI del portal (03/10/2026):**
+  - `fromDate`/`toDate` (yyyy-MM-dd, obligatorias sin id/externalId, rango ≤1 año) filtran por fecha de CREACIÓN del proyecto, salvo con `policyApplicationSubmitted=true`, que filtra por fecha de la solicitud de emisión (es lo que usa el cron).
+  - No hay filtro por fecha de modificación.
+  - `pageNumber` (por defecto 1) y `pageSize` (por defecto 10, ≤100); `X-Total-Count` solo en la página 1.
+  - Ordenación: no consta.
+  - Sin `X-User-Email`, alcance de toda la correduría.
 
 ## Pendiente en código
 
 - Descuento por defecto en el ReRate = **50 %**. Hoy solo Allianz auto lo lleva; Allianz moto, Generali y Catalana Occidente necesitan el id exacto del campo.
 - Aviso «bonificación NO verificada» a partir de `messages[]`.
-- ✅ **Descubrimiento autónomo:** cron `correduria-descubrir-emisiones` implementado (plataforma, `10,40 5-21 * * *` UTC); cola de revisión `seguros.codeoscopic_emisiones_revision` activa; rotación en anillo 40 llamadas/pasada. Acuñado atómico vía `registrarPolizaEmitida` (PR pendiente de revisión). URL del webhook cambiada a `api.grupoasegura.es` (PENDIENTE que Codeoscopic actualice de su lado).
-- Paginación y filtros de fecha de GET /insurances (preguntas a Codeoscopic).
+- ✅ **Descubrimiento autónomo:** cron `correduria-descubrir-emisiones` implementado (plataforma, `10,40 5-21 * * *` UTC); cola de revisión `seguros.codeoscopic_emisiones_revision` activa; rotación en anillo 40 llamadas/pasada. Acuñado atómico vía `registrarPolizaEmitida` (PR #4158, mergeado). URL del webhook cambiada a `api.grupoasegura.es` (PENDIENTE que Codeoscopic actualice de su lado).
