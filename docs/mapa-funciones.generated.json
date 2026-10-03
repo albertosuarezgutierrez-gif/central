@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T19:06:35Z",
-  "sha": "93fef63680badec2d4f7638c0c2a04af9480cef6",
+  "generadoEn": "2026-10-03T19:38:57Z",
+  "sha": "534468a30e863b0950d6799ef049025ff298780d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -103216,7 +103216,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "esMensajeAutomatico",
@@ -103224,7 +103224,7 @@
           "exportada": false,
           "params": "subject: string, text: string",
           "retorno": "boolean",
-          "linea": 32,
+          "linea": 33,
           "resumen": "Los mensajes del HOST / automáticos de Smoobu/Booking llevan ASUNTO (RECORDATORIO, WHERE TO COLLECT, 📈 Ayúdanos…) o son el aviso \"Check-in online disponible\". Los del HUÉSPED llegan con asunto vacío "
         },
         {
@@ -103233,7 +103233,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 38,
+          "linea": 39,
           "resumen": "Despedidas / cortesías que no necesitan respuesta."
         },
         {
@@ -103242,13 +103242,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 46,
+          "linea": 47,
           "resumen": "Cron (cada 3 min) + red de seguridad del webhook. Sondea los hilos de Smoobu y enruta cada pregunta NUEVA del huésped al agente (propone por Telegram / auto-envía y deja log). Idempotencia por msgId ("
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/mensajes/auto-reply",
-      "hash": "3528c8758a1f"
+      "hash": "31937b7458bb"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/diagnostico-guia/route.ts",
@@ -103551,7 +103551,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 53,
+          "linea": 54,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -103560,7 +103560,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 70,
+          "linea": 71,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -103569,7 +103569,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 96
+          "linea": 97
         },
         {
           "nombre": "getPendiente",
@@ -103577,7 +103577,24 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 126
+          "linea": 127
+        },
+        {
+          "nombre": "reclamarPendiente",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string",
+          "retorno": "Promise<(Pendiente & Record<string, unknown>) | null>",
+          "linea": 137,
+          "resumen": "Reclamo ATÓMICO del pendiente (doble pulsación / reintento de Telegram): el primero que borra la fila gana y es el único que envía; el segundo recibe `null`. Si luego el envío no sale, quien reclamó D"
+        },
+        {
+          "nombre": "restaurarPendiente",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Pendiente & Record<string, unknown>",
+          "retorno": "Promise<void>",
+          "linea": 142
         },
         {
           "nombre": "POST",
@@ -103585,7 +103602,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 131
+          "linea": 150
         },
         {
           "nombre": "procesarUpdate",
@@ -103593,7 +103610,7 @@
           "exportada": false,
           "params": "req: NextRequest, body: any",
           "retorno": "Promise<Response>",
-          "linea": 157
+          "linea": 176
         },
         {
           "nombre": "enrutarTextoLibre",
@@ -103601,7 +103618,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1194,
+          "linea": 1269,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -103610,7 +103627,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1201,
+          "linea": 1276,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -103619,7 +103636,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1213
+          "linea": 1288
         },
         {
           "nombre": "correduriaSegura",
@@ -103627,7 +103644,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "Promise<void>",
-          "linea": 1219,
+          "linea": 1294,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -103657,7 +103674,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "f65863693670"
+      "hash": "ce1cc61670a0"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -131171,15 +131188,195 @@
           "nombre": "decidirAutoEnvio",
           "kind": "function",
           "exportada": true,
-          "params": "dec: Decision",
+          "params": "dec: Decision, pregunta: string",
           "retorno": "",
-          "linea": 27,
+          "linea": 28,
           "resumen": "¿Puede salir solo? Dos vías, sobre una misma guarda común. Guardas comunes: nunca se auto-envía nada que requiera ojo humano (sensible / negativo / dato inventado / escalado IA / control de calidad ca"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "22abd5058276"
+      "hash": "0af9112ef01b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/cambio-horario.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/cambio-horario.ts — entrada anticipada, salida tardía y maletas. PURO. Origen (03/10/2026): un huésped de House Sevillana pidió dejar el equipaje / quedarse hasta las 15:00 el día de salida. Se clasificó «equipaje», salió AUTOMÁTICO y prometió un «coste según la hora» que no",
+      "exporta": [
+        "evaluarCambioHorario",
+        "peticionCambioHorario",
+        "mencionaMaletas",
+        "resolverTipo",
+        "extraerHoraPedida",
+        "contraoferta",
+        "asegurarCallback",
+        "botonesCambioHorario",
+        "horaDeCallback",
+        "textoAceptacion",
+        "consignasDePiso",
+        "textoNegativa",
+        "tareaLimpieza"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaOk",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string | null | undefined",
+          "retorno": "f is string",
+          "linea": 33,
+          "resumen": "Además del formato, la fecha debe existir en el calendario (\"2026-13-45\" haría lanzar a toISOString)."
+        },
+        {
+          "nombre": "diaAnterior",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string",
+          "retorno": "string",
+          "linea": 39
+        },
+        {
+          "nombre": "fmt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": null,
+          "linea": 45
+        },
+        {
+          "nombre": "quien",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ReservaHorario",
+          "retorno": null,
+          "linea": 46
+        },
+        {
+          "nombre": "evaluarCambioHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tipo: TipoCambio reserva: ReservaHorario reservasMismaPropiedad: ReservaHorario[] | null }",
+          "retorno": "EvaluacionHorario",
+          "linea": 58,
+          "resumen": "¿Lo permite el calendario del piso? - salida tardía + otra entrada el mismo día del check-out → rojo - salida tardía sin entrada ese día → amarillo (hace falta el OK de la limpieza, nunca verde) - ent"
+        },
+        {
+          "nombre": "peticionCambioHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, categoria?: string | null",
+          "retorno": "PeticionHorario | null",
+          "linea": 156,
+          "resumen": "¿Es una petición de cambio de horario o de guardar maletas? Conservador a propósito: un falso positivo solo convierte un mensaje en PROPUESTA por Telegram (sin daño); un falso negativo deja salir solo"
+        },
+        {
+          "nombre": "mencionaMaletas",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 167
+        },
+        {
+          "nombre": "resolverTipo",
+          "kind": "function",
+          "exportada": true,
+          "params": "pet: PeticionHorario, texto: string, o: { hoy: string; checkIn: string | null }",
+          "retorno": "TipoCambio",
+          "linea": 176,
+          "resumen": "«equipaje» no dice si es antes de entrar o después de salir: lo dice el texto, y si no, el momento (`hoy` ≤ llegada → antes de entrar; si no → el día de salida). Fechas YYYY-MM-DD."
+        },
+        {
+          "nombre": "extraerHoraPedida",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string | null",
+          "linea": 188,
+          "resumen": "Primera hora pedida («a las 15:00», «until 3pm», «um 15 Uhr»…) como 'HH:MM', o null. Rango 06–23."
+        },
+        {
+          "nombre": "contraoferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoCambio, horaPedida: string | null",
+          "retorno": "number | null",
+          "linea": 214,
+          "resumen": "Contraoferta (hora entera, 13 o 14) para el botón `🕐`. Salida: 14 si pide 15:00 o más, 13 si no. Entrada: 13 si pide a las 12 o antes, 14 si no. null si coincide con lo que ya pidió (botón redundante"
+        },
+        {
+          "nombre": "asegurarCallback",
+          "kind": "function",
+          "exportada": true,
+          "params": "cb: string",
+          "retorno": "string",
+          "linea": 228,
+          "resumen": "Telegram rechaza un `callback_data` > 64 BYTES (y el aviso entero falla): se comprueba al construir."
+        },
+        {
+          "nombre": "botonesCambioHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { bookingId: string; tipo: TipoCambio; semaforo: Semaforo; horaPedida: string | null }",
+          "retorno": "BotonCH[][]",
+          "linea": 238,
+          "resumen": "Botones de la propuesta. Prefijo `hsp_` (mismo emisor autorizado que el resto): `hsp_chsi:<id>:<HHMM>`, `hsp_chhasta:<id>:<HH>`, `hsp_chno:<id>`, `hsp_chlimp:<id>`. En ROJO no se ofrecen los «sí»: el "
+        },
+        {
+          "nombre": "horaDeCallback",
+          "kind": "function",
+          "exportada": true,
+          "params": "arg: string | undefined",
+          "retorno": "string | null",
+          "linea": 256,
+          "resumen": "'HHMM' (callback) → 'HH:MM'; null si no es una hora válida."
+        },
+        {
+          "nombre": "saludo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "nombre?: string | null",
+          "retorno": null,
+          "linea": 267
+        },
+        {
+          "nombre": "textoAceptacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tipo: TipoCambio; hora: string; nombre?: string | null }",
+          "retorno": "string",
+          "linea": 272
+        },
+        {
+          "nombre": "consignasDePiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string",
+          "retorno": "string[]",
+          "linea": 279,
+          "resumen": "Consignas de la zona del piso (de `equipaje.ts`); vacío = piso sin zona → texto genérico."
+        },
+        {
+          "nombre": "textoNegativa",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tipo: TipoCambio; semaforo: Semaforo; propertyId: string; nombre?: string | null; ofrecerMaletas?: boolean }",
+          "retorno": "string",
+          "linea": 284
+        },
+        {
+          "nombre": "tareaLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tipo: TipoCambio; hora: string; checkIn: string | null; checkOut: string | null; huesped?: string | null; reservationId: string }",
+          "retorno": "",
+          "linea": 302,
+          "resumen": "Instrucción para la tarea de limpieza y fecha en la que se crea."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5bef3b2bab1e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cierre.ts",
@@ -131513,7 +131710,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 93
+          "linea": 94
         },
         {
           "nombre": "limpiarReply",
@@ -131521,7 +131718,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 101,
+          "linea": 102,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -131530,7 +131727,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<Veredicto>",
-          "linea": 124
+          "linea": 125
         },
         {
           "nombre": "decidir",
@@ -131538,12 +131735,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 174
+          "linea": 175
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c4fd2056b30"
+      "hash": "b0abcd00424f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/destilar.ts",
@@ -132552,7 +132749,7 @@
           "exportada": true,
           "params": "bookingId: string, opts: { pregunta?: string; msgId?: string } = {},",
           "retorno": "Promise<",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner` y /api/reservations"
         }
       ],
@@ -132561,7 +132758,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "eb9e79538daa"
+      "hash": "08422eeef9a4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -133112,7 +133309,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3e7a0210d75d"
+      "hash": "996748ef3461"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/sensibilidad.ts",
@@ -133223,7 +133420,10 @@
         "confirmarEnviado",
         "confirmarRespondidoFuera",
         "confirmarEsMio",
-        "confirmarDescartado"
+        "confirmarDescartado",
+        "cargarReservasPropiedad",
+        "aceptarCambioHorario",
+        "negativaListaParaEnviar"
       ],
       "funciones": [
         {
@@ -133232,7 +133432,7 @@
           "exportada": false,
           "params": "urgente: boolean",
           "retorno": null,
-          "linea": 11
+          "linea": 18
         },
         {
           "nombre": "traducirEs",
@@ -133240,7 +133440,7 @@
           "exportada": false,
           "params": "txt: string",
           "retorno": "Promise<string>",
-          "linea": 14,
+          "linea": 21,
           "resumen": "Traduce al español de España (para que Alberto entienda de un vistazo). Best-effort: si falla, ''."
         },
         {
@@ -133249,7 +133449,7 @@
           "exportada": false,
           "params": "lang: string",
           "retorno": "string",
-          "linea": 25,
+          "linea": 32,
           "resumen": "El borrador salió en ESPAÑOL con un huésped que escribe en otro idioma. Pedir su «traducción al español» devuelve el mismo texto y `traduccionUtil` la descarta → la línea 🔁 decía «no he podido traduc"
         },
         {
@@ -133258,7 +133458,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 35,
+          "linea": 42,
           "resumen": "Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada). Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático. El mensa"
         },
         {
@@ -133267,7 +133467,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": "string",
-          "linea": 64,
+          "linea": 71,
           "resumen": "Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato)."
         },
         {
@@ -133276,7 +133476,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 70,
+          "linea": 77,
           "resumen": "Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking)."
         },
         {
@@ -133285,7 +133485,7 @@
           "exportada": true,
           "params": "pend: { booking_id: string; idioma: string | null }, borrador: string, opts: { borradorEs?: string } = {},",
           "retorno": "Promise<void>",
-          "linea": 153,
+          "linea": 163,
           "resumen": "Re-propone un borrador tras ✏️ Modificar / 🔧 Retocar: muestra el texto FINAL que se va a enviar (en el idioma del huésped + 🔁 español para verificar) con los botones, y deja el pendiente listo para "
         },
         {
@@ -133294,7 +133494,7 @@
           "exportada": true,
           "params": "messageId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 180
+          "linea": 190
         },
         {
           "nombre": "confirmarRespondidoFuera",
@@ -133302,7 +133502,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 184
+          "linea": 194
         },
         {
           "nombre": "confirmarEsMio",
@@ -133310,7 +133510,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 188
+          "linea": 198
         },
         {
           "nombre": "confirmarDescartado",
@@ -133318,15 +133518,76 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 192
+          "linea": 202
+        },
+        {
+          "nombre": "cargarReservasPropiedad",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string",
+          "retorno": "Promise<ReservaHorario[] | null>",
+          "linea": 218,
+          "resumen": "Reservas del MISMO piso, deduplicadas por `reservationId` y SIN las de `reservas_canceladas`. `null` = no se pudo leer (≠ `[]` = no hay ninguna): el semáforo no puede ser verde con un null."
+        },
+        {
+          "nombre": "cargarReserva",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string",
+          "retorno": "Promise<ReservaIncome | null>",
+          "linea": 237
+        },
+        {
+          "nombre": "hoyMadrid",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 249
+        },
+        {
+          "nombre": "evaluarReserva",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string, propertyId: string, pet: PeticionHorario, pregunta: string, fechas: { checkIn: string | null; checkOut: string | null }",
+          "retorno": null,
+          "linea": 251
+        },
+        {
+          "nombre": "proponerCambioHorario",
+          "kind": "function",
+          "exportada": false,
+          "params": "ctx: Contexto, pregunta: string, dec: Decision, pet: PeticionHorario",
+          "retorno": "Promise<void>",
+          "linea": 258
+        },
+        {
+          "nombre": "aceptarCambioHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "pend: PendCambio, hora: string",
+          "retorno": "Promise<ResultadoAceptacion>",
+          "linea": 322,
+          "resumen": "✅ Sí / 🕐 Sí, hasta HH: vuelve a mirar el calendario (puede haber entrado una reserva desde que se propuso), manda el mensaje al huésped en SU idioma y crea la tarea en /invitado/limpieza. Si el calen"
+        },
+        {
+          "nombre": "negativaListaParaEnviar",
+          "kind": "function",
+          "exportada": true,
+          "params": "pend: { borrador: string | null; idioma: string | null }",
+          "retorno": "boolean",
+          "linea": 360,
+          "resumen": "Texto del «no»: debe estar en el idioma del huésped (si el borrador salió en español, no se manda)."
         }
       ],
       "tablas": [
+        "incomes",
         "mensajes_pendientes_tg",
+        "reservas_canceladas",
         "set"
       ],
       "rutaApi": null,
-      "hash": "94207bdc3d22"
+      "hash": "7fc8d6d158bc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/alertas-autoresolucion.ts",
@@ -134319,6 +134580,7 @@
       "resumen": "lib/sivra/extras/orden-limpieza.ts — una ORDEN suelta a la empresa de limpieza. Hermana de `aviso-limpieza.ts`, y distinta a propósito. Aquélla es la consecuencia de un COBRO (la dispara el webhook de Stripe y dice «ya cobrado»); ésta no sabe nada de dinero: es Alberto pulsando un botón para que alg",
       "exporta": [
         "enviarOrdenLimpieza",
+        "crearTareaIntranet",
         "listarOrdenes",
         "ordenYaEnviada"
       ],
@@ -134335,7 +134597,7 @@
         {
           "nombre": "crearTareaIntranet",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "d: DatosOrden & { propertyId: string },",
           "retorno": "Promise<string | null>",
           "linea": 78,
@@ -134390,7 +134652,7 @@
         "sivra_ordenes_limpieza"
       ],
       "rutaApi": null,
-      "hash": "d0384a248b81"
+      "hash": "c95c7f0dcbd3"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/extras/orden-texto.ts",
@@ -179250,7 +179512,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4100,
-    "funciones": 13955
+    "archivos": 4101,
+    "funciones": 13982
   }
 }
