@@ -1,6 +1,7 @@
 import { Building2, Waves } from 'lucide-react'
 import { rotuloAnulacionCima, type DatosCompaniaCima } from '@central/module-seguros'
 import { ConIcono } from '@/app/(usuario)/correduria/iconos'
+import { bloquesContratoCima, type ContratoFicha } from '@/lib/poliza-contrato'
 
 /**
  * Lo que la compañía dice de esta póliza por CIMA y no es el objeto asegurado
@@ -12,9 +13,19 @@ import { ConIcono } from '@/app/(usuario)/correduria/iconos'
  * `null` no se pinta como «la compañía no manda nada»: se dice que no consta,
  * porque las pólizas ingeridas antes del 24/09/2026 no lo tienen leído.
  */
-export default function CimaPoliza({ d, vigente }: { d: DatosCompaniaCima | null; vigente: boolean }) {
-  if (d === null) {
+export default function CimaPoliza({ d, vigente, contrato = null }: { d: DatosCompaniaCima | null; vigente: boolean; contrato?: ContratoFicha | null }) {
+  // Desglose de prima, comisiones, origen… del contrato (solo operador). Sin datos, ningún bloque.
+  const bloques = bloquesContratoCima(contrato)
+  if (d === null && bloques.length === 0) {
     return <p style={muted}>No consta nada más de la compañía por CIMA para esta póliza.</p>
+  }
+  if (d === null) {
+    return (
+      <section style={{ display: 'grid', gap: 8 }}>
+        <h2 style={{ fontSize: 16, margin: 0 }}><ConIcono i={Building2}>Lo que dice la compañía (CIMA)</ConIcono></h2>
+        <BloquesContrato bloques={bloques} />
+      </section>
+    )
   }
   const inm = d.inmueble
   const filasInmueble: Array<[string, string]> = inm
@@ -39,6 +50,8 @@ export default function CimaPoliza({ d, vigente }: { d: DatosCompaniaCima | null
   return (
     <section style={{ display: 'grid', gap: 8 }}>
       <h2 style={{ fontSize: 16, margin: 0 }}><ConIcono i={Building2}>Lo que dice la compañía (CIMA)</ConIcono></h2>
+
+      <BloquesContrato bloques={bloques} />
 
       {d.anulacion && <p style={{ margin: 0, fontSize: 14 }}>{rotuloAnulacionCima(d.anulacion, vigente)}</p>}
 
@@ -90,6 +103,30 @@ export default function CimaPoliza({ d, vigente }: { d: DatosCompaniaCima | null
         </details>
       )}
     </section>
+  )
+}
+
+function BloquesContrato({ bloques }: { bloques: ReturnType<typeof bloquesContratoCima> }) {
+  if (bloques.length === 0) return null
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+      {bloques.map((b) => (
+        <div key={b.titulo} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4 }}>
+          <strong style={{ fontSize: 14 }}>{b.titulo}</strong>
+          <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'minmax(0, max-content) minmax(0, 1fr)', gap: '4px 12px', fontSize: 13 }}>
+            {b.filas.map((f, i) => (
+              <div key={`${f.etiqueta}-${i}`} style={{ display: 'contents' }}>
+                <dt style={{ color: 'var(--muted)' }}>{f.etiqueta}</dt>
+                <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>
+                  {f.valor}
+                  {f.nota && <span style={{ color: 'var(--muted)' }}> · {f.nota}</span>}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </div>
   )
 }
 

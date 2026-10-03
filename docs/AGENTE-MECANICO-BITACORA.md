@@ -12,6 +12,10 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (03/10/2026) actualizar fechaEfecto en fixtures (2026-10-01 → 2026-11-02) en formulario-guardado.test.ts + peticion-hogar.test.ts — agente-mecanico — ok (3 tests fallidos; todos verdes tras fix; 1168 tests de asegura pasan)
+
+- (03/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (auditoría CIMA Allianz POL 131), SKILL.md cima-ingesta (riesgo_sin_bloque), AGENTE-MECANICO-BITACORA.md — sesión — ok
+
 - (27/09/2026) parking de House Sevillana «en el edificio» → San Juan de la Palma en sivra/messages ×5 + skill seo-house-sevillana (8 ficheros) — agente-mecanico — ok (no commiteó; JSON válido; afirmó errores de tsc «preexistentes» en sivra que eran falta de `prisma generate`: con él, tsc limpio).
 
 - (20/09/2026) tres artículos de siniestro por ramo en `apps/asegura-web/lib/articulos.ts` (coche / fuga de agua / salud) — agente-mecanico — ok (46 tests + tsc en verde; un solo retoque a mano: «te ahorra un viaje» → «te evita un viaje», que el cepo de copy no caza porque no es de precio)

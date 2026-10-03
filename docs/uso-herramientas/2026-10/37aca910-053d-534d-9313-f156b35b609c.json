@@ -1,0 +1,114 @@
+{
+ "sesion": "37aca910-053d-534d-9313-f156b35b609c",
+ "inicio": "2026-10-03T07:07:57.400Z",
+ "fin": "2026-10-03T07:15:23.851Z",
+ "llamadas": 54,
+ "categorias": {
+  "otro": {
+   "llamadas": 5,
+   "chars_in": 200,
+   "chars_out": 4481,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 1008758,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 2,
+    "ExitPlanMode": 1,
+    "ReadNotifications": 1
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 1790,
+   "chars_out": 2010,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 95751,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 22,
+   "chars_in": 3027,
+   "chars_out": 96625,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 13,
+    "Read": 9
+   }
+  },
+  "sql": {
+   "llamadas": 17,
+   "chars_in": 5595,
+   "chars_out": 40182,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__execute_sql": 1,
+    "mcp__Supabase__execute_sql": 16
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 4058,
+   "chars_out": 4135,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 3,
+   "chars_in": 178,
+   "chars_out": 4600,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__list_repos": 1,
+    "mcp__claude-code-remote__add_repo": 1,
+    "mcp__claude-code-remote__register_repo_root": 1
+   }
+  },
+  "bash": {
+   "llamadas": 3,
+   "chars_in": 740,
+   "chars_out": 8893,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 3
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 1840,
+   "chars_out": 2037,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

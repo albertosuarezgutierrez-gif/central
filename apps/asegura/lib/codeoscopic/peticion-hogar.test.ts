@@ -11,6 +11,9 @@ import {
 } from './peticion-hogar.ts'
 import { construirPeticionAuto, type DatosAuto } from './peticion-auto.ts'
 
+// Fecha de efecto siempre futura: el validador rechaza efectos anteriores a hoy.
+const FECHA_EFECTO_FUTURA = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)
+
 // Persona inventada: aquí no entra ningún cliente real.
 const BASE: DatosHogar = {
   dni: '00000000t',
@@ -45,14 +48,14 @@ const BASE: DatosHogar = {
   propietarioEsTomador: true,
   capitalContinente: 61000,
   capitalContenido: 7000,
-  fechaEfecto: '2026-10-01',
+  fechaEfecto: FECHA_EFECTO_FUTURA,
 }
 
 test('con los datos mínimos no hay reparos y el cuerpo es EXACTAMENTE el HomeRisk del portal', () => {
   assert.deepEqual(revisarDatosHogar(BASE), [])
   const c = construirPeticionHogar(BASE, 'Home') as any
   assert.deepEqual(c.insuranceLine, { id: 'Home' })
-  assert.equal(c.effectiveDate, '2026-10-01')
+  assert.equal(c.effectiveDate, FECHA_EFECTO_FUTURA)
   assert.deepEqual(c.risk.address, {
     postalCode: '41002',
     town: { id: 12345 },

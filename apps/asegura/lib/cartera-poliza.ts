@@ -211,6 +211,14 @@ export type ReciboFichaPoliza = ReciboResumen & {
   retencionIrpf: number | null
   /** Comisión bruta del recibo según CIMA. `null` = no la da o no se sabe leer (nunca 0 por defecto). */
   comisionBruta: number | null
+  /** `clase_recibo` del EIAC (CA/NP/SU…) tal cual. `null` = no consta. */
+  clase: string | null
+  /** Día en que el recibo pasó a su situación actual (cobrado/devuelto/anulado). `null` = no consta. */
+  fechaSituacion: string | null
+  /** Prima neta del recibo (CIMA). `null` = no consta (nunca 0). Solo operador. */
+  primaNeta: number | null
+  /** Comisión líquida del recibo (CIMA). `null` = no consta (nunca 0). Solo operador. */
+  comisionLiquida: number | null
   /**
    * La compañía avisó POR CORREO de que el banco lo devolvió y aún no consta el cobro
    * (`recibo_devolucion`). Es lo único que permite marcarlo «cobrado de nuevo» a mano: una devolución
@@ -369,7 +377,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       },
       recibos: {
         select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEfectoActual: true, fechaEmision: true, fechaVencimiento: true, formaPago: true,
-          idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true, comisionBruta: true },
+          idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true, comisionBruta: true,
+          fechaSituacion: true, comisionLiquida: true },
         orderBy: { fechaEmision: 'desc' },
       },
       siniestros: { select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
@@ -588,6 +597,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, fechaEfecto: r.fechaEfecto ?? null, formaPago: etiquetaFormaPago(r.formaPago),
         idRemesa: texto(x.idRemesa), gestionCobro: texto(x.gestionCobro), claseComision: texto(x.claseComision),
         baseComision: num(x.baseComision), retencionIrpf: num(x.retencionIrpf), comisionBruta: importeEiac(x.comisionBruta),
+        clase: texto(x.claseRecibo), fechaSituacion: fechaIso(x.fechaSituacion),
+        primaNeta: importeEiac(x.primaNeta), comisionLiquida: importeEiac(x.comisionLiquida),
         devolucionCorreo: devolucionesCorreo.get(r.id) ?? null,
       }
     }),
