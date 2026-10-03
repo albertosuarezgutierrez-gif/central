@@ -8,7 +8,7 @@ import { estadoConsumo } from '@/lib/codeoscopic/cotizar'
 import { estadosCiviles, municipiosPorCp, emparejar, type Opcion } from '@/lib/codeoscopic/catalogos'
 import { sanearSupuestos, sanearReparos, type SupuestoPublico, type ReparoPublico } from '@/lib/codeoscopic/precalificar-publica'
 import { registrarErrorCartera } from '@/lib/error-cartera'
-import { imputarSeguroAnterior, seguroAnteriorNoDisponible } from '@/lib/seguro-anterior-candidatas'
+import { imputarSeguroAnteriorGratis, seguroAnteriorNoDisponible } from '@/lib/seguro-anterior-candidatas'
 import { revisarDatosAuto } from '@/lib/codeoscopic/peticion-auto'
 
 export const runtime = 'nodejs'
@@ -131,7 +131,7 @@ export async function GET(req: Request) {
   // póliza de motor suya que conocemos (`?seguroAnteriorId=` elige otra; `?sinSeguroAnterior=1` la apaga).
   // Gratis: solo BD. Un fallo aquí no tumba la pantalla: sale `seguroAnterior.estado = 'no_disponible'`.
   const sp = new URL(req.url).searchParams
-  const imp = await imputarSeguroAnterior({
+  const imp = await imputarSeguroAnteriorGratis({
     correduriaId, clienteId, tipoNuevo: 'auto', cliente: origen.cliente,
     cuerpo: { seguroAnteriorId: sp.get('seguroAnteriorId') ?? undefined, sinSeguroAnterior: sp.get('sinSeguroAnterior') === '1' },
     correcciones: undefined, hoy: hoyIso(),

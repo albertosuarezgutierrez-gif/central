@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { bonusSupuestoFinal, carnetMasAntiguo, imputarConLectura as imputarSeguroAnterior, type LecturaCandidatas } from './seguro-anterior-reglas.ts'
+import { bonusSupuestoFinal, carnetMasAntiguo, imputarConLectura as imputarSeguroAnterior, imputarParaPrecalificar, type LecturaCandidatas } from './seguro-anterior-reglas.ts'
 import { historialParaImputar, origenesHistorialManual, type CandidataSeguroAnterior } from '@central/module-seguros'
 
 const HOY = '2026-10-03'
@@ -91,4 +91,15 @@ test('misma póliza, mismos datos: la pantalla manual y la imputación automáti
     const correcciones = { aniosAsegurado: asegurado, aniosSinSiniestros: limpios, siniestrosUltimos5: 0, ...origenesHistorialManual({ seguro: sa, aniosAsegurado: asegurado, aniosSinSiniestros: limpios, hoy: HOY }) }
     assert.equal(bonusSupuestoFinal({ aseguradoAntes: true }, correcciones, null), auto.bonusSupuesto, JSON.stringify(sa))
   }
+})
+
+test('precalificar (gratis): una EXCEPCIÓN al leer/imputar degrada a no_disponible, nunca revienta (500)', async () => {
+  const revienta = async (): Promise<LecturaCandidatas> => { throw new Error('boom postgres://u:p@h/db') }
+  // la ruta que paga sí propaga (corta con 503 antes de gastar): no cambia
+  await assert.rejects(imputarSeguroAnterior({ ...base, tipoNuevo: 'auto', cuerpo: {}, correcciones: undefined, leer: revienta }))
+  const r = await imputarParaPrecalificar({ ...base, tipoNuevo: 'auto', cuerpo: {}, correcciones: undefined, leer: revienta })
+  assert.ok(!r.ok && r.status === 503 && r.causa === 'seguro_anterior_no_disponible')
+  assert.ok(!r.ok && !/postgres:\/\//.test(r.mensaje), 'no filtra la URL de la BD')
+  const ok = await imputarParaPrecalificar({ ...base, tipoNuevo: 'auto', cuerpo: {}, correcciones: undefined, leer: leer([COCHE]) })
+  assert.ok(ok.ok && ok.publico.estado === 'imputado')
 })

@@ -37,7 +37,7 @@ test('las rutas que pagan pasan el override y anotan el bonus tras guardar', () 
   }
   for (const r of ['precalificar-auto-nuevo', 'precalificar-moto-nuevo']) {
     const src = sinComentarios(leer(`apps/asegura/app/api/operador/codeoscopic/${r}/route.ts`))
-    assert.match(src, /imputarSeguroAnterior\(/, `${r}: propone la póliza imputada`)
+    assert.match(src, /imputarSeguroAnteriorGratis\(/, `${r}: propone la póliza imputada (variante que nunca lanza)`)
     assert.match(src, /seguroAnterior,\n/, `${r}: la devuelve en la respuesta`)
   }
 })

@@ -140,6 +140,26 @@ export async function imputarConLectura(entrada: {
 }
 
 /**
+ * Imputar para la PRECALIFICACIÓN (gratis): una excepción (lectura o regla) degrada a
+ * `no_disponible` en vez de reventar la ruta con 500. Las rutas que PAGAN siguen con
+ * `imputarConLectura` (cortan antes de gastar).
+ */
+export async function imputarParaPrecalificar(entrada: Parameters<typeof imputarConLectura>[0]): Promise<Imputacion> {
+  try {
+    return await imputarConLectura(entrada)
+  } catch (e) {
+    const detalle = e instanceof Error ? e.message : String(e)
+    console.log('[seguro-anterior] precalificar: la imputación ha lanzado —', detalle.replace(/postgres(ql)?:\/\/\S+/gi, '[url]'))
+    return {
+      ok: false,
+      status: 503,
+      causa: 'seguro_anterior_no_disponible',
+      mensaje: 'No se ha podido calcular el seguro anterior del cliente (error interno). No es que no tenga: no se ha podido mirar.',
+    }
+  }
+}
+
+/**
  * Orígenes de unos años tecleados que cuentan como DATO (no supuesto). `'corredor'` NO está (03/10/2026,
  * criterio conservador): un número tecleado por encima de lo que acreditan los datos se verifica antes
  * de emitir. La pantalla manda `'documento'` con `origenesHistorialManual()` (module-seguros), la misma

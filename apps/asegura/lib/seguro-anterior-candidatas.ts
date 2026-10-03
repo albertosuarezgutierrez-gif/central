@@ -25,7 +25,7 @@ import {
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { catalogoCompanias } from './emision'
-import { imputarConLectura, type Imputacion, type LecturaCandidatas, type SeguroAnteriorPublico } from './seguro-anterior-reglas'
+import { imputarConLectura, imputarParaPrecalificar, type Imputacion, type LecturaCandidatas, type SeguroAnteriorPublico } from './seguro-anterior-reglas'
 
 export {
   CONDICION_BONUS_SUPUESTO,
@@ -149,6 +149,11 @@ export async function candidatasSeguroAnterior(correduriaId: string, clienteId: 
 /** Imputa el seguro anterior leyendo las candidatas de la BD (la decisión es `imputarConLectura`, pura). */
 export function imputarSeguroAnterior(entrada: Omit<Parameters<typeof imputarConLectura>[0], 'leer'>): Promise<Imputacion> {
   return imputarConLectura({ ...entrada, leer: candidatasSeguroAnterior })
+}
+
+/** Igual, para la precalificación gratis: nunca lanza (ver `imputarParaPrecalificar`). */
+export function imputarSeguroAnteriorGratis(entrada: Omit<Parameters<typeof imputarConLectura>[0], 'leer'>): Promise<Imputacion> {
+  return imputarParaPrecalificar({ ...entrada, leer: candidatasSeguroAnterior })
 }
 
 /**
