@@ -51,3 +51,4 @@
 | 30/09/2026 | regla sesión ordena / agentes ejecutan en CLAUDE.md | agente-mecanico | ok |
 | 03/10/2026 | asegura-web: ramo `salud-sin-copago` + noindex/robots de asegura-portal | general-purpose | ok parcial: la 301 de /mejoramos-tu-seguro ya existía hacia /cambiar-de-correduria (decisión documentada) y no se cambió a / |
 | 03/10/2026 | anotación memoria CIMA: CONTEXTO-SESIONES.md (REC 261 Allianz), SKILL.md cima-ingesta (LI/RE §13.3.33), AGENTE-MECANICO-BITACORA.md | sesión | ok |
+| 03/10/2026 | memoria CIMA #877 | sesión | ok |
