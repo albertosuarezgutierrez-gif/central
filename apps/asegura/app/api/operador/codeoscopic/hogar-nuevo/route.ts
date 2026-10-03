@@ -113,6 +113,7 @@ export const POST = auditado(async (req: Request) => {
       anioConstruccion: datos.anioConstruccion,
       codigoPostal: datos.codigoPostal,
       uso: datos.uso,
+      referencia,
       direccion: direccionDesdeCatastro(paramsDnploc(datos.direccion)),
     }
   } catch (e) {

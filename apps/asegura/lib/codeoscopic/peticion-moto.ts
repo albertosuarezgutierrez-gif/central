@@ -25,6 +25,7 @@ import {
   type DatosPropietario,
 } from './persona.ts'
 import { mismoDni } from './peticion-auto.ts'
+import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
 
 /** El carné de quien CONDUCE la moto: fecha + tipo (A, A2, A1, AM o B) + zona, y el B si lo tiene. */
 export type CarnetMoto = {
@@ -140,6 +141,11 @@ export function revisarDatosMoto(d: Partial<DatosMoto>): ReparoMoto[] {
   for (const c of [...(d.conductor || d.tomadorEsEmpresa ? [] : (['fechaCarnet'] as const)), 'fechaMatriculacion', 'fechaEfecto'] as const) {
     if (!texto(d[c])) falta(c)
     else if (!RE_FECHA.test(String(d[c]))) r.push({ campo: c, motivo: 'la fecha tiene que ser aaaa-mm-dd' })
+  }
+  // Efecto: ni anterior a hoy ni a más de 90 días (mismo cepo que auto; no se arregla tras pagar).
+  if (texto(d.fechaEfecto) && RE_FECHA.test(String(d.fechaEfecto))) {
+    const mal = motivoFechaEfectoInvalida(String(d.fechaEfecto))
+    if (mal) r.push({ campo: 'fechaEfecto', motivo: mal })
   }
 
   // ── Propietario y conductor distintos del tomador (opcionales) ──
