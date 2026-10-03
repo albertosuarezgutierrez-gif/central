@@ -112,6 +112,21 @@ const objetos = (v: unknown): Record<string, unknown>[] =>
 
 const noVacia = <T>(xs: T[]): T[] | null => (xs.length > 0 ? xs : null)
 
+/**
+ * Normaliza códigos numéricos eliminando ceros a la izquierda.
+ * «016» ≡ «16» para poder casar códigos en búsquedas.
+ */
+export function normalizarCodigoCoberturaNumerico(codigo: string | null): string | null {
+  if (codigo === null) return null
+  const trimmed = codigo.trim()
+  if (trimmed === '') return null
+  // Si es un código numérico, elimina ceros a la izquierda
+  if (/^\d+$/.test(trimmed)) {
+    return String(Number(trimmed))
+  }
+  return trimmed
+}
+
 function contacto(c: EntradaDetalle['tramitador']): ContactoGestion | null {
   const r = { nombre: textoClaro(c.nombre), telefono: textoClaro(c.telefono), email: textoClaro(c.email) }
   return r.nombre === null && r.telefono === null && r.email === null ? null : r
@@ -147,7 +162,8 @@ export function detalleSiniestroCompania(
         objetos(rd.coberturas)
           .map((c) => {
             const cod = textoClaro(c.cobertura)
-            return { cobertura: cod === null ? null : Object.hasOwn(nombresCobertura, cod) ? nombresCobertura[cod] : /^[\d\s./-]+$/.test(cod) ? null : cod, importe: importe(c.importe) }
+            const codNormalizado = cod ? normalizarCodigoCoberturaNumerico(cod) : null
+            return { cobertura: codNormalizado === null ? null : Object.hasOwn(nombresCobertura, codNormalizado) ? nombresCobertura[codNormalizado] : /^[\d\s./-]+$/.test(codNormalizado) ? null : codNormalizado, importe: importe(c.importe) }
           })
           .filter((c): c is { cobertura: string; importe: number | null } => c.cobertura !== null),
       )

@@ -65,6 +65,7 @@ import {
   vistaCobertura,
   capitalDeCobertura,
   nombreCobertura,
+  normalizarCodigoCoberturaNumerico,
   type CoberturaVista,
   tonoSituacionRecibo,
   type ReciboHistorial,
@@ -978,8 +979,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     const nombresPorCodigo: Record<string, string> = {}
     for (const c of cobs) {
       const n = nombreCobertura((c.descripcion ?? '').trim())
-      const k = (c.codigo ?? '').trim()
-      if (k !== '' && n !== '') nombresPorCodigo[k] = n
+      const k = normalizarCodigoCoberturaNumerico(c.codigo ?? '')
+      if (k !== null && n !== '') nombresPorCodigo[k] = n
     }
     // Allianz no manda prima en la póliza ni avanza su vencimiento al renovar:
     // solo el recibo anual (27/09/2026). Los recibos son los de ESTA póliza,

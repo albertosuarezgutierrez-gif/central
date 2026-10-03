@@ -13,7 +13,7 @@ import { interpretarCapital, importeEiac, extraerDetalleCobertura } from '@centr
  *  - 🚨 si `datos_extra` trae un límite POR SINIESTRO (`ClaseLimite` PS), ESE es el de la cobertura:
  *    `capital_asegurado` es entonces el capital del riesgo entero repetido en cada línea (medido
  *    03/10/2026: un Clio de 11.800€ traía 77.202 en Cristales/Incendio/Robo). Un límite ≤ 1 no es dinero
- *    (Mapfre manda «1.00» en Fenómenos de la naturaleza) → `null`, nunca el capital heredado.
+ *    (Allianz auto manda «1.00» en Fenómenos de la naturaleza) → `null`, nunca el capital heredado.
  * Franquicia: solo un importe > 0 (el 0 no se afirma como «sin franquicia»).
  * Vigencia: solo si DIFIERE del periodo de la póliza (Mapfre repite la anualidad en cada línea).
  */
@@ -61,7 +61,8 @@ export type CapitalVista =
 
 /** El capital que SE AFIRMA de una cobertura (ver la cabecera). Una sola fuente para la ficha y la lista. */
 export function capitalDeCobertura(c: { descripcion?: string | null; capitalAsegurado: string | null; datosExtra?: unknown }): CapitalVista {
-  const lim = extraerDetalleCobertura(c.datosExtra)?.limites.find((l) => l.maximo !== null) ?? null
+  const limites = extraerDetalleCobertura(c.datosExtra)?.limites ?? null
+  const lim = limites ? (limites.find(l => l.clase === 'PS' && l.maximo !== null) ?? limites.find(l => l.maximo !== null)) : null
   const cap = interpretarCapital(c.capitalAsegurado)
   const rcObl = esRcObligatoria(c.descripcion)
   if (lim !== null && lim.clase === 'PS') {

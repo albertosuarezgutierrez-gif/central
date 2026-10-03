@@ -56,6 +56,14 @@ test('🚨 capital: el límite por siniestro manda sobre el capital del riesgo r
   assert.equal(v('Cristales', null), '77.202,00€')
 })
 
+test('🚨 capital: prioriza límite PS cuando hay múltiples límites (PS siempre primero)', () => {
+  const multiLim = { DatosLimitesAsegurados: { Limite: [
+    { ClaseLimite: 'NI', LimiteMaximo: '100000.00', LimiteMinimo: '100000.00' },
+    { ClaseLimite: 'PS', LimiteMaximo: '50000.00', LimiteMinimo: '50000.00', DescripcionLimite: 'Por siniestro' }
+  ] } }
+  assert.equal(vistaCobertura({ ...base, capitalAsegurado: '77202.00', datosExtra: multiLim }).capital, '50.000,00€')
+})
+
 test('capital: sin capital pero con límite → el límite; sin nada → no se pinta', () => {
   const n = { ...base, descripcion: 'R.C. Patronal' }
   assert.equal(vistaCobertura({ ...n, datosExtra: { DatosLimitesAsegurados: { Limite: { ClaseLimite: 'NI', LimiteMaximo: '309000.00' } } } }).capital, '309.000,00€')

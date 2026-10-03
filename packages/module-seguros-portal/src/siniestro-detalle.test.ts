@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detalleSiniestroCompania, descripcionRiesgoLegible, textoClaro, type EntradaDetalle } from './siniestro-detalle.ts'
+import { detalleSiniestroCompania, descripcionRiesgoLegible, textoClaro, normalizarCodigoCoberturaNumerico, type EntradaDetalle } from './siniestro-detalle.ts'
 
 const vacio: EntradaDetalle = {
   fechaDeclaracion: null,
@@ -101,4 +101,20 @@ test('riesgo afectado: se quita el código interno delante del nombre', () => {
 test('culpa indeterminada (IN) no se pinta: no consta, no se afirma', () => {
   assert.equal(detalleSiniestroCompania({ ...vacio, posicion: 'IN' }), null)
   assert.equal(detalleSiniestroCompania({ ...vacio, posicion: 'RE' })?.culpa, 'Sin culpa: tu compañía reclama al contrario')
+})
+
+test('normalizarCodigoCoberturaNumerico: elimina ceros a la izquierda de códigos numéricos', () => {
+  assert.equal(normalizarCodigoCoberturaNumerico('016'), '16')
+  assert.equal(normalizarCodigoCoberturaNumerico('0'), '0')
+  assert.equal(normalizarCodigoCoberturaNumerico('A01'), 'A01')
+  assert.equal(normalizarCodigoCoberturaNumerico(''), null)
+  assert.equal(normalizarCodigoCoberturaNumerico(null), null)
+})
+
+test('🚨 reserva por cobertura: código normalizado casa con mapa normalizado (016 ≡ 16)', () => {
+  const d = detalleSiniestroCompania(
+    { ...vacio, reservaDesglose: { coberturas: [{ cobertura: '016', importe: 171.31 }] } },
+    { '16': 'Daños propios' }
+  )
+  assert.deepEqual(d?.reservaPorCobertura, [{ cobertura: 'Daños propios', importe: 171.31 }])
 })
