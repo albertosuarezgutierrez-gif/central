@@ -96,6 +96,19 @@ zips más grandes, rama temporal con el zip cifrado (openssl aes-256-cbc -pbkdf2
 la clave como input. Tras usarlo: **borrar el run entero y la rama** (los inputs
 llevan datos personales; borrar solo los logs no basta).
 
+🚫📮 **Desde asegura#871 (03/10/2026) el rescate (`ingerir-manual`) NO llama a 
+confirmarDescarga** (`CIMA_INGERIR_MANUAL_OPTS.sinConfirmarTirea`); antes sí confirmaba. 
+`reprocesar-cuarentena` SÍ confirma a propósito: un fichero en cuarentena puede no 
+estar confirmado y saltarse el ACK lo dejaría 'confirmed' sin ACK y TIREA lo 
+reentregaría siempre. Un test de guarda exige ambas cosas.
+
+🔁 **Antes de reprocesar POL/REC del archivo, recorta del lote las entidades que 
+ya tienen un fichero MÁS NUEVO en BD** (igual que con SIN): reprocesar uno viejo 
+retrocede la póliza/recibo. SIN nunca en lote.
+
+🧹 **Limpieza tras un rescate:** el proxy de git da 403 al borrar ramas y no hay 
+herramienta para borrar runs: lo hace Alberto a mano (ramas tmp-* y runs con inputs).
+
 ### 📁 Archivo de CIMA en Drive (24/09/2026)
 Carpeta **`asegura/CIMA`** del Drive de Alberto (id `1DoHnkMj2gYepUKR3A3SmkBE4JIE9iwM1`):
 las descargas del Portal CIMA («Ficheros recibidos», zip de zips EIAC por rango de
