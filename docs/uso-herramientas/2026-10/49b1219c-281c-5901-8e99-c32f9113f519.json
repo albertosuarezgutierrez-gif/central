@@ -1,67 +1,68 @@
 {
  "sesion": "49b1219c-281c-5901-8e99-c32f9113f519",
  "inicio": "2026-10-03T07:27:37.509Z",
- "fin": "2026-10-03T07:56:45.473Z",
- "llamadas": 131,
+ "fin": "2026-10-03T08:50:47.026Z",
+ "llamadas": 192,
  "categorias": {
   "agente:general-purpose": {
-   "llamadas": 5,
-   "chars_in": 6545,
-   "chars_out": 4358,
+   "llamadas": 7,
+   "chars_in": 10100,
+   "chars_out": 6480,
    "errores": 0,
-   "archivos_citados": 3,
-   "chars_citados": 928307,
+   "archivos_citados": 5,
+   "chars_citados": 988706,
    "tools": {
-    "Agent": 5
+    "Agent": 7
    }
   },
   "otro": {
-   "llamadas": 36,
-   "chars_in": 18587,
-   "chars_out": 200739,
+   "llamadas": 50,
+   "chars_in": 33271,
+   "chars_out": 288857,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 5,
-    "SubagentHandback": 7,
-    "ReadNotifications": 24
+    "ToolSearch": 8,
+    "SubagentHandback": 10,
+    "ReadNotifications": 32
    }
   },
   "lectura-directa": {
-   "llamadas": 19,
-   "chars_in": 1789,
-   "chars_out": 155270,
+   "llamadas": 20,
+   "chars_in": 1963,
+   "chars_out": 158669,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 1,
-    "Grep": 6,
+    "Grep": 7,
     "Read": 12
    }
   },
   "mcp:Gmail": {
-   "llamadas": 7,
-   "chars_in": 811,
-   "chars_out": 148017,
-   "errores": 2,
+   "llamadas": 14,
+   "chars_in": 2538,
+   "chars_out": 254550,
+   "errores": 4,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Gmail__search_threads": 3,
-    "mcp__Gmail__get_thread": 4
+    "mcp__Gmail__search_threads": 5,
+    "mcp__Gmail__get_thread": 8,
+    "mcp__Gmail__create_draft": 1
    }
   },
   "bash": {
-   "llamadas": 50,
-   "chars_in": 20853,
-   "chars_out": 160035,
+   "llamadas": 82,
+   "chars_in": 30459,
+   "chars_out": 403128,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 50
+    "Bash": 82
    }
   },
   "agente:agente-mecanico": {
@@ -90,15 +91,16 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 2,
-   "chars_in": 243,
-   "chars_out": 347,
+   "llamadas": 3,
+   "chars_in": 289,
+   "chars_out": 1806,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 1,
-    "mcp__claude-code-remote__send_later": 1
+    "mcp__claude-code-remote__send_later": 1,
+    "mcp__claude-code-remote__delete_trigger": 1
    }
   },
   "escritura": {
@@ -110,6 +112,39 @@
    "chars_citados": 0,
    "tools": {
     "Edit": 4
+   }
+  },
+  "mcp:Supabase_asegura": {
+   "llamadas": 1,
+   "chars_in": 48,
+   "chars_out": 3838,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__list_tables": 1
+   }
+  },
+  "sql": {
+   "llamadas": 2,
+   "chars_in": 402,
+   "chars_out": 2018,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__execute_sql": 2
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 3700,
+   "chars_out": 3911,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 64045,
+   "tools": {
+    "Agent": 1
    }
   }
  }
