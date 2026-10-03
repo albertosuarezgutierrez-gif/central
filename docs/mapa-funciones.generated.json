@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T08:44:36Z",
-  "sha": "4e63183e4ce03143c9b344b5dfb283f7bd6fdf24",
+  "generadoEn": "2026-10-03T09:17:12Z",
+  "sha": "a73730b9a5ada758ca648d7c4ec110566f867f95",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -15421,6 +15421,15 @@
       "hash": "51e8de9e4a3e"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/descubrir-emisiones/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/descubrir-emisiones",
+      "hash": "ff9b6e6b7292"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/documentos/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -18092,7 +18101,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 22,
+          "linea": 27,
           "resumen": "POST /api/webhooks/codeoscopic — el webhook que Codeoscopic tiene dado de alta (HTTP Basic). Hoy apunta al CRM de Manuel (`app.grupoasegura.com`), que DESCARTA sin persistir el payload real (raíz arra"
         }
       ],
@@ -18103,7 +18112,7 @@
         "set"
       ],
       "rutaApi": "/api/webhooks/codeoscopic",
-      "hash": "40304e596db4"
+      "hash": "c07e4fdf34ae"
     },
     {
       "ruta": "apps/asegura/app/api/webhooks/resend/route.ts",
@@ -24335,6 +24344,200 @@
       "hash": "7697eaf9867f"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/descubrir-emisiones.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Descubrimiento AUTOMÁTICO de emisiones de Codeoscopic / Avant2 (03/10/2026). Hasta hoy una emisión hecha en la web de Avant2 solo entraba en la intranet si alguien la registraba a mano o si el proyecto ya estaba retenido (`/retenidas`). El webhook del vendor sigue apuntando al CRM de Manuel, y no qu",
+      "exporta": [
+        "nuevoPresupuesto",
+        "esAuth",
+        "reintentable",
+        "esperarReal",
+        "leerConReintento",
+        "itemsDePagina",
+        "ventanaDe",
+        "listarPresentadas",
+        "planificar",
+        "procesarProyecto",
+        "descubrirEmisiones",
+        "idsDelWebhook",
+        "sincronizarTrasWebhook"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Json",
+          "linea": 32
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 33
+        },
+        {
+          "nombre": "nuevoPresupuesto",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "tope = TOPE_LLAMADAS",
+          "retorno": "Presupuesto",
+          "linea": 53
+        },
+        {
+          "nombre": "esAuth",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 63
+        },
+        {
+          "nombre": "reintentable",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 66,
+          "resumen": "¿Merece otro intento? 429 y 5xx (el vendor pide calma o tropieza), timeout y cortes de red."
+        },
+        {
+          "nombre": "esperarReal",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "ms",
+          "retorno": null,
+          "linea": 74
+        },
+        {
+          "nombre": "leerConReintento",
+          "kind": "function",
+          "exportada": true,
+          "params": "fn: () => Promise<T>, presupuesto: Presupuesto, esperar: Esperar = esperarReal,",
+          "retorno": "Promise<T>",
+          "linea": 80,
+          "resumen": "Una LECTURA al vendor con backoff simple (1 s, 2 s…) y tope de llamadas. Cada intento gasta una llamada del presupuesto. Un 401/403 NO se reintenta (lo propaga: la pasada se corta)."
+        },
+        {
+          "nombre": "itemsDePagina",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "unknown[] | null",
+          "linea": 100,
+          "resumen": "La lista CRUDA de una página. `null` = forma desconocida (nunca «vacía»)."
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 112
+        },
+        {
+          "nombre": "ventanaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias: number, hoy: Date",
+          "retorno": "",
+          "linea": 114
+        },
+        {
+          "nombre": "listarPresentadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "leer: (path: string) => Promise<unknown>, ventana: { desde: string; hasta: string }, presupuesto: Presupuesto, esperar: Esperar = esperarReal, opciones: { pageSize?: number; maxPaginas?: number } = {},",
+          "retorno": "Promise<Listado>",
+          "linea": 126,
+          "resumen": "Ids de los proyectos con solicitud presentada en la ventana. Pagina con `pageNumber` (1…) hasta una página incompleta. `X-Total-Count` no se lee (el transporte solo devuelve el cuerpo): por eso se cor"
+        },
+        {
+          "nombre": "horasDesde",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | null, ahora: Date",
+          "retorno": null,
+          "linea": 171
+        },
+        {
+          "nombre": "planificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: string[], locales: Map<string, EstadoLocal>, ahora: Date",
+          "retorno": "Plan",
+          "linea": 179,
+          "resumen": "Qué se mira en esta pasada y en qué orden: primero los NUEVOS (nadie los ha visto), luego los proyectos vivos de la intranet (los de revisión más antigua primero) y por último las filas en revisión. «"
+        },
+        {
+          "nombre": "itemBase",
+          "kind": "function",
+          "exportada": false,
+          "params": "projectId: string, crudo: unknown, e: EmisionExterna",
+          "retorno": "Omit<ItemRevision, 'motivo' | 'coincidencias' | 'clienteId' | 'detalle'>",
+          "linea": 272
+        },
+        {
+          "nombre": "procesarProyecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "projectId: string, deps: DepsProyecto, opciones: { presentadaSegunLista: boolean; ahora?: Date },",
+          "retorno": "Promise<DesenlaceProyecto>",
+          "linea": 289,
+          "resumen": "Resuelve UN proyecto. Lanza ante errores de vendor/BD (los cuenta la pasada como ERROR; un `ErrorCodeoscopic` de auth corta la pasada). Nunca escribe en la cartera sin un match ÚNICO por documento, y "
+        },
+        {
+          "nombre": "emisionNoAcunable",
+          "kind": "function",
+          "exportada": false,
+          "params": "emision: EmisionExterna, encolar: (m: MotivoRevision, extra?: Partial<Pick<ItemRevision, 'coincidencias' | 'clienteId' | 'detalle'>>) => Promise<DesenlaceProyecto>, clienteId: string | null, coincidencias: number | null,",
+          "retorno": "Promise<DesenlaceProyecto>",
+          "linea": 357,
+          "resumen": "Hogar, salud, vida, decesos…: la intranet no los acuña sola. Emitida con nº → «emitida sin acuñar»."
+        },
+        {
+          "nombre": "textoError",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "string",
+          "linea": 413
+        },
+        {
+          "nombre": "descubrirEmisiones",
+          "kind": "function",
+          "exportada": true,
+          "params": "opciones: { dias?: number; topeLlamadas?: number; presupuestoMs?: number }, deps: DepsPasada,",
+          "retorno": "Promise<ResumenPasada>",
+          "linea": 418
+        },
+        {
+          "nombre": "idsDelWebhook",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: (string | null | undefined)[]",
+          "retorno": "string[]",
+          "linea": 506,
+          "resumen": "Ids válidos y únicos de un envío del webhook (como mucho `MAX_IDS_WEBHOOK`)."
+        },
+        {
+          "nombre": "sincronizarTrasWebhook",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: (string | null | undefined)[], procesar: (projectId: string) => Promise<DesenlaceProyecto>, log: (linea: string) => void = (l) => console.log(l),",
+          "retorno": "Promise<",
+          "linea": 515,
+          "resumen": "Tras guardar el crudo del webhook, intenta sincronizar cada proyecto. NUNCA lanza: si falla, el cron de descubrimiento lo recoge. El receptor tiene que seguir contestando 200 pase lo que pase (Codeosc"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "838be1b7e454"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera-decesos.ts",
       "ambito": "apps/asegura",
       "resumen": "Precalificación de DECESOS sin póliza («oportunidad nueva»): la cartera viva tiene 0 pólizas de este ramo (03/09/2026). Mismo patrón que `desde-cartera-vida.ts` — ver su cabecera para el porqué del fichero aparte. 🚧 Ver la cabecera de `peticion-decesos.ts`: el `risk` que se manda al vendor es una s",
@@ -28799,6 +29002,60 @@
       "hash": "36b0175c9310"
     },
     {
+      "ruta": "apps/asegura/lib/descubrir-emisiones.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Cableado (BD + vendor) del descubrimiento automático de emisiones de Avant2 (03/10/2026). La lógica —qué se mira, qué se escribe, qué va a revisión— vive PURA y probada en `codeoscopic/descubrir-emisiones.ts`. Aquí solo hay consultas y el transporte de LECTURA. Escritura en la cartera: SOLO por `sin",
+      "exporta": [
+        "pasadaDescubrimiento",
+        "sincronizarDesdeWebhook"
+      ],
+      "funciones": [
+        {
+          "nombre": "depsProyectoBase",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, origen: Origen",
+          "retorno": "Omit<DepsProyecto, 'leerProyecto'>",
+          "linea": 33
+        },
+        {
+          "nombre": "lectorVendor",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 98
+        },
+        {
+          "nombre": "pasadaDescubrimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opciones: { dias?: number; presupuestoMs?: number },",
+          "retorno": "Promise<ResultadoDescubrimiento>",
+          "linea": 109,
+          "resumen": "Una pasada completa (la del cron). Lanza solo si la BD falla fuera de un proyecto concreto."
+        },
+        {
+          "nombre": "sincronizarDesdeWebhook",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: (string | null)[]",
+          "retorno": "Promise<void>",
+          "linea": 180,
+          "resumen": "Tras guardar el crudo del webhook: sincroniza los proyectos recibidos. NUNCA lanza (si algo falla, el cron lo recoge en su próxima pasada). Pensado para `after()`: no retrasa el 200."
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "codeoscopic_emisiones_revision",
+        "codeoscopic_projects",
+        "descubrimiento",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "982363a372d5"
+    },
+    {
       "ruta": "apps/asegura/lib/devoluciones-recibo.ts",
       "ambito": "apps/asegura",
       "resumen": "Recibos DEVUELTOS: registrar lo que avisa la compañía por correo, escalar con el reloj del art. 15 LCS y cerrar solo cuando consta el cobro (28/09/2026). · `registrarDevoluciones()` — lo llama plataforma cuando el triaje lee un correo de devolución (`leerCorreoDevolucion`). Guarda la devolución en `",
@@ -29354,7 +29611,7 @@
           "exportada": false,
           "params": "status: 400 | 404 | 409 | 422 | 502 | 503, mensaje: string, origen: 'entrada' | 'vendor' | 'bd' = 'entrada'",
           "retorno": "ResultadoSincronizar",
-          "linea": 70
+          "linea": 75
         },
         {
           "nombre": "accionDe",
@@ -29362,7 +29619,7 @@
           "exportada": false,
           "params": "estado: ReturnType<typeof leerEmisionExterna>",
           "retorno": "AccionExterna",
-          "linea": 72
+          "linea": 77
         },
         {
           "nombre": "sincronizarEmisionExterna",
@@ -29370,7 +29627,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: EntradaSincronizar",
           "retorno": "Promise<ResultadoSincronizar>",
-          "linea": 82
+          "linea": 87
         },
         {
           "nombre": "yaEmitida",
@@ -29378,7 +29635,7 @@
           "exportada": false,
           "params": "correduriaId: string, projectId: string, fila: FilaProyecto",
           "retorno": "Promise<ResultadoSincronizar>",
-          "linea": 289
+          "linea": 294
         },
         {
           "nombre": "vistaDeYaEmitida",
@@ -29386,7 +29643,7 @@
           "exportada": false,
           "params": "projectId: string, ya: ResultadoSincronizar",
           "retorno": "ResultadoSincronizar",
-          "linea": 316,
+          "linea": 321,
           "resumen": "Vista previa de un proyecto que YA está emitido en la intranet: no se llama al vendor (no hace falta y cuesta una petición). `emision` es un resumen mínimo coherente con `EmisionResumen`: estado 'apro"
         }
       ],
@@ -29400,7 +29657,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "6c6e7cc1ca41"
+      "hash": "f335f21dadef"
     },
     {
       "ruta": "apps/asegura/lib/emision-figuras-reglas.ts",
@@ -96250,7 +96507,7 @@
           "exportada": false,
           "params": "ag: { id: string; etiqueta: string; maxHoras: number; nota: string }, evaluadoAt: Date, alerta: boolean, horas: number | null, motivo: string, sondaError: string | null,",
           "retorno": "Promise<void>",
-          "linea": 268,
+          "linea": 271,
           "resumen": "Persiste el veredicto de UN agente en `agente_veredicto` para que lo pueda leer una pantalla. 🚨 NO es `agente_salud` (05/09/2026): esa tabla ya existía desde julio con otro esquema —el badge que el p"
         },
         {
@@ -96259,7 +96516,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 289
+          "linea": 292
         }
       ],
       "tablas": [
@@ -96274,7 +96531,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "c5d3300047fd"
+      "hash": "0568fd543405"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -96738,6 +96995,39 @@
       "tablas": [],
       "rutaApi": "/api/cron/correduria-bajas-pue",
       "hash": "cb44c10e413e"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/correduria-descubrir-emisiones/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Descubrimiento AUTOMÁTICO de emisiones de Avant2 (03/10/2026). Cada 30 min de 07 a 23 h pide a asegura que mire en Avant2 los proyectos con solicitud presentada (gratis) y registre lo que pueda demostrar por documento. Aquí",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "latidoPrevio",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<LatidoPrevio>",
+          "linea": 28,
+          "resumen": "El latido ANTERIOR (antes de escribir el de esta pasada). `null` = no se pudo leer."
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 39
+        }
+      ],
+      "tablas": [
+        "agente_latidos",
+        "next"
+      ],
+      "rutaApi": "/api/cron/correduria-descubrir-emisiones",
+      "hash": "e12c17d76e1b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-eventos/route.ts",
@@ -112480,6 +112770,7 @@
         "sustitucionesAsegura",
         "interpretarRetenidas",
         "retenidasAsegura",
+        "descubrirEmisionesAsegura",
         "emisionExternaVista",
         "emisionExternaRegistrar",
         "oportunidadesAvisoAsegura",
@@ -112806,12 +113097,21 @@
           "resumen": "Revisa en Avant2 las emisiones retenidas. POST sin cuerpo (lee Avant2, no tarifica)."
         },
         {
+          "nombre": "descubrirEmisionesAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 1003,
+          "resumen": "Descubrimiento AUTOMÁTICO de emisiones de Avant2 (03/10/2026). Solo lee el vendor (gratis); asegura registra lo que puede demostrar y deja el resto en revisión. La lectura de la respuesta es PURA y vi"
+        },
+        {
           "nombre": "emisionExternaVista",
           "kind": "function",
           "exportada": true,
           "params": "q: { projectId: string; clienteId: string; oportunidadId?: string | null },",
           "retorno": "Promise<",
-          "linea": 998,
+          "linea": 1008,
           "resumen": "Vista previa (GET, gratis) de registrar en la intranet una emisión hecha en la web de Avant2."
         },
         {
@@ -112820,7 +113120,7 @@
           "exportada": true,
           "params": "b: { projectId: string; clienteId: string; oportunidadId?: string | null; actor: string },",
           "retorno": "Promise<",
-          "linea": 1012,
+          "linea": 1022,
           "resumen": "Registra la emisión externa. `actor` lo pone el servidor con la sesión."
         },
         {
@@ -112829,7 +113129,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<LecturaOportunidadesAviso>",
-          "linea": 1026,
+          "linea": 1036,
           "resumen": "── Oportunidades a 45 días (regla única, 29/09/2026) ──────────────────────"
         },
         {
@@ -112838,7 +113138,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "EstadoPortalCliente | null",
-          "linea": 1093,
+          "linea": 1103,
           "resumen": "🚨 Un valor que no reconocemos es `null` («no comprobado»), no un estado por defecto. Un asegura más nuevo que esta pantalla mandaría una etiqueta que aquí no existe, y elegir la optimista diría que e"
         },
         {
@@ -112847,7 +113147,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 1171,
+          "linea": 1181,
           "resumen": "Tri-estado de verdad: un campo ausente es `null` («no se informó»), no `false`. Con `=== true` a secas, un puerto que no manda el campo diría que TODOS están sin email."
         },
         {
@@ -112856,7 +113156,7 @@
           "exportada": true,
           "params": "email: boolean | null, telefono: boolean | null, canalEnPoliza: number | null, contactoDeOtros: number | null, contactoDeAllegados: number | null,",
           "retorno": "EstadoCanal",
-          "linea": 1183,
+          "linea": 1193,
           "resumen": "El estado se DERIVA de dónde hay contacto; no se cree el que venga en el JSON. Si falta cualquiera de las cuatro medidas, el resultado es `no_comprobado`. 🚨 Ojo al último bloque: sin saber lo de la p"
         },
         {
@@ -112865,7 +113165,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaContacto[]",
-          "linea": 1208,
+          "linea": 1218,
           "resumen": "Las fichas nombradas. Una entrada sin id o con el nombre cifrado (`v1:`) se descarta: sigue contada en `contactoDeOtros`, pero no se inventa un nombre."
         },
         {
@@ -112874,7 +113174,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaAllegado[]",
-          "linea": 1224,
+          "linea": 1234,
           "resumen": "Ídem, conservando el parentesco. Sin parentesco legible se descarta: sigue contado en `contactoDeAllegados`, pero no se dice «llama a X» a secas."
         },
         {
@@ -112883,7 +113183,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SinCanal",
-          "linea": 1239
+          "linea": 1249
         },
         {
           "nombre": "sinCanalAsegura",
@@ -112891,7 +113191,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SinCanal>",
-          "linea": 1309
+          "linea": 1319
         },
         {
           "nombre": "interpretarCalidad",
@@ -112899,7 +113199,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CalidadDato",
-          "linea": 1327
+          "linea": 1337
         },
         {
           "nombre": "calidadAsegura",
@@ -112907,7 +113207,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CalidadDato>",
-          "linea": 1369
+          "linea": 1379
         },
         {
           "nombre": "planBackfillDni",
@@ -112915,7 +113215,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PlanBackfillDni>",
-          "linea": 1432
+          "linea": 1442
         },
         {
           "nombre": "interpretarPlanBackfill",
@@ -112923,7 +113223,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "PlanBackfillDni",
-          "linea": 1443,
+          "linea": 1453,
           "resumen": "Puro: separado para poder probarlo sin red."
         },
         {
@@ -112932,7 +113232,7 @@
           "exportada": true,
           "params": "limite?: number",
           "retorno": "Promise<EscrituraBackfillDni>",
-          "linea": 1491,
+          "linea": 1501,
           "resumen": "Lanza la escritura. `limite` la parte en tandas: descifrar y hashear 32.000 fichas ya consume parte de los 300 s del endpoint de asegura, así que una pasada sin tope puede no llegar. Se vuelve a pulsa"
         },
         {
@@ -112941,7 +113241,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "EscrituraBackfillDni",
-          "linea": 1519,
+          "linea": 1529,
           "resumen": "Puro: separado para poder probarlo sin red. Para el backfill de CONTACTO la respuesta trae además `derivadosEscritos`/`derivadosRestantes` (las mitades del email); se suman a `escritos`/`restantes` pa"
         },
         {
@@ -112950,7 +113250,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PlanBackfillContacto>",
-          "linea": 1574
+          "linea": 1584
         },
         {
           "nombre": "interpretarPlanBackfillContacto",
@@ -112958,7 +113258,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "PlanBackfillContacto",
-          "linea": 1585,
+          "linea": 1595,
           "resumen": "Puro: separado para poder probarlo sin red."
         },
         {
@@ -112967,13 +113267,13 @@
           "exportada": true,
           "params": "limite?: number",
           "retorno": "Promise<EscrituraBackfillDni>",
-          "linea": 1623,
+          "linea": 1633,
           "resumen": "Lanza la escritura, por tandas. Misma forma de respuesta que la del DNI."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ffa146ba7856"
+      "hash": "854b74266037"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-tarificacion-tg.ts",
@@ -114019,6 +114319,95 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6d3f2929076f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/descubrir-emisiones-aviso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Descubrimiento AUTOMÁTICO de emisiones de Avant2 — lectura de la respuesta de asegura, latido y aviso de Telegram (03/10/2026). PURO (sin BD ni red): la ruta del cron solo cablea. asegura (`POST /api/operador/codeoscopic/de",
+      "exporta": [
+        "interpretarDescubrimiento",
+        "esPrimeraPasadaDelDia",
+        "decidirDescubrimiento"
+      ],
+      "funciones": [
+        {
+          "nombre": "objeto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 56
+        },
+        {
+          "nombre": "cadena",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 58
+        },
+        {
+          "nombre": "entero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 59
+        },
+        {
+          "nombre": "interpretarDescubrimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "Descubrimiento",
+          "linea": 62,
+          "resumen": "La respuesta de asegura, sin suponer nada: un campo que falta es «ilegible», nunca 0."
+        },
+        {
+          "nombre": "esPrimeraPasadaDelDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date",
+          "retorno": "boolean",
+          "linea": 97,
+          "resumen": "¿Es la primera pasada del día (07:10 de Madrid)? Solo ahí se recuerda la cola aunque no haya nada nuevo."
+        },
+        {
+          "nombre": "horas",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: Date, b: Date",
+          "retorno": null,
+          "linea": 106
+        },
+        {
+          "nombre": "enlace",
+          "kind": "function",
+          "exportada": false,
+          "params": "base: string",
+          "retorno": "string",
+          "linea": 108
+        },
+        {
+          "nombre": "decidirDescubrimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { r: Descubrimiento previo: LatidoPrevio ahora: Date base?: string }",
+          "retorno": "DecisionDescubrimiento",
+          "linea": 112
+        },
+        {
+          "nombre": "escapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 175
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4fcce09a8a6a"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/dni-otp.ts",
@@ -116286,7 +116675,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 244,
+          "linea": 248,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -116295,7 +116684,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 274,
+          "linea": 278,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -116304,7 +116693,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 296
+          "linea": 300
         },
         {
           "nombre": "ventanaMinutos",
@@ -116312,7 +116701,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 304,
+          "linea": 308,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -116321,13 +116710,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 316,
+          "linea": 320,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e5a57f2a2173"
+      "hash": "06c0c9f83948"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -122445,7 +122834,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "78681c3b9faf"
+      "hash": "e04a10cf6596"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -137831,7 +138220,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 703
+          "linea": 709
         },
         {
           "nombre": "avisosDe",
@@ -137839,7 +138228,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 708,
+          "linea": 714,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -137848,13 +138237,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 718,
+          "linea": 724,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "105babd22ad4"
+      "hash": "64b5591fd624"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -175308,7 +175697,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4051,
-    "funciones": 13600
+    "archivos": 4056,
+    "funciones": 13636
   }
 }
