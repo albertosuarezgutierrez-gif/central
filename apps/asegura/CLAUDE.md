@@ -75,6 +75,9 @@
   401). Arranca APAGADO (`CODEOSCOPIC_TARIFICACION_ACTIVA`). Contador persistente `seguros.codeoscopic_consumo`:
   sin libro no se cotiza; una cotización sin desenlace CUENTA como gastada. ReRate y Submit pasan por su propio
   embudo (`libro-emision.ts`, motivos y topes separados; su coste va en env y **0 = «sin confirmar», no gratis**).
+  Codeoscopic (correo 02/10/2026, hilo «Duda»): se factura por cada `POST /insurances` con HTTP 200 (aunque sea el
+  mismo riesgo; 4xx/5xx no cuentan), solo en producción; septiembre = 28 facturables. ReRate y Submit no aparecen
+  como facturables: resuelto por inferencia; confirmación explícita no pedida.
   Ningún botón público ni vigilancia periódica tarifica.
 - **Se guarda TODO lo del vendor:** `tarificaciones.respuesta` (escritura aparte que no lanza; no sale por el
   puerto), `fallos` (NULL = anterior al 29/09 ≠ `[]`) y por precio `id_precio`, forma/frecuencia de pago y meses.
@@ -101,6 +104,8 @@
   (se llama a la compañía).
 - El webhook de Codeoscopic apunta aún al CRM de Manuel; el receptor propio (`/api/webhooks/codeoscopic`) guarda y
   no acuña. Repuntarlo es gestión de Alberto.
+  Al repuntarlo hay que pedir a Codeoscopic que confíe en el certificado del nuevo dominio (tienen el nuestro en su
+  keystore, actualizado 30/09/2026). Reintentan cada ~30 min hasta HTTP 200/204; no hay id de notificación.
 
 ## ✉️ Correos y crons (todos con cerrojos)
 - Tres cerrojos: `CRON_SECRET` Bearer, **modo cuenta por defecto** (`ASEGURA_AVISOS_ACTIVOS=1` para enviar;

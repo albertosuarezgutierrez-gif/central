@@ -134,7 +134,8 @@ test('consejoTrasFallo: el 500 manda REPORTAR con el requestId; 502/503/504 «tr
   const con = consejoTrasFallo(ERROR_500.replace('"status":500', '"requestId":"0d65134e-161833","status":500'))
   assert.equal(con?.tipo, 'reportar')
   assert.match(con?.texto ?? '', /0d65134e-161833/)
-  assert.match(con?.texto ?? '', /soporteapi@/)
+  assert.match(con?.texto ?? '', /soporteapi@codeoscopic\.com/)
+  assert.doesNotMatch(con?.texto ?? '', /avant2\.es/)
   assert.equal(consejoTrasFallo('502: Bad Gateway')?.tipo, 'reintentar_en_minutos')
   assert.equal(consejoTrasFallo('504: Gateway Timeout')?.tipo, 'reintentar_en_minutos')
   // Un 505 no lleva la cita del 500: el portal no lo documenta.

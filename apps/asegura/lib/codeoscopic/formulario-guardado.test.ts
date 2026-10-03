@@ -2,9 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { extraerFormularioAuto } from './formulario-guardado.ts'
 import { construirPeticionAuto, type DatosAuto } from './peticion-auto.ts'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
 
-// Fecha de efecto siempre futura: el validador rechaza efectos anteriores a hoy.
-const FECHA_EFECTO_FUTURA = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)
+// Fecha de efecto válida SIEMPRE (ni pasada ni a >90 días): relativa a hoy, no cableada.
+const FECHA_EFECTO = sumarDias(hoyEnMadrid(), 15)
 
 // El fixture sale del propio constructor real (`construirPeticionAuto`), no
 // se escribe a mano: así el test no puede divergir en silencio del formato
@@ -25,7 +26,7 @@ const DATOS: DatosAuto = {
   cpCirculacion: '41003',
   municipioCirculacionId: 41091,
   garaje: 'Garage',
-  fechaEfecto: FECHA_EFECTO_FUTURA,
+  fechaEfecto: FECHA_EFECTO,
 }
 
 test('recupera el tipo de vía (catálogo) y la calle completa + correo tecleados (12/09/2026)', () => {
