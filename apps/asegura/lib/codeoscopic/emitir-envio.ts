@@ -147,6 +147,36 @@ export async function soltarCandadoEnvio(correduriaId: string, projectId: string
   `.catch(() => undefined)
 }
 
+/**
+ * El MISMO candado (`submit_in_flight_at` + `submit_attempt_id`) para el acuñado SIN Submit de
+ * `/emitir` (`acunarExistente`, 03/10/2026): sin él, el cron de descubrimiento podía ganar la
+ * carrera y acuñar con SUS datos (sin póliza de origen, sin correo al cliente, sin baja de la
+ * anterior). Solo se toma sobre una fila que ya existe y no está `emitida`; quien lo toma lo suelta
+ * con `soltarCandadoEnvio` en un `finally`. Sin fila → `en-vuelo` (conservador: no se acuña).
+ */
+export async function tomarCandadoAcunado(
+  correduriaId: string,
+  projectId: string,
+): Promise<{ tipo: 'tomado'; attemptId: string } | { tipo: 'en-vuelo' } | { tipo: 'ya-emitida' }> {
+  const attemptId = randomUUID()
+  const filas = await prisma.$queryRaw<{ id: string }[]>`
+    update codeoscopic_projects
+    set submit_attempt_id = ${attemptId}::uuid, submit_in_flight_at = now()
+    where correduria_id = ${correduriaId}::uuid
+      and project_id_codeoscopic = ${projectId}
+      and estado <> 'emitida'
+      and (submit_in_flight_at is null
+           or submit_in_flight_at < now() - (${MARGEN_EN_VUELO_MIN}::int * interval '1 minute'))
+    returning id::text as id
+  `
+  if (filas.length > 0) return { tipo: 'tomado', attemptId }
+  const [fila] = await prisma.$queryRaw<{ estado: string }[]>`
+    select estado::text as estado from codeoscopic_projects
+    where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${projectId}
+  `
+  return fila?.estado === 'emitida' ? { tipo: 'ya-emitida' } : { tipo: 'en-vuelo' }
+}
+
 // ─── Submit: la emisión de verdad ────────────────────────────────────────────
 
 export type ResultadoEnvio =

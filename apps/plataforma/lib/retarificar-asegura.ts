@@ -1369,7 +1369,9 @@ export type RespuestaEmitir =
       status?: number; causa?: string | null; quizaDeclarado?: boolean | null
     }
   | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null; trasEmision: TrasEmision | null }
-  | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
+  /** `yaAcunada` (03/10/2026): asegura contestó `acunado.estado === 'ya_acunada'` — la póliza SÍ está en
+   *  la cartera, la registró otra vía (descubrimiento/webhook) a la vez. `mensaje` ya lo dice. */
+  | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null; yaAcunada?: boolean }
   /** 409 · cliente NUEVO (28/09/2026): asegura cree que es un duplicado y NO ha enviado
    *  nada. `ya_en_cartera` = la matrícula ya tiene póliza en vigor (quizá en otra ficha:
    *  el mensaje trae su nº ENMASCARADO); `ya_emitido` = otro proyecto emitido del mismo
@@ -1476,6 +1478,11 @@ export function leerSolicitudes(v: unknown): SolicitudEmisionVista[] {
 export const TIMEOUT_EMITIR_MS = 170_000
 
 /** PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable. */
+/** Lo que se dice cuando asegura no acuña porque OTRA vía ya lo hizo a la vez (`ya_acunada`). */
+export const TEXTO_YA_ACUNADA =
+  'La compañía la ha aceptado y la póliza ya está en la cartera: ya la registró el descubrimiento automático; ' +
+  'revisa en la ficha si hay que dar de baja la anterior y avisar al cliente.'
+
 export function interpretarEmitir(status: number, json: unknown): RespuestaEmitir {
   const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
   if (status === 401 || status === 403) {
@@ -1546,6 +1553,10 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
   }
   if (status === 200) {
     if (r.estado === 'emitido_sin_acunar') {
+      const acunado = typeof r.acunado === 'object' && r.acunado !== null ? (r.acunado as Record<string, unknown>) : null
+      if (acunado?.estado === 'ya_acunada') {
+        return { estado: 'emitido_sin_acunar', mensaje: TEXTO_YA_ACUNADA, referenciaVendor: cadenaONulo(r.referenciaVendor), yaAcunada: true }
+      }
       return {
         estado: 'emitido_sin_acunar',
         mensaje: cadenaONulo(r.mensaje) ?? 'Codeoscopic aceptó la emisión pero no se pudo acuñar sola.',

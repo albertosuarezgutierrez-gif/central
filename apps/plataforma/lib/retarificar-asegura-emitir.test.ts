@@ -246,3 +246,22 @@ test('emision.tsx emite con la prima CONFIRMADA por la compañía y avisa del ca
   assert.match(src, /const primaConfirmada = ofertaAntesDeEmitir\.current\?\.primaEur \?\? null/)
   assert.match(src, /cambioDePrecio\(primaEur, estado\.primaEur\)/)
 })
+
+test('emitido_sin_acunar con acunado ya_acunada (03/10/2026): dice que YA está en la cartera, no «no se pudo registrar»', () => {
+  const r = interpretarEmitir(200, {
+    estado: 'emitido_sin_acunar',
+    mensaje: 'no se ha podido registrar en la cartera: Ese proyecto ya tiene póliza acuñada',
+    referenciaVendor: 'P-9',
+    acunado: { ok: false, estado: 'ya_acunada', polizaId: 'pol-1', status: 409 },
+  })
+  assert.equal(r.estado, 'emitido_sin_acunar')
+  if (r.estado !== 'emitido_sin_acunar') return
+  assert.equal(r.yaAcunada, true)
+  assert.match(r.mensaje, /ya la registró el descubrimiento automático/)
+  assert.match(r.mensaje, /dar de baja la anterior y avisar al cliente/)
+  assert.doesNotMatch(r.mensaje, /no se ha podido registrar/)
+  // Sin `ya_acunada`, el mensaje de asegura pasa tal cual.
+  const otro = interpretarEmitir(200, { estado: 'emitido_sin_acunar', mensaje: 'sin código DGS', acunado: { ok: false, estado: 'invalido' } })
+  assert.equal(otro.estado === 'emitido_sin_acunar' && otro.mensaje, 'sin código DGS')
+  assert.equal(otro.estado === 'emitido_sin_acunar' && otro.yaAcunada, undefined)
+})

@@ -60,21 +60,64 @@ export async function reclamarProyectoParaAcunar(tx: TxCompuerta, p: ProyectoARe
   return { tipo: 'ya_acunada', polizaId: ya?.poliza_id ?? null }
 }
 
+/**
+ * ¿Es una violación de unicidad (SQLSTATE 23505)? Prisma la envuelve en `P2010` con `meta.code`;
+ * se miran las dos formas y el texto, sin importar Prisma.
+ */
+export function esViolacionUnica(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false
+  const x = e as { code?: unknown; meta?: { code?: unknown }; message?: unknown }
+  if (x.code === '23505' || x.meta?.code === '23505') return true
+  return typeof x.message === 'string' && /\b23505\b|duplicate key value violates unique constraint/.test(x.message)
+}
+
+/** Marca un error que nació en la compuerta (no en `crear`): solo esos se reintentan. */
+class ChoqueCompuerta extends Error {
+  readonly causa: unknown
+  constructor(causa: unknown) {
+    super('choque de unicidad en la compuerta del acuñado')
+    this.causa = causa
+  }
+}
+
 export type DesenlaceAcunado = { tipo: 'acunada'; polizaId: string } | { tipo: 'ya_acunada'; polizaId: string | null }
 
 /**
  * Orquesta el acuñado: abre la transacción, reclama el proyecto y SOLO si lo ha reclamado llama a
  * `crear` (que inserta la póliza y enlaza `poliza_id` con la misma `tx`). Si no lo reclama, `crear`
  * no corre y no se escribe nada.
+ *
+ * Reintento ÚNICO, fuera de la transacción: si la fila del proyecto NO existía y dos acuñados la
+ * insertan a la vez, el perdedor puede chocar con OTRO índice único (`uq_codeoscopic_projects_project_id`,
+ * solo sobre `project_id_codeoscopic`) antes que con el árbitro del `ON CONFLICT`, y Postgres lanza
+ * 23505 en vez de ir al DO UPDATE. La transacción se deshace entera; el segundo intento ya ve la
+ * fila confirmada, entra por DO UPDATE y sale `ya_acunada`. Solo se reintenta un 23505 de la
+ * COMPUERTA: uno que lance `crear` sube tal cual (repetirlo no lo arreglaría).
  */
 export async function acunarUnaVez<Tx extends TxCompuerta>(
   transaccion: <R>(fn: (tx: Tx) => Promise<R>) => Promise<R>,
   proyecto: ProyectoAReclamar,
   crear: (tx: Tx) => Promise<string>,
 ): Promise<DesenlaceAcunado> {
-  return transaccion(async (tx) => {
-    const reclamo = await reclamarProyectoParaAcunar(tx, proyecto)
-    if (reclamo.tipo === 'ya_acunada') return reclamo
-    return { tipo: 'acunada' as const, polizaId: await crear(tx) }
-  })
+  const intento = () =>
+    transaccion(async (tx) => {
+      let reclamo: Reclamo
+      try {
+        reclamo = await reclamarProyectoParaAcunar(tx, proyecto)
+      } catch (e) {
+        throw esViolacionUnica(e) ? new ChoqueCompuerta(e) : e
+      }
+      if (reclamo.tipo === 'ya_acunada') return reclamo
+      return { tipo: 'acunada' as const, polizaId: await crear(tx) }
+    })
+  try {
+    return await intento()
+  } catch (e) {
+    if (!(e instanceof ChoqueCompuerta)) throw e
+  }
+  try {
+    return await intento()
+  } catch (e) {
+    throw e instanceof ChoqueCompuerta ? e.causa : e
+  }
 }

@@ -14,7 +14,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { acunarUnaVez, type TxCompuerta, type ProyectoAReclamar } from './acunado-unico.ts'
+import { acunarUnaVez, esViolacionUnica, type TxCompuerta, type ProyectoAReclamar } from './acunado-unico.ts'
 
 // ─── 1. BD falsa con semántica de bloqueo de fila ─────────────────────────────
 
@@ -134,6 +134,67 @@ test('si el primero falla al crear (ROLLBACK), el segundo acuña: la compuerta n
   assert.equal(bd.polizas.length, 1)
 })
 
+// ─── 1b. Reintento único ante 23505 de la compuerta ─────────────────────────
+
+/** Una tx de mentira que lanza lo que se le diga en la compuerta, y cuenta las transacciones. */
+function txGuionizada(guion: { insert: unknown[]; polizaExistente: string | null }) {
+  let transacciones = 0
+  const tx: TxCompuerta = {
+    async $queryRaw<T>(q: TemplateStringsArray): Promise<T> {
+      const sql = q.join('?').replace(/\s+/g, ' ').trim()
+      if (/^insert into codeoscopic_projects/.test(sql)) {
+        const paso = guion.insert.shift()
+        if (paso instanceof Error || (paso && typeof paso === 'object' && 'code' in paso)) throw paso
+        return paso as T
+      }
+      return [{ poliza_id: guion.polizaExistente }] as T
+    },
+  }
+  const transaccion = async <R>(fn: (t: TxCompuerta) => Promise<R>) => {
+    transacciones++
+    return fn(tx)
+  }
+  return { transaccion, transacciones: () => transacciones }
+}
+
+const choque23505 = Object.assign(new Error('Raw query failed. Code: `23505`. duplicate key value violates unique constraint "uq_codeoscopic_projects_project_id"'), {
+  code: 'P2010',
+  meta: { code: '23505' },
+})
+
+test('sin fila previa, el perdedor que choca con OTRO índice único (23505) reintenta UNA vez y sale ya_acunada', async () => {
+  const g = txGuionizada({ insert: [choque23505, []], polizaExistente: 'poliza-ganadora' })
+  let crear = 0
+  const r = await acunarUnaVez(g.transaccion, PROYECTO, async () => {
+    crear++
+    return 'otra'
+  })
+  assert.deepEqual(r, { tipo: 'ya_acunada', polizaId: 'poliza-ganadora' })
+  assert.equal(g.transacciones(), 2)
+  assert.equal(crear, 0)
+})
+
+test('el reintento es UNO: dos 23505 seguidos suben el error original', async () => {
+  const g = txGuionizada({ insert: [choque23505, choque23505], polizaExistente: null })
+  await assert.rejects(acunarUnaVez(g.transaccion, PROYECTO, async () => 'x'), (e) => e === choque23505)
+  assert.equal(g.transacciones(), 2)
+})
+
+test('un 23505 que lanza crear (no la compuerta) NO se reintenta', async () => {
+  const g = txGuionizada({ insert: [[{ id: 'f' }], [{ id: 'f' }]], polizaExistente: null })
+  await assert.rejects(acunarUnaVez(g.transaccion, PROYECTO, async () => {
+    throw choque23505
+  }))
+  assert.equal(g.transacciones(), 1)
+})
+
+test('esViolacionUnica reconoce el 23505 de Prisma y no confunde otros errores', () => {
+  assert.equal(esViolacionUnica(choque23505), true)
+  assert.equal(esViolacionUnica({ code: '23505' }), true)
+  assert.equal(esViolacionUnica(new Error('deadlock detected')), false)
+  assert.equal(esViolacionUnica(null), false)
+})
+
 // ─── 2. Postgres de verdad (opcional) ────────────────────────────────────────
 
 const PG = process.env.ASEGURA_PG_TEST_URL
@@ -158,6 +219,9 @@ test('Postgres real: dos acuñados concurrentes → una póliza', { skip: PG ? f
       `create table ${schema}.codeoscopic_projects (id uuid primary key default gen_random_uuid(), correduria_id uuid not null,
          project_id_codeoscopic text not null, producto ${schema}.tipo_seguro not null, cliente_id uuid,
          estado ${schema}.codeoscopic_project_estado not null, poliza_id uuid, error_mensaje text, updated_at timestamptz default now())`,
+      // Mismo orden que en producción: `uq_codeoscopic_projects_project_id` (no es el árbitro del ON
+      // CONFLICT) es anterior al árbitro de 2026-09-11. Sin fila previa, el perdedor puede chocar aquí (23505).
+      `create unique index on ${schema}.codeoscopic_projects (project_id_codeoscopic)`,
       `create unique index on ${schema}.codeoscopic_projects (correduria_id, project_id_codeoscopic)`,
       `create table ${schema}.polizas (id uuid primary key default gen_random_uuid(), proyecto text)`,
     ]) await db.$executeRawUnsafe(q)
@@ -212,7 +276,23 @@ test('/emitir suelta el candado del Submit DESPUÉS de acuñar, no antes', () =>
   assert.match(envio, /cerrarEnvio\([^)]*'preemision', null, true\)/, 'el Submit aceptado vuelve a soltar el candado antes de acuñar')
   const ruta = readFileSync(new URL('../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url), 'utf8')
   const acunado = ruta.indexOf('acunado = await registrarPolizaEmitida(')
-  const soltar = ruta.indexOf('await soltarCandadoEnvio(')
+  const soltar = ruta.indexOf('await soltarCandadoEnvio(', acunado)
   assert.ok(acunado > 0 && soltar > acunado, 'soltarCandadoEnvio tiene que ir tras el acuñado')
   assert.match(ruta.slice(acunado, soltar), /\} finally \{/, 'el candado se suelta en un finally (también si no hay código DGS)')
+})
+
+test('/emitir acuñarExistente: toma el candado ANTES de acuñar y lo suelta en un finally', () => {
+  const ruta = readFileSync(new URL('../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url), 'utf8')
+  const inicio = ruta.indexOf('if (cuerpo.acunarExistente === true)')
+  const fin = ruta.indexOf('await trasEmisionConTope(', inicio)
+  assert.ok(inicio > 0 && fin > inicio, 'no se encuentra el camino acunarExistente')
+  const tramo = ruta.slice(inicio, fin)
+  const tomar = tramo.indexOf('await tomarCandadoAcunado(')
+  const acunar = tramo.indexOf('acunadoAc = await registrarPolizaEmitida(')
+  const soltar = tramo.indexOf('await soltarCandadoEnvio(', acunar)
+  assert.ok(tomar > 0, 'acunarExistente acuña sin candado')
+  assert.ok(acunar > tomar, 'el candado se toma después de acuñar')
+  assert.ok(soltar > acunar, 'el candado no se suelta tras acuñar')
+  assert.match(tramo.slice(acunar, soltar), /\} finally \{/, 'el candado de acunarExistente no se suelta en un finally')
+  assert.match(tramo.slice(tomar, acunar), /causa: 'en-vuelo'/, 'con el candado ocupado no responde «en vuelo»')
 })
