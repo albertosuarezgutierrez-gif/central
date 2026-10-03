@@ -194,6 +194,10 @@ export const CRON_JOBS: CronJob[] = [
   // Cada 5 min: es un aviso de «acaba de pasar», no un resumen. La marca de
   // agua NO avanza si el Telegram no sale. Ver el fichero de la ruta.
   { path: '/api/cron/correduria-actividad', schedule: '*/5 * * * *' },
+  // Tope de gasto de Avant2 en EUROS (03/10/2026, decisión de Alberto 29/09): manda por Telegram el
+  // aviso de 60 € y cada BLOQUEO (70 €…) con el botón «Autorizar +30 €». Cada 5 min: mientras el
+  // bloqueo no llega, no se tarifica. asegura decide y anota; este job solo avisa y marca.
+  { path: '/api/cron/correduria-tope-avant2', schedule: '*/5 * * * *' },
   // Seguimiento de presupuestos enviados (28/09/2026): 08:12, 13:12 y 18:12 UTC — horario de oficina
   // para que el «¿le llamas?» llegue cuando se puede llamar. Asegura decide qué toca (48 h sin abrir,
   // 72 h sin elegir, un aviso por etapa); este job solo avisa y marca lo avisado.

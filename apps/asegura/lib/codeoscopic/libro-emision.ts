@@ -31,6 +31,7 @@ import {
   topesEmision,
   type OperacionEmision,
 } from './gasto-emision.ts'
+import { comprobarTopeEuros } from './tope-euros-bd.ts'
 
 export type GastoEmision<T> =
   | {
@@ -102,6 +103,11 @@ export async function conLibroDeEmision<T>(
   // 2 — Tope
   const veredicto = puedeGastarEmision(p.operacion, consumo, topesEmision(p.operacion, env), costeCents)
   if (!veredicto.permitido) return { ok: false, razon: 'tope', mensaje: veredicto.explicacion }
+
+  // 2b — Tope en EUROS del mes, el mismo que el de cotizar: una sola bolsa de gasto en Avant2.
+  // Fail-closed: sin poder leer el gasto del mes, no se llama.
+  const euros = await comprobarTopeEuros(p.correduriaId, costeCents, env)
+  if (!euros.ok) return { ok: false, razon: euros.razon, mensaje: euros.mensaje }
 
   // 3 — Reserva ANTES de llamar
   const intentoId = randomUUID()

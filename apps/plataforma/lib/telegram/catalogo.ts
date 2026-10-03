@@ -643,6 +643,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Cada 5 minutos, y solo cuando ha pasado algo',
   },
   {
+    id: 'correduria.tope-avant2', categoria: 'correduria',
+    titulo: 'Gasto de Avant2 (tarificar): aviso a 60 € y bloqueo a 70 €',
+    que: 'Lo gastado en el mes en Avant2 (cada tarificación, ReRate, límites de hogar o envío cuenta 0,50€). Un aviso al cruzar 60€ y, al llegar al tope (70€, o el ampliado), el BLOQUEO con el botón «Autorizar +30€». ⚠️ Si lo silencias, el botón de desbloqueo no te llega y no se puede tarificar hasta reactivarlo.',
+    cuando: 'Cada 5 minutos, solo cuando se cruza 60€ (una vez al mes) o se bloquea',
+  },
+  {
     id: 'correduria.fuga-cartera', categoria: 'correduria',
     titulo: 'Posible pérdida de cartera',
     que: 'Una póliza viva que CIMA da de baja, que anuncia que no renovará («anula al vencimiento») o que deja de aparecer, SIN una sustitución registrada. Un mensaje por pasada con el tomador (enlazado a su ficha), la compañía y el número; se revisa en /correduria → Hoy (pérdida con motivo, o no es pérdida).',
