@@ -13,8 +13,10 @@ import { Prisma } from './generated/asegura-client'
 import {
   normalizarContacto,
   parcheFichaDesdePoliza,
+  parcheFigura,
   provinciaPorCp,
   type ContactoTomadorLeido,
+  type PersonaFigura,
   type ResultadoParche,
 } from '@central/module-seguros'
 import { computeDniLookupHash, encryptField } from '@central/module-seguros-pii'
@@ -206,5 +208,75 @@ export async function volcarPolizaEnFicha(e: {
   } catch (err) {
     console.error('[ficha-desde-poliza] no se pudo volcar la póliza en la ficha:', err instanceof Error ? err.message : err)
     return { estado: 'error', motivo: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+/**
+ * Fecha de nacimiento y carné de una FIGURA de la póliza (propietario, conductor) a SU ficha
+ * (03/10/2026). Solo HUECOS (`parcheFigura`, puro). Quien llama ya ha comprobado que la ficha es
+ * de esa persona (su DNI, o el lead recién abierto / ya vinculado al tomador con su nombre exacto).
+ * Nunca lanza: devuelve lo escrito (nombres de campo) y los avisos.
+ */
+export async function volcarFiguraEnFicha(e: {
+  correduriaId: string
+  clienteId: string
+  persona: Pick<PersonaFigura, 'fechaNacimiento' | 'fechaCarnet' | 'claseCarnet'>
+  ramo: string
+  /** Cómo figura en la póliza («Conductor habitual»…), para la nota del historial. */
+  queEs: string
+  actor: string
+  origen: string
+  hoy?: Date
+}): Promise<{ campos: string[]; avisos: string[] }> {
+  const campos: string[] = []
+  const avisos: string[] = []
+  try {
+    if (!e.persona.fechaNacimiento && !e.persona.fechaCarnet) return { campos, avisos }
+    const db = prismaAsegura()
+    const c = await db.cliente.findFirst({
+      where: { id: e.clienteId, correduriaId: e.correduriaId, mergedIntoClienteId: null },
+      select: { fechaNacimiento: true },
+    })
+    if (!c) return { campos, avisos: ['no se encontró su ficha para rellenarla'] }
+    const carnets = await db.clienteCarnetConducir.count({ where: { clienteId: e.clienteId, correduriaId: e.correduriaId } }).catch(() => null)
+    const p = parcheFigura(
+      { tieneFechaNacimiento: typeof c.fechaNacimiento === 'string' && c.fechaNacimiento.trim() !== '', carnets },
+      e.persona,
+      e.ramo,
+      hoyIso(e.hoy ?? new Date()),
+    )
+    if (p.rellenado.length === 0) return { campos, avisos }
+    if (p.fechaNacimiento) {
+      // Solo si sigue vacía AHORA (la misma sentencia lo comprueba): dos subidas a la vez no se pisan.
+      const filas = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+        update clientes set fecha_nacimiento = ${encryptField(p.fechaNacimiento)}, updated_at = now()
+        where id = ${e.clienteId}::uuid and correduria_id = ${e.correduriaId}::uuid and merged_into_cliente_id is null
+          and nullif(trim(coalesce(fecha_nacimiento, '')), '') is null
+        returning id::text as id`)
+      if (filas.length > 0) {
+        campos.push(p.fechaNacimientoAConfirmar ? 'fecha de nacimiento (01/01, a confirmar)' : 'fecha de nacimiento')
+        anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: 'fecha_nacimiento' })
+      }
+    }
+    if (p.carnet) {
+      const ya = await db.clienteCarnetConducir.count({ where: { clienteId: e.clienteId, correduriaId: e.correduriaId } }).catch(() => null)
+      if (ya === 0) {
+        const g = await guardarCarnet(e.correduriaId, e.clienteId, { tipo: p.carnet.tipo, fecha: p.carnet.fecha, actor: e.actor }).catch(() => null)
+        if (g?.ok) campos.push(`carné ${p.carnet.tipo}`)
+        else avisos.push('no se pudo guardar su carné')
+      }
+    }
+    if (campos.length > 0) {
+      const partes = [
+        `Rellenado desde la póliza subida (${e.origen}), donde figura como ${e.queEs.toLowerCase()}: ${campos.join(', ')}.`,
+        campos.some((x) => x.includes('a confirmar')) ? 'Fecha de nacimiento 01/01 a confirmar: la póliza solo trae el año.' : null,
+        `— por ${e.actor}`,
+      ].filter(Boolean)
+      await anotarHistorialCliente(e.correduriaId, e.clienteId, 'gestion', partes.join(' ').slice(0, 2000)).catch(() => null)
+    }
+    return { campos, avisos }
+  } catch (err) {
+    console.error('[ficha-desde-poliza] no se pudo rellenar la ficha de la figura:', err instanceof Error ? err.message : err)
+    return { campos, avisos: [...avisos, 'no se pudo rellenar su ficha'] }
   }
 }

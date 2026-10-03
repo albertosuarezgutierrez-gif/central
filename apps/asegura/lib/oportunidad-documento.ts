@@ -15,7 +15,8 @@ import {
   companiaPorNombre,
   extraccionSinPii,
   normalizarContactoTomador,
-  notaConductorPrincipal,
+  normalizarFigurasLeidas,
+  planFiguras,
   polizaFinanciada,
   prepararAltaDesdeDocumento,
   seguroAnteriorDe,
@@ -32,8 +33,10 @@ import { polizaEnCartera } from './poliza-en-cartera'
 import { leerPoliza, type ResultadoLecturaPoliza } from './documentos/extraer-poliza'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
 import { volcarPolizaEnFicha, type VolcadoFicha } from './ficha-desde-poliza'
+import { anotarConductorJoven, figurasDesdePoliza, type FiguraResultado } from './oportunidad-figuras'
 import {
   planTomador,
+  puedeAbrirFiguras,
   puedeVolcarEnFicha,
   esDocumentoDeSeguro,
   fechaLlamada,
@@ -69,6 +72,14 @@ export type ResultadoOportunidadDocumento =
       posiblesDuplicados: string[]
       /** Lead nuevo: ¿nació con su DNI/CIF? `false` = el documento no traía ninguno legible. */
       conIdentificador: boolean
+      /**
+       * Motor (03/10/2026): las personas de la póliza que no son el tomador (propietario, conductores),
+       * cada una con su ficha y su rol (`null` = sin rol: de más, o el ramo no lo tiene). Sin nombres.
+       * `null` = no se ha intentado (otro ramo, o subida sin verificar): no es «no había nadie».
+       */
+      figuras: FiguraResultado[] | null
+      /** Lo que no se ha podido hacer con alguna figura (sin nombres). */
+      avisosFiguras: string[]
     }
   | { estado: 'ya_nuestra' }
   | { estado: 'no_es_seguro' }
@@ -214,14 +225,15 @@ export async function oportunidadDesdeLectura(
     // documento es el de la ficha (o ella no tiene); quién puede volcar, en `puedeVolcarEnFicha`
     // (desde el portal, solo en la ficha propia de quien sube).
     const hoy = e.hoy ?? new Date()
-    const identificado = puedeVolcarEnFicha({
+    const quienSube = {
       origen: e.origen,
       verificado,
       hayTomador: alta !== null,
       porqueFicha: decision.tipo === 'ficha' ? decision.porque : null,
       clienteId,
       clienteSube,
-    })
+    }
+    const identificado = puedeVolcarEnFicha(quienSube)
     const volcado = identificado
       ? await volcarPolizaEnFicha({
           correduriaId: e.correduriaId,
@@ -232,18 +244,14 @@ export async function oportunidadDesdeLectura(
           leido: {
             ramo: r.ramo,
             dni: alta?.dni ?? null,
-            // De una empresa, ni fecha de nacimiento ni carné (el parche tampoco los escribiría).
+            // De una empresa, ni fecha de nacimiento ni carné: son del conductor habitual, que es
+            // otra persona y los recibe en SU ficha (las figuras, más abajo).
             fechaNacimiento: empresa ? null : txt(d.fechaNacimiento, 10),
             fechaCarnet: empresa ? null : txt(d.fechaCarnet, 10),
             contacto,
           },
         })
       : null
-    // El conductor principal, si es OTRA persona (siempre, con un tomador empresa): solo se SUGIERE
-    // en el historial de la ficha. Ni ficha ni relación automáticas: el nombre no identifica.
-    if (identificado && volcado?.estado !== 'no_tocada') {
-      await sugerirConductorPrincipal(e.correduriaId, clienteId, notaConductorPrincipal(contacto, alta ? `${alta.nombre} ${alta.apellidos}`.trim() : null, alta?.dni ?? null), e.actor)
-    }
     if (clienteNuevo) await notaPosiblesDuplicados(e.correduriaId, clienteId, alta ? `${alta.nombre} ${alta.apellidos}` : null, compartenContacto, e.actor)
 
     const vence = proximoVencimiento(txt(d.fechaVencimiento, 10), hoy)
@@ -284,7 +292,46 @@ export async function oportunidadDesdeLectura(
     const o = await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`)
     const posiblesDuplicados = clienteNuevo ? compartenContacto.filter((id) => id !== clienteId) : []
     const conIdentificador = decision.tipo === 'lead' ? Boolean(decision.alta.dni) : Boolean(alta?.dni)
-    const comun = { clienteId, clienteNuevo, relacionado, vence, llamada, ficha: volcado, financiada, posiblesDuplicados, conIdentificador }
+
+    // Motor (03/10/2026): cada persona de la póliza que no es el tomador tiene su ficha, su rol en la
+    // oportunidad y su relación con el tomador (`oportunidad-figuras.ts`). Solo con la ficha del
+    // tomador identificada y solo si sube el CORREDOR (`puedeAbrirFiguras`: desde el portal o el
+    // enlace de datos nunca, ni a su propia ficha). Una
+    // figura que falla no tumba la oportunidad: va a `avisosFiguras`.
+    let figuras: FiguraResultado[] | null = null
+    let avisosFiguras: string[] = []
+    const opId = o.ok ? o.id : o.estado === 'duplicada' && 'id' in o ? o.id : null
+    if (opId && (datos.ramo === 'auto' || datos.ramo === 'moto')) {
+      // La oportunidad ya existe: si las figuras fallan, no se devuelve `error`, se avisa.
+      try {
+        const plan = planFiguras(
+          {
+            figuras: ('figuras' in leida && leida.figuras) || normalizarFigurasLeidas(d),
+            fechaNacimiento: txt(d.fechaNacimiento, 10),
+            fechaCarnet: txt(d.fechaCarnet, 10),
+            claseCarnet: contacto.claseCarnet,
+            tomadorEsConductorHabitual: contacto.tomadorEsConductorHabitual,
+          },
+          { nombre: alta ? `${alta.nombre} ${alta.apellidos}`.trim() : null, dni: alta?.dni ?? null, empresa },
+          datos.ramo,
+        )
+        if (puedeAbrirFiguras(quienSube)) {
+          const f = await figurasDesdePoliza({
+            correduriaId: e.correduriaId, oportunidadId: opId, tomadorId: clienteId, ramo: datos.ramo, plan,
+            numeroPoliza: datos.numeroPoliza, actor: e.actor, origen: e.origen, hoy,
+          })
+          figuras = f.figuras
+          avisosFiguras = f.avisos
+        }
+        // Sin datos personales en la línea: vale también sin verificar (es del riesgo, no de nadie).
+        await anotarConductorJoven({ correduriaId: e.correduriaId, oportunidadId: opId, plan, hoy, actor: e.actor })
+      } catch (err) {
+        console.error('[oportunidad-documento] figuras:', err instanceof Error ? err.message : err)
+        avisosFiguras = [...avisosFiguras, 'No se han podido revisar las figuras de la póliza; revísalas a mano en la oportunidad.']
+      }
+    }
+
+    const comun = { clienteId, clienteNuevo, relacionado, vence, llamada, ficha: volcado, financiada, posiblesDuplicados, conIdentificador, figuras, avisosFiguras }
     if (o.ok) return { estado: 'creada', oportunidadId: o.id, completada: false, ...comun }
     if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, completada: o.completada, ...comun }
     return { estado: 'error', motivo: o.motivo, clienteId }
@@ -329,25 +376,6 @@ export async function guardarExtraccion(correduriaId: string, documentoId: strin
       where id = ${documentoId}::uuid and correduria_id = ${correduriaId}::uuid`)
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo guardar la extracción del documento:', err instanceof Error ? err.message : err)
-  }
-}
-
-/**
- * Deja la nota «Conductor principal en la póliza: …» en la ficha, una sola vez (la misma póliza
- * subida dos veces no la repite). Solo el nombre: el historial va en claro y no se borra.
- * Best-effort: la oportunidad no depende de esto.
- */
-async function sugerirConductorPrincipal(correduriaId: string, clienteId: string, nota: string | null, actor: string): Promise<void> {
-  if (!nota) return
-  try {
-    const ya = await prismaAsegura().$queryRaw<{ n: number }[]>(Prisma.sql`
-      select 1 as n from historial_interno
-      where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid and starts_with(texto, ${nota})
-      limit 1`)
-    if (ya.length > 0) return
-    await anotarHistorialCliente(correduriaId, clienteId, 'gestion', `${nota} — por ${actor}`)
-  } catch (err) {
-    console.error('[oportunidad-documento] no se pudo anotar el conductor principal:', err instanceof Error ? err.message : err)
   }
 }
 

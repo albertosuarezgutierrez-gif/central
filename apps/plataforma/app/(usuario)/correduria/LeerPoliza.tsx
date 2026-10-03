@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { btnStyle, cardStyle } from '@/components/ui'
 import { prepararAdjunto } from '@/lib/imagen-cliente'
 import { interpretarLecturaOportunidad, type LecturaDocumentoOportunidad } from '@/lib/seguimiento-asegura'
-import { interpretarFichaDocumento, interpretarOportunidadDocumento, textoFichaDocumento, type AvisoOportunidadDocumento, type FichaDocumento } from '@/lib/oportunidad-documento'
+import { interpretarFichaDocumento, interpretarFigurasDocumento, interpretarOportunidadDocumento, textoFichaDocumento, textoFiguraDocumento, type AvisoOportunidadDocumento, type FichaDocumento, type FigurasDocumento } from '@/lib/oportunidad-documento'
 
 /**
  * UNA sola lectura de documento para toda la correduría (03/10/2026): la pantalla general
@@ -53,6 +53,8 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
   const [ficha, setFicha] = useState<FichaDocumento | null | undefined>(undefined)
   // Con `crear`: la oportunidad que el servidor ha abierto o encontrado ya abierta (`null` = no consta).
   const [abierta, setAbierta] = useState<OportunidadAbierta | null>(null)
+  // Motor: las personas de la póliza que no son el tomador (`null` = asegura no dice nada).
+  const [figuras, setFiguras] = useState<FigurasDocumento | null>(null)
 
   async function leer(f: File) {
     setLeyendo(true)
@@ -63,6 +65,7 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
     setSinGuardar(false)
     setFichaIncierta(false)
     setAbierta(null)
+    setFiguras(null)
     let status = 0
     let json: unknown = null
     try {
@@ -102,18 +105,19 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
     // asegura dice si guardó el fichero; si no lo dice (versión anterior), no se afirma nada.
     setSinGuardar(j?.oportunidad != null && j?.ficheroGuardado === false)
     setFicha(j?.oportunidad != null ? interpretarFichaDocumento(j?.ficha) : undefined)
+    setFiguras(interpretarFigurasDocumento(j?.oportunidad))
     if (l.estado === 'ok') onLectura?.(l)
   }
 
   return {
-    leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta, abierta,
+    leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta, abierta, figuras,
     /** La oportunidad o la ficha ya llevan al usuario a un sitio: el resto de salidas sobra. */
     conOportunidad: Boolean(oportunidad?.clienteId || ficha),
   }
 }
 
 /** Lo que asegura dice de la oportunidad y de la ficha del tomador. No pinta nada si no dice nada. */
-export function AvisosLectura({ oportunidad, ficha, sinGuardar, fichaIncierta }: Pick<ReturnType<typeof useLeerPoliza>, 'oportunidad' | 'ficha' | 'sinGuardar' | 'fichaIncierta'>) {
+export function AvisosLectura({ oportunidad, ficha, sinGuardar, fichaIncierta, figuras }: Pick<ReturnType<typeof useLeerPoliza>, 'oportunidad' | 'ficha' | 'sinGuardar' | 'fichaIncierta'> & { figuras?: FigurasDocumento | null }) {
   return (
     <>
       {oportunidad && (
@@ -125,6 +129,7 @@ export function AvisosLectura({ oportunidad, ficha, sinGuardar, fichaIncierta }:
         </div>
       )}
       {ficha && <FichaTomadorResultado f={ficha} guardado={!sinGuardar} />}
+      {figuras && <FigurasResultado f={figuras} />}
       {fichaIncierta && !oportunidad?.clienteId && (
         <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
           No se ha podido confirmar si se ha tocado alguna ficha: mírala en el buscador antes de volver a subirlo.
@@ -157,6 +162,25 @@ function FichaTomadorResultado({ f, guardado }: { f: FichaDocumento; guardado: b
       <Link href={`/correduria/cliente/${encodeURIComponent(f.clienteId)}`} style={enlaceStyle}>
         {f.creada ? 'Abrir el lead nuevo →' : 'Abrir su ficha →'}
       </Link>
+    </div>
+  )
+}
+
+/** Las otras personas de la póliza (propietario, conductores): una línea por ficha, con su enlace. */
+function FigurasResultado({ f }: { f: FigurasDocumento }) {
+  return (
+    <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+      <strong>Figuras de la póliza</strong>
+      {f.figuras.map(x => (
+        <Link key={x.clienteId} href={`/correduria/cliente/${encodeURIComponent(x.clienteId)}`} style={{ ...enlaceStyle, overflowWrap: 'anywhere', whiteSpace: 'normal', textAlign: 'left' }}>
+          {textoFiguraDocumento(x)} →
+        </Link>
+      ))}
+      {f.avisos.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4, fontSize: 13, color: 'var(--negative)' }}>
+          {f.avisos.map((a, i) => <li key={i} style={{ overflowWrap: 'anywhere' }}>{a}</li>)}
+        </ul>
+      )}
     </div>
   )
 }
