@@ -3,10 +3,10 @@
 // `desde-cartera-vida.ts` — ver su cabecera para el porqué del fichero aparte.
 //
 // 🚧 Ver la cabecera de `peticion-decesos.ts`: el `risk` que se manda al
-// vendor es una suposición razonada (solo cubre al tomador), no un contrato
-// verificado ni cobertura familiar.
+// vendor es una suposición razonada, no un contrato verificado; los asegurados adicionales (sin parentesco ni capital) los teclea el corredor.
 
 import { revisarDatosDecesos, type DatosDecesos, type ReparoDecesos } from './peticion-decesos.ts'
+import { type AseguradoAdicional } from './asegurados.ts'
 import { partirApellidos, sexoDeSaludo, type ClienteCartera } from './desde-cartera.ts'
 import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
 
@@ -31,6 +31,8 @@ export type PrecalificacionDecesos = {
 }
 
 export type ResueltosDecesosNueva = {
+  /** Asegurados adicionales al tomador, tecleados por el corredor (`risk.insureds[1..]`). */
+  asegurados?: AseguradoAdicional[]
   estadoCivilId: string | null
   /** 🚨 El capital NUNCA se supone: lo teclea el corredor. Ver `desde-cartera-vida.ts`. */
   capital: number | null
@@ -65,6 +67,7 @@ export function precalificarDecesosNueva(
     estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
     capital: resueltos.capital ?? undefined,
+    aseguradosAdicionales: resueltos.asegurados && resueltos.asegurados.length > 0 ? resueltos.asegurados : undefined,
     fechaEfecto,
   }
 

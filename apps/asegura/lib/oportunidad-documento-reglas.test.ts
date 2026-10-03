@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { decidirFicha, esDocumentoDeSeguro, fichaDelDocumento, planTomador, posiblesDuplicadosPorContacto, puedeVolcarEnFicha, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad } from './oportunidad-documento-reglas.ts'
+import { decidirFicha, esDocumentoDeSeguro, fichaDelDocumento, planTomador, posiblesDuplicadosPorContacto, puedeAbrirFiguras, puedeVolcarEnFicha, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad } from './oportunidad-documento-reglas.ts'
 
 const HOY = new Date('2026-09-29T10:00:00Z')
 
@@ -137,4 +137,13 @@ test('🪤 la respuesta de la ficha lleva NOMBRES de campos y avisos, nunca valo
   assert.equal(fichaDelDocumento({ estado: 'error', clienteId: 'ya' })?.creada, false)
   assert.equal(fichaDelDocumento({ estado: 'sin_persona' }), null)
   assert.equal(fichaDelDocumento({ estado: 'ya_nuestra' }), null)
+})
+
+test('🪤 figuras de la póliza: nunca desde el portal ni el enlace de datos, ni en la ficha propia', () => {
+  const b = { origen: 'subir-poliza', verificado: true, hayTomador: true, porqueFicha: 'dni_ficha', clienteId: 'c1', clienteSube: 'c1' }
+  assert.equal(puedeAbrirFiguras(b), true)
+  assert.equal(puedeAbrirFiguras({ ...b, origen: 'ficha' }), true)
+  assert.equal(puedeAbrirFiguras({ ...b, origen: 'portal' }), false)
+  assert.equal(puedeAbrirFiguras({ ...b, origen: 'solicitud' }), false)
+  assert.equal(puedeAbrirFiguras({ ...b, verificado: false }), false)
 })

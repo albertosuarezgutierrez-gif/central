@@ -2,8 +2,8 @@
 
 // Hermana de `.../vida-nuevo/VidaNuevo.tsx`, mismo patrón para DECESOS.
 // 🚧 Ver el aviso de `page.tsx`: el `risk` que se manda al vendor NO está
-// verificado, y solo cubre al TOMADOR como único asegurado (sin cobertura
-// familiar).
+// verificado. Cubre al TOMADOR y a los asegurados adicionales que se añadan
+// (`insureds[]`); la prestación de referencia es una nota que NO viaja.
 
 import { useState } from 'react'
 import { FlaskConical } from 'lucide-react'
@@ -18,6 +18,7 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import { pedirCotizacionDecesos } from './acciones'
 import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
 import { FallosTarificacion } from '../../../FallosTarificacion'
+import AseguradosAdicionales, { aseguradoCompleto, aseguradosParaEnviar, type AseguradoForm } from '../AseguradosAdicionales'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -26,6 +27,7 @@ const input: React.CSSProperties = {
 
 const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefined> = {
   dni: { etiqueta: 'DNI', tipo: 'text' },
+  email: { etiqueta: 'Correo electrónico', tipo: 'email' },
   nombre: { etiqueta: 'Nombre', tipo: 'text' },
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
@@ -79,6 +81,8 @@ export default function DecesosNuevo({
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
   const [capital, setCapital] = useState(inicial?.capital != null ? String(inicial.capital) : '')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
+  // Asegurados además del tomador (`insureds[1..]`): sí viajan al vendor.
+  const [asegurados, setAsegurados] = useState<AseguradoForm[]>([])
   // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
   const limitesEfecto = limitesFechaEfecto()
@@ -94,14 +98,19 @@ export default function DecesosNuevo({
 
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
-  const faltaAlgo = faltaCivil || aManoSinRellenar.length > 0
+  // Un hueco que esta pantalla no sabe resolver (p. ej. «dato que falta: weight», o person-roles ilegible) también bloquea: no se paga un 400 evitable.
+  const faltaAlgo = faltaCivil || aManoSinRellenar.length > 0 || huerfanos.length > 0 || asegurados.some((a) => !aseguradoCompleto(a))
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionDecesos({
       clienteId,
-      resueltos: { estadoCivilId, ...(Number(capital) > 0 ? { capital: Number(capital) } : {}) },
+      resueltos: {
+        estadoCivilId,
+        ...(Number(capital) > 0 ? { capital: Number(capital) } : {}),
+        ...(asegurados.length > 0 ? { asegurados: aseguradosParaEnviar(asegurados) } : {}),
+      },
       correcciones: fechaEfecto !== '' ? { ...correcciones, fechaEfecto } : correcciones,
       variante: variante ? { oportunidadId: variante.oportunidadId, nota: null } : null,
     })
@@ -153,9 +162,9 @@ export default function DecesosNuevo({
       )}
 
       <div style={cardStyle}>
-        <CardHeader title="1 · El capital" sub="La API de decesos no tiene campo de capital: la compañía cotiza su prestación estándar. Hoy solo cubre al tomador, sin resto de la familia." />
+        <CardHeader title="1 · El capital" sub="La API de decesos no tiene campo de capital: la compañía cotiza su prestación estándar. El resto de la familia se añade abajo como asegurados adicionales (sí viajan)." />
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Campo etiqueta="Prestación de referencia (€)" falta={false} ayuda="Opcional. Nota para el corredor: NO viaja al vendor (la API no tiene ese campo).">
+          <Campo etiqueta="Nota: prestación de referencia (€) — no viaja" falta={false} ayuda="Opcional. Nota para el corredor: NO viaja al vendor (la API no tiene ese campo).">
             <input type="number" min={0} step={500} value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="3000" style={input} />
           </Campo>
           <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
@@ -208,6 +217,8 @@ export default function DecesosNuevo({
           </div>
         )}
 
+        <AseguradosAdicionales lista={asegurados} onChange={setAsegurados} deshabilitado={cotizando} />
+
         {huerfanos.length > 0 && (
           <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--negative)', padding: 12 }}>
             <strong style={{ color: 'var(--negative)' }}>Esto no se arregla desde esta pantalla:</strong>
@@ -215,7 +226,7 @@ export default function DecesosNuevo({
               {huerfanos.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-              Hay que corregirlo en la ficha del cliente. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              Hay que corregirlo en la ficha del cliente: mientras tanto no se puede pedir precio (no se gasta nada).
             </p>
           </div>
         )}

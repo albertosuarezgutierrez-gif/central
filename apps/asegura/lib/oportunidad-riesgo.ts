@@ -318,7 +318,17 @@ export type ResultadoFigura = { ok: true } | { ok: false; status: number; motivo
  */
 export async function asignarFigura(
   correduriaId: string,
-  e: { oportunidadId: string; rol: unknown; clienteId: string; actor: string },
+  e: {
+    oportunidadId: string
+    rol: unknown
+    clienteId: string
+    actor: string
+    /**
+     * Solo si el rol está LIBRE (03/10/2026, la subida de una póliza): `on conflict do nothing`, así
+     * una asignación a mano o simultánea no se pisa nunca. Ocupado → 409 sin tocar nada.
+     */
+    soloSiLibre?: boolean
+  },
 ): Promise<ResultadoFigura> {
   if (!UUID.test(e.oportunidadId) || !UUID.test(e.clienteId)) return { ok: false, status: 400, motivo: 'ids no válidos' }
   if (!esRolFigura(e.rol)) return { ok: false, status: 422, motivo: 'rol desconocido' }
@@ -337,10 +347,18 @@ export async function asignarFigura(
           and r.cliente_b_id = ${e.clienteId}::uuid and r.tipo_relacion <> 'Sin vínculo'`
       if (!v || v.n === 0) return { ok: false as const, status: 422, motivo: 'esa persona no está vinculada al cliente: añádela como familiar primero' }
     }
-    await tx.$executeRaw`
-      insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
-      values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${rol}, ${e.clienteId}::uuid, ${e.actor})
-      on conflict (oportunidad_id, rol) do update set cliente_id = excluded.cliente_id, actor = excluded.actor, creado_at = now()`
+    if (e.soloSiLibre) {
+      const n = await tx.$executeRaw`
+        insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
+        values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${rol}, ${e.clienteId}::uuid, ${e.actor})
+        on conflict (oportunidad_id, rol) do nothing`
+      if (n === 0) return { ok: false as const, status: 409, motivo: 'ese rol ya lo tiene otra persona' }
+    } else {
+      await tx.$executeRaw`
+        insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
+        values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${rol}, ${e.clienteId}::uuid, ${e.actor})
+        on conflict (oportunidad_id, rol) do update set cliente_id = excluded.cliente_id, actor = excluded.actor, creado_at = now()`
+    }
     await tx.$executeRaw`
       insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
       values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, 'figura_asignada',

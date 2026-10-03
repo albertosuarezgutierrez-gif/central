@@ -19,7 +19,7 @@ import { ErrorCodeoscopic, peticion } from './codeoscopic/cliente'
 import { redactarCrudoVendor } from './codeoscopic/emitir'
 import { documentoTomador, fraccionamientoDeOferta, ramoDeLinea } from './codeoscopic/importar'
 import { riesgoDeTarificacion } from './codeoscopic/contexto-emision'
-import { coincideCompania } from './emision-externa-reglas'
+import { coincideCompania, hayPolizaDuplicada, quoteDataAGuardar } from './emision-externa-reglas'
 import { describirEmisionExterna, estadoProyectoDe, leerEmisionExterna, resumenEmision, type EmisionResumen } from './codeoscopic/emision-externa'
 
 /** Igual que `MARGEN_EN_VUELO_MIN` de `codeoscopic/emitir-envio.ts`: mismo candado, misma semántica. */
@@ -159,7 +159,7 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
 
   // ── Bloqueos (fail-closed) ──
   const ramo = ramoDeLinea(crudo)
-  if (!ramo) bloqueos.push('solo se registran emisiones de auto y moto')
+  if (!ramo) bloqueos.push('ramo del proyecto no reconocido (solo auto, moto, hogar, vida, salud y decesos): no se registra')
   const doc = documentoTomador(crudo)
   const hashTomador = doc ? computeDniLookupHash(doc) : null
   if (!hashTomador) bloqueos.push('el proyecto no trae documento del tomador: no se demuestra de quién es')
@@ -186,7 +186,18 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
   try {
     const db = prismaAsegura()
     // 🚨 Nunca el crudo sin redactar: trae IBAN/DNI/email del tomador y `quote_data` es jsonb sin cifrar.
-    const quoteData = JSON.stringify(redactarCrudoVendor(crudo))
+    // En vida/salud/decesos, además, solo una lista blanca (sin nombres, fechas de nacimiento ni salud).
+    const quoteData = JSON.stringify(quoteDataAGuardar(ramo, crudo, resumenEmision(emision), redactarCrudoVendor))
+    if (accion === 'acunar' && clienteId && numeroPoliza) {
+      // Una póliza con el mismo nº y compañía ya en la cartera del cliente: acuñar otra la DUPLICARÍA.
+      const existentes = await db.$queryRaw<{ aseguradora: string | null; numeroPoliza: string | null }[]>`
+        select aseguradora, numero_poliza as "numeroPoliza" from polizas
+        where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid and merged_into_poliza_id is null
+          and numero_poliza is not null`
+      if (hayPolizaDuplicada(existentes, compania, numeroPoliza)) {
+        return fallo(409, `posible_duplicado: este cliente ya tiene en la cartera la póliza nº ${numeroPoliza} de ${compania}: no se acuña otra, se revisa a mano`)
+      }
+    }
     const insercion = estadoProyecto ?? 'preemision'
     const filas = await db.$queryRaw<{ estado: string }[]>`
       insert into codeoscopic_projects (correduria_id, project_id_codeoscopic, producto, cliente_id, oportunidad_id, aseguradora, estado, quote_data)
@@ -249,6 +260,8 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
             clienteId,
             actor: entrada.actor,
             catalogo: catalogo ?? undefined,
+            // La póliza que se retarificaba: la antigua queda sustituida (igual que `/emitir`).
+            polizaOrigenId: fila?.poliza_id ?? null,
             proyecto: {
               projectIdCodeoscopic: projectId,
               producto: ramo,

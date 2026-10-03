@@ -13,7 +13,7 @@
 //    Sin DNI en el documento tampoco se toca nada: el nombre no identifica.
 //  - Tomador EMPRESA (póliza Qover a nombre de una SL, 03/10/2026): la identidad es su CIF (también
 //    escrito como NIF-IVA «ESB…»), con el mismo criterio; y en su ficha nunca van fecha de
-//    nacimiento ni carné (son del conductor, otra persona: solo se SUGIERE en el historial).
+//    nacimiento ni carné (son del conductor habitual, otra persona: van a SU ficha, `figuras-poliza.ts`).
 //  - `null` = «no se sabe». Nada de `''`, `'N/A'` ni valores de cajón: se anulan aquí.
 //  - Fecha de nacimiento 01/01 = casi siempre «solo sé el año» (lo hacen varias compañías y CIMA):
 //    se escribe (mejor que nada para tarificar) pero marcada «a confirmar».
@@ -26,6 +26,7 @@ import { normalizarCp, normalizarDni, normalizarEmail, normalizarFechaNacimiento
 import { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type TipoCarnet } from './carnet-ficha.ts'
 import { fechaTextoAIso } from './fecha-texto.ts'
 import { cifDeEmpresa, esTomadorEmpresa, identificadorFiscal } from './poliza-de-documento.ts'
+import { conductorHabitualLeido } from './figuras-poliza.ts'
 
 const SIN_DATO = new Set(MARCADORES_SIN_DATO)
 
@@ -66,8 +67,17 @@ export type ContactoTomadorLeido = {
   tomadorEsEmpresa: boolean | null
   /** CIF del tomador empresa, sin el prefijo «ES» del NIF-IVA y validado. Solo de persona jurídica. */
   cifTomador: string | null
-  /** El conductor principal que figura en la póliza (puede no ser el tomador). `null` = no figura. */
+  /**
+   * El conductor principal que figura en la póliza (puede no ser el tomador). `null` = no figura.
+   * Las figuras completas (propietario, ocasionales…) van en `normalizarFigurasLeidas`.
+   */
   conductorPrincipal: ConductorPrincipalLeido | null
+  /**
+   * La «persona de contacto» de un tomador EMPRESA (solo el nombre). `null` = no figura, o el tomador
+   * no es empresa. Si es una de las figuras, recibe también el teléfono y el email del tomador
+   * (`planFiguras`). Es un dato personal: nunca se guarda con el documento.
+   */
+  personaContacto: string | null
 }
 
 /** El conductor principal de la póliza. Es OTRA persona cuando el tomador es una empresa. */
@@ -94,6 +104,7 @@ export function contactoTomadorVacio(): ContactoTomadorLeido {
     tomadorEsEmpresa: null,
     cifTomador: null,
     conductorPrincipal: null,
+    personaContacto: null,
   }
 }
 
@@ -146,6 +157,7 @@ export function normalizarContactoTomador(raw: unknown): ContactoTomadorLeido {
   const cp = texto(o.domicilioCp, 10)
   const cpOk = cp ? normalizarCp(cp) : null
   const clase = claveTipoCarnet(texto(o.claseCarnet, 10) ?? '')
+  const empresa = tomadorEmpresa(o)
   return {
     telefono: telefonoEspanol(o.telefono),
     email: emailNormalizado(o.email),
@@ -157,8 +169,11 @@ export function normalizarContactoTomador(raw: unknown): ContactoTomadorLeido {
     mediador: texto(o.mediador, 200),
     cesionDerechos: booleano(o.cesionDerechos),
     tomadorEsConductorHabitual: booleano(o.tomadorEsConductorHabitual),
-    ...tomadorEmpresa(o),
-    conductorPrincipal: conductorPrincipal(o.conductorPrincipal),
+    ...empresa,
+    // El de siempre o, si el lector ya devuelve `figuras` (03/10/2026), su conductor habitual.
+    conductorPrincipal: conductorPrincipal(o.conductorPrincipal) ?? conductorHabitualLeido(o),
+    // Solo de una EMPRESA: con un tomador persona, «persona de contacto» no es otra figura.
+    personaContacto: empresa.tomadorEsEmpresa === true ? texto(o.personaContactoTomador, 200) : null,
   }
 }
 
@@ -411,46 +426,6 @@ export function parcheFichaDesdePoliza(
   return { parche: p, rellenado, motivo: 'ok' }
 }
 
-// ─── El conductor principal: solo una SUGERENCIA ────────────────────────────
-
-const palabrasNombre = (s: string) =>
-  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9ñ]+/).filter((x) => x.length >= 2 && !['de', 'del', 'la', 'las', 'los', 'y'].includes(x))
-
-/**
- * ¿El conductor principal es OTRA persona que el tomador? Con un tomador empresa, siempre. Si no:
- * el documento dice que el tomador conduce → no; DNI de los dos → si difieren; si no, por nombre
- * (las mismas palabras = la misma persona). Sin tomador legible no se sabe → `false` (no se sugiere).
- */
-export function conductorEsOtraPersona(c: Pick<ContactoTomadorLeido, 'conductorPrincipal' | 'tomadorEsEmpresa' | 'tomadorEsConductorHabitual'>, tomador: string | null, dniTomador: string | null): boolean {
-  const cp = c.conductorPrincipal
-  if (!cp) return false
-  if (c.tomadorEsEmpresa === true) return true
-  if (c.tomadorEsConductorHabitual === true) return false
-  const a = identificadorFiscal(dniTomador)
-  if (cp.dni && a) return cp.dni !== a.valor
-  if (!tomador) return false
-  const pt = new Set(palabrasNombre(tomador))
-  const pc = new Set(palabrasNombre(cp.nombre))
-  const [corto, largo] = pt.size <= pc.size ? [pt, pc] : [pc, pt]
-  // Un nombre contenido en el otro («Ana» en «Ana Ruiz Gil») es la MISMA persona: ante la duda no se
-  // sugiere crear otra ficha (revisión PR 4168). Sin palabras legibles no se sabe → no se sugiere.
-  if (corto.size === 0) return false
-  return ![...corto].every((x) => largo.has(x))
-}
-
-/**
- * La nota del historial que SUGIERE crear/vincular la ficha del conductor principal. Nunca se crea
- * la ficha ni la relación solas: el nombre no identifica, y fundir a dos personas no se deshace.
- *
- * 🚨 Solo el NOMBRE, sin la fecha de nacimiento ni el DNI: `historial_interno` va en claro y no se
- * puede borrar (supresión RGPD; mismo criterio que `solicitud-datos.ts` y la nota de la ficha, que
- * lleva los nombres de los campos y no sus valores), y el conductor es un TERCERO sin ficha.
- */
-export function notaConductorPrincipal(c: Pick<ContactoTomadorLeido, 'conductorPrincipal' | 'tomadorEsEmpresa' | 'tomadorEsConductorHabitual'>, tomador: string | null, dniTomador: string | null): string | null {
-  if (!c.conductorPrincipal || !conductorEsOtraPersona(c, tomador, dniTomador)) return null
-  return `Conductor principal en la póliza: ${c.conductorPrincipal.nombre.slice(0, 120)}. Crear/vincular su ficha a mano.`
-}
-
 // ─── Lo que se guarda con el documento ──────────────────────────────────────
 
 /**
@@ -505,6 +480,8 @@ export const CLAVES_PERSONALES_EXTRACCION = [
   'mediador',
   'cifTomador',
   'conductorPrincipal',
+  'figuras',
+  'personaContactoTomador',
 ] as const
 
 /**

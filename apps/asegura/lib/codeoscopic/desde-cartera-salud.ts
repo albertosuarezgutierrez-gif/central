@@ -6,6 +6,7 @@
 // es una suposición razonada, no un contrato verificado.
 
 import { revisarDatosSalud, type DatosSalud, type ReparoSalud } from './peticion-salud.ts'
+import { type AseguradoAdicional } from './asegurados.ts'
 import { partirApellidos, sexoDeSaludo, type ClienteCartera } from './desde-cartera.ts'
 import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
 
@@ -30,6 +31,8 @@ export type PrecalificacionSalud = {
 }
 
 export type ResueltosSaludNueva = {
+  /** Asegurados adicionales al tomador, tecleados por el corredor (`risk.insureds[1..]`). */
+  asegurados?: AseguradoAdicional[]
   estadoCivilId: string | null
   /** 🚨 El capital NUNCA se supone: lo teclea el corredor. Ver `desde-cartera-vida.ts`. */
   capital: number | null
@@ -65,6 +68,7 @@ export function precalificarSaludNueva(
     estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
     capital: resueltos.capital ?? undefined,
+    aseguradosAdicionales: resueltos.asegurados && resueltos.asegurados.length > 0 ? resueltos.asegurados : undefined,
     modalidadDeseada: limpio(resueltos.modalidadDeseada),
     fechaEfecto,
   }
