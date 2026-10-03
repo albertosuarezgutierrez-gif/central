@@ -20,6 +20,7 @@ import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
 import { etiquetaClaseRecibo, textoSituacionConFecha } from '@/lib/recibo-etiquetas'
+import { ListaCoberturas } from './ListaCoberturas'
 
 /**
  * Las piezas con las que se pinta una póliza, compartidas por la LISTA
@@ -542,16 +543,17 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
       <p className="suave" style={{ margin: '0 0 8px', fontSize: 13 }}>
         {c.total === 1 ? '1 cobertura' : `${c.total} coberturas`}
       </p>
-      <ul className="coberturas">
-        {c.lista.map((nombre, i) => (
-          <li key={`${nombre}-${i}`}>
-            {nombre}
-            {c.capitales?.[i] === 'ilimitado'
-              ? ': ilimitado'
-              : typeof c.capitales?.[i] === 'number' && `: ${eur(c.capitales[i] as number)}`}
-          </li>
-        ))}
-      </ul>
+      <ListaCoberturas
+        filas={c.lista.map((nombre, i) => ({
+          nombre,
+          // `detalle` (capital con su semántica, franquicia, vigencia propia). Sin él, el formato de siempre.
+          capital:
+            c.detalle?.[i]?.capital ??
+            (c.capitales?.[i] === 'ilimitado' ? 'ilimitado' : typeof c.capitales?.[i] === 'number' ? eur(c.capitales[i] as number) : null),
+          franquicia: c.detalle?.[i]?.franquicia ?? null,
+          vigencia: c.detalle?.[i]?.vigencia ?? null,
+        }))}
+      />
       {/* `total > lista.length` = filas informadas SIN descripción ni código.
           Se dice, en vez de dejar que el cliente cuente y le falten: el hueco es
           de la compañía, no una cobertura que le estemos escondiendo. */}

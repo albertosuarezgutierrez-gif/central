@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, lineaConductor, ventanaAnulacion } from '@central/module-seguros'
 import type { CapitalAsegurado } from '@central/module-seguros'
 import { esEstadoVigente } from '@central/module-seguros'
 import Documentos from '../../Documentos'
@@ -698,6 +698,8 @@ function Intervinientes({ p }: { p: Poliza }) {
           {i.email && <> · <a href={`mailto:${i.email}`}>✉️</a></>}
           {/* `poliza` no es una procedencia que decir: es la póliza que se está mirando. */}
           {i.origen !== 'poliza' && <span style={sub}> · {i.origen}</span>}
+          {/* Carné y nacimiento del conductor (CIMA). `null` = no consta: no se pinta. */}
+          {lineaConductor(i) && <div style={muted}>{lineaConductor(i)}</div>}
         </div>
       ))}
       {ef.telefono && ef.quien && <div style={muted}>Si el tomador no contesta: {ef.quien.fichaId ? <Link href={`/correduria/cliente/${ef.quien.fichaId}`}>{ef.quien.nombre}</Link> : ef.quien.nombre} ({etiquetaRol(ef.quien.rol)}) 📞 {ef.telefono}</div>}

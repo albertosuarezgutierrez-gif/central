@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Phone, Lock, RefreshCw } from 'lucide-react'
-import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, fechaVencimientoDudosa, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
+import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, fechaVencimientoDudosa, lineaFichaObjeto, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type PolizaFiguraFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
@@ -301,6 +301,8 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
     <span title={p.objeto.nota ?? undefined}>
       {p.objeto.titulo}
       {p.objeto.detalle && <div style={sub}>{p.objeto.detalle}</div>}
+      {/* Línea de la ficha del bien (CIMA); NULL → se omite. */}
+      {lineaFichaObjeto(p.objeto.ficha) && <div style={sub}>{lineaFichaObjeto(p.objeto.ficha)}</div>}
     </span>
   )
 }

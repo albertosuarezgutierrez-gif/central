@@ -267,7 +267,7 @@ test('las partidas OTROS son coberturas, no partidas del bien: no se repiten en 
   assert.deepEqual(b.detalles, ['90 m²', 'CONTINENTE: 150.000,00 €'])
 })
 
-test('🔒 el bastidor (VIN) NUNCA llega a la forma del portal; la ficha CIMA sí', () => {
+test('🔒 el bastidor (VIN) NUNCA llega a la forma del portal; la ficha CIMA sí (con códigos EIAC traducidos)', () => {
   const VIN = 'VSSZZZ6JZ9R123456'
   const b = describirBien('auto', {
     marca: 'SEAT', modelo: 'IBIZA', matricula: '1234ABC', bastidor: VIN,
@@ -275,8 +275,8 @@ test('🔒 el bastidor (VIN) NUNCA llega a la forma del portal; la ficha CIMA s�
   })
   assert.ok(!JSON.stringify(b).includes(VIN), 'el bastidor se ha colado en el bien del portal')
   assert.ok(b.detalles.includes('Valor del vehículo: 12.000,00€'))
-  assert.ok(b.detalles.includes('Combustible: GA'))
-  const h = describirBien('hogar', { localidad: 'Sevilla', zona: 'Z1', bastidor: VIN })
+  assert.ok(b.detalles.includes('Combustible: Gasolina'))
+  const h = describirBien('hogar', { localidad: 'Sevilla', zona: 'PO', bastidor: VIN })
   assert.ok(!JSON.stringify(h).includes(VIN))
-  assert.ok(h.detalles.includes('Zona: Z1'))
+  assert.ok(h.detalles.includes('Zona: Zona poblada'))
 })

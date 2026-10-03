@@ -179,6 +179,9 @@ export type IntervinienteFicha = {
    */
   telefonoPropio: boolean | null
   emailPropio: boolean | null
+  /** Del conductor, `AAAA-MM-DD`. `null`/ausente = asegura no lo manda o no se sabe. */
+  fechaCarnet?: string | null
+  fechaNacimiento?: string | null
 }
 
 export type Ficha = {
@@ -484,6 +487,19 @@ function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
 }
 
+/** La ficha del bien (pares etiqueta/valor), o `null` si no llega o está vacía. Una fila rara se salta. */
+export function leerFichaObjeto(v: unknown): Array<{ etiqueta: string; valor: string }> | null {
+  if (!Array.isArray(v)) return null
+  const out: Array<{ etiqueta: string; valor: string }> = []
+  for (const d of v) {
+    if (typeof d !== 'object' || d === null) continue
+    const o = d as Record<string, unknown>
+    if (typeof o.etiqueta !== 'string' || typeof o.valor !== 'string' || o.valor.trim() === '') continue
+    out.push({ etiqueta: o.etiqueta, valor: o.valor.trim() })
+  }
+  return out.length > 0 ? out : null
+}
+
 export function leerObjeto(v: unknown): ObjetoFicha | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
@@ -494,6 +510,10 @@ export function leerObjeto(v: unknown): ObjetoFicha | null {
     detalle: cadena(o.detalle),
     nota: cadena(o.nota),
     coberturas: Array.isArray(o.coberturas) ? o.coberturas.filter((c): c is string => typeof c === 'string') : null,
+    // Hasta el 03/10/2026 se descartaba aquí: la ficha del bien llegaba por el puerto y no se pintaba.
+    ficha: leerFichaObjeto(o.ficha),
+    // 🔒 Solo operador (esta es su pantalla): el VIN sigue el mismo camino que la ficha.
+    bastidor: cadena(o.bastidor),
   }
 }
 
@@ -682,6 +702,8 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
       origen: cadena(i.origen) ?? 'sin_informar',
       telefonoPropio: typeof i.telefonoPropio === 'boolean' ? i.telefonoPropio : null,
       emailPropio: typeof i.emailPropio === 'boolean' ? i.emailPropio : null,
+      fechaCarnet: cadena(i.fechaCarnet),
+      fechaNacimiento: cadena(i.fechaNacimiento),
     })
   }
   return out

@@ -48,6 +48,12 @@ export type IntervinienteFicha = {
   esTomador: boolean
   /** `cima` o `manual`. */
   origen: string
+  /**
+   * Del conductor (CIMA, cifrados en la BD y ya descifrados por asegura): `AAAA-MM-DD`.
+   * Opcional: asegura vieja no los manda, y `null` = no se sabe (nunca «sin carné»).
+   */
+  fechaCarnet?: string | null
+  fechaNacimiento?: string | null
 }
 
 const ROLES: Record<string, string> = {

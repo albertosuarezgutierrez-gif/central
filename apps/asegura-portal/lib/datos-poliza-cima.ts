@@ -27,6 +27,15 @@ export type RiesgoPortal = {
   fin: string | null
 }
 
+export type BeneficiarioPortal = { orden: string | null; nombre: string | null; prestamo: string | null }
+export type SuplementoPortal = {
+  numero: string | null
+  /** `AAAA-MM-DD` (fecha de efecto) o `null`. */
+  fecha: string | null
+  /** La CLASE del suplemento («Modificación general»); jamás el texto libre. */
+  descripcion: string | null
+}
+
 export type DatosPolizaCima = {
   /** «Domiciliación bancaria»… Solo códigos que sabemos leer; un código desconocido no se pinta. */
   formaPago: string | null
@@ -38,6 +47,10 @@ export type DatosPolizaCima = {
   producto: string | null
   /** `null` = no visible en este nivel. `[]` = la compañía no ha detallado riesgos. */
   riesgos: RiesgoPortal[] | null
+  /** Beneficiarios (orden, nombre, préstamo; nunca DNI). `null` = no visible; `[]` = no consta. */
+  beneficiarios: BeneficiarioPortal[] | null
+  /** Suplementos, el más reciente primero. `null` = no visible; `[]` = no consta ninguno. */
+  suplementos: SuplementoPortal[] | null
 }
 
 export const SIN_DATOS_CIMA: DatosPolizaCima = {
@@ -46,6 +59,8 @@ export const SIN_DATOS_CIMA: DatosPolizaCima = {
   cuentaCargo: null,
   producto: null,
   riesgos: null,
+  beneficiarios: null,
+  suplementos: null,
 }
 
 /**
@@ -131,6 +146,42 @@ function riesgos(x: unknown): RiesgoPortal[] {
   return out
 }
 
+function beneficiarios(x: unknown): BeneficiarioPortal[] {
+  if (!Array.isArray(x)) return []
+  const out: BeneficiarioPortal[] = []
+  for (const b of x.slice(0, MAX_RIESGOS)) {
+    const o = objeto(b)
+    if (!o) continue
+    // CIMA manda a veces un «1» donde iría el nombre: un número suelto no es un nombre.
+    const nombre = texto(o.descripcion)
+    const item: BeneficiarioPortal = {
+      orden: texto(o.orden),
+      nombre: nombre !== null && !/^\d+$/.test(nombre) ? nombre : null,
+      prestamo: texto(o.prestamo),
+    }
+    if (item.nombre === null && item.prestamo === null) continue
+    out.push(item)
+  }
+  return out
+}
+
+/**
+ * 🚨 De cada suplemento solo salen número, fecha de efecto y la CLASE. El texto libre
+ * (`detalle`) NO: trae «DATOS ANTERIORES… BANCO-CUENTA: 2038/9743/17» (medido 03/10/2026).
+ */
+function suplementos(x: unknown): SuplementoPortal[] {
+  if (!Array.isArray(x)) return []
+  const out: SuplementoPortal[] = []
+  for (const s of x.slice(0, MAX_RIESGOS)) {
+    const o = objeto(s)
+    if (!o) continue
+    const item: SuplementoPortal = { numero: texto(o.id), fecha: fechaIso(o.fechaEfecto), descripcion: texto(o.descripcionClase) }
+    if (item.numero === null && item.fecha === null && item.descripcion === null) continue
+    out.push(item)
+  }
+  return out.sort((a, b) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))
+}
+
 function producto(x: unknown): string | null {
   const p = objeto(x)
   if (!p) return null
@@ -142,14 +193,16 @@ function producto(x: unknown): string | null {
  *  - cobro (forma de pago y quién cobra) → `recibos` (es lo económico);
  *  - cuenta de cargo → `iban` (a un tercero de una persona física no llega nunca);
  *  - producto → `coberturas` (dato del contrato);
- *  - riesgos → `bien` (qué está asegurado, como la matrícula).
+ *  - riesgos → `bien` (qué está asegurado, como la matrícula);
+ *  - beneficiarios → `iban` (datos de personas: a un tercero de una física no llegan nunca);
+ *  - suplementos → `coberturas` (dato del contrato).
  */
 export function datosPolizaCima(
   datos: unknown,
   ve: Pick<CamposVisibles, 'recibos' | 'iban' | 'coberturas' | 'bien'>,
 ): DatosPolizaCima {
   const d = objeto(datos)
-  if (!d) return { ...SIN_DATOS_CIMA, riesgos: ve.bien ? [] : null }
+  if (!d) return { ...SIN_DATOS_CIMA, riesgos: ve.bien ? [] : null, beneficiarios: ve.iban ? [] : null, suplementos: ve.coberturas ? [] : null }
   const fp = codigo(d.formaPago)
   const gc = codigo(d.gestionCobro)
   return {
@@ -158,6 +211,8 @@ export function datosPolizaCima(
     cuentaCargo: ve.iban ? cuentaEnmascarada(d.ibanUltimos4) : null,
     producto: ve.coberturas ? producto(d.producto) : null,
     riesgos: ve.bien ? riesgos(d.riesgos) : null,
+    beneficiarios: ve.iban ? beneficiarios(d.beneficiarios) : null,
+    suplementos: ve.coberturas ? suplementos(d.suplementos) : null,
   }
 }
 

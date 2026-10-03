@@ -40,7 +40,7 @@ test('🚨 el `iban` (cifrado o en claro), el BIC y las comisiones NO salen en e
     assert.ok(!json.includes('CAIXESBBXXX'), 'el BIC se ha colado')
     assert.ok(!json.includes('12.50') && !json.includes('25.00'), 'las comisiones se han colado')
     assert.ok(!/"iban"/.test(json), 'hay una clave `iban` en la salida')
-    assert.deepEqual(Object.keys(r).sort(), ['cuentaCargo', 'formaPago', 'gestionCobro', 'producto', 'riesgos'])
+    assert.deepEqual(Object.keys(r).sort(), ['beneficiarios', 'cuentaCargo', 'formaPago', 'gestionCobro', 'producto', 'riesgos', 'suplementos'])
   }
 })
 
@@ -135,4 +135,48 @@ test('la figura «pagador» se lee bien en la frase de la ficha', () => {
   assert.equal(rolesLegibles(['pagador']), 'pagador')
   assert.equal(rolesLegibles(['pagador', 'tomador']), 'tomador y pagador')
   assert.equal(rolesLegibles(['conductor_habitual', 'pagador', 'propietario']), 'propietario, conductor habitual y pagador')
+})
+
+// ── Beneficiarios y suplementos (CIMA, 03/10/2026) ──────────────────────────
+const CON_BENEF = {
+  ...CIMA,
+  beneficiarios: [
+    { orden: '1', descripcion: 'Banco Ejemplo SA', prestamo: 'HIPOTECARIO', dni: '12345678Z', iban: IBAN_CLARO },
+    { orden: '2', descripcion: '1', prestamo: null },
+    { orden: '3', descripcion: null, prestamo: null },
+  ],
+  suplementos: [
+    { id: '0001', clase: 'NI', descripcionClase: 'Ninguno de los anteriores', detalle: 'SUPLEMENTO 1 (BANCO-CUENTA: 2038/9743/17', fechaEfecto: '2014-09-09', fechaEmision: '2014-09-09', situacion: 'AC' },
+    { id: '0003', clase: 'CC', descripcionClase: 'Modificación general', fechaEfecto: '2025-10-15' },
+    { id: null, fechaEfecto: null, detalle: 'solo detalle' },
+  ],
+}
+
+test('beneficiarios: orden, nombre y préstamo; un «1» suelto no es un nombre; nunca DNI ni cuenta', () => {
+  const r = datosPolizaCima(CON_BENEF, TODO)
+  assert.deepEqual(r.beneficiarios, [
+    { orden: '1', nombre: 'Banco Ejemplo SA', prestamo: 'HIPOTECARIO' },
+  ])
+  const json = JSON.stringify(r)
+  assert.ok(!json.includes('12345678Z') && !json.includes(IBAN_CLARO))
+})
+
+test('beneficiarios: son datos de personas → solo con el nivel `iban`; sin él, null (no visible)', () => {
+  assert.equal(datosPolizaCima(CON_BENEF, TARJETA).beneficiarios, null)
+  assert.deepEqual(datosPolizaCima({ ...CIMA }, TODO).beneficiarios, [])
+})
+
+test('suplementos: número, fecha de efecto y clase; el texto libre `detalle` NO sale (lleva cuentas); más reciente primero', () => {
+  const r = datosPolizaCima(CON_BENEF, TODO)
+  assert.deepEqual(r.suplementos, [
+    { numero: '0003', fecha: '2025-10-15', descripcion: 'Modificación general' },
+    { numero: '0001', fecha: '2014-09-09', descripcion: 'Ninguno de los anteriores' },
+  ])
+  const json = JSON.stringify(r)
+  assert.ok(!json.includes('2038/9743') && !json.includes('solo detalle'))
+})
+
+test('suplementos: visibles con `coberturas`; sin él null; sin datos [] (se miró y no hay)', () => {
+  assert.equal(datosPolizaCima(CON_BENEF, { recibos: true, iban: true, coberturas: false, bien: true }).suplementos, null)
+  assert.deepEqual(datosPolizaCima(CIMA, TODO).suplementos, [])
 })

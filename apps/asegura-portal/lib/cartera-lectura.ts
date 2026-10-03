@@ -62,6 +62,8 @@ import {
   estadoRecibos,
   resumirRecibos,
   fechaReciboFiable,
+  vistaCobertura,
+  type CoberturaVista,
   tonoSituacionRecibo,
   type ReciboHistorial,
   type ResumenRecibos,
@@ -193,6 +195,8 @@ export type PolizaPortal = {
   fechaEmision: Date | null
   /** Desde cuándo corre el periodo actual (EIAC). `null` = no se pinta. */
   fechaEfectoActual: Date | null
+  /** Cuándo se solicitó la póliza (EIAC). `null` = no consta O no visible en este nivel (`coberturas`): no se pinta. */
+  fechaSolicitud: Date | null
   estado: string
   vigencia: Vigencia
   /**
@@ -272,6 +276,11 @@ export type PolizaPortal = {
     lista: string[]
     /** Capital de cada cobertura, alineado con `lista`; `null` = no informado. */
     capitales?: (number | 'ilimitado' | null)[]
+    /**
+     * Capital (con «sin capital propio» / «ilimitado»), franquicia y vigencia propia de cada
+     * cobertura, alineado con `lista` (`vistaCobertura`). Cada campo `null` = no se pinta.
+     */
+    detalle?: CoberturaVista[]
   } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
@@ -855,7 +864,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       : await Promise.all([
           prisma.polizaCobertura.findMany({
             where: { polizaId: { in: polizaIds } },
-            select: { polizaId: true, descripcion: true, codigo: true, numeroOrden: true, capitalAsegurado: true },
+            select: {
+              polizaId: true, descripcion: true, codigo: true, numeroOrden: true, capitalAsegurado: true,
+              franquicia: true, fechaInicio: true, fechaFin: true,
+            },
             orderBy: { numeroOrden: 'asc' },
           }),
           prisma.polizaRecibo.findMany({
@@ -1031,6 +1043,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       fechaVencimiento,
       fechaEmision: p.fechaEmision,
       fechaEfectoActual: p.fechaEfectoActual,
+      fechaSolicitud: ve.coberturas ? p.fechaSolicitud : null,
       estado: p.estado,
       vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento }, hoy),
       renovacionSinConfirmar:
@@ -1060,7 +1073,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         ? {
             total: cobs.length,
             // Sin `slice`: la lista va entera. Ver el comentario del tipo.
-            ...listaCoberturas(cobs),
+            ...listaCoberturas(cobs, { inicio: p.fechaEfectoActual ?? p.fechaInicio, fin: p.fechaVencimiento }),
           }
         : null,
       recibos: ve.recibos ? recibosDePoliza(recs) : null,
@@ -1365,10 +1378,19 @@ type ReciboFila = {
  * se sabe leer sale `null` («no informado»), nunca «0,00€».
  */
 function listaCoberturas(
-  cobs: Array<{ descripcion: string | null; codigo: string | null; capitalAsegurado: string | null }>,
-): { lista: string[]; capitales: (number | 'ilimitado' | null)[] } {
+  cobs: Array<{
+    descripcion: string | null
+    codigo: string | null
+    capitalAsegurado: string | null
+    franquicia: string | null
+    fechaInicio: Date | null
+    fechaFin: Date | null
+  }>,
+  periodoPoliza: { inicio: Date | null; fin: Date | null },
+): { lista: string[]; capitales: (number | 'ilimitado' | null)[]; detalle: CoberturaVista[] } {
   const lista: string[] = []
   const capitales: (number | 'ilimitado' | null)[] = []
+  const detalle: CoberturaVista[] = []
   for (const c of cobs) {
     const nombre = (c.descripcion ?? c.codigo ?? '').trim()
     if (!nombre) continue
@@ -1377,8 +1399,9 @@ function listaCoberturas(
     const cap = interpretarCapital(c.capitalAsegurado)
     lista.push(nombre)
     capitales.push(cap.tipo === 'importe' && cap.importe > 0 ? cap.importe : cap.tipo === 'ilimitado' ? 'ilimitado' : null)
+    detalle.push(vistaCobertura(c, periodoPoliza))
   }
-  return { lista, capitales }
+  return { lista, capitales, detalle }
 }
 
 function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
