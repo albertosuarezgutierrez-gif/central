@@ -1,8 +1,8 @@
 {
  "sesion": "49b1219c-281c-5901-8e99-c32f9113f519",
  "inicio": "2026-10-03T07:27:37.509Z",
- "fin": "2026-10-03T11:05:37.171Z",
- "llamadas": 756,
+ "fin": "2026-10-03T11:10:27.107Z",
+ "llamadas": 772,
  "categorias": {
   "agente:general-purpose": {
    "llamadas": 14,
@@ -16,16 +16,16 @@
    }
   },
   "otro": {
-   "llamadas": 124,
-   "chars_in": 73267,
-   "chars_out": 806101,
+   "llamadas": 129,
+   "chars_in": 75232,
+   "chars_out": 865716,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 122023,
    "tools": {
     "ToolSearch": 23,
-    "SubagentHandback": 28,
-    "ReadNotifications": 71,
+    "SubagentHandback": 29,
+    "ReadNotifications": 75,
     "SendMessage": 2
    }
   },
@@ -58,14 +58,14 @@
    }
   },
   "bash": {
-   "llamadas": 364,
-   "chars_in": 156768,
-   "chars_out": 1523182,
+   "llamadas": 372,
+   "chars_in": 166119,
+   "chars_out": 1551523,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 364
+    "Bash": 372
    }
   },
   "agente:agente-mecanico": {
@@ -80,29 +80,29 @@
    }
   },
   "mcp:github": {
-   "llamadas": 33,
-   "chars_in": 10941,
-   "chars_out": 74279,
+   "llamadas": 35,
+   "chars_in": 12138,
+   "chars_out": 74479,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__github__create_pull_request": 8,
+    "mcp__github__create_pull_request": 9,
     "mcp__github__get_job_logs": 2,
     "mcp__github__pull_request_read": 11,
     "mcp__github__update_pull_request": 6,
-    "mcp__github__merge_pull_request": 6
+    "mcp__github__merge_pull_request": 7
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 14,
-   "chars_in": 1379,
-   "chars_out": 5280,
+   "llamadas": 15,
+   "chars_in": 1452,
+   "chars_out": 5519,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 8,
+    "mcp__claude-code-remote__subscribe_pr_activity": 9,
     "mcp__claude-code-remote__send_later": 3,
     "mcp__claude-code-remote__delete_trigger": 2,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 1
