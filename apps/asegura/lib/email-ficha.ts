@@ -22,6 +22,7 @@
  *     y cifrado, que es el fallo que esta app persigue por todas partes.
  */
 import { prismaAsegura } from './asegura-db'
+import { esCanalCorreduria } from '@central/module-seguros'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 
 export type EmailDeFicha =
@@ -62,11 +63,18 @@ export async function estadoEmailDeFicha(correduriaId: string, clienteId: string
   )
   if (guardados.length === 0) return { estado: 'sin_email' }
 
+  // 4. El canal de la correduría (hola@…) que se pone cuando la compañía exige un email NO es del
+  //    cliente: no se le escribe ahí (se le escribiría a la propia correduría). Se salta.
+  let soloCanal = false
   for (const cifrado of guardados) {
     if (campoIlegible(cifrado)) continue
     const claro = descifrarCampo(cifrado)
-    if (claro && claro.trim() !== '') return { estado: 'ok', email: claro.trim() }
+    if (claro && claro.trim() !== '') {
+      if (esCanalCorreduria(claro)) { soloCanal = true; continue }
+      return { estado: 'ok', email: claro.trim() }
+    }
   }
+  if (soloCanal) return { estado: 'sin_email' }
   // Había direcciones y ninguna se pudo abrir: eso es un problema de clave.
   return { estado: 'ilegible' }
 }
