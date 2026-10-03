@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
-import { alertaVencimiento, contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { alertaVencimiento, contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
@@ -41,6 +41,13 @@ export default function Cabecera({ ficha, resumen, seguros }: {
   // Ramos con algún SEGURO en vigor (no canceladas, no volcado). Siempre es array (nunca null),
   // así que esto no necesita un tercer estado.
   const tiposVivos = seguros.map(p => p.tipo)
+  // Física vs jurídica por el DOCUMENTO (comunidad de propietarios, sociedad: sin DNI, nacimiento ni
+  // carnés). `null` = no se sabe → se pinta lo de siempre (nunca se oculta por duda).
+  const juridica = personaDeFicha({ tipoPersona: ficha.identidad?.tipoPersona, dniEnmascarado: ficha.identidad?.dniEnmascarado, segmento: ficha.segmento }) === 'juridica'
+  // «000000000» es un comodín de la compañía, no un teléfono: «sin teléfono» (y que `contactoEfectivo`
+  // mire a los intervinientes, que sí lo tengan).
+  const contacto = { ...ficha.contacto, telefono: esTelefonoComodin(ficha.contacto.telefono) ? null : ficha.contacto.telefono }
+  const intervinientes = ficha.intervinientes?.map(i => esTelefonoComodin(i.telefono) ? { ...i, telefono: null } : i) ?? null
   // Un solo bloque con su propio `gap`: la cabecera, el siguiente paso, las acciones y los titulares
   // van juntos, y el aire grande (24) queda para separarla de lo que viene debajo.
   return (
@@ -59,21 +66,22 @@ export default function Cabecera({ ficha, resumen, seguros }: {
                     diga el enum. */}
                 <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
                 <RamosContratados tiposVivos={tiposVivos} />
-                <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
+                <Contacto nombre={ficha.nombre} esCliente={esCliente} c={contacto} intervinientes={intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
                 {/* DNI, nacimiento y carnés se consultan, no se trabajan: plegados
                     (26/09/2026, en móvil la línea ocupaba 5-6 renglones). */}
                 {/* Abierto de serie si un carné caduca o ya caducó: un aviso no se pliega.
                     En su propia línea: abierto e inline, estiraba la fila y la chapa de
                     estado salía como un círculo gigante (captura de Alberto, 28/09/2026). */}
-                <details className="plegable-dato" style={{ flexBasis: '100%' }} open={(ficha.carnets ?? []).some(k => estadoCaducidadCarnet(k.fechaCaducidad, new Date().toISOString().slice(0, 10)) !== 'vigente' && k.fechaCaducidad !== null)}>
+                <details className="plegable-dato" style={{ flexBasis: '100%' }} open={!juridica && (ficha.carnets ?? []).some(k => estadoCaducidadCarnet(k.fechaCaducidad, new Date().toISOString().slice(0, 10)) !== 'vigente' && k.fechaCaducidad !== null)}>
                   <summary style={{ cursor: 'pointer', color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32, fontSize: 13, listStyle: 'none', userSelect: 'none' }}>
-                    <ChevronRight className="chev" size={14} strokeWidth={1.75} aria-hidden />DNI y carnés
+                    <ChevronRight className="chev" size={14} strokeWidth={1.75} aria-hidden />{juridica ? 'CIF' : 'DNI y carnés'}
                   </summary>
                   <span style={{ display: 'flex', gap: '4px 14px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} />
-                    <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />
+                    <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} juridica={juridica} />
+                    {/* Persona jurídica: ni carnés de conducir ni «Añadir carné». */}
+                    {!juridica && <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />}
                     {/* `null` = asegura no manda el bloque: sin saber qué hay, no se ofrece editarlo. */}
-                    {ficha.carnets !== null && (
+                    {!juridica && ficha.carnets !== null && (
                       <EditarCarnets clienteId={ficha.id} carnets={ficha.carnets} fechaPoliza={ficha.dePolizas?.fechaCarnet ?? null} />
                     )}
                   </span>
@@ -93,7 +101,7 @@ export default function Cabecera({ ficha, resumen, seguros }: {
         </div>
       </div>
 
-      <SiguientePaso ficha={ficha} resumen={resumen} tiposVivos={tiposVivos} seguros={seguros} />
+      <SiguientePaso ficha={{ ...ficha, contacto, intervinientes }} resumen={resumen} tiposVivos={tiposVivos} seguros={seguros} />
 
       <Acciones clienteId={ficha.id} />
 
@@ -522,14 +530,14 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
 // puerto de asegura por diseño — para cambiarlo hace falta el DNI recibido y
 // documentado en 📎 Documentos (regla de identidad de la correduria-crm).
 
-function Identidad({ identidad, clienteId, dePolizas }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null }) {
+function Identidad({ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }) {
   // `null` = asegura aún no manda el bloque (versión anterior): no se afirma
   // «sin DNI», se calla — es distinto de «se miró y no hay ninguno».
   if (identidad === null) return null
   return (
     <>
       {identidad.dniIlegible ? (
-        <span style={FILA} title="Está guardado pero cifrado con una clave que asegura no puede abrir"><Ico i={IdCard} />DNI cifrado</span>
+        <span style={FILA} title="Está guardado pero cifrado con una clave que asegura no puede abrir"><Ico i={IdCard} />{juridica ? 'CIF cifrado' : 'DNI cifrado'}</span>
       ) : identidad.dniEnmascarado ? (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span style={FILA} title="El DNI completo no sale de asegura por diseño: para verlo entero, pide un código de un solo uso">
@@ -538,9 +546,9 @@ function Identidad({ identidad, clienteId, dePolizas }: { identidad: IdentidadFi
           <VerDniCompleto clienteId={clienteId} />
         </span>
       ) : (
-        <span style={{ ...FILA, color: 'var(--muted)' }} title="No consta DNI en la ficha"><Ico i={IdCard} />sin DNI</span>
+        <span style={{ ...FILA, color: 'var(--muted)' }} title={juridica ? 'No consta CIF en la ficha' : 'No consta DNI en la ficha'}><Ico i={IdCard} />{juridica ? 'sin CIF' : 'sin DNI'}</span>
       )}
-      {identidad.fechaNacimientoIlegible ? (
+      {juridica ? null : identidad.fechaNacimientoIlegible ? (
         <span style={FILA} title="Está guardada pero cifrada con una clave que asegura no puede abrir"><Ico i={Cake} />cifrada</span>
       ) : identidad.fechaNacimiento ? (
         <span style={FILA}><Ico i={Cake} />{fmt(identidad.fechaNacimiento)}</span>

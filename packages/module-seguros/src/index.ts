@@ -1213,3 +1213,5 @@ export type {
   VerificacionBonus,
   BloqueoBonus,
 } from './imputar-seguro-anterior.ts'
+
+export { personaDeFicha, esTelefonoComodin } from './persona-ficha.ts'
