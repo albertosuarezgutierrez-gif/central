@@ -510,8 +510,8 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
       ) : (
         // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
         // en sitios distintos (la clave PII vs. pedírselo al cliente).
-        <span style={FILA} title={c.telefonoIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
-          <Ico i={c.telefonoIlegible ? Lock : Phone} />{c.telefonoIlegible ? 'cifrado' : ef.canalCorreduria.telefono ? 'sin teléfono propio' : `sin teléfono${coletilla}`}{ef.canalCorreduria.telefono && !c.telefonoIlegible ? canalTag : null}
+        <span style={FILA} title={c.telefonoIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : ef.canalCorreduria.telefono ? `En su ficha consta el teléfono de la correduría, no uno propio${ef.intervinientesSinMirar ? ' (intervinientes sin comprobar)' : ''}` : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
+          <Ico i={c.telefonoIlegible ? Lock : Phone} />{c.telefonoIlegible ? 'cifrado' : ef.canalCorreduria.telefono ? `sin teléfono propio${coletilla}` : `sin teléfono${coletilla}`}{ef.canalCorreduria.telefono && !c.telefonoIlegible ? canalTag : null}
         </span>
       )}
       {ef.email ? (
