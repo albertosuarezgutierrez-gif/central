@@ -149,9 +149,9 @@ test('descuento en preemisión: límites del formulario real (CAP 0-99, venta cr
   const valor = (id: string) => (r.opciones as { id: string; value: unknown }[]).find((o) => o.id === id)?.value
   assert.equal(valor('dtoCap'), 10)
   assert.equal(valor('dtoVentaCruzada'), 0)
-  // 🪤 Copia: el catálogo compartido sigue en su valor por defecto (50, decisión 29/09/2026).
-  assert.equal(opcionesPorDefecto('Allianz')!.find((o) => o.id === 'dtoCap')!.value, 50)
-  assert.equal(opcionesPorDefecto('Allianz')!.find((o) => o.id === 'dtoVentaCruzada')!.value, 50)
+  // 🪤 Copia: el catálogo compartido sigue en su valor por defecto (30, decisión 03/10/2026).
+  assert.equal(opcionesPorDefecto('Allianz')!.find((o) => o.id === 'dtoCap')!.value, 30)
+  assert.equal(opcionesPorDefecto('Allianz')!.find((o) => o.id === 'dtoVentaCruzada')!.value, 30)
   // Otra compañía (sin el campo) no se inventa la opción: se rechaza antes de gastar.
   assert.equal(conDescuentos(null, { dtoCap: 10 }).ok, false)
   assert.equal(conDescuentos([{ id: 'otro', type: 'number', value: 1 }], { dtoCap: 10 }).ok, false)
