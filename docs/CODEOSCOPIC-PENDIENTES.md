@@ -51,17 +51,37 @@ póliza 05139; API `C0109` Allianz póliza 8846622.
 
 ## Campos de descuento por compañía (lo que han devuelto las compañías en nuestras 311 tarificaciones)
 
-| Compañía | Producto | Campo | Id interno | Máximo |
+| Compañía | Ramo | Campos disponibles | Id interno | Máximo |
 |---|---|---|---|---|
-| Allianz | Autos | Descuento comercial % (CAP) / (venta cruzada) | `dtoCap` / `dtoVentaCruzada` | ❓ (el vendor admite 0-99 / 0-100) |
-| Allianz | Motos | idem | ❓ (probablemente iguales) | ❓ |
-| Allianz | Hogar | idem | ❓ | ❓ |
-| Generali | Motos | Descuento comercial % | ❓ | ❓ |
-| Occident | Autos y Motos | Descuento comercial | ❓ | ❓ (se mandó 30) |
-| Mapfre | Autos y Motos | no ha salido ninguno | — | ❓ |
-| Reale | Autos | no ha salido ninguno; Motos no devuelve opciones | — | ❓ |
+| Allianz | Autos | Descuento comercial % (CAP) / (venta cruzada) + Tipo de comisión (A) | `dtoCap` / `dtoVentaCruzada` | Vendor permite 0-99 / 0-100; recorta a su tope (≤20%) |
+| Allianz | Motos | Descuento comercial % (CAP) / (venta cruzada) + Tipo de comisión (A) | no consta (probablemente iguales) | Tope real desconocido (web 50 devuelve igual precio) |
+| Allianz | Hogar | Descuento comercial % (CAP) / (venta cruzada) | no consta | 0/0 (no envía descuento) |
+| Generali | Motos | Descuento comercial % | no consta | 0 |
+| Generali | Hogar | Descuento comercial % + Código Flota | no consta | 0 |
+| Occident | Autos | Descuento comercial + Colectivo | no consta | 30 por defecto (estimado, sin confirmar) |
+| Occident | Motos | Descuento comercial + Colectivo | no consta | 30 por defecto (estimado, sin confirmar) |
+| Occident | Hogar | Descuento comercial + Colectivo | no consta | 30 por defecto |
+| Fidelidade | Hogar | Descuento (vacío) | no consta | no disponible |
+| Mapfre | Autos | sin campo de descuento | — | no disponible |
+| Mapfre | Motos | sin campo de descuento | — | no disponible |
+| Reale | Autos | sin descuento manual; solo Campaña comercial (no disponibles) | — | no disponible |
+| Reale | Motos | sin descuento manual; solo Campaña comercial (no disponibles) | — | no disponible |
+| Reale | Hogar | sin descuento manual; Campaña comercial + Producto comercial (REALE HOGAR) | — | no disponible |
 
 Que no haya salido un campo no prueba que no exista: hay que abrir el formulario de cada compañía.
+
+### Decisiones de Alberto (03/10/2026)
+
+- El descuento por defecto se queda en **50** (se valoró 30 y se descartó, PR #4166 cerrado sin mergear). La compañía recorta sola a su máximo; es lo mismo que se decidió el 29/09.
+- `comissionType` NO se toca: afecta a la comisión con la compañía.
+- Aplicar en los dos campos de Allianz (CAP + venta cruzada).
+
+### Pendiente
+
+- Sacar los ids internos de los campos de descuento de Allianz moto/hogar, Generali moto/hogar, Occident y Fidelidade. Las opciones con id NO se guardan en BD (`respuesta.ts:198` las deja en memoria como `productOptions`; `tarificacion_precios.opciones` solo guarda etiqueta/valor).
+- Vías: un prompt de Claude en Chrome que lea el `id`/`name` de los inputs del iframe `product-form.avant.codeoscopic.io`, o el GET gratuito `/api/operador/codeoscopic/proyecto?projectId=` (necesita `ASEGURA_OPERADOR_SECRET`).
+- Con los ids, ampliar `opcionesPorDefecto()` (`apps/asegura/lib/codeoscopic/opciones-producto.ts`, hoy solo Allianz auto) para mandar 50 en moto y hogar.
+- Marcar como resueltos los puntos 1 y 2 de «Para comprobar en la pantalla de Avant2»: el 1 en parte (los máximos reales siguen sin medirse) y el 2 del todo (Mapfre y Reale sin descuento).
 
 **Prueba de Alberto en la web (29/09/2026, proyecto 40961885, misma moto que el 40956228):** solo tres
 compañías dejan meter descuento en moto: Allianz (CAP + venta cruzada), Generali y Catalana Occidente
