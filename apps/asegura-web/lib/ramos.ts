@@ -377,6 +377,63 @@ export const RAMOS: readonly Ramo[] = [
       },
     ],
   },
+  // 📌 Página de INTENCIÓN (03/10/2026): «seguro de salud sin copago», ~2.900
+  // búsquedas/mes en España y KD 1 (OpenSEO). Hasta hoy la consulta solo
+  // encontraba una línea dentro de `vida-y-salud`. Mismo ramo real que la
+  // parte de salud de esa página (lead `salud`): por eso va en `SOLO_INTENCION`.
+  {
+    slug: 'salud-sin-copago',
+    nombre: 'Salud sin copago',
+    h1: 'Seguro de salud sin copago en toda España',
+    title: 'Seguro de salud sin copago en España',
+    description:
+      'Correduría de seguros en toda España. Seguro de salud sin copago: qué significa, en qué se diferencia del copago, carencias, cuadro médico y preexistencias.',
+    intro: [
+      'Un seguro de salud sin copago es una póliza en la que pagas la prima y nada más: cuando vas al especialista, te haces una prueba o te operas dentro del cuadro médico, no hay un importe por cada acto médico. Con copago, además de la prima, cada uso lleva su pequeño pago.',
+      'Somos correduría y trabajamos con varias compañías. Antes de hablar de modalidades miramos cómo vas a usar la póliza, qué cuadro médico tienes cerca y qué te queda de carencias si vienes de otra compañía, porque eso decide más que la etiqueta «sin copago».',
+    ],
+    cubre: [
+      'Qué significa «sin copago» en tu póliza concreta: si se aplica a todos los actos médicos o hay prestaciones que llevan franquicia o un pago aparte.',
+      'El cuadro médico allí donde vives: si están los especialistas, las clínicas y el hospital a los que realmente vas a ir.',
+      'Las carencias: desde cuándo puedes usar cada prestación, y si se reconoce la antigüedad que traes de otra compañía.',
+      'Las preexistencias: cómo se tratan las enfermedades que ya tenías al contratar, según lo que se declare en el cuestionario de salud.',
+      'Qué queda fuera de la póliza aunque no haya copago: tratamientos excluidos, límites por prestación y servicios que solo se dan con reembolso.',
+      'Cómo se actualiza la prima en cada renovación, sobre todo al cambiar de tramo de edad.',
+    ],
+    paraQuien: [
+      'Vas a usar la póliza a menudo —niños pequeños, seguimiento de una enfermedad crónica, revisiones frecuentes— y quieres saber de antemano lo que pagas.',
+      'Tienes un seguro con copago y los recibos de cada consulta se han convertido en un segundo gasto que no esperabas.',
+      'Estás comparando pólizas de salud y no tienes claro si te conviene la modalidad con copago o sin copago.',
+      'Quieres cambiar de compañía de salud y te preocupa volver a empezar con las carencias.',
+    ],
+    faq: [
+      {
+        pregunta: '¿Qué es el copago en un seguro de salud?',
+        respuesta:
+          'Es un importe que pagas cada vez que usas un servicio de la póliza —una consulta, una prueba, una sesión— además de la prima. Su cuantía depende del acto médico y de la compañía, y figura en las condiciones de la póliza. En un seguro sin copago ese importe no existe: pagas la prima y el uso dentro del cuadro médico no lleva pagos aparte.',
+      },
+      {
+        pregunta: '¿Qué diferencia hay entre un seguro de salud con copago y sin copago?',
+        respuesta:
+          'Con copago la prima suele ser más contenida y pagas una parte cada vez que usas la póliza; sin copago la prima suele ser más alta y el uso no lleva pagos añadidos. Cuál encaja depende de cuánto prevés usarla. Esa cuenta se hace con tu uso real delante, y las coberturas pueden ser las mismas en las dos modalidades: lo que cambia es cómo se paga.',
+      },
+      {
+        pregunta: '¿Un seguro sin copago tiene carencias?',
+        respuesta:
+          'Sí, puede tenerlas. Sin copago se refiere a cómo pagas, no a desde cuándo puedes usar cada prestación. Las carencias suelen afectar a intervenciones, pruebas diagnósticas complejas o parto, y varían según la compañía. Si vienes de otra póliza de salud, algunas compañías reconocen esa antigüedad y reducen o eliminan carencias: conviene pedirlo por escrito.',
+      },
+      {
+        pregunta: '¿Puedo elegir cualquier médico con un seguro sin copago?',
+        respuesta:
+          'Dentro del cuadro médico de la compañía, sí. Fuera de él, la modalidad sin copago no da acceso a cualquier médico: eso es propio de las pólizas de reembolso, que funcionan de otra forma. Por eso lo primero es comprobar que el cuadro médico de tu zona tiene los especialistas y el hospital que vas a usar.',
+      },
+      {
+        pregunta: '¿Qué pasa con las enfermedades que ya tenía al contratar?',
+        respuesta:
+          'Hay que declararlas en el cuestionario de salud. La compañía decide si las acepta, las excluye o aplica un recargo, y esa decisión queda por escrito en la póliza. Ocultarlas no las convierte en cubiertas: es el motivo más frecuente de que una prestación se rechace después.',
+      },
+    ],
+  },
   {
     slug: 'decesos',
     nombre: 'Decesos',
@@ -733,13 +790,14 @@ export const RAMOS: readonly Ramo[] = [
 ]
 
 /**
- * Slugs que son página de INTENCIÓN de oficio, no un producto distinto de la
+ * Slugs que son página de INTENCIÓN (de oficio o de consulta, como
+ * `salud-sin-copago`), no un producto distinto de la
  * cartera: comparten ramo real (BD y formulario) con otra entrada de este
  * array. `responsabilidad-civil-fontaneros` es la MISMA responsabilidad
  * civil que `responsabilidad-civil`, con un enfoque de contenido distinto
  * para una consulta distinta — no una línea de negocio nueva.
  */
-export const SOLO_INTENCION: readonly string[] = ['responsabilidad-civil-fontaneros', 'responsabilidad-civil-autonomos']
+export const SOLO_INTENCION: readonly string[] = ['responsabilidad-civil-fontaneros', 'responsabilidad-civil-autonomos', 'salud-sin-copago']
 
 /**
  * Los RAMOS que son un producto real y distinto entre sí. Úsalo para contar
