@@ -6,8 +6,8 @@
 // (`anadirContacto`, `guardarCarnet`) y se deja una nota en el historial con lo rellenado.
 //
 // - Nunca lanza: lo llama la subida de un documento, que ya está guardado y no puede caerse por esto.
-// - Cada escritura vuelve a comprobar el hueco en la propia sentencia (`coalesce`/`where`): dos
-//   subidas a la vez no pisan la una a la otra.
+// - Cada escritura vuelve a comprobar el hueco en la propia sentencia (y lo dice con RETURNING): dos
+//   subidas a la vez no se pisan, y la nota y la auditoría cuentan solo lo escrito.
 // - En el historial van los NOMBRES de los campos, no los valores (es la ficha; el valor ya está en ella).
 import { Prisma } from './generated/asegura-client'
 import {
@@ -101,36 +101,64 @@ export async function volcarPolizaEnFicha(e: {
       else if (otros.length > 0) avisos.push(`el DNI ya está en otra ficha (${otros.map((o) => o.id).join(', ')}): no se ha copiado, posible duplicado`)
       else dni = { cifrado: encryptField(p.dni), hash: computeDniLookupHash(p.dni) }
     }
+    // Cada columna se escribe SOLO si estaba vacía, y el RETURNING dice cuáles lo estaban de verdad
+    // (la fila se bloquea y se lee en la misma sentencia): la nota del historial y la auditoría
+    // cuentan lo ESCRITO, no lo propuesto. Dos subidas a la vez no se pisan ni se atribuyen lo ajeno.
     const vacio = (col: string) => Prisma.raw(`nullif(trim(coalesce(${col}, '')), '') is null`)
-    const sets: Prisma.Sql[] = []
+    type Campo = { flag: string; etiqueta: string | null; auditoria: string | null; cuando: Prisma.Sql; sets: Prisma.Sql[] }
+    const campos: Campo[] = []
     if (dni) {
-      sets.push(Prisma.sql`dni = case when ${vacio('dni')} then ${dni.cifrado} else dni end`)
-      sets.push(Prisma.sql`dni_lookup_hash = case when ${vacio('dni')} then ${dni.hash} else dni_lookup_hash end`)
+      campos.push({
+        flag: 'dni', etiqueta: 'DNI', auditoria: 'dni', cuando: Prisma.sql`${vacio('a.a_dni')}`,
+        sets: [
+          Prisma.sql`dni = case when ${vacio('a.a_dni')} then ${dni.cifrado} else c.dni end`,
+          Prisma.sql`dni_lookup_hash = case when ${vacio('a.a_dni')} then ${dni.hash} else c.dni_lookup_hash end`,
+        ],
+      })
     }
-    if (p.fechaNacimiento) sets.push(Prisma.sql`fecha_nacimiento = case when ${vacio('fecha_nacimiento')} then ${encryptField(p.fechaNacimiento)} else fecha_nacimiento end`)
-    if (p.direccion) sets.push(Prisma.sql`direccion = case when ${vacio('direccion')} then ${encryptField(p.direccion)} else direccion end`)
-    // CP, población y provincia van con la calle (el parche solo los trae si la calle estaba vacía):
-    // la sentencia los ata a que la calle SIGA vacía, para no casar el CP de una con la calle de otra.
-    const conCalle = (col: string, v: string) =>
-      Prisma.sql`${Prisma.raw(col)} = case when ${vacio(col)} and ${vacio('direccion')} then ${v} else ${Prisma.raw(col)} end`
-    if (p.codigoPostal) sets.push(conCalle('codigo_postal', p.codigoPostal))
-    if (p.ciudad) sets.push(conCalle('ciudad', p.ciudad.slice(0, 100)))
+    if (p.fechaNacimiento) {
+      campos.push({
+        flag: 'fecha_nacimiento',
+        etiqueta: p.fechaNacimientoAConfirmar ? 'fecha de nacimiento (01/01, a confirmar)' : 'fecha de nacimiento',
+        auditoria: 'fecha_nacimiento',
+        cuando: Prisma.sql`${vacio('a.a_fn')}`,
+        sets: [Prisma.sql`fecha_nacimiento = case when ${vacio('a.a_fn')} then ${encryptField(p.fechaNacimiento)} else c.fecha_nacimiento end`],
+      })
+    }
+    if (p.direccion) {
+      campos.push({
+        flag: 'direccion', etiqueta: 'domicilio', auditoria: 'direccion', cuando: Prisma.sql`${vacio('a.a_dir')}`,
+        sets: [Prisma.sql`direccion = case when ${vacio('a.a_dir')} then ${encryptField(p.direccion)} else c.direccion end`],
+      })
+    }
+    // CP, población y provincia van con la calle: solo si la calle estaba vacía (y ellos también),
+    // para no casar el CP de una dirección con la calle de otra.
+    const conCalle = (col: string, alias: string, v: string, etiqueta: string) =>
+      campos.push({
+        flag: col, etiqueta, auditoria: col,
+        cuando: Prisma.sql`${vacio(`a.${alias}`)} and ${vacio('a.a_dir')}`,
+        sets: [Prisma.sql`${Prisma.raw(col)} = case when ${vacio(`a.${alias}`)} and ${vacio('a.a_dir')} then ${v} else ${Prisma.raw(`c.${col}`)} end`],
+      })
+    if (p.codigoPostal) conCalle('codigo_postal', 'a_cp', p.codigoPostal, 'código postal')
+    if (p.ciudad) conCalle('ciudad', 'a_ciudad', p.ciudad.slice(0, 100), 'población')
     const provincia = p.provincia ?? (p.direccion && p.codigoPostal ? provinciaPorCp(p.codigoPostal) : null)
-    if (provincia) sets.push(conCalle('provincia', provincia.slice(0, 100)))
-    if (sets.length > 0) {
-      const n = await db.$executeRaw(Prisma.sql`
-        update clientes set ${Prisma.join(sets, ', ')}, updated_at = now()
-        where id = ${e.clienteId}::uuid and correduria_id = ${e.correduriaId}::uuid and merged_into_cliente_id is null`)
-      if (n > 0) {
-        if (dni) { hechos.push('DNI'); anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: 'dni' }) }
-        if (p.fechaNacimiento) {
-          hechos.push(p.fechaNacimientoAConfirmar ? 'fecha de nacimiento (01/01, a confirmar)' : 'fecha de nacimiento')
-          anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: 'fecha_nacimiento' })
-        }
-        if (p.direccion) { hechos.push('domicilio'); anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: 'direccion' }) }
-        if (p.codigoPostal) { hechos.push('código postal'); anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: 'codigo_postal' }) }
-        if (p.ciudad) { hechos.push('población'); anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: 'ciudad' }) }
-        if (provincia) { hechos.push('provincia'); anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: 'provincia' }) }
+    if (provincia) conCalle('provincia', 'a_prov', provincia.slice(0, 100), 'provincia')
+    if (campos.length > 0) {
+      const filas = await db.$queryRaw<Record<string, boolean>[]>(Prisma.sql`
+        with a as (
+          select id, dni as a_dni, fecha_nacimiento as a_fn, direccion as a_dir, codigo_postal as a_cp, ciudad as a_ciudad, provincia as a_prov
+          from clientes
+          where id = ${e.clienteId}::uuid and correduria_id = ${e.correduriaId}::uuid and merged_into_cliente_id is null
+          for update
+        )
+        update clientes c set ${Prisma.join(campos.flatMap((x) => x.sets), ', ')}, updated_at = now()
+        from a where c.id = a.id
+        returning ${Prisma.join(campos.map((x) => Prisma.sql`(${x.cuando}) as ${Prisma.raw(`"${x.flag}"`)}`), ', ')}`)
+      const escrito = filas[0]
+      for (const x of campos) {
+        if (escrito?.[x.flag] !== true) continue
+        if (x.etiqueta) hechos.push(x.etiqueta)
+        if (x.auditoria) anotarCambio({ entidad: 'cliente', id: e.clienteId, campo: x.auditoria })
       }
     }
 
@@ -139,7 +167,9 @@ export async function volcarPolizaEnFicha(e: {
     for (const tipo of ['telefono', 'email'] as const) {
       const valor = tipo === 'telefono' ? p.telefono : p.email
       if (!valor) continue
-      const a = await anadirContacto(e.correduriaId, e.clienteId, { tipo, valor, principal: false, forzar: false, actor: e.actor, etiqueta: null }).catch(() => null)
+      // 🚨 El email volcado NUNCA queda principal (`nuncaPrincipal`): el portal enlaza la sesión por el
+      // email principal, y un papel subido no puede entregar la cuenta de nadie.
+      const a = await anadirContacto(e.correduriaId, e.clienteId, { tipo, valor, principal: false, nuncaPrincipal: tipo === 'email', forzar: false, actor: e.actor, etiqueta: null }).catch(() => null)
       if (a?.ok) hechos.push(tipo === 'telefono' ? 'teléfono' : 'email')
       else if (a && a.estado === 'conflicto') {
         const quien = (a.coincidencias ?? []).map((x) => x.id).join(', ')
@@ -168,7 +198,7 @@ export async function volcarPolizaEnFicha(e: {
     ].filter(Boolean)
     await anotarHistorialCliente(e.correduriaId, e.clienteId, 'gestion', partes.join(' ').slice(0, 2000)).catch(() => null)
     return hechos.length > 0
-      ? { estado: 'rellenada', campos: hechos, fechaNacimientoAConfirmar: p.fechaNacimientoAConfirmar && p.fechaNacimiento !== null, avisos }
+      ? { estado: 'rellenada', campos: hechos, fechaNacimientoAConfirmar: hechos.includes('fecha de nacimiento (01/01, a confirmar)'), avisos }
       : { estado: 'nada_que_rellenar' }
   } catch (err) {
     console.error('[ficha-desde-poliza] no se pudo volcar la póliza en la ficha:', err instanceof Error ? err.message : err)

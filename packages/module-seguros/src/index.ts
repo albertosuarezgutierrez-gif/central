@@ -321,6 +321,7 @@ export {
   normalizarTelefono,
   normalizarEmail,
   normalizarContacto,
+  seraPrincipalAlAnadir,
   normalizarDni,
   etiquetasIdentidad,
   enmascararDni,
@@ -533,7 +534,8 @@ export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type CarnetRevisado, type TipoCarnet } from './carnet-ficha.ts'
 // Lo que una póliza subida sabe del TOMADOR y la ficha no: parche que solo rellena huecos (03/10/2026).
 export {
-  CLAVES_PII_EXTRACCION,
+  CLAVES_EXTRACCION_GUARDABLES,
+  CLAVES_PERSONALES_EXTRACCION,
   DIAS_VENCIMIENTO_URGENTE,
   companiaLegible,
   extraccionSinPii,

@@ -106,7 +106,7 @@ Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
 "anioConstruccion":number|null,"capitalContinente":number|null,"capitalContenido":number|null,
 "telefono":string|null,"email":string|null,"domicilioVia":string|null,"domicilioCp":string|null,
 "domicilioPoblacion":string|null,"domicilioProvincia":string|null,"claseCarnet":string|null,
-"mediador":string|null,"cesionDerechos":boolean|null}
+"mediador":string|null,"cesionDerechos":boolean|null,"tomadorEsConductorHabitual":boolean|null}
 
 Reglas, por orden de importancia:
 - "ramo" es de qué es la póliza: uno de auto, moto, hogar, vida, salud, decesos,
@@ -142,6 +142,10 @@ Reglas, por orden de importancia:
   TOMADOR (calle y número / código postal / población / provincia). NO son la dirección de la
   vivienda asegurada (esa va en "direccion"/"cp"/"localidad"): aunque coincidan, rellena las dos.
 - "fechaNacimiento" es la del TOMADOR (o del conductor principal si es la misma persona).
+- "fechaCarnet" y "claseCarnet" son del CONDUCTOR HABITUAL (el permiso que figura en la póliza).
+- "tomadorEsConductorHabitual": true SOLO si el documento dice que el tomador es también el
+  conductor habitual/principal (p. ej. "Conductor habitual: el tomador", o el mismo nombre y DNI en
+  los dos sitios); false si el conductor habitual es otra persona; si no lo dice, null.
 - "claseCarnet" la clase del permiso de conducir ("B", "A2"…) solo si el documento la escribe.
 - "mediador" es el agente, corredor, oficina o entidad que figura como mediador/canal de la póliza
   (p. ej. "RCI BANQUE", "Mobilize Financial Services", "Oficina 1234"). null si no aparece.

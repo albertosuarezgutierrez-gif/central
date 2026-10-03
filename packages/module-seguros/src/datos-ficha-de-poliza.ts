@@ -47,6 +47,11 @@ export type ContactoTomadorLeido = {
   mediador: string | null
   /** `true` = la póliza tiene cesión de derechos (a un banco o financiera). `null` = no lo dice. */
   cesionDerechos: boolean | null
+  /**
+   * `true` = el documento dice que el TOMADOR es también el conductor habitual. La fecha de carné
+   * de una póliza de auto es la del CONDUCTOR: sin esto no se sabe de quién es, y no se vuelca.
+   */
+  tomadorEsConductorHabitual: boolean | null
 }
 
 export function contactoTomadorVacio(): ContactoTomadorLeido {
@@ -60,6 +65,7 @@ export function contactoTomadorVacio(): ContactoTomadorLeido {
     claseCarnet: null,
     mediador: null,
     cesionDerechos: null,
+    tomadorEsConductorHabitual: null,
   }
 }
 
@@ -105,6 +111,7 @@ export function normalizarContactoTomador(raw: unknown): ContactoTomadorLeido {
     claseCarnet: (TIPOS_CARNET as readonly string[]).includes(clase) ? (clase as TipoCarnet) : null,
     mediador: texto(o.mediador, 200),
     cesionDerechos: booleano(o.cesionDerechos),
+    tomadorEsConductorHabitual: booleano(o.tomadorEsConductorHabitual),
   }
 }
 
@@ -302,10 +309,11 @@ export function parcheFichaDesdePoliza(
     rellenado.push('email')
   }
 
-  // Carné: solo si la ficha no tiene NINGUNO (lo que hay lo trajo CIMA o lo tecleó Alberto). Sin
-  // clase en el documento, una póliza de AUTO es el B (la misma regla que la sincro de CIMA); de
-  // otro ramo (moto: A, A2, A1…) no se adivina.
-  if (ficha.carnets === 0 && fechaReal(ext.fechaCarnet)) {
+  // Carné: solo si la ficha no tiene NINGUNO (lo que hay lo trajo CIMA o lo tecleó Alberto) y solo
+  // si el documento dice que el tomador ES el conductor habitual: la fecha de carné de la póliza es
+  // la del conductor, que puede ser el hijo. Sin clase en el documento, una póliza de AUTO es el B
+  // (la misma regla que la sincro de CIMA); de otro ramo (moto: A, A2, A1…) no se adivina.
+  if (ficha.carnets === 0 && c.tomadorEsConductorHabitual === true && fechaReal(ext.fechaCarnet)) {
     const tipo: TipoCarnet | null = c.claseCarnet ?? (ext.ramo === 'auto' ? 'B' : null)
     if (tipo) {
       const r = revisarCarnet({ tipo, fecha: ext.fechaCarnet, fechaNacimiento: p.fechaNacimiento ?? ext.fechaNacimiento, hoy: hoyIso })
@@ -322,41 +330,75 @@ export function parcheFichaDesdePoliza(
 // ─── Lo que se guarda con el documento ──────────────────────────────────────
 
 /**
- * Claves de la lectura que son DATOS PERSONALES del tomador y en `clientes` van cifrados (DNI,
- * fecha de nacimiento, dirección, contactos con hash) o en `cliente_carnets_conducir` (fecha del
- * carné, cifrada). Nunca se guardan en claro en `documentos.extraccion`: un jsonb es un campo SQL
- * consultable, no un fichero (03/10/2026). `direccion` (la del riesgo de hogar) entra también: casi
- * siempre es la casa del tomador.
+ * LISTA BLANCA de claves de la lectura que NO son datos de una persona: el contrato, el vehículo
+ * (sin matrícula) y la vivienda (sin dirección, CP ni localidad). Solo estas se guardan con el
+ * documento (`documentos.extraccion`, 03/10/2026). Todo lo demás —tomador, DNI, contactos, fechas
+ * de nacimiento y carné, domicilio, matrícula, mediador, y CUALQUIER clave nueva que invente el
+ * modelo— se queda fuera: un jsonb es un campo SQL consultable, y en `clientes` esos datos van
+ * cifrados. Una clave nueva entra aquí a mano, sabiendo qué es.
  */
-export const CLAVES_PII_EXTRACCION = [
+export const CLAVES_EXTRACCION_GUARDABLES = [
+  'ramo',
+  'compania',
+  'codigoEntidadDgs',
+  'numeroPoliza',
+  'fechaEfecto',
+  'fechaVencimiento',
+  'primaAnual',
+  'marca',
+  'modelo',
+  'version',
+  'fechaMatriculacion',
+  'aniosSinSiniestros',
+  'siniestrosUltimos5',
+  'metrosCuadrados',
+  'anioConstruccion',
+  'capitalContinente',
+  'capitalContenido',
+  'cesionDerechos',
+  'tomadorEsConductorHabitual',
+] as const
+
+/** Claves personales conocidas: de estas solo consta SI se leyeron (`leidos`), nunca el valor. */
+export const CLAVES_PERSONALES_EXTRACCION = [
+  'tomador',
   'dni',
-  'telefono',
-  'email',
   'fechaNacimiento',
   'fechaCarnet',
+  'claseCarnet',
+  'telefono',
+  'email',
   'domicilioVia',
   'domicilioCp',
   'domicilioPoblacion',
   'domicilioProvincia',
   'direccion',
+  'cp',
+  'localidad',
+  'matricula',
+  'mediador',
 ] as const
 
 /**
- * El JSON leído, listo para guardar: sin las claves PII y con `leidos` diciendo de cada una si el
- * documento la traía (`true`) o no (`false`), sin el valor. `null` si no hay nada que guardar.
+ * Lo leído, listo para guardar: solo las claves de la lista blanca (`datos`) y, de las personales
+ * conocidas, si el documento las traía (`leidos`, booleanos). `null` si no hay nada que guardar.
  */
 export function extraccionSinPii(
   bruto: Record<string, unknown> | null | undefined,
-): { datos: Record<string, unknown>; leidos: Record<(typeof CLAVES_PII_EXTRACCION)[number], boolean> } | null {
+): { datos: Record<string, unknown>; leidos: Record<(typeof CLAVES_PERSONALES_EXTRACCION)[number], boolean> } | null {
   if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null
-  const pii = new Set<string>(CLAVES_PII_EXTRACCION)
   const datos: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(bruto)) if (!pii.has(k)) datos[k] = v
+  for (const k of CLAVES_EXTRACCION_GUARDABLES) {
+    const v = bruto[k]
+    // Solo valores planos: un objeto anidado podría esconder cualquier cosa.
+    if (v === null || typeof v === 'number' || typeof v === 'boolean') datos[k] = v
+    else if (typeof v === 'string') datos[k] = texto(v)
+  }
   const leidos = Object.fromEntries(
-    CLAVES_PII_EXTRACCION.map((k) => {
+    CLAVES_PERSONALES_EXTRACCION.map((k) => {
       const v = bruto[k]
       return [k, typeof v === 'string' ? texto(v) !== null : v !== null && v !== undefined]
     }),
-  ) as Record<(typeof CLAVES_PII_EXTRACCION)[number], boolean>
+  ) as Record<(typeof CLAVES_PERSONALES_EXTRACCION)[number], boolean>
   return { datos, leidos }
 }

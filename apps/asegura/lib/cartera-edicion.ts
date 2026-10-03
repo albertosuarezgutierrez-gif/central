@@ -38,6 +38,7 @@ import {
   revisarAlta,
   revisarCarnet,
   revisarEdicion,
+  seraPrincipalAlAnadir,
   nombrePendiente,
   textoHistorialAlta,
   textoHistorialEdicion,
@@ -352,7 +353,16 @@ async function yaEnLaFicha(correduriaId: string, clienteId: string, tipo: TipoCo
 export async function anadirContacto(
   correduriaId: string,
   clienteId: string,
-  entrada: { tipo: TipoContacto; valor: unknown; etiqueta?: unknown; principal?: boolean; forzar?: boolean; actor: string },
+  entrada: {
+    tipo: TipoContacto
+    valor: unknown
+    etiqueta?: unknown
+    principal?: boolean
+    forzar?: boolean
+    actor: string
+    /** No asciende a principal aunque la ficha no tenga ninguno (volcado desde un documento). */
+    nuncaPrincipal?: boolean
+  },
 ): Promise<ResultadoContacto> {
   const tipo: TipoContacto = entrada.tipo === 'email' ? 'email' : 'telefono'
   const norm = normalizarContacto(tipo, entrada.valor)
@@ -372,7 +382,7 @@ export async function anadirContacto(
       tipo === 'telefono'
         ? (await db.clienteTelefono.count({ where: { clienteId, correduriaId, esPrincipal: true } })) > 0
         : (await db.clienteEmail.count({ where: { clienteId, correduriaId, esPrincipal: true } })) > 0
-    const principal = entrada.principal === true || !hayPrincipal
+    const principal = seraPrincipalAlAnadir({ pedido: entrada.principal === true, nuncaPrincipal: entrada.nuncaPrincipal === true, hayPrincipal })
     if (principal) {
       if (tipo === 'telefono') await db.clienteTelefono.updateMany({ where: { clienteId, correduriaId }, data: { esPrincipal: false } })
       else await db.clienteEmail.updateMany({ where: { clienteId, correduriaId }, data: { esPrincipal: false } })

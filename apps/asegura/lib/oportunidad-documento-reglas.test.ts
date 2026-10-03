@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { decidirFicha, elegirFichaPorContacto, esDocumentoDeSeguro, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad } from './oportunidad-documento-reglas.ts'
+import { decidirFicha, esDocumentoDeSeguro, posiblesDuplicadosPorContacto, puedeVolcarEnFicha, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad } from './oportunidad-documento-reglas.ts'
 
 const HOY = new Date('2026-09-29T10:00:00Z')
 
@@ -59,16 +59,21 @@ test('decidir ficha sin DNI en el documento: por nombre; otra persona = lead', (
   assert.deepEqual(decidirFicha({ ...base, clienteSube: null }), { tipo: 'lead' })
 })
 
-test('🪤 ficha por contacto: solo una, sin DNI y con el MISMO nombre; el hijo no se queda la del padre', () => {
-  const tomador = 'RUIZ GARCIA ANA MARIA'
-  const ana = { id: 'ana', nombre: 'Ana María Ruiz García', tieneDni: false }
-  assert.deepEqual(elegirFichaPorContacto({ candidatos: [ana, { ...ana }], tomador }), { tipo: 'usar', clienteId: 'ana' })
-  // Mismo teléfono, otra persona de la casa (nombre más corto): NO se funde.
-  const hijo = { id: 'hijo', nombre: 'Manuel Piña', tieneDni: false }
-  assert.deepEqual(elegirFichaPorContacto({ candidatos: [hijo], tomador: 'Manuel Piña Ruiz' }), { tipo: 'lead', compartenContacto: ['hijo'] })
-  // Con DNI (otro, si no la habría encontrado el DNI): no.
-  assert.deepEqual(elegirFichaPorContacto({ candidatos: [{ ...ana, tieneDni: true }], tomador }), { tipo: 'lead', compartenContacto: ['ana'] })
-  // Dos fichas que podrían ser ella: no se adivina.
-  assert.deepEqual(elegirFichaPorContacto({ candidatos: [ana, { ...ana, id: 'ana2' }], tomador }), { tipo: 'lead', compartenContacto: ['ana', 'ana2'] })
-  assert.deepEqual(elegirFichaPorContacto({ candidatos: [], tomador }), { tipo: 'lead', compartenContacto: [] })
+test('🪤 por contacto NUNCA se asigna ficha: solo posibles duplicados (el hijo no se queda la del padre)', () => {
+  // Aunque sea una sola, sin DNI y con el mismo nombre: no se usa, se anota.
+  assert.deepEqual(posiblesDuplicadosPorContacto([{ id: 'ana' }, { id: 'ana' }, { id: 'hijo' }]), ['ana', 'hijo'])
+  assert.deepEqual(posiblesDuplicadosPorContacto([{ id: 'nuevo' }, { id: 'hijo' }], 'nuevo'), ['hijo'])
+  assert.deepEqual(posiblesDuplicadosPorContacto([]), [])
+})
+
+test('🪤 desde el PORTAL solo se vuelca en la ficha PROPIA de quien sube (toma de cuenta por email)', () => {
+  const b = { origen: 'portal', verificado: true, hayTomador: true, porqueFicha: 'dni_ficha', clienteId: 'yo', clienteSube: 'yo' }
+  assert.equal(puedeVolcarEnFicha(b), true)
+  assert.equal(puedeVolcarEnFicha({ ...b, clienteId: 'otro', porqueFicha: 'dni_cartera' }), false)
+  assert.equal(puedeVolcarEnFicha({ ...b, clienteSube: null }), false)
+  assert.equal(puedeVolcarEnFicha({ ...b, origen: 'solicitud', clienteId: 'otro' }), false)
+  // El corredor sí rellena la ficha del tomador aunque la subiera desde otra.
+  assert.equal(puedeVolcarEnFicha({ ...b, origen: 'ficha', clienteId: 'otro' }), true)
+  assert.equal(puedeVolcarEnFicha({ ...b, origen: 'ficha', verificado: false }), false)
+  assert.equal(puedeVolcarEnFicha({ ...b, origen: 'ficha', porqueFicha: 'sin_tomador' }), false)
 })

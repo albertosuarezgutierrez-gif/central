@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  CLAVES_PII_EXTRACCION,
+  CLAVES_EXTRACCION_GUARDABLES,
+  CLAVES_PERSONALES_EXTRACCION,
   companiaLegible,
   extraccionSinPii,
   contactoTomadorVacio,
@@ -45,6 +46,7 @@ const leida = (extra: Partial<ExtraccionFicha> = {}): ExtraccionFicha => ({
     claseCarnet: null,
     mediador: 'MAPFRE OFICINA DIRECTA',
     cesionDerechos: false,
+    tomadorEsConductorHabitual: true,
   }),
   ...extra,
 })
@@ -180,19 +182,34 @@ test('póliza de concesionario/financiada: RCI, Mobilize, banco o cesión de der
   assert.equal(polizaFinanciada({ mediador: null, cesionDerechos: null }).financiada, null)
 })
 
-test('🪤 la extracción que se guarda NO lleva datos personales en claro: solo si se leyeron', () => {
+test('🪤 la extracción que se guarda es LISTA BLANCA: ni tomador, ni matrícula, ni CP, ni claves desconocidas', () => {
   const bruto = {
-    compania: 'MAPFRE', numeroPoliza: '0123', tomador: 'ANA RUIZ', dni: DNI, telefono: '612345678',
+    compania: 'MAPFRE', numeroPoliza: '0123', primaAnual: 410.5, tomador: 'ANA RUIZ', dni: DNI, telefono: '612345678',
     email: 'a@b.es', fechaNacimiento: '1980-05-14', fechaCarnet: '1999-03-02', domicilioVia: 'C/ Feria 12',
     domicilioCp: '41003', domicilioPoblacion: 'Sevilla', domicilioProvincia: 'Sevilla', direccion: 'C/ Feria 12',
+    cp: '41003', localidad: 'Sevilla', matricula: '1234BCD', mediador: 'Juan Agente', conductorHabitual: 'PEPE RUIZ',
+    marca: { nombre: 'ANA RUIZ' },
   }
   const r = extraccionSinPii(bruto)
   assert.ok(r)
-  for (const k of CLAVES_PII_EXTRACCION) assert.equal(k in r.datos, false, `${k} no se guarda`)
+  for (const k of Object.keys(r.datos)) assert.ok((CLAVES_EXTRACCION_GUARDABLES as readonly string[]).includes(k), `${k} no está en la lista blanca`)
   const enTexto = JSON.stringify(r)
-  for (const v of [DNI, '612345678', 'a@b.es', '1980-05-14', 'C/ Feria 12']) assert.equal(enTexto.includes(v), false, v)
+  for (const v of ['ANA RUIZ', 'PEPE RUIZ', DNI, '612345678', 'a@b.es', '1980-05-14', 'C/ Feria 12', '41003', 'Sevilla', '1234BCD', 'Juan Agente']) {
+    assert.equal(enTexto.includes(v), false, `${v} no se guarda`)
+  }
   assert.equal(r.datos.compania, 'MAPFRE')
+  assert.equal(r.datos.primaAnual, 410.5)
+  assert.equal(r.leidos.tomador, true)
   assert.equal(r.leidos.dni, true)
+  assert.equal(Object.keys(r.leidos).length, CLAVES_PERSONALES_EXTRACCION.length)
   assert.equal(extraccionSinPii({ compania: 'X', email: 'N/A', telefono: null })?.leidos.email, false)
   assert.equal(extraccionSinPii(null), null)
+})
+
+test('🪤 carné: solo si el documento dice que el tomador ES el conductor habitual', () => {
+  const noConsta = leida({ contacto: { ...leida().contacto, tomadorEsConductorHabitual: null } })
+  assert.equal(parcheFichaDesdePoliza(fichaVacia(), noConsta, null, HOY).parche.carnet, null)
+  const otro = leida({ contacto: { ...leida().contacto, tomadorEsConductorHabitual: false } })
+  assert.equal(parcheFichaDesdePoliza(fichaVacia(), otro, null, HOY).parche.carnet, null)
+  assert.deepEqual(parcheFichaDesdePoliza(fichaVacia(), leida(), null, HOY).parche.carnet, { tipo: 'B', fecha: '1999-03-02' })
 })

@@ -32,7 +32,8 @@ import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
 import { volcarPolizaEnFicha, type VolcadoFicha } from './ficha-desde-poliza'
 import {
   decidirFicha,
-  elegirFichaPorContacto,
+  posiblesDuplicadosPorContacto,
+  puedeVolcarEnFicha,
   esDocumentoDeSeguro,
   fechaLlamada,
   mismoNombre,
@@ -161,22 +162,17 @@ export async function oportunidadDesdeLectura(
       // Sin DNI, el mismo recibo subido dos veces (o reintentado) no puede abrir dos leads: se reusa
       // el lead sin DNI que se llama EXACTAMENTE igual.
       const previo = alta.dni ? null : await leadMismoNombre(e.correduriaId, `${alta.nombre} ${alta.apellidos}`)
-      // Sin ficha por DNI: ¿la hay por su teléfono o email? Solo una, sin DNI y con su mismo nombre
-      // (regla y porqué en `elegirFichaPorContacto`). Las que solo comparten contacto se anotan.
-      const porContacto = previo ? null : await fichaPorContacto(e.correduriaId, contacto, `${alta.nombre} ${alta.apellidos}`)
-      if (porContacto?.tipo === 'lead') compartenContacto = porContacto.compartenContacto
+      // Las fichas con su teléfono o email NO se usan (un móvil es un hogar): se anotan en el lead
+      // como posibles duplicados (`posiblesDuplicadosPorContacto`).
+      if (!previo) compartenContacto = await fichasPorContacto(e.correduriaId, contacto)
       const lead = previo
         ? { ok: true as const, id: previo }
-        : porContacto?.tipo === 'usar'
-        ? { ok: false as const, usar: porContacto.clienteId }
         : alta.dni
         ? await altaCliente(e.correduriaId, { nombre: alta.nombre, apellidos: alta.apellidos, dni: alta.dni, fuente: 'venta_directa' }, e.actor)
         : await altaLeadSinContacto(e.correduriaId, { nombre: alta.nombre, apellidos: alta.apellidos, tipoPersona: alta.tipoPersona ?? null }, e.actor, e.origen)
       if (lead.ok) {
         clienteId = lead.id
         clienteNuevo = !previo
-      } else if ('usar' in lead) {
-        clienteId = lead.usar
       } else {
         // El DNI ya estaba en una ficha que la búsqueda no vio: esa es la persona.
         const porDni = 'coincidencias' in lead ? lead.coincidencias?.find((c) => c.por === 'dni') : undefined
@@ -198,10 +194,17 @@ export async function oportunidadDesdeLectura(
     }
 
     // Lo que la póliza sabe del TOMADOR va a SU ficha (03/10/2026): solo huecos, solo si el DNI del
-    // documento es el de la ficha (o ella no tiene), y nunca desde una subida sin verificar ni con un
-    // documento sin tomador (no se sabe de quién son esos datos).
+    // documento es el de la ficha (o ella no tiene); quién puede volcar, en `puedeVolcarEnFicha`
+    // (desde el portal, solo en la ficha propia de quien sube).
     const hoy = e.hoy ?? new Date()
-    const identificado = verificado && !(decision.tipo === 'ficha' && decision.porque === 'sin_tomador') && alta !== null
+    const identificado = puedeVolcarEnFicha({
+      origen: e.origen,
+      verificado,
+      hayTomador: alta !== null,
+      porqueFicha: decision.tipo === 'ficha' ? decision.porque : null,
+      clienteId,
+      clienteSube,
+    })
     const volcado = identificado
       ? await volcarPolizaEnFicha({
           correduriaId: e.correduriaId,
@@ -307,28 +310,11 @@ async function nombrePorDgs(codigo: string | null): Promise<string | null> {
   return f?.nombreComun?.trim() || null
 }
 
-/**
- * Fichas con el teléfono o el email de la póliza, y si alguna es ELLA (`elegirFichaPorContacto`).
- * `null` = la póliza no trae contacto, o no se pudo buscar (entonces se abre el lead, como antes).
- */
-async function fichaPorContacto(
-  correduriaId: string,
-  contacto: ContactoTomadorLeido,
-  tomador: string,
-): Promise<ReturnType<typeof elegirFichaPorContacto> | null> {
-  if (!contacto.telefono && !contacto.email) return null
+/** Ids de las fichas con el teléfono o el email de la póliza. `[]` si no trae o no se pudo buscar. */
+async function fichasPorContacto(correduriaId: string, contacto: ContactoTomadorLeido): Promise<string[]> {
+  if (!contacto.telefono && !contacto.email) return []
   const cs = await coincidencias(correduriaId, { telefono: contacto.telefono, email: contacto.email }).catch(() => null)
-  if (!cs || cs.length === 0) return null
-  const ids = [...new Set(cs.map((c) => c.id))]
-  const fichas = await prismaAsegura().cliente.findMany({
-    where: { correduriaId, id: { in: ids }, mergedIntoClienteId: null },
-    select: { id: true, nombre: true, apellidos: true, dni: true },
-  }).catch(() => null)
-  if (!fichas) return null
-  return elegirFichaPorContacto({
-    candidatos: fichas.map((f) => ({ id: f.id, nombre: `${f.nombre ?? ''} ${f.apellidos ?? ''}`, tieneDni: typeof f.dni === 'string' && f.dni.trim() !== '' })),
-    tomador,
-  })
+  return cs ? posiblesDuplicadosPorContacto(cs) : []
 }
 
 /**
@@ -342,7 +328,7 @@ async function notaPosiblesDuplicados(correduriaId: string, clienteId: string, n
     const contacto = compartenContacto.filter((id) => id !== clienteId && !mismos.includes(id))
     const partes = [
       mismos.length > 0 ? `Posible duplicado de ${mismos.join(', ')} (mismo nombre; sin DNI común que lo confirme): no se ha fundido.` : null,
-      contacto.length > 0 ? `Comparte teléfono o email con ${contacto.join(', ')} (puede ser otra persona de la casa): no se ha fundido.` : null,
+      contacto.length > 0 ? `Posible duplicado de ${contacto.join(', ')} (comparte teléfono o email; puede ser otra persona de la casa): no se ha fundido ni se le ha escrito el DNI.` : null,
     ].filter(Boolean)
     if (partes.length === 0) return
     await anotarHistorialCliente(correduriaId, clienteId, 'gestion', `${partes.join(' ')} — por ${actor}`)
