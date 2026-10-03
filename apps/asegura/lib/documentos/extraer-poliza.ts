@@ -106,7 +106,9 @@ Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
 "anioConstruccion":number|null,"capitalContinente":number|null,"capitalContenido":number|null,
 "telefono":string|null,"email":string|null,"domicilioVia":string|null,"domicilioCp":string|null,
 "domicilioPoblacion":string|null,"domicilioProvincia":string|null,"claseCarnet":string|null,
-"mediador":string|null,"cesionDerechos":boolean|null,"tomadorEsConductorHabitual":boolean|null}
+"mediador":string|null,"cesionDerechos":boolean|null,"tomadorEsConductorHabitual":boolean|null,
+"tomadorEsEmpresa":boolean|null,"cifTomador":string|null,
+"conductorPrincipal":{"nombre":string,"fechaNacimiento":"YYYY-MM-DD"|null,"dni":string|null}|null}
 
 Reglas, por orden de importancia:
 - "ramo" es de qué es la póliza: uno de auto, moto, hogar, vida, salud, decesos,
@@ -140,12 +142,31 @@ Reglas, por orden de importancia:
 - Los campos de VIVIENDA (direccion, cp, localidad, metrosCuadrados,
   anioConstruccion, capitalContinente, capitalContenido) solo tienen sentido si
   el ramo es hogar: en cualquier otro caso, todos a null.
+- "tomador" es el TOMADOR del seguro, que el documento puede llamar "tomador", "titular de la
+  póliza", "nombre del titular de la póliza", "contratante" o "policyholder". Si es una EMPRESA
+  (sociedad, "Empresa: …", S.L., S.A.…), "tomador" es su RAZÓN SOCIAL tal cual, NUNCA la "persona de
+  contacto" ni el conductor.
+- "tomadorEsEmpresa": true si el tomador es una persona jurídica (empresa, sociedad, comunidad,
+  asociación…); false si es una persona física; null si no se puede decidir.
+- "cifTomador" es el identificador fiscal del tomador EMPRESA: su CIF, que puede venir rotulado
+  "CIF", "NIF", "Número de IVA", "NIF-IVA" o "VAT", a veces con el prefijo de país ("ESB12345674").
+  Cópialo tal cual aparece. Si el tomador es persona física, null.
+- "dni" es el DNI/NIE del tomador PERSONA FÍSICA. Si el tomador es una empresa, "dni" es null (NO
+  pongas el de la persona de contacto ni el del conductor).
+- "conductorPrincipal": la persona que figura como "Conductor principal" / "conductor habitual" en
+  los detalles de los conductores: su "nombre" (nombre y apellidos), su "fechaNacimiento" y su "dni"
+  (null si no aparece). Si la póliza no detalla conductores, null. No metas aquí conductores
+  adicionales u ocasionales.
 - Los datos de CONTACTO son SOLO del TOMADOR (no de la compañía, ni de la oficina, ni del agente,
-  ni el teléfono de asistencia): "telefono" (el suyo, móvil o fijo), "email" (el suyo).
+  ni el teléfono de asistencia): "telefono" (el suyo, móvil o fijo), "email" (el suyo). Si el
+  tomador es una empresa, son los que figuran en el bloque del titular (aunque sean los de su
+  persona de contacto).
 - "domicilioVia", "domicilioCp", "domicilioPoblacion", "domicilioProvincia" son el DOMICILIO DEL
-  TOMADOR (calle y número / código postal / población / provincia). NO son la dirección de la
+  TOMADOR (calle y número / código postal / población / provincia). Si viene en una sola línea
+  ("Calle Mayor 17 41003 Sevilla"), sepáralo en sus partes. NO son la dirección de la
   vivienda asegurada (esa va en "direccion"/"cp"/"localidad"): aunque coincidan, rellena las dos.
-- "fechaNacimiento" es la del TOMADOR (o del conductor principal si es la misma persona).
+- "fechaNacimiento" es la del TOMADOR persona física (o del conductor principal si es la misma
+  persona). Si el tomador es una empresa, null: la del conductor va en "conductorPrincipal".
 - "fechaCarnet" y "claseCarnet" son del CONDUCTOR HABITUAL (el permiso que figura en la póliza).
 - "tomadorEsConductorHabitual": true SOLO si el documento dice que el tomador es también el
   conductor habitual/principal (p. ej. "Conductor habitual: el tomador", o el mismo nombre y DNI en
@@ -160,7 +181,8 @@ Reglas, por orden de importancia:
 - "cp" el código postal tal y como aparezca, con sus 5 dígitos (aunque empiece por 0).
 - "aniosSinSiniestros" y "siniestrosUltimos5" solo si el documento los dice.
   Un 0 es una respuesta válida; "varios" o "algunos" NO son números: pon null.
-- Las fechas SIEMPRE en formato YYYY-MM-DD.`
+- Las fechas SIEMPRE en formato YYYY-MM-DD (también las que el documento escribe en texto, como
+  "2 de jul. de 1971").`
 
 const PETICION = 'Extrae los datos de esta póliza de seguro.'
 
@@ -263,7 +285,7 @@ export async function leerPoliza(
       )
     }
     try {
-      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1400, timeoutMs: 55_000, privado: true })
+      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1700, timeoutMs: 55_000, privado: true })
       return empaquetar(parsear(salida), 'texto')
     } catch (e) {
       console.warn('[asegura] lectura de texto por IA falló:', e)

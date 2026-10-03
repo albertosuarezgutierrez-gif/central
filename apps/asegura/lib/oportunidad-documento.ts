@@ -15,6 +15,7 @@ import {
   companiaPorNombre,
   extraccionSinPii,
   normalizarContactoTomador,
+  notaConductorPrincipal,
   polizaFinanciada,
   prepararAltaDesdeDocumento,
   seguroAnteriorDe,
@@ -125,8 +126,13 @@ export async function oportunidadDesdeLectura(
     const nuestra = await polizaEnCartera(e.correduriaId, txt(d.numeroPoliza, 60)).catch(() => null)
     if (nuestra && nuestra.length > 0) return { estado: 'ya_nuestra' }
 
-    const l = { ramo: r.ramo, tipoLectura: r.fase, datos: d } as LecturaPoliza
-    const { alta } = prepararAltaDesdeDocumento(l)
+    // Tomador EMPRESA (03/10/2026, póliza Qover a nombre de una SL): su identidad es el CIF (que el
+    // lector saca del «Número de IVA»/NIF-IVA sin el «ES»), y el DNI o la fecha de nacimiento que
+    // traiga el documento son de una PERSONA (contacto o conductor): no van a la empresa. Sin CIF,
+    // el lead se abre sin identificador, como antes.
+    const empresa = contacto.tomadorEsEmpresa === true
+    const l = { ramo: r.ramo, tipoLectura: r.fase, datos: empresa ? { ...d, dni: contacto.cifTomador, fechaNacimiento: null } : d } as LecturaPoliza
+    const { alta } = prepararAltaDesdeDocumento(l, { tomadorEsEmpresa: contacto.tomadorEsEmpresa })
 
     const db = prismaAsegura()
     const ficha = e.clienteSube
@@ -216,12 +222,18 @@ export async function oportunidadDesdeLectura(
           leido: {
             ramo: r.ramo,
             dni: alta?.dni ?? null,
-            fechaNacimiento: txt(d.fechaNacimiento, 10),
-            fechaCarnet: txt(d.fechaCarnet, 10),
+            // De una empresa, ni fecha de nacimiento ni carné (el parche tampoco los escribiría).
+            fechaNacimiento: empresa ? null : txt(d.fechaNacimiento, 10),
+            fechaCarnet: empresa ? null : txt(d.fechaCarnet, 10),
             contacto,
           },
         })
       : null
+    // El conductor principal, si es OTRA persona (siempre, con un tomador empresa): solo se SUGIERE
+    // en el historial de la ficha. Ni ficha ni relación automáticas: el nombre no identifica.
+    if (identificado && volcado?.estado !== 'no_tocada') {
+      await sugerirConductorPrincipal(e.correduriaId, clienteId, notaConductorPrincipal(contacto, alta ? `${alta.nombre} ${alta.apellidos}`.trim() : null, alta?.dni ?? null), e.actor)
+    }
     if (clienteNuevo) await notaPosiblesDuplicados(e.correduriaId, clienteId, alta ? `${alta.nombre} ${alta.apellidos}` : null, compartenContacto, e.actor)
 
     const vence = proximoVencimiento(txt(d.fechaVencimiento, 10), hoy)
@@ -304,6 +316,25 @@ export async function guardarExtraccion(correduriaId: string, documentoId: strin
       where id = ${documentoId}::uuid and correduria_id = ${correduriaId}::uuid`)
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo guardar la extracción del documento:', err instanceof Error ? err.message : err)
+  }
+}
+
+/**
+ * Deja la nota «Conductor principal en la póliza: …» en la ficha, una sola vez (la misma póliza
+ * subida dos veces no la repite). Solo el nombre: el historial va en claro y no se borra.
+ * Best-effort: la oportunidad no depende de esto.
+ */
+async function sugerirConductorPrincipal(correduriaId: string, clienteId: string, nota: string | null, actor: string): Promise<void> {
+  if (!nota) return
+  try {
+    const ya = await prismaAsegura().$queryRaw<{ n: number }[]>(Prisma.sql`
+      select 1 as n from historial_interno
+      where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid and starts_with(texto, ${nota})
+      limit 1`)
+    if (ya.length > 0) return
+    await anotarHistorialCliente(correduriaId, clienteId, 'gestion', `${nota} — por ${actor}`)
+  } catch (err) {
+    console.error('[oportunidad-documento] no se pudo anotar el conductor principal:', err instanceof Error ? err.message : err)
   }
 }
 

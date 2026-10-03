@@ -97,6 +97,17 @@ test('la fecha de nacimiento de una empresa no se arrastra', () => {
   assert.equal(r.alta?.fechaNacimiento, null)
 })
 
+test('🪤 un CIF (o el lector diciendo «empresa») hace jurídica a la empresa aunque el nombre no lo delate', () => {
+  const porCif = prepararAltaDesdeDocumento(lectura({ tomador: 'Ejemplo Viajes', dni: 'B12345674', fechaNacimiento: '1971-07-02' }))
+  assert.equal(porCif.alta?.tipoPersona, 'juridica')
+  assert.equal(porCif.alta?.nombre, 'Ejemplo Viajes')
+  assert.equal(porCif.alta?.apellidos, '')
+  assert.equal(porCif.alta?.fechaNacimiento, null)
+  const dicho = prepararAltaDesdeDocumento(lectura({ tomador: 'Ejemplo Viajes', dni: null }), { tomadorEsEmpresa: true })
+  assert.equal(dicho.alta?.tipoPersona, 'juridica')
+  assert.equal(prepararAltaDesdeDocumento(lectura({ tomador: 'Juan Pérez Gil', dni: '12345678Z' })).alta?.tipoPersona, 'fisica')
+})
+
 // ─── El canal queda marcado: llegó directamente al corredor ─────────────────
 
 test('la fuente es venta directa, no web ni portal', () => {

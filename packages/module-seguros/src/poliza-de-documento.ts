@@ -29,7 +29,7 @@
 
 import { MARCADORES_SIN_DATO } from './documento-auto.ts'
 import { normalizarMatricula } from './matricula.ts'
-import type { Coincidencia } from './cliente-edicion.ts'
+import { normalizarDni, type Coincidencia } from './cliente-edicion.ts'
 
 const SIN_DATO = new Set(MARCADORES_SIN_DATO)
 
@@ -177,7 +177,11 @@ export function partirNombre(completo: string): { nombre: string; apellidos: str
  * trae tomador: sin nombre no hay ficha, y **inventarse uno** («Titular del
  * documento», el número de póliza…) crearía una persona que no existe.
  */
-export function prepararAltaDesdeDocumento(l: LecturaPoliza): {
+export function prepararAltaDesdeDocumento(
+  l: LecturaPoliza,
+  /** `tomadorEsEmpresa: true` (lo dijo el lector): persona jurídica aunque el nombre no lo delate. */
+  opts: { tomadorEsEmpresa?: boolean | null } = {},
+): {
   alta: AltaDesdeDocumento | null
   avisos: AvisoDocumento[]
 } {
@@ -189,7 +193,11 @@ export function prepararAltaDesdeDocumento(l: LecturaPoliza): {
     avisos.push('sin_nombre')
     return { alta: null, avisos }
   }
-  const tipoPersona = tipoPersonaDeNombre(tomador)
+  // Un CIF de persona jurídica en `dni` también delata a una empresa (su nombre no se parte y no
+  // lleva fecha de nacimiento, que sería la del conductor).
+  const dniNorm = dni ? normalizarDni(dni) : null
+  const tipoPersona: TipoPersonaDocumento =
+    opts.tomadorEsEmpresa === true || (dniNorm?.ok && dniNorm.valor.tipoPersona === 'juridica') ? 'juridica' : tipoPersonaDeNombre(tomador)
   if (tipoPersona === 'juridica') {
     return {
       alta: {
