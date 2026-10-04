@@ -74,3 +74,45 @@ test('por revisar: el día exacto del plazo aún no avisa', () => {
   assert.deepEqual(telefonosPorRevisar(new Date('2026-09-28T00:00:00Z'), 270, [c]), [])
   assert.equal(telefonosPorRevisar(new Date('2026-09-29T00:00:00Z'), 270, [c]).length, 1)
 })
+
+// 04/10/2026: datos de las webs oficiales. Lo NO encontrado debe seguir vacío.
+const por = (slug: string) => TELEFONOS_COMPANIAS.find((c) => c.slug === slug)!
+const nums = (c: TelefonoCompania, para: string) => c.asistencia.find((a) => a.para === para)?.numeros
+
+test('Reale: extranjero y salud añadidos; sin WhatsApp de siniestros', () => {
+  const c = por('reale')
+  assert.equal(c.siniestros, '900 455 900')
+  assert.deepEqual(nums(c, 'Desde el extranjero'), ['+34 913 939 030'])
+  assert.deepEqual(nums(c, 'Salud'), ['900 299 783'])
+  assert.deepEqual(nums(c, 'En carretera'), ['900 365 900', '91 454 74 00'])
+  assert.equal(c.whatsapp, null)
+})
+
+test('Generali: viajes añadido; siniestros de hogar/empresas sigue sin dato', () => {
+  const c = por('generali')
+  assert.deepEqual(nums(c, 'Viajes'), ['91 514 36 09'])
+  assert.deepEqual(nums(c, 'Asistencia en carretera'), ['911 123 443', '900 903 433'])
+  assert.equal(c.siniestros, null)
+  assert.equal(c.horario, null)
+})
+
+test('Allianz: asistencia por tipo de riesgo y SIN teléfono de siniestros', () => {
+  const c = por('allianz')
+  assert.equal(c.siniestros, null)
+  assert.deepEqual(nums(c, 'Coche, moto y furgoneta'), ['900 117 115', '900 117 117'])
+  assert.deepEqual(nums(c, 'Hogar y comercio'), ['913 255 258'])
+  assert.deepEqual(nums(c, 'Vehículos pesados'), ['900 117 120'])
+})
+
+test('Mapfre: sin número de siniestros separado (la web no lo distingue)', () => {
+  const c = por('mapfre')
+  assert.equal(c.siniestros, null)
+  assert.deepEqual(nums(c, 'Hogar y ayuda en carretera'), ['918 365 365', '900 822 822'])
+  assert.deepEqual(nums(c, 'Accidentes personales'), ['918 366 224', '900 810 852'])
+  assert.deepEqual(nums(c, 'Decesos'), ['918 366 181', '900 814 111'])
+  assert.deepEqual(nums(c, 'Viajes'), ['918 366 280', '900 814 300'])
+})
+
+test('Occident: asistencia sigue vacía (no encontrada)', () => {
+  assert.deepEqual(por('occident').asistencia, [])
+})

@@ -1,8 +1,8 @@
 {
  "sesion": "ccc39eb4-b21c-5063-905f-ba43523e3eed",
  "inicio": "2026-10-03T17:16:44.532Z",
- "fin": "2026-10-04T05:39:04.489Z",
- "llamadas": 584,
+ "fin": "2026-10-04T06:13:56.807Z",
+ "llamadas": 632,
  "categorias": {
   "lectura-directa": {
    "llamadas": 12,
@@ -18,55 +18,56 @@
    }
   },
   "bash": {
-   "llamadas": 404,
-   "chars_in": 293203,
-   "chars_out": 1846027,
+   "llamadas": 424,
+   "chars_in": 304127,
+   "chars_out": 1915895,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 404
+    "Bash": 424
    }
   },
   "otro": {
-   "llamadas": 80,
-   "chars_in": 58053,
-   "chars_out": 494589,
+   "llamadas": 98,
+   "chars_in": 62374,
+   "chars_out": 614546,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 15,
-    "ToolSearch": 13,
-    "SendMessage": 5,
-    "ReadNotifications": 44,
+    "SubagentHandback": 18,
+    "ToolSearch": 17,
+    "SendMessage": 6,
+    "ReadNotifications": 54,
     "Monitor": 2,
     "Skill": 1
    }
   },
   "agente:general-purpose": {
-   "llamadas": 8,
-   "chars_in": 14867,
-   "chars_out": 13616,
+   "llamadas": 10,
+   "chars_in": 18727,
+   "chars_out": 14984,
    "errores": 0,
-   "archivos_citados": 12,
-   "chars_citados": 175157,
+   "archivos_citados": 13,
+   "chars_citados": 213072,
    "tools": {
-    "Agent": 8
+    "Agent": 10
    }
   },
   "mcp:github": {
-   "llamadas": 11,
-   "chars_in": 4440,
-   "chars_out": 59558,
+   "llamadas": 17,
+   "chars_in": 6264,
+   "chars_out": 75044,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 2492,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 8,
-    "mcp__github__update_pull_request": 1
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__pull_request_read": 11,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__merge_pull_request": 1
    }
   },
   "agente:agente-architect": {
@@ -81,15 +82,15 @@
    }
   },
   "sql": {
-   "llamadas": 33,
-   "chars_in": 14784,
-   "chars_out": 51993,
+   "llamadas": 34,
+   "chars_in": 15685,
+   "chars_out": 52570,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 10,
-    "mcp__Supabase__execute_sql": 23
+    "mcp__Supabase__execute_sql": 24
    }
   },
   "mcp:Supabase": {
@@ -116,14 +117,14 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 2,
-   "chars_in": 715,
-   "chars_out": 347,
+   "llamadas": 3,
+   "chars_in": 788,
+   "chars_out": 586,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 1,
+    "mcp__claude-code-remote__subscribe_pr_activity": 2,
     "mcp__claude-code-remote__send_later": 1
    }
   },
