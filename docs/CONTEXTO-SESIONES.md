@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(04/10/2026)** — asegura#879 (0108 poliza_no_duplicado, con CASCADE) y central#4221 (vigía de duplicadas + botón «No es duplicado») mergeados. 0108 aplicada en prod (audit 1f45b1a2) + REVOKE UPDATE (8b7e4aad).
+Pares marcados «no duplicado»: 32742526, 35374290, 8414300028 y 36088166.
+Fusiones del lote duplicadas-revision-2026-10-04 (evento 2f5cafd9): UVG410081428 (C0072; clientes distintos, manda el tomador de CIMA; combustible volcado no heredado porque contradice a CIMA), 3021500279880 y 3021500306694 (C0613). Quedan 0 grupos.
+central#4228: vigía ya no da «objetos en revisión» de ficheros que el reproceso de cuarentena dejó todo guardado (CUARENTENA_SELLO_FIABLE_DESDE). Alerta C0109 REC 20261003 era falsa.
+Pendiente: FK compuesta correduría en poliza_no_duplicado; ingesta no quita ceros; reclamar a Mapfre 10 renovaciones desde 05/06.
+
 **(04/10/2026)** — pasada agentes-entrenador: poda de bitácora (16 entradas procesadas, 27/09→04/10) en PR docs-only, sin cambios de prompt. Backlog PR claude/*: 0 entradas ≥2 semanas (el más antiguo #3755, 27/09, dentro del rango).
 
 **(03/10/2026, early/late check-in y maletas)** — Compuerta: early/late/maletas NUNCA auto-envío, siempre propuesta por Telegram. Semáforo puro `cambio-horario.ts` (rojo/amarillo/verde; dato desconocido = amarillo); botones `hsp_chsi`/`hsp_chhasta`/`hsp_chno`/`hsp_chlimp`.
