@@ -63,6 +63,23 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
   regla global** (GENERALI es nombre de aseguradora; una regla rompería la detección de comisiones):
   se reclasifica solo ese recibo.
 
+## Reglas contables confirmadas (04/10/2026)
+
+Decisiones de Alberto sobre clasificación de gastos por negocio. Guardianas del agente `jefe-contabilidad`:
+
+- **Punto y Coma SL:** dormida, sin imputación automática
+- **Negocios separados:** correduría Grupo ASegura, Dúplex (Villasís), pisos turísticos (Socorro/House Sevillana, Busto Reform, Luxury Busto). Cada gasto a su negocio; NO mezclar Dúplex ↔ correduría
+- **Informática/IA** (Anthropic, Vercel, Supabase, OpenRouter, Fly, SaaS) → correduría
+- **DIGI internet** → pisos turísticos (factura en transición). Internet Dúplex vía BBVA (proveedor distinto)
+- **Asisa salud autónomo** → correduría, deducible. **Endesa:** Kutxabank → pisos; BBVA → Dúplex
+- **Círculo Mercantil** → personal, NO deducible
+- **Hipoteca (CUOTA PTMO)** vivienda habitual → personal, NO negocio
+- **UE/USA sin IVA** → autoliquidación (303/349), informe a asesoría
+- **Circulares, inscripciones, donativos, presupuestos** → NO son gasto
+- **Pilar NO tiene gastos deducibles propios** (retroactivos a Alberto). RETA sí se registra (obligatorio)
+- **Trading FTMO/retos bróker** → personal, NO deducible
+- **Comisiones correduría:** bruto en renta (con retención 15% de compañía), no neto bancario
+
 ## Índice de `references/` — lee SOLO lo que necesite la tarea
 - **`references/entidades-y-propiedades.md`** — quién tributa qué: entidades (Alberto/Pilar/SL dormida),
   Pilar autónoma (cómo cargar sus ingresos vía `movimientos_bancarios`, landmine `conyuge_*`, base
