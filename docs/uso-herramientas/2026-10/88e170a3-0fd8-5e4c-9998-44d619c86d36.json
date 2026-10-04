@@ -1,0 +1,104 @@
+{
+ "sesion": "88e170a3-0fd8-5e4c-9998-44d619c86d36",
+ "inicio": "2026-10-04T09:09:23.254Z",
+ "fin": "2026-10-04T09:11:41.442Z",
+ "llamadas": 53,
+ "categorias": {
+  "otro": {
+   "llamadas": 5,
+   "chars_in": 542,
+   "chars_out": 1160,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 4
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 7,
+   "chars_in": 706,
+   "chars_out": 127533,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 7
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 14,
+   "chars_in": 1000,
+   "chars_out": 73997,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__list_labels": 2,
+    "mcp__Gmail__search_threads": 6,
+    "mcp__Gmail__get_thread": 4,
+    "mcp__Gmail__label_thread": 2
+   }
+  },
+  "bash": {
+   "llamadas": 4,
+   "chars_in": 716,
+   "chars_out": 1187,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 4
+   }
+  },
+  "sql": {
+   "llamadas": 7,
+   "chars_in": 4007,
+   "chars_out": 17404,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 7
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 14,
+   "chars_in": 1631,
+   "chars_out": 32107,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 7,
+    "mcp__Google-Drive__read_file_content": 2,
+    "mcp__Google-Drive__get_file_metadata": 2,
+    "mcp__Google-Drive__create_file": 1,
+    "mcp__Google-Drive__copy_file": 2
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1088,
+   "chars_out": 15164,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2020,
+   "chars_out": 2191,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 12469,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
