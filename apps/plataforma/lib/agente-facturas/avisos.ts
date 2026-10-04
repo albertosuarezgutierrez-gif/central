@@ -81,24 +81,26 @@ export async function avisaRecurrentesQueFaltan(faltan: ReglaFaltante[]): Promis
 export async function avisaDomiciliadosSinCargo(
   avisos: { proveedor: string | null; total: number; fecha_vencimiento: string }[],
   sinCobertura = 0,
+  paradas: { nombre: string; ultimo: string | null }[] = [],
 ): Promise<void> {
+  const ddmm = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`
+  let linea = ''
+  if (sinCobertura > 0) {
+    const fechas = paradas.map((c) => c.ultimo).filter((x): x is string => !!x).sort()
+    const desde = fechas.length ? ` desde ${ddmm(fechas[0])}` : ''
+    const nombres = paradas.map((c) => `${c.nombre}${c.ultimo ? ` ${ddmm(c.ultimo)}` : ' (sin datos)'}`).join(', ')
+    linea = `⚪ ${sinCobertura} sin poder comprobar: cuentas sin sincronizar${desde}${nombres ? ` (${nombres})` : ''}`
+  }
   if (avisos.length === 0) {
-    if (sinCobertura > 0) {
-      await tgAvisoAlerta(
-        'facturas.domiciliados-sin-cargo',
-        `🔍 ${sinCobertura} factura(s) domiciliada(s) no se han podido comprobar: el extracto del banco no llega a su fecha de cargo.`,
-        'aviso',
-      )
-    }
+    if (linea) await tgAvisoAlerta('facturas.domiciliados-sin-cargo', linea, 'aviso')
     return
   }
   const lineas = avisos
     .slice(0, 8)
     .map((a) => `• ${a.proveedor || 'desconocido'} · ${eur(a.total)} · se domiciliaba el ${a.fecha_vencimiento}`)
-  const cola = sinCobertura > 0 ? `\n\n(${sinCobertura} más sin poder comprobar: el extracto no llega a su fecha.)` : ''
   await tgAvisoAlerta(
     'facturas.domiciliados-sin-cargo',
-    `🏦 <b>${avisos.length}</b> factura(s) domiciliada(s) SIN cargo en cuenta:\n${lineas.join('\n')}${cola}`,
+    `🏦 <b>${avisos.length}</b> factura(s) domiciliada(s) SIN cargo en cuenta:\n${lineas.join('\n')}${linea ? `\n\n${linea}` : ''}`,
     'aviso',
   )
 }
