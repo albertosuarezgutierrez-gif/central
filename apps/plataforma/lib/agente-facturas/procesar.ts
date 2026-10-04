@@ -3,7 +3,9 @@
 import { fingerprint, huellasDe } from './fingerprint'
 import { evaluar } from './reglas'
 import { conciliar, mapeaPropiedadAlquiler } from './conciliar'
-import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, log, type DatosGasto } from './imputar'
+import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, escribirTitular, log, type DatosGasto } from './imputar'
+import { asignarTitular } from './asignar-titular'
+import { contextoTitularSiAplicado } from './contexto-titular'
 import { esBooking, parseBooking, bookingFingerprint } from './booking'
 import { esPresupuesto } from './clasificar'
 import { pareceIngresoDeCorreduria } from './no-es-gasto'
@@ -178,6 +180,19 @@ export async function procesarFactura(
     confianza: veredicto.confianza,
     motivo_revision: revisado ? null : motivo ?? null,
   })
+
+  // A quién va (sociedad/negocio). Sin la migración `2026-10-04_gastos_titular.sql` aplicada,
+  // `contextoTitularSiAplicado()` da null y no se hace NADA: el gasto queda como antes.
+  const ctxTit = await contextoTitularSiAplicado().catch(() => null)
+  if (ctxTit && gastoId) {
+    await escribirTitular(gastoId, asignarTitular({
+      nif_cliente: data.nif_cliente ?? null,
+      cliente: data.cliente ?? null,
+      nif_proveedor: datos.nif_proveedor ?? null,
+      proveedor,
+      propiedad,
+    }, ctxTit))
+  }
 
   if (revisado) await reforzarRegla(datos)
   await log({ fuente: ctx.fuente, fingerprint: fp, gasto_id: gastoId, decision, confianza: veredicto.confianza, motivo })

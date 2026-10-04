@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(04/10/2026, agente jefe-contabilidad)** — Creado `.claude/agents/jefe-contabilidad.md` (auditor contable, sonnet, solo lectura salvo OK explícito de Alberto). Reglas confirmadas: Punto y Coma dormida, negocios separados (correduría/Dúplex/pisos), Informática→correduría, DIGI→pisos, Asisa deducible, etc. (13 reglas en perfil-fiscal/SKILL.md §«Reglas contables confirmadas»). Informe ≤15 líneas, cifras con `eur()`, `null` = desconocido.
+
 **(04/10/2026, facturas-scan: falsos positivos)** — `INVOICE_SYSTEM` clasifica `tipo_documento`; `decidirAvisoPago` aparta con motivo `no_es_factura` todo tipo conocido fuera de {factura, recibo, justificante_pago} (null = no aparta) y devuelve `permitirPagar:false` si no hay nº de factura NI base/IVA (aviso Telegram con «⚠️ Revisar», sin ✅ Pagar). Tests en `filtro-pago.test.ts`.
 Arreglo «domiciliados sin cargo»: solo entra `raw_extraction.domiciliado = true` (null = no se sabe) y la cobertura es POR CUENTA (corriente o tarjeta con movimientos en 180 d); cuenta parada → `sin_cobertura` (línea «⚪ … sin poder comprobar» nombrando cuentas), no «sin cargo». Helper puro + tests en `domiciliados.ts`. Pendiente operativo: reconectar PSD2 de la cuenta 8ce760ca (parada 10/09) y tarjetas 3059/b8c4/15ba (paradas desde julio).
 Pendiente en BD (sin tocar): Asoc. Corredores 50€ (04/10), AMPA 50€ y Asoc. Mediadores 145,20€ (25/09), Fundación SS.CC. 10€+120€ (12-14/09), y Anthropic 170€ ×7 entre 13/09 y 04/10 (revisar recarga automática).

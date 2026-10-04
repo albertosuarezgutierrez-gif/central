@@ -1,13 +1,9 @@
 // Carga el contexto de `asignarTitular` (sociedades + negocios de la cuenta dueña del buzón).
 //
-// ⛔ NO CABLEADO TODAVÍA: lee `sociedades.estado`, que crea `prisma/sql/2026-10-04_gastos_titular.sql`
-// (sin aplicar). Tras aplicar esa migración:
-//   1. `procesar.ts`: `const ctxTit = ctx.contextoTitular ?? await cargarContextoTitular()` (mejor
-//      cargarlo UNA vez por pasada en el scan/backfill, como `cargarTitulares`) y, tras decidir la
-//      `propiedad`, `asignarTitular({ nif_cliente, cliente, nif_proveedor, propiedad }, ctxTit)`.
-//   2. `imputar.ts` (`DatosGasto` + `insertarGasto`): escribir sociedad_id, negocio_id,
-//      titular_fuente, titular_pendiente.
-//   3. Aviso de `sociedad_paralizada` en el parte del scan (catalogarlo; avisos.ts es de otro cambio).
+// Lee `sociedades.estado`, que crea `prisma/sql/2026-10-04_gastos_titular.sql`. Mientras esa
+// migración NO esté aplicada (`esquemaTitularAplicado()` = false) devuelve `null` y quien llama no
+// asigna nada: el gasto se inserta exactamente como antes. Cacheado 5 min por proceso (un scan
+// procesa decenas de facturas; la jerarquía no cambia entre una y otra).
 //
 // 🚨 Si la lectura falla devuelve contexto VACÍO → todo sale `sin_datos` (null): un fallo de BD
 // nunca asigna un titular, solo deja de asignarlo.
@@ -15,6 +11,21 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { resolverCuentaBuzon } from './cuenta-buzon'
 import type { ContextoTitular, SociedadRef } from './asignar-titular'
+import { esquemaTitularAplicado } from './esquema-titular'
+
+const TTL_MS = 5 * 60_000
+let cache: { ctx: ContextoTitular; hasta: number } | null = null
+
+/** Contexto para asignar titular, o `null` si la migración aún no está aplicada. */
+export async function contextoTitularSiAplicado(): Promise<ContextoTitular | null> {
+  if (!(await esquemaTitularAplicado())) return null
+  const ahora = Date.now()
+  if (cache && ahora < cache.hasta) return cache.ctx
+  const ctx = await cargarContextoTitular()
+  // Un contexto vacío (fallo o sin cuenta) no se cachea: el siguiente gasto lo reintenta.
+  if (ctx.sociedades.length > 0) cache = { ctx, hasta: ahora + TTL_MS }
+  return ctx
+}
 
 export async function cargarContextoTitular(): Promise<ContextoTitular> {
   try {

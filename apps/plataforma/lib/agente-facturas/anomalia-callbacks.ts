@@ -7,7 +7,8 @@
 //   fiva_sin:<facturaId>  IVA dudoso, proveedor extranjero → cuota_iva = 0 (solo si seguía null)
 //   fiva_rev:<facturaId>  «Revisar»: no hace nada
 //   gdup_ok:<gastoId>     «Son distintos»: la fila no se vuelve a preguntar (ver `claveNoDuplicado`)
-//   gdup_del:<gastoId>    «Quitar duplicado» (sin cablear: `gastos` no tiene estado de descarte)
+//   gdup_del:<gastoId>    «Quitar duplicado»: descarte SUAVE (gastos.descartado_at), nunca DELETE.
+//                         Ejecutor: `descarte-gasto.ts` (sin enganchar aún al webhook).
 
 export const PREFIJO_IVA = 'fiva'
 export const PREFIJO_DUP = 'gdup'
@@ -71,3 +72,33 @@ export function filaAQuitar(a: FilaDup, b: FilaDup): string {
 
 /** Marca en `raw_extraction` para «Son distintos» (no se crea tabla). */
 export const claveNoDuplicado = 'no_duplicado'
+
+/** Motivo que queda en `gastos.descartado_motivo` al quitar un duplicado desde Telegram. */
+export const MOTIVO_DESCARTE_DUP = 'duplicado (Telegram)'
+
+export type PlanDup =
+  | { tipo: 'descartar'; id: string; motivo: string }
+  | { tipo: 'marcar_no_duplicado'; id: string }
+  | { tipo: 'no_disponible'; id: string; mensaje: string }
+
+/**
+ * Qué hacer con un botón de duplicado. PURO: quien llama ejecuta el plan (`descarte-gasto.ts`).
+ * `del` necesita la columna `descartado_at` (migración 2026-10-04_gastos_titular.sql); sin ella NO
+ * se borra la fila como sustituto: se contesta que no está disponible y no se toca nada.
+ * `ok` solo escribe en `raw_extraction` (existe hoy), así que no depende de la migración.
+ */
+export function planDup(dec: { accion: AccionDup; id: string }, esquemaAplicado: boolean): PlanDup {
+  if (dec.accion === 'ok') return { tipo: 'marcar_no_duplicado', id: dec.id }
+  if (!esquemaAplicado) {
+    return { tipo: 'no_disponible', id: dec.id, mensaje: 'Aún no se puede quitar: falta aplicar la migración de descarte. No he tocado nada.' }
+  }
+  return { tipo: 'descartar', id: dec.id, motivo: MOTIVO_DESCARTE_DUP }
+}
+
+/** Texto corto para `answerCallbackQuery` según cuántas filas cambió el UPDATE. */
+export function respuestaDup(plan: PlanDup, filas: number): string {
+  if (plan.tipo === 'no_disponible') return plan.mensaje
+  if (plan.tipo === 'marcar_no_duplicado') return filas > 0 ? '👍 Anotado: son distintos' : 'No encontrado'
+  return filas > 0 ? '🗑️ Duplicado quitado (se puede deshacer)' : 'Ya estaba quitado o no existe'
+}
+

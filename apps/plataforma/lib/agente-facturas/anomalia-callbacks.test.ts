@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { callbackIva, callbackDup, interpretarIva, interpretarDup, esProveedorExtranjero, ofrecerSinIvaExtranjero, filaAQuitar } from './anomalia-callbacks.ts'
+import { callbackIva, callbackDup, interpretarIva, interpretarDup, esProveedorExtranjero, ofrecerSinIvaExtranjero, filaAQuitar, planDup, respuestaDup, MOTIVO_DESCARTE_DUP } from './anomalia-callbacks.ts'
 
 const ID = '123e4567-e89b-12d3-a456-426614174000'
 const ID2 = '223e4567-e89b-12d3-a456-426614174000'
@@ -45,4 +45,28 @@ test('se quita la fila más nueva', () => {
   assert.equal(filaAQuitar(vieja, nueva), ID2)
   assert.equal(filaAQuitar(nueva, vieja), ID2)
   assert.equal(filaAQuitar({ ...vieja, created_at: nueva.created_at }, nueva), ID2) // empate: id mayor
+})
+
+// ── Plan de los botones de duplicado ─────────────────────────────────────────────────────────
+const IDD = '00000000-0000-4000-8000-000000000001'
+
+test('gdup_del SIN migración → no_disponible (nunca DELETE como sustituto)', () => {
+  const p = planDup({ accion: 'del', id: IDD }, false)
+  assert.equal(p.tipo, 'no_disponible')
+  assert.match(respuestaDup(p, 0), /No he tocado nada/)
+})
+
+test('gdup_del CON migración → descartar con motivo', () => {
+  assert.deepEqual(planDup({ accion: 'del', id: IDD }, true), { tipo: 'descartar', id: IDD, motivo: MOTIVO_DESCARTE_DUP })
+})
+
+test('gdup_ok → marca no_duplicado, con o sin migración', () => {
+  assert.equal(planDup({ accion: 'ok', id: IDD }, false).tipo, 'marcar_no_duplicado')
+  assert.equal(planDup({ accion: 'ok', id: IDD }, true).tipo, 'marcar_no_duplicado')
+})
+
+test('respuesta: 0 filas en un descarte = ya estaba quitado (no se afirma que se quitó)', () => {
+  const p = planDup({ accion: 'del', id: IDD }, true)
+  assert.match(respuestaDup(p, 1), /quitado/)
+  assert.match(respuestaDup(p, 0), /Ya estaba quitado/)
 })

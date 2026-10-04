@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { FACTOR_BANDA, type Regla } from './reglas'
 import { huellasDe } from './fingerprint'
 import { mismoGastoPorHuella, TOLERANCIA_DIAS, TOLERANCIA_IMPORTE } from './duplicado'
+import type { AsignacionTitular } from './asignar-titular'
 
 export interface DatosGasto {
   fecha: string
@@ -132,6 +133,26 @@ export async function insertarGasto(
     RETURNING id
   `)
   return rows[0]?.id as string
+}
+
+/**
+ * Escribe a quién va el gasto (sociedad/negocio o motivo de pendiente). Solo lo llama quien ya
+ * comprobó `contextoTitularSiAplicado()` (columnas creadas por `2026-10-04_gastos_titular.sql`).
+ *
+ * Va APARTE del INSERT a propósito: el INSERT no cambia ni una coma respecto a antes de la
+ * migración, y si esto falla el gasto queda «sin evaluar» (todo NULL), que es el estado
+ * conservador — nunca un titular a medias. Solo rellena filas sin evaluar: no pisa lo manual.
+ */
+export async function escribirTitular(gastoId: string, a: AsignacionTitular): Promise<void> {
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE gastos SET
+      sociedad_id = ${a.sociedadId}::uuid,
+      negocio_id = ${a.negocioId}::uuid,
+      titular_fuente = ${a.fuente},
+      titular_pendiente = ${a.pendiente}
+    WHERE id = ${gastoId}::uuid
+      AND sociedad_id IS NULL AND titular_fuente IS NULL AND titular_pendiente IS NULL
+  `).catch((e) => console.error('[imputar] no se pudo escribir el titular (queda sin evaluar):', e))
 }
 
 // Crea o refuerza la regla aprendida tras una confirmación/imputación.
