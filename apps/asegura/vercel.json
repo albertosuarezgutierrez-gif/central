@@ -41,6 +41,10 @@
     {
       "path": "/api/cron/coberturas-backfill",
       "schedule": "17 * * * *"
+    },
+    {
+      "path": "/api/cron/siniestros-vinculo",
+      "schedule": "43 * * * *"
     }
   ]
 }

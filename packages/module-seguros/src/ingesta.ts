@@ -449,6 +449,11 @@ export type SaludIngesta = {
   cajaNegra: CajaNegraCodeoscopic | null
   /** Última corrida del cron. `null` = no consta ninguna. */
   ultimoPull: UltimoPullIngesta | null
+  /**
+   * Días desde que se persistió algo, por tipo (POL/REC/SIN/CEF…). `null` = no
+   * comprobado; un tipo a `null` = no consta. Lo usa `corteSiniestros`.
+   */
+  diasSinPersistir?: Record<string, number | null> | null
   /** Ficheros confirmados con objetos sin guardar. `null` = no comprobado. */
   parciales: FicheroParcial[] | null
   /**
@@ -582,6 +587,7 @@ export function saludIngesta(
       cobertura: null,
       cajaNegra: null,
       ultimoPull: null,
+      diasSinPersistir: null,
       parciales: null,
       objetosEnRevision: null,
       motivos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
@@ -870,6 +876,7 @@ export function saludIngesta(
     cobertura,
     cajaNegra,
     ultimoPull,
+    diasSinPersistir: e.diasSinPersistir ?? null,
     parciales,
     objetosEnRevision,
     total,

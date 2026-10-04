@@ -42,16 +42,21 @@ import {
   comunicadoACompania,
   describirPolizaDesligada,
   esTipoSiniestro,
+  lineasDatosRamoParte,
   plazoComunicacion,
+  unirDatosRamoParte,
   type ParteEstado,
   type PlazoComunicacion,
 } from '@central/module-seguros-portal'
 import { estadoDocumento, tipoDocumento, type EstadoDocumento, type TipoDocumento } from '@central/module-seguros'
+import { requireSecret } from '@central/core-identity'
+import { descifrarJsonEstricto } from '@central/module-seguros-pii'
 import { prismaAsegura } from './asegura-db'
 // Los dos viven en `vinculos-portal.ts` desde el 07/09/2026: la misma pregunta
 // la hacen ahora dos pantallas, y la decisión sobre los vínculos múltiples no
 // puede tener dos copias que puedan divergir.
 import { identidadesDeCliente, vinculosPorIdentidad } from './vinculos-portal'
+import { sugerenciasDePartes, type SugerenciaParte } from './siniestros-vinculo'
 
 /** La ficha de la cartera detrás de un parte. `null` en la salida = no la sabemos. */
 export type ClienteDelParte = {
@@ -120,6 +125,12 @@ export type PartePortal = {
   polizaDesligadaEn: string | null
   /** ISO-8601. */
   creadoEn: string
+  /**
+   * `datos_ramo` del parte, ya en texto (`lineasDatosRamoParte`): lo que el
+   * CLIENTE contestó por ramo. Es su DECLARACIÓN (la culpa incluida), no lo que
+   * diga la compañía. `[]` = no contestó nada.
+   */
+  datosRamo: { etiqueta: string; valor: string }[]
   plazo: PlazoComunicacion
   /**
    * El parte va sobre una póliza que NO es de la ficha de quien lo mandó — se le
@@ -152,6 +163,14 @@ export type PartePortal = {
    * como hace la lectura de la cartera.
    */
   adjuntos: AdjuntoDelParte[] | null
+  /**
+   * Con qué siniestro de la cartera PODRÍA ser (misma póliza, fecha ±3 días):
+   * `fuerte` = un único candidato con fecha; `ambiguo` = varios o alguno sin
+   * fecha (decide Alberto); `ninguno`. Solo propone, nunca vincula.
+   * `null` = no aplica (ya vinculado, sin póliza de cartera) o la consulta falló
+   * — en ningún caso significa «no hay siniestro».
+   */
+  sugerencia: SugerenciaParte | null
 }
 
 export type FiltrosPartes = {
@@ -210,6 +229,8 @@ type FilaParte = {
   hayHeridos: boolean | null
   hayTerceros: boolean | null
   tipoSiniestro: string | null
+  datosRamo: unknown
+  datosRamoCifrado: string | null
   estado: ParteEstado
   siniestroId: string | null
   polizaDesligadaAt: Date | null
@@ -231,6 +252,8 @@ const SELECT_PARTE = {
   hayHeridos: true,
   hayTerceros: true,
   tipoSiniestro: true,
+  datosRamo: true,
+  datosRamoCifrado: true,
   estado: true,
   siniestroId: true,
   polizaDesligadaAt: true,
@@ -300,6 +323,47 @@ async function adjuntosPorParte(
   }
 }
 
+/** La línea que se pinta cuando hay datos de terceros guardados que no se han podido abrir. */
+export const LINEA_TERCEROS_ILEGIBLES = {
+  etiqueta: 'Datos de terceros',
+  valor: 'Guardados cifrados, pero no se han podido descifrar aquí (PII_ENCRYPTION_KEY). No se han perdido.',
+} as const
+
+/**
+ * `datos_ramo` (en claro) + `datos_ramo_cifrado` (terceros, sobre `v1:`) →
+ * líneas para la ficha. Se descifra AQUÍ, en el servidor del corredor, y solo
+ * para devolverlo por el puerto de operador a `/correduria`.
+ *
+ * 🚨 Tres estados también aquí: sin columna cifrada = el cliente no dio datos
+ * de terceros; columna que no se abre = HAY datos y no se pueden leer, y se
+ * DICE con una línea (`LINEA_TERCEROS_ILEGIBLES`) — callarlo pintaría un parte
+ * con heridos como si nadie hubiera dado sus nombres. Un fallo aquí no tumba
+ * la bandeja. El log no lleva el contenido.
+ */
+export function lineasDatosRamoDelParte(
+  datosRamo: unknown,
+  cifrado: string | null,
+  descifrar: (sobre: string) => unknown = descifrarTerceros,
+): { etiqueta: string; valor: string }[] {
+  let pii: unknown = null
+  let ilegible = false
+  if (cifrado !== null) {
+    try {
+      pii = descifrar(cifrado)
+    } catch (e) {
+      ilegible = true
+      console.error('[partes-portal] datos de terceros ilegibles:', e instanceof Error ? e.message : 'error')
+    }
+  }
+  const lineas = lineasDatosRamoParte(unirDatosRamoParte(datosRamo, pii)).map((l) => ({ etiqueta: l.etiqueta, valor: l.valor }))
+  return ilegible ? [...lineas, { ...LINEA_TERCEROS_ILEGIBLES }] : lineas
+}
+
+function descifrarTerceros(sobre: string): unknown {
+  requireSecret('PII_ENCRYPTION_KEY')
+  return descifrarJsonEstricto(sobre)
+}
+
 /**
  * Monta la salida del puerto. `titulares` trae el dueño de cada `polizaId` que
  * había que comparar; que falte una que se pidió es un error de quien llama, no
@@ -313,6 +377,8 @@ function aParte(
     nombres: Map<string, string | null>
     /** `null` = la consulta de documentos falló para TODO el lote. */
     adjuntos: Map<string, AdjuntoDelParte[]> | null
+    /** `null` = la consulta de sugerencias falló para el lote. */
+    sugerencias: Map<string, SugerenciaParte> | null
     hoy: Date
   },
 ): PartePortal {
@@ -362,11 +428,13 @@ function aParte(
     ),
     polizaDesligadaEn: p.polizaDesligadaAt?.toISOString() ?? null,
     creadoEn: p.creadoEn.toISOString(),
+    datosRamo: lineasDatosRamoDelParte(p.datosRamo, p.datosRamoCifrado),
     plazo: plazoComunicacion({ fechaHecho: p.fechaHecho, hoy: ctx.hoy }),
     titularDistinto,
     // `null` del lote entero ⇒ `null` en este parte: «no se ha podido mirar».
     // Un parte sin ficheros da `[]`, que es «se miró y no hay».
     adjuntos: ctx.adjuntos === null ? null : ctx.adjuntos.get(p.id) ?? [],
+    sugerencia: ctx.sugerencias?.get(p.id) ?? null,
   }
 }
 
@@ -399,7 +467,12 @@ async function completar(correduriaId: string, filas: FilaParte[], hoy: Date): P
   const nombres = await nombresDeClientes(correduriaId, idsFicha)
   // Una sola consulta para el lote entero, nunca una por parte.
   const adjuntos = await adjuntosPorParte(correduriaId, filas.map((f) => f.id))
-  return filas.map((f) => aParte(f, { vinculos, titulares, nombres, adjuntos, hoy }))
+  // Best-effort como los adjuntos: una sugerencia que falla no tumba la bandeja.
+  const sugerencias = await sugerenciasDePartes(correduriaId, filas).catch((e: unknown) => {
+    console.error('[partes-portal] no se pudieron calcular las sugerencias de vínculo:', e instanceof Error ? e.message : e)
+    return null
+  })
+  return filas.map((f) => aParte(f, { vinculos, titulares, nombres, adjuntos, sugerencias, hoy }))
 }
 
 /**
@@ -465,7 +538,7 @@ export type EntradaMoverParte = {
 
 export type ResultadoMoverParte =
   | { ok: true; parte: PartePortal }
-  | { ok: false; error: 'datos_invalidos' | 'no_encontrado' | 'siniestro_requerido' | 'motivo_requerido' | 'transicion_invalida'; status: 400 | 404 | 409 }
+  | { ok: false; error: 'datos_invalidos' | 'no_encontrado' | 'siniestro_requerido' | 'motivo_requerido' | 'transicion_invalida' | 'siniestro_fusionado' | 'ya_vinculado'; status: 400 | 404 | 409 }
 
 const fallo = (error: Exclude<ResultadoMoverParte, { ok: true }>['error'], status: 400 | 404 | 409): ResultadoMoverParte => ({ ok: false, error, status })
 
@@ -526,10 +599,19 @@ export async function moverParte(correduriaId: string, entrada: EntradaMoverPart
     // se arreglan igual (poner el siniestro bueno) y distinguirlas diría si un
     // uuid ajeno existe o no en la cartera.
     if (siniestroId === null || !esUuid(siniestroId)) return fallo('siniestro_requerido', 400)
-    const s = await db.siniestro.findFirst({ where: { id: siniestroId, correduriaId }, select: { id: true } })
+    const s = await db.siniestro.findFirst({ where: { id: siniestroId, correduriaId }, select: { id: true, fusionadoEnSiniestroId: true } })
     if (s === null) return fallo('siniestro_requerido', 400)
+    // Un siniestro fusionado ya no es visible: el parte colgaría de una ficha oculta.
+    if (s.fusionadoEnSiniestroId !== null) return fallo('siniestro_fusionado', 409)
+    // Un parte ya vinculado a OTRO siniestro no se re-vincula en silencio: hay que desvincularlo explícitamente.
+    if (actual.siniestroId !== null && actual.siniestroId !== siniestroId) return fallo('ya_vinculado', 409)
     data.siniestroId = siniestroId
     data.abiertoEnCompaniaAt = new Date()
+    if (actual.siniestroId === null) {
+      // Mismo registro que el vínculo manual (vincularParteEn): quién/cómo/cuándo.
+      data.siniestroVinculo = 'manual'
+      data.siniestroVinculadoAt = new Date()
+    }
   }
 
   if (nuevo === 'descartado') {

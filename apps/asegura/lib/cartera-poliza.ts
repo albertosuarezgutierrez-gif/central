@@ -399,7 +399,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
           fechaSituacion: true, comisionLiquida: true, datosExtra: true },
         orderBy: { fechaEmision: 'desc' },
       },
-      siniestros: { select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
+      siniestros: { where: { fusionadoEnSiniestroId: null }, select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
     },
   })
   if (!p) return null
