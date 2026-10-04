@@ -210,6 +210,17 @@ test('filasContrato: nº de suplemento solo con dato; ausente o vacío no genera
   assert.equal(leerContrato({ numeroSuplemento: '  ', duracion: 'AN' })!.numeroSuplemento, null)
 })
 
+test('filasContrato: convenio y otros riesgos solo con dato (nunca fila vacía ni 0)', () => {
+  const c = leerContrato({ convenio: '99000123456789', nombreRiesgo: 'Taller', descripcionRiesgo: 'Obra menor' })!
+  const f = filasContrato(c, null)
+  assert.deepEqual(f.find((x) => x.etiqueta === 'Convenio colectivo'), { etiqueta: 'Convenio colectivo', valor: '99000123456789' })
+  assert.equal(f.find((x) => x.etiqueta === 'Riesgo')?.valor, 'Taller')
+  assert.equal(f.find((x) => x.etiqueta === 'Descripción del riesgo')?.valor, 'Obra menor')
+  const sin = leerContrato({ duracion: 'AN', convenio: '', nombreRiesgo: 'v1:a:b:c', descripcionRiesgo: null })!
+  const g = filasContrato(sin, null)
+  assert.ok(!g.some((x) => ['Convenio colectivo', 'Riesgo', 'Descripción del riesgo'].includes(x.etiqueta)))
+})
+
 test('bloquesContratoCima: comisión clase ME traducida', () => {
   const c = leerContrato({ comisiones: [{ clase: 'ME', bruta: '10.00' }] })!
   assert.equal(bloquesContratoCima(c)[0].filas[0].etiqueta, 'Comisión · Mediador: Comisión por producto')
