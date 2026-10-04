@@ -195,7 +195,7 @@ export async function escanearNuevasFacturas(
     if (!importe || importe <= 0) { descartados++; continue }
 
     // Una indemnización/liquidación de mediador es un COBRO, nunca algo que pagar ni un gasto.
-    const noGasto = pareceIngresoDeCorreduria({ proveedor, concepto: (datos.concepto as string | null) || correo.subject })
+    const noGasto = pareceIngresoDeCorreduria({ proveedor, concepto: (datos.concepto as string | null) || undefined })
     if (noGasto.esSospechoso) {
       console.log(`[facturas] apartada (no es un gasto): ${proveedor} · ${importe} — ${noGasto.motivo}`)
       descartados++
@@ -250,7 +250,7 @@ export async function escanearNuevasFacturas(
     await marcarProcesado(correo.uid, ETIQUETA_GMAIL, listado.buzon).catch(() => {})
 
     // Notificar por Telegram con botones de acción
-    await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId, decision.permitirPagar)
+    await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId, decision.permitirPagar, decision.motivoRevision)
     // Idea #11: proponer vínculo con reserva cercana
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
@@ -270,6 +270,7 @@ async function notificarFactura(
   fechaVenc: string | null,
   cuentaId: string,
   permitirPagar = true,
+  motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso' = 'sin_numero_ni_iva',
 ): Promise<void> {
   const vence = fechaVenc ? ` · vence ${fechaVenc}` : ''
 
@@ -297,7 +298,7 @@ async function notificarFactura(
     }
   } catch { /* no crítico */ }
 
-  const prefijo = permitirPagar ? '' : '⚠️ Revisar: sin nº de factura ni IVA\n'
+  const prefijo = permitirPagar ? '' : motivoRevision === 'tipo_dudoso' ? '⚠️ Revisar: documento dudoso\n' : '⚠️ Revisar: sin nº de factura ni IVA\n'
   const texto = `${prefijo}🧾 <b>${proveedor}</b> · ${eur(importe)}${vence}${budgetLinea}`
   const botones = permitirPagar
     ? [

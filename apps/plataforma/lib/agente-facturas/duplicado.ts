@@ -15,6 +15,7 @@ export interface GastoHuella {
   proveedor?: string | null
   nif_proveedor?: string | null
   numero_factura?: string | null
+  propiedad?: string | null
   /** YYYY-MM-DD */
   fecha: string
   total: number
@@ -39,11 +40,18 @@ export function mismoGastoPorHuella(a: GastoHuella, b: GastoHuella): boolean {
   // Dos números distintos = dos facturas distintas. Es la única vía que cierra la puerta del todo.
   if (na && nb && na !== nb) return false
 
+  // Dos propiedades distintas = dos gastos distintos (dos líneas Digi de 10 €, una por piso).
+  const propA = (a.propiedad ?? '').trim().toLowerCase()
+  const propB = (b.propiedad ?? '').trim().toLowerCase()
+  if (propA && propB && propA !== propB) return false
+
   // Proveedor ausente en uno = «no se sabe», no «distinto» (caso 307,11 NULL vs nombre).
   const pa = normalizaProveedor(a.proveedor ?? '')
   const pb = normalizaProveedor(b.proveedor ?? '')
   const nifA = normalizaNif(a.nif_proveedor)
   const nifB = normalizaNif(b.nif_proveedor)
+  // Sin proveedor NI NIF en AMBOS no hay nada que comparar: la huella solo casaría importe y fecha.
+  if (!pa && !pb && !nifA && !nifB) return false
   const mismoNif = !!nifA && nifA === nifB
   const nifsDistintos = !!nifA && !!nifB && nifA !== nifB
   if (nifsDistintos) return false

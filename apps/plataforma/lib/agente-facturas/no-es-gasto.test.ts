@@ -138,3 +138,9 @@ test('indemnizaciones de seguro: Occident «Prestación de seguro» 2.032 EUR no
   // Una prima/recibo que SÍ se paga no se marca.
   assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Occident', concepto: 'Recibo seguro hogar póliza 123' }).esSospechoso, false)
 })
+
+test('recibo de PRIMA con «indemnización diaria por hospitalización» NO se descarta', () => {
+  const r = pareceIngresoDeCorreduria({ proveedor: 'Occident', concepto: 'Recibo de prima. Cobertura de indemnización diaria por hospitalización' })
+  assert.equal(r.esSospechoso, false)
+  assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Occident', concepto: 'Indemnización por siniestro 123' }).esSospechoso, true)
+})

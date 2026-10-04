@@ -110,7 +110,7 @@ test('factura de Anthropic con nº e IVA → pasa con Pagar', () => {
 
 test('recibo sin nº ni IVA → pasa pero SIN Pagar', () => {
   const d = decidirAvisoPago({ fecha: '2026-10-04', proveedor: 'Alguien', tipo_documento: 'recibo' }, TITULARES, HOY2)
-  assert.deepEqual(d, { pagar: true, permitirPagar: false })
+  assert.deepEqual(d, { pagar: true, permitirPagar: false, motivoRevision: 'sin_numero_ni_iva' })
 })
 
 test('recibo sin nº pero con IVA, o con nº pero sin IVA → permite Pagar', () => {
@@ -127,4 +127,12 @@ test('tipo_documento null/ausente → no aparta por esto (comportamiento anterio
 test('los motivos existentes mandan sobre el tipo (antigua)', () => {
   const d = decidirAvisoPago({ fecha: '2022-01-01', tipo_documento: 'otro' }, TITULARES, HOY2)
   assert.equal(d.pagar === false && d.motivo, 'antigua')
+})
+
+test('tipo «otro» no aparta: pasa sin Pagar y con motivo «tipo_dudoso»', () => {
+  const d = decidirAvisoPago({ fecha: '2026-10-04', proveedor: 'Alguien', tipo_documento: 'otro', numero_factura: 'X-1', iva: 21 }, TITULARES, HOY2)
+  assert.deepEqual(d, { pagar: true, permitirPagar: false, motivoRevision: 'tipo_dudoso' })
+  assert.equal(decidirAvisoPago({ fecha: '2026-10-04', tipo_documento: 'presupuesto' }, TITULARES, HOY2).pagar, false)
+  const s = decidirAvisoPago({ fecha: '2026-10-04', tipo_documento: 'recibo' }, TITULARES, HOY2) as any
+  assert.equal(s.motivoRevision, 'sin_numero_ni_iva')
 })

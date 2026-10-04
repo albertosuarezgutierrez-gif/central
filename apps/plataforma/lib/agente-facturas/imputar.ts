@@ -70,6 +70,7 @@ export async function existeDuplicado(d: {
   total: number
   proveedor?: string | null
   nif_proveedor?: string | null
+  propiedad?: string | null
 }): Promise<boolean> {
   // Dedup por nº de factura exacto, o por misma huella + mismo importe dentro de
   // ±7 días (pilla "presupuesto+factura" del mismo gasto, sin chocar con los
@@ -88,7 +89,7 @@ export async function existeDuplicado(d: {
   // de proveedor/NIF/número se hace en el helper puro. Se excluyen los placeholders de gastos fijos
   // (origen='fijo'): la factura real los sustituye en `insertarGasto`, no es un duplicado.
   const cand = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT proveedor, nif_proveedor, numero_factura, fecha::text AS fecha, total::float8 AS total
+    SELECT proveedor, nif_proveedor, numero_factura, propiedad, fecha::text AS fecha, total::float8 AS total
     FROM gastos
     WHERE coalesce(origen, '') <> 'fijo'
       AND fecha BETWEEN ${d.fecha}::date - ${TOLERANCIA_DIAS}::int AND ${d.fecha}::date + ${TOLERANCIA_DIAS}::int
@@ -96,8 +97,8 @@ export async function existeDuplicado(d: {
     LIMIT 50
   `)
   return cand.some((c) => mismoGastoPorHuella(
-    { proveedor: d.proveedor, nif_proveedor: d.nif_proveedor, numero_factura: d.numero_factura, fecha: d.fecha, total: d.total },
-    { proveedor: c.proveedor, nif_proveedor: c.nif_proveedor, numero_factura: c.numero_factura, fecha: c.fecha, total: Number(c.total) },
+    { proveedor: d.proveedor, nif_proveedor: d.nif_proveedor, numero_factura: d.numero_factura, propiedad: d.propiedad, fecha: d.fecha, total: d.total },
+    { proveedor: c.proveedor, nif_proveedor: c.nif_proveedor, numero_factura: c.numero_factura, propiedad: c.propiedad, fecha: c.fecha, total: Number(c.total) },
   ))
 }
 

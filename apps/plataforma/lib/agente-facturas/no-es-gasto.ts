@@ -96,7 +96,7 @@ const SENALES_RETROCESION: Array<[RegExp, string]> = [
  */
 const SENALES_INDEMNIZACION: Array<[RegExp, string]> = [
   [/\bprestaci[oó]n(?:es)?\s+(?:de\s+)?(?:del\s+)?seguros?\b/i, 'es una prestación de seguro (indemnización cobrada)'],
-  [/\bindemnizaci[oó]n(?:es)?\b/i, 'es una indemnización (dinero cobrado, no un gasto)'],
+  [/\bindemnizaci[oó]n(?:es)?\s+(?:de|del|por)\s+(?:el\s+)?siniestros?\b/i, 'es una indemnización de siniestro (dinero cobrado, no un gasto)'],
   [/\bliquidaci[oó]n\s+(?:de|del)\s+siniestros?\b/i, 'es una liquidación de siniestro (indemnización cobrada)'],
   [/\bpago\s+(?:de|del)\s+siniestros?\b/i, 'es un pago de siniestro (indemnización cobrada)'],
 ]

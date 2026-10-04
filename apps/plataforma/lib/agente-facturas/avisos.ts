@@ -1,6 +1,7 @@
 // Avisos del agente: Telegram (con enlace a la bandeja) + email de respaldo.
 import { tgAvisoAlerta } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
+import { escapeHtml } from '@central/core-telegram'
 import type { ReglaFaltante } from './anomalias'
 
 function baseUrl(): string {
@@ -17,7 +18,7 @@ export interface PendienteAviso {
 export async function avisaBandeja(items: PendienteAviso[]): Promise<void> {
   if (items.length === 0) return
   const url = `${baseUrl()}/expenses/pendientes`
-  const lineas = items.slice(0, 8).map((i) => `• ${i.proveedor || 'desconocido'} · ${eur(i.total)}${i.motivo ? ` (${i.motivo})` : ''}`)
+  const lineas = items.slice(0, 8).map((i) => `• ${escapeHtml(i.proveedor || 'desconocido')} · ${eur(i.total)}${i.motivo ? ` (${i.motivo})` : ''}`)
   const msg = `🧾 <b>${items.length}</b> factura(s) en la bandeja de revisión\n${lineas.join('\n')}\n\n👉 <a href="${url}">Revisar</a>`
   await tgAvisoAlerta('facturas.bandeja', msg, 'aviso')
 }
@@ -59,7 +60,7 @@ export async function avisaNoLegibles(items: { nombre: string; from?: string }[]
 // tiene que poder verlo aquí en vez de descubrir el gasto perdido meses después.
 export async function avisaAjenas(items: { proveedor: string | null; total: number; receptor?: string | null }[]): Promise<void> {
   if (items.length === 0) return
-  const lineas = items.slice(0, 8).map((i) => `• ${i.proveedor || 'desconocido'} · ${eur(i.total)} → ${i.receptor || 'otro titular'}`)
+  const lineas = items.slice(0, 8).map((i) => `• ${escapeHtml(i.proveedor || 'desconocido')} · ${eur(i.total)} → ${i.receptor || 'otro titular'}`)
   await tgAvisoAlerta(
     'facturas.ajenas',
     `🙅 ${items.length} factura(s) de terceros ignoradas (no están a tu nombre):\n${lineas.join('\n')}\n\nSi alguna SÍ es tuya, dímelo y la recupero.`,
@@ -70,7 +71,7 @@ export async function avisaAjenas(items: { proveedor: string | null; total: numb
 // Aviso: facturas recurrentes que no han llegado este mes.
 export async function avisaRecurrentesQueFaltan(faltan: ReglaFaltante[]): Promise<void> {
   if (faltan.length === 0) return
-  const lineas = faltan.slice(0, 8).map((f) => `• ${f.proveedor || f.fingerprint}${f.importe_esperado ? ` (~${eur(f.importe_esperado)})` : ''}`)
+  const lineas = faltan.slice(0, 8).map((f) => `• ${escapeHtml(f.proveedor || f.fingerprint)}${f.importe_esperado ? ` (~${eur(f.importe_esperado)})` : ''}`)
   await tgAvisoAlerta('facturas.recurrentes-faltan', `⏳ ${faltan.length} gasto(s) recurrente(s) aún sin llegar este mes:\n${lineas.join('\n')}`, 'aviso')
 }
 
@@ -88,7 +89,7 @@ export async function avisaDomiciliadosSinCargo(
   if (sinCobertura > 0) {
     const fechas = paradas.map((c) => c.ultimo).filter((x): x is string => !!x).sort()
     const desde = fechas.length ? ` desde ${ddmm(fechas[0])}` : ''
-    const nombres = paradas.map((c) => `${c.nombre}${c.ultimo ? ` ${ddmm(c.ultimo)}` : ' (sin datos)'}`).join(', ')
+    const nombres = paradas.map((c) => `${escapeHtml(c.nombre)}${c.ultimo ? ` ${ddmm(c.ultimo)}` : ' (sin datos)'}`).join(', ')
     linea = `⚪ ${sinCobertura} sin poder comprobar: cuentas sin sincronizar${desde}${nombres ? ` (${nombres})` : ''}`
   }
   if (avisos.length === 0) {
@@ -97,7 +98,7 @@ export async function avisaDomiciliadosSinCargo(
   }
   const lineas = avisos
     .slice(0, 8)
-    .map((a) => `• ${a.proveedor || 'desconocido'} · ${eur(a.total)} · se domiciliaba el ${a.fecha_vencimiento}`)
+    .map((a) => `• ${escapeHtml(a.proveedor || 'desconocido')} · ${eur(a.total)} · se domiciliaba el ${a.fecha_vencimiento}`)
   await tgAvisoAlerta(
     'facturas.domiciliados-sin-cargo',
     `🏦 <b>${avisos.length}</b> factura(s) domiciliada(s) SIN cargo en cuenta:\n${lineas.join('\n')}${linea ? `\n\n${linea}` : ''}`,

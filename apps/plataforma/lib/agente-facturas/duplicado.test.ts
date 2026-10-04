@@ -32,3 +32,16 @@ test('límites: importe >0,02, fecha >3 días, proveedor o NIF distinto = no dup
   assert.equal(m({ ...base, nif_proveedor: 'A1' }, { ...base, nif_proveedor: 'B2' }), false)
   assert.equal(m({ ...base, proveedor: 'Occident SA', nif_proveedor: 'A1' }, { ...base, proveedor: 'Otro', nif_proveedor: 'A1' }), true)
 })
+
+test('propiedad distinta en ambos = no duplicado (dos líneas Digi de 10 EUR)', () => {
+  const d = { proveedor: 'Digi', fecha: '2026-09-05', total: 10 }
+  assert.equal(m({ ...d, propiedad: 'piso_a' }, { ...d, propiedad: 'piso_b' }), false)
+  assert.equal(m({ ...d, propiedad: 'piso_a' }, { ...d, propiedad: 'piso_a' }), true)
+  assert.equal(m({ ...d, propiedad: 'piso_a' }, { ...d, propiedad: null }), true)
+})
+test('sin proveedor NI NIF en ambos = no se aplica la huella', () => {
+  const d = { proveedor: null, fecha: '2026-09-05', total: 10 }
+  assert.equal(m(d, { ...d }), false)
+  assert.equal(m(d, { ...d, proveedor: 'Digi' }), true)
+  assert.equal(m({ ...d, nif_proveedor: 'B123' }, { ...d }), true)
+})

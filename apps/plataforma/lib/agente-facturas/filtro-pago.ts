@@ -29,7 +29,7 @@ export const TIPOS_DOCUMENTO_PAGABLES = ['factura', 'recibo', 'justificante_pago
 
 export type DecisionPago =
   /** `permitirPagar: false` = pasa, pero sin nº de factura ni desglose fiscal: se avisa SIN botón ✅ Pagar. */
-  | { pagar: true; permitirPagar: boolean }
+  | { pagar: true; permitirPagar: boolean; motivoRevision?: 'sin_numero_ni_iva' | 'tipo_dudoso' }
   | { pagar: false; motivo: MotivoApartar; detalle: string }
 
 export interface DatosFactura {
@@ -98,11 +98,14 @@ export function decidirAvisoPago(d: DatosFactura, titulares: Titular[], hoy: Dat
   // 5. Documento que la IA clasifica como algo que NO es factura/recibo (circular, inscripción,
   //    donativo, presupuesto, proforma…). `null` = no se sabe → no aparta.
   const tipo = normalizaTipoDocumento(d.tipo_documento)
+  //    `otro` NO es concluyente (la IA no supo clasificarlo): pasa sin botón Pagar y con aviso.
+  if (tipo === 'otro') return { pagar: true, permitirPagar: false, motivoRevision: 'tipo_dudoso' }
   if (tipo && !(TIPOS_DOCUMENTO_PAGABLES as readonly string[]).includes(tipo)) {
     return { pagar: false, motivo: 'no_es_factura', detalle: `documento de tipo «${tipo}», no es una factura` }
   }
 
   // Pasa, pero sin nº de factura NI desglose fiscal no se ofrece pagar de un toque.
   const sinNumero = !(d.numero_factura?.trim())
-  return { pagar: true, permitirPagar: !(sinNumero && !hayDesgloseFiscal(d)) }
+  if (sinNumero && !hayDesgloseFiscal(d)) return { pagar: true, permitirPagar: false, motivoRevision: 'sin_numero_ni_iva' }
+  return { pagar: true, permitirPagar: true }
 }
