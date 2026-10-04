@@ -91,7 +91,7 @@ export async function existeDuplicado(d: {
     SELECT proveedor, nif_proveedor, numero_factura, fecha::text AS fecha, total::float8 AS total
     FROM gastos
     WHERE coalesce(origen, '') <> 'fijo'
-      AND fecha BETWEEN ${d.fecha}::date - ${TOLERANCIA_DIAS} AND ${d.fecha}::date + ${TOLERANCIA_DIAS}
+      AND fecha BETWEEN ${d.fecha}::date - ${TOLERANCIA_DIAS}::int AND ${d.fecha}::date + ${TOLERANCIA_DIAS}::int
       AND abs(coalesce(total,0) - ${d.total}) <= ${TOLERANCIA_IMPORTE + 0.001}
     LIMIT 50
   `)
