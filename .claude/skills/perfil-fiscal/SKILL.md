@@ -69,8 +69,11 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 - Antecedente CLAVE: en 2024 la Inspección ya revisó IS 2021-22 de la SL y se APORTARON contratos de cesión Socorro y Sanlúcar → SL a 500 €/mes/inmueble; IRPF 2023 los declaró así. ⛔ No argumentar «cesión gratuita»: contradice lo aportado.
 - La SL era arrendataria de pisos de la madre de Alberto (edificio San Luis 9: pisos 3/10/12; Villasís hasta la donación de mayo-2024) y propietaria de Bustos Tavera 22. Lasso de la Vega 4 = Dúplex = Villasís.
 - Hipoteca de Socorro (CaixaBank) cancelada 11/11/2024 con el dinero de la venta de Sanlúcar (03/09/2024).
-- Sospecha abierta: la cifra de datos fiscales de las plataformas (DAC7) ya es NETA de comisión y Asecon restó comisiones otra vez en IS 2024 (y Villasís en IRPF). Sin confirmar hasta ver el informe fiscal de Booking.
+- DESCARTADO (04/10/2026, probable): doble resta de comisiones. El DAC7 de Booking es BRUTO y la SL contabilizó los ingresos 2024 ya NETOS sin gasto de comisión aparte (solo queda sin desglosar la cuenta 629). IVA: Alberto dicta que alojamiento (sin servicios hoteleros) y mediación de seguros son exentos; abierto: modelo 309 por comisiones de Booking (inversión del sujeto pasivo) e IVA de las rentas que paga la SL.
 - La BD no tiene movimientos bancarios de 2024 (empiezan 2025-01-01); `incomes` 2024 solo cubre Socorro, Bustos (Reform+Luxury) y Dúplex.
+- La SL fue ARRENDATARIA de la familia en 2024: pagaba alquiler (cuenta 621, modelo 115) a la abuela (María Alcalá Maguilla) y a la madre (María Gutiérrez Alcalá); San Luis 9 es de SAN LUIS 9 CB (familia Gutiérrez Alcalá/Belascoain), ni Alberto ni Pilar ni la SL son comuneros. Villasís: donación de la madre a Alberto el 21/05/2024.
+- Punto débil: Socorro y Sanlúcar se cobraban en cuentas PERSONALES (Caixa …7622 / común …0855) aunque Booking facturaba con el NIF de la SL; la hipoteca de Socorro se pagaba desde la …7622 y se canceló el 11/11/2024 tras entrar ahí la venta de Sanlúcar. En 2024 la SL no pagó los 500 €/mes de los contratos de cesión. ⚠️ Los .docx de esos contratos (fechados 2020) se crearon el 16/05/2024 y hay versiones incoherentes: no aportar contratos nuevos/rehechos; revisión por fiscalista.
+- Resumen vigente: Doc «Resumen reunión Asecon v2 (04-10-2026) — VIGENTE» en la subcarpeta 09 de la carpeta Drive. Adjuntos de correo: Vía C (agente `lector-correo`).
 
 ## Índice de `references/` — lee SOLO lo que necesite la tarea
 - **`references/entidades-y-propiedades.md`** — quién tributa qué: entidades (Alberto/Pilar/SL dormida),
