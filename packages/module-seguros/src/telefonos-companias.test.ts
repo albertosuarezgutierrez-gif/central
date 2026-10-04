@@ -104,9 +104,9 @@ test('Allianz: asistencia por tipo de riesgo y SIN teléfono de siniestros', () 
   assert.deepEqual(nums(c, 'Vehículos pesados'), ['900 117 120'])
 })
 
-test('Mapfre: sin número de siniestros separado (la web no lo distingue)', () => {
+test('Mapfre: siniestros confirmado el 04/10/2026 (línea general mapfre.es)', () => {
   const c = por('mapfre')
-  assert.equal(c.siniestros, null)
+  assert.equal(c.siniestros, '918 365 365')
   assert.deepEqual(nums(c, 'Hogar y ayuda en carretera'), ['918 365 365', '900 822 822'])
   assert.deepEqual(nums(c, 'Accidentes personales'), ['918 366 224', '900 810 852'])
   assert.deepEqual(nums(c, 'Decesos'), ['918 366 181', '900 814 111'])
