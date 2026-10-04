@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(04/10/2026, limpieza contable — solo BD, sin código)** — Rechazada factura Giraldillo 6d85ba72 (72,60€, gemela de gasto b1437e07). d9a0a1d2 (504,57€, 29/05) NO es duplicado (el más cercano 504,27€ 30/06 = mes siguiente): sigue pendiente_revision.
+Jefe-contabilidad asignó los 12 «sin determinar»: Pepemobile ×6, gasoil ×3, Allianz moto → personal; Booking cargos ×2 → pisos compartido. Codeoscopic, Asoc. Corredores ff0900f2 y Fly.io 220a37e0 → correduría; Fly.io 570fb3f0 («Manuel Suárez») → receptor_no_titular.
+Generali coche (36760c84, 176dfe7a) seguros→personal. Pendiente: home-office (m², Pilar), donativos_anual, Pepemobile fibra = suministro afecto (30 %×% despacho) cuando haya m²; sin_datos 388,91€ (Petroprix 90, Bricomart, Asecon 181,50, Mercadona).
+
 **(04/10/2026, agente jefe-contabilidad)** — Creado `.claude/agents/jefe-contabilidad.md` (auditor contable, sonnet, solo lectura salvo OK explícito de Alberto). Reglas confirmadas: Punto y Coma dormida, negocios separados (correduría/Dúplex/pisos), Informática→correduría, DIGI→pisos, Asisa deducible, etc. (13 reglas en perfil-fiscal/SKILL.md §«Reglas contables confirmadas»). Informe ≤15 líneas, cifras con `eur()`, `null` = desconocido.
 
 **(04/10/2026, facturas-scan: falsos positivos)** — `INVOICE_SYSTEM` clasifica `tipo_documento`; `decidirAvisoPago` aparta con motivo `no_es_factura` todo tipo conocido fuera de {factura, recibo, justificante_pago} (null = no aparta) y devuelve `permitirPagar:false` si no hay nº de factura NI base/IVA (aviso Telegram con «⚠️ Revisar», sin ✅ Pagar). Tests en `filtro-pago.test.ts`.
