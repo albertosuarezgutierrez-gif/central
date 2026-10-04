@@ -13,7 +13,7 @@
 import type { ObjetoAsegurado, Retarificabilidad } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 import { interpretarContacto, leerTruncado, type Contacto } from './correduria-puerto.ts'
-import { leerRetarificacion } from './ficha-asegura.ts'
+import { leerFichaObjeto, leerRetarificacion } from './ficha-asegura.ts'
 
 export type MotivoErrorCartera =
   | 'secreto_rechazado'   // asegura devolvió 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
@@ -187,6 +187,8 @@ export function interpretarObjeto(v: unknown): ObjetoAsegurado | null {
     titulo: cadena(o.titulo),
     detalle: cadena(o.detalle),
     nota: cadena(o.nota),
+    // Una línea del bien en la lista (`lineaFichaObjeto`). Sin bastidor: la lista no lo necesita.
+    ficha: leerFichaObjeto(o.ficha),
   }
 }
 

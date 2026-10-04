@@ -90,6 +90,8 @@ export const POST = auditado(async (req: Request) => {
             clienteSube: clienteId,
             origen: 'ficha',
             actor: req.headers.get('x-actor') ?? 'corredor',
+            // Lo leído se guarda con ESTE documento (`documentos.extraccion`).
+            documentoId: r.documento.id,
             fichero: { contenido, mime: fichero.type, nombre: fichero.name },
           })
         : null

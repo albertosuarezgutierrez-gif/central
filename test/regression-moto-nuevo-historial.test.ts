@@ -72,8 +72,9 @@ test('MotoNuevo: los km al año van como corrección solo si se escriben (vacío
 
 test('MotoNuevo: la moto de la última tarificación se precarga sin pisar lo tecleado, y la media supuesta no pasa a km declarados', () => {
   const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx', import.meta.url), 'utf8')
-  assert.match(src, /setCodigoVehiculo\(\(c\) => c \|\| v\.codigoVehiculo\)/)
-  assert.match(src, /setMatricula\(\(m\) => m \|\| v\.matricula!\)/)
+  // Sin variante retomada, la última tarificación no pisa lo que ya hay (30/09/2026: con retomada, manda lo pagado).
+  assert.match(src, /setCodigoVehiculo\(\(c\) => \(retomada \? v\.codigoVehiculo : c \|\| v\.codigoVehiculo\)\)/)
+  assert.match(src, /setMatricula\(\(m\) => \(retomada \? v\.matricula! : m \|\| v\.matricula!\)\)/)
   assert.match(src, /v\.kmAnuales !== null && v\.kmAnuales !== KM_ANUALES_SUPUESTOS/)
   // Se puede volver al catálogo: la moto previa no es una trampa.
   assert.match(src, /Elegir otra moto/)

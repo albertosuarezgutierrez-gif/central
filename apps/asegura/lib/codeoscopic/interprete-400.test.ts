@@ -300,3 +300,11 @@ test('interpretarError400 tampoco confunde el campo de producto con uno de perso
   assert.equal(r.campos.length, 0)
   assert.deepEqual(r.noReconocidos, [OCCIDENT_ADQUISICION])
 })
+
+test('corrección de nacionalidad y de documento: NIE con su tipo y nationality.code en mayúsculas', () => {
+  const conNie = aplicarCampoPersona({ name: 'X' }, 'dni', 'x-1234567-l') as { identificationDocument: { type: { id: string }; id: string } }
+  assert.equal(conNie.identificationDocument.type.id, 'Nie')
+  assert.equal(conNie.identificationDocument.id, 'X1234567L')
+  const conNac = aplicarCampoPersona(conNie, 'nacionalidad', ' mar ')
+  assert.equal(leerCampoPersona(conNac, 'nacionalidad'), 'MAR')
+})

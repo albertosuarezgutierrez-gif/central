@@ -12,7 +12,11 @@ import { useState, type ReactNode } from 'react'
 import { Badge, btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { CeldaCompania } from './CeldaCompania'
-import { bloqueoCompania, reparosPorFila, textoBloqueoCorredor } from '@central/module-seguros'
+import { bloqueoCompania, esMismaCompaniaQueLaActual, reparosPorFila, textoBloqueoCorredor } from '@central/module-seguros'
+import { textoPagasProponemos } from '@/lib/correduria/competencia-oportunidad'
+
+/** Lo que paga hoy en la competencia, ya anualizado (`vistaCompetencia`). `anual: null` = no se compara, y `motivo` dice por qué. */
+export type PrimaActualLista = { anual: number | null; motivo: string | null; compania: string | null }
 
 export type PrecioLista = {
   id?: string
@@ -33,7 +37,10 @@ export default function ListaPrecios<P extends PrecioLista>({
   motivoNoEmitir,
   emision,
   detalle,
+  actual,
 }: {
+  /** «Pagas X → te proponemos Y» (03/10/2026). Sin esto la lista es la de siempre. */
+  actual?: PrimaActualLista | null
   precios: P[]
   simulado: boolean
   /** Sin esto no hay botón «Emitir» (p. ej. sin cotización guardada). */
@@ -62,6 +69,11 @@ export default function ListaPrecios<P extends PrecioLista>({
           Todos son precios <strong>estimados</strong>: la compañía puede cambiarlos al verificar los datos.
         </p>
       )}
+      {actual && (
+        actual.anual !== null
+          ? <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 6px' }}>Hoy paga {eur(actual.anual)}/año{actual.compania ? ` con ${actual.compania}` : ''}.</p>
+          : actual.motivo && <p style={{ color: 'var(--warning)', fontSize: 12, margin: '0 0 6px', overflowWrap: 'anywhere' }}>{actual.motivo}</p>
+      )}
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {filas.map(({ p, clave, reparos: reparosFila }) => {
           const abiertaEsta = abierta === clave
@@ -77,12 +89,20 @@ export default function ListaPrecios<P extends PrecioLista>({
                     {p.franquiciaEur === null || p.franquiciaEur === undefined ? 'franquicia no declarada' : p.franquiciaEur === 0 ? 'sin franquicia' : `franquicia ${eur(p.franquiciaEur)}`}
                   </div>
                   {detalle && <div style={{ fontSize: 12, marginTop: 4 }}>{detalle(p)}</div>}
+                  {actual && (() => {
+                    const t = textoPagasProponemos(actual.anual, p.primaEur)
+                    return t ? (
+                      <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text)', overflowWrap: 'anywhere' }}>
+                        {t}{esMismaCompaniaQueLaActual(actual.compania, p.compania) === true ? ' · es su compañía actual' : ''}
+                      </div>
+                    ) : null
+                  })()}
                   {!todasEstimadas && p.firmeza !== 'firme' && (
                     <Badge tono="aviso" title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge>
                   )}
                   {simulado && <Badge tono="aviso">simulado</Badge>}
                   {bloqueoCompania(p.avisos) !== null && (
-                    <div style={{ fontSize: 12, color: 'var(--negative)', fontWeight: 600, marginTop: 4 }}>{textoBloqueoCorredor(bloqueoCompania(p.avisos) as string)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--negative)', fontWeight: 600, marginTop: 4 }}>{textoBloqueoCorredor(bloqueoCompania(p.avisos) as string, p.compania)}</div>
                   )}
                   {reparosFila.map((m) => (
                     <div key={m} style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 600, marginTop: 4, overflowWrap: 'anywhere' }}>⚠️ {m}</div>

@@ -139,3 +139,65 @@ test('aseguradoraActual: la compañía de HOY se distingue de la de la oferta; s
   const viejo = interpretarRiesgo(200, { ...base, oportunidad: { ...OP, aseguradora: 'Mapfre' } })
   assert.equal(viejo.estado === 'ok' && viejo.riesgo.oportunidad.aseguradoraActual, null, 'asegura anterior: no consta')
 })
+
+test('interpretarRiesgo: datosVehiculo y faltanVehiculo — sin bloque = null, nunca un vehículo vacío que parezca leído', () => {
+  const base = { estado: 'ok', oportunidad: { id: 'o1', clienteId: 'c1', ramo: 'auto' }, figuras: [], roles: [], variantes: [] }
+  const sin = interpretarRiesgo(200, base)
+  assert.equal(sin.estado, 'ok')
+  if (sin.estado === 'ok') {
+    assert.equal(sin.riesgo.datosVehiculo, null)
+    assert.equal(sin.riesgo.faltanVehiculo, null)
+  }
+  const con = interpretarRiesgo(200, {
+    ...base,
+    datosVehiculo: { matricula: '1234BCD', kmAnuales: '10000', fechaMatriculacion: '2019-05-17', confirmadoAt: '2026-09-30T10:00:00Z' },
+    faltanVehiculo: ['codigoVehiculo', 'garaje', 'inventado'],
+  })
+  assert.equal(con.estado, 'ok')
+  if (con.estado === 'ok') {
+    assert.equal(con.riesgo.datosVehiculo?.matricula, '1234BCD')
+    assert.equal(con.riesgo.datosVehiculo?.kmAnuales, null, 'un km con tipo raro es «no se sabe», no un dato')
+    assert.equal(con.riesgo.datosVehiculo?.marca, null)
+    assert.equal(con.riesgo.datosVehiculo?.confirmadoAt, '2026-09-30T10:00:00Z')
+    assert.deepEqual(con.riesgo.faltanVehiculo, ['codigoVehiculo', 'garaje'])
+  }
+})
+
+test('interpretarRiesgo: datosRiesgo de cada ramo — clave rara o datos ilegibles = null, nunca un bloque vacío que parezca leído', () => {
+  const base = { estado: 'ok', oportunidad: { id: 'o1', clienteId: 'c1', ramo: 'hogar' }, figuras: [], roles: [], variantes: [] }
+  const leer = (datosRiesgo: unknown) => {
+    const r = interpretarRiesgo(200, { ...base, datosRiesgo })
+    assert.equal(r.estado, 'ok')
+    return r.estado === 'ok' ? r.riesgo.datosRiesgo : undefined
+  }
+  assert.equal(leer(undefined), null, 'asegura vieja: no se enseña el bloque')
+  assert.equal(leer({ clave: 'otraCosa', datos: {}, faltan: [] }), null)
+  assert.equal(leer({ clave: 'datosVivienda', datos: 'x', faltan: [] }), null)
+  const v = leer({ clave: 'datosVivienda', datos: { cp: '41003', habitaciones: '3', metrosCuadrados: 90, ventanasSeguras: false }, faltan: ['uso', 7], dePoliza: true, tarifica: true })
+  assert.equal(v?.clave, 'datosVivienda')
+  if (v?.clave === 'datosVivienda') {
+    assert.equal(v.datos.cp, '41003')
+    assert.equal(v.datos.habitaciones, null, 'un número como texto es «no se sabe»')
+    assert.equal(v.datos.metrosCuadrados, 90)
+    assert.equal(v.datos.ventanasSeguras, false, 'false es un dato')
+    assert.equal(v.datos.vigilante, null)
+    assert.deepEqual(v.faltan, ['uso'])
+    assert.equal(v.dePoliza, true)
+  }
+  const c = leer({ clave: 'datosCapital', datos: { capital: 0, duracionAnios: null }, faltan: ['capital'], tarifica: true })
+  assert.equal(c?.clave === 'datosCapital' && c.datos.capital, 0, 'un 0 declarado es un dato')
+  const k = leer({ clave: 'datosComercio', datos: { actividad: 'Bar', regimenLocal: 'inquilino', capitales: [{ bien: 'CONTENIDO', importe: 0 }], medidasProteccion: null }, faltan: ['capitales', 4], dePoliza: true, tarifica: false })
+  assert.equal(k?.clave, 'datosComercio')
+  if (k?.clave === 'datosComercio') {
+    assert.equal(k.datos.regimenLocal, 'inquilino')
+    assert.deepEqual(k.datos.capitales, [{ bien: 'CONTENIDO', importe: 0, modalidad: null, descripcion: null }], 'un importe de 0 es un dato')
+    assert.equal(k.datos.medidasProteccion, null, 'sin mirar ≠ vacío')
+    assert.equal(k.datos.metrosCuadrados, null)
+    assert.deepEqual(k.faltan, ['capitales'])
+    assert.equal(k.tarifica, false)
+  }
+  assert.equal(leer({ clave: 'datosComercio', datos: 'x', faltan: [] }), null)
+  const l = leer({ clave: 'datosRiesgoLibre', datos: { descripcion: 'Bar', capital: 5000 }, faltan: [], tarifica: false })
+  assert.equal(l?.clave === 'datosRiesgoLibre' && l.tarifica, false)
+  assert.equal(l?.clave === 'datosRiesgoLibre' && l.datos.notas, null)
+})

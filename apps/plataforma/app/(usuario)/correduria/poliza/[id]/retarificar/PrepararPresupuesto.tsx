@@ -50,7 +50,7 @@ export default function PrepararPresupuesto({
 }) {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [hecho, setHecho] = useState<{ p: PresupuestoPreparado; token: string } | null>(null)
+  const [hecho, setHecho] = useState<{ p: PresupuestoPreparado; token: string | null } | null>(null)
 
   async function preparar() {
     setCargando(true)
@@ -134,12 +134,23 @@ const ROTULO_PAPEL: Record<string, string> = {
   mejor_cubierta: 'la mejor cubierta',
 }
 
-function Preparado({ p, token, origen }: { p: PresupuestoPreparado; token: string; origen?: { polizaId: string } | { clienteId: string; ramo?: string } }) {
+function Preparado({ p, token, origen }: { p: PresupuestoPreparado; token: string | null; origen?: { polizaId: string } | { clienteId: string; ramo?: string } }) {
   const avisos = frasePresupuesto(p)
   return (
     <section style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+      {p.referencia && (
+        <p style={{ margin: '0 0 6px', fontSize: 15 }}>
+          Referencia <strong>{p.referencia}</strong>
+          <span className="muted" style={{ fontSize: 13 }}> · la que das al cliente y a tu gente (el nº de Avant2 no sale)</span>
+        </p>
+      )}
+      {p.reutilizado && (
+        <p className="muted" style={{ margin: '0 0 6px', fontSize: 13 }}>
+          Ya tenías preparado uno vigente con exactamente estas opciones: es ése, no se ha creado otro.
+        </p>
+      )}
       <p style={{ margin: '0 0 8px' }}>
-        <strong>Presupuesto preparado</strong> · {p.opciones.length} recomendadas
+        <strong>{p.reutilizado ? 'Presupuesto ya preparado' : 'Presupuesto preparado'}</strong> · {p.opciones.length} recomendadas
         {p.enLista !== null ? ` + ${p.enLista} más en su lista` : ''} · de {p.preciosTotales} precios
         {p.ocultas ? ` · ${p.ocultas} ocultas` : ''} · caduca el {new Date(p.venceEl).toLocaleDateString('es-ES')}
       </p>

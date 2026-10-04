@@ -48,3 +48,16 @@ test('volcado antiguo: arriba las que aún llegan al preaviso, ninguna se quita'
   assert.match(b, /Tarde0 — .*plazo de baja pasado/)
   assert.match(b, /…y 10 más en \/correduria\/vencimientos\./)
 })
+
+test('sin vencimiento: no se avisa y se dice «vencimiento desconocido» (solo con mensaje que mandar; null no es 0)', () => {
+  const con = { estado: 'ok' as const, oportunidades: [op()], truncado: false, sinVencimiento: 3 }
+  assert.match(bloqueOportunidades(con, [op()]) ?? '', /3 oportunidades abiertas con vencimiento desconocido: no se avisan/)
+  assert.match(bloqueOportunidades({ ...con, sinVencimiento: 1 }, [op()]) ?? '', /1 oportunidad abierta con vencimiento desconocido: no se avisa /)
+  assert.doesNotMatch(bloqueOportunidades({ ...con, sinVencimiento: null }, [op()]) ?? '', /desconocido/)
+  assert.doesNotMatch(bloqueOportunidades({ ...con, sinVencimiento: 0 }, [op()]) ?? '', /desconocido/)
+  assert.equal(bloqueOportunidades(con, []), null, 'sin nada nuevo no se manda un mensaje solo por esto')
+  const r = interpretarOportunidadesAviso(200, { estado: 'ok', oportunidades: [], sinVencimiento: 4 })
+  assert.equal(r.estado === 'ok' && r.sinVencimiento, 4)
+  const v = interpretarOportunidadesAviso(200, { estado: 'ok', oportunidades: [] })
+  assert.equal(v.estado === 'ok' && v.sinVencimiento, null)
+})

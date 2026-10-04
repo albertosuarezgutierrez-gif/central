@@ -22,12 +22,30 @@ import type { DatosEmpresa, DatosPersona } from '@/lib/codeoscopic/persona'
 import { resolverConfig } from '@/lib/codeoscopic/config'
 import { municipiosPorCp, tiposDeVia } from '@/lib/codeoscopic/catalogos'
 import { partirDireccion, tipoViaDeFicha } from '@/lib/codeoscopic/direccion'
+import { anotarCambio } from '@/lib/auditoria'
 import {
+  admiteDatosVehiculo,
+  calcularEdicionRiesgo,
+  claveDatosDeRamo,
+  datosCapitalDeCotizacion,
+  datosVehiculoDeCotizacion,
+  datosVehiculoDeInfoRiesgo,
+  datosViviendaDeCotizacion,
   diferenciasVariante,
   esRolFigura,
+  faltanDatosVehiculo,
+  leerBloqueDeRamo,
+  leerDatosVehiculo,
+  objetoAsegurado,
+  precargaDePoliza,
+  ramoTarificable,
   rolesDelRamo,
+  type CampoVehiculo,
+  type ClaveDatosRiesgo,
+  type DatosVehiculoRiesgo,
   type Diferencia,
   type FigurasVariante,
+  type RamoCapital,
   type RolFigura,
 } from '@central/module-seguros'
 
@@ -93,9 +111,53 @@ export type Riesgo = {
   figuras: FiguraRiesgo[]
   vinculos: Array<{ clienteId: string; nombre: string; tipo: string }>
   variantes: VarianteRiesgo[]
+  /**
+   * Los datos del vehículo (30/09/2026), solo en auto/moto. De `info_riesgo.datosVehiculo`, con
+   * FALLBACK de lectura a las claves antiguas (`matricula`, `vehiculo` texto, `marca`, `modelo`).
+   * `null` = el ramo no es de vehículo. Un campo sin dato es `null`, nunca `''` ni `0`.
+   */
+  datosVehiculo: DatosVehiculoRiesgo | null
+  /** Qué falta para poder pedir precio. `null` = el ramo no es de vehículo. */
+  faltanVehiculo: CampoVehiculo[] | null
+  /**
+   * Los datos del riesgo de CUALQUIER ramo (30/09/2026), con el mismo patrón que el vehículo: qué clave de
+   * `info_riesgo` es (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`), los datos
+   * (`null` = no se sabe, nunca `''`/`0`), los campos que faltan para pedir precio (vacío en los ramos sin
+   * tarifa) y si lo que se ve es la PRECARGA de la póliza de la que nace (`dePoliza`, nunca confirmada).
+   */
+  datosRiesgo: { clave: ClaveDatosRiesgo; datos: Record<string, unknown>; faltan: string[]; dePoliza: boolean; tarifica: boolean }
 }
 
 const nombreDe = (n: string | null, a: string | null) => `${n ?? ''} ${a ?? ''}`.trim() || 'Sin nombre'
+
+type ConsultaSql = { $queryRaw: typeof prisma.$queryRaw }
+
+/**
+ * La precarga del bloque de datos desde la póliza de la que nace la oportunidad (`datos_especificos` + objeto
+ * asegurado): solo para los ramos donde el bien vive ahí (vivienda, comercio y libres) y solo si la oportunidad tiene
+ * póliza. Una lectura que falla es «sin precarga» (`null`), nunca un dato inventado ni un error de pantalla.
+ */
+async function precargaDePolizaDeOportunidad(
+  db: ConsultaSql,
+  correduriaId: string,
+  polizaId: string | null,
+  ramo: string,
+): Promise<Record<string, unknown> | null> {
+  if (!polizaId || !UUID.test(polizaId)) return null
+  const clave = claveDatosDeRamo(ramo)
+  if (clave !== 'datosVivienda' && clave !== 'datosComercio' && clave !== 'datosRiesgoLibre') return null
+  try {
+    const [p] = await db.$queryRaw<Array<{ datos: Record<string, unknown> | null }>>`
+      select datos_especificos as datos from seguros.polizas
+      where id = ${polizaId}::uuid and correduria_id = ${correduriaId}::uuid`
+    if (!p) return null
+    const objeto = objetoAsegurado({ tipo: ramo, datos: p.datos })
+    return precargaDePoliza(ramo, p.datos, objeto)?.valor ?? null
+  } catch (err) {
+    console.error('[oportunidad-riesgo] precarga de la póliza sin leer:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
 
 export async function leerRiesgo(correduriaId: string, oportunidadId: string): Promise<Riesgo | null> {
   if (!UUID.test(oportunidadId)) return null
@@ -185,8 +247,16 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
   variantes.reverse()
 
   const info = op.info_riesgo ?? {}
+  const claveRamo = claveDatosDeRamo(op.tipo)
+  const precarga = info[claveRamo] === undefined ? await precargaDePolizaDeOportunidad(prisma, correduriaId, op.poliza_id, op.tipo) : null
+  const bloque = leerBloqueDeRamo(op.tipo, info, precarga)
   const texto = (k: string) => (typeof info[k] === 'string' && (info[k] as string).trim() !== '' ? (info[k] as string).trim() : null)
-  const vehiculo = texto('vehiculo') ?? ([texto('marca'), texto('modelo')].filter(Boolean).join(' ') || null)
+  const conVehiculo = admiteDatosVehiculo(op.tipo)
+  const datosVehiculo = conVehiculo ? datosVehiculoDeInfoRiesgo(info) : null
+  const propios = conVehiculo ? leerDatosVehiculo(info.datosVehiculo) : null
+  // Lo estructurado manda; la clave `vehiculo` de texto queda como fallback de LECTURA (no se pisa).
+  const deMarcaModelo = [propios?.marca ?? null, propios?.modelo ?? null].filter(Boolean).join(' ')
+  const vehiculo = (deMarcaModelo || null) ?? texto('vehiculo') ?? ([texto('marca'), texto('modelo')].filter(Boolean).join(' ') || null)
 
   const figuras: FiguraRiesgo[] = figs
     .filter((f) => esRolFigura(f.rol))
@@ -222,7 +292,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       ramo: op.tipo,
       estado: op.estado,
       polizaId: op.poliza_id,
-      matricula: texto('matricula'),
+      matricula: propios?.matricula ?? texto('matricula'),
       vehiculo,
       vence: op.fecha_fin_vigencia ? op.fecha_fin_vigencia.toISOString().slice(0, 10) : null,
       aseguradora: op.aseguradora,
@@ -233,6 +303,9 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     figuras,
     vinculos: vinculos.map((v) => ({ clienteId: v.cliente_id, nombre: nombreDe(v.nombre, v.apellidos), tipo: v.tipo })),
     variantes,
+    datosVehiculo,
+    faltanVehiculo: datosVehiculo ? faltanDatosVehiculo(datosVehiculo) : null,
+    datosRiesgo: { clave: bloque.clave, datos: bloque.datos, faltan: bloque.faltan, dePoliza: bloque.dePoliza, tarifica: ramoTarificable(op.tipo) },
   }
 }
 
@@ -245,7 +318,17 @@ export type ResultadoFigura = { ok: true } | { ok: false; status: number; motivo
  */
 export async function asignarFigura(
   correduriaId: string,
-  e: { oportunidadId: string; rol: unknown; clienteId: string; actor: string },
+  e: {
+    oportunidadId: string
+    rol: unknown
+    clienteId: string
+    actor: string
+    /**
+     * Solo si el rol está LIBRE (03/10/2026, la subida de una póliza): `on conflict do nothing`, así
+     * una asignación a mano o simultánea no se pisa nunca. Ocupado → 409 sin tocar nada.
+     */
+    soloSiLibre?: boolean
+  },
 ): Promise<ResultadoFigura> {
   if (!UUID.test(e.oportunidadId) || !UUID.test(e.clienteId)) return { ok: false, status: 400, motivo: 'ids no válidos' }
   if (!esRolFigura(e.rol)) return { ok: false, status: 422, motivo: 'rol desconocido' }
@@ -264,10 +347,18 @@ export async function asignarFigura(
           and r.cliente_b_id = ${e.clienteId}::uuid and r.tipo_relacion <> 'Sin vínculo'`
       if (!v || v.n === 0) return { ok: false as const, status: 422, motivo: 'esa persona no está vinculada al cliente: añádela como familiar primero' }
     }
-    await tx.$executeRaw`
-      insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
-      values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${rol}, ${e.clienteId}::uuid, ${e.actor})
-      on conflict (oportunidad_id, rol) do update set cliente_id = excluded.cliente_id, actor = excluded.actor, creado_at = now()`
+    if (e.soloSiLibre) {
+      const n = await tx.$executeRaw`
+        insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
+        values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${rol}, ${e.clienteId}::uuid, ${e.actor})
+        on conflict (oportunidad_id, rol) do nothing`
+      if (n === 0) return { ok: false as const, status: 409, motivo: 'ese rol ya lo tiene otra persona' }
+    } else {
+      await tx.$executeRaw`
+        insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
+        values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${rol}, ${e.clienteId}::uuid, ${e.actor})
+        on conflict (oportunidad_id, rol) do update set cliente_id = excluded.cliente_id, actor = excluded.actor, creado_at = now()`
+    }
     await tx.$executeRaw`
       insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
       values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, 'figura_asignada',
@@ -382,14 +473,16 @@ export async function nuevaPersonaEnRiesgo(
  */
 export async function validarVariante(
   correduriaId: string,
-  e: { oportunidadId: string; figuras: FigurasVariante | null },
+  e: { oportunidadId: string; figuras: FigurasVariante | null; ramo?: string },
 ): Promise<{ ok: true } | { ok: false; motivo: string }> {
   if (!UUID.test(e.oportunidadId)) return { ok: false, motivo: 'oportunidad no válida' }
   const [op] = await prisma.$queryRaw<Array<{ id: string }>>`
     select id::text as id from seguros.oportunidades where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
-      and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')`
-  // Un riesgo ganado o perdido no se sigue: pedir precio ahí es pagar 0,50€ por nada.
-  if (!op) return { ok: false, motivo: 'la oportunidad no es de esta correduría o ya está cerrada' }
+      and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      and (${e.ramo ?? null}::text is null or tipo::text = ${e.ramo ?? null}::text)`
+  // Un riesgo ganado o perdido no se sigue: pedir precio ahí es pagar 0,50€ por nada. Y un presupuesto de hogar
+  // no se cuelga de una oportunidad de auto: el ramo de la variante es el de la oportunidad.
+  if (!op) return { ok: false, motivo: 'la oportunidad no es de esta correduría, ya está cerrada o es de otro ramo' }
   const ids = Object.values(e.figuras ?? {}).filter((x): x is string => typeof x === 'string')
   if (ids.length > 0) {
     const [n] = await prisma.$queryRaw<Array<{ n: number }>>`
@@ -412,7 +505,7 @@ type EmpresaFigura = Partial<DatosEmpresa> & { tipo: 'juridica'; direccion?: str
 export async function personaDeFicha(
   correduriaId: string,
   clienteId: string,
-  ramo: 'auto' | 'moto' = 'auto',
+  ramo: string = 'auto',
 ): Promise<PersonaFigura | EmpresaFigura | null> {
   const o = await clienteOrigenDe(correduriaId, clienteId)
   if (!o) return null
@@ -482,19 +575,20 @@ export type VarianteEntrada = {
 }
 
 /**
- * Prepara una cotización que es VARIANTE de un riesgo (auto-nuevo / moto-nuevo con `oportunidadId`).
- * Gratis. Si no viene oportunidad, devuelve el cuerpo tal cual: el camino de siempre.
+ * Prepara una cotización que es VARIANTE de un riesgo (auto-, moto-, hogar-, vida-, salud- o decesos-nuevo con
+ * `oportunidadId`; 30/09/2026: los cuatro últimos, con solo el tomador como figura). Gratis. Si no viene oportunidad, devuelve el cuerpo tal cual: el camino de siempre.
  * Las figuras distintas del tomador se arman desde sus fichas, en auto y en moto (entrega 2, 29/09/2026:
  * en moto, propietario y conductor habitual; el carné del conductor es el de moto de su ficha).
  */
 export async function prepararVariante(
   correduriaId: string,
-  e: { tomadorId: string; ramo: 'auto' | 'moto'; cuerpo: Record<string, unknown>; correcciones: Record<string, unknown> | undefined },
+  e: { tomadorId: string; ramo: 'auto' | 'moto' | 'hogar' | 'vida' | 'salud' | 'decesos'; cuerpo: Record<string, unknown>; correcciones: Record<string, unknown> | undefined },
 ): Promise<{ ok: true; v: VarianteEntrada } | { ok: false; motivo: string }> {
   const oportunidadId = typeof e.cuerpo.oportunidadId === 'string' ? e.cuerpo.oportunidadId.trim() : ''
   if (oportunidadId === '') return { ok: true, v: { contexto: null, correcciones: e.correcciones } }
-  const figuras = limpiarFigurasEntrada(e.cuerpo.figuras, e.tomadorId)
-  const val = await validarVariante(correduriaId, { oportunidadId, figuras })
+  // Fuera de auto/moto el riesgo solo tiene tomador (`rolesDelRamo`): un rol de más en el cuerpo no se cuela.
+  const figuras = limpiarFigurasEntrada(e.cuerpo.figuras, e.tomadorId, !admiteDatosVehiculo(e.ramo))
+  const val = await validarVariante(correduriaId, { oportunidadId, figuras, ramo: e.ramo })
   if (!val.ok) return val
   const nota = typeof e.cuerpo.nota === 'string' && e.cuerpo.nota.trim() !== '' ? e.cuerpo.nota.trim().slice(0, 200) : null
 
@@ -588,11 +682,11 @@ export function faltaDireccionEmpresa(e: Pick<DatosEmpresa, 'municipioResidencia
 }
 
 /** Solo roles conocidos y uuids; el tomador siempre es quien cotiza (el cliente de la ruta). */
-function limpiarFigurasEntrada(v: unknown, tomadorId: string): FigurasVariante | null {
+function limpiarFigurasEntrada(v: unknown, tomadorId: string, soloTomador: boolean): FigurasVariante | null {
   const out: FigurasVariante = { tomador: tomadorId }
   if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
     for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
-      if (!esRolFigura(k) || k === 'tomador') continue
+      if (!esRolFigura(k) || k === 'tomador' || soloTomador) continue
       if (typeof x === 'string' && UUID.test(x)) out[k] = x
     }
   }
@@ -684,7 +778,13 @@ export async function abrirRiesgoDePoliza(
 
     const d = pol.datos ?? {}
     const txt = (k: string) => (typeof d[k] === 'string' && (d[k] as string).trim() !== '' ? (d[k] as string).trim() : null)
-    const info = { origen: 'poliza:riesgo', polizaId: e.polizaId, matricula: txt('matricula'), marca: txt('marca'), modelo: txt('modelo'), aseguradora: pol.aseguradora }
+    // Lo que la póliza ya sabe del bien (vivienda, riesgo libre) se precarga en la clave NUEVA de su ramo, sin
+    // confirmar y sin inventar: lo que no hay queda `null`. Auto/moto siguen con las tres claves sueltas de siempre.
+    const pre = precargaDePoliza(pol.tipo, d, objetoAsegurado({ tipo: pol.tipo, datos: d }))
+    const info: Record<string, unknown> = {
+      origen: 'poliza:riesgo', polizaId: e.polizaId, matricula: txt('matricula'), marca: txt('marca'), modelo: txt('modelo'), aseguradora: pol.aseguradora,
+      ...(pre ? { [pre.clave]: { ...pre.valor, confirmadoAt: null } } : {}),
+    }
     const [o] = await tx.$queryRaw<Array<{ id: string }>>`
       insert into seguros.oportunidades (correduria_id, cliente_id, tipo, fuente, estado, info_riesgo, poliza_id)
       values (${correduriaId}::uuid, ${pol.cliente_id}::uuid, cast(${pol.tipo} as seguros.tipo_seguro), 'renovacion', 'en_negociacion',
@@ -731,4 +831,103 @@ export async function validarRiesgoDePoliza(
     where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and poliza_id = ${polizaId}::uuid
       and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')`
   return o ? { ok: true } : { ok: false, motivo: 'ese riesgo no es de esta póliza o ya está cerrado' }
+}
+
+
+// ─── Datos del riesgo por ramo (30/09/2026) ─────────────────────────────────
+
+export type ResultadoDatosRiesgo =
+  | { ok: true; clave: ClaveDatosRiesgo; datos: Record<string, unknown>; faltan: string[]; cambios: number }
+  | { ok: false; status: number; motivo: string; errores?: Array<{ campo: string; motivo: string }> }
+
+/** Prefijo de la fila de historial y de la auditoría: `datos_vehiculo`, `datos_vivienda`… */
+const PREFIJO_HISTORIAL: Record<ClaveDatosRiesgo, string> = {
+  datosVehiculo: 'datos_vehiculo',
+  datosVivienda: 'datos_vivienda',
+  datosCapital: 'datos_capital',
+  datosComercio: 'datos_comercio',
+  datosRiesgoLibre: 'datos_riesgo_libre',
+}
+
+/**
+ * Edita (y/o confirma) los datos del riesgo de una oportunidad, de CUALQUIER ramo. `clave` dice qué bloque
+ * (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`) y TIENE que ser el del ramo de la
+ * oportunidad (400 si no). Se guarda bajo esa clave NUEVA de `info_riesgo`: el resto de claves se conservan tal
+ * cual (la `vehiculo` de texto, `presupuestoCodeoscopic`…). Con `confirmar` se sella `confirmadoAt`; cualquier
+ * edición sin confirmar lo borra. Fila en `oportunidad_historial` con qué cambió; la de `auditoria` la pone
+ * `auditado()` en la ruta. Lectura + escritura en UNA transacción con la fila bloqueada; toda la lógica (validar,
+ * aplicar, sello, fusión) es `calcularEdicionRiesgo` de module-seguros, con test.
+ */
+export async function editarDatosRiesgo(
+  correduriaId: string,
+  e: { oportunidadId: string; clave: ClaveDatosRiesgo; datos: unknown; confirmar: boolean; actor: string },
+): Promise<ResultadoDatosRiesgo> {
+  if (!UUID.test(e.oportunidadId)) return { ok: false, status: 400, motivo: 'id no válido' }
+  const ahora = new Date().toISOString()
+  return prisma.$transaction(async (tx) => {
+    const [op] = await tx.$queryRaw<Array<{ tipo: string; info_riesgo: Record<string, unknown> | null; poliza_id: string | null }>>`
+      select o.tipo::text as tipo, o.info_riesgo, o.poliza_id::text as poliza_id from seguros.oportunidades o
+      where o.id = ${e.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid
+      for update`
+    if (!op) return { ok: false as const, status: 404, motivo: 'la oportunidad no es de esta correduría' }
+    // Se parte de lo ESTRUCTURADO que hay y, sin ello, de la precarga de la póliza (para no perder lo que se veía).
+    const precarga = op.info_riesgo?.[e.clave] === undefined ? await precargaDePolizaDeOportunidad(tx, correduriaId, op.poliza_id, op.tipo) : null
+    const r = calcularEdicionRiesgo({ ramo: op.tipo, clave: e.clave, info: op.info_riesgo, parcial: e.datos ?? {}, confirmar: e.confirmar, ahora, precarga })
+    if (!r.ok) return { ok: false as const, status: r.status, motivo: r.motivo, errores: r.errores }
+    if (!r.hayQueEscribir) return { ok: true as const, clave: r.clave, datos: r.datos, faltan: r.faltan, cambios: 0 }
+    await tx.$executeRaw`
+      update seguros.oportunidades set info_riesgo = ${JSON.stringify(r.infoNueva)}::jsonb
+      where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+    const pref = PREFIJO_HISTORIAL[r.clave]
+    await tx.$executeRaw`
+      insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
+      values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${e.confirmar ? `${pref}_confirmados` : `${pref}_editados`},
+              ${JSON.stringify({ cambios: r.cambios, confirmado: r.datos.confirmadoAt !== null })}::jsonb, ${e.actor})`
+    for (const c of r.cambios) anotarCambio({ entidad: 'oportunidad', id: e.oportunidadId, campo: `${pref}.${c.campo}` })
+    if (e.confirmar) anotarCambio({ entidad: 'oportunidad', id: e.oportunidadId, campo: `${pref}.confirmado` })
+    return { ok: true as const, clave: r.clave, datos: r.datos, faltan: r.faltan, cambios: r.cambios.length }
+  })
+}
+
+/**
+ * Write-back de una cotización con `?oportunidad=`: anota en el riesgo lo que se USÓ para pedir precio (sin sellar
+ * `confirmadoAt`; si algo cambió respecto a lo guardado, el sello se borra). Solo claves con valor: lo que la
+ * cotización no trae no borra lo que ya había.
+ *
+ * 🚨 Se llama DESPUÉS de guardar la tarificación y NUNCA lanza: la cotización ya está pagada (0,50€, no
+ * idempotente, regla 20) y un fallo aquí no puede romperla ni hacer que se repita.
+ */
+async function anotarBloqueDeCotizacion(
+  correduriaId: string,
+  e: { oportunidadId: string; clave: ClaveDatosRiesgo; valor: Record<string, unknown>; actor: string },
+): Promise<void> {
+  try {
+    if (Object.keys(e.valor).length === 0) return
+    const r = await editarDatosRiesgo(correduriaId, { oportunidadId: e.oportunidadId, clave: e.clave, datos: e.valor, confirmar: false, actor: e.actor })
+    if (!r.ok) console.error(`[oportunidad-riesgo] write-back de ${e.clave} no guardado:`, r.status, r.motivo)
+  } catch (err) {
+    console.error(`[oportunidad-riesgo] write-back de ${e.clave} falló (la cotización ya está guardada):`, err instanceof Error ? err.message : err)
+  }
+}
+
+export async function anotarVehiculoDeCotizacion(
+  correduriaId: string,
+  e: { oportunidadId: string; cuerpo: unknown; actor: string },
+): Promise<void> {
+  await anotarBloqueDeCotizacion(correduriaId, { oportunidadId: e.oportunidadId, clave: 'datosVehiculo', valor: datosVehiculoDeCotizacion(e.cuerpo), actor: e.actor })
+}
+
+/** Hogar: `catastro` es lo que la ruta acaba de leer del Catastro (m², año, CP), que rellena lo que no se tecleó. */
+export async function anotarViviendaDeCotizacion(
+  correduriaId: string,
+  e: { oportunidadId: string; cuerpo: unknown; catastro?: { metrosCuadrados?: number | null; anioConstruccion?: number | null; codigoPostal?: string | null } | null; actor: string },
+): Promise<void> {
+  await anotarBloqueDeCotizacion(correduriaId, { oportunidadId: e.oportunidadId, clave: 'datosVivienda', valor: datosViviendaDeCotizacion(e.cuerpo, e.catastro), actor: e.actor })
+}
+
+export async function anotarCapitalDeCotizacion(
+  correduriaId: string,
+  e: { oportunidadId: string; ramo: RamoCapital; cuerpo: unknown; actor: string },
+): Promise<void> {
+  await anotarBloqueDeCotizacion(correduriaId, { oportunidadId: e.oportunidadId, clave: 'datosCapital', valor: datosCapitalDeCotizacion(e.cuerpo, e.ramo), actor: e.actor })
 }

@@ -20,10 +20,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
+import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
-import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
@@ -53,6 +54,12 @@ import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 import { FallosTarificacion } from '../../../FallosTarificacion'
+import { AvisoBonusSupuesto, PanelSeguroImputado, eleccionParaCotizar } from '../../../SeguroAnteriorImputado'
+import { describirCandidata, type SeguroAnteriorImputado } from '@/lib/correduria/seguro-anterior-imputado'
+import { decidirFamiliaAllianz } from '@central/module-seguros'
+import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
+import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
+import PackVehiculos from '../PackVehiculos'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -66,6 +73,7 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
 }
 
@@ -154,6 +162,8 @@ type Resultado =
       supuestos: Supuesto[] | null
       /** Qué pasó con la copia guardada: su `cotizacionId` es de lo que sale el presupuesto. */
       guardado?: unknown
+      /** Seguro anterior declarado y si el bonus va SUPUESTO (03/10/2026). `null`/ausente = no consta. */
+      seguroAnterior?: SeguroAnteriorImputado | null
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
@@ -174,9 +184,25 @@ export default function AutoNuevo({
   simulacion,
   companias,
   variante = null,
+  datosRiesgo = null,
   anterior = null,
   anteriorAmbiguo = null,
+  seguroImputado = null,
+  otroVehiculo = null,
+  carteraAllianz = null,
 }: {
+  /** Pack coche + moto (03/10/2026): la otra oportunidad del cliente. `null` = no se han podido leer sus oportunidades. */
+  otroVehiculo?: OtroVehiculo | null
+  /** `true` = tiene una póliza en vigor en Allianz (cartera); `null` = no se pudo mirar. Solo cuenta con el pack encendido. */
+  carteraAllianz?: boolean | null
+  /** Vehículo NUEVO (03/10/2026): la póliza de motor del cliente que asegura propone como seguro anterior. */
+  seguroImputado?: SeguroAnteriorImputado | null
+  /**
+   * Los datos del vehículo del RIESGO (30/09/2026, `info_riesgo.datosVehiculo`): se PRECARGAN aquí y lo que
+   * se use al pedir precio se anota de vuelta. Prioridad: variante retomada (`?tarificacion=`) > riesgo >
+   * borrador local. `null` = sin riesgo o sin datos: pantalla como siempre.
+   */
+  datosRiesgo?: DatosVehiculoRiesgo | null
   /** Variante de un riesgo (29/09/2026): oportunidad, figuras en otras fichas y qué les falta. */
   variante?: VarianteNueva | null
   /** El seguro que tiene hoy, leído de su póliza y guardado en la oportunidad (29/09/2026). */
@@ -234,7 +260,7 @@ export default function AutoNuevo({
   }, [])
 
   const [matricula, setMatricula] = useState(matriculaInicial)
-  const [matriculacion, setMatriculacion] = useState('')
+  const [matriculacion, setMatriculacion] = useState(datosRiesgo?.fechaMatriculacion ?? '')
   // true = la fecha la ha puesto la ESTIMACIÓN por matrícula, no el corredor:
   // se pinta como tal y se recalcula si cambia la matrícula. En cuanto el
   // corredor toca la fecha, pasa a ser suya.
@@ -244,10 +270,12 @@ export default function AutoNuevo({
   const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
   // Por defecto en GARAJE, nunca en la calle (Alberto, 29/09/2026; sustituye a «vía pública» del
   // 25/09): es un dato de EMISIÓN, no de precio — viaja como supuesto y se confirma al emitir.
-  const [garaje, setGaraje] = useState(() => garajePorDefecto(garajes)?.id ?? '')
+  // Del riesgo, si trae uno que siga en el catálogo; si no, el defecto (que no es una elección).
+  const garajeDelRiesgo = datosRiesgo?.garaje && garajes.some((g) => g.id === datosRiesgo.garaje) ? datosRiesgo.garaje : null
+  const [garaje, setGaraje] = useState(() => garajeDelRiesgo ?? garajePorDefecto(garajes)?.id ?? '')
   // El garaje por defecto no es una elección: el vehículo guardado de una variante puede traer
   // su garaje, y sin esto retomar caía en silencio al defecto (29/09/2026).
-  const garajeElegido = useRef(false)
+  const garajeElegido = useRef(garajeDelRiesgo !== null)
 
   // ── Los tres datos del coche que hasta hoy viajaban SUPUESTOS ─────────────
   // `kmAnuales`, `fechaCompra` y `remolqueLigero` ya iban en la petición al
@@ -259,11 +287,11 @@ export default function AutoNuevo({
   // con el supuesto convertiría un «no lo sé» en un dato afirmado.
   // Por defecto 10.000 km/año y compra = matriculación (Alberto, 25/09/2026):
   // se ven en pantalla y el corredor los cambia si el cliente dice otra cosa.
-  const [kmAnuales, setKmAnuales] = useState(String(KM_ANUALES_POR_DEFECTO))
+  const [kmAnuales, setKmAnuales] = useState(datosRiesgo?.kmAnuales != null ? String(datosRiesgo.kmAnuales) : String(KM_ANUALES_POR_DEFECTO))
   // Vacío = sigue a la matriculación (se pinta esa fecha y no se manda nada:
   // el precalificador ya usa la de matriculación como compra).
-  const [fechaCompra, setFechaCompra] = useState('')
-  const [remolqueLigero, setRemolqueLigero] = useState(false)
+  const [fechaCompra, setFechaCompra] = useState(datosRiesgo?.fechaCompra ?? '')
+  const [remolqueLigero, setRemolqueLigero] = useState(datosRiesgo?.remolqueLigero === true)
   // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
   const limitesEfecto = limitesFechaEfecto()
@@ -336,6 +364,11 @@ export default function AutoNuevo({
   const [aniosSinSiniestros, setAniosSinSiniestros] = useState(String(historial.aniosSinSiniestros))
   const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5))
   const [matriculaAnterior, setMatriculaAnterior] = useState('')
+  // Vehículo NUEVO (03/10/2026): qué póliza suya se declara como seguro anterior si no se teclea a mano.
+  // '' = la que proponga asegura al cotizar.
+  // Pack coche + moto: apagado por defecto; sin tocarlo, la pantalla es la de siempre.
+  const [pack, setPack] = useState({ activo: false, tarificado: false })
+  const [eleccionAnterior, setEleccionAnterior] = useState(() => seguroImputado?.elegida?.id ?? '')
 
   // ── Borrador local: lo tecleado NO se pierde al salir de la pantalla ───────
   //
@@ -348,24 +381,77 @@ export default function AutoNuevo({
   // Vive en el navegador, no en `seguros.*`: un borrador no es una cotización.
   const claveBorrador = claveBorradorAutoNuevo(clienteId, variante?.oportunidadId)
 
+  // ── Precarga desde el riesgo (30/09/2026) ───────────────────────────────────
+  // Prioridad: variante RETOMADA (`?tarificacion=`, lo pagado manda) > riesgo > borrador local.
+  // El vehículo del riesgo solo se precarga entero (versión + ids del catálogo): con la versión sola no se
+  // puede repoblar el selector, y media cascada confunde más que ayuda.
+  const retomada = (variante?.tarificacionId ?? null) !== null
+  const riesgoManda =
+    !retomada && !!(datosRiesgo?.codigoVehiculo && datosRiesgo.marcaId && datosRiesgo.modeloId && datosRiesgo.motorId)
+
+  /** Rehace la cascada marca → modelo+motor → versión (gratis) para que `codigoVehiculo` sea uno que el catálogo reconoce. */
+  async function poblarCascada(v: { marcaId: string; modeloId?: string; motorId?: string; codigoVehiculo?: string }, vivo: () => boolean) {
+    try {
+      setCargando('modelos')
+      const [ms, mt] = await Promise.all([
+        catalogo(`tipo=modelos&marcaId=${encodeURIComponent(v.marcaId)}`),
+        catalogo('tipo=motores'),
+      ])
+      if (!vivo()) return
+      setMarcaId(v.marcaId)
+      setModelos(ms)
+      setMotores(mt)
+      if (v.modeloId && ms.some((m) => m.id === v.modeloId)) setModeloId(v.modeloId)
+      if (v.motorId && mt.some((m) => m.id === v.motorId)) setMotorId(v.motorId)
+      if (v.modeloId && v.motorId && ms.some((m) => m.id === v.modeloId)) {
+        setCargando('versiones')
+        const vs = await catalogo(
+          `tipo=versiones&marcaId=${encodeURIComponent(v.marcaId)}` +
+            `&modeloId=${encodeURIComponent(v.modeloId)}&motor=${encodeURIComponent(v.motorId)}`,
+        )
+        if (!vivo()) return
+        setVersiones(vs)
+        if (v.codigoVehiculo && vs.some((x) => x.id === v.codigoVehiculo)) setCodigoVehiculo(v.codigoVehiculo)
+      }
+    } catch {
+      // Restaurar el coche es una comodidad: si el catálogo falla, se elige a mano. NO se pinta el error de
+      // `fallo`, que está reservado a lo que el corredor acaba de pedir.
+    } finally {
+      if (vivo()) setCargando(null)
+    }
+  }
+
+  useEffect(() => {
+    if (!riesgoManda || !datosRiesgo) return
+    let vivo = true
+    void poblarCascada(
+      { marcaId: datosRiesgo.marcaId!, modeloId: datosRiesgo.modeloId!, motorId: datosRiesgo.motorId!, codigoVehiculo: datosRiesgo.codigoVehiculo! },
+      () => vivo,
+    )
+    return () => { vivo = false }
+    // Una vez, al abrir la pantalla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     const b = leerBorrador<BorradorAutoNuevo>(claveBorrador)
     if (!b) return
     let vivo = true
 
     // Lo que no depende de ningún catálogo se restaura tal cual.
-    if (b.matricula) setMatricula(b.matricula)
-    if (b.matriculacion) setMatriculacion(b.matriculacion)
-    if (b.matriculacionEstimada) setMatriculacionEstimada(true)
-    if (b.kmAnuales) setKmAnuales(b.kmAnuales)
-    if (b.fechaCompra) setFechaCompra(b.fechaCompra)
-    if (b.remolqueLigero) setRemolqueLigero(true)
+    // Lo que el RIESGO ya trae manda sobre el borrador (30/09/2026).
+    if (b.matricula && !datosRiesgo?.matricula) setMatricula(b.matricula)
+    if (b.matriculacion && !datosRiesgo?.fechaMatriculacion) setMatriculacion(b.matriculacion)
+    if (b.matriculacionEstimada && !datosRiesgo?.fechaMatriculacion) setMatriculacionEstimada(true)
+    if (b.kmAnuales && datosRiesgo?.kmAnuales == null) setKmAnuales(b.kmAnuales)
+    if (b.fechaCompra && !datosRiesgo?.fechaCompra) setFechaCompra(b.fechaCompra)
+    if (b.remolqueLigero && datosRiesgo?.remolqueLigero == null) setRemolqueLigero(true)
     if (b.correcciones) setCorrecciones(b.correcciones)
 
     // Lo que SÍ sale de un catálogo se restaura solo si sigue existiendo en
     // él: un id que ya no está dejaría un desplegable enseñando un valor que
     // el vendor rechazaría, que es peor que el hueco.
-    if (b.garaje && garajes.some((g) => g.id === b.garaje)) {
+    if (b.garaje && !garajeDelRiesgo && garajes.some((g) => g.id === b.garaje)) {
       garajeElegido.current = true
       setGaraje(b.garaje)
     }
@@ -401,40 +487,8 @@ export default function AutoNuevo({
     // es una llamada al catálogo, gratis. Se rehace entera para que el
     // desplegable de versión llegue poblado y `codigoVehiculo` siga siendo un
     // código que el catálogo reconoce, no una cadena suelta del borrador.
-    if (b.marcaId) {
-      void (async () => {
-        try {
-          setCargando('modelos')
-          const [ms, mt] = await Promise.all([
-            catalogo(`tipo=modelos&marcaId=${encodeURIComponent(b.marcaId!)}`),
-            catalogo('tipo=motores'),
-          ])
-          if (!vivo) return
-          setMarcaId(b.marcaId!)
-          setModelos(ms)
-          setMotores(mt)
-          if (b.modeloId && ms.some((m) => m.id === b.modeloId)) setModeloId(b.modeloId)
-          if (b.motorId && mt.some((m) => m.id === b.motorId)) setMotorId(b.motorId)
-          if (b.modeloId && b.motorId && ms.some((m) => m.id === b.modeloId)) {
-            setCargando('versiones')
-            const vs = await catalogo(
-              `tipo=versiones&marcaId=${encodeURIComponent(b.marcaId!)}` +
-                `&modeloId=${encodeURIComponent(b.modeloId)}&motor=${encodeURIComponent(b.motorId)}`,
-            )
-            if (!vivo) return
-            setVersiones(vs)
-            if (b.codigoVehiculo && vs.some((v) => v.id === b.codigoVehiculo)) {
-              setCodigoVehiculo(b.codigoVehiculo)
-            }
-          }
-        } catch {
-          // Restaurar el coche es una comodidad: si el catálogo falla, se
-          // elige a mano. NO se pinta el error de `fallo`, que está reservado
-          // a lo que el corredor acaba de pedir.
-        } finally {
-          if (vivo) setCargando(null)
-        }
-      })()
+    if (b.marcaId && !riesgoManda) {
+      void poblarCascada({ marcaId: b.marcaId, modeloId: b.modeloId, motorId: b.motorId, codigoVehiculo: b.codigoVehiculo }, () => vivo)
     }
 
     return () => {
@@ -524,20 +578,23 @@ export default function AutoNuevo({
         if (!r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada)
         const v = r.guardada.vehiculo
         if (!v) return
-        setPrevio(v)
-        setUsarPrevio(true)
-        setCodigoVehiculo((c) => c || v.codigoVehiculo)
+        // Con el vehículo del riesgo ya cargado (y sin variante retomada) la última tarificación no lo pisa.
+        if (!riesgoManda) {
+          setPrevio(v)
+          setUsarPrevio(true)
+          setCodigoVehiculo((c) => (retomada ? v.codigoVehiculo : c || v.codigoVehiculo))
+        }
         if (v.fechaMatriculacion) {
-          setMatriculacion((f) => f || v.fechaMatriculacion!)
+          setMatriculacion((f) => (retomada ? v.fechaMatriculacion! : f || v.fechaMatriculacion!))
           setMatriculacionEstimada(false)
         }
-        if (v.matricula) setMatricula((m) => m || v.matricula!)
+        if (v.matricula) setMatricula((m) => (retomada ? v.matricula! : m || v.matricula!))
         // Los km solo si se DECLARARON (la media supuesta no es un dato del cliente) y el corredor
         // no ha tecleado otra cifra.
         if (v.kmAnuales !== null && v.kmAnuales !== KM_ANUALES_SUPUESTOS) {
-          setKmAnuales((k) => (k === String(KM_ANUALES_POR_DEFECTO) ? String(v.kmAnuales) : k))
+          setKmAnuales((k) => (retomada || k === String(KM_ANUALES_POR_DEFECTO) ? String(v.kmAnuales) : k))
         }
-        if (v.garaje && !garajeElegido.current && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
+        if (v.garaje && (retomada || !garajeElegido.current) && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
       })
       .catch(() => {})
     return () => { vivo = false }
@@ -625,7 +682,9 @@ export default function AutoNuevo({
   // Con un conductor habitual en otra ficha, el «falta conductor» de la precalificación ya está cubierto.
   const faltanTomador = (faltanInicial ?? []).filter((f) => !(f.campo === 'conductor' && (figs.conductor_habitual || conductorDistintoEf)))
   const faltaMunicipio = !municipioId
-  const faltaMatricula = !matricula.trim()
+  // Vehículo NUEVO (03/10/2026): la matrícula ya no es obligatoria — un vehículo recién comprado se tarifica
+  // antes de matricularse con la versión y la fecha de matriculación PREVISTA (≤ 90 días). Lo valida asegura.
+  const faltaMatricula = false
   const faltaMatriculacion = !matriculacion
   const estimacion = fechaMatriculacionEstimada(matricula, hoyLocal())
 
@@ -761,9 +820,14 @@ export default function AutoNuevo({
       correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
       if (siniestrosUltimos5.trim() !== '') correccionesFinal.siniestrosUltimos5 = Number(siniestrosUltimos5)
+      // De dónde salen los años (03/10/2026, criterio conservador): solo cuentan como DATO si no pasan de
+      // lo que acredita su póliza leída — la MISMA regla que la imputación automática. Lo precargado al
+      // máximo o tecleado por encima va SUPUESTO y la emisión pedirá verificarlo.
+      Object.assign(correccionesFinal, origenesHistorialManual({ seguro: sa, aniosAsegurado: Number(aniosAsegurado), aniosSinSiniestros: Number(aniosSinSiniestros), hoy: limitesFechaEfecto().min }))
     }
     const r = await pedirCotizacionAuto({
       clienteId,
+      ...(tieneSeguroActual ? {} : eleccionParaCotizar(seguroImputado, eleccionAnterior)),
       variante: variante
         ? { oportunidadId: variante.oportunidadId, figuras: figs as Record<string, string>, nota }
         : null,
@@ -775,6 +839,23 @@ export default function AutoNuevo({
         matricula: matricula.trim().toUpperCase(),
         fechaMatriculacion: matriculacion,
         garajeEsSupuesto: true,
+        // Lo que se ha usado, para anotarlo en el riesgo (`info_riesgo.datosVehiculo`): asegura ignora esta
+        // clave al cotizar. Km y garaje solo si son un dato declarado (no el supuesto de la pantalla), y sin
+        // nombres ni ids si el coche viene de una variante guardada (la cascada de aquí no lo describe).
+        ...(variante
+          ? {
+              vehiculoRiesgo: {
+                marca: usarPrevio && previo ? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
+                modelo: usarPrevio && previo ? null : modelos.find((m) => m.id === modeloId)?.nombre ?? null,
+                version: usarPrevio && previo ? null : versiones.find((x) => x.id === codigoVehiculo)?.nombre ?? null,
+                marcaId: usarPrevio && previo ? null : marcaId || null,
+                modeloId: usarPrevio && previo ? null : modeloId || null,
+                motorId: usarPrevio && previo ? null : motorId || null,
+                kmAnuales: kmLeidos !== null && (datosRiesgo?.kmAnuales != null || kmAnuales !== String(KM_ANUALES_POR_DEFECTO)) ? kmLeidos : null,
+                garaje: garajeElegido.current ? garaje : null,
+              },
+            }
+          : {}),
       },
       correcciones: correccionesFinal,
     })
@@ -812,6 +893,7 @@ export default function AutoNuevo({
           fallos: r.fallos,
           supuestos: r.supuestos,
           guardado: r.guardado,
+          seguroAnterior: r.seguroAnterior ?? null,
         })
         return
       default: {
@@ -896,7 +978,7 @@ export default function AutoNuevo({
             />
           </Campo>
           </>)}
-          <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
+          <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="La teclea el corredor. Si el vehículo aún no está matriculado, déjala vacía y pon la fecha de matriculación prevista (máx. 90 días); con seguro anterior hará falta la matrícula de esa póliza.">
             <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
           </Campo>
           <Campo
@@ -1201,6 +1283,9 @@ export default function AutoNuevo({
             Tiene {anteriorAmbiguo} oportunidades de auto abiertas con su póliza leída: tarifica desde la oportunidad de ese coche para precargarla.
           </p>
         )}
+        {!tieneSeguroActual && seguroImputado && (
+          <PanelSeguroImputado s={seguroImputado} valor={eleccionAnterior} onCambio={setEleccionAnterior} />
+        )}
 
         {tieneSeguroActual && (
           <>
@@ -1288,6 +1373,19 @@ export default function AutoNuevo({
         )}
       </div>
 
+      <PackVehiculos
+        clienteId={clienteId}
+        ramoActual="auto"
+        otro={otroVehiculo}
+        estadoCivilId={estadoCivilId}
+        municipioId={municipioId}
+        fechaEfecto={fechaEfecto}
+        preciosActuales={resultado.estado === 'ok' && !resultado.simulado ? resultado.precios : null}
+        puedePedir={simulacion || consumoPermite}
+        llamadasHechas={resultado.estado === 'ok' && !resultado.simulado ? 1 : 0}
+        onPack={setPack}
+      />
+
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
@@ -1335,7 +1433,18 @@ export default function AutoNuevo({
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} clienteId={clienteId} />}
+        {resultado.estado === 'ok' && (
+          <Precios
+            r={resultado}
+            simulacion={simulacion}
+            clienteId={clienteId}
+            actual={primaActualParaLista(anterior)}
+            familiaAllianz={(() => {
+              const d = decidirFamiliaAllianz({ packActivo: pack.activo, packTarificado: pack.tarificado, carteraAllianz })
+              return d.familia === true ? { valor: true as const, motivo: d.motivo } : null
+            })()}
+          />
+        )}
       </div>
     </div>
   )
@@ -1457,7 +1566,15 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
   )
 }
 
-function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }) {
+function Precios({ r, simulacion, clienteId, actual, familiaAllianz }: {
+  r: Extract<Resultado, { estado: 'ok' }>
+  simulacion: boolean
+  clienteId: string
+  /** «Pagas X → te proponemos Y»: lo que paga hoy, anualizado. `null` = sin oportunidad de la que sacarlo. */
+  actual: ReturnType<typeof primaActualParaLista>
+  /** `insuredFamilyInAllianz` de partida (pack encendido + cartera Allianz o pack tarifado). `null` = no se toca. */
+  familiaAllianz: { valor: true; motivo: string } | null
+}) {
   // Emitir a un cliente NUEVO (28/09/2026): asegura enlazó el proyecto a la ficha y a
   // esta tarificación al confirmar el precio, así que no hace falta póliza previa.
   const cotizacionId = cotizacionIdDe(r.guardado)
@@ -1479,12 +1596,19 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         idPrecio={p.id ?? null}
         sustituye={false}
         ramo="auto"
+        familiaAllianz={familiaAllianz}
         onCerrar={cerrar}
       />
     ),
+    actual,
   }
   return (
     <div style={{ marginTop: 12 }}>
+      <EnlaceOportunidad guardado={r.guardado} />
+      {r.seguroAnterior?.elegida && (
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '6px 0' }}>Seguro anterior declarado: {describirCandidata(r.seguroAnterior.elegida)}</p>
+      )}
+      {r.seguroAnterior?.bonusSupuesto && <AvisoBonusSupuesto condicion={r.seguroAnterior.condicion} />}
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
           <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>
@@ -1508,7 +1632,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         <>
           {/* «Qué verá el cliente» enseña todos los precios y, desde el 29/09/2026, cada fila se emite
               ahí mismo: ya no hay una segunda lista plegada debajo para emitir. */}
-          <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionId} simulado={r.simulado} emitir={puedeEmitir ? (o, cerrar) => (
+          <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionId} simulado={r.simulado} actual={actual} emitir={puedeEmitir ? (o, cerrar) => (
                 <Emision
                   tarificacionId={cotizacionId as string}
                   compania={o.compania ?? ''}
@@ -1519,6 +1643,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
                   idPrecio={o.idVendor}
                   sustituye={false}
                   ramo="auto"
+                  familiaAllianz={familiaAllianz}
                   onCerrar={cerrar}
                 />
               ) : undefined} />

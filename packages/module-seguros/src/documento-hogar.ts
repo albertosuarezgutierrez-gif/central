@@ -17,7 +17,8 @@
  *  - Nada se inventa ni se deduce. Lo que no encaje con su forma se anula.
  */
 
-import { MARCADORES_SIN_DATO } from './documento-auto.ts'
+import { MARCADORES_SIN_DATO, cifCompania } from './documento-auto.ts'
+import { fechaTextoAIso } from './fecha-texto.ts'
 
 const SET_MARCADORES = new Set(MARCADORES_SIN_DATO)
 
@@ -25,6 +26,8 @@ const SET_MARCADORES = new Set(MARCADORES_SIN_DATO)
 export type HogarLeido = {
   // ── Identificación de la póliza ──
   compania: string | null
+  /** CIF de la ASEGURADORA (03/10/2026): `companias_dgs` aún no lo tiene; se guarda para cuando lo tenga. */
+  cifCompania: string | null
   codigoEntidadDgs: string | null
   numeroPoliza: string | null
   fechaEfecto: string | null
@@ -52,6 +55,7 @@ export const CAMPOS_PERSONALES_HOGAR: readonly (keyof HogarLeido)[] = ['tomador'
 export function hogarLeidoVacio(): HogarLeido {
   return {
     compania: null,
+    cifCompania: null,
     codigoEntidadDgs: null,
     numeroPoliza: null,
     fechaEfecto: null,
@@ -119,11 +123,14 @@ function importe(v: unknown): number | null {
   return n
 }
 
-/** `aaaa-mm-dd` estricto: rechaza los días que `Date` «arregla» solo. */
+/**
+ * `aaaa-mm-dd` estricto: rechaza los días que `Date` «arregla» solo. Una fecha en texto español
+ * («2 de jul. de 1971», `fechaTextoAIso`) se pasa a ISO; lo numérico («15/10/2026») sigue sin valer.
+ */
 function fechaIso(v: unknown): string | null {
   const t = texto(v)
   if (t === null) return null
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return null
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return fechaTextoAIso(t)
   const d = new Date(`${t}T00:00:00Z`)
   if (Number.isNaN(d.getTime())) return null
   return d.toISOString().slice(0, 10) === t ? t : null
@@ -171,6 +178,7 @@ export function normalizarHogarLeido(raw: unknown): HogarLeido {
   const o = raw as Record<string, unknown>
   return {
     compania: texto(o.compania),
+    cifCompania: cifCompania(o.cifCompania),
     codigoEntidadDgs: codigoDgs(o.codigoEntidadDgs),
     numeroPoliza: texto(o.numeroPoliza),
     fechaEfecto: fechaIso(o.fechaEfecto),

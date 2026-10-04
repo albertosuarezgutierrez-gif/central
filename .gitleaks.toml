@@ -34,6 +34,10 @@ regexes = [
   # portado verbatim del repo asegura): FAKE_KEY_B, 64 hex sintéticos por repetición del patrón
   # inverso al de arriba. NO es un secreto real; se allowlista el literal por el historial.
   '''fedcba9876543210fedcba9876543210''',
+  # Fixture de test (NO es un secreto real): valor de ASEGURA_OPERADOR_SECRET inventado que vivió en
+  # apps/plataforma/lib/presupuesto-asegura.test.ts (commit 998715d del PR #4133). El test actual usa
+  # 'test-secreto'; se allowlista el literal por el historial del PR.
+  '''secreto-de-prueba-0123456789abcdef''',
   # Anon key PÚBLICA del proyecto Supabase compartido (wswbehlcuxqxyinousql), hardcodeada
   # en el bridge de impresión (scripts/bridge-v6) igual que lo estaba la del proyecto viejo:
   # es una clave de cliente (viaja en todo bundle del navegador), la protección real es RLS.

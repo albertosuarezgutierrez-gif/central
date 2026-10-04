@@ -12,7 +12,7 @@ import { estadoPresupuestoVariante, ordenarParaComparar, type Riesgo, type Varia
 import { LogoCompaniaEnLinea } from '../../CeldaCompania'
 import CompararVariantes from './CompararVariantes'
 import { fechaEs } from './piezas-riesgo'
-import { ramoVariante, rutaVariante, tomadorDelRiesgo } from './variante'
+import { ramoRetomable, ramoVariante, rutaVariante, tomadorDelRiesgo } from './variante'
 
 /** Como mucho dos marcadas: marcar una tercera suelta la más antigua de las marcadas. */
 const MAX_COMPARAR = 2
@@ -52,7 +52,9 @@ export default function HistorialVariantes({ riesgo }: { riesgo: Riesgo }) {
                 // en blanco y pedir precio ahí sería pagar otra vez por un presupuesto sin póliza.
                 v.polizaId
                   ? `/correduria/poliza/${encodeURIComponent(v.polizaId)}/retarificar?oportunidad=${encodeURIComponent(op.id)}`
-                  : ramo && v.tomador.clienteId === tomadorVigente ? rutaVariante(ramo, tomadorVigente, op.id, v.id) : null
+                  // Solo auto y moto retoman su tarificación guardada: en los demás ramos «Abrir» sería una
+                  // pantalla de precio en blanco (pagar otra vez), así que no se ofrece.
+                  : ramo && ramoRetomable(op.ramo) && v.tomador.clienteId === tomadorVigente ? rutaVariante(ramo, tomadorVigente, op.id, v.id) : null
               }
               otroTomador={!v.polizaId && v.tomador.clienteId !== null && v.tomador.clienteId !== tomadorVigente}
               comparable={vs.length > 1} marcada={vigentes.includes(v.id)} onMarcar={() => marcar(v.id)}

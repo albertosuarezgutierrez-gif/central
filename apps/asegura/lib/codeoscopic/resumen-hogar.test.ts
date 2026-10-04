@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { resumen, CATALOGOS_PANTALLA, CAMPO_DE_CATALOGO, GRUPOS } from './resumen-hogar.ts'
 import { precalificarHogarCartera, type HogarCartera, type ResueltosHogar } from './desde-cartera-hogar.ts'
 import type { ClienteCartera } from './desde-cartera.ts'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
 
 // Persona inventada. Ningún cliente real aquí.
 const CLIENTE: ClienteCartera = {
@@ -54,9 +55,9 @@ const CATALOGOS = {
 function ficha(extra: Partial<ResueltosHogar> = {}, opts = {}) {
   const pre = precalificarHogarCartera(
     CLIENTE,
-    { numeroPoliza: 'X1', fechaVencimiento: '2027-09-30', hogar: GEMELA },
+    { numeroPoliza: 'X1', fechaVencimiento: sumarDias(hoyEnMadrid(), 30), hogar: GEMELA },
     { ...RESUELTOS, ...extra },
-    '2026-09-02',
+    hoyEnMadrid(),
   )
   return resumen(pre, {
     catalogos: CATALOGOS,
@@ -153,4 +154,14 @@ test('los nueve desplegables llevan su catálogo pegado, y no falta ningún grup
   }
   const gruposUsados = new Set(r.filas.map((f) => f.grupo))
   for (const g of GRUPOS) assert.ok(gruposUsados.has(g.id), `el grupo ${g.id} se quedó vacío`)
+})
+
+test('el mapa campo → catálogo de la pantalla del riesgo (module-seguros) es el mismo que el de esta pantalla', async () => {
+  const { CATALOGO_HOGAR_DE_CAMPO } = await import('@central/module-seguros')
+  const { CATALOGO_DE_CAMPO } = await import('./resumen-hogar.ts')
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(CATALOGO_HOGAR_DE_CAMPO).sort()),
+    Object.fromEntries(Object.entries(CATALOGO_DE_CAMPO).sort()),
+    'si se añade un desplegable a hogar-nuevo, tiene que añadirse también a los datos de la vivienda del riesgo',
+  )
 })

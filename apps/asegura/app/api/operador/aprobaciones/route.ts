@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
  *   GET   → { estado:'ok', pendientes, inciertos }
  *   PATCH { id, decision:'aprobar', asunto, texto } | { id, decision:'rechazar' }
  *         | { id, decision:'cerrar_incierto', salio }, actor
- *         → { estado:'ejecutada'|'rechazada'|'cerrada' } · 404 no existe · 409 ya decidida ·
+ *         → { estado:'ejecutada'|'rechazada'|'cerrada' } · 404 no existe · 409 ya decidida o «pue» (Allianz se tramita en el PUE, no por correo) ·
  *           422 sin_email · 503 sin_correo_configurado · 502 fallida · 504 incierto (pudo salir)
  */
 export async function GET(req: Request) {
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   }
 }
 
-const STATUS: Record<string, number> = { ejecutada: 200, rechazada: 200, cerrada: 200, no_encontrada: 404, ya_decidida: 409, sin_email: 422, sin_correo_configurado: 503, fallida: 502, incierto: 504 }
+const STATUS: Record<string, number> = { ejecutada: 200, rechazada: 200, cerrada: 200, no_encontrada: 404, ya_decidida: 409, pue: 409, sin_email: 422, sin_correo_configurado: 503, fallida: 502, incierto: 504 }
 
 export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

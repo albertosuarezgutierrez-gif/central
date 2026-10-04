@@ -2,7 +2,7 @@ export { NIVELES, camposVisibles } from './acceso.ts'
 // Qué COSA está asegurada (el coche, el piso). Lee `bien-asegurado.ts` antes de
 // tocarlo: `cosa` y `ubicacion` salen separados porque la dirección de un hogar
 // es un dato de la PERSONA y no la ve un tercero.
-export { describirBien, describirBienConGemela, componerUbicacion, bienTieneAlgo, esRamoInmueble, BIEN_VACIO } from './bien-asegurado.ts'
+export { describirBien, describirBienConGemela, pulirDatoVehiculo, componerUbicacion, bienTieneAlgo, esRamoInmueble, BIEN_VACIO } from './bien-asegurado.ts'
 export type { BienAsegurado } from './bien-asegurado.ts'
 export type { Nivel, CamposVisibles } from './acceso.ts'
 export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar, debeSustituir } from './procedencia.ts'
@@ -352,7 +352,7 @@ export {
 export type { EstadoSiniestro, SiniestroHistorial, ExplicacionSiniestro } from './siniestro-historial.ts'
 export { tramitacionSiniestro, importeNumero } from './siniestro-tramitacion.ts'
 export type { PasoTramitacion, TramitacionSiniestro } from './siniestro-tramitacion.ts'
-export { detalleSiniestroCompania } from './siniestro-detalle.ts'
+export { detalleSiniestroCompania, descripcionRiesgoLegible, normalizarCodigoCoberturaNumerico } from './siniestro-detalle.ts'
 export type { DetalleSiniestroCompania, ContactoGestion } from './siniestro-detalle.ts'
 export {
   SITUACIONES_RECIBO,
@@ -365,6 +365,7 @@ export {
   fechaDeRecibo,
   estadoRecibos,
   resumirRecibos,
+  fechaDeCobro,
 } from './recibo-historial.ts'
 export type { SituacionRecibo, ReciboHistorial, ResumenRecibos } from './recibo-historial.ts'
 export {
@@ -518,3 +519,4 @@ export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } fro
 export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'
 export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima } from './avisos-cima.ts'
 export type { EventoCima, PlanAvisos, PolizaParaAviso, TipoAvisoCima } from './avisos-cima.ts'
+export { vistaCobertura, capitalDeCobertura, nombreCobertura, LIMITES_LEGALES, type CoberturaVista, type CapitalVista } from './cobertura-vista.ts'

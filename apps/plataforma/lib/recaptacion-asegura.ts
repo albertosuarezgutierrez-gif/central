@@ -1,8 +1,13 @@
 import { cabecerasPuerto } from './puerto-actor.ts'
-// La cola de recaptación de leads sin vencimiento (12/09/2026), leída del
-// puerto de asegura (`/api/operador/recaptacion*`). Mismo patrón que
-// `correduria-puerto.ts`: interpretación PURA (sin red, la prueba el client
-// component) + las llamadas de red, que solo se invocan desde las rutas API.
+// El puerto de recaptación de asegura (`/api/operador/recaptacion*`). Mismo
+// patrón que `correduria-puerto.ts`: interpretación PURA (sin red) + las
+// llamadas de red, que solo se invocan desde las rutas API / crons.
+//
+// 30/09/2026: el bloque «Recaptación» de /correduria se quitó (esos antiguos
+// clientes son oportunidades y se trabajan en /correduria/vencimientos, carril
+// de leads), y con él la cola, su agrupación y los envíos manuales. Aquí queda
+// lo que sigue vivo: el LOTE diario de correo (cron `recaptacion-email-lote`)
+// y el contrato de escritura que reutiliza `renovaciones-asegura.ts`.
 //
 // Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md.
 
@@ -10,271 +15,15 @@ function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v : null
 }
 
-function numero(v: unknown): number | null {
-  return typeof v === 'number' && Number.isFinite(v) ? v : null
-}
-
 function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
 }
 
-function booleano(v: unknown): boolean {
-  return v === true
-}
-
-function origenLead(v: unknown): OrigenLeadRecaptacion {
-  return v === 'vencimiento_antiguo' ? 'vencimiento_antiguo' : 'sin_vencimiento'
-}
-
-/** 1-12, o `null` si no es un mes válido (incluido cuando el origen es `sin_vencimiento`). */
-function mes(v: unknown): number | null {
-  return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 12 ? v : null
-}
-
-/** 1-31, o `null` si no es un día válido. */
-function dia(v: unknown): number | null {
-  return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 31 ? v : null
-}
-
-// ── Cola ─────────────────────────────────────────────────────────────────────
-
-/**
- * `sin_vencimiento` (Fase 1) = activa sin fecha a la que anclar el contacto.
- * `vencimiento_antiguo` (Fase 2, 20/09/2026) = venció hace años; el mes/día es
- * la pista de cuándo solía renovar. Un valor que el puerto no reconozca (o no
- * lo mande, versión vieja de asegura) cae a `sin_vencimiento`, el lado que ya
- * se trataba como "sin fecha a la que anclar" — nunca se inventa un mes.
- */
-export type OrigenLeadRecaptacion = 'sin_vencimiento' | 'vencimiento_antiguo'
-
-export type LeadRecaptacion = {
-  clienteId: string
-  polizaId: string
-  cliente: string
-  ramo: string
-  ramoLegible: string
-  aseguradoraAnterior: string | null
-  numeroPoliza: string | null
-  telefono: string | null
-  email: string | null
-  /** `null` = la compañía no informa la prima. NUNCA 0. */
-  prima: number | null
-  /** `true` = ya se contactó hace menos de 14 días; la pantalla ofrece "ver igualmente" para forzar. */
-  enCooldown: boolean
-  ultimoContactoEn: string | null
-  origen: OrigenLeadRecaptacion
-  /** Mes (1-12) del vencimiento antiguo. `null` cuando `origen==='sin_vencimiento'`. */
-  mesVencimientoAntiguo: number | null
-  /** Día (1-31) del vencimiento antiguo. `null` si no consta (o puerto viejo que no lo manda). */
-  diaVencimientoAntiguo: number | null
-}
-
-export type ContadoresRecaptacion = {
-  totalCandidatos: number
-  contactadosSemana: number
-  conAperturaORespuestaSemana: number
-  /** Acumulado total de emails (no solo la semana). `null` = no se pudo leer. */
-  emailEnviadosTotal: number | null
-  emailAbiertosTotal: number | null
-  /** Leads `vencimiento_antiguo` cuya ventana de 45 días aún no se ha abierto:
-   *  existen, pero `totalCandidatos` no los cuenta a propósito. `0` si el
-   *  puerto es viejo y no lo manda — no se puede distinguir de "ninguno en
-   *  espera", pero tampoco se inventa un número mayor. */
-  enEsperaVentana: number
-}
-
-/**
- * `causa` es la clasificación que hace `apps/asegura/lib/error-cartera.ts`
- * (credenciales/permisos/conexión/esquema/sin_correduria/otro) — mismo patrón
- * que `describirCausaAsegura()` de `correduria-puerto.ts`. `null` = asegura no
- * la mandó, NO "sin error": un `error` sin causa sigue siendo un error.
- */
-export type Cola =
-  | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo: 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'; causa: string | null }
-  | { estado: 'ok'; leads: LeadRecaptacion[]; contadores: ContadoresRecaptacion }
-
-function leerLead(v: unknown): LeadRecaptacion | null {
-  if (typeof v !== 'object' || v === null) return null
-  const o = v as Record<string, unknown>
-  const clienteId = cadena(o.clienteId)
-  const polizaId = cadena(o.polizaId)
-  const cliente = cadena(o.cliente)
-  if (clienteId === null || polizaId === null || cliente === null) return null
-  return {
-    clienteId,
-    polizaId,
-    cliente,
-    ramo: cadena(o.ramo) ?? 'otros',
-    ramoLegible: cadena(o.ramoLegible) ?? 'sin ramo',
-    aseguradoraAnterior: cadena(o.aseguradoraAnterior),
-    numeroPoliza: cadena(o.numeroPoliza),
-    telefono: cadena(o.telefono),
-    email: cadena(o.email),
-    prima: numero(o.prima),
-    enCooldown: booleano(o.enCooldown),
-    ultimoContactoEn: cadena(o.ultimoContactoEn),
-    origen: origenLead(o.origen),
-    // El mes solo tiene sentido junto a `vencimiento_antiguo`: un puerto que
-    // mandara los dos campos inconsistentes (p. ej. `sin_vencimiento` con un
-    // mes) no debe colar un mes que la UI luego trataría como real. La
-    // invariante se fuerza AQUÍ, no se confía en que el emisor la respete.
-    mesVencimientoAntiguo: origenLead(o.origen) === 'vencimiento_antiguo' ? mes(o.mesVencimientoAntiguo) : null,
-    diaVencimientoAntiguo: origenLead(o.origen) === 'vencimiento_antiguo' && mes(o.mesVencimientoAntiguo) !== null
-      ? dia(o.diaVencimientoAntiguo)
-      : null,
-  }
-}
-
-function leerContadores(v: unknown): ContadoresRecaptacion {
-  const o = (typeof v === 'object' && v !== null ? v : {}) as Record<string, unknown>
-  return {
-    totalCandidatos: entero(o.totalCandidatos) ?? 0,
-    contactadosSemana: entero(o.contactadosSemana) ?? 0,
-    conAperturaORespuestaSemana: entero(o.conAperturaORespuestaSemana) ?? 0,
-    emailEnviadosTotal: entero(o.emailEnviadosTotal),
-    emailAbiertosTotal: entero(o.emailAbiertosTotal),
-    enEsperaVentana: entero(o.enEsperaVentana) ?? 0,
-  }
-}
-
-export function interpretarCola(status: number, json: unknown): Cola {
-  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado', causa: null }
-  if (status !== 200 || typeof json !== 'object' || json === null) {
-    return { estado: 'error', motivo: 'respuesta_ilegible', causa: null }
-  }
-  const r = json as Record<string, unknown>
-  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
-  if (r.estado === 'error') return { estado: 'error', motivo: 'asegura_error', causa: cadena(r.causa) }
-  if (r.estado !== 'ok' || !Array.isArray(r.leads)) {
-    return { estado: 'error', motivo: 'respuesta_ilegible', causa: null }
-  }
-  const leads: LeadRecaptacion[] = []
-  for (const fila of r.leads) {
-    const l = leerLead(fila)
-    if (l !== null) leads.push(l)
-    // Una fila con forma rara se descarta en silencio, no invalida la cola
-    // entera: es el mismo criterio que `interpretarPartes` con `ilegibles`,
-    // pero aquí no hay dónde mostrar el contador (no cambia el trabajo de
-    // Alberto: sigue viendo el resto de leads).
-  }
-  return { estado: 'ok', leads, contadores: leerContadores(r.contadores) }
-}
-
-// ── Agrupación por cliente ──────────────────────────────────────────────────
+// ── Escritura ─────────────────────────────────────────────────────────────────
 //
-// El puerto da una fila por PÓLIZA: el mismo cliente con varios seguros
-// (distintos ramos, o el mismo ramo repetido en el volcado) sale como varias
-// filas con el mismo contacto. Alberto: «leads puede haber tenido varios
-// seguros pero contacto es solo uno» — se agrupa por `clienteId` (la ficha,
-// que YA es la identidad correcta: regla «por NIF/ficha, nunca por nombre»
-// del CLAUDE.md — aquí no hay NIF en este feed, pero `clienteId` es la misma
-// idea) para que el contacto (llamada/WhatsApp/email) sea uno por cliente, no
-// uno por póliza. Dos `clienteId` distintos NUNCA se funden aquí, aunque
-// compartan teléfono (podría ser un negocio con varios titulares).
-
-export type GrupoLeadRecaptacion = {
-  clienteId: string
-  cliente: string
-  telefono: string | null
-  email: string | null
-  polizas: LeadRecaptacion[]
-  enCooldown: boolean
-  ultimoContactoEn: string | null
-  /** `true` si ALGUNA de sus pólizas es Fase 2 (vencimiento antiguo). */
-  tieneVencimientoAntiguo: boolean
-}
-
-export function agruparLeadsPorCliente(leads: readonly LeadRecaptacion[]): GrupoLeadRecaptacion[] {
-  const mapa = new Map<string, GrupoLeadRecaptacion>()
-  for (const l of leads) {
-    const existente = mapa.get(l.clienteId)
-    if (existente) {
-      existente.polizas.push(l)
-      if (l.enCooldown) existente.enCooldown = true
-      if (existente.telefono === null && l.telefono !== null) existente.telefono = l.telefono
-      if (existente.email === null && l.email !== null) existente.email = l.email
-      if (l.ultimoContactoEn !== null && (existente.ultimoContactoEn === null || l.ultimoContactoEn > existente.ultimoContactoEn)) {
-        existente.ultimoContactoEn = l.ultimoContactoEn
-      }
-      if (l.origen === 'vencimiento_antiguo') existente.tieneVencimientoAntiguo = true
-      continue
-    }
-    mapa.set(l.clienteId, {
-      clienteId: l.clienteId,
-      cliente: l.cliente,
-      telefono: l.telefono,
-      email: l.email,
-      polizas: [l],
-      enCooldown: l.enCooldown,
-      ultimoContactoEn: l.ultimoContactoEn,
-      tieneVencimientoAntiguo: l.origen === 'vencimiento_antiguo',
-    })
-  }
-  return ordenarPorVencimiento([...mapa.values()])
-}
-
-/**
- * Días hasta el próximo aniversario de ese mes/día (0 = hoy). Sin día, se
- * toma el ÚLTIMO del mes: con el 1 un mes ya empezado saltaría al año que
- * viene y se iría al final de la cola, justo cuando está en su ventana.
- * Misma cuenta que `proximoAniversario` de apps/asegura/lib/recaptacion-ventana.ts.
- */
-export function diasHastaVencimiento(mesV: number, diaV: number | null, hoy: Date = new Date()): number {
-  const base = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate())
-  const fecha = (anio: number) => {
-    const ultimo = new Date(Date.UTC(anio, mesV, 0)).getUTCDate()
-    return Date.UTC(anio, mesV - 1, Math.min(diaV ?? ultimo, ultimo))
-  }
-  let f = fecha(hoy.getUTCFullYear())
-  if (f < base) f = fecha(hoy.getUTCFullYear() + 1)
-  return Math.round((f - base) / 86_400_000)
-}
-
-/** Días hasta el vencimiento más cercano del grupo; `null` si ninguna póliza tiene mes. */
-function diasGrupo(g: GrupoLeadRecaptacion, hoy: Date): number | null {
-  let min: number | null = null
-  for (const p of g.polizas) {
-    if (p.mesVencimientoAntiguo === null) continue
-    const d = diasHastaVencimiento(p.mesVencimientoAntiguo, p.diaVencimientoAntiguo, hoy)
-    if (min === null || d < min) min = d
-  }
-  return min
-}
-
-/**
- * Primero lo que vence antes (su ventana se cierra); los `sin_vencimiento`
- * detrás, porque se pueden captar en cualquier momento. Empates y sin fecha
- * conservan el orden del puerto (apellidos). Dentro del grupo, las pólizas
- * también van por vencimiento: la primera es la que usa el mensaje sugerido.
- */
-export function ordenarPorVencimiento(grupos: GrupoLeadRecaptacion[], hoy: Date = new Date()): GrupoLeadRecaptacion[] {
-  const clave = (p: LeadRecaptacion) =>
-    p.mesVencimientoAntiguo === null ? Infinity : diasHastaVencimiento(p.mesVencimientoAntiguo, p.diaVencimientoAntiguo, hoy)
-  for (const g of grupos) g.polizas.sort((a, b) => clave(a) - clave(b) || 0)
-  return grupos
-    .map((g, i) => ({ g, i, d: diasGrupo(g, hoy) }))
-    .sort((a, b) => (a.d ?? Infinity) - (b.d ?? Infinity) || a.i - b.i)
-    .map((x) => x.g)
-}
-
-/** El motivo del puerto, en castellano de pantalla. */
-export function textoMotivoCola(motivo: 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red', causa: string | null): string {
-  switch (motivo) {
-    case 'secreto_rechazado':
-      return 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos).'
-    case 'asegura_error':
-      return causa
-        ? `asegura respondió, pero no pudo leer la cartera (${causa}).`
-        : 'asegura respondió, pero no pudo leer la cartera en central.'
-    case 'respuesta_ilegible':
-      return 'la respuesta de asegura no tenía la forma esperada.'
-    case 'red':
-      return 'no se pudo llegar a asegura (timeout, DNS o TLS).'
-  }
-}
-
-// ── Escritura (whatsapp/email) ────────────────────────────────────────────────
+// Los envíos manuales de recaptación (whatsapp/email) se quitaron con su
+// pantalla, pero el contrato de cinco estados lo reutiliza
+// `renovaciones-asegura.ts` para registrar el contacto de una renovación.
 
 export type EscrituraRecaptacion =
   | { estado: 'ok' }
@@ -299,8 +48,8 @@ export function interpretarEscrituraRecaptacion(status: number, json: unknown): 
 // Mismo estilo que `urlAsegura()`/`pedir()` de `correduria-puerto.ts`: mismo
 // env `ASEGURA_URL`/`ASEGURA_OPERADOR_SECRET`, `cache:'no-store'`, y
 // `sin_configurar`/`red` como los dos huecos que no son "el puerto respondió
-// con un error". Se generaliza a `pedirCon()` porque whatsapp/email son POST
-// con cuerpo — el `pedir()` de `correduria-puerto.ts` es solo GET y añadirle
+// con un error". Se generaliza a `pedirCon()` porque el lote es un POST con
+// cuerpo — el `pedir()` de `correduria-puerto.ts` es solo GET y añadirle
 // método/body ahí habría que tocar ese fichero (y con él, todos sus usos
 // existentes) para un caso que no necesitan.
 
@@ -321,52 +70,46 @@ async function pedirCon(path: string, init: RequestInit, timeoutMs: number = 800
   return { status: res.status, json: await res.json().catch(() => null) }
 }
 
-export async function colaRecaptacionAsegura(): Promise<Cola> {
-  try {
-    const r = await pedirCon('/api/operador/recaptacion', { method: 'GET' })
-    if (r === null) return { estado: 'sin_configurar' }
-    return interpretarCola(r.status, r.json)
-  } catch {
-    return { estado: 'error', motivo: 'red', causa: null }
-  }
-}
-
-export async function enviarWhatsappRecaptacionAsegura(body: {
-  clienteId: string
-  polizaId: string
-  mensaje: string
-  actor: string
-}): Promise<EscrituraRecaptacion> {
-  try {
-    const r = await pedirCon('/api/operador/recaptacion/whatsapp', { method: 'POST', body: JSON.stringify(body) })
-    if (r === null) return { estado: 'sin_configurar' }
-    return interpretarEscrituraRecaptacion(r.status, r.json)
-  } catch {
-    return { estado: 'error', motivo: 'red' }
-  }
-}
-
-export async function enviarEmailRecaptacionAsegura(body: {
-  clienteId: string
-  polizaId: string
-  email: string
-  asunto: string
-  texto: string
-  actor: string
-}): Promise<EscrituraRecaptacion> {
-  try {
-    const r = await pedirCon('/api/operador/recaptacion/email', { method: 'POST', body: JSON.stringify(body) })
-    if (r === null) return { estado: 'sin_configurar' }
-    return interpretarEscrituraRecaptacion(r.status, r.json)
-  } catch {
-    return { estado: 'error', motivo: 'red' }
-  }
-}
-
 // ── Envío en LOTE (cron diario) ───────────────────────────────────────────
 
+/**
+ * Los campos de CAMPAÑA (30/09/2026) son `null` cuando asegura no los manda
+ * (versión anterior) o no los pudo leer — NUNCA 0. Un 0 aquí afirma algo:
+ * `pendientesPrimerEnvio: 0` es «ya se ha escrito a todos», y con eso (más
+ * `primerosEnviados > 0`) se dispara el aviso de fin de campaña
+ * (`lib/recaptacion-campana.ts`).
+ * `emailEnviadosTotal`/`emailAbiertosTotal` se leen ANTES de enviar: no
+ * incluyen los `enviados` de esta pasada.
+ *
+ * 🚨 `enviados` ≠ `primerosEnviados`: `enviados` incluye los correos de
+ * SEGUIMIENTO (tras el cooldown se vuelve a escribir a los ya contactados), así
+ * que no sirve para saber si esta pasada ha vaciado la cola de primeros envíos.
+ */
+export type LoteEmailOk = {
+  estado: 'ok'
+  candidatos: number
+  /** Correos enviados en esta pasada: primeros + seguimientos. */
+  enviados: number
+  fallidos: number
+  detalleFallos: string[]
+  descartadosPorSilencio: number
+  /** De `enviados`, cuántos son el PRIMER correo a esa persona. */
+  primerosEnviados: number | null
+  /**
+   * Personas solo-correo que siguen sin su PRIMER correo, descontando las de
+   * esta pasada. No cuenta a quien ha fallado en esta pasada (esas van en `fallidos`).
+   */
+  pendientesPrimerEnvio: number | null
+  /** Correos de recaptación enviados en total ANTES de esta pasada. */
+  emailEnviadosTotal: number | null
+  /** De esos, cuántos se han abierto (acumulado). */
+  emailAbiertosTotal: number | null
+  /** PERSONAS solo-correo cuya ventana (~45 días antes del antiguo vencimiento) aún no se ha abierto. */
+  enEsperaVentanaSoloCorreo: number | null
+}
+
 export type LoteEmail =
-  | { estado: 'ok'; candidatos: number; enviados: number; fallidos: number; detalleFallos: string[]; descartadosPorSilencio: number }
+  | LoteEmailOk
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string }
 
@@ -384,6 +127,14 @@ export function interpretarLoteEmail(status: number, json: unknown): LoteEmail {
       // Cron viejo de asegura sin este campo (versión anterior al 21/09/2026) → 0,
       // no `null`: es un recuento real de ESTA pasada, no un dato pendiente.
       descartadosPorSilencio: entero(o.descartadosPorSilencio) ?? 0,
+      // Estos SÍ son `null` si faltan: son estado de la campaña (o el desglose
+      // que la decide), y un 0 inventado dispararía «ya se ha escrito a todos»
+      // o pintaría un «0 %» de aperturas que nadie midió.
+      primerosEnviados: entero(o.primerosEnviados),
+      pendientesPrimerEnvio: entero(o.pendientesPrimerEnvio),
+      emailEnviadosTotal: entero(o.emailEnviadosTotal),
+      emailAbiertosTotal: entero(o.emailAbiertosTotal),
+      enEsperaVentanaSoloCorreo: entero(o.enEsperaVentanaSoloCorreo),
     }
   }
   const motivo = cadena(o.motivo) ?? cadena(o.causa) ?? cadena(o.error)

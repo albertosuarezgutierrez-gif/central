@@ -141,7 +141,13 @@ export type CrudoPendiente = {
 export type CoberturaResumen = {
   /** Rutas DISTINTAS por tipo de objeto. Nunca filas. */
   rutas: number
+  /** Sin leer Y sin exclusión: lo que de verdad se está dejando sin aprovechar. */
   rutasNuncaLeidas: number
+  /**
+   * Rutas sin leer que se EXCLUYEN A PROPÓSITO (privacidad: `excluido_motivo`). «Descartado» ≠ «sin leer».
+   * `undefined`/`null` = el puerto no lo manda o la columna aún no existe: no consta, se cuenta como antes.
+   */
+  rutasDescartadas?: number | null
   /** Cuántas compañías distintas han aportado alguna ruta. `null` = no consta. */
   entidadesObservadas: number | null
   porTipo: Array<{ tipoObjeto: string; rutas: number; nuncaLeidas: number }>
@@ -771,6 +777,9 @@ export function saludIngesta(
       `CIMA manda ${cobertura.rutas} campo(s) distintos${alcance} y ${cobertura.rutasNuncaLeidas} no se leen nunca` +
       (peor ? ` (sobre todo ${peor.tipoObjeto}: ${peor.nuncaLeidas})` : ''),
     )
+  }
+  if (cobertura !== null && (cobertura.rutasDescartadas ?? 0) > 0) {
+    motivos.push(`${cobertura.rutasDescartadas} campo(s) descartados por privacidad (a propósito, no cuentan como sin leer)`)
   }
   if (e.cobertura === null) {
     hueco('Cobertura de campos SIN MEDIR todavía: no equivale a «los leemos todos».')

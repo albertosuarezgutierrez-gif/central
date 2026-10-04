@@ -9,6 +9,7 @@ import {
 import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 import type { DocumentoResumen, EvolucionPrima, Retarificabilidad, DatosCompaniaCima } from '@central/module-seguros'
 import { leerDatosCompaniaPuerto } from '@central/module-seguros'
+import { cimaExtraTruncado, vistaCimaExtra, type GrupoCimaExtra } from './cima-extra-vista.ts'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { CapitalAsegurado, DetalleCobertura } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
@@ -96,6 +97,17 @@ export type ReciboFicha = {
   devolucionCorreo: DevolucionCorreoFicha | null
   /** Efecto del recibo: desde aquí corre el mes del art. 15 LCS. `null` = asegura no lo manda. */
   fechaEfecto: string | null
+  /** `clase_recibo` CIMA (CA/NP/SU…). `null` = no consta o asegura no lo manda. */
+  clase: string | null
+  /** Día en que pasó a su situación actual. `null` = no consta. */
+  fechaSituacion: string | null
+  /** Prima neta (operador). `null` = no consta: nunca 0. */
+  primaNeta: number | null
+  /** Comisión líquida (operador). `null` = no consta: nunca 0. */
+  comisionLiquida: number | null
+  /** «Más datos de CIMA» del recibo (solo operador). `null` = aún no leído o asegura no lo manda: no se dice «sin datos». */
+  cimaExtra: GrupoCimaExtra[] | null
+  cimaExtraTruncado: boolean
 } & ReciboExtraFicha
 
 export type DevolucionCorreoFicha = { fecha: string; motivo: string | null; tipoMotivo: string | null }
@@ -169,6 +181,13 @@ export type Poliza = {
   evolucionPrima: EvolucionPrima | null
   /** Lo que la compañía dice por CIMA y no es el objeto (anulación, reemplazada, suplementos…). `null` = no consta. */
   datosCompania: DatosCompaniaCima | null
+  /**
+   * «Más datos de CIMA» (campos EIAC sin extractor, sin PII). `null` = aún no leído (asegura no lo manda o la
+   * póliza se ingirió antes): NO es «sin datos». `[]` = CIMA no trae más. Solo intranet del operador.
+   */
+  cimaExtra: GrupoCimaExtra[] | null
+  /** El lector cortó la lista a 400 campos. */
+  cimaExtraTruncado: boolean
   /**
    * «¿Merece la pena gastarse los 0,50€ en pedir precio?». `null` = la versión
    * desplegada de asegura todavía no lo manda (o llega ilegible): NO es «no hay
@@ -439,6 +458,9 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
         fechaEmision: cadena(o.fechaEmision), fechaVencimiento: cadena(o.fechaVencimiento), formaPago: cadena(o.formaPago),
         devolucionCorreo: leerDevolucionCorreo(o.devolucionCorreo),
         fechaEfecto: fechaIsoOnull(o.fechaEfecto),
+        clase: cadena(o.clase), fechaSituacion: fechaIsoOnull(o.fechaSituacion),
+        primaNeta: numero(o.primaNeta), comisionLiquida: numero(o.comisionLiquida),
+        cimaExtra: vistaCimaExtra(o.cimaExtra), cimaExtraTruncado: cimaExtraTruncado(o.cimaExtraTruncado),
         ...leerReciboExtra(o),
       })
     }
@@ -498,6 +520,8 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       retarificacion: leerRetarificacion(p.retarificacion),
       evolucionPrima: leerEvolucionPrima(p.evolucionPrima),
       datosCompania: leerDatosCompaniaPuerto(p.datosCompania),
+      cimaExtra: vistaCimaExtra(p.cimaExtra),
+      cimaExtraTruncado: cimaExtraTruncado(p.cimaExtraTruncado),
       estimacion: leerEstimacion(p.estimacion),
       capitalesHogar: leerCapitalesHogar(p.capitalesHogar),
       sustitucion: leerSustitucion(p.sustitucion),

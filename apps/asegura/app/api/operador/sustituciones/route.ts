@@ -3,7 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { sustitucionesEnSeguimiento } from '@/lib/cartera-sustituciones'
+import { dobleSeguroEnSeguimiento, sustitucionesEnSeguimiento } from '@/lib/cartera-sustituciones'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +18,9 @@ export async function GET(req: Request) {
     if (!correduria) return NextResponse.json({ estado: 'error' })
     const lista = await sustitucionesEnSeguimiento(correduria.id)
     if (lista === null) return NextResponse.json({ estado: 'error' })
-    return NextResponse.json({ estado: 'ok', sustituciones: lista })
+    // `null` = no se pudo leer el doble seguro: se manda `null` (≠ `[]` = ninguno), la lista principal sigue.
+    const dobleSeguro = await dobleSeguroEnSeguimiento(correduria.id)
+    return NextResponse.json({ estado: 'ok', sustituciones: lista, dobleSeguro })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/sustituciones', e) })
   }

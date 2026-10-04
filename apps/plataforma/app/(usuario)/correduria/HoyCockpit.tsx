@@ -16,6 +16,7 @@ import PerdidasCartera from './PerdidasCartera'
 import Aprobaciones from './Aprobaciones'
 import Anulaciones from './Anulaciones'
 import CartasMediador from './CartasMediador'
+import BajasPue from './BajasPue'
 
 /**
  * El cockpit de «Hoy» (pieza 1-4 de ASegura OS, maqueta aprobada el
@@ -51,12 +52,11 @@ function cifraC(c: Contador | null | undefined): string {
 }
 
 export default function HoyCockpit({
-  ingesta, nIncidencias, nRecaptacion, nBlog, onIr, onContadorTareas,
+  ingesta, nIncidencias, nBlog, onIr, onContadorTareas,
 }: {
   ingesta: VistaIngesta | null
   /** Todas las colas de los bloques de debajo (las mismas que el badge de la pestaña, menos las tareas). */
   nIncidencias: Contador | null | undefined
-  nRecaptacion: N
   nBlog: N
   onIr: (s: Destino) => void
   onContadorTareas: (n: number | null) => void
@@ -68,6 +68,7 @@ export default function HoyCockpit({
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nAprobaciones, setNAprobaciones] = useState<N>(undefined)
+  const [nBajasPue, setNBajasPue] = useState<N>(undefined)
   // El bloque del portal va PLEGADO y se lee al abrirlo: es la consulta más pesada de Hoy
   // (feed + embudo) y no pide ninguna acción; lo accionable ya llega por Telegram y por las colas.
   const [verPortal, setVerPortal] = useState(false)
@@ -119,7 +120,7 @@ export default function HoyCockpit({
 
   const hoy = hoyMadrid()
   const nTareas: N = tareas === null ? undefined : tareas.estado === 'ok' ? tareas.tareas.length : null
-  const nOk = nRecaptacion === undefined || nBlog === undefined || nAprobaciones === undefined ? undefined : agregarContadores([nRecaptacion, nBlog, nAprobaciones])
+  const nOk = nBlog === undefined || nAprobaciones === undefined || nBajasPue === undefined ? undefined : agregarContadores([nBlog, nAprobaciones, nBajasPue])
   const estado = lineaEstadoIngesta(ingesta)
   const colorEstado = estado.tono === 'ok' ? 'var(--positive)' : estado.tono === 'malo' ? 'var(--negative)' : estado.tono === 'aviso' ? 'var(--warning)' : 'var(--muted)'
   const vencidas = tareas?.estado === 'ok' ? tareas.tareas.filter(t => cuandoTarea(t.fechaLimite, hoy).vencida).length : 0
@@ -204,12 +205,12 @@ export default function HoyCockpit({
       <PerdidasCartera />
       <Anulaciones />
       <CartasMediador />
+      <BajasPue onContador={setNBajasPue} />
 
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}
       <section id="esperan-ok" style={{ display: 'grid', gap: 6 }}>
         <h2 style={TITULO}>Esperan tu OK{nOk && nOk.n > 0 ? ` · ${cifraC(nOk)}` : ''}</h2>
         <Aprobaciones onContador={setNAprobaciones} />
-        <FilaOk n={nRecaptacion} titulo="Leads para recaptar" sub="Correo solo a quien fue cliente (LSSI 21.2); tú decides a quién se envía." onClick={() => onIr('clientes')} />
         <FilaOk n={nBlog} titulo="Artículos del blog" sub="Escritos y pendientes de publicar." onClick={() => onIr('redes')} />
         {nOk && nOk.n === 0 && !nOk.parcial && <p style={NOTA}>Nada esperando tu OK.</p>}
         {nOk === null && <p style={{ ...NOTA, color: 'var(--negative)' }}>No se ha podido comprobar qué espera tu OK. No significa que no haya nada.</p>}

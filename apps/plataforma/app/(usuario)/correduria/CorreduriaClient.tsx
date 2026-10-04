@@ -4,7 +4,7 @@ import ContactosMovil from './ContactosMovil'
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { CalendarClock, Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity } from 'lucide-react'
+import { CalendarClock, Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity, ClipboardCheck } from 'lucide-react'
 import { Pagina, Badge, btnStyle } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
@@ -38,10 +38,10 @@ import LeadsPortal from './LeadsPortal'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
 import DeclaradasVencer from './DeclaradasVencer'
 import ListaCartera from './ListaCartera'
-import Recaptacion from './Recaptacion'
 import LeadsWebConversion from './LeadsWebConversion'
 import GarantiasFiltradas from './GarantiasFiltradas'
 import PanelIngesta, { AvisoIngesta } from './Ingesta'
+import EmisionesRevision from './EmisionesRevision'
 import Secciones, { type ContadoresSeccion } from './Secciones'
 import HoyCockpit from './HoyCockpit'
 import {
@@ -73,8 +73,8 @@ import {
  * · Una sección se MONTA la primera vez que se abre (24/09/2026, Alberto: «la
  *   carga es súper lenta»). Antes se montaban las ocho al entrar: ~34 peticiones,
  *   ~28 al puerto de asegura, que atiende 5 a la vez, para enseñar solo «Hoy».
- *   Excepción: Recaptación y Blog se montan siempre porque su contador entra en
- *   «esperan tu OK» de Hoy. Coste asumido: el badge de una pestaña que aún no
+ *   Excepción: Blog se monta siempre porque su contador entra en «esperan tu
+ *   OK» de Hoy. Coste asumido: el badge de una pestaña que aún no
  *   se ha abierto no se pinta (no se sabe todavía), nunca un 0.
  * · El buscador y las colas de trabajo son HERMANOS de la cartera, nunca hijos:
  *   `CarteraResumen` hace `return` temprano cuando el puerto falla, y anidado
@@ -190,20 +190,9 @@ export default function CorreduriaClient() {
   const [nFormacion, setNFormacion] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [, setNClientes] = useState<number | null | undefined>(undefined)
-  const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
-  // Recaptación se monta al abrir Clientes; hasta entonces el badge sale del
-  // contador cacheado (la cola entera eran ~0,8 MB de BD por visita).
-  const clientesVista = vistas.has('clientes')
-  useEffect(() => {
-    if (clientesVista) return
-    let vivo = true
-    fetch('/api/correduria/contador?c=recaptacion')
-      .then(r => (r.ok ? r.json() : null))
-      .then((d: { estado?: string; n?: number | null } | null) => { if (vivo) setNRecaptacion(d?.estado === 'ok' && typeof d.n === 'number' ? d.n : null) })
-      .catch(() => { if (vivo) setNRecaptacion(null) })
-    return () => { vivo = false }
-  }, [clientesVista])
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
+  // Emisiones de Avant2 en revisión (undefined = aún no contestó · null = no se pudo leer · n).
+  const [nEmisiones, setNEmisiones] = useState<number | null | undefined>(undefined)
   const [nTareasHoy, setNTareasHoy] = useState<number | null | undefined>(undefined)
   // Su contador ya NO se suma en «Hoy» (ver el comentario junto a `agregarContadores`
   // de la sección `hoy`, más abajo): el valor no hace falta, solo la función.
@@ -302,7 +291,7 @@ export default function CorreduriaClient() {
   const cDatos = montada('mas')
     ? agregarContadores([nCalidad, nDuplicadas, nSinCanal, nExportRgpd, nFormacion])
     : undefined
-  const cMas = combinarContadores([cIngesta, cDatos, nBlog === undefined ? undefined : agregarContadores([nBlog])])
+  const cMas = combinarContadores([cIngesta, cDatos, nBlog === undefined ? undefined : agregarContadores([nBlog]), nEmisiones === undefined ? undefined : agregarContadores([nEmisiones])])
 
   // Lo que la franja de «Hoy» llama avisos: todas las colas de los bloques de
   // debajo. Son EXACTAMENTE las que suma el badge de la pestaña (más las tareas),
@@ -327,15 +316,10 @@ export default function CorreduriaClient() {
       tono: 'malo',
       title: 'Tareas de seguimiento para hoy, partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra, declaradas de otra compañía a punto de renovar y sustituciones pendientes de que CIMA confirme la nueva',
     },
-    clientes: {
-      // El listado NO es trabajo pendiente (cuántos clientes cumplen el
-      // filtro), pero la recaptación SÍ lo es (leads a los que contactar) —
-      // igual que «Hoy» suma varias colas de una sección en un solo número.
-      // Solo lo que es TRABAJO: la recaptación. El total del listado no se
-      // «atiende», y con él la pestaña enseñaba siempre un número (26/09/2026).
-      contador: agregarContadores([nRecaptacion]),
-      title: 'Leads pendientes de recaptar',
-    },
+    // «Clientes» no lleva badge: el listado NO es trabajo pendiente (cuántos
+    // clientes cumplen el filtro no se «atiende»). Su único contador era la
+    // recaptación, que salió de aquí el 30/09/2026: esos antiguos clientes son
+    // oportunidades y se trabajan en /correduria/vencimientos (carril de leads).
     comisiones: {
       contador: agregarContadores([nCuadre]),
       tono: 'aviso',
@@ -354,7 +338,7 @@ export default function CorreduriaClient() {
         contador: cMas,
         // Rojo solo con pérdida MEDIDA en la ingesta; lo demás es ámbar.
         tono: (cIngesta != null && cIngesta.n > 0 ? 'malo' : 'aviso') as 'malo' | 'aviso',
-        title: 'Señales de pérdida de datos de CIMA, artículos del blog pendientes de tu OK, pólizas duplicadas y clientes a los que no se puede avisar',
+        title: 'Señales de pérdida de datos de CIMA, emisiones de Avant2 a revisar, artículos del blog pendientes de tu OK, pólizas duplicadas y clientes a los que no se puede avisar',
       },
     }),
   }
@@ -407,7 +391,6 @@ export default function CorreduriaClient() {
         <HoyCockpit
           ingesta={ingesta}
           nIncidencias={nIncidencias}
-          nRecaptacion={nRecaptacion}
           nBlog={nBlog}
           onIr={cambiarSeccion}
           onContadorTareas={setNTareasHoy}
@@ -495,19 +478,17 @@ export default function CorreduriaClient() {
         {montada('clientes') && <ContactosMovil />}
         {montada('clientes') && <ListaCartera onContador={setNClientes} />}
 
-        {/* Leads del volcado sin vencimiento, con contacto, que hoy no son
-            cliente vivo por CIMA: recaptarlos es venta, no mantenimiento de
-            cartera, pero comparte pestaña con el listado de clientes porque
-            ambos parten de la misma base y compiten por el mismo hueco de
-            atención comercial. */}
-        {montada('clientes') && <Recaptacion onContador={setNRecaptacion} />}
+        {/* El bloque «Recaptación» (leads del volcado a los que volver a
+            escribir) se quitó el 30/09/2026: esos antiguos clientes son
+            oportunidades y se trabajan en /correduria/vencimientos, carril de
+            leads. El correo automático a los solo-correo SIGUE (cron
+            `recaptacion-email-lote`) y avisa por Telegram al terminar la tanda. */}
 
         {/* De los leads captados por apps/asegura-web, cuántos son hoy cartera
             viva. Sin contador: con 1 lead medido el 15/09/2026 es infraestructura
             de medición que necesita acumular datos, no un aviso accionable hoy
             (ver LeadsWebConversion.tsx). Movido de «Datos» aquí (20/09/2026):
-            es un embudo COMERCIAL, no calidad de dato, y comparte pestaña con
-            Recaptación por el mismo motivo que ella. */}
+            es un embudo COMERCIAL, no calidad de dato. */}
         {montada('clientes') && <LeadsWebConversion />}
         {montada('clientes') && <GarantiasFiltradas />}
       </div>
@@ -662,6 +643,9 @@ export default function CorreduriaClient() {
             el contador de «esperan tu OK». El resto espera a que se abra. */}
         <SubMas id="ingesta" Icono={Antenna} titulo="Ingesta de CIMA" primero />
         <PanelIngesta datos={ingesta} />
+
+        <SubMas id="emisiones" Icono={ClipboardCheck} titulo="Emisiones a revisar" />
+        <EmisionesRevision onContador={setNEmisiones} primero />
 
         <SubMas id="redes" Icono={Megaphone} titulo="Redes y blog" />
         <Blog onContador={setNBlog} />

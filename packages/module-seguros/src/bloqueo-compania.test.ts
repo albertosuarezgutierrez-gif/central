@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { bloqueoCompania, textoBloqueoCliente, textoBloqueoCorredor } from './bloqueo-compania.ts'
+import { bloqueoCompania, textoBloqueoCliente, textoBloqueoCorredor, esAllianz } from './bloqueo-compania.ts'
 import { revisarCopy } from './copy-regulado.ts'
 
 // Literal de la tarificación real de Allianz Motos (29/09/2026).
@@ -19,4 +19,16 @@ test('sin bloqueo → null; bloqueo sin motivo → cadena vacía (se avisa igual
 test('los textos recomiendan emitir la básica y ampliar; el del cliente pasa el copy regulado', () => {
   assert.match(textoBloqueoCorredor('INCENDIO-ROBO SIN DAÑOS'), /BLOQUEADA.*\(INCENDIO-ROBO SIN DAÑOS\).*básica.*suplemento/)
   assert.deepEqual(revisarCopy(textoBloqueoCliente()), [])
+})
+
+test('Allianz añade el aviso de la intranet; otra compañía o sin compañía, el texto de siempre', () => {
+  const base = textoBloqueoCorredor('X')
+  assert.equal(textoBloqueoCorredor('X', null), base)
+  assert.equal(textoBloqueoCorredor('X', 'Reale'), base)
+  const a = textoBloqueoCorredor('X', 'ALLIANZ Seguros')
+  assert.ok(a.startsWith(base))
+  assert.match(a, /SOLO en su intranet \(no por correo\): tienes que entrar tú/)
+  assert.match(a, /no admite robo ni daños: pide la básica/)
+  assert.equal(esAllianz('Allianz'), true)
+  assert.equal(esAllianz(null), false)
 })

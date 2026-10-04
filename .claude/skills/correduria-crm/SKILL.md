@@ -13,7 +13,7 @@ description: >
 **Lee primero `docs/CORREDURIA-CRM-VISION.md`** (visión dictada por Alberto el 02/09/2026, estado
 real medido, orden de trabajo). Después, según lo que toques:
 
-- Puerto y trastienda → `apps/asegura/CLAUDE.md` («El puerto que sirve la pantalla», «Codeoscopic»).
+- Puerto y trastienda → `apps/asegura/CLAUDE.md` («El puerto que sirve la pantalla», «Codeoscopic»; descubrimiento autónomo de emisiones, cola de revisión, webhook en api.grupoasegura.es). Descuentos por compañía y ramo: `docs/CODEOSCOPIC-PENDIENTES.md`.
 - Pantallas → `apps/plataforma/CLAUDE.md` («La correduría se trabaja DESDE AQUÍ»).
 - **Portal del cliente → `apps/asegura-portal/CLAUDE.md`** (es la fuente de verdad de esa app:
   aislamiento por código, lectura por columnas, calendario). Diseño del calendario en
@@ -34,6 +34,9 @@ real medido, orden de trabajo). Después, según lo que toques:
    anulada (se cambia a mano con nota en `historial_interno`, la verdad es el portal de la compañía). La
    RC se titula solo por la cobertura que ES la RC («RC caballos», `tituloRc()` en `objeto.ts`); el resto
    va al desglose. Detalle en `apps/asegura/CLAUDE.md` § «Prima y vencimiento».
+   - **Etiquetas de códigos CIMA (03/10/2026):** siempre `etiquetaClave()` de `module-seguros` (nunca un
+     mapa a mano en la pantalla). Portal: comisiones, prima neta, mediador, bastidor, IBAN y DNI nunca;
+     beneficiarios solo con nivel iban; el texto libre de suplementos no sale (lleva datos bancarios).
 1. **Dos caras, dos apps.** Corredor en `apps/plataforma` (`/correduria`); cliente en
    `apps/asegura-portal` (rol `prisma_asegura_portal` sin BYPASSRLS, secreto propio). Nunca una
    pantalla compartida con permisos. En el portal el aislamiento **lo da el código**, no RLS.
@@ -230,6 +233,17 @@ orden en §9.
     - Cotización RECUPERADA: fallos y supuestos no guardados se DICEN (`null`), nunca `[]`.
     - Antes de afirmar un dato del vendor, mídelo en `seguros.tarificacion_precios` (coberturas crudas y
       `tarificaciones.respuesta`): el parser puede estar leyendo bien un dato que la compañía manda mal.
+22. **Bloqueos de compañía (30/09/2026, dictado de Alberto).** Una moto de Manuel Piña se
+    emitió en Allianz desde la web de Avant2 y Allianz la BLOQUEÓ («riesgo condicionado»).
+    - **Todo bloqueo exige que intervenga Alberto.** Allianz contesta SOLO por su intranet (ni correo ni nada):
+      tiene que entrar él. Y no admite robo ni daños si el cliente no tiene OTRA póliza en Allianz: solo la básica.
+    - **Toda retenida Allianz → recordatorio por Telegram**, con esas dos advertencias: cron
+      `correduria-retenidas` (pasada de la MAÑANA, Madrid < 12, manda la lista aunque no haya cambios; la
+      tarde solo si hay cambios) y aviso inmediato al registrar en `/api/correduria/avant2-emision`.
+    - **Solo es bloqueante si la compañía YA nos lo anuncia** (Allianz con la moto de Manuel Piña Franco). Si no
+      avisa, no se recomienda emitir la básica ni ampliar por suplemento: se emite y ya está, hasta que ocurra
+      (Alberto, 30/09/2026). Retirado el aviso preventivo; guardián `test/regression-sin-aviso-emision-escalonada.test.ts`.
+    - Viven en `packages/module-seguros/src/bloqueo-compania.ts` (`textoBloqueoCorredor(motivo, compania)`) y `apps/plataforma/lib/correduria/retenidas-aviso.ts`.
     - **Y por encima de la modalidad, el `id` del vendor** (`idPrecio`, 30/09/2026 tarde): si el proyecto
       aún lo trae, se emite ESE. Toda pantalla que abre `<Emision>` le pasa `idPrecio` (cepo en
       `test/regression-rerate-fecha-y-desempate.test.ts`).
@@ -237,3 +251,10 @@ orden en §9.
       (`revisarCoherenciaCotizacion`, en pantalla + Telegram) y un cambio del lector se prueba gratis con
       `GET /api/operador/codeoscopic/reproceso` sobre respuestas reales. El vocabulario de coberturas de
       Codeoscopic es cerrado: un nombre nuevo sale en `coberturasNuevas` y se decide a mano.
+
+22. **Los datos del riesgo viven en info_riesgo por CLAVE DE RAMO (30/09/2026, PR #4127).** En la oportunidad se editan
+    y confirman POR RAMO: `datosVehiculo` (auto/moto), `datosVivienda` (hogar), `datosCapital` (vida/salud/decesos),
+    `datosRiesgoLibre` (RC/comercio/comunidades/otros). Cada clave guarda el campo confirmado (se sella al confirmar,
+    se borra al editar). Se pide precio desde la oportunidad en los 6 ramos tarificables; personas editan datos sin salir
+    (carné si conductor). Catálogo de versión solo en pantalla de precio; editar marca/modelo/versión borra codigoVehiculo.
+    Precarga desde polizas.datos_especificos sin confirmar.

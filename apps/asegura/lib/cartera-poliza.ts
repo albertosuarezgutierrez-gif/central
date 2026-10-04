@@ -170,6 +170,9 @@ export type FichaPoliza = {
    * que se leyera, 24/09/2026), NO «la compañía no lo manda».
    */
   datosCompania: DatosCompaniaCima | null
+  /** `datos_especificos.cimaExtra` tal cual (sin PII, denegada en origen). `null` = clave ausente (aún no leído) ≠ `[]`. */
+  cimaExtra: Array<{ ruta: string; valor: string }> | null
+  cimaExtraTruncado: boolean
   /** `retarificacion.retarificable`, mantenido por compatibilidad con quien ya lo lee. */
   retarificable: boolean
   /** Por qué ramo se puede pedir precio (auto/hogar), o por qué no, mirando también la gemela. */
@@ -211,12 +214,23 @@ export type ReciboFichaPoliza = ReciboResumen & {
   retencionIrpf: number | null
   /** Comisión bruta del recibo según CIMA. `null` = no la da o no se sabe leer (nunca 0 por defecto). */
   comisionBruta: number | null
+  /** `clase_recibo` del EIAC (CA/NP/SU…) tal cual. `null` = no consta. */
+  clase: string | null
+  /** Día en que el recibo pasó a su situación actual (cobrado/devuelto/anulado). `null` = no consta. */
+  fechaSituacion: string | null
+  /** Prima neta del recibo (CIMA). `null` = no consta (nunca 0). Solo operador. */
+  primaNeta: number | null
+  /** Comisión líquida del recibo (CIMA). `null` = no consta (nunca 0). Solo operador. */
+  comisionLiquida: number | null
   /**
    * La compañía avisó POR CORREO de que el banco lo devolvió y aún no consta el cobro
    * (`recibo_devolucion`). Es lo único que permite marcarlo «cobrado de nuevo» a mano: una devolución
    * que trae CIMA la resuelve CIMA. `null` = no hay aviso abierto o no se pudo leer.
    */
   devolucionCorreo: { fecha: string; motivo: string | null; tipoMotivo: string | null } | null
+  /** `datos_extra.cimaExtra` del recibo (sin PII, denegada en origen). `null` = clave ausente (aún no leído) ≠ `[]`. Solo operador. */
+  cimaExtra: Array<{ ruta: string; valor: string }> | null
+  cimaExtraTruncado: boolean
 }
 
 export type DevolucionHistorial = {
@@ -325,6 +339,18 @@ function descifrar(v: string | null | undefined): string | null {
 function ilegible(v: string | null | undefined): boolean {
   return typeof v === 'string' && v.startsWith('v1:') && descifrar(v) === null
 }
+/** `cimaExtra` de `datos_especificos`: `null` si la clave no está (null ≠ []); solo pares {ruta, valor} de texto. */
+function leerCimaExtra(datos: unknown): Array<{ ruta: string; valor: string }> | null {
+  if (!esObjetoPlano(datos) || !Array.isArray(datos.cimaExtra)) return null
+  const out: Array<{ ruta: string; valor: string }> = []
+  for (const it of datos.cimaExtra) {
+    if (it && typeof it === 'object' && typeof (it as { ruta?: unknown }).ruta === 'string' && typeof (it as { valor?: unknown }).valor === 'string') {
+      out.push({ ruta: (it as { ruta: string }).ruta, valor: (it as { valor: string }).valor })
+    }
+  }
+  return out
+}
+
 function esObjetoPlano(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
@@ -369,7 +395,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       },
       recibos: {
         select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEfectoActual: true, fechaEmision: true, fechaVencimiento: true, formaPago: true,
-          idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true, comisionBruta: true },
+          idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true, comisionBruta: true,
+          fechaSituacion: true, comisionLiquida: true, datosExtra: true },
         orderBy: { fechaEmision: 'desc' },
       },
       siniestros: { select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
@@ -385,7 +412,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         orderBy: [{ rol: 'asc' }, { id: 'asc' }],
         select: {
           id: true, polizaId: true, rol: true, clienteId: true, origen: true, nombre: true, apellidos: true, telefono: true, email: true,
-          nifLookupHash: true,
+          nifLookupHash: true, fechaCarnet: true, fechaNacimiento: true,
           cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
         },
       })
@@ -408,6 +435,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
             emailIlegible: email === null && (ilegible(f.email) || ilegible(f.cliente?.email)),
             fichaId: f.clienteId ?? null, esTomador: f.clienteId === p.cliente.id, origen: String(f.origen),
             personaClave: f.nifLookupHash ? claves.get(f.nifLookupHash) ?? null : null,
+            // Cifrados en la BD: solo salen si se abren (operador); ilegible → `null`, no «sin carné».
+            fechaCarnet: descifrar(f.fechaCarnet), fechaNacimiento: descifrar(f.fechaNacimiento),
           }
         })
       })
@@ -588,7 +617,11 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, fechaEfecto: r.fechaEfecto ?? null, formaPago: etiquetaFormaPago(r.formaPago),
         idRemesa: texto(x.idRemesa), gestionCobro: texto(x.gestionCobro), claseComision: texto(x.claseComision),
         baseComision: num(x.baseComision), retencionIrpf: num(x.retencionIrpf), comisionBruta: importeEiac(x.comisionBruta),
+        clase: texto(x.claseRecibo), fechaSituacion: fechaIso(x.fechaSituacion),
+        primaNeta: importeEiac(x.primaNeta), comisionLiquida: importeEiac(x.comisionLiquida),
         devolucionCorreo: devolucionesCorreo.get(r.id) ?? null,
+        cimaExtra: leerCimaExtra(x.datosExtra),
+        cimaExtraTruncado: esObjetoPlano(x.datosExtra) && x.datosExtra.cimaExtraTruncado === true,
       }
     }),
     historialDevoluciones,
@@ -600,6 +633,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     contrato: contratoCima(p.datosEspecificos, descifrar),
     siniestros: p.siniestros.map(mapSiniestro),
     datosCompania: leerDatosCompaniaCima(p.datosEspecificos),
+    cimaExtra: leerCimaExtra(p.datosEspecificos),
+    cimaExtraTruncado: esObjetoPlano(p.datosEspecificos) && p.datosEspecificos.cimaExtraTruncado === true,
     evolucionPrima: evolucionPrima({
       fechaInicio: fechaIso(p.fechaInicio),
       fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),

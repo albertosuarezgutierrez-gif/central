@@ -17,7 +17,14 @@ export default function Plegable({ titulo, resumen, children }: {
   const [abierto, setAbierto] = useState(false)
   return (
     <details
-      onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open) setAbierto(true) }}
+      onToggle={(e) => {
+        const d = e.currentTarget as HTMLDetailsElement
+        if (!d.open) return
+        setAbierto(true)
+        // En móvil el contenido recién abierto puede quedar fuera de pantalla: se trae a la vista
+        // (el scroller de plataforma es `LayoutShell`; `scrollIntoView` lo encuentra solo).
+        setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0)
+      }}
       style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', padding: '4px 16px' }}
     >
       <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontWeight: 700, fontSize: 14 }}>

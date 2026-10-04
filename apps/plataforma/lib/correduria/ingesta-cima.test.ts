@@ -474,3 +474,11 @@ test('🚨 emisiones sin aviso: una fila ilegible degrada la lista ENTERA a null
   assert.equal(r.salud.emisionesSinAviso, null)
   assert.ok(r.salud.huecos.some(h => /webhook/.test(h)))
 })
+
+test('cobertura con rutasDescartadas llega a la salud; una forma rara la degrada a null', () => {
+  const ok = interpretarIngesta(200, { ...OK, cobertura: { ...SENALES.cobertura, rutasDescartadas: 4 } })
+  assert.equal(ok.estado, 'ok')
+  if (ok.estado === 'ok') assert.equal(ok.salud.cobertura?.rutasDescartadas, 4)
+  const mala = interpretarIngesta(200, { ...OK, cobertura: { ...SENALES.cobertura, rutasDescartadas: 'x' } })
+  if (mala.estado === 'ok') assert.equal(mala.salud.cobertura, null)
+})

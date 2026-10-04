@@ -82,9 +82,9 @@ export const ARTICULOS: readonly Articulo[] = [
   {
     slug: 'preaviso-un-mes-no-renovar-seguro',
     h1: 'El preaviso de un mes para no renovar tu seguro',
-    title: 'Preaviso de un mes para no renovar el seguro',
+    title: 'Hasta qué día puedes avisar para no renovar',
     description:
-      'Tu póliza no se decide el día que vence, sino un mes antes. Qué dice el artículo 22 de la Ley de Contrato de Seguro y cómo calcular tu fecha real.',
+      'Tu seguro se renueva automáticamente. Tienes un mes antes del vencimiento para avisar si no quieres prórroga. Cómo calcular tu fecha real según el art. 22 LCS.',
     fecha: '2026-09-07',
     consulta: 'preaviso de un mes para cancelar el seguro',
     resumen:
@@ -798,9 +798,9 @@ export const ARTICULOS: readonly Articulo[] = [
   {
     slug: 'como-dar-de-baja-un-seguro-a-tiempo',
     h1: 'Cómo dar de baja un seguro a tiempo, paso a paso',
-    title: 'Cómo dar de baja un seguro a tiempo',
+    title: 'Cómo dar de baja un seguro: pasos y plazo',
     description:
-      'Para no renovar un seguro hay que avisar por escrito un mes antes del vencimiento. Qué lleva la carta, por dónde enviarla y qué hacer después.',
+      'Qué lleva la carta de baja, por dónde enviarla y plazo. Pasos para dar de baja un seguro sin errores y con comprobante de envío.',
     fecha: '2026-09-19',
     consulta: 'cómo dar de baja un seguro',
     resumen:

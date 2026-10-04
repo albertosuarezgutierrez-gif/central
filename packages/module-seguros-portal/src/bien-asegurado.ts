@@ -47,7 +47,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { textoConDato } from './poliza-leida.ts'
-import { formatCapitales } from '@central/module-seguros'
+import { fichaObjeto, formatCapitales } from '@central/module-seguros'
 
 /** La cosa asegurada, ya legible y ya troceada por quién puede ver cada parte. */
 export interface BienAsegurado {
@@ -150,6 +150,26 @@ export function esRamoInmueble(ramo: string | null | undefined): boolean {
 }
 
 /**
+ * Pulido para el CLIENTE de la ficha del vehículo (03/10/2026; `fichaObjeto` es la del operador):
+ *  - «Uso»: se OCULTA. La tabla de uso es externa al EIAC y no está transcrita: no se traduce `PA` ni
+ *    nada a ojo, y un código crudo («Uso: NI») no le dice nada al cliente. Si algún día hay tabla oficial, aquí.
+ *  - «Potencia»: `fichaObjeto` ya la entrega como «N CV» (CIMA manda CV: 1.5 dCi 109, 1.9 TDI 90, 1.6 HDI 92…);
+ *    solo se descarta si no trae ninguna cifra.
+ *  - «PMA»: la masa máxima autorizada en kg. Medido sobre la cartera: turismos 970–2.800 y, en
+ *    motos, valores de 0 a 89 que son un campo mal volcado (no existe una moto de 6 kg). Por debajo de
+ *    150 kg no es un dato: no se pinta («7 kg» era mentira).
+ */
+export function pulirDatoVehiculo(f: { etiqueta: string; valor: string }): { etiqueta: string; valor: string } | null {
+  if (f.etiqueta.startsWith('Uso')) return null
+  if (f.etiqueta === 'Potencia') return /\d/.test(f.valor) ? f : null
+  if (f.etiqueta.startsWith('PMA')) {
+    const n = Number(f.valor.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, ''))
+    return Number.isFinite(n) && n >= 150 ? { etiqueta: 'Masa máxima autorizada (PMA)', valor: f.valor } : null
+  }
+  return f
+}
+
+/**
  * Describe el bien asegurado a partir del `datos_especificos` de la póliza.
  *
  * 🚨 Nunca inventa y nunca lanza: lo que no venga informado sale `null`, y eso
@@ -191,6 +211,16 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
     ? d.capitales.filter((c) => !esPartidaDeCobertura(c))
     : d.capitales
   detalles.push(...(formatCapitales({ ...d, capitales }) ?? []))
+  // Ficha de CIMA (valor, combustible, uso, zona…): solo lo informado, códigos
+  // crudos. 🔒 `fichaObjeto` NO incluye el bastidor (VIN): es solo del operador y
+  // no hay ninguna ruta de este fichero que lo lea (cepo en bien-asegurado.test.ts).
+  const esVehiculo = RAMOS_VEHICULO.has(r) || campo(d, 'matricula') !== null
+  for (const f0 of fichaObjeto(esVehiculo ? 'auto' : r, d) ?? []) {
+    const f = esVehiculo ? pulirDatoVehiculo(f0) : f0
+    if (f === null) continue
+    // El mismo filtro anti-cifrado que el resto de campos del portal.
+    if (!VERSION_CIFRADO.test(f.valor)) detalles.push(`${f.etiqueta}: ${f.valor}`)
+  }
 
   // ── Vehículo ──────────────────────────────────────────────────────────────
   if (RAMOS_VEHICULO.has(r) || campo(d, 'matricula') !== null) {

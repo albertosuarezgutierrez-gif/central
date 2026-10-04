@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detalleSiniestroCompania, textoClaro, type EntradaDetalle } from './siniestro-detalle.ts'
+import { detalleSiniestroCompania, descripcionRiesgoLegible, textoClaro, normalizarCodigoCoberturaNumerico, type EntradaDetalle } from './siniestro-detalle.ts'
 
 const vacio: EntradaDetalle = {
   fechaDeclaracion: null,
@@ -79,4 +79,42 @@ test('parte amistoso: false es un dato, no un hueco', () => {
 test('vehículo propio con matrícula en claro', () => {
   const d = detalleSiniestroCompania({ ...vacio, vehiculo: { marca: 'SEAT', modelo: 'IBIZA', matricula: '1234ABC', conductorNombre: 'v1:q' } })
   assert.equal(d?.vehiculo, 'SEAT IBIZA · 1234ABC')
+})
+
+test('🚨 reserva por cobertura: el código se traduce con las coberturas de la póliza; sin nombre, la fila no se pinta', () => {
+  const d = detalleSiniestroCompania(
+    { ...vacio, reservaDesglose: { coberturas: [{ cobertura: '16', importe: '171.31' }, { cobertura: '43', importe: '78.00' }, { cobertura: 'constructor', importe: '1' }] } },
+    { '16': 'Fenómenos Naturaleza' },
+  )
+  assert.deepEqual(d?.reservaPorCobertura, [{ cobertura: 'Fenómenos Naturaleza', importe: 171.31 }, { cobertura: 'constructor', importe: 1 }])
+  assert.doesNotMatch(JSON.stringify(d), /"43"|"16"/)
+  assert.equal(detalleSiniestroCompania({ ...vacio, reservaDesglose: { coberturas: [{ cobertura: '16', importe: '5' }] } }), null)
+})
+
+test('riesgo afectado: se quita el código interno delante del nombre', () => {
+  assert.equal(descripcionRiesgoLegible('1219-Allianz Auto Terceros'), 'Allianz Auto Terceros')
+  assert.equal(descripcionRiesgoLegible('HONDA NTV 700'), 'HONDA NTV 700')
+  assert.equal(descripcionRiesgoLegible('1219'), null)
+  assert.equal(detalleSiniestroCompania({ ...vacio, riesgo: { descripcion: '1219-Allianz Auto Terceros', coberturas: [] } })?.riesgo?.descripcion, 'Allianz Auto Terceros')
+})
+
+test('culpa indeterminada (IN) no se pinta: no consta, no se afirma', () => {
+  assert.equal(detalleSiniestroCompania({ ...vacio, posicion: 'IN' }), null)
+  assert.equal(detalleSiniestroCompania({ ...vacio, posicion: 'RE' })?.culpa, 'Sin culpa: tu compañía reclama al contrario')
+})
+
+test('normalizarCodigoCoberturaNumerico: elimina ceros a la izquierda de códigos numéricos', () => {
+  assert.equal(normalizarCodigoCoberturaNumerico('016'), '16')
+  assert.equal(normalizarCodigoCoberturaNumerico('0'), '0')
+  assert.equal(normalizarCodigoCoberturaNumerico('A01'), 'A01')
+  assert.equal(normalizarCodigoCoberturaNumerico(''), null)
+  assert.equal(normalizarCodigoCoberturaNumerico(null), null)
+})
+
+test('🚨 reserva por cobertura: código normalizado casa con mapa normalizado (016 ≡ 16)', () => {
+  const d = detalleSiniestroCompania(
+    { ...vacio, reservaDesglose: { coberturas: [{ cobertura: '016', importe: 171.31 }] } },
+    { '16': 'Daños propios' }
+  )
+  assert.deepEqual(d?.reservaPorCobertura, [{ cobertura: 'Daños propios', importe: 171.31 }])
 })

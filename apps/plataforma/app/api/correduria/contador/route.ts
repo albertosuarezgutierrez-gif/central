@@ -4,7 +4,7 @@ import { contadorCacheado, esContador } from '@/lib/correduria/contadores-cachea
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/correduria/contador?c=llamadas|recaptacion — solo el número, cacheado
+// GET /api/correduria/contador?c=llamadas — solo el número, cacheado
 // 5 min (ver lib/correduria/contadores-cacheados.ts). `n: null` = no se sabe.
 export async function GET(req: NextRequest) {
   const guarda = await exigirCorreduria()

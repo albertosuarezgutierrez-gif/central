@@ -52,6 +52,12 @@ export type CatastroHogar = {
   codigoPostal: string | null
   uso: string | null
   /**
+   * La referencia catastral (20) con la que se consultó. Viaja como
+   * `risk.address.cadastralReference` (campo opcional del esquema). Solo se
+   * pone cuando consta de verdad: nunca se deduce de la dirección.
+   */
+  referencia?: string | null
+  /**
    * La dirección oficial del Catastro, YA TROCEADA (con `paramsDnploc` de
    * `@central/core-catastro`, que entiende el formato propio del Catastro
    * «Es:1 Pl:01 Pt:IZ» — el `partirDireccion` de aquí abajo está pensado para
@@ -294,6 +300,7 @@ export function precalificarHogarCartera(
     numeroVia: dir.numero ?? undefined,
     planta: dir.planta,
     puertaVivienda: dir.puerta,
+    referenciaCatastral: limpio(catastro?.referencia) ?? undefined,
 
     // ── Cómo es ──
     metrosCuadrados: metrosFinal ?? undefined,

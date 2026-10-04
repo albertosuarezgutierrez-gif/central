@@ -72,6 +72,8 @@ export const POST = auditado(async (req: Request) => {
         contenido: Buffer.from(await fichero.arrayBuffer()),
       },
       actor: texto(datos.actor) ?? 'plataforma',
+      // El `contacto` que devolvió la lectura (si la pantalla lo reenvía): empresa y su CIF.
+      ...empresaDe(datos),
     })
 
     if (!r.ok) {
@@ -114,4 +116,17 @@ function leerLectura(v: unknown): LecturaPoliza | null {
     else datos[k] = null
   }
   return { ramo: texto(o.ramo), tipoLectura: tipo, datos }
+}
+
+/** `tomadorEsEmpresa`/`cifTomador` del cuerpo o de `lectura.contacto`. Ausentes = no se sabe (el alta mira el nombre y un CIF en `dni`). */
+function empresaDe(datos: Record<string, unknown>): { tomadorEsEmpresa: boolean | null; cifTomador: string | null } {
+  const lect = datos.lectura
+  const c = typeof lect === 'object' && lect !== null && typeof (lect as Record<string, unknown>).contacto === 'object'
+    ? ((lect as Record<string, unknown>).contacto as Record<string, unknown> | null) ?? {}
+    : {}
+  const emp = datos.tomadorEsEmpresa ?? c.tomadorEsEmpresa
+  return {
+    tomadorEsEmpresa: typeof emp === 'boolean' ? emp : null,
+    cifTomador: texto(datos.cifTomador) ?? texto(c.cifTomador),
+  }
 }

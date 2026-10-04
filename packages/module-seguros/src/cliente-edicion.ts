@@ -73,6 +73,17 @@ export function normalizarEmail(v: unknown): Revisado<string> {
   return { ok: true, valor: s }
 }
 
+/**
+ * ¿El contacto que se añade queda como PRINCIPAL? El que se pide principal, sí; si la ficha no tiene
+ * ninguno, el primero sube solo… salvo `nuncaPrincipal` (03/10/2026): un email volcado desde un
+ * documento NO puede quedar principal nunca, porque el portal enlaza la sesión por el email
+ * principal y eso sería entregar la cuenta a quien subió el papel.
+ */
+export function seraPrincipalAlAnadir(e: { pedido: boolean; nuncaPrincipal: boolean; hayPrincipal: boolean }): boolean {
+  if (e.nuncaPrincipal) return false
+  return e.pedido || !e.hayPrincipal
+}
+
 export function normalizarContacto(tipo: TipoContacto, v: unknown): Revisado<string> {
   return tipo === 'telefono' ? normalizarTelefono(v) : normalizarEmail(v)
 }

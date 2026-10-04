@@ -15,7 +15,7 @@ import {
 } from '@/lib/codeoscopic/emitir'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada, fechaEfectoDeOferta } from '@/lib/codeoscopic/fecha-efecto'
 import { consejoTrasFallo, intentoQuizaEmitido, rastroSolicitudEmision, solicitudViva, solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
-import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
+import { enviarEmision, soltarCandadoEnvio, tomarCandadoAcunado } from '@/lib/codeoscopic/emitir-envio'
 import {
   conCuentaBancaria,
   decidirCuentaEnvio,
@@ -29,6 +29,7 @@ import {
 import { cuentaDeFicha, origenCuentaAceptada, presupuestoAceptadoDe, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
 import { cuentaDistintaDeLaFirmada, discrepanciaConElegida, polizaParaCuenta } from '@/lib/presupuesto-cuenta'
 import { marcarEmitido } from '@/lib/envio-presupuesto'
+import { cerrarPresupuestosPorEmision } from '@/lib/presupuesto-referencia'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { documentoTomador, fraccionamientoDeOferta, matriculaProyecto } from '@/lib/codeoscopic/importar'
 import {
@@ -47,6 +48,8 @@ import { trasEmisionConTope } from '@/lib/tras-emision'
 import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 import { copiarFigurasAPoliza, faltanConfirmaciones, leerCambiosDeFiguras, registrarConfirmacion, type Confirmacion } from '@/lib/emision-figuras'
+import { decidirBloqueoBonus, verificacionBonusDe, FUENTES_VERIFICACION_BONUS } from '@central/module-seguros'
+import { guardarVerificacionBonus, leerBonusTarificacion } from '@/lib/seguro-anterior-candidatas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -73,6 +76,9 @@ export const maxDuration = 240
  *   `reintento_sin_confirmar`): el corredor ha mirado el proyecto y no hay póliza.
  *   `acunarExistente: true` cuando el proyecto YA cuenta una `policyApplication` aprobada con
  *   nº de póliza (`solicitudes[]` del 409): se acuña ESA en la cartera y NO se envía nada.
+ *   `bonusVerificado: { fuente: 'certificado'|'sinco'|'dato_confirmado', nota? }` (03/10/2026): el bonus
+ *   de un vehículo nuevo se declaró SUPUESTO (o no consta) y el corredor ya lo ha verificado. Sin él → 422
+ *   `bonus_sin_verificar`, antes de llamar a nadie.
  *   `duplicadoConfirmado: true` (solo cliente NUEVO, 28/09/2026): el corredor ha visto el 409
  *   `ya_en_cartera`/`ya_emitido` y confirma que es otra póliza. Queda en el log.
  *
@@ -236,6 +242,29 @@ export const POST = auditado(async (req: Request) => {
   }
   const ctx = resuelto.ctx
 
+  // 🚗 Bonus SUPUESTO de un vehículo nuevo (03/10/2026): si al tarificar se declararon al MÁXIMO
+  // unos años sin siniestros que no constaban, no se emite sin verificarlos (certificado, SINCO o dato
+  // confirmado por el cliente). Fail-closed: NULL (tarificación anterior a la marca, o no se pudo
+  // leer) es «no se sabe», no «no se supuso». Acuñar una solicitud YA aprobada no envía nada: no se corta.
+  if (modoNuevo && tar && p.tarificacion_id && cuerpo.acunarExistente !== true) {
+    const riesgo = esObjeto(tar.peticion) && esObjeto(tar.peticion.risk) ? tar.peticion.risk : null
+    const previamenteAsegurado = riesgo && typeof riesgo.previouslyInsured === 'boolean' ? riesgo.previouslyInsured : null
+    const marca = await leerBonusTarificacion(correduria.id, p.tarificacion_id)
+    const deCuerpo = verificacionBonusDe(cuerpo.bonusVerificado)
+    const verificacion = deCuerpo ?? verificacionBonusDe(marca.verificacion)
+    const bloqueo = decidirBloqueoBonus({ ramo: tar.ramo, previamenteAsegurado, bonusSupuesto: marca.bonusSupuesto, verificacion })
+    if (bloqueo.bloquea) {
+      return NextResponse.json(
+        { estado: 'error', causa: bloqueo.causa, mensaje: bloqueo.mensaje, bonusSupuesto: marca.bonusSupuesto, fuentes: FUENTES_VERIFICACION_BONUS },
+        { status: 422 },
+      )
+    }
+    if (deCuerpo && marca.bonusSupuesto !== false) {
+      console.log(`[emitir] proyecto ${projectId}: bonus verificado por ${actor} (${deCuerpo.fuente}) — se sigue`)
+      await guardarVerificacionBonus(correduria.id, p.tarificacion_id, deCuerpo, actor)
+    }
+  }
+
   // 🚨 Si el cliente aceptó en el portal un presupuesto de ESTA tarificación, lo que se emite tiene
   // que ser la opción que FIRMÓ (compañía y prima). Fail-closed: si no se puede mirar, no se emite.
   let aceptado: Awaited<ReturnType<typeof presupuestoAceptadoDe>>
@@ -262,11 +291,19 @@ export const POST = auditado(async (req: Request) => {
       )
     }
   }
-  /** Cierra el presupuesto aceptado al acuñar la póliza. Best-effort: la póliza ya existe. */
-  const cerrarPresupuesto = async () => {
-    if (!aceptado) return
-    await marcarEmitido(correduria.id, { id: aceptado.id, actor }).catch((e: unknown) =>
-      console.error('[emitir] póliza acuñada pero el presupuesto no se marcó emitido:', e instanceof Error ? e.message : e),
+  /**
+   * Cierra el presupuesto aceptado al acuñar la póliza y, desde el 30/09/2026, ata la póliza
+   * (`poliza_emitida_id`) a los presupuestos de ESTA tarificación que enseñaban esa compañía —también
+   * los emitidos desde su referencia sin firma en el portal. Best-effort: la póliza ya existe.
+   */
+  const cerrarPresupuesto = async (polizaId: string) => {
+    if (aceptado) {
+      await marcarEmitido(correduria.id, { id: aceptado.id, actor }).catch((e: unknown) =>
+        console.error('[emitir] póliza acuñada pero el presupuesto no se marcó emitido:', e instanceof Error ? e.message : e),
+      )
+    }
+    await cerrarPresupuestosPorEmision(correduria.id, { tarificacionId: p.tarificacion_id, polizaId, compania: p.aseguradora, actor }).catch((e: unknown) =>
+      console.error('[emitir] póliza acuñada pero no se ató a su presupuesto:', e instanceof Error ? e.message : e),
     )
   }
   /** Tras acuñar: las figuras de la variante pasan a la póliza (29/09/2026). Best-effort: la póliza ya existe. */
@@ -489,32 +526,53 @@ export const POST = auditado(async (req: Request) => {
         { status: 409 },
       )
     }
-    const catalogoAc = await catalogoCompanias()
-    const codigoDgsAc = catalogoAc?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
-    if (!codigoDgsAc) {
+    // 🔒 Mismo candado que el Submit (03/10/2026): sin él, el cron de descubrimiento podía acuñar
+    // este proyecto a la vez con SUS datos y se perdían la póliza de origen, el correo al cliente,
+    // la baja de la anterior, el cierre del presupuesto y las figuras. Ocupado → «en vuelo», sin acuñar.
+    const candadoAc = await tomarCandadoAcunado(correduria.id, projectId)
+    if (candadoAc.tipo !== 'tomado') {
       return NextResponse.json(
-        { estado: 'emitido_sin_acunar', mensaje: `«${p.aseguradora}» no tiene código DGS en companias_dgs: acúñala a mano${aprobada.numeroPoliza ? ` con el nº ${aprobada.numeroPoliza}` : ' (la compañía aún no ha dado número)'}.`, referenciaVendor: aprobada.numeroPoliza },
-        { status: 200 },
+        candadoAc.tipo === 'ya-emitida'
+          ? { estado: 'error', causa: 'ya_emitida', mensaje: `El proyecto ${projectId} ya consta como emitido: no se acuña otra póliza.` }
+          : {
+              estado: 'error',
+              causa: 'en-vuelo',
+              mensaje: `Otra operación está registrando el proyecto ${projectId} ahora mismo: no se acuña. Vuelve a mirarlo en un minuto.`,
+            },
+        { status: 409 },
       )
     }
-    const opcionesAc = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
-    const acunadoAc = await registrarPolizaEmitida(correduria.id, {
-      clienteId: ctx.clienteId,
-      actor,
-      catalogo: catalogoAc ?? undefined,
-      polizaOrigenId: ctx.polizaOrigenId,
-      proyecto: {
-        projectIdCodeoscopic: projectId,
-        producto: ctx.tipo,
-        codigoDgs: codigoDgsAc,
-        numeroPoliza: aprobada.numeroPoliza,
-        primaAnual: numero(cuerpo.primaAnual),
-        emitidaEn: aprobada.creadaEn ?? new Date().toISOString(),
-        riesgo: ctx.riesgo,
-        fraccionamiento: fraccionamientoAcunado,
-        opciones: opcionesAc,
-      },
-    })
+    let acunadoAc: Awaited<ReturnType<typeof registrarPolizaEmitida>>
+    try {
+      const catalogoAc = await catalogoCompanias()
+      const codigoDgsAc = catalogoAc?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
+      if (!codigoDgsAc) {
+        return NextResponse.json(
+          { estado: 'emitido_sin_acunar', mensaje: `«${p.aseguradora}» no tiene código DGS en companias_dgs: acúñala a mano${aprobada.numeroPoliza ? ` con el nº ${aprobada.numeroPoliza}` : ' (la compañía aún no ha dado número)'}.`, referenciaVendor: aprobada.numeroPoliza },
+          { status: 200 },
+        )
+      }
+      const opcionesAc = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
+      acunadoAc = await registrarPolizaEmitida(correduria.id, {
+        clienteId: ctx.clienteId,
+        actor,
+        catalogo: catalogoAc ?? undefined,
+        polizaOrigenId: ctx.polizaOrigenId,
+        proyecto: {
+          projectIdCodeoscopic: projectId,
+          producto: ctx.tipo,
+          codigoDgs: codigoDgsAc,
+          numeroPoliza: aprobada.numeroPoliza,
+          primaAnual: numero(cuerpo.primaAnual),
+          emitidaEn: aprobada.creadaEn ?? new Date().toISOString(),
+          riesgo: ctx.riesgo,
+          fraccionamiento: fraccionamientoAcunado,
+          opciones: opcionesAc,
+        },
+      })
+    } finally {
+      await soltarCandadoEnvio(correduria.id, projectId, candadoAc.attemptId)
+    }
     console.log(
       `[emitir] proyecto ${projectId}: solicitud ${aprobada.id ?? '?'} ya aprobada por la compañía (póliza ${aprobada.numeroPoliza ?? 'sin número'}) — ` +
         (acunadoAc.ok ? 'acuñada sin reenviar' : `NO acuñada: ${acunadoAc.motivo}`),
@@ -522,7 +580,7 @@ export const POST = auditado(async (req: Request) => {
     // Best-effort: el PDF de la póliza puede venir ya en `issuedDocuments[]` del
     // proyecto que se acaba de leer (`crudoPrevio`) — sin gastar un GET extra.
     if (acunadoAc.ok) {
-      await cerrarPresupuesto()
+      await cerrarPresupuesto(acunadoAc.polizaId)
       await figurasAPoliza(acunadoAc.polizaId)
     }
     const archivadoAc = acunadoAc.ok
@@ -534,7 +592,11 @@ export const POST = auditado(async (req: Request) => {
       estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
       trasEmision: trasAc,
       // Aquí no se ha enviado nada: si no se acuña, el motivo real es lo único útil.
-      ...(acunadoAc.ok ? {} : { mensaje: `La compañía ya tiene la póliza${aprobada.numeroPoliza ? ` nº ${aprobada.numeroPoliza}` : ''} pero no se ha podido registrar en la cartera: ${acunadoAc.motivo}` }),
+      ...(acunadoAc.ok
+        ? {}
+        : acunadoAc.estado === 'ya_acunada'
+          ? { mensaje: YA_ACUNADA_POR_OTRA_VIA }
+          : { mensaje: `La compañía ya tiene la póliza${aprobada.numeroPoliza ? ` nº ${aprobada.numeroPoliza}` : ''} pero no se ha podido registrar en la cartera: ${acunadoAc.motivo}` }),
       referenciaVendor: aprobada.numeroPoliza,
       acunado: acunadoAc,
       cuenta: null,
@@ -694,6 +756,7 @@ export const POST = auditado(async (req: Request) => {
   // asume por defecto, ver comentario de `conProductoPorDefecto`.
   const camposConProducto = conProductoPorDefecto(camposEnvio, p.aseguradora, {
     familiaAllianz: cuerpo.familiaEnAllianz === true,
+    ramo: ctx.tipo,
   })
 
   // GRATIS: lo que el vendor dice que hace falta. Informativo — no bloquea el
@@ -1027,61 +1090,71 @@ export const POST = auditado(async (req: Request) => {
     )
   }
 
-  // ── El vendor aceptó: se acuña la póliza en NUESTRA BD ──────────────────
-  // Persiste la respuesta CRUDA del Submit (incluido `issuedDocuments[]`, si
-  // el vendor lo manda aquí) en `quote_data` — hasta el 17/09/2026 se
-  // descartaba tras esta petición y no había forma de saber qué documentos
-  // había devuelto una emisión ya pasada. Best-effort: nunca bloquea el acuñado.
-  // 🚨 SIEMPRE `redactarCrudoVendor` antes de guardar: `crudo` trae IBAN/DNI/
-  // email/teléfono del tomador en texto plano (`quote`/`payment`/persona), y
-  // `quote_data` es jsonb sin cifrar (a diferencia de `clientes.iban/dni`).
-  await prisma.$executeRaw`
-    update codeoscopic_projects set quote_data = ${JSON.stringify(redactarCrudoVendor(envio.crudo))}::jsonb
-    where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
-  `.catch((e: unknown) => {
-    console.log(`[emitir] no se pudo guardar quote_data del proyecto ${projectId} —`, e instanceof Error ? e.message : String(e))
-  })
-
-  const catalogo = await catalogoCompanias()
-  const codigoDgs = catalogo?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
-  if (!codigoDgs) {
-    // El vendor YA aceptó el Submit: esto NO se pierde. Se deja constancia del
-    // aviso y de la respuesta cruda para que se acuñe a mano — un dato de
-    // nuestro catálogo que falta no puede borrar una emisión real.
-    return NextResponse.json({
-      estado: 'emitido_sin_acunar',
-      mensaje:
-        `Codeoscopic aceptó la emisión pero «${p.aseguradora}» no tiene código DGS en companias_dgs: ` +
-        'la póliza NO se ha acuñado sola. Añade el código y acúñala a mano con este `crudo`.',
-      referenciaVendor: envio.referenciaVendor,
-      crudo: redactarCrudoVendor(envio.crudo),
+  // 🔒 El candado del Submit (`submit_in_flight_at`) sigue puesto hasta aquí abajo (03/10/2026): así
+  // el cron de descubrimiento y el webhook no acuñan este proyecto en el hueco entre el Submit y el
+  // acuñado. La exclusión DURA del acuñado es de la BD (`lib/acunado-unico.ts`); esto decide QUIÉN
+  // acuña: el botón, con su póliza de origen y su correo al cliente.
+  const attemptIdEnvio = envio.attemptId
+  let acunado: Awaited<ReturnType<typeof registrarPolizaEmitida>>
+  try {
+    // ── El vendor aceptó: se acuña la póliza en NUESTRA BD ──────────────────
+    // Persiste la respuesta CRUDA del Submit (incluido `issuedDocuments[]`, si
+    // el vendor lo manda aquí) en `quote_data` — hasta el 17/09/2026 se
+    // descartaba tras esta petición y no había forma de saber qué documentos
+    // había devuelto una emisión ya pasada. Best-effort: nunca bloquea el acuñado.
+    // 🚨 SIEMPRE `redactarCrudoVendor` antes de guardar: `crudo` trae IBAN/DNI/
+    // email/teléfono del tomador en texto plano (`quote`/`payment`/persona), y
+    // `quote_data` es jsonb sin cifrar (a diferencia de `clientes.iban/dni`).
+    await prisma.$executeRaw`
+      update codeoscopic_projects set quote_data = ${JSON.stringify(redactarCrudoVendor(envio.crudo))}::jsonb
+      where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
+    `.catch((e: unknown) => {
+      console.log(`[emitir] no se pudo guardar quote_data del proyecto ${projectId} —`, e instanceof Error ? e.message : String(e))
     })
-  }
 
-  const opcionesEmitida = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
-  const acunado = await registrarPolizaEmitida(correduria.id, {
-    clienteId: ctx.clienteId,
-    actor,
-    catalogo: catalogo ?? undefined,
-    polizaOrigenId: ctx.polizaOrigenId,
-    proyecto: {
-      projectIdCodeoscopic: projectId,
-      producto: ctx.tipo,
-      codigoDgs,
-      numeroPoliza: envio.referenciaVendor,
-      primaAnual: numero(cuerpo.primaAnual),
-      emitidaEn: new Date().toISOString(),
-      riesgo: ctx.riesgo,
-      fraccionamiento: fraccionamientoAcunado,
-      opciones: opcionesEmitida,
-    },
-  })
+    const catalogo = await catalogoCompanias()
+    const codigoDgs = catalogo?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
+    if (!codigoDgs) {
+      // El vendor YA aceptó el Submit: esto NO se pierde. Se deja constancia del
+      // aviso y de la respuesta cruda para que se acuñe a mano — un dato de
+      // nuestro catálogo que falta no puede borrar una emisión real.
+      return NextResponse.json({
+        estado: 'emitido_sin_acunar',
+        mensaje:
+          `Codeoscopic aceptó la emisión pero «${p.aseguradora}» no tiene código DGS en companias_dgs: ` +
+          'la póliza NO se ha acuñado sola. Añade el código y acúñala a mano con este `crudo`.',
+        referenciaVendor: envio.referenciaVendor,
+        crudo: redactarCrudoVendor(envio.crudo),
+      })
+    }
+
+    const opcionesEmitida = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
+    acunado = await registrarPolizaEmitida(correduria.id, {
+      clienteId: ctx.clienteId,
+      actor,
+      catalogo: catalogo ?? undefined,
+      polizaOrigenId: ctx.polizaOrigenId,
+      proyecto: {
+        projectIdCodeoscopic: projectId,
+        producto: ctx.tipo,
+        codigoDgs,
+        numeroPoliza: envio.referenciaVendor,
+        primaAnual: numero(cuerpo.primaAnual),
+        emitidaEn: new Date().toISOString(),
+        riesgo: ctx.riesgo,
+        fraccionamiento: fraccionamientoAcunado,
+        opciones: opcionesEmitida,
+      },
+    })
+  } finally {
+    await soltarCandadoEnvio(correduria.id, projectId, attemptIdEnvio)
+  }
 
   // Best-effort: el propio Submit puede traer ya `issuedDocuments[]` en su
   // respuesta (`envio.crudo`) — se descarga y archiva sin gastar otro GET.
   // Un fallo aquí nunca deshace el acuñado que ya se hizo arriba.
   if (acunado.ok) {
-    await cerrarPresupuesto()
+    await cerrarPresupuesto(acunado.polizaId)
     await figurasAPoliza(acunado.polizaId)
   }
   const archivado = acunado.ok
@@ -1095,6 +1168,7 @@ export const POST = auditado(async (req: Request) => {
   return NextResponse.json({
     estado: acunado.ok ? 'ok' : 'emitido_sin_acunar',
     trasEmision: tras,
+    ...(!acunado.ok && acunado.estado === 'ya_acunada' ? { mensaje: YA_ACUNADA_POR_OTRA_VIA } : {}),
     referenciaVendor: envio.referenciaVendor,
     acunado,
     // Con qué cuenta se ha emitido (enmascarada) y de dónde salió: la póliza
@@ -1105,6 +1179,11 @@ export const POST = auditado(async (req: Request) => {
     crudo: redactarCrudoVendor(envio.crudo),
   })
 })
+
+/** `registrarPolizaEmitida` → `ya_acunada`: otra vía (cron, webhook, otro clic) ganó la carrera. NO acuñar a mano. */
+const YA_ACUNADA_POR_OTRA_VIA =
+  'La póliza de este proyecto YA está acuñada en la cartera (la registró otra vía a la vez: descubrimiento o webhook). ' +
+  'No se ha creado otra ni hay que acuñarla a mano; el correo al cliente y la baja de la anterior no se han lanzado desde aquí: revísalos en la ficha.'
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null

@@ -101,6 +101,7 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 | Historial de cambios | ✅ se escribe y se pinta (tarjeta plegada, 50 filas) | `cartera-historial.ts` |
 | Cola de retención (recibos devueltos, art. 15 LCS) | ✅ | `Retencion.tsx`, `cartera-impagados.ts` |
 | Retarificar auto/hogar (Codeoscopic, 0,50 €) | ✅ solo tarifica | `lib/codeoscopic/*` |
+| Datos del riesgo de oportunidades por ramo | ✅ PR #4127 | `datos-riesgo-{generico,ramo,vivienda,capital,libre}` · `/api/operador/oportunidad/riesgo` |
 | **Emitir por Codeoscopic** | 🟡 OK de Alberto 02/09. Acuñar la póliza emitida (D2) está: `registrarPolizaEmitida` + puerto `POST /api/operador/poliza/emitida`, cerrado tras `CODEOSCOPIC_EMISION_ACTIVA`. ✅ **El envío al vendor SÍ está** (`emitir-envio.ts`, desde 11/09; emisiones reales Allianz 17/09 y Reale 23/09, medido 25/09). Sigue sin probar la idempotencia del `attempt_id` (no hay sandbox). **Solo emite desde «Retarificar» de una póliza auto/moto**: negocio nuevo (`*-nuevo`) y proyectos creados a mano en Avant2 no se pueden emitir ni importar por id | `asegura/lib/emision.ts` · spec §3 |
 | **Conciliación emitida ↔ CIMA** | 🟡 reglas puras hechas y testeadas (`emparejarConCima` D4, `conciliarConCima` D3) + `companias_dgs` (DGS → nombre exacto de CIMA) + enum `emitida_codeoscopic`. Falta el port de la ingesta CIMA que las use (aparcado); mientras, el legacy casa por nombre y D2 lo hace compatible | `module-seguros/emision.ts` · `seguros.companias_dgs` |
 | Alta automática de leads (web, WhatsApp, agente) | 🟡 **Web ✅** (02/09): landing pública `/seguros` en plataforma → `POST /api/publico/correduria/lead` (rate limit, honeypot, RGPD) → alta con `fuente = web` e historial `contacto`; si el teléfono/email ya está en una ficha NO se duplica: se anota el contacto en esa ficha. Telegram `correduria.lead-nuevo` siempre, con enlace a la ficha. WhatsApp ❌ (sin WABA) · agente ❌ | `plataforma/app/seguros` · `lib/leads-web.ts` · `asegura /cliente/historial` |
@@ -149,6 +150,22 @@ Lo que pasará sin cambiar nada, en orden de probabilidad:
 4. Guardián nocturno en la auditoría: **dos pólizas vivas con el mismo número y compañía = aviso**.
 5. Hasta que exista esto, la ficha ya distingue «viva (CIMA)» de lo demás; una emitida sin confirmar
    se enseñará como **«pendiente de confirmación por CIMA»**, nunca como viva.
+
+## 5.1 Tarificación de vehículo nuevo con bonificación imputada (03/10/2026)
+
+Al tarificar un vehículo nuevo, se imputa bonificación del **conductor** (no del vehículo). Descubrimiento:
+auto/moto-nuevo descartaban `seguroAnterior`, asumiendo erróneamente sin histórico.
+
+**Decisiones Alberto:** (a) elegir póliza a imputar (turismo > moto, efecto antiguo sin siniestros, override
+corredor); (b) años desconocidos → PRESUPUESTO tarifica máximo «bonusSupuesto», EMISIÓN bloqueada sin
+verificar (art. 10 LCS); (c) leer-documento completa nº póliza/matrícula/canal/cesión/modalidad.
+
+**PR1** (agente-architect, rama ccr-7156a8bc-i5qt5c): imputación + bloqueo + extracción.
+
+**PR2 pendiente (tras PR1):** aviso 45 días vencimientos competencia, plurianuales RCI como objetivo, «pagas
+X → Y» anualizado (sin ahorro si no asegura), pack coche+moto opcional (interruptor, desactivado).
+
+**Codeoscopic:** 0,50€/riesgo, 90 días vista, Allianz vinculación (insuredFamilyInAllianz, dtoVentaCruzada).
 
 ## 6. Leads: cómo entran y cómo se convierten
 

@@ -4,7 +4,11 @@
  * degrada a `null` en el campo, nunca a un valor tranquilizador: una variante sin precios leídos no
  * es «0 opciones», es «no se pudo leer».
  */
-import { ETIQUETA_ROL, esRolFigura, type RolFigura, type Diferencia } from '@central/module-seguros'
+import {
+  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda,
+  type CampoVehiculo, type ClaveDatosRiesgo, type DatosCapitalRiesgo, type DatosComercioRiesgo, type DatosRiesgoLibre, type DatosVehiculoRiesgo, type DatosViviendaRiesgo,
+  type RolFigura, type Diferencia,
+} from '@central/module-seguros'
 
 export type FiguraRiesgo = {
   rol: RolFigura
@@ -60,6 +64,43 @@ export type Riesgo = {
   figuras: FiguraRiesgo[]
   vinculos: Array<{ clienteId: string; nombre: string; tipo: string }>
   variantes: VarianteRiesgo[]
+  /**
+   * Datos del vehículo (solo auto/moto; `null` = otro ramo, o una versión de asegura que aún no los manda:
+   * en ese caso NO se enseña el bloque, no se pinta «sin datos»). Un campo sin dato es `null`, nunca `0`.
+   */
+  datosVehiculo: DatosVehiculoRiesgo | null
+  /** Lo que falta para pedir precio. `null` = no aplica o no se sabe. */
+  faltanVehiculo: CampoVehiculo[] | null
+  /**
+   * Los datos del riesgo de CUALQUIER ramo (30/09/2026). `null` = una versión de asegura que aún no los manda
+   * (no se enseña el bloque: no se pinta «sin datos» sobre algo que no se ha podido mirar). Cada bloque trae sus
+   * datos tal cual (`null` = no se sabe, nunca `''`/`0`), lo que falta para pedir precio y si lo que se ve es la
+   * precarga de la póliza (`dePoliza`, nunca confirmada). `tarifica: false` = ramo que se cotiza fuera.
+   */
+  datosRiesgo: DatosRiesgoDeRamo | null
+}
+
+export type DatosRiesgoDeRamo =
+  | { clave: 'datosVehiculo'; datos: DatosVehiculoRiesgo; faltan: string[]; dePoliza: boolean; tarifica: boolean }
+  | { clave: 'datosVivienda'; datos: DatosViviendaRiesgo; faltan: string[]; dePoliza: boolean; tarifica: boolean }
+  | { clave: 'datosCapital'; datos: DatosCapitalRiesgo; faltan: string[]; dePoliza: boolean; tarifica: boolean }
+  | { clave: 'datosComercio'; datos: DatosComercioRiesgo; faltan: string[]; dePoliza: boolean; tarifica: boolean }
+  | { clave: 'datosRiesgoLibre'; datos: DatosRiesgoLibre; faltan: string[]; dePoliza: boolean; tarifica: boolean }
+
+/** Lee `datosRiesgo` sin fiarse: una clave rara o unos datos ilegibles son `null` («no se sabe»), no un bloque vacío. */
+export function leerDatosRiesgoDeRamo(bruto: unknown): DatosRiesgoDeRamo | null {
+  const o = obj(bruto)
+  const clave = o.clave
+  if (!esClaveDatosRiesgo(clave)) return null
+  const faltan = Array.isArray(o.faltan) ? o.faltan.filter((c): c is string => typeof c === 'string') : []
+  const comunes = { faltan, dePoliza: o.dePoliza === true, tarifica: o.tarifica !== false }
+  switch (clave as ClaveDatosRiesgo) {
+    case 'datosVehiculo': { const d = leerDatosVehiculo(o.datos); return d ? { clave: 'datosVehiculo', datos: d, ...comunes } : null }
+    case 'datosVivienda': { const d = leerDatosVivienda(o.datos); return d ? { clave: 'datosVivienda', datos: d, ...comunes } : null }
+    case 'datosCapital': { const d = leerDatosCapital(o.datos); return d ? { clave: 'datosCapital', datos: d, ...comunes } : null }
+    case 'datosComercio': { const d = leerDatosComercio(o.datos); return d ? { clave: 'datosComercio', datos: d, ...comunes } : null }
+    case 'datosRiesgoLibre': { const d = leerDatosRiesgoLibre(o.datos); return d ? { clave: 'datosRiesgoLibre', datos: d, ...comunes } : null }
+  }
 }
 
 export type LecturaRiesgo = { estado: 'ok'; riesgo: Riesgo } | { estado: 'no_encontrado' } | { estado: 'error'; motivo: string }
@@ -131,6 +172,11 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
         return txt(x.clienteId) ? [{ clienteId: x.clienteId as string, nombre: txt(x.nombre) ?? 'Sin nombre', tipo: txt(x.tipo) ?? '' }] : []
       }),
       variantes,
+      datosRiesgo: leerDatosRiesgoDeRamo(o.datosRiesgo),
+      datosVehiculo: leerDatosVehiculo(o.datosVehiculo),
+      faltanVehiculo: Array.isArray(o.faltanVehiculo)
+        ? o.faltanVehiculo.filter((c): c is CampoVehiculo => (CAMPOS_VEHICULO as readonly string[]).includes(c as string))
+        : null,
     },
   }
 }

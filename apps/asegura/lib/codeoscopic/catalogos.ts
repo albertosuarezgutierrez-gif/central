@@ -21,6 +21,7 @@ import type { ConfigCodeoscopic } from './config.ts'
 export type { Opcion } from './opciones.ts'
 export { normalizarTexto, emparejar, elegirDefecto, pareceOpcionPropietario } from './opciones.ts'
 import { normalizarTexto, type Opcion } from './opciones.ts'
+import { PATH_ROLES, type RamoPersonas } from './roles-persona.ts'
 import { limitesDeCarnets, motorDeVersion, type LimiteCarnet, type MotorVersion } from './carnet-moto.ts'
 
 /**
@@ -584,6 +585,25 @@ export function saludDisponible(lineas: Opcion[]): DisponibilidadSalud {
 }
 export function decesosDisponible(lineas: Opcion[]): DisponibilidadDecesos {
   return disponibleDeIds(lineas, IDS_DECESOS)
+}
+
+/**
+ * `GET /{term-life|health|burial}/person-roles` CRUDO (gratis, misma caché de 24 h que el resto):
+ * lo que el vendor exige de cada persona del ramo. Se interpreta en `roles-persona.ts`. Lanza si
+ * el GET falla —y un fallo no se cachea—: quien llama lo trata como «no se sabe» (fail-closed).
+ */
+export async function rolesDePersonas(config: ConfigCodeoscopic, ramo: RamoPersonas): Promise<unknown> {
+  return catalogo<unknown>(config, PATH_ROLES[ramo])
+}
+
+/**
+ * `GET /economic-occupations?level=4`: profesiones CNO-11 al nivel más fino (código de 4 cifras,
+ * ej. `2612`). Gratis. 🚧 El parámetro `level` (1-4) está en la referencia; si es obligatorio o
+ * cuál es su valor por defecto NO está documentado: se pide el 4 y, si el vendor rechaza, esto
+ * lanza y la profesión no se puede validar (la ruta de pago corta antes de gastar).
+ */
+export async function profesiones(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/economic-occupations?level=4'))
 }
 
 // ─── Emparejar texto del CRM con el catálogo del vendor ──────────────────────

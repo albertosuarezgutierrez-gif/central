@@ -756,6 +756,10 @@ model Documento {
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   revisadoAt        DateTime? @map("revisado_at") @db.Timestamptz(6)
   revisadoPor       String?   @map("revisado_por")
+  /// Lectura por IA de la póliza subida (03/10/2026, `prisma/sql/2026-10-03_documentos_extraccion.sql`).
+  /// NULL = no se leyó con IA. SIN PII del tomador (`extraccionSinPii`): de esos campos, solo si se leyeron.
+  /// Se escribe por SQL crudo en best-effort (`guardarExtraccion`); toda lectura de `documento` usa `select`.
+  extraccion        Json?
 
   @@index([correduriaId, clienteId])
   @@index([correduriaId, polizaId])
@@ -1348,6 +1352,11 @@ model Presupuesto {
   /// Exigencias y necesidades del cliente (art. 20 Ley 16/2018), escritas por el corredor. NULL = no constan.
   necesidades      String?
   necesidadesAt    DateTime? @map("necesidades_at") @db.Timestamptz(6)
+  /// Referencia propia AS-AA-NNNN que se le da al cliente (nunca el nº de Avant2). La pone la BD
+  /// al insertar (trigger, contador por correduría + año) y no se reescribe. 2026-09-30b_presupuesto_referencia.sql
+  referencia       String?   @default(dbgenerated())
+  /// Primer PDF descargado para el cliente. NO prueba que se enviara (no es enviadoAt). NULL = no consta.
+  documentoDescargadoAt DateTime? @map("documento_descargado_at") @db.Timestamptz(6)
 
   opciones PresupuestoOpcion[]
   eventos  PresupuestoEvento[]

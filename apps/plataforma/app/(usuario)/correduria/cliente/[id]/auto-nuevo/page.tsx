@@ -5,6 +5,8 @@ import { precalificarAutoNuevaAsegura, catalogoAsegura } from '@/lib/auto-nuevo-
 import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura } from '@/lib/seguimiento-asegura'
 import { anteriorParaTarificar } from '@/lib/seguro-anterior'
+import { otroVehiculoDelCliente } from '@/lib/correduria/pack-otro-vehiculo'
+import { tienePolizaAllianzEnVigor } from '@central/module-seguros'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import AutoNuevo from './AutoNuevo'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
@@ -131,6 +133,7 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         clienteId={clienteId}
         matriculaInicial={matriculaInicial}
         etiquetaCliente={pre.pre.etiquetaCliente}
+        seguroImputado={pre.pre.seguroAnterior}
         faltanInicial={pre.pre.faltan}
         garajes={garajes.estado === 'ok' ? garajes.opciones : []}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}
@@ -143,8 +146,13 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         simulacion={pre.pre.simulacion}
         companias={companias}
         variante={variante}
+        datosRiesgo={carga.estado === 'ok' ? carga.riesgo.datosVehiculo : null}
         anterior={anterior?.estado === 'ok' ? anterior.anterior : null}
         anteriorAmbiguo={anterior?.estado === 'ambiguo' ? anterior.n : null}
+        // Pack coche + moto (03/10/2026): la otra oportunidad del cliente y, para `insuredFamilyInAllianz`, si tiene
+        // póliza EN VIGOR en Allianz. `null` = no se ha podido leer (nunca «no tiene»).
+        otroVehiculo={ops?.estado === 'ok' ? otroVehiculoDelCliente(ops.oportunidades, 'auto') : null}
+        carteraAllianz={ficha.estado === 'ok' ? tienePolizaAllianzEnVigor(ficha.ficha.polizas) : null}
       />
     </Pagina>
   )

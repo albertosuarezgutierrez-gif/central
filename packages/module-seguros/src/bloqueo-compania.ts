@@ -15,10 +15,22 @@ export function bloqueoCompania(avisos: readonly string[] | null | undefined): s
 }
 
 /** Lo que se le dice a quien emite, junto al precio y encima del botón. */
-export function textoBloqueoCorredor(motivo: string): string {
-  return `⛔ La compañía dejará esta póliza BLOQUEADA al emitirla${motivo ? ` (${motivo})` : ''}. `
+export function textoBloqueoCorredor(motivo: string, compania?: string | null): string {
+  const base = `⛔ La compañía dejará esta póliza BLOQUEADA al emitirla${motivo ? ` (${motivo})` : ''}. `
     + 'Lo recomendable: emitir primero la modalidad básica, sin la garantía que bloquea, para que el cliente pueda circular, '
     + 'y pedir después la ampliación como suplemento adjuntando la documentación (fotos, factura…).'
+  return esAllianz(compania) ? `${base} ${AVISO_ALLIANZ}` : base
+}
+
+/** Allianz contesta los bloqueos solo por su intranet, y sin otra póliza suya no admite robo ni daños (Alberto, 30/09/2026). */
+export const AVISO_ALLIANZ = 'Allianz contesta los bloqueos SOLO en su intranet (no por correo): tienes que entrar tú. '
+  + 'Si el cliente no tiene otra póliza en Allianz, no admite robo ni daños: pide la básica.'
+
+/** Recordatorio corto para el Telegram de retenidas. */
+export const RECORDATORIO_ALLIANZ_CORTO = 'Allianz: responde solo en su intranet · sin otra póliza suya no admite robo/daños → pide la básica'
+
+export function esAllianz(compania: string | null | undefined): boolean {
+  return typeof compania === 'string' && /allianz/i.test(compania)
 }
 
 /** Lo que ve el cliente en su comparativa. Sin promesas de precio ni de plazo. */

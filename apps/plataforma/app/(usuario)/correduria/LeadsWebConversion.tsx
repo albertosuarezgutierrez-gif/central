@@ -12,8 +12,8 @@ import type { ConversionLeadsWeb } from '@/lib/leads-web-conversion-asegura'
  * gastar en Ads: «necesito saber que convierte antes de meterle presupuesto».
  *
  * ─── Por qué esto es un informe y no una cola de trabajo ────────────────────
- * A diferencia de `Recaptacion` (leads sin vencimiento a los que SÍ hay que
- * llamar), aquí no se pinta contador en la barra de secciones: con 1 lead
+ * A diferencia de una cola de trabajo (como los leads de Vencimientos, a los
+ * que SÍ hay que llamar), aquí no se pinta contador en la barra de secciones: con 1 lead
  * medido el 15/09/2026 (la web lleva 10 días viva) una tasa de conversión
  * sería estadísticamente inútil como aviso — es infraestructura de medición
  * que necesita acumular datos, no un aviso accionable hoy. Los pendientes se

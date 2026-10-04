@@ -310,3 +310,17 @@ test('la fila sintética del TOMADOR no trae id: no es una fila que se pueda qui
   // Y las que SÍ vienen de la base la conservan, que es lo que se manda al borrar.
   assert.equal(r.filas.find((f) => f.rol === 'conductor_habitual')?.id, 'i1')
 })
+
+test('canal de la correduría en la ficha del titular: se salta y se busca al delegado', () => {
+  const c = contactoEfectivo({ telefono: '+34 637 349 990', email: 'hola@grupoasegura.es' }, [
+    base({ rol: 'conductor_habitual', nombre: 'María López', telefono: '611222333', email: 'maria@x.es' }),
+  ])
+  assert.equal(c.telefono, '611222333')
+  assert.equal(c.email, 'maria@x.es')
+  assert.equal(c.viaTelefono, 'interviniente')
+  assert.deepEqual(c.canalCorreduria, { telefono: true, email: true })
+  // sin delegado: no se devuelve el canal de la correduría como dato del cliente
+  const solo = contactoEfectivo({ telefono: null, email: 'hola@grupoasegura.es' }, [])
+  assert.equal(solo.email, null)
+  assert.equal(solo.canalCorreduria.email, true)
+})

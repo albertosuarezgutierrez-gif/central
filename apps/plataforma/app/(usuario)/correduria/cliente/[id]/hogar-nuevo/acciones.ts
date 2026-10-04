@@ -38,6 +38,8 @@ export async function pedirCotizacionHogar(entrada: {
   referencia: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
+  /** Variante de un riesgo (30/09/2026): la oportunidad de la que cuelga la tarificación. Sin ella, el flujo de siempre. */
+  variante?: { oportunidadId: string; nota?: string | null } | null
 }): Promise<RespuestaRetarificar> {
   return cotizarHogarNuevoAsegura({
     clienteId: entrada.clienteId,
@@ -45,5 +47,7 @@ export async function pedirCotizacionHogar(entrada: {
     solicitadoPor: 'plataforma/correduria',
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
+    oportunidadId: entrada.variante?.oportunidadId ?? null,
+    nota: entrada.variante?.nota ?? null,
   })
 }

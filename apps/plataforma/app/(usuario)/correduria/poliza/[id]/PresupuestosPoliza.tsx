@@ -90,9 +90,12 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId, 
         const libre = ocupado === null
         return (
           <div key={p.id} style={{ display: 'grid', gap: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 14 }}>
+            <span style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
+              {p.referencia && <strong>{p.referencia} · </strong>}
               {!polizaId && p.ramo ? `${p.ramo.charAt(0).toUpperCase()}${p.ramo.slice(1)} · ` : ''}{ROTULO_ESTADO_PRESUPUESTO[p.estado]} · {p.opciones} opción{p.opciones === 1 ? '' : 'es'}
               {p.desdeEur !== null ? ` · desde ${eur(p.desdeEur)}` : ''} · vale hasta el {new Date(p.venceEl).toLocaleDateString('es-ES')}
+              {/* Descargar el PDF no prueba que saliera: se dice como descarga, nunca como «enviado». */}
+              {p.documentoDescargadoAt && p.estado === 'borrador' ? ` · PDF descargado el ${new Date(p.documentoDescargadoAt).toLocaleDateString('es-ES')}` : ''}
             </span>
             {p.clienteId && p.estado !== 'retirado' && p.estado !== 'emitido' && p.estado !== 'caducado' && (() => {
               const d = fraseDatosEmision(datosEmision[p.clienteId])

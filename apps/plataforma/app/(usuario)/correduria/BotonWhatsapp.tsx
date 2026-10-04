@@ -42,7 +42,7 @@ export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onA
   compacto?: boolean
   /**
    * Se dispara AL PULSAR, sin bloquear la apertura de WhatsApp (sin
-   * `preventDefault`, igual que `BotonWhatsappRecaptacion`). Sirve para
+   * `preventDefault`). Sirve para
    * registrar «se abrió este aviso» en el historial del cliente — el envío en
    * sí lo hace WhatsApp, esto solo deja constancia de que Alberto lo abrió.
    */

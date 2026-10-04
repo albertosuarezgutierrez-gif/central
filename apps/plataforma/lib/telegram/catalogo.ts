@@ -190,6 +190,12 @@ export const AVISOS: AvisoTelegram[] = [
 
   // ── 🧾 Facturas y pagos ───────────────────────────────────────────────────
   {
+    id: 'facturas.siquebrilla-cuadre', categoria: 'facturas',
+    titulo: 'Factura mensual de Sique Brilla: cuadre',
+    que: 'Cuando llega su factura por correo la leo, cuadro los cambios por piso con las salidas del mes y te digo si cuadra o dónde está la discrepancia.',
+    cuando: 'Al llegar la factura (1 vez al mes)',
+  },
+  {
     id: 'facturas.bandeja', categoria: 'facturas',
     titulo: 'Facturas nuevas por revisar',
     que: 'Cuántas facturas han entrado en la bandeja de revisión y de quién.',
@@ -565,10 +571,40 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 06:35, y solo si hay alguna pendiente',
   },
   {
+    id: 'correduria.sustitucion-doble-seguro', categoria: 'correduria',
+    titulo: 'Póliza sustituida que sigue viva (posible doble seguro)',
+    que: 'Pólizas ya sustituidas por otra de otra compañía cuya vieja sigue en vigor (vencimiento o recibos posteriores al efecto de la nueva): hay que pedir su anulación.',
+    cuando: 'Todos los días a las 06:35, junto al seguimiento de sustituciones, y solo si hay alguna',
+  },
+  {
+    id: 'correduria.emision-retenida', categoria: 'correduria',
+    titulo: 'Emisiones retenidas por la compañía (riesgo condicionado)',
+    que: 'Pólizas emitidas desde Avant2 que la compañía dejó retenidas y que han cambiado: liberadas (ya en cartera) o rechazadas, más cuántas siguen retenidas.',
+    cuando: 'A las 07:40 y 13:40, y solo si ha cambiado alguna',
+  },
+  {
+    id: 'correduria.emisiones-descubiertas', categoria: 'correduria',
+    titulo: 'Emisiones de Avant2 descubiertas solas',
+    que: 'Pólizas emitidas en Avant2 que se han registrado solas en la cartera, emisiones nuevas que no se pueden registrar sin ti (tomador sin ficha o con varias, ramo que no se acuña, estado desconocido) y averías del descubrimiento (credenciales rechazadas, más de 6 h sin una pasada buena). Sin datos personales: solo cifras.',
+    cuando: 'Cada 30 min de 7 a 23 h, solo si hay algo nuevo o se rompe; recordatorio a las 7:10 si la cola sigue con algo',
+  },
+  {
+    id: 'correduria.baja-pue', categoria: 'correduria',
+    titulo: 'Bajas de Allianz para tramitar en el PUE',
+    que: 'Anulaciones firmadas por el cliente de pólizas de Allianz, que no se comunican por correo sino a mano en su extranet (PUE): cliente, póliza, fecha, operativa y enlaces al PUE y a la ficha.',
+    cuando: 'De lunes a viernes a las 07:50, y solo si hay alguna pendiente',
+  },
+  {
     id: 'correduria.recaptacion-lote', categoria: 'correduria',
     titulo: 'Recaptación por email · lote diario',
     que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',
     cuando: 'Todos los días a las 07:00, y solo si hubo candidatos o el envío falló',
+  },
+  {
+    id: 'correduria.recaptacion-fin', categoria: 'correduria',
+    titulo: 'Recaptación por email · fin de campaña',
+    que: 'Ya se ha escrito a todos los leads solo-correo que están en ventana: aperturas acumuladas, cuántas personas esperan todavía su ventana y qué direcciones fallan. Es la señal para analizar la campaña.',
+    cuando: 'Una vez al terminar cada campaña (como mucho 1 cada 60 días)',
   },
   {
     id: 'correduria.cima-diferencias', categoria: 'correduria',
@@ -611,6 +647,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Actividad de un cliente en el portal',
     que: 'Lo que hace un cliente en su intranet: entrar, pedir el código y no entrar, cambiar su dirección, dar un parte o pedir que se borren sus datos. Un mensaje por pasada, agrupado por cliente, con el enlace a su ficha y sin datos de contacto. La póliza declarada y la sugerencia no van aquí: el portal ya las avisa al instante.',
     cuando: 'Cada 5 minutos, y solo cuando ha pasado algo',
+  },
+  {
+    id: 'correduria.tope-avant2', categoria: 'correduria',
+    titulo: 'Gasto de Avant2 (tarificar): aviso a 60 € y bloqueo a 70 €',
+    que: 'Lo gastado en el mes en Avant2 (cada tarificación, ReRate, límites de hogar o envío cuenta 0,50€). Un aviso al cruzar 60€ y, al llegar al tope (70€, o el ampliado), el BLOQUEO con el botón «Autorizar +30€». ⚠️ Si lo silencias, el botón de desbloqueo no te llega y no se puede tarificar hasta reactivarlo.',
+    cuando: 'Cada 5 minutos, solo cuando se cruza 60€ (una vez al mes) o se bloquea',
   },
   {
     id: 'correduria.fuga-cartera', categoria: 'correduria',

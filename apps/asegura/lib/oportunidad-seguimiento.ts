@@ -22,6 +22,7 @@
 
 import {
   aplicarAccion,
+  companiaLegible,
   estadoPresupuesto,
   mismoSeguro,
   planLlamada,
@@ -629,10 +630,14 @@ export async function crearOportunidad(
       // La póliza leída es de ESE seguro: su bonus y su número se quedan en la que ya había
       // (29/09/2026). Sin esto, subir la póliza de un cliente con la oportunidad ya abierta perdía
       // lo leído. Número y compañía solo rellenan un hueco; el bonus, más nuevo, sustituye al anterior.
+      // Una compañía guardada que no es un nombre («P.P.», la antefirma de una póliza MAPFRE leída el
+      // 03/10/2026) es un valor de cajón: cuenta como hueco.
       const parche = {
         ...(a.seguroAnterior ? { seguroAnterior: a.seguroAnterior } : {}),
-        ...(a.aseguradora && !ya.aseguradora ? { aseguradora: a.aseguradora } : {}),
+        ...(a.aseguradora && !companiaLegible(ya.aseguradora, null) ? { aseguradora: a.aseguradora } : {}),
       }
+      // Póliza de concesionario/financiada: la marca se añade (no se quita nunca desde aquí).
+      const riesgo = a.financiada ? JSON.stringify({ financiada: a.financiada }) : null
       const numero = a.numeroPoliza && !ya.numeroPoliza ? a.numeroPoliza : null
       // Vencimiento y prima solo rellenan un hueco (29/09/2026): un documento subido después no pisa
       // lo que Alberto ya había anotado, pero tampoco se pierde si faltaba.
@@ -641,10 +646,12 @@ export async function crearOportunidad(
         from oportunidades where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid`)
       const fecha = a.fechaFinVigencia && huecos?.sinFecha ? a.fechaFinVigencia : null
       const prima = a.prima !== null && huecos?.sinPrima ? a.prima : null
-      if (Object.keys(parche).length > 0 || numero || fecha || prima !== null) {
+      if (Object.keys(parche).length > 0 || numero || fecha || prima !== null || riesgo) {
         await tx.$executeRaw(Prisma.sql`
           update oportunidades set
-            poliza_competencia = coalesce(poliza_competencia, '{}'::jsonb) || ${JSON.stringify(parche)}::jsonb,
+            poliza_competencia = case when ${Object.keys(parche).length === 0} then poliza_competencia
+              else coalesce(poliza_competencia, '{}'::jsonb) || ${JSON.stringify(parche)}::jsonb end,
+            info_riesgo = case when ${riesgo}::jsonb is null then info_riesgo else coalesce(info_riesgo, '{}'::jsonb) || ${riesgo}::jsonb end,
             numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${numero}),
             fecha_fin_vigencia = coalesce(fecha_fin_vigencia, ${fecha}::date),
             prima_bruta = coalesce(prima_bruta, ${prima}::numeric)
@@ -660,7 +667,7 @@ export async function crearOportunidad(
       insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_competencia, info_riesgo, numero_poliza)
       values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${a.ramo} as tipo_seguro), 'venta_directa',
               cast(${a.estado} as estado_comercial), ${a.fechaFinVigencia}::date, ${a.prima}::numeric,
-              ${competencia}::jsonb, ${JSON.stringify({ origen, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}) })}::jsonb,
+              ${competencia}::jsonb, ${JSON.stringify({ origen, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}), ...(a.financiada ? { financiada: a.financiada } : {}) })}::jsonb,
               ${a.numeroPoliza})
       returning id::text as id`)
     await tx.$executeRaw(Prisma.sql`
@@ -811,6 +818,12 @@ export type OportunidadDeCliente = OportunidadSeguimiento & {
   polizaId: string | null
   /** Sus precios pedidos (P1…Pn) y el último presupuesto al cliente. `variantes: 0` = aún no se ha pedido precio. */
   presupuestos: ResumenPresupuestos
+  /**
+   * La emisión más reciente de esta oportunidad en Avant2 que sigue retenida, se rechazó o se
+   * acuñó (`codeoscopic_projects`). `null` = ningún proyecto emitido cuelga de ella. Una
+   * `riesgo_condicionado` es «retenida» DERIVADA: proyecto sin póliza (no hay estado propio).
+   */
+  emision: { projectId: string; estado: 'riesgo_condicionado' | 'rechazada' | 'emitida'; compania: string | null; desde: string } | null
 }
 
 /**
@@ -891,6 +904,7 @@ export async function oportunidadesDeCliente(
     proximaTarea: { tipo: string; fechaLimite: string } | null
     polizaId: string | null
     presupuestos: JsonResumen
+    emision: OportunidadDeCliente['emision']
   })[]>(Prisma.sql`
     select o.id::text as id, o.cliente_id::text as "clienteId", o.tipo::text as ramo, o.estado::text as estado,
            o.fecha_fin_vigencia as "fechaFin", o.motivo_perdida as "motivoPerdida",
@@ -918,7 +932,14 @@ export async function oportunidadesDeCliente(
                      'presupuesto', ${sqlHitos(Prisma.sql`t2.oportunidad_id = o.id and pr.correduria_id = o.correduria_id`)})
               from tarificaciones t
               left join tarificacion_precios x on x.tarificacion_id = t.id and x.prima_eur is not null
-             where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id) as presupuestos
+             where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id) as presupuestos,
+           (select json_build_object('projectId', cp.project_id_codeoscopic, 'estado', cp.estado::text,
+                     'compania', cp.aseguradora,
+                     'desde', to_char(cp.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
+              from codeoscopic_projects cp
+             where cp.oportunidad_id = o.id and cp.correduria_id = o.correduria_id
+               and cp.estado::text in ('riesgo_condicionado', 'rechazada', 'emitida')
+             order by cp.updated_at desc limit 1) as emision
     from oportunidades o
     where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid
     order by (o.estado::text in ('ganada', 'perdida')), o.cerrada_at desc nulls last, o.created_at desc
@@ -937,6 +958,7 @@ export async function oportunidadesDeCliente(
       proximaTarea: f.proximaTarea,
       polizaId: f.polizaId,
       presupuestos: resumenPresupuestos(f.presupuestos),
+      emision: f.emision ?? null,
     })),
     truncado: filas.length > TECHO_POR_CLIENTE,
   }

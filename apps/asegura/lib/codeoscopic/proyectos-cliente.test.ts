@@ -46,3 +46,18 @@ test('petición guardada: lleva el riesgo y el tomador del propio proyecto', () 
   assert.equal(p.risk.previousInsurance.previousCompany.code, 'C0247')
   assert.equal(p.holder.identificationDocument.id, '00000000T')
 })
+
+test('resumen: sin policyApplications la emisión es null (no «no emitida»)', () => {
+  assert.equal(resumenProyecto(crudo).emision, null)
+})
+
+test('resumen: con una solicitud en riesgo condicionado trae la emisión resumida', () => {
+  const r = resumenProyecto({
+    ...crudo,
+    policyApplications: [{ id: 'PA1', status: { id: 'ConditionedRisk', name: 'Riesgo condicionado' }, quote: { id: 'Q1', premium: 99, product: { vendor: { name: 'Allianz' } } } }],
+  })
+  assert.equal(r.emision?.estado, 'pendiente')
+  assert.equal(r.emision?.compania, 'Allianz')
+  assert.equal(r.emision?.numeroPoliza, null)
+  assert.equal(r.emision?.estadoVendor, 'Riesgo condicionado')
+})

@@ -4,6 +4,8 @@ import { cotizar } from '@/lib/codeoscopic/cotizar'
 import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
 import { prepararRetarificacionNuevaDecesos, respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
+import { correduriaUnica } from '@/lib/cartera'
+import { anotarCapitalDeCotizacion, prepararVariante } from '@/lib/oportunidad-riesgo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -56,19 +58,47 @@ export const POST = auditado(async (req: Request) => {
       ? cuerpo.solicitadoPor.trim()
       : 'plataforma'
 
+  // VARIANTE de un riesgo (30/09/2026): con `oportunidadId` la tarificación se cuelga de ESA oportunidad (regla 9).
+  // Sin `oportunidadId` el camino es el de siempre, idéntico. Gratis, antes de gastar.
+  const oportunidadPedida = typeof cuerpo.oportunidadId === 'string' && cuerpo.oportunidadId.trim() !== ''
+  const correduria = oportunidadPedida ? await correduriaUnica().catch(() => null) : null
+  if (!correduria && oportunidadPedida) {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: 'no se pudo comprobar la variante; no se ha pedido precio', gastado: '0,00€' }, { status: 503 })
+  }
+  const variante = correduria
+    ? await prepararVariante(correduria.id, {
+        tomadorId: clienteId,
+        ramo: 'decesos',
+        cuerpo,
+        correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      })
+    : { ok: true as const, v: { contexto: null, correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined } }
+  if (!variante.ok) {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: variante.motivo, gastado: '0,00€' }, { status: 422 })
+  }
+
   const p = await prepararRetarificacionNuevaDecesos({
     clienteId,
     solicitadoPor,
     cuerpo: {
       resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
-      correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      correcciones: variante.v.correcciones,
     } satisfies CuerpoRetarificacion,
   })
   if (p.estado === 'corte') {
     return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })
   }
 
+  if (variante.v.contexto && p.peticion.contexto) {
+    p.peticion.contexto = { ...p.peticion.contexto, ...variante.v.contexto }
+  }
+
   const r = await cotizar(p.peticion)
+  // Lo usado para pedir precio se anota en el riesgo (`info_riesgo.datosCapital`), DESPUÉS de guardar la
+  // tarificación. Nunca lanza: la cotización ya está pagada (0,50€, no idempotente, regla 20).
+  if (correduria && variante.v.contexto && r.ok && r.guardado.estado === 'guardada') {
+    await anotarCapitalDeCotizacion(correduria.id, { oportunidadId: variante.v.contexto.oportunidadId, ramo: 'decesos', cuerpo, actor: solicitadoPor })
+  }
   // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
   const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)
   if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => undefined))

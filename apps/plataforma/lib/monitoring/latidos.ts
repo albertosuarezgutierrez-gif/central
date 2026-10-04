@@ -263,6 +263,22 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'ninguna póliza cruzó un hito. Huella: agente_latidos.correduria_renovaciones.',
   },
   {
+    id: 'correduria_descubrir_emisiones',
+    vigiladoDesde: '2026-10-03',
+    etiqueta: '🛡️ Descubrimiento de emisiones de Avant2 (cron cada 30 min, 7-23 h)',
+    // Solo corre de 05:10 a 21:40 UTC: la noche son ~8 h sin pasada legítima, y el vigía mira a las
+    // 07:45. Con 12 h salta si se pierde la tarde entera y no por la noche normal.
+    maxHoras: 12,
+    nota:
+      'Nadie está mirando en Avant2 las emisiones hechas fuera de la intranet: una póliza emitida en la ' +
+      'web no entra en la cartera ni en los avisos. Lee el `detalle`: «credenciales de Codeoscopic ' +
+      'rechazadas» es el CLIENT_ID/SECRET de Codeoscopic en central-asegura; «no se pudo mirar» con ' +
+      '`secreto_rechazado` es ASEGURA_OPERADOR_SECRET (mismo valor en plataforma y central-asegura); ' +
+      '«N sin poder revisar» son proyectos sueltos que fallaron (la próxima pasada los reintenta). ' +
+      'Un «0 acuñadas» con ok NO es un fallo: es que no había emisiones nuevas. ' +
+      'Huella: agente_latidos.correduria_descubrir_emisiones.',
+  },
+  {
     id: 'correduria_ingesta',
     vigiladoDesde: '2026-09-01',
     etiqueta: '🛡️ Ingesta de CIMA — que los datos de las compañías entren (cron diario 06:45)',
@@ -294,6 +310,19 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'ancló la marca sin mandar el histórico; «nada nuevo (comprobado)» sí es que se miró y no hay; ' +
       '«SIN avisar» es que el Telegram no salió y se reintenta (la marca NO avanza). ' +
       'Huella: agente_latidos.correduria_actividad.',
+  },
+  {
+    id: 'correduria_tope_avant2',
+    vigiladoDesde: '2026-10-03',
+    etiqueta: '💶 Tope de gasto de Avant2 — aviso 60 € y bloqueo con botón por Telegram (cron cada 5 min)',
+    // Cada 5 min → 1 h de margen, como `correduria_actividad`.
+    maxHoras: 1,
+    nota:
+      'Manda el aviso de 60 € y el BLOQUEO de tarificar (70 € o el tope ampliado) con el botón ' +
+      '«Autorizar +30 €». Lee el `detalle`: «NO se ha podido mirar» es el puerto, el secreto o la BD de ' +
+      'asegura (y entonces asegura TAMPOCO tarifica: sin gasto legible no llama, fail-closed); ' +
+      '«SILENCIADOS» es que el aviso está apagado en /telegram y el botón no llega. ' +
+      'Huella: agente_latidos.correduria_tope_avant2.',
   },
   {
     id: 'correduria_eventos',

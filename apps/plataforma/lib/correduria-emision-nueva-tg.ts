@@ -235,7 +235,9 @@ export function textoResumenNuevo(r: ResumenEmisionNueva): string {
     : []
   const bloqueo = bloqueoCompania(r.avisos)
   return [
-    ...(bloqueo !== null ? [`<b>${esc(textoBloqueoCorredor(bloqueo))}</b>`, ''] : []),
+    ...(bloqueo !== null
+      ? [`<b>${esc(textoBloqueoCorredor(bloqueo, r.compania))}</b>`, '']
+      : []),
     `🛡️ <b>Emisión NUEVA lista para confirmar</b> · ${r.ramo === 'moto' ? 'moto' : 'coche'}`,
     '',
     `Cliente: ${oNoConsta(r.clienteNombre)}${r.tomadorDni !== undefined ? ` · DNI ${oNoConsta(r.tomadorDni)}` : ''} · vehículo <b>${esc(r.matricula)}</b>`,

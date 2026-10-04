@@ -24,6 +24,8 @@
  *    confianza» del documento entero no sirve para decidir nada.
  */
 
+import { fechaTextoAIso } from './fecha-texto.ts'
+
 /** Marcadores que los modelos escriben cuando NO han encontrado el dato. */
 export const MARCADORES_SIN_DATO: readonly string[] = [
   '',
@@ -60,6 +62,8 @@ const SET_MARCADORES = new Set(MARCADORES_SIN_DATO)
 export type AutoLeido = {
   // ── Identificación de la póliza ──
   compania: string | null
+  /** CIF de la ASEGURADORA (03/10/2026): `companias_dgs` aún no lo tiene; se guarda para cuando lo tenga. */
+  cifCompania: string | null
   /** Código DGS de la entidad, si el documento lo trae (lo llevan muchas). */
   codigoEntidadDgs: string | null
   numeroPoliza: string | null
@@ -97,6 +101,7 @@ export const CAMPOS_PERSONALES: readonly (keyof AutoLeido)[] = [
 export function autoLeidoVacio(): AutoLeido {
   return {
     compania: null,
+    cifCompania: null,
     codigoEntidadDgs: null,
     numeroPoliza: null,
     fechaEfecto: null,
@@ -170,11 +175,14 @@ function importe(v: unknown): number | null {
   return n
 }
 
-/** `aaaa-mm-dd` estricto: rechaza los días que `Date` «arregla» solo. */
+/**
+ * `aaaa-mm-dd` estricto: rechaza los días que `Date` «arregla» solo. Una fecha en texto español
+ * («2 de jul. de 1971», `fechaTextoAIso`) se pasa a ISO; lo numérico («15/10/2026») sigue sin valer.
+ */
 function fechaIso(v: unknown): string | null {
   const t = texto(v)
   if (t === null) return null
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return null
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return fechaTextoAIso(t)
   const d = new Date(`${t}T00:00:00Z`)
   if (Number.isNaN(d.getTime())) return null
   return d.toISOString().slice(0, 10) === t ? t : null
@@ -208,6 +216,14 @@ function documentoIdentidad(v: unknown): string | null {
   return limpio
 }
 
+/** CIF de persona jurídica con forma válida (letra + 7 dígitos + control), o null. No valida el dígito. */
+export function cifCompania(v: unknown): string | null {
+  const t = texto(v)
+  if (t === null) return null
+  const limpio = t.toUpperCase().replace(/[\s.-]/g, '')
+  return /^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(limpio) ? limpio : null
+}
+
 /** Código DGS de entidad: `C` + 4 dígitos (C0058 Mapfre, C0109 Allianz…). */
 function codigoDgs(v: unknown): string | null {
   const t = texto(v)
@@ -228,6 +244,7 @@ export function normalizarAutoLeido(raw: unknown): AutoLeido {
   const o = raw as Record<string, unknown>
   return {
     compania: texto(o.compania),
+    cifCompania: cifCompania(o.cifCompania),
     codigoEntidadDgs: codigoDgs(o.codigoEntidadDgs),
     numeroPoliza: texto(o.numeroPoliza),
     fechaEfecto: fechaIso(o.fechaEfecto),

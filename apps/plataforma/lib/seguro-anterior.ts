@@ -13,6 +13,8 @@ export type AnteriorParaTarificar = {
   aseguradora: string | null
   numeroPoliza: string | null
   seguroAnterior: SeguroAnterior | null
+  /** Lo que paga hoy según la oportunidad (`null` = no consta, nunca 0). Con el periodo del seguro anterior sirve para anualizarlo. */
+  prima: number | null
 }
 
 const CERRADAS = new Set(['ganada', 'perdida'])
@@ -28,6 +30,7 @@ function aAnterior(o: OportunidadDeCliente): AnteriorParaTarificar {
     aseguradora: o.aseguradora,
     numeroPoliza: o.numeroPoliza,
     seguroAnterior: o.seguroAnterior,
+    prima: o.prima,
   }
 }
 

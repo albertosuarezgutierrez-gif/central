@@ -60,7 +60,7 @@ En el Notion enlazado desde el portal hay una página «Entornos de test», pero
 - Token: `POST https://api-int.codeoscopic.io/oauth2/token`, con `Content-Type: application/x-www-form-urlencoded`
   - Body: `grant_type=client_credentials&client_id=...&client_secret=...` (los tres obligatorios; `grant_type` solo admite `client_credentials`)
   - Respuesta: `access_token`*, `expires_in`* (en el ejemplo, **360 s**), `refresh_expires_in`* (siempre `0`: no hay refresh), `token_type`* (`Bearer`), `not-before-policy`, `scope`*
-- Las credenciales se piden a soporteapi@avant2.es (el spec también da soporteapi@codeoscopic.com y apisupport@codeoscopic.com).
+- Las credenciales las crea y entrega Juan Manuel Fernández, Product Manager API (juan.fernandez@codeoscopic.com, 91 075 84 98 ext. 606), o se piden a soporteapi@codeoscopic.com (el spec también da apisupport@codeoscopic.com). El portal enlaza soporteapi@avant2.es: rebota desde 2026; no usar.
 - Prohibido usar las credenciales en el navegador: el token se gestiona siempre en el backend.
 
 **Cabeceras:**

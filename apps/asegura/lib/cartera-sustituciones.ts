@@ -12,6 +12,7 @@
 // confirmación (no es instantáneo) y meter aquí lo de esta misma mañana solo
 // añadiría ruido a una lista que se supone que hay que trabajar.
 
+import { POLIZA_ESTADOS_VIGENTES, avisoDobleSeguro } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 const DIAS_GRACIA = 3
@@ -68,6 +69,55 @@ export async function sustitucionesEnSeguimiento(correduriaId: string): Promise<
         ? { id: f.nueva_id, aseguradora: f.nueva_aseguradora ?? '', numeroPoliza: f.nueva_numero }
         : null,
     }))
+  } catch {
+    return null
+  }
+}
+
+// ── «Póliza sustituida que sigue viva» → posible doble seguro (03/10/2026) ──────────────────────
+// La regla es PURA y vive en `@central/module-seguros` (`avisoDobleSeguro`); aquí solo se leen las
+// parejas vieja → nueva ya registradas (`poliza_origen_id`). Incluye las nuevas YA confirmadas por CIMA:
+// la confirmación no anula la vieja. Sin datos personales en el resultado (solo ids, nº de póliza, compañía).
+
+export type DobleSeguroAviso = {
+  polizaViejaId: string
+  polizaNuevaId: string
+  motivos: Array<'vencimiento_posterior' | 'recibo_posterior'>
+  texto: string
+}
+
+/** `null` = no se pudo leer (no es «no hay ninguno»). */
+export async function dobleSeguroEnSeguimiento(correduriaId: string): Promise<DobleSeguroAviso[] | null> {
+  if (!aseguraConfigurada()) return null
+  const db = prismaAsegura()
+  try {
+    const filas = await db.$queryRaw<
+      {
+        vieja_id: string; nueva_id: string; aseguradora: string; numero: string | null; estado: string
+        vence: string | null; efecto_recibo: string | null; efecto_nueva: string | null; estado_nueva: string
+      }[]
+    >`
+      select distinct on (v.id) v.id::text as vieja_id, n.id::text as nueva_id, v.aseguradora, v.numero_poliza as numero, v.estado::text as estado,
+             to_char(v.fecha_vencimiento::timestamptz at time zone 'Europe/Madrid', 'YYYY-MM-DD') as vence,
+             to_char((select max(r.fecha_efecto_actual) from poliza_recibos r
+                      where r.poliza_id = v.id and coalesce(r.situacion::text, '') not in ('anulado', 'devuelto')) at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto_recibo,
+             to_char(coalesce(n.fecha_efecto_inicial, n.fecha_inicio)::timestamptz at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto_nueva,
+             n.estado::text as estado_nueva
+      from polizas v
+      join polizas n on n.poliza_origen_id = v.id
+      where v.correduria_id = ${correduriaId}::uuid and v.sustituida_at is not null
+      -- Con 2 nuevas, una sola fila por vieja: la vigente primero, y entre ellas la más reciente.
+      order by v.id, (n.estado::text = any(${[...POLIZA_ESTADOS_VIGENTES]}::text[])) desc, coalesce(n.fecha_efecto_inicial, n.fecha_inicio) desc nulls last
+      limit 500`
+    const out: DobleSeguroAviso[] = []
+    for (const f of filas) {
+      const a = avisoDobleSeguro(
+        { aseguradora: f.aseguradora, numeroPoliza: f.numero, estado: f.estado, fechaVencimiento: f.vence, fechaEfectoUltimoRecibo: f.efecto_recibo },
+        { fechaEfecto: f.efecto_nueva, estado: f.estado_nueva },
+      )
+      if (a) out.push({ polizaViejaId: f.vieja_id, polizaNuevaId: f.nueva_id, motivos: a.motivos, texto: a.texto })
+    }
+    return out
   } catch {
     return null
   }

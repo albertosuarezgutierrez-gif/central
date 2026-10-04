@@ -22,6 +22,7 @@
  * de póliza NO salen por aquí — para eso está la pantalla del corredor, que va
  * detrás de sesión.
  */
+import { esColumnaAusente } from './pg-error'
 import type {
   EntradaRechazada,
   EntidadIngesta,
@@ -438,24 +439,33 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
     // y esta es la cifra sobre la que se decide qué mapear.
     // Y una ruta cuenta como leída si ALGUNA compañía la trajo y se leyó
     // (`bool_or`): que otra no la haya mandado nunca no la hace «no leída».
+    // `excluido_motivo` (mig 0106, aún sin aplicar en prod) separa «descartado por privacidad» de «sin leer».
+    // Si la columna no existe se cae a la consulta de siempre: `rutasDescartadas = null` (no consta).
     const cobertura = await leerONull<CoberturaResumen | null>(async () => {
-      const r = await db.$queryRawUnsafe<
-        Array<{ tipo: string; rutas: bigint | null; nunca: bigint | null; entidades: bigint | null }>
-      >(`
+      type Fila = { tipo: string; rutas: bigint | null; nunca: bigint | null; descartadas?: bigint | null; entidades: bigint | null }
+      const consulta = (conExclusion: boolean) => db.$queryRawUnsafe<Fila[]>(`
         WITH por_ruta AS (
           SELECT tipo_objeto, ruta,
-                 bool_or(ultima_vez_leido IS NOT NULL) AS leida
+                 bool_or(ultima_vez_leido IS NOT NULL) AS leida${conExclusion ? ',\n                 bool_or(excluido_motivo IS NOT NULL) AS excluida' : ''}
           FROM cima_cobertura_campos
           WHERE hoja
           GROUP BY tipo_objeto, ruta
         )
         SELECT tipo_objeto AS tipo,
                COUNT(*) AS rutas,
-               COUNT(*) FILTER (WHERE NOT leida) AS nunca,
+               COUNT(*) FILTER (WHERE NOT leida${conExclusion ? ' AND NOT excluida' : ''}) AS nunca,
+               ${conExclusion ? 'COUNT(*) FILTER (WHERE NOT leida AND excluida) AS descartadas,' : ''}
                (SELECT COUNT(DISTINCT codigo_entidad) FROM cima_cobertura_campos WHERE hoja) AS entidades
         FROM por_ruta
         GROUP BY tipo_objeto
       `)
+      let r: Fila[]
+      let conColumna = true
+      try { r = await consulta(true) } catch (e) {
+        // Solo «columna ausente» (42703) cae a la consulta vieja; cualquier otro fallo se propaga como siempre.
+        if (!esColumnaAusente(e)) throw e
+        conColumna = false; r = await consulta(false)
+      }
       // Cero filas = todavía no se ha medido NADA. Devolver `{rutas:0,
       // rutasNuncaLeidas:0}` diría «los leemos todos», que es justo la
       // afirmación tranquilizadora y falsa que la mig 0097 existe para impedir.
@@ -471,6 +481,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       return {
         rutas: porTipo.reduce((n, t) => n + t.rutas, 0),
         rutasNuncaLeidas: porTipo.reduce((n, t) => n + t.nuncaLeidas, 0),
+        rutasDescartadas: conColumna ? r.reduce((n, f) => n + Number(f.descartadas ?? 0), 0) : null,
         // `null` = no consta de cuántas compañías sale la cifra, que no es
         // «ninguna»: sin ese dato no se sabe si describe el EIAC o solo a tres.
         entidadesObservadas:

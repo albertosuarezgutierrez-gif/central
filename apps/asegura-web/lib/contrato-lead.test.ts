@@ -74,7 +74,8 @@ test('cada ramo publicado tiene su opción en el desplegable', async () => {
   // `responsabilidad-civil-fontaneros` es página de INTENCIÓN de oficio, no un
   // ramo nuevo en BD (sigue siendo `responsabilidad_civil`, ver `ramos.ts`):
   // comparte la opción general del desplegable.
-  const JUNTA_DOS_TIPOS = new Set(['vida-y-salud', 'responsabilidad-civil-fontaneros', 'responsabilidad-civil-autonomos'])
+  // `salud-sin-copago` es página de intención: su formulario marca `salud`.
+  const JUNTA_DOS_TIPOS = new Set(['vida-y-salud', 'responsabilidad-civil-fontaneros', 'responsabilidad-civil-autonomos', 'salud-sin-copago'])
 
   const sinOpcion = RAMOS.map((r) => r.slug)
     .filter((slug) => !JUNTA_DOS_TIPOS.has(slug))

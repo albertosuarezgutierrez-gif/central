@@ -18,9 +18,18 @@
 // `POST /insurances` cuesta 0,50€ y NO es idempotente.
 
 import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
+import {
+  construirAsegurado,
+  revisarAseguradosAdicionales,
+  type AseguradoAdicional,
+} from './asegurados.ts'
 
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
 export type DatosSalud = DatosPersona & {
+  /** Asegurados ADICIONALES al tomador (`risk.insureds[1..]`): nombre, apellidos, nacimiento, sexo y
+   * DNI opcional. El tomador es siempre el primero. Vacío/ausente = solo el tomador. */
+  aseguradosAdicionales?: AseguradoAdicional[] | null
+
   /** 🚧 Capital / importe de referencia de la cobertura. Ver cabecera: salud no
    * es naturalmente un «capital», pero es el único dato mínimo disponible hoy. */
   capital?: number | null
@@ -60,6 +69,11 @@ export function revisarDatosSalud(d: Partial<DatosSalud>): ReparoSalud[] {
   else if (!RE_FECHA.test(String(d.fechaEfecto)))
     r.push({ campo: 'fechaEfecto', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
 
+  if (Array.isArray(d.aseguradosAdicionales)) {
+    for (const m of revisarAseguradosAdicionales(d.aseguradosAdicionales))
+      r.push({ campo: 'aseguradosAdicionales', motivo: m })
+  }
+
   return r
 }
 
@@ -81,11 +95,12 @@ export function construirPeticionSalud(d: DatosSalud, lineaId: string): Record<s
   const persona = construirPersona(d)
 
   // Forma según la referencia oficial (23/09/2026): `insureds` (obligatorio),
-  // array de `NaturalPerson_V1`. Hoy solo el tomador. El capital NO viaja: la
+  // array de `NaturalPerson_V1`: el tomador y los adicionales. El capital NO viaja: la
   // referencia no documenta campo para él, y un nombre inventado es lo que
   // tenía bloqueado el ramo.
+  // Los adicionales (nombre, apellidos, nacimiento, sexo, DNI opcional) van detrás del tomador.
   const riesgo: Record<string, unknown> = {
-    insureds: [persona],
+    insureds: [persona, ...(d.aseguradosAdicionales ?? []).map(construirAsegurado)],
   }
 
   const cuerpo: Record<string, unknown> = {

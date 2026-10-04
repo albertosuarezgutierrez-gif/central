@@ -35,6 +35,7 @@ import {
   RE_FECHA,
   type DatosPersona,
 } from './persona.ts'
+import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
 
 /** Lo que recoge el formulario de hogar. Nombres en castellano: nuestro dominio. */
 export type DatosHogar = DatosPersona & {
@@ -226,6 +227,10 @@ export function revisarDatosHogar(
   // mandatory», medido el 23/09/2026 aunque el ejemplo del portal no la lleva).
   if (!texto(d.fechaEfecto)) falta('fechaEfecto')
   else if (!RE_FECHA.test(String(d.fechaEfecto))) r.push({ campo: 'fechaEfecto', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
+  else {
+    const mal = motivoFechaEfectoInvalida(String(d.fechaEfecto))
+    if (mal) r.push({ campo: 'fechaEfecto', motivo: mal })
+  }
 
   return r
 }

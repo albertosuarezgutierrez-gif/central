@@ -605,7 +605,7 @@ export function precalificarAutoNueva(
     })
   }
 
-  return { datos, supuestos, faltan: revisarDatosAuto(datos, { hoy }) }
+  return { datos, supuestos, faltan: revisarDatosAuto(datos, { hoy, vehiculoNuevo: true }) }
 }
 
 /**
@@ -719,6 +719,7 @@ export function precalificarMotoNueva(
       'ThisMotorcycle',
       'no se ha preguntado si el conductor viene de otra moto; se supone que ya ha llevado ESTA — ' +
         'corrígelo si no es el caso',
+      true,
     ) as string)
 
   // ── El carné: el de MOTO de la ficha, si consta. Tarificar una moto con la
@@ -799,7 +800,7 @@ export function precalificarMotoNueva(
     })
   }
 
-  return { datos, supuestos, faltan: revisarDatosMoto(datos) }
+  return { datos, supuestos, faltan: revisarDatosMoto(datos, { hoy, vehiculoNuevo: true }) }
 }
 
 // ─── MOTO, retarificar una póliza de la cartera ─────────────────────────────

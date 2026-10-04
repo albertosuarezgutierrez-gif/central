@@ -29,10 +29,7 @@ Regla de Alberto (24/09/2026): **todo desarrollo de CIMA empieza en la carpeta �
   `26-06-26a24-09-26.zip`; POL, REC, SIN, CEF). Sirven para validar el lector contra ficheros REALES
   (no fixtures escritos a mano) y para reprocesar con `cima-rescate-lote` cuando el lector aprende un campo.
 
-⚠️ **Reprocesar SIN viejos después de uno más nuevo RETROCEDE el siniestro**: `persist-siniestro` pisa
-los campos mutables (estado, fecha, tipo, lugar, daños) sin mirar la fecha del fichero. El lote va en
-orden (fecha del dato, luego 311 < 361 < 399) y, si la BD tiene SIN posteriores al último zip
-(`cima_ficheros`), esos siniestros se restauran a mano al terminar.
+✅ **Un SIN más viejo ya no retrocede el siniestro** (asegura#872, 03/10/2026): `persist-siniestro` compara la clave del nombre `_SIN_<proceso>_<n>_<AAAAMMDD>_<seq>` (fecha, luego seq; el proceso 311<361<399 solo desempata) con la última aplicada (`operational_events` cima_siniestro_persisted/actualizado, respaldo `cima_ficheros` por hash). Si el fichero es más viejo, solo RELLENA huecos (`coalesce(guardado, nuevo)`) y en el historial gana lo guardado. Ya se puede reprocesar el archivo de Drive en cualquier orden.
 
 🚫 **Los siniestros van SOLO de la compañía a nosotros.** TIREA (accesos.cima@tirea.es, 03/09/2026):
 el proceso **841 «alta de nuevos siniestros» (mediador → entidad) NO está disponible por CIMA**, las
@@ -95,6 +92,20 @@ duplicadas que se fusionaron el 17/09; su crudo no existe. **Rescatados el 24/09
 zips más grandes, rama temporal con el zip cifrado (openssl aes-256-cbc -pbkdf2) y
 la clave como input. Tras usarlo: **borrar el run entero y la rama** (los inputs
 llevan datos personales; borrar solo los logs no basta).
+🔑 Desde el 03/10/2026 la clave del lote vive en el secret `CIMA_LOTE_CLAVE` del repo `asegura` (la crea Alberto); el input `clave` queda solo de emergencia. Una clave pasada por input ya usada se da por expuesta: no se reutiliza.
+
+🚫📮 **Desde asegura#871 (03/10/2026) el rescate (`ingerir-manual`) NO llama a 
+confirmarDescarga** (`CIMA_INGERIR_MANUAL_OPTS.sinConfirmarTirea`); antes sí confirmaba. 
+`reprocesar-cuarentena` SÍ confirma a propósito: un fichero en cuarentena puede no 
+estar confirmado y saltarse el ACK lo dejaría 'confirmed' sin ACK y TIREA lo 
+reentregaría siempre. Un test de guarda exige ambas cosas.
+
+🔁 **Antes de reprocesar POL/REC del archivo, recorta del lote las entidades que 
+ya tienen un fichero MÁS NUEVO en BD** (igual que con SIN): reprocesar uno viejo 
+retrocede la póliza/recibo. SIN nunca en lote.
+
+🧹 **Limpieza tras un rescate:** el proxy de git da 403 al borrar ramas y no hay 
+herramienta para borrar runs: lo hace Alberto a mano (ramas tmp-* y runs con inputs).
 
 ### 📁 Archivo de CIMA en Drive (24/09/2026)
 Carpeta **`asegura/CIMA`** del Drive de Alberto (id `1DoHnkMj2gYepUKR3A3SmkBE4JIE9iwM1`):
@@ -109,6 +120,7 @@ de Mapfre, ticket SAU-24238). Hasta entonces sus 14 ficheros eran solo la carga 
 26/05 entre 19:30:25 y 19:30:28 (el «23/06» de la BD es cuando NOSOTROS los cargamos). Primeros diarios:
 REC 261 + SIN 311 el 25/09 a las 18:31 UTC, código mediador 5239640, ambos auto y casados sin cuarentena.
 **POL y el resto de ramos aún no han llegado**: si siguen sin llegar, reclamarlo en ese mismo ticket.
+03/10/2026: CIMA respondió (30/09) que lo anterior al envío diario NO lo recarga CIMA: se pide como **carga masiva** en el portal de mediadores de Mapfre (código 5239640). El POL del 28/09 trajo 1 póliza y ninguna de las 10 renovaciones EV pendientes (nota en docs/borradores/2026-10-03-mapfre-sau-24238.md).
 **Antes de reprocesar un `sin_poliza_en_cartera`, busca duplicados vivos**
 (mismo número normalizado + DGS, `merged_into_poliza_id IS NULL`): el 23/09 quedaban
 3 parejas que solo diferían en la puntuación (`HR G`/`HR-G`, `/ 045981539`).
@@ -200,6 +212,30 @@ En este orden, y **sin saltarse el paso 0**:
   está en `operational_events` (`webhook_signature_invalid`, con `authUserPresente`). La señal
   `emisionesSinAviso` del vigía cruza proyectos `emitida` contra `codeoscopic_webhook_events` y lo delata.
 
+- 🧱 **`riesgo_sin_bloque` no quiere decir que falte el riesgo (03/10/2026).** Allianz trajo el riesgo en
+  `OtrosRiesgos` (bloque genérico EIAC) y el lector solo miraba hijos `Riesgo*`. Para saber QUÉ trae un fichero
+  cifrado, mira `cima_cobertura_campos` por `primera_vez` = fecha del fichero: las rutas nuevas son su forma.
+  Desde asegura#868 un bloque desconocido sale con su nombre (`riesgo_no_reconocido:<X>`).
+
+- 📏 **`cima_cobertura_campos.ultima_vez_leido IS NULL` mintió (03/10/2026).** Filas duplicadas con prefijo
+  `ProcesosEIAC.` (anteriores al 28/09) hacían mentir la consulta. La cifra real (03/10): **487 de 947 hojas sin
+  guardar**, casi todo contexto. Inventario en `docs/CIMA-CAMPOS-HUECOS.md`. El Monitor decía 1016.
+
+## 🔑 Claves EIAC (estándar V07.1 §13.3)
+
+Las claves oficiales están en `packages/module-seguros/src/claves-eiac.ts`. Situación de póliza: **AN**
+anulada, **ES** en suspenso, **EV** en vigor, **EX** extinguida, **PR** propuesta. Un código que no está en la
+tabla se pinta crudo. Uso del vehículo no tiene tabla en el estándar (remite a RGV).
+
+Situación de recibo §13.3.33: PE, CO, DE, AN, **LI** liquidado (→ cobrado), **RE** rehabilitado (→ pendiente). Hasta asegura#876 (03/10/2026) el mapper REC no tenía LI/RE y mandaba a cuarentena; el reason ya trae el código: `estado_recibo_desconocido:<COD>`.
+
+🔢 **Allianz (C0109) numera con cero delante en CIMA y sin él en cartera** (061048939 vs 61048939): póliza (desde 28/09) y recibo (asegura#877) reintentan sin ceros; siniestro y CEF aún no. Y `reprocesar-cuarentena` solo sella si TODOS los objetos se guardaron (antes sellaba un REC con 0 pólizas).
+
+## 🗓️ Fechas de relleno
+
+Fechas como `2000-01-01`, `1900-01-01` y `9999-12-31` se guardan como `null`. Un parche de datos nunca las guarda
+como fecha literal.
+
 ## Lo que la pantalla enseña (y lo que NO alarma a propósito)
 
 `/correduria` de plataforma pinta cuatro señales de la ingesta, y **solo cuando
@@ -217,6 +253,8 @@ hay algo que mirar** (regla de Alberto: el panel enseña errores). Lógica pura 
   cientos de campos y siempre habrá alguno que no leamos: si encendiera el rojo
   estaría encendido para siempre, que es como muere una alarma. Se informa como
   hueco.
+- **`excluido_motivo` (0106):** una ruta descartada a propósito por privacidad no cuenta como «sin leer»; vuelve a NULL si se pasa a leer.
+- **`siniestros.cima_extra`:** el resto del SIN se guarda y se pinta solo para el operador, nunca en el portal (guardián `regression-portal-sin-cimaextra`).
 - **`undefined` no es `null`.** «El llamante no pide la señal» y «la pidió y
   falló» son cosas distintas; se normaliza en la frontera HTTP, que es donde el
   tipo miente (`esSalud` tolera campos nuevos, así que una `apps/asegura` vieja
@@ -224,9 +262,7 @@ hay algo que mirar** (regla de Alberto: el panel enseña errores). Lógica pura 
 
 ## 📦 La caja negra del webhook de Codeoscopic
 
-Guarda el cuerpo de lo que se rechaza (`invalid_json` / `invalid_payload`) para
-poder saber **qué** nos están mandando, porque el contador de «138 inválidos en 7
-días» del panel del vendor no dice ni una palabra de la forma.
+Webhook nuevo en `https://api.grupoasegura.es/api/webhooks/codeoscopic` (Vercel central-asegura): guarda el cuerpo de lo que se rechaza (`invalid_json` / `invalid_payload`) para saber **qué** nos mandan. **Descubrimiento autónomo** sin dependencia del webhook: cron `correduria-descubrir-emisiones` (plataforma, `10,40 5-21 * * *` UTC) consulta GET /insurances gratis, acuña por hash DNI, pone pendientes en cola de revisión. Contacto soporte: `soporteapi@codeoscopic.com` / Juan Manuel Fernández.
 
 - **El cuerpo se guarda CIFRADO** y la `forma` (lista de rutas, sin valores) en
   claro. 🚨 `encryptField` **devuelve el texto plano si no hay clave**: hay una

@@ -63,6 +63,10 @@ async function enviar(url: string, metodo: 'POST' | 'PATCH', body: Record<string
 const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   creada_mano: 'Abierta a mano desde la ficha',
   creada_portal: 'Pedida por el cliente desde su portal',
+  // SQL 2026-09-30_recaptacion_a_oportunidades: las pólizas antiguas de Recaptación pasadas a oportunidad.
+  creada_recaptacion: 'Creada desde Recaptación (póliza antigua)',
+  // Mismo SQL, rellenando `fecha_fin_vigencia` de una oportunidad ya abierta sin fecha.
+  fecha_desde_recaptacion: 'Fecha estimada desde Recaptación (póliza antigua)',
   editada: 'Corregida (ramo, vencimiento, compañía o prima)',
   tarea_creada: 'Tarea creada',
   tarea_cerrada: 'Tarea cerrada',
@@ -70,6 +74,13 @@ const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   whatsapp: 'WhatsApp abierto',
   aparcar: 'Aparcada',
   reabrir: 'Reabierta',
+  // La pone la subida de una póliza de motor (03/10/2026): solo con fechas conocidas, sin datos personales.
+  conductor_joven_novel: 'Hay un conductor joven/novel: revisar antes de tarificar',
+  // Figura con rol y sin nombre en la póliza subida (`notaFiguraSinNombre` de module-seguros): no abre ficha.
+  conductor_adicional_sin_nombre: 'Hay un conductor adicional sin nombre en la póliza: complétalo a mano.',
+  conductor_habitual_sin_nombre: 'Hay un conductor habitual sin nombre en la póliza: complétalo a mano.',
+  propietario_sin_nombre: 'Hay un propietario del vehículo sin nombre en la póliza: complétalo a mano.',
+  figura_asignada: 'Figura asignada al riesgo',
 }
 
 /**

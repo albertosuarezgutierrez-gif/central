@@ -246,6 +246,9 @@ export function resultadoEmision(r: RespuestaEmitir, urlIntranet: string): { est
         texto: `✅ Emitida${r.referenciaVendor ? `: póliza nº ${esc(r.referenciaVendor)}` : ' (la compañía aún no ha dado número)'}. Queda en la cartera y el PDF, si la compañía lo ha mandado, en la ficha: ${urlIntranet}${lineasTrasEmision(r.trasEmision)}`,
       }
     case 'emitido_sin_acunar':
+      // `yaAcunada`: SÍ está en la cartera (otra vía la registró a la vez). Decir «no se ha podido
+      // registrar» invitaría a acuñarla a mano: la segunda póliza del mismo proyecto.
+      if (r.yaAcunada) return { estado: 'emitida', texto: `✅ ${esc(r.mensaje)} ${mirar}` }
       return { estado: 'emitida', texto: `✅ La compañía la ha aceptado, pero no se ha podido registrar sola en la cartera: ${esc(r.mensaje)} ${mirar}` }
     case 'faltan_campos':
       return {

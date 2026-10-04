@@ -294,6 +294,32 @@ export type OportunidadDeCliente = Oportunidad & {
   polizaId?: string | null
   /** Lo pedido para este riesgo (P1…Pn) y su presupuesto al cliente; `null` = asegura no lo manda. */
   presupuestos?: ResumenPresupuestos | null
+  /**
+   * Emisión hecha FUERA (web de Avant2) que cuelga de esta oportunidad (30/09/2026). `null` = no hay,
+   * o asegura aún no lo manda / forma desconocida: en ese caso la tarjeta no afirma nada nuevo.
+   * `riesgo_condicionado` = emitida pero RETENIDA por la compañía: no está en vigor.
+   */
+  emision?: EmisionOportunidad | null
+}
+
+export type EmisionOportunidad = {
+  projectId: string
+  estado: 'riesgo_condicionado' | 'rechazada' | 'emitida'
+  compania: string | null
+  desde: string
+}
+
+const ESTADOS_EMISION_OPORTUNIDAD = ['riesgo_condicionado', 'rechazada', 'emitida'] as const
+
+/** Puro. Cualquier forma que no se entienda es `null` (nada que pintar), nunca un estado inventado. */
+export function leerEmisionOportunidad(v: unknown): EmisionOportunidad | null {
+  const e = objeto(v)
+  if (!e) return null
+  const projectId = texto(e.projectId)
+  const estado = uno(ESTADOS_EMISION_OPORTUNIDAD, e.estado)
+  const desde = texto(e.desde)
+  if (!projectId || !estado || !desde) return null
+  return { projectId, estado, compania: texto(e.compania), desde }
 }
 
 export type OportunidadesCliente =
@@ -345,6 +371,7 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
       proximaTarea: ptTipo && ptFecha ? { tipo: ptTipo, fechaLimite: ptFecha } : null,
       polizaId: texto(r.polizaId),
       presupuestos: leerResumenPresupuestos(r.presupuestos),
+      emision: leerEmisionOportunidad(r.emision),
     })
   }
   return { estado: 'ok', oportunidades, truncado: o.truncado === true, descartadas, sinOportunidad: leerSinOportunidad(o.sinOportunidad) }
@@ -584,6 +611,32 @@ export function tramoLead(l: Pick<LeadVencimiento, 'intentos' | 'respondioAntes'
 
 /** Días desde el último contacto (`null` = no consta). A partir de 3 sin respuesta, toca llamar. */
 export const DIAS_SIN_RESPUESTA_LLAMAR = 3
+/** Minúsculas, sin tildes ni signos: «Gutiérrez-Alcalá» casa con «gutierrez alcala». */
+function normalizarBusqueda(t: string): string {
+  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9ñ@.]+/g, ' ').trim()
+}
+
+/**
+ * ¿Casa el lead con lo tecleado en el buscador? (30/09/2026, Alberto: «un buscador aquí»).
+ * Busca en nombre, compañía, ramo, correo y teléfono; cada palabra tiene que aparecer en alguno
+ * («maria mapfre» = María con Mapfre). El teléfono se compara solo por dígitos y a partir de 3,
+ * para que «600 12» encuentre «+34 600123456». Vacío = todos.
+ */
+export function leadCoincide(
+  l: Pick<LeadVencimiento, 'cliente' | 'aseguradora' | 'ramo' | 'email' | 'telefono'>,
+  consulta: string,
+): boolean {
+  const q = normalizarBusqueda(consulta)
+  if (q === '') return true
+  const texto = normalizarBusqueda([l.cliente, l.aseguradora, l.ramo, l.ramo ? rotuloRamo(l.ramo) : null, l.email].filter(Boolean).join(' '))
+  const digitosTel = (l.telefono ?? '').replace(/\D/g, '')
+  // Los dígitos juntos («600 12» → «60012») solo si la consulta es SOLO un número: con
+  // palabras («garcía 600») cada una tiene que aparecer, o casaría cualquiera con ese 600.
+  const digitosQ = consulta.replace(/\D/g, '')
+  if (/^[\d\s+().-]+$/.test(consulta.trim()) && digitosQ.length >= 3 && digitosTel.includes(digitosQ)) return true
+  return q.split(' ').every((palabra) => texto.includes(palabra) || (/^\d{3,}$/.test(palabra) && digitosTel.includes(palabra)))
+}
+
 export function diasSinRespuesta(ultimoContactoEn: string | null, ahora: Date = new Date()): number | null {
   if (!ultimoContactoEn) return null
   const t = Date.parse(ultimoContactoEn)
@@ -883,6 +936,13 @@ export function accionSolicitudDatosAsegura(body: Record<string, unknown>): Prom
 // ─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────
 export function riesgoAsegura(oportunidadId: string): Promise<Reenvio> {
   return llamar(`/api/operador/oportunidad/riesgo?id=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
+}
+/**
+ * Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de
+ * datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`). Gratis: no pide precio.
+ */
+export function datosRiesgoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/riesgo', { method: 'PATCH', body: JSON.stringify(body) })
 }
 export function figuraAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/figuras', { method: 'POST', body: JSON.stringify(body) })

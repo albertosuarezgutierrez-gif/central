@@ -7,6 +7,13 @@
 // solo hay que confirmar al tomador y teclear el capital, que el corredor
 // escribe siempre (nunca se supone, ver `desde-cartera-vida.ts` en asegura).
 //
+// Datos del ASEGURADO que sí viajan (`insured.economicOccupation.code` y
+// `insured.smoker`): los pide también lo que el vendor exija en `person-roles`
+// (llega en `faltanInicial` con campo `profesion` / `fumador`). La «duración» se
+// quitó (03/10/2026): `TermLifeRisk_V1` no tiene campo y no afecta al precio.
+// Peso y altura NO se piden: su formato no está documentado; si el vendor los
+// exige, llegan como «dato que falta: weight» y no se puede pedir precio.
+//
 // 🚧 Ver el aviso de `page.tsx`: el `risk` que se manda al vendor NO está
 // verificado. El primer intento real puede fallar con un mensaje que pida un
 // campo distinto — la pantalla lo enseña entero, tal cual lo devuelve Codeoscopic.
@@ -15,12 +22,14 @@ import { useState } from 'react'
 import { FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
+import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import FiltroGarantias from '../../../FiltroGarantias'
 import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import { eur } from '@/lib/dinero'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/vida-nuevo-asegura'
 import { pedirPrecalificacionVida, pedirCotizacionVida } from './acciones'
+import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
 import { FallosTarificacion } from '../../../FallosTarificacion'
 
 const input: React.CSSProperties = {
@@ -31,10 +40,12 @@ const input: React.CSSProperties = {
 /** Los campos que el corredor puede teclear cuando la ficha no los trae. */
 const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefined> = {
   dni: { etiqueta: 'DNI', tipo: 'text' },
+  email: { etiqueta: 'Correo electrónico', tipo: 'email' },
   nombre: { etiqueta: 'Nombre', tipo: 'text' },
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
 }
 
 type Resultado =
@@ -50,6 +61,7 @@ type Resultado =
       precios: Precio[]
       fallos: Fallo[]
       supuestos: Supuesto[]
+      guardado: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
@@ -63,6 +75,8 @@ export default function VidaNuevo({
   estadoCivilMotivo,
   consumo,
   simulacion,
+  variante = null,
+  inicial = null,
 }: {
   clienteId: string
   etiquetaCliente: string
@@ -72,10 +86,16 @@ export default function VidaNuevo({
   estadoCivilMotivo: string | null
   consumo: ConsumoPuerto
   simulacion: boolean
+  /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
+  variante?: VarianteNueva | null
+  /** Lo que el riesgo ya sabe (`info_riesgo.datosCapital`): precarga; `null` = no se sabe, nunca 0. */
+  inicial?: { capital: number | null; duracionAnios: number | null } | null
 }) {
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
-  const [capital, setCapital] = useState('')
-  const [duracionAnios, setDuracionAnios] = useState('')
+  const [capital, setCapital] = useState(inicial?.capital != null ? String(inicial.capital) : '')
+  // Datos del asegurado que viajan al vendor. Vacío = «no se sabe» (no se manda), nunca un «no» por defecto.
+  const [profesion, setProfesion] = useState('')
+  const [fumador, setFumador] = useState<'' | 'si' | 'no'>('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
@@ -84,6 +104,12 @@ export default function VidaNuevo({
 
   const faltaCivil = !estadoCivilId
   const faltaCapital = !capital.trim() || !(Number(capital) > 0)
+  // Lo que el vendor exige del asegurado (person-roles) llega como hueco con el nombre de NUESTRO campo.
+  const exigeProfesion = (faltanInicial ?? []).some((f) => f.campo === 'profesion')
+  const exigeFumador = (faltanInicial ?? []).some((f) => f.campo === 'fumador')
+  const profesionMal = profesion.trim() !== '' && !/^\d{4}$/.test(profesion.trim())
+  const faltaProfesion = (exigeProfesion && profesion.trim() === '') || profesionMal
+  const faltaFumador = exigeFumador && fumador === ''
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
@@ -93,7 +119,8 @@ export default function VidaNuevo({
 
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
-  const faltaAlgo = faltaCivil || faltaCapital || aManoSinRellenar.length > 0
+  // Un hueco que esta pantalla no sabe resolver (p. ej. «dato que falta: weight», o person-roles ilegible) también bloquea: no se paga un 400 evitable.
+  const faltaAlgo = faltaCivil || faltaCapital || faltaProfesion || faltaFumador || aManoSinRellenar.length > 0 || huerfanos.length > 0
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
@@ -103,9 +130,11 @@ export default function VidaNuevo({
       resueltos: {
         estadoCivilId,
         capital: Number(capital),
-        ...(duracionAnios.trim() ? { duracionAnios: Number(duracionAnios) } : {}),
+        ...(profesion.trim() ? { profesion: profesion.trim() } : {}),
+        ...(fumador !== '' ? { fumador: fumador === 'si' } : {}),
       },
       correcciones: fechaEfecto !== '' ? { ...correcciones, fechaEfecto } : correcciones,
+      variante: variante ? { oportunidadId: variante.oportunidadId, nota: null } : null,
     })
     switch (r.estado) {
       case 'faltan':
@@ -134,6 +163,7 @@ export default function VidaNuevo({
           precios: r.precios,
           fallos: r.fallos,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
       default: {
@@ -159,9 +189,6 @@ export default function VidaNuevo({
           <Campo etiqueta="Capital asegurado (€)" falta={faltaCapital}>
             <input type="number" min={0} step={1000} value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="30000" style={input} />
           </Campo>
-          <Campo etiqueta="Duración (años)" falta={false} ayuda="Nota para el corredor: NO viaja al vendor (la API de vida no documenta ese campo).">
-            <input type="number" min={1} value={duracionAnios} onChange={(e) => setDuracionAnios(e.target.value)} placeholder="10" style={input} />
-          </Campo>
           <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
             <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
           </Campo>
@@ -180,6 +207,30 @@ export default function VidaNuevo({
               {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
           </Campo>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 8px' }}>
+            Datos del asegurado que viajan al vendor. Déjalos en blanco si no se saben: no se mandan ni se suponen
+            (solo son obligatorios si el vendor los exige).
+          </p>
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+            <Campo
+              etiqueta="Profesión (código CNO-11)"
+              falta={faltaProfesion}
+              faltaTexto={profesionMal ? '4 cifras' : exigeProfesion ? 'la exige el vendor' : undefined}
+              ayuda="Código CNO-11 de 4 cifras (nivel 4 del catálogo), p. ej. 2612. El servidor lo valida contra el catálogo del vendor (gratis) antes de gastar."
+            >
+              <input inputMode="numeric" value={profesion} onChange={(e) => setProfesion(e.target.value)} placeholder="2612" style={input} />
+            </Campo>
+            <Campo etiqueta="¿Fuma?" falta={faltaFumador} faltaTexto={faltaFumador ? 'lo exige el vendor' : undefined}>
+              <select value={fumador} onChange={(e) => setFumador(e.target.value as '' | 'si' | 'no')} style={input}>
+                <option value="">No consta</option>
+                <option value="no">No fuma</option>
+                <option value="si">Fuma</option>
+              </select>
+            </Campo>
+          </div>
         </div>
 
         {aMano.length > 0 && (
@@ -219,7 +270,7 @@ export default function VidaNuevo({
               {huerfanos.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-              Hay que corregirlo en la ficha del cliente. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              Hay que corregirlo en la ficha del cliente: mientras tanto no se puede pedir precio (no se gasta nada).
             </p>
           </div>
         )}
@@ -311,6 +362,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
   }
   return (
     <div style={{ marginTop: 12 }}>
+      <EnlaceOportunidad guardado={r.guardado} />
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
           <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>
@@ -358,4 +410,4 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
 }
 
 /** Reparos que ESTA pantalla resuelve con un desplegable o una caja. */
-const RESUELTOS_EN_PANTALLA = new Set<string>(['capital', 'duracionAnios', 'fechaEfecto', 'estadoCivil', 'sexo'])
+const RESUELTOS_EN_PANTALLA = new Set<string>(['capital', 'profesion', 'fumador', 'fechaEfecto', 'estadoCivil', 'sexo'])

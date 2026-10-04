@@ -230,7 +230,7 @@ function esCobertura(v: unknown): boolean {
   if (typeof v !== 'object' || v === null) return false
   const o = v as Record<string, unknown>
   return entero(o.rutas) && entero(o.rutasNuncaLeidas) &&
-    enteroONulo(o.entidadesObservadas) && Array.isArray(o.porTipo) &&
+    enteroONulo(o.entidadesObservadas) && (o.rutasDescartadas === undefined || enteroONulo(o.rutasDescartadas)) && Array.isArray(o.porTipo) &&
     o.porTipo.every(t => typeof t === 'object' && t !== null &&
       typeof (t as Record<string, unknown>).tipoObjeto === 'string' &&
       entero((t as Record<string, unknown>).rutas) &&
