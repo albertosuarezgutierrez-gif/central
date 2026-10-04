@@ -10,8 +10,8 @@
  *
  * ─── El aislamiento (lo da el CÓDIGO) ────────────────────────────────────────
  * 🚨 No acepta `clienteId`. Las fichas salen de `portal_vinculo` de la identidad, y la póliza solo
- * se lee si es VIVA, de esta correduría, sin fusionar y su tomador es una ficha suya o figura en
- * ella (`poliza_intervinientes` con su `cliente_id`). Si no, `no_visible` (404, nunca 403: no se
+ * se abre si es VIVA, de esta correduría, sin fusionar y la abre la MISMA regla que la cartera del
+ * portal (`puenteAbrePoliza`: tomador propio o `figurasEnPolizas`). Si no, `no_visible` (404, nunca 403: no se
  * confirma que exista). Con el secreto en la mano no se llega a la póliza de otro: solo a las de la
  * identidad que se nombra, como el resto del puente.
  */
@@ -26,9 +26,8 @@ import {
 import { decryptField } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
-import { fichasDeIdentidad } from './contacto-portal'
 import { tercerosCimaCrudos, tercerosCimaDe } from './cartera-siniestros'
-import { entradasDePoliza } from './personas-portal-entradas'
+import { entradasDePoliza, puenteAbrePoliza } from './personas-portal-entradas'
 
 export type PersonasPolizaPortal =
   | {
@@ -62,26 +61,30 @@ export async function personasPolizaPortal(
   polizaId: string,
 ): Promise<PersonasPolizaPortal> {
   const db = prismaAsegura()
-  let fichas: string[]
+  let vinculos: { clienteId: string; nivel: string }[]
   try {
-    fichas = await fichasDeIdentidad(correduriaId, identidadId)
+    vinculos = await db.portalVinculo.findMany({ where: { identidadId, correduriaId }, select: { clienteId: true, nivel: true } })
   } catch (e) {
     console.error('[personas-portal] vínculos ilegibles:', e instanceof Error ? e.message : e)
     return { estado: 'error', causa: 'vinculos_ilegibles' }
   }
+  const fichas = vinculos.map((v) => v.clienteId)
   if (fichas.length === 0) return { estado: 'no_visible' }
 
   const poliza = await db.poliza.findFirst({
-    where: {
-      id: polizaId,
-      correduriaId,
-      mergedIntoPolizaId: null,
-      OR: [{ clienteId: { in: fichas } }, { intervinientes: { some: { correduriaId, clienteId: { in: fichas } } } }],
-    },
+    where: { id: polizaId, correduriaId, mergedIntoPolizaId: null },
     select: { id: true, clienteId: true, importRef: true, eiacXmlHash: true, datosEspecificos: true },
   })
   // El volcado histórico no se enseña en el portal: tampoco sus personas.
   if (!poliza || !esCarteraViva(poliza)) return { estado: 'no_visible' }
+  // Solo las filas de SUS fichas en esta póliza (misma frontera que `carteraDeIdentidad`).
+  const filas = await db.polizaInterviniente.findMany({
+    where: { polizaId: poliza.id, clienteId: { in: fichas } },
+    select: { polizaId: true, clienteId: true, rol: true },
+  })
+  // La MISMA regla que la cartera del portal (`puenteAbrePoliza` → `figurasEnPolizas`): lo que la
+  // cartera no abre, el puente tampoco (404, nunca 403).
+  if (!puenteAbrePoliza({ poliza, filas: filas.map((f) => ({ ...f, rol: String(f.rol) })), vinculos })) return { estado: 'no_visible' }
 
   const tomadorEsPropio = fichas.includes(poliza.clienteId)
   const propiasFichas = await db.cliente.findMany({

@@ -11,7 +11,8 @@
 //  1. SUS PROPIAS figuras, completas (para que confirme sus datos): nombre, domicilio, teléfono,
 //     email, fecha de nacimiento, orden/%. Del documento solo «consta» (el NIF no cruza).
 //     «Propia» = identidad, no nombre: el papel `tomador` de una póliza cuyo tomador es una ficha
-//     suya, o el MISMO documento que una de sus fichas. Dos documentos distintos no se funden
+//     suya (salvo que CIMA traiga un documento DISTINTO al de sus fichas), o el MISMO documento que
+//     una de sus fichas. Dos documentos distintos no se funden
 //     jamás, y sin documento un nombre igual NO basta (una homónima no le enseña sus datos).
 //  2. Las DEMÁS personas de una póliza suya (es el tomador): solo papel y nombre. Nunca su
 //     contacto ni su domicilio. En una póliza ajena (la ve por figurar en ella), las demás no salen.
@@ -140,7 +141,10 @@ export function personasParaCliente(
   const otras: FiguraAjenaCliente[] = []
   for (const { figura, documento } of entradas) {
     const doc = documentoIdentidad(documento)
-    const esSuya = (figura.papel === 'tomador' && ctx.tomadorEsPropio) || (doc !== null && docs.has(doc))
+    // El papel `tomador` con tomador propio es él SOLO si no hay documentos que se contradigan: con
+    // documento de CIMA distinto del suyo (suplemento con otro tomador, mal emparejamiento) NO lo es.
+    const tomadorSuyo = figura.papel === 'tomador' && ctx.tomadorEsPropio && (doc === null || docs.size === 0 || docs.has(doc))
+    const esSuya = tomadorSuyo || (doc !== null && docs.has(doc))
     if (esSuya) propias.push(figuraPropiaParaCliente(figura))
     else if (ctx.tomadorEsPropio) {
       const a = figuraAjenaParaCliente(figura)

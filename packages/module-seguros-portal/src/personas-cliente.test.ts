@@ -89,10 +89,10 @@ test('tercero: la compañía solo es la del contrario; un testigo no la enseña'
   assert.ok(!JSON.stringify(terceroParaCliente({ ...CONTRARIO, nombre: 'v1:xx' })).includes('v1:'))
 })
 
-test('figuras: la suya completa (por tomador propio o mismo documento); las demás solo papel y nombre', () => {
+test('figuras: la suya completa (tomador propio con SU documento, o mismo documento); las demás solo papel y nombre', () => {
   const r = personasParaCliente(
     [
-      { figura: { ...FIGURA, papel: 'tomador', etiqueta: 'Tomador' }, documento: '99999999R' },
+      { figura: { ...FIGURA, papel: 'tomador', etiqueta: 'Tomador' }, documento: '12345678Z' },
       { figura: FIGURA, documento: '12.345.678-z' },
       { figura: { ...FIGURA, papel: 'beneficiario', etiqueta: 'Beneficiario', nombre: 'Luis' }, documento: '11111111H' },
     ],
@@ -105,6 +105,30 @@ test('figuras: la suya completa (por tomador propio o mismo documento); las dem�
   assert.ok(!('tipoDocumento' in r.propias[1]))
   assert.deepEqual(r.otras, [{ papel: 'beneficiario', etiqueta: 'Beneficiario', nombre: 'Luis' }])
   assert.ok(!JSON.stringify(r.otras).includes('600111222'))
+})
+
+test('🚨 tomador de CIMA con documento DISTINTO al del cliente NO es él: cae a «otras» (solo papel y nombre)', () => {
+  // Suplemento con otro tomador o mal emparejamiento: A no puede ver el domicilio, contacto ni nacimiento de B.
+  const r = personasParaCliente(
+    [{ figura: { ...FIGURA, papel: 'tomador', etiqueta: 'Tomador', nombre: 'B' }, documento: '99999999R' }],
+    { tomadorEsPropio: true, documentosPropios: ['12345678Z'] },
+  )
+  assert.deepEqual(r.propias, [])
+  assert.deepEqual(r.otras, [{ papel: 'tomador', etiqueta: 'Tomador', nombre: 'B' }])
+  for (const v of ['600111222', 'ana@example.com', 'Socorro', '1980']) assert.ok(!JSON.stringify(r).includes(v), v)
+})
+
+test('tomador propio sin documento que comparar (CIMA no lo trae, o la ficha no tiene) sí es él', () => {
+  const sinDocFigura = personasParaCliente(
+    [{ figura: { ...FIGURA, papel: 'tomador', etiqueta: 'Tomador' }, documento: null }],
+    { tomadorEsPropio: true, documentosPropios: ['12345678Z'] },
+  )
+  assert.equal(sinDocFigura.propias.length, 1)
+  const sinDocFicha = personasParaCliente(
+    [{ figura: { ...FIGURA, papel: 'tomador', etiqueta: 'Tomador' }, documento: '99999999R' }],
+    { tomadorEsPropio: true, documentosPropios: [null] },
+  )
+  assert.equal(sinDocFicha.propias.length, 1)
 })
 
 test('figuras: el mismo NOMBRE sin documento no es él; en póliza ajena las demás no salen', () => {

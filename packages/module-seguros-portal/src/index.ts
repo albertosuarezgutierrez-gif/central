@@ -586,3 +586,6 @@ export type {
   FiguraConDocumento,
   PersonasParaCliente,
 } from './personas-cliente.ts'
+// Qué pólizas ajenas abre figurar en ellas: la usan la cartera del portal y el puente de asegura.
+export { figurasEnPolizas, nivelMasAlto, ordenarRoles } from './figuras-en-polizas.ts'
+export type { FilaInterviniente, PolizaDeTomador, FiguraEnPoliza } from './figuras-en-polizas.ts'
