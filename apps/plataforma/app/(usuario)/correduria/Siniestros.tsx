@@ -31,6 +31,7 @@ import {
   type TerceroCartera,
 } from '@/lib/siniestros-asegura'
 import Documentos from './Documentos'
+import { ListaPersonasCima } from './PersonaCima'
 import PartesSinVincular, { type PrecargaDesdeParte } from './PartesSinVincular'
 import type { Compania } from '@/lib/companias-asegura'
 import { companiaDeSiniestro, contactoSiniestroDe, tieneAlgoQueEnsenar } from '@/lib/compania-contacto-siniestro'
@@ -909,6 +910,15 @@ function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ra
       <BloqueDanos danos={s.danosCima} />
       <BloqueTramitacion t={s.tramitacionCima} />
       <BloqueDetalleCima s={s} />
+
+      {/* Terceros que manda la COMPAÑÍA por CIMA (asegura PR 880), con todo: papel, nombre, domicilio,
+          teléfono, email, matrícula, compañía y responsabilidad. `null`/`[]` no se pinta. */}
+      {s.tercerosCima && s.tercerosCima.length > 0 && (
+        <div>
+          <div style={etiqueta}>Terceros (CIMA)</div>
+          <ListaPersonasCima lista={s.tercerosCima} />
+        </div>
+      )}
 
       {propio && (
         <BloqueRamo siniestroId={s.id} ramoPoliza={ramoPoliza} datosRamo={s.datosRamo} onGuardar={onAnotar} />

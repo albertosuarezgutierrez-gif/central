@@ -26,6 +26,8 @@ import {
   type SeguimientoSiniestro,
   type IntervinienteEntrada,
   esVolcadoHistorico,
+  tercerosDeSiniestro,
+  type TerceroFicha,
 } from '@central/module-seguros'
 import { encryptField, encryptFieldNullable, decryptField, decryptFieldNullable } from '@central/module-seguros-pii'
 import { comunicadoACompania, type ParteEstado } from '@central/module-seguros-portal'
@@ -34,6 +36,7 @@ import { SELECT_DETALLE_CIMA, detalleCimaDeFila, type FilaDetalleCima } from './
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { esColumnaAusente } from './pg-error'
 import type { SiniestroFicha, SiniestroIntervinienteFicha } from './cartera-ficha'
 
 /** Columnas que necesita `SiniestroFicha`. Lo usan la ficha de cliente, la de póliza y este módulo. */
@@ -260,6 +263,43 @@ export function mapSiniestro(s: FilaSiniestro): SiniestroFicha {
   }
 }
 
+// ─── Terceros de CIMA (asegura#880) ──────────────────────────────────────────
+
+/**
+ * `cima_extra -> 'terceros'` de esos siniestros, crudo (PII cifrada). Por SQL aparte y no por
+ * `SELECT_SINIESTRO` a propósito: `cima_extra` no está declarada en el schema de Prisma (la crea
+ * la migración 0106 del repo de la ingesta y puede no estar aplicada), y declararla antes del DDL
+ * tumbaría TODA lectura de siniestros. Columna ausente → `null` (no se sabe), cualquier otro fallo
+ * también `null` y se anota: la ficha no se cae por los terceros.
+ */
+export async function tercerosCimaCrudos(correduriaId: string, ids: string[]): Promise<Map<string, unknown> | null> {
+  if (ids.length === 0) return new Map()
+  try {
+    const filas = await prismaAsegura().$queryRaw<{ id: string; terceros: unknown }[]>`
+      select id::text as id, cima_extra -> 'terceros' as terceros
+      from siniestros
+      where correduria_id = ${correduriaId}::uuid and id = any(${ids}::uuid[])`
+    return new Map(filas.map((f) => [f.id, f.terceros]))
+  } catch (e) {
+    if (!esColumnaAusente(e)) console.error('[cartera-siniestros] terceros de CIMA ilegibles:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+/** Descifrado de los terceros (puede lanzar; `figuras-cima.ts` lo trata como ilegible, nunca `v1:`). */
+const descifrarTercero = (v: string): string | null => decryptField(v)
+
+/** Lo crudo de un siniestro → lista para la pantalla. `null` = no consta. */
+export function tercerosCimaDe(crudo: unknown): TerceroFicha[] | null {
+  return tercerosDeSiniestro(crudo, descifrarTercero)
+}
+
+/** Añade `tercerosCima` a cada siniestro ya mapeado (una sola consulta para todos). */
+export async function conTercerosCima(correduriaId: string, lista: SiniestroFicha[]): Promise<SiniestroFicha[]> {
+  const crudos = await tercerosCimaCrudos(correduriaId, lista.map((s) => s.id))
+  return lista.map((s) => ({ ...s, tercerosCima: crudos === null ? null : tercerosCimaDe(crudos.get(s.id)) }))
+}
+
 // ─── Resultado común ─────────────────────────────────────────────────────────
 
 type Fallo =
@@ -288,7 +328,7 @@ async function anotarHistorial(correduriaId: string, clienteId: string, texto: s
 /** Un siniestro de la correduría, o `null` si no existe en ella. */
 export async function leerSiniestro(correduriaId: string, id: string): Promise<SiniestroFicha | null> {
   const s = await prismaAsegura().siniestro.findFirst({ where: { id, correduriaId }, select: SELECT_SINIESTRO })
-  return s ? mapSiniestro(s) : null
+  return s ? (await conTercerosCima(correduriaId, [mapSiniestro(s)]))[0] : null
 }
 
 // ─── Apertura ────────────────────────────────────────────────────────────────
