@@ -10,6 +10,7 @@ import { listarCandidatosConLimite, marcarProcesado, etiquetarCorreo, quitarEtiq
 import { ordenarAdjuntosFactura } from './elegir-adjuntos'
 import { decidirAvisoPago } from './filtro-pago'
 import { calcularIvaFactura } from './iva'
+import { callbackIva, ofrecerSinIvaExtranjero } from './anomalia-callbacks'
 import { pareceIngresoDeCorreduria } from './no-es-gasto'
 import { cargarTitulares } from './titulares'
 import type { Titular } from './receptor'
@@ -250,7 +251,8 @@ export async function escanearNuevasFacturas(
     await marcarProcesado(correo.uid, ETIQUETA_GMAIL, listado.buzon).catch(() => {})
 
     // Notificar por Telegram con botones de acción
-    await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId, decision.permitirPagar, decision.motivoRevision)
+    const ivaDudoso = ofrecerSinIvaExtranjero(ivaPct, { nif_proveedor: datos.nif_proveedor as string | null, proveedor })
+    await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId, decision.permitirPagar, decision.motivoRevision, ivaDudoso)
     // Idea #11: proponer vínculo con reserva cercana
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
@@ -271,6 +273,7 @@ async function notificarFactura(
   cuentaId: string,
   permitirPagar = true,
   motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso' = 'sin_numero_ni_iva',
+  ivaDudoso = false,
 ): Promise<void> {
   const vence = fechaVenc ? ` · vence ${fechaVenc}` : ''
 
@@ -316,6 +319,13 @@ async function notificarFactura(
           { texto: '❌ Rechazar', callback: `pago_rechazar:${facturaId}` },
         ],
       ]
+  // IVA no leído de un proveedor extranjero: se decide aquí, en el mismo aviso (nunca en el escaneo).
+  if (ivaDudoso) {
+    botones.push([
+      { texto: '🌍 Sin IVA (extranjero)', callback: callbackIva('sin', facturaId) },
+      { texto: '🔍 Revisar', callback: callbackIva('rev', facturaId) },
+    ])
+  }
   try {
     const msgId = await tgAvisoBotones('facturas.pago-aprobar', texto, botones)
     if (msgId) {
@@ -416,6 +426,15 @@ export async function rechazarFactura(facturaId: string, cuentaId: string): Prom
   )
   await actualizarMensajeTg(rows[0]?.telegram_msg_id ?? null, `❌ Factura rechazada`)
   return (res as any) > 0
+}
+
+/** IVA 0 de un proveedor extranjero. Solo si seguía sin leer (null): nunca pisa un dato. */
+export async function aplicarSinIvaExtranjero(facturaId: string): Promise<boolean> {
+  const n = await prisma.$executeRaw(Prisma.sql`
+    UPDATE facturas_proveedor SET iva_porcentaje = 0, cuota_iva = 0
+    WHERE id = ${facturaId}::uuid AND cuota_iva IS NULL AND iva_porcentaje IS NULL
+  `)
+  return (n as any) > 0
 }
 
 // ── Verificar pagos en curso (pago_iniciado → ACSC → pagada) ─────────────────
