@@ -84,7 +84,9 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     asistencia: [
       { para: 'Hogar y ayuda en carretera', numeros: ['918 365 365', '900 822 822'], horario: '24 horas' },
       { para: 'Ayuda en carretera desde el extranjero', numeros: ['+34 915 811 823'], horario: '24 horas' },
-      { para: 'Viajes', numeros: ['915 811 823', '900 814 400'], horario: '24 horas' },
+      // 04/10/2026: Viajes corregido según mapfre.es/particulares/contacto/atencion (web oficial);
+      // sustituye al 915 811 823 / 900 814 400 del 23/09/2026.
+      { para: 'Viajes', numeros: ['918 366 280', '900 814 300'], horario: '24 horas' },
       { para: 'Médica', numeros: ['900 122 122'], horario: '24 horas' },
       { para: 'Accidentes personales', numeros: ['918 366 224', '900 810 852'], horario: '24 horas' },
       { para: 'Decesos', numeros: ['918 366 181', '900 814 111'], horario: '24 horas' },
@@ -147,7 +149,12 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     asistencia: [
       { para: 'En carretera', numeros: ['900 365 900', '91 454 74 00'], horario: '24 horas, todos los días' },
       { para: 'Hogar', numeros: ['900 365 900', '91 454 74 00'], horario: '24 horas, todos los días' },
+      // 04/10/2026: añadidas de reale.es/es/te-ayudamos/contacto (web oficial). Horario del
+      // extranjero: la web no lo rotula aparte, queda null; salud dice 24 h.
+      { para: 'Desde el extranjero', numeros: ['+34 913 939 030'], horario: null },
+      { para: 'Salud', numeros: ['900 299 783'], horario: '24 horas' },
     ],
+    // WhatsApp de siniestros: no encontrado en su web (04/10/2026) → null.
     whatsapp: null,
     horario: null,
     fuente: 'https://www.reale.es/es/te-ayudamos/contacto',
@@ -167,6 +174,9 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     asistencia: [
       { para: 'Asistencia en carretera', numeros: ['911 123 443', '900 903 433'], horario: null },
       { para: 'Asistencia en carretera desde el extranjero', numeros: ['+34 911 123 443'], horario: null },
+      // 04/10/2026: de generali.es/contacto-generali (web oficial). Siniestros de hogar,
+      // comunidades y empresas: NO ENCONTRADO en esa web → `siniestros` sigue null.
+      { para: 'Viajes', numeros: ['91 514 36 09'], horario: null },
     ],
     whatsapp: '+34654033629',
     whatsappNota: 'asistente virtual para gestiones y grúa; no publica horario (su perfil verificado de WhatsApp Business)',
