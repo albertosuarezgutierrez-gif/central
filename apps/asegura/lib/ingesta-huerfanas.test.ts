@@ -122,3 +122,21 @@ test('📭 emisiones sin aviso: emitidas, fuera de las 24 h y SIN ningún evento
   assert.match(consulta, /NOT EXISTS[\s\S]*codeoscopic_webhook_events w[\s\S]*w\.project_id_codeoscopic = p\.project_id_codeoscopic/)
   assert.match(consulta, /p\.updated_at > now\(\) - interval '30 days'/)
 })
+
+test('🔁 duplicadas vivas: solo NO fusionadas, con DGS, por correduría, y sin los pares marcados', () => {
+  // 04/10/2026: tras fusionar 13 pares de Allianz quedaban grupos vivos con el
+  // mismo número y DGS. Sin `merged_into_poliza_id IS NULL` contaría las lápidas
+  // recién fusionadas; sin `correduria_id` en el grupo fundiría dos corredurías;
+  // sin leer las marcas, el par ya decidido volvería a salir cada mañana.
+  const bloque = FUENTE.slice(FUENTE.indexOf('const polizasDuplicadas = await leerONull'))
+  const tramo = bloque.slice(0, bloque.indexOf('const fila = huerfanasRaw[0]'))
+  assert.match(tramo, /p\.merged_into_poliza_id IS NULL/)
+  assert.match(tramo, /p\.codigo_entidad_dgs IS NOT NULL/)
+  assert.match(tramo, /c\.correduria_id = v\.correduria_id/)
+  assert.match(tramo, /ltrim\(regexp_replace\(upper\(coalesce\(p\.numero_poliza, ''\)\), '\[\^0-9A-Z\]', '', 'g'\), '0'\)/)
+  assert.match(tramo, /leerParesNoDuplicado\(\)/)
+  assert.match(tramo, /if \(noDuplicados === null\) throw/)
+  assert.match(tramo, /gruposVivosDuplicados\(/)
+  // Y viaja en la respuesta (si no, plataforma lo leería como «no se pide»).
+  assert.match(FUENTE, /return \{\s*polizasDuplicadas,/)
+})

@@ -141,6 +141,8 @@ export {
   textoRenovacionesSinLlegar,
   HORAS_EMISION_SIN_AVISO,
   textoEmisionesSinAviso,
+  textoPolizasDuplicadas,
+  cambioDuplicadasEnFirma,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
@@ -407,8 +409,14 @@ export {
 export {
   normalizarNumeroPoliza,
   polizasDuplicadas,
+  claveParNoDuplicado,
+  grupoResueltoNoDuplicado,
+  numeroPolizaComparable,
+  gruposVivosDuplicados,
   type PolizaParaDuplicados,
   type GrupoDuplicado,
+  type PolizaParaVigiaDuplicadas,
+  type GrupoVivoDuplicado,
 } from './duplicados.ts'
 export {
   ESTADOS_SINIESTRO,

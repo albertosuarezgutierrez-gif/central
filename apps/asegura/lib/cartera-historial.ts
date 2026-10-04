@@ -3,6 +3,7 @@
 // explícito en todo. `null` = no se pudo consultar, nunca `[]`.
 
 import { polizasDuplicadas, WHERE_CARTERA_VIVA, type GrupoDuplicado } from '@central/module-seguros'
+import { leerParesNoDuplicado } from './no-duplicados'
 import { prismaAsegura } from './asegura-db'
 
 export type HistorialFila = { id: string; tipo: string; texto: string; fecha: string }
@@ -73,6 +74,11 @@ export async function cotizacionesVivas(correduriaId: string, clienteId: string,
 /** Pólizas vivas duplicadas (mismo número + compañía) en toda la correduría. `null` = no se pudo leer. */
 export async function duplicadasCartera(correduriaId: string): Promise<GrupoDuplicado[] | null> {
   try {
+    // Pares ya decididos «no duplicado» (mig 0108). `null` = no se sabe qué hay
+    // marcado: se responde «no se pudo comprobar», nunca la lista sin filtrar
+    // como si estuviera filtrada.
+    const noDuplicados = await leerParesNoDuplicado(correduriaId)
+    if (noDuplicados === null) return null
     const filas = await prismaAsegura().poliza.findMany({
       where: { correduriaId, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null, cliente: { activo: true } },
       select: { id: true, clienteId: true, numeroPoliza: true, codigoEntidadDgs: true, aseguradora: true, idPolizaEntidad: true, estado: true },
@@ -88,6 +94,7 @@ export async function duplicadasCartera(correduriaId: string): Promise<GrupoDupl
         confirmadaCima: p.idPolizaEntidad !== null,
         estado: String(p.estado),
       })),
+      noDuplicados,
     )
   } catch {
     return null

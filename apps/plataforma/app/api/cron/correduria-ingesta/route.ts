@@ -27,6 +27,8 @@ import {
   firmaAvisoIngesta,
   normalizarFirmaIngesta,
   textoHuerfanas,
+  textoPolizasDuplicadas,
+  cambioDuplicadasEnFirma,
   DIAS_RECORDATORIO_INGESTA,
 } from '@central/module-seguros'
 
@@ -210,10 +212,28 @@ export async function GET(req: NextRequest) {
     const recorte = respuesta.estado === 'ok' && respuesta.huerfanasTruncadas
       ? '\n\n⚠️ El listado venía recortado: los recuentos por clave son un mínimo, no el total.'
       : ''
+    // 🔁 Informativo, al final: no es pérdida y no debe tapar lo de arriba.
+    const textoDup = textoPolizasDuplicadas(salud.polizasDuplicadas)
+    const duplicadas = textoDup ? `\n\nℹ️ ${textoDup}` : ''
     await tgAviso('correduria.ingesta',
       titular + '\n' +
       salud.motivos.map(m => `• ${m}`).join('\n') +
-      prima + entidades + pedidos + sinAmbito + recorte + sinComprobar + antiguedad + recado,
+      prima + entidades + pedidos + sinAmbito + recorte + sinComprobar + antiguedad + recado + duplicadas,
+    ).catch(() => {})
+  }
+
+  // 🔁 Con la ingesta en `ok` no suena nada… salvo que hayan cambiado las
+  // pólizas vivas duplicadas (entra o sale un grupo). Aviso INFORMATIVO y una
+  // sola vez por cambio: sin recordatorio semanal, porque no es una avería y un
+  // aviso repetido de algo que no se pierde enseña a ignorar el canal.
+  const avisoDuplicadas = salud.estado === 'ok' && decision.avisar && decision.motivo !== 'recordatorio'
+    && cambioDuplicadasEnFirma(firmaPrevia, actual)
+  if (avisoDuplicadas) {
+    const textoDup = textoPolizasDuplicadas(salud.polizasDuplicadas)
+    await tgAviso('correduria.ingesta',
+      'ℹ️ <b>Pólizas vivas duplicadas</b>\n' +
+      (textoDup || 'Ya no queda ningún grupo de pólizas vivas duplicadas.') +
+      '\n\nLa ingesta de CIMA va bien: esto es solo orden en la cartera.',
     ).catch(() => {})
   }
 
@@ -229,7 +249,7 @@ export async function GET(req: NextRequest) {
     reprocesables: salud.huerfanasReparto?.totalReprocesar ?? null,
     objetosEnRevision: salud.objetosEnRevision,
     huecos: salud.huecos.length,
-    avisado: cambio && salud.estado !== 'ok',
+    avisado: (cambio && salud.estado !== 'ok') || avisoDuplicadas,
     motivoAviso: decision.avisar ? decision.motivo : null,
     detalle,
   })

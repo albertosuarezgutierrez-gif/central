@@ -482,3 +482,33 @@ test('cobertura con rutasDescartadas llega a la salud; una forma rara la degrada
   const mala = interpretarIngesta(200, { ...OK, cobertura: { ...SENALES.cobertura, rutasDescartadas: 'x' } })
   if (mala.estado === 'ok') assert.equal(mala.salud.cobertura, null)
 })
+
+// ── 🔁 Pólizas vivas duplicadas (04/10/2026) — informativa ──────────────────
+
+const DUP = [{ entidad: 'C0109', ref: '0ae40684-0000-0000-0000-000000000001', fichas: 2 }]
+
+test('duplicadas: el puerto las manda → viajan a la salud SIN degradar', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], polizasDuplicadas: DUP })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  // (`parcial` por las señales que este JSON mínimo no trae; lo que importa es
+  // que las duplicadas NO lo empujen a `degradada` ni abran un hueco.)
+  assert.notEqual(r.salud.estado, 'degradada')
+  assert.equal(r.salud.huecos.some(h => /duplicadas/.test(h)), false)
+  assert.deepEqual(r.salud.polizasDuplicadas, DUP)
+})
+
+test('duplicadas: puerto viejo (clave ausente) = no se pide (`undefined`), NO es hueco', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.polizasDuplicadas, undefined)
+  assert.equal(r.salud.huecos.some(h => /duplicadas/.test(h)), false)
+})
+
+test('🚨 duplicadas: `null` o una fila ilegible degradan la lista ENTERA a null (hueco), nunca a []', () => {
+  for (const polizasDuplicadas of [null, [...DUP, { entidad: 'C0613', ref: 'x', fichas: '2' }]]) {
+    const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], polizasDuplicadas })
+    if (r.estado !== 'ok') return assert.fail('debía ser ok')
+    assert.equal(r.salud.polizasDuplicadas, null)
+    assert.ok(r.salud.huecos.some(h => /duplicadas/.test(h)))
+  }
+})
