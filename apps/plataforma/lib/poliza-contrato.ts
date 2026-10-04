@@ -41,6 +41,7 @@ export type ContratoFicha = {
   titularCuentaDistinto: boolean | null
   duracion: string | null
   clasePoliza: string | null
+  numeroSuplemento: string | null
   mediador: { clase: string | null; codigoInterno: string | null; nombre: string | null } | null
   producto: { modalidad: string | null; descripcion: string | null; ramoEntidad: string | null; descripcionRamo: string | null } | null
   moneda: string | null
@@ -117,6 +118,7 @@ export function leerContrato(v: unknown): ContratoFicha | null {
     titularCuentaDistinto: bool(v.titularCuentaDistinto),
     duracion: txt(v.duracion),
     clasePoliza: txt(v.clasePoliza),
+    numeroSuplemento: txt(v.numeroSuplemento),
     mediador: med && algo(med) ? med : null,
     producto: prod && algo(prod) ? prod : null,
     moneda: txt(v.moneda),
@@ -203,6 +205,7 @@ export function filasContrato(c: ContratoFicha | null, f: FechasContratoFicha | 
     // «Nueva producción (Póliza que se encuentra en el primer año…)»: la glosa larga sobra en una fila.
     out.push({ etiqueta: 'Clase de póliza', valor: conocida ? t.replace(/\s*\(.*\)\s*$/, '') : c.clasePoliza, nota: conocida ? `código ${c.clasePoliza}` : 'código de la compañía' })
   }
+  if (c?.numeroSuplemento) out.push({ etiqueta: 'Nº de suplemento', valor: c.numeroSuplemento })
   if (c?.mediador) {
     const m = c.mediador
     const valor = m.nombre ?? m.codigoInterno ?? m.clase

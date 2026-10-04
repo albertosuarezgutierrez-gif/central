@@ -47,6 +47,8 @@ export type ContratoCima = {
   titularCuentaDistinto: boolean | null
   duracion: string | null
   clasePoliza: string | null
+  /** Nº de suplemento de la póliza (texto EIAC, «0003»). `null` = no consta. */
+  numeroSuplemento: string | null
   mediador: { clase: string | null; codigoInterno: string | null; nombre: string | null } | null
   producto: { modalidad: string | null; descripcion: string | null; ramoEntidad: string | null; descripcionRamo: string | null } | null
   desglosePrima: { clase: string | null; descripcion: string | null; importe: string | null }[]
@@ -138,6 +140,7 @@ export function contratoCima(datos: unknown, descifrar: Descifrar): ContratoCima
     titularCuentaDistinto: bool(datos.titularCuentaDistinto),
     duracion: txt(datos.duracion),
     clasePoliza: txt(datos.clasePoliza),
+    numeroSuplemento: txt(datos.numeroSuplemento),
     mediador: mediador && algo(mediador) ? mediador : null,
     producto: producto && algo(producto) ? producto : null,
     desglosePrima: lista(datos.desglosePrima, (o) => {
