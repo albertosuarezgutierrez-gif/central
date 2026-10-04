@@ -29,6 +29,7 @@ import {
   type RecibosPoliza, extraerDetalleCobertura, type DetalleCobertura,
   seguimientoSustitucion, type SeguimientoSustitucion } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
+import { personasDePoliza, type PersonasPoliza } from '@central/module-seguros'
 import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { capitalesHogar, eurDeCapital, type CapitalAsegurado } from '@central/module-seguros'
@@ -39,7 +40,7 @@ import { casosDeRamo, type EjecutorLectura } from './codeoscopic/casos'
 import { estimar, mereceLaPena, type RiesgoAEstimar } from './codeoscopic/horquilla'
 import { elegirRiesgo, hogarDeDatos } from './codeoscopic/desde-cartera-hogar'
 import type { SiniestroFicha } from './cartera-ficha'
-import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
+import { SELECT_SINIESTRO, conTercerosCima, mapSiniestro } from './cartera-siniestros'
 import { historialRiesgo } from './cartera-historial-riesgo'
 import type { EslabonHistorial } from '@central/module-seguros'
 import { contratoCima, type ContratoCima } from './cartera-poliza-contrato'
@@ -151,6 +152,13 @@ export type FichaPoliza = {
    */
   contrato: ContratoCima | null
   siniestros: SiniestroFicha[]
+  /**
+   * Personas que manda CIMA (asegura#880): `figuras` de la póliza (papel, nombre, domicilio, teléfono,
+   * email; beneficiario con orden y %) y la persona asegurada + préstamo/modalidad de vida y decesos.
+   * Descifrado en este servidor; el documento NO cruza (solo «consta»). Cada parte
+   * `null` = no consta (póliza ingerida antes de #880, o sin ese bloque).
+   */
+  personas: PersonasPoliza
   intervinientes: IntervinienteFicha[] | null
   /** `null` = no se pudo contar. `0` = la tabla existe y no hay ninguno (hoy: 0 en TODA la base). */
   documentos: number | null
@@ -336,6 +344,8 @@ function descifrar(v: string | null | undefined): string | null {
     return null
   }
 }
+/** Descifrado para las figuras de CIMA: lanza o devuelve `null` si no abre (`figuras-cima.ts` lo trata como ilegible). */
+const descifrarFigura = (v: string): string | null => decryptField(v)
 function ilegible(v: string | null | undefined): boolean {
   return typeof v === 'string' && v.startsWith('v1:') && descifrar(v) === null
 }
@@ -631,7 +641,10 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       situacion: fechaIso(p.fechaSituacion), solicitud: fechaIso(p.fechaSolicitud),
     },
     contrato: contratoCima(p.datosEspecificos, descifrar),
-    siniestros: p.siniestros.map(mapSiniestro),
+    siniestros: await conTercerosCima(correduriaId, p.siniestros.map(mapSiniestro)),
+    // Personas de CIMA (asegura#880): figuras, persona asegurada de vida/decesos. Descifradas AQUÍ;
+    // del documento solo «consta». Todo `null` si la póliza es anterior a #880.
+    personas: personasDePoliza(p.datosEspecificos, descifrarFigura),
     datosCompania: leerDatosCompaniaCima(p.datosEspecificos),
     cimaExtra: leerCimaExtra(p.datosEspecificos),
     cimaExtraTruncado: esObjetoPlano(p.datosEspecificos) && p.datosEspecificos.cimaExtraTruncado === true,

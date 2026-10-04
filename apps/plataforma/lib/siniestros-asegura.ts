@@ -26,7 +26,8 @@
 // resto → `null`. Y la regla de siempre: `reserva: null` = «la compañía no lo
 // informa», NUNCA 0; `siniestros: null` = «no se pudo leer», NUNCA `[]`.
 
-import type { OrigenSiniestro, TramitacionCruda } from '@central/module-seguros'
+import type { OrigenSiniestro, TerceroFicha, TramitacionCruda } from '@central/module-seguros'
+import { tercerosDeSiniestro } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 import { leerDetalleCima, type DetalleCima } from './siniestro-detalle-cima.ts'
 
@@ -98,6 +99,12 @@ export type SiniestroCartera = {
    * `gestionado_correduria`.
    */
   terceros: TerceroCartera[] | null
+  /**
+   * Terceros que manda la COMPAÑÍA por CIMA (asegura#880): papel, nombre, domicilio, teléfono,
+   * email, matrícula, compañía y responsabilidad, ya descifrados por asegura (un `v1:` colado se
+   * tapa). `null` = no consta (anterior a #880, o asegura viejo) ≠ `[]`.
+   */
+  tercerosCima: TerceroFicha[] | null
   /**
    * Partes del portal VINCULADOS (lo que contó el cliente), en orden de llegada.
    * `null` = asegura no lo manda (versión anterior) — NUNCA «no hay parte», que es `[]`.
@@ -259,6 +266,7 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     tramitacionCima: tramitacionDe(s.tramitacionCima),
     detalleCima: leerDetalleCima(s.detalleCima),
     terceros: terceros(s.terceros),
+    tercerosCima: tercerosDeSiniestro(s.tercerosCima),
     partes: partesVinculadas(s.partes),
   }
 }

@@ -565,3 +565,24 @@ export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, 
 export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima } from './avisos-cima.ts'
 export type { EventoCima, PlanAvisos, PolizaParaAviso, TipoAvisoCima } from './avisos-cima.ts'
 export { vistaCobertura, capitalDeCobertura, nombreCobertura, LIMITES_LEGALES, type CoberturaVista, type CapitalVista } from './cobertura-vista.ts'
+// Personas de la póliza y terceros del siniestro (CIMA, asegura#880): lista blanca de lo que ve el cliente.
+export {
+  CAMPOS_TERCERO_CLIENTE,
+  CAMPOS_TERCERO_PROHIBIDOS,
+  CAMPOS_FIGURA_PROPIA,
+  CAMPOS_FIGURA_AJENA,
+  terceroParaCliente,
+  tercerosParaCliente,
+  figuraPropiaParaCliente,
+  figuraAjenaParaCliente,
+  documentoIdentidad,
+  personasParaCliente,
+} from './personas-cliente.ts'
+export type {
+  CampoTerceroCliente,
+  TerceroCliente,
+  FiguraPropiaCliente,
+  FiguraAjenaCliente,
+  FiguraConDocumento,
+  PersonasParaCliente,
+} from './personas-cliente.ts'

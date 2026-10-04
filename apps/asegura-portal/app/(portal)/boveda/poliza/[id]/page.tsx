@@ -9,10 +9,12 @@ import { documentosDePoliza } from '@/lib/documentos-poliza'
 import { fechaEs } from '@/lib/fechas'
 import { rolesLegibles } from '@/lib/intervinientes'
 import { partesDeIdentidad } from '@/lib/partes-siniestro'
+import { personasDePoliza } from '@/lib/personas-poliza'
 import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { getIdentidad } from '@/lib/session'
 
 import { SeguimientoDeParte } from '../../SeguimientoParte'
+import { PersonasDeTuPoliza, TercerosDeTusSiniestros } from '../../PersonasPoliza'
 import {
   AvisoReciboDevuelto,
   textoSustitucion,
@@ -106,6 +108,10 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
     (l) => l.filter((x) => x.polizaId === p.id),
     () => [],
   )
+  // Personas de CIMA (asegura PR 880) por el puente: el id viaja, pero asegura vuelve a comprobar que la
+  // póliza es de esta identidad (tomador propio o figura en ella). Sin puente o sin dato → `null` y se calla.
+  // Una póliza vista por AUTORIZACIÓN no pide nada: sus personas no son de quien mira.
+  const personas = deOtro && figuraComo === null ? null : await personasDePoliza(identidad.id, p.id)
   const seguimientos = seguimientosDePartes(partesPoliza, cartera)
   const partesConEstado = partesPoliza.flatMap((x) => {
     const seg = seguimientos.get(x.id) ?? null
@@ -301,6 +307,8 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
 
       {/* La documentación ORIGINAL de la compañía (el PDF de la póliza). `null` = no es tuya o tu nivel
           no la ve: no se pinta. `[]` = aún no nos la ha entregado, y se dice. */}
+      {personas && <PersonasDeTuPoliza propias={personas.propias} otras={personas.otras} />}
+
       {documentos !== null && (
         <section className="seccion" aria-labelledby="documentos-titulo">
           <h2 id="documentos-titulo">Documentos de tu póliza</h2>
@@ -348,6 +356,12 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
           <h2 id="siniestros-titulo">Tus siniestros de esta póliza</h2>
           <HistorialSiniestros p={p} />
         </section>
+      )}
+
+      {/* Terceros de CIMA: solo dentro de la sección de siniestros que el nivel ya enseña, y solo de
+          siniestros que están en la cartera AUTORIZADA (el id del puente filtra, no abre). */}
+      {p.siniestros !== null && personas?.terceros && (
+        <TercerosDeTusSiniestros siniestros={p.siniestros} terceros={personas.terceros} />
       )}
 
       {partesConEstado.length > 0 && (
