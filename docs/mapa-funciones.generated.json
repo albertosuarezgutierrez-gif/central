@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-04T05:58:54Z",
-  "sha": "a3cae2359b2f94db7da16682e0ed1d5a8592fb66",
+  "generadoEn": "2026-10-04T06:28:12Z",
+  "sha": "522ab720f0ed8ccc0a9eedc116506e205e892607",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -175035,7 +175035,7 @@
           "exportada": true,
           "params": "e164: string",
           "retorno": "string",
-          "linea": 210,
+          "linea": 220,
           "resumen": "`+34920750075` → `920 750 075`, para pintar un WhatsApp sin inventar formato."
         },
         {
@@ -175044,7 +175044,7 @@
           "exportada": true,
           "params": "numero: string",
           "retorno": "string",
-          "linea": 216,
+          "linea": 226,
           "resumen": "El número tal y como se marca: solo dígitos y el `+` inicial."
         },
         {
@@ -175053,7 +175053,7 @@
           "exportada": true,
           "params": "companias: readonly TelefonoCompania[] = TELEFONOS_COMPANIAS",
           "retorno": null,
-          "linea": 226,
+          "linea": 236,
           "resumen": "Lo que la página puede enseñar de cada compañía. Las no verificadas salen SIN ningún número —solo el nombre y su página oficial—: no se filtran de la lista, porque desaparecer se leería como «con esa "
         },
         {
@@ -175062,7 +175062,7 @@
           "exportada": true,
           "params": "codigoDgs: string",
           "retorno": "TelefonoCompania | null",
-          "linea": 236,
+          "linea": 246,
           "resumen": "La ficha VERIFICADA de una compañía por su código DGSFP, o `null` (sin ficha o sin verificar)."
         },
         {
@@ -175071,7 +175071,7 @@
           "exportada": true,
           "params": "nombreOSlug: string",
           "retorno": "TelefonoCompania | null",
-          "linea": 242,
+          "linea": 252,
           "resumen": "La ficha VERIFICADA por su nombre (`Mapfre`, sin distinguir mayúsculas) o por su `slug`, o `null`."
         },
         {
@@ -175080,7 +175080,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 256,
+          "linea": 266,
           "resumen": "Escapa un valor de texto de vCard 3.0 (RFC 2426 §4): `\\`, `,`, `;` y saltos de línea."
         },
         {
@@ -175089,7 +175089,7 @@
           "exportada": false,
           "params": "numero: string",
           "retorno": "string",
-          "linea": 260
+          "linea": 270
         },
         {
           "nombre": "vcardCompania",
@@ -175097,7 +175097,7 @@
           "exportada": true,
           "params": "c: TelefonoCompania",
           "retorno": "string",
-          "linea": 271,
+          "linea": 281,
           "resumen": "La tarjeta de contacto (vCard 3.0, la que abren iOS y Android) de una compañía VERIFICADA. Cada número va con su rótulo (`X-ABLabel`, que Android ignora sin romper): con varias líneas, un número sin r"
         },
         {
@@ -175106,13 +175106,13 @@
           "exportada": true,
           "params": "hoy: Date, dias: number = DIAS_REVISION_TELEFONOS, companias: readonly TelefonoCompania[] = TELEFONOS_COMPANIAS,",
           "retorno": "Array<",
-          "linea": 318,
+          "linea": 328,
           "resumen": "Las compañías verificadas cuya comprobación tiene más de `dias` días a `hoy`, de la más vieja a la más nueva."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4afc2f8b8741"
+      "hash": "bd230ae8c43e"
     },
     {
       "ruta": "packages/module-seguros/src/variantes-riesgo.ts",
