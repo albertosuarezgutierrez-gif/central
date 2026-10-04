@@ -12,7 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(04/10/2026, auditoría profunda)** — Código sano: 13/13 typecheck, 1318 tests de guardia, module-seguros{,-pii,-portal} verdes, cepos de aislamiento presentes, `apps/asegura` lee de central. 🔴 trading sin pasada desde el 29/09 (latidos ~101 h; el watchdog ya avisó) y `sivra_mercado_booking` ok=false desde el 27/09 (escaparate propio sin disponibilidad). 🟠 pricing: 8 alzas sin justificar + 1 oscilante (sin desplomes); CIMA degradada (cola 182, 0 procesados). 🟡 Codeoscopic 12 cotizaciones/7 d (3 €) sin decisión anotada. Detalle: `docs/AUDITORIA-2026-10.md`.
+**(04/10/2026, auditoría profunda)** — Código sano: 13/13 typecheck, 1318 tests. 🔴 trading-analista sin dispararse desde el 29/09 (acción Alberto en claude.ai). 🟢 mercado_booking arreglado (#4118); pricing evento falso id=1294 (año) → validación en código, descartar fila pendiente Alberto; CIMA queueDepth falsa alarma. 🟡 Codeoscopic respuesta Alberto pendiente confirmar. Detalle: `docs/AUDITORIA-2026-10.md`.
 
 **(03/10/2026, early/late check-in y maletas)** — Compuerta: early/late/maletas NUNCA auto-envío, siempre propuesta por Telegram. Semáforo puro `cambio-horario.ts` (rojo/amarillo/verde; dato desconocido = amarillo); botones `hsp_chsi`/`hsp_chhasta`/`hsp_chno`/`hsp_chlimp`.
 Política Alberto: GRATIS (también más allá de las 12:00, `salida.ts`: se consulta y confirma según limpieza/calendario) y SIN pedir reseña (Booking/Airbnb prohíben incentivar). «No» en rojo ofrece consignas de `CONSIGNA_POR_ZONA`.
