@@ -40,8 +40,9 @@ import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
 import { correosCliente, type CorreoFicha } from './correo-seguimiento'
 import { cotizacionesVivas, historialCliente, notasCliente, type HistorialFila, type NotasCliente } from './cartera-historial'
 import { listarDocumentos } from './cartera-documentos'
-import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
+import { SELECT_SINIESTRO, conTercerosCima, mapSiniestro } from './cartera-siniestros'
 import type { DetalleCimaSiniestro } from './siniestro-detalle-cima'
+import type { TerceroFicha } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { emailDeFicha } from './email-ficha'
 import { identidadesDeCliente } from './vinculos-portal'
@@ -340,6 +341,13 @@ export type SiniestroFicha = {
    * NUNCA «no hay ninguno» — mismo criterio que `intervinientes` de la ficha.
    */
   terceros: SiniestroIntervinienteFicha[] | null
+  /**
+   * Terceros que manda la COMPAÑÍA por CIMA (`siniestros.cima_extra.terceros`, asegura#880):
+   * papel, nombre, domicilio, teléfono, email, matrícula, compañía, responsabilidad. PII ya
+   * descifrada aquí; del documento solo «consta». `null` = no consta (columna o
+   * clave ausente, o ingerido antes de #880) ≠ `[]`. Ver `tercerosDeSiniestro` de `module-seguros`.
+   */
+  tercerosCima?: TerceroFicha[] | null
   /**
    * Partes del portal VINCULADOS a este siniestro (lo que contó el cliente). `[]` =
    * se miró y no hay ninguno. `comunicado` sale de `comunicadoACompania()`.
@@ -1008,7 +1016,7 @@ export async function fichaCliente(
         },
       }
     }).sort(ordenPolizasFicha),
-    siniestros: siniestros.map(mapSiniestro),
+    siniestros: await conTercerosCima(correduriaId, siniestros.map(mapSiniestro)),
   }
 }
 

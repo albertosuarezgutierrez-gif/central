@@ -99,6 +99,34 @@ export {
 export { lineaFichaObjeto, lineaConductor } from './ficha-objeto-linea.ts'
 
 export { etiquetaClave, claveEiacConocida, CLAVES_EIAC, type TablaClaveEiac } from './claves-eiac.ts'
+export {
+  etiquetaPapel,
+  figuraDeCima,
+  terceroDeCima,
+  figurasDePoliza,
+  tercerosDeSiniestro,
+  vidaDePoliza,
+  decesosDePoliza,
+  personasDePoliza,
+  leerPersonasPuerto,
+  textoDomicilio,
+  textoBeneficiario,
+  actividadesVida,
+  textoDuracionPrestamo,
+  PAPELES_FIGURA_CIMA,
+  ACTIVIDADES_VIDA,
+  MAX_FIGURAS_CIMA,
+  type DescifrarFigura,
+  type PapelFiguraCima,
+  type DomicilioCimaFigura,
+  type FiguraFicha,
+  type TerceroFicha,
+  type PrestamoFicha,
+  type VidaFicha,
+  type DecesosFicha,
+  type PersonasPoliza,
+  type ActividadVida,
+} from './figuras-cima.ts'
 export { fechaPintable, diaIsoPintable } from './fecha-pintable.ts'
 export { alertaVencimiento, hoyMadrid } from './alerta-vencimiento.ts'
 export type { AlertaVencimiento, EstadoAlertaVencimiento } from './alerta-vencimiento.ts'

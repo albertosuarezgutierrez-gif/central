@@ -13,6 +13,7 @@ import ClienteSeVa from './ClienteSeVa'
 import WhatsappReciboDevuelto, { type ContextoWhatsappDevuelto } from './WhatsappReciboDevuelto'
 import HistorialRiesgo from './HistorialRiesgo'
 import CimaPoliza from './CimaPoliza'
+import PersonasPoliza, { hayPersonas } from './PersonasPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
 import AbrirRiesgo from './AbrirRiesgo'
 import CartaMediadorPoliza from './CartaMediadorPoliza'
@@ -245,6 +246,14 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
         </>
       ),
     },
+    // Personas que manda CIMA (asegura PR 880): sin ninguna (póliza anterior o asegura viejo), no hay acceso.
+    ...(hayPersonas(p.personas)
+      ? [{
+          id: 'personas', icono: '🧑‍🤝‍🧑', titulo: p.personas.vida || p.personas.decesos ? 'Personas y persona asegurada' : 'Personas de la póliza',
+          detalle: p.personas.figuras?.length ? `${p.personas.figuras.length}` : null,
+          contenido: <Tarjeta titulo="Personas de la póliza (CIMA)"><PersonasPoliza p={p.personas} /></Tarjeta>,
+        }]
+      : []),
     {
       id: 'intervinientes', icono: '👥', titulo: 'Intervinientes',
       detalle: p.intervinientes === null ? null : p.intervinientes.length ? `${p.intervinientes.length}` : null,
