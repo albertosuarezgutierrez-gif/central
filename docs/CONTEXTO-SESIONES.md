@@ -15,6 +15,11 @@
 **(04/10/2026, facturas-scan: falsos positivos)** — `INVOICE_SYSTEM` clasifica `tipo_documento`; `decidirAvisoPago` aparta con motivo `no_es_factura` todo tipo conocido fuera de {factura, recibo, justificante_pago} (null = no aparta) y devuelve `permitirPagar:false` si no hay nº de factura NI base/IVA (aviso Telegram con «⚠️ Revisar», sin ✅ Pagar). Tests en `filtro-pago.test.ts`.
 Arreglo «domiciliados sin cargo»: solo entra `raw_extraction.domiciliado = true` (null = no se sabe) y la cobertura es POR CUENTA (corriente o tarjeta con movimientos en 180 d); cuenta parada → `sin_cobertura` (línea «⚪ … sin poder comprobar» nombrando cuentas), no «sin cargo». Helper puro + tests en `domiciliados.ts`. Pendiente operativo: reconectar PSD2 de la cuenta 8ce760ca (parada 10/09) y tarjetas 3059/b8c4/15ba (paradas desde julio).
 Pendiente en BD (sin tocar): Asoc. Corredores 50€ (04/10), AMPA 50€ y Asoc. Mediadores 145,20€ (25/09), Fundación SS.CC. 10€+120€ (12-14/09), y Anthropic 170€ ×7 entre 13/09 y 04/10 (revisar recarga automática).
+**(04/10/2026)** — asegura#879 (0108 poliza_no_duplicado, con CASCADE) y central#4221 (vigía de duplicadas + botón «No es duplicado») mergeados. 0108 aplicada en prod (audit 1f45b1a2) + REVOKE UPDATE (8b7e4aad).
+Pares marcados «no duplicado»: 32742526, 35374290, 8414300028 y 36088166.
+Fusiones del lote duplicadas-revision-2026-10-04 (evento 2f5cafd9): UVG410081428 (C0072; clientes distintos, manda el tomador de CIMA; combustible volcado no heredado porque contradice a CIMA), 3021500279880 y 3021500306694 (C0613). Quedan 0 grupos.
+central#4228: vigía ya no da «objetos en revisión» de ficheros que el reproceso de cuarentena dejó todo guardado (CUARENTENA_SELLO_FIABLE_DESDE). Alerta C0109 REC 20261003 era falsa.
+Pendiente: FK compuesta correduría en poliza_no_duplicado; ingesta no quita ceros; reclamar a Mapfre 10 renovaciones desde 05/06.
 
 **(04/10/2026)** — pasada agentes-entrenador: poda de bitácora (16 entradas procesadas, 27/09→04/10) en PR docs-only, sin cambios de prompt. Backlog PR claude/*: 0 entradas ≥2 semanas (el más antiguo #3755, 27/09, dentro del rango).
 
@@ -1031,7 +1036,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (04/10/2026) Siniestros portal: PR #4208 en producción + teléfonos de compañías
 - SQL `datos_ramo` y vínculo/fusión aplicados (Alberto vía Chrome, verificado); `PLATAFORMA_URL` en asegura-portal; 3 despliegues Ready; cron `siniestros-vinculo` :43.
 - Catálogo `telefonos-companias.ts`: Reale (extranjero, salud), Generali (viajes), Mapfre viajes actualizado (web 04/10). Siguen null: siniestros Allianz/Generali/Mapfre, asistencia Occident, WhatsApp Reale. ⏸️ Alberto: ¿Mapfre 918 365 365 como «siniestros»?
-- 🚨 Supabase `central` en plan Free, egress 5,138 GB del ciclo 15/09–15/10 (límite Free ~5 GB) y gracia vencida (10/07) → riesgo 402 para TODAS las apps. Recomendado Pro; decide Alberto.
+- 🚨 Supabase `central` en plan Free, egress 5,138 GB del ciclo 15/09–15/10 (límite Free ~5 GB) y gracia vencida (10/07) → riesgo 402 para TODAS las apps. ✅ Alberto lo subió a **Pro** el 04/10/2026.
 
 ## (03/10/2026) Portal: parte de siniestro con UN solo camino para toda póliza + aviso Telegram con enlace
 - Causa: autorizado sin alcance `total` → la ficha mandaba a `vista=siniestro` sin `?poliza=` → salían TODAS las compañías (caso Alberto→póliza hogar de José). No es fallo de permisos (regla 24/09): sigue el 403.

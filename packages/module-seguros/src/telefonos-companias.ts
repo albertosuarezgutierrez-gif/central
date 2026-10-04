@@ -80,7 +80,8 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     // número de voz para dar parte (solo el WhatsApp de hogar), así que
     // `siniestros` queda vacío en vez de adivinarlo. La segunda captura (página
     // entera) confirma que el de hogar es también el de ayuda en carretera.
-    siniestros: null,
+    // 04/10/2026: confirmado por Alberto; línea general de mapfre.es.
+    siniestros: '918 365 365',
     asistencia: [
       { para: 'Hogar y ayuda en carretera', numeros: ['918 365 365', '900 822 822'], horario: '24 horas' },
       { para: 'Ayuda en carretera desde el extranjero', numeros: ['+34 915 811 823'], horario: '24 horas' },

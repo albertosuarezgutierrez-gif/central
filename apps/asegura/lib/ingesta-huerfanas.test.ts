@@ -155,3 +155,15 @@ test('🔁 pantalla «Duplicadas» = vigía: misma consulta y mismo criterio', (
   // Nada de filtros propios de la pantalla (cartera viva…): eso eran dos criterios.
   assert.doesNotMatch(tramo, /findMany|WHERE_CARTERA_VIVA/)
 })
+
+test('🧯 el parcial se apaga si la cuarentena se reprocesó con sello fiable (>= asegura#877)', () => {
+  const ini = FUENTE.indexOf("e.event_name = 'cima_fichero_persistido_parcial'")
+  const consulta = FUENTE.slice(ini, FUENTE.indexOf('ORDER BY en_revision DESC', ini))
+  assert.match(consulta, /FROM cima_cuarentena_crudo q/)
+  assert.match(consulta, /q\.nombre_fichero = u\.fichero/)
+  assert.match(consulta, /q\.reprocesado_at > u\.occurred_at/)
+  assert.match(consulta, /q\.reprocesado_at >= \$1::timestamptz/)
+  // La fecha de corte es la del merge de #877 y viaja como parámetro.
+  assert.match(FUENTE, /CUARENTENA_SELLO_FIABLE_DESDE = '2026-10-03T15:59:56Z'/)
+  assert.match(FUENTE, /, CUARENTENA_SELLO_FIABLE_DESDE\)\n/)
+})
