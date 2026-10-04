@@ -122,3 +122,36 @@ test('📭 emisiones sin aviso: emitidas, fuera de las 24 h y SIN ningún evento
   assert.match(consulta, /NOT EXISTS[\s\S]*codeoscopic_webhook_events w[\s\S]*w\.project_id_codeoscopic = p\.project_id_codeoscopic/)
   assert.match(consulta, /p\.updated_at > now\(\) - interval '30 days'/)
 })
+
+test('🔁 duplicadas vivas: solo NO fusionadas, con DGS, por correduría, y sin los pares marcados', () => {
+  // 04/10/2026: tras fusionar 13 pares de Allianz quedaban grupos vivos con el
+  // mismo número y DGS. Sin `merged_into_poliza_id IS NULL` contaría las lápidas
+  // recién fusionadas; sin `correduria_id` en el grupo fundiría dos corredurías;
+  // sin leer las marcas, el par ya decidido volvería a salir cada mañana.
+  const bloque = FUENTE.slice(FUENTE.indexOf('const polizasDuplicadas = await leerONull'))
+  const tramo = bloque.slice(0, bloque.indexOf('const fila = huerfanasRaw[0]'))
+  assert.match(tramo, /leerParesNoDuplicado\(\)/)
+  assert.match(tramo, /if \(noDuplicados === null\) throw/)
+  assert.match(tramo, /gruposVivosDuplicados\(await leerFichasCandidatasDuplicadas\(\), noDuplicados\)/)
+  // La consulta es la COMPARTIDA con la pantalla (un solo criterio).
+  const ch = readFileSync(join(import.meta.dirname, 'cartera-historial.ts'), 'utf8')
+  const lec = ch.slice(ch.indexOf('export async function leerFichasCandidatasDuplicadas'))
+  const where = lec.slice(lec.indexOf('where: {'), lec.indexOf('select: {'))
+  assert.match(where, /mergedIntoPolizaId: null,/)
+  assert.match(where, /codigoEntidadDgs: \{ not: null \},/)
+  // 🚨 Fichas de cliente descartadas fuera, en pantalla Y vigía (la misma consulta).
+  assert.match(where, /cliente: \{ activo: true \},/)
+  assert.match(where, /\.\.\.\(correduriaId \? \{ correduriaId \} : \{\}\)/)
+  // Y viaja en la respuesta (si no, plataforma lo leería como «no se pide»).
+  assert.match(FUENTE, /return \{\s*polizasDuplicadas,/)
+})
+
+test('🔁 pantalla «Duplicadas» = vigía: misma consulta y mismo criterio', () => {
+  const ch = readFileSync(new URL('./cartera-historial.ts', import.meta.url), 'utf8')
+  const tramo = ch.slice(ch.indexOf('export async function duplicadasCartera'))
+  assert.match(FUENTE, /import \{ leerFichasCandidatasDuplicadas \} from '\.\/cartera-historial'/)
+  assert.match(tramo, /polizasDuplicadas\(await leerFichasCandidatasDuplicadas\(correduriaId\), noDuplicados\)/)
+  assert.match(tramo, /if \(noDuplicados === null\) return null/)
+  // Nada de filtros propios de la pantalla (cartera viva…): eso eran dos criterios.
+  assert.doesNotMatch(tramo, /findMany|WHERE_CARTERA_VIVA/)
+})

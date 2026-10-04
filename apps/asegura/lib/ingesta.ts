@@ -31,14 +31,18 @@ import type {
   CampoImportanteSinLeer,
   RenovacionSinLlegar,
   EmisionSinAviso,
+  GrupoVivoDuplicado,
 } from '@central/module-seguros'
 import {
   DIAS_GRACIA_RENOVACION,
   HORAS_EMISION_SIN_AVISO,
   HORAS_RECHAZO_RECIENTE,
+  gruposVivosDuplicados,
   sqlCarteraEnVigor,
 } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { leerParesNoDuplicado } from './no-duplicados'
+import { leerFichasCandidatasDuplicadas } from './cartera-historial'
 
 export type EstadoIngestaPuerto =
   | { estado: 'sin_configurar' }
@@ -98,6 +102,13 @@ export type EstadoIngestaPuerto =
        * no hay; `null` = no se pudo mirar.
        */
       emisionesSinAviso: EmisionSinAviso[] | null
+      /**
+       * 🔁 Grupos de fichas vivas (no fusionadas) con el mismo número y DGS, sin
+       * los pares marcados «no duplicado». INFORMATIVA. Sin números de póliza
+       * (solo DGS + id más bajo + nº de fichas). `[]` = se miró y no hay;
+       * `null` = no se pudo mirar (ni la cartera ni las marcas).
+       */
+      polizasDuplicadas: GrupoVivoDuplicado[] | null
     }
 
 /** Crudo EIAC guardado por una incidencia y todavía sin reprocesar. */
@@ -734,8 +745,23 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       }))
     })
 
+    // 10. 🔁 Pólizas vivas duplicadas (04/10/2026). Tras fusionar 13 pares de
+    //     Allianz quedaban grupos con el mismo número y DGS: unos duplicados de
+    //     verdad, otros pólizas distintas (clientes distintos). Las candidatas
+    //     salen de `leerFichasCandidatasDuplicadas` —la MISMA consulta que la
+    //     pantalla «Duplicadas»— y el criterio exacto, de `gruposVivosDuplicados`
+    //     (proyección de `agruparDuplicadas`, el mismo que usa la pantalla).
+    const polizasDuplicadas = await leerONull<GrupoVivoDuplicado[]>(async () => {
+      const noDuplicados = await leerParesNoDuplicado()
+      // Sin saber qué está marcado no se publica la lista: sería volver a
+      // enseñar como duplicados pares ya decididos.
+      if (noDuplicados === null) throw new Error('poliza_no_duplicado ilegible')
+      return gruposVivosDuplicados(await leerFichasCandidatasDuplicadas(), noDuplicados)
+    })
+
     const fila = huerfanasRaw[0]
     return {
+      polizasDuplicadas,
       emisionesSinAviso,
       renovacionesSinLlegar,
       crudo,

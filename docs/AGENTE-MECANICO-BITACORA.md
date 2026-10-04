@@ -28,6 +28,8 @@
 
 - (27/09/2026) parking de House Sevillana «en el edificio» → San Juan de la Palma en sivra/messages ×5 + skill seo-house-sevillana (8 ficheros) — agente-mecanico — ok (no commiteó; JSON válido; afirmó errores de tsc «preexistentes» en sivra que eran falta de `prisma generate`: con él, tsc limpio).
 
+- (04/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (CIMA/Allianz C0109 cierre), AGENTE-MECANICO-BITACORA.md — sesión — ok
+
 - (20/09/2026) tres artículos de siniestro por ramo en `apps/asegura-web/lib/articulos.ts` (coche / fuga de agua / salud) — agente-mecanico — ok (46 tests + tsc en verde; un solo retoque a mano: «te ahorra un viaje» → «te evita un viaje», que el cepo de copy no caza porque no es de precio)
 - (20/09/2026) embudo PostHog en `asegura-web` (`lib/medir.ts`, `EnlaceMedido`, 7 CTAs, formulario, calculadora, 11 tests con cepo visto en rojo) — agente-mecanico — ok con retoque: puso `calculadora_calculo` en el botón «+ Otro seguro» (la calculadora no tiene botón calcular); se movió a un `useEffect` al primer resultado con fecha
 - (20/09/2026) delegar-codigo NO disponible en este contenedor (`AI_GATEWAY_SECRET` ausente) — delegar-codigo — fallo: sin secreto no hay OpenRouter; se usó agente-mecanico para las dos tareas de arriba

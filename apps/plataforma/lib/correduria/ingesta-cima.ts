@@ -26,6 +26,7 @@ import {
   type CampoImportanteSinLeer,
   type RenovacionSinLlegar,
   type EmisionSinAviso,
+  type GrupoVivoDuplicado,
 } from '@central/module-seguros'
 import { cabecerasPuerto } from '../puerto-actor.ts'
 
@@ -305,6 +306,19 @@ function esListaEmisionesSinAviso(v: unknown): boolean {
   return Array.isArray(v) && v.every(esEmisionSinAviso)
 }
 
+/** 🔁 Un grupo de pólizas vivas duplicadas. Todo-o-nada, como las renovaciones. */
+function esGrupoVivoDuplicado(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.entidad === 'string' && o.entidad !== ''
+    && typeof o.ref === 'string' && o.ref !== ''
+    && entero(o.fichas)
+}
+
+function esListaDuplicadas(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esGrupoVivoDuplicado)
+}
+
 function esCajaNegra(v: unknown): boolean {
   if (typeof v !== 'object' || v === null) return false
   const o = v as Record<string, unknown>
@@ -393,6 +407,9 @@ export function interpretarIngesta(
       // 📭 Mismos tres estados: ausente (`central-asegura` anterior al 28/09/2026)
       // no se pide; `null`/ilegible = hueco; `[]` = se miró y no hay.
       emisionesSinAviso: señal<EmisionSinAviso[]>(r, 'emisionesSinAviso', esListaEmisionesSinAviso),
+      // 🔁 Mismos tres estados: ausente (`central-asegura` anterior al 04/10/2026)
+      // no se pide; `null`/ilegible = hueco; `[]` = se miró y no hay.
+      polizasDuplicadas: señal<GrupoVivoDuplicado[]>(r, 'polizasDuplicadas', esListaDuplicadas),
     }),
     huerfanasTruncadas: huerfanas.estado === 'ok' && huerfanas.truncado,
     huerfanasSinAmbito: huerfanas.estado === 'ok' ? huerfanas.ocultasOtroAmbito : null,

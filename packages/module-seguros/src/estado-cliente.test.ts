@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { estadoCliente, type SenalesCliente } from './estado-cliente.ts'
-import { normalizarNumeroPoliza, polizasDuplicadas, type PolizaParaDuplicados } from './duplicados.ts'
+import { normalizarNumeroPoliza } from './duplicados.ts'
 
 const s = (p: Partial<SenalesCliente>): SenalesCliente => ({
   polizasConfirmadasActivas: 0,
@@ -34,20 +34,6 @@ test('número de póliza normalizado: espacios, guiones y ceros a la izquierda f
   assert.equal(normalizarNumeroPoliza(null), null)
 })
 
-test('duplicadas: solo vivas no canceladas, por número + código de compañía; marca las que mezclan emitida y CIMA', () => {
-  const p = (x: Partial<PolizaParaDuplicados> & { id: string }): PolizaParaDuplicados => ({
-    clienteId: 'c', numeroPoliza: '123', codigoEntidadDgs: 'C0058', aseguradora: 'Mapfre', viva: true, confirmadaCima: true, estado: 'activa', ...x,
-  })
-  const g = polizasDuplicadas([
-    p({ id: 'a' }),
-    p({ id: 'b', confirmadaCima: false, codigoEntidadDgs: null, aseguradora: 'c0058' }),
-    p({ id: 'h', viva: false }), // histórica del volcado: no cuenta
-    p({ id: 'k', estado: 'cancelada' }),
-    p({ id: 'x', numeroPoliza: '999' }),
-    p({ id: 'y', numeroPoliza: '0999', codigoEntidadDgs: 'C0109' }), // otra compañía: no es duplicado
-  ])
-  assert.equal(g.length, 1)
-  assert.equal(g[0].numero, '123')
-  assert.deepEqual(g[0].polizas.map((x) => x.id), ['a', 'b'])
-  assert.equal(g[0].emitidaYCima, true)
-})
+// Las duplicadas tienen su propio test (`duplicados.test.ts`): desde el 04/10/2026
+// la pantalla usa el MISMO criterio que el vigía (`agruparDuplicadas`), que ya no
+// filtra por «viva»/cancelada ni cae al nombre de la compañía sin DGS.
