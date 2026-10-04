@@ -104,7 +104,7 @@ export async function procesarFactura(
   }
 
   // Duplicado → no imputar.
-  if (await existeDuplicado({ fingerprint: fp, numero_factura: data.numero_factura ?? null, fecha: data.fecha, total })) {
+  if (await existeDuplicado({ fingerprint: fp, numero_factura: data.numero_factura ?? null, fecha: data.fecha, total, proveedor, nif_proveedor: nifEmisorFiable ? data.nif_proveedor ?? null : null })) {
     await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'duplicado', payload: { total } })
     return { decision: 'duplicado', fingerprint: fp, total, proveedor }
   }

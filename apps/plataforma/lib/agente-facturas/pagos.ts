@@ -9,6 +9,8 @@ import { Prisma } from '@prisma/client'
 import { listarCandidatosConLimite, marcarProcesado, etiquetarCorreo, quitarEtiqueta, type ListadoCandidatos } from './gmail'
 import { ordenarAdjuntosFactura } from './elegir-adjuntos'
 import { decidirAvisoPago } from './filtro-pago'
+import { calcularIvaFactura } from './iva'
+import { pareceIngresoDeCorreduria } from './no-es-gasto'
 import { cargarTitulares } from './titulares'
 import type { Titular } from './receptor'
 import { aiExtractInvoiceDetallado, type FalloExtraccion } from '@/lib/ai-client'
@@ -192,6 +194,14 @@ export async function escanearNuevasFacturas(
     const importe = typeof datos.total === 'number' ? datos.total : null
     if (!importe || importe <= 0) { descartados++; continue }
 
+    // Una indemnización/liquidación de mediador es un COBRO, nunca algo que pagar ni un gasto.
+    const noGasto = pareceIngresoDeCorreduria({ proveedor, concepto: (datos.concepto as string | null) || correo.subject })
+    if (noGasto.esSospechoso) {
+      console.log(`[facturas] apartada (no es un gasto): ${proveedor} · ${importe} — ${noGasto.motivo}`)
+      descartados++
+      continue
+    }
+
     // Leída y con importe, pero ¿es algo que haya que PAGAR? (ver `filtro-pago.ts`)
     titulares ??= await cargarTitulares()
     const decision = decidirAvisoPago(datos, titulares)
@@ -201,9 +211,9 @@ export async function escanearNuevasFacturas(
       continue
     }
 
-    const ivaPct = typeof datos.iva_porcentaje === 'number' ? datos.iva_porcentaje : 21
-    const base = importe / (1 + ivaPct / 100)
-    const cuotaIva = Math.round((base * ivaPct / 100) * 100) / 100
+    // IVA: si la IA no lo leyó, queda null (no 21, no 0): ver `iva.ts`. El IVA trimestral solo
+    // suma filas con `cuota_iva IS NOT NULL`.
+    const { ivaPct, cuotaIva } = calcularIvaFactura(importe, datos.iva_porcentaje)
 
     const numeroFactura = (datos.numero_factura as string | null) || null
     const concepto = (datos.concepto as string | null) || correo.subject || null

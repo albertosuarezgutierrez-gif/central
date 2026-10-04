@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { FACTOR_BANDA, type Regla } from './reglas'
 import { huellasDe } from './fingerprint'
+import { mismoGastoPorHuella, TOLERANCIA_DIAS, TOLERANCIA_IMPORTE } from './duplicado'
 
 export interface DatosGasto {
   fecha: string
@@ -60,12 +61,15 @@ export async function getRegla(huella: string | string[]): Promise<Regla | null>
   }
 }
 
-// Dedup: misma huella+fecha+importe, o mismo número de factura.
+// Dedup: nº de factura exacto, misma huella+importe (±7 días), o HUELLA de gasto (proveedor + importe
+// ±0,02 € + fecha ±3 días) cuando no hay dos números distintos: ver `duplicado.ts`.
 export async function existeDuplicado(d: {
   fingerprint: string
   numero_factura?: string | null
   fecha: string
   total: number
+  proveedor?: string | null
+  nif_proveedor?: string | null
 }): Promise<boolean> {
   // Dedup por nº de factura exacto, o por misma huella + mismo importe dentro de
   // ±7 días (pilla "presupuesto+factura" del mismo gasto, sin chocar con los
@@ -78,7 +82,23 @@ export async function existeDuplicado(d: {
           AND abs(coalesce(total,0) - ${d.total}) < 0.01)
     LIMIT 1
   `)
-  return rows.length > 0
+  if (rows.length > 0) return true
+
+  // Por huella de gasto. Los candidatos (mismo importe ±0,02 y fecha ±3 días) son pocos: el cotejo
+  // de proveedor/NIF/número se hace en el helper puro. Se excluyen los placeholders de gastos fijos
+  // (origen='fijo'): la factura real los sustituye en `insertarGasto`, no es un duplicado.
+  const cand = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT proveedor, nif_proveedor, numero_factura, fecha::text AS fecha, total::float8 AS total
+    FROM gastos
+    WHERE coalesce(origen, '') <> 'fijo'
+      AND fecha BETWEEN ${d.fecha}::date - ${TOLERANCIA_DIAS} AND ${d.fecha}::date + ${TOLERANCIA_DIAS}
+      AND abs(coalesce(total,0) - ${d.total}) <= ${TOLERANCIA_IMPORTE + 0.001}
+    LIMIT 50
+  `)
+  return cand.some((c) => mismoGastoPorHuella(
+    { proveedor: d.proveedor, nif_proveedor: d.nif_proveedor, numero_factura: d.numero_factura, fecha: d.fecha, total: d.total },
+    { proveedor: c.proveedor, nif_proveedor: c.nif_proveedor, numero_factura: c.numero_factura, fecha: c.fecha, total: Number(c.total) },
+  ))
 }
 
 export async function insertarGasto(

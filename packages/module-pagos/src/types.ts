@@ -30,7 +30,7 @@ export interface FacturaProveedor {
   aplazar_hasta: string | null        // YYYY-MM-DD
   origen: OrigenFactura
   gmail_uid: number | null
-  iva_porcentaje: number
+  iva_porcentaje: number | null
   cuota_iva: number | null
   reserva_id: string | null
   created_at: string
