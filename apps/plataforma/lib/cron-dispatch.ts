@@ -62,7 +62,7 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/recaptacion-email-lote', schedule: '0 7 * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
-  { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },
+  { path: '/api/cron/resumen-mensual', schedule: '0 8 5 * *' },
   { path: '/api/cron/facturas-conciliar-gmail', schedule: '30 6 * * *' },
   { path: '/api/cron/contable-proactivo', schedule: '0 9 * * 1' },
   { path: '/api/cron/concursos-ingesta', schedule: '30 */6 * * *' },

@@ -11,6 +11,8 @@
 //   - Personal (prop_personal): fuera de la P&L de pisos.
 
 import { prisma } from './db'
+import { Prisma } from '@prisma/client'
+import { sqlGastoVigente } from './gasto-vigente'
 
 // Agrupación contable por cuenta bancaria. No mezclar (regla de Alberto, 15/06/2026).
 export const PROP_TURISTICOS = ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto'] as const
@@ -109,7 +111,7 @@ export async function getPropiedades(periodo?: Periodo): Promise<Propiedad[]> {
     `,
     prisma.$queryRaw<Array<{ pid: string; t: number }>>`
       SELECT propiedad AS pid, COALESCE(SUM(total),0)::float AS t
-      FROM gastos WHERE fecha >= ${periodStart} AND fecha < ${periodEnd} GROUP BY propiedad
+      FROM gastos WHERE fecha >= ${periodStart} AND fecha < ${periodEnd} AND ${Prisma.raw(sqlGastoVigente())} GROUP BY propiedad
     `,
     prisma.$queryRaw<Array<{ pid: string; guestName: string | null; checkIn: Date | null; checkOut: Date | null; portal: string | null }>>`
       SELECT DISTINCT ON ("propertyId") "propertyId" AS pid, "guestName", "checkIn", "checkOut", portal::text AS portal
@@ -197,7 +199,7 @@ export async function getResumenAnual(year: number): Promise<ResumenAnual> {
       GROUP BY 1`,
     prisma.$queryRaw<Array<{ m: number; t: number }>>`
       SELECT EXTRACT(MONTH FROM fecha)::int AS m, COALESCE(SUM(total),0)::float AS t
-      FROM gastos WHERE fecha >= ${yearStart} AND fecha < ${yearEnd} AND propiedad = ANY(${gasTurIds})
+      FROM gastos WHERE fecha >= ${yearStart} AND fecha < ${yearEnd} AND propiedad = ANY(${gasTurIds}) AND ${Prisma.raw(sqlGastoVigente())}
       GROUP BY 1`,
     prisma.$queryRaw<Array<{ m: number; t: number }>>`
       SELECT EXTRACT(MONTH FROM date)::int AS m, COALESCE(SUM(amount),0)::float AS t
@@ -205,7 +207,7 @@ export async function getResumenAnual(year: number): Promise<ResumenAnual> {
       GROUP BY 1`,
     prisma.$queryRaw<Array<{ m: number; t: number }>>`
       SELECT EXTRACT(MONTH FROM fecha)::int AS m, COALESCE(SUM(total),0)::float AS t
-      FROM gastos WHERE fecha >= ${yearStart} AND fecha < ${yearEnd} AND propiedad = ANY(${bbvaIds})
+      FROM gastos WHERE fecha >= ${yearStart} AND fecha < ${yearEnd} AND propiedad = ANY(${bbvaIds}) AND ${Prisma.raw(sqlGastoVigente())}
       GROUP BY 1`,
   ])
 
@@ -239,7 +241,7 @@ export async function getApartamentoDetalle(id: string): Promise<PropiedadDetall
       SELECT
         COALESCE((SELECT SUM(amount) FROM incomes WHERE "propertyId" = ${id} AND date >= date_trunc('year', CURRENT_DATE)),0)::float AS ingresos,
         (
-          COALESCE((SELECT SUM(total) FROM gastos WHERE propiedad = ${id} AND EXTRACT(YEAR FROM fecha) = EXTRACT(YEAR FROM CURRENT_DATE)),0)
+          COALESCE((SELECT SUM(total) FROM gastos WHERE propiedad = ${id} AND EXTRACT(YEAR FROM fecha) = EXTRACT(YEAR FROM CURRENT_DATE) AND ${Prisma.raw(sqlGastoVigente())}),0)
           + COALESCE((SELECT SUM(r.importe) FROM movimiento_reparto r
               JOIN movimientos_bancarios m ON m.id = r.movimiento_id
               WHERE r.propiedad = ${id} AND EXTRACT(YEAR FROM m.fecha_operacion) = EXTRACT(YEAR FROM CURRENT_DATE)),0)
@@ -276,6 +278,7 @@ export async function getApartamentoDetalle(id: string): Promise<PropiedadDetall
       SELECT COALESCE(categoria,'Sin categoría') AS categoria, COALESCE(SUM(total),0)::float AS total, COUNT(*)::int AS n
       FROM gastos
       WHERE propiedad = ${id} AND EXTRACT(YEAR FROM fecha) = EXTRACT(YEAR FROM CURRENT_DATE)
+        AND ${Prisma.raw(sqlGastoVigente())}
       GROUP BY categoria ORDER BY total DESC
     `,
     // Gastos compartidos (prop_multi_apartamentos + prop_personal) — para referencia
@@ -284,6 +287,7 @@ export async function getApartamentoDetalle(id: string): Promise<PropiedadDetall
       FROM gastos
       WHERE propiedad IN ('prop_multi_apartamentos','prop_personal')
         AND EXTRACT(YEAR FROM fecha) = EXTRACT(YEAR FROM CURRENT_DATE)
+        AND ${Prisma.raw(sqlGastoVigente())}
       GROUP BY categoria ORDER BY total DESC
     `,
     // Próximas reservas
@@ -317,6 +321,7 @@ export async function getApartamentoDetalle(id: string): Promise<PropiedadDetall
     prisma.$queryRaw<Array<{ t: number }>>`
       SELECT COALESCE(SUM(total),0)::float AS t FROM gastos
       WHERE propiedad = ${id} AND fecha >= date_trunc('month', CURRENT_DATE)
+        AND ${Prisma.raw(sqlGastoVigente())}
     `,
     prisma.$queryRaw<Array<{ t: number }>>`
       SELECT COALESCE(SUM(r.importe),0)::float AS t FROM movimiento_reparto r

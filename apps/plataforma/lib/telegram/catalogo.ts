@@ -122,6 +122,18 @@ export const AVISOS: AvisoTelegram[] = [
 
   // ── 🏦 Banca y contable ───────────────────────────────────────────────────
   {
+    id: 'finanzas.banca-frescura', categoria: 'finanzas',
+    titulo: 'Cuenta o tarjeta sin movimientos nuevos',
+    que: 'Una línea por cuenta activa con más de 3 días sin movimiento nuevo (alias, últimos 4 del IBAN, último movimiento) y el recuento de cuentas ocultas con movimientos.',
+    cuando: 'Todos los días a las 07:00 (solo si hay alguna parada; máx. 1 al día)',
+  },
+  {
+    id: 'finanzas.gasto-pico', categoria: 'finanzas',
+    titulo: 'Gasto recurrente disparado',
+    que: 'Proveedores con 3+ cargos en 6 meses cuyo gasto de los últimos 30 días supera el doble de su media mensual previa.',
+    cuando: 'Todos los días a las 07:00 (solo si hay pico; máx. 1 al día)',
+  },
+  {
     id: 'finanzas.tarjeta-importada', categoria: 'finanzas',
     titulo: 'Extracto de tarjeta importado',
     que: 'Resumen del mes de la tarjeta: total, clasificados, deducible y top de gastos.',
@@ -161,7 +173,19 @@ export const AVISOS: AvisoTelegram[] = [
     id: 'finanzas.resumen-mensual', categoria: 'finanzas',
     titulo: 'Cierre de mes',
     que: 'El mes anterior narrado: resultado, P&L por piso y las cifras de /banca.',
-    cuando: 'Día 1 de cada mes a las 10:00',
+    cuando: 'Día 5 de cada mes a las 10:00',
+  },
+  {
+    id: 'finanzas.cierre-negocios', categoria: 'finanzas',
+    titulo: 'Cierre de mes por negocio',
+    que: 'Gastos, ingresos e IVA por negocio, lo pendiente de conciliar y los cargos sin factura (no deducibles).',
+    cuando: 'Día 5 de cada mes a las 10:00',
+  },
+  {
+    id: 'finanzas.suscripciones', categoria: 'finanzas',
+    titulo: 'Revisión de suscripciones',
+    que: 'Gastos recurrentes (≥3 de los últimos 4 meses) con coste mensual y anual: ¿sigue valiendo?',
+    cuando: 'Día 5 de cada mes a las 10:00',
   },
   {
     id: 'finanzas.resumen-semanal-gastos', categoria: 'finanzas',

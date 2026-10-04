@@ -46,3 +46,12 @@ test('pgcDe deriva la cuenta PGC y degrada a otros', () => {
   assert.equal(pgcDe('impuestos'), '475')
   assert.equal(pgcDe('categoria-inventada'), '629')
 })
+
+test('CUOTA PTMO → prestamo (antes caía a proveedor/nomina); devolución AEAT → devolucion_impuestos', () => {
+  assert.equal(categorizarPorReglas('ADEUDO // CUOTA PTMO 856289293-5', null, -772.86), 'prestamo')
+  assert.equal(categorizarPorReglas('NOMINA CUOTA PTMO 856289293-5', null, -772.86), 'prestamo')
+  assert.equal(pgcDe('prestamo'), '170')
+  assert.equal(categorizarPorReglas('TRANSFERENCIA AEAT DEVOLUCION IRPF', null, 700), 'devolucion_impuestos')
+  // El pago a la AEAT (cargo) sigue siendo impuestos.
+  assert.equal(categorizarPorReglas('PAGO AEAT MODELO 303', null, -700), 'impuestos')
+})

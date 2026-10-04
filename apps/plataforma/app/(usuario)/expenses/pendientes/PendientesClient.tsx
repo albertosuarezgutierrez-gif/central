@@ -196,6 +196,9 @@ export default function PendientesClient() {
                     <>⚠️ <b>Esto parece un INGRESO de tu correduría, no un gasto</b> — {sospecha.motivo}.
                     Confirmarlo lo contaría como gasto deducible. El cobro ya está en el banco
                     (abono con negocio «seguros»): aquí lo suyo es <b>descartarlo</b>.</>
+                  ) : sospecha.tipo === 'indemnizacion' ? (
+                    <>⚠️ <b>Esto parece una INDEMNIZACIÓN cobrada, no un gasto</b> — {sospecha.motivo}.
+                    Confirmarlo lo contaría como gasto. Aquí lo suyo es <b>descartarlo</b>.</>
                   ) : (
                     <>⚠️ <b>Esta comisión YA está contada</b> — {sospecha.motivo}. Confirmarla como
                     gasto la restaría <b>dos veces</b> y hundiría el resultado del piso sin que nada

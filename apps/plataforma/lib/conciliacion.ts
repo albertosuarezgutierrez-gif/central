@@ -8,6 +8,8 @@
 // importe idéntico al céntimo y fecha dentro de ±TOL_DIAS. Uno a uno. Marca conciliado + factura_ref.
 
 import { prisma } from './db'
+import { Prisma } from '@prisma/client'
+import { sqlGastoVigente } from './gasto-vigente'
 
 const TOL_DIAS = 5
 
@@ -22,7 +24,8 @@ async function candidatosSivra(propertyId: string): Promise<Candidato[]> {
       WHERE "propertyId" = ${propertyId} AND date >= now() - interval '400 days'`,
     prisma.$queryRaw<Array<{ id: string; total: unknown; fecha: Date | null }>>`
       SELECT id::text AS id, total, fecha FROM gastos
-      WHERE propiedad = ${propertyId} AND fecha >= now() - interval '400 days'`,
+      WHERE propiedad = ${propertyId} AND fecha >= now() - interval '400 days'
+        AND ${Prisma.raw(sqlGastoVigente())}`,
   ])
   return [
     ...ing.map(r => ({ ref: `sivra:income:${r.id}`, importe: Math.abs(Number(r.total)), fecha: fechaIso(r.fecha) })),

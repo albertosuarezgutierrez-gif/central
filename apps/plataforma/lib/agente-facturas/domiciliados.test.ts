@@ -62,3 +62,34 @@ test('sumaDias cruza mes y año sin desfase de zona horaria', () => {
   assert.equal(sumaDias('2026-02-26', 3), '2026-03-01')
   assert.equal(sumaDias('2026-03-01', -1), '2026-02-28')
 })
+
+import { esDomiciliacionExplicita, cuentasParadas } from './domiciliados.ts'
+import { test as t2 } from 'node:test'
+import assert2 from 'node:assert/strict'
+
+const base = { fechaCargo: '2026-09-10', hoy: '2026-10-04', cargoCasado: false, bancoHasta: null }
+const fresca = { nombre: 'A', ultimo: '2026-10-03' }
+const parada = { nombre: 'Tarjeta 3059', ultimo: '2026-07-05' }
+
+t2('domiciliado null/ausente/false → fuera del detector', () => {
+  assert2.equal(esDomiciliacionExplicita({ domiciliado: null }), false)
+  assert2.equal(esDomiciliacionExplicita({}), false)
+  assert2.equal(esDomiciliacionExplicita(null), false)
+  assert2.equal(esDomiciliacionExplicita({ domiciliado: false }), false)
+  assert2.equal(esDomiciliacionExplicita({ domiciliado: true }), true)
+})
+t2('domiciliado + cargo casado → cobrado', () => {
+  assert2.equal(estadoCargo({ ...base, cargoCasado: true, cuentas: [fresca] }).estado, 'cobrado')
+})
+t2('todas las cuentas frescas y sin cargo → sin_cargo', () => {
+  assert2.equal(estadoCargo({ ...base, cuentas: [fresca, { nombre: 'B', ultimo: '2026-10-04' }] }).estado, 'sin_cargo')
+})
+t2('una cuenta parada → sin_cobertura y la nombra', () => {
+  const v = estadoCargo({ ...base, cuentas: [fresca, parada] })
+  assert2.equal(v.estado, 'sin_cobertura')
+  assert2.match(v.motivo, /Tarjeta 3059/)
+  assert2.deepEqual(cuentasParadas([fresca, parada], '2026-09-10').map((c) => c.nombre), ['Tarjeta 3059'])
+})
+t2('sin cuentas con movimientos → sin_cobertura', () => {
+  assert2.equal(estadoCargo({ ...base, cuentas: [] }).estado, 'sin_cobertura')
+})
