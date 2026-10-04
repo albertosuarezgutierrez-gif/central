@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-03T15:38:00Z",
+  "generadoEn": "2026-10-03T20:51:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 174
+        "evidencias": 178
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 141
+        "evidencias": 142
       },
       "rrhh": {
         "estado": "no",
@@ -4042,6 +4042,7 @@
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
       "/api/operador/codeoscopic/tarificacion",
+      "/api/operador/codeoscopic/tope",
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
       "/api/operador/comisiones-pactadas",
@@ -5117,6 +5118,7 @@
       "/api/cron/correduria-seguimiento-presupuestos",
       "/api/cron/correduria-siniestros",
       "/api/cron/correduria-sustituciones",
+      "/api/cron/correduria-tope-avant2",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
@@ -5564,6 +5566,7 @@
       "seguros.codeoscopic_prices",
       "seguros.codeoscopic_product_forms",
       "seguros.codeoscopic_projects",
+      "seguros.codeoscopic_tope_evento",
       "seguros.codeoscopic_topes_historial",
       "seguros.codeoscopic_webhook_events",
       "seguros.comision_pactada",
@@ -6638,7 +6641,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1549,
+    "apis": 1551,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

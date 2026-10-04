@@ -4,6 +4,7 @@ import { detectLang, detectCategory, tipoHueco, vaARecomendador, esAutomatico, e
 import { idiomaConocido } from './idiomas'
 import { decidir, type Decision } from './decidir'
 import { decidirAutoEnvio } from './auto'
+import { peticionCambioHorario } from './cambio-horario'
 import { esModoNoche } from './noche'
 import { acusarNocturno } from './noche-guardia'
 import { aprendizajesRelevantes, hechosRelevantes } from './similitud'
@@ -192,9 +193,17 @@ export async function procesarMensajeHuesped(
       dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}Habla de un pago (método/datos de cobro) — eso lo autorizas tú; el único cobro automático es el enlace de Stripe.`
     }
 
+    // 2-quater) 🚨 COMPUERTA DE HORARIO (03/10/2026): entrar antes, salir más tarde o guardar maletas fuera
+    // de la estancia NUNCA sale solo (ver `cambio-horario.ts`). Se marca aquí para que el log y el aviso
+    // lo reflejen (needs_human); `decidirAutoEnvio` lo vuelve a exigir por si alguien salta este paso.
+    if (peticionCambioHorario(pregunta, dec.categoria) || peticionCambioHorario(pregunta, categoria)) {
+      dec.needs_human = true
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}Petición de cambio de horario / maletas — la decides tú (semáforo y botones abajo).`
+    }
+
     // 3) ¿Auto-envío o propuesta por Telegram? La regla vive en `auto.ts` (pura y testeada); aquí
     //    solo se ejecuta. Las dos vías y sus guardas están documentadas en ese módulo.
-    const { auto: puedeAuto } = decidirAutoEnvio(dec)
+    const { auto: puedeAuto } = decidirAutoEnvio(dec, pregunta)
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false, emisor: emisorDiag })

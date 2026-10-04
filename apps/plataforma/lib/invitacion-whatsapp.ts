@@ -33,7 +33,7 @@
  * sigue dando `urlWhatsapp()` de `lib/telefono-wa.ts`, que es la fuente única
  * del repo; aquí no se vuelve a normalizar ningún número.
  */
-import { nombreDePila } from '@central/module-seguros'
+import { esCanalCorreduria, esTelefonoComodin, nombreDePila } from '@central/module-seguros'
 import { enlaceWhatsappConMensaje, urlWhatsapp } from './telefono-wa.ts'
 import type { AccionPortal, PortalCartera } from './portal-cliente-asegura.ts'
 
@@ -52,7 +52,8 @@ function unaLinea(s: string): string {
 export function movilParaInvitar(telefonos: readonly (string | null | undefined)[]): string | null {
   for (const t of telefonos) {
     const tel = (t ?? '').trim()
-    if (tel !== '' && urlWhatsapp(tel) !== null) return tel
+    if (tel === '' || esCanalCorreduria(tel) || esTelefonoComodin(tel)) continue
+    if (urlWhatsapp(tel) !== null) return tel
   }
   return null
 }

@@ -25,7 +25,7 @@
 -- (`2026-09-03_portal_parte_siniestro.sql`), que cubre la columna nueva; el
 -- corredor (`prisma_seguros`) tiene `SELECT, UPDATE`. No hace falta GRANT nuevo.
 --
--- 🚨 Aplicar ANTES (o en el mismo paso) que el despliegue de asegura-portal y de
+-- ✅ APLICADO en producción el 04/10/2026. 🚨 Aplicar ANTES (o en el mismo paso) que el despliegue de asegura-portal y de
 -- asegura: los dos `schema` de Prisma ya leen/escriben `datos_ramo` y
 -- `datos_ramo_cifrado`, y sin las columnas fallan con 42703.
 ALTER TABLE seguros.portal_parte_siniestro

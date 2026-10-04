@@ -4,11 +4,12 @@ import { bloqueSalida, bloqueSalidaTardia, SALIDA_FLEX_HASTA, llavesAlSalir, TAR
 import { contieneDatoInventado } from './guardrail.ts'
 import { bloqueEquipaje } from './equipaje.ts'
 
-test('la ficha explica la ventana gratis y que más allá tiene coste sin precio', () => {
+test('la ficha explica la ventana gratis y que más allá también es gratis pero se consulta', () => {
   const b = bloqueSalida('11:00')
   assert.match(b, /hasta las 12:00 SIN COSTE/)
-  assert.match(b, /TIENE UN COSTE/)
-  assert.match(b, /NUNCA des un precio/)
+  assert.doesNotMatch(b, /TIENE UN COSTE/)
+  assert.match(b, /no hay ningún coste, pero depende de que ese día no haya entrada ni salida/)
+  assert.match(b, /NO lo prometas/)
   // La respuesta al «¿dónde dejo las maletas el último día?» sale de aquí, no de la consigna de pago.
   assert.match(b, /no hace falta ninguna consigna de pago/)
 })
@@ -18,7 +19,8 @@ test('el piso libre el día de la salida: se confirma hasta las 12:00 hoy mismo'
   assert.match(b, /SÍ puedes confirmarle/)
   assert.match(b, /12:00 sin coste/)
   assert.match(b, /dejar dentro las maletas/)
-  assert.match(b, /lo consultas y se lo confirmas/)
+  assert.match(b, /lo consultas con el equipo/)
+  assert.doesNotMatch(b, /tiene un coste/i)
 })
 
 test('libre pero AÚN NO es el día de salida: no se promete en firme', () => {

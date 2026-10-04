@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-03T16:27:21Z",
-  "sha": "2e917c2efe7b4ade8644981d52315d1e0a86de85",
+  "generadoEn": "2026-10-03T20:51:52Z",
+  "sha": "cc0d1123d785930e85d7d0e4f75a09867525a20d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -16407,6 +16407,27 @@
       "hash": "31eea4d95e54"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/tope/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 35,
+          "resumen": "Tope de gasto de Avant2 en EUROS por mes (decisión de Alberto, 29/09/2026). Puerto para plataforma, que es quien tiene el bot de Telegram. GET → { estado:'ok', mes, gastadoCents, topeCents, pendientes"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/tope",
+      "hash": "641f12e39a6a"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/vida-nuevo/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -19467,13 +19488,64 @@
       "hash": "cdee22ff28ea"
     },
     {
+      "ruta": "apps/asegura/lib/avisos-vencimiento-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Destinatario de un aviso: regla pura (sin BD).",
+      "exporta": [
+        "descifrar",
+        "pareceEmail",
+        "emailAvisable",
+        "destinatarioDeCliente"
+      ],
+      "funciones": [
+        {
+          "nombre": "descifrar",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 10,
+          "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa: `null` significa «no se ha podido leer», y quien llama lo cuenta como «sin canal» en vez de como «este cliente no tiene email». Mismo criter"
+        },
+        {
+          "nombre": "pareceEmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null",
+          "retorno": "v is string",
+          "linea": 22,
+          "resumen": "Una dirección que no tiene forma de dirección no es un canal: es basura con forma de dato."
+        },
+        {
+          "nombre": "emailAvisable",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null",
+          "retorno": "v is string",
+          "linea": 29,
+          "resumen": "Email que puede recibir un aviso: debe tener forma de email Y no ser un canal de la correduría."
+        },
+        {
+          "nombre": "destinatarioDeCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ClienteConEmails",
+          "retorno": "string | null",
+          "linea": 43,
+          "resumen": "El email al que escribir: principal → el más antiguo de `cliente_emails` → la columna suelta de la ficha. `null` = no hay a quién escribir (o está de baja)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b6139564321f"
+    },
+    {
       "ruta": "apps/asegura/lib/avisos-vencimiento.ts",
       "ambito": "apps/asegura",
       "resumen": "Aviso de vencimiento del calendario del portal — el ENVÍO, que vive aquí y no en `apps/asegura-portal`. 🚨 Por qué aquí: el portal guarda **solo hashes**. `portal_canal.valor_hash` es un SHA-256 con pimienta y el `ClienteEmail` de su schema solo declara `email_lookup_hash`; su rol (`prisma_asegura_p",
       "exporta": [
         "avisosActivos",
         "esSoloContar",
-        "destinatarioDeCliente",
         "ejecutarAvisosVencimiento"
       ],
       "funciones": [
@@ -19483,7 +19555,7 @@
           "exportada": true,
           "params": "env: string | undefined = process.env.ASEGURA_AVISOS_ACTIVOS",
           "retorno": "boolean",
-          "linea": 102,
+          "linea": 101,
           "resumen": "El interruptor, puro y aparte para poder razonarlo de un vistazo: cualquier valor que no sea exactamente `'1'` (incluido `undefined`, `'true'` o `'0'`) deja el cron en modo cuenta. La ambigüedad se re"
         },
         {
@@ -19492,7 +19564,7 @@
           "exportada": true,
           "params": "p: { activos: boolean; forzarContar: boolean }",
           "retorno": "boolean",
-          "linea": 107,
+          "linea": 106,
           "resumen": "`?contar=1` fuerza el ensayo aunque los avisos estén activos."
         },
         {
@@ -19501,35 +19573,8 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 112,
+          "linea": 111,
           "resumen": "Medianoche UTC: las columnas `date` de Postgres llegan así."
-        },
-        {
-          "nombre": "descifrar",
-          "kind": "function",
-          "exportada": false,
-          "params": "v: string | null | undefined",
-          "retorno": "string | null",
-          "linea": 121,
-          "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa: `null` significa «no se ha podido leer», y quien llama lo cuenta como «sin canal» en vez de como «este cliente no tiene email». Mismo criter"
-        },
-        {
-          "nombre": "pareceEmail",
-          "kind": "function",
-          "exportada": false,
-          "params": "v: string | null",
-          "retorno": "v is string",
-          "linea": 133,
-          "resumen": "Una dirección que no tiene forma de dirección no es un canal: es basura con forma de dato."
-        },
-        {
-          "nombre": "destinatarioDeCliente",
-          "kind": "function",
-          "exportada": true,
-          "params": "c: ClienteConEmails",
-          "retorno": "string | null",
-          "linea": 147,
-          "resumen": "El email al que escribir: principal → el más antiguo de `cliente_emails` → la columna suelta de la ficha. `null` = no hay a quién escribir (o está de baja)."
         },
         {
           "nombre": "leerIntervinientesDePoliza",
@@ -19537,7 +19582,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, polizaId: string,",
           "retorno": "Promise<IntervinienteFicha[] | null>",
-          "linea": 175,
+          "linea": 131,
           "resumen": "Los intervinientes de ESTA póliza, ya descifrados, en la forma que espera `contactoEfectivo()`. Copia deliberadamente acotada de `leerIntervinientes` de `cartera-ficha.ts` (no exportada desde allí): a"
         },
         {
@@ -19546,7 +19591,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string,",
           "retorno": "Promise<",
-          "linea": 236,
+          "linea": 192,
           "resumen": "Las personas de referencia declaradas en `cliente_relaciones` del tomador, con SU PROPIO email ya resuelto (mismas reglas que `destinatarioDeCliente`: baja de correo respetada, principal primero). Exc"
         },
         {
@@ -19555,13 +19600,13 @@
           "exportada": true,
           "params": "opts: { hoy?: Date forzarContar?: boolean /** Presupuesto de envío en ms. Por debajo del `maxDuration` de la ruta. */ presupuestoMs?: number /** Reloj inyectable (tests). Por defecto `Date.now`. */ ahoraMs?: () => number } = {}",
           "retorno": "Promise<ResumenAvisos>",
-          "linea": 291,
+          "linea": 247,
           "resumen": "Una pasada del cron. Lanza (no devuelve un resumen tranquilizador) cuando el proceso NO puede hacer su trabajo —sin cartera, sin proveedor de correo, sin remitente—, para que el endpoint responda 503 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c0b438f2e96d"
+      "hash": "8c3be076f821"
     },
     {
       "ruta": "apps/asegura/lib/backfill-contacto.ts",
@@ -24030,7 +24075,8 @@
         "reservarEmision",
         "cerrarEmisionFacturable",
         "cerrarFacturable",
-        "cerrarDescartado"
+        "cerrarDescartado",
+        "gastadoMesCents"
       ],
       "funciones": [
         {
@@ -24104,6 +24150,15 @@
           "retorno": "Promise<void>",
           "linea": 231,
           "resumen": "Cierra como NO facturable. Exige evidencia por contrato (y por CHECK en BD). Solo hay tres evidencias admisibles, y todas significan que el vendor no llegó a tarificar: fallo de autenticación (401/403"
+        },
+        {
+          "nombre": "gastadoMesCents",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, costes: { rerate: number; submit: number; limites: number },",
+          "retorno": "Promise<number | null>",
+          "linea": 256,
+          "resumen": "Lo gastado este mes natural (Madrid) en el libro, en céntimos. Lo lee el tope en euros (`tope-euros-bd.ts`), que no toca la tabla: el libro solo se mira desde aquí. Las líneas de ReRate/Submit/límites"
         }
       ],
       "tablas": [
@@ -24111,7 +24166,7 @@
         "ventana"
       ],
       "rutaApi": null,
-      "hash": "44d60502175f"
+      "hash": "e12742b59f0b"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/contador.ts",
@@ -24481,7 +24536,7 @@
           "exportada": false,
           "params": "deps: DepsCotizar, p: PeticionCotizacion, extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean; respuesta?: unknown },",
           "retorno": "Promise<Guardado>",
-          "linea": 107,
+          "linea": 108,
           "resumen": "Guarda la cotización sin poder tumbarla. 🚨 El orden y el `try` de aquí son la decisión de diseño del módulo: cuando se llega a este punto el cliente YA ha pagado los 0,50€ y YA tiene su precio. Perde"
         },
         {
@@ -24490,7 +24545,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined> = process.env,",
           "retorno": "Promise<",
-          "linea": 161,
+          "linea": 162,
           "resumen": "Sonda GRATIS: pide solo el token OAuth2. Sirve para verificar host y credenciales sin gastar una cotización — que es como hay que estrenar la integración, porque no hay sandbox utilizable. Un fallo de"
         },
         {
@@ -24499,7 +24554,7 @@
           "exportada": true,
           "params": "correduriaId: string, env: Record<string, string | undefined> = process.env,",
           "retorno": null,
-          "linea": 188,
+          "linea": 189,
           "resumen": "Lo consumido y lo que queda. Para pintarlo antes de que nadie pulse nada."
         },
         {
@@ -24508,12 +24563,12 @@
           "exportada": true,
           "params": "p: PeticionCotizacion, env: Record<string, string | undefined> = process.env, deps: DepsCotizar = {},",
           "retorno": "Promise<ResultadoCotizacion>",
-          "linea": 217
+          "linea": 218
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9960eef7e206"
+      "hash": "446e38c49e71"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/crudo.ts",
@@ -26138,7 +26193,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "948e1d9b50da"
+      "hash": "825f0f42038e"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/horquilla.ts",
@@ -26486,13 +26541,13 @@
           "exportada": true,
           "params": "p: { correduriaId: string operacion: OperacionEmision solicitadoPor: string /** Para poder explicar la factura línea a línea. Puede no conocerse aún. */ projectId: string | null }, llamada: () => Promise<T>, opciones: { evidenciaSinCargo?: ",
           "retorno": "Promise<GastoEmision<T>>",
-          "linea": 62,
+          "linea": 63,
           "resumen": "Envuelve UNA llamada al vendor con su línea en el libro. `llamada` se invoca **una sola vez** y su excepción se propaga tal cual: el caller (la cascada de reparación de `/oferta` y `/emitir`) necesita"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c96ef2e24a4f"
+      "hash": "a45744f0fee1"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/limites-hogar.ts",
@@ -28158,6 +28213,177 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "84fad552ecff"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/tope-euros-bd.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Tope de gasto en EUROS de Avant2: la parte que toca la BD. La decisión vive en `tope-euros.ts` (pura y probada); aquí solo se lee el gasto del mes y se anotan los eventos. Lo llaman los DOS embudos que gastan, antes de su reserva: `cotizar()` (POST /insurances) y `conLibroDeEmision()` (ReRate, Submi",
+      "exporta": [
+        "leerGastoMes",
+        "comprobarTopeEuros",
+        "eventosPendientes",
+        "marcarNotificados",
+        "ampliarTope"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerGastoMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, env: Env = process.env",
+          "retorno": "Promise<GastoMes>",
+          "linea": 37,
+          "resumen": "Lo gastado este mes natural (Madrid) y lo ampliado. NO atrapa errores: quien llama decide, y la decisión correcta ante un fallo es no llamar al vendor. Las líneas de ReRate/Submit/límites escritas cua"
+        },
+        {
+          "nombre": "comprobarTopeEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, costeCents: number, env: Env = process.env,",
+          "retorno": "Promise<ComprobacionTope>",
+          "linea": 62,
+          "resumen": "La guarda de los dos embudos. Fail-closed: si no se puede leer el gasto, NO se llama. Anotar el aviso o el bloqueo es best-effort: si falla, la decisión no cambia (un bloqueo sigue bloqueando) y el me"
+        },
+        {
+          "nombre": "anotarEvento",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, tipo: 'aviso' | 'bloqueo', nivelCents: number, gastadoCents: number,",
+          "retorno": "Promise<boolean>",
+          "linea": 96,
+          "resumen": "Inserta un evento una sola vez por (correduría, mes, tipo, nivel). `false` si no se pudo escribir."
+        },
+        {
+          "nombre": "eventosPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<EventoPendiente[]>",
+          "linea": 121,
+          "resumen": "Lo que plataforma tiene que mandar por Telegram: avisos y bloqueos del mes EN CURSO sin notificar. Un bloqueo cuyo nivel ya se amplió no se manda (llegaría un botón que no hace nada)."
+        },
+        {
+          "nombre": "marcarNotificados",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ids: string[]",
+          "retorno": "Promise<number>",
+          "linea": 143
+        },
+        {
+          "nombre": "ampliarTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, pedida: { mes: string; nivelCents: number }, autor: { autorizadoPor: string; callbackId: string | null },",
+          "retorno": "Promise<ResultadoAmpliar>",
+          "linea": 162,
+          "resumen": "+30 € para el mes en curso, desde el nivel en el que se bloqueó. Idempotente: la clave única (correduría, mes, 'ampliacion', nivel) hace que el mismo botón pulsado dos veces sume una sola."
+        }
+      ],
+      "tablas": [
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "ce5eb2f506eb"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/tope-euros.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Tope de gasto de Codeoscopic / Avant2 en EUROS por mes natural. Lógica PURA (sin BD, sin red). ─── Decisión de Alberto (29/09/2026) ──────────────────────────────────────── - Cada llamada que cuesta (cotizar, ReRate, recomendación de capital, Submit) cuenta 0,50 € mientras el coste de las tres últim",
+      "exporta": [
+        "topeDelMes",
+        "decidirTopeEuros",
+        "mesClave",
+        "callbackAmpliar",
+        "leerArgAmpliar",
+        "validarAmpliacion",
+        "textoAviso",
+        "textoBloqueo",
+        "eur"
+      ],
+      "funciones": [
+        {
+          "nombre": "topeDelMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "ampliadoCents: number",
+          "retorno": "number",
+          "linea": 45,
+          "resumen": "Tope vigente del mes: el base más lo que Alberto haya autorizado."
+        },
+        {
+          "nombre": "decidirTopeEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "g: GastoMes, costeCents: number",
+          "retorno": "DecisionTope",
+          "linea": 55,
+          "resumen": "¿Se puede hacer UNA llamada más que cuesta `costeCents`? Se permite si, sumándola, el mes no pasa del tope: con 69,50 € gastados entra la que deja el mes en 70,00 € justos, y la siguiente se bloquea. "
+        },
+        {
+          "nombre": "mesClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 94,
+          "resumen": "Mes natural en Madrid como `AAAA-MM`. Es la clave del botón y de los eventos."
+        },
+        {
+          "nombre": "callbackAmpliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, nivelCents: number",
+          "retorno": "string",
+          "linea": 109
+        },
+        {
+          "nombre": "leerArgAmpliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "arg: string",
+          "retorno": "",
+          "linea": 114,
+          "resumen": "Lee el argumento del botón (lo que va detrás de `cas_tope:`). `null` si no tiene forma."
+        },
+        {
+          "nombre": "validarAmpliacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedida: { mes: string; nivelCents: number }, ctx: { mesActual: string; bloqueoEnEseNivel: boolean },",
+          "retorno": "",
+          "linea": 127,
+          "resumen": "¿Vale esta ampliación? Pura: el llamante le pasa lo que hay en BD. Solo se amplía el mes EN CURSO y desde un nivel en el que de verdad se bloqueó."
+        },
+        {
+          "nombre": "textoAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "gastadoCents: number, mes: string",
+          "retorno": "string",
+          "linea": 142
+        },
+        {
+          "nombre": "textoBloqueo",
+          "kind": "function",
+          "exportada": true,
+          "params": "gastadoCents: number, topeCents: number, mes: string",
+          "retorno": "string",
+          "linea": 150
+        },
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": true,
+          "params": "cents: number",
+          "retorno": "string",
+          "linea": 159,
+          "resumen": "Formato español de la casa: `2.162,49€`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c29b11f5e6d0"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/topes-historial.ts",
@@ -30078,6 +30304,28 @@
       "hash": "da896239e635"
     },
     {
+      "ruta": "apps/asegura/lib/email-ficha-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Regla pura (sin BD ni cifrado propio) de qué dirección usar entre las guardadas de una ficha.",
+      "exporta": [
+        "elegirEmailGuardado"
+      ],
+      "funciones": [
+        {
+          "nombre": "elegirEmailGuardado",
+          "kind": "function",
+          "exportada": true,
+          "params": "guardados: string[], { campoIlegible, descifrarCampo }: { campoIlegible: (v: string) => boolean; descifrarCampo: (v: string) => string | null },",
+          "retorno": "EstadoEmailGuardado",
+          "linea": 9,
+          "resumen": "Pura (sin BD): de las direcciones cifradas de la ficha, el desenlace."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3120b8b80211"
+    },
+    {
       "ruta": "apps/asegura/lib/email-ficha.ts",
       "ambito": "apps/asegura",
       "resumen": "A qué dirección se le escribe a una ficha de la cartera. UNA regla, un sitio. 🚨 Se extrajo el 05/09/2026 de `aviso-acceso.ts`, cuando la invitación al portal necesitó exactamente lo mismo. Dos copias de «cuál es el correo de este cliente» divergen sin que nada falle: un correo saldría a la direcció",
@@ -30092,7 +30340,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<EmailDeFicha>",
-          "linea": 47,
+          "linea": 48,
           "resumen": "El correo al que se escribiría a esta ficha, con los cinco desenlaces separados. Quien solo necesite la dirección puede usar `emailDeFicha`."
         },
         {
@@ -30101,13 +30349,13 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 75,
+          "linea": 70,
           "resumen": "La dirección a secas. `null` = no hay ninguna utilizable, por el motivo que sea."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db3cbd5d3e88"
+      "hash": "c04b139ee72c"
     },
     {
       "ruta": "apps/asegura/lib/emision-externa-reglas.ts",
@@ -80794,7 +81042,7 @@
           "exportada": false,
           "params": "{ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[]; seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 109,
+          "linea": 117,
           "resumen": "── Siguiente paso ────────────────────────────────────────────────────────── UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla vive pura y testeada en `siguientePaso` de "
         },
         {
@@ -80803,7 +81051,7 @@
           "exportada": false,
           "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 161,
+          "linea": 169,
           "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
@@ -80812,7 +81060,7 @@
           "exportada": false,
           "params": "{ resumen }: { resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 180
+          "linea": 188
         },
         {
           "nombre": "ProximoVencimiento",
@@ -80820,7 +81068,7 @@
           "exportada": false,
           "params": "{ proximo, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 235,
+          "linea": 243,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -80829,7 +81077,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 274
+          "linea": 282
         },
         {
           "nombre": "EstadoCabecera",
@@ -80837,7 +81085,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 300
+          "linea": 308
         },
         {
           "nombre": "Acciones",
@@ -80845,7 +81093,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 358
+          "linea": 366
         },
         {
           "nombre": "Contacto",
@@ -80853,15 +81101,15 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 426
+          "linea": 434
         },
         {
           "nombre": "Identidad",
           "kind": "function",
           "exportada": false,
-          "params": "{ identidad, clienteId, dePolizas }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null }",
+          "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 525
+          "linea": 542
         },
         {
           "nombre": "Carnets",
@@ -80869,12 +81117,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 565
+          "linea": 582
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "89a87218ab1f"
+      "hash": "77e40e237395"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -97897,7 +98145,7 @@
           "exportada": false,
           "params": "ag: { id: string; etiqueta: string; maxHoras: number; nota: string }, evaluadoAt: Date, alerta: boolean, horas: number | null, motivo: string, sondaError: string | null,",
           "retorno": "Promise<void>",
-          "linea": 271,
+          "linea": 274,
           "resumen": "Persiste el veredicto de UN agente en `agente_veredicto` para que lo pueda leer una pantalla. 🚨 NO es `agente_salud` (05/09/2026): esa tabla ya existía desde julio con otro esquema —el badge que el p"
         },
         {
@@ -97906,7 +98154,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 292
+          "linea": 295
         }
       ],
       "tablas": [
@@ -97921,7 +98169,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "0568fd543405"
+      "hash": "140eae5bc817"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -98642,6 +98890,35 @@
       "tablas": [],
       "rutaApi": "/api/cron/correduria-sustituciones",
       "hash": "f88573ef8adb"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/correduria-tope-avant2/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Tope de gasto de Avant2 en EUROS (decisión de Alberto, 29/09/2026): el mensajero. asegura anota en `seguros.codeoscopic_tope_evento` el aviso de 60 € y cada bloqueo (70 €, y los niveles siguientes tras ampliar). Este cron, ",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": false,
+          "params": "cents: number",
+          "retorno": "string",
+          "linea": 23
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 27
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/correduria-tope-avant2",
+      "hash": "7ccb12d6eb28"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correo-digest/route.ts",
@@ -102985,7 +103262,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "esMensajeAutomatico",
@@ -102993,7 +103270,7 @@
           "exportada": false,
           "params": "subject: string, text: string",
           "retorno": "boolean",
-          "linea": 32,
+          "linea": 33,
           "resumen": "Los mensajes del HOST / automáticos de Smoobu/Booking llevan ASUNTO (RECORDATORIO, WHERE TO COLLECT, 📈 Ayúdanos…) o son el aviso \"Check-in online disponible\". Los del HUÉSPED llegan con asunto vacío "
         },
         {
@@ -103002,7 +103279,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 38,
+          "linea": 39,
           "resumen": "Despedidas / cortesías que no necesitan respuesta."
         },
         {
@@ -103011,13 +103288,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 46,
+          "linea": 47,
           "resumen": "Cron (cada 3 min) + red de seguridad del webhook. Sondea los hilos de Smoobu y enruta cada pregunta NUEVA del huésped al agente (propone por Telegram / auto-envía y deja log). Idempotencia por msgId ("
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/mensajes/auto-reply",
-      "hash": "3528c8758a1f"
+      "hash": "31937b7458bb"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/diagnostico-guia/route.ts",
@@ -103320,7 +103597,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 52,
+          "linea": 54,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -103329,7 +103606,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 69,
+          "linea": 71,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -103338,7 +103615,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 95
+          "linea": 97
         },
         {
           "nombre": "getPendiente",
@@ -103346,7 +103623,24 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 125
+          "linea": 127
+        },
+        {
+          "nombre": "reclamarPendiente",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string",
+          "retorno": "Promise<(Pendiente & Record<string, unknown>) | null>",
+          "linea": 137,
+          "resumen": "Reclamo ATÓMICO del pendiente (doble pulsación / reintento de Telegram): el primero que borra la fila gana y es el único que envía; el segundo recibe `null`. Si luego el envío no sale, quien reclamó D"
+        },
+        {
+          "nombre": "restaurarPendiente",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Pendiente & Record<string, unknown>",
+          "retorno": "Promise<void>",
+          "linea": 142
         },
         {
           "nombre": "POST",
@@ -103354,7 +103648,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 130
+          "linea": 150
         },
         {
           "nombre": "procesarUpdate",
@@ -103362,7 +103656,7 @@
           "exportada": false,
           "params": "req: NextRequest, body: any",
           "retorno": "Promise<Response>",
-          "linea": 156
+          "linea": 176
         },
         {
           "nombre": "enrutarTextoLibre",
@@ -103370,7 +103664,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1179,
+          "linea": 1269,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -103379,7 +103673,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1186,
+          "linea": 1276,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -103388,7 +103682,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1198
+          "linea": 1288
         },
         {
           "nombre": "correduriaSegura",
@@ -103396,7 +103690,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "Promise<void>",
-          "linea": 1204,
+          "linea": 1294,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -103426,7 +103720,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "1a35f0a577fb"
+      "hash": "ce1cc61670a0"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -117511,6 +117805,91 @@
       "hash": "7fe9c60c7ef1"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/tope-avant2.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Tope de gasto de Avant2 en EUROS (decisión de Alberto, 29/09/2026): el lado de plataforma. asegura decide y anota (aviso a 60 €, bloqueo a 70 €, ampliaciones de +30 €) en `seguros.codeoscopic_tope_evento`; plataforma tiene el bot. Este fichero: - lee por el puerto los avisos/bloqueos pendientes, con",
+      "exporta": [
+        "interpretarLecturaTope",
+        "resultadoAmpliar",
+        "leerTopeAvant2",
+        "marcarTopeNotificado",
+        "ampliarTopeAvant2"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown>",
+          "linea": 27
+        },
+        {
+          "nombre": "interpretarLecturaTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaTope",
+          "linea": 32,
+          "resumen": "PURO. Interpreta la respuesta del GET del puerto."
+        },
+        {
+          "nombre": "resultadoAmpliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "",
+          "linea": 69,
+          "resumen": "PURO. El toast y la línea que se añade al mensaje tras pulsar «Autorizar»."
+        },
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": false,
+          "params": "cents: number",
+          "retorno": "string",
+          "linea": 88
+        },
+        {
+          "nombre": "base",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 92
+        },
+        {
+          "nombre": "leerTopeAvant2",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<LecturaTope>",
+          "linea": 96
+        },
+        {
+          "nombre": "marcarTopeNotificado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: string[]",
+          "retorno": "Promise<boolean>",
+          "linea": 112,
+          "resumen": "Marca como mandados. Si falla, el evento se vuelve a mandar en la pasada siguiente."
+        },
+        {
+          "nombre": "ampliarTopeAvant2",
+          "kind": "function",
+          "exportada": true,
+          "params": "arg: string, autorizadoPor: string, callbackId: string",
+          "retorno": "Promise<",
+          "linea": 130,
+          "resumen": "El botón «Autorizar +30 €». Nunca lanza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e0a88147a318"
+    },
+    {
       "ruta": "apps/plataforma/lib/correo/agoda-mensajes.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/agoda-mensajes.ts — parser PURO del aviso «New messages from your guests» de Agoda. POR QUÉ EXISTE (medido el 31/08/2026 contra Smoobu, 8 reservas de Agoda del histórico): el canal de Agoda es de UNA SOLA DIRECCIÓN. Smoobu ENTREGA nuestros mensajes al huésped por el alias `…@agoda-messagi",
@@ -117869,7 +118248,7 @@
           "exportada": false,
           "params": "from: string, adjuntos: { contentType?: string; filename?: string; content?: Buffer; size?: number }[] | undefined",
           "retorno": "Buffer[] | undefined",
-          "linea": 41
+          "linea": 43
         },
         {
           "nombre": "nuevoCliente",
@@ -117877,7 +118256,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 51
+          "linea": 53
         },
         {
           "nombre": "abrirTriaje",
@@ -117885,12 +118264,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SesionTriaje>",
-          "linea": 72
+          "linea": 74
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6a4ab8ed3791"
+      "hash": "9ebaa7e9d86b"
     },
     {
       "ruta": "apps/plataforma/lib/correo/keywords.ts",
@@ -118286,7 +118665,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 32,
+          "linea": 34,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -118295,7 +118674,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 34
+          "linea": 36
         },
         {
           "nombre": "fmtFecha",
@@ -118303,7 +118682,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 40
+          "linea": 42
         },
         {
           "nombre": "mensajeAviso",
@@ -118311,7 +118690,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 46,
+          "linea": 48,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -118320,7 +118699,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 63
+          "linea": 65
         },
         {
           "nombre": "pasadaTriaje",
@@ -118328,7 +118707,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 75
+          "linea": 77
         },
         {
           "nombre": "digestTriaje",
@@ -118336,7 +118715,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 266,
+          "linea": 280,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -118345,7 +118724,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 306,
+          "linea": 320,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         },
         {
@@ -118354,7 +118733,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<string>",
-          "linea": 333,
+          "linea": 347,
           "resumen": "Cuerpo del correo + el texto por filas de sus PDF (Allianz manda la tabla de devueltos/anuladas en un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO leí"
         }
       ],
@@ -118364,7 +118743,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "2904c9f1c6e3"
+      "hash": "82b50c579a56"
     },
     {
       "ruta": "apps/plataforma/lib/correos-cliente.ts",
@@ -118481,7 +118860,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 248,
+          "linea": 252,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -118490,7 +118869,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 278,
+          "linea": 282,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -118499,7 +118878,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 300
+          "linea": 304
         },
         {
           "nombre": "ventanaMinutos",
@@ -118507,7 +118886,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 308,
+          "linea": 312,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -118516,13 +118895,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 320,
+          "linea": 324,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "06c0c9f83948"
+      "hash": "e1f08e7c539d"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -123888,7 +124267,7 @@
           "exportada": true,
           "params": "d: DatosMensajeWhatsapp",
           "retorno": "string",
-          "linea": 95,
+          "linea": 96,
           "resumen": "por WhatsApp es justo el dato que falta para poder entrar. 🚨 Y nada más que eso. Ni compañía, ni póliza, ni matrícula, ni prima, ni DNI, ni cuántos seguros tiene: el número lo ha tecleado Alberto y p"
         },
         {
@@ -123897,12 +124276,12 @@
           "exportada": true,
           "params": "{ accion, portal, enlace, telefonos, nombre }: { accion: AccionPortal portal: PortalCartera enlace: string | null telefonos: readonly (string | null | undefined)[] nombre: string | null },",
           "retorno": "CanalWhatsapp",
-          "linea": 137
+          "linea": 138
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b94179822939"
+      "hash": "63ebe11d750d"
     },
     {
       "ruta": "apps/plataforma/lib/ipid-asegura.ts",
@@ -124640,7 +125019,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e04a10cf6596"
+      "hash": "d18beb9685b5"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -130855,15 +131234,195 @@
           "nombre": "decidirAutoEnvio",
           "kind": "function",
           "exportada": true,
-          "params": "dec: Decision",
+          "params": "dec: Decision, pregunta: string",
           "retorno": "",
-          "linea": 27,
+          "linea": 28,
           "resumen": "¿Puede salir solo? Dos vías, sobre una misma guarda común. Guardas comunes: nunca se auto-envía nada que requiera ojo humano (sensible / negativo / dato inventado / escalado IA / control de calidad ca"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "22abd5058276"
+      "hash": "0af9112ef01b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/cambio-horario.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/cambio-horario.ts — entrada anticipada, salida tardía y maletas. PURO. Origen (03/10/2026): un huésped de House Sevillana pidió dejar el equipaje / quedarse hasta las 15:00 el día de salida. Se clasificó «equipaje», salió AUTOMÁTICO y prometió un «coste según la hora» que no",
+      "exporta": [
+        "evaluarCambioHorario",
+        "peticionCambioHorario",
+        "mencionaMaletas",
+        "resolverTipo",
+        "extraerHoraPedida",
+        "contraoferta",
+        "asegurarCallback",
+        "botonesCambioHorario",
+        "horaDeCallback",
+        "textoAceptacion",
+        "consignasDePiso",
+        "textoNegativa",
+        "tareaLimpieza"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaOk",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string | null | undefined",
+          "retorno": "f is string",
+          "linea": 33,
+          "resumen": "Además del formato, la fecha debe existir en el calendario (\"2026-13-45\" haría lanzar a toISOString)."
+        },
+        {
+          "nombre": "diaAnterior",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string",
+          "retorno": "string",
+          "linea": 39
+        },
+        {
+          "nombre": "fmt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": null,
+          "linea": 45
+        },
+        {
+          "nombre": "quien",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ReservaHorario",
+          "retorno": null,
+          "linea": 46
+        },
+        {
+          "nombre": "evaluarCambioHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tipo: TipoCambio reserva: ReservaHorario reservasMismaPropiedad: ReservaHorario[] | null }",
+          "retorno": "EvaluacionHorario",
+          "linea": 58,
+          "resumen": "¿Lo permite el calendario del piso? - salida tardía + otra entrada el mismo día del check-out → rojo - salida tardía sin entrada ese día → amarillo (hace falta el OK de la limpieza, nunca verde) - ent"
+        },
+        {
+          "nombre": "peticionCambioHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, categoria?: string | null",
+          "retorno": "PeticionHorario | null",
+          "linea": 156,
+          "resumen": "¿Es una petición de cambio de horario o de guardar maletas? Conservador a propósito: un falso positivo solo convierte un mensaje en PROPUESTA por Telegram (sin daño); un falso negativo deja salir solo"
+        },
+        {
+          "nombre": "mencionaMaletas",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 167
+        },
+        {
+          "nombre": "resolverTipo",
+          "kind": "function",
+          "exportada": true,
+          "params": "pet: PeticionHorario, texto: string, o: { hoy: string; checkIn: string | null }",
+          "retorno": "TipoCambio",
+          "linea": 176,
+          "resumen": "«equipaje» no dice si es antes de entrar o después de salir: lo dice el texto, y si no, el momento (`hoy` ≤ llegada → antes de entrar; si no → el día de salida). Fechas YYYY-MM-DD."
+        },
+        {
+          "nombre": "extraerHoraPedida",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string | null",
+          "linea": 188,
+          "resumen": "Primera hora pedida («a las 15:00», «until 3pm», «um 15 Uhr»…) como 'HH:MM', o null. Rango 06–23."
+        },
+        {
+          "nombre": "contraoferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoCambio, horaPedida: string | null",
+          "retorno": "number | null",
+          "linea": 214,
+          "resumen": "Contraoferta (hora entera, 13 o 14) para el botón `🕐`. Salida: 14 si pide 15:00 o más, 13 si no. Entrada: 13 si pide a las 12 o antes, 14 si no. null si coincide con lo que ya pidió (botón redundante"
+        },
+        {
+          "nombre": "asegurarCallback",
+          "kind": "function",
+          "exportada": true,
+          "params": "cb: string",
+          "retorno": "string",
+          "linea": 228,
+          "resumen": "Telegram rechaza un `callback_data` > 64 BYTES (y el aviso entero falla): se comprueba al construir."
+        },
+        {
+          "nombre": "botonesCambioHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { bookingId: string; tipo: TipoCambio; semaforo: Semaforo; horaPedida: string | null }",
+          "retorno": "BotonCH[][]",
+          "linea": 238,
+          "resumen": "Botones de la propuesta. Prefijo `hsp_` (mismo emisor autorizado que el resto): `hsp_chsi:<id>:<HHMM>`, `hsp_chhasta:<id>:<HH>`, `hsp_chno:<id>`, `hsp_chlimp:<id>`. En ROJO no se ofrecen los «sí»: el "
+        },
+        {
+          "nombre": "horaDeCallback",
+          "kind": "function",
+          "exportada": true,
+          "params": "arg: string | undefined",
+          "retorno": "string | null",
+          "linea": 256,
+          "resumen": "'HHMM' (callback) → 'HH:MM'; null si no es una hora válida."
+        },
+        {
+          "nombre": "saludo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "nombre?: string | null",
+          "retorno": null,
+          "linea": 267
+        },
+        {
+          "nombre": "textoAceptacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tipo: TipoCambio; hora: string; nombre?: string | null }",
+          "retorno": "string",
+          "linea": 272
+        },
+        {
+          "nombre": "consignasDePiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string",
+          "retorno": "string[]",
+          "linea": 279,
+          "resumen": "Consignas de la zona del piso (de `equipaje.ts`); vacío = piso sin zona → texto genérico."
+        },
+        {
+          "nombre": "textoNegativa",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tipo: TipoCambio; semaforo: Semaforo; propertyId: string; nombre?: string | null; ofrecerMaletas?: boolean }",
+          "retorno": "string",
+          "linea": 284
+        },
+        {
+          "nombre": "tareaLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tipo: TipoCambio; hora: string; checkIn: string | null; checkOut: string | null; huesped?: string | null; reservationId: string }",
+          "retorno": "",
+          "linea": 302,
+          "resumen": "Instrucción para la tarea de limpieza y fecha en la que se crea."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5bef3b2bab1e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cierre.ts",
@@ -131197,7 +131756,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 93
+          "linea": 94
         },
         {
           "nombre": "limpiarReply",
@@ -131205,7 +131764,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 101,
+          "linea": 102,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -131214,7 +131773,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<Veredicto>",
-          "linea": 124
+          "linea": 125
         },
         {
           "nombre": "decidir",
@@ -131222,12 +131781,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 174
+          "linea": 175
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c4fd2056b30"
+      "hash": "b0abcd00424f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/destilar.ts",
@@ -132236,7 +132795,7 @@
           "exportada": true,
           "params": "bookingId: string, opts: { pregunta?: string; msgId?: string } = {},",
           "retorno": "Promise<",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner` y /api/reservations"
         }
       ],
@@ -132245,7 +132804,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "eb9e79538daa"
+      "hash": "08422eeef9a4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -132796,7 +133355,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3e7a0210d75d"
+      "hash": "996748ef3461"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/sensibilidad.ts",
@@ -132907,7 +133466,10 @@
         "confirmarEnviado",
         "confirmarRespondidoFuera",
         "confirmarEsMio",
-        "confirmarDescartado"
+        "confirmarDescartado",
+        "cargarReservasPropiedad",
+        "aceptarCambioHorario",
+        "negativaListaParaEnviar"
       ],
       "funciones": [
         {
@@ -132916,7 +133478,7 @@
           "exportada": false,
           "params": "urgente: boolean",
           "retorno": null,
-          "linea": 11
+          "linea": 18
         },
         {
           "nombre": "traducirEs",
@@ -132924,7 +133486,7 @@
           "exportada": false,
           "params": "txt: string",
           "retorno": "Promise<string>",
-          "linea": 14,
+          "linea": 21,
           "resumen": "Traduce al español de España (para que Alberto entienda de un vistazo). Best-effort: si falla, ''."
         },
         {
@@ -132933,7 +133495,7 @@
           "exportada": false,
           "params": "lang: string",
           "retorno": "string",
-          "linea": 25,
+          "linea": 32,
           "resumen": "El borrador salió en ESPAÑOL con un huésped que escribe en otro idioma. Pedir su «traducción al español» devuelve el mismo texto y `traduccionUtil` la descarta → la línea 🔁 decía «no he podido traduc"
         },
         {
@@ -132942,7 +133504,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 35,
+          "linea": 42,
           "resumen": "Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada). Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático. El mensa"
         },
         {
@@ -132951,7 +133513,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": "string",
-          "linea": 64,
+          "linea": 71,
           "resumen": "Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato)."
         },
         {
@@ -132960,7 +133522,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 70,
+          "linea": 77,
           "resumen": "Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking)."
         },
         {
@@ -132969,7 +133531,7 @@
           "exportada": true,
           "params": "pend: { booking_id: string; idioma: string | null }, borrador: string, opts: { borradorEs?: string } = {},",
           "retorno": "Promise<void>",
-          "linea": 153,
+          "linea": 163,
           "resumen": "Re-propone un borrador tras ✏️ Modificar / 🔧 Retocar: muestra el texto FINAL que se va a enviar (en el idioma del huésped + 🔁 español para verificar) con los botones, y deja el pendiente listo para "
         },
         {
@@ -132978,7 +133540,7 @@
           "exportada": true,
           "params": "messageId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 180
+          "linea": 190
         },
         {
           "nombre": "confirmarRespondidoFuera",
@@ -132986,7 +133548,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 184
+          "linea": 194
         },
         {
           "nombre": "confirmarEsMio",
@@ -132994,7 +133556,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 188
+          "linea": 198
         },
         {
           "nombre": "confirmarDescartado",
@@ -133002,15 +133564,76 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 192
+          "linea": 202
+        },
+        {
+          "nombre": "cargarReservasPropiedad",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string",
+          "retorno": "Promise<ReservaHorario[] | null>",
+          "linea": 218,
+          "resumen": "Reservas del MISMO piso, deduplicadas por `reservationId` y SIN las de `reservas_canceladas`. `null` = no se pudo leer (≠ `[]` = no hay ninguna): el semáforo no puede ser verde con un null."
+        },
+        {
+          "nombre": "cargarReserva",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string",
+          "retorno": "Promise<ReservaIncome | null>",
+          "linea": 237
+        },
+        {
+          "nombre": "hoyMadrid",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 249
+        },
+        {
+          "nombre": "evaluarReserva",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string, propertyId: string, pet: PeticionHorario, pregunta: string, fechas: { checkIn: string | null; checkOut: string | null }",
+          "retorno": null,
+          "linea": 251
+        },
+        {
+          "nombre": "proponerCambioHorario",
+          "kind": "function",
+          "exportada": false,
+          "params": "ctx: Contexto, pregunta: string, dec: Decision, pet: PeticionHorario",
+          "retorno": "Promise<void>",
+          "linea": 258
+        },
+        {
+          "nombre": "aceptarCambioHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "pend: PendCambio, hora: string",
+          "retorno": "Promise<ResultadoAceptacion>",
+          "linea": 322,
+          "resumen": "✅ Sí / 🕐 Sí, hasta HH: vuelve a mirar el calendario (puede haber entrado una reserva desde que se propuso), manda el mensaje al huésped en SU idioma y crea la tarea en /invitado/limpieza. Si el calen"
+        },
+        {
+          "nombre": "negativaListaParaEnviar",
+          "kind": "function",
+          "exportada": true,
+          "params": "pend: { borrador: string | null; idioma: string | null }",
+          "retorno": "boolean",
+          "linea": 360,
+          "resumen": "Texto del «no»: debe estar en el idioma del huésped (si el borrador salió en español, no se manda)."
         }
       ],
       "tablas": [
+        "incomes",
         "mensajes_pendientes_tg",
+        "reservas_canceladas",
         "set"
       ],
       "rutaApi": null,
-      "hash": "94207bdc3d22"
+      "hash": "7fc8d6d158bc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/alertas-autoresolucion.ts",
@@ -134003,6 +134626,7 @@
       "resumen": "lib/sivra/extras/orden-limpieza.ts — una ORDEN suelta a la empresa de limpieza. Hermana de `aviso-limpieza.ts`, y distinta a propósito. Aquélla es la consecuencia de un COBRO (la dispara el webhook de Stripe y dice «ya cobrado»); ésta no sabe nada de dinero: es Alberto pulsando un botón para que alg",
       "exporta": [
         "enviarOrdenLimpieza",
+        "crearTareaIntranet",
         "listarOrdenes",
         "ordenYaEnviada"
       ],
@@ -134019,7 +134643,7 @@
         {
           "nombre": "crearTareaIntranet",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "d: DatosOrden & { propertyId: string },",
           "retorno": "Promise<string | null>",
           "linea": 78,
@@ -134074,7 +134698,7 @@
         "sivra_ordenes_limpieza"
       ],
       "rutaApi": null,
-      "hash": "d0384a248b81"
+      "hash": "c95c7f0dcbd3"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/extras/orden-texto.ts",
@@ -134253,6 +134877,196 @@
       "hash": "04f2b383123d"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/factura-cuadre-correo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/factura-cuadre-correo.ts — borde sucio del cuadre de la factura de Sique Brilla. Lo llama el triaje de correo (`lib/correo/triaje.ts`) cuando llega un correo de limpiezascruzz@gmail.com con asunto de factura: PDF → texto por filas → cuadre puro (`factura-cuadre.ts`) → `limpieza_facturas` (",
+      "exporta": [
+        "salidasDelPeriodo",
+        "reservasSinSalida",
+        "procesarCorreoFacturaSique"
+      ],
+      "funciones": [
+        {
+          "nombre": "salidasDelPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "Promise<Salida[]>",
+          "linea": 31,
+          "resumen": "Salidas (checkouts) del mes de servicio de reservas NO canceladas, en fecha civil de Madrid. Excluye lo que figure en `reservas_canceladas` (por si una cancelación tardía sigue en `incomes`)."
+        },
+        {
+          "nombre": "reservasSinSalida",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "Promise<SinSalida[]>",
+          "linea": 51,
+          "resumen": "Reservas NO canceladas sin `checkOut` cuyo `checkIn` cae antes del fin del mes facturado: podrían haber salido ese mes y no se sabe. Se cuentan para que el cuadre no pueda ser un ✅ limpio."
+        },
+        {
+          "nombre": "cuentaDeFacturas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 68,
+          "resumen": "Cuenta dueña de las facturas: la de las ya guardadas (o `SIVRA_CUENTA_ID`). Sin sesión en un cron."
+        },
+        {
+          "nombre": "procesarCorreoFacturaSique",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: { subject: string fecha: Date pdfs?: Buffer[] }",
+          "retorno": "Promise<SalidaProcesoFactura>",
+          "linea": 86,
+          "resumen": "Procesa el correo de la factura. Idempotente por nº de factura (guardarFactura hace upsert). Nunca lanza por un PDF ilegible: avisa «no he podido leer la factura»."
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "limpieza_facturas",
+        "reservas_canceladas"
+      ],
+      "rutaApi": null,
+      "hash": "f26951f396da"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/factura-cuadre.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/factura-cuadre.ts — cuadre de la factura mensual de Sique Brilla contra las salidas (puro). La factura llega por correo (limpiezascruzz@gmail.com, PDF VeriFactu) con una línea por piso («LUXURY / DUPLEX / CASA SOCORRO / BUSTOS REFORMA», Unidades = nº de cambios) y una de lavandería («SERVI",
+      "exporta": [
+        "esCorreoFacturaSique",
+        "parsearFacturaSique",
+        "periodoFacturado",
+        "limitesDelPeriodo",
+        "comprobarAritmetica",
+        "cuadrarFactura",
+        "esGuardable",
+        "mesLegible",
+        "mensajeCuadre"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "numEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "number",
+          "linea": 30,
+          "resumen": "«1.128,48» → 1128.48"
+        },
+        {
+          "nombre": "esCorreoFacturaSique",
+          "kind": "function",
+          "exportada": true,
+          "params": "from: string, subject: string",
+          "retorno": "boolean",
+          "linea": 55,
+          "resumen": "Remitente exacto de la factura (no el dominio: gmail.com es de todo el mundo)."
+        },
+        {
+          "nombre": "parsearFacturaSique",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "FacturaLeida | null",
+          "linea": 65,
+          "resumen": "Lee la factura del texto por filas del PDF. `null` = no se ha podido leer (falta número, fecha, importes del pie o ninguna línea): quien llama debe decir «no he podido leerla», no «cuadra»."
+        },
+        {
+          "nombre": "periodoFacturado",
+          "kind": "function",
+          "exportada": true,
+          "params": "asunto: string, fechaFactura: string",
+          "retorno": "string",
+          "linea": 106,
+          "resumen": "Mes de SERVICIO ('YYYY-MM'): el del asunto («FACTURA LIMPIEZAS SEPTIEMBRE») con el año de la fecha de emisión (si el mes cae después de la emisión, es del año anterior: diciembre facturado en enero). "
+        },
+        {
+          "nombre": "limitesDelPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string",
+          "retorno": "",
+          "linea": 124,
+          "resumen": "Límites [desde, hasta) del mes en fecha civil de Madrid, para filtrar `checkOut::date` en SQL."
+        },
+        {
+          "nombre": "ddmm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 166
+        },
+        {
+          "nombre": "comprobarAritmetica",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FacturaLeida",
+          "retorno": "string[]",
+          "linea": 169,
+          "resumen": "Aritmética de la factura: unidades×precio, base, IVA 21 %, total."
+        },
+        {
+          "nombre": "cuadrarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "leida: FacturaLeida | null, periodo: string | null, salidas: Salida[], sinSalida: SinSalida[] = []",
+          "retorno": "ResultadoCuadre",
+          "linea": 199,
+          "resumen": "Cuadra unidades facturadas por piso con las salidas del mes. `leida: null` → no cuadra."
+        },
+        {
+          "nombre": "esGuardable",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoCuadre",
+          "retorno": "boolean",
+          "linea": 236,
+          "resumen": "¿Se puede guardar en `limpieza_facturas`? Solo si su aritmética es sana y no hay líneas desconocidas: el P&L usa el desglose para repartir el gasto, y uno con la aritmética rota lo contaminaría. Una d"
+        },
+        {
+          "nombre": "mesLegible",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodo: string | null",
+          "retorno": "string",
+          "linea": 241,
+          "resumen": "Nombre del mes en español con mayúscula: '2026-09' → 'Septiembre 2026'."
+        },
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 247
+        },
+        {
+          "nombre": "mensajeCuadre",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoCuadre",
+          "retorno": "string",
+          "linea": 250,
+          "resumen": "Texto del aviso de Telegram (HTML). Importes en formato español."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4456738d23b4"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza-lectura.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/factura-limpieza-lectura.ts — leer la factura de Si que Brilla y guardarla si cuadra. El LAYOUT lo lee la IA, nunca una expresión regular escrita de memoria (ver la cabecera de `factura-limpieza.ts`). Este módulo es el borde sucio: PDF → texto o visión → JSON → validación aritmética → BD. ",
@@ -134282,7 +135096,7 @@
           "nombre": "guardarFactura",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, factura: FacturaLimpieza, fuente: 'pdf_ia' | 'manual', avisos: string[], nombreFichero: string | null = null,",
+          "params": "cuentaId: string, factura: FacturaLimpieza, fuente: 'pdf_ia' | 'manual' | 'correo_pdf', avisos: string[], nombreFichero: string | null = null,",
           "retorno": "Promise<void>",
           "linea": 131,
           "resumen": "Guarda una factura ya validada. Reimportar la misma NUNCA duplica: sería gasto doble en el P&L. 🚨 Dos caminos porque Postgres no puede deduplicar el segundo: con número, el índice único parcial y `ON"
@@ -134312,7 +135126,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "fb6fb7d27fe0"
+      "hash": "48f356e22bb7"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza.ts",
@@ -140149,7 +140963,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 715
+          "linea": 727
         },
         {
           "nombre": "avisosDe",
@@ -140157,7 +140971,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 720,
+          "linea": 732,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -140166,13 +140980,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 730,
+          "linea": 742,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "de1fa02f8856"
+      "hash": "aab075e14ce9"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -164801,6 +165615,44 @@
       "hash": "99ff2f5e22d9"
     },
     {
+      "ruta": "packages/module-seguros/src/canal-correduria.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Canal de la CORREDURÍA ≠ dato del cliente. Cuando una compañía EXIGE email/móvil y el titular no tiene (típico: un familiar lleva sus seguros), se pone el de la correduría (Alberto, 03/10/2026). Esos datos NO son del cliente: no se pintan como suyos, no se usan para avisarle ni para agrupar/fundir f",
+      "exporta": [
+        "esCanalCorreduria"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarEmail",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 9
+        },
+        {
+          "nombre": "normalizarTelefono",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 17
+        },
+        {
+          "nombre": "esCanalCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 25,
+          "resumen": "`true` si el valor (email o teléfono) es un canal de la correduría. `null`/vacío → false."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3199eac05fda"
+    },
+    {
       "ruta": "packages/module-seguros/src/carnet-ficha.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Puro: el carné de conducir que Alberto teclea en la ficha del cliente (29/09/2026, «añadir o modificar fecha de carnet»). La fecha es la de EXPEDICIÓN o última renovación: la antigüedad es lo que tarifica, y de ella se DERIVA la caducidad (`caducidadCarnet`), que no se teclea ni se guarda.",
@@ -169644,7 +170496,7 @@
           "exportada": true,
           "params": "rol: string",
           "retorno": "string",
-          "linea": 72
+          "linea": 74
         },
         {
           "nombre": "contactoEfectivo",
@@ -169652,7 +170504,7 @@
           "exportada": true,
           "params": "tomador: { telefono: string | null; email: string | null }, intervinientes: IntervinienteFicha[] | null,",
           "retorno": "ContactoEfectivo",
-          "linea": 115,
+          "linea": 120,
           "resumen": "A quién se llama. Manda la ficha del tomador; si no tiene, **su propio dato colgado de la póliza**; y solo después el primer interviniente (por prioridad de rol) que sí tenga. `intervinientes === null"
         },
         {
@@ -169661,7 +170513,7 @@
           "exportada": false,
           "params": "rol: string",
           "retorno": "number",
-          "linea": 157
+          "linea": 167
         },
         {
           "nombre": "filasIntervinientes",
@@ -169669,7 +170521,7 @@
           "exportada": true,
           "params": "tomador: { polizaId: string; fichaId: string | null; nombre: string | null }, lista: IntervinienteFicha[] | null,",
           "retorno": "FilasIntervinientes",
-          "linea": 185
+          "linea": 195
         },
         {
           "nombre": "personasDePolizas",
@@ -169677,7 +170529,7 @@
           "exportada": true,
           "params": "intervinientes: IntervinienteFicha[] | null, polizas: readonly { id: string; etiqueta: string }[], relaciones: readonly { relacionadoId: string; tipo: string }[] | null,",
           "retorno": "PersonaDePolizas[] | null",
-          "linea": 276
+          "linea": 286
         },
         {
           "nombre": "normalizarNombre",
@@ -169685,7 +170537,7 @@
           "exportada": false,
           "params": "n: string | null",
           "retorno": "string | undefined",
-          "linea": 349,
+          "linea": 359,
           "resumen": "Un nombre para compararlo con otro: sin espacios de más, sin tildes, en minúsculas."
         },
         {
@@ -169694,13 +170546,13 @@
           "exportada": false,
           "params": "lista: PersonaDePolizas[]",
           "retorno": "void",
-          "linea": 366,
+          "linea": 376,
           "resumen": "Marca las filas que comparten nombre con otra. 🚨 Caso fundacional (03/09/2026, ficha de José Suárez Salas): «María Antonia Gutiérrez Alcalá» salía DOS veces, con las mismas tres matrículas. No era un"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "062e80f45415"
+      "hash": "9e9d066a05dc"
     },
     {
       "ruta": "packages/module-seguros/src/ipid.ts",
@@ -171108,6 +171960,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "19ad12d909ad"
+    },
+    {
+      "ruta": "packages/module-seguros/src/persona-ficha.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "¿Persona física o jurídica? `tipoPersona` guardado manda; sin él, documento + segmento deciden. Dígito sin segmento jurídico → null; letra → null; sin documento, solo segmento manda.",
+      "exporta": [
+        "personaDeFicha",
+        "esTelefonoComodin"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerTipo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "TipoPersona | null",
+          "linea": 7
+        },
+        {
+          "nombre": "personaDeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { tipoPersona?: string | null dniEnmascarado?: string | null segmento?: string | null }",
+          "retorno": "TipoPersona | null",
+          "linea": 19,
+          "resumen": "`tipoPersona` guardado manda. Sin él: documento enmascarado acaba en dígito → 'juridica' solo si segmento es jurídico (acaba en letra → null siempre; sin documento → segmento decide)."
+        },
+        {
+          "nombre": "esTelefonoComodin",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "Teléfono «comodín»: todo ceros o un solo dígito repetido («000000000», «999999999»), lo que algunas compañías mandan cuando no hay teléfono. Con prefijo (+34/0034) también."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7b38b24c444f"
     },
     {
       "ruta": "packages/module-seguros/src/personas-ficha.ts",
@@ -178744,7 +179636,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4093,
-    "funciones": 13911
+    "archivos": 4105,
+    "funciones": 13990
   }
 }

@@ -14,7 +14,7 @@
 --    póliza + fecha ±3 días + un único candidato de CIMA). Las filas ya vinculadas antes de esto quedan
 --    con `siniestro_vinculo` NULL = «vinculado antes de que se anotara cómo» (no se inventa).
 --
--- ⚠️ SIN APLICAR (03/10/2026). ORDEN: aplicar ANTES de desplegar `asegura`, `asegura-portal` y
+-- ✅ APLICADO en producción el 04/10/2026 (comprobaciones previas y posteriores OK). ORDEN: aplicar ANTES de desplegar `asegura`, `asegura-portal` y
 -- `plataforma`: el portal pide la columna nueva y tiene GRANT por columnas (sin el GRANT, su lectura de
 -- siniestros falla con «permission denied»).
 --

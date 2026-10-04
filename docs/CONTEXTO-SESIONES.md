@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(03/10/2026, early/late check-in y maletas)** — Compuerta: early/late/maletas NUNCA auto-envío, siempre propuesta por Telegram. Semáforo puro `cambio-horario.ts` (rojo/amarillo/verde; dato desconocido = amarillo); botones `hsp_chsi`/`hsp_chhasta`/`hsp_chno`/`hsp_chlimp`.
+Política Alberto: GRATIS (también más allá de las 12:00, `salida.ts`: se consulta y confirma según limpieza/calendario) y SIN pedir reseña (Booking/Airbnb prohíben incentivar). «No» en rojo ofrece consignas de `CONSIGNA_POR_ZONA`.
+Pendiente: la nota de 🧹 Consultar limpieza no persiste (sin columna); bloqueos manuales del calendario quedan fuera de `incomes`, el semáforo no los ve.
+PR #4212 MERGEADO (03/10). Caso origen: Massimo (reserva 154375571) avisado por Alberto fuera del log; el 05/09 la IA le negó entrar antes con la noche previa vacía (hoy sería 🟢).
+
+**(03/10/2026, tope Avant2 €)** — PR #4192 MERGEADO (fase 1): tope en euros/mes de Avant2 — aviso Telegram a 60 €, bloqueo a 70 €, +30 € por botón `cas_tope:` (idempotente); cron plataforma `correduria-tope-avant2` cada 5 min recoge los avisos por el puerto `/api/operador/codeoscopic/tope`. Fail-closed: sin leer el gasto no se llama a Avant2. Migración `2026-10-03b_codeoscopic_tope_euros.sql` APLICADA en prod (tabla `seguros.codeoscopic_tope_evento`, grants a `prisma_seguros` verificados). ReRate/Submit/límites cuentan a 0,50 € mientras no se confirme su coste. La lectura del gasto vive en `consumo.ts` (`gastadoMesCents`): el guardián `regression-simulacion-codeoscopic` solo deja tocar `codeoscopic_consumo` ahí.
+
 **(03/10/2026, CIMA cuarentena REC)** — Allianz C0109: REC 261 (2 recibos) del 03/10 atascados en cuarentena con `estado_recibo_desconocido`. Causa: `mapReciboSituacion` en `eiac-rec-mapper.ts` sin los códigos LI (Liquidado) ni RE (Rehabilitado) de EIAC §13.3.33. Fix en asegura#876 (draft): LI→cobrado, RE→pendiente, reason trae `estado_recibo_desconocido:<COD>`. Hecho: asegura#876 mergeado; reproceso dejó 1 recibo en sin_poliza_en_cartera por cero inicial (061048939 vs 61048939). asegura#877: matcher de recibos C0109 tolera ceros (numeroSinCerosIzquierda, exacto gana, ≥2 → unicaCarteraViva/ambiguo) + reprocesar-cuarentena ya no sella con objetos sin guardar (ficheroTotalmenteResuelto). Rescate: reprocesado_at=NULL en la fila + reproceso → 2/2 recibos en cartera. Pendiente: fusionar 15 pares duplicados C0109 (con/sin cero); mismo hueco de ceros en siniestro-matching y cef-matching.
 
 **(03/10/2026, bonificación vehículo nuevo)** — 🚗 Error descubierto: auto/moto-nuevo descartaban `seguroAnterior` (histórico es del CONDUCTOR, no del vehículo). Decisiones Alberto: (a) elegir póliza a imputar (turismo > moto, efecto antiguo sin siniestros, override corredor); (b) años sin siniestros desconocidos → PRESUPUESTO tarifica máximo «bonusSupuesto», EMISIÓN bloqueada sin verificar (art. 10 LCS); (c) leer-documento completa nº póliza/matrícula/canal/cesión/modalidad. PR1 (agente-architect, rama ccr-7156a8bc-i5qt5c): imputación+bloqueo+extracción. PR2 pendiente (tras PR1): aviso 45d vencimientos competencia, plurianuales RCI como objetivo, «pagas X→Y» anualizado (sin ahorro si no aseguro), pack coche+moto opcional (interruptor off). Codeoscopic: 0,50€/riesgo, 90d vista, Allianz vinculación (insuredFamilyInAllianz, dtoVentaCruzada).
@@ -1016,10 +1023,20 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (03/10/2026) Portal: parte de siniestro con UN solo camino para toda póliza + aviso Telegram con enlace
 - Causa: autorizado sin alcance `total` → la ficha mandaba a `vista=siniestro` sin `?poliza=` → salían TODAS las compañías (caso Alberto→póliza hogar de José). No es fallo de permisos (regla 24/09): sigue el 403.
 - Helper puro `vistaDelParte` (`module-seguros-portal/src/parte-entrada.ts`): desde una póliza, solo su compañía + formulario fijado si `puedeParte`; sin póliza, primero elegir seguro; sin catálogo → «Llámanos» MEDIADOR.
-- Telegram del parte: titular, quién lo da, compañía, ramo, nº póliza y enlace a `/correduria/poliza/<id>` vía `PLATAFORMA_URL` (falta darla de alta en Vercel del portal).
-- Campos de parte por ramo (`parte-ramo.ts`, 36 tipos con códigos EIAC ocultos, listas de contrarios/afectados/heridos, triestado) + vista en /correduria. 🚨 Aplicar ANTES de desplegar `apps/asegura-portal/prisma/sql/2026-10-03_portal_parte_datos_ramo.sql` (si no, 42703 y no entran partes).
+- Telegram del parte: titular, quién lo da, compañía, ramo, nº póliza y enlace a `/correduria/poliza/<id>` vía `PLATAFORMA_URL` (alta en Vercel del portal, Production, 04/10).
+- Campos de parte por ramo (`parte-ramo.ts`, 36 tipos con códigos EIAC ocultos, listas de contrarios/afectados/heridos, triestado) + vista en /correduria. ✅ SQL `2026-10-03_portal_parte_datos_ramo.sql` y `2026-10-03d_siniestro_vinculo_parte_fusion.sql` APLICADOS en prod el 04/10 (verificado).
 - Monte Carmelo 68 (Generali): no hay SIN de CIMA desde 28/09; check-in programado 10/10.
 - Antes pendiente: campos de parte por ramo según EIAC/CIMA (propuesta hecha: catálogo `EIAC_TIPOLOGIA_SINIESTRO` 182 códigos + `siniestro-ramo.ts`), a decidir con Alberto. El MCP `Supabase_asegura` apunta a OTRA BD: usar la de `central`.
+
+## (03/10/2026) Ficha correduría: contacto delegado + canal de la correduría
+- `esCanalCorreduria()` (module-seguros, datos de `MEDIADOR`): hola@grupoasegura.es y el móvil de Alberto, que se ponen cuando la compañía exige contacto, NO son del cliente. `contactoEfectivo` los salta y añade `canalCorreduria`; `estadoEmailDeFicha` (asegura) no escribe ahí.
+- Cabecera: «sin email propio · contacto: <delegado>, <rol>» o «canal de la correduría». Siguiente paso ya filtra teléfono comodín.
+- Pendiente: `backfill-contacto.ts`/fusión (hashes) no excluyen canal ni comodín; si la compañía exige email único por tomador, usar `hola+<id>@`.
+
+## (03/10/2026) Ficha correduría: persona jurídica sin nacimiento ni carnés
+- `personaDeFicha()` + `esTelefonoComodin()` en `module-seguros/src/persona-ficha.ts` (test). Orden: `tipoPersona` → cola del doc enmascarado (dígito = CIF) → segmento; `null` = se pinta lo de siempre.
+- `Cabecera.tsx`: jurídica → «CIF», sin tarta ni carnés; teléfono comodín → «sin teléfono» (cae a intervinientes). Posible conflicto menor con #4183 (Cabecera/index).
+- Pendiente: formularios `*-nuevo`/NuevaPersona piden nacimiento/carné a personas concretas (no al tomador): sin tocar.
 
 ## (03/10/2026) Sique Brilla: factura de septiembre cuadrada y cuadre automático por correo
 - Factura 2025/421 (1.128,48 €): 18 cambios = 18 salidas (Luxury 4, Duplex 5, Socorro 6, Reform 3) + lavandería 56,25 kg; cargada en `limpieza_facturas` (fuente `manual`).

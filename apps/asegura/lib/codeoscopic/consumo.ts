@@ -243,3 +243,36 @@ export async function cerrarDescartado(
        and estado = 'reservado'
   `
 }
+
+/**
+ * Lo gastado este mes natural (Madrid) en el libro, en céntimos. Lo lee el tope en euros
+ * (`tope-euros-bd.ts`), que no toca la tabla: el libro solo se mira desde aquí.
+ *
+ * Las líneas de ReRate/Submit/límites escritas cuando su coste por defecto era 0 («sin
+ * confirmar») se cuentan al coste vigente de su operación (`greatest`). Solo SUBE una línea,
+ * nunca la abarata. Las importadas de la web cuentan 0. `null` = sin fila (no se sabe, no 0 €).
+ * NO atrapa errores: quien llama decide.
+ */
+export async function gastadoMesCents(
+  correduriaId: string,
+  costes: { rerate: number; submit: number; limites: number },
+): Promise<number | null> {
+  const filas = await prisma.$queryRaw<{ gastado: bigint }[]>`
+    with mes as (
+      select (date_trunc('month', now() at time zone 'Europe/Madrid') at time zone 'Europe/Madrid') as desde
+    )
+    select
+      (select coalesce(sum(case
+                when c.motivo = ${MOTIVO_IMPORTADA_WEB} then 0
+                when c.motivo = ${MOTIVO_RERATE} then greatest(c.coste_cents, ${costes.rerate})
+                when c.motivo = ${MOTIVO_SUBMIT} then greatest(c.coste_cents, ${costes.submit})
+                when c.motivo = ${MOTIVO_LIMITES} then greatest(c.coste_cents, ${costes.limites})
+                else c.coste_cents end), 0)
+         from seguros.codeoscopic_consumo c, mes
+        where c.correduria_id = ${correduriaId}::uuid
+          and c.estado in ('reservado', 'facturable')
+          and c.creado_at >= mes.desde)::bigint as gastado
+  `
+  const f = filas[0]
+  return f ? Number(f.gastado) : null
+}
