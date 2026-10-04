@@ -60,7 +60,7 @@ export async function avisaNoLegibles(items: { nombre: string; from?: string }[]
 // tiene que poder verlo aquí en vez de descubrir el gasto perdido meses después.
 export async function avisaAjenas(items: { proveedor: string | null; total: number; receptor?: string | null }[]): Promise<void> {
   if (items.length === 0) return
-  const lineas = items.slice(0, 8).map((i) => `• ${escapeHtml(i.proveedor || 'desconocido')} · ${eur(i.total)} → ${i.receptor || 'otro titular'}`)
+  const lineas = items.slice(0, 8).map((i) => `• ${escapeHtml(i.proveedor || 'desconocido')} · ${eur(i.total)} → ${escapeHtml(i.receptor || 'otro titular')}`)
   await tgAvisoAlerta(
     'facturas.ajenas',
     `🙅 ${items.length} factura(s) de terceros ignoradas (no están a tu nombre):\n${lineas.join('\n')}\n\nSi alguna SÍ es tuya, dímelo y la recupero.`,
