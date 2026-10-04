@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(04/10/2026)** — análisis 2º requerimiento AEAT a Punto y Coma SL (ingresos plataformas 2024). Agentes leyeron correos Asecon 2024-2026 + `incomes` 2024.
+Hallazgos: contratos 500€/mes aportados a Inspección 2024; posible doble descuento de comisiones en IS 2024 (y Villasís ene-abr); carpeta Drive «Requerimiento AEAT 2024 - Punto y Coma» (subcarpeta 09) con resumen para reunión.
+Pendiente: reunión con Asecon (Marta), datos por pedir (listado en el Doc). Ver skill perfil-fiscal § «Requerimiento AEAT 2024».
+
 **(04/10/2026)** — asegura#879 (0108 poliza_no_duplicado, con CASCADE) y central#4221 (vigía de duplicadas + botón «No es duplicado») mergeados. 0108 aplicada en prod (audit 1f45b1a2) + REVOKE UPDATE (8b7e4aad).
 Pares marcados «no duplicado»: 32742526, 35374290, 8414300028 y 36088166.
 Fusiones del lote duplicadas-revision-2026-10-04 (evento 2f5cafd9): UVG410081428 (C0072; clientes distintos, manda el tomador de CIMA; combustible volcado no heredado porque contradice a CIMA), 3021500279880 y 3021500306694 (C0613). Quedan 0 grupos.

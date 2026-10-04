@@ -8,7 +8,7 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 ## Estructura en 6 líneas
 - **Personas físicas:** Alberto + **Pilar** (cónyuge, autónoma con sección `/finanzas/pilar`), separación de bienes, 3 hijos → familia numerosa general.
 - **Sociedad:** Punto y Coma SL, **dormida/inactiva desde finales de 2025** (no disuelta). **Desde 2026 TODOS los pisos tributan en IRPF personal de Alberto**; excepción dictada 20/07/2026: los ingresos de Socorro de 2025 sí fueron al IS de la SL.
-- **Pisos:** Socorro/House Sevillana (50/50 Alberto+Pilar), Villasís=Dúplex, Busto Reform y Luxury Busto (personal desde 2026); Monte Carmelo 68 = vivienda habitual (no deducible).
+- **Pisos:** Socorro/House Sevillana (50/50 Alberto+Pilar), Villasís=Lasso de la Vega 4=Dúplex, Busto Reform y Luxury Busto (personal desde 2026); Monte Carmelo 68 = vivienda habitual (no deducible).
 - **Declaración IRPF 2025 ya presentada (30/06/2026):** no tocar 2025 ni reclasificar movimientos anteriores a 2026-01-01; solo importa 2026 en adelante.
 - **Datos sensibles NO aquí:** viven en BD `fiscal_perfil`/`fiscal_descendientes` (Supabase, por `cuenta_id`) y en el borrador AEAT. Asesoría: Asecon Consultores (Marta).
 
@@ -62,6 +62,15 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 - **GENERALI seguro coche** → lo mete en **correduría** como gasto (decisión de Alberto), pero **SIN
   regla global** (GENERALI es nombre de aseguradora; una regla rompería la detección de comisiones):
   se reclasifica solo ese recibo.
+
+## 🚨 Requerimiento AEAT 2024 a Punto y Coma SL — ABIERTO (oct-2026)
+- 2º requerimiento de Inspección Sevilla (29/09/2026; el 1º, de jul-2026, no se atendió): justificar ingresos 2024 de plataformas imputados a la SL (Booking, Airbnb, Agoda; ~9 inmuebles). Plazo 10 días hábiles; aviso DEHú caduca 09/10/2026. Lo contesta Asecon (Marta Albarrán).
+- Todo el detalle (historia, cifras, riesgos, peticiones) vive en Drive, carpeta «Requerimiento AEAT 2024 - Punto y Coma» (https://drive.google.com/drive/folders/1aD1l_idUmNhq6hiTwtj5aGjtsTw3_Btn), subcarpeta 09. Léelo antes de opinar del tema.
+- Antecedente CLAVE: en 2024 la Inspección ya revisó IS 2021-22 de la SL y se APORTARON contratos de cesión Socorro y Sanlúcar → SL a 500 €/mes/inmueble; IRPF 2023 los declaró así. ⛔ No argumentar «cesión gratuita»: contradice lo aportado.
+- La SL era arrendataria de pisos de la madre de Alberto (edificio San Luis 9: pisos 3/10/12; Villasís hasta la donación de mayo-2024) y propietaria de Bustos Tavera 22. Lasso de la Vega 4 = Dúplex = Villasís.
+- Hipoteca de Socorro (CaixaBank) cancelada 11/11/2024 con el dinero de la venta de Sanlúcar (03/09/2024).
+- Sospecha abierta: la cifra de datos fiscales de las plataformas (DAC7) ya es NETA de comisión y Asecon restó comisiones otra vez en IS 2024 (y Villasís en IRPF). Sin confirmar hasta ver el informe fiscal de Booking.
+- La BD no tiene movimientos bancarios de 2024 (empiezan 2025-01-01); `incomes` 2024 solo cubre Socorro, Bustos (Reform+Luxury) y Dúplex.
 
 ## Índice de `references/` — lee SOLO lo que necesite la tarea
 - **`references/entidades-y-propiedades.md`** — quién tributa qué: entidades (Alberto/Pilar/SL dormida),
