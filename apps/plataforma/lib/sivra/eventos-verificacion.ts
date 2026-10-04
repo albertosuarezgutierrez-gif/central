@@ -29,6 +29,7 @@
 // Módulo PURO: sin Prisma, sin `@/`, testeable con `node --test`.
 
 import type { EstadoEvento } from './eventos-estado.ts'
+import { anioIncoherente } from './eventos-anio.ts'
 
 /** Lo que responde la búsqueda dirigida sobre UN evento. */
 export type VeredictoPrensa =
@@ -76,6 +77,8 @@ export type ContextoVerificacion = {
   desde?: string
   /** última fecha del horizonte de pricing (YYYY-MM-DD): fuera de él no se reubica nada */
   hasta?: string
+  /** evidencia con la que se dio de alta la fila: también delata un año equivocado */
+  evidenciaPrevia?: string | null
 }
 
 export type Decision = {
@@ -130,9 +133,14 @@ export function decidirVerificacion(
   const utiles = ctx.verificacionesPrevias + (util ? 1 : 0)
   const confianzaPrensa = Number(prensa.confianza)
   const confianzaValida = Number.isFinite(confianzaPrensa) && confianzaPrensa > 0 ? confianzaPrensa : null
+  // 🚨 Año equivocado (04/10/2026): rate_date=2027-09-26 con evidencia «26 de septiembre de 2026»
+  // se confirmó. Si la evidencia cita otro año, NADA de esta pasada confirma (ni la fuente dura,
+  // que puede ser el mismo error duplicado). Sin año en la evidencia, esta guarda no opina.
+  const textoEvidencia = [prensa.evidencia, ctx.evidenciaPrevia].filter(Boolean).join(' · ')
+  const anioMal = anioIncoherente(ctx.fecha, textoEvidencia)
 
   // 1. Ya hay entradas: es un hecho, no una apuesta.
-  if (dura.corrobora) {
+  if (dura.corrobora && !anioMal) {
     return {
       estado: 'confirmado',
       confianza: 1,
@@ -158,7 +166,8 @@ export function decidirVerificacion(
     otraFecha && ISO.test(otraFecha) && otraFecha !== ctx.fecha &&
     (!ctx.desde || otraFecha >= ctx.desde) && (!ctx.hasta || otraFecha <= ctx.hasta)
   ) {
-    const confirmadoAlli = prensa.veredicto === 'confirmado' && (confianzaValida ?? 0) >= CONFIANZA_CONFIRMA
+    const confirmadoAlli = prensa.veredicto === 'confirmado' && (confianzaValida ?? 0) >= CONFIANZA_CONFIRMA &&
+      !anioIncoherente(otraFecha, textoEvidencia)
     return {
       estado: 'descartado',
       veredicto: 'fecha_movida',
@@ -170,7 +179,7 @@ export function decidirVerificacion(
   }
 
   // 4. La prensa lo da por confirmado con confianza suficiente.
-  if (prensa.veredicto === 'confirmado' && (confianzaValida ?? 0) >= CONFIANZA_CONFIRMA) {
+  if (!anioMal && prensa.veredicto === 'confirmado' && (confianzaValida ?? 0) >= CONFIANZA_CONFIRMA) {
     return {
       estado: 'confirmado',
       confianza: confianzaValida,
@@ -184,7 +193,7 @@ export function decidirVerificacion(
   //    dinero: si los comparables de esa fecha se han ido arriba, la demanda existe aunque
   //    todavía no haya nota de prensa que lo cierre.
   const prensaEnPie = prensa.veredicto === 'confirmado' || prensa.veredicto === 'sigue_previsto'
-  if (mercado.estado === 'sube' && prensaEnPie) {
+  if (!anioMal && mercado.estado === 'sube' && prensaEnPie) {
     return {
       estado: 'confirmado',
       confianza: confianzaValida,
@@ -209,6 +218,17 @@ export function decidirVerificacion(
       motivo:
         `a ${ctx.diasVista} días y ${utiles} verificaciones sin que nadie lo confirme: ` +
         `se retira (no protege el suelo de una noche inventada)`,
+      util,
+    }
+  }
+
+  // 6b. Año incoherente: se ha mirado (cuenta para caducar), pero NO se confirma. Se queda como
+  //     está — el estado conservador — y la confianza no se refresca con una lectura sospechosa.
+  if (anioMal) {
+    return {
+      estado: null,
+      veredicto: 'anio_incoherente',
+      motivo: `la evidencia cita otro año que ${ctx.fecha}: NO se confirma (¿año equivocado?)`,
       util,
     }
   }

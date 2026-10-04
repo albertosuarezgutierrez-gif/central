@@ -152,7 +152,10 @@ export async function GET(req: NextRequest) {
       { corrobora: Boolean(hermano), fuente: hermano?.fuente },
       prensa,
       mercado,
-      { diasVista, verificacionesPrevias: ev.verificaciones, fecha: ev.rate_date, desde, hasta },
+      {
+        diasVista, verificacionesPrevias: ev.verificaciones, fecha: ev.rate_date, desde, hasta,
+        evidenciaPrevia: ev.evidencia,
+      },
     )
 
     if (!d.util) resumen.sinVerificar++

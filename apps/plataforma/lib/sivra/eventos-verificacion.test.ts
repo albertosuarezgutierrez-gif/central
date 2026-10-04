@@ -224,3 +224,62 @@ test('sin cola que verificar la pasada es buena (eso sí es «todo en orden»)',
     /nada pendiente/,
   )
 })
+
+// ─── Año incoherente (04/10/2026) ───────────────────────────────────────────────────────────
+// rate_date=2027-09-26 con evidencia «26 de septiembre de 2026» se CONFIRMÓ y, con factor ≥2, la
+// regla de vísperas infló las noches vecinas. Si la evidencia cita otro año, nada confirma.
+
+const ANIO_MAL: ContextoVerificacion = { diasVista: 357, verificacionesPrevias: 0, fecha: '2027-09-26' }
+
+test('prensa confirma pero su evidencia cita OTRO año → NO se confirma', () => {
+  const d = decidirVerificacion(
+    SIN_DURA,
+    { veredicto: 'confirmado', confianza: 0.95, evidencia: 'ABC — concierto el 26 de septiembre de 2026' },
+    SIN_MERCADO, ANIO_MAL,
+  )
+  assert.equal(d.estado, null)
+  assert.equal(d.veredicto, 'anio_incoherente')
+  assert.equal(d.util, true, 'se miró: cuenta para caducar')
+})
+
+test('la evidencia del alta con otro año también bloquea, y ni fuente dura ni mercado lo saltan', () => {
+  const d = decidirVerificacion(
+    { corrobora: true, fuente: 'websearch' },
+    { veredicto: 'sigue_previsto' },
+    { estado: 'sube', ratio: 1.6, comps: 8 },
+    { ...ANIO_MAL, evidenciaPrevia: 'Diario de Sevilla — 26/09/2026 en La Cartuja' },
+  )
+  assert.equal(d.estado, null)
+  assert.equal(d.veredicto, 'anio_incoherente')
+})
+
+test('mismo año o sin año en la evidencia → confirma como siempre', () => {
+  const conAnio = decidirVerificacion(
+    SIN_DURA, { veredicto: 'confirmado', confianza: 0.9, evidencia: 'ABC — 26 de septiembre de 2027' },
+    SIN_MERCADO, ANIO_MAL,
+  )
+  assert.equal(conAnio.estado, 'confirmado')
+  const sinAnio = decidirVerificacion(
+    SIN_DURA, { veredicto: 'confirmado', confianza: 0.9, evidencia: 'ABC — 26 de septiembre' },
+    SIN_MERCADO, ANIO_MAL,
+  )
+  assert.equal(sinAnio.estado, 'confirmado')
+})
+
+test('reubicada a otra fecha cuyo año tampoco cuadra con la evidencia → nace previsto, no confirmado', () => {
+  const d = decidirVerificacion(
+    SIN_DURA,
+    { veredicto: 'confirmado', confianza: 0.95, evidencia: 'el 3 de octubre de 2026', fechaConfirmada: '2027-10-03' },
+    SIN_MERCADO, { ...ANIO_MAL, desde: '2026-10-04', hasta: '2027-10-04' },
+  )
+  assert.equal(d.reubicarA, '2027-10-03')
+  assert.equal(d.reubicarComo, 'previsto')
+})
+
+test('año incoherente cerca de la fecha y ya mirado → se caduca igual (descartar es conservador)', () => {
+  const d = decidirVerificacion(
+    SIN_DURA, { veredicto: 'confirmado', confianza: 0.95, evidencia: 'el 26 de septiembre de 2026' },
+    SIN_MERCADO, { ...ANIO_MAL, diasVista: 10, verificacionesPrevias: 3 },
+  )
+  assert.equal(d.estado, 'descartado')
+})

@@ -8,6 +8,7 @@ import {
   impactoEvento, esPartidoFueraDeSevilla, nombreConfiesaDuda, estadoInicialWebsearch, CONFIANZA_WEB_SIN_VERIFICAR,
 } from "@/lib/sivra/eventos-impacto"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
+import { anioIncoherente } from "@/lib/sivra/eventos-anio"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -123,7 +124,7 @@ Si no hay nada nuevo: {"eventos":[]}`
     return NextResponse.json({ ok: false, configured: true, errors: [String(e).slice(0, 200)] })
   }
 
-  let upserted = 0, descartados = 0, fueraDeCasa = 0, dudosos = 0
+  let upserted = 0, descartados = 0, fueraDeCasa = 0, dudosos = 0, anioMal = 0
   for (const ev of evs) {
     const rateDate = ev.fecha
     const nombre = (ev.nombre ?? "").trim()
@@ -134,6 +135,8 @@ Si no hay nada nuevo: {"eventos":[]}`
     if (esPartidoFueraDeSevilla(nombre)) { fueraDeCasa++; continue }
     // El modelo escribe su propia duda en el nombre («día 2, si aplica»): eso no es un evento.
     if (nombreConfiesaDuda(nombre)) { dudosos++; continue }
+    // El nombre cita otro año que la fecha («… 2026» con fecha 2027): la IA se ha equivocado de año.
+    if (anioIncoherente(rateDate, nombre)) { anioMal++; continue }
     const aforo = Math.max(0, Math.round(Number(ev.aforo_estimado ?? 3000)) || 3000)
     const tipo = (ev.tipo ?? "evento").toString().slice(0, 40)
     const factor = impactoEvento(aforo, tipo, nombre)
@@ -183,7 +186,7 @@ Si no hay nada nuevo: {"eventos":[]}`
 
   return NextResponse.json({
     ok: errors.length === 0, configured: true, via,
-    vistos: evs.length, upserted, descartados, fuera_de_casa: fueraDeCasa, dudosos,
+    vistos: evs.length, upserted, descartados, fuera_de_casa: fueraDeCasa, dudosos, anio_incoherente: anioMal,
     previstos: previstos.guardados, previstosVistos: previstos.vistos,
     errors,
   })
@@ -248,6 +251,10 @@ Si no encuentras nada sólido: {"eventos":[]}`
     if (!Number.isFinite(confianza) || confianza < CONFIANZA_MIN) continue
     const evidencia = String(ev.evidencia ?? "").trim()
     if (!evidencia) continue
+    // 🚨 04/10/2026: entró rate_date=2027-09-26 con evidencia «26 de septiembre de 2026» (ya
+    // pasado) y el verificador lo confirmó. Si la evidencia cita OTRO año, la fecha no es fiable:
+    // no se guarda (un previsto lejano ya mueve el precio). Sin año en la evidencia, no opina.
+    if (anioIncoherente(fecha, `${nombre} · ${evidencia}`)) continue
 
     const aforo = Math.max(0, Math.round(Number(ev.aforo_estimado ?? 3000)) || 3000)
     const tipo = String(ev.tipo ?? "evento").slice(0, 40)
