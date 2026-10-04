@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-04T05:58:54Z",
-  "sha": "a3cae2359b2f94db7da16682e0ed1d5a8592fb66",
+  "generadoEn": "2026-10-04T06:51:25Z",
+  "sha": "9d6a8c9aad4ef7c30f6b323f5c933d38220b6d08",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -16785,6 +16785,15 @@
       "hash": "e7327232591b"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/duplicados/no-duplicado/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/duplicados/no-duplicado",
+      "hash": "11dbc0864389"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/duplicados/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -21570,6 +21579,7 @@
         "notasCliente",
         "historialCliente",
         "cotizacionesVivas",
+        "leerFichasCandidatasDuplicadas",
         "duplicadasCartera"
       ],
       "funciones": [
@@ -21579,7 +21589,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, antigua: string | null, limite = 100",
           "retorno": "Promise<NotasCliente | null>",
-          "linea": 22,
+          "linea": 23,
           "resumen": "Las notas de la ficha, aparte del historial: el historial trae las 50 últimas anotaciones de cualquier tipo, y en una ficha con mucha gestión una nota de hace un año quedaría fuera. `null` = no se pud"
         },
         {
@@ -21588,7 +21598,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, limite = 50",
           "retorno": "Promise<HistorialFila[] | null>",
-          "linea": 41,
+          "linea": 42,
           "resumen": "Últimas 50 anotaciones de la ficha, la más reciente primero. `null` = no se pudo leer."
         },
         {
@@ -21597,8 +21607,17 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, dias: number",
           "retorno": "Promise<number | null>",
-          "linea": 59,
+          "linea": 60,
           "resumen": "Cotizaciones vivas de un cliente (pendiente/enviada, últimos `dias` días). Es lo que convierte a un lead en «con presupuesto». `null` = no se pudo contar."
+        },
+        {
+          "nombre": "leerFichasCandidatasDuplicadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId?: string",
+          "retorno": "Promise<PolizaParaDuplicados[]>",
+          "linea": 86,
+          "resumen": "Las fichas candidatas a duplicado: UNA consulta para la pantalla «Duplicadas» (`duplicadasCartera`) y la señal 🔁 del vigía (`leerIngesta`). Fichas sin fusionar (sin `merged_into_poliza_id` contaría l"
         },
         {
           "nombre": "duplicadasCartera",
@@ -21606,8 +21625,8 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<GrupoDuplicado[] | null>",
-          "linea": 74,
-          "resumen": "Pólizas vivas duplicadas (mismo número + compañía) en toda la correduría. `null` = no se pudo leer."
+          "linea": 119,
+          "resumen": "Pólizas duplicadas (mismo número sin separadores ni ceros + mismo DGS, fichas sin fusionar de clientes no descartados, sin comodines ni pares marcados) en toda la correduría. MISMO criterio y MISMA co"
         }
       ],
       "tablas": [
@@ -21615,7 +21634,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "5f2a2ceb68fc"
+      "hash": "56bc82bdcdcb"
     },
     {
       "ruta": "apps/asegura/lib/cartera-impagados.ts",
@@ -31477,7 +31496,7 @@
           "exportada": true,
           "params": "filtroExtra = ''",
           "retorno": "string",
-          "linea": 169,
+          "linea": 180,
           "resumen": "El CTE que deja sobre la mesa solo las huérfanas que SIGUEN sin colgar. 🚨 Vive aquí y lo importa también `app/api/operador/huerfanas/route.ts` a propósito: si el recuento y la LISTA usaran criterios "
         },
         {
@@ -31486,7 +31505,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<EstadoIngestaPuerto>",
-          "linea": 205
+          "linea": 216
         }
       ],
       "tablas": [
@@ -31513,7 +31532,7 @@
         "viva"
       ],
       "rutaApi": null,
-      "hash": "f6fd7e2c0607"
+      "hash": "deabdfafb08c"
     },
     {
       "ruta": "apps/asegura/lib/invitacion-portal-lote.ts",
@@ -32119,6 +32138,62 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1a4e837d8f25"
+    },
+    {
+      "ruta": "apps/asegura/lib/no-duplicado-peticion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "«No es duplicado» desde la pantalla: lectura PURA de la petición (sin BD ni red, para `node --test`). La escritura vive en `no-duplicados.ts` (`marcarNoDuplicado`). Quién lo decide sale de `x-actor` (la sesión de plataforma), NUNCA del cuerpo, y tiene que ser una PERSONA (`humano:<cuentaId>`): es un",
+      "exporta": [
+        "leerPeticionNoDuplicado"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerPeticionNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown, cabeceraActor: string | null",
+          "retorno": "PeticionNoDuplicado",
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5f58ccc24f0f"
+    },
+    {
+      "ruta": "apps/asegura/lib/no-duplicados.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Pares de pólizas que una persona ha decidido que NO son duplicadas (`seguros.poliza_no_duplicado`, mig 0108 del repo asegura, 04/10/2026). Los leen la pantalla de duplicadas (`duplicadasCartera`) y el vigía de la ingesta (`leerIngesta`) para no volver a enseñar un par ya decidido. La clave es `clave",
+      "exporta": [
+        "leerParesNoDuplicado",
+        "marcarNoDuplicado"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerParesNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId?: string",
+          "retorno": "Promise<Set<string> | null>",
+          "linea": 26,
+          "resumen": "Con `correduriaId`, solo las marcas de esa correduría (la pantalla). Sin él, todas (el vigía, que agrupa ya por correduría): la clave son dos uuids de póliza, así que una marca de otra correduría no p"
+        },
+        {
+          "nombre": "marcarNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ids: readonly string[], motivo: string, decididoPor: string",
+          "retorno": "Promise<ResultadoMarca>",
+          "linea": 61,
+          "resumen": "Marca TODOS los pares del grupo `ids` como «no duplicado», en una transacción. Revalida en la BD que los ids son fichas sin fusionar de ESTA correduría y que forman un único grupo con el criterio de l"
+        }
+      ],
+      "tablas": [
+        "poliza_no_duplicado",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "34aa14d0d5e8"
     },
     {
       "ruta": "apps/asegura/lib/operador.ts",
@@ -33229,7 +33304,8 @@
       "ambito": "apps/asegura",
       "resumen": "¿El error de Prisma/Postgres es «columna inexistente» (SQLSTATE 42703)? Cualquier otro error NO lo es.",
       "exporta": [
-        "esColumnaAusente"
+        "esColumnaAusente",
+        "esTablaAusente"
       ],
       "funciones": [
         {
@@ -33240,11 +33316,20 @@
           "retorno": "boolean",
           "linea": 2,
           "resumen": "¿El error de Prisma/Postgres es «columna inexistente» (SQLSTATE 42703)? Cualquier otro error NO lo es."
+        },
+        {
+          "nombre": "esTablaAusente",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 15,
+          "resumen": "¿El error es «tabla inexistente» (SQLSTATE 42P01)? Sirve para una tabla cuya migración puede no estar aplicada todavía (p. ej. `poliza_no_duplicado`, mig 0108 del repo asegura). Cualquier otro error N"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "63eafbbf8ab7"
+      "hash": "374dddc8d64a"
     },
     {
       "ruta": "apps/asegura/lib/pii-estado.ts",
@@ -83724,12 +83809,36 @@
           "exportada": true,
           "params": "{ onContador }: { /** Pólizas sobrantes para la cabecera. `null` = no se ha podido saber. */ onContador?: (n: number | null) => void }",
           "retorno": null,
-          "linea": 30
+          "linea": 44
+        },
+        {
+          "nombre": "clave",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "g: GrupoDuplicadoPantalla",
+          "retorno": null,
+          "linea": 99
+        },
+        {
+          "nombre": "ListaDuplicadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ grupos: iniciales, onContador }: { grupos: GrupoDuplicadoPantalla[] onContador: (n: number) => void }",
+          "retorno": null,
+          "linea": 102
+        },
+        {
+          "nombre": "GrupoFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ g, onMarcado }: { g: GrupoDuplicadoPantalla; onMarcado: () => void }",
+          "retorno": null,
+          "linea": 155
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "671903641ecb"
+      "hash": "08680d1b916b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/EditarCliente.tsx",
@@ -97190,6 +97299,27 @@
       "hash": "8f7d705dd9c7"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/duplicados/no-duplicado/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "POST /api/correduria/duplicados/no-duplicado `{ ids: string[], motivo }` — «No es duplicado» desde la pantalla «Duplicadas». Reenvía al puerto de asegura (`/api/operador/duplicados/no-duplicado`) con "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/duplicados/no-duplicado",
+      "hash": "8a2ebd7cb78f"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/duplicados/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -99026,7 +99156,7 @@
           "exportada": false,
           "params": "detalle: string | null",
           "retorno": "",
-          "linea": 46,
+          "linea": 48,
           "resumen": "La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`. Va delante y separada del texto humano por ` · `. El formato viejo era solo la firma, así que un `detalle` sin `|` "
         },
         {
@@ -99035,7 +99165,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 59
+          "linea": 61
         }
       ],
       "tablas": [
@@ -99043,7 +99173,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/correduria-ingesta",
-      "hash": "435986f88f0f"
+      "hash": "af296911d545"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-partes/route.ts",
@@ -116776,7 +116906,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is FicheroEnCuarentena",
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "esRechazo",
@@ -116784,7 +116914,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is EntradaRechazada",
-          "linea": 70,
+          "linea": 71,
           "resumen": "Un envío rechazado tal y como lo manda el puerto. 🚨 `rechazos` ausente NO es `[]`: un `central-asegura` desplegado ANTES del 04/09/2026 no informa el campo, y convertir esa versión vieja en «se miró "
         },
         {
@@ -116793,7 +116923,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is EntidadIngesta",
-          "linea": 89,
+          "linea": 90,
           "resumen": "El ritmo de envío de una compañía tal y como lo manda el puerto. 🚨 Misma regla que `esRechazo`: un `central-asegura` anterior al 05/09/2026 no informa `entidades`, y tratar esa versión vieja como «se"
         },
         {
@@ -116802,7 +116932,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is PolizaEnCartera",
-          "linea": 119
+          "linea": 120
         },
         {
           "nombre": "esHuerfana",
@@ -116810,7 +116940,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is PolizaHuerfana",
-          "linea": 130,
+          "linea": 131,
           "resumen": "Una póliza huérfana tal y como la manda el puerto. `enCartera` se EXIGE y no tiene valor por defecto: es lo que decide si hay que pedírsela a la compañía o reprocesarla en casa, y suponerlo mandaría a"
         },
         {
@@ -116819,7 +116949,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Huerfanas",
-          "linea": 151,
+          "linea": 152,
           "resumen": "Interpretación PURA de la respuesta del puerto de huérfanas. Todo-o-nada, igual que con los rechazos y el silencio por compañía: si una sola fila viene rara, la lista entera se degrada a `sin_datos`. "
         },
         {
@@ -116828,7 +116958,7 @@
           "exportada": true,
           "params": "h: Huerfanas",
           "retorno": "PolizaHuerfana[] | null",
-          "linea": 183,
+          "linea": 184,
           "resumen": "La lista tal cual la quiere el módulo puro: `null` = no se ha podido mirar."
         },
         {
@@ -116837,7 +116967,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 212
+          "linea": 213
         },
         {
           "nombre": "enteroONulo",
@@ -116845,7 +116975,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 213
+          "linea": 214
         },
         {
           "nombre": "esCrudo",
@@ -116853,7 +116983,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 215
+          "linea": 216
         },
         {
           "nombre": "esCobertura",
@@ -116861,7 +116991,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 229,
+          "linea": 230,
           "resumen": "🚨 Exige `rutas`/`rutasNuncaLeidas`, no los viejos `hojas`/`hojasNuncaLeidas`. El puerto pasó a contar RUTAS distintas el 20/09/2026 (antes contaba filas, y la cifra venía multiplicada por el número d"
         },
         {
@@ -116870,7 +117000,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 248,
+          "linea": 249,
           "resumen": "Un fichero confirmado que se dejó objetos sin guardar. Todo-o-nada como el resto: una fila ilegible degrada la LISTA entera a `null`. Quedarse con las que se entienden daría un recuento MÁS BAJO que l"
         },
         {
@@ -116879,7 +117009,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 258
+          "linea": 259
         },
         {
           "nombre": "esCampoImportante",
@@ -116887,7 +117017,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 267,
+          "linea": 268,
           "resumen": "Un elemento de la watchlist curada (mig 0099): campos que CIMA manda de forma constante y nunca se leen. Todo-o-nada como el resto: una fila ilegible degrada la lista entera, no se descarta ella sola."
         },
         {
@@ -116896,7 +117026,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 273
+          "linea": 274
         },
         {
           "nombre": "esRenovacion",
@@ -116904,7 +117034,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 282,
+          "linea": 283,
           "resumen": "Renovaciones que no han llegado, por compañía. Todo-o-nada: una fila rara degrada la lista ENTERA a `null` (hueco). Quedarse con las legibles daría menos compañías de las que hay — y la que falta serí"
         },
         {
@@ -116913,7 +117043,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 291
+          "linea": 292
         },
         {
           "nombre": "esEmisionSinAviso",
@@ -116921,7 +117051,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 296,
+          "linea": 297,
           "resumen": "Emisiones de Codeoscopic sin aviso del webhook. Todo-o-nada, como las renovaciones."
         },
         {
@@ -116930,7 +117060,24 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 304
+          "linea": 305
+        },
+        {
+          "nombre": "esGrupoVivoDuplicado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 310,
+          "resumen": "🔁 Un grupo de pólizas vivas duplicadas. Todo-o-nada, como las renovaciones."
+        },
+        {
+          "nombre": "esListaDuplicadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 318
         },
         {
           "nombre": "esCajaNegra",
@@ -116938,7 +117085,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 308
+          "linea": 322
         },
         {
           "nombre": "esUltimoPull",
@@ -116946,7 +117093,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 315
+          "linea": 329
         },
         {
           "nombre": "interpretarIngesta",
@@ -116954,7 +117101,7 @@
           "exportada": true,
           "params": "status: number, json: unknown, huerfanas: Huerfanas = { estado: 'sin_datos', motivo: 'no_consultado' },",
           "retorno": "RespuestaIngesta",
-          "linea": 328,
+          "linea": 342,
           "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Una forma inesperada NO se degrada a «no hay nada atascado»: se degrada a `sin_datos`. Es la diferencia entre «he mirado y está limp"
         },
         {
@@ -116963,7 +117110,7 @@
           "exportada": true,
           "params": "r: RespuestaIngesta",
           "retorno": "SaludIngesta",
-          "linea": 403,
+          "linea": 420,
           "resumen": "La salud tal cual la ve el vigía: un fallo de red ya llega como `sin_datos`."
         },
         {
@@ -116972,7 +117119,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 407
+          "linea": 424
         },
         {
           "nombre": "pedir",
@@ -116980,7 +117127,7 @@
           "exportada": false,
           "params": "ruta: string, secret: string",
           "retorno": "Promise<",
-          "linea": 412,
+          "linea": 429,
           "resumen": "Una llamada al puerto. `null` = ni siquiera se pudo hablar con él."
         },
         {
@@ -116989,12 +117136,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<RespuestaIngesta>",
-          "linea": 424
+          "linea": 441
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "62f3335d594d"
+      "hash": "78114c1ef996"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/ingesta-pantalla.ts",
@@ -117061,7 +117208,7 @@
           "exportada": false,
           "params": "silencio: SilencioEntidad[] | null",
           "retorno": "SilencioEntidad[]",
-          "linea": 197
+          "linea": 203
         },
         {
           "nombre": "rechazosRecientes",
@@ -117069,7 +117216,7 @@
           "exportada": false,
           "params": "s: SaludIngesta",
           "retorno": null,
-          "linea": 201
+          "linea": 207
         },
         {
           "nombre": "senalesIngesta",
@@ -117077,7 +117224,7 @@
           "exportada": true,
           "params": "s: SaludIngesta",
           "retorno": "SenalIngesta[]",
-          "linea": 216,
+          "linea": 222,
           "resumen": "Las señales de la pantalla, en el orden en que se atienden. Primero lo que se está perdiendo AHORA (fichero atascado reciente, compañía que enmudeció, envío rechazado, huérfana), después los huecos de"
         },
         {
@@ -117086,7 +117233,7 @@
           "exportada": true,
           "params": "s: SaludIngesta",
           "retorno": "boolean",
-          "linea": 494,
+          "linea": 527,
           "resumen": "¿Hay pérdida MEDIDA? Es lo único que autoriza a decir «se está perdiendo»."
         },
         {
@@ -117095,7 +117242,7 @@
           "exportada": true,
           "params": "s: SaludIngesta",
           "retorno": "boolean",
-          "linea": 509,
+          "linea": 542,
           "resumen": "¿Hay algo que no se ha podido comprobar dentro de una lectura que sí llegó? 🚨 Hasta el 20/09/2026 esto miraba SOLO tres señales, así que una lectura sin cron, sin crudo, sin caja negra y sin cobertur"
         },
         {
@@ -117104,7 +117251,7 @@
           "exportada": true,
           "params": "v: VistaIngesta | null",
           "retorno": "VeredictoPantalla | null",
-          "linea": 513
+          "linea": 546
         },
         {
           "nombre": "hayQueEnsenar",
@@ -117112,7 +117259,7 @@
           "exportada": true,
           "params": "v: VistaIngesta | null",
           "retorno": "boolean",
-          "linea": 530,
+          "linea": 563,
           "resumen": "¿Se pinta la tarjeta de «Hoy»? Solo cuando hay algo que decir. «Todo bien» no ocupa sitio — que es literalmente lo que pidió Alberto («que solo salgan errores»). Y lo que NO se ha podido comprobar SÍ "
         },
         {
@@ -117121,7 +117268,7 @@
           "exportada": true,
           "params": "perdidas: Array<Pick<SenalIngesta, 'clave'>>,",
           "retorno": "'renovaciones' | 'emisiones' | 'ambas' | null",
-          "linea": 543,
+          "linea": 576,
           "resumen": "¿Las pérdidas medidas son SOLO de las que no tienen fichero atascado detrás (renovaciones que no llegan, emisiones sin aviso del webhook)? Entonces «se están perdiendo datos de CIMA» mandaría a buscar"
         },
         {
@@ -117130,7 +117277,7 @@
           "exportada": true,
           "params": "v: VistaIngesta | null",
           "retorno": "string",
-          "linea": 553
+          "linea": 586
         },
         {
           "nombre": "contadorIngesta",
@@ -117138,13 +117285,13 @@
           "exportada": true,
           "params": "v: VistaIngesta | null",
           "retorno": "",
-          "linea": 575,
+          "linea": 608,
           "resumen": "El contador de la pestaña: `{n, parcial}` o `null` («!»), jamás un 0 de relleno."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9e646deaa3bf"
+      "hash": "5dbe1235372f"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/llamadas-hoy.ts",
@@ -120533,7 +120680,13 @@
         "interpretarDuplicados",
         "textoMotivoDuplicados",
         "polizasSobrantes",
-        "duplicadosAsegura"
+        "textoOrigenFicha",
+        "grupoMarcableNoDuplicado",
+        "leerCuerpoNoDuplicado",
+        "interpretarNoDuplicado",
+        "textoErrorNoDuplicado",
+        "duplicadosAsegura",
+        "marcarNoDuplicadoAsegura"
       ],
       "funciones": [
         {
@@ -120542,15 +120695,24 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 29
+          "linea": 48
+        },
+        {
+          "nombre": "leerOrigen",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: Record<string, unknown>",
+          "retorno": "OrigenFicha | null",
+          "linea": 61,
+          "resumen": "El origen que dice el puerto. Un puerto viejo solo manda `confirmadaCima`: `true` es CIMA; `false` NO se traduce a «emitida» (ahora también entran el volcado y las altas a mano), se queda en `null` = "
         },
         {
           "nombre": "leerPolizaGrupo",
           "kind": "function",
           "exportada": false,
           "params": "v: unknown",
-          "retorno": "GrupoDuplicado['polizas'][number] | null",
-          "linea": 34,
+          "retorno": "FichaDuplicadaPantalla | null",
+          "linea": 67,
           "resumen": "Una póliza dentro de un grupo, o `null` si no tiene forma."
         },
         {
@@ -120558,17 +120720,17 @@
           "kind": "function",
           "exportada": true,
           "params": "v: unknown",
-          "retorno": "GrupoDuplicado | null",
-          "linea": 50,
-          "resumen": "Un grupo del puerto → `GrupoDuplicado`, o `null` si está mal formado. Un grupo con menos de dos pólizas legibles no es un duplicado y se descarta. `emitidaYCima` se recalcula aquí a partir de las póli"
+          "retorno": "GrupoDuplicadoPantalla | null",
+          "linea": 88,
+          "resumen": "Un grupo del puerto, o `null` si está mal formado. Un grupo con menos de dos pólizas legibles no es un duplicado y se descarta. `emitidaYCima` se recalcula aquí a partir de las pólizas (no se confía e"
         },
         {
           "nombre": "leerGruposDuplicados",
           "kind": "function",
           "exportada": true,
           "params": "v: unknown",
-          "retorno": "GrupoDuplicado[] | null",
-          "linea": 71,
+          "retorno": "GrupoDuplicadoPantalla[] | null",
+          "linea": 110,
           "resumen": "La lista de grupos, o `null` si no llega o no es lista. Un grupo mal formado se salta (no tumba el bloque); una LISTA que no es lista degrada a `null` — jamás a `[]`, que diría «sin duplicados»."
         },
         {
@@ -120577,7 +120739,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaDuplicados",
-          "linea": 76
+          "linea": 115
         },
         {
           "nombre": "textoMotivoDuplicados",
@@ -120585,17 +120747,62 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 90,
+          "linea": 129,
           "resumen": "El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
           "nombre": "polizasSobrantes",
           "kind": "function",
           "exportada": true,
-          "params": "grupos: readonly GrupoDuplicado[]",
+          "params": "grupos: readonly GrupoDuplicadoPantalla[]",
           "retorno": "number",
-          "linea": 106,
+          "linea": 145,
           "resumen": "Cuántas pólizas sobran: en cada grupo, todas menos una."
+        },
+        {
+          "nombre": "textoOrigenFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: OrigenFicha | null",
+          "retorno": "string",
+          "linea": 150,
+          "resumen": "Cómo se enseña el origen de una ficha (para decidir si fusionar o marcar)."
+        },
+        {
+          "nombre": "grupoMarcableNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "g: Pick<GrupoDuplicadoPantalla, 'polizas'>",
+          "retorno": "boolean",
+          "linea": 177,
+          "resumen": "¿Se puede marcar este grupo desde la pantalla? (>20 fichas: no, y se dice)."
+        },
+        {
+          "nombre": "leerCuerpoNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown",
+          "retorno": "CuerpoNoDuplicado",
+          "linea": 192,
+          "resumen": "El cuerpo de `POST /api/correduria/duplicados/no-duplicado`. Un cuerpo que no es objeto (`null`, lista, número…) es 400, no un 500. Más de `MAX_FICHAS_NO_DUPLICADO` ids distintos → `demasiadas_polizas"
+        },
+        {
+          "nombre": "interpretarNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "ResultadoNoDuplicado",
+          "linea": 210,
+          "resumen": "La respuesta del puerto. SOLO un 200 con `estado: 'ok'` y `pares` numérico es éxito: un 503 de tabla ausente, un 200 raro o un cuerpo ilegible son error, y el grupo sigue en pantalla (nunca se quita p"
+        },
+        {
+          "nombre": "textoErrorNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: string",
+          "retorno": "string",
+          "linea": 222,
+          "resumen": "El motivo de un «no es duplicado» fallido, en castellano de pantalla."
         },
         {
           "nombre": "urlAsegura",
@@ -120603,7 +120810,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 112
+          "linea": 249
         },
         {
           "nombre": "duplicadosAsegura",
@@ -120611,13 +120818,22 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 119,
+          "linea": 256,
           "resumen": "`GET /api/operador/duplicados` — los grupos de pólizas duplicadas en la cartera viva."
+        },
+        {
+          "nombre": "marcarNoDuplicadoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: readonly string[], motivo: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 272,
+          "resumen": "`POST /api/operador/duplicados/no-duplicado` — marca los pares del grupo como «no duplicado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6482e826bdea"
+      "hash": "13ef94c64d97"
     },
     {
       "ruta": "apps/plataforma/lib/duplicados.ts",
@@ -169696,10 +169912,18 @@
     {
       "ruta": "packages/module-seguros/src/duplicados.ts",
       "ambito": "packages/module-seguros",
-      "resumen": "Pólizas DUPLICADAS en la cartera viva: dos filas vivas con el mismo número en la misma compañía. Es el guardián de la conciliación Codeoscopic↔CIMA (docs/CORREDURIA-CRM-VISION.md §5): cuando emitamos por Codeoscopic y CIMA traiga la misma póliza sin casarla, aquí se ve antes de que la ficha pinte do",
+      "resumen": "Pólizas DUPLICADAS: dos fichas sin fusionar con el mismo número en la misma compañía. Es el guardián de la conciliación Codeoscopic↔CIMA (docs/CORREDURIA-CRM-VISION.md §5) y de las gemelas que deja la ingesta. 🚨 UN SOLO CRITERIO (04/10/2026): `agruparDuplicadas`. Lo usan la pantalla «Duplicadas» de",
       "exporta": [
         "normalizarNumeroPoliza",
-        "polizasDuplicadas"
+        "claveParNoDuplicado",
+        "grupoResueltoNoDuplicado",
+        "numeroPolizaComparable",
+        "agruparDuplicadas",
+        "origenFicha",
+        "polizasDuplicadas",
+        "gruposVivosDuplicados",
+        "limpiarMotivoNoDuplicado",
+        "paresNoDuplicado"
       ],
       "funciones": [
         {
@@ -169708,22 +169932,102 @@
           "exportada": true,
           "params": "n: string | null | undefined",
           "retorno": "string | null",
-          "linea": 30,
+          "linea": 12,
           "resumen": "Número de póliza sin espacios, guiones ni ceros a la izquierda, en mayúsculas."
+        },
+        {
+          "nombre": "claveParNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string | null | undefined, b: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 32,
+          "resumen": "Clave canónica de un par marcado «no duplicado»: los dos ids ordenados, así (a,b) y (b,a) son la misma decisión. `null` si falta uno o son el mismo."
+        },
+        {
+          "nombre": "grupoResueltoNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: readonly string[], noDuplicados: ReadonlySet<string> | null | undefined",
+          "retorno": "boolean",
+          "linea": 42,
+          "resumen": "¿Está el grupo ENTERO resuelto como «no duplicado»? Solo si TODOS sus pares están marcados: en un trío con A–B marcado, C sigue sin decidir frente a los dos y el grupo se sigue enseñando (ante la duda"
+        },
+        {
+          "nombre": "numeroPolizaComparable",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 71,
+          "resumen": "Número comparable entre fichas: solo [0-9A-Z], en mayúsculas y sin ceros a la izquierda. `null` si no sirve para casar: comodín, menos de 5 caracteres tras quitar los ceros, sin ningún dígito o un sol"
+        },
+        {
+          "nombre": "agruparDuplicadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "fichas: readonly T[], noDuplicados?: ReadonlySet<string> | null,",
+          "retorno": "GrupoFichas<T>[]",
+          "linea": 105,
+          "resumen": "EL criterio: agrupa por correduría + DGS + `numeroPolizaComparable` y devuelve los grupos de ≥ 2 fichas distintas. Una ficha sin DGS no entra (no se puede distinguir de otra compañía); un grupo cuyos "
+        },
+        {
+          "nombre": "informado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": null,
+          "linea": 148
+        },
+        {
+          "nombre": "origenFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: EntradaOrigenFicha",
+          "retorno": "OrigenFicha",
+          "linea": 151,
+          "resumen": "Origen de una ficha. CIMA manda sobre todo lo demás (una gemela del volcado que CIMA ya mantiene es CIMA)."
         },
         {
           "nombre": "polizasDuplicadas",
           "kind": "function",
           "exportada": true,
-          "params": "polizas: readonly PolizaParaDuplicados[]",
+          "params": "polizas: readonly PolizaParaDuplicados[], noDuplicados?: ReadonlySet<string> | null,",
           "retorno": "GrupoDuplicado[]",
-          "linea": 41,
-          "resumen": "Agrupa las VIVAS y NO canceladas por número + compañía. Las históricas del volcado no cuentan: su «copia gemela» es un dato útil (trae la dirección del riesgo), no un duplicado."
+          "linea": 197,
+          "resumen": "Los grupos para la pantalla «Duplicadas»: `agruparDuplicadas` con el detalle que hace falta para decidir (origen, estado, cliente activo). Primero los que mezclan emisión y CIMA, luego por compañía y "
+        },
+        {
+          "nombre": "gruposVivosDuplicados",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizas: readonly PolizaParaVigiaDuplicadas[], noDuplicados?: ReadonlySet<string> | null,",
+          "retorno": "GrupoVivoDuplicado[]",
+          "linea": 243,
+          "resumen": "`agruparDuplicadas` sin números de póliza, para el vigía."
+        },
+        {
+          "nombre": "limpiarMotivoNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 255,
+          "resumen": "Motivo obligatorio: recortado, sin saltos de línea. `null` = vacío o no es texto."
+        },
+        {
+          "nombre": "paresNoDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: readonly string[], fichas: readonly FichaClaveDuplicado[]",
+          "retorno": "MarcaNoDuplicado",
+          "linea": 275,
+          "resumen": "Los pares a guardar en `poliza_no_duplicado` para marcar un grupo entero. `fichas` = lo leído de la BD para esos ids (sin fusionar, de la correduría). Exige que TODOS los ids pedidos estén leídos y qu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b3efdbe7035f"
+      "hash": "1877756fd4fe"
     },
     {
       "ruta": "packages/module-seguros/src/eiac-siniestros.ts",
@@ -171058,11 +171362,13 @@
       "resumen": "Salud de la INGESTA de CIMA — el vigía de que los datos de las compañías llegan de verdad. Contexto que justifica este módulo (medido el 01/09/2026): durante más de dos meses se perdieron 23 recibos (7.721,71€ de prima) y 20 siniestros de Occident, y el health-check de origen estuvo TODO ese tiempo ",
       "exporta": [
         "textoEmisionesSinAviso",
+        "textoPolizasDuplicadas",
         "textoRenovacionesSinLlegar",
         "saludIngesta",
         "detalleSalud",
         "decidirRespaldoPull",
         "firmaAvisoIngesta",
+        "cambioDuplicadasEnFirma",
         "normalizarFirmaIngesta",
         "decidirAvisoIngesta",
         "repartirHuerfanas",
@@ -171075,8 +171381,26 @@
           "exportada": true,
           "params": "lista: EmisionSinAviso[] | null | undefined",
           "retorno": "string",
-          "linea": 335,
+          "linea": 336,
           "resumen": "«📭 2 emisión(es) de Codeoscopic sin aviso de su webhook en más de 24 h (40769244 Allianz · 40804066 Reale)…». Cadena vacía si no hay ninguna."
+        },
+        {
+          "nombre": "textoPolizasDuplicadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: GrupoVivoDuplicado[] | null | undefined",
+          "retorno": "string",
+          "linea": 356,
+          "resumen": "«🔁 3 grupo(s) de pólizas vivas duplicadas (mismo número y compañía, sin fusionar ni marcar «no duplicado»): C0109 2 · C0613 1…». Cadena vacía si no hay ninguno (o no se miró): quien llama decide el h"
+        },
+        {
+          "nombre": "ordenarDuplicadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "lista: GrupoVivoDuplicado[]",
+          "retorno": "GrupoVivoDuplicado[]",
+          "linea": 369,
+          "resumen": "Normaliza: solo grupos de verdad (≥ 2 fichas), en orden estable."
         },
         {
           "nombre": "diaMes",
@@ -171084,7 +171408,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string | null",
-          "linea": 498,
+          "linea": 543,
           "resumen": "`2026-06-18` → `18/06`. Una fecha ilegible no se inventa: `null`."
         },
         {
@@ -171093,7 +171417,7 @@
           "exportada": true,
           "params": "lista: RenovacionSinLlegar[] | null | undefined",
           "retorno": "string",
-          "linea": 511,
+          "linea": 556,
           "resumen": "La línea del aviso de renovaciones que no han llegado. Cadena vacía si no hay ninguna (o no se miró): quien llama decide el hueco, esto solo redacta. «⏳ Renovaciones sin llegar: Mapfre 10 póliza(s) (v"
         },
         {
@@ -171102,7 +171426,7 @@
           "exportada": false,
           "params": "lista: RenovacionSinLlegar[]",
           "retorno": "RenovacionSinLlegar[]",
-          "linea": 523,
+          "linea": 568,
           "resumen": "Normaliza y ordena: más pólizas primero; a igualdad, el código."
         },
         {
@@ -171111,7 +171435,7 @@
           "exportada": false,
           "params": "f: FicheroEnCuarentena",
           "retorno": "string | null",
-          "linea": 530,
+          "linea": 575,
           "resumen": "Un valor de cajón (vacío, guiones, «desconocido») es ausencia, no dato."
         },
         {
@@ -171120,7 +171444,7 @@
           "exportada": false,
           "params": "cuarentena: FicheroEnCuarentena[],",
           "retorno": "Array<",
-          "linea": 536
+          "linea": 581
         },
         {
           "nombre": "reparto",
@@ -171128,7 +171452,7 @@
           "exportada": false,
           "params": "cuarentena: FicheroEnCuarentena[]",
           "retorno": "Array<",
-          "linea": 552
+          "linea": 597
         },
         {
           "nombre": "saludIngesta",
@@ -171136,7 +171460,7 @@
           "exportada": true,
           "params": "e: EntradaSalud, diasRecientes: number = DIAS_CUARENTENA_RECIENTE,",
           "retorno": "SaludIngesta",
-          "linea": 569,
+          "linea": 614,
           "resumen": "Veredicto sobre la ingesta. `degradada` exige una señal MEDIDA de pérdida: un fichero atascado en la ventana reciente, o pólizas huérfanas. El backlog viejo por sí solo no alarma (se informa, pero no "
         },
         {
@@ -171145,7 +171469,7 @@
           "exportada": true,
           "params": "s: SaludIngesta",
           "retorno": "string",
-          "linea": 912,
+          "linea": 971,
           "resumen": "Una línea para el latido/Telegram. Nunca dice «todo bien» sin haberlo mirado. 🚨 Hasta el 20/09/2026 la rama `ok` DESCARTABA los motivos y solo pegaba una coletilla cableada para dos señales (rechazos"
         },
         {
@@ -171154,7 +171478,7 @@
           "exportada": true,
           "params": "ultimoPull: UltimoPullIngesta | null | undefined, umbral = HORAS_RESPALDO_PULL,",
           "retorno": "DecisionRespaldoPull",
-          "linea": 1002,
+          "linea": 1065,
           "resumen": "¿Dispara el respaldo el pull de CIMA? Existe por la avería del 22/09/2026: el presupuesto de GitHub Actions de la cuenta se agotó (lo consume casi todo `central`), los jobs de `asegura` se quedaron si"
         },
         {
@@ -171163,8 +171487,17 @@
           "exportada": true,
           "params": "salud: SaludIngesta",
           "retorno": "string",
-          "linea": 1026,
+          "linea": 1089,
           "resumen": "Firma de lo que el vigía ha visto hoy, para no repetir el MISMO aviso cada mañana mientras la avería sigue abierta (el Telegram suena cuando algo CAMBIA; ver `decidirAvisoIngesta`). Vivía dentro de la"
+        },
+        {
+          "nombre": "cambioDuplicadasEnFirma",
+          "kind": "function",
+          "exportada": true,
+          "params": "previa: string | null, actual: string",
+          "retorno": "boolean",
+          "linea": 1146,
+          "resumen": "¿Ha cambiado el tramo de pólizas duplicadas entre dos firmas (ya normalizadas)? Lo usa el cron para mandar el aviso INFORMATIVO cuando el resto está en `ok` (en `degradada`/`parcial` ya suena por el a"
         },
         {
           "nombre": "normalizarFirmaIngesta",
@@ -171172,7 +171505,7 @@
           "exportada": true,
           "params": "firma: string | null",
           "retorno": "string | null",
-          "linea": 1085,
+          "linea": 1171,
           "resumen": "Lee una firma GUARDADA en el formato de hoy. Las anteriores al 23/09/2026 no traían el tramo del cron (cinco tramos en vez de seis): se leen como «el cron corría», que es lo que decía el vigía cuando "
         },
         {
@@ -171181,7 +171514,7 @@
           "exportada": true,
           "params": "e: { firmaAnterior: string | null firmaActual: string ultimoAvisoEn: Date | null /** Desde cuándo consta abierta esta misma avería. `null` = no se sabe. */ abiertaDesde?: Date | null hoy: Date diasRecordatorio?: number }",
           "retorno": "DecisionAviso",
-          "linea": 1107,
+          "linea": 1194,
           "resumen": "¿Hay que sonar hoy? - `primera` — no consta que se haya avisado nunca. Suena siempre: perder un aviso es peor que duplicarlo. - `cambio` — el estado ha cambiado (entró otro fichero, apareció otra huér"
         },
         {
@@ -171190,7 +171523,7 @@
           "exportada": false,
           "params": "g: { entidad: string; entidadNombre: string | null; clave: string | null },",
           "retorno": "string",
-          "linea": 1242,
+          "linea": 1329,
           "resumen": "Etiqueta de a quién se le pide: compañía + CLAVE DE MEDIADOR, nunca solo la compañía. Occident manda por tres claves y el atasco no está repartido igual: decir «Occident» manda a revisar una cartera q"
         },
         {
@@ -171199,7 +171532,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 1249
+          "linea": 1336
         },
         {
           "nombre": "agrupar",
@@ -171207,7 +171540,7 @@
           "exportada": false,
           "params": "filas: PolizaHuerfana[]",
           "retorno": "GrupoHuerfanas[]",
-          "linea": 1257
+          "linea": 1344
         },
         {
           "nombre": "repartirHuerfanas",
@@ -171215,7 +171548,7 @@
           "exportada": true,
           "params": "filas: PolizaHuerfana[] | null",
           "retorno": "RepartoHuerfanas | null",
-          "linea": 1315,
+          "linea": 1402,
           "resumen": "Reparte las huérfanas por lo que hay que HACER con cada una. 🚨 `null` entra, `null` sale: no haber podido listarlas no es «no hay ninguna». Un `[]` aquí significa «se miró y no hay», y la diferencia "
         },
         {
@@ -171224,7 +171557,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string",
-          "linea": 1332,
+          "linea": 1419,
           "resumen": "Los números vienen de un XML de la compañía: se escapan antes de ir a HTML."
         },
         {
@@ -171233,13 +171566,13 @@
           "exportada": true,
           "params": "r: RepartoHuerfanas | null, opciones: { tope?: number; donde?: string } = {},",
           "retorno": "string",
-          "linea": 1344,
+          "linea": 1431,
           "resumen": "El bloque del Telegram, en HTML. Cadena vacía cuando no hay nada que decir. Dice QUÉ HACER, no cuántas hay: «pídele a Occident el volcado de estas 12 pólizas de la clave M00171» y la lista detrás, par"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7a7761191b31"
+      "hash": "254abfe5bd92"
     },
     {
       "ruta": "packages/module-seguros/src/intervinientes.ts",
@@ -175035,7 +175368,7 @@
           "exportada": true,
           "params": "e164: string",
           "retorno": "string",
-          "linea": 210,
+          "linea": 220,
           "resumen": "`+34920750075` → `920 750 075`, para pintar un WhatsApp sin inventar formato."
         },
         {
@@ -175044,7 +175377,7 @@
           "exportada": true,
           "params": "numero: string",
           "retorno": "string",
-          "linea": 216,
+          "linea": 226,
           "resumen": "El número tal y como se marca: solo dígitos y el `+` inicial."
         },
         {
@@ -175053,7 +175386,7 @@
           "exportada": true,
           "params": "companias: readonly TelefonoCompania[] = TELEFONOS_COMPANIAS",
           "retorno": null,
-          "linea": 226,
+          "linea": 236,
           "resumen": "Lo que la página puede enseñar de cada compañía. Las no verificadas salen SIN ningún número —solo el nombre y su página oficial—: no se filtran de la lista, porque desaparecer se leería como «con esa "
         },
         {
@@ -175062,7 +175395,7 @@
           "exportada": true,
           "params": "codigoDgs: string",
           "retorno": "TelefonoCompania | null",
-          "linea": 236,
+          "linea": 246,
           "resumen": "La ficha VERIFICADA de una compañía por su código DGSFP, o `null` (sin ficha o sin verificar)."
         },
         {
@@ -175071,7 +175404,7 @@
           "exportada": true,
           "params": "nombreOSlug: string",
           "retorno": "TelefonoCompania | null",
-          "linea": 242,
+          "linea": 252,
           "resumen": "La ficha VERIFICADA por su nombre (`Mapfre`, sin distinguir mayúsculas) o por su `slug`, o `null`."
         },
         {
@@ -175080,7 +175413,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 256,
+          "linea": 266,
           "resumen": "Escapa un valor de texto de vCard 3.0 (RFC 2426 §4): `\\`, `,`, `;` y saltos de línea."
         },
         {
@@ -175089,7 +175422,7 @@
           "exportada": false,
           "params": "numero: string",
           "retorno": "string",
-          "linea": 260
+          "linea": 270
         },
         {
           "nombre": "vcardCompania",
@@ -175097,7 +175430,7 @@
           "exportada": true,
           "params": "c: TelefonoCompania",
           "retorno": "string",
-          "linea": 271,
+          "linea": 281,
           "resumen": "La tarjeta de contacto (vCard 3.0, la que abren iOS y Android) de una compañía VERIFICADA. Cada número va con su rótulo (`X-ABLabel`, que Android ignora sin romper): con varias líneas, un número sin r"
         },
         {
@@ -175106,13 +175439,13 @@
           "exportada": true,
           "params": "hoy: Date, dias: number = DIAS_REVISION_TELEFONOS, companias: readonly TelefonoCompania[] = TELEFONOS_COMPANIAS,",
           "retorno": "Array<",
-          "linea": 318,
+          "linea": 328,
           "resumen": "Las compañías verificadas cuya comprobación tiene más de `dias` días a `hoy`, de la más vieja a la más nueva."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4afc2f8b8741"
+      "hash": "bd230ae8c43e"
     },
     {
       "ruta": "packages/module-seguros/src/variantes-riesgo.ts",
@@ -180551,7 +180884,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4116,
-    "funciones": 14076
+    "archivos": 4120,
+    "funciones": 14106
   }
 }
