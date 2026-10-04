@@ -1025,7 +1025,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (04/10/2026) Siniestros portal: PR #4208 en producción + teléfonos de compañías
 - SQL `datos_ramo` y vínculo/fusión aplicados (Alberto vía Chrome, verificado); `PLATAFORMA_URL` en asegura-portal; 3 despliegues Ready; cron `siniestros-vinculo` :43.
 - Catálogo `telefonos-companias.ts`: Reale (extranjero, salud), Generali (viajes), Mapfre viajes actualizado (web 04/10). Siguen null: siniestros Allianz/Generali/Mapfre, asistencia Occident, WhatsApp Reale. ⏸️ Alberto: ¿Mapfre 918 365 365 como «siniestros»?
-- 🚨 Supabase `central` en plan Free, egress 5,138 GB del ciclo 15/09–15/10 (límite Free ~5 GB) y gracia vencida (10/07) → riesgo 402 para TODAS las apps. Recomendado Pro; decide Alberto.
+- 🚨 Supabase `central` en plan Free, egress 5,138 GB del ciclo 15/09–15/10 (límite Free ~5 GB) y gracia vencida (10/07) → riesgo 402 para TODAS las apps. ✅ Alberto lo subió a **Pro** el 04/10/2026.
 
 ## (03/10/2026) Portal: parte de siniestro con UN solo camino para toda póliza + aviso Telegram con enlace
 - Causa: autorizado sin alcance `total` → la ficha mandaba a `vista=siniestro` sin `?poliza=` → salían TODAS las compañías (caso Alberto→póliza hogar de José). No es fallo de permisos (regla 24/09): sigue el 403.
