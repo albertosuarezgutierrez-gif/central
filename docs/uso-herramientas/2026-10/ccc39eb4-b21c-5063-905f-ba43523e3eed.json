@@ -1,8 +1,8 @@
 {
  "sesion": "ccc39eb4-b21c-5063-905f-ba43523e3eed",
  "inicio": "2026-10-03T17:16:44.532Z",
- "fin": "2026-10-03T19:26:31.706Z",
- "llamadas": 575,
+ "fin": "2026-10-04T05:39:04.489Z",
+ "llamadas": 584,
  "categorias": {
   "lectura-directa": {
    "llamadas": 12,
@@ -18,20 +18,20 @@
    }
   },
   "bash": {
-   "llamadas": 402,
-   "chars_in": 292697,
-   "chars_out": 1831935,
+   "llamadas": 404,
+   "chars_in": 293203,
+   "chars_out": 1846027,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 402
+    "Bash": 404
    }
   },
   "otro": {
-   "llamadas": 73,
-   "chars_in": 57757,
-   "chars_out": 446113,
+   "llamadas": 80,
+   "chars_in": 58053,
+   "chars_out": 494589,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -39,8 +39,9 @@
     "SubagentHandback": 15,
     "ToolSearch": 13,
     "SendMessage": 5,
-    "ReadNotifications": 38,
-    "Monitor": 2
+    "ReadNotifications": 44,
+    "Monitor": 2,
+    "Skill": 1
    }
   },
   "agente:general-purpose": {
