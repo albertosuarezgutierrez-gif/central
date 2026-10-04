@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(04/10/2026)** — CIMA, datos completos: asegura#880 (vida/decesos con persona asegurada, figuras en datos_especificos.figuras[], terceros en cima_extra.terceros[], todo cifrado v1; excluye sexo/estado civil/profesión/idioma/consentimientos; 11 ramos sin extractor aceptados como 'otros'; salud/asistencia sanitaria a review_salud).
+central#4236/#4238/#4240: ficha muestra suplemento, convenio y otros riesgos, «Personas de la póliza», «Persona asegurada» y «Terceros (CIMA)». Portal ve figuras completas y de terceros solo papel/nombre/matrícula/compañía (lista blanca en module-seguros-portal/personas-cliente). Tomador con otro documento no es propio, documento solo sale como «consta».
+central#4228: vigía ya no da «objetos en revisión» de ficheros sellados por el reproceso de cuarentena.
+Rutina cima-guardia (trig_01GHN3678GAAgcNuLYrZUwu3, diaria 8:48 Madrid): creada SIN conectores; Alberto debe añadir Supabase y GitHub en claude.ai → Routines.
+Pendiente: reprocesar 181 ficheros CIMA anteriores al 03/10 (zips en Drive, lote cifrado con CIMA_LOTE_CLAVE, orden por fecha del dato); comentario de columna 0106 y domicilio (DDL, por el gate); confirmar AD con SIN real; borrado RGPD no limpia siniestros.
+
 **(04/10/2026)** — asegura#879 (0108 poliza_no_duplicado, con CASCADE) y central#4221 (vigía de duplicadas + botón «No es duplicado») mergeados. 0108 aplicada en prod (audit 1f45b1a2) + REVOKE UPDATE (8b7e4aad).
 Pares marcados «no duplicado»: 32742526, 35374290, 8414300028 y 36088166.
 Fusiones del lote duplicadas-revision-2026-10-04 (evento 2f5cafd9): UVG410081428 (C0072; clientes distintos, manda el tomador de CIMA; combustible volcado no heredado porque contradice a CIMA), 3021500279880 y 3021500306694 (C0613). Quedan 0 grupos.
