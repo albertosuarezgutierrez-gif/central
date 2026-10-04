@@ -2,7 +2,7 @@
 // de pólizas duplicadas en la cartera viva. Solo lectura; `correduriaId`
 // explícito en todo. `null` = no se pudo consultar, nunca `[]`.
 
-import { polizasDuplicadas, WHERE_CARTERA_VIVA, type GrupoDuplicado } from '@central/module-seguros'
+import { origenFicha, polizasDuplicadas, type GrupoDuplicado, type PolizaParaDuplicados } from '@central/module-seguros'
 import { leerParesNoDuplicado } from './no-duplicados'
 import { prismaAsegura } from './asegura-db'
 
@@ -71,7 +71,51 @@ export async function cotizacionesVivas(correduriaId: string, clienteId: string,
   }
 }
 
-/** Pólizas vivas duplicadas (mismo número + compañía) en toda la correduría. `null` = no se pudo leer. */
+/**
+ * Las fichas candidatas a duplicado: UNA consulta para la pantalla «Duplicadas»
+ * (`duplicadasCartera`) y la señal 🔁 del vigía (`leerIngesta`). Fichas sin
+ * fusionar (sin `merged_into_poliza_id` contaría las lápidas recién fusionadas),
+ * con DGS y de fichas de cliente NO descartadas (una ficha descartada no sale en
+ * ninguna lista: `test/regression-cliente-descartado.test.ts`). El criterio
+ * exacto —número comparable, comodines, pares marcados, una correduría nunca se
+ * funde con otra— lo pone `agruparDuplicadas` de `@central/module-seguros`.
+ * Medido el 04/10/2026: ~940 filas de 28.900, así que no hace falta prefiltro SQL.
+ * Con `correduriaId`, solo esa correduría (la pantalla); sin él, todas (el
+ * vigía). Lanza si la consulta falla: quien llama decide el «no se pudo mirar».
+ */
+export async function leerFichasCandidatasDuplicadas(correduriaId?: string): Promise<PolizaParaDuplicados[]> {
+  const filas = await prismaAsegura().poliza.findMany({
+    where: {
+      ...(correduriaId ? { correduriaId } : {}),
+      mergedIntoPolizaId: null,
+      codigoEntidadDgs: { not: null },
+      cliente: { activo: true },
+    },
+    select: {
+      id: true, correduriaId: true, clienteId: true, numeroPoliza: true, codigoEntidadDgs: true, aseguradora: true,
+      estado: true, importRef: true, eiacXmlHash: true, idPolizaEntidad: true, origen: true,
+    },
+  })
+  return filas.map((p) => ({
+    id: p.id,
+    correduriaId: p.correduriaId,
+    clienteId: p.clienteId,
+    numeroPoliza: p.numeroPoliza,
+    codigoEntidadDgs: p.codigoEntidadDgs,
+    aseguradora: p.aseguradora,
+    estado: String(p.estado),
+    origen: origenFicha({ eiacXmlHash: p.eiacXmlHash, idPolizaEntidad: p.idPolizaEntidad, importRef: p.importRef, origen: String(p.origen) }),
+    // Filtrado arriba: solo entran fichas de cliente activo.
+    clienteActivo: true,
+  }))
+}
+
+/**
+ * Pólizas duplicadas (mismo número sin separadores ni ceros + mismo DGS, fichas
+ * sin fusionar de clientes no descartados, sin comodines ni pares marcados) en
+ * toda la correduría. MISMO criterio y MISMA consulta que la señal 🔁 del vigía
+ * (`leerFichasCandidatasDuplicadas` + `agruparDuplicadas`). `null` = no se pudo leer.
+ */
 export async function duplicadasCartera(correduriaId: string): Promise<GrupoDuplicado[] | null> {
   try {
     // Pares ya decididos «no duplicado» (mig 0108). `null` = no se sabe qué hay
@@ -79,23 +123,7 @@ export async function duplicadasCartera(correduriaId: string): Promise<GrupoDupl
     // como si estuviera filtrada.
     const noDuplicados = await leerParesNoDuplicado(correduriaId)
     if (noDuplicados === null) return null
-    const filas = await prismaAsegura().poliza.findMany({
-      where: { correduriaId, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null, cliente: { activo: true } },
-      select: { id: true, clienteId: true, numeroPoliza: true, codigoEntidadDgs: true, aseguradora: true, idPolizaEntidad: true, estado: true },
-    })
-    return polizasDuplicadas(
-      filas.map((p) => ({
-        id: p.id,
-        clienteId: p.clienteId,
-        numeroPoliza: p.numeroPoliza,
-        codigoEntidadDgs: p.codigoEntidadDgs,
-        aseguradora: p.aseguradora,
-        viva: true,
-        confirmadaCima: p.idPolizaEntidad !== null,
-        estado: String(p.estado),
-      })),
-      noDuplicados,
-    )
+    return polizasDuplicadas(await leerFichasCandidatasDuplicadas(correduriaId), noDuplicados)
   } catch {
     return null
   }

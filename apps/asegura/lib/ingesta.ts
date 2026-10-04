@@ -42,6 +42,7 @@ import {
 } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { leerParesNoDuplicado } from './no-duplicados'
+import { leerFichasCandidatasDuplicadas } from './cartera-historial'
 
 export type EstadoIngestaPuerto =
   | { estado: 'sin_configurar' }
@@ -746,46 +747,16 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
 
     // 10. 🔁 Pólizas vivas duplicadas (04/10/2026). Tras fusionar 13 pares de
     //     Allianz quedaban grupos con el mismo número y DGS: unos duplicados de
-    //     verdad, otros pólizas distintas (clientes distintos). El SQL solo
-    //     PREFILTRA candidatos (mismo DGS y mismo número sin separadores ni ceros
-    //     a la izquierda); el criterio exacto —comodines incluidos— y la
-    //     exclusión de los pares marcados los pone `gruposVivosDuplicados`.
-    //     Por correduría: dos corredurías no se funden jamás.
+    //     verdad, otros pólizas distintas (clientes distintos). Las candidatas
+    //     salen de `leerFichasCandidatasDuplicadas` —la MISMA consulta que la
+    //     pantalla «Duplicadas»— y el criterio exacto, de `gruposVivosDuplicados`
+    //     (proyección de `agruparDuplicadas`, el mismo que usa la pantalla).
     const polizasDuplicadas = await leerONull<GrupoVivoDuplicado[]>(async () => {
       const noDuplicados = await leerParesNoDuplicado()
       // Sin saber qué está marcado no se publica la lista: sería volver a
       // enseñar como duplicados pares ya decididos.
       if (noDuplicados === null) throw new Error('poliza_no_duplicado ilegible')
-      const r = await db.$queryRawUnsafe<
-        Array<{ id: string; correduria_id: string; numero_poliza: string | null; codigo_entidad_dgs: string | null }>
-      >(`
-        WITH vivas AS (
-          SELECT p.id, p.correduria_id, p.numero_poliza, p.codigo_entidad_dgs,
-                 ltrim(regexp_replace(upper(coalesce(p.numero_poliza, '')), '[^0-9A-Z]', '', 'g'), '0') AS n
-          FROM polizas p
-          WHERE p.merged_into_poliza_id IS NULL
-            AND p.codigo_entidad_dgs IS NOT NULL
-        ), candidatos AS (
-          SELECT correduria_id, upper(codigo_entidad_dgs) AS dgs, n
-          FROM vivas
-          WHERE length(n) >= 5
-          GROUP BY 1, 2, 3
-          HAVING COUNT(*) > 1
-        )
-        SELECT v.id::text AS id, v.correduria_id::text AS correduria_id, v.numero_poliza, v.codigo_entidad_dgs
-        FROM vivas v
-        JOIN candidatos c
-          ON c.correduria_id = v.correduria_id AND c.dgs = upper(v.codigo_entidad_dgs) AND c.n = v.n
-      `)
-      return gruposVivosDuplicados(
-        r.map(f => ({
-          id: f.id,
-          correduriaId: f.correduria_id,
-          numeroPoliza: f.numero_poliza,
-          codigoEntidadDgs: f.codigo_entidad_dgs,
-        })),
-        noDuplicados,
-      )
+      return gruposVivosDuplicados(await leerFichasCandidatasDuplicadas(), noDuplicados)
     })
 
     const fila = huerfanasRaw[0]
