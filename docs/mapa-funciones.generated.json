@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-04T07:02:41Z",
-  "sha": "da9ffd157a7b01c2240f75b2e8200d2d165abd17",
+  "generadoEn": "2026-10-04T07:32:54Z",
+  "sha": "5067f7430463e6c535f6f2f19a53ea313d1b4758",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -21773,7 +21773,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Obj",
-          "linea": 70
+          "linea": 72
         },
         {
           "nombre": "txt",
@@ -21781,7 +21781,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 73
+          "linea": 75
         },
         {
           "nombre": "bool",
@@ -21789,7 +21789,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 82
+          "linea": 84
         },
         {
           "nombre": "lista",
@@ -21797,7 +21797,7 @@
           "exportada": false,
           "params": "v: unknown, fn: (o: Obj) => T | null",
           "retorno": "T[]",
-          "linea": 85
+          "linea": 87
         },
         {
           "nombre": "algo",
@@ -21805,7 +21805,7 @@
           "exportada": false,
           "params": "o: Obj",
           "retorno": "boolean",
-          "linea": 89
+          "linea": 91
         },
         {
           "nombre": "riesgo",
@@ -21813,7 +21813,7 @@
           "exportada": false,
           "params": "o: Obj, descifrar: Descifrar",
           "retorno": "RiesgoContrato | null",
-          "linea": 93
+          "linea": 95
         },
         {
           "nombre": "contratoCima",
@@ -21821,13 +21821,13 @@
           "exportada": true,
           "params": "datos: unknown, descifrar: Descifrar",
           "retorno": "ContratoCima | null",
-          "linea": 123,
+          "linea": 125,
           "resumen": "Del `datos_especificos` de la póliza, SOLO las claves del contrato que la ficha pinta. `null` = no trae ninguna (póliza ingerida antes de #864, o del volcado): la ficha omite los bloques, no dice «sin"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3d128bfae3b8"
+      "hash": "7831b2f31791"
     },
     {
       "ruta": "apps/asegura/lib/cartera-poliza-editar.ts",
@@ -126776,7 +126776,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Obj",
-          "linea": 76
+          "linea": 77
         },
         {
           "nombre": "txt",
@@ -126784,7 +126784,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 79,
+          "linea": 80,
           "resumen": "Texto pintable. Un `v1:` es un cifrado: nunca es texto, y no se copia."
         },
         {
@@ -126793,7 +126793,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 84
+          "linea": 85
         },
         {
           "nombre": "num",
@@ -126801,7 +126801,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 87
+          "linea": 88
         },
         {
           "nombre": "lista",
@@ -126809,7 +126809,7 @@
           "exportada": false,
           "params": "v: unknown, fn: (o: Obj) => T",
           "retorno": "T[]",
-          "linea": 91,
+          "linea": 92,
           "resumen": "Lista de objetos → filas leídas con `fn`; lo que no es objeto o queda vacío se descarta. `[]` = no consta."
         },
         {
@@ -126818,7 +126818,7 @@
           "exportada": false,
           "params": "o: Obj",
           "retorno": null,
-          "linea": 94
+          "linea": 95
         },
         {
           "nombre": "leerRiesgo",
@@ -126826,7 +126826,7 @@
           "exportada": false,
           "params": "o: Obj",
           "retorno": "RiesgoFicha | null",
-          "linea": 96
+          "linea": 97
         },
         {
           "nombre": "leerContrato",
@@ -126834,7 +126834,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "ContratoFicha | null",
-          "linea": 106,
+          "linea": 107,
           "resumen": "`null` = asegura no manda el contrato (versión vieja) o no trae nada legible."
         },
         {
@@ -126843,7 +126843,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "FechasContratoFicha | null",
-          "linea": 143,
+          "linea": 145,
           "resumen": "`null` = asegura no manda las fechas o no trae ninguna."
         },
         {
@@ -126852,7 +126852,7 @@
           "exportada": true,
           "params": "o: Obj",
           "retorno": "ReciboExtraFicha",
-          "linea": 149
+          "linea": 151
         },
         {
           "nombre": "etiquetaGestionCobro",
@@ -126860,7 +126860,7 @@
           "exportada": true,
           "params": "codigo: string | null",
           "retorno": "string | null",
-          "linea": 164,
+          "linea": 166,
           "resumen": "Código EIAC de gestión del cobro. Uno que no se conoce se enseña tal cual, con su código."
         },
         {
@@ -126869,7 +126869,7 @@
           "exportada": true,
           "params": "ultimos4: string | null",
           "retorno": "string | null",
-          "linea": 170,
+          "linea": 172,
           "resumen": "«•••• 1234» o `null`. Nunca más de 4 dígitos."
         },
         {
@@ -126878,7 +126878,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string | null",
-          "linea": 177,
+          "linea": 179,
           "resumen": "`dd/mm/aaaa`. Una centinela (1900-01-01, 9999-12-31) o una basura NO es fecha: `null`, no se pinta."
         },
         {
@@ -126887,7 +126887,7 @@
           "exportada": true,
           "params": "c: ContratoFicha | null, f: FechasContratoFicha | null",
           "retorno": "Fila[]",
-          "linea": 182,
+          "linea": 184,
           "resumen": "Filas del bloque «Contrato». `[]` = no hay nada que pintar → el bloque se omite."
         },
         {
@@ -126896,7 +126896,7 @@
           "exportada": true,
           "params": "c: ContratoFicha | null",
           "retorno": "BloqueCobro | null",
-          "linea": 219,
+          "linea": 222,
           "resumen": "Bloque «Cobro». `null` = nada que pintar. El IBAN entero no existe aquí."
         },
         {
@@ -126905,7 +126905,7 @@
           "exportada": true,
           "params": "p: { prima: number | null; primaAnual: number | null; primaBruta: number | null }, c: ContratoFicha | null,",
           "retorno": "PrimaPintada",
-          "linea": 241,
+          "linea": 244,
           "resumen": "La tarjeta «Prima» de la cabecera. Con `primaAnualDudosa` NO se presenta como anual: se dice que es la del recibo y por qué, aunque haya otra cifra a mano (una prima anual guardada antes de saber que "
         },
         {
@@ -126914,7 +126914,7 @@
           "exportada": true,
           "params": "r: RiesgoFicha",
           "retorno": "string | null",
-          "linea": 263,
+          "linea": 266,
           "resumen": "«01/01/2026 → 01/01/2027», o `null` si no hay ninguna de las dos."
         },
         {
@@ -126923,7 +126923,7 @@
           "exportada": true,
           "params": "r: RiesgoFicha",
           "retorno": "string | null",
-          "linea": 269,
+          "linea": 272,
           "resumen": "Dónde está / qué es el bien del riesgo, sin nada cifrado. `null` = no consta."
         },
         {
@@ -126932,7 +126932,7 @@
           "exportada": true,
           "params": "clase: string",
           "retorno": "string",
-          "linea": 276,
+          "linea": 279,
           "resumen": "Clase de comisión (EIAC §13.3.5): traducida; fuera de tabla, «clase XX (código de la compañía)»."
         },
         {
@@ -126941,7 +126941,7 @@
           "exportada": false,
           "params": "texto: string | null, moneda: string | null",
           "retorno": "string",
-          "linea": 285,
+          "linea": 288,
           "resumen": "Importe EIAC → `2.162,49€`. Si no tiene la forma medida (o la moneda no es euro) sale el texto crudo: nunca una cifra inventada."
         },
         {
@@ -126950,13 +126950,13 @@
           "exportada": true,
           "params": "c: ContratoFicha | null",
           "retorno": "BloqueCima[]",
-          "linea": 297,
+          "linea": 300,
           "resumen": "Bloques económicos/comerciales del contrato (solo operador): desglose de la prima, capital, comisiones, comercialización, origen y suspensiones. Un bloque sin filas no existe; `[]` = no hay nada que p"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "248c68f8403e"
+      "hash": "5bbefa3d67d2"
     },
     {
       "ruta": "apps/plataforma/lib/poliza-digitos-sospechosos.ts",
