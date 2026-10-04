@@ -77,3 +77,54 @@ test('sin titulares (BD caída) solo aparta por antigüedad o aseguradora, nunca
   const d = decidirAvisoPago({ fecha: '2026-09-20', proveedor: 'LUANSA', nif_cliente: 'E26631895' }, [], HOY)
   assert.equal(d.pagar, true)
 })
+
+// ── Clasificación del documento (04/10/2026) ─────────────────────────────────
+const HOY2 = new Date('2026-10-04T06:00:00Z')
+
+test('circular de la Asociación de Corredores (50 €, cuota de inscripción) → no_es_factura', () => {
+  const d = decidirAvisoPago(
+    { fecha: '2026-10-04', proveedor: 'Asociación de Corredores de Seguros', tipo_documento: 'circular_informativa' },
+    TITULARES, HOY2,
+  )
+  assert.equal(d.pagar, false)
+  assert.equal(d.pagar === false && d.motivo, 'no_es_factura')
+})
+
+test('donativo a una fundación → no_es_factura', () => {
+  const d = decidirAvisoPago({ fecha: '2026-09-12', proveedor: 'Fundación SS.CC.', tipo_documento: 'certificado_donativo' }, TITULARES, HOY2)
+  assert.equal(d.pagar === false && d.motivo, 'no_es_factura')
+})
+
+test('presupuesto/proforma y tipo con mayúsculas o guiones también se aparta', () => {
+  assert.equal(decidirAvisoPago({ fecha: '2026-10-01', tipo_documento: 'Presupuesto' }, TITULARES, HOY2).pagar, false)
+  assert.equal(decidirAvisoPago({ fecha: '2026-10-01', tipo_documento: 'formulario-inscripcion' }, TITULARES, HOY2).pagar, false)
+})
+
+test('factura de Anthropic con nº e IVA → pasa con Pagar', () => {
+  const d = decidirAvisoPago(
+    { fecha: '2026-10-04', proveedor: 'Anthropic, PBC', tipo_documento: 'factura', numero_factura: 'ABC-1234', base_imponible: 140.5, iva: 29.5 },
+    TITULARES, HOY2,
+  )
+  assert.deepEqual(d, { pagar: true, permitirPagar: true })
+})
+
+test('recibo sin nº ni IVA → pasa pero SIN Pagar', () => {
+  const d = decidirAvisoPago({ fecha: '2026-10-04', proveedor: 'Alguien', tipo_documento: 'recibo' }, TITULARES, HOY2)
+  assert.deepEqual(d, { pagar: true, permitirPagar: false })
+})
+
+test('recibo sin nº pero con IVA, o con nº pero sin IVA → permite Pagar', () => {
+  assert.equal((decidirAvisoPago({ fecha: '2026-10-04', tipo_documento: 'recibo', iva: 21 }, TITULARES, HOY2) as any).permitirPagar, true)
+  assert.equal((decidirAvisoPago({ fecha: '2026-10-04', tipo_documento: 'recibo', numero_factura: 'R-1' }, TITULARES, HOY2) as any).permitirPagar, true)
+})
+
+test('tipo_documento null/ausente → no aparta por esto (comportamiento anterior)', () => {
+  const d = decidirAvisoPago({ fecha: '2026-10-04', proveedor: 'Anthropic', tipo_documento: null, numero_factura: 'X-1' }, TITULARES, HOY2)
+  assert.equal(d.pagar, true)
+  assert.equal(decidirAvisoPago({ fecha: '2026-10-04', proveedor: 'Anthropic', numero_factura: 'X-1' }, TITULARES, HOY2).pagar, true)
+})
+
+test('los motivos existentes mandan sobre el tipo (antigua)', () => {
+  const d = decidirAvisoPago({ fecha: '2022-01-01', tipo_documento: 'otro' }, TITULARES, HOY2)
+  assert.equal(d.pagar === false && d.motivo, 'antigua')
+})

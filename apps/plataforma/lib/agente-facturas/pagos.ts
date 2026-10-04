@@ -240,7 +240,7 @@ export async function escanearNuevasFacturas(
     await marcarProcesado(correo.uid, ETIQUETA_GMAIL, listado.buzon).catch(() => {})
 
     // Notificar por Telegram con botones de acción
-    await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId)
+    await notificarFactura(facturaId, proveedor, importe, fechaVenc, cuentaId, decision.permitirPagar)
     // Idea #11: proponer vínculo con reserva cercana
     await proponerVinculoReserva(facturaId, proveedor, fechaFactura).catch(() => {})
   }
@@ -259,6 +259,7 @@ async function notificarFactura(
   importe: number,
   fechaVenc: string | null,
   cuentaId: string,
+  permitirPagar = true,
 ): Promise<void> {
   const vence = fechaVenc ? ` · vence ${fechaVenc}` : ''
 
@@ -286,16 +287,24 @@ async function notificarFactura(
     }
   } catch { /* no crítico */ }
 
-  const texto = `🧾 <b>${proveedor}</b> · ${eur(importe)}${vence}${budgetLinea}`
-  const botones = [
-    [
-      { texto: '✅ Pagar', callback: `pago_aprobar:${facturaId}` },
-      { texto: '⏳ Aplazar', callback: `pago_aplazar:${facturaId}` },
-    ],
-    [
-      { texto: '❌ Rechazar', callback: `pago_rechazar:${facturaId}` },
-    ],
-  ]
+  const prefijo = permitirPagar ? '' : '⚠️ Revisar: sin nº de factura ni IVA\n'
+  const texto = `${prefijo}🧾 <b>${proveedor}</b> · ${eur(importe)}${vence}${budgetLinea}`
+  const botones = permitirPagar
+    ? [
+        [
+          { texto: '✅ Pagar', callback: `pago_aprobar:${facturaId}` },
+          { texto: '⏳ Aplazar', callback: `pago_aplazar:${facturaId}` },
+        ],
+        [
+          { texto: '❌ Rechazar', callback: `pago_rechazar:${facturaId}` },
+        ],
+      ]
+    : [
+        [
+          { texto: '⏳ Aplazar', callback: `pago_aplazar:${facturaId}` },
+          { texto: '❌ Rechazar', callback: `pago_rechazar:${facturaId}` },
+        ],
+      ]
   try {
     const msgId = await tgAvisoBotones('facturas.pago-aprobar', texto, botones)
     if (msgId) {

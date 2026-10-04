@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(04/10/2026, facturas-scan: falsos positivos)** — `INVOICE_SYSTEM` clasifica `tipo_documento`; `decidirAvisoPago` aparta con motivo `no_es_factura` todo tipo conocido fuera de {factura, recibo, justificante_pago} (null = no aparta) y devuelve `permitirPagar:false` si no hay nº de factura NI base/IVA (aviso Telegram con «⚠️ Revisar», sin ✅ Pagar). Tests en `filtro-pago.test.ts`.
+Pendiente en BD (sin tocar): Asoc. Corredores 50€ (04/10), AMPA 50€ y Asoc. Mediadores 145,20€ (25/09), Fundación SS.CC. 10€+120€ (12-14/09), y Anthropic 170€ ×7 entre 13/09 y 04/10 (revisar recarga automática).
+
 **(04/10/2026)** — pasada agentes-entrenador: poda de bitácora (16 entradas procesadas, 27/09→04/10) en PR docs-only, sin cambios de prompt. Backlog PR claude/*: 0 entradas ≥2 semanas (el más antiguo #3755, 27/09, dentro del rango).
 
 **(03/10/2026, early/late check-in y maletas)** — Compuerta: early/late/maletas NUNCA auto-envío, siempre propuesta por Telegram. Semáforo puro `cambio-horario.ts` (rojo/amarillo/verde; dato desconocido = amarillo); botones `hsp_chsi`/`hsp_chhasta`/`hsp_chno`/`hsp_chlimp`.
