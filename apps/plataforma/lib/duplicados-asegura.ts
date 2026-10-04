@@ -164,6 +164,40 @@ export function textoOrigenFicha(o: OrigenFicha | null): string {
 // (`POST /api/operador/duplicados/no-duplicado`). Quién lo decide lo pone el
 // puerto con `x-actor` (la sesión), nunca el cuerpo.
 
+/**
+ * Tope de fichas que se pueden marcar de una vez. Copia LOCAL de
+ * `MAX_POLIZAS_MARCA` de `@central/module-seguros` (este fichero lo importa un
+ * client component y el índice del paquete arrastraría todo al bundle); el
+ * guardián `test/regression-duplicados-asegura.test.ts` exige que coincidan.
+ * Un grupo mayor NO se recorta: no se puede marcar desde la pantalla.
+ */
+export const MAX_FICHAS_NO_DUPLICADO = 20
+
+/** ¿Se puede marcar este grupo desde la pantalla? (>20 fichas: no, y se dice). */
+export function grupoMarcableNoDuplicado(g: Pick<GrupoDuplicadoPantalla, 'polizas'>): boolean {
+  return g.polizas.length <= MAX_FICHAS_NO_DUPLICADO
+}
+
+export type CuerpoNoDuplicado =
+  | { ok: true; ids: string[]; motivo: string }
+  | { ok: false; motivo: 'cuerpo_no_valido' | 'demasiadas_polizas' }
+
+/**
+ * El cuerpo de `POST /api/correduria/duplicados/no-duplicado`. Un cuerpo que no
+ * es objeto (`null`, lista, número…) es 400, no un 500. Más de
+ * `MAX_FICHAS_NO_DUPLICADO` ids distintos → `demasiadas_polizas`: JAMÁS se
+ * recorta (marcar 20 de 25 dejaría pares sin mirar dados por mirados). El resto
+ * de validación (uuid, motivo) la hace el puerto de asegura.
+ */
+export function leerCuerpoNoDuplicado(cuerpo: unknown): CuerpoNoDuplicado {
+  if (typeof cuerpo !== 'object' || cuerpo === null || Array.isArray(cuerpo)) return { ok: false, motivo: 'cuerpo_no_valido' }
+  const o = cuerpo as Record<string, unknown>
+  const ids = Array.isArray(o.ids) ? o.ids.filter((x): x is string => typeof x === 'string') : []
+  if (new Set(ids.map((x) => x.toLowerCase())).size > MAX_FICHAS_NO_DUPLICADO) return { ok: false, motivo: 'demasiadas_polizas' }
+  const motivo = typeof o.motivo === 'string' ? o.motivo.slice(0, 500) : ''
+  return { ok: true, ids, motivo }
+}
+
 export type ResultadoNoDuplicado =
   | { estado: 'ok'; pares: number; nuevos: number }
   | { estado: 'error'; motivo: string }
@@ -195,9 +229,11 @@ export function textoErrorNoDuplicado(motivo: string): string {
       return 'Esas pólizas ya no forman un grupo (alguna se ha fusionado o cambiado). Recarga la página.'
     case 'poliza_desconocida':
       return 'Alguna póliza ya no existe o se ha fusionado. Recarga la página.'
+    case 'demasiadas_polizas':
+      return `Grupo demasiado grande para marcar desde aquí (más de ${MAX_FICHAS_NO_DUPLICADO} fichas): no se ha guardado nada.`
     case 'ids_no_validos':
     case 'pocas_polizas':
-    case 'demasiadas_polizas':
+    case 'cuerpo_no_valido':
       return 'El grupo no se ha podido enviar tal cual. Recarga la página.'
     case 'sin_usuario':
       return 'asegura no ha recibido quién eres (sin sesión): no se ha guardado nada.'

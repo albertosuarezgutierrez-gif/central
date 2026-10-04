@@ -29,15 +29,26 @@ test('🚨 motivo obligatorio', () => {
   }
 })
 
-test('ids: al menos dos uuids distintos y no más de 20', () => {
+test('ids: al menos dos uuids distintos', () => {
   const malo = { ok: false, status: 400, motivo: 'ids_no_validos' }
   assert.deepEqual(leerPeticionNoDuplicado({ ids: [A], motivo: 'x' }, humano), malo)
   assert.deepEqual(leerPeticionNoDuplicado({ ids: [A, A], motivo: 'x' }, humano), malo)
   assert.deepEqual(leerPeticionNoDuplicado({ ids: [A, 'no-uuid'], motivo: 'x' }, humano), malo)
   assert.deepEqual(leerPeticionNoDuplicado({ ids: 'A,B', motivo: 'x' }, humano), malo)
   assert.deepEqual(leerPeticionNoDuplicado(null, humano), malo)
-  const muchos = Array.from({ length: 21 }, (_, i) => `${String(i).padStart(8, '0')}-1111-4111-8111-111111111111`)
-  assert.deepEqual(leerPeticionNoDuplicado({ ids: muchos, motivo: 'x' }, humano), malo)
+})
+
+test('🚨 más de 20 pólizas distintas → 400 demasiadas_polizas explícito (nunca se marca un trozo)', () => {
+  const uuid = (i: number) => `${String(i).padStart(8, '0')}-1111-4111-8111-111111111111`
+  const muchos = Array.from({ length: 21 }, (_, i) => uuid(i))
+  assert.deepEqual(leerPeticionNoDuplicado({ ids: muchos, motivo: 'x' }, humano), { ok: false, status: 400, motivo: 'demasiadas_polizas' })
+  // Justo 20 sí pasa, entero.
+  const veinte = muchos.slice(0, 20)
+  const r = leerPeticionNoDuplicado({ ids: veinte, motivo: 'x' }, humano)
+  assert.equal(r.ok && r.ids.length, 20)
+  // 21 entradas con un repetido son 20 distintas: pasan.
+  const conRepe = [...veinte, veinte[0].toUpperCase()]
+  assert.equal(leerPeticionNoDuplicado({ ids: conRepe, motivo: 'x' }, humano).ok, true)
 })
 
 test('🚨 la escritura: tabla ausente → migración pendiente (503), jamás éxito; pares revalidados en BD', () => {

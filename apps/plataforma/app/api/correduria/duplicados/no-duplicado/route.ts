@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
-import { marcarNoDuplicadoAsegura } from '@/lib/duplicados-asegura'
+import { leerCuerpoNoDuplicado, marcarNoDuplicadoAsegura } from '@/lib/duplicados-asegura'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,9 +15,11 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta
-  const cuerpo = (await req.json().catch(() => ({}))) as Record<string, unknown>
-  const ids = Array.isArray(cuerpo.ids) ? cuerpo.ids.filter((x): x is string => typeof x === 'string').slice(0, 20) : []
-  const motivo = typeof cuerpo.motivo === 'string' ? cuerpo.motivo.slice(0, 500) : ''
+  // Cuerpo no-objeto (JSON `null`, lista, ilegible) → 400; >20 fichas → 400
+  // `demasiadas_polizas`. Nunca se recorta la lista: o va entera o no va.
+  const cuerpo = leerCuerpoNoDuplicado(await req.json().catch(() => null))
+  if (!cuerpo.ok) return NextResponse.json({ estado: 'error', motivo: cuerpo.motivo }, { status: 400 })
+  const { ids, motivo } = cuerpo
   const r = await marcarNoDuplicadoAsegura(ids, motivo)
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

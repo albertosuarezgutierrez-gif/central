@@ -6,6 +6,7 @@ import { Badge, btnStyle } from '@/components/ui'
 import Bloque from './Bloque'
 import {
   interpretarDuplicados,
+  grupoMarcableNoDuplicado,
   interpretarNoDuplicado,
   polizasSobrantes,
   textoErrorNoDuplicado,
@@ -185,7 +186,7 @@ function GrupoFila({ g, onMarcado }: { g: GrupoDuplicadoPantalla; onMarcado: () 
       <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4 }}>
         {g.polizas.map((p) => (
           <li key={p.id}>
-            <Link href={`/correduria/cliente/${p.clienteId}`} title={`póliza ${p.id}`} style={{ display: 'inline-block', minHeight: 24 }}>
+            <Link href={`/correduria/cliente/${p.clienteId}`} title={`póliza ${p.id}`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>
               ficha {p.clienteId.slice(0, 8)}
             </Link>
             <span style={{ color: 'var(--muted)', fontSize: 12 }}>
@@ -195,7 +196,11 @@ function GrupoFila({ g, onMarcado }: { g: GrupoDuplicadoPantalla; onMarcado: () 
           </li>
         ))}
       </ul>
-      {envio.fase === 'cerrado' ? (
+      {!grupoMarcableNoDuplicado(g) ? (
+        // >20 fichas: el puerto lo rechazaría (400 demasiadas_polizas) y recortar
+        // dejaría pares sin mirar dados por mirados. Sin botón, y se dice.
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Grupo demasiado grande para marcar desde aquí</p>
+      ) : envio.fase === 'cerrado' ? (
         <div>
           <button type="button" style={btnStyle('secundario')} onClick={() => setEnvio({ fase: 'abierto', error: null })}>
             No es duplicado

@@ -13,12 +13,16 @@ import {
   interpretarDuplicados,
   interpretarNoDuplicado,
   textoErrorNoDuplicado,
+  leerCuerpoNoDuplicado,
+  grupoMarcableNoDuplicado,
+  MAX_FICHAS_NO_DUPLICADO,
   textoOrigenFicha,
   leerGrupoDuplicado,
   leerGruposDuplicados,
   polizasSobrantes,
   textoMotivoDuplicados,
 } from '../apps/plataforma/lib/duplicados-asegura.ts'
+import { MAX_POLIZAS_MARCA } from '../packages/module-seguros/src/duplicados.ts'
 
 const GRUPO = {
   numero: '123456',
@@ -142,4 +146,38 @@ test('🚨 la pantalla solo quita el grupo tras el OK, exige motivo y el botón 
   const ruta = readFileSync(new URL('../apps/plataforma/app/api/correduria/duplicados/no-duplicado/route.ts', import.meta.url), 'utf8')
   assert.match(ruta, /const guarda = await exigirCorreduria\(\)\s*\n\s*if \(!guarda\.ok\) return guarda\.respuesta/)
   assert.match(ruta, /marcarNoDuplicadoAsegura\(ids, motivo\)/)
+})
+
+const UUIDS = (n: number) => Array.from({ length: n }, (_, i) => `${String(i).padStart(8, '0')}-1111-4111-8111-111111111111`)
+
+test('🚨 no-duplicado: más de 20 fichas → demasiadas_polizas, NUNCA se recorta la lista', () => {
+  // El tope de la pantalla es el mismo que el del puerto de asegura.
+  assert.equal(MAX_FICHAS_NO_DUPLICADO, MAX_POLIZAS_MARCA)
+  assert.deepEqual(leerCuerpoNoDuplicado({ ids: UUIDS(21), motivo: 'x' }), { ok: false, motivo: 'demasiadas_polizas' })
+  const veinte = leerCuerpoNoDuplicado({ ids: UUIDS(20), motivo: 'x' })
+  assert.deepEqual(veinte, { ok: true, ids: UUIDS(20), motivo: 'x' })
+  assert.match(textoErrorNoDuplicado('demasiadas_polizas'), /Grupo demasiado grande para marcar desde aquí/)
+  // La ruta reenvía lo que lee el helper, sin `.slice(` sobre los ids.
+  const ruta = readFileSync(new URL('../apps/plataforma/app/api/correduria/duplicados/no-duplicado/route.ts', import.meta.url), 'utf8')
+  assert.doesNotMatch(ruta, /ids[^\n]*\.slice\(/)
+  assert.match(ruta, /const cuerpo = leerCuerpoNoDuplicado\(await req\.json\(\)\.catch\(\(\) => null\)\)/)
+  assert.match(ruta, /if \(!cuerpo\.ok\) return NextResponse\.json\(\{ estado: 'error', motivo: cuerpo\.motivo \}, \{ status: 400 \}\)/)
+})
+
+test('🚨 no-duplicado: un cuerpo que no es objeto (JSON null, lista, número) → 400 cuerpo_no_valido, no 500', () => {
+  for (const c of [null, [], [1, 2], 7, 'ids', true, undefined]) {
+    assert.deepEqual(leerCuerpoNoDuplicado(c), { ok: false, motivo: 'cuerpo_no_valido' }, JSON.stringify(c))
+  }
+  // Objeto sin ids: pasa al puerto, que responde ids_no_validos.
+  assert.deepEqual(leerCuerpoNoDuplicado({}), { ok: true, ids: [], motivo: '' })
+})
+
+test('🚨 la pantalla no ofrece marcar un grupo de más de 20 fichas, y lo dice; enlaces de ficha a 44 px', () => {
+  const ficha = (id: string) => ({ id, clienteId: id, origen: null, estado: 'activa', clienteActivo: null })
+  assert.equal(grupoMarcableNoDuplicado({ polizas: UUIDS(20).map(ficha) }), true)
+  assert.equal(grupoMarcableNoDuplicado({ polizas: UUIDS(21).map(ficha) }), false)
+  const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/Duplicadas.tsx', import.meta.url), 'utf8')
+  assert.match(src, /\{!grupoMarcableNoDuplicado\(g\) \? \(\s*(\/\/[^\n]*\n\s*)*<p[^>]*>Grupo demasiado grande para marcar desde aquí<\/p>\s*\) : envio\.fase === 'cerrado' \?/)
+  assert.match(src, /<Link href=\{`\/correduria\/cliente\/\$\{p\.clienteId\}`\}[^>]*minHeight: 44/)
+  assert.doesNotMatch(src, /minHeight: 24/)
 })
