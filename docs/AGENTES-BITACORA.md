@@ -17,7 +17,7 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
-(vacío tras la poda del 04/10/2026)
+- **2026-10-04 · facturas-correo** · hizo: Vía B sana (última copia 04/10); 4.0 sin filas `sin_revisar` (todas revisada_sin_cargo); archivadas en `10-Octubre-2026` (carpeta creada, id 1uqbZzfYF1EXBzbsm3Vw4Vb-zJNsH_Ttl) SIQUE sept 1.128,48€ (cuadra ×1,21; `limpieza_facturas` ya existía; cargo aún no en banco) y Supabase 25,00 USD, ambas en `facturas_drive` y con `Procesada`; conciliados por contrato/ref 3 cargos Endesa 28/09 (Socorro −159,00, Luxury −108,44, Reform −81,63); Booking/Petroprix ya Procesada; ruido clickedu/checkqrpay/Occident descartado; dudas: destino de Supabase (no hay regla; archivado como SaaS de negocio), cargo Endesa −56,52 del 25/09 sin imputar (¿dúplex? sin email), Socorro P26CON039980996 sigue en PDF-pendiente (solo enlace Endesa, importe por banco); fallos: `gmail-adjuntos` CONNECTION_CLOSED (Vía A caída, no necesaria); Revisar: 1 hilo (Asecon), Extraccion-fallida: 0 por search_threads; PRs/commits: —
 
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
