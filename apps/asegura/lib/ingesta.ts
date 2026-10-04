@@ -152,6 +152,12 @@ export type CajaNegraCodeoscopic = {
 
 export type UltimoPullPuerto = { horas: number; procesados: number | null }
 
+/**
+ * Merge de asegura#877 (03/10/2026): antes, la ruta de reproceso de cuarentena sellaba
+ * `reprocesado_at` con residuo (en un REC comparaba 0===0), así que ese sello no es fiable.
+ */
+const CUARENTENA_SELLO_FIABLE_DESDE = '2026-10-03T15:59:56Z'
+
 /** Tipos de objeto EIAC que la ingesta persiste. El evento que lo confirma es
  *  `cima_<objeto>_persisted`; si un tipo lleva mucho sin aparecer, algo pasa. */
 const TIPOS = [
@@ -634,8 +640,17 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
               AND cf.nombre_fichero = u.fichero
               AND r.occurred_at > u.occurred_at
           )
+          -- Reproceso de cuarentena que lo dejó todo guardado: sella reprocesado_at
+          -- pero no emite parte nuevo. Solo cuenta un sello posterior al parte y al #877.
+          AND NOT EXISTS (
+            SELECT 1
+            FROM cima_cuarentena_crudo q
+            WHERE q.nombre_fichero = u.fichero
+              AND q.reprocesado_at > u.occurred_at
+              AND q.reprocesado_at >= $1::timestamptz
+          )
         ORDER BY en_revision DESC, dias ASC
-      `)
+      `, CUARENTENA_SELLO_FIABLE_DESDE)
       return r.map(f => ({
         fichero: f.fichero ?? 'desconocido',
         tipo: f.tipo ?? 'desconocido',
