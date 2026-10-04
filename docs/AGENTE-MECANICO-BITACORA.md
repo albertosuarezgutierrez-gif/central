@@ -12,6 +12,7 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (04/10/2026) crear agente jefe-contabilidad.md, reglas contables en perfil-fiscal/SKILL.md, actualizar CONTEXTO-SESIONES.md — sesión — ok
 - (03/10/2026) pasada SEO: CTR 2 artículos (preaviso 363 impr/0 clics, como-dar-de-baja 202 impr/1 clic) + keywords.md §5 — sesión — ok (189 tests articulos + ramos pass, 0 fail; tsc 0 errores)
 - 03/10/2026 · memoria+skill cierre CIMA (LOO-806) · ok
 - (03/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (migración 0105 cierre CIMA), SKILL.md cima-ingesta (rescate sinConfirmarTirea, recorte de lote, limpieza) — sesión — ok
