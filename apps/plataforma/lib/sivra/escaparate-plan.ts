@@ -31,6 +31,12 @@ export interface CandidataEscaparate {
   baseTotal: number | null
   /** por qué está esa fecha en el calendario (viaja al parte de la rutina) */
   motivo?: string
+  /**
+   * ¿Se puede reservar esa ventana en el calendario propio? (`rate_snapshots.available` +
+   * `min_stay`). `false` = alguna noche cogida o estancia por debajo del mínimo: el portal va a
+   * responder «sin disponibilidad» y la consulta se pierde. `null`/ausente = no consta.
+   */
+  libre?: boolean | null
 }
 
 /** Una medición de escaparate que ya tenemos. */
@@ -103,6 +109,24 @@ function diasEntre(desde: string, hasta: string): number {
     (new Date(`${hasta}T00:00:00Z`).getTime() - new Date(`${desde}T00:00:00Z`).getTime()) / DIA_MS)
 }
 
+/**
+ * ¿Se puede reservar la ventana? A partir de `available` de cada noche (1 libre · 0 cogida · null
+ * no consta) y la estancia mínima de la noche de entrada.
+ *   · `false` si alguna noche está cogida o `noches < minStay` — el portal no la venderá;
+ *   · `true` solo si TODAS las noches constan libres;
+ *   · `null` si falta algún dato (no consta ≠ ocupada: no se descarta a ciegas).
+ */
+export function ventanaLibre(
+  disponibles: (number | null | undefined)[],
+  noches: number,
+  minStay: number | null | undefined,
+): boolean | null {
+  if (disponibles.some(a => a === 0)) return false
+  if (minStay != null && Number(minStay) > 0 && noches < Number(minStay)) return false
+  if (disponibles.length === noches && disponibles.every(a => a === 1)) return true
+  return null
+}
+
 /** Recorrido relativo de una lista de bases (0 = todas iguales). Es lo que separa m de F. */
 export function recorrido(bases: number[]): number {
   if (bases.length < 2) return 0
@@ -141,8 +165,12 @@ export function planEscaparate(
     // se ajusta SOLO con ventanas de antelación, y el tramo de última hora solo mide un recargo. Si
     // el plan no las separa, basta con que el refresco caiga siempre en «mañana» —como pasó desde
     // el 07/09— para que la recta principal se quede sin ventanas y deje de poder ajustarse.
-    const medibles = (piso.candidatas ?? []).filter(c =>
+    // 🚨 (30/09/2026) Una ventana OCUPADA no se puede medir: Booking responde «sin
+    // disponibilidad», la medición no se guarda y el plan de mañana vuelve a pedir la misma fecha.
+    // Así se perdieron 4/4 ventanas dos días seguidos (9-12/oct, todas reservadas).
+    const conBase = (piso.candidatas ?? []).filter(c =>
       c.baseTotal != null && Number(c.baseTotal) > 0 && Number(c.noches) > 0 && c.checkin > hoy)
+    const medibles = conBase.filter(c => c.libre !== false)
     const utiles = medibles.filter(c => !esUltimaHora(diasEntre(hoy, c.checkin)))
     const utilesUh = medibles.filter(c => esUltimaHora(diasEntre(hoy, c.checkin)))
     if (!piso.nombrePortal) {
@@ -152,7 +180,12 @@ export function planEscaparate(
       continue
     }
     if (!medibles.length) {
-      huecos.push({ property_id: piso.propertyId, motivo: 'ninguna fecha candidata tiene base conocida (faltan snapshots)' })
+      huecos.push({
+        property_id: piso.propertyId,
+        motivo: conBase.length
+          ? 'todas las fechas candidatas están ocupadas o por debajo de la estancia mínima: no hay ventana reservable que medir'
+          : 'ninguna fecha candidata tiene base conocida (faltan snapshots)',
+      })
       continue
     }
 
