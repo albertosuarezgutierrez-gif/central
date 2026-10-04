@@ -11,7 +11,7 @@ const IBAN_CIFRADO = 'v1:AAAAIBANCIFRADOES7621000418450200051332'
 const DATOS = {
   matricula: '1234ABC', // clave vieja del riesgo principal: no es del contrato
   gestionCobro: 'CO', formaPago: 'CC', iban: IBAN_CIFRADO, ibanUltimos4: '1332', bic: 'CAIXESBBXXX',
-  titularCuentaDistinto: true, duracion: 'AN', clasePoliza: 'IN',
+  titularCuentaDistinto: true, duracion: 'AN', clasePoliza: 'IN', numeroSuplemento: '0003',
   mediador: { clase: 'CO', codigoInterno: '0170', nombre: 'Grupo ASegura' },
   producto: { modalidad: '12', descripcion: 'HOGAR PLUS' },
   primaAnualDudosa: true, primaTotalFichero: '190.29',
@@ -21,6 +21,11 @@ const DATOS = {
   ],
   beneficiarios: [{ orden: '1', prestamo: 'Préstamo hipotecario' }],
 }
+
+test('numeroSuplemento cruza el puerto; ausente = null', () => {
+  assert.equal(contratoCima(DATOS, descifrar)?.numeroSuplemento, '0003')
+  assert.equal(contratoCima({ ...DATOS, numeroSuplemento: undefined }, descifrar)?.numeroSuplemento, null)
+})
 
 test('el IBAN cifrado NUNCA sale del puerto (ni la clave ni el valor)', () => {
   const c = contratoCima(DATOS, descifrar)

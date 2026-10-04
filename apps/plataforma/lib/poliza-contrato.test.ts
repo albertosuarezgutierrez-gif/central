@@ -201,6 +201,15 @@ test('filasContrato: clase de póliza CA traducida; fuera de tabla, código de l
   assert.equal(filasContrato(raro, null).find((x) => x.etiqueta === 'Clase de póliza')?.nota, 'código de la compañía')
 })
 
+test('filasContrato: nº de suplemento solo con dato; ausente o vacío no genera fila (nunca 0)', () => {
+  const con = leerContrato({ numeroSuplemento: '0003', duracion: 'AN' })!
+  assert.deepEqual(filasContrato(con, null).find((x) => x.etiqueta === 'Nº de suplemento'), { etiqueta: 'Nº de suplemento', valor: '0003' })
+  const sin = leerContrato({ duracion: 'AN' })!
+  assert.equal(sin.numeroSuplemento, null)
+  assert.ok(!filasContrato(sin, null).some((x) => x.etiqueta === 'Nº de suplemento'))
+  assert.equal(leerContrato({ numeroSuplemento: '  ', duracion: 'AN' })!.numeroSuplemento, null)
+})
+
 test('bloquesContratoCima: comisión clase ME traducida', () => {
   const c = leerContrato({ comisiones: [{ clase: 'ME', bruta: '10.00' }] })!
   assert.equal(bloquesContratoCima(c)[0].filas[0].etiqueta, 'Comisión · Mediador: Comisión por producto')
