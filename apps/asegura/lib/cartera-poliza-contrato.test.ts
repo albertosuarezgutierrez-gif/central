@@ -27,6 +27,17 @@ test('numeroSuplemento cruza el puerto; ausente = null', () => {
   assert.equal(contratoCima({ ...DATOS, numeroSuplemento: undefined }, descifrar)?.numeroSuplemento, null)
 })
 
+test('convenio / nombreRiesgo / descripcionRiesgo cruzan el puerto; ausentes o cifrados = null', () => {
+  const c = contratoCima({ ...DATOS, convenio: '99000123456789', nombreRiesgo: 'Taller', descripcionRiesgo: 'Obra menor' }, descifrar)!
+  assert.equal(c.convenio, '99000123456789')
+  assert.equal(c.nombreRiesgo, 'Taller')
+  assert.equal(c.descripcionRiesgo, 'Obra menor')
+  const sin = contratoCima({ ...DATOS, convenio: 'v1:x:y:z', nombreRiesgo: '  ' }, descifrar)!
+  assert.equal(sin.convenio, null)
+  assert.equal(sin.nombreRiesgo, null)
+  assert.equal(sin.descripcionRiesgo, null)
+})
+
 test('el IBAN cifrado NUNCA sale del puerto (ni la clave ni el valor)', () => {
   const c = contratoCima(DATOS, descifrar)
   const json = JSON.stringify(c)

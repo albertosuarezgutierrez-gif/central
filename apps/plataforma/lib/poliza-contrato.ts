@@ -42,6 +42,9 @@ export type ContratoFicha = {
   duracion: string | null
   clasePoliza: string | null
   numeroSuplemento: string | null
+  convenio: string | null
+  nombreRiesgo: string | null
+  descripcionRiesgo: string | null
   mediador: { clase: string | null; codigoInterno: string | null; nombre: string | null } | null
   producto: { modalidad: string | null; descripcion: string | null; ramoEntidad: string | null; descripcionRamo: string | null } | null
   moneda: string | null
@@ -119,6 +122,9 @@ export function leerContrato(v: unknown): ContratoFicha | null {
     duracion: txt(v.duracion),
     clasePoliza: txt(v.clasePoliza),
     numeroSuplemento: txt(v.numeroSuplemento),
+    convenio: txt(v.convenio),
+    nombreRiesgo: txt(v.nombreRiesgo),
+    descripcionRiesgo: txt(v.descripcionRiesgo),
     mediador: med && algo(med) ? med : null,
     producto: prod && algo(prod) ? prod : null,
     moneda: txt(v.moneda),
@@ -206,6 +212,9 @@ export function filasContrato(c: ContratoFicha | null, f: FechasContratoFicha | 
     out.push({ etiqueta: 'Clase de póliza', valor: conocida ? t.replace(/\s*\(.*\)\s*$/, '') : c.clasePoliza, nota: conocida ? `código ${c.clasePoliza}` : 'código de la compañía' })
   }
   if (c?.numeroSuplemento) out.push({ etiqueta: 'Nº de suplemento', valor: c.numeroSuplemento })
+  if (c?.convenio) out.push({ etiqueta: 'Convenio colectivo', valor: c.convenio })
+  if (c?.nombreRiesgo) out.push({ etiqueta: 'Riesgo', valor: c.nombreRiesgo })
+  if (c?.descripcionRiesgo) out.push({ etiqueta: 'Descripción del riesgo', valor: c.descripcionRiesgo })
   if (c?.mediador) {
     const m = c.mediador
     const valor = m.nombre ?? m.codigoInterno ?? m.clase
