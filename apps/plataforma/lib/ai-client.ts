@@ -198,6 +198,7 @@ Analiza el texto o imagen de la factura y devuelve SOLO JSON sin markdown:
   "irpf_porcentaje": 0,
   "irpf": 0.00,
   "total": 0.00,
+  "divisa": "código ISO 4217 de la moneda del campo total (EUR, USD, GBP...)",
   "tipo_documento": "factura|recibo|justificante_pago|presupuesto|proforma|circular_informativa|formulario_inscripcion|certificado_donativo|otro",
   "categoria": "ALQUILER|LIMPIEZA|MANTENIMIENTO|SUMINISTROS|COMUNIDAD|SEGURO|IMPUESTOS|PLATAFORMAS|MOBILIARIO|REFORMAS|OTRO"
 }
@@ -223,6 +224,10 @@ donativo o aportación a una fundación/asociación es "certificado_donativo"; u
 reserva de compra o proforma NO es un gasto devengado (presupuesto / proforma). Liquidaciones de
 siniestro, certificaciones de cuentas y similares son "otro". Si dudas entre factura y otra cosa
 porque falta número de factura y desglose de IVA, NO elijas "factura".
+"divisa" es la moneda EN LA QUE ESTÁ EXPRESADO "total" (el importe a pagar de la factura), como código
+ISO 4217 en mayúsculas. Si la factura está en USD y además muestra una conversión a EUR, "total" y
+"divisa" son los del importe PRINCIPAL en USD, no los de la conversión; mantén siempre la pareja
+coherente (total y divisa del mismo importe). Si no consta la moneda, pon null: NO asumas EUR.
 Si no encuentras un campo, pon null. Solo JSON, sin texto adicional.`
 
 
