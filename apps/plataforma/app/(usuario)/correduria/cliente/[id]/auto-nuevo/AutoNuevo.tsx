@@ -33,8 +33,23 @@ import {
   claveBorradorAutoNuevo,
   guardarBorrador,
   leerBorrador,
+  leerBorradorAutoNuevoConSello,
 } from '@/lib/correduria/borrador-local'
+import {
+  DEBOUNCE_SERVIDOR_MS,
+  borradorServidorPara,
+  borrarBorradorServidor,
+  elegirMasReciente,
+  guardarBorradorServidor,
+  leerBorradoresServidor,
+  textoIndicador,
+  type EstadoNube,
+} from '@/lib/correduria/borrador-servidor'
 import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
+import type { ContactoFicha } from '@/lib/ficha-asegura'
+import type { IdentidadFicha } from '@/lib/cliente-edicion-asegura'
+import type { DocumentoResumen } from '@central/module-seguros'
+import EditarCliente, { EditarDireccion } from '../../../EditarCliente'
 
 import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
@@ -190,9 +205,15 @@ export default function AutoNuevo({
   seguroImputado = null,
   otroVehiculo = null,
   carteraAllianz = null,
+  fichaTomador = null,
 }: {
   /** Pack coche + moto (03/10/2026): la otra oportunidad del cliente. `null` = no se han podido leer sus oportunidades. */
   otroVehiculo?: OtroVehiculo | null
+  /**
+   * Lo que hace falta para corregir la FICHA del tomador sin salir (identidad, documentos y dirección),
+   * leído igual que lo lee la pestaña Contactos. `null` = no se ha podido leer la ficha: no se ofrece edición.
+   */
+  fichaTomador?: { identidad: IdentidadFicha | null; documentos: DocumentoResumen[] | null; contacto: ContactoFicha } | null
   /** `true` = tiene una póliza en vigor en Allianz (cartera); `null` = no se pudo mirar. Solo cuenta con el pack encendido. */
   carteraAllianz?: boolean | null
   /** Vehículo NUEVO (03/10/2026): la póliza de motor del cliente que asegura propone como seguro anterior. */
@@ -364,6 +385,34 @@ export default function AutoNuevo({
   const [aniosSinSiniestros, setAniosSinSiniestros] = useState(String(historial.aniosSinSiniestros))
   const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5))
   const [matriculaAnterior, setMatriculaAnterior] = useState('')
+  // Estado de partida de lo que restaura un borrador: si gana el del servidor sobre el local, el ganador SUSTITUYE
+  // al estado completo (no se mezcla con lo que ya aplicó el local).
+  const estadoInicial = useRef<Record<string, unknown> | null>(null)
+  if (estadoInicial.current === null) {
+    estadoInicial.current = {
+      marcaId, modeloId, motorId, codigoVehiculo, matricula, matriculacion, matriculacionEstimada, garaje, kmAnuales,
+      fechaCompra, remolqueLigero, estadoCivilId, municipioId, correcciones, zonaCarnet, tipoCarnet,
+      ocasionalDistinto, ocasional, propietarioDistinto, propietario, conductorDistinto, conductor,
+      tieneSeguroActual, companiaActualCodigo, companiaActualLibre, polizaActualDigitos, aniosAsegurado,
+      aniosEnCompania, aniosSinSiniestros, siniestrosUltimos5,
+    }
+  }
+  const tokenRestauracion = useRef(0)
+  function restablecerInicial() {
+    const i = estadoInicial.current as Record<string, any>
+    setMarcaId(i.marcaId); setModeloId(i.modeloId); setMotorId(i.motorId); setCodigoVehiculo(i.codigoVehiculo)
+    setMatricula(i.matricula); setMatriculacion(i.matriculacion); setMatriculacionEstimada(i.matriculacionEstimada)
+    setGaraje(i.garaje); setKmAnuales(i.kmAnuales); setFechaCompra(i.fechaCompra); setRemolqueLigero(i.remolqueLigero)
+    setEstadoCivilId(i.estadoCivilId); setMunicipioId(i.municipioId); setCorrecciones(i.correcciones)
+    setZonaCarnet(i.zonaCarnet); setTipoCarnet(i.tipoCarnet)
+    setOcasionalDistinto(i.ocasionalDistinto); setOcasional(i.ocasional)
+    setPropietarioDistinto(i.propietarioDistinto); setPropietario(i.propietario)
+    setConductorDistinto(i.conductorDistinto); setConductor(i.conductor)
+    setTieneSeguroActual(i.tieneSeguroActual); setCompaniaActualCodigo(i.companiaActualCodigo)
+    setCompaniaActualLibre(i.companiaActualLibre); setPolizaActualDigitos(i.polizaActualDigitos)
+    setAniosAsegurado(i.aniosAsegurado); setAniosEnCompania(i.aniosEnCompania)
+    setAniosSinSiniestros(i.aniosSinSiniestros); setSiniestrosUltimos5(i.siniestrosUltimos5)
+  }
   // Vehículo NUEVO (03/10/2026): qué póliza suya se declara como seguro anterior si no se teclea a mano.
   // '' = la que proponga asegura al cotizar.
   // Pack coche + moto: apagado por defecto; sin tocarlo, la pantalla es la de siempre.
@@ -433,10 +482,80 @@ export default function AutoNuevo({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ── Borrador en SERVIDOR (05/10/2026): segunda línea, sobrevive a cerrar el navegador y a cambiar de
+  // equipo (`lib/correduria/borrador-servidor.ts`). El local sigue siendo la primera y se pinta YA; al
+  // llegar el del servidor se queda el MÁS RECIENTE. 🚨 Nada sube al servidor hasta haber leído el suyo
+  // (`reconciliado`): si no, los valores por defecto de una pantalla recién abierta pisarían un borrador
+  // bueno tecleado en otro equipo. Y solo sube lo que difiere de lo último que el servidor tiene
+  // (`baseServidor`; `null` = «hay que subirlo»).
+  const [nube, setNube] = useState<EstadoNube>(null)
+  const reconciliado = useRef(false)
+  const baseServidor = useRef<string | null>(null)
+  const marcaCambio = useRef(0)
+  const temporizadorNube = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function subirBorrador(keepalive: boolean) {
+    const datos = ultimoBorrador.current
+    if (!reconciliado.current || !datos) return
+    const json = JSON.stringify(datos)
+    if (json === baseServidor.current) return
+    if (!keepalive) setNube({ tipo: 'guardando' })
+    void guardarBorradorServidor(
+      { clienteId, oportunidadId: variante?.oportunidadId ?? null, ramo: 'auto', datos, guardadoEn: marcaCambio.current || Date.now() },
+      { keepalive },
+    ).then((t) => {
+      if (keepalive) return
+      if (t === null) {
+        setNube({ tipo: 'solo_local' })
+        return
+      }
+      baseServidor.current = json
+      setNube({ tipo: 'guardado', en: t })
+    })
+  }
+  function programarSubida() {
+    if (temporizadorNube.current) clearTimeout(temporizadorNube.current)
+    temporizadorNube.current = setTimeout(() => subirBorrador(false), DEBOUNCE_SERVIDOR_MS)
+  }
+
   useEffect(() => {
-    const b = leerBorrador<BorradorAutoNuevo>(claveBorrador)
-    if (!b) return
     let vivo = true
+    const local = leerBorradorAutoNuevoConSello<BorradorAutoNuevo>(clienteId, variante?.oportunidadId)
+    if (local) aplicarBorrador(local.datos)
+    void leerBorradoresServidor(clienteId, 'auto').then((filas) => {
+      if (!vivo) return
+      let subirLocal = false
+      if (filas === null) {
+        // No se ha podido leer (≠ «no hay»): se sigue con lo local y se dice.
+        setNube({ tipo: 'solo_local' })
+      } else {
+        const srv = borradorServidorPara<BorradorAutoNuevo>(filas, variante?.oportunidadId)
+        const elegido = elegirMasReciente(local, srv)
+        if (elegido?.origen === 'servidor') {
+          // El del servidor gana: sustituye el estado completo, no se suma a lo que aplicó el local.
+          restablecerInicial()
+          aplicarBorrador(elegido.borrador.datos)
+          setNube({ tipo: 'guardado', en: elegido.borrador.guardadoEn })
+        } else if (elegido?.origen === 'local') {
+          // Lo de este equipo es más nuevo (p. ej. tecleado sin red): se sube.
+          subirLocal = true
+          marcaCambio.current = elegido.borrador.guardadoEn
+        }
+      }
+      // La base se fija cuando React ya ha pintado lo restaurado.
+      setTimeout(() => {
+        if (!vivo) return
+        reconciliado.current = true
+        baseServidor.current = subirLocal ? null : JSON.stringify(ultimoBorrador.current)
+        if (subirLocal) programarSubida()
+      }, 50)
+    })
+    return () => {
+      vivo = false
+    }
+
+    function aplicarBorrador(b: BorradorAutoNuevo) {
+      const token = ++tokenRestauracion.current
 
     // Lo que no depende de ningún catálogo se restaura tal cual.
     // Lo que el RIESGO ya trae manda sobre el borrador (30/09/2026).
@@ -488,20 +607,18 @@ export default function AutoNuevo({
     // desplegable de versión llegue poblado y `codigoVehiculo` siga siendo un
     // código que el catálogo reconoce, no una cadena suelta del borrador.
     if (b.marcaId && !riesgoManda) {
-      void poblarCascada({ marcaId: b.marcaId, modeloId: b.modeloId, motorId: b.motorId, codigoVehiculo: b.codigoVehiculo }, () => vivo)
+      void poblarCascada({ marcaId: b.marcaId, modeloId: b.modeloId, motorId: b.motorId, codigoVehiculo: b.codigoVehiculo }, () => vivo && tokenRestauracion.current === token)
     }
-
-    return () => {
-      vivo = false
     }
     // Se restaura UNA vez al abrir la pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Autoguardado: cualquier cambio se guarda, aunque no se llegue a cotizar.
+  const ultimoBorrador = useRef<BorradorAutoNuevo | null>(null)
+  const borradorPendiente = useRef(false)
   useEffect(() => {
-    const t = setTimeout(() => {
-      guardarBorrador<BorradorAutoNuevo>(claveBorrador, {
+    const datos: BorradorAutoNuevo = {
         marcaId,
         modeloId,
         motorId,
@@ -532,8 +649,18 @@ export default function AutoNuevo({
         aniosEnCompania,
         aniosSinSiniestros,
         siniestrosUltimos5,
-      })
+    }
+    ultimoBorrador.current = datos
+    borradorPendiente.current = true
+    const t = setTimeout(() => {
+      guardarBorrador<BorradorAutoNuevo>(claveBorrador, datos)
+      borradorPendiente.current = false
     }, 400)
+    // Servidor: debounce más largo; antes de reconciliar no sube nada (ver arriba).
+    if (reconciliado.current && JSON.stringify(datos) !== baseServidor.current) {
+      marcaCambio.current = Date.now()
+      programarSubida()
+    }
     return () => clearTimeout(t)
   }, [
     claveBorrador,
@@ -568,6 +695,67 @@ export default function AutoNuevo({
     aniosSinSiniestros,
     siniestrosUltimos5,
   ])
+
+  // Corregir la ficha SIN salir (editores de EditarCliente): tras guardar, el servidor vuelve a precalificar
+  // (`router.refresh()` del editor) y llegan municipios y huecos nuevos SIN remontar la pantalla, así que lo
+  // tecleado se queda. Aquí solo se vuelve a casar lo que depende de esas listas.
+  const clavesMunicipios = listaMunicipios.map((m) => m.id).join(',')
+  useEffect(() => {
+    setMunicipioId((cur) =>
+      listaMunicipios.some((m) => m.id === cur) ? cur : listaMunicipios.length === 1 ? listaMunicipios[0].id : '',
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clavesMunicipios])
+  const [fichaAbierta, setFichaAbierta] = useState(false)
+  const [fichaMontada, setFichaMontada] = useState(false)
+  const [fichaGuardada, setFichaGuardada] = useState(false)
+  function alGuardarFicha() {
+    // El borrador se vuelca YA (sin esperar a los 400 ms): el refresco que sigue no puede costar lo tecleado.
+    if (ultimoBorrador.current) guardarBorrador<BorradorAutoNuevo>(claveBorrador, ultimoBorrador.current)
+    borradorPendiente.current = false
+    setFichaGuardada(true)
+  }
+
+  // Al salir de la pantalla (enlace a la ficha, atrás…) dentro de los 400 ms del último cambio, el
+  // temporizador se cancelaba y lo último tecleado se perdía: se vuelca el pendiente al desmontar.
+  useEffect(() => {
+    return () => {
+      if (borradorPendiente.current && ultimoBorrador.current) {
+        guardarBorrador<BorradorAutoNuevo>(claveBorrador, ultimoBorrador.current)
+        borradorPendiente.current = false
+      }
+    }
+  }, [claveBorrador])
+
+  // Cerrar la pestaña, cambiar de app en el móvil o navegar fuera: se vuelca YA lo pendiente, en local
+  // y en servidor (`keepalive`: la petición termina aunque la página se cierre). Al volver la red, se
+  // reintenta lo que no subió.
+  useEffect(() => {
+    function volcar() {
+      if (borradorPendiente.current && ultimoBorrador.current) {
+        guardarBorrador<BorradorAutoNuevo>(claveBorrador, ultimoBorrador.current)
+        borradorPendiente.current = false
+      }
+      if (temporizadorNube.current) clearTimeout(temporizadorNube.current)
+      subirBorrador(true)
+    }
+    function alCambiarVisibilidad() {
+      if (document.visibilityState === 'hidden') volcar()
+    }
+    function alVolverRed() {
+      subirBorrador(false)
+    }
+    document.addEventListener('visibilitychange', alCambiarVisibilidad)
+    window.addEventListener('pagehide', volcar)
+    window.addEventListener('online', alVolverRed)
+    return () => {
+      document.removeEventListener('visibilitychange', alCambiarVisibilidad)
+      window.removeEventListener('pagehide', volcar)
+      window.removeEventListener('online', alVolverRed)
+      volcar()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveBorrador])
 
   useEffect(() => {
     if (!variante) return
@@ -741,6 +929,12 @@ export default function AutoNuevo({
     (c) => Boolean(CAMPOS_A_MANO[c]),
   )
 
+  // Con reparos de ficha el bloque se despliega solo (y sigue siendo plegable a mano).
+  const nReparosFicha = reparos.ficha.length
+  useEffect(() => {
+    if (nReparosFicha > 0) { setFichaAbierta(true); setFichaMontada(true) }
+  }, [nReparosFicha])
+
   const faltaPropietario = propietarioDistintoEf && !personaCompleta(propietario, false)
   const faltaConductor = conductorDistintoEf && !personaCompleta(conductor, true)
   const faltaOcasional = ocasionalDistintoEf && !personaCompleta(ocasional, true)
@@ -881,7 +1075,16 @@ export default function AutoNuevo({
         // llevaba datos personales, así que se borra en cuanto sobra. Una
         // cotización SIMULADA no ha pagado nada y puede querer repetirse, así
         // que ahí el borrador se queda.
-        if (!r.simulado) borrarBorrador(claveBorrador)
+        if (!r.simulado) {
+          borradorPendiente.current = false
+          borrarBorrador(claveBorrador)
+          // El del servidor, igual y en el mismo momento (no antes). Lo que haya en vuelo se cancela y
+          // lo pintado pasa a ser la base, para que el debounce no lo vuelva a crear.
+          if (temporizadorNube.current) clearTimeout(temporizadorNube.current)
+          baseServidor.current = JSON.stringify(ultimoBorrador.current)
+          void borrarBorradorServidor(clienteId, 'auto', variante?.oportunidadId ?? null)
+          setNube(null)
+        }
         setResultado({
           estado: 'ok',
           coste: r.coste,
@@ -906,6 +1109,14 @@ export default function AutoNuevo({
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       {variante && <NotaVariante nota={nota} onNota={setNota} />}
+      {textoIndicador(nube) && (
+        <p
+          aria-live="polite"
+          style={{ margin: 0, justifySelf: 'end', fontSize: 12, color: nube?.tipo === 'solo_local' ? 'var(--warning)' : 'var(--muted)' }}
+        >
+          {textoIndicador(nube)}
+        </p>
+      )}
       {faltanInicial === null && (
         <div style={{ ...cardStyle, borderColor: 'var(--negative)', color: 'var(--negative)', fontSize: 13 }}>
           No se ha podido precalificar la ficha de {etiquetaCliente || 'este cliente'}: no se sabe qué datos
@@ -1162,15 +1373,57 @@ export default function AutoNuevo({
 
         {reparos.ficha.length > 0 && (
           <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--negative)', padding: 12 }}>
-            <strong style={{ color: 'var(--negative)' }}>Esto no se arregla desde esta pantalla:</strong>
+            <strong style={{ color: 'var(--negative)' }}>Corrígelo aquí abajo: se guarda en la ficha del cliente.</strong>
             <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
               {reparos.ficha.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-              Se corrige en la <a href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--brand)' }}>ficha
-              del cliente</a> (pestaña Contactos). Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              Abre «Datos del tomador en la ficha» (justo debajo), guarda y esta pantalla se actualiza sola, sin
+              perder lo que llevas tecleado. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              {reparos.ficha.some((f) => f.campo === 'email') && (
+                <> El correo se cambia en la <a href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--brand)' }}>ficha del cliente</a> (pestaña Contactos).</>
+              )}
             </p>
           </div>
+        )}
+
+        {fichaTomador && (
+          <details
+            open={fichaAbierta}
+            onToggle={(e) => { const o = e.currentTarget.open; setFichaAbierta(o); if (o) setFichaMontada(true) }}
+            style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 10, padding: '0 12px' }}
+          >
+            <summary style={{ cursor: 'pointer', userSelect: 'none', minHeight: 44, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14, fontWeight: 700 }}>
+              Datos del tomador en la ficha
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>identidad · dirección (se guarda en la ficha)</span>
+              {reparos.ficha.length > 0 && <Badge tono="aviso">{reparos.ficha.length === 1 ? 'falta 1 dato' : `faltan ${reparos.ficha.length} datos`}</Badge>}
+            </summary>
+            {/* Montaje perezoso, y una vez montado se queda: plegarlo no tira lo escrito en sus formularios. */}
+            {(fichaMontada || fichaAbierta) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18, padding: '4px 0 14px' }}>
+                {reparos.ficha.length > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    Campos marcados por el servidor: {reparos.ficha.map((f) => f.campo).join(' · ')}
+                  </div>
+                )}
+                <EditarCliente
+                  clienteId={clienteId}
+                  identidad={fichaTomador.identidad}
+                  documentos={fichaTomador.documentos}
+                  onGuardado={alGuardarFicha}
+                />
+                <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+                  <h3 style={{ margin: 0, fontSize: 14 }}>Dirección</h3>
+                  <EditarDireccion clienteId={clienteId} contacto={fichaTomador.contacto} onGuardado={alGuardarFicha} />
+                </section>
+                {fichaGuardada && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    Guardado en la ficha: los huecos de arriba se han recalculado y lo tecleado en esta pantalla sigue ahí.
+                  </div>
+                )}
+              </div>
+            )}
+          </details>
         )}
 
         {reparos.desconocidos.length > 0 && (

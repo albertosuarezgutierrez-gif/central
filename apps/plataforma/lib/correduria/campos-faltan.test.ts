@@ -63,3 +63,27 @@ test('mezcla real: historial + ficha + desconocido, cada uno a su sitio', () => 
   assert.deepEqual(r.ficha.map((x) => x.campo), ['cpCirculacion'])
   assert.deepEqual(r.desconocidos.map((x) => x.campo), ['loQueSea'])
 })
+
+// ── Corregir la ficha SIN salir de auto-nuevo (decisión de Alberto, 05/10/2026) ──────────────────────
+import { readFileSync } from 'node:fs'
+import { CAMPOS_DE_FICHA } from './campos-faltan.ts'
+
+const AUTO_NUEVO = readFileSync(new URL('../../app/(usuario)/correduria/cliente/[id]/auto-nuevo/AutoNuevo.tsx', import.meta.url), 'utf8')
+const PAGE_AUTO_NUEVO = readFileSync(new URL('../../app/(usuario)/correduria/cliente/[id]/auto-nuevo/page.tsx', import.meta.url), 'utf8')
+
+test('todo campo de ficha sigue clasificado como ficha (es lo que abre el bloque plegable)', () => {
+  for (const c of CAMPOS_DE_FICHA) assert.equal(dondeSeCorrige(c, () => false), 'ficha', c)
+})
+
+test('auto-nuevo monta los editores de la ficha en vez de mandar a salir', () => {
+  assert.doesNotMatch(AUTO_NUEVO, /Esto no se arregla desde esta pantalla/, 'el aviso que obligaba a salir ya no existe')
+  assert.match(AUTO_NUEVO, /Datos del tomador en la ficha/)
+  assert.match(AUTO_NUEVO, /<EditarCliente[\s\S]*?onGuardado=\{alGuardarFicha\}/, 'identidad: mismo componente que la ficha')
+  assert.match(AUTO_NUEVO, /<EditarDireccion[\s\S]*?onGuardado=\{alGuardarFicha\}/, 'dirección: mismo componente que la ficha')
+  assert.match(PAGE_AUTO_NUEVO, /fichaTomador=\{/, 'page.tsx carga identidad, documentos y contacto')
+})
+
+test('al guardar la ficha el borrador se vuelca antes del refresco y al desmontar', () => {
+  assert.match(AUTO_NUEVO, /function alGuardarFicha\(\) \{[\s\S]*?guardarBorrador<BorradorAutoNuevo>\(claveBorrador, ultimoBorrador\.current\)/)
+  assert.match(AUTO_NUEVO, /return \(\) => \{\s*if \(borradorPendiente\.current && ultimoBorrador\.current\) \{/, 'flush al desmontar')
+})

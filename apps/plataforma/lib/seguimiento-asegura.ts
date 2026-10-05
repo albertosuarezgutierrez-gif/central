@@ -933,6 +933,18 @@ export function accionSolicitudDatosAsegura(body: Record<string, unknown>): Prom
   return llamar('/api/operador/solicitud-datos', { method: 'POST', body: JSON.stringify(body) })
 }
 
+// ─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──
+export function borradoresPresupuestoAsegura(clienteId: string, ramo: string): Promise<Reenvio> {
+  return llamar(`/api/operador/borrador-presupuesto?clienteId=${encodeURIComponent(clienteId)}&ramo=${encodeURIComponent(ramo)}`, { method: 'GET' })
+}
+export function guardarBorradorPresupuestoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/borrador-presupuesto', { method: 'POST', body: JSON.stringify(body) })
+}
+export function borrarBorradorPresupuestoAsegura(clienteId: string, ramo: string, oportunidadId: string | null): Promise<Reenvio> {
+  const q = `clienteId=${encodeURIComponent(clienteId)}&ramo=${encodeURIComponent(ramo)}${oportunidadId ? `&oportunidadId=${encodeURIComponent(oportunidadId)}` : ''}`
+  return llamar(`/api/operador/borrador-presupuesto?${q}`, { method: 'DELETE' })
+}
+
 // ─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────
 export function riesgoAsegura(oportunidadId: string): Promise<Reenvio> {
   return llamar(`/api/operador/oportunidad/riesgo?id=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })

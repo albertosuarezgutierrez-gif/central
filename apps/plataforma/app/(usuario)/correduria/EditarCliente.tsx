@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
+  MOTIVO_CAMBIO_REQUERIDO,
   MOTIVO_DOCUMENTO_REQUERIDO,
   documentosAcreditativos,
   etiquetaEstadoDocumento,
@@ -33,9 +34,12 @@ import CiudadPorCp from './CiudadPorCp'
 
 /**
  * Editar la IDENTIDAD de un cliente de la correduría, desde la ficha de
- * plataforma: DNI, nombre, apellidos y fecha de nacimiento, y SOLO con un DNI
- * recibido en la ficha — «se pide documentado» (dictado de Alberto,
- * 02/09/2026). Sin él, el bloque está deshabilitado y ofrece «Pedir DNI».
+ * plataforma: DNI, nombre, apellidos y fecha de nacimiento. Con un documento
+ * que lo acredite —un DNI recibido, o (05/10/2026) una póliza de la ficha cuyo
+ * DNI leído es el de la ficha (`documentosAcreditativos`, de la lista que ya
+ * llega)— o SIN documento con un MOTIVO escrito (05/10/2026, Alberto: «yo puedo
+ * editar cualquier dato»), que asegura deja en el historial con el antes y el
+ * después. El servidor valida lo mismo (sin documento ni motivo, 400).
  *
  * 🚨 Ni los teléfonos y correos ni la DIRECCIÓN están aquí: se corrigen en la
  * tarjeta de arriba, donde se leen. Los primeros salieron el 06/09/2026 y la
@@ -57,14 +61,17 @@ export default function EditarCliente({
   clienteId,
   identidad,
   documentos,
+  onGuardado,
 }: {
   clienteId: string
   identidad: IdentidadFicha | null
   documentos: DocumentoResumen[] | null
+  /** Opcional: se llama tras guardar con éxito (p. ej. auto-nuevo corrige la ficha sin salir de su pantalla). */
+  onGuardado?: () => void
 }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
-      <BloqueIdentidad clienteId={clienteId} identidad={identidad} documentos={documentos} />
+      <BloqueIdentidad clienteId={clienteId} identidad={identidad} documentos={documentos} onGuardado={onGuardado} />
     </div>
   )
 }
@@ -73,8 +80,10 @@ export default function EditarCliente({
 
 type Libre = { direccion: string; codigoPostal: string; ciudad: string; provincia: string }
 
-export function EditarDireccion({ clienteId, contacto }: {
+export function EditarDireccion({ clienteId, contacto, onGuardado }: {
   clienteId: string
+  /** Opcional: se llama tras guardar con éxito. */
+  onGuardado?: () => void
   contacto: { direccion: string | null; direccionIlegible: boolean; codigoPostal: string | null; ciudad: string | null; provincia: string | null }
 }) {
   const router = useRouter()
@@ -130,6 +139,7 @@ export function EditarDireccion({ clienteId, contacto }: {
       if (r.estado === 'ok') {
         setInicial(f)
         router.refresh()
+        onGuardado?.()
       }
     } catch {
       setResultado({ estado: 'error', motivo: 'red' })
@@ -293,10 +303,11 @@ export function CuentaCargo({ clienteId }: { clienteId: string }) {
 
 type Ident = { nombre: string; apellidos: string; dni: string; fechaNacimiento: string }
 
-function BloqueIdentidad({ clienteId, identidad, documentos }: {
+function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
   clienteId: string
   identidad: IdentidadFicha | null
   documentos: DocumentoResumen[] | null
+  onGuardado?: () => void
 }) {
   const router = useRouter()
   const acreditativos = documentosAcreditativos(documentos)
@@ -313,6 +324,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
   const [resultado, setResultado] = useState<ResultadoEscritura | null>(null)
   const [campoMal, setCampoMal] = useState<string | null>(null)
   const [pedido, setPedido] = useState<string | null>(null)
+  const [motivo, setMotivo] = useState('')
 
   if (documentos === null) {
     return (
@@ -339,7 +351,8 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
     )
   }
 
-  const habilitado = acreditativos.length > 0
+  // Siempre se puede editar: con documento, o sin él diciendo por qué.
+  const conDocumento = documentoId !== '' && acreditativos.some((d) => d.id === documentoId)
 
   async function pedirDni() {
     setOcupado(true)
@@ -367,7 +380,11 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
     if (f.apellidos !== inicial.apellidos) ident.apellidos = f.apellidos.trim() === '' ? null : f.apellidos
     if (f.dni.trim() !== '') ident.dni = f.dni
     if (f.fechaNacimiento !== inicial.fechaNacimiento) ident.fechaNacimiento = f.fechaNacimiento.trim() === '' ? null : f.fechaNacimiento
-    const rev = revisarEdicion({ identidad: ident, documentoId: documentoId || null })
+    const motivoEnviado = conDocumento ? null : motivo
+    const rev = revisarEdicion(
+      { identidad: ident, documentoId: conDocumento ? documentoId : null, motivo: motivoEnviado },
+      { permiteMotivo: true, fichaSinNombre: nombrePendiente(identidad?.nombre) },
+    )
     if (!rev.ok) {
       setCampoMal(rev.campo ?? null)
       return setResultado({ estado: 'invalido', motivo: rev.motivo, campo: rev.campo ?? null })
@@ -378,7 +395,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
       const res = await fetch('/api/correduria/cliente', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: clienteId, identidad: ident, documentoId }),
+        body: JSON.stringify({ id: clienteId, identidad: ident, ...(conDocumento ? { documentoId } : { motivo: motivoEnviado }) }),
       })
       const r = interpretarEscritura(res.status, await res.json().catch(() => null))
       setResultado(r)
@@ -386,7 +403,9 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
       if (r.estado === 'ok') {
         setInicial({ ...f, dni: '' })
         setF((p) => ({ ...p, dni: '' }))
+        setMotivo('')
         router.refresh()
+        onGuardado?.()
       }
     } catch {
       setResultado({ estado: 'error', motivo: 'red' })
@@ -408,33 +427,42 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
         {identidad.tipoPersona && <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>persona {identidad.tipoPersona}</span>}
       </h3>
 
-      {habilitado ? (
+      {acreditativos.length > 0 && (
         <Campo label="Documento que acredita el cambio">
-          <select value={documentoId} onChange={(e) => setDocumentoId(e.target.value)} style={campo}>
+          <select value={conDocumento ? documentoId : ''} onChange={(e) => setDocumentoId(e.target.value)} style={campo}>
             {acreditativos.map((d) => (
               <option key={d.id} value={d.id}>
-                {etiquetaTipoDocumento(d.tipo)} · {d.nombre ?? 'sin nombre'} · {etiquetaEstadoDocumento(d.estado)}
+                {etiquetaTipoDocumento(d.tipo)}{d.tipo === 'poliza' ? ' (su DNI es el de la ficha)' : ''} · {d.nombre ?? 'sin nombre'} · {etiquetaEstadoDocumento(d.estado)}
               </option>
             ))}
+            <option value="">Ninguno: cambio sin documento, con motivo</option>
           </select>
         </Campo>
-      ) : (
-        <div style={{ ...pendienteBox, display: 'grid', gap: 8 }}>
+      )}
+      {!conDocumento && (
+        <div style={{ ...avisoAmbar, display: 'grid', gap: 8 }}>
           <div>
-            Para cambiar {rot.documento}, {rot.nombre.toLowerCase()} o {rot.fecha.toLowerCase()} hace falta
-            el {rot.pedir} en la ficha (regla: se pide documentado). Ahora mismo no hay ningún {rot.pedir} recibido
-            en Documentos.
-            {nombrePendiente(identidad.nombre) && ' Para PONER el nombre a esta ficha sin nombre no hace falta: usa «Poner nombre» bajo el título.'}
+            <Ico i={AlertTriangle} /> {acreditativos.length > 0
+              ? 'Cambio sin documento.'
+              : <>No hay ningún {rot.pedir} recibido en Documentos (ni una póliza suya con su mismo {rot.documento}).</>}
+            {' '}Puedes cambiar {rot.documento}, {rot.nombre.toLowerCase()} o {rot.fecha.toLowerCase()} igualmente: escribe el
+            motivo y quedará en el historial con quién lo cambió, el valor anterior y el nuevo.
+            {nombrePendiente(identidad.nombre) && ' Para PONER el nombre a esta ficha sin nombre no hace falta motivo: usa «Poner nombre» bajo el título.'}
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button type="button" disabled={ocupado} onClick={() => void pedirDni()} style={btnStyle('secundario')}>Pedir {rot.pedir}</button>
-            {pedido && <span style={{ fontSize: 12 }}>{pedido}</span>}
-          </div>
+          <Campo label="Motivo del cambio" mal={resultado?.estado === 'invalido' && resultado.motivo === MOTIVO_CAMBIO_REQUERIDO}>
+            <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="p. ej. corregido con la clienta por teléfono" style={campo} maxLength={500} />
+          </Campo>
+          {acreditativos.length === 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button type="button" disabled={ocupado} onClick={() => void pedirDni()} style={btnStyle('secundario')}>Pedir {rot.pedir}</button>
+              {pedido && <span style={{ fontSize: 12 }}>{pedido}</span>}
+            </div>
+          )}
         </div>
       )}
 
       <form onSubmit={guardar} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
-        <fieldset disabled={!habilitado || ocupado} style={{ border: 0, margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, opacity: habilitado ? 1 : 0.6 }}>
+        <fieldset disabled={ocupado} style={{ border: 0, margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
           <div className="edicion-fila" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
             <Campo label={rot.nombre} mal={campoMal === 'nombre'}>
               <input value={f.nombre} onChange={(e) => setF((p) => ({ ...p, nombre: e.target.value }))} style={campo} />
@@ -456,7 +484,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
           </div>
         </fieldset>
       </form>
-      <Aviso r={resultado} ok="Guardado, con el documento anotado en el historial." ocupado={ocupado} />
+      <Aviso r={resultado} ok={conDocumento ? 'Guardado, con el documento anotado en el historial.' : 'Guardado, con el motivo y el antes/después anotados en el historial.'} ocupado={ocupado} />
     </section>
   )
 }
@@ -524,6 +552,9 @@ const h3: React.CSSProperties = { margin: 0, fontSize: 13, fontWeight: 700 }
 const campo: React.CSSProperties = {
   width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 44, padding: '10px 12px',
   borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14,
+}
+const avisoAmbar: React.CSSProperties = {
+  fontSize: 13, lineHeight: 1.5, color: 'var(--warning)', background: 'var(--warning-bg)', border: '1px solid var(--warning)', borderRadius: 8, padding: '8px 10px',
 }
 const pendienteBox: React.CSSProperties = {
   fontSize: 13, lineHeight: 1.5, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 10px',

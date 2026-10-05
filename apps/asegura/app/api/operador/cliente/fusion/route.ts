@@ -14,7 +14,7 @@ export const maxDuration = 60
 //
 // GET ?id=              → las otras fichas con el MISMO DNI (candidatas).
 // GET ?id=&con=         → las dos fichas comparadas campo a campo.
-// POST {id, con, deAbsorbida[], confirmarSinDni?, actor}
+// POST {id, con, deAbsorbida[], conservar[]?, confirmarSinDni?, actor} — `conservar`: identidad distinta que se queda la de esta ficha (si difiere, o una u otra: obligatorio)
 //                       → fusiona `con` en `id` (`id` es la que se queda).
 //
 // La escritura la hace la función de BD `fusionar_clientes` en una sola
@@ -55,7 +55,7 @@ export const POST = auditado(async (req: Request) => {
     const actor = typeof body?.actor === 'string' && body.actor.trim() !== '' ? body.actor.trim() : ''
     if (id === '' || con === '') return NextResponse.json({ estado: 'invalido', motivo: 'Faltan las dos fichas.' }, { status: 422 })
     if (actor === '') return NextResponse.json({ estado: 'invalido', motivo: 'Falta quién fusiona.' }, { status: 422 })
-    const r = await fusionar(correduria.id, id, con, body?.deAbsorbida, body?.confirmarSinDni === true, actor)
+    const r = await fusionar(correduria.id, id, con, body?.deAbsorbida, body?.confirmarSinDni === true, actor, body?.conservar)
     const status = r.estado === 'ok' ? 200 : r.estado === 'no_encontrado' ? 404 : r.estado === 'conflicto' ? 409 : 422
     return NextResponse.json(r, { status })
   } catch (e) {

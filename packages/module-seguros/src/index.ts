@@ -375,6 +375,9 @@ export {
   documentoAcredita,
   documentosAcreditativos,
   textoHistorialEdicion,
+  MOTIVO_CAMBIO_REQUERIDO,
+  MOTIVO_CAMBIO_MINIMO,
+  motivoCambioValido,
   revisarAlta,
   coincidenciaBloquea,
   FUENTES_ORIGEN,
@@ -1072,6 +1075,8 @@ export {
   identidadFusion,
   dniIlegibleSinIndice,
   revisarElecciones,
+  GRUPOS_IDENTIDAD_FUSION,
+  identidadSinDecidir,
   type GrupoFusion,
   type ValorFusion,
   type EstadoCampoFusion,
@@ -1289,3 +1294,14 @@ export type {
 
 export { personaDeFicha, esTelefonoComodin } from './persona-ficha.ts'
 export { esCanalCorreduria } from './canal-correduria.ts'
+export {
+  marcaAcreditaFicha,
+  propuestaIdentidadDesdePoliza,
+  capitalizarNombre,
+  normalizarParaComparar,
+  enmascararFecha,
+  textoCambioIdentidadConMotivo,
+  type MarcaIdentidadDocumento,
+  type PropuestaIdentidad,
+  type MotivoPropuesta,
+} from './identidad-documentada.ts'
