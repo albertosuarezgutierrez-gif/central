@@ -2,6 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   MOTIVO_DOCUMENTO_REQUERIDO,
+  MOTIVO_CAMBIO_REQUERIDO,
+  completaApellidos,
   coincidenciaBloquea,
   etiquetasIdentidad,
   documentoAcredita,
@@ -270,4 +272,50 @@ test('Documentos: null = no se pudo leer (no se afirma que no haya DNI); [] = re
   assert.equal(estadoDocumentosIdentidad([]), 'ninguno')
   assert.equal(estadoDocumentosIdentidad([{ ...d, estado: 'pedido' }]), 'ninguno')
   assert.equal(estadoDocumentosIdentidad([d]), 'hay')
+})
+
+// ─── Completar apellidos no es corregir identidad ────────────────────────────
+
+const CTX = (apellidosActuales: string | null | undefined) => ({ permiteMotivo: true, apellidosActuales })
+
+test('«Slava» → «Slava Antoli» sin documento ni motivo: pasa, y el historial lo dice sin mentir', () => {
+  const r = revisarEdicion({ identidad: { apellidos: 'Slava Antoli' } }, CTX('Slava'))
+  assert.equal(r.ok, true)
+  if (!r.ok) return
+  assert.equal(r.motivoCambio, undefined)
+  assert.deepEqual(r.apellidosCompletados, { antes: 'Slava', despues: 'Slava Antoli' })
+  const t = textoHistorialEdicion(r, { actor: 'alberto' })
+  assert.match(t, /apellidos completados sin documento: "Slava" → "Slava Antoli"/)
+  assert.doesNotMatch(t, /no tenía nombre/)
+})
+
+test('apellidos actuales vacíos o null: rellenarlos no pide motivo; la comparación ignora tildes, mayúsculas y espacios', () => {
+  assert.equal(revisarEdicion({ identidad: { apellidos: 'Slava Antoli' } }, CTX('')).ok, true)
+  assert.equal(revisarEdicion({ identidad: { apellidos: 'Slava Antoli' } }, CTX(null)).ok, true)
+  assert.equal(revisarEdicion({ identidad: { apellidos: 'pérez  garcía' } }, CTX('  Perez ')).ok, true)
+  assert.equal(completaApellidos('Slava', 'SLAVA   Antoli'), true)
+})
+
+test('NO es completar: otro apellido, prefijo pegado, quitar o cambiar palabras, o no saber los actuales', () => {
+  for (const nuevo of ['Pérez', 'Slavaxx', 'Slava', 'Antoli Slava', 'Slavo Antoli']) {
+    const r = revisarEdicion({ identidad: { apellidos: nuevo } }, CTX('Slava'))
+    assert.deepEqual(r.ok ? null : r.motivo, MOTIVO_CAMBIO_REQUERIDO, nuevo)
+  }
+  const quitar = revisarEdicion({ identidad: { apellidos: 'Slava' } }, CTX('Slava Antoli'))
+  assert.deepEqual(quitar.ok ? null : quitar.motivo, MOTIVO_CAMBIO_REQUERIDO)
+  const borrar = revisarEdicion({ identidad: { apellidos: null } }, CTX('Slava'))
+  assert.deepEqual(borrar.ok ? null : borrar.motivo, MOTIVO_CAMBIO_REQUERIDO)
+  // `undefined` = no se sabe lo que hay: el estado conservador.
+  const nose = revisarEdicion({ identidad: { apellidos: 'Slava Antoli' } }, CTX(undefined))
+  assert.deepEqual(nose.ok ? null : nose.motivo, MOTIVO_CAMBIO_REQUERIDO)
+})
+
+test('con cambio de nombre, DNI o fecha a la vez, la regla de siempre; con motivo, vía motivo', () => {
+  const nombre = revisarEdicion({ identidad: { apellidos: 'Slava Antoli', nombre: 'Ana' } }, CTX('Slava'))
+  assert.deepEqual(nombre.ok ? null : nombre.motivo, MOTIVO_CAMBIO_REQUERIDO)
+  const dni = revisarEdicion({ identidad: { apellidos: 'Slava Antoli', dni: '12345678Z' } }, CTX('Slava'))
+  assert.deepEqual(dni.ok ? null : dni.motivo, MOTIVO_CAMBIO_REQUERIDO)
+  // Con motivo informado, sigue la vía del motivo (antes/después).
+  const conMotivo = revisarEdicion({ identidad: { apellidos: 'Slava Antoli' }, motivo: 'segundo apellido por teléfono' }, CTX('Slava'))
+  assert.equal(conMotivo.ok && conMotivo.motivoCambio !== undefined, true)
 })

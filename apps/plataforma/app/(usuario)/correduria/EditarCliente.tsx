@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -307,6 +307,24 @@ export function CuentaCargo({ clienteId }: { clienteId: string }) {
 
 type Ident = { nombre: string; apellidos: string; dni: string; fechaNacimiento: string }
 
+const MOTIVOS_RAPIDOS = [
+  'Confirmado con el cliente por teléfono',
+  'Errata al dar de alta',
+  'Dato de la póliza de la compañía',
+] as const
+
+const colapsar = (v: string) => v.replace(/\s+/g, ' ').trim()
+
+/** Lo que el usuario ha tocado, comparando sin espacios de más (un espacio no es un cambio). */
+function identTocada(f: Ident, inicial: Ident): NonNullable<EdicionCliente['identidad']> {
+  const ident: NonNullable<EdicionCliente['identidad']> = {}
+  if (colapsar(f.nombre) !== colapsar(inicial.nombre)) ident.nombre = f.nombre
+  if (colapsar(f.apellidos) !== colapsar(inicial.apellidos)) ident.apellidos = colapsar(f.apellidos) === '' ? null : f.apellidos
+  if (f.dni.trim() !== '') ident.dni = f.dni
+  if (f.fechaNacimiento !== inicial.fechaNacimiento) ident.fechaNacimiento = f.fechaNacimiento.trim() === '' ? null : f.fechaNacimiento
+  return ident
+}
+
 function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
   clienteId: string
   identidad: IdentidadFicha | null
@@ -329,6 +347,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
   const [campoMal, setCampoMal] = useState<string | null>(null)
   const [pedido, setPedido] = useState<string | null>(null)
   const [motivo, setMotivo] = useState('')
+  const refMotivo = useRef<HTMLInputElement>(null)
   const [viaGuardada, setViaGuardada] = useState<'documento' | 'motivo'>('documento')
   // Tres estados: `null` = no se pudieron leer los Documentos (no se afirma que no haya DNI; se
   // puede editar igual con motivo); sin acreditativos = revisado y no hay; o los hay.
@@ -353,7 +372,17 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
   // el cambio pide motivo y se registra como motivo, no como «acreditado con documento».
   const polizaNoCubre = docSel?.tipo === 'poliza'
     && (f.dni.trim() !== '' || f.fechaNacimiento !== inicial.fechaNacimiento)
-  const pideMotivo = !conDocumento || polizaNoCubre
+  // Lo editado, con la comparación normalizada (espacios de más no son un cambio).
+  const ident = identTocada(f, inicial)
+  const hayEdicion = Object.keys(ident).length > 0
+  // ¿Lo editado pide motivo? La misma función pura que el servidor (completar apellidos, poner nombre
+  // a una ficha sin nombre… no lo piden). Sin edición no hay cuadro ámbar: solo la línea de ayuda.
+  const sinMotivo = revisarEdicion(
+    { identidad: ident, documentoId: null, motivo: null },
+    { permiteMotivo: true, fichaSinNombre: nombrePendiente(identidad.nombre), apellidosActuales: inicial.apellidos },
+  )
+  const sinDocPideMotivo = !sinMotivo.ok && sinMotivo.motivo === MOTIVO_CAMBIO_REQUERIDO
+  const pideMotivo = hayEdicion && (polizaNoCubre || (!conDocumento && sinDocPideMotivo))
 
   async function pedirDni() {
     setOcupado(true)
@@ -374,20 +403,23 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
     }
   }
 
+  function enfocarMotivo() {
+    setTimeout(() => {
+      const el = refMotivo.current
+      if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus() }
+    }, 0)
+  }
+
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
-    const ident: NonNullable<EdicionCliente['identidad']> = {}
-    if (f.nombre !== inicial.nombre) ident.nombre = f.nombre
-    if (f.apellidos !== inicial.apellidos) ident.apellidos = f.apellidos.trim() === '' ? null : f.apellidos
-    if (f.dni.trim() !== '') ident.dni = f.dni
-    if (f.fechaNacimiento !== inicial.fechaNacimiento) ident.fechaNacimiento = f.fechaNacimiento.trim() === '' ? null : f.fechaNacimiento
-    const motivoEnviado = pideMotivo ? motivo : null
+    const motivoEnviado = pideMotivo || (hayEdicion && !conDocumento && motivo.trim() !== '') ? motivo : null
     const rev = revisarEdicion(
       { identidad: ident, documentoId: conDocumento ? documentoId : null, motivo: motivoEnviado },
-      { permiteMotivo: true, fichaSinNombre: nombrePendiente(identidad?.nombre) },
+      { permiteMotivo: true, fichaSinNombre: nombrePendiente(identidad?.nombre), apellidosActuales: inicial.apellidos },
     )
     if (!rev.ok) {
       setCampoMal(rev.campo ?? null)
+      if (rev.motivo === MOTIVO_CAMBIO_REQUERIDO) enfocarMotivo()
       return setResultado({ estado: 'invalido', motivo: rev.motivo, campo: rev.campo ?? null })
     }
     // La misma regla que el servidor: con póliza, DNI/fecha solo con motivo.
@@ -396,6 +428,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
       const acr = acreditarCambioConDocumento(docSel, camposIdentidadTocados(rev.identidad), { motivo: motivoEnviado, permiteMotivo: true })
       if (!acr.ok) {
         setCampoMal(null)
+        enfocarMotivo()
         return setResultado({ estado: 'invalido', motivo: MOTIVO_CAMBIO_REQUERIDO, campo: null })
       }
       via = acr.via
@@ -441,7 +474,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
     <section style={{ display: 'grid', gap: 10 }}>
       <h3 style={h3}>
         Identidad
-        {identidad.tipoPersona && <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>persona {identidad.tipoPersona}</span>}
+        {identidad.tipoPersona && <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>persona {identidad.tipoPersona === 'fisica' ? 'física' : identidad.tipoPersona === 'juridica' ? 'jurídica' : identidad.tipoPersona}</span>}
       </h3>
 
       {acreditativos.length > 0 && (
@@ -455,6 +488,12 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
             <option value="">Ninguno: cambio sin documento, con motivo</option>
           </select>
         </Campo>
+      )}
+      {!hayEdicion && (
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Cambiar DNI, nombre o fecha de nacimiento pide un documento o un motivo; completar los apellidos
+          (p. ej. añadir el segundo), no.
+        </div>
       )}
       {pideMotivo && (
         <div style={{ ...avisoAmbar, display: 'grid', gap: 8 }}>
@@ -477,8 +516,20 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
             </div>
           )}
           <Campo label="Motivo del cambio" mal={resultado?.estado === 'invalido' && resultado.motivo === MOTIVO_CAMBIO_REQUERIDO}>
-            <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="p. ej. corregido con la clienta por teléfono" style={campo} maxLength={500} />
+            <input ref={refMotivo} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="p. ej. corregido con la clienta por teléfono" style={campo} maxLength={500} />
           </Campo>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} aria-label="Motivos rápidos">
+            {MOTIVOS_RAPIDOS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMotivo(m)}
+                style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal', textAlign: 'left' }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
           {estadoDocs === 'ninguno' && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <button type="button" disabled={ocupado} onClick={() => void pedirDni()} style={btnStyle('secundario')}>Pedir {rot.pedir}</button>

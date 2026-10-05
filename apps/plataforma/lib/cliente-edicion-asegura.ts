@@ -202,6 +202,27 @@ export function interpretarDescarte(status: number, json: unknown): ResultadoDes
   return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
 }
 
+/** Los campos de la ficha que el servidor marca como «faltan», con su nombre de pantalla. */
+const ETIQUETA_FALTA_FICHA: Record<string, string> = {
+  nombre: 'nombre',
+  apellido1: 'primer apellido',
+  apellido2: 'segundo apellido (escribe los dos apellidos en «Apellidos»)',
+  dni: 'DNI',
+  fechaNacimiento: 'fecha de nacimiento',
+  telefono: 'teléfono',
+  email: 'email',
+  direccion: 'dirección',
+  codigoPostal: 'código postal',
+  ciudad: 'ciudad',
+  provincia: 'provincia',
+  estadoCivil: 'estado civil',
+}
+
+/** «Falta en la ficha: segundo apellido (…)» a partir de las claves que marca el servidor. */
+export function textoFaltaEnFicha(campos: readonly string[]): string {
+  return `Falta en la ficha: ${campos.map((c) => ETIQUETA_FALTA_FICHA[c] ?? c).join(' · ')}`
+}
+
 /** El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan. */
 export function textoMotivo(motivo: string): string {
   switch (motivo) {

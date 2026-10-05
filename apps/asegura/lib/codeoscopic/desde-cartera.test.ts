@@ -261,6 +261,12 @@ test('los apellidos se parten dejando el ÚLTIMO como segundo apellido', () => {
   assert.deepEqual(partirApellidos('de la Torre Ruiz'), { primero: 'de la Torre', segundo: 'Ruiz' })
   assert.deepEqual(partirApellidos('Pérez'), { primero: 'Pérez', segundo: null })
   assert.deepEqual(partirApellidos(null), { primero: null, segundo: null })
+  assert.deepEqual(partirApellidos('García de la Torre'), { primero: 'García', segundo: 'de la Torre' })
+  assert.deepEqual(partirApellidos('de la Rosa García'), { primero: 'de la Rosa', segundo: 'García' })
+  assert.deepEqual(partirApellidos('De la Rosa'), { primero: 'De la Rosa', segundo: null })
+  assert.deepEqual(partirApellidos('Martín del Río'), { primero: 'Martín', segundo: 'del Río' })
+  assert.deepEqual(partirApellidos('Van Der Berg'), { primero: 'Van Der', segundo: 'Berg' })
+  assert.deepEqual(partirApellidos('García de'), { primero: 'García de', segundo: null })
 })
 
 test('el tratamiento del CRM da el sexo: 1 hombre, 2 mujer, y el resto NO se adivina', () => {

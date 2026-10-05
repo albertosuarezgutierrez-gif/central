@@ -223,6 +223,8 @@ export type EdicionRevisada =
       tocaIdentidad: boolean
       /** El cambio de identidad va SIN documento, con este motivo (ya validado). */
       motivoCambio?: string
+      /** Solo se COMPLETARON los apellidos (sin documento ni motivo): lo que había y lo que queda. */
+      apellidosCompletados?: { antes: string; despues: string }
     }
   | { ok: false; motivo: string; campo?: CampoIdentidad | CampoLibre }
 
@@ -249,6 +251,32 @@ export function nombrePendiente(nombre: string | null | undefined): boolean {
   return s === '' || s === '(sin nombre)' || s === 'sin nombre'
 }
 
+/** Minúsculas, sin tildes, espacios colapsados: para comparar apellidos, nunca para guardarlos. */
+function claveApellidos(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+/**
+ * ¿Escribir `nuevo` en apellidos es COMPLETAR (no corregir)? Sí si los actuales están vacíos/null, o si
+ * el nuevo empieza por el actual seguido de ESPACIO y añade palabras («Slava» → «Slava Antoli»). No vale
+ * «Slava» → «Slavaxx» ni cambiar o quitar palabras. Rellenar un hueco no es corregir una identidad.
+ * Una sola fuente: la usan la pantalla de plataforma y el servidor de asegura.
+ */
+export function completaApellidos(actual: string | null | undefined, nuevo: string | null | undefined): boolean {
+  const n = claveApellidos(nuevo ?? '')
+  if (n === '') return false
+  const a = claveApellidos(actual ?? '')
+  if (a === '') return true
+  return n.startsWith(a + ' ') && n.length > a.length + 1
+}
+
+/** `motivo` y documento al margen: ¿la edición SOLO toca apellidos y solo los completa? */
+export function edicionSoloCompletaApellidos(e: EdicionCliente, apellidosActuales: string | null | undefined): boolean {
+  const ks = Object.keys(e.identidad ?? {}).filter((k) => (e.identidad as Record<string, unknown>)[k] !== undefined)
+  if (ks.length !== 1 || ks[0] !== 'apellidos') return false
+  return completaApellidos(apellidosActuales, e.identidad?.apellidos)
+}
+
 /**
  * Revisa una edición entera. Un solo motivo de rechazo cada vez, con su campo,
  * para que el formulario señale la casilla.
@@ -259,7 +287,15 @@ export function nombrePendiente(nombre: string | null | undefined): boolean {
  * rellena un hueco. DNI y fecha de nacimiento siguen exigiéndolo siempre, y
  * cambiar un nombre que YA existe, también.
  */
-export function revisarEdicion(e: EdicionCliente, ctx: { fichaSinNombre?: boolean; permiteMotivo?: boolean } = {}): EdicionRevisada {
+export function revisarEdicion(e: EdicionCliente, ctx: {
+  fichaSinNombre?: boolean
+  permiteMotivo?: boolean
+  /**
+   * Los apellidos que HAY en la ficha (`null`/vacío = no tiene). `undefined` = no se sabe: no hay
+   * exención de «completar apellidos» (ante la duda, el estado conservador).
+   */
+  apellidosActuales?: string | null
+} = {}): EdicionRevisada {
   const identidad: IdentidadRevisada = {}
   const libre: Partial<Record<CampoLibre, string | null>> = {}
 
@@ -311,6 +347,17 @@ export function revisarEdicion(e: EdicionCliente, ctx: { fichaSinNombre?: boolea
   if (!tocaIdentidad && Object.keys(libre).length === 0) return { ok: false, motivo: 'No hay nada que cambiar.' }
   const soloRellenaNombre = ctx.fichaSinNombre === true && identidad.nombre !== undefined
     && Object.keys(identidad).every((k) => k === 'nombre' || k === 'apellidos')
+  // Completar apellidos («Slava» → «Slava Antoli») tampoco es corregir: sin motivo. Si el motivo viene
+  // informado, el cambio sigue la vía del motivo (queda con antes/después).
+  const completaSolo = ctx.apellidosActuales !== undefined
+    && edicionSoloCompletaApellidos({ identidad: e.identidad }, ctx.apellidosActuales)
+    && !motivoCambioValido(e.motivo)
+  if (tocaIdentidad && !e.documentoId && !soloRellenaNombre && completaSolo) {
+    return {
+      ok: true, identidad, libre, tocaIdentidad,
+      apellidosCompletados: { antes: (ctx.apellidosActuales ?? '').replace(/\s+/g, ' ').trim(), despues: identidad.apellidos ?? '' },
+    }
+  }
   if (tocaIdentidad && !e.documentoId && !soloRellenaNombre) {
     // El corredor puede cambiarla sin documento si dice POR QUÉ (05/10/2026). Quien no lo tiene
     // permitido (el portal) sigue necesitando el documento, diga lo que diga el cuerpo.
@@ -401,7 +448,12 @@ export function textoHistorialEdicion(
   const partes: string[] = []
   const ident = (Object.keys(r.identidad) as CampoIdentidad[]).map((c) => ETIQUETA_CAMPO[c])
   if (ident.length > 0) {
-    partes.push(`identidad (${ident.join(', ')})${ctx.documentoId ? ` acreditada con el documento ${ctx.documentoId}` : ' rellenada sin documento: la ficha no tenía nombre'}`)
+    if (!ctx.documentoId && r.apellidosCompletados) {
+      const { antes, despues } = r.apellidosCompletados
+      partes.push(`apellidos completados sin documento: ${antes === '' ? '(vacío)' : `"${antes}"`} → "${despues}"`)
+    } else {
+      partes.push(`identidad (${ident.join(', ')})${ctx.documentoId ? ` acreditada con el documento ${ctx.documentoId}` : ' rellenada sin documento: la ficha no tenía nombre'}`)
+    }
   }
   for (const c of Object.keys(r.libre) as CampoLibre[]) {
     const v = r.libre[c]
