@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-05T17:11:17.039Z",
- "llamadas": 110,
+ "fin": "2026-10-05T17:47:50.040Z",
+ "llamadas": 226,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -16,37 +16,37 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 5,
-   "chars_in": 390,
-   "chars_out": 40321,
+   "llamadas": 6,
+   "chars_in": 462,
+   "chars_out": 65002,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 5
+    "Read": 6
    }
   },
   "bash": {
-   "llamadas": 51,
-   "chars_in": 22899,
-   "chars_out": 187850,
+   "llamadas": 132,
+   "chars_in": 64404,
+   "chars_out": 429373,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 51
+    "Bash": 132
    }
   },
   "otro": {
-   "llamadas": 12,
-   "chars_in": 27666,
-   "chars_out": 1819,
+   "llamadas": 14,
+   "chars_in": 32924,
+   "chars_out": 2004,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 7,
-    "ToolSearch": 5
+    "SubagentHandback": 8,
+    "ToolSearch": 6
    }
   },
   "agente:general-purpose": {
@@ -119,6 +119,50 @@
    "chars_citados": 0,
    "tools": {
     "mcp__Google_Drive__search_files": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 126,
+   "chars_out": 4658,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 6026,
+   "chars_out": 6237,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 13072,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 29,
+   "chars_in": 131733,
+   "chars_out": 271663,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 29
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 1489,
+   "chars_out": 1711,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
    }
   }
  }
