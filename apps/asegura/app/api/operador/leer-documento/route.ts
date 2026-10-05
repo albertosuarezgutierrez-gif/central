@@ -7,7 +7,8 @@ import { correduriaUnica } from '@/lib/cartera'
 import { polizaEnCartera } from '@/lib/poliza-en-cartera'
 import { seguroAnteriorDe } from '@central/module-seguros'
 import { contrasenasDeLaFicha } from '@/lib/documentos/contrasenas-ficha'
-import { guardarExtraccion, oportunidadDesdeLectura, type ResultadoOportunidadDocumento } from '@/lib/oportunidad-documento'
+import { guardarExtraccion, oportunidadDesdeLecturaConIdentidad, type ResultadoOportunidadDocumento } from '@/lib/oportunidad-documento'
+import type { PropuestaIdentidad } from '@central/module-seguros'
 import { guardarDocumento } from '@/lib/cartera-documentos'
 import { fichaDelDocumento, type FichaDelDocumento } from '@/lib/oportunidad-documento-reglas'
 
@@ -79,11 +80,16 @@ export const POST = auditado(async (req: Request) => {
   let oportunidad: ResultadoOportunidadDocumento | undefined
   let ficheroGuardado = false
   let ficha: FichaDelDocumento | null = null
+  // 05/10/2026: propuesta de corregir nombre/apellidos con la póliza (mismo DNI que la ficha). NO se
+  // escribe: la pantalla la enseña y, si el corredor la confirma, va por el PATCH de identidad con
+  // este documento como acreditativo. `null` = no hay nada que proponer (o no se guardó el fichero).
+  let identidad: { clienteId: string; documentoId: string; propuesta: PropuestaIdentidad } | null = null
   if (form.get('crear') === '1') {
     const c = await correduriaUnica().catch(() => null)
     if (c) {
       const sube = typeof clienteId === 'string' && clienteId.trim() !== '' ? clienteId.trim() : null
-      oportunidad = await oportunidadDesdeLectura({ correduriaId: c.id, clienteSube: sube, lectura: r, origen: 'subir-poliza', actor: req.headers.get('x-actor') ?? 'corredor' })
+      const conIdentidad = await oportunidadDesdeLecturaConIdentidad({ correduriaId: c.id, clienteSube: sube, lectura: r, origen: 'subir-poliza', actor: req.headers.get('x-actor') ?? 'corredor' })
+      oportunidad = conIdentidad.resultado
       // El fichero va a la ficha del tomador (la de la oportunidad, o la ya resuelta si la oportunidad
       // falló), o a la póliza si ya es nuestra. En los demás desenlaces (sin tomador legible, no es un
       // seguro) NO se guarda ni se toca ficha alguna, y se dice (`ficheroGuardado: false`).
@@ -96,8 +102,14 @@ export const POST = auditado(async (req: Request) => {
       if (destino) {
         const g = await guardarDocumento(c.id, { ...destino, tipo: 'poliza', nombre: fichero.name, mime: fichero.type, contenido, subidoPor: 'corredor', notas: 'Subida desde «Subir póliza»' }).catch(() => null)
         ficheroGuardado = g?.ok === true
-        // Lo leído (sin datos personales: `extraccionSinPii`) se queda con el documento.
-        if (g?.ok) await guardarExtraccion(c.id, g.documento.id, r.bruto ?? null)
+        // Lo leído (sin datos personales: `extraccionSinPii`) se queda con el documento, con la marca de
+        // identidad (índice ciego del DNI) si el documento va a la ficha en la que se comprobó.
+        if (g?.ok) {
+          const marca = conIdentidad.marca && 'clienteId' in destino && destino.clienteId === conIdentidad.marca.clienteId ? conIdentidad.marca : null
+          await guardarExtraccion(c.id, g.documento.id, r.bruto ?? null, marca)
+          const p = conIdentidad.propuesta
+          if (p && marca?.coincidiaConFicha && p.clienteId === marca.clienteId) identidad = { clienteId: p.clienteId, documentoId: g.documento.id, propuesta: p.propuesta }
+        }
       }
     }
   }
@@ -106,7 +118,7 @@ export const POST = auditado(async (req: Request) => {
   return NextResponse.json({
     // `ficha` (03/10/2026): la ficha del tomador resultante —id, si se creó, NOMBRES de lo rellenado
     // y avisos—; `null` = no se ha tocado ninguna ficha.
-    ...(oportunidad ? { oportunidad, ficheroGuardado, ficha } : {}),
+    ...(oportunidad ? { oportunidad, ficheroGuardado, ficha, identidad } : {}),
     enCartera,
     matricula: auto?.matricula ?? null,
     vehiculo,

@@ -28,18 +28,22 @@
 //   tecleada, `nota`.
 
 import {
+  MOTIVO_CAMBIO_REQUERIDO,
+  MOTIVO_DOCUMENTO_REQUERIDO,
   WHERE_CARTERA_VIVA,
   claveTipoCarnet,
   coincidenciaBloquea,
   documentoAcredita,
   estadoDocumento,
   etiquetaContacto,
+  marcaAcreditaFicha,
   normalizarContacto,
   revisarAlta,
   revisarCarnet,
   revisarEdicion,
   seraPrincipalAlAnadir,
   nombrePendiente,
+  textoCambioIdentidadConMotivo,
   textoHistorialAlta,
   textoHistorialEdicion,
   tipoDocumento,
@@ -81,11 +85,13 @@ export function campoIlegible(v: string | null | undefined): boolean {
   return typeof v === 'string' && v.startsWith('v1:') && descifrarCampo(v) === null
 }
 
-type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; campo?: string; coincidencias?: Coincidencia[]; forzable?: boolean; polizasVivas?: number; status: 404 | 409 | 422 | 500 }
+type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; campo?: string; coincidencias?: Coincidencia[]; forzable?: boolean; polizasVivas?: number; status: 400 | 404 | 409 | 422 | 500 }
 
-function invalido(motivo: string, campo?: string): Fallo {
-  return { ok: false, estado: 'invalido', motivo, campo, status: 422 }
+function invalido(motivo: string, campo?: string, status: 400 | 422 = 422): Fallo {
+  return { ok: false, estado: 'invalido', motivo, campo, status }
 }
+/** Identidad sin documento ni motivo: 400 (05/10/2026), el resto de rechazos de forma, 422. */
+const STATUS_SIN_ACREDITAR = new Set([MOTIVO_DOCUMENTO_REQUERIDO, MOTIVO_CAMBIO_REQUERIDO])
 function noEncontrado(): Fallo {
   return { ok: false, estado: 'no_encontrado', motivo: 'El cliente no existe en esta correduría.', status: 404 }
 }
@@ -609,33 +615,47 @@ export type ResultadoEdicion = { ok: true } | Fallo
 
 /**
  * Aplica una edición ya revisada por las reglas puras. Si toca identidad,
- * exige que `documentoId` sea un documento de tipo DNI, recibido, DE ESTE
- * cliente: un documento de otra ficha no acredita nada.
+ * exige que `documentoId` sea un documento DE ESTE cliente que acredite: un DNI
+ * recibido, o (05/10/2026) una póliza cuyo DNI leído es el de la ficha
+ * (`marcaAcreditaFicha` sobre su `extraccion`). Un documento de otra ficha no
+ * acredita nada.
+ *
+ * `permiteMotivo` (05/10/2026, Alberto: «yo puedo editar cualquier dato»): el
+ * corredor desde plataforma (puerto de operador) puede cambiar la identidad SIN
+ * documento con un `motivo` escrito, que queda en el historial con el antes y el
+ * después. El portal del cliente NUNCA lo pasa.
  */
 export async function editarCliente(
   correduriaId: string,
   clienteId: string,
   edicion: EdicionCliente,
   actor: string,
+  opciones: { permiteMotivo?: boolean } = {},
 ): Promise<ResultadoEdicion> {
+  const permiteMotivo = opciones.permiteMotivo === true
+  const rechazo = (x: { motivo: string; campo?: string }) => invalido(x.motivo, x.campo, STATUS_SIN_ACREDITAR.has(x.motivo) ? 400 : 422)
   // Primera pasada sin la ficha: un dato mal tecleado se rechaza sin tocar la BD.
-  const previa = revisarEdicion(edicion, { fichaSinNombre: true })
-  if (!previa.ok) return invalido(previa.motivo, previa.campo)
+  const previa = revisarEdicion(edicion, { fichaSinNombre: true, permiteMotivo })
+  if (!previa.ok) return rechazo(previa)
   try {
     const db = prismaAsegura()
     const c = await clienteDe(correduriaId, clienteId)
     if (!c) return noEncontrado()
     // La excepción «ficha sin nombre» la decide lo que hay en la BD, nunca quien llama.
-    const r = revisarEdicion(edicion, { fichaSinNombre: nombrePendiente(c.nombre) })
-    if (!r.ok) return invalido(r.motivo, r.campo)
+    const r = revisarEdicion(edicion, { fichaSinNombre: nombrePendiente(c.nombre), permiteMotivo })
+    if (!r.ok) return rechazo(r)
+    const ident = r.tocaIdentidad
+      ? await db.cliente.findFirst({ where: { id: clienteId, correduriaId }, select: { dni: true, dniLookupHash: true, fechaNacimiento: true } })
+      : null
 
-    // Sin documento solo llega aquí el caso «rellenar nombre en ficha sin nombre».
+    // Sin documento solo llega aquí «rellenar nombre en ficha sin nombre» o el cambio con motivo.
     if (r.tocaIdentidad && edicion.documentoId) {
       const d = await db.documento.findFirst({
         where: { id: edicion.documentoId ?? '', correduriaId, clienteId },
-        select: { tipo: true, estado: true },
+        select: { tipo: true, estado: true, extraccion: true },
       })
-      if (!d || !documentoAcredita({ tipo: tipoDocumento(d.tipo), estado: estadoDocumento(d.estado) })) {
+      const dniCoincideFicha = d ? marcaAcreditaFicha(d.extraccion, { clienteId, dniLookupHash: ident?.dniLookupHash ?? null }) : null
+      if (!d || !documentoAcredita({ tipo: tipoDocumento(d.tipo), estado: estadoDocumento(d.estado), dniCoincideFicha })) {
         return invalido('documento_no_acredita', 'documentoId')
       }
     }
@@ -688,7 +708,23 @@ export async function editarCliente(
         anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'notas' })
       }
     }
-    await anotarHistorial(correduriaId, clienteId, 'gestion', textoHistorialEdicion(r, { actor, documentoId: edicion.documentoId }))
+    const texto = r.motivoCambio
+      ? [
+          textoCambioIdentidadConMotivo({
+            actor,
+            motivo: r.motivoCambio,
+            antes: { nombre: c.nombre, apellidos: c.apellidos, dni: descifrarCampo(ident?.dni), fechaNacimiento: descifrarCampo(ident?.fechaNacimiento) },
+            despues: {
+              nombre: r.identidad.nombre,
+              apellidos: r.identidad.apellidos,
+              dni: r.identidad.dni === undefined ? undefined : (r.identidad.dni?.valor ?? null),
+              fechaNacimiento: r.identidad.fechaNacimiento,
+            },
+          }),
+          Object.keys(r.libre).length > 0 ? textoHistorialEdicion({ ...r, identidad: {} }, { actor }) : null,
+        ].filter(Boolean).join(' ')
+      : textoHistorialEdicion(r, { actor, documentoId: edicion.documentoId })
+    await anotarHistorial(correduriaId, clienteId, 'gestion', texto)
     return { ok: true }
   } catch (e) {
     if (esUnicoViolado(e)) return conflicto([], false)

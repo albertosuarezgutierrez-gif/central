@@ -1,10 +1,12 @@
 'use client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { btnStyle, cardStyle } from '@/components/ui'
 import { prepararAdjunto } from '@/lib/imagen-cliente'
 import { interpretarLecturaOportunidad, type LecturaDocumentoOportunidad } from '@/lib/seguimiento-asegura'
-import { interpretarFichaDocumento, interpretarFigurasDocumento, interpretarOportunidadDocumento, textoCamposFigura, textoFichaDocumento, textoFiguraDocumento, type AvisoOportunidadDocumento, type FichaDocumento, type FiguraDocumento, type FigurasDocumento } from '@/lib/oportunidad-documento'
+import { interpretarFichaDocumento, interpretarFigurasDocumento, interpretarOportunidadDocumento, interpretarPropuestaIdentidad, textoCamposFigura, textoFichaDocumento, textoFiguraDocumento, textoPropuestaIdentidad, type AvisoOportunidadDocumento, type FichaDocumento, type FiguraDocumento, type FigurasDocumento, type PropuestaIdentidadDocumento } from '@/lib/oportunidad-documento'
+import { interpretarEscritura, textoMotivo } from '@/lib/cliente-edicion-asegura'
 
 /**
  * UNA sola lectura de documento para toda la correduría (03/10/2026): la pantalla general
@@ -55,6 +57,8 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
   const [abierta, setAbierta] = useState<OportunidadAbierta | null>(null)
   // Motor: las personas de la póliza que no son el tomador (`null` = asegura no dice nada).
   const [figuras, setFiguras] = useState<FigurasDocumento | null>(null)
+  // 05/10/2026: la póliza (mismo DNI que la ficha) escribe distinto el nombre/apellidos: se PROPONE.
+  const [identidad, setIdentidad] = useState<PropuestaIdentidadDocumento | null>(null)
 
   async function leer(f: File) {
     setLeyendo(true)
@@ -66,6 +70,7 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
     setFichaIncierta(false)
     setAbierta(null)
     setFiguras(null)
+    setIdentidad(null)
     let status = 0
     let json: unknown = null
     try {
@@ -106,20 +111,22 @@ export function useLeerPoliza({ clienteId, tomador, crear, onLectura }: Opciones
     setSinGuardar(j?.oportunidad != null && j?.ficheroGuardado === false)
     setFicha(j?.oportunidad != null ? interpretarFichaDocumento(j?.ficha) : undefined)
     setFiguras(interpretarFigurasDocumento(j?.oportunidad))
+    setIdentidad(interpretarPropuestaIdentidad(j?.identidad))
     if (l.estado === 'ok') onLectura?.(l)
   }
 
   return {
-    leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta, abierta, figuras,
+    leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta, abierta, figuras, identidad,
     /** La oportunidad o la ficha ya llevan al usuario a un sitio: el resto de salidas sobra. */
     conOportunidad: Boolean(oportunidad?.clienteId || ficha),
   }
 }
 
 /** Lo que asegura dice de la oportunidad y de la ficha del tomador. No pinta nada si no dice nada. */
-export function AvisosLectura({ oportunidad, ficha, sinGuardar, fichaIncierta, figuras }: Pick<ReturnType<typeof useLeerPoliza>, 'oportunidad' | 'ficha' | 'sinGuardar' | 'fichaIncierta'> & { figuras?: FigurasDocumento | null }) {
+export function AvisosLectura({ oportunidad, ficha, sinGuardar, fichaIncierta, figuras, identidad }: Pick<ReturnType<typeof useLeerPoliza>, 'oportunidad' | 'ficha' | 'sinGuardar' | 'fichaIncierta'> & { figuras?: FigurasDocumento | null; identidad?: PropuestaIdentidadDocumento | null }) {
   return (
     <>
+      {identidad && <PropuestaIdentidad key={identidad.documentoId} p={identidad} />}
       {oportunidad && (
         <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, color: oportunidad.tono === 'aviso' ? 'var(--negative)' : 'var(--text)' }}>
           <span>{oportunidad.texto}</span>
@@ -201,5 +208,52 @@ function CamposFigura({ x }: { x: FiguraDocumento }) {
       {t.falta.length > 0 && <li style={{ overflowWrap: 'anywhere', color: 'var(--negative)' }}>Falta: {t.falta.join(', ')}</li>}
       {t.sinComprobar.length > 0 && <li style={{ overflowWrap: 'anywhere', color: 'var(--muted)' }}>Sin comprobar: {t.sinComprobar.join(', ')}</li>}
     </ul>
+  )
+}
+
+/**
+ * La póliza (con el MISMO DNI que la ficha) escribe distinto el nombre o los apellidos (05/10/2026,
+ * «Estibaliz Slava» → «Eslava Antoli»). Nada se ha escrito: el botón lo corrige por el PATCH de
+ * identidad de siempre, con ESTA póliza como documento acreditativo (asegura vuelve a comprobar que
+ * su DNI es el de la ficha). Si no se pulsa, la ficha se queda como estaba.
+ */
+function PropuestaIdentidad({ p }: { p: PropuestaIdentidadDocumento }) {
+  const router = useRouter()
+  const [estado, setEstado] = useState<'listo' | 'guardando' | 'hecho'>('listo')
+  const [error, setError] = useState<string | null>(null)
+
+  async function corregir() {
+    setEstado('guardando'); setError(null)
+    try {
+      const res = await fetch('/api/correduria/cliente', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: p.clienteId, identidad: { nombre: p.nombre, apellidos: p.apellidos }, documentoId: p.documentoId }),
+      })
+      const r = interpretarEscritura(res.status, await res.json().catch(() => null))
+      if (r.estado === 'ok') { setEstado('hecho'); router.refresh(); return }
+      setEstado('listo')
+      setError(r.estado === 'invalido' || r.estado === 'error' ? textoMotivo(r.motivo) : r.estado === 'no_encontrado' ? 'Esa ficha ya no está (¿fusionada?).' : 'No se ha guardado.')
+    } catch {
+      setEstado('listo')
+      setError('No se sabe si se ha guardado (se cortó la comunicación): recarga la ficha antes de repetir.')
+    }
+  }
+
+  return (
+    <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)', border: '1px solid var(--warning)' }}>
+      <strong>Nombre del titular distinto en la póliza</strong>
+      <span style={{ overflowWrap: 'anywhere' }}>{textoPropuestaIdentidad(p)} No se ha cambiado nada.</span>
+      {estado === 'hecho'
+        ? <span style={{ color: 'var(--positive)' }}>Corregido con la póliza; queda anotado en el historial con el documento.</span>
+        : (
+          <div>
+            <button type="button" disabled={estado === 'guardando'} onClick={() => void corregir()} style={{ ...btnStyle('primario'), minHeight: 44 }}>
+              {estado === 'guardando' ? 'Corrigiendo…' : 'Corregir con lo de la póliza'}
+            </button>
+          </div>
+        )}
+      {error && <span style={{ fontSize: 13, color: 'var(--negative)', overflowWrap: 'anywhere' }}>{error}</span>}
+    </div>
   )
 }

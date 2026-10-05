@@ -16,15 +16,20 @@ import {
   extraccionSinPii,
   figurasSinNombre,
   normalizarContactoTomador,
+  normalizarDni,
   normalizarFigurasLeidas,
   planFiguras,
+  propuestaIdentidadDesdePoliza,
   polizaFinanciada,
   prepararAltaDesdeDocumento,
   seguroAnteriorDe,
   vencimientoUrgente,
   type ContactoTomadorLeido,
   type LecturaPoliza,
+  type MarcaIdentidadDocumento,
+  type PropuestaIdentidad,
 } from '@central/module-seguros'
+import { computeDniLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { altaCliente, altaLeadSinContacto, anotarHistorialCliente, coincidencias, descifrarCampo } from './cartera-edicion'
@@ -118,8 +123,10 @@ export async function oportunidadDesdeFichero(
     const lectura = await leerPoliza(e.fichero.contenido, e.fichero.mime, e.fichero.nombre, {
       contrasenas: clienteSube ? () => contrasenasDeLaFicha(e.correduriaId, clienteSube) : undefined,
     })
-    if (e.documentoId && lectura.fase !== 'ninguno') await guardarExtraccion(e.correduriaId, e.documentoId, lectura.bruto ?? null)
-    return await oportunidadDesdeLectura({ ...e, lectura })
+    const r = await oportunidadDesdeLecturaConIdentidad({ ...e, lectura })
+    // Con la MARCA de identidad (05/10/2026): con ella, esta póliza acredita la identidad de su ficha.
+    if (e.documentoId && lectura.fase !== 'ninguno') await guardarExtraccion(e.correduriaId, e.documentoId, lectura.bruto ?? null, r.marca)
+    return r.resultado
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo leer el documento:', err instanceof Error ? err.message : err)
     return { estado: 'error', motivo: err instanceof Error ? err.message : String(err) }
@@ -129,6 +136,32 @@ export async function oportunidadDesdeFichero(
 /** Con el documento ya leído (p. ej. `subir-poliza`, que lo leyó antes de guardar). */
 export async function oportunidadDesdeLectura(
   e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },
+): Promise<ResultadoOportunidadDocumento> {
+  return (await oportunidadDesdeLecturaConIdentidad(e)).resultado
+}
+
+/**
+ * Lo mismo, y además (05/10/2026) lo que el documento dice de la IDENTIDAD de la ficha del tomador,
+ * que NO va en el resultado (este viaja al navegador y al portal):
+ * - `marca`: para guardar con el documento (`guardarExtraccion`): el índice ciego del DNI leído, la
+ *   ficha y si ese DNI era el que la ficha YA tenía antes de leer (no el que el volcado le acaba de
+ *   escribir). Con ella la póliza cuenta como documento acreditativo (`marcaAcreditaFicha`).
+ * - `propuesta`: nombre/apellidos de la póliza si difieren de la ficha y el DNI coincide
+ *   (`propuestaIdentidadDesdePoliza`). Solo si sube el CORREDOR. NO se escribe: la confirma él.
+ */
+export async function oportunidadDesdeLecturaConIdentidad(
+  e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },
+): Promise<{ resultado: ResultadoOportunidadDocumento; marca: MarcaIdentidadDocumento | null; propuesta: { clienteId: string; propuesta: PropuestaIdentidad } | null }> {
+  const identidad: { marca: MarcaIdentidadDocumento | null; propuesta: { clienteId: string; propuesta: PropuestaIdentidad } | null } = { marca: null, propuesta: null }
+  const resultado = await oportunidadDesdeLecturaInterna(e, identidad)
+  // Sin oportunidad no hay ficha resuelta de la que fiarse: ni marca ni propuesta.
+  if (resultado.estado !== 'creada' && resultado.estado !== 'actualizada') return { resultado, marca: null, propuesta: null }
+  return { resultado, ...identidad }
+}
+
+async function oportunidadDesdeLecturaInterna(
+  e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },
+  identidad: { marca: MarcaIdentidadDocumento | null; propuesta: { clienteId: string; propuesta: PropuestaIdentidad } | null },
 ): Promise<ResultadoOportunidadDocumento> {
   // Fuera del `try`: si algo falla DESPUÉS de elegir o crear la ficha, el `catch` devuelve su id
   // (no se afirma que no se tocó ninguna ficha).
@@ -234,6 +267,35 @@ export async function oportunidadDesdeLectura(
       clienteId,
       clienteSube,
     }
+    // La identidad, ANTES del volcado (que puede escribir el DNI del documento en una ficha sin DNI:
+    // ese DNI no puede luego «coincidir» consigo mismo). El DNI de la ficha de antes: el de la ficha
+    // donde se sube, o el que la encontró por su índice ciego (`dni_cartera`). Lead nuevo: ninguno.
+    if (alta?.dni && !empresa) {
+      let dniFichaAntes: string | null = null
+      let actual: { nombre: string | null; apellidos: string | null } | null = null
+      if (decision.tipo === 'ficha' && ficha && clienteId === ficha.id) {
+        dniFichaAntes = descifrarCampo(ficha.dni)
+        actual = ficha
+      } else if (decision.tipo === 'ficha' && decision.porque === 'dni_cartera') {
+        dniFichaAntes = alta.dni
+        actual = await db.cliente.findFirst({ where: { id: clienteId, correduriaId: e.correduriaId }, select: { nombre: true, apellidos: true } }).catch(() => null)
+      }
+      const a = normalizarDni(alta.dni)
+      const f = normalizarDni(dniFichaAntes ?? '')
+      const hash = computeDniLookupHash(alta.dni)
+      if (hash && verificado) identidad.marca = { dniHash: hash, clienteId, coincidiaConFicha: a.ok && f.ok && a.valor.valor === f.valor.valor }
+      if (actual && puedeAbrirFiguras(quienSube)) {
+        const p = propuestaIdentidadDesdePoliza({
+          dniFicha: dniFichaAntes,
+          dniLeido: alta.dni,
+          esEmpresa: empresa,
+          ficha: actual,
+          leido: { nombre: alta.nombre, apellidos: alta.apellidos },
+        })
+        if (p) identidad.propuesta = { clienteId, propuesta: p }
+      }
+    }
+
     const identificado = puedeVolcarEnFicha(quienSube)
     const volcado = identificado
       ? await volcarPolizaEnFicha({
@@ -381,12 +443,19 @@ async function leadMismoNombre(correduriaId: string, nombreCompleto: string): Pr
  * un campo SQL (en `clientes` van cifrados); de esos solo consta si se leyeron (`leidos`).
  * Best-effort: si falla (p. ej. la migración aún sin aplicar), el documento y la oportunidad siguen.
  */
-export async function guardarExtraccion(correduriaId: string, documentoId: string, bruto: Record<string, unknown> | null): Promise<void> {
+export async function guardarExtraccion(
+  correduriaId: string,
+  documentoId: string,
+  bruto: Record<string, unknown> | null,
+  /** 05/10/2026: la marca de identidad (índice ciego del DNI, nunca el DNI). Ver `marcaAcreditaFicha`. */
+  marca: MarcaIdentidadDocumento | null = null,
+): Promise<void> {
   const limpio = extraccionSinPii(bruto)
   if (!limpio) return
+  const guardado = marca ? { ...limpio, identidad: marca } : limpio
   try {
     await prismaAsegura().$executeRaw(Prisma.sql`
-      update documentos set extraccion = ${JSON.stringify(limpio)}::jsonb
+      update documentos set extraccion = ${JSON.stringify(guardado)}::jsonb
       where id = ${documentoId}::uuid and correduria_id = ${correduriaId}::uuid`)
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo guardar la extracción del documento:', err instanceof Error ? err.message : err)

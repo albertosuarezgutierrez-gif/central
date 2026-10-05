@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { CampoFusion, GrupoFusion, IdentidadFusion } from '@central/module-seguros'
+import { GRUPOS_IDENTIDAD_FUSION, identidadSinDecidir, type CampoFusion, type GrupoFusion, type IdentidadFusion } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 
 /**
@@ -71,6 +71,9 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
   const [cmp, setCmp] = useState<Comparacion | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deOtra, setDeOtra] = useState<Set<GrupoFusion>>(new Set())
+  // Identidad distinta (nombre, apellidos, fecha de nacimiento): NO hay opción marcada de salida; hay
+  // que elegir (05/10/2026, caso Estibaliz: «Slava» se quedó por omisión y «Eslava Antoli» se perdió).
+  const [conservar, setConservar] = useState<Set<GrupoFusion>>(new Set())
   const [confirmo, setConfirmo] = useState(false)
   const [enCurso, setEnCurso] = useState(false)
   const [elegidaPorDefecto, setElegidaPorDefecto] = useState(false)
@@ -81,7 +84,7 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
 
   useEffect(() => {
     let vivo = true
-    setCmp(null); setError(null); setDeOtra(new Set())
+    setCmp(null); setError(null); setDeOtra(new Set()); setConservar(new Set())
     fetch(`/api/correduria/cliente/fusion?id=${encodeURIComponent(seQueda)}&con=${encodeURIComponent(absorbidaId)}`, { cache: 'no-store' })
       .then(r => r.json().catch(() => null))
       .then(j => {
@@ -107,7 +110,7 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
       const res = await fetch('/api/correduria/cliente/fusion', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: cmp.superviviente.id, con: cmp.absorbida.id, deAbsorbida: [...deOtra], confirmarSinDni: confirmo }),
+        body: JSON.stringify({ id: cmp.superviviente.id, con: cmp.absorbida.id, deAbsorbida: [...deOtra], conservar: [...conservar], confirmarSinDni: confirmo }),
       })
       const j = await res.json().catch(() => null)
       if (j?.estado === 'ok') {
@@ -159,7 +162,8 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
   const heredados = cmp.campos.filter(c => c.estado === 'solo_absorbida')
   const ilegibles = cmp.campos.filter(c => c.estado === 'ilegible')
   const iguales = cmp.campos.filter(c => c.estado === 'igual' || c.estado === 'solo_superviviente').length
-  const bloqueada = cmp.identidad === 'dni_distinto' || cmp.identidad === 'dni_sin_indice' || (cmp.identidad === 'sin_comprobar' && !confirmo)
+  const identidadPendiente = identidadSinDecidir(cmp.campos, [...deOtra], [...conservar])
+  const bloqueada = cmp.identidad === 'dni_distinto' || cmp.identidad === 'dni_sin_indice' || (cmp.identidad === 'sin_comprobar' && !confirmo) || identidadPendiente.length > 0
   const nombreDe = (id: string) => (id === cmp.superviviente.id ? cmp.superviviente : cmp.absorbida)
 
   return (
@@ -203,18 +207,26 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
         <div key={c.grupo} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 10, display: 'grid', gap: 6 }}>
           <div style={{ fontSize: 12, fontWeight: 700 }}>{c.etiqueta}</div>
           {([['sup', c.superviviente.valor, cmp.superviviente.nombre], ['abs', c.absorbida.valor, cmp.absorbida.nombre]] as const).map(([lado, valor, de]) => {
-            const marcado = lado === 'abs' ? deOtra.has(c.grupo) : !deOtra.has(c.grupo)
+            const deIdentidad = GRUPOS_IDENTIDAD_FUSION.includes(c.grupo)
+            const marcado = lado === 'abs' ? deOtra.has(c.grupo) : deIdentidad ? conservar.has(c.grupo) : !deOtra.has(c.grupo)
             return (
               <label key={lado} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, minHeight: 44 }}>
                 <input
                   type="radio"
                   name={`${otra.id}-${c.grupo}`}
                   checked={marcado}
-                  onChange={() => setDeOtra(prev => {
-                    const n = new Set(prev)
-                    if (lado === 'abs') n.add(c.grupo); else n.delete(c.grupo)
-                    return n
-                  })}
+                  onChange={() => {
+                    setDeOtra(prev => {
+                      const n = new Set(prev)
+                      if (lado === 'abs') n.add(c.grupo); else n.delete(c.grupo)
+                      return n
+                    })
+                    setConservar(prev => {
+                      const n = new Set(prev)
+                      if (lado === 'sup') n.add(c.grupo); else n.delete(c.grupo)
+                      return n
+                    })
+                  }}
                   style={{ marginTop: 3 }}
                 />
                 <span style={{ overflowWrap: 'anywhere' }}>
@@ -240,6 +252,11 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
         {iguales} dato(s) coinciden o solo están en la que se queda. Teléfonos ({cmp.superviviente.telefonos} + {cmp.absorbida.telefonos}) y correos ({cmp.superviviente.emails} + {cmp.absorbida.emails}): se conservan todos. Pólizas, documentos y relaciones pasan a la que se queda (si algo no puede, te lo diré).
       </div>
 
+      {identidadPendiente.length > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--warning)' }}>
+          Elige con cuál te quedas en {identidadPendiente.map(g => cmp.campos.find(c => c.grupo === g)?.etiqueta.toLowerCase() ?? g).join(', ')}: es identidad y no se decide por omisión.
+        </div>
+      )}
       {error && <div style={{ fontSize: 12, color: 'var(--negative)' }}>{error}</div>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" disabled={bloqueada || enCurso} onClick={() => void fusionar()} style={{ ...btnStyle('primario'), minHeight: 44 }}>

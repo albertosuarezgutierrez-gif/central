@@ -15,6 +15,7 @@
 import { createHash } from 'node:crypto'
 import {
   estadoDocumento,
+  marcaAcreditaFicha,
   mimeDocumento,
   mimeParaServir,
   revisarDocumento,
@@ -132,13 +133,22 @@ export async function listarDocumentos(
     if (d.polizaId) or.push({ polizaId: d.polizaId })
     if (d.siniestroId) or.push({ siniestroId: d.siniestroId })
     if (or.length === 0) return []
-    const filas = await db.documento.findMany({
-      where: { correduriaId, OR: or },
-      select: SELECT_RESUMEN,
-      orderBy: { createdAt: 'desc' },
-      take: 200,
+    // Por ficha (05/10/2026): las pólizas cuyo DNI leído es el de la ficha cuentan como documento
+    // acreditativo de su identidad (`dniCoincideFicha`, de la marca guardada en `extraccion`).
+    const [filas, ficha] = await Promise.all([
+      db.documento.findMany({
+        where: { correduriaId, OR: or },
+        select: { ...SELECT_RESUMEN, extraccion: true },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+      d.clienteId ? db.cliente.findFirst({ where: { id: d.clienteId, correduriaId }, select: { dniLookupHash: true } }) : null,
+    ])
+    return filas.map(({ extraccion, ...f }) => {
+      const r = aResumen(f)
+      if (r.tipo !== 'poliza' || !d.clienteId || f.clienteId !== d.clienteId) return r
+      return { ...r, dniCoincideFicha: marcaAcreditaFicha(extraccion, { clienteId: d.clienteId, dniLookupHash: ficha?.dniLookupHash ?? null }) }
     })
-    return filas.map(aResumen)
   } catch {
     return null
   }

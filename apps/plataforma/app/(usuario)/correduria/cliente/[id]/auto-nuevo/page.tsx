@@ -153,6 +153,7 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         // póliza EN VIGOR en Allianz. `null` = no se ha podido leer (nunca «no tiene»).
         otroVehiculo={ops?.estado === 'ok' ? otroVehiculoDelCliente(ops.oportunidades, 'auto') : null}
         carteraAllianz={ficha.estado === 'ok' ? tienePolizaAllianzEnVigor(ficha.ficha.polizas) : null}
+        fichaTomador={ficha.estado === 'ok' ? { identidad: ficha.ficha.identidad, documentos: ficha.ficha.documentos, contacto: ficha.ficha.contacto } : null}
       />
     </Pagina>
   )

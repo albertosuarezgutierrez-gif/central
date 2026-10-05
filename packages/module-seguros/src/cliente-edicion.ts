@@ -198,8 +198,14 @@ export const ETIQUETA_CAMPO: Record<CampoIdentidad | CampoLibre, string> = {
 export type EdicionCliente = {
   identidad?: Partial<Record<CampoIdentidad, string | null>>
   libre?: Partial<Record<CampoLibre, string | null>>
-  /** El documento de identidad que acredita el cambio. Obligatorio si se toca identidad. */
+  /** El documento de identidad que acredita el cambio. Obligatorio si se toca identidad (salvo `motivo`). */
   documentoId?: string | null
+  /**
+   * Sin documento (05/10/2026, Alberto: «yo puedo editar cualquier dato»): el motivo escrito del
+   * cambio, ≥5 caracteres. Solo vale si quien revisa lo permite (`ctx.permiteMotivo`: el corredor
+   * desde plataforma; NUNCA el portal del cliente).
+   */
+  motivo?: string | null
 }
 
 export type IdentidadRevisada = {
@@ -210,11 +216,28 @@ export type IdentidadRevisada = {
 }
 
 export type EdicionRevisada =
-  | { ok: true; identidad: IdentidadRevisada; libre: Partial<Record<CampoLibre, string | null>>; tocaIdentidad: boolean }
+  | {
+      ok: true
+      identidad: IdentidadRevisada
+      libre: Partial<Record<CampoLibre, string | null>>
+      tocaIdentidad: boolean
+      /** El cambio de identidad va SIN documento, con este motivo (ya validado). */
+      motivoCambio?: string
+    }
   | { ok: false; motivo: string; campo?: CampoIdentidad | CampoLibre }
 
 /** `'documento_requerido'` es el motivo que la pantalla convierte en «pide el DNI». */
 export const MOTIVO_DOCUMENTO_REQUERIDO = 'documento_requerido'
+/** Sin documento y sin un motivo de al menos `MOTIVO_CAMBIO_MINIMO` caracteres. */
+export const MOTIVO_CAMBIO_REQUERIDO = 'motivo_requerido'
+export const MOTIVO_CAMBIO_MINIMO = 5
+
+/** El motivo escrito de un cambio de identidad sin documento, o `null` si no llega al mínimo. */
+export function motivoCambioValido(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const s = v.replace(/\s+/g, ' ').trim()
+  return s.length >= MOTIVO_CAMBIO_MINIMO ? s.slice(0, 500) : null
+}
 
 /**
  * ¿La ficha está SIN NOMBRE? Vacío o el marcador literal `(sin nombre)` que la
@@ -236,7 +259,7 @@ export function nombrePendiente(nombre: string | null | undefined): boolean {
  * rellena un hueco. DNI y fecha de nacimiento siguen exigiéndolo siempre, y
  * cambiar un nombre que YA existe, también.
  */
-export function revisarEdicion(e: EdicionCliente, ctx: { fichaSinNombre?: boolean } = {}): EdicionRevisada {
+export function revisarEdicion(e: EdicionCliente, ctx: { fichaSinNombre?: boolean; permiteMotivo?: boolean } = {}): EdicionRevisada {
   const identidad: IdentidadRevisada = {}
   const libre: Partial<Record<CampoLibre, string | null>> = {}
 
@@ -288,13 +311,26 @@ export function revisarEdicion(e: EdicionCliente, ctx: { fichaSinNombre?: boolea
   if (!tocaIdentidad && Object.keys(libre).length === 0) return { ok: false, motivo: 'No hay nada que cambiar.' }
   const soloRellenaNombre = ctx.fichaSinNombre === true && identidad.nombre !== undefined
     && Object.keys(identidad).every((k) => k === 'nombre' || k === 'apellidos')
-  if (tocaIdentidad && !e.documentoId && !soloRellenaNombre) return { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO }
+  if (tocaIdentidad && !e.documentoId && !soloRellenaNombre) {
+    // El corredor puede cambiarla sin documento si dice POR QUÉ (05/10/2026). Quien no lo tiene
+    // permitido (el portal) sigue necesitando el documento, diga lo que diga el cuerpo.
+    if (!ctx.permiteMotivo) return { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO }
+    const motivoCambio = motivoCambioValido(e.motivo)
+    if (!motivoCambio) return { ok: false, motivo: MOTIVO_CAMBIO_REQUERIDO }
+    return { ok: true, identidad, libre, tocaIdentidad, motivoCambio }
+  }
   return { ok: true, identidad, libre, tocaIdentidad }
 }
 
-/** Qué documento sirve para cambiar la identidad: uno de tipo DNI que HAYA LLEGADO. */
-export function documentoAcredita(d: Pick<DocumentoResumen, 'tipo' | 'estado'>): boolean {
-  return d.tipo === 'dni' && d.estado !== 'pedido'
+/**
+ * Qué documento sirve para cambiar la identidad: uno de tipo DNI que HAYA LLEGADO, o (05/10/2026)
+ * una PÓLIZA de la ficha cuyo DNI leído es el de la ficha (`dniCoincideFicha === true`, que sale de
+ * `marcaAcreditaFicha`; `null` = no se sabe, y no acredita).
+ */
+export function documentoAcredita(d: Pick<DocumentoResumen, 'tipo' | 'estado' | 'dniCoincideFicha'>): boolean {
+  if (d.estado === 'pedido') return false
+  if (d.tipo === 'dni') return true
+  return d.tipo === 'poliza' && d.dniCoincideFicha === true
 }
 
 export function documentosAcreditativos(docs: readonly DocumentoResumen[] | null): DocumentoResumen[] {

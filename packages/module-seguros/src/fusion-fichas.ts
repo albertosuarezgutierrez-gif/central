@@ -158,3 +158,21 @@ export function revisarElecciones(pedidos: unknown, campos: CampoFusion[]): Revi
   }
   return { ok: true, deAbsorbida }
 }
+
+/**
+ * Los grupos de IDENTIDAD que, si difieren, NO se pueden resolver por omisión (05/10/2026). La
+ * fusión de «Estibaliz Slava» con el lead «ESTIBALIZ ESLAVA ANTOLI» (mismo móvil) se quedó con
+ * «Slava» porque nadie eligió: la omisión era «se queda el de la ficha que se conserva». Ahora quien
+ * fusiona tiene que decir, de cada uno, si se queda el de la otra (`deAbsorbida`) o el de esta
+ * (`conservar`).
+ */
+export const GRUPOS_IDENTIDAD_FUSION: readonly GrupoFusion[] = ['nombre', 'apellidos', 'fecha_nacimiento']
+
+/** Los grupos de identidad que difieren y nadie ha decidido. `[]` = se puede fusionar. */
+export function identidadSinDecidir(campos: CampoFusion[], deAbsorbida: readonly string[], conservar: unknown): GrupoFusion[] {
+  const conservados = new Set(Array.isArray(conservar) ? conservar.filter((g): g is string => typeof g === 'string') : [])
+  return campos
+    .filter((c) => c.estado === 'distinto' && GRUPOS_IDENTIDAD_FUSION.includes(c.grupo))
+    .filter((c) => !deAbsorbida.includes(c.grupo) && !conservados.has(c.grupo))
+    .map((c) => c.grupo)
+}

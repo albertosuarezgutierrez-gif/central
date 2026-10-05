@@ -67,8 +67,9 @@ real medido, orden de trabajo). Después, según lo que toques:
    (32.520 fichas, vencimientos 2013-2018) son volcado histórico = **leads**, jamás «clientes».
 3. **Toda escritura** va por `/api/operador/*` de asegura con `correduriaId` explícito y deja fila en
    `historial_interno`. Reglas puras en `@central/module-seguros` con test.
-4. **Identidad solo documentada** (DNI recibido en la ficha); contacto y dirección libres; el DNI
-   entero no cruza el puerto (enmascarado).
+4. **Identidad acreditada** (cambio de nombre/apellidos/DNI): documento con DNI recibido, o póliza con DNI
+   coincidente, o **motivo obligatorio del corredor** con auditoría; el portal NUNCA la edita. Contacto y
+   dirección libres; el DNI entero no cruza el puerto (enmascarado).
 5. **Autorización para ver seguros ajenos es direccional** y se da desde la ficha de quien autoriza.
 6. **Emisión y conciliación CIMA: spec + OK de Alberto antes de código.** Hoy CIMA empareja por
    número + nombre de compañía y pisa; una emitida sin marcar se duplica o se sobreescribe.

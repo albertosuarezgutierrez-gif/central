@@ -66,7 +66,7 @@ test('el borrador se BORRA en cuanto la cotización está pagada', () => {
   assert.match(codigo, /borrarBorrador\(/, 'el borrador con datos personales tiene que limpiarse')
   assert.match(
     codigo,
-    /!r\.simulado\)\s*borrarBorrador\(/,
+    /!r\.simulado\)\s*\{\s*(?:[\w.]+\s*=\s*[^\n]+\n\s*)?borrarBorrador\(/,
     'se borra solo cuando se ha PAGADO: una cotización simulada puede querer repetirse',
   )
 })
@@ -114,4 +114,12 @@ test('el borrador caduca: el dato personal no se queda para siempre', () => {
 test('el borrador NO viaja a la base: no es una cotización', () => {
   const comun = sinComentarios(readFileSync(COMUN, 'utf8'))
   assert.doesNotMatch(comun, /prisma|fetch\(|seguros\./i)
+})
+
+test('si gana el borrador del servidor, SUSTITUYE al estado (no se mezcla con el local)', () => {
+  assert.match(
+    codigo,
+    /origen === 'servidor'\)\s*\{\s*(?:\/\/[^\n]*\n\s*)*restablecerInicial\(\)\s*aplicarBorrador\(/,
+    'aplicar el del servidor sin vaciar antes deja campos del borrador local mezclados',
+  )
 })
