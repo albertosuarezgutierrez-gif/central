@@ -4,6 +4,8 @@
 // precio condicionado a SINCO/certificado; no se emite sin verificar). Aquí solo se LEE lo que manda
 // el puerto (`seguroAnterior` en precalificar-*-nuevo y en la respuesta de cotizar). Puro.
 
+import { polizaAnteriorParaTarificar } from '@central/module-seguros'
+
 export type CandidataImputable = {
   id: string
   origen: 'cartera' | 'competencia'
@@ -11,6 +13,8 @@ export type CandidataImputable = {
   compania: string | null
   etiqueta: string | null
   numeroPoliza: string | null
+  /** Código DGS de la compañía (para saber cómo viaja el nº de póliza). */
+  codigoDgs?: string | null
   fechaEfecto: string | null
   canal: string | null
   cesionDerechos: boolean | null
@@ -49,6 +53,7 @@ function candidata(v: unknown): CandidataImputable | null {
     compania: txt(o.compania),
     etiqueta: txt(o.etiqueta),
     numeroPoliza: txt(o.numeroPoliza),
+    codigoDgs: txt(o.codigoDgs),
     fechaEfecto: txt(o.fechaEfecto),
     canal: txt(o.canal),
     cesionDerechos: typeof o.cesionDerechos === 'boolean' ? o.cesionDerechos : null,
@@ -80,7 +85,7 @@ export function leerSeguroAnteriorImputado(v: unknown): SeguroAnteriorImputado |
 export function describirCandidata(c: CandidataImputable): string {
   return [
     c.compania,
-    c.numeroPoliza ? `nº …${c.numeroPoliza.slice(-4)}` : null,
+    c.numeroPoliza ? `nº ${polizaAnteriorParaTarificar(c.numeroPoliza, c.codigoDgs)}` : null,
     c.etiqueta,
     c.tipoVehiculo === 'moto' ? 'moto' : c.tipoVehiculo === 'turismo' ? 'turismo' : null,
     c.fechaEfecto ? `efecto ${c.fechaEfecto}` : null,

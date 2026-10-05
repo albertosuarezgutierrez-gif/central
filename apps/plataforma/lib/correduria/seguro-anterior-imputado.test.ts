@@ -18,5 +18,9 @@ test('lee lo imputado; el bonus solo es «no supuesto» con un false explícito'
 test('solo se ofrecen las declarables; la descripción no enseña el nº entero', () => {
   const s = leerSeguroAnteriorImputado({ estado: 'imputado', elegida: coche, alternativas: [sinNum] })!
   assert.deepEqual(elegibles(s).map((c) => c.id), ['poliza:a'])
-  assert.equal(describirCandidata(s.elegida!), 'MAPFRE · nº …0001 · turismo · efecto 2023-10-10')
+  assert.equal(describirCandidata(s.elegida!), 'MAPFRE · nº 5000000001 · turismo · efecto 2023-10-10')
+})
+
+test('la etiqueta muestra el nº tal como se enviará (Mapfre sin sufijo de versión)', () => {
+  assert.match(describirCandidata({ ...coche, numeroPoliza: '4840402030 01', codigoDgs: 'C0058' } as never), /nº 4840402030 ·/)
 })
