@@ -171,26 +171,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 260 | 34.460 | 26.809.520 | 0 | 0 |
-| `otro` | 257 | 8.390 | 23.048.184 | 12.089.136 | 0 |
-| `lectura-directa` | 231 | 5.922 | 17.323.482 | 0 | 0 |
-| `mcp:github` | 237 | 5.559 | 4.611.259 | 50.957.018 | 89 |
+| `bash` | 260 | 34.486 | 26.831.670 | 0 | 0 |
+| `otro` | 257 | 8.407 | 23.071.622 | 12.089.136 | 0 |
+| `lectura-directa` | 231 | 5.925 | 17.325.293 | 0 | 0 |
+| `mcp:github` | 237 | 5.566 | 4.615.773 | 50.957.018 | 89 |
 | `escritura` | 179 | 3.550 | 51.981.945 | 0 | 0 |
-| `sql` | 165 | 3.419 | 1.694.953 | 2.351.230 | 13 |
+| `sql` | 165 | 3.422 | 1.695.365 | 2.351.230 | 13 |
 | `mcp:Claude_Code_Remote` | 141 | 1.477 | 304.037 | 5.301.463 | 14 |
 | `mcp:Gmail` | 32 | 1.065 | 1.005.386 | 0 | 63 |
 | `mcp:Booking-com` | 25 | 716 | 3.021.614 | 0 | 0 |
 | `mcp:Vercel` | 57 | 566 | 841.744 | 201.411 | 14 |
 | `mcp:Google_Drive` | 17 | 322 | 370.368 | 0 | 31 |
 | `mcp:Supabase` | 104 | 293 | 28.108 | 0 | 2 |
-| `agente:general-purpose` | 62 | 261 | 181.335 | 5.308.238 | 0 |
+| `agente:general-purpose` | 62 | 262 | 181.372 | 5.308.238 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
 | `agente:agente-architect` | 41 | 130 | 98.127 | 4.530.436 | 0 |
 | `mcp:Google-Drive` | 15 | 111 | 97.697 | 0 | 2 |
 | `agente:agente-mecanico` | 32 | 76 | 58.644 | 3.775.009 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
+| `mcp:claude-code-remote` | 12 | 76 | 7.312 | 0 | 0 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
-| `mcp:claude-code-remote` | 11 | 70 | 6.751 | 0 | 0 |
 | `agente:Explore` | 28 | 65 | 32.709 | 1.503.946 | 0 |
 | `agente:rastreador-codigo` | 34 | 59 | 19.732 | 649.514 | 0 |
 | `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
@@ -212,6 +212,6 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:ccd_session` | 2 | 2 | 175 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
+| `agente:jefe-contabilidad` | 1 | 2 | 418 | 7.630 | 0 |
 | `mcp:Google_Calendar` | 1 | 1 | 272 | 0 | 0 |
-| `agente:jefe-contabilidad` | 1 | 1 | 381 | 7.630 | 0 |
 <!-- ahorro:fin -->
