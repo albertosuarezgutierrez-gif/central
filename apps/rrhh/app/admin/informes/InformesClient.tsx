@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState, Fragment } from 'react'
+import { useEffect, useMemo, useRef, useState, Fragment } from 'react'
 import AdminShell from '@/components/AdminShell'
 import { CATALOGO, type EntidadDef, type FiltroDef } from '@/lib/informes/catalogo'
 import { formatearMetrica, formatearValor, numeroEs } from '@/lib/informes/formato'
@@ -33,6 +33,8 @@ export default function InformesClient({ logoUrl, nombreEmpresa, colorPrimario, 
   const [filtros, setFiltros] = useState<Filtros>({})
   const [agrupacion, setAgrupacion] = useState('')
   const [vista, setVista] = useState<Vista | null>(null)
+  // Id de la última petición de «Ver»: una respuesta con id viejo (cambió la entidad o se relanzó) se descarta.
+  const peticionId = useRef(0)
   const [cabecera, setCabecera] = useState<CabeceraInforme | null>(null)
   const [visibles, setVisibles] = useState(PASO)
   const [cargando, setCargando] = useState(false)
@@ -59,6 +61,7 @@ export default function InformesClient({ logoUrl, nombreEmpresa, colorPrimario, 
     setColumnas(columnasPorDefecto(e))
     setFiltros({})
     setAgrupacion('')
+    peticionId.current++; setCargando(false)
     setVista(null); setCabecera(null); setError('')
   }
 
@@ -79,13 +82,15 @@ export default function InformesClient({ logoUrl, nombreEmpresa, colorPrimario, 
 
   async function ver() {
     if (!columnas.length) { setError('Elige al menos una columna'); return }
+    const id = ++peticionId.current
     setCargando(true); setError('')
     try {
       const r = await fetch('/api/admin/informes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(peticion()) })
       const j = await r.json().catch(() => ({}))
+      if (id !== peticionId.current) return
       if (!r.ok) { setError(j.errores?.[0]?.mensaje ?? j.error ?? 'No se pudo generar el informe'); return }
       setVista(j.resultado); setCabecera(j.cabecera); setVisibles(PASO)
-    } catch { setError('No se pudo generar el informe (sin conexión)') } finally { setCargando(false) }
+    } catch { if (id === peticionId.current) setError('No se pudo generar el informe (sin conexión)') } finally { if (id === peticionId.current) setCargando(false) }
   }
 
   async function descargar(formato: 'xlsx' | 'pdf' | 'csv') {
