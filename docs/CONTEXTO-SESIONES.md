@@ -1067,7 +1067,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (05/10/2026) Correduría: el vehículo de la póliza escaneada ya precarga el presupuesto de auto
 - REGLA ÚNICA: el riesgo se rellena UNA vez (documento o corredor) en `info_riesgo.datosVehiculo`; toda pantalla de auto lo lee de ahí y no re-pide lo que consta (skill correduria-crm punto 22).
 - Al crear oportunidad desde documento: OCR (ahora con combustible) → `datosVehiculoDesdeDocumento` (module-seguros) → ids de marca/modelo con `emparejar()` contra catálogo GRATIS; motor/versión solo si candidata única; catálogo caído = sin ids. Nunca búsqueda por matrícula (créditos).
-- AutoNuevo precarga en cascada PARCIAL (`lib/correduria/precarga-vehiculo.ts`), marca «precargado · sin confirmar» mientras `confirmadoAt` null. Oportunidad ya abierta: no pisa un `datosVehiculo` existente.
+- AutoNuevo precarga en cascada PARCIAL (`lib/correduria/precarga-vehiculo.ts`), marca «precargado · sin confirmar» mientras `confirmadoAt` null. Oportunidad ya abierta: no pisa un `datosVehiculo` existente ni tapa un coche antiguo (`matricula`/`vehiculo`) salvo misma matrícula (`puedeEscribirDatosVehiculo`). PR #4287.
 - Pendiente: ver con una póliza real que los nombres de `/car/engine-types` casan con el combustible traducido.
 
 ## (05/10/2026) RRHH: ubicación OBLIGATORIA al fichar (petición de Pilar)

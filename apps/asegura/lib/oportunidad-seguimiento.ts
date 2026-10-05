@@ -38,6 +38,7 @@ import {
   type SeguroAnterior,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
+import { puedeEscribirDatosVehiculo } from './oportunidad-vehiculo-previo'
 import { prismaAsegura } from './asegura-db'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -621,10 +622,11 @@ export async function crearOportunidad(
       where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`)
     if (!cli) return { tipo: 'sin_cliente' as const }
     await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`oportunidad:${clienteId}:${a.ramo}`}))`)
-    const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null }[]>(Prisma.sql`
+    const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; vehiculo: string | null }[]>(Prisma.sql`
       select id::text as id, nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora,
              ${Prisma.raw(sqlNumeroPoliza(''))} as "numeroPoliza",
-             nullif(trim(info_riesgo->>'matricula'), '') as matricula from oportunidades
+             nullif(trim(info_riesgo->>'matricula'), '') as matricula,
+             nullif(trim(info_riesgo->>'vehiculo'), '') as vehiculo from oportunidades
       where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid
         and tipo::text = ${a.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
       order by created_at`)
@@ -643,7 +645,8 @@ export async function crearOportunidad(
       }
       // Póliza de concesionario/financiada: la marca se añade (no se quita nunca desde aquí).
       const riesgo = a.financiada ? JSON.stringify({ financiada: a.financiada }) : null
-      const vehiculoNuevo = datosVehiculo ? JSON.stringify({ datosVehiculo }) : null
+      // Si ya tenía el coche en las claves antiguas, el nuevo `datosVehiculo` solo entra si es el mismo coche.
+      const vehiculoNuevo = datosVehiculo && puedeEscribirDatosVehiculo(ya, datosVehiculo) ? JSON.stringify({ datosVehiculo }) : null
       const numero = a.numeroPoliza && !ya.numeroPoliza ? a.numeroPoliza : null
       // Vencimiento y prima solo rellenan un hueco (29/09/2026): un documento subido después no pisa
       // lo que Alberto ya había anotado, pero tampoco se pierde si faltaba.
