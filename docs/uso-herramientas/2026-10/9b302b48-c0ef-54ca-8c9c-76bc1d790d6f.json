@@ -1,0 +1,74 @@
+{
+ "sesion": "9b302b48-c0ef-54ca-8c9c-76bc1d790d6f",
+ "inicio": "2026-10-05T10:02:22.469Z",
+ "fin": "2026-10-05T10:02:50.180Z",
+ "llamadas": 10,
+ "categorias": {
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 620,
+   "chars_out": 1758,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
+   }
+  },
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 154,
+   "chars_out": 291,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 118,
+   "chars_out": 3752,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "agente:jefe-contabilidad": {
+   "llamadas": 1,
+   "chars_in": 1338,
+   "chars_out": 1525,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 30519,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2519,
+   "chars_out": 2691,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 30519,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 3,
+   "chars_in": 228,
+   "chars_out": 64072,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 3
+   }
+  }
+ }
+}
