@@ -1075,6 +1075,15 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Alta por coexistencia (Embedded Signup, Alberto = Tech Provider, sin BSP): `/correduria/ajustes/whatsapp` → `/api/operador/whatsapp/alta` (canje + subscribed_apps + syncs); webhooks history/account_update/edit/revoke; aviso Telegram de desconexión vía cron de plataforma. SQL `2026-10-05e_whatsapp_conexion.sql` SIN aplicar. «No compartir chats».
 - Pendiente: Alberto crea app Meta + Coexistence (disponibilidad en ES sin confirmar), envs, aplicar SQL, UI en `/correduria`. No tocar Google Contacts (#4286). Doc: `apps/asegura/docs/WHATSAPP.md`.
 
+## (05/10/2026) RRHH: rotación masiva de acceso_token tras PR #4313
+- Con OK de Alberto, tras el deploy READY del fix: 36 tokens renovados (Global2 14, Mariscos González 22), formato `generarAccesoToken()`, transacción con verificación. Auditoría en `seguros.operational_events` (`rrhh_acceso_token_rotacion_masiva`).
+- Los enlaces antiguos ya no valen: cada responsable saca el nuevo con «Ver enlace» en la ficha. Aviso a empleados pendiente del OK de Alberto.
+
+## (05/10/2026) RRHH: el panel ya no expone el `acceso_token` de los empleados
+- 🔒 `GET /api/admin/empleados` y la página `/admin/empleados` mandaban al navegador el token de TODA la plantilla (con él se entra como el empleado); también la ficha y el alta. Ahora lista blanca `lib/empleados-columnas.ts`; el enlace se pide uno a uno con `POST /api/admin/empleados/[id]/enlace` (botón «Ver enlace»); `/acceso` (regenerar) devuelve solo `enlace`.
+- Guardián `lib/acceso-token-guardian.test.ts` (4 brazos vistos en rojo). Bug: export CSV de fichajes leía `e.nif` (no existe) → `e.dni AS nif`.
+- Pendiente (decisión de Alberto): rotar los tokens existentes, ya expuestos a cualquier responsable que abriera el listado.
+
 ## (05/10/2026) Vigía «🚨 Reserva que Smoobu NO tiene»: falso positivo de Expedia
 - Alerta «reserva 102699405 · piso sin identificar»: era un MENSAJE de huésped de Expedia Partner Central
   (Reka Bekesi, llega 06/11 20:00, pide balcón); 102699405 = ID de alojamiento Expedia de «Busto Reform» (`htid`).
@@ -1088,6 +1097,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Migraciones 2026-10-05b y 05c APLICADAS en BD central. Google Cloud `grupo-asegura-contactos` en Producción; env en Vercel central-asegura.
 - #4302: «Conectar Google» caía en /login de asegura (middleware); eximidas SOLO `/api/google-contactos/{conectar,callback}` (se autentican solas; OK de Alberto).
 - Conectado (05/10). Simulación: 2.472 en agenda, 957 fichas, 24 «mismo tel, otro nombre» (familia/amigos). Añadido: Unificar (+«todos», lote 20 por cursor, solo `nombre_distinto`), MOTE por ficha en tabla AISLADA `seguros.cliente_mote` (guardián `regression-mote-aislado`; nunca en correos/portal/PDF), dedupe por email/nombre antes de crear, estados 🚨 siniestro abierto > 💶 recibo devuelto > ⏰ (máx 2 emojis), ⚪ ex-cliente solo si ya vinculado, informe «Ordenar agenda» (solo lectura). Migración 2026-10-05d APLICADA.
+- Sync ACTIVA (05/10 16:44): 906 vínculos, 20 unificados. «Un número, un contacto»: fichas con mismo teléfono → 1 contacto de la persona + «También: <empresa>» (titular en `seguros.google_contactos_titular_telefono`, cola «Este número es de…», >3 fichas = centralita → solo aviso, freno >10 desvinculaciones/pasada). «Completar ficha» (`enriquecer_ficha`): solo rellena vacíos con OK. Migración 2026-10-05e APLICADA.
 - Siguiente: Alberto conecta → simula → revisa adoptados/conflictos → activa. Riesgos: nota vieja del .vcf duplicada en adoptados; biographies/birthdays sin probar contra People API real.
 
 ## (05/10/2026) Correduría: el vehículo de la póliza escaneada ya precarga el presupuesto de auto
@@ -1095,6 +1105,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Al crear oportunidad desde documento: OCR (ahora con combustible) → `datosVehiculoDesdeDocumento` (module-seguros) → ids de marca/modelo con `emparejar()` contra catálogo GRATIS; motor/versión solo si candidata única; catálogo caído = sin ids. Nunca búsqueda por matrícula (créditos).
 - AutoNuevo precarga en cascada PARCIAL (`lib/correduria/precarga-vehiculo.ts`), marca «precargado · sin confirmar» mientras `confirmadoAt` null. Oportunidad ya abierta: no pisa un `datosVehiculo` existente ni tapa un coche antiguo (`matricula`/`vehiculo`) salvo misma matrícula (`puedeEscribirDatosVehiculo`). PR #4287.
 - Pendiente: ver con una póliza real que los nombres de `/car/engine-types` casan con el combustible traducido.
+
+## (05/10/2026) RRHH: sección «Informes» (Excel/PDF/CSV) para Pilar
+- `/admin/informes`: catálogo declarativo `apps/rrhh/lib/informes/` (8 entidades: fichajes, solicitudes, empleados, nóminas, incidencias, contratos, documentos, obras) + motor genérico con subtotales/total; `empresa_id` solo de sesión, Zod `.strict()`, SQL parametrizado.
+- Fichajes en curso/datos null = «sin dato», nunca 0. `xlsx` (ya en plataforma/ialimp) + `@react-pdf`. 36 tests, 3 cepos en rojo.
+- 🚨 Detectado fuera de alcance: `GET /api/admin/empleados` devuelve `acceso_token` al navegador; `/api/admin/fichajes/exportar` usa `e.nif` (columna es `dni`).
 
 ## (05/10/2026) RRHH: ubicación OBLIGATORIA al fichar (petición de Pilar)
 - `POST /api/e/fichaje` (solo empleado) rechaza 400 `ubicacion_requerida` sin lat/lng válidos; validador puro `apps/rrhh/lib/ubicacion-fichaje.ts` + 15 tests (cepo visto en rojo).

@@ -97,6 +97,25 @@ export type ContactoGoogle = Omit<ContactoMovil, 'grupo'> & {
    * 🚨 Solo para la agenda de Alberto: nunca en correos, portal, PDF ni envíos (guardián de aislamiento).
    */
   mote?: string | null
+  /**
+   * «Un número, un contacto» (05/10/2026): `fisica`/`juridica` de la ficha (`clientes.tipo_persona`);
+   * `null`/ausente = no consta. Solo decide quién es la PRINCIPAL de un teléfono compartido.
+   */
+  tipoPersona?: 'fisica' | 'juridica' | null
+  /** Ramo · compañía de sus pólizas (`resumenPolizas`), para la línea «También: …» de otra ficha. */
+  resumen?: string | null
+  /**
+   * «Enriquecer ficha»: `true` SOLO si la BD dice que la ficha no tiene NINGÚN teléfono (columna y tabla
+   * hija vacías). `false`/ausente = tiene o no se sabe → nunca se propone.
+   */
+  fichaSinTelefono?: boolean
+  /** Ídem con el correo. */
+  fichaSinEmail?: boolean
+  /**
+   * Las OTRAS fichas que comparten su teléfono (las pone `agruparNumeros`, no la selección): van como
+   * organizations gestionadas (`TIPO_ORG_TAMBIEN`) del contacto de la principal.
+   */
+  tambien?: readonly { nombre: string; titulo: string }[]
 }
 
 /**
@@ -201,6 +220,11 @@ export type CamposSincronizados = {
   aviso: boolean
   /** 🚨/💶 en el prefijo (`null` = ninguna). */
   alerta: AlertaGoogle | null
+  /**
+   * Las otras fichas del MISMO número (organizations `TIPO_ORG_TAMBIEN`), en JSON canónico
+   * (`[[nombre, título], …]` ordenado). `null` = ninguna: es presentación del CRM, se compara siempre.
+   */
+  tambien: string | null
 }
 
 /** Subconjunto de `Person` de la People API que se lee. */
@@ -211,7 +235,7 @@ export type PersonaGoogle = {
   names?: { givenName?: string; familyName?: string; middleName?: string; honorificPrefix?: string; honorificSuffix?: string; displayName?: string; unstructuredName?: string }[]
   phoneNumbers?: { value?: string; canonicalForm?: string; type?: string }[]
   emailAddresses?: { value?: string; type?: string }[]
-  organizations?: { name?: string; title?: string }[]
+  organizations?: { name?: string; title?: string; type?: string }[]
   externalIds?: { value?: string; type?: string }[]
   memberships?: { contactGroupMembership?: { contactGroupResourceName?: string } }[]
   biographies?: { value?: string; contentType?: string }[]
@@ -228,7 +252,7 @@ export type PersonaParaEscribir = {
   /** La entrada del CRM va PRIMERA; detrás, las demás de Google tal cual llegaron (`type` incluido). */
   phoneNumbers: { value: string; type?: string }[]
   emailAddresses: { value: string; type?: string }[]
-  organizations: { name?: string; title?: string }[]
+  organizations: { name?: string; title?: string; type?: string }[]
   externalIds: { value: string; type?: string }[]
   /** Singleton en Google: el texto de Alberto + el bloque del CRM (`conBloque`). */
   biographies?: { value: string; contentType?: string }[]
@@ -266,6 +290,7 @@ export type Vinculo = {
 }
 
 export type TipoRevision = 'cambio_en_google' | 'borrado_en_google' | 'sacado_del_grupo' | 'propuesta_lead' | 'duplicado_ambiguo'
+  | 'telefono_titular' | 'telefono_muchas_fichas' | 'enriquecer_ficha'
 
 export type Revision = {
   tipo: TipoRevision
@@ -281,6 +306,12 @@ export type Revision = {
    * (migración 2026-10-05d): de él depende que la cola ofrezca «Unificar» (solo si es inequívoco).
    */
   motivo?: MotivoDuplicado
+  /**
+   * Solo `telefono_titular` («Este número es de…») y `telefono_muchas_fichas` (informativa): el índice ciego del teléfono (`hashTelefono`,
+   * nunca el número en claro) y las fichas entre las que elegir (ordenadas).
+   */
+  telefonoHash?: string
+  candidatos?: string[]
 }
 
 export type Escritura = {
@@ -314,6 +345,19 @@ export type Plan = {
    * el contacto estaba `fuera_del_grupo`; la decisión de Alberto sobre esa persona se hereda).
    */
   reasignar: { de: string; a: string }[]
+  /**
+   * «Un número, un contacto»: contactos de fichas SECUNDARIAS (su teléfono ya va en el de la principal)
+   * que dejan de ser nuestros. NUNCA se borran: se reescribe el contacto SIN lo que puso el CRM
+   * (emoji, organizations, id externo, URL, bloque de la nota) y se saca de la etiqueta; luego se
+   * borra el vínculo. Lo de Alberto (teléfonos, correos, su texto, cumpleaños) se queda tal cual.
+   */
+  desvincular: { clienteId: string; resourceName: string; persona: PersonaParaEscribir }[]
+  /** Los que se desvincularían (aunque se hayan BLOQUEADO por pasar de `MAX_DESVINCULAR_POR_PASADA`). */
+  desvincularCalculados: number
+  /** Números compartidos: combinados solos (titular decidido), a la cola, y con más de `MAX_FICHAS_POR_NUMERO`. */
+  numerosCompartidos: { combinados: number; enCola: number; demasiadas: number }
+  /** Fichas principales de los números combinados (su contacto lleva a las demás dentro). */
+  principalesCombinadas: string[]
   revisiones: Revision[]
   omitidos: number
   ilegibles: number
@@ -333,6 +377,13 @@ export type EntradaPlan = {
   google: readonly PersonaGoogle[]
   modo: 'completo' | 'delta'
   grupoResourceName: string
+  /**
+   * Titular ELEGIDO por Alberto para un teléfono compartido (`google_contactos_titular_telefono`):
+   * índice ciego del número → ficha. Ausente = ninguno elegido.
+   */
+  titulares?: ReadonlyMap<string, string>
+  /** Índice ciego de un E.164 (en la app, `computeTelefonoLookupHash`). Por defecto, sha256 (tests). */
+  hashTelefono?: (e164: string) => string
 }
 
 function limpio(v: string | null | undefined): string | null {
@@ -387,6 +438,14 @@ export function extraerBloque(bio: string | null | undefined): string | null {
 }
 
 /** La nota con el bloque del CRM puesto (al final); lo que Alberto escribió fuera, intacto. */
+/** La nota SIN el bloque del CRM: solo lo que escribió Alberto (vacía si no había nada más). */
+export function sinBloque(bio: string | null | undefined): string {
+  const t = (bio ?? '').replace(/\r\n?/g, '\n')
+  const b = localizarBloque(t)
+  if (!b) return t.trim()
+  return [t.slice(0, b.i).trim(), t.slice(b.j).trim()].filter((x) => x !== '').join('\n\n')
+}
+
 export function conBloque(bio: string | null | undefined, contenido: string): string {
   const t = (bio ?? '').replace(/\r\n?/g, '\n')
   const b = localizarBloque(t)
@@ -529,7 +588,29 @@ export function camposDeCrm(c: ContactoGoogle): CamposSincronizados | null {
     // releído sin ⏰ diferiría del CRM y se reescribiría cada hora).
     aviso: c.grupo === 'cliente' && c.aviso === true && !alertaDe(c),
     alerta: alertaDe(c),
+    tambien: tambienCanonico((c.tambien ?? []).map((t) => [t.nombre, t.titulo])),
   }
+}
+
+/** Organization gestionada «también»: otra ficha con el mismo teléfono. Se reconoce por su `type`. */
+export const TIPO_ORG_TAMBIEN = 'Grupo ASegura · también'
+
+function esOrgTambien(o: { type?: string }): boolean {
+  return o.type === TIPO_ORG_TAMBIEN
+}
+
+/** `[[nombre, título], …]` limpio, sin repetir y ordenado → JSON; `null` si no hay ninguna. */
+function tambienCanonico(xs: readonly (readonly [string | null | undefined, string | null | undefined])[]): string | null {
+  const limpios = xs.flatMap(([n, t]) => (limpio(n) ? [[limpio(n)!, limpio(t) ?? ''] as [string, string]] : []))
+  const unicos = [...new Map(limpios.map((x) => [JSON.stringify(x), x])).values()]
+    .sort((a, b) => a[0].localeCompare(b[0], 'es') || a[1].localeCompare(b[1], 'es') || (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1))
+  return unicos.length ? JSON.stringify(unicos) : null
+}
+
+function orgsTambien(tambien: string | null): { name: string; title?: string; type: string }[] {
+  if (tambien === null) return []
+  const xs = JSON.parse(tambien) as [string, string][]
+  return xs.map(([name, title]) => ({ name, ...(title ? { title } : {}), type: TIPO_ORG_TAMBIEN }))
 }
 
 function alertaDe(c: ContactoGoogle): AlertaGoogle | null {
@@ -564,6 +645,7 @@ export function camposDeGoogle(p: PersonaGoogle): CamposSincronizados {
     cumpleanos: cumpleanosDeGoogle(p.birthdays?.[0]),
     aviso,
     alerta,
+    tambien: tambienCanonico((p.organizations ?? []).filter(esOrgTambien).map((o) => [o.name, o.title])),
   }
 }
 
@@ -572,7 +654,7 @@ const CAMPOS: readonly (keyof CamposSincronizados)[] = ['nombre', 'apellidos', '
  * Campos que, editados en Google, el CRM repone SIN encolar: el bloque de la nota y la URL son
  * del CRM, y el ⏰ es derivado de las fechas (decisión de Alberto, 05/10/2026).
  */
-const SIN_COLA = new Set<keyof CamposSincronizados>(['nota', 'url', 'aviso', 'alerta'])
+const SIN_COLA = new Set<keyof CamposSincronizados>(['nota', 'url', 'aviso', 'alerta', 'tambien'])
 
 /**
  * `alerta` entra en el hash SOLO cuando hay una: así los hashes de antes del 05/10/2026 (sin
@@ -581,6 +663,8 @@ const SIN_COLA = new Set<keyof CamposSincronizados>(['nota', 'url', 'aviso', 'al
 export function hashCampos(c: CamposSincronizados): string {
   const valores: unknown[] = CAMPOS.map((k) => c[k])
   if (c.alerta) valores.push(c.alerta)
+  // Igual «también»: solo cuando lo hay (los hashes de las fichas que no comparten número no cambian).
+  if (c.tambien !== null && c.tambien !== undefined) valores.push({ tambien: c.tambien })
   return createHash('sha256').update(JSON.stringify(valores)).digest('hex')
 }
 
@@ -590,7 +674,7 @@ function hashIdentidad(c: CamposSincronizados): string {
 }
 
 export function diferencias(a: CamposSincronizados, b: CamposSincronizados): (keyof CamposSincronizados)[] {
-  return [...CAMPOS, 'alerta' as const].filter((k) => a[k] !== b[k])
+  return [...CAMPOS, 'alerta' as const, 'tambien' as const].filter((k) => (a[k] ?? null) !== (b[k] ?? null))
 }
 
 /**
@@ -604,7 +688,8 @@ export function personaDesdeCampos(c: CamposSincronizados, clienteId: string, et
     names: [{ givenName: givenNameConPrefijo(c), familyName: c.apellidos }],
     phoneNumbers: c.telefono ? [{ value: c.telefono, type: 'mobile' }] : [],
     emailAddresses: c.email ? [{ value: c.email, type: 'other' }] : [],
-    organizations: [{ name: NOMBRE_GRUPO_GOOGLE, title: etiqueta }],
+    // Las otras fichas del número DELANTE: es la «empresa» que se ve al recibir la llamada.
+    organizations: [...orgsTambien(c.tambien ?? null), { name: NOMBRE_GRUPO_GOOGLE, title: etiqueta }],
     externalIds: [{ value: clienteId, type: TIPO_ID_EXTERNO }],
     ...(c.nota !== null ? { biographies: [{ value: conBloque('', c.nota), contentType: 'TEXT_PLAIN' }] } : {}),
     ...(c.url !== null ? { urls: [{ value: c.url, type: TIPO_URL }] } : {}),
@@ -703,13 +788,17 @@ function conNuestraEntrada<T extends { value?: string }>(
 function conservandoDeGoogle(persona: PersonaParaEscribir, cc: CamposSincronizados, g: PersonaGoogle, pisaPrimera: boolean): PersonaParaEscribir {
   const nuestroTel = persona.phoneNumbers[0] ? { value: persona.phoneNumbers[0].value, type: persona.phoneNumbers[0].type ?? 'mobile' } : null
   const nuestroMail = persona.emailAddresses[0] ? { value: persona.emailAddresses[0].value, type: persona.emailAddresses[0].type ?? 'other' } : null
-  const nuestraOrg = persona.organizations[0]
-  const deOtros = (g.organizations ?? []).filter((o) => limpio(o.name) !== NOMBRE_GRUPO_GOOGLE)
-  const iOrg = (g.organizations ?? []).findIndex((o) => limpio(o.name) === NOMBRE_GRUPO_GOOGLE)
+  // La entrada «Grupo ASegura» es la ÚLTIMA de las nuestras; delante, las «también» (si las hay).
+  const nuestraOrg = persona.organizations[persona.organizations.length - 1]
+  const tambienOrgs = persona.organizations.filter(esOrgTambien)
+  // Las «también» que hubiera en Google se sustituyen enteras por las del CRM (son solo nuestras).
+  const deGoogle = (g.organizations ?? []).filter((o) => !esOrgTambien(o))
+  const deOtros = deGoogle.filter((o) => limpio(o.name) !== NOMBRE_GRUPO_GOOGLE)
+  const iOrg = deGoogle.findIndex((o) => limpio(o.name) === NOMBRE_GRUPO_GOOGLE)
   // La nuestra en su sitio si ya estaba (no se reordena la empresa de Alberto); si no, detrás.
   const organizations = iOrg >= 0
-    ? (g.organizations ?? []).map((o, j) => (j === iOrg ? nuestraOrg : o)).filter((o, j) => j === iOrg || limpio(o.name) !== NOMBRE_GRUPO_GOOGLE)
-    : [...deOtros, nuestraOrg]
+    ? deGoogle.flatMap((o, j) => (j === iOrg ? [...tambienOrgs, nuestraOrg] : limpio(o.name) !== NOMBRE_GRUPO_GOOGLE ? [o] : []))
+    : [...deOtros, ...tambienOrgs, nuestraOrg]
   return {
     ...persona,
     phoneNumbers: conNuestraEntrada(g.phoneNumbers, cc.telefono === null ? null : nuestroTel,
@@ -791,21 +880,207 @@ export function conNombreAnterior(bio: string | null | undefined, nombre: string
   return t.trim() === '' ? linea : `${linea}\n\n${t}`
 }
 
+// ─── «Un número, un contacto» (05/10/2026, decisión de Alberto) ─────────────────
+//
+// Varias fichas con el MISMO teléfono E.164 (la empresa y la persona que la lleva, un matrimonio…)
+// son UN contacto en Google: el de la PRINCIPAL (la persona). Las demás no tienen contacto propio:
+// van como organizations gestionadas (`TIPO_ORG_TAMBIEN`) y en el bloque de la nota («También: …»).
+// 🚨 Es SOLO presentación en Google: las fichas del CRM NO se fusionan (NIF distintos; regla de
+// agrupar por identidad). Principal: la elegida por Alberto en la cola («Este número es de…»); si no
+// hay elección, la única `fisica` frente a `juridica`; si no es inequívoco, a la cola y no se crea
+// nada para las fichas de ese número que aún no tienen contacto.
+
+const ESTADO_FICHA: Record<GrupoGoogle, string> = { cliente: 'cliente', lead: 'lead', compania: 'compañía', ex_cliente: 'ex cliente' }
+
+/** Tipo del contacto de un número compartido: 🟢 si ALGUNA ficha está en vigor; si no 🟡 lead; si no ⚪. */
+export function grupoCombinado(gs: readonly GrupoGoogle[]): GrupoGoogle {
+  return gs.includes('cliente') ? 'cliente' : gs.includes('lead') ? 'lead' : gs.includes('ex_cliente') ? 'ex_cliente' : (gs[0] ?? 'lead')
+}
+
+/** «Hogar · Mapfre, Auto · Allianz» (sin repetir, ordenado: el orden de la consulta no cambia el hash). */
+export function resumenPolizas(ps: readonly { ramo: string; compania: string | null }[]): string | null {
+  const xs = [...new Set(ps.map((x) => `${etiquetaRamo(x.ramo)} · ${limpio(x.compania) ?? SIN_COMPANIA}`))].sort((a, b) => a.localeCompare(b, 'es'))
+  return xs.length ? xs.join(', ') : null
+}
+
+function nombreFicha(c: Pick<ContactoGoogle, 'nombre' | 'apellidos'>): string {
+  return `${limpio(c.nombre) ?? ''} ${limpio(c.apellidos) ?? ''}`.trim() || SIN_NOMBRE
+}
+
+/** La línea del bloque de la nota de la principal por cada OTRA ficha del número. */
+export function lineaTambien(s: ContactoGoogle): string {
+  const det = [ESTADO_FICHA[s.grupo], limpio(s.resumen)].filter(Boolean).join(', ')
+  const a = alertaDe(s)
+  return `También: ${nombreFicha(s)} (${det})${a === 'siniestro' ? ' · 🚨 siniestro abierto' : a === 'recibo' ? ' · 💶 recibo devuelto' : ''}`
+}
+
+/**
+ * Más fichas que esto con el MISMO número (centralita, gestoría…) → ni titular automático ni combinación:
+ * cada ficha sigue como estaba y UNA revisión informativa por número. Nada de 30 organizations en un contacto.
+ */
+export const MAX_FICHAS_POR_NUMERO = 3
+/** Tope ABSOLUTO de desvinculaciones por pasada: por encima, no se ejecuta NINGUNA y se avisa. */
+export const MAX_DESVINCULAR_POR_PASADA = 10
+
+export type DecisionTitular = { titular: string; por: 'elegido' | 'tipo_persona' } | { titular: null }
+
+/**
+ * ¿De quién es el número? 1) la ficha que eligió Alberto, si sigue entre las que lo comparten; 2) la
+ * ÚNICA persona física cuando TODAS las demás son jurídicas (`tipo_persona` NULL = no se sabe: no
+ * decide); 3) nadie → cola.
+ */
+export function titularDeNumero(miembros: readonly Pick<ContactoGoogle, 'clienteId' | 'tipoPersona'>[], elegido: string | null): DecisionTitular {
+  if (miembros.length > MAX_FICHAS_POR_NUMERO) return { titular: null }
+  if (elegido && miembros.some((m) => m.clienteId === elegido)) return { titular: elegido, por: 'elegido' }
+  const fisicas = miembros.filter((m) => m.tipoPersona === 'fisica')
+  const juridicas = miembros.filter((m) => m.tipoPersona === 'juridica')
+  if (fisicas.length === 1 && juridicas.length === miembros.length - 1) return { titular: fisicas[0].clienteId, por: 'tipo_persona' }
+  return { titular: null }
+}
+
+function hashTelefonoPorDefecto(e164: string): string {
+  return createHash('sha256').update(`tel|${e164}`).digest('hex')
+}
+
+export type Agrupacion = {
+  /** La selección con UNA ficha por número compartido (la principal, ya combinada). */
+  crm: ContactoGoogle[]
+  /** secundaria → principal. */
+  secundarias: Map<string, string>
+  /** Fichas de un número SIN titular decidido y sin vínculo: no se crea nada para ellas. */
+  retenidas: Set<string>
+  /** Los números (E.164) sin titular decidido: sus contactos de la etiqueta no son «propuesta de lead». */
+  telefonosRetenidos: Set<string>
+  revisiones: Revision[]
+  combinados: number
+  enCola: number
+  demasiadas: number
+}
+
+/**
+ * Agrupa por teléfono E.164 (solo fichas: los contactos de compañía 🔵 no entran) y combina cada
+ * número compartido en su principal: tipo combinado (`grupoCombinado`), la alerta más urgente
+ * (🚨 > 💶), ⏰ si alguna en vigor vence pronto, la nota con «También: …» y las organizations.
+ * `tieneVinculo` = la ficha ya tiene contacto (sin titular decidido, esa sigue como estaba).
+ */
+export function agruparNumeros(p: {
+  crm: readonly ContactoGoogle[]
+  campos: ReadonlyMap<string, CamposSincronizados | null>
+  titulares: ReadonlyMap<string, string>
+  hashTelefono: (e164: string) => string
+  tieneVinculo: (clienteId: string) => boolean
+}): Agrupacion {
+  const porTel = new Map<string, ContactoGoogle[]>()
+  for (const c of p.crm) {
+    if (c.grupo === 'compania') continue
+    const t = p.campos.get(c.clienteId)?.telefono
+    if (!t || !t.startsWith('+')) continue // sin E.164 no se agrupa (no se sabe si es el mismo número)
+    porTel.set(t, [...(porTel.get(t) ?? []), c])
+  }
+  const sustituta = new Map<string, ContactoGoogle>()
+  const secundarias = new Map<string, string>()
+  const retenidas = new Set<string>()
+  const telefonosRetenidos = new Set<string>()
+  const revisiones: Revision[] = []
+  let combinados = 0
+  let enCola = 0
+  let demasiadas = 0
+  for (const [tel, ms0] of porTel) {
+    if (ms0.length < 2) continue
+    const ms = [...ms0].sort((a, b) => (a.clienteId < b.clienteId ? -1 : 1))
+    const h = p.hashTelefono(tel)
+    const d = titularDeNumero(ms, p.titulares.get(h) ?? null)
+    if (d.titular === null) {
+      const candidatos = ms.map((m) => m.clienteId)
+      // Con más de 3 fichas no se pregunta «de quién es» (no es de nadie): solo se informa.
+      const tipo: TipoRevision = ms.length > MAX_FICHAS_POR_NUMERO ? 'telefono_muchas_fichas' : 'telefono_titular'
+      if (tipo === 'telefono_muchas_fichas') demasiadas++
+      else enCola++
+      revisiones.push({
+        tipo, clienteId: null, resourceName: `telefono:${h}`, campos: [], propuesta: null,
+        huella: huella(tipo, `telefono:${h}`, candidatos.join(',')), telefonoHash: h, candidatos,
+      })
+      for (const m of ms) if (!p.tieneVinculo(m.clienteId)) retenidas.add(m.clienteId)
+      telefonosRetenidos.add(tel)
+      continue
+    }
+    const principal = ms.find((m) => m.clienteId === d.titular)!
+    const otras = ms.filter((m) => m.clienteId !== d.titular)
+    const alertas = ms.map(alertaDe)
+    const alerta: AlertaGoogle | null = alertas.includes('siniestro') ? 'siniestro' : alertas.includes('recibo') ? 'recibo' : null
+    const lineas = otras.map(lineaTambien).sort((a, b) => a.localeCompare(b, 'es'))
+    sustituta.set(principal.clienteId, {
+      ...principal,
+      grupo: grupoCombinado(ms.map((m) => m.grupo)),
+      alerta,
+      aviso: ms.some((m) => m.grupo === 'cliente' && m.aviso === true),
+      nota: normNota([principal.nota ?? '', ...lineas].join('\n')),
+      tambien: otras.map((s) => ({ nombre: nombreFicha(s), titulo: ETIQUETA[s.grupo] })),
+    })
+    for (const s of otras) secundarias.set(s.clienteId, principal.clienteId)
+    combinados++
+  }
+  const crm = p.crm.flatMap((c) => (secundarias.has(c.clienteId) || retenidas.has(c.clienteId) ? [] : [sustituta.get(c.clienteId) ?? c]))
+  return { crm, secundarias, retenidas, telefonosRetenidos, revisiones, combinados, enCola, demasiadas }
+}
+
+/**
+ * El contacto de una ficha SECUNDARIA sin nada de lo que puso el CRM: sin emoji, sin la organization
+ * «Grupo ASegura» ni las «también», sin nuestro id externo, sin la URL de la ficha y sin el bloque de
+ * la nota. Teléfonos, correos, cumpleaños, su texto y su empresa: tal cual. Lleva los OCHO campos de
+ * la máscara (uno ausente = Google lo vaciaría).
+ */
+export function personaSinGestion(g: PersonaGoogle, quitar: { telefono: string | null; email: string | null } = { telefono: null, email: null }): PersonaParaEscribir {
+  const n = g.names?.[0]
+  // Contacto que CREÓ el CRM: también fuera NUESTRA entrada de teléfono/correo (si no, quedarían dos
+  // contactos con el mismo número). Lo que Alberto añadió a mano (otros valores) se queda.
+  const esNuestroTel = (t: { value?: string; canonicalForm?: string }) => quitar.telefono !== null && (limpio(t.canonicalForm) ?? telefonoCanonico(t.value)) === quitar.telefono
+  const esNuestroMail = (m: { value?: string }) => quitar.email !== null && emailCanonico(m.value) === quitar.email
+  const nota = sinBloque(g.biographies?.[0]?.value)
+  return {
+    ...(g.etag ? { etag: g.etag } : {}),
+    names: [{ givenName: quitarPrefijo(n?.givenName).nombre, familyName: limpio(n?.familyName) ?? '' }],
+    phoneNumbers: (g.phoneNumbers ?? []).flatMap((t) => (limpio(t.value) && !esNuestroTel(t) ? [{ value: t.value!, ...(t.type ? { type: t.type } : {}) }] : [])),
+    emailAddresses: (g.emailAddresses ?? []).flatMap((m) => (limpio(m.value) && !esNuestroMail(m) ? [{ value: m.value!, ...(m.type ? { type: m.type } : {}) }] : [])),
+    organizations: (g.organizations ?? []).filter((o) => !esOrgTambien(o) && limpio(o.name) !== NOMBRE_GRUPO_GOOGLE),
+    externalIds: (g.externalIds ?? []).flatMap((x) => (x.type !== TIPO_ID_EXTERNO && limpio(x.value) ? [{ value: x.value!, ...(x.type ? { type: x.type } : {}) }] : [])),
+    biographies: nota === '' ? [] : [{ value: nota, contentType: g.biographies?.[0]?.contentType ?? 'TEXT_PLAIN' }],
+    urls: (g.urls ?? []).flatMap((u) => (limpio(u.value) && !esNuestraUrl(u) ? [{ value: u.value!, ...(u.type ? { type: u.type } : {}) }] : [])),
+    birthdays: (g.birthdays ?? []).flatMap((b) => (b.date || b.text ? [{ ...(b.date ? { date: b.date } : {}), ...(b.text ? { text: b.text } : {}) }] : [])),
+  }
+}
+
+const EMAIL_VALIDO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/u
+
 export function planificarSync(e: EntradaPlan): Plan {
   const plan: Plan = {
-    crear: [], actualizar: [], refrescar: [], retirar: [], olvidar: [], apartar: [], reasignar: [], revisiones: [],
+    crear: [], actualizar: [], refrescar: [], retirar: [], olvidar: [], apartar: [], reasignar: [], desvincular: [], revisiones: [],
+    desvincularCalculados: 0, numerosCompartidos: { combinados: 0, enCola: 0, demasiadas: 0 }, principalesCombinadas: [],
     omitidos: 0, ilegibles: 0, avisos: [], necesitaListadoCompleto: false,
   }
-  const crm = seleccionUnica(e.crm, e.fusiones)
+  const crm0 = seleccionUnica(e.crm, e.fusiones)
+  const vinculoDe = new Map(e.vinculos.map((v) => [v.clienteId, v]))
+  // «Un número, un contacto»: UNA ficha por teléfono compartido (la principal, combinada).
+  const campos0 = new Map<string, CamposSincronizados | null>(crm0.map((c) => [c.clienteId, camposDeCrm(c)]))
+  const conHerencia = new Set(e.vinculos.filter((v) => e.fusiones.has(v.clienteId)).map((v) => superviviente(v.clienteId, e.fusiones)))
+  const agr = agruparNumeros({
+    crm: crm0, campos: campos0, titulares: e.titulares ?? new Map(), hashTelefono: e.hashTelefono ?? hashTelefonoPorDefecto,
+    tieneVinculo: (id) => vinculoDe.has(id) || conHerencia.has(id),
+  })
+  plan.revisiones.push(...agr.revisiones)
+  plan.numerosCompartidos = { combinados: agr.combinados, enCola: agr.enCola, demasiadas: agr.demasiadas }
+  plan.principalesCombinadas = [...new Set(agr.secundarias.values())].sort()
+  plan.omitidos += agr.retenidas.size
+  const crm = agr.crm
   comprobarLimite({ aSincronizar: crm.length, vinculados: e.vinculos.length, totalCuenta: null })
 
   const google = new Map(e.google.map((p) => [p.resourceName, p]))
-  const vinculoDe = new Map(e.vinculos.map((v) => [v.clienteId, v]))
   const vinculadoRN = new Set(e.vinculos.map((v) => v.resourceName))
   const reclamados = new Set<string>() // resourceNames que esta pasada ya asigna a una ficha
   const ambiguos = new Set<string>() // resourceNames con el teléfono de MÁS de una ficha (o al revés)
   const intocables = new Set<string>() // fichas de la selección que NO se pueden retirar
-  const enSeleccion = new Set(crm.map((c) => c.clienteId))
+  // Las secundarias y las retenidas SIGUEN en la selección: su vínculo no se retira (ver abajo).
+  const enSeleccion = new Set([...crm.map((c) => c.clienteId), ...agr.secundarias.keys(), ...agr.retenidas])
   const vivaEnGrupo = (p: PersonaGoogle | undefined) => !!p && !p.metadata?.deleted && enGrupo(p, e.grupoResourceName)
 
   // Fichas del CRM (sin vínculo) por E.164, para saber si un teléfono lo comparten dos personas.
@@ -842,6 +1117,8 @@ export function planificarSync(e: EntradaPlan): Plan {
       for (const n of nombresDeAgenda(p)) fueraPorNombre.set(n, [...(fueraPorNombre.get(n) ?? []), p])
     }
   }
+  // Un número sin titular decidido: sus contactos sin vínculo esperan a la elección (no son leads nuevos).
+  for (const t of agr.telefonosRetenidos) for (const p of [...(libresPorTel.get(t) ?? []), ...(fueraPorTel.get(t) ?? [])]) reclamados.add(p.resourceName)
   // Fichas SIN vínculo por correo y por nombre: un contacto que casa con DOS fichas no es de nadie.
   const crmPorEmail = new Map<string, Set<string>>()
   const crmPorNombre = new Map<string, Set<string>>()
@@ -879,6 +1156,79 @@ export function planificarSync(e: EntradaPlan): Plan {
     if (vinculoDe.has(sup)) continue
     const ya = heredable.get(sup)
     if (!ya || (ya.estado !== 'activo' && v.estado === 'activo')) heredable.set(sup, v)
+  }
+
+  // «Un número, un contacto»: los vínculos de las fichas SECUNDARIAS. 1) Si la principal aún no tiene
+  // contacto, HEREDA el de una secundaria (activo, ya escrito y vivo en la etiqueta): no se crea otro
+  // con el mismo número. 2) El resto se DESVINCULA sin borrar nada en Google (`personaSinGestion` +
+  // fuera de la etiqueta); si ya no está en la etiqueta, borrado o a medio unificar, solo se olvida.
+  const secundariasDe = new Map<string, string[]>()
+  for (const [sec, pr] of agr.secundarias) secundariasDe.set(pr, [...(secundariasDe.get(pr) ?? []), sec])
+  for (const [pr, ss] of secundariasDe) {
+    if (vinculoDe.has(pr) || heredable.has(pr)) continue
+    for (const sec of [...ss].sort()) {
+      const v = vinculoDe.get(sec)
+      if (!v || v.estado !== 'activo' || v.hashEnviado === HASH_PENDIENTE_UNIFICAR) continue
+      const g = google.get(v.resourceName)
+      // En delta un contacto que no cambió no viene: el camino de la herencia ya pide el listado completo.
+      if (e.modo === 'completo' ? !vivaEnGrupo(g) : g !== undefined && !vivaEnGrupo(g)) continue
+      heredable.set(pr, v)
+      break
+    }
+  }
+  const heredadaDe = new Set([...heredable.values()].map((v) => v.clienteId))
+  const desvincular: Plan['desvincular'] = []
+  for (const sec of [...agr.secundarias.keys()].sort()) {
+    const v = vinculoDe.get(sec)
+    if (!v || heredadaDe.has(sec)) continue
+    const g = google.get(v.resourceName)
+    const borrado = g?.metadata?.deleted === true || (e.modo === 'completo' && !g)
+    if (v.estado !== 'activo' || v.hashEnviado === HASH_PENDIENTE_UNIFICAR || borrado || (g && !enGrupo(g, e.grupoResourceName))) {
+      plan.olvidar.push(sec)
+      continue
+    }
+    if (!g) {
+      plan.necesitaListadoCompleto = true
+      continue
+    }
+    reclamados.add(v.resourceName)
+    const cs = campos0.get(sec)
+    desvincular.push({
+      clienteId: sec, resourceName: v.resourceName,
+      persona: personaSinGestion(g, v.origen === 'creado' ? { telefono: cs?.telefono ?? null, email: cs?.email ?? null } : undefined),
+    })
+  }
+  plan.desvincularCalculados = desvincular.length
+  if (desvincular.length > MAX_DESVINCULAR_POR_PASADA) {
+    // Umbral ABSOLUTO (p. ej. la primera pasada tras el despliegue): no se ejecuta NINGUNA.
+    plan.avisos.push(`desvinculación BLOQUEADA: ${desvincular.length} contactos de números compartidos dejarían de ser del CRM de golpe (máx. ${MAX_DESVINCULAR_POR_PASADA}); revisa los titulares`)
+  } else {
+    plan.desvincular = desvincular
+  }
+
+  // «Enriquecer ficha»: el contacto vinculado tiene un teléfono/correo que la ficha NO tiene (la BD
+  // dice que está vacía, no «no se sabe») → propuesta en la cola. Nunca uno que ya es de OTRA ficha
+  // de la selección (p. ej. el correo de la empresa que quedó en el contacto heredado).
+  const valoresCrm = new Set<string>()
+  for (const x of campos0.values()) {
+    if (x?.telefono) valoresCrm.add(x.telefono)
+    if (x?.email) valoresCrm.add(x.email)
+  }
+  const original = new Map(crm0.map((c) => [c.clienteId, c]))
+  const enriquecer = (clienteId: string, g: PersonaGoogle | undefined) => {
+    const c = original.get(clienteId)
+    if (!c || !g || g.metadata?.deleted || c.grupo === 'compania' || esClaveCompania(clienteId)) return
+    const tel = c.fichaSinTelefono === true ? telefonosDe(g).find((t) => t.startsWith('+') && !valoresCrm.has(t)) : undefined
+    const mail = c.fichaSinEmail === true ? emailsDe(g).find((m) => EMAIL_VALIDO.test(m) && !valoresCrm.has(m)) : undefined
+    const cg = camposDeGoogle(g)
+    for (const [campo, valor] of [['telefono', tel], ['email', mail]] as const) {
+      if (!valor) continue
+      plan.revisiones.push({
+        tipo: 'enriquecer_ficha', clienteId, resourceName: g.resourceName, campos: [campo],
+        propuesta: { ...cg, telefono: campo === 'telefono' ? valor : null, email: campo === 'email' ? valor : null },
+        huella: huella('enriquecer_ficha', g.resourceName, `${clienteId}|${campo}|${valor}`),
+      })
+    }
   }
 
   const actualizar = (c: CamposSincronizados, clienteId: string, resourceName: string, etag: string | null, origen: OrigenVinculo, revinculaDe: string | null, g: PersonaGoogle | undefined, anadirAlGrupo = false, unificar = false) => {
@@ -959,6 +1309,7 @@ export function planificarSync(e: EntradaPlan): Plan {
           plan.omitidos++
           continue
         }
+        enriquecer(c.clienteId, gu)
         if (gu) {
           const cg = camposDeGoogle(gu)
           if (cc.cumpleanos !== null && cg.cumpleanos !== null && cg.cumpleanos !== cc.cumpleanos) {
@@ -983,6 +1334,7 @@ export function planificarSync(e: EntradaPlan): Plan {
         continue
       }
       reclamados.add(v.resourceName)
+      enriquecer(c.clienteId, g)
       if (g) {
         const cg = camposDeGoogle(g)
         const vista = vistaGestionada(cg, cc)
@@ -1017,6 +1369,7 @@ export function planificarSync(e: EntradaPlan): Plan {
       }
       // Se conserva el ORIGEN del contacto (quién lo creó): de él depende si se puede borrar.
       const gh = google.get(h.resourceName)
+      enriquecer(c.clienteId, gh)
       actualizar(cc, c.clienteId, h.resourceName, gh?.etag ?? h.etag, h.origen, h.clienteId, gh)
       continue
     }
@@ -1024,6 +1377,7 @@ export function planificarSync(e: EntradaPlan): Plan {
     //    (vínculo perdido): se recupera.
     const porId = libresPorId.get(c.clienteId) ?? libresPorSuperviviente.get(c.clienteId)
     if (porId && !reclamados.has(porId.resourceName)) {
+      enriquecer(c.clienteId, porId)
       actualizar(cc, c.clienteId, porId.resourceName, porId.etag ?? null, 'vinculado_id', null, porId)
       continue
     }
@@ -1069,6 +1423,7 @@ export function planificarSync(e: EntradaPlan): Plan {
       if (cc.cumpleanos !== null && cg.cumpleanos !== null && cg.cumpleanos !== cc.cumpleanos) {
         plan.revisiones.push({ tipo: 'cambio_en_google', clienteId: c.clienteId, resourceName: p.resourceName, campos: ['cumpleanos'], propuesta: cg, huella: huella('cambio_en_google', p.resourceName, hashCampos(cg)) })
       }
+      enriquecer(c.clienteId, p)
       actualizar(cc, c.clienteId, p.resourceName, p.etag ?? null, adopcion ? 'adoptado' : 'vinculado_telefono', null, p, adopcion)
       continue
     }

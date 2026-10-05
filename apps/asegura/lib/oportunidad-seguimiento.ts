@@ -876,12 +876,16 @@ type JsonHitos = {
 } | null
 type JsonResumen = { variantes: number; mejorPrima: number | null; mejorCompania: string | null; presupuesto: JsonHitos } | null
 
-/** Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2`). */
+/**
+ * Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2` y/o `pr`).
+ * LEFT JOIN desde el 05/10/2026: un presupuesto de OFERTAS no tiene tarificación (`t2` = NULL) y cuelga
+ * de su oportunidad por `pr.oportunidad_id`; con un INNER JOIN desaparecería de la ficha.
+ */
 function sqlHitos(filtro: Prisma.Sql): Prisma.Sql {
   return Prisma.sql`(select json_build_object('creadoAt', pr.creado_at, 'venceEl', pr.vence_el, 'enlaceGeneradoAt', pr.enlace_generado_at,
               'enviadoAt', pr.enviado_at, 'vistoAt', pr.visto_at, 'elegidoAt', pr.elegido_at,
               'aceptadoAt', pr.aceptado_at, 'emitidoAt', pr.emitido_at, 'retiradoAt', pr.retirado_at)
-         from presupuesto pr join tarificaciones t2 on t2.id = pr.tarificacion_id and t2.correduria_id = pr.correduria_id
+         from presupuesto pr left join tarificaciones t2 on t2.id = pr.tarificacion_id and t2.correduria_id = pr.correduria_id
         where ${filtro} order by pr.creado_at desc limit 1)`
 }
 
@@ -939,12 +943,32 @@ export async function oportunidadesDeCliente(
                and g.estado::text <> 'cerrada' and g.fecha_limite is not null
              order by g.fecha_limite limit 1) as "proximaTarea",
            (select json_build_object(
-                     'variantes', count(distinct t.id)::int,
-                     'mejorPrima', (min(x.prima_eur) filter (where not t.simulado))::float8,
-                     'mejorCompania', (array_agg(x.compania order by x.prima_eur asc) filter (where x.prima_eur is not null and not t.simulado))[1],
-                     'presupuesto', ${sqlHitos(Prisma.sql`t2.oportunidad_id = o.id and pr.correduria_id = o.correduria_id`)})
+                     -- Precios pedidos: las tarificaciones de Avant2 + las ofertas de compañías (PDF) vivas.
+                     'variantes', count(distinct t.id)::int
+                       + (select count(*)::int from oportunidad_oferta f
+                           where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id
+                             and f.rol = 'oferta' and f.estado <> 'descartada'),
+                     -- El mejor precio REAL: de Avant2 (no simulado) o de una oferta REVISADA.
+                     'mejorPrima', (select b.prima from (
+                         select x2.prima_eur::float8 as prima, x2.compania from tarificaciones t3
+                           join tarificacion_precios x2 on x2.tarificacion_id = t3.id and x2.prima_eur is not null
+                          where t3.oportunidad_id = o.id and t3.correduria_id = o.correduria_id and not t3.simulado
+                         union all
+                         select f.prima_total::float8, f.compania from oportunidad_oferta f
+                          where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'oferta'
+                            and f.estado = 'revisada' and f.prima_total is not null
+                       ) b order by b.prima asc limit 1),
+                     'mejorCompania', (select b.compania from (
+                         select x2.prima_eur::float8 as prima, x2.compania from tarificaciones t3
+                           join tarificacion_precios x2 on x2.tarificacion_id = t3.id and x2.prima_eur is not null
+                          where t3.oportunidad_id = o.id and t3.correduria_id = o.correduria_id and not t3.simulado
+                         union all
+                         select f.prima_total::float8, f.compania from oportunidad_oferta f
+                          where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'oferta'
+                            and f.estado = 'revisada' and f.prima_total is not null
+                       ) b order by b.prima asc limit 1),
+                     'presupuesto', ${sqlHitos(Prisma.sql`(t2.oportunidad_id = o.id or pr.oportunidad_id = o.id) and pr.correduria_id = o.correduria_id`)})
               from tarificaciones t
-              left join tarificacion_precios x on x.tarificacion_id = t.id and x.prima_eur is not null
              where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id) as presupuestos,
            (select json_build_object('projectId', cp.project_id_codeoscopic, 'estado', cp.estado::text,
                      'compania', cp.aseguradora,

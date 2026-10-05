@@ -19,7 +19,7 @@ import {
 } from '@central/module-seguros/google-contactos'
 import { informeSimulacion, type InformeSimulacion } from '@central/module-seguros/google-contactos-simulacion'
 import { informeOrdenarAgenda, type InformeOrdenar } from '@central/module-seguros/google-contactos-ordenar'
-import { decryptField, encryptField } from '@central/module-seguros-pii'
+import { computeTelefonoLookupHash, decryptField, encryptField } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
 import { seleccionGoogle } from './contactos-google'
@@ -178,6 +178,8 @@ export type ResultadoSync =
       creados: number
       actualizados: number
       retirados: number
+      /** Contactos de fichas secundarias (número compartido) que dejan de ser nuestros, sin borrarse. */
+      desvinculados: number
       omitidos: number
       ilegibles: number
       revisionesNuevas: number
@@ -255,6 +257,24 @@ async function guardarVinculo(correduriaId: string, v: { clienteId: string; reso
   ])
 }
 
+/**
+ * «Un número, un contacto»: los titulares ELEGIDOS por Alberto (índice ciego del teléfono → ficha) y
+ * el índice ciego que usa el plan (`computeTelefonoLookupHash`, el mismo de `clientes`: el número
+ * nunca se guarda en claro). Si la tabla no se puede leer, LANZA: sin saber quién es el titular no se
+ * escribe nada (el cron sale con error y nada cambia en Google).
+ */
+async function titularesGoogle(correduriaId: string): Promise<{ titulares: Map<string, string>; hashTelefono: (e164: string) => string }> {
+  const filas = await prismaAsegura().googleContactosTitularTelefono.findMany({ where: { correduriaId }, select: { telefonoHash: true, clienteId: true } })
+  return {
+    titulares: new Map(filas.map((f) => [f.telefonoHash, f.clienteId])),
+    hashTelefono: (e164) => {
+      const h = computeTelefonoLookupHash(e164)
+      if (!h) throw new Error('No se pudo calcular el índice ciego de un teléfono (PII_LOOKUP_KEY)')
+      return h
+    },
+  }
+}
+
 async function encolarRevisiones(correduriaId: string, plan: Plan): Promise<number> {
   if (plan.revisiones.length === 0) return 0
   const filas = plan.revisiones.map((r) => ({
@@ -266,6 +286,8 @@ async function encolarRevisiones(correduriaId: string, plan: Plan): Promise<numb
     propuestaCifrada: r.propuesta ? cifrar(JSON.stringify(r.propuesta satisfies CamposSincronizados)) : null,
     huella: r.huella,
     motivo: r.tipo === 'duplicado_ambiguo' ? (r.motivo ?? null) : null,
+    telefonoHash: r.tipo === 'telefono_titular' || r.tipo === 'telefono_muchas_fichas' ? (r.telefonoHash ?? null) : null,
+    candidatos: r.tipo === 'telefono_titular' || r.tipo === 'telefono_muchas_fichas' ? (r.candidatos ?? []) : [],
   }))
   const { count } = await prismaAsegura().googleContactosRevision.createMany({ data: filas, skipDuplicates: true })
   return count
@@ -319,10 +341,11 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
     // con el id de una ficha absorbida es de su superviviente (vínculo perdido al fusionar).
     const idsExternos = (ps: PersonaGoogle[]) => ps.flatMap((p) => (p.externalIds ?? []).filter((x) => x.type === TIPO_ID_EXTERNO && x.value).map((x) => x.value!))
     const baseIds = [...sel.contactos.map((c) => c.clienteId), ...vinculos.map((v) => v.clienteId)]
+    const titulares = await titularesGoogle(correduriaId)
     const planificar = async (google: PersonaGoogle[]) => planificarSync({
       crm: sel.contactos, seleccionCompleta: sel.seleccionCompleta, vinculos,
       fusiones: await fusionesDe(correduriaId, [...baseIds, ...idsExternos(google)]),
-      google, modo, grupoResourceName: grupo,
+      google, modo, grupoResourceName: grupo, ...titulares,
     })
     let plan = await planificar(listado.personas)
     if (plan.necesitaListadoCompleto) {
@@ -382,6 +405,26 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
       }
     }
 
+    // «Un número, un contacto»: el contacto de una ficha SECUNDARIA deja de ser nuestro SIN borrarse.
+    // 1) se reescribe sin lo del CRM (`personaSinGestion`), 2) se saca de la etiqueta, 3) se borra el
+    // vínculo. Si 1) o 2) fallan, el vínculo SE QUEDA y la hora siguiente se repite (idempotente).
+    let desvinculados = 0
+    for (const lote of trocear(plan.desvincular, LOTE_ESCRITURA_GOOGLE)) {
+      if (lotes++ >= MAX_LOTES_POR_PASADA) break
+      const res = await people.actualizarLote(Object.fromEntries(lote.map((d) => [d.resourceName, d.persona])))
+      const escritos = lote.filter((d) => res[d.resourceName])
+      fallidos += lote.length - escritos.length
+      if (escritos.length === 0) continue
+      try {
+        await people.quitarDelGrupo(grupo, escritos.map((d) => d.resourceName))
+      } catch {
+        fallidos += escritos.length
+        continue
+      }
+      await db.googleContactosVinculo.deleteMany({ where: { correduriaId, ...whereClaves(escritos.map((d) => d.clienteId)) } })
+      desvinculados += escritos.length
+    }
+
     for (const lote of trocear(plan.crear, LOTE_ESCRITURA_GOOGLE)) {
       if (lotes++ >= MAX_LOTES_POR_PASADA) break
       const res = await people.crearLote(lote.map((c) => c.persona))
@@ -426,7 +469,7 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
       },
     })
     return {
-      estado: 'ok', modo, completo, creados, actualizados, retirados, omitidos: plan.omitidos, ilegibles: plan.ilegibles,
+      estado: 'ok', modo, completo, creados, actualizados, retirados, desvinculados, omitidos: plan.omitidos, ilegibles: plan.ilegibles,
       revisionesNuevas, fallidos, avisos: plan.avisos,
     }
   } catch (e) {
@@ -474,7 +517,7 @@ export async function simularGoogleContactos(correduriaId: string): Promise<Resu
   const idsExternos = listado.personas.flatMap((p) => (p.externalIds ?? []).filter((x) => x.type === TIPO_ID_EXTERNO && x.value).map((x) => x.value!))
   const fusiones = await fusionesDe(correduriaId, [...sel.contactos.map((c) => c.clienteId), ...vinculos.map((v) => v.clienteId), ...idsExternos])
   const informe = informeSimulacion(
-    { crm: sel.contactos, seleccionCompleta: sel.seleccionCompleta, vinculos, fusiones, google: listado.personas, grupoResourceName: grupo },
+    { crm: sel.contactos, seleccionCompleta: sel.seleccionCompleta, vinculos, fusiones, google: listado.personas, grupoResourceName: grupo, ...(await titularesGoogle(correduriaId)) },
     { totalCuenta: listado.totalCuenta },
   )
   await db.googleContactosConexion.update({ where: { correduriaId }, data: { simuladaEn: new Date(), actualizadoEn: new Date() } })
@@ -515,7 +558,7 @@ export async function ordenarAgendaGoogle(correduriaId: string): Promise<Resulta
   const fusiones = await fusionesDe(correduriaId, [...sel.contactos.map((c) => c.clienteId), ...vinculos.map((v) => v.clienteId), ...idsExternos])
   const companias = (await db.companiaDgs.findMany({ where: { activa: true }, select: { nombreComun: true } })).map((c) => c.nombreComun).filter((x) => x.trim() !== '')
   const informe = informeOrdenarAgenda(
-    { crm: sel.contactos, seleccionCompleta: sel.seleccionCompleta, vinculos, fusiones, google: listado.personas, grupoResourceName: grupo },
+    { crm: sel.contactos, seleccionCompleta: sel.seleccionCompleta, vinculos, fusiones, google: listado.personas, grupoResourceName: grupo, ...(await titularesGoogle(correduriaId)) },
     { companias },
   )
   return { estado: 'ok', informe }

@@ -170,6 +170,16 @@ export default function GoogleContactosSimulacion() {
               {i.superaTope ? <strong style={{ color: 'var(--negative)' }}> — SUPERA el tope de 25.000 de Google: no se escribiría nada.</strong> : ' (tope de Google: 25.000).'}
               {' '}Fichas del CRM: {numero(i.fichasCrm)}{i.seleccionIncompleta ? ' (selección INCOMPLETA: no se retiraría nada)' : ''}.
             </p>
+            {i.compartidos && i.compartidos.numeros > 0 && (
+              <p style={pMuted}>
+                <strong>Un número, un contacto:</strong> {numero(i.compartidos.numeros)} números compartidos por varias fichas.{' '}
+                {numero(i.compartidos.combinadosSolos)} se combinan solos ({numero(i.compartidos.principalesReescritas)} contactos de la persona se
+                crean o reescriben con las demás fichas dentro), {numero(i.compartidos.preguntaraCola)} te preguntará la cola («Este número es de…»)
+                y {numero(i.compartidos.dejanDeSerCrm)} contactos dejarán de ser del CRM (no se borran; salen de «Grupo ASegura»)
+                {i.compartidos.desvinculacionBloqueada ? <strong style={{ color: 'var(--negative)' }}> — BLOQUEADO: son demasiados de golpe, no se desvincula ninguno</strong> : null}.
+                {i.compartidos.demasiadasFichas > 0 ? ` ${numero(i.compartidos.demasiadasFichas)} números con más de 3 fichas (centralita/gestoría) no se tocan: solo aviso en la cola.` : ''}
+              </p>
+            )}
             <Seccion titulo="Se crearán nuevas" ayuda="Nadie en tu agenda tiene ese teléfono." lista={i.crear} fila={(x) => <Ficha x={x} />} />
             <Seccion titulo="Se vincularán a un contacto de la etiqueta" ayuda="Ya está en «Grupo ASegura» con el mismo teléfono y el mismo nombre." lista={i.vincular} fila={(x) => <Ficha x={x} />} />
             <Seccion titulo="Se adoptarán de tu agenda" ayuda="Están fuera de la etiqueta (el volcado del .vcf) con el mismo teléfono y el mismo nombre o el sufijo «· AS …»: se meten en «Grupo ASegura» sin duplicarlos y nunca se borran." lista={i.adoptar} fila={(x) => <Ficha x={x} />} />

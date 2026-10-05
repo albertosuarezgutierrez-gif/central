@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
  * y devuelve el MISMO status y json.
  *
  *   GET  ?despuesDe=<id>  → { estado:'ok', revisiones, siguiente, pendientes }
- *   POST { id, accion, forzar? } | { lote: 'unificar', motivo: 'nombre_distinto', despuesDe? } → el `actor` lo pone el SERVIDOR
+ *   POST { id, accion, forzar?, clienteId? } | { lote: 'unificar', motivo: 'nombre_distinto', despuesDe? } → el `actor` lo pone el SERVIDOR
  *        (la sesión), nunca el cuerpo.
  */
 export async function GET(req: NextRequest) {
@@ -36,7 +36,8 @@ export async function POST(req: NextRequest) {
   }
   // Solo los campos del contrato, y el `actor` el último: no se firma con otro nombre.
   const r = await resolverRevisionGoogleAsegura({
-    id: body.id, accion: body.accion, ...(body.forzar === true ? { forzar: true } : {}), actor: guarda.session.email,
+    id: body.id, accion: body.accion, ...(body.forzar === true ? { forzar: true } : {}),
+    ...(typeof body.clienteId === 'string' ? { clienteId: body.clienteId } : {}), actor: guarda.session.email,
   })
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

@@ -85,6 +85,22 @@ export type InformeSimulacion = {
     retirar: number
     ilegibles: number
   }
+  /**
+   * «Un número, un contacto»: números compartidos por varias fichas. `combinadosSolos` = titular decidido
+   * (elegido o física/jurídica); `preguntaraCola` = «Este número es de…»; `demasiadasFichas` = >3 fichas
+   * (solo informativa); `principalesReescritas` = contactos de principales que se crean/reescriben
+   * combinados; `dejanDeSerCrm` = contactos de secundarias que se desvincularán (sin borrarse) y
+   * `desvinculacionBloqueada` si pasan del tope por pasada (entonces no se desvincula ninguno).
+   */
+  compartidos: {
+    numeros: number
+    combinadosSolos: number
+    preguntaraCola: number
+    demasiadasFichas: number
+    principalesReescritas: number
+    dejanDeSerCrm: number
+    desvinculacionBloqueada: boolean
+  }
   avisos: string[]
 }
 
@@ -154,6 +170,7 @@ export function informeSimulacion(
     return {
       ...base, contactosTras: previo.tras, superaTope: true, crear: vacia, vincular: vacia, adoptar: vacia, conflictosNombre: vacia, ambiguos: vacia, yaEnAgenda: vacia,
       real: { crear: 0, vincular: 0, adoptar: 0, unificar: 0, actualizarVinculados: 0, aRevision: 0, propuestasLead: 0, retirar: 0, ilegibles: 0 },
+      compartidos: { numeros: 0, combinadosSolos: 0, preguntaraCola: 0, demasiadasFichas: 0, principalesReescritas: 0, dejanDeSerCrm: 0, desvinculacionBloqueada: false },
       avisos: [`La selección del CRM (${crm.length}) ya pasa del tope de Google: no se ha calculado el plan.`],
     }
   }
@@ -210,6 +227,25 @@ export function informeSimulacion(
         'NO se crean (serían duplicados); van a la cola para que las unifiques.',
     )
   }
+  const nc = real.numerosCompartidos
+  const principales = new Set(real.principalesCombinadas)
+  const compartidos = {
+    numeros: nc.combinados + nc.enCola + nc.demasiadas,
+    combinadosSolos: nc.combinados,
+    preguntaraCola: nc.enCola,
+    demasiadasFichas: nc.demasiadas,
+    principalesReescritas: [...real.crear, ...real.actualizar].filter((x) => principales.has(x.clienteId)).length,
+    dejanDeSerCrm: real.desvincularCalculados,
+    desvinculacionBloqueada: real.desvincularCalculados > 0 && real.desvincular.length === 0,
+  }
+  if (compartidos.numeros > 0) {
+    avisos.push(
+      `${compartidos.numeros} números compartidos por varias fichas: ${compartidos.combinadosSolos} se combinan solos, ` +
+        `${compartidos.preguntaraCola} te preguntará la cola («Este número es de…»), ${compartidos.dejanDeSerCrm} contactos dejarán de ser del CRM ` +
+        '(sin borrarse)' + (compartidos.desvinculacionBloqueada ? ' — BLOQUEADO por ser demasiados de golpe' : '') +
+        (compartidos.demasiadasFichas ? `; ${compartidos.demasiadasFichas} con más de 3 fichas (centralita/gestoría) no se tocan` : '') + '.',
+    )
+  }
   if (!e.grupoResourceName) avisos.push('La etiqueta «Grupo ASegura» aún no existe en Google: la creará la primera sincronización.')
 
   return {
@@ -233,6 +269,7 @@ export function informeSimulacion(
       retirar: real.retirar.length,
       ilegibles: real.ilegibles,
     },
+    compartidos,
     avisos,
   }
 }

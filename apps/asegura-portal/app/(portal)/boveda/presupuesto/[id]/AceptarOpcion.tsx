@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { listaY, type AvisoPerdidas } from '@/lib/todas-las-opciones'
+import { TEXTOS_OFERTAS } from '@/lib/presupuesto-ofertas-vista'
 
 /**
  * Aceptar una opción del presupuesto (pieza 4-d).
@@ -38,7 +39,7 @@ function leerCuentaFicha(v: unknown): CuentaFicha {
   }
 }
 
-export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos, perdidas = null }: {
+export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos, perdidas = null, origen = 'codeoscopic' }: {
   presupuestoId: string
   opcionId: string
   prima: number | null
@@ -48,6 +49,8 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
   bloqueoDatos: string | null
   /** Lo que deja de tener frente a su seguro actual (`avisoPerdidas`). `null` = nada que avisar. */
   perdidas?: AvisoPerdidas | null
+  /** De dónde salen los precios: en `ofertas` lo que se confirma es el tomador y la oferta, no «los datos con los que se calculó». */
+  origen?: 'codeoscopic' | 'ofertas'
 }) {
   const [paso, setPaso] = useState<{ paso: 'inicio' } | PasoCuenta | PasoRev | PasoCodigo | { paso: 'aceptada'; aceptadoEl: string }>({ paso: 'inicio' })
   // La cuenta: «usar la de mi ficha» o «usar otra» (con el IBAN tecleado).
@@ -378,7 +381,7 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
                   type="checkbox" checked={confirma} onChange={(e) => setConfirma(e.target.checked)}
                   style={{ width: 22, height: 22, flex: '0 0 auto', marginTop: 1 }}
                 />
-                <span>{paso.confirmacionDatos} <span className="suave">(los de «Revisa tus datos», arriba)</span></span>
+                <span>{paso.confirmacionDatos} <span className="suave">{origen === 'ofertas' ? TEXTOS_OFERTAS.casillaPista : '(los de «Revisa tus datos», arriba)'}</span></span>
               </label>
               <button
                 type="button" className="boton" style={{ minHeight: 48 }}

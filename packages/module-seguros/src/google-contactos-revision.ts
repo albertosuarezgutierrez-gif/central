@@ -19,11 +19,22 @@
 //
 // «Usar como mote» (`cambio_en_google` con el nombre cambiado): Alberto lo renombró en Google →
 // ese nombre pasa a ser el mote (en vez de pisarlo con el del CRM). Solo fichas, no compañías.
+//
+// «Este número es de…» (`telefono_titular`, 05/10/2026): varias fichas comparten teléfono y no se sabe
+// quién es la persona. Un botón por ficha (`elegir_titular` + `clienteId`): la elección se GUARDA
+// (`google_contactos_titular_telefono`, por índice ciego del número) y la pasada siguiente hace UN solo
+// contacto, el de esa ficha. No toca Google ni vínculos; las fichas del CRM NO se fusionan.
+// «Añadir a la ficha» (`enriquecer_ficha`): el contacto de Google tiene un teléfono/correo que la ficha
+// no tiene; aceptarlo lo AÑADE con el alta normal de contactos de la ficha (nunca pisa uno existente).
 
-export const TIPOS_REVISION = ['cambio_en_google', 'borrado_en_google', 'sacado_del_grupo', 'propuesta_lead', 'duplicado_ambiguo'] as const
+export const TIPOS_REVISION = [
+  'cambio_en_google', 'borrado_en_google', 'sacado_del_grupo', 'propuesta_lead', 'duplicado_ambiguo', 'telefono_titular', 'telefono_muchas_fichas', 'enriquecer_ficha',
+] as const
 export type TipoRevisionGoogle = (typeof TIPOS_REVISION)[number]
 
-export const ACCIONES_REVISION = ['aceptar_lead', 'descartar', 'mantener_crm', 'unificar', 'unificar_nombre_crm', 'usar_como_mote'] as const
+export const ACCIONES_REVISION = [
+  'aceptar_lead', 'descartar', 'mantener_crm', 'unificar', 'unificar_nombre_crm', 'usar_como_mote', 'elegir_titular', 'anadir_a_ficha',
+] as const
 export type AccionRevision = (typeof ACCIONES_REVISION)[number]
 
 /**
@@ -55,6 +66,9 @@ export const ETIQUETA_TIPO_REVISION: Record<TipoRevisionGoogle, string> = {
   sacado_del_grupo: 'Sacado del grupo',
   propuesta_lead: 'Contacto nuevo en el grupo',
   duplicado_ambiguo: 'Teléfono ambiguo',
+  telefono_titular: 'Este número es de…',
+  telefono_muchas_fichas: 'Número de muchas fichas',
+  enriquecer_ficha: 'Añadir a la ficha',
 }
 
 export const ETIQUETA_MOTIVO_DUPLICADO: Record<MotivoDuplicado, string> = {
@@ -72,6 +86,8 @@ export const ETIQUETA_ACCION_REVISION: Record<AccionRevision, string> = {
   unificar: 'Unificar (mi nombre como mote)',
   unificar_nombre_crm: 'Unificar con nombre del CRM',
   usar_como_mote: 'Usar como mote',
+  elegir_titular: 'Es de esta ficha',
+  anadir_a_ficha: 'Añadir a la ficha',
 }
 
 /**
@@ -80,6 +96,10 @@ export const ETIQUETA_ACCION_REVISION: Record<AccionRevision, string> = {
  */
 export function accionesPermitidas(tipo: TipoRevisionGoogle, motivo: string | null = null, campos: readonly string[] = []): readonly AccionRevision[] {
   if (tipo === 'propuesta_lead') return ['aceptar_lead', 'descartar']
+  if (tipo === 'telefono_titular') return ['elegir_titular', 'descartar']
+  // Informativa (centralita/gestoría, >3 fichas): cada ficha sigue como estaba; solo se cierra.
+  if (tipo === 'telefono_muchas_fichas') return ['descartar']
+  if (tipo === 'enriquecer_ficha') return ['anadir_a_ficha', 'descartar']
   if (tipo === 'cambio_en_google' && (campos.includes('nombre') || campos.includes('apellidos'))) return ['usar_como_mote', 'mantener_crm', 'descartar']
   if (tipo === 'duplicado_ambiguo' && esMotivoDuplicado(motivo) && MOTIVOS_UNIFICABLES.includes(motivo)) return ['unificar', 'unificar_nombre_crm', 'mantener_crm', 'descartar']
   return ['mantener_crm', 'descartar']
@@ -101,6 +121,10 @@ export type EfectoResolucion =
        * (`unificar_nombre_crm` no: el contacto pasa a llamarse como la ficha.)
        */
       mote: boolean
+      /** `elegir_titular`: guardar la ficha elegida como titular del número (debe ser una de las candidatas). */
+      titular: boolean
+      /** `anadir_a_ficha`: añadir el teléfono/correo a la ficha SOLO si sigue sin ninguno de ese tipo. */
+      enriquecer: boolean
     }
   | { ok: false; motivo: string }
 
@@ -114,11 +138,13 @@ export function efectoResolucion(tipo: string, accion: AccionRevision, motivo: s
         : `«${ETIQUETA_ACCION_REVISION[accion]}» no vale para «${ETIQUETA_TIPO_REVISION[tipo as TipoRevisionGoogle]}».`,
     }
   }
-  if (accion === 'aceptar_lead') return { ok: true, estado: 'aceptada', altaLead: true, vinculo: 'ninguno', mote: false }
+  if (accion === 'aceptar_lead') return { ok: true, estado: 'aceptada', altaLead: true, vinculo: 'ninguno', mote: false, titular: false, enriquecer: false }
   if (accion === 'unificar' || accion === 'unificar_nombre_crm') {
-    return { ok: true, estado: 'aceptada', altaLead: false, vinculo: 'unificar', mote: accion === 'unificar' }
+    return { ok: true, estado: 'aceptada', altaLead: false, vinculo: 'unificar', mote: accion === 'unificar', titular: false, enriquecer: false }
   }
-  if (accion === 'usar_como_mote') return { ok: true, estado: 'aceptada', altaLead: false, vinculo: 'ninguno', mote: true }
+  if (accion === 'elegir_titular') return { ok: true, estado: 'aceptada', altaLead: false, vinculo: 'ninguno', mote: false, titular: true, enriquecer: false }
+  if (accion === 'anadir_a_ficha') return { ok: true, estado: 'aceptada', altaLead: false, vinculo: 'ninguno', mote: false, titular: false, enriquecer: true }
+  if (accion === 'usar_como_mote') return { ok: true, estado: 'aceptada', altaLead: false, vinculo: 'ninguno', mote: true, titular: false, enriquecer: false }
   // «Mantener CRM» = lo de Google se rechaza (el CRM ya lo pisó o lo dejó como estaba).
-  return { ok: true, estado: accion === 'mantener_crm' ? 'aceptada' : 'descartada', altaLead: false, vinculo: 'ninguno', mote: false }
+  return { ok: true, estado: accion === 'mantener_crm' ? 'aceptada' : 'descartada', altaLead: false, vinculo: 'ninguno', mote: false, titular: false, enriquecer: false }
 }

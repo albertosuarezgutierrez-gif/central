@@ -216,9 +216,14 @@ export function textoDatos(grupos: GrupoDatos[]): string {
 }
 
 /** Lo que se añade al documento de aceptación: los datos + la declaración de la casilla. */
-export function anexoDatosFirmados(datos: Extract<DatosCotizados, { estado: 'ok' }>, confirmacion: string = TEXTO_CONFIRMACION_DATOS): string {
-  return `${datos.texto}\n\nEl tomador ha marcado: «${confirmacion}» ` +
-    'El precio y la póliza dependen de estos datos: si alguno no fuera correcto, hay que corregirlo antes de emitir.'
+export function anexoDatosFirmados(
+  datos: Extract<DatosCotizados, { estado: 'ok' }>, confirmacion: string = TEXTO_CONFIRMACION_DATOS, via: 'codeoscopic' | 'ofertas' = 'codeoscopic',
+): string {
+  // 🚨 La rama `codeoscopic` es byte a byte la de siempre: la huella de lo firmado depende de ella.
+  const cierre = via === 'ofertas'
+    ? 'La póliza se contrata a nombre de este tomador y en las condiciones de la oferta elegida: si algún dato no fuera correcto, hay que corregirlo antes de contratar.'
+    : 'El precio y la póliza dependen de estos datos: si alguno no fuera correcto, hay que corregirlo antes de emitir.'
+  return `${datos.texto}\n\nEl tomador ha marcado: «${confirmacion}» ` + cierre
 }
 
 // ─── Telegram (parse_mode HTML de `tgSend`: todo lo que viene de fuera, escapado) ──

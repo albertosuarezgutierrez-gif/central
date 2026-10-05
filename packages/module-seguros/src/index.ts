@@ -1317,3 +1317,12 @@ export { polizaAnteriorParaTarificar, CODIGOS_DGS_MAPFRE } from './poliza-anteri
 export { aE164 } from './telefono-e164.ts'
 export { telefonoParaFicha, formasHashTelefono } from './whatsapp-telefono.ts'
 export { redactarPii, type OpcionesRedaccion } from './redactar-pii.ts'
+
+export {
+  TAXONOMIA_POR_RAMO, ramoOfertaDe, garantiasDelRamo, garantiaCanonica, normalizarGarantia, normalizarTexto,
+} from './coberturas-taxonomia.ts'
+export type { RamoOferta, GrupoGarantia, TipoValorGarantia, GarantiaCanonica } from './coberturas-taxonomia.ts'
+export { compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2 } from './comparar-ofertas.ts'
+export type {
+  OfertaNormalizada, ValorGarantia, ResultadoComparacion, FilaMatriz, CeldaMatriz, ResumenOferta, AlertaInfraseguro,
+} from './comparar-ofertas.ts'

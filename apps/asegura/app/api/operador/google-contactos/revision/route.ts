@@ -40,6 +40,8 @@ const Cuerpo = z.object({
   actor: z.string().trim().min(1).max(120),
   /** Solo `aceptar_lead`: dar de alta aunque el teléfono/email ya esté en otra ficha (tras el 409). */
   forzar: z.boolean().optional(),
+  /** Solo `elegir_titular` («Este número es de…»): la ficha elegida (una de las candidatas). */
+  clienteId: UUID.optional(),
 }).strict()
 
 /** «Unificar todos» los pendientes de un motivo inequívoco (`nombre_distinto`, `mismo_email`, `mismo_nombre`). */
@@ -79,13 +81,13 @@ export const POST = auditado(async (req: Request) => {
   }
   const cuerpo = Cuerpo.safeParse(crudo)
   if (!cuerpo.success) {
-    return NextResponse.json({ estado: 'invalido', motivo: 'Cuerpo inválido: { id, accion, actor, forzar? }', errores: cuerpo.error.flatten().fieldErrors }, { status: 400 })
+    return NextResponse.json({ estado: 'invalido', motivo: 'Cuerpo inválido: { id, accion, actor, forzar?, clienteId? }', errores: cuerpo.error.flatten().fieldErrors }, { status: 400 })
   }
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
-    const r = await resolverRevision(correduria.id, { ...cuerpo.data, forzar: cuerpo.data.forzar === true })
+    const r = await resolverRevision(correduria.id, { ...cuerpo.data, forzar: cuerpo.data.forzar === true, clienteId: cuerpo.data.clienteId ?? null })
     if (!r.ok) {
       const { ok: _ok, status, ...resto } = r
       void _ok

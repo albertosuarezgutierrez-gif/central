@@ -15,8 +15,10 @@ const cuerpoDe = (nombre: string) => {
 test('los precios de cada oportunidad: solo los suyos, de esta correduría, y la mejor prima nunca simulada', () => {
   const c = cuerpoDe('oportunidadesDeCliente')
   assert.match(c, /where t\.oportunidad_id = o\.id and t\.correduria_id = o\.correduria_id/)
-  assert.match(c, /min\(x\.prima_eur\) filter \(where not t\.simulado\)/)
-  assert.match(c, /filter \(where x\.prima_eur is not null and not t\.simulado\)/)
+  // Desde el 05/10/2026 la mejor prima sale de Avant2 (nunca simulada) O de una oferta de compañía REVISADA.
+  assert.match(c, /where t3\.oportunidad_id = o\.id and t3\.correduria_id = o\.correduria_id and not t3\.simulado/)
+  assert.match(c, /f\.rol = 'oferta'\s+and f\.estado = 'revisada' and f\.prima_total is not null/)
+  assert.doesNotMatch(c, /f\.estado <> 'descartada'\s*\n\s*\) b order by/, 'una oferta sin revisar no da «mejor precio»')
 })
 
 test('lo tarificado sin oportunidad: acotado a la correduría, sin oportunidad y del tomador (también por su póliza)', () => {

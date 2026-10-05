@@ -22,6 +22,7 @@ const P = (o: Partial<PresupuestoReferencia> = {}): PresupuestoReferencia => ({
   ramo: 'auto',
   polizaId: null,
   tarificacionId: 't1',
+  origen: 'codeoscopic',
   oportunidadId: 'op1',
   estado: 'descargado',
   rotuloEstado: 'PDF descargado',

@@ -5,13 +5,14 @@ import { getSesion, AuthError } from '@/lib/tenant'
 import { generarAccesoToken, normalizarEmpleado } from '@/lib/empleados'
 import { nuevaPersonaId } from '@central/core-identity'
 import { saldoVacacionesEmpleados } from '@/lib/solicitudes'
+import { SQL_COLUMNAS_LISTADO_EMPLEADOS } from '@/lib/empleados-columnas'
 
 export async function GET(req: Request) {
   try {
     const { empresa_id } = await getSesion()
     const anio = parseInt(new URL(req.url).searchParams.get('anio') ?? '') || new Date().getFullYear()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id, nombre, apellidos, dni, nss, email, telefono, puesto, estado, acceso_token, creada_at
+      SELECT ${Prisma.raw(SQL_COLUMNAS_LISTADO_EMPLEADOS)}
       FROM rrhh.empleados WHERE empresa_id = ${empresa_id}::uuid
       ORDER BY COALESCE(apellidos, nombre) ASC, nombre ASC`)
     const { map: saldos, devengados } = await saldoVacacionesEmpleados(empresa_id, anio)
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       INSERT INTO rrhh.empleados (empresa_id, nombre, apellidos, dni, email, telefono, puesto, acceso_token, persona_id)
       VALUES (${empresa_id}::uuid, ${n.nombre}, ${n.apellidos}, ${n.dni}, ${n.email}, ${n.telefono}, ${body.puesto ?? null}, ${token}, ${nuevaPersonaId()}::uuid)
-      RETURNING id, nombre, apellidos, acceso_token`)
+      RETURNING id, nombre, apellidos`)
     return NextResponse.json({ empleado: rows[0] }, { status: 201 })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })

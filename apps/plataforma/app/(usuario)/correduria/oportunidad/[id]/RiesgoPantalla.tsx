@@ -17,6 +17,7 @@ import DatosRiesgo from './DatosRiesgo'
 import DatosVehiculo from './DatosVehiculo'
 import FigurasRiesgo from './FigurasRiesgo'
 import HistorialVariantes from './HistorialVariantes'
+import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
 import { fechaEs } from './piezas-riesgo'
 import { etiquetaRiesgo, ramoVariante, retarificaEnRiesgo, rutaVariante, tomadorDelRiesgo } from './variante'
@@ -125,6 +126,8 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
         onCambio={(texto) => void recargar(texto)}
         onError={(texto) => setAviso({ ok: false, texto })}
       />
+
+      <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
 
       <HistorialVariantes riesgo={riesgo} />
 

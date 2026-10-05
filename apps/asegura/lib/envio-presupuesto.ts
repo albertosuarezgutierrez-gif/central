@@ -33,11 +33,14 @@ import { MOTIVO_REMITENTE, rechazoDeRemitente } from './correo-invitacion-portal
 import { estadoEmailDeFicha } from './email-ficha'
 import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
 import { fechaEfectoDe } from './presupuesto'
+import { admiteCodeoscopic, decidirSalida } from './presupuesto-origen'
 
 export type CanalAviso = 'email' | 'whatsapp_enlace'
 
 export type FalloEnvio =
   | 'no_encontrado' | 'no_enviable' | 'sin_necesidades' | 'sin_enlace' | 'sin_email' | 'sin_acceso' | 'simulado' | 'ocupado'
+  /** Origen `ofertas`: alguna opción no sale de una oferta REVISADA. `origen_desconocido`: no se sabe de dónde salen los precios. */
+  | 'sin_revisar' | 'origen_desconocido'
   | 'sin_proveedor' | 'remitente_no_verificado' | 'rechazado'
 
 export type ResultadoEnvio =
@@ -96,7 +99,7 @@ export async function avisarPresupuesto(
   const p = await db.presupuesto.findFirst({
     where: { id: entrada.id, correduriaId },
     select: {
-      id: true, clienteId: true, tarificacionId: true, tokenHash: true, canalAviso: true, creadoAt: true, venceEl: true,
+      id: true, clienteId: true, tarificacionId: true, origen: true, oportunidadId: true, tokenHash: true, canalAviso: true, creadoAt: true, venceEl: true,
       enlaceGeneradoAt: true, enviadoAt: true, vistoAt: true, elegidoAt: true, aceptadoAt: true, emitidoAt: true, retiradoAt: true,
       necesidades: true,
     },
@@ -107,10 +110,23 @@ export async function avisarPresupuesto(
   // IDD (art. 20 Ley 16/2018): las necesidades del cliente se especifican ANTES de proponerle nada.
   if (!p.necesidades?.trim()) return error('sin_necesidades', 'Antes de avisarle, escribe sus exigencias y necesidades: qué quiere asegurar y qué le importa. Es lo que luego firma con la aceptación.')
 
-  const [t] = await db.$queryRaw<{ simulado: boolean | null; peticion: unknown }[]>`
-    select simulado, peticion from tarificaciones where id = ${p.tarificacionId}::uuid and correduria_id = ${correduriaId}::uuid`
-  // Mismo criterio que el trigger de la BD: si no se puede afirmar que es real, no sale.
-  if (t?.simulado !== false) return error('simulado', 'Los precios salen de una tarificación simulada: ninguna compañía los ha dado y no se le enseñan a un cliente.')
+  // Mismo criterio que el trigger de la BD (`presupuesto_no_enviar_simulado`), por ORIGEN:
+  //   · codeoscopic → su tarificación tiene que ser real (si no se puede afirmar, no sale);
+  //   · ofertas     → SIN tarificación: toda opción visible sale de una oferta REVISADA de su oportunidad.
+  // 🚨 Un presupuesto de ofertas no consulta `tarificaciones` (no tiene): la puerta es `admiteCodeoscopic`.
+  let t: { simulado: boolean | null; peticion: unknown } | undefined
+  let opcionesOfertas: { ofertaId: string | null; estadoOferta: string | null; mismaOportunidad: boolean }[] | null = null
+  if (admiteCodeoscopic(p)) {
+    ;[t] = await db.$queryRaw<{ simulado: boolean | null; peticion: unknown }[]>`
+      select simulado, peticion from tarificaciones where id = ${p.tarificacionId}::uuid and correduria_id = ${correduriaId}::uuid`
+  } else if (p.origen === 'ofertas') {
+    opcionesOfertas = (await db.$queryRaw<{ oferta_id: string | null; estado: string | null; misma: boolean }[]>`
+      select o.oferta_id::text as oferta_id, f.estado, coalesce(f.oportunidad_id = ${p.oportunidadId}::uuid and f.correduria_id = ${correduriaId}::uuid, false) as misma
+      from (select oferta_id from presupuesto_opcion where presupuesto_id = ${p.id}::uuid and oculta_at is null) o
+      left join oportunidad_oferta f on f.id = o.oferta_id`).map((o) => ({ ofertaId: o.oferta_id, estadoOferta: o.estado, mismaOportunidad: o.misma }))
+  }
+  const salida = decidirSalida(p, { simulado: t?.simulado ?? null, opciones: opcionesOfertas })
+  if (!salida.ok) return error(salida.motivo, salida.detalle)
 
   const ficha = await estadoEmailDeFicha(correduriaId, p.clienteId)
   if (ficha.estado !== 'ok') return error('sin_email', TEXTO_SIN_EMAIL[ficha.estado] ?? 'No hay un correo al que mandar el código.')
@@ -131,10 +147,13 @@ export async function avisarPresupuesto(
   const enlace = enlacePresupuesto(token)
   if (!enlace) return error('sin_enlace', 'Falta ASEGURA_PORTAL_URL o no es https: sin enlace no hay presupuesto que abrir. No se ha tocado nada.')
 
-  const venceSiSale = calcularVencimiento({ creadoAt: p.creadoAt, enviadoAt: p.enviadoAt ?? ahora, fechaEfecto: fechaEfectoDe(t.peticion) }).venceEl
+  const venceSiSale = calcularVencimiento({ creadoAt: p.creadoAt, enviadoAt: p.enviadoAt ?? ahora, fechaEfecto: fechaEfectoDe(t?.peticion ?? null) }).venceEl
   const nombre = await nombreDe(correduriaId, p.clienteId)
   // Cuántos datos SUYOS faltan para emitir (§4bis): solo el número. Si no se puede leer, no se dice nada.
-  const faltanDatos = await datosParaEmitir(correduriaId, p.clienteId).then((r) => r?.faltanCliente ?? null).catch(() => null)
+  // En un presupuesto de ofertas no se dice: esos datos son los de la emisión por Avant2, que aquí no hay.
+  const faltanDatos = salida.via === 'ofertas'
+    ? null
+    : await datosParaEmitir(correduriaId, p.clienteId).then((r) => r?.faltanCliente ?? null).catch(() => null)
   const datos = { nombre, enlace, venceEl: venceSiSale, email: emailAcceso, faltanDatos }
 
   // Compare-and-swap sobre el hash anterior: el segundo clic no encuentra la fila.

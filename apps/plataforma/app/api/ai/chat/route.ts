@@ -35,6 +35,9 @@ export async function POST(req: Request) {
       app, endpoint: 'chat',
       system: typeof body?.system === 'string' ? body.system : undefined,
       modelo: typeof body?.model === 'string' ? body.model : undefined,
+      // Categoría del catálogo (p. ej. `redaccion` para la lectura de ofertas de asegura): modelo por
+      // tag SIN hop al decisor. Una categoría desconocida degrada al default (`elegirPorCategoria`).
+      categoria: typeof body?.categoria === 'string' && /^[a-z_]{2,30}$/.test(body.categoria) ? body.categoria : undefined,
       maxTokens: Number(body?.maxTokens) || 700,
       timeoutMs: Number(body?.timeoutMs) || 25_000,
       clienteRef,

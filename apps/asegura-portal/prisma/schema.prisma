@@ -1307,6 +1307,9 @@ model Presupuesto {
   retiradoAt   DateTime? @map("retirado_at") @db.Timestamptz(6)
   /// Exigencias y necesidades que anotó el corredor (IDD). Es lo que el cliente firma con la aceptación.
   necesidades  String?
+  /// `codeoscopic` | `ofertas` (PDFs de compañías: se emite en la compañía, no por Avant2). GRANT
+  /// SELECT(origen) en `apps/asegura/prisma/sql/2026-10-05_oportunidad_ofertas.sql`.
+  origen       String    @default("codeoscopic")
 
   opciones PresupuestoOpcion[]
   eventos  PresupuestoEvento[]
