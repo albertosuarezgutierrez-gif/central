@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-05T09:03:46Z",
-  "sha": "80f04c45880e997bd27eebb14b5b2e4658b3c667",
+  "generadoEn": "2026-10-05T09:46:06Z",
+  "sha": "c51e6a9f34d5a0aafc299a7c25f6cb8788ac546f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -16049,7 +16049,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "c08e2e1e7c84"
+      "hash": "47b6afc82471"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -27106,6 +27106,7 @@
       "resumen": "Catálogo ESTÁTICO de `product.options` por defecto para el ReRate, para las compañías que exigen campos que la cotización NUNCA devuelve (ver `Precio.productOptions` en `respuesta.ts` — el vendor no los manda al cotizar, así que aquí casi siempre es `null`). Sin sandbox y sin catálogo REST para esto",
       "exporta": [
         "opcionesPorDefecto",
+        "opcionesParaReRate",
         "descuentosDelCuerpo",
         "conDescuentos",
         "opcionesEmisionPorDefecto",
@@ -27122,12 +27123,21 @@
           "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
         },
         {
+          "nombre": "opcionesParaReRate",
+          "kind": "function",
+          "exportada": true,
+          "params": "delVendor: unknown, compania: string, ramo: string | null = 'auto'",
+          "retorno": "unknown",
+          "linea": 103,
+          "resumen": "PURO. Las opciones de producto del ReRate: las que el vendor devolvió para ESE precio (`delVendor`) y, si no hay, el catálogo por defecto. Generali auto: si el vendor devolvió opciones, el descuento p"
+        },
+        {
           "nombre": "descuentosDelCuerpo",
           "kind": "function",
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 110,
+          "linea": 130,
           "resumen": "Lee `{ dtoCap?, dtoVentaCruzada? }` del cuerpo. `null` si no viene nada; lanza nada: lo raro es reparo."
         },
         {
@@ -27136,7 +27146,7 @@
           "exportada": true,
           "params": "base: unknown, pedidos: DescuentosPedidos, origen: 'catalogo' | 'formulario' = 'catalogo',",
           "retorno": "",
-          "linea": 132,
+          "linea": 152,
           "resumen": "PURO. Aplica los descuentos pedidos a las opciones que irán en el ReRate. Solo si esas opciones YA traen el campo (hoy, el catálogo de Allianz auto): meter un `dtoCap` en otra compañía sería declarar "
         },
         {
@@ -27145,7 +27155,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string | null = 'auto'",
           "retorno": "OpcionProducto[] | null",
-          "linea": 189,
+          "linea": 209,
           "resumen": "Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate: ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo Allianz AUTO tiene esta captura (los 4 consentimien"
         },
         {
@@ -27154,13 +27164,13 @@
           "exportada": true,
           "params": "campos: Record<string, unknown>, compania: string, opts?: { familiaAllianz?: boolean; ramo?: string | null },",
           "retorno": "Record<string, unknown>",
-          "linea": 209,
+          "linea": 229,
           "resumen": "Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre cualquier default. Puro y testeable aparte de la ru"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ac1ac31f8149"
+      "hash": "030633a7d815"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -27502,7 +27512,7 @@
           "exportada": true,
           "params": "d: Partial<DatosAuto>, opciones: OpcionesRevision = {}",
           "retorno": "Reparo[]",
-          "linea": 169,
+          "linea": 170,
           "resumen": "Comprueba los datos ANTES de gastar los 0,50€. Devuelve la lista de reparos: vacía significa que se puede cotizar. No lanza, porque la UI tiene que poder pintar TODOS los problemas a la vez y no uno a"
         },
         {
@@ -27511,7 +27521,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 357
+          "linea": 358
         },
         {
           "nombre": "numero",
@@ -27519,7 +27529,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 360
+          "linea": 361
         },
         {
           "nombre": "construirPeticionAuto",
@@ -27527,7 +27537,7 @@
           "exportada": true,
           "params": "d: DatosAuto, opciones: Pick<OpcionesRevision, 'vehiculoNuevo'> = {}",
           "retorno": "Record<string, unknown>",
-          "linea": 370,
+          "linea": 371,
           "resumen": "Construye el cuerpo `CreateInsuranceRequest_V1`. Lanza si los datos no pasan `revisarDatosAuto`: preferimos fallar aquí, gratis, a mandar una petición que el vendor rechazará después de facturarla."
         },
         {
@@ -27536,7 +27546,7 @@
           "exportada": true,
           "params": "d: Partial<DatosAuto>",
           "retorno": "boolean",
-          "linea": 467,
+          "linea": 468,
           "resumen": "¿El vendor exige el detalle de siniestros de los últimos 5 años?"
         },
         {
@@ -27545,13 +27555,13 @@
           "exportada": true,
           "params": "a: string | null | undefined, b: string | null | undefined",
           "retorno": "boolean",
-          "linea": 480,
+          "linea": 481,
           "resumen": "Mismo documento, normalizado (mayúsculas, sin espacios ni guiones)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cdfd07536084"
+      "hash": "cc54945251f0"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/peticion-decesos.ts",
@@ -27691,7 +27701,7 @@
           "exportada": true,
           "params": "d: Partial<DatosMoto>, opciones: { vehiculoNuevo?: boolean; hoy?: string } = {}",
           "retorno": "ReparoMoto[]",
-          "linea": 125,
+          "linea": 126,
           "resumen": "`vehiculoNuevo` (moto-nuevo, 03/10/2026): la matrícula deja de ser obligatoria (`reparosMatricula`)."
         },
         {
@@ -27700,7 +27710,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 220
+          "linea": 221
         },
         {
           "nombre": "numero",
@@ -27708,7 +27718,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 223
+          "linea": 224
         },
         {
           "nombre": "construirPeticionMoto",
@@ -27716,7 +27726,7 @@
           "exportada": true,
           "params": "d: DatosMoto, lineaId: string, opciones: { vehiculoNuevo?: boolean } = {}",
           "retorno": "Record<string, unknown>",
-          "linea": 236,
+          "linea": 237,
           "resumen": "Construye el cuerpo `CreateInsuranceRequest_V1` de moto. `lineaId` viene SIEMPRE de `GET /insurance-lines` (`motoDisponible()`), nunca se escribe a mano: adivinar el id del ramo es un 400 pagado en va"
         },
         {
@@ -27725,13 +27735,13 @@
           "exportada": true,
           "params": "d: Partial<DatosMoto>",
           "retorno": "boolean",
-          "linea": 309,
+          "linea": 310,
           "resumen": "¿El vendor exige el detalle de siniestros de los últimos 5 años?"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a718f26535e9"
+      "hash": "6eed4d79359d"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/peticion-salud.ts",
@@ -81779,7 +81789,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "813e679a2379"
+      "hash": "c58088affbd8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/page.tsx",
@@ -82538,7 +82548,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f52165777f01"
+      "hash": "b5aad4c51687"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/page.tsx",
@@ -119532,7 +119542,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 36
+          "linea": 40
         },
         {
           "nombre": "candidata",
@@ -119540,7 +119550,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CandidataImputable | null",
-          "linea": 40
+          "linea": 44
         },
         {
           "nombre": "leerSeguroAnteriorImputado",
@@ -119548,7 +119558,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "SeguroAnteriorImputado | null",
-          "linea": 62,
+          "linea": 67,
           "resumen": "Lo que manda el puerto → tipo. `null` = no vino (asegura antigua): no es «no tiene seguro anterior»."
         },
         {
@@ -119557,7 +119567,7 @@
           "exportada": true,
           "params": "c: CandidataImputable",
           "retorno": "string",
-          "linea": 80,
+          "linea": 85,
           "resumen": "«MAPFRE · nº …1234 · 1234ABC · Nissan Juke · efecto 2023-01-01» para pantalla."
         },
         {
@@ -119566,13 +119576,13 @@
           "exportada": true,
           "params": "s: SeguroAnteriorImputado",
           "retorno": "CandidataImputable[]",
-          "linea": 91,
+          "linea": 96,
           "resumen": "Las que el corredor puede elegir en lugar de la propuesta (declarables)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "49fd006b2931"
+      "hash": "bf7d903dcc8e"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/seguros-cliente.ts",
@@ -148582,7 +148592,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         },
         {
           "nombre": "POST",
@@ -148590,12 +148600,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [],
       "rutaApi": "/api/e/fichaje",
-      "hash": "9993fff5feb6"
+      "hash": "4211c54303da"
     },
     {
       "ruta": "apps/rrhh/app/api/e/login/route.ts",
@@ -149106,7 +149116,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         },
         {
           "nombre": "CalendarioMes",
@@ -149114,7 +149124,7 @@
           "exportada": false,
           "params": "{ fichajes }: { fichajes: Fichaje[] }",
           "retorno": null,
-          "linea": 14,
+          "linea": 15,
           "resumen": "---- Calendario mensual ----"
         },
         {
@@ -149123,12 +149133,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 82
+          "linea": 83
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0126a440db61"
+      "hash": "378af9aeadfe"
     },
     {
       "ruta": "apps/rrhh/components/RegisterSW.tsx",
@@ -150968,6 +150978,35 @@
       ],
       "rutaApi": null,
       "hash": "95ca5cbf6b86"
+    },
+    {
+      "ruta": "apps/rrhh/lib/ubicacion-fichaje.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Ubicación OBLIGATORIA al fichar (entrada y salida). El servidor no se fía del cliente.",
+      "exporta": [
+        "validarUbicacionFichaje"
+      ],
+      "funciones": [
+        {
+          "nombre": "coordValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "v is number",
+          "linea": 11
+        },
+        {
+          "nombre": "validarUbicacionFichaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown",
+          "retorno": "ResultadoUbicacion",
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "21db52b12cd8"
     },
     {
       "ruta": "apps/rrhh/lib/verificacion.ts",
@@ -175495,6 +175534,28 @@
       "hash": "b8eb0b2c50e3"
     },
     {
+      "ruta": "packages/module-seguros/src/poliza-anterior.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "El nº de póliza anterior tal como se manda a Codeoscopic (SINCO lo busca por él). Mapfre guarda en cartera «4840402030 01»: el sufijo de 2 dígitos es la versión/suplemento y el nº real es «4840402030». Con el sufijo la compañía no encuentra el historial. Puro, sin BD.",
+      "exporta": [
+        "polizaAnteriorParaTarificar"
+      ],
+      "funciones": [
+        {
+          "nombre": "polizaAnteriorParaTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "numero: string | null | undefined, companiaCodigoDgs?: string | null",
+          "retorno": "string",
+          "linea": 14,
+          "resumen": "`numero` tal como viaja: sin espacios en los extremos y, si la compañía es MAPFRE y tiene la forma `<dígitos> <2 dígitos>`, sin el sufijo. En el resto se quitan los espacios internos. Sin compañía con"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dd634c841515"
+    },
+    {
       "ruta": "packages/module-seguros/src/poliza-de-documento.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Una póliza que llega DIRECTAMENTE al corredor (WhatsApp, correo, en mano) y que sube él mismo desde la pantalla de leer documentos. ─── Qué es, y sobre todo qué NO es ───────────────────────────────────────── Es **el mismo dato que un cliente declara en el portal**, entrando por otra puerta: la póli",
@@ -183250,7 +183311,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4154,
-    "funciones": 14315
+    "archivos": 4156,
+    "funciones": 14319
   }
 }
