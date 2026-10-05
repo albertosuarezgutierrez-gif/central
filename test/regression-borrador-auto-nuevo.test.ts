@@ -66,7 +66,7 @@ test('el borrador se BORRA en cuanto la cotización está pagada', () => {
   assert.match(codigo, /borrarBorrador\(/, 'el borrador con datos personales tiene que limpiarse')
   assert.match(
     codigo,
-    /!r\.simulado\)\s*\{\s*(?:[\w.]+\s*=\s*[^\n]+\n\s*)?borrarBorrador\(/,
+    /!r\.simulado\)\s*\{\s*(?:[\w.?()]+\s*=\s*[^\n]+\n\s*|[\w.?]+\([^\n]*\)\n\s*)*borrarBorrador\(/,
     'se borra solo cuando se ha PAGADO: una cotización simulada puede querer repetirse',
   )
 })
@@ -122,4 +122,27 @@ test('si gana el borrador del servidor, SUSTITUYE al estado (no se mezcla con el
     /origen === 'servidor'\)\s*\{\s*(?:\/\/[^\n]*\n\s*)*restablecerInicial\(\)\s*aplicarBorrador\(/,
     'aplicar el del servidor sin vaciar antes deja campos del borrador local mezclados',
   )
+})
+
+test('🪤 no se guarda (local ni servidor) mientras el formulario esté igual que al abrirlo', () => {
+  assert.match(codigo, /esBorradorVacio\(d, estadoInicial\.current\)/, 'sin comparar con el estado inicial, los valores por defecto pisan un borrador bueno')
+  assert.match(
+    codigo,
+    /ultimoBorrador\.current = datos\s*(?:\/\/[^\n]*\n\s*)*if \(bloqueado\.current \|\| vacio\(datos\)\) \{[^}]*return/,
+    'el autoguardado debe salir antes de escribir en local si el estado es el inicial',
+  )
+  assert.match(codigo, /elegirMasReciente\(local, srv, vacio\)/, 'un local vacío no puede ganar al servidor')
+  assert.match(codigo, /!datos \|\| vacio\(datos\)/, 'subirBorrador no puede subir un formulario vacío')
+})
+
+test('🪤 tras pagar: se bloquea el guardado y se aborta el POST en vuelo ANTES del DELETE', () => {
+  assert.match(
+    codigo,
+    /bloqueado\.current = true\s*abortSubida\.current\?\.abort\(\)[\s\S]*?clearTimeout\(temporizadorNube\.current\)[\s\S]*?void borrarBorradorServidor\(/,
+    'bloquear + abortar + cancelar el debounce deben ir antes del DELETE, o un POST tardío resucita el borrador pagado',
+  )
+  assert.match(codigo, /new AbortController\(\)/)
+  assert.match(codigo, /signal: ctl\.signal/)
+  assert.match(codigo, /function volcar\(\) \{\s*if \(bloqueado\.current\) return/, 'el pagehide keepalive no puede disparar tras el pago')
+  assert.match(codigo, /if \(bloqueado\.current \|\| !reconciliado\.current/, 'subirBorrador debe respetar el bloqueo')
 })

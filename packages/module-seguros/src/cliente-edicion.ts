@@ -338,6 +338,58 @@ export function documentosAcreditativos(docs: readonly DocumentoResumen[] | null
 }
 
 /**
+ * Qué campos acredita cada documento (Alberto, 05/10/2026): una PÓLIZA con el DNI de la ficha
+ * acredita SOLO nombre y apellidos; el DNI y la fecha de nacimiento no se corrigen «porque lo dice
+ * la póliza». El DNI-documento acredita todo.
+ */
+export const CAMPOS_QUE_ACREDITA_POLIZA: readonly CampoIdentidad[] = ['nombre', 'apellidos']
+
+/** ¿Este documento (ya acreditativo) cubre TODOS los campos de identidad que se tocan? */
+export function documentoCubreCampos(d: Pick<DocumentoResumen, 'tipo'>, campos: readonly CampoIdentidad[]): boolean {
+  if (d.tipo === 'dni') return true
+  if (d.tipo === 'poliza') return campos.every((c) => CAMPOS_QUE_ACREDITA_POLIZA.includes(c))
+  return false
+}
+
+export type AcreditacionCambio =
+  | { ok: true; via: 'documento' }
+  /** El documento no cubre lo que se toca, pero el corredor dijo por qué: se registra como MOTIVO. */
+  | { ok: true; via: 'motivo'; motivoCambio: string }
+  | { ok: false; motivo: 'documento_no_acredita' }
+
+/**
+ * Decide si un cambio de identidad que llega CON documento queda acreditado. Puro: lo usan el
+ * servidor (asegura) y la pantalla (plataforma) con la misma regla.
+ *  - Documento que no acredita (pedido, de otra ficha, póliza sin DNI coincidente) → rechazo.
+ *  - Póliza + DNI o fecha de nacimiento → solo con motivo, si quien llama lo permite (el corredor;
+ *    NUNCA el portal), y entonces el historial dice MOTIVO, no «acreditado con documento».
+ */
+export function acreditarCambioConDocumento(
+  d: Pick<DocumentoResumen, 'tipo' | 'estado' | 'dniCoincideFicha'> | null,
+  campos: readonly CampoIdentidad[],
+  ctx: { motivo?: string | null; permiteMotivo?: boolean } = {},
+): AcreditacionCambio {
+  if (!d || !documentoAcredita(d)) return { ok: false, motivo: 'documento_no_acredita' }
+  if (documentoCubreCampos(d, campos)) return { ok: true, via: 'documento' }
+  const motivoCambio = ctx.permiteMotivo === true ? motivoCambioValido(ctx.motivo) : null
+  return motivoCambio ? { ok: true, via: 'motivo', motivoCambio } : { ok: false, motivo: 'documento_no_acredita' }
+}
+
+/** Los campos de identidad que una edición revisada toca. */
+export function camposIdentidadTocados(identidad: IdentidadRevisada): CampoIdentidad[] {
+  return CAMPOS_IDENTIDAD.filter((c) => identidad[c] !== undefined)
+}
+
+/**
+ * Tres estados de la lista de Documentos para el bloque de identidad: `null` = no se pudo leer
+ * (NO se afirma que no haya DNI), `[]`/sin acreditativos = revisado y no hay, o los hay.
+ */
+export function estadoDocumentosIdentidad(docs: readonly DocumentoResumen[] | null): 'no_leidos' | 'ninguno' | 'hay' {
+  if (docs === null) return 'no_leidos'
+  return docs.some(documentoAcredita) ? 'hay' : 'ninguno'
+}
+
+/**
  * El texto que queda en `historial_interno`. Sin valores de identidad: dice QUÉ
  * cambió y con qué documento, no el DNI nuevo ni el viejo (el historial va en
  * claro). Los campos libres sí llevan su valor nuevo, salvo la dirección.

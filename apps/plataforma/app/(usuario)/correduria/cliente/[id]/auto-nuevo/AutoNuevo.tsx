@@ -40,6 +40,7 @@ import {
   borradorServidorPara,
   borrarBorradorServidor,
   elegirMasReciente,
+  esBorradorVacio,
   guardarBorradorServidor,
   leerBorradoresServidor,
   textoIndicador,
@@ -493,18 +494,28 @@ export default function AutoNuevo({
   const baseServidor = useRef<string | null>(null)
   const marcaCambio = useRef(0)
   const temporizadorNube = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Tras pagar: no se guarda nada más (ni local ni servidor) y se aborta el POST en vuelo, que si no podría
+  // llegar DESPUÉS del DELETE y resucitar el borrador ya pagado.
+  const bloqueado = useRef(false)
+  const abortSubida = useRef<AbortController | null>(null)
+  const vacio = (d: unknown) => esBorradorVacio(d, estadoInicial.current)
 
   function subirBorrador(keepalive: boolean) {
     const datos = ultimoBorrador.current
-    if (!reconciliado.current || !datos) return
+    if (bloqueado.current || !reconciliado.current || !datos || vacio(datos)) return
     const json = JSON.stringify(datos)
     if (json === baseServidor.current) return
     if (!keepalive) setNube({ tipo: 'guardando' })
+    const ctl = new AbortController()
+    if (!keepalive) {
+      abortSubida.current?.abort()
+      abortSubida.current = ctl
+    }
     void guardarBorradorServidor(
       { clienteId, oportunidadId: variante?.oportunidadId ?? null, ramo: 'auto', datos, guardadoEn: marcaCambio.current || Date.now() },
-      { keepalive },
+      { keepalive, signal: ctl.signal },
     ).then((t) => {
-      if (keepalive) return
+      if (keepalive || bloqueado.current) return
       if (t === null) {
         setNube({ tipo: 'solo_local' })
         return
@@ -530,7 +541,7 @@ export default function AutoNuevo({
         setNube({ tipo: 'solo_local' })
       } else {
         const srv = borradorServidorPara<BorradorAutoNuevo>(filas, variante?.oportunidadId)
-        const elegido = elegirMasReciente(local, srv)
+        const elegido = elegirMasReciente(local, srv, vacio)
         if (elegido?.origen === 'servidor') {
           // El del servidor gana: sustituye el estado completo, no se suma a lo que aplicó el local.
           restablecerInicial()
@@ -651,8 +662,14 @@ export default function AutoNuevo({
         siniestrosUltimos5,
     }
     ultimoBorrador.current = datos
+    // Formulario igual al de partida: nada que guardar (no pisa un borrador bueno con valores por defecto).
+    if (bloqueado.current || vacio(datos)) {
+      borradorPendiente.current = false
+      return
+    }
     borradorPendiente.current = true
     const t = setTimeout(() => {
+      if (bloqueado.current) return
       guardarBorrador<BorradorAutoNuevo>(claveBorrador, datos)
       borradorPendiente.current = false
     }, 400)
@@ -711,7 +728,7 @@ export default function AutoNuevo({
   const [fichaGuardada, setFichaGuardada] = useState(false)
   function alGuardarFicha() {
     // El borrador se vuelca YA (sin esperar a los 400 ms): el refresco que sigue no puede costar lo tecleado.
-    if (ultimoBorrador.current) guardarBorrador<BorradorAutoNuevo>(claveBorrador, ultimoBorrador.current)
+    if (!bloqueado.current && ultimoBorrador.current && !vacio(ultimoBorrador.current)) guardarBorrador<BorradorAutoNuevo>(claveBorrador, ultimoBorrador.current)
     borradorPendiente.current = false
     setFichaGuardada(true)
   }
@@ -732,6 +749,7 @@ export default function AutoNuevo({
   // reintenta lo que no subió.
   useEffect(() => {
     function volcar() {
+      if (bloqueado.current) return
       if (borradorPendiente.current && ultimoBorrador.current) {
         guardarBorrador<BorradorAutoNuevo>(claveBorrador, ultimoBorrador.current)
         borradorPendiente.current = false
@@ -1076,6 +1094,8 @@ export default function AutoNuevo({
         // cotización SIMULADA no ha pagado nada y puede querer repetirse, así
         // que ahí el borrador se queda.
         if (!r.simulado) {
+          bloqueado.current = true
+          abortSubida.current?.abort()
           borradorPendiente.current = false
           borrarBorrador(claveBorrador)
           // El del servidor, igual y en el mismo momento (no antes). Lo que haya en vuelo se cancela y

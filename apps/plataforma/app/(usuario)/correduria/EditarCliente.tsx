@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation'
 import {
   MOTIVO_CAMBIO_REQUERIDO,
   MOTIVO_DOCUMENTO_REQUERIDO,
+  acreditarCambioConDocumento,
+  camposIdentidadTocados,
   documentosAcreditativos,
+  estadoDocumentosIdentidad,
   etiquetaEstadoDocumento,
   etiquetaTipoDocumento,
   etiquetasIdentidad,
@@ -36,7 +39,8 @@ import CiudadPorCp from './CiudadPorCp'
  * Editar la IDENTIDAD de un cliente de la correduría, desde la ficha de
  * plataforma: DNI, nombre, apellidos y fecha de nacimiento. Con un documento
  * que lo acredite —un DNI recibido, o (05/10/2026) una póliza de la ficha cuyo
- * DNI leído es el de la ficha (`documentosAcreditativos`, de la lista que ya
+ * DNI leído es el de la ficha, que acredita SOLO nombre y apellidos: DNI y fecha con
+ * póliza piden motivo (`acreditarCambioConDocumento`, de la lista que ya
  * llega)— o SIN documento con un MOTIVO escrito (05/10/2026, Alberto: «yo puedo
  * editar cualquier dato»), que asegura deja en el historial con el antes y el
  * después. El servidor valida lo mismo (sin documento ni motivo, 400).
@@ -325,19 +329,10 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
   const [campoMal, setCampoMal] = useState<string | null>(null)
   const [pedido, setPedido] = useState<string | null>(null)
   const [motivo, setMotivo] = useState('')
-
-  if (documentos === null) {
-    return (
-      <section style={{ display: 'grid', gap: 10 }}>
-        <h3 style={h3}>Identidad</h3>
-        <div style={pendienteBox}>
-          <Ico i={HelpCircle} /> No se ha podido consultar la documentación de esta ficha, y sin saber si hay un DNI
-          recibido no se puede ofrecer la edición de identidad. Vuelve a cargar la ficha o mira
-          <Ico i={Paperclip} /> Documentos.
-        </div>
-      </section>
-    )
-  }
+  const [viaGuardada, setViaGuardada] = useState<'documento' | 'motivo'>('documento')
+  // Tres estados: `null` = no se pudieron leer los Documentos (no se afirma que no haya DNI; se
+  // puede editar igual con motivo); sin acreditativos = revisado y no hay; o los hay.
+  const estadoDocs = estadoDocumentosIdentidad(documentos)
 
   if (identidad === null) {
     return (
@@ -352,7 +347,13 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
   }
 
   // Siempre se puede editar: con documento, o sin él diciendo por qué.
-  const conDocumento = documentoId !== '' && acreditativos.some((d) => d.id === documentoId)
+  const docSel = documentoId !== '' ? acreditativos.find((d) => d.id === documentoId) ?? null : null
+  const conDocumento = docSel !== null
+  // Una PÓLIZA acredita solo nombre y apellidos (05/10/2026): si se toca DNI o fecha de nacimiento,
+  // el cambio pide motivo y se registra como motivo, no como «acreditado con documento».
+  const polizaNoCubre = docSel?.tipo === 'poliza'
+    && (f.dni.trim() !== '' || f.fechaNacimiento !== inicial.fechaNacimiento)
+  const pideMotivo = !conDocumento || polizaNoCubre
 
   async function pedirDni() {
     setOcupado(true)
@@ -380,7 +381,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
     if (f.apellidos !== inicial.apellidos) ident.apellidos = f.apellidos.trim() === '' ? null : f.apellidos
     if (f.dni.trim() !== '') ident.dni = f.dni
     if (f.fechaNacimiento !== inicial.fechaNacimiento) ident.fechaNacimiento = f.fechaNacimiento.trim() === '' ? null : f.fechaNacimiento
-    const motivoEnviado = conDocumento ? null : motivo
+    const motivoEnviado = pideMotivo ? motivo : null
     const rev = revisarEdicion(
       { identidad: ident, documentoId: conDocumento ? documentoId : null, motivo: motivoEnviado },
       { permiteMotivo: true, fichaSinNombre: nombrePendiente(identidad?.nombre) },
@@ -389,13 +390,29 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
       setCampoMal(rev.campo ?? null)
       return setResultado({ estado: 'invalido', motivo: rev.motivo, campo: rev.campo ?? null })
     }
+    // La misma regla que el servidor: con póliza, DNI/fecha solo con motivo.
+    let via: 'documento' | 'motivo' = rev.motivoCambio ? 'motivo' : 'documento'
+    if (docSel && rev.tocaIdentidad) {
+      const acr = acreditarCambioConDocumento(docSel, camposIdentidadTocados(rev.identidad), { motivo: motivoEnviado, permiteMotivo: true })
+      if (!acr.ok) {
+        setCampoMal(null)
+        return setResultado({ estado: 'invalido', motivo: MOTIVO_CAMBIO_REQUERIDO, campo: null })
+      }
+      via = acr.via
+    }
+    setViaGuardada(via)
     setCampoMal(null)
     setOcupado(true)
     try {
       const res = await fetch('/api/correduria/cliente', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: clienteId, identidad: ident, ...(conDocumento ? { documentoId } : { motivo: motivoEnviado }) }),
+        body: JSON.stringify({
+          id: clienteId,
+          identidad: ident,
+          ...(conDocumento ? { documentoId } : {}),
+          ...(motivoEnviado !== null ? { motivo: motivoEnviado } : {}),
+        }),
       })
       const r = interpretarEscritura(res.status, await res.json().catch(() => null))
       setResultado(r)
@@ -432,27 +449,37 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
           <select value={conDocumento ? documentoId : ''} onChange={(e) => setDocumentoId(e.target.value)} style={campo}>
             {acreditativos.map((d) => (
               <option key={d.id} value={d.id}>
-                {etiquetaTipoDocumento(d.tipo)}{d.tipo === 'poliza' ? ' (su DNI es el de la ficha)' : ''} · {d.nombre ?? 'sin nombre'} · {etiquetaEstadoDocumento(d.estado)}
+                {etiquetaTipoDocumento(d.tipo)}{d.tipo === 'poliza' ? ' (su DNI es el de la ficha; acredita solo nombre y apellidos)' : ''} · {d.nombre ?? 'sin nombre'} · {etiquetaEstadoDocumento(d.estado)}
               </option>
             ))}
             <option value="">Ninguno: cambio sin documento, con motivo</option>
           </select>
         </Campo>
       )}
-      {!conDocumento && (
+      {pideMotivo && (
         <div style={{ ...avisoAmbar, display: 'grid', gap: 8 }}>
-          <div>
-            <Ico i={AlertTriangle} /> {acreditativos.length > 0
-              ? 'Cambio sin documento.'
-              : <>No hay ningún {rot.pedir} recibido en Documentos (ni una póliza suya con su mismo {rot.documento}).</>}
-            {' '}Puedes cambiar {rot.documento}, {rot.nombre.toLowerCase()} o {rot.fecha.toLowerCase()} igualmente: escribe el
-            motivo y quedará en el historial con quién lo cambió, el valor anterior y el nuevo.
-            {nombrePendiente(identidad.nombre) && ' Para PONER el nombre a esta ficha sin nombre no hace falta motivo: usa «Poner nombre» bajo el título.'}
-          </div>
+          {polizaNoCubre ? (
+            <div>
+              <Ico i={AlertTriangle} /> Una póliza acredita solo {rot.nombre.toLowerCase()} y {rot.apellidos.toLowerCase()}.
+              {' '}Para cambiar {rot.documento} o {rot.fecha.toLowerCase()} escribe el motivo: quedará en el historial como
+              cambio con motivo (quién, el valor anterior y el nuevo), no como acreditado por la póliza.
+            </div>
+          ) : (
+            <div>
+              <Ico i={estadoDocs === 'no_leidos' ? HelpCircle : AlertTriangle} /> {estadoDocs === 'no_leidos'
+                ? <>No se han podido leer los Documentos de la ficha (<Ico i={Paperclip} /> Documentos): no se sabe si hay un {rot.pedir} recibido.</>
+                : estadoDocs === 'hay'
+                  ? 'Cambio sin documento.'
+                  : <>No hay ningún {rot.pedir} recibido en Documentos (ni una póliza suya con su mismo {rot.documento}).</>}
+              {' '}Puedes cambiar {rot.documento}, {rot.nombre.toLowerCase()} o {rot.fecha.toLowerCase()} igualmente: escribe el
+              motivo y quedará en el historial con quién lo cambió, el valor anterior y el nuevo.
+              {nombrePendiente(identidad.nombre) && ' Para PONER el nombre a esta ficha sin nombre no hace falta motivo: usa «Poner nombre» bajo el título.'}
+            </div>
+          )}
           <Campo label="Motivo del cambio" mal={resultado?.estado === 'invalido' && resultado.motivo === MOTIVO_CAMBIO_REQUERIDO}>
             <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="p. ej. corregido con la clienta por teléfono" style={campo} maxLength={500} />
           </Campo>
-          {acreditativos.length === 0 && (
+          {estadoDocs === 'ninguno' && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <button type="button" disabled={ocupado} onClick={() => void pedirDni()} style={btnStyle('secundario')}>Pedir {rot.pedir}</button>
               {pedido && <span style={{ fontSize: 12 }}>{pedido}</span>}
@@ -484,7 +511,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
           </div>
         </fieldset>
       </form>
-      <Aviso r={resultado} ok={conDocumento ? 'Guardado, con el documento anotado en el historial.' : 'Guardado, con el motivo y el antes/después anotados en el historial.'} ocupado={ocupado} />
+      <Aviso r={resultado} ok={viaGuardada === 'documento' ? 'Guardado, con el documento anotado en el historial.' : 'Guardado, con el motivo y el antes/después anotados en el historial.'} ocupado={ocupado} />
     </section>
   )
 }

@@ -23,7 +23,17 @@ test('gate: la póliza acredita SOLO con su marca comprobada contra el índice c
   const f = cuerpo(leer('lib/cartera-edicion.ts'), 'export async function editarCliente(', '// ─── Descartar')
   assert.match(f, /select: \{ tipo: true, estado: true, extraccion: true \}/)
   assert.match(f, /marcaAcreditaFicha\(d\.extraccion, \{ clienteId, dniLookupHash: ident\?\.dniLookupHash \?\? null \}\)/)
-  assert.match(f, /documentoAcredita\(\{ tipo: tipoDocumento\(d\.tipo\), estado: estadoDocumento\(d\.estado\), dniCoincideFicha \}\)/)
+  assert.match(f, /acreditarCambioConDocumento\(\s*d \? \{ tipo: tipoDocumento\(d\.tipo\), estado: estadoDocumento\(d\.estado\), dniCoincideFicha \} : null,/)
+})
+
+test('gate: una PÓLIZA acredita solo nombre y apellidos; DNI/fecha con póliza solo con motivo, y se registra como motivo', () => {
+  const f = cuerpo(leer('lib/cartera-edicion.ts'), 'export async function editarCliente(', '// ─── Descartar')
+  // Los campos tocados y el motivo (con la vía permitida de ESTA llamada) entran en la decisión pura.
+  assert.match(f, /camposIdentidadTocados\(r\.identidad\),\s*\{ motivo: edicion\.motivo, permiteMotivo \},/)
+  assert.match(f, /if \(!acr\.ok\) return invalido\(acr\.motivo, 'documentoId'\)/)
+  // Aceptado por motivo → el historial va por la rama del motivo, no por «acreditado con documento».
+  assert.match(f, /if \(acr\.via === 'motivo'\) motivoCambio = acr\.motivoCambio/)
+  assert.ok(!/documentoAcredita\(/.test(f), 'el gate no puede volver al booleano que no mira qué campos se tocan')
 })
 
 test('sin documento: solo con permiteMotivo explícito; por defecto (portal) NO', () => {
@@ -40,7 +50,7 @@ test('sin documento: solo con permiteMotivo explícito; por defecto (portal) NO'
 
 test('el cambio con motivo deja en el historial antes → después (texto puro con DNI enmascarado)', () => {
   const f = cuerpo(leer('lib/cartera-edicion.ts'), 'export async function editarCliente(', '// ─── Descartar')
-  assert.match(f, /r\.motivoCambio\s*\?\s*\[\s*textoCambioIdentidadConMotivo\(/)
+  assert.match(f, /const texto = motivoCambio\s*\?\s*\[\s*textoCambioIdentidadConMotivo\(/)
 })
 
 test('la marca se calcula ANTES del volcado (un DNI escrito por el propio documento no coincide consigo mismo)', () => {

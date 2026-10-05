@@ -4,6 +4,7 @@ import {
   MAX_DATOS_BORRADOR,
   borradorServidorPara,
   elegirMasReciente,
+  esBorradorVacio,
   interpretarLecturaServidor,
   revisarCuerpoBorrador,
   textoIndicador,
@@ -90,4 +91,23 @@ test('textoIndicador: los tres mensajes y nada antes de intentarlo', () => {
   assert.equal(textoIndicador({ tipo: 'solo_local' }), 'Sin conexión: guardado en este equipo')
   // 09:05 UTC del 5/10/2026 = 11:05 en Madrid (horario de verano).
   assert.equal(textoIndicador({ tipo: 'guardado', en: Date.UTC(2026, 9, 5, 9, 5) }), 'Guardado ✓ 11:05')
+})
+
+test('esBorradorVacio: igual al inicial (sin importar el orden de claves) es vacío; un cambio, no', () => {
+  const ini = { a: '', b: [1, 2], c: { x: 1, y: 2 } }
+  assert.equal(esBorradorVacio({ c: { y: 2, x: 1 }, b: [1, 2], a: '' }, ini), true)
+  assert.equal(esBorradorVacio({ ...ini, a: 'x' }, ini), false)
+  assert.equal(esBorradorVacio({ ...ini, b: [2, 1] }, ini), false)
+  assert.equal(esBorradorVacio(ini, null), false)
+})
+
+test('🪤 elegirMasReciente: un local VACÍO con sello nuevo no gana al servidor', () => {
+  const ini = { m: '' }
+  const vacio = (d: { m: string }) => esBorradorVacio(d, ini)
+  const local = { datos: { m: '' }, guardadoEn: 2000 }
+  const srv = { datos: { m: '1234ABC' }, guardadoEn: 1000 }
+  assert.equal(elegirMasReciente(local, srv, vacio)?.origen, 'servidor')
+  assert.equal(elegirMasReciente(local, null, vacio), null)
+  // Un local con contenido sí sigue ganando si es más nuevo.
+  assert.equal(elegirMasReciente({ datos: { m: 'z' }, guardadoEn: 2000 }, srv, vacio)?.origen, 'local')
 })

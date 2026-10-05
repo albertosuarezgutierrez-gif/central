@@ -55,9 +55,9 @@ test('escritura: cifra, filtra por correduría y no deja que lo viejo pise lo nu
 })
 
 test('pantalla: nada sube al servidor antes de reconciliar, y al pagar se borra también allí', () => {
-  assert.match(PANTALLA, /if \(!reconciliado\.current \|\| !datos\) return/, 'compuerta de subirBorrador')
+  assert.match(PANTALLA, /if \(bloqueado\.current \|\| !reconciliado\.current \|\| !datos \|\| vacio\(datos\)\) return/, 'compuerta de subirBorrador')
   assert.match(PANTALLA, /if \(reconciliado\.current && JSON\.stringify\(datos\) !== baseServidor\.current\)/, 'compuerta del autoguardado')
-  assert.match(PANTALLA, /elegirMasReciente\(local, srv\)/)
+  assert.match(PANTALLA, /elegirMasReciente\(local, srv, vacio\)/)
   assert.match(PANTALLA, /borrarBorrador\(claveBorrador\)\s*\n[\s\S]{0,400}borrarBorradorServidor\(clienteId, 'auto'/)
   assert.match(PANTALLA, /addEventListener\('pagehide'/)
   assert.match(PANTALLA, /addEventListener\('visibilitychange'/)

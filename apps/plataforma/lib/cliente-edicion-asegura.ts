@@ -208,7 +208,7 @@ export function textoMotivo(motivo: string): string {
     case 'documento_requerido':
       return 'Para cambiar DNI, nombre, apellidos o fecha de nacimiento hace falta el DNI en la ficha (regla: se pide documentado).'
     case 'documento_no_acredita':
-      return 'Ese documento no sirve: tiene que ser un DNI RECIBIDO de este mismo cliente, o una póliza suya cuyo DNI es el de la ficha.'
+      return 'Ese documento no sirve: tiene que ser un DNI RECIBIDO de este mismo cliente, o una póliza suya cuyo DNI es el de la ficha (la póliza acredita solo nombre y apellidos: para DNI o fecha de nacimiento, escribe el motivo).'
     case 'motivo_requerido':
       return 'Sin documento, escribe el motivo del cambio (al menos 5 caracteres): queda en el historial con el antes y el después.'
     case 'secreto_rechazado':
