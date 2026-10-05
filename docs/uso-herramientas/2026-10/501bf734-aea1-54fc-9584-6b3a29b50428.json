@@ -1,16 +1,96 @@
 {
  "sesion": "501bf734-aea1-54fc-9584-6b3a29b50428",
  "inicio": "2026-10-05T13:11:07.009Z",
- "fin": "2026-10-05T13:11:07.010Z",
- "llamadas": 1,
+ "fin": "2026-10-05T13:57:41.030Z",
+ "llamadas": 77,
  "categorias": {
   "agente:Explore": {
-   "llamadas": 1,
-   "chars_in": 1320,
-   "chars_out": 1525,
+   "llamadas": 2,
+   "chars_in": 3483,
+   "chars_out": 3867,
    "errores": 0,
-   "archivos_citados": 1,
-   "chars_citados": 24026,
+   "archivos_citados": 2,
+   "chars_citados": 48052,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 7,
+   "chars_in": 1116,
+   "chars_out": 2586457,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 5,
+    "Read": 2
+   }
+  },
+  "bash": {
+   "llamadas": 55,
+   "chars_in": 21784,
+   "chars_out": 206064,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 55
+   }
+  },
+  "otro": {
+   "llamadas": 5,
+   "chars_in": 10402,
+   "chars_out": 487,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "SubagentHandback": 3,
+    "ToolSearch": 2
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 1216,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "sql": {
+   "llamadas": 5,
+   "chars_in": 2054,
+   "chars_out": 3059,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__execute_sql": 1,
+    "mcp__Supabase__execute_sql": 4
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 2749,
+   "chars_out": 2934,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 26888,
    "tools": {
     "Agent": 1
    }
