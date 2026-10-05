@@ -589,3 +589,35 @@ export type {
 // Qué pólizas ajenas abre figurar en ellas: la usan la cartera del portal y el puente de asegura.
 export { figurasEnPolizas, nivelMasAlto, ordenarRoles } from './figuras-en-polizas.ts'
 export type { FilaInterviniente, PolizaDeTomador, FiguraEnPoliza } from './figuras-en-polizas.ts'
+
+// Flota de una empresa (05/10/2026): dueño + jefe de flota (`portal_autorizacion` con alcance `flota`, que NO es un `Alcance`).
+export {
+  ALCANCE_FLOTA,
+  DIAS_PRONTO_FLOTA,
+  RAMOS_FLOTA,
+  TEXTO_JEFE_FLOTA,
+  TITULO_JEFE_FLOTA,
+  VERSION_TEXTO_JEFE_FLOTA,
+  claveVehiculo,
+  empresaPermitida,
+  empresasConFlota,
+  esRamoFlota,
+  fechaMatriculacionValida,
+  itvDeVehiculo,
+  matriculacionDeCompania,
+  puedeEditarVehiculo,
+  puedeNombrarJefeFlota,
+  vehiculosDeFlota,
+  vencimientoFlota,
+  wherePolizasFlota,
+} from './flota.ts'
+export type {
+  AutorizacionFlotaFila,
+  FuenteMatriculacion,
+  ItvVehiculo,
+  PapelFlota,
+  RamoFlota,
+  VehiculoFlota,
+  VehiculoFlotaEntrada,
+  VencimientoFlota,
+} from './flota.ts'
