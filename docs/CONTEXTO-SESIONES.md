@@ -1079,6 +1079,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Gmail personal sin DPA (aceptado). Etiqueta «Grupo ASegura»: 🟢 cliente en vigor, 🟡 lead, 🔵 compañía, ⏰ vence ≤30 d; nota con pólizas+vencimiento+URL, cumpleaños; adopción del volcado .vcf sin duplicar; simular antes de activar. Skill `google-contactos`.
 - Todo desde plataforma: menú «…» de /correduria → «Google Contactos» (conectar con ticket de un solo uso, simular, activar, cola). Solo conecta `GOOGLE_CONTACTOS_CUENTAS_PERMITIDAS` (Gmail de Alberto). Compañías: llamar + añadir teléfono (WhatsApp si móvil).
 - Migraciones 2026-10-05b y 05c APLICADAS en BD central. Google Cloud `grupo-asegura-contactos` en Producción; env en Vercel central-asegura.
+- #4302: «Conectar Google» caía en /login de asegura (middleware); eximidas SOLO `/api/google-contactos/{conectar,callback}` (se autentican solas; OK de Alberto).
 - Siguiente: Alberto conecta → simula → revisa adoptados/conflictos → activa. Riesgos: nota vieja del .vcf duplicada en adoptados; biographies/birthdays sin probar contra People API real.
 
 ## (05/10/2026) Correduría: el vehículo de la póliza escaneada ya precarga el presupuesto de auto
