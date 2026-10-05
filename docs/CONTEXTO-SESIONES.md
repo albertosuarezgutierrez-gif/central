@@ -1068,6 +1068,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (05/10/2026) Vigía «🚨 Reserva que Smoobu NO tiene»: falso positivo de Expedia
+- Alerta «reserva 102699405 · piso sin identificar»: era un MENSAJE de huésped de Expedia Partner Central
+  (Reka Bekesi, llega 06/11 20:00, pide balcón); 102699405 = ID de alojamiento Expedia de «Busto Reform» (`htid`).
+- Fix: `lib/correo/num-confirmacion.ts` descarta htid/ID de alojamiento y, con remitente Expedia, solo acepta
+  «confirmación: N»; el vigía excluye en SQL las filas `mensaje_huesped` de Expedia; `canalDeAsunto` reconoce «huésped de Expedia».
+- Reserva de Reka Bekesi (06/11) confirmada en Smoobu por Alberto.
+
 ## (05/10/2026) Correduría: sincronización CRM ↔ Google Contacts (People API)
 - Gmail personal de Alberto (aceptado SIN DPA de Google; revierte la decisión de vcard.ts del 23/09), alcance = selección de `contactos-movil` (en vigor + leads), solo grupo «Grupo ASegura». CRM manda; cambios en Google → cola `google_contactos_revision`.
 - Código en apps/asegura (OAuth, cron horario `/api/cron/google-contactos`, desconexión, `/api/operador/llamada`) + helpers puros en module-seguros (`telefono-e164`, `google-contactos`). Guía: docs/GOOGLE-CONTACTOS-ASEGURA.md.
