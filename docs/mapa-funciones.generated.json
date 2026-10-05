@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-05T17:00:33Z",
-  "sha": "a8278bd4f31171678ec1da9d290f776be340bb31",
+  "generadoEn": "2026-10-05T18:15:19Z",
+  "sha": "ff77a9db6844bfff7b0f3c532784b9da8bdb33ab",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -149143,6 +149143,88 @@
       "hash": "f3ceddcddb6b"
     },
     {
+      "ruta": "apps/rrhh/app/admin/informes/InformesClient.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "InformesClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "columnasPorDefecto",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: EntidadDef",
+          "retorno": "string[]",
+          "linea": 18
+        },
+        {
+          "nombre": "nombreDeCabecera",
+          "kind": "function",
+          "exportada": false,
+          "params": "cd: string | null, porDefecto: string",
+          "retorno": "string",
+          "linea": 23
+        },
+        {
+          "nombre": "InformesClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "CampoFiltro",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ def, valor, empleados, obras, onChange }: { def: FiltroDef; valor: unknown; empleados: Opcion[]; obras: Opcion[]; onChange: (v: string | boolean | Rango | undefined) => void }",
+          "retorno": null,
+          "linea": 170
+        },
+        {
+          "nombre": "Metricas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ metricas }: { metricas: ResultadoMetrica[] }",
+          "retorno": null,
+          "linea": 209
+        },
+        {
+          "nombre": "Resultado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ vista, cabecera, visibles, onVerMas }: { vista: Vista; cabecera: CabeceraInforme; visibles: number; onVerMas: () => void }",
+          "retorno": null,
+          "linea": 223
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "a4800a9c8229"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/informes/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1d36666a50ac"
+    },
+    {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/NominasPanel.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -149954,6 +150036,48 @@
       "tablas": [],
       "rutaApi": "/api/admin/fichajes",
       "hash": "39a7194fb331"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/informes/exportar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "Descarga de un informe en Excel, PDF o CSV. Misma autorización y validación que la vista previa."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/informes/exportar",
+      "hash": "c025029d2af5"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/informes/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "Vista previa de un informe. Misma autorización que el resto de /api/admin: sesión del responsable (getSesion). El empresa_id sale SOLO de la sesión; si el cliente manda uno, el validador (.strict) lo "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/informes",
+      "hash": "1c391651a231"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/mis-empresas/route.ts",
@@ -151135,7 +151259,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0639bda8445e"
+      "hash": "dd646499dc2e"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -152449,6 +152573,592 @@
       ],
       "rutaApi": null,
       "hash": "608f4172c761"
+    },
+    {
+      "ruta": "apps/rrhh/lib/informes/cabecera.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Texto de cabecera de un informe (título, filtros aplicados, fecha de generación). Módulo PURO.",
+      "exporta": [
+        "describirFiltros",
+        "construirCabecera"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: string",
+          "retorno": "string",
+          "linea": 15
+        },
+        {
+          "nombre": "describirFiltros",
+          "kind": "function",
+          "exportada": true,
+          "params": "ent: EntidadDef, pet: PeticionInforme, nombres: Record<string, string> = {}",
+          "retorno": "string[]",
+          "linea": 18,
+          "resumen": "«Filtro: valor» legibles. `nombres` resuelve uuids de empleado/obra a nombre."
+        },
+        {
+          "nombre": "construirCabecera",
+          "kind": "function",
+          "exportada": true,
+          "params": "ent: EntidadDef, pet: PeticionInforme, empresa: string, nombres: Record<string, string>, ahora = new Date()",
+          "retorno": "CabeceraInforme",
+          "linea": 40
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "40e3bf4ad9aa"
+    },
+    {
+      "ruta": "apps/rrhh/lib/informes/catalogo.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Catálogo DECLARATIVO de informes del panel del responsable. Módulo PURO (sin prisma ni next): lo importan el motor, el validador, la exportación y la UI. Una entidad nueva = una entrada aquí + su consulta en `consultas.ts` (el SELECT debe devolver TODAS las claves de `columnas` con el mismo nombre).",
+      "exporta": [
+        "entidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "entidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string",
+          "retorno": "EntidadDef | undefined",
+          "linea": 376
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ffa256deeb97"
+    },
+    {
+      "ruta": "apps/rrhh/lib/informes/consultas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Consultas de BD de cada entidad del catálogo de informes. SERVIDOR. 🚨 Aislamiento multi-tenant: el rol `rrhh_app` tiene BYPASSRLS, así que el ÚNICO aislamiento es el `WHERE <tabla>.empresa_id = ${empresaId}` de cada consulta (y en cada JOIN). `empresaId` llega SIEMPRE de la sesión (getSesion), nunc",
+      "exporta": [
+        "construirConsulta",
+        "leerFilas",
+        "contextoCabecera"
+      ],
+      "funciones": [
+        {
+          "nombre": "rango",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Rango",
+          "linea": 22
+        },
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 23
+        },
+        {
+          "nombre": "condRangoFecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "expr: Sql, r: Rango",
+          "retorno": "Sql",
+          "linea": 26,
+          "resumen": "Condición de rango de fechas sobre una expresión SQL fija (de este archivo, nunca del cliente)."
+        },
+        {
+          "nombre": "LOCAL",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "col: Sql",
+          "retorno": null,
+          "linea": 33
+        },
+        {
+          "nombre": "LOCAL_TXT",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "col: Sql",
+          "retorno": null,
+          "linea": 34
+        },
+        {
+          "nombre": "NUM_JSON",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "ruta: string",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "postProcesar",
+          "kind": "function",
+          "exportada": false,
+          "params": "entidad: string, filas: Record<string, unknown>[]",
+          "retorno": "Record<string, unknown>[]",
+          "linea": 215
+        },
+        {
+          "nombre": "construirConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, pet: PeticionInforme, limite: number",
+          "retorno": "Sql",
+          "linea": 232,
+          "resumen": "Construye el SQL (exportado para test: comprobar que SIEMPRE filtra por la empresa de sesión)."
+        },
+        {
+          "nombre": "leerFilas",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, pet: PeticionInforme, limite = LIMITE_FILAS",
+          "retorno": "Promise<Record<string, unknown>[]>",
+          "linea": 241,
+          "resumen": "Lee de BD las filas crudas (hasta limite+1 para detectar truncado)."
+        },
+        {
+          "nombre": "contextoCabecera",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, pet: PeticionInforme",
+          "retorno": "Promise<",
+          "linea": 247,
+          "resumen": "Nombre de la empresa + nombres de empleado/obra de los filtros (para la cabecera del informe)."
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "20980eede3f8"
+    },
+    {
+      "ruta": "apps/rrhh/lib/informes/ejecutar.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Orquestación servidor: consulta (filtrada por la empresa de SESIÓN) + motor + cabecera.",
+      "exporta": [
+        "ejecutarInforme"
+      ],
+      "funciones": [
+        {
+          "nombre": "ejecutarInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, pet: PeticionInforme",
+          "retorno": "Promise<",
+          "linea": 10,
+          "resumen": "`empresaId` SOLO puede venir de getSesion(). La petición ya está validada (validador.ts)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ddcded2fcb62"
+    },
+    {
+      "ruta": "apps/rrhh/lib/informes/exportar-pdf.tsx",
+      "ambito": "apps/rrhh",
+      "resumen": "Exportación de un informe a PDF con @react-pdf/renderer (ya en rrhh, serverExternalPackages). Cabecera (título, empresa, filtros, agrupación, fecha), cuadro de totales (por grupo + general) y tabla de detalle con filas de grupo y subtotal. Apaisado si hay más de 6 columnas. El detalle se limita a LI",
+      "exporta": [
+        "generarPdf"
+      ],
+      "funciones": [
+        {
+          "nombre": "CuadroTotales",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r }: { r: ResultadoInforme }",
+          "retorno": null,
+          "linea": 33
+        },
+        {
+          "nombre": "Detalle",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r }: { r: ResultadoInforme }",
+          "retorno": null,
+          "linea": 53
+        },
+        {
+          "nombre": "InformePdf",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r, cab }: { r: ResultadoInforme; cab: CabeceraInforme }",
+          "retorno": null,
+          "linea": 100
+        },
+        {
+          "nombre": "generarPdf",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoInforme, cab: CabeceraInforme",
+          "retorno": "Promise<Buffer>",
+          "linea": 130
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f956fafc63e8"
+    },
+    {
+      "ruta": "apps/rrhh/lib/informes/exportar.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Exportación de un informe a Excel (.xlsx, SheetJS) y CSV. SERVIDOR (sin BD: recibe el resultado del motor ya calculado). El PDF va en `exportar-pdf.tsx`. Excel: hoja «Informe» con cabecera (título, empresa, filtros, fecha), detalle con filas de grupo, subtotal y total; las celdas son NÚMEROS/FECHAS ",
+      "exporta": [
+        "generarXlsx",
+        "generarCsv",
+        "nombreArchivo"
+      ],
+      "funciones": [
+        {
+          "nombre": "serialExcel",
+          "kind": "function",
+          "exportada": false,
+          "params": "y: number, m: number, d: number, h = 0, mi = 0",
+          "retorno": "number",
+          "linea": 21,
+          "resumen": "Serial de Excel (días desde 1899-12-30) de una fecha/hora LOCAL ya descompuesta."
+        },
+        {
+          "nombre": "celda",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipo: TipoColumna, v: Valor",
+          "retorno": "Celda",
+          "linea": 27
+        },
+        {
+          "nombre": "celdaMetrica",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: ResultadoMetrica",
+          "retorno": "Celda",
+          "linea": 46
+        },
+        {
+          "nombre": "filaTotales",
+          "kind": "function",
+          "exportada": false,
+          "params": "columnas: ColumnaDef[], rotulo: string, metricas: ResultadoMetrica[]",
+          "retorno": "Celda[]",
+          "linea": 53,
+          "resumen": "Fila de subtotal/total: suma bajo la columna cuando hay una métrica `suma` sobre ella."
+        },
+        {
+          "nombre": "resumenTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "metricas: ResultadoMetrica[]",
+          "retorno": "string",
+          "linea": 61
+        },
+        {
+          "nombre": "hoja",
+          "kind": "function",
+          "exportada": false,
+          "params": "filas: Celda[][], anchos: number[]",
+          "retorno": "XLSX.WorkSheet",
+          "linea": 65
+        },
+        {
+          "nombre": "S",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "Celda",
+          "linea": 80
+        },
+        {
+          "nombre": "lineasCabecera",
+          "kind": "function",
+          "exportada": false,
+          "params": "cab: CabeceraInforme, r: ResultadoInforme",
+          "retorno": "Celda[][]",
+          "linea": 82
+        },
+        {
+          "nombre": "generarXlsx",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoInforme, cab: CabeceraInforme",
+          "retorno": "Buffer",
+          "linea": 98
+        },
+        {
+          "nombre": "generarCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoInforme",
+          "retorno": "string",
+          "linea": 134,
+          "resumen": "CSV para Excel en español: `;` de separador, coma decimal, BOM UTF-8. Solo el detalle."
+        },
+        {
+          "nombre": "nombreArchivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "entidad: string, ext: string, ahora = new Date()",
+          "retorno": "string",
+          "linea": 150,
+          "resumen": "Nombre de archivo seguro: informe_fichajes_2026-10-05.xlsx"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "29cdcf5b94d7"
+    },
+    {
+      "ruta": "apps/rrhh/lib/informes/formato.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Formato español de los valores de un informe (pantalla, PDF y CSV). Módulo PURO. - Números: 1.234,56 (punto de miles también con 4 cifras, coma decimal). - Dinero: 2.162,49€ (€ detrás, sin espacio). Horas: 2 decimales. - Fechas: dd/mm/aaaa; fecha-hora en hora de Madrid. - null = «sin dato»: celda va",
+      "exporta": [
+        "numeroEs",
+        "dineroEs",
+        "fechaEs",
+        "partesMadrid",
+        "fechaHoraEs",
+        "formatearValor",
+        "formatearMetrica"
+      ],
+      "funciones": [
+        {
+          "nombre": "numeroEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number, dec = 2",
+          "retorno": "string",
+          "linea": 12,
+          "resumen": "1234.5 → «1.234,50» (dec = 2). Agrupa miles siempre, también con 4 cifras."
+        },
+        {
+          "nombre": "numeroLibre",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 21,
+          "resumen": "Entero si lo es; si no, 2 decimales."
+        },
+        {
+          "nombre": "dineroEs",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 28,
+          "resumen": "'YYYY-MM-DD' (o ISO) → 'dd/mm/aaaa'."
+        },
+        {
+          "nombre": "partesMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "",
+          "linea": 34,
+          "resumen": "Partes de fecha-hora en hora de Madrid (para pantalla y para Excel)."
+        },
+        {
+          "nombre": "fechaHoraEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 44
+        },
+        {
+          "nombre": "formatearValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoColumna, v: unknown",
+          "retorno": "string",
+          "linea": 52,
+          "resumen": "Valor de celda → texto en español. null/undefined → '' (sin dato)."
+        },
+        {
+          "nombre": "formatearMetrica",
+          "kind": "function",
+          "exportada": true,
+          "params": "formato: TipoColumna | 'recuento', v: number | null",
+          "retorno": "string",
+          "linea": 66,
+          "resumen": "Valor de una métrica (recuento, suma, media). null → «—» (no hay dato que sumar)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bc03ff6b100d"
+    },
+    {
+      "ruta": "apps/rrhh/lib/informes/motor.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Motor GENÉRICO de informes. Funciones PURAS (sin BD): reciben las filas crudas que devuelve `consultas.ts` y calculan filas proyectadas + subtotales por grupo + total general. Regla del repo: null = «no se sabe», nunca 0. Las sumas y medias ignoran los null y cuentan cuántas filas quedaron fuera (`s",
+      "exporta": [
+        "normalizarValor",
+        "normalizarFila",
+        "semanaIso",
+        "claveGrupo",
+        "calcularMetricas",
+        "calcularInforme",
+        "recortarParaVista"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "Valor",
+          "linea": 53,
+          "resumen": "Normaliza lo que devuelve Prisma ($queryRaw): Date → ISO, bigint/Decimal → number."
+        },
+        {
+          "nombre": "normalizarFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Record<string, unknown>",
+          "retorno": "Fila",
+          "linea": 66
+        },
+        {
+          "nombre": "semanaIso",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string",
+          "retorno": "",
+          "linea": 75,
+          "resumen": "Semana ISO-8601 de una fecha 'YYYY-MM-DD': { anio, semana, lunes 'YYYY-MM-DD' }."
+        },
+        {
+          "nombre": "claveGrupo",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: Valor, modo: ModoAgrupacion, etiqueta?: Valor",
+          "retorno": "",
+          "linea": 90,
+          "resumen": "Clave de orden + etiqueta del grupo al que pertenece un valor. null → «(sin dato)»."
+        },
+        {
+          "nombre": "calcularMetricas",
+          "kind": "function",
+          "exportada": true,
+          "params": "defs: MetricaDef[], filas: Fila[]",
+          "retorno": "ResultadoMetrica[]",
+          "linea": 113,
+          "resumen": "Calcula las métricas de la entidad sobre un conjunto de filas crudas."
+        },
+        {
+          "nombre": "redondear",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "number",
+          "linea": 133,
+          "resumen": "Evita la deriva de coma flotante (0,1 + 0,2) sin perder precisión útil."
+        },
+        {
+          "nombre": "calcularInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "ent: EntidadDef, pet: PeticionInforme, filasCrudas: Record<string, unknown>[], limite = LIMITE_FILAS",
+          "retorno": "ResultadoInforme",
+          "linea": 139,
+          "resumen": "Ejecuta el informe sobre las filas crudas (ya filtradas por empresa y filtros en la consulta). `filasCrudas` puede traer una fila de más que `limite` para detectar el truncado."
+        },
+        {
+          "nombre": "recortarParaVista",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoInforme, max: number",
+          "retorno": "ResultadoInforme &",
+          "linea": 181,
+          "resumen": "Recorta las filas para la vista previa SIN tocar grupos ni totales (que son de todo)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8fc459e8d508"
+    },
+    {
+      "ruta": "apps/rrhh/lib/informes/validador.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Validación del payload de informes contra el catálogo (lista blanca). Módulo PURO. - `.strict()` en todos los niveles: un `empresa_id` (o cualquier clave extra) se RECHAZA, no se ignora en silencio. El empresa_id sale SIEMPRE de la sesión. - entidad / columnas / agrupación / claves de filtro: solo c",
+      "exporta": [
+        "validarPeticion",
+        "validarExportacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "esquemaFiltro",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FiltroDef",
+          "retorno": "z.ZodTypeAny",
+          "linea": 19
+        },
+        {
+          "nombre": "refinar",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: { entidad: string; columnas: string[]; filtros: Record<string, unknown>; agrupacion: string | null }, ctx: z.RefinementCtx",
+          "retorno": null,
+          "linea": 46
+        },
+        {
+          "nombre": "limpiarFiltros",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Record<string, unknown>",
+          "retorno": "FiltrosInforme",
+          "linea": 69,
+          "resumen": "Quita los filtros vacíos (rango sin extremos) para no generar condiciones inútiles."
+        },
+        {
+          "nombre": "aErrores",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: z.ZodError",
+          "retorno": null,
+          "linea": 82
+        },
+        {
+          "nombre": "sinFiltrosVacios",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: unknown",
+          "retorno": "unknown",
+          "linea": 87,
+          "resumen": "Un filtro vacío del formulario ('' o rango sin extremos) es «sin filtro», no un valor inválido."
+        },
+        {
+          "nombre": "validarPeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown",
+          "retorno": "ResultadoValidacion<PeticionInforme>",
+          "linea": 100
+        },
+        {
+          "nombre": "validarExportacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown",
+          "retorno": "ResultadoValidacion<PeticionInforme &",
+          "linea": 106
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4ea2f016811d"
     },
     {
       "ruta": "apps/rrhh/lib/mailer.ts",
@@ -186504,7 +187214,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4214,
-    "funciones": 14592
+    "archivos": 4227,
+    "funciones": 14654
   }
 }
