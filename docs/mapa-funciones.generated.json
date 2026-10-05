@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-05T09:46:06Z",
-  "sha": "c51e6a9f34d5a0aafc299a7c25f6cb8788ac546f",
+  "generadoEn": "2026-10-05T10:18:15Z",
+  "sha": "4d9a36c3513076dbf6dbca0d46bf93cc9d7adf66",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -100165,7 +100165,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "GET",
@@ -100173,7 +100173,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 34
+          "linea": 35
         }
       ],
       "tablas": [
@@ -100181,7 +100181,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-scan",
-      "hash": "b00e52424dfe"
+      "hash": "7a567ac82699"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/health-check/route.ts",
@@ -107995,6 +107995,7 @@
       "exporta": [
         "recurrentesQueFaltan",
         "luzPorPisoQueFalta",
+        "coberturaPorCuenta",
         "domiciliadosSinCargo"
       ],
       "funciones": [
@@ -108019,8 +108020,8 @@
         {
           "nombre": "coberturaPorCuenta",
           "kind": "function",
-          "exportada": false,
-          "params": "hoy: string",
+          "exportada": true,
+          "params": "hoy: string, cuentaId?: string, incluirOcultas = false",
           "retorno": "Promise<CuentaCobertura[]>",
           "linea": 71,
           "resumen": "Última fecha sincronizada de cada cuenta activa (corriente o tarjeta) con movimientos en 180 días."
@@ -108031,7 +108032,7 @@
           "exportada": true,
           "params": "hoy: string, diasAtras = 90,",
           "retorno": "Promise<",
-          "linea": 92,
+          "linea": 93,
           "resumen": "Gastos ya imputados cuya domiciliación venció y NO tienen cargo en cuenta. Devuelve SOLO los accionables (`sin_cargo`): lo pendiente se calla y lo que no se puede comprobar por falta de extracto NO se"
         }
       ],
@@ -108043,7 +108044,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "e1633982205f"
+      "hash": "0f38924571ad"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/asignar-titular.ts",
@@ -108351,6 +108352,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "317b5b3e7ed8"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/casar-cargos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Casado factura↔cargo bancario, PURO (testeable con `node --test`). Dos fallos reales de `conciliarConBanco` (auditoría 05/10/2026): 1. Anthropic: 3 facturas de 170,00€ con la misma fecha de referencia y 5 cargos exactos de 170€. El SQL elegía «el cargo más cercano» de CADA factura y luego «la factur",
+      "exporta": [
+        "toleranciaFactura",
+        "asignarCargos"
+      ],
+      "funciones": [
+        {
+          "nombre": "toleranciaFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "proveedor: string | null, divisa: string | null | undefined",
+          "retorno": "number",
+          "linea": 17
+        },
+        {
+          "nombre": "asignarCargos",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CandidatoCargo[]",
+          "retorno": "",
+          "linea": 35,
+          "resumen": "Asignación global 1:1: primero los pares más cercanos en fecha y, a igualdad, en importe."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4299dc259c76"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/clasificar.ts",
@@ -108923,6 +108955,130 @@
       "hash": "a82ddeda9f54"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/forma-pago.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "¿Una factura de proveedor EXIGE que Alberto la pague a mano? Caso fundacional (05/10/2026): el resumen del lunes avisó «32 facturas pendientes · 2.930,90€» con botones «Pagar todo», cuando casi todas se cobran SOLAS (domiciliación, tarjeta de PriceLabs/IONOS, comisión de Booking descontada del payou",
+      "exporta": [
+        "esPlataformaQueDescuenta",
+        "claveProveedor",
+        "clavesDeTitulares",
+        "claveUtil",
+        "clasificarFormaPago",
+        "planificarAviso",
+        "hayAviso",
+        "componerTexto",
+        "hayCoberturaTotal"
+      ],
+      "funciones": [
+        {
+          "nombre": "esPlataformaQueDescuenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "proveedor: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 40
+        },
+        {
+          "nombre": "claveProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "proveedor: string",
+          "retorno": "string",
+          "linea": 58,
+          "resumen": "Primera palabra significativa (sin tildes, solo letras) en mayúsculas."
+        },
+        {
+          "nombre": "clavesDeTitulares",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombres: (string | null | undefined)[]",
+          "retorno": "string[]",
+          "linea": 63,
+          "resumen": "Palabras (≥4 letras) de los nombres de titulares, para excluirlas como clave."
+        },
+        {
+          "nombre": "claveUtil",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string, extraExcluidas: string[] = []",
+          "retorno": "boolean",
+          "linea": 70,
+          "resumen": "¿La clave sirve para buscar cargos del proveedor? ≥4 letras, no genérica y no un nombre del titular."
+        },
+        {
+          "nombre": "clasificarFormaPago",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaForma",
+          "retorno": "FormaPago",
+          "linea": 74
+        },
+        {
+          "nombre": "sumaDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string, dias: number",
+          "retorno": "string",
+          "linea": 108
+        },
+        {
+          "nombre": "planificarAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "facturas: FacturaResumen[], hoy: string, hayCobertura: (fechaCargo: string) => boolean = () => true, margen: number = MARGEN_CARGO_DIAS,",
+          "retorno": "PlanAviso",
+          "linea": 117,
+          "resumen": "Reparte las facturas aún sin cargo casado. `hayCobertura` = el extracto llega hasta la fecha de cargo: si no, la ausencia del apunte no prueba nada y NO se reclama."
+        },
+        {
+          "nombre": "suma",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "l: FacturaResumen[]",
+          "retorno": null,
+          "linea": 137
+        },
+        {
+          "nombre": "hayAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PlanAviso",
+          "retorno": "boolean",
+          "linea": 140,
+          "resumen": "¿Hay algo que decir? Sin manuales, cargos que faltan ni desconocidas, no se avisa."
+        },
+        {
+          "nombre": "lineas",
+          "kind": "function",
+          "exportada": false,
+          "params": "l: FacturaResumen[]",
+          "retorno": "string[]",
+          "linea": 146
+        },
+        {
+          "nombre": "componerTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PlanAviso",
+          "retorno": "string",
+          "linea": 156,
+          "resumen": "Texto HTML del aviso (el proveedor viene ya escapado por quien llama si hace falta)."
+        },
+        {
+          "nombre": "hayCoberturaTotal",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentas: CuentaCobertura[] | null, fechaCargo: string",
+          "retorno": "boolean",
+          "linea": 177,
+          "resumen": "¿El extracto cubre la fecha de cargo en TODAS las cuentas (incluidas las ocultas, p. ej. tarjetas paradas)? Basta una cuenta parada para no poder afirmar «sin cargo»: el cargo pudo caer en ella."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "90d9bc448080"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/gastos-fijos.ts",
       "ambito": "apps/plataforma",
       "resumen": "Gastos fijos mensuales (alquileres, comunidades, seguros…): plantillas con importe conocido que se imputan automáticamente el día configurado de cada mes.",
@@ -109265,6 +109421,7 @@
         "verificarPagosPendientes",
         "conciliarConBanco",
         "pagarTodo",
+        "prefijoAviso",
         "resumenSemanal",
         "alertarFacturasAusentes"
       ],
@@ -109275,7 +109432,7 @@
           "exportada": true,
           "params": "cuentaId: string, opts: { deadline?: number } = {},",
           "retorno": "Promise<ResultadoEscaneo>",
-          "linea": 84,
+          "linea": 87,
           "resumen": "@param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es justo como se perdía el latido antes del "
         },
         {
@@ -109284,7 +109441,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string, permitirPagar = true, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso' = 'sin_numero_ni_iva', ivaDudoso = false,",
           "retorno": "Promise<void>",
-          "linea": 268
+          "linea": 271
         },
         {
           "nombre": "aprobarPago",
@@ -109292,7 +109449,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 342
+          "linea": 352
         },
         {
           "nombre": "aplazarPago",
@@ -109300,7 +109457,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 403
+          "linea": 413
         },
         {
           "nombre": "rechazarFactura",
@@ -109308,7 +109465,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 419
+          "linea": 429
         },
         {
           "nombre": "aplicarSinIvaExtranjero",
@@ -109316,7 +109473,7 @@
           "exportada": true,
           "params": "facturaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 432,
+          "linea": 442,
           "resumen": "IVA 0 de un proveedor extranjero. Solo si seguía sin leer (null): nunca pisa un dato."
         },
         {
@@ -109325,7 +109482,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 442
+          "linea": 452
         },
         {
           "nombre": "conciliarConBanco",
@@ -109333,7 +109490,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 482
+          "linea": 492
         },
         {
           "nombre": "pagarTodo",
@@ -109341,7 +109498,24 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 534
+          "linea": 553
+        },
+        {
+          "nombre": "prefijoAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "forma: FormaPago, permitirPagar: boolean, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso'",
+          "retorno": "string",
+          "linea": 578,
+          "resumen": "Prefijo del aviso: «se cobra sola» y «revisar documento» CONVIVEN (la revisión no se pisa)."
+        },
+        {
+          "nombre": "formasPago",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, proveedores: string[]",
+          "retorno": "Promise<Map<string, FormaPago>>",
+          "linea": 585
         },
         {
           "nombre": "resumenSemanal",
@@ -109349,7 +109523,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 550
+          "linea": 622
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -109357,7 +109531,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 579
+          "linea": 657
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -109365,7 +109539,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 612
+          "linea": 690
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -109373,22 +109547,21 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 643
+          "linea": 721
         }
       ],
       "tablas": [
-        "candidatos",
-        "coincidencias",
         "cuentas_bancarias",
         "facturas_proveedor",
+        "gastos",
         "incomes",
-        "por_factura",
         "presupuesto_proveedores",
         "properties",
+        "sociedades",
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "a167a34e47ba"
+      "hash": "367ac9df7ca2"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/parsear-json-ia.ts",
@@ -143368,7 +143541,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5ae46ec9d3ce"
+      "hash": "fc7cc77b23c0"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -183311,7 +183484,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4156,
-    "funciones": 14319
+    "archivos": 4158,
+    "funciones": 14335
   }
 }
