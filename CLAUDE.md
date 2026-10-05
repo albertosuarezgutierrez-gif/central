@@ -94,6 +94,7 @@ y los `module-*` de cada vertical.
     memoria, diagnosticar CI. **Sin umbral de tamaño**: también el cambio de 1-2 archivos.
   - **Qué agente:** mecánico/bajo riesgo → `agente-mecanico` · código normal → `general-purpose` con `model: sonnet` ·
     localizar → `rastreador-codigo` · afirmar una ausencia/estado o validar un cepo → `verificador-esceptico` ·
+    leer correos y sus adjuntos (PDF/Excel) → `lector-correo` (Vía C: etiqueta `Claude/Adjuntos` → Drive) ·
     alto riesgo (datos de clientes, emisión, pagos, RLS, migraciones) → `agente-architect`.
     Si sonnet/haiku devuelven 429 de límite semanal, relanza con `model: opus`.
   - **En paralelo** cuando no se pisen archivos; lista explícita de archivos en cada prompt. Si dos agentes tocan

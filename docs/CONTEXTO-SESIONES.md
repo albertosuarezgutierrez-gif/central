@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(04/10/2026)** — análisis 2º requerimiento AEAT a Punto y Coma SL (ingresos plataformas 2024). Agentes leyeron correos Asecon 2024-2026 + `incomes` 2024.
+Hallazgos: contratos 500€/mes aportados a Inspección 2024; 2ª pasada sobre adjuntos (Vía C, agente lector-correo): doble resta de comisiones DESCARTADA; SL arrendataria de abuela/madre (621+115); punto débil Socorro/Sanlúcar cobrados en cuentas personales; resumen v2 en Drive; carpeta Drive «Requerimiento AEAT 2024 - Punto y Coma» (subcarpeta 09) con resumen para reunión.
+PR #4248. Pendiente: reunión con Asecon (Marta), datos por pedir (listado en el Doc). Ver skill perfil-fiscal § «Requerimiento AEAT 2024».
+
 **(04/10/2026, limpieza contable — solo BD, sin código)** — Rechazada factura Giraldillo 6d85ba72 (72,60€, gemela de gasto b1437e07). d9a0a1d2 (504,57€, 29/05) NO es duplicado (el más cercano 504,27€ 30/06 = mes siguiente): sigue pendiente_revision.
 Jefe-contabilidad asignó los 12 «sin determinar»: Pepemobile ×6, gasoil ×3, Allianz moto → personal; Booking cargos ×2 → pisos compartido. Codeoscopic, Asoc. Corredores ff0900f2 y Fly.io 220a37e0 → correduría; Fly.io 570fb3f0 («Manuel Suárez») → receptor_no_titular.
 Generali coche (36760c84, 176dfe7a) seguros→personal. Pendiente: home-office (m², Pilar), donativos_anual, Pepemobile fibra = suministro afecto (30 %×% despacho) cuando haya m²; sin_datos 388,91€ (Petroprix 90, Bricomart, Asecon 181,50, Mercadona).

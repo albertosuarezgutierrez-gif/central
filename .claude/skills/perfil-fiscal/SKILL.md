@@ -8,7 +8,7 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 ## Estructura en 6 líneas
 - **Personas físicas:** Alberto + **Pilar** (cónyuge, autónoma con sección `/finanzas/pilar`), separación de bienes, 3 hijos → familia numerosa general.
 - **Sociedad:** Punto y Coma SL, **dormida/inactiva desde finales de 2025** (no disuelta). **Desde 2026 TODOS los pisos tributan en IRPF personal de Alberto**; excepción dictada 20/07/2026: los ingresos de Socorro de 2025 sí fueron al IS de la SL.
-- **Pisos:** Socorro/House Sevillana (50/50 Alberto+Pilar), Villasís=Dúplex, Busto Reform y Luxury Busto (personal desde 2026); Monte Carmelo 68 = vivienda habitual (no deducible).
+- **Pisos:** Socorro/House Sevillana (50/50 Alberto+Pilar), Villasís=Lasso de la Vega 4=Dúplex, Busto Reform y Luxury Busto (personal desde 2026); Monte Carmelo 68 = vivienda habitual (no deducible).
 - **Declaración IRPF 2025 ya presentada (30/06/2026):** no tocar 2025 ni reclasificar movimientos anteriores a 2026-01-01; solo importa 2026 en adelante.
 - **Datos sensibles NO aquí:** viven en BD `fiscal_perfil`/`fiscal_descendientes` (Supabase, por `cuenta_id`) y en el borrador AEAT. Asesoría: Asecon Consultores (Marta).
 
@@ -62,6 +62,18 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 - **GENERALI seguro coche** → lo mete en **correduría** como gasto (decisión de Alberto), pero **SIN
   regla global** (GENERALI es nombre de aseguradora; una regla rompería la detección de comisiones):
   se reclasifica solo ese recibo.
+
+## 🚨 Requerimiento AEAT 2024 a Punto y Coma SL — ABIERTO (oct-2026)
+- 2º requerimiento de Inspección Sevilla (29/09/2026; el 1º, de jul-2026, no se atendió): justificar ingresos 2024 de plataformas imputados a la SL (Booking, Airbnb, Agoda; ~9 inmuebles). Plazo 10 días hábiles; aviso DEHú caduca 09/10/2026. Lo contesta Asecon (Marta Albarrán).
+- Todo el detalle (historia, cifras, riesgos, peticiones) vive en Drive, carpeta «Requerimiento AEAT 2024 - Punto y Coma» (https://drive.google.com/drive/folders/1aD1l_idUmNhq6hiTwtj5aGjtsTw3_Btn), subcarpeta 09. Léelo antes de opinar del tema.
+- Antecedente CLAVE: en 2024 la Inspección ya revisó IS 2021-22 de la SL y se APORTARON contratos de cesión Socorro y Sanlúcar → SL a 500 €/mes/inmueble; IRPF 2023 los declaró así. ⛔ No argumentar «cesión gratuita»: contradice lo aportado.
+- La SL era arrendataria de pisos de la madre de Alberto (edificio San Luis 9: pisos 3/10/12; Villasís hasta la donación de mayo-2024) y propietaria de Bustos Tavera 22. Lasso de la Vega 4 = Dúplex = Villasís.
+- Hipoteca de Socorro (CaixaBank) cancelada 11/11/2024 con el dinero de la venta de Sanlúcar (03/09/2024).
+- DESCARTADO (04/10/2026, probable): doble resta de comisiones. El DAC7 de Booking es BRUTO y la SL contabilizó los ingresos 2024 ya NETOS sin gasto de comisión aparte (solo queda sin desglosar la cuenta 629). IVA: Alberto dicta que alojamiento (sin servicios hoteleros) y mediación de seguros son exentos; abierto: modelo 309 por comisiones de Booking (inversión del sujeto pasivo) e IVA de las rentas que paga la SL.
+- La BD no tiene movimientos bancarios de 2024 (empiezan 2025-01-01); `incomes` 2024 solo cubre Socorro, Bustos (Reform+Luxury) y Dúplex.
+- La SL fue ARRENDATARIA de la familia en 2024: pagaba alquiler (cuenta 621, modelo 115) a la abuela (María Alcalá Maguilla) y a la madre (María Gutiérrez Alcalá); San Luis 9 es de SAN LUIS 9 CB (familia Gutiérrez Alcalá/Belascoain), ni Alberto ni Pilar ni la SL son comuneros. Villasís: donación de la madre a Alberto el 21/05/2024.
+- Punto débil: Socorro y Sanlúcar se cobraban en cuentas PERSONALES (Caixa …7622 / común …0855) aunque Booking facturaba con el NIF de la SL; la hipoteca de Socorro se pagaba desde la …7622 y se canceló el 11/11/2024 tras entrar ahí la venta de Sanlúcar. En 2024 la SL no pagó los 500 €/mes de los contratos de cesión. ⚠️ Los .docx de esos contratos (fechados 2020) se crearon el 16/05/2024 y hay versiones incoherentes: no aportar contratos nuevos/rehechos; revisión por fiscalista.
+- Resumen vigente: Doc «Resumen reunión Asecon v2 (04-10-2026) — VIGENTE» en la subcarpeta 09 de la carpeta Drive. Adjuntos de correo: Vía C (agente `lector-correo`).
 
 ## Reglas contables confirmadas (04/10/2026)
 

@@ -5,6 +5,14 @@
 > dentro del PDF (y no solo el cuerpo del correo). El conector Gmail **gestionado** de
 > Claude Code web no baja adjuntos; por eso hace falta este de más.
 
+## Vía C — ACTIVA desde 04/10/2026 (genérica, preferente para cualquier tema que no sea facturas)
+
+Para extraer información de correos y adjuntos SIN montar un servidor MCP propio: usa el agente
+`lector-correo`. Flujo: (1) etiqueta el hilo con `Claude/Adjuntos` (escritura única permitida),
+(2) el Apps Script «Claude - Adjuntos Gmail a Drive» copia los adjuntos a Drive cada 10 min,
+(3) el agente lee los ficheros con `read_file_content` (PDF/xlsx/docx) y devuelve los hallazgos.
+Sin tokens, sin OAuth, sin MCP. Preferente cuando el tema no sea facturas de la skill.
+
 ## Qué dejó preparado Claude (ya commiteado, no tocar)
 - **`/.mcp.json`** (raíz del repo) → declara el servidor `gmail-adjuntos`
   (`@gongrzhe/server-gmail-autoauth-mcp`, arranca con `npx`). Se clona en cada sesión.
