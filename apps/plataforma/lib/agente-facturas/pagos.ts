@@ -20,6 +20,9 @@ import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
 import type { EstadoPagoEB } from '@/lib/enablebanking'
 import { baseUrl } from '@/lib/base-url'
 import type { FacturaProveedor } from '@central/module-pagos'
+import { clasificarFormaPago, claveProveedor, claveUtil, clavesDeTitulares, CLAVES_GENERICAS, RE_CONCEPTO_TRANSFERENCIA_SQL, planificarAviso, hayCoberturaTotal, componerTexto, hayAviso, type FormaPago, type FacturaResumen } from './forma-pago'
+import { asignarCargos, toleranciaFactura } from './casar-cargos'
+import { coberturaPorCuenta } from './anomalias'
 
 const ETIQUETA_GMAIL = 'Facturas/Proveedor'
 /**
@@ -301,9 +304,16 @@ async function notificarFactura(
     }
   } catch { /* no crítico */ }
 
-  const prefijo = permitirPagar ? '' : motivoRevision === 'tipo_dudoso' ? '⚠️ Revisar: documento dudoso\n' : '⚠️ Revisar: sin nº de factura ni IVA\n'
+  // 🚨 Una factura que se cobra SOLA (domiciliada/tarjeta/plataforma) no se «paga»: sin botón Pagar.
+  const forma = (await formasPago(cuentaId, [proveedor])).get(proveedor) ?? 'desconocida'
+  const sola = forma === 'cargo_automatico' || forma === 'plataforma'
+  const permitirPagarOriginal = permitirPagar
+  if (sola) permitirPagar = false
+  const prefijo = prefijoAviso(forma, permitirPagarOriginal, motivoRevision)
   const texto = `${prefijo}🧾 <b>${proveedor}</b> · ${eur(importe)}${vence}${budgetLinea}`
-  const botones = permitirPagar
+  const botones = sola
+    ? [[{ texto: '❌ Rechazar', callback: `pago_rechazar:${facturaId}` }]]
+    : permitirPagar
     ? [
         [
           { texto: '✅ Pagar', callback: `pago_aprobar:${facturaId}` },
@@ -480,9 +490,16 @@ export async function verificarPagosPendientes(): Promise<number> {
 // cercana en fecha).
 
 export async function conciliarConBanco(cuentaId: string): Promise<number> {
-  const conciliadas = await prisma.$queryRaw<{ id: string; telegram_msg_id: number | null }[]>(Prisma.sql`
+  // Candidatos SIN elegir en SQL: la asignación 1:1 global la hace `casar-cargos.ts` (puro, con test).
+  // El SQL solo acota con la ventana más ancha (±15 %, por las facturas en USD); la tolerancia real
+  // de cada factura se aplica en TS.
+  const cands = await prisma.$queryRaw<{
+    factura_id: string; telegram_msg_id: number | null; movimiento_id: string
+    dist: number; ratio: number; proveedor: string; divisa: string | null
+  }[]>(Prisma.sql`
     WITH fp AS (
-      SELECT f.id, f.telegram_msg_id, f.importe,
+      SELECT f.id, f.telegram_msg_id, f.importe, f.proveedor,
+             to_jsonb(f)->>'divisa' AS divisa,
              COALESCE(f.fecha_vencimiento, f.fecha_factura, NOW()::date) AS ref,
              upper(split_part(trim(regexp_replace(
                translate(f.proveedor, 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN'), '[^A-Za-z ]', '', 'g')), ' ', 1)) AS clave
@@ -490,41 +507,43 @@ export async function conciliarConBanco(cuentaId: string): Promise<number> {
       WHERE f.cuenta_id = ${cuentaId}::uuid
         AND f.estado IN ('nueva', 'pendiente_revision', 'aprobada', 'pago_iniciado')
         AND f.importe > 0
-    ),
-    candidatos AS (
-      SELECT fp.id AS factura_id, fp.telegram_msg_id, mb.id AS movimiento_id,
-             ABS(mb.fecha_operacion - fp.ref) AS dist
-      FROM fp
-      JOIN v_movimientos_activos mb
-        ON ABS(mb.importe) BETWEEN fp.importe * 0.97 AND fp.importe * 1.03
-        AND mb.importe < 0
-        AND mb.fecha_operacion BETWEEN fp.ref - 10 AND fp.ref + 30
-        AND (
-          upper(translate(mb.concepto, 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
-          OR upper(translate(COALESCE(mb.concepto_normalizado, ''), 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
-          OR upper(translate(COALESCE(mb.contraparte, ''), 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
-        )
-      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = ${cuentaId}::uuid
-      WHERE length(fp.clave) >= 4
-        AND fp.clave NOT IN ('FUNDACION', 'ASOCIACION', 'COMUNIDAD', 'AYUNTAMIENTO', 'SERVICIOS', 'GRUPO')
-    ),
-    -- Cada factura se queda con su cargo más cercano, y cada cargo con su factura más cercana.
-    por_factura AS (
-      SELECT DISTINCT ON (factura_id) * FROM candidatos ORDER BY factura_id, dist
-    ),
-    coincidencias AS (
-      SELECT DISTINCT ON (movimiento_id) * FROM por_factura ORDER BY movimiento_id, dist
     )
+    SELECT fp.id::text AS factura_id, fp.telegram_msg_id, mb.id::text AS movimiento_id,
+           ABS(mb.fecha_operacion - fp.ref)::int AS dist,
+           (ABS(mb.importe) / fp.importe)::float AS ratio,
+           fp.proveedor, fp.divisa
+    FROM fp
+    JOIN v_movimientos_activos mb
+      ON ABS(mb.importe) BETWEEN fp.importe * 0.85 AND fp.importe * 1.15
+      AND mb.importe < 0
+      AND mb.conciliado IS NOT TRUE -- un cargo ya conciliado por otra vía no paga otra factura
+      AND mb.fecha_operacion BETWEEN fp.ref - 10 AND fp.ref + 30
+      AND (
+        upper(translate(mb.concepto, 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
+        OR upper(translate(COALESCE(mb.concepto_normalizado, ''), 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
+        OR upper(translate(COALESCE(mb.contraparte, ''), 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || fp.clave || '%'
+      )
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = ${cuentaId}::uuid
+    WHERE length(fp.clave) >= 4
+      AND fp.clave NOT IN (${Prisma.join(CLAVES_GENERICAS)})
+  `)
+  const msgPorFactura = new Map(cands.map(c => [c.factura_id, c.telegram_msg_id]))
+  const pares = asignarCargos(cands.map(c => ({
+    factura_id: c.factura_id, movimiento_id: c.movimiento_id, dist: c.dist, ratio: c.ratio,
+    tolerancia: toleranciaFactura(c.proveedor, c.divisa),
+  })))
+  if (pares.length === 0) return 0
+
+  const conciliadas = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
     UPDATE facturas_proveedor f
     SET estado = 'pagada', pago_confirmado_at = NOW()
-    FROM coincidencias c
-    WHERE f.id = c.factura_id
+    WHERE f.cuenta_id = ${cuentaId}::uuid
+      AND f.id = ANY(${pares.map(p => p.factura_id)}::uuid[])
       AND f.estado IN ('nueva', 'pendiente_revision', 'aprobada', 'pago_iniciado')
-    RETURNING f.id, f.telegram_msg_id
+    RETURNING f.id::text
   `)
-
   for (const row of conciliadas) {
-    await actualizarMensajeTg(row.telegram_msg_id, `✅ Pago conciliado con el extracto bancario.`)
+    await actualizarMensajeTg(msgPorFactura.get(row.id) ?? null, `✅ Pago conciliado con el extracto bancario.`)
   }
   return conciliadas.length
 }
@@ -532,13 +551,16 @@ export async function conciliarConBanco(cuentaId: string): Promise<number> {
 // ── Pagar todas las facturas pendientes de una cuenta (Idea #3) ───────────────
 
 export async function pagarTodo(cuentaId: string): Promise<{ ok: number; error: number }> {
-  const facturas = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-    SELECT id FROM facturas_proveedor
+  const facturas = await prisma.$queryRaw<{ id: string; proveedor: string }[]>(Prisma.sql`
+    SELECT id, proveedor FROM facturas_proveedor
     WHERE cuenta_id = ${cuentaId}::uuid AND estado IN ('nueva', 'pendiente_revision')
   `)
+  // 🚨 Solo las que exigen transferencia: lo domiciliado/tarjeta/plataforma o sin forma conocida NO se paga a mano.
+  const formas = await formasPago(cuentaId, facturas.map(f => f.proveedor))
+  const aPagar = facturas.filter(f => formas.get(f.proveedor) === 'transferencia')
   const debtorIban = process.env.EB_DEBTOR_IBAN ?? ''
   let ok = 0, error = 0
-  for (const f of facturas) {
+  for (const f of aPagar) {
     const result = await aprobarPago(f.id, cuentaId, debtorIban).catch(() => ({ ok: false as const }))
     if (result.ok) ok++; else error++
   }
@@ -547,8 +569,60 @@ export async function pagarTodo(cuentaId: string): Promise<{ ok: number; error: 
 
 // ── Resumen semanal agrupado (Idea #3, lunes 09:00) ───────────────────────────
 
+/**
+ * Forma de pago deducida por proveedor: domiciliación explícita en lo ya leído (`gastos.raw_extraction`)
+ * + histórico de cargos del proveedor en el banco (transferencia vs recibo/tarjeta). Un fallo de lectura
+ * deja `desconocida` (no inventa una obligación de pago).
+ */
+/** Prefijo del aviso: «se cobra sola» y «revisar documento» CONVIVEN (la revisión no se pisa). */
+export function prefijoAviso(forma: FormaPago, permitirPagar: boolean, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso'): string {
+  const sola = forma === 'cargo_automatico' || forma === 'plataforma'
+  const revisar = permitirPagar ? '' : motivoRevision === 'tipo_dudoso' ? '⚠️ Revisar: documento dudoso\n' : '⚠️ Revisar: sin nº de factura ni IVA\n'
+  const aviso = sola ? `🏦 Se cobra sola (${forma === 'plataforma' ? 'la plataforma lo descuenta' : 'banco/tarjeta'}): no hay que pagarla\n` : ''
+  return revisar + aviso
+}
+
+async function formasPago(cuentaId: string, proveedores: string[]): Promise<Map<string, FormaPago>> {
+  const out = new Map<string, FormaPago>()
+  const titulares = await cargarTitulares().catch(() => [] as Titular[])
+  const excluidas = clavesDeTitulares(titulares.map(t => t.nombre))
+  for (const prov of new Set(proveedores)) {
+    const clave = claveProveedor(prov)
+    let dom: boolean | null = null
+    let auto = 0
+    let transf = 0
+    try {
+      const g = await prisma.$queryRaw<{ si: bigint; no: bigint }[]>(Prisma.sql`
+        SELECT COUNT(*) FILTER (WHERE raw_extraction->>'domiciliado' = 'true') AS si,
+               COUNT(*) FILTER (WHERE raw_extraction->>'domiciliado' = 'false') AS no
+        FROM gastos g
+        WHERE g.proveedor = ${prov}
+          AND (to_jsonb(g)->>'sociedad_id' IS NULL
+               OR (to_jsonb(g)->>'sociedad_id')::uuid IN (SELECT s.id FROM sociedades s WHERE s.cuenta_id = ${cuentaId}::uuid))`)
+      if (Number(g[0]?.si ?? 0) > 0) dom = true
+      else if (Number(g[0]?.no ?? 0) > 0) dom = false
+      if (claveUtil(clave, excluidas)) {
+        const m = await prisma.$queryRaw<{ transf: bigint; auto: bigint }[]>(Prisma.sql`
+          SELECT COUNT(*) FILTER (WHERE upper(mb.concepto) ~ ${RE_CONCEPTO_TRANSFERENCIA_SQL}) AS transf,
+                 COUNT(*) FILTER (WHERE NOT upper(mb.concepto) ~ ${RE_CONCEPTO_TRANSFERENCIA_SQL}) AS auto
+          FROM v_movimientos_activos mb
+          JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id AND cb.cuenta_id = ${cuentaId}::uuid
+          WHERE mb.importe < 0
+            AND (upper(translate(mb.concepto, 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || ${clave} || '%'
+              OR upper(translate(COALESCE(mb.contraparte, ''), 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) LIKE '%' || ${clave} || '%')`)
+        auto = Number(m[0]?.auto ?? 0)
+        transf = Number(m[0]?.transf ?? 0)
+      }
+    } catch { /* sin dato = desconocida */ }
+    out.set(prov, clasificarFormaPago({ proveedor: prov, domiciliadoExplicito: dom, cargosAutomaticosPrevios: auto, transferenciasPrevias: transf }))
+  }
+  return out
+}
+
 export async function resumenSemanal(cuentaId: string): Promise<boolean> {
-  const facturas = await prisma.$queryRaw<{
+  // Primero se concilia: lo que el banco ya cargó deja de estar pendiente.
+  await conciliarConBanco(cuentaId).catch(() => 0)
+  const rows = await prisma.$queryRaw<{
     id: string; proveedor: string; importe: number; fecha_vencimiento: string | null
   }[]>(Prisma.sql`
     SELECT id, proveedor, importe::float, fecha_vencimiento::text
@@ -557,20 +631,24 @@ export async function resumenSemanal(cuentaId: string): Promise<boolean> {
       AND estado IN ('nueva', 'pendiente_revision')
     ORDER BY fecha_vencimiento ASC NULLS LAST, created_at ASC
   `)
-  if (facturas.length <= 1) return false
+  if (rows.length === 0) return false
 
-  const total = facturas.reduce((s, f) => s + f.importe, 0)
-  const lineas = facturas.slice(0, 5).map(f => {
-    const vence = f.fecha_vencimiento ? ` · vence ${f.fecha_vencimiento}` : ''
-    return `  • ${f.proveedor} · ${eur(f.importe)}${vence}`
-  })
-  if (facturas.length > 5) lineas.push(`  <i>... y ${facturas.length - 5} más</i>`)
+  const formas = await formasPago(cuentaId, rows.map(r => r.proveedor))
+  const facturas: FacturaResumen[] = rows.map(r => ({ ...r, forma: formas.get(r.proveedor) ?? 'desconocida' }))
+  const hoy = new Date().toISOString().slice(0, 10)
+  const cuentas = await coberturaPorCuenta(hoy, cuentaId, true).catch(() => null)
+  const hayCobertura = (f: string) => hayCoberturaTotal(cuentas, f)
+  const plan = planificarAviso(facturas, hoy, hayCobertura)
+  if (!hayAviso(plan)) return false
 
-  const texto = `📋 <b>${facturas.length} facturas pendientes esta semana:</b>\n${lineas.join('\n')}\n<b>Total: ${eur(total)}</b>`
-  await tgAvisoBotones('facturas.pagos-resumen-semanal', texto, [[
-    { texto: '✅ Pagar todo', callback: `pago_pagartodo:${cuentaId}` },
-    { texto: '📋 Revisar una a una', callback: `pago_revisarunauna:${cuentaId}` },
-  ]])
+  // Botones de pago SOLO si hay transferencias; nunca para lo que se cobra solo.
+  const botones = plan.manuales.length > 0
+    ? [[
+        { texto: '✅ Pagar las transferencias', callback: `pago_pagartodo:${cuentaId}` },
+        { texto: '📋 Revisar una a una', callback: `pago_revisarunauna:${cuentaId}` },
+      ]]
+    : []
+  await tgAvisoBotones('facturas.pagos-resumen-semanal', componerTexto(plan), botones)
   return true
 }
 

@@ -282,7 +282,7 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'facturas.pagos-resumen-semanal', categoria: 'facturas',
     titulo: 'Pagos pendientes de la semana',
-    que: 'Lo que queda por pagar, con botón para pagarlo todo.',
+    que: 'Solo lo que exige transferencia a mano (lo domiciliado o de tarjeta va en una línea resumen), con botón para pagarlo.',
     cuando: 'Semanal',
   },
   {
