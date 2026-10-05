@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(05/10/2026)** — agente-facturas/divisa: columna aplicada en BD y el extractor la rellena desde #4284; las 79 facturas previas (anterior 05/10) siguen null (cubiertas por lista USD en casar-cargos.ts).
+
 **(05/10/2026)** — correduría: al «Pedir precio» (auto/moto/hogar/vida/decesos/salud `*-nuevo`) el PRESUPUESTO se prepara SOLO en `after()` (decisión de Alberto: «opción B»). `lib/presupuesto-tras-tarificar.ts`: idempotente (no duplica si hay uno vivo), nunca rompe la respuesta, gratis (prepararPresupuesto solo escribe BD + GET de coberturas; no envía nada). Botón manual sigue para re-preparar. También al retarificar (pantalla del corredor: operador/codeoscopic/retarificar y cartera/polizas/[id]/retarificar) y en cartera/cliente/[id]/hogar-nuevo. Causa: Estibaliz pidió precios y no pulsó «Preparar presupuesto» → la tarjeta parecía vacía.
 
 **(05/10/2026)** — agente-facturas/forma-pago: aviso semanal clasifica por forma de pago (transferencia/automático/plataforma/desconocida) y botones de pago solo para transferencias. Conciliación arreglada: asignación global 1:1 (antes 3 Anthropic de 170€ perdían por cargo compartido); USD ±15% tolerancia (no ±3%). Pendientes: migración `facturas_proveedor.divisa`, feeds PSD2 parados (Kutxabank 31/07, N26 03/07, Pilar fin junio), 4 cargos Anthropic 170€ sin factura, 19 duplicados gastos, 60 gastos sin negocio, 82 sin IVA.
