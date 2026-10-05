@@ -77,7 +77,7 @@ cifras con `eur()`, `null` = no se sabe (no `?? 0`).
 
 ## Pendientes críticos (05/10/2026)
 
-1. **Migración BD sin aplicar:** `prisma/sql/2026-10-05_facturas_proveedor_divisa.sql` (añadir columna `divisa` a `facturas_proveedor`).
+1. **Divisa en facturas:** Columna aplicada en BD (05/10/2026). Extractor guarda ISO 4217 desde INVOICE_SYSTEM (apps/plataforma/lib/ai-client.ts) y normalizarDivisa() (apps/plataforma/lib/agente-facturas/divisa.ts); null si no reconoce. 79 facturas previas al 05/10 quedan null, cubiertas por RE_USD en casar-cargos.ts.
 2. **Feeds PSD2 parados y requieren renovación consentimiento:**
    - Tarjeta Kutxabank desde 31/07/2026
    - N26 desde 03/07/2026

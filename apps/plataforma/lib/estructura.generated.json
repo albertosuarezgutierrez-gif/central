@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-05T09:46:06Z",
+  "generadoEn": "2026-10-05T12:04:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 187
+        "evidencias": 189
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 118
+        "evidencias": 121
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 147
+        "evidencias": 149
       },
       "rrhh": {
         "estado": "no",
@@ -2310,7 +2310,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 92
+        "evidencias": 95
       },
       "asegura-web": {
         "estado": "usado",
@@ -4153,6 +4153,8 @@
       "/api/datos",
       "/api/datos/documento",
       "/api/documento/dni",
+      "/api/flota/jefe",
+      "/api/flota/vehiculo",
       "/api/hojas",
       "/api/hojas/[id]",
       "/api/invitaciones",
@@ -6648,7 +6650,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1557,
+    "apis": 1559,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

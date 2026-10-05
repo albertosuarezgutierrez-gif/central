@@ -32,6 +32,7 @@
 import {
   alcanceConcedible,
   alcancesConcedibles,
+  ALCANCE_FLOTA,
   esAlcance,
   estadoAutorizacion,
   pideRevision,
@@ -497,6 +498,9 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
     // él esto devuelve las autorizaciones de la correduría entera.
     prisma.portalAutorizacion.findMany({
       where: {
+        // 🚨 El jefe de flota (`flota`, 05/10/2026) NO es un acceso a «tus seguros»: se nombra,
+        // acepta y retira en `/flota`. Aquí se pintaría con un alcance que esta pantalla no conoce.
+        alcance: { not: ALCANCE_FLOTA },
         OR: [
           { otorganteClienteId: { in: misIds } },
           { autorizadoClienteId: { in: recibidorIds } },

@@ -105,7 +105,7 @@ Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
 {"ramo":string|null,"compania":string|null,"cifCompania":string|null,"codigoEntidadDgs":string|null,"numeroPoliza":string|null,
 "fechaEfecto":"YYYY-MM-DD"|null,"fechaVencimiento":"YYYY-MM-DD"|null,"primaAnual":number|null,
 "tomador":string|null,"dni":string|null,"fechaNacimiento":"YYYY-MM-DD"|null,
-"matricula":string|null,"marca":string|null,"modelo":string|null,"version":string|null,
+"matricula":string|null,"marca":string|null,"modelo":string|null,"version":string|null,"combustible":string|null,
 "fechaMatriculacion":"YYYY-MM-DD"|null,"fechaCarnet":"YYYY-MM-DD"|null,
 "aniosSinSiniestros":number|null,"siniestrosUltimos5":number|null,
 "direccion":string|null,"cp":string|null,"localidad":string|null,"metrosCuadrados":number|null,
@@ -144,7 +144,10 @@ Reglas, por orden de importancia:
 - "primaAnual" es el TOTAL que paga el cliente (con recargos, IPS y Consorcio),
   no la prima neta. Si el pago es fraccionado, el año completo, no el fraccionamiento.
 - "capitalContinente" y "capitalContenido" en euros, solo el número.
-- Los campos de VEHÍCULO (matricula, marca, modelo, version, fechaMatriculacion,
+- "combustible" es el tipo de combustible/motor del vehículo tal como lo escribe el documento
+  (p. ej. "Gasolina", "Diésel", "Eléctrico", "Híbrido"). Si no aparece, null: NO lo deduzcas de la
+  marca ni del modelo.
+- Los campos de VEHÍCULO (matricula, marca, modelo, version, combustible, fechaMatriculacion,
   fechaCarnet, aniosSinSiniestros, siniestrosUltimos5) solo tienen sentido si el
   ramo es auto o moto: en cualquier otro caso, todos a null.
 - Los campos de VIVIENDA (direccion, cp, localidad, metrosCuadrados,

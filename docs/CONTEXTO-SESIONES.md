@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(05/10/2026)** — Grupo ASegura, plan B2B decidido: fases grupo (3-5 empresas propias, piloto) → flotas pequeñas → gremios/asociaciones → franquicias; ciber como gancho comercial; SIN envíos en frío. Implementado el MÍNIMO DE EMPRESA del portal (Fase 0, sin PR aún): `/flota` en asegura-portal — vehículos con póliza viva EN VIGOR de la sociedad, vencimiento (con recibos) y próxima ITV calculada (`flota.ts` puro en module-seguros-portal; ITV sin matriculación = «no lo sabemos», nunca «al día»). Ancla `portal_bien` de EMPRESA (`cliente_id` + matrícula normalizada + `fecha_matriculacion`). Jefe de flota = `portal_autorizacion` alcance `flota` (NO es `Alcance`: los lectores viejos lo ignoran y no abre la bóveda), lo nombra solo el Dueño entre relacionados de la ficha, doble aceptación. Administración NO ve la flota (coherente con 25/09). Cepos: `flota.test.ts` + `test/regression-portal-flota.test.ts`.
+✅ `apps/asegura-portal/prisma/sql/2026-10-05_portal_flota_empresa.sql` APLICADA en `central` (05/10, antes del merge de #4289). Pendiente: conductor con acceso que caduca, QR del vehículo→WhatsApp, multi-CIF, dar parte desde la flota, invitar jefe por correo (hoy solo fichas relacionadas con vínculo), mostrar `flota` en /correduria (cartera-relaciones lo ignora).
+**(05/10/2026)** — agente-facturas/divisa: columna aplicada en BD y el extractor la rellena desde #4284; las 79 facturas previas (anterior 05/10) siguen null (cubiertas por lista USD en casar-cargos.ts).
+
 **(05/10/2026)** — correduría: al «Pedir precio» (auto/moto/hogar/vida/decesos/salud `*-nuevo`) el PRESUPUESTO se prepara SOLO en `after()` (decisión de Alberto: «opción B»). `lib/presupuesto-tras-tarificar.ts`: idempotente (no duplica si hay uno vivo), nunca rompe la respuesta, gratis (prepararPresupuesto solo escribe BD + GET de coberturas; no envía nada). Botón manual sigue para re-preparar. También al retarificar (pantalla del corredor: operador/codeoscopic/retarificar y cartera/polizas/[id]/retarificar) y en cartera/cliente/[id]/hogar-nuevo. Causa: Estibaliz pidió precios y no pulsó «Preparar presupuesto» → la tarjeta parecía vacía.
 
 **(05/10/2026)** — agente-facturas/forma-pago: aviso semanal clasifica por forma de pago (transferencia/automático/plataforma/desconocida) y botones de pago solo para transferencias. Conciliación arreglada: asignación global 1:1 (antes 3 Anthropic de 170€ perdían por cargo compartido); USD ±15% tolerancia (no ±3%). Pendientes: migración `facturas_proveedor.divisa`, feeds PSD2 parados (Kutxabank 31/07, N26 03/07, Pilar fin junio), 4 cargos Anthropic 170€ sin factura, 19 duplicados gastos, 60 gastos sin negocio, 82 sin IVA.
@@ -1069,6 +1073,12 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Reutiliza `conversaciones`/`mensajes`/`channel_inbound_messages` heredadas; SQL `2026-10-05b_whatsapp_crm.sql` SIN aplicar (gate DDL). Flags `ASEGURA_WHATSAPP_ACTIVO`/`_IA_ACTIVO` apagados.
 - Número personal: desconocidos quedan `pendiente_clasificar`; si la IA dice personal → `descartada_personal` + purga de texto.
 - Pendiente: Alberto crea app Meta + Coexistence (disponibilidad en ES sin confirmar), envs, aplicar SQL, UI en `/correduria`. No tocar Google Contacts (#4286). Doc: `apps/asegura/docs/WHATSAPP.md`.
+
+## (05/10/2026) Correduría: el vehículo de la póliza escaneada ya precarga el presupuesto de auto
+- REGLA ÚNICA: el riesgo se rellena UNA vez (documento o corredor) en `info_riesgo.datosVehiculo`; toda pantalla de auto lo lee de ahí y no re-pide lo que consta (skill correduria-crm punto 22).
+- Al crear oportunidad desde documento: OCR (ahora con combustible) → `datosVehiculoDesdeDocumento` (module-seguros) → ids de marca/modelo con `emparejar()` contra catálogo GRATIS; motor/versión solo si candidata única; catálogo caído = sin ids. Nunca búsqueda por matrícula (créditos).
+- AutoNuevo precarga en cascada PARCIAL (`lib/correduria/precarga-vehiculo.ts`), marca «precargado · sin confirmar» mientras `confirmadoAt` null. Oportunidad ya abierta: no pisa un `datosVehiculo` existente ni tapa un coche antiguo (`matricula`/`vehiculo`) salvo misma matrícula (`puedeEscribirDatosVehiculo`). PR #4287.
+- Pendiente: ver con una póliza real que los nombres de `/car/engine-types` casan con el combustible traducido.
 
 ## (05/10/2026) RRHH: ubicación OBLIGATORIA al fichar (petición de Pilar)
 - `POST /api/e/fichaje` (solo empleado) rechaza 400 `ubicacion_requerida` sin lat/lng válidos; validador puro `apps/rrhh/lib/ubicacion-fichaje.ts` + 15 tests (cepo visto en rojo).

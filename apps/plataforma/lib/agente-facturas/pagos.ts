@@ -22,6 +22,7 @@ import { baseUrl } from '@/lib/base-url'
 import type { FacturaProveedor } from '@central/module-pagos'
 import { clasificarFormaPago, claveProveedor, claveUtil, clavesDeTitulares, CLAVES_GENERICAS, RE_CONCEPTO_TRANSFERENCIA_SQL, planificarAviso, hayCoberturaTotal, componerTexto, hayAviso, type FormaPago, type FacturaResumen } from './forma-pago'
 import { asignarCargos, toleranciaFactura } from './casar-cargos'
+import { normalizarDivisa } from './divisa'
 import { coberturaPorCuenta } from './anomalias'
 
 const ETIQUETA_GMAIL = 'Facturas/Proveedor'
@@ -224,6 +225,8 @@ export async function escanearNuevasFacturas(
     const fechaFactura = (datos.fecha as string | null) || correo.fecha
     const fechaVenc = (datos.fecha_vencimiento as string | null) || null
     const ibanProv = (datos.iban as string | null) || null
+    // Divisa del importe guardado (= `total`). null si la IA no la da o no es válida: nunca 'EUR' por defecto.
+    const divisa = normalizarDivisa(datos.divisa)
 
     // Dedupe por número de factura (la constraint del índice único lo garantiza).
     // Si hay conflicto, skip silencioso.
@@ -232,12 +235,12 @@ export async function escanearNuevasFacturas(
       const res = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
         INSERT INTO facturas_proveedor
           (cuenta_id, proveedor, concepto, importe, fecha_factura, fecha_vencimiento,
-           numero_factura, iban_proveedor, estado, gmail_uid, iva_porcentaje, cuota_iva, origen)
+           numero_factura, iban_proveedor, estado, gmail_uid, iva_porcentaje, cuota_iva, origen, divisa)
         VALUES
           (${cuentaId}::uuid, ${proveedor}, ${concepto}, ${importe}::numeric,
            ${fechaFactura}::date, ${fechaVenc ? fechaVenc : null}::date,
            ${numeroFactura}, ${ibanProv}, 'nueva', ${correo.uid}, ${ivaPct}::numeric,
-           ${cuotaIva}::numeric, 'gmail')
+           ${cuotaIva}::numeric, 'gmail', ${divisa})
         ON CONFLICT (cuenta_id, proveedor, numero_factura)
           WHERE numero_factura IS NOT NULL
           DO NOTHING
