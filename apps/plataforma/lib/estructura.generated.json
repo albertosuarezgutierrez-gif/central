@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-05T12:04:59Z",
+  "generadoEn": "2026-10-05T12:49:33Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -686,7 +686,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 189
+        "evidencias": 196
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 149
+        "evidencias": 151
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 48
+        "evidencias": 51
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3977,9 +3977,12 @@
       "/api/cron/avisos-web",
       "/api/cron/coberturas-backfill",
       "/api/cron/felicitaciones",
+      "/api/cron/google-contactos",
       "/api/cron/polizas-pdf",
       "/api/cron/revision-anual",
       "/api/cron/siniestros-vinculo",
+      "/api/google-contactos/callback",
+      "/api/google-contactos/conectar",
       "/api/operador/actividad",
       "/api/operador/actividad-nueva",
       "/api/operador/anulaciones",
@@ -4064,6 +4067,11 @@
       "/api/operador/export-rgpd",
       "/api/operador/formacion",
       "/api/operador/formacion/baja",
+      "/api/operador/google-contactos",
+      "/api/operador/google-contactos/activar",
+      "/api/operador/google-contactos/desconectar",
+      "/api/operador/google-contactos/revision",
+      "/api/operador/google-contactos/simular",
       "/api/operador/huerfanas",
       "/api/operador/impagados",
       "/api/operador/informe-mediacion",
@@ -4075,6 +4083,7 @@
       "/api/operador/leer-documento",
       "/api/operador/libro-registro",
       "/api/operador/linea-base",
+      "/api/operador/llamada",
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/comparar",
       "/api/operador/oportunidad/de-poliza",
@@ -5060,6 +5069,8 @@
       "/api/correduria/formacion/baja",
       "/api/correduria/fugas",
       "/api/correduria/garantias-filtradas",
+      "/api/correduria/google-contactos-revision",
+      "/api/correduria/google-contactos-sync",
       "/api/correduria/impagados",
       "/api/correduria/informe-mediacion",
       "/api/correduria/ingesta",
@@ -5596,6 +5607,9 @@
       "seguros.formacion",
       "seguros.formacion_baja",
       "seguros.gestiones",
+      "seguros.google_contactos_conexion",
+      "seguros.google_contactos_revision",
+      "seguros.google_contactos_vinculo",
       "seguros.historial_interno",
       "seguros.interviniente_purga_log",
       "seguros.ipid",
@@ -6060,6 +6074,11 @@
       "id": "github-vigia",
       "name": "github-vigia",
       "description": "Agente PROGRAMADO mensual (día 15) que vigila el ecosistema GitHub/OSS — releases de los repos curados en docs/VIGIA-OSS.md, descubrimiento por vertical, y deps npm desactualizadas o con CVE. Actualiza docs/VIGIA-OSS.md, Telegram + PR draft solo para bumps seguros. Úsala si Alberto pide \"revisa las novedades de GitHub / del ecosistema\". Sin secretos."
+    },
+    {
+      "id": "google-contactos",
+      "name": "google-contactos",
+      "description": ">"
     },
     {
       "id": "ia-rest-maestro",
@@ -6649,8 +6668,8 @@
     "verticales": 13,
     "packages": 42,
     "capacidades": 23,
-    "skills": 43,
-    "apis": 1559,
+    "skills": 44,
+    "apis": 1570,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

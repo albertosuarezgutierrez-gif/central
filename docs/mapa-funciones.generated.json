@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-05T12:04:59Z",
-  "sha": "9bac6d16f79e4499c53db3f4b3ee4738e0ff167f",
+  "generadoEn": "2026-10-05T12:49:33Z",
+  "sha": "74ad4b0b7a6436dd9ba1d1ab2b3a9d115d029cc1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -15115,6 +15115,27 @@
       "hash": "fc90e55875f9"
     },
     {
+      "ruta": "apps/asegura/app/api/cron/google-contactos/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 23,
+          "resumen": "GET /api/cron/google-contactos — sincronización horaria CRM → Google Contacts (05/10/2026). El CRM manda: crea/actualiza los contactos del grupo «Grupo ASegura» con la selección del .vcf (clientes en "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/google-contactos",
+      "hash": "d65d07e560db"
+    },
+    {
       "ruta": "apps/asegura/app/api/cron/polizas-pdf/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -15176,6 +15197,56 @@
       "tablas": [],
       "rutaApi": "/api/cron/siniestros-vinculo",
       "hash": "611ea88f4af9"
+    },
+    {
+      "ruta": "apps/asegura/app/api/google-contactos/callback/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "pagina",
+          "kind": "function",
+          "exportada": false,
+          "params": "titulo: string, texto: string, status: number",
+          "retorno": "NextResponse",
+          "linea": 10
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "GET /api/google-contactos/callback — vuelta del consentimiento de Google (05/10/2026). Sesión + ámbito, `state` firmado + cookie del nonce + misma cuenta y correduría; solo entonces se canjea el códig"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/google-contactos/callback",
+      "hash": "16b38ab294c3"
+    },
+    {
+      "ruta": "apps/asegura/app/api/google-contactos/conectar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "GET /api/google-contactos/conectar — arranca el OAuth de Google Contacts (05/10/2026). Se abre en el NAVEGADOR de Alberto con su sesión de asegura (no es una ruta del puerto: el consentimiento de Goog"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/google-contactos/conectar",
+      "hash": "22f1594f4573"
     },
     {
       "ruta": "apps/asegura/app/api/operador/actividad-nueva/route.ts",
@@ -17020,7 +17091,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/operador/contactos-movil",
-      "hash": "3f379b449b9b"
+      "hash": "e5819fa8aa81"
     },
     {
       "ruta": "apps/asegura/app/api/operador/correo/resolver/route.ts",
@@ -17275,6 +17346,75 @@
       "hash": "3d3f1b766374"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/google-contactos/activar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/google-contactos/activar",
+      "hash": "6402ef1439c2"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/google-contactos/desconectar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/google-contactos/desconectar",
+      "hash": "3603e8ccb348"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/google-contactos/revision/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "GET /api/operador/google-contactos/revision[?despuesDe=<id>] — la cola de revisión de la sincronización con Google Contacts: 50 pendientes por página, por CURSOR (`siguiente`), con lo que había en Goo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/google-contactos/revision",
+      "hash": "a31f80a31728"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/google-contactos/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "GET /api/operador/google-contactos — estado de la conexión con Google Contacts: cuenta, última sincronización, vínculos y revisiones pendientes. Nunca el token."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/google-contactos",
+      "hash": "7a5621092e66"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/google-contactos/simular/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/google-contactos/simular",
+      "hash": "289423557621"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/huerfanas/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -17513,6 +17653,15 @@
       "tablas": [],
       "rutaApi": "/api/operador/linea-base",
       "hash": "8c8f2dd5cbc8"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/llamada/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/llamada",
+      "hash": "871059dfafae"
     },
     {
       "ruta": "apps/asegura/app/api/operador/oportunidad/comparar/route.ts",
@@ -29743,6 +29892,49 @@
       "hash": "3d7407472067"
     },
     {
+      "ruta": "apps/asegura/lib/contactos-google.ts",
+      "ambito": "apps/asegura",
+      "resumen": "La selección que se sincroniza con Google Contacts (05/10/2026): la del .vcf del móvil (`contactosMovil`: cartera en vigor + leads de Vencimientos) más lo que solo va a Google: · B · la NOTA (ficha rápida: pólizas en vigor —ramo + compañía—, próximo vencimiento) y la URL de la ficha en plataforma (`",
+      "exporta": [
+        "hoyMadrid",
+        "urlFichaPlataforma",
+        "seleccionGoogle"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 29
+        },
+        {
+          "nombre": "urlFichaPlataforma",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string",
+          "retorno": "string",
+          "linea": 33
+        },
+        {
+          "nombre": "seleccionGoogle",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, hoy: string = hoyMadrid()",
+          "retorno": "Promise<SeleccionGoogle>",
+          "linea": 38
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "companias_dgs",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "8d9d47d2e84e"
+    },
+    {
       "ruta": "apps/asegura/lib/contactos-movil.ts",
       "ambito": "apps/asegura",
       "resumen": "Contactos para el móvil (23/09/2026): la cartera EN VIGOR y los leads que se están trabajando en Vencimientos, con su teléfono y correo ya descifrados, para que plataforma arme el .vcf (`libroVcard` de `@central/module-seguros`). Solo lo que hace falta para reconocer a quien llama: nombre, teléfono,",
@@ -29756,7 +29948,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ContactosMovil>",
-          "linea": 24
+          "linea": 26
         }
       ],
       "tablas": [
@@ -29764,7 +29956,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "f023dc4a6333"
+      "hash": "242d66f461b4"
     },
     {
       "ruta": "apps/asegura/lib/correo-aviso-acceso.ts",
@@ -31993,6 +32185,389 @@
       "hash": "92614a88bf69"
     },
     {
+      "ruta": "apps/asegura/lib/google-contactos-revision.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Cola de revisión de la sincronización con Google Contacts (05/10/2026): leerla y resolverla. Qué hace cada botón lo decide `efectoResolucion` (puro, `@central/module-seguros`). Aquí solo BD. 🚨 Ninguna resolución toca `google_contactos_vinculo` ni Google: «Mantener CRM» sobre un contacto que Alberto",
+      "exporta": [
+        "listarRevisiones",
+        "resolverRevision"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerPropuesta",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: string | null",
+          "retorno": "",
+          "linea": 34
+        },
+        {
+          "nombre": "listarRevisiones",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, despuesDe: string | null",
+          "retorno": "Promise<",
+          "linea": 61,
+          "resumen": "Pendientes, de la más reciente a la más antigua, de 50 en 50. Paginación por CLAVE (`creado_en`, `id`) de la última que se vio, no por desplazamiento ni con el `cursor` de Prisma: al resolver tarjetas"
+        },
+        {
+          "nombre": "resolverRevision",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, p: { id: string; accion: AccionRevision; actor: string; forzar: boolean },",
+          "retorno": "Promise<ResultadoResolucion>",
+          "linea": 103
+        },
+        {
+          "nombre": "liberarClaim",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, id: string, actor: string, resueltoEn: Date",
+          "retorno": "Promise<void>",
+          "linea": 160,
+          "resumen": "Deshace un claim propio (mismo actor y mismo instante) si el alta del lead no salió."
+        }
+      ],
+      "tablas": [
+        "google_contactos_revision"
+      ],
+      "rutaApi": null,
+      "hash": "39d977d09f27"
+    },
+    {
+      "ruta": "apps/asegura/lib/google-contactos.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Sincronización CRM ↔ Google Contacts: la parte con BD y red (05/10/2026). El QUÉ (plan de diff, conflictos, dedup por E.164, límite de 25.000) es puro y vive en `@central/module-seguros/google-contactos`. Aquí solo: leer la selección y los vínculos, hablar con Google (`lib/google-people.ts`) y apunt",
+      "exporta": [
+        "credencialesGoogle",
+        "secretoEstadoGoogle",
+        "guardarConexion",
+        "estadoGoogleContactos",
+        "columnasDeClave",
+        "claveDeFila",
+        "whereClaves",
+        "sincronizarGoogleContactos",
+        "simularGoogleContactos",
+        "activarGoogleContactos",
+        "desconectarGoogleContactos"
+      ],
+      "funciones": [
+        {
+          "nombre": "credencialesGoogle",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Credenciales",
+          "linea": 34
+        },
+        {
+          "nombre": "secretoEstadoGoogle",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 42
+        },
+        {
+          "nombre": "cifrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 46
+        },
+        {
+          "nombre": "descifrarToken",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: string",
+          "retorno": "string",
+          "linea": 53
+        },
+        {
+          "nombre": "saneado",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "string",
+          "linea": 59,
+          "resumen": "Mensaje de error apto para la BD: sin nada que parezca un token."
+        },
+        {
+          "nombre": "guardarConexion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, t: TokensIniciales, conectadoPor: string",
+          "retorno": "Promise<void>",
+          "linea": 66
+        },
+        {
+          "nombre": "estadoGoogleContactos",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<EstadoGoogleContactos>",
+          "linea": 121
+        },
+        {
+          "nombre": "fusionesDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, ids: string[]",
+          "retorno": "Promise<Map<string, string>>",
+          "linea": 169,
+          "resumen": "absorbida → en quién se fusionó, siguiendo las CADENAS (A→B y después B→C): sin el segundo salto, el vínculo de A no lo heredaba C y se creaba un contacto duplicado."
+        },
+        {
+          "nombre": "columnasDeClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string",
+          "retorno": "",
+          "linea": 193,
+          "resumen": "La clave del plan → las dos columnas de la BD (exactamente una con valor; CHECK en BD)."
+        },
+        {
+          "nombre": "claveDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { clienteId: string | null; companiaContactoId: string | null }",
+          "retorno": "string",
+          "linea": 199
+        },
+        {
+          "nombre": "whereClaves",
+          "kind": "function",
+          "exportada": true,
+          "params": "claves: readonly string[]",
+          "retorno": null,
+          "linea": 204,
+          "resumen": "`where` de Prisma para varias claves (mezcla de fichas y compañías)."
+        },
+        {
+          "nombre": "leerVinculos",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<Vinculo[]>",
+          "linea": 211
+        },
+        {
+          "nombre": "guardarVinculo",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, v: { clienteId: string; resourceName: string; etag: string | null; hash: string; origen: OrigenVinculo }, sustituye: string[] = []",
+          "retorno": "Promise<void>",
+          "linea": 220,
+          "resumen": "Upsert por clave (el de Prisma no admite una clave única con NULL): borrar + crear, juntos."
+        },
+        {
+          "nombre": "encolarRevisiones",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, plan: Plan",
+          "retorno": "Promise<number>",
+          "linea": 233
+        },
+        {
+          "nombre": "sincronizarGoogleContactos",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<ResultadoSync>",
+          "linea": 248
+        },
+        {
+          "nombre": "simularGoogleContactos",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<ResultadoSimulacion>",
+          "linea": 426,
+          "resumen": "Qué haría la sincronización, SIN escribir en Google ni en vínculos/cola. Lee la agenda ENTERA (listado completo, sin syncToken) y la etiqueta solo si ya existe (no la crea). Lo único que escribe es `s"
+        },
+        {
+          "nombre": "activarGoogleContactos",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, actor: string",
+          "retorno": "Promise<ResultadoActivacion>",
+          "linea": 463,
+          "resumen": "Marca «simulación revisada: sincroniza». Exige haber simulado con ESTA conexión."
+        },
+        {
+          "nombre": "desconectarGoogleContactos",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, p: { borrarContactos: boolean }",
+          "retorno": "Promise<ResultadoDesconexion>",
+          "linea": 486,
+          "resumen": "Revoca en Google, borra el token y los vínculos. Con `borrarContactos`, borra antes los contactos del grupo que CREÓ el CRM (`aBorrarAlDesconectar`); los vinculados por teléfono/id y los que Alberto a"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "48d9ea61a13c"
+    },
+    {
+      "ruta": "apps/asegura/lib/google-oauth-estado.ts",
+      "ambito": "apps/asegura",
+      "resumen": "`state` del OAuth de Google Contacts, FIRMADO (HMAC-SHA256) y atado al navegador (05/10/2026). Anti-CSRF de verdad, no solo «un valor aleatorio»: 1. Firma con `GOOGLE_CONTACTOS_STATE_SECRET` → nadie fabrica un `state` válido. 2. Lleva un `nonce` que TAMBIÉN va en una cookie httpOnly del mismo navega",
+      "exporta": [
+        "nuevoNonce",
+        "firmarEstado",
+        "verificarEstado"
+      ],
+      "funciones": [
+        {
+          "nombre": "b64",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "b: Buffer | string",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "firma",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: string, secreto: string",
+          "retorno": "string",
+          "linea": 26
+        },
+        {
+          "nombre": "nuevoNonce",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 30
+        },
+        {
+          "nombre": "firmarEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Omit<DatosEstado, 'caduca'>, secreto: string, ahora: number = Date.now()",
+          "retorno": "string",
+          "linea": 34
+        },
+        {
+          "nombre": "iguales",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": "boolean",
+          "linea": 40
+        },
+        {
+          "nombre": "verificarEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "state: string | null, p: { secreto: string; nonceCookie: string | null | undefined; cuentaId: string; correduriaId: string; ahora?: number },",
+          "retorno": "ResultadoEstado",
+          "linea": 50,
+          "resumen": "Verifica el `state` que vuelve de Google contra el secreto, la cookie del navegador y la sesión actual. Cualquier duda → `ok: false` (fail-closed)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "360511d3b97a"
+    },
+    {
+      "ruta": "apps/asegura/lib/google-people.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Cliente mínimo de Google OAuth + People API por `fetch` (05/10/2026). Sin `googleapis`: son nueve llamadas y el paquete entero pesa decenas de MB en la función de Vercel. 🚨 Los tokens NUNCA salen de aquí en un mensaje: `ErrorGoogle` lleva el status y el cuerpo de Google (que no los incluye), jamás ",
+      "exporta": [
+        "urlAutorizacion",
+        "canjearCodigo",
+        "emailDeIdToken",
+        "accesoDesdeRefresh",
+        "debeRevocarAnterior",
+        "revocar"
+      ],
+      "funciones": [
+        {
+          "nombre": "llamar",
+          "kind": "function",
+          "exportada": false,
+          "params": "red: Red, url: string, init: RequestInit, donde: string",
+          "retorno": "Promise<Response>",
+          "linea": 47
+        },
+        {
+          "nombre": "json",
+          "kind": "function",
+          "exportada": false,
+          "params": "red: Red, url: string, init: RequestInit, donde: string",
+          "retorno": "Promise<T>",
+          "linea": 59
+        },
+        {
+          "nombre": "form",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "o: Record<string, string>",
+          "retorno": null,
+          "linea": 65
+        },
+        {
+          "nombre": "urlAutorizacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Credenciales, state: string",
+          "retorno": "string",
+          "linea": 73
+        },
+        {
+          "nombre": "canjearCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Credenciales, code: string, red: Red = redPorDefecto",
+          "retorno": "Promise<TokensIniciales>",
+          "linea": 90,
+          "resumen": "Canjea el `code`. Sin refresh token o sin el scope de contactos → lanza (no se guarda nada)."
+        },
+        {
+          "nombre": "emailDeIdToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "idToken: string | undefined",
+          "retorno": "string | null",
+          "linea": 104,
+          "resumen": "El email del `id_token`. Llega por TLS directamente del endpoint de token de Google, así que (OIDC §3.1.3.7) no hace falta verificar la firma para LEERLO; solo se usa para informar."
+        },
+        {
+          "nombre": "accesoDesdeRefresh",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Credenciales, refreshToken: string, red: Red = redPorDefecto",
+          "retorno": "Promise<string>",
+          "linea": 116
+        },
+        {
+          "nombre": "debeRevocarAnterior",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { cuentaAnterior: string | null; cuentaNueva: string | null; tokenAnterior: string; tokenNuevo: string }",
+          "retorno": "boolean",
+          "linea": 138,
+          "resumen": "¿Se revoca el refresh token ANTERIOR al reconectar? Solo si era de OTRA cuenta de Google. `oauth2/revoke` retira el GRANT entero (cliente + usuario), no un token suelto: revocar el viejo de la MISMA c"
+        },
+        {
+          "nombre": "revocar",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, red: Red = redPorDefecto",
+          "retorno": "Promise<void>",
+          "linea": 144,
+          "resumen": "Revoca en Google. Un 400 «invalid_token» es que YA estaba revocado: cuenta como hecho."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cb8d23efce60"
+    },
+    {
       "ruta": "apps/asegura/lib/ia.ts",
       "ambito": "apps/asegura",
       "resumen": "IA de texto de la correduría enrutada por la PASARELA central (vive en plataforma), igual que rrhh (`apps/rrhh/lib/ai.ts`). Por la pasarela cada llamada queda en `ai_usos` con app='asegura' y le aplican el tope diario y el mensual (`ia_presupuestos`); una llamada directa a `aiComplete` gasta saldo d",
@@ -32561,6 +33136,29 @@
       ],
       "rutaApi": null,
       "hash": "c76fc3d9e7f5"
+    },
+    {
+      "ruta": "apps/asegura/lib/llamada.ts",
+      "ambito": "apps/asegura",
+      "resumen": "¿Quién llama? (05/10/2026). Búsqueda por teléfono SOLO por índice ciego y exacta: se prueban las variantes de dígitos con las que el teléfono puede estar hasheado (`34600…`, `600…`, `0034600…`) en `clientes` y en `cliente_telefonos`. Solo lectura; devuelve nombre y si es cliente en vigor o lead. Ni ",
+      "exporta": [
+        "quienLlama"
+      ],
+      "funciones": [
+        {
+          "nombre": "quienLlama",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, tel: string",
+          "retorno": "Promise<ResultadoLlamada>",
+          "linea": 30
+        }
+      ],
+      "tablas": [
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "df635b10e073"
     },
     {
       "ruta": "apps/asegura/lib/lote-invitacion.ts",
@@ -84344,7 +84942,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 92
+          "linea": 94
         },
         {
           "nombre": "fmtFecha",
@@ -84352,7 +84950,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 97,
+          "linea": 99,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -84361,7 +84959,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 147
+          "linea": 149
         },
         {
           "nombre": "CorreduriaClient",
@@ -84369,7 +84967,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 149
+          "linea": 151
         },
         {
           "nombre": "SubMas",
@@ -84377,7 +84975,7 @@
           "exportada": false,
           "params": "{ id, titulo, Icono, primero = false }: { id: BloqueMas titulo: string Icono: typeof Antenna primero?: boolean }",
           "retorno": null,
-          "linea": 731
+          "linea": 735
         },
         {
           "nombre": "CarteraResumen",
@@ -84385,7 +84983,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 757
+          "linea": 761
         },
         {
           "nombre": "btnMini",
@@ -84393,7 +84991,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 874,
+          "linea": 878,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -84402,12 +85000,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 892
+          "linea": 896
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3a48b21361b"
+      "hash": "b0ad230a7973"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -85052,6 +85650,142 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "54fe2dfbcea3"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/google-revision-lista.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Estado de la lista de la cola de revisión de Google Contacts (05/10/2026). Puro, con test. «Ver más» de 50 en 50 por CURSOR (`siguiente` del puerto). Lo que hay que evitar: · que una tarjeta resuelta reaparezca al cargar la página siguiente (se deduplica por id); · que «Ver más» DESAPAREZCA porque s",
+      "exporta": [
+        "primeraPagina",
+        "anadirPagina",
+        "quitarResuelta",
+        "hayMas"
+      ],
+      "funciones": [
+        {
+          "nombre": "primeraPagina",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { revisiones: T[]; siguiente: string | null; pendientes: number }",
+          "retorno": "ListaRevision<T>",
+          "linea": 18
+        },
+        {
+          "nombre": "anadirPagina",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: ListaRevision<T>, p: { revisiones: T[]; siguiente: string | null; pendientes: number }",
+          "retorno": "ListaRevision<T>",
+          "linea": 22
+        },
+        {
+          "nombre": "quitarResuelta",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: ListaRevision<T>, id: string",
+          "retorno": "ListaRevision<T>",
+          "linea": 27
+        },
+        {
+          "nombre": "hayMas",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: ListaRevision<TarjetaRevision>",
+          "retorno": "boolean",
+          "linea": 33
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fd2ce2fb7144"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/GoogleContactosRevision.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GoogleContactosRevision"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 39
+        },
+        {
+          "nombre": "pagina",
+          "kind": "function",
+          "exportada": false,
+          "params": "j: unknown",
+          "retorno": "Pagina | null",
+          "linea": 43
+        },
+        {
+          "nombre": "GoogleContactosRevision",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 53
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2c4962565bbe"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/GoogleContactosSimulacion.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GoogleContactosSimulacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "numero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 25
+        },
+        {
+          "nombre": "Seccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, ayuda, lista, fila }: { titulo: string; ayuda: string; lista: Lista<T>; fila: (x: T) => React.ReactNode }",
+          "retorno": null,
+          "linea": 36
+        },
+        {
+          "nombre": "Ficha",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ x }: { x: EjemploFicha }",
+          "retorno": null,
+          "linea": 55
+        },
+        {
+          "nombre": "GoogleContactosSimulacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 69
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a19acd1f8252"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Historial.tsx",
@@ -98520,6 +99254,66 @@
       "tablas": [],
       "rutaApi": "/api/correduria/garantias-filtradas",
       "hash": "d290cd8ea0b9"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/google-contactos-revision/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "/api/correduria/google-contactos-revision — la cola de revisión de la sincronización CRM ↔ Google Contacts. Reenvía al puerto de asegura (`/api/operador/google-contactos/revision`) y devuelve el MISMO"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/google-contactos-revision",
+      "hash": "9d59fd9a2520"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/google-contactos-sync/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "/api/correduria/google-contactos-sync — simular y activar la sincronización CRM → Google Contacts. Reenvía al puerto de asegura y devuelve el MISMO status y json. GET → estado de la conexión (`/api/op"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/google-contactos-sync",
+      "hash": "4031c6a5ad57"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/impagados/route.ts",
@@ -120836,7 +121630,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "57cbb70d7a70"
+      "hash": "75d489bbab2e"
     },
     {
       "ruta": "apps/plataforma/lib/correo/imap.ts",
@@ -120969,15 +121763,15 @@
           "nombre": "extraerNumConfirmacionDe",
           "kind": "function",
           "exportada": true,
-          "params": "subject: string, cuerpo: string",
+          "params": "subject: string, cuerpo: string, from?: string",
           "retorno": "string | null",
-          "linea": 58,
+          "linea": 69,
           "resumen": "Nº de confirmación de la OTA tal cual lo publica el correo, o null si no lo dice. Booking lo pone en claro («Número de confirmación: 5815945265»); el resto de canales caen al primer número largo suelt"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5fb4fdffb3c3"
+      "hash": "dbceb85f51fe"
     },
     {
       "ruta": "apps/plataforma/lib/correo/pdf-filas.ts",
@@ -121219,7 +122013,7 @@
           "exportada": true,
           "params": "piso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 78,
+          "linea": 81,
           "resumen": "Nombre de piso → slug de PROPS_CALENDARIO (sin acentos, sin may/min). null si no casa."
         },
         {
@@ -121228,7 +122022,7 @@
           "exportada": false,
           "params": "dmy: string",
           "retorno": "string | null",
-          "linea": 87,
+          "linea": 90,
           "resumen": "«03.09.26» → '2026-09-03'. Devuelve null ante cualquier cosa que no sea una fecha real: una fecha mal leída es peor que una fecha ausente (sale un dato plausible y falso)."
         },
         {
@@ -121237,7 +122031,7 @@
           "exportada": false,
           "params": "palabra: string",
           "retorno": "TipoNotifSmoobu",
-          "linea": 103
+          "linea": 106
         },
         {
           "nombre": "parsearNotificacionSmoobu",
@@ -121245,13 +122039,13 @@
           "exportada": true,
           "params": "correo: { from: string; subject: string; body?: string }",
           "retorno": "NotificacionSmoobu | null",
-          "linea": 115,
+          "linea": 118,
           "resumen": "¿Es este correo la notificación de Smoobu de una reserva? Devuelve lo que el correo publica, o null si no lo es (los reenvíos de mensajes de huésped —«Hemos recibido este mensaje de…»— NO casan a prop"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df50ec7204fe"
+      "hash": "0b73828ba1de"
     },
     {
       "ruta": "apps/plataforma/lib/correo/triaje.ts",
@@ -132022,6 +132816,11 @@
         "registrarWhatsappAsegura",
         "contactosMovilAsegura",
         "interpretarContactosMovil",
+        "revisionesGoogleAsegura",
+        "resolverRevisionGoogleAsegura",
+        "estadoGoogleContactosAsegura",
+        "simularGoogleContactosAsegura",
+        "activarGoogleContactosAsegura",
         "tareasHoyAsegura",
         "interpretarTomador",
         "interpretarLecturaOportunidad",
@@ -132234,7 +133033,7 @@
           "nombre": "llamar",
           "kind": "function",
           "exportada": false,
-          "params": "path: string, init: RequestInit",
+          "params": "path: string, init: RequestInit, timeoutMs = 15_000",
           "retorno": "Promise<Reenvio>",
           "linea": 650
         },
@@ -132322,12 +133121,56 @@
           "resumen": "Lectura defensiva de la respuesta: `null` = no se pudo leer (el .vcf NO se genera vacío, que se importaría como «no tienes a nadie»)."
         },
         {
+          "nombre": "revisionesGoogleAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "despuesDe: string | null",
+          "retorno": "Promise<Reenvio>",
+          "linea": 716,
+          "resumen": "Cola de revisión de la sincronización con Google Contacts (50 por página, cursor `despuesDe`)."
+        },
+        {
+          "nombre": "resolverRevisionGoogleAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 719
+        },
+        {
+          "nombre": "estadoGoogleContactosAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 723,
+          "resumen": "Estado de la conexión con Google Contacts (cuenta, simulada, activada)."
+        },
+        {
+          "nombre": "simularGoogleContactosAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 727,
+          "resumen": "Simulación SOLO LECTURA (lee la agenda entera de Google: hasta ~2 min)."
+        },
+        {
+          "nombre": "activarGoogleContactosAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "actor: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 731,
+          "resumen": "«Simulación revisada: sincroniza». El `actor` lo pone quien llama desde la SESIÓN."
+        },
+        {
           "nombre": "tareasHoyAsegura",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 715
+          "linea": 735
         },
         {
           "nombre": "interpretarTomador",
@@ -132335,7 +133178,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TomadorLeido | undefined",
-          "linea": 761
+          "linea": 781
         },
         {
           "nombre": "interpretarLecturaOportunidad",
@@ -132343,7 +133186,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaDocumentoOportunidad",
-          "linea": 783,
+          "linea": 803,
           "resumen": "Lo que devuelve el puerto `leer-documento`. Un campo con forma rara se queda en `null` («no se leyó»), nunca en un valor plausible: una prima 0 o una fecha que no es fecha no rellenan nada. Si no se l"
         },
         {
@@ -132352,7 +133195,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 817,
+          "linea": 837,
           "resumen": "La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50»."
         },
         {
@@ -132361,7 +133204,7 @@
           "exportada": true,
           "params": "guardado: unknown",
           "retorno": "EnlacePresupuesto | null",
-          "linea": 830
+          "linea": 850
         },
         {
           "nombre": "interpretarSolicitudesDatos",
@@ -132369,7 +133212,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SolicitudesDatos",
-          "linea": 874
+          "linea": 894
         },
         {
           "nombre": "valorLegible",
@@ -132377,7 +133220,7 @@
           "exportada": true,
           "params": "campo: SolicitudDatos['campos'][number], v: string | number | boolean | null | undefined",
           "retorno": "string",
-          "linea": 919,
+          "linea": 939,
           "resumen": "Una respuesta como la lee Alberto: opción → su etiqueta, sí/no, fecha española; `null` → «—»."
         },
         {
@@ -132386,7 +133229,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 929
+          "linea": 949
         },
         {
           "nombre": "accionSolicitudDatosAsegura",
@@ -132394,7 +133237,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 932
+          "linea": 952
         },
         {
           "nombre": "borradoresPresupuestoAsegura",
@@ -132402,7 +133245,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 937,
+          "linea": 957,
           "resumen": "─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──"
         },
         {
@@ -132411,7 +133254,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 940
+          "linea": 960
         },
         {
           "nombre": "borrarBorradorPresupuestoAsegura",
@@ -132419,7 +133262,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string, oportunidadId: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 943
+          "linea": 963
         },
         {
           "nombre": "riesgoAsegura",
@@ -132427,7 +133270,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 949,
+          "linea": 969,
           "resumen": "─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────"
         },
         {
@@ -132436,7 +133279,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 956,
+          "linea": 976,
           "resumen": "Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoL"
         },
         {
@@ -132445,7 +133288,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 959
+          "linea": 979
         },
         {
           "nombre": "quitarFiguraAsegura",
@@ -132453,7 +133296,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 962
+          "linea": 982
         },
         {
           "nombre": "compararVariantesAsegura",
@@ -132461,7 +133304,7 @@
           "exportada": true,
           "params": "oportunidadId: string, a: string, b: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 967,
+          "linea": 987,
           "resumen": "Dos variantes del mismo riesgo: qué cambia y el precio de cada compañía en las dos. Gratis."
         },
         {
@@ -132470,7 +133313,7 @@
           "exportada": true,
           "params": "body: { polizaId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 972,
+          "linea": 992,
           "resumen": "Abre (o devuelve la abierta) la oportunidad de retarificar una póliza. Gratis: no pide precio."
         },
         {
@@ -132479,13 +133322,13 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; nuevoClienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 977,
+          "linea": 997,
           "resumen": "«Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "878eebf490ce"
+      "hash": "46bb1d519360"
     },
     {
       "ruta": "apps/plataforma/lib/seguimiento-presupuestos-asegura.ts",
@@ -141265,7 +142108,7 @@
         "reservas_correo_booking"
       ],
       "rutaApi": null,
-      "hash": "411f47bb6550"
+      "hash": "155a09f85ea2"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -174127,6 +174970,567 @@
       "hash": "40066db72049"
     },
     {
+      "ruta": "packages/module-seguros/src/google-contactos-revision.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Cola de revisión de la sincronización con Google Contacts (05/10/2026): qué hace cada botón. Puro y sin `node:crypto` para que lo importe también la pantalla de plataforma. 🚨 Ninguna resolución toca el VÍNCULO ni Google. En particular «Mantener CRM» sobre un contacto que Alberto sacó a mano del gru",
+      "exporta": [
+        "accionesPermitidas",
+        "efectoResolucion"
+      ],
+      "funciones": [
+        {
+          "nombre": "accionesPermitidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoRevisionGoogle",
+          "retorno": "readonly AccionRevision[]",
+          "linea": 30,
+          "resumen": "Qué botones tiene cada tipo. «Aceptar como lead» solo en un contacto que el CRM no conoce."
+        },
+        {
+          "nombre": "efectoResolucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: string, accion: AccionRevision",
+          "retorno": "EfectoResolucion",
+          "linea": 45
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8ce006c07161"
+    },
+    {
+      "ruta": "packages/module-seguros/src/google-contactos-simulacion.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Simulación de la sincronización CRM → Google Contacts (05/10/2026). Lógica PURA: con la MISMA entrada que el cron (`planificarSync`), dice qué PASARÍA, sin escribir nada. Alberto ya volcó la cartera a su agenda a mano (el .vcf de contactos-movil): en su Google hay clientes SIN nuestro externalId, FU",
+      "exporta": [
+        "enmascararTelefono",
+        "informeSimulacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "enmascararTelefono",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 81,
+          "resumen": "«•••••••233»: solo los 3 últimos dígitos. Con 3 o menos, todo oculto."
+        },
+        {
+          "nombre": "nombreAgenda",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PersonaGoogle",
+          "retorno": "string",
+          "linea": 88
+        },
+        {
+          "nombre": "lista",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: T[], max: number",
+          "retorno": "Lista<T>",
+          "linea": 93
+        },
+        {
+          "nombre": "informeSimulacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: Omit<EntradaPlan, 'grupoResourceName' | 'modo'> & { grupoResourceName: string | null }, opts: { totalCuenta: number | null; maxEjemplos?: number },",
+          "retorno": "InformeSimulacion",
+          "linea": 103,
+          "resumen": "El informe. `e.grupoResourceName` = `null` si la etiqueta aún no existe en Google (la simulación no la crea). `totalCuenta` = el `totalPeople` del listado completo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d6503206fdce"
+    },
+    {
+      "ruta": "packages/module-seguros/src/google-contactos.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Sincronización CRM → Google Contacts (05/10/2026). Lógica PURA: qué se crea, qué se actualiza, qué se deja y qué va a revisión. La red (People API) y la BD viven en `apps/asegura/lib/google-contactos*.ts`; aquí no hay `fetch` ni Prisma. Reglas (decididas por Alberto, no se reabren aquí): · El CRM es",
+      "exporta": [
+        "esClaveCompania",
+        "quitarPrefijo",
+        "nombreEnGoogle",
+        "extraerBloque",
+        "conBloque",
+        "fechaEs",
+        "notaCliente",
+        "notaLead",
+        "avisoVencimiento",
+        "proximoVencimiento",
+        "normalizarNacimiento",
+        "nombreCompaniaContacto",
+        "camposDeCrm",
+        "camposDeGoogle",
+        "hashCampos",
+        "diferencias",
+        "personaDesdeCampos",
+        "enGrupo",
+        "comprobarLimite",
+        "excesoLimite",
+        "seleccionUnica",
+        "superviviente",
+        "planificarSync",
+        "puertaSync",
+        "trocear",
+        "esReintentable",
+        "esperaReintento",
+        "syncTokenCaducado",
+        "aBorrarAlDesconectar"
+      ],
+      "funciones": [
+        {
+          "nombre": "esClaveCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string",
+          "retorno": "boolean",
+          "linea": 56
+        },
+        {
+          "nombre": "quitarPrefijo",
+          "kind": "function",
+          "exportada": true,
+          "params": "givenName: string | null | undefined",
+          "retorno": "",
+          "linea": 95,
+          "resumen": "`givenName` leído → el nombre sin el emoji, el tipo que el emoji dice (`null` = no lo lleva) y si lleva ⏰."
+        },
+        {
+          "nombre": "givenNameConPrefijo",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo' | 'aviso'>",
+          "retorno": "string",
+          "linea": 103,
+          "resumen": "El `givenName` que se escribe: emoji (+⏰) + nombre; sin nombre pero con apellidos, solo el emoji."
+        },
+        {
+          "nombre": "nombreEnGoogle",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo'> & { aviso?: boolean }",
+          "retorno": "string",
+          "linea": 110,
+          "resumen": "Cómo se verá el contacto en la agenda: «🟢 Juan Pérez García»."
+        },
+        {
+          "nombre": "limpio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 254
+        },
+        {
+          "nombre": "cifrado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 259
+        },
+        {
+          "nombre": "telefonoCanonico",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 263
+        },
+        {
+          "nombre": "emailCanonico",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 269
+        },
+        {
+          "nombre": "normNota",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 284,
+          "resumen": "Texto de nota normalizado (línea a línea, sin huecos): lo que se escribe es lo que se relee."
+        },
+        {
+          "nombre": "localizarBloque",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "",
+          "linea": 290,
+          "resumen": "Dónde está el bloque: el ÚLTIMO inicio y el primer fin tras él (una marca suelta no se come texto)."
+        },
+        {
+          "nombre": "extraerBloque",
+          "kind": "function",
+          "exportada": true,
+          "params": "bio: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 298,
+          "resumen": "El contenido del bloque del CRM en una nota de Google; `null` si no lo hay."
+        },
+        {
+          "nombre": "conBloque",
+          "kind": "function",
+          "exportada": true,
+          "params": "bio: string | null | undefined, contenido: string",
+          "retorno": "string",
+          "linea": 306,
+          "resumen": "La nota con el bloque del CRM puesto (al final); lo que Alberto escribió fuera, intacto."
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 317,
+          "resumen": "`AAAA-MM-DD` → `dd/mm/aaaa`."
+        },
+        {
+          "nombre": "notaCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { polizas: readonly { ramo: string; compania: string | null }[]; proximoVencimiento: string | null }",
+          "retorno": "string",
+          "linea": 329,
+          "resumen": "La ficha rápida de un CLIENTE: sus pólizas en vigor (ramo + compañía) y el próximo vencimiento. 🚨 Sin NIF, sin importes y sin nº de póliza: la nota se ve en el móvil y se copia a otras apps. Líneas o"
+        },
+        {
+          "nombre": "notaLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { ramo: string; compania: string | null; vencimiento: string | null }",
+          "retorno": "string",
+          "linea": 337,
+          "resumen": "La de un LEAD: la póliza que tiene en otra compañía y cuándo vence (estimado)."
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, dias: number",
+          "retorno": "string",
+          "linea": 343
+        },
+        {
+          "nombre": "avisoVencimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimientos: readonly (string | null)[], hoy: string",
+          "retorno": "boolean",
+          "linea": 353,
+          "resumen": "¿Alguna vence entre hoy y hoy+30 (ambos incluidos)? `null` = no se sabe: no cuenta. Fechas ISO."
+        },
+        {
+          "nombre": "proximoVencimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimientos: readonly (string | null)[], hoy: string",
+          "retorno": "string | null",
+          "linea": 359,
+          "resumen": "El vencimiento más cercano a partir de hoy (incluido); `null` si no hay ninguno conocido."
+        },
+        {
+          "nombre": "normalizarNacimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 365,
+          "resumen": "Fecha de nacimiento → `AAAA-MM-DD` válida, o `null` (vacía, cifrada sin abrir o imposible)."
+        },
+        {
+          "nombre": "fechaGoogleDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "FechaGoogle | null",
+          "linea": 377
+        },
+        {
+          "nombre": "cumpleanosDeGoogle",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: { date?: FechaGoogle } | undefined",
+          "retorno": "string | null",
+          "linea": 382
+        },
+        {
+          "nombre": "nombreCompaniaContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { compania: string; area: string | null; nombre: string | null }",
+          "retorno": "string",
+          "linea": 393,
+          "resumen": "«Mapfre · Siniestros (Laura)»: compañía, área si consta y la persona entre paréntesis."
+        },
+        {
+          "nombre": "camposDeCrm",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContactoGoogle",
+          "retorno": "CamposSincronizados | null",
+          "linea": 400,
+          "resumen": "Los campos gestionados de una ficha del CRM, o `null` si algo viene sin descifrar."
+        },
+        {
+          "nombre": "esNuestraUrl",
+          "kind": "function",
+          "exportada": false,
+          "params": "u: { value?: string; type?: string }",
+          "retorno": "boolean",
+          "linea": 417
+        },
+        {
+          "nombre": "camposDeGoogle",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PersonaGoogle",
+          "retorno": "CamposSincronizados",
+          "linea": 422,
+          "resumen": "Lo mismo leído de Google, con la misma normalización (si no, cada hora sería un «cambio»)."
+        },
+        {
+          "nombre": "hashCampos",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CamposSincronizados",
+          "retorno": "string",
+          "linea": 452
+        },
+        {
+          "nombre": "hashIdentidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CamposSincronizados",
+          "retorno": "string",
+          "linea": 457,
+          "resumen": "Solo lo que identifica a la persona: la huella de un ambiguo no cambia porque cambie su nota o su ⏰."
+        },
+        {
+          "nombre": "diferencias",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: CamposSincronizados, b: CamposSincronizados",
+          "retorno": "(keyof CamposSincronizados)[]",
+          "linea": 461
+        },
+        {
+          "nombre": "personaDesdeCampos",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CamposSincronizados, clienteId: string, etag?: string | null",
+          "retorno": "PersonaParaEscribir",
+          "linea": 469,
+          "resumen": "El contacto tal como se escribe en Google. El nombre empieza por 🟢 (cliente) o 🟡 (lead) para que la pantalla de llamada diga quién es; la organization «Grupo ASegura» lleva lo mismo en texto."
+        },
+        {
+          "nombre": "enGrupo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PersonaGoogle, grupoResourceName: string",
+          "retorno": "boolean",
+          "linea": 484
+        },
+        {
+          "nombre": "idExterno",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PersonaGoogle",
+          "retorno": "string | null",
+          "linea": 488
+        },
+        {
+          "nombre": "huella",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipo: TipoRevision, resourceName: string, hashGoogle: string",
+          "retorno": "string",
+          "linea": 492
+        },
+        {
+          "nombre": "comprobarLimite",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { aSincronizar: number; vinculados: number; totalCuenta: number | null }",
+          "retorno": "void",
+          "linea": 500,
+          "resumen": "Error claro si la cuenta se pasaría del tope de Google. `totalCuenta` = contactos que hay HOY en la cuenta (todos, también los personales); `null` = no se sabe → solo se mira lo nuestro."
+        },
+        {
+          "nombre": "excesoLimite",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { aSincronizar: number; vinculados: number; totalCuenta: number | null }",
+          "retorno": "",
+          "linea": 511,
+          "resumen": "Lo mismo que `comprobarLimite` sin lanzar: cuántos contactos quedarían y si se pasa del tope."
+        },
+        {
+          "nombre": "seleccionUnica",
+          "kind": "function",
+          "exportada": true,
+          "params": "crm: readonly T[], fusiones: ReadonlyMap<string, string>",
+          "retorno": "T[]",
+          "linea": 517,
+          "resumen": "Cliente gana a lead si la misma ficha sale dos veces (como en el .vcf); fuera las fusionadas."
+        },
+        {
+          "nombre": "superviviente",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string, fusiones: ReadonlyMap<string, string>",
+          "retorno": "string",
+          "linea": 528,
+          "resumen": "La superviviente FINAL de una cadena de fusiones (A→B y luego B→C: la de A es C)."
+        },
+        {
+          "nombre": "vistaGestionada",
+          "kind": "function",
+          "exportada": false,
+          "params": "cg: CamposSincronizados, cc: CamposSincronizados",
+          "retorno": "CamposSincronizados",
+          "linea": 543,
+          "resumen": "Lo de Google VISTO con los ojos del CRM. Un teléfono/correo (o nota, URL, cumpleaños) que el CRM no tiene (`null`) NO es «el CRM dice que no hay»: un lead con baja de WhatsApp llega de `leadsCompetenc"
+        },
+        {
+          "nombre": "conNuestraEntrada",
+          "kind": "function",
+          "exportada": false,
+          "params": "deGoogle: readonly T[] | undefined, nuestra: { value: string; type: string } | null, igual: (x: T) => boolean, pisaPrimera: boolean,",
+          "retorno": "",
+          "linea": 556,
+          "resumen": "Una lista de Google con la entrada del CRM dentro. Si el valor del CRM ya está, se usa esa entrada; si no, sustituye a la PRIMERA (la que el CRM escribió y que `camposDeGoogle` lee; su valor anterior "
+        },
+        {
+          "nombre": "conservandoDeGoogle",
+          "kind": "function",
+          "exportada": false,
+          "params": "persona: PersonaParaEscribir, cc: CamposSincronizados, g: PersonaGoogle, pisaPrimera: boolean",
+          "retorno": "PersonaParaEscribir",
+          "linea": 572,
+          "resumen": "La persona a escribir SOBRE un contacto que existe en Google: el CRM pone su entrada y conserva TAL CUAL las demás (otro teléfono, otro correo, la empresa del cliente que Alberto añadió…), y también e"
+        },
+        {
+          "nombre": "normNombre",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 613,
+          "resumen": "Nombre comparable: sin sufijo del .vcf, emojis, tildes, mayúsculas ni espacios de más."
+        },
+        {
+          "nombre": "nombreCrm",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CamposSincronizados",
+          "retorno": "string",
+          "linea": 617
+        },
+        {
+          "nombre": "nombresDeAgenda",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PersonaGoogle",
+          "retorno": "Set<string>",
+          "linea": 622,
+          "resumen": "Los nombres con que la persona está en la agenda (estructurado, visible y sin estructurar)."
+        },
+        {
+          "nombre": "llevaSufijoVcf",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PersonaGoogle",
+          "retorno": "boolean",
+          "linea": 628,
+          "resumen": "¿Lleva el sufijo «· AS Cliente/Lead» del .vcf en alguno de sus nombres? Señal de que lo volcó el CRM."
+        },
+        {
+          "nombre": "telefonosDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PersonaGoogle",
+          "retorno": "string[]",
+          "linea": 634,
+          "resumen": "TODOS los teléfonos del contacto, canónicos y sin repetir (se empareja por cualquiera)."
+        },
+        {
+          "nombre": "planificarSync",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaPlan",
+          "retorno": "Plan",
+          "linea": 641
+        },
+        {
+          "nombre": "puertaSync",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { estado: string; syncActivadaEn: Date | string | null } | null",
+          "retorno": "PuertaSync",
+          "linea": 883
+        },
+        {
+          "nombre": "trocear",
+          "kind": "function",
+          "exportada": true,
+          "params": "xs: readonly T[], n: number",
+          "retorno": "T[][]",
+          "linea": 890
+        },
+        {
+          "nombre": "esReintentable",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number",
+          "retorno": "boolean",
+          "linea": 897,
+          "resumen": "¿Se reintenta esta respuesta de Google? Cuota (429) y fallos transitorios del servidor."
+        },
+        {
+          "nombre": "esperaReintento",
+          "kind": "function",
+          "exportada": true,
+          "params": "intento: number, retryAfter: string | null, azar: number = Math.random()",
+          "retorno": "number",
+          "linea": 902,
+          "resumen": "Espera antes del reintento `intento` (0, 1, 2…): `Retry-After` si viene, si no exponencial con techo."
+        },
+        {
+          "nombre": "syncTokenCaducado",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, cuerpo: string",
+          "retorno": "boolean",
+          "linea": 910,
+          "resumen": "El `syncToken` de People caduca (7 días): 410, o 400 con `EXPIRED_SYNC_TOKEN`."
+        },
+        {
+          "nombre": "aBorrarAlDesconectar",
+          "kind": "function",
+          "exportada": true,
+          "params": "miembros: readonly string[], vinculos: readonly { resourceName: string; origen: string; estado: string }[],",
+          "retorno": "string[]",
+          "linea": 920,
+          "resumen": "Qué contactos se borran de Google al desconectar con `borrarContactos`: solo los que CREÓ el CRM (`origen: 'creado'`), siguen activos y siguen en el grupo. Uno vinculado por teléfono o por id era un c"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "46e13fed04b1"
+    },
+    {
       "ruta": "packages/module-seguros/src/historial-maximo.ts",
       "ambito": "packages/module-seguros",
       "resumen": "El historial del seguro anterior se declara al MÁXIMO (29/09/2026, dictado de Alberto). «Siempre se pone el máximo: la compañía lo contrasta con SINCO por el nº de póliza y aplica el bonus real. Teclear años no justifica nada y solo mete errores.» Lo que SÍ se ha leído de su póliza manda sobre el má",
@@ -178559,6 +179963,47 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "781e88b800c1"
+    },
+    {
+      "ruta": "packages/module-seguros/src/telefono-e164.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Teléfono → E.164 (05/10/2026). Primer helper COMÚN de la casa para esto: hasta hoy cada sitio limpiaba a su manera (`vcard.ts` quita lo que no es dígito o `+`, el índice ciego `normalizeTelefonoForHash` se queda solo con los dígitos). Este NO sustituye a ninguno: lo usa la sincronización con Google ",
+      "exporta": [
+        "aE164",
+        "esTelefonoValido",
+        "variantesIndiceTelefono"
+      ],
+      "funciones": [
+        {
+          "nombre": "aE164",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined, region: CountryCode = REGION_POR_DEFECTO",
+          "retorno": "string | null",
+          "linea": 18,
+          "resumen": "`+34600112233`, o `null` si no hay número o no es un teléfono válido."
+        },
+        {
+          "nombre": "esTelefonoValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined, region: CountryCode = REGION_POR_DEFECTO",
+          "retorno": "boolean",
+          "linea": 29
+        },
+        {
+          "nombre": "variantesIndiceTelefono",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined, region: CountryCode = REGION_POR_DEFECTO",
+          "retorno": "string[]",
+          "linea": 39,
+          "resumen": "Las cadenas de DÍGITOS con las que puede estar guardado ese teléfono en el índice ciego (`telefono_lookup_hash` = HMAC de solo-dígitos, sin normalizar el prefijo): `34600112233` y `600112233` son hash"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "710b9dc4678a"
     },
     {
       "ruta": "packages/module-seguros/src/telefonos-companias.ts",
@@ -184106,7 +185551,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4172,
-    "funciones": 14384
+    "archivos": 4196,
+    "funciones": 14512
   }
 }
