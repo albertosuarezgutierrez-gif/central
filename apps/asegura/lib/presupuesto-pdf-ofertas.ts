@@ -160,7 +160,8 @@ export function textoInfraseguro(a: NonNullable<ResumenOferta['infraseguroContin
 
 export const AVISO_LEGAL_OFERTAS =
   'Este documento es un análisis objetivo de las ofertas recibidas, elaborado conforme a la obligación de asesoramiento ' +
-  'del Real Decreto-ley 3/2020 sobre distribución de seguros. Los datos de cada oferta (primas, capitales, límites y franquicias) ' +
+  'del Real Decreto-ley 3/2020 sobre distribución de seguros' +
+  '. Los datos de cada oferta (primas, capitales, límites y franquicias) ' +
   'han sido facilitados por las propias compañías en sus documentos y pueden variar al contratar. «No figura» significa que el dato ' +
   'no consta en el documento de la compañía, no que la garantía no esté cubierta. No sustituye a la póliza ni a sus condiciones ' +
   'generales, particulares y especiales, que son las únicas que obligan al asegurador: el seguro empieza cuando la compañía emite la póliza.'
