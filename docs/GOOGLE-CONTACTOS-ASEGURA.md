@@ -21,6 +21,7 @@ Lógica: `packages/module-seguros/src/google-contactos.ts`. SQL: `apps/asegura/p
 - `GOOGLE_CONTACTOS_CLIENT_ID`, `GOOGLE_CONTACTOS_CLIENT_SECRET` — del paso 5.
 - `GOOGLE_CONTACTOS_REDIRECT_URI` — la URI del paso 5.
 - `GOOGLE_CONTACTOS_STATE_SECRET` — aleatorio largo (firma el `state` anti-CSRF del OAuth).
+- `GOOGLE_CONTACTOS_CUENTAS_PERMITIDAS` (opcional) — emails de Google autorizados, separados por coma (sin distinguir mayúsculas); si está definida y la cuenta que consiente no está, no se guarda, se revoca su token y vuelve `motivo=cuenta_no_permitida`.
 - Ya existentes y obligatorias: `PII_ENCRYPTION_KEY` (cifra el refresh token en BD), `PII_LOOKUP_KEY`, `CRON_SECRET`,
   `ASEGURA_OPERADOR_SECRET`. El refresh token NUNCA va en una env.
 
@@ -36,8 +37,16 @@ CUALQUIER teléfono E.164 del contacto. Primero en la etiqueta (vínculo de siem
 - varios contactos con ese número, o un contacto cuyos teléfonos casan con dos fichas → cola, sin crear.
 En modo delta no se adopta: se pide el listado completo. El cron **no escribe nada** (ni crea la etiqueta) hasta la
 marca `sync_activada_en`: responde `200 { estado: 'pendiente_activar' }`.
-1. **Conectar**: abrir en el navegador, con sesión de asegura, `https://<asegura>/api/google-contactos/conectar`.
-2. **Simular** (plataforma → /correduria → Clientes → «Google Contacts: simular y activar» → «Simular sincronización»;
+1. **Conectar** (05/10/2026): plataforma → `/correduria` → menú «…» → **«Google Contactos»** (`/correduria/google-contactos`:
+   tarjeta de estado + Conectar/Reconectar/Desconectar + simular/activar + cola). «Conectar Google» pide por el puerto un
+   TICKET (`POST /api/operador/google-contactos/ticket`, auditado, solo `x-actor: humano:`): HMAC con
+   `GOOGLE_CONTACTOS_STATE_SECRET` (dominio propio, distinto del `state`), correduría + cuenta + `jti`, 2 min, UN SOLO USO
+   (`seguros.google_contactos_ticket_usado`, migración `2026-10-05c_google_contactos_ticket.sql`; sin ella `conectar?ticket=`
+   falla cerrado con `ticket_bd`). El navegador va a `…/api/google-contactos/conectar?ticket=…` (misma pestaña); un ticket
+   malo NO cae a la sesión. El callback ya no exige sesión de asegura (mandan `state` firmado + nonce de la cookie; si hay
+   sesión, debe coincidir) y vuelve SIEMPRE a `PLATAFORMA_URL|URL_PLATAFORMA_DEFECTO` + `/correduria/google-contactos?google=ok|error&motivo=<código>`
+   (solo el origen de la base, motivo de lista cerrada: sin open redirect). Sigue valiendo abrir `conectar` a mano con sesión de asegura.
+2. **Simular** (plataforma → `/correduria/google-contactos` → «Google Contacts: simular y activar» → «Simular sincronización»;
    puerto `POST /api/operador/google-contactos/simular`, auditado). SOLO LECTURA: lee la agenda entera, no crea la
    etiqueta, no toca vínculos ni cola; solo apunta `simulada_en`. Informe (contadores + ≤50 ejemplos, nombre como
    quedará con su 🟢/🟡/🔵 y teléfono con solo los 3 últimos dígitos): se crearán · se vincularán (en la etiqueta) ·
@@ -84,9 +93,14 @@ marca `sync_activada_en`: responde `200 { estado: 'pendiente_activar' }`.
   `{ "borrarContactos": true|false }` (revoca en Google y borra el token; con `true` borra solo los contactos que CREÓ el CRM; los vinculados por teléfono/id y los adoptados eran de Alberto y se quedan).
 - ¿Quién llama?: `POST /api/operador/llamada` `{ "tel": "600112233" }` (índice ciego, solo lectura). POST y no GET:
   el teléfono en la URL quedaría en los logs de Vercel.
-- Cola de revisión: plataforma → /correduria → Clientes («Google Contacts: revisión»), puerto
+- Desconectar desde el panel: «Desconectar» en `/correduria/google-contactos`, con confirmación y casilla «borrar los creados
+  por el CRM» DESMARCADA por defecto.
+- Cola de revisión: plataforma → `/correduria/google-contactos` («Google Contacts: revisión»; en la pestaña Clientes solo
+  queda un aviso si hay pendientes o la conexión está revocada), puerto
   `GET|POST /api/operador/google-contactos/revision` (50 por página por cursor; acciones `aceptar_lead`, `descartar`,
   `mantener_crm`). Ninguna toca el vínculo ni Google: «Mantener CRM» sobre un sacado del grupo NO lo recrea.
+- Teléfono de los contactos 🔵 de compañía: se mete en `/correduria/companias` («Añadir/Cambiar teléfono»; `PATCH
+  /api/operador/companias/contacto/[id] { accion:'telefono' }`, validado y guardado en E.164 con `aE164`).
 - Teléfono/correo ausente en el CRM (p. ej. lead con baja de WhatsApp) NO vacía el de Google: se conserva.
 - El CRM gestiona solo SU entrada (primer teléfono/correo, la organization «Grupo ASegura», su URL, el bloque de la
   nota y el cumpleaños si lo sabe): otro teléfono, otro correo, otra URL, su texto de la nota o la empresa que Alberto

@@ -176,6 +176,23 @@ export async function marcarContactoAsegura(contactoId: string): Promise<Reenvio
   }
 }
 
+/** Pone (E.164, lo valida asegura) o quita (`null`) el teléfono de un contacto de compañía. */
+export async function telefonoContactoAsegura(contactoId: string, telefono: string | null): Promise<Reenvio> {
+  const h = await cabeceras()
+  if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/companias/contacto/${encodeURIComponent(contactoId)}`, {
+      method: 'PATCH',
+      headers: { ...h, 'content-type': 'application/json' },
+      body: JSON.stringify({ accion: 'telefono', telefono }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    return { status: res.status, json: await res.json().catch(() => null) }
+  } catch {
+    return { status: 502, json: { estado: 'error', motivo: 'red' } }
+  }
+}
+
 /** Cuadro de comisiones pactado cruzado con los recibos de CIMA (`GET /api/operador/comisiones-pactadas`). */
 export async function comisionesPactadasAsegura(): Promise<Reenvio> {
   const h = await cabeceras()

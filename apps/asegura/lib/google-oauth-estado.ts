@@ -44,12 +44,17 @@ function iguales(a: string, b: string): boolean {
 }
 
 /**
- * Verifica el `state` que vuelve de Google contra el secreto, la cookie del navegador y la
- * sesión actual. Cualquier duda → `ok: false` (fail-closed).
+ * Verifica el `state` que vuelve de Google contra el secreto, la cookie del navegador y, si la
+ * hay, la sesión de asegura actual. Cualquier duda → `ok: false` (fail-closed).
+ *
+ * `sesion: null` (05/10/2026): el flujo que arranca desde plataforma con TICKET no tiene sesión de
+ * asegura en el navegador. Entonces mandan el `state` firmado (correduría + cuenta de quien lo pidió,
+ * por sesión o por ticket de un solo uso) y el nonce de la cookie httpOnly de ESTE navegador. Si hay
+ * sesión, tiene que ser la misma cuenta y correduría que el `state`.
  */
 export function verificarEstado(
   state: string | null,
-  p: { secreto: string; nonceCookie: string | null | undefined; cuentaId: string; correduriaId: string; ahora?: number },
+  p: { secreto: string; nonceCookie: string | null | undefined; sesion: { cuentaId: string; correduriaId: string } | null; ahora?: number },
 ): ResultadoEstado {
   if (!state || !p.secreto) return { ok: false, motivo: 'mal_formado' }
   const partes = state.split('.')
@@ -67,6 +72,18 @@ export function verificarEstado(
   }
   if ((p.ahora ?? Date.now()) > d.e) return { ok: false, motivo: 'caducado' }
   if (!p.nonceCookie || !iguales(d.n, p.nonceCookie)) return { ok: false, motivo: 'nonce' }
-  if (d.u !== p.cuentaId || d.c !== p.correduriaId) return { ok: false, motivo: 'sesion' }
+  if (p.sesion && (d.u !== p.sesion.cuentaId || d.c !== p.sesion.correduriaId)) return { ok: false, motivo: 'sesion' }
   return { ok: true, datos: { correduriaId: d.c, cuentaId: d.u, nonce: d.n, caduca: d.e } }
+}
+
+/**
+ * Lista blanca de cuentas de Google (`GOOGLE_CONTACTOS_CUENTAS_PERMITIDAS`, emails separados por coma,
+ * sin distinguir mayúsculas). Sin env (o en blanco) → `true` (comportamiento anterior). Con env, un email
+ * desconocido (`null`) NO pasa: ante la duda, el estado conservador.
+ */
+export function cuentaGooglePermitida(email: string | null | undefined, lista: string | null | undefined): boolean {
+  const permitidas = (lista ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+  if (permitidas.length === 0) return true
+  const e = (email ?? '').trim().toLowerCase()
+  return e !== '' && permitidas.includes(e)
 }

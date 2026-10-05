@@ -1524,6 +1524,19 @@ model GoogleContactosVinculo {
   @@map("google_contactos_vinculo")
 }
 
+/// Tickets de inicio del OAuth ya CONSUMIDOS (un solo uso; `lib/google-oauth-ticket.ts`).
+/// Migración `prisma/sql/2026-10-05c_google_contactos_ticket.sql`.
+model GoogleContactosTicketUsado {
+  jti           String   @id
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  cuentaId      String   @map("cuenta_id")
+  caducaEn      DateTime @map("caduca_en") @db.Timestamptz(6)
+  usadoEn       DateTime @default(now()) @map("usado_en") @db.Timestamptz(6)
+
+  @@index([usadoEn], map: "google_contactos_ticket_usado_usado_en")
+  @@map("google_contactos_ticket_usado")
+}
+
 /// Cola de revisión: cambios en Google (CRM gana), borrados, ambiguos y propuestas de lead.
 /// `propuestaCifrada` = JSON de lo que había en Google, cifrado (`v1:`).
 model GoogleContactosRevision {

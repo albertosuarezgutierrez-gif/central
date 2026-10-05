@@ -731,6 +731,14 @@ export function simularGoogleContactosAsegura(): Promise<Reenvio> {
 export function activarGoogleContactosAsegura(actor: string): Promise<Reenvio> {
   return llamar('/api/operador/google-contactos/activar', { method: 'POST', body: JSON.stringify({ actor }) })
 }
+/** Ticket de un solo uso (2 min) para arrancar el OAuth de Google desde el panel: asegura devuelve la URL de `conectar`. */
+export function ticketGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/ticket', { method: 'POST', body: '{}' })
+}
+/** Revoca en Google y borra token y vínculos; con `borrarContactos` borra antes los que CREÓ el CRM. */
+export function desconectarGoogleContactosAsegura(borrarContactos: boolean): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/desconectar', { method: 'POST', body: JSON.stringify({ borrarContactos }) }, 115_000)
+}
 
 export function tareasHoyAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/tareas-hoy', { method: 'GET' })
