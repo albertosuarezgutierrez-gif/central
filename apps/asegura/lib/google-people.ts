@@ -128,6 +128,18 @@ export async function accesoDesdeRefresh(c: Credenciales, refreshToken: string, 
   }
 }
 
+/**
+ * ¿Se revoca el refresh token ANTERIOR al reconectar? Solo si era de OTRA cuenta de Google.
+ * `oauth2/revoke` retira el GRANT entero (cliente + usuario), no un token suelto: revocar el viejo
+ * de la MISMA cuenta mataba también el nuevo recién guardado y la sincronización quedaba
+ * `revocada` en la pasada siguiente. Con una de las dos cuentas desconocida (`null`) no se sabe
+ * si es la misma: no se revoca (el viejo ya no está en la BD; matar el nuevo rompe la conexión).
+ */
+export function debeRevocarAnterior(p: { cuentaAnterior: string | null; cuentaNueva: string | null; tokenAnterior: string; tokenNuevo: string }): boolean {
+  if (p.tokenAnterior === p.tokenNuevo) return false
+  return p.cuentaAnterior !== null && p.cuentaNueva !== null && p.cuentaAnterior !== p.cuentaNueva
+}
+
 /** Revoca en Google. Un 400 «invalid_token» es que YA estaba revocado: cuenta como hecho. */
 export async function revocar(token: string, red: Red = redPorDefecto): Promise<void> {
   try {

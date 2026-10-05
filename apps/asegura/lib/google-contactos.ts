@@ -21,7 +21,7 @@ import { decryptField, encryptField } from '@central/module-seguros-pii'
 import { prismaAsegura } from './asegura-db'
 import { contactosMovil } from './contactos-movil'
 import {
-  accesoDesdeRefresh, People, revocar, SyncTokenCaducado, TokenRevocado,
+  accesoDesdeRefresh, debeRevocarAnterior, People, revocar, SyncTokenCaducado, TokenRevocado,
   type Credenciales, type TokensIniciales,
 } from './google-people'
 import { estadoClavePii } from './pii-estado'
@@ -82,11 +82,14 @@ export async function guardarConexion(correduriaId: string, t: TokensIniciales, 
     ...(otraCuenta ? { grupoResourceName: null } : {}),
   }
   await db.googleContactosConexion.upsert({ where: { correduriaId }, create: { correduriaId, ...datos }, update: datos })
-  // El token anterior, si lo había, se revoca: no se deja uno vivo sin dueño.
+  // El token anterior se revoca SOLO si era de OTRA cuenta: `revoke` retira el grant entero, y
+  // con la misma cuenta mataría también el token nuevo que se acaba de guardar.
   if (previa) {
     try {
       const viejo = descifrarToken(previa.refreshTokenCifrado)
-      if (viejo !== t.refreshToken) await revocar(viejo)
+      if (debeRevocarAnterior({ cuentaAnterior: previa.cuentaGoogle, cuentaNueva: t.cuentaGoogle, tokenAnterior: viejo, tokenNuevo: t.refreshToken })) {
+        await revocar(viejo)
+      }
     } catch {
       // Best effort: el nuevo ya está guardado.
     }

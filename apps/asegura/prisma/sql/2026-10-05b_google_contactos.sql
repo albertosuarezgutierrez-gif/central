@@ -94,6 +94,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON seguros.google_contactos_conexion TO pri
 GRANT SELECT, INSERT, UPDATE, DELETE ON seguros.google_contactos_vinculo  TO prisma_seguros;
 -- La cola se lee, se inserta y se RESUELVE; no se borra (es la constancia). `cliente_id` se
 -- actualiza solo al «aceptar como lead» (la propuesta queda enlazada a la ficha que se creó).
+-- 🚨 Los privilegios por defecto del bootstrap (2026-08-19_asegura_bootstrap.sql) ya le dieron a
+-- prisma_seguros UPDATE y DELETE de TABLA al crearla: sin este REVOKE, el GRANT por columna de
+-- abajo no restringe nada. Va ANTES del GRANT por columna (revocar el UPDATE de tabla también
+-- retira los de columna) y es idempotente. Conexión y vínculo NO se tocan: el código hace
+-- upsert/update/delete en las dos (guardarConexion, desconexión, sincronización).
+REVOKE UPDATE, DELETE ON seguros.google_contactos_revision FROM prisma_seguros;
 GRANT SELECT, INSERT ON seguros.google_contactos_revision TO prisma_seguros;
 GRANT UPDATE (estado, resolucion, resuelto_por, resuelto_en, cliente_id) ON seguros.google_contactos_revision TO prisma_seguros;
 

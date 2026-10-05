@@ -307,3 +307,63 @@ test('🪤 3b: al desconectar con borrado solo se borra lo que CREÓ el CRM (ni 
   ])
   assert.deepEqual(borrar, ['people/1'])
 })
+
+// ─── Revisión PR #4286: el CRM gestiona SU entrada; lo demás de Google se conserva ──────
+
+test('🪤 Alberto añadió en Google un 2.º teléfono, un 2.º correo y su empresa → una escritura por otro campo los conserva', () => {
+  const g = enGoogle(ana, 'people/1')
+  g.phoneNumbers = [...g.phoneNumbers!, { value: '955 00 11 22', canonicalForm: '+34955001122', type: 'work' }]
+  g.emailAddresses = [...g.emailAddresses!, { value: 'ana@empresa.es', type: 'work' }]
+  g.organizations = [{ name: 'Talleres Pérez', title: 'Gerente' }, ...g.organizations!]
+  const plan = planificarSync(entrada({ crm: [{ ...ana, nombre: 'Ana María' }], vinculos: [vinculo(ana, 'people/1')], google: [g] }))
+  assert.equal(plan.actualizar.length, 1)
+  const p = plan.actualizar[0].persona
+  // La nuestra ya estaba: se reenvía la entrada de Google tal cual (con su formato).
+  assert.deepEqual(p.phoneNumbers.map((t) => t.value.replace(/\s/g, '')), ['+34600112233', '955001122'])
+  assert.deepEqual(p.emailAddresses.map((m) => m.value), ['ana@x.es', 'ana@empresa.es'])
+  assert.deepEqual(p.organizations.map((o) => o.name).sort(), ['Grupo ASegura', 'Talleres Pérez'])
+  assert.equal(p.organizations.find((o) => o.name === 'Talleres Pérez')?.title, 'Gerente')
+})
+
+test('🪤 cambia el teléfono en el CRM → se sustituye SOLO nuestra entrada; el 2.º teléfono de Google sigue', () => {
+  const g = enGoogle(ana, 'people/1')
+  g.phoneNumbers = [...g.phoneNumbers!, { value: '955001122', type: 'work' }]
+  const plan = planificarSync(entrada({ crm: [{ ...ana, telefono: '644 55 66 77' }], vinculos: [vinculo(ana, 'people/1')], google: [g] }))
+  assert.equal(plan.actualizar.length, 1)
+  assert.deepEqual(plan.actualizar[0].persona.phoneNumbers.map((t) => t.value), ['+34644556677', '955001122'])
+})
+
+test('🪤 lo escrito con entradas conservadas se relee con el MISMO hash (no reescribe cada hora)', () => {
+  const g = enGoogle(ana, 'people/1')
+  g.phoneNumbers = [...g.phoneNumbers!, { value: '955001122', type: 'work' }]
+  const plan = planificarSync(entrada({ crm: [{ ...ana, nombre: 'Ana María' }], vinculos: [vinculo(ana, 'people/1')], google: [g] }))
+  const escrito = plan.actualizar[0].persona
+  const releido: PersonaGoogle = { ...g, names: escrito.names, phoneNumbers: escrito.phoneNumbers, emailAddresses: escrito.emailAddresses, organizations: escrito.organizations }
+  assert.equal(hashCampos(camposDeGoogle(releido)), plan.actualizar[0].hash)
+})
+
+test('🪤 vincular por teléfono un contacto que ya tenía OTRO nombre → no se pisa: a revisión, ni se vincula ni se duplica', () => {
+  const ya: PersonaGoogle = { resourceName: 'people/5', etag: 'x', names: [{ givenName: 'Fontanero', familyName: 'Juan' }], phoneNumbers: [{ value: '+34 600 11 22 33' }], memberships: [{ contactGroupMembership: { contactGroupResourceName: GRUPO } }] }
+  const plan = planificarSync(entrada({ crm: [ana], google: [ya] }))
+  assert.equal(plan.actualizar.length, 0)
+  assert.equal(plan.crear.length, 0)
+  assert.equal(plan.revisiones.length, 1)
+  assert.equal(plan.revisiones[0].tipo, 'duplicado_ambiguo')
+  assert.equal(plan.revisiones[0].resourceName, 'people/5')
+  assert.ok(plan.revisiones[0].campos.includes('nombre'))
+  assert.equal(plan.revisiones[0].propuesta?.nombre, 'Fontanero')
+})
+
+test('vincular por teléfono con el MISMO nombre (escrito distinto) sí vincula, y su correo de Google se conserva', () => {
+  const ya: PersonaGoogle = { resourceName: 'people/5', etag: 'x', names: [{ givenName: 'ana perez' }], phoneNumbers: [{ value: '+34 600 11 22 33' }], emailAddresses: [{ value: 'ana.casa@x.es', type: 'home' }], memberships: [{ contactGroupMembership: { contactGroupResourceName: GRUPO } }] }
+  const plan = planificarSync(entrada({ crm: [ana], google: [ya] }))
+  assert.equal(plan.actualizar.length, 1)
+  assert.equal(plan.actualizar[0].origen, 'vinculado_telefono')
+  assert.deepEqual(plan.actualizar[0].persona.emailAddresses.map((m) => m.value), ['ana@x.es', 'ana.casa@x.es'])
+})
+
+test('🪤 en delta sin ver el contacto NO se escribe a ciegas aunque el CRM traiga teléfono y correo (perdería lo demás de Google)', () => {
+  const plan = planificarSync(entrada({ crm: [{ ...ana, nombre: 'Ana María' }], vinculos: [vinculo(ana, 'people/1')], modo: 'delta' }))
+  assert.equal(plan.actualizar.length, 0)
+  assert.equal(plan.necesitaListadoCompleto, true)
+})

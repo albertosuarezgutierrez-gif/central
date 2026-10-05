@@ -33,7 +33,12 @@ export const LOTE_ESCRITURA_GOOGLE = 200
 /** `people:batchDeleteContacts` admite 500. */
 export const LOTE_BORRADO_GOOGLE = 500
 export const TIPO_ID_EXTERNO = 'asegura'
-/** Los únicos campos que gestiona el CRM. Nada fuera de aquí se pisa en Google. */
+/**
+ * Los únicos campos que se ESCRIBEN. 🚨 La People API sustituye cada lista de la máscara ENTERA:
+ * dentro de ellas el CRM gestiona solo SU entrada (el primer teléfono/correo, la organization
+ * «Grupo ASegura» y el externalId `asegura`); las demás entradas de Google se reenvían tal cual
+ * (`conservandoDeGoogle`) o se perderían en silencio.
+ */
 export const MASCARA_GESTIONADA = 'names,phoneNumbers,emailAddresses,organizations,externalIds'
 /** Un barrido que retiraría más que esto se BLOQUEA (y se avisa): huele a selección rota. */
 export const MAX_RETIRADA_POR_PASADA = 50
@@ -72,10 +77,11 @@ export type PersonaGoogle = {
 export type PersonaParaEscribir = {
   etag?: string
   names: { givenName: string; familyName: string }[]
-  phoneNumbers: { value: string; type: string }[]
-  emailAddresses: { value: string; type: string }[]
-  organizations: { name: string; title: string }[]
-  externalIds: { value: string; type: string }[]
+  /** La entrada del CRM va PRIMERA; detrás, las demás de Google tal cual llegaron (`type` incluido). */
+  phoneNumbers: { value: string; type?: string }[]
+  emailAddresses: { value: string; type?: string }[]
+  organizations: { name?: string; title?: string }[]
+  externalIds: { value: string; type?: string }[]
 }
 
 export type OrigenVinculo = 'creado' | 'vinculado_id' | 'vinculado_telefono' | 'fusion'
@@ -286,15 +292,54 @@ function vistaGestionada(cg: CamposSincronizados, cc: CamposSincronizados): Camp
   return { ...cg, telefono: cc.telefono === null ? null : cg.telefono, email: cc.email === null ? null : cg.email }
 }
 
-/** La persona a escribir, conservando TAL CUAL el teléfono/correo de Google que el CRM no trae. */
-function conservandoDeGoogle(persona: PersonaParaEscribir, cc: CamposSincronizados, g: PersonaGoogle): PersonaParaEscribir {
-  const tels = (g.phoneNumbers ?? []).flatMap((t) => (limpio(t.value) ? [{ value: t.value!, type: t.type ?? 'mobile' }] : []))
-  const mails = (g.emailAddresses ?? []).flatMap((m) => (limpio(m.value) ? [{ value: m.value!, type: m.type ?? 'other' }] : []))
+/**
+ * Una lista de Google con la entrada del CRM dentro. Si el valor del CRM ya está, se usa esa
+ * entrada; si no, sustituye a la PRIMERA (la que el CRM escribió y que `camposDeGoogle` lee; su
+ * valor anterior queda en la revisión `cambio_en_google`) — o, con `pisaPrimera: false` (contacto
+ * que no creamos y que se vincula ahora), se pone delante sin pisar nada. Va siempre primera; el
+ * resto de entradas, tal cual y en su orden. `nuestra: null` = el CRM no trae dato: no se toca nada.
+ */
+function conNuestraEntrada<T extends { value?: string }>(
+  deGoogle: readonly T[] | undefined, nuestra: { value: string; type: string } | null,
+  igual: (x: T) => boolean, pisaPrimera: boolean,
+): { value: string; type?: string }[] {
+  const resto = (deGoogle ?? []).flatMap((x) => (limpio(x.value) ? [{ ...x, value: x.value! }] : []))
+  if (nuestra === null) return resto
+  const i = resto.findIndex(igual)
+  if (i >= 0) return [resto[i], ...resto.filter((_, j) => j !== i)]
+  return [nuestra, ...(pisaPrimera ? resto.slice(1) : resto)]
+}
+
+/**
+ * La persona a escribir SOBRE un contacto que existe en Google: el CRM pone su entrada y conserva
+ * TAL CUAL las demás (otro teléfono, otro correo, la empresa del cliente que Alberto añadió…), y
+ * también el teléfono/correo que el CRM no trae (`null` = no se sabe, no «no hay»).
+ */
+function conservandoDeGoogle(persona: PersonaParaEscribir, cc: CamposSincronizados, g: PersonaGoogle, pisaPrimera: boolean): PersonaParaEscribir {
+  const nuestroTel = persona.phoneNumbers[0] ? { value: persona.phoneNumbers[0].value, type: persona.phoneNumbers[0].type ?? 'mobile' } : null
+  const nuestroMail = persona.emailAddresses[0] ? { value: persona.emailAddresses[0].value, type: persona.emailAddresses[0].type ?? 'other' } : null
+  const nuestraOrg = persona.organizations[0]
+  const deOtros = (g.organizations ?? []).filter((o) => limpio(o.name) !== NOMBRE_GRUPO_GOOGLE)
+  const iOrg = (g.organizations ?? []).findIndex((o) => limpio(o.name) === NOMBRE_GRUPO_GOOGLE)
+  // La nuestra en su sitio si ya estaba (no se reordena la empresa de Alberto); si no, detrás.
+  const organizations = iOrg >= 0
+    ? (g.organizations ?? []).map((o, j) => (j === iOrg ? nuestraOrg : o)).filter((o, j) => j === iOrg || limpio(o.name) !== NOMBRE_GRUPO_GOOGLE)
+    : [...deOtros, nuestraOrg]
   return {
     ...persona,
-    phoneNumbers: cc.telefono === null ? tels : persona.phoneNumbers,
-    emailAddresses: cc.email === null ? mails : persona.emailAddresses,
+    phoneNumbers: conNuestraEntrada(g.phoneNumbers, cc.telefono === null ? null : nuestroTel,
+      (t) => (limpio(t.canonicalForm) ?? telefonoCanonico(t.value)) === cc.telefono, pisaPrimera),
+    emailAddresses: conNuestraEntrada(g.emailAddresses, cc.email === null ? null : nuestroMail,
+      (m) => emailCanonico(m.value) === cc.email, pisaPrimera),
+    organizations,
+    externalIds: [...persona.externalIds, ...(g.externalIds ?? []).flatMap((x) => (x.type !== TIPO_ID_EXTERNO && limpio(x.value) ? [{ ...x, value: x.value! }] : []))],
   }
+}
+
+/** Mismo nombre visto por una persona: sin mayúsculas, tildes ni espacios de más, y nombre+apellidos juntos. */
+function mismoNombre(a: CamposSincronizados, b: CamposSincronizados): boolean {
+  const n = (c: CamposSincronizados) => `${c.nombre} ${c.apellidos}`.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim()
+  return n(a) === n(b)
 }
 
 export function planificarSync(e: EntradaPlan): Plan {
@@ -353,9 +398,11 @@ export function planificarSync(e: EntradaPlan): Plan {
   const actualizar = (c: CamposSincronizados, clienteId: string, resourceName: string, etag: string | null, origen: OrigenVinculo, revinculaDe: string | null, g: PersonaGoogle | undefined) => {
     reclamados.add(resourceName)
     let persona = personaDesdeCampos(c, clienteId, etag)
-    if (g) persona = conservandoDeGoogle(persona, c, g)
-    else if (e.modo === 'delta' && (c.telefono === null || c.email === null)) {
-      // Sin ver el contacto no se sabe qué teléfono/correo conservar: escribir a ciegas lo vaciaría.
+    // Un contacto que se vincula AHORA por teléfono no lo escribimos nunca: no se pisa su primera entrada.
+    if (g) persona = conservandoDeGoogle(persona, c, g, origen !== 'vinculado_telefono' || revinculaDe !== null || vinculoDe.has(clienteId))
+    else if (e.modo === 'delta') {
+      // Sin ver el contacto no se sabe qué entradas tiene: la escritura sustituye listas enteras y
+      // se llevaría por delante el 2.º teléfono/correo o la empresa que hubiera en Google.
       plan.necesitaListadoCompleto = true
       plan.omitidos++
       return
@@ -440,7 +487,18 @@ export function planificarSync(e: EntradaPlan): Plan {
       ? (libresPorTel.get(cc.telefono) ?? []).filter((p) => !idExterno(p) && (!reclamados.has(p.resourceName) || ambiguos.has(p.resourceName)))
       : []
     if (candidatos.length === 1 && (crmPorTel.get(cc.telefono!) ?? 0) === 1) {
-      actualizar(cc, c.clienteId, candidatos[0].resourceName, candidatos[0].etag ?? null, 'vinculado_telefono', null, candidatos[0])
+      const p = candidatos[0]
+      const cg = camposDeGoogle(p)
+      if ((cg.nombre !== '' || cg.apellidos !== '') && !mismoNombre(cg, cc)) {
+        // Mismo teléfono, OTRO nombre: puede ser otra persona (o el nombre con que Alberto la
+        // guardó). Ni se pisa su nombre ni se crea un duplicado: lo decide Alberto en la cola.
+        const campos = diferencias(cc, { ...cg, telefono: cc.telefono, email: cc.email, grupo: cc.grupo })
+        plan.revisiones.push({ tipo: 'duplicado_ambiguo', clienteId: c.clienteId, resourceName: p.resourceName, campos: ['telefono', ...campos], propuesta: cg, huella: huella('duplicado_ambiguo', p.resourceName, `${c.clienteId}|${hash}|nombre`) })
+        reclamados.add(p.resourceName)
+        plan.omitidos++
+        continue
+      }
+      actualizar(cc, c.clienteId, p.resourceName, p.etag ?? null, 'vinculado_telefono', null, p)
       continue
     }
     if (candidatos.length > 0) {

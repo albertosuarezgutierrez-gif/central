@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  accesoDesdeRefresh, canjearCodigo, emailDeIdToken, People, SyncTokenCaducado, TokenRevocado, urlAutorizacion,
+  accesoDesdeRefresh, canjearCodigo, debeRevocarAnterior, emailDeIdToken, People, SyncTokenCaducado, TokenRevocado, urlAutorizacion,
   SCOPE_CONTACTOS, type Red,
 } from './google-people.ts'
 
@@ -91,4 +91,23 @@ test('actualizar por lote manda solo la máscara gestionada y marca los que fall
   assert.equal(out['people/1']?.etag, 'e2')
   assert.equal(out['people/2'], null)
   assert.equal(JSON.parse(String(llamadas[0].init.body)).updateMask, 'names,phoneNumbers,emailAddresses,organizations,externalIds')
+})
+
+test('🪤 reconectar la MISMA cuenta de Google no revoca el token anterior (revoke mata el grant entero, también el nuevo)', () => {
+  const base = { tokenAnterior: '1//viejo', tokenNuevo: '1//nuevo' }
+  assert.equal(debeRevocarAnterior({ ...base, cuentaAnterior: 'alberto@x.es', cuentaNueva: 'alberto@x.es' }), false)
+  assert.equal(debeRevocarAnterior({ ...base, cuentaAnterior: 'alberto@x.es', cuentaNueva: 'otra@x.es' }), true)
+  // Cuenta desconocida en un lado: no se sabe si es la misma → no se revoca.
+  assert.equal(debeRevocarAnterior({ ...base, cuentaAnterior: null, cuentaNueva: 'alberto@x.es' }), false)
+  assert.equal(debeRevocarAnterior({ ...base, cuentaAnterior: 'alberto@x.es', cuentaNueva: null }), false)
+  // El mismo token: nada que revocar.
+  assert.equal(debeRevocarAnterior({ tokenAnterior: 't', tokenNuevo: 't', cuentaAnterior: 'a@x.es', cuentaNueva: 'b@x.es' }), false)
+})
+
+test('🪤 guardarConexion decide la revocación con debeRevocarAnterior (no revoca por su cuenta)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('./google-contactos.ts', import.meta.url), 'utf8')
+  const cuerpo = src.slice(src.indexOf('export async function guardarConexion'), src.indexOf('export type EstadoGoogleContactos'))
+  assert.match(cuerpo, /debeRevocarAnterior\(/)
+  assert.equal((cuerpo.match(/\brevocar\(/g) ?? []).length, 1, 'una sola llamada a revocar(), condicionada por debeRevocarAnterior')
 })

@@ -27,11 +27,16 @@ Lógica: `packages/module-seguros/src/google-contactos.ts`. SQL: `apps/asegura/p
 - Conectar: abrir en el navegador, con sesión de asegura, `https://<asegura>/api/google-contactos/conectar`.
 - Estado: `GET /api/operador/google-contactos`. Desconectar: `POST /api/operador/google-contactos/desconectar`
   `{ "borrarContactos": true|false }` (revoca en Google y borra el token; con `true` borra solo los contactos que CREÓ el CRM; los vinculados por teléfono/id eran de Alberto y se quedan).
-- ¿Quién llama?: `GET /api/operador/llamada?tel=600112233` (índice ciego, solo lectura).
+- ¿Quién llama?: `POST /api/operador/llamada` `{ "tel": "600112233" }` (índice ciego, solo lectura). POST y no GET:
+  el teléfono en la URL quedaría en los logs de Vercel.
 - Cola de revisión: plataforma → /correduria → Clientes («Google Contacts: revisión»), puerto
   `GET|POST /api/operador/google-contactos/revision` (50 por página por cursor; acciones `aceptar_lead`, `descartar`,
   `mantener_crm`). Ninguna toca el vínculo ni Google: «Mantener CRM» sobre un sacado del grupo NO lo recrea.
 - Teléfono/correo ausente en el CRM (p. ej. lead con baja de WhatsApp) NO vacía el de Google: se conserva.
+- El CRM gestiona solo SU entrada (primer teléfono/correo, la organization «Grupo ASegura»): otro teléfono, otro correo
+  o la empresa que Alberto añada en Google se conservan. Un contacto previo del grupo con el mismo teléfono pero OTRO
+  nombre no se vincula ni se pisa: va a la cola como «Teléfono ambiguo».
+- Reconectar la MISMA cuenta de Google no revoca el token anterior (`revoke` mata el grant entero, también el nuevo).
 
 ## Límites
 - **Google admite 25.000 contactos por cuenta (incluidos los personales).** Si la sincronización los superaría, se
