@@ -606,6 +606,9 @@ async function cabecera(correduriaId: string, e: { tarificacionId?: string | nul
                  ramo, simulado, peticion, project_id_codeoscopic::text as project_id
           from tarificaciones
           where correduria_id = ${correduriaId}::uuid and poliza_id = ${e.polizaId}::uuid
+            -- Solo Avant2: una tarificación del bot RPA (#4310) no puede colgar un presupuesto.
+            -- Vía to_jsonb para no romper mientras la columna \`canal\` no exista en la BD.
+            and coalesce(to_jsonb(tarificaciones) ->> 'canal', 'codeoscopic') = 'codeoscopic'
           order by creado_at desc
           limit 1
         `
