@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-05T14:37:50Z",
+  "generadoEn": "2026-10-05T17:00:33Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5617,6 +5617,7 @@
       "seguros.google_contactos_conexion",
       "seguros.google_contactos_revision",
       "seguros.google_contactos_ticket_usado",
+      "seguros.google_contactos_titular_telefono",
       "seguros.google_contactos_vinculo",
       "seguros.historial_interno",
       "seguros.interviniente_purga_log",
