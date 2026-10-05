@@ -1,29 +1,33 @@
 {
  "sesion": "9b302b48-c0ef-54ca-8c9c-76bc1d790d6f",
  "inicio": "2026-10-05T10:02:22.469Z",
- "fin": "2026-10-05T10:02:50.180Z",
- "llamadas": 10,
+ "fin": "2026-10-05T10:12:26.988Z",
+ "llamadas": 97,
  "categorias": {
   "bash": {
-   "llamadas": 2,
-   "chars_in": 620,
-   "chars_out": 1758,
+   "llamadas": 43,
+   "chars_in": 49393,
+   "chars_out": 217870,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 2
+    "Bash": 43
    }
   },
   "otro": {
-   "llamadas": 2,
-   "chars_in": 154,
-   "chars_out": 291,
+   "llamadas": 15,
+   "chars_in": 27767,
+   "chars_out": 8375,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 4,
+   "chars_citados": 82010,
    "tools": {
-    "ToolSearch": 2
+    "ToolSearch": 2,
+    "SubagentHandback": 6,
+    "SendMessage": 5,
+    "ReportFindings": 1,
+    "Skill": 1
    }
   },
   "mcp:github": {
@@ -60,14 +64,49 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 3,
-   "chars_in": 228,
-   "chars_out": 64072,
+   "llamadas": 17,
+   "chars_in": 1303,
+   "chars_out": 153557,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 3
+    "Read": 12,
+    "Grep": 2,
+    "Glob": 3
+   }
+  },
+  "sql": {
+   "llamadas": 11,
+   "chars_in": 12496,
+   "chars_out": 30372,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 11
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 2,
+   "chars_in": 4157,
+   "chars_out": 4551,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 943774,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "escritura": {
+   "llamadas": 6,
+   "chars_in": 11062,
+   "chars_out": 989498,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 6
    }
   }
  }
