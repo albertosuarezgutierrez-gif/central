@@ -22,12 +22,21 @@ export function bloqueoAccion(
 ): BloqueoAccion | null {
   if (a.origen !== 'portal') return null
   if (accion === 'marcar_firmada' && !liberadaParaFirma(a, ahora)) {
-    return { estado: 'no_permitida', motivo: 'Pedida por el cliente desde el portal y aún retenida: llámale y pulsa «Liberar para firma» antes (se libera sola a las 48 h).' }
+    return { estado: 'no_permitida', motivo: MOTIVO_RETENIDA }
   }
   if (accion === 'desistir' && !nota?.trim()) {
     return { estado: 'invalida', motivo: 'La pidió el cliente: di por qué se desiste (p. ej. «hablado por teléfono, se queda»).' }
   }
   return null
+}
+
+export const MOTIVO_RETENIDA = 'Pedida por el cliente desde el portal y aún retenida: llámale y pulsa «Liberar para firma» antes (se libera sola a las 48 h).'
+
+/** El CHECK `anulacion_portal_retenida` (23514) saltó en un UPDATE: la BD defiende lo que `bloqueoAccion` ya debía cortar. */
+export function esViolacionRetencionPortal(e: unknown): boolean {
+  if (typeof e !== 'object' || e === null) return false
+  const x = e as { message?: unknown; constraint?: unknown; meta?: { constraint?: unknown; message?: unknown } }
+  return [x.message, x.constraint, x.meta?.constraint, x.meta?.message].some((c) => typeof c === 'string' && c.includes('anulacion_portal_retenida'))
 }
 
 type Plantilla = (texto: TemplateStringsArray, ...valores: unknown[]) => Promise<unknown>

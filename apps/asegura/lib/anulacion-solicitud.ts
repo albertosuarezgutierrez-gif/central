@@ -67,12 +67,18 @@ type FilaPoliza = {
   estado: string | null; importRef: string | null; eiacXmlHash: string | null; sustituidaAt: Date | null
 }
 
-/** El índice único parcial (o un 23505 pelado) dice que otra baja se abrió entre el pre-chequeo y el INSERT. */
+const INDICE_BAJA_ABIERTA = 'uq_anulacion_abierta_por_poliza'
+
+/**
+ * Otra baja se abrió entre el pre-chequeo y el INSERT: SOLO si el error nombra nuestro índice único parcial.
+ * Cualquier otro 23505/P2002 (otro índice) es un fallo distinto y se relanza. El nombre del índice viene en
+ * `message`, en `constraint` (pg), en `meta.target`/`meta.constraint`/`meta.message` (Prisma raw o conocido).
+ */
 export function esConflictoDeBajaAbierta(e: unknown): boolean {
   if (typeof e !== 'object' || e === null) return false
-  const x = e as { message?: unknown; code?: unknown; meta?: { code?: unknown } }
-  const mensaje = typeof x.message === 'string' ? x.message : ''
-  return /uq_anulacion_abierta_por_poliza/.test(mensaje) || /\b23505\b/.test(mensaje) || x.code === '23505' || x.meta?.code === '23505' || x.code === 'P2002'
+  const x = e as { message?: unknown; constraint?: unknown; meta?: { target?: unknown; constraint?: unknown; message?: unknown } }
+  const candidatos: unknown[] = [x.message, x.constraint, x.meta?.constraint, x.meta?.message, x.meta?.target]
+  return candidatos.some((c) => (Array.isArray(c) ? c.join(' ') : typeof c === 'string' ? c : '').includes(INDICE_BAJA_ABIERTA))
 }
 
 export async function solicitarAnulacionConDeps(

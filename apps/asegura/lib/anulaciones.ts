@@ -16,7 +16,7 @@ import {
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
-import { bloqueoAccion, liberarConDeps, type DbLiberar, type ResultadoLiberar } from './anulacion-operador'
+import { bloqueoAccion, esViolacionRetencionPortal, liberarConDeps, MOTIVO_RETENIDA, type DbLiberar, type ResultadoLiberar } from './anulacion-operador'
 
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
 
@@ -184,7 +184,9 @@ export async function accionAnulacion(correduriaId: string, id: string, accion: 
   if (accion === 'marcar_firmada' && !texto) return { estado: 'invalida', motivo: 'Di cómo consta la firma (p. ej. «carta firmada, subida a Documentos»).' }
   const quien = actor.slice(0, 100)
   // `where estado = actual`: si otro clic la movió entre medias, esta no pisa nada.
-  const n = await db.$executeRaw`
+  let n: number
+  try {
+    n = await db.$executeRaw`
     update anulacion set estado = ${nuevo}, updated_at = now(),
       firmada_at    = case when ${nuevo} = 'firmada'    then now() else firmada_at end,
       firma_nota    = case when ${nuevo} = 'firmada'    then ${texto} else firma_nota end,
@@ -192,6 +194,11 @@ export async function accionAnulacion(correduriaId: string, id: string, accion: 
       confirmada_at = case when ${nuevo} = 'confirmada' then now() else confirmada_at end,
       desistida_at  = case when ${nuevo} = 'desistida'  then now() else desistida_at end
     where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = ${a.estado}`
+  } catch (e) {
+    // El CHECK de la BD es la red de seguridad de `bloqueoAccion`: si salta, es un 409 («libérala primero»), no un 500.
+    if (esViolacionRetencionPortal(e)) return { estado: 'no_permitida', motivo: MOTIVO_RETENIDA }
+    throw e
+  }
   if (n === 0) return { estado: 'no_permitida', motivo: 'Ha cambiado mientras tanto: recarga.' }
   anotarCambio({ entidad: 'anulacion', id, campo: 'estado', antes: a.estado, despues: nuevo })
   await historial(correduriaId, a.clienteId, a.polizaId, `Anulación ${nuevo}${texto ? `: ${texto}` : ''} (${quien}).`)

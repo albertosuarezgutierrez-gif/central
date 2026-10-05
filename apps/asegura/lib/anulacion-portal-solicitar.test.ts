@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { solicitarAnulacionConDeps, type DepsSolicitud, type FichaSolicitud } from './anulacion-solicitud.ts'
-import { bloqueoAccion, liberarConDeps } from './anulacion-operador.ts'
+import { bloqueoAccion, esViolacionRetencionPortal, MOTIVO_RETENIDA, liberarConDeps } from './anulacion-operador.ts'
 
 const CORR = '11111111-1111-4111-8111-111111111111'
 const IDENT = '22222222-2222-4222-8222-222222222222'
@@ -81,11 +81,21 @@ test('baja ya abierta: el pre-chequeo la corta (409) y el 23505 del índice parc
   assert.equal(pre.insertos().length, 0)
   for (const e of [
     new Error('duplicate key value violates unique constraint "uq_anulacion_abierta_por_poliza"'),
-    Object.assign(new Error('Raw query failed'), { code: '23505' }),
-    Object.assign(new Error('Raw query failed'), { code: 'P2010', meta: { code: '23505' } }),
+    Object.assign(new Error('Raw query failed'), { code: '23505', constraint: 'uq_anulacion_abierta_por_poliza' }),
+    Object.assign(new Error('Raw query failed'), { code: 'P2010', meta: { code: '23505', message: 'ERROR: duplicate key value violates unique constraint "uq_anulacion_abierta_por_poliza"' } }),
+    Object.assign(new Error('x'), { code: 'P2002', meta: { target: ['uq_anulacion_abierta_por_poliza'] } }),
   ]) {
     const carrera = montar({ insertar: () => { throw e } })
     assert.equal((await solicitarAnulacionConDeps(carrera.deps, CORR, IDENT, cuerpo)).estado, 'ya_abierta')
+  }
+  // Un 23505 de OTRO índice no es «ya abierta»: se relanza.
+  for (const e of [
+    Object.assign(new Error('Raw query failed'), { code: '23505' }),
+    Object.assign(new Error('duplicate key value violates unique constraint "otro_indice"'), { code: '23505', constraint: 'otro_indice' }),
+    Object.assign(new Error('Raw query failed'), { code: 'P2010', meta: { code: '23505', message: 'constraint "otro_indice"' } }),
+    Object.assign(new Error('x'), { code: 'P2002', meta: { target: ['otro_indice'] } }),
+  ]) {
+    await assert.rejects(solicitarAnulacionConDeps(montar({ insertar: () => { throw e } }).deps, CORR, IDENT, cuerpo), e as Error)
   }
   await assert.rejects(solicitarAnulacionConDeps(montar({ insertar: () => { throw new Error('conexión caída') } }).deps, CORR, IDENT, cuerpo), /conexión caída/)
 })
@@ -224,4 +234,14 @@ test('la ruta del puente solicitar: protegida con el secreto del puente, auditad
   assert.match(r, /creada: 201, no_es_tuya: 403, ya_abierta: 409/)
   assert.match(r, /no_vigente: 422/)
   assert.doesNotMatch(r.replace(/\/\*[\s\S]*?\*\//g, ''), /clienteId/, 'nunca acepta clienteId')
+})
+
+test('el CHECK anulacion_portal_retenida (23514) se reconoce y habla como bloqueoAccion; otros errores no', () => {
+  const ahora = new Date('2026-10-05T10:00:00Z')
+  assert.equal(bloqueoAccion({ origen: 'portal', liberadaAt: null, createdAt: ahora }, 'marcar_firmada', 'carta', ahora)?.motivo, MOTIVO_RETENIDA)
+  assert.equal(esViolacionRetencionPortal(Object.assign(new Error('new row for relation "anulacion" violates check constraint "anulacion_portal_retenida"'), { code: '23514' })), true)
+  assert.equal(esViolacionRetencionPortal(Object.assign(new Error('Raw query failed'), { code: 'P2010', meta: { code: '23514', message: 'violates check constraint "anulacion_portal_retenida"' } })), true)
+  assert.equal(esViolacionRetencionPortal(Object.assign(new Error('violates check constraint "otro_check"'), { code: '23514' })), false)
+  assert.equal(esViolacionRetencionPortal(new Error('conexión caída')), false)
+  assert.equal(esViolacionRetencionPortal(null), false)
 })
