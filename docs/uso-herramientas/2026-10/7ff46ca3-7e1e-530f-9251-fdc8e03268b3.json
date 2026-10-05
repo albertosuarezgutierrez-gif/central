@@ -1,0 +1,42 @@
+{
+ "sesion": "7ff46ca3-7e1e-530f-9251-fdc8e03268b3",
+ "inicio": "2026-10-05T05:16:42.226Z",
+ "fin": "2026-10-05T05:17:21.154Z",
+ "llamadas": 12,
+ "categorias": {
+  "bash": {
+   "llamadas": 9,
+   "chars_in": 2536,
+   "chars_out": 29194,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 9
+   }
+  },
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 3716,
+   "chars_out": 224,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "SubagentHandback": 1,
+    "SendMessage": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 1754,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
