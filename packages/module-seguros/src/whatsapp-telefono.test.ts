@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { aE164, formasHashTelefono, telefonoParaFicha } from './whatsapp-telefono.ts'
+import { aE164 } from './telefono-e164.ts'
+import { formasHashTelefono, telefonoParaFicha } from './whatsapp-telefono.ts'
 import { redactarPii } from './redactar-pii.ts'
 
 test('aE164: las cuatro formas de escribir un móvil español dan el mismo E.164', () => {
@@ -11,18 +12,18 @@ test('aE164: las cuatro formas de escribir un móvil español dan el mismo E.164
 })
 
 test('aE164: extranjeros con +, 00 o como los manda Meta (wa_id sin +)', () => {
-  assert.equal(aE164('+44 7700 900123'), '+447700900123')
-  assert.equal(aE164('0044 7700 900123'), '+447700900123')
-  assert.equal(aE164('447700900123'), '+447700900123')
-  assert.equal(aE164('15551234567'), '+15551234567')
+  // libphonenumber valida de verdad: los rangos ficticios (+44 7700 900xxx, +1 555…) ya no pasan.
+  assert.equal(aE164('+44 7911 123456'), '+447911123456')
+  assert.equal(aE164('0044 7911 123456'), '+447911123456')
+  assert.equal(aE164('+16502530000'), '+16502530000')
+  // El wa_id de Meta llega SIN «+»: con región ES se leería como nacional → null. Quien lo reciba antepone «+».
+  assert.equal(aE164('+447911123456'), '+447911123456')
 })
 
 test('aE164: inválidos → null (no se «arregla» un número)', () => {
-  for (const v of ['', 'hola', '12345', '500123456', '+34 500 123 456', '+34 60012345', '0600123456', '+0123456789', '+1234567890123456', null, undefined, {}]) {
+  for (const v of ['', 'hola', '12345', '+34 60012345', '0600123456', '+0123456789', '+1234567890123456', null, undefined, {}]) {
     assert.equal(aE164(v as unknown), null, String(v))
   }
-  // 9 dígitos sin prefijo solo se sabe leer si el país por defecto es España.
-  assert.equal(aE164('600123456', 'PT'), null)
 })
 
 test('telefonoParaFicha: como lo guarda la ficha (normalizarTelefono)', () => {

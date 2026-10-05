@@ -149,7 +149,8 @@ async function procesarUna(correduriaId: string, f: FilaCruda): Promise<string> 
   }
   const direccion = f.direction === 'outbound' ? 'saliente' : 'entrante'
   const contraparte = direccion === 'entrante' ? m.from : m.to
-  const e164 = aE164(typeof contraparte === 'string' ? contraparte : null)
+  // El wa_id de Meta llega sin «+» (34600123456): con región ES se leería como nacional.
+  const e164 = aE164(typeof contraparte === 'string' ? (/^\d{10,15}$/.test(contraparte) ? `+${contraparte}` : contraparte) : null)
   if (e164 === null) {
     await marcar(f.id, 'telefono_invalido', null, crudoMinimizado(crudo))
     return 'telefono_invalido'
