@@ -30,7 +30,7 @@ export async function GET(req: Request) {
         SELECT
           emp.nombre                AS empresa_nombre,
           e.nombre                  AS empleado_nombre,
-          e.nif,
+          e.dni                     AS nif,  -- la columna real es dni (DNI/NIE = NIF de persona física)
           f.entrada_at::date::text  AS fecha,
           f.entrada_at,
           f.salida_at,
