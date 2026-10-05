@@ -25,7 +25,9 @@
 
 import { createHash } from 'node:crypto'
 
+import { eurEs } from './comparativa-precios.ts'
 import { etiquetaRamo } from './filtro-cartera.ts'
+import type { MotivoDuplicado } from './google-contactos-revision.ts'
 import { aE164 } from './telefono-e164.ts'
 import type { ContactoMovil, GrupoContacto } from './vcard.ts'
 
@@ -49,8 +51,24 @@ export const MASCARA_GESTIONADA = 'names,phoneNumbers,emailAddresses,organizatio
 /** Un barrido que retiraría más que esto se BLOQUEA (y se avisa): huele a selección rota. */
 export const MAX_RETIRADA_POR_PASADA = 50
 
-/** Además de clientes y leads, los contactos de las COMPAÑÍAS (`compania_contactos`, 🔵). */
-export type GrupoGoogle = GrupoContacto | 'compania'
+/**
+ * Además de clientes y leads, los contactos de las COMPAÑÍAS (`compania_contactos`, 🔵) y los
+ * EX-CLIENTES (⚪, 05/10/2026): ficha con póliza de cartera viva pero NINGUNA en vigor
+ * (`esCarteraEnVigor`, nunca `clientes.tipo`). Solo los que YA tienen vínculo: no se crean contactos
+ * nuevos de ex-clientes; el que ya estaba se queda con ⚪ en vez de retirarse.
+ */
+export type GrupoGoogle = GrupoContacto | 'compania' | 'ex_cliente'
+/**
+ * Estado urgente del contacto (05/10/2026): 🚨 siniestro abierto (no cerrado ni rechazado) · 💶
+ * recibo DEVUELTO de una póliza en vigor. Prioridad 🚨 > 💶 > ⏰; nunca más de 2 emojis (tipo + uno).
+ */
+export type AlertaGoogle = 'siniestro' | 'recibo'
+export const EMOJI_ALERTA: Record<AlertaGoogle, string> = { siniestro: '🚨', recibo: '💶' }
+
+/** La más urgente: 🚨 gana a 💶. `null` = ninguna (con las consultas LEÍDAS; si fallan, el cron no escribe). */
+export function alertaPrioritaria(p: { siniestroAbierto: boolean; reciboDevuelto: boolean }): AlertaGoogle | null {
+  return p.siniestroAbierto ? 'siniestro' : p.reciboDevuelto ? 'recibo' : null
+}
 /** La clave de un contacto de compañía en vínculos/externalId: `compania:<uuid>` (un cliente va por su uuid). */
 export const PREFIJO_CLAVE_COMPANIA = 'compania:'
 export function esClaveCompania(clave: string): boolean {
@@ -71,9 +89,57 @@ export type ContactoGoogle = Omit<ContactoMovil, 'grupo'> & {
   cumpleanos?: string | null
   /** Alguna póliza en vigor vence en ≤30 días (`avisoVencimiento`): prefijo «🟢⏰ ». Solo clientes. */
   aviso?: boolean
+  /** 🚨/💶 (`alertaPrioritaria`). Gana al ⏰. Clientes y ex-clientes. */
+  alerta?: AlertaGoogle | null
+  /**
+   * MOTE de la ficha (`seguros.cliente_mote`, 05/10/2026): «mamá», «Benito Pintor». Si lo hay, el
+   * contacto se llama «<emoji> <mote>» y el nombre de la ficha va al bloque de la nota («Ficha: …»).
+   * 🚨 Solo para la agenda de Alberto: nunca en correos, portal, PDF ni envíos (guardián de aislamiento).
+   */
+  mote?: string | null
 }
 
-const ETIQUETA: Record<GrupoGoogle, string> = { cliente: 'Cliente', lead: 'Lead', compania: 'Compañía' }
+/**
+ * El mote que propone «Unificar» desde el contacto de Google: el nombre COMPLETO que ve Alberto
+ * (`displayName`, si no `unstructuredName`, si no nombre + apellidos: incluye segundo nombre y
+ * tratamiento), limpio (`limpiarMote`). Sin contacto (no se pudo leer), lo que se encoló.
+ */
+export function moteDesdeAgenda(p: PersonaGoogle | null, encolado: { nombre: string; apellidos: string } | null): string | null {
+  const n = p?.names?.[0]
+  const candidatos = [
+    n?.displayName, n?.unstructuredName,
+    [n?.honorificPrefix, n?.givenName, n?.middleName, n?.familyName, n?.honorificSuffix].filter(Boolean).join(' '),
+    encolado ? `${encolado.nombre} ${encolado.apellidos}` : null,
+  ]
+  for (const c of candidatos) {
+    const m = limpiarMote(c)
+    if (m) return m
+  }
+  return null
+}
+
+/** Línea del bloque de la nota con el nombre de la ficha cuando el contacto lleva mote. */
+export const PREFIJO_FICHA = 'Ficha: '
+export const MAX_MOTE = 60
+
+/**
+ * El mote que propone «Unificar» a partir del nombre con que Alberto tiene el contacto: sin ruido
+ * evidente (prefijo «AA »/«AAA » para ordenar la agenda, sufijo «· AS …» del .vcf, emojis, espacios
+ * dobles). `null` = no queda nada usable. Corta a 60 (CHECK en BD).
+ */
+export function limpiarMote(v: string | null | undefined): string | null {
+  const t = (v ?? '')
+    .replace(SUFIJO_VCF, '')
+    .replace(/\s*·\s*AS(?:\s.*)?$/u, '')
+    .replace(EMOJIS, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^(?:A{2,}\s+)+/u, '')
+    .trim()
+  return t === '' ? null : [...t].slice(0, MAX_MOTE).join('').trim()
+}
+
+const ETIQUETA: Record<GrupoGoogle, string> = { cliente: 'Cliente', lead: 'Lead', compania: 'Compañía', ex_cliente: 'Ex cliente' }
 /**
  * El nombre en Google EMPIEZA por el emoji del tipo (decisión de Alberto, 05/10/2026): «🟢 Juan
  * Pérez» = cliente con póliza en vigor, «🟡 María López» = lead, «🔵 Mapfre · Siniestros (Laura)» =
@@ -84,30 +150,37 @@ const ETIQUETA: Record<GrupoGoogle, string> = { cliente: 'Cliente', lead: 'Lead'
  * nombre leído conservara el emoji, ≠ CRM y CADA HORA se reescribiría (y se encolaría un «cambio en
  * Google» falso). Cubre el caso sin nombre («🟡» a secas) y el selector de variación U+FE0F.
  */
-export const EMOJI_GRUPO: Record<GrupoGoogle, string> = { cliente: '🟢', lead: '🟡', compania: '🔵' }
+export const EMOJI_GRUPO: Record<GrupoGoogle, string> = { cliente: '🟢', lead: '🟡', compania: '🔵', ex_cliente: '⚪' }
 export const EMOJI_AVISO = '⏰'
-const PREFIJO = /^(🟢|🟡|🔵)\uFE0F?(⏰\uFE0F?)?\s*/u
-const GRUPO_DE_EMOJI: Record<string, GrupoGoogle> = { '🟢': 'cliente', '🟡': 'lead', '🔵': 'compania' }
+const PREFIJO = /^(🟢|🟡|🔵|⚪)\uFE0F?(?:(⏰|🚨|💶)\uFE0F?)?\s*/u
+const GRUPO_DE_EMOJI: Record<string, GrupoGoogle> = { '🟢': 'cliente', '🟡': 'lead', '🔵': 'compania', '⚪': 'ex_cliente' }
+const ALERTA_DE_EMOJI: Record<string, AlertaGoogle> = { '🚨': 'siniestro', '💶': 'recibo' }
 /** Lo que se escribe en Google cuando la ficha no tiene ni nombre ni apellidos; al leer vuelve a ''. */
 const SIN_NOMBRE = '(sin nombre)'
 
-/** `givenName` leído → el nombre sin el emoji, el tipo que el emoji dice (`null` = no lo lleva) y si lleva ⏰. */
-export function quitarPrefijo(givenName: string | null | undefined): { nombre: string; grupo: GrupoGoogle | null; aviso: boolean } {
+/** `givenName` leído → el nombre sin emojis, el tipo que dice (`null` = no lo lleva), si lleva ⏰ y su 🚨/💶. */
+export function quitarPrefijo(givenName: string | null | undefined): { nombre: string; grupo: GrupoGoogle | null; aviso: boolean; alerta: AlertaGoogle | null } {
   const t = (givenName ?? '').replace(/\s+/g, ' ').trim()
   const m = t.match(PREFIJO)
   const resto = (m ? t.slice(m[0].length) : t).trim()
-  return { nombre: resto === SIN_NOMBRE ? '' : resto, grupo: m ? GRUPO_DE_EMOJI[m[1]] : null, aviso: !!m?.[2] }
+  return {
+    nombre: resto === SIN_NOMBRE ? '' : resto, grupo: m ? GRUPO_DE_EMOJI[m[1]] : null,
+    aviso: m?.[2] === EMOJI_AVISO, alerta: m?.[2] ? (ALERTA_DE_EMOJI[m[2]] ?? null) : null,
+  }
 }
 
-/** El `givenName` que se escribe: emoji (+⏰) + nombre; sin nombre pero con apellidos, solo el emoji. */
-function givenNameConPrefijo(c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo' | 'aviso'>): string {
-  const e = EMOJI_GRUPO[c.grupo ?? 'lead'] + (c.aviso ? EMOJI_AVISO : '')
+/**
+ * El `givenName` que se escribe: emoji de tipo + COMO MUCHO uno de estado (🚨 > 💶 > ⏰) + nombre; sin
+ * nombre pero con apellidos, solo los emojis.
+ */
+function givenNameConPrefijo(c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo' | 'aviso'> & { alerta?: AlertaGoogle | null }): string {
+  const e = EMOJI_GRUPO[c.grupo ?? 'lead'] + (c.alerta ? EMOJI_ALERTA[c.alerta] : c.aviso ? EMOJI_AVISO : '')
   if (c.nombre !== '') return `${e} ${c.nombre}`
   return c.apellidos !== '' ? e : `${e} ${SIN_NOMBRE}`
 }
 
 /** Cómo se verá el contacto en la agenda: «🟢 Juan Pérez García». */
-export function nombreEnGoogle(c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo'> & { aviso?: boolean }): string {
+export function nombreEnGoogle(c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo'> & { aviso?: boolean; alerta?: AlertaGoogle | null }): string {
   return `${givenNameConPrefijo({ ...c, aviso: c.aviso ?? false })} ${c.apellidos}`.trim()
 }
 
@@ -124,8 +197,10 @@ export type CamposSincronizados = {
   url: string | null
   /** `AAAA-MM-DD` (o `--MM-DD` leído de Google sin año); `null` = no consta. */
   cumpleanos: string | null
-  /** ⏰ en el prefijo. */
+  /** ⏰ en el prefijo. Falso si hay `alerta` (no se ve: lo que no se escribe no se compara). */
   aviso: boolean
+  /** 🚨/💶 en el prefijo (`null` = ninguna). */
+  alerta: AlertaGoogle | null
 }
 
 /** Subconjunto de `Person` de la People API que se lee. */
@@ -133,7 +208,7 @@ export type PersonaGoogle = {
   resourceName: string
   etag?: string
   metadata?: { deleted?: boolean }
-  names?: { givenName?: string; familyName?: string; displayName?: string; unstructuredName?: string }[]
+  names?: { givenName?: string; familyName?: string; middleName?: string; honorificPrefix?: string; honorificSuffix?: string; displayName?: string; unstructuredName?: string }[]
   phoneNumbers?: { value?: string; canonicalForm?: string; type?: string }[]
   emailAddresses?: { value?: string; type?: string }[]
   organizations?: { name?: string; title?: string }[]
@@ -170,6 +245,16 @@ export type PersonaParaEscribir = {
 export type OrigenVinculo = 'creado' | 'vinculado_id' | 'vinculado_telefono' | 'fusion' | 'adoptado'
 export type EstadoVinculo = 'activo' | 'fuera_del_grupo'
 
+/**
+ * `hash_enviado` de un vínculo creado por «Unificar» en la cola (`google-contactos-revision.ts`): aún
+ * NO se ha escrito nada en Google. La pasada siguiente lo trata como una ADOPCIÓN (entrada del CRM,
+ * lo demás de Alberto se conserva, entra en la etiqueta) en vez de leerlo como «sacado del grupo».
+ * No es un sha256 (64 hex): no puede chocar con un hash real.
+ */
+export const HASH_PENDIENTE_UNIFICAR = 'pendiente:unificar'
+/** Línea que se añade a la nota (FUERA del bloque del CRM) con el nombre con que Alberto lo tenía guardado. */
+export const PREFIJO_NOMBRE_ANTERIOR = 'Guardado antes en tu agenda como: '
+
 export type Vinculo = {
   /** La CLAVE del contacto: el uuid de la ficha o `compania:<uuid>` (`PREFIJO_CLAVE_COMPANIA`). */
   clienteId: string
@@ -192,11 +277,10 @@ export type Revision = {
   /** Idempotencia: la misma situación detectada cada hora no se encola dos veces. */
   huella: string
   /**
-   * Solo en `duplicado_ambiguo` (también los de FUERA de la etiqueta en la adopción): por qué. `nombre_distinto` = un único contacto con ese teléfono
-   * pero OTRO nombre; `telefono_compartido` = varios contactos (o varias fichas) con el mismo
-   * número. No se guarda en la BD (la cola ya lo distingue por `campos`): lo usa la simulación.
+   * Solo en `duplicado_ambiguo`: por qué (`MOTIVOS_DUPLICADO`). Se guarda en la columna `motivo`
+   * (migración 2026-10-05d): de él depende que la cola ofrezca «Unificar» (solo si es inequívoco).
    */
-  motivo?: 'nombre_distinto' | 'telefono_compartido'
+  motivo?: MotivoDuplicado
 }
 
 export type Escritura = {
@@ -340,6 +424,35 @@ export function notaLead(p: { ramo: string; compania: string | null; vencimiento
   return normNota(out.join('\n'))!
 }
 
+const ESTADO_SINIESTRO: Record<string, string> = { abierto: 'abierto', en_tramitacion: 'en tramitación' }
+
+/**
+ * Líneas de estado para el bloque de la nota (05/10/2026, decisión de Alberto): 🚨 cada siniestro
+ * ABIERTO (nº y estado) y 💶 cada recibo DEVUELTO (importe `2.162,49€` y ramo · compañía; el nº de
+ * póliza NO: la nota se copia a otras apps). Ordenadas: el orden de la consulta no cambia el hash.
+ * `importe: null` = el EIAC no lo trae legible: se dice «importe no consta», nunca 0€.
+ */
+export function lineasEstado(p: {
+  siniestros: readonly { numero: string | null; estado: string }[]
+  recibos: readonly { importe: number | null; ramo: string; compania: string | null }[]
+}): string[] {
+  const s = p.siniestros.map((x) => `🚨 Siniestro ${limpio(x.numero) ?? 'sin número'} · ${ESTADO_SINIESTRO[x.estado] ?? x.estado}`)
+  const r = p.recibos.map((x) => `💶 Recibo devuelto: ${x.importe === null ? 'importe no consta' : eurEs(x.importe)} · ${etiquetaRamo(x.ramo)} · ${limpio(x.compania) ?? SIN_COMPANIA}`)
+  return [...[...new Set(s)].sort((a, b) => a.localeCompare(b, 'es')), ...[...new Set(r)].sort((a, b) => a.localeCompare(b, 'es'))]
+}
+
+/** Nota de un EX-CLIENTE (⚪): «Ex cliente: baja mm/aaaa, compañía». Sin fecha, se dice. */
+export function notaExCliente(p: { baja: string | null; compania: string | null }, estado: readonly string[] = []): string {
+  const m = (p.baja ?? '').match(/^(\d{4})-(\d{2})/)
+  const out = [`Ex cliente: baja ${m ? `${m[2]}/${m[1]}` : '(fecha no consta)'}, ${limpio(p.compania) ?? SIN_COMPANIA}`, ...estado]
+  return normNota(out.join('\n'))!
+}
+
+/** El bloque de un cliente con sus líneas de estado debajo. */
+export function conLineasEstado(nota: string, estado: readonly string[]): string {
+  return estado.length ? normNota([nota, ...estado].join('\n'))! : nota
+}
+
 function sumarDias(iso: string, dias: number): string {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + dias)
@@ -399,20 +512,31 @@ export function nombreCompaniaContacto(c: { compania: string; area: string | nul
 /** Los campos gestionados de una ficha del CRM, o `null` si algo viene sin descifrar. */
 export function camposDeCrm(c: ContactoGoogle): CamposSincronizados | null {
   if (cifrado(c.telefono) || cifrado(c.email) || cifrado(c.nombre) || cifrado(c.apellidos)) return null
+  // Por PUNTOS DE CÓDIGO (no unidades UTF-16): cortar a 60 con `slice` partiría un emoji en dos.
+  const mote = c.grupo === 'compania' ? null : (limpio(c.mote) ? [...limpio(c.mote)!].slice(0, MAX_MOTE).join('').trim() || null : null)
+  const ficha = `${limpio(c.nombre) ?? ''} ${limpio(c.apellidos) ?? ''}`.trim()
   return {
-    nombre: limpio(c.nombre) ?? '',
-    apellidos: limpio(c.apellidos) ?? '',
+    // Con mote, el contacto se llama así (todo en el nombre, sin apellidos) y la ficha va a la nota.
+    nombre: mote ?? limpio(c.nombre) ?? '',
+    apellidos: mote ? '' : (limpio(c.apellidos) ?? ''),
     telefono: telefonoCanonico(c.telefono) || null,
     email: emailCanonico(c.email),
     grupo: c.grupo,
-    nota: normNota(c.nota),
+    nota: mote && ficha ? normNota(`${PREFIJO_FICHA}${ficha}\n${c.nota ?? ''}`) : normNota(c.nota),
     url: limpio(c.url),
     cumpleanos: normalizarNacimiento(c.cumpleanos),
-    aviso: c.grupo === 'cliente' && c.aviso === true,
+    // Solo se cuenta lo que se VE: con 🚨/💶 el ⏰ no se escribe, así que tampoco se compara (si no,
+    // releído sin ⏰ diferiría del CRM y se reescribiría cada hora).
+    aviso: c.grupo === 'cliente' && c.aviso === true && !alertaDe(c),
+    alerta: alertaDe(c),
   }
 }
 
-const GRUPO_DE_TITULO: Record<string, GrupoGoogle> = { Cliente: 'cliente', Lead: 'lead', 'Compañía': 'compania' }
+function alertaDe(c: ContactoGoogle): AlertaGoogle | null {
+  return (c.grupo === 'cliente' || c.grupo === 'ex_cliente') && (c.alerta === 'siniestro' || c.alerta === 'recibo') ? c.alerta : null
+}
+
+const GRUPO_DE_TITULO: Record<string, GrupoGoogle> = { Cliente: 'cliente', Lead: 'lead', 'Compañía': 'compania', 'Ex cliente': 'ex_cliente' }
 
 function esNuestraUrl(u: { value?: string; type?: string }): boolean {
   return u.type === TIPO_URL || RUTA_FICHA.test(u.value ?? '')
@@ -421,7 +545,7 @@ function esNuestraUrl(u: { value?: string; type?: string }): boolean {
 /** Lo mismo leído de Google, con la misma normalización (si no, cada hora sería un «cambio»). */
 export function camposDeGoogle(p: PersonaGoogle): CamposSincronizados {
   const n = p.names?.[0]
-  const { nombre, grupo: grupoPrefijo, aviso } = quitarPrefijo(n?.givenName)
+  const { nombre, grupo: grupoPrefijo, aviso, alerta } = quitarPrefijo(n?.givenName)
   const org = p.organizations?.find((o) => limpio(o.name) === NOMBRE_GRUPO_GOOGLE)
   const titulo = limpio(org?.title)
   const grupoTitulo: GrupoGoogle | null = titulo ? (GRUPO_DE_TITULO[titulo] ?? null) : null
@@ -439,6 +563,7 @@ export function camposDeGoogle(p: PersonaGoogle): CamposSincronizados {
     url: limpio(p.urls?.find(esNuestraUrl)?.value),
     cumpleanos: cumpleanosDeGoogle(p.birthdays?.[0]),
     aviso,
+    alerta,
   }
 }
 
@@ -447,10 +572,16 @@ const CAMPOS: readonly (keyof CamposSincronizados)[] = ['nombre', 'apellidos', '
  * Campos que, editados en Google, el CRM repone SIN encolar: el bloque de la nota y la URL son
  * del CRM, y el ⏰ es derivado de las fechas (decisión de Alberto, 05/10/2026).
  */
-const SIN_COLA = new Set<keyof CamposSincronizados>(['nota', 'url', 'aviso'])
+const SIN_COLA = new Set<keyof CamposSincronizados>(['nota', 'url', 'aviso', 'alerta'])
 
+/**
+ * `alerta` entra en el hash SOLO cuando hay una: así los hashes de antes del 05/10/2026 (sin
+ * alerta) no cambian y el despliegue no reescribe la agenda entera.
+ */
 export function hashCampos(c: CamposSincronizados): string {
-  return createHash('sha256').update(JSON.stringify(CAMPOS.map((k) => c[k]))).digest('hex')
+  const valores: unknown[] = CAMPOS.map((k) => c[k])
+  if (c.alerta) valores.push(c.alerta)
+  return createHash('sha256').update(JSON.stringify(valores)).digest('hex')
 }
 
 /** Solo lo que identifica a la persona: la huella de un ambiguo no cambia porque cambie su nota o su ⏰. */
@@ -459,7 +590,7 @@ function hashIdentidad(c: CamposSincronizados): string {
 }
 
 export function diferencias(a: CamposSincronizados, b: CamposSincronizados): (keyof CamposSincronizados)[] {
-  return CAMPOS.filter((k) => a[k] !== b[k])
+  return [...CAMPOS, 'alerta' as const].filter((k) => a[k] !== b[k])
 }
 
 /**
@@ -610,7 +741,7 @@ const SUFIJO_VCF = /\s*·\s*AS\s+(Cliente|Lead)\b.*$/iu
 const EMOJIS = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\uFE0F\u200D]/gu
 
 /** Nombre comparable: sin sufijo del .vcf, emojis, tildes, mayúsculas ni espacios de más. */
-function normNombre(v: string): string {
+export function normNombre(v: string): string {
   return v.replace(SUFIJO_VCF, '').replace(EMOJIS, ' ').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim()
 }
 
@@ -631,11 +762,33 @@ function llevaSufijoVcf(p: PersonaGoogle): boolean {
 }
 
 /** TODOS los teléfonos del contacto, canónicos y sin repetir (se empareja por cualquiera). */
-function telefonosDe(p: PersonaGoogle): string[] {
+export function telefonosDe(p: PersonaGoogle): string[] {
   return [...new Set((p.phoneNumbers ?? []).flatMap((t) => {
     const x = limpio(t.canonicalForm) ?? telefonoCanonico(t.value)
     return x ? [x] : []
   }))]
+}
+
+/** TODOS los correos del contacto, canónicos y sin repetir. */
+function emailsDe(p: PersonaGoogle): string[] {
+  return [...new Set((p.emailAddresses ?? []).flatMap((m) => { const x = emailCanonico(m.value); return x ? [x] : [] }))]
+}
+
+/** El nombre con que Alberto ve el contacto en su agenda (tal cual, sin espacios de más). */
+export function nombreVisible(p: PersonaGoogle): string | null {
+  const n = p.names?.[0]
+  return limpio(n?.displayName) ?? limpio(`${n?.givenName ?? ''} ${n?.familyName ?? ''}`) ?? limpio(n?.unstructuredName)
+}
+
+/**
+ * La nota con «Guardado antes en tu agenda como: X» DELANTE (fuera del bloque del CRM, así que se
+ * conserva para siempre y no entra en el hash). Idempotente: si la línea ya está, no se repite.
+ */
+export function conNombreAnterior(bio: string | null | undefined, nombre: string): string {
+  const linea = `${PREFIJO_NOMBRE_ANTERIOR}${nombre.replace(/\s+/g, ' ').trim()}`
+  const t = (bio ?? '').replace(/\r\n?/g, '\n')
+  if (t.split('\n').some((l) => l.trim() === linea)) return t
+  return t.trim() === '' ? linea : `${linea}\n\n${t}`
 }
 
 export function planificarSync(e: EntradaPlan): Plan {
@@ -657,6 +810,11 @@ export function planificarSync(e: EntradaPlan): Plan {
 
   // Fichas del CRM (sin vínculo) por E.164, para saber si un teléfono lo comparten dos personas.
   const campos = new Map<string, CamposSincronizados | null>(crm.map((c) => [c.clienteId, camposDeCrm(c)]))
+  // Nombres con que se reconoce a cada ficha al emparejar: el de la ficha y, si lo hay, su mote.
+  const nombresFicha = new Map(crm.map((c) => [c.clienteId, [...new Set([
+    normNombre(`${c.nombre ?? ''} ${c.apellidos ?? ''}`), ...(c.mote && c.grupo !== 'compania' ? [normNombre(c.mote)] : []),
+  ])].filter((n) => n !== '')]))
+  const conMote = new Set(crm.filter((c) => c.grupo !== 'compania' && limpio(c.mote)).map((c) => c.clienteId))
   const crmPorTel = new Map<string, number>()
   for (const c of crm) {
     const t = campos.get(c.clienteId)?.telefono
@@ -668,6 +826,10 @@ export function planificarSync(e: EntradaPlan): Plan {
   const libresPorTel = new Map<string, PersonaGoogle[]>()
   const fueraPorTel = new Map<string, PersonaGoogle[]>()
   const libresPorId = new Map<string, PersonaGoogle>()
+  // Fuera de la etiqueta y SIN id externo, por correo y por nombre completo normalizado: el último
+  // filtro antes de CREAR una ficha cuyo teléfono no casa (Alberto la tiene guardada con su nombre).
+  const fueraPorEmail = new Map<string, PersonaGoogle[]>()
+  const fueraPorNombre = new Map<string, PersonaGoogle[]>()
   for (const p of e.google) {
     if (p.metadata?.deleted || vinculadoRN.has(p.resourceName)) continue
     const dentro = enGrupo(p, e.grupoResourceName)
@@ -675,7 +837,24 @@ export function planificarSync(e: EntradaPlan): Plan {
     for (const t of telefonosDe(p)) destino.set(t, [...(destino.get(t) ?? []), p])
     const id = dentro ? idExterno(p) : null
     if (id) libresPorId.set(id, p)
+    if (!dentro && !idExterno(p)) {
+      for (const m of emailsDe(p)) fueraPorEmail.set(m, [...(fueraPorEmail.get(m) ?? []), p])
+      for (const n of nombresDeAgenda(p)) fueraPorNombre.set(n, [...(fueraPorNombre.get(n) ?? []), p])
+    }
   }
+  // Fichas SIN vínculo por correo y por nombre: un contacto que casa con DOS fichas no es de nadie.
+  const crmPorEmail = new Map<string, Set<string>>()
+  const crmPorNombre = new Map<string, Set<string>>()
+  for (const c of crm) {
+    const x = campos.get(c.clienteId)
+    if (!x || vinculoDe.has(c.clienteId)) continue
+    if (x.email) crmPorEmail.set(x.email, new Set([...(crmPorEmail.get(x.email) ?? []), c.clienteId]))
+    for (const n of nombresFicha.get(c.clienteId) ?? []) crmPorNombre.set(n, new Set([...(crmPorNombre.get(n) ?? []), c.clienteId]))
+  }
+  const fichasPorEmailONombre = (p: PersonaGoogle) => new Set([
+    ...emailsDe(p).flatMap((m) => [...(crmPorEmail.get(m) ?? [])]),
+    ...[...nombresDeAgenda(p)].flatMap((n) => [...(crmPorNombre.get(n) ?? [])]),
+  ]).size
   /** Cuántas fichas sin vínculo casan con ALGUNO de sus teléfonos: más de una = no se sabe de quién es. */
   const fichasDe = (p: PersonaGoogle) => telefonosDe(p).reduce((n, t) => n + (crmPorTel.get(t) ?? 0), 0)
   // Un contacto sin vínculo que lleva el id de una ficha ABSORBIDA es de su superviviente (el
@@ -685,25 +864,38 @@ export function planificarSync(e: EntradaPlan): Plan {
     const sup = superviviente(id, e.fusiones)
     if (sup !== id && !libresPorSuperviviente.has(sup)) libresPorSuperviviente.set(sup, p)
   }
+  const disponible = (p: PersonaGoogle) => !reclamados.has(p.resourceName) || ambiguos.has(p.resourceName)
   // Vínculos de fichas absorbidas, por superviviente FINAL (las cadenas A→B→C también): el
   // contacto se hereda, no se duplica. Si hay varios, gana uno activo; uno `fuera_del_grupo` se
   // hereda tal cual (Alberto sacó a esa persona del grupo: no se le vuelve a meter).
   const heredable = new Map<string, Vinculo>()
   for (const v of e.vinculos) {
     if (!e.fusiones.has(v.clienteId)) continue
+    // Un «Unificar» pendiente de una ficha absorbida NO se hereda: se olvida (no está en la
+    // selección) y la superviviente pasa otra vez por la cola. Heredarlo pisaría la primera
+    // entrada de Alberto y dejaría el contacto fuera de la etiqueta.
+    if (v.hashEnviado === HASH_PENDIENTE_UNIFICAR) continue
     const sup = superviviente(v.clienteId, e.fusiones)
     if (vinculoDe.has(sup)) continue
     const ya = heredable.get(sup)
     if (!ya || (ya.estado !== 'activo' && v.estado === 'activo')) heredable.set(sup, v)
   }
 
-  const actualizar = (c: CamposSincronizados, clienteId: string, resourceName: string, etag: string | null, origen: OrigenVinculo, revinculaDe: string | null, g: PersonaGoogle | undefined, anadirAlGrupo = false) => {
+  const actualizar = (c: CamposSincronizados, clienteId: string, resourceName: string, etag: string | null, origen: OrigenVinculo, revinculaDe: string | null, g: PersonaGoogle | undefined, anadirAlGrupo = false, unificar = false) => {
     reclamados.add(resourceName)
     let persona = personaDesdeCampos(c, clienteId, etag)
-    // Un contacto que se vincula/adopta AHORA por teléfono no lo escribimos nunca: no se pisa su primera entrada.
-    const nuevoDeAlberto = (origen === 'vinculado_telefono' || origen === 'adoptado') && revinculaDe === null && !vinculoDe.has(clienteId)
-    if (g) persona = conservandoDeGoogle(persona, c, g, !nuevoDeAlberto)
-    else if (e.modo === 'delta') {
+    // Un contacto que se vincula/adopta/unifica AHORA no lo escribimos nunca: no se pisa su primera entrada.
+    const nuevoDeAlberto = unificar || ((origen === 'vinculado_telefono' || origen === 'adoptado') && revinculaDe === null && !vinculoDe.has(clienteId))
+    if (g) {
+      persona = conservandoDeGoogle(persona, c, g, !nuevoDeAlberto)
+      // Unificar: el nombre con que Alberto lo tenía guardado no se pierde en silencio (va a la nota,
+      // fuera del bloque del CRM). Si ya es el del CRM (p. ej. un reintento tras escribirlo), nada.
+      // Con mote no hace falta: el contacto se sigue llamando como Alberto lo llama.
+      const anterior = unificar && !conMote.has(clienteId) ? nombreVisible(g) : null
+      if (anterior && normNombre(anterior) !== nombreCrm(c)) {
+        persona = { ...persona, biographies: [{ value: conNombreAnterior(persona.biographies?.[0]?.value, anterior), contentType: persona.biographies?.[0]?.contentType ?? 'TEXT_PLAIN' }] }
+      }
+    } else if (e.modo === 'delta') {
       // Sin ver el contacto no se sabe qué entradas tiene: la escritura sustituye listas enteras y
       // se llevaría por delante el 2.º teléfono/correo o la empresa que hubiera en Google.
       plan.necesitaListadoCompleto = true
@@ -711,6 +903,35 @@ export function planificarSync(e: EntradaPlan): Plan {
       return
     }
     plan.actualizar.push({ clienteId, resourceName, origen, revinculaDe, hash: hashCampos(c), persona, ...(anadirAlGrupo ? { anadirAlGrupo: true } : {}) })
+  }
+
+  /**
+   * Antes de CREAR una ficha cuyo teléfono no casa: ¿la tiene Alberto ya guardada FUERA de la
+   * etiqueta (sin id externo) con el mismo correo o el mismo nombre completo (sin tildes,
+   * mayúsculas, emojis ni sufijo «· AS …»)? Entonces NO se crea: a la cola (`mismo_email` /
+   * `mismo_nombre`, unificable) o, con varios contactos o varias fichas posibles,
+   * `varios_candidatos` (sin «Unificar»). Solo con el listado completo: en delta no se ve la
+   * agenda entera, y el `crear` ya fuerza a repetir el plan en completo.
+   */
+  const encolarSiYaEsta = (cc: CamposSincronizados, clienteId: string): boolean => {
+    if (e.modo !== 'completo') return false
+    const porEmail = cc.email ? (fueraPorEmail.get(cc.email) ?? []).filter(disponible) : []
+    const porNombre = (nombresFicha.get(clienteId) ?? []).flatMap((n) => fueraPorNombre.get(n) ?? []).filter(disponible)
+    const todos = [...new Map([...porEmail, ...porNombre].map((p) => [p.resourceName, p])).values()]
+    if (todos.length === 0) return false
+    const p = todos[0]
+    const motivo: MotivoDuplicado = todos.length > 1 || fichasPorEmailONombre(p) > 1
+      ? 'varios_candidatos'
+      : porEmail.length > 0 ? 'mismo_email' : 'mismo_nombre'
+    const cg = camposDeGoogle(p)
+    const campos = diferencias(cc, { ...cc, nombre: cg.nombre, apellidos: cg.apellidos, telefono: cg.telefono, email: cg.email })
+    plan.revisiones.push({ tipo: 'duplicado_ambiguo', clienteId, resourceName: p.resourceName, campos, propuesta: cg, huella: huella('duplicado_ambiguo', p.resourceName, `${clienteId}|${hashIdentidad(cc)}|${motivo}`), motivo })
+    for (const x of todos) {
+      reclamados.add(x.resourceName)
+      if (motivo === 'varios_candidatos') ambiguos.add(x.resourceName)
+    }
+    plan.omitidos++
+    return true
   }
 
   for (const c of crm) {
@@ -726,6 +947,25 @@ export function planificarSync(e: EntradaPlan): Plan {
     if (v) {
       if (v.estado === 'fuera_del_grupo') {
         plan.omitidos++
+        continue
+      }
+      if (v.hashEnviado === HASH_PENDIENTE_UNIFICAR) {
+        // «Unificar» de la cola: aún no se ha escrito nada. Se ADOPTA ese contacto (aunque esté fuera
+        // de la etiqueta: NO es «sacado del grupo»). Si ya no existe, el vínculo se olvida y la ficha
+        // se vuelve a evaluar la pasada siguiente (sin crear nada en esta).
+        const gu = google.get(v.resourceName)
+        if (gu?.metadata?.deleted === true || (e.modo === 'completo' && !gu)) {
+          plan.olvidar.push(c.clienteId)
+          plan.omitidos++
+          continue
+        }
+        if (gu) {
+          const cg = camposDeGoogle(gu)
+          if (cc.cumpleanos !== null && cg.cumpleanos !== null && cg.cumpleanos !== cc.cumpleanos) {
+            plan.revisiones.push({ tipo: 'cambio_en_google', clienteId: c.clienteId, resourceName: v.resourceName, campos: ['cumpleanos'], propuesta: cg, huella: huella('cambio_en_google', v.resourceName, hashCampos(cg)) })
+          }
+        }
+        actualizar(cc, c.clienteId, v.resourceName, gu?.etag ?? v.etag, 'adoptado', null, gu, gu ? !enGrupo(gu, e.grupoResourceName) : false, true)
         continue
       }
       const g = google.get(v.resourceName)
@@ -793,7 +1033,7 @@ export function planificarSync(e: EntradaPlan): Plan {
     //    mismo teléfono y OTRO nombre es probablemente un contacto PERSONAL de Alberto → ni se adopta
     //    ni se crea (se crearía un segundo contacto con su número): a la cola.
     if (!cc.telefono) {
-      plan.crear.push({ clienteId: c.clienteId, hash, persona: personaDesdeCampos(cc, c.clienteId) })
+      if (!encolarSiYaEsta(cc, c.clienteId)) plan.crear.push({ clienteId: c.clienteId, hash, persona: personaDesdeCampos(cc, c.clienteId) })
       continue
     }
     if (e.modo === 'delta') {
@@ -804,7 +1044,6 @@ export function planificarSync(e: EntradaPlan): Plan {
       continue
     }
     const tel = cc.telefono
-    const disponible = (p: PersonaGoogle) => !reclamados.has(p.resourceName) || ambiguos.has(p.resourceName)
     const deEtiqueta = (libresPorTel.get(tel) ?? []).filter((p) => !idExterno(p) && disponible(p))
     const adopcion = deEtiqueta.length === 0
     // Fuera de la etiqueta: sin id externo, o con el de ESTA ficha (escrito por una adopción a medias).
@@ -814,7 +1053,7 @@ export function planificarSync(e: EntradaPlan): Plan {
     if (candidatos.length === 1 && fichasDe(candidatos[0]) === 1) {
       const p = candidatos[0]
       const nombres = nombresDeAgenda(p)
-      const mismo = nombres.has(nombreCrm(cc))
+      const mismo = (nombresFicha.get(c.clienteId) ?? []).some((n) => nombres.has(n))
       const vale = adopcion ? mismo || llevaSufijoVcf(p) || idExterno(p) === c.clienteId : nombres.size === 0 || mismo
       const cg = camposDeGoogle(p)
       if (!vale) {
@@ -843,7 +1082,7 @@ export function planificarSync(e: EntradaPlan): Plan {
       plan.omitidos++
       continue
     }
-    plan.crear.push({ clienteId: c.clienteId, hash, persona: personaDesdeCampos(cc, c.clienteId) })
+    if (!encolarSiYaEsta(cc, c.clienteId)) plan.crear.push({ clienteId: c.clienteId, hash, persona: personaDesdeCampos(cc, c.clienteId) })
   }
 
   if (e.modo === 'delta' && plan.crear.length > 0) plan.necesitaListadoCompleto = true

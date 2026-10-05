@@ -383,10 +383,10 @@ test('emoji: 🟢 cliente / 🟡 lead al PRINCIPIO del nombre visible; sin nombr
 })
 
 test('🪤 3a emoji: al leer se quita y se reconoce (también con U+FE0F y solo-emoji): mismo hash, no reescribe', () => {
-  assert.deepEqual(quitarPrefijo('🟢 Ana'), { nombre: 'Ana', grupo: 'cliente', aviso: false })
-  assert.deepEqual(quitarPrefijo('🟡\uFE0F  María'), { nombre: 'María', grupo: 'lead', aviso: false })
-  assert.deepEqual(quitarPrefijo('🟡'), { nombre: '', grupo: 'lead', aviso: false })
-  assert.deepEqual(quitarPrefijo('Ana'), { nombre: 'Ana', grupo: null, aviso: false })
+  assert.deepEqual(quitarPrefijo('🟢 Ana'), { nombre: 'Ana', grupo: 'cliente', aviso: false, alerta: null })
+  assert.deepEqual(quitarPrefijo('🟡\uFE0F  María'), { nombre: 'María', grupo: 'lead', aviso: false, alerta: null })
+  assert.deepEqual(quitarPrefijo('🟡'), { nombre: '', grupo: 'lead', aviso: false, alerta: null })
+  assert.deepEqual(quitarPrefijo('Ana'), { nombre: 'Ana', grupo: null, aviso: false, alerta: null })
   for (const c of [ana, luis, lead, { ...luis, nombre: null }, { ...luis, nombre: null, apellidos: null }]) {
     const plan = planificarSync(entrada({ crm: [c], vinculos: [vinculo(c, 'people/1')], google: [enGoogle(c, 'people/1')] }))
     assert.equal(plan.actualizar.length + plan.refrescar.length + plan.revisiones.length, 0, `cicla: ${c.clienteId}`)

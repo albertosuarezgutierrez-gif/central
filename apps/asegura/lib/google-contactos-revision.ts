@@ -2,25 +2,32 @@
  * Cola de revisión de la sincronización con Google Contacts (05/10/2026): leerla y resolverla.
  *
  * Qué hace cada botón lo decide `efectoResolucion` (puro, `@central/module-seguros`). Aquí solo
- * BD. 🚨 Ninguna resolución toca `google_contactos_vinculo` ni Google: «Mantener CRM» sobre un
- * contacto que Alberto sacó del grupo solo cierra la revisión (el vínculo sigue
+ * BD. 🚨 Ninguna resolución toca Google, y solo «Unificar» toca `google_contactos_vinculo` (crea el
+ * vínculo PENDIENTE ficha ↔ contacto; lo escribe la pasada siguiente del cron). «Mantener CRM» sobre
+ * un contacto que Alberto sacó del grupo solo cierra la revisión (el vínculo sigue
  * `fuera_del_grupo` y la sincronización no lo recrea).
  *
  * 🛡️ Cada consulta lleva `correduriaId` (Prisma con BYPASSRLS: el filtro es el código).
  */
-import type { CamposSincronizados } from '@central/module-seguros/google-contactos'
-import { efectoResolucion, type AccionRevision, type TipoRevisionGoogle } from '@central/module-seguros/google-contactos-revision'
+import { HASH_PENDIENTE_UNIFICAR, limpiarMote, moteDesdeAgenda, type CamposSincronizados, type PersonaGoogle } from '@central/module-seguros/google-contactos'
+import {
+  efectoResolucion, esMotivoDuplicado, MOTIVOS_UNIFICABLES_EN_LOTE,
+  type AccionRevision, type MotivoDuplicado, type TipoRevisionGoogle,
+} from '@central/module-seguros/google-contactos-revision'
 import { decryptField } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
 import { Prisma } from './generated/asegura-client'
 import { altaCliente } from './cartera-edicion'
+import { lectorContactoGoogle } from './google-contactos'
 
 export const PAGINA_REVISION = 50
 
 export type RevisionGoogle = {
   id: string
   tipo: TipoRevisionGoogle
+  /** Solo `duplicado_ambiguo`; `null` = fila anterior a la columna (no se sabe: sin «Unificar»). */
+  motivo: MotivoDuplicado | null
   campos: string[]
   clienteId: string | null
   /** Nombre de la ficha del CRM (en claro en `clientes`); `null` si no hay ficha o ya no existe. */
@@ -40,9 +47,10 @@ function leerPropuesta(c: string | null): { propuesta: CamposSincronizados | nul
     return {
       propuesta: {
         nombre: txt(o.nombre), apellidos: txt(o.apellidos), telefono: opc(o.telefono), email: opc(o.email),
-        grupo: o.grupo === 'cliente' || o.grupo === 'lead' || o.grupo === 'compania' ? o.grupo : null,
+        grupo: o.grupo === 'cliente' || o.grupo === 'lead' || o.grupo === 'compania' || o.grupo === 'ex_cliente' ? o.grupo : null,
         // Campos de después del 05/10/2026 (las revisiones anteriores no los traen: `null` = no consta).
         nota: opc(o.nota), url: opc(o.url), cumpleanos: opc(o.cumpleanos), aviso: o.aviso === true,
+        alerta: o.alerta === 'siniestro' || o.alerta === 'recibo' ? o.alerta : null,
       },
       ilegible: false,
     }
@@ -58,18 +66,19 @@ function leerPropuesta(c: string | null): { propuesta: CamposSincronizados | nul
  * al resolver tarjetas ya cargadas, un `skip` saltaría revisiones sin enseñarlas nunca, y el
  * `cursor` + `skip: 1` de Prisma, si esa última ya NO está pendiente, se come la siguiente.
  */
-export async function listarRevisiones(correduriaId: string, despuesDe: string | null): Promise<{ revisiones: RevisionGoogle[]; siguiente: string | null; pendientes: number }> {
+export async function listarRevisiones(correduriaId: string, despuesDe: string | null): Promise<{ revisiones: RevisionGoogle[]; siguiente: string | null; pendientes: number; nombreDistintoPendientes: number }> {
   const db = prismaAsegura()
   const corte = despuesDe
     ? Prisma.sql`and (r.creado_en, r.id) < (select x.creado_en, x.id from google_contactos_revision x where x.id = ${despuesDe}::uuid and x.correduria_id = ${correduriaId}::uuid)`
     : Prisma.empty
-  const [idsPagina, pendientes] = await Promise.all([
+  const [idsPagina, pendientes, nombreDistintoPendientes] = await Promise.all([
     db.$queryRaw<{ id: string }[]>(Prisma.sql`
       select r.id::text as id from google_contactos_revision r
       where r.correduria_id = ${correduriaId}::uuid and r.estado = 'pendiente' ${corte}
       order by r.creado_en desc, r.id desc
       limit ${PAGINA_REVISION + 1}`),
     db.googleContactosRevision.count({ where: { correduriaId, estado: 'pendiente' } }),
+    db.googleContactosRevision.count({ where: { correduriaId, estado: 'pendiente', tipo: 'duplicado_ambiguo', motivo: 'nombre_distinto' } }),
   ])
   const orden = idsPagina.map((f) => f.id)
   const porId = new Map(
@@ -86,13 +95,14 @@ export async function listarRevisiones(correduriaId: string, despuesDe: string |
     revisiones: pagina.map((f) => {
       const p = leerPropuesta(f.propuestaCifrada)
       return {
-        id: f.id, tipo: f.tipo as TipoRevisionGoogle, campos: f.campos, clienteId: f.clienteId,
+        id: f.id, tipo: f.tipo as TipoRevisionGoogle, motivo: esMotivoDuplicado(f.motivo) ? f.motivo : null, campos: f.campos, clienteId: f.clienteId,
         clienteNombre: f.clienteId ? (nombre.get(f.clienteId) ?? null) : null,
         propuesta: p.propuesta, propuestaIlegible: p.ilegible, creadoEn: f.creadoEn.toISOString(),
       }
     }),
     siguiente: filas.length > PAGINA_REVISION ? pagina[pagina.length - 1].id : null,
     pendientes,
+    nombreDistintoPendientes,
   }
 }
 
@@ -108,8 +118,9 @@ export async function resolverRevision(
   const fila = await db.googleContactosRevision.findFirst({ where: { correduriaId, id: p.id } })
   if (!fila) return { ok: false, estado: 'no_encontrada', motivo: 'Esa revisión no existe en esta correduría.', status: 404 }
   if (fila.estado !== 'pendiente') return { ok: false, estado: 'ya_resuelta', motivo: 'Esa revisión ya estaba resuelta.', status: 409 }
-  const ef = efectoResolucion(fila.tipo, p.accion)
+  const ef = efectoResolucion(fila.tipo, p.accion, fila.motivo, fila.campos)
   if (!ef.ok) return { ok: false, estado: 'invalido', motivo: ef.motivo, status: 422 }
+  if (ef.vinculo === 'unificar' || ef.mote) return unificarOMote(correduriaId, fila, p.actor, { accion: p.accion, vinculo: ef.vinculo === 'unificar', mote: ef.mote }, lectorContactoGoogle(correduriaId))
 
   const propuestaLead = ef.altaLead ? leerPropuesta(fila.propuestaCifrada) : null
   if (propuestaLead && !propuestaLead.propuesta) {
@@ -162,4 +173,163 @@ async function liberarClaim(correduriaId: string, id: string, actor: string, res
     where: { correduriaId, id, estado: { not: 'pendiente' }, resueltoPor: actor, resueltoEn },
     data: { estado: 'pendiente', resolucion: null, resueltoPor: null, resueltoEn: null },
   })
+}
+
+// ─── Unificar y mote ──────────────────────────────────────────────────────────
+
+class Rechazo extends Error {
+  constructor(readonly r: Extract<ResultadoResolucion, { ok: false }>) { super(r.motivo) }
+}
+
+function esUnicaViolada(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002'
+}
+
+type FilaUnificar = {
+  id: string; clienteId: string | null; companiaContactoId: string | null; resourceName: string; propuestaCifrada: string | null
+}
+
+/**
+ * «Unificar» un `duplicado_ambiguo` inequívoco y/o guardar un MOTE («Usar como mote»), en UNA
+ * transacción: el claim de la revisión, el vínculo PENDIENTE ficha ↔ resourceName (origen `adoptado`,
+ * hash `HASH_PENDIENTE_UNIFICAR`) y el mote (`seguros.cliente_mote`, el nombre que Alberto tenía en
+ * Google, limpio). Nada en Google: lo escribe la pasada siguiente del cron. 🔒 Un resourceName nunca
+ * queda en dos fichas ni una ficha en dos contactos: lo comprueba aquí y lo garantizan los UNIQUE del
+ * vínculo (P2002 → 409, sin claim). Las compañías 🔵 no llevan mote: se unifican con su nombre.
+ */
+async function unificarOMote(
+  correduriaId: string,
+  fila: FilaUnificar,
+  actor: string,
+  modo: { accion: AccionRevision; vinculo: boolean; mote: boolean },
+  leerGoogle: (resourceName: string) => Promise<PersonaGoogle | null>,
+): Promise<ResultadoResolucion> {
+  const db = prismaAsegura()
+  if ((fila.clienteId === null) === (fila.companiaContactoId === null)) {
+    return { ok: false, estado: 'invalido', motivo: 'Esta revisión ya no tiene ficha del CRM.', status: 422 }
+  }
+  if (fila.clienteId) {
+    const ficha = await db.cliente.findFirst({ where: { correduriaId, id: fila.clienteId }, select: { mergedIntoClienteId: true } })
+    if (!ficha) return { ok: false, estado: 'invalido', motivo: 'La ficha ya no existe.', status: 422 }
+    if (ficha.mergedIntoClienteId) return { ok: false, estado: 'invalido', motivo: 'Esa ficha se fusionó en otra: la sincronización volverá a proponer la buena.', status: 422 }
+  } else if (modo.mote && !modo.vinculo) {
+    return { ok: false, estado: 'invalido', motivo: 'Los contactos de compañía no llevan mote.', status: 422 }
+  }
+  let mote: string | null = null
+  // «Unificar» NO pisa un mote que la ficha ya tenga: solo vincula. («Usar como mote» sí: es explícito.)
+  const conservaMote = modo.vinculo && !!fila.clienteId
+    && (await db.clienteMote.findUnique({ where: { clienteId: fila.clienteId }, select: { clienteId: true } })) !== null
+  if (modo.mote && fila.clienteId && !conservaMote) {
+    const p = leerPropuesta(fila.propuestaCifrada)
+    // Unificar: el nombre que el contacto tiene HOY en Google (aún no lo ha tocado el CRM); si no se
+    // puede leer, lo encolado. «Usar como mote»: lo encolado (el cron ya le ha vuelto a poner el del CRM).
+    const actual = modo.vinculo ? await leerGoogle(fila.resourceName).catch(() => null) : null
+    mote = modo.vinculo
+      ? moteDesdeAgenda(actual, p.propuesta)
+      : p.propuesta ? limpiarMote(`${p.propuesta.nombre} ${p.propuesta.apellidos}`) : null
+    if (!mote) {
+      return {
+        ok: false, estado: 'invalido', status: 422,
+        motivo: p.ilegible
+          ? 'No se puede leer el nombre que tenía en Google (clave PII).'
+          : 'El nombre que tenía en Google está vacío.' + (modo.vinculo ? ' Usa «Unificar con nombre del CRM».' : ''),
+      }
+    }
+  }
+  const clave = fila.clienteId ? { clienteId: fila.clienteId } : { companiaContactoId: fila.companiaContactoId! }
+  try {
+    await db.$transaction(async (tx) => {
+      const ahora = new Date()
+      const { count } = await tx.googleContactosRevision.updateMany({
+        where: { correduriaId, id: fila.id, estado: 'pendiente' },
+        data: { estado: 'aceptada', resolucion: modo.accion, resueltoPor: actor, resueltoEn: ahora },
+      })
+      if (count === 0) throw new Rechazo({ ok: false, estado: 'ya_resuelta', motivo: 'Otra persona la resolvió a la vez.', status: 409 })
+      if (modo.vinculo) {
+        const ya = await tx.googleContactosVinculo.findFirst({
+          where: { correduriaId, OR: [{ resourceName: fila.resourceName }, clave] },
+          select: { resourceName: true },
+        })
+        if (ya) {
+          throw new Rechazo({
+            ok: false, estado: 'conflicto', status: 409,
+            motivo: ya.resourceName === fila.resourceName
+              ? 'Ese contacto de Google ya está unido a otra ficha.'
+              : 'Esta ficha ya está unida a otro contacto de Google.',
+          })
+        }
+        await tx.googleContactosVinculo.create({
+          data: {
+            correduriaId, clienteId: fila.clienteId, companiaContactoId: fila.companiaContactoId,
+            resourceName: fila.resourceName, etag: null, hashEnviado: HASH_PENDIENTE_UNIFICAR, origen: 'adoptado', estado: 'activo',
+          },
+        })
+      }
+      if (mote && fila.clienteId && modo.vinculo) {
+        // Si otro lo puso a la vez, gana el que ya estaba (no se pisa).
+        await tx.clienteMote.createMany({ data: [{ clienteId: fila.clienteId, mote, actualizadoPor: actor, actualizadoEn: ahora }], skipDuplicates: true })
+      } else if (mote && fila.clienteId) {
+        await tx.clienteMote.upsert({
+          where: { clienteId: fila.clienteId },
+          create: { clienteId: fila.clienteId, mote, actualizadoPor: actor, actualizadoEn: ahora },
+          update: { mote, actualizadoPor: actor, actualizadoEn: ahora },
+        })
+      }
+    })
+  } catch (e) {
+    if (e instanceof Rechazo) return e.r
+    if (esUnicaViolada(e)) return { ok: false, estado: 'conflicto', motivo: 'Ese contacto o esa ficha ya están unidos a otro (a la vez).', status: 409 }
+    throw e
+  }
+  return { ok: true, estado: 'aceptada', clienteId: fila.clienteId }
+}
+
+/** Tope por llamada de «Unificar todos»: el proxy de plataforma corta a 15 s (cada una puede leer Google). */
+export const MAX_UNIFICAR_LOTE = 20
+
+/** Causas que no se arreglan reintentando: se OMITEN y el cursor las deja atrás (siguen en la cola, una a una). */
+const PERMANENTES = new Set(['invalido', 'conflicto'])
+
+export type ResultadoLote =
+  | { ok: true; unificadas: number; omitidas: { id: string; motivo: string }[]; fallidas: { id: string; motivo: string }[]; siguiente: string | null; quedan: number }
+  | { ok: false; estado: string; motivo: string; status: number }
+
+/**
+ * «Unificar todos los de nombre distinto» con la opción POR DEFECTO (mote = su nombre de agenda), de
+ * 20 en 20 por CURSOR (`despuesDe` = la última vista; `siguiente` para seguir). Una que no se puede
+ * unificar por causa PERMANENTE (sin nombre, ficha fusionada, ya unida por el cron…) se OMITE y el
+ * cursor la deja atrás: no atasca los lotes siguientes y sigue en la cola para resolverla a mano.
+ * Solo `nombre_distinto` (`MOTIVOS_UNIFICABLES_EN_LOTE`).
+ */
+export async function unificarTodos(
+  correduriaId: string,
+  p: { motivo: MotivoDuplicado; actor: string; despuesDe?: string | null },
+): Promise<ResultadoLote> {
+  if (!MOTIVOS_UNIFICABLES_EN_LOTE.includes(p.motivo)) return { ok: false, estado: 'invalido', motivo: 'En bloque solo se unifican los de «nombre distinto»; los demás, uno a uno.', status: 422 }
+  const db = prismaAsegura()
+  const where = { correduriaId, estado: 'pendiente', tipo: 'duplicado_ambiguo', motivo: p.motivo }
+  const corte = p.despuesDe ? await db.googleContactosRevision.findFirst({ where: { correduriaId, id: p.despuesDe }, select: { creadoEn: true, id: true } }) : null
+  if (p.despuesDe && !corte) return { ok: false, estado: 'invalido', motivo: 'El cursor no es de esta cola.', status: 422 }
+  const tras = corte ? { OR: [{ creadoEn: { gt: corte.creadoEn } }, { creadoEn: corte.creadoEn, id: { gt: corte.id } }] } : {}
+  const filas = await db.googleContactosRevision.findMany({
+    where: { ...where, ...tras }, orderBy: [{ creadoEn: 'asc' }, { id: 'asc' }], take: MAX_UNIFICAR_LOTE + 1,
+    select: { id: true, clienteId: true, companiaContactoId: true, resourceName: true, propuestaCifrada: true, creadoEn: true },
+  })
+  const lote = filas.slice(0, MAX_UNIFICAR_LOTE)
+  const leer = lectorContactoGoogle(correduriaId)
+  let unificadas = 0
+  const omitidas: { id: string; motivo: string }[] = []
+  const fallidas: { id: string; motivo: string }[] = []
+  for (const f of lote) {
+    const r = await unificarOMote(correduriaId, f, p.actor, { accion: 'unificar', vinculo: true, mote: true }, leer)
+    if (r.ok) unificadas++
+    else if (r.estado === 'ya_resuelta') continue
+    else (PERMANENTES.has(r.estado) ? omitidas : fallidas).push({ id: f.id, motivo: r.motivo })
+  }
+  const ultima = lote[lote.length - 1]
+  const siguiente = filas.length > MAX_UNIFICAR_LOTE && ultima ? ultima.id : null
+  const quedan = ultima
+    ? await db.googleContactosRevision.count({ where: { ...where, OR: [{ creadoEn: { gt: ultima.creadoEn } }, { creadoEn: ultima.creadoEn, id: { gt: ultima.id } }] } })
+    : 0
+  return { ok: true, unificadas, omitidas, fallidas, siguiente, quedan }
 }

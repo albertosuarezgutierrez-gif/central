@@ -124,8 +124,8 @@ test('D: ≤30 días (incluidos hoy y el día 30) → aviso; NULL o vencida no c
 })
 
 test('D: prefijo «🟢⏰ », el parser lo reconoce y no hay revisiones falsas; UN update al entrar y otro al salir', () => {
-  assert.deepEqual(quitarPrefijo('🟢⏰ Ana'), { nombre: 'Ana', grupo: 'cliente', aviso: true })
-  assert.deepEqual(quitarPrefijo('🟢️⏰️ Ana'), { nombre: 'Ana', grupo: 'cliente', aviso: true })
+  assert.deepEqual(quitarPrefijo('🟢⏰ Ana'), { nombre: 'Ana', grupo: 'cliente', aviso: true, alerta: null })
+  assert.deepEqual(quitarPrefijo('🟢️⏰️ Ana'), { nombre: 'Ana', grupo: 'cliente', aviso: true, alerta: null })
   const { g, v } = creado(ana)
   const entra = planificarSync(entrada({ crm: [{ ...ana, aviso: true }], vinculos: [v], google: [g] }))
   assert.equal(entra.actualizar.length, 1)

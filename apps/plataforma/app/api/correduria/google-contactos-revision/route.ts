@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic'
  * y devuelve el MISMO status y json.
  *
  *   GET  ?despuesDe=<id>  → { estado:'ok', revisiones, siguiente, pendientes }
- *   POST { id, accion, forzar? } → el `actor` lo pone el SERVIDOR (la sesión), nunca el cuerpo.
+ *   POST { id, accion, forzar? } | { lote: 'unificar', motivo: 'nombre_distinto', despuesDe? } → el `actor` lo pone el SERVIDOR
+ *        (la sesión), nunca el cuerpo.
  */
 export async function GET(req: NextRequest) {
   const guarda = await exigirCorreduria()
@@ -24,6 +25,12 @@ export async function POST(req: NextRequest) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
+  if (body && body.lote === 'unificar' && typeof body.motivo === 'string') {
+    const r = await resolverRevisionGoogleAsegura({
+      lote: 'unificar', motivo: body.motivo, ...(typeof body.despuesDe === 'string' ? { despuesDe: body.despuesDe } : {}), actor: guarda.session.email,
+    })
+    return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
+  }
   if (!body || typeof body.id !== 'string' || typeof body.accion !== 'string') {
     return NextResponse.json({ estado: 'invalido', motivo: 'Falta la revisión o la acción.' }, { status: 400 })
   }

@@ -18,6 +18,7 @@ import {
   type CamposSincronizados, type EstadoVinculo, type OrigenVinculo, type PersonaGoogle, type Plan, type Vinculo,
 } from '@central/module-seguros/google-contactos'
 import { informeSimulacion, type InformeSimulacion } from '@central/module-seguros/google-contactos-simulacion'
+import { informeOrdenarAgenda, type InformeOrdenar } from '@central/module-seguros/google-contactos-ordenar'
 import { decryptField, encryptField } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
@@ -264,6 +265,7 @@ async function encolarRevisiones(correduriaId: string, plan: Plan): Promise<numb
     campos: r.campos,
     propuestaCifrada: r.propuesta ? cifrar(JSON.stringify(r.propuesta satisfies CamposSincronizados)) : null,
     huella: r.huella,
+    motivo: r.tipo === 'duplicado_ambiguo' ? (r.motivo ?? null) : null,
   }))
   const { count } = await prismaAsegura().googleContactosRevision.createMany({ data: filas, skipDuplicates: true })
   return count
@@ -477,6 +479,67 @@ export async function simularGoogleContactos(correduriaId: string): Promise<Resu
   )
   await db.googleContactosConexion.update({ where: { correduriaId }, data: { simuladaEn: new Date(), actualizadoEn: new Date() } })
   return { estado: 'ok', informe, syncActivada: conexion.syncActivadaEn !== null }
+}
+
+export type ResultadoOrdenar =
+  | { estado: 'sin_conexion' | 'revocada' }
+  | { estado: 'pii_no_descifra'; clave: string }
+  | { estado: 'ok'; informe: InformeOrdenar }
+
+/**
+ * «Ordenar agenda» (05/10/2026): la MISMA lectura que la simulación (agenda entera, etiqueta solo si
+ * existe) y un informe para que Alberto limpie su agenda en Google. SOLO LECTURA: no escribe nada, ni
+ * siquiera `simulada_en` (no es una simulación y no habilita activar).
+ */
+export async function ordenarAgendaGoogle(correduriaId: string): Promise<ResultadoOrdenar> {
+  const db = prismaAsegura()
+  const conexion = await db.googleContactosConexion.findUnique({ where: { correduriaId } })
+  if (!conexion) return { estado: 'sin_conexion' }
+  if (conexion.estado === 'revocada') return { estado: 'revocada' }
+  const muestra = await db.cliente.findFirst({ where: { correduriaId, telefono: { startsWith: 'v1:' } }, select: { telefono: true } })
+  const clave = estadoClavePii(muestra?.telefono)
+  if (clave !== 'ok') return { estado: 'pii_no_descifra', clave }
+  let acceso: string
+  try {
+    acceso = await accesoDesdeRefresh(credencialesGoogle(), descifrarToken(conexion.refreshTokenCifrado))
+  } catch (e) {
+    if (e instanceof TokenRevocado) return { estado: 'revocada' }
+    throw e
+  }
+  const people = new People(acceso)
+  const grupo = conexion.grupoResourceName ?? (await people.buscarGrupo())
+  const sel = await seleccionGoogle(correduriaId)
+  const vinculos = await leerVinculos(correduriaId)
+  const listado = await people.listar(null)
+  const idsExternos = listado.personas.flatMap((p) => (p.externalIds ?? []).filter((x) => x.type === TIPO_ID_EXTERNO && x.value).map((x) => x.value!))
+  const fusiones = await fusionesDe(correduriaId, [...sel.contactos.map((c) => c.clienteId), ...vinculos.map((v) => v.clienteId), ...idsExternos])
+  const companias = (await db.companiaDgs.findMany({ where: { activa: true }, select: { nombreComun: true } })).map((c) => c.nombreComun).filter((x) => x.trim() !== '')
+  const informe = informeOrdenarAgenda(
+    { crm: sel.contactos, seleccionCompleta: sel.seleccionCompleta, vinculos, fusiones, google: listado.personas, grupoResourceName: grupo },
+    { companias },
+  )
+  return { estado: 'ok', informe }
+}
+
+/**
+ * Lector del contacto ACTUAL de Google para «Unificar» (el mote sale del nombre que tiene HOY, no del
+ * que se encoló). Un token por lector; cada lectura con tope de 4 s. Cualquier fallo (sin conexión,
+ * revocada, red, 404) → `null` y quien llama usa lo encolado: leer Google nunca bloquea unificar.
+ */
+export function lectorContactoGoogle(correduriaId: string): (resourceName: string) => Promise<PersonaGoogle | null> {
+  let people: Promise<People | null> | null = null
+  const conTope = <T>(p: Promise<T>): Promise<T | null> =>
+    Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), 4_000))]).catch(() => null)
+  return async (resourceName) => {
+    if (!/^people\/[A-Za-z0-9_-]+$/.test(resourceName)) return null
+    people ??= conTope((async () => {
+      const c = await prismaAsegura().googleContactosConexion.findUnique({ where: { correduriaId } })
+      if (!c || c.estado === 'revocada') return null
+      return new People(await accesoDesdeRefresh(credencialesGoogle(), descifrarToken(c.refreshTokenCifrado)))
+    })())
+    const p = await people
+    return p ? conTope(p.obtenerNombre(resourceName)) : null
+  }
 }
 
 export type ResultadoActivacion =

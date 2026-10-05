@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Contact, TriangleAlert } from 'lucide-react'
 import {
-  accionesPermitidas, ETIQUETA_ACCION_REVISION, ETIQUETA_TIPO_REVISION,
-  type AccionRevision, type TipoRevisionGoogle,
+  accionesPermitidas, ETIQUETA_ACCION_REVISION, ETIQUETA_MOTIVO_DUPLICADO, ETIQUETA_TIPO_REVISION, esMotivoDuplicado,
+  type AccionRevision, type MotivoDuplicado, type TipoRevisionGoogle,
 } from '@central/module-seguros/google-contactos-revision'
 import { Badge, btnStyle } from '@/components/ui'
 import Bloque from './Bloque'
@@ -15,7 +15,9 @@ import { anadirPagina, hayMas, primeraPagina, quitarResuelta, type ListaRevision
  * Cola de revisión de la sincronización CRM ↔ Google Contacts (05/10/2026). El CRM manda: lo que
  * se editó en Google ya se pisó y aquí queda lo que había; un contacto nuevo en el grupo es una
  * propuesta de lead. Ningún botón toca Google: «Mantener CRM» sobre un contacto sacado del grupo
- * solo cierra la revisión (no lo vuelve a meter).
+ * solo cierra la revisión (no lo vuelve a meter). «Unificar» (solo en un duplicado inequívoco) une la
+ * ficha con ese contacto de la agenda y guarda SU nombre como mote («🟢 Mamá»); «Unificar con nombre
+ * del CRM», sin mote. «Usar como mote» (renombrado en Google): ese nombre pasa a ser el mote.
  *
  * 🚨 Sin lectura buena no se dice «nada pendiente»: un fallo es un error visible.
  */
@@ -24,6 +26,7 @@ type Campos = { nombre: string; apellidos: string; telefono: string | null; emai
 type Revision = {
   id: string
   tipo: TipoRevisionGoogle
+  motivo?: MotivoDuplicado | null
   campos: string[]
   clienteId: string | null
   clienteNombre: string | null
@@ -31,7 +34,7 @@ type Revision = {
   propuestaIlegible: boolean
   creadoEn: string
 }
-type Pagina = { revisiones: Revision[]; siguiente: string | null; pendientes: number }
+type Pagina = { revisiones: Revision[]; siguiente: string | null; pendientes: number; nombreDistintoPendientes: number | null }
 
 const pMuted = { fontSize: 13, color: 'var(--muted)', margin: 0 } as const
 const ETIQUETA_CAMPO: Record<string, string> = { nombre: 'nombre', apellidos: 'apellidos', telefono: 'teléfono', email: 'correo', grupo: 'cliente/lead' }
@@ -47,6 +50,8 @@ function pagina(j: unknown): Pagina | null {
     revisiones: o.revisiones as Revision[],
     siguiente: typeof o.siguiente === 'string' ? o.siguiente : null,
     pendientes: typeof o.pendientes === 'number' ? o.pendientes : o.revisiones.length,
+    // `null` = asegura antiguo que no lo cuenta: sin botón en bloque (no se inventa un 0).
+    nombreDistintoPendientes: typeof o.nombreDistintoPendientes === 'number' ? o.nombreDistintoPendientes : null,
   }
 }
 
@@ -57,6 +62,8 @@ export default function GoogleContactosRevision() {
   const [errorMas, setErrorMas] = useState<string | null>(null)
   const [ocupada, setOcupada] = useState<string | null>(null)
   const [avisos, setAvisos] = useState<Record<string, { texto: string; forzable?: boolean }>>({})
+  const [nombreDistinto, setNombreDistinto] = useState<number | null>(null)
+  const [lote, setLote] = useState<{ ocupado: boolean; texto: string | null; error: boolean; siguiente: string | null }>({ ocupado: false, texto: null, error: false, siguiente: null })
 
   const cargar = useCallback(async () => {
     setModo('cargando')
@@ -67,6 +74,7 @@ export default function GoogleContactosRevision() {
       const p = r.ok ? pagina(j) : null
       if (!p) return setModo('error')
       setLista(primeraPagina(p))
+      setNombreDistinto(p.nombreDistintoPendientes)
       setModo('ok')
     } catch {
       setModo('error')
@@ -103,6 +111,7 @@ export default function GoogleContactosRevision() {
       const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string; forzable?: boolean } | null
       if (r.ok || (r.status === 409 && j?.estado === 'ya_resuelta')) {
         setLista((l) => (l ? quitarResuelta(l, rev.id) : l))
+        if (rev.tipo === 'duplicado_ambiguo' && rev.motivo === 'nombre_distinto') setNombreDistinto((n) => (n ? n - 1 : n))
         return
       }
       const texto = r.status === 409 && j?.estado === 'conflicto'
@@ -113,6 +122,48 @@ export default function GoogleContactosRevision() {
       setAvisos((a) => ({ ...a, [rev.id]: { texto: 'No se ha podido resolver. Inténtalo de nuevo.' } }))
     } finally {
       setOcupada(null)
+    }
+  }
+
+  async function unificarTodos(continuar = false) {
+    if (!nombreDistinto) return
+    const ok = continuar || window.confirm(
+      `¿Unificar los ${nombreDistinto} contactos de tu agenda que tienen el teléfono de una ficha pero OTRO nombre?\n\n` +
+        'Se quedan con TU nombre como mote de la ficha (p. ej. «🟢 Mamá»; se puede cambiar en la ficha) y pasan a «Grupo ASegura» ' +
+        'en la próxima sincronización; el nombre de la ficha va a la nota y lo demás que hayas puesto se conserva. No se crea ningún duplicado.',
+    )
+    if (!ok) return
+    const despuesDe = continuar ? lote.siguiente : null
+    setLote((l) => ({ ...l, ocupado: true, texto: null, error: false }))
+    try {
+      const r = await fetch('/api/correduria/google-contactos-revision', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ lote: 'unificar', motivo: 'nombre_distinto', ...(despuesDe ? { despuesDe } : {}) }),
+      })
+      type Omision = { motivo?: string }
+      const j = (await r.json().catch(() => null)) as { unificadas?: number; omitidas?: Omision[]; fallidas?: Omision[]; siguiente?: string | null; quedan?: number; motivo?: string } | null
+      if (!r.ok || typeof j?.unificadas !== 'number') {
+        setLote({ ocupado: false, texto: j?.motivo ?? `No se ha podido unificar (HTTP ${r.status}).`, error: true, siguiente: null })
+        return
+      }
+      const porMotivo = (xs: Omision[] | undefined) => {
+        const m = new Map<string, number>()
+        for (const x of xs ?? []) m.set(x.motivo ?? '¿?', (m.get(x.motivo ?? '¿?') ?? 0) + 1)
+        return [...m].map(([k, n]) => `${n} × ${k}`).join(' · ')
+      }
+      const om = j.omitidas?.length ?? 0
+      const fa = j.fallidas?.length ?? 0
+      const siguiente = typeof j.siguiente === 'string' ? j.siguiente : null
+      setLote({
+        ocupado: false, error: fa > 0, siguiente,
+        texto: `Unificados ${j.unificadas}.` +
+          (om ? ` Omitidos ${om} (siguen en la cola para hacerlos a mano): ${porMotivo(j.omitidas)}.` : '') +
+          (fa ? ` Fallaron ${fa}: ${porMotivo(j.fallidas)}.` : '') +
+          (siguiente && j.quedan ? ` Quedan ${j.quedan}.` : ''),
+      })
+      await cargar()
+    } catch {
+      setLote((l) => ({ ...l, ocupado: false, texto: 'No se ha podido unificar. Inténtalo de nuevo.', error: true }))
     }
   }
 
@@ -142,22 +193,54 @@ export default function GoogleContactosRevision() {
   return (
     <Bloque titulo={titulo} Icono={Contact}
       sub={<>{lista.pendientes} pendiente{lista.pendientes === 1 ? '' : 's'}. El CRM manda: lo editado en Google ya se ha vuelto a pisar y aquí queda lo que había.</>}>
+      {(!!nombreDistinto || lote.texto) && (
+        <div style={{ display: 'grid', gap: 6, marginBottom: 10 }}>
+          {!!nombreDistinto && (
+            <button type="button" disabled={lote.ocupado || ocupada !== null} onClick={() => void unificarTodos()}
+              style={{ ...btnStyle('primario'), minHeight: 44, justifySelf: 'start', maxWidth: '100%', whiteSpace: 'normal' }}>
+              {lote.ocupado ? 'Unificando…' : `Unificar todos los de nombre distinto (${nombreDistinto})`}
+            </button>
+          )}
+          {lote.siguiente && !lote.ocupado && (
+            <button type="button" disabled={ocupada !== null} onClick={() => void unificarTodos(true)}
+              style={{ ...btnStyle('secundario'), minHeight: 44, justifySelf: 'start' }}>
+              Seguir con los siguientes
+            </button>
+          )}
+          {lote.texto && <p role={lote.error ? 'alert' : 'status'} style={{ ...pMuted, color: lote.error ? 'var(--negative)' : 'var(--muted)' }}>{lote.texto}</p>}
+        </div>
+      )}
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
         {lista.tarjetas.map((rev) => {
           const aviso = avisos[rev.id]
           const p = rev.propuesta
+          const motivo = esMotivoDuplicado(rev.motivo) ? rev.motivo : null
+          const duplicado = rev.tipo === 'duplicado_ambiguo'
           return (
             <article key={rev.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12, display: 'grid', gap: 8, minWidth: 0 }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 <Badge tono={rev.tipo === 'propuesta_lead' ? 'info' : 'neutral'}>{ETIQUETA_TIPO_REVISION[rev.tipo] ?? rev.tipo}</Badge>
+                {motivo && <Badge tono="neutral">{ETIQUETA_MOTIVO_DUPLICADO[motivo]}</Badge>}
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>{fecha(rev.creadoEn)}</span>
               </div>
-              {rev.clienteId && (
+              {duplicado && (
+                <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: '2px 10px', fontSize: 14 }}>
+                  <dt style={{ color: 'var(--muted)' }}>En tu agenda</dt>
+                  <dd style={{ margin: 0, overflowWrap: 'anywhere', fontWeight: 600 }}>
+                    {p ? ([p.nombre, p.apellidos].filter(Boolean).join(' ') || '(sin nombre)') : rev.propuestaIlegible ? '(no se puede leer)' : '—'}
+                  </dd>
+                  <dt style={{ color: 'var(--muted)' }}>En el CRM</dt>
+                  <dd style={{ margin: 0, overflowWrap: 'anywhere', fontWeight: 600 }}>
+                    {rev.clienteId ? <Link href={`/correduria/cliente/${rev.clienteId}`}>{rev.clienteNombre ?? 'abrir ficha'}</Link> : '—'}
+                  </dd>
+                </dl>
+              )}
+              {!duplicado && rev.clienteId && (
                 <p style={{ margin: 0, fontSize: 14, overflowWrap: 'anywhere' }}>
                   Ficha: <Link href={`/correduria/cliente/${rev.clienteId}`}>{rev.clienteNombre ?? 'abrir ficha'}</Link>
                 </p>
               )}
-              {rev.campos.length > 0 && (
+              {!duplicado && rev.campos.length > 0 && (
                 <p style={pMuted}>Cambiado en Google: {rev.campos.map((c) => ETIQUETA_CAMPO[c] ?? c).join(', ')}</p>
               )}
               {p ? (
@@ -173,10 +256,10 @@ export default function GoogleContactosRevision() {
                 <p style={{ ...pMuted, color: 'var(--warning)' }}>No se puede leer lo que había en Google (clave de cifrado).</p>
               ) : null}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {accionesPermitidas(rev.tipo).map((accion) => (
+                {accionesPermitidas(rev.tipo, motivo, rev.campos).filter((a) => a !== 'usar_como_mote' || !!rev.clienteId).map((accion) => (
                   <button key={accion} type="button" disabled={ocupada !== null}
                     onClick={() => void resolver(rev, accion)}
-                    style={{ ...btnStyle(accion === 'descartar' ? 'secundario' : 'primario'), minHeight: 44 }}>
+                    style={{ ...btnStyle(accion === 'unificar' || accion === 'usar_como_mote' || accion === 'aceptar_lead' || (accion === 'mantener_crm' && !duplicado) ? 'primario' : 'secundario'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal' }}>
                     {ocupada === rev.id ? 'Guardando…' : ETIQUETA_ACCION_REVISION[accion]}
                   </button>
                 ))}
