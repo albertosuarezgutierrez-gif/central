@@ -1072,8 +1072,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Alerta «reserva 102699405 · piso sin identificar»: era un MENSAJE de huésped de Expedia Partner Central
   (Reka Bekesi, llega 06/11 20:00, pide balcón); 102699405 = ID de alojamiento Expedia de «Busto Reform» (`htid`).
 - Fix: `lib/correo/num-confirmacion.ts` descarta htid/ID de alojamiento y, con remitente Expedia, solo acepta
-  «confirmación: N»; el vigía salta filas `mensaje_huesped` de Expedia; `canalDeAsunto` reconoce «huésped de Expedia».
-- Pendiente Alberto: comprobar que la reserva de Reka Bekesi (06/11) está en Smoobu en Busto Reform.
+  «confirmación: N»; el vigía excluye en SQL las filas `mensaje_huesped` de Expedia; `canalDeAsunto` reconoce «huésped de Expedia».
+- Reserva de Reka Bekesi (06/11) confirmada en Smoobu por Alberto.
 
 ## (05/10/2026) Correduría: el vehículo de la póliza escaneada ya precarga el presupuesto de auto
 - REGLA ÚNICA: el riesgo se rellena UNA vez (documento o corredor) en `info_riesgo.datosVehiculo`; toda pantalla de auto lo lee de ahí y no re-pide lo que consta (skill correduria-crm punto 22).

@@ -154,15 +154,15 @@ export async function verificarReservasBooking(): Promise<{
     WHERE estado IN ('pendiente', 'huerfana')
       AND visto_at > now() - make_interval(days => ${REVISAR_DIAS}::int)
       AND ref_booking IS NOT NULL
+      -- Mensaje de huésped de Expedia: no trae ID de reserva (el nº suelto es el ID de alojamiento,
+      -- 05/10/2026). Se filtra en el SQL para que las filas viejas no ocupen huecos del LIMIT.
+      AND NOT (origen = 'mensaje_huesped' AND COALESCE(asunto, '') ~* 'hu(e|é)sped[[:space:]]+de[[:space:]]+expedia')
     ORDER BY visto_at ASC
     LIMIT 20
   `
   const stats = { ok: true, comprobadas: 0, confirmadas: 0, huerfanasNuevas: 0, sinComprobar: 0 }
 
   for (const f of filas) {
-    // Un mensaje de huésped de Expedia no trae ID de reserva (el nº suelto es el ID de alojamiento,
-    // 05/10/2026): sin ID real no se puede afirmar que a Smoobu le falte → no se comprueba ni se avisa.
-    if (f.origen === 'mensaje_huesped' && canalDeAsunto(f.asunto) === 'Expedia') continue
     const tipo = f.tipo === 'cancelacion' ? 'cancelacion' as const : 'nueva' as const
     const activa = (tipo === 'nueva' && await yaSincronizada(f.ref_booking!).catch(() => false))
       ? true

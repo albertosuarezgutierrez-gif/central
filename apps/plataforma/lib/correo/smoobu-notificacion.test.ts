@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  canalDeAsunto, canalDeCorreo, canalDeRemitente, esRemitenteSmoobu, normalizarCanal, parsearNotificacionSmoobu, propertyIdDePiso,
+  canalDeAsunto, esRemitenteSmoobu, normalizarCanal, parsearNotificacionSmoobu, propertyIdDePiso,
 } from './smoobu-notificacion.ts'
 
 // Copiado LITERAL del correo REAL que disparó el 🚨 falso (01/09/2026, hilo 1a05dd054bf72a06),
@@ -92,12 +92,8 @@ test('un piso desconocido no se fuerza a ninguno de los cuatro', () => {
 })
 
 // Correo REAL (05/10/2026): aviso de mensaje de huésped de Expedia Partner Central.
-test('canal Expedia por asunto «huésped de Expedia» (con espacio inicial y salto final) y por remitente', () => {
+test('canal Expedia por asunto «huésped de Expedia» (con espacio inicial y salto final) ', () => {
   assert.equal(canalDeAsunto(' Te ha escrito Reka Bekesi, huésped de Expedia\n'), 'Expedia')
-  assert.equal(canalDeRemitente('xxxx@m.expediapartnercentral.com'), 'Expedia')
-  assert.equal(canalDeRemitente('Expedia <donotreply@expediagroup.com>'), 'Expedia')
-  assert.equal(canalDeRemitente('service@smoobu.com'), null)
-  assert.equal(canalDeCorreo('xxxx@m.expediapartnercentral.com', 'Asunto sin canal'), 'Expedia')
 })
 
 test('«Busto Reform» con espacios/saltos casa con prop_busto_reform', () => {

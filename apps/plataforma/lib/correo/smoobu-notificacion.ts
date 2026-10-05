@@ -76,16 +76,6 @@ export function canalDeAsunto(asunto: string | null | undefined): string | null 
   return /hu[eé]sped\s+de\s+expedia\b/i.test(asunto ?? '') ? 'Expedia' : null
 }
 
-/** Canal por remitente (Expedia Partner Central / Group). null = el remitente no lo dice. */
-export function canalDeRemitente(from: string | null | undefined): string | null {
-  const dom = (from ?? '').toLowerCase().replace(/^.*</, '').replace(/>.*$/, '').split('@')[1]?.trim() ?? ''
-  return /(^|\.)(expediapartnercentral|expediagroup|expedia)\.com$/.test(dom) ? 'Expedia' : null
-}
-
-/** Canal del correo: el asunto manda; si no lo dice, el remitente. */
-export function canalDeCorreo(from: string | null | undefined, asunto: string | null | undefined): string | null {
-  return canalDeAsunto(asunto) ?? canalDeRemitente(from)
-}
 
 /** Nombre de piso → slug de PROPS_CALENDARIO (sin acentos, sin may/min). null si no casa. */
 export function propertyIdDePiso(piso: string | null | undefined): string | null {
