@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-05T08:18:53Z",
-  "sha": "3183663b8c8ec908268e3a58adb58018b50e5c01",
+  "generadoEn": "2026-10-05T08:45:20Z",
+  "sha": "c6c86e84a6499189659b982339c4b3f94b830aa5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -80302,7 +80302,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f0dfcbe8433a"
+      "hash": "03f0cfd2a417"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -95323,12 +95323,12 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 16,
-          "resumen": "POST /api/banca/duplicados { ids, estado } — el dueño resuelve un par sospechoso de cobro doble: 'ignorado' (es normal), 'confirmado' (es un cobro doble real) o null (deshacer). Scoped por sesión (cue"
+          "resumen": "POST /api/banca/duplicados { ids, estado } — el dueño resuelve un par sospechoso de cobro doble: 'normal' (es normal; NO 'ignorado', que excluye el cargo del P&L), 'confirmado' (es un cobro doble real"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/banca/duplicados",
-      "hash": "0e7b2a82e5c2"
+      "hash": "c1a6723dfcce"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/export/route.ts",
@@ -99409,7 +99409,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "93faf1817564"
+      "hash": "1bb8cb43af31"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/cima-pull-respaldo/route.ts",
@@ -110744,7 +110744,7 @@
           "exportada": true,
           "params": "cuentaId: string, sociedadId: string, extractos: ExtractoN43[], origen = 'norma43', titular: 'titular' | 'conyuge' = 'titular', tipo: 'corriente' | 'tarjeta' | 'ahorro' = 'corriente',",
           "retorno": "Promise<",
-          "linea": 22,
+          "linea": 23,
           "resumen": "Importa los extractos de un fichero Norma 43 en una sociedad de la cuenta. Upsert de la cuenta bancaria (por sociedad+ccc), inserta movimientos deduplicados y actualiza el saldo con el saldo final del"
         },
         {
@@ -110753,7 +110753,7 @@
           "exportada": true,
           "params": "cuentaId: string, cuentaBancariaIds: string[], mes: string, // YYYY-MM",
           "retorno": "Promise<void>",
-          "linea": 197,
+          "linea": 206,
           "resumen": "Envía un resumen por Telegram del extracto de tarjeta de crédito recién importado."
         },
         {
@@ -110762,7 +110762,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<SaldoConsolidado>",
-          "linea": 376,
+          "linea": 385,
           "resumen": "Saldo consolidado de TODAS las cuentas bancarias de una cuenta (scoped por cuenta_id). Las cuentas con oculta=true se devuelven al final del array pero NO suman al total."
         },
         {
@@ -110771,7 +110771,7 @@
           "exportada": true,
           "params": "cuentaId: string, maxMovs = 5",
           "retorno": "Promise<CuentaConMovimientos[]>",
-          "linea": 457,
+          "linea": 466,
           "resumen": "Saldo de cada cuenta bancaria PROPIA (excluye titular='conyuge', las de Pilar) con sus últimos `maxMovs` movimientos (por nº, no por días: si el feed lleva días sin traer nada, la tarjeta no se queda "
         },
         {
@@ -110780,7 +110780,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number",
           "retorno": "Promise<CobradoPisos>",
-          "linea": 528
+          "linea": 537
         },
         {
           "nombre": "getSerieCobrosPisos",
@@ -110788,7 +110788,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<MesCobros[]>",
-          "linea": 559
+          "linea": 568
         },
         {
           "nombre": "getTopGastosMes",
@@ -110796,7 +110796,7 @@
           "exportada": true,
           "params": "cuentaId: string, n = 5",
           "retorno": "Promise<GastoGrande[]>",
-          "linea": 598
+          "linea": 607
         },
         {
           "nombre": "mapMov",
@@ -110804,7 +110804,7 @@
           "exportada": false,
           "params": "r: MovRow",
           "retorno": "MovimientoBancario",
-          "linea": 644
+          "linea": 653
         },
         {
           "nombre": "listarMovimientos",
@@ -110812,7 +110812,7 @@
           "exportada": true,
           "params": "cuentaId: string, cuentaBancariaId?: string, limite = 100,",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 660,
+          "linea": 669,
           "resumen": "Últimos movimientos de una cuenta (todas sus cuentas bancarias, o una concreta)."
         },
         {
@@ -110821,7 +110821,7 @@
           "exportada": true,
           "params": "cuentaId: string, filtros: LedgerFiltros = {}, limite = 50, offset = 0,",
           "retorno": "Promise<",
-          "linea": 714
+          "linea": 723
         },
         {
           "nombre": "listarIngresosPorRevisar",
@@ -110829,7 +110829,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovLedger[]>",
-          "linea": 774,
+          "linea": 783,
           "resumen": "INGRESOS (abonos) marcados para revisar cuyo NEGOCIO está sin confirmar. Antes un ingreso mal clasificado no tenía dónde aparecer (la revisión de /finanzas/gastos es solo importe<0); estos abonos se s"
         },
         {
@@ -110838,7 +110838,7 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<MovimientoBancario[]>",
-          "linea": 816,
+          "linea": 825,
           "resumen": "GASTOS que la IA marcó \"por revisar\": lo dudoso es el NEGOCIO (destino) — la bandeja de /banca lo resuelve vía /api/banca/destino (confirma + aprende regla del comercio)."
         },
         {
@@ -110847,7 +110847,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 12",
           "retorno": "Promise<MesEvolucion[]>",
-          "linea": 844
+          "linea": 853
         },
         {
           "nombre": "getMovimientosExport",
@@ -110855,7 +110855,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<MovExport[]>",
-          "linea": 867
+          "linea": 876
         },
         {
           "nombre": "getComparativaMensual",
@@ -110863,7 +110863,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 902
+          "linea": 911
         },
         {
           "nombre": "getGastosPorCategoria",
@@ -110871,7 +110871,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<GastoCategoria[]>",
-          "linea": 929
+          "linea": 938
         },
         {
           "nombre": "getEvolucionPorDestino",
@@ -110879,7 +110879,7 @@
           "exportada": true,
           "params": "cuentaId: string, meses = 6",
           "retorno": "Promise<",
-          "linea": 947
+          "linea": 956
         },
         {
           "nombre": "getAlertas",
@@ -110887,7 +110887,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<Alertas>",
-          "linea": 992
+          "linea": 1001
         },
         {
           "nombre": "getDuplicadosSospechosos",
@@ -110895,7 +110895,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<DupGrupo[]>",
-          "linea": 1074,
+          "linea": 1083,
           "resumen": "Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde los dos están con"
         },
         {
@@ -110904,16 +110904,16 @@
           "exportada": true,
           "params": "cuentaId: string, limite = 40",
           "retorno": "Promise<DupResuelto[]>",
-          "linea": 1170
+          "linea": 1179
         },
         {
           "nombre": "resolverDuplicados",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, ids: string[], estado: 'ignorado' | 'confirmado' | null,",
+          "params": "cuentaId: string, ids: string[], estado: 'normal' | 'confirmado' | null,",
           "retorno": "Promise<number>",
-          "linea": 1194,
-          "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL)."
+          "linea": 1204,
+          "resumen": "Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo toca movimientos de cuentas bancarias de la sesión. 'normal' = el dueño dice «es normal» (NO excluye del P&L"
         },
         {
           "nombre": "getResumenPorDestino",
@@ -110921,7 +110921,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<ResumenDestino[]>",
-          "linea": 1212
+          "linea": 1222
         }
       ],
       "tablas": [
@@ -110935,7 +110935,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "7f59f7281f08"
+      "hash": "95f8edfbd550"
     },
     {
       "ruta": "apps/plataforma/lib/base-url.ts",
@@ -117057,7 +117057,7 @@
           "exportada": true,
           "params": "concepto: string | null",
           "retorno": "string | null",
-          "linea": 60,
+          "linea": 61,
           "resumen": "\"Clave de referencia\" del concepto: el código que identifica a la compañía pagadora en los abonos de la correduría (p.ej. \"M1454\", \"M00171\", \"8/92361\"). Se usa para APRENDER reglas (clave → compañía):"
         },
         {
@@ -117066,7 +117066,7 @@
           "exportada": true,
           "params": "concepto: string | null",
           "retorno": "string | null",
-          "linea": 93,
+          "linea": 94,
           "resumen": "\"Clave de comercio\": token que identifica al COMERCIO en compras de tarjeta / recibos (\"COMPRA EN PETROPRIX GINES\" → \"PETROPRIX\", \"COMPRA EN PAYPAL *IONOS CLOUD\" → \"IONOS\", \"COMPRA EN NETFLIX.COM\" → \""
         },
         {
@@ -117075,7 +117075,7 @@
           "exportada": true,
           "params": "clave: string | null | undefined",
           "retorno": "boolean",
-          "linea": 140,
+          "linea": 141,
           "resumen": "¿Es SEGURA esta clave para aprender una regla clave→destino (que se aplica por substring)? Rechaza las trampa: demasiado cortas, sin ninguna letra útil, números cortos, o compuestas SOLO de términos g"
         },
         {
@@ -117084,13 +117084,13 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null",
           "retorno": "MotivoSeguros",
-          "linea": 161,
+          "linea": 162,
           "resumen": "Explica POR QUÉ un ABONO en BBVA quedó como 'seguros': porque el concepto trae el nombre de una aseguradora / liquidación de comisiones ('nombre' → alta confianza), o porque cayó por el fallback de de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "80db7c413c7c"
+      "hash": "7233331f0a16"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/avant2-proyectos.ts",
@@ -117742,6 +117742,7 @@
         "codigoDeAbono",
         "mesDelConcepto",
         "casarAbonos",
+        "casarSaldoMultiRemesa",
         "bancoDePeriodo",
         "rangoAbonos"
       ],
@@ -117795,8 +117796,17 @@
           "exportada": true,
           "params": "periodos: readonly PeriodoLiq[], abonos: readonly AbonoBanco[], reglas: ReadonlyMap<string, string>,",
           "retorno": "Casado",
-          "linea": 106,
+          "linea": 113,
           "resumen": "3. el último cerrado antes del pago, SOLO si cubre el mes anterior al pago (se liquida al acabar el periodo). Si el mes que se paga no está en el libro, el abono no se asigna: medido, sin esta condici"
+        },
+        {
+          "nombre": "casarSaldoMultiRemesa",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AbonoBanco, codigo: string, periodos: readonly PeriodoLiq[], porPeriodo: ReadonlyMap<string, string[]>, usados: ReadonlySet<string>, /** Fecha del abono anterior ya casado de esta compañía: los periodos cerrados antes de él no se reclama",
+          "retorno": "",
+          "linea": 181,
+          "resumen": "Periodos PENDIENTES (con remesa, sin ningún abono casado) de la compañía, anteriores a la fecha del abono, que el abono cubre enteros: abono ≥ suma de remesas (±1€) y al menos DOS (con una sola ya man"
         },
         {
           "nombre": "bancoDePeriodo",
@@ -117804,7 +117814,7 @@
           "exportada": true,
           "params": "p: PeriodoLiq, casado: Casado, abonos: readonly AbonoBanco[],",
           "retorno": "",
-          "linea": 149,
+          "linea": 202,
           "resumen": "Total y abonos casados con un periodo. `total: null` = ningún abono identificado (no «0€ cobrados»)."
         },
         {
@@ -117813,13 +117823,13 @@
           "exportada": true,
           "params": "periodos: readonly PeriodoLiq[]",
           "retorno": "",
-          "linea": 162,
+          "linea": 217,
           "resumen": "Primera y última fecha que hay que traer del banco para poder casar estos periodos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "faa33d6957fa"
+      "hash": "53a300c4ddf6"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/competencia-oportunidad.ts",
@@ -121053,6 +121063,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ebccf67b6dea"
+    },
+    {
+      "ruta": "apps/plataforma/lib/dedupe-gemelos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Emparejado 1↔1 de movimientos importados (xls/norma43) con su gemelo del feed del banco (psd2). Lógica PURA (sin BD). Cada gemelo psd2 se CONSUME al emparejarse: un psd2 solo puede cubrir UN movimiento importado, nunca varios. Así los cargos recurrentes del mismo importe en días distintos (p. ej. 7 ",
+      "exporta": [
+        "emparejarGemelos"
+      ],
+      "funciones": [
+        {
+          "nombre": "emparejarGemelos",
+          "kind": "function",
+          "exportada": true,
+          "params": "importados: MovGemelo[], feed: MovGemelo[], toleranciaDias = 0,",
+          "retorno": "Array<",
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "74dc9f3d6be0"
     },
     {
       "ruta": "apps/plataforma/lib/descuadres.ts",
@@ -183097,7 +183128,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4153,
-    "funciones": 14300
+    "archivos": 4154,
+    "funciones": 14302
   }
 }
