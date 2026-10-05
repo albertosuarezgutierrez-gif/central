@@ -1312,3 +1312,5 @@ export {
   type MotivoPropuesta,
 } from './identidad-documentada.ts'
 export { polizaAnteriorParaTarificar, CODIGOS_DGS_MAPFRE } from './poliza-anterior.ts'
+export { aE164, telefonoParaFicha, formasHashTelefono } from './whatsapp-telefono.ts'
+export { redactarPii, type OpcionesRedaccion } from './redactar-pii.ts'

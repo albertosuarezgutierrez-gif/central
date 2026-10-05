@@ -45,6 +45,14 @@
     {
       "path": "/api/cron/siniestros-vinculo",
       "schedule": "43 * * * *"
+    },
+    {
+      "path": "/api/cron/whatsapp-analizar",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/whatsapp-retencion",
+      "schedule": "25 3 * * *"
     }
   ]
 }
