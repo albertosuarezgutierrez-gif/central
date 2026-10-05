@@ -1,0 +1,79 @@
+{
+ "sesion": "62d97d94-4450-50f4-a4a5-808808fd4f39",
+ "inicio": "2026-10-05T04:39:01.375Z",
+ "fin": "2026-10-05T04:40:13.209Z",
+ "llamadas": 19,
+ "categorias": {
+  "sql": {
+   "llamadas": 1,
+   "chars_in": 201,
+   "chars_out": 48537,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 1
+   }
+  },
+  "agente:general": {
+   "llamadas": 1,
+   "chars_in": 2593,
+   "chars_out": 2839,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 1884,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "bash": {
+   "llamadas": 7,
+   "chars_in": 927,
+   "chars_out": 40934,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 7
+   }
+  },
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 355,
+   "chars_out": 696,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 3
+   }
+  },
+  "mcp:OpenSEO": {
+   "llamadas": 4,
+   "chars_in": 283,
+   "chars_out": 5145,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__OpenSEO__list_projects": 1,
+    "mcp__OpenSEO__get_search_console_performance": 1,
+    "mcp__OpenSEO__get_google_analytics_traffic_acquisition": 1,
+    "mcp__OpenSEO__get_project_context": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 3,
+   "chars_in": 152,
+   "chars_out": 18311,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_projects": 1,
+    "mcp__Vercel__list_deployments": 1,
+    "mcp__Vercel__get_project": 1
+   }
+  }
+ }
+}

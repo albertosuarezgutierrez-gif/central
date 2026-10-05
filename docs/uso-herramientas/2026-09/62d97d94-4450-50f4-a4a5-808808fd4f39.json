@@ -1,8 +1,8 @@
 {
  "sesion": "62d97d94-4450-50f4-a4a5-808808fd4f39",
  "inicio": "2026-09-15T10:45:37.659Z",
- "fin": "2026-09-15T20:24:20.189Z",
- "llamadas": 1030,
+ "fin": "2026-09-16T09:43:16.445Z",
+ "llamadas": 1035,
  "categorias": {
   "bash": {
    "llamadas": 426,
@@ -16,9 +16,9 @@
    }
   },
   "otro": {
-   "llamadas": 161,
-   "chars_in": 26866,
-   "chars_out": 3279904,
+   "llamadas": 162,
+   "chars_in": 26935,
+   "chars_out": 3280033,
    "errores": 0,
    "archivos_citados": 15,
    "chars_citados": 166794,
@@ -27,7 +27,7 @@
     "SubagentHandback": 3,
     "SendUserFile": 5,
     "ReadNotifications": 90,
-    "ToolSearch": 32,
+    "ToolSearch": 33,
     "ReportFindings": 1,
     "WebSearch": 14,
     "AskUserQuestion": 1,
@@ -47,15 +47,15 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 165,
-   "chars_in": 15913,
-   "chars_out": 698756,
+   "llamadas": 168,
+   "chars_in": 16225,
+   "chars_out": 704915,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 114,
-    "Grep": 39,
+    "Read": 115,
+    "Grep": 41,
     "Glob": 12
    }
   },
@@ -173,6 +173,17 @@
    "chars_citados": 0,
    "tools": {
     "Agent": 1
+   }
+  },
+  "mcp:Google_Calendar": {
+   "llamadas": 1,
+   "chars_in": 907,
+   "chars_out": 1362,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Calendar__create_event": 1
    }
   }
  }
