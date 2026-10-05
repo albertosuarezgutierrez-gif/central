@@ -19,7 +19,7 @@
 **(05/10/2026)** — correduría: presupuesto auto edita la ficha in-page (panel); borrador también en servidor (`/api/*/borrador-presupuesto`, gana el más reciente y SUSTITUYE al local);
 identidad editable con motivo del corredor (auditado) o por documento/póliza con DNI coincidente (portal nunca); propuesta de apellidos desde la póliza;
 fusión de fichas exige elegir identidad (422 si no). Guardianes: `regression-borrador-auto-nuevo`, `regression-borradores-presupuesto`.
-Pendiente: aplicar con gate DDL `apps/asegura/prisma/sql/2026-10-05_borradores_presupuesto.sql` (PR-review + 2-eyes). Sin commitear al cierre de esta nota.
+✅ (05/10/2026 ~09:30 UTC) Aplicada en prod `2026-10-05_borradores_presupuesto.sql` con OK de Alberto: 2-eyes (verificador-esceptico sobre el SQL + SELECT de prerrequisitos) y verificada (tabla, cron, grants). Antes daba 12× 503 `42P01` en `/api/operador/borrador-presupuesto`.
 
 **(05/10/2026)** — requerimiento AEAT PyC — leídos extractos 2024 SL …9871 y …0855 con agentes; doc v3 en Drive; hallazgos clave (sin 500 €/mes, IRPF solo Socorro nov-dic, 309 Booking abierto); Excel de Asecon: Socorro ene-oct y Sanlúcar están en el ajuste del IS ([P] cuadre al euro); el riesgo pasa a la 551 (≈54k cobrados por los socios); pendiente …7622.
 
