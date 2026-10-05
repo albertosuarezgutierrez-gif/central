@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-05T17:48:33.182Z",
- "llamadas": 235,
+ "fin": "2026-10-05T18:15:00.582Z",
+ "llamadas": 327,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -16,49 +16,51 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 8,
-   "chars_in": 604,
-   "chars_out": 74116,
+   "llamadas": 13,
+   "chars_in": 1134,
+   "chars_out": 662500,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 8
+    "Read": 12,
+    "Grep": 1
    }
   },
   "bash": {
-   "llamadas": 134,
-   "chars_in": 65450,
-   "chars_out": 429745,
+   "llamadas": 183,
+   "chars_in": 136498,
+   "chars_out": 563953,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 134
+    "Bash": 183
    }
   },
   "otro": {
-   "llamadas": 16,
-   "chars_in": 32993,
-   "chars_out": 43654,
+   "llamadas": 47,
+   "chars_in": 45284,
+   "chars_out": 279164,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 8,
-    "ToolSearch": 7,
-    "ReadNotifications": 1
+    "SubagentHandback": 13,
+    "ToolSearch": 9,
+    "ReadNotifications": 23,
+    "SendMessage": 2
    }
   },
   "agente:general-purpose": {
-   "llamadas": 2,
-   "chars_in": 2570,
-   "chars_out": 2964,
+   "llamadas": 4,
+   "chars_in": 7608,
+   "chars_out": 8396,
    "errores": 0,
-   "archivos_citados": 2,
-   "chars_citados": 12085,
+   "archivos_citados": 6,
+   "chars_citados": 40128,
    "tools": {
-    "Agent": 2
+    "Agent": 4
    }
   },
   "agente:lector-correo": {
@@ -123,15 +125,17 @@
    }
   },
   "mcp:github": {
-   "llamadas": 2,
-   "chars_in": 2981,
-   "chars_out": 4749,
+   "llamadas": 4,
+   "chars_in": 4069,
+   "chars_out": 12508,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 2492,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 1
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__get_job_logs": 1,
+    "mcp__github__add_issue_comment": 1
    }
   },
   "agente:agente-architect": {
@@ -146,15 +150,15 @@
    }
   },
   "escritura": {
-   "llamadas": 30,
-   "chars_in": 133133,
-   "chars_out": 1205395,
+   "llamadas": 33,
+   "chars_in": 134618,
+   "chars_out": 1222863,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Write": 29,
-    "Edit": 1
+    "Edit": 4
    }
   },
   "agente:agente-mecanico": {
