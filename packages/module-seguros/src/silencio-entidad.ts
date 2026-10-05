@@ -122,8 +122,18 @@ export function veredictoEntidad(e: EntidadIngesta): SilencioEntidad {
 
   const motivos: string[] = []
 
-  // 1. La pérdida MEDIDA. No depende de ningún umbral discutible.
-  const perdida = e.vencidasEnSilencio !== null && e.vencidasEnSilencio > 0
+  // 1. La pérdida MEDIDA, pero SOLO como respaldo del ritmo. Una póliza que
+  //    vence sin fichero posterior es una renovación que no ha llegado (ya se
+  //    avisa aparte en «renovaciones sin llegar»), NO una compañía muda: si su
+  //    último fichero es reciente (< SUELO_DIAS), Mapfre sí manda.
+  //    Cuenta como silencio solo cuando ya hay ≥ SUELO_DIAS sin fichero Y la
+  //    vía de ritmo no puede decidir por falta de histórico (estado
+  //    conservador). Con histórico decide el ritmo, y solo el ritmo.
+  const dias = e.diasSinFichero
+  const hayBase = e.huecoMaximo !== null && e.huecosObservados >= MIN_HUECOS
+  const perdida =
+    e.vencidasEnSilencio !== null && e.vencidasEnSilencio > 0 &&
+    !hayBase && (dias === null || dias >= SUELO_DIAS)
   if (perdida) {
     motivos.push(
       `${e.entidad}: ${e.vencidasEnSilencio} renovación(es) vencieron sin que llegara su fichero`,
@@ -131,8 +141,6 @@ export function veredictoEntidad(e: EntidadIngesta): SilencioEntidad {
   }
 
   // 2. El ritmo roto. Solo se afirma con muestra suficiente.
-  const dias = e.diasSinFichero
-  const hayBase = e.huecoMaximo !== null && e.huecosObservados >= MIN_HUECOS
   const ritmoRoto =
     dias !== null && hayBase && dias >= SUELO_DIAS && dias > (e.huecoMaximo as number) * FACTOR_SILENCIO
 

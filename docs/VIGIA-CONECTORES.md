@@ -9,7 +9,7 @@
 
 ## Última pasada
 
-**05/09/2026** — primera pasada real de la rutina programada. Ver hallazgos abajo.
+**05/10/2026** — segunda pasada (canario NO ejecutable otra vez; ver bitácora). Anterior: 05/09/2026.
 
 ## Veredictos
 
@@ -87,3 +87,11 @@
   poder cumplir el Paso 3, asumiendo el coste de superficie.
 - **05/09/2026 — Expedia en `needs_reconnect`.** Ver fila de higiene arriba. `pricing-agente` sigue
   operando (diseño resiliente) pero con una fuente de mercado menos y sin demanda por vuelos.
+- **05/10/2026 — canario imposible por segundo mes.** `ListConnectors` devuelve `enabledInChat: false`
+  en los 40 conectores; ninguna llamada real a Booking/IBKR/Alpha Vantage/Datos financieros. Sin veredictos
+  nuevos de endpoints. Pasos 0-bis, 1 y 2 NO ejecutados en profundidad esta pasada (sin evidencia, sin fila).
+- **05/10/2026 — higiene de cuenta (solo `installState`; no se ve lo adjunto a cada rutina):**
+  Expedia sigue `needs_reconnect` (1 mes). Nuevos respecto a la pasada anterior, sin uso encontrado en este
+  repo: **Graphify** (`connected`, y CLAUDE.md dice que NO se usa → candidato a desconectar), Context7, META MCP,
+  OpenSEO, posthog, Google Calendar, idealista (este SÍ lo usa `idealista-radar`), Docusign/Firecrawl/OpenRush
+  (`connect_incomplete`), Google People API (`needs_reconnect`). Ninguna acción sin OK de Alberto.
