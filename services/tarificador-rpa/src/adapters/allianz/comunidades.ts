@@ -366,47 +366,45 @@ async function leerPrimas(page: Page): Promise<{ anual: DesglosePrima; sucesivos
 }
 
 /**
- * PDF del proyecto: pestaña «Proyecto» (no graba nada). Puede llegar como descarga o como ventana
- * emergente. TODO(pdf): confirmar cuál de las dos es en ePAC; se contemplan ambas.
+ * PDF del proyecto: pestaña «Proyecto» (no graba nada). La descarga se captura en paralelo
+ * con la pulsación de «Proyecto»; se obtiene el fichero, se verifica que sea PDF y se
+ * convierte a base64.
  */
 async function descargarProyecto(page: Page, ctx: ContextoPortal, nombre: string): Promise<PdfRef | null> {
   const pestana = page.getByText('Proyecto', { exact: true }).first()
-  const descarga = page.waitForEvent('download', { timeout: 45_000 }).then((d) => ({ d }) as const)
-  const popup = page.context().waitForEvent('page', { timeout: 45_000 }).then((p) => ({ p }) as const)
-  const esperando = Promise.any([descarga, popup]).catch(() => null)
-  await ctx.abrirProyecto(pestana)
-  const r = await esperando
-  if (!r) {
-    ctx.log('pdf: ni descarga ni ventana tras abrir «Proyecto»')
+  const descargar = page.waitForEvent('download', { timeout: 45_000 })
+
+  // Lanzar descarga en paralelo con la pulsación
+  const [, descarga] = await Promise.all([
+    ctx.abrirProyecto(pestana),
+    descargar,
+  ]).catch(() => [undefined, null] as const)
+
+  if (!descarga) {
+    ctx.log('pdf: no se descargó tras abrir «Proyecto»')
     return null
   }
-  let bytes: Uint8Array | null = null
-  if ('d' in r) {
+
+  // Leer el fichero desde el stream
+  let bytes: Buffer | null = null
+  try {
     const trozos: Buffer[] = []
-    const flujo = await r.d.createReadStream()
-    for await (const t of flujo) trozos.push(Buffer.from(t))
-    bytes = Buffer.concat(trozos)
-  } else {
-    // Ventana emergente: o dispara una descarga o es un visor con la URL del PDF.
-    const p = r.p
-    const dl = await p.waitForEvent('download', { timeout: 10_000 }).catch(() => null)
-    if (dl) {
-      const trozos: Buffer[] = []
-      for await (const t of await dl.createReadStream()) trozos.push(Buffer.from(t))
-      bytes = Buffer.concat(trozos)
-    } else {
-      await p.waitForLoadState('load').catch(() => undefined)
-      comprobarUrl(p.url()) // nunca se sigue una URL de emisión
-      const resp = await p.context().request.get(p.url())
-      if (resp.ok()) bytes = await resp.body()
+    const flujo = await descarga.createReadStream()
+    for await (const t of flujo) {
+      trozos.push(Buffer.from(t))
     }
-    await p.close().catch(() => undefined)
+    bytes = Buffer.concat(trozos)
+  } catch (e) {
+    ctx.log(`pdf: error al leer la descarga: ${e instanceof Error ? e.message : 'error'}`)
+    return null
   }
+
   // Un PDF de verdad empieza por «%PDF»; si no, no se adjunta (no se sube cualquier cosa).
-  if (!bytes || bytes.length < 5 || Buffer.from(bytes.subarray(0, 4)).toString('latin1') !== '%PDF') {
+  if (!bytes || bytes.length < 5 || bytes.subarray(0, 4).toString('latin1') !== '%PDF') {
     ctx.log('pdf: lo recibido no es un PDF; se omite')
     return null
   }
+
   return ctx.adjuntarPdf(nombre, bytes)
 }
 
