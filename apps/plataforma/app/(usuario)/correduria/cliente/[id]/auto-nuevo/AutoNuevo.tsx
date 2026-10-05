@@ -48,7 +48,7 @@ import {
 } from '@/lib/correduria/borrador-servidor'
 import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 import type { ContactoFicha } from '@/lib/ficha-asegura'
-import type { IdentidadFicha } from '@/lib/cliente-edicion-asegura'
+import { textoFaltaEnFicha, type IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import type { DocumentoResumen } from '@central/module-seguros'
 import EditarCliente, { EditarDireccion } from '../../../EditarCliente'
 
@@ -1423,7 +1423,7 @@ export default function AutoNuevo({
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18, padding: '4px 0 14px' }}>
                 {reparos.ficha.length > 0 && (
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                    Campos marcados por el servidor: {reparos.ficha.map((f) => f.campo).join(' · ')}
+                    {textoFaltaEnFicha(reparos.ficha.map((f) => f.campo))}
                   </div>
                 )}
                 <EditarCliente

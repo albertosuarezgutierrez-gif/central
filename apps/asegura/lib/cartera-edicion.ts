@@ -636,14 +636,17 @@ export async function editarCliente(
   const permiteMotivo = opciones.permiteMotivo === true
   const rechazo = (x: { motivo: string; campo?: string }) => invalido(x.motivo, x.campo, STATUS_SIN_ACREDITAR.has(x.motivo) ? 400 : 422)
   // Primera pasada sin la ficha: un dato mal tecleado se rechaza sin tocar la BD.
+  // (Sin la ficha no se sabe si los apellidos solo se completan: ahí no se exige motivo todavía.)
   const previa = revisarEdicion(edicion, { fichaSinNombre: true, permiteMotivo })
-  if (!previa.ok) return rechazo(previa)
+  const soloApellidos = Object.keys(edicion.identidad ?? {}).every((k) => k === 'apellidos')
+  const previaPideMotivo = !previa.ok && soloApellidos && (previa.motivo === MOTIVO_CAMBIO_REQUERIDO || previa.motivo === MOTIVO_DOCUMENTO_REQUERIDO)
+  if (!previa.ok && !previaPideMotivo) return rechazo(previa)
   try {
     const db = prismaAsegura()
     const c = await clienteDe(correduriaId, clienteId)
     if (!c) return noEncontrado()
     // La excepción «ficha sin nombre» la decide lo que hay en la BD, nunca quien llama.
-    const r = revisarEdicion(edicion, { fichaSinNombre: nombrePendiente(c.nombre), permiteMotivo })
+    const r = revisarEdicion(edicion, { fichaSinNombre: nombrePendiente(c.nombre), permiteMotivo, apellidosActuales: c.apellidos })
     if (!r.ok) return rechazo(r)
     const ident = r.tocaIdentidad
       ? await db.cliente.findFirst({ where: { id: clienteId, correduriaId }, select: { dni: true, dniLookupHash: true, fechaNacimiento: true } })

@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(05/10/2026)** — correduría, bloque identidad del tomador: completar apellidos («Slava» → «Slava Antoli», o vacío → algo) ya NO pide motivo ni DNI (helper puro `completaApellidos`/`edicionSoloCompletaApellidos` en `module-seguros/cliente-edicion.ts`, usado por plataforma y asegura; historial «apellidos completados sin documento: antes → después»). Cambiar/quitar palabras sí lo pide. Cuadro ámbar solo si lo editado lo requiere, foco al motivo, 3 motivos rápidos (decisión: el DNI se cambia sin pedir documento pero con motivo, 1 clic). «Falta en la ficha: segundo apellido», «persona física». `partirApellidos` pega partículas (de/del/la…).
+
 **(05/10/2026)** — correduría: presupuesto auto edita la ficha in-page (panel); borrador también en servidor (`/api/*/borrador-presupuesto`, gana el más reciente y SUSTITUYE al local);
 identidad editable con motivo del corredor (auditado) o por documento/póliza con DNI coincidente (portal nunca); propuesta de apellidos desde la póliza;
 fusión de fichas exige elegir identidad (422 si no). Guardianes: `regression-borrador-auto-nuevo`, `regression-borradores-presupuesto`.
