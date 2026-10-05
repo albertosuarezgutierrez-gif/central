@@ -1474,3 +1474,75 @@ model Firma {
   @@index([clienteId, creadaAt])
   @@map("firma")
 }
+
+// ─── Google Contacts (05/10/2026, `prisma/sql/2026-10-05b_google_contactos.sql`) ─────────────
+// Sin relaciones declaradas a propósito: las FK viven en la BD y así no se toca `Cliente`.
+// Reglas y plan de diff: `@central/module-seguros/google-contactos`.
+
+/// Conexión OAuth (una por correduría). `refreshTokenCifrado` SIEMPRE `v1:` (CHECK en BD).
+model GoogleContactosConexion {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId          String    @unique @map("correduria_id") @db.Uuid
+  cuentaGoogle          String?   @map("cuenta_google")
+  refreshTokenCifrado   String    @map("refresh_token_cifrado")
+  scopes                String[]  @default([])
+  grupoResourceName     String?   @map("grupo_resource_name")
+  syncToken             String?   @map("sync_token")
+  estado                String    @default("conectada")
+  ultimoError           String?   @map("ultimo_error")
+  conectadoPor          String?   @map("conectado_por")
+  conectadoEn           DateTime  @default(now()) @map("conectado_en") @db.Timestamptz(6)
+  ultimaSyncEn          DateTime? @map("ultima_sync_en") @db.Timestamptz(6)
+  ultimaSyncCompletaEn  DateTime? @map("ultima_sync_completa_en") @db.Timestamptz(6)
+  /// Simular → revisar → activar: sin `syncActivadaEn` el cron no escribe nada.
+  simuladaEn            DateTime? @map("simulada_en") @db.Timestamptz(6)
+  syncActivadaEn        DateTime? @map("sync_activada_en") @db.Timestamptz(6)
+  syncActivadaPor       String?   @map("sync_activada_por")
+  actualizadoEn         DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("google_contactos_conexion")
+}
+
+/// Ficha (o contacto de compañía) ↔ contacto de Google, con el hash de lo último ENVIADO.
+/// Exactamente uno de `clienteId` / `companiaContactoId` (CHECK en BD).
+model GoogleContactosVinculo {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  clienteId     String?  @map("cliente_id") @db.Uuid
+  companiaContactoId String? @map("compania_contacto_id") @db.Uuid
+  resourceName  String   @map("resource_name")
+  etag          String?
+  hashEnviado   String   @map("hash_enviado")
+  origen        String
+  estado        String   @default("activo")
+  lastSyncedAt  DateTime @default(now()) @map("last_synced_at") @db.Timestamptz(6)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([correduriaId, clienteId], map: "google_contactos_vinculo_cliente")
+  @@unique([correduriaId, companiaContactoId], map: "google_contactos_vinculo_compania")
+  @@unique([correduriaId, resourceName], map: "google_contactos_vinculo_recurso")
+  @@map("google_contactos_vinculo")
+}
+
+/// Cola de revisión: cambios en Google (CRM gana), borrados, ambiguos y propuestas de lead.
+/// `propuestaCifrada` = JSON de lo que había en Google, cifrado (`v1:`).
+model GoogleContactosRevision {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String    @map("correduria_id") @db.Uuid
+  clienteId        String?   @map("cliente_id") @db.Uuid
+  companiaContactoId String? @map("compania_contacto_id") @db.Uuid
+  resourceName     String    @map("resource_name")
+  tipo             String
+  campos           String[]  @default([])
+  propuestaCifrada String?   @map("propuesta_cifrada")
+  huella           String
+  estado           String    @default("pendiente")
+  /// aceptar_lead | descartar | mantener_crm (null mientras está pendiente; CHECK en BD).
+  resolucion       String?
+  resueltoPor      String?   @map("resuelto_por")
+  resueltoEn       DateTime? @map("resuelto_en") @db.Timestamptz(6)
+  creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([correduriaId, huella], map: "google_contactos_revision_huella")
+  @@map("google_contactos_revision")
+}

@@ -1075,6 +1075,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   «confirmación: N»; el vigía excluye en SQL las filas `mensaje_huesped` de Expedia; `canalDeAsunto` reconoce «huésped de Expedia».
 - Reserva de Reka Bekesi (06/11) confirmada en Smoobu por Alberto.
 
+## (05/10/2026) Correduría: sincronización CRM ↔ Google Contacts (People API)
+- Gmail personal de Alberto (aceptado SIN DPA de Google; revierte la decisión de vcard.ts del 23/09), alcance = selección de `contactos-movil` (en vigor + leads), solo grupo «Grupo ASegura». CRM manda; cambios en Google → cola `google_contactos_revision`.
+- Código en apps/asegura (OAuth, cron horario `/api/cron/google-contactos`, desconexión, `/api/operador/llamada`) + helpers puros en module-seguros (`telefono-e164`, `google-contactos`). Guía: docs/GOOGLE-CONTACTOS-ASEGURA.md.
+- Pendiente: aplicar `2026-10-05b_google_contactos.sql` por gate DDL ANTES de mergear (si no, el cron da 500 cada hora); crear proyecto Google Cloud + 4 env vars `GOOGLE_CONTACTOS_*`; pantalla de la cola de revisión en plataforma; app móvil aplazada.
+
 ## (05/10/2026) Correduría: el vehículo de la póliza escaneada ya precarga el presupuesto de auto
 - REGLA ÚNICA: el riesgo se rellena UNA vez (documento o corredor) en `info_riesgo.datosVehiculo`; toda pantalla de auto lo lee de ahí y no re-pide lo que consta (skill correduria-crm punto 22).
 - Al crear oportunidad desde documento: OCR (ahora con combustible) → `datosVehiculoDesdeDocumento` (module-seguros) → ids de marca/modelo con `emparejar()` contra catálogo GRATIS; motor/versión solo si candidata única; catálogo caído = sin ids. Nunca búsqueda por matrícula (créditos).
