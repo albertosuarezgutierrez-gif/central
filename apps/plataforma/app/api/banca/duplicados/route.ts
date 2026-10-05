@@ -7,11 +7,11 @@ export const dynamic = 'force-dynamic'
 
 const Body = z.object({
   ids: z.array(z.string().uuid()).min(1).max(50),
-  estado: z.enum(['ignorado', 'confirmado']).nullable(),
+  estado: z.enum(['normal', 'confirmado']).nullable(),
 })
 
 // POST /api/banca/duplicados { ids, estado } — el dueño resuelve un par sospechoso de cobro
-// doble: 'ignorado' (es normal), 'confirmado' (es un cobro doble real) o null (deshacer).
+// doble: 'normal' (es normal; NO 'ignorado', que excluye el cargo del P&L), 'confirmado' (es un cobro doble real) o null (deshacer).
 // Scoped por sesión (cuenta).
 export async function POST(req: NextRequest) {
   const session = await requireSession().catch(() => null)

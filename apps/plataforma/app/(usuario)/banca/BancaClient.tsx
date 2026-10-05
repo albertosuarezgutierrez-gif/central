@@ -451,7 +451,7 @@ export function ExportarBtn() {
 
 type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string; cuentaLabel?: string }
 type DupGrupoUI = { clave: string; confianza: 'alta' | 'baja'; importe: number; superaUmbral: boolean; movimientos: DupMov[] }
-type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado'; cuentaLabel?: string }
+type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'normal' | 'ignorado' | 'confirmado'; cuentaLabel?: string }
 
 // Bandeja "Posibles cargos duplicados": pares sospechosos de cobro doble. El dueño los resuelve
 // con un clic ("Es normal" / "Es un cobro doble"); la decisión persiste. Plegable de "ya
@@ -476,7 +476,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
     if (r.ok && d) { setRecl({ asunto: d.asunto, cuerpo: d.cuerpo }); setCopiado(false) }
   }
 
-  async function resolver(g: DupGrupoUI, estado: 'ignorado' | 'confirmado') {
+  async function resolver(g: DupGrupoUI, estado: 'normal' | 'confirmado') {
     setBusy(g.clave)
     const ids = g.movimientos.map(m => m.id)
     const r = await fetch('/api/banca/duplicados', {
@@ -544,7 +544,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
               <div className="banca-dup-acciones" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
                 <button disabled={busy === g.clave} onClick={() => redactar(g)} style={dupGhost}>📝 Reclamar</button>
                 <div className="banca-dup-sep" style={{ flex: 1 }} />
-                <button disabled={busy === g.clave} onClick={() => resolver(g, 'ignorado')} style={dupGhost}>Es normal</button>
+                <button disabled={busy === g.clave} onClick={() => resolver(g, 'normal')} style={dupGhost}>Es normal</button>
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'confirmado')} style={dupDanger}>Es un cobro doble</button>
               </div>
             </div>
