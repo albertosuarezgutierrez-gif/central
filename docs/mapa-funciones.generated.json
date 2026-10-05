@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-05T14:37:50Z",
-  "sha": "9eeb32b436bb49746a70a1dccb5eb693cea094a9",
+  "generadoEn": "2026-10-05T17:00:33Z",
+  "sha": "a8278bd4f31171678ec1da9d290f776be340bb31",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -17441,7 +17441,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/operador/google-contactos/revision",
-      "hash": "c0eb4c11306b"
+      "hash": "316e507c012b"
     },
     {
       "ruta": "apps/asegura/app/api/operador/google-contactos/route.ts",
@@ -30035,7 +30035,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 37
+          "linea": 40
         },
         {
           "nombre": "urlFichaPlataforma",
@@ -30043,7 +30043,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "string",
-          "linea": 41
+          "linea": 44
         },
         {
           "nombre": "seleccionGoogle",
@@ -30051,10 +30051,12 @@
           "exportada": true,
           "params": "correduriaId: string, hoy: string = hoyMadrid()",
           "retorno": "Promise<SeleccionGoogle>",
-          "linea": 46
+          "linea": 49
         }
       ],
       "tablas": [
+        "cliente_emails",
+        "cliente_telefonos",
         "clientes",
         "companias_dgs",
         "lateral",
@@ -30063,7 +30065,7 @@
         "siniestros"
       ],
       "rutaApi": null,
-      "hash": "0edc95e65868"
+      "hash": "97822bf746c3"
     },
     {
       "ruta": "apps/asegura/lib/contactos-movil.ts",
@@ -32331,7 +32333,7 @@
           "exportada": false,
           "params": "c: string | null",
           "retorno": "",
-          "linea": 41
+          "linea": 43
         },
         {
           "nombre": "listarRevisiones",
@@ -32339,16 +32341,16 @@
           "exportada": true,
           "params": "correduriaId: string, despuesDe: string | null",
           "retorno": "Promise<",
-          "linea": 69,
+          "linea": 72,
           "resumen": "Pendientes, de la más reciente a la más antigua, de 50 en 50. Paginación por CLAVE (`creado_en`, `id`) de la última que se vio, no por desplazamiento ni con el `cursor` de Prisma: al resolver tarjetas"
         },
         {
           "nombre": "resolverRevision",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, p: { id: string; accion: AccionRevision; actor: string; forzar: boolean },",
+          "params": "correduriaId: string, p: { id: string; accion: AccionRevision; actor: string; forzar: boolean; clienteId?: string | null },",
           "retorno": "Promise<ResultadoResolucion>",
-          "linea": 113
+          "linea": 118
         },
         {
           "nombre": "liberarClaim",
@@ -32356,8 +32358,26 @@
           "exportada": false,
           "params": "correduriaId: string, id: string, actor: string, resueltoEn: Date",
           "retorno": "Promise<void>",
-          "linea": 171,
+          "linea": 178,
           "resumen": "Deshace un claim propio (mismo actor y mismo instante) si el alta del lead no salió."
+        },
+        {
+          "nombre": "elegirTitular",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, fila: { id: string; telefonoHash: string | null; candidatos: string[] }, actor: string, clienteId: string | null,",
+          "retorno": "Promise<ResultadoResolucion>",
+          "linea": 193,
+          "resumen": "Guarda la ficha elegida como TITULAR del número (`google_contactos_titular_telefono`, por índice ciego) y cierra la revisión, en UNA transacción. Solo vale una de las candidatas, viva y sin fusionar. "
+        },
+        {
+          "nombre": "anadirAFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, fila: { id: string; clienteId: string | null; campos: string[]; propuestaCifrada: string | null }, actor: string,",
+          "retorno": "Promise<ResultadoResolucion>",
+          "linea": 235,
+          "resumen": "«Añadir a la ficha»: el teléfono/correo que el contacto de Google tiene y la ficha NO. Se añade con el alta normal de contactos de la ficha (`anadirContacto`: cifrado + índice ciego + duplicados en ot"
         },
         {
           "nombre": "esUnicaViolada",
@@ -32365,7 +32385,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 184
+          "linea": 279
         },
         {
           "nombre": "unificarOMote",
@@ -32373,7 +32393,7 @@
           "exportada": false,
           "params": "correduriaId: string, fila: FilaUnificar, actor: string, modo: { accion: AccionRevision; vinculo: boolean; mote: boolean }, leerGoogle: (resourceName: string) => Promise<PersonaGoogle | null>,",
           "retorno": "Promise<ResultadoResolucion>",
-          "linea": 200,
+          "linea": 295,
           "resumen": "«Unificar» un `duplicado_ambiguo` inequívoco y/o guardar un MOTE («Usar como mote»), en UNA transacción: el claim de la revisión, el vínculo PENDIENTE ficha ↔ resourceName (origen `adoptado`, hash `HA"
         },
         {
@@ -32382,7 +32402,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { motivo: MotivoDuplicado; actor: string; despuesDe?: string | null },",
           "retorno": "Promise<ResultadoLote>",
-          "linea": 304,
+          "linea": 399,
           "resumen": "«Unificar todos los de nombre distinto» con la opción POR DEFECTO (mote = su nombre de agenda), de 20 en 20 por CURSOR (`despuesDe` = la última vista; `siguiente` para seguir). Una que no se puede uni"
         }
       ],
@@ -32390,7 +32410,7 @@
         "google_contactos_revision"
       ],
       "rutaApi": null,
-      "hash": "d45431e4fae8"
+      "hash": "3d53b9cca9bb"
     },
     {
       "ruta": "apps/asegura/lib/google-contactos.ts",
@@ -32485,7 +32505,7 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<Map<string, string>>",
-          "linea": 194,
+          "linea": 196,
           "resumen": "absorbida → en quién se fusionó, siguiendo las CADENAS (A→B y después B→C): sin el segundo salto, el vínculo de A no lo heredaba C y se creaba un contacto duplicado."
         },
         {
@@ -32494,7 +32514,7 @@
           "exportada": true,
           "params": "clave: string",
           "retorno": "",
-          "linea": 218,
+          "linea": 220,
           "resumen": "La clave del plan → las dos columnas de la BD (exactamente una con valor; CHECK en BD)."
         },
         {
@@ -32503,7 +32523,7 @@
           "exportada": true,
           "params": "f: { clienteId: string | null; companiaContactoId: string | null }",
           "retorno": "string",
-          "linea": 224
+          "linea": 226
         },
         {
           "nombre": "whereClaves",
@@ -32511,7 +32531,7 @@
           "exportada": true,
           "params": "claves: readonly string[]",
           "retorno": null,
-          "linea": 229,
+          "linea": 231,
           "resumen": "`where` de Prisma para varias claves (mezcla de fichas y compañías)."
         },
         {
@@ -32520,7 +32540,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<Vinculo[]>",
-          "linea": 236
+          "linea": 238
         },
         {
           "nombre": "guardarVinculo",
@@ -32528,8 +32548,17 @@
           "exportada": false,
           "params": "correduriaId: string, v: { clienteId: string; resourceName: string; etag: string | null; hash: string; origen: OrigenVinculo }, sustituye: string[] = []",
           "retorno": "Promise<void>",
-          "linea": 245,
+          "linea": 247,
           "resumen": "Upsert por clave (el de Prisma no admite una clave única con NULL): borrar + crear, juntos."
+        },
+        {
+          "nombre": "titularesGoogle",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<",
+          "linea": 266,
+          "resumen": "«Un número, un contacto»: los titulares ELEGIDOS por Alberto (índice ciego del teléfono → ficha) y el índice ciego que usa el plan (`computeTelefonoLookupHash`, el mismo de `clientes`: el número nunca"
         },
         {
           "nombre": "encolarRevisiones",
@@ -32537,7 +32566,7 @@
           "exportada": false,
           "params": "correduriaId: string, plan: Plan",
           "retorno": "Promise<number>",
-          "linea": 258
+          "linea": 278
         },
         {
           "nombre": "sincronizarGoogleContactos",
@@ -32545,7 +32574,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResultadoSync>",
-          "linea": 274
+          "linea": 296
         },
         {
           "nombre": "simularGoogleContactos",
@@ -32553,7 +32582,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResultadoSimulacion>",
-          "linea": 452,
+          "linea": 495,
           "resumen": "Qué haría la sincronización, SIN escribir en Google ni en vínculos/cola. Lee la agenda ENTERA (listado completo, sin syncToken) y la etiqueta solo si ya existe (no la crea). Lo único que escribe es `s"
         },
         {
@@ -32562,7 +32591,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResultadoOrdenar>",
-          "linea": 494,
+          "linea": 537,
           "resumen": "«Ordenar agenda» (05/10/2026): la MISMA lectura que la simulación (agenda entera, etiqueta solo si existe) y un informe para que Alberto limpie su agenda en Google. SOLO LECTURA: no escribe nada, ni s"
         },
         {
@@ -32571,7 +32600,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "(resourceName: string)",
-          "linea": 529,
+          "linea": 572,
           "resumen": "Lector del contacto ACTUAL de Google para «Unificar» (el mote sale del nombre que tiene HOY, no del que se encoló). Un token por lector; cada lectura con tope de 4 s. Cualquier fallo (sin conexión, re"
         },
         {
@@ -32580,7 +32609,7 @@
           "exportada": true,
           "params": "correduriaId: string, actor: string",
           "retorno": "Promise<ResultadoActivacion>",
-          "linea": 550,
+          "linea": 593,
           "resumen": "Marca «simulación revisada: sincroniza». Exige haber simulado con ESTA conexión."
         },
         {
@@ -32589,13 +32618,13 @@
           "exportada": true,
           "params": "correduriaId: string, p: { borrarContactos: boolean }",
           "retorno": "Promise<ResultadoDesconexion>",
-          "linea": 573,
+          "linea": 616,
           "resumen": "Revoca en Google, borra el token y los vínculos. Con `borrarContactos`, borra antes los contactos del grupo que CREÓ el CRM (`aBorrarAlDesconectar`); los vinculados por teléfono/id y los que Alberto a"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a492144bc5bd"
+      "hash": "7e9c091bd264"
     },
     {
       "ruta": "apps/asegura/lib/google-oauth-estado.ts",
@@ -32848,7 +32877,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0834112e4717"
+      "hash": "309c97790746"
     },
     {
       "ruta": "apps/asegura/lib/ia.ts",
@@ -86172,7 +86201,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 42
+          "linea": 46
         },
         {
           "nombre": "pagina",
@@ -86180,7 +86209,7 @@
           "exportada": false,
           "params": "j: unknown",
           "retorno": "Pagina | null",
-          "linea": 46
+          "linea": 50
         },
         {
           "nombre": "GoogleContactosRevision",
@@ -86188,12 +86217,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 58
+          "linea": 62
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4ddf085849aa"
+      "hash": "fb97a16879de"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/GoogleContactosSimulacion.tsx",
@@ -86245,7 +86274,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d171280e1ebb"
+      "hash": "ab2dcf22c522"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Historial.tsx",
@@ -99815,7 +99844,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/correduria/google-contactos-revision",
-      "hash": "f97b68aad312"
+      "hash": "a21e6b63df01"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/google-contactos-sync/route.ts",
@@ -175690,7 +175719,7 @@
           "exportada": true,
           "params": "m: unknown",
           "retorno": "m is MotivoDuplicado",
-          "linea": 48
+          "linea": 59
         },
         {
           "nombre": "accionesPermitidas",
@@ -175698,7 +175727,7 @@
           "exportada": true,
           "params": "tipo: TipoRevisionGoogle, motivo: string | null = null, campos: readonly string[] = []",
           "retorno": "readonly AccionRevision[]",
-          "linea": 81,
+          "linea": 97,
           "resumen": "«Unificar» solo en un `duplicado_ambiguo` con motivo inequívoco (`MOTIVOS_UNIFICABLES`)."
         },
         {
@@ -175707,12 +175736,12 @@
           "exportada": true,
           "params": "tipo: string, accion: AccionRevision, motivo: string | null = null, campos: readonly string[] = []",
           "retorno": "EfectoResolucion",
-          "linea": 107
+          "linea": 131
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c5578e0fc318"
+      "hash": "44c85219afce"
     },
     {
       "ruta": "packages/module-seguros/src/google-contactos-simulacion.ts",
@@ -175729,7 +175758,7 @@
           "exportada": true,
           "params": "t: string | null | undefined",
           "retorno": "string | null",
-          "linea": 92,
+          "linea": 108,
           "resumen": "«•••••••233»: solo los 3 últimos dígitos. Con 3 o menos, todo oculto."
         },
         {
@@ -175738,7 +175767,7 @@
           "exportada": false,
           "params": "p: PersonaGoogle",
           "retorno": "string",
-          "linea": 99
+          "linea": 115
         },
         {
           "nombre": "lista",
@@ -175746,7 +175775,7 @@
           "exportada": false,
           "params": "xs: T[], max: number",
           "retorno": "Lista<T>",
-          "linea": 104
+          "linea": 120
         },
         {
           "nombre": "informeSimulacion",
@@ -175754,13 +175783,13 @@
           "exportada": true,
           "params": "e: Omit<EntradaPlan, 'grupoResourceName' | 'modo'> & { grupoResourceName: string | null }, opts: { totalCuenta: number | null; maxEjemplos?: number },",
           "retorno": "InformeSimulacion",
-          "linea": 114,
+          "linea": 130,
           "resumen": "El informe. `e.grupoResourceName` = `null` si la etiqueta aún no existe en Google (la simulación no la crea). `totalCuenta` = el `totalPeople` del listado completo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69d5509ef8f5"
+      "hash": "cf9b208342e0"
     },
     {
       "ruta": "packages/module-seguros/src/google-contactos.ts",
@@ -175774,6 +175803,7 @@
         "quitarPrefijo",
         "nombreEnGoogle",
         "extraerBloque",
+        "sinBloque",
         "conBloque",
         "fechaEs",
         "notaCliente",
@@ -175799,6 +175829,12 @@
         "telefonosDe",
         "nombreVisible",
         "conNombreAnterior",
+        "grupoCombinado",
+        "resumenPolizas",
+        "lineaTambien",
+        "titularDeNumero",
+        "agruparNumeros",
+        "personaSinGestion",
         "planificarSync",
         "puertaSync",
         "trocear",
@@ -175831,7 +175867,7 @@
           "exportada": true,
           "params": "p: PersonaGoogle | null, encolado: { nombre: string; apellidos: string } | null",
           "retorno": "string | null",
-          "linea": 107,
+          "linea": 126,
           "resumen": "El mote que propone «Unificar» desde el contacto de Google: el nombre COMPLETO que ve Alberto (`displayName`, si no `unstructuredName`, si no nombre + apellidos: incluye segundo nombre y tratamiento),"
         },
         {
@@ -175840,7 +175876,7 @@
           "exportada": true,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 130,
+          "linea": 149,
           "resumen": "El mote que propone «Unificar» a partir del nombre con que Alberto tiene el contacto: sin ruido evidente (prefijo «AA »/«AAA » para ordenar la agenda, sufijo «· AS …» del .vcf, emojis, espacios dobles"
         },
         {
@@ -175849,7 +175885,7 @@
           "exportada": true,
           "params": "givenName: string | null | undefined",
           "retorno": "",
-          "linea": 162,
+          "linea": 181,
           "resumen": "`givenName` leído → el nombre sin emojis, el tipo que dice (`null` = no lo lleva), si lleva ⏰ y su 🚨/💶."
         },
         {
@@ -175858,7 +175894,7 @@
           "exportada": false,
           "params": "c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo' | 'aviso'> & { alerta?: AlertaGoogle | null }",
           "retorno": "string",
-          "linea": 176,
+          "linea": 195,
           "resumen": "El `givenName` que se escribe: emoji de tipo + COMO MUCHO uno de estado (🚨 > 💶 > ⏰) + nombre; sin nombre pero con apellidos, solo los emojis."
         },
         {
@@ -175867,7 +175903,7 @@
           "exportada": true,
           "params": "c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo'> & { aviso?: boolean; alerta?: AlertaGoogle | null }",
           "retorno": "string",
-          "linea": 183,
+          "linea": 202,
           "resumen": "Cómo se verá el contacto en la agenda: «🟢 Juan Pérez García»."
         },
         {
@@ -175876,7 +175912,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 338
+          "linea": 389
         },
         {
           "nombre": "cifrado",
@@ -175884,7 +175920,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 343
+          "linea": 394
         },
         {
           "nombre": "telefonoCanonico",
@@ -175892,7 +175928,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 347
+          "linea": 398
         },
         {
           "nombre": "emailCanonico",
@@ -175900,7 +175936,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 353
+          "linea": 404
         },
         {
           "nombre": "normNota",
@@ -175908,7 +175944,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 368,
+          "linea": 419,
           "resumen": "Texto de nota normalizado (línea a línea, sin huecos): lo que se escribe es lo que se relee."
         },
         {
@@ -175917,7 +175953,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "",
-          "linea": 374,
+          "linea": 425,
           "resumen": "Dónde está el bloque: el ÚLTIMO inicio y el primer fin tras él (una marca suelta no se come texto)."
         },
         {
@@ -175926,8 +175962,17 @@
           "exportada": true,
           "params": "bio: string | null | undefined",
           "retorno": "string | null",
-          "linea": 382,
+          "linea": 433,
           "resumen": "El contenido del bloque del CRM en una nota de Google; `null` si no lo hay."
+        },
+        {
+          "nombre": "sinBloque",
+          "kind": "function",
+          "exportada": true,
+          "params": "bio: string | null | undefined",
+          "retorno": "string",
+          "linea": 442,
+          "resumen": "La nota SIN el bloque del CRM: solo lo que escribió Alberto (vacía si no había nada más)."
         },
         {
           "nombre": "conBloque",
@@ -175935,8 +175980,7 @@
           "exportada": true,
           "params": "bio: string | null | undefined, contenido: string",
           "retorno": "string",
-          "linea": 390,
-          "resumen": "La nota con el bloque del CRM puesto (al final); lo que Alberto escribió fuera, intacto."
+          "linea": 449
         },
         {
           "nombre": "fechaEs",
@@ -175944,7 +175988,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 401,
+          "linea": 460,
           "resumen": "`AAAA-MM-DD` → `dd/mm/aaaa`."
         },
         {
@@ -175953,7 +175997,7 @@
           "exportada": true,
           "params": "p: { polizas: readonly { ramo: string; compania: string | null }[]; proximoVencimiento: string | null }",
           "retorno": "string",
-          "linea": 413,
+          "linea": 472,
           "resumen": "La ficha rápida de un CLIENTE: sus pólizas en vigor (ramo + compañía) y el próximo vencimiento. 🚨 Sin NIF, sin importes y sin nº de póliza: la nota se ve en el móvil y se copia a otras apps. Líneas o"
         },
         {
@@ -175962,7 +176006,7 @@
           "exportada": true,
           "params": "p: { ramo: string; compania: string | null; vencimiento: string | null }",
           "retorno": "string",
-          "linea": 421,
+          "linea": 480,
           "resumen": "La de un LEAD: la póliza que tiene en otra compañía y cuándo vence (estimado)."
         },
         {
@@ -175971,7 +176015,7 @@
           "exportada": true,
           "params": "p: { siniestros: readonly { numero: string | null; estado: string }[] recibos: readonly { importe: number | null; ramo: string; compania: string | null }[] }",
           "retorno": "string[]",
-          "linea": 435,
+          "linea": 494,
           "resumen": "Líneas de estado para el bloque de la nota (05/10/2026, decisión de Alberto): 🚨 cada siniestro ABIERTO (nº y estado) y 💶 cada recibo DEVUELTO (importe `2.162,49€` y ramo · compañía; el nº de póliza "
         },
         {
@@ -175980,7 +176024,7 @@
           "exportada": true,
           "params": "p: { baja: string | null; compania: string | null }, estado: readonly string[] = []",
           "retorno": "string",
-          "linea": 445,
+          "linea": 504,
           "resumen": "Nota de un EX-CLIENTE (⚪): «Ex cliente: baja mm/aaaa, compañía». Sin fecha, se dice."
         },
         {
@@ -175989,7 +176033,7 @@
           "exportada": true,
           "params": "nota: string, estado: readonly string[]",
           "retorno": "string",
-          "linea": 452,
+          "linea": 511,
           "resumen": "El bloque de un cliente con sus líneas de estado debajo."
         },
         {
@@ -175998,7 +176042,7 @@
           "exportada": false,
           "params": "iso: string, dias: number",
           "retorno": "string",
-          "linea": 456
+          "linea": 515
         },
         {
           "nombre": "avisoVencimiento",
@@ -176006,7 +176050,7 @@
           "exportada": true,
           "params": "vencimientos: readonly (string | null)[], hoy: string",
           "retorno": "boolean",
-          "linea": 466,
+          "linea": 525,
           "resumen": "¿Alguna vence entre hoy y hoy+30 (ambos incluidos)? `null` = no se sabe: no cuenta. Fechas ISO."
         },
         {
@@ -176015,7 +176059,7 @@
           "exportada": true,
           "params": "vencimientos: readonly (string | null)[], hoy: string",
           "retorno": "string | null",
-          "linea": 472,
+          "linea": 531,
           "resumen": "El vencimiento más cercano a partir de hoy (incluido); `null` si no hay ninguno conocido."
         },
         {
@@ -176024,7 +176068,7 @@
           "exportada": true,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 478,
+          "linea": 537,
           "resumen": "Fecha de nacimiento → `AAAA-MM-DD` válida, o `null` (vacía, cifrada sin abrir o imposible)."
         },
         {
@@ -176033,7 +176077,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "FechaGoogle | null",
-          "linea": 490
+          "linea": 549
         },
         {
           "nombre": "cumpleanosDeGoogle",
@@ -176041,7 +176085,7 @@
           "exportada": false,
           "params": "b: { date?: FechaGoogle } | undefined",
           "retorno": "string | null",
-          "linea": 495
+          "linea": 554
         },
         {
           "nombre": "nombreCompaniaContacto",
@@ -176049,7 +176093,7 @@
           "exportada": true,
           "params": "c: { compania: string; area: string | null; nombre: string | null }",
           "retorno": "string",
-          "linea": 506,
+          "linea": 565,
           "resumen": "«Mapfre · Siniestros (Laura)»: compañía, área si consta y la persona entre paréntesis."
         },
         {
@@ -176058,8 +176102,33 @@
           "exportada": true,
           "params": "c: ContactoGoogle",
           "retorno": "CamposSincronizados | null",
-          "linea": 513,
+          "linea": 572,
           "resumen": "Los campos gestionados de una ficha del CRM, o `null` si algo viene sin descifrar."
+        },
+        {
+          "nombre": "esOrgTambien",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: { type?: string }",
+          "retorno": "boolean",
+          "linea": 598
+        },
+        {
+          "nombre": "tambienCanonico",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: readonly (readonly [string | null | undefined, string | null | undefined])[]",
+          "retorno": "string | null",
+          "linea": 603,
+          "resumen": "`[[nombre, título], …]` limpio, sin repetir y ordenado → JSON; `null` si no hay ninguna."
+        },
+        {
+          "nombre": "orgsTambien",
+          "kind": "function",
+          "exportada": false,
+          "params": "tambien: string | null",
+          "retorno": "",
+          "linea": 610
         },
         {
           "nombre": "alertaDe",
@@ -176067,7 +176136,7 @@
           "exportada": false,
           "params": "c: ContactoGoogle",
           "retorno": "AlertaGoogle | null",
-          "linea": 535
+          "linea": 616
         },
         {
           "nombre": "esNuestraUrl",
@@ -176075,7 +176144,7 @@
           "exportada": false,
           "params": "u: { value?: string; type?: string }",
           "retorno": "boolean",
-          "linea": 541
+          "linea": 622
         },
         {
           "nombre": "camposDeGoogle",
@@ -176083,7 +176152,7 @@
           "exportada": true,
           "params": "p: PersonaGoogle",
           "retorno": "CamposSincronizados",
-          "linea": 546,
+          "linea": 627,
           "resumen": "Lo mismo leído de Google, con la misma normalización (si no, cada hora sería un «cambio»)."
         },
         {
@@ -176092,7 +176161,7 @@
           "exportada": true,
           "params": "c: CamposSincronizados",
           "retorno": "string",
-          "linea": 581,
+          "linea": 663,
           "resumen": "`alerta` entra en el hash SOLO cuando hay una: así los hashes de antes del 05/10/2026 (sin alerta) no cambian y el despliegue no reescribe la agenda entera."
         },
         {
@@ -176101,7 +176170,7 @@
           "exportada": false,
           "params": "c: CamposSincronizados",
           "retorno": "string",
-          "linea": 588,
+          "linea": 672,
           "resumen": "Solo lo que identifica a la persona: la huella de un ambiguo no cambia porque cambie su nota o su ⏰."
         },
         {
@@ -176110,7 +176179,7 @@
           "exportada": true,
           "params": "a: CamposSincronizados, b: CamposSincronizados",
           "retorno": "(keyof CamposSincronizados)[]",
-          "linea": 592
+          "linea": 676
         },
         {
           "nombre": "personaDesdeCampos",
@@ -176118,7 +176187,7 @@
           "exportada": true,
           "params": "c: CamposSincronizados, clienteId: string, etag?: string | null",
           "retorno": "PersonaParaEscribir",
-          "linea": 600,
+          "linea": 684,
           "resumen": "El contacto tal como se escribe en Google. El nombre empieza por 🟢 (cliente) o 🟡 (lead) para que la pantalla de llamada diga quién es; la organization «Grupo ASegura» lleva lo mismo en texto."
         },
         {
@@ -176127,7 +176196,7 @@
           "exportada": true,
           "params": "p: PersonaGoogle, grupoResourceName: string",
           "retorno": "boolean",
-          "linea": 615
+          "linea": 700
         },
         {
           "nombre": "idExterno",
@@ -176135,7 +176204,7 @@
           "exportada": false,
           "params": "p: PersonaGoogle",
           "retorno": "string | null",
-          "linea": 619
+          "linea": 704
         },
         {
           "nombre": "huella",
@@ -176143,7 +176212,7 @@
           "exportada": false,
           "params": "tipo: TipoRevision, resourceName: string, hashGoogle: string",
           "retorno": "string",
-          "linea": 623
+          "linea": 708
         },
         {
           "nombre": "comprobarLimite",
@@ -176151,7 +176220,7 @@
           "exportada": true,
           "params": "p: { aSincronizar: number; vinculados: number; totalCuenta: number | null }",
           "retorno": "void",
-          "linea": 631,
+          "linea": 716,
           "resumen": "Error claro si la cuenta se pasaría del tope de Google. `totalCuenta` = contactos que hay HOY en la cuenta (todos, también los personales); `null` = no se sabe → solo se mira lo nuestro."
         },
         {
@@ -176160,7 +176229,7 @@
           "exportada": true,
           "params": "p: { aSincronizar: number; vinculados: number; totalCuenta: number | null }",
           "retorno": "",
-          "linea": 642,
+          "linea": 727,
           "resumen": "Lo mismo que `comprobarLimite` sin lanzar: cuántos contactos quedarían y si se pasa del tope."
         },
         {
@@ -176169,7 +176238,7 @@
           "exportada": true,
           "params": "crm: readonly T[], fusiones: ReadonlyMap<string, string>",
           "retorno": "T[]",
-          "linea": 648,
+          "linea": 733,
           "resumen": "Cliente gana a lead si la misma ficha sale dos veces (como en el .vcf); fuera las fusionadas."
         },
         {
@@ -176178,7 +176247,7 @@
           "exportada": true,
           "params": "clienteId: string, fusiones: ReadonlyMap<string, string>",
           "retorno": "string",
-          "linea": 659,
+          "linea": 744,
           "resumen": "La superviviente FINAL de una cadena de fusiones (A→B y luego B→C: la de A es C)."
         },
         {
@@ -176187,7 +176256,7 @@
           "exportada": false,
           "params": "cg: CamposSincronizados, cc: CamposSincronizados",
           "retorno": "CamposSincronizados",
-          "linea": 674,
+          "linea": 759,
           "resumen": "Lo de Google VISTO con los ojos del CRM. Un teléfono/correo (o nota, URL, cumpleaños) que el CRM no tiene (`null`) NO es «el CRM dice que no hay»: un lead con baja de WhatsApp llega de `leadsCompetenc"
         },
         {
@@ -176196,7 +176265,7 @@
           "exportada": false,
           "params": "deGoogle: readonly T[] | undefined, nuestra: { value: string; type: string } | null, igual: (x: T) => boolean, pisaPrimera: boolean,",
           "retorno": "",
-          "linea": 687,
+          "linea": 772,
           "resumen": "Una lista de Google con la entrada del CRM dentro. Si el valor del CRM ya está, se usa esa entrada; si no, sustituye a la PRIMERA (la que el CRM escribió y que `camposDeGoogle` lee; su valor anterior "
         },
         {
@@ -176205,7 +176274,7 @@
           "exportada": false,
           "params": "persona: PersonaParaEscribir, cc: CamposSincronizados, g: PersonaGoogle, pisaPrimera: boolean",
           "retorno": "PersonaParaEscribir",
-          "linea": 703,
+          "linea": 788,
           "resumen": "La persona a escribir SOBRE un contacto que existe en Google: el CRM pone su entrada y conserva TAL CUAL las demás (otro teléfono, otro correo, la empresa del cliente que Alberto añadió…), y también e"
         },
         {
@@ -176214,7 +176283,7 @@
           "exportada": true,
           "params": "v: string",
           "retorno": "string",
-          "linea": 744,
+          "linea": 833,
           "resumen": "Nombre comparable: sin sufijo del .vcf, emojis, tildes, mayúsculas ni espacios de más."
         },
         {
@@ -176223,7 +176292,7 @@
           "exportada": false,
           "params": "c: CamposSincronizados",
           "retorno": "string",
-          "linea": 748
+          "linea": 837
         },
         {
           "nombre": "nombresDeAgenda",
@@ -176231,7 +176300,7 @@
           "exportada": false,
           "params": "p: PersonaGoogle",
           "retorno": "Set<string>",
-          "linea": 753,
+          "linea": 842,
           "resumen": "Los nombres con que la persona está en la agenda (estructurado, visible y sin estructurar)."
         },
         {
@@ -176240,7 +176309,7 @@
           "exportada": false,
           "params": "p: PersonaGoogle",
           "retorno": "boolean",
-          "linea": 759,
+          "linea": 848,
           "resumen": "¿Lleva el sufijo «· AS Cliente/Lead» del .vcf en alguno de sus nombres? Señal de que lo volcó el CRM."
         },
         {
@@ -176249,7 +176318,7 @@
           "exportada": true,
           "params": "p: PersonaGoogle",
           "retorno": "string[]",
-          "linea": 765,
+          "linea": 854,
           "resumen": "TODOS los teléfonos del contacto, canónicos y sin repetir (se empareja por cualquiera)."
         },
         {
@@ -176258,7 +176327,7 @@
           "exportada": false,
           "params": "p: PersonaGoogle",
           "retorno": "string[]",
-          "linea": 773,
+          "linea": 862,
           "resumen": "TODOS los correos del contacto, canónicos y sin repetir."
         },
         {
@@ -176267,7 +176336,7 @@
           "exportada": true,
           "params": "p: PersonaGoogle",
           "retorno": "string | null",
-          "linea": 778,
+          "linea": 867,
           "resumen": "El nombre con que Alberto ve el contacto en su agenda (tal cual, sin espacios de más)."
         },
         {
@@ -176276,8 +176345,78 @@
           "exportada": true,
           "params": "bio: string | null | undefined, nombre: string",
           "retorno": "string",
-          "linea": 787,
+          "linea": 876,
           "resumen": "La nota con «Guardado antes en tu agenda como: X» DELANTE (fuera del bloque del CRM, así que se conserva para siempre y no entra en el hash). Idempotente: si la línea ya está, no se repite."
+        },
+        {
+          "nombre": "grupoCombinado",
+          "kind": "function",
+          "exportada": true,
+          "params": "gs: readonly GrupoGoogle[]",
+          "retorno": "GrupoGoogle",
+          "linea": 896,
+          "resumen": "Tipo del contacto de un número compartido: 🟢 si ALGUNA ficha está en vigor; si no 🟡 lead; si no ⚪."
+        },
+        {
+          "nombre": "resumenPolizas",
+          "kind": "function",
+          "exportada": true,
+          "params": "ps: readonly { ramo: string; compania: string | null }[]",
+          "retorno": "string | null",
+          "linea": 901,
+          "resumen": "«Hogar · Mapfre, Auto · Allianz» (sin repetir, ordenado: el orden de la consulta no cambia el hash)."
+        },
+        {
+          "nombre": "nombreFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Pick<ContactoGoogle, 'nombre' | 'apellidos'>",
+          "retorno": "string",
+          "linea": 906
+        },
+        {
+          "nombre": "lineaTambien",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: ContactoGoogle",
+          "retorno": "string",
+          "linea": 911,
+          "resumen": "La línea del bloque de la nota de la principal por cada OTRA ficha del número."
+        },
+        {
+          "nombre": "titularDeNumero",
+          "kind": "function",
+          "exportada": true,
+          "params": "miembros: readonly Pick<ContactoGoogle, 'clienteId' | 'tipoPersona'>[], elegido: string | null",
+          "retorno": "DecisionTitular",
+          "linea": 932,
+          "resumen": "¿De quién es el número? 1) la ficha que eligió Alberto, si sigue entre las que lo comparten; 2) la ÚNICA persona física cuando TODAS las demás son jurídicas (`tipo_persona` NULL = no se sabe: no decid"
+        },
+        {
+          "nombre": "hashTelefonoPorDefecto",
+          "kind": "function",
+          "exportada": false,
+          "params": "e164: string",
+          "retorno": "string",
+          "linea": 941
+        },
+        {
+          "nombre": "agruparNumeros",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { crm: readonly ContactoGoogle[] campos: ReadonlyMap<string, CamposSincronizados | null> titulares: ReadonlyMap<string, string> hashTelefono: (e164: string) => string tieneVinculo: (clienteId: string) => boolean }",
+          "retorno": "Agrupacion",
+          "linea": 966,
+          "resumen": "Agrupa por teléfono E.164 (solo fichas: los contactos de compañía 🔵 no entran) y combina cada número compartido en su principal: tipo combinado (`grupoCombinado`), la alerta más urgente (🚨 > 💶), ⏰ "
+        },
+        {
+          "nombre": "personaSinGestion",
+          "kind": "function",
+          "exportada": true,
+          "params": "g: PersonaGoogle, quitar: { telefono: string | null; email: string | null } = { telefono: null, email: null }",
+          "retorno": "PersonaParaEscribir",
+          "linea": 1033,
+          "resumen": "El contacto de una ficha SECUNDARIA sin nada de lo que puso el CRM: sin emoji, sin la organization «Grupo ASegura» ni las «también», sin nuestro id externo, sin la URL de la ficha y sin el bloque de l"
         },
         {
           "nombre": "planificarSync",
@@ -176285,7 +176424,7 @@
           "exportada": true,
           "params": "e: EntradaPlan",
           "retorno": "Plan",
-          "linea": 794
+          "linea": 1055
         },
         {
           "nombre": "puertaSync",
@@ -176293,7 +176432,7 @@
           "exportada": true,
           "params": "c: { estado: string; syncActivadaEn: Date | string | null } | null",
           "retorno": "PuertaSync",
-          "linea": 1122
+          "linea": 1477
         },
         {
           "nombre": "trocear",
@@ -176301,7 +176440,7 @@
           "exportada": true,
           "params": "xs: readonly T[], n: number",
           "retorno": "T[][]",
-          "linea": 1129
+          "linea": 1484
         },
         {
           "nombre": "esReintentable",
@@ -176309,7 +176448,7 @@
           "exportada": true,
           "params": "status: number",
           "retorno": "boolean",
-          "linea": 1136,
+          "linea": 1491,
           "resumen": "¿Se reintenta esta respuesta de Google? Cuota (429) y fallos transitorios del servidor."
         },
         {
@@ -176318,7 +176457,7 @@
           "exportada": true,
           "params": "intento: number, retryAfter: string | null, azar: number = Math.random()",
           "retorno": "number",
-          "linea": 1141,
+          "linea": 1496,
           "resumen": "Espera antes del reintento `intento` (0, 1, 2…): `Retry-After` si viene, si no exponencial con techo."
         },
         {
@@ -176327,7 +176466,7 @@
           "exportada": true,
           "params": "status: number, cuerpo: string",
           "retorno": "boolean",
-          "linea": 1149,
+          "linea": 1504,
           "resumen": "El `syncToken` de People caduca (7 días): 410, o 400 con `EXPIRED_SYNC_TOKEN`."
         },
         {
@@ -176336,13 +176475,13 @@
           "exportada": true,
           "params": "miembros: readonly string[], vinculos: readonly { resourceName: string; origen: string; estado: string }[],",
           "retorno": "string[]",
-          "linea": 1159,
+          "linea": 1514,
           "resumen": "Qué contactos se borran de Google al desconectar con `borrarContactos`: solo los que CREÓ el CRM (`origen: 'creado'`), siguen activos y siguen en el grupo. Uno vinculado por teléfono o por id era un c"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0fdfd172e09d"
+      "hash": "881c0d06a691"
     },
     {
       "ruta": "packages/module-seguros/src/historial-maximo.ts",
@@ -186366,6 +186505,6 @@
   ],
   "resumen": {
     "archivos": 4214,
-    "funciones": 14577
+    "funciones": 14592
   }
 }
