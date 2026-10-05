@@ -27,6 +27,7 @@ import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
+import { planPrecargaVehiculo, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import {
   borrarBorrador,
@@ -433,11 +434,15 @@ export default function AutoNuevo({
 
   // ── Precarga desde el riesgo (30/09/2026) ───────────────────────────────────
   // Prioridad: variante RETOMADA (`?tarificacion=`, lo pagado manda) > riesgo > borrador local.
-  // El vehículo del riesgo solo se precarga entero (versión + ids del catálogo): con la versión sola no se
-  // puede repoblar el selector, y media cascada confunde más que ayuda.
+  // Precarga PARCIAL en cascada (05/10/2026, `lib/correduria/precarga-vehiculo.ts`): lo que el riesgo trae (del documento o de
+  // la corredora) se precarga hasta donde llegue —marca → modelo → combustible → versión—, y el texto sin id va a la caja de
+  // búsqueda. `riesgoManda` sigue siendo «el riesgo trae la cascada ENTERA»: entonces gana a la última tarificación y al borrador.
   const retomada = (variante?.tarificacionId ?? null) !== null
-  const riesgoManda =
-    !retomada && !!(datosRiesgo?.codigoVehiculo && datosRiesgo.marcaId && datosRiesgo.modeloId && datosRiesgo.motorId)
+  const plan = planPrecargaVehiculo(datosRiesgo, retomada)
+  const riesgoManda = plan.completa
+  // Si el borrador restaura su propia cascada, la del riesgo (más vieja) se aparta para no pisarla al llegar tarde.
+  const cascadaRiesgo = useRef(0)
+  const avisoDelRiesgo = 'precargado · sin confirmar'
 
   /** Rehace la cascada marca → modelo+motor → versión (gratis) para que `codigoVehiculo` sea uno que el catálogo reconoce. */
   async function poblarCascada(v: { marcaId: string; modeloId?: string; motorId?: string; codigoVehiculo?: string }, vivo: () => boolean) {
@@ -472,12 +477,10 @@ export default function AutoNuevo({
   }
 
   useEffect(() => {
-    if (!riesgoManda || !datosRiesgo) return
+    if (!plan.cascada) return
     let vivo = true
-    void poblarCascada(
-      { marcaId: datosRiesgo.marcaId!, modeloId: datosRiesgo.modeloId!, motorId: datosRiesgo.motorId!, codigoVehiculo: datosRiesgo.codigoVehiculo! },
-      () => vivo,
-    )
+    const token = cascadaRiesgo.current
+    void poblarCascada(plan.cascada, () => vivo && cascadaRiesgo.current === token)
     return () => { vivo = false }
     // Una vez, al abrir la pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -618,6 +621,10 @@ export default function AutoNuevo({
     // desplegable de versión llegue poblado y `codigoVehiculo` siga siendo un
     // código que el catálogo reconoce, no una cadena suelta del borrador.
     if (b.marcaId && !riesgoManda) {
+      if (plan.cascada) {
+        cascadaRiesgo.current++
+        setModeloId(''); setMotorId(''); setCodigoVehiculo('')
+      }
       void poblarCascada({ marcaId: b.marcaId, modeloId: b.modeloId, motorId: b.motorId, codigoVehiculo: b.codigoVehiculo }, () => vivo && tokenRestauracion.current === token)
     }
     }
@@ -1159,9 +1166,10 @@ export default function AutoNuevo({
         )}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           {!(usarPrevio && previo) && (<>
-          <Campo etiqueta="Marca" falta={false}>
+          <Campo etiqueta="Marca" falta={false} aviso={sigueSinConfirmar(plan, datosRiesgo?.marcaId, marcaId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={marcaId}
+              pista={marcaId ? null : plan.pistaMarca}
               onCambiar={(v) => void alElegirMarca(v)}
               opciones={marcas}
               deshabilitado={cargando === 'marcas'}
@@ -1171,9 +1179,10 @@ export default function AutoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Modelo" falta={false}>
+          <Campo etiqueta="Modelo" falta={false} aviso={sigueSinConfirmar(plan, datosRiesgo?.modeloId, modeloId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={modeloId}
+              pista={modeloId ? null : plan.pistaModelo}
               onCambiar={alElegirModelo}
               opciones={modelos}
               deshabilitado={!marcaId || cargando === 'modelos'}
@@ -1183,7 +1192,7 @@ export default function AutoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Combustible" falta={motorId === ''} faltaTexto="lo elige el corredor">
+          <Campo etiqueta="Combustible" falta={motorId === ''} faltaTexto="lo elige el corredor" aviso={sigueSinConfirmar(plan, datosRiesgo?.motorId, motorId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={motorId}
               onCambiar={alElegirMotor}
@@ -1195,9 +1204,10 @@ export default function AutoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Versión" falta={faltaVersion} faltaTexto="la elige el corredor">
+          <Campo etiqueta="Versión" falta={faltaVersion} faltaTexto="la elige el corredor" aviso={sigueSinConfirmar(plan, datosRiesgo?.codigoVehiculo, codigoVehiculo) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={codigoVehiculo}
+              pista={codigoVehiculo ? null : plan.pistaVersion}
               onCambiar={setCodigoVehiculo}
               opciones={versiones}
               deshabilitado={!modeloId || !motorId || cargando === 'versiones'}
@@ -1215,6 +1225,7 @@ export default function AutoNuevo({
           <Campo
             etiqueta="Fecha de matriculación"
             falta={faltaMatriculacion}
+            aviso={!matriculacionEstimada && sigueSinConfirmar(plan, plan.fechaMatriculacion, matriculacion) ? avisoDelRiesgo : undefined}
             ayuda={
               matriculacionEstimada && fuenteMatriculacion === 'avant2'
                 ? 'Consultada a Avant2 por la matrícula. El propio proveedor la da como aproximada: confírmala con la ficha técnica.'
@@ -1807,12 +1818,13 @@ function fechaCorta(iso: string): string {
   return `${d}/${m}/${a}`
 }
 
-function Campo({ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }) {
+function Campo({ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }) {
   return (
     <div style={{ minWidth: 0 }}>
       <label style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
         <span>{etiqueta}</span>
         {falta && <Badge tono="aviso">falta{faltaTexto ? ` · ${faltaTexto}` : ''}</Badge>}
+        {!falta && aviso && <Badge tono="aviso">{aviso}</Badge>}
       </label>
       {children}
       {ayuda && <span style={{ color: 'var(--muted)', fontSize: 12, display: 'block', marginTop: 4 }}>{ayuda}</span>}

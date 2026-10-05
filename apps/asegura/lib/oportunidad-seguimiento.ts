@@ -38,6 +38,7 @@ import {
   type SeguroAnterior,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
+import { puedeEscribirDatosVehiculo } from './oportunidad-vehiculo-previo'
 import { prismaAsegura } from './asegura-db'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -605,6 +606,11 @@ export async function crearOportunidad(
   hoy: Date = hoyUtc(),
   /** De dónde nace (`info_riesgo.origen`): a mano por defecto; `documento:*` si la abre un documento subido. */
   origen: string = ORIGEN_MANUAL,
+  /**
+   * `info_riesgo.datosVehiculo` leído de un documento (05/10/2026), ya estructurado y SIN confirmar. En una oportunidad nueva
+   * se escribe tal cual; en una ya abierta solo si no tenía `datosVehiculo` (lo de la corredora nunca se pisa).
+   */
+  datosVehiculo: Record<string, unknown> | null = null,
 ): Promise<{ ok: true; id: string } | Fallo | { ok: false; estado: 'duplicada'; motivo: string; status: 409; id: string; completada: boolean }> {
   if (!UUID.test(clienteId)) return { ok: false, estado: 'invalido', motivo: 'id de cliente no válido', status: 422 }
   const v = validarAltaOportunidad(datos, hoy)
@@ -616,10 +622,11 @@ export async function crearOportunidad(
       where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`)
     if (!cli) return { tipo: 'sin_cliente' as const }
     await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`oportunidad:${clienteId}:${a.ramo}`}))`)
-    const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null }[]>(Prisma.sql`
+    const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; vehiculo: string | null }[]>(Prisma.sql`
       select id::text as id, nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora,
              ${Prisma.raw(sqlNumeroPoliza(''))} as "numeroPoliza",
-             nullif(trim(info_riesgo->>'matricula'), '') as matricula from oportunidades
+             nullif(trim(info_riesgo->>'matricula'), '') as matricula,
+             nullif(trim(info_riesgo->>'vehiculo'), '') as vehiculo from oportunidades
       where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid
         and tipo::text = ${a.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
       order by created_at`)
@@ -638,6 +645,8 @@ export async function crearOportunidad(
       }
       // Póliza de concesionario/financiada: la marca se añade (no se quita nunca desde aquí).
       const riesgo = a.financiada ? JSON.stringify({ financiada: a.financiada }) : null
+      // Si ya tenía el coche en las claves antiguas, el nuevo `datosVehiculo` solo entra si es el mismo coche.
+      const vehiculoNuevo = datosVehiculo && puedeEscribirDatosVehiculo(ya, datosVehiculo) ? JSON.stringify({ datosVehiculo }) : null
       const numero = a.numeroPoliza && !ya.numeroPoliza ? a.numeroPoliza : null
       // Vencimiento y prima solo rellenan un hueco (29/09/2026): un documento subido después no pisa
       // lo que Alberto ya había anotado, pero tampoco se pierde si faltaba.
@@ -646,12 +655,16 @@ export async function crearOportunidad(
         from oportunidades where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid`)
       const fecha = a.fechaFinVigencia && huecos?.sinFecha ? a.fechaFinVigencia : null
       const prima = a.prima !== null && huecos?.sinPrima ? a.prima : null
-      if (Object.keys(parche).length > 0 || numero || fecha || prima !== null || riesgo) {
+      if (Object.keys(parche).length > 0 || numero || fecha || prima !== null || riesgo || vehiculoNuevo) {
         await tx.$executeRaw(Prisma.sql`
           update oportunidades set
             poliza_competencia = case when ${Object.keys(parche).length === 0} then poliza_competencia
               else coalesce(poliza_competencia, '{}'::jsonb) || ${JSON.stringify(parche)}::jsonb end,
-            info_riesgo = case when ${riesgo}::jsonb is null then info_riesgo else coalesce(info_riesgo, '{}'::jsonb) || ${riesgo}::jsonb end,
+            info_riesgo = case when ${riesgo}::jsonb is null and ${vehiculoNuevo}::jsonb is null then info_riesgo
+              else coalesce(info_riesgo, '{}'::jsonb)
+                || coalesce(${riesgo}::jsonb, '{}'::jsonb)
+                || case when info_riesgo->'datosVehiculo' is not null then '{}'::jsonb else coalesce(${vehiculoNuevo}::jsonb, '{}'::jsonb) end
+              end,
             numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${numero}),
             fecha_fin_vigencia = coalesce(fecha_fin_vigencia, ${fecha}::date),
             prima_bruta = coalesce(prima_bruta, ${prima}::numeric)
@@ -667,7 +680,7 @@ export async function crearOportunidad(
       insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_competencia, info_riesgo, numero_poliza)
       values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${a.ramo} as tipo_seguro), 'venta_directa',
               cast(${a.estado} as estado_comercial), ${a.fechaFinVigencia}::date, ${a.prima}::numeric,
-              ${competencia}::jsonb, ${JSON.stringify({ origen, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}), ...(a.financiada ? { financiada: a.financiada } : {}) })}::jsonb,
+              ${competencia}::jsonb, ${JSON.stringify({ origen, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}), ...(a.financiada ? { financiada: a.financiada } : {}), ...(datosVehiculo ? { datosVehiculo } : {}) })}::jsonb,
               ${a.numeroPoliza})
       returning id::text as id`)
     await tx.$executeRaw(Prisma.sql`
