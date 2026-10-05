@@ -1,33 +1,33 @@
 {
  "sesion": "8ea9bcdf-9921-5e6b-8aca-f543becf3a83",
  "inicio": "2026-10-04T08:32:19.191Z",
- "fin": "2026-10-04T10:39:03.529Z",
- "llamadas": 1176,
+ "fin": "2026-10-05T03:30:27.840Z",
+ "llamadas": 1198,
  "categorias": {
   "otro": {
-   "llamadas": 71,
-   "chars_in": 52919,
-   "chars_out": 256013,
+   "llamadas": 80,
+   "chars_in": 54344,
+   "chars_out": 333921,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 24,
-    "SubagentHandback": 17,
+    "ToolSearch": 25,
+    "SubagentHandback": 18,
     "SendMessage": 1,
-    "ReadNotifications": 28
+    "ReadNotifications": 35
    }
   },
   "bash": {
-   "llamadas": 136,
-   "chars_in": 90622,
-   "chars_out": 613093,
+   "llamadas": 143,
+   "chars_in": 93342,
+   "chars_out": 651229,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 136
+    "Bash": 143
    }
   },
   "agente:general-purpose": {
@@ -93,17 +93,18 @@
    }
   },
   "mcp:Google_Drive": {
-   "llamadas": 210,
-   "chars_in": 112125,
-   "chars_out": 976992,
+   "llamadas": 215,
+   "chars_in": 154165,
+   "chars_out": 979777,
    "errores": 10,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Google_Drive__search_files": 55,
-    "mcp__Google_Drive__create_file": 16,
+    "mcp__Google_Drive__create_file": 20,
     "mcp__Google_Drive__read_file_content": 138,
-    "mcp__Google_Drive__get_file_metadata": 1
+    "mcp__Google_Drive__get_file_metadata": 1,
+    "mcp__Google_Drive__update_file": 1
    }
   },
   "escritura": {
@@ -130,15 +131,16 @@
    }
   },
   "mcp:github": {
-   "llamadas": 2,
-   "chars_in": 1002,
-   "chars_out": 822,
+   "llamadas": 3,
+   "chars_in": 1187,
+   "chars_out": 913,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 1
+    "mcp__github__pull_request_read": 1,
+    "mcp__github__update_pull_request": 1
    }
   },
   "agente:lector-correo": {
