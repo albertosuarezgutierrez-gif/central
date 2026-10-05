@@ -11,6 +11,7 @@
 // - La deduplicación es la de `crearOportunidad`: el mismo seguro ya abierto se COMPLETA, no se repite.
 // - El DNI del documento no sale de aquí.
 import {
+  admiteDatosVehiculo,
   companiaLegible,
   companiaPorNombre,
   extraccionSinPii,
@@ -35,6 +36,8 @@ import { prismaAsegura } from './asegura-db'
 import { altaCliente, altaLeadSinContacto, anotarHistorialCliente, coincidencias, descifrarCampo } from './cartera-edicion'
 import { crearRelacion } from './cartera-relaciones'
 import { crearOportunidad } from './oportunidad-seguimiento'
+import { datosVehiculoParaOportunidad } from './oportunidad-vehiculo-catalogo'
+import { catalogosVehiculoReales } from './oportunidad-vehiculo-catalogo-real'
 import { polizaEnCartera } from './poliza-en-cartera'
 import { leerPoliza, type ResultadoLecturaPoliza } from './documentos/extraer-poliza'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
@@ -361,7 +364,16 @@ async function oportunidadDesdeLecturaInterna(
         ? `${urgente ? 'URGENTE — ' : ''}Llamar para su renovación: vence el ${fmt(vence)} (documento subido: ${e.origen})${sinVerificar}`
         : `Pedir la fecha de vencimiento: el documento subido (${e.origen}) no la trae legible${sinVerificar}`) + avisoFinanciada,
     }
-    const o = await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`)
+    // Regla única del riesgo (05/10/2026): el vehículo leído se guarda ESTRUCTURADO en `info_riesgo.datosVehiculo`
+    // (sin confirmar), con los ids del catálogo si se emparejan sin duda; toda pantalla de auto lo lee de ahí. Fail-soft:
+    // si el catálogo falla, o el documento no trae vehículo, la oportunidad se crea igual (con `vehiculo` texto, como siempre).
+    const datosVehiculo = admiteDatosVehiculo(datos.ramo)
+      ? await datosVehiculoParaOportunidad(datos.ramo, {
+          matricula: txt(d.matricula, 20), marca: txt(d.marca, 60), modelo: txt(d.modelo, 80), version: txt(d.version, 120),
+          combustible: txt(d.combustible, 40), fechaMatriculacion: txt(d.fechaMatriculacion, 10),
+        }, catalogosVehiculoReales()).catch(() => null)
+      : null
+    const o = await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`, datosVehiculo)
     const posiblesDuplicados = clienteNuevo ? compartenContacto.filter((id) => id !== clienteId) : []
     const conIdentificador = decision.tipo === 'lead' ? Boolean(decision.alta.dni) : Boolean(alta?.dni)
 

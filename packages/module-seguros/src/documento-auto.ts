@@ -76,6 +76,8 @@ export type AutoLeido = {
   marca: string | null
   modelo: string | null
   version: string | null
+  /** Combustible tal como lo dice el documento («Gasolina», «Diésel»…). Solo sirve para emparejar con el catálogo. */
+  combustible: string | null
   fechaMatriculacion: string | null
 
   // ── Tomador / conductor ──
@@ -111,6 +113,7 @@ export function autoLeidoVacio(): AutoLeido {
     marca: null,
     modelo: null,
     version: null,
+    combustible: null,
     fechaMatriculacion: null,
     tomador: null,
     dni: null,
@@ -254,6 +257,7 @@ export function normalizarAutoLeido(raw: unknown): AutoLeido {
     marca: texto(o.marca),
     modelo: texto(o.modelo),
     version: texto(o.version),
+    combustible: texto(o.combustible),
     fechaMatriculacion: fechaIso(o.fechaMatriculacion),
     tomador: texto(o.tomador),
     dni: documentoIdentidad(o.dni),
