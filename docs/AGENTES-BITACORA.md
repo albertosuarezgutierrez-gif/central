@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-05 · mercado-booking** · hizo: 24/24 ventanas medidas (de 556 candidatas, el tope dejó fuera 532), 239 comps `booking_mcp` escritos (2 noches; aforos 2/4/5/12; fechas 06-oct TIS y 09-oct remedidas tras caducar, 05-mar, 26-mar Semana Santa, 15-abr, 08-may, 11-dic); escaparate 2/5 medido (Dúplex 12-14 oct 400,9€; Busto Reform 15-19 abr 1.242,5€); latido ok; dudas: Casa 95 Sevilla 43.977€ (2 noches, aforo 12, 26-mar) omitido por implausible; fallos: 3 ventanas de escaparate sin disponibilidad (Dúplex 06-10 oct, House 12-15 oct, Luxury Busto 22-26 mar 2027) = hueco; 🪞 propio descartado: HOUSE SEVILLANA 6 habitaciones (guardado como escaparate); PRs/commits: —
+
 - **2026-10-05 · pricing-agente** · hizo: ciclo completo 4 pisos con 4 agentes en paralelo; comps escritos (verificado por SQL) house=125, busto=129, luxury=129, duplex=130; 52 propuestas dry-run (13/piso, `agente_ciclo_05_10_2026`), breaker no saltó; medición ciclo 28/09 (vendidas busto 6/12, duplex 6/12, house 6/12, luxury 8/12, sin noches fantasma); aprendizaje `ciclo_05_10_2026`; Telegram enviado; dudas: 16-oct con p50 anómalo en los 4 (¿evento/puente sin catalogar?), `dryRunForzado` no leído en la respuesta del POST; fallos: —; PRs/commits: claude/sharp-wozniak-tskck1
 
 - **2026-10-05 · buscador-ia** · hizo: preflight 200; pasada por WebSearch (sin keys, WebFetch a openrouter.ai/console.groq.com bloqueado); Telegram enviado (gemini-2.5-flash EOL 16/10 en listas contexto/registral, sucesor 3.6-flash $0,75/$3,75; corrección alerta Groq); dudas: Groq free vs pago, las fuentes se contradicen; fallos: —; PRs/commits: solo doc
