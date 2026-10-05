@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-05T10:38:03Z",
-  "sha": "9efa918fd95a95ef5fc34005483687b244e93db2",
+  "generadoEn": "2026-10-05T12:04:59Z",
+  "sha": "9bac6d16f79e4499c53db3f4b3ee4738e0ff167f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3647,6 +3647,27 @@
       "hash": "8eff45dde594"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/EnlaceFlota.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "EnlaceFlota"
+      ],
+      "funciones": [
+        {
+          "nombre": "EnlaceFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ identidadId }: { identidadId: string }",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "La puerta a «Tu flota» desde «Mis seguros» (05/10/2026). Componente de SERVIDOR con su propia lectura, y solo aparece si esta identidad lleva la flota de alguna sociedad (dueño o jefe de flota) o tien"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fc263e3bf4e3"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/EnviarACompania.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -4045,7 +4066,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 91
+          "linea": 92
         },
         {
           "nombre": "Titular",
@@ -4053,7 +4074,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date }",
           "retorno": null,
-          "linea": 805,
+          "linea": 808,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -4062,7 +4083,7 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], /** De `polizasParaParte`: la única fuente de si se puede dar parte de ella. */ puedeParte: boolean, titular?: string, /** El titular tal como figura, para el mensaje a la compañía (propi",
           "retorno": "PolizaOpcionParte",
-          "linea": 854,
+          "linea": 857,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
@@ -4070,7 +4091,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "8932622ca381"
+      "hash": "07291724ae58"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -5196,6 +5217,116 @@
       "hash": "d0f8b65d6a53"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/flota/FlotaEmpresa.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "FlotaEmpresa",
+        "NombramientoPendiente"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": "string | null",
+          "linea": 29
+        },
+        {
+          "nombre": "enviar",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, cuerpo: unknown",
+          "retorno": "Promise<string | null>",
+          "linea": 35
+        },
+        {
+          "nombre": "ChipVencimiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ v }: { v: VencimientoFlota }",
+          "retorno": null,
+          "linea": 47
+        },
+        {
+          "nombre": "TextoItv",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ itv }: { itv: ItvVehiculo }",
+          "retorno": null,
+          "linea": 60
+        },
+        {
+          "nombre": "EditarMatriculacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empresaId, v }: { empresaId: string; v: VehiculoFlota }",
+          "retorno": null,
+          "linea": 85
+        },
+        {
+          "nombre": "ListaVehiculos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empresaId, vehiculos, recortada }: { empresaId: string; vehiculos: VehiculoFlota[]; recortada: boolean }",
+          "retorno": null,
+          "linea": 137
+        },
+        {
+          "nombre": "JefesDeFlota",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empresaId, jefes, candidatos, textoJefe }: { empresaId: string; jefes: Jefe[]; candidatos: Candidato[]; textoJefe: string }",
+          "retorno": null,
+          "linea": 178
+        },
+        {
+          "nombre": "FlotaEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "props: { empresaId: string papel: PapelFlota recortada: boolean vehiculos: VehiculoFlota[] jefes: Jefe[] | null candidatos: Candidato[] | null textoJefe: string }",
+          "retorno": null,
+          "linea": 262
+        },
+        {
+          "nombre": "NombramientoPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ autorizacionId, empresa, otorgadoEn }: { autorizacionId: string; empresa: string | null; otorgadoEn: string | null }",
+          "retorno": null,
+          "linea": 287,
+          "resumen": "Un nombramiento pendiente: aceptarlo o rechazarlo, por la ruta de siempre de las autorizaciones."
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "884f090e2709"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/flota/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "FlotaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "FlotaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams, }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
+          "retorno": null,
+          "linea": 27,
+          "resumen": "«Tu flota» (05/10/2026) — el mínimo de empresa del piloto. Sin `?empresa=`: índice de las sociedades cuya flota puede ver esta identidad (dueño o jefe de flota) y los nombramientos que tiene pendiente"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dba48a8e1e55"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/layout.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5754,6 +5885,48 @@
       "tablas": [],
       "rutaApi": "/api/documento/dni",
       "hash": "0a448abea231"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/flota/jefe/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "El dueño nombra jefe de flota a una persona relacionada con su sociedad. Nace PENDIENTE: esa persona lo acepta (o lo rechaza) desde su `/flota`, por la ruta de siempre (`POST /api/autorizaciones/[id]`"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/flota/jefe",
+      "hash": "6e81496837a3"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/flota/vehiculo/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Anota (o borra con `null`) la fecha de matriculación de un vehículo de la flota, que es de lo que sale la próxima ITV. Dueño o jefe de flota. El vehículo se busca DENTRO de la flota autorizada por la "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/flota/vehiculo",
+      "hash": "e85112dc66e1"
     },
     {
       "ruta": "apps/asegura-portal/app/api/hojas/[id]/route.ts",
@@ -7938,7 +8111,7 @@
           "exportada": true,
           "params": "alcance: Alcance, tipo: TipoOtorgante",
           "retorno": "",
-          "linea": 171,
+          "linea": 172,
           "resumen": "Qué texto (versión y contenido) corresponde a una concesión. ÚNICA fuente: la usan el alta directa, las invitaciones y las peticiones, para que ninguna selle una fila con un texto que dice otra cosa d"
         },
         {
@@ -7947,7 +8120,7 @@
           "exportada": false,
           "params": "a: Alcance",
           "retorno": "boolean",
-          "linea": 180
+          "linea": 181
         },
         {
           "nombre": "tipoDeFicha",
@@ -7955,7 +8128,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "TipoOtorgante",
-          "linea": 192,
+          "linea": 193,
           "resumen": "Qué es quien cede, leído de `clientes.tipo_persona`. 🚨 `null` = **no consta**, y se trata como `'fisica'`. No es colapsar un «no lo sé» en un dato: es elegir el lado RESTRICTIVO, el único que no abre"
         },
         {
@@ -7964,7 +8137,7 @@
           "exportada": false,
           "params": "estado: EstadoAutorizacion",
           "retorno": "boolean",
-          "linea": 216,
+          "linea": 217,
           "resumen": "Estados en los que una autorización OCUPA el sitio de su pareja+alcance: no se puede conceder otra igual mientras haya una así. 📌 Decisión, no descuido: `caducada` y `revocada` **no** ocupan sitio. L"
         },
         {
@@ -7973,7 +8146,7 @@
           "exportada": false,
           "params": "estado: EstadoAutorizacion, esMia: boolean",
           "retorno": "boolean",
-          "linea": 228,
+          "linea": 229,
           "resumen": "Quién puede revocar una fila, para que la pantalla no lo adivine ni ofrezca un botón que va a devolver `no_te_toca`. Los dos lados pueden: el otorgante porque los datos son suyos, y el autorizado porq"
         },
         {
@@ -7982,7 +8155,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Nivel",
-          "linea": 239,
+          "linea": 240,
           "resumen": "`nivel` es `text` con CHECK en la BD. Un valor fuera del vocabulario cae al nivel MÁS bajo."
         },
         {
@@ -7991,7 +8164,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 244,
+          "linea": 245,
           "resumen": "Medianoche UTC del día de `d`. La columna `dia` es un `date`: sin hora ni zona."
         },
         {
@@ -8000,7 +8173,7 @@
           "exportada": false,
           "params": "identidadId: string",
           "retorno": null,
-          "linea": 405,
+          "linea": 406,
           "resumen": "Las fichas de la cartera que son de ESTA identidad. La única frontera de aislamiento."
         },
         {
@@ -8009,7 +8182,7 @@
           "exportada": false,
           "params": "identidadId: string",
           "retorno": null,
-          "linea": 423,
+          "linea": 424,
           "resumen": "Las fichas desde las que esta identidad puede AUTORIZAR (25/09/2026): las suyas y, además, las EMPRESAS de las que es dueña (relación `Dueño`, ver `empresasDeFichas`). Decisión de Alberto: el dueño ve"
         },
         {
@@ -8018,7 +8191,7 @@
           "exportada": false,
           "params": "ids: string[]",
           "retorno": "Promise<Map<string, FichaVista>>",
-          "linea": 446,
+          "linea": 447,
           "resumen": "Nombre y tipo de persona de cada ficha, para pintar. Las fusionadas (`merged_into_cliente_id`) y las que ya no existen **no salen del mapa**, y por eso su nombre y su tipo acaban en `null`: es «no se "
         },
         {
@@ -8027,7 +8200,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<AutorizacionesPortal>",
-          "linea": 468,
+          "linea": 469,
           "resumen": "Todo lo que la pantalla de autorizaciones necesita de una identidad. Sin `try/catch`: si una consulta falla, que suba como error. Devolver listas vacías haría pasar un fallo de BD por un «no tienes ni"
         },
         {
@@ -8036,7 +8209,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<AutorizacionesPortal | null>",
-          "linea": 730,
+          "linea": 734,
           "resumen": "Igual que `autorizacionesDeIdentidad`, abriendo la puerta aquí. `null` = no hay sesión."
         },
         {
@@ -8045,7 +8218,7 @@
           "exportada": true,
           "params": "datos: { identidadId: string otorganteClienteId: string autorizadoClienteId: string alcance: string /** * La ÚNICA póliza que se abre. `null`/ausente = todas las del otorgante, que * es lo que significaban todas las autorizaciones antes del",
           "retorno": "Promise<ResultadoConceder>",
-          "linea": 763,
+          "linea": 767,
           "resumen": "José concede: «que María pueda ver los seguros de esta ficha mía». El orden de las comprobaciones no es decorativo — va de lo que no toca la BD a lo que sí, y de lo que no revela nada a lo que podría:"
         },
         {
@@ -8054,7 +8227,7 @@
           "exportada": true,
           "params": "datos: { identidadId: string autorizacionId: string tituloRepresentacion?: unknown ip: string | null userAgent: string | null }",
           "retorno": "Promise<ResultadoConceder>",
-          "linea": 1042,
+          "linea": 1046,
           "resumen": "«Pasar a acceso total» sobre un acceso que YA existe (25/09/2026). 🚨 Es la ÚNICA vía para dar `total` a quien entró por una invitación o una petición (una IDENTIDAD sin ficha): el acceso total (DNI, "
         },
         {
@@ -8063,7 +8236,7 @@
           "exportada": true,
           "params": "datos: { identidadId: string autorizacionId: string /** * `mantener` (25/09/2026): el OTORGANTE contesta «sí, lo mantengo» a la * revisión anual. Solo sella `revisado_en`; no cambia lo concedido. */ accion: 'aceptar' | 'revocar' | 'mantener",
           "retorno": "Promise<ResultadoResolver>",
-          "linea": 1234,
+          "linea": 1238,
           "resumen": "María acepta lo que José concedió, o cualquiera de los dos lo revoca. 🚨 La **doble aceptación** no es un trámite: sin ella María entraría en los datos de otro sin saber que hay un registro con su nom"
         },
         {
@@ -8072,13 +8245,13 @@
           "exportada": true,
           "params": "identidadId: string, autorizacionIds: string[]",
           "retorno": "Promise<ResultadoUso>",
-          "linea": 1409,
+          "linea": 1413,
           "resumen": "Deja constancia de que ESTA identidad ha mirado los seguros que le autorizaron. Una fila por (autorización, identidad, DÍA): no interesa cuántos clics dio, interesa que José pueda ver qué días entró M"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e78d95f3116f"
+      "hash": "6982a1aab07a"
     },
     {
       "ruta": "apps/asegura-portal/lib/aviso-acceso.ts",
@@ -9443,6 +9616,112 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e25d5668c8cc"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/flota.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "La FLOTA de una empresa (05/10/2026) — lectura y escritura con la BD. Las reglas viven puras en `flota.ts` de `@central/module-seguros-portal` (con su test). Aquí solo se leen las filas y se aplican, y la frontera es UNA: 🚨 Toda consulta parte de `accesosFlota(identidadId)`, que se resuelve desde l",
+      "exporta": [
+        "accesosFlota",
+        "empresasDeFlota",
+        "flotaDeEmpresa",
+        "nombramientosPendientes",
+        "nombrarJefeFlota",
+        "guardarMatriculacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "nivelDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "Nivel",
+          "linea": 50
+        },
+        {
+          "nombre": "tipoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string | null",
+          "retorno": "TipoFicha",
+          "linea": 54
+        },
+        {
+          "nombre": "accesosFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<Map<string, PapelFlota>>",
+          "linea": 65,
+          "resumen": "Las empresas cuya flota puede ver ESTA identidad, con su papel. Vacío si la sesión no es la de `identidadId` (no se confía a ciegas en el parámetro)."
+        },
+        {
+          "nombre": "empresasDeFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<EmpresaFlota[]>",
+          "linea": 113,
+          "resumen": "Las empresas con flota visible, con nombre, para el índice de `/flota`."
+        },
+        {
+          "nombre": "vehiculosDeEmpresa",
+          "kind": "function",
+          "exportada": false,
+          "params": "empresaId: string",
+          "retorno": "Promise<",
+          "linea": 146,
+          "resumen": "Las pólizas de la flota de UNA empresa ya autorizada, como entradas puras."
+        },
+        {
+          "nombre": "candidatosDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "empresaId: string, excluir: ReadonlySet<string>",
+          "retorno": "Promise<CandidatoJefe[]>",
+          "linea": 221,
+          "resumen": "Personas relacionadas con la empresa en la cartera a las que el dueño puede nombrar jefe de flota."
+        },
+        {
+          "nombre": "flotaDeEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, empresaPedida: unknown",
+          "retorno": "Promise<FlotaVista | null>",
+          "linea": 248,
+          "resumen": "La flota de una empresa para ESTA identidad. `null` = no existe o no es suya (la ruta contesta 404 en los dos casos, a propósito)."
+        },
+        {
+          "nombre": "nombramientosPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<InvitacionFlota[]>",
+          "linea": 317,
+          "resumen": "Nombramientos de jefe de flota que ESTA identidad tiene pendientes de aceptar."
+        },
+        {
+          "nombre": "nombrarJefeFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: { identidadId: string empresaId: unknown candidatoId: unknown aceptaTexto: unknown }",
+          "retorno": "Promise<ResultadoFlota>",
+          "linea": 358,
+          "resumen": "El dueño nombra jefe de flota a una persona RELACIONADA con la empresa en la cartera. Nace PENDIENTE (doble aceptación): no abre nada hasta que esa persona lo acepta en su portal. Ni la empresa ni el "
+        },
+        {
+          "nombre": "guardarMatriculacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: { identidadId: string empresaId: unknown polizaId: unknown fecha: unknown }",
+          "retorno": "Promise<ResultadoFlota>",
+          "linea": 407,
+          "resumen": "Anota (o borra, con `null`) la fecha de matriculación de un vehículo de la flota. La escriben el dueño y el jefe de flota. El vehículo se identifica por la póliza que lo trae, buscada DENTRO de la flo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2609f813e310"
     },
     {
       "ruta": "apps/asegura-portal/lib/historial-companias.ts",
@@ -11814,13 +12093,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SugerenciaVista[] | null>",
-          "linea": 104,
+          "linea": 106,
           "resumen": "Igual que `sugerenciasDeIdentidad`, abriendo la puerta aquí. `null` = no hay sesión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8cc64957d84c"
+      "hash": "4e24000f7ad5"
     },
     {
       "ruta": "apps/asegura-portal/lib/supresion.ts",
@@ -30609,7 +30888,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "ResultadoLecturaPoliza",
-          "linea": 219
+          "linea": 222
         },
         {
           "nombre": "mensaje",
@@ -30617,7 +30896,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 223
+          "linea": 226
         },
         {
           "nombre": "parsear",
@@ -30625,7 +30904,7 @@
           "exportada": false,
           "params": "salida: string",
           "retorno": "",
-          "linea": 231,
+          "linea": 234,
           "resumen": "Un JSON que no parsea produce TODOS los campos a `null`, nunca campos a medias: media extracción pintada como póliza es peor que ninguna."
         },
         {
@@ -30634,7 +30913,7 @@
           "exportada": false,
           "params": "{ ramo, auto, hogar, contacto, figuras, sinNombre, bruto }: ReturnType<typeof parsear>, fuente: 'texto' | 'vision',",
           "retorno": "ResultadoLecturaPoliza",
-          "linea": 250
+          "linea": 253
         },
         {
           "nombre": "textoPdfParse",
@@ -30642,7 +30921,7 @@
           "exportada": false,
           "params": "buffer: Buffer",
           "retorno": "Promise<string>",
-          "linea": 267,
+          "linea": 270,
           "resumen": "Texto con `pdf-parse`; `''` si no abre (se dice aguas abajo)."
         },
         {
@@ -30651,12 +30930,12 @@
           "exportada": true,
           "params": "buffer: Buffer, mimeType: string, fileName = '', /** Contraseñas a probar si el PDF está protegido (el DNI del cliente de la ficha). Nunca se devuelven. */ opts: { contrasenas?: () => Promise<string[]> } = {},",
           "retorno": "Promise<ResultadoLecturaPoliza>",
-          "linea": 278
+          "linea": 281
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1f2a5a907955"
+      "hash": "6b6fea5f1ffd"
     },
     {
       "ruta": "apps/asegura/lib/documentos/leer-doc-solicitud.ts",
@@ -32676,7 +32955,7 @@
           "exportada": false,
           "params": "v: unknown, max = 120",
           "retorno": null,
-          "linea": 114
+          "linea": 117
         },
         {
           "nombre": "fmt",
@@ -32684,7 +32963,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 115
+          "linea": 118
         },
         {
           "nombre": "oportunidadDesdeFichero",
@@ -32692,7 +32971,7 @@
           "exportada": true,
           "params": "e: EntradaOportunidadDocumento & { fichero: { contenido: Buffer; mime: string; nombre: string } },",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
-          "linea": 118,
+          "linea": 121,
           "resumen": "Lee el fichero (probando el DNI de la ficha si el PDF tiene contraseña) y sigue con lo leído."
         },
         {
@@ -32701,7 +32980,7 @@
           "exportada": true,
           "params": "e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
-          "linea": 137,
+          "linea": 140,
           "resumen": "Con el documento ya leído (p. ej. `subir-poliza`, que lo leyó antes de guardar)."
         },
         {
@@ -32710,7 +32989,7 @@
           "exportada": true,
           "params": "e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },",
           "retorno": "Promise<",
-          "linea": 152,
+          "linea": 155,
           "resumen": "Lo mismo, y además (05/10/2026) lo que el documento dice de la IDENTIDAD de la ficha del tomador, que NO va en el resultado (este viaja al navegador y al portal): - `marca`: para guardar con el docume"
         },
         {
@@ -32719,7 +32998,7 @@
           "exportada": false,
           "params": "e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza }, identidad: { marca: MarcaIdentidadDocumento | null; propuesta: { clienteId: string; propuesta: PropuestaIdentidad } | null },",
           "retorno": "Promise<ResultadoOportunidadDocumento>",
-          "linea": 162
+          "linea": 165
         },
         {
           "nombre": "leadMismoNombre",
@@ -32727,7 +33006,7 @@
           "exportada": false,
           "params": "correduriaId: string, nombreCompleto: string",
           "retorno": "Promise<string | null>",
-          "linea": 422,
+          "linea": 434,
           "resumen": "El lead SIN DNI que se llama exactamente igual (el más antiguo), o null. Solo leads: una ficha de cliente o con DNI no se toma por nombre."
         },
         {
@@ -32736,7 +33015,7 @@
           "exportada": true,
           "params": "correduriaId: string, documentoId: string, bruto: Record<string, unknown> | null, /** 05/10/2026: la marca de identidad (índice ciego del DNI, nunca el DNI). Ver `marcaAcreditaFicha`. */ marca: MarcaIdentidadDocumento | null = null,",
           "retorno": "Promise<void>",
-          "linea": 446,
+          "linea": 458,
           "resumen": "Guarda con el documento lo leído por la IA (`documentos.extraccion`, 03/10/2026) SIN datos personales: DNI, teléfono, email, fechas de nacimiento/carné y domicilio no se guardan en claro en un campo S"
         },
         {
@@ -32745,7 +33024,7 @@
           "exportada": false,
           "params": "codigo: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 466,
+          "linea": 478,
           "resumen": "El nombre de la compañía por su código DGS (C0058 → Mapfre), o null."
         },
         {
@@ -32754,7 +33033,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 474,
+          "linea": 486,
           "resumen": "El catálogo DGS para casar un nombre leído. `[]` si no se pudo leer: entonces no se resuelve nada."
         },
         {
@@ -32763,7 +33042,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, nombre: string | null, compartenContacto: string[], actor: string",
           "retorno": "Promise<void>",
-          "linea": 485,
+          "linea": 497,
           "resumen": "En un lead RECIÉN abierto: «posible duplicado de <id>» por cada ficha que se llama exactamente igual, y las que comparten su teléfono/email. NO se funde nada (duplicar se ve; mezclar a dos personas, n"
         },
         {
@@ -32772,7 +33051,7 @@
           "exportada": false,
           "params": "correduriaId: string, nombreCompleto: string",
           "retorno": "Promise<string[]>",
-          "linea": 501,
+          "linea": 513,
           "resumen": "Fichas vivas (no lápidas) que se llaman EXACTAMENTE igual, sin orden. Hasta 5."
         }
       ],
@@ -32780,7 +33059,7 @@
         "documentos"
       ],
       "rutaApi": null,
-      "hash": "4170c7ff45ab"
+      "hash": "669f578f84ed"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-figuras.ts",
@@ -33132,7 +33411,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 89
+          "linea": 90
         },
         {
           "nombre": "dia",
@@ -33140,7 +33419,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 94
+          "linea": 95
         },
         {
           "nombre": "mapOportunidad",
@@ -33148,7 +33427,7 @@
           "exportada": false,
           "params": "f: FilaOportunidad",
           "retorno": "OportunidadSeguimiento",
-          "linea": 122
+          "linea": 123
         },
         {
           "nombre": "leerOportunidad",
@@ -33156,7 +33435,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string,",
           "retorno": "Promise<",
-          "linea": 141,
+          "linea": 142,
           "resumen": "La oportunidad con su historial y sus tareas. `null` = no existe o no es de esta correduría."
         },
         {
@@ -33165,7 +33444,7 @@
           "exportada": false,
           "params": "antes: OportunidadSeguimiento, cambios: CambiosOportunidad",
           "retorno": "Record<string, unknown>",
-          "linea": 189,
+          "linea": 190,
           "resumen": "Solo los campos que cambian, con su antes y su después (salvo texto libre)."
         },
         {
@@ -33174,7 +33453,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, peticion: PeticionAccion, actor: string, hoy: Date = hoyUtc(),",
           "retorno": "Promise<",
-          "linea": 208
+          "linea": 209
         },
         {
           "nombre": "transicionar",
@@ -33182,7 +33461,7 @@
           "exportada": false,
           "params": "tx: Tx, correduriaId: string, antes: OportunidadSeguimiento, peticion: PeticionAccion, actor: string, hoy: Date,",
           "retorno": "Promise<",
-          "linea": 235,
+          "linea": 236,
           "resumen": "La transición sobre una oportunidad YA bloqueada (`for update`) por quien llama: la usan el cambio de estado suelto y el registro de una llamada, que la hace en la misma transacción que sus tareas."
         },
         {
@@ -33191,7 +33470,7 @@
           "exportada": false,
           "params": "accion: string, antes: OportunidadSeguimiento, despues: OportunidadSeguimiento, actor: string",
           "retorno": "string",
-          "linea": 308
+          "linea": 309
         },
         {
           "nombre": "crearTarea",
@@ -33199,7 +33478,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, datos: { tipo?: unknown; prioridad?: unknown; observaciones?: unknown; fechaLimite?: unknown }, actor: string, hoy: Date = hoyUtc(),",
           "retorno": "Promise<",
-          "linea": 317
+          "linea": 318
         },
         {
           "nombre": "cerrarTarea",
@@ -33207,7 +33486,7 @@
           "exportada": true,
           "params": "correduriaId: string, tareaId: string, resultado: string | null, actor: string,",
           "retorno": "Promise<",
-          "linea": 355
+          "linea": 356
         },
         {
           "nombre": "registrarLlamada",
@@ -33215,7 +33494,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, datos: { resultado?: unknown; nota?: unknown; volverEl?: unknown; motivo?: unknown; canal?: unknown }, actor: string, hoy: Date = hoyUtc(),",
           "retorno": "Promise<",
-          "linea": 397,
+          "linea": 398,
           "resumen": "Registra el resultado de una llamada en UNA transacción: la llamada queda como tarea `llamada` cerrada (cuenta como intento), las llamadas pendientes que vencían hoy se dan por hechas, y se aplican el"
         },
         {
@@ -33224,7 +33503,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, actor: string, hoy: Date = hoyUtc(),",
           "retorno": "Promise<",
-          "linea": 482,
+          "linea": 483,
           "resumen": "Deja constancia de que Alberto ha abierto el WhatsApp de seguimiento de un lead (23/09/2026). El mensaje lo envía él desde su teléfono: esto NO envía nada, solo anota el contacto para que cuente como "
         },
         {
@@ -33233,7 +33512,7 @@
           "exportada": true,
           "params": "correduriaId: string, // «Hoy» es el de Madrid: con la fecha UTC, entre las 00:00 y las 02:00 el // corte seguiría en ayer y las tareas de hoy no saldrían. hoyIso: string = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' ",
           "retorno": "Promise<",
-          "linea": 552,
+          "linea": 553,
           "resumen": "Las tareas de seguimiento que vencen hoy o ya vencieron (para «Hoy» de plataforma). Solo las de oportunidades abiertas: una tarea de una ganada o perdida ya la cerró el sistema. `truncado` = hay más d"
         },
         {
@@ -33242,7 +33521,7 @@
           "exportada": false,
           "params": "p: string",
           "retorno": "string",
-          "linea": 585,
+          "linea": 586,
           "resumen": "El nº de la póliza que tiene hoy, venga de donde venga: la columna `numero_poliza` (la buena), el `nPoliza` que dejaba el CRM anterior en `poliza_competencia`, o el `numeroPoliza` que escribió el asis"
         },
         {
@@ -33251,7 +33530,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, datos: Parameters<typeof validarAltaOportunidad>[0], actor: string, hoy: Date = hoyUtc(), /** De dónde nace (`info_riesgo.origen`): a mano por defecto; `documento:*` si la abre un documento subido. *",
           "retorno": "Promise<",
-          "linea": 600,
+          "linea": 601,
           "resumen": "Abre una oportunidad a mano con su primer paso, en UNA transacción: oportunidad + tarea + historial. Si el cliente ya tiene una ABIERTA del mismo ramo y de la misma compañía (o sin compañía en un lado"
         },
         {
@@ -33260,7 +33539,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, datos: Parameters<typeof validarEdicionOportunidad>[0], actor: string, // `reprogramar`: al cambiar el vencimiento, la próxima tarea de seguimiento va a 45 días antes // (`planTareaTrasVencimiento`). Opcion",
           "retorno": "Promise<",
-          "linea": 701,
+          "linea": 714,
           "resumen": "Corrige ramo, vencimiento, compañía o prima de una oportunidad ABIERTA. Una cerrada no se edita: se reabre antes, que es una acción con su rastro. Cada cambio deja antes/después en el historial (la co"
         },
         {
@@ -33269,7 +33548,7 @@
           "exportada": false,
           "params": "filtro: Prisma.Sql",
           "retorno": "Prisma.Sql",
-          "linea": 867,
+          "linea": 880,
           "resumen": "Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2`)."
         },
         {
@@ -33278,7 +33557,7 @@
           "exportada": false,
           "params": "j: JsonHitos",
           "retorno": "HitosPresupuesto | null",
-          "linea": 875
+          "linea": 888
         },
         {
           "nombre": "resumenPresupuestos",
@@ -33286,7 +33565,7 @@
           "exportada": false,
           "params": "j: JsonResumen",
           "retorno": "ResumenPresupuestos",
-          "linea": 880
+          "linea": 893
         },
         {
           "nombre": "oportunidadesDeCliente",
@@ -33294,7 +33573,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 895,
+          "linea": 908,
           "resumen": "Las oportunidades de UN cliente: abiertas primero (las más nuevas arriba), luego las cerradas más recientes. La «próxima tarea» es solo de seguimiento (`central:seguimiento`), la misma que lista «Hoy»"
         },
         {
@@ -33303,7 +33582,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<PresupuestoSinOportunidad[] | null>",
-          "linea": 973,
+          "linea": 986,
           "resumen": "Lo tarificado para este cliente que no cuelga de ninguna oportunidad: las retarificaciones y altas anteriores al 24/09/2026, cuando aún no se enlazaban solas. Se ENSEÑAN tal cual, sin abrirles oportun"
         },
         {
@@ -33312,7 +33591,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1007
+          "linea": 1020
         }
       ],
       "tablas": [
@@ -33329,7 +33608,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "62d71c65966d"
+      "hash": "52e5fb51c12e"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-traspaso.ts",
@@ -33353,6 +33632,91 @@
       ],
       "rutaApi": null,
       "hash": "aa14bf1e0625"
+    },
+    {
+      "ruta": "apps/asegura/lib/oportunidad-vehiculo-catalogo-real.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Los catálogos REALES de Codeoscopic para `oportunidad-vehiculo-catalogo.ts` (solo GET de catálogo: gratis). Aparte para que el emparejador puro se pruebe sin tocar red ni config.",
+      "exporta": [
+        "catalogosVehiculoReales"
+      ],
+      "funciones": [
+        {
+          "nombre": "catalogosVehiculoReales",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env",
+          "retorno": "CatalogosVehiculo | null",
+          "linea": 8,
+          "resumen": "`null` = Codeoscopic sin configurar (se ignora el interruptor de tarificación: esto no gasta)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b0905cda5d9a"
+    },
+    {
+      "ruta": "apps/asegura/lib/oportunidad-vehiculo-catalogo.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Del documento al riesgo, parte 2 (05/10/2026): empareja lo que el OCR leyó del vehículo con el catálogo de Codeoscopic para dejar en `info_riesgo.datosVehiculo` los ids (marca → modelo → combustible → versión) que precargan la cascada de la pantalla de precio. 🚨 SOLO catálogo (GET gratis). PROHIBID",
+      "exporta": [
+        "emparejarCombustible",
+        "emparejarVehiculo",
+        "datosVehiculoParaOportunidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "emparejarCombustible",
+          "kind": "function",
+          "exportada": true,
+          "params": "motores: Opcion[], texto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 33,
+          "resumen": "El id del combustible si hay UNA sola candidata (por nombre, por id o por su traducción); si no, `null`."
+        },
+        {
+          "nombre": "emparejarVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "leido: VehiculoParaEmparejar, cat: CatalogosVehiculo",
+          "retorno": "Promise<IdsCatalogoVehiculo>",
+          "linea": 52,
+          "resumen": "Cascada de emparejamiento. Cada paso necesita el anterior; en cuanto uno no es inequívoco (o falla la red), se devuelve lo conseguido hasta ahí. Nunca lanza."
+        },
+        {
+          "nombre": "datosVehiculoParaOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string, leido: VehiculoParaEmparejar, catalogos: CatalogosVehiculo | null,",
+          "retorno": "Promise<DatosVehiculoRiesgo | null>",
+          "linea": 83,
+          "resumen": "`info_riesgo.datosVehiculo` de un documento de auto/moto, o `null` si no trae nada del vehículo. Solo AUTO busca ids (los de moto son otro catálogo y la pantalla de moto no los precarga hoy). `catalog"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dd3acbf93309"
+    },
+    {
+      "ruta": "apps/asegura/lib/oportunidad-vehiculo-previo.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "puedeEscribirDatosVehiculo"
+      ],
+      "funciones": [
+        {
+          "nombre": "puedeEscribirDatosVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "previo: { matricula: string | null; vehiculo: string | null }, datosVehiculo: Record<string, unknown> | null,",
+          "retorno": "boolean",
+          "linea": 12,
+          "resumen": "si no, taparía en la ficha el vehículo de la corredora. - Con matrícula antigua: solo si coincide con la leída (mayúsculas, sin espacios ni guiones). - Sin matrícula antigua pero con `vehiculo` texto:"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1b70367715f8"
     },
     {
       "ruta": "apps/asegura/lib/oportunidades-aviso.ts",
@@ -81735,7 +82099,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "boolean",
-          "linea": 135,
+          "linea": 136,
           "resumen": "¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor."
         },
         {
@@ -81744,7 +82108,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "Record<string, unknown>",
-          "linea": 149,
+          "linea": 150,
           "resumen": "La forma que espera `DatosAuto.propietario`/`conductor` en el puerto de asegura."
         },
         {
@@ -81753,7 +82117,7 @@
           "exportada": true,
           "params": "{ clienteId, matriculaInicial = '', etiquetaCliente, faltanInicial, garajes, civiles, zonasCarnet, tiposCarnet, municipios, municipiosMotivo, estadoCivilAuto, consumo, simulacion, companias, variante = null, datosRiesgo = null, anterior = n",
           "retorno": null,
-          "linea": 187
+          "linea": 188
         },
         {
           "nombre": "BloquePersona",
@@ -81761,7 +82125,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onActivo, persona, onPersona, civiles, conCarnet, }: { etiqueta: string activo: boolean onActivo: (v: boolean) => void persona: PersonaForm onPersona: (p: PersonaForm) => void civiles: Opcion[] conCarnet: boolean }",
           "retorno": null,
-          "linea": 1727,
+          "linea": 1738,
           "resumen": "El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador."
         },
         {
@@ -81770,7 +82134,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 1800,
+          "linea": 1811,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -81779,15 +82143,15 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 1805
+          "linea": 1816
         },
         {
           "nombre": "Campo",
           "kind": "function",
           "exportada": false,
-          "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
+          "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1810
+          "linea": 1821
         },
         {
           "nombre": "Contador",
@@ -81795,7 +82159,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 1823
+          "linea": 1835
         },
         {
           "nombre": "Precios",
@@ -81803,7 +82167,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId, actual, familiaAllianz }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean clienteId: string /** «Pagas X → te proponemos Y»: lo que paga hoy, anualizado. `null` = sin oportunidad de la que sacarlo. ",
           "retorno": null,
-          "linea": 1842
+          "linea": 1854
         }
       ],
       "tablas": [
@@ -81811,7 +82175,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "c58088affbd8"
+      "hash": "e5dfa0fccaf9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/page.tsx",
@@ -108571,6 +108935,27 @@
       "hash": "80ec4e92b110"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/divisa.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Divisa de una factura leída por la IA. Módulo PURO (sin imports) para testearlo con `node --test`. Regla «null ≠ 0»: si la IA no da divisa, o da algo que no es una moneda reconocible, queda `null` («no se sabe»), NUNCA 'EUR' por defecto: `conciliarConBanco` usa `null` para caer a la lista de proveed",
+      "exporta": [
+        "normalizarDivisa"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarDivisa",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown",
+          "retorno": "string | null",
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2c5ef5f3db49"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/domiciliados.ts",
       "ambito": "apps/plataforma",
       "resumen": "Un gasto DOMICILIADO tiene que acabar cargado en cuenta. Este módulo decide, para una factura ya imputada, si su cargo bancario está, aún no toca, o falta de verdad. Módulo PURO (sin imports) para que sea testeable con `node --test`. 🚨 La razón de existir de este archivo (lección DIGI, 26/08/2026):",
@@ -108839,7 +109224,7 @@
           "exportada": false,
           "params": "buffer: Buffer",
           "retorno": "Promise<",
-          "linea": 58,
+          "linea": 60,
           "resumen": "Texto y nº de páginas de un PDF. Import PEREZOSO y apuntando al implementador interno (`lib/pdf-parse.js`) en vez de a la raíz del paquete: es el patrón que usan los otros NUEVE lectores de PDF del re"
         },
         {
@@ -108848,7 +109233,7 @@
           "exportada": false,
           "params": "pdf: Buffer",
           "retorno": "Promise<ImageInput[]>",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Páginas de un PDF escaneado como imagen, listas para visión. Primero los JPEG embebidos (gratis, el escáner ya los trae) y, si el escaneo va en CCITT/JBIG2 y no hay ni uno, el rasterizador PDFium. Los"
         },
         {
@@ -108857,12 +109242,12 @@
           "exportada": true,
           "params": "buffer: Buffer, mimeType: string, fileName = '', /** `ocr: true` = si el PDF no trae texto, se rasterizan sus páginas y se leen por visión. Cuesta * una llamada multimodal, así que lo pide explícitamente quien tiene a alguien esperando * re",
           "retorno": "Promise<Extraccion>",
-          "linea": 80
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "939b8c6c66e3"
+      "hash": "35d44392c872"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/filtro-pago.ts",
@@ -109454,7 +109839,7 @@
           "exportada": true,
           "params": "cuentaId: string, opts: { deadline?: number } = {},",
           "retorno": "Promise<ResultadoEscaneo>",
-          "linea": 87,
+          "linea": 88,
           "resumen": "@param opts.deadline epoch ms en el que el escaneo debe estar de vuelta. Sin él el trabajo es ilimitado y la función acaba muriendo por `maxDuration` — que es justo como se perdía el latido antes del "
         },
         {
@@ -109463,7 +109848,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, importe: number, fechaVenc: string | null, cuentaId: string, permitirPagar = true, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso' = 'sin_numero_ni_iva', ivaDudoso = false,",
           "retorno": "Promise<void>",
-          "linea": 271
+          "linea": 274
         },
         {
           "nombre": "aprobarPago",
@@ -109471,7 +109856,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, debtorIban: string,",
           "retorno": "Promise<",
-          "linea": 352
+          "linea": 355
         },
         {
           "nombre": "aplazarPago",
@@ -109479,7 +109864,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string, dias = 7",
           "retorno": "Promise<boolean>",
-          "linea": 413
+          "linea": 416
         },
         {
           "nombre": "rechazarFactura",
@@ -109487,7 +109872,7 @@
           "exportada": true,
           "params": "facturaId: string, cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 429
+          "linea": 432
         },
         {
           "nombre": "aplicarSinIvaExtranjero",
@@ -109495,7 +109880,7 @@
           "exportada": true,
           "params": "facturaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 442,
+          "linea": 445,
           "resumen": "IVA 0 de un proveedor extranjero. Solo si seguía sin leer (null): nunca pisa un dato."
         },
         {
@@ -109504,7 +109889,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<number>",
-          "linea": 452
+          "linea": 455
         },
         {
           "nombre": "conciliarConBanco",
@@ -109512,7 +109897,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 492
+          "linea": 495
         },
         {
           "nombre": "pagarTodo",
@@ -109520,7 +109905,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<",
-          "linea": 553
+          "linea": 556
         },
         {
           "nombre": "prefijoAviso",
@@ -109528,7 +109913,7 @@
           "exportada": true,
           "params": "forma: FormaPago, permitirPagar: boolean, motivoRevision: 'sin_numero_ni_iva' | 'tipo_dudoso'",
           "retorno": "string",
-          "linea": 578,
+          "linea": 581,
           "resumen": "Prefijo del aviso: «se cobra sola» y «revisar documento» CONVIVEN (la revisión no se pisa)."
         },
         {
@@ -109537,7 +109922,7 @@
           "exportada": false,
           "params": "cuentaId: string, proveedores: string[]",
           "retorno": "Promise<Map<string, FormaPago>>",
-          "linea": 585
+          "linea": 588
         },
         {
           "nombre": "resumenSemanal",
@@ -109545,7 +109930,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 622
+          "linea": 625
         },
         {
           "nombre": "alertarFacturasAusentes",
@@ -109553,7 +109938,7 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<number>",
-          "linea": 657
+          "linea": 660
         },
         {
           "nombre": "proponerVinculoReserva",
@@ -109561,7 +109946,7 @@
           "exportada": false,
           "params": "facturaId: string, proveedor: string, fechaFactura: string | null,",
           "retorno": "Promise<void>",
-          "linea": 690
+          "linea": 693
         },
         {
           "nombre": "actualizarMensajeTg",
@@ -109569,7 +109954,7 @@
           "exportada": false,
           "params": "msgId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 721
+          "linea": 724
         }
       ],
       "tablas": [
@@ -109583,7 +109968,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "367ac9df7ca2"
+      "hash": "cec77c8a43fb"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/parsear-json-ia.ts",
@@ -110237,7 +110622,7 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string /** Páginas YA rasterizadas (PDF escaneado). Tiene prioridad sobre `imageBase64`. */ images?: ImageInput[] }",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 264,
+          "linea": 269,
           "resumen": "Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay. PDF (texto) → pasarela de texto (Director/OpenRouter → cadena gratis). Imagen → pasarela de visión (`aiVision`: OpenRout"
         },
         {
@@ -110246,13 +110631,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 369,
+          "linea": 374,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla. ⚠️ Este `{}` NO distingue «no era una factura» de «no se pudo leer»: si esa diferencia importa (y para contabilida"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f696395aa9c2"
+      "hash": "51204730f18f"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -119378,6 +119763,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e6fddabfd8d2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/precarga-vehiculo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Qué se precarga en la pantalla de precio de auto desde `info_riesgo.datosVehiculo` (05/10/2026). Regla única: el riesgo se rellena UNA vez (documento o corredora) y la pantalla lo lee de ahí; nunca se vuelve a pedir lo que ya consta. Antes la cascada solo se precargaba ENTERA (versión + marca + mode",
+      "exporta": [
+        "planPrecargaVehiculo",
+        "sigueSinConfirmar"
+      ],
+      "funciones": [
+        {
+          "nombre": "planPrecargaVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: DatosVehiculoRiesgo | null | undefined, retomada: boolean",
+          "retorno": "PrecargaVehiculo",
+          "linea": 28
+        },
+        {
+          "nombre": "sigueSinConfirmar",
+          "kind": "function",
+          "exportada": true,
+          "params": "plan: PrecargaVehiculo, precargado: string | null | undefined, actual: string",
+          "retorno": "boolean",
+          "linea": 53,
+          "resumen": "¿El valor que hay en pantalla sigue siendo el precargado del riesgo (y el riesgo está sin confirmar)?"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "553c97c87d4a"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/presupuestos-oportunidad.ts",
@@ -165292,6 +165708,168 @@
       "hash": "3db46fc9c1dc"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/flota.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "La FLOTA de una empresa en el portal (05/10/2026) — el mínimo de empresa para el piloto con 3-5 sociedades del grupo (spec `2026-09-01-asegura-portal-…`, sección «Empresas»). Reglas puras, sin BD. Tres piezas, y por qué así: 1. **Quién ve la flota.** El DUEÑO de la sociedad (la misma regla que ya le",
+      "exporta": [
+        "esRamoFlota",
+        "empresasConFlota",
+        "empresaPermitida",
+        "puedeNombrarJefeFlota",
+        "puedeEditarVehiculo",
+        "wherePolizasFlota",
+        "claveVehiculo",
+        "fechaMatriculacionValida",
+        "matriculacionDeCompania",
+        "itvDeVehiculo",
+        "vencimientoFlota",
+        "vehiculosDeFlota"
+      ],
+      "funciones": [
+        {
+          "nombre": "esRamoFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined",
+          "retorno": "ramo is RamoFlota",
+          "linea": 67
+        },
+        {
+          "nombre": "empresasConFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { /** Empresas de las que es dueño (relación `Dueño`, o la ficha de la empresa vinculada con nivel para gestionar). */ empresasComoDueno: readonly string[] /** Fichas propias (vinculadas a la identidad). */ propias: readonly string[] aut",
+          "retorno": "Map<string, PapelFlota>",
+          "linea": 97,
+          "resumen": "Las empresas cuya flota puede ver esta identidad, con su papel. Todas las entradas llegan YA acotadas por quien llama a la identidad de la sesión (`portal_vinculo` de esa identidad, autorizaciones cuy"
+        },
+        {
+          "nombre": "empresaPermitida",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedida: unknown, accesos: ReadonlyMap<string, PapelFlota>",
+          "retorno": "string | null",
+          "linea": 130,
+          "resumen": "La empresa que se pide (de la URL o del cuerpo), SOLO si está entre las autorizadas. El id de fuera NUNCA consulta: se busca dentro de lo ya resuelto por sesión, y lo que no está es `null` → 404 (nunc"
+        },
+        {
+          "nombre": "puedeNombrarJefeFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "papel: PapelFlota | undefined",
+          "retorno": "boolean",
+          "linea": 137,
+          "resumen": "Nombrar o retirar jefes de flota: solo el dueño. El jefe no reautoriza a un cuarto."
+        },
+        {
+          "nombre": "puedeEditarVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "papel: PapelFlota | undefined",
+          "retorno": "boolean",
+          "linea": 142,
+          "resumen": "Anotar datos del vehículo (fecha de matriculación): dueño o jefe de flota."
+        },
+        {
+          "nombre": "wherePolizasFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresasAutorizadas: readonly string[], enVigor: T",
+          "retorno": null,
+          "linea": 153,
+          "resumen": "El `where` de Prisma de las pólizas de la flota. Puro para poder probar que el filtro por empresa está SIEMPRE: sin empresas no hay consulta (`null`), y el `clienteId` sale únicamente de la lista auto"
+        },
+        {
+          "nombre": "claveVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "matricula: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 170,
+          "resumen": "La clave del vehículo dentro de una empresa: la matrícula normalizada. `null` = sin matrícula usable."
+        },
+        {
+          "nombre": "diaValido",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 177
+        },
+        {
+          "nombre": "fechaMatriculacionValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, hoy: Date",
+          "retorno": "string | null",
+          "linea": 191,
+          "resumen": "La fecha de matriculación que escribe el dueño o el jefe de flota. Solo una fecha REAL, no futura y no anterior a 1950 (antes no hay serie que valga). `null` = no se acepta, y la ruta lo devuelve como"
+        },
+        {
+          "nombre": "matriculacionDeCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "datosPoliza: unknown",
+          "retorno": "string | null",
+          "linea": 204,
+          "resumen": "La fecha de matriculación que trae la compañía (EIAC) en los datos de la póliza. Lee UNA clave concreta (`fechaMatriculacion`), nunca el objeto entero. `null` = no la trae o no es una fecha."
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desdeIso: string, hasta: Date",
+          "retorno": "number",
+          "linea": 235
+        },
+        {
+          "nombre": "itvDeVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { ramo: string | null | undefined matricula: string | null matriculacionCompania: string | null matriculacionDeclarada: string | null hoy: Date }",
+          "retorno": "ItvVehiculo",
+          "linea": 249,
+          "resumen": "La próxima ITV de un vehículo de la flota. Orden de la fecha de matriculación: compañía > declarada > estimada por la matrícula (la escalera de procedencias del portal: lo calculado nunca pisa lo que "
+        },
+        {
+          "nombre": "vencimientoFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | null, hoy: Date",
+          "retorno": "VencimientoFlota",
+          "linea": 299
+        },
+        {
+          "nombre": "grupo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: VehiculoFlota",
+          "retorno": "0 | 1 | 2",
+          "linea": 340,
+          "resumen": "Grupo de orden: 0 = algo pide atención ya (ITV o vencimiento en ≤30 días, o renovación sin confirmar); 1 = algo NO lo sabemos (sin ITV calculable o sin vencimiento): no se entierra al final como si es"
+        },
+        {
+          "nombre": "diasClave",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: VehiculoFlota",
+          "retorno": "number",
+          "linea": 347
+        },
+        {
+          "nombre": "vehiculosDeFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "entradas: readonly VehiculoFlotaEntrada[], hoy: Date",
+          "retorno": "VehiculoFlota[]",
+          "linea": 354
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2b811ba362ec"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/hoja-qr.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "La HOJA de la nevera y su QR. Alberto quería «la hoja del frigorífico»: lo que hace falta después de un percance —compañía, nº de póliza, qué está asegurado y a quién llamar— en un papel, con un QR al lado. Y decidió su forma el 05/09/2026: *«crear QR y ahí seleccionas si todas las pólizas, una o al",
@@ -171172,6 +171750,28 @@
       "hash": "a8351f37f633"
     },
     {
+      "ruta": "packages/module-seguros/src/datos-vehiculo-documento.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Del documento al riesgo (05/10/2026): lo que el OCR leyó de una póliza de auto/moto, convertido en `info_riesgo.datosVehiculo` para que NINGUNA pantalla vuelva a pedir lo que ya consta. Regla única: el riesgo se rellena UNA vez (documento o corredora) en `datosVehiculo` y toda pantalla lo lee de ahí",
+      "exporta": [
+        "datosVehiculoDeDocumento"
+      ],
+      "funciones": [
+        {
+          "nombre": "datosVehiculoDeDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "leido: VehiculoLeido, ids: IdsCatalogoVehiculo = SIN_IDS_CATALOGO, opciones: { hoy?: string } = {},",
+          "retorno": "DatosVehiculoRiesgo | null",
+          "linea": 39,
+          "resumen": "`datosVehiculo` desde lo leído, o `null` si el documento no trae NADA del vehículo (no se escribe un bloque vacío: que `datosVehiculo` exista significa que alguien o algo lo rellenó)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "550a93a5dc08"
+    },
+    {
       "ruta": "packages/module-seguros/src/datos-vehiculo-riesgo.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Los datos del VEHÍCULO de un riesgo de auto/moto (30/09/2026), guardados estructurados en `seguros.oportunidades.info_riesgo.datosVehiculo` para poder verlos, editarlos y CONFIRMARLOS en la pantalla del riesgo sin salir de ella. Hasta hoy `info_riesgo` solo traía `matricula` y `vehiculo` (TEXTO: «SE",
@@ -171858,7 +172458,7 @@
           "exportada": true,
           "params": "",
           "retorno": "AutoLeido",
-          "linea": 101
+          "linea": 103
         },
         {
           "nombre": "seLeyoAlgo",
@@ -171866,7 +172466,7 @@
           "exportada": true,
           "params": "d: AutoLeido",
           "retorno": "boolean",
-          "linea": 125,
+          "linea": 128,
           "resumen": "¿Se ha leído ALGO? `false` = el documento no se pudo leer, no que esté vacío."
         },
         {
@@ -171875,7 +172475,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 131
+          "linea": 134
         },
         {
           "nombre": "entero",
@@ -171883,7 +172483,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 143,
+          "linea": 146,
           "resumen": "Entero >= 0. El `0` SÍ es un dato (cero siniestros es una respuesta), así que aquí no se puede usar el truco de «<= 0 es que no lo he leído» que sí vale para una prima."
         },
         {
@@ -171892,7 +172492,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 161,
+          "linea": 164,
           "resumen": "Importe en euros. Una prima de 0€ no existe: es un «no lo he leído»."
         },
         {
@@ -171901,7 +172501,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 182,
+          "linea": 185,
           "resumen": "`aaaa-mm-dd` estricto: rechaza los días que `Date` «arregla» solo. Una fecha en texto español («2 de jul. de 1971», `fechaTextoAIso`) se pasa a ISO; lo numérico («15/10/2026») sigue sin valer."
         },
         {
@@ -171910,7 +172510,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 197,
+          "linea": 200,
           "resumen": "Matrícula española, en cualquiera de sus dos formatos vivos: - actual (desde 2000): `1234ABC` - provincial anterior: `SE1234AB`, `M1234AB`… Lo que no encaje se anula: una matrícula inventada identific"
         },
         {
@@ -171919,7 +172519,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 207,
+          "linea": 210,
           "resumen": "DNI/NIE. Se comprueba la LETRA: un DNI mal leído es de otra persona."
         },
         {
@@ -171928,7 +172528,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 220,
+          "linea": 223,
           "resumen": "CIF de persona jurídica con forma válida (letra + 7 dígitos + control), o null. No valida el dígito."
         },
         {
@@ -171937,7 +172537,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 228,
+          "linea": 231,
           "resumen": "Código DGS de entidad: `C` + 4 dígitos (C0058 Mapfre, C0109 Allianz…)."
         },
         {
@@ -171946,7 +172546,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "AutoLeido",
-          "linea": 242,
+          "linea": 245,
           "resumen": "Convierte lo que devuelva el modelo en `AutoLeido`. Nunca lanza: una respuesta ilegible produce TODO a `null`, que es la verdad («no se ha leído nada»), no un objeto a medias que la pantalla pintaría "
         },
         {
@@ -171955,13 +172555,13 @@
           "exportada": true,
           "params": "d: AutoLeido",
           "retorno": "(keyof AutoLeido)[]",
-          "linea": 268,
+          "linea": 272,
           "resumen": "Los campos que SÍ se han leído. Es lo que la pantalla enseña para revisar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "60413b18f894"
+      "hash": "6ed1ffee6160"
     },
     {
       "ruta": "packages/module-seguros/src/documento-hogar.ts",
@@ -183506,7 +184106,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4159,
-    "funciones": 14336
+    "archivos": 4172,
+    "funciones": 14384
   }
 }
