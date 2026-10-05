@@ -91,6 +91,7 @@ En absoluto Luxury «empeora» (29→33); en porcentaje mejora (39% → 35%).
 | 07/09/2026 | 0,91× (12/91) | **1,40× (33/90)** | 1,03× (9/92) | 0,91× (17/90) | 30% | **Convergencia terminada en 3 pisos**: cada uno aterriza en SU `target_pctl` (0,40/0,40/0,50). House sigue en 1,40× y tiene `antelacion_k=1` — la palanca que el 27/08 se apagó en los cuatro. ⚠️ El barrido lleva 9 de 10 días midiendo SOLO jul-ago 2027 |
 | 14/09/2026 | 0,91× (13/91) | 1,47× (33/90) | 1,03× (10/92) | 0,88× (18/90) | 30% | ✅ `antelacion_k` de House **vuelve a 0**. Los 3 convergidos, quietos. El 1,47× de House **no es que suba: es que ya no nos engañábamos** — su `channel_markup` pasó de 1,056 a 1,20 el 12/09 y su neto BAJÓ. ⚠️ Cobertura clavada al 30% tres semanas; barrido sigue monotemático |
 | 28/09/2026 | 0,87× (2/106) | 1,33× (27/107) | 0,91× (8/106) | 0,82× (6/105) | 34-35% | 🎉 **Cobertura se mueve por primera vez en 3 semanas** (30%→34-35%): la prioridad jul-ago 2027 del barrido se quitó (100%→0-5% de los comps del día desde el 19/09) y el calendario vuelve a refrescarse entero. House sigue bajando (1,47×→1,33×, «más caros que todos» 37%→25%). **Fuga de canal: n=1→4** (busto/duplex/luxury), las tres nuevas también negativas. **Sin fila el 21/09** (la sesión se desvió a un problema de guardado en el editor de la propia rutina) — esta compara contra 14/09 |
+| 05/10/2026 | 0,92× (4/123) | 1,23× (25/124) | 0,92× (15/122) | 0,82× (11/122) | 40-41% | **Cobertura sigue subiendo** (34-35%→40-41%), segunda semana seguida tras quitar la prioridad jul-ago del barrido. **House sigue bajando** (1,33×→1,23×): a solo 0,03 de la condición 1, «más caros que todos» baja de 25% a 20%. Busto y Dúplex suben un poco (0,87→0,92 / 0,91→0,92) pero siguen muy por debajo del techo. **Heartbeat `sivra_mercado_booking` vuelve a `ok:true`** — el fallo del escaparate propio de la semana pasada ya tenía arreglo mergeado (PR #4118/#4220, filtro `ventanaLibre`) |
 
 #### Lectura del 31/08/2026
 
@@ -233,8 +234,9 @@ Con eso dicho, y contando solo lo que sigue vivo hoy:
 | 31/08 | 17 | 49 | 230,00€ | 1 |
 | 07/09 | 21 | 60 | 116,00€ | 9 (8 en incomes) — la fila de la semana pasada ya lo predecía |
 | 14/09 | 18 | 52 | 212,00€ | 2 |
-| 21/09 | 26 | 69 | 158,00€ | 5 |
-| 28/09 | — | — | — | *semana en curso, no cerrada: contar sus reservas ahora infla la próxima fila* |
+| 21/09 | 25 | 67 | 159,96€ | 6 |
+| 28/09 | 19 | 57 | 274,62€ | 3 |
+| 05/10 | — | — | — | *semana en curso, no cerrada: contar sus reservas ahora infla la próxima fila* |
 
 **El volumen se ha multiplicado y el ADR se ha hundido**, que es exactamente lo que uno espera tras
 bajar precios un 20-26%. Los ingresos de la semana salen por encima (49 x 230 = 11.270,00€ y
@@ -289,6 +291,48 @@ que no se escribió — el hueco queda anotado, no rellenado a posteriori con da
 - **2 — cobertura > 25%:** cumplida y **por fin en tendencia**, no estancada: 34-35%.
 - **3 — fuga de canal medida:** **n=4**, ya no n=1. Sigue sin ser suficiente para fijar un
   porcentaje, pero el patrón (huésped paga menos) se repite en los cuatro pisos con datos.
+
+#### Lectura del 05/10/2026 — segunda semana de cobertura al alza, House a 0,03 de la condición 1
+
+**La cobertura sigue subiendo**, segunda semana seguida desde que se quitó la prioridad jul-ago 2027
+del barrido: **34-35% → 40-41%**. Confirma que el movimiento de la semana pasada no fue un pico
+aislado sino el calendario entero volviendo a refrescarse.
+
+**House sigue bajando**: 1,33× → **1,23×**, y «más caros que todos los comps» cae de 25% a 20%. Está
+a solo 0,03 de la condición 1 (≤~1,2×) — la más cerca que ha estado nunca. Los otros tres siguen
+cómodos por debajo del techo: Busto Reform 0,87×→0,92×, Dúplex Center 0,91×→0,92×, Luxury Busto
+0,82× (igual). Las subidas de Busto y Dúplex son ruido dentro de rango, no una tendencia: siguen a
+menos de la mitad del límite.
+
+⚠️ **House tiene `sobre_techo=40`** (fechas por encima de 1,5×) sobre 124 medidas — más alto que su
+`mas_caros`=25. Son condiciones distintas (ratio>1,5× no implica ser el más caro que TODOS los
+comps) y no es nuevo: se deja anotado para seguir la serie, no como hallazgo.
+
+**El heartbeat `sivra_mercado_booking` vuelve a `ok:true`.** El `ok:false` de la semana pasada —
+causado por el plan de escaparate pidiendo ventanas con los pisos ya ocupados — tenía arreglo
+mergeado entre medias (`ventanaLibre()`, PR #4118 absorbido por #4220): el plan ahora descarta las
+candidatas sin disponibilidad en vez de pedirlas en bucle. Confirmado por el detalle del latido de
+hoy: 239 comps en 24/24 ventanas, sin ventanas sin respuesta.
+
+**Reservas: la semana del 28/09 cierra en 19 reservas / 57 noches / 274,62€ de ADR** (3 canceladas
+ya vistas) — el ADR más alto de las últimas semanas, en línea con que el motor sigue sin volver a
+subir precios base. La del 21/09 baja levemente al corregirla (26→25 reservas, 158,00€→159,96€),
+como cada semana. **Tendencia, no prueba**: n pequeño, mezcla de pisos y aforos, sin contrafactual.
+
+**No se re-midió la fuga de canal esta semana** (no estaba en el alcance de esta pasada); sigue
+documentada en n=4 de la semana pasada.
+
+##### Las tres condiciones, hoy
+
+- **1 — ratio ≤ ~1,2×:** sigue en **3 de 4**. House en 1,23×, a 0,03 de entrar — la más cerca desde
+  que se mide esta tabla.
+- **2 — cobertura > 25%:** cumplida y en tendencia clara dos semanas seguidas: 34-35% → 40-41%.
+- **3 — fuga de canal medida:** sin cambios, **n=4** (no evaluada esta semana).
+
+Ninguna condición se cumple aún del todo, pero la 1 está a un paso. Si House cruza ≤1,2× la semana
+que viene con la cobertura manteniendo la tendencia, ya habría dos de tres — momento de proponerle a
+Alberto, con los números, si tiene sentido revisar `antelacion_k`. Hoy no: **sin Telegram**, nada se
+ha estancado y ningún piso ha empeorado.
 
 ### La consulta (reproducible tal cual)
 
