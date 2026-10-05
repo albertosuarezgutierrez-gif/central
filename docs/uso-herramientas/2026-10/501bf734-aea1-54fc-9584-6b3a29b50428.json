@@ -1,8 +1,8 @@
 {
  "sesion": "501bf734-aea1-54fc-9584-6b3a29b50428",
  "inicio": "2026-10-05T13:11:07.009Z",
- "fin": "2026-10-05T16:03:18.571Z",
- "llamadas": 519,
+ "fin": "2026-10-05T17:47:07.604Z",
+ "llamadas": 525,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -40,18 +40,18 @@
    }
   },
   "otro": {
-   "llamadas": 50,
-   "chars_in": 42579,
-   "chars_out": 263331,
+   "llamadas": 55,
+   "chars_in": 42589,
+   "chars_out": 331396,
    "errores": 0,
-   "archivos_citados": 1,
-   "chars_citados": 24026,
+   "archivos_citados": 5,
+   "chars_citados": 107410,
    "tools": {
     "SubagentHandback": 11,
     "ToolSearch": 8,
     "AskUserQuestion": 1,
-    "ExitPlanMode": 1,
-    "ReadNotifications": 27,
+    "ExitPlanMode": 3,
+    "ReadNotifications": 30,
     "Monitor": 1,
     "SendUserFile": 1
    }
@@ -102,15 +102,15 @@
    }
   },
   "escritura": {
-   "llamadas": 16,
-   "chars_in": 144534,
-   "chars_out": 312447,
+   "llamadas": 17,
+   "chars_in": 144885,
+   "chars_out": 321038,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Write": 14,
-    "Edit": 2
+    "Edit": 3
    }
   },
   "agente:rastreador-codigo": {
