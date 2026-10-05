@@ -39,7 +39,12 @@ export const MASCARA_GESTIONADA = 'names,phoneNumbers,emailAddresses,organizatio
 export const MAX_RETIRADA_POR_PASADA = 50
 
 const ETIQUETA: Record<GrupoContacto, string> = { cliente: 'Cliente', lead: 'Lead' }
-const SUFIJO = / · AS (Cliente|Lead)$/
+// `(?:^|\s)`: sin apellidos el familyName es «· AS Lead» (sin espacio delante). Con ` · AS` a secas
+// no casaba, el apellido leído de Google era «· AS Lead» ≠ '' y CADA HORA se reescribía (y se
+// encolaba un «cambio en Google» falso) para todos los leads, que llegan sin apellidos.
+const SUFIJO = /(?:^|\s)· AS (Cliente|Lead)$/
+/** Lo que se escribe en Google cuando la ficha no tiene ni nombre ni apellidos; al leer vuelve a ''. */
+const SIN_NOMBRE = '(sin nombre)'
 
 export type CamposSincronizados = {
   nombre: string
@@ -56,8 +61,8 @@ export type PersonaGoogle = {
   etag?: string
   metadata?: { deleted?: boolean }
   names?: { givenName?: string; familyName?: string }[]
-  phoneNumbers?: { value?: string; canonicalForm?: string }[]
-  emailAddresses?: { value?: string }[]
+  phoneNumbers?: { value?: string; canonicalForm?: string; type?: string }[]
+  emailAddresses?: { value?: string; type?: string }[]
   organizations?: { name?: string; title?: string }[]
   externalIds?: { value?: string; type?: string }[]
   memberships?: { contactGroupMembership?: { contactGroupResourceName?: string } }[]
@@ -122,6 +127,11 @@ export type Plan = {
   olvidar: string[]
   /** Vínculos que pasan a `fuera_del_grupo` (Alberto lo sacó del grupo a mano: ya no es nuestro). */
   apartar: string[]
+  /**
+   * Vínculos de una ficha ABSORBIDA que pasan tal cual a su superviviente sin tocar Google (hoy:
+   * el contacto estaba `fuera_del_grupo`; la decisión de Alberto sobre esa persona se hereda).
+   */
+  reasignar: { de: string; a: string }[]
   revisiones: Revision[]
   omitidos: number
   ilegibles: number
@@ -186,7 +196,7 @@ export function camposDeGoogle(p: PersonaGoogle): CamposSincronizados {
     titulo === 'Cliente' ? 'cliente' : titulo === 'Lead' ? 'lead' : sufijo ? (sufijo[1] === 'Cliente' ? 'cliente' : 'lead') : null
   const tel = p.phoneNumbers?.[0]
   return {
-    nombre: limpio(n?.givenName) ?? '',
+    nombre: limpio(n?.givenName) === SIN_NOMBRE ? '' : (limpio(n?.givenName) ?? ''),
     apellidos: familia.replace(SUFIJO, '').trim(),
     telefono: limpio(tel?.canonicalForm) ?? (telefonoCanonico(tel?.value) || null),
     email: emailCanonico(p.emailAddresses?.[0]?.value),
@@ -211,7 +221,7 @@ export function personaDesdeCampos(c: CamposSincronizados, clienteId: string, et
   const nombreVacio = c.nombre === '' && c.apellidos === ''
   return {
     ...(etag ? { etag } : {}),
-    names: [{ givenName: nombreVacio ? '(sin nombre)' : c.nombre, familyName: `${c.apellidos} · AS ${etiqueta}`.trim() }],
+    names: [{ givenName: nombreVacio ? SIN_NOMBRE : c.nombre, familyName: `${c.apellidos} · AS ${etiqueta}`.trim() }],
     phoneNumbers: c.telefono ? [{ value: c.telefono, type: 'mobile' }] : [],
     emailAddresses: c.email ? [{ value: c.email, type: 'other' }] : [],
     organizations: [{ name: NOMBRE_GRUPO_GOOGLE, title: etiqueta }],
@@ -256,9 +266,40 @@ export function seleccionUnica(crm: readonly ContactoMovil[], fusiones: Readonly
   return [...porId.values()]
 }
 
+/** La superviviente FINAL de una cadena de fusiones (A→B y luego B→C: la de A es C). */
+export function superviviente(clienteId: string, fusiones: ReadonlyMap<string, string>): string {
+  let x = clienteId
+  const vistos = new Set<string>()
+  while (fusiones.has(x) && !vistos.has(x)) {
+    vistos.add(x)
+    x = fusiones.get(x)!
+  }
+  return x
+}
+
+/**
+ * Lo de Google VISTO con los ojos del CRM. Un teléfono/correo que el CRM no tiene (`null`) NO es
+ * «el CRM dice que no hay»: un lead con baja de WhatsApp llega de `leadsCompetencia` sin teléfono, y
+ * pisar Google con ese hueco le borraría el número del móvil. Ese campo ni se compara ni se pisa.
+ */
+function vistaGestionada(cg: CamposSincronizados, cc: CamposSincronizados): CamposSincronizados {
+  return { ...cg, telefono: cc.telefono === null ? null : cg.telefono, email: cc.email === null ? null : cg.email }
+}
+
+/** La persona a escribir, conservando TAL CUAL el teléfono/correo de Google que el CRM no trae. */
+function conservandoDeGoogle(persona: PersonaParaEscribir, cc: CamposSincronizados, g: PersonaGoogle): PersonaParaEscribir {
+  const tels = (g.phoneNumbers ?? []).flatMap((t) => (limpio(t.value) ? [{ value: t.value!, type: t.type ?? 'mobile' }] : []))
+  const mails = (g.emailAddresses ?? []).flatMap((m) => (limpio(m.value) ? [{ value: m.value!, type: m.type ?? 'other' }] : []))
+  return {
+    ...persona,
+    phoneNumbers: cc.telefono === null ? tels : persona.phoneNumbers,
+    emailAddresses: cc.email === null ? mails : persona.emailAddresses,
+  }
+}
+
 export function planificarSync(e: EntradaPlan): Plan {
   const plan: Plan = {
-    crear: [], actualizar: [], refrescar: [], retirar: [], olvidar: [], apartar: [], revisiones: [],
+    crear: [], actualizar: [], refrescar: [], retirar: [], olvidar: [], apartar: [], reasignar: [], revisiones: [],
     omitidos: 0, ilegibles: 0, avisos: [], necesitaListadoCompleto: false,
   }
   const crm = seleccionUnica(e.crm, e.fusiones)
@@ -290,16 +331,36 @@ export function planificarSync(e: EntradaPlan): Plan {
     const id = idExterno(p)
     if (id) libresPorId.set(id, p)
   }
-  // Vínculos de fichas absorbidas, por superviviente: el contacto se hereda, no se duplica.
+  // Un contacto sin vínculo que lleva el id de una ficha ABSORBIDA es de su superviviente (el
+  // vínculo se perdió al fusionar): se recupera por ahí en vez de crear otro.
+  const libresPorSuperviviente = new Map<string, PersonaGoogle>()
+  for (const [id, p] of libresPorId) {
+    const sup = superviviente(id, e.fusiones)
+    if (sup !== id && !libresPorSuperviviente.has(sup)) libresPorSuperviviente.set(sup, p)
+  }
+  // Vínculos de fichas absorbidas, por superviviente FINAL (las cadenas A→B→C también): el
+  // contacto se hereda, no se duplica. Si hay varios, gana uno activo; uno `fuera_del_grupo` se
+  // hereda tal cual (Alberto sacó a esa persona del grupo: no se le vuelve a meter).
   const heredable = new Map<string, Vinculo>()
   for (const v of e.vinculos) {
-    const sup = e.fusiones.get(v.clienteId)
-    if (sup && v.estado === 'activo' && !vinculoDe.has(sup) && !heredable.has(sup)) heredable.set(sup, v)
+    if (!e.fusiones.has(v.clienteId)) continue
+    const sup = superviviente(v.clienteId, e.fusiones)
+    if (vinculoDe.has(sup)) continue
+    const ya = heredable.get(sup)
+    if (!ya || (ya.estado !== 'activo' && v.estado === 'activo')) heredable.set(sup, v)
   }
 
-  const actualizar = (c: CamposSincronizados, clienteId: string, resourceName: string, etag: string | null, origen: OrigenVinculo, revinculaDe: string | null) => {
+  const actualizar = (c: CamposSincronizados, clienteId: string, resourceName: string, etag: string | null, origen: OrigenVinculo, revinculaDe: string | null, g: PersonaGoogle | undefined) => {
     reclamados.add(resourceName)
-    plan.actualizar.push({ clienteId, resourceName, origen, revinculaDe, hash: hashCampos(c), persona: personaDesdeCampos(c, clienteId, etag) })
+    let persona = personaDesdeCampos(c, clienteId, etag)
+    if (g) persona = conservandoDeGoogle(persona, c, g)
+    else if (e.modo === 'delta' && (c.telefono === null || c.email === null)) {
+      // Sin ver el contacto no se sabe qué teléfono/correo conservar: escribir a ciegas lo vaciaría.
+      plan.necesitaListadoCompleto = true
+      plan.omitidos++
+      return
+    }
+    plan.actualizar.push({ clienteId, resourceName, origen, revinculaDe, hash: hashCampos(c), persona })
   }
 
   for (const c of crm) {
@@ -334,11 +395,12 @@ export function planificarSync(e: EntradaPlan): Plan {
       reclamados.add(v.resourceName)
       if (g) {
         const cg = camposDeGoogle(g)
-        const hg = hashCampos(cg)
+        const vista = vistaGestionada(cg, cc)
+        const hg = hashCampos(vista)
         if (hg !== v.hashEnviado && hg !== hash) {
           // Alguien lo cambió en Google y no coincide con el CRM: CRM gana, Google a revisión.
-          plan.revisiones.push({ tipo: 'cambio_en_google', clienteId: c.clienteId, resourceName: v.resourceName, campos: diferencias(cc, cg), propuesta: cg, huella: huella('cambio_en_google', v.resourceName, hg) })
-          actualizar(cc, c.clienteId, v.resourceName, g.etag ?? v.etag, v.origen, null)
+          plan.revisiones.push({ tipo: 'cambio_en_google', clienteId: c.clienteId, resourceName: v.resourceName, campos: diferencias(cc, vista), propuesta: cg, huella: huella('cambio_en_google', v.resourceName, hashCampos(cg)) })
+          actualizar(cc, c.clienteId, v.resourceName, g.etag ?? v.etag, v.origen, null, g)
           continue
         }
         if (hg === hash) {
@@ -347,7 +409,7 @@ export function planificarSync(e: EntradaPlan): Plan {
           continue
         }
       }
-      if (hash !== v.hashEnviado) actualizar(cc, c.clienteId, v.resourceName, g?.etag ?? v.etag, v.origen, null)
+      if (hash !== v.hashEnviado) actualizar(cc, c.clienteId, v.resourceName, g?.etag ?? v.etag, v.origen, null, g)
       else plan.omitidos++
       continue
     }
@@ -355,13 +417,22 @@ export function planificarSync(e: EntradaPlan): Plan {
     // Sin vínculo. 1) Heredado de una ficha fusionada en esta.
     const h = heredable.get(c.clienteId)
     if (h) {
-      actualizar(cc, c.clienteId, h.resourceName, google.get(h.resourceName)?.etag ?? h.etag, 'fusion', h.clienteId)
+      reclamados.add(h.resourceName)
+      if (h.estado === 'fuera_del_grupo') {
+        plan.reasignar.push({ de: h.clienteId, a: c.clienteId })
+        plan.omitidos++
+        continue
+      }
+      // Se conserva el ORIGEN del contacto (quién lo creó): de él depende si se puede borrar.
+      const gh = google.get(h.resourceName)
+      actualizar(cc, c.clienteId, h.resourceName, gh?.etag ?? h.etag, h.origen, h.clienteId, gh)
       continue
     }
-    // 2) Ya está en el grupo con nuestro id externo (vínculo perdido): se recupera.
-    const porId = libresPorId.get(c.clienteId)
+    // 2) Ya está en el grupo con nuestro id externo, o con el de una ficha fusionada en esta
+    //    (vínculo perdido): se recupera.
+    const porId = libresPorId.get(c.clienteId) ?? libresPorSuperviviente.get(c.clienteId)
     if (porId && !reclamados.has(porId.resourceName)) {
-      actualizar(cc, c.clienteId, porId.resourceName, porId.etag ?? null, 'vinculado_id', null)
+      actualizar(cc, c.clienteId, porId.resourceName, porId.etag ?? null, 'vinculado_id', null, porId)
       continue
     }
     // 3) Mismo teléfono en el grupo: uno y solo uno a cada lado → se vincula.
@@ -369,7 +440,7 @@ export function planificarSync(e: EntradaPlan): Plan {
       ? (libresPorTel.get(cc.telefono) ?? []).filter((p) => !idExterno(p) && (!reclamados.has(p.resourceName) || ambiguos.has(p.resourceName)))
       : []
     if (candidatos.length === 1 && (crmPorTel.get(cc.telefono!) ?? 0) === 1) {
-      actualizar(cc, c.clienteId, candidatos[0].resourceName, candidatos[0].etag ?? null, 'vinculado_telefono', null)
+      actualizar(cc, c.clienteId, candidatos[0].resourceName, candidatos[0].etag ?? null, 'vinculado_telefono', null, candidatos[0])
       continue
     }
     if (candidatos.length > 0) {
@@ -388,7 +459,7 @@ export function planificarSync(e: EntradaPlan): Plan {
   if (e.modo === 'delta' && plan.crear.length > 0) plan.necesitaListadoCompleto = true
 
   // Fichas que ya no están en la selección.
-  const heredados = new Set(plan.actualizar.filter((a) => a.revinculaDe).map((a) => a.revinculaDe!))
+  const heredados = new Set([...plan.actualizar.filter((a) => a.revinculaDe).map((a) => a.revinculaDe!), ...plan.reasignar.map((r) => r.de)])
   const fuera = e.vinculos.filter((v) => !enSeleccion.has(v.clienteId) && !intocables.has(v.clienteId) && !heredados.has(v.clienteId))
   if (fuera.length > 0 && !e.seleccionCompleta) {
     plan.avisos.push(`selección incompleta: no se retira ninguno de los ${fuera.length} contactos que no aparecen`)
@@ -434,4 +505,18 @@ export function esperaReintento(intento: number, retryAfter: string | null, azar
 /** El `syncToken` de People caduca (7 días): 410, o 400 con `EXPIRED_SYNC_TOKEN`. */
 export function syncTokenCaducado(status: number, cuerpo: string): boolean {
   return status === 410 || (status === 400 && /EXPIRED_SYNC_TOKEN|sync token.*expired/i.test(cuerpo))
+}
+
+/**
+ * Qué contactos se borran de Google al desconectar con `borrarContactos`: solo los que CREÓ el CRM
+ * (`origen: 'creado'`), siguen activos y siguen en el grupo. Uno vinculado por teléfono o por id
+ * era un contacto de Alberto antes de la sincronización (o pudo serlo): se queda. Uno apartado
+ * (`fuera_del_grupo`) ya no es nuestro. Misma regla que la retirada horaria (`retirar`).
+ */
+export function aBorrarAlDesconectar(
+  miembros: readonly string[],
+  vinculos: readonly { resourceName: string; origen: string; estado: string }[],
+): string[] {
+  const creados = new Set(vinculos.filter((v) => v.origen === 'creado' && v.estado === 'activo').map((v) => v.resourceName))
+  return miembros.filter((rn) => creados.has(rn))
 }

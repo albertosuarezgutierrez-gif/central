@@ -16,7 +16,7 @@ const Cuerpo = z.object({ borrarContactos: z.boolean() }).strict()
 /**
  * POST /api/operador/google-contactos/desconectar — revoca el acceso en Google
  * (oauth2.googleapis.com/revoke), borra el refresh token y los vínculos. Con
- * `borrarContactos: true` borra antes los contactos del grupo que creó/vinculó el CRM (nunca uno
+ * `borrarContactos: true` borra antes los contactos del grupo que CREÓ el CRM (ni uno vinculado por teléfono/id ni uno
  * personal). La cola de revisión se conserva.
  */
 export const POST = auditado(async (req: Request) => {

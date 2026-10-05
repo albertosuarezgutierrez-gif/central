@@ -712,6 +712,14 @@ export function interpretarContactosMovil(status: number, j: unknown): { contact
   return { contactos, clientesSinLeer: typeof o.clientesSinLeer === 'number' ? o.clientesSinLeer : 0 }
 }
 
+/** Cola de revisión de la sincronización con Google Contacts (50 por página, cursor `despuesDe`). */
+export function revisionesGoogleAsegura(despuesDe: string | null): Promise<Reenvio> {
+  return llamar(`/api/operador/google-contactos/revision${despuesDe ? `?despuesDe=${encodeURIComponent(despuesDe)}` : ''}`, { method: 'GET' })
+}
+export function resolverRevisionGoogleAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/revision', { method: 'POST', body: JSON.stringify(body) })
+}
+
 export function tareasHoyAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/tareas-hoy', { method: 'GET' })
 }

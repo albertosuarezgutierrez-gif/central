@@ -26,8 +26,12 @@ Lógica: `packages/module-seguros/src/google-contactos.ts`. SQL: `apps/asegura/p
 ## Uso
 - Conectar: abrir en el navegador, con sesión de asegura, `https://<asegura>/api/google-contactos/conectar`.
 - Estado: `GET /api/operador/google-contactos`. Desconectar: `POST /api/operador/google-contactos/desconectar`
-  `{ "borrarContactos": true|false }` (revoca en Google y borra el token; con `true` borra solo los contactos vinculados).
+  `{ "borrarContactos": true|false }` (revoca en Google y borra el token; con `true` borra solo los contactos que CREÓ el CRM; los vinculados por teléfono/id eran de Alberto y se quedan).
 - ¿Quién llama?: `GET /api/operador/llamada?tel=600112233` (índice ciego, solo lectura).
+- Cola de revisión: plataforma → /correduria → Clientes («Google Contacts: revisión»), puerto
+  `GET|POST /api/operador/google-contactos/revision` (50 por página por cursor; acciones `aceptar_lead`, `descartar`,
+  `mantener_crm`). Ninguna toca el vínculo ni Google: «Mantener CRM» sobre un sacado del grupo NO lo recrea.
+- Teléfono/correo ausente en el CRM (p. ej. lead con baja de WhatsApp) NO vacía el de Google: se conserva.
 
 ## Límites
 - **Google admite 25.000 contactos por cuenta (incluidos los personales).** Si la sincronización los superaría, se

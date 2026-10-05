@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   camposDeCrm, camposDeGoogle, comprobarLimite, esReintentable, esperaReintento, hashCampos, personaDesdeCampos,
-  planificarSync, syncTokenCaducado, trocear, LIMITE_CONTACTOS_GOOGLE,
+  planificarSync, syncTokenCaducado, trocear, aBorrarAlDesconectar, LIMITE_CONTACTOS_GOOGLE,
   type EntradaPlan, type PersonaGoogle, type Vinculo,
 } from './google-contactos.ts'
 import type { ContactoMovil } from './vcard.ts'
@@ -200,4 +200,110 @@ test('red: reintentos, espera y syncToken caducado', () => {
   assert.equal(syncTokenCaducado(400, '{"reason":"EXPIRED_SYNC_TOKEN"}'), true)
   assert.equal(syncTokenCaducado(400, 'otra cosa'), false)
   assert.deepEqual(trocear([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]])
+})
+
+// ─── Revisión adversarial (05/10/2026) ──────────────────────────────────────────
+
+const lead: ContactoMovil = { clienteId: 'l1', nombre: 'María López Ruiz', apellidos: null, telefono: '622 33 44 55', email: 'maria@x.es', grupo: 'lead' }
+
+test('🪤 3a: lead SIN apellidos — lo que Google devuelve tal cual se envió da el mismo hash (no reescribe cada hora)', () => {
+  const plan = planificarSync(entrada({ crm: [lead], vinculos: [vinculo(lead, 'people/9')], google: [enGoogle(lead, 'people/9')] }))
+  assert.equal(plan.actualizar.length, 0)
+  assert.equal(plan.revisiones.length, 0)
+  assert.equal(plan.omitidos, 1)
+})
+
+test('🪤 3a: ficha sin nombre ni apellidos («(sin nombre)») tampoco cicla', () => {
+  const nadie: ContactoMovil = { clienteId: 'l2', nombre: null, apellidos: null, telefono: '633 44 55 66', email: null, grupo: 'lead' }
+  const plan = planificarSync(entrada({ crm: [nadie], vinculos: [vinculo(nadie, 'people/8')], google: [enGoogle(nadie, 'people/8')] }))
+  assert.equal(plan.actualizar.length + plan.revisiones.length, 0)
+})
+
+test('🪤 2: lead con baja de WhatsApp llega sin teléfono → NO se borra el de Google', () => {
+  const sinTel = { ...lead, telefono: null }
+  const plan = planificarSync(entrada({ crm: [sinTel], vinculos: [vinculo(lead, 'people/9')], google: [enGoogle(lead, 'people/9')] }))
+  assert.equal(plan.actualizar.length, 0)
+  assert.equal(plan.revisiones.length, 0)
+  // Y el hash que se guarda ya no vuelve a pedir escritura la hora siguiente.
+  const refresco = plan.refrescar[0]
+  const plan2 = planificarSync(entrada({ crm: [sinTel], vinculos: [vinculo(lead, 'people/9', { hashEnviado: refresco.hash })], google: [enGoogle(lead, 'people/9')] }))
+  assert.equal(plan2.actualizar.length + plan2.refrescar.length + plan2.revisiones.length, 0)
+})
+
+test('🪤 2: si hay que escribir por OTRO campo, el teléfono de Google se conserva tal cual', () => {
+  const sinTel = { ...lead, telefono: null, email: 'nuevo@x.es' }
+  const g = enGoogle(lead, 'people/9')
+  const plan = planificarSync(entrada({ crm: [sinTel], vinculos: [vinculo(lead, 'people/9')], google: [g] }))
+  assert.equal(plan.actualizar.length, 1)
+  assert.deepEqual(plan.actualizar[0].persona.phoneNumbers.map((t) => t.value), [g.phoneNumbers![0].value])
+  assert.deepEqual(plan.actualizar[0].persona.emailAddresses, [{ value: 'nuevo@x.es', type: 'other' }])
+})
+
+test('🪤 2: correo ausente en el CRM tampoco vacía el de Google', () => {
+  const sinMail = { ...lead, email: null, nombre: 'María López Ruiz (Seguros)' }
+  const plan = planificarSync(entrada({ crm: [sinMail], vinculos: [vinculo(lead, 'people/9')], google: [enGoogle(lead, 'people/9')] }))
+  assert.equal(plan.actualizar.length, 1)
+  assert.deepEqual(plan.actualizar[0].persona.emailAddresses.map((m) => m.value), ['maria@x.es'])
+})
+
+test('🪤 2: en delta sin ver el contacto, un teléfono ausente NO se escribe a ciegas: pide listado completo', () => {
+  const sinTel = { ...lead, telefono: null, email: 'nuevo@x.es' }
+  const plan = planificarSync(entrada({ crm: [sinTel], vinculos: [vinculo(lead, 'people/9')], modo: 'delta' }))
+  assert.equal(plan.actualizar.length, 0)
+  assert.equal(plan.necesitaListadoCompleto, true)
+})
+
+test('🪤 3c: fusión encadenada (A→B→C): C hereda el contacto de A, no crea otro', () => {
+  const a = { ...ana, clienteId: 'cA' }
+  const c = { ...ana, clienteId: 'cC' }
+  const plan = planificarSync(entrada({
+    crm: [c], fusiones: new Map([['cA', 'cB'], ['cB', 'cC']]),
+    vinculos: [vinculo(a, 'people/A')], google: [enGoogle(a, 'people/A')],
+  }))
+  assert.equal(plan.crear.length, 0)
+  assert.equal(plan.actualizar.length, 1)
+  assert.equal(plan.actualizar[0].clienteId, 'cC')
+  assert.equal(plan.actualizar[0].revinculaDe, 'cA')
+  assert.equal(plan.retirar.length + plan.olvidar.length, 0)
+})
+
+test('🪤 3c: vínculo perdido tras fusionar (el contacto lleva el id de la ABSORBIDA) → se recupera, no se duplica', () => {
+  const absorbida = { ...ana, clienteId: 'c0' }
+  const plan = planificarSync(entrada({ crm: [ana], fusiones: new Map([['c0', 'c1']]), google: [enGoogle(absorbida, 'people/0')] }))
+  assert.equal(plan.crear.length, 0)
+  assert.equal(plan.actualizar.length, 1)
+  assert.equal(plan.actualizar[0].resourceName, 'people/0')
+  assert.equal(plan.actualizar[0].clienteId, 'c1')
+})
+
+test('🪤 3c: la absorbida estaba SACADA del grupo → la superviviente lo hereda apartado, no se recrea', () => {
+  const absorbida = { ...ana, clienteId: 'c0' }
+  const plan = planificarSync(entrada({
+    crm: [ana], fusiones: new Map([['c0', 'c1']]),
+    vinculos: [vinculo(absorbida, 'people/0', { estado: 'fuera_del_grupo' })], google: [enGoogle(absorbida, 'people/0', { memberships: [] })],
+  }))
+  assert.equal(plan.crear.length, 0)
+  assert.deepEqual(plan.reasignar, [{ de: 'c0', a: 'c1' }])
+  assert.equal(plan.olvidar.length, 0)
+})
+
+test('🪤 3c: lo heredado conserva QUIÉN creó el contacto (si no, al desconectar se perdería o se borraría mal)', () => {
+  const absorbida = { ...ana, clienteId: 'c0' }
+  const plan = planificarSync(entrada({
+    crm: [ana], fusiones: new Map([['c0', 'c1']]),
+    vinculos: [vinculo(absorbida, 'people/0', { origen: 'vinculado_telefono' })], google: [enGoogle(absorbida, 'people/0')],
+  }))
+  assert.equal(plan.actualizar[0].origen, 'vinculado_telefono')
+})
+
+test('🪤 3b: al desconectar con borrado solo se borra lo que CREÓ el CRM (ni lo vinculado por teléfono/id ni lo apartado)', () => {
+  const miembros = ['people/1', 'people/2', 'people/3', 'people/4', 'people/5']
+  const borrar = aBorrarAlDesconectar(miembros, [
+    { resourceName: 'people/1', origen: 'creado', estado: 'activo' },
+    { resourceName: 'people/2', origen: 'vinculado_telefono', estado: 'activo' },
+    { resourceName: 'people/3', origen: 'vinculado_id', estado: 'activo' },
+    { resourceName: 'people/4', origen: 'creado', estado: 'fuera_del_grupo' },
+    { resourceName: 'people/9', origen: 'creado', estado: 'activo' }, // ya no está en el grupo
+  ])
+  assert.deepEqual(borrar, ['people/1'])
 })

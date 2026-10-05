@@ -66,10 +66,18 @@ CREATE TABLE IF NOT EXISTS seguros.google_contactos_revision (
   propuesta_cifrada  text CHECK (propuesta_cifrada IS NULL OR propuesta_cifrada LIKE 'v1:%'),
   huella             text NOT NULL,
   estado             text NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'aceptada', 'descartada')),
+  -- El BOTÓN que la cerró (`efectoResolucion` de module-seguros). Ninguno toca el vínculo ni Google:
+  -- «mantener_crm» sobre un contacto sacado del grupo solo cierra, no lo recrea.
+  resolucion         text CHECK (resolucion IN ('aceptar_lead', 'descartar', 'mantener_crm')),
   resuelto_por       text,
   resuelto_en        timestamptz,
   creado_en          timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT google_contactos_revision_huella UNIQUE (correduria_id, huella)
+  CONSTRAINT google_contactos_revision_huella UNIQUE (correduria_id, huella),
+  -- Pendiente ⇔ sin resolver; resuelta ⇔ con botón, quién y cuándo.
+  CONSTRAINT google_contactos_revision_resuelta CHECK (
+    (estado = 'pendiente') = (resolucion IS NULL AND resuelto_por IS NULL AND resuelto_en IS NULL)
+    AND (estado = 'pendiente' OR (resolucion IS NOT NULL AND resuelto_por IS NOT NULL AND resuelto_en IS NOT NULL))
+  )
 );
 CREATE INDEX IF NOT EXISTS google_contactos_revision_pendiente
   ON seguros.google_contactos_revision (correduria_id, creado_en DESC) WHERE estado = 'pendiente';
@@ -84,9 +92,10 @@ REVOKE ALL ON seguros.google_contactos_revision FROM PUBLIC, anon, authenticated
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON seguros.google_contactos_conexion TO prisma_seguros;
 GRANT SELECT, INSERT, UPDATE, DELETE ON seguros.google_contactos_vinculo  TO prisma_seguros;
--- La cola se lee, se inserta y se RESUELVE; no se borra (es la constancia).
+-- La cola se lee, se inserta y se RESUELVE; no se borra (es la constancia). `cliente_id` se
+-- actualiza solo al «aceptar como lead» (la propuesta queda enlazada a la ficha que se creó).
 GRANT SELECT, INSERT ON seguros.google_contactos_revision TO prisma_seguros;
-GRANT UPDATE (estado, resuelto_por, resuelto_en) ON seguros.google_contactos_revision TO prisma_seguros;
+GRANT UPDATE (estado, resolucion, resuelto_por, resuelto_en, cliente_id) ON seguros.google_contactos_revision TO prisma_seguros;
 
 COMMENT ON TABLE seguros.google_contactos_conexion IS
   'Conexión OAuth con Google Contacts (una por correduría). refresh_token_cifrado con encryptField; nunca en claro.';

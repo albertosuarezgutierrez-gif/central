@@ -1528,6 +1528,8 @@ model GoogleContactosRevision {
   propuestaCifrada String?   @map("propuesta_cifrada")
   huella           String
   estado           String    @default("pendiente")
+  /// aceptar_lead | descartar | mantener_crm (null mientras está pendiente; CHECK en BD).
+  resolucion       String?
   resueltoPor      String?   @map("resuelto_por")
   resueltoEn       DateTime? @map("resuelto_en") @db.Timestamptz(6)
   creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)

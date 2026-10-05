@@ -13,7 +13,7 @@
  */
 import { requireSecret } from '@central/core-identity'
 import {
-  comprobarLimite, planificarSync, trocear, LOTE_BORRADO_GOOGLE, LOTE_ESCRITURA_GOOGLE,
+  aBorrarAlDesconectar, comprobarLimite, planificarSync, trocear, LOTE_BORRADO_GOOGLE, LOTE_ESCRITURA_GOOGLE, TIPO_ID_EXTERNO,
   type CamposSincronizados, type EstadoVinculo, type OrigenVinculo, type PersonaGoogle, type Plan, type Vinculo,
 } from '@central/module-seguros/google-contactos'
 import { decryptField, encryptField } from '@central/module-seguros-pii'
@@ -147,14 +147,29 @@ export type ResultadoSync =
       avisos: string[]
     }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * absorbida → en quién se fusionó, siguiendo las CADENAS (A→B y después B→C): sin el segundo
+ * salto, el vínculo de A no lo heredaba C y se creaba un contacto duplicado.
+ */
 async function fusionesDe(correduriaId: string, ids: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>()
-  for (const tanda of trocear([...new Set(ids)], 5000)) {
-    const filas = await prismaAsegura().cliente.findMany({
-      where: { correduriaId, id: { in: tanda }, mergedIntoClienteId: { not: null } },
-      select: { id: true, mergedIntoClienteId: true },
-    })
-    for (const f of filas) if (f.mergedIntoClienteId) out.set(f.id, f.mergedIntoClienteId)
+  let pendientes = [...new Set(ids.filter((id) => UUID.test(id)))]
+  for (let salto = 0; salto < 10 && pendientes.length > 0; salto++) {
+    const siguientes: string[] = []
+    for (const tanda of trocear(pendientes, 5000)) {
+      const filas = await prismaAsegura().cliente.findMany({
+        where: { correduriaId, id: { in: tanda }, mergedIntoClienteId: { not: null } },
+        select: { id: true, mergedIntoClienteId: true },
+      })
+      for (const f of filas) {
+        if (!f.mergedIntoClienteId) continue
+        out.set(f.id, f.mergedIntoClienteId)
+        if (!out.has(f.mergedIntoClienteId)) siguientes.push(f.mergedIntoClienteId)
+      }
+    }
+    pendientes = [...new Set(siguientes)]
   }
   return out
 }
@@ -219,7 +234,6 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
       clienteId: v.clienteId, resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hashEnviado,
       origen: v.origen as OrigenVinculo, estado: v.estado as EstadoVinculo,
     }))
-    const fusiones = await fusionesDe(correduriaId, [...sel.contactos.map((c) => c.clienteId), ...vinculos.map((v) => v.clienteId)])
 
     let modo: 'completo' | 'delta' = conexion.syncToken ? 'delta' : 'completo'
     let listado: Awaited<ReturnType<People['listar']>>
@@ -230,15 +244,21 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
       modo = 'completo'
       listado = await people.listar(null)
     }
-    const planificar = (google: PersonaGoogle[]) => planificarSync({
-      crm: sel.contactos, seleccionCompleta: sel.clientesSinLeer === 0, vinculos, fusiones, google, modo, grupoResourceName: grupo,
+    // Las fusiones se miran también para los ids externos que hay en Google: un contacto huérfano
+    // con el id de una ficha absorbida es de su superviviente (vínculo perdido al fusionar).
+    const idsExternos = (ps: PersonaGoogle[]) => ps.flatMap((p) => (p.externalIds ?? []).filter((x) => x.type === TIPO_ID_EXTERNO && x.value).map((x) => x.value!))
+    const baseIds = [...sel.contactos.map((c) => c.clienteId), ...vinculos.map((v) => v.clienteId)]
+    const planificar = async (google: PersonaGoogle[]) => planificarSync({
+      crm: sel.contactos, seleccionCompleta: sel.clientesSinLeer === 0, vinculos,
+      fusiones: await fusionesDe(correduriaId, [...baseIds, ...idsExternos(google)]),
+      google, modo, grupoResourceName: grupo,
     })
-    let plan = planificar(listado.personas)
+    let plan = await planificar(listado.personas)
     if (plan.necesitaListadoCompleto) {
-      // Hay que crear: sin ver el grupo entero, el dedup por teléfono no sería fiable.
+      // Hay que crear (o conservar un teléfono que no se ve): sin el grupo entero no es fiable.
       modo = 'completo'
       listado = await people.listar(null)
-      plan = planificar(listado.personas)
+      plan = await planificar(listado.personas)
     }
     if (modo === 'completo') {
       comprobarLimite({ aSincronizar: plan.crear.length + vinculos.length, vinculados: vinculos.length, totalCuenta: listado.totalCuenta })
@@ -247,6 +267,10 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
     const revisionesNuevas = await encolarRevisiones(correduriaId, plan)
     if (plan.olvidar.length) await db.googleContactosVinculo.deleteMany({ where: { correduriaId, clienteId: { in: plan.olvidar } } })
     if (plan.apartar.length) await db.googleContactosVinculo.updateMany({ where: { correduriaId, clienteId: { in: plan.apartar } }, data: { estado: 'fuera_del_grupo' } })
+    for (const r of plan.reasignar) {
+      // El vínculo apartado de una absorbida pasa a su superviviente: no se recrea el contacto.
+      await db.googleContactosVinculo.updateMany({ where: { correduriaId, clienteId: r.de }, data: { clienteId: r.a } })
+    }
     for (const r of plan.refrescar) {
       await db.googleContactosVinculo.updateMany({ where: { correduriaId, clienteId: r.clienteId }, data: { etag: r.etag, hashEnviado: r.hash, lastSyncedAt: new Date() } })
     }
@@ -259,13 +283,24 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
 
     for (const lote of trocear(plan.actualizar, LOTE_ESCRITURA_GOOGLE)) {
       if (lotes++ >= MAX_LOTES_POR_PASADA) break
-      const heredados = lote.filter((a) => a.revinculaDe).map((a) => a.revinculaDe!)
-      if (heredados.length) await db.googleContactosVinculo.deleteMany({ where: { correduriaId, clienteId: { in: heredados } } })
       const res = await people.actualizarLote(Object.fromEntries(lote.map((a) => [a.resourceName, a.persona])))
       for (const a of lote) {
         const p = res[a.resourceName]
+        // Si Google no lo escribió, el vínculo de la absorbida SE QUEDA: borrarlo antes (como se
+        // hacía) perdía el contacto y la hora siguiente se creaba un duplicado.
         if (!p) { fallidos++; continue }
-        await guardarVinculo(correduriaId, { clienteId: a.clienteId, resourceName: a.resourceName, etag: p.etag ?? null, hash: a.hash, origen: a.origen })
+        const v = { clienteId: a.clienteId, resourceName: a.resourceName, etag: p.etag ?? null, hash: a.hash, origen: a.origen }
+        if (a.revinculaDe) {
+          // Mismo resourceName (UNIQUE): fuera el de la absorbida y dentro el de la superviviente, a la vez.
+          await db.$transaction(async (tx) => {
+            await tx.googleContactosVinculo.deleteMany({ where: { correduriaId, clienteId: { in: [a.revinculaDe!, v.clienteId] } } })
+            await tx.googleContactosVinculo.create({
+              data: { correduriaId, clienteId: v.clienteId, resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hash, origen: v.origen, estado: 'activo', lastSyncedAt: new Date() },
+            })
+          })
+        } else {
+          await guardarVinculo(correduriaId, v)
+        }
         actualizados++
       }
     }
@@ -334,8 +369,8 @@ export type ResultadoDesconexion =
 
 /**
  * Revoca en Google, borra el token y los vínculos. Con `borrarContactos`, borra antes los
- * contactos del grupo QUE SON NUESTROS (vinculados); los que Alberto añadiera a mano al grupo
- * se quedan (sin grupo si este se borra). La cola de revisión se conserva: es la constancia.
+ * contactos del grupo que CREÓ el CRM (`aBorrarAlDesconectar`); los vinculados por teléfono/id y los
+ * que Alberto añadiera a mano se quedan (sin grupo si este se borra). La cola de revisión se conserva.
  */
 export async function desconectarGoogleContactos(correduriaId: string, p: { borrarContactos: boolean }): Promise<ResultadoDesconexion> {
   const db = prismaAsegura()
@@ -358,8 +393,9 @@ export async function desconectarGoogleContactos(correduriaId: string, p: { borr
       try {
         const people = new People(await accesoDesdeRefresh(credencialesGoogle(), refresh))
         const miembros = await people.miembrosGrupo(c.grupoResourceName)
-        const nuestros = new Set((await db.googleContactosVinculo.findMany({ where: { correduriaId }, select: { resourceName: true } })).map((v) => v.resourceName))
-        const borrar = miembros.filter((rn) => nuestros.has(rn))
+        // Solo lo que CREÓ el CRM: lo vinculado por teléfono/id era un contacto de Alberto.
+        const vinculos = await db.googleContactosVinculo.findMany({ where: { correduriaId }, select: { resourceName: true, origen: true, estado: true } })
+        const borrar = aBorrarAlDesconectar(miembros, vinculos)
         for (const lote of trocear(borrar, LOTE_BORRADO_GOOGLE)) await people.borrarLote(lote)
         contactosBorrados = borrar.length
         if (borrar.length === miembros.length) {

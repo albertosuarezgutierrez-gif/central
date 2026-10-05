@@ -11,6 +11,7 @@
     "./matricula": "./src/matricula.ts",
     "./referencia-presupuesto": "./src/referencia-presupuesto.ts",
     "./google-contactos": "./src/google-contactos.ts",
+    "./google-contactos-revision": "./src/google-contactos-revision.ts",
     "./telefono-e164": "./src/telefono-e164.ts"
   },
   "scripts": {
