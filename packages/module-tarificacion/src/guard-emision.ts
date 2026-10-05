@@ -12,6 +12,19 @@
 // dispara: falso positivo aceptado).
 export const PATRON_EMISION = /emit|emisi|contrat|formaliz|suplement|anul|baja/i
 
+// Textos del formulario REAL de Allianz ePAC «Comunidades 2020» (captura del 05/10/2026) que
+// materializan o inician una alta y que el bot NUNCA debe pulsar: «Aceptar» (acepta/guarda la
+// oferta elegida), «NUEVA ALTA» (abre un alta nueva) y el radio «ELIJA UNA OPCIÓN» (elige modalidad
+// para contratar). Se comparan sin tildes y tolerando separadores (`nueva_alta`, `NuevaAlta`).
+// «aceptar» también casa con «Aceptar cookies»: falso positivo aceptado (fail-closed).
+export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
+  /aceptar/i,
+  /nueva[\s_+-]*alta/i,
+  /elij[ae][\s_+-]*una[\s_+-]*opcion/i,
+  // Login de ePAC: «RECUPERACIÓN DE CONTRASEÑA» dispara un cambio de credenciales de la cuenta.
+  /recuperacion[\s_+-]*de[\s_+-]*contrasena/i,
+]
+
 // Sin «parameter properties» (`constructor(readonly x)`): `node --test` solo QUITA tipos y no las admite.
 export class EmisionBloqueadaError extends Error {
   readonly tipo = 'emision' as const
@@ -39,7 +52,7 @@ export function pareceEmision(texto: string | null | undefined): boolean {
   } catch {
     /* no era URI válida: se mira tal cual */
   }
-  return PATRON_EMISION.test(t)
+  return PATRON_EMISION.test(t) || TEXTOS_BLOQUEADOS_ALTA.some((r) => r.test(t))
 }
 
 /** Lanza si la URL casa con el patrón. */

@@ -53,8 +53,7 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
   const d = obj(e.direccion)
   const via = texto(d?.via)
   const cp = texto(d?.codigoPostal)
-  if (!via) errores.push('direccion.via es obligatoria')
-  if (!cp || !/^\d{5}$/.test(cp)) errores.push('direccion.codigoPostal tiene que tener 5 dígitos')
+  if (!cp || !/^\d{5}$/.test(cp)) errores.push('direccion.codigoPostal (C.P. *) tiene que tener 5 dígitos')
 
   const anioMax = hoy.getUTCFullYear()
   const anioConstruccion = entero(e.anioConstruccion, 'anioConstruccion', errores, 1800, anioMax)
@@ -62,15 +61,39 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
   const m2Construidos = entero(e.m2Construidos, 'm2Construidos', errores, 1)
   const numViviendas = entero(e.numViviendas, 'numViviendas', errores, 0)
   const numLocales = entero(e.numLocales, 'numLocales', errores, 0)
+  const numViviendasYLocalesDado = entero(e.numViviendasYLocales, 'numViviendasYLocales', errores, 1)
   const numGarajes = entero(e.numGarajes, 'numGarajes', errores, 0)
   const plantas = entero(e.plantas, 'plantas', errores, 1, 80)
   const plantasBajoRasante = entero(e.plantasBajoRasante, 'plantasBajoRasante', errores, 0, 10)
+  const sotanos = entero(e.sotanos, 'sotanos', errores, 0, 10)
+  const numEdificios = entero(e.numEdificios, 'numEdificios', errores, 1, 999)
   const siniestros = entero(e.siniestrosUltimos3Anios, 'siniestrosUltimos3Anios', errores, 0)
   const capitalContinente = importe(e.capitalContinente, 'capitalContinente', errores)
   const capitalContenido = importe(e.capitalContenido, 'capitalContenido', errores)
-  if (m2Construidos === null && capitalContinente === null) {
-    errores.push('hace falta m2Construidos o capitalContinente: sin ninguno no hay con qué dimensionar el edificio')
-  }
+
+  // «Nº Viv. y Locales *» es un único campo en ePAC: dado, o la suma de los dos (solo si vienen ambos).
+  const numViviendasYLocales =
+    numViviendasYLocalesDado ?? (numViviendas !== null && numLocales !== null ? numViviendas + numLocales : null)
+
+  // Selects de ePAC: string libre (TODO(valores admitidos): no se inventa catálogo).
+  const tipoVivienda = texto(e.tipoVivienda)
+  const uso = texto(e.uso)
+  const listaPropietarios = texto(e.listaPropietarios)
+
+  // Obligatorios (*) del formulario «Comunidades 2020».
+  const faltan: [string, unknown][] = [
+    ['fechaEfecto (Fecha Inicio *)', texto(e.fechaEfecto)],
+    ['fechaTermino (Fecha Término *)', texto(e.fechaTermino)],
+    ['m2Construidos (Metros Cuadrados *)', m2Construidos],
+    ['anioConstruccion (Año Construcción *)', anioConstruccion],
+    ['tipoVivienda (Tipo Vivienda *)', tipoVivienda],
+    ['uso (Uso *)', uso],
+    ['plantas (Plantas sobre N. Calle *)', plantas],
+    ['numEdificios (Nº Edificios *)', numEdificios],
+    ['numViviendasYLocales (Nº Viv. y Locales *; o numViviendas + numLocales)', numViviendasYLocales],
+    ['listaPropietarios (Lista Propietarios / Arrendatarios *)', listaPropietarios],
+  ]
+  for (const [campo, valor] of faltan) if (valor === null) errores.push(`${campo} es obligatorio`)
 
   const calidad = e.calidadConstruccion
   if (calidad !== undefined && calidad !== null && calidad !== 'normal' && calidad !== 'alta' && calidad !== 'lujo') {
@@ -78,14 +101,25 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
   }
 
   const fecha = texto(e.fechaEfecto)
-  if (fecha !== null && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) errores.push('fechaEfecto: formato AAAA-MM-DD')
-  if (fecha !== null && /^\d{4}-\d{2}-\d{2}$/.test(fecha) && fecha < hoy.toISOString().slice(0, 10)) {
+  const fechaTermino = texto(e.fechaTermino)
+  const iso = /^\d{4}-\d{2}-\d{2}$/
+  if (fecha !== null && !iso.test(fecha)) errores.push('fechaEfecto: formato AAAA-MM-DD')
+  if (fechaTermino !== null && !iso.test(fechaTermino)) errores.push('fechaTermino: formato AAAA-MM-DD')
+  if (fecha !== null && iso.test(fecha) && fecha < hoy.toISOString().slice(0, 10)) {
     errores.push('fechaEfecto: ya ha pasado (una fecha de efecto caducada no se tarifica)')
+  }
+  if (fecha !== null && fechaTermino !== null && iso.test(fecha) && iso.test(fechaTermino) && fechaTermino <= fecha) {
+    errores.push('fechaTermino: tiene que ser posterior a fechaEfecto')
   }
 
   const ascensor = booleano(e.ascensor, 'ascensor', errores)
   const piscina = booleano(e.piscina, 'piscina', errores)
   const zonas = booleano(e.zonasAjardinadas, 'zonasAjardinadas', errores)
+  const instalacionesAnexas = booleano(e.instalacionesAnexas, 'instalacionesAnexas', errores)
+  const asistenciaPlagas = booleano(e.asistenciaPlagas, 'asistenciaPlagas', errores)
+  const asesoramientoJuridico = booleano(e.asesoramientoJuridico, 'asesoramientoJuridico', errores)
+  const impagoCuotas = booleano(e.impagoCuotas, 'impagoCuotas', errores)
+  const ite = booleano(e.ite, 'ite', errores)
 
   if (errores.length) return { ok: false, errores }
   return {
@@ -93,13 +127,32 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
     riesgo: {
       ramo: 'comunidades',
       direccion: {
-        via: via as string,
+        via,
         numero: texto(d?.numero),
         codigoPostal: cp as string,
         municipio: texto(d?.municipio),
         provincia: texto(d?.provincia),
       },
       referenciaCatastral: texto(e.referenciaCatastral),
+      polizaAReemplazar: texto(e.polizaAReemplazar),
+      documentoIdentidad: texto(e.documentoIdentidad),
+      tipoDocumento: texto(e.tipoDocumento),
+      tipoVivienda,
+      uso,
+      sotanos,
+      numEdificios,
+      contiguos: texto(e.contiguos),
+      numViviendasYLocales,
+      listaPropietarios,
+      instalacionesAnexas,
+      formaPagoPrimerRecibo: texto(e.formaPagoPrimerRecibo),
+      formaPagoSucesivos: texto(e.formaPagoSucesivos),
+      comision: texto(e.comision),
+      asistenciaPlagas,
+      asesoramientoJuridico,
+      impagoCuotas,
+      ite,
+      fechaTermino,
       anioConstruccion,
       anioRehabilitacion,
       m2Construidos,

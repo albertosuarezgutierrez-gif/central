@@ -46,6 +46,28 @@ describe('guard de emisión', () => {
     expect(() => comprobarBoton([undefined, 'Formalizar contrato'])).toThrow(/boton/)
   })
 
+  // Formulario real de ePAC «Comunidades 2020»: estos tres controles dan de alta, no cotizan.
+  it.each(['Aceptar', '> Aceptar', 'ACEPTAR', 'NUEVA ALTA', 'Nueva alta', 'ELIJA UNA OPCIÓN', 'Elija una opcion', 'RECUPERACIÓN DE CONTRASEÑA', 'Recuperacion de contraseña'])(
+    'aborta el control de alta de ePAC «%s»',
+    (texto) => {
+      expect(() => comprobarBoton([texto])).toThrow(EmisionBloqueadaError)
+    },
+  )
+
+  it('aborta también por id/value/href de los controles de alta de ePAC', () => {
+    expect(() => comprobarBoton([null, 'btnAceptar'])).toThrow(/guard_emision/)
+    expect(() => comprobarBoton(['', null, undefined, 'nuevaAlta'])).toThrow(/guard_emision/)
+    expect(() => comprobarUrl('https://x/epac/nueva-alta')).toThrow(EmisionBloqueadaError)
+    expect(() => comprobarUrl('https://x/epac/Nueva%20Alta')).toThrow(EmisionBloqueadaError)
+    expect(() => comprobarUrl('https://x/epac/aceptar.do')).toThrow(EmisionBloqueadaError)
+  })
+
+  it('«Calcular» y las pestañas de ePAC siguen pasando', () => {
+    for (const ok of ['Calcular', '> Calcular', 'INICIAR SESIÓN', 'Datos Básicos', 'Tarificar', 'Comunidades 2020']) {
+      expect(() => comprobarBoton([ok])).not.toThrow()
+    }
+  })
+
   it('deja pasar la tarificación', () => {
     for (const ok of ['https://epac.allianz.es/tarificador/comunidades', 'Calcular precio', 'Tarificar', 'Siguiente', 'Descargar proyecto PDF']) {
       expect(pareceEmision(ok)).toBe(false)

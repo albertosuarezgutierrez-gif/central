@@ -7,6 +7,7 @@ import {
   puedeTransitar,
   validarRiesgoComunidad,
   validarOfertas,
+  importeEs,
   franquiciaGeneral,
   garantiasComoRegistro,
   crearRegistro,
@@ -60,36 +61,85 @@ describe('política de reintento: UNO solo, solo infra', () => {
   })
 })
 
-describe('riesgo de comunidad', () => {
+describe('riesgo de comunidad (formulario ePAC «Comunidades 2020»)', () => {
   const hoy = new Date('2026-10-05T10:00:00Z')
   const base = {
-    direccion: { via: 'Calle Feria', numero: '12', codigoPostal: '41003', municipio: 'Sevilla' },
-    anioConstruccion: 1975,
+    direccion: { codigoPostal: '41003', municipio: 'Sevilla' },
+    fechaEfecto: '2026-10-05',
+    fechaTermino: '2027-10-01',
     m2Construidos: 1800,
-    numViviendas: 16,
+    anioConstruccion: 1975,
+    tipoVivienda: 'Viviendas Pisos en Alto',
+    uso: 'Habitual',
     plantas: 5,
+    numEdificios: 1,
+    numViviendasYLocales: 18,
+    listaPropietarios: '> 50%',
   }
-  it('lo que no viene queda null (no 0, no false)', () => {
+  it('con solo los obligatorios (*) valida y el resto queda null (no 0, no false)', () => {
     const r = validarRiesgoComunidad(base, hoy)
     expect(r.ok).toBe(true)
     if (!r.ok) return
+    expect(r.riesgo.direccion.via).toBeNull()
     expect(r.riesgo.ascensor).toBeNull()
-    expect(r.riesgo.numLocales).toBeNull()
-    expect(r.riesgo.capitalContenido).toBeNull()
-    expect(r.riesgo.siniestrosUltimos3Anios).toBeNull()
+    expect(r.riesgo.anioRehabilitacion).toBeNull()
+    expect(r.riesgo.sotanos).toBeNull()
+    expect(r.riesgo.plantasBajoRasante).toBeNull()
+    expect(r.riesgo.instalacionesAnexas).toBeNull()
+    expect(r.riesgo.asistenciaPlagas).toBeNull()
+    expect(r.riesgo.capitalContinente).toBeNull()
+    expect(r.riesgo.polizaAReemplazar).toBeNull()
+  })
+  it.each([
+    'fechaEfecto', 'fechaTermino', 'm2Construidos', 'anioConstruccion', 'tipoVivienda', 'uso',
+    'plantas', 'numEdificios', 'numViviendasYLocales', 'listaPropietarios',
+  ])('falta el obligatorio %s → error', (campo) => {
+    const r = validarRiesgoComunidad({ ...base, [campo]: undefined }, hoy)
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.errores.join(' ')).toContain(campo)
+  })
+  it('falta el CP (C.P. *) → error', () => {
+    expect(validarRiesgoComunidad({ ...base, direccion: {} }, hoy).ok).toBe(false)
+    expect(validarRiesgoComunidad({ ...base, direccion: { codigoPostal: '4100' } }, hoy).ok).toBe(false)
+  })
+  it('un select vacío no cuenta como dato', () => {
+    expect(validarRiesgoComunidad({ ...base, tipoVivienda: '  ' }, hoy).ok).toBe(false)
+  })
+  it('nº viviendas y locales: dado, o suma si vienen los dos; con solo uno NO se inventa', () => {
+    const sin = { ...base, numViviendasYLocales: undefined }
+    const suma = validarRiesgoComunidad({ ...sin, numViviendas: 16, numLocales: 2 }, hoy)
+    expect(suma.ok && suma.riesgo.numViviendasYLocales).toBe(18)
+    expect(validarRiesgoComunidad({ ...sin, numViviendas: 16 }, hoy).ok).toBe(false)
   })
   it('un valor presente pero inválido es error, no se convierte en null', () => {
-    const r = validarRiesgoComunidad({ ...base, numViviendas: 'muchas', ascensor: 'si' }, hoy)
-    expect(r.ok).toBe(false)
+    expect(validarRiesgoComunidad({ ...base, numEdificios: 'muchos' }, hoy).ok).toBe(false)
+    expect(validarRiesgoComunidad({ ...base, instalacionesAnexas: 'si' }, hoy).ok).toBe(false)
+    expect(validarRiesgoComunidad({ ...base, ite: 1 }, hoy).ok).toBe(false)
   })
-  it('exige CP de 5 dígitos y algo con que dimensionar', () => {
-    expect(validarRiesgoComunidad({ ...base, direccion: { via: 'x', codigoPostal: '4100' } }, hoy).ok).toBe(false)
-    expect(validarRiesgoComunidad({ ...base, m2Construidos: undefined }, hoy).ok).toBe(false)
-    expect(validarRiesgoComunidad({ ...base, m2Construidos: undefined, capitalContinente: 1_500_000 }, hoy).ok).toBe(true)
+  it('opcionales de ePAC se conservan cuando vienen', () => {
+    const r = validarRiesgoComunidad(
+      { ...base, anioRehabilitacion: 2005, sotanos: 1, plantasBajoRasante: 2, instalacionesAnexas: true, asistenciaPlagas: false, capitalContinente: 1_500_000, contiguos: 'x' },
+      hoy,
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.riesgo).toMatchObject({ anioRehabilitacion: 2005, sotanos: 1, plantasBajoRasante: 2, instalacionesAnexas: true, asistenciaPlagas: false, capitalContinente: 1_500_000, contiguos: 'x' })
   })
-  it('una fecha de efecto pasada no se tarifica', () => {
+  it('fechas: efecto no pasada, término posterior al efecto, formato ISO', () => {
     expect(validarRiesgoComunidad({ ...base, fechaEfecto: '2026-10-01' }, hoy).ok).toBe(false)
-    expect(validarRiesgoComunidad({ ...base, fechaEfecto: '2026-11-01' }, hoy).ok).toBe(true)
+    expect(validarRiesgoComunidad({ ...base, fechaEfecto: '2026-11-01', fechaTermino: '2026-11-01' }, hoy).ok).toBe(false)
+    expect(validarRiesgoComunidad({ ...base, fechaTermino: '01/10/2027' }, hoy).ok).toBe(false)
+    expect(validarRiesgoComunidad({ ...base, fechaEfecto: '2026-11-01', fechaTermino: '2027-11-01' }, hoy).ok).toBe(true)
+  })
+})
+
+describe('importeEs (formato español)', () => {
+  it.each([
+    ['12.000,00', 12000], ['347,55', 347.55], ['300.000,00', 300000], ['250', 250], ['600,00 €', 600],
+    ['1.234', 1234], ['1.234.567,89', 1234567.89], ['-5,5', -5.5], ['0,00', 0],
+  ])('«%s» → %s', (t, n) => expect(importeEs(t)).toBe(n))
+  it.each(['', '  ', 'Incluida', 'Excluida', '1,2,3', '12.5', '1.23.456', 'abc 12', '12,', null, undefined])('«%s» → null', (t) => {
+    expect(importeEs(t as string)).toBeNull()
   })
 })
 

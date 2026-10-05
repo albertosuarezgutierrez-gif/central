@@ -9,7 +9,8 @@ export type RamoRpa = 'comunidades'
 
 /** Dirección del riesgo (la del EDIFICIO, no la del tomador). */
 export type DireccionRiesgo = {
-  via: string
+  /** ePAC Comunidades 2020 no pide la vía (solo CP/población): opcional. */
+  via: string | null
   numero: string | null
   codigoPostal: string
   municipio: string | null
@@ -17,38 +18,87 @@ export type DireccionRiesgo = {
 }
 
 /**
- * El riesgo de una comunidad de propietarios. Obligatorio solo lo que ninguna compañía deja
- * en blanco (dirección + CP, y algo con lo que dimensionar el continente); el resto opcional
- * y `null` = no se ha preguntado.
+ * El riesgo de una comunidad de propietarios, con la forma del formulario real de Allianz ePAC
+ * «Comunidades 2020» (captura del 05/10/2026). Los campos que ePAC marca con * los exige
+ * `validarRiesgoComunidad` (en el TIPO siguen `| null` por compatibilidad con lo ya encolado);
+ * el resto es opcional y `null`/ausente = «no se ha preguntado» (≠ 0, ≠ false).
+ * Los selects de ePAC viajan como string LIBRE: TODO(valores admitidos) cuando Alberto pase las listas.
  */
 export type RiesgoComunidad = {
   ramo: 'comunidades'
+  /** Dirección del edificio. ePAC solo pide CP/población (lupa); la vía queda para la ficha. */
   direccion: DireccionRiesgo
   /** Referencia catastral del edificio. `null` = no consta. */
   referenciaCatastral?: string | null
-  anioConstruccion: number | null
-  /** Año de la última rehabilitación integral (tuberías/cubierta). `null` = no consta. */
-  anioRehabilitacion?: number | null
+
+  // ── DATOS ──
+  /** «Póliza a Reemplazar» (opcional). */
+  polizaAReemplazar?: string | null
+  /** DNI/NIF/NIE/CIF del tomador (opcional) y su tipo (select; ejemplo visto: «Dispone NIF/CIF/NIE»; TODO valores admitidos). */
+  documentoIdentidad?: string | null
+  tipoDocumento?: string | null
+  /** «Fecha Inicio *», ISO `AAAA-MM-DD` (= fecha de efecto). */
+  fechaEfecto: string | null
+  /** «Fecha Término *», ISO `AAAA-MM-DD`. Obligatoria. */
+  fechaTermino?: string | null
+
+  // ── DESCRIPCIÓN RIESGO ──
+  /** «Metros Cuadrados *». */
   m2Construidos: number | null
+  /** «Año Construcción *». */
+  anioConstruccion: number | null
+  /** «Año Reforma» (opcional). */
+  anioRehabilitacion?: number | null
+  /** «Tipo Vivienda *» (select). Ejemplo visto: «Viviendas Pisos en Alto». TODO(valores admitidos): no es catálogo cerrado. */
+  tipoVivienda?: string | null
+  /** «Uso *» (select). Ejemplo visto: «Habitual». TODO(valores admitidos). */
+  uso?: string | null
+  /** «Plantas sobre N. Calle *» (plantas SOBRE rasante). */
+  plantas: number | null
+  /** «Plantas bajo Nivel Calle» (opcional). */
+  plantasBajoRasante?: number | null
+  /** «Sótanos» (opcional). */
+  sotanos?: number | null
+  /** «Nº Edificios *». */
+  numEdificios?: number | null
+  /** «Contiguos» (select que se habilita con varios edificios; TODO valores admitidos). */
+  contiguos?: string | null
+  /**
+   * «Nº Viv. y Locales *» es UN solo campo en ePAC. Se rellena con `numViviendasYLocales` o, si no
+   * viene, con numViviendas + numLocales (solo cuando vienen los dos).
+   */
+  numViviendasYLocales?: number | null
   numViviendas: number | null
   numLocales: number | null
   numGarajes?: number | null
-  /** Plantas SOBRE rasante. */
-  plantas: number | null
-  plantasBajoRasante?: number | null
+  /** «Lista Propietarios / Arrendatarios *» (select). Ejemplo visto: «> 50%». TODO(valores admitidos). */
+  listaPropietarios?: string | null
+  /** «Instalaciones Anexas (Deportivas, Piscinas, etc.)» (checkbox). `null` = no se marca. */
+  instalacionesAnexas?: boolean | null
+
+  // ── FORMA PAGO / COMISIÓN (selects; ejemplos vistos: «Bancario», comisión «A»; TODO valores admitidos) ──
+  formaPagoPrimerRecibo?: string | null
+  formaPagoSucesivos?: string | null
+  comision?: string | null
+
+  // ── PARTIDAS ASEGURABLES ──
+  /** «Edificación Valor Reposición» (opcional en ePAC). */
+  capitalContinente: number | null
+  /** ePAC Comunidades 2020 no lo pide: se conserva por compatibilidad con lo encolado. */
+  capitalContenido: number | null
+  /** Checkboxes de asistencia. `null`/ausente = no se marca. */
+  asistenciaPlagas?: boolean | null
+  asesoramientoJuridico?: boolean | null
+  impagoCuotas?: boolean | null
+  ite?: boolean | null
+
+  // ── Campos previos que ePAC Comunidades 2020 NO pide (compatibilidad, no se rellenan) ──
   ascensor: boolean | null
   piscina?: boolean | null
   zonasAjardinadas?: boolean | null
-  /** Calidad constructiva tal como la pide la compañía (normal/alta/lujo). `null` = no consta. */
   calidadConstruccion?: 'normal' | 'alta' | 'lujo' | null
-  capitalContinente: number | null
-  capitalContenido: number | null
-  /** Siniestros declarados en los últimos 3 años. `null` = no se ha preguntado (≠ 0). */
   siniestrosUltimos3Anios?: number | null
-  /** Compañía actual de la comunidad (si se renueva desde otra). */
   companiaActual?: string | null
-  /** Fecha de efecto pedida, ISO `AAAA-MM-DD`. */
-  fechaEfecto: string | null
 }
 
 export type Fraccionamiento = 'anual' | 'semestral' | 'trimestral' | 'mensual'
