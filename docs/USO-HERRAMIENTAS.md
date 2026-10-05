@@ -167,18 +167,18 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 268 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 269 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
 | `bash` | 261 | 34.592 | 26.935.070 | 0 | 0 |
-| `otro` | 258 | 8.426 | 23.083.265 | 12.089.136 | 0 |
+| `otro` | 259 | 8.427 | 23.083.317 | 12.089.136 | 0 |
 | `lectura-directa` | 232 | 5.931 | 17.344.678 | 0 | 0 |
 | `mcp:github` | 238 | 5.567 | 4.615.796 | 50.957.018 | 89 |
 | `escritura` | 180 | 3.557 | 52.023.253 | 0 | 0 |
 | `sql` | 165 | 3.422 | 1.695.365 | 2.351.230 | 13 |
 | `mcp:Claude_Code_Remote` | 141 | 1.477 | 304.037 | 5.301.463 | 14 |
-| `mcp:Gmail` | 32 | 1.065 | 1.005.386 | 0 | 63 |
+| `mcp:Gmail` | 33 | 1.066 | 1.008.833 | 0 | 63 |
 | `mcp:Booking-com` | 25 | 716 | 3.021.614 | 0 | 0 |
 | `mcp:Vercel` | 57 | 566 | 841.744 | 201.411 | 14 |
 | `mcp:Google_Drive` | 17 | 322 | 370.368 | 0 | 31 |
@@ -192,7 +192,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
 | `agente:Explore` | 29 | 66 | 33.114 | 1.752.395 | 0 |
-| `agente:rastreador-codigo` | 34 | 59 | 19.732 | 649.514 | 0 |
+| `agente:rastreador-codigo` | 35 | 60 | 19.941 | 649.514 | 0 |
 | `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
@@ -203,7 +203,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `agente:general` | 9 | 13 | 8.369 | 512.187 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
 | `mcp:Supabase_asegura` | 9 | 9 | 2.935 | 0 | 0 |
-| `agente:lector-correo` | 1 | 7 | 3.391 | 0 | 0 |
+| `agente:lector-correo` | 2 | 8 | 3.629 | 0 | 0 |
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:openrouter` | 2 | 5 | 14.639 | 0 | 0 |
