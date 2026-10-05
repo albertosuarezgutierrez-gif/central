@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-05T18:15:19Z",
-  "sha": "ff77a9db6844bfff7b0f3c532784b9da8bdb33ab",
+  "generadoEn": "2026-10-05T18:59:30Z",
+  "sha": "f07b706d8f1abaa0214a14f7a0ab073e69a236e3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -148949,14 +148949,14 @@
           "exportada": false,
           "params": "carpeta: string, file: File, modo: string = 'none'",
           "retorno": null,
-          "linea": 84
+          "linea": 88
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "a8d40f17c77f"
+      "hash": "bc12ba20f252"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -148979,7 +148979,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "5e2c612f8fe4"
+      "hash": "9f97396fb530"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/EmpleadosClient.tsx",
@@ -149009,7 +149009,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b15bc26dbd72"
+      "hash": "cda725623e44"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -149024,7 +149024,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [
@@ -149032,7 +149032,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "eddcf86cd70a"
+      "hash": "31b747f2dbb5"
     },
     {
       "ruta": "apps/rrhh/app/admin/empresa/EmpresaClient.tsx",
@@ -149670,8 +149670,8 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 8,
-          "resumen": "POST — regenera el enlace mágico de acceso del empleado (revoca el anterior). Scope por empresa."
+          "linea": 10,
+          "resumen": "POST — regenera el enlace mágico de acceso del empleado (revoca el anterior). Scope por empresa. Devuelve SOLO la ruta del portal (`enlace`), nunca la columna en bruto."
         }
       ],
       "tablas": [
@@ -149679,7 +149679,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]/acceso",
-      "hash": "15a70925a747"
+      "hash": "7fbedad76f68"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/chat/route.ts",
@@ -149898,6 +149898,30 @@
       "hash": "4ec25307779a"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/enlace/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "POST — devuelve el enlace de acceso VIGENTE de UN empleado (no lo rota), a petición expresa del responsable (botón «Ver enlace»). Sustituye a exponer el token en listados/props: es el ÚNICO sitio del "
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/empleados/[id]/enlace",
+      "hash": "4a0d321cc4d2"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -149943,7 +149967,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         },
         {
           "nombre": "POST",
@@ -149951,7 +149975,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         }
       ],
       "tablas": [
@@ -149959,7 +149983,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados",
-      "hash": "e06a1fdcbdb4"
+      "hash": "c8bfafd0baba"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/fichajes/[id]/route.ts",
@@ -150015,7 +150039,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/fichajes/exportar",
-      "hash": "0bbb3864afdd"
+      "hash": "1a924ca9d852"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/fichajes/route.ts",
@@ -152259,6 +152283,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d72b9e52eb62"
+    },
+    {
+      "ruta": "apps/rrhh/lib/empleados-columnas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Lista BLANCA de columnas de rrhh.empleados que pueden viajar al navegador en el LISTADO del panel del responsable (GET /api/admin/empleados y la página /admin/empleados). Módulo PURO (sin prisma) para poder testearlo aislado. NUNCA añadir aquí `acceso_token` (con él se entra al portal como el emplea",
+      "exporta": [
+        "rutaPortalEmpleado"
+      ],
+      "funciones": [
+        {
+          "nombre": "rutaPortalEmpleado",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "token: string",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "Ruta relativa del portal del empleado para un token (el origin lo pone el cliente)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c71fd5423272"
     },
     {
       "ruta": "apps/rrhh/lib/empleados.ts",
@@ -187214,7 +187260,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4227,
-    "funciones": 14654
+    "archivos": 4229,
+    "funciones": 14656
   }
 }
