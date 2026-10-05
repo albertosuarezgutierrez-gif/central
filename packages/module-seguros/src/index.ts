@@ -1311,3 +1311,4 @@ export {
   type PropuestaIdentidad,
   type MotivoPropuesta,
 } from './identidad-documentada.ts'
+export { polizaAnteriorParaTarificar, CODIGOS_DGS_MAPFRE } from './poliza-anterior.ts'

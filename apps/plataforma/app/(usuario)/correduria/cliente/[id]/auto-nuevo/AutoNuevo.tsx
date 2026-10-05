@@ -380,7 +380,7 @@ export default function AutoNuevo({
   const [companiaActualCodigo, setCompaniaActualCodigo] = useState(() =>
     anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '')
   const [companiaActualLibre, setCompaniaActualLibre] = useState(() => (companias === null ? sa?.codigoDgs ?? '' : ''))
-  const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.replace(/\s+/g, '') ?? '')
+  const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.trim() ?? '')
   const [aniosAsegurado, setAniosAsegurado] = useState(String(historial.aniosAsegurado))
   const [aniosEnCompania, setAniosEnCompania] = useState(String(historial.aniosEnCompania))
   const [aniosSinSiniestros, setAniosSinSiniestros] = useState(String(historial.aniosSinSiniestros))

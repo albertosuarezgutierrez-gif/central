@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(05/10/2026)** — correduría, tarificación: (1) Mapfre guarda el nº de póliza con sufijo de versión («4840402030 01») y SINCO no lo encontraba: helper `polizaAnteriorParaTarificar` (module-seguros, DGS C0058) quita el « NN» al armar `previousInsurance.policyNumber` (auto y moto, imputado y manual); el desplegable muestra el nº tal cual se envía. (2) Generali COCHE iba con descuento 0 %: `opcionesParaReRate` aplica `commercialDiscountNumber`=50 solo si el vendor trae ese id (id en auto supuesto por moto/hogar; confirmar en el primer ReRate real, ver CODEOSCOPIC-PENDIENTES).
+
 **(05/10/2026)** — correduría, bloque identidad del tomador: completar apellidos («Slava» → «Slava Antoli», o vacío → algo) ya NO pide motivo ni DNI (helper puro `completaApellidos`/`edicionSoloCompletaApellidos` en `module-seguros/cliente-edicion.ts`, usado por plataforma y asegura; historial «apellidos completados sin documento: antes → después»). Cambiar/quitar palabras sí lo pide. Cuadro ámbar solo si lo editado lo requiere, foco al motivo, 3 motivos rápidos (decisión: el DNI se cambia sin pedir documento pero con motivo, 1 clic). «Falta en la ficha: segundo apellido», «persona física». `partirApellidos` pega partículas (de/del/la…).
 
 **(05/10/2026)** — correduría: presupuesto auto edita la ficha in-page (panel); borrador también en servidor (`/api/*/borrador-presupuesto`, gana el más reciente y SUSTITUYE al local);

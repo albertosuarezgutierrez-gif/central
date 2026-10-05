@@ -9,6 +9,7 @@
 // Las reglas no son adivinadas: salen del builder de Manuel, verificado por él
 // contra el entorno real, y están transcritas en docs/CODEOSCOPIC-TRASPASO-MANUEL.md §3.
 
+import { polizaAnteriorParaTarificar } from '@central/module-seguros'
 import {
   construirEmpresa,
   construirPersona,
@@ -440,7 +441,7 @@ export function construirPeticionAuto(d: DatosAuto, opciones: Pick<OpcionesRevis
 
   if (d.aseguradoAntes) {
     const previa: Record<string, unknown> = {
-      policyNumber: d.polizaAnterior,
+      policyNumber: polizaAnteriorParaTarificar(d.polizaAnterior, d.companiaAnteriorCodigo),
       previousCompany: { code: d.companiaAnteriorCodigo },
       registrationPlate: texto(d.matriculaAnterior) ? d.matriculaAnterior!.toUpperCase().replace(/\s/g, '') : riesgo.registrationPlate,
       totalYearsInsured: d.aniosAsegurado,
