@@ -1,63 +1,100 @@
 {
  "sesion": "65a94694-5a08-5949-831d-ce785ff3328c",
  "inicio": "2026-10-05T05:01:09.468Z",
- "fin": "2026-10-05T05:01:53.907Z",
- "llamadas": 22,
+ "fin": "2026-10-05T06:03:13.627Z",
+ "llamadas": 122,
  "categorias": {
   "otro": {
-   "llamadas": 5,
-   "chars_in": 612,
-   "chars_out": 1199,
+   "llamadas": 17,
+   "chars_in": 10986,
+   "chars_out": 64168,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 4
+    "ToolSearch": 6,
+    "SubagentHandback": 5,
+    "ReadNotifications": 5
    }
   },
   "lectura-directa": {
-   "llamadas": 2,
-   "chars_in": 181,
-   "chars_out": 62771,
+   "llamadas": 4,
+   "chars_in": 346,
+   "chars_out": 81872,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 2
+    "Read": 4
    }
   },
   "sql": {
-   "llamadas": 10,
-   "chars_in": 1649,
-   "chars_out": 29527,
+   "llamadas": 31,
+   "chars_in": 50882,
+   "chars_out": 86432,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 10
+    "mcp__Supabase__execute_sql": 31
    }
   },
   "agente:general-purpose": {
-   "llamadas": 4,
-   "chars_in": 7193,
-   "chars_out": 7981,
+   "llamadas": 5,
+   "chars_in": 9710,
+   "chars_out": 10695,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 4
+    "Agent": 5
    }
   },
   "mcp:Booking-com": {
-   "llamadas": 1,
-   "chars_in": 245,
-   "chars_out": 20722,
+   "llamadas": 52,
+   "chars_in": 12675,
+   "chars_out": 968768,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Booking-com__accommodations_search": 1
+    "mcp__Booking-com__accommodations_search": 52
+   }
+  },
+  "bash": {
+   "llamadas": 9,
+   "chars_in": 4992,
+   "chars_out": 8655,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 9
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 816,
+   "chars_out": 19231,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 659,
+   "chars_out": 7841,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 1
    }
   }
  }
