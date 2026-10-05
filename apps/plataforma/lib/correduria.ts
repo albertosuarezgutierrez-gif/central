@@ -43,7 +43,7 @@ export function detectarCompania(concepto: string, conceptoNorm: string, contrap
   if (txt.includes('PELAYO') || /^COMISIONES /.test(txt)) return 'Pelayo'
   if (txt.includes('LIBERTY')) return 'Liberty'
   if (txt.includes('PLUS ULTRA')) return 'Plus Ultra'
-  if (/\bM1454\b/.test(txt)) return 'Asisa'
+  if (/\bM1454\b/.test(txt)) return 'Salud'
   if (txt.includes('SANITAS') || txt.includes('ADESLAS') || txt.includes('DKV') || txt.includes('ASISA')) return 'Salud'
   if (txt.includes('REMSALDO')) return 'Aegon'
   if (/PAGO SALDO CTA/.test(txt)) return 'Generali'

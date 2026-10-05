@@ -121,6 +121,8 @@ export function casarAbonos(
   const excedentes: Casado['excedentes'] = []
   const codigosLibro = new Set(periodos.map((p) => p.codigo))
   let sinPeriodo = 0
+  /** Fecha del último abono casado por compañía: cota inferior del saldo multi-remesa. */
+  const ultimoAbono = new Map<string, string>()
   const orden = [...abonos].sort((x, y) => (x.fecha < y.fecha ? -1 : x.fecha > y.fecha ? 1 : x.id < y.id ? -1 : 1))
   for (const a of orden) {
     const codigo = codigoDeAbono(a, reglas)
@@ -145,7 +147,7 @@ export function casarAbonos(
       else {
         // Un abono con compañía asignada que NO se parece a ninguna remesa suelta puede ser el saldo
         // que liquida varias a la vez (Allianz: «Transferencia saldo de la cuenta» 704,53€).
-        const multi = a.companiaSeguros ? casarSaldoMultiRemesa(a, codigo, periodos, porPeriodo, porRemesa) : null
+        const multi = a.companiaSeguros ? casarSaldoMultiRemesa(a, codigo, periodos, porPeriodo, porRemesa, ultimoAbono.get(codigo)) : null
         if (multi) {
           for (const p of multi.periodos) {
             porPeriodo.set(clave(p), [a.id])
@@ -155,6 +157,7 @@ export function casarAbonos(
           if (multi.excedente > 0) {
             excedentes.push({ abonoId: a.id, codigo, importe: a.importe, sumaRemesas: multi.suma, excedente: multi.excedente })
           }
+          ultimoAbono.set(codigo, a.fecha)
           continue
         }
         const minimo = mitadMesAnterior(a.fecha)
@@ -164,6 +167,7 @@ export function casarAbonos(
     if (!elegido) { sinPeriodo++; continue }
     const k = clave(elegido)
     porPeriodo.set(k, [...(porPeriodo.get(k) ?? []), a.id])
+    ultimoAbono.set(codigo, a.fecha)
   }
   return { porPeriodo, sinPeriodo, totalFijo, excedentes }
 }
@@ -180,9 +184,11 @@ export function casarSaldoMultiRemesa(
   periodos: readonly PeriodoLiq[],
   porPeriodo: ReadonlyMap<string, string[]>,
   usados: ReadonlySet<string>,
+  /** Fecha del abono anterior ya casado de esta compañía: los periodos cerrados antes de él no se reclaman (sin cota si no hay). */
+  desde?: string,
 ): { periodos: PeriodoLiq[]; suma: number; excedente: number } | null {
   const pendientes = periodos.filter(
-    (p) => p.codigo === codigo && p.remesa !== null && p.remesa > 0 && p.fin <= a.fecha
+    (p) => p.codigo === codigo && p.remesa !== null && p.remesa > 0 && p.fin <= a.fecha && (desde === undefined || p.fin > desde)
       && !porPeriodo.has(clave(p)) && !usados.has(clave(p)),
   )
   if (pendientes.length < 2) return null

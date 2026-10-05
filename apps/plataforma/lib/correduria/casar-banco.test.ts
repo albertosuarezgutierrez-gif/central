@@ -152,3 +152,15 @@ test('multi-remesa: no casa si el abono no cubre la suma, sin compañía asignad
   const antes = [abono({ id: 'c', fecha: '2026-06-20', importe: 200, companiaSeguros: 'Allianz' })]
   assert.equal(bancoDePeriodo(periodos[1], casarAbonos(periodos, antes, SIN_REGLAS), antes).total, null)
 })
+
+test('multi-remesa: un abono normal que casa con el mes anterior no reclama remesas antiguas pendientes', () => {
+  const periodos = [mes('C0109', '2026-01', 100), mes('C0109', '2026-02', 100), mes('C0109', '2026-07', 50), mes('C0109', '2026-08', 45)]
+  const ab = [
+    abono({ id: 'jul', fecha: '2026-08-10', importe: 50, companiaSeguros: 'Allianz' }),
+    abono({ id: 'ago', fecha: '2026-09-10', importe: 300, companiaSeguros: 'Allianz' }),
+  ]
+  const c = casarAbonos(periodos, ab, SIN_REGLAS)
+  assert.equal(bancoDePeriodo(periodos[0], c, ab).total, null)
+  assert.equal(bancoDePeriodo(periodos[1], c, ab).total, null)
+  assert.deepEqual(bancoDePeriodo(periodos[3], c, ab).ids, ['ago'])
+})

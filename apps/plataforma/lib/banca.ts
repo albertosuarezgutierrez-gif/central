@@ -130,7 +130,8 @@ export async function importarExtracto(
         AND origen IN ('psd2', ${origen})
         AND fecha_operacion IS NOT NULL
         AND (coalesce(duplicado_estado, '') <> 'ignorado'
-             OR comentario LIKE '%auto-dedup: duplicado del feed del banco (psd2)%')
+             OR (duplicado_estado = 'ignorado'
+                 AND comentario LIKE '%auto-dedup: duplicado del feed del banco (psd2)%'))
     `)
     const aMarcar: string[] = []
     for (const cuenta of new Set(filas.map(f => f.cuenta))) {
