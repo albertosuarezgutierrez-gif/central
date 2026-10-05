@@ -2,7 +2,7 @@ import Wordmark from '@/components/Wordmark'
 import { estiloMarca } from '@/lib/branding'
 import CambiadorEmpresa from '@/components/CambiadorEmpresa'
 
-type NavKey = 'empleados' | 'solicitudes' | 'cuenta' | 'nominas' | 'calendario' | 'fichajes' | 'obras' | 'empresa' | 'prl'
+type NavKey = 'empleados' | 'solicitudes' | 'cuenta' | 'nominas' | 'calendario' | 'fichajes' | 'obras' | 'empresa' | 'prl' | 'informes'
 
 /** Marco del panel del responsable: sidebar + contenido. Presentacional puro. */
 export default function AdminShell({ activo, children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
@@ -34,6 +34,7 @@ export default function AdminShell({ activo, children, logoUrl, nombreEmpresa, c
             {item('prl', '/admin/prl', 'PRL')}
             {tieneFichaje && item('fichajes', '/admin/fichajes', 'Fichajes')}
             {tieneFichaje && item('obras', '/admin/obras', 'Obras')}
+            {item('informes', '/admin/informes', 'Informes')}
             {item('empresa', '/admin/empresa', 'Empresa')}
             <a href="/admin/cuenta"
               className={`flex shrink-0 items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium no-underline whitespace-nowrap ${
