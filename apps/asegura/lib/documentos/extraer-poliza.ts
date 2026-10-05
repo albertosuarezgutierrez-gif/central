@@ -266,12 +266,32 @@ function empaquetar(
   return { ramo, fase: 'contrato_solo', fuente, datos: auto, contacto, bruto }
 }
 
-/** Texto con `pdf-parse`; `''` si no abre (se dice aguas abajo). */
-async function textoPdfParse(buffer: Buffer): Promise<string> {
+/**
+ * Texto con `pdf-parse`; `''` si no abre (se dice aguas abajo). Exportado para `extraer-oferta.ts`
+ * (05/10/2026): con `marcarPaginas`, cada página va precedida de `[[Página N]]` para que la IA pueda
+ * citar DÓNDE leyó cada cifra (la evidencia). Sin la opción, el texto es el de siempre.
+ */
+export async function textoPdfParse(buffer: Buffer, opts: { marcarPaginas?: boolean } = {}): Promise<string> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pdfParse = require('pdf-parse')
-    return (await pdfParse(buffer)).text || ''
+    if (!opts.marcarPaginas) return (await pdfParse(buffer)).text || ''
+    let n = 0
+    // El render por defecto de pdf-parse, con la marca de página delante (pdf-parse llama a
+    // `pagerender` página a página y en orden).
+    const pagerender = async (pagina: { pageIndex?: number; getTextContent: (o: unknown) => Promise<{ items: { str: string; transform: number[] }[] }> }) => {
+      n += 1
+      const numero = typeof pagina.pageIndex === 'number' ? pagina.pageIndex + 1 : n
+      const contenido = await pagina.getTextContent({ normalizeWhitespace: false, disableCombineTextItems: false })
+      let ultimaY: number | undefined
+      let texto = ''
+      for (const item of contenido.items) {
+        texto += ultimaY === item.transform[5] || ultimaY === undefined ? item.str : `\n${item.str}`
+        ultimaY = item.transform[5]
+      }
+      return `[[Página ${numero}]]\n${texto}`
+    }
+    return (await pdfParse(buffer, { pagerender })).text || ''
   } catch (e) {
     console.warn('[asegura] pdf-parse falló:', e)
     return ''

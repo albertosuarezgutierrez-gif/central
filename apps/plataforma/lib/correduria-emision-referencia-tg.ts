@@ -50,6 +50,11 @@ export function resolverReferenciaEmision(b: BusquedaReferencia, pista: PistaOpc
   if (p.estado === 'retirado') return { tipo: 'no', motivo: `el presupuesto ${ref} está RETIRADO: no se emite. Si el cliente lo quiere, hay que preparar otro` }
   if (p.estado === 'emitido' || p.polizaEmitidaId) return { tipo: 'no', motivo: `el presupuesto ${ref} ya está EMITIDO` }
   if (p.estado === 'caducado') return { tipo: 'no', motivo: `el presupuesto ${ref} está CADUCADO: con ese precio no se emite, hay que volver a tarificar` }
+  // 🚨 Un presupuesto de OFERTAS (PDFs de compañías) no tiene tarificación de Avant2: por aquí se
+  // re-tarificaría y se emitiría por Codeoscopic algo que nadie ha cotizado allí.
+  if (p.origen === 'ofertas' || !p.tarificacionId) {
+    return { tipo: 'no', motivo: `el presupuesto ${ref} sale de ofertas de compañías (PDF), no de Avant2: se emite directamente en la compañía, no por aquí` }
+  }
   if (!p.emitible) return { tipo: 'no', motivo: `el presupuesto ${ref} no admite emitir (${p.rotuloEstado})` }
   const ramo: RamoNuevo | null = p.ramo === 'auto' || p.ramo === 'moto' ? p.ramo : null
   if (!ramo) {
