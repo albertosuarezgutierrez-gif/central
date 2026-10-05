@@ -27,6 +27,7 @@ test('cada motivo del callback tiene su texto; uno desconocido, el genérico', (
   assert.match(textoMotivoGoogle('ticket_usado'), /ya se había usado/)
   assert.match(textoMotivoGoogle('ticket_caducado'), /caducó/)
   assert.match(textoMotivoGoogle('state_nonce'), /no se pudo verificar/)
+  assert.match(textoMotivoGoogle('cuenta_no_permitida'), /no está autorizada/)
   assert.match(textoMotivoGoogle('<script>'), /No se ha podido conectar/)
   assert.match(textoMotivoGoogle(null), /No se ha podido conectar/)
 })

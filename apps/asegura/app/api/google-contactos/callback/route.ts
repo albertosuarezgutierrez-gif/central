@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { exigirAccesoCartera } from '@/lib/session'
 import { credencialesGoogle, guardarConexion, secretoEstadoGoogle } from '@/lib/google-contactos'
-import { COOKIE_NONCE_GOOGLE, verificarEstado } from '@/lib/google-oauth-estado'
-import { canjearCodigo } from '@/lib/google-people'
+import { COOKIE_NONCE_GOOGLE, cuentaGooglePermitida, verificarEstado } from '@/lib/google-oauth-estado'
+import { canjearCodigo, revocar } from '@/lib/google-people'
 import { urlVueltaPlataforma } from '@/lib/google-oauth-ticket'
 import { URL_PLATAFORMA_DEFECTO } from '@/lib/datos-cotizados'
 
@@ -59,6 +59,15 @@ export async function GET(req: NextRequest) {
 
   try {
     const tokens = await canjearCodigo(credencialesGoogle(), code)
+    // Lista blanca opcional: una cuenta de Google ajena (ticket reenviado) no se guarda y se revoca su grant.
+    if (!cuentaGooglePermitida(tokens.cuentaGoogle, process.env.GOOGLE_CONTACTOS_CUENTAS_PERMITIDAS)) {
+      try {
+        await revocar(tokens.refreshToken)
+      } catch (e) {
+        console.error('[google-contactos/callback] no se pudo revocar la cuenta no permitida:', (e instanceof Error ? e.message : '').slice(0, 200))
+      }
+      return volver('error', 'cuenta_no_permitida', 'No se conectó', 'Esa cuenta de Google no está autorizada. No se ha guardado nada.', 403)
+    }
     const conectadoPor = acceso.ok ? (acceso.session.email ?? acceso.session.id) : v.datos.cuentaId
     await guardarConexion(v.datos.correduriaId, tokens, conectadoPor)
     return volver('ok', null, 'Google Contacts conectado', `Cuenta ${tokens.cuentaGoogle ?? '(sin email)'}. Puedes cerrar esta pestaña.`, 200)

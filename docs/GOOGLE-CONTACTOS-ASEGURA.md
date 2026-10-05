@@ -21,6 +21,7 @@ Lógica: `packages/module-seguros/src/google-contactos.ts`. SQL: `apps/asegura/p
 - `GOOGLE_CONTACTOS_CLIENT_ID`, `GOOGLE_CONTACTOS_CLIENT_SECRET` — del paso 5.
 - `GOOGLE_CONTACTOS_REDIRECT_URI` — la URI del paso 5.
 - `GOOGLE_CONTACTOS_STATE_SECRET` — aleatorio largo (firma el `state` anti-CSRF del OAuth).
+- `GOOGLE_CONTACTOS_CUENTAS_PERMITIDAS` (opcional) — emails de Google autorizados, separados por coma (sin distinguir mayúsculas); si está definida y la cuenta que consiente no está, no se guarda, se revoca su token y vuelve `motivo=cuenta_no_permitida`.
 - Ya existentes y obligatorias: `PII_ENCRYPTION_KEY` (cifra el refresh token en BD), `PII_LOOKUP_KEY`, `CRON_SECRET`,
   `ASEGURA_OPERADOR_SECRET`. El refresh token NUNCA va en una env.
 

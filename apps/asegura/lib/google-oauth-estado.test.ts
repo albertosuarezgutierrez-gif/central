@@ -53,3 +53,12 @@ test('basura o vacío → mal formado; sin secreto no se firma', () => {
   assert.deepEqual(ok('a.b.c'), { ok: false, motivo: 'mal_formado' })
   assert.throws(() => firmarEstado(base, ''))
 })
+
+test('cuentaGooglePermitida: sin env todo pasa; con env, solo la lista (minúsculas); email nulo no pasa', async () => {
+  const { cuentaGooglePermitida } = await import('./google-oauth-estado.ts')
+  assert.equal(cuentaGooglePermitida('x@y.com', undefined), true)
+  assert.equal(cuentaGooglePermitida(null, '  '), true)
+  assert.equal(cuentaGooglePermitida('Alberto@Gmail.com', 'otro@x.es, alberto@gmail.com'), true)
+  assert.equal(cuentaGooglePermitida('intruso@gmail.com', 'alberto@gmail.com'), false)
+  assert.equal(cuentaGooglePermitida(null, 'alberto@gmail.com'), false)
+})

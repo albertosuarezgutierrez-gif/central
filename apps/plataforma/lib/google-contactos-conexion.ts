@@ -36,6 +36,7 @@ export function textoMotivoGoogle(motivo: string | null): string {
   if (m.startsWith('state_')) return 'La vuelta de Google no se pudo verificar (¿otro navegador o pasaron más de 10 minutos?). Empieza de nuevo.'
   if (m === 'sin_configurar') return 'Faltan las variables GOOGLE_CONTACTOS_* en asegura.'
   if (m === 'canje') return 'Google dio el permiso pero no se pudo guardar la conexión. No se ha guardado nada; inténtalo de nuevo.'
+  if (m === 'cuenta_no_permitida') return 'Esa cuenta de Google no está autorizada para esta correduría. No se ha guardado nada.'
   if (m === 'sesion') return 'Tu sesión de asegura no tiene acceso a la cartera.'
   return 'No se ha podido conectar con Google. No se ha guardado nada.'
 }
