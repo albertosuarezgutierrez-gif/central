@@ -71,7 +71,20 @@ export function normalizarCanal(bruto: string | null | undefined): string | null
  */
 export function canalDeAsunto(asunto: string | null | undefined): string | null {
   const m = (asunto ?? '').match(/\(([^()]{2,40})\)\s*$/)
-  return m ? normalizarCanal(m[1]) : null
+  if (m) return normalizarCanal(m[1])
+  // Aviso de mensaje de Expedia Partner Central: «Te ha escrito X, huésped de Expedia» (05/10/2026).
+  return /hu[eé]sped\s+de\s+expedia\b/i.test(asunto ?? '') ? 'Expedia' : null
+}
+
+/** Canal por remitente (Expedia Partner Central / Group). null = el remitente no lo dice. */
+export function canalDeRemitente(from: string | null | undefined): string | null {
+  const dom = (from ?? '').toLowerCase().replace(/^.*</, '').replace(/>.*$/, '').split('@')[1]?.trim() ?? ''
+  return /(^|\.)(expediapartnercentral|expediagroup|expedia)\.com$/.test(dom) ? 'Expedia' : null
+}
+
+/** Canal del correo: el asunto manda; si no lo dice, el remitente. */
+export function canalDeCorreo(from: string | null | undefined, asunto: string | null | undefined): string | null {
+  return canalDeAsunto(asunto) ?? canalDeRemitente(from)
 }
 
 /** Nombre de piso → slug de PROPS_CALENDARIO (sin acentos, sin may/min). null si no casa. */
