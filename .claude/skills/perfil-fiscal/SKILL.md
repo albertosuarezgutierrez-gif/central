@@ -75,6 +75,23 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 - Punto débil: Socorro y Sanlúcar se cobraban en cuentas PERSONALES (Caixa …7622 / común …0855) aunque Booking facturaba con el NIF de la SL; la hipoteca de Socorro se pagaba desde la …7622 y se canceló el 11/11/2024 tras entrar ahí la venta de Sanlúcar. En 2024 la SL no pagó los 500 €/mes de los contratos de cesión. ⚠️ Los .docx de esos contratos (fechados 2020) se crearon el 16/05/2024 y hay versiones incoherentes: no aportar contratos nuevos/rehechos; revisión por fiscalista.
 - Resumen vigente: Doc «Resumen reunión Asecon v2 (04-10-2026) — VIGENTE» en la subcarpeta 09 de la carpeta Drive. Adjuntos de correo: Vía C (agente `lector-correo`).
 
+## Reglas contables confirmadas (04/10/2026)
+
+Decisiones de Alberto sobre clasificación de gastos por negocio. Guardianas del agente `jefe-contabilidad`:
+
+- **Punto y Coma SL:** dormida, sin imputación automática
+- **Negocios separados:** correduría Grupo ASegura, Dúplex (Villasís), pisos turísticos (Socorro/House Sevillana, Busto Reform, Luxury Busto). Cada gasto a su negocio; NO mezclar Dúplex ↔ correduría
+- **Informática/IA** (Anthropic, Vercel, Supabase, OpenRouter, Fly, SaaS) → correduría
+- **DIGI internet** → pisos turísticos (factura en transición). Internet Dúplex vía BBVA (proveedor distinto)
+- **Asisa salud autónomo** → correduría, deducible. **Endesa:** Kutxabank → pisos; BBVA → Dúplex
+- **Círculo Mercantil** → personal, NO deducible
+- **Hipoteca (CUOTA PTMO)** vivienda habitual → personal, NO negocio
+- **UE/USA sin IVA** → autoliquidación (303/349), informe a asesoría
+- **Circulares, inscripciones, donativos, presupuestos** → NO son gasto
+- **Pilar NO tiene gastos deducibles propios** (retroactivos a Alberto). RETA sí se registra (obligatorio)
+- **Trading FTMO/retos bróker** → personal, NO deducible
+- **Comisiones correduría:** bruto en renta (con retención 15% de compañía), no neto bancario
+
 ## Índice de `references/` — lee SOLO lo que necesite la tarea
 - **`references/entidades-y-propiedades.md`** — quién tributa qué: entidades (Alberto/Pilar/SL dormida),
   Pilar autónoma (cómo cargar sus ingresos vía `movimientos_bancarios`, landmine `conyuge_*`, base

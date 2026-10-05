@@ -13,8 +13,23 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 **(04/10/2026)** — análisis 2º requerimiento AEAT a Punto y Coma SL (ingresos plataformas 2024). Agentes leyeron correos Asecon 2024-2026 + `incomes` 2024.
-Hallazgos: contratos 500€/mes aportados a Inspección 2024; posible doble descuento de comisiones en IS 2024 (y Villasís ene-abr); carpeta Drive «Requerimiento AEAT 2024 - Punto y Coma» (subcarpeta 09) con resumen para reunión.
-Pendiente: reunión con Asecon (Marta), datos por pedir (listado en el Doc). Ver skill perfil-fiscal § «Requerimiento AEAT 2024».
+Hallazgos: contratos 500€/mes aportados a Inspección 2024; 2ª pasada sobre adjuntos (Vía C, agente lector-correo): doble resta de comisiones DESCARTADA; SL arrendataria de abuela/madre (621+115); punto débil Socorro/Sanlúcar cobrados en cuentas personales; resumen v2 en Drive; carpeta Drive «Requerimiento AEAT 2024 - Punto y Coma» (subcarpeta 09) con resumen para reunión.
+PR #4248. Pendiente: reunión con Asecon (Marta), datos por pedir (listado en el Doc). Ver skill perfil-fiscal § «Requerimiento AEAT 2024».
+
+**(04/10/2026, limpieza contable — solo BD, sin código)** — Rechazada factura Giraldillo 6d85ba72 (72,60€, gemela de gasto b1437e07). d9a0a1d2 (504,57€, 29/05) NO es duplicado (el más cercano 504,27€ 30/06 = mes siguiente): sigue pendiente_revision.
+Jefe-contabilidad asignó los 12 «sin determinar»: Pepemobile ×6, gasoil ×3, Allianz moto → personal; Booking cargos ×2 → pisos compartido. Codeoscopic, Asoc. Corredores ff0900f2 y Fly.io 220a37e0 → correduría; Fly.io 570fb3f0 («Manuel Suárez») → receptor_no_titular.
+Generali coche (36760c84, 176dfe7a) seguros→personal. Pendiente: home-office (m², Pilar), donativos_anual, Pepemobile fibra = suministro afecto (30 %×% despacho) cuando haya m²; sin_datos 388,91€ (Petroprix 90, Bricomart, Asecon 181,50, Mercadona).
+
+**(04/10/2026, agente jefe-contabilidad)** — Creado `.claude/agents/jefe-contabilidad.md` (auditor contable, sonnet, solo lectura salvo OK explícito de Alberto). Reglas confirmadas: Punto y Coma dormida, negocios separados (correduría/Dúplex/pisos), Informática→correduría, DIGI→pisos, Asisa deducible, etc. (13 reglas en perfil-fiscal/SKILL.md §«Reglas contables confirmadas»). Informe ≤15 líneas, cifras con `eur()`, `null` = desconocido.
+
+**(04/10/2026, facturas-scan: falsos positivos)** — `INVOICE_SYSTEM` clasifica `tipo_documento`; `decidirAvisoPago` aparta con motivo `no_es_factura` todo tipo conocido fuera de {factura, recibo, justificante_pago} (null = no aparta) y devuelve `permitirPagar:false` si no hay nº de factura NI base/IVA (aviso Telegram con «⚠️ Revisar», sin ✅ Pagar). Tests en `filtro-pago.test.ts`.
+Arreglo «domiciliados sin cargo»: solo entra `raw_extraction.domiciliado = true` (null = no se sabe) y la cobertura es POR CUENTA (corriente o tarjeta con movimientos en 180 d); cuenta parada → `sin_cobertura` (línea «⚪ … sin poder comprobar» nombrando cuentas), no «sin cargo». Helper puro + tests en `domiciliados.ts`. Pendiente operativo: reconectar PSD2 de la cuenta 8ce760ca (parada 10/09) y tarjetas 3059/b8c4/15ba (paradas desde julio).
+Pendiente en BD (sin tocar): Asoc. Corredores 50€ (04/10), AMPA 50€ y Asoc. Mediadores 145,20€ (25/09), Fundación SS.CC. 10€+120€ (12-14/09), y Anthropic 170€ ×7 entre 13/09 y 04/10 (revisar recarga automática).
+**(04/10/2026)** — CIMA, datos completos: asegura#880 (vida/decesos con persona asegurada, figuras en datos_especificos.figuras[], terceros en cima_extra.terceros[], todo cifrado v1; excluye sexo/estado civil/profesión/idioma/consentimientos; 11 ramos sin extractor aceptados como 'otros'; salud/asistencia sanitaria a review_salud).
+central#4236/#4238/#4240: ficha muestra suplemento, convenio y otros riesgos, «Personas de la póliza», «Persona asegurada» y «Terceros (CIMA)». Portal ve figuras completas y de terceros solo papel/nombre/matrícula/compañía (lista blanca en module-seguros-portal/personas-cliente). Tomador con otro documento no es propio, documento solo sale como «consta».
+central#4228: vigía ya no da «objetos en revisión» de ficheros sellados por el reproceso de cuarentena.
+Rutina cima-guardia (trig_01GHN3678GAAgcNuLYrZUwu3, diaria 8:48 Madrid): creada SIN conectores; Alberto debe añadir Supabase y GitHub en claude.ai → Routines.
+Pendiente: reprocesar 181 ficheros CIMA anteriores al 03/10 (zips en Drive, lote cifrado con CIMA_LOTE_CLAVE, orden por fecha del dato); comentario de columna 0106 y domicilio (DDL, por el gate); confirmar AD con SIN real; borrado RGPD no limpia siniestros.
 
 **(04/10/2026)** — asegura#879 (0108 poliza_no_duplicado, con CASCADE) y central#4221 (vigía de duplicadas + botón «No es duplicado») mergeados. 0108 aplicada en prod (audit 1f45b1a2) + REVOKE UPDATE (8b7e4aad).
 Pares marcados «no duplicado»: 32742526, 35374290, 8414300028 y 36088166.

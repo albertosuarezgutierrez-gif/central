@@ -3,6 +3,12 @@ import { Prisma } from '@prisma/client'
 import { DESTINO_LABEL, type Destino } from './destino'
 import { claveComercio } from './correduria'
 import { comercioDe } from './comercio'
+import { REGEX_DEVOLUCION_AEAT } from './devolucion-aeat'
+import { calcularAutoliquidacion, type AutoliquidacionAnual } from './iva-autoliquidacion'
+
+// Devoluciones AEAT: FUERA de los ingresos y del resultado (no son ingreso del negocio).
+// Valen también para movimientos antiguos sin recategorizar en BD (por concepto).
+const ES_DEV = Prisma.sql`(coalesce(mb.categoria, '') = 'devolucion_impuestos' OR (mb.importe > 0 AND coalesce(mb.concepto, '') ~* ${REGEX_DEVOLUCION_AEAT}))`
 import {
   calcularResultadoFiscal,
   avisosOportunidad,
@@ -110,6 +116,8 @@ export type ResumenFinanciero = {
     recientes: MovResumen[]
     verificacion: MovConfirmados
   }
+  // Abonos de la AEAT del periodo, FUERA del resultado.
+  devolucionesImpuestos: number
   personal: {
     bbva: { gastos: number; porCategoria: { categoria: string; importe: number }[] }
     kutxa: { gastos: number; porCategoria: { categoria: string; importe: number }[] }
@@ -133,6 +141,9 @@ export type ResumenFinanciero = {
     // fuera de la base imponible. Se expone para explicar en pantalla por qué la base < caja.
     exento: number
     trimestres: { q: number; ingresos: number; gastosDeducibles: number; resultado: number; ivaSoportado: number }[]
+    // Informativo para la asesoría (NO altera los totales de arriba): IVA a autoliquidar por facturas
+    // de proveedores extranjeros sin cuota (inversión del sujeto pasivo).
+    autoliquidacionPendiente: AutoliquidacionAnual
     retencionesAcumuladas: number
   }
   deducciones: DeduccionesView
@@ -445,7 +456,7 @@ export async function getResumenFinanciero(
       coalesce(mb.destino, 'personal') AS destino,
       lower(coalesce(cb.banco, '')) AS banco,
       to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
-      coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+      coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND NOT ${ES_DEV}), 0) AS ingresos,
       -- Ingresos EXENTOS de IRPF (p.ej. prestación por nacimiento y cuidado del menor, Art. 7.h LIRPF):
       -- se cobran en la correduría pero NO tributan → se excluyen de la base imponible (no del cobrado).
       coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.subcategoria = 'exento'), 0) AS ingresos_exento,
@@ -524,6 +535,7 @@ export async function getResumenFinanciero(
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND coalesce(mb.destino, 'personal') = 'personal'
       AND mb.importe < 0
+     
       AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
       AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
     GROUP BY 1, 2 ORDER BY 3 DESC
@@ -532,7 +544,7 @@ export async function getResumenFinanciero(
   // ── Año anterior para comparativa ────────────────────────────────────────────
   const antRows = await prisma.$queryRaw<Array<{ ingresos: unknown; gastos: unknown }>>`
     SELECT
-      coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+      coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND NOT ${ES_DEV}), 0) AS ingresos,
       coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
@@ -588,6 +600,18 @@ export async function getResumenFinanciero(
     }
   }
 
+  // Devoluciones AEAT del periodo: informativo, fuera del resultado.
+  const devRows = await prisma.$queryRaw<Array<{ importe: unknown }>>`
+    SELECT mb.importe
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.fecha_operacion BETWEEN ${inicio}::date AND ${fin}::date
+      AND ${ES_DEV}
+  `
+  const devolucionesImpuestos = devRows.reduce((s, r) => s + Number(r.importe), 0)
+
   // Correduría: bruto estimado y retenciones. Sobre el ingreso GRAVABLE (cobrado − exento): las
   // prestaciones exentas (Art. 7.h LIRPF) no tributan ni llevan retención → fuera de la base.
   const corrIngGravable = Math.max(0, corrIng - corrExento)
@@ -615,13 +639,13 @@ export async function getResumenFinanciero(
 
   // Trimestres (fiscal — siempre año completo para el bloque fiscal)
   // Incluye IVA soportado de facturas_proveedor pagadas en cada trimestre.
-  const [trimestresRows, ivaProvRows] = await Promise.all([
+  const [trimestresRows, ivaProvRows, facturasExtRows] = await Promise.all([
     prisma.$queryRaw<Array<{
       q: number; ingresos: unknown; gastos: unknown
     }>>`
       SELECT
         EXTRACT(quarter FROM mb.fecha_operacion)::int AS q,
-        coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND coalesce(mb.subcategoria,'') <> 'exento'), 0) AS ingresos,
+        coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND coalesce(mb.subcategoria,'') <> 'exento' AND NOT ${ES_DEV}), 0) AS ingresos,
         coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0 AND mb.destino IN ('seguros','turistico_pisos','turistico_duplex') AND NOT coalesce(mb.amortizable, false)), 0) AS gastos
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
@@ -642,7 +666,30 @@ export async function getResumenFinanciero(
         AND EXTRACT(year FROM pago_confirmado_at) = ${year}
       GROUP BY 1
     `,
+    // Facturas del año (por fecha de factura; si no hay, la de pago) para la autoliquidación informativa.
+    prisma.$queryRaw<Array<{
+      id: string; proveedor: string | null; importe: unknown; cuota_iva: unknown
+      fecha_factura: Date | null; pago_confirmado_at: Date | null; estado: string | null
+    }>>`
+      SELECT id, proveedor, importe, cuota_iva, fecha_factura, pago_confirmado_at, estado
+      FROM facturas_proveedor
+      WHERE cuenta_id = ${cuentaId}::uuid
+        AND estado <> 'rechazada'
+        AND EXTRACT(year FROM coalesce(fecha_factura::timestamp, pago_confirmado_at)) = ${year}
+    `,
   ])
+  const autoliquidacionPendiente = calcularAutoliquidacion(
+    facturasExtRows.map(f => {
+      const d = f.fecha_factura ?? f.pago_confirmado_at
+      return {
+        id: f.id, proveedor: f.proveedor, estado: f.estado,
+        importe: f.importe == null ? null : Number(f.importe),
+        cuota_iva: f.cuota_iva == null ? null : Number(f.cuota_iva),   // null = cuota sin extraer ≠ 0
+        fecha: d ? d.toISOString().slice(0, 10) : null,
+      }
+    }),
+    year,
+  )
   const ivaSoportadoMap = new Map(ivaProvRows.map(r => [r.q, Number(r.iva_soportado)]))
   const trimestres = [1, 2, 3, 4].map(q => {
     const r = trimestresRows.find(x => x.q === q)
@@ -749,6 +796,7 @@ export async function getResumenFinanciero(
       recientes: pisosRecientes,
       verificacion: verifOf(['turistico_pisos', 'turistico_duplex']),
     },
+    devolucionesImpuestos,
     personal: {
       bbva: {
         gastos: persGasBbva,
@@ -775,6 +823,7 @@ export async function getResumenFinanciero(
       reduccionConjunta: REDUCCION_CONJUNTA,
       exento: corrExento,
       trimestres,
+      autoliquidacionPendiente,
       retencionesAcumuladas: retencionesEstimadas,
     },
     deducciones,

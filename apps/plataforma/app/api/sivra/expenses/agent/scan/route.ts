@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
     // Un gasto domiciliado tiene que acabar cargado en cuenta: si venció y no aparece,
     // se avisa; si el extracto no llega a esa fecha, se declara el hueco (no se afirma).
     const dom = await domiciliadosSinCargo(now.toISOString().slice(0, 10))
-    await avisaDomiciliadosSinCargo(dom.avisos, dom.sinCobertura)
+    await avisaDomiciliadosSinCargo(dom.avisos, dom.sinCobertura, dom.cuentasParadas)
     await resumen({ fuente: 'diario', ...stats })
   } catch (e) {
     console.error('[scan] avisos error:', e)

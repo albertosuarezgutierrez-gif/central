@@ -17,7 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
-(vacío tras la poda del 04/10/2026)
+- **2026-10-04 · mercado-booking** · hizo: plan max=24 (556 candidatas, 532 recortadas); 24/24 ventanas medidas = 239 comps `booking_mcp` (eventos 25/10 y 1/11 refrescados; meses ene/mar/abr-27). Medianas/noche aprox. aforo 12: 25/10 ≈ 780€, 1/11 ≈ 450€, 9/1/27 ≈ 310€, 13/3 ≈ 545€, 27/3 ≈ 1.000€ (Feria-Semana Santa), 17/4 ≈ 1.000€; escaparate 1/4 (House 11-14/10 = 2.024€ total); dudas: —; fallos: escaparate sin disponibilidad en Busto Reform, Dúplex y Luxury Busto (hueco, 3/4); 1 propio descartado (HOUSE SEVILLANA, aforo 12 25/10); PRs/commits: —
+- **2026-10-04 · facturas-correo** · hizo: Vía B sana (última copia 04/10); 4.0 sin filas `sin_revisar` (todas revisada_sin_cargo); archivadas en `10-Octubre-2026` (carpeta creada, id 1uqbZzfYF1EXBzbsm3Vw4Vb-zJNsH_Ttl) SIQUE sept 1.128,48€ (cuadra ×1,21; `limpieza_facturas` ya existía; cargo aún no en banco) y Supabase 25,00 USD, ambas en `facturas_drive` y con `Procesada`; conciliados por contrato/ref 3 cargos Endesa 28/09 (Socorro −159,00, Luxury −108,44, Reform −81,63); Booking/Petroprix ya Procesada; ruido clickedu/checkqrpay/Occident descartado; dudas: destino de Supabase (no hay regla; archivado como SaaS de negocio), cargo Endesa −56,52 del 25/09 sin imputar (¿dúplex? sin email), Socorro P26CON039980996 sigue en PDF-pendiente (solo enlace Endesa, importe por banco); fallos: `gmail-adjuntos` CONNECTION_CLOSED (Vía A caída, no necesaria); Revisar: 1 hilo (Asecon), Extraccion-fallida: 0 por search_threads; PRs/commits: —
 
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
@@ -129,3 +130,6 @@ copiar/sobrescribir (2 fallos propios de la semana con la misma raíz — ver en
 arriba).
 - 27/09/2026 · idealista-radar (pasada manual de arranque) · 12/13 núcleos (Huelva 8/9 + Cádiz 4/4), 285 casas escritas, 17 fuera de zona · Matalascañas sin respuesta (bloqueo de permisos en el subagente) · norte validado en local, pendiente de desplegar centros.
 - 29/09/2026 · mercado-booking · 228 comps booking_mcp en 24/24 ventanas (rondas 0-2, sep→abr; 532 en plan, 508 recortadas) · 0/4 escaparate propio: las 4 fichas sin disponibilidad 06-10/oct (latido ok:false) · 2 anuncios propios filtrados (House Sevillana, 12-oct y 8-ene) · 1 SSL transitorio reintentado ok · ojo outlier Mercer 6.400€/2n el 3-oct.
+
+### mercado-booking (04/10/2026)
+24/24 ventanas de mercado medidas, 238 comps booking_mcp (ventanas 11-oct, 30-oct..3-nov-2026, 6/16/23-may-2027; aforos 2/4/5/12). Escaparate propio 1/4 (House 11-13 oct: 1433€); Busto Reform, Dúplex y Luxury Busto sin disponibilidad (hueco, no "canal cuadra"). 1 anuncio propio descartado (HOUSE SEVILLANA). Tope max=24 dejó 532 ventanas fuera. Latido ok:true (detalle dice 235 comps; real 238).
