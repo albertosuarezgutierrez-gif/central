@@ -167,14 +167,14 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 260 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 262 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 253 | 34.350 | 26.728.661 | 0 | 0 |
-| `otro` | 250 | 8.333 | 23.000.207 | 12.063.419 | 0 |
-| `lectura-directa` | 226 | 5.892 | 17.230.043 | 0 | 0 |
-| `mcp:github` | 231 | 5.543 | 4.595.508 | 50.668.530 | 89 |
+| `bash` | 255 | 34.381 | 26.747.220 | 0 | 0 |
+| `otro` | 252 | 8.347 | 23.004.455 | 12.063.419 | 0 |
+| `lectura-directa` | 227 | 5.895 | 17.242.847 | 0 | 0 |
+| `mcp:github` | 233 | 5.546 | 4.595.554 | 50.668.530 | 89 |
 | `escritura` | 175 | 3.539 | 51.700.821 | 0 | 0 |
 | `sql` | 161 | 3.368 | 1.661.585 | 2.351.230 | 13 |
 | `mcp:Claude_Code_Remote` | 140 | 1.475 | 303.946 | 5.301.463 | 14 |
@@ -184,13 +184,13 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Google_Drive` | 17 | 322 | 370.368 | 0 | 31 |
 | `mcp:Supabase` | 104 | 293 | 28.108 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
-| `agente:general-purpose` | 59 | 253 | 177.321 | 5.299.692 | 0 |
+| `agente:general-purpose` | 60 | 255 | 177.989 | 5.300.608 | 0 |
 | `agente:agente-architect` | 41 | 130 | 98.127 | 4.530.436 | 0 |
 | `mcp:Google-Drive` | 14 | 109 | 96.262 | 0 | 2 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `agente:agente-mecanico` | 31 | 74 | 57.507 | 3.539.065 | 0 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
-| `mcp:claude-code-remote` | 10 | 69 | 6.692 | 0 | 0 |
+| `mcp:claude-code-remote` | 11 | 70 | 6.751 | 0 | 0 |
 | `agente:Explore` | 28 | 65 | 32.709 | 1.503.946 | 0 |
 | `agente:rastreador-codigo` | 34 | 59 | 19.732 | 649.514 | 0 |
 | `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
