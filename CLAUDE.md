@@ -35,6 +35,7 @@
   - 🚨 **32.600 fichas ≠ clientes.** Cliente = póliza viva de CIMA EN VIGOR: `esCarteraEnVigor()` de
     `packages/module-seguros/src/cartera-viva.ts` (origen: `esCarteraViva()`). Nunca `clientes.tipo`.
   - 🔑 Rotar la contraseña de un rol de BD y actualizar el `DATABASE_URL` de su proyecto Vercel es UN solo paso.
+  - 📇 Sincronización con Google Contacts (agenda/WhatsApp): skill `google-contactos`.
 - **`apps/asegura-portal`** — portal del CLIENTE (rol `prisma_asegura_portal` SIN BYPASSRLS; el aislamiento lo da
   el CÓDIGO). `canal_no_disponible` (503) ≠ «el envío falló» (502). `CLAUDE.md` propio.
 - **`apps/asegura-web`** — web pública (`grupoasegura.es` + `www`). **Sin BD a propósito**: el lead va a

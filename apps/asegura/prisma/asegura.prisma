@@ -1493,6 +1493,10 @@ model GoogleContactosConexion {
   conectadoEn           DateTime  @default(now()) @map("conectado_en") @db.Timestamptz(6)
   ultimaSyncEn          DateTime? @map("ultima_sync_en") @db.Timestamptz(6)
   ultimaSyncCompletaEn  DateTime? @map("ultima_sync_completa_en") @db.Timestamptz(6)
+  /// Simular → revisar → activar: sin `syncActivadaEn` el cron no escribe nada.
+  simuladaEn            DateTime? @map("simulada_en") @db.Timestamptz(6)
+  syncActivadaEn        DateTime? @map("sync_activada_en") @db.Timestamptz(6)
+  syncActivadaPor       String?   @map("sync_activada_por")
   actualizadoEn         DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
   @@map("google_contactos_conexion")

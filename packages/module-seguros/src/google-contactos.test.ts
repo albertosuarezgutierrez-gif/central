@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   camposDeCrm, camposDeGoogle, comprobarLimite, esReintentable, esperaReintento, hashCampos, personaDesdeCampos,
   planificarSync, syncTokenCaducado, trocear, aBorrarAlDesconectar, LIMITE_CONTACTOS_GOOGLE,
+  nombreEnGoogle, puertaSync, quitarPrefijo,
   type EntradaPlan, type PersonaGoogle, type Vinculo,
 } from './google-contactos.ts'
 import type { ContactoMovil } from './vcard.ts'
@@ -29,9 +30,9 @@ function entrada(e: Partial<EntradaPlan>): EntradaPlan {
   return { crm: [], seleccionCompleta: true, vinculos: [], fusiones: new Map(), google: [], modo: 'completo', grupoResourceName: GRUPO, ...e }
 }
 
-test('mapeo: E.164, correo en minúsculas y «· AS Cliente» en el apellido; ni DNI ni dirección', () => {
+test('mapeo: E.164, correo en minúsculas y «🟢 » delante del nombre; ni DNI ni dirección', () => {
   const p = personaDesdeCampos(camposDeCrm(ana)!, 'c1')
-  assert.deepEqual(p.names, [{ givenName: 'Ana', familyName: 'Pérez · AS Cliente' }])
+  assert.deepEqual(p.names, [{ givenName: '🟢 Ana', familyName: 'Pérez' }])
   assert.deepEqual(p.phoneNumbers, [{ value: '+34600112233', type: 'mobile' }])
   assert.deepEqual(p.emailAddresses, [{ value: 'ana@x.es', type: 'other' }])
   assert.deepEqual(p.externalIds, [{ value: 'c1', type: 'asegura' }])
@@ -366,4 +367,63 @@ test('🪤 en delta sin ver el contacto NO se escribe a ciegas aunque el CRM tra
   const plan = planificarSync(entrada({ crm: [{ ...ana, nombre: 'Ana María' }], vinculos: [vinculo(ana, 'people/1')], modo: 'delta' }))
   assert.equal(plan.actualizar.length, 0)
   assert.equal(plan.necesitaListadoCompleto, true)
+})
+
+// ─── Emoji de tipo delante del nombre (05/10/2026) ─────────────────────────────
+
+test('emoji: 🟢 cliente / 🟡 lead al PRINCIPIO del nombre visible; sin nombre, «🟡 (sin nombre)»', () => {
+  assert.equal(nombreEnGoogle(camposDeCrm(ana)!), '🟢 Ana Pérez')
+  assert.equal(nombreEnGoogle(camposDeCrm(lead)!), '🟡 María López Ruiz')
+  const soloApellidos = personaDesdeCampos(camposDeCrm({ ...luis, nombre: null })!, 'c2')
+  assert.deepEqual(soloApellidos.names, [{ givenName: '🟡', familyName: 'Gil' }])
+  const nadie = personaDesdeCampos(camposDeCrm({ ...luis, nombre: null, apellidos: null })!, 'c2')
+  assert.deepEqual(nadie.names, [{ givenName: '🟡 (sin nombre)', familyName: '' }])
+})
+
+test('🪤 3a emoji: al leer se quita y se reconoce (también con U+FE0F y solo-emoji): mismo hash, no reescribe', () => {
+  assert.deepEqual(quitarPrefijo('🟢 Ana'), { nombre: 'Ana', grupo: 'cliente' })
+  assert.deepEqual(quitarPrefijo('🟡\uFE0F  María'), { nombre: 'María', grupo: 'lead' })
+  assert.deepEqual(quitarPrefijo('🟡'), { nombre: '', grupo: 'lead' })
+  assert.deepEqual(quitarPrefijo('Ana'), { nombre: 'Ana', grupo: null })
+  for (const c of [ana, luis, lead, { ...luis, nombre: null }, { ...luis, nombre: null, apellidos: null }]) {
+    const plan = planificarSync(entrada({ crm: [c], vinculos: [vinculo(c, 'people/1')], google: [enGoogle(c, 'people/1')] }))
+    assert.equal(plan.actualizar.length + plan.refrescar.length + plan.revisiones.length, 0, `cicla: ${c.clienteId}`)
+  }
+})
+
+test('emoji borrado a mano en Google → se vuelve a poner (CRM manda) y queda constancia', () => {
+  const g = enGoogle(ana, 'people/1', { names: [{ givenName: 'Ana', familyName: 'Pérez' }] })
+  const plan = planificarSync(entrada({ crm: [ana], vinculos: [vinculo(ana, 'people/1')], google: [g] }))
+  assert.equal(plan.actualizar.length, 1)
+  assert.equal(plan.actualizar[0].persona.names[0].givenName, '🟢 Ana')
+  assert.deepEqual(plan.revisiones.map((r) => r.campos), [['grupo']])
+})
+
+test('lead que pasa a cliente → UN update con 🟢 (sin «cambio en Google» falso) y la hora siguiente nada', () => {
+  const comoLead = { ...ana, grupo: 'lead' as const }
+  const g = enGoogle(comoLead, 'people/1')
+  const plan = planificarSync(entrada({ crm: [ana], vinculos: [vinculo(comoLead, 'people/1')], google: [g] }))
+  assert.equal(plan.actualizar.length, 1)
+  assert.equal(plan.revisiones.length, 0)
+  const escrito = plan.actualizar[0].persona
+  assert.equal(escrito.names[0].givenName, '🟢 Ana')
+  assert.deepEqual(escrito.organizations, [{ name: 'Grupo ASegura', title: 'Cliente' }])
+  const releido: PersonaGoogle = { ...g, names: escrito.names, organizations: escrito.organizations }
+  const plan2 = planificarSync(entrada({ crm: [ana], vinculos: [vinculo(ana, 'people/1')], google: [releido] }))
+  assert.equal(plan2.actualizar.length + plan2.refrescar.length + plan2.revisiones.length, 0)
+})
+
+test('vincular por teléfono: el emoji no cuenta como nombre distinto («🟢 Ana Pérez» = «Ana Pérez»)', () => {
+  const ya: PersonaGoogle = { resourceName: 'people/5', etag: 'x', names: [{ givenName: '🟢 Ana', familyName: 'Pérez' }], phoneNumbers: [{ value: '+34 600 11 22 33' }], memberships: [{ contactGroupMembership: { contactGroupResourceName: GRUPO } }] }
+  const plan = planificarSync(entrada({ crm: [ana], google: [ya] }))
+  assert.equal(plan.revisiones.length, 0)
+  assert.equal(plan.actualizar.length, 1)
+  assert.equal(plan.actualizar[0].origen, 'vinculado_telefono')
+})
+
+test('puerta del cron: sin la marca de «sync activada» NO se escribe (pendiente_activar)', () => {
+  assert.equal(puertaSync(null), 'sin_conexion')
+  assert.equal(puertaSync({ estado: 'revocada', syncActivadaEn: new Date() }), 'revocada')
+  assert.equal(puertaSync({ estado: 'conectada', syncActivadaEn: null }), 'pendiente_activar')
+  assert.equal(puertaSync({ estado: 'conectada', syncActivadaEn: new Date() }), 'adelante')
 })

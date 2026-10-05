@@ -111,3 +111,9 @@ test('🪤 guardarConexion decide la revocación con debeRevocarAnterior (no rev
   assert.match(cuerpo, /debeRevocarAnterior\(/)
   assert.equal((cuerpo.match(/\brevocar\(/g) ?? []).length, 1, 'una sola llamada a revocar(), condicionada por debeRevocarAnterior')
 })
+
+test('buscarGrupo (la simulación) es SOLO lectura: si la etiqueta no existe devuelve null y no la crea', async () => {
+  const { r, llamadas } = red([{ status: 200, body: { contactGroups: [{ resourceName: 'contactGroups/x', name: 'Otro', groupType: 'USER_CONTACT_GROUP' }] } }])
+  assert.equal(await new People('tok', r).buscarGrupo(), null)
+  assert.deepEqual(llamadas.map((l) => l.init.method), ['GET'])
+})

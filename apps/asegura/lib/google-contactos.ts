@@ -13,9 +13,10 @@
  */
 import { requireSecret } from '@central/core-identity'
 import {
-  aBorrarAlDesconectar, comprobarLimite, planificarSync, trocear, LOTE_BORRADO_GOOGLE, LOTE_ESCRITURA_GOOGLE, TIPO_ID_EXTERNO,
+  aBorrarAlDesconectar, comprobarLimite, planificarSync, puertaSync, trocear, LOTE_BORRADO_GOOGLE, LOTE_ESCRITURA_GOOGLE, TIPO_ID_EXTERNO,
   type CamposSincronizados, type EstadoVinculo, type OrigenVinculo, type PersonaGoogle, type Plan, type Vinculo,
 } from '@central/module-seguros/google-contactos'
+import { informeSimulacion, type InformeSimulacion } from '@central/module-seguros/google-contactos-simulacion'
 import { decryptField, encryptField } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
@@ -79,7 +80,8 @@ export async function guardarConexion(correduriaId: string, t: TokensIniciales, 
     conectadoPor,
     conectadoEn: new Date(),
     actualizadoEn: new Date(),
-    ...(otraCuenta ? { grupoResourceName: null } : {}),
+    // Otra cuenta = otra agenda, sin simular: se vuelve a «simular → activar».
+    ...(otraCuenta ? { grupoResourceName: null, simuladaEn: null, syncActivadaEn: null, syncActivadaPor: null } : {}),
   }
   await db.googleContactosConexion.upsert({ where: { correduriaId }, create: { correduriaId, ...datos }, update: datos })
   // El token anterior se revoca SOLO si era de OTRA cuenta: `revoke` retira el grant entero, y
@@ -106,6 +108,8 @@ export type EstadoGoogleContactos =
       ultimaSyncEn: string | null
       ultimaSyncCompletaEn: string | null
       ultimoError: string | null
+      simuladaEn: string | null
+      syncActivadaEn: string | null
       vinculados: number
       revisionesPendientes: number
     }
@@ -126,6 +130,8 @@ export async function estadoGoogleContactos(correduriaId: string): Promise<Estad
     ultimaSyncEn: c.ultimaSyncEn?.toISOString() ?? null,
     ultimaSyncCompletaEn: c.ultimaSyncCompletaEn?.toISOString() ?? null,
     ultimoError: c.ultimoError,
+    simuladaEn: c.simuladaEn?.toISOString() ?? null,
+    syncActivadaEn: c.syncActivadaEn?.toISOString() ?? null,
     vinculados,
     revisionesPendientes,
   }
@@ -134,7 +140,7 @@ export async function estadoGoogleContactos(correduriaId: string): Promise<Estad
 // ─── Sincronización ───────────────────────────────────────────────────────────
 
 export type ResultadoSync =
-  | { estado: 'sin_conexion' | 'revocada' | 'error_previo' }
+  | { estado: 'sin_conexion' | 'revocada' | 'error_previo' | 'pendiente_activar' }
   | { estado: 'pii_no_descifra'; clave: string }
   | {
       estado: 'ok'
@@ -204,8 +210,10 @@ async function encolarRevisiones(correduriaId: string, plan: Plan): Promise<numb
 export async function sincronizarGoogleContactos(correduriaId: string): Promise<ResultadoSync> {
   const db = prismaAsegura()
   const conexion = await db.googleContactosConexion.findUnique({ where: { correduriaId } })
-  if (!conexion) return { estado: 'sin_conexion' }
-  if (conexion.estado === 'revocada') return { estado: 'revocada' }
+  // 🚨 Lo PRIMERO, antes de cualquier escritura (también la de crear la etiqueta): sin la marca de
+  // «sync activada» tras revisar la simulación, el cron no hace nada.
+  const puerta = puertaSync(conexion)
+  if (puerta !== 'adelante' || !conexion) return { estado: puerta === 'adelante' ? 'sin_conexion' : puerta }
 
   // 🚨 Si la clave PII no abre la cartera, todos los teléfonos saldrían «vacíos» y el CRM
   // «ganaría» borrándolos de Google. Sin clave que abra, no se sincroniza nada.
@@ -362,6 +370,71 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
       .catch(() => undefined)
     throw e
   }
+}
+
+// ─── Simulación y activación ──────────────────────────────────────────────────
+
+export type ResultadoSimulacion =
+  | { estado: 'sin_conexion' | 'revocada' }
+  | { estado: 'pii_no_descifra'; clave: string }
+  | { estado: 'ok'; informe: InformeSimulacion; syncActivada: boolean }
+
+/**
+ * Qué haría la sincronización, SIN escribir en Google ni en vínculos/cola. Lee la agenda ENTERA
+ * (listado completo, sin syncToken) y la etiqueta solo si ya existe (no la crea). Lo único que
+ * escribe es `simulada_en` en la conexión: activar exige haber simulado.
+ */
+export async function simularGoogleContactos(correduriaId: string): Promise<ResultadoSimulacion> {
+  const db = prismaAsegura()
+  const conexion = await db.googleContactosConexion.findUnique({ where: { correduriaId } })
+  if (!conexion) return { estado: 'sin_conexion' }
+  if (conexion.estado === 'revocada') return { estado: 'revocada' }
+  const muestra = await db.cliente.findFirst({ where: { correduriaId, telefono: { startsWith: 'v1:' } }, select: { telefono: true } })
+  const clave = estadoClavePii(muestra?.telefono)
+  if (clave !== 'ok') return { estado: 'pii_no_descifra', clave }
+
+  let acceso: string
+  try {
+    acceso = await accesoDesdeRefresh(credencialesGoogle(), descifrarToken(conexion.refreshTokenCifrado))
+  } catch (e) {
+    // Sin marcar la conexión: eso lo hace el cron. Aquí solo se informa.
+    if (e instanceof TokenRevocado) return { estado: 'revocada' }
+    throw e
+  }
+  const people = new People(acceso)
+  const grupo = conexion.grupoResourceName ?? (await people.buscarGrupo())
+  const sel = await contactosMovil(correduriaId)
+  const filasVinculo = await db.googleContactosVinculo.findMany({ where: { correduriaId } })
+  const vinculos: Vinculo[] = filasVinculo.map((v) => ({
+    clienteId: v.clienteId, resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hashEnviado,
+    origen: v.origen as OrigenVinculo, estado: v.estado as EstadoVinculo,
+  }))
+  const listado = await people.listar(null)
+  const idsExternos = listado.personas.flatMap((p) => (p.externalIds ?? []).filter((x) => x.type === TIPO_ID_EXTERNO && x.value).map((x) => x.value!))
+  const fusiones = await fusionesDe(correduriaId, [...sel.contactos.map((c) => c.clienteId), ...vinculos.map((v) => v.clienteId), ...idsExternos])
+  const informe = informeSimulacion(
+    { crm: sel.contactos, seleccionCompleta: sel.clientesSinLeer === 0, vinculos, fusiones, google: listado.personas, grupoResourceName: grupo },
+    { totalCuenta: listado.totalCuenta },
+  )
+  await db.googleContactosConexion.update({ where: { correduriaId }, data: { simuladaEn: new Date(), actualizadoEn: new Date() } })
+  return { estado: 'ok', informe, syncActivada: conexion.syncActivadaEn !== null }
+}
+
+export type ResultadoActivacion =
+  | { estado: 'sin_conexion' | 'revocada' | 'sin_simular' }
+  | { estado: 'ok' | 'ya_activa'; syncActivadaEn: string }
+
+/** Marca «simulación revisada: sincroniza». Exige haber simulado con ESTA conexión. */
+export async function activarGoogleContactos(correduriaId: string, actor: string): Promise<ResultadoActivacion> {
+  const db = prismaAsegura()
+  const c = await db.googleContactosConexion.findUnique({ where: { correduriaId } })
+  if (!c) return { estado: 'sin_conexion' }
+  if (c.estado === 'revocada') return { estado: 'revocada' }
+  if (c.syncActivadaEn) return { estado: 'ya_activa', syncActivadaEn: c.syncActivadaEn.toISOString() }
+  if (!c.simuladaEn) return { estado: 'sin_simular' }
+  const ahora = new Date()
+  await db.googleContactosConexion.update({ where: { correduriaId }, data: { syncActivadaEn: ahora, syncActivadaPor: actor, actualizadoEn: ahora } })
+  return { estado: 'ok', syncActivadaEn: ahora.toISOString() }
 }
 
 // ─── Desconexión ──────────────────────────────────────────────────────────────

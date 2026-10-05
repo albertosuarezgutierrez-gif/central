@@ -24,6 +24,7 @@ real medido, orden de trabajo). Después, según lo que toques:
 - **Ingesta de CIMA (EIAC/TIREA, cuarentena, cobertura de campos, caja negra del webhook y el
   diagnóstico de «la ingesta está muda») → skill `cima-ingesta`.** La regla 6 de aquí abajo dice
   QUÉ no se hace sin spec; el CÓMO de la tubería está allí.
+- Google Contacts (agenda del móvil/WhatsApp) → skill `google-contactos`.
 
 ## 🚨 No romper
 

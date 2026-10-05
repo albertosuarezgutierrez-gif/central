@@ -197,8 +197,8 @@ export class People {
     return { personas, nextSyncToken, totalCuenta }
   }
 
-  /** El grupo «Grupo ASegura»: lo busca por nombre y, si no existe, lo crea. */
-  async asegurarGrupo(): Promise<string> {
+  /** El grupo «Grupo ASegura» por nombre, SOLO LECTURA (la simulación): `null` si no existe. */
+  async buscarGrupo(): Promise<string | null> {
     let pageToken: string | undefined
     do {
       const q = new URLSearchParams({ pageSize: '1000' })
@@ -209,6 +209,13 @@ export class People {
       if (g) return g.resourceName
       pageToken = r.nextPageToken
     } while (pageToken)
+    return null
+  }
+
+  /** El grupo «Grupo ASegura»: lo busca por nombre y, si no existe, lo crea. */
+  async asegurarGrupo(): Promise<string> {
+    const ya = await this.buscarGrupo()
+    if (ya) return ya
     const nuevo = await json<{ resourceName: string }>(this.red, `${PEOPLE}/contactGroups`,
       this.init('POST', { contactGroup: { name: NOMBRE_GRUPO_GOOGLE } }), 'contactGroups.create')
     return nuevo.resourceName

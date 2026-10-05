@@ -15,7 +15,9 @@ export const maxDuration = 300
  * El CRM manda: crea/actualiza los contactos del grupo «Grupo ASegura» con la selección del .vcf
  * (clientes en vigor + leads de Vencimientos). Lo editado en Google sobre un campo gestionado se
  * vuelve a pisar y queda en la cola de revisión; los contactos nuevos del grupo son propuestas de
- * lead. Sin conexión → `sin_conexion` (200, no hace nada). Clave PII que no abre → no escribe.
+ * lead. Sin conexión → `sin_conexion` (200, no hace nada). Sin la sincronización ACTIVADA tras
+ * revisar la simulación → `pendiente_activar` (200, no escribe nada, ni la etiqueta). Clave PII
+ * que no abre → no escribe.
  * Auth: `CRON_SECRET` por `Authorization: Bearer`.
  */
 export async function GET(req: Request) {

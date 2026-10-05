@@ -19,6 +19,10 @@
 -- ingesta de Manuel (`crm_seguros`, que recibe DML en `seguros` por privilegios por defecto: se le
 -- QUITA aquí), ni `anon`/`authenticated`. RLS activada sin políticas, como las hermanas.
 --
+-- 🧪 Antes de la PRIMERA escritura: simular (`POST /api/operador/google-contactos/simular`, solo
+-- lectura en Google) y activar (`…/activar`, marca `sync_activada_en`). Sin la marca, el cron
+-- responde `pendiente_activar` y no toca nada.
+--
 -- 🚨 GATE DDL: no aplicar sin PR-review + segundo par de ojos. Sin estas tablas el cron responde
 -- error `esquema` (500) y no escribe nada en Google.
 
@@ -37,8 +41,18 @@ CREATE TABLE IF NOT EXISTS seguros.google_contactos_conexion (
   conectado_en             timestamptz NOT NULL DEFAULT now(),
   ultima_sync_en           timestamptz,
   ultima_sync_completa_en  timestamptz,
-  actualizado_en           timestamptz NOT NULL DEFAULT now()
+  -- Simular → revisar → ACTIVAR. Sin `sync_activada_en` el cron no escribe NADA (ni la etiqueta).
+  -- Se vacían al reconectar con OTRA cuenta de Google (su agenda no se ha simulado).
+  simulada_en              timestamptz,
+  sync_activada_en         timestamptz,
+  sync_activada_por        text,
+  actualizado_en           timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT google_contactos_conexion_activada_tras_simular CHECK (sync_activada_en IS NULL OR simulada_en IS NOT NULL)
 );
+-- Idempotente si la tabla ya existía de una versión anterior de este fichero (staging).
+ALTER TABLE seguros.google_contactos_conexion ADD COLUMN IF NOT EXISTS simulada_en timestamptz;
+ALTER TABLE seguros.google_contactos_conexion ADD COLUMN IF NOT EXISTS sync_activada_en timestamptz;
+ALTER TABLE seguros.google_contactos_conexion ADD COLUMN IF NOT EXISTS sync_activada_por text;
 
 CREATE TABLE IF NOT EXISTS seguros.google_contactos_vinculo (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),

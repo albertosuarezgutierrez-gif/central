@@ -44,12 +44,39 @@ export const MASCARA_GESTIONADA = 'names,phoneNumbers,emailAddresses,organizatio
 export const MAX_RETIRADA_POR_PASADA = 50
 
 const ETIQUETA: Record<GrupoContacto, string> = { cliente: 'Cliente', lead: 'Lead' }
-// `(?:^|\s)`: sin apellidos el familyName es «· AS Lead» (sin espacio delante). Con ` · AS` a secas
-// no casaba, el apellido leído de Google era «· AS Lead» ≠ '' y CADA HORA se reescribía (y se
-// encolaba un «cambio en Google» falso) para todos los leads, que llegan sin apellidos.
-const SUFIJO = /(?:^|\s)· AS (Cliente|Lead)$/
+/**
+ * El nombre en Google EMPIEZA por el emoji del tipo (decisión de Alberto, 05/10/2026): «🟢 Juan
+ * Pérez» = cliente con póliza en vigor, «🟡 María López» = lead. Va al principio del `givenName`
+ * (lo primero que se ve al recibir una llamada o un WhatsApp) y sustituye al antiguo sufijo
+ * «· AS Cliente/Lead» del apellido.
+ * 🪤 (lección del 3a) Al LEER se quita y se reconoce con la misma regla con la que se escribe: si el
+ * nombre leído conservara el emoji, ≠ CRM y CADA HORA se reescribiría (y se encolaría un «cambio en
+ * Google» falso). Cubre el caso sin nombre («🟡» a secas) y el selector de variación U+FE0F.
+ */
+export const EMOJI_GRUPO: Record<GrupoContacto, string> = { cliente: '🟢', lead: '🟡' }
+const PREFIJO = /^(🟢|🟡)\uFE0F?\s*/u
 /** Lo que se escribe en Google cuando la ficha no tiene ni nombre ni apellidos; al leer vuelve a ''. */
 const SIN_NOMBRE = '(sin nombre)'
+
+/** `givenName` leído → el nombre sin el emoji y el tipo que el emoji dice (`null` = no lo lleva). */
+export function quitarPrefijo(givenName: string | null | undefined): { nombre: string; grupo: GrupoContacto | null } {
+  const t = (givenName ?? '').replace(/\s+/g, ' ').trim()
+  const m = t.match(PREFIJO)
+  const resto = (m ? t.slice(m[0].length) : t).trim()
+  return { nombre: resto === SIN_NOMBRE ? '' : resto, grupo: m ? (m[1] === EMOJI_GRUPO.cliente ? 'cliente' : 'lead') : null }
+}
+
+/** El `givenName` que se escribe: emoji + nombre; sin nombre pero con apellidos, solo el emoji. */
+function givenNameConPrefijo(c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo'>): string {
+  const e = EMOJI_GRUPO[c.grupo ?? 'lead']
+  if (c.nombre !== '') return `${e} ${c.nombre}`
+  return c.apellidos !== '' ? e : `${e} ${SIN_NOMBRE}`
+}
+
+/** Cómo se verá el contacto en la agenda: «🟢 Juan Pérez García». */
+export function nombreEnGoogle(c: Pick<CamposSincronizados, 'nombre' | 'apellidos' | 'grupo'>): string {
+  return `${givenNameConPrefijo(c)} ${c.apellidos}`.trim()
+}
 
 export type CamposSincronizados = {
   nombre: string
@@ -107,6 +134,12 @@ export type Revision = {
   propuesta: CamposSincronizados | null
   /** Idempotencia: la misma situación detectada cada hora no se encola dos veces. */
   huella: string
+  /**
+   * Solo en `duplicado_ambiguo`: por qué. `nombre_distinto` = un único contacto con ese teléfono
+   * pero OTRO nombre; `telefono_compartido` = varios contactos (o varias fichas) con el mismo
+   * número. No se guarda en la BD (la cola ya lo distingue por `campos`): lo usa la simulación.
+   */
+  motivo?: 'nombre_distinto' | 'telefono_compartido'
 }
 
 export type Escritura = {
@@ -194,16 +227,17 @@ export function camposDeCrm(c: ContactoMovil): CamposSincronizados | null {
 /** Lo mismo leído de Google, con la misma normalización (si no, cada hora sería un «cambio»). */
 export function camposDeGoogle(p: PersonaGoogle): CamposSincronizados {
   const n = p.names?.[0]
-  const familia = limpio(n?.familyName) ?? ''
-  const sufijo = familia.match(SUFIJO)
+  const { nombre, grupo: grupoPrefijo } = quitarPrefijo(n?.givenName)
   const org = p.organizations?.find((o) => limpio(o.name) === NOMBRE_GRUPO_GOOGLE)
   const titulo = limpio(org?.title)
-  const grupo: GrupoContacto | null =
-    titulo === 'Cliente' ? 'cliente' : titulo === 'Lead' ? 'lead' : sufijo ? (sufijo[1] === 'Cliente' ? 'cliente' : 'lead') : null
+  const grupoTitulo: GrupoContacto | null = titulo === 'Cliente' ? 'cliente' : titulo === 'Lead' ? 'lead' : null
+  // El tipo cuenta si el emoji y la organization dicen LO MISMO (es lo que se escribe siempre). Si
+  // alguien quita el emoji o cambia uno de los dos a mano, `null` → difiere del CRM → se reescribe.
+  const grupo = grupoPrefijo !== null && grupoPrefijo === grupoTitulo ? grupoPrefijo : null
   const tel = p.phoneNumbers?.[0]
   return {
-    nombre: limpio(n?.givenName) === SIN_NOMBRE ? '' : (limpio(n?.givenName) ?? ''),
-    apellidos: familia.replace(SUFIJO, '').trim(),
+    nombre,
+    apellidos: limpio(n?.familyName) ?? '',
     telefono: limpio(tel?.canonicalForm) ?? (telefonoCanonico(tel?.value) || null),
     email: emailCanonico(p.emailAddresses?.[0]?.value),
     grupo,
@@ -219,15 +253,14 @@ export function diferencias(a: CamposSincronizados, b: CamposSincronizados): (ke
 }
 
 /**
- * El contacto tal como se escribe en Google. El apellido lleva « · AS Cliente/Lead» para que
- * la pantalla de llamada diga quién es (igual que el .vcf: `nombreVisible`).
+ * El contacto tal como se escribe en Google. El nombre empieza por 🟢 (cliente) o 🟡 (lead) para
+ * que la pantalla de llamada diga quién es; la organization «Grupo ASegura» lleva lo mismo en texto.
  */
 export function personaDesdeCampos(c: CamposSincronizados, clienteId: string, etag?: string | null): PersonaParaEscribir {
   const etiqueta = ETIQUETA[c.grupo ?? 'lead']
-  const nombreVacio = c.nombre === '' && c.apellidos === ''
   return {
     ...(etag ? { etag } : {}),
-    names: [{ givenName: nombreVacio ? SIN_NOMBRE : c.nombre, familyName: `${c.apellidos} · AS ${etiqueta}`.trim() }],
+    names: [{ givenName: givenNameConPrefijo(c), familyName: c.apellidos }],
     phoneNumbers: c.telefono ? [{ value: c.telefono, type: 'mobile' }] : [],
     emailAddresses: c.email ? [{ value: c.email, type: 'other' }] : [],
     organizations: [{ name: NOMBRE_GRUPO_GOOGLE, title: etiqueta }],
@@ -252,13 +285,19 @@ function huella(tipo: TipoRevision, resourceName: string, hashGoogle: string): s
  * en la cuenta (todos, también los personales); `null` = no se sabe → solo se mira lo nuestro.
  */
 export function comprobarLimite(p: { aSincronizar: number; vinculados: number; totalCuenta: number | null }): void {
-  const tras = p.totalCuenta === null ? p.aSincronizar : p.totalCuenta - p.vinculados + p.aSincronizar
-  if (p.aSincronizar > LIMITE_CONTACTOS_GOOGLE || tras > LIMITE_CONTACTOS_GOOGLE) {
+  const { tras, supera } = excesoLimite(p)
+  if (supera) {
     throw new Error(
       `Google Contacts admite ${LIMITE_CONTACTOS_GOOGLE} contactos por cuenta y la sincronización dejaría ${tras} ` +
         `(${p.aSincronizar} del CRM). No se ha escrito nada: hay que reducir la selección o usar otra cuenta.`,
     )
   }
+}
+
+/** Lo mismo que `comprobarLimite` sin lanzar: cuántos contactos quedarían y si se pasa del tope. */
+export function excesoLimite(p: { aSincronizar: number; vinculados: number; totalCuenta: number | null }): { tras: number; supera: boolean } {
+  const tras = p.totalCuenta === null ? p.aSincronizar : p.totalCuenta - p.vinculados + p.aSincronizar
+  return { tras, supera: p.aSincronizar > LIMITE_CONTACTOS_GOOGLE || tras > LIMITE_CONTACTOS_GOOGLE }
 }
 
 /** Cliente gana a lead si la misma ficha sale dos veces (como en el .vcf); fuera las fusionadas. */
@@ -338,7 +377,8 @@ function conservandoDeGoogle(persona: PersonaParaEscribir, cc: CamposSincronizad
 
 /** Mismo nombre visto por una persona: sin mayúsculas, tildes ni espacios de más, y nombre+apellidos juntos. */
 function mismoNombre(a: CamposSincronizados, b: CamposSincronizados): boolean {
-  const n = (c: CamposSincronizados) => `${c.nombre} ${c.apellidos}`.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim()
+  // El emoji de tipo no es parte del nombre: «🟢 Ana» (contacto que ya escribimos) = «Ana».
+  const n = (c: CamposSincronizados) => `${quitarPrefijo(c.nombre).nombre} ${c.apellidos}`.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim()
   return n(a) === n(b)
 }
 
@@ -493,7 +533,7 @@ export function planificarSync(e: EntradaPlan): Plan {
         // Mismo teléfono, OTRO nombre: puede ser otra persona (o el nombre con que Alberto la
         // guardó). Ni se pisa su nombre ni se crea un duplicado: lo decide Alberto en la cola.
         const campos = diferencias(cc, { ...cg, telefono: cc.telefono, email: cc.email, grupo: cc.grupo })
-        plan.revisiones.push({ tipo: 'duplicado_ambiguo', clienteId: c.clienteId, resourceName: p.resourceName, campos: ['telefono', ...campos], propuesta: cg, huella: huella('duplicado_ambiguo', p.resourceName, `${c.clienteId}|${hash}|nombre`) })
+        plan.revisiones.push({ tipo: 'duplicado_ambiguo', clienteId: c.clienteId, resourceName: p.resourceName, campos: ['telefono', ...campos], propuesta: cg, huella: huella('duplicado_ambiguo', p.resourceName, `${c.clienteId}|${hash}|nombre`), motivo: 'nombre_distinto' })
         reclamados.add(p.resourceName)
         plan.omitidos++
         continue
@@ -503,7 +543,7 @@ export function planificarSync(e: EntradaPlan): Plan {
     }
     if (candidatos.length > 0) {
       const p = candidatos[0]
-      plan.revisiones.push({ tipo: 'duplicado_ambiguo', clienteId: c.clienteId, resourceName: p.resourceName, campos: ['telefono'], propuesta: camposDeGoogle(p), huella: huella('duplicado_ambiguo', p.resourceName, `${c.clienteId}|${hash}`) })
+      plan.revisiones.push({ tipo: 'duplicado_ambiguo', clienteId: c.clienteId, resourceName: p.resourceName, campos: ['telefono'], propuesta: camposDeGoogle(p), huella: huella('duplicado_ambiguo', p.resourceName, `${c.clienteId}|${hash}`), motivo: 'telefono_compartido' })
       for (const x of candidatos) {
         reclamados.add(x.resourceName)
         ambiguos.add(x.resourceName)
@@ -539,6 +579,20 @@ export function planificarSync(e: EntradaPlan): Plan {
   }
 
   return plan
+}
+
+/**
+ * ¿Puede el cron ESCRIBIR? Solo con conexión viva y la sincronización ACTIVADA a mano tras revisar la
+ * simulación (`sync_activada_en`). Sin esa marca, nada: ni crear la etiqueta, ni tocar contactos, ni
+ * vínculos, ni cola. Antes de la primera pasada hay que ver qué haría (la agenda de Alberto ya
+ * tiene clientes volcados a mano por el .vcf: sin simular, se duplicarían).
+ */
+export type PuertaSync = 'sin_conexion' | 'revocada' | 'pendiente_activar' | 'adelante'
+export function puertaSync(c: { estado: string; syncActivadaEn: Date | string | null } | null): PuertaSync {
+  if (!c) return 'sin_conexion'
+  if (c.estado === 'revocada') return 'revocada'
+  if (c.syncActivadaEn === null) return 'pendiente_activar'
+  return 'adelante'
 }
 
 export function trocear<T>(xs: readonly T[], n: number): T[][] {

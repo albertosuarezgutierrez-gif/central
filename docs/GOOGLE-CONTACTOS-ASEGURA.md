@@ -23,8 +23,38 @@ Lógica: `packages/module-seguros/src/google-contactos.ts`. SQL: `apps/asegura/p
 - Ya existentes y obligatorias: `PII_ENCRYPTION_KEY` (cifra el refresh token en BD), `PII_LOOKUP_KEY`, `CRON_SECRET`,
   `ASEGURA_OPERADOR_SECRET`. El refresh token NUNCA va en una env.
 
+## Puesta en marcha: conectar → simular → revisar → activar
+Alberto ya volcó clientes a su agenda a mano (.vcf de contactos-movil): están SIN nuestro id, FUERA de la etiqueta
+«Grupo ASegura» y a veces duplicados. La regla «solo se tocan contactos de la etiqueta» no cambia, así que la
+primera sincronización los DUPLICARÍA. Por eso el cron **no escribe nada** (ni crea la etiqueta) hasta la marca
+`sync_activada_en`: responde `200 { estado: 'pendiente_activar' }`.
+1. **Conectar**: abrir en el navegador, con sesión de asegura, `https://<asegura>/api/google-contactos/conectar`.
+2. **Simular** (plataforma → /correduria → Clientes → «Google Contacts: simular y activar» → «Simular sincronización»;
+   puerto `POST /api/operador/google-contactos/simular`, auditado). SOLO LECTURA: lee la agenda entera, no crea la
+   etiqueta, no toca vínculos ni cola; solo apunta `simulada_en`. Informe (contadores + ≤50 ejemplos, nombre como
+   quedará con su 🟢/🟡 y teléfono con solo los 3 últimos dígitos): se crearán · se vincularán (mismo E.164 y mismo
+   nombre; marcados «fuera de la etiqueta: se DUPLICARÍA» si el contacto existe pero no está en la etiqueta) ·
+   conflictos de nombre (mismo teléfono, otro nombre → cola) · teléfonos ambiguos (varios contactos con el mismo
+   número) · teléfonos no E.164 · contactos leídos y si se pasaría del tope de 25.000.
+   Lógica pura: `packages/module-seguros/src/google-contactos-simulacion.ts` (dos planes con `planificarSync`: el real
+   y el de «agenda entera», solo para lo que el real crearía).
+3. **Revisar**: lo que salga «fuera de la etiqueta», meterlo en la etiqueta «Grupo ASegura» en Google Contacts
+   (selección múltiple → Gestionar etiquetas) y limpiar duplicados; volver a simular hasta que cuadre.
+4. **Activar** («Activar sincronización»; `POST /api/operador/google-contactos/activar { actor }`, auditado). Exige
+   haber simulado (409 `sin_simular`). Reconectar con OTRA cuenta de Google borra la marca (otra agenda, sin simular).
+
+## Nombre en Google: 🟢 cliente · 🟡 lead
+- El nombre EMPIEZA por el emoji de tipo (decisión de Alberto, 05/10/2026): «🟢 Juan Pérez García» = cliente con
+  póliza en vigor, «🟡 María López» = lead. Va al principio del `givenName`; el apellido va limpio (sin el antiguo
+  sufijo «· AS Cliente/Lead»). La organization «Grupo ASegura» lleva el tipo en texto (`Cliente`/`Lead`).
+- Al leer se quita el emoji y se reconoce (`quitarPrefijo`): lo escrito se relee con el mismo hash, sin reescritura
+  horaria (lección del fix 3a). El tipo cuenta solo si emoji y organization coinciden; si alguien borra el emoji a
+  mano, se vuelve a poner (y queda en la cola como cambio en Google).
+- Lead que pasa a cliente → UN update en la siguiente pasada (🟡 → 🟢), sin «cambio en Google» falso.
+- Al vincular por teléfono, el emoji no cuenta para comparar nombres.
+- El .vcf del móvil (`vcard.ts`) sigue con su «· AS Cliente/Lead»: no es este canal.
+
 ## Uso
-- Conectar: abrir en el navegador, con sesión de asegura, `https://<asegura>/api/google-contactos/conectar`.
 - Estado: `GET /api/operador/google-contactos`. Desconectar: `POST /api/operador/google-contactos/desconectar`
   `{ "borrarContactos": true|false }` (revoca en Google y borra el token; con `true` borra solo los contactos que CREÓ el CRM; los vinculados por teléfono/id eran de Alberto y se quedan).
 - ¿Quién llama?: `POST /api/operador/llamada` `{ "tel": "600112233" }` (índice ciego, solo lectura). POST y no GET:
