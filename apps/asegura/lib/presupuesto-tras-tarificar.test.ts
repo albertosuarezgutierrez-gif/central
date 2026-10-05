@@ -59,3 +59,14 @@ test('guardián: las rutas «nuevo» lo enganchan tras guardar la tarificación,
     assert.match(src, /after\(\(\) => completarCoberturasTarificacion\(aCompletar\)\.then\(\(\) => prepararPresupuestoTrasTarificar\(aCompletar, solicitadoPor\)\)\.then\(\(\) => undefined\)\)/, ruta)
   }
 })
+
+test('guardián: «retarificar» (puerto de operador y pantalla de cartera) también lo engancha, dentro de after()', () => {
+  const rutas: [string, string][] = [
+    ['../app/api/operador/codeoscopic/retarificar/route.ts', 'solicitadoPor'],
+    ['../app/api/cartera/polizas/[polizaId]/retarificar/route.ts', "session\\.nombre \\?\\? 'desconocido'"],
+  ]
+  for (const [ruta, actor] of rutas) {
+    const src = readFileSync(join(import.meta.dirname, ruta), 'utf8')
+    assert.match(src, new RegExp(`after\\(\\(\\) => completarCoberturasTarificacion\\(aCompletar\\)\\.then\\(\\(\\) => prepararPresupuestoTrasTarificar\\(aCompletar, ${actor}\\)\\)\\.then\\(\\(\\) => undefined\\)\\)`), ruta)
+  }
+})
