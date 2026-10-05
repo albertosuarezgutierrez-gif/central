@@ -1,6 +1,6 @@
 -- Portal de Grupo ASegura — mínimo de EMPRESA (05/10/2026): flota + jefe de flota.
 --
--- ⏳ PENDIENTE DE APLICAR. 🚨 Se aplica ANTES (o en el mismo paso) que el
+-- ✅ APLICADA en `central` el 05/10/2026 (MCP Supabase, antes del merge de #4289). 🚨 Se aplica ANTES (o en el mismo paso) que el
 -- despliegue de asegura-portal que la usa: el `schema.prisma` del portal ya
 -- declara las columnas nuevas de `portal_bien`, y sin ellas cualquier consulta
 -- a ese modelo cae con 42703. Es ADITIVA: el código viejo sigue funcionando
