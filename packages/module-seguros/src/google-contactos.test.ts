@@ -115,12 +115,15 @@ test('dedup por E.164 antes de crear: uno y solo uno en el grupo → se vincula'
   assert.equal(plan.revisiones.length, 0, 'el vinculado no es además propuesta de lead')
 })
 
-test('teléfono compartido por dos fichas del CRM → no se funde: a revisión', () => {
+test('teléfono compartido por dos fichas del CRM sin titular claro → no se funde ni se crea: «Este número es de…»', () => {
   const ya: PersonaGoogle = { resourceName: 'people/5', phoneNumbers: [{ value: '600112233' }], memberships: [{ contactGroupMembership: { contactGroupResourceName: GRUPO } }] }
   const hermano = { ...luis, telefono: '600112233' }
   const plan = planificarSync(entrada({ crm: [ana, hermano], google: [ya] }))
   assert.equal(plan.actualizar.length, 0)
-  assert.equal(plan.revisiones.filter((r) => r.tipo === 'duplicado_ambiguo').length, 2)
+  assert.equal(plan.crear.length, 0)
+  const t = plan.revisiones.filter((r) => r.tipo === 'telefono_titular')
+  assert.equal(t.length, 1)
+  assert.deepEqual(t[0].candidatos, ['c1', 'c2'])
 })
 
 test('vínculo perdido pero el contacto lleva nuestro id externo → se recupera, no se duplica', () => {

@@ -119,6 +119,18 @@ marca `sync_activada_en`: responde `200 { estado: 'pendiente_activar' }`.
   en vigor (los `pendiente` no) > ⏰; ⚪ ex-cliente solo con vínculo previo (no se retira). Consulta caída = no se escribe.
 - «Ordenar agenda» en la vista: duplicados por teléfono, sin nombre, no E.164, fichas con otro nombre, «parecen de trabajo».
 
+## Un número, un contacto · enriquecer ficha (05/10/2026, migración `2026-10-05e`, gate DDL ANTES del despliegue)
+- Fichas con el MISMO E.164 → UN contacto, el de la principal (elegida en la cola «Este número es de…», guardada por índice
+  ciego en `google_contactos_titular_telefono`; si no, la única `tipo_persona='fisica'` frente a jurídicas). Las demás van como
+  organizations `type='Grupo ASegura · también'` y «También: <ficha> (<estado>, <ramo · compañía>)» en la nota; emoji
+  combinado (🟢 si alguna en vigor, alerta más urgente). Sin titular: cola y NO se crea nada para las fichas sin contacto.
+  Las fichas del CRM NO se fusionan. Transición: la principal sin contacto HEREDA el de una secundaria; el de una secundaria
+  sobrante se DESVINCULA sin borrarse (se reescribe sin emoji/org/id/URL/bloque, sale de la etiqueta; lo de Alberto se queda;
+  si lo CREÓ el CRM también se le quitan nuestro teléfono/correo; >10 en una pasada → no se desvincula NINGUNO y se avisa).
+  >3 fichas con el mismo número (centralita/gestoría): ni titular ni combinación, cada ficha como estaba + aviso informativo
+  en la cola. La simulación cuenta números compartidos, combinados, cola y desvinculaciones. «Añadir a la ficha»: dato del contacto que la ficha NO tiene (BD vacía) → cola; aceptar usa
+  `anadirContacto` y nunca pisa. Lógica: `agruparNumeros`/`personaSinGestion`; tests `google-contactos-numero.test.ts`.
+
 ## Límites
 - **Google admite 25.000 contactos por cuenta (incluidos los personales).** Si la sincronización los superaría, se
   aborta con error y no escribe nada. Escrituras por lotes de 200, máx. 25 lotes por hora (la primera carga puede

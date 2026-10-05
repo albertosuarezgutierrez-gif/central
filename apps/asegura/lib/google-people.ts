@@ -239,6 +239,14 @@ export class People {
     }
   }
 
+  /** Saca de la etiqueta (sin borrar el contacto): «un número, un contacto», ficha secundaria. */
+  async quitarDelGrupo(grupo: string, resourceNames: string[]): Promise<void> {
+    for (let i = 0; i < resourceNames.length; i += 1000) {
+      await json(this.red, `${PEOPLE}/${grupo}/members:modify`,
+        this.init('POST', { resourceNamesToRemove: resourceNames.slice(i, i + 1000) }), 'members.modify')
+    }
+  }
+
   /** ≤200. Devuelve, en el MISMO orden, el contacto creado o `null` si ese falló. */
   async crearLote(personas: PersonaParaEscribir[]): Promise<(PersonaGoogle | null)[]> {
     const r = await json<{ createdPeople?: { person?: PersonaGoogle; httpStatusCode?: number }[] }>(

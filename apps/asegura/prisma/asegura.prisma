@@ -1538,6 +1538,21 @@ model ClienteMote {
   @@map("cliente_mote")
 }
 
+/// «Un número, un contacto» (05/10/2026): de QUIÉN es un teléfono compartido por varias fichas, elegido por
+/// Alberto en la cola («Este número es de…»). Por índice ciego (`computeTelefonoLookupHash`): el número no se
+/// guarda en claro. Solo presentación en Google: las fichas del CRM NO se fusionan.
+/// Migración `prisma/sql/2026-10-05e_google_contactos_titular_telefono.sql` (FK a clientes en SQL).
+model GoogleContactosTitularTelefono {
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  telefonoHash  String   @map("telefono_hash")
+  clienteId     String   @map("cliente_id") @db.Uuid
+  elegidoPor    String   @map("elegido_por")
+  elegidoEn     DateTime @default(now()) @map("elegido_en") @db.Timestamptz(6)
+
+  @@id([correduriaId, telefonoHash])
+  @@map("google_contactos_titular_telefono")
+}
+
 /// Tickets de inicio del OAuth ya CONSUMIDOS (un solo uso; `lib/google-oauth-ticket.ts`).
 /// Migración `prisma/sql/2026-10-05c_google_contactos_ticket.sql`.
 model GoogleContactosTicketUsado {
@@ -1567,7 +1582,12 @@ model GoogleContactosRevision {
   /// Solo `duplicado_ambiguo`: por qué (MOTIVOS_DUPLICADO de module-seguros; CHECK en BD, migración 2026-10-05d).
   /// `null` en filas anteriores = no se sabe → sin «Unificar».
   motivo           String?
-  /// aceptar_lead | descartar | mantener_crm | unificar | unificar_nombre_crm (null mientras está pendiente; CHECK en BD).
+  /// Solo `telefono_titular` («Este número es de…», migración 2026-10-05e): índice ciego del teléfono
+  /// (`computeTelefonoLookupHash`, nunca el número) y las fichas candidatas.
+  telefonoHash     String?   @map("telefono_hash")
+  candidatos       String[]  @default([]) @db.Uuid
+  /// aceptar_lead | descartar | mantener_crm | unificar | unificar_nombre_crm | usar_como_mote | elegir_titular | anadir_a_ficha
+  /// (null mientras está pendiente; CHECK en BD).
   resolucion       String?
   resueltoPor      String?   @map("resuelto_por")
   resueltoEn       DateTime? @map("resuelto_en") @db.Timestamptz(6)

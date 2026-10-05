@@ -11,6 +11,9 @@
  *         EX-CLIENTE (póliza de cartera viva y ninguna en vigor) SOLO si ya tiene vínculo: no se crean
  *         contactos de ex-clientes; el que había se queda con ⚪ en vez de retirarse.
  *   · MOTE (`cliente_mote`, aislado): el contacto se llama «<emoji> <mote>».
+ *   · «UN NÚMERO, UN CONTACTO» (05/10/2026): `tipo_persona` (decide la principal de un teléfono
+ *         compartido), el resumen ramo · compañía («También: …») y si la ficha NO tiene ningún
+ *         teléfono/correo (columna Y tabla hija vacías: «Enriquecer ficha»; si no, no se propone).
  * 🚨 Si la consulta de siniestros, recibos, motes o ex-clientes FALLA, se lanza como las demás: el
  * cron no escribe nada y cada contacto conserva su emoji anterior («no se pudo mirar» ≠ «no hay»).
  * Lo que no se puede leer va como `null` («no se sabe»): ese campo de Google no se toca. Si una
@@ -21,7 +24,7 @@
  */
 import {
   alertaPrioritaria, avisoVencimiento, conLineasEstado, lineasEstado, nombreCompaniaContacto, normalizarNacimiento,
-  notaCliente, notaExCliente, notaLead, proximoVencimiento, trocear, PREFIJO_CLAVE_COMPANIA, type ContactoGoogle,
+  notaCliente, notaExCliente, notaLead, proximoVencimiento, resumenPolizas, trocear, PREFIJO_CLAVE_COMPANIA, type ContactoGoogle,
 } from '@central/module-seguros/google-contactos'
 import { importeEiac, sqlCarteraEnVigor, sqlCarteraViva } from '@central/module-seguros'
 
@@ -121,6 +124,27 @@ export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMad
     for (const x of xs) m.set(x.clienteId, [...(m.get(x.clienteId) ?? []), x])
     return m
   }
+  // Perfil de cada ficha: tipo de persona y si NO tiene ningún teléfono/correo (en la BD: columna y
+  // tabla hija; sin descifrar nada). Una consulta caída LANZA: el cron no escribe.
+  const perfil = new Map<string, { tipoPersona: 'fisica' | 'juridica' | null; sinTel: boolean; sinEmail: boolean }>()
+  for (const tanda of trocear(fichas, 5000)) {
+    const filas = await db.$queryRaw<{ id: string; tipoPersona: string | null; sinTel: boolean; sinEmail: boolean }[]>(Prisma.sql`
+      select c.id::text as id, c.tipo_persona::text as "tipoPersona",
+        (c.telefono is null and not exists (select 1 from cliente_telefonos t where t.cliente_id = c.id)) as "sinTel",
+        (c.email is null and not exists (select 1 from cliente_emails m where m.cliente_id = c.id)) as "sinEmail"
+      from clientes c
+      where c.correduria_id = ${correduriaId}::uuid and c.id = any(${tanda}::uuid[])`)
+    for (const f of filas) {
+      perfil.set(f.id, {
+        tipoPersona: f.tipoPersona === 'fisica' || f.tipoPersona === 'juridica' ? f.tipoPersona : null,
+        sinTel: f.sinTel === true, sinEmail: f.sinEmail === true,
+      })
+    }
+  }
+  const deFicha = (id: string) => {
+    const x = perfil.get(id)
+    return { tipoPersona: x?.tipoPersona ?? null, fichaSinTelefono: x?.sinTel === true, fichaSinEmail: x?.sinEmail === true }
+  }
   const sinPorCliente = agrupar(siniestros)
   const recPorCliente = agrupar(devueltos)
   const estado = (clienteId: string) => {
@@ -136,7 +160,7 @@ export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMad
   }
 
   const deCartera: ContactoGoogle[] = sel.contactos.map((c) => {
-    const base = { ...c, url: urlFichaPlataforma(c.clienteId), cumpleanos: nacimiento.get(c.clienteId) ?? null, mote: motes.get(c.clienteId) ?? null }
+    const base = { ...c, url: urlFichaPlataforma(c.clienteId), cumpleanos: nacimiento.get(c.clienteId) ?? null, mote: motes.get(c.clienteId) ?? null, ...deFicha(c.clienteId) }
     if (c.grupo === 'cliente') {
       const ps = porCliente.get(c.clienteId) ?? []
       const vencs = ps.map((p) => p.vencimiento)
@@ -146,10 +170,14 @@ export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMad
         nota: conLineasEstado(notaCliente({ polizas: ps.map((p) => ({ ramo: p.ramo, compania: p.compania })), proximoVencimiento: proximoVencimiento(vencs, hoy) }), e.lineas),
         aviso: avisoVencimiento(vencs, hoy),
         alerta: e.alerta,
+        resumen: resumenPolizas(ps),
       }
     }
     const l = sel.detalleLeads.get(c.clienteId)
-    return { ...base, nota: l ? notaLead({ ramo: l.ramo, compania: l.aseguradora, vencimiento: l.vencimiento }) : null, aviso: false }
+    return {
+      ...base, nota: l ? notaLead({ ramo: l.ramo, compania: l.aseguradora, vencimiento: l.vencimiento }) : null, aviso: false,
+      resumen: l ? resumenPolizas([{ ramo: l.ramo, compania: l.aseguradora }]) : null,
+    }
   })
   const deExClientes: ContactoGoogle[] = contactoEx === null ? [] : exClientes.map((x) => {
     const k = contactoEx.get(x.id)
@@ -158,6 +186,7 @@ export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMad
       clienteId: x.id, nombre: x.nombre, apellidos: x.apellidos, telefono: k?.telefono ?? null, email: k?.email ?? null,
       grupo: 'ex_cliente', url: urlFichaPlataforma(x.id), cumpleanos: nacimiento.get(x.id) ?? null, mote: motes.get(x.id) ?? null,
       nota: notaExCliente({ baja: x.baja, compania: x.compania }, e.lineas), aviso: false, alerta: e.alerta,
+      resumen: x.compania?.trim() || null, ...deFicha(x.id),
     }
   })
 
