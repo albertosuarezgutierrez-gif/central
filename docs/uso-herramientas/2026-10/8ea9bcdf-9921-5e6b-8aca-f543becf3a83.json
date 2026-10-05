@@ -1,33 +1,33 @@
 {
  "sesion": "8ea9bcdf-9921-5e6b-8aca-f543becf3a83",
  "inicio": "2026-10-04T08:32:19.191Z",
- "fin": "2026-10-05T04:21:02.049Z",
- "llamadas": 1302,
+ "fin": "2026-10-05T04:53:17.795Z",
+ "llamadas": 1373,
  "categorias": {
   "otro": {
-   "llamadas": 101,
-   "chars_in": 67948,
-   "chars_out": 434830,
+   "llamadas": 116,
+   "chars_in": 71274,
+   "chars_out": 594546,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 3,
-    "ToolSearch": 32,
-    "SubagentHandback": 25,
+    "ToolSearch": 38,
+    "SubagentHandback": 26,
     "SendMessage": 1,
-    "ReadNotifications": 40
+    "ReadNotifications": 48
    }
   },
   "bash": {
-   "llamadas": 184,
-   "chars_in": 142024,
-   "chars_out": 801168,
+   "llamadas": 199,
+   "chars_in": 146238,
+   "chars_out": 851855,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 184
+    "Bash": 199
    }
   },
   "agente:general-purpose": {
@@ -54,18 +54,18 @@
    }
   },
   "mcp:Gmail": {
-   "llamadas": 680,
-   "chars_in": 43376,
-   "chars_out": 1648144,
-   "errores": 48,
+   "llamadas": 700,
+   "chars_in": 44889,
+   "chars_out": 1853823,
+   "errores": 50,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Gmail__search_threads": 55,
-    "mcp__Gmail__get_thread": 76,
-    "mcp__Gmail__get_message": 31,
-    "mcp__Gmail__list_labels": 4,
-    "mcp__Gmail__label_thread": 514
+    "mcp__Gmail__search_threads": 61,
+    "mcp__Gmail__get_thread": 78,
+    "mcp__Gmail__get_message": 36,
+    "mcp__Gmail__list_labels": 5,
+    "mcp__Gmail__label_thread": 520
    }
   },
   "sql": {
@@ -80,45 +80,45 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 7,
-   "chars_in": 1239,
-   "chars_out": 2916,
+   "llamadas": 9,
+   "chars_in": 1791,
+   "chars_out": 3150,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__read_documentation": 1,
     "mcp__claude-code-remote__subscribe_pr_activity": 2,
-    "mcp__claude-code-remote__send_later": 2,
+    "mcp__claude-code-remote__send_later": 3,
     "mcp__claude-code-remote__delete_trigger": 1,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 1
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 2
    }
   },
   "mcp:Google_Drive": {
-   "llamadas": 235,
-   "chars_in": 162238,
-   "chars_out": 1039721,
+   "llamadas": 248,
+   "chars_in": 163649,
+   "chars_out": 1202737,
    "errores": 12,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Google_Drive__search_files": 68,
+    "mcp__Google_Drive__search_files": 73,
     "mcp__Google_Drive__create_file": 22,
-    "mcp__Google_Drive__read_file_content": 141,
+    "mcp__Google_Drive__read_file_content": 149,
     "mcp__Google_Drive__get_file_metadata": 2,
     "mcp__Google_Drive__update_file": 1,
     "mcp__Google_Drive__download_file_content": 1
    }
   },
   "escritura": {
-   "llamadas": 19,
-   "chars_in": 123994,
-   "chars_out": 2067880,
+   "llamadas": 20,
+   "chars_in": 130437,
+   "chars_out": 2074400,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 9,
+    "Write": 10,
     "Edit": 10
    }
   },
@@ -134,28 +134,28 @@
    }
   },
   "mcp:github": {
-   "llamadas": 6,
-   "chars_in": 1962,
-   "chars_out": 4479,
+   "llamadas": 9,
+   "chars_in": 2319,
+   "chars_out": 12026,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__create_pull_request": 2,
-    "mcp__github__pull_request_read": 2,
-    "mcp__github__update_pull_request": 1,
-    "mcp__github__merge_pull_request": 1
+    "mcp__github__pull_request_read": 3,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__merge_pull_request": 2
    }
   },
   "agente:lector-correo": {
-   "llamadas": 7,
-   "chars_in": 12078,
-   "chars_out": 13565,
+   "llamadas": 9,
+   "chars_in": 15030,
+   "chars_out": 16899,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 7
+    "Agent": 9
    }
   }
  }
