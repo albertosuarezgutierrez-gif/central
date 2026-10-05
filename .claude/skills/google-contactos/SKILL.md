@@ -17,7 +17,10 @@ landmines, estado). Después, según lo que toques:
 - App (autenticación OAuth, endpoints) → `apps/asegura/lib/google-*.ts`
 - Rutas API → `apps/asegura/app/api/google-contactos/{conectar,callback}`,
   `app/api/cron/google-contactos`, `app/api/operador/google-contactos/*`
-- Pantalla de revisión (`/correduria`) → `GoogleContactosRevision.tsx` de `apps/plataforma`
+- Pantalla (plataforma `/correduria/google-contactos`, menú «…» → «Google Contactos»): `GoogleContactosConexion.tsx`
+  (estado + Conectar/Reconectar/Desconectar), `GoogleContactosSimulacion.tsx`, `GoogleContactosRevision.tsx`; en Clientes
+  solo `AvisoGoogleContactos.tsx`. Conectar = ticket de un solo uso (`apps/asegura/lib/google-oauth-ticket.ts`, POST
+  `/api/operador/google-contactos/ticket`, migración `2026-10-05c`); el callback vuelve a esa vista sin sesión de asegura.
 - Selección (cartera + leads + compañías 🔵, nota/URL/⏰/cumpleaños) → `apps/asegura/lib/contactos-google.ts`
 - Migración schema → `apps/asegura/prisma/sql/2026-10-05b_google_contactos.sql`
 

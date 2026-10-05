@@ -5,7 +5,7 @@ import { firmarEstado, verificarEstado, VIGENCIA_ESTADO_MS } from './google-oaut
 const S = 'secreto-de-prueba-0123456789'
 const base = { correduriaId: 'cor-1', cuentaId: 'cta-1', nonce: 'n-abc' }
 const ok = (state: string, extra: Partial<Parameters<typeof verificarEstado>[1]> = {}) =>
-  verificarEstado(state, { secreto: S, nonceCookie: 'n-abc', cuentaId: 'cta-1', correduriaId: 'cor-1', ...extra })
+  verificarEstado(state, { secreto: S, nonceCookie: 'n-abc', sesion: { cuentaId: 'cta-1', correduriaId: 'cor-1' }, ...extra })
 
 test('un state recién firmado, en el mismo navegador y sesión, vale', () => {
   const r = ok(firmarEstado(base, S))
@@ -26,8 +26,20 @@ test('🪤 sin la cookie del nonce (state robado y usado desde otro navegador) n
 
 test('🪤 otra sesión u otra correduría no vale', () => {
   const st = firmarEstado(base, S)
-  assert.deepEqual(ok(st, { cuentaId: 'cta-2' }), { ok: false, motivo: 'sesion' })
-  assert.deepEqual(ok(st, { correduriaId: 'cor-2' }), { ok: false, motivo: 'sesion' })
+  assert.deepEqual(ok(st, { sesion: { cuentaId: 'cta-2', correduriaId: 'cor-1' } }), { ok: false, motivo: 'sesion' })
+  assert.deepEqual(ok(st, { sesion: { cuentaId: 'cta-1', correduriaId: 'cor-2' } }), { ok: false, motivo: 'sesion' })
+})
+
+test('sin sesión de asegura (flujo con ticket desde plataforma): state firmado + nonce del navegador bastan', () => {
+  const r = ok(firmarEstado(base, S), { sesion: null })
+  assert.equal(r.ok, true)
+  if (r.ok) assert.deepEqual([r.datos.correduriaId, r.datos.cuentaId], ['cor-1', 'cta-1'])
+})
+
+test('🪤 sin sesión NO se relaja nada más: sin cookie del nonce o con otra firma sigue sin valer', () => {
+  const st = firmarEstado(base, S)
+  assert.deepEqual(ok(st, { sesion: null, nonceCookie: undefined }), { ok: false, motivo: 'nonce' })
+  assert.deepEqual(ok(firmarEstado(base, 'otro-secreto'), { sesion: null }), { ok: false, motivo: 'firma' })
 })
 
 test('caduca a los 10 minutos', () => {

@@ -63,6 +63,30 @@ function saneado(e: unknown): string {
 
 // ─── Conexión ─────────────────────────────────────────────────────────────────
 
+/**
+ * Consume el `jti` de un ticket de inicio (un solo uso, `google-oauth-ticket.ts`). `true` = era la
+ * primera vez y queda marcado; `false` = ya se había usado. Lanza si la tabla falta: el que llama
+ * (`canjearTicket`) lo convierte en rechazo (fail-closed). Purga de paso lo de más de un día.
+ */
+export async function consumirTicketGoogle(d: { jti: string; correduriaId: string; cuentaId: string; caduca: number }): Promise<boolean> {
+  const db = prismaAsegura()
+  try {
+    await db.googleContactosTicketUsado.create({
+      data: { jti: d.jti, correduriaId: d.correduriaId, cuentaId: d.cuentaId, caducaEn: new Date(d.caduca) },
+    })
+  } catch (e) {
+    // Clave primaria repetida = ese `jti` ya se usó. Cualquier otro fallo sube (fail-closed).
+    if (typeof e === 'object' && e !== null && (e as { code?: string }).code === 'P2002') return false
+    throw e
+  }
+  try {
+    await db.googleContactosTicketUsado.deleteMany({ where: { correduriaId: d.correduriaId, usadoEn: { lt: new Date(Date.now() - 24 * 3600_000) } } })
+  } catch {
+    // Best effort: la purga no decide nada.
+  }
+  return true
+}
+
 export async function guardarConexion(correduriaId: string, t: TokensIniciales, conectadoPor: string): Promise<void> {
   const db = prismaAsegura()
   // Cifrar ANTES de tocar nada: si la clave falla, no se ha borrado ningún vínculo.

@@ -137,7 +137,7 @@ export default function GoogleContactosSimulacion() {
     )
   }
   if (!estado.conectada) {
-    return <Bloque titulo={titulo} Icono={RefreshCw}><p style={pMuted}>No hay cuenta de Google conectada (paso 1: conectar desde asegura).</p></Bloque>
+    return <Bloque titulo={titulo} Icono={RefreshCw}><p style={pMuted}>No hay cuenta de Google conectada: conéctala arriba («Conectar Google»).</p></Bloque>
   }
 
   const activa = !!estado.syncActivadaEn
