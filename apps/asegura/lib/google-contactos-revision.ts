@@ -40,7 +40,9 @@ function leerPropuesta(c: string | null): { propuesta: CamposSincronizados | nul
     return {
       propuesta: {
         nombre: txt(o.nombre), apellidos: txt(o.apellidos), telefono: opc(o.telefono), email: opc(o.email),
-        grupo: o.grupo === 'cliente' || o.grupo === 'lead' ? o.grupo : null,
+        grupo: o.grupo === 'cliente' || o.grupo === 'lead' || o.grupo === 'compania' ? o.grupo : null,
+        // Campos de después del 05/10/2026 (las revisiones anteriores no los traen: `null` = no consta).
+        nota: opc(o.nota), url: opc(o.url), cumpleanos: opc(o.cumpleanos), aviso: o.aviso === true,
       },
       ilegible: false,
     }
@@ -109,15 +111,28 @@ export async function resolverRevision(
   const ef = efectoResolucion(fila.tipo, p.accion)
   if (!ef.ok) return { ok: false, estado: 'invalido', motivo: ef.motivo, status: 422 }
 
-  let clienteId = fila.clienteId
-  if (ef.altaLead) {
-    const { propuesta, ilegible } = leerPropuesta(fila.propuestaCifrada)
-    if (!propuesta) {
-      return { ok: false, estado: 'invalido', motivo: ilegible ? 'No se puede leer lo que había en Google (clave PII).' : 'No hay datos que dar de alta.', status: 422 }
-    }
-    // Alta normal de lead: busca antes duplicados por teléfono/email (409 con las fichas) y deja
-    // historial. Sin fuente inventada: `null` = no se ha dicho.
-    const alta = await altaCliente(
+  const propuestaLead = ef.altaLead ? leerPropuesta(fila.propuestaCifrada) : null
+  if (propuestaLead && !propuestaLead.propuesta) {
+    return { ok: false, estado: 'invalido', motivo: propuestaLead.ilegible ? 'No se puede leer lo que había en Google (clave PII).' : 'No hay datos que dar de alta.', status: 422 }
+  }
+
+  // 🔒 El CLAIM primero (solo una de dos resoluciones simultáneas lo gana): si el alta del lead fuera
+  // antes, dos «Aceptar como lead» a la vez crearían DOS leads. Solo la revisión; el vínculo y
+  // Google, intactos (`ef.vinculo === 'ninguno'`).
+  const resueltoEn = new Date()
+  const { count } = await db.googleContactosRevision.updateMany({
+    where: { correduriaId, id: p.id, estado: 'pendiente' },
+    data: { estado: ef.estado, resolucion: p.accion, resueltoPor: p.actor, resueltoEn },
+  })
+  if (count === 0) return { ok: false, estado: 'ya_resuelta', motivo: 'Otra persona la resolvió a la vez.', status: 409, clienteId: fila.clienteId }
+  if (!propuestaLead?.propuesta) return { ok: true, estado: ef.estado, clienteId: fila.clienteId }
+
+  // Alta normal de lead: busca antes duplicados por teléfono/email (409 con las fichas) y deja
+  // historial. Sin fuente inventada: `null` = no se ha dicho.
+  const propuesta = propuestaLead.propuesta
+  let alta: Awaited<ReturnType<typeof altaCliente>>
+  try {
+    alta = await altaCliente(
       correduriaId,
       {
         nombre: propuesta.nombre, apellidos: propuesta.apellidos, telefono: propuesta.telefono ?? '', email: propuesta.email ?? '',
@@ -125,19 +140,26 @@ export async function resolverRevision(
       },
       p.actor,
     )
-    if (!alta.ok) {
-      const { ok: _ok, status, ...resto } = alta
-      void _ok
-      return { ok: false, ...resto, status }
-    }
-    clienteId = alta.id
+  } catch (e) {
+    await liberarClaim(correduriaId, p.id, p.actor, resueltoEn)
+    throw e
   }
+  if (!alta.ok) {
+    // Sin lead (p. ej. 409 por duplicado: se reintenta con «forzar»): la revisión vuelve a pendiente,
+    // solo si sigue siendo NUESTRO claim.
+    await liberarClaim(correduriaId, p.id, p.actor, resueltoEn)
+    const { ok: _ok, status, ...resto } = alta
+    void _ok
+    return { ok: false, ...resto, status }
+  }
+  await db.googleContactosRevision.updateMany({ where: { correduriaId, id: p.id }, data: { clienteId: alta.id } })
+  return { ok: true, estado: ef.estado, clienteId: alta.id }
+}
 
-  // Solo la revisión. El vínculo y Google, intactos (`ef.vinculo === 'ninguno'`).
-  const { count } = await db.googleContactosRevision.updateMany({
-    where: { correduriaId, id: p.id, estado: 'pendiente' },
-    data: { estado: ef.estado, resolucion: p.accion, resueltoPor: p.actor, resueltoEn: new Date(), ...(ef.altaLead ? { clienteId } : {}) },
+/** Deshace un claim propio (mismo actor y mismo instante) si el alta del lead no salió. */
+async function liberarClaim(correduriaId: string, id: string, actor: string, resueltoEn: Date): Promise<void> {
+  await prismaAsegura().googleContactosRevision.updateMany({
+    where: { correduriaId, id, estado: { not: 'pendiente' }, resueltoPor: actor, resueltoEn },
+    data: { estado: 'pendiente', resolucion: null, resueltoPor: null, resueltoEn: null },
   })
-  if (count === 0) return { ok: false, estado: 'ya_resuelta', motivo: 'Otra persona la resolvió a la vez.', status: 409, clienteId }
-  return { ok: true, estado: ef.estado, clienteId }
 }

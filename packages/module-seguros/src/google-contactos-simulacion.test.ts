@@ -30,10 +30,10 @@ test('máscara: solo los 3 últimos dígitos; sin teléfono, null', () => {
   assert.equal(enmascararTelefono(null), null)
 })
 
-test('los 5 tipos: crear, vincular (dentro y FUERA de la etiqueta), conflicto de nombre, ambiguo y no normalizable', () => {
+test('los tipos: crear, vincular (en la etiqueta), ADOPTAR (fuera), conflicto de nombre, ambiguo y no normalizable', () => {
   const google = [
     agenda('people/v', 'vicente', 'vinculo', '600 000 002', true), // en la etiqueta, mismo nombre (sin tildes)
-    agenda('people/f', 'Fernando', 'Fuera', '+34600000003'), // agenda antigua, fuera de la etiqueta
+    agenda('people/f', 'Fernando', 'Fuera', '+34600000003'), // agenda antigua (.vcf), fuera de la etiqueta
     agenda('people/k', 'Fontanero', 'Juan', '600000004', true), // mismo teléfono, otro nombre
     agenda('people/a1', 'Antonio', 'Ambiguo', '600000005'), // dos contactos con el mismo número
     agenda('people/a2', 'Toni', '', '600000005'),
@@ -45,8 +45,8 @@ test('los 5 tipos: crear, vincular (dentro y FUERA de la etiqueta), conflicto de
   assert.equal(inf.crear.ejemplos[0].nombre, '🟢 Nadia Nueva', 'el informe refleja el nombre con prefijo')
   assert.equal(inf.crear.ejemplos[0].telefono, '••••••••001')
 
-  assert.deepEqual(inf.vincular.ejemplos.map((x) => [x.clienteId, x.fueraDeEtiqueta]), [['v1', false], ['f1', true]])
-  assert.equal(inf.vincular.ejemplos[1].nombre, '🟡 Fernando Fuera')
+  assert.deepEqual(inf.vincular.ejemplos.map((x) => [x.clienteId, x.fueraDeEtiqueta]), [['v1', false]])
+  assert.deepEqual(inf.adoptar.ejemplos.map((x) => [x.clienteId, x.nombre, x.fueraDeEtiqueta]), [['f1', '🟡 Fernando Fuera', true]])
 
   assert.deepEqual(inf.conflictosNombre.ejemplos.map((x) => [x.clienteId, x.nombreEnAgenda]), [['k1', 'Fontanero Juan']])
 
@@ -56,21 +56,29 @@ test('los 5 tipos: crear, vincular (dentro y FUERA de la etiqueta), conflicto de
   assert.deepEqual(inf.telefonosNoNormalizables.ejemplos, [{ nombre: 'Raro', telefono: '••345' }])
   assert.equal(inf.telefonosNoNormalizables.total, 1)
 
-  // La primera pasada REAL crea nueva + fuera + ambiguo (los dos últimos, duplicados): se dice.
-  assert.equal(inf.real.crear, 3)
-  assert.equal(inf.real.duplicariaFueraDeEtiqueta, 2)
+  // La primera pasada REAL solo crea la nueva: el de fuera se ADOPTA y el ambiguo va a la cola.
+  assert.equal(inf.real.crear, 1)
+  assert.equal(inf.real.adoptar, 1)
   assert.equal(inf.real.vincular, 1)
   assert.equal(inf.contactosLeidos, 6)
   assert.equal(inf.contactosEnEtiqueta, 2)
   assert.equal(inf.superaTope, false)
-  assert.ok(inf.avisos.some((a) => /DUPLICARÍA/.test(a)))
+  assert.ok(inf.avisos.some((a) => /Se adoptarán 1/.test(a)))
+  assert.ok(!inf.avisos.some((a) => /DUPLICAR/.test(a)), 'lo adoptable ya no se anuncia como duplicado')
 })
 
-test('etiqueta aún inexistente: todo lo de la agenda cuenta como fuera de la etiqueta, sin crearla', () => {
+test('un contacto personal (otro nombre) fuera de la etiqueta con el mismo teléfono: conflicto, ni se adopta ni se crea', () => {
+  const inf = informeSimulacion(entrada({ crm: [conflicto], google: [agenda('people/p', 'Fontanero', 'Juan', '600000004')] }), { totalCuenta: 1 })
+  assert.deepEqual(inf.conflictosNombre.ejemplos.map((x) => [x.clienteId, x.fueraDeEtiqueta]), [['k1', true]])
+  assert.equal(inf.real.crear + inf.real.adoptar, 0)
+})
+
+test('etiqueta aún inexistente: lo de la agenda se ADOPTA (fuera de la etiqueta), sin crearla', () => {
   const inf = informeSimulacion(entrada({ crm: [vinc], google: [agenda('people/v', 'Vicente', 'Vínculo', '600000002')], grupoResourceName: null }), { totalCuenta: 1 })
   assert.equal(inf.grupoExiste, false)
-  assert.deepEqual(inf.vincular.ejemplos.map((x) => x.fueraDeEtiqueta), [true])
-  assert.equal(inf.real.crear, 1)
+  assert.deepEqual(inf.adoptar.ejemplos.map((x) => x.fueraDeEtiqueta), [true])
+  assert.equal(inf.real.crear, 0)
+  assert.equal(inf.real.adoptar, 1)
 })
 
 test('tope de 25.000: con la agenda casi llena, se avisa (sin lanzar)', () => {

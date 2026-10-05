@@ -18,7 +18,16 @@ landmines, estado). Después, según lo que toques:
 - Rutas API → `apps/asegura/app/api/google-contactos/{conectar,callback}`,
   `app/api/cron/google-contactos`, `app/api/operador/google-contactos/*`
 - Pantalla de revisión (`/correduria`) → `GoogleContactosRevision.tsx` de `apps/plataforma`
+- Selección (cartera + leads + compañías 🔵, nota/URL/⏰/cumpleaños) → `apps/asegura/lib/contactos-google.ts`
 - Migración schema → `apps/asegura/prisma/sql/2026-10-05b_google_contactos.sql`
+
+## Adopción y campos extra (05/10/2026)
+- **Adopción:** fuera de la etiqueta, mismo E.164 (cualquiera de sus teléfonos) + mismo nombre (sin «· AS …» ni
+  emojis) o sufijo del .vcf → se adopta (origen `adoptado`, entra en la etiqueta, nunca se borra). Mismo teléfono y
+  otro nombre, o varios contactos → cola, sin crear. Tests: `google-contactos-adopcion.test.ts`.
+- **🔵 compañías** (`compania:<uuid>`), **⏰** (vence en ≤30 días), **nota** (solo el bloque `— Grupo ASegura —`;
+  editarlo en Google no va a cola), **URL** de la ficha, **cumpleaños** (`fecha_nacimiento` descifrada; sin ella no
+  se toca). Tests: `google-contactos-extras.test.ts`.
 
 ## 🚨 No romper
 
@@ -30,8 +39,8 @@ landmines, estado). Después, según lo que toques:
    revisión y activación manual. No se usan conectores de Claude.
 4. **Reconectar la MISMA cuenta no revoca el token.** Revoke mata el grant entero. Reconexión =
    nuevo token sin limpiar el viejo.
-5. **El CRM solo gestiona su entrada (teléfono/correo/organización).** El resto de Google se
-   conserva. Nunca borrar en Google salvo origen `creado`.
+5. **El CRM solo gestiona su entrada (teléfono/correo/organización/URL, el BLOQUE de la nota y el
+   cumpleaños si lo sabe).** El resto de Google se conserva. Nunca borrar en Google salvo origen `creado`.
 6. **Retirada masiva bloqueada:** >50 contactos o >10% del total. Ahí se para y se avisa.
 7. **Si la clave PII no abre la cartera no se escribe nada.** Falla silenciosa de encriptación =
    modo lectura.

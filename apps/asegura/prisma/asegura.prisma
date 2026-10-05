@@ -1502,11 +1502,13 @@ model GoogleContactosConexion {
   @@map("google_contactos_conexion")
 }
 
-/// Ficha ↔ contacto de Google, con el hash de lo último ENVIADO.
+/// Ficha (o contacto de compañía) ↔ contacto de Google, con el hash de lo último ENVIADO.
+/// Exactamente uno de `clienteId` / `companiaContactoId` (CHECK en BD).
 model GoogleContactosVinculo {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId  String   @map("correduria_id") @db.Uuid
-  clienteId     String   @map("cliente_id") @db.Uuid
+  clienteId     String?  @map("cliente_id") @db.Uuid
+  companiaContactoId String? @map("compania_contacto_id") @db.Uuid
   resourceName  String   @map("resource_name")
   etag          String?
   hashEnviado   String   @map("hash_enviado")
@@ -1516,6 +1518,7 @@ model GoogleContactosVinculo {
   creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
 
   @@unique([correduriaId, clienteId], map: "google_contactos_vinculo_cliente")
+  @@unique([correduriaId, companiaContactoId], map: "google_contactos_vinculo_compania")
   @@unique([correduriaId, resourceName], map: "google_contactos_vinculo_recurso")
   @@map("google_contactos_vinculo")
 }
@@ -1526,6 +1529,7 @@ model GoogleContactosRevision {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId     String    @map("correduria_id") @db.Uuid
   clienteId        String?   @map("cliente_id") @db.Uuid
+  companiaContactoId String? @map("compania_contacto_id") @db.Uuid
   resourceName     String    @map("resource_name")
   tipo             String
   campos           String[]  @default([])

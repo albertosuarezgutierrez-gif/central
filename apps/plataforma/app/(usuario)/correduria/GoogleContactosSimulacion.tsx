@@ -55,11 +55,13 @@ function Seccion<T>({ titulo, ayuda, lista, fila }: { titulo: string; ayuda: str
 function Ficha({ x }: { x: EjemploFicha }) {
   return (
     <>
-      <Link href={`/correduria/cliente/${x.clienteId}`}>{x.nombre}</Link>
+      {x.clienteId.startsWith('compania:')
+        ? <Link href="/correduria/companias">{x.nombre}</Link>
+        : <Link href={`/correduria/cliente/${x.clienteId}`}>{x.nombre}</Link>}
       {x.telefono ? ` · ${x.telefono}` : ' · sin teléfono'}
       {x.nombreEnAgenda ? ` · en tu agenda: «${x.nombreEnAgenda}»` : ''}
       {x.contactosConEseTelefono !== undefined ? ` · ${x.contactosConEseTelefono} contactos con ese número` : ''}
-      {x.fueraDeEtiqueta && <strong style={{ color: 'var(--warning)' }}> · fuera de la etiqueta: se DUPLICARÍA</strong>}
+      {x.fueraDeEtiqueta && <span style={{ color: 'var(--muted)' }}> · fuera de la etiqueta</span>}
     </>
   )
 }
@@ -115,9 +117,8 @@ export default function GoogleContactosSimulacion() {
   function confirmarActivar() {
     const i = informe
     const texto = i
-      ? `La primera sincronización creará ${numero(i.real.crear)} contactos en Google` +
-        (i.real.duplicariaFueraDeEtiqueta > 0 ? ` (${numero(i.real.duplicariaFueraDeEtiqueta)} de ellos ya están en tu agenda fuera de la etiqueta y quedarían DUPLICADOS)` : '') +
-        ` y vinculará ${numero(i.real.vincular)}. ¿Activar?`
+      ? `La primera sincronización creará ${numero(i.real.crear)} contactos en Google, vinculará ${numero(i.real.vincular)}` +
+        ` y adoptará ${numero(i.real.adoptar)} que ya tienes en la agenda (los mete en «Grupo ASegura»). ¿Activar?`
       : '¿Activar la sincronización?'
     if (window.confirm(texto)) void accion('activar')
   }
@@ -169,9 +170,10 @@ export default function GoogleContactosSimulacion() {
               {' '}Fichas del CRM: {numero(i.fichasCrm)}{i.seleccionIncompleta ? ' (selección INCOMPLETA: no se retiraría nada)' : ''}.
             </p>
             <Seccion titulo="Se crearán nuevas" ayuda="Nadie en tu agenda tiene ese teléfono." lista={i.crear} fila={(x) => <Ficha x={x} />} />
-            <Seccion titulo="Se vincularán a un contacto que ya tienes" ayuda="Mismo teléfono y mismo nombre. Si están fuera de la etiqueta, hoy se DUPLICARÍAN: mételos en «Grupo ASegura» en Google y vuelve a simular." lista={i.vincular} fila={(x) => <Ficha x={x} />} />
-            <Seccion titulo="Conflictos de nombre" ayuda="Mismo teléfono, otro nombre: irían a la cola de revisión, sin pisar el nombre." lista={i.conflictosNombre} fila={(x) => <Ficha x={x} />} />
-            <Seccion titulo="Teléfonos ambiguos" ayuda="Varios contactos con el mismo número: duplicados que ya hay en tu agenda." lista={i.ambiguos} fila={(x) => <Ficha x={x} />} />
+            <Seccion titulo="Se vincularán a un contacto de la etiqueta" ayuda="Ya está en «Grupo ASegura» con el mismo teléfono y el mismo nombre." lista={i.vincular} fila={(x) => <Ficha x={x} />} />
+            <Seccion titulo="Se adoptarán de tu agenda" ayuda="Están fuera de la etiqueta (el volcado del .vcf) con el mismo teléfono y el mismo nombre o el sufijo «· AS …»: se meten en «Grupo ASegura» sin duplicarlos y nunca se borran." lista={i.adoptar} fila={(x) => <Ficha x={x} />} />
+            <Seccion titulo="Conflictos de nombre" ayuda="Mismo teléfono, otro nombre (fuera de la etiqueta, probablemente un contacto tuyo): a la cola de revisión, sin pisarlo ni crear otro." lista={i.conflictosNombre} fila={(x) => <Ficha x={x} />} />
+            <Seccion titulo="Teléfonos ambiguos" ayuda="Varios contactos con el mismo número: a la cola, sin crear ni adoptar." lista={i.ambiguos} fila={(x) => <Ficha x={x} />} />
             <Seccion titulo="Teléfonos que no son E.164" ayuda="No se pueden emparejar por teléfono." lista={i.telefonosNoNormalizables}
               fila={(x: EjemploAgenda) => <>{x.nombre}{x.telefono ? ` · ${x.telefono}` : ''}</>} />
             <p style={pMuted}>

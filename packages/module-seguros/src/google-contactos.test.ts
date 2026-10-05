@@ -97,11 +97,13 @@ test('contacto NUEVO en Google dentro del grupo → propuesta de lead, nunca alt
   assert.equal(plan.revisiones[0].resourceName, 'people/9')
 })
 
-test('🪤 un contacto PERSONAL (fuera del grupo) con el mismo teléfono no se vincula ni se toca', () => {
+test('🪤 un contacto PERSONAL (fuera del grupo, otro nombre) con el mismo teléfono no se vincula ni se toca, ni se duplica', () => {
+  // Desde la adopción (05/10/2026): tampoco se CREA otro con su número; lo decide Alberto en la cola.
   const personal: PersonaGoogle = { resourceName: 'people/8', phoneNumbers: [{ value: '600112233' }], memberships: [] }
   const plan = planificarSync(entrada({ crm: [ana], google: [personal] }))
-  assert.equal(plan.crear.length, 1)
+  assert.equal(plan.crear.length, 0)
   assert.equal(plan.actualizar.length, 0)
+  assert.equal(plan.revisiones[0]?.motivo, 'nombre_distinto')
 })
 
 test('dedup por E.164 antes de crear: uno y solo uno en el grupo → se vincula', () => {
@@ -381,10 +383,10 @@ test('emoji: 🟢 cliente / 🟡 lead al PRINCIPIO del nombre visible; sin nombr
 })
 
 test('🪤 3a emoji: al leer se quita y se reconoce (también con U+FE0F y solo-emoji): mismo hash, no reescribe', () => {
-  assert.deepEqual(quitarPrefijo('🟢 Ana'), { nombre: 'Ana', grupo: 'cliente' })
-  assert.deepEqual(quitarPrefijo('🟡\uFE0F  María'), { nombre: 'María', grupo: 'lead' })
-  assert.deepEqual(quitarPrefijo('🟡'), { nombre: '', grupo: 'lead' })
-  assert.deepEqual(quitarPrefijo('Ana'), { nombre: 'Ana', grupo: null })
+  assert.deepEqual(quitarPrefijo('🟢 Ana'), { nombre: 'Ana', grupo: 'cliente', aviso: false })
+  assert.deepEqual(quitarPrefijo('🟡\uFE0F  María'), { nombre: 'María', grupo: 'lead', aviso: false })
+  assert.deepEqual(quitarPrefijo('🟡'), { nombre: '', grupo: 'lead', aviso: false })
+  assert.deepEqual(quitarPrefijo('Ana'), { nombre: 'Ana', grupo: null, aviso: false })
   for (const c of [ana, luis, lead, { ...luis, nombre: null }, { ...luis, nombre: null, apellidos: null }]) {
     const plan = planificarSync(entrada({ crm: [c], vinculos: [vinculo(c, 'people/1')], google: [enGoogle(c, 'people/1')] }))
     assert.equal(plan.actualizar.length + plan.refrescar.length + plan.revisiones.length, 0, `cicla: ${c.clienteId}`)

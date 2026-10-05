@@ -22,7 +22,7 @@ const TOKEN = 'https://oauth2.googleapis.com/token'
 const REVOKE = 'https://oauth2.googleapis.com/revoke'
 const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth'
 /** Campos que se LEEN de cada persona. Un syncToken solo vale con los MISMOS campos. */
-export const CAMPOS_LECTURA = 'names,phoneNumbers,emailAddresses,organizations,externalIds,memberships,metadata'
+export const CAMPOS_LECTURA = 'names,phoneNumbers,emailAddresses,organizations,externalIds,memberships,metadata,biographies,urls,birthdays'
 const MAX_INTENTOS = 5
 
 export class ErrorGoogle extends Error {

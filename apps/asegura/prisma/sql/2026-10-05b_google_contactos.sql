@@ -8,8 +8,9 @@
 --   · `google_contactos_conexion`: UNA por correduría. El refresh token va CIFRADO con
 --     `encryptField` (PII_ENCRYPTION_KEY) y el CHECK lo exige (`v1:`): un token en claro no entra
 --     ni por error. Nunca en una env ni en un log.
---   · `google_contactos_vinculo`: ficha ↔ contacto de Google (`resourceName`), con el hash de lo
---     último ENVIADO: así se distingue «cambió el CRM» de «lo cambiaron en Google».
+--   · `google_contactos_vinculo`: ficha (o contacto de compañía 🔵) ↔ contacto de Google
+--     (`resourceName`), con el hash de lo último ENVIADO: así se distingue «cambió el CRM» de «lo
+--     cambiaron en Google». Origen `adoptado`: lo que ya estaba en la agenda (el .vcf) y se adoptó.
 --   · `google_contactos_revision`: la cola. Lo que se editó en Google sobre un campo gestionado
 --     (el CRM lo vuelve a pisar, pero el valor de Google se guarda aquí, CIFRADO), los borrados y
 --     sacados del grupo a mano, los teléfonos ambiguos y los contactos NUEVOS del grupo
@@ -57,23 +58,40 @@ ALTER TABLE seguros.google_contactos_conexion ADD COLUMN IF NOT EXISTS sync_acti
 CREATE TABLE IF NOT EXISTS seguros.google_contactos_vinculo (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   correduria_id   uuid NOT NULL REFERENCES seguros.corredurias (id),
-  cliente_id      uuid NOT NULL REFERENCES seguros.clientes (id) ON DELETE CASCADE,
+  -- Una ficha del CRM o un contacto de compañía (🔵, `compania_contactos`): exactamente uno.
+  cliente_id      uuid REFERENCES seguros.clientes (id) ON DELETE CASCADE,
+  compania_contacto_id uuid REFERENCES seguros.compania_contactos (id) ON DELETE CASCADE,
   resource_name   text NOT NULL,
   etag            text,
   hash_enviado    text NOT NULL,
-  origen          text NOT NULL CHECK (origen IN ('creado', 'vinculado_id', 'vinculado_telefono', 'fusion')),
+  -- `adoptado` = contacto que Alberto ya tenía FUERA de la etiqueta (volcado del .vcf) y que la
+  -- sincronización metió en ella. Como `vinculado_*`, nunca se borra de Google (solo `creado`).
+  origen          text NOT NULL,
   estado          text NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'fuera_del_grupo')),
   last_synced_at  timestamptz NOT NULL DEFAULT now(),
   creado_en       timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT google_contactos_vinculo_cliente UNIQUE (correduria_id, cliente_id),
   CONSTRAINT google_contactos_vinculo_recurso UNIQUE (correduria_id, resource_name)
 );
+-- Idempotente si la tabla ya existía de una versión anterior de este fichero (staging): cliente
+-- opcional, columna de compañía, origen `adoptado` y «exactamente uno».
+ALTER TABLE seguros.google_contactos_vinculo ADD COLUMN IF NOT EXISTS compania_contacto_id uuid REFERENCES seguros.compania_contactos (id) ON DELETE CASCADE;
+ALTER TABLE seguros.google_contactos_vinculo ALTER COLUMN cliente_id DROP NOT NULL;
+ALTER TABLE seguros.google_contactos_vinculo DROP CONSTRAINT IF EXISTS google_contactos_vinculo_origen_check;
+ALTER TABLE seguros.google_contactos_vinculo ADD CONSTRAINT google_contactos_vinculo_origen_check
+  CHECK (origen IN ('creado', 'vinculado_id', 'vinculado_telefono', 'fusion', 'adoptado'));
+ALTER TABLE seguros.google_contactos_vinculo DROP CONSTRAINT IF EXISTS google_contactos_vinculo_uno;
+ALTER TABLE seguros.google_contactos_vinculo ADD CONSTRAINT google_contactos_vinculo_uno
+  CHECK ((cliente_id IS NULL) <> (compania_contacto_id IS NULL));
+ALTER TABLE seguros.google_contactos_vinculo DROP CONSTRAINT IF EXISTS google_contactos_vinculo_compania;
+ALTER TABLE seguros.google_contactos_vinculo ADD CONSTRAINT google_contactos_vinculo_compania UNIQUE (correduria_id, compania_contacto_id);
 
 CREATE TABLE IF NOT EXISTS seguros.google_contactos_revision (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   correduria_id      uuid NOT NULL REFERENCES seguros.corredurias (id),
   -- SET NULL y no CASCADE: la constancia de lo que pasó en Google no se borra con la ficha.
   cliente_id         uuid REFERENCES seguros.clientes (id) ON DELETE SET NULL,
+  compania_contacto_id uuid REFERENCES seguros.compania_contactos (id) ON DELETE SET NULL,
   resource_name      text NOT NULL,
   tipo               text NOT NULL CHECK (tipo IN ('cambio_en_google', 'borrado_en_google', 'sacado_del_grupo', 'propuesta_lead', 'duplicado_ambiguo')),
   campos             text[] NOT NULL DEFAULT '{}',
@@ -93,6 +111,7 @@ CREATE TABLE IF NOT EXISTS seguros.google_contactos_revision (
     AND (estado = 'pendiente' OR (resolucion IS NOT NULL AND resuelto_por IS NOT NULL AND resuelto_en IS NOT NULL))
   )
 );
+ALTER TABLE seguros.google_contactos_revision ADD COLUMN IF NOT EXISTS compania_contacto_id uuid REFERENCES seguros.compania_contactos (id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS google_contactos_revision_pendiente
   ON seguros.google_contactos_revision (correduria_id, creado_en DESC) WHERE estado = 'pendiente';
 

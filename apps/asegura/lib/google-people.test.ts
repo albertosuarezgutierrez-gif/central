@@ -90,7 +90,7 @@ test('actualizar por lote manda solo la máscara gestionada y marca los que fall
   const out = await new People('t', r).actualizarLote({ 'people/1': persona, 'people/2': persona })
   assert.equal(out['people/1']?.etag, 'e2')
   assert.equal(out['people/2'], null)
-  assert.equal(JSON.parse(String(llamadas[0].init.body)).updateMask, 'names,phoneNumbers,emailAddresses,organizations,externalIds')
+  assert.equal(JSON.parse(String(llamadas[0].init.body)).updateMask, 'names,phoneNumbers,emailAddresses,organizations,externalIds,biographies,urls,birthdays')
 })
 
 test('🪤 reconectar la MISMA cuenta de Google no revoca el token anterior (revoke mata el grant entero, también el nuevo)', () => {

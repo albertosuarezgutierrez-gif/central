@@ -13,14 +13,15 @@
  */
 import { requireSecret } from '@central/core-identity'
 import {
-  aBorrarAlDesconectar, comprobarLimite, planificarSync, puertaSync, trocear, LOTE_BORRADO_GOOGLE, LOTE_ESCRITURA_GOOGLE, TIPO_ID_EXTERNO,
+  aBorrarAlDesconectar, comprobarLimite, esClaveCompania, planificarSync, puertaSync, trocear, LOTE_BORRADO_GOOGLE, LOTE_ESCRITURA_GOOGLE,
+  PREFIJO_CLAVE_COMPANIA, TIPO_ID_EXTERNO,
   type CamposSincronizados, type EstadoVinculo, type OrigenVinculo, type PersonaGoogle, type Plan, type Vinculo,
 } from '@central/module-seguros/google-contactos'
 import { informeSimulacion, type InformeSimulacion } from '@central/module-seguros/google-contactos-simulacion'
 import { decryptField, encryptField } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
-import { contactosMovil } from './contactos-movil'
+import { seleccionGoogle } from './contactos-google'
 import {
   accesoDesdeRefresh, debeRevocarAnterior, People, revocar, SyncTokenCaducado, TokenRevocado,
   type Credenciales, type TokensIniciales,
@@ -64,15 +65,13 @@ function saneado(e: unknown): string {
 
 export async function guardarConexion(correduriaId: string, t: TokensIniciales, conectadoPor: string): Promise<void> {
   const db = prismaAsegura()
+  // Cifrar ANTES de tocar nada: si la clave falla, no se ha borrado ningún vínculo.
+  const refreshTokenCifrado = cifrar(t.refreshToken)
   const previa = await db.googleContactosConexion.findUnique({ where: { correduriaId } })
   const otraCuenta = !!previa && previa.cuentaGoogle !== t.cuentaGoogle
-  if (otraCuenta) {
-    // Otra cuenta de Google: los vínculos apuntan a contactos que esta cuenta no tiene.
-    await db.googleContactosVinculo.deleteMany({ where: { correduriaId } })
-  }
   const datos = {
     cuentaGoogle: t.cuentaGoogle,
-    refreshTokenCifrado: cifrar(t.refreshToken),
+    refreshTokenCifrado,
     scopes: t.scopes,
     syncToken: null,
     estado: 'conectada',
@@ -83,7 +82,12 @@ export async function guardarConexion(correduriaId: string, t: TokensIniciales, 
     // Otra cuenta = otra agenda, sin simular: se vuelve a «simular → activar».
     ...(otraCuenta ? { grupoResourceName: null, simuladaEn: null, syncActivadaEn: null, syncActivadaPor: null } : {}),
   }
-  await db.googleContactosConexion.upsert({ where: { correduriaId }, create: { correduriaId, ...datos }, update: datos })
+  // Otra cuenta de Google: los vínculos apuntan a contactos que esta cuenta no tiene. Se borran en
+  // la MISMA transacción que se guarda la conexión nueva: si el upsert falla, los vínculos siguen.
+  await db.$transaction([
+    ...(otraCuenta ? [db.googleContactosVinculo.deleteMany({ where: { correduriaId } })] : []),
+    db.googleContactosConexion.upsert({ where: { correduriaId }, create: { correduriaId, ...datos }, update: datos }),
+  ])
   // El token anterior se revoca SOLO si era de OTRA cuenta: `revoke` retira el grant entero, y
   // con la misma cuenta mataría también el token nuevo que se acaba de guardar.
   if (previa) {
@@ -183,20 +187,54 @@ async function fusionesDe(correduriaId: string, ids: string[]): Promise<Map<stri
   return out
 }
 
-async function guardarVinculo(correduriaId: string, v: { clienteId: string; resourceName: string; etag: string | null; hash: string; origen: OrigenVinculo }): Promise<void> {
-  const datos = { resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hash, origen: v.origen, estado: 'activo' as EstadoVinculo, lastSyncedAt: new Date() }
-  await prismaAsegura().googleContactosVinculo.upsert({
-    where: { correduriaId_clienteId: { correduriaId, clienteId: v.clienteId } },
-    create: { correduriaId, clienteId: v.clienteId, ...datos },
-    update: datos,
-  })
+// ─── Claves: ficha del CRM (uuid) o contacto de compañía (`compania:<uuid>`) ─────
+
+/** La clave del plan → las dos columnas de la BD (exactamente una con valor; CHECK en BD). */
+export function columnasDeClave(clave: string): { clienteId: string | null; companiaContactoId: string | null } {
+  return esClaveCompania(clave)
+    ? { clienteId: null, companiaContactoId: clave.slice(PREFIJO_CLAVE_COMPANIA.length) }
+    : { clienteId: clave, companiaContactoId: null }
+}
+
+export function claveDeFila(f: { clienteId: string | null; companiaContactoId: string | null }): string {
+  return f.clienteId ?? `${PREFIJO_CLAVE_COMPANIA}${f.companiaContactoId}`
+}
+
+/** `where` de Prisma para varias claves (mezcla de fichas y compañías). */
+export function whereClaves(claves: readonly string[]) {
+  const cols = claves.map(columnasDeClave)
+  const clientes = cols.flatMap((c) => (c.clienteId ? [c.clienteId] : []))
+  const companias = cols.flatMap((c) => (c.companiaContactoId ? [c.companiaContactoId] : []))
+  return { OR: [{ clienteId: { in: clientes } }, { companiaContactoId: { in: companias } }] }
+}
+
+async function leerVinculos(correduriaId: string): Promise<Vinculo[]> {
+  const filas = await prismaAsegura().googleContactosVinculo.findMany({ where: { correduriaId } })
+  return filas.map((v) => ({
+    clienteId: claveDeFila(v), resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hashEnviado,
+    origen: v.origen as OrigenVinculo, estado: v.estado as EstadoVinculo,
+  }))
+}
+
+/** Upsert por clave (el de Prisma no admite una clave única con NULL): borrar + crear, juntos. */
+async function guardarVinculo(correduriaId: string, v: { clienteId: string; resourceName: string; etag: string | null; hash: string; origen: OrigenVinculo }, sustituye: string[] = []): Promise<void> {
+  const db = prismaAsegura()
+  await db.$transaction([
+    db.googleContactosVinculo.deleteMany({ where: { correduriaId, ...whereClaves([v.clienteId, ...sustituye]) } }),
+    db.googleContactosVinculo.create({
+      data: {
+        correduriaId, ...columnasDeClave(v.clienteId), resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hash,
+        origen: v.origen, estado: 'activo', lastSyncedAt: new Date(),
+      },
+    }),
+  ])
 }
 
 async function encolarRevisiones(correduriaId: string, plan: Plan): Promise<number> {
   if (plan.revisiones.length === 0) return 0
   const filas = plan.revisiones.map((r) => ({
     correduriaId,
-    clienteId: r.clienteId,
+    ...(r.clienteId ? columnasDeClave(r.clienteId) : { clienteId: null, companiaContactoId: null }),
     resourceName: r.resourceName,
     tipo: r.tipo,
     campos: r.campos,
@@ -238,13 +276,9 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
       await db.googleContactosConexion.update({ where: { correduriaId }, data: { grupoResourceName: grupo } })
     }
 
-    // La MISMA selección que el .vcf del móvil.
-    const sel = await contactosMovil(correduriaId)
-    const filasVinculo = await db.googleContactosVinculo.findMany({ where: { correduriaId } })
-    const vinculos: Vinculo[] = filasVinculo.map((v) => ({
-      clienteId: v.clienteId, resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hashEnviado,
-      origen: v.origen as OrigenVinculo, estado: v.estado as EstadoVinculo,
-    }))
+    // La MISMA selección que el .vcf del móvil, con nota/URL/⏰/cumpleaños, y las compañías 🔵.
+    const sel = await seleccionGoogle(correduriaId)
+    const vinculos = await leerVinculos(correduriaId)
 
     let modo: 'completo' | 'delta' = conexion.syncToken ? 'delta' : 'completo'
     let listado: Awaited<ReturnType<People['listar']>>
@@ -260,7 +294,7 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
     const idsExternos = (ps: PersonaGoogle[]) => ps.flatMap((p) => (p.externalIds ?? []).filter((x) => x.type === TIPO_ID_EXTERNO && x.value).map((x) => x.value!))
     const baseIds = [...sel.contactos.map((c) => c.clienteId), ...vinculos.map((v) => v.clienteId)]
     const planificar = async (google: PersonaGoogle[]) => planificarSync({
-      crm: sel.contactos, seleccionCompleta: sel.clientesSinLeer === 0, vinculos,
+      crm: sel.contactos, seleccionCompleta: sel.seleccionCompleta, vinculos,
       fusiones: await fusionesDe(correduriaId, [...baseIds, ...idsExternos(google)]),
       google, modo, grupoResourceName: grupo,
     })
@@ -276,14 +310,15 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
     }
 
     const revisionesNuevas = await encolarRevisiones(correduriaId, plan)
-    if (plan.olvidar.length) await db.googleContactosVinculo.deleteMany({ where: { correduriaId, clienteId: { in: plan.olvidar } } })
-    if (plan.apartar.length) await db.googleContactosVinculo.updateMany({ where: { correduriaId, clienteId: { in: plan.apartar } }, data: { estado: 'fuera_del_grupo' } })
+    if (plan.olvidar.length) await db.googleContactosVinculo.deleteMany({ where: { correduriaId, ...whereClaves(plan.olvidar) } })
+    if (plan.apartar.length) await db.googleContactosVinculo.updateMany({ where: { correduriaId, ...whereClaves(plan.apartar) }, data: { estado: 'fuera_del_grupo' } })
     for (const r of plan.reasignar) {
       // El vínculo apartado de una absorbida pasa a su superviviente: no se recrea el contacto.
+      // (Solo fichas: las fusiones son de `clientes`.)
       await db.googleContactosVinculo.updateMany({ where: { correduriaId, clienteId: r.de }, data: { clienteId: r.a } })
     }
     for (const r of plan.refrescar) {
-      await db.googleContactosVinculo.updateMany({ where: { correduriaId, clienteId: r.clienteId }, data: { etag: r.etag, hashEnviado: r.hash, lastSyncedAt: new Date() } })
+      await db.googleContactosVinculo.updateMany({ where: { correduriaId, ...whereClaves([r.clienteId]) }, data: { etag: r.etag, hashEnviado: r.hash, lastSyncedAt: new Date() } })
     }
 
     let lotes = 0
@@ -295,23 +330,28 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
     for (const lote of trocear(plan.actualizar, LOTE_ESCRITURA_GOOGLE)) {
       if (lotes++ >= MAX_LOTES_POR_PASADA) break
       const res = await people.actualizarLote(Object.fromEntries(lote.map((a) => [a.resourceName, a.persona])))
-      for (const a of lote) {
-        const p = res[a.resourceName]
-        // Si Google no lo escribió, el vínculo de la absorbida SE QUEDA: borrarlo antes (como se
-        // hacía) perdía el contacto y la hora siguiente se creaba un duplicado.
-        if (!p) { fallidos++; continue }
-        const v = { clienteId: a.clienteId, resourceName: a.resourceName, etag: p.etag ?? null, hash: a.hash, origen: a.origen }
-        if (a.revinculaDe) {
-          // Mismo resourceName (UNIQUE): fuera el de la absorbida y dentro el de la superviviente, a la vez.
-          await db.$transaction(async (tx) => {
-            await tx.googleContactosVinculo.deleteMany({ where: { correduriaId, clienteId: { in: [a.revinculaDe!, v.clienteId] } } })
-            await tx.googleContactosVinculo.create({
-              data: { correduriaId, clienteId: v.clienteId, resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hash, origen: v.origen, estado: 'activo', lastSyncedAt: new Date() },
-            })
-          })
-        } else {
-          await guardarVinculo(correduriaId, v)
+      // Si Google no lo escribió, el vínculo de la absorbida SE QUEDA: borrarlo antes (como se
+      // hacía) perdía el contacto y la hora siguiente se creaba un duplicado.
+      const escritos = lote.flatMap((a) => (res[a.resourceName] ? [{ a, p: res[a.resourceName]! }] : []))
+      fallidos += lote.length - escritos.length
+      // ADOPCIÓN: el contacto (de Alberto, fuera de la etiqueta) entra en ella ANTES de guardar el
+      // vínculo. Si esto falla no se guarda vínculo: un vínculo de un contacto fuera del grupo se
+      // leería como «sacado del grupo» y quedaría apartado para siempre. Ya lleva nuestro id
+      // externo, así que la hora siguiente se vuelve a adoptar (por id), sin duplicar.
+      const adoptados = escritos.filter((x) => x.a.anadirAlGrupo).map((x) => x.a.resourceName)
+      let adopcionOk = true
+      if (adoptados.length) {
+        try {
+          await people.anadirAlGrupo(grupo, adoptados)
+        } catch {
+          adopcionOk = false
         }
+      }
+      for (const { a, p } of escritos) {
+        if (a.anadirAlGrupo && !adopcionOk) { fallidos++; continue }
+        const v = { clienteId: a.clienteId, resourceName: a.resourceName, etag: p.etag ?? null, hash: a.hash, origen: a.origen }
+        // Mismo resourceName (UNIQUE): fuera el de la absorbida y dentro el de la superviviente, a la vez.
+        await guardarVinculo(correduriaId, v, a.revinculaDe ? [a.revinculaDe] : [])
         actualizados++
       }
     }
@@ -329,7 +369,6 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
         throw e
       }
       for (const { c, p } of hechos) {
-        await db.googleContactosVinculo.deleteMany({ where: { correduriaId, clienteId: c.clienteId } })
         await guardarVinculo(correduriaId, { clienteId: c.clienteId, resourceName: p.resourceName, etag: p.etag ?? null, hash: c.hash, origen: 'creado' })
         creados++
       }
@@ -344,7 +383,7 @@ export async function sincronizarGoogleContactos(correduriaId: string): Promise<
         await people.borrarLote(lote.map((r) => r.resourceName))
         retirados += lote.length
       }
-      await db.googleContactosVinculo.deleteMany({ where: { correduriaId, clienteId: { in: plan.retirar.map((r) => r.clienteId) } } })
+      await db.googleContactosVinculo.deleteMany({ where: { correduriaId, ...whereClaves(plan.retirar.map((r) => r.clienteId)) } })
     }
 
     const completo = lotes <= MAX_LOTES_POR_PASADA && fallidos === 0
@@ -403,17 +442,13 @@ export async function simularGoogleContactos(correduriaId: string): Promise<Resu
   }
   const people = new People(acceso)
   const grupo = conexion.grupoResourceName ?? (await people.buscarGrupo())
-  const sel = await contactosMovil(correduriaId)
-  const filasVinculo = await db.googleContactosVinculo.findMany({ where: { correduriaId } })
-  const vinculos: Vinculo[] = filasVinculo.map((v) => ({
-    clienteId: v.clienteId, resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hashEnviado,
-    origen: v.origen as OrigenVinculo, estado: v.estado as EstadoVinculo,
-  }))
+  const sel = await seleccionGoogle(correduriaId)
+  const vinculos = await leerVinculos(correduriaId)
   const listado = await people.listar(null)
   const idsExternos = listado.personas.flatMap((p) => (p.externalIds ?? []).filter((x) => x.type === TIPO_ID_EXTERNO && x.value).map((x) => x.value!))
   const fusiones = await fusionesDe(correduriaId, [...sel.contactos.map((c) => c.clienteId), ...vinculos.map((v) => v.clienteId), ...idsExternos])
   const informe = informeSimulacion(
-    { crm: sel.contactos, seleccionCompleta: sel.clientesSinLeer === 0, vinculos, fusiones, google: listado.personas, grupoResourceName: grupo },
+    { crm: sel.contactos, seleccionCompleta: sel.seleccionCompleta, vinculos, fusiones, google: listado.personas, grupoResourceName: grupo },
     { totalCuenta: listado.totalCuenta },
   )
   await db.googleContactosConexion.update({ where: { correduriaId }, data: { simuladaEn: new Date(), actualizadoEn: new Date() } })
