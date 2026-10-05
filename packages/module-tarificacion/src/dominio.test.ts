@@ -8,6 +8,7 @@ import {
   validarRiesgoComunidad,
   validarOfertas,
   importeEs,
+  importePuntoDecimal,
   franquiciaGeneral,
   garantiasComoRegistro,
   crearRegistro,
@@ -140,6 +141,35 @@ describe('importeEs (formato español)', () => {
   ])('«%s» → %s', (t, n) => expect(importeEs(t)).toBe(n))
   it.each(['', '  ', 'Incluida', 'Excluida', '1,2,3', '12.5', '1.23.456', 'abc 12', '12,', null, undefined])('«%s» → null', (t) => {
     expect(importeEs(t as string)).toBeNull()
+  })
+})
+
+describe('importePuntoDecimal (pestaña Tarificar de ePAC)', () => {
+  it.each([['296.71', 296.71], ['343.74', 343.74], ['300.00', 300], ['47.55', 47.55], ['1234.5', 1234.5], ['250', 250]])(
+    '«%s» → %s',
+    (t, n) => expect(importePuntoDecimal(t)).toBe(n),
+  )
+  it.each(['', 'Incluida', '1,5', '1.234,56', '12.345.6', '1.234.567', '-', null, undefined])('«%s» → null', (t) => {
+    expect(importePuntoDecimal(t as string)).toBeNull()
+  })
+  it('no rompe importeEs: «296.71» no es un importe español', () => {
+    expect(importeEs('296.71')).toBeNull()
+    expect(importeEs('12.000,00')).toBe(12000)
+  })
+})
+
+describe('modalidad del riesgo', () => {
+  const hoy = new Date('2026-10-05T10:00:00Z')
+  const base = {
+    direccion: { codigoPostal: '41003' }, fechaEfecto: '2026-10-05', fechaTermino: '2027-10-01', m2Construidos: 1800, anioConstruccion: 1975,
+    tipoVivienda: 'Viviendas Pisos en Alto', uso: 'Habitual', plantas: 5, numEdificios: 1, numViviendasYLocales: 18, listaPropietarios: '> 50%',
+  }
+  it('ausente → null (el adaptador usa estandar); valores válidos pasan; otros, error', () => {
+    const r = validarRiesgoComunidad(base, hoy)
+    expect(r.ok && r.riesgo.modalidad).toBeNull()
+    const p = validarRiesgoComunidad({ ...base, modalidad: 'personalizado' }, hoy)
+    expect(p.ok && p.riesgo.modalidad).toBe('personalizado')
+    expect(validarRiesgoComunidad({ ...base, modalidad: 'ambas' }, hoy).ok).toBe(false)
   })
 })
 

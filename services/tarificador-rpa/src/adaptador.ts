@@ -2,6 +2,7 @@
 // de Playwright y un contexto con `pulsar()` (el único modo de pulsar algo: guardado contra emisión).
 
 import type { Locator, Page } from 'playwright'
+import type { ModalidadPortal } from '@central/module-tarificacion'
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 
 export type ContextoPortal = ContextoTarificacion & {
@@ -9,6 +10,12 @@ export type ContextoPortal = ContextoTarificacion & {
   pulsar: (boton: Locator) => Promise<void>
   /** Lanza `ErrorTarificador('captcha')` si el portal presenta un reto: requiere_humano. */
   exigirSinCaptcha: () => Promise<void>
+  /** Elige la modalidad (radio). Solo Datos Básicos, una vez por trabajo, pestaña verificada en DOM. */
+  elegirOpcion: (modalidad: ModalidadPortal) => Promise<void>
+  /** Avanza de Datos Básicos a Tarificar. Único «Aceptar» permitido (el de Tarificar EMITE: bloqueado). */
+  avanzarATarificar: () => Promise<void>
+  /** Pulsa la pestaña «Proyecto» (genera el PDF sin grabar). Solo desde Tarificar. */
+  abrirProyecto: (pestana: Locator) => Promise<void>
 }
 
 export type AdaptadorPortal = TarificadorAdapter<Page, RiesgoComunidad, ContextoPortal> & {

@@ -47,7 +47,7 @@ describe('guard de emisión', () => {
   })
 
   // Formulario real de ePAC «Comunidades 2020»: estos tres controles dan de alta, no cotizan.
-  it.each(['Aceptar', '> Aceptar', 'ACEPTAR', 'ELIJA UNA OPCIÓN', 'Elija una opcion', 'RECUPERACIÓN DE CONTRASEÑA', 'Recuperacion de contraseña'])(
+  it.each(['Aceptar', '> Aceptar', 'ACEPTAR', 'ELIJA UNA OPCIÓN', 'Elija una opcion', 'RECUPERACIÓN DE CONTRASEÑA', 'Recuperacion de contraseña', 'Emitir', 'Archivar', 'Proyecto Ampliado', 'proyectoAmpliado'])(
     'aborta el control de alta de ePAC «%s»',
     (texto) => {
       expect(() => comprobarBoton([texto])).toThrow(EmisionBloqueadaError)
@@ -60,8 +60,16 @@ describe('guard de emisión', () => {
     expect(() => comprobarUrl('https://x/epac/aceptar.do')).toThrow(EmisionBloqueadaError)
   })
 
+  it('«Aceptar» solo pasa con permitirAceptar (la función guardada por fase); lo demás sigue bloqueado', () => {
+    expect(() => comprobarBoton(['> Aceptar'], { permitirAceptar: true })).not.toThrow()
+    expect(() => comprobarBoton(['Aceptar', 'btnEmitir'], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+    expect(() => comprobarBoton(['Archivar'], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+    expect(() => comprobarUrl('https://x/epac/aceptar.do', { permitirAceptar: true })).not.toThrow()
+    expect(() => comprobarUrl('https://x/epac/aceptar.do')).toThrow(EmisionBloqueadaError)
+  })
+
   it('«Calcular», la navegación «Nueva Alta» y «Cerrar» de ePAC pasan (no son emisión)', () => {
-    for (const ok of ['Calcular', '> Calcular', 'NUEVA ALTA', 'Nueva Alta', 'Particulares', 'Comunidades', 'CERRAR', 'Venta', 'INICIAR SESIÓN', 'Datos Básicos', 'Tarificar', 'Comunidades 2020']) {
+    for (const ok of ['Calcular', '> Calcular', 'NUEVA ALTA', 'Nueva Alta', 'Particulares', 'Comunidades', 'CERRAR', 'Venta', 'Proyecto', 'Volver', 'Idioma Proyecto PDF', 'INICIAR SESIÓN', 'Datos Básicos', 'Tarificar', 'Comunidades 2020']) {
       expect(() => comprobarBoton([ok])).not.toThrow()
     }
   })

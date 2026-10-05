@@ -12,6 +12,8 @@ export type {
   FranquiciaOferta,
   PdfRef,
   OfertaNormalizada,
+  DesglosePrima,
+  ModalidadPortal,
   Credenciales,
   ContextoTarificacion,
   ResultadoAdaptador,
@@ -32,10 +34,11 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, comprobarUrl, comprobarBoton } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, comprobarUrl, comprobarBoton, type OpcionesGuard } from './guard-emision.ts'
+export { MaquinaFases, type FaseTarificacion, type PestanaActiva } from './fases.ts'
 export { MARCA_REDACTADO, esVariableSecreta, secretosDelEntorno, redactar, redactarHtml, crearRedactor } from './redactar.ts'
 export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCredencial } from './entorno.ts'
-export { importeEs } from './importes.ts'
+export { importeEs, importePuntoDecimal } from './importes.ts'
 export { validarRiesgoComunidad, type ValidacionRiesgo } from './riesgo.ts'
 export { validarOfertas, franquiciaGeneral, garantiasComoRegistro, type ValidacionOfertas, type ValorGarantiaCompatible } from './ofertas.ts'
 export { claveCompania, crearRegistro, type RegistroAdaptadores } from './registro.ts'

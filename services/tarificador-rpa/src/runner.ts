@@ -20,7 +20,7 @@ import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, clasificar } from './errores.ts'
-import { instalarGuardEmision, pulsar } from './guard.ts'
+import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import type { ContextoPortal } from './adaptador.ts'
 
@@ -111,6 +111,9 @@ async function main(): Promise<number> {
         return { indice: pdfs.length - 1, nombre }
       },
       pulsar: (boton) => pulsar(boton, guard),
+      elegirOpcion: (m) => elegirOpcion(page, guard, m),
+      avanzarATarificar: () => pulsarAvance(page, guard),
+      abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
     }
 

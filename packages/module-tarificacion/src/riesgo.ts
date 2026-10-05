@@ -95,6 +95,11 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
   ]
   for (const [campo, valor] of faltan) if (valor === null) errores.push(`${campo} es obligatorio`)
 
+  const modalidad = e.modalidad
+  if (modalidad !== undefined && modalidad !== null && modalidad !== 'estandar' && modalidad !== 'personalizado') {
+    errores.push('modalidad: estandar | personalizado')
+  }
+
   const calidad = e.calidadConstruccion
   if (calidad !== undefined && calidad !== null && calidad !== 'normal' && calidad !== 'alta' && calidad !== 'lujo') {
     errores.push('calidadConstruccion: normal | alta | lujo')
@@ -153,6 +158,7 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
       impagoCuotas,
       ite,
       fechaTermino,
+      modalidad: (modalidad as RiesgoComunidad['modalidad']) ?? null,
       anioConstruccion,
       anioRehabilitacion,
       m2Construidos,

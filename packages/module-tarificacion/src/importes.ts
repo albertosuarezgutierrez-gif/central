@@ -12,3 +12,16 @@ export function importeEs(texto: string | null | undefined): number | null {
   const n = Number(t.replace(/\./g, '').replace(',', '.'))
   return Number.isFinite(n) ? n : null
 }
+
+/**
+ * Importe de la pestaña «Tarificar» de ePAC: PUNTO decimal y sin separador de miles («296.71»,
+ * «343.74»). Distinto de `importeEs`: «1.234» aquí sería 1,234. Fail-closed: con coma, con
+ * miles o con basura → `null`.
+ */
+export function importePuntoDecimal(texto: string | null | undefined): number | null {
+  if (typeof texto !== 'string') return null
+  const t = texto.replace(/[€\s ]/g, '')
+  if (!/^-?\d+(\.\d{1,2})?$/.test(t)) return null
+  const n = Number(t)
+  return Number.isFinite(n) ? n : null
+}

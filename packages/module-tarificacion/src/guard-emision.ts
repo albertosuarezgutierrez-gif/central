@@ -12,27 +12,36 @@
 // dispara: falso positivo aceptado).
 export const PATRON_EMISION = /emit|emisi|contrat|formaliz|suplement|anul|baja/i
 
-// Textos de Allianz ePAC (capturas del 05/10/2026) que el bot NUNCA debe pulsar: «Aceptar» (acepta/guarda
-// la oferta elegida), el radio «ELIJA UNA OPCIÓN» (elige modalidad para contratar) y «RECUPERACIÓN DE
-// CONTRASEÑA» (toca las credenciales de la cuenta). Se comparan sin tildes y tolerando separadores.
-// «aceptar» también casa con «Aceptar cookies»: falso positivo aceptado (fail-closed).
-// «NUEVA ALTA» NO está aquí a propósito (Alberto, 05/10/2026): en ePAC es la NAVEGACIÓN para cotizar
-// (botón → modal «Nueva Alta» → Particulares → Comunidades), no una emisión. Lo que da de alta de
-// verdad es «Aceptar».
+// Textos de Allianz ePAC (capturas del 05/10/2026) que el bot NUNCA debe pulsar, sea cual sea la fase:
+// el radio «ELIJA UNA OPCIÓN» (por texto; la elección legítima va por la máquina de fases), «RECUPERACIÓN
+// DE CONTRASEÑA» (toca las credenciales), y las pestañas «Archivar» y «Proyecto Ampliado» (más «Emitir»,
+// que ya casa con PATRON_EMISION). Se comparan sin tildes y tolerando separadores.
+// «NUEVA ALTA» NO está aquí a propósito (Alberto, 05/10/2026): es la NAVEGACIÓN para cotizar.
 export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
-  /aceptar/i,
   /elij[ae][\s_+-]*una[\s_+-]*opcion/i,
-  // Login de ePAC: «RECUPERACIÓN DE CONTRASEÑA» dispara un cambio de credenciales de la cuenta.
   /recuperacion[\s_+-]*de[\s_+-]*contrasena/i,
+  /archivar/i,
+  /proyecto[\s_+-]*ampliado/i,
 ]
+
+// «Aceptar» es CONTEXTUAL (ver fases.ts): en Datos Básicos solo avanza a «Tarificar»; en Tarificar avanza
+// a EMITIR. Bloqueado por texto en todo `pulsar()` genérico; solo la función guardada por fase (guard.ts)
+// lo permite, con `permitirAceptar`. «Aceptar cookies» también cae: falso positivo aceptado (fail-closed).
+export const PATRON_ACEPTAR = /aceptar/i
+
+export type OpcionesGuard = { permitirAceptar?: boolean }
 
 // Sin «parameter properties» (`constructor(readonly x)`): `node --test` solo QUITA tipos y no las admite.
 export class EmisionBloqueadaError extends Error {
   readonly tipo = 'emision' as const
-  readonly donde: 'url' | 'boton'
+  readonly donde: 'url' | 'boton' | 'fase'
   readonly texto: string
-  constructor(donde: 'url' | 'boton', texto: string) {
-    super(`guard_emision: ${donde} bloqueada (casa con el patrón de emisión): «${texto.slice(0, 200)}»`)
+  constructor(donde: 'url' | 'boton' | 'fase', texto: string) {
+    super(
+      donde === 'fase'
+        ? `guard_emision: fase bloqueada: ${texto.slice(0, 200)}`
+        : `guard_emision: ${donde} bloqueada (casa con el patrón de emisión): «${texto.slice(0, 200)}»`,
+    )
     this.name = 'EmisionBloqueadaError'
     this.donde = donde
     this.texto = texto
@@ -44,7 +53,7 @@ function plano(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
 
-export function pareceEmision(texto: string | null | undefined): boolean {
+export function pareceEmision(texto: string | null | undefined, opciones: OpcionesGuard = {}): boolean {
   if (typeof texto !== 'string' || texto === '') return false
   let t = plano(texto)
   // Las URL pueden venir codificadas (`%C3%A9mitir`, `contrat%61r`): se decodifica si se puede.
@@ -53,12 +62,13 @@ export function pareceEmision(texto: string | null | undefined): boolean {
   } catch {
     /* no era URI válida: se mira tal cual */
   }
-  return PATRON_EMISION.test(t) || TEXTOS_BLOQUEADOS_ALTA.some((r) => r.test(t))
+  if (PATRON_EMISION.test(t) || TEXTOS_BLOQUEADOS_ALTA.some((r) => r.test(t))) return true
+  return !opciones.permitirAceptar && PATRON_ACEPTAR.test(t)
 }
 
 /** Lanza si la URL casa con el patrón. */
-export function comprobarUrl(url: string): void {
-  if (pareceEmision(url)) throw new EmisionBloqueadaError('url', url)
+export function comprobarUrl(url: string, opciones: OpcionesGuard = {}): void {
+  if (pareceEmision(url, opciones)) throw new EmisionBloqueadaError('url', url)
 }
 
 /**
@@ -66,8 +76,8 @@ export function comprobarUrl(url: string): void {
  * `aria-label`, `title`, `value`, `id`, `name`, `href`): un botón con icono y `id="btnEmitir"`
  * también es emitir.
  */
-export function comprobarBoton(descripciones: readonly (string | null | undefined)[]): void {
+export function comprobarBoton(descripciones: readonly (string | null | undefined)[], opciones: OpcionesGuard = {}): void {
   for (const d of descripciones) {
-    if (pareceEmision(d)) throw new EmisionBloqueadaError('boton', String(d))
+    if (pareceEmision(d, opciones)) throw new EmisionBloqueadaError('boton', String(d))
   }
 }

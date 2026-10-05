@@ -3,7 +3,7 @@
 // limite, franquicia, evidencia}). El worker es código nuestro, pero corre en otra máquina y
 // rasca HTML ajeno: su salida se valida como si viniera de fuera.
 
-import type { CoberturaOferta, Fraccionamiento, FranquiciaOferta, OfertaNormalizada } from './tipos.ts'
+import type { DesglosePrima, CoberturaOferta, Fraccionamiento, FranquiciaOferta, OfertaNormalizada } from './tipos.ts'
 
 export type ValidacionOfertas = { ok: true; ofertas: OfertaNormalizada[] } | { ok: false; errores: string[] }
 
@@ -15,6 +15,17 @@ const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFi
 const fecha = (v: unknown): string | null => {
   const t = txt(v)
   return t && /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : null
+}
+
+function desglose(v: unknown): { anual: DesglosePrima; sucesivos: DesglosePrima } | null {
+  const d = obj(v)
+  const periodo = (x: unknown): DesglosePrima | null => {
+    const o = obj(x)
+    return o ? { primaNetaEur: num(o.primaNetaEur), impuestosEur: num(o.impuestosEur), primaTotalEur: num(o.primaTotalEur) } : null
+  }
+  const anual = periodo(d?.anual)
+  const sucesivos = periodo(d?.sucesivos)
+  return anual && sucesivos ? { anual, sucesivos } : null
 }
 
 function cobertura(v: unknown): CoberturaOferta | null {
@@ -79,6 +90,7 @@ export function validarOfertas(entrada: unknown, numPdfs: number): ValidacionOfe
       validaHasta: fecha(o.validaHasta),
       referenciaPortal: txt(o.referenciaPortal),
       pdf,
+      desglose: desglose(o.desglose),
       avisos: Array.isArray(o.avisos) ? o.avisos.map(txt).filter((a): a is string => a !== null) : [],
     })
   })

@@ -99,6 +99,9 @@ export type RiesgoComunidad = {
   calidadConstruccion?: 'normal' | 'alta' | 'lujo' | null
   siniestrosUltimos3Anios?: number | null
   companiaActual?: string | null
+
+  /** Modalidad a elegir en el portal. Ausente = `estandar`. Querer las dos = DOS trabajos. */
+  modalidad?: ModalidadPortal | null
 }
 
 export type Fraccionamiento = 'anual' | 'semestral' | 'trimestral' | 'mensual'
@@ -126,6 +129,12 @@ export type FranquiciaOferta = {
 /** Referencia al PDF que el worker sube junto al resultado (en `pdfs[]` del POST, por índice). */
 export type PdfRef = { indice: number; nombre: string }
 
+/** Modalidad que se elige en el portal (radio de opción). Por defecto `estandar`; las dos = dos trabajos. */
+export type ModalidadPortal = 'estandar' | 'personalizado'
+
+/** Prima desglosada de un periodo (euros). `null` = el portal no lo da. */
+export type DesglosePrima = { primaNetaEur: number | null; impuestosEur: number | null; primaTotalEur: number | null }
+
 /** La oferta de UNA compañía para UN producto, ya normalizada por el adaptador. */
 export type OfertaNormalizada = {
   compania: string
@@ -144,6 +153,8 @@ export type OfertaNormalizada = {
   /** Número de proyecto/oferta del portal (para volver a ella a mano). `null` = no lo da. */
   referenciaPortal: string | null
   pdf: PdfRef | null
+  /** Desglose neta/impuestos/total del primer año y de los recibos sucesivos, si el portal lo da. */
+  desglose?: { anual: DesglosePrima; sucesivos: DesglosePrima } | null
   /** Avisos de la compañía (se enseñan SIEMPRE) y del adaptador (lo que supuso o no pudo leer). */
   avisos: string[]
 }

@@ -92,14 +92,40 @@ test('el middleware de asegura deja pasar /api/tarificador (auth propia del work
   assert.match(publica![1], /['"]\/api\/tarificador['"]/)
 })
 
-test('ePAC Comunidades 2020: el adaptador no nombra ni toca «Aceptar» ni el radio «Elija una opción»', () => {
-  const src = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/comunidades.ts'), 'utf8'))
-  assert.ok(!/aceptar|elij[ae][\s_-]*una[\s_-]*opci/i.test(src), 'el código del adaptador nombra un control de ALTA de ePAC')
-  assert.ok(!/recuperaci[oó]n/i.test(src), 'el adaptador no nombra «Recuperación de contraseña» (cambia credenciales)')
-  assert.ok(!/radio/i.test(src.replace(/:not\(\[type=radio\]\)/g, '')), 'el adaptador no puede tocar radios (solo excluirlos al leer)')
-  // El único botón que se pulsa en el formulario es «Calcular»: todo ctx.pulsar(...) del adaptador apunta a él, al login o al menú.
-  const pulsaciones = [...src.matchAll(/ctx\.pulsar\(([^)]*\)?)\)/g)].map((m) => m[1])
-  for (const p of pulsaciones) assert.match(p, /botonCalcular|SEL\.|sel\(|INICIAR SESI|NUEVA ALTA|modal\.getByText\('(Particulares|Comunidades)'/, `pulsación inesperada en el adaptador: ${p}`)
-  const guard = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
-  assert.match(guard, /TEXTOS_BLOQUEADOS_ALTA/, 'el guard tiene que seguir bloqueando los textos de alta de ePAC')
+test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan por las funciones guardadas por FASE de guard.ts', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  // 1. Solo guard.ts nombra «Aceptar»/«Elija una opción» en código: ningún otro fichero tiene con qué pulsarlos.
+  for (const f of ficheros(join(SRV, 'src'))) {
+    if (f.endsWith('/src/guard.ts')) continue
+    const src = sinComentarios(readFileSync(f, 'utf8'))
+    assert.ok(!/aceptar|elij[ae][\s_-]*una[\s_-]*opci|recuperaci[oó]n/i.test(src), `${relative(RAIZ, f)} nombra un control de alta/credenciales de ePAC`)
+    assert.ok(!/radio/i.test(src.replace(/:not\(\[type=radio\]\)/g, '')), `${relative(RAIZ, f)} no puede tocar radios (solo excluirlos al leer)`)
+  }
+  // 2. En guard.ts, cada click()/check() vive en una función que primero pasa por la máquina de fases o por comprobarBoton.
+  const funciones = guard.split(/^export async function /m).slice(1)
+  assert.ok(funciones.length >= 4)
+  for (const fn of funciones) {
+    const acciones = fn.search(/\.(click|check)\s*\(/)
+    if (acciones < 0) continue
+    const nombre = fn.slice(0, fn.indexOf('('))
+    const previo = fn.slice(0, acciones)
+    assert.match(previo, /comprobarBoton\(|fases\.autorizar(Aceptar|Opcion|Proyecto)\(/, `${nombre}: click/check sin pasar antes por el guard`)
+  }
+  const aceptar = funciones.find((f) => f.startsWith('pulsarAvance'))!
+  assert.ok(aceptar.indexOf('fases.autorizarAceptar(') > -1 && aceptar.indexOf('fases.autorizarAceptar(') < aceptar.indexOf('.click('), 'pulsarAvance tiene que autorizar por fase ANTES de pulsar')
+  assert.match(aceptar, /pestanaActiva\(/, 'pulsarAvance tiene que verificar la pestaña activa en el DOM')
+  assert.match(aceptar, /confirmarTarificar\(/, 'pulsarAvance tiene que comprobar que el avance llegó a Tarificar')
+  const opcion = funciones.find((f) => f.startsWith('elegirOpcion'))!
+  assert.ok(opcion.indexOf('fases.autorizarOpcion(') > -1 && opcion.indexOf('fases.autorizarOpcion(') < opcion.indexOf('.check('), 'elegirOpcion tiene que autorizar por fase ANTES de marcar')
+  // 3. El runner enchufa esas funciones y no ofrece otra vía.
+  const runner = readFileSync(join(SRV, 'src/runner.ts'), 'utf8')
+  assert.match(runner, /avanzarATarificar:\s*\(\)\s*=>\s*pulsarAvance\(page, guard\)/)
+  // 4. El único botón que el adaptador pulsa en Datos Básicos es «Calcular».
+  const adaptador = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/comunidades.ts'), 'utf8'))
+  const pulsaciones = [...adaptador.matchAll(/ctx\.pulsar\(([^)]*\)?)\)/g)].map((m) => m[1])
+  for (const p of pulsaciones) assert.match(p, /botonCalcular|sel\(|INICIAR SESI|NUEVA ALTA|modal\.getByText\('(Particulares|Comunidades)'/, `pulsación inesperada en el adaptador: ${p}`)
+  // 5. Listas del guard del módulo.
+  const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
+  assert.match(g, /TEXTOS_BLOQUEADOS_ALTA/)
+  assert.match(g, /PATRON_ACEPTAR/)
 })

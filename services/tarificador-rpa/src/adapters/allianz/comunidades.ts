@@ -18,8 +18,8 @@
 //   · Los campos se localizan por el TEXTO de la etiqueta de su fila (`campoPorEtiqueta`), no por id.
 
 import type { Locator, Page } from 'playwright'
-import { importeEs } from '@central/module-tarificacion'
-import type { CoberturaOferta, FranquiciaOferta, OfertaNormalizada, RiesgoComunidad } from '@central/module-tarificacion'
+import { comprobarUrl, importeEs, importePuntoDecimal } from '@central/module-tarificacion'
+import type { CoberturaOferta, DesglosePrima, FranquiciaOferta, ModalidadPortal, OfertaNormalizada, PdfRef, RiesgoComunidad } from '@central/module-tarificacion'
 import type { AdaptadorPortal, ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 
@@ -309,71 +309,105 @@ async function leerFila(page: Page, p: Partida): Promise<{ estandar: Celda; pers
   return { estandar, personalizado, franquicia }
 }
 
-async function leerOfertas(page: Page, ctx: ContextoPortal): Promise<OfertaNormalizada[]> {
-  const costes = filaPorEtiqueta(page, 'COSTE ANUAL DEL SEG. SEGÚN OPCIÓN').locator('input:not([type=radio]):not([type=hidden])')
-  const primaEstandar = importeEs(await costes.nth(0).inputValue().catch(() => ''))
-  const primaPersonalizado = importeEs(await costes.nth(1).inputValue().catch(() => ''))
+type LecturaCalculo = {
+  /** Coste anual de la modalidad elegida según «COSTE ANUAL DEL SEG.» de Datos Básicos (referencia cruzada). */
+  costeDatosBasicos: number | null
+  coberturas: CoberturaOferta[]
+  franquicias: FranquiciaOferta[]
+}
 
-  const filas = []
+/** Lee, ANTES de avanzar, la tabla de garantías de Datos Básicos para la modalidad elegida. */
+async function leerCalculo(page: Page, ctx: ContextoPortal, modalidad: ModalidadPortal): Promise<LecturaCalculo> {
+  const costes = filaPorEtiqueta(page, 'COSTE ANUAL DEL SEG. SEGÚN OPCIÓN').locator('input:not([type=radio]):not([type=hidden])')
+  const columna = modalidad === 'estandar' ? 0 : 1
+  const costeDatosBasicos = importeEs(await costes.nth(columna).inputValue().catch(() => ''))
+
+  const coberturas: CoberturaOferta[] = []
+  const franquicias: FranquiciaOferta[] = []
+  for (const a of ASISTENCIAS) {
+    const estados = await leerEstadosAsistencia(page, a.fila)
+    coberturas.push({ clave: a.clave, literal: a.literal, estado: estados[columna], capital: null, limite: null, franquicia: null })
+  }
   for (const p of PARTIDAS) {
     try {
-      filas.push({ p, ...(await leerFila(page, p)) })
+      const f = await leerFila(page, p)
+      const celda = columna === 0 ? f.estandar : f.personalizado
+      // Capital = lo que muestra la columna elegida. Estado null: la tabla no dice «incluida» en estas filas.
+      coberturas.push({ clave: p.clave, literal: p.literal, estado: null, capital: celda.importe, limite: null, franquicia: f.franquicia?.importe ?? null })
+      if (f.franquicia?.texto) {
+        franquicias.push({ ambito: p.clave, importeEur: f.franquicia.importe, literal: f.franquicia.importe === null ? f.franquicia.texto : null })
+      }
     } catch (e) {
-      // Una fila ilegible no tumba la oferta (la prima ya está leída): se anota y se sigue.
+      // Una fila ilegible no tumba la oferta (la prima se lee después): se anota y se sigue.
       ctx.log(`partida «${p.literal}» ilegible: ${e instanceof Error ? e.message.slice(0, 120) : 'error'}`)
     }
   }
+  return { costeDatosBasicos, coberturas, franquicias }
+}
 
-  const asistencias = []
-  for (const a of ASISTENCIAS) asistencias.push({ ...a, estados: await leerEstadosAsistencia(page, a.fila) })
-
-  const modalidades: { nombre: 'Estándar' | 'Personalizado'; prima: number | null }[] = [
-    { nombre: 'Estándar', prima: primaEstandar },
-    { nombre: 'Personalizado', prima: primaPersonalizado },
-  ]
-  const ofertas: OfertaNormalizada[] = []
-  for (const m of modalidades) {
-    if (m.prima === null) {
-      ctx.log(`modalidad ${m.nombre} sin coste legible: se omite`)
-      continue
-    }
-    const coberturas: CoberturaOferta[] = []
-    const franquicias: FranquiciaOferta[] = []
-    for (const a of asistencias) {
-      const estado = m.nombre === 'Estándar' ? a.estados[0] : a.estados[1]
-      coberturas.push({ clave: a.clave, literal: a.literal, estado, capital: null, limite: null, franquicia: null })
-    }
-    for (const f of filas) {
-      const celda = m.nombre === 'Estándar' ? f.estandar : f.personalizado
-      // Capital = lo que muestra la columna de la modalidad. Estado null: la tabla no dice «incluida» en estas filas.
-      coberturas.push({ clave: f.p.clave, literal: f.p.literal, estado: null, capital: celda.importe, limite: null, franquicia: f.franquicia?.importe ?? null })
-      // La franquicia es de UNA sola columna (la del select): vale para ambas modalidades.
-      if (f.franquicia?.texto) {
-        franquicias.push({ ambito: f.p.clave, importeEur: f.franquicia.importe, literal: f.franquicia.importe === null ? f.franquicia.texto : null })
-      }
-    }
-    ofertas.push({
-      compania: 'Allianz',
-      producto: `Comunidades 2020 · ${m.nombre}`,
-      primaAnualEur: m.prima,
-      primaNetaEur: null,
-      fraccionamiento: null,
-      importeReciboEur: null,
-      coberturas,
-      franquicias,
-      validaHasta: null,
-      referenciaPortal: null,
-      // TODO(pdf): aún no sabemos desde qué pantalla se descarga el proyecto SIN «Aceptar». Hasta saberlo
-      // no se descarga nada (el PDF solo se pediría con ctx.pulsar + waitForEvent('download')).
-      pdf: null,
-      avisos: [
-        'PDF del proyecto pendiente (no se sabe desde qué pantalla se descarga sin dar el alta)',
-        'Capitales y franquicias tal como los muestra la tabla de ePAC; «estado» solo en las asistencias (Incluida/Excluida)',
-      ],
-    })
+/**
+ * Pestaña «Tarificar»: tabla Anual / Sucesivos con Prima Neta, Impuestos y Prima Total. Aquí los importes
+ * van con PUNTO decimal y sin miles (`importePuntoDecimal`, no `importeEs`). Lo que no se lee es `null`.
+ */
+async function leerPrimas(page: Page): Promise<{ anual: DesglosePrima; sucesivos: DesglosePrima }> {
+  const fila = async (etiqueta: string): Promise<[number | null, number | null]> => {
+    const textos = await filaPorEtiqueta(page, etiqueta).locator('td').allInnerTexts().catch(() => [] as string[])
+    const importes = textos.slice(1).map((t) => importePuntoDecimal(t)).filter((n): n is number => n !== null)
+    // Esperado: [anual, sucesivos]. Si no salen exactamente dos importes, no se afirma ninguno.
+    return importes.length === 2 ? [importes[0], importes[1]] : [null, null]
   }
-  if (!ofertas.length) throw new ErrorTarificador('portal', 'allianz/comunidades: el portal no devolvió ningún coste anual legible')
-  return ofertas
+  const [netaA, netaS] = await fila('Prima Neta')
+  const [impA, impS] = await fila('Impuestos')
+  const [totA, totS] = await fila('Prima Total')
+  return {
+    anual: { primaNetaEur: netaA, impuestosEur: impA, primaTotalEur: totA },
+    sucesivos: { primaNetaEur: netaS, impuestosEur: impS, primaTotalEur: totS },
+  }
+}
+
+/**
+ * PDF del proyecto: pestaña «Proyecto» (no graba nada). Puede llegar como descarga o como ventana
+ * emergente. TODO(pdf): confirmar cuál de las dos es en ePAC; se contemplan ambas.
+ */
+async function descargarProyecto(page: Page, ctx: ContextoPortal, nombre: string): Promise<PdfRef | null> {
+  const pestana = page.getByText('Proyecto', { exact: true }).first()
+  const descarga = page.waitForEvent('download', { timeout: 45_000 }).then((d) => ({ d }) as const)
+  const popup = page.context().waitForEvent('page', { timeout: 45_000 }).then((p) => ({ p }) as const)
+  const esperando = Promise.any([descarga, popup]).catch(() => null)
+  await ctx.abrirProyecto(pestana)
+  const r = await esperando
+  if (!r) {
+    ctx.log('pdf: ni descarga ni ventana tras abrir «Proyecto»')
+    return null
+  }
+  let bytes: Uint8Array | null = null
+  if ('d' in r) {
+    const trozos: Buffer[] = []
+    const flujo = await r.d.createReadStream()
+    for await (const t of flujo) trozos.push(Buffer.from(t))
+    bytes = Buffer.concat(trozos)
+  } else {
+    // Ventana emergente: o dispara una descarga o es un visor con la URL del PDF.
+    const p = r.p
+    const dl = await p.waitForEvent('download', { timeout: 10_000 }).catch(() => null)
+    if (dl) {
+      const trozos: Buffer[] = []
+      for await (const t of await dl.createReadStream()) trozos.push(Buffer.from(t))
+      bytes = Buffer.concat(trozos)
+    } else {
+      await p.waitForLoadState('load').catch(() => undefined)
+      comprobarUrl(p.url()) // nunca se sigue una URL de emisión
+      const resp = await p.context().request.get(p.url())
+      if (resp.ok()) bytes = await resp.body()
+    }
+    await p.close().catch(() => undefined)
+  }
+  // Un PDF de verdad empieza por «%PDF»; si no, no se adjunta (no se sube cualquier cosa).
+  if (!bytes || bytes.length < 5 || Buffer.from(bytes.subarray(0, 4)).toString('latin1') !== '%PDF') {
+    ctx.log('pdf: lo recibido no es un PDF; se omite')
+    return null
+  }
+  return ctx.adjuntarPdf(nombre, bytes)
 }
 
 export const allianzComunidades: AdaptadorPortal = {
@@ -381,11 +415,49 @@ export const allianzComunidades: AdaptadorPortal = {
   ramo: 'comunidades',
   credencial: 'ALLIANZ_EPAC',
   async tarificar(page, riesgo, ctx) {
+    // UNA modalidad por trabajo (por defecto estándar). Querer las dos = DOS trabajos (dos pasadas):
+    // tras «Aceptar» el formulario avanza y no hay vuelta atrás sin riesgo de dejar el portal a medias.
+    const modalidad: ModalidadPortal = riesgo.modalidad ?? 'estandar'
     await login(page, ctx)
     await ctx.trasLogin()
     await abrirComunidades(page, ctx)
     await rellenarRiesgo(page, riesgo, ctx)
     await calcular(page, ctx)
-    return { ofertas: await leerOfertas(page, ctx) }
+    const calculo = await leerCalculo(page, ctx, modalidad)
+    // Datos Básicos → elegir modalidad → «Aceptar» (SOLO avanza a Tarificar; guardado por fases).
+    await ctx.elegirOpcion(modalidad)
+    await ctx.pausa()
+    await ctx.avanzarATarificar()
+    await ctx.exigirSinCaptcha()
+    const primas = await leerPrimas(page)
+    if (primas.anual.primaTotalEur === null) {
+      throw new ErrorTarificador('portal', 'allianz/comunidades: la pestaña Tarificar no trajo «Prima Total» anual legible')
+    }
+    const pdf = await descargarProyecto(page, ctx, `proyecto-comunidades-2020-${modalidad}.pdf`)
+    const avisos = [
+      `Modalidad ${modalidad === 'estandar' ? 'Estándar' : 'Personalizado'} (la otra requiere otro trabajo)`,
+      'Prima anual = Prima Total del primer año; los recibos sucesivos pueden diferir (ver desglose)',
+      'Capitales y franquicias tal como los muestra la tabla de ePAC; «estado» solo en las asistencias (Incluida/Excluida)',
+    ]
+    if (pdf === null) avisos.push('PDF del proyecto no obtenido (TODO: confirmar si «Proyecto» da descarga o ventana)')
+    if (calculo.costeDatosBasicos !== null && primas.sucesivos.primaTotalEur !== null && calculo.costeDatosBasicos !== primas.sucesivos.primaTotalEur) {
+      avisos.push('El coste de Datos Básicos no coincide con la Prima Total de sucesivos: revisar a mano')
+    }
+    const oferta: OfertaNormalizada = {
+      compania: 'Allianz',
+      producto: `Comunidades 2020 · ${modalidad === 'estandar' ? 'Estándar' : 'Personalizado'}`,
+      primaAnualEur: primas.anual.primaTotalEur,
+      primaNetaEur: primas.anual.primaNetaEur,
+      fraccionamiento: null,
+      importeReciboEur: primas.sucesivos.primaTotalEur,
+      coberturas: calculo.coberturas,
+      franquicias: calculo.franquicias,
+      validaHasta: null,
+      referenciaPortal: null,
+      pdf,
+      desglose: { anual: primas.anual, sucesivos: primas.sucesivos },
+      avisos,
+    }
+    return { ofertas: [oferta] }
   },
 }
