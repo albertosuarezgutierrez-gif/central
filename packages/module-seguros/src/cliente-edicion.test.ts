@@ -6,6 +6,9 @@ import {
   etiquetasIdentidad,
   documentoAcredita,
   documentosAcreditativos,
+  acreditarCambioConDocumento,
+  camposIdentidadTocados,
+  estadoDocumentosIdentidad,
   enmascararDni,
   etiquetaContacto,
   normalizarDni,
@@ -238,4 +241,33 @@ test('🪤 un contacto «nuncaPrincipal» no asciende aunque la ficha no tenga p
   assert.equal(seraPrincipalAlAnadir({ pedido: false, nuncaPrincipal: false, hayPrincipal: false }), true)
   assert.equal(seraPrincipalAlAnadir({ pedido: false, nuncaPrincipal: false, hayPrincipal: true }), false)
   assert.equal(seraPrincipalAlAnadir({ pedido: true, nuncaPrincipal: false, hayPrincipal: true }), true)
+})
+
+test('PÓLIZA con el DNI de la ficha acredita SOLO nombre y apellidos (Alberto, 05/10/2026)', () => {
+  const poliza = { tipo: 'poliza', estado: 'recibido', dniCoincideFicha: true } as const
+  const dni = { tipo: 'dni', estado: 'recibido', dniCoincideFicha: null } as const
+  // póliza + nombre/apellidos → documento
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['nombre', 'apellidos']), { ok: true, via: 'documento' })
+  // póliza + DNI (o fecha) sin motivo → no acredita, aunque el corredor tenga vía motivo
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['nombre', 'dni'], { permiteMotivo: true }), { ok: false, motivo: 'documento_no_acredita' })
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['fechaNacimiento'], { permiteMotivo: true, motivo: 'x' }), { ok: false, motivo: 'documento_no_acredita' })
+  // póliza + DNI con motivo → se acepta como MOTIVO, no como documento
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['dni'], { permiteMotivo: true, motivo: '  hablado con él por teléfono ' }), { ok: true, via: 'motivo', motivoCambio: 'hablado con él por teléfono' })
+  // el portal no tiene vía motivo: aunque lo mande, no vale
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['dni'], { motivo: 'hablado con él por teléfono' }), { ok: false, motivo: 'documento_no_acredita' })
+  // DNI-documento acredita todo
+  assert.deepEqual(acreditarCambioConDocumento(dni, ['dni', 'fechaNacimiento', 'nombre']), { ok: true, via: 'documento' })
+  // documento que no acredita (póliza sin DNI coincidente, nulo) → rechazo aunque haya motivo
+  assert.deepEqual(acreditarCambioConDocumento({ ...poliza, dniCoincideFicha: null }, ['nombre'], { permiteMotivo: true, motivo: 'por teléfono' }), { ok: false, motivo: 'documento_no_acredita' })
+  assert.deepEqual(acreditarCambioConDocumento(null, ['nombre']), { ok: false, motivo: 'documento_no_acredita' })
+  assert.deepEqual(camposIdentidadTocados({ nombre: 'A', dni: null }), ['dni', 'nombre'])
+})
+
+test('Documentos: null = no se pudo leer (no se afirma que no haya DNI); [] = revisado y no hay', () => {
+  const d = { id: 'd', tipo: 'dni', estado: 'recibido', nombre: null, mime: null, bytes: null, sha256: null, notas: null,
+    subidoPor: 'corredor', clienteId: 'c', polizaId: null, siniestroId: null, creado: '', revisadoEn: null } as DocumentoResumen
+  assert.equal(estadoDocumentosIdentidad(null), 'no_leidos')
+  assert.equal(estadoDocumentosIdentidad([]), 'ninguno')
+  assert.equal(estadoDocumentosIdentidad([{ ...d, estado: 'pedido' }]), 'ninguno')
+  assert.equal(estadoDocumentosIdentidad([d]), 'hay')
 })

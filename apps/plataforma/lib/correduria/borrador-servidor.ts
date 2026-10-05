@@ -27,14 +27,36 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export type ConSello<T> = { datos: T; guardadoEn: number }
 export type FilaServidor<T = Record<string, unknown>> = { oportunidadId: string | null; datos: T | null; guardadoEn: number }
 
+function claveEstable(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(claveEstable).join(',')}]`
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>
+    return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${claveEstable(o[k])}`).join(',')}}`
+  }
+  return JSON.stringify(v) ?? 'undefined'
+}
+
+/**
+ * ¿Es el formulario tal cual se abre (valores por defecto)? Un borrador así no tiene nada que
+ * conservar: guardarlo (local o servidor) con sello nuevo pisaría un borrador bueno de otro equipo.
+ * Compara por contenido, sin importar el orden de las claves. Sin `inicial` nada es «vacío».
+ */
+export function esBorradorVacio(datos: unknown, inicial: unknown): boolean {
+  if (datos == null || inicial == null) return false
+  return claveEstable(datos) === claveEstable(inicial)
+}
+
 /**
  * El más reciente de los dos. Empate → el LOCAL (es lo que este equipo acaba de teclear y ya está
- * pintado). `null` en un lado = ese lado no tiene nada utilizable.
+ * pintado). `null` en un lado = ese lado no tiene nada utilizable. Un local VACÍO (`esVacio`: los
+ * valores por defecto, con sello nuevo) no cuenta: nunca gana al servidor.
  */
 export function elegirMasReciente<T>(
   local: ConSello<T> | null,
   servidor: ConSello<T> | null,
+  esVacio?: (datos: T) => boolean,
 ): { origen: 'local' | 'servidor'; borrador: ConSello<T> } | null {
+  if (local && esVacio?.(local.datos)) local = null
   if (!local && !servidor) return null
   if (!servidor) return { origen: 'local', borrador: local! }
   if (!local) return { origen: 'servidor', borrador: servidor }
@@ -138,13 +160,14 @@ export async function leerBorradoresServidor(clienteId: string, ramo: RamoBorrad
  * petición aunque la página se cierre (tope de 64 KB de cuerpo, por eso el límite de arriba).
  * Devuelve el sello guardado o `null` si no se pudo (la copia local sigue).
  */
-export async function guardarBorradorServidor(cuerpo: CuerpoBorrador, opciones: { keepalive?: boolean } = {}): Promise<number | null> {
+export async function guardarBorradorServidor(cuerpo: CuerpoBorrador, opciones: { keepalive?: boolean; signal?: AbortSignal } = {}): Promise<number | null> {
   try {
     const r = await fetch(RUTA, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(cuerpo),
       keepalive: opciones.keepalive === true,
+      signal: opciones.signal,
     })
     if (!r.ok) return null
     const j = (await r.json().catch(() => null)) as { guardadoEn?: unknown } | null

@@ -33,7 +33,8 @@ import {
   WHERE_CARTERA_VIVA,
   claveTipoCarnet,
   coincidenciaBloquea,
-  documentoAcredita,
+  acreditarCambioConDocumento,
+  camposIdentidadTocados,
   estadoDocumento,
   etiquetaContacto,
   marcaAcreditaFicha,
@@ -649,15 +650,22 @@ export async function editarCliente(
       : null
 
     // Sin documento solo llega aquí «rellenar nombre en ficha sin nombre» o el cambio con motivo.
+    // Con documento: una PÓLIZA acredita solo nombre y apellidos (05/10/2026); si además toca DNI o
+    // fecha de nacimiento, vale únicamente con motivo (y vía motivo permitida), y se registra como motivo.
+    let motivoCambio = r.motivoCambio
     if (r.tocaIdentidad && edicion.documentoId) {
       const d = await db.documento.findFirst({
         where: { id: edicion.documentoId ?? '', correduriaId, clienteId },
         select: { tipo: true, estado: true, extraccion: true },
       })
       const dniCoincideFicha = d ? marcaAcreditaFicha(d.extraccion, { clienteId, dniLookupHash: ident?.dniLookupHash ?? null }) : null
-      if (!d || !documentoAcredita({ tipo: tipoDocumento(d.tipo), estado: estadoDocumento(d.estado), dniCoincideFicha })) {
-        return invalido('documento_no_acredita', 'documentoId')
-      }
+      const acr = acreditarCambioConDocumento(
+        d ? { tipo: tipoDocumento(d.tipo), estado: estadoDocumento(d.estado), dniCoincideFicha } : null,
+        camposIdentidadTocados(r.identidad),
+        { motivo: edicion.motivo, permiteMotivo },
+      )
+      if (!acr.ok) return invalido(acr.motivo, 'documentoId')
+      if (acr.via === 'motivo') motivoCambio = acr.motivoCambio
     }
 
     const data: Record<string, unknown> = { updatedAt: new Date() }
@@ -708,11 +716,11 @@ export async function editarCliente(
         anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'notas' })
       }
     }
-    const texto = r.motivoCambio
+    const texto = motivoCambio
       ? [
           textoCambioIdentidadConMotivo({
             actor,
-            motivo: r.motivoCambio,
+            motivo: motivoCambio,
             antes: { nombre: c.nombre, apellidos: c.apellidos, dni: descifrarCampo(ident?.dni), fechaNacimiento: descifrarCampo(ident?.fechaNacimiento) },
             despues: {
               nombre: r.identidad.nombre,
