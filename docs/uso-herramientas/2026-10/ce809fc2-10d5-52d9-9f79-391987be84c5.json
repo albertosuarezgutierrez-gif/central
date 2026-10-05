@@ -1,0 +1,55 @@
+{
+ "sesion": "ce809fc2-10d5-52d9-9f79-391987be84c5",
+ "inicio": "2026-10-05T02:06:45.656Z",
+ "fin": "2026-10-05T02:07:23.824Z",
+ "llamadas": 10,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 129,
+   "chars_out": 13563,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1,
+    "ListConnectors": 1
+   }
+  },
+  "bash": {
+   "llamadas": 4,
+   "chars_in": 2944,
+   "chars_out": 2955,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 4
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 59,
+   "chars_out": 8614,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 2,
+   "chars_in": 682,
+   "chars_out": 93,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  }
+ }
+}
