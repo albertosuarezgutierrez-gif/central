@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-05T03:38:11Z",
-  "sha": "4b81873fbaaa6a8d44a3f7a02e1330281ae65fea",
+  "generadoEn": "2026-10-05T07:31:08Z",
+  "sha": "769bc60550e93bb7b4f8cfa41a0ea14949c8774f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -79991,7 +79991,7 @@
           "exportada": true,
           "params": "{ id, oculta }: { id: string; oculta: boolean }",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "AccionesBanca",
@@ -79999,7 +79999,7 @@
           "exportada": true,
           "params": "{ anadir, mas }: { anadir: React.ReactNode; mas: React.ReactNode }",
           "retorno": null,
-          "linea": 45,
+          "linea": 46,
           "resumen": "Barra de acciones consolidada: un botón principal «➕ Añadir» (importar extracto / conectar banco) y un desplegable «⋯ Más» (subir factura, conciliar, re-analizar, exportar, revisar correo). Antes eran"
         },
         {
@@ -80008,7 +80008,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 90,
+          "linea": 91,
           "resumen": "Ancla al libro de movimientos (que ya va siempre visible más abajo, es \"lo que más se usa\" — ver comentario en page.tsx). El botón lleva directo al selector de cuenta, donde las cuentas sincronizadas "
         },
         {
@@ -80017,7 +80017,7 @@
           "exportada": true,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 101,
+          "linea": 102,
           "resumen": "Envoltorio plegable para agrupar los paneles secundarios (IA / herramientas) y que no tapen los movimientos. Cerrado por defecto y con MONTAJE PEREZOSO: los hijos no se renderizan (ni disparan sus fet"
         },
         {
@@ -80026,7 +80026,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 116,
+          "linea": 117,
           "resumen": "Formulario de subida de extracto Norma 43 (.n43) para una sociedad."
         },
         {
@@ -80035,7 +80035,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 212,
+          "linea": 213,
           "resumen": "Botón para (re)lanzar la categorización IA de los movimientos pendientes."
         },
         {
@@ -80044,7 +80044,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 236,
+          "linea": 237,
           "resumen": "Botón para cruzar banco ↔ facturas/ingresos registrados (sivra + ialimp)."
         },
         {
@@ -80053,7 +80053,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 260,
+          "linea": 261,
           "resumen": "Sube una FOTO/imagen de factura → OCR (IA) → intenta casarla con un movimiento."
         },
         {
@@ -80062,7 +80062,7 @@
           "exportada": true,
           "params": "{ sociedades }: { sociedades: SociedadOpt[] }",
           "retorno": null,
-          "linea": 294,
+          "linea": 295,
           "resumen": "Conexión automática del banco vía Open Banking (PSD2/Enable Banking): elige banco + sociedad, crea el consentimiento y redirige al banco para autorizar."
         },
         {
@@ -80071,7 +80071,7 @@
           "exportada": true,
           "params": "{ movimientos, destinoLabel }: { movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }> destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 378,
+          "linea": 379,
           "resumen": "Bandeja \"Por revisar\": lo que de verdad estaba en duda es el NEGOCIO del gasto (¿deducible de la correduría, del Dúplex/pisos, o personal?) — no la categoría contable, que para una compra con tarjeta "
         },
         {
@@ -80080,7 +80080,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 447,
+          "linea": 448,
           "resumen": "Descarga el CSV de todos los movimientos para enviárselo al gestor."
         },
         {
@@ -80089,7 +80089,7 @@
           "exportada": true,
           "params": "{ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }",
           "retorno": null,
-          "linea": 458,
+          "linea": 459,
           "resumen": "Bandeja \"Posibles cargos duplicados\": pares sospechosos de cobro doble. El dueño los resuelve con un clic (\"Es normal\" / \"Es un cobro doble\"); la decisión persiste. Plegable de \"ya resueltos\" para rea"
         },
         {
@@ -80098,7 +80098,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 597,
+          "linea": 598,
           "resumen": "Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar."
         },
         {
@@ -80107,7 +80107,7 @@
           "exportada": true,
           "params": "{ cuentas, destinoLabel, initial, periodo }: { cuentas: { id: string; label: string; sincronizada?: boolean }[] destinoLabel: Record<string, string> initial: { movimientos: MovLedgerUI[]; total: number; hayMas: boolean } // Rango por defect",
           "retorno": null,
-          "linea": 636
+          "linea": 637
         },
         {
           "nombre": "IngresosPorRevisar",
@@ -80115,7 +80115,7 @@
           "exportada": true,
           "params": "{ ingresos, destinoLabel }: { ingresos: MovLedgerUI[] destinoLabel: Record<string, string> }",
           "retorno": null,
-          "linea": 951,
+          "linea": 952,
           "resumen": "Bandeja de INGRESOS por revisar: abonos cuyo negocio está sin confirmar. Antes no aparecían en ningún sitio accionable (la revisión de gastos es solo importe<0). Aquí el dueño les asigna el negocio (d"
         },
         {
@@ -80124,7 +80124,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 1016
+          "linea": 1036
         }
       ],
       "tablas": [
@@ -80132,7 +80132,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "41f31ca7947e"
+      "hash": "f0dfcbe8433a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/BenchmarkPisos.tsx",
@@ -95094,7 +95094,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14,
+          "linea": 22,
           "resumen": "POST /api/banca/destino { id, destino } — reclasifica el \"destino\"/negocio de un movimiento. Lo usa el desglose de la correduría para SACAR de seguros un movimiento que no lo era. Scoped por cuenta_id"
         }
       ],
@@ -95103,10 +95103,11 @@
         "cuentas_bancarias",
         "movimientos_bancarios",
         "next",
-        "set"
+        "set",
+        "zod"
       ],
       "rutaApi": "/api/banca/destino",
-      "hash": "521419a2e687"
+      "hash": "faf82fa82910"
     },
     {
       "ruta": "apps/plataforma/app/api/banca/duplicados/reclamacion/route.ts",
@@ -120727,6 +120728,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6819e6bb9a48"
+    },
+    {
+      "ruta": "apps/plataforma/lib/destino-campos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lógica PURA de los campos de seguros al reclasificar el destino de un movimiento (la usa /api/banca/destino; testeable con `node --test`).",
+      "exporta": [
+        "esCompaniaConocida",
+        "camposSeguros"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCompaniaConocida",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: unknown",
+          "retorno": "c is (typeof COMPANIAS_CONOCIDAS)[number]",
+          "linea": 14
+        },
+        {
+          "nombre": "camposSeguros",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string, compania?: string | null",
+          "retorno": "CamposSeguros",
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9972ba10a50a"
     },
     {
       "ruta": "apps/plataforma/lib/destino.ts",
@@ -182580,7 +182611,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4146,
-    "funciones": 14255
+    "archivos": 4147,
+    "funciones": 14257
   }
 }
