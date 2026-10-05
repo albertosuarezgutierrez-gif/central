@@ -12,7 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(05/10/2026)** — requerimiento AEAT PyC — leídos extractos 2024 SL …9871 y …0855 con agentes; doc v3 en Drive; hallazgos clave (sin 500 €/mes, IRPF solo Socorro nov-dic, ~60k a comprobar en ajuste IS, 309 Booking abierto); pendiente …7622 e informe Booking por propiedad.
+**(05/10/2026)** — requerimiento AEAT PyC — leídos extractos 2024 SL …9871 y …0855 con agentes; doc v3 en Drive; hallazgos clave (sin 500 €/mes, IRPF solo Socorro nov-dic, 309 Booking abierto); Excel de Asecon: Socorro ene-oct y Sanlúcar están en el ajuste del IS ([P] cuadre al euro); el riesgo pasa a la 551 (≈54k cobrados por los socios); pendiente …7622.
 
 **(04/10/2026)** — análisis 2º requerimiento AEAT a Punto y Coma SL (ingresos plataformas 2024). Agentes leyeron correos Asecon 2024-2026 + `incomes` 2024.
 Hallazgos: contratos 500€/mes aportados a Inspección 2024; 2ª pasada sobre adjuntos (Vía C, agente lector-correo): doble resta de comisiones DESCARTADA; SL arrendataria de abuela/madre (621+115); punto débil Socorro/Sanlúcar cobrados en cuentas personales; resumen v2 en Drive; carpeta Drive «Requerimiento AEAT 2024 - Punto y Coma» (subcarpeta 09) con resumen para reunión.
