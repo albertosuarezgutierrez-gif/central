@@ -1314,3 +1314,12 @@ export {
   type MotivoPropuesta,
 } from './identidad-documentada.ts'
 export { polizaAnteriorParaTarificar, CODIGOS_DGS_MAPFRE } from './poliza-anterior.ts'
+
+export {
+  TAXONOMIA_POR_RAMO, ramoOfertaDe, garantiasDelRamo, garantiaCanonica, normalizarGarantia, normalizarTexto,
+} from './coberturas-taxonomia.ts'
+export type { RamoOferta, GrupoGarantia, TipoValorGarantia, GarantiaCanonica } from './coberturas-taxonomia.ts'
+export { compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2 } from './comparar-ofertas.ts'
+export type {
+  OfertaNormalizada, ValorGarantia, ResultadoComparacion, FilaMatriz, CeldaMatriz, ResumenOferta, AlertaInfraseguro,
+} from './comparar-ofertas.ts'
