@@ -1,6 +1,8 @@
 'use client'
 
 import ContactosMovil from './ContactosMovil'
+import GoogleContactosRevision from './GoogleContactosRevision'
+import GoogleContactosSimulacion from './GoogleContactosSimulacion'
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
@@ -476,6 +478,8 @@ export default function CorreduriaClient() {
           Es la herramienta de trabajo; «Cartera» es la foto. */}
       <div role="tabpanel" aria-label="Clientes" className="corr-panel" style={panel('clientes')}>
         {montada('clientes') && <ContactosMovil />}
+        {montada('clientes') && <GoogleContactosSimulacion />}
+        {montada('clientes') && <GoogleContactosRevision />}
         {montada('clientes') && <ListaCartera onContador={setNClientes} />}
 
         {/* El bloque «Recaptación» (leads del volcado a los que volver a
