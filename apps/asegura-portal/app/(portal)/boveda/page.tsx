@@ -175,6 +175,19 @@ export default async function Boveda({
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
   const [peticiones, firmas, presupuestosPend] = await Promise.all([peticionesP, firmasP, presupuestosP])
 
+  // Pólizas donde YA hay una baja en marcha (por firmar, en revisión o firmada y sin cerrar): ahí no se ofrece «Solicitar baja».
+  // `null` = no se pudo leer el puente: no se ofrece (el servidor también la rechazaría con 409), no se afirma que no haya.
+  const bajasAbiertas: ReadonlySet<string> | null = firmas === null
+    ? null
+    : new Set(
+        [
+          ...firmas.anulaciones.map((a) => a.polizaId),
+          ...firmas.enRevision.map((a) => a.polizaId),
+          ...firmas.firmadas.filter((a) => a.estado !== 'confirmada').map((a) => a.polizaId),
+        ].filter((x): x is string => x !== null),
+      )
+  const puedePedirBaja = !identidad.corredor
+
   const pendientes =
     vista === 'seguros'
       ? pendientesDeTi(
@@ -502,7 +515,7 @@ export default async function Boveda({
           <AvisoContacto lectura={contacto} />
 
           {/* Lo único que el cliente TIENE que hacer y que tiene fecha: su firma. */}
-          {firmas && <FirmarAnulacion anulaciones={firmas.anulaciones} firmadas={firmas.firmadas} consentimiento={firmas.consentimiento} corredor={Boolean(identidad.corredor)} />}
+          {firmas && <FirmarAnulacion anulaciones={firmas.anulaciones} firmadas={firmas.firmadas} enRevision={firmas.enRevision} consentimiento={firmas.consentimiento} corredor={Boolean(identidad.corredor)} />}
 
           {/* «Tus vencimientos» (pieza 1-5): solo si algo SUYO renueva en 60
               días; si no, no pinta nada y el alta sigue arriba. */}
@@ -580,6 +593,7 @@ export default async function Boveda({
               grupo="mias"
               conNombre={bloqueMias?.conNombre ?? false}
               hoy={hoy}
+              bajasAbiertas={puedePedirBaja ? bajasAbiertas : null}
             />
           ))
         )}
@@ -807,12 +821,15 @@ function Titular({
   grupo,
   conNombre,
   hoy,
+  bajasAbiertas = null,
 }: {
   titular: TitularPortal
   grupo: GrupoCartera
   conNombre: boolean
   /** Resuelto en el servidor (la página es `force-dynamic`). */
   hoy: Date
+  /** Solo en «mias»: las pólizas con baja en marcha. `null` = no se ofrece «Solicitar baja» (ajenas, vista de corredor, puente caído). */
+  bajasAbiertas?: ReadonlySet<string> | null
 }) {
   if (titular.polizas.length === 0) {
     return (
@@ -837,7 +854,14 @@ function Titular({
         filas={titular.polizas.map((p) => ({
           key: p.id,
           enVigor: cuentaComoEnVigor(p),
-          nodo: <FilaPoliza key={p.id} p={p} deOtro={grupo === 'autorizadas' ? titular.nombre : null} />,
+          nodo: (
+            <FilaPoliza
+              key={p.id}
+              p={p}
+              deOtro={grupo === 'autorizadas' ? titular.nombre : null}
+              puedeSolicitarBaja={grupo === 'mias' && bajasAbiertas !== null && cuentaComoEnVigor(p) && !bajasAbiertas.has(p.id)}
+            />
+          ),
         }))}
       />
     </>
