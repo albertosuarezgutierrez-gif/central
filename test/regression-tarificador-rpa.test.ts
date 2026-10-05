@@ -92,14 +92,14 @@ test('el middleware de asegura deja pasar /api/tarificador (auth propia del work
   assert.match(publica![1], /['"]\/api\/tarificador['"]/)
 })
 
-test('ePAC Comunidades 2020: el adaptador no nombra ni toca «Aceptar», «NUEVA ALTA» ni el radio «Elija una opción»', () => {
+test('ePAC Comunidades 2020: el adaptador no nombra ni toca «Aceptar» ni el radio «Elija una opción»', () => {
   const src = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/comunidades.ts'), 'utf8'))
-  assert.ok(!/aceptar|nueva[\s_-]*alta|elij[ae][\s_-]*una[\s_-]*opci/i.test(src), 'el código del adaptador nombra un control de ALTA de ePAC')
+  assert.ok(!/aceptar|elij[ae][\s_-]*una[\s_-]*opci/i.test(src), 'el código del adaptador nombra un control de ALTA de ePAC')
   assert.ok(!/recuperaci[oó]n/i.test(src), 'el adaptador no nombra «Recuperación de contraseña» (cambia credenciales)')
   assert.ok(!/radio/i.test(src.replace(/:not\(\[type=radio\]\)/g, '')), 'el adaptador no puede tocar radios (solo excluirlos al leer)')
   // El único botón que se pulsa en el formulario es «Calcular»: todo ctx.pulsar(...) del adaptador apunta a él, al login o al menú.
   const pulsaciones = [...src.matchAll(/ctx\.pulsar\(([^)]*\)?)\)/g)].map((m) => m[1])
-  for (const p of pulsaciones) assert.match(p, /botonCalcular|SEL\.|sel\(|INICIAR SESI/, `pulsación inesperada en el adaptador: ${p}`)
+  for (const p of pulsaciones) assert.match(p, /botonCalcular|SEL\.|sel\(|INICIAR SESI|NUEVA ALTA|modal\.getByText\('(Particulares|Comunidades)'/, `pulsación inesperada en el adaptador: ${p}`)
   const guard = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
   assert.match(guard, /TEXTOS_BLOQUEADOS_ALTA/, 'el guard tiene que seguir bloqueando los textos de alta de ePAC')
 })

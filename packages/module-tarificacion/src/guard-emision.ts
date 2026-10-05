@@ -12,14 +12,15 @@
 // dispara: falso positivo aceptado).
 export const PATRON_EMISION = /emit|emisi|contrat|formaliz|suplement|anul|baja/i
 
-// Textos del formulario REAL de Allianz ePAC «Comunidades 2020» (captura del 05/10/2026) que
-// materializan o inician una alta y que el bot NUNCA debe pulsar: «Aceptar» (acepta/guarda la
-// oferta elegida), «NUEVA ALTA» (abre un alta nueva) y el radio «ELIJA UNA OPCIÓN» (elige modalidad
-// para contratar). Se comparan sin tildes y tolerando separadores (`nueva_alta`, `NuevaAlta`).
+// Textos de Allianz ePAC (capturas del 05/10/2026) que el bot NUNCA debe pulsar: «Aceptar» (acepta/guarda
+// la oferta elegida), el radio «ELIJA UNA OPCIÓN» (elige modalidad para contratar) y «RECUPERACIÓN DE
+// CONTRASEÑA» (toca las credenciales de la cuenta). Se comparan sin tildes y tolerando separadores.
 // «aceptar» también casa con «Aceptar cookies»: falso positivo aceptado (fail-closed).
+// «NUEVA ALTA» NO está aquí a propósito (Alberto, 05/10/2026): en ePAC es la NAVEGACIÓN para cotizar
+// (botón → modal «Nueva Alta» → Particulares → Comunidades), no una emisión. Lo que da de alta de
+// verdad es «Aceptar».
 export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   /aceptar/i,
-  /nueva[\s_+-]*alta/i,
   /elij[ae][\s_+-]*una[\s_+-]*opcion/i,
   // Login de ePAC: «RECUPERACIÓN DE CONTRASEÑA» dispara un cambio de credenciales de la cuenta.
   /recuperacion[\s_+-]*de[\s_+-]*contrasena/i,

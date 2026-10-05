@@ -8,9 +8,10 @@
 // Reglas para quien toque este fichero:
 //   · Pulsar SIEMPRE con `ctx.pulsar(locator)`, nunca `locator.click()` (lo vigila el guardián de la raíz).
 //     Los campos se rellenan con `fill`/`selectOption`/`setChecked`, no pulsando botones.
-//   · 🚨 El formulario tiene «Aceptar», «NUEVA ALTA» y el radio «ELIJA UNA OPCIÓN»: dan de ALTA. El bot
-//     solo pulsa «Calcular». El guard los bloquea (TEXTOS_BLOQUEADOS_ALTA) y este fichero ni los
+//   · 🚨 El formulario tiene «Aceptar» y el radio «ELIJA UNA OPCIÓN»: dan de ALTA. Dentro del formulario el
+//     bot solo pulsa «Calcular». El guard los bloquea (TEXTOS_BLOQUEADOS_ALTA) y este fichero ni los
 //     nombra en código (lo vigila test/regression-tarificador-rpa.test.ts). El radio NO se toca nunca.
+//     («NUEVA ALTA» es solo la navegación hasta el formulario.)
 //   · Tras el login y tras calcular: `await ctx.exigirSinCaptcha()`.
 //   · Un dato que el portal exige y el riesgo no trae (`null`) → `ErrorTarificador('datos', …)`,
 //     NUNCA se inventa un valor por defecto.
@@ -28,12 +29,8 @@ import { ErrorTarificador } from '../../errores.ts'
  * El formulario en sí NO usa selectores: va por etiqueta (ver `campoPorEtiqueta`).
  */
 const SEL = {
-  // TODO(capturas): URL de entrada de ePAC. En la captura la barra solo enseña «e-pacallianz.com…» (truncada).
-  urlLogin: null as string | null,
-  // TODO(capturas): ruta de menú hasta «Comunidades 2020». Se ve el menú superior («Venta»,
-  // «Administracion», «Servicios») y la miga «Inicio > Comunidades 2020», pero NO el camino de clics.
-  // Ojo: «NUEVA ALTA» está en esa cabecera y NO es la ruta (guard).
-  menuHastaComunidades: null as string | null,
+  // URL pública de entrada de ePAC (dada por Alberto, 05/10/2026; no es secreta).
+  urlLogin: 'https://www.e-pacallianz.com/ngx-azs-epac/public/home' as string | null,
 }
 
 function sel(clave: keyof typeof SEL): string {
@@ -141,10 +138,16 @@ async function login(page: Page, ctx: ContextoPortal): Promise<void> {
 }
 
 async function abrirComunidades(page: Page, ctx: ContextoPortal): Promise<void> {
-  // TODO(capturas): pulsar la ruta de menú hasta «Comunidades 2020» (SEL.menuHastaComunidades). Cuando
-  // se conozca, cada clic va por ctx.pulsar y NUNCA por «NUEVA ALTA».
-  await ctx.pulsar(page.locator(sel('menuHastaComunidades')))
+  // Ruta dada por Alberto: botón naranja «NUEVA ALTA» (cabecera de la home) → modal «Nueva Alta» con
+  // acordeones → «Particulares» → tarjeta «Comunidades» → «Comunidades 2020».
+  // «Nueva alta» es NAVEGACIÓN para cotizar, no emisión (el guard ya no la bloquea). Alternativa en el
+  // menú: «Venta» → «Nueva Alta». El modal también tiene «CERRAR» (tampoco se bloquea).
+  await ctx.pulsar(page.getByText('NUEVA ALTA', { exact: true }).first())
   await ctx.pausa()
+  const modal = page.getByRole('dialog').filter({ hasText: 'Nueva Alta' }).first()
+  await ctx.pulsar(modal.getByText('Particulares', { exact: true }).first())
+  await ctx.pausa()
+  await ctx.pulsar(modal.getByText('Comunidades', { exact: true }).first())
   await page.getByText(TITULO_FORMULARIO, { exact: true }).first().waitFor()
   await ctx.exigirSinCaptcha()
 }
