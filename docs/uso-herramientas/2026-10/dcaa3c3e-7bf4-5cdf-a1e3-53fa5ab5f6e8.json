@@ -1,8 +1,8 @@
 {
  "sesion": "dcaa3c3e-7bf4-5cdf-a1e3-53fa5ab5f6e8",
  "inicio": "2026-10-05T10:00:23.042Z",
- "fin": "2026-10-05T15:27:24.457Z",
- "llamadas": 237,
+ "fin": "2026-10-05T19:32:56.588Z",
+ "llamadas": 247,
  "categorias": {
   "agente:Explore": {
    "llamadas": 3,
@@ -16,19 +16,19 @@
    }
   },
   "otro": {
-   "llamadas": 37,
-   "chars_in": 25616,
-   "chars_out": 219918,
+   "llamadas": 45,
+   "chars_in": 25652,
+   "chars_out": 276907,
    "errores": 0,
-   "archivos_citados": 12,
-   "chars_citados": 3989970,
+   "archivos_citados": 15,
+   "chars_citados": 4989861,
    "tools": {
     "ToolSearch": 7,
     "AskUserQuestion": 1,
-    "ExitPlanMode": 4,
+    "ExitPlanMode": 5,
     "SubagentHandback": 6,
     "SendMessage": 1,
-    "ReadNotifications": 17,
+    "ReadNotifications": 24,
     "SendUserFile": 1
    }
   },
@@ -44,15 +44,15 @@
    }
   },
   "sql": {
-   "llamadas": 12,
-   "chars_in": 7161,
-   "chars_out": 16331,
+   "llamadas": 13,
+   "chars_in": 7589,
+   "chars_out": 16881,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 2,
-    "mcp__Supabase__execute_sql": 10
+    "mcp__Supabase__execute_sql": 11
    }
   },
   "mcp:Supabase": {
@@ -125,14 +125,14 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 5,
-   "chars_in": 1168,
-   "chars_out": 671,
+   "llamadas": 6,
+   "chars_in": 1447,
+   "chars_out": 779,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__send_later": 4,
+    "mcp__claude-code-remote__send_later": 5,
     "mcp__claude-code-remote__subscribe_pr_activity": 1
    }
   },
