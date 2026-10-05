@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-05T12:49:33Z",
+  "generadoEn": "2026-10-05T13:26:40Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 196
+        "evidencias": 197
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4072,6 +4072,7 @@
       "/api/operador/google-contactos/desconectar",
       "/api/operador/google-contactos/revision",
       "/api/operador/google-contactos/simular",
+      "/api/operador/google-contactos/ticket",
       "/api/operador/huerfanas",
       "/api/operador/impagados",
       "/api/operador/informe-mediacion",
@@ -5052,6 +5053,7 @@
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
       "/api/correduria/companias/contactado",
+      "/api/correduria/companias/telefono",
       "/api/correduria/contactos-movil",
       "/api/correduria/contador",
       "/api/correduria/declaradas-vencer",
@@ -5609,6 +5611,7 @@
       "seguros.gestiones",
       "seguros.google_contactos_conexion",
       "seguros.google_contactos_revision",
+      "seguros.google_contactos_ticket_usado",
       "seguros.google_contactos_vinculo",
       "seguros.historial_interno",
       "seguros.interviniente_purga_log",
@@ -6669,7 +6672,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1570,
+    "apis": 1572,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
