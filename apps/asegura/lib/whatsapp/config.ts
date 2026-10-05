@@ -7,6 +7,10 @@
 //   ASEGURA_WHATSAPP_ACTIVO    '1' = se guarda y procesa. Otra cosa = 200 sin guardar nada.
 //   ASEGURA_WHATSAPP_IA_ACTIVO '1' = el cron analiza con IA. Otra cosa = no se llama a la IA.
 //   WHATSAPP_RETENCION_DIAS    días que se conserva el texto de los mensajes (por defecto 730).
+//   WHATSAPP_APP_ID            id de la app de Meta (canje del `code` del Embedded Signup; con requireSecret).
+//   WHATSAPP_GRAPH_API_VERSION versión de la Graph API para el alta (`vNN.N`; ver graph.ts).
+//   WHATSAPP_IMPORTAR_HISTORIAL '1' = el historial que comparta la app del móvil se GUARDA en crudo (sin
+//                              importar: no hay importador). Otra cosa = se descarta y solo se cuenta.
 //
 // No hay token de ENVÍO: este canal no manda nada a Meta.
 
@@ -18,6 +22,11 @@ export const RETENCION_CRUDO_DIAS = 30
 
 export function whatsappActivo(env: Env = process.env): boolean {
   return env.ASEGURA_WHATSAPP_ACTIVO === '1'
+}
+
+/** Historial de Coexistence: sin '1' se descarta sin guardar texto (decisión de Alberto: «No compartir chats»). */
+export function importarHistorial(env: Env = process.env): boolean {
+  return env.WHATSAPP_IMPORTAR_HISTORIAL === '1'
 }
 
 export function iaWhatsappActiva(env: Env = process.env): boolean {

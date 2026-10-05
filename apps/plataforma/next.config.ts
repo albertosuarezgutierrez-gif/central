@@ -36,7 +36,9 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/(.*)',
-        headers: [{ key: 'Content-Security-Policy', value: "frame-src 'self' *.codeoscopic.io;" }],
+        // WhatsApp Embedded Signup (05/10/2026, /correduria/ajustes/whatsapp): el SDK JS de Facebook pinta
+        // iframes propios (facebook.com) para el popup de alta; solo se AMPLÍA frame-src, nada más.
+        headers: [{ key: 'Content-Security-Policy', value: "frame-src 'self' *.codeoscopic.io https://*.facebook.com https://*.facebook.net;" }],
       },
     ]
   },

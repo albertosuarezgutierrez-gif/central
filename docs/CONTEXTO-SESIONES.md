@@ -1072,6 +1072,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - `apps/asegura`: webhook `/api/webhooks/whatsapp` (HMAC + Zod, dedupe wamid, `messages` + `smb_message_echoes`), crons `whatsapp-analizar` (IA, lista blanca de 6 acciones) y `whatsapp-retencion`; helpers `aE164`/`redactarPii` en module-seguros. Sin código de envío.
 - Reutiliza `conversaciones`/`mensajes`/`channel_inbound_messages` heredadas; SQL `2026-10-05b_whatsapp_crm.sql` SIN aplicar (gate DDL). Flags `ASEGURA_WHATSAPP_ACTIVO`/`_IA_ACTIVO` apagados.
 - Número personal: desconocidos quedan `pendiente_clasificar`; si la IA dice personal → `descartada_personal` + purga de texto.
+- Alta por coexistencia (Embedded Signup, Alberto = Tech Provider, sin BSP): `/correduria/ajustes/whatsapp` → `/api/operador/whatsapp/alta` (canje + subscribed_apps + syncs); webhooks history/account_update/edit/revoke; aviso Telegram de desconexión vía cron de plataforma. SQL `2026-10-05e_whatsapp_conexion.sql` SIN aplicar. «No compartir chats».
 - Pendiente: Alberto crea app Meta + Coexistence (disponibilidad en ES sin confirmar), envs, aplicar SQL, UI en `/correduria`. No tocar Google Contacts (#4286). Doc: `apps/asegura/docs/WHATSAPP.md`.
 
 ## (05/10/2026) Vigía «🚨 Reserva que Smoobu NO tiene»: falso positivo de Expedia

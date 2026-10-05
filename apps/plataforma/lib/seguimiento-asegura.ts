@@ -751,6 +751,19 @@ export function desconectarGoogleContactosAsegura(borrarContactos: boolean): Pro
   return llamar('/api/operador/google-contactos/desconectar', { method: 'POST', body: JSON.stringify({ borrarContactos }) }, 115_000)
 }
 
+/** Estado de la conexión de WhatsApp (Embedded Signup / Coexistence) y qué variables faltan en asegura. */
+export function conexionWhatsappAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/conexion', { method: 'GET' })
+}
+/** Cierre del Embedded Signup: asegura canjea el `code`, suscribe la WABA y pide las syncs (varias llamadas a Meta). */
+export function altaWhatsappAsegura(body: { code: string; waba_id: string; phone_number_id: string; business_id: string | null }): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/alta', { method: 'POST', body: JSON.stringify(body) }, 55_000)
+}
+/** El Telegram del evento de conexión `eventoAt` ya salió: asegura lo marca. */
+export function whatsappAvisadoAsegura(eventoAt: string): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/conexion', { method: 'POST', body: JSON.stringify({ accion: 'avisado', eventoAt }) })
+}
+
 export function tareasHoyAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/tareas-hoy', { method: 'GET' })
 }

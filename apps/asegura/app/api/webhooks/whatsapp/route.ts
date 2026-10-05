@@ -1,11 +1,13 @@
 import { NextResponse, after } from 'next/server'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { whatsappActivo } from '@/lib/whatsapp/config'
+import { importarHistorial, whatsappActivo } from '@/lib/whatsapp/config'
 import { secretoWhatsapp } from '@/lib/whatsapp/secretos'
 import { verificarFirmaMeta, verificarSuscripcion } from '@/lib/whatsapp/firma'
 import { extraerMensajes, zWebhookWhatsapp } from '@/lib/whatsapp/payload'
 import { guardarCrudos, guardarNoReconocido, procesarPendientes } from '@/lib/whatsapp/procesar'
+import { extraerEventos } from '@/lib/whatsapp/eventos'
+import { hayEventosDeCuenta, registrarEventosWebhook } from '@/lib/whatsapp/conexion'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -19,7 +21,11 @@ export const maxDuration = 60
 //          2) ASEGURA_WHATSAPP_ACTIVO≠'1' → 200 sin guardar nada (un 4xx/5xx haría reintentar a Meta);
 //          3) Zod safeParse; 4) guarda el crudo (dedupe por wamid); 5) 200 rápido; 6) procesa en `after`.
 // Solo `messages` (entrantes) y `smb_message_echoes` (lo que Alberto escribe desde el móvil en
-// Coexistence); `statuses` se ignoran. Solo lo dirigido a WHATSAPP_PHONE_NUMBER_ID.
+// Coexistence); `statuses` se ignoran. Solo lo dirigido a WHATSAPP_PHONE_NUMBER_ID. Ediciones y
+// borrados (`edit`/`revoke`) entran como mensajes y se aplican al original al procesar.
+// Eventos de CUENTA (`account_update`, `history`, `smb_app_state_sync`; lib/whatsapp/eventos.ts): no
+// llevan texto de nadie, así que se registran AUNQUE el canal esté apagado (el alta se hace antes de
+// encenderlo y el «No compartir chats» llega a los pocos minutos). Fallo al registrarlos → 500 (Meta reintenta).
 // El número de teléfono NUNCA sale en el log.
 
 export async function GET(req: Request) {
@@ -39,8 +45,38 @@ export async function POST(req: Request) {
   if (!verificarFirmaMeta(cuerpoCrudo, req.headers.get('x-hub-signature-256'), appSecret)) {
     return NextResponse.json({ estado: 'firma_invalida' }, { status: 401 })
   }
-  // Apagado: se contesta 200 y no se guarda NADA (ni el crudo). Meta da el evento por entregado.
-  if (!whatsappActivo()) return NextResponse.json({ estado: 'inactivo' })
+  let parseado: unknown
+  try {
+    parseado = JSON.parse(cuerpoCrudo)
+  } catch {
+    parseado = undefined
+  }
+  const v = parseado === undefined ? null : zWebhookWhatsapp.safeParse(parseado)
+  const activo = whatsappActivo()
+
+  // Eventos de cuenta: con el canal encendido o apagado (no llevan datos personales).
+  const eventos = v?.success ? extraerEventos(v.data, numeroId) : null
+  // Sin BD y con el canal apagado no se devuelve 503 (Meta reintentaría y podría desactivar el webhook).
+  if (eventos && hayEventosDeCuenta(eventos) && (aseguraConfigurada() || activo)) {
+    if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
+    try {
+      const correduria = await correduriaUnica()
+      if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
+      const r = await registrarEventosWebhook(correduria.id, eventos, { importarHistorial: importarHistorial(), canalActivo: activo })
+      console.log(
+        `[webhooks/whatsapp] cuenta: aplicados=${r.cuentas.aplicados} otra_waba=${r.cuentas.otraWaba} ignorados=${r.cuentas.ignorados}` +
+          ` historial: no_compartido=${r.historial.noCompartido} descartados=${r.historial.descartados} crudo=${r.historial.guardadosCrudo} error_meta=${r.historial.errorMeta}` +
+          ` contactos_acuse=${r.contactosSync}`,
+      )
+    } catch (e) {
+      console.error('[webhooks/whatsapp] no se pudieron registrar los eventos de cuenta:', e instanceof Error ? e.name : e)
+      return NextResponse.json({ estado: 'error' }, { status: 500 })
+    }
+  }
+  if (eventos && eventos.noAdmitidos > 0) console.warn(`[webhooks/whatsapp] mensajes no admitidos por Meta (131060): ${eventos.noAdmitidos}`)
+
+  // Apagado: se contesta 200 y no se guarda NINGÚN mensaje (ni el crudo). Meta da el evento por entregado.
+  if (!activo) return NextResponse.json({ estado: 'inactivo' })
   if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
 
   let correduriaId: string
@@ -53,13 +89,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ estado: 'error' }, { status: 500 })
   }
 
-  let parseado: unknown
-  try {
-    parseado = JSON.parse(cuerpoCrudo)
-  } catch {
-    parseado = undefined
-  }
-  const v = parseado === undefined ? null : zWebhookWhatsapp.safeParse(parseado)
   if (!v || !v.success) {
     // Firmado por Meta pero con una forma que no conocemos: se guarda tal cual (no se pierde) y 200.
     try {

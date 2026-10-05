@@ -5,7 +5,9 @@
 //                             `value.statuses[]` (entregado/leído de lo que se envía) se IGNORA.
 //   · `smb_message_echoes`  → `value.message_echoes[]`: lo que Alberto escribe desde la app del
 //                             móvil en modo Coexistence (SALIENTE). La contraparte es `to`.
-// El resto de campos (history, smb_app_state_sync, account_update…) se ignoran.
+// `history`, `smb_app_state_sync` y `account_update` NO son mensajes: los lee `eventos.ts`. Las
+// ediciones (`type:'edit'`) y borrados (`type:'revoke'`) entran aquí como un mensaje más (con su propio
+// wamid, se guardan en crudo) y procesar.ts los aplica al mensaje ORIGINAL en vez de crear uno nuevo.
 //
 // Zod NO es `.strict()` aquí a propósito: Meta añade campos sin avisar y un campo nuevo no puede
 // tumbar la recepción. Se valida lo que se USA; lo demás pasa. Lo estricto es la salida de la IA.
@@ -155,7 +157,15 @@ export function crudoMinimizado(crudo: unknown): Record<string, unknown> {
   return {
     field: typeof c.field === 'string' ? c.field : null,
     phone_number_id: (c.metadata as { phone_number_id?: unknown } | undefined)?.phone_number_id ?? null,
-    message: { id: m.id ?? null, type: m.type ?? null, timestamp: m.timestamp ?? null },
+    message: { id: m.id ?? null, type: m.type ?? null, timestamp: m.timestamp ?? null, ...originalDe(m) },
     minimizado: true,
   }
+}
+
+/** De una edición o un borrado se conserva a QUÉ mensaje apuntaba (un wamid, sin texto). */
+function originalDe(m: Record<string, unknown>): { original_message_id?: unknown } {
+  if (m.type !== 'edit' && m.type !== 'revoke') return {}
+  const c = m[m.type as string]
+  const o = c && typeof c === 'object' ? (c as { original_message_id?: unknown }).original_message_id : undefined
+  return typeof o === 'string' ? { original_message_id: o.slice(0, 255) } : {}
 }

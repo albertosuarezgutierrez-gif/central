@@ -21,6 +21,7 @@ import { createHash } from 'node:crypto'
 import { Prisma } from '../generated/asegura-client'
 import { prismaAsegura } from '../asegura-db'
 import { crudoMinimizado, textoDeMensaje, type MensajeExtraido } from './payload'
+import { interpretarEdicion, type Edicion } from './eventos'
 
 const CANAL = 'whatsapp'
 
@@ -96,7 +97,7 @@ export async function fichasPorHashes(correduriaId: string, hashes: readonly str
 
 type FilaCruda = { id: string; direction: string; payload: unknown }
 
-export type ResumenProceso = { procesados: number; optOut: number; invalidos: number; errores: number }
+export type ResumenProceso = { procesados: number; optOut: number; invalidos: number; errores: number; ediciones: number; sinOriginal: number }
 
 /**
  * Procesa las filas `pendiente`/`error` del canal (todas, o solo `ids`). Idempotente: el mensaje se
@@ -112,13 +113,15 @@ export async function procesarPendientes(correduriaId: string, ids?: readonly st
        and (${soloIds}::text[] is null or id::text = any(${soloIds}::text[]))
      order by event_timestamp asc
      limit ${limite}`)
-  const r: ResumenProceso = { procesados: 0, optOut: 0, invalidos: 0, errores: 0 }
+  const r: ResumenProceso = { procesados: 0, optOut: 0, invalidos: 0, errores: 0, ediciones: 0, sinOriginal: 0 }
   for (const f of filas) {
     try {
       const estado = await procesarUna(correduriaId, f)
       if (estado === 'procesado') r.procesados++
       else if (estado === 'opt_out') r.optOut++
-      else if (estado === 'telefono_invalido') r.invalidos++
+      else if (estado === 'telefono_invalido' || estado === 'edicion_invalida') r.invalidos++
+      else if (estado === 'edicion_aplicada') r.ediciones++
+      else if (estado === 'original_desconocido') r.sinOriginal++
       else r.errores++
     } catch (e) {
       r.errores++
@@ -147,6 +150,9 @@ async function procesarUna(correduriaId: string, f: FilaCruda): Promise<string> 
     await marcar(f.id, 'telefono_invalido', 'sin_mensaje', crudoMinimizado(crudo))
     return 'telefono_invalido'
   }
+  // Edición o borrado: se aplica al mensaje ORIGINAL; no es un mensaje nuevo.
+  const edicion = interpretarEdicion(m)
+  if (edicion) return aplicarEdicion(correduriaId, f.id, crudo, m, edicion)
   const direccion = f.direction === 'outbound' ? 'saliente' : 'entrante'
   const contraparte = direccion === 'entrante' ? m.from : m.to
   // El wa_id de Meta llega sin «+» (34600123456): con región ES se leería como nacional.
@@ -200,7 +206,7 @@ async function procesarUna(correduriaId: string, f: FilaCruda): Promise<string> 
     const [msg] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
       insert into mensajes (conversacion_id, rol, contenido, wa_message_id, metadata, direccion, tipo, enviado_at, estado, texto_purgado_at)
       values (${conv.id}::uuid, ${direccion === 'entrante' ? 'cliente' : 'corredor'}, ${personal ? '' : encryptField(texto)}, ${m.id},
-              ${JSON.stringify({ canal: CANAL, campo: crudo.field ?? null })}::jsonb, ${direccion}, ${m.type.slice(0, 30)}, ${fecha},
+              ${JSON.stringify({ canal: CANAL, campo: crudo.field ?? null, ...erroresDe(m) })}::jsonb, ${direccion}, ${m.type.slice(0, 30)}, ${fecha},
               ${direccion === 'entrante' ? 'recibido' : 'enviado'}, ${personal ? new Date() : null})
       on conflict (conversacion_id, wa_message_id) where direccion is not null and wa_message_id is not null do nothing
       returning id::text as id`)
@@ -225,4 +231,76 @@ async function procesarUna(correduriaId: string, f: FilaCruda): Promise<string> 
            lead_phone = null, lead_name = null, message_text = null
      where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid`)
   return resultado.estado
+}
+
+/** Códigos de error de Meta del mensaje (131060 = no admitido): constan en `metadata`, nunca tumban nada. */
+function erroresDe(m: Record<string, unknown>): { errores?: number[] } {
+  if (!Array.isArray(m.errors)) return {}
+  const codigos = m.errors.map((e) => (e && typeof e === 'object' ? (e as { code?: unknown }).code : null)).filter((c): c is number => typeof c === 'number')
+  return codigos.length > 0 ? { errores: codigos.slice(0, 5) } : {}
+}
+
+/**
+ * `edit` → el texto del original se SUSTITUYE (cifrado) y consta `editado_at`; `revoke` → se PURGA el texto
+ * del original y consta `revocado_at`. En los dos, la conversación vuelve a la cola de la IA (el análisis
+ * se hizo con un texto que ya no es el que vale). Reglas:
+ *   · un texto purgado (personal, revocado, retención) NO se resucita con una edición;
+ *   · una edición más vieja que la ya aplicada no la pisa (no se retrocede);
+ *   · original desconocido (anterior a la conexión, o de una conversación con opt-out) → `original_desconocido`,
+ *     terminal; pero si el original está aún SIN procesar, se reintenta (si no, un borrado se perdería).
+ */
+async function aplicarEdicion(correduriaId: string, filaId: string, crudo: Record<string, unknown>, m: Record<string, unknown>, ed: Edicion): Promise<string> {
+  if (ed.tipo === 'invalida') {
+    await marcar(filaId, 'edicion_invalida', ed.motivo, crudoMinimizado(crudo))
+    return 'edicion_invalida'
+  }
+  const db = prismaAsegura()
+  const [orig] = await db.$queryRaw<{ id: string; conversacion_id: string; enviado_at: Date | null }[]>(Prisma.sql`
+    select m.id::text as id, m.conversacion_id::text as conversacion_id, m.enviado_at
+      from mensajes m join conversaciones c on c.id = m.conversacion_id
+     where c.correduria_id = ${correduriaId}::uuid and m.wa_message_id = ${ed.original} and m.direccion is not null
+     limit 1`)
+  if (!orig) {
+    const [pend] = await db.$queryRaw<{ n: number }[]>(Prisma.sql`
+      select count(*)::int as n from channel_inbound_messages
+       where channel = ${CANAL} and correduria_id = ${correduriaId}::uuid and external_message_id = ${ed.original}
+         and processing_status in ('pendiente', 'error') and payload_minimizado_at is null`)
+    if ((pend?.n ?? 0) > 0) {
+      await marcar(filaId, 'error', 'original_pendiente')
+      return 'error'
+    }
+    await marcar(filaId, 'original_desconocido', null, crudoMinimizado(crudo))
+    return 'original_desconocido'
+  }
+  const fecha = /^\d{1,12}$/.test(String(m.timestamp)) ? new Date(Number(m.timestamp) * 1000) : new Date()
+  // Cifrado FUERA de la transacción (sin clave, encryptField lanza en producción → fila en `error`).
+  const cifrado = ed.tipo === 'edit' ? encryptField(ed.texto) : null
+  await db.$transaction(async (tx) => {
+    if (ed.tipo === 'revoke') {
+      await tx.$executeRaw(Prisma.sql`
+        update mensajes set contenido = '', texto_purgado_at = coalesce(texto_purgado_at, now()), revocado_at = coalesce(revocado_at, ${fecha})
+         where id = ${orig.id}::uuid`)
+    } else {
+      await tx.$executeRaw(Prisma.sql`
+        update mensajes set
+          contenido = case when texto_purgado_at is null and (editado_at is null or editado_at <= ${fecha}) then ${cifrado} else contenido end,
+          editado_at = greatest(coalesce(editado_at, ${fecha}), ${fecha})
+         where id = ${orig.id}::uuid`)
+    }
+    // Re-análisis: `analizada_hasta` retrocede justo antes del mensaje tocado (el cron la vuelve a coger).
+    await tx.$executeRaw(Prisma.sql`
+      update conversaciones
+         set analizada_hasta = case when analizada_hasta is null or ${orig.enviado_at}::timestamptz is null then analizada_hasta
+                                    else least(analizada_hasta, ${orig.enviado_at}::timestamptz - interval '1 millisecond') end,
+             updated_at = now()
+       where id = ${orig.conversacion_id}::uuid and correduria_id = ${correduriaId}::uuid`)
+  })
+  await db.$executeRaw(Prisma.sql`
+    update channel_inbound_messages
+       set processing_status = 'edicion_aplicada', processing_error = null,
+           conversacion_id = ${orig.conversacion_id}::uuid, mensaje_id = ${orig.id}::uuid,
+           payload = ${JSON.stringify(crudoMinimizado(crudo))}::jsonb, payload_minimizado_at = now(),
+           lead_phone = null, lead_name = null, message_text = null
+     where id = ${filaId}::uuid and correduria_id = ${correduriaId}::uuid`)
+  return 'edicion_aplicada'
 }

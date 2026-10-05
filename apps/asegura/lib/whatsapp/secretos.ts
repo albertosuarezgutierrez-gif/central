@@ -4,7 +4,9 @@
 import { requireSecret } from '@central/core-identity'
 
 /** Un secreto, o `null` si falta (quien llama responde 503). Nunca un literal de relleno. */
-export function secretoWhatsapp(nombre: 'WHATSAPP_APP_SECRET' | 'WHATSAPP_VERIFY_TOKEN' | 'WHATSAPP_PHONE_NUMBER_ID'): string | null {
+export type NombreSecretoWhatsapp = 'WHATSAPP_APP_SECRET' | 'WHATSAPP_VERIFY_TOKEN' | 'WHATSAPP_PHONE_NUMBER_ID' | 'WHATSAPP_APP_ID'
+
+export function secretoWhatsapp(nombre: NombreSecretoWhatsapp): string | null {
   try {
     return requireSecret(nombre)
   } catch {

@@ -1,5 +1,5 @@
 'use client'
-import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, BookUser } from 'lucide-react'
+import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, BookUser, MessageCircle } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 
 /**
@@ -121,6 +121,13 @@ export default function AccionesCabecera() {
             style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
           >
             <BookUser size={15} strokeWidth={1.75} aria-hidden /> Google Contactos
+          </a>
+          {/* Conexión del WhatsApp Business (Coexistence, Embedded Signup) con el CRM (05/10/2026). */}
+          <a
+            href="/correduria/ajustes/whatsapp"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <MessageCircle size={15} strokeWidth={1.75} aria-hidden /> WhatsApp Business
           </a>
         </div>
       </details>
