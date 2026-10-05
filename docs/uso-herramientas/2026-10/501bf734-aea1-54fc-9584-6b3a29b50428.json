@@ -1,8 +1,8 @@
 {
  "sesion": "501bf734-aea1-54fc-9584-6b3a29b50428",
  "inicio": "2026-10-05T13:11:07.009Z",
- "fin": "2026-10-05T15:10:05.326Z",
- "llamadas": 475,
+ "fin": "2026-10-05T16:03:18.571Z",
+ "llamadas": 519,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -29,29 +29,29 @@
    }
   },
   "bash": {
-   "llamadas": 360,
-   "chars_in": 322397,
-   "chars_out": 1480159,
+   "llamadas": 394,
+   "chars_in": 333971,
+   "chars_out": 1636128,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 360
+    "Bash": 394
    }
   },
   "otro": {
-   "llamadas": 43,
-   "chars_in": 39405,
-   "chars_out": 228512,
+   "llamadas": 50,
+   "chars_in": 42579,
+   "chars_out": 263331,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 24026,
    "tools": {
-    "SubagentHandback": 10,
+    "SubagentHandback": 11,
     "ToolSearch": 8,
     "AskUserQuestion": 1,
     "ExitPlanMode": 1,
-    "ReadNotifications": 21,
+    "ReadNotifications": 27,
     "Monitor": 1,
     "SendUserFile": 1
    }
@@ -91,26 +91,26 @@
    }
   },
   "agente:agente-architect": {
-   "llamadas": 3,
-   "chars_in": 10121,
-   "chars_out": 10728,
+   "llamadas": 4,
+   "chars_in": 11175,
+   "chars_out": 11993,
    "errores": 0,
-   "archivos_citados": 6,
-   "chars_citados": 65602,
+   "archivos_citados": 7,
+   "chars_citados": 83268,
    "tools": {
-    "Agent": 3
+    "Agent": 4
    }
   },
   "escritura": {
-   "llamadas": 15,
-   "chars_in": 143219,
-   "chars_out": 303391,
+   "llamadas": 16,
+   "chars_in": 144534,
+   "chars_out": 312447,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Write": 14,
-    "Edit": 1
+    "Edit": 2
    }
   },
   "agente:rastreador-codigo": {
@@ -139,15 +139,16 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 2,
-   "chars_in": 328,
-   "chars_out": 347,
+   "llamadas": 3,
+   "chars_in": 381,
+   "chars_out": 1372,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 1,
-    "mcp__claude-code-remote__send_later": 1
+    "mcp__claude-code-remote__send_later": 1,
+    "mcp__claude-code-remote__read_documentation": 1
    }
   }
  }
