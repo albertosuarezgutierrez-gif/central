@@ -3,7 +3,7 @@ import { Building2 } from 'lucide-react'
 import { companiasAsegura, interpretarCompanias, type Compania, type Contacto } from '@/lib/companias-asegura'
 import { etiquetaArea } from '@central/module-seguros'
 import { PageHeader, Pagina } from '@/components/ui'
-import ContactoAcciones from '../ContactoAcciones'
+import TelefonoContacto from './TelefonoContacto'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,14 +113,13 @@ function TarjetaContacto({ ct }: { ct: Contacto }) {
         )}
       </div>
 
-      {(ct.email || ct.telefono) && (
-        <div style={{ display: 'grid', gap: 4, fontSize: 13 }}>
-          {ct.email && <a href={`mailto:${ct.email}`} style={{ overflowWrap: 'anywhere' }}>{ct.email}</a>}
-          {ct.telefono && <a href={`tel:${ct.telefono.replace(/[^0-9+]/g, '')}`}>{ct.telefono}</a>}
+      {ct.email && (
+        <div style={{ fontSize: 13 }}>
+          <a href={`mailto:${ct.email}`} style={{ overflowWrap: 'anywhere' }}>{ct.email}</a>
         </div>
       )}
 
-      <ContactoAcciones contactoId={ct.id} nombre={ct.nombre} telefono={ct.telefono} email={ct.email} />
+      <TelefonoContacto contactoId={ct.id} nombre={ct.nombre} telefono={ct.telefono} email={ct.email} />
     </div>
   )
 }

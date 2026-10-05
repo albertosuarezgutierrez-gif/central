@@ -1074,6 +1074,21 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Número personal: desconocidos quedan `pendiente_clasificar`; si la IA dice personal → `descartada_personal` + purga de texto.
 - Pendiente: Alberto crea app Meta + Coexistence (disponibilidad en ES sin confirmar), envs, aplicar SQL, UI en `/correduria`. No tocar Google Contacts (#4286). Doc: `apps/asegura/docs/WHATSAPP.md`.
 
+## (05/10/2026) Vigía «🚨 Reserva que Smoobu NO tiene»: falso positivo de Expedia
+- Alerta «reserva 102699405 · piso sin identificar»: era un MENSAJE de huésped de Expedia Partner Central
+  (Reka Bekesi, llega 06/11 20:00, pide balcón); 102699405 = ID de alojamiento Expedia de «Busto Reform» (`htid`).
+- Fix: `lib/correo/num-confirmacion.ts` descarta htid/ID de alojamiento y, con remitente Expedia, solo acepta
+  «confirmación: N»; el vigía excluye en SQL las filas `mensaje_huesped` de Expedia; `canalDeAsunto` reconoce «huésped de Expedia».
+- Reserva de Reka Bekesi (06/11) confirmada en Smoobu por Alberto.
+
+## (05/10/2026) Correduría: Google Contacts — MERGEADO (#4286 + #4298)
+- Gmail personal sin DPA (aceptado). Etiqueta «Grupo ASegura»: 🟢 cliente en vigor, 🟡 lead, 🔵 compañía, ⏰ vence ≤30 d; nota con pólizas+vencimiento+URL, cumpleaños; adopción del volcado .vcf sin duplicar; simular antes de activar. Skill `google-contactos`.
+- Todo desde plataforma: menú «…» de /correduria → «Google Contactos» (conectar con ticket de un solo uso, simular, activar, cola). Solo conecta `GOOGLE_CONTACTOS_CUENTAS_PERMITIDAS` (Gmail de Alberto). Compañías: llamar + añadir teléfono (WhatsApp si móvil).
+- Migraciones 2026-10-05b y 05c APLICADAS en BD central. Google Cloud `grupo-asegura-contactos` en Producción; env en Vercel central-asegura.
+- #4302: «Conectar Google» caía en /login de asegura (middleware); eximidas SOLO `/api/google-contactos/{conectar,callback}` (se autentican solas; OK de Alberto).
+- Conectado (05/10). Simulación: 2.472 en agenda, 957 fichas, 24 «mismo tel, otro nombre» (familia/amigos). Añadido: Unificar (+«todos», lote 20 por cursor, solo `nombre_distinto`), MOTE por ficha en tabla AISLADA `seguros.cliente_mote` (guardián `regression-mote-aislado`; nunca en correos/portal/PDF), dedupe por email/nombre antes de crear, estados 🚨 siniestro abierto > 💶 recibo devuelto > ⏰ (máx 2 emojis), ⚪ ex-cliente solo si ya vinculado, informe «Ordenar agenda» (solo lectura). Migración 2026-10-05d APLICADA.
+- Siguiente: Alberto conecta → simula → revisa adoptados/conflictos → activa. Riesgos: nota vieja del .vcf duplicada en adoptados; biographies/birthdays sin probar contra People API real.
+
 ## (05/10/2026) Correduría: el vehículo de la póliza escaneada ya precarga el presupuesto de auto
 - REGLA ÚNICA: el riesgo se rellena UNA vez (documento o corredor) en `info_riesgo.datosVehiculo`; toda pantalla de auto lo lee de ahí y no re-pide lo que consta (skill correduria-crm punto 22).
 - Al crear oportunidad desde documento: OCR (ahora con combustible) → `datosVehiculoDesdeDocumento` (module-seguros) → ids de marca/modelo con `emparejar()` contra catálogo GRATIS; motor/versión solo si candidata única; catálogo caído = sin ids. Nunca búsqueda por matrícula (créditos).

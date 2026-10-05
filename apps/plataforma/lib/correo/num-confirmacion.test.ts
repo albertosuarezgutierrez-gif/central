@@ -57,3 +57,23 @@ test('un dominio que solo TERMINA parecido no cuela', () => {
   assert.equal(esRemitenteDeCanal('spam@booking.com.evil.net'), false)
   assert.equal(esRemitenteDeCanal(''), false)
 })
+
+// Correo REAL (05/10/2026): aviso de MENSAJE de huésped de Expedia Partner Central, no una reserva.
+// 102699405 es el ID de ALOJAMIENTO (htid) del anuncio «Busto Reform».
+const EXPEDIA_MENSAJE = {
+  from: 'xxxx@m.expediapartnercentral.com',
+  subject: ' Te ha escrito Reka Bekesi, huésped de Expedia\n',
+  body: 'Busto Reform\nReka Bekesi te ha enviado un mensaje.\nResponder: conversations/messageCenter.html?htid=102699405&cid=abc\nID de la propiedad: 102699405',
+}
+
+test('Expedia: el htid / ID de alojamiento NO es código de reserva (caso 102699405)', () => {
+  assert.equal(extraerNumConfirmacionDe(EXPEDIA_MENSAJE.subject, EXPEDIA_MENSAJE.body, EXPEDIA_MENSAJE.from), null)
+  // aunque el enlace venga cortado/sin protocolo y el remitente no se pase
+  assert.equal(extraerNumConfirmacionDe(EXPEDIA_MENSAJE.subject, EXPEDIA_MENSAJE.body), null)
+  assert.equal(extraerNumConfirmacionDe('x', 'messageCenter.html?htid=102699405&cid=1'), null)
+})
+
+test('Expedia (remitente): marketing con ID suelto tampoco da reserva; con etiqueta explícita sí', () => {
+  assert.equal(extraerNumConfirmacionDe('Oferta', 'Tu alojamiento 102699405 destaca', 'donotreply@expediagroup.com'), null)
+  assert.equal(extraerNumConfirmacionDe('Reserva', 'Número de confirmación: 123456789', 'x@m.expediapartnercentral.com'), '123456789')
+})

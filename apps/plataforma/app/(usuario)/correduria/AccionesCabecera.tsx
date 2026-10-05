@@ -1,5 +1,5 @@
 'use client'
-import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock } from 'lucide-react'
+import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, BookUser } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 
 /**
@@ -114,6 +114,13 @@ export default function AccionesCabecera() {
             style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
           >
             <Wrench size={15} strokeWidth={1.75} aria-hidden /> Mantenimiento
+          </a>
+          {/* Conexión, simulación y cola de revisión de Google Contacts (05/10/2026). */}
+          <a
+            href="/correduria/google-contactos"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <BookUser size={15} strokeWidth={1.75} aria-hidden /> Google Contactos
           </a>
         </div>
       </details>
