@@ -4,7 +4,8 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { datosPdfPresupuesto } from '@/lib/presupuesto-pdf-datos'
+import { leerPdfPresupuesto } from '@/lib/presupuesto-pdf-lectura'
+import { nombreFicheroOfertas, pdfEstudioOfertas } from '@/lib/presupuesto-pdf-ofertas'
 import { nombreFicheroPresupuesto, pdfPresupuesto } from '@/lib/presupuesto-pdf'
 
 export const dynamic = 'force-dynamic'
@@ -24,13 +25,17 @@ export async function GET(req: Request) {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 503 })
-    const datos = await datosPdfPresupuesto(correduria.id, id)
-    if (!datos) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
-    const bytes = await pdfPresupuesto(datos)
+    const lectura = await leerPdfPresupuesto(correduria.id, id)
+    if (lectura.estado === 'no_encontrado') return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
+    if (lectura.estado !== 'ok') return NextResponse.json({ estado: 'error', motivo: lectura.estado }, { status: 409 })
+    // La plantilla la decide el ORIGEN: ofertas = estudio comparativo; codeoscopic = el de siempre.
+    const [bytes, fichero] = lectura.origen === 'ofertas'
+      ? [await pdfEstudioOfertas(lectura.datos), nombreFicheroOfertas(lectura.datos)]
+      : [await pdfPresupuesto(lectura.datos), nombreFicheroPresupuesto(lectura.datos)]
     return new Response(Buffer.from(bytes), {
       headers: {
         'content-type': 'application/pdf',
-        'content-disposition': `attachment; filename="${nombreFicheroPresupuesto(datos)}"`,
+        'content-disposition': `attachment; filename="${fichero}"`,
         'cache-control': 'private, no-store',
       },
     })

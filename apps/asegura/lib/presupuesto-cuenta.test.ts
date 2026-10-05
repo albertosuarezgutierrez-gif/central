@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
   MOTIVO_IBAN_INVALIDO, TEXTO_CONFIRMACION_CON_IPID, lineaCuentaAviso, lineaCuentaDocumento, lineaCuentaHistorial,
-  mascaraCuenta, resolverCuentaFirma, textoAutorizacion,
+  mascaraCuenta, resolverCuentaFirma, textoAutorizacion, textoAutorizacionDe, textoAutorizacionOfertas,
 } from './presupuesto-cuenta.ts'
 import { TEXTO_CONFIRMACION_DATOS, avisoAceptacion, enlaceFichaCliente, leerDatosCotizados } from './datos-cotizados.ts'
 
@@ -83,6 +83,35 @@ test('🪤 la casilla solo dice «he recibido la información previa» si había
   assert.doesNotMatch(textoAutorizacion(false), /información previa/)
   assert.equal(textoAutorizacion(true), TEXTO_CONFIRMACION_CON_IPID)
   assert.match(textoAutorizacion(true), /autorizo la emisión de la póliza y he recibido la información previa del producto\.$/)
+})
+
+test('🪤 Codeoscopic: el texto de la casilla es BYTE A BYTE el de siempre (la huella firmada depende de él)', () => {
+  assert.equal(TEXTO_CONFIRMACION_DATOS, 'He revisado mis datos, son correctos y autorizo la emisión de la póliza.')
+  assert.equal(TEXTO_CONFIRMACION_CON_IPID, 'He revisado mis datos, son correctos, autorizo la emisión de la póliza y he recibido la información previa del producto.')
+  for (const conIpid of [false, true]) {
+    assert.equal(textoAutorizacionDe({ origen: 'codeoscopic', conIpid, mediador: 'Grupo ASegura', compania: 'Mapfre' }), textoAutorizacion(conIpid))
+  }
+})
+
+test('🪤 ofertas: la casilla autoriza al MEDIADOR a gestionar con la compañía, nunca «la emisión» ni «el precio calculado»', () => {
+  for (const conIpid of [false, true]) {
+    const t = textoAutorizacionDe({ origen: 'ofertas', conIpid, mediador: 'Grupo ASegura', compania: 'Compañía B' })
+    assert.ok(t)
+    assert.notEqual(t, textoAutorizacion(conIpid))
+    assert.doesNotMatch(t!, /autorizo la emisión|calcul/i)
+    assert.match(t!, /autorizo a Grupo ASegura a gestionar la contratación con Compañía B en las condiciones de esa oferta/)
+    assert.equal(/información previa/.test(t!), conIpid)
+    assert.equal(t, textoAutorizacionOfertas('Grupo ASegura', 'Compañía B', conIpid))
+  }
+})
+
+test('🪤 puerta cerrada: origen desconocido, oferta sin compañía o sin mediador → null (no se firma)', () => {
+  for (const origen of [null, undefined, '', 'Codeoscopic', 'oferta', 42]) {
+    assert.equal(textoAutorizacionDe({ origen, conIpid: false, mediador: 'Grupo ASegura', compania: 'X' }), null)
+  }
+  assert.equal(textoAutorizacionDe({ origen: 'ofertas', conIpid: false, mediador: 'Grupo ASegura', compania: null }), null)
+  assert.equal(textoAutorizacionDe({ origen: 'ofertas', conIpid: false, mediador: 'Grupo ASegura', compania: '  ' }), null)
+  assert.equal(textoAutorizacionDe({ origen: 'ofertas', conIpid: false, mediador: ' ', compania: 'X' }), null)
 })
 
 const fuente = readFileSync(fileURLToPath(new URL('./presupuesto-aceptacion.ts', import.meta.url)), 'utf8')

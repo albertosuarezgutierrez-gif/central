@@ -12,7 +12,8 @@ test('🪤 sin enlace ni correo ni precio real NO se toca la fila: todas las gua
   for (const g of [
     "if (!enlace) return error('sin_enlace'",
     "if (ficha.estado !== 'ok') return error('sin_email'",
-    "if (t?.simulado !== false) return error('simulado'",
+    // Simulado (Codeoscopic) y sin revisar (ofertas): una sola decisión pura, `decidirSalida` (presupuesto-origen.ts).
+    'if (!salida.ok) return error(salida.motivo, salida.detalle)',
     "if (!AVISABLE.has(estado)) return error('no_enviable'",
     "if (portal?.estado !== 'invitable' && portal?.estado !== 'ya_entra') {",
   ]) {

@@ -24,13 +24,15 @@ import { ipidDeOpcion } from './ipid'
 import { encryptField } from '@central/module-seguros-pii'
 import { cuentaDeFicha, type CuentaFicha } from './codeoscopic/cuenta-ficha'
 import {
-  lineaCuentaAviso, lineaCuentaDocumento, lineaCuentaHistorial, mascaraCuenta, resolverCuentaFirma, textoAutorizacion, type CuentaElegida,
+  lineaCuentaAviso, lineaCuentaDocumento, lineaCuentaHistorial, mascaraCuenta, resolverCuentaFirma, textoAutorizacionDe, textoAutorizacionOfertas, type CuentaElegida,
 } from './presupuesto-cuenta'
 import { estadoEmailDeFicha } from './email-ficha'
 import {
   MAX_TEXTO_REPORTE, TEXTO_CONFIRMACION_DATOS, URL_PLATAFORMA_DEFECTO, anexoDatosFirmados, avisoAceptacion, avisoDatosIncorrectos,
-  enlaceFichaCliente, leerDatosCotizados, type DatosCotizados, type GrupoDatos,
+  enlaceFichaCliente, escaparHtml, leerDatosCotizados, type DatosCotizados, type GrupoDatos,
 } from './datos-cotizados'
+import { origenPresupuesto } from './presupuesto-origen'
+import { datosAceptacionOfertas, gruposAceptacionOfertas, gruposRevisionOfertas, lineaEmitirEnCompania } from './ofertas-reglas'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const MINUTOS_CODIGO = 10
@@ -46,6 +48,8 @@ const hoyMadrid = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Euro
 
 type Fila = {
   id: string; clienteId: string; polizaId: string | null; ramo: string; tomador: string
+  /** `codeoscopic` | `ofertas` (sin petición a Avant2: se emite en la compañía). Otro valor = no se firma. */
+  origen: string
   creadoAt: Date; venceEl: Date; enviadoAt: Date | null; vistoAt: Date | null; elegidoAt: Date | null
   aceptadoAt: Date | null; emitidoAt: Date | null; retiradoAt: Date | null; enlaceGeneradoAt: Date | null
   otpHash: string | null; otpExpira: Date | null
@@ -72,7 +76,7 @@ type Fila = {
 
 async function leer(correduriaId: string, clienteId: string, presupuestoId: string, opcionId: string): Promise<Fila | null> {
   const [f] = await prismaAsegura().$queryRaw<Omit<Fila, 'ipidHuella' | 'ipidsMostrados'>[]>`
-    select p.id::text as id, p.cliente_id::text as "clienteId", p.poliza_id::text as "polizaId", p.ramo,
+    select p.id::text as id, p.cliente_id::text as "clienteId", p.poliza_id::text as "polizaId", p.ramo, p.origen,
            trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
            p.creado_at as "creadoAt", p.vence_el as "venceEl", p.enviado_at as "enviadoAt", p.visto_at as "vistoAt",
            p.elegido_at as "elegidoAt", p.aceptado_at as "aceptadoAt", p.emitido_at as "emitidoAt",
@@ -135,6 +139,10 @@ type Compuesto = {
 function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado: 'ok' }>, cuenta: CuentaElegida): Compuesto | null {
   const prima = f.prima === null ? null : Number(f.prima)
   if (prima === null || !Number.isFinite(prima)) return null
+  // La casilla y el documento dependen del origen (puerta CERRADA): desconocido → no se compone nada.
+  const via = origenPresupuesto(f.origen)
+  const confirmacion = textoAutorizacionDe({ origen: f.origen, conIpid: !!f.ipidHuella, mediador: MEDIADOR.marca, compania: f.compania })
+  if (via === null || confirmacion === null) return null
   const firmeza = f.firmeza === 'firme' || f.firmeza === 'condicionado' ? f.firmeza : 'estimado'
   let anulacion: Compuesto['anulacion'] = null
   let sinAnulacion: string | null = null
@@ -171,12 +179,13 @@ function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado:
     },
     necesidades: f.necesidades,
     ipid: f.ipidHuella ? { huella: f.ipidHuella } : null,
-  }) + '\n\n' + lineaCuentaDocumento(cuenta) + '\n\n' + anexoDatosFirmados(datos, textoAutorizacion(!!f.ipidHuella))
+    ...(via === 'ofertas' ? { via } : {}),
+  }) + '\n\n' + lineaCuentaDocumento(cuenta) + '\n\n' + anexoDatosFirmados(datos, confirmacion, via)
   // La huella cubre las DOS cartas: si cambia cualquiera, no se firma lo que no se leyó.
   // Los datos cotizados van DENTRO de `documento`, así que también los cubre.
   return {
     documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion, datos,
-    confirmacionDatos: textoAutorizacion(!!f.ipidHuella), cuenta: { origen: cuenta.origen, mascara: cuenta.mascara },
+    confirmacionDatos: confirmacion, cuenta: { origen: cuenta.origen, mascara: cuenta.mascara },
   }
 }
 
@@ -205,6 +214,15 @@ type BloqueoDatos = { estado: 'sin_datos'; motivo: string } | { estado: 'datos_e
 
 function datosDe(f: Fila): Extract<DatosCotizados, { estado: 'ok' }> | BloqueoDatos {
   if (f.datosEnRevision) return { estado: 'datos_en_revision', motivo: MOTIVO_EN_REVISION }
+  const origen = origenPresupuesto(f.origen)
+  // Ofertas de compañías (PDF): no hay petición a Avant2 de la que leer «con qué datos se calculó». El
+  // cliente confirma quién es el tomador y QUÉ oferta elige, y que la emisión la tramita el corredor
+  // con la compañía. 🚨 Sin `tarificaciones`: este camino nunca lee la petición ni toca Codeoscopic.
+  if (origen === 'ofertas') {
+    return datosAceptacionOfertas(gruposAceptacionOfertas({ tomador: f.tomador, compania: f.compania, producto: f.producto }))
+  }
+  // Un origen que no se reconoce no se firma (fail-closed): no se sabe qué se estaría autorizando.
+  if (origen !== 'codeoscopic') return { estado: 'sin_datos', motivo: 'No sabemos de dónde salen los precios de este presupuesto. Llámanos y lo revisamos contigo: no se emite nada hasta entonces.' }
   const d = leerDatosCotizados(f.peticion, f.ramo)
   return d.estado === 'ok' ? d : { estado: 'sin_datos', motivo: d.motivo }
 }
@@ -470,13 +488,18 @@ export async function firmarAceptacion(
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
       values (${correduriaId}::uuid, ${clienteId}::uuid, ${f.polizaId}::uuid, cast('gestion' as tipo_historial_interno),
               ${`El cliente aceptó en el portal el presupuesto de ${f.compania}${c.anulacion ? ' y firmó la anulación de su póliza actual' : ''}. ` +
-                `Confirmó con la casilla los datos con los que se calculó el precio y autorizó la emisión (huella ${c.datos.huella.slice(0, 12)}). ` +
+                (f.origen === 'ofertas' ? `Presupuesto de OFERTAS (PDF): se emite en ${f.compania}, no por Avant2. ` : '') +
+                (f.origen === 'ofertas'
+                  ? `Confirmó con la casilla sus datos y la oferta elegida, y autorizó a ${MEDIADOR.marca} a gestionar la contratación con ${f.compania} en sus condiciones (huella ${c.datos.huella.slice(0, 12)}). `
+                  : `Confirmó con la casilla los datos con los que se calculó el precio y autorizó la emisión (huella ${c.datos.huella.slice(0, 12)}). `) +
                 `${lineaCuentaHistorial(c.cuenta)} ` +
                 (f.ipidHuella ? 'Tenía en el portal la ficha IPID de la opción.' : 'No había ficha IPID de la opción en el portal: hay que mandársela antes de emitir.')})`
   } catch (e) {
     console.error('[presupuesto-aceptacion] historial no anotado:', e instanceof Error ? e.message : e)
   }
-  const aviso = avisoAceptacion({
+  // Ofertas: el corredor emite EN LA COMPAÑÍA (no hay emisión por API). Se dice lo primero del aviso.
+  const avisoOfertas = f.origen === 'ofertas' ? `${escaparHtml(lineaEmitirEnCompania(f.compania))}\n` : ''
+  const aviso = avisoOfertas + avisoAceptacion({
     tomador: f.tomador, ramo: f.ramo, compania: f.compania, producto: f.producto,
     primaEur: f.prima === null ? null : Number(f.prima), franquiciaEur: f.franquicia === null ? null : Number(f.franquicia),
     datos: c.datos, anulacionCompania: c.anulacion?.compania ?? null, sinAnulacion: c.sinAnulacion,
@@ -491,7 +514,7 @@ const urlPlataforma = () => process.env.PLATAFORMA_URL?.trim() || URL_PLATAFORMA
 // ─── «Revisa tus datos» fuera de la firma: leerlos y avisar de uno que no es correcto ──────────
 
 type Propio = {
-  clienteId: string; ramo: string; tomador: string; peticion: unknown
+  clienteId: string; ramo: string; origen: string; tomador: string; peticion: unknown
   datosEnRevision: boolean; retirado: boolean; emitido: boolean
 }
 
@@ -501,7 +524,7 @@ async function propio(correduriaId: string, identidadId: string, presupuestoId: 
   const ficha = await fichaPropiaDe(correduriaId, identidadId)
   if (ficha.estado !== 'ok') return ficha
   const [f] = await prismaAsegura().$queryRaw<Omit<Propio, 'clienteId'>[]>`
-    select p.ramo, trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
+    select p.ramo, p.origen, trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
            (select t.peticion from tarificaciones t where t.id = p.tarificacion_id and t.correduria_id = p.correduria_id) as peticion,
            exists (select 1 from presupuesto_evento ev where ev.presupuesto_id = p.id and ev.tipo = ${TIPO_DATOS_INCORRECTOS}) as "datosEnRevision",
            (p.retirado_at is not null) as retirado, (p.emitido_at is not null) as emitido
@@ -519,6 +542,14 @@ export type ResultadoDatos =
 export async function datosCotizadosDelPresupuesto(correduriaId: string, identidadId: string, presupuestoId: string): Promise<ResultadoDatos> {
   const p = await propio(correduriaId, identidadId, presupuestoId)
   if ('estado' in p) return p
+  // Ofertas: no hay petición a Avant2; se enseña quién es el tomador y quién emite (sin tarificaciones).
+  if (p.origen === 'ofertas') {
+    return { estado: 'ok', datos: gruposRevisionOfertas(p.tomador), confirmacionDatos: textoAutorizacionOfertas(MEDIADOR.marca, 'la compañía que elija', false), enRevision: p.datosEnRevision }
+  }
+  // Puerta cerrada: solo un `codeoscopic` tiene petición de la que leer «con qué se calculó».
+  if (origenPresupuesto(p.origen) !== 'codeoscopic') {
+    return { estado: 'sin_datos', motivo: 'No sabemos de dónde salen los precios de este presupuesto. Llámanos y lo revisamos contigo: no se emite nada hasta entonces.', enRevision: p.datosEnRevision }
+  }
   const d = leerDatosCotizados(p.peticion, p.ramo)
   if (d.estado !== 'ok') return { estado: 'sin_datos', motivo: d.motivo, enRevision: p.datosEnRevision }
   return { estado: 'ok', datos: d.grupos, confirmacionDatos: TEXTO_CONFIRMACION_DATOS, enRevision: p.datosEnRevision }

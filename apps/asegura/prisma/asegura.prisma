@@ -1349,7 +1349,16 @@ model Presupuesto {
   /// NULL = venta nueva (no hay póliza que comparar), JAMÁS «no tiene seguro».
   polizaId         String?   @map("poliza_id") @db.Uuid
   ramo             String
-  tarificacionId   String    @map("tarificacion_id") @db.Uuid
+  /// La tarificación pagada en Avant2 de la que salen los precios. NULL SOLO con `origen = 'ofertas'`
+  /// (CHECKs de `2026-10-05_oportunidad_ofertas.sql`). Toda puerta a Codeoscopic pasa por
+  /// `admiteCodeoscopic()` de `lib/presupuesto-origen.ts`.
+  tarificacionId   String?   @map("tarificacion_id") @db.Uuid
+  /// `codeoscopic` (tarificación de Avant2) | `ofertas` (PDFs de compañías revisados; se emite en la compañía).
+  origen           String    @default("codeoscopic")
+  /// Solo `ofertas`: la oportunidad de la que sale (las de Codeoscopic la heredan de su tarificación).
+  oportunidadId    String?   @map("oportunidad_id") @db.Uuid
+  /// Solo `ofertas`: la comparación congelada (`compararOfertas`) + la narrativa validada.
+  estudio          Json?
   /// El token del enlace, HASHEADO. En claro solo existe en el mensaje que sale.
   tokenHash        String    @unique @map("token_hash")
   canalAviso       String?   @map("canal_aviso")
@@ -1418,6 +1427,9 @@ model PresupuestoOpcion {
   garantias       Json?
   /// El corredor la quitó antes de enviar: congelada pero INVISIBLE. Filtra siempre `ocultaAt: null`.
   ocultaAt        DateTime? @map("oculta_at") @db.Timestamptz(6)
+  /// Origen `ofertas`: la oferta (`oportunidad_oferta`) de la que sale. Una opción sale de UN sitio:
+  /// o `precioId` o `ofertaId` (CHECK `opcion_de_un_solo_origen`).
+  ofertaId        String?   @map("oferta_id") @db.Uuid
 
   presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
 
@@ -1595,4 +1607,35 @@ model GoogleContactosRevision {
 
   @@unique([correduriaId, huella], map: "google_contactos_revision_huella")
   @@map("google_contactos_revision")
+}
+
+/// Ofertas (PDF) subidas a una OPORTUNIDAD (05/10/2026, `prisma/sql/2026-10-05_oportunidad_ofertas.sql`):
+/// la póliza actual del cliente (`rol = actual`) o el presupuesto de una compañía (`rol = oferta`), leídas
+/// por IA con evidencia y REVISADAS por el corredor antes de consolidarse en un presupuesto de origen
+/// `ofertas`. 🚨 NULL = no figura / no leído, nunca 0. No se borran (sin GRANT DELETE): se descartan.
+model OportunidadOferta {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId  String    @map("correduria_id") @db.Uuid
+  oportunidadId String    @map("oportunidad_id") @db.Uuid
+  /// El PDF. NULL = se borró después (la oferta y su evidencia literal quedan).
+  documentoId   String?   @map("documento_id") @db.Uuid
+  rol           String
+  compania      String?
+  producto      String?
+  primaNeta     Decimal?  @map("prima_neta") @db.Decimal(12, 2)
+  primaTotal    Decimal?  @map("prima_total") @db.Decimal(12, 2)
+  /// `OfertaNormalizada.garantias` (module-seguros) con evidencia {pagina, texto}. NULL = no se pudo leer.
+  garantias     Json?
+  datosExtra    Json?     @map("datos_extra")
+  /// extraida | revisada | descartada
+  estado        String    @default("extraida")
+  recomendada   Boolean   @default(false)
+  revisadaAt    DateTime? @map("revisada_at") @db.Timestamptz(6)
+  revisadaPor   String?   @map("revisada_por")
+  creadoPor     String    @map("creado_por")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@index([correduriaId, oportunidadId, createdAt], map: "oportunidad_oferta_por_oportunidad")
+  @@map("oportunidad_oferta")
 }

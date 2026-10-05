@@ -28,6 +28,7 @@ import {
 } from '@central/module-seguros'
 import { generarTokenVista, hashTokenVista } from '@central/module-seguros-portal'
 
+import type { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { registrarErrorCartera } from './error-cartera'
@@ -39,6 +40,11 @@ import { completarCoberturasTarificacion } from './codeoscopic/coberturas-tarifi
 import { OCULTAR_VACIO, estaOculta, ordenResto, type Ocultar } from './presupuesto-ocultar'
 import { conjuntoEnDocumento, elegirReutilizable } from '@central/module-seguros/referencia-presupuesto'
 import { opcionesReutilizadas } from './presupuesto-reutilizado'
+import { compararOfertas, type ResultadoComparacion } from '@central/module-seguros'
+import { ofertaNormalizadaDeFila } from './documentos/oferta-leida'
+import { generarNarrativa, type Narrativa } from './estudio-ia'
+import { AVISO_OPCION_OFERTA, caducidadOfertas, opcionesDeOfertas, seleccionarParaConsolidar } from './ofertas-reglas'
+import { leerOportunidadParaOfertas, ofertasDeOportunidad } from './oportunidad-ofertas'
 
 /**
  * Por qué no se ha podido situar la cobertura que el cliente tiene HOY.
@@ -501,9 +507,12 @@ type Tx = Parameters<Parameters<Db['$transaction']>[0]>[0]
  */
 async function buscarReutilizable(db: Db | Tx, correduriaId: string, tarificacionId: string, enDocumento: string[] | null) {
   if (enDocumento === null) return null
+  // 🚨 Desde que `tarificacion_id` admite NULL (presupuestos de ofertas, 05/10/2026), un `where` con
+  // un id vacío casaría con TODOS los de ofertas. Sin tarificación no hay nada que reutilizar.
+  if (!tarificacionId) return null
   // oculta-exenta: se leen también las ocultas para saber EXACTAMENTE qué quedó fuera del documento.
   const candidatos = await db.presupuesto.findMany({
-    where: { correduriaId, tarificacionId, retiradoAt: null, emitidoAt: null, venceEl: { gte: new Date() } },
+    where: { correduriaId, origen: 'codeoscopic', tarificacionId, retiradoAt: null, emitidoAt: null, venceEl: { gte: new Date() } },
     orderBy: { creadoAt: 'desc' },
     take: 20,
     include: { opciones: { select: { precioId: true, ocultaAt: true } } },
@@ -683,6 +692,8 @@ function numero(v: string | number | null | { toString(): string }): number | nu
 
 export type PresupuestoEnLista = {
   id: string
+  /** `codeoscopic` | `ofertas` (PDFs de compañías: se emite en la compañía, no por Avant2). */
+  origen: string
   /** Referencia propia `AS-AA-NNNN`. `null` = la BD aún no la tiene. */
   referencia: string | null
   /** Primer PDF descargado. NO es «enviado». `null` = no consta. */
@@ -752,6 +763,7 @@ export async function listarPresupuestos(
     }
     return filas.map((p) => ({
       id: p.id,
+      origen: p.origen,
       referencia: p.referencia ?? null,
       documentoDescargadoAt: p.documentoDescargadoAt ?? null,
       estado: estadoPresupuesto(p, hoy),
@@ -1003,4 +1015,189 @@ export async function ocultarOpcion(
     return { estado: 'error', motivo: 'ya_enviado', detalle: 'El presupuesto acaba de salir hacia el cliente: ya no se le cambia lo que ve.' }
   }
   return { estado: 'ok', oculta: entrada.ocultar }
+}
+
+
+// ─── Presupuesto de OFERTAS de compañías (05/10/2026, F2) ────────────────────
+
+export type ResultadoPrepararOfertas =
+  | {
+      estado: 'ok'
+      /** El token en claro, UNA vez (en la BD solo vive su hash), igual que `prepararPresupuesto`. */
+      token: string
+      presupuesto: {
+        id: string
+        referencia: string | null
+        origen: 'ofertas'
+        oportunidadId: string
+        clienteId: string
+        polizaId: string | null
+        ramo: string
+        venceEl: Date
+        fuenteVencimiento: string
+        opciones: number
+        recomendadaId: string | null
+        narrativa: Narrativa
+        /** Borradores de ofertas de esta oportunidad que se retiraron al sustituirlos (sin enviar). */
+        sustituidos: number
+      }
+    }
+  | {
+      estado: 'error'
+      motivo: 'no_encontrado' | 'sin_ofertas' | 'sin_revisar' | 'sin_prima' | 'no_encontrada' | 'caducada'
+      detalle: string
+    }
+
+/**
+ * Consolida las ofertas REVISADAS de una oportunidad en UN presupuesto de origen `ofertas` (la vía
+ * nueva junto a `prepararPresupuesto`, que sigue siendo la de Avant2). Gratis y sin Codeoscopic:
+ *
+ *   · Exige que TODAS las ofertas que van (y la póliza actual viva, si la hay) estén REVISADAS y con
+ *     prima total (`seleccionarParaConsolidar`). El trigger de la BD vuelve a exigirlo al enviar.
+ *   · Una `presupuesto_opcion` por oferta (snapshot): prima total, franquicia general, coberturas con el
+ *     sobre de siempre, firmeza `condicionado`, SIN ReRate, papel `recomendada` si el corredor la marcó.
+ *   · `estudio` = la comparación determinista (`compararOfertas`) + la narrativa validada contra sus
+ *     cifras (`generarNarrativa`; si la IA mete una cifra que no está en la matriz, va la determinista).
+ *   · Un borrador ANTERIOR de ofertas de esta oportunidad que no ha salido hacia el cliente se retira
+ *     (con motivo y evento): regenerar tras corregir una oferta no deja dos borradores vivos.
+ */
+export async function prepararPresupuestoDeOfertas(
+  correduriaId: string,
+  entrada: { oportunidadId: string; ofertaIds?: string[] | null; superficieM2?: number | null; actor: string },
+  ahora: Date = new Date(),
+): Promise<ResultadoPrepararOfertas> {
+  const op = await leerOportunidadParaOfertas(correduriaId, entrada.oportunidadId)
+  if (!op) return { estado: 'error', motivo: 'no_encontrado', detalle: 'Esa oportunidad no existe en esta correduría.' }
+  const filas = await ofertasDeOportunidad(correduriaId, op.id)
+  const sel = seleccionarParaConsolidar(filas, entrada.ofertaIds ?? null)
+  if (!sel.ok) return { estado: 'error', motivo: sel.motivo, detalle: sel.detalle }
+
+  const hoy = ahora.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+  const cad = caducidadOfertas(sel.ofertas, hoy)
+  if (cad.caducadas.length > 0) {
+    return { estado: 'error', motivo: 'caducada', detalle: `La oferta de ${cad.caducadas.join(', ')} ya ha caducado según la propia compañía: pide una actualizada o descártala.` }
+  }
+
+  // La póliza que se compara (y la que se anularía al aceptar otra compañía): solo si es de ESTE cliente.
+  const db = prismaAsegura()
+  const polizaId = op.polizaId
+    ? (await db.poliza.findFirst({ where: { id: op.polizaId, correduriaId, clienteId: op.clienteId }, select: { id: true } }))?.id ?? null
+    : null
+
+  const superficie = typeof entrada.superficieM2 === 'number' && Number.isFinite(entrada.superficieM2) && entrada.superficieM2 > 0
+    ? entrada.superficieM2
+    : op.superficieM2
+  const comparacion: ResultadoComparacion = compararOfertas({
+    ramo: op.ramoOferta,
+    ofertas: [...(sel.actual ? [sel.actual] : []), ...sel.ofertas].map(ofertaNormalizadaDeFila),
+    superficieM2: superficie,
+  })
+  const recomendadaId = sel.recomendada?.id ?? null
+  const narrativa = await generarNarrativa(comparacion, recomendadaId)
+  const opciones = opcionesDeOfertas(op.ramoOferta, sel.ofertas, ahora)
+  const { venceEl, fuente } = calcularVencimiento({ creadoAt: ahora, fechaEfecto: null, expiraOferta: cad.expira })
+
+  const token = generarTokenVista()
+  const tokenHash = await hashTokenVista(token)
+  const estudio = {
+    version: 1,
+    generadoAt: ahora.toISOString(),
+    recomendadaId,
+    actualId: sel.actual?.id ?? null,
+    comparacion,
+    narrativa,
+  }
+
+  const hecho = await db.$transaction(async (tx) => {
+    // Bajo cerrojo por oportunidad: dos «Generar presupuesto» a la vez no dejan dos borradores.
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`presupuesto-ofertas:${correduriaId}:${op.id}`}))`
+    const previos = await tx.presupuesto.findMany({
+      where: { correduriaId, origen: 'ofertas', oportunidadId: op.id, retiradoAt: null, enviadoAt: null, enlaceGeneradoAt: null, aceptadoAt: null },
+      select: { id: true },
+    })
+    for (const p of previos) {
+      const motivo = 'Sustituido por un presupuesto nuevo de las ofertas de la misma oportunidad (sin haberse enviado).'
+      await tx.presupuesto.update({
+        where: { id: p.id },
+        data: { retiradoAt: ahora, retiradoMotivo: motivo, eventos: { create: [{ tipo: 'retirado', origen: 'corredor', detalle: { actor: entrada.actor, motivo } }] } },
+      })
+    }
+    const creado = await tx.presupuesto.create({
+      data: {
+        correduriaId,
+        clienteId: op.clienteId,
+        polizaId,
+        ramo: op.ramo ?? 'otros',
+        origen: 'ofertas',
+        tarificacionId: null,
+        oportunidadId: op.id,
+        estudio: estudio as unknown as Prisma.InputJsonValue,
+        tokenHash,
+        venceEl,
+        creadoAt: ahora,
+        creadoPor: entrada.actor,
+        opciones: {
+          create: opciones.map((o) => ({
+            orden: o.orden,
+            compania: o.compania,
+            producto: o.producto,
+            modalidad: null,
+            categoria: null,
+            grupoCobertura: null,
+            primaEur: o.primaEur,
+            entradaEur: null,
+            franquiciaEur: o.franquiciaEur,
+            firmeza: o.firmeza,
+            requiereRerate: o.requiereRerate,
+            referenciaVendor: null,
+            avisos: [AVISO_OPCION_OFERTA],
+            papeles: o.papeles,
+            ofertaId: o.ofertaId,
+            garantias: o.garantias as unknown as Prisma.InputJsonValue,
+            coberturas: o.coberturas as unknown as Prisma.InputJsonValue,
+          })),
+        },
+        eventos: {
+          create: [{
+            tipo: 'preparado',
+            origen: 'corredor',
+            detalle: {
+              actor: entrada.actor,
+              origen: 'ofertas',
+              ofertas: opciones.map((o) => o.ofertaId),
+              recomendada: recomendadaId,
+              narrativa: narrativa.fuente,
+              ...(narrativa.descartada ? { narrativaDescartada: narrativa.descartada } : {}),
+              ...(previos.length > 0 ? { sustituye: previos.map((p) => p.id) } : {}),
+            },
+          }],
+        },
+      },
+      select: { id: true, referencia: true },
+    })
+    return { creado, sustituidos: previos.length }
+  }, { timeout: 20_000, maxWait: 10_000 })
+
+  await autocompletarNecesidades(correduriaId, hecho.creado.id, entrada.actor)
+  anotarCambio({ entidad: 'presupuesto', id: hecho.creado.id, campo: 'origen', antes: null, despues: 'ofertas' })
+
+  return {
+    estado: 'ok',
+    token,
+    presupuesto: {
+      id: hecho.creado.id,
+      referencia: hecho.creado.referencia ?? null,
+      origen: 'ofertas',
+      oportunidadId: op.id,
+      clienteId: op.clienteId,
+      polizaId,
+      ramo: op.ramo ?? 'otros',
+      venceEl,
+      fuenteVencimiento: fuente,
+      opciones: opciones.length,
+      recomendadaId,
+      narrativa,
+      sustituidos: hecho.sustituidos,
+    },
+  }
 }
