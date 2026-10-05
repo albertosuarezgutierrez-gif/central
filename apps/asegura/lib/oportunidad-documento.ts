@@ -368,10 +368,10 @@ async function oportunidadDesdeLecturaInterna(
     // (sin confirmar), con los ids del catálogo si se emparejan sin duda; toda pantalla de auto lo lee de ahí. Fail-soft:
     // si el catálogo falla, o el documento no trae vehículo, la oportunidad se crea igual (con `vehiculo` texto, como siempre).
     const datosVehiculo = admiteDatosVehiculo(datos.ramo)
-      ? await datosVehiculoParaOportunidad(datos.ramo, {
+      ? await Promise.resolve().then(() => datosVehiculoParaOportunidad(datos.ramo, {
           matricula: txt(d.matricula, 20), marca: txt(d.marca, 60), modelo: txt(d.modelo, 80), version: txt(d.version, 120),
           combustible: txt(d.combustible, 40), fechaMatriculacion: txt(d.fechaMatriculacion, 10),
-        }, catalogosVehiculoReales()).catch(() => null)
+        }, catalogosVehiculoReales())).catch(() => null)
       : null
     const o = await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`, datosVehiculo)
     const posiblesDuplicados = clienteNuevo ? compartenContacto.filter((id) => id !== clienteId) : []
