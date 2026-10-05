@@ -60,6 +60,7 @@ function Ficha({ x }: { x: EjemploFicha }) {
         : <Link href={`/correduria/cliente/${x.clienteId}`}>{x.nombre}</Link>}
       {x.telefono ? ` · ${x.telefono}` : ' · sin teléfono'}
       {x.nombreEnAgenda ? ` · en tu agenda: «${x.nombreEnAgenda}»` : ''}
+      {x.motivo === 'mismo_email' ? ' · mismo correo' : x.motivo === 'mismo_nombre' ? ' · mismo nombre' : x.motivo === 'varios_candidatos' ? ' · varios posibles' : ''}
       {x.contactosConEseTelefono !== undefined ? ` · ${x.contactosConEseTelefono} contactos con ese número` : ''}
       {x.fueraDeEtiqueta && <span style={{ color: 'var(--muted)' }}> · fuera de la etiqueta</span>}
     </>
@@ -174,6 +175,9 @@ export default function GoogleContactosSimulacion() {
             <Seccion titulo="Se adoptarán de tu agenda" ayuda="Están fuera de la etiqueta (el volcado del .vcf) con el mismo teléfono y el mismo nombre o el sufijo «· AS …»: se meten en «Grupo ASegura» sin duplicarlos y nunca se borran." lista={i.adoptar} fila={(x) => <Ficha x={x} />} />
             <Seccion titulo="Conflictos de nombre" ayuda="Mismo teléfono, otro nombre (fuera de la etiqueta, probablemente un contacto tuyo): a la cola de revisión, sin pisarlo ni crear otro." lista={i.conflictosNombre} fila={(x) => <Ficha x={x} />} />
             <Seccion titulo="Teléfonos ambiguos" ayuda="Varios contactos con el mismo número: a la cola, sin crear ni adoptar." lista={i.ambiguos} fila={(x) => <Ficha x={x} />} />
+            {i.yaEnAgenda && (
+              <Seccion titulo="Ya en tu agenda (mismo correo o nombre)" ayuda="El teléfono no casa, pero fuera de la etiqueta hay un contacto con el mismo correo o el mismo nombre completo: NO se crean (serían duplicados). Van a la cola para que las unifiques («Varios posibles»: sin «Unificar», decides tú)." lista={i.yaEnAgenda} fila={(x) => <Ficha x={x} />} />
+            )}
             <Seccion titulo="Teléfonos que no son E.164" ayuda="No se pueden emparejar por teléfono." lista={i.telefonosNoNormalizables}
               fila={(x: EjemploAgenda) => <>{x.nombre}{x.telefono ? ` · ${x.telefono}` : ''}</>} />
             <p style={pMuted}>

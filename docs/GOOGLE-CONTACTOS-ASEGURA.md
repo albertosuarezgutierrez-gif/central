@@ -98,7 +98,7 @@ marca `sync_activada_en`: responde `200 { estado: 'pendiente_activar' }`.
 - Cola de revisión: plataforma → `/correduria/google-contactos` («Google Contacts: revisión»; en la pestaña Clientes solo
   queda un aviso si hay pendientes o la conexión está revocada), puerto
   `GET|POST /api/operador/google-contactos/revision` (50 por página por cursor; acciones `aceptar_lead`, `descartar`,
-  `mantener_crm`). Ninguna toca el vínculo ni Google: «Mantener CRM» sobre un sacado del grupo NO lo recrea.
+  `mantener_crm`, `unificar`, `unificar_nombre_crm`, `usar_como_mote`; lote `{ lote:'unificar', motivo }`). Salvo Unificar, ninguna toca el vínculo; ninguna toca Google: «Mantener CRM» sobre un sacado del grupo NO lo recrea.
 - Teléfono de los contactos 🔵 de compañía: se mete en `/correduria/companias` («Añadir/Cambiar teléfono»; `PATCH
   /api/operador/companias/contacto/[id] { accion:'telefono' }`, validado y guardado en E.164 con `aE164`).
 - Teléfono/correo ausente en el CRM (p. ej. lead con baja de WhatsApp) NO vacía el de Google: se conserva.
@@ -107,6 +107,17 @@ marca `sync_activada_en`: responde `200 { estado: 'pendiente_activar' }`.
   añada en Google se conservan. Un contacto previo del grupo con el mismo teléfono pero OTRO
   nombre no se vincula ni se pisa: va a la cola como «Teléfono ambiguo».
 - Reconectar la MISMA cuenta de Google no revoca el token anterior (`revoke` mata el grant entero, también el nuevo).
+
+## Unificar, mote, estados y «Ordenar agenda» (05/10/2026)
+- Migración `2026-10-05d_google_contactos_unificar.sql` (gate DDL, aplicar ANTES del despliegue): `revision.motivo`,
+  `resolucion` + `unificar`/`unificar_nombre_crm`/`usar_como_mote`, tabla AISLADA `cliente_mote` (sin relación Prisma).
+- «Unificar» (y «Unificar todos los de nombre distinto», 50 por pulsación) crea el vínculo pendiente y guarda como MOTE el
+  nombre de su agenda; la pasada siguiente lo adopta como «🟢 <mote>» con «Ficha: <nombre>» en la nota. Mote editable en
+  la ficha («Mote (solo en tu agenda)»). Sin mote, el nombre que tenía queda en la nota fuera del bloque.
+- Antes de CREAR: fuera de la etiqueta, 1 contacto sin id con el mismo correo o nombre → cola (`mismo_email`/`mismo_nombre`);
+  varios → `varios_candidatos` (sin Unificar). Estados: 🚨 siniestro abierto/en tramitación > 💶 recibo DEVUELTO de póliza
+  en vigor (los `pendiente` no) > ⏰; ⚪ ex-cliente solo con vínculo previo (no se retira). Consulta caída = no se escribe.
+- «Ordenar agenda» en la vista: duplicados por teléfono, sin nombre, no E.164, fichas con otro nombre, «parecen de trabajo».
 
 ## Límites
 - **Google admite 25.000 contactos por cuenta (incluidos los personales).** Si la sincronización los superaría, se

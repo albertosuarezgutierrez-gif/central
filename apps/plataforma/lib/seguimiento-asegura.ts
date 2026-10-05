@@ -719,6 +719,17 @@ export function revisionesGoogleAsegura(despuesDe: string | null): Promise<Reenv
 export function resolverRevisionGoogleAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/google-contactos/revision', { method: 'POST', body: JSON.stringify(body) })
 }
+/** MOTE de la ficha (solo para la agenda de Google de Alberto; AISLADO: nunca en correos/portal/PDF). */
+export function moteClienteAsegura(clienteId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/cliente/mote?clienteId=${encodeURIComponent(clienteId)}`, { method: 'GET' })
+}
+export function guardarMoteClienteAsegura(body: { clienteId: string; mote: string | null; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/mote', { method: 'PUT', body: JSON.stringify(body) })
+}
+/** «Ordenar agenda»: informe SOLO LECTURA de la agenda de Google (lee la agenda entera: hasta ~2 min). */
+export function ordenarAgendaGoogleAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/ordenar', { method: 'GET' }, 115_000)
+}
 /** Estado de la conexión con Google Contacts (cuenta, simulada, activada). */
 export function estadoGoogleContactosAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/google-contactos', { method: 'GET' })

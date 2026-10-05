@@ -6,6 +6,13 @@
  *   · C · los contactos de las COMPAÑÍAS (`compania_contactos` activos de compañías activas), 🔵.
  *   · D · el aviso ⏰ si alguna póliza en vigor del cliente vence en ≤30 días.
  *   · E · la fecha de nacimiento de la ficha (`clientes.fecha_nacimiento`, CIFRADA), si consta.
+ *   · ESTADOS (05/10/2026): 🚨 siniestro abierto/en tramitación (no fusionado), 💶 recibo DEVUELTO de
+ *         una póliza en vigor (no los `pendiente`: Alberto los leyó como deuda y no lo son), ⚪
+ *         EX-CLIENTE (póliza de cartera viva y ninguna en vigor) SOLO si ya tiene vínculo: no se crean
+ *         contactos de ex-clientes; el que había se queda con ⚪ en vez de retirarse.
+ *   · MOTE (`cliente_mote`, aislado): el contacto se llama «<emoji> <mote>».
+ * 🚨 Si la consulta de siniestros, recibos, motes o ex-clientes FALLA, se lanza como las demás: el
+ * cron no escribe nada y cada contacto conserva su emoji anterior («no se pudo mirar» ≠ «no hay»).
  * Lo que no se puede leer va como `null` («no se sabe»): ese campo de Google no se toca. Si una
  * consulta falla, LANZA (el cron no escribe nada): un hueco aquí no es «no hay».
  *
@@ -13,12 +20,13 @@
  * (no lleva correduría): hoy hay una sola correduría; con una segunda habría que acotarlo.
  */
 import {
-  avisoVencimiento, nombreCompaniaContacto, normalizarNacimiento, notaCliente, notaLead, proximoVencimiento,
-  trocear, PREFIJO_CLAVE_COMPANIA, type ContactoGoogle,
+  alertaPrioritaria, avisoVencimiento, conLineasEstado, lineasEstado, nombreCompaniaContacto, normalizarNacimiento,
+  notaCliente, notaExCliente, notaLead, proximoVencimiento, trocear, PREFIJO_CLAVE_COMPANIA, type ContactoGoogle,
 } from '@central/module-seguros/google-contactos'
-import { sqlCarteraEnVigor } from '@central/module-seguros'
+import { importeEiac, sqlCarteraEnVigor, sqlCarteraViva } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
+import { contactosDe } from './cartera-busqueda'
 import { descifrarCampo } from './cartera-edicion'
 import { contactosMovil } from './contactos-movil'
 import { URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
@@ -61,19 +69,96 @@ export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMad
     for (const f of filas) nacimiento.set(f.id, normalizarNacimiento(descifrarCampo(f.fechaNacimiento)))
   }
 
+  // ⚪ EX-CLIENTES: SOLO fichas que ya tienen vínculo y no salen en la selección (no se crean contactos
+  // nuevos de ex-clientes). Póliza de cartera viva (no volcado) y ninguna en vigor; nunca `clientes.tipo`.
+  const enSel = new Set(ids)
+  const vinculadas = (await db.googleContactosVinculo.findMany({ where: { correduriaId, clienteId: { not: null } }, select: { clienteId: true } }))
+    .flatMap((v) => (v.clienteId && !enSel.has(v.clienteId) ? [v.clienteId] : []))
+  const exClientes = vinculadas.length === 0 ? [] : await db.$queryRaw<{ id: string; nombre: string | null; apellidos: string | null; baja: string | null; compania: string | null }[]>(Prisma.sql`
+    select c.id::text as id, c.nombre, c.apellidos, u.baja, u.compania
+    from clientes c
+    left join lateral (
+      select to_char(coalesce(p.fecha_situacion, p.fecha_vencimiento), 'YYYY-MM-DD') as baja,
+        coalesce(nullif(trim(cd.nombre_comun), ''), nullif(trim(p.aseguradora), '')) as compania
+      from polizas p left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
+      where p.cliente_id = c.id and p.correduria_id = c.correduria_id and p.merged_into_poliza_id is null
+        and ${Prisma.raw(sqlCarteraViva('p'))}
+      order by coalesce(p.fecha_situacion, p.fecha_vencimiento) desc nulls last
+      limit 1
+    ) u on true
+    where c.correduria_id = ${correduriaId}::uuid and c.id = any(${vinculadas}::uuid[])
+      and c.activo and c.merged_into_cliente_id is null
+      and exists (select 1 from polizas p where p.cliente_id = c.id and p.correduria_id = c.correduria_id
+        and p.merged_into_poliza_id is null and ${Prisma.raw(sqlCarteraViva('p'))})
+      and not exists (select 1 from polizas p where p.cliente_id = c.id and p.correduria_id = c.correduria_id
+        and p.merged_into_poliza_id is null and ${Prisma.raw(sqlCarteraEnVigor('p'))})`)
+  const contactoEx = exClientes.length ? await contactosDe(correduriaId, exClientes.map((x) => x.id)) : new Map()
+  const fichas = [...ids, ...exClientes.map((x) => x.id)]
+
+  // 🚨 Siniestros abiertos y 💶 recibos devueltos de pólizas EN VIGOR. Una consulta caída LANZA.
+  const siniestros = fichas.length === 0 ? [] : await db.$queryRaw<{ clienteId: string; numero: string | null; estado: string }[]>(Prisma.sql`
+    select s.cliente_id::text as "clienteId", coalesce(nullif(trim(s.referencia), ''), nullif(trim(s.id_siniestro_entidad), '')) as numero,
+      s.estado::text as estado
+    from siniestros s
+    where s.correduria_id = ${correduriaId}::uuid and s.cliente_id = any(${fichas}::uuid[])
+      and s.fusionado_en_siniestro_id is null and s.estado::text in ('abierto', 'en_tramitacion')`)
+  const devueltos = fichas.length === 0 ? [] : await db.$queryRaw<{ clienteId: string; primaTotal: string | null; ramo: string; compania: string | null }[]>(Prisma.sql`
+    select p.cliente_id::text as "clienteId", r.prima_total as "primaTotal", p.tipo::text as ramo,
+      coalesce(nullif(trim(cd.nombre_comun), ''), nullif(trim(p.aseguradora), '')) as compania
+    from poliza_recibos r
+    join polizas p on p.id = r.poliza_id and p.correduria_id = r.correduria_id
+    left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
+    where r.correduria_id = ${correduriaId}::uuid and p.cliente_id = any(${fichas}::uuid[])
+      and r.situacion::text = 'devuelto' and p.merged_into_poliza_id is null
+      and ${Prisma.raw(sqlCarteraEnVigor('p'))}`)
+  // MOTE (tabla aislada `cliente_mote`; sin relación Prisma con Cliente a propósito).
+  const motes = new Map<string, string>()
+  for (const tanda of trocear(fichas, 5000)) {
+    for (const m of await db.clienteMote.findMany({ where: { clienteId: { in: tanda } }, select: { clienteId: true, mote: true } })) motes.set(m.clienteId, m.mote)
+  }
+  const agrupar = <T extends { clienteId: string }>(xs: T[]) => {
+    const m = new Map<string, T[]>()
+    for (const x of xs) m.set(x.clienteId, [...(m.get(x.clienteId) ?? []), x])
+    return m
+  }
+  const sinPorCliente = agrupar(siniestros)
+  const recPorCliente = agrupar(devueltos)
+  const estado = (clienteId: string) => {
+    const ss = sinPorCliente.get(clienteId) ?? []
+    const rs = recPorCliente.get(clienteId) ?? []
+    return {
+      alerta: alertaPrioritaria({ siniestroAbierto: ss.length > 0, reciboDevuelto: rs.length > 0 }),
+      lineas: lineasEstado({
+        siniestros: ss.map((x) => ({ numero: x.numero, estado: x.estado })),
+        recibos: rs.map((x) => ({ importe: importeEiac(x.primaTotal), ramo: x.ramo, compania: x.compania })),
+      }),
+    }
+  }
+
   const deCartera: ContactoGoogle[] = sel.contactos.map((c) => {
-    const base = { ...c, url: urlFichaPlataforma(c.clienteId), cumpleanos: nacimiento.get(c.clienteId) ?? null }
+    const base = { ...c, url: urlFichaPlataforma(c.clienteId), cumpleanos: nacimiento.get(c.clienteId) ?? null, mote: motes.get(c.clienteId) ?? null }
     if (c.grupo === 'cliente') {
       const ps = porCliente.get(c.clienteId) ?? []
       const vencs = ps.map((p) => p.vencimiento)
+      const e = estado(c.clienteId)
       return {
         ...base,
-        nota: notaCliente({ polizas: ps.map((p) => ({ ramo: p.ramo, compania: p.compania })), proximoVencimiento: proximoVencimiento(vencs, hoy) }),
+        nota: conLineasEstado(notaCliente({ polizas: ps.map((p) => ({ ramo: p.ramo, compania: p.compania })), proximoVencimiento: proximoVencimiento(vencs, hoy) }), e.lineas),
         aviso: avisoVencimiento(vencs, hoy),
+        alerta: e.alerta,
       }
     }
     const l = sel.detalleLeads.get(c.clienteId)
     return { ...base, nota: l ? notaLead({ ramo: l.ramo, compania: l.aseguradora, vencimiento: l.vencimiento }) : null, aviso: false }
+  })
+  const deExClientes: ContactoGoogle[] = contactoEx === null ? [] : exClientes.map((x) => {
+    const k = contactoEx.get(x.id)
+    const e = estado(x.id)
+    return {
+      clienteId: x.id, nombre: x.nombre, apellidos: x.apellidos, telefono: k?.telefono ?? null, email: k?.email ?? null,
+      grupo: 'ex_cliente', url: urlFichaPlataforma(x.id), cumpleanos: nacimiento.get(x.id) ?? null, mote: motes.get(x.id) ?? null,
+      nota: notaExCliente({ baja: x.baja, compania: x.compania }, e.lineas), aviso: false, alerta: e.alerta,
+    }
   })
 
   // C · Compañías: catálogo de contactos humanos (comercial, siniestros…). Sin cifrar.
@@ -91,5 +176,7 @@ export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMad
     grupo: 'compania',
   }))
 
-  return { contactos: [...deCartera, ...deCompanias], seleccionCompleta: sel.clientesSinLeer === 0 }
+  // Sin el contacto de los ex-clientes no salen en la lista: entonces la selección NO está completa
+  // (si no, se retirarían de Google por «ya no están»).
+  return { contactos: [...deCartera, ...deExClientes, ...deCompanias], seleccionCompleta: sel.clientesSinLeer === 0 && contactoEx !== null }
 }

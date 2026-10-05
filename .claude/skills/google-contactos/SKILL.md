@@ -32,6 +32,14 @@ landmines, estado). Después, según lo que toques:
   editarlo en Google no va a cola), **URL** de la ficha, **cumpleaños** (`fecha_nacimiento` descifrada; sin ella no
   se toca). Tests: `google-contactos-extras.test.ts`.
 
+## Unificar, mote, estados y «Ordenar agenda» (05/10/2026, migración `2026-10-05d`)
+- **Unificar** (cola, solo `duplicado_ambiguo` con `motivo` inequívoco: `nombre_distinto`/`mismo_email`/`mismo_nombre`):
+  vínculo pendiente (`hash_enviado='pendiente:unificar'`, origen `adoptado`) + **mote** = su nombre de agenda limpio
+  (`limpiarMote`); «Unificar con nombre del CRM» sin mote. Antes de crear, mismo correo/nombre fuera de la etiqueta → cola.
+- **Mote** (`seguros.cliente_mote`, AISLADO; guardián `test/regression-mote-aislado.test.ts`): contacto «🟢 mote», nota «Ficha: …».
+- **Estados**: 🚨 siniestro abierto > 💶 recibo devuelto > ⏰ (máx. 2 emojis); ⚪ ex-cliente solo si ya tenía vínculo.
+  Tests: `google-contactos-{unificar,estados,ordenar}.test.ts`. «Ordenar agenda»: `GET …/google-contactos/ordenar` (solo lectura).
+
 ## 🚨 No romper
 
 1. **Gmail personal sin DPA.** Decisión cerrada por Alberto el 05/10/2026; revierte la nota de

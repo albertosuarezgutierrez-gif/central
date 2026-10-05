@@ -1524,6 +1524,20 @@ model GoogleContactosVinculo {
   @@map("google_contactos_vinculo")
 }
 
+/// MOTE de una ficha (05/10/2026): cómo la llama Alberto en SU agenda («mamá», «Benito Pintor»).
+/// 🚨 AISLADO a propósito: tabla aparte y SIN relación Prisma con `Cliente`, para que ningún `include`
+/// lo arrastre a un correo, al portal, a un PDF o a un envío («Estimada Burra»). Solo lo leen la sync de
+/// Google, la ficha (edición) y la cola de revisión: guardián `test/regression-mote-aislado.test.ts`.
+/// Migración `prisma/sql/2026-10-05d_google_contactos_unificar.sql` (FK a clientes en SQL).
+model ClienteMote {
+  clienteId      String   @id @map("cliente_id") @db.Uuid
+  mote           String
+  actualizadoEn  DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  actualizadoPor String?  @map("actualizado_por")
+
+  @@map("cliente_mote")
+}
+
 /// Tickets de inicio del OAuth ya CONSUMIDOS (un solo uso; `lib/google-oauth-ticket.ts`).
 /// Migración `prisma/sql/2026-10-05c_google_contactos_ticket.sql`.
 model GoogleContactosTicketUsado {
@@ -1550,7 +1564,10 @@ model GoogleContactosRevision {
   propuestaCifrada String?   @map("propuesta_cifrada")
   huella           String
   estado           String    @default("pendiente")
-  /// aceptar_lead | descartar | mantener_crm (null mientras está pendiente; CHECK en BD).
+  /// Solo `duplicado_ambiguo`: por qué (MOTIVOS_DUPLICADO de module-seguros; CHECK en BD, migración 2026-10-05d).
+  /// `null` en filas anteriores = no se sabe → sin «Unificar».
+  motivo           String?
+  /// aceptar_lead | descartar | mantener_crm | unificar | unificar_nombre_crm (null mientras está pendiente; CHECK en BD).
   resolucion       String?
   resueltoPor      String?   @map("resuelto_por")
   resueltoEn       DateTime? @map("resuelto_en") @db.Timestamptz(6)

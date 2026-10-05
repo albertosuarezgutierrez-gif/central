@@ -197,6 +197,12 @@ export class People {
     return { personas, nextSyncToken, totalCuenta }
   }
 
+  /** UN contacto, solo su nombre (SOLO LECTURA; «Unificar» lee el nombre actual para el mote). */
+  async obtenerNombre(resourceName: string): Promise<PersonaGoogle> {
+    const q = new URLSearchParams({ personFields: 'names' })
+    return json(this.red, `${PEOPLE}/${resourceName}?${q}`, this.init('GET'), 'people.get')
+  }
+
   /** El grupo «Grupo ASegura» por nombre, SOLO LECTURA (la simulación): `null` si no existe. */
   async buscarGrupo(): Promise<string | null> {
     let pageToken: string | undefined

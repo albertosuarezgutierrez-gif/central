@@ -9,6 +9,7 @@ import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
 import PonerNombre from './PonerNombre'
 import EditarCarnets from './EditarCarnets'
+import MoteAgenda from './MoteAgenda'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
 
@@ -86,6 +87,8 @@ export default function Cabecera({ ficha, resumen, seguros }: {
                     )}
                   </span>
                 </details>
+                {/* Mote para la agenda de Google (aislado: no viaja con la ficha). */}
+                {!juridica && <span style={{ flexBasis: '100%' }}><MoteAgenda clienteId={ficha.id} /></span>}
                 {conyuge && (
                   <span style={FILA} title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                     <Ico i={Heart} /><Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>

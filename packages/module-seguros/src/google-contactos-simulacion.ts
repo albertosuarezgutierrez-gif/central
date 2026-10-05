@@ -12,8 +12,9 @@
 // últimos dígitos. Listas acotadas (`maxEjemplos`); los contadores son siempre los totales.
 
 import { aE164 } from './telefono-e164.ts'
+import type { MotivoDuplicado } from './google-contactos-revision.ts'
 import {
-  camposDeCrm, camposDeGoogle, excesoLimite, nombreEnGoogle, planificarSync, seleccionUnica,
+  HASH_PENDIENTE_UNIFICAR, camposDeCrm, camposDeGoogle, excesoLimite, nombreEnGoogle, planificarSync, seleccionUnica,
   type EntradaPlan, type PersonaGoogle,
 } from './google-contactos.ts'
 
@@ -30,6 +31,8 @@ export type EjemploFicha = {
   nombreEnAgenda?: string
   /** Teléfono ambiguo: cuántos contactos de Google tienen ese número. */
   contactosConEseTelefono?: number
+  /** Mismo correo / mismo nombre / varios posibles (`ya en la agenda` sin casar por teléfono). */
+  motivo?: MotivoDuplicado
 }
 export type EjemploAgenda = { nombre: string; telefono: string | null }
 
@@ -58,6 +61,12 @@ export type InformeSimulacion = {
   conflictosNombre: Lista<EjemploFicha>
   /** Varios contactos de Google (o varias fichas) con el mismo número. */
   ambiguos: Lista<EjemploFicha>
+  /**
+   * El teléfono no casa pero fuera de la etiqueta hay un contacto (sin id externo) con el mismo correo
+   * o el mismo nombre completo: NO se crea, va a la cola (`mismo_email`/`mismo_nombre` → «Unificar»;
+   * `varios_candidatos` → sin «Unificar»).
+   */
+  yaEnAgenda: Lista<EjemploFicha>
   /** Contactos de la agenda con teléfono pero NINGUNO E.164 válido (no se pueden emparejar). */
   telefonosNoNormalizables: Lista<EjemploAgenda>
   /** Números E.164 que tienen ya 2+ contactos en la agenda (duplicados previos a la sync). */
@@ -68,6 +77,8 @@ export type InformeSimulacion = {
     vincular: number
     /** Contactos de fuera de la etiqueta que se adoptan (se vinculan y entran en ella). */
     adoptar: number
+    /** Vínculos creados con «Unificar» en la cola que la pasada escribirá (adopción del contacto de Alberto). */
+    unificar: number
     actualizarVinculados: number
     aRevision: number
     propuestasLead: number
@@ -141,8 +152,8 @@ export function informeSimulacion(
     // `planificarSync` lanzaría: ni se calcula el plan.
     const vacia = lista<EjemploFicha>([], max)
     return {
-      ...base, contactosTras: previo.tras, superaTope: true, crear: vacia, vincular: vacia, adoptar: vacia, conflictosNombre: vacia, ambiguos: vacia,
-      real: { crear: 0, vincular: 0, adoptar: 0, actualizarVinculados: 0, aRevision: 0, propuestasLead: 0, retirar: 0, ilegibles: 0 },
+      ...base, contactosTras: previo.tras, superaTope: true, crear: vacia, vincular: vacia, adoptar: vacia, conflictosNombre: vacia, ambiguos: vacia, yaEnAgenda: vacia,
+      real: { crear: 0, vincular: 0, adoptar: 0, unificar: 0, actualizarVinculados: 0, aRevision: 0, propuestasLead: 0, retirar: 0, ilegibles: 0 },
       avisos: [`La selección del CRM (${crm.length}) ya pasa del tope de Google: no se ha calculado el plan.`],
     }
   }
@@ -152,6 +163,7 @@ export function informeSimulacion(
   const personaPorRN = new Map(e.google.map((p) => [p.resourceName, p]))
   const enLaEtiqueta = new Set(enEtiqueta.map((p) => p.resourceName))
   const vinculados = new Set(e.vinculos.map((v) => v.clienteId))
+  const pendientesUnificar = new Set(e.vinculos.filter((v) => v.hashEnviado === HASH_PENDIENTE_UNIFICAR).map((v) => v.clienteId))
   const ejemplo = (clienteId: string, fueraDeEtiqueta: boolean): EjemploFicha => {
     const c = camposPorId.get(clienteId)
     return { clienteId, nombre: c ? nombreEnGoogle(c) : '(ilegible)', telefono: enmascararTelefono(c?.telefono), fueraDeEtiqueta }
@@ -163,10 +175,14 @@ export function informeSimulacion(
   const adoptar = nuevos.filter((a) => a.origen === 'adoptado').map((a) => ejemplo(a.clienteId, true))
   const conflictos: EjemploFicha[] = []
   const ambiguos: EjemploFicha[] = []
+  const yaEnAgenda: EjemploFicha[] = []
   for (const r of real.revisiones) {
     if (r.tipo !== 'duplicado_ambiguo' || !r.clienteId) continue
     const ej = ejemplo(r.clienteId, !enLaEtiqueta.has(r.resourceName))
-    if (r.motivo === 'nombre_distinto') {
+    if (r.motivo === 'mismo_email' || r.motivo === 'mismo_nombre' || r.motivo === 'varios_candidatos') {
+      const p = personaPorRN.get(r.resourceName)
+      yaEnAgenda.push({ ...ej, nombreEnAgenda: p ? nombreAgenda(p) : '(desconocido)', motivo: r.motivo })
+    } else if (r.motivo === 'nombre_distinto') {
       const p = personaPorRN.get(r.resourceName)
       conflictos.push({ ...ej, nombreEnAgenda: p ? nombreAgenda(p) : '(desconocido)' })
     } else {
@@ -188,6 +204,12 @@ export function informeSimulacion(
   if (fueraEnCola > 0) {
     avisos.push(`${fueraEnCola} ficha(s) casan por teléfono con contactos de tu agenda que NO son claramente suyos: van a la cola, ni se adoptan ni se crean.`)
   }
+  if (yaEnAgenda.length > 0) {
+    avisos.push(
+      `${yaEnAgenda.length} ficha(s) no casan por teléfono pero ya están en tu agenda con el mismo correo o el mismo nombre: ` +
+        'NO se crean (serían duplicados); van a la cola para que las unifiques.',
+    )
+  }
   if (!e.grupoResourceName) avisos.push('La etiqueta «Grupo ASegura» aún no existe en Google: la creará la primera sincronización.')
 
   return {
@@ -199,11 +221,13 @@ export function informeSimulacion(
     adoptar: lista(adoptar, max),
     conflictosNombre: lista(conflictos, max),
     ambiguos: lista(ambiguos, max),
+    yaEnAgenda: lista(yaEnAgenda, max),
     real: {
       crear: real.crear.length,
       vincular: vincular.length,
       adoptar: adoptar.length,
-      actualizarVinculados: real.actualizar.filter((a) => vinculados.has(a.clienteId)).length,
+      unificar: real.actualizar.filter((a) => pendientesUnificar.has(a.clienteId)).length,
+      actualizarVinculados: real.actualizar.filter((a) => vinculados.has(a.clienteId) && !pendientesUnificar.has(a.clienteId)).length,
       aRevision: real.revisiones.filter((r) => r.tipo !== 'propuesta_lead').length,
       propuestasLead: real.revisiones.filter((r) => r.tipo === 'propuesta_lead').length,
       retirar: real.retirar.length,

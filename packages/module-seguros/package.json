@@ -13,6 +13,7 @@
     "./google-contactos": "./src/google-contactos.ts",
     "./google-contactos-revision": "./src/google-contactos-revision.ts",
     "./google-contactos-simulacion": "./src/google-contactos-simulacion.ts",
+    "./google-contactos-ordenar": "./src/google-contactos-ordenar.ts",
     "./telefono-e164": "./src/telefono-e164.ts"
   },
   "scripts": {
