@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-04T08:52:52Z",
-  "sha": "2083edcd9a837cba5848cea595a0e4a65b5c0d3c",
+  "generadoEn": "2026-10-05T03:38:11Z",
+  "sha": "4b81873fbaaa6a8d44a3f7a02e1330281ae65fea",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -175966,7 +175966,7 @@
           "exportada": true,
           "params": "entidades: EntidadIngesta[] | null",
           "retorno": "SilencioEntidad[] | null",
-          "linea": 175,
+          "linea": 183,
           "resumen": "Veredicto sobre todas. `null` = no se ha podido leer la lista, y eso NO se sirve como «todas bien»: se devuelve `sin_datos` con su motivo."
         },
         {
@@ -175975,7 +175975,7 @@
           "exportada": false,
           "params": "v: VeredictoEntidad",
           "retorno": "number",
-          "linea": 182
+          "linea": 190
         },
         {
           "nombre": "motivosSilencio",
@@ -175983,13 +175983,13 @@
           "exportada": true,
           "params": "lista: SilencioEntidad[] | null",
           "retorno": "string[]",
-          "linea": 192,
+          "linea": 200,
           "resumen": "Las frases para el aviso. Solo habla de lo que exige mirar algo: el `ok` no genera línea (un vigía que enumera a los sanos entrena a no leerlo), pero `sin_base` y `nunca` SÍ, porque son huecos de cono"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0a903aed3cb7"
+      "hash": "e4f41abcc485"
     },
     {
       "ruta": "packages/module-seguros/src/sincro-cima.ts",
