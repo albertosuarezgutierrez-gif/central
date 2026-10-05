@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-05T17:00:33Z",
+  "generadoEn": "2026-10-05T18:15:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3689,8 +3689,8 @@
         "evidencias": 0
       },
       "rrhh": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 17
       },
       "sivra": {
         "presente": false,
@@ -5395,6 +5395,8 @@
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/fichajes/exportar",
+      "/api/admin/informes",
+      "/api/admin/informes/exportar",
       "/api/admin/mis-empresas",
       "/api/admin/nominas",
       "/api/admin/nominas/[nominaId]/confirmar",
@@ -6614,7 +6616,8 @@
         "capacidad": "informes",
         "label": "Informes",
         "tiene": [
-          "ialimp"
+          "ialimp",
+          "rrhh"
         ],
         "falta": [
           "almacen",
@@ -6625,7 +6628,6 @@
           "housesevillana",
           "ia-rest",
           "mariscos",
-          "rrhh",
           "sivra",
           "transporte"
         ]
@@ -6678,7 +6680,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1576,
+    "apis": 1578,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
