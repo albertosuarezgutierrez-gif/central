@@ -1,0 +1,30 @@
+{
+ "sesion": "dcaa3c3e-7bf4-5cdf-a1e3-53fa5ab5f6e8",
+ "inicio": "2026-10-05T10:00:23.042Z",
+ "fin": "2026-10-05T10:00:25.050Z",
+ "llamadas": 3,
+ "categorias": {
+  "agente:Explore": {
+   "llamadas": 2,
+   "chars_in": 2123,
+   "chars_out": 2563,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 935671,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 69,
+   "chars_out": 130,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1
+   }
+  }
+ }
+}
