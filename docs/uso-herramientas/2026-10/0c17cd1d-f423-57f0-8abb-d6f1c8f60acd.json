@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-05T16:43:02.588Z",
- "llamadas": 6,
+ "fin": "2026-10-05T17:11:17.039Z",
+ "llamadas": 110,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -16,25 +16,109 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 1,
-   "chars_in": 71,
-   "chars_out": 22150,
+   "llamadas": 5,
+   "chars_in": 390,
+   "chars_out": 40321,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 1
+    "Read": 5
    }
   },
   "bash": {
-   "llamadas": 3,
-   "chars_in": 693,
-   "chars_out": 4866,
+   "llamadas": 51,
+   "chars_in": 22899,
+   "chars_out": 187850,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3
+    "Bash": 51
+   }
+  },
+  "otro": {
+   "llamadas": 12,
+   "chars_in": 27666,
+   "chars_out": 1819,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "SubagentHandback": 7,
+    "ToolSearch": 5
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 2570,
+   "chars_out": 2964,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 12085,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "agente:lector-correo": {
+   "llamadas": 2,
+   "chars_in": 1928,
+   "chars_out": 2360,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 26,
+   "chars_in": 3600,
+   "chars_out": 182499,
+   "errores": 7,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__search_threads": 10,
+    "mcp__Gmail__get_message": 7,
+    "mcp__Gmail__get_thread": 3,
+    "mcp__Gmail__label_thread": 4,
+    "mcp__Gmail__create_draft": 1
+   }
+  },
+  "sql": {
+   "llamadas": 8,
+   "chars_in": 3073,
+   "chars_out": 9626,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__execute_sql": 3,
+    "mcp__Supabase__execute_sql": 5
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "mcp:Google_Drive": {
+   "llamadas": 1,
+   "chars_in": 223,
+   "chars_out": 2,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 1
    }
   }
  }
