@@ -4199,3 +4199,25 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
 }
 .parte-seguimiento-texto { margin: 8px 0 0; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
 .parte-seguimiento-texto.ojo { color: var(--warning); font-weight: 600; }
+
+/* ─── Presupuesto de ofertas (F4, 05/10/2026) ─────────────────────────────── */
+/* La recomendada por el corredor se destaca con el borde, no con otro tamaño. */
+.presu-tarjeta[data-recomendada='si'] { border: 2px solid var(--primary); }
+.presu-anual { font-size: 13px; font-weight: 400; color: var(--muted); }
+.presu-clave { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
+.presu-clave li { margin-bottom: 3px; overflow-wrap: anywhere; }
+
+/* El cuadro comparativo: tabla desde 700 px, tarjetas por garantía por debajo (≥ 320 px sin scroll lateral). */
+.ofertas-tabla { display: none; }
+.ofertas-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.ofertas-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+  min-width: 0;
+}
+@media (min-width: 700px) {
+  .ofertas-tabla { display: block; }
+  .ofertas-cards { display: none; }
+}

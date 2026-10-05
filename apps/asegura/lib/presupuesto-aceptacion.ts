@@ -24,7 +24,7 @@ import { ipidDeOpcion } from './ipid'
 import { encryptField } from '@central/module-seguros-pii'
 import { cuentaDeFicha, type CuentaFicha } from './codeoscopic/cuenta-ficha'
 import {
-  lineaCuentaAviso, lineaCuentaDocumento, lineaCuentaHistorial, mascaraCuenta, resolverCuentaFirma, textoAutorizacion, type CuentaElegida,
+  lineaCuentaAviso, lineaCuentaDocumento, lineaCuentaHistorial, mascaraCuenta, resolverCuentaFirma, textoAutorizacionDe, textoAutorizacionOfertas, type CuentaElegida,
 } from './presupuesto-cuenta'
 import { estadoEmailDeFicha } from './email-ficha'
 import {
@@ -139,6 +139,10 @@ type Compuesto = {
 function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado: 'ok' }>, cuenta: CuentaElegida): Compuesto | null {
   const prima = f.prima === null ? null : Number(f.prima)
   if (prima === null || !Number.isFinite(prima)) return null
+  // La casilla y el documento dependen del origen (puerta CERRADA): desconocido → no se compone nada.
+  const via = origenPresupuesto(f.origen)
+  const confirmacion = textoAutorizacionDe({ origen: f.origen, conIpid: !!f.ipidHuella, mediador: MEDIADOR.marca, compania: f.compania })
+  if (via === null || confirmacion === null) return null
   const firmeza = f.firmeza === 'firme' || f.firmeza === 'condicionado' ? f.firmeza : 'estimado'
   let anulacion: Compuesto['anulacion'] = null
   let sinAnulacion: string | null = null
@@ -175,12 +179,13 @@ function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado:
     },
     necesidades: f.necesidades,
     ipid: f.ipidHuella ? { huella: f.ipidHuella } : null,
-  }) + '\n\n' + lineaCuentaDocumento(cuenta) + '\n\n' + anexoDatosFirmados(datos, textoAutorizacion(!!f.ipidHuella))
+    ...(via === 'ofertas' ? { via } : {}),
+  }) + '\n\n' + lineaCuentaDocumento(cuenta) + '\n\n' + anexoDatosFirmados(datos, confirmacion, via)
   // La huella cubre las DOS cartas: si cambia cualquiera, no se firma lo que no se leyó.
   // Los datos cotizados van DENTRO de `documento`, así que también los cubre.
   return {
     documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion, datos,
-    confirmacionDatos: textoAutorizacion(!!f.ipidHuella), cuenta: { origen: cuenta.origen, mascara: cuenta.mascara },
+    confirmacionDatos: confirmacion, cuenta: { origen: cuenta.origen, mascara: cuenta.mascara },
   }
 }
 
@@ -484,7 +489,9 @@ export async function firmarAceptacion(
       values (${correduriaId}::uuid, ${clienteId}::uuid, ${f.polizaId}::uuid, cast('gestion' as tipo_historial_interno),
               ${`El cliente aceptó en el portal el presupuesto de ${f.compania}${c.anulacion ? ' y firmó la anulación de su póliza actual' : ''}. ` +
                 (f.origen === 'ofertas' ? `Presupuesto de OFERTAS (PDF): se emite en ${f.compania}, no por Avant2. ` : '') +
-                `Confirmó con la casilla los datos con los que se calculó el precio y autorizó la emisión (huella ${c.datos.huella.slice(0, 12)}). ` +
+                (f.origen === 'ofertas'
+                  ? `Confirmó con la casilla sus datos y la oferta elegida, y autorizó a ${MEDIADOR.marca} a gestionar la contratación con ${f.compania} en sus condiciones (huella ${c.datos.huella.slice(0, 12)}). `
+                  : `Confirmó con la casilla los datos con los que se calculó el precio y autorizó la emisión (huella ${c.datos.huella.slice(0, 12)}). `) +
                 `${lineaCuentaHistorial(c.cuenta)} ` +
                 (f.ipidHuella ? 'Tenía en el portal la ficha IPID de la opción.' : 'No había ficha IPID de la opción en el portal: hay que mandársela antes de emitir.')})`
   } catch (e) {
@@ -537,7 +544,11 @@ export async function datosCotizadosDelPresupuesto(correduriaId: string, identid
   if ('estado' in p) return p
   // Ofertas: no hay petición a Avant2; se enseña quién es el tomador y quién emite (sin tarificaciones).
   if (p.origen === 'ofertas') {
-    return { estado: 'ok', datos: gruposRevisionOfertas(p.tomador), confirmacionDatos: TEXTO_CONFIRMACION_DATOS, enRevision: p.datosEnRevision }
+    return { estado: 'ok', datos: gruposRevisionOfertas(p.tomador), confirmacionDatos: textoAutorizacionOfertas(MEDIADOR.marca, 'la compañía que elija', false), enRevision: p.datosEnRevision }
+  }
+  // Puerta cerrada: solo un `codeoscopic` tiene petición de la que leer «con qué se calculó».
+  if (origenPresupuesto(p.origen) !== 'codeoscopic') {
+    return { estado: 'sin_datos', motivo: 'No sabemos de dónde salen los precios de este presupuesto. Llámanos y lo revisamos contigo: no se emite nada hasta entonces.', enRevision: p.datosEnRevision }
   }
   const d = leerDatosCotizados(p.peticion, p.ramo)
   if (d.estado !== 'ok') return { estado: 'sin_datos', motivo: d.motivo, enRevision: p.datosEnRevision }

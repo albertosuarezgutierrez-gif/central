@@ -7,6 +7,8 @@ import { TEXTO_AJENO, TEXTO_VINCULO_AMBIGUO, textoCaducidad } from '@/lib/presup
 import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fecha } from './Comparativa'
 import { TodasLasOpciones } from './TodasLasOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
+import { EstudioOfertas } from './EstudioOfertas'
+import { TEXTOS_OFERTAS, puedeDescargarPdf, textoCompaniasOfertas, textoValidezOfertas } from '@/lib/presupuesto-ofertas-vista'
 import { DatosParaContratar } from './DatosParaContratar'
 import { RevisaTusDatos } from './RevisaTusDatos'
 import { ResumenOpciones } from './ResumenOpciones'
@@ -90,6 +92,15 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   }
 
   const p = r.presupuesto
+  // 🚨 Un origen que no se reconoce no se pinta: no se sabe qué precios serían ni qué se aceptaría.
+  if (p.origen === null) {
+    return (
+      <Marco titulo="Lo está revisando el corredor">
+        <p className="pendiente" style={{ marginTop: 0 }}>{TEXTOS_OFERTAS.origenDesconocido}</p>
+      </Marco>
+    )
+  }
+  const deOfertas = p.origen === 'ofertas'
   // Qué falta para emitir (§4bis): solo mientras se puede contratar. `null` = no se pudo mirar.
   const mostrarDatos = !p.retirado && !p.caducado && p.emitidoAt === null && p.enviadoAt !== null
   // «Revisa tus datos»: mientras no esté emitido ni retirado. `null` = no se han podido leer.
@@ -101,7 +112,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const bloqueoDatos = datosListosParaAceptar(cotizados)
     ? null
     : cotizados?.enRevision ? MOTIVO_EN_REVISION
-    : cotizados?.estado === 'sin_datos' ? cotizados.motivo : MOTIVO_SIN_DATOS
+    : cotizados?.estado === 'sin_datos' ? cotizados.motivo : deOfertas ? TEXTOS_OFERTAS.sinDatos : MOTIVO_SIN_DATOS
   const portada = p.opciones.filter((o) => o.esPortada)
   const resto = p.opciones.filter((o) => !o.esPortada)
   const ramoCat = ramoDeCatalogo(p.ramo)
@@ -120,7 +131,9 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       {/* 🚨 Nunca «válido hasta el X» a secas: sonaría a compromiso de la
           compañía, y la compañía no ha comprometido nada. */}
       <p className={p.caducado ? 'pendiente' : 'suave'} style={{ marginTop: 0 }}>
-        {textoCaducidad(fecha(p.creadoAt), fecha(p.venceEl), p.caducado)}
+        {deOfertas
+          ? textoValidezOfertas(fecha(p.creadoAt), fecha(p.venceEl), p.caducado)
+          : textoCaducidad(fecha(p.creadoAt), fecha(p.venceEl), p.caducado)}
       </p>
 
       {p.retirado && (
@@ -145,11 +158,12 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           datos={cotizados}
           corredor={p.vistaDeCorredor}
           telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+          origen={p.origen}
         />
       )}
 
       {/* Tras «Revisa tus datos»: resumen IA + tabla de coberturas por compañía + comparar dos con IA. */}
-      {!p.retirado && portada.length > 0 && (
+      {!deOfertas && !p.retirado && portada.length > 0 && (
         <ResumenOpciones
           presupuestoId={p.id}
           corredor={p.vistaDeCorredor}
@@ -172,7 +186,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         </section>
       )}
 
-      <Actual actual={p.actual} />
+      {(!deOfertas || p.actual !== null) && <Actual actual={p.actual} />}
 
       {p.aceptadoAt !== null && (
         <section className="seccion">
@@ -182,6 +196,18 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         </section>
       )}
 
+      {deOfertas ? (
+        <EstudioOfertas
+          presupuestoId={p.id}
+          opciones={p.opciones}
+          caducado={p.caducado}
+          puedeAceptar={puedeAceptar}
+          bloqueoDatos={bloqueoDatos}
+          corredor={p.vistaDeCorredor}
+          pdf={puedeDescargarPdf(p)}
+        />
+      ) : (
+        <>
       <section className="seccion">
         <h2 style={{ marginTop: 0 }}>Lo que he encontrado</h2>
         <SinEquivalenteAviso motivo={p.motivoSinEquivalente} />
@@ -217,14 +243,16 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           </section>
         )
       })}
+        </>
+      )}
 
       {/* La comparativa es la portada (§4.1): lo que falta para contratar va debajo. */}
-      {mostrarDatos && <DatosParaContratar datos={datos} corredor={p.vistaDeCorredor} />}
+      {mostrarDatos && !deOfertas && <DatosParaContratar datos={datos} corredor={p.vistaDeCorredor} />}
 
       {/* «Todas las opciones»: la lista entera (portada incluida, marcada «Recomendada») con los
           interruptores de garantías, paginada. Solo si hay algo más que la portada: si no, sería la
           misma lista dos veces. */}
-      {resto.length > 0 && (
+      {!deOfertas && resto.length > 0 && (
         <TodasLasOpciones
           presupuestoId={p.id}
           ramo={ramoDeCatalogo(p.ramo)}
@@ -245,7 +273,10 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         puedeNombrar={!p.retirado && p.aceptadoAt === null && p.emitidoAt === null && p.enviadoAt !== null}
         corredor={p.vistaDeCorredor}
       />
-      <Mediador companiasEnPortada={companias} />
+      <Mediador
+        companiasEnPortada={companias}
+        textoCompanias={deOfertas ? textoCompaniasOfertas(new Set(p.opciones.map((o) => o.compania)).size) : undefined}
+      />
 
       <p className="volver">
         <Link href="/boveda">← Volver a mis seguros</Link>

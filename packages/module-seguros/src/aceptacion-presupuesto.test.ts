@@ -76,3 +76,18 @@ test('🪤 lo firmado cita la ficha IPID que vio, o dice que no consta', () => {
   assert.match(documentoAceptacion(base), /ficha de información del producto \(IPID\) de esta opción \(huella aaaaaaaaaaaaaaaa\)/)
   assert.match(documentoAceptacion({ ...base, ipid: null }), /No consta que se me haya puesto a disposición la ficha/)
 })
+
+test('🪤 Codeoscopic: el documento es BYTE A BYTE el de siempre (la huella de lo firmado depende de él)', async () => {
+  const { createHash } = await import('node:crypto')
+  const t = documentoAceptacion(base)
+  assert.equal(createHash('sha256').update(t).digest('hex'), '592b6eae9ed6ff0f5e230262b92c9e8036270989222c4a5bb2c793234a13282a')
+  assert.equal(documentoAceptacion({ ...base, via: 'codeoscopic' }), t)
+})
+
+test('🪤 ofertas: el documento autoriza al mediador a gestionar con la compañía; ni «precio calculado» ni «autorizo la emisión»', () => {
+  const t = documentoAceptacion({ ...base, via: 'ofertas' })
+  assert.doesNotMatch(t, /calculado|autorizo la emisión/i)
+  assert.match(t, /autorizo a mi corredor, Grupo ASegura \(DGSFP CS-F\/0170\), a gestionar en mi nombre la contratación con Allianz en las condiciones de la oferta elegida/)
+  assert.match(t, /NO es todavía el contrato/)
+  assert.match(t, /no hay cobertura hasta que la emita/)
+})

@@ -13,6 +13,7 @@
 
 import { ibanValido, normalizarIban } from './codeoscopic/emitir-iban.ts'
 import { TEXTO_CONFIRMACION_DATOS } from './datos-cotizados.ts'
+import { origenPresupuesto } from './presupuesto-origen.ts'
 import { eur } from './dinero.ts'
 
 /** Lo único que un humano (cliente, Alberto) ve de la cuenta: los 4 últimos caracteres. */
@@ -85,6 +86,29 @@ export const TEXTO_CONFIRMACION_CON_IPID =
  */
 export function textoAutorizacion(conIpid: boolean): string {
   return conIpid ? TEXTO_CONFIRMACION_CON_IPID : TEXTO_CONFIRMACION_DATOS
+}
+
+/**
+ * La casilla de un presupuesto de OFERTAS (PDF de compañías). Aquí no hay «precio calculado» ni emisión
+ * automática: el cliente autoriza al MEDIADOR a gestionar la contratación con la compañía en las
+ * condiciones de la oferta que elige. 🚨 Nunca «autorizo la emisión» (cepo en `presupuesto-cuenta.test.ts`).
+ */
+export function textoAutorizacionOfertas(mediador: string, compania: string, conIpid: boolean): string {
+  const base = `He revisado mis datos y la oferta elegida, son correctos y autorizo a ${mediador.trim()} a gestionar ` +
+    `la contratación con ${compania.trim()} en las condiciones de esa oferta`
+  return conIpid ? `${base}, y he recibido la información previa del producto.` : `${base}.`
+}
+
+/**
+ * El texto de la casilla según de dónde salen los precios (puerta `presupuesto-origen`). Cerrada:
+ * un origen desconocido, o una oferta sin compañía o sin mediador, es `null` y no se firma nada.
+ * `codeoscopic` devuelve EXACTAMENTE `textoAutorizacion` (la huella de lo ya firmado depende de él).
+ */
+export function textoAutorizacionDe(p: { origen: unknown; conIpid: boolean; mediador: string; compania: string | null }): string | null {
+  const origen = origenPresupuesto(p.origen)
+  if (origen === 'codeoscopic') return textoAutorizacion(p.conIpid)
+  if (origen === 'ofertas' && p.mediador.trim() && p.compania?.trim()) return textoAutorizacionOfertas(p.mediador, p.compania, p.conIpid)
+  return null
 }
 
 /**
