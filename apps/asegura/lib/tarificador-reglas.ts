@@ -101,9 +101,13 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const pdfs: { nombre: string; contenido: Buffer }[] = []
     lista.forEach((p, i) => {
       const o = obj(p)
-      const b = base64(o?.base64, `pdfs[${i}].base64`, errores, MAX_BYTES_ADJUNTO)
+      if (!o || o.base64 === undefined || o.base64 === null) {
+        errores.push(`pdfs[${i}].base64: falta`)
+        return
+      }
+      const b = base64(o.base64, `pdfs[${i}].base64`, errores, MAX_BYTES_ADJUNTO)
       if (b && !esPdf(b)) errores.push(`pdfs[${i}]: no empieza por %PDF-`)
-      const nombre = typeof o?.nombre === 'string' && o.nombre.trim() ? o.nombre.trim().slice(0, 120) : `oferta-${i + 1}.pdf`
+      const nombre = typeof o.nombre === 'string' && o.nombre.trim() ? o.nombre.trim().slice(0, 120) : `oferta-${i + 1}.pdf`
       if (b) pdfs.push({ nombre, contenido: b })
     })
     const v = validarOfertas(e.ofertas, lista.length)

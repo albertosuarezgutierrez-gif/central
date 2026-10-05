@@ -48,6 +48,15 @@ test('resultado ok: valida ofertas y exige que el PDF sea un PDF', () => {
   assert.equal(leerResultadoWorker({ trabajoId: 'x', resultado: 'ok' }).ok, false)
 })
 
+test('resultado ok: rechaza PDF sin base64', () => {
+  const sinBase64 = leerResultadoWorker({
+    trabajoId: JOB, resultado: 'ok', pdfs: [{ nombre: 'a.pdf' }],
+    ofertas: [{ compania: 'Allianz', producto: 'C', primaAnualEur: 900 }],
+  })
+  assert.equal(sinBase64.ok, false)
+  assert.ok(!sinBase64.ok && sinBase64.errores.some((e) => e.includes('pdfs[0].base64')), 'debe rechazar con error que contiene «pdfs[0].base64»')
+})
+
 test('resultado error: tipo conocido, captura PNG', () => {
   const png = Buffer.concat([Buffer.from([0x89]), Buffer.from('PNG\r\n\x1a\n...')]).toString('base64')
   const r = leerResultadoWorker({ trabajoId: JOB, resultado: 'error', error: { tipo: 'captcha', mensaje: 'reCAPTCHA en el login' }, capturaBase64: png })
