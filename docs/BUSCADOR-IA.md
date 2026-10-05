@@ -76,6 +76,31 @@
 
 ## Bitácora de hallazgos (lo más reciente arriba)
 
+- **2026-10-05 · pasada semanal — ⏰ `google/gemini-2.5-flash` se apaga el 16/10/2026 (afecta a las
+  listas `PREFERIDOS` `contexto` y `registral` del cron `ia-director-refresh`) y ↩️ CORRECCIÓN
+  probable de la alerta de Groq del 21/09.** Todo por WebSearch: sin keys de proveedor y con
+  WebFetch a `openrouter.ai`/`console.groq.com` bloqueado por el proxy.
+  **Gemini 2.5:** `gemini-2.5-flash`, `-flash-lite` y `-pro` se apagan el 16/10/2026 en la Gemini API
+  ([deprecations](https://ai.google.dev/gemini-api/docs/deprecations)); Google recomienda
+  `gemini-3.5-flash`. Desde el 09/07 ya daban 404 a quien no los usaba antes (Google aclaró que no
+  estaban deprecados aún). Efecto en el cron: `contexto` = `['google/gemini-2.5-flash','google/gemini-flash-1.5']`
+  se queda SIN modelo vivo; `registral` cae a `claude-sonnet-4.5` (con visión). El sucesor en
+  OpenRouter `google/gemini-3.6-flash` cuesta **$0,75/$3,75 por M** — varias veces el precio del
+  2.5 Flash: es decisión de presupuesto, no swap mecánico → **Telegram, sin PR** (messageId 5986).
+  `gemini-flash-latest` (nuestro eslabón directo, apagado) es alias rodante, no se ve afectado.
+  **Groq:** `openai/gpt-oss-120b` sigue vivo; la entrada del 21/09 decía «ya no es gratis desde
+  11/09». Esta pasada, varias fuentes ([eesel](https://eesel.ai/blog/groq-pricing),
+  [novita](https://blogs.novita.ai/free-llm-api-comparison-2026/), benchlm, costbench) siguen dando
+  free tier para ese modelo (30 RPM, 1.000 req/día, 8k TPM, 200k tok/día, sin tarjeta) y precio de
+  pago $0,15/$0,75. Las fuentes se contradicen entre pasadas; sin `GROQ_API_KEY` no se zanja →
+  comprobar en `console.groq.com/settings/limits`. El riesgo de gasto sin vigilar solo existe si
+  la cuenta tiene tier de pago activado; en free tier pasarse da 429, no factura.
+  **OpenRouter:** `deepseek/deepseek-v4.1-flash` vivo; DeepSeek aplica tarifa punta/valle (valle
+  $0,15/$0,60, punta L-V 09-12 y 14-18h Pekín $0,30/$1,20) — explica los $0,13-0,30 dispares de
+  las fuentes. `qwen/qwen3.7-flash` sigue a $0,03/$0,13, sin mini-eval (sin key). **Visión NIM:**
+  `llama-3.2-11b-vision-instruct` sin aviso de EOL en docs NVIDIA (lista de EOL no lo menciona);
+  riesgo abierto sin cambios (no verificable sin `NVIDIA_API_KEY`). Resto sin novedades.
+
 - **2026-09-21 · pasada semanal — 🔴 HALLAZGO CRÍTICO: Groq retiró gratis a `openai/gpt-oss-120b`
   el 11/09/2026, y en la cadena es el ÚNICO eslabón sin presupuesto ni tarifa cargada.** Cinco
   fuentes independientes (cloudzero.com, requesty.ai, freellm.net, eesel.ai, markaicode.com)
