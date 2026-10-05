@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { dedupeHash, type ExtractoN43 } from './norma43'
 import { fmtEur } from './financiero'
+import { emparejarGemelos } from './dedupe-gemelos'
 import { agruparDuplicados, DUP_UMBRAL_BANNER, type DupGrupo, type DupPar } from './duplicados'
 import { getEstadoCobrosOTA } from './sivra/cobros-ota-db'
 import { type Pendiente } from './sivra/cobros-ota'
@@ -116,31 +117,38 @@ export async function importarExtracto(
   // repeticiones legítimas del mismo día/importe). Se conserva SIEMPRE el feed del banco (psd2).
   if (origen !== 'psd2' && cuentasTocadas.size) {
     const ids = [...cuentasTocadas]
-    // Regla idempotente y conservadora: solo si el feed del banco CUBRE POR COMPLETO el grupo
-    // (psd2_n >= filas de este Excel) se marcan TODAS las de Excel. Así re-ejecutar no erosiona
-    // nada (las ya marcadas salen del recuento) y, si el banco trae MENOS que el Excel (feed
-    // incompleto ese día), no se toca ninguna (queda para revisión manual, nunca se pierde dato).
-    await prisma.$executeRaw(Prisma.sql`
-      WITH cnt AS (
-        SELECT cuenta_bancaria_id, fecha_operacion, importe,
-               count(*) FILTER (WHERE origen = 'psd2')     AS psd2_n,
-               count(*) FILTER (WHERE origen = ${origen})  AS this_n
-        FROM movimientos_bancarios
-        WHERE cuenta_bancaria_id = ANY(${ids}::uuid[])
-          AND origen IN ('psd2', ${origen})
-          AND coalesce(duplicado_estado, '') <> 'ignorado'
-        GROUP BY 1, 2, 3
-      )
-      UPDATE movimientos_bancarios m
-      SET duplicado_estado = 'ignorado',
-          comentario = COALESCE(m.comentario || ' | ', '') || 'auto-dedup: duplicado del feed del banco (psd2)'
-      FROM cnt
-      WHERE m.cuenta_bancaria_id = cnt.cuenta_bancaria_id
-        AND m.fecha_operacion = cnt.fecha_operacion AND m.importe = cnt.importe
-        AND m.origen = ${origen}
-        AND coalesce(m.duplicado_estado, '') <> 'ignorado'
-        AND cnt.psd2_n > 0 AND cnt.psd2_n >= cnt.this_n
+    // Emparejado 1↔1 (lib/dedupe-gemelos.ts): cada gemelo psd2 cubre UN solo movimiento del Excel,
+    // mismo importe y misma fecha. Antes se comparaban CONTEOS por (fecha, importe) sin consumir el
+    // gemelo. Idempotente: las filas ya marcadas por este auto-dedup entran en el emparejado (para
+    // seguir ocupando su gemelo) y solo se actualizan las que aún no lo están. Lo que el dueño marcó a
+    // mano o por otro motivo ('ignorado' sin la marca auto-dedup) no se toca ni consume gemelo.
+    const filas = await prisma.$queryRaw<Array<{ id: string; cuenta: string; fecha: Date | null; importe: number; origen: string; ya: boolean }>>(Prisma.sql`
+      SELECT id, cuenta_bancaria_id::text AS cuenta, fecha_operacion AS fecha, importe::float AS importe, origen,
+             (coalesce(duplicado_estado, '') = 'ignorado') AS ya
+      FROM movimientos_bancarios
+      WHERE cuenta_bancaria_id = ANY(${ids}::uuid[])
+        AND origen IN ('psd2', ${origen})
+        AND fecha_operacion IS NOT NULL
+        AND (coalesce(duplicado_estado, '') <> 'ignorado'
+             OR comentario LIKE '%auto-dedup: duplicado del feed del banco (psd2)%')
     `)
+    const aMarcar: string[] = []
+    for (const cuenta of new Set(filas.map(f => f.cuenta))) {
+      const m = (f: (typeof filas)[number]) => ({ id: f.id, fecha: f.fecha!.toISOString().slice(0, 10), importe: f.importe })
+      const delCuenta = filas.filter(f => f.cuenta === cuenta)
+      const importados = delCuenta.filter(f => f.origen === origen)
+      const pares = emparejarGemelos(importados.map(m), delCuenta.filter(f => f.origen === 'psd2').map(m))
+      const yaMarcado = new Set(importados.filter(f => f.ya).map(f => f.id))
+      for (const p of pares) if (!yaMarcado.has(p.importadoId)) aMarcar.push(p.importadoId)
+    }
+    if (aMarcar.length) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE movimientos_bancarios
+        SET duplicado_estado = 'ignorado',
+            comentario = COALESCE(comentario || ' | ', '') || 'auto-dedup: duplicado del feed del banco (psd2)'
+        WHERE id = ANY(${aMarcar}::uuid[]) AND coalesce(duplicado_estado, '') <> 'ignorado'
+      `)
+    }
 
     // Anti-duplicado CROSS-CUENTA tarjeta↔corriente (01/07/2026). Kutxabank exporta los cargos
     // de la tarjeta en DOS extractos: el de la CUENTA CORRIENTE y el PROPIO de la tarjeta.
@@ -1166,7 +1174,7 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
 }
 
 // Resueltos recientes (para el plegable "ya resueltos" con opción de reactivar).
-export type DupResuelto = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado'; cuentaLabel?: string }
+export type DupResuelto = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'normal' | 'ignorado' | 'confirmado'; cuentaLabel?: string }
 export async function getDuplicadosResueltos(cuentaId: string, limite = 40): Promise<DupResuelto[]> {
   const rows = await prisma.$queryRaw<Array<{ id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null; importe: number; duplicado_estado: string; cuenta_label: string | null }>>`
     SELECT mb.id, mb.fecha_operacion,
@@ -1175,7 +1183,7 @@ export async function getDuplicadosResueltos(cuentaId: string, limite = 40): Pro
            coalesce(cb.banco || coalesce(' ' || cb.iban_mascara, ''), cb.alias, cb.iban_mascara, 'Cuenta') AS cuenta_label
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-    WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.duplicado_estado IN ('ignorado', 'confirmado')
+    WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.duplicado_estado IN ('normal', 'ignorado', 'confirmado')
     ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
     LIMIT ${limite}
   `
@@ -1184,17 +1192,18 @@ export async function getDuplicadosResueltos(cuentaId: string, limite = 40): Pro
     fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
     concepto: r.concepto || r.contraparte || 'Movimiento',
     importe: Number(r.importe),
-    estado: r.duplicado_estado as 'ignorado' | 'confirmado',
+    estado: r.duplicado_estado as 'normal' | 'ignorado' | 'confirmado',
     cuentaLabel: r.cuenta_label ?? undefined,
   }))
 }
 
 // Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo
-// toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL).
+// toca movimientos de cuentas bancarias de la sesión. 'normal' = el dueño dice «es normal» (NO excluye
+// del P&L; 'ignorado' sí excluye y es solo del auto-dedup: usarlo aquí ocultaba cargos reales). estado=null → deshacer (vuelve a NULL).
 export async function resolverDuplicados(
   cuentaId: string,
   ids: string[],
-  estado: 'ignorado' | 'confirmado' | null,
+  estado: 'normal' | 'confirmado' | null,
 ): Promise<number> {
   if (ids.length === 0) return 0
   const res = await prisma.$executeRaw`

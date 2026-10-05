@@ -20,6 +20,12 @@ test('claveReglaValida rechaza claves genéricas/trampa y acepta comercios/códi
   assert.equal(claveReglaValida(''), false)
 })
 
+test('detectarCompania reconoce los códigos de mediador M1454 (Asisa) y PD005 (Caser)', () => {
+  assert.equal(detectarCompania('TRANSFERENCIAS // M1454 LIQ', '', ''), 'Asisa')
+  assert.equal(detectarCompania('ABONO PD005 COMISIONES', '', ''), 'Caser')
+  assert.equal(detectarCompania('ABONO M14540', '', ''), COMPANIA_OTRAS)
+})
+
 test('detectarCompania reconoce aseguradoras por nombre', () => {
   assert.equal(detectarCompania('RECIBO GENERALI SEGUROS', '', 'GENERALI SEG.'), 'Generali')
   assert.equal(detectarCompania('LIQ.COMISIONES 202604', '', ''), 'Mapfre')
