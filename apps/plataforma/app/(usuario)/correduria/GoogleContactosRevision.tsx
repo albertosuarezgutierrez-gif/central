@@ -18,6 +18,9 @@ import { anadirPagina, hayMas, primeraPagina, quitarResuelta, type ListaRevision
  * solo cierra la revisión (no lo vuelve a meter). «Unificar» (solo en un duplicado inequívoco) une la
  * ficha con ese contacto de la agenda y guarda SU nombre como mote («🟢 Mamá»); «Unificar con nombre
  * del CRM», sin mote. «Usar como mote» (renombrado en Google): ese nombre pasa a ser el mote.
+ * «Este número es de…» (varias fichas con el mismo teléfono): un botón por ficha; la elegida tendrá EL
+ * contacto y las demás irán dentro como empresa/nota (las fichas del CRM no se fusionan). «Añadir a la
+ * ficha»: un teléfono/correo del contacto que la ficha no tiene (nunca pisa uno existente).
  *
  * 🚨 Sin lectura buena no se dice «nada pendiente»: un fallo es un error visible.
  */
@@ -32,6 +35,7 @@ type Revision = {
   clienteNombre: string | null
   propuesta: Campos | null
   propuestaIlegible: boolean
+  candidatos?: { id: string; nombre: string | null; tipoPersona: string | null }[]
   creadoEn: string
 }
 type Pagina = { revisiones: Revision[]; siguiente: string | null; pendientes: number; nombreDistintoPendientes: number | null }
@@ -100,13 +104,13 @@ export default function GoogleContactosRevision() {
     }
   }
 
-  async function resolver(rev: Revision, accion: AccionRevision, forzar = false) {
+  async function resolver(rev: Revision, accion: AccionRevision, forzar = false, clienteId: string | null = null) {
     setOcupada(rev.id)
     setAvisos((a) => { const { [rev.id]: _, ...resto } = a; void _; return resto })
     try {
       const r = await fetch('/api/correduria/google-contactos-revision', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: rev.id, accion, ...(forzar ? { forzar: true } : {}) }),
+        body: JSON.stringify({ id: rev.id, accion, ...(forzar ? { forzar: true } : {}), ...(clienteId ? { clienteId } : {}) }),
       })
       const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string; forzable?: boolean } | null
       if (r.ok || (r.status === 409 && j?.estado === 'ya_resuelta')) {
@@ -216,6 +220,9 @@ export default function GoogleContactosRevision() {
           const p = rev.propuesta
           const motivo = esMotivoDuplicado(rev.motivo) ? rev.motivo : null
           const duplicado = rev.tipo === 'duplicado_ambiguo'
+          const titular = rev.tipo === 'telefono_titular'
+          const muchas = rev.tipo === 'telefono_muchas_fichas'
+          const enriquecer = rev.tipo === 'enriquecer_ficha'
           return (
             <article key={rev.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12, display: 'grid', gap: 8, minWidth: 0 }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
@@ -240,10 +247,34 @@ export default function GoogleContactosRevision() {
                   Ficha: <Link href={`/correduria/cliente/${rev.clienteId}`}>{rev.clienteNombre ?? 'abrir ficha'}</Link>
                 </p>
               )}
-              {!duplicado && rev.campos.length > 0 && (
+              {titular && (
+                <p style={{ margin: 0, fontSize: 14 }}>
+                  Varias fichas tienen el MISMO teléfono. ¿De quién es? Esa ficha tendrá el contacto en tu agenda y las demás
+                  irán dentro (como empresa y en la nota). Las fichas del CRM no se fusionan.{' '}
+                  {(rev.candidatos ?? []).map((c, i) => (
+                    <span key={c.id}>{i > 0 ? ' · ' : ''}<Link href={`/correduria/cliente/${c.id}`}>{c.nombre ?? 'abrir ficha'}</Link></span>
+                  ))}
+                </p>
+              )}
+              {muchas && (
+                <p style={{ margin: 0, fontSize: 14 }}>
+                  {(rev.candidatos ?? []).length} fichas tienen el MISMO teléfono (¿centralita o gestoría?). No se combina en un
+                  contacto ni se crea ninguno nuevo: cada ficha sigue como estaba. Si alguna tiene mal el teléfono, corrígelo en su ficha.{' '}
+                  {(rev.candidatos ?? []).map((c, i) => (
+                    <span key={c.id}>{i > 0 ? ' · ' : ''}<Link href={`/correduria/cliente/${c.id}`}>{c.nombre ?? 'abrir ficha'}</Link></span>
+                  ))}
+                </p>
+              )}
+              {enriquecer && p && (
+                <p style={{ margin: 0, fontSize: 14, overflowWrap: 'anywhere' }}>
+                  Tu contacto tiene {rev.campos[0] === 'email' ? 'un correo' : 'un teléfono'} que la ficha no tiene:{' '}
+                  <strong>{rev.campos[0] === 'email' ? p.email : p.telefono}</strong>
+                </p>
+              )}
+              {!duplicado && !titular && !muchas && !enriquecer && rev.campos.length > 0 && (
                 <p style={pMuted}>Cambiado en Google: {rev.campos.map((c) => ETIQUETA_CAMPO[c] ?? c).join(', ')}</p>
               )}
-              {p ? (
+              {titular || muchas || enriquecer ? null : p ? (
                 <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: '2px 10px', fontSize: 13 }}>
                   <dt style={{ color: 'var(--muted)' }}>En Google</dt>
                   <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{[p.nombre, p.apellidos].filter(Boolean).join(' ') || '—'}</dd>
@@ -256,10 +287,17 @@ export default function GoogleContactosRevision() {
                 <p style={{ ...pMuted, color: 'var(--warning)' }}>No se puede leer lo que había en Google (clave de cifrado).</p>
               ) : null}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {accionesPermitidas(rev.tipo, motivo, rev.campos).filter((a) => a !== 'usar_como_mote' || !!rev.clienteId).map((accion) => (
+                {titular && (rev.candidatos ?? []).map((c) => (
+                  <button key={c.id} type="button" disabled={ocupada !== null}
+                    onClick={() => void resolver(rev, 'elegir_titular', false, c.id)}
+                    style={{ ...btnStyle('primario'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal' }}>
+                    {ocupada === rev.id ? 'Guardando…' : `Es de ${c.nombre ?? 'esta ficha'}${c.tipoPersona === 'juridica' ? ' (empresa)' : ''}`}
+                  </button>
+                ))}
+                {accionesPermitidas(rev.tipo, motivo, rev.campos).filter((a) => a !== 'elegir_titular' && (a !== 'usar_como_mote' || !!rev.clienteId)).map((accion) => (
                   <button key={accion} type="button" disabled={ocupada !== null}
                     onClick={() => void resolver(rev, accion)}
-                    style={{ ...btnStyle(accion === 'unificar' || accion === 'usar_como_mote' || accion === 'aceptar_lead' || (accion === 'mantener_crm' && !duplicado) ? 'primario' : 'secundario'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal' }}>
+                    style={{ ...btnStyle(accion === 'unificar' || accion === 'usar_como_mote' || accion === 'aceptar_lead' || accion === 'anadir_a_ficha' || (accion === 'mantener_crm' && !duplicado) ? 'primario' : 'secundario'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal' }}>
                     {ocupada === rev.id ? 'Guardando…' : ETIQUETA_ACCION_REVISION[accion]}
                   </button>
                 ))}

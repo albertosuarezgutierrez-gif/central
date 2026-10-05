@@ -40,6 +40,11 @@ landmines, estado). Después, según lo que toques:
 - **Estados**: 🚨 siniestro abierto > 💶 recibo devuelto > ⏰ (máx. 2 emojis); ⚪ ex-cliente solo si ya tenía vínculo.
   Tests: `google-contactos-{unificar,estados,ordenar}.test.ts`. «Ordenar agenda»: `GET …/google-contactos/ordenar` (solo lectura).
 
+## Un número, un contacto y «Añadir a la ficha» (05/10/2026, migración `2026-10-05e`)
+- Teléfono compartido → UN contacto (la persona; titular elegido en la cola o `tipo_persona`), las demás fichas como
+  organization «también» + nota. Nunca fusiona fichas ni borra en Google (la secundaria sobrante se desvincula limpia).
+- Dato del contacto que la ficha NO tiene → cola «Añadir a la ficha» (`anadirContacto`). Detalle en el doc.
+
 ## 🚨 No romper
 
 1. **Gmail personal sin DPA.** Decisión cerrada por Alberto el 05/10/2026; revierte la nota de

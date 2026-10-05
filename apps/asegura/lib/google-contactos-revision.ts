@@ -18,7 +18,7 @@ import { decryptField } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
 import { Prisma } from './generated/asegura-client'
-import { altaCliente } from './cartera-edicion'
+import { altaCliente, anadirContacto, listarContactos } from './cartera-edicion'
 import { lectorContactoGoogle } from './google-contactos'
 
 export const PAGINA_REVISION = 50
@@ -35,6 +35,8 @@ export type RevisionGoogle = {
   /** Lo que había en Google. `null` = no hay (borrado) o no se pudo descifrar (`propuestaIlegible`). */
   propuesta: CamposSincronizados | null
   propuestaIlegible: boolean
+  /** Solo `telefono_titular` (un botón por ficha) y `telefono_muchas_fichas` (informativa): las fichas que comparten el número. */
+  candidatos: { id: string; nombre: string | null; tipoPersona: string | null }[]
   creadoEn: string
 }
 
@@ -48,6 +50,7 @@ function leerPropuesta(c: string | null): { propuesta: CamposSincronizados | nul
       propuesta: {
         nombre: txt(o.nombre), apellidos: txt(o.apellidos), telefono: opc(o.telefono), email: opc(o.email),
         grupo: o.grupo === 'cliente' || o.grupo === 'lead' || o.grupo === 'compania' || o.grupo === 'ex_cliente' ? o.grupo : null,
+        tambien: opc(o.tambien),
         // Campos de después del 05/10/2026 (las revisiones anteriores no los traen: `null` = no consta).
         nota: opc(o.nota), url: opc(o.url), cumpleanos: opc(o.cumpleanos), aviso: o.aviso === true,
         alerta: o.alerta === 'siniestro' || o.alerta === 'recibo' ? o.alerta : null,
@@ -86,11 +89,12 @@ export async function listarRevisiones(correduriaId: string, despuesDe: string |
   )
   const filas = orden.flatMap((id) => (porId.has(id) ? [porId.get(id)!] : []))
   const pagina = filas.slice(0, PAGINA_REVISION)
-  const ids = [...new Set(pagina.map((f) => f.clienteId).filter((x): x is string => !!x))]
+  const ids = [...new Set(pagina.flatMap((f) => [f.clienteId, ...f.candidatos]).filter((x): x is string => !!x))]
   const fichas = ids.length
-    ? await db.cliente.findMany({ where: { correduriaId, id: { in: ids } }, select: { id: true, nombre: true, apellidos: true } })
+    ? await db.cliente.findMany({ where: { correduriaId, id: { in: ids } }, select: { id: true, nombre: true, apellidos: true, tipoPersona: true } })
     : []
   const nombre = new Map(fichas.map((f) => [f.id, [f.nombre, f.apellidos].filter(Boolean).join(' ').trim() || null]))
+  const tipoPersona = new Map(fichas.map((f) => [f.id, f.tipoPersona ?? null]))
   return {
     revisiones: pagina.map((f) => {
       const p = leerPropuesta(f.propuestaCifrada)
@@ -98,6 +102,7 @@ export async function listarRevisiones(correduriaId: string, despuesDe: string |
         id: f.id, tipo: f.tipo as TipoRevisionGoogle, motivo: esMotivoDuplicado(f.motivo) ? f.motivo : null, campos: f.campos, clienteId: f.clienteId,
         clienteNombre: f.clienteId ? (nombre.get(f.clienteId) ?? null) : null,
         propuesta: p.propuesta, propuestaIlegible: p.ilegible, creadoEn: f.creadoEn.toISOString(),
+        candidatos: f.candidatos.map((id) => ({ id, nombre: nombre.get(id) ?? null, tipoPersona: tipoPersona.get(id) ?? null })),
       }
     }),
     siguiente: filas.length > PAGINA_REVISION ? pagina[pagina.length - 1].id : null,
@@ -112,7 +117,7 @@ export type ResultadoResolucion =
 
 export async function resolverRevision(
   correduriaId: string,
-  p: { id: string; accion: AccionRevision; actor: string; forzar: boolean },
+  p: { id: string; accion: AccionRevision; actor: string; forzar: boolean; clienteId?: string | null },
 ): Promise<ResultadoResolucion> {
   const db = prismaAsegura()
   const fila = await db.googleContactosRevision.findFirst({ where: { correduriaId, id: p.id } })
@@ -120,6 +125,8 @@ export async function resolverRevision(
   if (fila.estado !== 'pendiente') return { ok: false, estado: 'ya_resuelta', motivo: 'Esa revisión ya estaba resuelta.', status: 409 }
   const ef = efectoResolucion(fila.tipo, p.accion, fila.motivo, fila.campos)
   if (!ef.ok) return { ok: false, estado: 'invalido', motivo: ef.motivo, status: 422 }
+  if (ef.titular) return elegirTitular(correduriaId, fila, p.actor, p.clienteId ?? null)
+  if (ef.enriquecer) return anadirAFicha(correduriaId, fila, p.actor)
   if (ef.vinculo === 'unificar' || ef.mote) return unificarOMote(correduriaId, fila, p.actor, { accion: p.accion, vinculo: ef.vinculo === 'unificar', mote: ef.mote }, lectorContactoGoogle(correduriaId))
 
   const propuestaLead = ef.altaLead ? leerPropuesta(fila.propuestaCifrada) : null
@@ -173,6 +180,94 @@ async function liberarClaim(correduriaId: string, id: string, actor: string, res
     where: { correduriaId, id, estado: { not: 'pendiente' }, resueltoPor: actor, resueltoEn },
     data: { estado: 'pendiente', resolucion: null, resueltoPor: null, resueltoEn: null },
   })
+}
+
+// ─── «Este número es de…» y «Añadir a la ficha» ───────────────────────────────
+
+/**
+ * Guarda la ficha elegida como TITULAR del número (`google_contactos_titular_telefono`, por índice ciego)
+ * y cierra la revisión, en UNA transacción. Solo vale una de las candidatas, viva y sin fusionar. No toca
+ * Google ni vínculos: la pasada siguiente hace UN contacto (el de esa ficha) y desvincula los demás sin
+ * borrarlos. Las fichas del CRM NO se fusionan.
+ */
+async function elegirTitular(
+  correduriaId: string,
+  fila: { id: string; telefonoHash: string | null; candidatos: string[] },
+  actor: string,
+  clienteId: string | null,
+): Promise<ResultadoResolucion> {
+  if (!fila.telefonoHash) return { ok: false, estado: 'invalido', motivo: 'Esta revisión no trae el número.', status: 422 }
+  if (!clienteId || !fila.candidatos.includes(clienteId)) {
+    return { ok: false, estado: 'invalido', motivo: 'Elige una de las fichas que comparten ese número.', status: 422 }
+  }
+  const db = prismaAsegura()
+  const ficha = await db.cliente.findFirst({ where: { correduriaId, id: clienteId }, select: { mergedIntoClienteId: true } })
+  if (!ficha) return { ok: false, estado: 'invalido', motivo: 'La ficha ya no existe.', status: 422 }
+  if (ficha.mergedIntoClienteId) return { ok: false, estado: 'invalido', motivo: 'Esa ficha se fusionó en otra: la sincronización volverá a preguntar.', status: 422 }
+  const telefonoHash = fila.telefonoHash
+  try {
+    await db.$transaction(async (tx) => {
+      const ahora = new Date()
+      const { count } = await tx.googleContactosRevision.updateMany({
+        where: { correduriaId, id: fila.id, estado: 'pendiente' },
+        data: { estado: 'aceptada', resolucion: 'elegir_titular', resueltoPor: actor, resueltoEn: ahora, clienteId },
+      })
+      if (count === 0) throw new Rechazo({ ok: false, estado: 'ya_resuelta', motivo: 'Otra persona la resolvió a la vez.', status: 409 })
+      await tx.googleContactosTitularTelefono.upsert({
+        where: { correduriaId_telefonoHash: { correduriaId, telefonoHash } },
+        create: { correduriaId, telefonoHash, clienteId, elegidoPor: actor, elegidoEn: ahora },
+        update: { clienteId, elegidoPor: actor, elegidoEn: ahora },
+      })
+    })
+  } catch (e) {
+    if (e instanceof Rechazo) return e.r
+    throw e
+  }
+  return { ok: true, estado: 'aceptada', clienteId }
+}
+
+/**
+ * «Añadir a la ficha»: el teléfono/correo que el contacto de Google tiene y la ficha NO. Se añade con el
+ * alta normal de contactos de la ficha (`anadirContacto`: cifrado + índice ciego + duplicados en otras
+ * fichas → 409), SOLO si la ficha sigue sin ninguno de ese tipo: nunca se pisa ni se suma a uno que ya
+ * esté. CLAIM primero; si el alta no sale, la revisión vuelve a pendiente.
+ */
+async function anadirAFicha(
+  correduriaId: string,
+  fila: { id: string; clienteId: string | null; campos: string[]; propuestaCifrada: string | null },
+  actor: string,
+): Promise<ResultadoResolucion> {
+  const campo = fila.campos[0]
+  if (!fila.clienteId || (campo !== 'telefono' && campo !== 'email')) return { ok: false, estado: 'invalido', motivo: 'Esta revisión no trae ficha o dato.', status: 422 }
+  const p = leerPropuesta(fila.propuestaCifrada)
+  const valor = p.propuesta ? (campo === 'telefono' ? p.propuesta.telefono : p.propuesta.email) : null
+  if (!valor) return { ok: false, estado: 'invalido', motivo: p.ilegible ? 'No se puede leer el dato (clave PII).' : 'No hay dato que añadir.', status: 422 }
+  const actuales = await listarContactos(correduriaId, fila.clienteId)
+  if (!actuales) return { ok: false, estado: 'error', motivo: 'No se ha podido leer la ficha: no se añade nada.', status: 503 }
+  if ((campo === 'telefono' ? actuales.telefonos : actuales.emails).length > 0) {
+    return { ok: false, estado: 'conflicto', motivo: `La ficha ya tiene ${campo === 'telefono' ? 'teléfono' : 'correo'}: no se pisa. Descarta esta propuesta o edítalo en la ficha.`, status: 409 }
+  }
+  const db = prismaAsegura()
+  const resueltoEn = new Date()
+  const { count } = await db.googleContactosRevision.updateMany({
+    where: { correduriaId, id: fila.id, estado: 'pendiente' },
+    data: { estado: 'aceptada', resolucion: 'anadir_a_ficha', resueltoPor: actor, resueltoEn },
+  })
+  if (count === 0) return { ok: false, estado: 'ya_resuelta', motivo: 'Otra persona la resolvió a la vez.', status: 409 }
+  let r: Awaited<ReturnType<typeof anadirContacto>>
+  try {
+    r = await anadirContacto(correduriaId, fila.clienteId, { tipo: campo, valor, forzar: false, actor: `${actor} (desde Google Contactos)` })
+  } catch (e) {
+    await liberarClaim(correduriaId, fila.id, actor, resueltoEn)
+    throw e
+  }
+  if (!r.ok) {
+    await liberarClaim(correduriaId, fila.id, actor, resueltoEn)
+    const { ok: _ok, status, ...resto } = r
+    void _ok
+    return { ok: false, ...resto, status }
+  }
+  return { ok: true, estado: 'aceptada', clienteId: fila.clienteId }
 }
 
 // ─── Unificar y mote ──────────────────────────────────────────────────────────
