@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-05T13:44:48Z",
+  "generadoEn": "2026-10-05T14:37:50Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 197
+        "evidencias": 198
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 151
+        "evidencias": 152
       },
       "rrhh": {
         "estado": "no",
@@ -4007,6 +4007,7 @@
       "/api/operador/cliente/dni",
       "/api/operador/cliente/fusion",
       "/api/operador/cliente/historial",
+      "/api/operador/cliente/mote",
       "/api/operador/cliente/portal",
       "/api/operador/cliente/portal/vista",
       "/api/operador/cliente/relaciones",
@@ -4070,6 +4071,7 @@
       "/api/operador/google-contactos",
       "/api/operador/google-contactos/activar",
       "/api/operador/google-contactos/desconectar",
+      "/api/operador/google-contactos/ordenar",
       "/api/operador/google-contactos/revision",
       "/api/operador/google-contactos/simular",
       "/api/operador/google-contactos/ticket",
@@ -5033,6 +5035,7 @@
       "/api/correduria/catastro",
       "/api/correduria/cima-sincro",
       "/api/correduria/cliente",
+      "/api/correduria/cliente-mote",
       "/api/correduria/cliente/[id]/dni-codigo",
       "/api/correduria/cliente/[id]/dni-revelar",
       "/api/correduria/cliente/carnets",
@@ -5071,6 +5074,7 @@
       "/api/correduria/formacion/baja",
       "/api/correduria/fugas",
       "/api/correduria/garantias-filtradas",
+      "/api/correduria/google-contactos-ordenar",
       "/api/correduria/google-contactos-revision",
       "/api/correduria/google-contactos-sync",
       "/api/correduria/impagados",
@@ -5577,6 +5581,7 @@
       "seguros.cliente_carnets_conducir",
       "seguros.cliente_emails",
       "seguros.cliente_merge_log",
+      "seguros.cliente_mote",
       "seguros.cliente_relaciones",
       "seguros.cliente_telefonos",
       "seguros.clientes",
@@ -6672,7 +6677,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1572,
+    "apis": 1576,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
