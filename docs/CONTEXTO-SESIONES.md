@@ -1090,6 +1090,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - AutoNuevo precarga en cascada PARCIAL (`lib/correduria/precarga-vehiculo.ts`), marca «precargado · sin confirmar» mientras `confirmadoAt` null. Oportunidad ya abierta: no pisa un `datosVehiculo` existente ni tapa un coche antiguo (`matricula`/`vehiculo`) salvo misma matrícula (`puedeEscribirDatosVehiculo`). PR #4287.
 - Pendiente: ver con una póliza real que los nombres de `/car/engine-types` casan con el combustible traducido.
 
+## (05/10/2026) RRHH: sección «Informes» (Excel/PDF/CSV) para Pilar
+- `/admin/informes`: catálogo declarativo `apps/rrhh/lib/informes/` (8 entidades: fichajes, solicitudes, empleados, nóminas, incidencias, contratos, documentos, obras) + motor genérico con subtotales/total; `empresa_id` solo de sesión, Zod `.strict()`, SQL parametrizado.
+- Fichajes en curso/datos null = «sin dato», nunca 0. `xlsx` (ya en plataforma/ialimp) + `@react-pdf`. 36 tests, 3 cepos en rojo.
+- 🚨 Detectado fuera de alcance: `GET /api/admin/empleados` devuelve `acceso_token` al navegador; `/api/admin/fichajes/exportar` usa `e.nif` (columna es `dni`).
+
 ## (05/10/2026) RRHH: ubicación OBLIGATORIA al fichar (petición de Pilar)
 - `POST /api/e/fichaje` (solo empleado) rechaza 400 `ubicacion_requerida` sin lat/lng válidos; validador puro `apps/rrhh/lib/ubicacion-fichaje.ts` + 15 tests (cepo visto en rojo).
 - `FichajeEmpleado.tsx`: ya no ficha «sin ubicación»; mensaje + Reintentar. Correcciones manuales del panel NO cambian (BD sigue admitiendo NULL).

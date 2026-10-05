@@ -41,6 +41,10 @@ El god-panel de plataforma crea empresas vía HTTP:
 /admin/prl          → documentos de Prevención de Riesgos Laborales (autorización maquinaria,
                       entrega EPIs, información de riesgos art.18, acuerdos de confidencialidad
                       RGPD con/sin acceso a datos) — firma doble empresa→empleado
+/admin/informes     → informes de todas las entidades (catálogo declarativo `lib/informes/catalogo.ts`
+                      + motor puro `motor.ts` + SQL por entidad `consultas.ts`, SIEMPRE con empresa_id de
+                      sesión); vista previa y descarga Excel (xlsx/SheetJS) / PDF (@react-pdf) / CSV.
+                      Entidad nueva = entrada en el catálogo + su consulta (lo vigila `consultas.test.ts`)
 /e/[token]          → portal del empleado (acceso por token único; incluye fichaje GPS)
 /api/admin/*        → endpoints protegidos por sesión JWT (responsable), incl. `/api/admin/prl/generar`
                       y `/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado`
