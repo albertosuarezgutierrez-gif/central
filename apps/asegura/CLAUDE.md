@@ -127,6 +127,9 @@
 ## Oportunidad/riesgo/correduría
 - **Datos del riesgo por ramo (PR #4127):** módulo puro `@central/module-seguros/datos-riesgo-{generico,ramo,vivienda,capital,libre}.ts` con claves `datosVehiculo|datosVivienda|datosCapital|datosRiesgoLibre` en `info_riesgo`. PATCH `/api/operador/oportunidad/riesgo` edita una clave (400 si no es del ramo); precarga desde `polizas.datos_especificos` (nunca confirmada). Helper `leerRiesgo()` con validación pura `calcularEdicionRiesgo()`.
 
+## Tarificador RPA (bots Playwright)
+Guía viva (arquitectura, DOM de ePAC, seguridad, interruptores, plan): **`docs/TARIFICADOR-RPA.md`**. TARIFICAR ≠ EMITIR; guardián `test/regression-tarificador-rpa.test.ts`.
+
 ## Cuando dudes
 Busca el tema en `docs/claude-md/ASEGURA-completo-2026-09-30.md` antes de suponer: casi todo lo de aquí ya se midió
 una vez y está escrito con su cifra y su porqué.

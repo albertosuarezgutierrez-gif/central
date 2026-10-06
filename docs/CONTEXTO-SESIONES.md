@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(06/10/2026)** — Tarificador RPA: creada la guía viva `docs/TARIFICADOR-RPA.md` (arquitectura, DOM de ePAC Comunidades, precio verificado 347,55/342,77 €, seguridad, formador, renovaciones, grabador, fichas, env, SQL, rutina «Médico del bot», decisiones de Alberto y plan). Enlazada desde `apps/asegura/CLAUDE.md`, skill `correduria-crm` y el README del servicio.
+Decisiones: Allianz NO se avisa; nunca desplegar imagen desde rama sin OK. Plan: 1) cotización real Allianz desde Oportunidades, 2) Comunidades con Occident vía grabador, 3) RC Occident, 4) Comercio.
+Pendiente: validar umbrales de infraseguro (1.100/1.400/1.800 €/m²), revisar 13 pólizas Allianz sin prima, rotar contraseña de Occident.
+
 **(06/10/2026)** — IA — presupuesto diario global: creada env `AI_GATEWAY_LIMITE_DIARIO_EUR=5` (production+preview) en el proyecto Vercel `plataforma` (antes no existía → default 1€ del código, `lib/ai-gateway.ts`). Redeploy prod dpl_9qD8ieiJxUEazzk9Kz86ZHRzjpec del commit 929f2d1. Sin cambios de código.
 Pendiente: revisar `AI_GATEWAY_LIMITE_MENSUAL` frente a 5€/día.
 
