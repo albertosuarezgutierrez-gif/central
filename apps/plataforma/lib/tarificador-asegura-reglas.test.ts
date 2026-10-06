@@ -7,7 +7,62 @@ import {
   fechasPorDefecto, formularioInicial, leerTrabajoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
 } from './tarificador-asegura-reglas.ts'
 
+import { fechaCorta, formularioConUltimoRiesgo, leerUltimoRiesgoBot } from './tarificador-asegura-reglas.ts'
+
 const APP = join(import.meta.dirname, '..')
+
+// ─── Pre-relleno con el último riesgo (07/10/2026) ──────────────────────────
+
+test('último riesgo: respuesta sin datos o sin forma → null', () => {
+  assert.equal(leerUltimoRiesgoBot({ riesgo: null, trabajoId: null, creadoEn: null }), null)
+  assert.equal(leerUltimoRiesgoBot({ estado: 'error' }), null)
+  assert.equal(leerUltimoRiesgoBot(null), null)
+  assert.equal(leerUltimoRiesgoBot({ riesgo: [1] }), null)
+  assert.deepEqual(leerUltimoRiesgoBot({ riesgo: { uso: 'x' }, creadoEn: '2026-10-05T08:00:00.000Z' }), { riesgo: { uso: 'x' }, creadoEn: '2026-10-05T08:00:00.000Z' })
+})
+
+test('fecha corta dd/mm/aaaa', () => {
+  assert.equal(fechaCorta('2026-10-05T08:00:00.000Z'), '05/10/2026')
+  assert.equal(fechaCorta('basura'), null)
+  assert.equal(fechaCorta(null), null)
+})
+
+test('pre-relleno: solo claves conocidas, números a texto, tri-estado, ignora lo demás', () => {
+  const hoy = new Date('2026-10-06T10:00:00Z')
+  const base = formularioInicial({ codigoPostal: '41001', ciudad: 'Sevilla', provincia: 'Sevilla', direccion: 'Ficha 1' }, hoy)
+  const f = formularioConUltimoRiesgo(base, {
+    fechaEfecto: '2026-11-01', fechaTermino: '2027-11-01', m2Construidos: 800, anioConstruccion: 1990, plantas: 5,
+    numEdificios: 2, numViviendasYLocales: 24, tipoVivienda: 'Viviendas Pisos en Alto', uso: 'Habitual', listaPropietarios: '> 50%',
+    ascensor: true, piscina: false, calidadConstruccion: 'alta', password: 'x', otraCosa: 1,
+    direccion: { via: 'Calle Sol', numero: '4', codigoPostal: '41003', municipio: 'Sevilla', provincia: 'Sevilla', token: 'z' },
+  }, hoy)
+  assert.deepEqual(f, {
+    fechaEfecto: '2026-11-01', fechaTermino: '2027-11-01', m2Construidos: '800', anioConstruccion: '1990', tipoVivienda: 'Viviendas Pisos en Alto',
+    uso: 'Habitual', plantas: '5', numEdificios: '2', numViviendasYLocales: '24', listaPropietarios: '> 50%', codigoPostal: '41003',
+    via: 'Calle Sol', numero: '4', municipio: 'Sevilla', provincia: 'Sevilla', ascensor: 'si', piscina: 'no', calidadConstruccion: 'alta',
+  })
+  assert.ok(!('password' in f) && !('otraCosa' in f))
+})
+
+test('pre-relleno: lo que no viene (o viene mal) deja el valor del formulario; fechas caducadas no pasan', () => {
+  const hoy = new Date('2026-10-06T10:00:00Z')
+  const base = formularioInicial({ codigoPostal: '41001' }, hoy)
+  const f = formularioConUltimoRiesgo(base, {
+    fechaEfecto: '2026-01-01', fechaTermino: '2027-01-01', m2Construidos: null, ascensor: null, piscina: 'si', calidadConstruccion: 'platino',
+    direccion: { codigoPostal: '123' },
+  }, hoy)
+  assert.deepEqual(f, base)
+  assert.deepEqual(formularioConUltimoRiesgo(base, {}, hoy), base)
+})
+
+test('PrecioAllianzBot y proxy: piden el último riesgo al abrir; su fallo no es bloqueante; proxy con guarda', () => {
+  const src = readFileSync(join(APP, 'app/(usuario)/correduria/cliente/[id]/PrecioAllianzBot.tsx'), 'utf8')
+  assert.match(src, /api\/correduria\/tarificador\/ultimo-riesgo\?cliente_id=/)
+  assert.match(src, /Datos de la última petición/)
+  assert.ok(!/setFallo\([^)]*ultimo/i.test(src))
+  const ruta = readFileSync(join(APP, 'app/api/correduria/tarificador/ultimo-riesgo/route.ts'), 'utf8')
+  assert.ok(ruta.indexOf('exigirCorreduria()') < ruta.indexOf('searchParams'))
+})
 
 test('fechas por defecto: mañana y +1 año', () => {
   assert.deepEqual(fechasPorDefecto(new Date('2026-10-06T12:00:00Z')), { fechaEfecto: '2026-10-07', fechaTermino: '2027-10-07' })

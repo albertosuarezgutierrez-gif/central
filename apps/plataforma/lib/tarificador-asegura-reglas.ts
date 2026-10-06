@@ -106,6 +106,66 @@ export function riesgoDesdeFormulario(f: FormularioRiesgo): { ok: true; riesgo: 
   return { ok: true, riesgo }
 }
 
+// ─── Pre-relleno con el último riesgo del cliente (07/10/2026) ─────────────
+
+export type UltimoRiesgoBot = { riesgo: Record<string, unknown>; creadoEn: string | null }
+
+/** Respuesta de `ultimo-riesgo` → `null` si no hay datos previos o no tiene forma (no se inventa nada). */
+export function leerUltimoRiesgoBot(v: unknown): UltimoRiesgoBot | null {
+  if (!v || typeof v !== 'object') return null
+  const o = v as Record<string, unknown>
+  if (!o.riesgo || typeof o.riesgo !== 'object' || Array.isArray(o.riesgo)) return null
+  return { riesgo: o.riesgo as Record<string, unknown>, creadoEn: typeof o.creadoEn === 'string' ? o.creadoEn : null }
+}
+
+/** ISO → `dd/mm/aaaa` (en UTC: es un día de calendario). `null` si no es una fecha. */
+export function fechaCorta(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return `${dos(d.getUTCDate())}/${dos(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`
+}
+
+const CALIDADES = ['normal', 'alta', 'lujo'] as const
+const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/
+const textoDe = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null)
+const numeroDe = (v: unknown): string | null => (typeof v === 'number' && Number.isFinite(v) ? String(v) : textoDe(v))
+const triDe = (v: unknown): 'si' | 'no' | null => (v === true ? 'si' : v === false ? 'no' : null)
+
+/**
+ * Formulario base + último riesgo → formulario pre-rellenado. SOLO claves conocidas del formulario; lo que
+ * falte o no tenga la forma esperada deja el valor del formulario base. Las fechas del riesgo antiguo solo
+ * pasan si el efecto sigue en el futuro (no se pre-rellena una fecha ya caducada).
+ */
+export function formularioConUltimoRiesgo(base: FormularioRiesgo, riesgo: Record<string, unknown>, hoy: Date = new Date()): FormularioRiesgo {
+  const f: FormularioRiesgo = { ...base }
+  const efecto = textoDe(riesgo.fechaEfecto)
+  const termino = textoDe(riesgo.fechaTermino)
+  if (efecto && termino && FECHA_ISO.test(efecto) && FECHA_ISO.test(termino) && efecto >= fechasPorDefecto(hoy).fechaEfecto && termino > efecto) {
+    f.fechaEfecto = efecto
+    f.fechaTermino = termino
+  }
+  const m2 = numeroDe(riesgo.m2Construidos); if (m2) f.m2Construidos = m2
+  const anio = numeroDe(riesgo.anioConstruccion); if (anio) f.anioConstruccion = anio
+  const plantas = numeroDe(riesgo.plantas); if (plantas) f.plantas = plantas
+  const nEdif = numeroDe(riesgo.numEdificios); if (nEdif) f.numEdificios = nEdif
+  const nViv = numeroDe(riesgo.numViviendasYLocales); if (nViv) f.numViviendasYLocales = nViv
+  const tipo = textoDe(riesgo.tipoVivienda); if (tipo) f.tipoVivienda = tipo
+  const uso = textoDe(riesgo.uso); if (uso) f.uso = uso
+  const lista = textoDe(riesgo.listaPropietarios); if (lista) f.listaPropietarios = lista
+  const d = riesgo.direccion && typeof riesgo.direccion === 'object' && !Array.isArray(riesgo.direccion) ? (riesgo.direccion as Record<string, unknown>) : {}
+  const cp = numeroDe(d.codigoPostal); if (cp && /^\d{5}$/.test(cp)) f.codigoPostal = cp
+  const via = textoDe(d.via); if (via) f.via = via
+  const numero = numeroDe(d.numero); if (numero) f.numero = numero
+  const municipio = textoDe(d.municipio); if (municipio) f.municipio = municipio
+  const provincia = textoDe(d.provincia); if (provincia) f.provincia = provincia
+  const asc = triDe(riesgo.ascensor); if (asc) f.ascensor = asc
+  const pis = triDe(riesgo.piscina); if (pis) f.piscina = pis
+  const cal = textoDe(riesgo.calidadConstruccion)
+  if (cal && (CALIDADES as readonly string[]).includes(cal)) f.calidadConstruccion = cal as FormularioRiesgo['calidadConstruccion']
+  return f
+}
+
 // ─── Lo que devuelve asegura ────────────────────────────────────────────────
 
 export type OfertaBot = {
