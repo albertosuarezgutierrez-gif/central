@@ -82,7 +82,7 @@ export async function datosParaEmitir(correduriaId: string, clienteId: string): 
 
 export type DatosParaEmitirPortal =
   | ({ estado: 'ok' } & DatosParaEmitir)
-  | { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'otra_ficha' } | { estado: 'no_encontrado' }
+  | { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'otra_ficha' } | { estado: 'no_encontrado' }
   | { estado: 'error'; causa: string }
 
 /**
@@ -94,7 +94,9 @@ export type DatosParaEmitirPortal =
 export async function datosParaEmitirDePortal(correduriaId: string, identidadId: string, presupuestoId: string): Promise<DatosParaEmitirPortal> {
   // La ficha es la DUEÑA del presupuesto si está vinculada con nivel de operar (con varias, la elige él).
   const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
-  if (ficha.estado === 'ajena') return ficha.motivo === 'sin_dueno' ? { estado: 'no_encontrado' } : { estado: 'otra_ficha' }
+  // 🚨 Ficha no vinculada y presupuesto inexistente dan LO MISMO (`no_encontrado`): `otra_ficha` sería un oráculo
+  // de «ese presupuesto existe en la ficha de otra persona».
+  if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const [p] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>`
     select cliente_id::text as "clienteId" from presupuesto where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`

@@ -8,7 +8,7 @@ import { fechaEs } from '@/lib/fechas'
 import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { peticionesPrecio } from '@/lib/mejorar-precio'
 import { getIdentidad } from '@/lib/session'
-import { estadoMejorarPrecio, primaQuePaga } from '@/lib/vencimientos'
+import { estadoMejorarPrecio, primaQuePaga, titularesQueOperan } from '@/lib/vencimientos'
 
 import { tituloDePoliza } from '../../PolizaVista'
 import { FormMejorar } from './FormMejorar'
@@ -30,7 +30,8 @@ export default async function MejorarPrecio({ params }: { params: Promise<{ id: 
 
   const cartera = await carteraDeIdentidad(identidad.id)
   let p: PolizaPortal | null = null
-  for (const t of cartera.propias) p = p ?? t.polizas.find((x) => x.id === id) ?? null
+  // Solo fichas donde el vínculo OPERA (gestionar/administrar): de solo consulta, 404 como si no existiera.
+  for (const t of titularesQueOperan(cartera.propias)) p = p ?? t.polizas.find((x) => x.id === id) ?? null
   if (!p) notFound()
   // Baja en marcha (por firmar, en revisión, firmada o confirmada): ahí no se mejora el precio. `null` (puente
   // caído) = se conserva el comportamiento de siempre, no se inventa una baja.

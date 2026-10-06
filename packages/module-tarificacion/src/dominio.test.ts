@@ -76,6 +76,7 @@ describe('riesgo de comunidad (formulario ePAC «Comunidades 2020»)', () => {
     numEdificios: 1,
     numViviendasYLocales: 18,
     listaPropietarios: '> 50%',
+    capitalContinente: 1_500_000,
   }
   it('con solo los obligatorios (*) valida y el resto queda null (no 0, no false)', () => {
     const r = validarRiesgoComunidad(base, hoy)
@@ -88,12 +89,12 @@ describe('riesgo de comunidad (formulario ePAC «Comunidades 2020»)', () => {
     expect(r.riesgo.plantasBajoRasante).toBeNull()
     expect(r.riesgo.instalacionesAnexas).toBeNull()
     expect(r.riesgo.asistenciaPlagas).toBeNull()
-    expect(r.riesgo.capitalContinente).toBeNull()
+    expect(r.riesgo.capitalContenido).toBeNull()
     expect(r.riesgo.polizaAReemplazar).toBeNull()
   })
   it.each([
     'fechaEfecto', 'fechaTermino', 'm2Construidos', 'anioConstruccion', 'tipoVivienda', 'uso',
-    'plantas', 'numEdificios', 'numViviendasYLocales', 'listaPropietarios',
+    'plantas', 'numEdificios', 'numViviendasYLocales', 'listaPropietarios', 'capitalContinente',
   ])('falta el obligatorio %s → error', (campo) => {
     const r = validarRiesgoComunidad({ ...base, [campo]: undefined }, hoy)
     expect(r.ok).toBe(false)
@@ -162,7 +163,7 @@ describe('modalidad del riesgo', () => {
   const hoy = new Date('2026-10-05T10:00:00Z')
   const base = {
     direccion: { codigoPostal: '41003' }, fechaEfecto: '2026-10-05', fechaTermino: '2027-10-01', m2Construidos: 1800, anioConstruccion: 1975,
-    tipoVivienda: 'Viviendas Pisos en Alto', uso: 'Habitual', plantas: 5, numEdificios: 1, numViviendasYLocales: 18, listaPropietarios: '> 50%',
+    tipoVivienda: 'Viviendas Pisos en Alto', uso: 'Habitual', plantas: 5, numEdificios: 1, numViviendasYLocales: 18, listaPropietarios: '> 50%', capitalContinente: 1_500_000,
   }
   it('ausente → null (el adaptador usa estandar); valores válidos pasan; otros, error', () => {
     const r = validarRiesgoComunidad(base, hoy)

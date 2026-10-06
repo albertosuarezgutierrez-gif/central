@@ -1085,6 +1085,18 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   `EditarCliente.tsx` queda con `CuentaCargo` y helpers. Guardián sin lista blanca. Fuera: `info_riesgo`, NuevaPersona,
   FaltaPorCompletar (sexo/móvil) y dirección del riesgo, que no escriben en la ficha.
 
+## (06/10/2026) Correduría: botón WhatsApp en el aviso Telegram de lead web
+- `textoTelegramLead` (plataforma `lib/leads-web.ts`) añade «📲 Escribir por WhatsApp» (wa.me con texto prellenado, solo si es móvil). `mensajeWhatsappLead`: Alberto de Grupo ASegura; auto/moto piden permiso de circulación + carné + CP. Test `leads-web.test.ts`.
+- Paso 2 APARCADO (decide Alberto): formulario de auto sin login vía `/datos/[token]` del portal. Hoy el portal no tiene formulario de auto y un lead no entra sin invitación + OTP.
+
+## (06/10/2026) Portal: instrucciones Chrome iOS con las dos posiciones del botón Compartir
+Víctor confirma que instala desde Chrome iOS; Chrome movió Compartir de abajo a arriba a la derecha. `instalacion.tsx` menciona ambas.
+
+## (06/10/2026) Portal: cierre de la auditoría final (H1-H5)
+Botones de baja/mejorar precio solo con nivel que opera (`NIVELES_QUE_OPERAN`/`nivelPuedeOperar` en module-seguros-portal/acceso.ts,
+espejo testado del servidor); `sin_permiso` ≠ `ajena` con texto «solo consulta» (`MENSAJE_SOLO_CONSULTA`); carta/datos de emisión sin
+oráculo (`no_encontrado`); «hoy» de carnés en Madrid (`hoyParaCarnet`); cron avisos-push con `mapConConcurrencia` (5).
+
 ## (06/10/2026) Ficha de cliente: editor ÚNICO («✏️ Editar datos» en la cabecera)
 - Alberto: DNI, carné, dirección, contacto y mote se editaban en 5 sitios. Ahora todo en `cliente/[id]/EditarFicha.tsx`,
   abierto desde el resumen; un «Guardar cambios» (identidad+dirección en un PATCH, carnés, mote) con resultado POR TRAMO.

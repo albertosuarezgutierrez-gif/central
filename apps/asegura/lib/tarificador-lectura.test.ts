@@ -91,6 +91,11 @@ test('último riesgo: solo claves conocidas; nada de credenciales ni html', () =
   for (const x of ['password', 'html_documento_id', 'zzz', 'error']) assert.ok(!s.includes(x), x)
 })
 
+test('último riesgo: los capitales (edificación/contenido) pasan, como número', () => {
+  const t = proyectarUltimoRiesgo({ id: 'a', created_at: new Date('2026-10-05T08:00:00Z'), riesgo: { capitalContinente: 1500000, capitalContenido: 20000, otro: 1 } })
+  assert.deepEqual(t.riesgo, { capitalContinente: 1500000, capitalContenido: 20000 })
+})
+
 test('último riesgo: sin fila o riesgo no objeto → null (no se inventa)', () => {
   const vacio = { riesgo: null, trabajoId: null, creadoEn: null }
   assert.deepEqual(proyectarUltimoRiesgo(null), vacio)

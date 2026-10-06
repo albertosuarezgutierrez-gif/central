@@ -11,15 +11,17 @@
 //   · desplegable: `<select>` nativo → se listan las opciones y se intenta el valor de ejemplo (si no
 //     existe es AVISO, no fallo: los valores admitidos son TODO); `nx-dropdown` → solo que resuelve.
 // NO pulsa nada: ni Calcular, ni abre desplegables ndbx, ni datepickers (sin el JS de Angular/del
-// servlet no se abrirían). Eso, la lectura tras calcular y el avance solo se validan en REAL; aquí
-// los locators de esas fases se listan como «presente/ausente» a título informativo.
+// servlet no se abrirían). «Calcular» SÍ se comprueba (sin pulsar): entre TODOS los marcos tiene que
+// resolver a EXACTAMENTE un elemento (`marcoDeCalcular`) y su descripción tiene que pasar `comprobarBoton`
+// (lo mismo que mira `pulsar()` del guard). La lectura tras calcular y el avance solo se validan en REAL;
+// aquí los locators de esas fases se listan como «presente/ausente» a título informativo.
 //
 // 🚨 El HTML de prueba NO se commitea (aunque esté redactado, es de un trabajo real): se pasa por ruta.
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { chromium, type Browser, type Frame } from 'playwright'
-import type { RiesgoComunidad } from '@central/module-tarificacion'
+import { chromium, type Browser, type Frame, type Locator } from 'playwright'
+import { comprobarBoton, type RiesgoComunidad } from '@central/module-tarificacion'
 import {
   ASISTENCIAS,
   CAMPOS,
@@ -29,7 +31,9 @@ import {
   costesAnuales,
   fechaEs,
   filaPorEtiqueta,
+  marcoDeCalcular,
   marcoFormulario,
+  normalizarEtiqueta,
   tipoControl,
 } from '../src/adapters/allianz/comunidades.ts'
 import { separarMarcos } from '../src/evidencia.ts'
@@ -120,6 +124,88 @@ function ejemplo(v: string | number | boolean, tipo: string): string {
   return tipo === 'fecha' ? fechaEs(String(v)) : String(v)
 }
 
+// ───────── verificación del MAPEO (independiente de `campoPorEtiqueta`: va del control a la etiqueta) ─────────
+
+const CONTROLES_XPATH = '//*[self::input[not(@type="hidden")] or self::select or self::textarea or self::nx-dropdown]'
+
+/**
+ * EN EL NAVEGADOR. Etiqueta que corresponde a un control, mirando desde el control: (1) texto de su propia
+ * celda; (2) el texto más cercano ANTES del control dentro de su fila (y de las filas que la contienen, hasta 4
+ * niveles: tablas anidadas del servlet); (3) checkbox sin texto previo en su fila: el texto INMEDIATAMENTE
+ * posterior en su fila. Devuelve el texto completo del elemento que contiene ese texto.
+ */
+function etiquetaDelControl(control: Element): string | null {
+  const doc = control.ownerDocument
+  const textoUtil = (n: Node) =>
+    n.nodeType === 3 &&
+    (n.nodeValue ?? '').replace(/[*:\u00a0]/g, ' ').trim() !== '' &&
+    !!n.parentElement &&
+    !n.parentElement.closest('select, option, textarea, script, style, nx-dropdown')
+  const textos = (ambito: Element): Node[] => {
+    const out: Node[] = []
+    const it = doc.createTreeWalker(ambito, 4)
+    for (let n = it.nextNode(); n; n = it.nextNode()) if (textoUtil(n)) out.push(n)
+    return out
+  }
+  const de = (n: Node) => (n.parentElement?.textContent ?? '').trim()
+  const celda = control.parentElement?.closest('td, th, label')
+  if (celda) {
+    const propios = textos(celda)
+    if (propios.length > 0) return de(propios[propios.length - 1])
+  }
+  const fila = control.closest('tr')
+  let r: Element | null = fila
+  for (let nivel = 0; r && nivel < 4; nivel++) {
+    const antes = textos(r).filter((t) => control.compareDocumentPosition(t) & 2)
+    if (antes.length > 0) return de(antes[antes.length - 1])
+    if (nivel === 0 && (control as HTMLInputElement).type === 'checkbox') {
+      const despues = textos(r).filter((t) => control.compareDocumentPosition(t) & 4)
+      if (despues.length > 0) return de(despues[0])
+    }
+    r = r.parentElement?.closest('tr') ?? null
+  }
+  return null
+}
+
+// Como texto con `__name` neutro (tsx/esbuild envuelve las funciones con nombre; en la página no existe).
+const ETIQUETA_DEL_CONTROL = new Function('el', `var __name = (f) => f; return (${etiquetaDelControl.toString()})(el)`) as typeof etiquetaDelControl
+
+/** EN EL NAVEGADOR (vía locator). Filas `tr` (las más internas de cada etiqueta) con 2+ pares etiqueta→control. */
+async function filasConVariosPares(raiz: Frame): Promise<number> {
+  return raiz.locator('xpath=/*').evaluate((html, xp) => {
+    const doc = html.ownerDocument
+    const snap = doc.evaluate(xp, doc, null, 7, null)
+    const porFila = new Map<Element, Set<string>>()
+    for (let i = 0; i < snap.snapshotLength; i++) {
+      const c = snap.snapshotItem(i) as Element
+      // Texto inmediatamente anterior al control dentro de su fila más interna.
+      const fila = c.closest('tr')
+      if (!fila) continue
+      const it = doc.createTreeWalker(fila, 4)
+      let ultimo: string | null = null
+      for (let n = it.nextNode(); n; n = it.nextNode()) {
+        if (!(c.compareDocumentPosition(n) & 2)) break
+        const t = (n.nodeValue ?? '').replace(/[*:\u00a0]/g, ' ').trim()
+        if (t && n.parentElement && !n.parentElement.closest('select, option, textarea, script, style')) ultimo = t
+      }
+      if (ultimo) porFila.set(fila, (porFila.get(fila) ?? new Set()).add(ultimo))
+    }
+    return [...porFila.values()].filter((s) => s.size >= 2).length
+  }, CONTROLES_XPATH)
+}
+
+/** La lógica ANTERIOR (unión XPath, ordenada por documento), SOLO para comparar en este harness. */
+function campoAntiguo(raiz: Frame, etiqueta: string, indice: number): Locator {
+  const t = normalizarEtiqueta(etiqueta)
+  const e = t.includes('"') ? `'${t}'` : `"${t}"`
+  const may = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÜÑÀÈÌÒÙ\u00a0*:'
+  const min = 'abcdefghijklmnopqrstuvwxyzáéíóúüñàèìòù   '
+  const et = 'self::td or self::th or self::label or self::span or self::b or self::strong or self::font or self::div or self::p or self::nobr or self::nx-label'
+  const ctl = `*[self::input[not(@type="hidden")] or self::select or self::textarea or self::nx-dropdown]`
+  const celda = `(//*[${et}][not(.//td)][normalize-space(translate(string(.),"${may}","${min}"))=${e}])[1]`
+  return raiz.locator(`xpath=(${celda}/descendant::${ctl} | ${celda}/ancestor::tr[1]/descendant::${ctl} | ${celda}/following::${ctl})[${indice + 1}]`)
+}
+
 async function main(): Promise<number> {
   const ruta = process.argv[2]
   if (!ruta || !existsSync(ruta)) {
@@ -150,17 +236,41 @@ async function main(): Promise<number> {
     }
     console.log(`formulario en el marco «${formulario === page.mainFrame() ? '(principal)' : formulario.name()}»`)
 
+    console.log(`filas (tr) con VARIOS pares etiqueta→control: ${await filasConVariosPares(formulario)}`)
     let ok = 0
+    let distintosAntiguo = 0
     for (const c of CAMPOS) {
       const nombre = `${c.etiqueta}${c.indice ? ` [#${c.indice}]` : ''} (${c.tipo})`
-      const loc = campoPorEtiqueta(formulario, c.etiqueta, c.indice ?? 0)
+      let loc: Locator
+      try {
+        loc = await campoPorEtiqueta(formulario, c.etiqueta, c.indice ?? 0)
+      } catch (e) {
+        console.log(`✗ ${nombre}: ${e instanceof Error ? e.message.split('\n')[0] : e}`)
+        continue
+      }
       const n = await loc.count()
       if (n !== 1) {
         console.log(`✗ ${nombre}: resuelve a ${n} elementos`)
         continue
       }
+      // MAPEO: la etiqueta que «le toca» al control resuelto (calculada al revés, desde el control) tiene que
+      // ser la buscada. Si no, el dato acabaría en otro campo aunque el locator resuelva a uno.
+      const deVerdad = await loc.evaluate(ETIQUETA_DEL_CONTROL)
+      if (normalizarEtiqueta(deVerdad ?? '') !== normalizarEtiqueta(c.etiqueta)) {
+        console.log(`✗ ${nombre}: MAPEO ERRÓNEO, el control resuelto es de «${deVerdad ?? '(sin etiqueta)'}»`)
+        continue
+      }
+      // Comparación con la lógica ANTERIOR (unión XPath ordenada por documento), a título informativo.
+      const antiguo = campoAntiguo(formulario, c.etiqueta, c.indice ?? 0)
+      const mismo = (await antiguo.count()) === 1 && (await antiguo.evaluate((a, b) => a === b, await loc.elementHandle()))
+      if (!mismo) {
+        distintosAntiguo++
+        const deAntes = (await antiguo.count()) === 1 ? await antiguo.evaluate(ETIQUETA_DEL_CONTROL) : null
+        console.log(`  ⚠ ${nombre}: la lógica ANTERIOR resolvía OTRO control (de «${deAntes ?? '?'}»)`)
+      }
       const visible = await loc.isVisible()
       const tipo = await tipoControl(loc)
+      const id = await loc.evaluate((el) => el.id || (el as HTMLInputElement).name || el.tagName.toLowerCase())
       const v = c.valor(RIESGO)
       try {
         if (c.tipo === 'texto' || c.tipo === 'fecha') {
@@ -169,11 +279,16 @@ async function main(): Promise<number> {
           await loc.fill(val)
           const leido = await loc.inputValue()
           if (leido !== val) throw new Error(`fill no quedó escrito («${leido}»)`)
-          console.log(`✓ ${nombre}: input${visible ? '' : ' (no visible)'} · fill OK`)
+          console.log(`✓ ${nombre}: input #${id}${visible ? '' : ' (no visible)'} · fill OK`)
         } else if (c.tipo === 'check') {
           if (tipo !== 'checkbox') throw new Error(`control «${tipo}», se esperaba checkbox`)
-          await loc.setChecked(true)
-          console.log(`✓ ${nombre}: checkbox${visible ? '' : ' (no visible)'} · setChecked OK`)
+          if (await loc.isEnabled()) {
+            await loc.setChecked(true)
+            console.log(`✓ ${nombre}: checkbox #${id}${visible ? '' : ' (no visible)'} · setChecked OK`)
+          } else {
+            // Como el <select> deshabilitado: el locator es el bueno; el portal lo habilita (o no) en REAL.
+            console.log(`✓ ${nombre}: checkbox #${id} (deshabilitado en la captura: no se marca)`)
+          }
         } else if (tipo === 'select') {
           const opciones = (await loc.locator('option').allTextContents()).map((t) => t.trim())
           let nota = `${opciones.length} opciones`
@@ -182,7 +297,7 @@ async function main(): Promise<number> {
             if (casa && (await loc.isEnabled())) await loc.selectOption({ label: String(v) })
             nota += casa ? ` · «${v}» seleccionable` : ` · ⚠ «${v}» NO está entre las opciones (TODO valores admitidos)`
           }
-          console.log(`✓ ${nombre}: <select>${visible ? '' : ' (no visible)'}${(await loc.isEnabled()) ? '' : ' (deshabilitado)'} · ${nota}`)
+          console.log(`✓ ${nombre}: <select> #${id}${visible ? '' : ' (no visible)'}${(await loc.isEnabled()) ? '' : ' (deshabilitado)'} · ${nota}`)
         } else if (tipo === 'nx-dropdown') {
           console.log(`✓ ${nombre}: nx-dropdown (abrir y elegir solo se valida en REAL)`)
         } else {
@@ -194,11 +309,50 @@ async function main(): Promise<number> {
       }
     }
 
+    // «Calcular»: resuelve a UNO entre todos los marcos y su descripción pasa el guard. NO se pulsa.
+    let calcularOk = false
+    try {
+      const marco = await marcoDeCalcular(page, 3_000)
+      const boton = botonCalcular(marco)
+      const desc = await boton.evaluate((el) => {
+        const h = el as HTMLElement & { value?: unknown; href?: unknown; name?: unknown }
+        return [
+          h.innerText ?? h.textContent ?? '',
+          h.getAttribute('aria-label'),
+          h.getAttribute('title'),
+          typeof h.value === 'string' ? h.value : null,
+          h.id || null,
+          typeof h.name === 'string' ? h.name : null,
+          typeof h.href === 'string' ? h.href : h.getAttribute('href'),
+          h.getAttribute('onclick'),
+          h.getAttribute('formaction'),
+        ]
+      })
+      comprobarBoton(desc)
+      const tag = await boton.evaluate((el) => `<${el.tagName.toLowerCase()} id="${el.id}">`)
+      console.log(`✓ Calcular: 1 elemento (${tag}) en el marco «${marco === page.mainFrame() ? '(principal)' : marco.name() || '(sin nombre)'}» · pasa comprobarBoton · NO se pulsa`)
+      calcularOk = true
+    } catch (e) {
+      console.log(`✗ Calcular: ${e instanceof Error ? e.message.split('\n')[0] : e}`)
+    }
+
     // Fases siguientes: solo informativo (aparecen tras «Calcular»/«Aceptar»; aquí no se pulsa nada).
     const info: [string, number][] = [
-      ['botón Calcular', await botonCalcular(formulario).count()],
       ['fila COSTE ANUAL (inputs)', await costesAnuales(formulario).count()],
       ['filas de partidas', (await Promise.all(PARTIDAS.map((p) => filaPorEtiqueta(formulario, p.fila, p.grupo).count()))).reduce((a, b) => a + b, 0)],
+      [
+        'partidas con columnas estandar/personalizado[/franquicia] (1 c/u)',
+        (
+          await Promise.all(
+            PARTIDAS.map(async (p) => {
+              const f = filaPorEtiqueta(formulario, p.fila, p.grupo)
+              const n = async (pre: string) => f.locator(`input[id^="${pre}"], select[id^="${pre}"]`).count()
+              return (await n('estandar')) === 1 && (await n('personalizado')) === 1 && (!p.franquicia || (await n('franquicia')) === 1) ? 1 : 0
+            }),
+          )
+        ).reduce((a: number, b: number) => a + b, 0),
+      ],
+      ['control de avance de Datos Básicos (#aceptar, el que busca guard.ts)', await formulario.locator('#aceptar').filter({ hasText: /^\s*Aceptar\s*$/i }).count()],
       ['filas de asistencias', (await Promise.all(ASISTENCIAS.map((a) => filaPorEtiqueta(formulario, a.fila).count()))).reduce((a, b) => a + b, 0)],
       ['radios de modalidad', await formulario.locator('xpath=//tr[td[contains(translate(normalize-space(.),"elijaunopcó","ELIJAUNOPCÓ"),"ELIJA UNA OPCI")]]//input[@type="radio"]').count()],
       ['fila Prima Total', await filaPorEtiqueta(formulario, 'Prima Total').count()],
@@ -206,8 +360,9 @@ async function main(): Promise<number> {
     ]
     console.log('— fases siguientes (informativo; dependen de calcular/avanzar) —')
     for (const [q, n] of info) console.log(`  ${q}: ${n}`)
-    console.log(`RESULTADO: ${ok}/${CAMPOS.length} campos OK`)
-    return ok === CAMPOS.length ? 0 : 1
+    console.log(`lógica anterior: ${distintosAntiguo} campo(s) mapeados a otro control`)
+    console.log(`RESULTADO: ${ok}/${CAMPOS.length} campos OK (resuelven a 1 y con mapeo correcto) · Calcular ${calcularOk ? 'OK' : 'FALLA'}`)
+    return ok === CAMPOS.length && calcularOk ? 0 : 1
   } finally {
     await browser.close()
   }

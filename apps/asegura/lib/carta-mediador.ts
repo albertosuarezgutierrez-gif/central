@@ -53,7 +53,7 @@ type Guardas = {
   anulacionAbierta: boolean; cartaAceptada: boolean
 }
 
-type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
+type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 type NoDisponible = { estado: 'no_disponible'; motivo: string } | { estado: 'otra_ficha' } | { estado: 'no_encontrado' }
 
 /**
@@ -66,11 +66,8 @@ async function base(correduriaId: string, identidadId: string, presupuestoId: st
   // La ficha es la DUEÑA del presupuesto, si es una de las vinculadas con nivel de operar (con varias
   // fichas vinculadas no se elige: la elige el presupuesto). Abajo se sigue exigiendo que la póliza sea suya.
   const f = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
-  if (f.estado === 'ajena') {
-    return f.motivo === 'sin_dueno'
-      ? { estado: 'no_disponible', motivo: 'Este presupuesto no va sobre una póliza tuya que conozcamos: escríbenos y lo hablamos.' }
-      : { estado: 'otra_ficha' }
-  }
+  // 🚨 No vinculada e inexistente dan LO MISMO (`no_encontrado`): `otra_ficha` sería un oráculo de existencia.
+  if (f.estado === 'ajena') return { estado: 'no_encontrado' }
   if (f.estado !== 'ok') return f
   // 🚨 La compañía por su código DGS primero: el volcado escribe «(legacy)» en `aseguradora`, y lo que
   // quede de relleno lo rechaza `cartaNombramientoMediador` (nunca «A la atención de (legacy)»).

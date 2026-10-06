@@ -27,3 +27,10 @@ test('🪤 el correo sale de la MISMA regla que los avisos (estadoEmailDeFicha),
   assert.doesNotMatch(src, /select c\.email|c\.email,/)
   assert.match(src, /c\.merged_into_cliente_id is null/)
 })
+
+test('🪤 H3: ficha NO vinculada e inexistente dan lo mismo (`no_encontrado`); `sin_permiso` aparte; `otra_ficha` ya no sale de `ajena`', () => {
+  const portal = src.slice(src.indexOf('export async function datosParaEmitirDePortal'))
+  assert.match(portal, /if \(ficha\.estado === 'ajena'\) return \{ estado: 'no_encontrado' \}/)
+  assert.doesNotMatch(portal, /ficha\.motivo/)
+  assert.match(portal, /if \(ficha\.estado !== 'ok'\) return ficha/) // sin_permiso viaja tal cual
+})

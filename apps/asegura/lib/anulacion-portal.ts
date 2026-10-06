@@ -138,7 +138,7 @@ function carta(p: Pendiente, fechaCarta: string): string | null {
   })
 }
 
-type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
+type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 
 /** `consentimiento` es el texto EXACTO que queda en la evidencia: el portal enseña este, no una copia. */
 export type LecturaParaFirmar =

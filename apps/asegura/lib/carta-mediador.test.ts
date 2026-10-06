@@ -76,3 +76,10 @@ test('🪤 a quien ya firmó se le dice «ya firmada», no «sube tu DNI»: la g
     assert.ok(ya > 0 && dni > ya, `${fn}: «ya firmada» antes que el motivo del DNI`)
   }
 })
+
+test('🪤 H3: presupuesto de ficha NO vinculada = inexistente (`no_encontrado`), nunca `otra_ficha` desde la guarda de ficha', () => {
+  const base = src.slice(src.indexOf('async function base('), src.indexOf('const [b] = await prismaAsegura()'))
+  assert.match(base, /if \(f\.estado === 'ajena'\) return \{ estado: 'no_encontrado' \}/)
+  assert.doesNotMatch(base, /estado: 'otra_ficha'/)
+  assert.match(base, /if \(f\.estado !== 'ok'\) return f/) // sin_permiso viaja tal cual
+})
