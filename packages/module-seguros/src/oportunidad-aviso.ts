@@ -134,7 +134,7 @@ export function planTareaTrasVencimiento(
 }
 
 export type PlanLlamadaAnual =
-  | { accion: 'nada'; motivo: 'no_es_llamada' | 'no_abierta' | 'aparcada' | 'sin_vencimiento' | 'ya_hay_pendiente' }
+  | { accion: 'nada'; motivo: 'no_es_llamada' | 'no_abierta' | 'aparcada' | 'sin_vencimiento' | 'ya_hay_anual' }
   | { accion: 'crear'; fecha: string; vence: string }
 
 /**
@@ -144,15 +144,19 @@ export type PlanLlamadaAnual =
  * que se cierra ERA la de este ciclo) el objetivo es el vencimiento del año que viene; si aún no ha
  * llegado (se llamó antes de tiempo) la tarea sigue siendo la de este ciclo. La fecha la da la misma
  * regla de siempre ({@link fechaAvisoOportunidad}: 45 días antes, nunca antes de mañana).
- * Idempotente: con cualquier tarea pendiente (`pendientes > 0`) no crea otra.
+ * Idempotente (07/10/2026): no crea si YA hay una llamada pendiente con fecha ≥ la que se crearía
+ * (`ultimaLlamadaPendiente` = la fecha MÁS LEJANA entre las llamadas pendientes). Se compara contra la fecha
+ * calculada, no contra «0 pendientes», para que los reintentos de «no contesta» / «otro día» (fechas
+ * cercanas, < fecha del aviso) convivan con la anual sin duplicarla, y un segundo cierre no cree otra.
+ * Una pendiente lejana ≥ fecha es la propia anual (o equivale a ella: llamada ya puesta junto al aviso).
  */
 export function planLlamadaAnual(p: {
   tipoTareaCerrada: string | null | undefined
   estado: string
   aparcadaHasta: string | null | undefined
   fechaFinVigencia: string | null | undefined
-  /** Tareas aún sin cerrar de la oportunidad, ya sin la que se acaba de cerrar. */
-  pendientes: number
+  /** Fecha límite (aaaa-mm-dd) más lejana entre las LLAMADAS aún pendientes de la oportunidad (sin la que se acaba de cerrar); `null` = ninguna. */
+  ultimaLlamadaPendiente: string | null
   hoy: string
 }): PlanLlamadaAnual {
   if (p.tipoTareaCerrada !== 'llamada') return { accion: 'nada', motivo: 'no_es_llamada' }
@@ -161,10 +165,12 @@ export function planLlamadaAnual(p: {
   if (aparcada && aparcada > p.hoy) return { accion: 'nada', motivo: 'aparcada' }
   const ciclo = vencimientoDelCiclo(p.fechaFinVigencia, p.hoy)
   if (!ciclo) return { accion: 'nada', motivo: 'sin_vencimiento' }
-  if (p.pendientes > 0) return { accion: 'nada', motivo: 'ya_hay_pendiente' }
   const objetivo = sumarDias(ciclo, -DIAS_AVISO_OPORTUNIDAD) > p.hoy ? ciclo : vencimientoDelCiclo(p.fechaFinVigencia, sumarDias(ciclo, 1))
   if (!objetivo) return { accion: 'nada', motivo: 'sin_vencimiento' }
-  return { accion: 'crear', fecha: fechaAvisoOportunidad(objetivo, p.hoy), vence: objetivo }
+  const fecha = fechaAvisoOportunidad(objetivo, p.hoy)
+  const ultima = valida(p.ultimaLlamadaPendiente)
+  if (ultima && ultima >= fecha) return { accion: 'nada', motivo: 'ya_hay_anual' }
+  return { accion: 'crear', fecha, vence: objetivo }
 }
 
 /** Más allá de esto un vencimiento no es de la póliza en curso: un seguro anual renueva cada año. */
