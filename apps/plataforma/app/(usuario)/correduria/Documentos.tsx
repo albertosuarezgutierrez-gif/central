@@ -48,7 +48,9 @@ export default function Documentos({
   const [aviso, setAviso] = useState<string | null>(null)
   const [tipo, setTipo] = useState<TipoDocumento>(tipoInicial ?? sugeridos?.[0] ?? 'poliza')
   const [notas, setNotas] = useState('')
-  const [fichero, setFichero] = useState<File | null>(null)
+  const [ficheros, setFicheros] = useState<File[]>([])
+  /** Resultado de cada fichero de una subida múltiple (uno tras otro). */
+  const [lote, setLote] = useState<{ nombre: string; texto: string; ok: boolean; oportunidad: AvisoOportunidadDocumento | 'leyendo' | null }[]>([])
 
   // «Subir póliza» de la ficha llega con `tipoInicial`: el formulario se abre y se
   // trae a la vista. Cerrado y debajo de las baldosas, en el móvil el botón
@@ -86,38 +88,53 @@ export default function Documentos({
   const destino = { clienteId: clienteId ?? null, polizaId: polizaId ?? null, siniestroId: siniestroId ?? null }
   const resumen = resumenDocumentos(lista)
 
+  /** Sube los ficheros elegidos UNO DETRÁS DE OTRO (cada uno por el mismo flujo) y dice el resultado de cada uno. */
   async function subir() {
-    if (!fichero) return setAviso('Elige un fichero.')
-    const reparo = revisarDocumento({ type: fichero.type, size: fichero.size, name: fichero.name })
-    if (reparo) return setAviso(reparo)
+    if (ficheros.length === 0) return setAviso('Elige un fichero.')
     setOcupado(true)
     setAviso(null)
-    if (leerPoliza) setOportunidad('leyendo')
-    try {
-      const form = new FormData()
-      form.append('fichero', fichero)
-      form.append('tipo', tipo)
-      if (notas.trim()) form.append('notas', notas.trim())
-      for (const [k, v] of Object.entries(destino)) if (v) form.append(k, v)
-      const res = await fetch('/api/correduria/documentos', { method: 'POST', body: form })
-      const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
-      if (!res.ok || !j || j.estado !== 'ok') {
-        setAviso(String(j?.error ?? j?.motivo ?? `error ${res.status}`))
-        setOportunidad(null)
-        return
-      }
-      const d = j.documento as DocumentoResumen
-      setLista((l) => [d, ...(l ?? [])])
-      setAviso(j.repetido === true ? 'Guardado. Ojo: este cliente ya tenía un fichero idéntico.' : 'Guardado.')
-      setOportunidad(leerPoliza ? interpretarOportunidadDocumento(j.oportunidad) : null)
-      setFichero(null)
-      setNotas('')
-    } catch (e) {
-      setAviso(e instanceof Error ? e.message : String(e))
-      setOportunidad(null)
-    } finally {
-      setOcupado(false)
+    setOportunidadEstado(null)
+    const cola = [...ficheros]
+    const filas: { nombre: string; texto: string; ok: boolean; oportunidad: AvisoOportunidadDocumento | 'leyendo' | null }[] = cola.map((f) => ({ nombre: f.name, texto: 'En espera…', ok: false, oportunidad: null }))
+    setLote([...filas])
+    const pinta = (i: number, f: Partial<(typeof filas)[number]>) => {
+      filas[i] = { ...filas[i], ...f }
+      setLote([...filas])
     }
+    let refrescar = false
+    for (let i = 0; i < cola.length; i++) {
+      const fichero = cola[i]
+      const reparo = revisarDocumento({ type: fichero.type, size: fichero.size, name: fichero.name })
+      if (reparo) {
+        pinta(i, { texto: reparo })
+        continue
+      }
+      pinta(i, { texto: 'Subiendo…', oportunidad: leerPoliza ? 'leyendo' : null })
+      try {
+        const form = new FormData()
+        form.append('fichero', fichero)
+        form.append('tipo', tipo)
+        if (notas.trim()) form.append('notas', notas.trim())
+        for (const [k, v] of Object.entries(destino)) if (v) form.append(k, v)
+        const res = await fetch('/api/correduria/documentos', { method: 'POST', body: form })
+        const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
+        if (!res.ok || !j || j.estado !== 'ok') {
+          pinta(i, { texto: String(j?.error ?? j?.motivo ?? `error ${res.status}`), oportunidad: null })
+          continue
+        }
+        const d = j.documento as DocumentoResumen
+        setLista((l) => [d, ...(l ?? [])])
+        const o = leerPoliza ? interpretarOportunidadDocumento(j.oportunidad) : null
+        if (o && o.tono === 'ok') refrescar = true
+        pinta(i, { ok: true, texto: j.repetido === true ? 'Guardado. Ojo: este cliente ya tenía un fichero idéntico.' : 'Guardado.', oportunidad: o })
+      } catch (e) {
+        pinta(i, { texto: e instanceof Error ? e.message : String(e), oportunidad: null })
+      }
+    }
+    setFicheros([])
+    setNotas('')
+    if (refrescar) router.refresh()
+    setOcupado(false)
   }
 
   async function pedir() {
@@ -284,11 +301,12 @@ export default function Documentos({
             </select>
           </label>
           <label style={lbl}>
-            Fichero (PDF o foto, ≤ 10 MB)
+            Ficheros (PDF o foto, ≤ 10 MB cada uno; puedes elegir varios)
             <input
               type="file"
               accept="application/pdf,image/*"
-              onChange={(e) => setFichero(e.target.files?.[0] ?? null)}
+              multiple
+              onChange={(e) => setFicheros(Array.from(e.target.files ?? []))}
               style={inp}
             />
           </label>
@@ -297,8 +315,8 @@ export default function Documentos({
             <input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="p. ej. «pedido por WhatsApp el 2/9»" style={inp} />
           </label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" onClick={subir} disabled={ocupado || !fichero} style={{ ...btn, fontWeight: 600, gap: 6 }}>
-              <Ico i={Upload} /> Guardar fichero
+            <button type="button" onClick={subir} disabled={ocupado || ficheros.length === 0} style={{ ...btn, fontWeight: 600, gap: 6 }}>
+              <Ico i={Upload} /> {ficheros.length > 1 ? `Guardar ${ficheros.length} ficheros` : 'Guardar fichero'}
             </button>
             <button type="button" onClick={pedir} disabled={ocupado} style={{ ...btn, gap: 6 }}>
               <Ico i={Clock} /> Anotar como pedido (sin fichero)
@@ -307,18 +325,33 @@ export default function Documentos({
         </div>
       </details>
       {aviso && <div style={{ fontSize: 13, color: 'var(--warning)' }}>{aviso}</div>}
-      {oportunidad !== null && <AvisoOportunidad a={oportunidad} />}
+      {lote.length > 0 && (
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8, minWidth: 0 }}>
+          {lote.map((f, i) => (
+            <li key={`${i}-${f.nombre}`} style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+              <div style={{ fontSize: 13, color: f.ok ? 'var(--text)' : 'var(--warning)', wordBreak: 'break-word' }}>
+                <strong>{f.nombre}</strong> · {f.texto}
+              </div>
+              {f.oportunidad !== null && <AvisoOportunidad a={f.oportunidad} fichaActual={clienteId ?? null} />}
+            </li>
+          ))}
+        </ul>
+      )}
+      {oportunidad !== null && <AvisoOportunidad a={oportunidad} fichaActual={clienteId ?? null} />}
     </div>
   )
 }
 
 /** El desenlace de la oportunidad que abre (o completa) el documento subido. */
-function AvisoOportunidad({ a }: { a: AvisoOportunidadDocumento | 'leyendo' }) {
+function AvisoOportunidad({ a, fichaActual }: { a: AvisoOportunidadDocumento | 'leyendo'; fichaActual: string | null }) {
   const caja: React.CSSProperties = { display: 'grid', gap: 8, border: '1px solid var(--border)', borderRadius: 10, padding: 10, fontSize: 13 }
   if (a === 'leyendo') return <div role="status" style={caja}>Leyendo el documento con IA para abrir su oportunidad…</div>
   const color = a.tono === 'aviso' ? 'var(--negative)' : a.tono === 'ok' ? 'var(--text)' : 'var(--muted)'
+  // La oportunidad se abrió en OTRA ficha (lead nuevo o el tomador del documento): se ve y se enlaza.
+  const enOtraFicha = !!a.clienteId && a.clienteId !== fichaActual
   return (
-    <div role="status" style={{ ...caja, color }}>
+    <div role="status" style={{ ...caja, color, ...(enOtraFicha ? { borderColor: 'var(--warning)', borderWidth: 2 } : {}) }}>
+      {enOtraFicha && <strong style={{ color: 'var(--warning)' }}>Abierta en OTRA ficha, no en esta.</strong>}
       <span>{a.texto}</span>
       {a.clienteId && (
         <Link href={`/correduria/cliente/${encodeURIComponent(a.clienteId)}?tab=oportunidades`} style={{ color: 'var(--primary)', fontWeight: 600, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>

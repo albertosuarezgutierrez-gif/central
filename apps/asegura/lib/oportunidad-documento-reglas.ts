@@ -62,6 +62,8 @@ export function esDocumentoDeSeguro(d: { compania?: unknown; numeroPoliza?: unkn
 
 // Partículas que no identifican a nadie: «de la» no puede contar como media persona.
 const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'i'])
+const sinEspacios = (s: string | null | undefined) =>
+  (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9ñ]+/g, '')
 const palabras = (s: string | null | undefined) =>
   (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9ñ]+/).filter((p) => p.length >= 2 && !PARTICULAS.has(p))
 
@@ -73,6 +75,10 @@ const palabras = (s: string | null | undefined) =>
  * partículas («de», «la», «y»…) no cuentan.
  */
 export function mismoNombre(a: string | null | undefined, b: string | null | undefined, opts: { exacto?: boolean } = {}): boolean {
+  // El OCR a veces pega las palabras («JOSE ANTONIOMARTINAVILA»): idénticos sin espacios = mismo nombre.
+  // Solo igualdad total (con ≥ 2 palabras en alguno), nunca parcial.
+  const sa = sinEspacios(a)
+  if (sa !== '' && sa === sinEspacios(b) && Math.max(palabras(a).length, palabras(b).length) >= 2) return true
   const pa = new Set(palabras(a))
   const pb = new Set(palabras(b))
   const [corto, largo] = pa.size <= pb.size ? [pa, pb] : [pb, pa]
