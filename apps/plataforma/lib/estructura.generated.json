@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-06T06:55:21Z",
+  "generadoEn": "2026-10-06T10:52:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2203,11 +2203,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 210
+        "evidencias": 212
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 121
+        "evidencias": 122
       },
       "asegura-web": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 156
+        "evidencias": 157
       },
       "rrhh": {
         "estado": "no",
@@ -2311,11 +2311,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 36
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 95
+        "evidencias": 96
       },
       "asegura-web": {
         "estado": "usado",
@@ -4195,6 +4195,7 @@
       "/api/operador/tarificador/encolar",
       "/api/operador/tarificador/trabajo/[id]",
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
+      "/api/operador/tarificador/ultimo-riesgo",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/portal/anulacion",
@@ -4248,6 +4249,8 @@
       "/api/ipid/[id]",
       "/api/mejorar-precio",
       "/api/mis-datos",
+      "/api/mis-datos/carnets",
+      "/api/mis-datos/carnets/[id]",
       "/api/mis-datos/codigo-correo",
       "/api/mis-datos/confirmar",
       "/api/mis-datos/contactos",
@@ -5194,6 +5197,7 @@
       "/api/correduria/tarificador/encolar",
       "/api/correduria/tarificador/trabajo/[id]",
       "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
+      "/api/correduria/tarificador/ultimo-riesgo",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -6769,7 +6773,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1599,
+    "apis": 1603,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
