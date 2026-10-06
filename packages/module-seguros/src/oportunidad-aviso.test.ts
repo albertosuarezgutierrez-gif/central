@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  DIAS_AVISO_OPORTUNIDAD, avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, fechaVencimientoDudosa, planTareaTrasVencimiento, vencimientoDelCiclo,
+  DIAS_AVISO_OPORTUNIDAD, avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, fechaVencimientoDudosa, planLlamadaAnual, planTareaTrasVencimiento, vencimientoDelCiclo,
 } from './oportunidad-aviso.ts'
 import { DIAS_PRIMER_CONTACTO, siguientePasoLead } from './lead-competencia.ts'
 
@@ -74,4 +74,36 @@ test('fecha leída que no cuadra: pasada o a más de 13 meses; la del año que v
   // Sin fecha legible no es «dudosa»: es «sin fecha», y se dice en otro sitio.
   assert.equal(fechaVencimientoDudosa(null, HOY), null)
   assert.equal(fechaVencimientoDudosa('2027-02-30', HOY), null)
+})
+
+// Recurrencia anual de la llamada (06/10/2026)
+const base = { tipoTareaCerrada: 'llamada', estado: 'competencia', aparcadaHasta: null, fechaFinVigencia: '2026-11-15', pendientes: 0, hoy: '2026-10-06' }
+
+test('llamada anual: cerrada la del ciclo (aviso ya pasado), crea la del año que viene', () => {
+  // vence 15/11/2026: aviso 01/10 ya pasó -> objetivo 15/11/2027, tarea 45 días antes
+  assert.deepEqual(planLlamadaAnual(base), { accion: 'crear', fecha: '2027-10-01', vence: '2027-11-15' })
+})
+
+test('llamada anual: cerrada antes de tiempo, la tarea sigue siendo la de este ciclo', () => {
+  assert.deepEqual(planLlamadaAnual({ ...base, fechaFinVigencia: '2027-03-10' }), { accion: 'crear', fecha: '2027-01-24', vence: '2027-03-10' })
+})
+
+test('llamada anual: vencimiento pasado se corre al ciclo y luego al siguiente', () => {
+  // 20/10/2025 -> ciclo 20/10/2026 (aviso 05/09 pasado) -> 20/10/2027
+  assert.deepEqual(planLlamadaAnual({ ...base, fechaFinVigencia: '2025-10-20' }), { accion: 'crear', fecha: '2027-09-05', vence: '2027-10-20' })
+})
+
+test('llamada anual: 29/02 se ajusta al año siguiente', () => {
+  assert.equal(planLlamadaAnual({ ...base, fechaFinVigencia: '2024-02-29', hoy: '2027-02-10' }).accion, 'crear')
+  const p = planLlamadaAnual({ ...base, fechaFinVigencia: '2024-02-29', hoy: '2027-02-10' })
+  assert.equal(p.accion === 'crear' && p.vence, '2028-02-29')
+})
+
+test('llamada anual: no crea si hay pendiente, si no es llamada, si está cerrada/aparcada o sin fecha', () => {
+  assert.deepEqual(planLlamadaAnual({ ...base, pendientes: 1 }), { accion: 'nada', motivo: 'ya_hay_pendiente' })
+  assert.deepEqual(planLlamadaAnual({ ...base, tipoTareaCerrada: 'tarea' }), { accion: 'nada', motivo: 'no_es_llamada' })
+  assert.deepEqual(planLlamadaAnual({ ...base, estado: 'ganada' }), { accion: 'nada', motivo: 'no_abierta' })
+  assert.deepEqual(planLlamadaAnual({ ...base, estado: 'perdida' }), { accion: 'nada', motivo: 'no_abierta' })
+  assert.deepEqual(planLlamadaAnual({ ...base, aparcadaHasta: '2027-01-01' }), { accion: 'nada', motivo: 'aparcada' })
+  assert.deepEqual(planLlamadaAnual({ ...base, fechaFinVigencia: null }), { accion: 'nada', motivo: 'sin_vencimiento' })
 })

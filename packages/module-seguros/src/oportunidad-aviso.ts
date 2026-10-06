@@ -133,6 +133,40 @@ export function planTareaTrasVencimiento(
   return { accion: 'mover', tareaId: proxima.id, desde: proxima.fecha, fecha }
 }
 
+export type PlanLlamadaAnual =
+  | { accion: 'nada'; motivo: 'no_es_llamada' | 'no_abierta' | 'aparcada' | 'sin_vencimiento' | 'ya_hay_pendiente' }
+  | { accion: 'crear'; fecha: string; vence: string }
+
+/**
+ * Recurrencia anual de la llamada de seguimiento (06/10/2026): al COMPLETAR una llamada de una
+ * oportunidad que sigue abierta y sin otra tarea pendiente, se deja la del ciclo siguiente. El
+ * vencimiento es un aniversario (día+mes), así que si el aviso del ciclo en curso ya pasó (la llamada
+ * que se cierra ERA la de este ciclo) el objetivo es el vencimiento del año que viene; si aún no ha
+ * llegado (se llamó antes de tiempo) la tarea sigue siendo la de este ciclo. La fecha la da la misma
+ * regla de siempre ({@link fechaAvisoOportunidad}: 45 días antes, nunca antes de mañana).
+ * Idempotente: con cualquier tarea pendiente (`pendientes > 0`) no crea otra.
+ */
+export function planLlamadaAnual(p: {
+  tipoTareaCerrada: string | null | undefined
+  estado: string
+  aparcadaHasta: string | null | undefined
+  fechaFinVigencia: string | null | undefined
+  /** Tareas aún sin cerrar de la oportunidad, ya sin la que se acaba de cerrar. */
+  pendientes: number
+  hoy: string
+}): PlanLlamadaAnual {
+  if (p.tipoTareaCerrada !== 'llamada') return { accion: 'nada', motivo: 'no_es_llamada' }
+  if (!(ESTADOS_OPORTUNIDAD_ABIERTA as readonly string[]).includes(p.estado)) return { accion: 'nada', motivo: 'no_abierta' }
+  const aparcada = valida(p.aparcadaHasta)
+  if (aparcada && aparcada > p.hoy) return { accion: 'nada', motivo: 'aparcada' }
+  const ciclo = vencimientoDelCiclo(p.fechaFinVigencia, p.hoy)
+  if (!ciclo) return { accion: 'nada', motivo: 'sin_vencimiento' }
+  if (p.pendientes > 0) return { accion: 'nada', motivo: 'ya_hay_pendiente' }
+  const objetivo = sumarDias(ciclo, -DIAS_AVISO_OPORTUNIDAD) > p.hoy ? ciclo : vencimientoDelCiclo(p.fechaFinVigencia, sumarDias(ciclo, 1))
+  if (!objetivo) return { accion: 'nada', motivo: 'sin_vencimiento' }
+  return { accion: 'crear', fecha: fechaAvisoOportunidad(objetivo, p.hoy), vence: objetivo }
+}
+
 /** Más allá de esto un vencimiento no es de la póliza en curso: un seguro anual renueva cada año. */
 export const MESES_VENCIMIENTO_MAX = 13
 
@@ -164,6 +198,17 @@ export type EstadoAvisoVencimiento =
 
 const fechaEs = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 
+const MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/**
+ * Día + mes en español de una fecha ISO, SIN año («2026-06-01» → «1 de junio»). El vencimiento de una
+ * oportunidad es un aniversario anual: el año no es un dato del seguro, así que no se enseña.
+ */
+export function diaMesEs(iso: string): string {
+  const m = Number(iso.slice(5, 7))
+  return `${Number(iso.slice(8, 10))} de ${MESES_ES[m - 1] ?? ''}`.trim()
+}
+
 /**
  * Qué pasa con el aviso de una oportunidad (03/10/2026): sin vencimiento, NO se avisa y se dice
  * («vencimiento desconocido», no «sin aviso» a secas); con él, el aviso sale
@@ -174,8 +219,8 @@ export function estadoAvisoVencimiento(fecha: string | null | undefined, hoy: st
   if (!vence) return { estado: 'desconocido', texto: 'Vencimiento desconocido: no se avisa. Pídeselo al cliente.' }
   const dias = diasEntre(hoy, vence)
   if (dias <= DIAS_AVISO_OPORTUNIDAD) {
-    return { estado: 'en_ventana', vence, dias, texto: `Vence el ${fechaEs(vence)} (${dias} d): ya toca avisarle.` }
+    return { estado: 'en_ventana', vence, dias, texto: `Vence cada año el ${diaMesEs(vence)} (${dias} d): ya toca avisarle.` }
   }
   const fechaAviso = sumarDias(vence, -DIAS_AVISO_OPORTUNIDAD)
-  return { estado: 'programado', vence, fechaAviso, texto: `Vence el ${fechaEs(vence)}: te aviso el ${fechaEs(fechaAviso)} (${DIAS_AVISO_OPORTUNIDAD} días antes).` }
+  return { estado: 'programado', vence, fechaAviso, texto: `Vence cada año el ${diaMesEs(vence)}: te aviso el ${fechaEs(fechaAviso)} (${DIAS_AVISO_OPORTUNIDAD} días antes).` }
 }
