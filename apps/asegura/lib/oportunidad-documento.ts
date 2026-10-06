@@ -50,6 +50,7 @@ import {
   esDocumentoDeSeguro,
   fechaLlamada,
   mismoNombre,
+  decidirOportunidadExistente,
   proximoVencimiento,
   ramoOportunidad,
 } from './oportunidad-documento-reglas'
@@ -67,6 +68,8 @@ export type ResultadoOportunidadDocumento =
       llamada: string
       /** `actualizada`: se rellenó algún hueco de la que ya había (false = ya lo tenía todo). */
       completada: boolean
+      /** `true` = esta póliza (mismo nº y compañía) ya tenía una oportunidad abierta: NO se ha creado otra. */
+      yaExistia?: boolean
       /**
        * Lo que la póliza sabía del tomador y se volcó a SU ficha (03/10/2026). `null` = no se intentó
        * (subida sin verificar, o documento sin tomador): no es «no había nada».
@@ -373,7 +376,12 @@ async function oportunidadDesdeLecturaInterna(
           combustible: txt(d.combustible, 40), fechaMatriculacion: txt(d.fechaMatriculacion, 10),
         }, catalogosVehiculoReales())).catch(() => null)
       : null
-    const o = await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`, datosVehiculo)
+    // 06/10/2026: la misma póliza (nº normalizado + compañía) ya abierta en esta ficha, en la de donde se
+    // subió o en una fusionada en ella: NO se abre otra (nº 18162048 subido dos veces = dos «competencia»).
+    const previa = await oportunidadAbiertaDeLaPoliza(e.correduriaId, [clienteId, clienteSube], datos.numeroPoliza, datos.aseguradora)
+    const o = previa
+      ? { ok: false as const, estado: 'duplicada' as const, motivo: 'ya existía', status: 409 as const, id: previa, completada: false }
+      : await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`, datosVehiculo)
     const posiblesDuplicados = clienteNuevo ? compartenContacto.filter((id) => id !== clienteId) : []
     const conIdentificador = decision.tipo === 'lead' ? Boolean(decision.alta.dni) : Boolean(alta?.dni)
 
@@ -385,7 +393,7 @@ async function oportunidadDesdeLecturaInterna(
     let figuras: FiguraResultado[] | null = null
     let avisosFiguras: string[] = []
     const opId = o.ok ? o.id : o.estado === 'duplicada' && 'id' in o ? o.id : null
-    if (opId && (datos.ramo === 'auto' || datos.ramo === 'moto')) {
+    if (opId && !previa && (datos.ramo === 'auto' || datos.ramo === 'moto')) {
       // La oportunidad ya existe: si las figuras fallan, no se devuelve `error`, se avisa.
       try {
         const plan = planFiguras(
@@ -421,11 +429,41 @@ async function oportunidadDesdeLecturaInterna(
 
     const comun = { clienteId, clienteNuevo, relacionado, vence, llamada, ficha: volcado, financiada, posiblesDuplicados, conIdentificador, figuras, avisosFiguras }
     if (o.ok) return { estado: 'creada', oportunidadId: o.id, completada: false, ...comun }
-    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, completada: o.completada, ...comun }
+    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, completada: o.completada, ...(previa ? { yaExistia: true } : {}), ...comun }
     return { estado: 'error', motivo: o.motivo, clienteId }
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo abrir la oportunidad:', err instanceof Error ? err.message : err)
     return { estado: 'error', motivo: err instanceof Error ? err.message : String(err), ...(clienteId ? { clienteId } : {}) }
+  }
+}
+
+/**
+ * La oportunidad ABIERTA de esa misma póliza en las fichas dadas (y las fusionadas en ellas), o null.
+ * La decisión es `decidirOportunidadExistente` (pura). Si la consulta falla, null: se sigue como antes
+ * (`crearOportunidad` aún deduplica por ramo y seguro).
+ */
+async function oportunidadAbiertaDeLaPoliza(
+  correduriaId: string,
+  clientes: (string | null)[],
+  numeroPoliza: string | null,
+  aseguradora: string | null,
+): Promise<string | null> {
+  const ids = [...new Set(clientes.filter((c): c is string => !!c))]
+  if (ids.length === 0 || !numeroPoliza) return null
+  try {
+    const filas = await prismaAsegura().$queryRaw<{ id: string; estado: string; numeroPoliza: string | null; aseguradora: string | null }[]>(Prisma.sql`
+      select o.id::text as id, o.estado::text as estado, o.numero_poliza as "numeroPoliza",
+             nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora
+      from oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid
+        and (o.cliente_id = any(${ids}::uuid[])
+             or o.cliente_id in (select c.id from clientes c where c.correduria_id = ${correduriaId}::uuid and c.merged_into_cliente_id = any(${ids}::uuid[])))
+      order by o.created_at`)
+    const d = decidirOportunidadExistente({ numeroPoliza, aseguradora }, filas)
+    return d.accion === 'reutilizar' ? d.id : null
+  } catch (err) {
+    console.error('[oportunidad-documento] no se pudo buscar la oportunidad existente:', err instanceof Error ? err.message : err)
+    return null
   }
 }
 

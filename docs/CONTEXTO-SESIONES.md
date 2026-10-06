@@ -1079,6 +1079,10 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (06/10/2026) Correduría: subir la misma póliza dos veces ya no duplica
+- Mismo fichero (sha256, mismo cliente/destino) → devuelve el documento existente; misma póliza (nº normalizado + compañía) con oportunidad abierta en la ficha o sus fusionadas → la reutiliza (`decidirOportunidadExistente`, test).
+- UI: «Ya estaba subida: no se ha duplicado». Duplicado real de hoy borrado aparte.
+
 ## (06/10/2026) Portal: carnés con varias fichas
 Puente `/api/portal/carnets` agrupa por titular (`carnets-titulares.ts` en asegura y portal): `ok` (1 titular, `carnets` plana como antes) /
 `varios_titulares` (200, solo `titulares`); carné de ficha no leída se descarta. Avisos/recordatorios nombran al titular («…de Ana Pérez»).

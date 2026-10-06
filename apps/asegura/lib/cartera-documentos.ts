@@ -174,7 +174,7 @@ export type Guardado =
 
 /**
  * Guarda un fichero. Devuelve `repetido: true` si ya había uno con el mismo
- * sha256 colgado del mismo cliente (se guarda igual: puede ser otra póliza).
+ * sha256 colgado del mismo cliente (NO se guarda otra copia: se devuelve la existente).
  */
 export async function guardarDocumento(
   correduriaId: string,
@@ -208,9 +208,17 @@ export async function guardarDocumento(
   try {
     const db = prismaAsegura()
     const sha256 = createHash('sha256').update(entrada.contenido).digest('hex')
-    const repetido =
-      destino.clienteId !== null &&
-      (await db.documento.count({ where: { correduriaId, clienteId: destino.clienteId, sha256 } })) > 0
+    // Mismo fichero (sha256) en el mismo cliente y mismo destino: NO se guarda otro (06/10/2026,
+    // póliza 18162048 subida dos veces). Se devuelve el que ya estaba, con `repetido: true`.
+    const previo = destino.clienteId !== null
+      ? await db.documento.findFirst({
+          where: { correduriaId, clienteId: destino.clienteId, polizaId: destino.polizaId, siniestroId: destino.siniestroId, sha256, estado: { not: 'pedido' } },
+          select: SELECT_RESUMEN,
+          orderBy: { createdAt: 'asc' },
+        })
+      : null
+    if (previo) return { ok: true, documento: aResumen(previo), repetido: true }
+    const repetido = false
     const fila = await db.documento.create({
       data: {
         correduriaId,
