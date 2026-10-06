@@ -123,7 +123,7 @@ test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan po
   // 4. El único botón que el adaptador pulsa en Datos Básicos es «Calcular».
   const adaptador = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/comunidades.ts'), 'utf8'))
   const pulsaciones = [...adaptador.matchAll(/ctx\.pulsar\(([^)]*\)?)\)/g)].map((m) => m[1])
-  for (const p of pulsaciones) assert.match(p, /botonCalcular|sel\(|INICIAR SESI|NUEVA ALTA|modal\.getByText\('(Particulares|Comunidades)'/, `pulsación inesperada en el adaptador: ${p}`)
+  for (const p of pulsaciones) assert.match(p, /botonCalcular|sel\(|INICIAR SESI|^\s*page\.locator\('#link_new_policy'|modal\.getByText\(textoExacto\('(Particulares|Comunidades)'\)/, `pulsación inesperada en el adaptador: ${p}`)
   // 5. Listas del guard del módulo.
   const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
   assert.match(g, /TEXTOS_BLOQUEADOS_ALTA/)

@@ -148,3 +148,10 @@ test('🪤 cada opción enlaza su IPID o dice que se enviará antes de emitir (s
   // Y el IPID no entra en la decisión de poder aceptar.
   assert.doesNotMatch(pagina, /ipidId[^\n]*puedeAceptar|puedeAceptar[^\n]*ipidId/)
 })
+
+import { MENSAJE_VARIAS_FICHAS } from './mensajes-ficha.ts'
+
+test('🪤 varias_fichas tiene mensaje propio en código y firma (no «presupuesto no disponible»)', () => {
+  assert.deepEqual(interpretarCodigo(409, { estado: 'varias_fichas' }), { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS })
+  assert.deepEqual(interpretarFirma(409, { estado: 'varias_fichas' }), { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS })
+})

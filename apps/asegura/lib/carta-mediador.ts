@@ -21,7 +21,7 @@ import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 import { encryptField } from '@central/module-seguros-pii'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso } from './contacto-portal'
 import { estadoEmailDeFicha } from './email-ficha'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -63,7 +63,14 @@ type NoDisponible = { estado: 'no_disponible'; motivo: string } | { estado: 'otr
  */
 async function base(correduriaId: string, identidadId: string, presupuestoId: string): Promise<{ b: Base } | NoDisponible | SinFicha> {
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
-  const f = await fichaPropiaDe(correduriaId, identidadId)
+  // La ficha es la DUEÑA del presupuesto, si es una de las vinculadas con nivel de operar (con varias
+  // fichas vinculadas no se elige: la elige el presupuesto). Abajo se sigue exigiendo que la póliza sea suya.
+  const f = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  if (f.estado === 'ajena') {
+    return f.motivo === 'sin_dueno'
+      ? { estado: 'no_disponible', motivo: 'Este presupuesto no va sobre una póliza tuya que conozcamos: escríbenos y lo hablamos.' }
+      : { estado: 'otra_ficha' }
+  }
   if (f.estado !== 'ok') return f
   // 🚨 La compañía por su código DGS primero: el volcado escribe «(legacy)» en `aseguradora`, y lo que
   // quede de relleno lo rechaza `cartaNombramientoMediador` (nunca «A la atención de (legacy)»).

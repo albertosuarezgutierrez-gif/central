@@ -12,6 +12,7 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (06/10/2026) helper textoExacto en tarificador-rpa/allianz/comunidades.ts, actualizar abrirComunidades para robustecer detectores de texto con variación CSS (mayúsculas, espacios) — agente-mecanico — ok (tsc limpio, 6/6 pruebas del helper pass)
 - (04/10/2026) crear agente jefe-contabilidad.md, reglas contables en perfil-fiscal/SKILL.md, actualizar CONTEXTO-SESIONES.md — sesión — ok
 - (03/10/2026) pasada SEO: CTR 2 artículos (preaviso 363 impr/0 clics, como-dar-de-baja 202 impr/1 clic) + keywords.md §5 — sesión — ok (189 tests articulos + ramos pass, 0 fail; tsc 0 errores)
 - 03/10/2026 · memoria+skill cierre CIMA (LOO-806) · ok
@@ -55,3 +56,4 @@
 | 03/10/2026 | asegura-web: ramo `salud-sin-copago` + noindex/robots de asegura-portal | general-purpose | ok parcial: la 301 de /mejoramos-tu-seguro ya existía hacia /cambiar-de-correduria (decisión documentada) y no se cambió a / |
 | 03/10/2026 | anotación memoria CIMA: CONTEXTO-SESIONES.md (REC 261 Allianz), SKILL.md cima-ingesta (LI/RE §13.3.33), AGENTE-MECANICO-BITACORA.md | sesión | ok |
 | 03/10/2026 | memoria CIMA #877 | sesión | ok |
+| 06/10/2026 | asegura-portal: 4 ajustes del globo de instalar (InstalarBoton/instalacion) | agente-mecanico | ok |

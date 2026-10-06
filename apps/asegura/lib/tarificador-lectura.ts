@@ -1,7 +1,22 @@
 // Lectura (solo SELECT) de un trabajo del tarificador RPA para el puerto de operador. Todo por
 // `correduria_id`. La proyección pública vive en `tarificador-lectura-reglas.ts`.
 import { prisma } from './tenant'
-import { documentoDePdf, proyectarTrabajo, type TrabajoLectura } from './tarificador-lectura-reglas'
+import { documentoDePdf, proyectarTrabajo, proyectarUltimoRiesgo, type TrabajoLectura, type UltimoRiesgo } from './tarificador-lectura-reglas'
+
+/**
+ * Riesgo del trabajo MÁS RECIENTE de ese cliente (cualquier estado, también error: interesan los datos
+ * tecleados). Por `correduria_id`; solo SELECT; sin html/captura/error. Pre-rellena el modal del bot.
+ */
+export async function leerUltimoRiesgo(correduriaId: string, clienteId: string, compania: string, ramo: string): Promise<UltimoRiesgo> {
+  const f = await prisma.$queryRaw<{ id: string; created_at: Date; riesgo: unknown }[]>`
+    select t.id::text as id, t.created_at, t.riesgo
+    from seguros.tarificacion_trabajos t
+    where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${clienteId}::uuid
+      and lower(t.compania) = ${compania} and t.ramo = ${ramo}
+    order by t.created_at desc
+    limit 1`
+  return proyectarUltimoRiesgo(f[0] ?? null)
+}
 
 type FilaTrabajo = { estado: string; created_at: Date; updated_at: Date; error: unknown; respuesta: unknown }
 

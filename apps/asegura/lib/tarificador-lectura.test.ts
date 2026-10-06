@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { documentoDePdf, errorPublico, indicePdfValido, proyectarTrabajo } from './tarificador-lectura-reglas.ts'
+import { documentoDePdf, errorPublico, indicePdfValido, proyectarTrabajo, proyectarUltimoRiesgo, riesgoPublico } from './tarificador-lectura-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
 const RUTA = 'app/api/operador/tarificador/trabajo/[id]/route.ts'
@@ -71,4 +71,47 @@ test('la lectura filtra por correduria_id y no toca html/captura', () => {
   const src = readFileSync(join(APP, 'lib/tarificador-lectura.ts'), 'utf8')
   assert.ok((src.match(/correduria_id = \$\{correduriaId\}/g) ?? []).length >= 2)
   assert.ok(!/evidencia_documento_id|html_documento_id/.test(src))
+})
+
+// ─── Último riesgo (pre-relleno del modal) ──────────────────────────────────
+
+test('último riesgo: solo claves conocidas; nada de credenciales ni html', () => {
+  const t = proyectarUltimoRiesgo({
+    id: 'abc', created_at: new Date('2026-10-05T08:00:00Z'),
+    riesgo: {
+      ramo: 'comunidades', fechaEfecto: '2026-11-01', m2Construidos: 800, ascensor: true, piscina: null,
+      password: 'x', html_documento_id: 'h1', error: { a: 1 },
+      direccion: { via: 'Calle Sol', numero: '4', codigoPostal: '41003', token: 'zzz', municipio: ['x'] },
+    },
+  })
+  assert.deepEqual(t.riesgo, { fechaEfecto: '2026-11-01', m2Construidos: 800, ascensor: true, direccion: { via: 'Calle Sol', numero: '4', codigoPostal: '41003' } })
+  assert.equal(t.trabajoId, 'abc')
+  assert.equal(t.creadoEn, '2026-10-05T08:00:00.000Z')
+  const s = JSON.stringify(t)
+  for (const x of ['password', 'html_documento_id', 'zzz', 'error']) assert.ok(!s.includes(x), x)
+})
+
+test('último riesgo: sin fila o riesgo no objeto → null (no se inventa)', () => {
+  const vacio = { riesgo: null, trabajoId: null, creadoEn: null }
+  assert.deepEqual(proyectarUltimoRiesgo(null), vacio)
+  assert.deepEqual(proyectarUltimoRiesgo({ id: 'a', created_at: new Date(), riesgo: 'texto' }), vacio)
+  assert.equal(riesgoPublico([1]), null)
+  assert.equal(riesgoPublico({ otra: 1 }), null)
+})
+
+test('ruta último riesgo: Bearer primero, uuid 400, por correduría; SQL por cliente, más reciente, sin html/captura', () => {
+  const src = leer('app/api/operador/tarificador/ultimo-riesgo/route.ts')
+  assert.ok(src.indexOf('operadorAutorizado(req)') < src.indexOf('searchParams'), 'auth primero')
+  assert.match(src, /status: 401/)
+  assert.match(src, /UUID\.test\(clienteId\)/)
+  assert.match(src, /status: 400/)
+  assert.match(src, /correduriaUnica\(\)/)
+  assert.ok(!src.includes('rpaActivo'))
+  const lib = leer('lib/tarificador-lectura.ts')
+  const sql = lib.slice(lib.indexOf('export async function leerUltimoRiesgo'), lib.indexOf('type FilaTrabajo'))
+  assert.match(sql, /t\.correduria_id = \$\{correduriaId\}/)
+  assert.match(sql, /t\.cliente_id = \$\{clienteId\}/)
+  assert.match(sql, /order by t\.created_at desc\s+limit 1/)
+  assert.ok(!/estado/.test(sql.replace(/^\s*\*.*$/gm, '')), 'cualquier estado: no se filtra por estado')
+  assert.ok(!/evidencia_documento_id|html_documento_id|t\.error/.test(sql))
 })

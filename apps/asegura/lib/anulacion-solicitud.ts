@@ -28,11 +28,14 @@ export type FichaSolicitud =
   | { estado: 'ok'; clienteId: string }
   | { estado: 'sin_ficha' }
   | { estado: 'varias_fichas' }
+  /** La póliza no cuelga de ninguna ficha en la que esta identidad pueda operar (o no existe). */
+  | { estado: 'ajena' }
   | { estado: 'error'; causa: string }
 
 export type DepsSolicitud = {
   db: DbSolicitud
-  ficha: (correduriaId: string, identidadId: string) => Promise<FichaSolicitud>
+  /** La ficha DUEÑA de esa póliza, si es una de las vinculadas con nivel de operar (`fichaPropiaDeRecurso`). */
+  ficha: (correduriaId: string, identidadId: string, polizaId: string) => Promise<FichaSolicitud>
   /** `YYYY-MM-DD` en Madrid. */
   hoy: () => string
   anotar: (cambio: { entidad: string; id: string; campo: string; antes: string | null; despues: string }) => void
@@ -91,7 +94,8 @@ export async function solicitarAnulacionConDeps(
   const polizaId = typeof (cuerpo as { polizaId?: unknown } | null)?.polizaId === 'string' ? (cuerpo as { polizaId: string }).polizaId.trim() : ''
   if (!UUID.test(polizaId)) return { estado: 'no_es_tuya' }
 
-  const f = await deps.ficha(correduriaId, identidadId)
+  const f = await deps.ficha(correduriaId, identidadId, polizaId)
+  if (f.estado === 'ajena') return { estado: 'no_es_tuya' }
   if (f.estado !== 'ok') return f
 
   const [p] = (await db.$queryRaw`
