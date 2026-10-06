@@ -9,14 +9,15 @@ import { join, relative } from 'node:path'
 // desde la cabecera. Ni tsc ni el build cazan que alguien vuelva a montar un editor suelto en una
 // pestaña: se vigila leyendo los FUENTES (sin importar módulos).
 //
-// Excepción declarada: `AutoNuevo` (corregir el tomador sin salir del flujo de tarificación) y
-// `EditarFichaModal` (editar a la persona de una oportunidad) son OTROS flujos, no la ficha del
-// cliente; siguen usando los editores de `EditarCliente`/`EditarCarnets`.
+// El panel es `PanelDatosCliente` y lo montan TRES flujos con él, sin editor propio: la ficha
+// (`EditarFicha`), el modal «Editar datos» de la oportunidad (`EditarFichaModal`) y la tarificación de un
+// coche (`AutoNuevo`). Ningún otro fichero de `correduria/**` monta editores de identidad, dirección ni carnés.
 
 const ROOT = join(import.meta.dirname, '..')
 const BASE = join(ROOT, 'apps/plataforma/app/(usuario)/correduria')
 const FICHA = 'cliente/[id]/EditarFicha.tsx'
-const OTROS_FLUJOS = ['cliente/[id]/auto-nuevo/AutoNuevo.tsx', 'oportunidad/[id]/EditarFichaModal.tsx']
+const PANEL = 'cliente/[id]/PanelDatosCliente.tsx'
+const MONTAN_PANEL = [FICHA, 'oportunidad/[id]/EditarFichaModal.tsx', 'cliente/[id]/auto-nuevo/AutoNuevo.tsx']
 
 function fuentes(dir = BASE): string[] {
   return readdirSync(dir).flatMap((n) => {
@@ -31,11 +32,23 @@ test('la cabecera monta EditarFicha (el botón «✏️ Editar datos» está en 
   assert.match(leer('cliente/[id]/Cabecera.tsx'), /<EditarFicha\b/)
 })
 
-test('EditarFicha tiene UN botón «Guardar cambios» y monta los contactos en modo editable', () => {
-  const src = leer(FICHA)
+test('el panel tiene UN botón «Guardar cambios» y monta los contactos en modo editable; EditarFicha lo abre con «✏️ Editar datos»', () => {
+  const src = leer(PANEL)
   assert.equal((src.match(/'Guardar cambios'/g) ?? []).length, 1)
   assert.match(src, /<ContactosFicha\s[^>]*\beditable\b/)
-  assert.ok(src.includes('✏️ Editar datos'))
+  assert.match(leer(FICHA), /<PanelDatosCliente\b/)
+  assert.ok(leer(FICHA).includes('✏️ Editar datos'))
+})
+
+test('la ficha, el modal de la oportunidad y AutoNuevo montan el panel único (no uno propio)', () => {
+  for (const f of MONTAN_PANEL) assert.match(leer(f), /<PanelDatosCliente\b/, `${f} debe montar PanelDatosCliente`)
+})
+
+test('los editores antiguos ya no existen (EditarCarnets, EditarDireccion, BloqueIdentidad, EditarCliente)', () => {
+  const todo = fuentes().map(leer).join('\n')
+  assert.doesNotMatch(todo, /\bEditarCarnets\b/)
+  assert.doesNotMatch(todo, /\b(BloqueIdentidad|EditarDireccion)\b(?!Riesgo)/)
+  assert.doesNotMatch(todo, /<EditarCliente\b/)
 })
 
 test('ContactosFicha es de solo lectura salvo que se pida `editable`', () => {
@@ -44,20 +57,22 @@ test('ContactosFicha es de solo lectura salvo que se pida `editable`', () => {
 
 // Un brazo por editor: dónde se puede montar cada uno.
 const EDITORES: { nombre: string; patron: RegExp; permitidos: string[] }[] = [
-  { nombre: 'identidad (BloqueIdentidad)', patron: /<BloqueIdentidad\b/, permitidos: ['EditarCliente.tsx'] },
-  { nombre: 'identidad (EditarCliente)', patron: /<EditarCliente\b/, permitidos: OTROS_FLUJOS },
-  { nombre: 'dirección (EditarDireccion)', patron: /<EditarDireccion\b/, permitidos: OTROS_FLUJOS },
-  { nombre: 'carnés (EditarCarnets)', patron: /<EditarCarnets\b/, permitidos: OTROS_FLUJOS },
+  { nombre: 'identidad (BloqueIdentidad)', patron: /<BloqueIdentidad\b/, permitidos: [] },
+  { nombre: 'identidad (EditarCliente)', patron: /<EditarCliente\b/, permitidos: [] },
+  { nombre: 'dirección (EditarDireccion)', patron: /<EditarDireccion\b/, permitidos: [] },
+  { nombre: 'carnés (EditarCarnets)', patron: /<EditarCarnets\b/, permitidos: [] },
+  { nombre: 'dirección (DireccionConfirmable)', patron: /<DireccionConfirmable\b/, permitidos: [PANEL, 'NuevoCliente.tsx', 'poliza/[id]/EditarDireccionRiesgo.tsx'] },
+  { nombre: 'carnés (TIPOS_CARNET en un select)', patron: /TIPOS_CARNET\.map\(/, permitidos: [PANEL] },
   { nombre: 'mote (MoteAgenda)', patron: /<MoteAgenda\b/, permitidos: [] },
   { nombre: 'poner nombre (PonerNombre)', patron: /<PonerNombre\b/, permitidos: [] },
-  { nombre: 'contactos en modo edición (ContactosFicha editable)', patron: /<ContactosFicha\s[^>]*\beditable\b/, permitidos: [FICHA] },
+  { nombre: 'contactos en modo edición (ContactosFicha editable)', patron: /<ContactosFicha\s[^>]*\beditable\b/, permitidos: [PANEL] },
 ]
 
 for (const e of EDITORES) {
   test(`el editor de ${e.nombre} no se monta fuera de su sitio`, () => {
     const dentro = fuentes().filter((f) => e.patron.test(leer(f)))
-    const fuera = dentro.filter((f) => !e.permitidos.includes(f) && f !== FICHA)
-    assert.deepEqual(fuera, [], `Editor suelto en: ${fuera.join(', ')}. Los datos del cliente se editan en EditarFicha.`)
+    const fuera = dentro.filter((f) => !e.permitidos.includes(f) && f !== PANEL)
+    assert.deepEqual(fuera, [], `Editor suelto en: ${fuera.join(', ')}. Los datos del cliente se editan en PanelDatosCliente.`)
   })
 }
 
@@ -70,8 +85,9 @@ test('ni la cabecera ni las pestañas de la ficha montan ningún editor de datos
 })
 
 test('el carné nuevo precargado con la fecha de la póliza NO cuenta como cambio: `nuevoPide` depende de `nuevoTocado`', () => {
-  const src = leer(FICHA)
+  const src = leer(PANEL)
   assert.match(src, /const nuevoPide = [^\n]*\bnuevoTocado\b/)
   assert.match(src, /const nuevoPide = [^\n]*carnets !== null/)
-  assert.match(src, /const nuevoPide = [^\n]*!juridica/)
+  assert.match(src, /const nuevoPide = [^\n]*verCarnets/)
+  assert.match(src, /const verCarnets = [^\n]*!juridica/)
 })

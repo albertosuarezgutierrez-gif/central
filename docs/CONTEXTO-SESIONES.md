@@ -1079,6 +1079,12 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (06/10/2026) Editor único también en AutoNuevo y en la oportunidad
+- `cliente/[id]/PanelDatosCliente.tsx` = el panel (extraído de EditarFicha); lo montan la ficha, `EditarFichaModal` (identidad,
+  dirección, carné si conduce) y AutoNuevo (identidad+dirección), con `secciones` y `onGuardado`. Borrado `EditarCarnets.tsx`;
+  `EditarCliente.tsx` queda con `CuentaCargo` y helpers. Guardián sin lista blanca. Fuera: `info_riesgo`, NuevaPersona,
+  FaltaPorCompletar (sexo/móvil) y dirección del riesgo, que no escriben en la ficha.
+
 ## (06/10/2026) Portal: arreglos de la auditoría final (cron push, carnés, globo PWA)
 - Cron `avisos-push`: decisión pura en `lib/obligaciones-debidas.ts`; puente caído ⇒ identidad SALTADA (ni push «renueva» ni sello `avisadaPushAt`); try/catch por identidad (`saltadas`/`fallidas` en la respuesta). Cepos vínculo/`conConfirmadas`/null vistos en rojo.
 - Carnés: escribir sobre ficha propia de solo consulta ⇒ `sin_permiso` 403 + `MENSAJE_SOLO_CONSULTA` (ajena sigue `no_encontrado`); cepo de cableado de `fichasLegiblesDeCarnets` en la lectura.

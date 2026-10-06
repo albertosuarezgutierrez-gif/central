@@ -51,7 +51,7 @@ import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 import type { ContactoFicha } from '@/lib/ficha-asegura'
 import { textoFaltaEnFicha, type IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import type { DocumentoResumen } from '@central/module-seguros'
-import EditarCliente, { EditarDireccion } from '../../../EditarCliente'
+import PanelDatosCliente from '../PanelDatosCliente'
 
 import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
@@ -215,7 +215,7 @@ export default function AutoNuevo({
    * Lo que hace falta para corregir la FICHA del tomador sin salir (identidad, documentos y dirección),
    * leído igual que lo lee la pestaña Contactos. `null` = no se ha podido leer la ficha: no se ofrece edición.
    */
-  fichaTomador?: { identidad: IdentidadFicha | null; documentos: DocumentoResumen[] | null; contacto: ContactoFicha } | null
+  fichaTomador?: { identidad: IdentidadFicha | null; documentos: DocumentoResumen[] | null; contacto: ContactoFicha; juridica: boolean } | null
   /** `true` = tiene una póliza en vigor en Allianz (cartera); `null` = no se pudo mirar. Solo cuenta con el pack encendido. */
   carteraAllianz?: boolean | null
   /** Vehículo NUEVO (03/10/2026): la póliza de motor del cliente que asegura propone como seguro anterior. */
@@ -720,7 +720,7 @@ export default function AutoNuevo({
     siniestrosUltimos5,
   ])
 
-  // Corregir la ficha SIN salir (editores de EditarCliente): tras guardar, el servidor vuelve a precalificar
+  // Corregir la ficha SIN salir (el panel único `PanelDatosCliente`): tras guardar, el servidor vuelve a precalificar
   // (`router.refresh()` del editor) y llegan municipios y huecos nuevos SIN remontar la pantalla, así que lo
   // tecleado se queda. Aquí solo se vuelve a casar lo que depende de esas listas.
   const clavesMunicipios = listaMunicipios.map((m) => m.id).join(',')
@@ -1437,16 +1437,15 @@ export default function AutoNuevo({
                     {textoFaltaEnFicha(reparos.ficha.map((f) => f.campo))}
                   </div>
                 )}
-                <EditarCliente
+                <PanelDatosCliente
                   clienteId={clienteId}
                   identidad={fichaTomador.identidad}
                   documentos={fichaTomador.documentos}
+                  contacto={fichaTomador.contacto}
+                  juridica={fichaTomador.juridica}
+                  secciones={['identidad', 'direccion']}
                   onGuardado={alGuardarFicha}
                 />
-                <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
-                  <h3 style={{ margin: 0, fontSize: 14 }}>Dirección</h3>
-                  <EditarDireccion clienteId={clienteId} contacto={fichaTomador.contacto} onGuardado={alGuardarFicha} />
-                </section>
                 {fichaGuardada && (
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>
                     Guardado en la ficha: los huecos de arriba se han recalculado y lo tecleado en esta pantalla sigue ahí.
