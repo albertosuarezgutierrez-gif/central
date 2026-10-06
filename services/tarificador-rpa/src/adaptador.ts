@@ -4,6 +4,7 @@
 import type { Locator, Page } from 'playwright'
 import type { ModalidadPortal } from '@central/module-tarificacion'
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
+import type { ContextoFormador } from './formador.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -16,6 +17,12 @@ export type ContextoPortal = ContextoTarificacion & {
   avanzarATarificar: () => Promise<void>
   /** Pulsa la pestaña «Proyecto» (genera el PDF sin grabar). Solo desde Tarificar. */
   abrirProyecto: (pestana: Locator) => Promise<void>
+  /**
+   * Formador con IA (06/10/2026). `undefined` o `activo: false` = apagado. El adaptador lo usa como
+   * FALLBACK: `resolverConFormador(page, ctx.formador, …)` cuando no encuentra un campo o una acción
+   * permitida, y `acompanar(page, ctx.formador, paso, …)` en los `PUNTOS_ENGANCHE` (src/formador.ts).
+   */
+  formador?: ContextoFormador
 }
 
 export type AdaptadorPortal = TarificadorAdapter<Page, RiesgoComunidad, ContextoPortal> & {

@@ -24,6 +24,7 @@ import { comprobarUrl, importeEs, importePuntoDecimal } from '@central/module-ta
 import type { CoberturaOferta, DesglosePrima, FranquiciaOferta, ModalidadPortal, OfertaNormalizada, PdfRef, RiesgoComunidad } from '@central/module-tarificacion'
 import type { AdaptadorPortal, ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { acompanar, resolverConFormador, type PasoAcompanado, type ResolucionFormador } from '../../formador.ts'
 
 /**
  * Selectores del LOGIN y de la ruta de menú. `null` = PENDIENTE DE CAPTURAS: el adaptador falla en
@@ -306,13 +307,63 @@ export async function tipoControl(c: Locator): Promise<TipoControl> {
   }) as Promise<TipoControl>
 }
 
+// ───────────────────────── formador con IA (FALLBACK + modo acompañado) ─────────────────────────
+//
+// 🚨 TARIFICAR ≠ EMITIR. El formador SOLO se consulta cuando la vía determinista no encuentra nada, y lo que
+// propone la IA lo valida `formador.ts` (campo = control editable; acción = texto de la TABLA CERRADA y sin
+// patrón de emisión) antes de devolver un Locator. Aquí no se le envía nada propio: la descripción es la
+// etiqueta del formulario (nunca credenciales ni valores del riesgo) y el HTML lo redacta formador.ts.
+// Apagado (`ctx.formador` ausente o `activo: false`, kill-switch `TARIFICADOR_FORMADOR_ACTIVO` en asegura)
+// = comportamiento de siempre. Un fallo de la IA nunca tumba nada: devuelve null y se relanza el error original.
+
+/** Dónde se resuelve un campo: página (para el formador) + contexto. */
+type Entorno = { page: Page; ctx: ContextoPortal }
+
+/** `campoPorEtiqueta` y, SOLO si no encuentra el campo y el formador está activo, el campo que valide el formador. */
+async function campoResuelto(raiz: Raiz, e: Entorno, etiqueta: string, indice = 0): Promise<{ campo: Locator; confirmar: () => Promise<void> }> {
+  try {
+    return { campo: await campoPorEtiqueta(raiz, etiqueta, indice), confirmar: async () => undefined }
+  } catch (err) {
+    // Un dato que falta o cualquier error que no sea «no encuentro el campo» no es cosa del formador.
+    if (!e.ctx.formador?.activo || (err instanceof ErrorTarificador && err.tipo !== 'portal')) throw err
+    const r = await resolverConFormador(e.page, e.ctx.formador, {
+      clave: `${etiqueta}${indice ? `#${indice}` : ''}`,
+      tipo: 'campo',
+      descripcion: `Campo editable del formulario «${etiqueta}»${indice ? ` (control nº ${indice + 1} de esa fila)` : ''}`,
+    }).catch(() => null)
+    if (!r) throw err
+    e.ctx.log(`formador: campo «${etiqueta}» resuelto por ${r.origen}`)
+    return { campo: r.locator, confirmar: r.confirmar }
+  }
+}
+
+/** Mensaje de `marcoDeCalcular` cuando NO hay ningún «Calcular» (la ambigüedad —más de uno— NO activa el formador). */
+const SIN_CALCULAR = 'no aparece en ningún marco'
+
+/** Revisión del modo acompañado en un punto de enganche. Bloqueante → `ErrorTarificador`; cualquier otro fallo, se sigue. */
+async function acompanarPaso(
+  page: Page,
+  ctx: ContextoPortal,
+  punto: PasoAcompanado,
+  pantallaEsperada: string,
+  extra: { valoresLeidos?: Parameters<typeof acompanar>[3]['valoresLeidos']; modalidadPedida?: ModalidadPortal | null } = {},
+): Promise<void> {
+  if (!ctx.formador?.activo) return
+  try {
+    await acompanar(page, ctx.formador, punto, { pantallaEsperada, ...extra })
+  } catch (e) {
+    if (e instanceof ErrorTarificador) throw e
+    ctx.log(`formador: acompañamiento «${punto}» no disponible`)
+  }
+}
+
 /**
  * Texto y fechas. Las fechas (también el datepicker de ndbx, `input[nxDatefield]`) se TECLEAN con
  * `fill`: no se abre el calendario. Tras escribir se quita el foco (`blur`): las páginas del servlet
  * validan/recalculan en `onchange`/`onblur`. Si el valor no queda escrito (campo readonly) → `portal`.
  */
-async function poner(raiz: Raiz, etiqueta: string, valor: string | number, indice = 0): Promise<void> {
-  const c = await campoPorEtiqueta(raiz, etiqueta, indice)
+async function poner(raiz: Raiz, e: Entorno, etiqueta: string, valor: string | number, indice = 0): Promise<void> {
+  const { campo: c, confirmar } = await campoResuelto(raiz, e, etiqueta, indice)
   const v = String(valor)
   await c.fill(v)
   await c.blur().catch(() => undefined)
@@ -320,6 +371,7 @@ async function poner(raiz: Raiz, etiqueta: string, valor: string | number, indic
   if (escrito !== null && escrito.trim() === '') {
     throw new ErrorTarificador('portal', `allianz/comunidades: «${etiqueta}» no aceptó el valor (¿solo lectura?)`)
   }
+  await confirmar()
 }
 
 /** Control del desplegable ndbx que abre la lista (el propio `nx-dropdown`). */
@@ -338,8 +390,9 @@ function opcionNx(raiz: Raiz, valor: string): Locator {
  * `<select>`): se abre y se elige la opción de texto EXACTO, ambas pulsaciones por `ctx.pulsar` (guardadas).
  * Si ninguna opción casa, error de datos (no se elige «lo más parecido»).
  */
-async function elegir(raiz: Raiz, ctx: ContextoPortal, etiqueta: string, valor: string, indice = 0): Promise<void> {
-  const s = await campoPorEtiqueta(raiz, etiqueta, indice)
+async function elegir(raiz: Raiz, e: Entorno, etiqueta: string, valor: string, indice = 0): Promise<void> {
+  const { ctx } = e
+  const { campo: s, confirmar } = await campoResuelto(raiz, e, etiqueta, indice)
   const tipo = await tipoControl(s)
   if (tipo === 'nx-dropdown') {
     await ctx.pulsar(desplegableNx(s))
@@ -351,6 +404,7 @@ async function elegir(raiz: Raiz, ctx: ContextoPortal, etiqueta: string, valor: 
     }
     if ((await opciones.count()) !== 1) throw new ErrorTarificador('datos', `allianz/comunidades: «${etiqueta}» tiene varias opciones «${valor}»`)
     await ctx.pulsar(opcionNx(raiz, valor))
+    await confirmar()
     return
   }
   if (tipo !== 'select') {
@@ -365,14 +419,17 @@ async function elegir(raiz: Raiz, ctx: ContextoPortal, etiqueta: string, valor: 
       throw new ErrorTarificador('datos', `allianz/comunidades: «${etiqueta}» no admite el valor «${valor}»`)
     }
   }
+  await confirmar()
 }
 
 /** Checkbox por etiqueta. Las asistencias salen DESHABILITADAS en el DOM capturado: si no se habilita, `portal`. */
-async function marcar(raiz: Raiz, etiqueta: string, valor: boolean): Promise<void> {
+async function marcar(raiz: Raiz, e: Entorno, etiqueta: string, valor: boolean): Promise<void> {
   try {
-    await (await campoPorEtiqueta(raiz, etiqueta)).setChecked(valor, { timeout: 10_000 })
-  } catch (e) {
-    if (e instanceof ErrorTarificador) throw e
+    const { campo, confirmar } = await campoResuelto(raiz, e, etiqueta)
+    await campo.setChecked(valor, { timeout: 10_000 })
+    await confirmar()
+  } catch (err) {
+    if (err instanceof ErrorTarificador) throw err
     throw new ErrorTarificador('portal', `allianz/comunidades: no se pudo marcar «${etiqueta}» (¿deshabilitado?)`)
   }
 }
@@ -484,7 +541,8 @@ export const CAMPOS: readonly CampoFormulario[] = [
   { etiqueta: 'ITE:Inspeción Técnica Edificios', tipo: 'check', obligatorio: false, valor: (r) => r.ite, pausa: true },
 ]
 
-async function rellenarRiesgo(raiz: Raiz, r: RiesgoComunidad, ctx: ContextoPortal): Promise<void> {
+async function rellenarRiesgo(raiz: Raiz, page: Page, r: RiesgoComunidad, ctx: ContextoPortal): Promise<void> {
+  const e: Entorno = { page, ctx }
   // DOM real (06/10/2026): «Datos Básicos» y «Tarificar» son pestañas del menú del marco (`td#DATOSBASICOS`,
   // `td#TARIFICAR`); la de Tarificar dispara el MISMO avance que el botón de Datos Básicos, así que aquí no se
   // cambia de pestaña: se rellena todo en Datos Básicos y el avance va SOLO por `ctx.avanzarATarificar()`.
@@ -493,11 +551,11 @@ async function rellenarRiesgo(raiz: Raiz, r: RiesgoComunidad, ctx: ContextoPorta
     if (v === null || v === undefined || v === '') {
       if (c.obligatorio) dato(v, c.etiqueta)
     } else if (c.tipo === 'check') {
-      await marcar(raiz, c.etiqueta, Boolean(v))
+      await marcar(raiz, e, c.etiqueta, Boolean(v))
     } else if (c.tipo === 'desplegable') {
-      await elegir(raiz, ctx, c.etiqueta, String(v), c.indice ?? 0)
+      await elegir(raiz, e, c.etiqueta, String(v), c.indice ?? 0)
     } else {
-      await poner(raiz, c.etiqueta, c.tipo === 'fecha' ? fechaEs(String(v)) : (v as string | number), c.indice ?? 0)
+      await poner(raiz, e, c.etiqueta, c.tipo === 'fecha' ? fechaEs(String(v)) : (v as string | number), c.indice ?? 0)
     }
     if (c.pausa) await ctx.pausa()
   }
@@ -544,17 +602,46 @@ export function costesAnuales(raiz: Raiz): Locator {
   return filaPorEtiqueta(raiz, 'COSTE ANUAL DEL SEG. SEGÚN OPCIÓN').locator('input:not([type=radio]):not([type=hidden])')
 }
 
+/**
+ * FALLBACK del formador para «Calcular»: solo si la vía determinista no lo encuentra en NINGÚN marco. La IA señala
+ * entre los candidatos y `formador.ts` lo valida contra la tabla cerrada (clave `calcular` = «Calcular»/«Calcular
+ * prima»/«Recalcular», único, visible, habilitado, sin patrón de emisión). `null` si está apagado o no valida.
+ */
+async function calcularConFormador(page: Page, ctx: ContextoPortal): Promise<ResolucionFormador | null> {
+  if (!ctx.formador?.activo) return null
+  return resolverConFormador(page, ctx.formador, {
+    clave: 'calcular',
+    tipo: 'accion',
+    descripcion: 'Botón «Calcular» de la pestaña Datos Básicos del formulario Comunidades 2020',
+    textoEsperado: 'Calcular',
+  }).catch(() => null)
+}
+
 async function calcular(page: Page, ctx: ContextoPortal): Promise<Frame> {
-  const marco = await marcoDeCalcular(page)
-  // El servlet lo deja deshabilitado hasta dar el formulario por bueno: se espera (máx. ~15 s) y, si sigue
-  // así, error claro en vez de pulsar un botón muerto y esperar 45 s al coste anual.
-  for (let i = 0; await deshabilitado(botonCalcular(marco)); i++) {
-    if (i >= 30) {
-      throw new ErrorTarificador('portal', 'allianz/comunidades: «Calcular» sigue deshabilitado tras rellenar (¿falta un dato que el portal exige, p. ej. Población o Edificación Valor Reposición?)')
-    }
-    await page.waitForTimeout(500)
+  let marco: Frame | null = null
+  let alterno: ResolucionFormador | null = null
+  try {
+    marco = await marcoDeCalcular(page)
+  } catch (e) {
+    // Solo «no aparece» (no «resuelve a N elementos»: lo ambiguo nunca se resuelve con la IA).
+    if (!(e instanceof ErrorTarificador) || !e.message.includes(SIN_CALCULAR)) throw e
+    alterno = await calcularConFormador(page, ctx)
+    if (!alterno) throw e
+    ctx.log('formador: «Calcular» resuelto por ' + alterno.origen)
   }
-  await ctx.pulsar(botonCalcular(marco))
+  if (marco) {
+    // El servlet lo deja deshabilitado hasta dar el formulario por bueno: se espera (máx. ~15 s) y, si sigue
+    // así, error claro en vez de pulsar un botón muerto y esperar 45 s al coste anual.
+    for (let i = 0; await deshabilitado(botonCalcular(marco)); i++) {
+      if (i >= 30) {
+        throw new ErrorTarificador('portal', 'allianz/comunidades: «Calcular» sigue deshabilitado tras rellenar (¿falta un dato que el portal exige, p. ej. Población o Edificación Valor Reposición?)')
+      }
+      await page.waitForTimeout(500)
+    }
+    await ctx.pulsar(botonCalcular(marco))
+  } else if (alterno) {
+    await ctx.pulsar(alterno.locator)
+  }
   await ctx.exigirSinCaptcha()
   // Espera a que «COSTE ANUAL DEL SEG. SEGÚN OPCIÓN» traiga el importe de Estándar (sondeo, máx. ~45 s).
   // El servlet puede recargar el marco al calcular: se vuelve a buscar el marco en cada vuelta.
@@ -562,7 +649,10 @@ async function calcular(page: Page, ctx: ContextoPortal): Promise<Frame> {
     const marco = await marcoCon(page, costesAnuales, 'COSTE ANUAL DEL SEG.', 0).catch(() => null)
     if (marco) {
       const v = await costesAnuales(marco).first().inputValue({ timeout: 1_000 }).catch(() => '')
-      if (importeEs(v) !== null) return marco
+      if (importeEs(v) !== null) {
+        await alterno?.confirmar()
+        return marco
+      }
     }
     await page.waitForTimeout(500)
   }
@@ -768,12 +858,15 @@ export const allianzComunidades: AdaptadorPortal = {
     const modalidad: ModalidadPortal = riesgo.modalidad ?? 'estandar'
     await login(page, ctx)
     await ctx.trasLogin()
+    await acompanarPaso(page, ctx, 'login', 'Cabecera de ePAC logueada (aparece «Mediador principal»)')
     await abrirComunidades(page, ctx)
     // El formulario vive en un iframe (`appArea`): todo lo que sigue se busca en su marco.
     const formulario = await marcoFormulario(page)
     ctx.log(`formulario en el marco «${formulario.name() || '(sin nombre)'}»`)
-    await rellenarRiesgo(formulario, riesgo, ctx)
+    await rellenarRiesgo(formulario, page, riesgo, ctx)
+    await acompanarPaso(page, ctx, 'formulario', 'Datos Básicos de «Comunidades 2020» con todos los campos rellenados', { modalidadPedida: modalidad })
     const resultado = await calcular(page, ctx)
+    await acompanarPaso(page, ctx, 'tras_calcular', '«COSTE ANUAL DEL SEG. SEGÚN OPCIÓN» con importe tras pulsar Calcular', { modalidadPedida: modalidad })
     const calculo = await leerCalculo(resultado, ctx, modalidad)
     // Datos Básicos → elegir modalidad → «Aceptar» (SOLO avanza a Tarificar; guardado por fases).
     await ctx.elegirOpcion(modalidad)
@@ -783,10 +876,15 @@ export const allianzComunidades: AdaptadorPortal = {
     // Tras el avance el servlet puede recargar o cambiar de marco: se busca el que trae «Prima Total».
     const tarificar = await marcoCon(page, (r) => filaPorEtiqueta(r, 'Prima Total'), 'Prima Total')
     const primas = await leerPrimas(tarificar)
+    await acompanarPaso(page, ctx, 'resultado', 'Pestaña Tarificar con Prima Neta, Impuestos y Prima Total (anual y sucesivos)', {
+      valoresLeidos: { primaNetaEur: primas.anual.primaNetaEur, impuestosEur: primas.anual.impuestosEur, primaTotalEur: primas.anual.primaTotalEur },
+      modalidadPedida: modalidad,
+    })
     if (primas.anual.primaTotalEur === null) {
       throw new ErrorTarificador('portal', 'allianz/comunidades: la pestaña Tarificar no trajo «Prima Total» anual legible')
     }
     const pdf = await descargarProyecto(page, tarificar, ctx, `proyecto-comunidades-2020-${modalidad}.pdf`)
+    await acompanarPaso(page, ctx, 'proyecto', 'Pestaña Tarificar tras abrir «Proyecto» (descarga del PDF)', { modalidadPedida: modalidad })
     const avisos = [
       `Modalidad ${modalidad === 'estandar' ? 'Estándar' : 'Personalizado'} (la otra requiere otro trabajo)`,
       'Prima anual = Prima Total del primer año; los recibos sucesivos pueden diferir (ver desglose)',

@@ -126,7 +126,7 @@ test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan po
   // Desplegables ndbx (06/10/2026): abrir el `nx-dropdown` y elegir la opción de texto EXACTO. Lista blanca
   // ESTRECHA: la llamada literal y la forma de los dos helpers (no pueden apuntar a otra cosa).
   // «Calcular» (06/10/2026): solo `botonCalcular(<marco>)`, y botonCalcular clavado a `#calcular` con texto EXACTO.
-  for (const p of pulsaciones) assert.match(p, /^botonCalcular\(\w+\)$|sel\(|INICIAR SESI|^\s*page\.locator\('#link_new_policy'|modal\.getByText\(textoExacto\('(Particulares|Comunidades)'\)|^desplegableNx\(s\)$|^opcionNx\(raiz, valor\)$/, `pulsación inesperada en el adaptador: ${p}`)
+  for (const p of pulsaciones) assert.match(p, /^botonCalcular\(\w+\)$|sel\(|INICIAR SESI|^\s*page\.locator\('#link_new_policy'|modal\.getByText\(textoExacto\('(Particulares|Comunidades)'\)|^desplegableNx\(s\)$|^opcionNx\(raiz, valor\)$|^alterno\.locator$/, `pulsación inesperada en el adaptador: ${p}`)
   assert.match(adaptador, /function botonCalcular\(raiz: Raiz\): Locator \{\s*return raiz\.locator\('#calcular'\)\.filter\(\{ hasText: textoExacto\('Calcular'\) \}\)\s*\}/, 'botonCalcular solo puede devolver el #calcular de texto exacto «Calcular»')
   assert.match(adaptador, /function desplegableNx\(c: Locator\): Locator \{\s*return c\.locator\('xpath=ancestor-or-self::nx-dropdown\[1\]'\)\s*\}/, 'desplegableNx solo puede devolver el nx-dropdown del campo')
   assert.match(adaptador, /function opcionNx\(raiz: Raiz, valor: string\): Locator \{\s*return raiz\.locator\('nx-dropdown-item, \[role="option"\]'\)\.filter\(\{ hasText: textoExacto\(valor\) \}\)\s*\}/, 'opcionNx solo puede devolver opciones de lista por texto exacto')
@@ -134,4 +134,50 @@ test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan po
   const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
   assert.match(g, /TEXTOS_BLOQUEADOS_ALTA/)
   assert.match(g, /PATRON_ACEPTAR/)
+})
+
+test('formador con IA: solo la lista de bloqueo nombra emitir/contratar/formalizar; la tabla de acciones permitidas, nunca', () => {
+  const src = sinComentarios(readFileSync(join(SRV, 'src/formador.ts'), 'utf8'))
+  const PROHIBIDAS = /emitir|contratar|formalizar/i
+  // 1. La lista de bloqueo existe, en UNA línea, y nombra las tres.
+  const bloqueo = src.match(/^export const BLOQUEO_FORMADOR = \[[^\n]*\] as const$/m)
+  assert.ok(bloqueo, 'falta BLOQUEO_FORMADOR (una línea, `as const`) en services/tarificador-rpa/src/formador.ts')
+  for (const p of ['emitir', 'contratar', 'formalizar']) assert.ok(bloqueo![0].includes(`'${p}'`), `BLOQUEO_FORMADOR tiene que nombrar '${p}'`)
+  // 2. Fuera de esa línea, el fichero no las nombra.
+  const resto = src.replace(bloqueo![0], '')
+  assert.ok(!PROHIBIDAS.test(resto), 'formador.ts nombra emitir/contratar/formalizar fuera de BLOQUEO_FORMADOR')
+  // 3. La tabla cerrada de acciones permitidas no contiene ninguna palabra de emisión (ni del guard del módulo).
+  const tabla = src.match(/export const ACCIONES_PERMITIDAS = \{([\s\S]*?)\} as const/)
+  assert.ok(tabla, 'falta la tabla ACCIONES_PERMITIDAS')
+  assert.ok(!PROHIBIDAS.test(tabla![1]), 'ACCIONES_PERMITIDAS contiene una acción de emisión')
+  assert.ok(!/emit|emisi|contrat|formaliz|suplement|anul|baja|aceptar|archivar|ampliado/i.test(tabla![1]), 'ACCIONES_PERMITIDAS casa con el patrón de emisión del guard')
+  // 4. El formador no actúa (devuelve el locator) y valida antes de devolver.
+  assert.match(src, /pareceEmision\(/, 'validarAccion tiene que pasar por pareceEmision()')
+  assert.match(src, /BLOQUEO_FORMADOR\.find\(/, 'validarAccion tiene que mirar la lista de bloqueo')
+  assert.match(src, /validarResolucion\(p\.tipo, p\.clave, d, p\.textoEsperado\)/, 'resolverConFormador tiene que validar antes de devolver')
+  assert.ok(!/\.(check|fill|press|selectOption|setChecked)\s*\(/.test(src), 'el formador no actúa sobre la página: solo señala')
+})
+
+test('formador en el adaptador ePAC: FALLBACK acotado (campos + «Calcular»), acompañado en sus 5 puntos y sin pulsar nada que no valide formador.ts', () => {
+  const src = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/comunidades.ts'), 'utf8'))
+  // 1. Solo dos peticiones al formador: los campos (tipo 'campo') y la acción `calcular`. Nada más.
+  const llamadas = [...src.matchAll(/resolverConFormador\(([^]*?)\)\.catch\(/g)].map((m) => m[1])
+  assert.equal(llamadas.length, 2, 'resolverConFormador solo se usa en campoResuelto y en calcularConFormador')
+  assert.ok(llamadas.some((l) => /tipo: 'campo'/.test(l)), 'falta el fallback de campos')
+  const accion = llamadas.find((l) => /tipo: 'accion'/.test(l))
+  assert.ok(accion && /clave: 'calcular'/.test(accion) && /textoEsperado: 'Calcular'/.test(accion), 'la única acción que se pide al formador es «calcular»')
+  // 2. Lo que se pulsa de lo que devuelva el formador es UNA sola cosa, en la rama de «Calcular», tras el fallback.
+  assert.equal([...src.matchAll(/ctx\.pulsar\(alterno\.locator\)/g)].length, 1)
+  assert.ok(!/resolverConFormador[^]*\.(click|check|fill)\(/.test(src.slice(src.indexOf('async function calcularConFormador'), src.indexOf('async function calcular('))), 'calcularConFormador solo señala')
+  // 3. El fallback de «Calcular» NO se activa por ambigüedad (más de un Calcular).
+  assert.match(src, /e\.message\.includes\(SIN_CALCULAR\)/)
+  // 4. Acompañado en los cinco puntos de formador.ts (PUNTOS_ENGANCHE), en orden.
+  const puntos = [...src.matchAll(/await acompanarPaso\(page, ctx, '(\w+)'/g)].map((m) => m[1])
+  assert.deepEqual(puntos, ['login', 'formulario', 'tras_calcular', 'resultado', 'proyecto'])
+  // 5. Apagable y no bloqueante: sin `activo` no se llama, y un fallo que no sea ErrorTarificador no tumba.
+  assert.match(src, /if \(!ctx\.formador\?\.activo\) return/)
+  assert.match(src, /if \(e instanceof ErrorTarificador\) throw e\s*ctx\.log\(`formador: acompañamiento/)
+  // 6. A la IA no viajan credenciales ni valores del riesgo: la descripción solo usa la etiqueta del formulario.
+  const bloque = src.slice(src.indexOf('async function campoResuelto'), src.indexOf('const SIN_CALCULAR'))
+  assert.ok(!/credenciales|contrasena|riesgo|valor/i.test(bloque), 'campoResuelto no puede pasar credenciales ni valores a la IA')
 })

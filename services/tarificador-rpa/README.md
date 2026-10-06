@@ -53,7 +53,20 @@ fly deploy . --config services/tarificador-rpa/fly.toml --dockerfile services/ta
 (`Dockerfile.dockerignore` acota el contexto si el builder lo soporta; si no, sube la raíz entera pero
 los `COPY` son explícitos y la imagen es la misma.)
 
+## Formador con IA y modo acompañado (`src/formador.ts`, 06/10/2026)
+Enganche: el runner ya crea `ctx.formador` (`prepararFormador`) y llama a `cerrarFormador` antes del resultado.
+En el adaptador, como FALLBACK: si `campoPorEtiqueta`/`botonCalcular` no resuelven, `resolverConFormador(page,
+ctx.formador, { clave, tipo, descripcion, textoEsperado })` → Locator VALIDADO (lista cerrada `ACCIONES_PERMITIDAS`
++ `pareceEmision`; campo = control editable) o `null`; se pulsa SOLO con `ctx.pulsar()` y, si funcionó,
+`res.confirmar()`. Acompañante: `acompanar(page, ctx.formador, paso, { pantallaEsperada, valoresLeidos?,
+modalidadPedida? })` en `PUNTOS_ENGANCHE` (tras_login · tras_rellenar · tras_calcular · tras_leer_ofertas · tras_pdf);
+un aviso bloqueante lanza `ErrorTarificador('portal')` con la explicación legible. Rutas: `/api/tarificador/formador/*`.
+Tests: `npm test` (sin navegador). SQL: `apps/asegura/prisma/sql/2026-10-06b_tarificador_formador.sql`.
+
 ## Envs del orquestador (Vercel `central-asegura`, solo nombres)
+Formador: `TARIFICADOR_FORMADOR_ACTIVO` (=`1`; apagado por defecto) · `TARIFICADOR_FORMADOR_MAX_LLAMADAS` (tope de
+llamadas a la IA por trabajo; 12 por defecto) · la IA va por la pasarela (`AI_GATEWAY_URL` / `AI_GATEWAY_SECRET`, ya existentes).
+
 `TARIFICADOR_RPA_ACTIVO` (=`1` para encender; apagado por defecto) · `TARIFICADOR_WORKER_SECRET` ·
 `FLY_API_TOKEN` (token de despliegue acotado a la app `asegura-tarificador`) · `TARIFICADOR_FLY_APP` ·
 `TARIFICADOR_FLY_IMAGE` · `TARIFICADOR_API_URL` (https de asegura que el worker llama).

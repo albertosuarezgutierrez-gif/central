@@ -12,7 +12,7 @@ const MARCA = '<!-- tarificador:marco ruta="'
 const FIN_MARCA = '" -->'
 
 /** Ruta de un marco desde la página: nombres (o `#índice` si no tiene) separados por «/». */
-function rutaMarco(f: Frame): string {
+export function rutaMarco(f: Frame): string {
   const trozos: string[] = []
   let actual: Frame | null = f
   while (actual && actual.parentFrame()) {

@@ -23,6 +23,7 @@ import { ErrorTarificador, clasificar } from './errores.ts'
 import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { htmlConMarcos } from './evidencia.ts'
+import { cerrarFormador, prepararFormador } from './formador.ts'
 import type { ContextoPortal } from './adaptador.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
@@ -83,6 +84,12 @@ async function main(): Promise<number> {
     return 1
   }
 
+  // Formador con IA: lo enciende asegura (`TARIFICADOR_FORMADOR_ACTIVO`); si no responde, apagado.
+  const formador = await prepararFormador({
+    trabajoId: trabajo.id, compania: trabajo.compania, ramo: trabajo.ramo, apiUrl: cfg.apiUrl, secreto: cfg.secreto,
+    redactar, log: (m, d) => log(m, d),
+  })
+
   const pdfs: { nombre: string; base64: string }[] = []
   let browser: Browser | null = null
   // Respaldo duro: si algo se cuelga por encima del tope (incluido el cierre del navegador), se sale.
@@ -116,6 +123,7 @@ async function main(): Promise<number> {
       avanzarATarificar: () => pulsarAvance(page, guard),
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
+      formador,
     }
 
     let resultado: { ofertas: OfertaNormalizada[] } | null = null
@@ -135,6 +143,7 @@ async function main(): Promise<number> {
       clearTimeout(tope)
     }
 
+    await cerrarFormador(formador, resultado && !error ? 'ok' : 'error')
     if (resultado && !error) {
       const st = await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'ok', ofertas: resultado.ofertas, pdfs })
       log('resultado_ok_enviado', { status: st, ofertas: resultado.ofertas.length })
@@ -161,6 +170,7 @@ async function main(): Promise<number> {
     // Fallo del propio navegador (no arrancó, se cayó): infraestructura.
     const c = clasificar(e)
     const tipo = c.tipo === 'portal' ? 'infra' : c.tipo
+    await cerrarFormador(formador, 'error')
     await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo, mensaje: redactar(c.mensaje).slice(0, 2000), url: null } })
     log('fallo_navegador', { mensaje: c.mensaje.slice(0, 300) })
     return 1
