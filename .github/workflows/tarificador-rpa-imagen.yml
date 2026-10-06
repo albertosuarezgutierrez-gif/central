@@ -32,7 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be # 1.5
+      # Instalador oficial de Fly en vez de setup-flyctl@1.5: esa acción (Node 20) murió en silencio en el run #2.
+      - name: Instalar flyctl
+        run: |
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
       - name: Comprobar secreto y etiqueta
         run: |
