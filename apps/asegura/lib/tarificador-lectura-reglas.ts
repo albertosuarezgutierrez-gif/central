@@ -98,3 +98,47 @@ export function documentoDePdf(respuesta: unknown, indice: number): string | nul
 export function indicePdfValido(s: string): number | null {
   return /^(0|[1-9]\d?)$/.test(s) ? Number(s) : null
 }
+
+// ─── Último riesgo tecleado (07/10/2026) ───────────────────────────────────
+// Para PRE-RELLENAR el modal «Precio Allianz (bot)». Lista BLANCA de claves del riesgo de comunidad:
+// nada de credenciales, html, captura ni error interno; solo los datos del riesgo que el formulario conoce.
+
+export const CLAVES_RIESGO_ESCALARES = [
+  'fechaEfecto', 'fechaTermino', 'm2Construidos', 'anioConstruccion', 'tipoVivienda', 'uso', 'plantas',
+  'numEdificios', 'numViviendasYLocales', 'listaPropietarios', 'ascensor', 'piscina', 'calidadConstruccion',
+] as const
+export const CLAVES_DIRECCION = ['via', 'numero', 'codigoPostal', 'municipio', 'provincia'] as const
+
+export type UltimoRiesgo = { riesgo: Record<string, unknown> | null; trabajoId: string | null; creadoEn: string | null }
+
+const primitivo = (v: unknown): string | number | boolean | null =>
+  typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v)) ? v : null
+
+/** `riesgo` jsonb → solo claves conocidas con valor primitivo. Cualquier otra cosa → `null`. */
+export function riesgoPublico(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const o = raw as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  for (const k of CLAVES_RIESGO_ESCALARES) {
+    const v = primitivo(o[k])
+    if (v !== null) out[k] = v
+  }
+  if (o.direccion && typeof o.direccion === 'object' && !Array.isArray(o.direccion)) {
+    const d = o.direccion as Record<string, unknown>
+    const dir: Record<string, unknown> = {}
+    for (const k of CLAVES_DIRECCION) {
+      const v = primitivo(d[k])
+      if (v !== null) dir[k] = v
+    }
+    if (Object.keys(dir).length) out.direccion = dir
+  }
+  return Object.keys(out).length ? out : null
+}
+
+export function proyectarUltimoRiesgo(fila: { id: string; created_at: Date | string; riesgo: unknown } | null): UltimoRiesgo {
+  const vacio: UltimoRiesgo = { riesgo: null, trabajoId: null, creadoEn: null }
+  if (!fila) return vacio
+  const riesgo = riesgoPublico(fila.riesgo)
+  if (!riesgo) return vacio
+  return { riesgo, trabajoId: fila.id, creadoEn: iso(fila.created_at) }
+}

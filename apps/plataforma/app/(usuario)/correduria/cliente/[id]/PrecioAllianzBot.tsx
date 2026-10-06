@@ -9,7 +9,7 @@ import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
   OPCIONES_LISTA_PROPIETARIOS, OPCIONES_TIPO_VIVIENDA, OPCIONES_USO, SONDEO_MAX_MS, SONDEO_MS,
-  formularioInicial, leerTrabajoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
+  fechaCorta, formularioConUltimoRiesgo, formularioInicial, leerTrabajoBot, leerUltimoRiesgoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
   type FormularioRiesgo, type TrabajoBot,
 } from '@/lib/tarificador-asegura-reglas'
 
@@ -29,7 +29,11 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
   const [trabajo, setTrabajo] = useState<TrabajoBot | null>(null)
   const [agotado, setAgotado] = useState(false)
   const [errorLectura, setErrorLectura] = useState<string | null>(null)
-  const set = <K extends keyof FormularioRiesgo>(k: K, v: FormularioRiesgo[K]) => setF((x) => ({ ...x, [k]: v }))
+  // Pre-relleno con el último riesgo del cliente: 'cargando' · 'sin' (sin datos previos o lectura fallida) · fecha.
+  const [previo, setPrevio] = useState<'cargando' | 'sin' | { fecha: string | null }>('cargando')
+  const previoPedido = useRef(false)
+  const tocado = useRef(false)
+  const set = <K extends keyof FormularioRiesgo>(k: K, v: FormularioRiesgo[K]) => { tocado.current = true; setF((x) => ({ ...x, [k]: v })) }
   const cierre = useRef<HTMLButtonElement>(null)
 
   const cerrar = useCallback(() => setAbierto(false), [])
@@ -40,6 +44,24 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
     window.addEventListener('keydown', tecla)
     return () => window.removeEventListener('keydown', tecla)
   }, [abierto, cerrar])
+
+  // Al abrir (una vez): pide el último riesgo de este cliente. Si falla, formulario vacío como siempre y sin error.
+  useEffect(() => {
+    if (!abierto || previoPedido.current) return
+    previoPedido.current = true
+    ;(async () => {
+      try {
+        const r = await fetch(`/api/correduria/tarificador/ultimo-riesgo?cliente_id=${encodeURIComponent(clienteId)}`, { cache: 'no-store' })
+        const u = r.ok ? leerUltimoRiesgoBot(await r.json().catch(() => null)) : null
+        // Si Alberto ya ha empezado a teclear, no se le pisa nada.
+        if (!u || tocado.current) { setPrevio('sin'); return }
+        setF((x) => formularioConUltimoRiesgo(x, u.riesgo))
+        setPrevio({ fecha: fechaCorta(u.creadoEn) })
+      } catch {
+        setPrevio('sin')
+      }
+    })()
+  }, [abierto, clienteId])
 
   // Sondeo cada 5 s, máx. ~6 min. El modal puede cerrarse: el sondeo sigue mientras el componente viva.
   useEffect(() => {
@@ -116,6 +138,12 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
 
             {!trabajoId && (
               <form onSubmit={pedir} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
+                {previo === 'cargando' && <p role="status" style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Buscando datos de la última petición…</p>}
+                {typeof previo === 'object' && (
+                  <p role="status" style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
+                    Datos de la última petición{previo.fecha ? ` (${previo.fecha})` : ''} — revísalos
+                  </p>
+                )}
                 <datalist id="bot-tipo-vivienda">{OPCIONES_TIPO_VIVIENDA.map((o) => <option key={o} value={o} />)}</datalist>
                 <datalist id="bot-uso">{OPCIONES_USO.map((o) => <option key={o} value={o} />)}</datalist>
                 <datalist id="bot-lista">{OPCIONES_LISTA_PROPIETARIOS.map((o) => <option key={o} value={o} />)}</datalist>

@@ -36,6 +36,12 @@ export function encolarTarificacionComunidad(clienteId: string, oportunidadId: s
   })
 }
 
+/** Riesgo del último trabajo del cliente (pre-relleno del modal). 200 `{ riesgo|null, trabajoId, creadoEn }`. */
+export function leerUltimoRiesgoTarificador(clienteId: string): Promise<Reenvio> {
+  const q = new URLSearchParams({ cliente_id: clienteId, compania: COMPANIA_BOT, ramo: 'comunidades' })
+  return puerto(`ultimo-riesgo?${q}`, { method: 'GET' }, 15_000)
+}
+
 export function leerTrabajoTarificador(id: string): Promise<Reenvio> {
   return puerto(`trabajo/${encodeURIComponent(id)}`, { method: 'GET' }, 15_000)
 }
