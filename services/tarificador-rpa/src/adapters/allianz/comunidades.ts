@@ -119,8 +119,10 @@ export function celdaEtiqueta(raiz: Raiz, etiqueta: string): Locator {
 
 /**
  * Localiza el control de una fila del formulario por el TEXTO de su etiqueta (patrón tabla
- * etiqueta → input; sin ids estables conocidos: el DOM del marco aún no se ha capturado). Busca el
- * control DENTRO de la celda de la etiqueta y, si no, a continuación en orden de documento.
+ * etiqueta → input; validado contra el DOM real del marco con `scripts/probar-formulario.ts`). Busca el
+ * control DENTRO de la celda de la etiqueta, en su MISMA FILA (`tr`, también si va ANTES de la etiqueta: las
+ * asistencias de «PARTIDAS ASEGURABLES» ponen el checkbox a la izquierda) y, si no, a continuación en orden
+ * de documento (06/10/2026, DOM real del marco `appArea`).
  * `indice` (0 por defecto) elige el control N-ésimo: sirve para filas con varios controles tras la
  * etiqueta («Nº Edificios *» → input, luego el select «Contiguos»).
  * Ojo: «siguiente control en el documento» — si la fila no tiene control propio, devolvería el de la
@@ -129,16 +131,21 @@ export function celdaEtiqueta(raiz: Raiz, etiqueta: string): Locator {
 export function campoPorEtiqueta(raiz: Raiz, etiqueta: string, indice = 0): Locator {
   const e = literalXPath(normalizarEtiqueta(etiqueta))
   const celda = `(//*[${ETIQUETAS}][not(.//td)][${textoNormalizadoXPath('string(.)')}=${e}])[1]`
-  return raiz.locator(`xpath=(${celda}/descendant::${CONTROLES} | ${celda}/following::${CONTROLES})[${indice + 1}]`)
+  const fila = `${celda}/ancestor::tr[1]/descendant::${CONTROLES}`
+  return raiz.locator(`xpath=(${celda}/descendant::${CONTROLES} | ${fila} | ${celda}/following::${CONTROLES})[${indice + 1}]`)
 }
 
-/** Fila (`tr`) de una garantía de la tabla de partidas, por el texto de su etiqueta (y su grupo, si lo hay). */
+/**
+ * Fila (`tr`) de una garantía de la tabla de partidas, por el texto de su etiqueta (y su grupo, si lo hay).
+ * En el DOM real cada fila va en su PROPIA `<table>` (el grupo «Acción Agua» en una y «Bienes Comunes» en la
+ * siguiente): la fila del grupo se busca hacia delante en el documento, no entre hermanos.
+ */
 export function filaPorEtiqueta(raiz: Raiz, etiqueta: string, grupo: string | null = null): Locator {
   const e = literalXPath(normalizarEtiqueta(etiqueta))
   const celda = `td[${textoNormalizadoXPath('string(.)')}=${e}]`
   if (grupo === null) return raiz.locator(`xpath=(//tr[${celda}])[1]`)
   const g = literalXPath(normalizarEtiqueta(grupo))
-  return raiz.locator(`xpath=(//tr[td[${textoNormalizadoXPath('string(.)')}=${g}]]/following-sibling::tr[${celda}])[1]`)
+  return raiz.locator(`xpath=(//tr[td[${textoNormalizadoXPath('string(.)')}=${g}]]/following::tr[${celda}])[1]`)
 }
 
 /** «2026-10-05» → «05/10/2026» (formato de los campos de fecha de ePAC). */
@@ -245,8 +252,13 @@ async function elegir(raiz: Raiz, ctx: ContextoPortal, etiqueta: string, valor: 
   }
 }
 
+/** Checkbox por etiqueta. Las asistencias salen DESHABILITADAS en el DOM capturado: si no se habilita, `portal`. */
 async function marcar(raiz: Raiz, etiqueta: string, valor: boolean): Promise<void> {
-  await campoPorEtiqueta(raiz, etiqueta).setChecked(valor)
+  try {
+    await campoPorEtiqueta(raiz, etiqueta).setChecked(valor, { timeout: 10_000 })
+  } catch {
+    throw new ErrorTarificador('portal', `allianz/comunidades: no se pudo marcar «${etiqueta}» (¿deshabilitado?)`)
+  }
 }
 
 // ───────────────────────── login y navegación ─────────────────────────
@@ -352,12 +364,14 @@ export const CAMPOS: readonly CampoFormulario[] = [
   { etiqueta: 'Asistencia y Control de Plagas', tipo: 'check', obligatorio: false, valor: (r) => r.asistenciaPlagas },
   { etiqueta: 'Asesoramiento Jurídico', tipo: 'check', obligatorio: false, valor: (r) => r.asesoramientoJuridico },
   { etiqueta: 'Impago Cuotas Comunitarias', tipo: 'check', obligatorio: false, valor: (r) => r.impagoCuotas },
-  { etiqueta: 'ITE:Inspección Técnica Edificios', tipo: 'check', obligatorio: false, valor: (r) => r.ite, pausa: true },
+  // El portal lo escribe «Inspeción» (con una sola «c»): la etiqueta va TAL CUAL está en el DOM.
+  { etiqueta: 'ITE:Inspeción Técnica Edificios', tipo: 'check', obligatorio: false, valor: (r) => r.ite, pausa: true },
 ]
 
 async function rellenarRiesgo(raiz: Raiz, r: RiesgoComunidad, ctx: ContextoPortal): Promise<void> {
-  // TODO(capturas): confirmar si «Tarificar» es otra pestaña o la misma página con scroll (en la captura
-  // se ve todo en «Datos Básicos»). De momento no se cambia de pestaña.
+  // DOM real (06/10/2026): «Datos Básicos» y «Tarificar» son pestañas del menú del marco (`td#DATOSBASICOS`,
+  // `td#TARIFICAR`); la de Tarificar dispara el MISMO avance que el botón de Datos Básicos, así que aquí no se
+  // cambia de pestaña: se rellena todo en Datos Básicos y el avance va SOLO por `ctx.avanzarATarificar()`.
   for (const c of CAMPOS) {
     const v = c.valor(r)
     if (v === null || v === undefined || v === '') {
@@ -373,12 +387,40 @@ async function rellenarRiesgo(raiz: Raiz, r: RiesgoComunidad, ctx: ContextoPorta
   }
 }
 
-/** El ÚNICO botón que el bot pulsa en este formulario. */
+/**
+ * El ÚNICO botón que el bot pulsa en este formulario. En el DOM real (06/10/2026) NO es `a`/`button`/`input`:
+ * es el «footer button» del servlet, un `<div id="calcular" onclick="calcular();">Calcular</div>` (su vecino
+ * es el de avance, que este fichero no nombra). Por id Y texto exacto: tiene que resolver a UNO solo.
+ */
 export function botonCalcular(raiz: Raiz): Locator {
-  // TODO(capturas): confirmar el elemento real (enlace, botón o input) y si el texto lleva el «>» inicial.
-  return raiz.locator(
-    ['a', 'button'].map((t) => `${t}:text-matches("^\\\\s*>?\\\\s*Calcular\\\\s*$", "i")`).join(', ') + ', input[value="Calcular" i]',
-  ).first()
+  return raiz.locator('#calcular').filter({ hasText: textoExacto('Calcular') })
+}
+
+/** ¿El footer button está deshabilitado? El servlet lo marca con la clase `footerButtonDisabled`. */
+async function deshabilitado(boton: Locator): Promise<boolean> {
+  return boton.evaluate((el) => /disabled/i.test(el.className) || el.getAttribute('aria-disabled') === 'true')
+}
+
+/**
+ * Marco con EXACTAMENTE un «Calcular» entre TODOS los marcos de la página (como `enMarcos` de guard.ts).
+ * Cero en todos, o más de uno (en uno o en varios marcos) → `portal`: no se pulsa algo ambiguo.
+ */
+export async function marcoDeCalcular(page: Page, timeoutMs = 30_000): Promise<Frame> {
+  const fin = Date.now() + timeoutMs
+  for (;;) {
+    let total = 0
+    let marco: Frame | null = null
+    for (const f of page.frames()) {
+      if (f.isDetached()) continue
+      const n = await botonCalcular(f).count().catch(() => 0)
+      total += n
+      if (n > 0) marco = f
+    }
+    if (total === 1 && marco) return marco
+    if (total > 1) throw new ErrorTarificador('portal', `allianz/comunidades: «Calcular» resuelve a ${total} elementos entre los marcos`)
+    if (Date.now() >= fin) throw new ErrorTarificador('portal', 'allianz/comunidades: «Calcular» no aparece en ningún marco de la página')
+    await page.waitForTimeout(500)
+  }
 }
 
 /** Inputs de importe de la fila «COSTE ANUAL DEL SEG. SEGÚN OPCIÓN» (Estándar, Personalizado). */
@@ -386,8 +428,17 @@ export function costesAnuales(raiz: Raiz): Locator {
   return filaPorEtiqueta(raiz, 'COSTE ANUAL DEL SEG. SEGÚN OPCIÓN').locator('input:not([type=radio]):not([type=hidden])')
 }
 
-async function calcular(page: Page, raiz: Raiz, ctx: ContextoPortal): Promise<Frame> {
-  await ctx.pulsar(botonCalcular(raiz))
+async function calcular(page: Page, ctx: ContextoPortal): Promise<Frame> {
+  const marco = await marcoDeCalcular(page)
+  // El servlet lo deja deshabilitado hasta dar el formulario por bueno: se espera (máx. ~15 s) y, si sigue
+  // así, error claro en vez de pulsar un botón muerto y esperar 45 s al coste anual.
+  for (let i = 0; await deshabilitado(botonCalcular(marco)); i++) {
+    if (i >= 30) {
+      throw new ErrorTarificador('portal', 'allianz/comunidades: «Calcular» sigue deshabilitado tras rellenar (¿falta un dato que el portal exige, p. ej. Población o Edificación Valor Reposición?)')
+    }
+    await page.waitForTimeout(500)
+  }
+  await ctx.pulsar(botonCalcular(marco))
   await ctx.exigirSinCaptcha()
   // Espera a que «COSTE ANUAL DEL SEG. SEGÚN OPCIÓN» traiga el importe de Estándar (sondeo, máx. ~45 s).
   // El servlet puede recargar el marco al calcular: se vuelve a buscar el marco en cada vuelta.
@@ -435,7 +486,7 @@ export const ASISTENCIAS: readonly { clave: string; literal: string; fila: strin
   { clave: 'asistencia_plagas', literal: 'Asistencia y Control de Plagas', fila: 'Asistencia y Control de Plagas' },
   { clave: 'asesoramiento_juridico', literal: 'Asesoramiento Jurídico', fila: 'Asesoramiento Jurídico' },
   { clave: 'impago_cuotas', literal: 'Impago Cuotas Comunitarias', fila: 'Impago Cuotas Comunitarias' },
-  { clave: 'ite', literal: 'ITE: Inspección Técnica Edificios', fila: 'ITE:Inspección Técnica Edificios' },
+  { clave: 'ite', literal: 'ITE: Inspección Técnica Edificios', fila: 'ITE:Inspeción Técnica Edificios' },
 ]
 
 /** «Incluida»/«Excluida» → estado; cualquier otra cosa → null (sin dato, no «excluida»). */
@@ -444,8 +495,17 @@ export function estadoDeTexto(t: string | null | undefined): 'incluida' | 'exclu
   return v === 'incluida' ? 'incluida' : v === 'excluida' ? 'excluida' : null
 }
 
+/**
+ * DOM real: la etiqueta va en una tabla anidada (checkbox + texto) y los estados en la fila EXTERIOR, como dos
+ * pares de `<label>` «Incluida»/«Excluida» (Estándar, Personalizado) de los que ePAC muestra uno por columna
+ * (el otro con `display:none`). Se leen solo los VISIBLES; antes de calcular no hay ninguno → `null`.
+ */
 async function leerEstadosAsistencia(raiz: Raiz, fila: string): Promise<['incluida' | 'excluida' | null, 'incluida' | 'excluida' | null]> {
-  const textos = await filaPorEtiqueta(raiz, fila).locator('td').allInnerTexts().catch(() => [] as string[])
+  const textos = await filaPorEtiqueta(raiz, fila)
+    .locator('xpath=ancestor::tr[1]')
+    .locator('label')
+    .evaluateAll((els) => els.filter((e) => e.getClientRects().length > 0).map((e) => e.textContent ?? ''))
+    .catch(() => [] as string[])
   const estados = textos.map(estadoDeTexto).filter((e) => e !== null)
   // Esperado: [Estándar, Personalizado]. Si no salen exactamente dos, no se afirma nada.
   return estados.length === 2 ? [estados[0], estados[1]] : [null, null]
@@ -469,13 +529,17 @@ async function leerControl(c: Locator): Promise<Celda> {
 
 async function leerFila(raiz: Raiz, p: Partida): Promise<{ estandar: Celda; personalizado: Celda; franquicia: Celda | null }> {
   const fila = filaPorEtiqueta(raiz, p.fila, p.grupo)
-  const controles = fila.locator('input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select')
-  const n = await controles.count()
+  // DOM real (06/10/2026): cada fila trae también «anterior…» e «iC…» ocultos (`display:none`), así que no vale
+  // el orden de los controles: cada columna va por el prefijo de su id (Estándar / Personalizado / Franquicia).
+  // Personalizado puede ser input o select (las sumas aseguradas de RC); Franquicia, un select.
+  const columna = async (prefijo: string): Promise<Celda | null> => {
+    const c = fila.locator(`input[id^="${prefijo}"], select[id^="${prefijo}"]`)
+    return (await c.count()) === 1 ? leerControl(c) : null
+  }
   const vacio: Celda = { texto: null, importe: null }
-  // Orden en la captura: Estándar, Personalizado, [Franquicia]. Con 2 controles no hay franquicia.
-  const estandar = n > 0 ? await leerControl(controles.nth(0)) : vacio
-  const personalizado = n > 1 ? await leerControl(controles.nth(1)) : vacio
-  const franquicia = p.franquicia && n > 2 ? await leerControl(controles.nth(2)) : null
+  const estandar = (await columna('estandar')) ?? vacio
+  const personalizado = (await columna('personalizado')) ?? vacio
+  const franquicia = p.franquicia ? await columna('franquicia') : null
   return { estandar, personalizado, franquicia }
 }
 
@@ -593,7 +657,7 @@ export const allianzComunidades: AdaptadorPortal = {
     const formulario = await marcoFormulario(page)
     ctx.log(`formulario en el marco «${formulario.name() || '(sin nombre)'}»`)
     await rellenarRiesgo(formulario, riesgo, ctx)
-    const resultado = await calcular(page, formulario, ctx)
+    const resultado = await calcular(page, ctx)
     const calculo = await leerCalculo(resultado, ctx, modalidad)
     // Datos Básicos → elegir modalidad → «Aceptar» (SOLO avanza a Tarificar; guardado por fases).
     await ctx.elegirOpcion(modalidad)

@@ -11,15 +11,17 @@
 //   · desplegable: `<select>` nativo → se listan las opciones y se intenta el valor de ejemplo (si no
 //     existe es AVISO, no fallo: los valores admitidos son TODO); `nx-dropdown` → solo que resuelve.
 // NO pulsa nada: ni Calcular, ni abre desplegables ndbx, ni datepickers (sin el JS de Angular/del
-// servlet no se abrirían). Eso, la lectura tras calcular y el avance solo se validan en REAL; aquí
-// los locators de esas fases se listan como «presente/ausente» a título informativo.
+// servlet no se abrirían). «Calcular» SÍ se comprueba (sin pulsar): entre TODOS los marcos tiene que
+// resolver a EXACTAMENTE un elemento (`marcoDeCalcular`) y su descripción tiene que pasar `comprobarBoton`
+// (lo mismo que mira `pulsar()` del guard). La lectura tras calcular y el avance solo se validan en REAL;
+// aquí los locators de esas fases se listan como «presente/ausente» a título informativo.
 //
 // 🚨 El HTML de prueba NO se commitea (aunque esté redactado, es de un trabajo real): se pasa por ruta.
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type Frame } from 'playwright'
-import type { RiesgoComunidad } from '@central/module-tarificacion'
+import { comprobarBoton, type RiesgoComunidad } from '@central/module-tarificacion'
 import {
   ASISTENCIAS,
   CAMPOS,
@@ -29,6 +31,7 @@ import {
   costesAnuales,
   fechaEs,
   filaPorEtiqueta,
+  marcoDeCalcular,
   marcoFormulario,
   tipoControl,
 } from '../src/adapters/allianz/comunidades.ts'
@@ -161,6 +164,7 @@ async function main(): Promise<number> {
       }
       const visible = await loc.isVisible()
       const tipo = await tipoControl(loc)
+      const id = await loc.evaluate((el) => el.id || (el as HTMLInputElement).name || el.tagName.toLowerCase())
       const v = c.valor(RIESGO)
       try {
         if (c.tipo === 'texto' || c.tipo === 'fecha') {
@@ -169,11 +173,16 @@ async function main(): Promise<number> {
           await loc.fill(val)
           const leido = await loc.inputValue()
           if (leido !== val) throw new Error(`fill no quedó escrito («${leido}»)`)
-          console.log(`✓ ${nombre}: input${visible ? '' : ' (no visible)'} · fill OK`)
+          console.log(`✓ ${nombre}: input #${id}${visible ? '' : ' (no visible)'} · fill OK`)
         } else if (c.tipo === 'check') {
           if (tipo !== 'checkbox') throw new Error(`control «${tipo}», se esperaba checkbox`)
-          await loc.setChecked(true)
-          console.log(`✓ ${nombre}: checkbox${visible ? '' : ' (no visible)'} · setChecked OK`)
+          if (await loc.isEnabled()) {
+            await loc.setChecked(true)
+            console.log(`✓ ${nombre}: checkbox #${id}${visible ? '' : ' (no visible)'} · setChecked OK`)
+          } else {
+            // Como el <select> deshabilitado: el locator es el bueno; el portal lo habilita (o no) en REAL.
+            console.log(`✓ ${nombre}: checkbox #${id} (deshabilitado en la captura: no se marca)`)
+          }
         } else if (tipo === 'select') {
           const opciones = (await loc.locator('option').allTextContents()).map((t) => t.trim())
           let nota = `${opciones.length} opciones`
@@ -182,7 +191,7 @@ async function main(): Promise<number> {
             if (casa && (await loc.isEnabled())) await loc.selectOption({ label: String(v) })
             nota += casa ? ` · «${v}» seleccionable` : ` · ⚠ «${v}» NO está entre las opciones (TODO valores admitidos)`
           }
-          console.log(`✓ ${nombre}: <select>${visible ? '' : ' (no visible)'}${(await loc.isEnabled()) ? '' : ' (deshabilitado)'} · ${nota}`)
+          console.log(`✓ ${nombre}: <select> #${id}${visible ? '' : ' (no visible)'}${(await loc.isEnabled()) ? '' : ' (deshabilitado)'} · ${nota}`)
         } else if (tipo === 'nx-dropdown') {
           console.log(`✓ ${nombre}: nx-dropdown (abrir y elegir solo se valida en REAL)`)
         } else {
@@ -194,11 +203,50 @@ async function main(): Promise<number> {
       }
     }
 
+    // «Calcular»: resuelve a UNO entre todos los marcos y su descripción pasa el guard. NO se pulsa.
+    let calcularOk = false
+    try {
+      const marco = await marcoDeCalcular(page, 3_000)
+      const boton = botonCalcular(marco)
+      const desc = await boton.evaluate((el) => {
+        const h = el as HTMLElement & { value?: unknown; href?: unknown; name?: unknown }
+        return [
+          h.innerText ?? h.textContent ?? '',
+          h.getAttribute('aria-label'),
+          h.getAttribute('title'),
+          typeof h.value === 'string' ? h.value : null,
+          h.id || null,
+          typeof h.name === 'string' ? h.name : null,
+          typeof h.href === 'string' ? h.href : h.getAttribute('href'),
+          h.getAttribute('onclick'),
+          h.getAttribute('formaction'),
+        ]
+      })
+      comprobarBoton(desc)
+      const tag = await boton.evaluate((el) => `<${el.tagName.toLowerCase()} id="${el.id}">`)
+      console.log(`✓ Calcular: 1 elemento (${tag}) en el marco «${marco === page.mainFrame() ? '(principal)' : marco.name() || '(sin nombre)'}» · pasa comprobarBoton · NO se pulsa`)
+      calcularOk = true
+    } catch (e) {
+      console.log(`✗ Calcular: ${e instanceof Error ? e.message.split('\n')[0] : e}`)
+    }
+
     // Fases siguientes: solo informativo (aparecen tras «Calcular»/«Aceptar»; aquí no se pulsa nada).
     const info: [string, number][] = [
-      ['botón Calcular', await botonCalcular(formulario).count()],
       ['fila COSTE ANUAL (inputs)', await costesAnuales(formulario).count()],
       ['filas de partidas', (await Promise.all(PARTIDAS.map((p) => filaPorEtiqueta(formulario, p.fila, p.grupo).count()))).reduce((a, b) => a + b, 0)],
+      [
+        'partidas con columnas estandar/personalizado[/franquicia] (1 c/u)',
+        (
+          await Promise.all(
+            PARTIDAS.map(async (p) => {
+              const f = filaPorEtiqueta(formulario, p.fila, p.grupo)
+              const n = async (pre: string) => f.locator(`input[id^="${pre}"], select[id^="${pre}"]`).count()
+              return (await n('estandar')) === 1 && (await n('personalizado')) === 1 && (!p.franquicia || (await n('franquicia')) === 1) ? 1 : 0
+            }),
+          )
+        ).reduce((a: number, b: number) => a + b, 0),
+      ],
+      ['control de avance de Datos Básicos (#aceptar, el que busca guard.ts)', await formulario.locator('#aceptar').filter({ hasText: /^\s*Aceptar\s*$/i }).count()],
       ['filas de asistencias', (await Promise.all(ASISTENCIAS.map((a) => filaPorEtiqueta(formulario, a.fila).count()))).reduce((a, b) => a + b, 0)],
       ['radios de modalidad', await formulario.locator('xpath=//tr[td[contains(translate(normalize-space(.),"elijaunopcó","ELIJAUNOPCÓ"),"ELIJA UNA OPCI")]]//input[@type="radio"]').count()],
       ['fila Prima Total', await filaPorEtiqueta(formulario, 'Prima Total').count()],
@@ -206,8 +254,8 @@ async function main(): Promise<number> {
     ]
     console.log('— fases siguientes (informativo; dependen de calcular/avanzar) —')
     for (const [q, n] of info) console.log(`  ${q}: ${n}`)
-    console.log(`RESULTADO: ${ok}/${CAMPOS.length} campos OK`)
-    return ok === CAMPOS.length ? 0 : 1
+    console.log(`RESULTADO: ${ok}/${CAMPOS.length} campos OK · Calcular ${calcularOk ? 'OK' : 'FALLA'}`)
+    return ok === CAMPOS.length && calcularOk ? 0 : 1
   } finally {
     await browser.close()
   }
