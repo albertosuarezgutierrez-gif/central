@@ -185,6 +185,7 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
           <EditarFichaModal
             oportunidadId={op.id} clienteId={f.clienteId} nombre={f.nombre}
             conduce={riesgo.figuras.some((g) => g.clienteId === f.clienteId && conduceEnRiesgo(g.rol, op.ramo, riesgo.figuras))}
+            faltan={f.faltan}
             refresco={riesgo} onCerrar={() => setEditando(null)}
           />
         )

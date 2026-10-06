@@ -56,6 +56,7 @@ import {
   type EdicionCliente,
   type TipoContacto,
   type TipoHistorial,
+  SALUDO_POR_SEXO,
 } from '@central/module-seguros'
 import { anotarCambio } from './auditoria'
 import {
@@ -695,6 +696,7 @@ export async function editarCliente(
     if (r.libre.ciudad !== undefined) data.ciudad = r.libre.ciudad
     if (r.libre.provincia !== undefined) data.provincia = r.libre.provincia
     if (r.libre.notas !== undefined) data.notas = r.libre.notas
+    if (r.sexo !== undefined) data.saludo = SALUDO_POR_SEXO[r.sexo]
 
     await db.cliente.update({ where: { id: clienteId }, data })
     // Anotar cambios de auditoria (sin antes/despues)
@@ -719,6 +721,7 @@ export async function editarCliente(
         anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'notas' })
       }
     }
+    if (r.sexo !== undefined) anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'saludo' })
     const texto = motivoCambio
       ? [
           textoCambioIdentidadConMotivo({
@@ -732,7 +735,7 @@ export async function editarCliente(
               fechaNacimiento: r.identidad.fechaNacimiento,
             },
           }),
-          Object.keys(r.libre).length > 0 ? textoHistorialEdicion({ ...r, identidad: {} }, { actor }) : null,
+          Object.keys(r.libre).length > 0 || r.sexo !== undefined ? textoHistorialEdicion({ ...r, identidad: {} }, { actor }) : null,
         ].filter(Boolean).join(' ')
       : textoHistorialEdicion(r, { actor, documentoId: edicion.documentoId })
     await anotarHistorial(correduriaId, clienteId, 'gestion', texto)
