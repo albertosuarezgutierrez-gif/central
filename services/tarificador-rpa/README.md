@@ -34,6 +34,15 @@ fly secrets set --app asegura-tarificador --stage \
 - Los fly secrets de la app se inyectan en las máquinas creadas por la API de Machines: comprobarlo en el
   primer trabajo real (si faltan, el trabajo acaba `error_definitivo` «faltan los fly secrets»).
 
+## Probar el formulario SIN portal (harness offline)
+```sh
+npx tsx scripts/probar-formulario.ts /ruta/al/html-de-evidencia.html   # NO se commitea el HTML
+```
+El HTML es el que guarda el runner en un fallo (`seguros.documentos`, redactado), ya con el contenido de
+los marcos: el formulario de ePAC vive en el iframe `appArea` (`src/evidencia.ts`). El harness lo monta sin
+red ni JS y comprueba que cada campo de `CAMPOS` resuelve a un control y acepta `fill`/`setChecked`.
+No pulsa nada: Calcular, desplegables ndbx, la lectura de ofertas y el avance solo se validan en real.
+
 ## Construir la imagen (desde la RAÍZ del monorepo)
 ```sh
 fly deploy . --config services/tarificador-rpa/fly.toml --dockerfile services/tarificador-rpa/Dockerfile \

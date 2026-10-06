@@ -5,7 +5,7 @@
 //      value, id, name y href del elemento y se niega a pulsar si casa con el patrón. (Lo vigila
 //      `test/regression-tarificador-rpa.test.ts` en la raíz.)
 
-import type { BrowserContext, Locator, Page } from 'playwright'
+import type { BrowserContext, Frame, Locator, Page } from 'playwright'
 import { EmisionBloqueadaError, MaquinaFases, comprobarBoton, pareceEmision, type ModalidadPortal, type PestanaActiva } from '@central/module-tarificacion'
 
 export type GuardEmision = { violacion(): EmisionBloqueadaError | null; comprobar(): void; fases: MaquinaFases }
@@ -64,12 +64,43 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
  * `aria-selected`, comprobarlo además.
  */
 export async function pestanaActiva(page: Page): Promise<PestanaActiva> {
-  const visible = (t: string) => page.getByText(t, { exact: false }).first().isVisible().catch(() => false)
+  // El formulario vive en un iframe (`appArea`, 06/10/2026): se mira en TODOS los marcos de la página.
+  const visible = async (t: string) => {
+    for (const f of marcosVivos(page)) {
+      if (await f.getByText(t, { exact: false }).first().isVisible().catch(() => false)) return true
+    }
+    return false
+  }
   const tarificar = await visible('Idioma Proyecto PDF')
   const datos = await visible('COSTE ANUAL DEL SEG.')
   if (tarificar && !datos) return 'tarificar'
   if (datos && !tarificar) return 'datos_basicos'
   return null
+}
+
+/** Marcos no desconectados de la página (la carcasa de ePAC + el iframe de la aplicación y sus hijos). */
+function marcosVivos(page: Page): Frame[] {
+  return page.frames().filter((f) => !f.isDetached())
+}
+
+/**
+ * Cuenta lo que casa con `buscar` en TODOS los marcos: `total` (suma), `marcos` (cuántos tienen
+ * alguno) y el locator del primero que lo tiene. Quien llama exige el `total` exacto que espera.
+ */
+async function enMarcos(page: Page, buscar: (f: Frame) => Locator): Promise<{ total: number; locator: Locator | null; marcos: number }> {
+  let total = 0
+  let marcos = 0
+  let locator: Locator | null = null
+  for (const f of marcosVivos(page)) {
+    const l = buscar(f)
+    const n = await l.count().catch(() => 0)
+    if (n > 0) {
+      total += n
+      marcos++
+      locator ??= l
+    }
+  }
+  return { total, locator, marcos }
 }
 
 async function descripcion(boton: Locator): Promise<(string | null)[]> {
@@ -93,8 +124,9 @@ async function descripcion(boton: Locator): Promise<(string | null)[]> {
 export async function elegirOpcion(page: Page, guard: GuardEmision, modalidad: ModalidadPortal): Promise<void> {
   guard.comprobar()
   guard.fases.autorizarOpcion(await pestanaActiva(page))
-  const radios = page.locator('xpath=//tr[td[contains(normalize-space(.),"ELIJA UNA OPCI")]]//input[@type="radio"]')
-  if ((await radios.count()) !== 2) throw new Error('allianz/comunidades: se esperaban exactamente 2 radios de modalidad')
+  const r = await enMarcos(page, (f) => f.locator('xpath=//tr[td[contains(translate(normalize-space(.),"elijaunopcó","ELIJAUNOPCÓ"),"ELIJA UNA OPCI")]]//input[@type="radio"]'))
+  if (r.total !== 2 || r.marcos !== 1 || !r.locator) throw new Error('allianz/comunidades: se esperaban exactamente 2 radios de modalidad, en un solo marco')
+  const radios = r.locator
   await radios.nth(modalidad === 'personalizado' ? 1 : 0).check()
   guard.comprobar()
 }
@@ -107,13 +139,15 @@ export async function elegirOpcion(page: Page, guard: GuardEmision, modalidad: M
 export async function pulsarAvance(page: Page, guard: GuardEmision): Promise<void> {
   guard.comprobar()
   guard.fases.autorizarAceptar(await pestanaActiva(page))
-  const candidatos = page
-    .locator('a, button')
-    .filter({ hasText: /^\s*>?\s*Aceptar\s*$/i })
-    .or(page.locator('input[value="Aceptar"]'))
-    .locator('visible=true')
-  if ((await candidatos.count()) !== 1) throw new Error('allianz/comunidades: no hay exactamente un control visible de avance en Datos Básicos')
-  const boton = candidatos.first()
+  const c = await enMarcos(page, (f) =>
+    f
+      .locator('a, button')
+      .filter({ hasText: /^\s*>?\s*Aceptar\s*$/i })
+      .or(f.locator('input[value="Aceptar" i]'))
+      .locator('visible=true'),
+  )
+  if (c.total !== 1 || !c.locator) throw new Error('allianz/comunidades: no hay exactamente un control visible de avance en Datos Básicos')
+  const boton = c.locator.first()
   comprobarBoton(await descripcion(boton), { permitirAceptar: true })
   await boton.click()
   for (let i = 0; i < 60; i++) {
