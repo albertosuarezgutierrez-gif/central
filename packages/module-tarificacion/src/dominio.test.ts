@@ -172,6 +172,13 @@ describe('modalidad del riesgo', () => {
     expect(p.ok && p.riesgo.modalidad).toBe('personalizado')
     expect(validarRiesgoComunidad({ ...base, modalidad: 'ambas' }, hoy).ok).toBe(false)
   })
+  it('opciones (variantes): ausente → null (apagado); booleano pasa; otra cosa, error', () => {
+    const r = validarRiesgoComunidad(base, hoy)
+    expect(r.ok && r.riesgo.opciones).toBeNull()
+    const s = validarRiesgoComunidad({ ...base, opciones: true }, hoy)
+    expect(s.ok && s.riesgo.opciones).toBe(true)
+    expect(validarRiesgoComunidad({ ...base, opciones: 'si' }, hoy).ok).toBe(false)
+  })
 })
 
 describe('ofertas', () => {

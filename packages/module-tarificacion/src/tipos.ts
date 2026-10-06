@@ -102,6 +102,11 @@ export type RiesgoComunidad = {
 
   /** Modalidad a elegir en el portal. Ausente = `estandar`. Querer las dos = DOS trabajos. */
   modalidad?: ModalidadPortal | null
+  /**
+   * Varias opciones (06/10/2026): `true` = tras la oferta base, recalcular las variantes de franquicia/RC que el
+   * adaptador tenga declaradas (cada una, oferta extra con su etiqueta). Ausente/`null`/`false` = solo la base.
+   */
+  opciones?: boolean | null
 }
 
 export type Fraccionamiento = 'anual' | 'semestral' | 'trimestral' | 'mensual'

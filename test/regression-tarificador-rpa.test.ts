@@ -146,6 +146,37 @@ test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan po
   assert.match(g, /PATRON_ACEPTAR/)
 })
 
+test('varias opciones: las variantes solo cambian <select> nativos, recalculan con calcular() y restauran la base ANTES del avance', () => {
+  const src = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/comunidades.ts'), 'utf8'))
+  const ini = src.indexOf('export type ColumnaPartida')
+  const fin = src.indexOf('export async function leerPrimas')
+  assert.ok(ini > -1 && fin > ini, 'falta el bloque de variantes (ColumnaPartida … leerPrimas)')
+  const bloque = src.slice(ini, fin)
+  // Sin pulsaciones propias: lo único que se pulsa es «Calcular», dentro de calcular() (botonCalcular, ya vigilado).
+  assert.ok(!/ctx\.pulsar\(|\.(click|dblclick|tap|check|setChecked|fill|press|type)\s*\(/.test(bloque), 'variantes: ni pulsaciones ni escrituras salvo selectOption')
+  assert.match(bloque, /\.locator\(`select\[id\^="\$\{columna\}"\]`\)/, 'variantes: solo <select> nativos de la fila de la partida')
+  assert.match(bloque, /export type ColumnaPartida = 'estandar' \| 'personalizado' \| 'franquicia'\n/)
+  assert.match(bloque, /await calcular\(page, ctx\)/)
+  assert.match(bloque, /finally \{[^}]*restaurarBase\(/, 'variantes: la base se restaura SIEMPRE (finally)')
+  // En tarificar: las variantes, solo con riesgo.opciones y ANTES de elegir modalidad / avanzar.
+  const t = src.slice(src.indexOf('async tarificar('))
+  assert.match(t, /riesgo\.opciones \? await calcularVariantes\(/)
+  assert.ok(t.indexOf('calcularVariantes(') < t.indexOf('ctx.elegirOpcion('), 'las variantes van antes del avance a Tarificar')
+})
+
+test('sesión reutilizada: solo en memoria (sin disco), y el runner pulsa siempre por pulsar(boton, guard)', () => {
+  for (const f of ficheros(join(SRV, 'src'))) {
+    const src = sinComentarios(readFileSync(f, 'utf8'))
+    assert.ok(!/storageState\(\s*\{[^)]*path/.test(src), `${relative(RAIZ, f)} guarda el storageState en disco`)
+  }
+  const sesion = sinComentarios(readFileSync(join(SRV, 'src/sesion.ts'), 'utf8'))
+  assert.ok(!/from ['"](node:)?fs/.test(sesion), 'sesion.ts no puede tocar el disco')
+  assert.match(sesion, /toJSON\(\): string \{\s*return '\[sesion\]'/, 'la sesión no se serializa (toJSON)')
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /pulsar: async \(boton\) => \{\s*await ctx\.pausaAccion\(\)\s*await pulsar\(boton, guard\)\s*\}/, 'ctx.pulsar = pausa + pulsar(boton, guard), nada más')
+  assert.match(runner, /sesionEpac\.invalidar\(\)/, 'el runner invalida la sesión ante un fallo')
+})
+
 test('formador con IA: solo la lista de bloqueo nombra emitir/contratar/formalizar; la tabla de acciones permitidas, nunca', () => {
   const src = sinComentarios(readFileSync(join(SRV, 'src/formador.ts'), 'utf8'))
   const PROHIBIDAS = /emitir|contratar|formalizar/i
