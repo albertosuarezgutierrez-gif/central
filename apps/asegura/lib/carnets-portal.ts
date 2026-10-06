@@ -19,9 +19,16 @@
 import { caducidadCarnet } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
-import { descifrarCampo } from './cartera-edicion'
+import { borrarCarnet, descifrarCampo, guardarCarnet } from './cartera-edicion'
+import {
+  destinoCarnet,
+  traducirResultadoCarnet,
+  type OperacionCarnetPortal,
+  type ResultadoCarnetPortalEscritura,
+} from './carnets-portal-reglas'
 import { agruparCarnetsPorTitular, fichasLegiblesDeCarnets, type CarnetDeFicha, type TitularCarnets } from './carnets-titulares'
 import { vinculosDeIdentidad } from './contacto-portal'
+import type { VinculoPortal } from './ficha-de-poliza'
 
 export type { CarnetPortal, TitularCarnets } from './carnets-titulares'
 
@@ -108,4 +115,69 @@ export async function caducidadesCarnetDeIdentidad(
     console.error('[carnets-portal] no se pudo leer la ficha:', e instanceof Error ? e.message : e)
     return { estado: 'error', causa: 'ficha_ilegible' }
   }
+}
+
+/**
+ * El CLIENTE escribe uno de sus carnés desde el portal (alta, cambio o baja). Reglas en
+ * `carnets-portal-reglas.ts`; la escritura es la MISMA del corredor (`guardarCarnet`/`borrarCarnet`:
+ * `revisarCarnet`, fecha cifrada, uno por tipo, `historial_interno`), con origen `portal`.
+ *
+ * 🚨 La ficha la propone el portal (`fichaId`) pero la DECIDE esta función contra `portal_vinculo`: solo una
+ * ficha vinculada con nivel que opera. En cambio/baja el dueño del carné se lee de BD y tiene que ser esa
+ * ficha; `guardarCarnet`/`borrarCarnet` vuelven a filtrar por `cliente_id`, así que esto decide la ficha,
+ * no sustituye esa guarda.
+ */
+export async function escribirCarnetPortal(
+  correduriaId: string,
+  op: OperacionCarnetPortal,
+): Promise<ResultadoCarnetPortalEscritura> {
+  let vinculos: VinculoPortal[]
+  try {
+    vinculos = await vinculosDeIdentidad(correduriaId, op.identidadId)
+  } catch (e) {
+    console.error('[carnets-portal] no se pudieron leer los vínculos:', e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: 'vinculos_ilegibles' }
+  }
+
+  let duenoCarnet: string | null = null
+  let tipoPersonaDestino: string | null = null
+  try {
+    if (op.accion === 'alta') {
+      const c = await prismaAsegura().cliente.findFirst({
+        where: { id: op.fichaId, correduriaId, mergedIntoClienteId: null },
+        select: { tipoPersona: true },
+      })
+      tipoPersonaDestino = c?.tipoPersona == null ? null : String(c.tipoPersona)
+    } else {
+      const k = await prismaAsegura().clienteCarnetConducir.findFirst({
+        where: { id: op.id, correduriaId },
+        select: { clienteId: true },
+      })
+      duenoCarnet = k?.clienteId ?? null
+    }
+  } catch (e) {
+    console.error('[carnets-portal] no se pudo leer el destino:', e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: 'destino_ilegible' }
+  }
+
+  const d = destinoCarnet({ accion: op.accion, vinculos, fichaId: op.fichaId, duenoCarnet, tipoPersonaDestino })
+  if (d.estado === 'sin_ficha') return { estado: 'sin_ficha' }
+  if (d.estado === 'ajena') {
+    if (d.motivo !== 'sin_dueno') console.warn(`[carnets-portal] identidad ${op.identidadId}: ${op.accion} de carné rechazado (${d.motivo})`)
+    return { estado: 'no_encontrado' }
+  }
+
+  const origen = { origen: 'portal', identidadId: op.identidadId } as const
+  const actor = 'el cliente, desde el portal'
+  const r =
+    op.accion === 'baja'
+      ? await borrarCarnet(correduriaId, d.clienteId, { id: op.id, actor, origen })
+      : await guardarCarnet(correduriaId, d.clienteId, {
+          ...(op.accion === 'cambio' ? { id: op.id } : {}),
+          tipo: op.tipo,
+          fecha: op.fecha,
+          actor,
+          origen,
+        })
+  return traducirResultadoCarnet(r)
 }

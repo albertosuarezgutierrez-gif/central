@@ -46,6 +46,11 @@ test('un cambio de dirección AVISA de que el domicilio tarifica', () => {
   assert.match(String(r), /hogar|auto/i)
 })
 
+test('un carné cambiado desde el portal consta como del cliente y avisa de que tarifica', () => {
+  assert.equal(definicionActividad('carnet')?.origen, 'cliente')
+  assert.match(String(riesgoActividad('carnet')), /tarifica/)
+})
+
 test('la supresión nombra el plazo legal', () => {
   assert.match(String(riesgoActividad('supresion')), /plazo|mes|art\. 17/i)
 })
