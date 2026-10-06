@@ -13,7 +13,7 @@ import { DIAS_AVISO_OPORTUNIDAD, fechaAvisoOportunidad } from '@central/module-s
 /** Días antes del vencimiento a los que se llama: la regla única de las oportunidades (`@central/module-seguros`). */
 export const DIAS_LLAMADA_ANTES_VENCIMIENTO = DIAS_AVISO_OPORTUNIDAD
 
-const RAMOS = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] as const
+const RAMOS = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'empresas', 'rc_profesional', 'dyo', 'flotas', 'transporte_mercancias', 'ciberriesgos', 'decenal', 'embarcaciones', 'mascotas', 'impago_alquiler', 'viaje', 'caucion', 'otros'] as const
 export type RamoDocumento = (typeof RAMOS)[number]
 
 /** El ramo leído, o `otros`: un documento de seguro sin ramo claro sigue siendo una venta. */

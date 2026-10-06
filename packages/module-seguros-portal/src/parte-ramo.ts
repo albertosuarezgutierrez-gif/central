@@ -278,6 +278,8 @@ const VIVIENDA = (r: 'hogar' | 'comunidades'): readonly CampoParte[] => [
   LESIONADOS,
 ]
 
+const PARTE_GENERICO: readonly CampoParte[] = [afectados('Afectado', 'Otras personas perjudicadas'), LESIONADOS]
+
 export const CAMPOS_PARTE_POR_RAMO: Readonly<Record<RamoSiniestro, readonly CampoParte[]>> = {
   auto: VEHICULO('auto'),
   moto: VEHICULO('moto'),
@@ -307,7 +309,28 @@ export const CAMPOS_PARTE_POR_RAMO: Readonly<Record<RamoSiniestro, readonly Camp
   decesos: [personaAfectada('Persona fallecida')],
   salud: [personaAfectada('Persona asegurada afectada')],
   accidentes: [personaAfectada('Persona accidentada'), BAJA],
-  otros: [afectados('Afectado', 'Otras personas perjudicadas'), LESIONADOS],
+  // Ramos nuevos de oportunidad (06/10/2026): sin parte propio todavía, como `otros`.
+  rc_profesional: PARTE_GENERICO,
+  dyo: PARTE_GENERICO,
+  flotas: PARTE_GENERICO,
+  transporte_mercancias: PARTE_GENERICO,
+  ciberriesgos: PARTE_GENERICO,
+  decenal: PARTE_GENERICO,
+  embarcaciones: PARTE_GENERICO,
+  mascotas: PARTE_GENERICO,
+  impago_alquiler: PARTE_GENERICO,
+  viaje: PARTE_GENERICO,
+  caucion: PARTE_GENERICO,
+  empresas: [
+    ORIGEN_DANO,
+    AVERIA_ACTIVA,
+    ZONAS_LOCAL,
+    ACTIVIDAD_PARADA,
+    DENUNCIA,
+    afectados('Afectado', 'Vecinos, clientes u otras personas perjudicadas'),
+    LESIONADOS,
+  ],
+  otros: PARTE_GENERICO,
 }
 
 /** Los campos del parte para ESE ramo (`'comunidad'` incluido). `[]` = ramo desconocido. */
