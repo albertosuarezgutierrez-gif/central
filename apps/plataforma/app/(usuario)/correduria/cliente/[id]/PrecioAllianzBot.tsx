@@ -180,7 +180,10 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
                 {vista?.detalle && <div style={{ fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{vista.detalle}</div>}
                 {errorLectura && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{errorLectura}</div>}
                 {agotado && enCurso && (
-                  <div role="status" style={{ fontSize: 13 }}>Sigue en curso: cierra esto y recarga más tarde (el resultado queda guardado).</div>
+                  <div role="status" style={{ fontSize: 13, display: 'grid', gap: 8 }}>
+                    Sigue en curso y he dejado de preguntar. El resultado se guarda en asegura, pero si recargas la página esta ventana lo pierde de vista.
+                    <button type="button" onClick={() => setAgotado(false)} style={{ ...btnStyle('secundario'), justifySelf: 'start' }}>Seguir esperando</button>
+                  </div>
                 )}
                 {trabajo?.estado === 'ok' && trabajo.ofertas.map((o, i) => (
                   <div key={`${o.producto}-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6 }}>
