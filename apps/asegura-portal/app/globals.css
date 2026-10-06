@@ -3510,6 +3510,21 @@ h1 em {
   font-size: 14px;
 }
 
+/* «Mis carnés» (06/10/2026): reutiliza las filas de contactos; el formulario va en línea (no en modal), en
+   una sola columna que cabe a 320 px, con los mismos campos de 44 px de «Mis datos». */
+.mis-carnets-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 0;
+}
+.mis-carnets-form-titulo { margin: 0; font-weight: 600; font-size: 14px; }
+.mis-carnets-form input[type='date'] { min-height: 44px; }
+
 /* La banda de «vista de corredor» (08/09/2026): Alberto mirando el portal como
    lo ve un cliente. En el flujo, encima de la navegación; el ámbar es el tono
    de «ojo», no el de error: no ha fallado nada, es que no eres quien parece. */
