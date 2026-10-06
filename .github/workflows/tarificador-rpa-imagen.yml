@@ -27,14 +27,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_TARIFICADOR }}
       ETIQUETA: ${{ inputs.etiqueta }}
+      FLYCTL_VERSION: '0.4.111'
     steps:
       - uses: actions/checkout@v4
 
-      - uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be # 1.5
+      # flyctl de una release FIJA de GitHub y verificada con su checksums.txt (sin `curl | sh` ni el token
+      # en este paso). setup-flyctl@1.5 (Node 20) murió en silencio en el run #2.
+      - name: Instalar flyctl
+        run: |
+          set -euo pipefail
+          archivo="flyctl_${FLYCTL_VERSION}_Linux_x86_64.tar.gz"
+          base="https://github.com/superfly/flyctl/releases/download/v${FLYCTL_VERSION}"
+          curl -fsSL -o "$archivo" "$base/$archivo"
+          curl -fsSL -o checksums.txt "$base/checksums.txt"
+          grep " ${archivo}\$" checksums.txt | sha256sum -c -
+          mkdir -p "$HOME/.fly/bin"
+          tar -xzf "$archivo" -C "$HOME/.fly/bin" flyctl
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
       - name: Comprobar secreto y etiqueta
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_TARIFICADOR }}
         run: |
           if [ -z "$FLY_API_TOKEN" ]; then
             echo "::error::Falta el secreto de repo FLY_API_TOKEN_TARIFICADOR (Settings → Secrets and variables → Actions)."
@@ -46,6 +60,8 @@ jobs:
           fi
 
       - name: Crear la app si no existe
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_TARIFICADOR }}
         run: |
           if ! flyctl status --app asegura-tarificador >/dev/null 2>&1; then
             flyctl apps create asegura-tarificador --org grupo-asegura || {
@@ -55,6 +71,8 @@ jobs:
           fi
 
       - name: Construir y subir la imagen
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_TARIFICADOR }}
         run: |
           flyctl deploy . \
             --config services/tarificador-rpa/fly.toml \
