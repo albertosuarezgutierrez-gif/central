@@ -181,7 +181,7 @@ export function IconoCompartir() {
 function AbrirEnSafari({ motivo }: { motivo: string }) {
   const [copiado, setCopiado] = useState<'no' | 'si' | 'manual'>('no')
   const copiar = async () => {
-    const url = window.location.origin + '/'
+    const url = location.href
     try {
       await navigator.clipboard.writeText(url)
       setCopiado('si')

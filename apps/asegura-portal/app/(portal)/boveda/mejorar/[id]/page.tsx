@@ -7,7 +7,7 @@ import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
 import { peticionesPrecio } from '@/lib/mejorar-precio'
 import { getIdentidad } from '@/lib/session'
-import { primaQuePaga } from '@/lib/vencimientos'
+import { ofrecibleParaMejorarPrecio, primaQuePaga } from '@/lib/vencimientos'
 
 import { tituloDePoliza } from '../../PolizaVista'
 import { FormMejorar } from './FormMejorar'
@@ -30,7 +30,7 @@ export default async function MejorarPrecio({ params }: { params: Promise<{ id: 
   const cartera = await carteraDeIdentidad(identidad.id)
   let p: PolizaPortal | null = null
   for (const t of cartera.propias) p = p ?? t.polizas.find((x) => x.id === id) ?? null
-  if (!p || p.vigencia !== 'vigente' || !p.fechaVencimiento) notFound()
+  if (!p || !ofrecibleParaMejorarPrecio(p) || !p.fechaVencimiento) notFound()
 
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
   const dias = diasHastaVencimientoPortal(p.fechaVencimiento.toISOString().slice(0, 10), hoy)

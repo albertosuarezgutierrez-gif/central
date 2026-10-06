@@ -20,7 +20,7 @@ import { peticionesPrecio } from '@/lib/mejorar-precio'
 import { datosParaContratar } from '@/lib/datos-emision'
 import { pendientesDeTi } from '@/lib/pendiente-de-ti'
 import { presupuestosPendientesDeIdentidad } from '@/lib/presupuesto'
-import { anulacionesPendientes } from '@/lib/anulacion-firma'
+import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
@@ -147,13 +147,23 @@ export default async function Boveda({
   const hoyMadrid = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
   // La MISMA lista pinta el bloque: si se calculara dos veces y discreparan, el
   // bloque saldría sin peticiones (`null`) y enseñaría el botón a quien ya pidió.
-  const vencimientos = vista === 'seguros'
-    ? vencimientosEnVentana(cartera.propias.flatMap((t) => t.polizas), hoyMadrid)
-    : []
-  const peticionesP = vencimientos.length > 0 ? peticionesPrecio(identidad.id) : Promise.resolve(null)
+
   // Anulaciones que el corredor ha preparado y esperan su firma (pieza 2-d-2).
   // `null` = no se pudo saber: no se pinta nada, pero tampoco se afirma que no haya.
   const firmasP = vista === 'seguros' ? anulacionesPendientes(identidad.id) : Promise.resolve(null)
+  // Se calculan DESPUÉS de las firmas: una póliza con baja en marcha no «renueva» (decisión 05/10/2026), y
+  // la misma lista decide si se piden las peticiones (si se calcularan dos veces y discreparan, el bloque
+  // saldría sin peticiones (`null`) y enseñaría el botón a quien ya pidió). Encadenado para no sumar esperas.
+  const vencimientosP = firmasP.then((f) =>
+    vista === 'seguros'
+      ? vencimientosEnVentana(
+          cartera.propias.flatMap((t) => t.polizas),
+          hoyMadrid,
+          f === null ? undefined : polizasConBajaEnMarcha(f, { conConfirmadas: true }),
+        )
+      : [],
+  )
+  const peticionesP = vencimientosP.then((v) => (v.length > 0 ? peticionesPrecio(identidad.id) : null))
 
   // «Pendiente de ti» (§Q.4): sus presupuestos vivos, y a los aceptados qué datos les faltan para
   // contratar (puente). Encadenado para que corra en paralelo con firmas y peticiones. Un fallo del
@@ -174,19 +184,13 @@ export default async function Boveda({
       : Promise.resolve(null)
 
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
-  const [peticiones, firmas, presupuestosPend] = await Promise.all([peticionesP, firmasP, presupuestosP])
+  const [peticiones, firmas, presupuestosPend, vencimientos] = await Promise.all([peticionesP, firmasP, presupuestosP, vencimientosP])
 
   // Pólizas donde YA hay una baja en marcha (por firmar, en revisión o firmada y sin cerrar): ahí no se ofrece «Solicitar baja».
   // `null` = no se pudo leer el puente: no se ofrece (el servidor también la rechazaría con 409), no se afirma que no haya.
   const bajasAbiertas: ReadonlySet<string> | null = firmas === null
     ? null
-    : new Set(
-        [
-          ...firmas.anulaciones.map((a) => a.polizaId),
-          ...firmas.enRevision.map((a) => a.polizaId),
-          ...firmas.firmadas.filter((a) => a.estado !== 'confirmada').map((a) => a.polizaId),
-        ].filter((x): x is string => x !== null),
-      )
+    : polizasConBajaEnMarcha(firmas)
   const puedePedirBaja = !identidad.corredor
 
   const pendientes =

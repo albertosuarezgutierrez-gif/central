@@ -70,6 +70,23 @@ export type ResultadoFirma =
   /** No se sabe si se firmó: que lo mire antes de volver a intentarlo. */
   | { estado: 'error' }
 
+/**
+ * Pólizas con una baja EN MARCHA (por firmar, en revisión o firmada). Una `confirmada` solo cuenta si se pide
+ * (`conConfirmadas`): «Solicitar baja» la vuelve a permitir, pero «renueva el…» no debe seguir enseñándose.
+ */
+export function polizasConBajaEnMarcha(
+  firmas: Pick<LecturaPendientes, 'anulaciones' | 'enRevision' | 'firmadas'>,
+  opciones: { conConfirmadas?: boolean } = {},
+): Set<string> {
+  return new Set(
+    [
+      ...firmas.anulaciones.map((a) => a.polizaId),
+      ...firmas.enRevision.map((a) => a.polizaId),
+      ...firmas.firmadas.filter((a) => opciones.conConfirmadas === true || a.estado !== 'confirmada').map((a) => a.polizaId),
+    ].filter((x): x is string => x !== null),
+  )
+}
+
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
 
 function obj(j: unknown): Record<string, unknown> {

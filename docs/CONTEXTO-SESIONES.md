@@ -1082,7 +1082,9 @@ Víctor Manuel de la Fuente no podía añadir el portal a inicio desde Chrome iO
 helper `puedeAnadirDesdeNavegador` (Chrome/Firefox/Edge iOS solo ≥16.4; vista integrada Gmail/WhatsApp nunca) + test;
 instrucciones Chrome iOS (Compartir arriba dcha → «Ver más») y salida «Ábrela en Safari» con copiar enlace; globo de
 instalar se abre solo UNA vez al entrar (descarte en localStorage), en Android lanza el prompt nativo; `appleWebApp` +
-apple-touch-icon. En iOS NO existe aviso automático de instalación. ⚠️ Pendiente OK de Alberto: el auto-abierto choca con su decisión del 08/09.
+apple-touch-icon. En iOS NO existe aviso automático de instalación. Alberto dio OK al auto-abierto (06/10).
+Mismo PR: «Tus vencimientos» ofrecía «mejorar precio» de una póliza SUSTITUIDA (baja `sustitucion` comunicada) y el POST
+devolvía «No encontramos esta póliza» (`sqlCarteraEnVigor` exige `sustituida_at IS NULL`; la lista no). Predicado común `ofrecibleParaMejorarPrecio` + `polizasConBajaEnMarcha`.
 
 ## (06/10/2026) Correduría: CP en la cabecera de la ficha de cliente
 - `Cabecera.tsx` (`Contacto`) pinta «CP Ciudad, Provincia» junto al pin. El CP ya llegaba de asegura (`ContactoFicha.codigoPostal`); solo faltaba pintarlo. Sin cambios de BD/puerto.

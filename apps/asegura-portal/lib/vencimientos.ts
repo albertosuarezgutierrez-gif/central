@@ -12,13 +12,27 @@ import type { PolizaPortal } from './cartera-lectura.ts'
 export type Vencimiento = { p: PolizaPortal; dias: number | null }
 
 /**
+ * El criterio de PROPIEDAD/VIGOR de la acción «mejorar el precio»: el mismo que aplica el puente de asegura
+ * (`pedirMejorarPrecio`: ficha vinculada + `sqlCarteraEnVigor`, que exige `sustituida_at IS NULL`). Si la lista
+ * enseñara algo que el puente rechaza, el cliente vería «No encontramos esta póliza entre las tuyas».
+ */
+export function ofrecibleParaMejorarPrecio(p: Pick<PolizaPortal, 'vigencia' | 'sustituidaAt'>): boolean {
+  return p.vigencia === 'vigente' && (p.sustituidaAt ?? null) === null
+}
+
+/**
  * Lo que renueva en la ventana, del más cercano al más lejano. Solo en vigor y
  * con fecha; una fecha ya pasada no entra (la compañía no ha mandado la
  * renovación y decir «renovó» sería afirmar algo que no sabemos).
  */
-export function vencimientosEnVentana(polizas: PolizaPortal[], hoyIso: string): Vencimiento[] {
+export function vencimientosEnVentana(
+  polizas: PolizaPortal[],
+  hoyIso: string,
+  /** Pólizas con baja en marcha (`polizasConBajaEnMarcha`). Una póliza que se da de baja no «renueva». */
+  conBaja: ReadonlySet<string> = new Set(),
+): Vencimiento[] {
   return polizas
-    .filter((p) => p.vigencia === 'vigente' && p.fechaVencimiento !== null)
+    .filter((p) => ofrecibleParaMejorarPrecio(p) && !conBaja.has(p.id) && p.fechaVencimiento !== null)
     .map((p) => ({ p, dias: diasHastaVencimientoPortal(p.fechaVencimiento!.toISOString().slice(0, 10), hoyIso) }))
     .filter((f) => enVentanaVencimientos(f.dias))
     .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0))

@@ -58,12 +58,16 @@ export function InstalarBoton() {
     } catch {}
   }
 
+  const cerrarSinPersistir = () => {
+    setAbierto(false)
+  }
+
   // Cerrar al pulsar fuera o con Escape: un globo que solo se cierra con su
   // propio botón se queda tapando la póliza.
   useEffect(() => {
     if (!abierto) return
     const fuera = (e: MouseEvent) => {
-      if (raiz.current && !raiz.current.contains(e.target as Node)) cerrar()
+      if (raiz.current && !raiz.current.contains(e.target as Node)) cerrarSinPersistir()
     }
     const tecla = (e: KeyboardEvent) => {
       if (e.key === 'Escape') cerrar()
@@ -91,8 +95,12 @@ export function InstalarBoton() {
         aria-expanded={abierto}
         aria-controls={idGlobo}
         onClick={() => {
-          if (abierto) cerrar()
-          else setAbierto(true)
+          if (ios) {
+            if (abierto) cerrar()
+            else setAbierto(true)
+          } else {
+            if (!abierto) void instalar()
+          }
         }}
       >
         <IconoInstalar />
@@ -110,7 +118,7 @@ export function InstalarBoton() {
             ) : (
               <>
                 <p>Instala «Mis seguros» y ábrela desde un icono, sin buscar el correo.</p>
-                <button type="button" className="instalar-copiar" onClick={() => void instalar()}>
+                <button type="button" className="instalar-copiar" onClick={() => { cerrar(); void instalar(); }}>
                   Instalar ahora
                 </button>
               </>
