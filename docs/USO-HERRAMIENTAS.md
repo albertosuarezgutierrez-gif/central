@@ -167,31 +167,31 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 273 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 274 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 265 | 35.451 | 27.808.776 | 0 | 0 |
-| `otro` | 263 | 8.659 | 23.443.830 | 13.646.937 | 0 |
-| `lectura-directa` | 235 | 6.044 | 18.355.157 | 0 | 0 |
-| `mcp:github` | 241 | 5.604 | 4.642.951 | 50.971.840 | 89 |
-| `escritura` | 183 | 3.629 | 52.487.425 | 0 | 0 |
+| `bash` | 266 | 35.504 | 27.854.752 | 0 | 0 |
+| `otro` | 263 | 8.674 | 23.473.122 | 13.933.080 | 0 |
+| `lectura-directa` | 236 | 6.049 | 18.358.698 | 0 | 0 |
+| `mcp:github` | 241 | 5.612 | 4.647.467 | 50.971.840 | 89 |
+| `escritura` | 183 | 3.631 | 52.495.178 | 0 | 0 |
 | `sql` | 168 | 3.462 | 1.705.332 | 2.351.230 | 13 |
 | `mcp:Claude_Code_Remote` | 141 | 1.477 | 304.037 | 5.301.463 | 14 |
 | `mcp:Gmail` | 34 | 1.092 | 1.054.458 | 0 | 70 |
 | `mcp:Booking-com` | 26 | 741 | 3.138.410 | 0 | 0 |
-| `mcp:Vercel` | 60 | 588 | 873.658 | 202.197 | 15 |
+| `mcp:Vercel` | 60 | 590 | 874.324 | 202.197 | 15 |
 | `mcp:Google_Drive` | 18 | 323 | 370.369 | 0 | 31 |
 | `mcp:Supabase` | 107 | 300 | 28.700 | 0 | 2 |
-| `agente:general-purpose` | 66 | 281 | 193.578 | 5.457.920 | 0 |
+| `agente:general-purpose` | 67 | 283 | 195.040 | 5.511.233 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
 | `agente:agente-architect` | 45 | 141 | 105.694 | 4.855.106 | 0 |
 | `mcp:Google-Drive` | 15 | 111 | 97.697 | 0 | 2 |
-| `mcp:claude-code-remote` | 16 | 90 | 8.060 | 0 | 0 |
+| `mcp:claude-code-remote` | 16 | 93 | 8.211 | 0 | 0 |
 | `agente:agente-mecanico` | 34 | 81 | 60.717 | 4.021.980 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
+| `agente:Explore` | 32 | 74 | 36.887 | 2.118.846 | 0 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
-| `agente:Explore` | 32 | 73 | 35.964 | 2.017.324 | 0 |
 | `agente:rastreador-codigo` | 37 | 62 | 20.586 | 651.535 | 0 |
 | `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |

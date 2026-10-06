@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T06:55:21Z",
-  "sha": "94b0a9e9f43934c3ff8244a1424ed7d39a49dade",
+  "generadoEn": "2026-10-06T08:44:10Z",
+  "sha": "49b8c357ba75fbdef04922e791d51715abd432b9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -34820,7 +34820,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2babf4d3977"
+      "hash": "c4af382b4569"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-documento.ts",
@@ -84916,7 +84916,7 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 453
+          "linea": 454
         },
         {
           "nombre": "Identidad",
@@ -84924,7 +84924,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 561
+          "linea": 563
         },
         {
           "nombre": "Carnets",
@@ -84932,12 +84932,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 601
+          "linea": 603
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5297d8827364"
+      "hash": "e0757bae104f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -119357,7 +119357,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd8d7579691c"
+      "hash": "89bde870bab1"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-correccion-tg.ts",
@@ -135673,6 +135673,7 @@
         "rotuloMotivo",
         "ramoInicialValido",
         "ramosConOfertas",
+        "urlOportunidadNueva",
         "rotuloRamo",
         "parsearPrima",
         "interpretarTareasHoy",
@@ -135829,7 +135830,7 @@
           "exportada": true,
           "params": "v: string | null | undefined",
           "retorno": "RamoOportunidad | null",
-          "linea": 449,
+          "linea": 451,
           "resumen": "Ramo válido de `?ramo=` para preseleccionar en el alta; `null` si no es uno conocido."
         },
         {
@@ -135838,8 +135839,17 @@
           "exportada": true,
           "params": "tarificables: readonly { etiqueta: string }[]",
           "retorno": "readonly",
-          "linea": 453,
+          "linea": 455,
           "resumen": "Ramos que se trabajan con ofertas de compañías (sin tarificador): los de RAMOS_OPORTUNIDAD que no están entre los tarificables."
+        },
+        {
+          "nombre": "urlOportunidadNueva",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string, ramo?: RamoOportunidad | null",
+          "retorno": "string",
+          "linea": 460,
+          "resumen": "URL de «oportunidad nueva» de una ficha; sin ramo, el alta se abre sin ramo preseleccionado («Otro ramo»)."
         },
         {
           "nombre": "rotuloRamo",
@@ -135847,7 +135857,7 @@
           "exportada": true,
           "params": "r: string | null",
           "retorno": "string",
-          "linea": 457
+          "linea": 464
         },
         {
           "nombre": "parsearPrima",
@@ -135855,7 +135865,7 @@
           "exportada": true,
           "params": "t: string",
           "retorno": "number | null | 'invalido'",
-          "linea": 470,
+          "linea": 477,
           "resumen": "Prima tecleada en formato español. Solo se aceptan formas sin ambigüedad: «1.200» es mil doscientos, nunca 1,2; «1200», «1.200,50», «412,5» y «412.50» también. Lo que no encaja es `'invalido'`, no un "
         },
         {
@@ -135864,7 +135874,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "TareasDeHoy",
-          "linea": 500
+          "linea": 507
         },
         {
           "nombre": "colaLlamadas",
@@ -135872,7 +135882,7 @@
           "exportada": true,
           "params": "leads: readonly LeadVencimiento[]",
           "retorno": "LeadVencimiento[]",
-          "linea": 538,
+          "linea": 545,
           "resumen": "La cola de llamadas de hoy, en el orden de la lista (probabilidad × prima). Solo quien se puede llamar (teléfono y canal que lo permite) y a quien le toca ya: un primer contacto a quien se le puede es"
         },
         {
@@ -135881,7 +135891,7 @@
           "exportada": true,
           "params": "l: LeadVencimiento",
           "retorno": "",
-          "linea": 557,
+          "linea": 564,
           "resumen": "El WhatsApp de seguimiento de un lead, o `null` si no se le puede escribir por ahí. Lo abre Alberto y lo envía él desde su teléfono. 🚨 A TODOS con teléfono desde el 30/09/2026 (decisión de Alberto, a"
         },
         {
@@ -135890,7 +135900,7 @@
           "exportada": true,
           "params": "l: LeadVencimiento",
           "retorno": "string[]",
-          "linea": 572,
+          "linea": 579,
           "resumen": "Guion corto de la llamada, con lo que se sabe del lead. Lo que no consta no se inventa."
         },
         {
@@ -135899,7 +135909,7 @@
           "exportada": true,
           "params": "l: Pick<LeadVencimiento, 'intentos' | 'respondioAntes' | 'estado'>",
           "retorno": "TramoLead",
-          "linea": 616,
+          "linea": 623,
           "resumen": "Por enviar = nadie le ha escrito ni llamado en este ciclo · Esperando = se le contactó y no hay respuesta registrada · Respondió = contestó, o ya está interesado / con propuesta. Así, al mandarle el W"
         },
         {
@@ -135908,7 +135918,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string",
-          "linea": 624,
+          "linea": 631,
           "resumen": "Minúsculas, sin tildes ni signos: «Gutiérrez-Alcalá» casa con «gutierrez alcala»."
         },
         {
@@ -135917,7 +135927,7 @@
           "exportada": true,
           "params": "l: Pick<LeadVencimiento, 'cliente' | 'aseguradora' | 'ramo' | 'email' | 'telefono'>, consulta: string,",
           "retorno": "boolean",
-          "linea": 634,
+          "linea": 641,
           "resumen": "¿Casa el lead con lo tecleado en el buscador? (30/09/2026, Alberto: «un buscador aquí»). Busca en nombre, compañía, ramo, correo y teléfono; cada palabra tiene que aparecer en alguno («maria mapfre» ="
         },
         {
@@ -135926,7 +135936,7 @@
           "exportada": true,
           "params": "ultimoContactoEn: string | null, ahora: Date = new Date()",
           "retorno": "number | null",
-          "linea": 649
+          "linea": 656
         },
         {
           "nombre": "llamar",
@@ -135934,7 +135944,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit, timeoutMs = 15_000",
           "retorno": "Promise<Reenvio>",
-          "linea": 659
+          "linea": 666
         },
         {
           "nombre": "leadsCompetenciaAsegura",
@@ -135942,7 +135952,7 @@
           "exportada": true,
           "params": "dias: number",
           "retorno": "Promise<Reenvio>",
-          "linea": 676
+          "linea": 683
         },
         {
           "nombre": "oportunidadAsegura",
@@ -135950,7 +135960,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 679
+          "linea": 686
         },
         {
           "nombre": "oportunidadesClienteAsegura",
@@ -135958,7 +135968,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 682
+          "linea": 689
         },
         {
           "nombre": "accionOportunidadAsegura",
@@ -135966,7 +135976,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 685
+          "linea": 692
         },
         {
           "nombre": "crearTareaAsegura",
@@ -135974,7 +135984,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 688
+          "linea": 695
         },
         {
           "nombre": "cerrarTareaAsegura",
@@ -135982,7 +135992,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 691
+          "linea": 698
         },
         {
           "nombre": "registrarLlamadaAsegura",
@@ -135990,7 +136000,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 694
+          "linea": 701
         },
         {
           "nombre": "registrarWhatsappAsegura",
@@ -135998,7 +136008,7 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 699,
+          "linea": 706,
           "resumen": "Anota que se abrió el WhatsApp de seguimiento de un lead (no envía nada)."
         },
         {
@@ -136007,7 +136017,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 704,
+          "linea": 711,
           "resumen": "Clientes en vigor y leads de Vencimientos con su contacto, para el .vcf del móvil."
         },
         {
@@ -136016,7 +136026,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "",
-          "linea": 712,
+          "linea": 719,
           "resumen": "Lectura defensiva de la respuesta: `null` = no se pudo leer (el .vcf NO se genera vacío, que se importaría como «no tienes a nadie»)."
         },
         {
@@ -136025,7 +136035,7 @@
           "exportada": true,
           "params": "despuesDe: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 725,
+          "linea": 732,
           "resumen": "Cola de revisión de la sincronización con Google Contacts (50 por página, cursor `despuesDe`)."
         },
         {
@@ -136034,7 +136044,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 728
+          "linea": 735
         },
         {
           "nombre": "moteClienteAsegura",
@@ -136042,7 +136052,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 732,
+          "linea": 739,
           "resumen": "MOTE de la ficha (solo para la agenda de Google de Alberto; AISLADO: nunca en correos/portal/PDF)."
         },
         {
@@ -136051,7 +136061,7 @@
           "exportada": true,
           "params": "body: { clienteId: string; mote: string | null; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 735
+          "linea": 742
         },
         {
           "nombre": "ordenarAgendaGoogleAsegura",
@@ -136059,7 +136069,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 739,
+          "linea": 746,
           "resumen": "«Ordenar agenda»: informe SOLO LECTURA de la agenda de Google (lee la agenda entera: hasta ~2 min)."
         },
         {
@@ -136068,7 +136078,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 743,
+          "linea": 750,
           "resumen": "Estado de la conexión con Google Contacts (cuenta, simulada, activada)."
         },
         {
@@ -136077,7 +136087,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 747,
+          "linea": 754,
           "resumen": "Simulación SOLO LECTURA (lee la agenda entera de Google: hasta ~2 min)."
         },
         {
@@ -136086,7 +136096,7 @@
           "exportada": true,
           "params": "actor: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 751,
+          "linea": 758,
           "resumen": "«Simulación revisada: sincroniza». El `actor` lo pone quien llama desde la SESIÓN."
         },
         {
@@ -136095,7 +136105,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 755,
+          "linea": 762,
           "resumen": "Ticket de un solo uso (2 min) para arrancar el OAuth de Google desde el panel: asegura devuelve la URL de `conectar`."
         },
         {
@@ -136104,7 +136114,7 @@
           "exportada": true,
           "params": "borrarContactos: boolean",
           "retorno": "Promise<Reenvio>",
-          "linea": 759,
+          "linea": 766,
           "resumen": "Revoca en Google y borra token y vínculos; con `borrarContactos` borra antes los que CREÓ el CRM."
         },
         {
@@ -136113,7 +136123,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 763
+          "linea": 770
         },
         {
           "nombre": "interpretarTomador",
@@ -136121,7 +136131,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TomadorLeido | undefined",
-          "linea": 809
+          "linea": 816
         },
         {
           "nombre": "interpretarLecturaOportunidad",
@@ -136129,7 +136139,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaDocumentoOportunidad",
-          "linea": 831,
+          "linea": 838,
           "resumen": "Lo que devuelve el puerto `leer-documento`. Un campo con forma rara se queda en `null` («no se leyó»), nunca en un valor plausible: una prima 0 o una fecha que no es fecha no rellenan nada. Si no se l"
         },
         {
@@ -136138,7 +136148,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 865,
+          "linea": 872,
           "resumen": "La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50»."
         },
         {
@@ -136147,7 +136157,7 @@
           "exportada": true,
           "params": "guardado: unknown",
           "retorno": "EnlacePresupuesto | null",
-          "linea": 878
+          "linea": 885
         },
         {
           "nombre": "interpretarSolicitudesDatos",
@@ -136155,7 +136165,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SolicitudesDatos",
-          "linea": 922
+          "linea": 929
         },
         {
           "nombre": "valorLegible",
@@ -136163,7 +136173,7 @@
           "exportada": true,
           "params": "campo: SolicitudDatos['campos'][number], v: string | number | boolean | null | undefined",
           "retorno": "string",
-          "linea": 967,
+          "linea": 974,
           "resumen": "Una respuesta como la lee Alberto: opción → su etiqueta, sí/no, fecha española; `null` → «—»."
         },
         {
@@ -136172,7 +136182,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 977
+          "linea": 984
         },
         {
           "nombre": "accionSolicitudDatosAsegura",
@@ -136180,7 +136190,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 980
+          "linea": 987
         },
         {
           "nombre": "borradoresPresupuestoAsegura",
@@ -136188,7 +136198,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 985,
+          "linea": 992,
           "resumen": "─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──"
         },
         {
@@ -136197,7 +136207,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 988
+          "linea": 995
         },
         {
           "nombre": "borrarBorradorPresupuestoAsegura",
@@ -136205,7 +136215,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string, oportunidadId: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 991
+          "linea": 998
         },
         {
           "nombre": "riesgoAsegura",
@@ -136213,7 +136223,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 997,
+          "linea": 1004,
           "resumen": "─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────"
         },
         {
@@ -136222,7 +136232,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1004,
+          "linea": 1011,
           "resumen": "Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoL"
         },
         {
@@ -136231,7 +136241,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1007
+          "linea": 1014
         },
         {
           "nombre": "quitarFiguraAsegura",
@@ -136239,7 +136249,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1010
+          "linea": 1017
         },
         {
           "nombre": "compararVariantesAsegura",
@@ -136247,7 +136257,7 @@
           "exportada": true,
           "params": "oportunidadId: string, a: string, b: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1015,
+          "linea": 1022,
           "resumen": "Dos variantes del mismo riesgo: qué cambia y el precio de cada compañía en las dos. Gratis."
         },
         {
@@ -136256,7 +136266,7 @@
           "exportada": true,
           "params": "body: { polizaId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1020,
+          "linea": 1027,
           "resumen": "Abre (o devuelve la abierta) la oportunidad de retarificar una póliza. Gratis: no pide precio."
         },
         {
@@ -136265,13 +136275,13 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; nuevoClienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1025,
+          "linea": 1032,
           "resumen": "«Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a796a23ff6b1"
+      "hash": "7c8f6d148e76"
     },
     {
       "ruta": "apps/plataforma/lib/seguimiento-presupuestos-asegura.ts",
@@ -137731,7 +137741,7 @@
           "exportada": true,
           "params": "tipoPoliza: string | null | undefined",
           "retorno": "readonly string[] | null",
-          "linea": 344,
+          "linea": 358,
           "resumen": "Los ramos de `TIPOS_SINIESTRO` a ofrecer para una póliza; `null` = todos. `null` se devuelve en dos casos que son el MISMO «no se sabe de qué es esta póliza»: sin tipo (una póliza que asegura no clasi"
         },
         {
@@ -137740,7 +137750,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaSiniestro",
-          "linea": 367
+          "linea": 381
         },
         {
           "nombre": "textoMotivoSiniestro",
@@ -137748,7 +137758,7 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 389,
+          "linea": 403,
           "resumen": "El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
@@ -137757,7 +137767,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 406
+          "linea": 420
         },
         {
           "nombre": "cabeceras",
@@ -137765,7 +137775,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<Record<string, string> | null>",
-          "linea": 410
+          "linea": 424
         },
         {
           "nombre": "llamar",
@@ -137773,7 +137783,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit",
           "retorno": "Promise<Reenvio>",
-          "linea": 417
+          "linea": 431
         },
         {
           "nombre": "siniestroAsegura",
@@ -137781,7 +137791,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 434,
+          "linea": 448,
           "resumen": "`GET /api/operador/siniestro?id=` — un siniestro."
         },
         {
@@ -137790,7 +137800,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 439,
+          "linea": 453,
           "resumen": "`POST` — apertura `{polizaId, tipo, fechaHora, descripcion, lugar*?, seConsideraCulpable?, gravedad?, referencia?, actor}`."
         },
         {
@@ -137799,7 +137809,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 444,
+          "linea": 458,
           "resumen": "`PATCH` — `{siniestroId, estado, actor}` · `{siniestroId, …seguimiento, actor}` · `{siniestroId, datosRamo, actor}`."
         },
         {
@@ -137808,7 +137818,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 449,
+          "linea": 463,
           "resumen": "`POST` — añade un tercero/testigo `{siniestroId, tipo, nombre?, telefono?, matricula?, …, actor}`."
         },
         {
@@ -137817,13 +137827,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 454,
+          "linea": 468,
           "resumen": "`DELETE` — quita un tercero/testigo `{siniestroId, intervinienteId, actor}`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "872b914f877f"
+      "hash": "c7d46bfc2fae"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/acceso.ts",
@@ -171590,7 +171600,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "readonly CampoParte[]",
-          "linea": 314,
+          "linea": 337,
           "resumen": "Los campos del parte para ESE ramo (`'comunidad'` incluido). `[]` = ramo desconocido."
         },
         {
@@ -171599,7 +171609,7 @@
           "exportada": true,
           "params": "campo: Condicion, ctx: ContextoParte",
           "retorno": "boolean",
-          "linea": 327,
+          "linea": 350,
           "resumen": "¿Se enseña / se acepta este campo con lo que ha contestado?"
         },
         {
@@ -171608,7 +171618,7 @@
           "exportada": false,
           "params": "v: unknown, max: number",
           "retorno": "string | undefined",
-          "linea": 334
+          "linea": 357
         },
         {
           "nombre": "triestado",
@@ -171616,7 +171626,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | undefined",
-          "linea": 341
+          "linea": 364
         },
         {
           "nombre": "normalizarElemento",
@@ -171624,7 +171634,7 @@
           "exportada": false,
           "params": "subcampos: readonly SubcampoLista[], bruto: unknown",
           "retorno": "ElementoLista | null",
-          "linea": 350
+          "linea": 373
         },
         {
           "nombre": "normalizarDatosRamoParte",
@@ -171632,7 +171642,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined, entrada: unknown, ctx: ContextoParte",
           "retorno": "DatosRamoParte | null",
-          "linea": 378,
+          "linea": 401,
           "resumen": "Lo que llega del formulario → lo que se guarda en `datos_ramo`, o `null` si no queda nada. 🚨 Descarta, no rechaza: una clave que no es del ramo, un valor fuera de la lista, un texto demasiado largo, "
         },
         {
@@ -171641,7 +171651,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 447
+          "linea": 470
         },
         {
           "nombre": "partirDatosRamoParte",
@@ -171649,7 +171659,7 @@
           "exportada": true,
           "params": "datos: DatosRamoParte | null",
           "retorno": "",
-          "linea": 456,
+          "linea": 479,
           "resumen": "Parte lo YA normalizado en lo que va en claro (`datos_ramo`) y lo que va cifrado (`datos_ramo_cifrado`). Cada mitad es `null` si se queda vacía: un `{}` en la BD parecería «contestado sin nada»."
         },
         {
@@ -171658,7 +171668,7 @@
           "exportada": true,
           "params": "claro: unknown, pii: unknown",
           "retorno": "Record<string, unknown>",
-          "linea": 476,
+          "linea": 499,
           "resumen": "Vuelve a juntar las dos mitades para pintarlas. Sin fiarse de la forma (sale de la BD): lo que no es un objeto se ignora. De `claro` se DESCARTA cualquier clave PII que se hubiera colado (no se pinta "
         },
         {
@@ -171667,7 +171677,7 @@
           "exportada": false,
           "params": "opciones: readonly OpcionCampoRamoSiniestro[] | undefined, v: unknown",
           "retorno": "string | null",
-          "linea": 493
+          "linea": 516
         },
         {
           "nombre": "siNo",
@@ -171675,7 +171685,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 498
+          "linea": 521
         },
         {
           "nombre": "textoElemento",
@@ -171683,7 +171693,7 @@
           "exportada": false,
           "params": "s: readonly SubcampoLista[], e: unknown",
           "retorno": "string | null",
-          "linea": 502
+          "linea": 525
         },
         {
           "nombre": "lineasDatosRamoParte",
@@ -171691,7 +171701,7 @@
           "exportada": true,
           "params": "datos: unknown",
           "retorno": "LineaDatoRamo[]",
-          "linea": 535,
+          "linea": 558,
           "resumen": "`datos_ramo` (tal cual sale de la BD, sin fiarse de su forma) → líneas legibles. Lo que no se reconoce se ignora; nunca lanza. Una lista sale como una línea por elemento («Afectado 1», «Afectado 2»…)."
         },
         {
@@ -171700,13 +171710,13 @@
           "exportada": true,
           "params": "datos: unknown, max = 3",
           "retorno": "string[]",
-          "linea": 572,
+          "linea": 595,
           "resumen": "Los 2-3 datos CLAVE para el aviso de Telegram: respuestas sueltas, nunca nombres ni teléfonos (las listas solo se CUENTAN: «2 afectados»). Un chat no es donde viven los datos personales de terceros."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0136826b6c93"
+      "hash": "5931755e8819"
     },
     {
       "ruta": "packages/module-seguros-portal/src/parte-seguimiento.ts",
@@ -173322,7 +173332,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "RamoSiniestro | null",
-          "linea": 230,
+          "linea": 243,
           "resumen": "`'auto'`, `'HOGAR '`, `'comunidad'`… → la clave de `TIPOS_POR_RAMO`, o `null` si no es un ramo conocido. Las dos formas de comunidad: la cartera y las aportadas no siempre lo escribieron igual."
         },
         {
@@ -173331,7 +173341,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "readonly TipoSiniestro[]",
-          "linea": 241,
+          "linea": 254,
           "resumen": "Las opciones para ESE ramo. `[]` = no se sabe el ramo (sin póliza, o un ramo que no conocemos): la pantalla no pinta el bloque y el parte viaja sin tipo."
         },
         {
@@ -173340,7 +173350,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined, tipo: string | null | undefined",
           "retorno": "readonly string[]",
-          "linea": 247,
+          "linea": 260,
           "resumen": "Códigos EIAC sugeridos de un tipo EN un ramo. `[]` si el tipo no es de ese ramo. Interno: no se enseña al cliente."
         },
         {
@@ -173349,7 +173359,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is TipoSiniestro",
-          "linea": 253
+          "linea": 266
         },
         {
           "nombre": "codigosEiacDesconocidos",
@@ -173357,13 +173367,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string[]",
-          "linea": 258,
+          "linea": 271,
           "resumen": "Para el test: todo código sugerido existe en la tabla oficial."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "79af951397c0"
+      "hash": "ebcd6a7db789"
     },
     {
       "ruta": "packages/module-seguros-portal/src/titular-declarado.ts",
@@ -175496,7 +175506,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f99be83e618a"
+      "hash": "cc18d393c6b4"
     },
     {
       "ruta": "packages/module-seguros/src/coherencia-cotizacion.ts",
@@ -178560,7 +178570,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b8986d268256"
+      "hash": "083cf3039c96"
     },
     {
       "ruta": "packages/module-seguros/src/estado-cliente.ts",
@@ -179324,7 +179334,7 @@
           "exportada": true,
           "params": "v: string",
           "retorno": "string",
-          "linea": 45
+          "linea": 58
         },
         {
           "nombre": "lista",
@@ -179332,7 +179342,7 @@
           "exportada": false,
           "params": "l: Lector, k: string",
           "retorno": "string[]",
-          "linea": 147
+          "linea": 160
         },
         {
           "nombre": "entero",
@@ -179340,7 +179350,7 @@
           "exportada": false,
           "params": "l: Lector, k: string, porDefecto: number",
           "retorno": "number",
-          "linea": 153
+          "linea": 166
         },
         {
           "nombre": "parseFiltroCartera",
@@ -179348,7 +179358,7 @@
           "exportada": true,
           "params": "l: Lector",
           "retorno": "ParseFiltro",
-          "linea": 167,
+          "linea": 180,
           "resumen": "Lee el filtro de los parámetros de una URL. Se comparte entre el proxy de plataforma y el puerto de asegura para que los dos entiendan EXACTAMENTE lo mismo; si cada uno parseara por su cuenta, un pará"
         },
         {
@@ -179357,7 +179367,7 @@
           "exportada": true,
           "params": "f: FiltroCartera",
           "retorno": "boolean",
-          "linea": 232,
+          "linea": 245,
           "resumen": "¿El filtro pide algo, o es la vista por defecto? Para decidir si hay que ofrecer «limpiar»."
         },
         {
@@ -179366,7 +179376,7 @@
           "exportada": true,
           "params": "f: FiltroCartera",
           "retorno": "string",
-          "linea": 245,
+          "linea": 258,
           "resumen": "El filtro en una frase, para la cabecera de la lista y para la primera línea del CSV exportado. Un CSV sin decir de qué es se convierte en «la lista de clientes» en cuanto sale del navegador, y ahí ya"
         },
         {
@@ -179375,13 +179385,13 @@
           "exportada": true,
           "params": "v: VentanaVencimiento",
           "retorno": "number | null",
-          "linea": 263,
+          "linea": 276,
           "resumen": "Los días de la ventana, o `null` para las dos que no son un plazo. Se comparte para que la consulta y el rótulo no puedan discrepar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f08abe5402cb"
+      "hash": "b66545cbec0f"
     },
     {
       "ruta": "packages/module-seguros/src/filtro-garantias.ts",
@@ -182391,7 +182401,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "08906c5a7b66"
+      "hash": "32e726b3ca7a"
     },
     {
       "ruta": "packages/module-seguros/src/orden-polizas.ts",
@@ -184273,7 +184283,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "readonly CampoRamoSiniestro[]",
-          "linea": 298,
+          "linea": 311,
           "resumen": "Los campos de un ramo, o lista vacía si el ramo no se reconoce. Nunca lanza."
         },
         {
@@ -184282,7 +184292,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 335
+          "linea": 348
         },
         {
           "nombre": "normalizarValorCampoSiniestro",
@@ -184290,7 +184300,7 @@
           "exportada": true,
           "params": "campo: CampoRamoSiniestro, valor: unknown",
           "retorno": "string | number | boolean | undefined | 'invalido'",
-          "linea": 348,
+          "linea": 361,
           "resumen": "`undefined` = no se escribe la clave · `'invalido'` = error con nombre del campo. Exportada (como `normalizarValorCampoSiniestro`) para el parte del PORTAL (`@central/module-seguros-portal`, `parte-ra"
         },
         {
@@ -184299,13 +184309,13 @@
           "exportada": true,
           "params": "ramo: string | null | undefined, entrada: unknown",
           "retorno": "ResultadoDatosRamoSiniestro",
-          "linea": 392,
+          "linea": 405,
           "resumen": "Normaliza lo que llega de la pantalla contra el catálogo del ramo. Mismas reglas que `normalizarDatosRamo()` de pólizas — ver su cabecera."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "513d8cca5d05"
+      "hash": "37403cde314d"
     },
     {
       "ruta": "packages/module-seguros/src/siniestro-tramitacion.ts",
@@ -191045,6 +191055,6 @@
   ],
   "resumen": {
     "archivos": 4293,
-    "funciones": 14980
+    "funciones": 14981
   }
 }
