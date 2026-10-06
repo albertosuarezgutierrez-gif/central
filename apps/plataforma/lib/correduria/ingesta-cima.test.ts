@@ -512,3 +512,47 @@ test('🚨 duplicadas: `null` o una fila ilegible degradan la lista ENTERA a nul
     assert.ok(r.salud.huecos.some(h => /duplicadas/.test(h)))
   }
 })
+
+// ── 📉 Anulaciones (06/10/2026) ─────────────────────────────────────────────
+
+const FICH = [{ entidad: 'C0109', entidadNombre: 'Mapfre', fichero: 'POL_1.xml', polizas: 47, anuladas: 25, impago: 11, otraCompania: 9, siniestralidad: 5, otros: 0, medianaDiasRetraso: null }]
+const ANUL_RENOV = [{ entidad: 'C0109', entidadNombre: 'Mapfre', polizas: 4, vencimientoMasAntiguo: '2026-09-01' }]
+const RETRASO = [{ entidad: 'C0109', entidadNombre: 'Mapfre', polizas: 12, medianaDias: 369 }]
+const BAJAS = [{ entidad: 'C0109', entidadNombre: 'Mapfre', numeros: ['0008414300065'] }]
+const ANUL = { anulacionesPorFichero: FICH, renovacionesAnuladas: ANUL_RENOV, retrasoAnulacion: RETRASO, posiblesBajas: BAJAS }
+
+test('anulaciones: el puerto manda las 4 señales → viajan a la salud', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], ...ANUL })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.deepEqual(r.salud.anulacionesEnBloque, FICH)
+  assert.deepEqual(r.salud.renovacionesAnuladas, ANUL_RENOV)
+  assert.deepEqual(r.salud.retrasoAnulacion, RETRASO)
+  assert.deepEqual(r.salud.posiblesBajas, BAJAS)
+})
+
+test('anulaciones: puerto viejo (claves ausentes) = no se piden (`undefined`), NO es hueco ni 0', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.anulacionesEnBloque, undefined)
+  assert.equal(r.salud.renovacionesAnuladas, undefined)
+  assert.equal(r.salud.retrasoAnulacion, undefined)
+  assert.equal(r.salud.posiblesBajas, undefined)
+  assert.equal(r.salud.huecos.some(h => /anulacion|anulado/i.test(h)), false)
+})
+
+test('🚨 anulaciones: `null` o una fila ilegible degradan CADA lista ENTERA a null (hueco), nunca a []', () => {
+  const malas: Record<string, unknown> = {
+    anulacionesPorFichero: [...FICH, { ...FICH[0], anuladas: '25' }],
+    renovacionesAnuladas: [...ANUL_RENOV, { entidad: 'C0109', polizas: 'dos' }],
+    retrasoAnulacion: [...RETRASO, { entidad: 'C0613', polizas: 1, medianaDias: '3' }],
+    posiblesBajas: [...BAJAS, { entidad: 'C0613', numeros: [123] }],
+  }
+  for (const [clave, mala] of Object.entries(malas)) {
+    for (const valor of [null, mala]) {
+      const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], [clave]: valor })
+      if (r.estado !== 'ok') return assert.fail('debía ser ok')
+      const campo = clave === 'anulacionesPorFichero' ? 'anulacionesEnBloque' : clave
+      assert.equal((r.salud as Record<string, unknown>)[campo], null, `${clave}`)
+    }
+  }
+})

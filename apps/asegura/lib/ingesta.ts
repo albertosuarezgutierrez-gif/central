@@ -794,6 +794,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
         JOIN polizas p ON p.eiac_xml_hash = f.xml_hash
         LEFT JOIN companias_dgs c ON c.codigo_dgs = f.codigo_entidad
         WHERE f.tipo_objeto = 'POL'
+          AND p.merged_into_poliza_id IS NULL
           AND f.created_at > now() - ($1 || ' hours')::interval
         GROUP BY f.codigo_entidad, f.nombre_fichero
         HAVING COUNT(*) FILTER (WHERE p.situacion = 'AN') > 0
@@ -829,6 +830,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
         JOIN cima_ficheros f ON f.xml_hash = p.eiac_xml_hash AND f.tipo_objeto = 'POL'
         LEFT JOIN companias_dgs c ON c.codigo_dgs = p.codigo_entidad_dgs
         WHERE p.situacion = 'AN'
+          AND p.merged_into_poliza_id IS NULL
           AND ${fechaAnul} IS NOT NULL
           AND f.created_at::date >= ${fechaAnul}
           AND f.created_at > now() - interval '30 days'

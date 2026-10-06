@@ -502,5 +502,5 @@ test('🪤 el cron manda el aviso INFORMATIVO de duplicadas en `ok` solo cuando 
   assert.match(ruta, /const avisoDuplicadas = salud\.estado === 'ok' && decision\.avisar && decision\.motivo !== 'recordatorio'\s*&& cambioDuplicadasEnFirma\(firmaPrevia, actual\)/)
   assert.match(ruta, /if \(avisoDuplicadas\) \{\s*const textoDup = textoPolizasDuplicadas\(salud\.polizasDuplicadas\)\s*await tgAviso/)
   // Y en el aviso normal va al final, como informativo.
-  assert.match(ruta, /recado \+ duplicadas,/)
+  assert.match(ruta, /recado \+ duplicadas(?: \+ anulaciones)?,/)
 })
