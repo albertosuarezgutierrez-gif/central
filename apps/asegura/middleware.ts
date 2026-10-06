@@ -20,9 +20,11 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // /api/google-contactos/{conectar,callback}: «Conectar Google» llega desde plataforma SIN cookie de
 // asegura; conectar valida su ticket HMAC de un uso (o la sesión) y callback el state firmado + nonce.
 // Sin la exención, 307 al login y Google nunca llegaba a abrirse (medido 05/10/2026).
+// /api/tarificador: el worker del tarificador RPA (máquina efímera de Fly) llama sin cookie, con Bearer
+// TARIFICADOR_WORKER_SECRET que cada ruta valida (lib/tarificador-worker-auth.ts, cerrada sin la env).
 const PUBLIC = [
   '/login', '/api/auth', '/api/operador', '/api/portal', '/api/webhooks', '/api/publico', '/api/cron',
-  '/api/google-contactos/conectar', '/api/google-contactos/callback',
+  '/api/google-contactos/conectar', '/api/google-contactos/callback', '/api/tarificador',
 ]
 
 export async function middleware(req: NextRequest) {

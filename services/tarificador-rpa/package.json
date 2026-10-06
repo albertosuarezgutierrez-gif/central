@@ -1,0 +1,21 @@
+{
+  "name": "tarificador-rpa",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Worker del tarificador RPA de Grupo ASegura: una máquina EFÍMERA de Fly por trabajo (app asegura-tarificador). Lee JOB_ID, pide el riesgo a apps/asegura, cotiza con Playwright en el portal de la compañía y devuelve el resultado. TARIFICAR ≠ EMITIR. FUERA del workspace pnpm a propósito (ver README).",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/runner.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@central/module-tarificacion": "file:../../packages/module-tarificacion",
+    "playwright": "1.63.0",
+    "tsx": "4.23.15"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0"
+  },
+  "license": "UNLICENSED"
+}
