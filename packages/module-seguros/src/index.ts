@@ -946,7 +946,7 @@ export {
 } from './lead-competencia.ts'
 export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
 export {
-  ESTADOS_ALTA, MOTIVOS_PERDIDA, MOTIVOS_PERDIDA_VENTA, MOTIVO_DESCARTE, PRIORIDADES_TAREA, RAMOS_OPORTUNIDAD, TIPOS_TAREA, aplicarAccion,
+  ESTADOS_ALTA, ESTADOS_ALTA_SERVIDOR, MOTIVOS_PERDIDA, MOTIVOS_PERDIDA_VENTA, MOTIVO_DESCARTE, PRIORIDADES_TAREA, RAMOS_OPORTUNIDAD, TIPOS_TAREA, aplicarAccion,
   seguroAnteriorDe, validarAltaOportunidad, validarEdicionOportunidad, validarTarea,
 } from './oportunidad-seguimiento.ts'
 export {

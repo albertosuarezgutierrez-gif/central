@@ -981,6 +981,16 @@ export function valorLegible(campo: SolicitudDatos['campos'][number], v: string 
   return f ? `${f[3]}/${f[2]}/${f[1]}` : v
 }
 
+/**
+ * Lead web de auto/moto recién dado de alta (06/10/2026): abre su oportunidad y crea el enlace de datos
+ * en UNA llamada (`/api/operador/solicitud-datos/lead-web`). Timeout de 8 s: el aviso de Telegram espera
+ * por esto y nunca debe perderse; si no llega a tiempo, sale sin enlace. La respuesta lleva el token en
+ * la URL: no se loguea.
+ */
+export const TIMEOUT_ENLACE_LEAD_MS = 8_000
+export function solicitudLeadWebAsegura(body: { clienteId: string; ramo: 'auto' | 'moto' }): Promise<Reenvio> {
+  return llamar('/api/operador/solicitud-datos/lead-web', { method: 'POST', body: JSON.stringify(body) }, TIMEOUT_ENLACE_LEAD_MS)
+}
 export function solicitudesDatosAsegura(oportunidadId: string): Promise<Reenvio> {
   return llamar(`/api/operador/solicitud-datos?oportunidadId=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
 }

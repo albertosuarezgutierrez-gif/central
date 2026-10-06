@@ -381,7 +381,7 @@ async function oportunidadDesdeLecturaInterna(
     const previa = await oportunidadAbiertaDeLaPoliza(e.correduriaId, [clienteId, clienteSube], datos.numeroPoliza, datos.aseguradora)
     const o = previa
       ? { ok: false as const, estado: 'duplicada' as const, motivo: 'ya existía', status: 409 as const, id: previa, completada: false }
-      : await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`, datosVehiculo)
+      : await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, { hoy, origen: `documento:${e.origen}`, datosVehiculo })
     const posiblesDuplicados = clienteNuevo ? compartenContacto.filter((id) => id !== clienteId) : []
     const conIdentificador = decision.tipo === 'lead' ? Boolean(decision.alta.dni) : Boolean(alta?.dni)
 
