@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T12:52:24Z",
-  "sha": "c7e8b609de4781374c88a1647e048dc62573f215",
+  "generadoEn": "2026-10-06T13:36:53Z",
+  "sha": "a886ae2840c87da753920a05ea80dac8a8a83469",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -15974,6 +15974,27 @@
       "hash": "611ea88f4af9"
     },
     {
+      "ruta": "apps/asegura/app/api/cron/tarificador-renovaciones/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "GET /api/cron/tarificador-renovaciones — renovaciones de COMUNIDADES por el bot de Allianz (07/10/2026). Tres pasadas en días laborables (`vercel.json`); cada una encola COMO MUCHO una cotización. Cer"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/tarificador-renovaciones",
+      "hash": "2dfc3a394dd3"
+    },
+    {
       "ruta": "apps/asegura/app/api/google-contactos/callback/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -19325,6 +19346,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/intervenciones",
       "hash": "8e694d65b2f2"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/tarificador/panel/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "`GET /api/operador/tarificador/panel` — salud del tarificador RPA para `/correduria/tarificador` de plataforma: éxito 7/30 días, tiempo medio, fallos por paso/mensaje, intervenciones de la IA (y su co"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/tarificador/panel",
+      "hash": "b794b5729c00"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/trabajo/[id]/pdf/[indice]/route.ts",
@@ -31921,8 +31963,17 @@
           "exportada": true,
           "params": "p: { secret?: string | null; bearer?: string | null }",
           "retorno": "boolean",
-          "linea": 18,
+          "linea": 19,
           "resumen": "Autorización de los endpoints de cron de `apps/asegura`. 🚨 SIN `CRON_SECRET` NO SE AUTORIZA A NADIE — tampoco en desarrollo. Aquí la regla es más dura que la de `apps/plataforma` (que conserva el pas"
+        },
+        {
+          "nombre": "leerCronSecret",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string | undefined",
+          "linea": 29,
+          "resumen": "`CRON_SECRET` por `requireSecret` (sin fallback): si falta, `undefined` → se deniega."
         },
         {
           "nombre": "isCronAuthorized",
@@ -31930,12 +31981,12 @@
           "exportada": true,
           "params": "req: NextRequest | Request",
           "retorno": "boolean",
-          "linea": 27
+          "linea": 37
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cfb662a27195"
+      "hash": "198c781ec906"
     },
     {
       "ruta": "apps/asegura/lib/datos-cotizados.ts",
@@ -40465,7 +40516,7 @@
           "exportada": false,
           "params": "d: Date | string",
           "retorno": "string",
-          "linea": 36
+          "linea": 38
         },
         {
           "nombre": "num",
@@ -40473,7 +40524,15 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 37
+          "linea": 39
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 40
         },
         {
           "nombre": "errorPublico",
@@ -40481,7 +40540,7 @@
           "exportada": true,
           "params": "e: unknown",
           "retorno": "",
-          "linea": 40,
+          "linea": 43,
           "resumen": "Del jsonb `error` solo salen tipo y mensaje (recortado)."
         },
         {
@@ -40490,7 +40549,7 @@
           "exportada": true,
           "params": "respuesta: unknown",
           "retorno": "",
-          "linea": 49,
+          "linea": 52,
           "resumen": "`respuesta.ofertas[]` de `tarificaciones` (canal rpa) → ofertas públicas + PDFs (por índice del worker)."
         },
         {
@@ -40499,7 +40558,7 @@
           "exportada": true,
           "params": "fila: FilaTrabajoLectura, respuesta: unknown",
           "retorno": "TrabajoLectura",
-          "linea": 83
+          "linea": 87
         },
         {
           "nombre": "documentoDePdf",
@@ -40507,7 +40566,7 @@
           "exportada": true,
           "params": "respuesta: unknown, indice: number",
           "retorno": "string | null",
-          "linea": 96,
+          "linea": 100,
           "resumen": "`documentoId` de la oferta cuyo PDF tiene ese índice (lo guardó `registrarResultado`)."
         },
         {
@@ -40516,7 +40575,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "number | null",
-          "linea": 107,
+          "linea": 111,
           "resumen": "Índice de la URL: entero 0..99 sin ceros a la izquierda ni signos."
         },
         {
@@ -40525,7 +40584,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | number | boolean | null",
-          "linea": 124
+          "linea": 128
         },
         {
           "nombre": "riesgoPublico",
@@ -40533,7 +40592,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 128,
+          "linea": 132,
           "resumen": "`riesgo` jsonb → solo claves conocidas con valor primitivo. Cualquier otra cosa → `null`."
         },
         {
@@ -40542,12 +40601,12 @@
           "exportada": true,
           "params": "fila: { id: string; created_at: Date | string; riesgo: unknown } | null",
           "retorno": "UltimoRiesgo",
-          "linea": 148
+          "linea": 152
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1424033fc618"
+      "hash": "5149d37e70d7"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-lectura.ts",
@@ -40598,6 +40657,336 @@
       ],
       "rutaApi": null,
       "hash": "19590361b709"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-ops-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Operación del tarificador RPA (07/10/2026): renovaciones automáticas, detector de cambio de tarifa y métricas del panel `/correduria/tarificador`. PURO: sin BD ni red (`node --test`). 🛡️ Allianz NO está avisada del acceso automatizado: todo lo automático aquí es de VOLUMEN BAJO y ESPACIADO. Renovac",
+      "exporta": [
+        "esOrigenRenovacion",
+        "renovacionesActivas",
+        "maxRenovacionesDia",
+        "diasEntre",
+        "enVentanaRenovacion",
+        "sumarUnAnio",
+        "elegirRiesgoPrevio",
+        "trabajosDeLaPoliza",
+        "riesgoParaRenovacion",
+        "clasificarRenovacion",
+        "cupoPasada",
+        "elegirParaEncolar",
+        "primaAnualMinima",
+        "riesgoNormalizado",
+        "hashRiesgo",
+        "esCambioRelevante",
+        "detectarCambiosTarifa",
+        "pasoDelError",
+        "calcularMetricas"
+      ],
+      "funciones": [
+        {
+          "nombre": "esOrigenRenovacion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "solicitadoPor: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 21
+        },
+        {
+          "nombre": "renovacionesActivas",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>",
+          "retorno": "boolean",
+          "linea": 25,
+          "resumen": "APAGADO salvo `TARIFICADOR_RENOVACIONES_ACTIVO=1` exacto (fail-closed)."
+        },
+        {
+          "nombre": "maxRenovacionesDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>",
+          "retorno": "number",
+          "linea": 36,
+          "resumen": "Tope diario: entero 0..TOPE_ABSOLUTO_DIA; ausente o basura → el valor por defecto."
+        },
+        {
+          "nombre": "aUtc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "number",
+          "linea": 52
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desdeIso: string, hastaIso: string",
+          "retorno": "number | null",
+          "linea": 54
+        },
+        {
+          "nombre": "enVentanaRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoyIso: string, vencimientoIso: string | null",
+          "retorno": "boolean",
+          "linea": 59
+        },
+        {
+          "nombre": "sumarUnAnio",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string | null",
+          "linea": 66,
+          "resumen": "+1 año; el 29 de febrero pasa al 28 (no existe el 29 en el año siguiente)."
+        },
+        {
+          "nombre": "elegirRiesgoPrevio",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: TrabajoConRiesgo[], polizaId: string, polizasComunidadDelCliente: number",
+          "retorno": "unknown | null",
+          "linea": 82,
+          "resumen": "El riesgo a reutilizar para renovar ESA póliza: el del trabajo más reciente de esa misma póliza; si no hay, el más reciente del cliente SIN póliza, pero solo si el cliente tiene UNA sola póliza de com"
+        },
+        {
+          "nombre": "trabajosDeLaPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: T[], polizaId: string, polizasComunidadDelCliente: number",
+          "retorno": "T[]",
+          "linea": 92,
+          "resumen": "Los trabajos que son de ESA póliza: los suyos y, si el cliente solo tiene una comunidad, los sin póliza."
+        },
+        {
+          "nombre": "riesgoParaRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "previo: unknown, vencimientoIso: string, hoy: Date",
+          "retorno": "RiesgoRenovacion",
+          "linea": 102,
+          "resumen": "El riesgo previo con las fechas de la renovación: efecto = vencimiento, término = vencimiento + 1 año (renovación anual). Nada más cambia. Se valida con la misma regla que el encolado manual."
+        },
+        {
+          "nombre": "clasificarRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "recientes: TrabajoReciente[], riesgo: RiesgoRenovacion",
+          "retorno": "Clasificacion",
+          "linea": 138,
+          "resumen": "`recientes` = trabajos de ESA póliza en los últimos `DIAS_SIN_REPETIR` días (los cancelados no cuentan). Con alguno no se encola otro: ok → cotizada; vivo → en cola; fallido → fallida (lo mira una per"
+        },
+        {
+          "nombre": "cupoPasada",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { topeDia: number; hechasHoy: number; renovacionesEnCola: number }",
+          "retorno": "number",
+          "linea": 154,
+          "resumen": "Cuántas se pueden encolar en esta pasada: nada si ya hay una renovación en cola (espaciado: se espera a que termine), y nunca más de `MAX_POR_PASADA` ni de lo que quede del tope diario."
+        },
+        {
+          "nombre": "elegirParaEncolar",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: T[], cupo: number",
+          "retorno": "T[]",
+          "linea": 160,
+          "resumen": "Las encolables, la que antes vence primero."
+        },
+        {
+          "nombre": "primaAnualMinima",
+          "kind": "function",
+          "exportada": true,
+          "params": "ofertas: { primaTotalSucesivos: number | null }[]",
+          "retorno": "number | null",
+          "linea": 166,
+          "resumen": "La prima anual de Allianz de una respuesta: la más barata de los sucesivos que consten; `null` si ninguna."
+        },
+        {
+          "nombre": "canonico",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown",
+          "linea": 177
+        },
+        {
+          "nombre": "riesgoNormalizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 196,
+          "resumen": "Riesgo normalizado (lo que tarifica): sin fechas ni datos personales; nulos/vacíos = ausentes."
+        },
+        {
+          "nombre": "hashRiesgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: unknown",
+          "retorno": "string | null",
+          "linea": 216
+        },
+        {
+          "nombre": "redondear2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 243
+        },
+        {
+          "nombre": "etiquetaRiesgo",
+          "kind": "function",
+          "exportada": false,
+          "params": "riesgo: unknown",
+          "retorno": "string",
+          "linea": 245
+        },
+        {
+          "nombre": "esCambioRelevante",
+          "kind": "function",
+          "exportada": true,
+          "params": "antes: number, despues: number",
+          "retorno": "boolean",
+          "linea": 254,
+          "resumen": "¿Cambio relevante? Más de un 1 % O más de 5 € (estricto)."
+        },
+        {
+          "nombre": "detectarCambiosTarifa",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: TrabajoCompletado[]",
+          "retorno": "AlertaTarifa[]",
+          "linea": 265,
+          "resumen": "Para trabajos `ok` con el MISMO riesgo normalizado y la misma modalidad (y producto), compara la prima ANUAL (sucesivos) de cada cotización con la anterior que tenga dato. Un sucesivos `null` no se co"
+        },
+        {
+          "nombre": "metricasPeriodo",
+          "kind": "function",
+          "exportada": false,
+          "params": "trabajos: TrabajoMetrica[], ahora: Date, dias: number",
+          "retorno": "MetricasPeriodo",
+          "linea": 328
+        },
+        {
+          "nombre": "pasoDelError",
+          "kind": "function",
+          "exportada": true,
+          "params": "error: unknown",
+          "retorno": "",
+          "linea": 349,
+          "resumen": "Paso del fallo: el que nombra el acompañante («…en el paso «login»…») o, si no, el tipo de error."
+        },
+        {
+          "nombre": "calcularMetricas",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: TrabajoMetrica[], ahora: Date",
+          "retorno": "",
+          "linea": 360
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "303dd2136e5d"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-ops.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Operación del tarificador RPA (07/10/2026): renovaciones de COMUNIDADES por el bot de Allianz, panel de salud y detector de cambio de tarifa. Las reglas PURAS viven en `tarificador-ops-reglas.ts`. 🛡️ Todo por `correduria_id`. La lista de pólizas sale de la cartera (`prismaAsegura`, cartera EN VIGOR",
+      "exporta": [
+        "hoyMadrid",
+        "ejecutarRenovacionesTarificador",
+        "leerPanelTarificador"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 45
+        },
+        {
+          "nombre": "numeroONull",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": "number | null",
+          "linea": 91
+        },
+        {
+          "nombre": "leerRenovaciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, ahora: Date",
+          "retorno": "Promise<RenovacionInterna[]>",
+          "linea": 97
+        },
+        {
+          "nombre": "sinRiesgo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "{ riesgo: _r, ...r }: RenovacionInterna",
+          "retorno": "Renovacion",
+          "linea": 157
+        },
+        {
+          "nombre": "contarPorEstado",
+          "kind": "function",
+          "exportada": false,
+          "params": "lista: { estado: EstadoRenovacion }[]",
+          "retorno": "Record<EstadoRenovacion, number>",
+          "linea": 159
+        },
+        {
+          "nombre": "contarRenovacionesBot",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<",
+          "linea": 165
+        },
+        {
+          "nombre": "ejecutarRenovacionesTarificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env, ahora = new Date()",
+          "retorno": "Promise<ResumenRenovaciones>",
+          "linea": 192,
+          "resumen": "Pasada del cron de renovaciones. APAGADO salvo `TARIFICADOR_RENOVACIONES_ACTIVO=1`; con el RPA apagado solo cuenta. Encendido: barre la cola (relanza lo pendiente) y encola COMO MUCHO una renovación p"
+        },
+        {
+          "nombre": "leerIntervenciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<IntervencionesResumen>",
+          "linea": 239,
+          "resumen": "La tabla de intervenciones puede no existir aún (SQL del formador sin aplicar): se dice, no se pinta 0."
+        },
+        {
+          "nombre": "leerPanelTarificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, env: Record<string, string | undefined> = process.env, ahora = new Date()",
+          "retorno": "Promise<PanelTarificador>",
+          "linea": 263
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "polizas",
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "2826e7162e88"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-reglas.ts",
@@ -40806,7 +41195,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 299
+          "linea": 303
         },
         {
           "nombre": "marcarFallo",
@@ -40814,7 +41203,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null,",
           "retorno": "Promise<string>",
-          "linea": 316,
+          "linea": 320,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -40823,7 +41212,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 361,
+          "linea": 365,
           "resumen": "4. lanza lo que quepa por compañía."
         }
       ],
@@ -40832,7 +41221,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "4337b310a321"
+      "hash": "af3e4ac69dd2"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -85423,7 +85812,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "56cf81bf702e"
+      "hash": "108fde4dcf11"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/AccionesContacto.tsx",
@@ -87401,7 +87790,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "838bf0c45cdd"
+      "hash": "af6f61b06881"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PresupuestosAvant2.tsx",
@@ -94024,6 +94413,119 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "715add855026"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/tarificador/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TarificadorPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "TarificadorPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "Panel del tarificador RPA (bot de Allianz ePAC, comunidades) — 07/10/2026. Aparte de `/correduria` a propósito: no es trabajo del día, es la salud del bot (cuánto acierta, dónde se para, cuánto cuesta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8643d73098bb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/tarificador/PanelTarificador.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PanelTarificador"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "importe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "PanelTarificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "Periodo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ m }: { m: MetricasPeriodo }",
+          "retorno": null,
+          "linea": 85
+        },
+        {
+          "nombre": "Salud",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ d7, d30, intervenciones }: { d7: MetricasPeriodo; d30: MetricasPeriodo; intervenciones: Panel['intervenciones'] }",
+          "retorno": null,
+          "linea": 98
+        },
+        {
+          "nombre": "Fallos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ fallos }: { fallos: Panel['metricas']['fallos'] }",
+          "retorno": null,
+          "linea": 126
+        },
+        {
+          "nombre": "TarjetaRenovacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r }: { r: Renovacion }",
+          "retorno": null,
+          "linea": 150
+        },
+        {
+          "nombre": "GrupoRenovaciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, lista, vacio }: { titulo: string; lista: Renovacion[]; vacio: string }",
+          "retorno": null,
+          "linea": 176
+        },
+        {
+          "nombre": "Renovaciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ lista, activas }: { lista: Renovacion[]; activas: boolean }",
+          "retorno": null,
+          "linea": 197
+        },
+        {
+          "nombre": "Alertas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ alertas }: { alertas: AlertaTarifa[] }",
+          "retorno": null,
+          "linea": 216
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2fb8ffaaea40"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/useCompanias.ts",
@@ -104198,6 +104700,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/tarificador/encolar",
       "hash": "0e44457370a2"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/tarificador/panel/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "GET /api/correduria/tarificador/panel — salud del bot de Allianz (éxito, tiempos, fallos, IA), renovaciones de comunidades y alertas de cambio de tarifa, leídos del puerto de operador de asegura (`/ap"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/tarificador/panel",
+      "hash": "6f7fcfa0dafc"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/tarificador/trabajo/[id]/pdf/[indice]/route.ts",
@@ -149079,6 +149602,7 @@
         "importeDeTexto",
         "importeParaCampo",
         "riesgoDesdeFormulario",
+        "estimarInfraseguro",
         "leerUltimoRiesgoBot",
         "fechaCorta",
         "formularioConUltimoRiesgo",
@@ -149175,12 +149699,21 @@
           "resumen": "Formulario → `riesgo` para asegura. Vacío = `null`/ausente («no se ha preguntado»), nunca 0 ni false. Los errores que da son de FORMA (campo vacío o no numérico); la validación de dominio la hace aseg"
         },
         {
+          "nombre": "estimarInfraseguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Pick<FormularioRiesgo, 'm2Construidos' | 'capitalContinente' | 'calidadConstruccion'>",
+          "retorno": "EstimacionInfraseguro | null",
+          "linea": 174,
+          "resumen": "Estima el capital de reposición (m² construidos × €/m²) y lo compara con el capital de edificación tecleado. `null` si falta o no se entiende el m² o el capital: sin dato no se afirma nada (ni «bien» "
+        },
+        {
           "nombre": "leerUltimoRiesgoBot",
           "kind": "function",
           "exportada": true,
           "params": "v: unknown",
           "retorno": "UltimoRiesgoBot | null",
-          "linea": 148,
+          "linea": 190,
           "resumen": "Respuesta de `ultimo-riesgo` → `null` si no hay datos previos o no tiene forma (no se inventa nada)."
         },
         {
@@ -149189,7 +149722,7 @@
           "exportada": true,
           "params": "iso: string | null | undefined",
           "retorno": "string | null",
-          "linea": 156,
+          "linea": 198,
           "resumen": "ISO → `dd/mm/aaaa` (en UTC: es un día de calendario). `null` si no es una fecha."
         },
         {
@@ -149198,7 +149731,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 165
+          "linea": 207
         },
         {
           "nombre": "numeroDe",
@@ -149206,7 +149739,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 166
+          "linea": 208
         },
         {
           "nombre": "triDe",
@@ -149214,7 +149747,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "'si' | 'no' | null",
-          "linea": 167
+          "linea": 209
         },
         {
           "nombre": "formularioConUltimoRiesgo",
@@ -149222,7 +149755,7 @@
           "exportada": true,
           "params": "base: FormularioRiesgo, riesgo: Record<string, unknown>, hoy: Date = new Date()",
           "retorno": "FormularioRiesgo",
-          "linea": 174,
+          "linea": 216,
           "resumen": "Formulario base + último riesgo → formulario pre-rellenado. SOLO claves conocidas del formulario; lo que falte o no tenga la forma esperada deja el valor del formulario base. Las fechas del riesgo ant"
         },
         {
@@ -149231,7 +149764,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 219
+          "linea": 263
         },
         {
           "nombre": "leerTrabajoBot",
@@ -149239,7 +149772,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TrabajoBot | null",
-          "linea": 222,
+          "linea": 266,
           "resumen": "`null` = no tiene forma de trabajo (versión de asegura distinta o error): no se pinta nada inventado."
         },
         {
@@ -149248,7 +149781,7 @@
           "exportada": true,
           "params": "o: OfertaBot, terminoIso?: string | null",
           "retorno": "VistaPrecio",
-          "linea": 264,
+          "linea": 309,
           "resumen": "Qué cifra enseñar. En ePAC «Anual» = primer recibo (prorrata hasta el día 1 del mes) y «Sucesivos» = prima anual completa. Sucesivos presente → principal; el primer recibo se añade solo si difiere. Su"
         },
         {
@@ -149257,7 +149790,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "boolean",
-          "linea": 276,
+          "linea": 321,
           "resumen": "¿Hay que seguir sondeando? Pendiente, en curso y el reintento de infraestructura."
         },
         {
@@ -149266,7 +149799,7 @@
           "exportada": true,
           "params": "t: TrabajoBot",
           "retorno": "Vista",
-          "linea": 286,
+          "linea": 331,
           "resumen": "Frase legible de un trabajo. `requiere_humano` ≠ error del bot: Allianz pide a una persona."
         },
         {
@@ -149275,13 +149808,13 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "",
-          "linea": 302,
+          "linea": 347,
           "resumen": "Respuesta de encolar de asegura → texto para Alberto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bcbdef84f1b7"
+      "hash": "b774e99376c1"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-asegura.ts",
@@ -149290,6 +149823,7 @@
       "exporta": [
         "encolarTarificacionComunidad",
         "leerUltimoRiesgoTarificador",
+        "leerPanelTarificador",
         "leerTrabajoTarificador",
         "descargarPdfTarificador"
       ],
@@ -149329,12 +149863,21 @@
           "resumen": "Riesgo del último trabajo del cliente (pre-relleno del modal). 200 `{ riesgo|null, trabajoId, creadoEn }`."
         },
         {
+          "nombre": "leerPanelTarificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 46,
+          "resumen": "Panel de salud del bot, renovaciones de comunidades y alertas de cambio de tarifa (solo lectura)."
+        },
+        {
           "nombre": "leerTrabajoTarificador",
           "kind": "function",
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 45
+          "linea": 50
         },
         {
           "nombre": "descargarPdfTarificador",
@@ -149342,13 +149885,83 @@
           "exportada": true,
           "params": "id: string, indice: number",
           "retorno": "Promise<Response | null>",
-          "linea": 50,
+          "linea": 55,
           "resumen": "El PDF de una oferta (streaming). `null` = sin secreto configurado."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0cacc31599d7"
+      "hash": "0063f44dab3d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/tarificador-panel.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Panel del tarificador RPA (`/correduria/tarificador`, 07/10/2026) — lo PURO: lectura defensiva de la respuesta de `/api/correduria/tarificador/panel` y formatos. Sin red ni envs: importable desde 'use client'. 🚨 Tres estados: `null` = no consta (se pinta «—» o se dice), nunca 0 ni 0 %.",
+      "exporta": [
+        "leerRespuestaPanel",
+        "porcentaje",
+        "duracion",
+        "diferenciaPrima",
+        "agruparRenovaciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 60
+        },
+        {
+          "nombre": "leerRespuestaPanel",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaPanel",
+          "linea": 63,
+          "resumen": "La respuesta del proxy → panel, o un mensaje que dice POR QUÉ no hay panel (nunca un panel vacío)."
+        },
+        {
+          "nombre": "porcentaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | null",
+          "retorno": "string",
+          "linea": 81,
+          "resumen": "66,7 % · `null` → «—»."
+        },
+        {
+          "nombre": "duracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "seg: number | null",
+          "retorno": "string",
+          "linea": 86,
+          "resumen": "185 → «3 min 5 s» · `null` → «—»."
+        },
+        {
+          "nombre": "diferenciaPrima",
+          "kind": "function",
+          "exportada": true,
+          "params": "actual: number | null, allianz: number | null",
+          "retorno": "number | null",
+          "linea": 96,
+          "resumen": "Allianz − actual (negativo = Allianz más barata). Sin uno de los dos datos → `null` (no se compara)."
+        },
+        {
+          "nombre": "agruparRenovaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: Renovacion[]",
+          "retorno": "",
+          "linea": 110,
+          "resumen": "Los tres grupos de la pantalla: cotizadas · pendientes (en cola, por cotizar o fallidas) · faltan datos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c12a7fe1ae8c"
     },
     {
       "ruta": "apps/plataforma/lib/telefono-wa.ts",
@@ -190799,7 +191412,7 @@
           "exportada": true,
           "params": "o: OfertaNormalizada",
           "retorno": "number | null",
-          "linea": 101,
+          "linea": 102,
           "resumen": "La franquicia GENERAL si la oferta la declara con importe; `null` = no la declara (≠ «sin franquicia»)."
         },
         {
@@ -190808,13 +191421,13 @@
           "exportada": true,
           "params": "o: OfertaNormalizada",
           "retorno": "Record<string, ValorGarantiaCompatible>",
-          "linea": 118,
+          "linea": 119,
           "resumen": "Las coberturas como `Record<clave, ValorGarantia>` (forma de `oportunidad_oferta.garantias` del PR #4305). Si dos coberturas comparten clave, gana la primera y la otra entra por su literal."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "70a2e4e319d6"
+      "hash": "a2bf73398a48"
     },
     {
       "ruta": "packages/module-tarificacion/src/redactar.ts",
@@ -190985,7 +191598,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "20e1f46503b1"
+      "hash": "fc3ae3526f58"
     },
     {
       "ruta": "packages/module-trading/src/backtest.ts",
@@ -192775,7 +193388,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4322,
-    "funciones": 15126
+    "archivos": 4330,
+    "funciones": 15183
   }
 }
