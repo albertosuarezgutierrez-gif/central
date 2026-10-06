@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   const ramoEnlace = ramoEnlaceDatos(lead.tipoSeguro, resultado, lead.telefono)
   if (ramoEnlace && ficha) {
     // `llamar` no lanza: red, timeout o puerto caído vuelven como 502/503 → sin enlace.
-    const s = await solicitudLeadWebAsegura({ clienteId: ficha.id, ramo: ramoEnlace, actor: 'web' })
+    const s = await solicitudLeadWebAsegura({ clienteId: ficha.id, ramo: ramoEnlace })
     enlace = interpretarEnlaceDatos(s.status, s.json)
   }
 

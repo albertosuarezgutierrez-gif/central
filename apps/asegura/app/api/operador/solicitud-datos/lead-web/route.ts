@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * POST { clienteId, ramo: 'auto'|'moto', actor } — lead web de auto/moto recién dado de alta:
+ * POST { clienteId, ramo: 'auto'|'moto' } — lead web de auto/moto recién dado de alta:
  * abre su oportunidad (tope diario global) y crea el enlace de datos, todo en una llamada.
  *   201 { estado:'ok', oportunidadId, url }  · `url: null` = ya había una solicitud viva (su token no se da)
  *   409 `no_apta` (la ficha no es una recién creada por el formulario) · 429 `tope` · 422/404
@@ -23,7 +23,7 @@ export const POST = auditado(async (req: Request) => {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
     const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
-    const actor = typeof b?.actor === 'string' && b.actor.trim() ? b.actor.trim().slice(0, 200) : 'web'
+    const actor = 'web'
     const r = await solicitudParaLeadWeb(correduria.id, b?.clienteId, b?.ramo, actor)
     if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
     return NextResponse.json(

@@ -988,7 +988,7 @@ export function valorLegible(campo: SolicitudDatos['campos'][number], v: string 
  * la URL: no se loguea.
  */
 export const TIMEOUT_ENLACE_LEAD_MS = 8_000
-export function solicitudLeadWebAsegura(body: { clienteId: string; ramo: 'auto' | 'moto'; actor: string }): Promise<Reenvio> {
+export function solicitudLeadWebAsegura(body: { clienteId: string; ramo: 'auto' | 'moto' }): Promise<Reenvio> {
   return llamar('/api/operador/solicitud-datos/lead-web', { method: 'POST', body: JSON.stringify(body) }, TIMEOUT_ENLACE_LEAD_MS)
 }
 export function solicitudesDatosAsegura(oportunidadId: string): Promise<Reenvio> {
