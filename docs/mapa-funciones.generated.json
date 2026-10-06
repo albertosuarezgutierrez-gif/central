@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T14:43:56Z",
-  "sha": "e8bf5c34b87601c883c2453030e5e156ff6689c4",
+  "generadoEn": "2026-10-06T16:01:36Z",
+  "sha": "3b3792c6a3f10e69ffd7dc8b73dcedbce8a71bf2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7264,7 +7264,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "La pantalla de entrada: pedir el código y canjearlo. 🚨 Vive aquí y no en `page.tsx` desde el 05/09/2026, y no es un refactor: la raíz `/` era este componente de CLIENTE y por tanto **no miraba nunca "
         },
         {
@@ -7273,7 +7273,7 @@
           "exportada": false,
           "params": "codigo: string",
           "retorno": "string",
-          "linea": 270
+          "linea": 271
         },
         {
           "nombre": "textoVinculo",
@@ -7287,7 +7287,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "00dfbca59263"
+      "hash": "3de980aed1be"
     },
     {
       "ruta": "apps/asegura-portal/app/hoja/[token]/page.tsx",
@@ -9952,6 +9952,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6cbf2e2397d5"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/entrada-enlace.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Qué se le dice al cliente cuando el ENLACE DIRECTO del correo de avisos no le abre la puerta. 🚨 Nunca un «Ha ocurrido un error.» seco (29/09/2026: un cliente respondió al correo «no puedo entrar error»). Cuando el enlace falla, `Entrada.tsx` ya le deja en la pantalla de pedir código con su correo p",
+      "exporta": [
+        "textoFalloEnlace"
+      ],
+      "funciones": [
+        {
+          "nombre": "textoFalloEnlace",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: string | null | undefined",
+          "retorno": "string",
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2f7cc1f71521"
     },
     {
       "ruta": "apps/asegura-portal/lib/extraer-poliza.ts",
@@ -21655,6 +21676,7 @@
       "exporta": [
         "reunirPendientes",
         "crearEnlaceDirecto",
+        "detallesDe",
         "avisarIntranet"
       ],
       "funciones": [
@@ -21664,7 +21686,7 @@
           "exportada": false,
           "params": "c: { nombre: string | null; apellidos: string | null } | null | undefined",
           "retorno": "string | null",
-          "linea": 92
+          "linea": 98
         },
         {
           "nombre": "reunirPendientes",
@@ -21672,7 +21694,7 @@
           "exportada": true,
           "params": "correduriaId: string, hoy: Date",
           "retorno": "Promise<",
-          "linea": 107,
+          "linea": 113,
           "resumen": "Reúne, por cliente, las fuentes del catálogo. Una consulta por fuente (no una por cliente): con 80 clientes vivos el bucle N+1 sería gratuito igual, pero el día que la cartera crezca esto ya está bien"
         },
         {
@@ -21681,7 +21703,7 @@
           "exportada": false,
           "params": "correduriaId: string, hoy: Date, conFicha: ReadonlySet<string>",
           "retorno": "Promise<number>",
-          "linea": 642,
+          "linea": 648,
           "resumen": "Cuántos recordatorios propios se pierden por no haber a quién escribir. 🚨 Usa `entraEnVentana()`, la MISMA puerta que el catálogo, y no el rango ancho de la criba: con el rango, una fila de ayer que "
         },
         {
@@ -21690,7 +21712,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, correo: string, tipos: readonly (keyof typeof HREF_POR_TIPO)[], base: string,",
           "retorno": "Promise<",
-          "linea": 665,
+          "linea": 671,
           "resumen": "El enlace del correo con ACCESO DIRECTO (Alberto, 24/09/2026): una llave de un solo uso y 24 h, atada al correo de la ficha por su índice ciego. Sin `PII_LOOKUP_KEY` no se puede atar, y entonces va el"
         },
         {
@@ -21699,8 +21721,26 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, correo: string, hash: string, destino: string, base: string,",
           "retorno": "Promise<",
-          "linea": 685,
+          "linea": 691,
           "resumen": "La llave en sí: sustituye a las vivas del cliente y devuelve el enlace. Exportada para el aviso de vencimiento de la web (`aviso-web.ts`), que reutiliza la misma llave de un solo uso."
+        },
+        {
+          "nombre": "detallesDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Pendiente, nuevos: readonly { tipo: string; id: string }[]",
+          "retorno": "DetalleAviso[]",
+          "linea": 716,
+          "resumen": "Ramo y tipo de cambio de las pólizas que van en el correo. Solo esos dos datos: el correo nunca lleva nº de póliza, matrícula, compañía ni importes."
+        },
+        {
+          "nombre": "direccionesRebotadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<Set<string>>",
+          "linea": 734,
+          "resumen": "Direcciones del cliente que han rebotado (duro) o se han quejado, según los eventos de Resend que ya guarda el webhook (`correo_envio` + `correo_evento`). Lanza si no se puede leer."
         },
         {
           "nombre": "avisarIntranet",
@@ -21708,19 +21748,21 @@
           "exportada": true,
           "params": "correduriaId: string, opciones: { hoy?: Date; forzarContar?: boolean } = {},",
           "retorno": "Promise<ResumenAvisosIntranet>",
-          "linea": 706
+          "linea": 756
         }
       ],
       "tablas": [
         "anulacion",
         "companias_dgs",
+        "correo_envio",
+        "correo_evento",
         "polizas",
         "portal_identidad",
         "portal_poliza_cambio",
         "portal_vinculo"
       ],
       "rutaApi": null,
-      "hash": "7f5eac7feceb"
+      "hash": "874ed853a05f"
     },
     {
       "ruta": "apps/asegura/lib/avisos-presupuesto.ts",
@@ -31897,18 +31939,35 @@
       "ambito": "apps/asegura",
       "resumen": "«Tienes algo esperándote en tu área de clientes» — el correo GENÉRICO de la intranet del portal. ── Por qué existe ────────────────────────────────────────────────────────── El portal ya sabe decirle a cada cliente lo que tiene pendiente: es la campana (`avisosDe()`, en `@central/module-seguros-port",
       "exporta": [
+        "frasePoliza",
         "resumirAvisos",
+        "componerAsuntoYLineas",
         "cuerpoAvisosIntranet",
-        "enviarAvisosIntranet"
+        "enviarAvisosIntranet",
+        "tocaEscribir",
+        "debeEscribirHoy",
+        "esTablaInexistente",
+        "esDireccionInterna",
+        "direccionesBloqueadas",
+        "elegirDestino"
       ],
       "funciones": [
+        {
+          "nombre": "frasePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DetalleAviso",
+          "retorno": "",
+          "linea": 181,
+          "resumen": "Qué le pasó a una póliza, en una frase sin números. Puro. 🚨 Renovación: si entre lo cambiado están las FECHAS y el estado NO cambia (`estadoNuevo` null), la póliza se ha renovado (vencimiento movido "
+        },
         {
           "nombre": "enumerar",
           "kind": "function",
           "exportada": false,
           "params": "partes: readonly string[]",
           "retorno": "string",
-          "linea": 131,
+          "linea": 206,
           "resumen": "`['a','b','c']` → `a, b y c`. Vacío no ocurre (quien llama no escribe sin avisos)."
         },
         {
@@ -31917,7 +31976,7 @@
           "exportada": true,
           "params": "avisos: readonly AvisoParaCorreo[]",
           "retorno": "string",
-          "linea": 140,
+          "linea": 215,
           "resumen": "Las clases presentes, contadas y nombradas, en el orden del catálogo (no en el de llegada: así dos correos con lo mismo se leen igual)."
         },
         {
@@ -31926,7 +31985,24 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 152
+          "linea": 227
+        },
+        {
+          "nombre": "cap",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": null,
+          "linea": 231
+        },
+        {
+          "nombre": "componerAsuntoYLineas",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosAvisosIntranet",
+          "retorno": "",
+          "linea": 238,
+          "resumen": "El asunto y las viñetas. Con detalle de póliza: una viñeta por póliza («Tu seguro de Hogar: ...»). Los demás avisos van agrupados por clase y contados («2 vencimientos próximos»). Sin ramo, texto neut"
         },
         {
           "nombre": "cuerpoAvisosIntranet",
@@ -31934,7 +32010,7 @@
           "exportada": true,
           "params": "d: DatosAvisosIntranet",
           "retorno": "CuerpoCorreo",
-          "linea": 162,
+          "linea": 277,
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta, para que su cepo pueda recorrer el texto entero. Mismo motivo que en `correo-aviso-acceso.ts`: un guardián que neces"
         },
         {
@@ -31943,13 +32019,67 @@
           "exportada": true,
           "params": "destino: string, d: DatosAvisosIntranet, quien: { correduriaId: string; clienteId: string },",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 228,
+          "linea": 346,
           "resumen": "El envío. Devuelve el desenlace en vez de lanzar, por lo mismo que el resto de correos de esta app: «no hay proveedor» es una variable de Vercel que falta, y un reintento no la pone."
+        },
+        {
+          "nombre": "tocaEscribir",
+          "kind": "function",
+          "exportada": true,
+          "params": "ultimoSello: Date | null, hoy: Date",
+          "retorno": "boolean",
+          "linea": 378,
+          "resumen": "`false` = hace menos de 7 días que se le escribió: hoy NO se envía y NO se sella (lo pendiente sale junto en el siguiente). `ultimoSello` = el `enviado_en` más reciente de `portal_aviso_enviado`."
+        },
+        {
+          "nombre": "debeEscribirHoy",
+          "kind": "function",
+          "exportada": true,
+          "params": "ultimoSello: Date | null, hoy: Date, tiposNuevos: readonly string[]",
+          "retorno": "boolean",
+          "linea": 390,
+          "resumen": "`true` = hoy se escribe: toca por los 7 días, o hay entre los nuevos un aviso con fecha propia."
+        },
+        {
+          "nombre": "esTablaInexistente",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 395,
+          "resumen": "Error de Postgres «la relación no existe» (42P01), tal como lo envuelve Prisma en `$queryRaw`."
+        },
+        {
+          "nombre": "esDireccionInterna",
+          "kind": "function",
+          "exportada": true,
+          "params": "email: string",
+          "retorno": "boolean",
+          "linea": 407,
+          "resumen": "Dirección de la casa, de pruebas o reservada: no es un cliente. Mira el dominio, no un literal."
+        },
+        {
+          "nombre": "direccionesBloqueadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: readonly EventoRebote[]",
+          "retorno": "Set<string>",
+          "linea": 421,
+          "resumen": "Direcciones a las que no se escribe más: rebote DURO (`Permanent`; uno `Transient` es un buzón lleno y se reintenta), queja de spam, o supresión de Resend (ya rebotó antes). En minúscula."
+        },
+        {
+          "nombre": "elegirDestino",
+          "kind": "function",
+          "exportada": true,
+          "params": "candidatas: readonly (string | null)[], bloqueadas: ReadonlySet<string>",
+          "retorno": "string | null",
+          "linea": 434,
+          "resumen": "La primera dirección de la lista (ya en orden de preferencia y en claro) que sirve: con forma de email, no canal de la correduría, no interna y no rebotada. `null` = sin canal."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0e215aba4c11"
+      "hash": "487b612fc84d"
     },
     {
       "ruta": "apps/asegura/lib/correo-emision.ts",
@@ -193744,7 +193874,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is RamoFicha",
-          "linea": 71
+          "linea": 97
         },
         {
           "nombre": "garantiasFicha",
@@ -193752,7 +193882,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "readonly GarantiaFicha[]",
-          "linea": 76,
+          "linea": 102,
           "resumen": "Garantías del ramo; un ramo sin catálogo devuelve [] (todo irá a `extras`, nunca a una clave inventada)."
         },
         {
@@ -193761,7 +193891,7 @@
           "exportada": true,
           "params": "ramo: string, clave: string",
           "retorno": "GarantiaFicha | null",
-          "linea": 80
+          "linea": 106
         },
         {
           "nombre": "normalizarLiteral",
@@ -193769,7 +193899,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 85,
+          "linea": 111,
           "resumen": "Minúsculas, sin tildes, solo letras/números y espacios simples."
         },
         {
@@ -193778,13 +193908,13 @@
           "exportada": true,
           "params": "ramo: string, literal: string",
           "retorno": "string | null",
-          "linea": 93,
+          "linea": 119,
           "resumen": "Literal de la compañía → clave del catálogo, o `null` si no se reconoce (va a `extras`). Palabras completas; gana el sinónimo MÁS LARGO (así «RC por agua» no cae en «rc» ni en «daños por agua»)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d7d041362ff"
+      "hash": "4e351fab05e2"
     },
     {
       "ruta": "packages/module-tarificacion/src/fichas.ts",
@@ -194180,6 +194310,78 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "32a19edcaa8a"
+    },
+    {
+      "ruta": "packages/module-tarificacion/src/formulario-rc.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Formulario CANÓNICO de RC general / de actividad (08/10/2026). PURO: ni BD, ni red. Datos de riesgo comunes a cualquier compañía. Todavía no hay ninguna registrada (la primera: Occident, pendiente de grabar su portal): este ramo existe solo a nivel canónico y NO está en `RamoRpa`. Importes en EUROS ",
+      "exporta": [
+        "normalizarCnae",
+        "validarFormularioRC"
+      ],
+      "funciones": [
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], max = 300",
+          "retorno": "string | null",
+          "linea": 34
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], permitirCero = false",
+          "retorno": "number | null",
+          "linea": 41,
+          "resumen": "Importe en euros (número, no texto). `permitirCero`: 0 es un dato válido (p. ej. siniestros sin coste)."
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], max = 1_000_000",
+          "retorno": "number | null",
+          "linea": 51
+        },
+        {
+          "nombre": "booleano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[]",
+          "retorno": "boolean | null",
+          "linea": 58
+        },
+        {
+          "nombre": "normalizarCnae",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string | null",
+          "linea": 65,
+          "resumen": "«5610» o «56.10» → «5610»; cualquier otra cosa → null (el llamante lo marca error)."
+        },
+        {
+          "nombre": "validarFormularioRC",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: unknown",
+          "retorno": "ValidacionFormularioRC",
+          "linea": 70
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "99f873f3432b"
     },
     {
       "ruta": "packages/module-tarificacion/src/grabador-bookmarklet.ts",
@@ -196624,7 +196826,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4383,
-    "funciones": 15470
+    "archivos": 4385,
+    "funciones": 15489
   }
 }
