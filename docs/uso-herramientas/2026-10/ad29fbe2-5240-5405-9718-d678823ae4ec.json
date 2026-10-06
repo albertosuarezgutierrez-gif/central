@@ -1,19 +1,113 @@
 {
  "sesion": "ad29fbe2-5240-5405-9718-d678823ae4ec",
  "inicio": "2026-10-06T11:33:05.425Z",
- "fin": "2026-10-06T11:33:10.578Z",
- "llamadas": 2,
+ "fin": "2026-10-06T13:04:05.174Z",
+ "llamadas": 65,
  "categorias": {
   "mcp:Google_Drive": {
-   "llamadas": 2,
-   "chars_in": 190,
-   "chars_out": 31827,
+   "llamadas": 4,
+   "chars_in": 425,
+   "chars_out": 35365,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Google_Drive__search_files": 1,
+    "mcp__Google_Drive__search_files": 3,
     "mcp__Google_Drive__read_file_content": 1
+   }
+  },
+  "otro": {
+   "llamadas": 12,
+   "chars_in": 2789,
+   "chars_out": 2905,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 5,
+    "SubagentHandback": 1,
+    "SendUserFile": 4
+   }
+  },
+  "bash": {
+   "llamadas": 16,
+   "chars_in": 7286,
+   "chars_out": 36900,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 16
+   }
+  },
+  "sql": {
+   "llamadas": 5,
+   "chars_in": 1068,
+   "chars_out": 4660,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 5
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 20,
+   "chars_in": 2409,
+   "chars_out": 3515124,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 20
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 259,
+   "chars_out": 2749,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 2365,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 4,
+   "chars_in": 1250,
+   "chars_out": 32284,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 1,
+    "mcp__Gmail__get_thread": 1,
+    "mcp__Gmail__get_message": 1,
+    "mcp__Gmail__create_draft": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 5594,
+   "chars_out": 5938,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
    }
   }
  }
