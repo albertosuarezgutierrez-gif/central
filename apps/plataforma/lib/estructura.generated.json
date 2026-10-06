@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-05T18:15:19Z",
+  "generadoEn": "2026-10-06T04:55:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -213,6 +213,11 @@
       "npm": "@central/module-subastas"
     },
     {
+      "id": "module-tarificacion",
+      "tipo": "module",
+      "npm": "@central/module-tarificacion"
+    },
+    {
       "id": "module-trading",
       "tipo": "module",
       "npm": "@central/module-trading"
@@ -362,7 +367,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
@@ -686,7 +691,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
@@ -960,7 +965,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 12
       },
       "asegura-web": {
         "estado": "no",
@@ -2198,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 198
+        "evidencias": 210
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 152
+        "evidencias": 155
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2257,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 51
+        "evidencias": 52
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2443,6 +2448,60 @@
       "plataforma": {
         "estado": "usado",
         "evidencias": 38
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-tarificacion": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
       },
       "rrhh": {
         "estado": "no",
@@ -2848,7 +2907,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 19
+        "evidencias": 20
       },
       "asegura-portal": {
         "presente": false,
@@ -3928,6 +3987,7 @@
       "core-catastro",
       "module-concursos"
     ],
+    "module-tarificacion": [],
     "module-trading": [],
     "module-transporte": [
       "module-flota",
@@ -4089,9 +4149,11 @@
       "/api/operador/llamada",
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/comparar",
+      "/api/operador/oportunidad/consolidar",
       "/api/operador/oportunidad/de-poliza",
       "/api/operador/oportunidad/figuras",
       "/api/operador/oportunidad/llamada",
+      "/api/operador/oportunidad/ofertas",
       "/api/operador/oportunidad/riesgo",
       "/api/operador/oportunidad/tarea",
       "/api/operador/oportunidad/traspasar",
@@ -4126,9 +4188,11 @@
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
       "/api/operador/tareas-hoy",
+      "/api/operador/tarificador/encolar",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/portal/anulacion",
+      "/api/portal/anulacion/solicitar",
       "/api/portal/carnets",
       "/api/portal/carta-mediador",
       "/api/portal/contacto",
@@ -4145,6 +4209,8 @@
       "/api/portal/solicitud-datos",
       "/api/portal/solicitud-datos/documento",
       "/api/publico/recaptacion/baja",
+      "/api/tarificador/resultado",
+      "/api/tarificador/trabajo/[id]",
       "/api/webhooks/codeoscopic",
       "/api/webhooks/resend"
     ],
@@ -4152,6 +4218,7 @@
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
       "/api/anulacion",
+      "/api/anulacion/solicitar",
       "/api/autorizaciones",
       "/api/autorizaciones/[id]",
       "/api/avisos",
@@ -4193,6 +4260,7 @@
       "/api/presupuesto/datos",
       "/api/presupuesto/firma",
       "/api/presupuesto/ia",
+      "/api/presupuesto/pdf",
       "/api/push/desuscribir",
       "/api/push/preferencias",
       "/api/push/suscribir",
@@ -5089,10 +5157,12 @@
       "/api/correduria/linea-base",
       "/api/correduria/oportunidad",
       "/api/correduria/oportunidad/comparar",
+      "/api/correduria/oportunidad/consolidar",
       "/api/correduria/oportunidad/de-poliza",
       "/api/correduria/oportunidad/figuras",
       "/api/correduria/oportunidad/leer",
       "/api/correduria/oportunidad/llamada",
+      "/api/correduria/oportunidad/ofertas",
       "/api/correduria/oportunidad/riesgo",
       "/api/correduria/oportunidad/tarea",
       "/api/correduria/oportunidad/traspasar",
@@ -5392,6 +5462,7 @@
       "/api/admin/empleados/[id]/documentos/confirm",
       "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/empleados/[id]/documentos/presign",
+      "/api/admin/empleados/[id]/enlace",
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/fichajes/exportar",
@@ -5601,6 +5672,7 @@
       "seguros.comision_pactada",
       "seguros.compania_contactos",
       "seguros.companias_dgs",
+      "seguros.companias_integracion",
       "seguros.consent_logs",
       "seguros.conversaciones",
       "seguros.corredurias",
@@ -5633,6 +5705,7 @@
       "seguros.operational_events",
       "seguros.oportunidad_figura",
       "seguros.oportunidad_historial",
+      "seguros.oportunidad_oferta",
       "seguros.oportunidades",
       "seguros.peticiones",
       "seguros.poliza_coberturas",
@@ -5662,6 +5735,7 @@
       "seguros.solicitud_cambio_documentos",
       "seguros.solicitud_datos",
       "seguros.tarificacion_precios",
+      "seguros.tarificacion_trabajos",
       "seguros.tarificaciones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
@@ -6677,10 +6751,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 42,
+    "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1578,
+    "apis": 1589,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
