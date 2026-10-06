@@ -11,7 +11,7 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-async function puerto(ruta: string, init: RequestInit, topeMs = 30_000): Promise<Reenvio> {
+export async function puerto(ruta: string, init: RequestInit, topeMs = 30_000): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
