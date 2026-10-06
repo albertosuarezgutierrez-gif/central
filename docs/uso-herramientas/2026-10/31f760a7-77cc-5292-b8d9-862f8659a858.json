@@ -1,0 +1,41 @@
+{
+ "sesion": "31f760a7-77cc-5292-b8d9-862f8659a858",
+ "inicio": "2026-10-06T15:04:42.296Z",
+ "fin": "2026-10-06T15:04:43.927Z",
+ "llamadas": 3,
+ "categorias": {
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 1137,
+   "chars_out": 1334,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 930,
+   "chars_out": 1150,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 162,
+   "chars_out": 322,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1
+   }
+  }
+ }
+}
