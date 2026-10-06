@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(06/10/2026)** — RRHH: acceso del empleado por EMAIL + CÓDIGO en `/e/entrar` (OTP HMAC 6 díg./10 min/5 intentos, topes email+IP, sin enumerar, multi-empresa, PIN después) y sesión de empleado 90 d revocable (`empleados.sesion_version`, «Cerrar sesiones»). OTP generalizado a `@central/core-identity/codigo-otp`. Rama `claude/gifted-hopper-21ntem`, sin commit/PR aún.
+Sesión de responsable = lista blanca `typ:'responsable'` + jti (`lib/auth.ts`, cepo `auth-separacion.test.ts`): al desplegar, responsables y empleados re-entran UNA vez.
+⏳ SQL `apps/rrhh/prisma/migrations/0021_acceso_email.sql` PENDIENTE de aplicar ANTES del merge (sin él, 500 en `/e`).
 **(05/10/2026)** — Tarificador RPA (Grupo ASegura): Codeoscopic/Avant2 se queda para auto/moto/hogar/salud/decesos/vida; bots Playwright solo para ramos sin API (comunidades, pyme, RC). Primer bot: Allianz ePAC · Comunidades, autorizado por Alberto (sin confirmación escrita de Allianz; borrador a J.A. Maroto, sucursal 209, pidiendo usuario solo-cotización, en Gmail sin enviar).
 Infra: en Fly NO hay Symfony (solo adaptador Java CIMA). Worker = app Fly nueva `asegura-tarificador`, máquina efímera por trabajo; orquestador apps/asegura; cola = `seguros.tarificacion_trabajos`; módulo `packages/module-tarificacion`; servicio `services/tarificador-rpa` (fuera del workspace pnpm). Credenciales solo en fly secrets. Guard anti-emisión con test.
 Pendiente: capturas + PDF de ePAC Comunidades para selectores; aplicar SQL 2026-10-05_tarificador_rpa.sql; envs Vercel/Fly; enganchar `barrerTarificadorRpa` a cron; puente a #4305; filtro `canal='codeoscopic'` en lib/presupuesto.ts:594 de #4305.
