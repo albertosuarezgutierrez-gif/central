@@ -30,21 +30,43 @@ import { instalar, InstruccionesIOS, useInstalacion } from './instalacion'
  * fila con la marca, y la barra se saldría de la pantalla sin que ninguna
  * medida de alto lo delatara.
  */
+const CLAVE_DESCARTADO = 'instalar-descartado'
+
 export function InstalarBoton() {
   const estado = useInstalacion()
   const [abierto, setAbierto] = useState(false)
   const raiz = useRef<HTMLDivElement>(null)
   const idGlobo = useId()
+  const visto = useRef(false)
+
+  // Al entrar, UNA vez: el globo se abre solo (iOS no tiene aviso automático y
+  // nadie busca un botón que no sabe que existe). Descartarlo se recuerda; sin
+  // `localStorage` (modo privado) simplemente se ofrece en cada visita.
+  useEffect(() => {
+    if (visto.current || (estado !== 'instalable' && estado !== 'ios')) return
+    visto.current = true
+    try {
+      if (localStorage.getItem(CLAVE_DESCARTADO) === '1') return
+    } catch {}
+    setAbierto(true)
+  }, [estado])
+
+  const cerrar = () => {
+    setAbierto(false)
+    try {
+      localStorage.setItem(CLAVE_DESCARTADO, '1')
+    } catch {}
+  }
 
   // Cerrar al pulsar fuera o con Escape: un globo que solo se cierra con su
   // propio botón se queda tapando la póliza.
   useEffect(() => {
     if (!abierto) return
     const fuera = (e: MouseEvent) => {
-      if (raiz.current && !raiz.current.contains(e.target as Node)) setAbierto(false)
+      if (raiz.current && !raiz.current.contains(e.target as Node)) cerrar()
     }
     const tecla = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setAbierto(false)
+      if (e.key === 'Escape') cerrar()
     }
     document.addEventListener('mousedown', fuera)
     document.addEventListener('keydown', tecla)
@@ -66,25 +88,36 @@ export function InstalarBoton() {
         // desaparece y el lector de pantalla solo tiene esto.
         aria-label="Instalar «Mis seguros» en este dispositivo"
         title="Instalar la app"
-        aria-expanded={ios ? abierto : undefined}
-        aria-controls={ios ? idGlobo : undefined}
+        aria-expanded={abierto}
+        aria-controls={idGlobo}
         onClick={() => {
-          if (ios) setAbierto((a) => !a)
-          else void instalar()
+          if (abierto) cerrar()
+          else setAbierto(true)
         }}
       >
         <IconoInstalar />
         <span className="instalar-texto">Instalar</span>
       </button>
-      {ios && abierto && (
-        <div className="instalar-globo" id={idGlobo} role="dialog" aria-label="Cómo instalar en iPhone o iPad">
+      {abierto && (
+        <div className="instalar-globo" id={idGlobo} role="dialog" aria-label={ios ? 'Cómo instalar en iPhone o iPad' : 'Instalar la app'}>
           <strong>Tenlo a mano</strong>
           <div className="instalar-globo-cuerpo">
-            <p>Añade «Mis seguros» a la pantalla de inicio:</p>
-            <InstruccionesIOS />
+            {ios ? (
+              <>
+                <p>Añade «Mis seguros» a la pantalla de inicio:</p>
+                <InstruccionesIOS />
+              </>
+            ) : (
+              <>
+                <p>Instala «Mis seguros» y ábrela desde un icono, sin buscar el correo.</p>
+                <button type="button" className="instalar-copiar" onClick={() => void instalar()}>
+                  Instalar ahora
+                </button>
+              </>
+            )}
           </div>
-          <button type="button" className="instalar-globo-cerrar" onClick={() => setAbierto(false)}>
-            Entendido
+          <button type="button" className="instalar-globo-cerrar" onClick={cerrar}>
+            {ios ? 'Entendido' : 'Ahora no'}
           </button>
         </div>
       )}

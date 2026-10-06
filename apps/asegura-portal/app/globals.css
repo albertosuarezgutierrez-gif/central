@@ -3229,6 +3229,21 @@ h1 em {
   vertical-align: -2px;
   color: var(--primary);
 }
+.instalar-alt { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.instalar-alt p { margin: 0 0 6px; }
+.instalar-copiar {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+}
 .instalar-globo-cerrar {
   width: 100%;
   min-height: 44px;
