@@ -27,7 +27,7 @@ import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
-import { aceptaMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
+import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { FilaDeclarada } from './FilaDeclarada'
 import { FiltroVigencia } from './FiltroVigencia'
@@ -616,6 +616,7 @@ export default async function Boveda({
               conNombre={bloqueMias?.conNombre ?? false}
               hoy={hoy}
               bajasAbiertas={puedePedirBaja ? bajasAbiertas : null}
+              bajasParaMejorar={firmas === null ? null : polizasConBajaEnMarcha(firmas, { conConfirmadas: true })}
             />
           ))
         )}
@@ -845,6 +846,7 @@ function Titular({
   conNombre,
   hoy,
   bajasAbiertas = null,
+  bajasParaMejorar = null,
 }: {
   titular: TitularPortal
   grupo: GrupoCartera
@@ -853,6 +855,8 @@ function Titular({
   hoy: Date
   /** Solo en «mias»: las pólizas con baja en marcha. `null` = no se ofrece «Solicitar baja» (ajenas, vista de corredor, puente caído). */
   bajasAbiertas?: ReadonlySet<string> | null
+  /** Como `bajasAbiertas` pero con las confirmadas (lo que mira la página «Mejorar el precio»). */
+  bajasParaMejorar?: ReadonlySet<string> | null
 }) {
   // «Solicitar baja» y «Mejorar el precio» solo donde el vínculo OPERA; el servidor rechaza el resto (sin_permiso).
   const opera = nivelPuedeOperar(titular.nivel)
@@ -885,7 +889,7 @@ function Titular({
               p={p}
               deOtro={grupo === 'autorizadas' ? titular.nombre : null}
               puedeSolicitarBaja={grupo === 'mias' && opera && puedeOfrecerSolicitarBaja(p, bajasAbiertas)}
-              puedeMejorarPrecio={opera && aceptaMejorarPrecio(p)}
+              puedeMejorarPrecio={puedeOfrecerMejorarPrecio(p, titular.nivel, bajasParaMejorar)}
             />
           ),
         }))}

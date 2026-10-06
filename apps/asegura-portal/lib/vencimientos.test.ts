@@ -59,7 +59,7 @@ test('polizasConBajaEnMarcha: pendientes, en revisión y firmadas; la confirmada
   assert.deepEqual([...polizasConBajaEnMarcha(f, { conConfirmadas: true })].sort(), ['a', 'b', 'c', 'd'])
 })
 
-import { enVigorParaActuar, estadoMejorarPrecio, aceptaMejorarPrecio, puedeOfrecerSolicitarBaja, sinObligacionesDePolizasConBaja, titularesQueOperan } from './vencimientos.ts'
+import { enVigorParaActuar, estadoMejorarPrecio, aceptaMejorarPrecio, puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, sinObligacionesDePolizasConBaja, titularesQueOperan } from './vencimientos.ts'
 
 const base = (id: string, extra: Record<string, unknown> = {}) =>
   ({ id, vigencia: 'vigente', sustituidaAt: null, fechaVencimiento: new Date('2026-11-01T00:00:00Z'), ...extra }) as unknown as PolizaPortal
@@ -117,6 +117,32 @@ test('🪤 H1: la página y la bóveda usan titularesQueOperan / nivelPuedeOpera
   assert.match(mejorar, /titularesQueOperan\(cartera\.propias\)/)
   const boveda = readFileSync(new URL('page.tsx', dir), 'utf8')
   assert.match(boveda, /puedeSolicitarBaja=\{grupo === 'mias' && opera &&/)
-  assert.match(boveda, /puedeMejorarPrecio=\{opera &&/)
+  assert.match(boveda, /puedeMejorarPrecio=\{puedeOfrecerMejorarPrecio\(p, titular\.nivel, bajasParaMejorar\)\}/)
   assert.match(boveda, /titularesQueOperan\(cartera\.propias\)\.flatMap/)
+})
+
+test('🪤 el enlace «Mejorar el precio» y la página usan el MISMO predicado: nunca se ofrece lo que la página rechaza', () => {
+  const base = { id: 'p', vigencia: 'vigente', sustituidaAt: null, fechaVencimiento: new Date('2026-11-01T00:00:00Z') }
+  const casos: Array<[string, Record<string, unknown>, string, ReadonlySet<string> | null, boolean]> = [
+    ['ok', base, 'gestionar', new Set(), true],
+    ['puente caído', base, 'administrar', null, true],
+    ['sin fecha', { ...base, fechaVencimiento: null }, 'gestionar', new Set(), false],
+    ['sustituida', { ...base, sustituidaAt: new Date('2026-09-24T00:00:00Z') }, 'gestionar', new Set(), false],
+    ['no vigente', { ...base, vigencia: 'anulada' }, 'gestionar', new Set(), false],
+    ['baja en marcha', base, 'gestionar', new Set(['p']), false],
+    ['solo consulta', base, 'completo', new Set(), false],
+    ['nivel raro', base, 'raro', new Set(), false],
+  ]
+  for (const [nombre, p, nivel, conBaja, esperado] of casos) {
+    const ofrece = puedeOfrecerMejorarPrecio(p as never, nivel, conBaja)
+    assert.equal(ofrece, esperado, nombre)
+    // Lo que la página hace con esa póliza (si el nivel opera): ofrecer ⇔ estado 'ok' (si no, 404 o «baja en marcha»).
+    if (ofrece) assert.equal(estadoMejorarPrecio(p as never, conBaja), 'ok', nombre)
+  }
+})
+
+test('🪤 una baja CONFIRMADA también quita el enlace (la página la trata como baja en marcha)', () => {
+  const conBaja = polizasConBajaEnMarcha({ anulaciones: [], enRevision: [], firmadas: [{ polizaId: 'p', estado: 'confirmada' }] as never }, { conConfirmadas: true })
+  const p = { id: 'p', vigencia: 'vigente', sustituidaAt: null, fechaVencimiento: new Date('2026-11-01T00:00:00Z') }
+  assert.equal(puedeOfrecerMejorarPrecio(p as never, 'gestionar', conBaja), false)
 })

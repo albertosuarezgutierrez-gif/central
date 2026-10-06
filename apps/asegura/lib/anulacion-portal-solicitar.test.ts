@@ -275,4 +275,9 @@ test('🪤 H2: `fichaPropiaDeRecurso` distingue sin_permiso de ajena y todas las
     const s = readFileSync(new URL(`../app/api/portal/${ruta}/route.ts`, import.meta.url), 'utf8')
     assert.match(s, /sin_permiso: 403/, ruta)
   }
+  // Las dos rutas que lo mapean en línea (no con tabla STATUS).
+  for (const ruta of ['datos-emision', 'mejorar-precio']) {
+    const s = readFileSync(new URL(`../app/api/portal/${ruta}/route.ts`, import.meta.url), 'utf8')
+    assert.match(s, /r\.estado === 'sin_permiso' \? 403/, ruta)
+  }
 })

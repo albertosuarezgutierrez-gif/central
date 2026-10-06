@@ -70,6 +70,20 @@ export function estadoMejorarPrecio(
 }
 
 /**
+ * ¿Se ENLAZA «Mejorar el precio» desde una fila? Solo si la página lo atendería (`estadoMejorarPrecio === 'ok'`:
+ * en vigor, con fecha, sin baja en marcha — confirmadas incluidas, como la página) y el vínculo OPERA. Mismo
+ * predicado que la página: si discreparan, el botón llevaría a un 404 o a «ya tiene una baja en marcha».
+ * `conBaja` = `polizasConBajaEnMarcha(firmas, { conConfirmadas: true })`, o `null` si el puente no respondió.
+ */
+export function puedeOfrecerMejorarPrecio(
+  p: Pick<PolizaPortal, 'id' | 'vigencia' | 'sustituidaAt' | 'fechaVencimiento'>,
+  nivel: string,
+  conBaja: ReadonlySet<string> | null,
+): boolean {
+  return nivelPuedeOperar(nivel) && estadoMejorarPrecio(p, conBaja) === 'ok'
+}
+
+/**
  * Quita de una lista de obligaciones las «renueva/vence» de pólizas con baja en marcha. Solo `tipo: 'poliza'`:
  * un recordatorio propio (ITV…) puede colgar del mismo `polizaId` y sigue siendo verdad. `conBaja === null`
  * (no se pudo leer) = la lista tal cual.
