@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  fechasPorDefecto, formularioInicial, leerTrabajoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
+  vistaPrecio, fechasPorDefecto, formularioInicial, leerTrabajoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
 } from './tarificador-asegura-reglas.ts'
 
 import { fechaCorta, formularioConUltimoRiesgo, importeDeTexto, importeParaCampo, leerUltimoRiesgoBot } from './tarificador-asegura-reglas.ts'
@@ -138,4 +138,30 @@ test('rutas proxy: exigen sesión de correduría y el secreto no sale al cliente
   assert.ok(!ui.includes('ASEGURA_OPERADOR_SECRET') && !ui.includes('tarificador-asegura.ts'))
   const sinComentarios = ui.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
   assert.ok(!/emitir|contratar/i.test(sinComentarios), 'nada de emitir/contratar en la UI')
+})
+
+test('vistaPrecio: principal = prima anual (sucesivos); primer recibo solo si difiere; sin inventar', () => {
+  const base = { compania: 'allianz', producto: 'C', pdfIndice: null }
+  const dif = { ...base, primaTotalAnual: 342.77, primaNeta: 295.88, impuestos: 46.89, primaTotalSucesivos: 347.55, primaNetaSucesivos: 300, impuestosSucesivos: 47.55 }
+  assert.deepEqual(vistaPrecio(dif, '2027-10-01'), { total: 347.55, neta: 300, impuestos: 47.55, primerRecibo: { total: 342.77, hasta: '01/10/2027' } })
+  assert.equal(vistaPrecio(dif).primerRecibo?.hasta, null) // sin fecha real no se inventa
+  assert.equal(vistaPrecio(dif, 'basura').primerRecibo?.hasta, null)
+  const igual = { ...dif, primaTotalAnual: 347.55 }
+  assert.equal(vistaPrecio(igual).primerRecibo, null)
+  assert.equal(vistaPrecio(igual).total, 347.55)
+  const soloPrimero = { ...base, primaTotalAnual: 342.77, primaNeta: 295.88, impuestos: 46.89 }
+  assert.deepEqual(vistaPrecio(soloPrimero), { total: 342.77, neta: 295.88, impuestos: 46.89, primerRecibo: null })
+  const sucSinDesglose = { ...base, primaTotalAnual: 342.77, primaNeta: 295.88, impuestos: 46.89, primaTotalSucesivos: 347.55, primaNetaSucesivos: null, impuestosSucesivos: null }
+  const v = vistaPrecio(sucSinDesglose)
+  assert.equal(v.neta, null) // no se mezcla la neta del primer recibo con la prima anual
+  assert.equal(v.impuestos, null)
+})
+
+test('leerTrabajoBot conserva los sucesivos y los marca null si no vienen', () => {
+  const t = leerTrabajoBot({ estado: 'ok', ofertas: [
+    { compania: 'a', producto: 'p', primaTotalAnual: 342.77, primaTotalSucesivos: 347.55, primaNetaSucesivos: 300, impuestosSucesivos: 47.55 },
+    { compania: 'a', producto: 'q', primaTotalAnual: 10 },
+  ] })
+  assert.equal(t?.ofertas[0].primaTotalSucesivos, 347.55)
+  assert.equal(t?.ofertas[1].primaTotalSucesivos, null)
 })

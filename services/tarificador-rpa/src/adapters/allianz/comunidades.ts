@@ -1016,7 +1016,7 @@ export const allianzComunidades: AdaptadorPortal = {
     await acompanarPaso(page, ctx, 'proyecto', 'Pestaña Tarificar tras abrir «Proyecto» (descarga del PDF)', { modalidadPedida: modalidad })
     const avisos = [
       `Modalidad ${modalidad === 'estandar' ? 'Estándar' : 'Personalizado'} (la otra requiere otro trabajo)`,
-      'Prima anual = Prima Total del primer año; los recibos sucesivos pueden diferir (ver desglose)',
+      '«Anual» de ePAC = primer recibo (prorrateado hasta el día 1 del mes); la prima anual de renovación es la de «Sucesivos» (ver desglose)',
       'Capitales y franquicias tal como los muestra la tabla de ePAC; «estado» solo en las asistencias (Incluida/Excluida)',
     ]
     if (pdf === null) avisos.push('PDF del proyecto no obtenido (TODO: confirmar si «Proyecto» da descarga o ventana)')
