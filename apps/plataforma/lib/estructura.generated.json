@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-06T13:36:53Z",
+  "generadoEn": "2026-10-06T14:43:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -367,7 +367,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 215
+        "evidencias": 217
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 157
+        "evidencias": 159
       },
       "rrhh": {
         "estado": "no",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 17
       },
       "asegura-portal": {
         "estado": "no",
@@ -2500,8 +2500,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "no",
@@ -3991,7 +3991,9 @@
       "core-catastro",
       "module-concursos"
     ],
-    "module-tarificacion": [],
+    "module-tarificacion": [
+      "module-seguros"
+    ],
     "module-trading": [],
     "module-transporte": [
       "module-flota",
@@ -4118,7 +4120,10 @@
       "/api/operador/comisiones",
       "/api/operador/comisiones-pactadas",
       "/api/operador/companias",
+      "/api/operador/companias/acuerdo/cotejar",
+      "/api/operador/companias/acuerdos",
       "/api/operador/companias/contacto/[id]",
+      "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
       "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
@@ -4194,8 +4199,16 @@
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
       "/api/operador/tareas-hoy",
+      "/api/operador/tarificador/coberturas",
       "/api/operador/tarificador/encolar",
+      "/api/operador/tarificador/fichas",
+      "/api/operador/tarificador/fichas/[id]",
+      "/api/operador/tarificador/grabaciones",
+      "/api/operador/tarificador/grabaciones/[id]",
+      "/api/operador/tarificador/grabaciones/[id]/analizar",
+      "/api/operador/tarificador/grabaciones/[id]/pantallas",
       "/api/operador/tarificador/intervenciones",
+      "/api/operador/tarificador/oportunidad",
       "/api/operador/tarificador/panel",
       "/api/operador/tarificador/trabajo/[id]",
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
@@ -5138,9 +5151,10 @@
       "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/codigo-postal",
       "/api/correduria/comisiones",
-      "/api/correduria/comisiones-pactadas",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
+      "/api/correduria/companias/acuerdos",
+      "/api/correduria/companias/acuerdos/cotejar",
       "/api/correduria/companias/contactado",
       "/api/correduria/companias/telefono",
       "/api/correduria/contactos-movil",
@@ -5203,7 +5217,15 @@
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
       "/api/correduria/tareas-hoy",
+      "/api/correduria/tarificador/coberturas",
       "/api/correduria/tarificador/encolar",
+      "/api/correduria/tarificador/fichas",
+      "/api/correduria/tarificador/fichas/[id]",
+      "/api/correduria/tarificador/grabaciones",
+      "/api/correduria/tarificador/grabaciones/[id]",
+      "/api/correduria/tarificador/grabaciones/[id]/analizar",
+      "/api/correduria/tarificador/grabaciones/[id]/pantallas",
+      "/api/correduria/tarificador/oportunidad",
       "/api/correduria/tarificador/panel",
       "/api/correduria/tarificador/trabajo/[id]",
       "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
@@ -5662,6 +5684,9 @@
     "asegura": [
       "if",
       "seguros._volcado_control",
+      "seguros.acuerdo_comisiones",
+      "seguros.acuerdo_objetivos",
+      "seguros.acuerdos_compania",
       "seguros.anulacion",
       "seguros.aprobacion",
       "seguros.auditoria",
@@ -5679,6 +5704,7 @@
       "seguros.channel_inbound_messages",
       "seguros.cima_decisiones",
       "seguros.cima_ficheros",
+      "seguros.claves_mediador",
       "seguros.cliente_carnets_conducir",
       "seguros.cliente_emails",
       "seguros.cliente_merge_log",
@@ -5766,7 +5792,11 @@
       "seguros.tarificacion_trabajos",
       "seguros.tarificaciones",
       "seguros.tarificador_acompanamiento",
+      "seguros.tarificador_coberturas_presupuesto",
       "seguros.tarificador_conocimiento",
+      "seguros.tarificador_fichas",
+      "seguros.tarificador_grabacion_pantallas",
+      "seguros.tarificador_grabaciones",
       "seguros.tarificador_intervenciones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
@@ -6786,7 +6816,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1613,
+    "apis": 1633,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
