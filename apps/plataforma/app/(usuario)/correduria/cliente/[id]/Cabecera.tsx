@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
 import { alertaVencimiento, contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { ramosConOfertas } from '@/lib/seguimiento-asegura'
+import { ramosConOfertas, urlOportunidadNueva } from '@/lib/seguimiento-asegura'
 import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
@@ -382,6 +382,7 @@ function Acciones({ clienteId, contacto }: { clienteId: string; contacto: Ficha[
             width: 240, maxWidth: '86vw',
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: 10, padding: 6, boxShadow: 'var(--shadow)',
+            maxHeight: 'min(70vh, 480px)', overflowY: 'auto', overscrollBehavior: 'contain',
           }}
         >
           <p style={{ margin: '4px 4px 4px', fontSize: 11, color: 'var(--muted)' }}>Con precio</p>
@@ -402,7 +403,7 @@ function Acciones({ clienteId, contacto }: { clienteId: string; contacto: Ficha[
             <Link
               key={r.valor}
               role="menuitem"
-              href={`/correduria/cliente/${clienteId}?tab=oportunidades&oportunidad=nueva&ramo=${r.valor}`}
+              href={urlOportunidadNueva(clienteId, r.valor)}
               title={`Oportunidad nueva de ${r.rotulo.toLowerCase()}: se apunta con su primer paso, sin tarificar`}
               style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 10px', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}
             >

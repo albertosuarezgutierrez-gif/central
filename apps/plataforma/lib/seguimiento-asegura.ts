@@ -441,7 +441,9 @@ export function rotuloMotivo(m: string | null): string | null {
 
 const ROTULO_RAMO: Record<RamoOportunidad, string> = {
   auto: 'Auto', moto: 'Moto', hogar: 'Hogar', vida: 'Vida', salud: 'Salud', decesos: 'Decesos',
-  responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes', otros: 'Otros',
+  responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes',
+  empresas: 'Empresas / pymes', rc_profesional: 'RC profesional', dyo: 'D&O (directivos)', flotas: 'Flotas', transporte_mercancias: 'Transporte de mercancías', ciberriesgos: 'Ciberriesgos', decenal: 'Decenal / construcción', embarcaciones: 'Embarcaciones', mascotas: 'Mascotas', impago_alquiler: 'Impago de alquiler', viaje: 'Viaje', caucion: 'Caución',
+  otros: 'Otros',
 }
 export const RAMOS_OPORTUNIDAD_UI: readonly { valor: RamoOportunidad; rotulo: string }[] =
   RAMOS_OPORTUNIDAD.map((valor) => ({ valor, rotulo: ROTULO_RAMO[valor] }))
@@ -453,6 +455,11 @@ export function ramoInicialValido(v: string | null | undefined): RamoOportunidad
 export function ramosConOfertas(tarificables: readonly { etiqueta: string }[]): readonly { valor: RamoOportunidad; rotulo: string }[] {
   const precio = new Set(tarificables.map((t) => t.etiqueta.toLowerCase()))
   return RAMOS_OPORTUNIDAD_UI.filter((r) => !precio.has(r.valor))
+}
+/** URL de «oportunidad nueva» de una ficha; sin ramo, el alta se abre sin ramo preseleccionado («Otro ramo»). */
+export function urlOportunidadNueva(clienteId: string, ramo?: RamoOportunidad | null): string {
+  const base = `/correduria/cliente/${clienteId}?tab=oportunidades&oportunidad=nueva`
+  return ramo ? `${base}&ramo=${ramo}` : base
 }
 export function rotuloRamo(r: string | null): string {
   return r === null ? 'Sin ramo' : (ROTULO_RAMO as Record<string, string>)[r] ?? r

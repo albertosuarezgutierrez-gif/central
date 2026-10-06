@@ -231,7 +231,7 @@ export function validarTarea(
 // ── Alta y edición a mano (Fase 1 del rediseño de la ficha, 24/09/2026) ─────
 
 /** Los del enum `tipo_seguro` de la BD, en su orden. */
-export const RAMOS_OPORTUNIDAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] as const
+export const RAMOS_OPORTUNIDAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'empresas', 'rc_profesional', 'dyo', 'flotas', 'transporte_mercancias', 'ciberriesgos', 'decenal', 'embarcaciones', 'mascotas', 'impago_alquiler', 'viaje', 'caucion', 'otros'] as const
 export type RamoOportunidad = (typeof RAMOS_OPORTUNIDAD)[number]
 /** Con qué estado puede nacer una oportunidad a mano: por contactar o ya interesado. */
 export const ESTADOS_ALTA: readonly EstadoOportunidad[] = ['competencia', 'en_negociacion']

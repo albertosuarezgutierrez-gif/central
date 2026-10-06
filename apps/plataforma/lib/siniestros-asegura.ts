@@ -332,6 +332,20 @@ const RAMOS_POR_TIPO_POLIZA: Record<string, readonly string[]> = {
   // Accidentes (convenio/colectivo): cubre asistencia sanitaria, fallecimiento
   // e invalidez por accidente — no hay coche ni inmueble que dañar.
   accidentes: ['salud', 'vida', 'general'],
+  // Ramos nuevos de oportunidad (06/10/2026). Empresas = daños como un comercio y flotas = vehículos;
+  // el resto, sin ramo de siniestro propio aún: solo el general (conservador).
+  empresas: ['hogar', 'general'],
+  flotas: ['auto', 'general'],
+  rc_profesional: ['general'],
+  dyo: ['general'],
+  transporte_mercancias: ['general'],
+  ciberriesgos: ['general'],
+  decenal: ['general'],
+  embarcaciones: ['general'],
+  mascotas: ['general'],
+  impago_alquiler: ['general'],
+  viaje: ['general'],
+  caucion: ['general'],
 }
 
 /**

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, diasSinRespuesta, guionLlamada, tramoLead, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible, ramoInicialValido, ramosConOfertas } from './seguimiento-asegura.ts'
+import { colaLlamadas, diasSinRespuesta, guionLlamada, tramoLead, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible, ramoInicialValido, ramosConOfertas, urlOportunidadNueva } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -288,6 +288,12 @@ test('ramoInicialValido: solo acepta ramos conocidos', () => {
 test('ramosConOfertas: comunidades sí, tarificables (auto…) no', async () => {
   const { RAMOS_PRESUPUESTO } = await import('./ficha-asegura.ts')
   const valores = ramosConOfertas(RAMOS_PRESUPUESTO).map((r) => r.valor)
-  assert.deepEqual([...valores].sort(), ['accidentes', 'comercio', 'comunidades', 'otros', 'responsabilidad_civil'])
+  assert.deepEqual([...valores].sort(), ['accidentes', 'caucion', 'ciberriesgos', 'comercio', 'comunidades', 'decenal', 'dyo', 'embarcaciones', 'empresas', 'flotas', 'impago_alquiler', 'mascotas', 'otros', 'rc_profesional', 'responsabilidad_civil', 'transporte_mercancias', 'viaje'])
   assert.ok(!valores.includes('auto' as never))
+})
+
+test('urlOportunidadNueva: con ramo lo preselecciona; «Otro ramo» (sin ramo) no lo lleva', () => {
+  assert.equal(urlOportunidadNueva('c1', 'viaje'), '/correduria/cliente/c1?tab=oportunidades&oportunidad=nueva&ramo=viaje')
+  assert.equal(urlOportunidadNueva('c1'), '/correduria/cliente/c1?tab=oportunidades&oportunidad=nueva')
+  assert.equal(urlOportunidadNueva('c1', null), '/correduria/cliente/c1?tab=oportunidades&oportunidad=nueva')
 })

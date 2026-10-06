@@ -27,6 +27,18 @@ enum TipoSeguro {
   comercio
   comunidades
   accidentes
+  empresas
+  rc_profesional
+  dyo
+  flotas
+  transporte_mercancias
+  ciberriesgos
+  decenal
+  embarcaciones
+  mascotas
+  impago_alquiler
+  viaje
+  caucion
   otros
 
   @@map("tipo_seguro")

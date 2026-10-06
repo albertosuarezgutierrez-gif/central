@@ -32,7 +32,7 @@ export type CompaniaDgs = {
   activa: boolean
 }
 
-export const TIPOS_SEGURO = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] as const
+export const TIPOS_SEGURO = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'empresas', 'rc_profesional', 'dyo', 'flotas', 'transporte_mercancias', 'ciberriesgos', 'decenal', 'embarcaciones', 'mascotas', 'impago_alquiler', 'viaje', 'caucion', 'otros'] as const
 export type TipoSeguro = (typeof TIPOS_SEGURO)[number]
 
 /** Máximo representable en `polizas.prima_anual numeric(10,2)`. */
