@@ -1,15 +1,15 @@
 'use server'
 
 // Acción de servidor de la pantalla del riesgo: leer la ficha de UNA figura para editarla en el modal
-// «Editar datos» (EditarCliente + EditarCarnets, los mismos de la ficha del cliente). Solo lectura.
+// «Editar datos» (`PanelDatosCliente`, el mismo editor de la ficha del cliente). Solo lectura.
 // El DNI sale enmascarado (regla 4): la ficha ya lo trae así del puerto.
 
 import { exigirCorreduria } from '@/lib/correduria-acceso'
-import { fichaAsegura, type CarnetFicha } from '@/lib/ficha-asegura'
+import { fichaAsegura, type CarnetFicha, type ContactoFicha } from '@/lib/ficha-asegura'
 import { riesgoAsegura } from '@/lib/seguimiento-asegura'
 import { interpretarRiesgo } from '@/lib/riesgo-asegura'
 import type { IdentidadFicha } from '@/lib/cliente-edicion-asegura'
-import type { DocumentoResumen } from '@central/module-seguros'
+import { personaDeFicha, type DocumentoResumen } from '@central/module-seguros'
 
 export type FichaParaEditar =
   | {
@@ -17,6 +17,9 @@ export type FichaParaEditar =
       nombre: string
       identidad: IdentidadFicha | null
       documentos: DocumentoResumen[] | null
+      contacto: ContactoFicha
+      /** Persona jurídica: el panel no ofrece carnés. */
+      juridica: boolean
       /** `null` = asegura no manda los carnés: sin saber qué hay, no se ofrece editarlos. */
       carnets: CarnetFicha[] | null
       fechaCarnetPoliza: string | null
@@ -46,6 +49,8 @@ export async function pedirFichaParaEditar(entrada: { oportunidadId: string; cli
     nombre: f.ficha.nombre,
     identidad: f.ficha.identidad,
     documentos: f.ficha.documentos,
+    contacto: f.ficha.contacto,
+    juridica: personaDeFicha({ tipoPersona: f.ficha.identidad?.tipoPersona, dniEnmascarado: f.ficha.identidad?.dniEnmascarado, segmento: f.ficha.segmento }) === 'juridica',
     carnets: f.ficha.carnets,
     fechaCarnetPoliza: f.ficha.dePolizas?.fechaCarnet ?? null,
   }
