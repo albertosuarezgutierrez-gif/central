@@ -22,7 +22,7 @@ export default function FaltaPorCompletar({ clienteId, faltaSexo, faltaMovil, ta
   faltaMovil: boolean
   /** Otros datos que faltan y se corrigen en los formularios de debajo (rótulos). */
   tambien: string[]
-  onGuardado: () => void
+  onGuardado: (guardado: { sexo: boolean; movil: boolean }) => void
 }) {
   const router = useRouter()
   const [sexo, setSexo] = useState<Sexo>('')
@@ -43,7 +43,7 @@ export default function FaltaPorCompletar({ clienteId, faltaSexo, faltaMovil, ta
     }
     setErrores([])
     setOcupado(true)
-    let algoGuardado = false
+    const guardado = { sexo: false, movil: false }
     try {
       if (faltaSexo && sexo !== '') {
         try {
@@ -52,7 +52,7 @@ export default function FaltaPorCompletar({ clienteId, faltaSexo, faltaMovil, ta
             body: JSON.stringify({ id: clienteId, sexo }),
           })
           const r = interpretarEscritura(res.status, await res.json().catch(() => null))
-          if (r.estado === 'ok') { algoGuardado = true; setSexo('') } else fallos.push(r.estado === 'invalido' ? `Sexo: ${r.motivo}` : 'Sexo: no se ha podido guardar.')
+          if (r.estado === 'ok') { guardado.sexo = true; setSexo('') } else fallos.push(r.estado === 'invalido' ? `Sexo: ${r.motivo}` : 'Sexo: no se ha podido guardar.')
         } catch { fallos.push('Sexo: no se ha podido guardar (sin conexión).') }
       }
       if (telefono !== null) {
@@ -62,13 +62,16 @@ export default function FaltaPorCompletar({ clienteId, faltaSexo, faltaMovil, ta
             body: JSON.stringify({ clienteId, tipo: 'telefono', valor: telefono, etiqueta: null, principal: true }),
           })
           const r = interpretarEscritura(res.status, await res.json().catch(() => null))
-          if (r.estado === 'ok') { algoGuardado = true; setMovil('') }
+          if (r.estado === 'ok') { guardado.movil = true; setMovil('') }
           else if (r.estado === 'conflicto') fallos.push('Móvil: ya está en otra ficha. Corrígelo o añádelo desde la ficha de la persona.')
           else fallos.push(r.estado === 'invalido' ? `Móvil: ${r.motivo}` : 'Móvil: no se ha podido guardar.')
         } catch { fallos.push('Móvil: no se ha podido guardar (sin conexión).') }
       }
       setErrores(fallos)
-      if (algoGuardado) { onGuardado(); router.refresh() }
+      if (guardado.sexo || guardado.movil) {
+        onGuardado(guardado)
+        router.refresh()
+      }
     } finally {
       setOcupado(false)
     }

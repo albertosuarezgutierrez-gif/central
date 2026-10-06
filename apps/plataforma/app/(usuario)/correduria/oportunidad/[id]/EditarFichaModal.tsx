@@ -29,7 +29,7 @@ export default function EditarFichaModal({ oportunidadId, clienteId, nombre, con
   onCerrar: () => void
 }) {
   const [ficha, setFicha] = useState<FichaParaEditar | null>(null)
-  const [guardadoAqui, setGuardadoAqui] = useState(false)
+  const [guardadoAqui, setGuardadoAqui] = useState<{ sexo: boolean; movil: boolean } | null>(null)
   const cierre = useRef<HTMLButtonElement>(null)
   // ¿Hay algo tecleado y sin guardar en cada formulario? Se marca al teclear (los eventos de los campos suben
   // hasta el contenedor) y se limpia cuando ESE formulario se remonta con datos nuevos (= se guardó).
@@ -54,6 +54,7 @@ export default function EditarFichaModal({ oportunidadId, clienteId, nombre, con
   const cerrar = useCallback(() => {
     const cuales = [sucio.current.identidad && 'la identidad', sucio.current.carnets && 'el carné'].filter(Boolean)
     if (cuales.length > 0 && !window.confirm(`Hay cambios sin guardar en ${cuales.join(' y ')}. ¿Cerrar y perderlos?`)) return
+    setGuardadoAqui(null)
     onCerrar()
   }, [onCerrar])
   const cerrarRef = useRef(cerrar)
@@ -86,18 +87,20 @@ export default function EditarFichaModal({ oportunidadId, clienteId, nombre, con
             {(faltaSexo(faltan) || faltaMovil(faltan)) && (
               <FaltaPorCompletar
                 clienteId={clienteId} faltaSexo={faltaSexo(faltan)} faltaMovil={faltaMovil(faltan)}
-                tambien={rotulosFaltaEnFormulario(faltan)} onGuardado={() => setGuardadoAqui(true)}
+                tambien={rotulosFaltaEnFormulario(faltan)} onGuardado={(g) => setGuardadoAqui(g)}
               />
             )}
-            {guardadoAqui && !faltaSexo(faltan) && !faltaMovil(faltan) && (
-              <div role="status" style={{ fontSize: 13, color: 'var(--positive)' }}>Guardado en su ficha.</div>
+            {guardadoAqui && (
+              <div role="status" style={{ fontSize: 13, color: 'var(--positive)' }}>
+                {guardadoAqui.sexo && guardadoAqui.movil ? 'Sexo y móvil guardados' : guardadoAqui.sexo ? 'Sexo guardado' : 'Móvil guardado'} en su ficha.
+              </div>
             )}
-            <div key={`c${claveIdentidad}`} onInput={() => { sucio.current.identidad = true }} onChange={() => { sucio.current.identidad = true }} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+            <div key={`c${claveIdentidad}`} onInput={() => { sucio.current.identidad = true; setGuardadoAqui(null) }} onChange={() => { sucio.current.identidad = true; setGuardadoAqui(null) }} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>Identidad</div>
               <EditarCliente clienteId={clienteId} identidad={ficha.identidad} documentos={ficha.documentos} />
             </div>
             {conduce && (
-              <div key={`k${claveCarnets}`} onInput={() => { sucio.current.carnets = true }} onChange={() => { sucio.current.carnets = true }} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+              <div key={`k${claveCarnets}`} onInput={() => { sucio.current.carnets = true; setGuardadoAqui(null) }} onChange={() => { sucio.current.carnets = true; setGuardadoAqui(null) }} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>Carné de conducir</div>
                 {ficha.carnets !== null
                   ? <EditarCarnets clienteId={clienteId} carnets={ficha.carnets} fechaPoliza={ficha.fechaCarnetPoliza} />

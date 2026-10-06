@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { alertaVencimiento } from '@central/module-seguros'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
-import { ESTADOS_ABIERTOS, estaHuerfana, estadoVencimiento, fechaFutura, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
+import { ESTADOS_ABIERTOS, aniversarioOportunidad, estaHuerfana, estadoVencimiento, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
+import { textoVenceCadaAño } from '@/lib/correduria/aniversario'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import type { SiniestroCartera } from '@/lib/siniestros-asegura'
 import { eur } from '@/lib/dinero'
@@ -39,7 +40,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
           : <Rejilla>{conNosotros.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} />)}</Rejilla>}
       </Cubo>
 
-      <Cubo titulo={`Oportunidades (${oportunidades.length})`} nota="Otros seguros que se le conocen (otra compañía, volcado antiguo, lo que dice el cliente). Sin vencimiento futuro conocido: pregúntale.">
+      <Cubo titulo={`Oportunidades (${oportunidades.length})`} nota="Otros seguros que se le conocen (otra compañía, volcado antiguo, lo que dice el cliente). El vencimiento es un aniversario: se avisa cada año, el año da igual. Sin día y mes conocidos: pregúntale.">
         {!reparto.oportunidadesLeidas && <Vacio aviso>No se han podido leer sus oportunidades: puede haber más de las que se ven.</Vacio>}
         {!reparto.declaradasLeidas && <Vacio aviso>No se han podido leer las pólizas que aportó desde el portal.</Vacio>}
         {oportunidades.length > 0
@@ -123,7 +124,13 @@ const ESTADO_POLIZA: Record<string, string> = {
  * El vencimiento en tres estados (nunca se proyecta una fecha): futuro conocido → «Vence …»;
  * pasado o sin fecha → «vencimiento desconocido», con lo último que se anotó solo como contexto.
  */
-function textoVence(fecha: string | null | undefined, hoy: Date, fuente = 'anotado', opciones: { vencidaSiPasada?: boolean } = {}): string {
+function textoVence(fecha: string | null | undefined, hoy: Date, fuente = 'anotado', opciones: { vencidaSiPasada?: boolean; anual?: boolean } = {}): string {
+  // Oportunidad: aniversario, se dice día y mes sin año (da igual el año guardado).
+  if (opciones.anual) {
+    const prox = aniversarioOportunidad(fecha, hoy)
+    if (prox) return textoVenceCadaAño(prox) as string
+    return 'Vencimiento desconocido — preguntar al cliente'
+  }
   const e = estadoVencimiento(fecha, hoy)
   if (e.estado === 'futuro') return `Vence ${fmt(e.fecha)}`
   // Una póliza viva de la compañía con la fecha pasada: se dice UNA cosa («Venció el …»), no «desconocido»
@@ -178,7 +185,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     lineas = [
       `${p.aseguradora}${p.numeroPoliza ? ` · nº ${p.numeroPoliza}` : ''}${s.historica ? ' (volcado histórico)' : ''}`,
       s.historica && p.matricula && p.objeto?.titulo ? `Matrícula ${p.matricula}` : null,
-      [textoVence(fechaBase, ctx.hoy, venc.delSeguimiento ? 'anotado' : 'volcado', { vencidaSiPasada: p.viva && !venc.delSeguimiento }), p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
+      [textoVence(fechaBase, ctx.hoy, venc.delSeguimiento ? 'anotado' : 'volcado', { vencidaSiPasada: p.viva && !venc.delSeguimiento, anual: eliminable }), p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
       // El cambio de compañía va en la tarjeta de la nueva, no en una segunda del mismo bien.
       s.sustituye
         ? `Sustituye a ${s.sustituye.aseguradora}${s.sustituye.numeroPoliza ? ` nº ${s.sustituye.numeroPoliza}` : ''}${s.sustituye.fechaVencimiento ? `, que cubre hasta el ${fmt(s.sustituye.fechaVencimiento.slice(0, 10))}` : ''}`
@@ -219,7 +226,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     // Uno que venció hace menos se queda tal cual: esa renovación se acaba de pasar.
     lineas = [
       bien ? `${compania}${o.numeroPoliza ? ` · nº ${o.numeroPoliza}` : ''}${o.vehiculo && o.matricula ? ` · ${o.matricula}` : ''}` : null,
-      [textoVence(o.fechaFinVigencia, ctx.hoy), o.prima !== null ? `paga ${eur(o.prima)}` : null].filter(Boolean).join(' · '),
+      [textoVence(o.fechaFinVigencia, ctx.hoy, 'anotado', { anual: true }), o.prima !== null ? `paga ${eur(o.prima)}` : null].filter(Boolean).join(' · '),
     ]
     avisos.push(...avisosOportunidad(o, ctx.hoy))
   } else {
@@ -231,7 +238,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     titulo = d.bien?.cosa ?? d.matricula ?? (d.compania ? `Seguro en ${d.compania}` : 'Sin detalle del bien')
     lineas = [
       d.compania ?? 'Compañía sin leer',
-      [textoVence(d.fechaVencimiento, ctx.hoy, 'declarado'), d.primaAnual !== null ? eur(d.primaAnual) : null].filter(Boolean).join(' · '),
+      [textoVence(d.fechaVencimiento, ctx.hoy, 'declarado', { anual: true }), d.primaAnual !== null ? eur(d.primaAnual) : null].filter(Boolean).join(' · '),
     ]
     avisos.push({ texto: 'Abrir seguimiento', tono: 'aviso' })
   }
@@ -266,10 +273,10 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
   const vencimiento = !eliminable ? null
     : s.clase === 'poliza'
       ? abierta
-        ? <EditarVencimiento oportunidadId={abierta} vence={vencimientoPoliza(s, ctx.hoy).fecha} proximaLlamada={s.oportunidad?.proximaTarea?.fechaLimite.slice(0, 10) ?? null} />
-        : <EditarVencimiento polizaId={s.id} vence={vencimientoPoliza(s, ctx.hoy).fecha} proximaLlamada={null} />
+        ? <EditarVencimiento oportunidadId={abierta} vence={aniversarioOportunidad(vencimientoPoliza(s, ctx.hoy).delSeguimiento ? s.oportunidad?.fechaFinVigencia : s.poliza.fechaVencimiento, ctx.hoy)} proximaLlamada={s.oportunidad?.proximaTarea?.fechaLimite.slice(0, 10) ?? null} />
+        : <EditarVencimiento polizaId={s.id} vence={aniversarioOportunidad(s.poliza.fechaVencimiento, ctx.hoy)} proximaLlamada={null} />
       : s.clase === 'oportunidad' && abierta
-        ? <EditarVencimiento oportunidadId={abierta} vence={fechaFutura(s.oportunidad.fechaFinVigencia, ctx.hoy)} proximaLlamada={s.oportunidad.proximaTarea?.fechaLimite.slice(0, 10) ?? null} />
+        ? <EditarVencimiento oportunidadId={abierta} vence={aniversarioOportunidad(s.oportunidad.fechaFinVigencia, ctx.hoy)} proximaLlamada={s.oportunidad.proximaTarea?.fechaLimite.slice(0, 10) ?? null} />
         : null
   // La derivada del volcado (sin seguimiento): no se escribe nada hasta que Alberto decide. Crear
   // la oportunidad abre el alta ya existente, precargada; «Descartar» la cierra como perdida.

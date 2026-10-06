@@ -1080,7 +1080,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (06/10/2026) Correduría: «Subir póliza» — apellidos pegados creaban lead duplicado + subida múltiple
 - Caso Jose Antonio Martin Avila: OCR leyó «JOSE ANTONIOMARTINAVILA»; ficha sin DNI exige nombre exacto → lead nuevo 8f0bc75f con la oportunidad auto (Línea Directa). Solo llegó 1 de 3 PDF (input sin `multiple`).
 - `mismoNombre` acepta igualdad total sin espacios (≥2 palabras); `Documentos.tsx` sube varios en serie y avisa si la oportunidad cae en OTRA ficha.
-- Pendiente (OK de Alberto): fusionar lead 8f0bc75f → 6cce46af; resubir los otros 2 PDF tras el deploy.
+- Fusionado 8f0bc75f → 6cce46af (merge_log 8f546b6b). Pendiente: Alberto pone domicilio Granada (calle cifrada) y resube 2 PDF.
+
+## (06/10/2026) Correduría: vencimiento de Oportunidades = aniversario (día+mes, cada año)
+- Ficha cliente: la tarjeta de Oportunidad dice «Vence cada año el 1 de junio»; `EditarVencimiento` pide día+mes y guarda la próxima ocurrencia. Helper puro `lib/correduria/aniversario.ts` (`proximoAniversario`, 29/02→28/02) + tests; el cubo se ordena por próxima ocurrencia.
+- El aviso del cron (`oportunidad_45`, `vencimientoDelCiclo` en module-seguros) YA era anual: sin cambio de BD.
+- Llamada anual: `cerrarTarea` (apps/asegura) al completar una llamada de oportunidad abierta crea la del ciclo siguiente (helper `planLlamadaAnual` en module-seguros; idempotente: solo si no hay ya una llamada pendiente con fecha ≥ la del ciclo siguiente). `registrarLlamada` también la deja (no_contesta, otro_dia, quiere_precio; las que aparcan, no) vía `dejarLlamadaAnual`; los reintentos cercanos conviven con ella; cierres anteriores al cambio no se recuperan.
+- Textos de aviso (`estadoAvisoVencimiento`, Telegram) dicen «Vence cada año el 1 de junio» (helper `diaMesEs`).
 
 ## (06/10/2026) Correduría: completar lo que falta de un interviniente sin salir de la oportunidad
 - «Falta en su ficha» (sexo, móvil…) no se podía rellenar desde `oportunidad/[id]`: el modal «Editar datos» no tenía esos campos y asegura no tenía escritor de `clientes.saludo`.

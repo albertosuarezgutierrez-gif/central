@@ -1,6 +1,7 @@
 import type { PolizaDeclaradaFicha, PolizaFicha } from '../ficha-asegura'
 import type { OportunidadDeCliente } from '../seguimiento-asegura'
-import { RAMOS_OPORTUNIDAD, claveMatricula, claveNumeroPoliza } from '@central/module-seguros'
+import { RAMOS_OPORTUNIDAD, claveMatricula, claveNumeroPoliza, fechaPintable } from '@central/module-seguros'
+import { proximoAniversario } from './aniversario.ts'
 
 /**
  * Los seguros de un cliente en los TRES cubos con los que trabaja una
@@ -123,6 +124,23 @@ function fechaDe(s: SeguroCliente, hoy: Date): string | null {
   if (s.clase === 'poliza') return s.oportunidad?.proximaTarea?.fechaLimite ?? vencimientoPoliza(s, hoy).fecha
   if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? fechaFutura(s.oportunidad.fechaFinVigencia, hoy)
   return fechaFutura(s.declarada.fechaVencimiento, hoy)
+}
+
+/**
+ * El vencimiento de un seguro de OPORTUNIDAD es un aniversario (Alberto, 06/10/2026): el año da
+ * igual y se avisa cada año, así que se ordena y se enseña por su PRÓXIMA ocurrencia de día/mes.
+ * `null` = sin fecha legible (o centinela): sigue siendo «desconocido», nunca se inventa.
+ * Las pólizas CON nosotros no pasan por aquí: su vencimiento es una fecha concreta.
+ */
+export function aniversarioOportunidad(iso: string | null | undefined, hoy: Date): string | null {
+  const dia = diaIso(iso)
+  return dia !== null && fechaPintable(dia) !== null ? proximoAniversario(dia, hoy) : null
+}
+
+function fechaAnualDe(s: SeguroCliente, hoy: Date): string | null {
+  if (s.clase === 'poliza') return s.oportunidad?.proximaTarea?.fechaLimite ?? aniversarioOportunidad(s.oportunidad?.fechaFinVigencia ?? s.poliza.fechaVencimiento, hoy)
+  if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? aniversarioOportunidad(s.oportunidad.fechaFinVigencia, hoy)
+  return aniversarioOportunidad(s.declarada.fechaVencimiento, hoy)
 }
 
 export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy = new Date() }: {
@@ -280,11 +298,14 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
     .filter(d => d.yaEnCartera !== true)
     .map(d => ({ clase: 'declarada' as const, id: d.id, declarada: d }))
 
-  const ordenar = (l: SeguroCliente[]) => l.sort((a, b) => porFecha(fechaDe(a, hoy), fechaDe(b, hoy)))
+  const ordenar = (l: SeguroCliente[], anual = false) => {
+    const f = anual ? fechaAnualDe : fechaDe
+    return l.sort((a, b) => porFecha(f(a, hoy), f(b, hoy)))
+  }
 
   return {
     conNosotros: ordenar(conNosotros),
-    oportunidades: ordenar([...enCompetencia, ...sueltas, ...aportadas]),
+    oportunidades: ordenar([...enCompetencia, ...sueltas, ...aportadas], true),
     yaNoExiste,
     historicas: historicasPlegadas,
     descartadas,

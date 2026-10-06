@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-06 · facturas-correo** · hizo: Vía B sana (copia 05/10); 26 candidatos Gmail revisados, archivado Anthropic Receipt 2594-3325 (180€, seguros) en 10-Octubre-2026 + fila `facturas_drive` + etiqueta Procesada; barrido 4.0: Si Que Brilla 1.128,48€ y Supabase 25USD siguen `sin_revisar` (cargo aún no entra, banco hasta 05/10); dudas: ticket bp 06/10 (¿correduría o personal?), cargos Anthropic 170€ del 01 y 02/10 sin factura en `facturas_drive` ni conciliar; fallos: —; PRs/commits: —
+
 - **2026-10-06 · mercado-booking** · hizo: 24/24 ventanas medidas (de 556, 532 recortadas por tope), 224 comps `booking_mcp` escritos (10-oct, 29-oct-2026; 18/30-abr, 1/2-may, 6/14-ago-2027; aforos 2/4/5/12); propio HOUSE SEVILLANA 6 hab. guardado aparte (2 ventanas); dudas: —; fallos: escaparate 0/7 (todas `hotel_names_no_availability`: Busto/Dúplex/Luxury 9-oct y 17-oct, House 17-oct, Luxury 22-26 mar-27) = hueco, latido `ok:false`; PRs/commits: —
 
 - **2026-10-05 · facturas-correo** · hizo: Vía B sana (copia 05/10), 0 candidatos Gmail nuevos sin procesar (Supabase y limpiezascruzz ya archivados), barrido 4.0: 2 facturas `sin_revisar` (Si Que Brilla 1.128,48€ 03/10; Supabase 25 USD 04/10) sin cargo aún en banco (feed al día 05/10) → se dejan en cola, no se marcan; dudas: —; fallos: —; PRs/commits: —
