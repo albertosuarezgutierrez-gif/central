@@ -2,17 +2,17 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, IdCard, KeyRound, Mail, MapPin, MessageCircle, Pencil, Phone, Star, Users } from 'lucide-react'
+import { Eye, KeyRound, Mail, MapPin, MessageCircle, Phone, Star, Users } from 'lucide-react'
 import { Ico } from '../../iconos'
 import { etiquetaRol, leerSitio, textoReparoSitio, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import Bloque from '../../Bloque'
-import ContactosFicha from '../../ContactosFicha'
+import ContactosFicha, { espejoDe } from '../../ContactosFicha'
 import { datosDeLaCompania } from '@/lib/datos-compania'
 import DatosCompania from './DatosCompania'
 import BotonWhatsapp, { VERDE_WHATSAPP } from '../../BotonWhatsapp'
-import EditarCliente, { CuentaCargo, EditarDireccion } from '../../EditarCliente'
+import { CuentaCargo } from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
-import { Badge, btnStyle } from '@/components/ui'
+import { btnStyle } from '@/components/ui'
 import {
   explicarPortal,
   interpretarInvitacion,
@@ -157,7 +157,7 @@ export default function TabContactos({ ficha, personas }: {
         espejo={espejoDe(ficha.contacto, ficha.contactos)}
         cifradoEnEspejo={ficha.contacto.telefonoIlegible || ficha.contacto.emailIlegible}
       >
-        <Direccion clienteId={ficha.id} c={ficha.contacto} />
+        <Direccion c={ficha.contacto} />
         {/* La cuenta de los recibos: la leen la emisión y el bot de Telegram (29/09/2026). */}
         <CuentaCargo clienteId={ficha.id} />
       </ContactosFicha>
@@ -185,44 +185,13 @@ export default function TabContactos({ ficha, personas }: {
         {resultado && resultado.estado !== 'ok' && <Aviso r={resultado} />}
       </Bloque>
 
-      {/* Editar la identidad (solo con DNI recibido). Los contactos y la
-          dirección se corrigen arriba, en la tarjeta donde se leen. */}
-      <Editor ficha={ficha} />
+      {/* Aquí solo se LEE: todo lo que se edita (identidad, contacto, dirección, carnés, agenda)
+          vive en UN panel, «✏️ Editar datos», en la cabecera de la ficha (`EditarFicha`). */}
     </div>
   )
 }
 
 // ─── Teléfonos, correos y dirección de la PROPIA ficha ───────────────────────
-
-/**
- * El desplegable que SÍ escribe vive al final de la pestaña, debajo de dos
- * tarjetas: en un móvil queda a una pantalla y media de los datos que corrige,
- * y de ahí el «no puedo modificar móvil ni mails» de Alberto (05/09/2026) — la
- * edición existía y no se veía. La tira de arriba abre ese mismo desplegable en
- * vez de duplicar el formulario, que es lo que crearía dos sitios donde se
- * escribe lo mismo.
- */
-const ID_EDITOR = 'editar-datos-cliente'
-
-function abrirEditor() {
-  const el = document.getElementById(ID_EDITOR)
-  if (!(el instanceof HTMLDetailsElement)) return
-  el.open = true
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-/**
- * El principal espejado en `clientes.telefono/email`, que es lo ÚNICO que hay
- * cuando la lista de contactos no se ha podido leer. Con la lista delante NO se
- * mezcla: el principal ya está dentro, y pintarlo aparte lo duplicaría.
- */
-function espejoDe(c: ContactoFicha, contactos: ContactosCliente | null): { tipo: 'telefono' | 'email'; valor: string }[] {
-  if (contactos !== null) return []
-  return [
-    c.telefono && { tipo: 'telefono' as const, valor: c.telefono },
-    c.email && { tipo: 'email' as const, valor: c.email },
-  ].filter((x): x is { tipo: 'telefono' | 'email'; valor: string } => Boolean(x))
-}
 
 /**
  * Los teléfonos de la ficha para el canal de WhatsApp, **el principal primero**.
@@ -252,8 +221,7 @@ function telefonosDe(ficha: Ficha): (string | null)[] {
  * `intranet:` de mayo; ninguna de CIMA. Antes se pintaban seguidas, igual que
  * las que concuerdan: «41807 34304, Tarragona». La calle sí es la que hay.
  */
-function Direccion({ clienteId, c }: { clienteId: string; c: ContactoFicha }) {
-  const [corrigiendo, setCorrigiendo] = useState(false)
+function Direccion({ c }: { c: ContactoFicha }) {
   const sitio = leerSitio({ codigoPostal: c.codigoPostal, ciudad: c.ciudad, provincia: c.provincia })
   const texto = [c.direccion, sitio.texto].filter(Boolean).join(' · ')
   return (
@@ -279,25 +247,9 @@ function Direccion({ clienteId, c }: { clienteId: string; c: ContactoFicha }) {
         </div>
       ))}
 
-      {/* 🚨 El botón va PEGADO a la dirección, no en el desplegable del final
-          de la pestaña. Ahí abajo el formulario existía desde el 02/09/2026 y
-          Alberto siguió sin poder corregir una dirección desde el móvil
-          (08/09): estaba a pantalla y media del dato, detrás de dos tarjetas.
-          Es la misma corrección que se le hizo a los teléfonos y correos el
-          06/09, y por el mismo motivo. El formulario NO se duplica: es el
-          `EditarDireccion` de `EditarCliente.tsx`, montado aquí. */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setCorrigiendo((v) => !v)}
-          style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}
-        >
-          {corrigiendo ? 'Listo' : <><Pencil size={14} strokeWidth={1.75} aria-hidden /> Corregir dirección</>}
-        </button>
+      <div style={{ fontSize: 12, color: 'var(--muted)', paddingLeft: 20 }}>
+        Se corrige desde ✏️ Editar datos, arriba.
       </div>
-      {/* Montaje perezoso: son cinco campos que no pinta nadie que entre a leer
-          un teléfono, que es a lo que se entra a esta pestaña. */}
-      {corrigiendo && <EditarDireccion clienteId={clienteId} contacto={c} />}
     </div>
   )
 }
@@ -614,65 +566,6 @@ const COLOR_PORTAL: Record<'neutral' | 'positivo' | 'negativo' | 'aviso', string
   positivo: 'var(--positive)',
   negativo: 'var(--negative)',
   aviso: 'var(--warning)',
-}
-
-// ─── El formulario, plegado ──────────────────────────────────────────────────
-
-/**
- * La IDENTIDAD (DNI, nombre, fecha de nacimiento) son campos permanentes que no
- * dependen de los datos del cliente, en una pestaña que se abre para leer un
- * teléfono. Se pliega — pero plegar NO puede esconder trabajo: lo que ahí
- * dentro es un «no se ha podido leer» (y por tanto lo único que reclama una
- * acción) sube al rótulo. `<details>` nativo, como el resto del repo, con
- * montaje perezoso: uno cerrado igualmente crea todo su DOM.
- *
- * La dirección salió de aquí el 08/09/2026 y se edita en la tarjeta de arriba,
- * donde se lee. Por eso `direccionIlegible` ya NO es un hueco de este rótulo:
- * lo dice el propio formulario de la dirección, que ahora está a la vista.
- */
-function Editor({ ficha }: { ficha: Ficha }) {
-  const [abierto, setAbierto] = useState(false)
-  // Una vez montado se queda: cerrar el desplegable no puede tirar lo que el
-  // usuario llevara escrito en el formulario.
-  const [montado, setMontado] = useState(false)
-
-  const huecos: string[] = []
-  if (ficha.identidad === null) huecos.push('identidad')
-  if (ficha.documentos === null) huecos.push('documentación')
-
-  return (
-    <details
-      id={ID_EDITOR}
-      onToggle={(e) => { const o = e.currentTarget.open; setAbierto(o); if (o) setMontado(true) }}
-      style={{ borderTop: '1px solid var(--border)', marginTop: 20, paddingTop: 20 }}
-    >
-      <summary
-        style={{
-          cursor: 'pointer', listStyle: 'none', userSelect: 'none', minHeight: 44,
-          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-        }}
-      >
-        <IdCard size={15} strokeWidth={1.75} aria-hidden />
-        <span style={{ fontSize: 14, fontWeight: 700 }}>Editar identidad</span>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>DNI · nombre · fecha de nacimiento</span>
-        {huecos.length > 0 && (
-          <Badge tono="aviso" title={`No se ha podido leer: ${huecos.join(' · ')}. No es que la ficha no lo tenga.`}>
-            {huecos.length === 1 ? `sin leer: ${huecos[0]}` : `${huecos.length} datos sin leer`}
-          </Badge>
-        )}
-        <span style={{ ...btnStyle('sutil', 'sm'), marginLeft: 'auto' }}>{abierto ? 'Cerrar' : 'Abrir'}</span>
-      </summary>
-      {montado && (
-        <div style={{ marginTop: 14 }}>
-          <EditarCliente
-            clienteId={ficha.id}
-            identidad={ficha.identidad}
-            documentos={ficha.documentos}
-          />
-        </div>
-      )}
-    </details>
-  )
 }
 
 /** Qué es la ficha, para ofrecer primero los vínculos de empresa en una sociedad.

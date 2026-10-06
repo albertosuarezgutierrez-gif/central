@@ -1,16 +1,14 @@
 import Link from 'next/link'
 import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
-import { alertaVencimiento, contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { alertaVencimiento, contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { ramosConOfertas, urlOportunidadNueva } from '@/lib/seguimiento-asegura'
 import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
-import PonerNombre from './PonerNombre'
-import EditarCarnets from './EditarCarnets'
-import MoteAgenda from './MoteAgenda'
+import EditarFicha from './EditarFicha'
 import PrecioAllianzBot from './PrecioAllianzBot'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
@@ -83,14 +81,8 @@ export default function Cabecera({ ficha, resumen, seguros }: {
                     <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} juridica={juridica} />
                     {/* Persona jurídica: ni carnés de conducir ni «Añadir carné». */}
                     {!juridica && <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />}
-                    {/* `null` = asegura no manda el bloque: sin saber qué hay, no se ofrece editarlo. */}
-                    {!juridica && ficha.carnets !== null && (
-                      <EditarCarnets clienteId={ficha.id} carnets={ficha.carnets} fechaPoliza={ficha.dePolizas?.fechaCarnet ?? null} />
-                    )}
                   </span>
                 </details>
-                {/* Mote para la agenda de Google (aislado: no viaja con la ficha). */}
-                {!juridica && <span style={{ flexBasis: '100%' }}><MoteAgenda clienteId={ficha.id} /></span>}
                 {conyuge && (
                   <span style={FILA} title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                     <Ico i={Heart} /><Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
@@ -98,13 +90,22 @@ export default function Cabecera({ ficha, resumen, seguros }: {
                 )}
               </span>}
             />
-            {/* Ficha sin nombre: se rellena aquí, sin DNI (el nombre que ya existe sigue pidiéndolo). */}
-            {ficha.identidad && nombrePendiente(ficha.identidad.nombre) && (
-              <PonerNombre clienteId={ficha.id} apellidos={ficha.identidad.apellidos} />
-            )}
           </div>
         </div>
       </div>
+
+      {/* UN solo sitio donde se editan los datos personales (identidad, contacto, dirección, carnés
+          agenda), fuera de las pestañas: visible en todas. El resumen de arriba solo MUESTRA. */}
+      <EditarFicha
+        clienteId={ficha.id}
+        identidad={ficha.identidad}
+        documentos={ficha.documentos}
+        contacto={ficha.contacto}
+        contactos={ficha.contactos}
+        carnets={ficha.carnets}
+        fechaCarnetPoliza={ficha.dePolizas?.fechaCarnet ?? null}
+        juridica={juridica}
+      />
 
       <SiguientePaso ficha={{ ...ficha, contacto, intervinientes }} resumen={resumen} tiposVivos={tiposVivos} seguros={seguros} />
 

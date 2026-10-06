@@ -48,14 +48,20 @@ import {
  * leer (y entonces no se ofrece corregir lo que no se ve, solo añadir), `[]` =
  * se ha mirado y no hay, lista = los que hay.
  */
-export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEspejo, children }: {
+export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEspejo, editable = false, children }: {
   clienteId: string
+  /**
+   * Solo lectura por defecto (06/10/2026, Alberto: UN solo sitio de edición). La edición —corregir,
+   * añadir, borrar— vive únicamente en el panel «Datos del cliente» de la cabecera (`EditarFicha`),
+   * que lo monta con `editable`.
+   */
+  editable?: boolean
   inicial: ContactosCliente | null
   /** El principal espejado en `clientes`, lo ÚNICO que hay si la lista no se pudo leer. */
   espejo: { tipo: TipoContacto; valor: string }[]
   cifradoEnEspejo: boolean
   /** La dirección, que vive en la misma tarjeta pero la escribe otro formulario. */
-  children: React.ReactNode
+  children?: React.ReactNode
 }) {
   const router = useRouter()
   const [lista, setLista] = useState<ContactosCliente | null>(inicial)
@@ -107,7 +113,7 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
   return (
     <Bloque
       primero
-      titulo="Teléfonos, correos y dirección"
+      titulo={editable ? 'Teléfonos y correos' : 'Teléfonos, correos y dirección'}
       Icono={Phone}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
@@ -116,7 +122,7 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
             No se han podido leer los teléfonos y correos de esta ficha (asegura no manda el bloque o su
             consulta falló). <strong>No significa que no tenga.</strong>
             {espejo.length > 0 && ' Lo de abajo es el principal espejado en la ficha, no la lista entera.'}
-            {' '}Se puede añadir uno igualmente.
+            {editable && ' Se puede añadir uno igualmente.'}
           </p>
         )}
 
@@ -126,7 +132,7 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
               <Chip
                 key={c.id}
                 c={c}
-                corrigiendo={corrigiendo}
+                corrigiendo={editable && corrigiendo}
                 onAbrir={() => { setAbierto(c.id); setResultado(null) }}
               />
             ))}
@@ -143,7 +149,7 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
                 la misma línea y la cabecera pasaba de 20px a 64px. Aquí cae en
                 el hueco que deja el último chip y en la mayoría de fichas no
                 cuesta ni un píxel. */}
-            {puedeCorregir && (
+            {editable && puedeCorregir && (
               <button
                 type="button"
                 onClick={() => { setCorrigiendo(v => !v); setAbierto(null); setResultado(null) }}
@@ -157,12 +163,13 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
             Ninguno en la ficha (se ha mirado).
             {cifradoEnEspejo && ' Hay uno guardado cifrado que asegura no puede abrir con la clave que tiene.'}
+            {!editable && ' Se editan desde ✏️ Editar datos, arriba.'}
           </p>
         )}
 
         {/* El editor de UNO, debajo de la tira: así el chip que se está
             corrigiendo no cambia de sitio ni parte la fila de los demás. */}
-        {abierto !== null && (() => {
+        {editable && abierto !== null && (() => {
           const c = items.find(x => x.id === abierto)
           return c ? (
             <EditarUno
@@ -179,14 +186,14 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
           ) : null
         })()}
 
-        {corrigiendo && abierto === null && !anadiendo && (
+        {editable && corrigiendo && abierto === null && !anadiendo && (
           <div>
             <button type="button" onClick={() => { setAnadiendo(true); setResultado(null) }} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
               <Plus size={14} strokeWidth={1.75} aria-hidden /> Añadir teléfono o email
             </button>
           </div>
         )}
-        {anadiendo && (
+        {editable && anadiendo && (
           <Anadir
             ocupado={ocupado}
             onAnadir={(body) => void enviar('POST', body)}
@@ -200,7 +207,7 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
         {/* Y con la lista leída y VACÍA pasa lo mismo: sin chips no sale «Corregir»,
             y el «Añadir» de arriba cuelga de ese modo — la ficha decía «Ninguno en
             la ficha» sin ninguna forma de meter uno (Alberto, 25/09/2026). */}
-        {(lista === null || items.length === 0) && !anadiendo && (
+        {editable && (lista === null || items.length === 0) && !anadiendo && (
           <div>
             <button type="button" onClick={() => setAnadiendo(true)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
               <Plus size={14} strokeWidth={1.75} aria-hidden /> Añadir teléfono o email
@@ -208,11 +215,11 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
           </div>
         )}
 
-        <Aviso
+        {editable && <Aviso
           r={resultado}
           ocupado={ocupado}
           onForzar={pendiente ? () => void enviar(pendiente.method, pendiente.body, true) : undefined}
-        />
+        />}
 
         {children}
       </div>
@@ -518,4 +525,20 @@ const campo: React.CSSProperties = {
 
 const pendienteBox: React.CSSProperties = {
   fontSize: 13, lineHeight: 1.5, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 10px',
+}
+
+/**
+ * El principal espejado en `clientes.telefono/email`, que es lo ÚNICO que hay cuando la lista de
+ * contactos no se ha podido leer. Con la lista delante NO se mezcla: el principal ya está dentro,
+ * y pintarlo aparte lo duplicaría.
+ */
+export function espejoDe(
+  c: { telefono: string | null; email: string | null },
+  contactos: ContactosCliente | null,
+): { tipo: TipoContacto; valor: string }[] {
+  if (contactos !== null) return []
+  return [
+    c.telefono && { tipo: 'telefono' as const, valor: c.telefono },
+    c.email && { tipo: 'email' as const, valor: c.email },
+  ].filter((x): x is { tipo: TipoContacto; valor: string } => Boolean(x))
 }
