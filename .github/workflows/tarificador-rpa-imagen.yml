@@ -28,23 +28,27 @@ jobs:
     timeout-minutes: 30
     env:
       ETIQUETA: ${{ inputs.etiqueta }}
-      FLYCTL_VERSION: '0.4.111'
     steps:
       - uses: actions/checkout@v4
 
-      # flyctl de una release FIJA de GitHub y verificada con su checksums.txt (sin `curl | sh` ni el token
-      # en este paso). setup-flyctl@1.5 (Node 20) murió en silencio en el run #2.
+      # flyctl de la última release de superfly/flyctl con `gh` (preinstalado; descubre los nombres de los
+      # ficheros, sin adivinar versión) y verificado con su checksums.txt; sin `curl | sh` ni el token de Fly
+      # en este paso. setup-flyctl@1.5 murió en silencio (run #2); la versión fija 0.4.111 no existía (run #3).
       - name: Instalar flyctl
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          archivo="flyctl_${FLYCTL_VERSION}_Linux_x86_64.tar.gz"
-          base="https://github.com/superfly/flyctl/releases/download/v${FLYCTL_VERSION}"
-          curl -fsSL -o "$archivo" "$base/$archivo"
-          curl -fsSL -o checksums.txt "$base/checksums.txt"
-          grep " ${archivo}\$" checksums.txt | sha256sum -c -
-          mkdir -p "$HOME/.fly/bin"
-          tar -xzf "$archivo" -C "$HOME/.fly/bin" flyctl
+          dir="$RUNNER_TEMP/flyctl"
+          mkdir -p "$dir" "$HOME/.fly/bin"
+          gh release download --repo superfly/flyctl --dir "$dir" \
+            --pattern 'flyctl_*_Linux_x86_64.tar.gz' --pattern 'checksums.txt'
+          archivo="$(cd "$dir" && ls flyctl_*_Linux_x86_64.tar.gz)"
+          echo "flyctl: $archivo"
+          (cd "$dir" && grep " ${archivo}\$" checksums.txt | sha256sum -c -)
+          tar -xzf "$dir/$archivo" -C "$HOME/.fly/bin" flyctl
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+          "$HOME/.fly/bin/flyctl" version
 
       - name: Comprobar secreto y etiqueta
         env:
