@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T04:55:31Z",
-  "sha": "637767f40b0be76ac23279ca1e515e54012517cc",
+  "generadoEn": "2026-10-06T05:20:22Z",
+  "sha": "7b29d7398c550b47d2b78f62502591137e82cbde",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -84689,7 +84689,7 @@
           "exportada": true,
           "params": "{ ficha, resumen, seguros }: { ficha: Ficha; resumen: ResumenFicha /** Solo los SEGUROS (cartera en vigor): el volcado y lo que ya no cubre son oportunidades. */ seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 30,
+          "linea": 31,
           "resumen": "La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto. 🚨 Por qué los contadores viven aquí y no dentro de "
         },
         {
@@ -84698,7 +84698,7 @@
           "exportada": false,
           "params": "{ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[]; seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 120,
+          "linea": 121,
           "resumen": "── Siguiente paso ────────────────────────────────────────────────────────── UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla vive pura y testeada en `siguientePaso` de "
         },
         {
@@ -84707,7 +84707,7 @@
           "exportada": false,
           "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 172,
+          "linea": 173,
           "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
@@ -84716,7 +84716,7 @@
           "exportada": false,
           "params": "{ resumen }: { resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 191
+          "linea": 192
         },
         {
           "nombre": "ProximoVencimiento",
@@ -84724,7 +84724,7 @@
           "exportada": false,
           "params": "{ proximo, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 246,
+          "linea": 247,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -84733,7 +84733,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 285
+          "linea": 286
         },
         {
           "nombre": "EstadoCabecera",
@@ -84741,7 +84741,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 311
+          "linea": 312
         },
         {
           "nombre": "Acciones",
@@ -84749,7 +84749,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 369
+          "linea": 370
         },
         {
           "nombre": "Contacto",
@@ -84757,7 +84757,7 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 437
+          "linea": 450
         },
         {
           "nombre": "Identidad",
@@ -84765,7 +84765,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 545
+          "linea": 558
         },
         {
           "nombre": "Carnets",
@@ -84773,12 +84773,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 585
+          "linea": 598
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "502376aeefbe"
+      "hash": "0beeb1318279"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -85491,7 +85491,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 54
+          "linea": 55
         },
         {
           "nombre": "hoyMadrid",
@@ -85499,7 +85499,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 59
+          "linea": 60
         },
         {
           "nombre": "enviar",
@@ -85507,7 +85507,7 @@
           "exportada": false,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "motivoDe",
@@ -85515,7 +85515,7 @@
           "exportada": false,
           "params": "json: unknown, status: number",
           "retorno": "string",
-          "linea": 76
+          "linea": 77
         },
         {
           "nombre": "OportunidadesCliente",
@@ -85523,7 +85523,7 @@
           "exportada": true,
           "params": "{ clienteId, telefono = null, polizas, precargas = {} }: { clienteId: string; telefono?: string | null; polizas: Poliza[] /** Por id de póliza del volcado: con qué se precarga el alta al crear la oportunidad desde su fila. */ precargas?: Re",
           "retorno": null,
-          "linea": 81
+          "linea": 82
         },
         {
           "nombre": "SinOportunidad",
@@ -85531,7 +85531,7 @@
           "exportada": false,
           "params": "{ clienteId, lista }: { clienteId: string; lista: PresupuestoSinOportunidad[] | null | undefined }",
           "retorno": null,
-          "linea": 205,
+          "linea": 211,
           "resumen": "Lo tarificado que no cuelga de ninguna oportunidad (anterior al 24/09/2026, cuando aún no se enlazaba solo). Va en la misma lista para que no haya precios en un bloque aparte; no se les abre oportunid"
         },
         {
@@ -85540,7 +85540,7 @@
           "exportada": false,
           "params": "{ o }: { o: OportunidadDeCliente }",
           "retorno": null,
-          "linea": 232
+          "linea": 238
         },
         {
           "nombre": "FilaAbierta",
@@ -85548,7 +85548,7 @@
           "exportada": false,
           "params": "{ o, telefono, polizas, desplegada, onAlternar, onRecargar, onHecho }: { o: OportunidadDeCliente telefono: string | null polizas: Poliza[] desplegada: boolean onAlternar: () => void onRecargar: () => void onHecho: (t: { ok: boolean; texto: ",
           "retorno": null,
-          "linea": 259
+          "linea": 265
         },
         {
           "nombre": "FilaCerrada",
@@ -85556,7 +85556,7 @@
           "exportada": false,
           "params": "{ o, desplegada, onAlternar, onRecargar }: { o: OportunidadDeCliente; desplegada: boolean; onAlternar: () => void; onRecargar: () => void }",
           "retorno": null,
-          "linea": 383
+          "linea": 389
         },
         {
           "nombre": "textoSeguroAnterior",
@@ -85564,16 +85564,16 @@
           "exportada": true,
           "params": "s: SeguroAnterior",
           "retorno": "string",
-          "linea": 402,
+          "linea": 408,
           "resumen": "El bonus leído, en una línea: lo que se va a guardar con la oportunidad."
         },
         {
           "nombre": "FormAlta",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId, inicial, precarga = null, onCancelar, onHecho, onRecargar }: { clienteId: string inicial?: LecturaOk | null /** Crear desde una fila del volcado: vehículo/aseguradora, y el vencimiento SOLO si es futuro. */ precarga?: PrecargaA",
+          "params": "{ clienteId, inicial, precarga = null, ramoInicial = null, onCancelar, onHecho, onRecargar }: { clienteId: string inicial?: LecturaOk | null /** Crear desde una fila del volcado: vehículo/aseguradora, y el vencimiento SOLO si es futuro. */ ",
           "retorno": null,
-          "linea": 415,
+          "linea": 421,
           "resumen": "`inicial` (29/09/2026): una lectura ya hecha (la póliza subida en Documentos) rellena el formulario al abrirlo, sin volver a pagar la lectura."
         },
         {
@@ -85582,7 +85582,7 @@
           "exportada": false,
           "params": "{ o, onCancelar, onHecho }: { o: OportunidadDeCliente onCancelar: () => void onHecho: (t: { ok: boolean; texto: string }) => void }",
           "retorno": null,
-          "linea": 629
+          "linea": 637
         }
       ],
       "tablas": [
@@ -85591,7 +85591,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "487bac84cbb9"
+      "hash": "832064d8f1a5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/pack-acciones.ts",
@@ -135329,6 +135329,8 @@
         "textoAltaOportunidad",
         "rotuloCanal",
         "rotuloMotivo",
+        "ramoInicialValido",
+        "ramosConOfertas",
         "rotuloRamo",
         "parsearPrima",
         "interpretarTareasHoy",
@@ -135480,12 +135482,30 @@
           "resumen": "Rótulo de un motivo leído del puerto; `null` si no es uno conocido (se enseña tal cual)."
         },
         {
+          "nombre": "ramoInicialValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "RamoOportunidad | null",
+          "linea": 449,
+          "resumen": "Ramo válido de `?ramo=` para preseleccionar en el alta; `null` si no es uno conocido."
+        },
+        {
+          "nombre": "ramosConOfertas",
+          "kind": "function",
+          "exportada": true,
+          "params": "tarificables: readonly { etiqueta: string }[]",
+          "retorno": "readonly",
+          "linea": 453,
+          "resumen": "Ramos que se trabajan con ofertas de compañías (sin tarificador): los de RAMOS_OPORTUNIDAD que no están entre los tarificables."
+        },
+        {
           "nombre": "rotuloRamo",
           "kind": "function",
           "exportada": true,
           "params": "r: string | null",
           "retorno": "string",
-          "linea": 448
+          "linea": 457
         },
         {
           "nombre": "parsearPrima",
@@ -135493,7 +135513,7 @@
           "exportada": true,
           "params": "t: string",
           "retorno": "number | null | 'invalido'",
-          "linea": 461,
+          "linea": 470,
           "resumen": "Prima tecleada en formato español. Solo se aceptan formas sin ambigüedad: «1.200» es mil doscientos, nunca 1,2; «1200», «1.200,50», «412,5» y «412.50» también. Lo que no encaja es `'invalido'`, no un "
         },
         {
@@ -135502,7 +135522,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "TareasDeHoy",
-          "linea": 491
+          "linea": 500
         },
         {
           "nombre": "colaLlamadas",
@@ -135510,7 +135530,7 @@
           "exportada": true,
           "params": "leads: readonly LeadVencimiento[]",
           "retorno": "LeadVencimiento[]",
-          "linea": 529,
+          "linea": 538,
           "resumen": "La cola de llamadas de hoy, en el orden de la lista (probabilidad × prima). Solo quien se puede llamar (teléfono y canal que lo permite) y a quien le toca ya: un primer contacto a quien se le puede es"
         },
         {
@@ -135519,7 +135539,7 @@
           "exportada": true,
           "params": "l: LeadVencimiento",
           "retorno": "",
-          "linea": 548,
+          "linea": 557,
           "resumen": "El WhatsApp de seguimiento de un lead, o `null` si no se le puede escribir por ahí. Lo abre Alberto y lo envía él desde su teléfono. 🚨 A TODOS con teléfono desde el 30/09/2026 (decisión de Alberto, a"
         },
         {
@@ -135528,7 +135548,7 @@
           "exportada": true,
           "params": "l: LeadVencimiento",
           "retorno": "string[]",
-          "linea": 563,
+          "linea": 572,
           "resumen": "Guion corto de la llamada, con lo que se sabe del lead. Lo que no consta no se inventa."
         },
         {
@@ -135537,7 +135557,7 @@
           "exportada": true,
           "params": "l: Pick<LeadVencimiento, 'intentos' | 'respondioAntes' | 'estado'>",
           "retorno": "TramoLead",
-          "linea": 607,
+          "linea": 616,
           "resumen": "Por enviar = nadie le ha escrito ni llamado en este ciclo · Esperando = se le contactó y no hay respuesta registrada · Respondió = contestó, o ya está interesado / con propuesta. Así, al mandarle el W"
         },
         {
@@ -135546,7 +135566,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string",
-          "linea": 615,
+          "linea": 624,
           "resumen": "Minúsculas, sin tildes ni signos: «Gutiérrez-Alcalá» casa con «gutierrez alcala»."
         },
         {
@@ -135555,7 +135575,7 @@
           "exportada": true,
           "params": "l: Pick<LeadVencimiento, 'cliente' | 'aseguradora' | 'ramo' | 'email' | 'telefono'>, consulta: string,",
           "retorno": "boolean",
-          "linea": 625,
+          "linea": 634,
           "resumen": "¿Casa el lead con lo tecleado en el buscador? (30/09/2026, Alberto: «un buscador aquí»). Busca en nombre, compañía, ramo, correo y teléfono; cada palabra tiene que aparecer en alguno («maria mapfre» ="
         },
         {
@@ -135564,7 +135584,7 @@
           "exportada": true,
           "params": "ultimoContactoEn: string | null, ahora: Date = new Date()",
           "retorno": "number | null",
-          "linea": 640
+          "linea": 649
         },
         {
           "nombre": "llamar",
@@ -135572,7 +135592,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit, timeoutMs = 15_000",
           "retorno": "Promise<Reenvio>",
-          "linea": 650
+          "linea": 659
         },
         {
           "nombre": "leadsCompetenciaAsegura",
@@ -135580,7 +135600,7 @@
           "exportada": true,
           "params": "dias: number",
           "retorno": "Promise<Reenvio>",
-          "linea": 667
+          "linea": 676
         },
         {
           "nombre": "oportunidadAsegura",
@@ -135588,7 +135608,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 670
+          "linea": 679
         },
         {
           "nombre": "oportunidadesClienteAsegura",
@@ -135596,7 +135616,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 673
+          "linea": 682
         },
         {
           "nombre": "accionOportunidadAsegura",
@@ -135604,7 +135624,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 676
+          "linea": 685
         },
         {
           "nombre": "crearTareaAsegura",
@@ -135612,7 +135632,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 679
+          "linea": 688
         },
         {
           "nombre": "cerrarTareaAsegura",
@@ -135620,7 +135640,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 682
+          "linea": 691
         },
         {
           "nombre": "registrarLlamadaAsegura",
@@ -135628,7 +135648,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 685
+          "linea": 694
         },
         {
           "nombre": "registrarWhatsappAsegura",
@@ -135636,7 +135656,7 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 690,
+          "linea": 699,
           "resumen": "Anota que se abrió el WhatsApp de seguimiento de un lead (no envía nada)."
         },
         {
@@ -135645,7 +135665,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 695,
+          "linea": 704,
           "resumen": "Clientes en vigor y leads de Vencimientos con su contacto, para el .vcf del móvil."
         },
         {
@@ -135654,7 +135674,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "",
-          "linea": 703,
+          "linea": 712,
           "resumen": "Lectura defensiva de la respuesta: `null` = no se pudo leer (el .vcf NO se genera vacío, que se importaría como «no tienes a nadie»)."
         },
         {
@@ -135663,7 +135683,7 @@
           "exportada": true,
           "params": "despuesDe: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 716,
+          "linea": 725,
           "resumen": "Cola de revisión de la sincronización con Google Contacts (50 por página, cursor `despuesDe`)."
         },
         {
@@ -135672,7 +135692,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 719
+          "linea": 728
         },
         {
           "nombre": "moteClienteAsegura",
@@ -135680,7 +135700,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 723,
+          "linea": 732,
           "resumen": "MOTE de la ficha (solo para la agenda de Google de Alberto; AISLADO: nunca en correos/portal/PDF)."
         },
         {
@@ -135689,7 +135709,7 @@
           "exportada": true,
           "params": "body: { clienteId: string; mote: string | null; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 726
+          "linea": 735
         },
         {
           "nombre": "ordenarAgendaGoogleAsegura",
@@ -135697,7 +135717,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 730,
+          "linea": 739,
           "resumen": "«Ordenar agenda»: informe SOLO LECTURA de la agenda de Google (lee la agenda entera: hasta ~2 min)."
         },
         {
@@ -135706,7 +135726,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 734,
+          "linea": 743,
           "resumen": "Estado de la conexión con Google Contacts (cuenta, simulada, activada)."
         },
         {
@@ -135715,7 +135735,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 738,
+          "linea": 747,
           "resumen": "Simulación SOLO LECTURA (lee la agenda entera de Google: hasta ~2 min)."
         },
         {
@@ -135724,7 +135744,7 @@
           "exportada": true,
           "params": "actor: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 742,
+          "linea": 751,
           "resumen": "«Simulación revisada: sincroniza». El `actor` lo pone quien llama desde la SESIÓN."
         },
         {
@@ -135733,7 +135753,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 746,
+          "linea": 755,
           "resumen": "Ticket de un solo uso (2 min) para arrancar el OAuth de Google desde el panel: asegura devuelve la URL de `conectar`."
         },
         {
@@ -135742,7 +135762,7 @@
           "exportada": true,
           "params": "borrarContactos: boolean",
           "retorno": "Promise<Reenvio>",
-          "linea": 750,
+          "linea": 759,
           "resumen": "Revoca en Google y borra token y vínculos; con `borrarContactos` borra antes los que CREÓ el CRM."
         },
         {
@@ -135751,7 +135771,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 754
+          "linea": 763
         },
         {
           "nombre": "interpretarTomador",
@@ -135759,7 +135779,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TomadorLeido | undefined",
-          "linea": 800
+          "linea": 809
         },
         {
           "nombre": "interpretarLecturaOportunidad",
@@ -135767,7 +135787,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaDocumentoOportunidad",
-          "linea": 822,
+          "linea": 831,
           "resumen": "Lo que devuelve el puerto `leer-documento`. Un campo con forma rara se queda en `null` («no se leyó»), nunca en un valor plausible: una prima 0 o una fecha que no es fecha no rellenan nada. Si no se l"
         },
         {
@@ -135776,7 +135796,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 856,
+          "linea": 865,
           "resumen": "La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50»."
         },
         {
@@ -135785,7 +135805,7 @@
           "exportada": true,
           "params": "guardado: unknown",
           "retorno": "EnlacePresupuesto | null",
-          "linea": 869
+          "linea": 878
         },
         {
           "nombre": "interpretarSolicitudesDatos",
@@ -135793,7 +135813,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SolicitudesDatos",
-          "linea": 913
+          "linea": 922
         },
         {
           "nombre": "valorLegible",
@@ -135801,7 +135821,7 @@
           "exportada": true,
           "params": "campo: SolicitudDatos['campos'][number], v: string | number | boolean | null | undefined",
           "retorno": "string",
-          "linea": 958,
+          "linea": 967,
           "resumen": "Una respuesta como la lee Alberto: opción → su etiqueta, sí/no, fecha española; `null` → «—»."
         },
         {
@@ -135810,7 +135830,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 968
+          "linea": 977
         },
         {
           "nombre": "accionSolicitudDatosAsegura",
@@ -135818,7 +135838,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 971
+          "linea": 980
         },
         {
           "nombre": "borradoresPresupuestoAsegura",
@@ -135826,7 +135846,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 976,
+          "linea": 985,
           "resumen": "─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──"
         },
         {
@@ -135835,7 +135855,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 979
+          "linea": 988
         },
         {
           "nombre": "borrarBorradorPresupuestoAsegura",
@@ -135843,7 +135863,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string, oportunidadId: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 982
+          "linea": 991
         },
         {
           "nombre": "riesgoAsegura",
@@ -135851,7 +135871,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 988,
+          "linea": 997,
           "resumen": "─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────"
         },
         {
@@ -135860,7 +135880,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 995,
+          "linea": 1004,
           "resumen": "Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoL"
         },
         {
@@ -135869,7 +135889,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 998
+          "linea": 1007
         },
         {
           "nombre": "quitarFiguraAsegura",
@@ -135877,7 +135897,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1001
+          "linea": 1010
         },
         {
           "nombre": "compararVariantesAsegura",
@@ -135885,7 +135905,7 @@
           "exportada": true,
           "params": "oportunidadId: string, a: string, b: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1006,
+          "linea": 1015,
           "resumen": "Dos variantes del mismo riesgo: qué cambia y el precio de cada compañía en las dos. Gratis."
         },
         {
@@ -135894,7 +135914,7 @@
           "exportada": true,
           "params": "body: { polizaId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1011,
+          "linea": 1020,
           "resumen": "Abre (o devuelve la abierta) la oportunidad de retarificar una póliza. Gratis: no pide precio."
         },
         {
@@ -135903,13 +135923,13 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; nuevoClienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1016,
+          "linea": 1025,
           "resumen": "«Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "beb1220d9ef5"
+      "hash": "a796a23ff6b1"
     },
     {
       "ruta": "apps/plataforma/lib/seguimiento-presupuestos-asegura.ts",
@@ -189905,6 +189925,6 @@
   ],
   "resumen": {
     "archivos": 4272,
-    "funciones": 14885
+    "funciones": 14887
   }
 }
