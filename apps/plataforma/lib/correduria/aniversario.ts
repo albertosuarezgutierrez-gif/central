@@ -68,3 +68,11 @@ export function fechaDeDiaYMes(dia: number, mes: number, hoy: string | Date): st
   // Una referencia bisiesta (2000) admite el 29/02; `proximoAniversario` ya lo lleva al 28/02 si toca.
   return proximoAniversario(`2000-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`, hoy)
 }
+
+/** Al cambiar de mes, un día que ya no existe (31 → febrero) pasa al último del nuevo mes. Vacío o mes sin elegir: tal cual. */
+export function ajustarDiaAlMes(dia: string, mes: string): string {
+  const d = Number(dia)
+  const m = Number(mes)
+  if (!dia || !Number.isInteger(d) || !Number.isInteger(m) || m < 1 || m > 12) return dia
+  return String(Math.min(d, DIAS_POR_MES[m - 1]))
+}

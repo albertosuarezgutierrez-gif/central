@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { planTareaTrasVencimiento } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
-import { DIAS_POR_MES, NOMBRES_MES, fechaDeDiaYMes, proximoAniversario } from '@/lib/correduria/aniversario'
+import { DIAS_POR_MES, NOMBRES_MES, ajustarDiaAlMes, fechaDeDiaYMes, proximoAniversario } from '@/lib/correduria/aniversario'
 
 /**
  * Corregir el vencimiento desde la tarjeta de Oportunidades (29/09/2026): es la fecha con la que
@@ -88,7 +88,7 @@ export default function EditarVencimiento(props: { vence: string | null; proxima
             <option value="">Día</option>
             {Array.from({ length: Number(mes) >= 1 ? DIAS_POR_MES[Number(mes) - 1] : 31 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
           </select>
-          <select aria-label="Mes" value={mes} onChange={e => setMes(e.target.value)} style={selectStyle}>
+          <select aria-label="Mes" value={mes} onChange={e => { setMes(e.target.value); setDia(d => ajustarDiaAlMes(d, e.target.value)) }} style={selectStyle}>
             <option value="">Mes</option>
             {NOMBRES_MES.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
           </select>

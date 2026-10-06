@@ -42,3 +42,12 @@ test('día y mes elegidos → próxima ocurrencia', () => {
   assert.equal(fechaDeDiaYMes(31, 4, '2026-10-06'), null)
   assert.equal(fechaDeDiaYMes(1, 13, '2026-10-06'), null)
 })
+
+test('ajustarDiaAlMes: el día inexistente pasa al último del mes nuevo', async () => {
+  const { ajustarDiaAlMes } = await import('./aniversario.ts')
+  assert.equal(ajustarDiaAlMes('31', '2'), '29')
+  assert.equal(ajustarDiaAlMes('31', '4'), '30')
+  assert.equal(ajustarDiaAlMes('15', '2'), '15')
+  assert.equal(ajustarDiaAlMes('', '2'), '')
+  assert.equal(ajustarDiaAlMes('31', ''), '31')
+})
