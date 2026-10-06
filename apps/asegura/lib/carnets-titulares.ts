@@ -9,13 +9,16 @@
  *
  *  - 🚨 Un carné solo va con la ficha que es su DUEÑA (`cliente_id` leído de BD). Uno cuyo dueño no está
  *    entre las fichas leídas se DESCARTA: nunca se cuelga de otra persona.
- *  - Leer carnés no exige nivel (hoy tampoco lo exigía: `fichaPropiaDe` no mira `nivel`), así que entran
- *    TODAS las fichas vinculadas. Esto es solo lectura y no amplía nada que no se leyera ya.
+ *  - 🚨 El carné es un dato de la PERSONA, no de la cosa (como en `module-seguros-portal/acceso.ts`): solo se
+ *    leen los de las fichas cuyo vínculo OPERA (`NIVELES_QUE_OPERAN`: gestionar/administrar). Un vínculo
+ *    `tarjeta` o `completo` a la ficha de otra persona no expone sus carnés; nivel desconocido = no legible.
  *  - Una ficha de EMPRESA (`juridica`) sin carnés no es titular: una SL no conduce, y contarla haría que
  *    el caso normal (persona + su empresa) se pintara con cabeceras sin motivo. Si la empresa tiene
  *    carnés (dato raro), sí cuenta: esconderlos sería decir «no hay» de algo que sí hay.
  *  - `nombrar` = hay más de un titular: entonces cada carné lleva el nombre; con uno, igual que siempre.
  */
+
+import { NIVELES_QUE_OPERAN } from './ficha-de-poliza.ts'
 
 export type FichaTitular = { id: string; nombre: string; tipoPersona: string | null }
 
@@ -29,9 +32,16 @@ function limpio(id: string | null | undefined): string {
   return typeof id === 'string' ? id.trim() : ''
 }
 
-/** Las fichas (sin repetir, ordenadas) de las que esta identidad puede LEER carnés: todas las vinculadas. */
-export function fichasLegiblesDeCarnets(vinculos: readonly { clienteId: string }[]): string[] {
-  return [...new Set(vinculos.map((v) => limpio(v.clienteId)).filter((id) => id !== ''))].sort()
+/** Las fichas (sin repetir, ordenadas) de las que esta identidad puede LEER carnés: solo las de vínculo que opera. */
+export function fichasLegiblesDeCarnets(vinculos: readonly { clienteId: string; nivel: string }[]): string[] {
+  return [
+    ...new Set(
+      vinculos
+        .filter((v) => (NIVELES_QUE_OPERAN as readonly string[]).includes(v.nivel))
+        .map((v) => limpio(v.clienteId))
+        .filter((id) => id !== ''),
+    ),
+  ].sort()
 }
 
 /**

@@ -14,17 +14,30 @@ const ana = { id: A, nombre: 'Ana Pérez', tipoPersona: 'fisica' }
 const blas = { id: B, nombre: 'Blas Gómez ', tipoPersona: null }
 const empresa = { id: SL, nombre: 'Talleres Ana SL', tipoPersona: 'juridica' }
 
-test('leer carnés no exige nivel: entran todas las fichas vinculadas, sin repetir ni vacías', () => {
+test('solo son legibles las fichas con vínculo que opera (gestionar/administrar); sin repetir ni vacías', () => {
   assert.deepEqual(
     fichasLegiblesDeCarnets([
-      { clienteId: B, nivel: 'tarjeta' },
+      { clienteId: B, nivel: 'administrar' },
       { clienteId: ` ${A} `, nivel: 'gestionar' },
-      { clienteId: A, nivel: 'completo' },
-      { clienteId: '' },
-    ] as { clienteId: string }[]),
+      { clienteId: A, nivel: 'gestionar' },
+      { clienteId: '', nivel: 'gestionar' },
+    ]),
     [A, B],
   )
   assert.deepEqual(fichasLegiblesDeCarnets([]), [])
+})
+
+test('🪤 el carné es dato de la persona: tarjeta, completo y niveles raros NO exponen la ficha', () => {
+  assert.deepEqual(fichasLegiblesDeCarnets([{ clienteId: AJENA, nivel: 'tarjeta' }]), [])
+  assert.deepEqual(fichasLegiblesDeCarnets([{ clienteId: AJENA, nivel: 'completo' }]), [])
+  assert.deepEqual(fichasLegiblesDeCarnets([{ clienteId: AJENA, nivel: 'root' }, { clienteId: AJENA, nivel: '' }]), [])
+  assert.deepEqual(
+    fichasLegiblesDeCarnets([
+      { clienteId: A, nivel: 'gestionar' },
+      { clienteId: AJENA, nivel: 'completo' },
+    ]),
+    [A],
+  )
 })
 
 test('🪤 dos fichas vinculadas → dos titulares, cada carné con SU dueña (A y B)', () => {

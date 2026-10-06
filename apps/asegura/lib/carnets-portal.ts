@@ -40,7 +40,7 @@ export type ResultadoCarnetsPortal =
   | { estado: 'error'; causa: string }
 
 /**
- * Los carnés de las fichas vinculadas a esa identidad, por titular, con su próxima caducidad ya
+ * Los carnés de las fichas vinculadas a esa identidad CON nivel que opera, por titular, con su próxima caducidad ya
  * calculada. Un carné cuya fecha de expedición no se puede descifrar se OMITE (se avisa en el log): es un
  * dato ilegible de ESE carné, no motivo para negar los demás. Si lo que no se puede leer es la fecha de
  * nacimiento de una ficha CON carnés, no se puede calcular ninguno de ella con garantías (la edad decide
