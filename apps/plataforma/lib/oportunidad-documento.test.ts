@@ -100,3 +100,9 @@ test('propuesta de identidad: se lee entera o no se lee (no se inventa una a med
   assert.equal(interpretarPropuestaIdentidad({ ...ok, documentoId: '' }), null)
   assert.equal(interpretarPropuestaIdentidad({ ...ok, propuesta: { ...ok.propuesta, nombre: '' } }), null)
 })
+
+test('🪤 «yaExistia»: dice que no se ha duplicado y enlaza a la ficha', () => {
+  const a = interpretarOportunidadDocumento({ estado: 'actualizada', clienteId: 'c1', vence: '2027-03-01', llamada: '2027-01-15', completada: false, yaExistia: true })!
+  assert.match(a.texto, /Ya estaba subida: no se ha duplicado/)
+  assert.equal(a.clienteId, 'c1')
+})

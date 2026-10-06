@@ -1084,10 +1084,21 @@ Botones de baja/mejorar precio solo con nivel que opera (`NIVELES_QUE_OPERAN`/`n
 espejo testado del servidor); `sin_permiso` ≠ `ajena` con texto «solo consulta» (`MENSAJE_SOLO_CONSULTA`); carta/datos de emisión sin
 oráculo (`no_encontrado`); «hoy» de carnés en Madrid (`hoyParaCarnet`); cron avisos-push con `mapConConcurrencia` (5).
 
+## (06/10/2026) Ficha de cliente: editor ÚNICO («✏️ Editar datos» en la cabecera)
+- Alberto: DNI, carné, dirección, contacto y mote se editaban en 5 sitios. Ahora todo en `cliente/[id]/EditarFicha.tsx`,
+  abierto desde el resumen; un «Guardar cambios» (identidad+dirección en un PATCH, carnés, mote) con resultado POR TRAMO.
+  Contactos va embebido con su guardado propio. Motivo/documento solo cuando `revisarEdicion()` lo exige.
+- Borrados `PonerNombre`/`MoteAgenda`; `TabContactos` queda de lectura. Guardián `test/regression-ficha-cliente-editor-unico.test.ts`.
+- Pendiente: AutoNuevo y EditarFichaModal (oportunidad) siguen con su propio editor de identidad/carnés (otros flujos).
+
 ## (06/10/2026) Portal: el cliente da de alta/edita/borra sus carnés
 «Mis carnés» en Mis datos → `/api/mis-datos/carnets` → puente POST/PATCH/DELETE `/api/portal/carnets` (Zod; `fichaDeRecurso`
 gestionar/administrar; dueño del carné leído de BD; misma `guardarCarnet`/`borrarCarnet` del corredor con `origen`). No en fichas jurídicas.
 Historial `PREFIJO_HISTORIAL_CARNET_PROPIO` (sin fecha) → evento `carnet` en el muro → Telegram por el cron de actividad. Sin DDL.
+
+## (06/10/2026) Correduría: subir la misma póliza dos veces ya no duplica
+- Mismo fichero (sha256, mismo cliente/destino) → devuelve el documento existente; misma póliza (nº normalizado + compañía) con oportunidad abierta en la ficha o sus fusionadas → la reutiliza (`decidirOportunidadExistente`, test).
+- UI: «Ya estaba subida: no se ha duplicado». Duplicado real de hoy borrado aparte.
 
 ## (06/10/2026) Portal: carnés con varias fichas
 Puente `/api/portal/carnets` agrupa por titular (`carnets-titulares.ts` en asegura y portal): `ok` (1 titular, `carnets` plana como antes) /

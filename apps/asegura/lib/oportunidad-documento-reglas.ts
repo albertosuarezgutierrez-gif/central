@@ -8,7 +8,7 @@
 //
 // Aquí no hay BD ni red: lo que decide va testeado en `oportunidad-documento-reglas.test.ts`.
 
-import { DIAS_AVISO_OPORTUNIDAD, fechaAvisoOportunidad } from '@central/module-seguros'
+import { DIAS_AVISO_OPORTUNIDAD, fechaAvisoOportunidad, mismaCompania } from '@central/module-seguros'
 
 /** Días antes del vencimiento a los que se llama: la regla única de las oportunidades (`@central/module-seguros`). */
 export const DIAS_LLAMADA_ANTES_VENCIMIENTO = DIAS_AVISO_OPORTUNIDAD
@@ -287,4 +287,34 @@ export function fichaDelDocumento(o: {
   if (dup.length > 0) avisos.push(`${dup.length === 1 ? 'una ficha comparte' : `${dup.length} fichas comparten`} su teléfono o email: posible duplicado (anotado en la ficha, no se ha fundido ni asignado)`)
   if (o.estado === 'error') avisos.push('la oportunidad no se ha podido abrir: ábrela a mano')
   return { clienteId: o.clienteId, creada, rellenados, avisos }
+}
+
+/** Estados en los que una oportunidad sigue ABIERTA (cualquier otro: ganada, perdida, descartada… = cerrada). */
+const ESTADOS_ABIERTOS: readonly string[] = ['competencia', 'en_negociacion', 'pendiente_cliente']
+
+/** Nº de póliza comparable: mayúsculas y sin espacios, guiones, puntos ni barras («18.162.048» = «18162048»). `null` si queda vacío. */
+export function normalizarNumeroPoliza(n: string | null | undefined): string | null {
+  const t = (n ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return t === '' ? null : t
+}
+
+export type OportunidadExistente = { id: string; estado: string; numeroPoliza: string | null; aseguradora: string | null }
+
+/**
+ * ¿Ya existe la oportunidad de ESTE documento? (06/10/2026: nº 18162048 subido dos veces = dos oportunidades.)
+ * Reutiliza la primera ABIERTA con el mismo nº de póliza (normalizado) y la misma compañía (o
+ * desconocida en alguno de los dos lados). Sin nº en el documento o en la existente no se puede
+ * afirmar que sea la misma: se crea (la regla por ramo/compañía de `crearOportunidad` sigue después).
+ * Una cerrada o descartada no cuenta: una renovación nueva sí es una oportunidad nueva.
+ */
+export function decidirOportunidadExistente(
+  nueva: { numeroPoliza: string | null; aseguradora: string | null },
+  existentes: OportunidadExistente[],
+): { accion: 'reutilizar'; id: string } | { accion: 'crear' } {
+  const n = normalizarNumeroPoliza(nueva.numeroPoliza)
+  if (!n) return { accion: 'crear' }
+  const ya = existentes.find(
+    (o) => ESTADOS_ABIERTOS.includes(o.estado) && normalizarNumeroPoliza(o.numeroPoliza) === n && mismaCompania(nueva.aseguradora, o.aseguradora) !== 'otra',
+  )
+  return ya ? { accion: 'reutilizar', id: ya.id } : { accion: 'crear' }
 }
