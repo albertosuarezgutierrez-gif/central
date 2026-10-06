@@ -10,7 +10,7 @@
 // · Una garantía que no casa NO se fuerza a una clave: va a `extras` con su literal (nunca se inventa clave).
 // · Extensible: otro ramo = otra entrada en `CATALOGO_FICHAS` (y su valor en `RAMOS_FICHA`).
 
-export const RAMOS_FICHA = ['comunidades'] as const
+export const RAMOS_FICHA = ['comunidades', 'rc'] as const
 export type RamoFicha = (typeof RAMOS_FICHA)[number]
 
 export type GrupoGarantiaFicha = 'danos' | 'rc' | 'asistencia' | 'juridica' | 'otros'
@@ -64,8 +64,34 @@ const COMUNIDADES: readonly GarantiaFicha[] = [
   g('impago_cuotas', 'Impago de cuotas de comunidad', 'juridica', 'limite', ['impago de cuotas', 'impago cuotas', 'reclamacion de cuotas', 'morosidad', 'cuotas impagadas', 'recobro de cuotas']),
 ]
 
+// RC general / de actividad (08/10/2026). Ramo canónico sin compañía registrada todavía (la primera: Occident).
+// `limite_indemnizacion` es el CAPITAL contratado (suma asegurada del presupuesto); el resto, límites/sublímites del condicionado.
+const RC: readonly GarantiaFicha[] = [
+  // ── Responsabilidad civil ──
+  g('limite_indemnizacion', 'Límite de indemnización (suma asegurada)', 'rc', 'capital', ['limite de indemnizacion', 'suma asegurada', 'capital asegurado', 'limite por siniestro', 'limite maximo de indemnizacion', 'limite de cobertura']),
+  g('limite_agregado_anual', 'Límite agregado anual', 'rc', 'limite', ['limite agregado', 'agregado anual', 'limite anual', 'limite maximo por anualidad', 'limite por anualidad de seguro']),
+  g('rc_explotacion', 'RC de explotación (actividad)', 'rc', 'limite', ['rc explotacion', 'responsabilidad civil de explotacion', 'responsabilidad civil explotacion', 'explotacion', 'rc general', 'responsabilidad civil general', 'rc de la actividad', 'responsabilidad civil de la actividad', 'rc actividad']),
+  g('rc_patronal', 'RC patronal (empleados)', 'rc', 'limite', ['rc patronal', 'responsabilidad civil patronal', 'patronal', 'rc empleador', 'responsabilidad civil del empleador']),
+  g('sublimite_victima_patronal', 'Sublímite por víctima (RC patronal)', 'rc', 'limite', ['sublimite por victima', 'limite por victima', 'sublimite victima', 'sublimite por victima patronal', 'maximo por victima']),
+  g('rc_productos', 'RC de productos', 'rc', 'limite', ['rc productos', 'responsabilidad civil de productos', 'responsabilidad civil productos', 'productos entregados']),
+  g('rc_post_trabajos', 'RC post-trabajos / trabajos terminados', 'rc', 'limite', ['rc post trabajos', 'post trabajos', 'responsabilidad civil post trabajos', 'trabajos terminados', 'rc trabajos terminados', 'despues de la entrega', 'post entrega']),
+  g('rc_locativa', 'RC locativa (daños al local alquilado)', 'rc', 'limite', ['rc locativa', 'responsabilidad civil locativa', 'locativa', 'danos al local arrendado', 'danos al inmueble alquilado', 'responsabilidad del arrendatario']),
+  g('rc_cruzada', 'RC cruzada', 'rc', 'limite', ['rc cruzada', 'responsabilidad civil cruzada']),
+  g('rc_contaminacion_accidental', 'RC por contaminación accidental', 'rc', 'limite', ['contaminacion accidental', 'rc contaminacion', 'responsabilidad civil por contaminacion', 'polucion accidental']),
+  g('rc_subsidiaria', 'RC subsidiaria / de contratistas y subcontratistas', 'rc', 'limite', ['rc subsidiaria', 'responsabilidad civil subsidiaria', 'subcontratistas', 'contratistas y subcontratistas', 'rc subcontratistas']),
+  g('rc_gastos_prevencion', 'Gastos de prevención y salvamento', 'rc', 'limite', ['gastos de prevencion', 'gastos de salvamento', 'prevencion y salvamento', 'salvamento y prevencion']),
+  // ── Jurídico ──
+  g('defensa_juridica', 'Defensa jurídica y reclamación de daños', 'juridica', 'limite', ['defensa juridica', 'defensa legal', 'defensa y reclamacion', 'reclamacion de danos', 'defensa penal', 'gastos de defensa']),
+  g('fianzas_judiciales', 'Fianzas judiciales y constitución de fianzas', 'juridica', 'limite', ['fianzas', 'fianzas judiciales', 'constitucion de fianzas', 'fianza penal', 'fianza civil', 'defensa y fianzas']),
+  // ── Otros ──
+  g('franquicia_general', 'Franquicia general de la póliza', 'otros', 'limite', ['franquicia', 'franquicia general', 'franquicia por siniestro', 'franquicia a cargo del asegurado']),
+  g('ambito_territorial', 'Ámbito territorial de la cobertura', 'otros', 'servicio', ['ambito territorial', 'ambito geografico', 'territorialidad', 'ambito de cobertura']),
+  g('retroactividad', 'Retroactividad / cobertura de reclamaciones', 'otros', 'servicio', ['retroactividad', 'periodo de retroactividad', 'reclamaciones presentadas', 'claims made']),
+]
+
 export const CATALOGO_FICHAS: Readonly<Record<RamoFicha, readonly GarantiaFicha[]>> = {
   comunidades: COMUNIDADES,
+  rc: RC,
 }
 
 export function esRamoFicha(v: unknown): v is RamoFicha {
