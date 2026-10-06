@@ -20,7 +20,7 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { chromium, type Browser, type Frame } from 'playwright'
+import { chromium, type Browser, type Frame, type Locator } from 'playwright'
 import { comprobarBoton, type RiesgoComunidad } from '@central/module-tarificacion'
 import {
   ASISTENCIAS,
@@ -33,6 +33,7 @@ import {
   filaPorEtiqueta,
   marcoDeCalcular,
   marcoFormulario,
+  normalizarEtiqueta,
   tipoControl,
 } from '../src/adapters/allianz/comunidades.ts'
 import { separarMarcos } from '../src/evidencia.ts'
@@ -123,6 +124,88 @@ function ejemplo(v: string | number | boolean, tipo: string): string {
   return tipo === 'fecha' ? fechaEs(String(v)) : String(v)
 }
 
+// ───────── verificación del MAPEO (independiente de `campoPorEtiqueta`: va del control a la etiqueta) ─────────
+
+const CONTROLES_XPATH = '//*[self::input[not(@type="hidden")] or self::select or self::textarea or self::nx-dropdown]'
+
+/**
+ * EN EL NAVEGADOR. Etiqueta que corresponde a un control, mirando desde el control: (1) texto de su propia
+ * celda; (2) el texto más cercano ANTES del control dentro de su fila (y de las filas que la contienen, hasta 4
+ * niveles: tablas anidadas del servlet); (3) checkbox sin texto previo en su fila: el texto INMEDIATAMENTE
+ * posterior en su fila. Devuelve el texto completo del elemento que contiene ese texto.
+ */
+function etiquetaDelControl(control: Element): string | null {
+  const doc = control.ownerDocument
+  const textoUtil = (n: Node) =>
+    n.nodeType === 3 &&
+    (n.nodeValue ?? '').replace(/[*:\u00a0]/g, ' ').trim() !== '' &&
+    !!n.parentElement &&
+    !n.parentElement.closest('select, option, textarea, script, style, nx-dropdown')
+  const textos = (ambito: Element): Node[] => {
+    const out: Node[] = []
+    const it = doc.createTreeWalker(ambito, 4)
+    for (let n = it.nextNode(); n; n = it.nextNode()) if (textoUtil(n)) out.push(n)
+    return out
+  }
+  const de = (n: Node) => (n.parentElement?.textContent ?? '').trim()
+  const celda = control.parentElement?.closest('td, th, label')
+  if (celda) {
+    const propios = textos(celda)
+    if (propios.length > 0) return de(propios[propios.length - 1])
+  }
+  const fila = control.closest('tr')
+  let r: Element | null = fila
+  for (let nivel = 0; r && nivel < 4; nivel++) {
+    const antes = textos(r).filter((t) => control.compareDocumentPosition(t) & 2)
+    if (antes.length > 0) return de(antes[antes.length - 1])
+    if (nivel === 0 && (control as HTMLInputElement).type === 'checkbox') {
+      const despues = textos(r).filter((t) => control.compareDocumentPosition(t) & 4)
+      if (despues.length > 0) return de(despues[0])
+    }
+    r = r.parentElement?.closest('tr') ?? null
+  }
+  return null
+}
+
+// Como texto con `__name` neutro (tsx/esbuild envuelve las funciones con nombre; en la página no existe).
+const ETIQUETA_DEL_CONTROL = new Function('el', `var __name = (f) => f; return (${etiquetaDelControl.toString()})(el)`) as typeof etiquetaDelControl
+
+/** EN EL NAVEGADOR (vía locator). Filas `tr` (las más internas de cada etiqueta) con 2+ pares etiqueta→control. */
+async function filasConVariosPares(raiz: Frame): Promise<number> {
+  return raiz.locator('xpath=/*').evaluate((html, xp) => {
+    const doc = html.ownerDocument
+    const snap = doc.evaluate(xp, doc, null, 7, null)
+    const porFila = new Map<Element, Set<string>>()
+    for (let i = 0; i < snap.snapshotLength; i++) {
+      const c = snap.snapshotItem(i) as Element
+      // Texto inmediatamente anterior al control dentro de su fila más interna.
+      const fila = c.closest('tr')
+      if (!fila) continue
+      const it = doc.createTreeWalker(fila, 4)
+      let ultimo: string | null = null
+      for (let n = it.nextNode(); n; n = it.nextNode()) {
+        if (!(c.compareDocumentPosition(n) & 2)) break
+        const t = (n.nodeValue ?? '').replace(/[*:\u00a0]/g, ' ').trim()
+        if (t && n.parentElement && !n.parentElement.closest('select, option, textarea, script, style')) ultimo = t
+      }
+      if (ultimo) porFila.set(fila, (porFila.get(fila) ?? new Set()).add(ultimo))
+    }
+    return [...porFila.values()].filter((s) => s.size >= 2).length
+  }, CONTROLES_XPATH)
+}
+
+/** La lógica ANTERIOR (unión XPath, ordenada por documento), SOLO para comparar en este harness. */
+function campoAntiguo(raiz: Frame, etiqueta: string, indice: number): Locator {
+  const t = normalizarEtiqueta(etiqueta)
+  const e = t.includes('"') ? `'${t}'` : `"${t}"`
+  const may = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÜÑÀÈÌÒÙ\u00a0*:'
+  const min = 'abcdefghijklmnopqrstuvwxyzáéíóúüñàèìòù   '
+  const et = 'self::td or self::th or self::label or self::span or self::b or self::strong or self::font or self::div or self::p or self::nobr or self::nx-label'
+  const ctl = `*[self::input[not(@type="hidden")] or self::select or self::textarea or self::nx-dropdown]`
+  const celda = `(//*[${et}][not(.//td)][normalize-space(translate(string(.),"${may}","${min}"))=${e}])[1]`
+  return raiz.locator(`xpath=(${celda}/descendant::${ctl} | ${celda}/ancestor::tr[1]/descendant::${ctl} | ${celda}/following::${ctl})[${indice + 1}]`)
+}
+
 async function main(): Promise<number> {
   const ruta = process.argv[2]
   if (!ruta || !existsSync(ruta)) {
@@ -153,14 +236,37 @@ async function main(): Promise<number> {
     }
     console.log(`formulario en el marco «${formulario === page.mainFrame() ? '(principal)' : formulario.name()}»`)
 
+    console.log(`filas (tr) con VARIOS pares etiqueta→control: ${await filasConVariosPares(formulario)}`)
     let ok = 0
+    let distintosAntiguo = 0
     for (const c of CAMPOS) {
       const nombre = `${c.etiqueta}${c.indice ? ` [#${c.indice}]` : ''} (${c.tipo})`
-      const loc = campoPorEtiqueta(formulario, c.etiqueta, c.indice ?? 0)
+      let loc: Locator
+      try {
+        loc = await campoPorEtiqueta(formulario, c.etiqueta, c.indice ?? 0)
+      } catch (e) {
+        console.log(`✗ ${nombre}: ${e instanceof Error ? e.message.split('\n')[0] : e}`)
+        continue
+      }
       const n = await loc.count()
       if (n !== 1) {
         console.log(`✗ ${nombre}: resuelve a ${n} elementos`)
         continue
+      }
+      // MAPEO: la etiqueta que «le toca» al control resuelto (calculada al revés, desde el control) tiene que
+      // ser la buscada. Si no, el dato acabaría en otro campo aunque el locator resuelva a uno.
+      const deVerdad = await loc.evaluate(ETIQUETA_DEL_CONTROL)
+      if (normalizarEtiqueta(deVerdad ?? '') !== normalizarEtiqueta(c.etiqueta)) {
+        console.log(`✗ ${nombre}: MAPEO ERRÓNEO, el control resuelto es de «${deVerdad ?? '(sin etiqueta)'}»`)
+        continue
+      }
+      // Comparación con la lógica ANTERIOR (unión XPath ordenada por documento), a título informativo.
+      const antiguo = campoAntiguo(formulario, c.etiqueta, c.indice ?? 0)
+      const mismo = (await antiguo.count()) === 1 && (await antiguo.evaluate((a, b) => a === b, await loc.elementHandle()))
+      if (!mismo) {
+        distintosAntiguo++
+        const deAntes = (await antiguo.count()) === 1 ? await antiguo.evaluate(ETIQUETA_DEL_CONTROL) : null
+        console.log(`  ⚠ ${nombre}: la lógica ANTERIOR resolvía OTRO control (de «${deAntes ?? '?'}»)`)
       }
       const visible = await loc.isVisible()
       const tipo = await tipoControl(loc)
@@ -254,7 +360,8 @@ async function main(): Promise<number> {
     ]
     console.log('— fases siguientes (informativo; dependen de calcular/avanzar) —')
     for (const [q, n] of info) console.log(`  ${q}: ${n}`)
-    console.log(`RESULTADO: ${ok}/${CAMPOS.length} campos OK · Calcular ${calcularOk ? 'OK' : 'FALLA'}`)
+    console.log(`lógica anterior: ${distintosAntiguo} campo(s) mapeados a otro control`)
+    console.log(`RESULTADO: ${ok}/${CAMPOS.length} campos OK (resuelven a 1 y con mapeo correcto) · Calcular ${calcularOk ? 'OK' : 'FALLA'}`)
     return ok === CAMPOS.length && calcularOk ? 0 : 1
   } finally {
     await browser.close()

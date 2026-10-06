@@ -117,22 +117,137 @@ export function celdaEtiqueta(raiz: Raiz, etiqueta: string): Locator {
   return raiz.locator(`xpath=(//*[${ETIQUETAS}][not(.//td)][${textoNormalizadoXPath('string(.)')}=${e}])[1]`)
 }
 
+/** Lo que el navegador devuelve al resolver un campo: id único del control o su ordinal entre `//CONTROLES`. */
+type ControlResuelto = { id: string | null; ordinal: number; regla: 'celda' | 'fila' | 'izquierda' | 'siguiente' } | { error: string }
+
 /**
- * Localiza el control de una fila del formulario por el TEXTO de su etiqueta (patrón tabla
- * etiqueta → input; validado contra el DOM real del marco con `scripts/probar-formulario.ts`). Busca el
- * control DENTRO de la celda de la etiqueta, en su MISMA FILA (`tr`, también si va ANTES de la etiqueta: las
- * asistencias de «PARTIDAS ASEGURABLES» ponen el checkbox a la izquierda) y, si no, a continuación en orden
- * de documento (06/10/2026, DOM real del marco `appArea`).
- * `indice` (0 por defecto) elige el control N-ésimo: sirve para filas con varios controles tras la
- * etiqueta («Nº Edificios *» → input, luego el select «Contiguos»).
- * Ojo: «siguiente control en el documento» — si la fila no tiene control propio, devolvería el de la
- * fila siguiente: por eso se usa solo con etiquetas cuyo control está en su misma fila.
+ * Localiza el control de una fila del formulario por el TEXTO de su etiqueta (patrón tabla etiqueta → control;
+ * validado contra el DOM real del marco con `scripts/probar-formulario.ts`, que comprueba también el MAPEO).
+ *
+ * 🚨 (06/10/2026) Antes era una UNIÓN XPath `(celda//C | fila//C | following::C)[n]`: la unión se ordena por
+ * orden de DOCUMENTO, así que en una fila «Fecha Inicio [a] Fecha Fin [b]» buscar «Fecha Fin» devolvía [a] y
+ * se tarificaba con el dato en otro campo, en silencio. Ahora es PRIORIDAD explícita, con «tramo» = controles
+ * tras la etiqueta y ANTES del siguiente texto (otra etiqueta):
+ *   (a) controles DENTRO de la celda de la etiqueta;
+ *   (b) tramo de la etiqueta en su MISMA fila (`ancestor::tr[1]`). Con `indice` > 0 («Nº Edificios *» →
+ *       input y luego el select «Contiguos»; DNI → input y luego el tipo de documento) y la fila acabada sin
+ *       otra etiqueta, el tramo sigue en la fila que la contiene (tablas anidadas del servlet), hasta 3 niveles;
+ *   (c) SOLO si la fila no tiene NINGÚN control después de la etiqueta: el control INMEDIATAMENTE anterior
+ *       en la fila, sin texto entre ambos (asistencias de «PARTIDAS ASEGURABLES»: checkbox a la izquierda);
+ *   (d) si la fila no da nada: el tramo en orden de documento (siguiente control, pero nunca saltando otra
+ *       etiqueta: si antes aparece texto, no hay control y se dice).
+ * Se prueba cada elemento con ese texto en orden de documento y vale el PRIMERO que da control: el título de
+ * sección «% COMISIÓN» (sin control) va antes que la etiqueta «% Comisión» de su desplegable.
+ * Sin control → `ErrorTarificador('portal')`. Devuelve un locator por `id` (si es único) o por ordinal.
  */
-export function campoPorEtiqueta(raiz: Raiz, etiqueta: string, indice = 0): Locator {
+export async function campoPorEtiqueta(raiz: Raiz, etiqueta: string, indice = 0): Promise<Locator> {
+  await celdaEtiqueta(raiz, etiqueta).waitFor({ state: 'attached' })
+  const r = await etiquetasCandidatas(raiz, etiqueta).evaluateAll(FUENTE_RESOLVER, { controles: `//${CONTROLES}`, indice })
+  if ('error' in r) throw new ErrorTarificador('portal', `allianz/comunidades: «${etiqueta}»${indice ? ` [#${indice}]` : ''}: ${r.error}`)
+  if (r.id && !(r.id.includes('"') && r.id.includes("'"))) return raiz.locator(`xpath=//*[@id=${literalXPath(r.id)}]`)
+  return raiz.locator(`xpath=(//${CONTROLES})[${r.ordinal + 1}]`)
+}
+
+/** Todos los elementos-etiqueta con ese texto (como `celdaEtiqueta`, sin quedarse con el primero). */
+function etiquetasCandidatas(raiz: Raiz, etiqueta: string): Locator {
   const e = literalXPath(normalizarEtiqueta(etiqueta))
-  const celda = `(//*[${ETIQUETAS}][not(.//td)][${textoNormalizadoXPath('string(.)')}=${e}])[1]`
-  const fila = `${celda}/ancestor::tr[1]/descendant::${CONTROLES}`
-  return raiz.locator(`xpath=(${celda}/descendant::${CONTROLES} | ${fila} | ${celda}/following::${CONTROLES})[${indice + 1}]`)
+  return raiz.locator(`xpath=//*[${ETIQUETAS}][not(.//td)][${textoNormalizadoXPath('string(.)')}=${e}]`)
+}
+
+// Se pasa como TEXTO con un `__name` neutro: tsx/esbuild (keepNames) envuelve las funciones con nombre en
+// `__name(…)`, que no existe en la página («ReferenceError: __name is not defined»).
+const FUENTE_RESOLVER = new Function(
+  'el',
+  'a',
+  `var __name = (f) => f; ${resolverUna.toString()}; return (${resolverControlEnDom.toString()})(el, a)`,
+) as typeof resolverControlEnDom
+
+/**
+ * Se ejecuta EN EL NAVEGADOR (por `evaluateAll`): no puede usar nada de fuera de su cuerpo salvo `resolverUna`,
+ * que va en el mismo texto. `etiquetas`: candidatas en orden de documento; `controles`: XPath de todos los controles.
+ */
+function resolverControlEnDom(etiquetas: Element[], a: { controles: string; indice: number }): ControlResuelto {
+  let primerError: ControlResuelto = { error: 'no aparece la etiqueta' }
+  for (const etiqueta of etiquetas) {
+    // Un elemento DENTRO de otro candidato (label dentro de su td) es la misma etiqueta: se prueba el externo.
+    if (etiquetas.some((o) => o !== etiqueta && o.contains(etiqueta))) continue
+    const r = resolverUna(etiqueta, a)
+    if (!('error' in r)) return r
+    if (primerError.error === 'no aparece la etiqueta') primerError = r
+  }
+  return primerError
+}
+
+function resolverUna(etiqueta: Element, a: { controles: string; indice: number }): ControlResuelto {
+  const doc = etiqueta.ownerDocument
+  const snap = doc.evaluate(a.controles, doc, null, 7 /* ORDERED_NODE_SNAPSHOT_TYPE */, null)
+  const todos: Element[] = []
+  for (let i = 0; i < snap.snapshotLength; i++) todos.push(snap.snapshotItem(i) as Element)
+  // Un control dentro de otro (p. ej. el input interno de un nx-dropdown) no cuenta aparte.
+  const conjunto = new Set(todos)
+  const esControl = (e: Element) => conjunto.has(e) && !todos.some((o) => o !== e && o.contains(e))
+  const dentroDeControl = (n: Node) => todos.some((o) => o.contains(n))
+  const textoNormal = (t: string) => t.replace(/[*:\u00a0]/g, ' ').trim()
+  const ignorar = (n: Node) => {
+    const p = n.parentElement
+    return !p || /^(script|style|option|noscript)$/i.test(p.tagName)
+  }
+  // Recorre en orden de documento los nodos de `ambito` que van DESPUÉS de la etiqueta (fuera de ella).
+  // Devuelve [controles del tramo, ¿se cerró por un texto?].
+  const tramoTras = (ambito: Element): [Element[], boolean] => {
+    const it = doc.createTreeWalker(ambito, 1 | 4 /* ELEMENT | TEXT */)
+    const out: Element[] = []
+    let n: Node | null = it.currentNode
+    while ((n = it.nextNode())) {
+      if (etiqueta === n || etiqueta.contains(n)) continue
+      if (!(etiqueta.compareDocumentPosition(n) & 4 /* FOLLOWING */)) continue
+      if (n.nodeType === 3) {
+        if (!ignorar(n) && !dentroDeControl(n) && textoNormal(n.nodeValue ?? '') !== '') return [out, true]
+      } else if (esControl(n as Element)) out.push(n as Element)
+    }
+    return [out, false]
+  }
+  const ok = (e: Element, regla: 'celda' | 'fila' | 'izquierda' | 'siguiente'): ControlResuelto => {
+    const id = e.getAttribute('id')
+    const unico = id && doc.querySelectorAll(`[id="${id.replace(/["\\]/g, '\\$&')}"]`).length === 1
+    return { id: unico ? id : null, ordinal: todos.indexOf(e), regla }
+  }
+  // (a) dentro de la celda de la etiqueta.
+  const propios = todos.filter((c) => esControl(c) && etiqueta.contains(c))
+  if (propios.length > 0) {
+    return propios[a.indice] ? ok(propios[a.indice], 'celda') : { error: `la celda solo tiene ${propios.length} control(es)` }
+  }
+  const fila = etiqueta.closest('tr')
+  if (fila) {
+    // (b) tramo en la misma fila; con indice > 0 y la fila agotada sin otra etiqueta, la fila contenedora.
+    let ambito: Element | null = fila
+    let [tramo, cerrado] = tramoTras(fila)
+    for (let nivel = 0; tramo.length > 0 && tramo.length <= a.indice && !cerrado && nivel < 3; nivel++) {
+      ambito = ambito?.parentElement?.closest('tr') ?? null
+      if (!ambito) break
+      ;[tramo, cerrado] = tramoTras(ambito)
+    }
+    if (tramo.length > 0) {
+      return tramo[a.indice] ? ok(tramo[a.indice], 'fila') : { error: `su tramo solo tiene ${tramo.length} control(es)` }
+    }
+    const posteriores = todos.filter((c) => esControl(c) && fila.contains(c) && etiqueta.compareDocumentPosition(c) & 4)
+    if (posteriores.length > 0) return { error: 'los controles de su fila son de otra etiqueta' }
+    // (c) checkbox a la izquierda: el control inmediatamente anterior en la fila, sin texto entre medias.
+    if (a.indice === 0) {
+      const anteriores = todos.filter((c) => esControl(c) && fila.contains(c) && etiqueta.compareDocumentPosition(c) & 2)
+      const previo = anteriores[anteriores.length - 1]
+      if (previo) {
+        const rango = doc.createRange()
+        rango.setStartAfter(previo)
+        rango.setEndBefore(etiqueta)
+        if (textoNormal(rango.toString()) === '') return ok(previo, 'izquierda')
+      }
+    }
+  }
+  // (d) nada en la fila: siguiente control en el documento, sin saltar otra etiqueta.
+  const [tramo] = tramoTras(doc.documentElement)
+  if (tramo[a.indice]) return ok(tramo[a.indice], 'siguiente')
+  return { error: 'no tiene control (ni en su celda, ni en su fila, ni antes de la siguiente etiqueta)' }
 }
 
 /**
@@ -197,7 +312,7 @@ export async function tipoControl(c: Locator): Promise<TipoControl> {
  * validan/recalculan en `onchange`/`onblur`. Si el valor no queda escrito (campo readonly) → `portal`.
  */
 async function poner(raiz: Raiz, etiqueta: string, valor: string | number, indice = 0): Promise<void> {
-  const c = campoPorEtiqueta(raiz, etiqueta, indice)
+  const c = await campoPorEtiqueta(raiz, etiqueta, indice)
   const v = String(valor)
   await c.fill(v)
   await c.blur().catch(() => undefined)
@@ -224,7 +339,7 @@ function opcionNx(raiz: Raiz, valor: string): Locator {
  * Si ninguna opción casa, error de datos (no se elige «lo más parecido»).
  */
 async function elegir(raiz: Raiz, ctx: ContextoPortal, etiqueta: string, valor: string, indice = 0): Promise<void> {
-  const s = campoPorEtiqueta(raiz, etiqueta, indice)
+  const s = await campoPorEtiqueta(raiz, etiqueta, indice)
   const tipo = await tipoControl(s)
   if (tipo === 'nx-dropdown') {
     await ctx.pulsar(desplegableNx(s))
@@ -255,8 +370,9 @@ async function elegir(raiz: Raiz, ctx: ContextoPortal, etiqueta: string, valor: 
 /** Checkbox por etiqueta. Las asistencias salen DESHABILITADAS en el DOM capturado: si no se habilita, `portal`. */
 async function marcar(raiz: Raiz, etiqueta: string, valor: boolean): Promise<void> {
   try {
-    await campoPorEtiqueta(raiz, etiqueta).setChecked(valor, { timeout: 10_000 })
-  } catch {
+    await (await campoPorEtiqueta(raiz, etiqueta)).setChecked(valor, { timeout: 10_000 })
+  } catch (e) {
+    if (e instanceof ErrorTarificador) throw e
     throw new ErrorTarificador('portal', `allianz/comunidades: no se pudo marcar «${etiqueta}» (¿deshabilitado?)`)
   }
 }
