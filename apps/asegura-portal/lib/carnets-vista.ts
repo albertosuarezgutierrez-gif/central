@@ -5,6 +5,7 @@
  * 🚨 `sin_puente` (503: el puente no está configurado) ≠ `error` (502: no contestó o falló). Ninguno culpa a
  * la persona.
  */
+import { MENSAJE_SOLO_CONSULTA } from './mensajes-ficha.ts'
 import type { TitularCarnets } from './carnets-titulares'
 
 export type ResultadoEscrituraCarnet =
@@ -15,6 +16,8 @@ export type ResultadoEscrituraCarnet =
   | { estado: 'duplicado' }
   /** El carné o el titular no son suyos, o ya no existen. */
   | { estado: 'no_encontrado' }
+  /** La ficha es suya pero su vínculo es de solo consulta (403 del puente). */
+  | { estado: 'sin_permiso' }
   /** Su acceso no está enlazado con ninguna ficha. */
   | { estado: 'sin_ficha' }
   /** El puente no está configurado en este despliegue (503). NO es «falló el envío». */
@@ -44,6 +47,8 @@ export function textoAvisoCarnet(r: Exclude<ResultadoEscrituraCarnet, { estado: 
       return 'Ya tienes un carné de ese tipo guardado: cambia su fecha en vez de añadir otro.'
     case 'no_encontrado':
       return 'No hemos encontrado ese carné. Puede que ya lo hayas cambiado desde otra pestaña: recarga la página.'
+    case 'sin_permiso':
+      return MENSAJE_SOLO_CONSULTA
     case 'sin_ficha':
       return 'Tu acceso todavía no está enlazado con tu ficha, así que no podemos guardar carnés. Escríbenos y lo enlazamos.'
     case 'sin_puente':

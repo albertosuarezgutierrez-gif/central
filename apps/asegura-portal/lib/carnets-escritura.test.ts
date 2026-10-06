@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import { interpretarEscrituraCarnet, leerEscrituraCarnet, statusEscrituraCarnet } from './carnets-escritura.ts'
+import { MENSAJE_SOLO_CONSULTA } from './mensajes-ficha.ts'
 import { fechaCarnetEs, necesitaSelectorTitular, textoAvisoCarnet, titularesEscribibles } from './carnets-vista.ts'
 
 const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -122,4 +123,12 @@ test('🪤 H4: «MisCarnets» recibe el día de MADRID (no el UTC): a las 23:30 
   const ahora = new Date('2026-10-10T23:30:00Z')
   assert.equal(ahora.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }), '2026-10-11')
   assert.equal(ahora.toISOString().slice(0, 10), '2026-10-10')
+})
+
+test('🪤 sin_permiso (403 del puente) llega al portal y se dice «solo consulta», no «no encontrado»', () => {
+  assert.deepEqual(interpretarEscrituraCarnet(403, { estado: 'sin_permiso' }), { estado: 'sin_permiso' })
+  assert.equal(statusEscrituraCarnet('sin_permiso'), 403)
+  assert.equal(textoAvisoCarnet({ estado: 'sin_permiso' }), MENSAJE_SOLO_CONSULTA)
+  assert.notEqual(textoAvisoCarnet({ estado: 'sin_permiso' }), textoAvisoCarnet({ estado: 'no_encontrado' }))
+  assert.deepEqual(interpretarEscrituraCarnet(404, { estado: 'no_encontrado' }), { estado: 'no_encontrado' })
 })

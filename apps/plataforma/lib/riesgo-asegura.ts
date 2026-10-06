@@ -208,7 +208,7 @@ const CAMPO_FALTA: Record<string, string> = {
 /**
  * Dónde se rellena cada clave que puede devolver `faltanDeFigura()` (apps/asegura/lib/oportunidad-riesgo.ts).
  * · `completar`: bloque «Falta por completar» del modal «Editar datos» (sexo → `clientes.saludo`, móvil → teléfono principal).
- * · `formulario`: formulario del propio modal (identidad: DNI/nombre/apellidos/nacimiento; carné: `EditarCarnets`).
+ * · `formulario`: formulario del propio modal (identidad: DNI/nombre/apellidos/nacimiento; carné: sección de carnés de `PanelDatosCliente`).
  * · `cambiar`: no es un dato que teclear: se resuelve con «Cambiar» (poner a una persona como conductor).
  * · `sin_ficha`: la figura no tiene ficha legible; no hay nada que editar hasta que exista.
  * Un test lee `faltanDeFigura` y falla si aparece una clave sin entrada aquí.

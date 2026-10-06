@@ -6,7 +6,7 @@ import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura } from '@/lib/seguimiento-asegura'
 import { anteriorParaTarificar } from '@/lib/seguro-anterior'
 import { otroVehiculoDelCliente } from '@/lib/correduria/pack-otro-vehiculo'
-import { tienePolizaAllianzEnVigor } from '@central/module-seguros'
+import { personaDeFicha, tienePolizaAllianzEnVigor } from '@central/module-seguros'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import AutoNuevo from './AutoNuevo'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
@@ -153,7 +153,7 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         // póliza EN VIGOR en Allianz. `null` = no se ha podido leer (nunca «no tiene»).
         otroVehiculo={ops?.estado === 'ok' ? otroVehiculoDelCliente(ops.oportunidades, 'auto') : null}
         carteraAllianz={ficha.estado === 'ok' ? tienePolizaAllianzEnVigor(ficha.ficha.polizas) : null}
-        fichaTomador={ficha.estado === 'ok' ? { identidad: ficha.ficha.identidad, documentos: ficha.ficha.documentos, contacto: ficha.ficha.contacto } : null}
+        fichaTomador={ficha.estado === 'ok' ? { identidad: ficha.ficha.identidad, documentos: ficha.ficha.documentos, contacto: ficha.ficha.contacto, juridica: personaDeFicha({ tipoPersona: ficha.ficha.identidad?.tipoPersona, dniEnmascarado: ficha.ficha.identidad?.dniEnmascarado, segmento: ficha.ficha.segmento }) === 'juridica' } : null}
       />
     </Pagina>
   )

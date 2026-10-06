@@ -42,3 +42,16 @@ export { importeEs, importePuntoDecimal } from './importes.ts'
 export { validarRiesgoComunidad, type ValidacionRiesgo } from './riesgo.ts'
 export { validarOfertas, franquiciaGeneral, garantiasComoRegistro, type ValidacionOfertas, type ValorGarantiaCompatible } from './ofertas.ts'
 export { claveCompania, crearRegistro, type RegistroAdaptadores } from './registro.ts'
+export {
+  MARCA_DATO_PERSONAL,
+  redactarDatosPersonales,
+  limpiarTextoAviso,
+  coherenciaPrecio,
+  UMBRAL_ACOMPANAMIENTO,
+  acompanamientoInicial,
+  siguienteAcompanamiento,
+  type ValoresLeidos,
+  type IncidenciaPrecio,
+  type EstadoAcompanamiento,
+  type EventoAcompanamiento,
+} from './formador.ts'

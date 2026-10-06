@@ -1,17 +1,15 @@
 'use client'
 
-// «Editar datos» de una figura del riesgo (30/09/2026): abre, sin salir de la pantalla, los MISMOS
-// formularios de la ficha del cliente — `EditarCliente` (identidad: nombre, DNI, fecha de nacimiento,
-// que exigen DNI recibido, regla 4) y `EditarCarnets` (solo si esa persona va a conducir) — sobre ESA
-// ficha. Sin lógica nueva de identidad. Al guardar, esos formularios llaman a `router.refresh()`: la
-// pantalla del riesgo vuelve a leerse y el aviso «Falta…» se actualiza; el modal recarga su ficha con ella.
-// Cada formulario se remonta solo si cambian SUS datos y, con cambios sin guardar, cerrar pide confirmación.
+// «Editar datos» de una figura del riesgo (30/09/2026): abre, sin salir de la pantalla, EL MISMO editor
+// de la ficha del cliente (`PanelDatosCliente`: identidad con DNI recibido o motivo, regla 4; dirección; y el
+// carné solo si esa persona va a conducir) sobre ESA ficha. Sin lógica propia de identidad. Al guardar, el
+// panel llama a `router.refresh()`: la pantalla del riesgo vuelve a leerse y el aviso «Falta…» se actualiza;
+// el modal recarga su ficha con ella. Con cambios sin guardar, cerrar pide confirmación.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
-import EditarCliente from '../../EditarCliente'
-import EditarCarnets from '../../cliente/[id]/EditarCarnets'
+import PanelDatosCliente from '../../cliente/[id]/PanelDatosCliente'
 import FaltaPorCompletar from './FaltaPorCompletar'
 import { faltaMovil, faltaSexo, rotulosFaltaEnFormulario } from '@/lib/riesgo-asegura'
 import { pedirFichaParaEditar, type FichaParaEditar } from './acciones'
@@ -31,9 +29,9 @@ export default function EditarFichaModal({ oportunidadId, clienteId, nombre, con
   const [ficha, setFicha] = useState<FichaParaEditar | null>(null)
   const [guardadoAqui, setGuardadoAqui] = useState<{ sexo: boolean; movil: boolean } | null>(null)
   const cierre = useRef<HTMLButtonElement>(null)
-  // ¿Hay algo tecleado y sin guardar en cada formulario? Se marca al teclear (los eventos de los campos suben
-  // hasta el contenedor) y se limpia cuando ESE formulario se remonta con datos nuevos (= se guardó).
-  const sucio = useRef({ identidad: false, carnets: false })
+  // ¿Hay algo tecleado y sin guardar en el panel? Se marca al teclear (los eventos de los campos suben hasta
+  // el contenedor) y se limpia cuando el panel avisa de que guardó todo (`onGuardado`).
+  const sucio = useRef(false)
 
   // Se mantiene lo que había mientras llega lo nuevo: no se desmonta un formulario a medio teclear.
   useEffect(() => {
@@ -44,16 +42,8 @@ export default function EditarFichaModal({ oportunidadId, clienteId, nombre, con
     return () => { vivo = false }
   }, [oportunidadId, clienteId, refresco])
 
-  // Cada formulario se remonta SOLO cuando cambian SUS datos: guardar la identidad no borra lo que se esté
-  // tecleando en el carné, ni al revés. (Antes una sola versión compartida remontaba los dos.)
-  const claveIdentidad = ficha?.estado === 'ok' ? JSON.stringify([ficha.identidad, ficha.documentos]) : ''
-  const claveCarnets = ficha?.estado === 'ok' ? JSON.stringify(ficha.carnets) : ''
-  useEffect(() => { sucio.current.identidad = false }, [claveIdentidad])
-  useEffect(() => { sucio.current.carnets = false }, [claveCarnets])
-
   const cerrar = useCallback(() => {
-    const cuales = [sucio.current.identidad && 'la identidad', sucio.current.carnets && 'el carné'].filter(Boolean)
-    if (cuales.length > 0 && !window.confirm(`Hay cambios sin guardar en ${cuales.join(' y ')}. ¿Cerrar y perderlos?`)) return
+    if (sucio.current && !window.confirm('Hay cambios sin guardar. ¿Cerrar y perderlos?')) return
     setGuardadoAqui(null)
     onCerrar()
   }, [onCerrar])
@@ -95,20 +85,21 @@ export default function EditarFichaModal({ oportunidadId, clienteId, nombre, con
                 {guardadoAqui.sexo && guardadoAqui.movil ? 'Sexo y móvil guardados' : guardadoAqui.sexo ? 'Sexo guardado' : 'Móvil guardado'} en su ficha.
               </div>
             )}
-            <div key={`c${claveIdentidad}`} onInput={() => { sucio.current.identidad = true; setGuardadoAqui(null) }} onChange={() => { sucio.current.identidad = true; setGuardadoAqui(null) }} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Identidad</div>
-              <EditarCliente clienteId={clienteId} identidad={ficha.identidad} documentos={ficha.documentos} />
+            <div onInput={() => { sucio.current = true; setGuardadoAqui(null) }} onChange={() => { sucio.current = true; setGuardadoAqui(null) }} style={{ minWidth: 0 }}>
+              <PanelDatosCliente
+                clienteId={clienteId}
+                identidad={ficha.identidad}
+                documentos={ficha.documentos}
+                contacto={ficha.contacto}
+                carnets={ficha.carnets}
+                fechaCarnetPoliza={ficha.fechaCarnetPoliza}
+                juridica={ficha.juridica}
+                secciones={conduce ? ['identidad', 'direccion', 'carnets'] : ['identidad', 'direccion']}
+                onGuardado={({ todoGuardado }) => { if (todoGuardado) sucio.current = false }}
+              />
             </div>
-            {conduce && (
-              <div key={`k${claveCarnets}`} onInput={() => { sucio.current.carnets = true; setGuardadoAqui(null) }} onChange={() => { sucio.current.carnets = true; setGuardadoAqui(null) }} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>Carné de conducir</div>
-                {ficha.carnets !== null
-                  ? <EditarCarnets clienteId={clienteId} carnets={ficha.carnets} fechaPoliza={ficha.fechaCarnetPoliza} />
-                  : <div style={{ fontSize: 13, color: 'var(--muted)' }}>No se han podido leer los carnés de esta ficha: sin saber qué hay, no se ofrece editarlos.</div>}
-              </div>
-            )}
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              El correo, la dirección y otros teléfonos se corrigen en la ficha de la persona. El nombre, el DNI y la fecha de nacimiento exigen el DNI recibido.
+              El correo y otros teléfonos se corrigen en la ficha de la persona. El nombre, el DNI y la fecha de nacimiento exigen el DNI recibido o un motivo.
             </div>
           </>
         )}

@@ -22,3 +22,17 @@ test('el dueño del carné sale de la BD filtrando por id Y correduría, nunca d
 test('destinoCarnet recibe ese duenoCarnet leído (no otro valor)', () => {
   assert.match(cuerpo, /destinoCarnet\(\{[^}]*\bfichaId:\s*op\.fichaId,\s*duenoCarnet,/)
 })
+
+test('el rechazo de destinoCarnet se traduce con resultadoDeDestinoAjeno(d.motivo) (sin_permiso ≠ no_encontrado)', () => {
+  assert.match(cuerpo, /return resultadoDeDestinoAjeno\(d\.motivo\)/)
+})
+
+// Cepo de cableado de la LECTURA: las fichas de las que se leen carnés salen de `fichasLegiblesDeCarnets`
+// (solo vínculos con nivel que opera/lee carnés). Si alguien vuelve a mapear `vinculos` a mano, una ficha
+// de solo consulta podría colar sus carnés.
+const lectura = fuente.slice(fuente.indexOf('export async function caducidadesCarnetDeIdentidad'), fuente.indexOf('export async function escribirCarnetPortal'))
+
+test('caducidadesCarnetDeIdentidad saca las fichas de fichasLegiblesDeCarnets(vinculosDeIdentidad(...))', () => {
+  assert.match(lectura, /ids\s*=\s*fichasLegiblesDeCarnets\(\s*await vinculosDeIdentidad\(correduriaId,\s*identidadId\)\s*\)/)
+  assert.match(fuente, /import \{[^}]*\bfichasLegiblesDeCarnets\b[^}]*\} from '\.\/carnets-titulares'/)
+})

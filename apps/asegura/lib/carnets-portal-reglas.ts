@@ -120,8 +120,18 @@ export type ResultadoCarnetPortalEscritura =
   | { estado: 'duplicado'; campo?: string }
   /** El carné o la ficha no son suyos, o ya no existen. Ajeno e inexistente, iguales hacia fuera. */
   | { estado: 'no_encontrado' }
+  /** Ficha vinculada pero de solo consulta (`tarjeta`/`completo`): es SUYA, así que se le dice (403), no «no encontrado». */
+  | { estado: 'sin_permiso' }
   | { estado: 'sin_ficha' }
   | { estado: 'error'; causa: string }
+
+/**
+ * Lo que se contesta cuando `destinoCarnet` rechaza (`ajena`). Solo `sin_permiso` (ficha SUYA, de solo
+ * consulta) se distingue; no vinculada, otra ficha, empresa o sin dueño siguen siendo `no_encontrado`.
+ */
+export function resultadoDeDestinoAjeno(motivo: Extract<DestinoCarnet, { estado: 'ajena' }>['motivo']): ResultadoCarnetPortalEscritura {
+  return motivo === 'sin_permiso' ? { estado: 'sin_permiso' } : { estado: 'no_encontrado' }
+}
 
 /**
  * Traduce lo que devuelve `guardarCarnet`/`borrarCarnet` (forma del corredor) a la del portal. El 409 de
@@ -149,6 +159,8 @@ export function statusCarnetPortal(estado: ResultadoCarnetPortalEscritura['estad
       return 409
     case 'no_encontrado':
       return 404
+    case 'sin_permiso':
+      return 403
     case 'sin_ficha':
       return 409
     default:
