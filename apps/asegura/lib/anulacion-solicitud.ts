@@ -30,6 +30,8 @@ export type FichaSolicitud =
   | { estado: 'varias_fichas' }
   /** La póliza no cuelga de ninguna ficha en la que esta identidad pueda operar (o no existe). */
   | { estado: 'ajena' }
+  /** La ficha dueña SÍ está vinculada, pero el vínculo es de solo consulta: se dice aparte de «no es tuya». */
+  | { estado: 'sin_permiso' }
   | { estado: 'error'; causa: string }
 
 export type DepsSolicitud = {
@@ -57,6 +59,8 @@ export type ResultadoSolicitudPortal =
       poliza: { id: string; compania: string | null; numeroPoliza: string | null }
     }
   | { estado: 'no_es_tuya' }
+  /** Vinculada pero de solo consulta (`tarjeta`/`completo`): «tu acceso a esta ficha es de solo consulta», no «no es tuya». */
+  | { estado: 'sin_permiso' }
   | { estado: 'no_vigente' }
   | { estado: 'ya_abierta' }
   | { estado: 'ofrecer_presupuesto'; motivo: string }
@@ -96,7 +100,7 @@ export async function solicitarAnulacionConDeps(
 
   const f = await deps.ficha(correduriaId, identidadId, polizaId)
   if (f.estado === 'ajena') return { estado: 'no_es_tuya' }
-  if (f.estado !== 'ok') return f
+  if (f.estado !== 'ok') return f // sin_ficha · varias_fichas · sin_permiso · error
 
   const [p] = (await db.$queryRaw`
     select p.id::text as id, p.aseguradora as compania, p.numero_poliza as "numeroPoliza",

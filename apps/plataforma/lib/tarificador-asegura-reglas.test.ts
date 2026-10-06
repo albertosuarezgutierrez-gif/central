@@ -7,7 +7,7 @@ import {
   fechasPorDefecto, formularioInicial, leerTrabajoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
 } from './tarificador-asegura-reglas.ts'
 
-import { fechaCorta, formularioConUltimoRiesgo, leerUltimoRiesgoBot } from './tarificador-asegura-reglas.ts'
+import { fechaCorta, formularioConUltimoRiesgo, importeDeTexto, importeParaCampo, leerUltimoRiesgoBot } from './tarificador-asegura-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
 
@@ -32,14 +32,14 @@ test('pre-relleno: solo claves conocidas, números a texto, tri-estado, ignora l
   const base = formularioInicial({ codigoPostal: '41001', ciudad: 'Sevilla', provincia: 'Sevilla', direccion: 'Ficha 1' }, hoy)
   const f = formularioConUltimoRiesgo(base, {
     fechaEfecto: '2026-11-01', fechaTermino: '2027-11-01', m2Construidos: 800, anioConstruccion: 1990, plantas: 5,
-    numEdificios: 2, numViviendasYLocales: 24, tipoVivienda: 'Viviendas Pisos en Alto', uso: 'Habitual', listaPropietarios: '> 50%',
+    numEdificios: 2, numViviendasYLocales: 24, capitalContinente: 1500000, capitalContenido: 20000.5, tipoVivienda: 'Viviendas Pisos en Alto', uso: 'Habitual', listaPropietarios: '> 50%',
     ascensor: true, piscina: false, calidadConstruccion: 'alta', password: 'x', otraCosa: 1,
     direccion: { via: 'Calle Sol', numero: '4', codigoPostal: '41003', municipio: 'Sevilla', provincia: 'Sevilla', token: 'z' },
   }, hoy)
   assert.deepEqual(f, {
     fechaEfecto: '2026-11-01', fechaTermino: '2027-11-01', m2Construidos: '800', anioConstruccion: '1990', tipoVivienda: 'Viviendas Pisos en Alto',
     uso: 'Habitual', plantas: '5', numEdificios: '2', numViviendasYLocales: '24', listaPropietarios: '> 50%', codigoPostal: '41003',
-    via: 'Calle Sol', numero: '4', municipio: 'Sevilla', provincia: 'Sevilla', ascensor: 'si', piscina: 'no', calidadConstruccion: 'alta',
+    via: 'Calle Sol', numero: '4', municipio: 'Sevilla', provincia: 'Sevilla', capitalContinente: '1.500.000', capitalContenido: '20.000,5', ascensor: 'si', piscina: 'no', calidadConstruccion: 'alta',
   })
   assert.ok(!('password' in f) && !('otraCosa' in f))
 })
@@ -77,17 +77,32 @@ test('prefill: solo CP de 5 dígitos; sin ficha, vacío', () => {
 })
 
 test('formulario → riesgo: obligatorios, vacío = null (nunca 0/false)', () => {
-  const f = { ...formularioInicial({ codigoPostal: '41003' }, new Date('2026-10-06T00:00:00Z')), m2Construidos: '1200', anioConstruccion: '1985', plantas: '5', numViviendasYLocales: '18' }
+  const f = { ...formularioInicial({ codigoPostal: '41003' }, new Date('2026-10-06T00:00:00Z')), m2Construidos: '1200', anioConstruccion: '1985', plantas: '5', numViviendasYLocales: '18', capitalContinente: '1.500.000' }
   const r = riesgoDesdeFormulario(f)
   assert.ok(r.ok)
   if (r.ok) {
     assert.equal(r.riesgo.ascensor, null)
     assert.equal(r.riesgo.piscina, null)
     assert.equal(r.riesgo.m2Construidos, 1200)
+    assert.equal(r.riesgo.capitalContinente, 1500000)
+    assert.equal(r.riesgo.capitalContenido, null)
     assert.deepEqual((r.riesgo.direccion as { codigoPostal: string }).codigoPostal, '41003')
   }
   const mal = riesgoDesdeFormulario({ ...f, m2Construidos: '', codigoPostal: '12', fechaTermino: f.fechaEfecto })
   assert.ok(!mal.ok && mal.errores.length === 3)
+})
+
+test('capital de edificación: sin él no se envía y el error dice cuál falta; importes a la española', () => {
+  const f = { ...formularioInicial({ codigoPostal: '41003' }, new Date('2026-10-06T00:00:00Z')), m2Construidos: '1200', anioConstruccion: '1985', plantas: '5', numViviendasYLocales: '18' }
+  const sin = riesgoDesdeFormulario(f)
+  assert.ok(!sin.ok && sin.errores.length === 1 && /valor de reposición/.test(sin.errores[0]))
+  for (const mal of ['0', 'abc', '12.5', '1,2,3', '-5']) assert.ok(!riesgoDesdeFormulario({ ...f, capitalContinente: mal }).ok, mal)
+  assert.ok(!riesgoDesdeFormulario({ ...f, capitalContinente: '1.500.000', capitalContenido: 'x' }).ok)
+  const ok = riesgoDesdeFormulario({ ...f, capitalContinente: '1.500.000,50 €', capitalContenido: '30000' })
+  assert.ok(ok.ok && ok.riesgo.capitalContinente === 1500000.5 && ok.riesgo.capitalContenido === 30000)
+  assert.equal(importeDeTexto('1500000'), 1500000)
+  assert.equal(importeParaCampo(1500000), '1.500.000')
+  assert.equal(importeParaCampo(9500), '9.500')
 })
 
 test('mensajes de encolar: 503 apagado, 202, 409', () => {

@@ -10,6 +10,7 @@
  */
 import type { CarnetParaAviso } from '@central/module-seguros-portal'
 
+import { interpretarEscrituraCarnet, type OperacionCarnet, type ResultadoEscrituraCarnet } from './carnets-escritura'
 import { carnetsParaAviso, interpretarCarnets, type TitularCarnets } from './carnets-titulares'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config'
 
@@ -58,4 +59,41 @@ export async function carnetsPorTitularDeIdentidad(identidadId: string): Promise
  */
 export async function carnetsDeIdentidad(identidadId: string): Promise<CarnetParaAviso[]> {
   return carnetsParaAviso(await carnetsPorTitularDeIdentidad(identidadId))
+}
+
+/**
+ * Alta, cambio o baja de un carné por el puente (`POST/PATCH/DELETE /api/portal/carnets`). `identidadId`
+ * SIEMPRE el de la sesión (lo pasa la ruta, de `requireIdentidad`). No lanza: un puente caído es `error`
+ * (502) y uno sin configurar `sin_puente` (503).
+ */
+export async function escribirCarnet(identidadId: string, op: OperacionCarnet): Promise<ResultadoEscrituraCarnet> {
+  const p = puente()
+  if (!p) return { estado: 'sin_puente' }
+  const metodo = op.accion === 'alta' ? 'POST' : op.accion === 'cambio' ? 'PATCH' : 'DELETE'
+  const cuerpo =
+    op.accion === 'alta'
+      ? { identidadId, fichaId: op.fichaId, tipo: op.tipo, fecha: op.fecha }
+      : op.accion === 'cambio'
+        ? { identidadId, fichaId: op.fichaId, id: op.id, tipo: op.tipo, fecha: op.fecha }
+        : { identidadId, fichaId: op.fichaId, id: op.id }
+  const control = new AbortController()
+  const reloj = setTimeout(() => control.abort(), PORTAL_PUENTE_TIEMPO_MS)
+  try {
+    const res = await fetch(`${p.base}/api/portal/carnets`, {
+      method: metodo,
+      headers: { authorization: `Bearer ${p.secret}`, 'content-type': 'application/json' },
+      body: JSON.stringify(cuerpo),
+      cache: 'no-store',
+      signal: control.signal,
+    })
+    const r = interpretarEscrituraCarnet(res.status, await res.json().catch(() => null))
+    if (r.estado === 'error') console.error(`[portal/carnets] escritura inesperada del puente: ${r.causa}`)
+    return r
+  } catch (e) {
+    const abortado = e instanceof Error && e.name === 'AbortError'
+    console.error('[portal/carnets] el puente no respondió a la escritura:', abortado ? 'timeout' : e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: abortado ? 'timeout' : 'red' }
+  } finally {
+    clearTimeout(reloj)
+  }
 }

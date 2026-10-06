@@ -236,7 +236,7 @@ export function InstruccionesIOS() {
       <>
         <ol className="instalar-pasos">
           <li>
-            Toca <IconoCompartir /> <strong>Compartir</strong>, arriba a la derecha, junto a la barra de la dirección.
+            Toca <IconoCompartir /> <strong>Compartir</strong>: arriba a la derecha, junto a la barra de la dirección (en versiones antiguas de Chrome está abajo).
           </li>
           {final}
         </ol>

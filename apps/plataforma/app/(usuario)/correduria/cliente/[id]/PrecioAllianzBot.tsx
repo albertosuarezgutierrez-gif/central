@@ -164,6 +164,13 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
                   <label style={CAMPO}>Uso *<input list="bot-uso" required value={f.uso} onChange={(e) => set('uso', e.target.value)} style={INPUT} /></label>
                   <label style={CAMPO}>Lista de propietarios *<input list="bot-lista" required value={f.listaPropietarios} onChange={(e) => set('listaPropietarios', e.target.value)} style={INPUT} /></label>
                 </div>
+                <div style={GRID}>
+                  <label style={CAMPO}>Capital de edificación (valor de reposición, €) *<input inputMode="decimal" required placeholder="1.500.000" value={f.capitalContinente} onChange={(e) => set('capitalContinente', e.target.value)} style={INPUT} /></label>
+                  <label style={CAMPO}>Capital de contenido (€)<input inputMode="decimal" placeholder="opcional" value={f.capitalContenido} onChange={(e) => set('capitalContenido', e.target.value)} style={INPUT} /></label>
+                </div>
+                <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
+                  Allianz no calcula sin el valor de reposición de la edificación. Importes en euros, p. ej. 1.500.000.
+                </p>
                 <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
                   Tipo, uso y lista tienen que coincidir con la etiqueta exacta del desplegable de Allianz (se sugieren las ya vistas; si el portal no la admite el bot avisa con un error de datos).
                 </p>

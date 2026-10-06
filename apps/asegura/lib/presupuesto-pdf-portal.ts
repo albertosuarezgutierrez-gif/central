@@ -19,7 +19,7 @@ export type ResultadoPdfPortal =
   | { estado: 'no_encontrado' }
   /** Existe pero no es de los que se descargan desde el portal (otro origen, sin enviar o estudio ilegible). */
   | { estado: 'no_disponible' }
-  | { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
+  | { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 
 export async function pdfEstudioParaPortal(correduriaId: string, identidadId: string, presupuestoId: string): Promise<ResultadoPdfPortal> {
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }

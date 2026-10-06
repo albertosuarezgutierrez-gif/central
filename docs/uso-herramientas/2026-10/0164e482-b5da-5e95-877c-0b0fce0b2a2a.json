@@ -1,0 +1,64 @@
+{
+ "sesion": "0164e482-b5da-5e95-877c-0b0fce0b2a2a",
+ "inicio": "2026-10-06T10:30:52.206Z",
+ "fin": "2026-10-06T10:31:08.873Z",
+ "llamadas": 9,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 92,
+   "chars_out": 171,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1
+   }
+  },
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 233,
+   "chars_out": 508,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1554,
+   "chars_out": 1774,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 118,
+   "chars_out": 4676,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 3,
+   "chars_in": 200,
+   "chars_out": 16073,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Glob": 3
+   }
+  }
+ }
+}

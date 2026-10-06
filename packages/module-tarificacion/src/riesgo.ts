@@ -92,6 +92,8 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
     ['numEdificios (Nº Edificios *)', numEdificios],
     ['numViviendasYLocales (Nº Viv. y Locales *; o numViviendas + numLocales)', numViviendasYLocales],
     ['listaPropietarios (Lista Propietarios / Arrendatarios *)', listaPropietarios],
+    // Sin «Edificación Valor Reposición» ePAC deja «Calcular» deshabilitado (06/10/2026).
+    ['capitalContinente (Edificación Valor Reposición, en euros)', capitalContinente],
   ]
   for (const [campo, valor] of faltan) if (valor === null) errores.push(`${campo} es obligatorio`)
 

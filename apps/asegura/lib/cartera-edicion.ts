@@ -69,6 +69,7 @@ import {
   encryptField,
 } from '@central/module-seguros-pii'
 import { prismaAsegura } from './asegura-db'
+import { hoyParaCarnet, textoHistorialCarnet, type OrigenCarnet } from './carnets-portal-reglas'
 
 // ─── Cifrado ─────────────────────────────────────────────────────────────────
 
@@ -1058,11 +1059,21 @@ export async function altaCliente(
 
 export type ResultadoCarnet = { ok: true; id: string } | Fallo
 
+/**
+ * Quién escribe el carné y cómo consta en `historial_interno`. Por defecto, el corredor desde plataforma
+ * (tipo `gestion`, texto de siempre). Desde el portal (`/api/portal/carnets`) lo hace el CLIENTE: tipo
+ * `contacto` y el prefijo compartido que el muro clasifica como suyo (`carnets-portal-reglas.ts`).
+ */
+function origenCarnet(entrada: { actor: string; origen?: OrigenCarnet }): { tipo: TipoHistorial; origen: OrigenCarnet } {
+  const origen: OrigenCarnet = entrada.origen ?? { origen: 'plataforma', actor: entrada.actor }
+  return { tipo: origen.origen === 'portal' ? 'contacto' : 'gestion', origen }
+}
+
 /** Añade (`id` ausente) o corrige (`id` de un carné de la ficha) un carné: tipo y fecha de expedición. */
 export async function guardarCarnet(
   correduriaId: string,
   clienteId: string,
-  entrada: { id?: unknown; tipo: unknown; fecha: unknown; actor: string },
+  entrada: { id?: unknown; tipo: unknown; fecha: unknown; actor: string; origen?: OrigenCarnet },
 ): Promise<ResultadoCarnet> {
   try {
     const db = prismaAsegura()
@@ -1075,7 +1086,7 @@ export async function guardarCarnet(
       tipo: entrada.tipo,
       fecha: entrada.fecha,
       fechaNacimiento: descifrarCampo(c.fechaNacimiento),
-      hoy: new Date().toISOString().slice(0, 10),
+      hoy: hoyParaCarnet(),
     })
     if (!r.ok) return invalido(r.motivo, r.campo)
     const id = typeof entrada.id === 'string' && entrada.id.trim() !== '' ? entrada.id.trim() : null
@@ -1092,7 +1103,8 @@ export async function guardarCarnet(
     const antes = anterior ? claveTipoCarnet(anterior.tipo) : null
     const que = !anterior ? `Carné ${r.tipo} añadido` : antes !== r.tipo ? `Carné ${antes} cambiado a ${r.tipo}` : `Fecha del carné ${r.tipo} corregida`
     anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'carnet' })
-    await anotarHistorial(correduriaId, clienteId, 'gestion', `${que} desde plataforma por ${entrada.actor}`)
+    const h = origenCarnet(entrada)
+    await anotarHistorial(correduriaId, clienteId, h.tipo, textoHistorialCarnet(que, h.origen))
     return { ok: true, id: nuevo }
   } catch (e) {
     return fallo(e)
@@ -1103,7 +1115,7 @@ export async function guardarCarnet(
 export async function borrarCarnet(
   correduriaId: string,
   clienteId: string,
-  entrada: { id: string; actor: string },
+  entrada: { id: string; actor: string; origen?: OrigenCarnet },
 ): Promise<ResultadoCarnet> {
   try {
     if (!(await clienteDe(correduriaId, clienteId))) return noEncontrado()
@@ -1112,7 +1124,8 @@ export async function borrarCarnet(
     if (!k) return { ok: false, estado: 'no_encontrado', motivo: 'Ese carné ya no está en la ficha. Recarga.', status: 404 }
     await db.clienteCarnetConducir.delete({ where: { id: k.id } })
     anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'carnet' })
-    await anotarHistorial(correduriaId, clienteId, 'gestion', `Carné ${claveTipoCarnet(k.tipo)} retirado de la ficha desde plataforma por ${entrada.actor}`)
+    const h = origenCarnet(entrada)
+    await anotarHistorial(correduriaId, clienteId, h.tipo, textoHistorialCarnet(`Carné ${claveTipoCarnet(k.tipo)} retirado de la ficha`, h.origen))
     return { ok: true, id: k.id }
   } catch (e) {
     return fallo(e)

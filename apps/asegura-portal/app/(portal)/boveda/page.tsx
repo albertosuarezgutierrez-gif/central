@@ -3,14 +3,15 @@ import { redirect } from 'next/navigation'
 import {
   canalDeCompania,
   entradaValida,
+  nivelPuedeOperar,
   plazoComunicacion,
   type FilaCompania,
 } from '@central/module-seguros-portal'
 
 import { companiasConCanal } from '@/lib/canales-compania'
-import { carnetsDeIdentidad } from '@/lib/carnets'
+import { carnetsDeIdentidad, carnetsPorTitularDeIdentidad } from '@/lib/carnets'
 import { carteraALaVista, carteraDeIdentidad, cuentaComoEnVigor, polizasParaParte, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
-import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
+import { MEDIADOR, TIPOS_CARNET, telefonoLegible } from '@central/module-seguros'
 import { listarContactosPropios } from '@/lib/contactos-propios'
 import { prisma } from '@/lib/db'
 import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
@@ -26,7 +27,7 @@ import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
-import { aceptaMejorarPrecio, puedeOfrecerSolicitarBaja, vencimientosEnVentana } from '@/lib/vencimientos'
+import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { FilaDeclarada } from './FilaDeclarada'
 import { FiltroVigencia } from './FiltroVigencia'
@@ -61,6 +62,7 @@ import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './Par
 import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
 import { GestionContactos } from './GestionContactos'
+import { MisCarnets } from './MisCarnets'
 import { MisDatos } from './MisDatos'
 import CambioCuenta from './CambioCuenta'
 import { TusDatos } from './TusDatos'
@@ -157,7 +159,8 @@ export default async function Boveda({
   const vencimientosP = firmasP.then((f) =>
     vista === 'seguros'
       ? vencimientosEnVentana(
-          cartera.propias.flatMap((t) => t.polizas),
+          // Solo fichas donde el vínculo OPERA: el enlace «Mejorar el precio» llevaría a un rechazo del servidor.
+          titularesQueOperan(cartera.propias).flatMap((t) => t.polizas),
           hoyMadrid,
           f === null ? undefined : polizasConBajaEnMarcha(f, { conConfirmadas: true }),
         )
@@ -296,7 +299,19 @@ export default async function Boveda({
   // Solo se lee para la pestaña que la pinta.
   // La lista de TODOS los contactos (no solo el principal) solo se lee para
   // la pestaña que la pinta — mismo criterio de rendimiento que el resto.
-  const contactosLista = vista === 'datos' ? await listarContactosPropios(identidad.id) : ({ estado: 'sin_puente' } as const)
+  // «Mis carnés» (06/10/2026) en la misma pestaña y en el MISMO `Promise.all` que los contactos: los dos
+  // salen por el puente a `apps/asegura` y en serie se sumarían sus esperas. `carnetsPorTitularDeIdentidad`
+  // LANZA si no se ha podido mirar: `null` = «no lo sabemos», que la pantalla dice; nunca «no tienes carnés».
+  const [contactosLista, carnetsPorTitular] =
+    vista === 'datos'
+      ? await Promise.all([
+          listarContactosPropios(identidad.id),
+          carnetsPorTitularDeIdentidad(identidad.id).catch((e: unknown) => {
+            console.error('[boveda] carnés ilegibles para «Mis carnés»', e instanceof Error ? e.message : e)
+            return null
+          }),
+        ])
+      : [{ estado: 'sin_puente' } as const, null]
 
   // Desde el 23/09/2026 también en «Mis seguros»: la casilla corta va junto al
   // alta de pólizas de otras compañías, que es donde se decide (pieza 1-5).
@@ -601,6 +616,7 @@ export default async function Boveda({
               conNombre={bloqueMias?.conNombre ?? false}
               hoy={hoy}
               bajasAbiertas={puedePedirBaja ? bajasAbiertas : null}
+              bajasParaMejorar={firmas === null ? null : polizasConBajaEnMarcha(firmas, { conConfirmadas: true })}
             />
           ))
         )}
@@ -709,6 +725,7 @@ export default async function Boveda({
           <MisDatos lectura={contacto} reparos={contacto.estado === 'ok' ? reparosDeContacto(contacto.contacto) : []} />
           <CambioCuenta />
           <GestionContactos inicial={contactosLista} />
+          <MisCarnets inicial={carnetsPorTitular} tipos={TIPOS_CARNET} hoy={hoyMadrid} />
           <ConsentimientoComercial inicial={consentimientoComercial} />
           <TusDatos inicial={supresiones} />
         </>
@@ -829,6 +846,7 @@ function Titular({
   conNombre,
   hoy,
   bajasAbiertas = null,
+  bajasParaMejorar = null,
 }: {
   titular: TitularPortal
   grupo: GrupoCartera
@@ -837,7 +855,11 @@ function Titular({
   hoy: Date
   /** Solo en «mias»: las pólizas con baja en marcha. `null` = no se ofrece «Solicitar baja» (ajenas, vista de corredor, puente caído). */
   bajasAbiertas?: ReadonlySet<string> | null
+  /** Como `bajasAbiertas` pero con las confirmadas (lo que mira la página «Mejorar el precio»). */
+  bajasParaMejorar?: ReadonlySet<string> | null
 }) {
+  // «Solicitar baja» y «Mejorar el precio» solo donde el vínculo OPERA; el servidor rechaza el resto (sin_permiso).
+  const opera = nivelPuedeOperar(titular.nivel)
   if (titular.polizas.length === 0) {
     return (
       <p className="tenue" style={{ margin: '0 0 12px', fontSize: 14 }}>
@@ -866,8 +888,8 @@ function Titular({
               key={p.id}
               p={p}
               deOtro={grupo === 'autorizadas' ? titular.nombre : null}
-              puedeSolicitarBaja={grupo === 'mias' && puedeOfrecerSolicitarBaja(p, bajasAbiertas)}
-              puedeMejorarPrecio={aceptaMejorarPrecio(p)}
+              puedeSolicitarBaja={grupo === 'mias' && opera && puedeOfrecerSolicitarBaja(p, bajasAbiertas)}
+              puedeMejorarPrecio={puedeOfrecerMejorarPrecio(p, titular.nivel, bajasParaMejorar)}
             />
           ),
         }))}
