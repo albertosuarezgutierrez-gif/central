@@ -1,8 +1,8 @@
 {
  "sesion": "31f760a7-77cc-5292-b8d9-862f8659a858",
  "inicio": "2026-10-06T15:04:42.296Z",
- "fin": "2026-10-06T15:04:43.927Z",
- "llamadas": 3,
+ "fin": "2026-10-06T15:05:42.376Z",
+ "llamadas": 26,
  "categorias": {
   "agente:general-purpose": {
    "llamadas": 1,
@@ -27,14 +27,64 @@
    }
   },
   "otro": {
-   "llamadas": 1,
-   "chars_in": 162,
-   "chars_out": 322,
+   "llamadas": 3,
+   "chars_in": 5032,
+   "chars_out": 444,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1
+    "ToolSearch": 1,
+    "SubagentHandback": 2
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 3,
+   "chars_in": 257,
+   "chars_out": 5782,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 2,
+    "mcp__Gmail__get_thread": 1
+   }
+  },
+  "mcp:Resend": {
+   "llamadas": 3,
+   "chars_in": 437,
+   "chars_out": 31124,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Resend__list-broadcasts": 1,
+    "mcp__Resend__list-emails": 1,
+    "mcp__Resend__get-email": 1
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 76,
+   "chars_out": 86,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 14,
+   "chars_in": 1164,
+   "chars_out": 68757,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 7,
+    "Read": 6,
+    "Glob": 1
    }
   }
  }
