@@ -22,7 +22,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string; in
   }
   if (!r) return NextResponse.json({ error: 'falta el secreto de operador en plataforma' }, { status: 503 })
   if (!r.ok || r.headers.get('content-type')?.split(';')[0]?.trim() !== 'application/pdf') {
-    return NextResponse.json({ error: `asegura respondió ${r.status}` }, { status: r.ok ? 502 : r.status })
+    await r.body?.cancel().catch(() => {})
+    // 401/403 de asegura es el secreto de operador, no la sesión del usuario: no lo reenviamos tal cual.
+    const status = r.ok || r.status === 401 || r.status === 403 ? 502 : r.status
+    return NextResponse.json({ error: `asegura respondió ${r.status}` }, { status })
   }
   const nombre = (r.headers.get('content-disposition')?.match(/filename="([^"]+)"/)?.[1] ?? 'oferta-allianz.pdf')
     // eslint-disable-next-line no-control-regex
