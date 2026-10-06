@@ -24,7 +24,7 @@
 import { escapeHtml } from '@central/core-telegram'
 import { nombreDePila, normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
 import type { ResultadoEscritura } from './cliente-edicion-asegura'
-import { enlaceWhatsappConMensaje } from './telefono-wa.ts'
+import { enlaceWhatsappConMensaje, urlWhatsapp } from './telefono-wa.ts'
 
 // ─── Formulario ──────────────────────────────────────────────────────────────
 
@@ -179,6 +179,52 @@ export function interpretarAltaLead(r: ResultadoEscritura): ResultadoLead {
   }
 }
 
+// ─── Enlace al formulario de datos (auto/moto) ───────────────────────────────
+
+/**
+ * ¿Se pide a asegura el enlace `/datos/[token]` para este lead? (06/10/2026, Alberto: automático.)
+ * SOLO ficha NUEVA, ramo auto/moto y un teléfono al que se pueda abrir WhatsApp (la misma regla que
+ * pinta la línea 📲 del aviso: `urlWhatsapp`). Sin móvil, o con un fijo, el enlace no le llegaría
+ * nunca: no se crea ni oportunidad ni token. Una ficha que ya existía NUNCA: el formulario es anónimo,
+ * el enlace va al teléfono tecleado y la página trae rellenos el DNI y el nacimiento de la ficha
+ * (quien escribiera el email de un cliente y su propio móvil los vería). Asegura lo comprueba otra vez.
+ */
+export function ramoEnlaceDatos(tipoSeguro: TipoSeguroLead, resultado: ResultadoLead, telefono: string | null): 'auto' | 'moto' | null {
+  if (resultado.estado !== 'nueva') return null
+  if (!telefono || urlWhatsapp(telefono) === null) return null
+  return tipoSeguro === 'auto' || tipoSeguro === 'moto' ? tipoSeguro : null
+}
+
+export const HOST_PORTAL_POR_DEFECTO = 'clientes.grupoasegura.es'
+
+/** El host del portal del cliente: el de `ASEGURA_PORTAL_URL` si plataforma lo tiene, si no el de producción. */
+export function hostPortalCliente(url: string | undefined = process.env.ASEGURA_PORTAL_URL): string {
+  try {
+    if (url) return new URL(url).host.toLowerCase()
+  } catch {
+    /* mal formada: el de producción */
+  }
+  return HOST_PORTAL_POR_DEFECTO
+}
+
+export type EnlaceDatos = { estado: 'ok'; url: string } | { estado: 'tope' } | { estado: 'sin_enlace' }
+
+/**
+ * Respuesta del puerto → enlace. Solo vale `https://<host del portal exacto>/datos/<token>`; todo lo
+ * demás (otro host, otra ruta, `url: null` de una viva, error, timeout) es «sin enlace» y el aviso
+ * sale con el texto de siempre. El 429 `tope` se distingue para decírselo a Alberto.
+ */
+export function interpretarEnlaceDatos(status: number, json: unknown, hostPortal: string = hostPortalCliente()): EnlaceDatos {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : null
+  if (status === 429 && o?.estado === 'tope') return { estado: 'tope' }
+  if (status !== 201 || o?.estado !== 'ok' || typeof o.url !== 'string') return { estado: 'sin_enlace' }
+  const m = /^https:\/\/([^/?#@]+)\/datos\/[A-Za-z0-9_-]{40,60}$/.exec(o.url)
+  if (!m || m[1].toLowerCase() !== hostPortal.toLowerCase()) return { estado: 'sin_enlace' }
+  return { estado: 'ok', url: o.url }
+}
+
+export const LINEA_TOPE_LEADS_WEB = '⚠️ tope diario de leads web alcanzado: formulario no generado'
+
 // ─── Aviso Telegram ──────────────────────────────────────────────────────────
 
 export const URL_PLATAFORMA_POR_DEFECTO = 'https://plataforma-ten-flame.vercel.app'
@@ -201,6 +247,10 @@ export type AvisoLead = {
   /** Por qué no hay ficha (solo si `ficha === null`). */
   motivo?: string
   base?: string
+  /** Enlace al formulario de datos (auto/moto, ficha nueva). Sin él, el WhatsApp pide las fotos. */
+  urlDatos?: string | null
+  /** El tope diario de oportunidades web impidió generar el enlace: se dice en el aviso. */
+  topeLeadsWeb?: boolean
 }
 
 /**
@@ -209,13 +259,17 @@ export type AvisoLead = {
  * Los ramos de vehículo piden la documentación para tarificar; el resto va genérico.
  * Se usa solo `nombre`: pasarle también los apellidos no aporta y arriesga la coma.
  */
-export function mensajeWhatsappLead(a: { nombre: string; tipoSeguro?: TipoSeguroLead | null }): string {
+export function mensajeWhatsappLead(a: { nombre: string; tipoSeguro?: TipoSeguroLead | null; urlDatos?: string | null }): string {
   const pila = nombreDePila(a.nombre)
   const saludo = pila ? `Hola ${pila}` : 'Hola'
   const intro = `${saludo}, soy Alberto, de Grupo ASegura, tu persona de contacto.`
   const t = a.tipoSeguro ?? null
   if (t === 'auto' || t === 'moto') {
     const ramo = ETIQUETA_TIPO_SEGURO[t].toLowerCase()
+    // Con enlace (ficha nueva): el formulario sin login del portal. Sin él, las fotos por WhatsApp.
+    if (a.urlDatos) {
+      return `${intro} He visto tu solicitud de seguro de ${ramo}. Para prepararte la propuesta, rellena este formulario (2 minutos, puedes subir foto del permiso de circulación y del carné): ${a.urlDatos}. Si lo prefieres, mándamelas por aquí. Gracias.`
+    }
     return `${intro} He visto tu solicitud de seguro de ${ramo}. Para prepararte la propuesta, ¿me puedes enviar una foto del permiso de circulación, una foto del carné de conducir (por delante y por detrás) y tu código postal? Gracias.`
   }
   if (t === 'flota') {
@@ -244,6 +298,7 @@ export function textoTelegramLead(a: AvisoLead): string {
   if (wa) lineas.push(`📲 <a href="${escapeHtml(wa)}">Escribir por WhatsApp</a>`)
   if (a.email) lineas.push(`✉️ ${escapeHtml(a.email)}`)
   if (a.comentario) lineas.push(`💬 ${escapeHtml(a.comentario)}`)
+  if (a.topeLeadsWeb) lineas.push(LINEA_TOPE_LEADS_WEB)
   if (a.ficha) {
     const url = urlFichaCliente(a.ficha.id, a.base)
     lineas.push(

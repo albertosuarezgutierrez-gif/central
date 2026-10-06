@@ -63,6 +63,8 @@ async function enviar(url: string, metodo: 'POST' | 'PATCH', body: Record<string
 const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   creada_mano: 'Abierta a mano desde la ficha',
   creada_portal: 'Pedida por el cliente desde su portal',
+  // Lead del formulario web de auto/moto (06/10/2026, `lib/lead-web-solicitud.ts` de asegura): nace con su enlace de datos.
+  creada_web: 'Abierta sola por el formulario web (con enlace de datos)',
   // SQL 2026-09-30_recaptacion_a_oportunidades: las pólizas antiguas de Recaptación pasadas a oportunidad.
   creada_recaptacion: 'Creada desde Recaptación (póliza antigua)',
   // Mismo SQL, rellenando `fecha_fin_vigencia` de una oportunidad ya abierta sin fecha.

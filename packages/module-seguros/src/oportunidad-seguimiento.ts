@@ -235,6 +235,8 @@ export const RAMOS_OPORTUNIDAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'dec
 export type RamoOportunidad = (typeof RAMOS_OPORTUNIDAD)[number]
 /** Con qué estado puede nacer una oportunidad a mano: por contactar o ya interesado. */
 export const ESTADOS_ALTA: readonly EstadoOportunidad[] = ['competencia', 'en_negociacion']
+/** Los que además admite un alta que abre el servidor (`validarAltaOportunidad(…, { desdeServidor: true })`). */
+export const ESTADOS_ALTA_SERVIDOR: readonly EstadoOportunidad[] = [...ESTADOS_ALTA, 'pendiente_cliente']
 
 export type AltaValida = {
   ramo: RamoOportunidad
@@ -268,10 +270,16 @@ export type AltaValida = {
 export function validarAltaOportunidad(
   d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; matricula?: unknown; vehiculo?: unknown; seguroAnterior?: unknown; tipoTarea?: unknown; prioridadTarea?: unknown; fechaTarea?: unknown; nota?: unknown; financiada?: unknown },
   hoy: Date,
+  /**
+   * `desdeServidor` (06/10/2026): un alta que abre el SERVIDOR (lead web de auto/moto) puede nacer además en
+   * `pendiente_cliente` (esperando a que el cliente rellene el enlace). Desde la pantalla, nunca.
+   */
+  opciones: { desdeServidor?: boolean } = {},
 ): { ok: true; alta: AltaValida } | { ok: false; motivo: string } {
   const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
   if (!ramo) return { ok: false, motivo: 'Elige el ramo.' }
-  const estado = d.estado === undefined ? 'en_negociacion' : ESTADOS_ALTA.find(e => e === d.estado)
+  const permitidos = opciones.desdeServidor ? ESTADOS_ALTA_SERVIDOR : ESTADOS_ALTA
+  const estado = d.estado === undefined ? 'en_negociacion' : permitidos.find(e => e === d.estado)
   if (!estado) return { ok: false, motivo: 'Una oportunidad nueva nace «por contactar» o «interesado».' }
   const campos = camposEditables(d)
   if (!campos.ok) return campos
