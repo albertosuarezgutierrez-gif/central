@@ -55,7 +55,7 @@ import { avisosActivos, esSoloContar } from './avisos-vencimiento'
 import { descifrar } from './avisos-vencimiento-reglas'
 import { descifrarCampo } from './cartera-edicion'
 import {
-  cuerpoAvisosIntranet, enviarAvisosIntranet, tocaEscribir, elegirDestino, direccionesBloqueadas,
+  cuerpoAvisosIntranet, enviarAvisosIntranet, debeEscribirHoy, esTablaInexistente, elegirDestino, direccionesBloqueadas,
   type DetalleAviso, type EventoRebote,
 } from './correo-avisos-intranet'
 import { avisosNuevos, claveAviso, enlacePortal, type Pendiente } from './avisos-intranet-reglas'
@@ -731,11 +731,20 @@ export function detallesDe(p: Pendiente, nuevos: readonly { tipo: string; id: st
  * Direcciones del cliente que han rebotado (duro) o se han quejado, según los eventos de Resend que
  * ya guarda el webhook (`correo_envio` + `correo_evento`). Lanza si no se puede leer.
  */
-async function direccionesRebotadas(clienteId: string): Promise<Set<string>> {
-  const filas = await prismaAsegura().$queryRaw<{ tipo: string; tipoRebote: string | null; destino: string }[]>`
+async function direccionesRebotadas(correduriaId: string, clienteId: string): Promise<Set<string>> {
+  let filas: { tipo: string; tipoRebote: string | null; destino: string }[]
+  try {
+    filas = await prismaAsegura().$queryRaw<{ tipo: string; tipoRebote: string | null; destino: string }[]>`
     select e.tipo, e.detalle->>'tipoRebote' as "tipoRebote", v.destino_cifrado as destino
     from correo_envio v join correo_evento e on e.resend_id = v.resend_id
-    where v.cliente_id = ${clienteId}::uuid and e.tipo in ('email.bounced', 'email.complained', 'email.suppressed')`
+    where v.correduria_id = ${correduriaId}::uuid and v.cliente_id = ${clienteId}::uuid and e.tipo in ('email.bounced', 'email.complained', 'email.suppressed')`
+  } catch (e) {
+    // Con ASEGURA_FUENTE=origen (BD de Manuel) estas tablas pueden no existir: sin tabla no hay rebotes
+    // que conocer. Cualquier otro fallo sigue siendo «no he podido mirar» (lanza).
+    if (!esTablaInexistente(e)) throw e
+    console.warn('[asegura/avisos-intranet] correo_envio/correo_evento no existen en esta BD: sin rebotes conocidos')
+    return new Set()
+  }
   const eventos: EventoRebote[] = []
   for (const f of filas) {
     const destino = descifrar(f.destino)
@@ -795,10 +804,10 @@ export async function avisarIntranet(
     resumen.clientes += 1
     resumen.avisos += nuevos.length
 
-    // Máximo UN correo por cliente cada 7 días. Sin enviar y SIN sellar: lo pendiente sale junto en
+    // Máximo UN correo por cliente cada 7 días (salvo avisos con fecha propia). Sin enviar y SIN sellar: lo pendiente sale junto en
     // el primer correo que toque, y entre medias sigue en la campana.
     const ultimoSello = sellos.reduce<Date | null>((m, x) => (m === null || x.enviadoEn > m ? x.enviadoEn : m), null)
-    if (!tocaEscribir(ultimoSello, hoy)) {
+    if (!debeEscribirHoy(ultimoSello, hoy, nuevos.map((a) => a.tipo))) {
       resumen.enEspera += 1
       continue
     }
@@ -823,7 +832,7 @@ export async function avisarIntranet(
       : []
     let bloqueadas: Set<string>
     try {
-      bloqueadas = await direccionesRebotadas(p.clienteId)
+      bloqueadas = await direccionesRebotadas(correduriaId, p.clienteId)
     } catch (e) {
       // «No he podido mirar los rebotes» no es «no hay»: a este cliente no se le escribe hoy.
       console.error('[asegura/avisos-intranet] no se pudieron leer los rebotes:', e instanceof Error ? e.message : e)

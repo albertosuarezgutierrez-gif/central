@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  cuerpoAvisosIntranet, frasePoliza, tocaEscribir, esDireccionInterna, direccionesBloqueadas, elegirDestino,
+  cuerpoAvisosIntranet, frasePoliza, tocaEscribir, debeEscribirHoy, esTablaInexistente, esDireccionInterna, direccionesBloqueadas, elegirDestino,
   type DatosAvisosIntranet,
 } from './correo-avisos-intranet.ts'
 
@@ -57,4 +57,21 @@ test('rebote duro y queja bloquean la dirección; rebote blando no; se salta a l
   assert.deepEqual([...b].sort(), ['muerta@x.es', 'queja@x.es'])
   assert.equal(elegirDestino(['muerta@x.es', 'interno@grupoasegura.es', 'llena@x.es'], b), 'llena@x.es')
   assert.equal(elegirDestino(['muerta@x.es', null, 'no-es-email'], b), null)
+})
+
+test('un aviso con fecha propia sale hoy aunque haya sello reciente; los demás esperan', () => {
+  const hoy = new Date('2026-10-06T08:15:00Z')
+  const reciente = new Date('2026-10-03T08:15:00Z')
+  assert.equal(debeEscribirHoy(reciente, hoy, ['poliza_modificada']), false)
+  for (const t of ['felicitacion', 'obligacion_en_ventana', 'carnet_en_ventana']) {
+    assert.equal(debeEscribirHoy(reciente, hoy, ['poliza_modificada', t]), true, t)
+  }
+  assert.equal(debeEscribirHoy(null, hoy, ['poliza_modificada']), true)
+})
+
+test('«la relación no existe» se reconoce; otros errores no', () => {
+  assert.equal(esTablaInexistente(new Error('relation "correo_envio" does not exist')), true)
+  assert.equal(esTablaInexistente(Object.assign(new Error('x'), { meta: { code: '42P01' } })), true)
+  assert.equal(esTablaInexistente(new Error('connection refused')), false)
+  assert.equal(esTablaInexistente(new Error('column "x" does not exist')), false)
 })

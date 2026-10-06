@@ -380,6 +380,24 @@ export function tocaEscribir(ultimoSello: Date | null, hoy: Date): boolean {
   return hoy.getTime() - ultimoSello.getTime() >= DIAS_ENTRE_CORREOS * MS_DIA - MARGEN_MS
 }
 
+/**
+ * Avisos con DÍA propio (felicitación, vencimiento en ventana, carné en ventana): esperar a la
+ * semana siguiente los haría llegar tarde o ya caducados.
+ */
+export const TIPOS_AVISO_CON_FECHA: readonly string[] = ['felicitacion', 'obligacion_en_ventana', 'carnet_en_ventana']
+
+/** `true` = hoy se escribe: toca por los 7 días, o hay entre los nuevos un aviso con fecha propia. */
+export function debeEscribirHoy(ultimoSello: Date | null, hoy: Date, tiposNuevos: readonly string[]): boolean {
+  return tiposNuevos.some((t) => TIPOS_AVISO_CON_FECHA.includes(t)) || tocaEscribir(ultimoSello, hoy)
+}
+
+/** Error de Postgres «la relación no existe» (42P01), tal como lo envuelve Prisma en `$queryRaw`. */
+export function esTablaInexistente(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e)
+  const meta = (e as { meta?: { code?: unknown; message?: unknown } } | null)?.meta
+  return meta?.code === '42P01' || /relation "?[\w.]+"? does not exist/i.test(`${msg} ${typeof meta?.message === 'string' ? meta.message : ''}`)
+}
+
 /** Dominios de la propia correduría (y de pruebas) a los que un aviso a clientes NUNCA sale. */
 const DOMINIOS_INTERNOS = ['grupoasegura.es', 'grupoasegura.com']
 const DOMINIOS_PRUEBA = ['example.com', 'example.org', 'example.net']
