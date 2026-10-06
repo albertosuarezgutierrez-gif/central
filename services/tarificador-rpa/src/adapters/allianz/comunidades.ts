@@ -121,8 +121,14 @@ async function login(page: Page, ctx: ContextoPortal): Promise<void> {
   const usuario = page.getByLabel('Usuario', { exact: true })
   await usuario.fill(ctx.credenciales.usuario)
   await ctx.pausa()
-  // exact: la frase «Contraseña sensible a mayúsculas…» no es la etiqueta del campo.
-  await page.getByLabel('Contraseña', { exact: true }).fill(ctx.credenciales.contrasena)
+  // Por la etiqueta salen DOS inputs (06/10/2026, strict mode violation): el campo es el
+  // input[type=password] VISIBLE. exact: «Contraseña sensible a mayúsculas…» no es la etiqueta.
+  await page
+    .getByLabel('Contraseña', { exact: true })
+    .and(page.locator('input[type="password"]'))
+    .filter({ visible: true })
+    .first()
+    .fill(ctx.credenciales.contrasena)
   await ctx.pausa()
   // NUNCA «Recuperación de contraseña» (el guard la bloquea).
   await ctx.pulsar(page.getByRole('button', { name: 'INICIAR SESIÓN' }))
