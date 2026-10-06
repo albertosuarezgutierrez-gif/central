@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T08:44:10Z",
-  "sha": "49b8c357ba75fbdef04922e791d51715abd432b9",
+  "generadoEn": "2026-10-06T09:12:00Z",
+  "sha": "b01ae79b262f5955dbede9c36f92a6f69b4ad51f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -16198,7 +16198,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 30,
+          "linea": 31,
           "resumen": "GET /api/operador/cliente?id=<uuid> — la ficha completa de un cliente. Es lo que hay detrás del «pincho en el nombre y lo tengo todo»: pólizas, recibos y siniestros de una vez, para que la pantalla de"
         },
         {
@@ -16207,7 +16207,7 @@
           "exportada": false,
           "params": "b: Record<string, unknown>",
           "retorno": "Record<string, unknown> | null",
-          "linea": 144,
+          "linea": 149,
           "resumen": "Alta con `sello` (de `leer-documento?tomador=1`): nombre, DNI y nacimiento salen del sello y NO se pueden pisar desde fuera; teléfono y email sí se aceptan (Alberto puede dictarlos). Sin `forzar`: si "
         },
         {
@@ -16216,7 +16216,7 @@
           "exportada": false,
           "params": "b: Record<string, unknown>",
           "retorno": "string",
-          "linea": 155
+          "linea": 160
         },
         {
           "nombre": "objeto",
@@ -16224,7 +16224,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | undefined",
-          "linea": 158
+          "linea": 163
         },
         {
           "nombre": "sinStatus",
@@ -16232,12 +16232,12 @@
           "exportada": false,
           "params": "r: T",
           "retorno": "Omit<T, 'ok' | 'status'>",
-          "linea": 161
+          "linea": 166
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/cliente",
-      "hash": "540fe534535f"
+      "hash": "3757469fea2f"
     },
     {
       "ruta": "apps/asegura/app/api/operador/clientes/route.ts",
@@ -22158,7 +22158,7 @@
           "exportada": true,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 75,
+          "linea": 76,
           "resumen": "Como en cartera-ficha: `v1:` que no abre → `null` (ilegible), en claro → tal cual."
         },
         {
@@ -22167,7 +22167,7 @@
           "exportada": true,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 85
+          "linea": 86
         },
         {
           "nombre": "invalido",
@@ -22175,7 +22175,7 @@
           "exportada": false,
           "params": "motivo: string, campo?: string, status: 400 | 422 = 422",
           "retorno": "Fallo",
-          "linea": 91
+          "linea": 92
         },
         {
           "nombre": "noEncontrado",
@@ -22183,7 +22183,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Fallo",
-          "linea": 96
+          "linea": 97
         },
         {
           "nombre": "conflicto",
@@ -22191,7 +22191,7 @@
           "exportada": false,
           "params": "coincidencias: Coincidencia[], forzable: boolean",
           "retorno": "Fallo",
-          "linea": 99
+          "linea": 100
         },
         {
           "nombre": "fallo",
@@ -22199,7 +22199,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "Fallo",
-          "linea": 102
+          "linea": 103
         },
         {
           "nombre": "cifrado",
@@ -22207,7 +22207,7 @@
           "exportada": false,
           "params": "tipo: TipoContacto | 'dni', valor: string",
           "retorno": "",
-          "linea": 111,
+          "linea": 112,
           "resumen": "Cifra y hashea. Si la clave PII falta o está mal, `encryptField` lanza en producción: eso se convierte en un 500 con su mensaje, nunca en escribir el dato en claro o sin índice."
         },
         {
@@ -22216,7 +22216,7 @@
           "exportada": false,
           "params": "valor: string",
           "retorno": "Mitades",
-          "linea": 125
+          "linea": 126
         },
         {
           "nombre": "clienteDe",
@@ -22224,7 +22224,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": null,
-          "linea": 129
+          "linea": 130
         },
         {
           "nombre": "coincidencias",
@@ -22232,7 +22232,7 @@
           "exportada": true,
           "params": "correduriaId: string, datos: { dni?: string | null; telefono?: string | null; email?: string | null }, excepto?: string,",
           "retorno": "Promise<Coincidencia[]>",
-          "linea": 149,
+          "linea": 150,
           "resumen": "¿Qué OTRAS fichas de la correduría tienen ya este DNI/teléfono/email? Mira el principal (`clientes`) y también los secundarios de las tablas hijas. Las lápidas de fusión no cuentan. 🚨 Las fichas DESC"
         },
         {
@@ -22241,7 +22241,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<Contactos | null>",
-          "linea": 212,
+          "linea": 213,
           "resumen": "Todos los teléfonos y emails de la ficha. Si la tabla hija está vacía pero `clientes.telefono` tiene valor (3.000+ fichas del volcado están así), ese valor se presenta como el único, principal, con id"
         },
         {
@@ -22250,7 +22250,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: TipoContacto",
           "retorno": "Promise<void>",
-          "linea": 257,
+          "linea": 258,
           "resumen": "Cuando la ficha solo tiene el valor en la COLUMNA (sin filas hijas), antes de añadir otro hay que bajar ese valor a la tabla hija como principal: si no, el nuevo secundario quedaría solo en la hija y "
         },
         {
@@ -22259,7 +22259,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: TipoContacto",
           "retorno": "Promise<void>",
-          "linea": 277,
+          "linea": 278,
           "resumen": "Espeja el principal en la columna de `clientes` (o la vacía si no queda ninguno)."
         },
         {
@@ -22268,7 +22268,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 294
+          "linea": 295
         },
         {
           "nombre": "duplicadoContacto",
@@ -22276,7 +22276,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, tipo: TipoContacto, valor: string, seraPrincipal: boolean, forzar: boolean,",
           "retorno": "Promise<Fallo | null>",
-          "linea": 310,
+          "linea": 311,
           "resumen": "¿Puede este valor vivir en esta ficha? Mismo criterio para el ALTA de un contacto y para el CAMBIO de uno que ya está — si cada uno llevara el suyo, acabarían divergiendo y uno de los dos escribiría l"
         },
         {
@@ -22285,7 +22285,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: TipoContacto, valor: string, excepto?: string",
           "retorno": "Promise<Fallo | null>",
-          "linea": 342,
+          "linea": 343,
           "resumen": "¿Tiene YA esta ficha ese valor? (29/09/2026, Alberto: «no se puede duplicar datos de contactos», con el mismo móvil dos veces en la ficha de Antonio Cruz). `duplicadoContacto` solo mira OTRAS fichas; "
         },
         {
@@ -22294,7 +22294,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { tipo: TipoContacto valor: unknown etiqueta?: unknown principal?: boolean forzar?: boolean actor: string /** No asciende a principal aunque la ficha no tenga ninguno (volcado desde un docum",
           "retorno": "Promise<ResultadoContacto>",
-          "linea": 360
+          "linea": 361
         },
         {
           "nombre": "cambiarContacto",
@@ -22302,7 +22302,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { id: string; valor?: unknown; principal?: boolean; etiqueta?: unknown; forzar?: boolean; actor: string },",
           "retorno": "Promise<ResultadoContacto>",
-          "linea": 436,
+          "linea": 437,
           "resumen": "Cambiar un teléfono o email que YA está en la ficha: su VALOR, su etiqueta o cuál es el principal. 🚨 Corregir el valor no es «borrar y añadir»: borrar pierde el id, la fecha y el orden, y si era el p"
         },
         {
@@ -22311,7 +22311,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { id: string; actor: string },",
           "retorno": "Promise<ResultadoContacto>",
-          "linea": 556
+          "linea": 557
         },
         {
           "nombre": "editarCliente",
@@ -22319,7 +22319,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, edicion: EdicionCliente, actor: string, opciones: { permiteMotivo?: boolean } = {},",
           "retorno": "Promise<ResultadoEdicion>",
-          "linea": 629,
+          "linea": 630,
           "resumen": "Aplica una edición ya revisada por las reglas puras. Si toca identidad, exige que `documentoId` sea un documento DE ESTE cliente que acredite: un DNI recibido, o (05/10/2026) una póliza cuyo DNI leído"
         },
         {
@@ -22328,7 +22328,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 774
+          "linea": 777
         },
         {
           "nombre": "polizasVivasDe",
@@ -22336,7 +22336,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<number | null>",
-          "linea": 787,
+          "linea": 790,
           "resumen": "Cuántas pólizas VIVAS tiene la ficha. Devuelve `null` cuando la consulta falla, y ese `null` NO se colapsa con 0 aguas arriba: sin saberlo, no se descarta. Un `?? 0` aquí sería dar vía libre a un borr"
         },
         {
@@ -22345,7 +22345,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, actor: string, motivo?: unknown,",
           "retorno": "Promise<ResultadoDescarte>",
-          "linea": 813,
+          "linea": 816,
           "resumen": "Descarta una ficha: deja de salir en el buscador, la lista y los contadores. Reversible con `restaurarCliente`. `yaEstaba: true` cuando la ficha ya estaba descartada: no es un error (el resultado pedi"
         },
         {
@@ -22354,7 +22354,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, actor: string, motivo?: unknown,",
           "retorno": "Promise<ResultadoDescarte>",
-          "linea": 864,
+          "linea": 867,
           "resumen": "Devuelve una ficha descartada a la cartera. No toca nada más de la ficha."
         },
         {
@@ -22363,7 +22363,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, porque: string",
           "retorno": "Promise<void>",
-          "linea": 903,
+          "linea": 906,
           "resumen": "Reactiva una ficha descartada porque ha vuelto a ser un cliente de verdad: ha entrado una póliza suya. Idempotente y sin ruido — si ya estaba activa no escribe nada. Es la contrapartida de la guarda: "
         },
         {
@@ -22372,7 +22372,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { nombre: string; apellidos: string; tipoPersona: 'fisica' | 'juridica' | null }, actor: string, nota: string,",
           "retorno": "Promise<ResultadoAlta>",
-          "linea": 932,
+          "linea": 935,
           "resumen": "Lead SIN DNI, teléfono ni email (29/09/2026): el tomador de un documento subido que solo trae su nombre. `altaCliente` exige uno de los tres para poder volver a encontrar la ficha; aquí se encuentra p"
         },
         {
@@ -22381,7 +22381,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: Record<string, unknown>, actor: string,",
           "retorno": "Promise<ResultadoAlta>",
-          "linea": 974,
+          "linea": 977,
           "resumen": "Alta manual = `lead`, `prospecto`. Antes de crear, busca por DNI, teléfono y email: un DNI repetido es la misma persona y NO se crea; un teléfono o email repetidos pueden ser otra persona y se crea so"
         },
         {
@@ -22390,7 +22390,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { id?: unknown; tipo: unknown; fecha: unknown; actor: string },",
           "retorno": "Promise<ResultadoCarnet>",
-          "linea": 1059,
+          "linea": 1062,
           "resumen": "Añade (`id` ausente) o corrige (`id` de un carné de la ficha) un carné: tipo y fecha de expedición."
         },
         {
@@ -22399,7 +22399,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { id: string; actor: string },",
           "retorno": "Promise<ResultadoCarnet>",
-          "linea": 1100,
+          "linea": 1103,
           "resumen": "Quita un carné de la ficha (el anotado por error)."
         },
         {
@@ -22408,7 +22408,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: TipoHistorial, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1126,
+          "linea": 1129,
           "resumen": "Deja constancia en `historial_interno` (tabla del CRM, 0 filas hasta hoy). Best-effort a propósito: el cambio ya está hecho, y un historial caído no puede deshacerlo ni presentarlo como fallido."
         },
         {
@@ -22417,7 +22417,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, tipo: unknown, texto: unknown,",
           "retorno": "Promise<ResultadoHistorial>",
-          "linea": 1147,
+          "linea": 1150,
           "resumen": "Anotar una fila de historial COMO OPERACIÓN (puerto `POST /api/operador/cliente/historial`): un contacto que llega por un canal —formulario web sobre una ficha que ya existía, p. ej.— y cuyo único ras"
         }
       ],
@@ -22425,7 +22425,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "a57c7f10f7ca"
+      "hash": "be87af38d203"
     },
     {
       "ruta": "apps/asegura/lib/cartera-ficha.ts",
@@ -89260,14 +89260,37 @@
           "nombre": "EditarFichaModal",
           "kind": "function",
           "exportada": true,
-          "params": "{ oportunidadId, clienteId, nombre, conduce, refresco, onCerrar }: { oportunidadId: string clienteId: string nombre: string /** Esta persona va a conducir el vehículo del riesgo: se ofrece también su carné. */ conduce: boolean /** Cambia cu",
+          "params": "{ oportunidadId, clienteId, nombre, conduce, faltan, refresco, onCerrar }: { oportunidadId: string clienteId: string nombre: string /** Esta persona va a conducir el vehículo del riesgo: se ofrece también su carné. */ conduce: boolean /** L",
           "retorno": null,
-          "linea": 17
+          "linea": 19
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "54b808ec9a86"
+      "hash": "36873f0e716f"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/FaltaPorCompletar.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "FaltaPorCompletar"
+      ],
+      "funciones": [
+        {
+          "nombre": "FaltaPorCompletar",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId, faltaSexo, faltaMovil, tambien, onGuardado }: { clienteId: string faltaSexo: boolean faltaMovil: boolean /** Otros datos que faltan y se corrigen en los formularios de debajo (rótulos). */ tambien: string[] onGuardado: () => vo",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "76f43e66daa0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/figuras-form.ts",
@@ -89347,7 +89370,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3a2d41d6d24"
+      "hash": "252f33989b3e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/HistorialVariantes.tsx",
@@ -135368,6 +135391,9 @@
         "interpretarRiesgo",
         "estadoPresupuestoVariante",
         "figuraDelRol",
+        "rotulosFaltaEnFormulario",
+        "faltaMovil",
+        "faltaSexo",
         "textoFaltan",
         "interpretarComparacion",
         "mejoresComparacion",
@@ -135435,12 +135461,39 @@
           "resumen": "Figura que ocupa un rol: la asignada o, si no hay, la del tomador (salvo el ocasional, que es opcional)."
         },
         {
+          "nombre": "rotulosFaltaEnFormulario",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: string[] | null",
+          "retorno": "string[]",
+          "linea": 223,
+          "resumen": "Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»)."
+        },
+        {
+          "nombre": "faltaMovil",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: string[] | null",
+          "retorno": "boolean",
+          "linea": 228,
+          "resumen": "¿La ficha de la figura NO tiene móvil? `null` (no se pudo leer la ficha) = no se sabe → false: no se ofrece escribir a ciegas."
+        },
+        {
+          "nombre": "faltaSexo",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: string[] | null",
+          "retorno": "boolean",
+          "linea": 232,
+          "resumen": "¿La ficha de la figura NO tiene sexo? Misma regla que `faltaMovil`: `null` = no se sabe → false."
+        },
+        {
           "nombre": "textoFaltan",
           "kind": "function",
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "string | null",
-          "linea": 208
+          "linea": 235
         },
         {
           "nombre": "precioComparado",
@@ -135448,7 +135501,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "PrecioComparado",
-          "linea": 224
+          "linea": 251
         },
         {
           "nombre": "interpretarComparacion",
@@ -135456,7 +135509,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "LecturaComparacion",
-          "linea": 230
+          "linea": 257
         },
         {
           "nombre": "mejoresComparacion",
@@ -135464,7 +135517,7 @@
           "exportada": true,
           "params": "filas: readonly FilaComparacion[]",
           "retorno": "",
-          "linea": 253,
+          "linea": 280,
           "resumen": "La prima más baja de cada columna (`null` = esa variante no tiene ningún precio)."
         },
         {
@@ -135473,7 +135526,7 @@
           "exportada": true,
           "params": "f: FilaComparacion",
           "retorno": "number | null",
-          "linea": 262,
+          "linea": 289,
           "resumen": "`b − a` redondeado al céntimo; `null` si falta cualquiera de las dos (no se compara con un hueco)."
         },
         {
@@ -135482,13 +135535,13 @@
           "exportada": true,
           "params": "variantes: readonly VarianteRiesgo[], ids: readonly string[]",
           "retorno": "[VarianteRiesgo, VarianteRiesgo] | null",
-          "linea": 268,
+          "linea": 295,
           "resumen": "Las dos marcadas, la más ANTIGUA como `a` (orden de `creadoAt`; sin fecha, la de más abajo en la lista)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5ae626f0769e"
+      "hash": "771fda16b9bf"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -175195,7 +175248,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 238,
+          "linea": 246,
           "resumen": "El motivo escrito de un cambio de identidad sin documento, o `null` si no llega al mínimo."
         },
         {
@@ -175204,7 +175257,7 @@
           "exportada": true,
           "params": "nombre: string | null | undefined",
           "retorno": "boolean",
-          "linea": 249,
+          "linea": 257,
           "resumen": "¿La ficha está SIN NOMBRE? Vacío o el marcador literal `(sin nombre)` que la ingesta escribe porque la columna es NOT NULL (14 fichas el 28/09/2026). Es un «no lo sé» con forma de dato: se trata como "
         },
         {
@@ -175213,7 +175266,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 255,
+          "linea": 263,
           "resumen": "Minúsculas, sin tildes, espacios colapsados: para comparar apellidos, nunca para guardarlos."
         },
         {
@@ -175222,7 +175275,7 @@
           "exportada": true,
           "params": "actual: string | null | undefined, nuevo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 265,
+          "linea": 273,
           "resumen": "¿Escribir `nuevo` en apellidos es COMPLETAR (no corregir)? Sí si los actuales están vacíos/null, o si el nuevo empieza por el actual seguido de ESPACIO y añade palabras («Slava» → «Slava Antoli»). No "
         },
         {
@@ -175231,7 +175284,7 @@
           "exportada": true,
           "params": "e: EdicionCliente, apellidosActuales: string | null | undefined",
           "retorno": "boolean",
-          "linea": 274,
+          "linea": 282,
           "resumen": "`motivo` y documento al margen: ¿la edición SOLO toca apellidos y solo los completa?"
         },
         {
@@ -175240,7 +175293,7 @@
           "exportada": true,
           "params": "e: EdicionCliente, ctx: { fichaSinNombre?: boolean permiteMotivo?: boolean /** * Los apellidos que HAY en la ficha (`null`/vacío = no tiene). `undefined` = no se sabe: no hay * exención de «completar apellidos» (ante la duda, el estado cons",
           "retorno": "EdicionRevisada",
-          "linea": 290,
+          "linea": 298,
           "resumen": "Revisa una edición entera. Un solo motivo de rechazo cada vez, con su campo, para que el formulario señale la casilla. Excepción a «se pide documentado» (Alberto, 28/09/2026): si la ficha está SIN NOM"
         },
         {
@@ -175249,7 +175302,7 @@
           "exportada": true,
           "params": "d: Pick<DocumentoResumen, 'tipo' | 'estado' | 'dniCoincideFicha'>",
           "retorno": "boolean",
-          "linea": 377,
+          "linea": 388,
           "resumen": "Qué documento sirve para cambiar la identidad: uno de tipo DNI que HAYA LLEGADO, o (05/10/2026) una PÓLIZA de la ficha cuyo DNI leído es el de la ficha (`dniCoincideFicha === true`, que sale de `marca"
         },
         {
@@ -175258,7 +175311,7 @@
           "exportada": true,
           "params": "docs: readonly DocumentoResumen[] | null",
           "retorno": "DocumentoResumen[]",
-          "linea": 383
+          "linea": 394
         },
         {
           "nombre": "documentoCubreCampos",
@@ -175266,7 +175319,7 @@
           "exportada": true,
           "params": "d: Pick<DocumentoResumen, 'tipo'>, campos: readonly CampoIdentidad[]",
           "retorno": "boolean",
-          "linea": 395,
+          "linea": 406,
           "resumen": "¿Este documento (ya acreditativo) cubre TODOS los campos de identidad que se tocan?"
         },
         {
@@ -175275,7 +175328,7 @@
           "exportada": true,
           "params": "d: Pick<DocumentoResumen, 'tipo' | 'estado' | 'dniCoincideFicha'> | null, campos: readonly CampoIdentidad[], ctx: { motivo?: string | null; permiteMotivo?: boolean } = {},",
           "retorno": "AcreditacionCambio",
-          "linea": 414,
+          "linea": 425,
           "resumen": "NUNCA el portal), y entonces el historial dice MOTIVO, no «acreditado con documento»."
         },
         {
@@ -175284,7 +175337,7 @@
           "exportada": true,
           "params": "identidad: IdentidadRevisada",
           "retorno": "CampoIdentidad[]",
-          "linea": 426,
+          "linea": 437,
           "resumen": "Los campos de identidad que una edición revisada toca."
         },
         {
@@ -175293,7 +175346,7 @@
           "exportada": true,
           "params": "docs: readonly DocumentoResumen[] | null",
           "retorno": "'no_leidos' | 'ninguno' | 'hay'",
-          "linea": 434,
+          "linea": 445,
           "resumen": "Tres estados de la lista de Documentos para el bloque de identidad: `null` = no se pudo leer (NO se afirma que no haya DNI), `[]`/sin acreditativos = revisado y no hay, o los hay."
         },
         {
@@ -175302,7 +175355,7 @@
           "exportada": true,
           "params": "r: Extract<EdicionRevisada, { ok: true }>, ctx: { actor: string; documentoId?: string | null },",
           "retorno": "string",
-          "linea": 444,
+          "linea": 455,
           "resumen": "El texto que queda en `historial_interno`. Sin valores de identidad: dice QUÉ cambió y con qué documento, no el DNI nuevo ni el viejo (el historial va en claro). Los campos libres sí llevan su valor n"
         },
         {
@@ -175311,7 +175364,7 @@
           "exportada": true,
           "params": "f: FuenteOrigen | null | undefined",
           "retorno": "boolean",
-          "linea": 483
+          "linea": 495
         },
         {
           "nombre": "fuenteOrigen",
@@ -175319,7 +175372,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Revisado<FuenteOrigen | null>",
-          "linea": 488,
+          "linea": 500,
           "resumen": "Texto → fuente válida. Vacío/ausente → `null` (no se sabe); desconocida → rechazo con motivo."
         },
         {
@@ -175328,7 +175381,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TipoHistorial | null",
-          "linea": 529
+          "linea": 541
         },
         {
           "nombre": "tipoHistorialAlta",
@@ -175336,7 +175389,7 @@
           "exportada": true,
           "params": "fuente: FuenteOrigen | null",
           "retorno": "TipoHistorial",
-          "linea": 538,
+          "linea": 550,
           "resumen": "Qué fila deja un alta en `historial_interno`. Un lead que entra por un CANAL (web, portal, WhatsApp) es un CONTACTO del cliente con la correduría —§6: «cada contacto deja historial tipo contacto»—; un"
         },
         {
@@ -175345,7 +175398,7 @@
           "exportada": true,
           "params": "a: Pick<AltaCliente, 'fuente' | 'notas'>, ctx: { actor: string; compartido?: boolean },",
           "retorno": "string",
-          "linea": 542
+          "linea": 554
         },
         {
           "nombre": "revisarAlta",
@@ -175353,7 +175406,7 @@
           "exportada": true,
           "params": "e: Record<string, unknown>",
           "retorno": "AltaRevisada",
-          "linea": 562,
+          "linea": 574,
           "resumen": "Un alta exige nombre y AL MENOS un dato por el que se pueda volver a encontrar (DNI, teléfono o email): una ficha con solo un nombre es la que mañana se duplica, porque nadie la encuentra al buscar."
         },
         {
@@ -175362,7 +175415,7 @@
           "exportada": true,
           "params": "cs: readonly Coincidencia[]",
           "retorno": "boolean",
-          "linea": 639,
+          "linea": 651,
           "resumen": "Un DNI que ya está NUNCA se fuerza: es la misma persona. Teléfono o email repetidos sí pueden ser dos personas (matrimonio, padre e hijo) y se admite seguir adelante a sabiendas."
         },
         {
@@ -175371,12 +175424,12 @@
           "exportada": true,
           "params": "tipoPersona: TipoPersona | null | undefined",
           "retorno": "EtiquetasIdentidad",
-          "linea": 664
+          "linea": 676
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b25d90dc6737"
+      "hash": "2c7eb4f45d4a"
     },
     {
       "ruta": "packages/module-seguros/src/cobertura-detalle.ts",
@@ -191054,7 +191107,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4293,
-    "funciones": 14981
+    "archivos": 4294,
+    "funciones": 14985
   }
 }
