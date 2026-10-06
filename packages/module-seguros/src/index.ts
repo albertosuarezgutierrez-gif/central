@@ -1347,3 +1347,68 @@ export { compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2 } from './com
 export type {
   OfertaNormalizada, ValorGarantia, ResultadoComparacion, FilaMatriz, CeldaMatriz, ResumenOferta, AlertaInfraseguro,
 } from './comparar-ofertas.ts'
+
+// Acuerdos con compañías (comisión por ramo, rappel, clave de mediador) — 06/10/2026.
+// Spec: docs/superpowers/specs/2026-10-06-correduria-acuerdos-companias-design.md
+export {
+  FUENTES_ACUERDO,
+  ESTADOS_CLAVE,
+  CANALES_CLAVE,
+  TIPOS_OBJETIVO,
+  AMBITOS_OBJETIVO,
+  BASES_OBJETIVO,
+  CRITERIOS_COBRO,
+  deLista,
+  leerPct,
+  leerTramos,
+  normalizarCodigoCima,
+  atribuirClave,
+  conflictosCodigos,
+  lineaAplicable,
+  ramoDesdeTexto,
+  leerSeedAcuerdos,
+} from './acuerdos.ts'
+export type {
+  FuenteAcuerdo,
+  EstadoClave,
+  CanalClave,
+  TipoObjetivo,
+  AmbitoObjetivo,
+  BaseObjetivo,
+  CriterioCobro,
+  RamoAcuerdo,
+  LecturaPct,
+  Tramo,
+  LecturaTramos,
+  ClaveParaAtribuir,
+  Atribucion,
+  ConflictoCodigo,
+  LineaAcuerdo,
+  AcuerdoParaCalculo,
+  ConsultaLinea,
+  Candidata,
+  LineaAplicable,
+  SeedComision,
+  SeedObjetivo,
+  SeedAcuerdo,
+  LecturaSeed,
+} from './acuerdos.ts'
+
+// Productividad por compañía frente a los acuerdos (fase 2, 06/10/2026).
+export {
+  produccionPorCompania,
+  evaluarObjetivo,
+  esCodigoProducto,
+  TEXTO_PENDIENTE,
+  DIAS_MINIMOS_PROYECCION,
+  DIAS_ALERTA,
+} from './acuerdos-productividad.ts'
+export type {
+  ReciboProduccion,
+  Suma,
+  ProduccionCompania,
+  MotivoPendiente,
+  ColorObjetivo,
+  EstadoObjetivo,
+  ObjetivoParaEvaluar,
+} from './acuerdos-productividad.ts'
