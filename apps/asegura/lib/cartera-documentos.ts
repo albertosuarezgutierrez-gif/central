@@ -25,6 +25,7 @@ import {
 } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { reutilizaDocumentoPrevio } from './cartera-documentos-reglas'
 
 export type Destino = { clienteId?: string | null; polizaId?: string | null; siniestroId?: string | null }
 
@@ -173,8 +174,9 @@ export type Guardado =
   | { ok: false; motivo: string; status: 400 | 404 | 415 | 500 }
 
 /**
- * Guarda un fichero. Devuelve `repetido: true` si ya había uno con el mismo
- * sha256 colgado del mismo cliente (NO se guarda otra copia: se devuelve la existente).
+ * Guarda un fichero. Por defecto SIEMPRE crea una fila nueva y `repetido: true` indica que ya había
+ * otra con el mismo sha256 en el mismo cliente (puede ser otra póliza). Solo con
+ * `reutilizarSiIdentico: true` (opt-in) NO se guarda otra copia: se devuelve la existente.
  */
 export async function guardarDocumento(
   correduriaId: string,
@@ -187,6 +189,8 @@ export async function guardarDocumento(
     subidoPor?: 'corredor' | 'cliente' | 'agente'
     /** El cliente lo ve en su portal. Solo para la documentación ORIGINAL de la compañía (la póliza). */
     visiblePorCliente?: boolean
+    /** Opt-in (por defecto false): si ya hay uno idéntico (cliente+destino+sha256) se devuelve ese en vez de guardar otro. */
+    reutilizarSiIdentico?: boolean
   },
 ): Promise<Guardado> {
   const reparo = revisarDocumento({ type: entrada.mime, size: entrada.contenido.length, name: entrada.nombre })
@@ -208,17 +212,21 @@ export async function guardarDocumento(
   try {
     const db = prismaAsegura()
     const sha256 = createHash('sha256').update(entrada.contenido).digest('hex')
-    // Mismo fichero (sha256) en el mismo cliente y mismo destino: NO se guarda otro (06/10/2026,
-    // póliza 18162048 subida dos veces). Se devuelve el que ya estaba, con `repetido: true`.
-    const previo = destino.clienteId !== null
-      ? await db.documento.findFirst({
-          where: { correduriaId, clienteId: destino.clienteId, polizaId: destino.polizaId, siniestroId: destino.siniestroId, sha256, estado: { not: 'pedido' } },
-          select: SELECT_RESUMEN,
-          orderBy: { createdAt: 'asc' },
-        })
-      : null
-    if (previo) return { ok: true, documento: aResumen(previo), repetido: true }
-    const repetido = false
+    if (reutilizaDocumentoPrevio(entrada)) {
+      // Mismo fichero (sha256) en el mismo cliente y mismo destino: NO se guarda otro (06/10/2026,
+      // póliza 18162048 subida dos veces). Se devuelve el que ya estaba, con `repetido: true`.
+      const previo = destino.clienteId !== null
+        ? await db.documento.findFirst({
+            where: { correduriaId, clienteId: destino.clienteId, polizaId: destino.polizaId, siniestroId: destino.siniestroId, sha256, estado: { not: 'pedido' } },
+            select: SELECT_RESUMEN,
+            orderBy: { createdAt: 'asc' },
+          })
+        : null
+      if (previo) return { ok: true, documento: aResumen(previo), repetido: true }
+    }
+    const repetido =
+      destino.clienteId !== null &&
+      (await db.documento.count({ where: { correduriaId, clienteId: destino.clienteId, sha256 } })) > 0
     const fila = await db.documento.create({
       data: {
         correduriaId,
