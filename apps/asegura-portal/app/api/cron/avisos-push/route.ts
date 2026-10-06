@@ -4,7 +4,9 @@ import { DIAS_VENTANA_AVISO, debeAvisarPush, textoPushObligacion } from '@centra
 import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seguros'
 
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { prisma } from '@/lib/db'
+import { sinObligacionesDePolizasConBaja } from '@/lib/vencimientos'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -79,12 +81,24 @@ export async function GET(req: Request) {
     : []
   const clientePorPoliza = new Map(polizasVivas.map((p) => [p.id, p.clienteId]))
 
-  const debidas = enVentana.filter((o) => {
+  const debidasDePoliza = enVentana.filter((o) => {
     if (o.polizaId === null) return true
     const clienteId = clientePorPoliza.get(o.polizaId)
     if (!clienteId) return false
     return clientesPorIdentidad.get(o.identidadId)?.has(clienteId) ?? false
   })
+
+  // Una póliza con baja en marcha (por firmar, en revisión, firmada o confirmada) no «renueva» ni «vence»: no se
+  // avisa. El dato sale del puente por identidad; si no se puede leer (`null`) se conserva el comportamiento
+  // de siempre — no se inventa una baja. Solo se pregunta por las identidades con alguna póliza de cartera.
+  const bajasPorIdentidad = new Map<string, ReadonlySet<string> | null>()
+  for (const id of new Set(debidasDePoliza.filter((o) => o.tipo === 'poliza' && o.polizaId !== null).map((o) => o.identidadId))) {
+    const firmas = await anulacionesPendientes(id).catch(() => null)
+    bajasPorIdentidad.set(id, firmas === null ? null : polizasConBajaEnMarcha(firmas, { conConfirmadas: true }))
+  }
+  const debidas = debidasDePoliza.filter(
+    (o) => sinObligacionesDePolizasConBaja([o], bajasPorIdentidad.get(o.identidadId) ?? null).length > 0,
+  )
 
   let avisadas = 0
   let sinSuscripcion = 0

@@ -9,6 +9,7 @@
  * por un secreto mal puesto o un corte NO pueden pintarse como «recibido» —
  * la persona se quedaría esperando una llamada que nadie va a hacer.
  */
+import { MENSAJE_VARIAS_FICHAS } from './mensajes-ficha.ts'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
 
 export type PeticionAbierta = { polizaId: string; pedidoEl: string }
@@ -29,6 +30,10 @@ export function interpretarPedirPrecio(status: number, j: unknown): ResultadoPed
   }
   if (o.estado === 'invalido') return { estado: 'invalido', motivo: typeof o.motivo === 'string' ? o.motivo : 'Revisa lo que has marcado.' }
   if (o.estado === 'fuera_de_ventana') return { estado: 'no_disponible', motivo: 'Esta póliza no renueva en los próximos dos meses.' }
+  if (o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS }
+  if (o.estado === 'no_vigente' || o.estado === 'no_en_vigor') {
+    return { estado: 'no_disponible', motivo: 'Esta póliza ya no está en vigor: no hay precio que mejorar.' }
+  }
   if (o.estado === 'no_encontrada' || o.estado === 'sin_ficha') {
     return { estado: 'no_disponible', motivo: 'No encontramos esta póliza entre las tuyas. Escríbenos y lo miramos.' }
   }

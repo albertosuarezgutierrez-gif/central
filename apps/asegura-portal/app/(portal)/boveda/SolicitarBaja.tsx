@@ -36,7 +36,8 @@ function cuando(iso: string): string {
  *  - Lo pedido NO se firma de inmediato: lo revisamos (te llamamos) y se libera a las 48 h. La pantalla lo dice.
  *  - La póliza la valida el servidor contra la ficha del cliente; aquí solo se pide.
  */
-export function SolicitarBaja({ polizaId, titulo, vencimiento }: { polizaId: string; titulo: string; vencimiento: string | null }) {
+/** `puedeMejorarPrecio`: la página «Mejorar el precio» aceptaría esta póliza (si no, daría 404: no se enlaza). */
+export function SolicitarBaja({ polizaId, titulo, vencimiento, puedeMejorarPrecio }: { polizaId: string; titulo: string; vencimiento: string | null; puedeMejorarPrecio: boolean }) {
   const router = useRouter()
   const dialogo = useRef<HTMLDialogElement>(null)
   const [motivo, setMotivo] = useState<Motivo | null>(null)
@@ -65,7 +66,7 @@ export function SolicitarBaja({ polizaId, titulo, vencimiento }: { polizaId: str
 
   const listo =
     motivo !== null &&
-    (motivo === 'venta' ? fechaVenta !== '' : motivo === 'otro' ? texto.trim() !== '' : sigue)
+    (motivo === 'venta' ? fechaVenta !== '' : motivo === 'otro' ? texto.trim() !== '' : sigue || !puedeMejorarPrecio)
 
   async function enviar() {
     if (!motivo || !listo) return
@@ -152,7 +153,7 @@ export function SolicitarBaja({ polizaId, titulo, vencimiento }: { polizaId: str
               </label>
             )}
 
-            {motivo === 'precio' && !sigue && (
+            {motivo === 'precio' && puedeMejorarPrecio && !sigue && (
               <div style={{ display: 'grid', gap: 10, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
                 <p style={{ margin: 0, fontSize: 15 }}>
                   Antes de irte, déjanos intentar mejorártelo: te preparamos un presupuesto sin compromiso y, si hay uno mejor, ni te enteras del cambio.
@@ -166,7 +167,7 @@ export function SolicitarBaja({ polizaId, titulo, vencimiento }: { polizaId: str
               </div>
             )}
 
-            {motivo === 'precio' && sigue && (
+            {motivo === 'precio' && (sigue || !puedeMejorarPrecio) && (
               <div style={{ display: 'grid', gap: 10 }}>
                 <label style={{ display: 'grid', gap: 4, fontSize: 14 }}>
                   ¿Con qué compañía? (opcional)

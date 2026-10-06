@@ -58,5 +58,7 @@ test('🪤 las bajas ya firmadas: solo las de ESTA ficha y sin la carta ni la ev
   assert.match(f, /a\.cliente_id = \$\{clienteId\}::uuid/, 'sin filtro por cliente enseñaría las bajas de otros')
   assert.match(f, /a\.correduria_id = \$\{correduriaId\}::uuid/)
   assert.doesNotMatch(f, /carta_texto|firma_otp|doc_hash|evidencia/, 'la lectura del portal no saca la carta ni la firma')
-  assert.match(src, /firmadasDe\(correduriaId, f\.clienteId\)/, 'el cliente sale del vínculo, nunca de la petición')
+  // Las fichas salen de los vínculos con permiso de operar (`fichasOperablesDe`), nunca de la petición.
+  assert.match(src, /const f = await fichasOperablesDe\(correduriaId, identidadId\)/, 'el cliente sale del vínculo, nunca de la petición')
+  assert.match(src, /firmadasDe\(correduriaId, id\)/, 'cada ficha vinculada, la suya')
 })

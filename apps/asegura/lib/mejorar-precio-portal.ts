@@ -26,7 +26,7 @@ import {
 import { sqlCarteraEnVigor } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
-import { fichasDeIdentidad } from './contacto-portal'
+import { fichaPropiaDeRecurso, fichasDeIdentidad } from './contacto-portal'
 import { Prisma } from './generated/asegura-client'
 import { sqlPrimaDeRecibo, sqlVencimientoConRecibos } from './recibos-vigencia'
 
@@ -42,8 +42,10 @@ export type PeticionAbierta = { polizaId: string; pedidoEl: string }
 export type ResultadoPeticionPrecio =
   | { estado: 'ok'; pedidoEl: string; yaExistia: boolean }
   | { estado: 'invalido'; motivo: string }
-  /** No es una póliza en vigor de una ficha vinculada a esta identidad. */
+  /** No es una póliza de una ficha vinculada a esta identidad (con nivel de operar), o no existe. */
   | { estado: 'no_encontrada' }
+  /** ES suya, pero no está en cartera en vigor (`sqlCarteraEnVigor`): el portal dice «ya no está en vigor». */
+  | { estado: 'no_en_vigor' }
   | { estado: 'fuera_de_ventana' }
   | { estado: 'sin_ficha' }
 
@@ -78,8 +80,13 @@ export async function pedirMejorarPrecio(
   if (!UUID.test(polizaId)) return { estado: 'invalido', motivo: 'Póliza no válida.' }
   const v = validarPeticionPrecio(cuerpo)
   if (!v.ok) return { estado: 'invalido', motivo: v.motivo }
-  const fichas = await fichasDeIdentidad(correduriaId, identidadId)
-  if (fichas.length === 0) return { estado: 'sin_ficha' }
+  // La ficha es la DUEÑA de la póliza, si es una de las vinculadas con nivel de operar: con varias fichas
+  // vinculadas no hay que elegir, y una póliza de una ficha no vinculada (o de solo lectura) no vale.
+  const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'poliza', polizaId)
+  if (ficha.estado === 'sin_ficha') return { estado: 'sin_ficha' }
+  if (ficha.estado === 'ajena') return { estado: 'no_encontrada' }
+  // El route convierte lo lanzado en 503 con el clasificador de errores de cartera.
+  if (ficha.estado === 'error') throw new Error(`mejorar-precio: ${ficha.causa}`)
 
   const db = prismaAsegura()
   const hoy = hoyMadrid()
@@ -89,17 +96,19 @@ export async function pedirMejorarPrecio(
   // botón con la fecha nueva, y la petición rebotaría con `fuera_de_ventana`.
   const [p] = await db.$queryRaw<{
     clienteId: string; ramo: string; compania: string | null; numeroPoliza: string | null
-    fechaVencimiento: string | null; prima: string | null
+    fechaVencimiento: string | null; prima: string | null; enVigor: boolean
   }[]>(Prisma.sql`
     select p.cliente_id::text as "clienteId", p.tipo::text as ramo, p.aseguradora as compania,
+           coalesce(${Prisma.raw(sqlCarteraEnVigor('p'))}, false) as "enVigor",
            p.numero_poliza as "numeroPoliza", to_char(${sqlVencimientoConRecibos('p', hoy)}, 'YYYY-MM-DD') as "fechaVencimiento",
            coalesce(nullif(coalesce(p.prima_bruta, p.prima_anual), 0), ${sqlPrimaDeRecibo('p', hoy)})::text as prima
     from polizas p
     where p.id = ${polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid
       and p.merged_into_poliza_id is null
-      and p.cliente_id in (${Prisma.join(fichas.map(f => Prisma.sql`${f}::uuid`))})
-      and ${Prisma.raw(sqlCarteraEnVigor('p'))}`)
+      and p.cliente_id = ${ficha.clienteId}::uuid`)
   if (!p) return { estado: 'no_encontrada' }
+  // Suya pero fuera de cartera en vigor: se dice así, no como «no es tuya» (se sigue sin pedir nada).
+  if (!p.enVigor) return { estado: 'no_en_vigor' }
   if (!p.fechaVencimiento || !enVentanaVencimientos(diasHastaVencimientoPortal(p.fechaVencimiento, hoy))) {
     return { estado: 'fuera_de_ventana' }
   }

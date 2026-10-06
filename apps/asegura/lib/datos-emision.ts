@@ -10,7 +10,7 @@
 import { POLIZA_ESTADOS_VIGENTES, datosDelTomador, huecosParaEmitirDesdeFicha, type DatosParaEmitir, type ValorLeido } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso } from './contacto-portal'
 import { estadoEmailDeFicha } from './email-ficha'
 import { partirDireccion } from './codeoscopic/direccion'
 
@@ -92,7 +92,9 @@ export type DatosParaEmitirPortal =
  * SU ficha, o colgarle su DNI, mezclaría dos personas: `otra_ficha` y no se enseña nada.
  */
 export async function datosParaEmitirDePortal(correduriaId: string, identidadId: string, presupuestoId: string): Promise<DatosParaEmitirPortal> {
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  // La ficha es la DUEÑA del presupuesto si está vinculada con nivel de operar (con varias, la elige él).
+  const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  if (ficha.estado === 'ajena') return ficha.motivo === 'sin_dueno' ? { estado: 'no_encontrado' } : { estado: 'otra_ficha' }
   if (ficha.estado !== 'ok') return ficha
   const [p] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>`
     select cliente_id::text as "clienteId" from presupuesto where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`

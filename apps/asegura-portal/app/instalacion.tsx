@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-import { navegadorIOS } from '@/lib/navegador-ios'
+import { navegadorIOS, puedeAnadirDesdeNavegador } from '@/lib/navegador-ios'
 
 /**
  * Lo que la instalación de la app tiene de COMPARTIDO entre la franja «Tenlo a
@@ -172,34 +172,93 @@ export function IconoCompartir() {
  * Solo se pinta tras pulsar el botón (cliente), así que leer `navigator` en el
  * render no descuadra la hidratación.
  */
+/**
+ * «Ábrelo en Safari»: la salida para quien su navegador no puede (Chrome de
+ * iOS < 16.4, vista integrada de Gmail/WhatsApp) o simplemente no ve la opción.
+ * Copia el enlace; sin portapapeles (o sin permiso) lo deja seleccionado para
+ * copiarlo a mano: nunca se queda sin camino.
+ */
+function AbrirEnSafari({ motivo }: { motivo: string }) {
+  const [copiado, setCopiado] = useState<'no' | 'si' | 'manual'>('no')
+  const copiar = async () => {
+    const url = location.href
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiado('si')
+    } catch {
+      setCopiado('manual')
+    }
+  }
+  return (
+    <div className="instalar-alt">
+      <p>{motivo}</p>
+      <button type="button" className="instalar-copiar" onClick={() => void copiar()}>
+        {copiado === 'si' ? 'Enlace copiado' : 'Copiar enlace'}
+      </button>
+      {copiado === 'si' && <p className="instalar-nota">Abre <strong>Safari</strong>, pégalo en la barra de la dirección y sigue los pasos de Safari.</p>}
+      {copiado === 'manual' && (
+        <p className="instalar-nota">
+          No se pudo copiar solo. Copia esta dirección, ábrela en <strong>Safari</strong>: <strong>{window.location.origin}</strong>
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function InstruccionesIOS() {
   const nav = typeof navigator === 'undefined' ? 'safari' : navegadorIOS(navigator.userAgent)
+  // Este navegador no tiene el gesto (Chrome < iOS 16.4, vista de Gmail/WhatsApp):
+  // se manda a Safari con el enlace copiado, y se enseñan los pasos de Safari.
+  const sinGesto = typeof navigator !== 'undefined' && !puedeAnadirDesdeNavegador(navigator.userAgent)
   const final = (
     <li>
       Baja y elige <strong>«Añadir a pantalla de inicio»</strong>.
     </li>
   )
+  if (sinGesto) {
+    return (
+      <>
+        <AbrirEnSafari motivo="Desde este navegador no se puede añadir. Ábrelo en Safari:" />
+        <ol className="instalar-pasos">
+          <li>
+            Toca <strong>···</strong> junto a la dirección.
+          </li>
+          <li>
+            Toca <IconoCompartir /> <strong>Compartir</strong>.
+          </li>
+          {final}
+        </ol>
+      </>
+    )
+  }
   if (nav === 'chrome') {
     return (
-      <ol className="instalar-pasos">
-        <li>
-          Toca <IconoCompartir /> <strong>Compartir</strong> en la barra de la dirección.
-        </li>
-        {final}
-      </ol>
+      <>
+        <ol className="instalar-pasos">
+          <li>
+            Toca <IconoCompartir /> <strong>Compartir</strong>, arriba a la derecha, junto a la barra de la dirección.
+          </li>
+          {final}
+        </ol>
+        <p className="instalar-nota">Si no la ves, toca <strong>Ver más</strong> en el menú de compartir.</p>
+        <AbrirEnSafari motivo="¿Sigue sin aparecer? Ábrelo en Safari:" />
+      </>
     )
   }
   if (nav === 'otro') {
     return (
-      <ol className="instalar-pasos">
-        <li>
-          Abre el menú del navegador (<strong>···</strong> o <strong>☰</strong>).
-        </li>
-        <li>
-          Toca <IconoCompartir /> <strong>Compartir</strong>.
-        </li>
-        {final}
-      </ol>
+      <>
+        <ol className="instalar-pasos">
+          <li>
+            Abre el menú del navegador (<strong>···</strong> o <strong>☰</strong>).
+          </li>
+          <li>
+            Toca <IconoCompartir /> <strong>Compartir</strong>.
+          </li>
+          {final}
+        </ol>
+        <AbrirEnSafari motivo="¿No te aparece «Añadir a pantalla de inicio»? Ábrelo en Safari:" />
+      </>
     )
   }
   return (

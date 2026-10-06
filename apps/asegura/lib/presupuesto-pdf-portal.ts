@@ -1,12 +1,13 @@
 // El estudio comparativo en PDF para el CLIENTE, por el puerto del portal (05/10/2026, F4).
 //
-// 🚨 Aislamiento: la ficha sale de `portal_vinculo` (`fichaPropiaDe`), NUNCA del cuerpo, y el presupuesto
+// 🚨 Aislamiento: la ficha sale de `portal_vinculo` (`fichaPropiaDeRecurso`: la dueña del presupuesto si está vinculada
+// con nivel de operar), NUNCA del cuerpo, y el presupuesto
 // se busca por id + correduría + ESA ficha. Con BYPASSRLS un id ajeno no falla: da los datos de otro.
 // Solo sale lo que ya salió hacia el cliente (`enviado_at`) y solo el de origen `ofertas`: el PDF del
 // presupuesto de Avant2 lleva el DNI entero y se descarga por el puerto del operador, no por aquí.
 
 import { prismaAsegura } from './asegura-db'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso } from './contacto-portal'
 import { leerPdfPresupuesto } from './presupuesto-pdf-lectura'
 import { nombreFicheroOfertas, pdfEstudioOfertas } from './presupuesto-pdf-ofertas'
 import { origenPresupuesto } from './presupuesto-origen'
@@ -22,7 +23,8 @@ export type ResultadoPdfPortal =
 
 export async function pdfEstudioParaPortal(correduriaId: string, identidadId: string, presupuestoId: string): Promise<ResultadoPdfPortal> {
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const p = await prismaAsegura().presupuesto.findFirst({
     where: { id: presupuestoId, correduriaId, clienteId: ficha.clienteId },

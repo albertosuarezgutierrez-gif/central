@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { navegadorIOS } from './navegador-ios.ts'
+import { navegadorIOS, puedeAnadirDesdeNavegador, versionIOS } from './navegador-ios.ts'
 
 // User agents reales de iPhone: cada navegador esconde Compartir en otro sitio,
 // y confundirlos manda al cliente a buscar un botón que no tiene.
@@ -28,4 +28,26 @@ test('Firefox, Edge y la app de Google no son Safari aunque lo digan', () => {
   assert.equal(navegadorIOS(FIREFOX), 'otro')
   assert.equal(navegadorIOS(EDGE), 'otro')
   assert.equal(navegadorIOS(GOOGLE), 'otro')
+})
+
+const CHROME_IOS_16_3 = CHROME.replace('18_0', '16_3')
+const CHROME_IOS_16_4 = CHROME.replace('18_0', '16_4')
+const GMAIL_INTEGRADO =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148'
+
+test('versionIOS lee la versión del user agent', () => {
+  assert.equal(versionIOS(CHROME_IOS_16_4), 16.04)
+  assert.equal(versionIOS(CHROME_IOS_16_3), 16.03)
+  assert.equal(versionIOS('Mozilla/5.0 (X11; Linux)'), null)
+})
+
+test('Chrome de iPhone puede añadir a inicio desde iOS 16.4, no antes', () => {
+  assert.equal(puedeAnadirDesdeNavegador(CHROME), true)
+  assert.equal(puedeAnadirDesdeNavegador(CHROME_IOS_16_4), true)
+  assert.equal(puedeAnadirDesdeNavegador(CHROME_IOS_16_3), false)
+})
+
+test('Safari siempre puede; la vista integrada de Gmail/WhatsApp nunca', () => {
+  assert.equal(puedeAnadirDesdeNavegador(SAFARI), true)
+  assert.equal(puedeAnadirDesdeNavegador(GMAIL_INTEGRADO), false)
 })

@@ -10,6 +10,7 @@
  * pinte como «firmada» — la persona creería que su póliza se va a anular y
  * nadie lo habría registrado.
  */
+import { MENSAJE_VARIAS_FICHAS } from './mensajes-ficha.ts'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
 
 export type AnulacionPendiente = {
@@ -69,6 +70,23 @@ export type ResultadoFirma =
   | { estado: 'no_disponible'; motivo: string }
   /** No se sabe si se firmó: que lo mire antes de volver a intentarlo. */
   | { estado: 'error' }
+
+/**
+ * Pólizas con una baja EN MARCHA (por firmar, en revisión o firmada). Una `confirmada` solo cuenta si se pide
+ * (`conConfirmadas`): «Solicitar baja» la vuelve a permitir, pero «renueva el…» no debe seguir enseñándose.
+ */
+export function polizasConBajaEnMarcha(
+  firmas: Pick<LecturaPendientes, 'anulaciones' | 'enRevision' | 'firmadas'>,
+  opciones: { conConfirmadas?: boolean } = {},
+): Set<string> {
+  return new Set(
+    [
+      ...firmas.anulaciones.map((a) => a.polizaId),
+      ...firmas.enRevision.map((a) => a.polizaId),
+      ...firmas.firmadas.filter((a) => opciones.conConfirmadas === true || a.estado !== 'confirmada').map((a) => a.polizaId),
+    ].filter((x): x is string => x !== null),
+  )
+}
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
 
@@ -182,7 +200,8 @@ export function interpretarSolicitud(status: number, j: unknown): ResultadoSolic
   if (o.estado === 'invalida' || o.estado === 'invalido') return { estado: 'invalido', motivo: motivo ?? 'Revisa lo que has marcado.' }
   if (o.estado === 'ya_abierta') return { estado: 'no_disponible', motivo: 'Esta póliza ya tiene una baja en marcha. Recarga la página.' }
   if (o.estado === 'no_vigente') return { estado: 'no_disponible', motivo: 'Esta póliza ya no está en vigor: no hay nada que dar de baja.' }
-  if (o.estado === 'no_es_tuya' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas') {
+  if (o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS }
+  if (o.estado === 'no_es_tuya' || o.estado === 'sin_ficha') {
     return { estado: 'no_disponible', motivo: 'No encontramos esta póliza entre las tuyas. Escríbenos y lo miramos.' }
   }
   return { estado: 'error' }
@@ -200,7 +219,8 @@ export function interpretarCodigo(status: number, j: unknown): ResultadoCodigo {
   if (o.estado === 'limite_codigos') {
     return { estado: 'no_disponible', motivo: 'Hoy ya te hemos mandado varios códigos. Inténtalo mañana o llámanos y la firmamos contigo.' }
   }
-  if (o.estado === 'no_encontrada' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: NO_ENCONTRADA }
+  if (o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS }
+  if (o.estado === 'no_encontrada' || o.estado === 'sin_ficha') return { estado: 'no_disponible', motivo: NO_ENCONTRADA }
   if (o.estado === 'carta_incompleta') return { estado: 'no_disponible', motivo: INCOMPLETA }
   if (o.estado === 'sin_email') {
     return { estado: 'no_disponible', motivo: 'No tenemos un correo tuyo al que mandarte el código. Llámanos y la firmamos contigo.' }
@@ -226,7 +246,8 @@ export function interpretarFirma(status: number, j: unknown): ResultadoFirma {
   if (o.estado === 'codigo_caducado') return { estado: 'reintentar', motivo: 'El código ha caducado. Pide uno nuevo.' }
   if (o.estado === 'sin_codigo' || o.estado === 'demasiados_intentos') return { estado: 'reintentar', motivo: 'Pide un código nuevo para firmar.' }
   if (o.estado === 'invalido') return { estado: 'reintentar', motivo: 'Revisa el código (6 cifras) y tu nombre.' }
-  if (o.estado === 'no_encontrada' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: NO_ENCONTRADA }
+  if (o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS }
+  if (o.estado === 'no_encontrada' || o.estado === 'sin_ficha') return { estado: 'no_disponible', motivo: NO_ENCONTRADA }
   if (o.estado === 'carta_incompleta') return { estado: 'no_disponible', motivo: INCOMPLETA }
   return { estado: 'error' }
 }

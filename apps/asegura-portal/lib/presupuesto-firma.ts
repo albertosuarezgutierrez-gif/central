@@ -11,6 +11,7 @@
  * pinte como «aceptada» — la persona creería que su póliza se va a emitir y
  * nadie lo habría registrado.
  */
+import { MENSAJE_VARIAS_FICHAS } from './mensajes-ficha.ts'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
 
 export type ResultadoCodigo =
@@ -46,7 +47,8 @@ export function interpretarCodigo(status: number, j: unknown): ResultadoCodigo {
   if (o.estado === 'limite_codigos') {
     return { estado: 'no_disponible', motivo: 'Hoy ya te hemos mandado varios códigos. Inténtalo mañana o llámanos y lo tramitamos contigo.' }
   }
-  if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: NO_ENCONTRADO }
+  if (o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS }
+  if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha') return { estado: 'no_disponible', motivo: NO_ENCONTRADO }
   if (o.estado === 'no_admite') {
     return { estado: 'no_disponible', motivo: typeof o.motivo === 'string' ? o.motivo : NO_ADMITE }
   }
@@ -74,7 +76,8 @@ export function interpretarFirma(status: number, j: unknown): ResultadoFirma {
   if (o.estado === 'codigo_caducado') return { estado: 'reintentar', motivo: 'El código ha caducado. Pide uno nuevo.' }
   if (o.estado === 'sin_codigo' || o.estado === 'demasiados_intentos') return { estado: 'reintentar', motivo: 'Pide un código nuevo para firmar.' }
   if (o.estado === 'invalido') return { estado: 'reintentar', motivo: 'Revisa el código (6 cifras) y tu nombre.' }
-  if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: NO_ENCONTRADO }
+  if (o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS }
+  if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha') return { estado: 'no_disponible', motivo: NO_ENCONTRADO }
   if (o.estado === 'no_admite') {
     return { estado: 'no_disponible', motivo: typeof o.motivo === 'string' ? o.motivo : NO_ADMITE }
   }
@@ -317,7 +320,8 @@ export function interpretarReporte(status: number, j: unknown): ResultadoReporte
   if (o.estado === 'invalido') return { estado: 'reintentar', motivo: 'Cuéntanos en unas palabras qué dato no es correcto.' }
   if (o.estado === 'limite') return { estado: 'no_disponible', motivo: 'Ya nos lo has dicho hoy varias veces: te llamamos. Si es urgente, llámanos tú.' }
   if (o.estado === 'no_admite') return { estado: 'no_disponible', motivo: typeof o.motivo === 'string' ? o.motivo : NO_ADMITE }
-  if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: NO_ENCONTRADO }
+  if (o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS }
+  if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha') return { estado: 'no_disponible', motivo: NO_ENCONTRADO }
   return { estado: 'error' }
 }
 

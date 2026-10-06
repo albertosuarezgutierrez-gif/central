@@ -108,3 +108,13 @@ test('🪤 /api/anulacion/solicitar: sin sesión 401, vista de corredor 403 ANTE
   assert.doesNotMatch(f, /b\.identidadId|clienteId/)
   assert.match(f, /after\(async/, 'el aviso va tras contestar y no puede tumbar la respuesta')
 })
+
+import { MENSAJE_VARIAS_FICHAS as VARIAS } from './mensajes-ficha.ts'
+
+test('🪤 varias_fichas nunca se traduce a «No encontramos esta póliza entre las tuyas»', () => {
+  for (const r of [interpretarSolicitud(409, { estado: 'varias_fichas' }), interpretarCodigo(409, { estado: 'varias_fichas' }), interpretarFirma(409, { estado: 'varias_fichas' })]) {
+    assert.deepEqual(r, { estado: 'no_disponible', motivo: VARIAS })
+  }
+  const sf = interpretarSolicitud(404, { estado: 'no_es_tuya' })
+  assert.match((sf as { motivo: string }).motivo, /No encontramos esta póliza/)
+})
