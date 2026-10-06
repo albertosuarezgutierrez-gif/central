@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mensajeWhatsappLead, textoTelegramLead, type AvisoLead } from './leads-web.ts'
+import { mensajeWhatsappLead, textoTelegramLead, TIPOS_SEGURO_LEAD, type AvisoLead } from './leads-web.ts'
 
 const base: AvisoLead = {
   nombre: 'MARÍA josé',
@@ -52,4 +52,43 @@ test('aviso: sin línea de WhatsApp con fijo, vacío o sin teléfono', () => {
     assert.ok(!t.includes('Escribir por WhatsApp'), String(telefono))
     assert.ok(!t.includes('wa.me'))
   }
+})
+
+test('saludo: nombre de pila con la regla compartida; si duda, sin nombre', () => {
+  const saluda = (nombre: string) => mensajeWhatsappLead({ nombre, tipoSeguro: 'hogar' }).split(',')[0]
+  assert.equal(saluda('MARÍA josé'), 'Hola María')
+  assert.equal(saluda('Pérez García, María'), 'Hola') // coma: cortar daría el apellido
+  assert.equal(saluda('M. José'), 'Hola') // inicial
+  assert.equal(saluda('Talleres Ruiz SL'), 'Hola') // empresa
+  assert.equal(saluda(''), 'Hola')
+  assert.equal(saluda('   '), 'Hola')
+  assert.match(mensajeWhatsappLead({ nombre: '', tipoSeguro: 'auto' }), /^Hola, soy Alberto, de Grupo ASegura/)
+})
+
+test('flota pide la documentación de vehículo', () => {
+  const m = mensajeWhatsappLead({ nombre: 'Luis', tipoSeguro: 'flota' })
+  assert.ok(m.includes('Grupo ASegura'))
+  assert.ok(m.includes('permiso de circulación'))
+  assert.ok(m.includes('por delante y por detrás'))
+  assert.ok(m.includes('código postal'))
+})
+
+test('patinete eléctrico: sin permiso de circulación; marca/modelo, nacimiento y CP', () => {
+  const m = mensajeWhatsappLead({ nombre: 'Luis', tipoSeguro: 'patinete-electrico' })
+  assert.ok(m.includes('Grupo ASegura'))
+  assert.ok(!m.includes('permiso de circulación') && !m.includes('carné'))
+  assert.ok(m.includes('marca y el modelo'))
+  assert.ok(m.includes('fecha de nacimiento'))
+  assert.ok(m.includes('código postal'))
+})
+
+test('genérico: ninguna etiqueta queda como «seguro (seguro…»', () => {
+  for (const t of TIPOS_SEGURO_LEAD) {
+    const m = mensajeWhatsappLead({ nombre: 'Ana', tipoSeguro: t })
+    assert.ok(!/seguro \(/i.test(m), t)
+    assert.ok(!/seguro de seguro|seguro otro|seguro de otro/i.test(m), t)
+  }
+  const perro = mensajeWhatsappLead({ nombre: 'Ana', tipoSeguro: 'seguro-perro' })
+  assert.ok(perro.includes('He visto tu solicitud: seguro de perro.'))
+  assert.ok(mensajeWhatsappLead({ nombre: 'Ana', tipoSeguro: 'otros' }).includes('He visto tu solicitud: otro seguro.'))
 })
