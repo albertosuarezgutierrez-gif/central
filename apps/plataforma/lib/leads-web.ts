@@ -24,6 +24,7 @@
 import { escapeHtml } from '@central/core-telegram'
 import { normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
 import type { ResultadoEscritura } from './cliente-edicion-asegura'
+import { enlaceWhatsappConMensaje } from './telefono-wa.ts'
 
 // ─── Formulario ──────────────────────────────────────────────────────────────
 
@@ -202,6 +203,33 @@ export type AvisoLead = {
   base?: string
 }
 
+/** Nombre de pila: primera palabra, con inicial mayúscula y el resto en minúscula («MARÍA josé» → «María»). */
+function nombreDePila(nombre: string): string {
+  const primera = nombre.trim().split(/\s+/)[0] ?? ''
+  if (!primera) return ''
+  return primera.charAt(0).toLocaleUpperCase('es') + primera.slice(1).toLocaleLowerCase('es')
+}
+
+/**
+ * Texto prellenado del WhatsApp al lead. Solo el nombre de pila. Auto/moto piden
+ * la documentación para tarificar; cualquier otro ramo (o ninguno) va genérico.
+ */
+export function mensajeWhatsappLead(a: { nombre: string; tipoSeguro?: TipoSeguroLead | null }): string {
+  const pila = nombreDePila(a.nombre)
+  const saludo = pila ? `Hola ${pila}` : 'Hola'
+  const intro = `${saludo}, soy Alberto, de Grupo ASegura, tu persona de contacto.`
+  const t = a.tipoSeguro ?? null
+  if (t === 'auto' || t === 'moto') {
+    const ramo = ETIQUETA_TIPO_SEGURO[t].toLowerCase()
+    return `${intro} He visto tu solicitud de seguro de ${ramo}. Para prepararte la propuesta, ¿me puedes enviar una foto del permiso de circulación, una foto del carné de conducir (por delante y por detrás) y tu código postal? Gracias.`
+  }
+  if (t) {
+    const ramo = ETIQUETA_TIPO_SEGURO[t].toLowerCase()
+    return `${intro} He visto tu solicitud de seguro (${ramo}). ¿Cuándo te viene bien que te llame, o me puedes pasar los datos para estudiarlo? Gracias.`
+  }
+  return `${intro} He visto tu solicitud. ¿Cuándo te viene bien que te llame, o me puedes pasar los datos para estudiarlo? Gracias.`
+}
+
 /** HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`. */
 export function textoTelegramLead(a: AvisoLead): string {
   const quien = escapeHtml(`${a.nombre}${a.apellidos ? ` ${a.apellidos}` : ''}`)
@@ -210,6 +238,8 @@ export function textoTelegramLead(a: AvisoLead): string {
     `👤 ${quien} · quiere <b>${escapeHtml(ETIQUETA_TIPO_SEGURO[a.tipoSeguro].toLowerCase())}</b>`,
   ]
   if (a.telefono) lineas.push(`📞 ${escapeHtml(a.telefono)}`)
+  const wa = a.telefono ? enlaceWhatsappConMensaje(a.telefono, mensajeWhatsappLead(a)) : null
+  if (wa) lineas.push(`📲 <a href="${escapeHtml(wa)}">Escribir por WhatsApp</a>`)
   if (a.email) lineas.push(`✉️ ${escapeHtml(a.email)}`)
   if (a.comentario) lineas.push(`💬 ${escapeHtml(a.comentario)}`)
   if (a.ficha) {
