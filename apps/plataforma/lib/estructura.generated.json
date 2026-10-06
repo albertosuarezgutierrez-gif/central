@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-06T04:55:31Z",
+  "generadoEn": "2026-10-06T05:43:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -723,7 +723,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 4
       },
       "sivra": {
         "estado": "no",
@@ -3932,7 +3932,10 @@
     "core-email": [],
     "core-firma": [],
     "core-fiscal": [],
-    "core-identity": [],
+    "core-identity": [
+      "module-seguros",
+      "module-seguros-portal"
+    ],
     "core-payments": [],
     "core-push": [],
     "core-receipts": [],
@@ -3979,6 +3982,7 @@
     "module-seguros-portal": [
       "core-catastro",
       "core-fiscal",
+      "core-identity",
       "module-seguros",
       "module-seguros-pii"
     ],
@@ -5453,6 +5457,7 @@
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
+      "/api/admin/empleados/[id]/cerrar-sesiones",
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
@@ -5491,6 +5496,9 @@
       "/api/cron/alerta-jornada-maxima",
       "/api/cron/nominas",
       "/api/cron/recordatorio-fichaje",
+      "/api/e/acceso/completar",
+      "/api/e/acceso/solicitar",
+      "/api/e/acceso/verificar",
       "/api/e/asistente",
       "/api/e/chat",
       "/api/e/expediente",
@@ -5499,6 +5507,7 @@
       "/api/e/fichaje",
       "/api/e/login",
       "/api/e/push/subscribe",
+      "/api/e/salir",
       "/api/e/solicitudes",
       "/api/operador/empresas",
       "/api/operador/logos",
@@ -6046,6 +6055,7 @@
       "trading_watchlist"
     ],
     "rrhh": [
+      "rrhh.acceso_otps",
       "rrhh.contratos_laborales",
       "rrhh.documentos",
       "rrhh.empleados",
@@ -6754,7 +6764,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1589,
+    "apis": 1594,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
