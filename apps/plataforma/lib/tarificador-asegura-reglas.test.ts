@@ -126,6 +126,21 @@ test('leerTrabajoBot descarta ofertas sin prima y respuestas sin forma', () => {
   const t = leerTrabajoBot({ estado: 'ok', ofertas: [{ primaTotalAnual: null }, { compania: 'a', producto: 'p', primaTotalAnual: 10, pdfIndice: 0 }], pdfs: [{ indice: 0, nombre: 'a.pdf' }] })
   assert.equal(t?.ofertas.length, 1)
   assert.equal(t?.pdfs[0].nombre, 'a.pdf')
+  assert.equal(t?.ofertas[0].fechaTerminoPortal, null) // asegura antigua: sin fecha real, null (no la pedida)
+})
+
+test('leerTrabajoBot: fecha de término real de Allianz solo si es ISO; el modal la pasa a vistaPrecio y enlaza el proyecto', () => {
+  const t = leerTrabajoBot({ estado: 'ok', ofertas: [
+    { compania: 'a', producto: 'p', primaTotalAnual: 342.77, primaTotalSucesivos: 347.55, pdfIndice: 0, fechaTerminoPortal: '2027-10-01' },
+    { compania: 'a', producto: 'q', primaTotalAnual: 10, pdfIndice: null, fechaTerminoPortal: '01102027' },
+  ], pdfs: [] })
+  assert.equal(t?.ofertas[0].fechaTerminoPortal, '2027-10-01')
+  assert.equal(t?.ofertas[1].fechaTerminoPortal, null)
+  assert.equal(vistaPrecio(t!.ofertas[0], t!.ofertas[0].fechaTerminoPortal).primerRecibo?.hasta, '01/10/2027')
+  const ui = readFileSync(join(APP, 'app/(usuario)/correduria/cliente/[id]/PrecioAllianzBot.tsx'), 'utf8')
+  assert.match(ui, /vistaPrecio\(o, o\.fechaTerminoPortal\)/)
+  assert.match(ui, /o\.pdfIndice !== null && \(\s*<a href=\{`\/api\/correduria\/tarificador\/trabajo\/\$\{trabajoId\}\/pdf\/\$\{o\.pdfIndice\}`\}/)
+  assert.match(ui, /Descargar proyecto de Allianz \(PDF\)/)
 })
 
 test('rutas proxy: exigen sesión de correduría y el secreto no sale al cliente', () => {

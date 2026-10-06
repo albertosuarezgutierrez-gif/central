@@ -20,10 +20,11 @@
 //     harness offline sin pulsar nada: `npx tsx scripts/probar-formulario.ts <html-de-evidencia>`.
 
 import type { Frame, Locator, Page } from 'playwright'
-import { comprobarUrl, importeEs, importePuntoDecimal } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, importeEs, importePuntoDecimal } from '@central/module-tarificacion'
 import type { CoberturaOferta, DesglosePrima, FranquiciaOferta, ModalidadPortal, OfertaNormalizada, PdfRef, RiesgoComunidad } from '@central/module-tarificacion'
 import type { AdaptadorPortal, ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { esperarPdf } from '../../descarga-pdf.ts'
 import { acompanar, claveCampo, resolverConFormador, type PasoAcompanado, type ResolucionFormador } from '../../formador.ts'
 
 /**
@@ -269,6 +270,33 @@ export function fechaEs(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
   if (!m) throw new ErrorTarificador('datos', `allianz/comunidades: fecha «${iso}» no es AAAA-MM-DD`)
   return `${m[3]}/${m[2]}/${m[1]}`
+}
+
+/**
+ * Fecha tal como la guarda ePAC → ISO. DOM real (06/10/2026): `value="01102027"` (ddmmaaaa sin separadores); en
+ * pantalla puede salir «01/10/2027». Mismo separador en los dos huecos o ninguno; fecha imposible → `null`.
+ */
+export function fechaPortalAIso(t: string | null | undefined): string | null {
+  const m = /^(\d{2})([/.-]?)(\d{2})\2(\d{4})$/.exec((t ?? '').trim())
+  if (!m) return null
+  const [d, mes, a] = [Number(m[1]), Number(m[3]), Number(m[4])]
+  const f = new Date(Date.UTC(a, mes - 1, d))
+  if (f.getUTCFullYear() !== a || f.getUTCMonth() !== mes - 1 || f.getUTCDate() !== d) return null
+  return `${m[4]}-${m[3]}-${m[1]}`
+}
+
+/**
+ * Fecha de término REAL del portal (ePAC la ajusta al día 1 del mes: efecto 06/10/2026 → 01/10/2027).
+ * DOM real (06/10/2026): Datos Básicos `input#fechaTermino`; Tarificar `input#fechaTerminoTarificar` (solo
+ * lectura). Cada uno con un gemelo oculto `#…_fullDate`. Ilegible → `null` (nunca se supone la pedida).
+ */
+export async function leerFechaTermino(raiz: Raiz, id: 'fechaTermino' | 'fechaTerminoTarificar'): Promise<string | null> {
+  for (const sel of [`#${id}`, `#${id}_fullDate`]) {
+    const v = await raiz.locator(sel).first().inputValue({ timeout: 1_000 }).catch(() => null)
+    const iso = fechaPortalAIso(v)
+    if (iso) return iso
+  }
+  return null
 }
 
 /** Exige el dato: si el portal lo pide y no lo tenemos, NO se inventa. */
@@ -935,46 +963,46 @@ export async function leerPrimas(raiz: Raiz): Promise<{ anual: DesglosePrima; su
 }
 
 /**
- * PDF del proyecto: pestaña «Proyecto» (no graba nada). La descarga se captura en paralelo
- * con la pulsación de «Proyecto»; se obtiene el fichero, se verifica que sea PDF y se
- * convierte a base64.
+ * Pestaña «Proyecto» de Tarificar. DOM real (06/10/2026, trabajo 083c0927):
+ * `<td id="MENU" onclick="goSelected('MENU'); sendEventMenuPDFJasper();">Proyecto</td>` (genera el PDF por
+ * `/drrg18/jsp4pdf/proyecto.jsp`, sin grabar). Por id Y texto EXACTO: nunca «Proyecto Ampliado»
+ * (`td#EMISION_PROJ`, la bloquea además el guard) ni las vecinas de alta.
  */
-async function descargarProyecto(page: Page, raiz: Raiz, ctx: ContextoPortal, nombre: string): Promise<PdfRef | null> {
-  const pestana = raiz.getByText('Proyecto', { exact: true }).first()
-  const descargar = page.waitForEvent('download', { timeout: 45_000 })
+export function pestanaProyecto(raiz: Raiz): Locator {
+  return raiz.locator('td#MENU').filter({ hasText: textoExacto('Proyecto') })
+}
 
-  // Lanzar descarga en paralelo con la pulsación
-  const [, descarga] = await Promise.all([
-    ctx.abrirProyecto(pestana),
-    descargar,
-  ]).catch(() => [undefined, null] as const)
+/** Segundos de espera al PDF del proyecto (el precio ya está leído: esto solo puede añadir el PDF). */
+const TOPE_PDF_MS = 40_000
 
-  if (!descarga) {
-    ctx.log('pdf: no se descargó tras abrir «Proyecto»')
-    return null
-  }
-
-  // Leer el fichero desde el stream
-  let bytes: Buffer | null = null
+/**
+ * PDF del proyecto: tras leer el precio, pulsa «Proyecto» (`ctx.abrirProyecto`: fase Tarificar, una vez, guard
+ * de emisión) y captura el PDF en TODO el contexto (descarga, ventana nueva o respuesta PDF: `esperarPdf`).
+ * Cualquier fallo del portal → `aviso` legible y `pdf: null`: el precio se devuelve igual. Lo ÚNICO que se
+ * relanza es el guard de emisión (`EmisionBloqueadaError`): eso nunca se traga.
+ */
+export async function descargarProyecto(page: Page, raiz: Raiz, ctx: ContextoPortal, nombre: string): Promise<{ pdf: PdfRef | null; aviso: string | null }> {
   try {
-    const trozos: Buffer[] = []
-    const flujo = await descarga.createReadStream()
-    for await (const t of flujo) {
-      trozos.push(Buffer.from(t))
+    const pestana = pestanaProyecto(raiz)
+    const n = await pestana.count()
+    if (n !== 1) throw new ErrorTarificador('portal', `allianz/comunidades: la pestaña «Proyecto» (td#MENU) resuelve a ${n} elementos`)
+    const espera = esperarPdf(page, TOPE_PDF_MS)
+    try {
+      await ctx.abrirProyecto(pestana)
+    } catch (e) {
+      espera.cancelar()
+      throw e
     }
-    bytes = Buffer.concat(trozos)
+    const r = await espera.promesa
+    if (!r) throw new ErrorTarificador('portal', `allianz/comunidades: «Proyecto» no produjo ningún PDF en ${TOPE_PDF_MS / 1000} s (ni descarga, ni ventana, ni respuesta PDF)`)
+    ctx.log(`pdf: proyecto capturado por ${r.origen} (${r.bytes.length} bytes)`)
+    return { pdf: ctx.adjuntarPdf(nombre, r.bytes), aviso: null }
   } catch (e) {
-    ctx.log(`pdf: error al leer la descarga: ${e instanceof Error ? e.message : 'error'}`)
-    return null
+    if (e instanceof EmisionBloqueadaError) throw e
+    const msg = e instanceof ErrorTarificador ? e.message : `allianz/comunidades: «Proyecto» falló (${e instanceof Error ? e.message.slice(0, 160) : 'error'})`
+    ctx.log(`pdf: ${msg}`)
+    return { pdf: null, aviso: `PDF del proyecto no obtenido: ${msg}` }
   }
-
-  // Un PDF de verdad empieza por «%PDF»; si no, no se adjunta (no se sube cualquier cosa).
-  if (!bytes || bytes.length < 5 || bytes.subarray(0, 4).toString('latin1') !== '%PDF') {
-    ctx.log('pdf: lo recibido no es un PDF; se omite')
-    return null
-  }
-
-  return ctx.adjuntarPdf(nombre, bytes)
 }
 
 export const allianzComunidades: AdaptadorPortal = {
@@ -994,6 +1022,8 @@ export const allianzComunidades: AdaptadorPortal = {
     ctx.log(`formulario en el marco «${formulario.name() || '(sin nombre)'}»`)
     await rellenarRiesgo(formulario, page, riesgo, ctx)
     await acompanarPaso(page, ctx, 'formulario', 'Datos Básicos de «Comunidades 2020» con todos los campos rellenados', { modalidadPedida: modalidad })
+    // Término REAL antes de Calcular (ePAC lo ajusta al día 1 del mes); en Tarificar se vuelve a leer y manda aquella.
+    const terminoDatosBasicos = await leerFechaTermino(formulario, 'fechaTermino')
     const resultado = await calcular(page, ctx)
     await acompanarPaso(page, ctx, 'tras_calcular', '«COSTE ANUAL DEL SEG. SEGÚN OPCIÓN» con importe tras pulsar Calcular', { modalidadPedida: modalidad })
     const calculo = await leerCalculo(resultado, ctx, modalidad)
@@ -1012,14 +1042,18 @@ export const allianzComunidades: AdaptadorPortal = {
     if (primas.anual.primaTotalEur === null) {
       throw new ErrorTarificador('portal', 'allianz/comunidades: la pestaña Tarificar no trajo «Prima Total» anual legible')
     }
-    const pdf = await descargarProyecto(page, tarificar, ctx, `proyecto-comunidades-2020-${modalidad}.pdf`)
+    const fechaTerminoPortal = (await leerFechaTermino(tarificar, 'fechaTerminoTarificar')) ?? terminoDatosBasicos
+    const { pdf, aviso: avisoPdf } = await descargarProyecto(page, tarificar, ctx, `proyecto-comunidades-2020-${modalidad}.pdf`)
     await acompanarPaso(page, ctx, 'proyecto', 'Pestaña Tarificar tras abrir «Proyecto» (descarga del PDF)', { modalidadPedida: modalidad })
     const avisos = [
       `Modalidad ${modalidad === 'estandar' ? 'Estándar' : 'Personalizado'} (la otra requiere otro trabajo)`,
       '«Anual» de ePAC = primer recibo (prorrateado hasta el día 1 del mes); la prima anual de renovación es la de «Sucesivos» (ver desglose)',
       'Capitales y franquicias tal como los muestra la tabla de ePAC; «estado» solo en las asistencias (Incluida/Excluida)',
     ]
-    if (pdf === null) avisos.push('PDF del proyecto no obtenido (TODO: confirmar si «Proyecto» da descarga o ventana)')
+    if (avisoPdf) avisos.push(avisoPdf)
+    if (fechaTerminoPortal && riesgo.fechaTermino && fechaTerminoPortal !== riesgo.fechaTermino) {
+      avisos.push(`ePAC fijó la fecha de término en ${fechaEs(fechaTerminoPortal)} (pedida: ${fechaEs(riesgo.fechaTermino)})`)
+    }
     if (calculo.costeDatosBasicos !== null && primas.sucesivos.primaTotalEur !== null && calculo.costeDatosBasicos !== primas.sucesivos.primaTotalEur) {
       avisos.push('El coste de Datos Básicos no coincide con la Prima Total de sucesivos: revisar a mano')
     }
@@ -1036,6 +1070,7 @@ export const allianzComunidades: AdaptadorPortal = {
       referenciaPortal: null,
       pdf,
       desglose: { anual: primas.anual, sucesivos: primas.sucesivos },
+      fechaTerminoPortal,
       avisos,
     }
     return { ofertas: [oferta] }

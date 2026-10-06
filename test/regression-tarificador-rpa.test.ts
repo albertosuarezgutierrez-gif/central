@@ -130,6 +130,16 @@ test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan po
   assert.match(adaptador, /function botonCalcular\(raiz: Raiz\): Locator \{\s*return raiz\.locator\('#calcular'\)\.filter\(\{ hasText: textoExacto\('Calcular'\) \}\)\s*\}/, 'botonCalcular solo puede devolver el #calcular de texto exacto «Calcular»')
   assert.match(adaptador, /function desplegableNx\(c: Locator\): Locator \{\s*return c\.locator\('xpath=ancestor-or-self::nx-dropdown\[1\]'\)\s*\}/, 'desplegableNx solo puede devolver el nx-dropdown del campo')
   assert.match(adaptador, /function opcionNx\(raiz: Raiz, valor: string\): Locator \{\s*return raiz\.locator\('nx-dropdown-item, \[role="option"\]'\)\.filter\(\{ hasText: textoExacto\(valor\) \}\)\s*\}/, 'opcionNx solo puede devolver opciones de lista por texto exacto')
+  // 4b. «Proyecto» (07/10/2026): solo por `ctx.abrirProyecto(pestana)` (fase Tarificar + guard), con `pestana` =
+  // `pestanaProyecto(raiz)` y ese helper clavado a `td#MENU` de texto EXACTO «Proyecto» (nunca «Proyecto Ampliado»).
+  const proyectos = [...adaptador.matchAll(/ctx\.abrirProyecto\(([^)]*)\)/g)].map((m) => m[1])
+  assert.deepEqual(proyectos, ['pestana'], 'abrirProyecto solo se llama una vez, con la pestaña de pestanaProyecto()')
+  assert.match(adaptador, /const pestana = pestanaProyecto\(raiz\)\n/, 'la pestaña de abrirProyecto tiene que salir de pestanaProyecto(raiz)')
+  assert.match(adaptador, /function pestanaProyecto\(raiz: Raiz\): Locator \{\s*return raiz\.locator\('td#MENU'\)\.filter\(\{ hasText: textoExacto\('Proyecto'\) \}\)\s*\}/, 'pestanaProyecto solo puede devolver td#MENU de texto exacto «Proyecto»')
+  assert.match(runner, /abrirProyecto:\s*\(pestana\)\s*=>\s*pulsarProyecto\(page, pestana, guard\)/)
+  const proyecto = funciones.find((f) => f.startsWith('pulsarProyecto'))!
+  assert.ok(proyecto.indexOf('fases.autorizarProyecto(') > -1 && proyecto.indexOf('fases.autorizarProyecto(') < proyecto.indexOf('.click('), 'pulsarProyecto tiene que autorizar por fase ANTES de pulsar')
+  assert.ok(!/\.(click|check|fill|press|selectOption|setChecked)\s*\(/.test(sinComentarios(readFileSync(join(SRV, 'src/descarga-pdf.ts'), 'utf8'))), 'descarga-pdf.ts solo escucha: no actúa sobre la página')
   // 5. Listas del guard del módulo.
   const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
   assert.match(g, /TEXTOS_BLOQUEADOS_ALTA/)

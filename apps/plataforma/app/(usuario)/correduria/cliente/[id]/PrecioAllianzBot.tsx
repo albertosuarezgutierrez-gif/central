@@ -221,7 +221,7 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
                   </div>
                 )}
                 {trabajo?.estado === 'ok' && trabajo.ofertas.map((o, i) => {
-                  const p = vistaPrecio(o)
+                  const p = vistaPrecio(o, o.fechaTerminoPortal)
                   return (
                   <div key={`${o.producto}-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6 }}>
                     <div style={{ fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{o.compania ? `${o.compania.charAt(0).toUpperCase()}${o.compania.slice(1)} · ` : ''}{o.producto}</div>
@@ -236,7 +236,7 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
                     )}
                     {o.pdfIndice !== null && (
                       <a href={`/api/correduria/tarificador/trabajo/${trabajoId}/pdf/${o.pdfIndice}`} style={{ ...btnStyle('secundario'), textDecoration: 'none', justifySelf: 'start' }}>
-                        <Download size={16} aria-hidden /> Descargar PDF
+                        <Download size={16} aria-hidden /> Descargar proyecto de Allianz (PDF)
                       </a>
                     )}
                   </div>

@@ -262,7 +262,11 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
 
 async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]): Promise<string> {
   const rg = t.riesgo
-  const respuesta = { canal: 'rpa', compania: t.compania, ofertas: ofertas.map((o) => ({ ...o, documentoId: o.pdf ? (docs[o.pdf.indice] ?? null) : null })) }
+  const conDocs = ofertas.map((o) => ({ ...o, documentoId: o.pdf ? (docs[o.pdf.indice] ?? null) : null }))
+  // ADITIVO (07/10/2026): el PDF del proyecto de la compañía (`seguros.documentos`), sin columna nueva: va en el
+  // jsonb `respuesta`. `null` = el worker no lo obtuvo (el motivo va en los `avisos` de la oferta).
+  const proyectoDocumentoId = conDocs.find((o) => o.documentoId)?.documentoId ?? null
+  const respuesta = { canal: 'rpa', compania: t.compania, ofertas: conDocs, proyectoDocumentoId }
   const filas = await tx.$queryRaw<{ id: string }[]>`
     insert into seguros.tarificaciones (
       correduria_id, intento_id, simulado, project_id_codeoscopic, canal,

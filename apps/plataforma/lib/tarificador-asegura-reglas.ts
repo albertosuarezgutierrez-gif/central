@@ -209,6 +209,8 @@ export type OfertaBot = {
   primaNeta: number | null; impuestos: number | null; pdfIndice: number | null
   /** Sucesivos de ePAC = prima anual completa de renovación. `null`/ausente = no se leyó (≠ 0). */
   primaTotalSucesivos?: number | null; primaNetaSucesivos?: number | null; impuestosSucesivos?: number | null
+  /** Fecha de término REAL que fijó Allianz (AAAA-MM-DD; ePAC la ajusta al día 1 del mes). `null`/ausente = no se leyó. */
+  fechaTerminoPortal?: string | null
 }
 export type TrabajoBot = {
   estado: string; creadoEn: string; actualizadoEn: string
@@ -234,6 +236,7 @@ export function leerTrabajoBot(v: unknown): TrabajoBot | null {
       compania: typeof r.compania === 'string' ? r.compania : '', producto: typeof r.producto === 'string' ? r.producto : '',
       primaTotalAnual: total, primaNeta: num(r.primaNeta), impuestos: num(r.impuestos), pdfIndice: num(r.pdfIndice),
       primaTotalSucesivos: num(r.primaTotalSucesivos), primaNetaSucesivos: num(r.primaNetaSucesivos), impuestosSucesivos: num(r.impuestosSucesivos),
+      fechaTerminoPortal: typeof r.fechaTerminoPortal === 'string' && FECHA_ISO.test(r.fechaTerminoPortal) ? r.fechaTerminoPortal : null,
     })
   }
   const pdfs: { indice: number; nombre: string }[] = []
