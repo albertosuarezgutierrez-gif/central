@@ -19,11 +19,12 @@
 // - El aviso y el historial llevan nombre/teléfono/email (Alberto los necesita
 //   para llamar); DNI no se pide y por tanto nunca viaja.
 //
-// Test: `test/regression-leads-web.test.ts`.
+// Test: `lib/leads-web.test.ts` (junto al módulo; no existe `test/regression-leads-web.test.ts`).
 
 import { escapeHtml } from '@central/core-telegram'
-import { normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
+import { nombreDePila, normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
 import type { ResultadoEscritura } from './cliente-edicion-asegura'
+import { enlaceWhatsappConMensaje } from './telefono-wa.ts'
 
 // ─── Formulario ──────────────────────────────────────────────────────────────
 
@@ -202,6 +203,35 @@ export type AvisoLead = {
   base?: string
 }
 
+/**
+ * Texto prellenado del WhatsApp al lead. Solo el nombre de pila (`nombreDePila` de
+ * `@central/module-seguros`: si duda —coma, inicial, empresa, vacío— saluda sin nombre).
+ * Los ramos de vehículo piden la documentación para tarificar; el resto va genérico.
+ * Se usa solo `nombre`: pasarle también los apellidos no aporta y arriesga la coma.
+ */
+export function mensajeWhatsappLead(a: { nombre: string; tipoSeguro?: TipoSeguroLead | null }): string {
+  const pila = nombreDePila(a.nombre)
+  const saludo = pila ? `Hola ${pila}` : 'Hola'
+  const intro = `${saludo}, soy Alberto, de Grupo ASegura, tu persona de contacto.`
+  const t = a.tipoSeguro ?? null
+  if (t === 'auto' || t === 'moto') {
+    const ramo = ETIQUETA_TIPO_SEGURO[t].toLowerCase()
+    return `${intro} He visto tu solicitud de seguro de ${ramo}. Para prepararte la propuesta, ¿me puedes enviar una foto del permiso de circulación, una foto del carné de conducir (por delante y por detrás) y tu código postal? Gracias.`
+  }
+  if (t === 'flota') {
+    return `${intro} He visto tu solicitud de seguro para tu flota de vehículos. Para prepararte la propuesta, ¿me puedes enviar una foto del permiso de circulación de cada vehículo, una foto del carné de conducir de los conductores (por delante y por detrás) y tu código postal? Gracias.`
+  }
+  if (t === 'patinete-electrico') {
+    // El patinete no tiene permiso de circulación: se pide el modelo, la edad y el CP.
+    return `${intro} He visto tu solicitud de seguro para tu patinete eléctrico. Para prepararte la propuesta, ¿me puedes decir la marca y el modelo del patinete, tu fecha de nacimiento y tu código postal? Gracias.`
+  }
+  if (t) {
+    // Etiquetas como «Seguro de perro» u «Otro seguro» ya dicen «seguro»: no se antepone.
+    return `${intro} He visto tu solicitud: ${ETIQUETA_TIPO_SEGURO[t].toLowerCase()}. ¿Cuándo te viene bien que te llame, o me puedes pasar los datos para estudiarlo? Gracias.`
+  }
+  return `${intro} He visto tu solicitud. ¿Cuándo te viene bien que te llame, o me puedes pasar los datos para estudiarlo? Gracias.`
+}
+
 /** HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`. */
 export function textoTelegramLead(a: AvisoLead): string {
   const quien = escapeHtml(`${a.nombre}${a.apellidos ? ` ${a.apellidos}` : ''}`)
@@ -210,6 +240,8 @@ export function textoTelegramLead(a: AvisoLead): string {
     `👤 ${quien} · quiere <b>${escapeHtml(ETIQUETA_TIPO_SEGURO[a.tipoSeguro].toLowerCase())}</b>`,
   ]
   if (a.telefono) lineas.push(`📞 ${escapeHtml(a.telefono)}`)
+  const wa = a.telefono ? enlaceWhatsappConMensaje(a.telefono, mensajeWhatsappLead(a)) : null
+  if (wa) lineas.push(`📲 <a href="${escapeHtml(wa)}">Escribir por WhatsApp</a>`)
   if (a.email) lineas.push(`✉️ ${escapeHtml(a.email)}`)
   if (a.comentario) lineas.push(`💬 ${escapeHtml(a.comentario)}`)
   if (a.ficha) {

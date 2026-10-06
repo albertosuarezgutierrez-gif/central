@@ -1084,6 +1084,10 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Carnés: escribir sobre ficha propia de solo consulta ⇒ `sin_permiso` 403 + `MENSAJE_SOLO_CONSULTA` (ajena sigue `no_encontrado`); cepo de cableado de `fichasLegiblesDeCarnets` en la lectura.
 - `InstalarBoton`: el botón instala aunque el globo esté abierto (Android/escritorio). `FlotaEmpresa` usa `hoyMadrid()`.
 
+## (06/10/2026) Correduría: botón WhatsApp en el aviso Telegram de lead web
+- `textoTelegramLead` (plataforma `lib/leads-web.ts`) añade «📲 Escribir por WhatsApp» (wa.me con texto prellenado, solo si es móvil). `mensajeWhatsappLead`: Alberto de Grupo ASegura; auto/moto piden permiso de circulación + carné + CP. Test `leads-web.test.ts`.
+- Paso 2 APARCADO (decide Alberto): formulario de auto sin login vía `/datos/[token]` del portal. Hoy el portal no tiene formulario de auto y un lead no entra sin invitación + OTP.
+
 ## (06/10/2026) Portal: instrucciones Chrome iOS con las dos posiciones del botón Compartir
 Víctor confirma que instala desde Chrome iOS; Chrome movió Compartir de abajo a arriba a la derecha. `instalacion.tsx` menciona ambas.
 
