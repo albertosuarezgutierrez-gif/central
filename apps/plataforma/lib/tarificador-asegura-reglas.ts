@@ -29,6 +29,10 @@ export type FormularioRiesgo = {
   numero: string
   municipio: string
   provincia: string
+  /** Edificación · valor de reposición (ePAC «Edificación Valor Reposición»), en euros, formato español. */
+  capitalContinente: string
+  /** Contenido de la comunidad (opcional), en euros, formato español. */
+  capitalContenido: string
   ascensor: '' | 'si' | 'no'
   piscina: '' | 'si' | 'no'
   calidadConstruccion: '' | 'normal' | 'alta' | 'lujo'
@@ -57,8 +61,25 @@ export function formularioInicial(
     codigoPostal: /^\d{5}$/.test(cp) ? cp : '',
     via: (c?.direccion ?? '').trim(), numero: '',
     municipio: (c?.ciudad ?? '').trim(), provincia: (c?.provincia ?? '').trim(),
+    capitalContinente: '', capitalContenido: '',
     ascensor: '', piscina: '', calidadConstruccion: '',
   }
+}
+
+/**
+ * Importe en euros escrito a la española → número. «1.500.000» · «1500000» · «1.500.000,50» · «250,5 €» → número.
+ * Fail-closed: lo que no es un importe inequívoco (vacío, «12.5», «1,2,3», 0 o negativo) → `null`.
+ */
+export function importeDeTexto(s: string): number | null {
+  const t = s.replace(/[€\s\u00a0]/g, '')
+  if (!/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(t) && !/^\d+(,\d{1,2})?$/.test(t)) return null
+  const n = Number(t.replace(/\./g, '').replace(',', '.'))
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null
+}
+
+/** Número → texto de importe español para el campo (sin € ni decimales si es entero): 1500000 → «1.500.000». */
+export function importeParaCampo(n: number): string {
+  return n.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2, useGrouping: 'always' })
 }
 
 const entero = (s: string): number | null => (/^\d{1,9}$/.test(s.trim()) ? Number(s.trim()) : null)
@@ -94,12 +115,25 @@ export function riesgoDesdeFormulario(f: FormularioRiesgo): { ok: true; riesgo: 
   const lista = req('Lista de propietarios', f.listaPropietarios)
   const cp = texto(f.codigoPostal)
   if (!cp || !/^\d{5}$/.test(cp)) errores.push('Código postal: 5 dígitos')
+  // ePAC deja «Calcular» deshabilitado sin «Edificación Valor Reposición»: se avisa aquí, antes de gastar un viaje del bot.
+  let capitalContinente: number | null = null
+  if (!f.capitalContinente.trim()) errores.push('Capital de edificación (valor de reposición): obligatorio, Allianz no calcula sin él')
+  else {
+    capitalContinente = importeDeTexto(f.capitalContinente)
+    if (capitalContinente === null) errores.push('Capital de edificación (valor de reposición): pon un importe en euros mayor que 0, p. ej. 1.500.000')
+  }
+  let capitalContenido: number | null = null
+  if (f.capitalContenido.trim()) {
+    capitalContenido = importeDeTexto(f.capitalContenido)
+    if (capitalContenido === null) errores.push('Capital de contenido: pon un importe en euros mayor que 0 o déjalo vacío')
+  }
   if (errores.length) return { ok: false, errores }
   const riesgo: Record<string, unknown> = {
     ramo: 'comunidades',
     direccion: { via: texto(f.via), numero: texto(f.numero), codigoPostal: cp, municipio: texto(f.municipio), provincia: texto(f.provincia) },
     fechaEfecto, fechaTermino, m2Construidos: m2, anioConstruccion: anio, tipoVivienda, uso,
     plantas, numEdificios: nEdif, numViviendasYLocales: nViv, listaPropietarios: lista,
+    capitalContinente, capitalContenido,
     ascensor: triestado(f.ascensor), piscina: triestado(f.piscina),
     calidadConstruccion: f.calidadConstruccion || null,
   }
@@ -153,6 +187,8 @@ export function formularioConUltimoRiesgo(base: FormularioRiesgo, riesgo: Record
   const tipo = textoDe(riesgo.tipoVivienda); if (tipo) f.tipoVivienda = tipo
   const uso = textoDe(riesgo.uso); if (uso) f.uso = uso
   const lista = textoDe(riesgo.listaPropietarios); if (lista) f.listaPropietarios = lista
+  const capC = riesgo.capitalContinente; if (typeof capC === 'number' && Number.isFinite(capC) && capC > 0) f.capitalContinente = importeParaCampo(capC)
+  const capT = riesgo.capitalContenido; if (typeof capT === 'number' && Number.isFinite(capT) && capT > 0) f.capitalContenido = importeParaCampo(capT)
   const d = riesgo.direccion && typeof riesgo.direccion === 'object' && !Array.isArray(riesgo.direccion) ? (riesgo.direccion as Record<string, unknown>) : {}
   const cp = numeroDe(d.codigoPostal); if (cp && /^\d{5}$/.test(cp)) f.codigoPostal = cp
   const via = textoDe(d.via); if (via) f.via = via

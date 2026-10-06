@@ -360,7 +360,7 @@ export const CAMPOS: readonly CampoFormulario[] = [
   { etiqueta: 'Sucesivos', tipo: 'desplegable', obligatorio: false, valor: (r) => r.formaPagoSucesivos },
   { etiqueta: '% Comisión', tipo: 'desplegable', obligatorio: false, valor: (r) => r.comision },
   // PARTIDAS ASEGURABLES
-  { etiqueta: 'Edificación Valor Reposición', tipo: 'texto', obligatorio: false, valor: (r) => r.capitalContinente },
+  { etiqueta: 'Edificación Valor Reposición', tipo: 'texto', obligatorio: true, valor: (r) => r.capitalContinente },
   { etiqueta: 'Asistencia y Control de Plagas', tipo: 'check', obligatorio: false, valor: (r) => r.asistenciaPlagas },
   { etiqueta: 'Asesoramiento Jurídico', tipo: 'check', obligatorio: false, valor: (r) => r.asesoramientoJuridico },
   { etiqueta: 'Impago Cuotas Comunitarias', tipo: 'check', obligatorio: false, valor: (r) => r.impagoCuotas },
