@@ -6,6 +6,7 @@ import { generarAccesoToken } from '@/lib/empleados'
 import { rutaPortalEmpleado } from '@/lib/empleados-columnas'
 
 // POST — regenera el enlace mágico de acceso del empleado (revoca el anterior). Scope por empresa.
+// También sube `sesion_version`: si el enlace se ha filtrado, las sesiones abiertas con él mueren.
 // Devuelve SOLO la ruta del portal (`enlace`), nunca la columna en bruto.
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,7 +14,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params
     const token = generarAccesoToken()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      UPDATE rrhh.empleados SET acceso_token=${token}
+      UPDATE rrhh.empleados SET acceso_token=${token}, sesion_version = sesion_version + 1
       WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid
       RETURNING id`)
     if (!rows[0]) return NextResponse.json({ error: 'Empleado no encontrado' }, { status: 404 })

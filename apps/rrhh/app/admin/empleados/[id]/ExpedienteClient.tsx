@@ -67,6 +67,8 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, logoUrl,
   const [errorEnlace, setErrorEnlace] = useState('')
   const [regenerando, setRegenerando] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [cerrando, setCerrando] = useState(false)
+  const [msgSesiones, setMsgSesiones] = useState('')
 
   async function guardarFicha() {
     setFichaGuardando(true); setFichaMsg('')
@@ -146,6 +148,16 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
     const j = await r.json().catch(() => ({}))
     if (r.ok && j.enlace) setEnlace(j.enlace); else setErrorEnlace(j.error ?? 'No se pudo regenerar el enlace')
     setRegenerando(false)
+  }
+
+  // Sube `sesion_version`: el empleado tendrá que volver a entrar (código por email o enlace).
+  async function cerrarSesiones() {
+    if (!confirm('¿Cerrar todas las sesiones del empleado? Tendrá que volver a entrar en todos sus dispositivos.')) return
+    setCerrando(true); setMsgSesiones('')
+    const r = await fetch(`/api/admin/empleados/${empleado.id}/cerrar-sesiones`, { method: 'POST' })
+    const j = await r.json().catch(() => ({}))
+    setMsgSesiones(r.ok ? 'Sesiones cerradas' : (j.error ?? 'No se pudieron cerrar las sesiones'))
+    setCerrando(false)
   }
 
   const f = (k: keyof typeof ficha) => (ev: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -320,9 +332,13 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
           <button onClick={regenerarToken} disabled={regenerando} className="bg-paper-2 text-sm text-ink-2 hover:bg-line">
             {regenerando ? 'Regenerando…' : 'Nuevo enlace'}
           </button>
+          <button onClick={cerrarSesiones} disabled={cerrando} className="bg-paper-2 text-sm text-alert hover:bg-line">
+            {cerrando ? 'Cerrando…' : 'Cerrar sesiones'}
+          </button>
         </div>
         {errorEnlace && <p className="mt-2 text-sm text-alert">{errorEnlace}</p>}
-        <p className="mt-2 text-xs text-ink-3">Envía este enlace al empleado para que acceda a su portal. Quien lo tenga entra como el empleado: no lo compartas por canales abiertos. Al generar uno nuevo el anterior deja de funcionar.</p>
+        {msgSesiones && <p className={`mt-2 text-sm ${msgSesiones === 'Sesiones cerradas' ? 'text-ok' : 'text-alert'}`}>{msgSesiones}</p>}
+        <p className="mt-2 text-xs text-ink-3">Si el empleado tiene email, entra en <strong>/e/entrar</strong> con un código que le llega por correo. Si no, envíale este enlace. Quien lo tenga entra como el empleado: no lo compartas por canales abiertos. Al generar uno nuevo el anterior deja de funcionar y se cierran sus sesiones abiertas.</p>
       </div>
 
       {error && <p className="mb-3 text-sm text-alert">{error}</p>}

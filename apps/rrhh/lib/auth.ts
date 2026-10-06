@@ -15,7 +15,7 @@ export async function verifyPassword(plain: string, hash: string) { return bcryp
 
 export async function firmarSesion(s: Omit<Sesion, 'jti'>): Promise<{ token: string; jti: string }> {
   const jti = crypto.randomUUID()
-  const token = await new SignJWT({ empresa_id: s.empresa_id })
+  const token = await new SignJWT({ typ: 'responsable', empresa_id: s.empresa_id })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(s.usuario_id)
     .setJti(jti)
@@ -40,11 +40,13 @@ export async function verificarPendiente(token: string): Promise<string> {
 
 export async function verificarSesion(token: string): Promise<Sesion> {
   const { payload } = await jwtVerify(token, secret)
-  // 🚨 Mismo `JWT_SECRET` que la sesión del EMPLEADO (`lib/empleado-auth.ts`) y que el token
-  // «pendiente» del selector de empresa: sin esto, un empleado pegaba su cookie `rrhh_empleado`
-  // en `rrhh_session` y entraba al panel de su empresa (`getSesion` no encontraba fila en
-  // usuarios_rrhh y dejaba pasar). Solo `firmarSesion` pone jti (desde el 15/06/2026).
-  if (typeof payload.jti !== 'string' || !payload.jti || payload.typ !== undefined || payload.pendiente) {
+  // 🚨 Mismo `JWT_SECRET` que la sesión del EMPLEADO (`lib/empleado-auth.ts`, `typ:'empleado'`),
+  // el ticket de acceso por email (`typ:'acceso_ticket'`) y el token «pendiente» del selector de
+  // empresa: sin esto, un empleado pegaba su cookie `rrhh_empleado` en `rrhh_session` y entraba al
+  // panel de su empresa (`getSesion` no encontraba fila en usuarios_rrhh y dejaba pasar). Lista
+  // BLANCA: solo vale `typ:'responsable'` + jti (lo pone `firmarSesion` desde el 06/10/2026; las
+  // sesiones de responsable anteriores, sin `typ`, dejan de valer y hay que entrar una vez).
+  if (payload.typ !== 'responsable' || typeof payload.jti !== 'string' || !payload.jti || payload.pendiente) {
     throw new Error('No es una sesión de responsable')
   }
   return { usuario_id: String(payload.sub), empresa_id: String(payload.empresa_id), jti: String(payload.jti) }

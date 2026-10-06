@@ -1280,6 +1280,9 @@ importers:
       '@central/core-fiscal':
         specifier: workspace:*
         version: link:../core-fiscal
+      '@central/core-identity':
+        specifier: workspace:*
+        version: link:../core-identity
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../module-seguros

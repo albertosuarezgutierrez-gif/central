@@ -45,7 +45,13 @@ El god-panel de plataforma crea empresas vía HTTP:
                       + motor puro `motor.ts` + SQL por entidad `consultas.ts`, SIEMPRE con empresa_id de
                       sesión); vista previa y descarga Excel (xlsx/SheetJS) / PDF (@react-pdf) / CSV.
                       Entidad nueva = entrada en el catálogo + su consulta (lo vigila `consultas.test.ts`)
-/e/[token]          → portal del empleado (acceso por token único; incluye fichaje GPS)
+/e/entrar           → entrada normal del empleado: email → código de 6 dígitos (10 min, 5 intentos) →
+                      [elegir empresa si el email está en varias] → [PIN si lo tiene] → cookie 90 días.
+                      Lógica en `lib/acceso-email.ts` (código: `@central/core-identity/codigo-otp`, el
+                      mismo del portal de la correduría); tabla `rrhh.acceso_otps` (migración 0021).
+/e/[token]          → alternativa por ENLACE para empleados sin email (+PIN si lo tiene); misma sesión
+/e                  → portal del empleado (incluye fichaje GPS). Sesión revocable: `empleados.sesion_version`
+                      («Cerrar sesiones» y «Nuevo enlace» en la ficha la suben; `getSesionEmpleado` la mira en BD)
 /api/admin/*        → endpoints protegidos por sesión JWT (responsable), incl. `/api/admin/prl/generar`
                       y `/api/admin/empleados/[id]/documentos/[docId]/descargar-firmado`
                       (fusiona el PDF con el certificado de firma eIDAS art.26, vía pdf-lib)
@@ -70,7 +76,9 @@ El god-panel de plataforma crea empresas vía HTTP:
 
 ## Patrones clave
 - `lib/auth.ts` — sesión del responsable (JWT firmado, `requireSecret()` para la clave de firma).
-- `lib/empleado-auth.ts` — auth del empleado (token único + PIN hash).
+- `lib/empleado-auth.ts` — sesión del empleado (`typ:'empleado'`, sin jti, con versión `v`) y ticket del paso
+  intermedio. 🚨 Comparte `JWT_SECRET` con el responsable: `lib/auth.ts` solo acepta `typ:'responsable'` + `jti`
+  (lista blanca, cepo `lib/auth-separacion.test.ts`; antes una cookie de empleado pegada en `rrhh_session` abría el panel — 05/10/2026).
 - `lib/tenant.ts` / `lib/empleado-tenant.ts` — resolución del `empresa_id` en cada request.
 - `lib/asistente.ts` — asistente IA (convenio, chat) usando `@central/core-ai`.
 - `lib/firma.ts` / `lib/firma-publica.ts` — firma de documentos vía `@central/core-firma`.
