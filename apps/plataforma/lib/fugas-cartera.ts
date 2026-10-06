@@ -16,6 +16,14 @@ export type Fuga = {
   polizaNumero: string | null
   aseguradora: string | null
   estado: string | null
+  /** Motivo CIMA ya legible; `null` = CIMA no lo trae (o asegura vieja): no se dice nada. */
+  motivo?: string | null
+  /** «anulada el dd/mm/aaaa» si es anterior a la ingesta en más de 7 días. */
+  anulacion?: string | null
+  /** Estado del último recibo, solo si añade información. */
+  ultimoRecibo?: string | null
+  /** Qué hacer con ella (p. ej. «no recuperable con esa compañía; ofrecer otra»). */
+  nota?: string | null
 }
 
 export type Deteccion = {
@@ -73,6 +81,10 @@ function leerFuga(v: unknown): Fuga | null {
     polizaNumero: texto(o.polizaNumero),
     aseguradora: texto(o.aseguradora),
     estado: texto(o.estado),
+    motivo: texto(o.motivo),
+    anulacion: texto(o.anulacion),
+    ultimoRecibo: texto(o.ultimoRecibo),
+    nota: texto(o.nota),
   }
 }
 
@@ -170,14 +182,51 @@ function escapar(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+/** Lo que añade el aviso a una póliza: motivo, fecha de la anulación si llega tarde y último recibo. */
+function detalle(f: Fuga): string {
+  const partes = [
+    f.motivo ? `motivo: ${f.motivo}` : null,
+    f.anulacion ? `${f.anulacion}, avisada hoy` : null,
+    f.ultimoRecibo ?? null,
+  ].filter((x): x is string => !!x)
+  const nota = f.nota ? ` ⚠️ ${f.nota}` : ''
+  return `${partes.length ? ` — ${partes.map(escapar).join(' · ')}` : ''}${escapar(nota)}`
+}
+
+function polizaDe(f: Fuga): string {
+  return [f.aseguradora, f.polizaNumero ? `nº ${f.polizaNumero}` : null].filter(Boolean).join(' ')
+}
+
+/**
+ * Agrupa por IDENTIDAD del tomador: `clienteId` (el NIF no cruza el puerto). Dos clientes distintos
+ * con el mismo nombre NO se funden, y el nombre solo se usa para pintar. Conserva el orden de llegada.
+ */
+export function agruparPorCliente(fugas: Fuga[]): Fuga[][] {
+  const grupos = new Map<string, Fuga[]>()
+  for (const f of fugas) {
+    const g = grupos.get(f.clienteId)
+    if (g) g.push(f)
+    else grupos.set(f.clienteId, [f])
+  }
+  return [...grupos.values()]
+}
+
 /** Aviso de Telegram (HTML). Nombre del tomador, póliza y compañía; nada de contacto. */
 export function mensajeFugas(fugas: Fuga[], urlFicha: (clienteId: string) => string | null, retenciones: number | null = null): string {
-  const lineas = fugas.slice(0, 15).map((f) => {
-    const poliza = [f.aseguradora, f.polizaNumero ? `nº ${f.polizaNumero}` : null].filter(Boolean).join(' ')
-    const quien = escapar(f.cliente ?? 'cliente sin nombre')
-    const url = urlFicha(f.clienteId)
+  const lineas = agruparPorCliente(fugas.slice(0, 15)).map((g) => {
+    const quien = escapar(g[0].cliente ?? 'cliente sin nombre')
+    const url = urlFicha(g[0].clienteId)
     const nombre = url ? `<a href="${escapar(url)}">${quien}</a>` : quien
-    return `• <b>${escapar(f.titulo)}</b> — ${nombre}${poliza ? ` · ${escapar(poliza)}` : ''}`
+    if (g.length === 1) {
+      const f = g[0]
+      const poliza = polizaDe(f)
+      return `• <b>${escapar(f.titulo)}</b> — ${nombre}${poliza ? ` · ${escapar(poliza)}` : ''}${detalle(f)}`
+    }
+    const sub = g.map((f) => {
+      const poliza = polizaDe(f)
+      return `   – <b>${escapar(f.titulo)}</b>${poliza ? ` · ${escapar(poliza)}` : ''}${detalle(f)}`
+    })
+    return `• ${nombre} (${g.length} pólizas)\n${sub.join('\n')}`
   })
   const resto = fugas.length > 15 ? `\n…y ${fugas.length - 15} más en «Hoy».` : ''
   const retener = retenciones && retenciones > 0

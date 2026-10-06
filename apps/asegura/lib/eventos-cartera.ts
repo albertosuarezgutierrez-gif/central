@@ -20,6 +20,12 @@ import {
   decidirRetencion,
   detectarCambios,
   esFugaSinExplicar,
+  leerAnulacion,
+  planRetencionPorMotivo,
+  categoriaMotivo,
+  textoFechaAnulacion,
+  textoMotivoAnulacion,
+  textoUltimoRecibo,
   fotoSospechosa,
   nombreEvento,
   sqlCarteraViva,
@@ -39,14 +45,15 @@ type Consultor = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw'>
 export async function fotoActual(correduriaId: string, db: Consultor = prismaAsegura()): Promise<Foto> {
   const viva = Prisma.raw(sqlCarteraViva('p'))
   const [polizas, recibos, siniestros] = await Promise.all([
-    db.$queryRaw<{ id: string; cliente_id: string; estado: string; vencimiento: string | null; sustituida: boolean; fusionada: boolean }[]>`
+    db.$queryRaw<{ id: string; cliente_id: string; estado: string; vencimiento: string | null; sustituida: boolean; fusionada: boolean; anulacion: unknown }[]>`
       select p.id, p.cliente_id, p.estado::text as estado, to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento,
              -- «Sustituida» = hay a dónde se fue: sustitución registrada, o una póliza que la tiene como
              -- madre (renovación como póliza nueva) u origen (cambio de compañía). Su baja no es pérdida.
              (p.sustituida_at is not null or exists (
                select 1 from polizas h where h.merged_into_poliza_id is null
                  and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id))) as sustituida,
-             p.merged_into_poliza_id is not null as fusionada
+             p.merged_into_poliza_id is not null as fusionada,
+             p.datos_especificos->'anulacion' as anulacion
       from polizas p where p.correduria_id = ${correduriaId}::uuid and ${viva}`,
     db.$queryRaw<{ id: string; poliza_id: string; cliente_id: string; situacion: string | null }[]>`
       select r.id, r.poliza_id, p.cliente_id, r.situacion::text as situacion
@@ -57,7 +64,7 @@ export async function fotoActual(correduriaId: string, db: Consultor = prismaAse
       from siniestros s where s.correduria_id = ${correduriaId}::uuid and s.fusionado_en_siniestro_id is null`,
   ])
   return {
-    polizas: Object.fromEntries(polizas.map((p) => [p.id, { id: p.id, clienteId: p.cliente_id, estado: p.estado, vencimiento: p.vencimiento, sustituida: p.sustituida, fusionada: p.fusionada }])),
+    polizas: Object.fromEntries(polizas.map((p) => [p.id, { id: p.id, clienteId: p.cliente_id, estado: p.estado, vencimiento: p.vencimiento, sustituida: p.sustituida, fusionada: p.fusionada, ...(leerAnulacion(p.anulacion) ? { anulacion: leerAnulacion(p.anulacion) } : {}) }])),
     recibos: Object.fromEntries(recibos.map((r) => [r.id, { id: r.id, polizaId: r.poliza_id, clienteId: r.cliente_id, situacion: r.situacion }])),
     siniestros: Object.fromEntries(siniestros.map((s) => [s.id, { id: s.id, clienteId: s.cliente_id, polizaId: s.poliza_id, estado: s.estado }])),
   }
@@ -72,6 +79,14 @@ export type FugaNueva = {
   polizaNumero: string | null
   aseguradora: string | null
   estado: string | null
+  /** Motivo CIMA legible; `null` = CIMA no lo trae (no se inventa). */
+  motivo: string | null
+  /** «anulada el dd/mm/aaaa», solo si es >7 días anterior a hoy. */
+  anulacion: string | null
+  /** Estado del último recibo, solo si añade información. */
+  ultimoRecibo: string | null
+  /** Qué hacer (p. ej. no recuperable con esa compañía); `null` = nada que añadir. */
+  nota: string | null
 }
 
 export type ResultadoDeteccion = {
@@ -295,9 +310,10 @@ function hoyMadrid(): string {
  * `null` si no toca (ya vencida, póliza que no está, o ya hay una retención abierta para ella).
  */
 async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string, polizaId: string, tipo: string): Promise<Retencion | null> {
-  const [p] = await tx.$queryRaw<{ clienteId: string; ramo: string; compania: string | null; numeroPoliza: string | null; vencimiento: string | null; prima: string | null }[]>`
+  const [p] = await tx.$queryRaw<{ clienteId: string; ramo: string; compania: string | null; numeroPoliza: string | null; vencimiento: string | null; prima: string | null; motivo: string | null }[]>`
     select p.cliente_id::text as "clienteId", p.tipo::text as ramo, p.aseguradora as compania, p.numero_poliza as "numeroPoliza",
-           to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento, nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima
+           to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento, nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima,
+           p.datos_especificos->'anulacion'->>'motivo' as motivo
     from polizas p where p.id = ${polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null
       and p.sustituida_at is null
       -- Baja verificada por el corredor: ya se sabe que se va, y su oportunidad para el año que viene ya existe.
@@ -310,6 +326,10 @@ async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegu
   const hoy = hoyMadrid()
   const d = decidirRetencion({ tipo, ramo: p.ramo, compania: p.compania, numeroPoliza: p.numeroPoliza, vencimiento: p.vencimiento, hoy })
   if (!d.abrir) return null
+  // Según el motivo CIMA: siniestralidad = la compañía no renueva, no hay a quién «retener» con ella.
+  const plan = planRetencionPorMotivo(p.motivo)
+  if (!plan.abrir) return null
+  const texto = plan.nota ? `${d.texto} ${plan.nota}` : d.texto
   const [ya] = await tx.$queryRaw<{ id: string }[]>`
     select o.id::text as id from oportunidades o
     where o.correduria_id = ${correduriaId}::uuid and o.info_riesgo->>'polizaId' = ${polizaId}
@@ -326,14 +346,14 @@ async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegu
     returning id::text as id`
   await tx.$executeRaw`
     insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, poliza_id, oportunidad_id, origen_trigger)
-    values (${correduriaId}::uuid, cast('llamada' as gestion_tipo), 'alta', 'pendiente', ${d.texto},
+    values (${correduriaId}::uuid, cast('llamada' as gestion_tipo), 'alta', 'pendiente', ${texto},
             (${hoy}::date + time '23:59:59') at time zone 'Europe/Madrid',
             ${p.clienteId}::uuid, ${polizaId}::uuid, ${o.id}::uuid, 'central:seguimiento')`
   await tx.$executeRaw`
     insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
     values (${correduriaId}::uuid, ${o.id}::uuid, 'creada_retencion', null, 'en_negociacion',
             ${JSON.stringify({ polizaId, diasRestantes: d.diasRestantes })}::jsonb, ${ACTOR_RETENCION})`
-  return { oportunidadId: o.id, clienteId: p.clienteId, polizaId, texto: d.texto }
+  return { oportunidadId: o.id, clienteId: p.clienteId, polizaId, texto }
 }
 
 const ESTADOS_VIGENTES = [...POLIZA_ESTADOS_VIGENTES] as string[]
@@ -411,11 +431,17 @@ async function anotarRetencion(correduriaId: string, r: Retencion): Promise<void
 async function describirFugas(db: Consultor, correduriaId: string, claves: string[] | null): Promise<FugaNueva[]> {
   const limite = claves ? claves.length : 100
   const tipos = TIPOS_FUGA as readonly string[]
-  const filas = await db.$queryRaw<{ id: string; tipo: TipoEventoCartera; cliente_id: string; nombre: string | null; apellidos: string | null; numero_poliza: string | null; aseguradora: string | null; despues: string | null }[]>`
-    select e.id, e.tipo, e.cliente_id, c.nombre, c.apellidos, p.numero_poliza, p.aseguradora, e.datos->>'despues' as despues
+  const filas = await db.$queryRaw<{ id: string; tipo: TipoEventoCartera; cliente_id: string; nombre: string | null; apellidos: string | null; numero_poliza: string | null; aseguradora: string | null; despues: string | null; anulacion: unknown; recibo: string | null }[]>`
+    select e.id, e.tipo, e.cliente_id, c.nombre, c.apellidos, p.numero_poliza, p.aseguradora, e.datos->>'despues' as despues,
+           -- El motivo CIMA de la póliza (puede llegar después que la baja); si no, el que guardó el evento.
+           coalesce(p.datos_especificos->'anulacion', jsonb_strip_nulls(jsonb_build_object('motivo', e.datos->>'motivoCima', 'fecha', e.datos->>'fechaAnulacion'))) as anulacion,
+           ur.situacion as recibo
     from evento e
     left join clientes c on c.id = e.cliente_id
     left join polizas p on p.id = e.entidad_id
+    left join lateral (
+      select r.situacion::text as situacion from poliza_recibos r where r.poliza_id = e.entidad_id
+      order by coalesce(r.fecha_emision, r.fecha_efecto_actual) desc nulls last, r.created_at desc limit 1) ur on true
     where e.correduria_id = ${correduriaId}::uuid and e.tipo = any(${tipos}::text[])
       -- La sustitución se mira AHORA, no la que había al crear el evento: la renovación con número
       -- nuevo (o la emitida por Codeoscopic) puede llegar en un pull posterior al de la baja.
@@ -425,7 +451,11 @@ async function describirFugas(db: Consultor, correduriaId: string, claves: strin
       and ${claves ? Prisma.sql`e.clave = any(${claves}::text[])` : Prisma.sql`e.estado = 'pendiente'`}
     order by e.created_at desc
     limit ${limite}`
-  return filas.map((f) => ({
+  const hoy = hoyMadrid()
+  return filas.map((f) => {
+    const an = leerAnulacion(f.anulacion)
+    const cat = categoriaMotivo(an?.motivo)
+    return {
     id: f.id,
     tipo: f.tipo,
     titulo: nombreEvento(f.tipo),
@@ -434,7 +464,12 @@ async function describirFugas(db: Consultor, correduriaId: string, claves: strin
     polizaNumero: f.numero_poliza,
     aseguradora: f.aseguradora,
     estado: f.despues,
-  }))
+    motivo: textoMotivoAnulacion(an),
+    anulacion: textoFechaAnulacion(an?.fecha, hoy),
+    ultimoRecibo: textoUltimoRecibo(f.recibo, cat),
+    nota: planRetencionPorMotivo(an?.motivo).abrir ? null : planRetencionPorMotivo(an?.motivo).nota,
+    }
+  })
 }
 
 export async function fugasPendientes(correduriaId: string): Promise<FugaNueva[] | null> {

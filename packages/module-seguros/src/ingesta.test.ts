@@ -831,7 +831,7 @@ test('firma: una firma guardada en el formato viejo (sin el cron) no hace sonar 
   // renovaciones (27/09) NI el de emisiones (28/09) NI el de duplicadas (04/10),
   // o sea cinco tramos.
   const quitar = (x: string) => x.slice(0, x.lastIndexOf(':'))
-  const vieja = quitar(quitar(quitar(quitar(hoy))))
+  const vieja = quitar(quitar(quitar(quitar(quitar(hoy)))))
   assert.equal(vieja.split(':').length, 5)
   assert.equal(normalizarFirmaIngesta(vieja), hoy)
   const d = decidirAvisoIngesta({
@@ -987,7 +987,8 @@ test('firma: «no se pudo mirar» (null) y «ninguna» ([]) no dan la misma firm
 
 test('firma: una firma de seis tramos (antes del 27/09) se lee como «ninguna»', () => {
   const hoy = firmaAvisoIngesta(conRenov([]))
-  const sinDup = hoy.slice(0, hoy.lastIndexOf(':'))
+  const sinAnul = hoy.slice(0, hoy.lastIndexOf(':'))
+  const sinDup = sinAnul.slice(0, sinAnul.lastIndexOf(':'))
   const sinEmis = sinDup.slice(0, sinDup.lastIndexOf(':'))
   const vieja = sinEmis.slice(0, sinEmis.lastIndexOf(':'))
   assert.equal(vieja.split(':').length, 6)
@@ -1069,7 +1070,8 @@ test('firma: «no se pudo mirar» (null) y «ninguna» ([]) no dan la misma firm
 
 test('firma: una firma de siete tramos (antes del 28/09) se lee como «ninguna»', () => {
   const hoy = firmaAvisoIngesta(conEmis([]))
-  const sinDup = hoy.slice(0, hoy.lastIndexOf(':'))
+  const sinAnul = hoy.slice(0, hoy.lastIndexOf(':'))
+  const sinDup = sinAnul.slice(0, sinAnul.lastIndexOf(':'))
   const vieja = sinDup.slice(0, sinDup.lastIndexOf(':'))
   assert.equal(vieja.split(':').length, 7)
   assert.equal(normalizarFirmaIngesta(vieja), hoy)
@@ -1154,12 +1156,13 @@ test('firma: entra, sale o se SUSTITUYE un grupo de duplicadas → suena', () =>
 
 test('firma: duplicadas `null` y `[]` no dan la misma firma; el tramo no rompe el recuento de tramos', () => {
   assert.notEqual(firmaAvisoIngesta(conDup(null)), firmaAvisoIngesta(conDup([])))
-  assert.equal(firmaAvisoIngesta(conDup([dupAllianz, dupReale])).split(':').length, 9)
+  assert.equal(firmaAvisoIngesta(conDup([dupAllianz, dupReale])).split(':').length, 10)
 })
 
 test('firma: una firma de ocho tramos (antes del 04/10) se lee como «ninguna duplicada»', () => {
   const hoy = firmaAvisoIngesta(conDup([]))
-  const vieja = hoy.slice(0, hoy.lastIndexOf(':'))
+  const sinAnul = hoy.slice(0, hoy.lastIndexOf(':'))
+  const vieja = sinAnul.slice(0, sinAnul.lastIndexOf(':'))
   assert.equal(vieja.split(':').length, 8)
   assert.equal(normalizarFirmaIngesta(vieja), hoy)
   assert.equal(suena(normalizarFirmaIngesta(vieja)!, firmaAvisoIngesta(conDup([dupAllianz]))), true)
