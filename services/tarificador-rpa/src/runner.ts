@@ -22,6 +22,7 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, clasificar } from './errores.ts'
 import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
+import { htmlConMarcos } from './evidencia.ts'
 import type { ContextoPortal } from './adaptador.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
@@ -143,7 +144,8 @@ async function main(): Promise<number> {
     const c = clasificar(error)
     const secretos = secretosDelEntorno(env)
     const captura = await page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null)
-    const html = await page.content().catch(() => null)
+    // Con el HTML de los marcos: el formulario de ePAC vive en el iframe `appArea`.
+    const html = await htmlConMarcos(page, 2 * 1024 * 1024).catch(() => null)
     const htmlRedactado = html ? redactarHtml(html, secretos) : null
     const cuerpo: CuerpoResultado = {
       trabajoId: trabajo.id,

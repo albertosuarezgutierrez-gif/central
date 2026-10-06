@@ -123,7 +123,11 @@ test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan po
   // 4. El único botón que el adaptador pulsa en Datos Básicos es «Calcular».
   const adaptador = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/comunidades.ts'), 'utf8'))
   const pulsaciones = [...adaptador.matchAll(/ctx\.pulsar\(([^)]*\)?)\)/g)].map((m) => m[1])
-  for (const p of pulsaciones) assert.match(p, /botonCalcular|sel\(|INICIAR SESI|^\s*page\.locator\('#link_new_policy'|modal\.getByText\(textoExacto\('(Particulares|Comunidades)'\)/, `pulsación inesperada en el adaptador: ${p}`)
+  // Desplegables ndbx (06/10/2026): abrir el `nx-dropdown` y elegir la opción de texto EXACTO. Lista blanca
+  // ESTRECHA: la llamada literal y la forma de los dos helpers (no pueden apuntar a otra cosa).
+  for (const p of pulsaciones) assert.match(p, /botonCalcular|sel\(|INICIAR SESI|^\s*page\.locator\('#link_new_policy'|modal\.getByText\(textoExacto\('(Particulares|Comunidades)'\)|^desplegableNx\(s\)$|^opcionNx\(raiz, valor\)$/, `pulsación inesperada en el adaptador: ${p}`)
+  assert.match(adaptador, /function desplegableNx\(c: Locator\): Locator \{\s*return c\.locator\('xpath=ancestor-or-self::nx-dropdown\[1\]'\)\s*\}/, 'desplegableNx solo puede devolver el nx-dropdown del campo')
+  assert.match(adaptador, /function opcionNx\(raiz: Raiz, valor: string\): Locator \{\s*return raiz\.locator\('nx-dropdown-item, \[role="option"\]'\)\.filter\(\{ hasText: textoExacto\(valor\) \}\)\s*\}/, 'opcionNx solo puede devolver opciones de lista por texto exacto')
   // 5. Listas del guard del módulo.
   const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
   assert.match(g, /TEXTOS_BLOQUEADOS_ALTA/)
