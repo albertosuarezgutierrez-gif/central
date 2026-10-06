@@ -22,8 +22,10 @@ import { instalar, InstruccionesIOS, useInstalacion } from './instalacion'
  *    antes de saberlo) NO se pinta: un botón que no puede hacer nada es peor
  *    que ninguno.
  *
- * Sin «Ahora no» ni `localStorage`: quien no quiere instalar no lo pulsa, y el
- * botón sigue ahí el día que quiera. Desaparece solo al instalar.
+ * El globo se abre solo UNA vez por visita y «Ahora no»/«Entendido»/Escape recuerdan el descarte en
+ * `localStorage` (sin él, modo privado, se ofrece en cada visita); pulsar fuera lo cierra sin recordarlo. El
+ * botón de la barra sigue ahí siempre: en iOS abre/cierra el globo; en Android/escritorio lanza la
+ * instalación (con el globo abierto también: no es un botón muerto). Desaparece solo al instalar.
  *
  * Por debajo de 480 px el texto se esconde y queda el icono (44×44, con
  * `aria-label`): a 320 px «Instalar» + «Salir» + campana + tema no caben en una
@@ -99,7 +101,10 @@ export function InstalarBoton() {
             if (abierto) cerrar()
             else setAbierto(true)
           } else {
-            if (!abierto) void instalar()
+            // Con el globo abierto también instala (antes no hacía nada): el globo se cierra sin
+            // persistir el descarte, porque quien pulsa «Instalar» no lo está descartando.
+            cerrarSinPersistir()
+            void instalar()
           }
         }}
       >
