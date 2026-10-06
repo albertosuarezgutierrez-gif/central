@@ -24,6 +24,7 @@ real medido, orden de trabajo). Después, según lo que toques:
 - **Ingesta de CIMA (EIAC/TIREA, cuarentena, cobertura de campos, caja negra del webhook y el
   diagnóstico de «la ingesta está muda») → skill `cima-ingesta`.** La regla 6 de aquí abajo dice
   QUÉ no se hace sin spec; el CÓMO de la tubería está allí.
+- Google Contacts (agenda del móvil/WhatsApp) → skill `google-contactos`.
 
 ## 🚨 No romper
 
@@ -259,3 +260,8 @@ orden en §9.
     se borra al editar). Se pide precio desde la oportunidad en los 6 ramos tarificables; personas editan datos sin salir
     (carné si conductor). Catálogo de versión solo en pantalla de precio; editar marca/modelo/versión borra codigoVehiculo.
     Precarga desde polizas.datos_especificos sin confirmar.
+    **Regla única (05/10/2026): el riesgo se rellena UNA vez (documento o corredor) en `info_riesgo.datosVehiculo` y toda
+    pantalla de auto lo lee de ahí; nunca se vuelve a pedir lo que ya consta.** Subir una póliza escribe marca/modelo/versión/
+    matrícula/matriculación (sin confirmar; lo que no viene = null) y, solo con coincidencia EXACTA e inequívoca en el catálogo
+    GRATIS, marcaId/modeloId/motorId/codigoVehiculo (nunca `?registrationPlate=`; catálogo caído = sin ids). AutoNuevo precarga
+    en cascada PARCIAL (`precarga-vehiculo.ts`), el texto sin id va a la caja de búsqueda y una variante retomada manda sobre todo.

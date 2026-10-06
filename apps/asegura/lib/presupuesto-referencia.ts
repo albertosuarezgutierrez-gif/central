@@ -13,6 +13,7 @@ import {
 } from '@central/module-seguros/referencia-presupuesto'
 
 import { prismaAsegura } from './asegura-db'
+import { esDeAvant2, origenPresupuesto, type OrigenPresupuesto } from './presupuesto-origen'
 
 export type OpcionEnDocumento = {
   id: string
@@ -34,11 +35,15 @@ export type PresupuestoPorReferencia = {
   cliente: string
   ramo: string
   polizaId: string | null
-  tarificacionId: string
-  /** La oportunidad a la que cuelga la tarificación. `null` = sin enlazar (regla 9: desde ahí no se emite). */
+  /** `null` SOLO en un presupuesto de origen `ofertas` (no tiene tarificación de Avant2). */
+  tarificacionId: string | null
+  /** Avant2 | `ofertas`. `null` = un origen que esta versión no conoce (y entonces no se emite). */
+  origen: OrigenPresupuesto | null
+  /** La oportunidad: la de la tarificación (Avant2) o la del propio presupuesto (ofertas). `null` = sin enlazar (regla 9: desde ahí no se emite). */
   oportunidadId: string | null
   estado: EstadoReferencia
-  /** `false` = retirado, emitido o CADUCADO: con ese precio no se emite, se re-tarifica. */
+  /** `false` = retirado, emitido o CADUCADO (con ese precio no se emite, se re-tarifica) — y SIEMPRE en
+   *  un presupuesto de ofertas: ese se emite en la compañía, nunca por Avant2. */
   emitible: boolean
   creadoAt: Date
   venceEl: Date
@@ -84,9 +89,12 @@ export async function buscarPresupuestoPorReferencia(
   if (!p) return { estado: 'no_encontrado', referencia }
 
   const cliente = await db.cliente.findFirst({ where: { id: p.clienteId, correduriaId }, select: { nombre: true, apellidos: true } })
-  const [tarif] = await db.$queryRaw<{ oportunidad_id: string | null }[]>`
-    select oportunidad_id::text as oportunidad_id from tarificaciones
-    where correduria_id = ${correduriaId}::uuid and id = ${p.tarificacionId}::uuid`
+  const deAvant2 = esDeAvant2(p)
+  const [tarif] = deAvant2
+    ? await db.$queryRaw<{ oportunidad_id: string | null }[]>`
+        select oportunidad_id::text as oportunidad_id from tarificaciones
+        where correduria_id = ${correduriaId}::uuid and id = ${p.tarificacionId}::uuid`
+    : []
 
   const estado = estadoReferencia(p, hoy)
   return {
@@ -99,9 +107,11 @@ export async function buscarPresupuestoPorReferencia(
       ramo: p.ramo,
       polizaId: p.polizaId,
       tarificacionId: p.tarificacionId,
-      oportunidadId: tarif?.oportunidad_id ?? null,
+      origen: origenPresupuesto(p.origen),
+      oportunidadId: deAvant2 ? tarif?.oportunidad_id ?? null : p.oportunidadId,
       estado,
-      emitible: admiteEmitir(estado),
+      // 🚨 Emitir desde la referencia es emitir por Avant2: solo un presupuesto de Codeoscopic.
+      emitible: deAvant2 && admiteEmitir(estado),
       creadoAt: p.creadoAt,
       venceEl: p.venceEl,
       enviadoAt: p.enviadoAt,

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-05T08:18:53Z",
+  "generadoEn": "2026-10-05T18:15:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -686,7 +686,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 185
+        "evidencias": 198
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 118
+        "evidencias": 121
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 146
+        "evidencias": 152
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 48
+        "evidencias": 51
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2310,7 +2310,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 92
+        "evidencias": 95
       },
       "asegura-web": {
         "estado": "usado",
@@ -3689,8 +3689,8 @@
         "evidencias": 0
       },
       "rrhh": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 17
       },
       "sivra": {
         "presente": false,
@@ -3977,9 +3977,12 @@
       "/api/cron/avisos-web",
       "/api/cron/coberturas-backfill",
       "/api/cron/felicitaciones",
+      "/api/cron/google-contactos",
       "/api/cron/polizas-pdf",
       "/api/cron/revision-anual",
       "/api/cron/siniestros-vinculo",
+      "/api/google-contactos/callback",
+      "/api/google-contactos/conectar",
       "/api/operador/actividad",
       "/api/operador/actividad-nueva",
       "/api/operador/anulaciones",
@@ -4004,6 +4007,7 @@
       "/api/operador/cliente/dni",
       "/api/operador/cliente/fusion",
       "/api/operador/cliente/historial",
+      "/api/operador/cliente/mote",
       "/api/operador/cliente/portal",
       "/api/operador/cliente/portal/vista",
       "/api/operador/cliente/relaciones",
@@ -4064,6 +4068,13 @@
       "/api/operador/export-rgpd",
       "/api/operador/formacion",
       "/api/operador/formacion/baja",
+      "/api/operador/google-contactos",
+      "/api/operador/google-contactos/activar",
+      "/api/operador/google-contactos/desconectar",
+      "/api/operador/google-contactos/ordenar",
+      "/api/operador/google-contactos/revision",
+      "/api/operador/google-contactos/simular",
+      "/api/operador/google-contactos/ticket",
       "/api/operador/huerfanas",
       "/api/operador/impagados",
       "/api/operador/informe-mediacion",
@@ -4075,6 +4086,7 @@
       "/api/operador/leer-documento",
       "/api/operador/libro-registro",
       "/api/operador/linea-base",
+      "/api/operador/llamada",
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/comparar",
       "/api/operador/oportunidad/de-poliza",
@@ -4153,6 +4165,8 @@
       "/api/datos",
       "/api/datos/documento",
       "/api/documento/dni",
+      "/api/flota/jefe",
+      "/api/flota/vehiculo",
       "/api/hojas",
       "/api/hojas/[id]",
       "/api/invitaciones",
@@ -5021,6 +5035,7 @@
       "/api/correduria/catastro",
       "/api/correduria/cima-sincro",
       "/api/correduria/cliente",
+      "/api/correduria/cliente-mote",
       "/api/correduria/cliente/[id]/dni-codigo",
       "/api/correduria/cliente/[id]/dni-revelar",
       "/api/correduria/cliente/carnets",
@@ -5041,6 +5056,7 @@
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
       "/api/correduria/companias/contactado",
+      "/api/correduria/companias/telefono",
       "/api/correduria/contactos-movil",
       "/api/correduria/contador",
       "/api/correduria/declaradas-vencer",
@@ -5058,6 +5074,9 @@
       "/api/correduria/formacion/baja",
       "/api/correduria/fugas",
       "/api/correduria/garantias-filtradas",
+      "/api/correduria/google-contactos-ordenar",
+      "/api/correduria/google-contactos-revision",
+      "/api/correduria/google-contactos-sync",
       "/api/correduria/impagados",
       "/api/correduria/informe-mediacion",
       "/api/correduria/ingesta",
@@ -5376,6 +5395,8 @@
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/fichajes/exportar",
+      "/api/admin/informes",
+      "/api/admin/informes/exportar",
       "/api/admin/mis-empresas",
       "/api/admin/nominas",
       "/api/admin/nominas/[nominaId]/confirmar",
@@ -5562,6 +5583,7 @@
       "seguros.cliente_carnets_conducir",
       "seguros.cliente_emails",
       "seguros.cliente_merge_log",
+      "seguros.cliente_mote",
       "seguros.cliente_relaciones",
       "seguros.cliente_telefonos",
       "seguros.clientes",
@@ -5594,6 +5616,11 @@
       "seguros.formacion",
       "seguros.formacion_baja",
       "seguros.gestiones",
+      "seguros.google_contactos_conexion",
+      "seguros.google_contactos_revision",
+      "seguros.google_contactos_ticket_usado",
+      "seguros.google_contactos_titular_telefono",
+      "seguros.google_contactos_vinculo",
       "seguros.historial_interno",
       "seguros.interviniente_purga_log",
       "seguros.ipid",
@@ -6058,6 +6085,11 @@
       "id": "github-vigia",
       "name": "github-vigia",
       "description": "Agente PROGRAMADO mensual (día 15) que vigila el ecosistema GitHub/OSS — releases de los repos curados en docs/VIGIA-OSS.md, descubrimiento por vertical, y deps npm desactualizadas o con CVE. Actualiza docs/VIGIA-OSS.md, Telegram + PR draft solo para bumps seguros. Úsala si Alberto pide \"revisa las novedades de GitHub / del ecosistema\". Sin secretos."
+    },
+    {
+      "id": "google-contactos",
+      "name": "google-contactos",
+      "description": ">"
     },
     {
       "id": "ia-rest-maestro",
@@ -6584,7 +6616,8 @@
         "capacidad": "informes",
         "label": "Informes",
         "tiene": [
-          "ialimp"
+          "ialimp",
+          "rrhh"
         ],
         "falta": [
           "almacen",
@@ -6595,7 +6628,6 @@
           "housesevillana",
           "ia-rest",
           "mariscos",
-          "rrhh",
           "sivra",
           "transporte"
         ]
@@ -6647,8 +6679,8 @@
     "verticales": 13,
     "packages": 42,
     "capacidades": 23,
-    "skills": 43,
-    "apis": 1557,
+    "skills": 44,
+    "apis": 1578,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

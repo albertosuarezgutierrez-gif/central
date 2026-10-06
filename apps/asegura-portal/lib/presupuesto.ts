@@ -52,6 +52,7 @@ import { prisma } from './db'
 import { getIdentidad } from './session'
 import { coberturasDeOpcion, type CoberturasOpcion } from './tabla-coberturas'
 import { garantiasDeJson } from './todas-las-opciones'
+import { origenVista, type OrigenVista } from './presupuesto-ofertas-vista'
 import { coberturasDeJson, leerFirmeza, leerSinEquivalente, esPapel, type Firmeza, type PapelPortada, type SinEquivalente } from './presupuesto-vista'
 
 // ─── Lo que la pantalla necesita ─────────────────────────────────────────────
@@ -103,6 +104,8 @@ export type ActualCliente = {
 export type PresupuestoCliente = {
   id: string
   ramo: string
+  /** De dónde salen los precios. `null` = origen que no se reconoce: no se pinta ni se acepta nada. */
+  origen: OrigenVista | null
   creadoAt: Date
   venceEl: Date
   caducado: boolean
@@ -203,6 +206,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
         clienteId: true,
         polizaId: true,
         ramo: true,
+        origen: true,
         destinoHash: true,
         venceEl: true,
         creadoAt: true,
@@ -298,6 +302,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
       presupuesto: {
         id: p.id,
         ramo: p.ramo,
+        origen: origenVista(p.origen),
         creadoAt: p.creadoAt,
         venceEl: p.venceEl,
         caducado,

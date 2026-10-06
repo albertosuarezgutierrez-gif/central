@@ -67,6 +67,7 @@ import { TusDatos } from './TusDatos'
 import { TusVencimientos } from './TusVencimientos'
 import { FirmarAnulacion } from './FirmarAnulacion'
 import { PendienteDeTi } from './PendienteDeTi'
+import { EnlaceFlota } from './EnlaceFlota'
 
 export const dynamic = 'force-dynamic'
 
@@ -504,6 +505,8 @@ export default async function Boveda({
               único de esta pantalla que pide una corrección con fecha, y un
               aviso que se baja por debajo de una acción deja de ser un aviso.
               El alta va justo detrás, que es lo que pidió Alberto. */}
+          {/* «Tu flota» (05/10/2026): solo pinta si lleva la flota de alguna sociedad. */}
+          <EnlaceFlota identidadId={identidad.id} />
           {pendientes && (
             <PendienteDeTi
               items={pendientes.items}

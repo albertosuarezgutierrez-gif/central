@@ -13,7 +13,7 @@ type Empleado = {
   tipo_contrato: string | null; centro_trabajo: string | null
   cuenta_cotizacion: string | null; categoria: string | null
   grupo_cotizacion: string | null; tipo_jornada: string | null
-  fecha_alta: string | null; acceso_token: string | null
+  fecha_alta: string | null
   fecha_reconocimiento_medico: string | null
 }
 
@@ -60,7 +60,11 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, logoUrl,
   })
   const [fichaGuardando, setFichaGuardando] = useState(false)
   const [fichaMsg, setFichaMsg] = useState('')
-  const [accesoToken, setAccesoToken] = useState(empleado.acceso_token ?? '')
+  // El enlace de acceso NO viene en las props (con él se entra como el empleado): se pide al
+  // pulsar «Ver enlace» (POST /enlace) o al regenerarlo (POST /acceso). Es una ruta relativa.
+  const [enlace, setEnlace] = useState('')
+  const [cargandoEnlace, setCargandoEnlace] = useState(false)
+  const [errorEnlace, setErrorEnlace] = useState('')
   const [regenerando, setRegenerando] = useState(false)
   const [copiado, setCopiado] = useState(false)
 
@@ -119,7 +123,15 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
   }
 
   function enlaceAcceso() {
-    return typeof window !== 'undefined' ? `${window.location.origin}/e/${accesoToken}` : ''
+    return typeof window !== 'undefined' && enlace ? `${window.location.origin}${enlace}` : enlace
+  }
+
+  async function verEnlace() {
+    setCargandoEnlace(true); setErrorEnlace('')
+    const r = await fetch(`/api/admin/empleados/${empleado.id}/enlace`, { method: 'POST' })
+    const j = await r.json().catch(() => ({}))
+    if (r.ok && j.enlace) setEnlace(j.enlace); else setErrorEnlace(j.error ?? 'No se pudo obtener el enlace')
+    setCargandoEnlace(false)
   }
 
   async function copiarEnlace() {
@@ -129,9 +141,10 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
 
   async function regenerarToken() {
     if (!confirm('¿Regenerar el enlace? El anterior dejará de funcionar.')) return
-    setRegenerando(true)
+    setRegenerando(true); setErrorEnlace('')
     const r = await fetch(`/api/admin/empleados/${empleado.id}/acceso`, { method: 'POST' })
-    if (r.ok) setAccesoToken((await r.json()).acceso_token)
+    const j = await r.json().catch(() => ({}))
+    if (r.ok && j.enlace) setEnlace(j.enlace); else setErrorEnlace(j.error ?? 'No se pudo regenerar el enlace')
     setRegenerando(false)
   }
 
@@ -289,23 +302,28 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
       </div>
 
       {/* Acceso al portal */}
-      {accesoToken && (
-        <div className="mb-4 rounded-[12px] border border-line bg-card p-4">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">Acceso al portal del empleado</h2>
-          <p className="mb-3 break-all rounded bg-paper-2 px-3 py-2 font-mono text-xs text-ink-2">
-            {typeof window !== 'undefined' ? `${window.location.origin}/e/${accesoToken}` : `/e/${accesoToken}`}
-          </p>
-          <div className="flex flex-wrap gap-2">
+      <div className="mb-4 rounded-[12px] border border-line bg-card p-4">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">Acceso al portal del empleado</h2>
+        {enlace && (
+          <p className="mb-3 break-all rounded bg-paper-2 px-3 py-2 font-mono text-xs text-ink-2">{enlaceAcceso()}</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {enlace ? (
             <button onClick={copiarEnlace} className="text-sm">
               {copiado ? '✔ Copiado' : 'Copiar enlace'}
             </button>
-            <button onClick={regenerarToken} disabled={regenerando} className="bg-paper-2 text-sm text-ink-2 hover:bg-line">
-              {regenerando ? 'Regenerando…' : 'Nuevo enlace'}
+          ) : (
+            <button onClick={verEnlace} disabled={cargandoEnlace} className="text-sm">
+              {cargandoEnlace ? 'Cargando…' : 'Ver enlace'}
             </button>
-          </div>
-          <p className="mt-2 text-xs text-ink-3">Envía este enlace al empleado para que acceda a su portal. Al generar uno nuevo el anterior deja de funcionar.</p>
+          )}
+          <button onClick={regenerarToken} disabled={regenerando} className="bg-paper-2 text-sm text-ink-2 hover:bg-line">
+            {regenerando ? 'Regenerando…' : 'Nuevo enlace'}
+          </button>
         </div>
-      )}
+        {errorEnlace && <p className="mt-2 text-sm text-alert">{errorEnlace}</p>}
+        <p className="mt-2 text-xs text-ink-3">Envía este enlace al empleado para que acceda a su portal. Quien lo tenga entra como el empleado: no lo compartas por canales abiertos. Al generar uno nuevo el anterior deja de funcionar.</p>
+      </div>
 
       {error && <p className="mb-3 text-sm text-alert">{error}</p>}
 

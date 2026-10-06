@@ -19,6 +19,7 @@
 // portal para que subir sea mover el fichero.
 
 import { revisarCopy, explicarInfracciones, VALIDEZ_PRESUPUESTO_DIAS } from '@central/module-seguros'
+import { copyOfertas } from './presupuesto-ofertas-vista.ts'
 
 export { VALIDEZ_PRESUPUESTO_DIAS }
 
@@ -84,9 +85,9 @@ export function textoFranquicia(franquiciaEur: number | null, eur: (n: number) =
 
 // ─── Los papeles de la portada ───────────────────────────────────────────────
 
-export type PapelPortada = 'equivalente' | 'mas_barata' | 'mejor_cubierta'
+export type PapelPortada = 'equivalente' | 'mas_barata' | 'mejor_cubierta' | 'recomendada'
 
-export const PAPELES_CONOCIDOS: readonly PapelPortada[] = ['equivalente', 'mas_barata', 'mejor_cubierta']
+export const PAPELES_CONOCIDOS: readonly PapelPortada[] = ['equivalente', 'mas_barata', 'mejor_cubierta', 'recomendada']
 
 export function esPapel(v: unknown): v is PapelPortada {
   return typeof v === 'string' && (PAPELES_CONOCIDOS as readonly string[]).includes(v)
@@ -102,6 +103,8 @@ const ETIQUETA_PAPEL: Record<PapelPortada, string> = {
   equivalente: 'La equivalente a lo que tienes hoy',
   mas_barata: 'La de menor importe de tu misma cobertura',
   mejor_cubierta: 'La que más cubre',
+  // Presupuestos de ofertas (F4): la marca el CORREDOR tras revisar las ofertas, no la calcula el código.
+  recomendada: 'La que te recomienda tu corredor',
 }
 
 /**
@@ -373,6 +376,7 @@ export function copyFijo(): string[] {
     textoCaducidad('1 de enero', '16 de enero', false),
     textoCaducidad('1 de enero', '16 de enero', true),
     textoCompaniasConsultadas(2),
+    ...copyOfertas(),
   ]
 }
 

@@ -647,7 +647,7 @@ export function diasSinRespuesta(ultimoContactoEn: string | null, ahora: Date = 
 
 export type Reenvio = { status: number; json: unknown }
 
-async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
+async function llamar(path: string, init: RequestInit, timeoutMs = 15_000): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   const base = (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
@@ -656,7 +656,7 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
       ...init,
       headers: { ...(await cabecerasPuerto(secret)), ...(init.body ? { 'content-type': 'application/json' } : {}) },
       cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {
@@ -710,6 +710,45 @@ export function interpretarContactosMovil(status: number, j: unknown): { contact
     return [{ clienteId: x.clienteId, nombre: txt(x.nombre), apellidos: txt(x.apellidos), telefono: txt(x.telefono), email: txt(x.email), grupo: x.grupo }]
   })
   return { contactos, clientesSinLeer: typeof o.clientesSinLeer === 'number' ? o.clientesSinLeer : 0 }
+}
+
+/** Cola de revisión de la sincronización con Google Contacts (50 por página, cursor `despuesDe`). */
+export function revisionesGoogleAsegura(despuesDe: string | null): Promise<Reenvio> {
+  return llamar(`/api/operador/google-contactos/revision${despuesDe ? `?despuesDe=${encodeURIComponent(despuesDe)}` : ''}`, { method: 'GET' })
+}
+export function resolverRevisionGoogleAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/revision', { method: 'POST', body: JSON.stringify(body) })
+}
+/** MOTE de la ficha (solo para la agenda de Google de Alberto; AISLADO: nunca en correos/portal/PDF). */
+export function moteClienteAsegura(clienteId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/cliente/mote?clienteId=${encodeURIComponent(clienteId)}`, { method: 'GET' })
+}
+export function guardarMoteClienteAsegura(body: { clienteId: string; mote: string | null; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/mote', { method: 'PUT', body: JSON.stringify(body) })
+}
+/** «Ordenar agenda»: informe SOLO LECTURA de la agenda de Google (lee la agenda entera: hasta ~2 min). */
+export function ordenarAgendaGoogleAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/ordenar', { method: 'GET' }, 115_000)
+}
+/** Estado de la conexión con Google Contacts (cuenta, simulada, activada). */
+export function estadoGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos', { method: 'GET' })
+}
+/** Simulación SOLO LECTURA (lee la agenda entera de Google: hasta ~2 min). */
+export function simularGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/simular', { method: 'POST', body: '{}' }, 115_000)
+}
+/** «Simulación revisada: sincroniza». El `actor` lo pone quien llama desde la SESIÓN. */
+export function activarGoogleContactosAsegura(actor: string): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/activar', { method: 'POST', body: JSON.stringify({ actor }) })
+}
+/** Ticket de un solo uso (2 min) para arrancar el OAuth de Google desde el panel: asegura devuelve la URL de `conectar`. */
+export function ticketGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/ticket', { method: 'POST', body: '{}' })
+}
+/** Revoca en Google y borra token y vínculos; con `borrarContactos` borra antes los que CREÓ el CRM. */
+export function desconectarGoogleContactosAsegura(borrarContactos: boolean): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/desconectar', { method: 'POST', body: JSON.stringify({ borrarContactos }) }, 115_000)
 }
 
 export function tareasHoyAsegura(): Promise<Reenvio> {

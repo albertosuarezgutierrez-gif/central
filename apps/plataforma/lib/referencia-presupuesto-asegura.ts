@@ -31,8 +31,14 @@ export type PresupuestoReferencia = {
   cliente: string
   ramo: string
   polizaId: string | null
-  tarificacionId: string
-  /** `null` = la tarificación no cuelga de ninguna oportunidad (regla 9: desde ahí no se emite). */
+  /** `null` SOLO con `origen: 'ofertas'` (PDFs de compañías: no hay tarificación de Avant2). */
+  tarificacionId: string | null
+  /**
+   * `codeoscopic` (tarificación de Avant2: se emite desde aquí) u `ofertas` (PDFs de compañías revisados:
+   * se emite EN LA COMPAÑÍA, nunca por Avant2). Un asegura anterior que no lo manda = `codeoscopic`.
+   */
+  origen: 'codeoscopic' | 'ofertas'
+  /** `null` = no cuelga de ninguna oportunidad (regla 9: desde ahí no se emite). */
   oportunidadId: string | null
   estado: EstadoReferencia
   rotuloEstado: string
@@ -91,7 +97,11 @@ export function interpretarReferencia(q: string, status: number | null, json: un
   const p = o.presupuesto as Record<string, unknown>
   const id = cad(p.id), clienteId = cad(p.clienteId), tarificacionId = cad(p.tarificacionId), venceEl = cad(p.venceEl)
   const estado = cad(p.estado) as EstadoReferencia | null
-  if (!id || !clienteId || !tarificacionId || !venceEl || !estado || !ESTADOS.includes(estado) || !Array.isArray(p.opciones)) {
+  // Sin `origen` = un asegura anterior a las ofertas (todo era de Avant2). Un origen desconocido: ilegible.
+  const origen = p.origen === undefined || p.origen === 'codeoscopic' ? 'codeoscopic' : p.origen === 'ofertas' ? 'ofertas' : null
+  if (!origen) return error('origen del presupuesto desconocido')
+  // Uno de Avant2 SIN tarificación es un contrato roto; uno de ofertas no la tiene nunca.
+  if (!id || !clienteId || (origen === 'codeoscopic' && !tarificacionId) || !venceEl || !estado || !ESTADOS.includes(estado) || !Array.isArray(p.opciones)) {
     return error('respuesta ilegible')
   }
   const opciones = p.opciones.map(leerOpcion)
@@ -106,12 +116,14 @@ export function interpretarReferencia(q: string, status: number | null, json: un
       cliente: cad(p.cliente) ?? 'Cliente sin nombre',
       ramo: cad(p.ramo) ?? '',
       polizaId: cad(p.polizaId),
-      tarificacionId,
+      tarificacionId: origen === 'ofertas' ? null : tarificacionId,
+      origen,
       oportunidadId: cad(p.oportunidadId),
       estado,
       rotuloEstado: ROTULO_ESTADO_REFERENCIA[estado],
-      // Fallo seguro: solo se ofrece emitir si asegura lo dice Y el estado lo admite.
-      emitible: p.emitible === true && estado !== 'caducado' && estado !== 'retirado' && estado !== 'emitido',
+      // Fallo seguro: solo se ofrece emitir si asegura lo dice Y el estado lo admite. Un presupuesto de
+      // ofertas NUNCA es emitible desde aquí (se emite en la compañía), diga lo que diga la respuesta.
+      emitible: origen === 'codeoscopic' && p.emitible === true && estado !== 'caducado' && estado !== 'retirado' && estado !== 'emitido',
       venceEl,
       polizaEmitidaId: cad(p.polizaEmitidaId),
       opciones: opciones as OpcionReferencia[],
@@ -126,6 +138,8 @@ export type EnlaceEmision =
   | { tipo: 'riesgo'; href: string; texto: string }
   /** Sin oportunidad enlazada no hay pantalla que la emita (regla 9): la ficha, y se dice. */
   | { tipo: 'ficha'; href: string; texto: string }
+  /** Presupuesto de OFERTAS (PDF): no hay emisión por Avant2. Se abre la oportunidad y se emite en la compañía. */
+  | { tipo: 'compania'; href: string; texto: string }
 
 /**
  * PURO. A dónde se va a emitir desde la referencia. NO se reimplementa la emisión: se abre la
@@ -137,7 +151,16 @@ export type EnlaceEmision =
  * - otro ramo con oportunidad → la pantalla del riesgo.
  * - sin oportunidad → la ficha del cliente, diciendo por qué no se puede emitir desde aquí.
  */
-export function enlaceEmision(p: Pick<PresupuestoReferencia, 'ramo' | 'clienteId' | 'oportunidadId' | 'tarificacionId'>): EnlaceEmision {
+export function enlaceEmision(
+  p: Pick<PresupuestoReferencia, 'ramo' | 'clienteId' | 'oportunidadId' | 'tarificacionId'> & { origen?: PresupuestoReferencia['origen'] },
+): EnlaceEmision {
+  // 🚨 Ofertas de compañías (o cualquier presupuesto sin tarificación): NUNCA la pantalla que emite
+  // por Avant2. Se emite en la compañía; aquí solo se lleva a la oportunidad (o a la ficha).
+  if (p.origen === 'ofertas' || !p.tarificacionId) {
+    return p.oportunidadId
+      ? { tipo: 'compania', href: `/correduria/oportunidad/${encodeURIComponent(p.oportunidadId)}`, texto: 'Se emite en la compañía (no por Avant2): ir a la oportunidad' }
+      : { tipo: 'compania', href: `/correduria/cliente/${encodeURIComponent(p.clienteId)}`, texto: 'Se emite en la compañía (no por Avant2): abrir la ficha' }
+  }
   if (p.oportunidadId && (p.ramo === 'auto' || p.ramo === 'moto')) {
     const q = new URLSearchParams({ oportunidad: p.oportunidadId, tarificacion: p.tarificacionId })
     return { tipo: 'emitir', href: `/correduria/cliente/${encodeURIComponent(p.clienteId)}/${p.ramo}-nuevo?${q.toString()}`, texto: 'Verificar datos y emitir' }

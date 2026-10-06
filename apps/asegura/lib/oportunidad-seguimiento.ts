@@ -38,6 +38,7 @@ import {
   type SeguroAnterior,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
+import { puedeEscribirDatosVehiculo } from './oportunidad-vehiculo-previo'
 import { prismaAsegura } from './asegura-db'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -605,6 +606,11 @@ export async function crearOportunidad(
   hoy: Date = hoyUtc(),
   /** De dónde nace (`info_riesgo.origen`): a mano por defecto; `documento:*` si la abre un documento subido. */
   origen: string = ORIGEN_MANUAL,
+  /**
+   * `info_riesgo.datosVehiculo` leído de un documento (05/10/2026), ya estructurado y SIN confirmar. En una oportunidad nueva
+   * se escribe tal cual; en una ya abierta solo si no tenía `datosVehiculo` (lo de la corredora nunca se pisa).
+   */
+  datosVehiculo: Record<string, unknown> | null = null,
 ): Promise<{ ok: true; id: string } | Fallo | { ok: false; estado: 'duplicada'; motivo: string; status: 409; id: string; completada: boolean }> {
   if (!UUID.test(clienteId)) return { ok: false, estado: 'invalido', motivo: 'id de cliente no válido', status: 422 }
   const v = validarAltaOportunidad(datos, hoy)
@@ -616,10 +622,11 @@ export async function crearOportunidad(
       where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`)
     if (!cli) return { tipo: 'sin_cliente' as const }
     await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`oportunidad:${clienteId}:${a.ramo}`}))`)
-    const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null }[]>(Prisma.sql`
+    const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; vehiculo: string | null }[]>(Prisma.sql`
       select id::text as id, nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora,
              ${Prisma.raw(sqlNumeroPoliza(''))} as "numeroPoliza",
-             nullif(trim(info_riesgo->>'matricula'), '') as matricula from oportunidades
+             nullif(trim(info_riesgo->>'matricula'), '') as matricula,
+             nullif(trim(info_riesgo->>'vehiculo'), '') as vehiculo from oportunidades
       where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid
         and tipo::text = ${a.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
       order by created_at`)
@@ -638,6 +645,8 @@ export async function crearOportunidad(
       }
       // Póliza de concesionario/financiada: la marca se añade (no se quita nunca desde aquí).
       const riesgo = a.financiada ? JSON.stringify({ financiada: a.financiada }) : null
+      // Si ya tenía el coche en las claves antiguas, el nuevo `datosVehiculo` solo entra si es el mismo coche.
+      const vehiculoNuevo = datosVehiculo && puedeEscribirDatosVehiculo(ya, datosVehiculo) ? JSON.stringify({ datosVehiculo }) : null
       const numero = a.numeroPoliza && !ya.numeroPoliza ? a.numeroPoliza : null
       // Vencimiento y prima solo rellenan un hueco (29/09/2026): un documento subido después no pisa
       // lo que Alberto ya había anotado, pero tampoco se pierde si faltaba.
@@ -646,12 +655,16 @@ export async function crearOportunidad(
         from oportunidades where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid`)
       const fecha = a.fechaFinVigencia && huecos?.sinFecha ? a.fechaFinVigencia : null
       const prima = a.prima !== null && huecos?.sinPrima ? a.prima : null
-      if (Object.keys(parche).length > 0 || numero || fecha || prima !== null || riesgo) {
+      if (Object.keys(parche).length > 0 || numero || fecha || prima !== null || riesgo || vehiculoNuevo) {
         await tx.$executeRaw(Prisma.sql`
           update oportunidades set
             poliza_competencia = case when ${Object.keys(parche).length === 0} then poliza_competencia
               else coalesce(poliza_competencia, '{}'::jsonb) || ${JSON.stringify(parche)}::jsonb end,
-            info_riesgo = case when ${riesgo}::jsonb is null then info_riesgo else coalesce(info_riesgo, '{}'::jsonb) || ${riesgo}::jsonb end,
+            info_riesgo = case when ${riesgo}::jsonb is null and ${vehiculoNuevo}::jsonb is null then info_riesgo
+              else coalesce(info_riesgo, '{}'::jsonb)
+                || coalesce(${riesgo}::jsonb, '{}'::jsonb)
+                || case when info_riesgo->'datosVehiculo' is not null then '{}'::jsonb else coalesce(${vehiculoNuevo}::jsonb, '{}'::jsonb) end
+              end,
             numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${numero}),
             fecha_fin_vigencia = coalesce(fecha_fin_vigencia, ${fecha}::date),
             prima_bruta = coalesce(prima_bruta, ${prima}::numeric)
@@ -667,7 +680,7 @@ export async function crearOportunidad(
       insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_competencia, info_riesgo, numero_poliza)
       values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${a.ramo} as tipo_seguro), 'venta_directa',
               cast(${a.estado} as estado_comercial), ${a.fechaFinVigencia}::date, ${a.prima}::numeric,
-              ${competencia}::jsonb, ${JSON.stringify({ origen, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}), ...(a.financiada ? { financiada: a.financiada } : {}) })}::jsonb,
+              ${competencia}::jsonb, ${JSON.stringify({ origen, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}), ...(a.financiada ? { financiada: a.financiada } : {}), ...(datosVehiculo ? { datosVehiculo } : {}) })}::jsonb,
               ${a.numeroPoliza})
       returning id::text as id`)
     await tx.$executeRaw(Prisma.sql`
@@ -863,12 +876,16 @@ type JsonHitos = {
 } | null
 type JsonResumen = { variantes: number; mejorPrima: number | null; mejorCompania: string | null; presupuesto: JsonHitos } | null
 
-/** Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2`). */
+/**
+ * Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2` y/o `pr`).
+ * LEFT JOIN desde el 05/10/2026: un presupuesto de OFERTAS no tiene tarificación (`t2` = NULL) y cuelga
+ * de su oportunidad por `pr.oportunidad_id`; con un INNER JOIN desaparecería de la ficha.
+ */
 function sqlHitos(filtro: Prisma.Sql): Prisma.Sql {
   return Prisma.sql`(select json_build_object('creadoAt', pr.creado_at, 'venceEl', pr.vence_el, 'enlaceGeneradoAt', pr.enlace_generado_at,
               'enviadoAt', pr.enviado_at, 'vistoAt', pr.visto_at, 'elegidoAt', pr.elegido_at,
               'aceptadoAt', pr.aceptado_at, 'emitidoAt', pr.emitido_at, 'retiradoAt', pr.retirado_at)
-         from presupuesto pr join tarificaciones t2 on t2.id = pr.tarificacion_id and t2.correduria_id = pr.correduria_id
+         from presupuesto pr left join tarificaciones t2 on t2.id = pr.tarificacion_id and t2.correduria_id = pr.correduria_id
         where ${filtro} order by pr.creado_at desc limit 1)`
 }
 
@@ -926,12 +943,32 @@ export async function oportunidadesDeCliente(
                and g.estado::text <> 'cerrada' and g.fecha_limite is not null
              order by g.fecha_limite limit 1) as "proximaTarea",
            (select json_build_object(
-                     'variantes', count(distinct t.id)::int,
-                     'mejorPrima', (min(x.prima_eur) filter (where not t.simulado))::float8,
-                     'mejorCompania', (array_agg(x.compania order by x.prima_eur asc) filter (where x.prima_eur is not null and not t.simulado))[1],
-                     'presupuesto', ${sqlHitos(Prisma.sql`t2.oportunidad_id = o.id and pr.correduria_id = o.correduria_id`)})
+                     -- Precios pedidos: las tarificaciones de Avant2 + las ofertas de compañías (PDF) vivas.
+                     'variantes', count(distinct t.id)::int
+                       + (select count(*)::int from oportunidad_oferta f
+                           where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id
+                             and f.rol = 'oferta' and f.estado <> 'descartada'),
+                     -- El mejor precio REAL: de Avant2 (no simulado) o de una oferta REVISADA.
+                     'mejorPrima', (select b.prima from (
+                         select x2.prima_eur::float8 as prima, x2.compania from tarificaciones t3
+                           join tarificacion_precios x2 on x2.tarificacion_id = t3.id and x2.prima_eur is not null
+                          where t3.oportunidad_id = o.id and t3.correduria_id = o.correduria_id and not t3.simulado
+                         union all
+                         select f.prima_total::float8, f.compania from oportunidad_oferta f
+                          where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'oferta'
+                            and f.estado = 'revisada' and f.prima_total is not null
+                       ) b order by b.prima asc limit 1),
+                     'mejorCompania', (select b.compania from (
+                         select x2.prima_eur::float8 as prima, x2.compania from tarificaciones t3
+                           join tarificacion_precios x2 on x2.tarificacion_id = t3.id and x2.prima_eur is not null
+                          where t3.oportunidad_id = o.id and t3.correduria_id = o.correduria_id and not t3.simulado
+                         union all
+                         select f.prima_total::float8, f.compania from oportunidad_oferta f
+                          where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'oferta'
+                            and f.estado = 'revisada' and f.prima_total is not null
+                       ) b order by b.prima asc limit 1),
+                     'presupuesto', ${sqlHitos(Prisma.sql`(t2.oportunidad_id = o.id or pr.oportunidad_id = o.id) and pr.correduria_id = o.correduria_id`)})
               from tarificaciones t
-              left join tarificacion_precios x on x.tarificacion_id = t.id and x.prima_eur is not null
              where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id) as presupuestos,
            (select json_build_object('projectId', cp.project_id_codeoscopic, 'estado', cp.estado::text,
                      'compania', cp.aseguradora,

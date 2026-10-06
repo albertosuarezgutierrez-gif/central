@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(05/10/2026)** — Grupo ASegura, plan B2B decidido: fases grupo (3-5 empresas propias, piloto) → flotas pequeñas → gremios/asociaciones → franquicias; ciber como gancho comercial; SIN envíos en frío. Implementado el MÍNIMO DE EMPRESA del portal (Fase 0, sin PR aún): `/flota` en asegura-portal — vehículos con póliza viva EN VIGOR de la sociedad, vencimiento (con recibos) y próxima ITV calculada (`flota.ts` puro en module-seguros-portal; ITV sin matriculación = «no lo sabemos», nunca «al día»). Ancla `portal_bien` de EMPRESA (`cliente_id` + matrícula normalizada + `fecha_matriculacion`). Jefe de flota = `portal_autorizacion` alcance `flota` (NO es `Alcance`: los lectores viejos lo ignoran y no abre la bóveda), lo nombra solo el Dueño entre relacionados de la ficha, doble aceptación. Administración NO ve la flota (coherente con 25/09). Cepos: `flota.test.ts` + `test/regression-portal-flota.test.ts`.
+✅ `apps/asegura-portal/prisma/sql/2026-10-05_portal_flota_empresa.sql` APLICADA en `central` (05/10, antes del merge de #4289). Pendiente: conductor con acceso que caduca, QR del vehículo→WhatsApp, multi-CIF, dar parte desde la flota, invitar jefe por correo (hoy solo fichas relacionadas con vínculo), mostrar `flota` en /correduria (cartera-relaciones lo ignora).
+**(05/10/2026)** — agente-facturas/divisa: columna aplicada en BD y el extractor la rellena desde #4284; las 79 facturas previas (anterior 05/10) siguen null (cubiertas por lista USD en casar-cargos.ts).
+
+**(05/10/2026)** — correduría: al «Pedir precio» (auto/moto/hogar/vida/decesos/salud `*-nuevo`) el PRESUPUESTO se prepara SOLO en `after()` (decisión de Alberto: «opción B»). `lib/presupuesto-tras-tarificar.ts`: idempotente (no duplica si hay uno vivo), nunca rompe la respuesta, gratis (prepararPresupuesto solo escribe BD + GET de coberturas; no envía nada). Botón manual sigue para re-preparar. También al retarificar (pantalla del corredor: operador/codeoscopic/retarificar y cartera/polizas/[id]/retarificar) y en cartera/cliente/[id]/hogar-nuevo. Causa: Estibaliz pidió precios y no pulsó «Preparar presupuesto» → la tarjeta parecía vacía.
+
+**(05/10/2026)** — agente-facturas/forma-pago: aviso semanal clasifica por forma de pago (transferencia/automático/plataforma/desconocida) y botones de pago solo para transferencias. Conciliación arreglada: asignación global 1:1 (antes 3 Anthropic de 170€ perdían por cargo compartido); USD ±15% tolerancia (no ±3%). Pendientes: migración `facturas_proveedor.divisa`, feeds PSD2 parados (Kutxabank 31/07, N26 03/07, Pilar fin junio), 4 cargos Anthropic 170€ sin factura, 19 duplicados gastos, 60 gastos sin negocio, 82 sin IVA.
+
 **(05/10/2026)** — correduría, tarificación: (1) Mapfre guarda el nº de póliza con sufijo de versión («4840402030 01») y SINCO no lo encontraba: helper `polizaAnteriorParaTarificar` (module-seguros, DGS C0058) quita el « NN» al armar `previousInsurance.policyNumber` (auto y moto, imputado y manual); el desplegable muestra el nº tal cual se envía. (2) Generali COCHE iba con descuento 0 %: `opcionesParaReRate` aplica `commercialDiscountNumber`=50 solo si el vendor trae ese id (id en auto supuesto por moto/hogar; confirmar en el primer ReRate real, ver CODEOSCOPIC-PENDIENTES).
 
 **(05/10/2026)** — correduría, bloque identidad del tomador: completar apellidos («Slava» → «Slava Antoli», o vacío → algo) ya NO pide motivo ni DNI (helper puro `completaApellidos`/`edicionSoloCompletaApellidos` en `module-seguros/cliente-edicion.ts`, usado por plataforma y asegura; historial «apellidos completados sin documento: antes → después»). Cambiar/quitar palabras sí lo pide. Cuadro ámbar solo si lo editado lo requiere, foco al motivo, 3 motivos rápidos (decisión: el DNI se cambia sin pedir documento pero con motivo, 1 clic). «Falta en la ficha: segundo apellido», «persona física». `partirApellidos` pega partículas (de/del/la…).
@@ -1062,9 +1070,44 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 ## (05/10/2026) Correduría: «Solicitar baja» desde el portal del cliente + baja moto Hassan Pimienta
 - Portal `/boveda`: botón por póliza propia en vigor, motivo OBLIGATORIO (venta→`inmediata`+fecha; precio→ofrece presupuesto y guarda competidor/precio en `motivo_texto`; otro→`no_renovacion`). `origen='portal'` retenida 48 h (`LIBERADA_SQL` en `pendientesDe` + CHECK en BD), Telegram a Alberto, «Liberar para firma» en «Hoy». ≤3 días al efecto → se libera sola.
-- SQL `apps/asegura/prisma/sql/2026-10-05a_seguros_anulacion_solicitud_portal.sql` PENDIENTE de aplicar (con OK, ANTES de desplegar: si no, 500 en «Hoy»/portal).
+- SQL `apps/asegura/prisma/sql/2026-10-05a_seguros_anulacion_solicitud_portal.sql` APLICADO 06/10 (+ baja Hassan id 1230d99a…, no_renovacion).
 - Allianz (C0109) NO sale por correo tras firmar: queda `firmada` → PUE a mano → marcar comunicada.
 - Hassan (póliza f19a195e…, vence 01/12, se va a Línea Directa por precio): Alberto invita y abre `no_renovacion`; recordatorio 25/10 (plazo ~31/10).
+## (05/10/2026) RRHH: rotación masiva de acceso_token tras PR #4313
+- Con OK de Alberto, tras el deploy READY del fix: 36 tokens renovados (Global2 14, Mariscos González 22), formato `generarAccesoToken()`, transacción con verificación. Auditoría en `seguros.operational_events` (`rrhh_acceso_token_rotacion_masiva`).
+- Los enlaces antiguos ya no valen: cada responsable saca el nuevo con «Ver enlace» en la ficha. Aviso a empleados pendiente del OK de Alberto.
+
+## (05/10/2026) RRHH: el panel ya no expone el `acceso_token` de los empleados
+- 🔒 `GET /api/admin/empleados` y la página `/admin/empleados` mandaban al navegador el token de TODA la plantilla (con él se entra como el empleado); también la ficha y el alta. Ahora lista blanca `lib/empleados-columnas.ts`; el enlace se pide uno a uno con `POST /api/admin/empleados/[id]/enlace` (botón «Ver enlace»); `/acceso` (regenerar) devuelve solo `enlace`.
+- Guardián `lib/acceso-token-guardian.test.ts` (4 brazos vistos en rojo). Bug: export CSV de fichajes leía `e.nif` (no existe) → `e.dni AS nif`.
+- Pendiente (decisión de Alberto): rotar los tokens existentes, ya expuestos a cualquier responsable que abriera el listado.
+
+## (05/10/2026) Vigía «🚨 Reserva que Smoobu NO tiene»: falso positivo de Expedia
+- Alerta «reserva 102699405 · piso sin identificar»: era un MENSAJE de huésped de Expedia Partner Central
+  (Reka Bekesi, llega 06/11 20:00, pide balcón); 102699405 = ID de alojamiento Expedia de «Busto Reform» (`htid`).
+- Fix: `lib/correo/num-confirmacion.ts` descarta htid/ID de alojamiento y, con remitente Expedia, solo acepta
+  «confirmación: N»; el vigía excluye en SQL las filas `mensaje_huesped` de Expedia; `canalDeAsunto` reconoce «huésped de Expedia».
+- Reserva de Reka Bekesi (06/11) confirmada en Smoobu por Alberto.
+
+## (05/10/2026) Correduría: Google Contacts — MERGEADO (#4286 + #4298)
+- Gmail personal sin DPA (aceptado). Etiqueta «Grupo ASegura»: 🟢 cliente en vigor, 🟡 lead, 🔵 compañía, ⏰ vence ≤30 d; nota con pólizas+vencimiento+URL, cumpleaños; adopción del volcado .vcf sin duplicar; simular antes de activar. Skill `google-contactos`.
+- Todo desde plataforma: menú «…» de /correduria → «Google Contactos» (conectar con ticket de un solo uso, simular, activar, cola). Solo conecta `GOOGLE_CONTACTOS_CUENTAS_PERMITIDAS` (Gmail de Alberto). Compañías: llamar + añadir teléfono (WhatsApp si móvil).
+- Migraciones 2026-10-05b y 05c APLICADAS en BD central. Google Cloud `grupo-asegura-contactos` en Producción; env en Vercel central-asegura.
+- #4302: «Conectar Google» caía en /login de asegura (middleware); eximidas SOLO `/api/google-contactos/{conectar,callback}` (se autentican solas; OK de Alberto).
+- Conectado (05/10). Simulación: 2.472 en agenda, 957 fichas, 24 «mismo tel, otro nombre» (familia/amigos). Añadido: Unificar (+«todos», lote 20 por cursor, solo `nombre_distinto`), MOTE por ficha en tabla AISLADA `seguros.cliente_mote` (guardián `regression-mote-aislado`; nunca en correos/portal/PDF), dedupe por email/nombre antes de crear, estados 🚨 siniestro abierto > 💶 recibo devuelto > ⏰ (máx 2 emojis), ⚪ ex-cliente solo si ya vinculado, informe «Ordenar agenda» (solo lectura). Migración 2026-10-05d APLICADA.
+- Sync ACTIVA (05/10 16:44): 906 vínculos, 20 unificados. «Un número, un contacto»: fichas con mismo teléfono → 1 contacto de la persona + «También: <empresa>» (titular en `seguros.google_contactos_titular_telefono`, cola «Este número es de…», >3 fichas = centralita → solo aviso, freno >10 desvinculaciones/pasada). «Completar ficha» (`enriquecer_ficha`): solo rellena vacíos con OK. Migración 2026-10-05e APLICADA.
+- Siguiente: Alberto conecta → simula → revisa adoptados/conflictos → activa. Riesgos: nota vieja del .vcf duplicada en adoptados; biographies/birthdays sin probar contra People API real.
+
+## (05/10/2026) Correduría: el vehículo de la póliza escaneada ya precarga el presupuesto de auto
+- REGLA ÚNICA: el riesgo se rellena UNA vez (documento o corredor) en `info_riesgo.datosVehiculo`; toda pantalla de auto lo lee de ahí y no re-pide lo que consta (skill correduria-crm punto 22).
+- Al crear oportunidad desde documento: OCR (ahora con combustible) → `datosVehiculoDesdeDocumento` (module-seguros) → ids de marca/modelo con `emparejar()` contra catálogo GRATIS; motor/versión solo si candidata única; catálogo caído = sin ids. Nunca búsqueda por matrícula (créditos).
+- AutoNuevo precarga en cascada PARCIAL (`lib/correduria/precarga-vehiculo.ts`), marca «precargado · sin confirmar» mientras `confirmadoAt` null. Oportunidad ya abierta: no pisa un `datosVehiculo` existente ni tapa un coche antiguo (`matricula`/`vehiculo`) salvo misma matrícula (`puedeEscribirDatosVehiculo`). PR #4287.
+- Pendiente: ver con una póliza real que los nombres de `/car/engine-types` casan con el combustible traducido.
+
+## (05/10/2026) RRHH: sección «Informes» (Excel/PDF/CSV) para Pilar
+- `/admin/informes`: catálogo declarativo `apps/rrhh/lib/informes/` (8 entidades: fichajes, solicitudes, empleados, nóminas, incidencias, contratos, documentos, obras) + motor genérico con subtotales/total; `empresa_id` solo de sesión, Zod `.strict()`, SQL parametrizado.
+- Fichajes en curso/datos null = «sin dato», nunca 0. `xlsx` (ya en plataforma/ialimp) + `@react-pdf`. 36 tests, 3 cepos en rojo.
+- 🚨 Detectado fuera de alcance: `GET /api/admin/empleados` devuelve `acceso_token` al navegador; `/api/admin/fichajes/exportar` usa `e.nif` (columna es `dni`).
 
 ## (05/10/2026) RRHH: ubicación OBLIGATORIA al fichar (petición de Pilar)
 - `POST /api/e/fichaje` (solo empleado) rechaza 400 `ubicacion_requerida` sin lat/lng válidos; validador puro `apps/rrhh/lib/ubicacion-fichaje.ts` + 15 tests (cepo visto en rojo).

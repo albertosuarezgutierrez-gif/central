@@ -8,6 +8,7 @@ import {
 } from '@/lib/presupuesto-aceptacion'
 import { entregarJustificanteAnulacion } from '@/lib/justificante-anulacion'
 import { pideLlamada, preguntaIA, resumenIA } from '@/lib/comparativa-ia-servicio'
+import { pdfEstudioParaPortal } from '@/lib/presupuesto-pdf-portal'
 import { actividadCliente } from '@/lib/presupuesto-actividad-servicio'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
@@ -25,6 +26,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  *        ENMASCARADA (`elegir_cuenta`); con `cuenta: { eleccion:'ficha'|'otra', iban? }`, el documento a firmar (no escribe)
  *        { accion:'codigo',   identidadId, presupuestoId, opcionId }
  *        { accion:'firmar',   identidadId, presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados, cuenta, ip?, userAgent? }
+ *        { accion:'pdf',      identidadId, presupuestoId }          → el estudio comparativo en PDF (solo origen ofertas, ya enviado)
  *        { accion:'datos',    identidadId, presupuestoId }          → «Revisa tus datos» (no escribe)
  *        { accion:'datos_incorrectos', identidadId, presupuestoId, texto } → avisa; cierra la firma desde el portal
  *        { accion:'resumen_ia',  identidadId, presupuestoId }                          → resumen IA (cacheado)
@@ -55,7 +57,7 @@ export const POST = auditado(async (req: Request) => {
     const identidadId = s('identidadId'), presupuestoId = s('presupuestoId'), opcionId = s('opcionId')
     // `datos` y `datos_incorrectos` son del presupuesto, no de una opción: no piden `opcionId`.
     const sinOpcion = b?.accion === 'datos' || b?.accion === 'datos_incorrectos' || b?.accion === 'resumen_ia' ||
-      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme' || b?.accion === 'actividad'
+      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme' || b?.accion === 'actividad' || b?.accion === 'pdf'
     if (!UUID.test(identidadId) || !UUID.test(presupuestoId) || (!sinOpcion && !UUID.test(opcionId))) {
       return NextResponse.json({ estado: 'invalido' }, { status: 422 })
     }
@@ -70,6 +72,16 @@ export const POST = auditado(async (req: Request) => {
       const r = await datosCotizadosDelPresupuesto(correduria.id, identidadId, presupuestoId)
       // `sin_datos` es una respuesta completa (el portal la pinta y cierra la firma), no un fallo.
       return NextResponse.json(r, { status: r.estado === 'sin_datos' ? 200 : STATUS[r.estado] ?? 500 })
+    }
+    if (b?.accion === 'pdf') {
+      // El estudio comparativo de un presupuesto de ofertas, ya enviado y de SU ficha (bytes, no JSON).
+      const r = await pdfEstudioParaPortal(correduria.id, identidadId, presupuestoId)
+      if (r.estado === 'ok') {
+        return new Response(Buffer.from(r.bytes), {
+          headers: { 'content-type': 'application/pdf', 'x-nombre-fichero': r.nombre, 'cache-control': 'private, no-store' },
+        })
+      }
+      return NextResponse.json(r, { status: r.estado === 'no_encontrado' ? 404 : r.estado === 'no_disponible' ? 409 : STATUS[r.estado] ?? 409 })
     }
     if (b?.accion === 'datos_incorrectos') {
       const r = await reportarDatosIncorrectos(correduria.id, identidadId, presupuestoId, s('texto'))

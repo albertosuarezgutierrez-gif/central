@@ -1226,6 +1226,8 @@ export {
   leerDatosVehiculo, motivoNoConfirmable, textoFaltanVehiculo, validarDatosVehiculoRiesgo,
 } from './datos-vehiculo-riesgo.ts'
 export type { CambioVehiculo, CampoVehiculo, DatosVehiculoRiesgo, ErrorVehiculo, ValidacionVehiculo } from './datos-vehiculo-riesgo.ts'
+export { SIN_IDS_CATALOGO, datosVehiculoDeDocumento } from './datos-vehiculo-documento.ts'
+export type { IdsCatalogoVehiculo, VehiculoLeido } from './datos-vehiculo-documento.ts'
 
 // Datos del riesgo por ramo (30/09/2026): vivienda, capital y riesgo libre, con el mismo patrón que el vehículo.
 export {
@@ -1312,3 +1314,12 @@ export {
   type MotivoPropuesta,
 } from './identidad-documentada.ts'
 export { polizaAnteriorParaTarificar, CODIGOS_DGS_MAPFRE } from './poliza-anterior.ts'
+
+export {
+  TAXONOMIA_POR_RAMO, ramoOfertaDe, garantiasDelRamo, garantiaCanonica, normalizarGarantia, normalizarTexto,
+} from './coberturas-taxonomia.ts'
+export type { RamoOferta, GrupoGarantia, TipoValorGarantia, GarantiaCanonica } from './coberturas-taxonomia.ts'
+export { compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2 } from './comparar-ofertas.ts'
+export type {
+  OfertaNormalizada, ValorGarantia, ResultadoComparacion, FilaMatriz, CeldaMatriz, ResumenOferta, AlertaInfraseguro,
+} from './comparar-ofertas.ts'

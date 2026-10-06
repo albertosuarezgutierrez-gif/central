@@ -68,15 +68,16 @@ export interface GastoDomiciliado {
 }
 
 /** Última fecha sincronizada de cada cuenta activa (corriente o tarjeta) con movimientos en 180 días. */
-async function coberturaPorCuenta(hoy: string): Promise<CuentaCobertura[]> {
+export async function coberturaPorCuenta(hoy: string, cuentaId?: string, incluirOcultas = false): Promise<CuentaCobertura[]> {
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT cb.id::text AS id, COALESCE(cb.alias, cb.banco, cb.iban_mascara, cb.id::text) AS nombre,
            cb.iban_mascara, MAX(m.fecha_operacion)::text AS ultimo
     FROM cuentas_bancarias cb
     JOIN v_movimientos_activos m ON m.cuenta_bancaria_id = cb.id
-    WHERE cb.oculta IS NOT TRUE
+    WHERE ${incluirOcultas ? Prisma.sql`TRUE` : Prisma.sql`cb.oculta IS NOT TRUE`}
+      ${cuentaId ? Prisma.sql`AND cb.cuenta_id = ${cuentaId}::uuid` : Prisma.empty}
     GROUP BY cb.id, cb.alias, cb.banco, cb.iban_mascara
-    HAVING MAX(m.fecha_operacion) >= ${hoy}::date - 180
+    ${incluirOcultas ? Prisma.empty : Prisma.sql`HAVING MAX(m.fecha_operacion) >= ${hoy}::date - 180`}
   `)
   return rows.map((r) => ({
     nombre: `${r.nombre}${r.iban_mascara && r.nombre !== r.iban_mascara ? ` ${String(r.iban_mascara).slice(-4)}` : ''}`,
