@@ -8,6 +8,7 @@ import {
   agruparPosiblesBajas,
   textoPosiblesBajas,
   tramoFirmaAnulaciones,
+  hayAnulacionNuevaEnTramo,
   type FicheroAnulacionFila,
 } from './anulacion-bloque.ts'
 import {
@@ -16,6 +17,8 @@ import {
   firmaAvisoIngesta,
   normalizarFirmaIngesta,
   cambioAnulacionesEnFirma,
+  firmaPreviaIgnorandoAnulaciones,
+  decidirAvisoIngesta,
 } from './ingesta.ts'
 
 const fila = (o: Partial<FicheroAnulacionFila> = {}): FicheroAnulacionFila => ({
@@ -84,9 +87,9 @@ test('posibles bajas: sin nada no redacta', () => {
 })
 test('firma: los tres estados dan tramos distintos', () => {
   const t = (v: null | undefined | []) => tramoFirmaAnulaciones({ bloque: v, bajas: v, anuladas: v })
-  assert.equal(t(undefined), '[||]')
-  assert.equal(t([]), '[||]')
-  assert.equal(t(null), '[?|?|?]')
+  assert.equal(t(undefined), '[//]')
+  assert.equal(t([]), '[//]')
+  assert.equal(t(null), '[?/?/?]')
 })
 
 // --- integración con saludIngesta ---
@@ -131,4 +134,59 @@ test('firma: un bloque nuevo cambia el tramo; el retraso solo NO lo cambia', () 
   const retraso = firmaAvisoIngesta(saludIngesta({ ...base, retrasoAnulacion: [{ entidad: 'C0058', entidadNombre: null, polizas: 3, medianaDias: 9 }] }))
   assert.equal(retraso, sin)
   assert.equal(cambioAnulacionesEnFirma(null, sin), false)
+})
+
+test('firma: el tramo no contiene `|`, `:` ni « · » (parten la cabecera guardada) aunque los datos los traigan', () => {
+  const t = tramoFirmaAnulaciones({
+    bloque: [{ ...fila(), entidad: 'C|0:58', fichero: 'a · b|c:d/e.zip' }],
+    bajas: [{ entidad: 'C0058', entidadNombre: null, numeros: ['P|1', 'P/2'] }],
+    anuladas: [{ entidad: 'C0058', entidadNombre: null, polizas: 2, vencimientoMasAntiguo: null }],
+  })
+  assert.doesNotMatch(t, /[|:·]/)
+  assert.doesNotMatch(t, / /)
+  assert.equal(t.split('/').length, 3)
+})
+test('firma vieja con `[||]` se lee como el tramo vacío de hoy', () => {
+  const hoy = firmaAvisoIngesta(saludIngesta({ cuarentena: [], ultimoPull: { horas: 2, procesados: 5 } }))
+  const vieja = hoy.replace(/\[\/\/\]$/, '[||]')
+  assert.notEqual(vieja, hoy)
+  assert.equal(normalizarFirmaIngesta(vieja), hoy)
+})
+test('anulaciones: la CADUCIDAD de una señal no cuenta como cambio; una nueva sí', () => {
+  const base = { cuarentena: [], ultimoPull: { horas: 2, procesados: 5 } }
+  const con = firmaAvisoIngesta(saludIngesta({ ...base, anulacionesPorFichero: [fila()] }))
+  const sin = firmaAvisoIngesta(saludIngesta(base))
+  assert.equal(cambioAnulacionesEnFirma(con, sin), false) // caduca el bloque (48 h)
+  assert.equal(cambioAnulacionesEnFirma(sin, con), true)
+  const otro = firmaAvisoIngesta(saludIngesta({ ...base, anulacionesPorFichero: [fila(), fila({ fichero: 'POL_2.zip' })] }))
+  assert.equal(cambioAnulacionesEnFirma(con, otro), true) // entra otro fichero
+  assert.equal(cambioAnulacionesEnFirma(otro, con), false)
+  // No poder mirar (`?`) tampoco es un cambio que avisar.
+  assert.equal(hayAnulacionNuevaEnTramo('[a=1/b=2/c=3]', '[?/?/?]'), false)
+})
+test('anulaciones: la firma previa con el tramo de hoy no suena como avería nueva', () => {
+  const base = { cuarentena: [], ultimoPull: { horas: 2, procesados: 5 } }
+  const con = firmaAvisoIngesta(saludIngesta({ ...base, anulacionesPorFichero: [fila()] }))
+  const sin = firmaAvisoIngesta(saludIngesta(base))
+  assert.equal(firmaPreviaIgnorandoAnulaciones(con, sin), sin)
+  assert.equal(firmaPreviaIgnorandoAnulaciones(sin, con), con)
+  assert.equal(firmaPreviaIgnorandoAnulaciones(null, con), null)
+  // Un cambio en OTRO tramo se conserva (sí es avería).
+  const otroTramo = firmaAvisoIngesta(saludIngesta({ cuarentena: [], ultimoPull: { horas: 99, procesados: 5 } }))
+  assert.notEqual(firmaPreviaIgnorandoAnulaciones(con, otroTramo), otroTramo)
+})
+test('anulaciones con ingesta degradada: un cambio solo del tramo de anulaciones no suena como `cambio` ni reinicia la avería', () => {
+  const base = { cuarentena: [{ tipo: 'REC', entidad: 'C0468', dias: 5 }], ultimoPull: { horas: 2, procesados: 5 } } as never
+  const sin = firmaAvisoIngesta(saludIngesta(base))
+  const con = firmaAvisoIngesta(saludIngesta({ ...(base as object), anulacionesPorFichero: [fila()] } as never))
+  const hoy = new Date('2026-10-06T08:00:00Z')
+  const aviso = new Date('2026-10-05T08:00:00Z')
+  const decide = (previa: string, actual: string) => decidirAvisoIngesta({
+    firmaAnterior: firmaPreviaIgnorandoAnulaciones(previa, actual), firmaActual: actual,
+    ultimoAvisoEn: aviso, abiertaDesde: aviso, hoy,
+  })
+  assert.equal(decide(sin, con).avisar, false) // entra una señal: línea informativa aparte
+  assert.equal(decide(con, sin).avisar, false) // caduca: nada
+  // Sin la tolerancia, sonaría la alarma completa como cambio.
+  assert.equal(decidirAvisoIngesta({ firmaAnterior: sin, firmaActual: con, ultimoAvisoEn: aviso, hoy }).avisar, true)
 })

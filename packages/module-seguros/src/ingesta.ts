@@ -31,6 +31,8 @@ import {
   textoRenovacionesAnuladas,
   textoRetrasoAnulacion,
   tramoFirmaAnulaciones,
+  TRAMO_ANULACIONES_VACIO,
+  hayAnulacionNuevaEnTramo,
   type AnulacionEnBloque,
   type FicheroAnulacionFila,
   type PosiblesBajasPorCompania,
@@ -1214,15 +1216,29 @@ export function cambioDuplicadasEnFirma(previa: string | null, actual: string): 
 }
 
 /**
- * ¿Ha cambiado el tramo de anulaciones (bloque / pre-aviso de baja / renovación
- * anulada) entre dos firmas ya normalizadas? Mismo criterio que
- * `cambioDuplicadasEnFirma`: una firma previa `null` solo cuenta si hoy hay algo.
+ * ¿Hay una señal de anulación NUEVA entre dos firmas ya normalizadas? Solo cuenta lo que aparece:
+ * las señales son ventanas deslizantes (48/72 h) y su caducidad no es un cambio. Una firma previa
+ * `null` solo cuenta si hoy hay algo.
  */
 export function cambioAnulacionesEnFirma(previa: string | null, actual: string): boolean {
-  const tramo = (f: string) => f.split(':')[9] ?? '[||]'
+  const tramo = (f: string) => f.split(':')[9] ?? TRAMO_ANULACIONES_VACIO
   const hoy = tramo(actual)
-  if (previa === null) return hoy !== '[||]'
-  return tramo(previa) !== hoy
+  if (previa === null) return hoy !== TRAMO_ANULACIONES_VACIO
+  return hayAnulacionNuevaEnTramo(tramo(previa), hoy)
+}
+
+/**
+ * La firma previa con el tramo de anulaciones puesto al de hoy. Se usa para DECIDIR el aviso: un
+ * cambio solo en las señales de anulación (nuevas o caducadas) no es una avería nueva, no debe
+ * sonar como `cambio` ni reiniciar `abiertaDesde`. Las nuevas se avisan aparte (info propia).
+ */
+export function firmaPreviaIgnorandoAnulaciones(previa: string | null, actual: string): string | null {
+  if (previa === null) return null
+  const t = previa.split(':')
+  const a = actual.split(':')
+  if (t.length !== a.length || a.length < 10) return previa
+  t[9] = a[9]!
+  return t.join(':')
 }
 
 /**
@@ -1251,8 +1267,10 @@ export function normalizarFirmaIngesta(firma: string | null): string | null {
   else if (tramos === 6) f = `${f}:[]:[]:[]`
   else if (tramos === 7) f = `${f}:[]:[]`
   else if (tramos === 8) f = `${f}:[]`
-  // Las anteriores al 06/10/2026 no traían el tramo de anulaciones (nueve): `[||]`.
-  if (f.split(':').length === 9) f = `${f}:[||]`
+  // Las anteriores al 06/10/2026 no traían el tramo de anulaciones (nueve): `[//]`.
+  if (f.split(':').length === 9) f = `${f}:${TRAMO_ANULACIONES_VACIO}`
+  // El tramo vacío con el separador de antes (`|`, que además rompía la cabecera guardada).
+  if (f.endsWith(':[||]')) f = `${f.slice(0, -5)}:${TRAMO_ANULACIONES_VACIO}`
   return f
 }
 

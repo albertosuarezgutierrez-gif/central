@@ -434,7 +434,7 @@ async function describirFugas(db: Consultor, correduriaId: string, claves: strin
   const filas = await db.$queryRaw<{ id: string; tipo: TipoEventoCartera; cliente_id: string; nombre: string | null; apellidos: string | null; numero_poliza: string | null; aseguradora: string | null; despues: string | null; anulacion: unknown; recibo: string | null }[]>`
     select e.id, e.tipo, e.cliente_id, c.nombre, c.apellidos, p.numero_poliza, p.aseguradora, e.datos->>'despues' as despues,
            -- El motivo CIMA de la póliza (puede llegar después que la baja); si no, el que guardó el evento.
-           coalesce(p.datos_especificos->'anulacion', jsonb_strip_nulls(jsonb_build_object('motivo', e.datos->>'motivoCima', 'detalle', e.datos->>'detalleCima', 'fecha', e.datos->>'fechaAnulacion'))) as anulacion,
+           coalesce(p.datos_especificos->'anulacion', jsonb_strip_nulls(jsonb_build_object('motivo', e.datos->>'motivoCima', 'fecha', e.datos->>'fechaAnulacion'))) as anulacion,
            ur.situacion as recibo
     from evento e
     left join clientes c on c.id = e.cliente_id

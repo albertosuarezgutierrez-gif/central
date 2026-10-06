@@ -508,3 +508,31 @@ export async function leerIngestaCima(): Promise<RespuestaIngesta> {
     : interpretarHuerfanas(listado.status, listado.json)
   return interpretarIngesta(ingesta.status, ingesta.json, huerfanas)
 }
+
+/**
+ * La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`.
+ *
+ * Va delante y separada del texto humano por ` · `. El formato viejo era solo
+ * la firma, así que un `detalle` sin `|` se lee como «no se sabe cuándo se
+ * avisó» → y eso hace sonar (`primera`). Es lo correcto en el primer despliegue:
+ * suena una vez y a partir de ahí ya lleva la cuenta.
+ *
+ * 🚨 La firma NO puede contener `|` ni ` · `: parten la cabecera y la leerían truncada
+ * (avisaría «primera» en cada pasada). Lo vigila el test de ida y vuelta.
+ */
+export function componerCabecera(firma: string, aviso: Date | null, abierta: Date | null): string {
+  return `${firma}|${aviso?.toISOString() ?? ''}|${abierta?.toISOString() ?? ''}`
+}
+
+export function leerCabecera(detalle: string | null): { firma: string | null; aviso: Date | null; abierta: Date | null } {
+  if (detalle === null) return { firma: null, aviso: null, abierta: null }
+  const cabeza = detalle.split(' · ')[0] ?? ''
+  const [f, aviso, abierta] = cabeza.split('|')
+  const fecha = (v: string | undefined): Date | null => {
+    if (!v) return null
+    const d = new Date(v)
+    // Una fecha ilegible NO es «hace poco»: es «no lo sabemos», y eso avisa.
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  return { firma: f || null, aviso: fecha(aviso), abierta: fecha(abierta) }
+}

@@ -106,8 +106,11 @@ test('motivo legible: conocido, desconocido con detalle, desconocido sin detalle
   assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'IM', detalle: null }), 'impago')
   assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'ex', detalle: null }), 'se va a otra compañía (mejor precio o venta)')
   assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'SI', detalle: null }), 'siniestralidad (la compañía no renueva)')
-  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'ZZ', detalle: 'Fallecimiento del tomador' }), 'Fallecimiento del tomador')
-  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'ZZ', detalle: null }), 'motivo CIMA «ZZ»')
+  // PII: el detalle libre nunca sale, con o sin motivo conocido.
+  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'ZZ', detalle: 'Fallecimiento del tomador' }), 'motivo CIMA ZZ')
+  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'ZZ', detalle: null }), 'motivo CIMA ZZ')
+  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: null, detalle: 'Fallecimiento del tomador' }), null)
+  assert.deepEqual(datosAnulacion({ fecha: '2026-01-01', motivo: 'ZZ', detalle: 'Fallecimiento del tomador' }), { motivoCima: 'ZZ', fechaAnulacion: '2026-01-01' })
   assert.equal(textoMotivoAnulacion(null), null)
   assert.equal(textoMotivoAnulacion({ fecha: '2026-01-01', motivo: null, detalle: null }), null)
 })

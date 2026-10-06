@@ -19,7 +19,7 @@ import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
-import { leerIngestaCima, saludDesdeRespuesta } from '@/lib/correduria/ingesta-cima'
+import { leerIngestaCima, saludDesdeRespuesta, leerCabecera, componerCabecera } from '@/lib/correduria/ingesta-cima'
 import { senalesIngesta, sinFicheroAtascado } from '@/lib/correduria/ingesta-pantalla'
 import {
   detalleSalud,
@@ -27,6 +27,7 @@ import {
   firmaAvisoIngesta,
   normalizarFirmaIngesta,
   cambioAnulacionesEnFirma,
+  firmaPreviaIgnorandoAnulaciones,
   textoAnulacionesEnBloque,
   textoRenovacionesAnuladas,
   textoPosiblesBajas,
@@ -41,27 +42,6 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const AGENTE = 'correduria_ingesta'
-
-/**
- * La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`.
- *
- * Va delante y separada del texto humano por ` · `. El formato viejo era solo
- * la firma, así que un `detalle` sin `|` se lee como «no se sabe cuándo se
- * avisó» → y eso hace sonar (`primera`). Es lo correcto en el primer despliegue:
- * suena una vez y a partir de ahí ya lleva la cuenta.
- */
-function leerCabecera(detalle: string | null): { firma: string | null; aviso: Date | null; abierta: Date | null } {
-  if (detalle === null) return { firma: null, aviso: null, abierta: null }
-  const cabeza = detalle.split(' · ')[0] ?? ''
-  const [f, aviso, abierta] = cabeza.split('|')
-  const fecha = (v: string | undefined): Date | null => {
-    if (!v) return null
-    const d = new Date(v)
-    // Una fecha ilegible NO es «hace poco»: es «no lo sabemos», y eso avisa.
-    return Number.isNaN(d.getTime()) ? null : d
-  }
-  return { firma: f || null, aviso: fecha(aviso), abierta: fecha(abierta) }
-}
 
 /** Líneas informativas de anulaciones; el retraso (A) va siempre que haya bloque o baja. */
 function textosAnulaciones(salud: {
@@ -106,11 +86,15 @@ export async function GET(req: NextRequest) {
   // «lleva 59 días» en vez de «otra vez esto».
   // Las firmas guardadas antes del tramo del cron se leen en el formato de hoy.
   const firmaPrevia = normalizarFirmaIngesta(previo.firma)
-  const mismaAveria = firmaPrevia !== null && firmaPrevia === actual
+  // 📉 Las señales de anulación son ventanas deslizantes (48/72 h): que entren o caduquen NO es una
+  // avería nueva. Para decidir el aviso y la antigüedad se compara con el tramo de hoy; las señales
+  // nuevas se avisan aparte (línea informativa propia) más abajo.
+  const firmaComparable = firmaPreviaIgnorandoAnulaciones(firmaPrevia, actual)
+  const mismaAveria = firmaComparable !== null && firmaComparable === actual
   const abiertaDesde = mismaAveria ? (previo.abierta ?? previo.aviso) : ahora
 
   const decision = decidirAvisoIngesta({
-    firmaAnterior: firmaPrevia,
+    firmaAnterior: firmaComparable,
     firmaActual: actual,
     ultimoAvisoEn: previo.aviso,
     abiertaDesde,
@@ -121,7 +105,7 @@ export async function GET(req: NextRequest) {
   // `ahora` reiniciaría el reloj del recordatorio cada mañana y la avería no
   // volvería a sonar NUNCA — que es exactamente el fallo que esto arregla.
   const avisoGuardado = decision.avisar ? ahora : previo.aviso
-  const cabecera = `${actual}|${avisoGuardado?.toISOString() ?? ''}|${abiertaDesde?.toISOString() ?? ''}`
+  const cabecera = componerCabecera(actual, avisoGuardado, abiertaDesde)
   const detalleGuardado = `${cabecera} · ${detalle}`
 
   if (salud.estado === 'sin_datos') {
@@ -260,17 +244,22 @@ export async function GET(req: NextRequest) {
     ).catch(() => {})
   }
 
-  // 📉 Con la ingesta en `ok`: aviso INFORMATIVO solo si cambia el tramo de
-  // anulaciones (bloque, posible baja, renovación anulada); sin recordatorio.
-  const avisoAnulaciones = salud.estado === 'ok' && decision.avisar && decision.motivo !== 'recordatorio'
-    && cambioAnulacionesEnFirma(firmaPrevia, actual)
+  // 📉 Aviso INFORMATIVO propio cuando ENTRA una señal de anulación nueva (bloque, posible baja,
+  // renovación anulada). Solo lo nuevo: la caducidad de una ventana no suena. Sin recordatorio.
+  // Si hoy ya sale la alarma completa (ingesta no `ok`), esas líneas van dentro de ella.
+  const alarmaCompleta = salud.estado !== 'ok' && decision.avisar
+  const avisoAnulaciones = !alarmaCompleta && cambioAnulacionesEnFirma(firmaPrevia, actual)
   if (avisoAnulaciones) {
     const textos = textosAnulaciones(salud)
-    await tgAviso('correduria.ingesta',
-      'ℹ️ <b>Anulaciones en la cartera</b>\n' +
-      (textos.length > 0 ? textos.map(t => `• ${t}`).join('\n') : 'Ya no queda ninguna señal de anulación abierta.') +
-      '\n\nLa ingesta de CIMA va bien: esto es información, no una avería.',
-    ).catch(() => {})
+    if (textos.length > 0) {
+      await tgAviso('correduria.ingesta',
+        'ℹ️ <b>Anulaciones en la cartera</b>\n' +
+        textos.map(t => `• ${t}`).join('\n') +
+        (salud.estado === 'ok'
+          ? '\n\nLa ingesta de CIMA va bien: esto es información, no una avería.'
+          : '\n\nAparte de esto, la ingesta ya tiene su propio aviso abierto: esto es solo información.'),
+      ).catch(() => {})
+    }
   }
 
   await registrarLatido(AGENTE, true, detalleGuardado)
@@ -285,7 +274,7 @@ export async function GET(req: NextRequest) {
     reprocesables: salud.huerfanasReparto?.totalReprocesar ?? null,
     objetosEnRevision: salud.objetosEnRevision,
     huecos: salud.huecos.length,
-    avisado: (cambio && salud.estado !== 'ok') || avisoDuplicadas,
+    avisado: (cambio && salud.estado !== 'ok') || avisoDuplicadas || avisoAnulaciones,
     motivoAviso: decision.avisar ? decision.motivo : null,
     detalle,
   })

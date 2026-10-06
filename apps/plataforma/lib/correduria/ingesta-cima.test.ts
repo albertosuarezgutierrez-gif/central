@@ -5,7 +5,10 @@ import {
   saludDesdeRespuesta,
   interpretarHuerfanas,
   polizasDe,
+  componerCabecera,
+  leerCabecera,
 } from './ingesta-cima.ts'
+import { saludIngesta, firmaAvisoIngesta, normalizarFirmaIngesta, detalleSalud } from '@central/module-seguros'
 
 const OK = {
   estado: 'ok',
@@ -555,4 +558,25 @@ test('🚨 anulaciones: `null` o una fila ilegible degradan CADA lista ENTERA a 
       assert.equal((r.salud as Record<string, unknown>)[campo], null, `${clave}`)
     }
   }
+})
+
+test('cabecera: la firma con señales de anulación sobrevive firma → cabecera → leerCabecera (sin `|` interno)', () => {
+  const salud = saludIngesta({
+    cuarentena: [], ultimoPull: { horas: 2, procesados: 5 },
+    anulacionesPorFichero: [{
+      entidad: 'C0058', entidadNombre: 'Mapfre', fichero: 'POL_1.zip', polizas: 47, anuladas: 25,
+      impago: 11, otraCompania: 9, siniestralidad: 5, otros: 0, medianaDiasRetraso: 437,
+    }],
+    posiblesBajas: [{ entidad: 'C0058', entidadNombre: 'Mapfre', numeros: ['123', '456'] }],
+    renovacionesAnuladas: [{ entidad: 'C0058', entidadNombre: 'Mapfre', polizas: 3, vencimientoMasAntiguo: '2026-07-01' }],
+  })
+  const firma = firmaAvisoIngesta(salud)
+  const aviso = new Date('2026-10-06T08:00:00Z')
+  const abierta = new Date('2026-10-05T08:00:00Z')
+  const guardado = `${componerCabecera(firma, aviso, abierta)} · ${detalleSalud(salud)}`
+  const leido = leerCabecera(guardado)
+  assert.equal(leido.firma, firma)
+  assert.equal(normalizarFirmaIngesta(leido.firma), firma)
+  assert.equal(leido.aviso?.toISOString(), aviso.toISOString())
+  assert.equal(leido.abierta?.toISOString(), abierta.toISOString())
 })

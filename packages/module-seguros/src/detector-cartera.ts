@@ -179,7 +179,6 @@ export function leerAnulacion(v: unknown): AnulacionEiac | null {
 export function datosAnulacion(a: AnulacionEiac | null | undefined): Record<string, string> {
   const r: Record<string, string> = {}
   if (a?.motivo) r.motivoCima = a.motivo
-  if (a?.detalle) r.detalleCima = a.detalle
   if (a?.fecha) r.fechaAnulacion = a.fecha
   return r
 }
@@ -189,15 +188,15 @@ export function categoriaMotivo(motivo: string | null | undefined): CategoriaMot
 }
 
 /**
- * Motivo legible. Código conocido → su texto; desconocido → el detalle tal cual (o el código);
- * sin anulación o sin motivo → `null` (no se inventa).
+ * Motivo legible. Código conocido → su texto; desconocido → «motivo CIMA <código>»;
+ * sin anulación o sin motivo → `null` (no se inventa). 🔒 El detalle libre de la compañía NO se usa
+ * (puede traer datos personales): ni se manda en el aviso ni se guarda en el evento.
  */
 export function textoMotivoAnulacion(a: AnulacionEiac | null | undefined): string | null {
   if (!a) return null
   const conocido = MOTIVOS_ANULACION[(a.motivo ?? '').trim().toUpperCase()]
   if (conocido) return conocido.texto
-  if (a.detalle) return a.detalle.slice(0, 120)
-  return a.motivo ? `motivo CIMA «${a.motivo.slice(0, 20)}»` : null
+  return a.motivo ? `motivo CIMA ${a.motivo.slice(0, 20)}` : null
 }
 
 const fechaCorta = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`

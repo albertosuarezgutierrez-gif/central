@@ -159,18 +159,46 @@ export function textoPosiblesBajas(lista: PosiblesBajasPorCompania[] | null | un
     `${HORAS_RECIBO_ANULADO_SIN_REEMISION} h — ${partes.join(' · ')}.`
 }
 
+/** Valor del tramo sin ningún separador de la firma/cabecera (`:` `|` ` · ` `;` `/` `[` `]` `+`). */
+const sinSeparadores = (v: string) => v.replace(/[:|;/\[\]+·\s]/g, '_')
+
+/** Tramo vacío: nada de anulaciones. Separador INTERNO `/` (el `|` parte la cabecera `firma|aviso|abierta`). */
+export const TRAMO_ANULACIONES_VACIO = '[//]'
+
 /** Tramo de firma: qué ficheros/compañías/pólizas, para que suene al cambiar (sin el retraso). */
 export function tramoFirmaAnulaciones(e: {
   bloque: AnulacionEnBloque[] | null | undefined
   bajas: PosiblesBajasPorCompania[] | null | undefined
   anuladas: RenovacionAnuladaPorCompania[] | null | undefined
 }): string {
-  // Sin `:` dentro (separa tramos) ni `,` ambiguas: `;` entre grupos.
+  // Sin `:` (separa tramos), sin `|` (separa la cabecera guardada) ni ` · ` (separa el texto humano):
+  // `/` entre los tres grupos y `;` entre elementos.
   const un = <T>(v: T[] | null | undefined, f: (x: T) => string) =>
     v === null ? '?' : v === undefined ? '' : v.map(f).sort().join(';')
-  const b = un(e.bloque, x => `${x.entidad}=${x.fichero}`)
-  const p = un(e.bajas, x => `${x.entidad}=${x.numeros.join('+').replace(/[:|;\[\]]/g, '_')}`)
-  const a = un(e.anuladas, x => `${x.entidad}=${x.polizas}`)
+  const b = un(e.bloque, x => `${sinSeparadores(x.entidad)}=${sinSeparadores(x.fichero)}`)
+  const p = un(e.bajas, x => `${sinSeparadores(x.entidad)}=${x.numeros.map(sinSeparadores).join('+')}`)
+  const a = un(e.anuladas, x => `${sinSeparadores(x.entidad)}=${x.polizas}`)
   // El retraso NO entra: su mediana se mueve con cada fichero y haría sonar el aviso sin cambio real.
-  return `[${b}|${p}|${a}]`
+  return `[${b}/${p}/${a}]`
+}
+
+/** Elementos de un tramo, etiquetados por grupo. `?` (no se pudo mirar) no aporta elementos. */
+function elementosTramo(tramo: string): Set<string> {
+  const out = new Set<string>()
+  const t = tramo.replace(/^\[|\]$/g, '')
+  t.split('/').forEach((grupo, i) => {
+    if (grupo === '?' || grupo === '') return
+    for (const x of grupo.split(';')) if (x) out.add(`${i}:${x}`)
+  })
+  return out
+}
+
+/**
+ * ¿Hay en `actual` alguna señal de anulación que NO estaba en `previa`? Las señales son ventanas
+ * deslizantes (48 h / 72 h): que una CADUQUE (o que no se pueda mirar) no es un cambio que avisar.
+ */
+export function hayAnulacionNuevaEnTramo(previa: string, actual: string): boolean {
+  const antes = elementosTramo(previa)
+  for (const x of elementosTramo(actual)) if (!antes.has(x)) return true
+  return false
 }

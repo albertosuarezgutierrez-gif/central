@@ -172,6 +172,7 @@ export {
   textoPolizasDuplicadas,
   cambioDuplicadasEnFirma,
   cambioAnulacionesEnFirma,
+  firmaPreviaIgnorandoAnulaciones,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,

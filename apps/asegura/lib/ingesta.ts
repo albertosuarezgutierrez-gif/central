@@ -787,10 +787,12 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
                COUNT(*) FILTER (WHERE p.situacion = 'AN' AND ${motivo} = 'IM') AS impago,
                COUNT(*) FILTER (WHERE p.situacion = 'AN' AND ${motivo} = 'EX') AS otra,
                COUNT(*) FILTER (WHERE p.situacion = 'AN' AND ${motivo} = 'SI') AS siniestro,
-               percentile_cont(0.5) WITHIN GROUP (ORDER BY (f.created_at::date - ${fechaAnul}))
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY (f.created_at::date - ${fechaAnul})) -- guardia-fechas: ok fragmento SQL ::date, no parámetro
                  FILTER (WHERE p.situacion = 'AN' AND ${fechaAnul} IS NOT NULL
                            AND f.created_at::date >= ${fechaAnul}) AS mediana
-        FROM cima_ficheros f
+        FROM (SELECT DISTINCT ON (xml_hash) * FROM cima_ficheros
+                 WHERE tipo_objeto = 'POL' AND xml_hash IS NOT NULL
+                 ORDER BY xml_hash, created_at ASC, id) f
         JOIN polizas p ON p.eiac_xml_hash = f.xml_hash
         LEFT JOIN companias_dgs c ON c.codigo_dgs = f.codigo_entidad
         WHERE f.tipo_objeto = 'POL'
@@ -825,9 +827,11 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       }>>(`
         SELECT p.codigo_entidad_dgs AS entidad, MAX(c.nombre_comun) AS nombre,
                COUNT(*) AS polizas,
-               percentile_cont(0.5) WITHIN GROUP (ORDER BY (f.created_at::date - ${fechaAnul})) AS mediana
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY (f.created_at::date - ${fechaAnul})) AS mediana -- guardia-fechas: ok fragmento SQL ::date, no parámetro
         FROM polizas p
-        JOIN cima_ficheros f ON f.xml_hash = p.eiac_xml_hash AND f.tipo_objeto = 'POL'
+        JOIN (SELECT DISTINCT ON (xml_hash) * FROM cima_ficheros
+                 WHERE tipo_objeto = 'POL' AND xml_hash IS NOT NULL
+                 ORDER BY xml_hash, created_at ASC, id) f ON f.xml_hash = p.eiac_xml_hash
         LEFT JOIN companias_dgs c ON c.codigo_dgs = p.codigo_entidad_dgs
         WHERE p.situacion = 'AN'
           AND p.merged_into_poliza_id IS NULL
@@ -843,7 +847,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
         medianaDias: f.mediana === null || f.mediana === undefined ? null : Math.round(Number(f.mediana)),
       }))
     })
-    // 🔔 Pre-aviso: póliza en vigor cuyo recibo llegó anulado / a cero / negativo
+    // 🔔 Pre-aviso: póliza en vigor cuyo recibo llegó anulado / a cero (no negativo: un extorno de mitad de anualidad no es baja)
     //    en las últimas 72 h (`updated_at` = llegada a nuestra BD; un reproceso
     //    también lo toca) y sin recibo vivo que lo sustituya (efecto igual o
     //    posterior). Las que ya son «renovación anulada» se excluyen.
@@ -857,7 +861,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
           AND p.merged_into_poliza_id IS NULL
           AND rx.updated_at > now() - ($1 || ' hours')::interval
           AND rx.fecha_efecto_actual IS NOT NULL
-          AND (rx.situacion::text = 'anulado' OR ${primaNum('rx')} <= 0)
+          AND (rx.situacion::text = 'anulado' OR ${primaNum('rx')} = 0)
           AND NOT EXISTS (
             SELECT 1 FROM poliza_recibos rc
             WHERE rc.poliza_id = p.id
