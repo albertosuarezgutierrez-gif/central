@@ -9,7 +9,7 @@ import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
   OPCIONES_LISTA_PROPIETARIOS, OPCIONES_TIPO_VIVIENDA, OPCIONES_USO, SONDEO_MAX_MS, SONDEO_MS,
-  fechaCorta, formularioConUltimoRiesgo, formularioInicial, leerTrabajoBot, leerUltimoRiesgoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
+  fechaCorta, formularioConUltimoRiesgo, formularioInicial, leerTrabajoBot, leerUltimoRiesgoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaPrecio, vistaTrabajo,
   type FormularioRiesgo, type TrabajoBot,
 } from '@/lib/tarificador-asegura-reglas'
 
@@ -220,20 +220,28 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
                     <button type="button" onClick={() => setAgotado(false)} style={{ ...btnStyle('secundario'), justifySelf: 'start' }}>Seguir esperando</button>
                   </div>
                 )}
-                {trabajo?.estado === 'ok' && trabajo.ofertas.map((o, i) => (
+                {trabajo?.estado === 'ok' && trabajo.ofertas.map((o, i) => {
+                  const p = vistaPrecio(o)
+                  return (
                   <div key={`${o.producto}-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6 }}>
                     <div style={{ fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{o.compania ? `${o.compania.charAt(0).toUpperCase()}${o.compania.slice(1)} · ` : ''}{o.producto}</div>
-                    <div style={{ fontSize: 22, fontWeight: 700 }}>{eur(o.primaTotalAnual)} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>/ año</span></div>
+                    <div style={{ fontSize: 22, fontWeight: 700 }}>{eur(p.total)} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>/ año</span></div>
                     <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                      Prima neta: {o.primaNeta === null ? 'no la da el portal' : eur(o.primaNeta)} · Impuestos: {o.impuestos === null ? 'no los da el portal' : eur(o.impuestos)}
+                      Prima neta: {p.neta === null ? 'no la da el portal' : eur(p.neta)} · Impuestos: {p.impuestos === null ? 'no los da el portal' : eur(p.impuestos)}
                     </div>
+                    {p.primerRecibo && (
+                      <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+                        Primer recibo: {eur(p.primerRecibo.total)}{p.primerRecibo.hasta ? ` (prorrata hasta el ${p.primerRecibo.hasta})` : ' (prorrata)'}
+                      </div>
+                    )}
                     {o.pdfIndice !== null && (
                       <a href={`/api/correduria/tarificador/trabajo/${trabajoId}/pdf/${o.pdfIndice}`} style={{ ...btnStyle('secundario'), textDecoration: 'none', justifySelf: 'start' }}>
                         <Download size={16} aria-hidden /> Descargar PDF
                       </a>
                     )}
                   </div>
-                ))}
+                  )
+                })}
                 {trabajo && !sigueEnCurso(trabajo.estado) && (
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => { setTrabajoId(null); setTrabajo(null); setAgotado(false) }} style={btnStyle('secundario')}>Pedir otro precio</button>

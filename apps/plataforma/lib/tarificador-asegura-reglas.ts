@@ -207,6 +207,8 @@ export function formularioConUltimoRiesgo(base: FormularioRiesgo, riesgo: Record
 export type OfertaBot = {
   compania: string; producto: string; primaTotalAnual: number
   primaNeta: number | null; impuestos: number | null; pdfIndice: number | null
+  /** Sucesivos de ePAC = prima anual completa de renovación. `null`/ausente = no se leyó (≠ 0). */
+  primaTotalSucesivos?: number | null; primaNetaSucesivos?: number | null; impuestosSucesivos?: number | null
 }
 export type TrabajoBot = {
   estado: string; creadoEn: string; actualizadoEn: string
@@ -231,6 +233,7 @@ export function leerTrabajoBot(v: unknown): TrabajoBot | null {
     ofertas.push({
       compania: typeof r.compania === 'string' ? r.compania : '', producto: typeof r.producto === 'string' ? r.producto : '',
       primaTotalAnual: total, primaNeta: num(r.primaNeta), impuestos: num(r.impuestos), pdfIndice: num(r.pdfIndice),
+      primaTotalSucesivos: num(r.primaTotalSucesivos), primaNetaSucesivos: num(r.primaNetaSucesivos), impuestosSucesivos: num(r.impuestosSucesivos),
     })
   }
   const pdfs: { indice: number; nombre: string }[] = []
@@ -243,6 +246,29 @@ export function leerTrabajoBot(v: unknown): TrabajoBot | null {
     estado: o.estado, creadoEn: String(o.creadoEn ?? ''), actualizadoEn: String(o.actualizadoEn ?? ''),
     error: e ? { tipo: typeof e.tipo === 'string' ? e.tipo : 'desconocido', mensaje: typeof e.mensaje === 'string' ? e.mensaje : '' } : null,
     ofertas, pdfs,
+  }
+}
+
+export type VistaPrecio = {
+  /** Cifra principal: la prima ANUAL (sucesivos) si se leyó; si no, la única que hay. */
+  total: number; neta: number | null; impuestos: number | null
+  /** Primer recibo (prorrateado) solo cuando difiere de la cifra principal. `hasta` = DD/MM/AAAA o `null` si no se conoce. */
+  primerRecibo: { total: number; hasta: string | null } | null
+}
+
+/**
+ * Qué cifra enseñar. En ePAC «Anual» = primer recibo (prorrata hasta el día 1 del mes) y «Sucesivos» = prima anual
+ * completa. Sucesivos presente → principal; el primer recibo se añade solo si difiere. Sucesivos ausente → el primer
+ * recibo es lo único que hay (no se inventa el otro). `terminoIso` = fecha real de término (AAAA-MM-DD), si se conoce.
+ */
+export function vistaPrecio(o: OfertaBot, terminoIso?: string | null): VistaPrecio {
+  const suc = o.primaTotalSucesivos ?? null
+  if (suc === null) return { total: o.primaTotalAnual, neta: o.primaNeta, impuestos: o.impuestos, primerRecibo: null }
+  const dif = Math.round(suc * 100) !== Math.round(o.primaTotalAnual * 100)
+  const hasta = terminoIso && FECHA_ISO.test(terminoIso) ? terminoIso.split('-').reverse().join('/') : null
+  return {
+    total: suc, neta: o.primaNetaSucesivos ?? null, impuestos: o.impuestosSucesivos ?? null,
+    primerRecibo: dif ? { total: o.primaTotalAnual, hasta } : null,
   }
 }
 

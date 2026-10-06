@@ -17,6 +17,10 @@ export type OfertaLectura = {
   primaTotalAnual: number
   primaNeta: number | null
   impuestos: number | null
+  /** Columna «Sucesivos» de ePAC = prima anual completa de renovación. `null` = no se leyó (≠ 0). */
+  primaTotalSucesivos: number | null
+  primaNetaSucesivos: number | null
+  impuestosSucesivos: number | null
   pdfIndice: number | null
 }
 
@@ -52,7 +56,9 @@ export function ofertasPublicas(respuesta: unknown): { ofertas: OfertaLectura[];
     const o = raw as Record<string, unknown>
     const total = num(o.primaAnualEur)
     if (total === null) continue // una oferta sin prima no es una oferta
-    const d = (o.desglose as { anual?: Record<string, unknown> } | null | undefined)?.anual
+    const dg = o.desglose as { anual?: Record<string, unknown>; sucesivos?: Record<string, unknown> } | null | undefined
+    const d = dg?.anual
+    const ds = dg?.sucesivos
     const pdf = o.pdf as { indice?: unknown; nombre?: unknown } | null | undefined
     const indice = pdf && typeof pdf.indice === 'number' && Number.isInteger(pdf.indice) && pdf.indice >= 0 ? pdf.indice : null
     if (indice !== null && !pdfs.has(indice)) pdfs.set(indice, typeof pdf?.nombre === 'string' && pdf.nombre ? pdf.nombre : `oferta-${indice + 1}.pdf`)
@@ -62,6 +68,9 @@ export function ofertasPublicas(respuesta: unknown): { ofertas: OfertaLectura[];
       primaTotalAnual: total,
       primaNeta: num(d?.primaNetaEur) ?? num(o.primaNetaEur),
       impuestos: num(d?.impuestosEur),
+      primaTotalSucesivos: num(ds?.primaTotalEur),
+      primaNetaSucesivos: num(ds?.primaNetaEur),
+      impuestosSucesivos: num(ds?.impuestosEur),
       pdfIndice: indice,
     })
   }

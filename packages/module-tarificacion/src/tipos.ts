@@ -153,7 +153,7 @@ export type OfertaNormalizada = {
   /** Número de proyecto/oferta del portal (para volver a ella a mano). `null` = no lo da. */
   referenciaPortal: string | null
   pdf: PdfRef | null
-  /** Desglose neta/impuestos/total del primer año y de los recibos sucesivos, si el portal lo da. */
+  /** Desglose neta/impuestos/total del primer recibo («anual» de ePAC, prorrateado) y de los sucesivos (prima anual de renovación), si el portal lo da. */
   desglose?: { anual: DesglosePrima; sucesivos: DesglosePrima } | null
   /** Avisos de la compañía (se enseñan SIEMPRE) y del adaptador (lo que supuso o no pudo leer). */
   avisos: string[]

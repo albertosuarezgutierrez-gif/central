@@ -24,10 +24,19 @@ test('proyecta estado, fechas, prima total, desglose y pdfs; nada más', () => {
   const t = proyectarTrabajo(fila, respuesta)
   assert.equal(t.estado, 'ok')
   assert.equal(t.creadoEn, '2026-10-06T10:00:00.000Z')
-  assert.deepEqual(t.ofertas, [{ compania: 'allianz', producto: 'Comunidades 2020', primaTotalAnual: 1234.5, primaNeta: 1000, impuestos: 234.5, pdfIndice: 0 }])
+  assert.deepEqual(t.ofertas, [{ compania: 'allianz', producto: 'Comunidades 2020', primaTotalAnual: 1234.5, primaNeta: 1000, impuestos: 234.5, primaTotalSucesivos: null, primaNetaSucesivos: null, impuestosSucesivos: null, pdfIndice: 0 }])
   assert.deepEqual(t.pdfs, [{ indice: 0, nombre: 'oferta.pdf' }])
   const s = JSON.stringify(t)
   for (const prohibido of ['documentoId', 'doc-1', 'referenciaPortal', 'coberturas', 'avisos']) assert.ok(!s.includes(prohibido), prohibido)
+})
+
+test('propaga la columna de sucesivos (prima anual de renovación) sin confundirla con el primer recibo', () => {
+  const r = { ofertas: [{ compania: 'allianz', producto: 'C', primaAnualEur: 342.77, desglose: {
+    anual: { primaNetaEur: 295.88, impuestosEur: 46.89, primaTotalEur: 342.77 },
+    sucesivos: { primaNetaEur: 300, impuestosEur: 47.55, primaTotalEur: 347.55 } } }] }
+  const [o] = proyectarTrabajo(fila, r).ofertas
+  assert.equal(o.primaTotalAnual, 342.77)
+  assert.deepEqual([o.primaTotalSucesivos, o.primaNetaSucesivos, o.impuestosSucesivos], [347.55, 300, 47.55])
 })
 
 test('un trabajo que no está ok no enseña ofertas; el error sale sin url ni ids de evidencia', () => {
