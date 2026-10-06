@@ -456,7 +456,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
   /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el
    *  mismo criterio que el rótulo de estado. */
   esCliente: boolean
-  c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
+  c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null; codigoPostal?: string | null }
   intervinientes: IntervinienteFicha[] | null
   piiClave: string | null
   /** Todos los teléfonos/emails; `null` = asegura no manda el bloque (no se afirma «solo uno»). */
@@ -471,7 +471,8 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
   const masEmail = contactos && contactos.emails.length > 1 ? contactos.emails.length - 1 : 0
   const mas = (n: number) => n > 0 ? <span style={{ fontSize: 11, color: 'var(--muted)' }} title={`${n} más, en la pestaña Contactos`}> (+{n})</span> : null
   const causaPii = piiClave === null ? 'la clave no abre este dato (asegura no dice por qué: versión anterior)' : CAUSA_PII[piiClave] ?? `estado de clave desconocido: ${piiClave}`
-  const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
+  // CP junto a la localidad («41003 Sevilla, Sevilla»); solo CP → el CP; nada → nada.
+  const sitio = [[c.codigoPostal, c.ciudad].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', ')
   const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
   // 🚨 De QUÉ póliza sale. GLOBAL 2 tiene tres furgonetas con TRES conductores
   // habituales distintos: sin esto la ficha pinta el número de uno de ellos como
