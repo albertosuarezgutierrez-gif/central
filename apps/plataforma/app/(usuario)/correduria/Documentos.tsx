@@ -129,10 +129,10 @@ export default function Documentos({
             continue
           }
           const d = j.documento as DocumentoResumen
-          setLista((l) => [d, ...(l ?? [])])
+          setLista((l) => ((l ?? []).some((x) => x.id === d.id) ? l : [d, ...(l ?? [])]))
           const o = leerPoliza ? interpretarOportunidadDocumento(j.oportunidad) : null
           if (o && o.tono === 'ok') refrescar = true
-          pinta(i, { ok: true, texto: j.repetido === true ? 'Guardado. Ojo: este cliente ya tenía un fichero idéntico.' : 'Guardado.', oportunidad: o })
+          pinta(i, { ok: true, texto: j.repetido === true ? 'Ya estaba subido: no se ha duplicado el documento.' : 'Guardado.', oportunidad: o })
         } catch (e) {
           fallidos.push(fichero)
           pinta(i, { texto: e instanceof Error ? e.message : String(e), oportunidad: null })

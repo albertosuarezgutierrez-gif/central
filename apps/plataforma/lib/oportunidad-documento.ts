@@ -29,6 +29,9 @@ export function interpretarOportunidadDocumento(v: unknown): AvisoOportunidadDoc
       const cuando = vence
         ? `vence el ${vence}; llamada el ${llamada ?? '—'}`
         : 'sin vencimiento legible: queda una tarea para pedirlo'
+      if (o.yaExistia === true) {
+        return { tono: 'info', texto: 'Ya estaba subida: no se ha duplicado. Sigue la oportunidad que ya había.', clienteId }
+      }
       const que = o.estado === 'creada'
         ? 'Oportunidad abierta sola'
         : o.completada === true
