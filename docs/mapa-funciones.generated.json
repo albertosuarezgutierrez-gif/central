@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T05:20:22Z",
-  "sha": "7b29d7398c550b47d2b78f62502591137e82cbde",
+  "generadoEn": "2026-10-06T05:43:25Z",
+  "sha": "42557fa095d210c165139a493e05dd66d7c5e1fc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -150888,14 +150888,14 @@
           "exportada": false,
           "params": "carpeta: string, file: File, modo: string = 'none'",
           "retorno": null,
-          "linea": 88
+          "linea": 90
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "bc12ba20f252"
+      "hash": "93144e0ec2dd"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -151609,8 +151609,8 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 10,
-          "resumen": "POST — regenera el enlace mágico de acceso del empleado (revoca el anterior). Scope por empresa. Devuelve SOLO la ruta del portal (`enlace`), nunca la columna en bruto."
+          "linea": 11,
+          "resumen": "POST — regenera el enlace mágico de acceso del empleado (revoca el anterior). Scope por empresa. También sube `sesion_version`: si el enlace se ha filtrado, las sesiones abiertas con él mueren. Devuel"
         }
       ],
       "tablas": [
@@ -151618,7 +151618,31 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]/acceso",
-      "hash": "7fbedad76f68"
+      "hash": "f82d52ee608c"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/empleados/[id]/cerrar-sesiones/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "POST — «Cerrar sesiones»: sube `sesion_version` y toda cookie del portal /e de ese empleado deja de valer en su próxima petición (móvil perdido, despido, cookie compartida). Scope por empresa. No toca"
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/admin/empleados/[id]/cerrar-sesiones",
+      "hash": "32b53d4cd6c1"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/chat/route.ts",
@@ -152662,6 +152686,69 @@
       "hash": "5cbb09922135"
     },
     {
+      "ruta": "apps/rrhh/app/api/e/acceso/completar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Paso 3 de `/e/entrar` (solo con varias empresas o PIN): elige empresa y, si la tiene, PIN."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/acceso/completar",
+      "hash": "7c3980750cd3"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/e/acceso/solicitar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Paso 1 de `/e/entrar`: pide un código para un email. PÚBLICA y SIN SESIÓN. 🚨 Respuesta idéntica exista o no el email (no se enumeran empleados): el correo se manda con `after()`, DESPUÉS de responder"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/acceso/solicitar",
+      "hash": "5817aa2a0c30"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/e/acceso/verificar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Paso 2 de `/e/entrar`: canjea el código. Un solo empleado sin PIN → sesión; si no → ticket."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/acceso/verificar",
+      "hash": "0eb2e12b6095"
+    },
+    {
       "ruta": "apps/rrhh/app/api/e/asistente/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -152823,7 +152910,8 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 7
+          "linea": 10,
+          "resumen": "Acceso por ENLACE `/e/<acceso_token>` (+ PIN si lo tiene). Se mantiene para los empleados sin email; la entrada normal es `/e/entrar` (email + código). Misma sesión de 90 días revocable."
         }
       ],
       "tablas": [
@@ -152832,7 +152920,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/e/login",
-      "hash": "a2d1118726d0"
+      "hash": "bf80de824fd5"
     },
     {
       "ruta": "apps/rrhh/app/api/e/push/subscribe/route.ts",
@@ -152857,6 +152945,27 @@
       ],
       "rutaApi": "/api/e/push/subscribe",
       "hash": "886c5f03aa6f"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/e/salir/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 5,
+          "resumen": "Cierra la sesión del empleado en ESTE dispositivo (borra la cookie)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/salir",
+      "hash": "e79cb928910f"
     },
     {
       "ruta": "apps/rrhh/app/api/e/solicitudes/route.ts",
@@ -153017,6 +153126,63 @@
       "hash": "4927103979a4"
     },
     {
+      "ruta": "apps/rrhh/app/e/entrar/EntrarEmpleado.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "EntrarEmpleado"
+      ],
+      "funciones": [
+        {
+          "nombre": "msg",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e?: string",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "post",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, body: unknown",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "EntrarEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 28
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f6b8d441a9c1"
+    },
+    {
+      "ruta": "apps/rrhh/app/e/entrar/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Entrada del Portal del Empleado por email + código. Neutra (sin branding): aún no sabemos de qué empresa es quien escribe, y mostrarla delataría que el email existe."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b8e530d7beb2"
+    },
+    {
       "ruta": "apps/rrhh/app/e/ExpedienteEmpleado.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -153036,7 +153202,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "80f72f1ed330"
+      "hash": "374b8c93c7e8"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -153056,7 +153222,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "76db8abb2e96"
+      "hash": "cd9747151d6d"
     },
     {
       "ruta": "apps/rrhh/app/layout.tsx",
@@ -153136,7 +153302,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4d9b00a23c9c"
+      "hash": "359d2309c278"
     },
     {
       "ruta": "apps/rrhh/app/v/[id]/page.tsx",
@@ -153417,6 +153583,117 @@
       "hash": "c5e24d6730e1"
     },
     {
+      "ruta": "apps/rrhh/lib/acceso-email-repo.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Adaptador Prisma (SQL crudo, schema `rrhh`) de los puertos de `acceso-email.ts`. Tablas: `rrhh.acceso_otps` y `rrhh.empleados.sesion_version` (migración 0021_acceso_email.sql).",
+      "exporta": [
+        "enviarCodigoAcceso"
+      ],
+      "funciones": [
+        {
+          "nombre": "enviarCodigoAcceso",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "c",
+          "retorno": null,
+          "linea": 59,
+          "resumen": "Envío real (remitente de rrhh, `MAIL_FROM`). `false` si no hay transporte o falla: no se dice al usuario."
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "8b88bae2d5a1"
+    },
+    {
+      "ruta": "apps/rrhh/lib/acceso-email.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Acceso del empleado por EMAIL + CÓDIGO de 6 dígitos (05/10/2026). Mismo patrón que el portal del cliente de la correduría (apps/asegura-portal, `/api/acceso/*`) y la MISMA lógica de código: `@central/core-identity/codigo-otp` (generar, caducidad, intentos, comparación en tiempo constante). Orquestac",
+      "exporta": [
+        "emailValido",
+        "hashEmailAcceso",
+        "hashCodigoAcceso",
+        "solicitarCodigoAcceso",
+        "verificarCodigoAcceso",
+        "completarAcceso",
+        "correoCodigo"
+      ],
+      "funciones": [
+        {
+          "nombre": "emailValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "email: unknown",
+          "retorno": "string | null",
+          "linea": 33,
+          "resumen": "Email normalizado (trim + minúsculas) o `null` si no tiene forma de email."
+        },
+        {
+          "nombre": "hmac",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string",
+          "retorno": "string",
+          "linea": 44,
+          "resumen": "HMAC-SHA256 con `JWT_SECRET` como clave y un prefijo de dominio. Es la pimienta: un SHA-256 pelado de 6 dígitos se revierte con un bucle de 10^6. Se deriva del secreto que rrhh YA tiene (no hay env nu"
+        },
+        {
+          "nombre": "hashEmailAcceso",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "emailNormalizado: string",
+          "retorno": null,
+          "linea": 47
+        },
+        {
+          "nombre": "hashCodigoAcceso",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "codigo: string",
+          "retorno": null,
+          "linea": 48
+        },
+        {
+          "nombre": "solicitarCodigoAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoAcceso, enviar: EnviarCodigo, entrada: { email: unknown; ip: string }, ahora = new Date(),",
+          "retorno": "Promise<ResultadoSolicitar>",
+          "linea": 86,
+          "resumen": "`envio` es la tarea de mandar el correo (o `null` si el email no es de nadie): la ruta la lanza con `after()` para que la respuesta NO espere al SMTP. `null` y no-`null` producen la MISMA respuesta HT"
+        },
+        {
+          "nombre": "verificarCodigoAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoAcceso, entrada: { email: unknown; codigo: unknown }, ahora = new Date(),",
+          "retorno": "Promise<ResultadoVerificar>",
+          "linea": 114
+        },
+        {
+          "nombre": "completarAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoAcceso, compararPin: (pin: string, hash: string) => Promise<boolean>, ticket: { otp_id: string; empleados: string[] }, entrada: { email: unknown; empleado_id: unknown; pin: unknown },",
+          "retorno": "Promise<ResultadoCompletar>",
+          "linea": 152
+        },
+        {
+          "nombre": "correoCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CorreoCodigo",
+          "retorno": "",
+          "linea": 177,
+          "resumen": "Asunto y cuerpo (texto plano, sobrio). Puro para poder testearlo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a0ebfa98b6a5"
+    },
+    {
       "ruta": "apps/rrhh/lib/ai.ts",
       "ambito": "apps/rrhh",
       "resumen": "IA de iarrhh enrutada por la PASARELA central (vive en plataforma): las keys de proveedor y el control de coste/uso quedan en plataforma. Si la pasarela no está configurada, se usa la key directa como fallback de transición (para no romper nada mientras se despliega). Envs (proyecto Vercel central-r",
@@ -153653,7 +153930,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07e82fd35b6d"
+      "hash": "5c4005461983"
     },
     {
       "ruta": "apps/rrhh/lib/branding.ts",
@@ -154178,16 +154455,28 @@
       "ambito": "apps/rrhh",
       "exporta": [
         "firmarSesionEmpleado",
-        "verificarSesionEmpleado"
+        "verificarSesionEmpleado",
+        "sesionVigente",
+        "firmarTicketAcceso",
+        "verificarTicketAcceso"
       ],
       "funciones": [
+        {
+          "nombre": "clave",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Mismo secreto que el panel del responsable (`JWT_SECRET`), así que los tokens se SEPARAN por tipo: el del empleado lleva `typ: 'empleado'` y NO lleva `jti`; el del responsable lleva `typ: 'responsable"
+        },
         {
           "nombre": "firmarSesionEmpleado",
           "kind": "function",
           "exportada": true,
           "params": "s: SesionEmpleado",
           "retorno": "Promise<string>",
-          "linea": 10
+          "linea": 20
         },
         {
           "nombre": "verificarSesionEmpleado",
@@ -154195,12 +154484,38 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<SesionEmpleado>",
-          "linea": 15
+          "linea": 31,
+          "resumen": "Solo FIRMA y forma; la vigencia (versión, empleado activo) la comprueba `getSesionEmpleado` contra la BD. Un token sin `typ: 'empleado'` o sin `v` (los de 7 días anteriores al 05/10/2026) no vale: esa"
+        },
+        {
+          "nombre": "sesionVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SesionEmpleado, fila: { sesion_version: number; estado: string } | null",
+          "retorno": "boolean",
+          "linea": 43,
+          "resumen": "¿Sigue vigente esta sesión? Puro para testearlo: la fila es la del empleado (id + empresa del token) o `null` si no existe en ESA empresa."
+        },
+        {
+          "nombre": "firmarTicketAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: TicketAcceso",
+          "retorno": "Promise<string>",
+          "linea": 56
+        },
+        {
+          "nombre": "verificarTicketAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string",
+          "retorno": "Promise<TicketAcceso>",
+          "linea": 62
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c43854c672b7"
+      "hash": "c80488ac576b"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-tenant.ts",
@@ -154215,13 +154530,16 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SesionEmpleado>",
-          "linea": 6,
-          "resumen": "Lee la sesión del EMPLEADO desde la cookie `rrhh_empleado`. Lanza AuthError si no hay."
+          "linea": 15,
+          "resumen": "Lee la sesión del EMPLEADO desde la cookie `rrhh_empleado`. Lanza AuthError si no hay o si ya no vale (versión revocada por el responsable, empleado de baja o de otra empresa). 🚨 Fail-CLOSED ante la "
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
       "rutaApi": null,
-      "hash": "d72b9e52eb62"
+      "hash": "cb41593e2de4"
     },
     {
       "ruta": "apps/rrhh/lib/empleados-columnas.ts",
@@ -155506,6 +155824,48 @@
       ],
       "rutaApi": null,
       "hash": "d9aeab4d6ca4"
+    },
+    {
+      "ruta": "apps/rrhh/lib/rate-limit.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "lib/rate-limit.ts — limitador EN MEMORIA, por proceso (copia del de asegura-portal/plataforma: las apps no se importan entre sí). 🚨 Es «best-effort»: en Vercel cada instancia serverless tiene su propio mapa. Frena al bot torpe que machaca desde una IP antes de tocar la BD; el límite REAL del acceso",
+      "exporta": [
+        "getIp",
+        "rateLimit",
+        "_resetRateLimit"
+      ],
+      "funciones": [
+        {
+          "nombre": "getIp",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": "string",
+          "linea": 11,
+          "resumen": "IP del cliente tal y como la pone el proxy de Vercel; `'unknown'` si no viene."
+        },
+        {
+          "nombre": "rateLimit",
+          "kind": "function",
+          "exportada": true,
+          "params": "key: string, max = 5, windowMs = 15 * 60 * 1000, ahora = Date.now(),",
+          "retorno": "",
+          "linea": 17,
+          "resumen": "`allowed` mientras `key` no pase de `max` intentos en `windowMs` (ventana fija)."
+        },
+        {
+          "nombre": "_resetRateLimit",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 34,
+          "resumen": "Solo tests: vacía el mapa."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2cbaa7523c75"
     },
     {
       "ruta": "apps/rrhh/lib/solicitudes-tipos.ts",
@@ -164285,6 +164645,56 @@
       "hash": "dcf80cce8d82"
     },
     {
+      "ruta": "packages/core-identity/src/codigo-otp.ts",
+      "ambito": "packages/core-identity",
+      "resumen": "Código de un solo uso (OTP de 6 dígitos): reglas PURAS, sin BD ni red. Generalizado el 05/10/2026 desde `@central/module-seguros-portal` (portal del cliente de la correduría) para que el Portal del Empleado (apps/rrhh, `/e/entrar`) use EXACTAMENTE la misma lógica: un segundo sistema de códigos es un",
+      "exporta": [
+        "generarCodigo",
+        "esHashCodigo",
+        "igualEnTiempoConstante",
+        "estadoCodigo"
+      ],
+      "funciones": [
+        {
+          "nombre": "generarCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 60
+        },
+        {
+          "nombre": "esHashCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "boolean",
+          "linea": 73
+        },
+        {
+          "nombre": "igualEnTiempoConstante",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string, b: string",
+          "retorno": "boolean",
+          "linea": 91,
+          "resumen": "Comparación en TIEMPO CONSTANTE de dos hashes hex. 🚨 Es JavaScript puro y no `timingSafeEqual` de `node:crypto` a propósito: este fichero lo re-exporta el barril del paquete y del barril tiran tambié"
+        },
+        {
+          "nombre": "estadoCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "guardado: CodigoGuardado, entradaHash: string, ahora: Date,",
+          "retorno": "EstadoCodigo",
+          "linea": 103,
+          "resumen": "El orden de las comprobaciones importa y es deliberado: primero «ya usado» y «bloqueado», DESPUÉS la caducidad, y el acierto al final. Comprobar el acierto antes del bloqueo convertiría el contador de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a90bd37ab59f"
+    },
+    {
       "ruta": "packages/core-identity/src/crypto.ts",
       "ambito": "packages/core-identity",
       "resumen": "Helpers cripto compartidos (Web Crypto API — válidos en Node serverless y edge). Sin dependencias npm. Se usan en ialimp y plataforma para hashing de PIN, tokens de sesión (jti) y tokens de un solo uso.",
@@ -169383,56 +169793,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "031a2257a440"
-    },
-    {
-      "ruta": "packages/module-seguros-portal/src/codigo.ts",
-      "ambito": "packages/module-seguros-portal",
-      "resumen": "Minutos que vive un código antes de caducar.",
-      "exporta": [
-        "generarCodigo",
-        "esHashCodigo",
-        "igualEnTiempoConstante",
-        "estadoCodigo"
-      ],
-      "funciones": [
-        {
-          "nombre": "generarCodigo",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": "string",
-          "linea": 49
-        },
-        {
-          "nombre": "esHashCodigo",
-          "kind": "function",
-          "exportada": true,
-          "params": "valor: string",
-          "retorno": "boolean",
-          "linea": 62
-        },
-        {
-          "nombre": "igualEnTiempoConstante",
-          "kind": "function",
-          "exportada": true,
-          "params": "a: string, b: string",
-          "retorno": "boolean",
-          "linea": 80,
-          "resumen": "Comparación en TIEMPO CONSTANTE de dos hashes hex. 🚨 Es JavaScript puro y no `timingSafeEqual` de `node:crypto` a propósito: este fichero lo re-exporta el barril del paquete y del barril tiran tambié"
-        },
-        {
-          "nombre": "estadoCodigo",
-          "kind": "function",
-          "exportada": true,
-          "params": "guardado: CodigoGuardado, entradaHash: string, ahora: Date,",
-          "retorno": "EstadoCodigo",
-          "linea": 92,
-          "resumen": "El orden de las comprobaciones importa y es deliberado: primero «ya usado» y «bloqueado», DESPUÉS la caducidad, y el acierto al final. Comprobar el acierto antes del bloqueo convertiría el contador de"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "3a25b33508a9"
     },
     {
       "ruta": "packages/module-seguros-portal/src/consentimiento.ts",
@@ -189924,7 +190284,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4272,
-    "funciones": 14887
+    "archivos": 4282,
+    "funciones": 14912
   }
 }
