@@ -11,6 +11,7 @@ import VerDniCompleto from './VerDniCompleto'
 import PonerNombre from './PonerNombre'
 import EditarCarnets from './EditarCarnets'
 import MoteAgenda from './MoteAgenda'
+import PrecioAllianzBot from './PrecioAllianzBot'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
 
@@ -107,7 +108,7 @@ export default function Cabecera({ ficha, resumen, seguros }: {
 
       <SiguientePaso ficha={{ ...ficha, contacto, intervinientes }} resumen={resumen} tiposVivos={tiposVivos} seguros={seguros} />
 
-      <Acciones clienteId={ficha.id} />
+      <Acciones clienteId={ficha.id} contacto={ficha.contacto} />
 
       <Titulares resumen={resumen} />
     </div>
@@ -367,7 +368,7 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 
 const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para salud no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
 
-function Acciones({ clienteId }: { clienteId: string }) {
+function Acciones({ clienteId, contacto }: { clienteId: string; contacto: Ficha['contacto'] }) {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
       <details style={{ position: 'relative' }}>
@@ -427,6 +428,8 @@ function Acciones({ clienteId }: { clienteId: string }) {
       <BtnLink href={`/correduria/cliente/${clienteId}?tab=documentos&subir=poliza`} variante="secundario">
         <Ico i={FileText} /> Subir póliza
       </BtnLink>
+      {/* Solo un PRECIO de comunidad en Allianz por bot (06/10/2026): no emite ni contrata. */}
+      <PrecioAllianzBot clienteId={clienteId} contacto={contacto} />
     </div>
   )
 }
