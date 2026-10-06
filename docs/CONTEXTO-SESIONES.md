@@ -1083,6 +1083,12 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Llamada anual: `cerrarTarea` (apps/asegura) al completar una llamada de oportunidad abierta crea la del ciclo siguiente (helper `planLlamadaAnual` en module-seguros; idempotente: solo si no queda tarea pendiente). `no_contesta` no la crea; cierres anteriores al cambio no se recuperan.
 - Textos de aviso (`estadoAvisoVencimiento`, Telegram) dicen «Vence cada año el 1 de junio» (helper `diaMesEs`).
 
+## (06/10/2026) Correduría: completar lo que falta de un interviniente sin salir de la oportunidad
+- «Falta en su ficha» (sexo, móvil…) no se podía rellenar desde `oportunidad/[id]`: el modal «Editar datos» no tenía esos campos y asegura no tenía escritor de `clientes.saludo`.
+- Nuevo bloque `FaltaPorCompletar` (sexo + móvil, un solo Guardar) arriba del modal; PATCH `/api/operador/cliente` admite `sexo` (enum estricto → saludo 1/2, con historial).
+- Principio (Alberto): todo dato que la pantalla diga que falta se edita ahí mismo. Cepo: `EDITOR_DE_FALTA` en `lib/riesgo-asegura.ts` + test que exige editor por cada clave de `faltanDeFigura`.
+- Pendiente: verificar en navegador; comprobar `EditarCliente` con empresa propietaria (CIF/razón social).
+
 ## (06/10/2026) Correduría: CP en la cabecera de la ficha de cliente
 - `Cabecera.tsx` (`Contacto`) pinta «CP Ciudad, Provincia» junto al pin. El CP ya llegaba de asegura (`ContactoFicha.codigoPostal`); solo faltaba pintarlo. Sin cambios de BD/puerto.
 

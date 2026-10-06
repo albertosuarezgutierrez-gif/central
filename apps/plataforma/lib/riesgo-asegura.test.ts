@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { readFileSync } from 'node:fs'
 
 import {
-  interpretarRiesgo, estadoPresupuestoVariante, textoFaltan,
+  interpretarRiesgo, estadoPresupuestoVariante, textoFaltan, faltaMovil, faltaSexo, EDITOR_DE_FALTA, rotulosFaltaEnFormulario,
   interpretarComparacion, mejoresComparacion, diferenciaComparacion, ordenarParaComparar,
 } from './riesgo-asegura.ts'
 
@@ -200,4 +201,39 @@ test('interpretarRiesgo: datosRiesgo de cada ramo — clave rara o datos ilegibl
   const l = leer({ clave: 'datosRiesgoLibre', datos: { descripcion: 'Bar', capital: 5000 }, faltan: [], tarifica: false })
   assert.equal(l?.clave === 'datosRiesgoLibre' && l.tarifica, false)
   assert.equal(l?.clave === 'datosRiesgoLibre' && l.datos.notas, null)
+})
+
+test('faltaMovil: solo si la ficha se leyó y no tiene móvil (null = no se sabe, no se ofrece escribir)', () => {
+  assert.equal(faltaMovil(['sexo', 'telefono']), true)
+  assert.equal(faltaMovil(['sexo']), false)
+  assert.equal(faltaMovil([]), false)
+  assert.equal(faltaMovil(null), false)
+})
+
+test('faltaSexo: solo si la ficha se leyó y no tiene sexo', () => {
+  assert.equal(faltaSexo(['sexo', 'telefono']), true)
+  assert.equal(faltaSexo(['telefono']), false)
+  assert.equal(faltaSexo(null), false)
+})
+
+test('cada clave posible de faltanDeFigura() tiene un editor asociado en la pantalla', () => {
+  const fuente = readFileSync(new URL('../../asegura/lib/oportunidad-riesgo.ts', import.meta.url), 'utf8')
+  const ini = fuente.indexOf('export function faltanDeFigura')
+  const fin = fuente.indexOf('/** Qué rol de figura va a qué clave', ini)
+  assert.ok(ini > 0 && fin > ini, 'no se encuentra faltanDeFigura')
+  const cuerpo = fuente.slice(ini, fin)
+  const claves = new Set<string>()
+  for (const m of cuerpo.matchAll(/f\.push\('([^']+)'\)/g)) claves.add(m[1])
+  for (const m of cuerpo.matchAll(/return \['([^']+)'\]/g)) claves.add(m[1])
+  const lista = cuerpo.match(/for \(const k of \[([^\]]+)\] as const\)/)
+  assert.ok(lista, 'no se encuentra la lista de campos de persona')
+  for (const m of lista[1].matchAll(/'([^']+)'/g)) claves.add(m[1])
+  assert.ok(claves.size >= 9, `se esperaban al menos 9 claves, salen ${claves.size}`)
+  for (const k of claves) assert.ok(k in EDITOR_DE_FALTA, `la clave «${k}» de faltanDeFigura no tiene editor en EDITOR_DE_FALTA`)
+  for (const k of Object.keys(EDITOR_DE_FALTA)) assert.ok(claves.has(k), `EDITOR_DE_FALTA tiene «${k}», que faltanDeFigura ya no devuelve`)
+})
+
+test('rotulosFaltaEnFormulario: solo lo que se corrige en los formularios, null = nada', () => {
+  assert.deepEqual(rotulosFaltaEnFormulario(['dni', 'sexo', 'telefono', 'fechaCarnet']), ['DNI', 'fecha del carnet'])
+  assert.deepEqual(rotulosFaltaEnFormulario(null), [])
 })

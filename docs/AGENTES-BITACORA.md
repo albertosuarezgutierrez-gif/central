@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-06 · mercado-booking** · hizo: 24/24 ventanas medidas (de 556, 532 recortadas por tope), 224 comps `booking_mcp` escritos (10-oct, 29-oct-2026; 18/30-abr, 1/2-may, 6/14-ago-2027; aforos 2/4/5/12); propio HOUSE SEVILLANA 6 hab. guardado aparte (2 ventanas); dudas: —; fallos: escaparate 0/7 (todas `hotel_names_no_availability`: Busto/Dúplex/Luxury 9-oct y 17-oct, House 17-oct, Luxury 22-26 mar-27) = hueco, latido `ok:false`; PRs/commits: —
+
 - **2026-10-05 · facturas-correo** · hizo: Vía B sana (copia 05/10), 0 candidatos Gmail nuevos sin procesar (Supabase y limpiezascruzz ya archivados), barrido 4.0: 2 facturas `sin_revisar` (Si Que Brilla 1.128,48€ 03/10; Supabase 25 USD 04/10) sin cargo aún en banco (feed al día 05/10) → se dejan en cola, no se marcan; dudas: —; fallos: —; PRs/commits: —
 
 - **2026-10-05 · mercado-booking** · hizo: 24/24 ventanas medidas (de 556 candidatas, el tope dejó fuera 532), 239 comps `booking_mcp` escritos (2 noches; aforos 2/4/5/12; fechas 06-oct TIS y 09-oct remedidas tras caducar, 05-mar, 26-mar Semana Santa, 15-abr, 08-may, 11-dic); escaparate 2/5 medido (Dúplex 12-14 oct 400,9€; Busto Reform 15-19 abr 1.242,5€); latido ok; dudas: Casa 95 Sevilla 43.977€ (2 noches, aforo 12, 26-mar) omitido por implausible; fallos: 3 ventanas de escaparate sin disponibilidad (Dúplex 06-10 oct, House 12-15 oct, Luxury Busto 22-26 mar 2027) = hueco; 🪞 propio descartado: HOUSE SEVILLANA 6 habitaciones (guardado como escaparate); PRs/commits: —
