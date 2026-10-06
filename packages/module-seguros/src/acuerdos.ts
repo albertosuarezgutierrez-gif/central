@@ -294,7 +294,7 @@ type Par = { acuerdo: AcuerdoParaCalculo; linea: LineaAcuerdo }
  *     aunque su `ramo` no esté mapeado.
  *   · Si ninguna línea nombra el producto del recibo, valen las GENÉRICAS: sin
  *     producto y con el `ramo` (`polizas.tipo`) del recibo. Una línea ceñida a
- *     un producto con nombre comercial («Autos nuevo producto / Patinetes») no se
+ *     un producto con nombre comercial («Autos nuevo producto / Ejemplo») no se
  *     aplica a todos los autos: no se sabe si el recibo es de ese producto.
  *   · Si el recibo NO trae producto, no hay con qué descartar: entran todas las
  *     del ramo (específicas y genéricas), y si sus % difieren acaba en

@@ -80,7 +80,7 @@ function ListaCompanias({ companias, acuerdos }: { companias: Compania[]; acuerd
 
       {sinContacto.length > 0 && (
         <div style={tarjeta}>
-          <h2 style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600 }}>Sin contacto ni acuerdo todavía</h2>
+          <h2 style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600 }}>{acuerdos.estado === 'ok' ? 'Sin contacto ni acuerdo todavía' : 'Sin contacto (acuerdos aún sin comprobar)'}</h2>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
             {sinContacto.map((c) => c.nombreComun).join(' · ')}
           </p>

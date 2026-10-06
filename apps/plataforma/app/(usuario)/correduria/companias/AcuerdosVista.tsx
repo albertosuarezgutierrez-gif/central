@@ -73,7 +73,7 @@ function ChipClave({ c }: { c: Clave }) {
 export function ProduccionCompania({ codigo, p, enCima, compacto = false }: {
   codigo: string
   p: RespuestaProductividad
-  enCima: boolean
+  enCima: boolean | null
   compacto?: boolean
 }) {
   if (p.estado !== 'ok') {
@@ -83,9 +83,11 @@ export function ProduccionCompania({ codigo, p, enCima, compacto = false }: {
   if (!prod) {
     return (
       <p style={{ margin: 0, fontSize: 12, ...gris }}>
-        {enCima
-          ? `Sin recibos de CIMA con efecto en ${p.anio}.`
-          : `Producción ${p.anio}: no se puede medir (esta compañía no envía por CIMA).`}
+        {enCima === null
+          ? `Sin recibos de CIMA con efecto en ${p.anio} (no se ha podido comprobar si esta compañía envía por CIMA).`
+          : enCima
+            ? `Sin recibos de CIMA con efecto en ${p.anio}.`
+            : `Producción ${p.anio}: no se puede medir (esta compañía no envía por CIMA).`}
         {p.truncado && ' La lectura llegó a su techo: puede faltar alguno.'}
       </p>
     )

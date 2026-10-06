@@ -128,6 +128,7 @@ export type MotivoPendiente =
   | 'siniestralidad'
   | 'tramos_ilegibles'
   | 'sin_tramos'
+  | 'umbral_no_consta'
   | 'periodo_sin_empezar'
   | 'lectura_incompleta'
   | 'recibos_sin_atribuir'
@@ -143,6 +144,7 @@ export const TEXTO_PENDIENTE: Record<MotivoPendiente, string> = {
   siniestralidad: 'Exige una siniestralidad máxima, y CIMA no manda el importe de los siniestros.',
   tramos_ilegibles: 'Los tramos del objetivo no tienen una forma legible.',
   sin_tramos: 'El objetivo no tiene tramos estructurados (solo texto).',
+  umbral_no_consta: 'Los tramos no dicen a partir de qué producción se cobra: no se puede saber si se alcanza.',
   periodo_sin_empezar: 'El periodo del objetivo aún no ha empezado.',
   lectura_incompleta: 'La lectura de recibos llegó a su techo: la producción está incompleta.',
   recibos_sin_atribuir: 'Hay recibos de esta compañía que no se pueden atribuir a ninguna clave.',
@@ -245,10 +247,11 @@ export function evaluarObjetivo(e: {
     medido = s.importe
   }
 
-  const conPago = tramos.find((t) => (t.pct ?? 0) > 0 || (t.importe ?? 0) > 0)
-  const umbral = o.tipo === 'rappel'
-    ? (conPago ?? tramos[0]).desde
-    : (tramos.find((t) => t.desde > 0) ?? tramos[0]).desde
+  // Sin pago CONOCIDO (pct/importe NULL = no consta) o con umbral 0 no hay a
+  // partir de qué medir: «alcanzado» con 0 € producidos sería un 🟢 sin dato.
+  const conPago = tramos.find((t) => (t.pct !== null && t.pct > 0) || (t.importe !== null && t.importe > 0))
+  const umbral = o.tipo === 'rappel' ? conPago?.desde ?? null : tramos.find((t) => t.desde > 0)?.desde ?? null
+  if (umbral === null || umbral <= 0) return pendiente('umbral_no_consta', null, medido)
 
   const tramoAlcanzado = [...tramos].reverse().find((t) => medido >= t.desde) ?? null
   const siguiente = tramos.find((t) => t.desde > medido) ?? null
@@ -281,7 +284,7 @@ export function evaluarObjetivo(e: {
 /**
  * ¿Es un CÓDIGO de producto de la compañía (lo que CIMA trae en `ramoEntidad`:
  * '1434', '01480', 'HR', '302') y no un nombre comercial («Hogar Plus», «Autos
- * nuevo producto / Patinetes»)? Solo los códigos se pueden cruzar con los
+ * nuevo producto / Ejemplo»)? Solo los códigos se pueden cruzar con los
  * recibos; un nombre comercial queda fuera del cruce hasta que se le asigne
  * su código (fase 5). Criterio: sin espacios, ≤ 12 caracteres, solo letras,
  * cifras y `./-`.

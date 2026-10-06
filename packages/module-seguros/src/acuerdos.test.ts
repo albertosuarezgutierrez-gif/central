@@ -274,7 +274,7 @@ test('producto: casa por el CÓDIGO aunque el ramo de la línea no esté mapeado
 })
 
 test('una línea ceñida a un producto con nombre comercial no se aplica a todo el ramo', () => {
-  const a = acuerdo({ comisiones: [{ id: 'x', ramo: 'auto', producto: 'Autos nuevo producto / Patinetes', modalidad: null, pctNp: 20, pctCartera: 20 }] })
+  const a = acuerdo({ comisiones: [{ id: 'x', ramo: 'auto', producto: 'Autos nuevo producto / Ejemplo', modalidad: null, pctNp: 20, pctCartera: 20 }] })
   assert.equal(lineaAplicable([a], consulta({ ramo: 'auto', producto: '1219' })).estado, 'sin_linea')
 })
 

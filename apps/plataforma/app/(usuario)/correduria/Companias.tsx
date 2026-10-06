@@ -60,7 +60,7 @@ export default function Companias() {
       </div>
       {resto.length > 0 && (
         <p style={{ fontSize: 12, color: 'var(--muted)', margin: '10px 0 0' }}>
-          Sin contacto ni acuerdo todavía: {resto.map((c) => c.nombreComun).join(' · ')}
+          {ra?.estado === 'ok' ? 'Sin contacto ni acuerdo todavía' : 'Sin contacto (acuerdos aún sin comprobar)'}: {resto.map((c) => c.nombreComun).join(' · ')}
         </p>
       )}
     </Bloque>

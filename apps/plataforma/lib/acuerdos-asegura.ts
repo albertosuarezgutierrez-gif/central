@@ -319,6 +319,7 @@ const TEXTO_MOTIVO: Record<string, string> = {
   siniestralidad: 'exige siniestralidad (CIMA no la da)',
   tramos_ilegibles: 'tramos ilegibles',
   sin_tramos: 'sin tramos estructurados',
+  umbral_no_consta: 'los tramos no dicen desde cuánto se cobra',
   periodo_sin_empezar: 'periodo sin empezar',
   lectura_incompleta: 'lectura de recibos incompleta',
   recibos_sin_atribuir: 'recibos sin clave atribuible',

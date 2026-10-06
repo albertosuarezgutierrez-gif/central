@@ -53,7 +53,7 @@ export default function FichaCompania({ codigo, compania, acuerdos, productivida
       </Bloque>
 
       <Bloque Icono={TrendingUp} titulo="Producción" sub="Lo que dice CIMA de esta compañía en el año. «Sin recibos» no es «0 €».">
-        <ProduccionCompania codigo={codigo} p={productividad} enCima={compania?.enCima ?? false} />
+        <ProduccionCompania codigo={codigo} p={productividad} enCima={compania ? compania.enCima : null} />
       </Bloque>
 
       <Bloque Icono={FileText} titulo={`Acuerdos (${propios.length})`}

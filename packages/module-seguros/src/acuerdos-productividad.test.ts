@@ -102,6 +102,12 @@ test('objetivo: colectivo, base no medible, siniestralidad y tramos rotos/vacío
   assert.equal(motivo({ base: null }), 'valor_fuera_de_lista')
 })
 
+test('objetivo: umbral que no consta (tramos sin pago conocido o desde 0) → pendiente, nunca alcanzado con 0', () => {
+  const motivo = (o: Partial<ObjetivoParaEvaluar>) => { const r = evaluar({ obj: o }); return r.color === 'pendiente' ? r.motivo : r.color }
+  assert.equal(motivo({ tramos: { estado: 'ok', tramos: [{ desde: 0, hasta: 1000, pct: null, importe: null }, { desde: 1000, hasta: null, pct: null, importe: null }] } }), 'umbral_no_consta')
+  assert.equal(motivo({ tipo: 'mantener_clave', tramos: { estado: 'ok', tramos: [{ desde: 0, hasta: null, pct: null, importe: null }] } }), 'umbral_no_consta')
+})
+
 test('objetivo: lectura truncada, recibos sin atribuir o primas ilegibles → pendiente', () => {
   const m = (r: ReturnType<typeof evaluar>) => (r.color === 'pendiente' ? r.motivo : r.color)
   assert.equal(m(evaluar({ completo: false })), 'lectura_incompleta')
@@ -169,7 +175,7 @@ test('todos los motivos de pendiente tienen texto', () => {
 
 test('esCodigoProducto: códigos sí, nombres comerciales no', () => {
   for (const c of ['1434', '01480', 'HR', '302', '209-C']) assert.equal(esCodigoProducto(c), true, c)
-  for (const c of ['Hogar Plus', 'Autos nuevo producto / Patinetes', '', ' 1434', 'Incremento % comisión', null, 1434]) {
+  for (const c of ['Hogar Plus', 'Autos nuevo producto / Ejemplo', '', ' 1434', 'Incremento % comisión', null, 1434]) {
     assert.equal(esCodigoProducto(c), false, String(c))
   }
 })
