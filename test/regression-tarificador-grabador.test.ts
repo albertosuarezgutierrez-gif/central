@@ -49,5 +49,5 @@ test('el SQL de grabaciones es aditivo, idempotente y sin DELETE para la app', (
   for (const c of ['cliente_id', 'poliza_id', 'siniestro_id', 'portal_parte_id', 'tarificador_grabacion_id']) assert.match(check![1], new RegExp(`${c} IS NOT NULL`), `el CHECK pierde ${c}`)
   assert.match(codigo, /ENABLE ROW LEVEL SECURITY/)
   assert.match(codigo, /REVOKE DELETE, TRUNCATE ON seguros\.tarificador_grabaciones, seguros\.tarificador_grabacion_pantallas FROM prisma_seguros/)
-  assert.match(sql, /NO APLICADA/)
+  assert.match(sql, /⚠️ (NO )?APLICADA/, "el SQL debe declarar su estado (APLICADA / NO APLICADA)")
 })
