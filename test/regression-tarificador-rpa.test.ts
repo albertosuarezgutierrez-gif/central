@@ -154,7 +154,15 @@ test('formador con IA: solo la lista de bloqueo nombra emitir/contratar/formaliz
   // 4. El formador no actúa (devuelve el locator) y valida antes de devolver.
   assert.match(src, /pareceEmision\(/, 'validarAccion tiene que pasar por pareceEmision()')
   assert.match(src, /BLOQUEO_FORMADOR\.find\(/, 'validarAccion tiene que mirar la lista de bloqueo')
-  assert.match(src, /validarResolucion\(p\.tipo, p\.clave, d, p\.textoEsperado\)/, 'resolverConFormador tiene que validar antes de devolver')
+  assert.match(src, /const v = validarResolucion\(p, d\)/, 'resolverConFormador tiene que validar antes de devolver')
+  // 5. (revisión de seguridad 06/10/2026) La tabla solo tiene «calcular»; el campo pasa por bloqueo + etiqueta + sin casillas.
+  const claves = [...tabla![1].matchAll(/^\s*(\w+)\s*:/gm)].map((m) => m[1])
+  assert.deepEqual(claves, ['calcular'], 'ACCIONES_PERMITIDAS solo puede tener «calcular»')
+  const vc = src.slice(src.indexOf('export function validarCampo'), src.indexOf('export function validarResolucion'))
+  assert.match(vc, /bloqueoPalabras\(\[\['id', d\.id\], \['name', d\.name\], \['title', d\.title\], \['aria-label', d\.ariaLabel\], \['onclick', d\.onclick\], \['onchange', d\.onchange\]\]\)/, 'validarCampo tiene que bloquear palabras de emisión en id/name/title/aria-label/onclick/onchange')
+  assert.match(vc, /type === 'checkbox' \|\| \(role !== '' && !ROLES_EDITABLES\.includes\(role\)\)/, 'validarCampo no admite casillas (ni roles que no sean de edición)')
+  assert.match(vc, /return contrastarEtiqueta\(etiqueta, d\.etiquetaFila\)/, 'validarCampo tiene que contrastar la etiqueta de la fila')
+  assert.ok(!/'checkbox'/.test(src.match(/export const TIPOS_INPUT_EDITABLES = \[[^\]]*\]/)![0]), 'TIPOS_INPUT_EDITABLES no puede admitir checkbox')
   assert.ok(!/\.(check|fill|press|selectOption|setChecked)\s*\(/.test(src), 'el formador no actúa sobre la página: solo señala')
 })
 
@@ -180,4 +188,10 @@ test('formador en el adaptador ePAC: FALLBACK acotado (campos + «Calcular»), a
   // 6. A la IA no viajan credenciales ni valores del riesgo: la descripción solo usa la etiqueta del formulario.
   const bloque = src.slice(src.indexOf('async function campoResuelto'), src.indexOf('const SIN_CALCULAR'))
   assert.ok(!/credenciales|contrasena|riesgo|valor/i.test(bloque), 'campoResuelto no puede pasar credenciales ni valores a la IA')
+  // 7. La clave que viaja es un slug (asegura exige [a-z0-9_]) y la etiqueta real va aparte para contrastarla.
+  assert.match(bloque, /clave: claveCampo\(etiqueta, indice\)/, 'la clave del campo tiene que ser claveCampo(etiqueta, indice)')
+  assert.match(bloque, /^\s*etiqueta,$/m, 'campoResuelto tiene que pasar la etiqueta real al formador')
+  // 8. setChecked solo sobre una casilla confirmada por tipoControl (no pasa por el guard).
+  const m = src.slice(src.indexOf('async function marcar'), src.indexOf('async function login'))
+  assert.ok(m.indexOf("(await tipoControl(campo)) !== 'checkbox'") > -1 && m.indexOf("(await tipoControl(campo)) !== 'checkbox'") < m.indexOf('setChecked('), 'marcar tiene que comprobar que es una casilla antes de setChecked')
 })

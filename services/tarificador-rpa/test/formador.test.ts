@@ -12,6 +12,7 @@ import {
   prepararFormador,
   proyectarCandidato,
   resolverConFormador,
+  selectorYaUsado,
   sinSelector,
   validarAccion,
   validarCampo,
@@ -20,7 +21,7 @@ import {
 
 const base: DescripcionElemento = {
   coincidencias: 1, visible: true, tag: 'button', type: null, role: null, texto: 'Calcular', valorBoton: null, title: null, ariaLabel: null,
-  id: null, name: null, href: null, onclick: null, formaction: null, deshabilitado: false, editableContenido: false,
+  id: null, name: null, href: null, onclick: null, onchange: null, formaction: null, etiquetaFila: null, deshabilitado: false, editableContenido: false,
 }
 const d = (o: Partial<DescripcionElemento>): DescripcionElemento => ({ ...base, ...o })
 
@@ -43,7 +44,6 @@ test('acción calcular: rechaza «Emitir», «Aceptar», otro texto y lo que esc
   assert.equal(validarAccion(d({ texto: 'Calcular', id: 'btnEmitirPoliza' }), 'calcular').ok, false)
   assert.equal(validarAccion(d({ texto: 'Calcular', href: '/poliza/contratar' }), 'calcular').ok, false)
   assert.equal(validarAccion(d({ texto: 'Calcular y formalizar' }), 'calcular').ok, false)
-  assert.equal(validarAccion(d({ texto: 'Proyecto Ampliado' }), 'pestana_proyecto').ok, false)
 })
 
 test('acción: exige exactamente 1 elemento visible y habilitado; clave y texto de la tabla cerrada', () => {
@@ -56,17 +56,75 @@ test('acción: exige exactamente 1 elemento visible y habilitado; clave y texto 
   assert.equal(validarAccion(d({ tag: 'input', type: 'text', texto: null, valorBoton: null, title: 'Calcular' }), 'calcular').ok, false, 'un input de texto no es una acción')
 })
 
+// Campo con su etiqueta de fila: la del formulario «Metros Cuadrados».
+const c = (o: Partial<DescripcionElemento>): DescripcionElemento => d({ texto: null, etiquetaFila: 'Metros Cuadrados *', ...o })
+const M2 = 'Metros Cuadrados'
+
 test('campo: control editable sí; enlace, botón, input-botón o password no', () => {
-  assert.deepEqual(validarCampo(d({ tag: 'input', type: 'text', texto: null })), { ok: true })
-  assert.deepEqual(validarCampo(d({ tag: 'input', type: null, texto: null })), { ok: true })
-  assert.deepEqual(validarCampo(d({ tag: 'select', texto: null })), { ok: true })
-  assert.deepEqual(validarCampo(d({ tag: 'nx-dropdown', texto: null })), { ok: true })
-  assert.deepEqual(validarCampo(d({ tag: 'div', role: 'combobox', texto: null })), { ok: true })
-  assert.equal(validarCampo(d({ tag: 'a', texto: 'Superficie' })).ok, false)
-  assert.equal(validarCampo(d({ tag: 'button' })).ok, false)
-  assert.equal(validarCampo(d({ tag: 'input', type: 'submit' })).ok, false)
-  assert.equal(validarCampo(d({ tag: 'input', type: 'password' })).ok, false)
-  assert.equal(validarCampo(d({ tag: 'input', type: 'text', coincidencias: 3 })).ok, false)
+  assert.deepEqual(validarCampo(c({ tag: 'input', type: 'text' }), M2), { ok: true })
+  assert.deepEqual(validarCampo(c({ tag: 'input', type: null }), M2), { ok: true })
+  assert.deepEqual(validarCampo(c({ tag: 'select' }), M2), { ok: true })
+  assert.deepEqual(validarCampo(c({ tag: 'nx-dropdown' }), M2), { ok: true })
+  assert.deepEqual(validarCampo(c({ tag: 'div', role: 'combobox' }), M2), { ok: true })
+  assert.equal(validarCampo(c({ tag: 'a', texto: 'Superficie' }), M2).ok, false)
+  assert.equal(validarCampo(c({ tag: 'button' }), M2).ok, false)
+  assert.equal(validarCampo(c({ tag: 'input', type: 'submit' }), M2).ok, false)
+  assert.equal(validarCampo(c({ tag: 'input', type: 'password' }), M2).ok, false)
+  assert.equal(validarCampo(c({ tag: 'input', type: 'text', coincidencias: 3 }), M2).ok, false)
+})
+
+test('campo del formador: nunca una casilla (checkbox/radio), ni por type ni por role', () => {
+  assert.equal(validarCampo(c({ tag: 'input', type: 'checkbox' }), M2).ok, false)
+  assert.equal(validarCampo(c({ tag: 'input', type: 'radio' }), M2).ok, false)
+  assert.equal(validarCampo(c({ tag: 'div', role: 'checkbox', editableContenido: true }), M2).ok, false)
+  assert.equal(validarCampo(c({ tag: 'span', role: 'radio' }), M2).ok, false)
+})
+
+test('campo del formador: palabras de emisión en id/name/title/aria-label/onclick/onchange → rechazo, sin volcar el valor', () => {
+  for (const attr of ['id', 'name', 'title', 'ariaLabel', 'onclick', 'onchange'] as const) {
+    for (const v of ['chkEmitirPoliza', 'contratar_ya', 'doFormalizar()']) {
+      const r = validarCampo(c({ tag: 'input', type: 'text', [attr]: v }), M2)
+      assert.equal(r.ok, false, `${attr}=${v}`)
+      assert.ok(!r.ok && !r.motivo.includes(v), `el motivo no lleva el valor (${attr})`)
+    }
+  }
+})
+
+test('campo del formador: la etiqueta de la fila tiene que ser la del campo pedido', () => {
+  // ≤2 palabras: el 100 %.
+  assert.deepEqual(validarCampo(c({ tag: 'input', type: 'text', etiquetaFila: 'METROS CUADRADOS:' }), M2), { ok: true })
+  assert.equal(validarCampo(c({ tag: 'input', type: 'text', etiquetaFila: 'Año Construcción' }), M2).ok, false, 'otra fila')
+  assert.equal(validarCampo(c({ tag: 'input', type: 'text', etiquetaFila: 'Metros' }), M2).ok, false, 'solo una de dos palabras')
+  assert.equal(validarCampo(c({ tag: 'input', type: 'text', etiquetaFila: 'Fecha Inicio' }), 'Fecha Término').ok, false, 'Fecha Inicio ≠ Fecha Término')
+  assert.equal(validarCampo(c({ tag: 'input', type: 'text', etiquetaFila: null }), M2).ok, false, 'sin etiqueta de fila')
+  assert.equal(validarCampo(c({ tag: 'input', type: 'text' }), null).ok, false, 'sin etiqueta pedida')
+  // >2 palabras: el 50 %.
+  assert.deepEqual(validarCampo(c({ tag: 'input', type: 'text', etiquetaFila: 'Plantas sobre rasante' }), 'Plantas sobre N. Calle'), { ok: true })
+  assert.equal(validarCampo(c({ tag: 'input', type: 'text', etiquetaFila: 'Plantas bajo Nivel Calle' }), 'Instalaciones Anexas (Deportivas, Piscinas, etc.)').ok, false)
+})
+
+test('selectorYaUsado: un elemento no vale para dos claves en el mismo trabajo', () => {
+  const m = new Map<string, string>()
+  assert.deepEqual(selectorYaUsado(m, 'metros_cuadrados', '#m2', 'appArea'), { ok: true })
+  m.set(`appArea\u0000#m2`, 'metros_cuadrados')
+  assert.deepEqual(selectorYaUsado(m, 'metros_cuadrados', '#m2', 'appArea'), { ok: true }, 'la misma clave sí')
+  assert.equal(selectorYaUsado(m, 'ano_construccion', '#m2', 'appArea').ok, false)
+})
+
+test('ACCIONES_PERMITIDAS: SOLO «calcular» (ampliarla es decisión de Alberto)', () => {
+  assert.deepEqual(Object.keys(ACCIONES_PERMITIDAS), ['calcular'])
+  assert.deepEqual([...ACCIONES_PERMITIDAS.calcular], ['calcular', 'calcular prima', 'recalcular'])
+  for (const otra of ['nueva_alta', 'pestana_proyecto', 'pestana_tarificar', 'desplegar_menu']) assert.equal(validarAccion(d({ texto: 'Calcular' }), otra).ok, false, otra)
+})
+
+test('validarAccion: el motivo nombra el atributo que casó, nunca su valor (href/onclick)', () => {
+  const href = '/poliza/emitir?nif=12345678Z'
+  const r1 = validarAccion(d({ texto: 'Calcular', href }), 'calcular')
+  assert.equal(r1.ok, false)
+  assert.ok(!r1.ok && r1.motivo.includes('href') && !r1.motivo.includes('12345678Z') && !r1.motivo.includes('/poliza'))
+  const r2 = validarAccion(d({ texto: 'Calcular', onclick: "doContratar('ES12 3456')" }), 'calcular')
+  assert.ok(!r2.ok && r2.motivo.includes('onclick') && !r2.motivo.includes('ES12'))
+  assert.equal(validarAccion(d({ texto: 'Calcular', onchange: 'formalizar()' }), 'calcular').ok, false)
 })
 
 test('proyección de candidatos: nunca un value, ni un password, ni texto de un campo; PII tapada', () => {

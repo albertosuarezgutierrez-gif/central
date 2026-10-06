@@ -137,9 +137,17 @@ test('rutas: las del worker usan el secreto del worker y el kill-switch; la de o
   }
   for (const r of ['sugerir', 'revisar-paso']) {
     const src = readFileSync(`${base}tarificador/formador/${r}/route.ts`, 'utf8')
-    assert.ok(src.indexOf('quedanLlamadas(') > -1 && src.indexOf('quedanLlamadas(') < src.indexOf('preguntarIA('), `${r}: el tope va ANTES de llamar a la IA`)
+    // Tope ATÓMICO: la llamada a la IA va DENTRO de conLlamadaIA (lock por trabajo + cuenta + registro en una transacción).
+    assert.ok(src.indexOf('conLlamadaIA(') > -1 && src.indexOf('conLlamadaIA(') < src.indexOf('preguntarIA('), `${r}: la IA se llama dentro de conLlamadaIA`)
+    assert.ok(!/llamadasIAUsadas|quedanLlamadas\(/.test(src), `${r}: nada de contar fuera de la transacción (carrera)`)
+    const tras = src.slice(src.indexOf('preguntarIA('))
+    assert.ok(!/registrarIntervencion\(\{[^}]*llamadaIA: true/.test(tras), `${r}: el registro de una llamada a la IA va por \`registrar\` (en la transacción)`)
     assert.ok(src.indexOf('trabajoVivo(') < src.indexOf('preguntarIA('), `${r}: solo un trabajo en curso gasta IA`)
   }
+  const lib = readFileSync(new URL('./tarificador-formador.ts', import.meta.url).pathname, 'utf8')
+  const f = lib.slice(lib.indexOf('export async function conLlamadaIA'))
+  assert.ok(f.indexOf('pg_advisory_xact_lock') > -1 && f.indexOf('pg_advisory_xact_lock') < f.indexOf('quedanLlamadas(') && f.indexOf('quedanLlamadas(') < f.indexOf('await llamar('), 'conLlamadaIA: lock → cuenta → llamada, en ese orden')
+  assert.match(f, /prisma\.\$transaction\(/)
   const op = readFileSync(`${base}operador/tarificador/intervenciones/route.ts`, 'utf8')
   assert.match(op, /operadorAutorizado\(req\)/)
   assert.match(op, /correduriaUnica\(\)/)

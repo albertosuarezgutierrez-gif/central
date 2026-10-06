@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
-import { llamadasIAUsadas, registrarIntervencion, trabajoVivo } from '@/lib/tarificador-formador'
+import { conLlamadaIA, registrarIntervencion, trabajoVivo } from '@/lib/tarificador-formador'
 import { preguntarIA } from '@/lib/tarificador-formador-ia'
-import { SYSTEM_SUGERIR, formadorActivo, leerPeticionSugerir, maxLlamadasIA, parsearRespuestaSugerir, promptSugerir, quedanLlamadas } from '@/lib/tarificador-formador-reglas'
+import { SYSTEM_SUGERIR, formadorActivo, leerPeticionSugerir, maxLlamadasIA, parsearRespuestaSugerir, promptSugerir } from '@/lib/tarificador-formador-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,30 +29,33 @@ export async function POST(req: Request) {
     if (!t) return NextResponse.json({ indice: null, motivo: 'trabajo_no_en_curso' }, { status: 404 })
     if (t.compania !== p.compania || t.ramo !== p.ramo) return NextResponse.json({ indice: null, motivo: 'compania_ramo_no_casan' }, { status: 409 })
     const max = maxLlamadasIA(process.env)
-    if (!quedanLlamadas(await llamadasIAUsadas(t.id), max)) {
+    // Tope ATÓMICO por trabajo: comprobación + llamada + registro en una transacción con lock (conLlamadaIA).
+    const res = await conLlamadaIA(t, max, async (registrar) => {
+      let r: { texto: string; coste: number }
+      try {
+        r = await preguntarIA(SYSTEM_SUGERIR, promptSugerir(p))
+      } catch (e) {
+        await registrar({ paso: 'formador', tipo: 'error_ia', llamadaIA: true, resumen: `${p.tipo} «${p.clave}»: la IA no respondió (${e instanceof Error ? e.message.slice(0, 150) : 'error'})`, coste: 0 })
+        return { indice: null, motivo: 'ia_no_disponible' }
+      }
+      const s = parsearRespuestaSugerir(r.texto, p.estructura.length)
+      const c = s ? p.estructura[s.indice] : null
+      await registrar({
+        paso: 'formador',
+        tipo: s ? 'sugerencia' : 'sin_sugerencia',
+        llamadaIA: true,
+        resumen: s
+          ? `${p.tipo} «${p.clave}» → <${c!.tag}${c!.id ? ` #${c!.id}` : ''}> «${c!.texto ?? c!.etiqueta ?? ''}» (confianza ${s.confianza.toFixed(2)}): ${s.motivo}`
+          : `${p.tipo} «${p.clave}»: la IA no señaló un candidato con confianza suficiente`,
+        coste: r.coste,
+      })
+      return s ? { indice: s.indice, confianza: s.confianza, motivo: s.motivo } : { indice: null, motivo: 'sin_candidato' }
+    })
+    if (res.tope) {
       await registrarIntervencion({ trabajo: t, paso: 'formador', tipo: 'tope', llamadaIA: false, resumen: `tope de ${max} llamadas: no se pregunta por «${p.clave}»`, coste: 0 })
       return NextResponse.json({ indice: null, motivo: 'tope_llamadas' })
     }
-    let r: { texto: string; coste: number }
-    try {
-      r = await preguntarIA(SYSTEM_SUGERIR, promptSugerir(p))
-    } catch (e) {
-      await registrarIntervencion({ trabajo: t, paso: 'formador', tipo: 'error_ia', llamadaIA: true, resumen: `${p.tipo} «${p.clave}»: la IA no respondió (${e instanceof Error ? e.message.slice(0, 150) : 'error'})`, coste: 0 })
-      return NextResponse.json({ indice: null, motivo: 'ia_no_disponible' })
-    }
-    const s = parsearRespuestaSugerir(r.texto, p.estructura.length)
-    const c = s ? p.estructura[s.indice] : null
-    await registrarIntervencion({
-      trabajo: t,
-      paso: 'formador',
-      tipo: s ? 'sugerencia' : 'sin_sugerencia',
-      llamadaIA: true,
-      resumen: s
-        ? `${p.tipo} «${p.clave}» → <${c!.tag}${c!.id ? ` #${c!.id}` : ''}> «${c!.texto ?? c!.etiqueta ?? ''}» (confianza ${s.confianza.toFixed(2)}): ${s.motivo}`
-        : `${p.tipo} «${p.clave}»: la IA no señaló un candidato con confianza suficiente`,
-      coste: r.coste,
-    })
-    return NextResponse.json(s ? { indice: s.indice, confianza: s.confianza, motivo: s.motivo } : { indice: null, motivo: 'sin_candidato' })
+    return NextResponse.json(res.valor)
   } catch (e) {
     console.error('[tarificador/formador] sugerir', p.trabajoId, e instanceof Error ? e.message.slice(0, 300) : e)
     return NextResponse.json({ indice: null, motivo: 'error' }, { status: 503 })

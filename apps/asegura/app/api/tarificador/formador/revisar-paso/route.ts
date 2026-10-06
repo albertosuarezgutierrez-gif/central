@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
-import { llamadasIAUsadas, registrarIntervencion, trabajoVivo } from '@/lib/tarificador-formador'
+import { conLlamadaIA, registrarIntervencion, trabajoVivo } from '@/lib/tarificador-formador'
 import { preguntarIA } from '@/lib/tarificador-formador-ia'
 import {
   SYSTEM_REVISAR,
@@ -10,7 +10,6 @@ import {
   maxLlamadasIA,
   parsearRespuestaRevisar,
   promptRevisar,
-  quedanLlamadas,
   type Revision,
 } from '@/lib/tarificador-formador-reglas'
 
@@ -42,31 +41,34 @@ export async function POST(req: Request) {
       await registrarIntervencion({ trabajo: t, paso: p.paso, tipo: 'incidencia_precio', llamadaIA: false, resumen: bloqueantesPrecio.map((i) => i.mensaje).join(' · '), coste: 0 })
     }
 
-    let revision: Revision | null = null
     const max = maxLlamadasIA(process.env)
-    if (!quedanLlamadas(await llamadasIAUsadas(t.id), max)) {
-      await registrarIntervencion({ trabajo: t, paso: p.paso, tipo: 'tope', llamadaIA: false, resumen: `tope de ${max} llamadas: paso «${p.paso}» sin revisar`, coste: 0 })
-    } else {
+    // Tope ATÓMICO por trabajo: comprobación + llamada + registro en una transacción con lock (conLlamadaIA).
+    const res = await conLlamadaIA(t, max, async (registrar): Promise<Revision | null> => {
       try {
         const r = await preguntarIA(SYSTEM_REVISAR, promptRevisar(p))
-        revision = parsearRespuestaRevisar(r.texto)
-        const bloqueantes = revision?.avisos.filter((a) => a.bloqueante) ?? []
-        await registrarIntervencion({
-          trabajo: t,
+        const rev = parsearRespuestaRevisar(r.texto)
+        const bloqueantes = rev?.avisos.filter((a) => a.bloqueante) ?? []
+        await registrar({
           paso: p.paso,
           tipo: bloqueantes.length ? 'aviso_bloqueante' : 'revision',
           llamadaIA: true,
-          resumen: !revision
+          resumen: !rev
             ? `paso «${p.paso}»: respuesta de la IA ilegible`
             : bloqueantes.length
               ? bloqueantes.map((a) => `«${a.texto}» → ${a.interpretacion}`).join(' · ')
-              : `paso «${p.paso}»: ${revision.enPantallaEsperada === false ? 'NO parece la pantalla esperada' : 'correcto'}${revision.avisos.length ? ` (${revision.avisos.length} aviso/s informativo/s)` : ''}`,
+              : `paso «${p.paso}»: ${rev.enPantallaEsperada === false ? 'NO parece la pantalla esperada' : 'correcto'}${rev.avisos.length ? ` (${rev.avisos.length} aviso/s informativo/s)` : ''}`,
           coste: r.coste,
         })
+        return rev
       } catch (e) {
-        await registrarIntervencion({ trabajo: t, paso: p.paso, tipo: 'error_ia', llamadaIA: true, resumen: `paso «${p.paso}»: la IA no respondió (${e instanceof Error ? e.message.slice(0, 150) : 'error'})`, coste: 0 })
+        await registrar({ paso: p.paso, tipo: 'error_ia', llamadaIA: true, resumen: `paso «${p.paso}»: la IA no respondió (${e instanceof Error ? e.message.slice(0, 150) : 'error'})`, coste: 0 })
+        return null
       }
+    })
+    if (res.tope) {
+      await registrarIntervencion({ trabajo: t, paso: p.paso, tipo: 'tope', llamadaIA: false, resumen: `tope de ${max} llamadas: paso «${p.paso}» sin revisar`, coste: 0 })
     }
+    const revision: Revision | null = res.tope ? null : res.valor
     return NextResponse.json({
       revisadoPorIA: revision !== null,
       enPantallaEsperada: revision?.enPantallaEsperada ?? null,

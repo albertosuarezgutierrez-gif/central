@@ -28,14 +28,13 @@ import { rutaMarco } from './evidencia.ts'
 /** Palabras que NUNCA pueden estar en un control que el formador devuelva (además de `pareceEmision`). */
 export const BLOQUEO_FORMADOR = ['emitir', 'emision', 'contratar', 'contratacion', 'formalizar', 'formalizacion', 'suplemento', 'anular', 'baja', 'archivar', 'grabar', 'firmar', 'pagar'] as const
 
-/** Acciones que el formador puede resolver, con los ÚNICOS textos (normalizados) admitidos para cada una. */
+/**
+ * Acciones que el formador puede resolver, con los ÚNICOS textos (normalizados) admitidos para cada una.
+ * 🔒 (revisión de seguridad 06/10/2026) SOLO «calcular»: es la única que pide el adaptador. Ampliarla
+ * (navegación, pestañas, menús) es una decisión de Alberto con su test (lo fija test/formador.test.ts).
+ */
 export const ACCIONES_PERMITIDAS = {
   calcular: ['calcular', 'calcular prima', 'recalcular'],
-  nueva_alta: ['nueva alta'],
-  pestana_datos_basicos: ['datos basicos'],
-  pestana_tarificar: ['tarificar'],
-  pestana_proyecto: ['proyecto'],
-  desplegar_menu: ['menu', 'mas opciones', 'desplegar'],
 } as const satisfies Record<string, readonly string[]>
 
 export type AccionPermitida = keyof typeof ACCIONES_PERMITIDAS
@@ -45,8 +44,12 @@ export function esAccionPermitida(clave: string): clave is AccionPermitida {
   return Object.prototype.hasOwnProperty.call(ACCIONES_PERMITIDAS, clave)
 }
 
-/** Tipos de `<input>` que se consideran control EDITABLE para un campo (lista blanca). */
-export const TIPOS_INPUT_EDITABLES = ['', 'text', 'number', 'date', 'datetime-local', 'month', 'email', 'tel', 'search', 'checkbox'] as const
+/**
+ * Tipos de `<input>` que se consideran control EDITABLE para un campo (lista BLANCA). Sin casillas (checkbox
+ * ni la de opción única): un control que viene de la IA o de lo aprendido nunca se marca (`setChecked` no
+ * pasa por el guard). La de opción única no se nombra en src/ (guardián): queda fuera por ser lista blanca.
+ */
+export const TIPOS_INPUT_EDITABLES = ['', 'text', 'number', 'date', 'datetime-local', 'month', 'email', 'tel', 'search'] as const
 /** Tipos de `<input>` que son un BOTÓN (su `value` es su etiqueta visible: lo único que se lee de un value). */
 export const TIPOS_INPUT_BOTON = ['button', 'submit', 'image', 'reset'] as const
 const ROLES_EDITABLES = ['textbox', 'combobox', 'spinbutton', 'listbox', 'searchbox']
@@ -62,6 +65,44 @@ export function normalizarTexto(t: string | null | undefined): string {
     .replace(/[>»›<«‹:*]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/**
+ * Clave de un CAMPO para asegura: slug `^[a-z0-9_]{1,60}$` (lo exige el servidor y el CHECK del SQL).
+ * Sin tildes, minúsculas, todo lo que no sea `[a-z0-9]` → `_`, recortada; el control N-ésimo de la fila
+ * lleva el sufijo `__N`. La etiqueta real viaja aparte (en la descripción). «DNI/NIF/NIE/CIF» #1 →
+ * `dni_nif_nie_cif__1`.
+ */
+export function claveCampo(etiqueta: string, indice = 0): string {
+  const sufijo = indice > 0 ? `__${indice}` : ''
+  const base = etiqueta
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  const recortada = base.slice(0, 60 - sufijo.length).replace(/_+$/g, '') || 'campo'
+  return `${recortada}${sufijo}`
+}
+
+/** Palabras (≥3 letras) de una etiqueta normalizada: lo que se contrasta con la fila del elemento. */
+export function palabrasEtiqueta(t: string | null | undefined): string[] {
+  return [...new Set(normalizarTexto(t).split(/[^a-z0-9]+/).filter((w) => /^[a-z]{3,}$/.test(w)))]
+}
+
+/**
+ * ¿La etiqueta de la fila del elemento (label/aria/celda anterior) es la del campo pedido? Las palabras de
+ * ≥3 letras de `etiqueta` tienen que estar en `etiquetaFila`: el 100 % si son ≤2, el 50 % si son más.
+ * Sin etiqueta, sin palabras contrastables o sin etiqueta de fila → NO (conservador).
+ */
+export function contrastarEtiqueta(etiqueta: string | null | undefined, etiquetaFila: string | null | undefined): Validacion {
+  const buscadas = palabrasEtiqueta(etiqueta)
+  if (!buscadas.length) return { ok: false, motivo: 'la etiqueta pedida no tiene palabras contrastables' }
+  const fila = new Set(palabrasEtiqueta(etiquetaFila))
+  if (!fila.size) return { ok: false, motivo: 'el elemento no tiene etiqueta en su fila' }
+  const casan = buscadas.filter((w) => fila.has(w)).length
+  const exigidas = buscadas.length <= 2 ? buscadas.length : Math.ceil(buscadas.length / 2)
+  return casan >= exigidas ? { ok: true } : { ok: false, motivo: `su etiqueta de fila no es la del campo (${casan}/${buscadas.length} palabras)` }
 }
 
 // ─── Validación DETERMINISTA (pura) ──────────────────────────────────────────
@@ -81,7 +122,10 @@ export type DescripcionElemento = {
   name: string | null
   href: string | null
   onclick: string | null
+  onchange: string | null
   formaction: string | null
+  /** Texto de su label[for]/label envolvente/aria-label(ledby)/celda anterior de su fila. Solo local: no viaja. */
+  etiquetaFila: string | null
   deshabilitado: boolean
   editableContenido: boolean
 }
@@ -92,6 +136,20 @@ function exigirUnicoVisible(d: DescripcionElemento): Validacion | null {
   if (d.coincidencias !== 1) return { ok: false, motivo: `resuelve a ${d.coincidencias} elementos (se exige exactamente 1)` }
   if (!d.visible) return { ok: false, motivo: 'no es visible' }
   if (d.deshabilitado) return { ok: false, motivo: 'está deshabilitado' }
+  return null
+}
+
+/**
+ * Bloqueo de palabras (patrón de emisión del guard + `BLOQUEO_FORMADOR`) sobre los atributos dados. El
+ * `motivo` nombra SOLO el atributo que casó, nunca su valor (un href/onclick puede llevar datos).
+ */
+function bloqueoPalabras(atributos: [string, string | null][]): Validacion | null {
+  for (const [nombre, x] of atributos) {
+    if (pareceEmision(x)) return { ok: false, motivo: `el atributo «${nombre}» casa con el patrón de emisión` }
+    const n = normalizarTexto(x)
+    const prohibida = BLOQUEO_FORMADOR.find((p) => n.includes(p))
+    if (prohibida) return { ok: false, motivo: `el atributo «${nombre}» contiene una palabra bloqueada («${prohibida}»)` }
+  }
   return null
 }
 
@@ -108,36 +166,45 @@ export function validarAccion(d: DescripcionElemento, clave: string, textoEspera
   if (tag === 'select' || tag === 'textarea' || (tag === 'input' && !(TIPOS_INPUT_BOTON as readonly string[]).includes(type))) {
     return { ok: false, motivo: `<${tag}${type ? ` type=${type}` : ''}> no es un control de acción` }
   }
-  const descripciones = [d.texto, d.valorBoton, d.title, d.ariaLabel, d.id, d.name, d.href, d.onclick, d.formaction]
-  for (const x of descripciones) {
-    if (pareceEmision(x)) return { ok: false, motivo: `casa con el patrón de emisión: «${String(x).slice(0, 80)}»` }
-    const n = normalizarTexto(x)
-    const prohibida = BLOQUEO_FORMADOR.find((p) => n.includes(p))
-    if (prohibida) return { ok: false, motivo: `contiene una palabra bloqueada («${prohibida}»)` }
-  }
+  const bloqueo = bloqueoPalabras([
+    ['texto', d.texto], ['value', d.valorBoton], ['title', d.title], ['aria-label', d.ariaLabel], ['id', d.id],
+    ['name', d.name], ['href', d.href], ['onclick', d.onclick], ['onchange', d.onchange], ['formaction', d.formaction],
+  ])
+  if (bloqueo) return bloqueo
   const objetivo = textoEsperado ? [normalizarTexto(textoEsperado)] : permitidos
   const visibles = [d.texto, d.valorBoton, d.title, d.ariaLabel].map(normalizarTexto).filter(Boolean)
   if (!visibles.some((v) => objetivo.includes(v))) return { ok: false, motivo: `su texto («${visibles[0] ?? ''}») no es el de «${clave}»` }
   return { ok: true }
 }
 
-export function validarCampo(d: DescripcionElemento): Validacion {
+/**
+ * Campo resuelto por el FORMADOR (IA o aprendido; la vía determinista del adaptador no pasa por aquí):
+ * control editable único y visible, sin casillas (listas blancas de type/tag/role), sin palabras de emisión en sus
+ * atributos y con la etiqueta de su fila contrastada con la pedida (`contrastarEtiqueta`).
+ */
+export function validarCampo(d: DescripcionElemento, etiqueta: string | null | undefined): Validacion {
   const u = exigirUnicoVisible(d)
   if (u) return u
   const tag = d.tag.toLowerCase()
   const type = (d.type ?? '').toLowerCase()
+  const role = (d.role ?? '').toLowerCase()
   if (tag === 'a' || tag === 'button' || tag === 'nx-button') return { ok: false, motivo: `<${tag}> no es un campo editable` }
-  if (tag === 'input') {
-    return (TIPOS_INPUT_EDITABLES as readonly string[]).includes(type) ? { ok: true } : { ok: false, motivo: `<input type=${type}> no es un campo editable` }
+  // Casillas: fuera por LISTA BLANCA (type de input, tag y role); un role que no sea de edición, también.
+  if (type === 'checkbox' || (role !== '' && !ROLES_EDITABLES.includes(role)) || !/^[a-z][a-z0-9-]*$/.test(tag)) {
+    return { ok: false, motivo: 'una casilla o un control sin rol de edición no se resuelve por el formador' }
   }
-  if (TAGS_EDITABLES.includes(tag)) return { ok: true }
-  if (d.role && ROLES_EDITABLES.includes(d.role.toLowerCase())) return { ok: true }
-  if (d.editableContenido) return { ok: true }
-  return { ok: false, motivo: `<${tag}> no es un campo editable` }
+  const bloqueo = bloqueoPalabras([['id', d.id], ['name', d.name], ['title', d.title], ['aria-label', d.ariaLabel], ['onclick', d.onclick], ['onchange', d.onchange]])
+  if (bloqueo) return bloqueo
+  const editable =
+    tag === 'input'
+      ? (TIPOS_INPUT_EDITABLES as readonly string[]).includes(type)
+      : TAGS_EDITABLES.includes(tag) || ROLES_EDITABLES.includes(role) || d.editableContenido
+  if (!editable) return { ok: false, motivo: tag === 'input' ? `<input type=${type}> no es un campo editable` : `<${tag}> no es un campo editable` }
+  return contrastarEtiqueta(etiqueta, d.etiquetaFila)
 }
 
-export function validarResolucion(tipo: TipoClave, clave: string, d: DescripcionElemento, textoEsperado?: string | null): Validacion {
-  return tipo === 'accion' ? validarAccion(d, clave, textoEsperado) : validarCampo(d)
+export function validarResolucion(p: Pick<PeticionResolver, 'tipo' | 'clave' | 'textoEsperado' | 'etiqueta'>, d: DescripcionElemento): Validacion {
+  return p.tipo === 'accion' ? validarAccion(d, p.clave, p.textoEsperado) : validarCampo(d, p.etiqueta)
 }
 
 // ─── Candidatos (estructura compacta, SIN valores) ───────────────────────────
@@ -200,6 +267,16 @@ export const SELECTOR_ACCIONES = 'a, button, input[type=button], input[type=subm
 export const SELECTOR_CAMPOS = 'input:not([type=hidden]):not([type=password]):not([type=radio]), select, textarea, nx-dropdown, nx-datefield, [role=combobox], [role=textbox], [role=spinbutton], [contenteditable=true]'
 export const MAX_CANDIDATOS = 400
 
+/**
+ * Función que se ejecuta EN EL NAVEGADOR. tsx/esbuild (keepNames) envuelve las funciones con nombre que
+ * lleve dentro en `__name(…)`, que no existe en la página («ReferenceError: __name is not defined»: el
+ * `.catch` lo tragaba y no salía ningún candidato). Se reconstruye desde su TEXTO con un `__name` neutro
+ * (mismo truco que `FUENTE_RESOLVER` del adaptador ePAC).
+ */
+export function enPagina<F extends (...args: never[]) => unknown>(fn: F): F {
+  return new Function('x', 'y', `var __name = (f) => f; return (${fn.toString()})(x, y)`) as F
+}
+
 /** Ruta legible del marco: «principal» o la de `rutaMarco` (nombres de iframe). */
 export function nombreMarco(page: Page, f: Frame): string {
   return f === page.mainFrame() ? 'principal' : rutaMarco(f)
@@ -213,7 +290,7 @@ export async function extraerCandidatos(page: Page, tipo: TipoClave, redactar: (
     const marco = nombreMarco(page, f)
     const crudos = await f
       .evaluate(
-        ({ sel, esAccion, tope }) => {
+        enPagina(({ sel, esAccion, tope }: { sel: string; esAccion: boolean; tope: number }) => {
           const visible = (el: Element) => {
             const r = (el as HTMLElement).getClientRects()
             const cs = getComputedStyle(el)
@@ -290,7 +367,7 @@ export async function extraerCandidatos(page: Page, tipo: TipoClave, redactar: (
             })
           }
           return res
-        },
+        }),
         { sel: tipo === 'accion' ? SELECTOR_ACCIONES : SELECTOR_CAMPOS, esAccion: tipo === 'accion', tope: MAX_CANDIDATOS - out.length },
       )
       .catch(() => [] as Record<string, unknown>[])
@@ -325,7 +402,7 @@ export async function describirElemento(l: Locator, total: number): Promise<Desc
   const primero = l.first()
   const visible = await primero.isVisible().catch(() => false)
   const d = await primero
-    .evaluate((el) => {
+    .evaluate(enPagina((el: Element) => {
       const h = el as HTMLElement & { disabled?: unknown }
       const tag = h.tagName.toLowerCase()
       const type = (h.getAttribute('type') ?? '').toLowerCase()
@@ -342,11 +419,55 @@ export async function describirElemento(l: Locator, total: number): Promise<Desc
         name: h.getAttribute('name'),
         href: h.getAttribute('href'),
         onclick: h.getAttribute('onclick'),
+        onchange: h.getAttribute('onchange'),
         formaction: h.getAttribute('formaction'),
+        etiquetaFila: etiquetaFila(h),
         deshabilitado: h.disabled === true || h.getAttribute('aria-disabled') === 'true',
         editableContenido: h.isContentEditable === true,
       }
-    })
+
+      // Texto visible de un nodo SIN lo de dentro de controles (las opciones de un select no son etiqueta).
+      function textoSinControles(n: Element): string {
+        const w = document.createTreeWalker(n, 4 /* TEXT */)
+        const partes: string[] = []
+        let t: Node | null
+        while ((t = w.nextNode())) {
+          if (t.parentElement?.closest('select, option, textarea, script, style, button')) continue
+          partes.push(t.nodeValue ?? '')
+        }
+        return partes.join(' ').replace(/\s+/g, ' ').trim()
+      }
+      // label[for] + label envolvente + aria-label/aria-labelledby + la celda con texto más cercana ANTES
+      // de la suya en su fila (subiendo hasta 3 filas si la tabla está anidada). Solo para contrastar en local.
+      function etiquetaFila(x: HTMLElement): string | null {
+        const partes: string[] = []
+        if (x.id) {
+          for (const l of Array.from(document.querySelectorAll(`label[for="${CSS.escape(x.id)}"]`))) partes.push(textoSinControles(l))
+        }
+        const envuelve = x.closest('label')
+        if (envuelve) partes.push(textoSinControles(envuelve))
+        const al = x.getAttribute('aria-label')
+        if (al) partes.push(al)
+        const lb = x.getAttribute('aria-labelledby')
+        if (lb) for (const i of lb.split(/\s+/)) { const r = document.getElementById(i); if (r) partes.push(textoSinControles(r)) }
+        let celda: Element | null = x.closest('td, th')
+        for (let nivel = 0; celda && nivel < 3; nivel++) {
+          let previa = celda.previousElementSibling
+          let hallada = ''
+          while (previa && !hallada) {
+            hallada = textoSinControles(previa)
+            previa = previa.previousElementSibling
+          }
+          if (hallada) {
+            partes.push(hallada)
+            break
+          }
+          celda = celda.parentElement?.closest('td, th') ?? null
+        }
+        const t = partes.filter(Boolean).join(' | ').slice(0, 400)
+        return t || null
+      }
+    }))
     .catch(() => null)
   return d ? { ...d, coincidencias: total, visible } : null
 }
@@ -366,6 +487,8 @@ export type ContextoFormador = {
   /** Modo acompañado para esta compañía/ramo. */
   acompanado: boolean
   conocimiento: EntradaConocimiento[]
+  /** Selectores (marco + selector) ya resueltos en ESTE trabajo → su clave: uno no vale para dos claves. */
+  resueltos: Map<string, string>
   redactar: (t: string) => string
   log: (m: string, datos?: Record<string, unknown>) => void
   fetchImpl?: typeof fetch
@@ -409,6 +532,7 @@ export async function prepararFormador(base: {
     activo,
     acompanado: activo && r?.acompanamiento?.activo === true,
     conocimiento: activo && Array.isArray(r?.conocimiento) ? r!.conocimiento! : [],
+    resueltos: new Map(),
   }
   base.log('formador', { activo: ctx.activo, acompanado: ctx.acompanado, aprendido: ctx.conocimiento.length })
   return ctx
@@ -430,15 +554,29 @@ export type PeticionResolver = {
   descripcion: string
   /** Solo acciones: uno de los textos de `ACCIONES_PERMITIDAS[clave]` (si no, se acepta cualquiera de la tabla). */
   textoEsperado?: string | null
+  /** Solo campos: la etiqueta REAL del formulario; se contrasta con la de la fila del elemento. Sin ella, no hay campo. */
+  etiqueta?: string | null
 }
 
-async function validarSelector(page: Page, p: PeticionResolver, selector: string, marco: string | null): Promise<{ locator: Locator } | { motivo: string }> {
+const claveSelector = (selector: string, marco: string | null) => `${marco ?? '*'}\u0000${selector}`
+
+/** Un selector ya usado en este trabajo para OTRA clave no vale (la IA no puede mandar dos datos al mismo control). */
+export function selectorYaUsado(resueltos: Map<string, string>, clave: string, selector: string, marco: string | null): Validacion {
+  const previa = resueltos.get(claveSelector(selector, marco))
+  return previa !== undefined && previa !== clave ? { ok: false, motivo: `ese elemento ya se resolvió para «${previa}» en este trabajo` } : { ok: true }
+}
+
+async function validarSelector(page: Page, ctx: ContextoFormador, p: PeticionResolver, selector: string, marco: string | null): Promise<{ locator: Locator } | { motivo: string }> {
+  const usado = selectorYaUsado(ctx.resueltos, p.clave, selector, marco)
+  if (!usado.ok) return { motivo: usado.motivo }
   const { locator, total } = await localizar(page, selector, marco)
   if (!locator) return { motivo: 'no resuelve a ningún elemento' }
   const d = await describirElemento(locator, total)
   if (!d) return { motivo: 'no se pudo describir el elemento' }
-  const v = validarResolucion(p.tipo, p.clave, d, p.textoEsperado)
-  return v.ok ? { locator: locator.first() } : { motivo: v.motivo }
+  const v = validarResolucion(p, d)
+  if (!v.ok) return { motivo: v.motivo }
+  ctx.resueltos.set(claveSelector(selector, marco), p.clave)
+  return { locator: locator.first() }
 }
 
 /**
@@ -462,7 +600,8 @@ export async function resolverConFormador(page: Page, ctx: ContextoFormador | un
   // 1º Lo aprendido (más confirmado primero).
   const previos = ctx.conocimiento.filter((c) => c.clave === p.clave && c.tipo === p.tipo).sort((a, b) => b.confirmaciones - a.confirmaciones)
   for (const c of previos) {
-    const v = await validarSelector(page, p, c.selector, c.marco)
+    const v = await validarSelector(page, ctx, p, c.selector, c.marco)
+    if (!('locator' in v)) ctx.log('formador_conocimiento_rechazado', { clave: p.clave, motivo: v.motivo })
     if ('locator' in v) {
       ctx.log('formador_conocimiento', { clave: p.clave })
       return { locator: v.locator, selector: c.selector, marco: c.marco, origen: 'conocimiento', confirmar: confirmarCon(c.selector, c.marco, c.origen === 'ia' ? 'ia' : 'codigo') }
@@ -491,7 +630,7 @@ export async function resolverConFormador(page: Page, ctx: ContextoFormador | un
     return null
   }
   const elegido = candidatos[i]
-  const v = await validarSelector(page, p, elegido.selector, elegido.marco)
+  const v = await validarSelector(page, ctx, p, elegido.selector, elegido.marco)
   if (!('locator' in v)) {
     ctx.log('formador_sugerencia_rechazada', { clave: p.clave, motivo: v.motivo })
     return null

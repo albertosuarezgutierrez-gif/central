@@ -24,7 +24,7 @@ import { comprobarUrl, importeEs, importePuntoDecimal } from '@central/module-ta
 import type { CoberturaOferta, DesglosePrima, FranquiciaOferta, ModalidadPortal, OfertaNormalizada, PdfRef, RiesgoComunidad } from '@central/module-tarificacion'
 import type { AdaptadorPortal, ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
-import { acompanar, resolverConFormador, type PasoAcompanado, type ResolucionFormador } from '../../formador.ts'
+import { acompanar, claveCampo, resolverConFormador, type PasoAcompanado, type ResolucionFormador } from '../../formador.ts'
 
 /**
  * Selectores del LOGIN y de la ruta de menú. `null` = PENDIENTE DE CAPTURAS: el adaptador falla en
@@ -326,10 +326,12 @@ async function campoResuelto(raiz: Raiz, e: Entorno, etiqueta: string, indice = 
   } catch (err) {
     // Un dato que falta o cualquier error que no sea «no encuentro el campo» no es cosa del formador.
     if (!e.ctx.formador?.activo || (err instanceof ErrorTarificador && err.tipo !== 'portal')) throw err
+    // Clave = slug `[a-z0-9_]` (lo exige asegura); la etiqueta REAL va en la descripción y se contrasta con la fila.
     const r = await resolverConFormador(e.page, e.ctx.formador, {
-      clave: `${etiqueta}${indice ? `#${indice}` : ''}`,
+      clave: claveCampo(etiqueta, indice),
       tipo: 'campo',
       descripcion: `Campo editable del formulario «${etiqueta}»${indice ? ` (control nº ${indice + 1} de esa fila)` : ''}`,
+      etiqueta,
     }).catch(() => null)
     if (!r) throw err
     e.ctx.log(`formador: campo «${etiqueta}» resuelto por ${r.origen}`)
@@ -422,10 +424,17 @@ async function elegir(raiz: Raiz, e: Entorno, etiqueta: string, valor: string, i
   await confirmar()
 }
 
-/** Checkbox por etiqueta. Las asistencias salen DESHABILITADAS en el DOM capturado: si no se habilita, `portal`. */
+/**
+ * Checkbox por etiqueta. Las asistencias salen DESHABILITADAS en el DOM capturado: si no se habilita, `portal`.
+ * 🔒 `setChecked` no pasa por el guard: un checkbox SOLO sale de la vía determinista (`campoPorEtiqueta`) y
+ * además tiene que ser un `input[type=checkbox]`. El formador no resuelve casillas (formador.ts lo rechaza).
+ */
 async function marcar(raiz: Raiz, e: Entorno, etiqueta: string, valor: boolean): Promise<void> {
   try {
     const { campo, confirmar } = await campoResuelto(raiz, e, etiqueta)
+    if ((await tipoControl(campo)) !== 'checkbox') {
+      throw new ErrorTarificador('portal', `allianz/comunidades: «${etiqueta}» no es una casilla`)
+    }
     await campo.setChecked(valor, { timeout: 10_000 })
     await confirmar()
   } catch (err) {
@@ -900,12 +909,21 @@ async function leerCalculo(raiz: Raiz, ctx: ContextoPortal, modalidad: Modalidad
  * Pestaña «Tarificar»: tabla Anual / Sucesivos con Prima Neta, Impuestos y Prima Total. Aquí los importes
  * van con PUNTO decimal y sin miles (`importePuntoDecimal`, no `importeEs`). Lo que no se lee es `null`.
  */
-async function leerPrimas(raiz: Raiz): Promise<{ anual: DesglosePrima; sucesivos: DesglosePrima }> {
+export async function leerPrimas(raiz: Raiz): Promise<{ anual: DesglosePrima; sucesivos: DesglosePrima }> {
   const fila = async (etiqueta: string): Promise<[number | null, number | null]> => {
-    const textos = await filaPorEtiqueta(raiz, etiqueta).locator('td').allInnerTexts().catch(() => [] as string[])
+    const loc = filaPorEtiqueta(raiz, etiqueta)
+    // Solo celdas HIJAS directas: cada importe va en una tabla anidada cuyos `td` no deben contarse.
+    const textos = await loc.locator('xpath=./td').allInnerTexts().catch(() => [] as string[])
     const importes = textos.slice(1).map((t) => importePuntoDecimal(t)).filter((n): n is number => n !== null)
     // Esperado: [anual, sucesivos]. Si no salen exactamente dos importes, no se afirma ninguno.
-    return importes.length === 2 ? [importes[0], importes[1]] : [null, null]
+    if (importes.length === 2) return [importes[0], importes[1]]
+    // Respaldo: `td#valor_*` dentro de `td#tablaTarificacion_modelData_{fila}_{0|1}`.
+    const leerCol = async (col: number): Promise<number | null> => {
+      const t = await loc.locator(`xpath=./td[starts-with(@id,'tablaTarificacion_modelData_') and substring(@id,string-length(@id)-1)='_${col}']//td[starts-with(@id,'valor_')]`).allInnerTexts().catch(() => [] as string[])
+      return t.length === 1 ? importePuntoDecimal(t[0]) : null
+    }
+    const [a, s] = [await leerCol(0), await leerCol(1)]
+    return a !== null && s !== null ? [a, s] : [null, null]
   }
   const [netaA, netaS] = await fila('Prima Neta')
   const [impA, impS] = await fila('Impuestos')

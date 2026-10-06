@@ -7,7 +7,7 @@
 
 import { acompanamientoInicial, siguienteAcompanamiento, type EstadoAcompanamiento } from '@central/module-tarificacion'
 import { prisma } from './tenant'
-import { eventoCierre, type Paso, type TipoClave } from './tarificador-formador-reglas'
+import { eventoCierre, quedanLlamadas, type Paso, type TipoClave } from './tarificador-formador-reglas'
 
 export type TrabajoVivo = { id: string; correduriaId: string; compania: string; ramo: string }
 
@@ -21,10 +21,39 @@ export async function trabajoVivo(id: string): Promise<TrabajoVivo | null> {
   return f ? { id: f.id, correduriaId: f.correduria_id, compania: f.compania, ramo: f.ramo } : null
 }
 
-export async function llamadasIAUsadas(trabajoId: string): Promise<number> {
-  const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+/** Cliente de BD: `prisma` o el de una transacción. */
+type Bd = Pick<typeof prisma, '$queryRaw' | '$executeRaw'>
+
+export async function llamadasIAUsadas(trabajoId: string, bd: Bd = prisma): Promise<number> {
+  const filas = await bd.$queryRaw<{ n: bigint }[]>`
     select count(*) as n from seguros.tarificador_intervenciones where trabajo_id = ${trabajoId}::uuid and llamada_ia`
   return Number(filas[0]?.n ?? 0)
+}
+
+/** La IA corta a 20 s (`preguntarIA`); la transacción que la envuelve, con margen. */
+const TIMEOUT_TX_LLAMADA_MS = 40_000
+
+/**
+ * Tope de llamadas a la IA por trabajo, ATÓMICO: comprobación + llamada + registro dentro de UNA transacción
+ * con `pg_advisory_xact_lock` por trabajo. Dos peticiones simultáneas del mismo trabajo se serializan: la
+ * segunda cuenta ya la fila de la primera y no puede pasarse del tope. `llamar` recibe `registrar`, que
+ * inserta en ESA transacción (el registro de la llamada tiene que ir por ahí para contar).
+ * Agotado → `{ tope: true }` sin llamar (quien llama registra el «tope»).
+ */
+export async function conLlamadaIA<T>(
+  t: TrabajoVivo,
+  max: number,
+  llamar: (registrar: (i: Omit<Parameters<typeof registrarIntervencion>[0], 'trabajo'>) => Promise<void>) => Promise<T>,
+): Promise<{ tope: true } | { tope: false; valor: T }> {
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`select pg_advisory_xact_lock(hashtextextended(${`tarificador_formador:${t.id}`}, 0))`
+      if (!quedanLlamadas(await llamadasIAUsadas(t.id, tx), max)) return { tope: true as const }
+      const valor = await llamar((i) => registrarIntervencion({ ...i, trabajo: t }, tx))
+      return { tope: false as const, valor }
+    },
+    { timeout: TIMEOUT_TX_LLAMADA_MS, maxWait: 10_000 },
+  )
 }
 
 export type TipoIntervencion = 'sugerencia' | 'sin_sugerencia' | 'revision' | 'aviso_bloqueante' | 'incidencia_precio' | 'confirmacion' | 'error_ia' | 'tope' | 'cierre'
@@ -36,8 +65,8 @@ export async function registrarIntervencion(i: {
   llamadaIA: boolean
   resumen: string
   coste: number
-}): Promise<void> {
-  await prisma.$executeRaw`
+}, bd: Bd = prisma): Promise<void> {
+  await bd.$executeRaw`
     insert into seguros.tarificador_intervenciones (correduria_id, trabajo_id, paso, tipo, llamada_ia, resumen, coste_estimado)
     values (${i.trabajo.correduriaId}::uuid, ${i.trabajo.id}::uuid, ${i.paso}, ${i.tipo}, ${i.llamadaIA}, ${i.resumen.slice(0, 2000)}, ${i.coste})`
 }
