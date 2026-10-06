@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Lock, Mail, Pencil, Phone, Plus, Star } from 'lucide-react'
 import {
@@ -71,6 +71,13 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
   const [ocupado, setOcupado] = useState(false)
   const [resultado, setResultado] = useState<ResultadoEscritura | null>(null)
   const [pendiente, setPendiente] = useState<{ method: 'POST' | 'PATCH'; body: Record<string, unknown> } | null>(null)
+  // Tras router.refresh() llega `inicial` nuevo: se resincroniza salvo que haya una edición en curso.
+  const firmaInicial = JSON.stringify(inicial)
+  useEffect(() => {
+    if (corrigiendo || abierto !== null || anadiendo || ocupado || pendiente !== null) return
+    setLista(inicial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firmaInicial])
 
   const items = lista === null ? [] : [...lista.telefonos, ...lista.emails]
 

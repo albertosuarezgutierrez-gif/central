@@ -183,6 +183,8 @@ function Panel({
   const [filas, setFilas] = useState<FilaCarnet[]>(() => filasDe(carnets ?? []))
   const libreTipo = TIPOS_CARNET.find((t) => !(carnets ?? []).some((k) => claveTipoCarnet(k.tipo) === t)) ?? 'B'
   const [nuevo, setNuevo] = useState({ tipo: libreTipo as string, fecha: (carnets ?? []).length === 0 ? (fechaCarnetPoliza?.slice(0, 10) ?? '') : '' })
+  // La fecha de la póliza solo PRECARGA el carné nuevo: no es un cambio hasta que el usuario lo toca.
+  const [nuevoTocado, setNuevoTocado] = useState(false)
   // Tras guardar, la ficha se vuelve a leer y llegan los carnés del servidor (con sus id): se toman
   // solo si no hay ediciones a medias (un tramo que falló conserva lo tecleado).
   const firmaCarnets = JSON.stringify(carnets)
@@ -248,7 +250,7 @@ function Panel({
 
   const setFila = (i: number, cambios: Partial<FilaCarnet>) => setFilas((xs) => xs.map((x, j) => (j === i ? { ...x, ...cambios } : x)))
 
-  const nuevoPide = nuevo.fecha !== ''
+  const nuevoPide = !juridica && carnets !== null && nuevoTocado && nuevo.fecha !== ''
   const hayCarnets = filas.some(filaSucia) || nuevoPide
   const moteCambiado = !juridica && mote !== undefined && moteTexto.trim() !== (mote ?? '')
 
@@ -338,7 +340,11 @@ function Panel({
             const { status, json } = await llamar('/api/correduria/cliente/carnets', op.method, { clienteId, ...op.body })
             const j = json as { estado?: string; motivo?: string } | null
             if (status >= 200 && status < 300 && j?.estado === 'ok') {
-              if (op.fila === 'nuevo') setNuevo({ tipo: nuevo.tipo, fecha: '' })
+              if (op.fila === 'nuevo') {
+                const usados = new Set([...filas.map((x) => claveTipoCarnet(x.tipo)), claveTipoCarnet(nuevo.tipo)])
+                setNuevo({ tipo: TIPOS_CARNET.find((t) => !usados.has(t)) ?? nuevo.tipo, fecha: '' })
+                setNuevoTocado(false)
+              }
               else if (op.method === 'DELETE') setFilas((xs) => xs.filter((x) => x.id !== (op.body.id as string)))
               else setFilas((xs) => xs.map((x) => (x.id === op.body.id ? { ...x, origTipo: x.tipo, origFecha: x.fecha } : x)))
             } else {
@@ -531,12 +537,12 @@ function Panel({
                 </div>
               ))}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <SelTipo valor={nuevo.tipo} onChange={(t) => setNuevo((n) => ({ ...n, tipo: t }))} etiqueta="Tipo del carné nuevo" />
+                <SelTipo valor={nuevo.tipo} onChange={(t) => { setNuevoTocado(true); setNuevo((n) => ({ ...n, tipo: t })) }} etiqueta="Tipo del carné nuevo" />
                 <input
                   type="date"
                   value={nuevo.fecha}
                   max={hoyISO()}
-                  onChange={(e) => setNuevo((n) => ({ ...n, fecha: e.target.value }))}
+                  onChange={(e) => { setNuevoTocado(true); setNuevo((n) => ({ ...n, fecha: e.target.value })) }}
                   aria-label="Fecha de expedición del carné nuevo"
                   style={{ ...campo, width: 'auto', flex: '1 1 150px' }}
                 />

@@ -68,3 +68,10 @@ test('ni la cabecera ni las pestañas de la ficha montan ningún editor de datos
     for (const p of todos) assert.doesNotMatch(src, p, `${f} monta un editor suelto (${p})`)
   }
 })
+
+test('el carné nuevo precargado con la fecha de la póliza NO cuenta como cambio: `nuevoPide` depende de `nuevoTocado`', () => {
+  const src = leer(FICHA)
+  assert.match(src, /const nuevoPide = [^\n]*\bnuevoTocado\b/)
+  assert.match(src, /const nuevoPide = [^\n]*carnets !== null/)
+  assert.match(src, /const nuevoPide = [^\n]*!juridica/)
+})
