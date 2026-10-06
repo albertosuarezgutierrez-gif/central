@@ -967,12 +967,12 @@ export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
 export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, TIPOS_ANULACION_ENVIO_SOLO, anulacionSeEnviaSola, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
 export type { AccionAprobacion, Borrador, BuzonCompania, Decision, EntradaAnulacionCompania, EntradaReciboDevuelto, EstadoAprobacion, Politica } from './aprobaciones.ts'
 export {
-  ACCIONES_ANULACION, DIAS_ESPERA_CONFIRMACION, ESTADOS_ANULACION, ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION,
-  ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION, MOTIVOS_ANULACION, SOLICITANTES_ANULACION, TIPOS_ANULACION,
-  cartaAnulacion, resolucionDeAnulacion, siguientePaso as siguientePasoAnulacion, transicion as transicionAnulacion, validarSolicitud as validarSolicitudAnulacion,
+  ACCIONES_ANULACION, DIAS_AVISO_VENCIMIENTO_PORTAL, DIAS_ESPERA_CONFIRMACION, DIAS_LIBERACION_DIRECTA, ESTADOS_ANULACION, ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION,
+  ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION, HORAS_RETENCION_PORTAL, MOTIVOS_ANULACION, MOTIVOS_PORTAL, SOLICITANTES_ANULACION, TIPOS_ANULACION,
+  cartaAnulacion, eurosEs as eurosAnulacionEs, liberaSolaAt, parsearEuros as parsearEurosAnulacion, textoOfertaPrecio, MAX_TEXTO_PRECIO_PORTAL, liberadaParaFirma, resolucionDeAnulacion, solicitudDesdePortal, siguientePaso as siguientePasoAnulacion, transicion as transicionAnulacion, validarSolicitud as validarSolicitudAnulacion,
 } from './anulacion.ts'
 export type {
-  AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
+  AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, MotivoPortal, OrigenAnulacion, ResultadoSolicitudPortal, SolicitudPortal, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
 } from './anulacion.ts'
 export { NECESIDADES_MAX, NECESIDADES_MIN, anulacionPorCambio, documentoAceptacion, esCambioCompania, lineaVistoAntes, validarNecesidades, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'
 export { deducirNecesidades, grupoNecesidades, preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades, type GrupoNecesidades, type OpcionPregunta, type PreguntaNecesidad, type RespuestasNecesidades, type ValidacionRespuestas } from './necesidades-idd.ts'

@@ -20,7 +20,7 @@ test('lo firmado es lo guardado y lo que se mandará: el mismo texto se hashea y
 
 test('solo firma el tomador, y solo desde «solicitada»; la ficha sale del vínculo, no de la petición', () => {
   assert.match(src, /a\.cliente_id = \$\{clienteId\}::uuid\s+and a\.estado = 'solicitada'/)
-  assert.match(firmar, /where id = \$\{anulacionId\}::uuid and correduria_id = \$\{correduriaId\}::uuid and estado = 'solicitada'/)
+  assert.match(firmar, /where a\.id = \$\{anulacionId\}::uuid and a\.correduria_id = \$\{correduriaId\}::uuid and a\.estado = 'solicitada'/)
   for (const firma of src.match(/export async function \w+\([^)]*\)/g) ?? []) {
     assert.doesNotMatch(firma, /clienteId/, `ninguna función pública recibe clienteId: ${firma}`)
   }
@@ -36,9 +36,9 @@ test('🪤 el intento se GASTA antes de comparar, en una sola sentencia con el t
 
 test('🪤 pedir código: los frenos (60 s y tope diario) van DENTRO del update, no en un if previo', () => {
   const pedir = src.slice(src.indexOf('export async function pedirCodigoFirma'), src.indexOf('export type ResultadoFirma'))
-  const upd = pedir.slice(pedir.indexOf('update anulacion set firma_otp_hash'))
-  assert.match(upd.slice(0, 900), /firma_otp_envios < \$\{MAX_CODIGOS_DIA\}::int/)
-  assert.match(upd.slice(0, 900), /firma_otp_expira is null\s+or firma_otp_expira <= now\(\)/)
+  const upd = pedir.slice(pedir.indexOf('update anulacion a set firma_otp_hash'))
+  assert.match(upd.slice(0, 1200), /firma_otp_envios < \$\{MAX_CODIGOS_DIA\}::int/)
+  assert.match(upd.slice(0, 1200), /firma_otp_expira is null\s+or firma_otp_expira <= now\(\)/)
 })
 
 test('🪤 se firma lo que se leyó: la huella de la carta se compara antes de firmar', () => {

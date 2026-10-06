@@ -4,6 +4,7 @@ import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { fechaEs } from '@/lib/fechas'
 import { figuraChip } from '@/lib/intervinientes'
 
+import { SolicitarBaja } from './SolicitarBaja'
 import { empiezaMasAdelante, ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBien } from './PolizaVista'
 
 /**
@@ -36,7 +37,7 @@ import { empiezaMasAdelante, ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBi
  * Lo que se va a la ficha: prima, recibos, coberturas, siniestros abiertos y
  * los teléfonos de la compañía.
  */
-export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | null }) {
+export function FilaPoliza({ p, deOtro, puedeSolicitarBaja = false }: { p: PolizaPortal; deOtro: string | null; puedeSolicitarBaja?: boolean }) {
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = RAMO[p.ramo] ?? p.ramo
   // Si el titular ya es el bien, la compañía baja a la segunda línea; si no, el
@@ -120,6 +121,11 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
           ›
         </span>
       </Link>
+      {/* «Solicitar baja»: fuera del <Link> (un botón dentro de un enlace no es HTML válido). Solo en pólizas PROPIAS en vigor
+          y sin baja en marcha; lo decide la página, y el servidor lo vuelve a comprobar. */}
+      {puedeSolicitarBaja && (
+        <SolicitarBaja polizaId={p.id} titulo={tituloDePoliza(p)} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null} />
+      )}
     </li>
   )
 }
