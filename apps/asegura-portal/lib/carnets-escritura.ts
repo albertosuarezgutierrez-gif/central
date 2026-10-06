@@ -71,6 +71,7 @@ export function interpretarEscrituraCarnet(status: number, j: unknown): Resultad
   }
   if (estado === 'duplicado') return { estado: 'duplicado' }
   if (estado === 'no_encontrado') return { estado: 'no_encontrado' }
+  if (estado === 'sin_permiso') return { estado: 'sin_permiso' }
   if (estado === 'sin_ficha') return { estado: 'sin_ficha' }
   if (estado === 'sin_configurar') return { estado: 'sin_puente' }
   return { estado: 'error', causa: `puente_${status}_${estado ?? 'sin_estado'}` }
@@ -88,6 +89,8 @@ export function statusEscrituraCarnet(estado: ResultadoEscrituraCarnet['estado']
       return 409
     case 'no_encontrado':
       return 404
+    case 'sin_permiso':
+      return 403
     case 'sin_puente':
       return 503
     default:

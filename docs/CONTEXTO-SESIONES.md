@@ -1085,6 +1085,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   `EditarCliente.tsx` queda con `CuentaCargo` y helpers. Guardián sin lista blanca. Fuera: `info_riesgo`, NuevaPersona,
   FaltaPorCompletar (sexo/móvil) y dirección del riesgo, que no escriben en la ficha.
 
+## (06/10/2026) Portal: arreglos de la auditoría final (cron push, carnés, globo PWA)
+- Cron `avisos-push`: decisión pura en `lib/obligaciones-debidas.ts`; puente caído ⇒ identidad SALTADA (ni push «renueva» ni sello `avisadaPushAt`); try/catch por identidad (`saltadas`/`fallidas` en la respuesta). Cepos vínculo/`conConfirmadas`/null vistos en rojo.
+- Carnés: escribir sobre ficha propia de solo consulta ⇒ `sin_permiso` 403 + `MENSAJE_SOLO_CONSULTA` (ajena sigue `no_encontrado`); cepo de cableado de `fichasLegiblesDeCarnets` en la lectura.
+- `InstalarBoton`: el botón instala aunque el globo esté abierto (Android/escritorio). `FlotaEmpresa` usa `hoyMadrid()`.
+
 ## (06/10/2026) Correduría: botón WhatsApp en el aviso Telegram de lead web
 - `textoTelegramLead` (plataforma `lib/leads-web.ts`) añade «📲 Escribir por WhatsApp» (wa.me con texto prellenado, solo si es móvil). `mensajeWhatsappLead`: Alberto de Grupo ASegura; auto/moto piden permiso de circulación + carné + CP. Test `leads-web.test.ts`.
 - Paso 2 APARCADO (decide Alberto): formulario de auto sin login vía `/datos/[token]` del portal. Hoy el portal no tiene formulario de auto y un lead no entra sin invitación + OTP.

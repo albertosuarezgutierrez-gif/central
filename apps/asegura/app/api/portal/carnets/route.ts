@@ -49,7 +49,7 @@ export async function GET(req: Request) {
  * Mismo secreto que la GET. `identidadId` es la de la SESIÓN del portal; `fichaId` (el titular que eligió)
  * se acepta solo si está vinculada a esa identidad con nivel que opera, y en cambio/baja el carné tiene que
  * ser de esa ficha (`carnets-portal-reglas.ts`). Nunca acepta `clienteId`. Respuestas: `ok` 200 ·
- * `invalido` 422 · `duplicado` 409 · `no_encontrado` 404 · `sin_ficha` 409 · `error` 503. Solo dice cómo
+ * `invalido` 422 · `duplicado` 409 · `no_encontrado` 404 · `sin_permiso` 403 (ficha vinculada de solo consulta) · `sin_ficha` 409 · `error` 503. Solo dice cómo
  * salió: ni la fecha ni ningún dato de la ficha vuelven por aquí.
  */
 export const POST = escribir

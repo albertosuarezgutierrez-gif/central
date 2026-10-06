@@ -11,6 +11,7 @@ import { revisarCarnet } from '@central/module-seguros'
 import {
   destinoCarnet,
   hoyParaCarnet,
+  resultadoDeDestinoAjeno,
   leerOperacionCarnet,
   statusCarnetPortal,
   textoHistorialCarnet,
@@ -145,4 +146,20 @@ test('🪤 H4: «hoy» del carné es el de MADRID: a las 23:30 UTC (01:30 del d�
   const guardar = src.slice(src.indexOf('export async function guardarCarnet'), src.indexOf('export async function guardarCarnet') + 1500)
   assert.match(guardar, /hoy: hoyParaCarnet\(\)/)
   assert.doesNotMatch(guardar, /toISOString\(\)\.slice\(0, 10\)/)
+})
+
+test('🪤 ficha vinculada de solo consulta → sin_permiso (403); el resto de rechazos siguen en no_encontrado (404)', () => {
+  assert.deepEqual(resultadoDeDestinoAjeno('sin_permiso'), { estado: 'sin_permiso' })
+  assert.equal(statusCarnetPortal('sin_permiso'), 403)
+  for (const m of ['no_vinculada', 'otra_ficha', 'empresa', 'sin_dueno'] as const) {
+    assert.deepEqual(resultadoDeDestinoAjeno(m), { estado: 'no_encontrado' }, m)
+  }
+  // De extremo a extremo con la regla de destino: solo consulta → sin_permiso; no vinculada → no_encontrado.
+  const soloVer: VinculoPortal[] = [{ clienteId: B, nivel: 'completo' }]
+  const d1 = destinoCarnet({ accion: 'alta', vinculos: soloVer, fichaId: B })
+  assert.equal(d1.estado, 'ajena')
+  if (d1.estado === 'ajena') assert.deepEqual(resultadoDeDestinoAjeno(d1.motivo), { estado: 'sin_permiso' })
+  const d2 = destinoCarnet({ accion: 'alta', vinculos: soloVer, fichaId: AJENA })
+  assert.equal(d2.estado, 'ajena')
+  if (d2.estado === 'ajena') assert.deepEqual(resultadoDeDestinoAjeno(d2.motivo), { estado: 'no_encontrado' })
 })
