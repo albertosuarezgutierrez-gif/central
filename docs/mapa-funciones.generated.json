@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T13:36:53Z",
-  "sha": "a886ae2840c87da753920a05ea80dac8a8a83469",
+  "generadoEn": "2026-10-06T14:29:01Z",
+  "sha": "8c6137e164c17deb8c011d6b5c1323242c393e2e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -17877,6 +17877,36 @@
       "hash": "f11a31f0b9d1"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/companias/acuerdo/cotejar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/companias/acuerdo/cotejar",
+      "hash": "262081421c6e"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/companias/acuerdos/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "GET /api/operador/companias/acuerdos — acuerdos con compañías (comisión por ramo/producto, objetivos, requisitos, letra pequeña) y claves de mediador de la correduría (06/10/2026, fase 1, solo lectura"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/companias/acuerdos",
+      "hash": "c26e8ddc8933"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/companias/contacto/[id]/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -17884,6 +17914,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/companias/contacto/[id]",
       "hash": "444bbf1708ca"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/companias/productividad/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "GET /api/operador/companias/productividad?anio=YYYY — producción por compañía (recibos de CIMA de cartera viva, por fecha de efecto) y estado de cada objetivo de los acuerdos (fase 2, 06/10/2026). Sol"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/companias/productividad",
+      "hash": "d3a937f5adf7"
     },
     {
       "ruta": "apps/asegura/app/api/operador/companias/route.ts",
@@ -20297,6 +20348,110 @@
       "hash": "99a4967a947c"
     },
     {
+      "ruta": "apps/asegura/lib/acuerdo-cotejo.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Cotejar un acuerdo con su documento original (fase 2, 06/10/2026): Alberto pulsa «Coincide con el PDF» en la ficha de la compañía y se sella `revisado_at`. Hasta entonces el acuerdo es un extracto SIN COTEJAR y ningún objetivo suyo se pinta en color (`evaluarObjetivo` → `sin_cotejar`). Solo SELLA: n",
+      "exporta": [
+        "cotejarAcuerdo"
+      ],
+      "funciones": [
+        {
+          "nombre": "cotejarAcuerdo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, acuerdoId: unknown, ahora: Date = new Date()",
+          "retorno": "Promise<ResultadoCotejo>",
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "26df50fd3e07"
+    },
+    {
+      "ruta": "apps/asegura/lib/acuerdos-productividad.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Productividad por compañía frente a los acuerdos (fase 2, 06/10/2026). Lo sirve `GET /api/operador/companias/productividad`; plataforma lo pinta junto a los contactos y acuerdos de cada compañía. Spec §3: docs/superpowers/specs/2026-10-06-correduria-acuerdos-companias-design.md Aquí solo se LEE (rec",
+      "exporta": [
+        "productividadCartera"
+      ],
+      "funciones": [
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | null",
+          "retorno": "string | null",
+          "linea": 56
+        },
+        {
+          "nombre": "codigoMediador",
+          "kind": "function",
+          "exportada": false,
+          "params": "json: unknown",
+          "retorno": "unknown",
+          "linea": 58
+        },
+        {
+          "nombre": "productividadCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, anio: number, hoy: string",
+          "retorno": "Promise<ProductividadCartera>",
+          "linea": 65
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ff609f7d5174"
+    },
+    {
+      "ruta": "apps/asegura/lib/acuerdos.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Acuerdos con compañías y claves de mediador, leídos del schema `seguros` (tablas de prisma/sql/2026-10-06_seguros_acuerdos_companias.sql). Lo sirve el puerto en `GET /api/operador/companias/acuerdos`; plataforma lo pinta en el bloque de compañías. Spec: docs/superpowers/specs/2026-10-06-correduria-a",
+      "exporta": [
+        "acuerdosCartera"
+      ],
+      "funciones": [
+        {
+          "nombre": "cerrado",
+          "kind": "function",
+          "exportada": false,
+          "params": "lista: readonly T[], v: string",
+          "retorno": "Cerrado<T>",
+          "linea": 45
+        },
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | null",
+          "retorno": "string | null",
+          "linea": 121
+        },
+        {
+          "nombre": "numeroONull",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: { toString(): string } | null",
+          "retorno": "number | null",
+          "linea": 124,
+          "resumen": "Decimal de Prisma (o lo que llegue) → número; `null` se queda `null`."
+        },
+        {
+          "nombre": "acuerdosCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<AcuerdosCartera>",
+          "linea": 130
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3c851912c7f6"
+    },
+    {
       "ruta": "apps/asegura/lib/acunado-unico.ts",
       "ambito": "apps/asegura",
       "resumen": "Compuerta ATÓMICA del acuñado: un proyecto de Codeoscopic → como mucho UNA póliza (03/10/2026). Antes, `registrarPolizaEmitida` miraba «¿el proyecto ya está `emitida`?» con un SELECT y DESPUÉS abría la transacción que creaba la póliza. Entre las dos cosas, el cron de descubrimiento (`descubrir-emisi",
@@ -22073,7 +22228,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Primitivo | undefined",
-          "linea": 58
+          "linea": 59
         },
         {
           "nombre": "sanearCambio",
@@ -22081,7 +22236,7 @@
           "exportada": true,
           "params": "c: Cambio",
           "retorno": "CambioGuardado",
-          "linea": 67
+          "linea": 68
         },
         {
           "nombre": "cambiosParaGuardar",
@@ -22089,13 +22244,13 @@
           "exportada": true,
           "params": "cambios: Cambio[]",
           "retorno": "CambioGuardado[]",
-          "linea": 77,
+          "linea": 78,
           "resumen": "Saneados, sin los que no cambian (antes === después) y con el tope aplicado."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c413901599f"
+      "hash": "ca6d7167621d"
     },
     {
       "ruta": "apps/asegura/lib/canal-baja.ts",
@@ -30969,16 +31124,17 @@
           "exportada": true,
           "params": "correduriaId: string, hoy: string",
           "retorno": "Promise<ComisionesPactadas>",
-          "linea": 17
+          "linea": 30
         }
       ],
       "tablas": [
-        "comision_pactada",
+        "acuerdo_comisiones",
+        "acuerdos_compania",
         "poliza_recibos",
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "dc154a180a5b"
+      "hash": "c5c64726912d"
     },
     {
       "ruta": "apps/asegura/lib/comisiones.ts",
@@ -88492,10 +88648,176 @@
       "hash": "30d36833687c"
     },
     {
-      "ruta": "apps/plataforma/app/(usuario)/correduria/ComisionesPactadas.tsx",
+      "ruta": "apps/plataforma/app/(usuario)/correduria/Companias.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
-        "ComisionesPactadas"
+        "Companias"
+      ],
+      "funciones": [
+        {
+          "nombre": "Companias",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 27,
+          "resumen": "Compañías: contactos, claves, acuerdos y producción en UN sitio (06/10/2026, fase 2 de acuerdos con compañías — decisión de Alberto: sin pestaña nueva). Una tarjeta por compañía con contactos o con ac"
+        },
+        {
+          "nombre": "TarjetaCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c, ra, rp }: { c: Compania ra: RespuestaAcuerdos | null rp: RespuestaProductividad | null }",
+          "retorno": null,
+          "linea": 70
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f71f3b73c568"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/companias/[codigo]/FichaCompania.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "FichaCompania"
+      ],
+      "funciones": [
+        {
+          "nombre": "NoComprobado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ que, motivo }: { que: string; motivo?: string }",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "FichaCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ codigo, compania, acuerdos, productividad, comisionReal }: { codigo: string compania: Compania | null acuerdos: RespuestaAcuerdos productividad: RespuestaProductividad comisionReal: ComisionRealDatos }",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "Cuerpo de la ficha de compañía. Solo presentación: los datos llegan ya leídos de la página."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "63162ba6bf35"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/companias/[codigo]/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "FichaCompaniaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "FichaCompaniaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ codigo: string }> }",
+          "retorno": null,
+          "linea": 26,
+          "resumen": "Ficha de una compañía (06/10/2026, fase 2 de acuerdos): contactos, claves, acuerdos (comisión por ramo, objetivos, letra pequeña, cotejo), producción del año y lo firmado frente al % real de CIMA. Spe"
+        },
+        {
+          "nombre": "leerComisionReal",
+          "kind": "function",
+          "exportada": false,
+          "params": "status: number, json: unknown, codigo: string",
+          "retorno": "ComisionRealDatos",
+          "linea": 69
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2d78bcad7da2"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/companias/AcuerdosVista.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ChipsAcuerdos",
+        "ProduccionCompania",
+        "TarjetaAcuerdo",
+        "CotejarBoton"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": null,
+          "linea": 34
+        },
+        {
+          "nombre": "ChipsAcuerdos",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ codigo, r }: { codigo: string; r: RespuestaAcuerdos }",
+          "retorno": null,
+          "linea": 40
+        },
+        {
+          "nombre": "ChipClave",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c }: { c: Clave }",
+          "retorno": null,
+          "linea": 62
+        },
+        {
+          "nombre": "ProduccionCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ codigo, p, enCima, compacto = false }: { codigo: string p: RespuestaProductividad enCima: boolean | null compacto?: boolean }",
+          "retorno": null,
+          "linea": 73
+        },
+        {
+          "nombre": "TarjetaAcuerdo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ a, objetivos, onCotejado }: { a: Acuerdo objetivos: ObjetivoEvaluado[] onCotejado?: (revisadoAt: string) => void }",
+          "retorno": null,
+          "linea": 118
+        },
+        {
+          "nombre": "LineasPaginadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ lineas }: { lineas: Acuerdo['comisiones'] }",
+          "retorno": null,
+          "linea": 172
+        },
+        {
+          "nombre": "ObjetivosAcuerdo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ a, objetivos }: { a: Acuerdo; objetivos: ObjetivoEvaluado[] }",
+          "retorno": null,
+          "linea": 215
+        },
+        {
+          "nombre": "CotejarBoton",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ acuerdoId, onHecho }: { acuerdoId: string; onHecho: (revisadoAt: string) => void }",
+          "retorno": null,
+          "linea": 249
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b68f7e1b98bb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/companias/ComisionReal.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ComisionReal"
       ],
       "funciones": [
         {
@@ -88504,7 +88826,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 29
+          "linea": 23
         },
         {
           "nombre": "fecha",
@@ -88512,7 +88834,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 30
+          "linea": 24
         },
         {
           "nombre": "tramo",
@@ -88520,7 +88842,7 @@
           "exportada": false,
           "params": "nueva: number, cartera: number",
           "retorno": null,
-          "linea": 31
+          "linea": 25
         },
         {
           "nombre": "Cuadro",
@@ -88528,49 +88850,20 @@
           "exportada": false,
           "params": "{ e }: { e: EntradaCuadro }",
           "retorno": null,
-          "linea": 34
+          "linea": 28
         },
         {
-          "nombre": "ComisionesPactadas",
+          "nombre": "ComisionReal",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ lineas, truncado, sinProducto }: { lineas: LineaComision[] truncado: boolean sinProducto: number }",
           "retorno": null,
-          "linea": 49
+          "linea": 43
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "29af61abf8eb"
-    },
-    {
-      "ruta": "apps/plataforma/app/(usuario)/correduria/Companias.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "Companias"
-      ],
-      "funciones": [
-        {
-          "nombre": "celda",
-          "kind": "function",
-          "exportada": false,
-          "params": "v: string | null",
-          "retorno": null,
-          "linea": 25,
-          "resumen": "Directorio de contacto por compañía aseguradora (`seguros.companias_dgs` + `seguros.compania_contactos`), minado del correo de Alberto: a quién llamar/escribir en cada compañía en vez de perder el hil"
-        },
-        {
-          "nombre": "Companias",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 29
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "b0db5548c697"
+      "hash": "837bc53e7911"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/page.tsx",
@@ -88585,24 +88878,24 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 18,
-          "resumen": "Directorio de contacto por compañía, como página propia (12/09/2026): Alberto quería llegar a esto desde el `+` de la cabecera, no buscarlo dentro de la pestaña Datos. Misma fuente que `Companias.tsx`"
+          "linea": 24,
+          "resumen": "salen además las compañías con acuerdo aunque aún no tengan contacto."
         },
         {
           "nombre": "ListaCompanias",
           "kind": "function",
           "exportada": false,
-          "params": "{ companias }: { companias: Compania[] }",
+          "params": "{ companias, acuerdos }: { companias: Compania[]; acuerdos: RespuestaAcuerdos }",
           "retorno": null,
-          "linea": 57
+          "linea": 64
         },
         {
           "nombre": "TarjetaCompania",
           "kind": "function",
           "exportada": false,
-          "params": "{ c }: { c: Compania }",
+          "params": "{ c, acuerdos }: { c: Compania; acuerdos: RespuestaAcuerdos }",
           "retorno": null,
-          "linea": 85
+          "linea": 93
         },
         {
           "nombre": "TarjetaContacto",
@@ -88610,12 +88903,12 @@
           "exportada": false,
           "params": "{ ct }: { ct: Contacto }",
           "retorno": null,
-          "linea": 104
+          "linea": 117
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad8f76d164a6"
+      "hash": "4007e0d62197"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/TelefonoContacto.tsx",
@@ -88764,7 +89057,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 93
+          "linea": 92
         },
         {
           "nombre": "fmtFecha",
@@ -88772,7 +89065,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 98,
+          "linea": 97,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -88781,7 +89074,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 148
+          "linea": 147
         },
         {
           "nombre": "CorreduriaClient",
@@ -88789,7 +89082,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 150
+          "linea": 149
         },
         {
           "nombre": "SubMas",
@@ -88797,7 +89090,7 @@
           "exportada": false,
           "params": "{ id, titulo, Icono, primero = false }: { id: BloqueMas titulo: string Icono: typeof Antenna primero?: boolean }",
           "retorno": null,
-          "linea": 734
+          "linea": 732
         },
         {
           "nombre": "CarteraResumen",
@@ -88805,7 +89098,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 760
+          "linea": 758
         },
         {
           "nombre": "btnMini",
@@ -88813,7 +89106,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 877,
+          "linea": 875,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -88822,12 +89115,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 895
+          "linea": 893
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9018a3aa4054"
+      "hash": "a6504c95ea0e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -94526,6 +94819,26 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2fb8ffaaea40"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/useAcuerdos.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "useAcuerdos"
+      ],
+      "funciones": [
+        {
+          "nombre": "useAcuerdos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "EstadoAcuerdos &",
+          "linea": 21
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c950cf2823cc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/useCompanias.ts",
@@ -102938,27 +103251,6 @@
       "hash": "e3cf9916cfb7"
     },
     {
-      "ruta": "apps/plataforma/app/api/correduria/comisiones-pactadas/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 8,
-          "resumen": "/api/correduria/comisiones-pactadas — reenvía al puerto de asegura, mismo patrón que `/api/correduria/companias`."
-        }
-      ],
-      "tablas": [],
-      "rutaApi": "/api/correduria/comisiones-pactadas",
-      "hash": "8568c8523e56"
-    },
-    {
       "ruta": "apps/plataforma/app/api/correduria/comisiones/confirmar/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -103008,6 +103300,48 @@
       ],
       "rutaApi": "/api/correduria/comisiones",
       "hash": "ee7be1cc80ff"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/companias/acuerdos/cotejar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "POST /api/correduria/companias/acuerdos/cotejar `{ acuerdoId }` — «Coincide con el PDF». asegura sella `revisado_at` (auditado, con el actor de la sesión)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/companias/acuerdos/cotejar",
+      "hash": "0a6f64daea65"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/companias/acuerdos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "GET /api/correduria/companias/acuerdos?anio=YYYY — acuerdos + claves y productividad de asegura, en UNA llamada para el bloque de compañías. Cada mitad viaja con su propio status: si la productividad "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/companias/acuerdos",
+      "hash": "02f5d0e6bfcf"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/companias/contactado/route.ts",
@@ -113295,6 +113629,206 @@
       "hash": "3bb26b38eb72"
     },
     {
+      "ruta": "apps/plataforma/lib/acuerdos-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Acuerdos con compañías, claves de mediador y productividad, servidos por asegura (`GET /api/operador/companias/acuerdos` y `…/productividad`). Lo PURO: leer las respuestas y decidir qué texto pintar. La red vive en `companias-asegura.ts`. Spec: docs/superpowers/specs/2026-10-06-correduria-acuerdos-c",
+      "exporta": [
+        "interpretarAcuerdos",
+        "interpretarProductividad",
+        "textoPct",
+        "textoSuma",
+        "etiquetaFuente",
+        "semaforoObjetivo",
+        "resumenCompania"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "O | null",
+          "linea": 126
+        },
+        {
+          "nombre": "cadena",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 127
+        },
+        {
+          "nombre": "numOnull",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 129,
+          "resumen": "Número o `null`. Un texto, un NaN o un `undefined` NO se convierten en 0."
+        },
+        {
+          "nombre": "lista",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown[]",
+          "linea": 130
+        },
+        {
+          "nombre": "cadenas",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string[]",
+          "linea": 131
+        },
+        {
+          "nombre": "cerrado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Cerrado | null",
+          "linea": 133
+        },
+        {
+          "nombre": "leerLinea",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "LineaAcuerdo | null",
+          "linea": 141
+        },
+        {
+          "nombre": "leerTramo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Tramo | null",
+          "linea": 153
+        },
+        {
+          "nombre": "leerObjetivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Objetivo | null",
+          "linea": 160
+        },
+        {
+          "nombre": "leerAcuerdo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Acuerdo | null",
+          "linea": 177
+        },
+        {
+          "nombre": "leerClave",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Clave | null",
+          "linea": 192
+        },
+        {
+          "nombre": "errorDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "status: number, o: O",
+          "retorno": "",
+          "linea": 202
+        },
+        {
+          "nombre": "interpretarAcuerdos",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaAcuerdos",
+          "linea": 206
+        },
+        {
+          "nombre": "leerSuma",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Suma | null",
+          "linea": 221
+        },
+        {
+          "nombre": "leerProduccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Produccion | null",
+          "linea": 228
+        },
+        {
+          "nombre": "leerEstadoObjetivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "EstadoObjetivo | null",
+          "linea": 238
+        },
+        {
+          "nombre": "interpretarProductividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaProductividad",
+          "linea": 255
+        },
+        {
+          "nombre": "textoPct",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: number | null",
+          "retorno": "string",
+          "linea": 284,
+          "resumen": "Un % pactado. `null` → «—» (no consta). Un 0 explícito → «0 %»."
+        },
+        {
+          "nombre": "textoSuma",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: Suma | null",
+          "retorno": "string",
+          "linea": 292,
+          "resumen": "Una suma de producción. `null` (no se pudo leer) → «sin datos»; sin recibos → «sin recibos» (no «0,00€»); con ilegibles → el importe leído y cuántos faltan."
+        },
+        {
+          "nombre": "etiquetaFuente",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: Pick<Acuerdo, 'fuente' | 'fuenteNombre'>",
+          "retorno": "string",
+          "linea": 301
+        },
+        {
+          "nombre": "semaforoObjetivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EstadoObjetivo",
+          "retorno": "Semaforo",
+          "linea": 331,
+          "resumen": "El semáforo de un objetivo. `pendiente` es SIEMPRE ⚪ con su motivo: jamás verde."
+        },
+        {
+          "nombre": "resumenCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string, r: RespuestaAcuerdos",
+          "retorno": null,
+          "linea": 342,
+          "resumen": "Resumen de una compañía para la lista: acuerdos, cuántos sin cotejar, si hay clave."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "25d43451dab0"
+    },
+    {
       "ruta": "apps/plataforma/lib/adapters/ialimp.ts",
       "ambito": "apps/plataforma",
       "resumen": "Adaptador de la vertical ialimp (limpieza). Los tenants son las filas de `empresas` en la BD COMPARTIDA → lectura directa por SQL (mismo patrón que lib/financiero.ts). Bloquear = empresas.activa (ya bloquea el login de ialimp).",
@@ -118537,7 +119071,10 @@
         "companiasAsegura",
         "marcarContactoAsegura",
         "telefonoContactoAsegura",
-        "comisionesPactadasAsegura"
+        "comisionesPactadasAsegura",
+        "acuerdosAsegura",
+        "productividadAsegura",
+        "cotejarAcuerdoAsegura"
       ],
       "funciones": [
         {
@@ -118657,11 +119194,46 @@
           "retorno": "Promise<Reenvio>",
           "linea": 197,
           "resumen": "Cuadro de comisiones pactado cruzado con los recibos de CIMA (`GET /api/operador/comisiones-pactadas`)."
+        },
+        {
+          "nombre": "getPuerto",
+          "kind": "function",
+          "exportada": false,
+          "params": "ruta: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 215
+        },
+        {
+          "nombre": "acuerdosAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 227,
+          "resumen": "Acuerdos con compañías y claves de mediador (`GET /api/operador/companias/acuerdos`)."
+        },
+        {
+          "nombre": "productividadAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number | null",
+          "retorno": "Promise<Reenvio>",
+          "linea": 232,
+          "resumen": "Producción por compañía y estado de cada objetivo (`GET /api/operador/companias/productividad`)."
+        },
+        {
+          "nombre": "cotejarAcuerdoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "acuerdoId: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 237,
+          "resumen": "«Coincide con el PDF»: sella `revisado_at` del acuerdo. El actor lo pone `cabeceras()` desde la sesión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aef828fcea16"
+      "hash": "7c752f2522ef"
     },
     {
       "ruta": "apps/plataforma/lib/comparativa-declaracion.ts",
@@ -176071,6 +176643,240 @@
       "hash": "79398c489b51"
     },
     {
+      "ruta": "packages/module-seguros/src/acuerdos-productividad.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Productividad por compañía frente a los acuerdos (fase 2, 06/10/2026). Spec: docs/superpowers/specs/2026-10-06-correduria-acuerdos-companias-design.md §3. Dos preguntas, puras (asegura lee los recibos y se los pasa): 1. ¿Cuánto se ha producido con cada compañía en el periodo? → `produccionPorCompani",
+      "exporta": [
+        "produccionPorCompania",
+        "evaluarObjetivo",
+        "esCodigoProducto"
+      ],
+      "funciones": [
+        {
+          "nombre": "SUMA_VACIA",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": "Suma",
+          "linea": 47
+        },
+        {
+          "nombre": "sumar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: Suma, texto: string | null",
+          "retorno": "void",
+          "linea": 49
+        },
+        {
+          "nombre": "claseDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: ReciboProduccion",
+          "retorno": "string | null",
+          "linea": 56
+        },
+        {
+          "nombre": "enPeriodo",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string | null, desde: string, hasta: string",
+          "retorno": "boolean",
+          "linea": 60
+        },
+        {
+          "nombre": "produccionPorCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "recibos: readonly ReciboProduccion[], periodo: { desde: string; hasta: string },",
+          "retorno": "ProduccionCompania[]",
+          "linea": 88,
+          "resumen": "Producción por compañía en `[desde, hasta]` (fechas de EFECTO, bordes incluidos). Una compañía sin ningún recibo en el periodo NO aparece: la pantalla distingue «no hay recibos» (lista sin ella) de «h"
+        },
+        {
+          "nombre": "ms",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 193
+        },
+        {
+          "nombre": "evaluarObjetivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { acuerdo: { claveId: string | null; revisado: boolean } objetivo: ObjetivoParaEvaluar recibos: readonly ReciboProduccion[] claves: readonly ClaveParaAtribuir[] hoy: string completo: boolean }",
+          "retorno": "EstadoObjetivo",
+          "linea": 199,
+          "resumen": "¿Cómo va un objetivo? `recibos` son los de ESA compañía (cualquier periodo: aquí se filtran). `completo = false` si la lectura tocó su techo."
+        },
+        {
+          "nombre": "esCodigoProducto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 292,
+          "resumen": "¿Es un CÓDIGO de producto de la compañía (lo que CIMA trae en `ramoEntidad`: '1434', '01480', 'HR', '302') y no un nombre comercial («Hogar Plus», «Autos nuevo producto / Ejemplo»)? Solo los códigos s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7962e39f0ba0"
+    },
+    {
+      "ruta": "packages/module-seguros/src/acuerdos.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Acuerdos con compañías: comisiones por ramo, objetivos (rappel, mantener la clave, apertura) y la CLAVE de mediador por la que se produce cada uno. Spec: docs/superpowers/specs/2026-10-06-correduria-acuerdos-companias-design.md Tablas: seguros.claves_mediador · acuerdos_compania · acuerdo_comisiones",
+      "exporta": [
+        "deLista",
+        "leerPct",
+        "leerTramos",
+        "normalizarCodigoCima",
+        "atribuirClave",
+        "conflictosCodigos",
+        "lineaAplicable",
+        "ramoDesdeTexto",
+        "leerSeedAcuerdos"
+      ],
+      "funciones": [
+        {
+          "nombre": "deLista",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: readonly T[], v: unknown",
+          "retorno": "T | null",
+          "linea": 51,
+          "resumen": "El valor si está en la lista cerrada; si no, `null`. Nunca se adivina el más parecido."
+        },
+        {
+          "nombre": "leerPct",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "LecturaPct",
+          "linea": 65,
+          "resumen": "Un porcentaje de comisión tal como llega del seed o de la BD (ya en número). `null`/`undefined` → «no consta» (`valor: null`), que es VÁLIDO. Un texto («17,5») se rechaza a propósito: el seed se escri"
+        },
+        {
+          "nombre": "numeroNoNegativo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 85
+        },
+        {
+          "nombre": "leerTramos",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "LecturaTramos",
+          "linea": 95,
+          "resumen": "Valida el jsonb `acuerdo_objetivos.tramos`. Un tramo mal formado deja TODO el objetivo ilegible (no se salta ese tramo): con un escalón de menos, «te faltan X € para el siguiente» saldría con un X fal"
+        },
+        {
+          "nombre": "normalizarCodigoCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 137,
+          "resumen": "Normaliza un código de mediador de CIMA para comparar: recorta, mayúsculas, espacios simples. `''` → `null`."
+        },
+        {
+          "nombre": "atribuirClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { companiaCodigoDgs: string; codigoRecibo: unknown; codigoPoliza: unknown }, claves: readonly ClaveParaAtribuir[],",
+          "retorno": "Atribucion",
+          "linea": 167,
+          "resumen": "¿Con qué clave se produjo este recibo? Manda el código del RECIBO (`datos_extra.mediador.codigoInterno`); el de la PÓLIZA (`datos_especificos.mediador.codigoInterno`) solo si el recibo no trae ninguno"
+        },
+        {
+          "nombre": "conflictosCodigos",
+          "kind": "function",
+          "exportada": true,
+          "params": "claves: readonly ClaveParaAtribuir[]",
+          "retorno": "ConflictoCodigo[]",
+          "linea": 195,
+          "resumen": "Códigos de CIMA que aparecen en más de una clave de la misma compañía. La BD no lo impide (un EXCLUDE sobre `text[]` cuesta más de lo que aporta): lo vigila esto, y el puerto lo devuelve para que la p"
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 270
+        },
+        {
+          "nombre": "textoComparable",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 279,
+          "resumen": "Para comparar producto/modalidad: minúsculas, sin tildes, espacios simples. `''` → `null`."
+        },
+        {
+          "nombre": "candidatas",
+          "kind": "function",
+          "exportada": false,
+          "params": "acuerdos: readonly AcuerdoParaCalculo[], c: ConsultaLinea",
+          "retorno": "Par[]",
+          "linea": 303,
+          "resumen": "Candidatas por PRODUCTO primero y por RAMO después, que es como se cruzan las dos fuentes: · `producto` es el código de producto de la compañía, el mismo que CIMA trae en `polizas.datos_especificos.pr"
+        },
+        {
+          "nombre": "afinarModalidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "pares: Par[], valor: string | null | undefined",
+          "retorno": "Par[]",
+          "linea": 315,
+          "resumen": "Igual para la modalidad: exacta si la hay; si no, las que no la nombran; sin dato, no se descarta nada."
+        },
+        {
+          "nombre": "lineaAplicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "acuerdos: readonly AcuerdoParaCalculo[], c: ConsultaLinea,",
+          "retorno": "LineaAplicable",
+          "linea": 331,
+          "resumen": "¿Qué porcentaje pactado le toca a este recibo? Acuerdos de la compañía vigentes en la fecha de efecto (bordes incluidos) → de ESA clave → líneas por producto o ramo (`candidatas`) → por modalidad. Con"
+        },
+        {
+          "nombre": "ramoDesdeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: unknown",
+          "retorno": "RamoAcuerdo | null",
+          "linea": 411
+        },
+        {
+          "nombre": "textoOpcional",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null | undefined",
+          "linea": 463
+        },
+        {
+          "nombre": "leerSeedAcuerdos",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "LecturaSeed",
+          "linea": 480,
+          "resumen": "Valida un fichero de seed de acuerdos. Devuelve TODOS los errores, no el primero: el seed lo escribe una persona (o un agente que extrae un PDF) y corregirlo de uno en uno es como no tener validador. "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7ae936ff99a4"
+    },
+    {
       "ruta": "packages/module-seguros/src/alerta-vencimiento.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Una sola fuente de verdad para lo que se DICE del vencimiento de una póliza. PURO. Antes cada pieza (cabecera, tabla de pólizas, tarjeta, ficha de póliza) decidía por su cuenta y una misma póliza decía a la vez «venció el 05/06», «avisar antes del 06/05», «vencimiento desconocido» y «renueva otro añ",
@@ -193388,7 +194194,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4330,
-    "funciones": 15183
+    "archivos": 4344,
+    "funciones": 15256
   }
 }

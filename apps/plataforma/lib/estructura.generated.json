@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-06T13:36:53Z",
+  "generadoEn": "2026-10-06T14:29:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 215
+        "evidencias": 217
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 157
+        "evidencias": 159
       },
       "rrhh": {
         "estado": "no",
@@ -4118,7 +4118,10 @@
       "/api/operador/comisiones",
       "/api/operador/comisiones-pactadas",
       "/api/operador/companias",
+      "/api/operador/companias/acuerdo/cotejar",
+      "/api/operador/companias/acuerdos",
       "/api/operador/companias/contacto/[id]",
+      "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
       "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
@@ -5138,9 +5141,10 @@
       "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/codigo-postal",
       "/api/correduria/comisiones",
-      "/api/correduria/comisiones-pactadas",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
+      "/api/correduria/companias/acuerdos",
+      "/api/correduria/companias/acuerdos/cotejar",
       "/api/correduria/companias/contactado",
       "/api/correduria/companias/telefono",
       "/api/correduria/contactos-movil",
@@ -5662,6 +5666,9 @@
     "asegura": [
       "if",
       "seguros._volcado_control",
+      "seguros.acuerdo_comisiones",
+      "seguros.acuerdo_objetivos",
+      "seguros.acuerdos_compania",
       "seguros.anulacion",
       "seguros.aprobacion",
       "seguros.auditoria",
@@ -5679,6 +5686,7 @@
       "seguros.channel_inbound_messages",
       "seguros.cima_decisiones",
       "seguros.cima_ficheros",
+      "seguros.claves_mediador",
       "seguros.cliente_carnets_conducir",
       "seguros.cliente_emails",
       "seguros.cliente_merge_log",
@@ -6786,7 +6794,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1613,
+    "apis": 1617,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
