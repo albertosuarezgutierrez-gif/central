@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T05:43:25Z",
-  "sha": "42557fa095d210c165139a493e05dd66d7c5e1fc",
+  "generadoEn": "2026-10-06T06:47:10Z",
+  "sha": "5efe177ab04f17458adbb2addd4d6f8d8f36ee83",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -18865,6 +18865,48 @@
       "hash": "fe35b29074cb"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/tarificador/trabajo/[id]/pdf/[indice]/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string; indice: string }> }",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "`GET /api/operador/tarificador/trabajo/[id]/pdf/[indice]` — el PDF de la oferta (índice del worker, el `pdfIndice` de la oferta). Bearer de operador, por correduría. Siempre `attachment` + `nosniff`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
+      "hash": "211d13a42427"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/tarificador/trabajo/[id]/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "`GET /api/operador/tarificador/trabajo/[id]` — estado y ofertas de un trabajo del tarificador RPA, para que plataforma lo pinte. Bearer de operador; filtrado por correduría. Solo lectura: NO depende d"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/tarificador/trabajo/[id]",
+      "hash": "0a4688cf7b5d"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/vehiculo/matricula/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -37332,7 +37374,7 @@
           "exportada": false,
           "params": "correduriaId: string, polizaId: string | null, claveNivelActual: string | null,",
           "retorno": "Promise<LecturaActual>",
-          "linea": 659,
+          "linea": 661,
           "resumen": "Qué se sabe de la cobertura que el cliente tiene HOY. Hoy solo se distingue «la compañía no manda el desglose» de «lo manda y no sabemos clasificarlo»: traducir las coberturas EIAC a un nivel es la ta"
         },
         {
@@ -37341,7 +37383,7 @@
           "exportada": true,
           "params": "peticion: unknown",
           "retorno": "Date | null",
-          "linea": 676
+          "linea": 678
         },
         {
           "nombre": "numero",
@@ -37349,7 +37391,7 @@
           "exportada": false,
           "params": "v: string | number | null | { toString(): string }",
           "retorno": "number | null",
-          "linea": 685,
+          "linea": 687,
           "resumen": "Prisma devuelve `numeric` como string. Se convierte en UN solo sitio."
         },
         {
@@ -37358,7 +37400,7 @@
           "exportada": true,
           "params": "correduriaId: string, filtro: { clienteId?: string | null; polizaId?: string | null }, hoy: Date = new Date(),",
           "retorno": "Promise<PresupuestoEnLista[] | null>",
-          "linea": 742,
+          "linea": 744,
           "resumen": "Los presupuestos de un cliente o de una póliza. `null` = **no se ha podido leer**, nunca `[]`. Un fallo de consulta pintado como lista vacía diría «no le has preparado ninguno» sobre una cartera que s"
         },
         {
@@ -37367,7 +37409,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, string> | null",
-          "linea": 801,
+          "linea": 803,
           "resumen": "El `porClave` de `presupuesto_opcion.garantias`, o `null` si no tiene la forma esperada."
         },
         {
@@ -37376,7 +37418,7 @@
           "exportada": false,
           "params": "opciones: { primaEur: unknown }[]",
           "retorno": "number | null",
-          "linea": 811,
+          "linea": 813,
           "resumen": "La prima más baja de las congeladas. `null` si no hay ninguna legible."
         },
         {
@@ -37385,7 +37427,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 825,
+          "linea": 827,
           "resumen": "Las respuestas del cuestionario IDD, solo para la auditoría del evento: claves y valores cortos de texto (son ids de opción, nunca texto libre del cliente). Lo que no cuadra no se guarda."
         },
         {
@@ -37394,7 +37436,7 @@
           "exportada": true,
           "params": "correduriaId: string, presupuestoId: string, actor: string",
           "retorno": "Promise<string | null>",
-          "linea": 842,
+          "linea": 844,
           "resumen": "Rellena y GUARDA el cuestionario de exigencias y necesidades de un presupuesto que aún no lo tiene, deducido de la petición que viajó a la compañía y de la opción recomendada (la primera visible). Dic"
         },
         {
@@ -37403,7 +37445,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; texto: unknown; actor: string; respuestas?: unknown },",
           "retorno": "Promise<ResultadoNecesidades>",
-          "linea": 882,
+          "linea": 884,
           "resumen": "Anota (o corrige) las exigencias y necesidades del cliente. Solo mientras no esté aceptado ni retirado: lo que el cliente firmó cita el texto de ese momento y no se reescribe después."
         },
         {
@@ -37412,7 +37454,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; motivo: string; actor: string },",
           "retorno": "Promise<ResultadoRetirar>",
-          "linea": 915,
+          "linea": 917,
           "resumen": "Retira un presupuesto. **Exige motivo**, igual que la BD (`retirado_con_motivo`): una fila retirada sin decir por qué no explica nada el día que el cliente pregunte por qué su enlace ya no abre. No bo"
         },
         {
@@ -37421,7 +37463,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; opcionId: string; ocultar: boolean; actor: string },",
           "retorno": "Promise<ResultadoOcultarOpcion>",
-          "linea": 966,
+          "linea": 968,
           "resumen": "Oculta (o vuelve a mostrar) UNA opción de un presupuesto en borrador. Solo antes de avisar al cliente: después, lo que vio es lo que vio, y quitárselo por debajo cambiaría lo que puede firmar. Una rec"
         },
         {
@@ -37430,7 +37472,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { oportunidadId: string; ofertaIds?: string[] | null; superficieM2?: number | null; actor: string }, ahora: Date = new Date(),",
           "retorno": "Promise<ResultadoPrepararOfertas>",
-          "linea": 1064,
+          "linea": 1066,
           "resumen": "Consolida las ofertas REVISADAS de una oportunidad en UN presupuesto de origen `ofertas` (la vía nueva junto a `prepararPresupuesto`, que sigue siendo la de Avant2). Gratis y sin Codeoscopic: · Exige "
         }
       ],
@@ -37444,7 +37486,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "ff23e7914543"
+      "hash": "d95a8830c5f8"
     },
     {
       "ruta": "apps/asegura/lib/puente-portal.ts",
@@ -39115,6 +39157,123 @@
       ],
       "rutaApi": null,
       "hash": "58bdd73aca3e"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-lectura-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lectura del tarificador RPA para plataforma (06/10/2026). PURO: sin BD ni red. 🛡️ Lo que sale hacia plataforma es una lista BLANCA: estado, fechas, error {tipo, mensaje} y las ofertas con sus primas. NUNCA la URL del portal, el HTML/captura del fallo (`html_documento_id`, `evidencia_documento_id`: ",
+      "exporta": [
+        "errorPublico",
+        "ofertasPublicas",
+        "proyectarTrabajo",
+        "documentoDePdf",
+        "indicePdfValido"
+      ],
+      "funciones": [
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | string",
+          "retorno": "string",
+          "linea": 32
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 33
+        },
+        {
+          "nombre": "errorPublico",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "",
+          "linea": 36,
+          "resumen": "Del jsonb `error` solo salen tipo y mensaje (recortado)."
+        },
+        {
+          "nombre": "ofertasPublicas",
+          "kind": "function",
+          "exportada": true,
+          "params": "respuesta: unknown",
+          "retorno": "",
+          "linea": 45,
+          "resumen": "`respuesta.ofertas[]` de `tarificaciones` (canal rpa) → ofertas públicas + PDFs (por índice del worker)."
+        },
+        {
+          "nombre": "proyectarTrabajo",
+          "kind": "function",
+          "exportada": true,
+          "params": "fila: FilaTrabajoLectura, respuesta: unknown",
+          "retorno": "TrabajoLectura",
+          "linea": 74
+        },
+        {
+          "nombre": "documentoDePdf",
+          "kind": "function",
+          "exportada": true,
+          "params": "respuesta: unknown, indice: number",
+          "retorno": "string | null",
+          "linea": 87,
+          "resumen": "`documentoId` de la oferta cuyo PDF tiene ese índice (lo guardó `registrarResultado`)."
+        },
+        {
+          "nombre": "indicePdfValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "number | null",
+          "linea": 98,
+          "resumen": "Índice de la URL: entero 0..99 sin ceros a la izquierda ni signos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2cfdd97bc887"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-lectura.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lectura (solo SELECT) de un trabajo del tarificador RPA para el puerto de operador. Todo por `correduria_id`. La proyección pública vive en `tarificador-lectura-reglas.ts`.",
+      "exporta": [
+        "leerTrabajoOperador",
+        "leerPdfTrabajo"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, id: string",
+          "retorno": "Promise<FilaTrabajo | null>",
+          "linea": 8
+        },
+        {
+          "nombre": "leerTrabajoOperador",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string",
+          "retorno": "Promise<TrabajoLectura | null>",
+          "linea": 17
+        },
+        {
+          "nombre": "leerPdfTrabajo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string, indice: number,",
+          "retorno": "Promise<",
+          "linea": 22
+        }
+      ],
+      "tablas": [
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "210014aacf68"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-reglas.ts",
@@ -84689,7 +84848,7 @@
           "exportada": true,
           "params": "{ ficha, resumen, seguros }: { ficha: Ficha; resumen: ResumenFicha /** Solo los SEGUROS (cartera en vigor): el volcado y lo que ya no cubre son oportunidades. */ seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 31,
+          "linea": 32,
           "resumen": "La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto. 🚨 Por qué los contadores viven aquí y no dentro de "
         },
         {
@@ -84698,7 +84857,7 @@
           "exportada": false,
           "params": "{ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[]; seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 121,
+          "linea": 122,
           "resumen": "── Siguiente paso ────────────────────────────────────────────────────────── UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla vive pura y testeada en `siguientePaso` de "
         },
         {
@@ -84707,7 +84866,7 @@
           "exportada": false,
           "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 173,
+          "linea": 174,
           "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
@@ -84716,7 +84875,7 @@
           "exportada": false,
           "params": "{ resumen }: { resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 192
+          "linea": 193
         },
         {
           "nombre": "ProximoVencimiento",
@@ -84724,7 +84883,7 @@
           "exportada": false,
           "params": "{ proximo, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 247,
+          "linea": 248,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -84733,7 +84892,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 286
+          "linea": 287
         },
         {
           "nombre": "EstadoCabecera",
@@ -84741,15 +84900,15 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 312
+          "linea": 313
         },
         {
           "nombre": "Acciones",
           "kind": "function",
           "exportada": false,
-          "params": "{ clienteId }: { clienteId: string }",
+          "params": "{ clienteId, contacto }: { clienteId: string; contacto: Ficha['contacto'] }",
           "retorno": null,
-          "linea": 370
+          "linea": 371
         },
         {
           "nombre": "Contacto",
@@ -84757,7 +84916,7 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 450
+          "linea": 453
         },
         {
           "nombre": "Identidad",
@@ -84765,7 +84924,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 558
+          "linea": 561
         },
         {
           "nombre": "Carnets",
@@ -84773,12 +84932,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 598
+          "linea": 601
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0beeb1318279"
+      "hash": "5297d8827364"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -85875,6 +86034,29 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "98f4dc45c1e9"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PrecioAllianzBot.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PrecioAllianzBot"
+      ],
+      "funciones": [
+        {
+          "nombre": "PrecioAllianzBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId, contacto }: { clienteId: string; contacto: Contacto }",
+          "retorno": null,
+          "linea": 22
+        }
+      ],
+      "tablas": [
+        "lucide",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "7350848b06db"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PresupuestosAvant2.tsx",
@@ -102680,6 +102862,69 @@
       "tablas": [],
       "rutaApi": "/api/correduria/tareas-hoy",
       "hash": "0c350d246e33"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/tarificador/encolar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "POST /api/correduria/tarificador/encolar { clienteId, oportunidadId?, riesgo } — pide «Precio Allianz (bot)» de una comunidad. Solo un PRECIO: no emite ni contrata. La compañía y el ramo los fija el s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/tarificador/encolar",
+      "hash": "0e44457370a2"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/tarificador/trabajo/[id]/pdf/[indice]/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, ctx: { params: Promise<{ id: string; indice: string }> }",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "GET /api/correduria/tarificador/trabajo/[id]/pdf/[indice] — el PDF de la oferta del bot, en streaming desde asegura."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
+      "hash": "efa127713154"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/tarificador/trabajo/[id]/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "GET /api/correduria/tarificador/trabajo/[id] — estado y ofertas del bot (sondeo de la pantalla)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/tarificador/trabajo/[id]",
+      "hash": "5a2ff6769258"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/vencimientos/route.ts",
@@ -147215,6 +147460,193 @@
       "hash": "cc997385b946"
     },
     {
+      "ruta": "apps/plataforma/lib/tarificador-asegura-reglas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Precio Allianz (bot)» — lo PURO (06/10/2026): sin red, sin envs, importable desde `'use client'`. 🚨 TARIFICAR ≠ EMITIR: esto pide un PRECIO al portal de la compañía. Nada de aquí contrata.",
+      "exporta": [
+        "fechasPorDefecto",
+        "formularioInicial",
+        "riesgoDesdeFormulario",
+        "leerTrabajoBot",
+        "sigueEnCurso",
+        "vistaTrabajo",
+        "mensajeEncolar"
+      ],
+      "funciones": [
+        {
+          "nombre": "dos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 37
+        },
+        {
+          "nombre": "aIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "fechasPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: Date = new Date()",
+          "retorno": "",
+          "linea": 41,
+          "resumen": "Mañana y mañana + 1 año (ISO `AAAA-MM-DD`, en UTC: la fecha es un día de calendario, no un instante)."
+        },
+        {
+          "nombre": "formularioInicial",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { codigoPostal?: string | null; ciudad?: string | null; provincia?: string | null; direccion?: string | null } | null | undefined, hoy: Date = new Date(),",
+          "retorno": "FormularioRiesgo",
+          "linea": 48,
+          "resumen": "Formulario inicial. Prefill SOLO con lo que la ficha tiene (CP válido de 5 dígitos, ciudad, provincia, calle)."
+        },
+        {
+          "nombre": "entero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "number | null",
+          "linea": 64
+        },
+        {
+          "nombre": "texto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string | null",
+          "linea": 65
+        },
+        {
+          "nombre": "triestado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: '' | 'si' | 'no'",
+          "retorno": "boolean | null",
+          "linea": 66
+        },
+        {
+          "nombre": "riesgoDesdeFormulario",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FormularioRiesgo",
+          "retorno": "",
+          "linea": 72,
+          "resumen": "Formulario → `riesgo` para asegura. Vacío = `null`/ausente («no se ha preguntado»), nunca 0 ni false. Los errores que da son de FORMA (campo vacío o no numérico); la validación de dominio la hace aseg"
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 121
+        },
+        {
+          "nombre": "leerTrabajoBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "TrabajoBot | null",
+          "linea": 124,
+          "resumen": "`null` = no tiene forma de trabajo (versión de asegura distinta o error): no se pinta nada inventado."
+        },
+        {
+          "nombre": "sigueEnCurso",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "boolean",
+          "linea": 154,
+          "resumen": "¿Hay que seguir sondeando? Pendiente, en curso y el reintento de infraestructura."
+        },
+        {
+          "nombre": "vistaTrabajo",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: TrabajoBot",
+          "retorno": "Vista",
+          "linea": 164,
+          "resumen": "Frase legible de un trabajo. `requiere_humano` ≠ error del bot: Allianz pide a una persona."
+        },
+        {
+          "nombre": "mensajeEncolar",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "",
+          "linea": 180,
+          "resumen": "Respuesta de encolar de asegura → texto para Alberto."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d9fd024efd99"
+    },
+    {
+      "ruta": "apps/plataforma/lib/tarificador-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Precio Allianz (bot)» — la RED (solo servidor, 06/10/2026). Reutiliza el puente de siempre hacia el puerto de operador de asegura: mismo `ASEGURA_URL` / `ASEGURA_OPERADOR_SECRET` y mismas cabeceras (`cabecerasPuerto`: Bearer + x-actor). El secreto NO sale de aquí: el navegador habla con las rutas `",
+      "exporta": [
+        "encolarTarificacionComunidad",
+        "leerTrabajoTarificador",
+        "descargarPdfTarificador"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 10
+        },
+        {
+          "nombre": "puerto",
+          "kind": "function",
+          "exportada": false,
+          "params": "ruta: string, init: RequestInit, topeMs = 30_000",
+          "retorno": "Promise<Reenvio>",
+          "linea": 14
+        },
+        {
+          "nombre": "encolarTarificacionComunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string, oportunidadId: string | null, riesgo: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 31,
+          "resumen": "Encola una cotización de COMUNIDAD en Allianz (solo precio; nunca emite). 202 `{trabajoId}`."
+        },
+        {
+          "nombre": "leerTrabajoTarificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 39
+        },
+        {
+          "nombre": "descargarPdfTarificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, indice: number",
+          "retorno": "Promise<Response | null>",
+          "linea": 44,
+          "resumen": "El PDF de una oferta (streaming). `null` = sin secreto configurado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3f9474673a19"
+    },
+    {
       "ruta": "apps/plataforma/lib/telefono-wa.ts",
       "ambito": "apps/plataforma",
       "resumen": "¿Este teléfono se puede abrir en WhatsApp, y con qué URL? Módulo PURO (sin red, sin env, sin BD): lo consume la UI de `/correduria` para pintar el icono de WhatsApp al lado de los móviles del cliente. 🚨 Aquí manda la regla del CLAUDE.md raíz «dato que NO hay ≠ dato que NO se ha mirado», aplicada a ",
@@ -190284,7 +190716,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4282,
-    "funciones": 14912
+    "archivos": 4292,
+    "funciones": 14946
   }
 }

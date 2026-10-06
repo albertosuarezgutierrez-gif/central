@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-06T05:43:25Z",
+  "generadoEn": "2026-10-06T06:47:10Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4193,6 +4193,8 @@
       "/api/operador/sustituciones",
       "/api/operador/tareas-hoy",
       "/api/operador/tarificador/encolar",
+      "/api/operador/tarificador/trabajo/[id]",
+      "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/portal/anulacion",
@@ -5189,6 +5191,9 @@
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
       "/api/correduria/tareas-hoy",
+      "/api/correduria/tarificador/encolar",
+      "/api/correduria/tarificador/trabajo/[id]",
+      "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -6764,7 +6769,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1594,
+    "apis": 1599,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
