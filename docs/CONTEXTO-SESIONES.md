@@ -1079,6 +1079,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (06/10/2026) Ficha de cliente: editor ÚNICO («✏️ Editar datos» en la cabecera)
+- Alberto: DNI, carné, dirección, contacto y mote se editaban en 5 sitios. Ahora todo en `cliente/[id]/EditarFicha.tsx`,
+  abierto desde el resumen; un «Guardar cambios» (identidad+dirección en un PATCH, carnés, mote) con resultado POR TRAMO.
+  Contactos va embebido con su guardado propio. Motivo/documento solo cuando `revisarEdicion()` lo exige.
+- Borrados `PonerNombre`/`MoteAgenda`; `TabContactos` queda de lectura. Guardián `test/regression-ficha-cliente-editor-unico.test.ts`.
+- Pendiente: AutoNuevo y EditarFichaModal (oportunidad) siguen con su propio editor de identidad/carnés (otros flujos).
+
 ## (06/10/2026) Portal: el cliente da de alta/edita/borra sus carnés
 «Mis carnés» en Mis datos → `/api/mis-datos/carnets` → puente POST/PATCH/DELETE `/api/portal/carnets` (Zod; `fichaDeRecurso`
 gestionar/administrar; dueño del carné leído de BD; misma `guardarCarnet`/`borrarCarnet` del corredor con `origen`). No en fichas jurídicas.

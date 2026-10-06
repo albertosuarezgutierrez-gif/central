@@ -305,9 +305,9 @@ export function CuentaCargo({ clienteId }: { clienteId: string }) {
 
 // ─── Identidad ───────────────────────────────────────────────────────────────
 
-type Ident = { nombre: string; apellidos: string; dni: string; fechaNacimiento: string }
+export type Ident = { nombre: string; apellidos: string; dni: string; fechaNacimiento: string }
 
-const MOTIVOS_RAPIDOS = [
+export const MOTIVOS_RAPIDOS = [
   'Confirmado con el cliente por teléfono',
   'Errata al dar de alta',
   'Dato de la póliza de la compañía',
@@ -316,7 +316,7 @@ const MOTIVOS_RAPIDOS = [
 const colapsar = (v: string) => v.replace(/\s+/g, ' ').trim()
 
 /** Lo que el usuario ha tocado, comparando sin espacios de más (un espacio no es un cambio). */
-function identTocada(f: Ident, inicial: Ident): NonNullable<EdicionCliente['identidad']> {
+export function identTocada(f: Ident, inicial: Ident): NonNullable<EdicionCliente['identidad']> {
   const ident: NonNullable<EdicionCliente['identidad']> = {}
   if (colapsar(f.nombre) !== colapsar(inicial.nombre)) ident.nombre = f.nombre
   if (colapsar(f.apellidos) !== colapsar(inicial.apellidos)) ident.apellidos = colapsar(f.apellidos) === '' ? null : f.apellidos
@@ -512,7 +512,6 @@ function BloqueIdentidad({ clienteId, identidad, documentos, onGuardado }: {
                   : <>No hay ningún {rot.pedir} recibido en Documentos (ni una póliza suya con su mismo {rot.documento}).</>}
               {' '}Puedes cambiar {rot.documento}, {rot.nombre.toLowerCase()} o {rot.fecha.toLowerCase()} igualmente: escribe el
               motivo y quedará en el historial con quién lo cambió, el valor anterior y el nuevo.
-              {nombrePendiente(identidad.nombre) && ' Para PONER el nombre a esta ficha sin nombre no hace falta motivo: usa «Poner nombre» bajo el título.'}
             </div>
           )}
           <Campo label="Motivo del cambio" mal={resultado?.estado === 'invalido' && resultado.motivo === MOTIVO_CAMBIO_REQUERIDO}>
@@ -616,7 +615,7 @@ function Aviso({ r, ok, ocupado, onForzar, textoForzar }: {
 
 // ─── Piezas ──────────────────────────────────────────────────────────────────
 
-function Campo({ label, mal, ayuda, children }: { label: string; mal?: boolean; ayuda?: string; children: React.ReactNode }) {
+export function Campo({ label, mal, ayuda, children }: { label: string; mal?: boolean; ayuda?: string; children: React.ReactNode }) {
   return (
     <label style={{ display: 'grid', gap: 4, minWidth: 0 }}>
       <span style={{ fontSize: 12, color: mal ? 'var(--negative)' : 'var(--muted)', fontWeight: 600 }}>{label}{mal ? ' ·  revisa este campo' : ''}</span>
@@ -626,14 +625,14 @@ function Campo({ label, mal, ayuda, children }: { label: string; mal?: boolean; 
   )
 }
 
-const h3: React.CSSProperties = { margin: 0, fontSize: 13, fontWeight: 700 }
-const campo: React.CSSProperties = {
+export const h3: React.CSSProperties = { margin: 0, fontSize: 13, fontWeight: 700 }
+export const campo: React.CSSProperties = {
   width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 44, padding: '10px 12px',
   borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14,
 }
-const avisoAmbar: React.CSSProperties = {
+export const avisoAmbar: React.CSSProperties = {
   fontSize: 13, lineHeight: 1.5, color: 'var(--warning)', background: 'var(--warning-bg)', border: '1px solid var(--warning)', borderRadius: 8, padding: '8px 10px',
 }
-const pendienteBox: React.CSSProperties = {
+export const pendienteBox: React.CSSProperties = {
   fontSize: 13, lineHeight: 1.5, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 10px',
 }
