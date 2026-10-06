@@ -208,3 +208,44 @@ export async function comisionesPactadasAsegura(): Promise<Reenvio> {
     return { status: 502, json: { estado: 'error', motivo: 'red' } }
   }
 }
+
+// ─── Acuerdos, productividad y cotejo (fase 2, 06/10/2026) ───────────────────
+// Lo puro (leer respuestas, qué texto pintar) vive en `acuerdos-asegura.ts`.
+
+async function getPuerto(ruta: string): Promise<Reenvio> {
+  const h = await cabeceras()
+  if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
+  try {
+    const res = await fetch(`${urlAsegura()}${ruta}`, { headers: h, cache: 'no-store', signal: AbortSignal.timeout(15_000) })
+    return { status: res.status, json: await res.json().catch(() => null) }
+  } catch {
+    return { status: 502, json: { estado: 'error', motivo: 'red' } }
+  }
+}
+
+/** Acuerdos con compañías y claves de mediador (`GET /api/operador/companias/acuerdos`). */
+export async function acuerdosAsegura(): Promise<Reenvio> {
+  return getPuerto('/api/operador/companias/acuerdos')
+}
+
+/** Producción por compañía y estado de cada objetivo (`GET /api/operador/companias/productividad`). */
+export async function productividadAsegura(anio: number | null): Promise<Reenvio> {
+  return getPuerto(`/api/operador/companias/productividad${anio === null ? '' : `?anio=${encodeURIComponent(String(anio))}`}`)
+}
+
+/** «Coincide con el PDF»: sella `revisado_at` del acuerdo. El actor lo pone `cabeceras()` desde la sesión. */
+export async function cotejarAcuerdoAsegura(acuerdoId: string): Promise<Reenvio> {
+  const h = await cabeceras()
+  if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/companias/acuerdo/cotejar`, {
+      method: 'POST',
+      headers: { ...h, 'content-type': 'application/json' },
+      body: JSON.stringify({ acuerdoId }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    return { status: res.status, json: await res.json().catch(() => null) }
+  } catch {
+    return { status: 502, json: { estado: 'error', motivo: 'red' } }
+  }
+}

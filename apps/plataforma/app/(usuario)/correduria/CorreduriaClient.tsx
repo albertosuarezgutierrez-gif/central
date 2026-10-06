@@ -25,7 +25,6 @@ import Calidad from './Calidad'
 import SinCanal from './SinCanal'
 import ExportRgpd from './ExportRgpd'
 import Companias from './Companias'
-import ComisionesPactadas from './ComisionesPactadas'
 import RadarRecibos from './RadarRecibos'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
@@ -687,12 +686,11 @@ export default function CorreduriaClient() {
 
         <h3 style={SUBTITULO_MAS}>Referencia</h3>
 
-        {/* Directorio de contacto por compañía, minado del correo. Sin
-            contador: es referencia, no trabajo pendiente. */}
+        {/* Compañías: contactos, claves, acuerdos y producción en un solo
+            sitio (06/10/2026). El cuadro firmado frente al % real de CIMA
+            (antes «Comisiones por compañía», bloque aparte) vive ahora en la
+            ficha de cada compañía. Sin contador: es referencia. */}
         <Companias />
-
-        {/* Cuadro de comisiones firmado por compañía frente al % real de los recibos. Referencia, sin contador. */}
-        <ComisionesPactadas />
 
         {/* Qué compañías reconocidas nunca han avisado de un recibo por correo
             (20/09/2026). Sin contador: es radar, no trabajo pendiente. */}

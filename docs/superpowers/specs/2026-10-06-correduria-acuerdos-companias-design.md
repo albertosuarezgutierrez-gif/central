@@ -449,6 +449,15 @@ líneas, estructurar objetivos, gestionar claves y asignar códigos CIMA, con ra
 
 ### F2 — Pintar acuerdos y claves en `Companias.tsx` / `/correduria/companias` y absorber `comision_pactada`
 
+> ✅ **Hecha el 06/10/2026 (sin commit en la sesión que la escribió), con parte de F3 dentro:**
+> producción por compañía y `evaluarObjetivo` (`packages/module-seguros/src/acuerdos-productividad.ts`,
+> `GET /api/operador/companias/productividad`), cotejo «Coincide con el PDF»
+> (`POST /api/operador/companias/acuerdo/cotejar`, `auditado()` + cambio `acuerdo.revisado_at`; no va a
+> `historial_interno` porque esa tabla exige `cliente_id`), ficha `/correduria/companias/[codigo]` y el
+> bloque `Companias.tsx` en tarjetas. Un objetivo sin clave o sin cotejar sale ⚪ (más estricto que §3.5:
+> decisión del 06/10). `comision_pactada` queda SIN lector; su `DROP` va en un PR aparte con recuento.
+> Responsive medido con Playwright sobre el scroller a 320/390/1024 con datos ficticios.
+
 - `apps/plataforma/lib/companias-asegura.ts`: tipos e `interpretarAcuerdos` (tres estados, `null` ≠ `[]`,
   `Cerrado<T>` con valor desconocido declarado) + `acuerdosAsegura()`; proxy
   `app/api/correduria/companias/acuerdos/route.ts`; hook (en `useCompanias.ts` o uno hermano).

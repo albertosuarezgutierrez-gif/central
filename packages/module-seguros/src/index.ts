@@ -1393,3 +1393,22 @@ export type {
   SeedAcuerdo,
   LecturaSeed,
 } from './acuerdos.ts'
+
+// Productividad por compañía frente a los acuerdos (fase 2, 06/10/2026).
+export {
+  produccionPorCompania,
+  evaluarObjetivo,
+  esCodigoProducto,
+  TEXTO_PENDIENTE,
+  DIAS_MINIMOS_PROYECCION,
+  DIAS_ALERTA,
+} from './acuerdos-productividad.ts'
+export type {
+  ReciboProduccion,
+  Suma,
+  ProduccionCompania,
+  MotivoPendiente,
+  ColorObjetivo,
+  EstadoObjetivo,
+  ObjetivoParaEvaluar,
+} from './acuerdos-productividad.ts'

@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Building2 } from 'lucide-react'
-import { companiasAsegura, interpretarCompanias, type Compania, type Contacto } from '@/lib/companias-asegura'
+import { acuerdosAsegura, companiasAsegura, interpretarCompanias, type Compania, type Contacto } from '@/lib/companias-asegura'
+import { interpretarAcuerdos, type RespuestaAcuerdos } from '@/lib/acuerdos-asegura'
+import { ChipsAcuerdos } from './AcuerdosVista'
 import { etiquetaArea } from '@central/module-seguros'
 import { PageHeader, Pagina } from '@/components/ui'
 import TelefonoContacto from './TelefonoContacto'
@@ -14,10 +16,15 @@ export const dynamic = 'force-dynamic'
  * como referencia rápida); aquí se pinta en tarjetas, una por compañía, con
  * TODOS sus contactos (desde el 13/09/2026 una compañía puede tener varios)
  * y los botones de WhatsApp y correo a mano.
+ *
+ * Desde el 06/10/2026 (fase 2 de acuerdos con compañías) cada tarjeta lleva
+ * también sus claves y acuerdos y enlaza a la ficha `/correduria/companias/[codigo]`;
+ * salen además las compañías con acuerdo aunque aún no tengan contacto.
  */
 export default async function CompaniasPage() {
-  const { status, json } = await companiasAsegura()
+  const [{ status, json }, acu] = await Promise.all([companiasAsegura(), acuerdosAsegura()])
   const r = interpretarCompanias(status, json)
+  const acuerdos = interpretarAcuerdos(acu.status, acu.json)
 
   return (
     <Pagina ancho="tabla">
@@ -25,9 +32,9 @@ export default async function CompaniasPage() {
         <div>
           <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
           <PageHeader
-            titulo="Contactos por compañía"
+            titulo="Compañías"
             icono={<Building2 size={20} strokeWidth={1.75} />}
-            sub="A quién llamar o escribir en cada aseguradora. Minado del correo de Alberto — no es la ficha oficial de la compañía."
+            sub="Contactos, claves y acuerdos de cada aseguradora. Contactos minados del correo de Alberto — no es la ficha oficial de la compañía."
           />
         </div>
 
@@ -40,7 +47,7 @@ export default async function CompaniasPage() {
             </p>
           </div>
         ) : (
-          <ListaCompanias companias={r.companias} />
+          <ListaCompanias companias={r.companias} acuerdos={acuerdos} />
         )}
       </div>
     </Pagina>
@@ -54,25 +61,26 @@ const tarjeta: React.CSSProperties = {
   background: 'var(--surface)',
 }
 
-function ListaCompanias({ companias }: { companias: Compania[] }) {
-  const conContacto = companias.filter((c) => c.contactos.length > 0)
-  const sinContacto = companias.filter((c) => c.contactos.length === 0)
+function ListaCompanias({ companias, acuerdos }: { companias: Compania[]; acuerdos: RespuestaAcuerdos }) {
+  const conAcuerdo = new Set(acuerdos.estado === 'ok' ? acuerdos.acuerdos.map((a) => a.companiaCodigoDgs) : [])
+  const conContacto = companias.filter((c) => c.contactos.length > 0 || conAcuerdo.has(c.codigoDgs))
+  const sinContacto = companias.filter((c) => !conContacto.includes(c))
 
   return (
     <>
       <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-        {conContacto.length} de {companias.length} compañías con al menos un contacto conocido.
+        {conContacto.length} de {companias.length} compañías con contacto o acuerdo.
       </p>
 
-      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))' }}>
         {conContacto.map((c) => (
-          <TarjetaCompania key={c.codigoDgs} c={c} />
+          <TarjetaCompania key={c.codigoDgs} c={c} acuerdos={acuerdos} />
         ))}
       </div>
 
       {sinContacto.length > 0 && (
         <div style={tarjeta}>
-          <h2 style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600 }}>Sin contacto todavía</h2>
+          <h2 style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600 }}>Sin contacto ni acuerdo todavía</h2>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
             {sinContacto.map((c) => c.nombreComun).join(' · ')}
           </p>
@@ -82,11 +90,13 @@ function ListaCompanias({ companias }: { companias: Compania[] }) {
   )
 }
 
-function TarjetaCompania({ c }: { c: Compania }) {
+function TarjetaCompania({ c, acuerdos }: { c: Compania; acuerdos: RespuestaAcuerdos }) {
   return (
-    <div style={{ ...tarjeta, display: 'grid', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{c.nombreComun}</h2>
+    <div style={{ ...tarjeta, display: 'grid', gap: 10, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
+          <Link href={`/correduria/companias/${encodeURIComponent(c.codigoDgs)}`}>{c.nombreComun} →</Link>
+        </h2>
         {c.claveMediador && (
           <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
             Mediador {c.claveMediador}
@@ -94,6 +104,9 @@ function TarjetaCompania({ c }: { c: Compania }) {
         )}
       </div>
 
+      <ChipsAcuerdos codigo={c.codigoDgs} r={acuerdos} />
+
+      {c.contactos.length === 0 && <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Sin contacto todavía.</p>}
       {c.contactos.map((ct) => (
         <TarjetaContacto key={ct.id} ct={ct} />
       ))}
