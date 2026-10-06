@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T14:43:56Z",
-  "sha": "e8bf5c34b87601c883c2453030e5e156ff6689c4",
+  "generadoEn": "2026-10-06T15:48:45Z",
+  "sha": "f3d2a379beb663c846a7111f3da44f157a5cd285",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -193744,7 +193744,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is RamoFicha",
-          "linea": 71
+          "linea": 97
         },
         {
           "nombre": "garantiasFicha",
@@ -193752,7 +193752,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "readonly GarantiaFicha[]",
-          "linea": 76,
+          "linea": 102,
           "resumen": "Garantías del ramo; un ramo sin catálogo devuelve [] (todo irá a `extras`, nunca a una clave inventada)."
         },
         {
@@ -193761,7 +193761,7 @@
           "exportada": true,
           "params": "ramo: string, clave: string",
           "retorno": "GarantiaFicha | null",
-          "linea": 80
+          "linea": 106
         },
         {
           "nombre": "normalizarLiteral",
@@ -193769,7 +193769,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 85,
+          "linea": 111,
           "resumen": "Minúsculas, sin tildes, solo letras/números y espacios simples."
         },
         {
@@ -193778,13 +193778,13 @@
           "exportada": true,
           "params": "ramo: string, literal: string",
           "retorno": "string | null",
-          "linea": 93,
+          "linea": 119,
           "resumen": "Literal de la compañía → clave del catálogo, o `null` si no se reconoce (va a `extras`). Palabras completas; gana el sinónimo MÁS LARGO (así «RC por agua» no cae en «rc» ni en «daños por agua»)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d7d041362ff"
+      "hash": "4e351fab05e2"
     },
     {
       "ruta": "packages/module-tarificacion/src/fichas.ts",
@@ -194180,6 +194180,78 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "32a19edcaa8a"
+    },
+    {
+      "ruta": "packages/module-tarificacion/src/formulario-rc.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Formulario CANÓNICO de RC general / de actividad (08/10/2026). PURO: ni BD, ni red. Datos de riesgo comunes a cualquier compañía. Todavía no hay ninguna registrada (la primera: Occident, pendiente de grabar su portal): este ramo existe solo a nivel canónico y NO está en `RamoRpa`. Importes en EUROS ",
+      "exporta": [
+        "normalizarCnae",
+        "validarFormularioRC"
+      ],
+      "funciones": [
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], max = 300",
+          "retorno": "string | null",
+          "linea": 34
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], permitirCero = false",
+          "retorno": "number | null",
+          "linea": 41,
+          "resumen": "Importe en euros (número, no texto). `permitirCero`: 0 es un dato válido (p. ej. siniestros sin coste)."
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], max = 1_000_000",
+          "retorno": "number | null",
+          "linea": 51
+        },
+        {
+          "nombre": "booleano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[]",
+          "retorno": "boolean | null",
+          "linea": 58
+        },
+        {
+          "nombre": "normalizarCnae",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string | null",
+          "linea": 65,
+          "resumen": "«5610» o «56.10» → «5610»; cualquier otra cosa → null (el llamante lo marca error)."
+        },
+        {
+          "nombre": "validarFormularioRC",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: unknown",
+          "retorno": "ValidacionFormularioRC",
+          "linea": 70
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "99f873f3432b"
     },
     {
       "ruta": "packages/module-tarificacion/src/grabador-bookmarklet.ts",
@@ -196624,7 +196696,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4383,
-    "funciones": 15470
+    "archivos": 4384,
+    "funciones": 15477
   }
 }
