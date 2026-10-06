@@ -328,15 +328,15 @@ export const SONDEO_MAX_MS = 6 * 60_000
 export type Vista = { tono: 'curso' | 'ok' | 'error'; titulo: string; detalle: string | null }
 
 /** Frase legible de un trabajo. `requiere_humano` ≠ error del bot: Allianz pide a una persona. */
-export function vistaTrabajo(t: TrabajoBot): Vista {
+export function vistaTrabajo(t: TrabajoBot, compania = 'Allianz'): Vista {
   switch (t.estado) {
     case 'pendiente': return { tono: 'curso', titulo: 'En cola', detalle: 'El bot aún no ha empezado.' }
-    case 'en_curso': return { tono: 'curso', titulo: 'El bot está cotizando en Allianz', detalle: 'Suele tardar un par de minutos.' }
+    case 'en_curso': return { tono: 'curso', titulo: `El bot está cotizando en ${compania}`, detalle: 'Suele tardar un par de minutos.' }
     case 'error_reintentable': return { tono: 'curso', titulo: 'Reintentando', detalle: 'Falló por un problema de conexión; el bot lo intenta otra vez.' }
     case 'ok': return t.ofertas.length
       ? { tono: 'ok', titulo: 'Precio listo', detalle: null }
       : { tono: 'error', titulo: 'El bot terminó pero no devolvió ninguna oferta', detalle: null }
-    case 'requiere_humano': return { tono: 'error', titulo: 'Allianz pide verificación humana', detalle: t.error?.mensaje || null }
+    case 'requiere_humano': return { tono: 'error', titulo: `${compania} pide verificación humana`, detalle: t.error?.mensaje || null }
     case 'cancelado': return { tono: 'error', titulo: 'Cancelado', detalle: null }
     case 'error_definitivo': return { tono: 'error', titulo: 'El bot no ha podido sacar el precio', detalle: t.error ? `${t.error.tipo}${t.error.mensaje ? `: ${t.error.mensaje}` : ''}` : null }
     default: return { tono: 'error', titulo: `Estado desconocido (${t.estado})`, detalle: null }

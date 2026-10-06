@@ -55,3 +55,23 @@ export {
   type EstadoAcompanamiento,
   type EventoAcompanamiento,
 } from './formador.ts'
+export {
+  CLAVES_SOLO_DE_COMPANIA,
+  ALLIANZ_TIPO_VIVIENDA,
+  ALLIANZ_USO,
+  ALLIANZ_LISTA_PROPIETARIOS,
+  CAPACIDAD_ALLIANZ_COMUNIDADES,
+  validarFormularioComunidad,
+  validarExtras,
+  crearCatalogo,
+  catalogoCotizacion,
+  prepararSolicitud,
+  type FormularioComunidad,
+  type ValidacionFormulario,
+  type CampoExtra,
+  type ValorExtra,
+  type ExtrasValidos,
+  type CapacidadCotizacion,
+  type CatalogoCotizacion,
+  type SolicitudPreparada,
+} from './capacidades.ts'

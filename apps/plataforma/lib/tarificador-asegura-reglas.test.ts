@@ -56,13 +56,16 @@ test('pre-relleno: lo que no viene (o viene mal) deja el valor del formulario; f
   assert.deepEqual(formularioConUltimoRiesgo(base, {}, hoy), base)
 })
 
-test('PrecioAllianzBot y proxy: piden el último riesgo al abrir; su fallo no es bloqueante; proxy con guarda', () => {
-  const src = readFileSync(join(APP, 'app/(usuario)/correduria/cliente/[id]/PrecioAllianzBot.tsx'), 'utf8')
-  assert.match(src, /api\/correduria\/tarificador\/ultimo-riesgo\?cliente_id=/)
-  assert.match(src, /Datos de la última petición/)
-  assert.ok(!/setFallo\([^)]*ultimo/i.test(src))
-  const ruta = readFileSync(join(APP, 'app/api/correduria/tarificador/ultimo-riesgo/route.ts'), 'utf8')
-  assert.ok(ruta.indexOf('exigirCorreduria()') < ruta.indexOf('searchParams'))
+test('Presupuestos de compañías y proxy: pre-rellena al leer; su fallo no es bloqueante ni «no hay»; proxy con guarda', () => {
+  const src = readFileSync(join(APP, 'app/(usuario)/correduria/oportunidad/[id]/PresupuestosCompanias.tsx'), 'utf8')
+  assert.match(src, /api\/correduria\/tarificador\/oportunidad\?id=/)
+  assert.match(src, /Datos de la última petición del cliente/)
+  assert.match(src, /No es que no haya: no se han podido mirar/)
+  assert.ok(!/setFallo\([^)]*leer/i.test(src))
+  for (const r of ['app/api/correduria/tarificador/ultimo-riesgo/route.ts', 'app/api/correduria/tarificador/oportunidad/route.ts']) {
+    const ruta = readFileSync(join(APP, r), 'utf8')
+    assert.ok(ruta.indexOf('exigirCorreduria()') < ruta.indexOf('searchParams'), r)
+  }
 })
 
 test('fechas por defecto: mañana y +1 año', () => {
@@ -138,22 +141,24 @@ test('leerTrabajoBot: fecha de término real de Allianz solo si es ISO; el modal
   assert.equal(t?.ofertas[0].fechaTerminoPortal, '2027-10-01')
   assert.equal(t?.ofertas[1].fechaTerminoPortal, null)
   assert.equal(vistaPrecio(t!.ofertas[0], t!.ofertas[0].fechaTerminoPortal).primerRecibo?.hasta, '01/10/2027')
-  const ui = readFileSync(join(APP, 'app/(usuario)/correduria/cliente/[id]/PrecioAllianzBot.tsx'), 'utf8')
+  const ui = readFileSync(join(APP, 'app/(usuario)/correduria/oportunidad/[id]/PresupuestosCompanias.tsx'), 'utf8')
   assert.match(ui, /vistaPrecio\(o, o\.fechaTerminoPortal\)/)
-  assert.match(ui, /o\.pdfIndice !== null && \(\s*<a href=\{`\/api\/correduria\/tarificador\/trabajo\/\$\{trabajoId\}\/pdf\/\$\{o\.pdfIndice\}`\}/)
-  assert.match(ui, /Descargar proyecto de Allianz \(PDF\)/)
+  assert.match(ui, /o\.pdfIndice !== null && \(\s*<a href=\{`\/api\/correduria\/tarificador\/trabajo\/\$\{t\.id\}\/pdf\/\$\{o\.pdfIndice\}`\}/)
+  assert.match(ui, /Descargar proyecto de \{nombre\} \(PDF\)/)
 })
 
 test('rutas proxy: exigen sesión de correduría y el secreto no sale al cliente', () => {
-  for (const r of ['app/api/correduria/tarificador/encolar/route.ts', 'app/api/correduria/tarificador/trabajo/[id]/route.ts', 'app/api/correduria/tarificador/trabajo/[id]/pdf/[indice]/route.ts']) {
+  for (const r of ['app/api/correduria/tarificador/encolar/route.ts', 'app/api/correduria/tarificador/oportunidad/route.ts', 'app/api/correduria/tarificador/trabajo/[id]/route.ts', 'app/api/correduria/tarificador/trabajo/[id]/pdf/[indice]/route.ts']) {
     const src = readFileSync(join(APP, r), 'utf8')
     assert.match(src, /exigirCorreduria\(\)/, r)
     assert.ok(!src.includes('ASEGURA_OPERADOR_SECRET'), r)
   }
-  const ui = readFileSync(join(APP, 'app/(usuario)/correduria/cliente/[id]/PrecioAllianzBot.tsx'), 'utf8')
-  assert.ok(!ui.includes('ASEGURA_OPERADOR_SECRET') && !ui.includes('tarificador-asegura.ts'))
-  const sinComentarios = ui.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
-  assert.ok(!/emitir|contratar/i.test(sinComentarios), 'nada de emitir/contratar en la UI')
+  for (const f of ['app/(usuario)/correduria/oportunidad/[id]/PresupuestosCompanias.tsx', 'app/(usuario)/correduria/cliente/[id]/PedirPresupuestoBot.tsx']) {
+    const ui = readFileSync(join(APP, f), 'utf8')
+    assert.ok(!ui.includes('ASEGURA_OPERADOR_SECRET') && !/tarificador-asegura['.]/.test(ui), f)
+    const sinComentarios = ui.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
+    assert.ok(!/emitir|contratar/i.test(sinComentarios), `nada de emitir/contratar en la UI (${f})`)
+  }
 })
 
 test('vistaPrecio: principal = prima anual (sucesivos); primer recibo solo si difiere; sin inventar', () => {
@@ -207,10 +212,10 @@ test('infraseguro: calidad «no consta» = normal (y se dice); sin m² o sin cap
   assert.equal(estimarInfraseguro({ m2Construidos: '800', capitalContinente: '12.5', calidadConstruccion: '' }), null)
 })
 
-test('infraseguro: el modal lo enseña ANTES de encolar, con eur(), y no bloquea el envío', () => {
-  const src = readFileSync(join(APP, 'app/(usuario)/correduria/cliente/[id]/PrecioAllianzBot.tsx'), 'utf8')
+test('infraseguro: el formulario lo enseña ANTES de encolar, con eur(), y no bloquea el envío', () => {
+  const src = readFileSync(join(APP, 'app/(usuario)/correduria/oportunidad/[id]/PresupuestosCompanias.tsx'), 'utf8')
   assert.match(src, /estimarInfraseguro\(f\)/)
   assert.match(src, /posible infraseguro: estimado \{eur\(infra\.estimado\)\}/i)
-  const pedir = src.slice(src.indexOf('async function pedir'), src.indexOf('const vista ='))
+  const pedir = src.slice(src.indexOf('async function pedir'), src.indexOf('// Aviso de infraseguro'))
   assert.ok(pedir.length > 0 && !/infra/i.test(pedir), 'el aviso no puede frenar pedir(): solo informa')
 })
