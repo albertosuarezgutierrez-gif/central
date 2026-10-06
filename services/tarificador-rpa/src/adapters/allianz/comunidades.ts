@@ -499,6 +499,8 @@ export type CampoFormulario = {
   valor: (r: RiesgoComunidad) => string | number | boolean | null | undefined
   /** Pausa humana tras el campo (fin de bloque). */
   pausa?: boolean
+  /** Se rellena en un paso propio (`resolverCodigoPostal`), no en el bucle genérico. Sigue en la tabla para el harness. */
+  aparte?: boolean
 }
 
 export const CAMPOS: readonly CampoFormulario[] = [
@@ -524,10 +526,8 @@ export const CAMPOS: readonly CampoFormulario[] = [
   { etiqueta: 'Nº Viv. y Locales', tipo: 'texto', obligatorio: true, valor: (r) => r.numViviendasYLocales },
   { etiqueta: 'Lista Propietarios / Arrendatarios', tipo: 'desplegable', obligatorio: true, valor: (r) => r.listaPropietarios },
   { etiqueta: 'Instalaciones Anexas (Deportivas, Piscinas, etc.)', tipo: 'check', obligatorio: false, valor: (r) => r.instalacionesAnexas },
-  // C.P.: se teclea el código y se deja que el portal resuelva la población.
-  // TODO(capturas): la lupa de «C.P./Población» abre un buscador; no se sabe si basta con teclear el CP
-  // (aquí no se pulsa la lupa: si la población no se rellena sola, el cálculo fallará con `portal`).
-  { etiqueta: 'C.P./Población', tipo: 'texto', obligatorio: true, valor: (r) => r.direccion.codigoPostal, pausa: true },
+  // C.P./Población: paso propio (`resolverCodigoPostal`): hay que PULSAR la lupa para que el portal rellene `#poblacion`.
+  { etiqueta: 'C.P./Población', tipo: 'texto', obligatorio: true, valor: (r) => r.direccion.codigoPostal, pausa: true, aparte: true },
   // FORMA PAGO / % COMISIÓN: solo si el riesgo lo pide; si no, se respeta el valor por defecto del portal.
   { etiqueta: 'Primer Recibo', tipo: 'desplegable', obligatorio: false, valor: (r) => r.formaPagoPrimerRecibo },
   { etiqueta: 'Sucesivos', tipo: 'desplegable', obligatorio: false, valor: (r) => r.formaPagoSucesivos },
@@ -541,6 +541,115 @@ export const CAMPOS: readonly CampoFormulario[] = [
   { etiqueta: 'ITE:Inspeción Técnica Edificios', tipo: 'check', obligatorio: false, valor: (r) => r.ite, pausa: true },
 ]
 
+// ───────────────────────── C.P. → población (lupa) ─────────────────────────
+
+/**
+ * La lupa de «C.P./Población» (DOM real 06/10/2026): `img#codigoPostalAjaxLocFinderImg`, con
+ * `onclick=sendRequestLocationFinder({... idDescripcionPoblacion:'poblacion' ...})`. `#codigoPostal` NO tiene
+ * onchange: sin pulsarla `#poblacion` queda vacío y «Calcular» no se habilita («01 poblacion — Debe indicar…»).
+ */
+export function lupaCodigoPostal(raiz: Raiz): Locator {
+  return raiz.locator('#codigoPostalAjaxLocFinderImg')
+}
+
+/** Minúsculas, sin acentos y con espacios colapsados (comparación de nombres de localidad). */
+export function normalizarLocalidad(t: string): string {
+  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Elige entre las opciones de un listado de localidades la que coincide con el municipio (normalizado).
+ * Exacta primero; si no, única que lo contiene. Sin municipio o sin coincidencia ÚNICA → `datos` con las opciones.
+ */
+export function elegirLocalidad(opciones: readonly string[], municipio: string | null | undefined): number {
+  const lista = opciones.length ? opciones.slice(0, 12).join(' | ') : '(ninguna visible)'
+  const m = municipio ? normalizarLocalidad(municipio) : ''
+  if (!m) throw new ErrorTarificador('datos', `allianz/comunidades: el C.P. da varias poblaciones y el riesgo no trae municipio para elegir. Opciones: ${lista}`)
+  const norm = opciones.map(normalizarLocalidad)
+  const exactas = norm.flatMap((o, i) => (o === m ? [i] : []))
+  if (exactas.length === 1) return exactas[0]
+  const parciales = norm.flatMap((o, i) => (o.includes(m) ? [i] : []))
+  if (exactas.length === 0 && parciales.length === 1) return parciales[0]
+  throw new ErrorTarificador('datos', `allianz/comunidades: el municipio «${municipio}» no coincide con una única población del C.P. Opciones: ${lista}`)
+}
+
+const MARCA_PREVIA = 'data-rpa-previo'
+const MARCA_NUEVA = 'data-rpa-localidad'
+
+/** Marca todo lo que ya existe en el marco, para distinguir después lo que aparece al pulsar la lupa. */
+async function marcarPrevios(marcos: readonly Frame[]): Promise<void> {
+  for (const f of marcos) {
+    await f.evaluate((a) => document.querySelectorAll('*').forEach((el) => el.setAttribute(a, '1')), MARCA_PREVIA).catch(() => undefined)
+  }
+}
+
+/**
+ * SUPOSICIÓN (sin DOM del popup): las localidades son elementos hoja visibles, NUEVOS tras pulsar la lupa
+ * (sin la marca previa), en cualquier marco de la página, con texto corto. Se marcan con `data-rpa-localidad`.
+ */
+async function localidadesNuevas(marcos: readonly Frame[]): Promise<{ marco: Frame; indice: number; texto: string }[]> {
+  const salida: { marco: Frame; indice: number; texto: string }[] = []
+  for (const f of marcos) {
+    const textos = await f
+      .evaluate(([previo, nueva]) => {
+        const out: string[] = []
+        let n = 0
+        document.querySelectorAll('li, a, td, option, div, span, tr').forEach((el) => {
+          const h = el as HTMLElement
+          if (h.hasAttribute(previo) || h.children.length > 0) return
+          const t = (h.textContent ?? '').replace(/\s+/g, ' ').trim()
+          const r = h.getBoundingClientRect()
+          if (!t || t.length > 80 || r.width === 0 || r.height === 0) return
+          h.setAttribute(nueva, String(n++))
+          out.push(t)
+        })
+        return out
+      }, [MARCA_PREVIA, MARCA_NUEVA] as const)
+      .catch(() => [] as string[])
+    textos.forEach((texto, indice) => salida.push({ marco: f, indice, texto }))
+  }
+  return salida
+}
+
+async function poblacionRellena(raiz: Raiz): Promise<boolean> {
+  const v = await raiz.locator('#poblacion').inputValue({ timeout: 500 }).catch(() => '')
+  return v.trim() !== ''
+}
+
+/**
+ * Rellena `#codigoPostal`, pulsa la lupa (`ctx.pulsar`, nunca Enter: hay un input submit) y espera a que
+ * `#poblacion` tenga valor (~10 s). Si en su lugar aparece una lista de localidades, elige la del municipio.
+ */
+export async function resolverCodigoPostal(raiz: Raiz, page: Pick<Page, 'frames' | 'waitForTimeout'>, r: RiesgoComunidad, ctx: ContextoPortal, cp: string): Promise<void> {
+  const e: Entorno = { page: page as Page, ctx }
+  const directo = raiz.locator('#codigoPostal')
+  if ((await directo.count().catch(() => 0)) === 1) {
+    await directo.fill(cp)
+    await directo.blur().catch(() => undefined)
+  } else {
+    await poner(raiz, e, 'C.P./Población', cp)
+  }
+  const marcos = page.frames().filter((f) => !f.isDetached())
+  await marcarPrevios(marcos)
+  await ctx.pulsar(lupaCodigoPostal(raiz))
+  let opciones: { marco: Frame; indice: number; texto: string }[] = []
+  for (let i = 0; i < 33; i++) {
+    if (await poblacionRellena(raiz)) return
+    if (i >= 3 && opciones.length === 0) opciones = await localidadesNuevas(marcos)
+    if (opciones.length > 0) break
+    await page.waitForTimeout(300)
+  }
+  if (opciones.length > 0) {
+    const k = elegirLocalidad(opciones.map((o) => o.texto), r.direccion.municipio)
+    const o = opciones[k]
+    const opcionLocalidad = o.marco.locator(`[${MARCA_NUEVA}="${o.indice}"]`)
+    await ctx.pulsar(opcionLocalidad)
+    for (let i = 0; i < 20 && !(await poblacionRellena(raiz)); i++) await page.waitForTimeout(300)
+    if (await poblacionRellena(raiz)) return
+  }
+  throw new ErrorTarificador('portal', `allianz/comunidades: Población no resuelta por el código postal ${cp} (la lupa no rellenó #poblacion)`)
+}
+
 async function rellenarRiesgo(raiz: Raiz, page: Page, r: RiesgoComunidad, ctx: ContextoPortal): Promise<void> {
   const e: Entorno = { page, ctx }
   // DOM real (06/10/2026): «Datos Básicos» y «Tarificar» son pestañas del menú del marco (`td#DATOSBASICOS`,
@@ -550,6 +659,8 @@ async function rellenarRiesgo(raiz: Raiz, page: Page, r: RiesgoComunidad, ctx: C
     const v = c.valor(r)
     if (v === null || v === undefined || v === '') {
       if (c.obligatorio) dato(v, c.etiqueta)
+    } else if (c.aparte) {
+      await resolverCodigoPostal(raiz, page, r, ctx, String(v))
     } else if (c.tipo === 'check') {
       await marcar(raiz, e, c.etiqueta, Boolean(v))
     } else if (c.tipo === 'desplegable') {
