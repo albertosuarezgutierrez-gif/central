@@ -26,6 +26,11 @@ import {
   decidirAvisoIngesta,
   firmaAvisoIngesta,
   normalizarFirmaIngesta,
+  cambioAnulacionesEnFirma,
+  textoAnulacionesEnBloque,
+  textoRenovacionesAnuladas,
+  textoPosiblesBajas,
+  textoRetrasoAnulacion,
   textoHuerfanas,
   textoPolizasDuplicadas,
   cambioDuplicadasEnFirma,
@@ -56,6 +61,22 @@ function leerCabecera(detalle: string | null): { firma: string | null; aviso: Da
     return Number.isNaN(d.getTime()) ? null : d
   }
   return { firma: f || null, aviso: fecha(aviso), abierta: fecha(abierta) }
+}
+
+/** Líneas informativas de anulaciones; el retraso (A) va siempre que haya bloque o baja. */
+function textosAnulaciones(salud: {
+  anulacionesEnBloque?: Parameters<typeof textoAnulacionesEnBloque>[0]
+  renovacionesAnuladas?: Parameters<typeof textoRenovacionesAnuladas>[0]
+  posiblesBajas?: Parameters<typeof textoPosiblesBajas>[0]
+  retrasoAnulacion?: Parameters<typeof textoRetrasoAnulacion>[0]
+}): string[] {
+  const out = [
+    textoAnulacionesEnBloque(salud.anulacionesEnBloque),
+    textoRenovacionesAnuladas(salud.renovacionesAnuladas),
+    textoPosiblesBajas(salud.posiblesBajas),
+    textoRetrasoAnulacion(salud.retrasoAnulacion),
+  ]
+  return out.filter(t => t !== '')
 }
 
 export async function GET(req: NextRequest) {
@@ -215,10 +236,12 @@ export async function GET(req: NextRequest) {
     // 🔁 Informativo, al final: no es pérdida y no debe tapar lo de arriba.
     const textoDup = textoPolizasDuplicadas(salud.polizasDuplicadas)
     const duplicadas = textoDup ? `\n\nℹ️ ${textoDup}` : ''
+    // 📉 Informativo: anulaciones (06/10/2026). Mismo sitio y mismo criterio.
+    const anulaciones = textosAnulaciones(salud).map(t => `\n\nℹ️ ${t}`).join('')
     await tgAviso('correduria.ingesta',
       titular + '\n' +
       salud.motivos.map(m => `• ${m}`).join('\n') +
-      prima + entidades + pedidos + sinAmbito + recorte + sinComprobar + antiguedad + recado + duplicadas,
+      prima + entidades + pedidos + sinAmbito + recorte + sinComprobar + antiguedad + recado + duplicadas + anulaciones,
     ).catch(() => {})
   }
 
@@ -234,6 +257,19 @@ export async function GET(req: NextRequest) {
       'ℹ️ <b>Pólizas vivas duplicadas</b>\n' +
       (textoDup || 'Ya no queda ningún grupo de pólizas vivas duplicadas.') +
       '\n\nLa ingesta de CIMA va bien: esto es solo orden en la cartera.',
+    ).catch(() => {})
+  }
+
+  // 📉 Con la ingesta en `ok`: aviso INFORMATIVO solo si cambia el tramo de
+  // anulaciones (bloque, posible baja, renovación anulada); sin recordatorio.
+  const avisoAnulaciones = salud.estado === 'ok' && decision.avisar && decision.motivo !== 'recordatorio'
+    && cambioAnulacionesEnFirma(firmaPrevia, actual)
+  if (avisoAnulaciones) {
+    const textos = textosAnulaciones(salud)
+    await tgAviso('correduria.ingesta',
+      'ℹ️ <b>Anulaciones en la cartera</b>\n' +
+      (textos.length > 0 ? textos.map(t => `• ${t}`).join('\n') : 'Ya no queda ninguna señal de anulación abierta.') +
+      '\n\nLa ingesta de CIMA va bien: esto es información, no una avería.',
     ).catch(() => {})
   }
 

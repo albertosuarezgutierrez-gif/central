@@ -171,6 +171,7 @@ export {
   textoEmisionesSinAviso,
   textoPolizasDuplicadas,
   cambioDuplicadasEnFirma,
+  cambioAnulacionesEnFirma,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,

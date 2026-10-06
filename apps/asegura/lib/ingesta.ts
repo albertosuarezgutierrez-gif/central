@@ -32,11 +32,18 @@ import type {
   RenovacionSinLlegar,
   EmisionSinAviso,
   GrupoVivoDuplicado,
+  FicheroAnulacionFila,
+  RenovacionAnuladaPorCompania,
+  RetrasoAnulacion,
+  PosiblesBajasPorCompania,
 } from '@central/module-seguros'
 import {
   DIAS_GRACIA_RENOVACION,
   HORAS_EMISION_SIN_AVISO,
   HORAS_RECHAZO_RECIENTE,
+  HORAS_VENTANA_ANULACION_BLOQUE,
+  HORAS_RECIBO_ANULADO_SIN_REEMISION,
+  agruparPosiblesBajas,
   gruposVivosDuplicados,
   sqlCarteraEnVigor,
 } from '@central/module-seguros'
@@ -109,6 +116,20 @@ export type EstadoIngestaPuerto =
        * `null` = no se pudo mirar (ni la cartera ni las marcas).
        */
       polizasDuplicadas: GrupoVivoDuplicado[] | null
+      /**
+       * 📉 (06/10/2026) Por fichero POL de las últimas 48 h: pólizas, AN y motivo.
+       * El umbral lo pone `evaluarAnulacionesEnBloque`. `[]` = se miró y no hay;
+       * `null` = no se pudo mirar. Enlace póliza↔fichero: `polizas.eiac_xml_hash`
+       * = `cima_ficheros.xml_hash` (la póliza guarda el hash del ÚLTIMO fichero que
+       * la escribió: si otro posterior la reescribe, deja de contar en el anterior).
+       */
+      anulacionesPorFichero: FicheroAnulacionFila[] | null
+      /** Renovaciones que la compañía ANULÓ (recibos anulados / prima ≤ 0). */
+      renovacionesAnuladas: RenovacionAnuladaPorCompania[] | null
+      /** Mediana de días fecha de anulación → llegada, por compañía (ficheros de 30 d). */
+      retrasoAnulacion: RetrasoAnulacion[] | null
+      /** Póliza en vigor con el último recibo anulado y sin reemisión (72 h). */
+      posiblesBajas: PosiblesBajasPorCompania[] | null
     }
 
 /** Crudo EIAC guardado por una incidencia y todavía sin reprocesar. */
@@ -697,7 +718,20 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
     //      `avanzar_vencimientos_por_recibo()` de la BD (Allianz), así que no son
     //      avería. Mismas situaciones que usa esa función, a propósito.
     //    Un vencimiento NULL no entra: es «no se sabe», no «vencida».
-    const renovacionesSinLlegar = await leerONull<RenovacionSinLlegar[]>(async () => {
+    // Prima como número, o NULL si no es legible (la columna es texto): un valor
+    // raro no tumba la consulta ni cuenta como «cero».
+    const primaNum = (a: string) =>
+      `(CASE WHEN ${a}.prima_total ~ '^-?[0-9]+([.,][0-9]+)?$' THEN replace(${a}.prima_total, ',', '.')::numeric END)`
+    // Recibo que la compañía ANULÓ (situación anulado o prima ≤ 0) con efecto en
+    // el periodo siguiente al vencimiento de la póliza = «renovación anulada».
+    const sqlRenovacionAnulada = `EXISTS (
+            SELECT 1 FROM poliza_recibos ra
+            WHERE ra.poliza_id = p.id
+              AND ra.fecha_efecto_actual IS NOT NULL
+              AND (ra.fecha_efecto_actual AT TIME ZONE 'UTC')::date >= p.fecha_vencimiento
+              AND (ra.situacion::text = 'anulado' OR ${primaNum('ra')} <= 0)
+          )`
+    const renovaciones = (anulada: boolean) => leerONull<RenovacionSinLlegar[]>(async () => {
       const r = await db.$queryRawUnsafe<
         Array<{ entidad: string | null; nombre: string | null; polizas: bigint | null; desde: string | null }>
       >(`
@@ -718,6 +752,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
               AND rc.fecha_vencimiento IS NOT NULL
               AND (rc.fecha_vencimiento AT TIME ZONE 'UTC')::date > p.fecha_vencimiento
           )
+          AND ${anulada ? '' : 'NOT '}${sqlRenovacionAnulada}
         GROUP BY p.codigo_entidad_dgs
         ORDER BY COUNT(*) DESC
       `, DIAS_GRACIA_RENOVACION)
@@ -727,6 +762,116 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
         polizas: Number(f.polizas ?? 0),
         vencimientoMasAntiguo: f.desde,
       }))
+    })
+    //    Una renovación que Mapfre ANULÓ (recibos anulados / prima 0 con efecto
+    //    desde el vencimiento) NO es «no llega»: la compañía sí mandó, y lo que
+    //    mandó es la anulación (caso 05/10/2026). Sale aparte y no se reclama.
+    const renovacionesSinLlegar = await renovaciones(false)
+    const renovacionesAnuladas = await renovaciones(true)
+
+    // 8b. 📉 Anulación en bloque, retraso y pre-aviso de baja (06/10/2026).
+    //     Enlace póliza↔fichero: `polizas.eiac_xml_hash = cima_ficheros.xml_hash`
+    //     (`cima_ficheros.poliza_id` es solo UNA póliza de muestra por fichero).
+    const motivo = `UPPER(btrim(p.datos_especificos->'anulacion'->>'motivo'))`
+    const fechaAnul = `(CASE WHEN p.datos_especificos->'anulacion'->>'fecha' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+                          THEN (p.datos_especificos->'anulacion'->>'fecha')::date END)`
+    const anulacionesPorFichero = await leerONull<FicheroAnulacionFila[]>(async () => {
+      const r = await db.$queryRawUnsafe<Array<{
+        entidad: string | null; nombre: string | null; fichero: string; polizas: bigint | null
+        anuladas: bigint | null; impago: bigint | null; otra: bigint | null; siniestro: bigint | null
+        mediana: number | null
+      }>>(`
+        SELECT f.codigo_entidad AS entidad, MAX(c.nombre_comun) AS nombre, f.nombre_fichero AS fichero,
+               GREATEST(COUNT(p.id), COALESCE(MAX(f.polizas_count), 0)) AS polizas,
+               COUNT(*) FILTER (WHERE p.situacion = 'AN') AS anuladas,
+               COUNT(*) FILTER (WHERE p.situacion = 'AN' AND ${motivo} = 'IM') AS impago,
+               COUNT(*) FILTER (WHERE p.situacion = 'AN' AND ${motivo} = 'EX') AS otra,
+               COUNT(*) FILTER (WHERE p.situacion = 'AN' AND ${motivo} = 'SI') AS siniestro,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY (f.created_at::date - ${fechaAnul}))
+                 FILTER (WHERE p.situacion = 'AN' AND ${fechaAnul} IS NOT NULL
+                           AND f.created_at::date >= ${fechaAnul}) AS mediana
+        FROM cima_ficheros f
+        JOIN polizas p ON p.eiac_xml_hash = f.xml_hash
+        LEFT JOIN companias_dgs c ON c.codigo_dgs = f.codigo_entidad
+        WHERE f.tipo_objeto = 'POL'
+          AND f.created_at > now() - ($1 || ' hours')::interval
+        GROUP BY f.codigo_entidad, f.nombre_fichero
+        HAVING COUNT(*) FILTER (WHERE p.situacion = 'AN') > 0
+      `, String(HORAS_VENTANA_ANULACION_BLOQUE))
+      return r.map(f => {
+        const anuladas = Number(f.anuladas ?? 0)
+        const impago = Number(f.impago ?? 0)
+        const otra = Number(f.otra ?? 0)
+        const siniestro = Number(f.siniestro ?? 0)
+        return {
+          entidad: f.entidad ?? 'desconocida',
+          entidadNombre: f.nombre,
+          fichero: f.fichero,
+          polizas: Number(f.polizas ?? 0),
+          anuladas,
+          impago,
+          otraCompania: otra,
+          siniestralidad: siniestro,
+          otros: Math.max(0, anuladas - impago - otra - siniestro),
+          // `null` = ninguna fecha de anulación legible, no «0 días».
+          medianaDiasRetraso: f.mediana === null || f.mediana === undefined ? null : Math.round(Number(f.mediana)),
+        }
+      })
+    })
+    const retrasoAnulacion = await leerONull<RetrasoAnulacion[]>(async () => {
+      const r = await db.$queryRawUnsafe<Array<{
+        entidad: string | null; nombre: string | null; polizas: bigint | null; mediana: number | null
+      }>>(`
+        SELECT p.codigo_entidad_dgs AS entidad, MAX(c.nombre_comun) AS nombre,
+               COUNT(*) AS polizas,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY (f.created_at::date - ${fechaAnul})) AS mediana
+        FROM polizas p
+        JOIN cima_ficheros f ON f.xml_hash = p.eiac_xml_hash AND f.tipo_objeto = 'POL'
+        LEFT JOIN companias_dgs c ON c.codigo_dgs = p.codigo_entidad_dgs
+        WHERE p.situacion = 'AN'
+          AND ${fechaAnul} IS NOT NULL
+          AND f.created_at::date >= ${fechaAnul}
+          AND f.created_at > now() - interval '30 days'
+        GROUP BY p.codigo_entidad_dgs
+      `)
+      return r.map(f => ({
+        entidad: f.entidad ?? 'desconocida',
+        entidadNombre: f.nombre,
+        polizas: Number(f.polizas ?? 0),
+        medianaDias: f.mediana === null || f.mediana === undefined ? null : Math.round(Number(f.mediana)),
+      }))
+    })
+    // 🔔 Pre-aviso: póliza en vigor cuyo recibo llegó anulado / a cero / negativo
+    //    en las últimas 72 h (`updated_at` = llegada a nuestra BD; un reproceso
+    //    también lo toca) y sin recibo vivo que lo sustituya (efecto igual o
+    //    posterior). Las que ya son «renovación anulada» se excluyen.
+    const posiblesBajas = await leerONull<PosiblesBajasPorCompania[]>(async () => {
+      const r = await db.$queryRawUnsafe<Array<{ entidad: string | null; nombre: string | null; numero: string | null }>>(`
+        SELECT DISTINCT p.codigo_entidad_dgs AS entidad, c.nombre_comun AS nombre, p.numero_poliza AS numero
+        FROM polizas p
+        JOIN poliza_recibos rx ON rx.poliza_id = p.id
+        LEFT JOIN companias_dgs c ON c.codigo_dgs = p.codigo_entidad_dgs
+        WHERE ${sqlCarteraEnVigor('p')}
+          AND p.merged_into_poliza_id IS NULL
+          AND rx.updated_at > now() - ($1 || ' hours')::interval
+          AND rx.fecha_efecto_actual IS NOT NULL
+          AND (rx.situacion::text = 'anulado' OR ${primaNum('rx')} <= 0)
+          AND NOT EXISTS (
+            SELECT 1 FROM poliza_recibos rc
+            WHERE rc.poliza_id = p.id
+              AND rc.situacion::text IN ('cobrado', 'pendiente', 'emitido')
+              AND ${primaNum('rc')} > 0
+              AND rc.fecha_efecto_actual >= rx.fecha_efecto_actual
+          )
+          AND NOT (p.fecha_vencimiento IS NOT NULL
+                   AND p.fecha_vencimiento < CURRENT_DATE - $2::int
+                   AND ${sqlRenovacionAnulada})
+      `, String(HORAS_RECIBO_ANULADO_SIN_REEMISION), DIAS_GRACIA_RENOVACION)
+      return agruparPosiblesBajas(r.map(f => ({
+        entidad: f.entidad ?? 'desconocida',
+        entidadNombre: f.nombre,
+        numeroPoliza: f.numero ?? '',
+      })))
     })
 
     // 9. 📭 Emisiones de Codeoscopic sin aviso de su webhook (28/09/2026). Cuatro
@@ -777,6 +922,10 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
     const fila = huerfanasRaw[0]
     return {
       polizasDuplicadas,
+      anulacionesPorFichero,
+      renovacionesAnuladas,
+      retrasoAnulacion,
+      posiblesBajas,
       emisionesSinAviso,
       renovacionesSinLlegar,
       crudo,
