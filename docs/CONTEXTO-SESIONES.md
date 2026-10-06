@@ -1078,9 +1078,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
 ## (06/10/2026) Correduría: «Subir póliza» — apellidos pegados creaban lead duplicado + subida múltiple
-- Caso Jose Antonio Martin Avila: OCR leyó «JOSE ANTONIOMARTINAVILA»; ficha sin DNI exige nombre exacto → lead nuevo 8f0bc75f con la oportunidad auto (Línea Directa). Solo llegó 1 de 3 PDF (input sin `multiple`).
-- `mismoNombre` acepta igualdad total sin espacios (≥2 palabras); `Documentos.tsx` sube varios en serie y avisa si la oportunidad cae en OTRA ficha.
-- Fusionado 8f0bc75f → 6cce46af (merge_log 8f546b6b). Pendiente: Alberto pone domicilio Granada (calle cifrada) y resube 2 PDF.
+- Caso real: el OCR pegó los apellidos del tomador; ficha sin DNI exige nombre exacto → lead duplicado con la oportunidad. Solo llegó 1 de 3 PDF (input sin `multiple`).
+- `mismoNombre` acepta igualdad total sin espacios (≥2 palabras en ambos); `Documentos.tsx` sube varios en serie y avisa si la oportunidad cae en OTRA ficha.
+- Duplicado fusionado con `seguros.fusionar_clientes` (queda en `cliente_merge_log`). Pendiente: Alberto corrige domicilio (calle cifrada) y resube 2 PDF.
 
 ## (06/10/2026) Correduría: vencimiento de Oportunidades = aniversario (día+mes, cada año)
 - Ficha cliente: la tarjeta de Oportunidad dice «Vence cada año el 1 de junio»; `EditarVencimiento` pide día+mes y guarda la próxima ocurrencia. Helper puro `lib/correduria/aniversario.ts` (`proximoAniversario`, 29/02→28/02) + tests; el cubo se ordena por próxima ocurrencia.
