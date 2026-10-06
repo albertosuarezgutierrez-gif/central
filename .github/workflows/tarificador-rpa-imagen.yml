@@ -28,23 +28,33 @@ jobs:
     timeout-minutes: 30
     env:
       ETIQUETA: ${{ inputs.etiqueta }}
-      FLYCTL_VERSION: '0.4.111'
+      FLYCTL_VERSION: '0.4.112'
     steps:
       - uses: actions/checkout@v4
 
-      # flyctl de una release FIJA de GitHub y verificada con su checksums.txt (sin `curl | sh` ni el token
-      # en este paso). setup-flyctl@1.5 (Node 20) murió en silencio en el run #2.
+      # flyctl de una release FIJA de superfly/flyctl bajada con `gh` (preinstalado) y verificada con el
+      # fichero de checksums de esa release (se localiza por patrón: no se llama `checksums.txt`). Sin
+      # `curl | sh` ni el token de Fly en este paso. Historia: setup-flyctl@1.5 murió en silencio (run #2);
+      # 0.4.111 no existía (run #3); la release no trae `checksums.txt` (run #5).
       - name: Instalar flyctl
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          dir="$RUNNER_TEMP/flyctl"
+          mkdir -p "$dir" "$HOME/.fly/bin"
+          gh release download "v${FLYCTL_VERSION}" --repo superfly/flyctl --dir "$dir" \
+            --pattern "flyctl_${FLYCTL_VERSION}_Linux_x86_64.tar.gz" --pattern '*checksums*'
+          ls -1 "$dir"
           archivo="flyctl_${FLYCTL_VERSION}_Linux_x86_64.tar.gz"
-          base="https://github.com/superfly/flyctl/releases/download/v${FLYCTL_VERSION}"
-          curl -fsSL -o "$archivo" "$base/$archivo"
-          curl -fsSL -o checksums.txt "$base/checksums.txt"
-          grep " ${archivo}\$" checksums.txt | sha256sum -c -
-          mkdir -p "$HOME/.fly/bin"
-          tar -xzf "$archivo" -C "$HOME/.fly/bin" flyctl
+          sumas="$(cd "$dir" && ls | grep -i "checksums.*\.txt$" | head -n1 || true)"
+          if [ -z "$sumas" ]; then echo "::error::La release v${FLYCTL_VERSION} no trae fichero de checksums"; exit 1; fi
+          linea="$(cd "$dir" && grep " \*\?${archivo}\$" "$sumas" || true)"
+          if [ -z "$linea" ]; then echo "::error::${archivo} no aparece en ${sumas}"; exit 1; fi
+          (cd "$dir" && echo "$linea" | sha256sum -c -)
+          tar -xzf "$dir/$archivo" -C "$HOME/.fly/bin" flyctl
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+          "$HOME/.fly/bin/flyctl" version
 
       - name: Comprobar secreto y etiqueta
         env:

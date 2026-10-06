@@ -6,6 +6,7 @@ import { correduriaUnica } from '@/lib/cartera'
 import { fichaCliente } from '@/lib/cartera-ficha'
 import { altaCliente, descartarCliente, editarCliente, restaurarCliente } from '@/lib/cartera-edicion'
 import type { EdicionCliente } from '@central/module-seguros'
+import { z } from 'zod'
 import { auditado } from '@/lib/auditoria'
 import { abrirSelloAltaLead } from '@/lib/sello-alta-lead'
 
@@ -106,7 +107,7 @@ export const DELETE = auditado(async (req: Request) => {
 })
 
 // PATCH /api/operador/cliente — EDICIÓN. Lo libre (dirección, CP, ciudad,
-// provincia, notas) entra tal cual; la identidad (DNI, nombre, apellidos,
+// provincia, notas) entra tal cual; `sexo` ('hombre'|'mujer' → `saludo` 1/2, ausente = no tocar); la identidad (DNI, nombre, apellidos,
 // fecha de nacimiento) con `documentoId` de un DNI recibido de este cliente o de
 // una póliza suya cuyo DNI leído es el de la ficha (422 `documento_no_acredita`
 // si no), o SIN documento con un `motivo` de ≥5 caracteres (05/10/2026; si falta,
@@ -120,7 +121,11 @@ export const PATCH = auditado(async (req: Request) => {
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
     if (!body || typeof body.id !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta id' }, { status: 422 })
+    // Sexo: enum estricto; ausente = no tocar (nunca un valor por defecto). Algo que no sea hombre/mujer → 422.
+    const sexoLeido = z.enum(['hombre', 'mujer']).optional().safeParse(body.sexo)
+    if (!sexoLeido.success) return NextResponse.json({ estado: 'invalido', motivo: 'Sexo no válido: hombre o mujer.', campo: 'sexo' }, { status: 422 })
     const edicion: EdicionCliente = {
+      ...(sexoLeido.data !== undefined ? { sexo: sexoLeido.data } : {}),
       identidad: objeto(body.identidad) as EdicionCliente['identidad'],
       libre: objeto(body.libre) as EdicionCliente['libre'],
       documentoId: typeof body.documentoId === 'string' && body.documentoId.trim() !== '' ? body.documentoId.trim() : null,

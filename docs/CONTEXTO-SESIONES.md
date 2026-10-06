@@ -1089,6 +1089,18 @@ Auditoría del portal (6 hallazgos, sin fugas) arreglada en el mismo PR: CTA/avi
 mensajes `varias_fichas`/`no_en_vigor`. asegura: `fichaPropiaDeRecurso` (lib/ficha-de-poliza.ts) resuelve la ficha POR PÓLIZA/recurso entre las
 vinculadas con nivel gestionar/administrar; cuenta, contacto, documento suelto y carnés siguen con `varias_fichas` (sin póliza).
 
+## (06/10/2026) Correduría: vencimiento de Oportunidades = aniversario (día+mes, cada año)
+- Ficha cliente: la tarjeta de Oportunidad dice «Vence cada año el 1 de junio»; `EditarVencimiento` pide día+mes y guarda la próxima ocurrencia. Helper puro `lib/correduria/aniversario.ts` (`proximoAniversario`, 29/02→28/02) + tests; el cubo se ordena por próxima ocurrencia.
+- El aviso del cron (`oportunidad_45`, `vencimientoDelCiclo` en module-seguros) YA era anual: sin cambio de BD.
+- Llamada anual: `cerrarTarea` (apps/asegura) al completar una llamada de oportunidad abierta crea la del ciclo siguiente (helper `planLlamadaAnual` en module-seguros; idempotente: solo si no hay ya una llamada pendiente con fecha ≥ la del ciclo siguiente). `registrarLlamada` también la deja (no_contesta, otro_dia, quiere_precio; las que aparcan, no) vía `dejarLlamadaAnual`; los reintentos cercanos conviven con ella; cierres anteriores al cambio no se recuperan.
+- Textos de aviso (`estadoAvisoVencimiento`, Telegram) dicen «Vence cada año el 1 de junio» (helper `diaMesEs`).
+
+## (06/10/2026) Correduría: completar lo que falta de un interviniente sin salir de la oportunidad
+- «Falta en su ficha» (sexo, móvil…) no se podía rellenar desde `oportunidad/[id]`: el modal «Editar datos» no tenía esos campos y asegura no tenía escritor de `clientes.saludo`.
+- Nuevo bloque `FaltaPorCompletar` (sexo + móvil, un solo Guardar) arriba del modal; PATCH `/api/operador/cliente` admite `sexo` (enum estricto → saludo 1/2, con historial).
+- Principio (Alberto): todo dato que la pantalla diga que falta se edita ahí mismo. Cepo: `EDITOR_DE_FALTA` en `lib/riesgo-asegura.ts` + test que exige editor por cada clave de `faltanDeFigura`.
+- Pendiente: verificar en navegador; comprobar `EditarCliente` con empresa propietaria (CIF/razón social).
+
 ## (06/10/2026) Correduría: CP en la cabecera de la ficha de cliente
 - `Cabecera.tsx` (`Contacto`) pinta «CP Ciudad, Provincia» junto al pin. El CP ya llegaba de asegura (`ContactoFicha.codigoPostal`); solo faltaba pintarlo. Sin cambios de BD/puerto.
 

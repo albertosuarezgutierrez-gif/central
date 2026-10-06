@@ -26,6 +26,7 @@ import {
   estadoPresupuesto,
   mismoSeguro,
   planLlamada,
+  planLlamadaAnual,
   planTareaTrasVencimiento,
   seguroAnteriorDe,
   validarAltaOportunidad,
@@ -353,6 +354,42 @@ export async function crearTarea(
   return { ok: true, tareaId: r.tareaId }
 }
 
+/**
+ * Recurrencia anual de la llamada (06/10/2026; también tras «no contesta»/«otro día»/«quiere precio» el
+ * 07/10/2026): lo decide `planLlamadaAnual` (idempotente por la llamada pendiente más lejana). Se llama
+ * DENTRO de la transacción de quien cierra la llamada; la oportunidad se bloquea (`for update`) para que
+ * dos cierres a la vez no dupliquen, y se relee aquí para ver su estado ya tras cualquier transición.
+ */
+async function dejarLlamadaAnual(
+  tx: Tx, correduriaId: string, oportunidadId: string, clienteId: string | null,
+  tipoTareaCerrada: string, actor: string, hoyIso: string,
+): Promise<void> {
+  const [op] = await tx.$queryRaw<{ estado: string; aparcadaHasta: Date | null; fechaFin: Date | null }[]>(Prisma.sql`
+    select estado::text as estado, aparcada_hasta as "aparcadaHasta", fecha_fin_vigencia as "fechaFin"
+    from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+  if (!op) return
+  const [{ ultima }] = await tx.$queryRaw<{ ultima: string | null }[]>(Prisma.sql`
+    select max((fecha_limite at time zone 'Europe/Madrid')::date)::text as ultima from gestiones
+    where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
+      and tipo::text = 'llamada' and estado::text <> 'cerrada'`)
+  const plan = planLlamadaAnual({
+    tipoTareaCerrada, estado: op.estado, aparcadaHasta: op.aparcadaHasta?.toISOString().slice(0, 10) ?? null,
+    fechaFinVigencia: op.fechaFin?.toISOString().slice(0, 10) ?? null, ultimaLlamadaPendiente: ultima, hoy: hoyIso,
+  })
+  if (plan.accion !== 'crear') return
+  const [nueva] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+    insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
+    values (${correduriaId}::uuid, cast('llamada' as gestion_tipo), cast('media' as gestion_prioridad), 'pendiente',
+            ${`Llamar antes del vencimiento (${plan.vence}) — ciclo anual`}, (${plan.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid',
+            ${clienteId}::uuid, ${oportunidadId}::uuid, 'central:seguimiento')
+    returning id::text as id`)
+  await tx.$executeRaw(Prisma.sql`
+    insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+    values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'tarea_creada',
+            cast(${op.estado} as estado_comercial), cast(${op.estado} as estado_comercial),
+            ${JSON.stringify({ tareaId: nueva.id, tipo: 'llamada', fechaLimite: plan.fecha, ciclo: plan.vence, recurrencia: 'anual' })}::jsonb, ${actor})`)
+}
+
 export async function cerrarTarea(
   correduriaId: string,
   tareaId: string,
@@ -362,8 +399,8 @@ export async function cerrarTarea(
   if (!UUID.test(tareaId)) return { ok: false, estado: 'invalido', motivo: 'id de tarea no válido', status: 422 }
   const db = prismaAsegura()
   const r = await db.$transaction(async tx => {
-    const [t] = await tx.$queryRaw<{ oportunidadId: string | null; clienteId: string | null; estado: string }[]>(Prisma.sql`
-      select oportunidad_id::text as "oportunidadId", cliente_id::text as "clienteId", estado::text as estado
+    const [t] = await tx.$queryRaw<{ oportunidadId: string | null; clienteId: string | null; estado: string; tipo: string }[]>(Prisma.sql`
+      select oportunidad_id::text as "oportunidadId", cliente_id::text as "clienteId", estado::text as estado, tipo::text as tipo
       from gestiones where id = ${tareaId}::uuid and correduria_id = ${correduriaId}::uuid
         and oportunidad_id is not null for update`)
     if (!t) return 'no_encontrado' as const
@@ -379,6 +416,7 @@ export async function cerrarTarea(
         select ${correduriaId}::uuid, o.id, 'tarea_cerrada', o.estado, o.estado,
                ${JSON.stringify({ tareaId, conResultado: resultado !== null })}::jsonb, ${actor}
         from oportunidades o where o.id = ${t.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`)
+      await dejarLlamadaAnual(tx, correduriaId, t.oportunidadId, t.clienteId, t.tipo, actor, hoyUtc().toISOString().slice(0, 10))
     }
     return t
   })
@@ -455,6 +493,9 @@ export async function registrarLlamada(
         returning id::text as id`)
       siguienteTareaId = nueva.id
     }
+    // Solo una LLAMADA cuenta para la recurrencia anual (no un WhatsApp). Las que aparcan la oportunidad
+    // (no_interesa, número equivocado, baja) las deja en 'aparcada' el helper: vuelven solas a su aniversario.
+    if (plan.canal === 'llamada') await dejarLlamadaAnual(tx, correduriaId, oportunidadId, antes.clienteId, 'llamada', actor, hoyIso)
     await tx.$executeRaw(Prisma.sql`
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
       values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${plan.canal},

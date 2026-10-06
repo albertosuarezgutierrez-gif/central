@@ -1,4 +1,5 @@
 'use client'
+import { textoVenceCadaAño } from '@/lib/correduria/aniversario'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Trophy } from 'lucide-react'
@@ -246,7 +247,7 @@ function Resumen({ o }: { o: OportunidadDeCliente }) {
   const v = vistaCompetencia({ seguroAnterior: o.seguroAnterior, prima: o.prima, fechaFinVigencia: o.fechaFinVigencia, hoy: hoyMadrid() })
   if (o.fechaFinVigencia && v.aviso.estado === 'desconocido') partes.push(`vence ${fmt(o.fechaFinVigencia)} (fecha ilegible)`)
   else if (!o.fechaFinVigencia) partes.push('vencimiento desconocido: no se avisa (tampoco entra en Vencimientos)')
-  else partes.push(`vence ${fmt(o.fechaFinVigencia)}`)
+  else partes.push(textoVenceCadaAño(o.fechaFinVigencia)?.replace('Vence', 'vence') ?? `vence ${fmt(o.fechaFinVigencia)}`)
   return (
     <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
       <span style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}>{partes.join(' · ')}</span>
