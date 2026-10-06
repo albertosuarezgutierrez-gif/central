@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T06:55:21Z",
-  "sha": "94b0a9e9f43934c3ff8244a1424ed7d39a49dade",
+  "generadoEn": "2026-10-06T08:39:26Z",
+  "sha": "582d023aa908929a69ce19c6e9a2ae1afd35445e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -84924,7 +84924,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 561
+          "linea": 562
         },
         {
           "nombre": "Carnets",
@@ -84932,12 +84932,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 601
+          "linea": 602
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5297d8827364"
+      "hash": "471c2ae581bd"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
