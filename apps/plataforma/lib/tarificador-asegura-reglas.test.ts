@@ -8,6 +8,7 @@ import {
 } from './tarificador-asegura-reglas.ts'
 
 import { fechaCorta, formularioConUltimoRiesgo, importeDeTexto, importeParaCampo, leerUltimoRiesgoBot } from './tarificador-asegura-reglas.ts'
+import { COSTE_REPOSICION_EUR_M2, UMBRAL_INFRASEGURO, estimarInfraseguro } from './tarificador-asegura-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
 
@@ -179,4 +180,37 @@ test('leerTrabajoBot conserva los sucesivos y los marca null si no vienen', () =
   ] })
   assert.equal(t?.ofertas[0].primaTotalSucesivos, 347.55)
   assert.equal(t?.ofertas[1].primaTotalSucesivos, null)
+})
+
+// ─── Infraseguro (06/10/2026) ───────────────────────────────────────────────
+
+test('infraseguro: estimado = m² × €/m² de su calidad; aviso por debajo del 80 %', () => {
+  const r = estimarInfraseguro({ m2Construidos: '1000', capitalContinente: '1.000.000', calidadConstruccion: 'normal' })
+  assert.equal(r?.estimado, 1000 * COSTE_REPOSICION_EUR_M2.normal)
+  assert.equal(r?.infraseguro, false)
+  const justo = estimarInfraseguro({ m2Construidos: '1000', capitalContinente: String(1000 * COSTE_REPOSICION_EUR_M2.normal * UMBRAL_INFRASEGURO), calidadConstruccion: 'normal' })
+  assert.equal(justo?.infraseguro, false, 'el 80 % justo no avisa')
+  const bajo = estimarInfraseguro({ m2Construidos: '1000', capitalContinente: '500.000', calidadConstruccion: 'normal' })
+  assert.equal(bajo?.infraseguro, true)
+  const lujo = estimarInfraseguro({ m2Construidos: '1000', capitalContinente: '1.000.000', calidadConstruccion: 'lujo' })
+  assert.equal(lujo?.estimado, 1000 * COSTE_REPOSICION_EUR_M2.lujo)
+  assert.equal(lujo?.infraseguro, true, 'la misma cifra en lujo sí avisa')
+})
+
+test('infraseguro: calidad «no consta» = normal (y se dice); sin m² o sin capital, no se afirma nada', () => {
+  const r = estimarInfraseguro({ m2Construidos: '800', capitalContinente: '300.000', calidadConstruccion: '' })
+  assert.equal(r?.calidad, 'normal')
+  assert.equal(r?.calidadSupuesta, true)
+  assert.equal(estimarInfraseguro({ m2Construidos: '', capitalContinente: '300.000', calidadConstruccion: '' }), null)
+  assert.equal(estimarInfraseguro({ m2Construidos: '800', capitalContinente: '', calidadConstruccion: '' }), null)
+  assert.equal(estimarInfraseguro({ m2Construidos: '0', capitalContinente: '300.000', calidadConstruccion: '' }), null)
+  assert.equal(estimarInfraseguro({ m2Construidos: '800', capitalContinente: '12.5', calidadConstruccion: '' }), null)
+})
+
+test('infraseguro: el modal lo enseña ANTES de encolar, con eur(), y no bloquea el envío', () => {
+  const src = readFileSync(join(APP, 'app/(usuario)/correduria/cliente/[id]/PrecioAllianzBot.tsx'), 'utf8')
+  assert.match(src, /estimarInfraseguro\(f\)/)
+  assert.match(src, /posible infraseguro: estimado \{eur\(infra\.estimado\)\}/i)
+  const pedir = src.slice(src.indexOf('async function pedir'), src.indexOf('const vista ='))
+  assert.ok(pedir.length > 0 && !/infra/i.test(pedir), 'el aviso no puede frenar pedir(): solo informa')
 })
