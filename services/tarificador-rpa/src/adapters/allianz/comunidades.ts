@@ -90,6 +90,16 @@ function dato<T>(v: T | null | undefined, campo: string): T {
   return v
 }
 
+/**
+ * Genera una RegExp para búsqueda de texto insensible a mayúsculas y tolerante con espacios.
+ * Escapa metacaracteres de regex y devuelve: `^\\s*<escapado>\\s*$` (insensible a mayúsculas).
+ * Sirve para localizar textos en el DOM donde las mayúsculas son solo CSS (e.g., «Nueva Alta»).
+ */
+function textoExacto(t: string): RegExp {
+  const escapado = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^\\s*${escapado}\\s*$`, 'i')
+}
+
 async function poner(page: Page, etiqueta: string, valor: string | number, indice = 0): Promise<void> {
   await campoPorEtiqueta(page, etiqueta, indice).fill(String(valor))
 }
@@ -144,17 +154,19 @@ async function login(page: Page, ctx: ContextoPortal): Promise<void> {
 }
 
 async function abrirComunidades(page: Page, ctx: ContextoPortal): Promise<void> {
-  // Ruta dada por Alberto: botón naranja «NUEVA ALTA» (cabecera de la home) → modal «Nueva Alta» con
-  // acordeones → «Particulares» → tarjeta «Comunidades» → «Comunidades 2020».
-  // «Nueva alta» es NAVEGACIÓN para cotizar, no emisión (el guard ya no la bloquea). Alternativa en el
-  // menú: «Venta» → «Nueva Alta». El modal también tiene «CERRAR» (tampoco se bloquea).
-  await ctx.pulsar(page.getByText('NUEVA ALTA', { exact: true }).first())
+  // Ruta dada por Alberto: botón id «link_new_policy» «Nueva Alta» (cabecera de la home) → modal «Nueva Alta»
+  // con acordeones → «Particulares» → tarjeta «Comunidades» → «Comunidades 2020».
+  // El texto del DOM es «Nueva Alta» (las mayúsculas son CSS). «Nueva alta» es NAVEGACIÓN para cotizar, no
+  // emisión (el guard ya no la bloquea). Alternativa en el menú: «Venta» → «Nueva Alta». El modal tiene «CERRAR».
+  await ctx.pulsar(
+    page.locator('#link_new_policy').or(page.getByRole('button', { name: textoExacto('Nueva Alta') })).first(),
+  )
   await ctx.pausa()
-  const modal = page.getByRole('dialog').filter({ hasText: 'Nueva Alta' }).first()
-  await ctx.pulsar(modal.getByText('Particulares', { exact: true }).first())
+  const modal = page.getByRole('dialog').filter({ hasText: /nueva alta/i }).first()
+  await ctx.pulsar(modal.getByText(textoExacto('Particulares')).first())
   await ctx.pausa()
-  await ctx.pulsar(modal.getByText('Comunidades', { exact: true }).first())
-  await page.getByText(TITULO_FORMULARIO, { exact: true }).first().waitFor()
+  await ctx.pulsar(modal.getByText(textoExacto('Comunidades')).first())
+  await page.getByText(textoExacto(TITULO_FORMULARIO)).first().waitFor()
   await ctx.exigirSinCaptcha()
 }
 
