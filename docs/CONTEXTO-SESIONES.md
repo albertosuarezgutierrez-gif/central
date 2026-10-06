@@ -1091,6 +1091,11 @@ Auditoría del portal (6 hallazgos, sin fugas) arreglada en el mismo PR: CTA/avi
 mensajes `varias_fichas`/`no_en_vigor`. asegura: `fichaPropiaDeRecurso` (lib/ficha-de-poliza.ts) resuelve la ficha POR PÓLIZA/recurso entre las
 vinculadas con nivel gestionar/administrar; cuenta, contacto, documento suelto y carnés siguen con `varias_fichas` (sin póliza).
 
+## (06/10/2026) Correduría: «Subir póliza» — apellidos pegados creaban lead duplicado + subida múltiple
+- Caso real: el OCR pegó los apellidos del tomador; ficha sin DNI exige nombre exacto → lead duplicado con la oportunidad. Solo llegó 1 de 3 PDF (input sin `multiple`).
+- `mismoNombre` acepta igualdad total sin espacios (≥2 palabras en ambos); `Documentos.tsx` sube varios en serie y avisa si la oportunidad cae en OTRA ficha.
+- Duplicado fusionado con `seguros.fusionar_clientes` (queda en `cliente_merge_log`). Pendiente: Alberto corrige domicilio (calle cifrada) y resube 2 PDF.
+
 ## (06/10/2026) Correduría: vencimiento de Oportunidades = aniversario (día+mes, cada año)
 - Ficha cliente: la tarjeta de Oportunidad dice «Vence cada año el 1 de junio»; `EditarVencimiento` pide día+mes y guarda la próxima ocurrencia. Helper puro `lib/correduria/aniversario.ts` (`proximoAniversario`, 29/02→28/02) + tests; el cubo se ordena por próxima ocurrencia.
 - El aviso del cron (`oportunidad_45`, `vencimientoDelCiclo` en module-seguros) YA era anual: sin cambio de BD.
