@@ -12,19 +12,24 @@ import { X } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import EditarCliente from '../../EditarCliente'
 import EditarCarnets from '../../cliente/[id]/EditarCarnets'
+import FaltaPorCompletar from './FaltaPorCompletar'
+import { faltaMovil, faltaSexo, rotulosFaltaEnFormulario } from '@/lib/riesgo-asegura'
 import { pedirFichaParaEditar, type FichaParaEditar } from './acciones'
 
-export default function EditarFichaModal({ oportunidadId, clienteId, nombre, conduce, refresco, onCerrar }: {
+export default function EditarFichaModal({ oportunidadId, clienteId, nombre, conduce, faltan, refresco, onCerrar }: {
   oportunidadId: string
   clienteId: string
   nombre: string
   /** Esta persona va a conducir el vehículo del riesgo: se ofrece también su carné. */
   conduce: boolean
+  /** Lo que el aviso dice que falta en su ficha (`null` = no se pudo leer): se ofrece completarlo aquí. */
+  faltan: string[] | null
   /** Cambia cuando el riesgo se ha vuelto a leer: la ficha del modal se recarga con él. */
   refresco: unknown
   onCerrar: () => void
 }) {
   const [ficha, setFicha] = useState<FichaParaEditar | null>(null)
+  const [guardadoAqui, setGuardadoAqui] = useState(false)
   const cierre = useRef<HTMLButtonElement>(null)
   // ¿Hay algo tecleado y sin guardar en cada formulario? Se marca al teclear (los eventos de los campos suben
   // hasta el contenedor) y se limpia cuando ESE formulario se remonta con datos nuevos (= se guardó).
@@ -78,6 +83,15 @@ export default function EditarFichaModal({ oportunidadId, clienteId, nombre, con
         {ficha?.estado === 'error' && <div role="alert" style={{ fontSize: 13, color: 'var(--negative)' }}>{ficha.mensaje}</div>}
         {ficha?.estado === 'ok' && (
           <>
+            {(faltaSexo(faltan) || faltaMovil(faltan)) && (
+              <FaltaPorCompletar
+                clienteId={clienteId} faltaSexo={faltaSexo(faltan)} faltaMovil={faltaMovil(faltan)}
+                tambien={rotulosFaltaEnFormulario(faltan)} onGuardado={() => setGuardadoAqui(true)}
+              />
+            )}
+            {guardadoAqui && !faltaSexo(faltan) && !faltaMovil(faltan) && (
+              <div role="status" style={{ fontSize: 13, color: 'var(--positive)' }}>Guardado en su ficha.</div>
+            )}
             <div key={`c${claveIdentidad}`} onInput={() => { sucio.current.identidad = true }} onChange={() => { sucio.current.identidad = true }} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>Identidad</div>
               <EditarCliente clienteId={clienteId} identidad={ficha.identidad} documentos={ficha.documentos} />
@@ -91,7 +105,7 @@ export default function EditarFichaModal({ oportunidadId, clienteId, nombre, con
               </div>
             )}
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Teléfono, correo y dirección se corrigen en la ficha de la persona. El nombre, el DNI y la fecha de nacimiento exigen el DNI recibido.
+              El correo, la dirección y otros teléfonos se corrigen en la ficha de la persona. El nombre, el DNI y la fecha de nacimiento exigen el DNI recibido.
             </div>
           </>
         )}
