@@ -77,7 +77,7 @@ test('fecha leída que no cuadra: pasada o a más de 13 meses; la del año que v
 })
 
 // Recurrencia anual de la llamada (06/10/2026)
-const base = { tipoTareaCerrada: 'llamada', estado: 'competencia', aparcadaHasta: null, fechaFinVigencia: '2026-11-15', pendientes: 0, hoy: '2026-10-06' }
+const base = { tipoTareaCerrada: 'llamada', estado: 'competencia', aparcadaHasta: null, fechaFinVigencia: '2026-11-15', ultimaLlamadaPendiente: null, hoy: '2026-10-06' }
 
 test('llamada anual: cerrada la del ciclo (aviso ya pasado), crea la del año que viene', () => {
   // vence 15/11/2026: aviso 01/10 ya pasó -> objetivo 15/11/2027, tarea 45 días antes
@@ -100,10 +100,21 @@ test('llamada anual: 29/02 se ajusta al año siguiente', () => {
 })
 
 test('llamada anual: no crea si hay pendiente, si no es llamada, si está cerrada/aparcada o sin fecha', () => {
-  assert.deepEqual(planLlamadaAnual({ ...base, pendientes: 1 }), { accion: 'nada', motivo: 'ya_hay_pendiente' })
   assert.deepEqual(planLlamadaAnual({ ...base, tipoTareaCerrada: 'tarea' }), { accion: 'nada', motivo: 'no_es_llamada' })
   assert.deepEqual(planLlamadaAnual({ ...base, estado: 'ganada' }), { accion: 'nada', motivo: 'no_abierta' })
   assert.deepEqual(planLlamadaAnual({ ...base, estado: 'perdida' }), { accion: 'nada', motivo: 'no_abierta' })
   assert.deepEqual(planLlamadaAnual({ ...base, aparcadaHasta: '2027-01-01' }), { accion: 'nada', motivo: 'aparcada' })
   assert.deepEqual(planLlamadaAnual({ ...base, fechaFinVigencia: null }), { accion: 'nada', motivo: 'sin_vencimiento' })
+})
+
+test('llamada anual: no_contesta con un reintento cercano pendiente -> crea igualmente la anual', () => {
+  // reintento a 2 días (08/10/2026) < fecha de la anual (01/10/2027): conviven
+  assert.deepEqual(planLlamadaAnual({ ...base, ultimaLlamadaPendiente: '2026-10-08' }), { accion: 'crear', fecha: '2027-10-01', vence: '2027-11-15' })
+})
+
+test('llamada anual: ya existe la anual pendiente (o una posterior) -> no duplica', () => {
+  assert.deepEqual(planLlamadaAnual({ ...base, ultimaLlamadaPendiente: '2027-10-01' }), { accion: 'nada', motivo: 'ya_hay_anual' })
+  assert.deepEqual(planLlamadaAnual({ ...base, ultimaLlamadaPendiente: '2027-10-15' }), { accion: 'nada', motivo: 'ya_hay_anual' })
+  // un día antes de la fecha prevista ya no la cubre
+  assert.equal(planLlamadaAnual({ ...base, ultimaLlamadaPendiente: '2027-09-30' }).accion, 'crear')
 })
