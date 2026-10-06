@@ -42,6 +42,11 @@ export function leerUltimoRiesgoTarificador(clienteId: string): Promise<Reenvio>
   return puerto(`ultimo-riesgo?${q}`, { method: 'GET' }, 15_000)
 }
 
+/** Panel de salud del bot, renovaciones de comunidades y alertas de cambio de tarifa (solo lectura). */
+export function leerPanelTarificador(): Promise<Reenvio> {
+  return puerto('panel', { method: 'GET' }, 30_000)
+}
+
 export function leerTrabajoTarificador(id: string): Promise<Reenvio> {
   return puerto(`trabajo/${encodeURIComponent(id)}`, { method: 'GET' }, 15_000)
 }

@@ -130,10 +130,51 @@ test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan po
   assert.match(adaptador, /function botonCalcular\(raiz: Raiz\): Locator \{\s*return raiz\.locator\('#calcular'\)\.filter\(\{ hasText: textoExacto\('Calcular'\) \}\)\s*\}/, 'botonCalcular solo puede devolver el #calcular de texto exacto «Calcular»')
   assert.match(adaptador, /function desplegableNx\(c: Locator\): Locator \{\s*return c\.locator\('xpath=ancestor-or-self::nx-dropdown\[1\]'\)\s*\}/, 'desplegableNx solo puede devolver el nx-dropdown del campo')
   assert.match(adaptador, /function opcionNx\(raiz: Raiz, valor: string\): Locator \{\s*return raiz\.locator\('nx-dropdown-item, \[role="option"\]'\)\.filter\(\{ hasText: textoExacto\(valor\) \}\)\s*\}/, 'opcionNx solo puede devolver opciones de lista por texto exacto')
+  // 4b. «Proyecto» (07/10/2026): solo por `ctx.abrirProyecto(pestana)` (fase Tarificar + guard), con `pestana` =
+  // `pestanaProyecto(raiz)` y ese helper clavado a `td#MENU` de texto EXACTO «Proyecto» (nunca «Proyecto Ampliado»).
+  const proyectos = [...adaptador.matchAll(/ctx\.abrirProyecto\(([^)]*)\)/g)].map((m) => m[1])
+  assert.deepEqual(proyectos, ['pestana'], 'abrirProyecto solo se llama una vez, con la pestaña de pestanaProyecto()')
+  assert.match(adaptador, /const pestana = pestanaProyecto\(raiz\)\n/, 'la pestaña de abrirProyecto tiene que salir de pestanaProyecto(raiz)')
+  assert.match(adaptador, /function pestanaProyecto\(raiz: Raiz\): Locator \{\s*return raiz\.locator\('td#MENU'\)\.filter\(\{ hasText: textoExacto\('Proyecto'\) \}\)\s*\}/, 'pestanaProyecto solo puede devolver td#MENU de texto exacto «Proyecto»')
+  assert.match(runner, /abrirProyecto:\s*\(pestana\)\s*=>\s*pulsarProyecto\(page, pestana, guard\)/)
+  const proyecto = funciones.find((f) => f.startsWith('pulsarProyecto'))!
+  assert.ok(proyecto.indexOf('fases.autorizarProyecto(') > -1 && proyecto.indexOf('fases.autorizarProyecto(') < proyecto.indexOf('.click('), 'pulsarProyecto tiene que autorizar por fase ANTES de pulsar')
+  assert.ok(!/\.(click|check|fill|press|selectOption|setChecked)\s*\(/.test(sinComentarios(readFileSync(join(SRV, 'src/descarga-pdf.ts'), 'utf8'))), 'descarga-pdf.ts solo escucha: no actúa sobre la página')
   // 5. Listas del guard del módulo.
   const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
   assert.match(g, /TEXTOS_BLOQUEADOS_ALTA/)
   assert.match(g, /PATRON_ACEPTAR/)
+})
+
+test('varias opciones: las variantes solo cambian <select> nativos, recalculan con calcular() y restauran la base ANTES del avance', () => {
+  const src = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/comunidades.ts'), 'utf8'))
+  const ini = src.indexOf('export type ColumnaPartida')
+  const fin = src.indexOf('export async function leerPrimas')
+  assert.ok(ini > -1 && fin > ini, 'falta el bloque de variantes (ColumnaPartida … leerPrimas)')
+  const bloque = src.slice(ini, fin)
+  // Sin pulsaciones propias: lo único que se pulsa es «Calcular», dentro de calcular() (botonCalcular, ya vigilado).
+  assert.ok(!/ctx\.pulsar\(|\.(click|dblclick|tap|check|setChecked|fill|press|type)\s*\(/.test(bloque), 'variantes: ni pulsaciones ni escrituras salvo selectOption')
+  assert.match(bloque, /\.locator\(`select\[id\^="\$\{columna\}"\]`\)/, 'variantes: solo <select> nativos de la fila de la partida')
+  assert.match(bloque, /export type ColumnaPartida = 'estandar' \| 'personalizado' \| 'franquicia'\n/)
+  assert.match(bloque, /await calcular\(page, ctx\)/)
+  assert.match(bloque, /finally \{[^}]*restaurarBase\(/, 'variantes: la base se restaura SIEMPRE (finally)')
+  // En tarificar: las variantes, solo con riesgo.opciones y ANTES de elegir modalidad / avanzar.
+  const t = src.slice(src.indexOf('async tarificar('))
+  assert.match(t, /riesgo\.opciones \? await calcularVariantes\(/)
+  assert.ok(t.indexOf('calcularVariantes(') < t.indexOf('ctx.elegirOpcion('), 'las variantes van antes del avance a Tarificar')
+})
+
+test('sesión reutilizada: solo en memoria (sin disco), y el runner pulsa siempre por pulsar(boton, guard)', () => {
+  for (const f of ficheros(join(SRV, 'src'))) {
+    const src = sinComentarios(readFileSync(f, 'utf8'))
+    assert.ok(!/storageState\(\s*\{[^)]*path/.test(src), `${relative(RAIZ, f)} guarda el storageState en disco`)
+  }
+  const sesion = sinComentarios(readFileSync(join(SRV, 'src/sesion.ts'), 'utf8'))
+  assert.ok(!/from ['"](node:)?fs/.test(sesion), 'sesion.ts no puede tocar el disco')
+  assert.match(sesion, /toJSON\(\): string \{\s*return '\[sesion\]'/, 'la sesión no se serializa (toJSON)')
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /pulsar: async \(boton\) => \{\s*await ctx\.pausaAccion\(\)\s*await pulsar\(boton, guard\)\s*\}/, 'ctx.pulsar = pausa + pulsar(boton, guard), nada más')
+  assert.match(runner, /sesionEpac\.invalidar\(\)/, 'el runner invalida la sesión ante un fallo')
 })
 
 test('formador con IA: solo la lista de bloqueo nombra emitir/contratar/formalizar; la tabla de acciones permitidas, nunca', () => {

@@ -102,6 +102,11 @@ export type RiesgoComunidad = {
 
   /** Modalidad a elegir en el portal. Ausente = `estandar`. Querer las dos = DOS trabajos. */
   modalidad?: ModalidadPortal | null
+  /**
+   * Varias opciones (06/10/2026): `true` = tras la oferta base, recalcular las variantes de franquicia/RC que el
+   * adaptador tenga declaradas (cada una, oferta extra con su etiqueta). Ausente/`null`/`false` = solo la base.
+   */
+  opciones?: boolean | null
 }
 
 export type Fraccionamiento = 'anual' | 'semestral' | 'trimestral' | 'mensual'
@@ -155,6 +160,11 @@ export type OfertaNormalizada = {
   pdf: PdfRef | null
   /** Desglose neta/impuestos/total del primer recibo («anual» de ePAC, prorrateado) y de los sucesivos (prima anual de renovación), si el portal lo da. */
   desglose?: { anual: DesglosePrima; sucesivos: DesglosePrima } | null
+  /**
+   * Fecha de término REAL que el portal fijó (ISO `AAAA-MM-DD`), leída de su formulario: ePAC la ajusta al día 1
+   * del mes (efecto 06/10/2026 → término 01/10/2027). Ausente/`null` = no se leyó (no se supone la pedida).
+   */
+  fechaTerminoPortal?: string | null
   /** Avisos de la compañía (se enseñan SIEMPRE) y del adaptador (lo que supuso o no pudo leer). */
   avisos: string[]
 }

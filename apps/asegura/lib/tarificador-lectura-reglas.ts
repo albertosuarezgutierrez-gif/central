@@ -22,6 +22,8 @@ export type OfertaLectura = {
   primaNetaSucesivos: number | null
   impuestosSucesivos: number | null
   pdfIndice: number | null
+  /** Fecha de término REAL que fijó el portal (ISO; ePAC la ajusta al día 1 del mes). `null` = no se leyó. */
+  fechaTerminoPortal: string | null
 }
 
 export type TrabajoLectura = {
@@ -35,6 +37,7 @@ export type TrabajoLectura = {
 
 const iso = (d: Date | string): string => (d instanceof Date ? d.toISOString() : new Date(d).toISOString())
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+const fechaIso = (v: unknown): string | null => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null)
 
 /** Del jsonb `error` solo salen tipo y mensaje (recortado). */
 export function errorPublico(e: unknown): { tipo: string; mensaje: string } | null {
@@ -72,6 +75,7 @@ export function ofertasPublicas(respuesta: unknown): { ofertas: OfertaLectura[];
       primaNetaSucesivos: num(ds?.primaNetaEur),
       impuestosSucesivos: num(ds?.impuestosEur),
       pdfIndice: indice,
+      fechaTerminoPortal: fechaIso(o.fechaTerminoPortal),
     })
   }
   return {

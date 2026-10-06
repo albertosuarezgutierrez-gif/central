@@ -20,10 +20,11 @@
 //     harness offline sin pulsar nada: `npx tsx scripts/probar-formulario.ts <html-de-evidencia>`.
 
 import type { Frame, Locator, Page } from 'playwright'
-import { comprobarUrl, importeEs, importePuntoDecimal } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, importeEs, importePuntoDecimal } from '@central/module-tarificacion'
 import type { CoberturaOferta, DesglosePrima, FranquiciaOferta, ModalidadPortal, OfertaNormalizada, PdfRef, RiesgoComunidad } from '@central/module-tarificacion'
 import type { AdaptadorPortal, ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { esperarPdf } from '../../descarga-pdf.ts'
 import { acompanar, claveCampo, resolverConFormador, type PasoAcompanado, type ResolucionFormador } from '../../formador.ts'
 
 /**
@@ -271,6 +272,33 @@ export function fechaEs(iso: string): string {
   return `${m[3]}/${m[2]}/${m[1]}`
 }
 
+/**
+ * Fecha tal como la guarda ePAC → ISO. DOM real (06/10/2026): `value="01102027"` (ddmmaaaa sin separadores); en
+ * pantalla puede salir «01/10/2027». Mismo separador en los dos huecos o ninguno; fecha imposible → `null`.
+ */
+export function fechaPortalAIso(t: string | null | undefined): string | null {
+  const m = /^(\d{2})([/.-]?)(\d{2})\2(\d{4})$/.exec((t ?? '').trim())
+  if (!m) return null
+  const [d, mes, a] = [Number(m[1]), Number(m[3]), Number(m[4])]
+  const f = new Date(Date.UTC(a, mes - 1, d))
+  if (f.getUTCFullYear() !== a || f.getUTCMonth() !== mes - 1 || f.getUTCDate() !== d) return null
+  return `${m[4]}-${m[3]}-${m[1]}`
+}
+
+/**
+ * Fecha de término REAL del portal (ePAC la ajusta al día 1 del mes: efecto 06/10/2026 → 01/10/2027).
+ * DOM real (06/10/2026): Datos Básicos `input#fechaTermino`; Tarificar `input#fechaTerminoTarificar` (solo
+ * lectura). Cada uno con un gemelo oculto `#…_fullDate`. Ilegible → `null` (nunca se supone la pedida).
+ */
+export async function leerFechaTermino(raiz: Raiz, id: 'fechaTermino' | 'fechaTerminoTarificar'): Promise<string | null> {
+  for (const sel of [`#${id}`, `#${id}_fullDate`]) {
+    const v = await raiz.locator(sel).first().inputValue({ timeout: 1_000 }).catch(() => null)
+    const iso = fechaPortalAIso(v)
+    if (iso) return iso
+  }
+  return null
+}
+
 /** Exige el dato: si el portal lo pide y no lo tenemos, NO se inventa. */
 function dato<T>(v: T | null | undefined, campo: string): T {
   if (v === null || v === undefined || v === '') {
@@ -445,8 +473,27 @@ async function marcar(raiz: Raiz, e: Entorno, etiqueta: string, valor: boolean):
 
 // ───────────────────────── login y navegación ─────────────────────────
 
+/** Abre la entrada de ePAC. Un 5xx del portal es pasajero: `portal` TRANSITORIO (el runner reintenta una vez). */
+async function abrirEntrada(page: Page): Promise<void> {
+  const r = await page.goto(sel('urlLogin'))
+  const st = r?.status() ?? 0
+  if (st >= 500) throw new ErrorTarificador('portal', `allianz/comunidades: ePAC respondió ${st} en la entrada`, { transitorio: true })
+}
+
+/**
+ * Sesión reutilizada (src/sesion.ts): con las cookies de un trabajo anterior (en memoria, TTL 10 min) se abre la
+ * entrada y, si aparece la cabecera logueada, NO se hace login. Si no aparece, `false`: login normal.
+ */
+async function sesionSirve(page: Page, ctx: ContextoPortal): Promise<boolean> {
+  await abrirEntrada(page)
+  await ctx.exigirSinCaptcha()
+  const ok = await page.getByText('Mediador principal').first().waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false)
+  ctx.log(ok ? 'sesión reutilizada: sin login' : 'sesión guardada no válida: login normal')
+  return ok
+}
+
 async function login(page: Page, ctx: ContextoPortal): Promise<void> {
-  await page.goto(sel('urlLogin'))
+  await abrirEntrada(page)
   await ctx.exigirSinCaptcha()
   // Login por etiqueta/rol (captura del 05/10/2026). Tracing apagado: lo vigila el guardián de la raíz.
   const usuario = page.getByLabel('Usuario', { exact: true })
@@ -668,7 +715,10 @@ async function rellenarRiesgo(raiz: Raiz, page: Page, r: RiesgoComunidad, ctx: C
     const v = c.valor(r)
     if (v === null || v === undefined || v === '') {
       if (c.obligatorio) dato(v, c.etiqueta)
-    } else if (c.aparte) {
+      continue
+    }
+    await ctx.pausaAccion()
+    if (c.aparte) {
       await resolverCodigoPostal(raiz, page, r, ctx, String(v))
     } else if (c.tipo === 'check') {
       await marcar(raiz, e, c.etiqueta, Boolean(v))
@@ -905,6 +955,174 @@ async function leerCalculo(raiz: Raiz, ctx: ContextoPortal, modalidad: Modalidad
   return { costeDatosBasicos, coberturas, franquicias }
 }
 
+// ───────────────────────── varias opciones (variantes de franquicia / RC) ─────────────────────────
+//
+// 🚨 Sin pulsaciones nuevas: una variante SOLO cambia `<select>` nativos de la tabla de partidas de Datos Básicos
+// (`selectOption`, como los desplegables del formulario) y vuelve a pulsar «Calcular» (`calcular()` →
+// `botonCalcular`, ya en la lista blanca). Se lee «COSTE ANUAL DEL SEG.» y la tabla; luego se RESTAURAN los
+// valores originales y se recalcula: el avance a Tarificar (y el PDF) son siempre de la oferta BASE. Si la base no
+// vuelve, se aborta. Lo vigila test/regression-tarificador-rpa.test.ts (sin ctx.pulsar ni click en este bloque).
+
+/** Columna de la tabla de partidas: prefijo del id del control (DOM real 06/10/2026). */
+export type ColumnaPartida = 'estandar' | 'personalizado' | 'franquicia'
+
+export type VarianteOferta = {
+  /** Etiqueta de la oferta extra («Franquicia agua 300 €», «RC 600.000 €»…). */
+  etiqueta: string
+  /** Cambios: partida (`PARTIDAS[].clave`), columna y TEXTO EXACTO de la opción tal como sale en el desplegable. */
+  cambios: readonly { partida: string; columna: ColumnaPartida; opcion: string }[]
+}
+
+/**
+ * Variantes que se recalculan con `riesgo.opciones = true` (máx. 2 por trabajo). VACÍA hasta ver en evidencia qué
+ * opciones admite cada desplegable. Para añadir una, con el texto EXACTO de la opción del DOM, p. ej.:
+ * `{ etiqueta: 'RC 600.000 €', cambios: [{ partida: 'rc_suma_asegurada', columna: 'personalizado', opcion: '600.000,00' }] }`.
+ */
+export const VARIANTES: readonly VarianteOferta[] = []
+export const MAX_VARIANTES = 2
+
+type Original = { control: Locator; valor: string }
+
+/** El `<select>` NATIVO de una partida en una columna (exactamente uno); si no, `null`. */
+async function selectDePartida(raiz: Raiz, partida: string, columna: ColumnaPartida): Promise<Locator | null> {
+  const p = PARTIDAS.find((x) => x.clave === partida)
+  if (!p) return null
+  const c = filaPorEtiqueta(raiz, p.fila, p.grupo).locator(`select[id^="${columna}"]`)
+  return (await c.count().catch(() => 0)) === 1 ? c : null
+}
+
+/** Coste anual de la modalidad en Datos Básicos (marco actual); `null` si no se lee. */
+async function costeActual(page: Page, modalidad: ModalidadPortal): Promise<{ marco: Frame; coste: number | null } | null> {
+  const marco = await marcoCon(page, costesAnuales, 'COSTE ANUAL DEL SEG.', 0).catch(() => null)
+  if (!marco) return null
+  const v = await costesAnuales(marco).nth(modalidad === 'estandar' ? 0 : 1).inputValue({ timeout: 1_000 }).catch(() => '')
+  return { marco, coste: importeEs(v) }
+}
+
+/** Tras «Calcular», espera (máx. ~15 s) a que el coste cumpla `cond`; devuelve el último leído. */
+async function esperarCoste(page: Page, modalidad: ModalidadPortal, cond: (c: number) => boolean): Promise<{ marco: Frame | null; coste: number | null; cumple: boolean }> {
+  let ultimo: { marco: Frame; coste: number | null } | null = null
+  for (let i = 0; i < 30; i++) {
+    ultimo = await costeActual(page, modalidad)
+    if (ultimo && ultimo.coste !== null && cond(ultimo.coste)) return { ...ultimo, cumple: true }
+    await page.waitForTimeout(500)
+  }
+  return { marco: ultimo?.marco ?? null, coste: ultimo?.coste ?? null, cumple: false }
+}
+
+/** Pone los `<select>` de la variante. Devuelve SIEMPRE los originales tocados (para restaurar) y, si no pudo, el motivo. */
+async function aplicarVariante(raiz: Raiz, v: VarianteOferta): Promise<{ originales: Original[]; motivo: string | null }> {
+  const originales: Original[] = []
+  for (const c of v.cambios) {
+    const control = await selectDePartida(raiz, c.partida, c.columna)
+    if (!control) return { originales, motivo: `sin desplegable único en ${c.partida}/${c.columna}` }
+    const valor = await control.inputValue()
+    try {
+      await control.selectOption({ label: c.opcion }, { timeout: 5_000 })
+    } catch {
+      return { originales, motivo: `${c.partida}/${c.columna} no admite «${c.opcion}»` }
+    }
+    originales.push({ control, valor })
+    await control.blur().catch(() => undefined)
+  }
+  return { originales, motivo: null }
+}
+
+/** Mismos controles de la variante en el marco actual (el servlet puede recargarlo al calcular). */
+async function relocalizar(raiz: Raiz, v: VarianteOferta, originales: readonly Original[]): Promise<Original[]> {
+  const out: Original[] = []
+  for (let i = 0; i < originales.length; i++) {
+    const c = v.cambios[i]
+    const control = c ? await selectDePartida(raiz, c.partida, c.columna) : null
+    if (!control) throw new ErrorTarificador('portal', `allianz/comunidades: no se pudo volver a localizar ${c?.partida ?? '?'} para restaurar la base`)
+    out.push({ control, valor: originales[i].valor })
+  }
+  return out
+}
+
+/** Vuelve a los valores originales, recalcula y EXIGE el coste base. Si no vuelve → `portal`: no se avanza. */
+async function restaurarBase(page: Page, ctx: ContextoPortal, modalidad: ModalidadPortal, v: VarianteOferta, originales: readonly Original[], costeBase: number): Promise<Frame> {
+  const actual = (await costeActual(page, modalidad))?.marco
+  if (!actual) throw new ErrorTarificador('portal', `allianz/comunidades: tras la variante «${v.etiqueta}» no se encuentra Datos Básicos para restaurar la base`)
+  for (const o of (await relocalizar(actual, v, originales)).reverse()) {
+    await o.control.selectOption({ value: o.valor }, { timeout: 5_000 })
+    await o.control.blur().catch(() => undefined)
+  }
+  await calcular(page, ctx)
+  const b = await esperarCoste(page, modalidad, (c) => c === costeBase)
+  if (!b.cumple || !b.marco) {
+    throw new ErrorTarificador('portal', `allianz/comunidades: tras la variante «${v.etiqueta}» no se recuperó el coste base; no se avanza con otra configuración`)
+  }
+  return b.marco
+}
+
+/**
+ * Recalcula cada variante declarada (máx. `MAX_VARIANTES`) y devuelve una oferta extra por variante con su
+ * etiqueta. Precio = «COSTE ANUAL DEL SEG.» de Datos Básicos (prima anual de renovación; sin desglose ni PDF: eso
+ * solo lo da Tarificar, que es de la base). Un fallo de una variante se avisa y no tumba la base; si la base no
+ * se puede restaurar → `portal` (nunca se avanza con una variante puesta).
+ */
+export async function calcularVariantes(
+  page: Page,
+  raiz: Raiz,
+  ctx: ContextoPortal,
+  modalidad: ModalidadPortal,
+  costeBase: number | null,
+  variantes: readonly VarianteOferta[] = VARIANTES,
+): Promise<{ ofertas: OfertaNormalizada[]; avisos: string[] }> {
+  const ofertas: OfertaNormalizada[] = []
+  const avisos: string[] = []
+  const lista = variantes.slice(0, MAX_VARIANTES)
+  if (lista.length === 0) return { ofertas, avisos: ['Varias opciones pedidas, pero el adaptador aún no tiene variantes declaradas (VARIANTES vacía)'] }
+  if (costeBase === null) return { ofertas, avisos: ['Varias opciones: sin coste base legible en Datos Básicos, no se recalculan variantes'] }
+  const nombre = modalidad === 'estandar' ? 'Estándar' : 'Personalizado'
+  let marco: Raiz = raiz
+  for (const v of lista) {
+    await ctx.pausa()
+    let originales: Original[] = []
+    try {
+      const a = await aplicarVariante(marco, v)
+      originales = a.originales
+      if (a.motivo) {
+        avisos.push(`Variante «${v.etiqueta}» no calculada: ${a.motivo}`)
+        continue
+      }
+      await calcular(page, ctx)
+      const r = await esperarCoste(page, modalidad, (c) => c !== costeBase)
+      if (!r.marco || r.coste === null) {
+        avisos.push(`Variante «${v.etiqueta}»: sin coste legible tras recalcular`)
+        continue
+      }
+      const lectura = await leerCalculo(r.marco, ctx, modalidad)
+      ofertas.push({
+        compania: 'Allianz',
+        producto: `Comunidades 2020 · ${nombre} · ${v.etiqueta}`,
+        primaAnualEur: r.coste,
+        primaNetaEur: null,
+        fraccionamiento: null,
+        importeReciboEur: r.coste,
+        coberturas: lectura.coberturas,
+        franquicias: lectura.franquicias,
+        validaHasta: null,
+        referenciaPortal: null,
+        pdf: null,
+        desglose: null,
+        avisos: [
+          `Variante «${v.etiqueta}» de la oferta base: precio = «COSTE ANUAL DEL SEG.» de Datos Básicos (prima anual de renovación), sin desglose ni PDF`,
+          ...(r.cumple ? [] : ['El coste no cambió respecto a la base tras recalcular: puede que la variante no afecte al precio o que el portal no recalculase; revisar a mano']),
+        ],
+      })
+    } catch (e) {
+      if (e instanceof EmisionBloqueadaError) throw e
+      avisos.push(`Variante «${v.etiqueta}» no calculada: ${e instanceof Error ? e.message.slice(0, 160) : 'error'}`)
+    } finally {
+      // Siempre se vuelve a la base (aunque la variante fallase a medias) y se exige el coste base de nuevo.
+      if (originales.length > 0) marco = await restaurarBase(page, ctx, modalidad, v, originales, costeBase)
+    }
+  }
+  return { ofertas, avisos }
+}
+
 /**
  * Pestaña «Tarificar»: tabla Anual / Sucesivos con Prima Neta, Impuestos y Prima Total. Aquí los importes
  * van con PUNTO decimal y sin miles (`importePuntoDecimal`, no `importeEs`). Lo que no se lee es `null`.
@@ -935,46 +1153,46 @@ export async function leerPrimas(raiz: Raiz): Promise<{ anual: DesglosePrima; su
 }
 
 /**
- * PDF del proyecto: pestaña «Proyecto» (no graba nada). La descarga se captura en paralelo
- * con la pulsación de «Proyecto»; se obtiene el fichero, se verifica que sea PDF y se
- * convierte a base64.
+ * Pestaña «Proyecto» de Tarificar. DOM real (06/10/2026, trabajo 083c0927):
+ * `<td id="MENU" onclick="goSelected('MENU'); sendEventMenuPDFJasper();">Proyecto</td>` (genera el PDF por
+ * `/drrg18/jsp4pdf/proyecto.jsp`, sin grabar). Por id Y texto EXACTO: nunca «Proyecto Ampliado»
+ * (`td#EMISION_PROJ`, la bloquea además el guard) ni las vecinas de alta.
  */
-async function descargarProyecto(page: Page, raiz: Raiz, ctx: ContextoPortal, nombre: string): Promise<PdfRef | null> {
-  const pestana = raiz.getByText('Proyecto', { exact: true }).first()
-  const descargar = page.waitForEvent('download', { timeout: 45_000 })
+export function pestanaProyecto(raiz: Raiz): Locator {
+  return raiz.locator('td#MENU').filter({ hasText: textoExacto('Proyecto') })
+}
 
-  // Lanzar descarga en paralelo con la pulsación
-  const [, descarga] = await Promise.all([
-    ctx.abrirProyecto(pestana),
-    descargar,
-  ]).catch(() => [undefined, null] as const)
+/** Segundos de espera al PDF del proyecto (el precio ya está leído: esto solo puede añadir el PDF). */
+const TOPE_PDF_MS = 40_000
 
-  if (!descarga) {
-    ctx.log('pdf: no se descargó tras abrir «Proyecto»')
-    return null
-  }
-
-  // Leer el fichero desde el stream
-  let bytes: Buffer | null = null
+/**
+ * PDF del proyecto: tras leer el precio, pulsa «Proyecto» (`ctx.abrirProyecto`: fase Tarificar, una vez, guard
+ * de emisión) y captura el PDF en TODO el contexto (descarga, ventana nueva o respuesta PDF: `esperarPdf`).
+ * Cualquier fallo del portal → `aviso` legible y `pdf: null`: el precio se devuelve igual. Lo ÚNICO que se
+ * relanza es el guard de emisión (`EmisionBloqueadaError`): eso nunca se traga.
+ */
+export async function descargarProyecto(page: Page, raiz: Raiz, ctx: ContextoPortal, nombre: string): Promise<{ pdf: PdfRef | null; aviso: string | null }> {
   try {
-    const trozos: Buffer[] = []
-    const flujo = await descarga.createReadStream()
-    for await (const t of flujo) {
-      trozos.push(Buffer.from(t))
+    const pestana = pestanaProyecto(raiz)
+    const n = await pestana.count()
+    if (n !== 1) throw new ErrorTarificador('portal', `allianz/comunidades: la pestaña «Proyecto» (td#MENU) resuelve a ${n} elementos`)
+    const espera = esperarPdf(page, TOPE_PDF_MS)
+    try {
+      await ctx.abrirProyecto(pestana)
+    } catch (e) {
+      espera.cancelar()
+      throw e
     }
-    bytes = Buffer.concat(trozos)
+    const r = await espera.promesa
+    if (!r) throw new ErrorTarificador('portal', `allianz/comunidades: «Proyecto» no produjo ningún PDF en ${TOPE_PDF_MS / 1000} s (ni descarga, ni ventana, ni respuesta PDF)`)
+    ctx.log(`pdf: proyecto capturado por ${r.origen} (${r.bytes.length} bytes)`)
+    return { pdf: ctx.adjuntarPdf(nombre, r.bytes), aviso: null }
   } catch (e) {
-    ctx.log(`pdf: error al leer la descarga: ${e instanceof Error ? e.message : 'error'}`)
-    return null
+    if (e instanceof EmisionBloqueadaError) throw e
+    const msg = e instanceof ErrorTarificador ? e.message : `allianz/comunidades: «Proyecto» falló (${e instanceof Error ? e.message.slice(0, 160) : 'error'})`
+    ctx.log(`pdf: ${msg}`)
+    return { pdf: null, aviso: `PDF del proyecto no obtenido: ${msg}` }
   }
-
-  // Un PDF de verdad empieza por «%PDF»; si no, no se adjunta (no se sube cualquier cosa).
-  if (!bytes || bytes.length < 5 || bytes.subarray(0, 4).toString('latin1') !== '%PDF') {
-    ctx.log('pdf: lo recibido no es un PDF; se omite')
-    return null
-  }
-
-  return ctx.adjuntarPdf(nombre, bytes)
 }
 
 export const allianzComunidades: AdaptadorPortal = {
@@ -985,7 +1203,7 @@ export const allianzComunidades: AdaptadorPortal = {
     // UNA modalidad por trabajo (por defecto estándar). Querer las dos = DOS trabajos (dos pasadas):
     // tras «Aceptar» el formulario avanza y no hay vuelta atrás sin riesgo de dejar el portal a medias.
     const modalidad: ModalidadPortal = riesgo.modalidad ?? 'estandar'
-    await login(page, ctx)
+    if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
     await ctx.trasLogin()
     await acompanarPaso(page, ctx, 'login', 'Cabecera de ePAC logueada (aparece «Mediador principal»)')
     await abrirComunidades(page, ctx)
@@ -994,9 +1212,13 @@ export const allianzComunidades: AdaptadorPortal = {
     ctx.log(`formulario en el marco «${formulario.name() || '(sin nombre)'}»`)
     await rellenarRiesgo(formulario, page, riesgo, ctx)
     await acompanarPaso(page, ctx, 'formulario', 'Datos Básicos de «Comunidades 2020» con todos los campos rellenados', { modalidadPedida: modalidad })
+    // Término REAL antes de Calcular (ePAC lo ajusta al día 1 del mes); en Tarificar se vuelve a leer y manda aquella.
+    const terminoDatosBasicos = await leerFechaTermino(formulario, 'fechaTermino')
     const resultado = await calcular(page, ctx)
     await acompanarPaso(page, ctx, 'tras_calcular', '«COSTE ANUAL DEL SEG. SEGÚN OPCIÓN» con importe tras pulsar Calcular', { modalidadPedida: modalidad })
     const calculo = await leerCalculo(resultado, ctx, modalidad)
+    // Varias opciones (apagado por defecto): variantes recalculadas en Datos Básicos y base RESTAURADA antes del avance.
+    const extra = riesgo.opciones ? await calcularVariantes(page, resultado, ctx, modalidad, calculo.costeDatosBasicos) : { ofertas: [], avisos: [] }
     // Datos Básicos → elegir modalidad → «Aceptar» (SOLO avanza a Tarificar; guardado por fases).
     await ctx.elegirOpcion(modalidad)
     await ctx.pausa()
@@ -1012,14 +1234,19 @@ export const allianzComunidades: AdaptadorPortal = {
     if (primas.anual.primaTotalEur === null) {
       throw new ErrorTarificador('portal', 'allianz/comunidades: la pestaña Tarificar no trajo «Prima Total» anual legible')
     }
-    const pdf = await descargarProyecto(page, tarificar, ctx, `proyecto-comunidades-2020-${modalidad}.pdf`)
+    const fechaTerminoPortal = (await leerFechaTermino(tarificar, 'fechaTerminoTarificar')) ?? terminoDatosBasicos
+    const { pdf, aviso: avisoPdf } = await descargarProyecto(page, tarificar, ctx, `proyecto-comunidades-2020-${modalidad}.pdf`)
     await acompanarPaso(page, ctx, 'proyecto', 'Pestaña Tarificar tras abrir «Proyecto» (descarga del PDF)', { modalidadPedida: modalidad })
     const avisos = [
       `Modalidad ${modalidad === 'estandar' ? 'Estándar' : 'Personalizado'} (la otra requiere otro trabajo)`,
       '«Anual» de ePAC = primer recibo (prorrateado hasta el día 1 del mes); la prima anual de renovación es la de «Sucesivos» (ver desglose)',
       'Capitales y franquicias tal como los muestra la tabla de ePAC; «estado» solo en las asistencias (Incluida/Excluida)',
     ]
-    if (pdf === null) avisos.push('PDF del proyecto no obtenido (TODO: confirmar si «Proyecto» da descarga o ventana)')
+    if (avisoPdf) avisos.push(avisoPdf)
+    avisos.push(...extra.avisos)
+    if (fechaTerminoPortal && riesgo.fechaTermino && fechaTerminoPortal !== riesgo.fechaTermino) {
+      avisos.push(`ePAC fijó la fecha de término en ${fechaEs(fechaTerminoPortal)} (pedida: ${fechaEs(riesgo.fechaTermino)})`)
+    }
     if (calculo.costeDatosBasicos !== null && primas.sucesivos.primaTotalEur !== null && calculo.costeDatosBasicos !== primas.sucesivos.primaTotalEur) {
       avisos.push('El coste de Datos Básicos no coincide con la Prima Total de sucesivos: revisar a mano')
     }
@@ -1036,8 +1263,9 @@ export const allianzComunidades: AdaptadorPortal = {
       referenciaPortal: null,
       pdf,
       desglose: { anual: primas.anual, sucesivos: primas.sucesivos },
+      fechaTerminoPortal,
       avisos,
     }
-    return { ofertas: [oferta] }
+    return { ofertas: [oferta, ...extra.ofertas] }
   },
 }

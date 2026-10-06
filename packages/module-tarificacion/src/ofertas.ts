@@ -91,6 +91,7 @@ export function validarOfertas(entrada: unknown, numPdfs: number): ValidacionOfe
       referenciaPortal: txt(o.referenciaPortal),
       pdf,
       desglose: desglose(o.desglose),
+      fechaTerminoPortal: fecha(o.fechaTerminoPortal),
       avisos: Array.isArray(o.avisos) ? o.avisos.map(txt).filter((a): a is string => a !== null) : [],
     })
   })

@@ -24,7 +24,7 @@ test('proyecta estado, fechas, prima total, desglose y pdfs; nada más', () => {
   const t = proyectarTrabajo(fila, respuesta)
   assert.equal(t.estado, 'ok')
   assert.equal(t.creadoEn, '2026-10-06T10:00:00.000Z')
-  assert.deepEqual(t.ofertas, [{ compania: 'allianz', producto: 'Comunidades 2020', primaTotalAnual: 1234.5, primaNeta: 1000, impuestos: 234.5, primaTotalSucesivos: null, primaNetaSucesivos: null, impuestosSucesivos: null, pdfIndice: 0 }])
+  assert.deepEqual(t.ofertas, [{ compania: 'allianz', producto: 'Comunidades 2020', primaTotalAnual: 1234.5, primaNeta: 1000, impuestos: 234.5, primaTotalSucesivos: null, primaNetaSucesivos: null, impuestosSucesivos: null, pdfIndice: 0, fechaTerminoPortal: null }])
   assert.deepEqual(t.pdfs, [{ indice: 0, nombre: 'oferta.pdf' }])
   const s = JSON.stringify(t)
   for (const prohibido of ['documentoId', 'doc-1', 'referenciaPortal', 'coberturas', 'avisos']) assert.ok(!s.includes(prohibido), prohibido)
@@ -37,6 +37,14 @@ test('propaga la columna de sucesivos (prima anual de renovación) sin confundir
   const [o] = proyectarTrabajo(fila, r).ofertas
   assert.equal(o.primaTotalAnual, 342.77)
   assert.deepEqual([o.primaTotalSucesivos, o.primaNetaSucesivos, o.impuestosSucesivos], [347.55, 300, 47.55])
+})
+
+test('propaga la fecha de término real del portal solo si es ISO (si no, null: no se supone)', () => {
+  const base = respuesta.ofertas[0]
+  const ok = proyectarTrabajo(fila, { ofertas: [{ ...base, fechaTerminoPortal: '2027-10-01' }] }).ofertas[0]
+  assert.equal(ok.fechaTerminoPortal, '2027-10-01')
+  const mal = proyectarTrabajo(fila, { ofertas: [{ ...base, fechaTerminoPortal: '01102027' }] }).ofertas[0]
+  assert.equal(mal.fechaTerminoPortal, null)
 })
 
 test('un trabajo que no está ok no enseña ofertas; el error sale sin url ni ids de evidencia', () => {

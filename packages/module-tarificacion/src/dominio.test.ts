@@ -172,6 +172,13 @@ describe('modalidad del riesgo', () => {
     expect(p.ok && p.riesgo.modalidad).toBe('personalizado')
     expect(validarRiesgoComunidad({ ...base, modalidad: 'ambas' }, hoy).ok).toBe(false)
   })
+  it('opciones (variantes): ausente → null (apagado); booleano pasa; otra cosa, error', () => {
+    const r = validarRiesgoComunidad(base, hoy)
+    expect(r.ok && r.riesgo.opciones).toBeNull()
+    const s = validarRiesgoComunidad({ ...base, opciones: true }, hoy)
+    expect(s.ok && s.riesgo.opciones).toBe(true)
+    expect(validarRiesgoComunidad({ ...base, opciones: 'si' }, hoy).ok).toBe(false)
+  })
 })
 
 describe('ofertas', () => {
@@ -205,6 +212,14 @@ describe('ofertas', () => {
     expect(validarOfertas([{ ...oferta, primaAnualEur: 0 }], 1).ok).toBe(false)
     expect(validarOfertas([], 0).ok).toBe(false)
     expect(validarOfertas([oferta], 0).ok).toBe(false)
+  })
+  it('fecha de término del portal: ISO válida pasa; ausente o mal formada = null', () => {
+    const r = validarOfertas([{ ...oferta, fechaTerminoPortal: '2027-10-01' }], 1)
+    expect(r.ok && r.ofertas[0].fechaTerminoPortal).toBe('2027-10-01')
+    const s = validarOfertas([oferta], 1)
+    expect(s.ok && s.ofertas[0].fechaTerminoPortal).toBeNull()
+    const t = validarOfertas([{ ...oferta, fechaTerminoPortal: '01/10/2027' }], 1)
+    expect(t.ok && t.ofertas[0].fechaTerminoPortal).toBeNull()
   })
   it('franquicia general no declarada = null, nunca 0', () => {
     const r = validarOfertas([{ ...oferta, franquicias: [] }], 1)

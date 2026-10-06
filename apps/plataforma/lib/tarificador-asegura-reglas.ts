@@ -140,6 +140,48 @@ export function riesgoDesdeFormulario(f: FormularioRiesgo): { ok: true; riesgo: 
   return { ok: true, riesgo }
 }
 
+// ─── Infraseguro (06/10/2026): aviso, nunca bloqueo ─────────────────────────
+
+/**
+ * Coste de REPOSICIÓN orientativo de un edificio residencial plurifamiliar, en €/m² construido, por calidad.
+ * Fuente ORIENTATIVA (no es tabla de Allianz): módulos de presupuesto de ejecución material de los colegios de
+ * arquitectos (COAS/COAM, vivienda plurifamiliar ~700–900 €/m² en 2025) + gastos generales, beneficio industrial,
+ * honorarios, licencias e IVA. Ajustar aquí si Alberto o la compañía dan otra referencia. «No consta» = normal.
+ */
+export const COSTE_REPOSICION_EUR_M2 = { normal: 1_100, alta: 1_400, lujo: 1_800 } as const
+
+/** Por debajo de este porcentaje del estimado se avisa de posible infraseguro (regla proporcional). */
+export const UMBRAL_INFRASEGURO = 0.8
+
+export type EstimacionInfraseguro = {
+  m2: number
+  /** m² × €/m² de su calidad. */
+  estimado: number
+  eurM2: number
+  /** Calidad usada (la del formulario o `normal` si no consta). */
+  calidad: keyof typeof COSTE_REPOSICION_EUR_M2
+  calidadSupuesta: boolean
+  capital: number
+  /** capital / estimado (0–∞). */
+  ratio: number
+  infraseguro: boolean
+}
+
+/**
+ * Estima el capital de reposición (m² construidos × €/m²) y lo compara con el capital de edificación tecleado.
+ * `null` si falta o no se entiende el m² o el capital: sin dato no se afirma nada (ni «bien» ni «infraseguro»).
+ */
+export function estimarInfraseguro(f: Pick<FormularioRiesgo, 'm2Construidos' | 'capitalContinente' | 'calidadConstruccion'>): EstimacionInfraseguro | null {
+  const m2 = entero(f.m2Construidos)
+  const capital = importeDeTexto(f.capitalContinente)
+  if (m2 === null || m2 <= 0 || capital === null) return null
+  const calidad = f.calidadConstruccion || 'normal'
+  const eurM2 = COSTE_REPOSICION_EUR_M2[calidad]
+  const estimado = m2 * eurM2
+  const ratio = capital / estimado
+  return { m2, estimado, eurM2, calidad, calidadSupuesta: !f.calidadConstruccion, capital, ratio, infraseguro: ratio < UMBRAL_INFRASEGURO }
+}
+
 // ─── Pre-relleno con el último riesgo del cliente (07/10/2026) ─────────────
 
 export type UltimoRiesgoBot = { riesgo: Record<string, unknown>; creadoEn: string | null }
@@ -209,6 +251,8 @@ export type OfertaBot = {
   primaNeta: number | null; impuestos: number | null; pdfIndice: number | null
   /** Sucesivos de ePAC = prima anual completa de renovación. `null`/ausente = no se leyó (≠ 0). */
   primaTotalSucesivos?: number | null; primaNetaSucesivos?: number | null; impuestosSucesivos?: number | null
+  /** Fecha de término REAL que fijó Allianz (AAAA-MM-DD; ePAC la ajusta al día 1 del mes). `null`/ausente = no se leyó. */
+  fechaTerminoPortal?: string | null
 }
 export type TrabajoBot = {
   estado: string; creadoEn: string; actualizadoEn: string
@@ -234,6 +278,7 @@ export function leerTrabajoBot(v: unknown): TrabajoBot | null {
       compania: typeof r.compania === 'string' ? r.compania : '', producto: typeof r.producto === 'string' ? r.producto : '',
       primaTotalAnual: total, primaNeta: num(r.primaNeta), impuestos: num(r.impuestos), pdfIndice: num(r.pdfIndice),
       primaTotalSucesivos: num(r.primaTotalSucesivos), primaNetaSucesivos: num(r.primaNetaSucesivos), impuestosSucesivos: num(r.impuestosSucesivos),
+      fechaTerminoPortal: typeof r.fechaTerminoPortal === 'string' && FECHA_ISO.test(r.fechaTerminoPortal) ? r.fechaTerminoPortal : null,
     })
   }
   const pdfs: { indice: number; nombre: string }[] = []

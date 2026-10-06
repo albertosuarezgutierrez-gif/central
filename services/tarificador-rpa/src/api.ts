@@ -15,7 +15,8 @@ export function leerConfig(env: Record<string, string | undefined>): Config {
   return { jobId, apiUrl: apiUrl.replace(/\/+$/, ''), secreto }
 }
 
-export type Trabajo = { id: string; compania: string; ramo: string; riesgo: unknown }
+/** `leaseHasta` (ISO): hasta cuándo asegura acepta el resultado; el runner no reintenta si no cabe. */
+export type Trabajo = { id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta?: string }
 
 export async function pedirTrabajo(c: Config): Promise<{ estado: 'ok'; trabajo: Trabajo } | { estado: 'no_disponible'; status: number }> {
   const res = await fetch(`${c.apiUrl}/api/tarificador/trabajo/${encodeURIComponent(c.jobId)}`, {

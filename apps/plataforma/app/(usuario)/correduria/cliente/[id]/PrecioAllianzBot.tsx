@@ -9,7 +9,7 @@ import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
   OPCIONES_LISTA_PROPIETARIOS, OPCIONES_TIPO_VIVIENDA, OPCIONES_USO, SONDEO_MAX_MS, SONDEO_MS,
-  fechaCorta, formularioConUltimoRiesgo, formularioInicial, leerTrabajoBot, leerUltimoRiesgoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaPrecio, vistaTrabajo,
+  estimarInfraseguro, fechaCorta, formularioConUltimoRiesgo, formularioInicial, leerTrabajoBot, leerUltimoRiesgoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaPrecio, vistaTrabajo,
   type FormularioRiesgo, type TrabajoBot,
 } from '@/lib/tarificador-asegura-reglas'
 
@@ -114,6 +114,8 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
   }
 
   const vista = trabajo ? vistaTrabajo(trabajo) : null
+  // Aviso de infraseguro (orientativo, no bloquea): m² × €/m² por calidad frente al capital de edificación tecleado.
+  const infra = estimarInfraseguro(f)
   const enCurso = trabajoId !== null && (!trabajo || sigueEnCurso(trabajo.estado))
 
   return (
@@ -171,6 +173,12 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
                 <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
                   Allianz no calcula sin el valor de reposición de la edificación. Importes en euros, p. ej. 1.500.000.
                 </p>
+                {infra?.infraseguro && (
+                  <div role="status" style={{ fontSize: 12, lineHeight: 1.4, padding: '8px 10px', borderRadius: 8, background: 'var(--warning-bg)', color: 'var(--warning)', overflowWrap: 'anywhere' }}>
+                    Posible infraseguro: estimado {eur(infra.estimado)} ({infra.m2.toLocaleString('es-ES', { useGrouping: 'always' })} m² × {eur(infra.eurM2)}/m², calidad {infra.calidad}{infra.calidadSupuesta ? ' supuesta' : ''}).
+                    El capital puesto es el {Math.round(infra.ratio * 100)} % de esa cifra. Es una estimación orientativa: puedes pedir el precio igualmente.
+                  </div>
+                )}
                 <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
                   Tipo, uso y lista tienen que coincidir con la etiqueta exacta del desplegable de Allianz (se sugieren las ya vistas; si el portal no la admite el bot avisa con un error de datos).
                 </p>
@@ -221,7 +229,7 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
                   </div>
                 )}
                 {trabajo?.estado === 'ok' && trabajo.ofertas.map((o, i) => {
-                  const p = vistaPrecio(o)
+                  const p = vistaPrecio(o, o.fechaTerminoPortal)
                   return (
                   <div key={`${o.producto}-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6 }}>
                     <div style={{ fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{o.compania ? `${o.compania.charAt(0).toUpperCase()}${o.compania.slice(1)} · ` : ''}{o.producto}</div>
@@ -236,7 +244,7 @@ export default function PrecioAllianzBot({ clienteId, contacto }: { clienteId: s
                     )}
                     {o.pdfIndice !== null && (
                       <a href={`/api/correduria/tarificador/trabajo/${trabajoId}/pdf/${o.pdfIndice}`} style={{ ...btnStyle('secundario'), textDecoration: 'none', justifySelf: 'start' }}>
-                        <Download size={16} aria-hidden /> Descargar PDF
+                        <Download size={16} aria-hidden /> Descargar proyecto de Allianz (PDF)
                       </a>
                     )}
                   </div>

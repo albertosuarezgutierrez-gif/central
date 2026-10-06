@@ -127,6 +127,7 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
   const asesoramientoJuridico = booleano(e.asesoramientoJuridico, 'asesoramientoJuridico', errores)
   const impagoCuotas = booleano(e.impagoCuotas, 'impagoCuotas', errores)
   const ite = booleano(e.ite, 'ite', errores)
+  const opciones = booleano(e.opciones, 'opciones', errores)
 
   if (errores.length) return { ok: false, errores }
   return {
@@ -161,6 +162,7 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
       ite,
       fechaTermino,
       modalidad: (modalidad as RiesgoComunidad['modalidad']) ?? null,
+      opciones,
       anioConstruccion,
       anioRehabilitacion,
       m2Construidos,

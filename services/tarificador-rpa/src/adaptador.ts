@@ -23,6 +23,13 @@ export type ContextoPortal = ContextoTarificacion & {
    * permitida, y `acompanar(page, ctx.formador, paso, …)` en los `PUNTOS_ENGANCHE` (src/formador.ts).
    */
   formador?: ContextoFormador
+  /** Pausa corta «humana» (300–1200 ms) antes de cada acción (campo o pulsación). */
+  pausaAccion: () => Promise<void>
+  /**
+   * El contexto arrancó con la sesión guardada en memoria (src/sesion.ts). El adaptador comprueba que sirve y,
+   * si sirve, se salta el login; si no, hace login normal. Nunca se le dan las cookies: solo esta bandera.
+   */
+  sesionReutilizada: boolean
 }
 
 export type AdaptadorPortal = TarificadorAdapter<Page, RiesgoComunidad, ContextoPortal> & {
