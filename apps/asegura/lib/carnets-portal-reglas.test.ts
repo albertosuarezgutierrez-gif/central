@@ -6,9 +6,11 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import { PREFIJO_HISTORIAL_CARNET_PROPIO } from '@central/module-seguros-portal'
+import { revisarCarnet } from '@central/module-seguros'
 
 import {
   destinoCarnet,
+  hoyParaCarnet,
   leerOperacionCarnet,
   statusCarnetPortal,
   textoHistorialCarnet,
@@ -131,4 +133,16 @@ test('la ruta del puente no lee clienteId y usa safeParse, nunca `as` sobre el c
   assert.match(ruta, /leerOperacionCarnet\(/)
   const reglas = readFileSync(new URL('./carnets-portal-reglas.ts', import.meta.url), 'utf8')
   assert.match(reglas, /safeParse\(/)
+})
+
+test('🪤 H4: «hoy» del carné es el de MADRID: a las 23:30 UTC (01:30 del día siguiente en Madrid) un carné de «hoy» vale', () => {
+  const ahora = new Date('2026-10-10T23:30:00Z')
+  assert.equal(hoyParaCarnet(ahora), '2026-10-11')
+  assert.notEqual(ahora.toISOString().slice(0, 10), hoyParaCarnet(ahora))
+  const ok = revisarCarnet({ tipo: 'B', fecha: '2026-10-11', fechaNacimiento: '1980-01-01', hoy: hoyParaCarnet(ahora) })
+  assert.equal(ok.ok, true)
+  const src = readFileSync(new URL('./cartera-edicion.ts', import.meta.url), 'utf8')
+  const guardar = src.slice(src.indexOf('export async function guardarCarnet'), src.indexOf('export async function guardarCarnet') + 1500)
+  assert.match(guardar, /hoy: hoyParaCarnet\(\)/)
+  assert.doesNotMatch(guardar, /toISOString\(\)\.slice\(0, 10\)/)
 })

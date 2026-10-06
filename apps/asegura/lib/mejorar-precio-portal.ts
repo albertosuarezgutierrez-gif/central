@@ -44,6 +44,8 @@ export type ResultadoPeticionPrecio =
   | { estado: 'invalido'; motivo: string }
   /** No es una póliza de una ficha vinculada a esta identidad (con nivel de operar), o no existe. */
   | { estado: 'no_encontrada' }
+  /** La ficha dueña SÍ está vinculada pero de solo consulta: se dice aparte de «no encontrada». */
+  | { estado: 'sin_permiso' }
   /** ES suya, pero no está en cartera en vigor (`sqlCarteraEnVigor`): el portal dice «ya no está en vigor». */
   | { estado: 'no_en_vigor' }
   | { estado: 'fuera_de_ventana' }
@@ -85,6 +87,7 @@ export async function pedirMejorarPrecio(
   const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'poliza', polizaId)
   if (ficha.estado === 'sin_ficha') return { estado: 'sin_ficha' }
   if (ficha.estado === 'ajena') return { estado: 'no_encontrada' }
+  if (ficha.estado === 'sin_permiso') return { estado: 'sin_permiso' }
   // El route convierte lo lanzado en 503 con el clasificador de errores de cartera.
   if (ficha.estado === 'error') throw new Error(`mejorar-precio: ${ficha.causa}`)
 

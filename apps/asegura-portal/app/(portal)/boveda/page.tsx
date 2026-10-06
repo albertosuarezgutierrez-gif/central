@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import {
   canalDeCompania,
   entradaValida,
+  nivelPuedeOperar,
   plazoComunicacion,
   type FilaCompania,
 } from '@central/module-seguros-portal'
@@ -26,7 +27,7 @@ import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
-import { aceptaMejorarPrecio, puedeOfrecerSolicitarBaja, vencimientosEnVentana } from '@/lib/vencimientos'
+import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { FilaDeclarada } from './FilaDeclarada'
 import { FiltroVigencia } from './FiltroVigencia'
@@ -158,7 +159,8 @@ export default async function Boveda({
   const vencimientosP = firmasP.then((f) =>
     vista === 'seguros'
       ? vencimientosEnVentana(
-          cartera.propias.flatMap((t) => t.polizas),
+          // Solo fichas donde el vínculo OPERA: el enlace «Mejorar el precio» llevaría a un rechazo del servidor.
+          titularesQueOperan(cartera.propias).flatMap((t) => t.polizas),
           hoyMadrid,
           f === null ? undefined : polizasConBajaEnMarcha(f, { conConfirmadas: true }),
         )
@@ -614,6 +616,7 @@ export default async function Boveda({
               conNombre={bloqueMias?.conNombre ?? false}
               hoy={hoy}
               bajasAbiertas={puedePedirBaja ? bajasAbiertas : null}
+              bajasParaMejorar={firmas === null ? null : polizasConBajaEnMarcha(firmas, { conConfirmadas: true })}
             />
           ))
         )}
@@ -722,7 +725,7 @@ export default async function Boveda({
           <MisDatos lectura={contacto} reparos={contacto.estado === 'ok' ? reparosDeContacto(contacto.contacto) : []} />
           <CambioCuenta />
           <GestionContactos inicial={contactosLista} />
-          <MisCarnets inicial={carnetsPorTitular} tipos={TIPOS_CARNET} hoy={new Date().toISOString().slice(0, 10)} />
+          <MisCarnets inicial={carnetsPorTitular} tipos={TIPOS_CARNET} hoy={hoyMadrid} />
           <ConsentimientoComercial inicial={consentimientoComercial} />
           <TusDatos inicial={supresiones} />
         </>
@@ -843,6 +846,7 @@ function Titular({
   conNombre,
   hoy,
   bajasAbiertas = null,
+  bajasParaMejorar = null,
 }: {
   titular: TitularPortal
   grupo: GrupoCartera
@@ -851,7 +855,11 @@ function Titular({
   hoy: Date
   /** Solo en «mias»: las pólizas con baja en marcha. `null` = no se ofrece «Solicitar baja» (ajenas, vista de corredor, puente caído). */
   bajasAbiertas?: ReadonlySet<string> | null
+  /** Como `bajasAbiertas` pero con las confirmadas (lo que mira la página «Mejorar el precio»). */
+  bajasParaMejorar?: ReadonlySet<string> | null
 }) {
+  // «Solicitar baja» y «Mejorar el precio» solo donde el vínculo OPERA; el servidor rechaza el resto (sin_permiso).
+  const opera = nivelPuedeOperar(titular.nivel)
   if (titular.polizas.length === 0) {
     return (
       <p className="tenue" style={{ margin: '0 0 12px', fontSize: 14 }}>
@@ -880,8 +888,8 @@ function Titular({
               key={p.id}
               p={p}
               deOtro={grupo === 'autorizadas' ? titular.nombre : null}
-              puedeSolicitarBaja={grupo === 'mias' && puedeOfrecerSolicitarBaja(p, bajasAbiertas)}
-              puedeMejorarPrecio={aceptaMejorarPrecio(p)}
+              puedeSolicitarBaja={grupo === 'mias' && opera && puedeOfrecerSolicitarBaja(p, bajasAbiertas)}
+              puedeMejorarPrecio={puedeOfrecerMejorarPrecio(p, titular.nivel, bajasParaMejorar)}
             />
           ),
         }))}

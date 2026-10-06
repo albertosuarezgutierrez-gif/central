@@ -16,12 +16,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * POST /api/portal/anulacion/solicitar — el cliente pide la baja de SU póliza desde el portal.
  *   { identidadId, polizaId, motivo:'venta'|'precio'|'otro', fechaVenta?, motivoTexto?, ofertaPrecioVista?, competidor?, precioOfrecido? }
  *   → 201 { estado:'creada', id, liberada, liberaSolaAt, advertencia, poliza }
- *   · 403 no_es_tuya (ajena o inexistente: igual) · 409 ya_abierta / sin_ficha / varias_fichas
+ *    · 403 no_es_tuya (ajena o inexistente: igual) / sin_permiso (vinculada, solo consulta) · 409 ya_abierta / sin_ficha / varias_fichas
  *   · 422 no_vigente / invalida / ofrecer_presupuesto · 503 error
  * Como el resto del puente: NO acepta `clienteId`; la ficha sale de `portal_vinculo`. Nace RETENIDA (48 h).
  */
 const STATUS: Record<string, number> = {
-  creada: 201, no_es_tuya: 403, ya_abierta: 409, sin_ficha: 409, varias_fichas: 409,
+  creada: 201, no_es_tuya: 403, sin_permiso: 403, ya_abierta: 409, sin_ficha: 409, varias_fichas: 409,
   no_vigente: 422, invalida: 422, ofrecer_presupuesto: 422, error: 503,
 }
 

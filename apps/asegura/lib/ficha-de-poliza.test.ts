@@ -3,7 +3,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { fichaDeRecurso, fichasOperables, puedeOperar, type VinculoPortal } from './ficha-de-poliza.ts'
+import { fichaDeRecurso, fichasOperables, puedeOperar, NIVELES_QUE_OPERAN, type VinculoPortal } from './ficha-de-poliza.ts'
+import { NIVELES, NIVELES_QUE_OPERAN as OPERAN_PORTAL, nivelPuedeOperar } from '@central/module-seguros-portal'
 
 const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
@@ -50,4 +51,9 @@ test('🪤 «mejorar precio»: ficha por la póliza, y suya-pero-no-en-vigor es 
   const noEncontrada = f.indexOf("if (!p) return { estado: 'no_encontrada' }")
   const noEnVigor = f.indexOf("if (!p.enVigor) return { estado: 'no_en_vigor' }")
   assert.ok(noEncontrada > 0 && noEnVigor > noEncontrada, 'primero «no es tuya», después «no está en vigor»')
+})
+
+test('🪤 H1: el portal ofrece lo mismo que el servidor acepta: NIVELES_QUE_OPERAN del portal == el de asegura', () => {
+  assert.deepEqual([...OPERAN_PORTAL], [...NIVELES_QUE_OPERAN])
+  for (const n of [...NIVELES, 'raro', '']) assert.equal(nivelPuedeOperar(n), puedeOperar(n), n)
 })

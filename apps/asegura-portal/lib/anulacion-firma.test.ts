@@ -109,7 +109,7 @@ test('🪤 /api/anulacion/solicitar: sin sesión 401, vista de corredor 403 ANTE
   assert.match(f, /after\(async/, 'el aviso va tras contestar y no puede tumbar la respuesta')
 })
 
-import { MENSAJE_VARIAS_FICHAS as VARIAS } from './mensajes-ficha.ts'
+import { MENSAJE_VARIAS_FICHAS as VARIAS, MENSAJE_SOLO_CONSULTA } from './mensajes-ficha.ts'
 
 test('🪤 varias_fichas nunca se traduce a «No encontramos esta póliza entre las tuyas»', () => {
   for (const r of [interpretarSolicitud(409, { estado: 'varias_fichas' }), interpretarCodigo(409, { estado: 'varias_fichas' }), interpretarFirma(409, { estado: 'varias_fichas' })]) {
@@ -117,4 +117,14 @@ test('🪤 varias_fichas nunca se traduce a «No encontramos esta póliza entre 
   }
   const sf = interpretarSolicitud(404, { estado: 'no_es_tuya' })
   assert.match((sf as { motivo: string }).motivo, /No encontramos esta póliza/)
+})
+
+test('🪤 H2: sin_permiso (vinculada, solo consulta) tiene texto propio y NO se dice «no es tuya»', () => {
+  const r = interpretarSolicitud(403, { estado: 'sin_permiso' })
+  assert.equal(r.estado, 'no_disponible')
+  assert.equal((r as { motivo: string }).motivo, MENSAJE_SOLO_CONSULTA)
+  assert.match(MENSAJE_SOLO_CONSULTA, /solo consulta.*llámanos/)
+  assert.doesNotMatch(MENSAJE_SOLO_CONSULTA, /tuyas|no es tuya/)
+  // y no_es_tuya sigue siendo el genérico, sin rastro del texto de solo consulta
+  assert.notEqual((interpretarSolicitud(403, { estado: 'no_es_tuya' }) as { motivo: string }).motivo, MENSAJE_SOLO_CONSULTA)
 })

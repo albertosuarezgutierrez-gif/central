@@ -113,3 +113,13 @@ test('las rutas del portal sacan la identidad de la cookie y no aceptan clienteI
   // La pantalla no lleva Zod al navegador.
   assert.doesNotMatch(sinComentarios('../app/(portal)/boveda/MisCarnets.tsx'), /carnets-escritura|from 'zod'/)
 })
+
+test('🪤 H4: «MisCarnets» recibe el día de MADRID (no el UTC): a las 23:30 UTC el máximo de la fecha sería ayer', () => {
+  const page = readFileSync(new URL('../app/(portal)/boveda/page.tsx', import.meta.url), 'utf8')
+  assert.match(page, /<MisCarnets [^>]*hoy=\{hoyMadrid\}/)
+  assert.match(page, /const hoyMadrid = new Date\(\)\.toLocaleDateString\('en-CA', \{ timeZone: 'Europe\/Madrid' \}\)/)
+  // y a esa hora el día UTC y el de Madrid difieren: justo el caso que el viejo `toISOString` fallaba
+  const ahora = new Date('2026-10-10T23:30:00Z')
+  assert.equal(ahora.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }), '2026-10-11')
+  assert.equal(ahora.toISOString().slice(0, 10), '2026-10-10')
+})

@@ -22,8 +22,17 @@
 import { z } from 'zod'
 
 import { PREFIJO_HISTORIAL_CARNET_PROPIO } from '@central/module-seguros-portal'
+import { hoyMadrid } from '@central/module-seguros'
 
 import { fichaDeRecurso, type VinculoPortal } from './ficha-de-poliza.ts'
+
+/**
+ * «Hoy» para validar la fecha de un carné: el día de MADRID, no el UTC. Con `toISOString()` entre las 00:00 y
+ * las 02:00 de Madrid (22:00-24:00 UTC en verano) el servidor aún cree que es ayer y rechaza un carné de hoy.
+ */
+export function hoyParaCarnet(ahora: Date = new Date()): string {
+  return hoyMadrid(ahora)
+}
 
 const Uuid = z.string().trim().uuid()
 /** Texto corto: el tipo y la fecha los valida `revisarCarnet` (la misma regla que el corredor). */

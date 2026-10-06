@@ -69,7 +69,7 @@ import {
   encryptField,
 } from '@central/module-seguros-pii'
 import { prismaAsegura } from './asegura-db'
-import { textoHistorialCarnet, type OrigenCarnet } from './carnets-portal-reglas'
+import { hoyParaCarnet, textoHistorialCarnet, type OrigenCarnet } from './carnets-portal-reglas'
 
 // ─── Cifrado ─────────────────────────────────────────────────────────────────
 
@@ -1086,7 +1086,7 @@ export async function guardarCarnet(
       tipo: entrada.tipo,
       fecha: entrada.fecha,
       fechaNacimiento: descifrarCampo(c.fechaNacimiento),
-      hoy: new Date().toISOString().slice(0, 10),
+      hoy: hoyParaCarnet(),
     })
     if (!r.ok) return invalido(r.motivo, r.campo)
     const id = typeof entrada.id === 'string' && entrada.id.trim() !== '' ? entrada.id.trim() : null

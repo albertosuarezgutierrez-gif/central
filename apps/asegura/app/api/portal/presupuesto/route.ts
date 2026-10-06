@@ -40,7 +40,7 @@ const STATUS: Record<string, number> = {
   ok: 200, codigo_enviado: 200, aceptado: 200, no_encontrado: 404, no_admite: 409, sin_precio: 409,
   sin_email: 422, sin_correo_configurado: 503, fallo_envio: 502, espera: 429, limite_codigos: 429,
   documento_cambiado: 409, sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422,
-  nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, error: 503,
+  nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, sin_permiso: 403, error: 503,
   sin_datos: 409, datos_en_revision: 409, sin_confirmar_datos: 422, invalido: 422, limite: 429,
   // La cuenta: elegirla es un paso más (200); sin ella o con un IBAN que no cuadra, no se firma.
   elegir_cuenta: 200, sin_cuenta: 422, iban_invalido: 422, sin_cifrado: 503,

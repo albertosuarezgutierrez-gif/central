@@ -244,7 +244,7 @@ test('la ruta del puente solicitar: protegida con el secreto del puente, auditad
   const r = readFileSync(new URL('../app/api/portal/anulacion/solicitar/route.ts', import.meta.url), 'utf8')
   assert.match(r, /export const POST = auditado\(/)
   assert.ok(r.indexOf('puentePortalAutorizado(req)') > 0 && r.indexOf('puentePortalAutorizado(req)') < r.indexOf('req.json()'))
-  assert.match(r, /creada: 201, no_es_tuya: 403, ya_abierta: 409/)
+  assert.match(r, /creada: 201, no_es_tuya: 403, sin_permiso: 403, ya_abierta: 409/)
   assert.match(r, /no_vigente: 422/)
   assert.doesNotMatch(r.replace(/\/\*[\s\S]*?\*\//g, ''), /clienteId/, 'nunca acepta clienteId')
 })
@@ -257,4 +257,27 @@ test('el CHECK anulacion_portal_retenida (23514) se reconoce y habla como bloque
   assert.equal(esViolacionRetencionPortal(Object.assign(new Error('violates check constraint "otro_check"'), { code: '23514' })), false)
   assert.equal(esViolacionRetencionPortal(new Error('conexión caída')), false)
   assert.equal(esViolacionRetencionPortal(null), false)
+})
+
+test('🪤 H2: vinculada de solo consulta → `sin_permiso` (propio); no vinculada/inexistente → `no_es_tuya`; nada se consulta ni escribe', async () => {
+  const m = montar({ ficha: { estado: 'sin_permiso' } })
+  assert.equal((await solicitarAnulacionConDeps(m.deps, CORR, IDENT, cuerpo)).estado, 'sin_permiso')
+  assert.equal(m.llamadas.length, 0)
+  assert.equal(m.insertos().length, 0)
+  const aj = montar({ ficha: { estado: 'ajena' } })
+  assert.equal((await solicitarAnulacionConDeps(aj.deps, CORR, IDENT, cuerpo)).estado, 'no_es_tuya')
+})
+
+test('🪤 H2: `fichaPropiaDeRecurso` distingue sin_permiso de ajena y todas las rutas lo mapean (si no, 500)', () => {
+  const cp = readFileSync(new URL('./contacto-portal.ts', import.meta.url), 'utf8')
+  assert.match(cp, /if \(r\.estado === 'ajena' && r\.motivo === 'sin_permiso'\)[\s\S]{0,200}return \{ estado: 'sin_permiso' \}/)
+  for (const ruta of ['anulacion/solicitar', 'anulacion', 'presupuesto', 'carta-mediador']) {
+    const s = readFileSync(new URL(`../app/api/portal/${ruta}/route.ts`, import.meta.url), 'utf8')
+    assert.match(s, /sin_permiso: 403/, ruta)
+  }
+  // Las dos rutas que lo mapean en línea (no con tabla STATUS).
+  for (const ruta of ['datos-emision', 'mejorar-precio']) {
+    const s = readFileSync(new URL(`../app/api/portal/${ruta}/route.ts`, import.meta.url), 'utf8')
+    assert.match(s, /r\.estado === 'sin_permiso' \? 403/, ruta)
+  }
 })
