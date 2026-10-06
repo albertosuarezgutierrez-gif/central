@@ -76,6 +76,16 @@ export {
   type SolicitudPreparada,
 } from './capacidades.ts'
 
+// Formulario canónico de RC general / de actividad (08/10/2026): ramo sin compañía registrada todavía.
+export {
+  AMBITOS_TERRITORIALES_RC,
+  normalizarCnae,
+  validarFormularioRC,
+  type AmbitoTerritorialRc,
+  type FormularioRC,
+  type ValidacionFormularioRC,
+} from './formulario-rc.ts'
+
 // Fichas de producto y coberturas (07/10/2026): catálogo canónico, validador anti-alucinación y comparador.
 export {
   RAMOS_FICHA,
