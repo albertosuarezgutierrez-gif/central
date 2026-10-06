@@ -22,6 +22,7 @@ import { prismaAsegura } from './asegura-db'
 import { borrarCarnet, descifrarCampo, guardarCarnet } from './cartera-edicion'
 import {
   destinoCarnet,
+  resultadoDeDestinoAjeno,
   traducirResultadoCarnet,
   type OperacionCarnetPortal,
   type ResultadoCarnetPortalEscritura,
@@ -164,7 +165,7 @@ export async function escribirCarnetPortal(
   if (d.estado === 'sin_ficha') return { estado: 'sin_ficha' }
   if (d.estado === 'ajena') {
     if (d.motivo !== 'sin_dueno') console.warn(`[carnets-portal] identidad ${op.identidadId}: ${op.accion} de carné rechazado (${d.motivo})`)
-    return { estado: 'no_encontrado' }
+    return resultadoDeDestinoAjeno(d.motivo)
   }
 
   const origen = { origen: 'portal', identidadId: op.identidadId } as const

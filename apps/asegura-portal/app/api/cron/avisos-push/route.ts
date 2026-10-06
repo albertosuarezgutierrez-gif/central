@@ -4,10 +4,10 @@ import { DIAS_VENTANA_AVISO, debeAvisarPush, textoPushObligacion } from '@centra
 import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seguros'
 
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
+import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { mapConConcurrencia } from '@/lib/concurrencia'
 import { prisma } from '@/lib/db'
-import { sinObligacionesDePolizasConBaja } from '@/lib/vencimientos'
+import { obligacionesDebidasDeIdentidad } from '@/lib/obligaciones-debidas'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -84,72 +84,74 @@ export async function GET(req: Request) {
     : []
   const clientePorPoliza = new Map(polizasVivas.map((p) => [p.id, p.clienteId]))
 
-  const debidasDePoliza = enVentana.filter((o) => {
-    if (o.polizaId === null) return true
-    const clienteId = clientePorPoliza.get(o.polizaId)
-    if (!clienteId) return false
-    return clientesPorIdentidad.get(o.identidadId)?.has(clienteId) ?? false
-  })
+  // Por identidad: la decisión de qué es «debido» vive en `obligacionesDebidasDeIdentidad` (puro, con cepos);
+  // aquí solo se orquesta. Una identidad cuyo puente de anulaciones falla se SALTA entera (ni push ni sello:
+  // se reintenta en la siguiente pasada) y un fallo de BD en una identidad no aborta al resto.
+  const porIdentidad = new Map<string, typeof enVentana>()
+  for (const o of enVentana) porIdentidad.set(o.identidadId, [...(porIdentidad.get(o.identidadId) ?? []), o])
 
-  // Una póliza con baja en marcha (por firmar, en revisión, firmada o confirmada) no «renueva» ni «vence»: no se
-  // avisa. El dato sale del puente por identidad; si no se puede leer (`null`) se conserva el comportamiento
-  // de siempre — no se inventa una baja. Solo se pregunta por las identidades con alguna póliza de cartera.
-  const bajasPorIdentidad = new Map<string, ReadonlySet<string> | null>()
-  // En paralelo con tope (CONCURRENCIA_PUENTE): en serie, N identidades = N viajes seguidos al puente.
-  const identidadesConPoliza = [...new Set(debidasDePoliza.filter((o) => o.tipo === 'poliza' && o.polizaId !== null).map((o) => o.identidadId))]
-  await mapConConcurrencia(identidadesConPoliza, CONCURRENCIA_PUENTE, async (id) => {
-    const firmas = await anulacionesPendientes(id).catch(() => null)
-    bajasPorIdentidad.set(id, firmas === null ? null : polizasConBajaEnMarcha(firmas, { conConfirmadas: true }))
-  })
-  const debidas = debidasDePoliza.filter(
-    (o) => sinObligacionesDePolizasConBaja([o], bajasPorIdentidad.get(o.identidadId) ?? null).length > 0,
-  )
-
+  let candidatas = 0
   let avisadas = 0
   let sinSuscripcion = 0
   let sinExito = 0
+  let saltadas = 0
+  let fallidas = 0
 
-  for (const o of debidas) {
-    const subs = await prisma.portalPushSuscripcion.findMany({ where: { identidadId: o.identidadId } })
-    if (subs.length === 0) {
-      sinSuscripcion += 1
-      continue
-    }
-
-    // 🚨 El texto lo decide el TIPO, en el módulo puro: aquí entran también los
-    // recordatorios propios (ITV, caldera, extintores…), y el texto de
-    // renovación de póliza sobre una ITV le dice a alguien que se queda sin
-    // cobertura cuando no es verdad.
-    const { title, body } = textoPushObligacion({ tipo: o.tipo, titulo: o.titulo })
-    const payload = {
-      title,
-      body,
-      icon: '/icono-app',
-      data: { url: '/boveda' },
-    }
-
-    let algunaOk = false
-    for (const s of subs) {
-      const res = await sendWebPush(vapid, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.authKey } }, payload)
-      if (res.ok) algunaOk = true
-      // Suscripción muerta (404/410): se borra para no seguir intentando en cada pasada.
-      // `deleteMany` con `identidadId` (no `delete({ id })`): `s` sale de una consulta ya
-      // acotada a `o.identidadId`, pero la forma segura es la misma pase lo que pase después.
-      if (res.gone) {
-        await prisma.portalPushSuscripcion.deleteMany({ where: { id: s.id, identidadId: o.identidadId } }).catch(() => {})
+  // En paralelo con tope (CONCURRENCIA_PUENTE): en serie, N identidades = N viajes seguidos al puente.
+  const lotes = [...porIdentidad.entries()]
+  await mapConConcurrencia(lotes, CONCURRENCIA_PUENTE, async ([identidadId, obligaciones]) => {
+    try {
+      const r = await obligacionesDebidasDeIdentidad({
+        obligaciones,
+        clientesVinculados: clientesPorIdentidad.get(identidadId) ?? new Set<string>(),
+        clientePorPoliza,
+        leerFirmas: () => anulacionesPendientes(identidadId).catch(() => null),
+      })
+      if (r.estado === 'saltada') {
+        saltadas += 1
+        return
       }
-    }
+      candidatas += r.debidas.length
+      if (r.debidas.length === 0) return
 
-    // Se sella SOLO si al menos un envío se aceptó (mismo criterio que `avisada_at` del correo):
-    // si todos fallaron (red, proveedor caído) se reintenta en la siguiente pasada, no se finge un
-    // envío que no salió.
-    if (algunaOk) {
-      await prisma.portalObligacion.update({ where: { id: o.id }, data: { avisadaPushAt: new Date() } })
-      avisadas += 1
-    } else {
-      sinExito += 1
-    }
-  }
+      const subs = await prisma.portalPushSuscripcion.findMany({ where: { identidadId } })
+      if (subs.length === 0) {
+        sinSuscripcion += r.debidas.length
+        return
+      }
 
-  return NextResponse.json({ estado: 'ok', candidatas: debidas.length, avisadas, sinSuscripcion, sinExito })
+      for (const o of r.debidas) {
+        // 🚨 El texto lo decide el TIPO, en el módulo puro: aquí entran también los
+        // recordatorios propios (ITV, caldera, extintores…), y el texto de
+        // renovación de póliza sobre una ITV le dice a alguien que se queda sin
+        // cobertura cuando no es verdad.
+        const { title, body } = textoPushObligacion({ tipo: o.tipo, titulo: o.titulo })
+        const payload = { title, body, icon: '/icono-app', data: { url: '/boveda' } }
+
+        let algunaOk = false
+        for (const s of subs) {
+          const res = await sendWebPush(vapid, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.authKey } }, payload)
+          if (res.ok) algunaOk = true
+          // Suscripción muerta (404/410): se borra para no seguir intentando en cada pasada.
+          if (res.gone) {
+            await prisma.portalPushSuscripcion.deleteMany({ where: { id: s.id, identidadId } }).catch(() => {})
+          }
+        }
+
+        // Se sella SOLO si al menos un envío se aceptó (mismo criterio que `avisada_at` del correo):
+        // si todos fallaron se reintenta en la siguiente pasada, no se finge un envío que no salió.
+        if (algunaOk) {
+          await prisma.portalObligacion.update({ where: { id: o.id }, data: { avisadaPushAt: new Date() } })
+          avisadas += 1
+        } else {
+          sinExito += 1
+        }
+      }
+    } catch (e) {
+      fallidas += 1
+      console.error('[avisos-push] fallo en una identidad; se sigue con las demás:', e instanceof Error ? e.message : e)
+    }
+  })
+
+  return NextResponse.json({ estado: 'ok', candidatas, avisadas, sinSuscripcion, sinExito, saltadas, fallidas })
 }
