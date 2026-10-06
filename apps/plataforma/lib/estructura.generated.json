@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-05T18:15:19Z",
+  "generadoEn": "2026-10-06T04:52:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -362,7 +362,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
@@ -960,7 +960,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 12
       },
       "asegura-web": {
         "estado": "no",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 198
+        "evidencias": 209
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 152
+        "evidencias": 155
       },
       "rrhh": {
         "estado": "no",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 19
+        "evidencias": 20
       },
       "asegura-portal": {
         "presente": false,
@@ -4089,9 +4089,11 @@
       "/api/operador/llamada",
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/comparar",
+      "/api/operador/oportunidad/consolidar",
       "/api/operador/oportunidad/de-poliza",
       "/api/operador/oportunidad/figuras",
       "/api/operador/oportunidad/llamada",
+      "/api/operador/oportunidad/ofertas",
       "/api/operador/oportunidad/riesgo",
       "/api/operador/oportunidad/tarea",
       "/api/operador/oportunidad/traspasar",
@@ -4129,6 +4131,7 @@
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/portal/anulacion",
+      "/api/portal/anulacion/solicitar",
       "/api/portal/carnets",
       "/api/portal/carta-mediador",
       "/api/portal/contacto",
@@ -4152,6 +4155,7 @@
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
       "/api/anulacion",
+      "/api/anulacion/solicitar",
       "/api/autorizaciones",
       "/api/autorizaciones/[id]",
       "/api/avisos",
@@ -4193,6 +4197,7 @@
       "/api/presupuesto/datos",
       "/api/presupuesto/firma",
       "/api/presupuesto/ia",
+      "/api/presupuesto/pdf",
       "/api/push/desuscribir",
       "/api/push/preferencias",
       "/api/push/suscribir",
@@ -5089,10 +5094,12 @@
       "/api/correduria/linea-base",
       "/api/correduria/oportunidad",
       "/api/correduria/oportunidad/comparar",
+      "/api/correduria/oportunidad/consolidar",
       "/api/correduria/oportunidad/de-poliza",
       "/api/correduria/oportunidad/figuras",
       "/api/correduria/oportunidad/leer",
       "/api/correduria/oportunidad/llamada",
+      "/api/correduria/oportunidad/ofertas",
       "/api/correduria/oportunidad/riesgo",
       "/api/correduria/oportunidad/tarea",
       "/api/correduria/oportunidad/traspasar",
@@ -5392,6 +5399,7 @@
       "/api/admin/empleados/[id]/documentos/confirm",
       "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/empleados/[id]/documentos/presign",
+      "/api/admin/empleados/[id]/enlace",
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/fichajes/exportar",
@@ -5633,6 +5641,7 @@
       "seguros.operational_events",
       "seguros.oportunidad_figura",
       "seguros.oportunidad_historial",
+      "seguros.oportunidad_oferta",
       "seguros.oportunidades",
       "seguros.peticiones",
       "seguros.poliza_coberturas",
@@ -6680,7 +6689,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1578,
+    "apis": 1586,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
