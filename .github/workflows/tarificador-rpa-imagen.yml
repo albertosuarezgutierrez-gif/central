@@ -1,0 +1,73 @@
+# Construye y sube a Fly la imagen del worker del tarificador RPA (services/tarificador-rpa), SIN terminal:
+# GitHub → Actions → «Tarificador RPA · imagen» → Run workflow. Solo manual (workflow_dispatch).
+#
+# Secreto de repo: FLY_API_TOKEN_TARIFICADOR. La PRIMERA vez, token de ORGANIZACIÓN grupo-asegura (para poder
+# crear la app); después, sustitúyelo por el token deploy de la app y revoca el de organización.
+# Resultado: referencia `registry.fly.io/asegura-tarificador:<etiqueta>` en el resumen del run.
+name: Tarificador RPA · imagen
+
+on:
+  workflow_dispatch:
+    inputs:
+      etiqueta:
+        description: 'Etiqueta de la imagen (minúsculas, números, . _ -)'
+        required: true
+        default: 'v20261005'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  imagen:
+    name: Construir y subir imagen
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_TARIFICADOR }}
+      ETIQUETA: ${{ inputs.etiqueta }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@fc53c09e1bc3be6f54706524e3b82c4f462f77be # 1.5
+
+      - name: Comprobar secreto y etiqueta
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::error::Falta el secreto de repo FLY_API_TOKEN_TARIFICADOR (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          if ! printf '%s' "$ETIQUETA" | grep -Eq '^[a-z0-9._-]+$'; then
+            echo "::error::Etiqueta no válida: solo minúsculas, números, punto, guion y guion bajo."
+            exit 1
+          fi
+
+      - name: Crear la app si no existe
+        run: |
+          if ! flyctl status --app asegura-tarificador >/dev/null 2>&1; then
+            flyctl apps create asegura-tarificador --org grupo-asegura || {
+              echo "::error::el token no puede crear apps: usa un token de organización la primera vez o crea la app a mano"
+              exit 1
+            }
+          fi
+
+      - name: Construir y subir la imagen
+        run: |
+          flyctl deploy . \
+            --config services/tarificador-rpa/fly.toml \
+            --dockerfile services/tarificador-rpa/Dockerfile \
+            --build-only --push --remote-only \
+            --image-label "$ETIQUETA"
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Imagen subida"
+            echo
+            echo "\`registry.fly.io/asegura-tarificador:${ETIQUETA}\`"
+            echo
+            echo "Ponla en Vercel (central-asegura) como \`TARIFICADOR_FLY_IMAGE\`."
+          } >> "$GITHUB_STEP_SUMMARY"

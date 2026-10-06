@@ -8,7 +8,8 @@ Worker de Fly + orquestador en asegura. Una máquina efímera por trabajo; cola 
 
 ## 2. Crear app Fly en grupo-asegura
 [ ] `fly auth login` (si no está logueado).
-[ ] `fly apps create asegura-tarificador --org grupo-asegura` (región por defecto está bien; se fuerza cdg en Dockerfile).
+[ ] `fly apps create asegura-tarificador --org grupo-asegura` (región por defecto está bien; `fly.toml` fuerza cdg).
+[ ] **Sin terminal:** salta este paso; el workflow del paso 4 crea la app si no existe (ver abajo).
 
 ## 3. Establecer secretos de Fly (credenciales + worker)
 [ ] Generar secreto del worker: `openssl rand -hex 32` → copiar valor completo.
@@ -22,13 +23,14 @@ fly secrets set --app asegura-tarificador --stage \
 ## 4. Construir e impulsar imagen
 [ ] `cd /home/user/central && fly deploy . --config services/tarificador-rpa/fly.toml --dockerfile services/tarificador-rpa/Dockerfile --build-only --push --image-label v20261005`
 [ ] Anotar referencia completa: `registry.fly.io/asegura-tarificador:v20261005`
+[ ] **Alternativa sin terminal:** GitHub → Actions → «Tarificador RPA · imagen» → Run workflow (etiqueta `v20261005`). Usa el secreto de repo `FLY_API_TOKEN_TARIFICADOR`: la primera vez, un token de ORGANIZACIÓN grupo-asegura (para que pueda crear la app); después, sustitúyelo por el token deploy de la app (paso 5) y revoca el de organización. La referencia sale en el resumen del run.
 
 ## 5. Token Fly limitado (para Vercel)
 [ ] `fly tokens create deploy -a asegura-tarificador` → copiar el valor completo.
 
 ## 6. Variables en Vercel (central-asegura)
 [ ] Proyecto: `central-asegura` | Settings | Environment Variables. Añadir:
-   - `TARIFICADOR_RPA_ACTIVO` = `0` (apagado hasta paso 7)
+   - `TARIFICADOR_RPA_ACTIVO` = `false` (apagado hasta paso 7; cualquier valor distinto de `1` lo apaga)
    - `TARIFICADOR_WORKER_SECRET` = <valor de paso 3>
    - `FLY_API_TOKEN` = <token de paso 5>
    - `TARIFICADOR_FLY_APP` = `asegura-tarificador`
@@ -40,7 +42,7 @@ fly secrets set --app asegura-tarificador --stage \
 [ ] `TARIFICADOR_RPA_ACTIVO` = `1` en Vercel; Redeploy.
 [ ] Encolar trabajo mínimo (verificar): `curl -X POST https://api.grupoasegura.es/api/operador/tarificador/encolar -H "Authorization: Bearer $OPERADOR_SECRET" -H "Content-Type: application/json" -d '{"correduriaId":"...", "oportunidadId":null, "clienteId":"...", "polizaId":null, "compania":"ALLIANZ_EPAC", "ramo":"comunidades", "riesgo":{...}, "solicitadoPor":"operador"}' | jq`
 [ ] Mirar `select * from seguros.tarificacion_trabajos where compania = 'ALLIANZ_EPAC' order by created_at desc limit 1` y comparar precio en ePAC a mano.
-[ ] `TARIFICADOR_RPA_ACTIVO` = `0` en Vercel; Redeploy.
+[ ] `TARIFICADOR_RPA_ACTIVO` = `false` en Vercel (apagado); Redeploy.
 
 ## 8. Pendientes (NO bloqueantes)
 - Enganchar `barrerTarificadorRpa` a un cron de operador.
