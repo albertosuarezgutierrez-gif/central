@@ -861,7 +861,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
           AND p.merged_into_poliza_id IS NULL
           AND rx.updated_at > now() - ($1 || ' hours')::interval
           AND rx.fecha_efecto_actual IS NOT NULL
-          AND (rx.situacion::text = 'anulado' OR ${primaNum('rx')} = 0)
+          AND ((rx.situacion::text = 'anulado' AND COALESCE(${primaNum('rx')}, 0) >= 0) OR ${primaNum('rx')} = 0)
           AND NOT EXISTS (
             SELECT 1 FROM poliza_recibos rc
             WHERE rc.poliza_id = p.id
