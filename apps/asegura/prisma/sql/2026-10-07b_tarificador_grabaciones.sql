@@ -9,8 +9,7 @@
 -- 🚨 TARIFICAR ≠ EMITIR: nada de esto pulsa nada en ningún portal. El mapa es documentación; un botón que
 --    casa con el patrón de emisión sale PROHIBIDO aunque la IA diga otra cosa (`validarPantallaMapa`).
 --
--- ⚠️ NO APLICADA. Las rutas `/api/operador/tarificador/grabaciones*` responden 503 `tabla_sin_crear` con
---    un mensaje claro mientras no se aplique; nada más depende de ella.
+-- ⚠️ APLICADA en producción el 06/10/2026 (migraciones tarificador_grabaciones_2026_10_07b).
 --
 -- Qué hace (una transacción; idempotente):
 --   1. `tarificador_grabaciones`: la grabación (compañía, ramo, producto, nota) + el mapa (jsonb) y su

@@ -151,6 +151,7 @@ export async function listarTarificacionesConPdf(correduriaId: string, limite: n
 
 export type ResultadoExtraccion =
   | { estado: 'no_encontrada' }
+  | { estado: 'sin_ramo'; mensaje: string }
   | { estado: 'sin_pdf'; mensaje: string }
   | { estado: 'sin_texto'; mensaje: string }
   | { estado: 'error_ia'; mensaje: string }
@@ -185,9 +186,10 @@ export async function extraerCoberturas(correduriaId: string, tarificacionId: st
       select ramo, respuesta from seguros.tarificaciones
       where id = ${tarificacionId}::uuid and correduria_id = ${correduriaId}::uuid and canal = 'rpa'`)[0]
     if (!t) return { estado: 'no_encontrada' as const }
+    if (t.ramo === null) return { estado: 'sin_ramo' as const, mensaje: 'la tarificación no tiene ramo' }
     const d = datosProyecto(t.respuesta)
     if (!d || !d.documentoId) return { estado: 'sin_pdf' as const, mensaje: 'Esta tarificación no tiene el PDF del proyecto guardado.' }
-    const ramo = t.ramo ?? 'comunidades'
+    const ramo = t.ramo
     const doc = (await prisma.$queryRaw<{ contenido: Buffer | null }[]>`
       select contenido from seguros.documentos
       where id = ${d.documentoId}::uuid and correduria_id = ${correduriaId}::uuid and mime_type = 'application/pdf'`)[0]

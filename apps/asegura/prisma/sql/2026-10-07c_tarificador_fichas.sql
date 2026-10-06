@@ -11,8 +11,7 @@
 --   · `tarificador_coberturas_presupuesto`: los valores propios de ESE proyecto (capitales, franquicia
 --     elegida, prima), uno por tarificación.
 --
--- ⚠️ NO APLICADA. Sin estas tablas el código degrada: las rutas responden 503 `sin_tabla` con un mensaje
---    claro y la página de plataforma lo enseña. Nada más depende de ellas.
+-- ⚠️ APLICADA en producción el 06/10/2026 (migraciones tarificador_fichas_2026_10_07c).
 --
 -- Sin PII: el condicionado de un producto no lleva datos del tomador; las citas del presupuesto son filas
 -- de capitales/prima. Aun así, solo `prisma_seguros` (la app). Ni `crm_seguros` ni el portal.
