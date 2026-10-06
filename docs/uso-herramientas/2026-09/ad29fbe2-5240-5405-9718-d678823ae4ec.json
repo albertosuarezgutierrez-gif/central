@@ -1,59 +1,60 @@
 {
  "sesion": "ad29fbe2-5240-5405-9718-d678823ae4ec",
  "inicio": "2026-09-21T09:58:35.919Z",
- "fin": "2026-09-21T10:31:03.132Z",
- "llamadas": 139,
+ "fin": "2026-09-25T11:29:32.713Z",
+ "llamadas": 246,
  "categorias": {
   "otro": {
-   "llamadas": 58,
-   "chars_in": 30011,
-   "chars_out": 161067,
+   "llamadas": 83,
+   "chars_in": 58704,
+   "chars_out": 300423,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 6,
+    "ToolSearch": 17,
     "WebSearch": 49,
-    "SubagentHandback": 1,
-    "ReadNotifications": 1,
+    "SubagentHandback": 4,
+    "ReadNotifications": 12,
     "Skill": 1
    }
   },
   "bash": {
-   "llamadas": 56,
-   "chars_in": 18466,
-   "chars_out": 260064,
+   "llamadas": 85,
+   "chars_in": 29520,
+   "chars_out": 330031,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 56
+    "Bash": 85
    }
   },
   "mcp:Gmail": {
-   "llamadas": 16,
-   "chars_in": 18650,
-   "chars_out": 67180,
+   "llamadas": 28,
+   "chars_in": 21531,
+   "chars_out": 150466,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Gmail__search_threads": 5,
-    "mcp__Gmail__get_thread": 1,
-    "mcp__Gmail__create_draft": 4,
-    "mcp__Gmail__send_message": 3,
-    "mcp__Gmail__delete_draft": 3
+    "mcp__Gmail__search_threads": 10,
+    "mcp__Gmail__get_thread": 3,
+    "mcp__Gmail__create_draft": 5,
+    "mcp__Gmail__send_message": 4,
+    "mcp__Gmail__delete_draft": 3,
+    "mcp__Gmail__get_message": 3
    }
   },
   "agente:general-purpose": {
-   "llamadas": 1,
-   "chars_in": 2858,
-   "chars_out": 3042,
+   "llamadas": 4,
+   "chars_in": 11474,
+   "chars_out": 5926,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 1
+    "Agent": 4
    }
   },
   "mcp:Supabase": {
@@ -68,39 +69,83 @@
    }
   },
   "sql": {
-   "llamadas": 1,
-   "chars_in": 517,
-   "chars_out": 916,
+   "llamadas": 4,
+   "chars_in": 2039,
+   "chars_out": 4399,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 1
+    "mcp__Supabase__execute_sql": 4
    }
   },
   "mcp:github": {
-   "llamadas": 4,
-   "chars_in": 3614,
-   "chars_out": 12216,
+   "llamadas": 11,
+   "chars_in": 5059,
+   "chars_out": 32736,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 1,
-    "mcp__github__actions_list": 2
+    "mcp__github__actions_list": 3,
+    "mcp__github__pull_request_read": 4,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__merge_pull_request": 1
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 2,
-   "chars_in": 827,
-   "chars_out": 347,
+   "llamadas": 4,
+   "chars_in": 946,
+   "chars_out": 3330,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
-    "mcp__Claude_Code_Remote__send_later": 1
+    "mcp__Claude_Code_Remote__send_later": 1,
+    "mcp__Claude_Code_Remote__delete_trigger": 1,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1
+   }
+  },
+  "mcp:Google_Calendar": {
+   "llamadas": 6,
+   "chars_in": 11728,
+   "chars_out": 18984,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Calendar__list_events": 2,
+    "mcp__Google_Calendar__create_event": 1,
+    "mcp__Google_Calendar__update_event": 3
+   }
+  },
+  "mcp:Google_Drive": {
+   "llamadas": 12,
+   "chars_in": 18326,
+   "chars_out": 17760,
+   "errores": 3,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 5,
+    "mcp__Google_Drive__read_file_content": 2,
+    "mcp__Google_Drive__create_file": 2,
+    "mcp__Google_Drive__download_file_content": 2,
+    "mcp__Google_Drive__update_file": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 8,
+   "chars_in": 1008,
+   "chars_out": 140364,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 8
    }
   }
  }

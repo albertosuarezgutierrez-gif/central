@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(06/10/2026)** — Grupo ASegura entra en **APROMES** (asociado nº 454, 72 €/mes; ficha firmada con BBVA ****1175). Acuerdos con compañías + productividad, **fase 1** (PR #4388): tablas `seguros.claves_mediador/acuerdos_compania/acuerdo_comisiones/acuerdo_objetivos` (APLICADAS en BD), `module-seguros/acuerdos.ts`, `GET /api/operador/companias/acuerdos`. 🚨 **El PDF de APROMES es confidencial: sus cifras NO van al repo** — se cargan con `scripts/cargar-acuerdos.mts` desde un JSON FUERA del repo (copia en Drive, carpeta APROMES; resumen v2 allí). Cargados 17 acuerdos APROMES (211 líneas) + Allianz directo, todo «sin cotejar»; fase 2 (UI en `Companias.tsx` + ficha `/correduria/companias/[codigo]`, cotejo «Coincide con el PDF») en el mismo PR. Códigos DGSFP de Hiscox (E0231) y Preventiva (C0155) con una sola fuente: confirmar. Pendiente: 6 compañías sin código DGSFP verificado (Admiral, Solunion, Markel, CGPA, Avanza, Stoïk) → no cargadas; `DROP comision_pactada` (ya sin lectores) en PR aparte; estructurar objetivos y asignar claves/códigos CIMA (fase 5). Pedir a APROMES: plantillas SAC para persona física (las suyas son de sociedad), coste del SAC, AXA/Mapfre/Generali y contactos.
+
 **(06/10/2026)** — IA — presupuesto diario global: creada env `AI_GATEWAY_LIMITE_DIARIO_EUR=5` (production+preview) en el proyecto Vercel `plataforma` (antes no existía → default 1€ del código, `lib/ai-gateway.ts`). Redeploy prod dpl_9qD8ieiJxUEazzk9Kz86ZHRzjpec del commit 929f2d1. Sin cambios de código.
 Pendiente: revisar `AI_GATEWAY_LIMITE_MENSUAL` frente a 5€/día.
 

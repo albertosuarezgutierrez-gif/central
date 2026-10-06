@@ -752,6 +752,112 @@ model CompaniaContacto {
   @@map("compania_contactos")
 }
 
+// ─── Acuerdos con compañías y claves de mediador (06/10/2026, fase 1) ────────
+// SQL en prisma/sql/2026-10-06_seguros_acuerdos_companias.sql. Spec:
+// docs/superpowers/specs/2026-10-06-correduria-acuerdos-companias-design.md.
+// Todo lleva `correduriaId` (las hijas lo heredan de su cabecera) y se consulta
+// SIEMPRE filtrando por él (`lib/acuerdos.ts`). Los porcentajes NULL = «no
+// consta», nunca 0 %. Las columnas de texto con CHECK (estado, canal, fuente,
+// tipo, ámbito, base…) se validan con las listas cerradas de
+// `@central/module-seguros/acuerdos.ts`; un valor fuera de lista se declara,
+// no se adivina. Sin relación Prisma a `CompaniaDgs`/`Correduria` a propósito
+// (la FK vive en la BD): así no se toca el modelo que sirve el directorio.
+
+/// Clave de mediador del TENANT en una compañía. `codigosCima` = tal como los
+/// manda CIMA en `datos_especificos.mediador.codigoInterno`.
+model ClaveMediador {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId      String    @map("correduria_id") @db.Uuid
+  companiaCodigoDgs String    @map("compania_codigo_dgs") @db.VarChar(16)
+  estado            String
+  canal             String
+  asociacion        String?
+  codigosCima       String[]  @default([]) @map("codigos_cima")
+  etiqueta          String?
+  fechaAlta         DateTime? @map("fecha_alta") @db.Date
+  fechaBaja         DateTime? @map("fecha_baja") @db.Date
+  notas             String?
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  acuerdos AcuerdoCompania[]
+
+  @@index([correduriaId, companiaCodigoDgs])
+  @@map("claves_mediador")
+}
+
+/// Acuerdo con una compañía (compañía × fuente × vigencia). `claveId` NULL =
+/// sin clave asignada (productividad «pendiente»). `revisadoAt` NULL = extracto
+/// sin cotejar con el documento original: ningún semáforo se pinta verde.
+model AcuerdoCompania {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId       String    @map("correduria_id") @db.Uuid
+  companiaCodigoDgs  String    @map("compania_codigo_dgs") @db.VarChar(16)
+  fuente             String
+  fuenteNombre       String?   @map("fuente_nombre")
+  claveId            String?   @map("clave_id") @db.Uuid
+  vigenciaDesde      DateTime  @map("vigencia_desde") @db.Date
+  vigenciaHasta      DateTime? @map("vigencia_hasta") @db.Date
+  requisitosApertura String?   @map("requisitos_apertura")
+  letraPequena       String?   @map("letra_pequena")
+  documentoFuente    String    @map("documento_fuente")
+  revisadoAt         DateTime? @map("revisado_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  clave      ClaveMediador?    @relation(fields: [claveId], references: [id])
+  comisiones AcuerdoComision[]
+  objetivos  AcuerdoObjetivo[]
+
+  @@unique([correduriaId, companiaCodigoDgs, fuente, vigenciaDesde])
+  @@index([claveId])
+  @@map("acuerdos_compania")
+}
+
+/// Comisión pactada por ramo. `ramo` NULL = no mapeado (se pinta, no se usa para
+/// calcular). `pctNp`/`pctCartera` NULL = no consta, NUNCA 0 %.
+model AcuerdoComision {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  acuerdoId  String      @map("acuerdo_id") @db.Uuid
+  ramo       TipoSeguro?
+  ramoTexto  String      @map("ramo_texto")
+  producto   String?
+  modalidad  String?
+  pctNp      Decimal?    @map("pct_np") @db.Decimal(5, 2)
+  pctCartera Decimal?    @map("pct_cartera") @db.Decimal(5, 2)
+  notas      String?
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  acuerdo AcuerdoCompania @relation(fields: [acuerdoId], references: [id], onDelete: Cascade)
+
+  @@index([acuerdoId])
+  @@map("acuerdo_comisiones")
+}
+
+/// Objetivo de un acuerdo (rappel, mantener clave, apertura). `tramos` lo valida
+/// `leerTramos()`; `ramos` vacío = todos; `criterioCobro` NULL = el
+/// documento no lo dice.
+model AcuerdoObjetivo {
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  acuerdoId            String       @map("acuerdo_id") @db.Uuid
+  tipo                 String
+  ambito               String
+  base                 String
+  criterioCobro        String?      @map("criterio_cobro")
+  ramos                TipoSeguro[] @default([])
+  periodoDesde         DateTime     @map("periodo_desde") @db.Date
+  periodoHasta         DateTime     @map("periodo_hasta") @db.Date
+  tramos               Json         @default("[]")
+  siniestralidadMaxPct Decimal?     @map("siniestralidad_max_pct") @db.Decimal(5, 2)
+  condiciones          String?
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  acuerdo AcuerdoCompania @relation(fields: [acuerdoId], references: [id], onDelete: Cascade)
+
+  @@index([acuerdoId])
+  @@map("acuerdo_objetivos")
+}
+
 model Documento {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId      String    @map("correduria_id") @db.Uuid
