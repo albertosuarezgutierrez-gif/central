@@ -33,8 +33,8 @@ test('elegirFichaValidada: la versión cuyas citas siguen en el PDF; si ninguna 
 })
 
 test('esSinTablaFichas: solo la ausencia de NUESTRAS tablas, no cualquier error', () => {
-  assert.equal(esSinTablaFichas(new Error('relation "seguros.tarificador_fichas" does not exist')), true)
-  assert.equal(esSinTablaFichas(new Error('relation "seguros.otra" does not exist')), false)
+  assert.equal(esSinTablaFichas(new Error('relation "tarificador_fichas" does not exist')), true)
+  assert.equal(esSinTablaFichas(new Error('relation "otra_tabla" does not exist')), false)
   assert.equal(esSinTablaFichas(new Error('permission denied for table tarificador_fichas')), false)
 })
 
