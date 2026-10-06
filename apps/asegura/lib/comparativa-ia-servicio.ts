@@ -30,7 +30,7 @@ export const TIPO_PIDE_LLAMADA = 'pide_llamada'
 const MAX_LLAMADAS_DIA = 3
 const TIMEOUT_IA_MS = 20_000
 
-export type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
+export type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 type Propio = { clienteId: string; ramo: string; tomador: string; retirado: boolean }
 
 export async function propio(correduriaId: string, identidadId: string, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {

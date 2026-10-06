@@ -146,8 +146,14 @@ export async function vinculosDeIdentidad(correduriaId: string, identidadId: str
 export type FichaPropiaDeRecurso =
   | { estado: 'ok'; clienteId: string }
   | { estado: 'sin_ficha' }
-  /** No es de ninguna ficha en la que esta identidad pueda operar (o no existe): el llamador lo dice como su «no encontrado». */
-  | { estado: 'ajena'; motivo: 'sin_dueno' | 'no_vinculada' | 'sin_permiso' }
+  /** No es de ninguna ficha VINCULADA a esta identidad (o no existe): el llamador lo dice como su «no encontrado», igual en los dos casos. */
+  | { estado: 'ajena'; motivo: 'sin_dueno' | 'no_vinculada' }
+  /**
+   * La ficha DUEÑA del recurso SÍ está vinculada a esta identidad, pero con un nivel de solo consulta
+   * (`tarjeta`/`completo`). No revela nada que no vea ya (la ve en su bóveda): el llamador lo dice con
+   * su propio texto («tu acceso es de solo consulta») y NO como «no es tuya».
+   */
+  | { estado: 'sin_permiso' }
   | { estado: 'error'; causa: string }
 
 /** De qué tabla sale el DUEÑO del recurso. Lista cerrada: el nombre va en SQL, nunca viene de fuera. */
@@ -187,9 +193,14 @@ export async function fichaPropiaDeRecurso(
     return { estado: 'error', causa: 'dueno_ilegible' }
   }
   const r = fichaDeRecurso(vinculos, dueno)
+  if (r.estado === 'ajena' && r.motivo === 'sin_permiso') {
+    console.warn(`[contacto-portal] identidad ${identidadId}: ${tipo} ${recursoId} rechazado (sin_permiso)`)
+    return { estado: 'sin_permiso' }
+  }
   if (r.estado === 'ajena') {
-    if (r.motivo !== 'sin_dueno') console.warn(`[contacto-portal] identidad ${identidadId}: ${tipo} ${recursoId} rechazado (${r.motivo})`)
-    return r
+    const motivo = r.motivo === 'sin_dueno' ? 'sin_dueno' : 'no_vinculada'
+    if (motivo !== 'sin_dueno') console.warn(`[contacto-portal] identidad ${identidadId}: ${tipo} ${recursoId} rechazado (${motivo})`)
+    return { estado: 'ajena', motivo }
   }
   return r
 }

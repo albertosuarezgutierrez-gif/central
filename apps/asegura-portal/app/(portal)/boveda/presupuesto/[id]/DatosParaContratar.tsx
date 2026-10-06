@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { MENSAJE_SOLO_CONSULTA } from '@/lib/mensajes-ficha'
 import { fraseDato, type ResultadoDatosParaContratar } from '@/lib/datos-emision'
 import { SubirDni } from './SubirDni'
 
@@ -21,7 +22,9 @@ export function DatosParaContratar({ datos, corredor }: { datos: ResultadoDatosP
   if (datos.estado !== 'ok') {
     const texto = datos.estado === 'otra_ficha'
       ? 'Este presupuesto es de otra persona: los datos para contratarlo los confirma ella desde su propio acceso.'
-      : datos.estado === 'varias_fichas'
+      : datos.estado === 'sin_permiso'
+        ? MENSAJE_SOLO_CONSULTA
+        : datos.estado === 'varias_fichas'
         ? 'Tu correo aparece en más de una ficha y no sabemos cuál es la tuya: escríbenos y lo resolvemos contigo.'
         : 'No tenemos una ficha tuya a la que asociar estos datos: escríbenos y lo resolvemos contigo.'
     return (

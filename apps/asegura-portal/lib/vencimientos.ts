@@ -5,11 +5,20 @@
 // bóveda dejaría de pedir las peticiones mientras el bloque sigue pintándose, y
 // entonces `peticiones === null` («no se pudo saber») enseñaría el botón a quien
 // ya lo pidió.
-import { diasHastaVencimientoPortal, enVentanaVencimientos } from '@central/module-seguros-portal'
+import { diasHastaVencimientoPortal, enVentanaVencimientos, nivelPuedeOperar } from '@central/module-seguros-portal'
 
 import type { PolizaPortal } from './cartera-lectura.ts'
 
 export type Vencimiento = { p: PolizaPortal; dias: number | null }
+
+/**
+ * Solo los titulares (fichas propias) cuyo vínculo deja OPERAR (`gestionar`/`administrar`): el servidor rechaza
+ * «mejorar el precio» y «solicitar baja» sobre una ficha vinculada de solo consulta (`sin_permiso`), así que el
+ * portal no las ofrece ahí. NO relaja nada: solo quita lo que ya se rechazaba.
+ */
+export function titularesQueOperan<T extends { nivel: string }>(titulares: readonly T[]): T[] {
+  return titulares.filter((t) => nivelPuedeOperar(t.nivel))
+}
 
 /**
  * El criterio de PROPIEDAD/VIGOR de la acción «mejorar el precio»: el mismo que aplica el puente de asegura

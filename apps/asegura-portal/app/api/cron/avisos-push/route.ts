@@ -5,6 +5,7 @@ import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seg
 
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
+import { mapConConcurrencia } from '@/lib/concurrencia'
 import { prisma } from '@/lib/db'
 import { sinObligacionesDePolizasConBaja } from '@/lib/vencimientos'
 
@@ -12,6 +13,8 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const MS_DIA = 86_400_000
+/** Consultas simultáneas al puente de asegura (anulaciones pendientes) por pasada del cron. */
+const CONCURRENCIA_PUENTE = 5
 
 /**
  * GET /api/cron/avisos-push — un push por obligación a punto de dejar de ser accionable, al
@@ -92,10 +95,12 @@ export async function GET(req: Request) {
   // avisa. El dato sale del puente por identidad; si no se puede leer (`null`) se conserva el comportamiento
   // de siempre — no se inventa una baja. Solo se pregunta por las identidades con alguna póliza de cartera.
   const bajasPorIdentidad = new Map<string, ReadonlySet<string> | null>()
-  for (const id of new Set(debidasDePoliza.filter((o) => o.tipo === 'poliza' && o.polizaId !== null).map((o) => o.identidadId))) {
+  // En paralelo con tope (CONCURRENCIA_PUENTE): en serie, N identidades = N viajes seguidos al puente.
+  const identidadesConPoliza = [...new Set(debidasDePoliza.filter((o) => o.tipo === 'poliza' && o.polizaId !== null).map((o) => o.identidadId))]
+  await mapConConcurrencia(identidadesConPoliza, CONCURRENCIA_PUENTE, async (id) => {
     const firmas = await anulacionesPendientes(id).catch(() => null)
     bajasPorIdentidad.set(id, firmas === null ? null : polizasConBajaEnMarcha(firmas, { conConfirmadas: true }))
-  }
+  })
   const debidas = debidasDePoliza.filter(
     (o) => sinObligacionesDePolizasConBaja([o], bajasPorIdentidad.get(o.identidadId) ?? null).length > 0,
   )

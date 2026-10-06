@@ -189,7 +189,7 @@ function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado:
   }
 }
 
-type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
+type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 type Base = { f: Fila; clienteId: string } | { estado: 'no_encontrado' } | { estado: 'no_admite'; motivo: string } | SinFicha
 
 async function base(correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string): Promise<Base> {
