@@ -76,9 +76,9 @@ const palabras = (s: string | null | undefined) =>
  */
 export function mismoNombre(a: string | null | undefined, b: string | null | undefined, opts: { exacto?: boolean } = {}): boolean {
   // El OCR a veces pega las palabras («JOSE ANTONIOMARTINAVILA»): idénticos sin espacios = mismo nombre.
-  // Solo igualdad total (con ≥ 2 palabras en alguno), nunca parcial.
+  // Solo igualdad total (con ≥ 2 palabras en AMBOS lados), nunca parcial.
   const sa = sinEspacios(a)
-  if (sa !== '' && sa === sinEspacios(b) && Math.max(palabras(a).length, palabras(b).length) >= 2) return true
+  if (sa !== '' && sa === sinEspacios(b) && Math.min(palabras(a).length, palabras(b).length) >= 2) return true
   const pa = new Set(palabras(a))
   const pb = new Set(palabras(b))
   const [corto, largo] = pa.size <= pb.size ? [pa, pb] : [pb, pa]

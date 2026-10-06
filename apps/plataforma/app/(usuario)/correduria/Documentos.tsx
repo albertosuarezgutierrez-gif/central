@@ -49,6 +49,8 @@ export default function Documentos({
   const [tipo, setTipo] = useState<TipoDocumento>(tipoInicial ?? sugeridos?.[0] ?? 'poliza')
   const [notas, setNotas] = useState('')
   const [ficheros, setFicheros] = useState<File[]>([])
+  /** Cambia al terminar la cola para vaciar el <input type="file"> (los fallidos siguen en `ficheros`). */
+  const [claveInput, setClaveInput] = useState(0)
   /** Resultado de cada fichero de una subida múltiple (uno tras otro). */
   const [lote, setLote] = useState<{ nombre: string; texto: string; ok: boolean; oportunidad: AvisoOportunidadDocumento | 'leyendo' | null }[]>([])
 
@@ -102,39 +104,47 @@ export default function Documentos({
       setLote([...filas])
     }
     let refrescar = false
-    for (let i = 0; i < cola.length; i++) {
-      const fichero = cola[i]
-      const reparo = revisarDocumento({ type: fichero.type, size: fichero.size, name: fichero.name })
-      if (reparo) {
-        pinta(i, { texto: reparo })
-        continue
-      }
-      pinta(i, { texto: 'Subiendo…', oportunidad: leerPoliza ? 'leyendo' : null })
-      try {
-        const form = new FormData()
-        form.append('fichero', fichero)
-        form.append('tipo', tipo)
-        if (notas.trim()) form.append('notas', notas.trim())
-        for (const [k, v] of Object.entries(destino)) if (v) form.append(k, v)
-        const res = await fetch('/api/correduria/documentos', { method: 'POST', body: form })
-        const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
-        if (!res.ok || !j || j.estado !== 'ok') {
-          pinta(i, { texto: String(j?.error ?? j?.motivo ?? `error ${res.status}`), oportunidad: null })
+    const fallidos: File[] = []
+    try {
+      for (let i = 0; i < cola.length; i++) {
+        const fichero = cola[i]
+        const reparo = revisarDocumento({ type: fichero.type, size: fichero.size, name: fichero.name })
+        if (reparo) {
+          fallidos.push(fichero)
+          pinta(i, { texto: reparo })
           continue
         }
-        const d = j.documento as DocumentoResumen
-        setLista((l) => [d, ...(l ?? [])])
-        const o = leerPoliza ? interpretarOportunidadDocumento(j.oportunidad) : null
-        if (o && o.tono === 'ok') refrescar = true
-        pinta(i, { ok: true, texto: j.repetido === true ? 'Guardado. Ojo: este cliente ya tenía un fichero idéntico.' : 'Guardado.', oportunidad: o })
-      } catch (e) {
-        pinta(i, { texto: e instanceof Error ? e.message : String(e), oportunidad: null })
+        pinta(i, { texto: 'Subiendo…', oportunidad: leerPoliza ? 'leyendo' : null })
+        try {
+          const form = new FormData()
+          form.append('fichero', fichero)
+          form.append('tipo', tipo)
+          if (notas.trim()) form.append('notas', notas.trim())
+          for (const [k, v] of Object.entries(destino)) if (v) form.append(k, v)
+          const res = await fetch('/api/correduria/documentos', { method: 'POST', body: form })
+          const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
+          if (!res.ok || !j || j.estado !== 'ok') {
+            fallidos.push(fichero)
+            pinta(i, { texto: String(j?.error ?? j?.motivo ?? `error ${res.status}`), oportunidad: null })
+            continue
+          }
+          const d = j.documento as DocumentoResumen
+          setLista((l) => [d, ...(l ?? [])])
+          const o = leerPoliza ? interpretarOportunidadDocumento(j.oportunidad) : null
+          if (o && o.tono === 'ok') refrescar = true
+          pinta(i, { ok: true, texto: j.repetido === true ? 'Guardado. Ojo: este cliente ya tenía un fichero idéntico.' : 'Guardado.', oportunidad: o })
+        } catch (e) {
+          fallidos.push(fichero)
+          pinta(i, { texto: e instanceof Error ? e.message : String(e), oportunidad: null })
+        }
       }
+    } finally {
+      setFicheros(fallidos)
+      setClaveInput((k) => k + 1)
+      if (fallidos.length === 0) setNotas('')
+      if (refrescar) router.refresh()
+      setOcupado(false)
     }
-    setFicheros([])
-    setNotas('')
-    if (refrescar) router.refresh()
-    setOcupado(false)
   }
 
   async function pedir() {
@@ -292,7 +302,7 @@ export default function Documentos({
         <div style={{ display: 'grid', gap: 8, marginTop: 8, maxWidth: 520 }}>
           <label style={lbl}>
             Tipo
-            <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoDocumento)} style={inp}>
+            <select value={tipo} disabled={ocupado} onChange={(e) => setTipo(e.target.value as TipoDocumento)} style={inp}>
               {tipos.map((t) => (
                 <option key={t} value={t}>
                   {etiquetaTipoDocumento(t)}
@@ -302,17 +312,20 @@ export default function Documentos({
           </label>
           <label style={lbl}>
             Ficheros (PDF o foto, ≤ 10 MB cada uno; puedes elegir varios)
+            {ficheros.length > 0 && <span style={{ color: 'var(--muted)' }}>Pendientes de subir: {ficheros.map((f) => f.name).join(', ')}</span>}
             <input
+              key={claveInput}
               type="file"
               accept="application/pdf,image/*"
               multiple
+              disabled={ocupado}
               onChange={(e) => setFicheros(Array.from(e.target.files ?? []))}
               style={inp}
             />
           </label>
           <label style={lbl}>
             Nota (opcional)
-            <input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="p. ej. «pedido por WhatsApp el 2/9»" style={inp} />
+            <input value={notas} disabled={ocupado} onChange={(e) => setNotas(e.target.value)} placeholder="p. ej. «pedido por WhatsApp el 2/9»" style={inp} />
           </label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" onClick={subir} disabled={ocupado || ficheros.length === 0} style={{ ...btn, fontWeight: 600, gap: 6 }}>

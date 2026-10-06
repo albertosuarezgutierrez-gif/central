@@ -157,3 +157,9 @@ test('🪤 tomador con apellidos pegados en ficha sin DNI: misma ficha, no lead 
   assert.deepEqual(decidirFicha(base), { tipo: 'ficha', clienteId: 'yo', porque: 'nombre' })
   assert.deepEqual(decidirFicha({ ...base, tomador: 'JOSE ANTONIOMARTINRUIZ' }), { tipo: 'lead' })
 })
+
+test('🪤 «Maria Na» no casa con «Mariana» (iguales sin espacios exige ≥2 palabras en ambos lados)', () => {
+  assert.equal(mismoNombre('Mariana', 'Maria Na'), false)
+  assert.equal(mismoNombre('Maria Na', 'Mariana'), false)
+  assert.equal(mismoNombre('JOSE ANTONIOMARTINAVILA', 'Jose Antonio Martin Avila'), true)
+})
