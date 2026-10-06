@@ -1080,7 +1080,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (06/10/2026) Correduría: vencimiento de Oportunidades = aniversario (día+mes, cada año)
 - Ficha cliente: la tarjeta de Oportunidad dice «Vence cada año el 1 de junio»; `EditarVencimiento` pide día+mes y guarda la próxima ocurrencia. Helper puro `lib/correduria/aniversario.ts` (`proximoAniversario`, 29/02→28/02) + tests; el cubo se ordena por próxima ocurrencia.
 - El aviso del cron (`oportunidad_45`, `vencimientoDelCiclo` en module-seguros) YA era anual: sin cambio de BD.
-- Pendiente: texto de `estadoAvisoVencimiento` aún pone el año; la tarea «llamada» no se recrea sola el ciclo siguiente (`apps/asegura/lib/oportunidad-seguimiento.ts`, sin mirar).
+- Llamada anual: `cerrarTarea` (apps/asegura) al completar una llamada de oportunidad abierta crea la del ciclo siguiente (helper `planLlamadaAnual` en module-seguros; idempotente: solo si no queda tarea pendiente). `no_contesta` no la crea; cierres anteriores al cambio no se recuperan.
+- Pendiente: texto de `estadoAvisoVencimiento` aún pone el año.
 
 ## (06/10/2026) Correduría: CP en la cabecera de la ficha de cliente
 - `Cabecera.tsx` (`Contacto`) pinta «CP Ciudad, Provincia» junto al pin. El CP ya llegaba de asegura (`ContactoFicha.codigoPostal`); solo faltaba pintarlo. Sin cambios de BD/puerto.
