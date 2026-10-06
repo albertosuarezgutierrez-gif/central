@@ -10,9 +10,11 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * GET /api/portal/carnets?identidadId= — los carnés de conducir de la ficha
- * vinculada a esa identidad, con su próxima caducidad ya calculada (nunca las
- * fechas de origen — ver la cabecera de `lib/carnets-portal.ts`).
+ * GET /api/portal/carnets?identidadId= — los carnés de conducir de las fichas
+ * vinculadas a esa identidad, AGRUPADOS POR TITULAR, con su próxima caducidad
+ * ya calculada (nunca las fechas de origen — ver `lib/carnets-portal.ts`).
+ * `ok` (un titular, con la lista plana de siempre) · `varios_titulares` (200,
+ * solo `titulares`) · `sin_ficha` (409) · `error` (503).
  *
  * Mismo secreto y misma resolución por `portal_vinculo` que
  * `/api/portal/contacto`: no acepta `clienteId`.
@@ -28,7 +30,7 @@ export async function GET(req: Request) {
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
 
     const r = await caducidadesCarnetDeIdentidad(correduria.id, identidadId)
-    const status = r.estado === 'ok' ? 200 : r.estado === 'error' ? 503 : 409
+    const status = r.estado === 'ok' || r.estado === 'varios_titulares' ? 200 : r.estado === 'error' ? 503 : 409
     return NextResponse.json(r, { status, headers: { 'cache-control': 'no-store' } })
   } catch (e) {
     return NextResponse.json(

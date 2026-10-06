@@ -187,6 +187,22 @@ export type CarnetParaAviso = {
   tipo: string
   /** `YYYY-MM-DD`. */
   fechaCaducidad: string
+  /**
+   * Nombre de la ficha DUEÑA del carné, solo cuando la identidad tiene VARIOS titulares con carné
+   * (`null`/ausente = uno solo: es el suyo y se dice «tu carné», como siempre). Con varios, el texto
+   * nombra a quién es: decir «tu carné» del de otra persona sería mezclar personas.
+   */
+  titular?: string | null
+}
+
+/** «tu carné de conducir (B)» o, con titular, «el carné de conducir (B) de Ana Pérez». */
+export function nombreCarnet(c: Pick<CarnetParaAviso, 'tipo' | 'titular'>): string {
+  const t = typeof c.titular === 'string' ? c.titular.trim() : ''
+  return t === '' ? `tu carné de conducir (${c.tipo})` : `el carné de conducir (${c.tipo}) de ${t}`
+}
+
+function mayuscula(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
 export type EntradaAvisos = {
@@ -487,7 +503,7 @@ export function avisosDe(x: EntradaAvisos): Avisos {
         avisos.push({
           tipo: 'carnet_en_ventana',
           id: c.id,
-          titulo: `Tu carné de conducir (${c.tipo}) caduca pronto`,
+          titulo: `${mayuscula(nombreCarnet(c))} caduca pronto`,
           detalle: `Caduca el ${cuando}. Pide cita en la DGT con tiempo.`,
           ciclo: c.fechaCaducidad.trim().slice(0, 10),
           href: HREF_POR_TIPO.carnet_en_ventana,
@@ -503,7 +519,7 @@ export function avisosDe(x: EntradaAvisos): Avisos {
         avisos.push({
           tipo: 'carnet_caducado',
           id: c.id,
-          titulo: `Nos consta que tu carné de conducir (${c.tipo}) está caducado`,
+          titulo: `Nos consta que ${nombreCarnet(c)} está caducado`,
           detalle: `Según lo que tenemos, caducó el ${cuando}. Si ya lo has renovado, escríbenos para que lo actualicemos; si no, pide cita en la DGT.`,
           href: HREF_POR_TIPO.carnet_caducado,
         })
