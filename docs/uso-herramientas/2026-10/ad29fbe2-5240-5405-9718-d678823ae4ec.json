@@ -1,0 +1,20 @@
+{
+ "sesion": "ad29fbe2-5240-5405-9718-d678823ae4ec",
+ "inicio": "2026-10-06T11:33:05.425Z",
+ "fin": "2026-10-06T11:33:10.578Z",
+ "llamadas": 2,
+ "categorias": {
+  "mcp:Google_Drive": {
+   "llamadas": 2,
+   "chars_in": 190,
+   "chars_out": 31827,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 1,
+    "mcp__Google_Drive__read_file_content": 1
+   }
+  }
+ }
+}
