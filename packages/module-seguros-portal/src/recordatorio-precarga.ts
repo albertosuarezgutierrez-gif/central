@@ -138,7 +138,7 @@ export function precargasDeRecordatorio(x: EntradaPrecargas): Precargas {
       id: `carnet:${c.id}`,
       clave: 'carnet',
       tipo: 'carnet',
-      titulo: titulo(`Carnet de conducir (${c.tipo})`),
+      titulo: titulo(`Carnet de conducir (${c.tipo})${typeof c.titular === 'string' && c.titular.trim() !== '' ? ` de ${c.titular.trim()}` : ''}`),
       fecha: caduca,
       // 🚨 A propósito NO se repite, aunque el catálogo ofrezca «cada 10 años»
       // cuando se pone a mano: la vigencia del carné baja a 5 años a partir de
