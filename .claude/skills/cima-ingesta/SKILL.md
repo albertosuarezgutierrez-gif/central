@@ -149,6 +149,15 @@ suyos: el envío diario no estaba configurado en el portal de mediadores de Mapf
 nuestra tubería. Lección: si una compañía enmudece, lo primero es preguntar a CIMA si la
 compañía tiene activado el envío automático, antes de buscar el fallo en el código.
 
+🚨 **Bajas que llegan tarde (06/10/2026).** El POL Mapfre del 05/10 trajo 47 pólizas, 25 en AN; bajas
+hechas semanas antes (renovación anulada 15/07, recibo anulado 25/08) llegaron ese día **junto con sus REC**:
+el retraso es de la compañía, no de la tubería, y un aviso por «recibo anulado» no habría avisado antes.
+En Mapfre, Automóviles y No Vida no tenían suscritos los ficheros de pólizas (solo Empresas).
+El POL trae `DatosAnulacion` → `polizas.datos_especificos.anulacion {fecha, motivo, detalle}`
+(C0058: IM impago, EX otra entidad/venta, SI siniestralidad). **`baja_motivo` es el motivo del CORREDOR, no el de CIMA.**
+El vigía lo usa: motivo y fecha real en el aviso de fugas, agrupado por cliente, retención según motivo
+(SI no abre llamada), renovación anulada ≠ «no llega», aviso de anulación en bloque y retraso por compañía.
+
 ## Diagnóstico: la ingesta está muda, ¿dónde miro?
 
 En este orden, y **sin saltarse el paso 0**:

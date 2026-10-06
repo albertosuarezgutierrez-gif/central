@@ -27,3 +27,37 @@ test('las retenciones abiertas se anuncian; null (asegura vieja) o 0 no dicen na
   assert.doesNotMatch(mensajeFugas([f()], () => null, null), /retenci/)
   assert.doesNotMatch(mensajeFugas([f()], () => null, 0), /retenci/)
 })
+
+test('el aviso dice el motivo CIMA, la fecha tardía y el último recibo', () => {
+  const m = mensajeFugas([f({ motivo: 'impago', anulacion: 'anulada el 25/08/2026', ultimoRecibo: 'último recibo anulado' })], () => null)
+  assert.match(m, /motivo: impago/)
+  assert.match(m, /anulada el 25\/08\/2026, avisada hoy/)
+  assert.match(m, /último recibo anulado/)
+})
+
+test('sin motivo no inventa nada (comportamiento de siempre)', () => {
+  const m = mensajeFugas([f()], () => null)
+  assert.doesNotMatch(m, /motivo|avisada hoy|recibo/)
+})
+
+test('la nota de «no recuperable» sale en el aviso', () => {
+  assert.match(mensajeFugas([f({ motivo: 'siniestralidad (la compañía no renueva)', nota: 'no recuperable con esa compañía; ofrecer otra' })], () => null), /no recuperable con esa compañía; ofrecer otra/)
+})
+
+test('varias pólizas del mismo cliente = un bloque con el cliente una sola vez', () => {
+  const m = mensajeFugas([f({ id: 'e1', polizaNumero: '1' }), f({ id: 'e2', polizaNumero: '2' })], () => null)
+  assert.match(m, /\(2 pólizas\)/)
+  assert.equal((m.match(/Ana &lt;Pérez&gt;/g) ?? []).length, 1)
+  assert.match(m, /nº 1/)
+  assert.match(m, /nº 2/)
+})
+
+test('mismo nombre pero clienteId distinto NO se funde', () => {
+  const m = mensajeFugas([f({ id: 'e1', clienteId: 'c1' }), f({ id: 'e2', clienteId: 'c2' })], () => null)
+  assert.doesNotMatch(m, /pólizas\)/)
+  assert.equal((m.match(/Ana &lt;Pérez&gt;/g) ?? []).length, 2)
+})
+
+test('el motivo se escapa como HTML', () => {
+  assert.doesNotMatch(mensajeFugas([f({ motivo: '<b>x</b>' })], () => null), /motivo: <b>x/)
+})

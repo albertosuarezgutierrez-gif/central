@@ -192,6 +192,25 @@ export {
   type RenovacionSinLlegar,
   type EmisionSinAviso,
 } from './ingesta.ts'
+
+export {
+  HORAS_VENTANA_ANULACION_BLOQUE,
+  HORAS_RECIBO_ANULADO_SIN_REEMISION,
+  UMBRAL_ANULACION_BLOQUE,
+  MIN_ANULADAS_BLOQUE,
+  evaluarAnulacionesEnBloque,
+  agruparPosiblesBajas,
+  textoAnulacionesEnBloque,
+  textoRenovacionesAnuladas,
+  textoRetrasoAnulacion,
+  textoPosiblesBajas,
+  type FicheroAnulacionFila,
+  type AnulacionEnBloque,
+  type RetrasoAnulacion,
+  type RenovacionAnuladaPorCompania,
+  type PosibleBaja,
+  type PosiblesBajasPorCompania,
+} from './anulacion-bloque.ts'
 export {
   corteSiniestros,
   textoCorteSiniestros,
@@ -960,8 +979,8 @@ export {
 export type { DecisionActividad, MarcaActividad } from './actividad-aviso.ts'
 export { libroVcard, nombreVisible, vcardContacto } from './vcard.ts'
 export type { ContactoMovil, GrupoContacto } from './vcard.ts'
-export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, detectarCambios, esFugaSinExplicar, fotoSospechosa, fotoVacia, nombreEvento } from './detector-cartera.ts'
-export type { Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
+export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, categoriaMotivo, datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, fotoVacia, leerAnulacion, nombreEvento, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo } from './detector-cartera.ts'
+export type { AnulacionEiac, CategoriaMotivo, PlanRetencion, Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
 export { ORIGEN_RETENCION, decidirRetencion } from './retencion-fuga.ts'
 export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
 export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, TIPOS_ANULACION_ENVIO_SOLO, anulacionSeEnviaSola, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
