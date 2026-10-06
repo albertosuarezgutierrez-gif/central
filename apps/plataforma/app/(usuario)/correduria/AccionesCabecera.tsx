@@ -1,5 +1,5 @@
 'use client'
-import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, BookUser } from 'lucide-react'
+import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, BookUser, Bot } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 
 /**
@@ -121,6 +121,13 @@ export default function AccionesCabecera() {
             style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
           >
             <BookUser size={15} strokeWidth={1.75} aria-hidden /> Google Contactos
+          </a>
+          {/* Salud del bot de Allianz, renovaciones de comunidades y cambios de tarifa (07/10/2026). */}
+          <a
+            href="/correduria/tarificador"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <Bot size={15} strokeWidth={1.75} aria-hidden /> Tarificador (bot)
           </a>
         </div>
       </details>
