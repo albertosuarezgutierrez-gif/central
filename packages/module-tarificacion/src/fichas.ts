@@ -389,9 +389,10 @@ export function validarExtraccion(bruto: unknown, ramo: string, texto: string): 
 
 /** FNV-1a de 64 bits (hex). Determinista y sin dependencias: no es criptográfico ni lo necesita. */
 export function fnv1a64(s: string): string {
-  let h = 0xcbf29ce484222325n
-  const p = 0x100000001b3n
-  const m = 0xffffffffffffffffn
+  // Sin literales `123n`: las apps compilan con target < ES2020.
+  let h = BigInt('0xcbf29ce484222325')
+  const p = BigInt('0x100000001b3')
+  const m = BigInt('0xffffffffffffffff')
   for (let i = 0; i < s.length; i++) {
     h ^= BigInt(s.charCodeAt(i))
     h = (h * p) & m
