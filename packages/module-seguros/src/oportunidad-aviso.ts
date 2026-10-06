@@ -198,6 +198,17 @@ export type EstadoAvisoVencimiento =
 
 const fechaEs = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 
+const MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/**
+ * Día + mes en español de una fecha ISO, SIN año («2026-06-01» → «1 de junio»). El vencimiento de una
+ * oportunidad es un aniversario anual: el año no es un dato del seguro, así que no se enseña.
+ */
+export function diaMesEs(iso: string): string {
+  const m = Number(iso.slice(5, 7))
+  return `${Number(iso.slice(8, 10))} de ${MESES_ES[m - 1] ?? ''}`.trim()
+}
+
 /**
  * Qué pasa con el aviso de una oportunidad (03/10/2026): sin vencimiento, NO se avisa y se dice
  * («vencimiento desconocido», no «sin aviso» a secas); con él, el aviso sale
@@ -208,8 +219,8 @@ export function estadoAvisoVencimiento(fecha: string | null | undefined, hoy: st
   if (!vence) return { estado: 'desconocido', texto: 'Vencimiento desconocido: no se avisa. Pídeselo al cliente.' }
   const dias = diasEntre(hoy, vence)
   if (dias <= DIAS_AVISO_OPORTUNIDAD) {
-    return { estado: 'en_ventana', vence, dias, texto: `Vence el ${fechaEs(vence)} (${dias} d): ya toca avisarle.` }
+    return { estado: 'en_ventana', vence, dias, texto: `Vence cada año el ${diaMesEs(vence)} (${dias} d): ya toca avisarle.` }
   }
   const fechaAviso = sumarDias(vence, -DIAS_AVISO_OPORTUNIDAD)
-  return { estado: 'programado', vence, fechaAviso, texto: `Vence el ${fechaEs(vence)}: te aviso el ${fechaEs(fechaAviso)} (${DIAS_AVISO_OPORTUNIDAD} días antes).` }
+  return { estado: 'programado', vence, fechaAviso, texto: `Vence cada año el ${diaMesEs(vence)}: te aviso el ${fechaEs(fechaAviso)} (${DIAS_AVISO_OPORTUNIDAD} días antes).` }
 }

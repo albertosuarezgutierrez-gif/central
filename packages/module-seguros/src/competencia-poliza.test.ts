@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   ahorroFrenteActual, esCanalFinanciera, esMismaCompaniaQueLaActual, objetivoPrioritario, periodoEnAnios, periodoEnMeses, primaActualAnualizada,
 } from './competencia-poliza.ts'
-import { estadoAvisoVencimiento } from './oportunidad-aviso.ts'
+import { diaMesEs, estadoAvisoVencimiento } from './oportunidad-aviso.ts'
 import { seguroAnteriorDe } from './oportunidad-seguimiento.ts'
 
 test('canal financiera: lista única, sin acentos, por «contiene»; sin canal = no se sabe', () => {
@@ -92,9 +92,12 @@ test('aviso de vencimiento: 45 días antes; dentro de la ventana, ya toca', () =
   const lejos = estadoAvisoVencimiento('2026-12-31', '2026-10-03')
   assert.equal(lejos.estado, 'programado')
   assert.equal(lejos.estado === 'programado' && lejos.fechaAviso, '2026-11-16')
+  assert.equal(lejos.texto, 'Vence cada año el 31 de diciembre: te aviso el 16/11/2026 (45 días antes).')
   const cerca = estadoAvisoVencimiento('2026-11-10', '2026-10-03')
   assert.equal(cerca.estado, 'en_ventana')
   assert.equal(cerca.estado === 'en_ventana' && cerca.dias, 38)
+  assert.equal(cerca.texto, 'Vence cada año el 10 de noviembre (38 d): ya toca avisarle.')
+  assert.equal(diaMesEs('2027-06-01'), '1 de junio')
 })
 
 test('SeguroAnterior: pagoUnico y fechaVencimiento viajan solo si se saben; false es un dato', () => {
