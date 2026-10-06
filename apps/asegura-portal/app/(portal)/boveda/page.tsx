@@ -26,7 +26,7 @@ import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
-import { vencimientosEnVentana } from '@/lib/vencimientos'
+import { aceptaMejorarPrecio, puedeOfrecerSolicitarBaja, vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { FilaDeclarada } from './FilaDeclarada'
 import { FiltroVigencia } from './FiltroVigencia'
@@ -150,7 +150,7 @@ export default async function Boveda({
 
   // Anulaciones que el corredor ha preparado y esperan su firma (pieza 2-d-2).
   // `null` = no se pudo saber: no se pinta nada, pero tampoco se afirma que no haya.
-  const firmasP = vista === 'seguros' ? anulacionesPendientes(identidad.id) : Promise.resolve(null)
+  const firmasP = vista === 'seguros' ? anulacionesPendientes(identidad.id).catch(() => null) : Promise.resolve(null)
   // Se calculan DESPUÉS de las firmas: una póliza con baja en marcha no «renueva» (decisión 05/10/2026), y
   // la misma lista decide si se piden las peticiones (si se calcularan dos veces y discreparan, el bloque
   // saldría sin peticiones (`null`) y enseñaría el botón a quien ya pidió). Encadenado para no sumar esperas.
@@ -163,7 +163,7 @@ export default async function Boveda({
         )
       : [],
   )
-  const peticionesP = vencimientosP.then((v) => (v.length > 0 ? peticionesPrecio(identidad.id) : null))
+  const peticionesP = vencimientosP.then((v) => (v.length > 0 ? peticionesPrecio(identidad.id) : null)).catch(() => null)
 
   // «Pendiente de ti» (§Q.4): sus presupuestos vivos, y a los aceptados qué datos les faltan para
   // contratar (puente). Encadenado para que corra en paralelo con firmas y peticiones. Un fallo del
@@ -866,7 +866,8 @@ function Titular({
               key={p.id}
               p={p}
               deOtro={grupo === 'autorizadas' ? titular.nombre : null}
-              puedeSolicitarBaja={grupo === 'mias' && bajasAbiertas !== null && cuentaComoEnVigor(p) && !bajasAbiertas.has(p.id)}
+              puedeSolicitarBaja={grupo === 'mias' && puedeOfrecerSolicitarBaja(p, bajasAbiertas)}
+              puedeMejorarPrecio={aceptaMejorarPrecio(p)}
             />
           ),
         }))}

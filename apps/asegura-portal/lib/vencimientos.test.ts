@@ -57,3 +57,45 @@ test('polizasConBajaEnMarcha: pendientes, en revisión y firmadas; la confirmada
   assert.deepEqual([...polizasConBajaEnMarcha(f)].sort(), ['a', 'b', 'c'])
   assert.deepEqual([...polizasConBajaEnMarcha(f, { conConfirmadas: true })].sort(), ['a', 'b', 'c', 'd'])
 })
+
+import { enVigorParaActuar, estadoMejorarPrecio, aceptaMejorarPrecio, puedeOfrecerSolicitarBaja, sinObligacionesDePolizasConBaja } from './vencimientos.ts'
+
+const base = (id: string, extra: Record<string, unknown> = {}) =>
+  ({ id, vigencia: 'vigente', sustituidaAt: null, fechaVencimiento: new Date('2026-11-01T00:00:00Z'), ...extra }) as unknown as PolizaPortal
+
+test('🪤 «Solicitar baja» solo donde asegura la aceptaría: vigente, no sustituida, sin baja y con puente legible', () => {
+  const sinBajas = new Set<string>()
+  assert.equal(puedeOfrecerSolicitarBaja(base('a'), sinBajas), true)
+  assert.equal(puedeOfrecerSolicitarBaja(base('a', { vigencia: 'pendiente' }), sinBajas), false)
+  assert.equal(puedeOfrecerSolicitarBaja(base('a', { vigencia: 'no_vigente', renovacionSinConfirmar: true }), sinBajas), false)
+  assert.equal(puedeOfrecerSolicitarBaja(base('a', { sustituidaAt: new Date() }), sinBajas), false)
+  assert.equal(puedeOfrecerSolicitarBaja(base('a'), new Set(['a'])), false)
+  assert.equal(puedeOfrecerSolicitarBaja(base('a'), null), false)
+  assert.equal(enVigorParaActuar(base('a')), true)
+})
+
+test('🪤 el enlace a «Mejorar el precio» y la página comparten predicado: sin fecha o sustituida, no', () => {
+  assert.equal(aceptaMejorarPrecio(base('a')), true)
+  assert.equal(aceptaMejorarPrecio(base('a', { fechaVencimiento: null })), false)
+  assert.equal(aceptaMejorarPrecio(base('a', { sustituidaAt: new Date() })), false)
+  assert.equal(aceptaMejorarPrecio(base('a', { vigencia: 'no_vigente' })), false)
+})
+
+test('🪤 la página de mejorar precio: baja en marcha se dice; puente caído (null) no inventa baja', () => {
+  assert.equal(estadoMejorarPrecio(base('a'), new Set()), 'ok')
+  assert.equal(estadoMejorarPrecio(base('a'), new Set(['a'])), 'baja_en_marcha')
+  assert.equal(estadoMejorarPrecio(base('a'), null), 'ok')
+  assert.equal(estadoMejorarPrecio(base('a', { fechaVencimiento: null }), new Set(['a'])), 'no_disponible')
+})
+
+test('🪤 avisos «renueva/vence»: salen las de pólizas con baja en marcha, no los recordatorios propios; null = tal cual', () => {
+  const filas = [
+    { id: '1', tipo: 'poliza', polizaId: 'honda' },
+    { id: '2', tipo: 'itv', polizaId: 'honda' },
+    { id: '3', tipo: 'poliza', polizaId: 'otra' },
+    { id: '4', tipo: 'poliza', polizaId: null },
+  ]
+  assert.deepEqual(sinObligacionesDePolizasConBaja(filas, new Set(['honda'])).map((f) => f.id), ['2', '3', '4'])
+  assert.deepEqual(sinObligacionesDePolizasConBaja(filas, null).map((f) => f.id), ['1', '2', '3', '4'])
+  assert.deepEqual(sinObligacionesDePolizasConBaja(filas, new Set()).map((f) => f.id), ['1', '2', '3', '4'])
+})

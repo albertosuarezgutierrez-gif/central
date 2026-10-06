@@ -37,7 +37,7 @@ import { empiezaMasAdelante, ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBi
  * Lo que se va a la ficha: prima, recibos, coberturas, siniestros abiertos y
  * los teléfonos de la compañía.
  */
-export function FilaPoliza({ p, deOtro, puedeSolicitarBaja = false }: { p: PolizaPortal; deOtro: string | null; puedeSolicitarBaja?: boolean }) {
+export function FilaPoliza({ p, deOtro, puedeSolicitarBaja = false, puedeMejorarPrecio = false }: { p: PolizaPortal; deOtro: string | null; puedeSolicitarBaja?: boolean; puedeMejorarPrecio?: boolean }) {
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = RAMO[p.ramo] ?? p.ramo
   // Si el titular ya es el bien, la compañía baja a la segunda línea; si no, el
@@ -124,7 +124,7 @@ export function FilaPoliza({ p, deOtro, puedeSolicitarBaja = false }: { p: Poliz
       {/* «Solicitar baja»: fuera del <Link> (un botón dentro de un enlace no es HTML válido). Solo en pólizas PROPIAS en vigor
           y sin baja en marcha; lo decide la página, y el servidor lo vuelve a comprobar. */}
       {puedeSolicitarBaja && (
-        <SolicitarBaja polizaId={p.id} titulo={tituloDePoliza(p)} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null} />
+        <SolicitarBaja polizaId={p.id} puedeMejorarPrecio={puedeMejorarPrecio} titulo={tituloDePoliza(p)} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null} />
       )}
     </li>
   )

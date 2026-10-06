@@ -48,6 +48,8 @@ import {
 import { normalizarContacto, revisarEdicion, type EdicionCliente, type TipoContacto } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
+import { fichaDeRecurso, fichasOperables, type VinculoPortal } from './ficha-de-poliza'
+import { Prisma } from './generated/asegura-client'
 import {
   anadirContacto,
   borrarContacto,
@@ -130,6 +132,83 @@ export async function fichaPropiaDe(
     return { estado: 'varias_fichas' }
   }
   return ficha
+}
+
+/** Los vínculos de esa identidad en esta correduría, con su nivel (el de `portal_vinculo`, sin traducir). */
+export async function vinculosDeIdentidad(correduriaId: string, identidadId: string): Promise<VinculoPortal[]> {
+  const filas = await prismaAsegura().$queryRaw<{ cliente_id: string; nivel: string }[]>`
+    select cliente_id::text as cliente_id, nivel
+    from portal_vinculo
+    where correduria_id = ${correduriaId}::uuid and identidad_id = ${identidadId}::uuid`
+  return filas.map((f) => ({ clienteId: f.cliente_id, nivel: f.nivel }))
+}
+
+export type FichaPropiaDeRecurso =
+  | { estado: 'ok'; clienteId: string }
+  | { estado: 'sin_ficha' }
+  /** No es de ninguna ficha en la que esta identidad pueda operar (o no existe): el llamador lo dice como su «no encontrado». */
+  | { estado: 'ajena'; motivo: 'sin_dueno' | 'no_vinculada' | 'sin_permiso' }
+  | { estado: 'error'; causa: string }
+
+/** De qué tabla sale el DUEÑO del recurso. Lista cerrada: el nombre va en SQL, nunca viene de fuera. */
+const DUENO_SQL = {
+  poliza: Prisma.sql`select cliente_id::text as cliente_id from polizas`,
+  presupuesto: Prisma.sql`select cliente_id::text as cliente_id from presupuesto`,
+  anulacion: Prisma.sql`select cliente_id::text as cliente_id from anulacion`,
+} as const
+
+/**
+ * La ficha sobre la que se opera para un recurso concreto (una póliza o algo que cuelga de ella): la DUEÑA
+ * del recurso, si está entre las vinculadas a la identidad y con nivel de operar (`fichaDeRecurso`). Con
+ * varias fichas vinculadas no hay que elegir: la elige la póliza. El llamador sigue filtrando por esa ficha.
+ */
+export async function fichaPropiaDeRecurso(
+  correduriaId: string,
+  identidadId: string,
+  tipo: keyof typeof DUENO_SQL,
+  recursoId: string,
+): Promise<FichaPropiaDeRecurso> {
+  let vinculos: VinculoPortal[]
+  try {
+    vinculos = await vinculosDeIdentidad(correduriaId, identidadId)
+  } catch (e) {
+    console.error('[contacto-portal] no se pudieron leer los vínculos:', e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: 'vinculos_ilegibles' }
+  }
+  if (vinculos.length === 0) return { estado: 'sin_ficha' }
+  let dueno: string | null
+  try {
+    const [f] = await prismaAsegura().$queryRaw<{ cliente_id: string | null }[]>(
+      Prisma.sql`${DUENO_SQL[tipo]} where id = ${recursoId}::uuid and correduria_id = ${correduriaId}::uuid`,
+    )
+    dueno = f?.cliente_id ?? null
+  } catch (e) {
+    console.error(`[contacto-portal] no se pudo leer el dueño de ${tipo}:`, e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: 'dueno_ilegible' }
+  }
+  const r = fichaDeRecurso(vinculos, dueno)
+  if (r.estado === 'ajena') {
+    if (r.motivo !== 'sin_dueno') console.warn(`[contacto-portal] identidad ${identidadId}: ${tipo} ${recursoId} rechazado (${r.motivo})`)
+    return r
+  }
+  return r
+}
+
+/**
+ * Las fichas en las que la identidad puede OPERAR, para LISTAR lo que tiene pendiente (p. ej. anulaciones
+ * por firmar, carnés). Leer de todas a la vez no es elegir una: cada fila sigue siendo de su ficha.
+ */
+export async function fichasOperablesDe(
+  correduriaId: string,
+  identidadId: string,
+): Promise<{ estado: 'ok'; clienteIds: string[] } | { estado: 'sin_ficha' } | { estado: 'error'; causa: string }> {
+  try {
+    const ids = fichasOperables(await vinculosDeIdentidad(correduriaId, identidadId))
+    return ids.length === 0 ? { estado: 'sin_ficha' } : { estado: 'ok', clienteIds: ids }
+  } catch (e) {
+    console.error('[contacto-portal] no se pudieron leer los vínculos:', e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: 'vinculos_ilegibles' }
+  }
 }
 
 /** Lo que el cliente puede mandar: su dirección de contacto y sus dos canales. */

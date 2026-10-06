@@ -17,7 +17,60 @@ export type Vencimiento = { p: PolizaPortal; dias: number | null }
  * enseñara algo que el puente rechaza, el cliente vería «No encontramos esta póliza entre las tuyas».
  */
 export function ofrecibleParaMejorarPrecio(p: Pick<PolizaPortal, 'vigencia' | 'sustituidaAt'>): boolean {
+  return enVigorParaActuar(p)
+}
+
+/**
+ * «En vigor» a efectos de ACTUAR sobre la póliza (mejorar el precio, solicitar baja): el criterio de
+ * `esCarteraEnVigor` de asegura — vigente y no sustituida. NO es `cuentaComoEnVigor` (esa es más ancha a
+ * propósito, para listar/avisar: incluye «sin fecha» y «renovación sin confirmar»).
+ */
+export function enVigorParaActuar(p: Pick<PolizaPortal, 'vigencia' | 'sustituidaAt'>): boolean {
   return p.vigencia === 'vigente' && (p.sustituidaAt ?? null) === null
+}
+
+/**
+ * ¿Se ofrece «Solicitar baja» en esta fila? Solo si el servidor la aceptaría: en vigor para actuar y sin baja
+ * en marcha. `bajasAbiertas === null` (no se pudo leer el puente) = no se ofrece: no se afirma que no haya.
+ */
+export function puedeOfrecerSolicitarBaja(
+  p: Pick<PolizaPortal, 'id' | 'vigencia' | 'sustituidaAt'>,
+  bajasAbiertas: ReadonlySet<string> | null,
+): boolean {
+  return bajasAbiertas !== null && enVigorParaActuar(p) && !bajasAbiertas.has(p.id)
+}
+
+/**
+ * ¿La página «Mejorar el precio» aceptaría esta póliza (sin tener en cuenta la baja en marcha)? Mismo
+ * predicado que la página y que el enlace de «Solicitar baja»: en vigor para actuar y con fecha de vencimiento.
+ */
+export function aceptaMejorarPrecio(p: Pick<PolizaPortal, 'vigencia' | 'sustituidaAt' | 'fechaVencimiento'>): boolean {
+  return ofrecibleParaMejorarPrecio(p) && p.fechaVencimiento !== null
+}
+
+/**
+ * Qué hace la página «Mejorar el precio» con una póliza. `conBaja === null` (no se pudo leer el puente) =
+ * se conserva el comportamiento de siempre: no se inventa una baja.
+ */
+export function estadoMejorarPrecio(
+  p: Pick<PolizaPortal, 'id' | 'vigencia' | 'sustituidaAt' | 'fechaVencimiento'>,
+  conBaja: ReadonlySet<string> | null,
+): 'ok' | 'no_disponible' | 'baja_en_marcha' {
+  if (!aceptaMejorarPrecio(p)) return 'no_disponible'
+  return conBaja !== null && conBaja.has(p.id) ? 'baja_en_marcha' : 'ok'
+}
+
+/**
+ * Quita de una lista de obligaciones las «renueva/vence» de pólizas con baja en marcha. Solo `tipo: 'poliza'`:
+ * un recordatorio propio (ITV…) puede colgar del mismo `polizaId` y sigue siendo verdad. `conBaja === null`
+ * (no se pudo leer) = la lista tal cual.
+ */
+export function sinObligacionesDePolizasConBaja<T extends { tipo: string; polizaId: string | null }>(
+  filas: readonly T[],
+  conBaja: ReadonlySet<string> | null,
+): T[] {
+  if (conBaja === null || conBaja.size === 0) return [...filas]
+  return filas.filter((f) => !(f.tipo === 'poliza' && f.polizaId !== null && conBaja.has(f.polizaId)))
 }
 
 /**

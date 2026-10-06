@@ -18,7 +18,7 @@ import { HORAS_RETENCION_PORTAL, MEDIADOR, cartaAnulacion, type TipoAnulacion } 
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso, fichasOperablesDe } from './contacto-portal'
 import { estadoEmailDeFicha } from './email-ficha'
 import { solicitarAnulacionConDeps, type DbSolicitud, type ResultadoSolicitudPortal } from './anulacion-solicitud'
 
@@ -138,12 +138,7 @@ function carta(p: Pendiente, fechaCarta: string): string | null {
   })
 }
 
-type Ficha = Awaited<ReturnType<typeof fichaPropiaDe>>
 type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
-
-function sinFicha(f: Ficha): SinFicha | null {
-  return f.estado === 'ok' ? null : f
-}
 
 /** `consentimiento` es el texto EXACTO que queda en la evidencia: el portal enseña este, no una copia. */
 export type LecturaParaFirmar =
@@ -173,13 +168,18 @@ async function firmadasDe(correduriaId: string, clienteId: string): Promise<Anul
 }
 
 export async function anulacionesParaFirmar(correduriaId: string, identidadId: string): Promise<LecturaParaFirmar> {
-  const f = await fichaPropiaDe(correduriaId, identidadId)
-  if (f.estado !== 'ok') return sinFicha(f)!
+  // Lista de TODAS las fichas en las que puede operar (el portal le enseña las pólizas de todas): cada
+  // anulación sigue siendo de su ficha, y firmarla resuelve la ficha por la propia anulación.
+  const f = await fichasOperablesDe(correduriaId, identidadId)
+  if (f.estado !== 'ok') return f
   const hoy = hoyMadrid()
   const ahora = new Date()
-  const [filas, firmadas, enRevision] = await Promise.all([
-    pendientesDe(correduriaId, f.clienteId), firmadasDe(correduriaId, f.clienteId), enRevisionDe(correduriaId, f.clienteId),
-  ])
+  const porFicha = await Promise.all(
+    f.clienteIds.map((id) => Promise.all([pendientesDe(correduriaId, id), firmadasDe(correduriaId, id), enRevisionDe(correduriaId, id)])),
+  )
+  const filas = porFicha.flatMap((x) => x[0]).sort((a, b) => a.fechaEfecto.localeCompare(b.fechaEfecto))
+  const firmadas = porFicha.flatMap((x) => x[1]).sort((a, b) => b.firmadaEl.localeCompare(a.firmadaEl))
+  const enRevision = porFicha.flatMap((x) => x[2]).sort((a, b) => a.liberaSolaAt.localeCompare(b.liberaSolaAt))
   return {
     estado: 'ok',
     consentimiento: TEXTO_CONSENTIMIENTO,
@@ -217,8 +217,10 @@ function enmascarar(email: string): string {
 
 export async function pedirCodigoFirma(correduriaId: string, identidadId: string, anulacionId: string): Promise<ResultadoCodigo> {
   if (!UUID.test(anulacionId)) return { estado: 'no_encontrada' }
-  const f = await fichaPropiaDe(correduriaId, identidadId)
-  if (f.estado !== 'ok') return sinFicha(f)!
+  // La ficha es la DUEÑA de esa anulación, si es una de las vinculadas con nivel de operar.
+  const f = await fichaPropiaDeRecurso(correduriaId, identidadId, 'anulacion', anulacionId)
+  if (f.estado === 'ajena') return { estado: 'no_encontrada' }
+  if (f.estado !== 'ok') return f
   const [p] = await pendientesDe(correduriaId, f.clienteId, anulacionId)
   if (!p) return { estado: 'no_encontrada' }
   if (!carta(p, hoyMadrid())) return { estado: 'carta_incompleta' }
@@ -287,8 +289,10 @@ export async function firmarAnulacion(
   datos: { codigo: string; nombre: string; cartaHash: string; ip: string | null; userAgent: string | null },
 ): Promise<ResultadoFirma> {
   if (!UUID.test(anulacionId)) return { estado: 'no_encontrada' }
-  const f = await fichaPropiaDe(correduriaId, identidadId)
-  if (f.estado !== 'ok') return sinFicha(f)!
+  // La ficha es la DUEÑA de esa anulación, si es una de las vinculadas con nivel de operar.
+  const f = await fichaPropiaDeRecurso(correduriaId, identidadId, 'anulacion', anulacionId)
+  if (f.estado === 'ajena') return { estado: 'no_encontrada' }
+  if (f.estado !== 'ok') return f
   const [p] = await pendientesDe(correduriaId, f.clienteId, anulacionId)
   if (!p) return { estado: 'no_encontrada' }
 
@@ -363,7 +367,7 @@ export async function firmarAnulacion(
  */
 export function solicitarAnulacionPortal(correduriaId: string, identidadId: string, cuerpo: unknown): Promise<ResultadoSolicitudPortal> {
   return solicitarAnulacionConDeps(
-    { db: prismaAsegura() as unknown as DbSolicitud, ficha: fichaPropiaDe, hoy: hoyMadrid, anotar: anotarCambio },
+    { db: prismaAsegura() as unknown as DbSolicitud, ficha: (c, i, polizaId) => fichaPropiaDeRecurso(c, i, 'poliza', polizaId), hoy: hoyMadrid, anotar: anotarCambio },
     correduriaId, identidadId, cuerpo,
   )
 }

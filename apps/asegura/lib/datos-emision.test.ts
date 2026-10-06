@@ -12,7 +12,7 @@ test('🪤 solo se rellena con lo PROPIO del tomador: intervinientes con SU clie
 
 test('🪤 el portal no elige ficha: sale de portal_vinculo', () => {
   const portal = src.slice(src.indexOf('export async function datosParaEmitirDePortal'))
-  assert.match(portal, /fichaPropiaDe\(correduriaId, identidadId\)/)
+  assert.match(portal, /fichaPropiaDeRecurso\(correduriaId, identidadId, 'presupuesto', presupuestoId\)/)
   // Y la ficha tiene que ser la del TOMADOR del presupuesto (el portal deja verlo también por canal).
   assert.match(portal, /if \(p\.clienteId !== ficha\.clienteId\) return \{ estado: 'otra_ficha' \}/)
   assert.match(portal, /datosParaEmitir\(correduriaId, ficha\.clienteId\)/)

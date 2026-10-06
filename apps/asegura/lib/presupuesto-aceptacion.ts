@@ -19,7 +19,7 @@ import {
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso } from './contacto-portal'
 import { ipidDeOpcion } from './ipid'
 import { encryptField } from '@central/module-seguros-pii'
 import { cuentaDeFicha, type CuentaFicha } from './codeoscopic/cuenta-ficha'
@@ -194,7 +194,9 @@ type Base = { f: Fila; clienteId: string } | { estado: 'no_encontrado' } | { est
 
 async function base(correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string): Promise<Base> {
   if (!UUID.test(presupuestoId) || !UUID.test(opcionId)) return { estado: 'no_encontrado' }
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  // La ficha es la DUEÑA del presupuesto si está vinculada con nivel de operar; con varias no se elige.
+  const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const f = await leer(correduriaId, ficha.clienteId, presupuestoId, opcionId)
   if (!f) return { estado: 'no_encontrado' }
@@ -521,7 +523,9 @@ type Propio = {
 /** El presupuesto, solo si es de la ficha de esta identidad. Mismo reparto que `base`, sin opción. */
 async function propio(correduriaId: string, identidadId: string, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  // La ficha es la DUEÑA del presupuesto si está vinculada con nivel de operar; con varias no se elige.
+  const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const [f] = await prismaAsegura().$queryRaw<Omit<Propio, 'clienteId'>[]>`
     select p.ramo, p.origen, trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,

@@ -1085,6 +1085,9 @@ instalar se abre solo UNA vez al entrar (descarte en localStorage), en Android l
 apple-touch-icon. En iOS NO existe aviso automático de instalación. Alberto dio OK al auto-abierto (06/10).
 Mismo PR: «Tus vencimientos» ofrecía «mejorar precio» de una póliza SUSTITUIDA (baja `sustitucion` comunicada) y el POST
 devolvía «No encontramos esta póliza» (`sqlCarteraEnVigor` exige `sustituida_at IS NULL`; la lista no). Predicado común `ofrecibleParaMejorarPrecio` + `polizasConBajaEnMarcha`.
+Auditoría del portal (6 hallazgos, sin fugas) arreglada en el mismo PR: CTA/avisos/push sin pólizas con baja, botón baja con `enVigorParaActuar`,
+mensajes `varias_fichas`/`no_en_vigor`. asegura: `fichaPropiaDeRecurso` (lib/ficha-de-poliza.ts) resuelve la ficha POR PÓLIZA/recurso entre las
+vinculadas con nivel gestionar/administrar; cuenta, contacto, documento suelto y carnés siguen con `varias_fichas` (sin póliza).
 
 ## (06/10/2026) Correduría: CP en la cabecera de la ficha de cliente
 - `Cabecera.tsx` (`Contacto`) pinta «CP Ciudad, Provincia» junto al pin. El CP ya llegaba de asegura (`ContactoFicha.codigoPostal`); solo faltaba pintarlo. Sin cambios de BD/puerto.

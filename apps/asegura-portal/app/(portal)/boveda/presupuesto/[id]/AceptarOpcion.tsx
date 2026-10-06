@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { MENSAJE_VARIAS_FICHAS } from '@/lib/mensajes-ficha'
 import { eur } from '@/lib/dinero'
 import { listaY, type AvisoPerdidas } from '@/lib/todas-las-opciones'
 import { TEXTOS_OFERTAS } from '@/lib/presupuesto-ofertas-vista'
@@ -149,7 +150,7 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
     const fijo: Record<string, string> = {
       no_encontrado: 'Este presupuesto ya no está disponible. Recarga la página.',
       sin_ficha: 'Este presupuesto ya no está disponible. Recarga la página.',
-      varias_fichas: 'Este presupuesto ya no está disponible. Recarga la página.',
+      varias_fichas: MENSAJE_VARIAS_FICHAS,
       sin_precio: 'La opción no tiene precio. Escríbeme para revisarla.',
     }
     setAviso(fijo[estado] ?? 'No hemos podido preparar la aceptación. Inténtalo en unos minutos o llámanos.')

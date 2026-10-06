@@ -67,6 +67,15 @@ test('sin ficha (o varias) no hay a quién pertenezca: se devuelve tal cual y no
   assert.equal(m.llamadas.length, 0)
 })
 
+test('🪤 la ficha se resuelve POR LA PÓLIZA pedida; si no es de una ficha vinculada con permiso → 403 sin consultar', async () => {
+  const pedidas: unknown[][] = []
+  const m = montar()
+  m.deps.ficha = async (...a) => { pedidas.push(a); return { estado: 'ajena' } }
+  assert.equal((await solicitarAnulacionConDeps(m.deps, CORR, IDENT, cuerpo)).estado, 'no_es_tuya')
+  assert.deepEqual(pedidas, [[CORR, IDENT, POLIZA]], 'el puente recibe la póliza para elegir la ficha dueña')
+  assert.equal(m.llamadas.length, 0)
+})
+
 test('una póliza que no está en vigor (cancelada, volcado histórico, sustituida) → 422 no_vigente', async () => {
   for (const extra of [{ estado: 'cancelada' }, { importRef: 'intranet:1', eiacXmlHash: null }, { sustituidaAt: new Date() }]) {
     const m = montar({ polizas: [poliza(extra)] })
@@ -154,7 +163,11 @@ test('🪤 la compuerta está en TODA consulta que lleva a una firma: lectura, c
 
 test('una baja del portal sin liberar no está en anulacionesParaFirmar, y pedirCodigoFirma dice no_encontrada', () => {
   // Las tres funciones leen por `pendientesDe`; una retenida no sale de ahí y, sin fila, el código y la firma contestan no_encontrada.
-  assert.match(tramo('export async function anulacionesParaFirmar', 'export type ResultadoCodigo'), /pendientesDe\(correduriaId, f\.clienteId\)/)
+  assert.match(tramo('export async function anulacionesParaFirmar', 'export type ResultadoCodigo'), /f\.clienteIds\.map\(\(id\) => Promise\.all\(\[pendientesDe\(correduriaId, id\)/)
+  // Código y firma: la ficha es la DUEÑA de esa anulación (vinculada y con permiso); ajena = no_encontrada.
+  for (const desde of ['export async function pedirCodigoFirma', 'export async function firmarAnulacion']) {
+    assert.match(tramo(desde), /fichaPropiaDeRecurso\(correduriaId, identidadId, 'anulacion', anulacionId\)\s+if \(f\.estado === 'ajena'\) return \{ estado: 'no_encontrada' \}/)
+  }
   assert.match(tramo('export async function pedirCodigoFirma', 'export type ResultadoFirma'), /const \[p\] = await pendientesDe\([^)]*anulacionId\)\s+if \(!p\) return \{ estado: 'no_encontrada' \}/)
   assert.match(tramo('export async function firmarAnulacion'), /const \[p\] = await pendientesDe\([^)]*anulacionId\)\s+if \(!p\) return \{ estado: 'no_encontrada' \}/)
 })
