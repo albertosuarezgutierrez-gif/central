@@ -1,5 +1,5 @@
 // Cepo de la decisión «qué se avisa por push a una identidad» (`obligaciones-debidas.ts`): vínculo, baja
-// confirmada incluida y puente caído = saltar (nunca «sin bajas»).
+// confirmada incluida y puente caído = retener las de póliza (nunca «sin bajas») sin perder los recordatorios propios.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -20,7 +20,7 @@ test('🪤 sin filtro de vínculo: la póliza de un cliente NO vinculado a esta 
     clientePorPoliza: new Map([[P1, 'c1'], [P2, 'c-ajeno']]),
     leerFirmas: async () => sinFirmas,
   })
-  assert.deepEqual(r, { estado: 'ok', debidas: [o(P1)] })
+  assert.deepEqual(r, { estado: 'ok', debidas: [o(P1)], retenidas: 0 })
 })
 
 test('póliza no viva (fuera del mapa) no se avisa; recordatorio propio sin póliza sí', async () => {
@@ -30,7 +30,7 @@ test('póliza no viva (fuera del mapa) no se avisa; recordatorio propio sin pól
     clientePorPoliza: new Map(),
     leerFirmas: async () => sinFirmas,
   })
-  assert.deepEqual(r, { estado: 'ok', debidas: [o(null, 'itv')] })
+  assert.deepEqual(r, { estado: 'ok', debidas: [o(null, 'itv')], retenidas: 0 })
 })
 
 test('🪤 conConfirmadas: una baja YA confirmada también excluye la póliza', async () => {
@@ -40,7 +40,7 @@ test('🪤 conConfirmadas: una baja YA confirmada también excluye la póliza', 
     clientePorPoliza: new Map([[P1, 'c1'], [P2, 'c1']]),
     leerFirmas: async () => ({ ...sinFirmas, firmadas: [firmada(P1, 'confirmada')] }) as never,
   })
-  assert.deepEqual(r, { estado: 'ok', debidas: [o(P2)] })
+  assert.deepEqual(r, { estado: 'ok', debidas: [o(P2)], retenidas: 0 })
 })
 
 test('baja en revisión / por firmar también excluye; un recordatorio propio de esa póliza sigue', async () => {
@@ -50,17 +50,27 @@ test('baja en revisión / por firmar también excluye; un recordatorio propio de
     clientePorPoliza: new Map([[P1, 'c1'], [P2, 'c1']]),
     leerFirmas: async () => ({ ...sinFirmas, anulaciones: [{ polizaId: P1 }], enRevision: [{ polizaId: P2 }] }) as never,
   })
-  assert.deepEqual(r, { estado: 'ok', debidas: [o(P1, 'itv')] })
+  assert.deepEqual(r, { estado: 'ok', debidas: [o(P1, 'itv')], retenidas: 0 })
 })
 
-test('🪤 puente caído (null) = identidad SALTADA, no «sin bajas»', async () => {
+test('🪤 puente caído (null): NO se avisan las de póliza (cualquier tipo), quedan retenidas', async () => {
   const r = await obligacionesDebidasDeIdentidad({
-    obligaciones: [o(P1)],
+    obligaciones: [o(P1), o(P1, 'itv')],
     clientesVinculados: new Set(['c1']),
     clientePorPoliza: new Map([[P1, 'c1']]),
     leerFirmas: async () => null,
   })
-  assert.deepEqual(r, { estado: 'saltada', motivo: 'puente_no_disponible' })
+  assert.deepEqual(r, { estado: 'ok', debidas: [], retenidas: 2 })
+})
+
+test('🪤 puente caído (null): los recordatorios propios (sin póliza) SE SIGUEN avisando', async () => {
+  const r = await obligacionesDebidasDeIdentidad({
+    obligaciones: [o(P1), o(null, 'itv'), o(null, 'caldera')],
+    clientesVinculados: new Set(['c1']),
+    clientePorPoliza: new Map([[P1, 'c1']]),
+    leerFirmas: async () => null,
+  })
+  assert.deepEqual(r, { estado: 'ok', debidas: [o(null, 'itv'), o(null, 'caldera')], retenidas: 1 })
 })
 
 test('sin obligaciones de póliza que comprobar no se pregunta al puente (y un puente caído no salta nada)', async () => {
@@ -72,13 +82,14 @@ test('sin obligaciones de póliza que comprobar no se pregunta al puente (y un p
     leerFirmas: async () => { llamadas++; return null },
   })
   assert.equal(llamadas, 0)
-  assert.deepEqual(r, { estado: 'ok', debidas: [o(null, 'itv')] })
+  assert.deepEqual(r, { estado: 'ok', debidas: [o(null, 'itv')], retenidas: 0 })
 })
 
-test('cableado: el cron decide con el helper, salta la identidad, aísla cada identidad con try/catch y no sella si se salta', () => {
+test('cableado: el cron decide con el helper, cuenta las retenidas por puente caído, aísla cada identidad con try/catch y no sella lo retenido', () => {
   const cron = readFileSync(new URL('../app/api/cron/avisos-push/route.ts', import.meta.url), 'utf8')
   assert.match(cron, /obligacionesDebidasDeIdentidad\(/)
-  assert.match(cron, /estado === 'saltada'/)
+  assert.match(cron, /r\.retenidas > 0/)
+  assert.doesNotMatch(cron, /estado === 'saltada'/, 'una identidad ya no se salta entera')
   assert.match(cron, /catch \(e\)/)
   assert.doesNotMatch(cron, /\?\? null\)\.length > 0/, 'ya no se trata el fallo del puente como «sin bajas»')
   assert.doesNotMatch(cron, /polizasConBajaEnMarcha|sinObligacionesDePolizasConBaja/, 'esa decisión vive solo en el helper')

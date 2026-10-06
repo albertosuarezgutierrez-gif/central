@@ -85,8 +85,8 @@ export async function GET(req: Request) {
   const clientePorPoliza = new Map(polizasVivas.map((p) => [p.id, p.clienteId]))
 
   // Por identidad: la decisión de qué es «debido» vive en `obligacionesDebidasDeIdentidad` (puro, con cepos);
-  // aquí solo se orquesta. Una identidad cuyo puente de anulaciones falla se SALTA entera (ni push ni sello:
-  // se reintenta en la siguiente pasada) y un fallo de BD en una identidad no aborta al resto.
+  // aquí solo se orquesta. Si el puente de anulaciones falla, las obligaciones de póliza de esa identidad se RETIENEN (ni push ni
+  // sello: se reintentan en la siguiente pasada; `saltadas` cuenta esas identidades) y sus recordatorios propios siguen y un fallo de BD en una identidad no aborta al resto.
   const porIdentidad = new Map<string, typeof enVentana>()
   for (const o of enVentana) porIdentidad.set(o.identidadId, [...(porIdentidad.get(o.identidadId) ?? []), o])
 
@@ -107,10 +107,9 @@ export async function GET(req: Request) {
         clientePorPoliza,
         leerFirmas: () => anulacionesPendientes(identidadId).catch(() => null),
       })
-      if (r.estado === 'saltada') {
-        saltadas += 1
-        return
-      }
+      // Puente caído: las de póliza quedan retenidas (sin push ni sello, reintento en la próxima pasada); los
+      // recordatorios propios siguen su curso.
+      if (r.retenidas > 0) saltadas += 1
       candidatas += r.debidas.length
       if (r.debidas.length === 0) return
 
