@@ -445,6 +445,15 @@ const ROTULO_RAMO: Record<RamoOportunidad, string> = {
 }
 export const RAMOS_OPORTUNIDAD_UI: readonly { valor: RamoOportunidad; rotulo: string }[] =
   RAMOS_OPORTUNIDAD.map((valor) => ({ valor, rotulo: ROTULO_RAMO[valor] }))
+/** Ramo válido de `?ramo=` para preseleccionar en el alta; `null` si no es uno conocido. */
+export function ramoInicialValido(v: string | null | undefined): RamoOportunidad | null {
+  return RAMOS_OPORTUNIDAD.find((r) => r === v) ?? null
+}
+/** Ramos que se trabajan con ofertas de compañías (sin tarificador): los de RAMOS_OPORTUNIDAD que no están entre los tarificables. */
+export function ramosConOfertas(tarificables: readonly { etiqueta: string }[]): readonly { valor: RamoOportunidad; rotulo: string }[] {
+  const precio = new Set(tarificables.map((t) => t.etiqueta.toLowerCase()))
+  return RAMOS_OPORTUNIDAD_UI.filter((r) => !precio.has(r.valor))
+}
 export function rotuloRamo(r: string | null): string {
   return r === null ? 'Sin ramo' : (ROTULO_RAMO as Record<string, string>)[r] ?? r
 }

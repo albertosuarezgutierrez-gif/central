@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
 import { alertaVencimiento, contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { ramosConOfertas } from '@/lib/seguimiento-asegura'
 import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
@@ -393,6 +394,18 @@ function Acciones({ clienteId }: { clienteId: string }) {
             >
               {r.etiqueta}
               {r.sinVerificar && <span title="esquema sin verificar" style={{ marginLeft: 'auto' }}><Ico i={Construction} size={12} /></span>}
+            </Link>
+          ))}
+          <p style={{ margin: '8px 4px 4px', fontSize: 11, color: 'var(--muted)', borderTop: '1px solid var(--border)', paddingTop: 6 }}>Con ofertas de compañías</p>
+          {ramosConOfertas(RAMOS_PRESUPUESTO).map(r => (
+            <Link
+              key={r.valor}
+              role="menuitem"
+              href={`/correduria/cliente/${clienteId}?tab=oportunidades&oportunidad=nueva&ramo=${r.valor}`}
+              title={`Oportunidad nueva de ${r.rotulo.toLowerCase()}: se apunta con su primer paso, sin tarificar`}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 10px', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}
+            >
+              {r.rotulo === 'Comercio' ? 'Comercio / pymes' : r.rotulo}
             </Link>
           ))}
           <Link

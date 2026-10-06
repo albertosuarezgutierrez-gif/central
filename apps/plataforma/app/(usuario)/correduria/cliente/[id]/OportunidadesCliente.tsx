@@ -6,6 +6,7 @@ import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
   RAMOS_OPORTUNIDAD_UI,
+  ramoInicialValido,
   ROTULO_ESTADO,
   TIPOS_TAREA_UI,
   interpretarOportunidadesCliente,
@@ -85,6 +86,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
 }) {
   const [lectura, setLectura] = useState<Lectura | null>(null)
   const [abriendo, setAbriendo] = useState(false)
+  const [ramoInicial, setRamoInicial] = useState<string | null>(null)
   // De qué fila del volcado nace el alta abierta (`?desde=<polizaId>`), si nace de una.
   const [desde, setDesde] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string; id?: string | null } | null>(null)
@@ -112,10 +114,12 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
   const params = useSearchParams()
   const pideNueva = params.get('oportunidad') === 'nueva'
   const pideDesde = params.get('desde')
+  const pideRamo = ramoInicialValido(params.get('ramo'))
   useEffect(() => {
     if (!pideNueva) return
     setAviso(null)
     setDesde(pideDesde && precargas[pideDesde] ? pideDesde : null)
+    setRamoInicial(pideRamo)
     setAbriendo(true)
     document.getElementById('oportunidades')?.scrollIntoView({ block: 'start' })
     // Se quita el parámetro: si se quedara, un segundo clic en el menú no cambiaría la URL
@@ -123,6 +127,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
     const url = new URL(window.location.href)
     url.searchParams.delete('oportunidad')
     url.searchParams.delete('desde')
+    url.searchParams.delete('ramo')
     window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
   }, [pideNueva])
 
@@ -184,8 +189,9 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
 
       {abriendo && (
         <FormAlta
-          key={desde ?? 'nueva'}
+          key={`${desde ?? 'nueva'}-${ramoInicial ?? ''}`}
           clienteId={clienteId}
+          ramoInicial={ramoInicial}
           precarga={desde ? precargas[desde] ?? null : null}
           onCancelar={() => setAbriendo(false)}
           onHecho={(t) => { setAviso(t); if (t.ok) setAbriendo(false); void cargar() }}
@@ -412,17 +418,19 @@ export function textoSeguroAnterior(s: SeguroAnterior): string {
  * `inicial` (29/09/2026): una lectura ya hecha (la póliza subida en Documentos) rellena el
  * formulario al abrirlo, sin volver a pagar la lectura.
  */
-export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHecho, onRecargar }: {
+export function FormAlta({ clienteId, inicial, precarga = null, ramoInicial = null, onCancelar, onHecho, onRecargar }: {
   clienteId: string
   inicial?: LecturaOk | null
   /** Crear desde una fila del volcado: vehículo/aseguradora, y el vencimiento SOLO si es futuro. */
   precarga?: PrecargaAlta | null
+  /** Ramo preseleccionado (`?ramo=` del menú de la cabecera), ya validado. */
+  ramoInicial?: string | null
   onCancelar: () => void
   onHecho: (t: { ok: boolean; texto: string; id?: string | null }) => void
   /** Refresca la lista sin cerrar el formulario (el documento ya abrió la oportunidad por su cuenta). */
   onRecargar?: () => void
 }) {
-  const [ramo, setRamo] = useState(precarga?.ramo ?? '')
+  const [ramo, setRamo] = useState(precarga?.ramo ?? ramoInicial ?? '')
   const [estado, setEstado] = useState<'en_negociacion' | 'competencia'>(precarga ? 'competencia' : 'en_negociacion')
   const [vence, setVence] = useState(precarga?.fechaFinVigencia ?? '')
   const [compania, setCompania] = useState(precarga?.aseguradora ?? '')

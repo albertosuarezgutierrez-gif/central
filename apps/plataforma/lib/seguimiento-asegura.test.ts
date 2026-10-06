@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, diasSinRespuesta, guionLlamada, tramoLead, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible } from './seguimiento-asegura.ts'
+import { colaLlamadas, diasSinRespuesta, guionLlamada, tramoLead, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible, ramoInicialValido, ramosConOfertas } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -275,4 +275,19 @@ test('buscador de leads (30/09/2026): nombre sin tildes, varias palabras, teléf
   assert.equal(leadCoincide(l, 'reale'), false)
   // Sin teléfono ni nombre no revienta, y un número no casa por accidente.
   assert.equal(leadCoincide({ cliente: null, aseguradora: null, ramo: null, email: null, telefono: null }, '600'), false)
+})
+
+test('ramoInicialValido: solo acepta ramos conocidos', () => {
+  assert.equal(ramoInicialValido('comunidades'), 'comunidades')
+  assert.equal(ramoInicialValido('otros'), 'otros')
+  assert.equal(ramoInicialValido('nave_espacial'), null)
+  assert.equal(ramoInicialValido(''), null)
+  assert.equal(ramoInicialValido(null), null)
+})
+
+test('ramosConOfertas: comunidades sí, tarificables (auto…) no', async () => {
+  const { RAMOS_PRESUPUESTO } = await import('./ficha-asegura.ts')
+  const valores = ramosConOfertas(RAMOS_PRESUPUESTO).map((r) => r.valor)
+  assert.deepEqual([...valores].sort(), ['accidentes', 'comercio', 'comunidades', 'otros', 'responsabilidad_civil'])
+  assert.ok(!valores.includes('auto' as never))
 })
