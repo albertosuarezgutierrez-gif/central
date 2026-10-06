@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-06T12:52:24Z",
+  "generadoEn": "2026-10-06T13:36:53Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -691,7 +691,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 214
+        "evidencias": 215
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 8
       },
       "asegura-portal": {
         "estado": "no",
@@ -4045,6 +4045,7 @@
       "/api/cron/polizas-pdf",
       "/api/cron/revision-anual",
       "/api/cron/siniestros-vinculo",
+      "/api/cron/tarificador-renovaciones",
       "/api/google-contactos/callback",
       "/api/google-contactos/conectar",
       "/api/operador/actividad",
@@ -4195,6 +4196,7 @@
       "/api/operador/tareas-hoy",
       "/api/operador/tarificador/encolar",
       "/api/operador/tarificador/intervenciones",
+      "/api/operador/tarificador/panel",
       "/api/operador/tarificador/trabajo/[id]",
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
       "/api/operador/tarificador/ultimo-riesgo",
@@ -5202,6 +5204,7 @@
       "/api/correduria/sustituciones",
       "/api/correduria/tareas-hoy",
       "/api/correduria/tarificador/encolar",
+      "/api/correduria/tarificador/panel",
       "/api/correduria/tarificador/trabajo/[id]",
       "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
       "/api/correduria/tarificador/ultimo-riesgo",
@@ -6783,7 +6786,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1610,
+    "apis": 1613,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
