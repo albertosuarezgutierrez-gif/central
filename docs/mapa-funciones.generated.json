@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T12:04:06Z",
-  "sha": "edf4f1e0ddf1280c54a1c59462b2bb232841e492",
+  "generadoEn": "2026-10-06T12:41:59Z",
+  "sha": "929f2d116c89241608df6fac239db12a0dd98152",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -19195,6 +19195,15 @@
       "hash": "8666fca8dd28"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/solicitud-datos/lead-web/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/solicitud-datos/lead-web",
+      "hash": "6817611e1eb5"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/solicitud-datos/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -19213,7 +19222,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/operador/solicitud-datos",
-      "hash": "73ee6daa2802"
+      "hash": "2770e5f921da"
     },
     {
       "ruta": "apps/asegura/app/api/operador/supresiones/route.ts",
@@ -34885,6 +34894,50 @@
       "hash": "d9c0242689c9"
     },
     {
+      "ruta": "apps/asegura/lib/lead-web-regla.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lead web de auto/moto (06/10/2026): reglas PURAS de `lib/lead-web-solicitud.ts`. La página `/datos/[token]` del portal trae RELLENOS el DNI y la fecha de nacimiento de la ficha (decisión del 24/09/2026) y deja subir documentos a ESA ficha. El formulario web es anónimo y el enlace se manda al teléfon",
+      "exporta": [
+        "fichaAptaParaEnlace"
+      ],
+      "funciones": [
+        {
+          "nombre": "fichaAptaParaEnlace",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FichaLeadWeb",
+          "retorno": "boolean",
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "20fdc5756333"
+    },
+    {
+      "ruta": "apps/asegura/lib/lead-web-solicitud.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lead web de AUTO/MOTO (06/10/2026, Alberto: automático). Plataforma acaba de dar de alta la ficha con el formulario público y pide, en UNA llamada, el enlace `/datos/[token]` para el WhatsApp prellenado del aviso de Telegram: 1. La ficha tiene que ser apta (`fichaAptaParaEnlace`: recién creada por e",
+      "exporta": [
+        "solicitudParaLeadWeb"
+      ],
+      "funciones": [
+        {
+          "nombre": "solicitudParaLeadWeb",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: unknown, ramoEntrada: unknown, actor: string,",
+          "retorno": "Promise<ResultadoLeadWebSolicitud>",
+          "linea": 32
+        }
+      ],
+      "tablas": [
+        "clientes"
+      ],
+      "rutaApi": null,
+      "hash": "56f466496221"
+    },
+    {
       "ruta": "apps/asegura/lib/leads-competencia.ts",
       "ambito": "apps/asegura",
       "resumen": "El carril de LEADS de Vencimientos: pólizas que los leads tenían en OTRA compañía (tabla heredada `oportunidades`, abiertas y no aparcadas), con el próximo aniversario de su fecha de fin. Solo lectura: no envía ni escribe. Por qué y qué significa la fecha: cabecera de `lead-competencia.ts` en `@cent",
@@ -35806,7 +35859,7 @@
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "5c944b3f3c6f"
+      "hash": "e1bf2457b7f7"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-figuras.ts",
@@ -36367,9 +36420,9 @@
           "nombre": "crearOportunidad",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, clienteId: string, datos: Parameters<typeof validarAltaOportunidad>[0], actor: string, hoy: Date = hoyUtc(), /** De dónde nace (`info_riesgo.origen`): a mano por defecto; `documento:*` si la abre un documento subido. *",
+          "params": "correduriaId: string, clienteId: string, datos: Parameters<typeof validarAltaOportunidad>[0], actor: string, opciones: OpcionesAltaOportunidad = {},",
           "retorno": "Promise<",
-          "linea": 642,
+          "linea": 672,
           "resumen": "Abre una oportunidad a mano con su primer paso, en UNA transacción: oportunidad + tarea + historial. Si el cliente ya tiene una ABIERTA del mismo ramo y de la misma compañía (o sin compañía en un lado"
         },
         {
@@ -36378,7 +36431,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, datos: Parameters<typeof validarEdicionOportunidad>[0], actor: string, // `reprogramar`: al cambiar el vencimiento, la próxima tarea de seguimiento va a 45 días antes // (`planTareaTrasVencimiento`). Opcion",
           "retorno": "Promise<",
-          "linea": 755,
+          "linea": 791,
           "resumen": "Corrige ramo, vencimiento, compañía o prima de una oportunidad ABIERTA. Una cerrada no se edita: se reabre antes, que es una acción con su rastro. Cada cambio deja antes/después en el historial (la co"
         },
         {
@@ -36387,7 +36440,7 @@
           "exportada": false,
           "params": "filtro: Prisma.Sql",
           "retorno": "Prisma.Sql",
-          "linea": 925,
+          "linea": 961,
           "resumen": "Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2` y/o `pr`). LEFT JOIN desde el 05/10/2026: un presupuesto de OFERTAS no tiene tarificación (`t2` = NULL) y cuelg"
         },
         {
@@ -36396,7 +36449,7 @@
           "exportada": false,
           "params": "j: JsonHitos",
           "retorno": "HitosPresupuesto | null",
-          "linea": 933
+          "linea": 969
         },
         {
           "nombre": "resumenPresupuestos",
@@ -36404,7 +36457,7 @@
           "exportada": false,
           "params": "j: JsonResumen",
           "retorno": "ResumenPresupuestos",
-          "linea": 938
+          "linea": 974
         },
         {
           "nombre": "oportunidadesDeCliente",
@@ -36412,7 +36465,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 953,
+          "linea": 989,
           "resumen": "Las oportunidades de UN cliente: abiertas primero (las más nuevas arriba), luego las cerradas más recientes. La «próxima tarea» es solo de seguimiento (`central:seguimiento`), la misma que lista «Hoy»"
         },
         {
@@ -36421,7 +36474,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<PresupuestoSinOportunidad[] | null>",
-          "linea": 1051,
+          "linea": 1087,
           "resumen": "Lo tarificado para este cliente que no cuelga de ninguna oportunidad: las retarificaciones y altas anteriores al 24/09/2026, cuando aún no se enlazaban solas. Se ENSEÑAN tal cual, sin abrirles oportun"
         },
         {
@@ -36430,7 +36483,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1085
+          "linea": 1121
         }
       ],
       "tablas": [
@@ -36450,7 +36503,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "e8dd6a6cedee"
+      "hash": "e35fd47465dd"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-traspaso.ts",
@@ -39783,8 +39836,11 @@
       "ambito": "apps/asegura",
       "resumen": "«Pídele los datos al cliente» (24/09/2026): enlace directo, sin código, para que el cliente complete lo que falta para presupuestar (moto o coche). Reglas puras (qué se pide, cómo se valida) en `@central/module-seguros`. Decisiones que no se tocan sin Alberto: - El token solo vive en claro en la res",
       "exporta": [
+        "urlPortalSolicitud",
         "hashToken",
         "crearSolicitud",
+        "camposParaPersona",
+        "insertarSolicitud",
         "solicitudesDeOportunidad",
         "anularSolicitud",
         "solicitudPorToken",
@@ -39793,12 +39849,21 @@
       ],
       "funciones": [
         {
+          "nombre": "urlPortalSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string",
+          "retorno": "string",
+          "linea": 54,
+          "resumen": "El enlace del portal para un token en claro. Solo se construye al crear la solicitud (el token no se guarda)."
+        },
+        {
           "nombre": "hashToken",
           "kind": "function",
           "exportada": true,
           "params": "token: string",
           "retorno": "string",
-          "linea": 53
+          "linea": 59
         },
         {
           "nombre": "crearSolicitud",
@@ -39806,8 +39871,26 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, actor: string, personaId: string | null = null,",
           "retorno": "Promise<",
-          "linea": 83,
+          "linea": 89,
           "resumen": "Crea (o devuelve la viva) la solicitud de datos de una oportunidad ABIERTA de moto/coche. `personaId` (29/09/2026): los datos de OTRA persona del riesgo (un familiar que es figura); sin él, los del cl"
+        },
+        {
+          "nombre": "camposParaPersona",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, personaId: string, ramo: RamoSolicitud",
+          "retorno": "Promise<CampoSolicitud[] | null>",
+          "linea": 124,
+          "resumen": "Qué se le pide a esa persona según lo que ya hay en su ficha. `null` = no se encuentra la ficha."
+        },
+        {
+          "nombre": "insertarSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: Prisma.TransactionClient, p: { correduriaId: string; oportunidadId: string; personaId: string; ramo: RamoSolicitud; campos: CampoSolicitud[]; actor: string; tercero: boolean; estadoOportunidad: string },",
+          "retorno": "Promise<",
+          "linea": 143,
+          "resumen": "La escritura de la solicitud, DENTRO de la transacción que le pasen (la propia de `crearSolicitud`, o la del alta de la oportunidad del lead web: así o quedan las dos o ninguna). Una viva por persona "
         },
         {
           "nombre": "estadoEfectivo",
@@ -39815,7 +39898,7 @@
           "exportada": false,
           "params": "estado: string, caduca: Date",
           "retorno": "SolicitudResumen['estado']",
-          "linea": 149
+          "linea": 172
         },
         {
           "nombre": "descifrarLecturas",
@@ -39823,7 +39906,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "LecturaDocSolicitud[] | null",
-          "linea": 154
+          "linea": 177
         },
         {
           "nombre": "descifrarRespuestas",
@@ -39831,7 +39914,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "",
-          "linea": 165
+          "linea": 188
         },
         {
           "nombre": "solicitudesDeOportunidad",
@@ -39839,7 +39922,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string",
           "retorno": "Promise<SolicitudResumen[] | null>",
-          "linea": 177,
+          "linea": 200,
           "resumen": "Las solicitudes de una oportunidad (más reciente primero), para plataforma."
         },
         {
@@ -39848,7 +39931,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<",
-          "linea": 218,
+          "linea": 241,
           "resumen": "Anula una pendiente (el enlace deja de funcionar)."
         },
         {
@@ -39857,7 +39940,7 @@
           "exportada": false,
           "params": "token: string",
           "retorno": "Promise<FilaToken | null>",
-          "linea": 236
+          "linea": 259
         },
         {
           "nombre": "identidadFicha",
@@ -39865,7 +39948,7 @@
           "exportada": false,
           "params": "f: FilaToken",
           "retorno": "Promise<",
-          "linea": 246,
+          "linea": 269,
           "resumen": "DNI y nacimiento de su ficha, para traerlos rellenos. Si no se pueden leer, se piden en blanco."
         },
         {
@@ -39874,7 +39957,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<SolicitudPublica>",
-          "linea": 261,
+          "linea": 284,
           "resumen": "Lo que ve la página pública: el ramo y los campos a pedir. Del cliente, SOLO su DNI y su fecha de nacimiento, rellenos para que los confirme o corrija (decisión de Alberto, 24/09/2026: «es su DNI, no "
         },
         {
@@ -39883,7 +39966,7 @@
           "exportada": true,
           "params": "token: string, fichero: { nombre: string; mime: string; contenido: Buffer }, consentimiento = false,",
           "retorno": "Promise<ResultadoDocSolicitud>",
-          "linea": 291,
+          "linea": 314,
           "resumen": "El cliente sube un documento por el enlace (DNI, carné, papeles del vehículo, su póliza). 1) Se ARCHIVA en su ficha (`seguros.documentos`, subido por el cliente) — aunque luego no se pueda leer: el pa"
         },
         {
@@ -39892,7 +39975,7 @@
           "exportada": true,
           "params": "token: string, entrada: Record<string, unknown>, consentimiento = false,",
           "retorno": "Promise<",
-          "linea": 370,
+          "linea": 393,
           "resumen": "El cliente manda sus datos. Una sola vez; lo que no se pidió se ignora."
         }
       ],
@@ -39907,7 +39990,7 @@
         "solicitud_datos"
       ],
       "rutaApi": null,
-      "hash": "b502786ea6c1"
+      "hash": "2715c5aff580"
     },
     {
       "ruta": "apps/asegura/lib/supresiones.ts",
@@ -87523,7 +87606,7 @@
           "exportada": true,
           "params": "{ id, telefono = null, onCambio }: { id: string; telefono?: string | null; onCambio?: () => void }",
           "retorno": null,
-          "linea": 94
+          "linea": 96
         },
         {
           "nombre": "FormPerder",
@@ -87531,7 +87614,7 @@
           "exportada": false,
           "params": "{ enviando, onEnviar, onCancelar }: { enviando: boolean; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
           "retorno": null,
-          "linea": 225
+          "linea": 227
         },
         {
           "nombre": "FormAparcar",
@@ -87539,7 +87622,7 @@
           "exportada": false,
           "params": "{ enviando, hoy, onEnviar, onCancelar }: { enviando: boolean; hoy: string; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
           "retorno": null,
-          "linea": 265
+          "linea": 267
         },
         {
           "nombre": "Tareas",
@@ -87547,7 +87630,7 @@
           "exportada": false,
           "params": "{ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, onCambio }: { oportunidadId: string; tareas: TareaSeguimiento[]; descartadas: number; fueCliente: boolean | null; cerrada: boolean; hoy: string; onCambio: () => void }",
           "retorno": null,
-          "linea": 295
+          "linea": 297
         }
       ],
       "tablas": [
@@ -87556,7 +87639,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "10b5154ca2f0"
+      "hash": "c64cd9959863"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/SegurosCliente.tsx",
@@ -107373,13 +107456,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 36,
+          "linea": 40,
           "resumen": "al usuario se le responde `{ok:true}` en los dos primeros sin distinguirlos (no se le revela si ya estaba en la cartera) y 502 en el tercero. Nunca se fuerza un duplicado desde aquí: si el teléfono/em"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/publico/correduria/lead",
-      "hash": "c16b89c789e0"
+      "hash": "0b0bf855735a"
     },
     {
       "ruta": "apps/plataforma/app/api/publico/disponibilidad/route.ts",
@@ -132413,6 +132496,9 @@
         "notasAlta",
         "textoHistorialContacto",
         "interpretarAltaLead",
+        "ramoEnlaceDatos",
+        "hostPortalCliente",
+        "interpretarEnlaceDatos",
         "urlFichaCliente",
         "mensajeWhatsappLead",
         "textoTelegramLead"
@@ -132470,20 +132556,47 @@
           "linea": 161
         },
         {
+          "nombre": "ramoEnlaceDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipoSeguro: TipoSeguroLead, resultado: ResultadoLead, telefono: string | null",
+          "retorno": "'auto' | 'moto' | null",
+          "linea": 192,
+          "resumen": "¿Se pide a asegura el enlace `/datos/[token]` para este lead? (06/10/2026, Alberto: automático.) SOLO ficha NUEVA, ramo auto/moto y un teléfono al que se pueda abrir WhatsApp (la misma regla que pinta"
+        },
+        {
+          "nombre": "hostPortalCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: string | undefined = process.env.ASEGURA_PORTAL_URL",
+          "retorno": "string",
+          "linea": 201,
+          "resumen": "El host del portal del cliente: el de `ASEGURA_PORTAL_URL` si plataforma lo tiene, si no el de producción."
+        },
+        {
+          "nombre": "interpretarEnlaceDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown, hostPortal: string = hostPortalCliente()",
+          "retorno": "EnlaceDatos",
+          "linea": 217,
+          "resumen": "Respuesta del puerto → enlace. Solo vale `https://<host del portal exacto>/datos/<token>`; todo lo demás (otro host, otra ruta, `url: null` de una viva, error, timeout) es «sin enlace» y el aviso sale"
+        },
+        {
           "nombre": "urlFichaCliente",
           "kind": "function",
           "exportada": true,
           "params": "id: string, base: string = process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_POR_DEFECTO",
           "retorno": "string",
-          "linea": 186
+          "linea": 232
         },
         {
           "nombre": "mensajeWhatsappLead",
           "kind": "function",
           "exportada": true,
-          "params": "a: { nombre: string; tipoSeguro?: TipoSeguroLead | null }",
+          "params": "a: { nombre: string; tipoSeguro?: TipoSeguroLead | null; urlDatos?: string | null }",
           "retorno": "string",
-          "linea": 212,
+          "linea": 262,
           "resumen": "Texto prellenado del WhatsApp al lead. Solo el nombre de pila (`nombreDePila` de `@central/module-seguros`: si duda —coma, inicial, empresa, vacío— saluda sin nombre). Los ramos de vehículo piden la d"
         },
         {
@@ -132492,13 +132605,13 @@
           "exportada": true,
           "params": "a: AvisoLead",
           "retorno": "string",
-          "linea": 236,
+          "linea": 290,
           "resumen": "HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "abc6508d63db"
+      "hash": "65fc1a3f1a39"
     },
     {
       "ruta": "apps/plataforma/lib/libro-registro-asegura.ts",
@@ -137091,6 +137204,7 @@
         "enlaceOportunidadDe",
         "interpretarSolicitudesDatos",
         "valorLegible",
+        "solicitudLeadWebAsegura",
         "solicitudesDatosAsegura",
         "accionSolicitudDatosAsegura",
         "borradoresPresupuestoAsegura",
@@ -137558,12 +137672,20 @@
           "resumen": "Una respuesta como la lee Alberto: opción → su etiqueta, sí/no, fecha española; `null` → «—»."
         },
         {
+          "nombre": "solicitudLeadWebAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: { clienteId: string; ramo: 'auto' | 'moto' }",
+          "retorno": "Promise<Reenvio>",
+          "linea": 991
+        },
+        {
           "nombre": "solicitudesDatosAsegura",
           "kind": "function",
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 984
+          "linea": 994
         },
         {
           "nombre": "accionSolicitudDatosAsegura",
@@ -137571,7 +137693,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 987
+          "linea": 997
         },
         {
           "nombre": "borradoresPresupuestoAsegura",
@@ -137579,7 +137701,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 992,
+          "linea": 1002,
           "resumen": "─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──"
         },
         {
@@ -137588,7 +137710,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 995
+          "linea": 1005
         },
         {
           "nombre": "borrarBorradorPresupuestoAsegura",
@@ -137596,7 +137718,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string, oportunidadId: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 998
+          "linea": 1008
         },
         {
           "nombre": "riesgoAsegura",
@@ -137604,7 +137726,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1004,
+          "linea": 1014,
           "resumen": "─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────"
         },
         {
@@ -137613,7 +137735,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1011,
+          "linea": 1021,
           "resumen": "Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoL"
         },
         {
@@ -137622,7 +137744,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1014
+          "linea": 1024
         },
         {
           "nombre": "quitarFiguraAsegura",
@@ -137630,7 +137752,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1017
+          "linea": 1027
         },
         {
           "nombre": "compararVariantesAsegura",
@@ -137638,7 +137760,7 @@
           "exportada": true,
           "params": "oportunidadId: string, a: string, b: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1022,
+          "linea": 1032,
           "resumen": "Dos variantes del mismo riesgo: qué cambia y el precio de cada compañía en las dos. Gratis."
         },
         {
@@ -137647,7 +137769,7 @@
           "exportada": true,
           "params": "body: { polizaId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1027,
+          "linea": 1037,
           "resumen": "Abre (o devuelve la abierta) la oportunidad de retarificar una póliza. Gratis: no pide precio."
         },
         {
@@ -137656,13 +137778,13 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; nuevoClienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1032,
+          "linea": 1042,
           "resumen": "«Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7c8f6d148e76"
+      "hash": "a6f7b37d0f6d"
     },
     {
       "ruta": "apps/plataforma/lib/seguimiento-presupuestos-asegura.ts",
@@ -183865,7 +183987,7 @@
           "exportada": true,
           "params": "d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; matricula?: unknown; vehiculo?: unknown; seguroAnterior?: unknown; tipoTarea?: unknown; prioridadTarea?: unkn",
           "retorno": "",
-          "linea": 268,
+          "linea": 270,
           "resumen": "Una oportunidad a mano nace con su PRIMER PASO (tipo + fecha): la regla del embudo es que nada queda sin siguiente paso, y una oportunidad sin tarea no sale en «Hoy» ni la mira nadie. Sin fecha de ven"
         },
         {
@@ -183874,7 +183996,7 @@
           "exportada": false,
           "params": "v: unknown, max: number",
           "retorno": "number | null",
-          "linea": 336
+          "linea": 344
         },
         {
           "nombre": "seguroAnteriorDe",
@@ -183882,7 +184004,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "SeguroAnterior | null",
-          "linea": 342,
+          "linea": 350,
           "resumen": "Lo sanea: un valor con forma rara se queda en `null`; sin ningún dato, `null` entero."
         },
         {
@@ -183891,7 +184013,7 @@
           "exportada": true,
           "params": "d: { ramo?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown },",
           "retorno": "",
-          "linea": 383,
+          "linea": 391,
           "resumen": "Lo que se corrige a mano de una oportunidad ABIERTA: ramo, vencimiento, compañía y prima actuales. `undefined` = no tocar; `null`/'' = borrar. El estado NO se edita aquí: para eso están las acciones, "
         },
         {
@@ -183900,7 +184022,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 399
+          "linea": 407
         },
         {
           "nombre": "camposEditables",
@@ -183908,12 +184030,12 @@
           "exportada": false,
           "params": "d: { fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown },",
           "retorno": "",
-          "linea": 403
+          "linea": 411
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "32e726b3ca7a"
+      "hash": "f128925cd18d"
     },
     {
       "ruta": "packages/module-seguros/src/orden-polizas.ts",
@@ -192643,7 +192765,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4319,
-    "funciones": 15116
+    "archivos": 4322,
+    "funciones": 15125
   }
 }
