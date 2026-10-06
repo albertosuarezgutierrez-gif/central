@@ -59,9 +59,10 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
 
 /**
  * Pestaña activa según el DOM, por CONTENIDO (no por clases CSS): «Idioma Proyecto PDF» solo existe
- * en Tarificar; «COSTE ANUAL DEL SEG.» solo en Datos Básicos tras calcular. Cualquier otra cosa → `null`
- * (y la máquina de fases bloquea). TODO(capturas): ver el DOM real de las pestañas y, si hay
- * `aria-selected`, comprobarlo además.
+ * en Tarificar; «COSTE ANUAL DEL SEG.» solo en Datos Básicos (la fila está ya ANTES de calcular, vacía).
+ * Cualquier otra cosa → `null` (y la máquina de fases bloquea). DOM real de Datos Básicos (06/10/2026): las
+ * pestañas son `td#DATOSBASICOS`/`td#TARIFICAR` sin `aria-selected`; la seleccionada lleva una clase
+ * `…Selected` que el `onmouseover` también pone, así que NO sirve. TODO(capturas): el DOM de Tarificar.
  */
 export async function pestanaActiva(page: Page): Promise<PestanaActiva> {
   // El formulario vive en un iframe (`appArea`, 06/10/2026): se mira en TODOS los marcos de la página.
@@ -139,11 +140,12 @@ export async function elegirOpcion(page: Page, guard: GuardEmision, modalidad: M
 export async function pulsarAvance(page: Page, guard: GuardEmision): Promise<void> {
   guard.comprobar()
   guard.fases.autorizarAceptar(await pestanaActiva(page))
+  // DOM real (06/10/2026): es un «footer button» del servlet, `<div id="aceptar" onclick="btnAceptar();">`, no un
+  // a/button/input. Por id Y texto exacto. (La pestaña `td#TARIFICAR` dispara lo mismo y NO se usa.)
   const c = await enMarcos(page, (f) =>
     f
-      .locator('a, button')
-      .filter({ hasText: /^\s*>?\s*Aceptar\s*$/i })
-      .or(f.locator('input[value="Aceptar" i]'))
+      .locator('#aceptar')
+      .filter({ hasText: /^\s*Aceptar\s*$/i })
       .locator('visible=true'),
   )
   if (c.total !== 1 || !c.locator) throw new Error('allianz/comunidades: no hay exactamente un control visible de avance en Datos Básicos')

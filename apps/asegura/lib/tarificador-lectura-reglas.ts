@@ -106,6 +106,7 @@ export function indicePdfValido(s: string): number | null {
 export const CLAVES_RIESGO_ESCALARES = [
   'fechaEfecto', 'fechaTermino', 'm2Construidos', 'anioConstruccion', 'tipoVivienda', 'uso', 'plantas',
   'numEdificios', 'numViviendasYLocales', 'listaPropietarios', 'ascensor', 'piscina', 'calidadConstruccion',
+  'capitalContinente', 'capitalContenido',
 ] as const
 export const CLAVES_DIRECCION = ['via', 'numero', 'codigoPostal', 'municipio', 'provincia'] as const
 
