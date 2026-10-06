@@ -5,6 +5,8 @@ Bot Playwright que cotiza en portales de compañía lo que Codeoscopic/Avant2 no
 org `grupo-asegura`, región `cdg`, shared-cpu-2x / 2 GB, `auto_destroy`). La lanza `apps/asegura`
 (`lib/tarificador.ts`); la cola es `seguros.tarificacion_trabajos`.
 
+> Estado, decisiones, DOM de ePAC y plan: **`docs/TARIFICADOR-RPA.md`** (este README es solo la técnica del worker).
+
 **TARIFICAR ≠ EMITIR.** `src/guard.ts` aborta (→ `error_definitivo`) cualquier navegación o botón que case
 con `emit|emisi|contrat|formaliz|suplement|anul|baja`. Los adaptadores pulsan solo con `ctx.pulsar()`.
 CAPTCHA → `requiere_humano` (nunca se evita). Reintento: uno, y solo de infraestructura.

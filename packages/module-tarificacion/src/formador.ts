@@ -13,7 +13,8 @@ import type { ModalidadPortal } from './tipos.ts'
 
 export const MARCA_DATO_PERSONAL = '[DATO]'
 
-const PATRONES_PERSONALES: readonly RegExp[] = [
+/** Exportada para el GRABADOR (07/10/2026): el bookmarklet lleva estos mismos patrones al navegador. */
+export const PATRONES_PERSONALES: readonly RegExp[] = [
   // IBAN español (y cualquiera con forma de IBAN), con o sin espacios.
   /\b[A-Z]{2}\d{2}(?:[\s-]?[A-Z0-9]{4}){3,7}(?:[\s-]?[A-Z0-9]{1,4})?\b/gi,
   // Correo.

@@ -11,7 +11,7 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-async function puerto(ruta: string, init: RequestInit, topeMs = 30_000): Promise<Reenvio> {
+export async function puerto(ruta: string, init: RequestInit, topeMs = 30_000): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
@@ -45,6 +45,25 @@ export function leerUltimoRiesgoTarificador(clienteId: string): Promise<Reenvio>
 /** Panel de salud del bot, renovaciones de comunidades y alertas de cambio de tarifa (solo lectura). */
 export function leerPanelTarificador(): Promise<Reenvio> {
   return puerto('panel', { method: 'GET' }, 30_000)
+}
+
+/** «Presupuestos de compañías» de una oportunidad: formulario guardado, pre-relleno y trabajos (solo lectura). */
+export function leerPresupuestosOportunidad(oportunidadId: string): Promise<Reenvio> {
+  return puerto(`oportunidad?${new URLSearchParams({ id: oportunidadId })}`, { method: 'GET' }, 15_000)
+}
+
+/**
+ * Pide presupuesto a las compañías elegidas desde la oportunidad: asegura valida el formulario común con
+ * cada capacidad (todo o nada), lo guarda en la oportunidad y encola un trabajo por compañía. Solo precio.
+ */
+export function pedirPresupuestosOportunidad(body: {
+  oportunidadId: string; ramo: string; formulario: unknown; extras: Record<string, unknown>; companias: string[]
+}): Promise<Reenvio> {
+  return puerto('oportunidad', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  }, 50_000)
 }
 
 export function leerTrabajoTarificador(id: string): Promise<Reenvio> {

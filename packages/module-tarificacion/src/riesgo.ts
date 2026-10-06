@@ -44,7 +44,18 @@ function booleano(v: unknown, campo: string, errores: string[]): boolean | null 
   return v
 }
 
-export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date()): ValidacionRiesgo {
+/**
+ * `exigirSelectsPortal` (07/10/2026): tipo de vivienda, uso y lista de propietarios son etiquetas de los
+ * desplegables de ePAC, no datos del riesgo comunes a toda compañía. El formulario CANÓNICO
+ * (`capacidades.ts`) valida con `false` y cada adaptador los pide como «extras»; el riesgo que llega al
+ * worker se valida siempre con el valor por defecto (`true`).
+ */
+export function validarRiesgoComunidad(
+  entrada: unknown,
+  hoy: Date = new Date(),
+  ajustes: { exigirSelectsPortal?: boolean } = {},
+): ValidacionRiesgo {
+  const exigirSelects = ajustes.exigirSelectsPortal !== false
   const e = obj(entrada)
   if (!e) return { ok: false, errores: ['el riesgo tiene que ser un objeto'] }
   const errores: string[] = []
@@ -86,12 +97,11 @@ export function validarRiesgoComunidad(entrada: unknown, hoy: Date = new Date())
     ['fechaTermino (Fecha Término *)', texto(e.fechaTermino)],
     ['m2Construidos (Metros Cuadrados *)', m2Construidos],
     ['anioConstruccion (Año Construcción *)', anioConstruccion],
-    ['tipoVivienda (Tipo Vivienda *)', tipoVivienda],
-    ['uso (Uso *)', uso],
+    ...(exigirSelects ? ([['tipoVivienda (Tipo Vivienda *)', tipoVivienda], ['uso (Uso *)', uso]] as [string, unknown][]) : []),
     ['plantas (Plantas sobre N. Calle *)', plantas],
     ['numEdificios (Nº Edificios *)', numEdificios],
     ['numViviendasYLocales (Nº Viv. y Locales *; o numViviendas + numLocales)', numViviendasYLocales],
-    ['listaPropietarios (Lista Propietarios / Arrendatarios *)', listaPropietarios],
+    ...(exigirSelects ? ([['listaPropietarios (Lista Propietarios / Arrendatarios *)', listaPropietarios]] as [string, unknown][]) : []),
     // Sin «Edificación Valor Reposición» ePAC deja «Calcular» deshabilitado (06/10/2026).
     ['capitalContinente (Edificación Valor Reposición, en euros)', capitalContinente],
   ]

@@ -9,7 +9,7 @@ import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/co
 import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
 import EditarFicha from './EditarFicha'
-import PrecioAllianzBot from './PrecioAllianzBot'
+import PedirPresupuestoBot from './PedirPresupuestoBot'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
 
@@ -109,7 +109,7 @@ export default function Cabecera({ ficha, resumen, seguros }: {
 
       <SiguientePaso ficha={{ ...ficha, contacto, intervinientes }} resumen={resumen} tiposVivos={tiposVivos} seguros={seguros} />
 
-      <Acciones clienteId={ficha.id} contacto={ficha.contacto} />
+      <Acciones clienteId={ficha.id} />
 
       <Titulares resumen={resumen} />
     </div>
@@ -369,7 +369,7 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 
 const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para salud no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
 
-function Acciones({ clienteId, contacto }: { clienteId: string; contacto: Ficha['contacto'] }) {
+function Acciones({ clienteId }: { clienteId: string }) {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
       <details style={{ position: 'relative' }}>
@@ -430,8 +430,8 @@ function Acciones({ clienteId, contacto }: { clienteId: string; contacto: Ficha[
       <BtnLink href={`/correduria/cliente/${clienteId}?tab=documentos&subir=poliza`} variante="secundario">
         <Ico i={FileText} /> Subir póliza
       </BtnLink>
-      {/* Solo un PRECIO de comunidad en Allianz por bot (06/10/2026): no emite ni contrata. */}
-      <PrecioAllianzBot clienteId={clienteId} contacto={contacto} />
+      {/* Presupuesto por bots (07/10/2026): ya no se cotiza desde la ficha; abre la oportunidad con el formulario común. */}
+      <PedirPresupuestoBot clienteId={clienteId} />
     </div>
   )
 }

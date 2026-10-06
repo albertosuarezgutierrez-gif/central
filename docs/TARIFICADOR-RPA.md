@@ -1,0 +1,63 @@
+# Tarificador RPA — guía viva (06/10/2026)
+
+> Estado, decisiones y plan del bot de cotización de Grupo ASegura. Sin secretos: solo nombres de variable.
+> Técnica del worker: `services/tarificador-rpa/README.md` · alta/puesta en marcha: `docs/TARIFICADOR-RPA-PUESTA-EN-MARCHA.md`
+> · plan de ramos con la API: `docs/CODEOSCOPIC-PLAN-RAMOS-2026-09.md`. Hitos: #4310, #4327, #4370, #4375, #4383, #4387 y `9d1f1ba38`→`226968775` (oportunidades, fichas, grabador).
+
+## Arquitectura
+Plataforma (**Oportunidades**) → asegura (cola `seguros.tarificacion_trabajos`, orquestador `apps/asegura/lib/tarificador*.ts`) → **worker Playwright** en Fly `asegura-tarificador` (una máquina efímera por trabajo). Imagen vigente `registry.fly.io/asegura-tarificador:v20261005`, construida por el workflow `tarificador-rpa-imagen.yml` (se lanza A MANO con input `etiqueta`). Módulo puro: `packages/module-tarificacion`. Servicio fuera del workspace pnpm.
+
+## Flujo de usuario
+Todo desde `/correduria/oportunidad/[id]`, sección **Presupuestos de compañías**: un formulario canónico de riesgo común a todas las compañías + registro de capacidades `packages/module-tarificacion/src/capacidades.ts` (cada bot declara ramo, extras de su portal, validación y mapeo). **Añadir un bot = registrar su adaptador/capacidad**; el formulario no cambia. El botón antiguo de la ficha de cliente sigue (#4327).
+
+## Hechos del DOM — Allianz ePAC Comunidades
+- Formulario en `iframe#appArea`; nueva póliza `#link_new_policy`; **Calcular = `div#calcular`**, **Aceptar = `div#aceptar`** (no son `<button>`, #4370). Edificación: capital obligatorio.
+- Población: lupa del CP `img#codigoPostalAjaxLocFinderImg`.
+- Resultado: tabla `#tablaTarificacion` con tabla ANIDADA. **Columna «Anual» = PRIMER RECIBO prorrateado** (ePAC fija el vencimiento al día 1); **«Sucesivos» = prima anual real**. La UI muestra la anual y aparte el primer recibo (#4383).
+- Término real: `#fechaTermino` / `#fechaTerminoTarificar`.
+- Proyecto (PDF): `td#MENU` → «Proyecto». **«Proyecto Ampliado» (`td#EMISION_PROJ`) PROHIBIDO.**
+- Precio verificado contra el manual (06/10/2026): **347,55 € anual / 342,77 € primer recibo.**
+
+## Seguridad (TARIFICAR ≠ EMITIR)
+- Guardián `test/regression-tarificador-rpa.test.ts`: lista blanca; nunca Emitir/Contratar/Formalizar/Grabar/Archivar ni Aceptar fuera de Tarificar; pulsar solo con `ctx.pulsar()`; sin `.click()` directo.
+- Credenciales (`CRED_<CLAVE>_USER/_PASS`) solo como fly secrets: nunca en código, logs, BD ni IA (se redactan). El worker no lleva `DATABASE_URL` ni `CODEOSCOPIC_*`.
+- CAPTCHA → `requiere_humano`, nunca se evita. **Un cepo se ve en rojo antes de darlo por bueno.**
+
+## IA formador (`src/formador.ts`)
+Fallback cuando `campoPorEtiqueta`/Calcular no resuelven (lista cerrada de acciones + `pareceEmision`); **modo acompañado** (hasta 10 cotizaciones) con contraste por etiqueta; registro inmutable `tarificador_intervenciones`. Tope de llamadas por trabajo: `TARIFICADOR_FORMADOR_MAX_LLAMADAS` (12).
+
+## Robustez
+Reintento único y solo transitorio (infraestructura); sesión en memoria con TTL 10 min (hoy NO ahorra logins: cada máquina hace 1 trabajo); pausas de ritmo humano; `VARIANTES` vacía (sin variantes de modalidad por ahora).
+
+## Renovaciones, detector y paneles
+- **Renovaciones:** cron asegura `/api/cron/tarificador-renovaciones`; `TARIFICADOR_RENOVACIONES_ACTIVO=1`, `MAX_DIA=3`.
+- **Detector de tarifa** (cambio de tarifa del portal) y panel `/correduria/tarificador`.
+- **Grabador** `/correduria/tarificador/grabaciones`: bookmarklet, redacción de datos, mapa IA → da de alta compañías/ramos sin escribir adaptador a mano. Tope `TARIFICADOR_GRABADOR_MAX_LLAMADAS` (60).
+- **Fichas** `/correduria/tarificador/fichas`: catálogo de garantías, validador anti-alucinación, validación humana, «Extraer coberturas» del PDF y `compararOfertas` (comparador determinista).
+- **Aviso de infraseguro** (1.100 / 1.400 / 1.800 €/m²): cifras **PENDIENTES de validar por Alberto**.
+
+## Interruptores y env (Vercel `central-asegura`)
+`TARIFICADOR_RPA_ACTIVO` (=1; apagado por defecto) · `TARIFICADOR_FORMADOR_ACTIVO` · `TARIFICADOR_RENOVACIONES_ACTIVO` · `TARIFICADOR_GRABADOR_MAX_LLAMADAS` · `TARIFICADOR_WORKER_SECRET` · `FLY_API_TOKEN` · `TARIFICADOR_FLY_APP` · `TARIFICADOR_FLY_IMAGE` · `TARIFICADOR_API_URL`.
+
+## SQL aplicados (`apps/asegura/prisma/sql/`)
+`2026-10-05_tarificador_rpa` · `2026-10-06b_tarificador_formador` · `2026-10-06c_tarificador_formador_revoke` · `07b` · `07c` (los dos últimos, de la sesión del 07/10; ver su cabecera). Mira `2026-10-06_tipo_seguro_ramos_ofertas` para los ramos de ofertas.
+
+## Rutina «Médico del bot tarificador»
+`trig_011zoZZAiTQnQ48qEWdRJq2Y`: laborables 8:52 Madrid; mira Supabase + repo; abre PR **draft**; **nunca mergea**.
+
+## Decisiones de Alberto
+- **Allianz NO se avisa** del acceso automatizado: riesgo de bloqueo asumido (volumen bajo, ritmo humano).
+- Todo lo hacen agentes, ahorrando tokens.
+- **Nunca desplegar imagen desde una rama sin su OK** (preview/producción: la imagen de Fly es única).
+- Auto/hogar/moto/vida/salud/decesos se quedan en **Avant2** (la API de Codeoscopic no cubre comunidades/RC/comercio).
+
+## PLAN
+1. Confirmar Allianz Comunidades con una **cotización real desde Oportunidades** (PDF + sesión).
+2. Comunidades con **Occident (Catalana Occidente)** vía grabador → comparador.
+3. RC con Occident.
+4. Comercio, más adelante.
+
+Por qué (cartera, 06/10): 103 pólizas en vigor de estos ramos/compañías; Occident ~46; Comunidades 4; RC 12; **13 pólizas Allianz sin prima cargada → revisar.**
+
+## Pendientes en vivo
+Cotización real de punta a punta (paso 1) · validar umbrales de infraseguro · revisar las 13 pólizas Allianz sin prima · rotar la contraseña de Occident que viajó en claro en un correo de Codeoscopic (08/06) · confirmar que los fly secrets llegan a las máquinas de la API de Machines.

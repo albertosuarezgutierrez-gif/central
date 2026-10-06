@@ -50,6 +50,11 @@ export default function PanelTarificador() {
   const { panel, cargando, error } = estado
   return (
     <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+      {/* Alta de compañías/ramos nuevos en el bot: grabar el portal a mano y las fichas de producto. */}
+      <nav aria-label="Alta de compañías en el bot" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Link href="/correduria/tarificador/grabaciones" style={{ ...btnStyle('secundario'), minHeight: 44, textDecoration: 'none' }}>Grabaciones de portales</Link>
+        <Link href="/correduria/tarificador/fichas" style={{ ...btnStyle('secundario'), minHeight: 44, textDecoration: 'none' }}>Fichas de producto</Link>
+      </nav>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <button type="button" onClick={() => void cargar()} disabled={cargando} style={{ ...btnStyle('secundario'), minHeight: 44 }}>
           <RefreshCw size={15} strokeWidth={1.75} aria-hidden /> {cargando ? 'Cargando…' : 'Actualizar'}

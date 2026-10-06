@@ -19,6 +19,7 @@ import FigurasRiesgo from './FigurasRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
+import PresupuestosCompanias from './PresupuestosCompanias'
 import { fechaEs } from './piezas-riesgo'
 import { etiquetaRiesgo, ramoVariante, retarificaEnRiesgo, rutaVariante, tomadorDelRiesgo } from './variante'
 
@@ -128,6 +129,9 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
       />
 
       <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
+
+      {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
+      <PresupuestosCompanias oportunidadId={op.id} ramo={op.ramo} />
 
       <HistorialVariantes riesgo={riesgo} />
 

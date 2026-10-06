@@ -265,3 +265,6 @@ orden en §9.
     matrícula/matriculación (sin confirmar; lo que no viene = null) y, solo con coincidencia EXACTA e inequívoca en el catálogo
     GRATIS, marcaId/modeloId/motorId/codigoVehiculo (nunca `?registrationPlate=`; catálogo caído = sin ids). AutoNuevo precarga
     en cascada PARCIAL (`precarga-vehiculo.ts`), el texto sin id va a la caja de búsqueda y una variante retomada manda sobre todo.
+
+## Presupuestos de compañías por bot (tarificador RPA)
+Se piden desde la oportunidad (`/correduria/oportunidad/[id]`); estado, decisiones y plan en `docs/TARIFICADOR-RPA.md`.

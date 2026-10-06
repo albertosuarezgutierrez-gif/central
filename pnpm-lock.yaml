@@ -770,6 +770,9 @@ importers:
       '@central/module-subastas':
         specifier: workspace:*
         version: link:../../packages/module-subastas
+      '@central/module-tarificacion':
+        specifier: workspace:*
+        version: link:../../packages/module-tarificacion
       '@central/module-trading':
         specifier: workspace:*
         version: link:../../packages/module-trading

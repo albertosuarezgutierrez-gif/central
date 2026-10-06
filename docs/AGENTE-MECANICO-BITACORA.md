@@ -12,6 +12,7 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (06/10/2026) fix(tarificador): ramo NULL sin valor por defecto en fichas; SQL 07b/07c marcados como aplicados — agente-mecanico — ok (tsc limpio, 7 tests pass, prisma generate ok)
 - (06/10/2026) helper textoExacto en tarificador-rpa/allianz/comunidades.ts, actualizar abrirComunidades para robustecer detectores de texto con variación CSS (mayúsculas, espacios) — agente-mecanico — ok (tsc limpio, 6/6 pruebas del helper pass)
 - (04/10/2026) crear agente jefe-contabilidad.md, reglas contables en perfil-fiscal/SKILL.md, actualizar CONTEXTO-SESIONES.md — sesión — ok
 - (03/10/2026) pasada SEO: CTR 2 artículos (preaviso 363 impr/0 clics, como-dar-de-baja 202 impr/1 clic) + keywords.md §5 — sesión — ok (189 tests articulos + ramos pass, 0 fail; tsc 0 errores)
