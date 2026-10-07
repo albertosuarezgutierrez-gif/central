@@ -6,6 +6,7 @@ import { correduriaUnica } from '@/lib/cartera'
 import { fichaCliente } from '@/lib/cartera-ficha'
 import { altaCliente, descartarCliente, editarCliente, restaurarCliente } from '@/lib/cartera-edicion'
 import type { EdicionCliente } from '@central/module-seguros'
+import { z } from 'zod'
 import { auditado } from '@/lib/auditoria'
 import { abrirSelloAltaLead } from '@/lib/sello-alta-lead'
 
@@ -106,10 +107,12 @@ export const DELETE = auditado(async (req: Request) => {
 })
 
 // PATCH /api/operador/cliente — EDICIÓN. Lo libre (dirección, CP, ciudad,
-// provincia, notas) entra tal cual; la identidad (DNI, nombre, apellidos,
-// fecha de nacimiento) SOLO con `documentoId` de un DNI recibido de este
-// cliente (422 `documento_requerido` / `documento_no_acredita` si no). Excepción:
-// en una ficha SIN NOMBRE se pueden poner nombre y apellidos sin documento.
+// provincia, notas) entra tal cual; `sexo` ('hombre'|'mujer' → `saludo` 1/2, ausente = no tocar); la identidad (DNI, nombre, apellidos,
+// fecha de nacimiento) con `documentoId` de un DNI recibido de este cliente o de
+// una póliza suya cuyo DNI leído es el de la ficha (422 `documento_no_acredita`
+// si no), o SIN documento con un `motivo` de ≥5 caracteres (05/10/2026; si falta,
+// 400 `motivo_requerido`). Excepción: en una ficha SIN NOMBRE se pueden poner
+// nombre y apellidos sin documento ni motivo.
 export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
@@ -118,12 +121,19 @@ export const PATCH = auditado(async (req: Request) => {
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
     if (!body || typeof body.id !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta id' }, { status: 422 })
+    // Sexo: enum estricto; ausente = no tocar (nunca un valor por defecto). Algo que no sea hombre/mujer → 422.
+    const sexoLeido = z.enum(['hombre', 'mujer']).optional().safeParse(body.sexo)
+    if (!sexoLeido.success) return NextResponse.json({ estado: 'invalido', motivo: 'Sexo no válido: hombre o mujer.', campo: 'sexo' }, { status: 422 })
     const edicion: EdicionCliente = {
+      ...(sexoLeido.data !== undefined ? { sexo: sexoLeido.data } : {}),
       identidad: objeto(body.identidad) as EdicionCliente['identidad'],
       libre: objeto(body.libre) as EdicionCliente['libre'],
       documentoId: typeof body.documentoId === 'string' && body.documentoId.trim() !== '' ? body.documentoId.trim() : null,
+      motivo: typeof body.motivo === 'string' ? body.motivo : null,
     }
-    const r = await editarCliente(correduria.id, body.id, edicion, actorDe(body))
+    // Este puerto lo llama SOLO plataforma (corredor autenticado): puede cambiar la identidad sin
+    // documento con `motivo` (≥5 caracteres; si no, 400). El portal del cliente no pasa por aquí.
+    const r = await editarCliente(correduria.id, body.id, edicion, actorDe(body), { permiteMotivo: true })
     if (!r.ok) return NextResponse.json(sinStatus(r), { status: r.status })
     return NextResponse.json({ estado: 'ok' })
   } catch (e) {

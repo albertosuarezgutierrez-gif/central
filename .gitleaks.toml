@@ -38,6 +38,10 @@ regexes = [
   # apps/plataforma/lib/presupuesto-asegura.test.ts (commit 998715d del PR #4133). El test actual usa
   # 'test-secreto'; se allowlista el literal por el historial del PR.
   '''secreto-de-prueba-0123456789abcdef''',
+  # Fixture de test (NO es un secreto real): TARIFICADOR_WORKER_SECRET inventado que vivió en
+  # packages/module-tarificacion/src/guardianes.test.ts (commit 704f1fde2 del PR #4310). El test
+  # actual lo compone en runtime; se allowlista el literal por el historial del PR.
+  '''wk_9f8e7d6c5b4a''',
   # Anon key PÚBLICA del proyecto Supabase compartido (wswbehlcuxqxyinousql), hardcodeada
   # en el bridge de impresión (scripts/bridge-v6) igual que lo estaba la del proyecto viejo:
   # es una clave de cliente (viaja en todo bundle del navegador), la protección real es RLS.

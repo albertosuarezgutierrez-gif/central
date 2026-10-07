@@ -65,7 +65,9 @@ const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
  *   la cartera. Si el cifrado no produce un `v1:` —sin `PII_ENCRYPTION_KEY`
  *   `encryptField` devuelve el texto TAL CUAL— o lanza, la dirección se omite:
  *   jamás se guarda en claro.
- * - `null` = no hay nada que guardar (ramos de personas, o petición vacía).
+ * - Vida guarda `capitalAsegurado` (`deathBenefit`) y `numeroAsegurados`; salud y decesos, `numeroAsegurados`
+ *   (`insureds[]`): sin nombres ni documentos, que son PII. Un asegurado sin datos no cuenta.
+ * - `null` = no hay nada que guardar (ramo sin riesgo propio, o petición vacía).
  */
 export function riesgoDeTarificacion(
   ramo: string | null,
@@ -96,6 +98,16 @@ export function riesgoDeTarificacion(
       const cifrada = cifrarSinFugas(direccion, cifrar)
       if (cifrada) out.direccion = cifrada
     }
+  } else if (tipo === 'vida') {
+    // El capital tarificado (`deathBenefit`, euros). Lo mismo que `datosCapital.capital` del riesgo.
+    const capital = typeof riesgo.deathBenefit === 'number' ? riesgo.deathBenefit : Number(riesgo.deathBenefit)
+    if (riesgo.deathBenefit !== null && riesgo.deathBenefit !== '' && Number.isFinite(capital) && capital > 0) out.capitalAsegurado = capital
+    // Vida tiene UN asegurado (`insured`): se anota que lo hay, sin sus datos personales.
+    if (Object.keys(obj(riesgo.insured)).length > 0) out.numeroAsegurados = 1
+  } else if (tipo === 'salud' || tipo === 'decesos') {
+    // Cuántas personas se tarificaron (`insureds[]`). Nombres y documentos NO se guardan aquí: son PII.
+    const n = Array.isArray(riesgo.insureds) ? riesgo.insureds.filter((x) => Object.keys(obj(x)).length > 0).length : 0
+    if (n > 0) out.numeroAsegurados = n
   }
 
   return Object.keys(out).length > 0 ? out : null

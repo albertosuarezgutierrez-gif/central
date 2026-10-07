@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-03T11:27:20Z",
+  "generadoEn": "2026-10-07T15:46:23Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -213,6 +213,11 @@
       "npm": "@central/module-subastas"
     },
     {
+      "id": "module-tarificacion",
+      "tipo": "module",
+      "npm": "@central/module-tarificacion"
+    },
+    {
       "id": "module-trading",
       "tipo": "module",
       "npm": "@central/module-trading"
@@ -362,7 +367,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 7
       },
       "asegura-portal": {
         "estado": "usado",
@@ -686,11 +691,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 7
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "asegura-web": {
         "estado": "no",
@@ -718,7 +723,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 4
       },
       "sivra": {
         "estado": "no",
@@ -960,7 +965,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 12
       },
       "asegura-web": {
         "estado": "no",
@@ -984,7 +989,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "usado",
@@ -2198,11 +2203,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 170
+        "evidencias": 228
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 114
+        "evidencias": 123
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 136
+        "evidencias": 165
       },
       "rrhh": {
         "estado": "no",
@@ -2252,11 +2257,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 44
+        "evidencias": 57
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "asegura-web": {
         "estado": "no",
@@ -2306,11 +2311,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 30
+        "evidencias": 38
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 88
+        "evidencias": 97
       },
       "asegura-web": {
         "estado": "usado",
@@ -2443,6 +2448,60 @@
       "plataforma": {
         "estado": "usado",
         "evidencias": 38
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-tarificacion": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "usado",
+        "evidencias": 24
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "no",
@@ -2848,7 +2907,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 18
+        "evidencias": 20
       },
       "asegura-portal": {
         "presente": false,
@@ -3689,8 +3748,8 @@
         "evidencias": 0
       },
       "rrhh": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 17
       },
       "sivra": {
         "presente": false,
@@ -3873,7 +3932,10 @@
     "core-email": [],
     "core-firma": [],
     "core-fiscal": [],
-    "core-identity": [],
+    "core-identity": [
+      "module-seguros",
+      "module-seguros-portal"
+    ],
     "core-payments": [],
     "core-push": [],
     "core-receipts": [],
@@ -3911,6 +3973,7 @@
       "module-documental"
     ],
     "module-seguros": [
+      "core-ai",
       "module-seguros-pii",
       "module-seguros-portal"
     ],
@@ -3920,6 +3983,7 @@
     "module-seguros-portal": [
       "core-catastro",
       "core-fiscal",
+      "core-identity",
       "module-seguros",
       "module-seguros-pii"
     ],
@@ -3927,6 +3991,9 @@
     "module-subastas": [
       "core-catastro",
       "module-concursos"
+    ],
+    "module-tarificacion": [
+      "module-seguros"
     ],
     "module-trading": [],
     "module-transporte": [
@@ -3977,8 +4044,15 @@
       "/api/cron/avisos-web",
       "/api/cron/coberturas-backfill",
       "/api/cron/felicitaciones",
+      "/api/cron/google-contactos",
       "/api/cron/polizas-pdf",
       "/api/cron/revision-anual",
+      "/api/cron/siniestros-vinculo",
+      "/api/cron/tarificador-renovaciones",
+      "/api/cron/whatsapp-analizar",
+      "/api/cron/whatsapp-retencion",
+      "/api/google-contactos/callback",
+      "/api/google-contactos/conectar",
       "/api/operador/actividad",
       "/api/operador/actividad-nueva",
       "/api/operador/anulaciones",
@@ -3988,6 +4062,7 @@
       "/api/operador/aviso-web",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
+      "/api/operador/borrador-presupuesto",
       "/api/operador/buscar",
       "/api/operador/calidad",
       "/api/operador/cambios-cuenta",
@@ -4002,6 +4077,7 @@
       "/api/operador/cliente/dni",
       "/api/operador/cliente/fusion",
       "/api/operador/cliente/historial",
+      "/api/operador/cliente/mote",
       "/api/operador/cliente/portal",
       "/api/operador/cliente/portal/vista",
       "/api/operador/cliente/relaciones",
@@ -4042,11 +4118,15 @@
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
       "/api/operador/codeoscopic/tarificacion",
+      "/api/operador/codeoscopic/tope",
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
       "/api/operador/comisiones-pactadas",
       "/api/operador/companias",
+      "/api/operador/companias/acuerdo/cotejar",
+      "/api/operador/companias/acuerdos",
       "/api/operador/companias/contacto/[id]",
+      "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
       "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
@@ -4054,12 +4134,20 @@
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
+      "/api/operador/duplicados/no-duplicado",
       "/api/operador/emision/aviso",
       "/api/operador/eventos",
       "/api/operador/eventos/detectar",
       "/api/operador/export-rgpd",
       "/api/operador/formacion",
       "/api/operador/formacion/baja",
+      "/api/operador/google-contactos",
+      "/api/operador/google-contactos/activar",
+      "/api/operador/google-contactos/desconectar",
+      "/api/operador/google-contactos/ordenar",
+      "/api/operador/google-contactos/revision",
+      "/api/operador/google-contactos/simular",
+      "/api/operador/google-contactos/ticket",
       "/api/operador/huerfanas",
       "/api/operador/impagados",
       "/api/operador/informe-mediacion",
@@ -4071,11 +4159,14 @@
       "/api/operador/leer-documento",
       "/api/operador/libro-registro",
       "/api/operador/linea-base",
+      "/api/operador/llamada",
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/comparar",
+      "/api/operador/oportunidad/consolidar",
       "/api/operador/oportunidad/de-poliza",
       "/api/operador/oportunidad/figuras",
       "/api/operador/oportunidad/llamada",
+      "/api/operador/oportunidad/ofertas",
       "/api/operador/oportunidad/riesgo",
       "/api/operador/oportunidad/tarea",
       "/api/operador/oportunidad/traspasar",
@@ -4107,12 +4198,33 @@
       "/api/operador/siniestro/terceros",
       "/api/operador/siniestros-nuevos",
       "/api/operador/solicitud-datos",
+      "/api/operador/solicitud-datos/lead-web",
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
       "/api/operador/tareas-hoy",
+      "/api/operador/tarificador/avisos-verificacion",
+      "/api/operador/tarificador/coberturas",
+      "/api/operador/tarificador/encolar",
+      "/api/operador/tarificador/fichas",
+      "/api/operador/tarificador/fichas/[id]",
+      "/api/operador/tarificador/grabaciones",
+      "/api/operador/tarificador/grabaciones/[id]",
+      "/api/operador/tarificador/grabaciones/[id]/analizar",
+      "/api/operador/tarificador/grabaciones/[id]/pantallas",
+      "/api/operador/tarificador/intervenciones",
+      "/api/operador/tarificador/oportunidad",
+      "/api/operador/tarificador/oportunidad/[id]/propuesta",
+      "/api/operador/tarificador/panel",
+      "/api/operador/tarificador/trabajo/[id]",
+      "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
+      "/api/operador/tarificador/ultimo-riesgo",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
+      "/api/operador/whatsapp/alta",
+      "/api/operador/whatsapp/conexion",
+      "/api/operador/whatsapp/conversaciones",
       "/api/portal/anulacion",
+      "/api/portal/anulacion/solicitar",
       "/api/portal/carnets",
       "/api/portal/carta-mediador",
       "/api/portal/contacto",
@@ -4124,17 +4236,28 @@
       "/api/portal/documento",
       "/api/portal/mejorar-precio",
       "/api/portal/nota",
+      "/api/portal/personas-poliza",
       "/api/portal/presupuesto",
       "/api/portal/solicitud-datos",
       "/api/portal/solicitud-datos/documento",
       "/api/publico/recaptacion/baja",
+      "/api/tarificador/formador/cierre",
+      "/api/tarificador/formador/confirmar",
+      "/api/tarificador/formador/conocimiento",
+      "/api/tarificador/formador/revisar-paso",
+      "/api/tarificador/formador/sugerir",
+      "/api/tarificador/resultado",
+      "/api/tarificador/sesion/[compania]",
+      "/api/tarificador/trabajo/[id]",
       "/api/webhooks/codeoscopic",
-      "/api/webhooks/resend"
+      "/api/webhooks/resend",
+      "/api/webhooks/whatsapp"
     ],
     "asegura-portal": [
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
       "/api/anulacion",
+      "/api/anulacion/solicitar",
       "/api/autorizaciones",
       "/api/autorizaciones/[id]",
       "/api/avisos",
@@ -4148,6 +4271,8 @@
       "/api/datos",
       "/api/datos/documento",
       "/api/documento/dni",
+      "/api/flota/jefe",
+      "/api/flota/vehiculo",
       "/api/hojas",
       "/api/hojas/[id]",
       "/api/invitaciones",
@@ -4156,6 +4281,8 @@
       "/api/ipid/[id]",
       "/api/mejorar-precio",
       "/api/mis-datos",
+      "/api/mis-datos/carnets",
+      "/api/mis-datos/carnets/[id]",
       "/api/mis-datos/codigo-correo",
       "/api/mis-datos/confirmar",
       "/api/mis-datos/contactos",
@@ -4174,6 +4301,8 @@
       "/api/presupuesto/datos",
       "/api/presupuesto/firma",
       "/api/presupuesto/ia",
+      "/api/presupuesto/pdf",
+      "/api/presupuesto/whatsapp",
       "/api/push/desuscribir",
       "/api/push/preferencias",
       "/api/push/suscribir",
@@ -5005,6 +5134,7 @@
       "/api/correduria/backfill-dni",
       "/api/correduria/bajas-pue",
       "/api/correduria/blog",
+      "/api/correduria/borrador-presupuesto",
       "/api/correduria/buscar",
       "/api/correduria/calidad",
       "/api/correduria/cambios-cuenta",
@@ -5015,6 +5145,7 @@
       "/api/correduria/catastro",
       "/api/correduria/cima-sincro",
       "/api/correduria/cliente",
+      "/api/correduria/cliente-mote",
       "/api/correduria/cliente/[id]/dni-codigo",
       "/api/correduria/cliente/[id]/dni-revelar",
       "/api/correduria/cliente/carnets",
@@ -5031,10 +5162,12 @@
       "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/codigo-postal",
       "/api/correduria/comisiones",
-      "/api/correduria/comisiones-pactadas",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
+      "/api/correduria/companias/acuerdos",
+      "/api/correduria/companias/acuerdos/cotejar",
       "/api/correduria/companias/contactado",
+      "/api/correduria/companias/telefono",
       "/api/correduria/contactos-movil",
       "/api/correduria/contador",
       "/api/correduria/declaradas-vencer",
@@ -5043,6 +5176,7 @@
       "/api/correduria/documentos",
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
+      "/api/correduria/duplicados/no-duplicado",
       "/api/correduria/emision-aviso",
       "/api/correduria/emisiones-revision",
       "/api/correduria/emisiones-revision/[id]/resolver",
@@ -5051,6 +5185,9 @@
       "/api/correduria/formacion/baja",
       "/api/correduria/fugas",
       "/api/correduria/garantias-filtradas",
+      "/api/correduria/google-contactos-ordenar",
+      "/api/correduria/google-contactos-revision",
+      "/api/correduria/google-contactos-sync",
       "/api/correduria/impagados",
       "/api/correduria/informe-mediacion",
       "/api/correduria/ingesta",
@@ -5063,10 +5200,12 @@
       "/api/correduria/linea-base",
       "/api/correduria/oportunidad",
       "/api/correduria/oportunidad/comparar",
+      "/api/correduria/oportunidad/consolidar",
       "/api/correduria/oportunidad/de-poliza",
       "/api/correduria/oportunidad/figuras",
       "/api/correduria/oportunidad/leer",
       "/api/correduria/oportunidad/llamada",
+      "/api/correduria/oportunidad/ofertas",
       "/api/correduria/oportunidad/riesgo",
       "/api/correduria/oportunidad/tarea",
       "/api/correduria/oportunidad/traspasar",
@@ -5089,7 +5228,22 @@
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
       "/api/correduria/tareas-hoy",
+      "/api/correduria/tarificador/coberturas",
+      "/api/correduria/tarificador/encolar",
+      "/api/correduria/tarificador/fichas",
+      "/api/correduria/tarificador/fichas/[id]",
+      "/api/correduria/tarificador/grabaciones",
+      "/api/correduria/tarificador/grabaciones/[id]",
+      "/api/correduria/tarificador/grabaciones/[id]/analizar",
+      "/api/correduria/tarificador/grabaciones/[id]/pantallas",
+      "/api/correduria/tarificador/oportunidad",
+      "/api/correduria/tarificador/oportunidad/[id]/propuesta",
+      "/api/correduria/tarificador/panel",
+      "/api/correduria/tarificador/trabajo/[id]",
+      "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
+      "/api/correduria/tarificador/ultimo-riesgo",
       "/api/correduria/vencimientos",
+      "/api/correduria/whatsapp-conexion",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
       "/api/cron/blog-asegura",
@@ -5117,6 +5271,8 @@
       "/api/cron/correduria-seguimiento-presupuestos",
       "/api/cron/correduria-siniestros",
       "/api/cron/correduria-sustituciones",
+      "/api/cron/correduria-tope-avant2",
+      "/api/cron/correduria-whatsapp-conexion",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
@@ -5145,6 +5301,7 @@
       "/api/cron/subastas-ingesta",
       "/api/cron/subastas-mercado",
       "/api/cron/subastas-radar",
+      "/api/cron/tarificador-verificacion",
       "/api/cron/trading-backtest",
       "/api/cron/trading-cohetes-rebalanceo",
       "/api/cron/trading-cohetes-track",
@@ -5356,6 +5513,7 @@
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
+      "/api/admin/empleados/[id]/cerrar-sesiones",
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
@@ -5365,9 +5523,12 @@
       "/api/admin/empleados/[id]/documentos/confirm",
       "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/empleados/[id]/documentos/presign",
+      "/api/admin/empleados/[id]/enlace",
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/fichajes/exportar",
+      "/api/admin/informes",
+      "/api/admin/informes/exportar",
       "/api/admin/mis-empresas",
       "/api/admin/nominas",
       "/api/admin/nominas/[nominaId]/confirmar",
@@ -5391,6 +5552,9 @@
       "/api/cron/alerta-jornada-maxima",
       "/api/cron/nominas",
       "/api/cron/recordatorio-fichaje",
+      "/api/e/acceso/completar",
+      "/api/e/acceso/solicitar",
+      "/api/e/acceso/verificar",
       "/api/e/asistente",
       "/api/e/chat",
       "/api/e/expediente",
@@ -5399,6 +5563,7 @@
       "/api/e/fichaje",
       "/api/e/login",
       "/api/e/push/subscribe",
+      "/api/e/salir",
       "/api/e/solicitudes",
       "/api/operador/empresas",
       "/api/operador/logos",
@@ -5534,6 +5699,9 @@
     "asegura": [
       "if",
       "seguros._volcado_control",
+      "seguros.acuerdo_comisiones",
+      "seguros.acuerdo_objetivos",
+      "seguros.acuerdos_compania",
       "seguros.anulacion",
       "seguros.aprobacion",
       "seguros.auditoria",
@@ -5541,6 +5709,7 @@
       "seguros.backfill_dni_plan",
       "seguros.bien_documentos",
       "seguros.bienes_asegurables",
+      "seguros.borradores_presupuesto",
       "seguros.bot_eval_runs",
       "seguros.bot_eval_scores",
       "seguros.bot_turn_traces",
@@ -5550,9 +5719,11 @@
       "seguros.channel_inbound_messages",
       "seguros.cima_decisiones",
       "seguros.cima_ficheros",
+      "seguros.claves_mediador",
       "seguros.cliente_carnets_conducir",
       "seguros.cliente_emails",
       "seguros.cliente_merge_log",
+      "seguros.cliente_mote",
       "seguros.cliente_relaciones",
       "seguros.cliente_telefonos",
       "seguros.clientes",
@@ -5564,11 +5735,13 @@
       "seguros.codeoscopic_prices",
       "seguros.codeoscopic_product_forms",
       "seguros.codeoscopic_projects",
+      "seguros.codeoscopic_tope_evento",
       "seguros.codeoscopic_topes_historial",
       "seguros.codeoscopic_webhook_events",
       "seguros.comision_pactada",
       "seguros.compania_contactos",
       "seguros.companias_dgs",
+      "seguros.companias_integracion",
       "seguros.consent_logs",
       "seguros.conversaciones",
       "seguros.corredurias",
@@ -5584,6 +5757,11 @@
       "seguros.formacion",
       "seguros.formacion_baja",
       "seguros.gestiones",
+      "seguros.google_contactos_conexion",
+      "seguros.google_contactos_revision",
+      "seguros.google_contactos_ticket_usado",
+      "seguros.google_contactos_titular_telefono",
+      "seguros.google_contactos_vinculo",
       "seguros.historial_interno",
       "seguros.interviniente_purga_log",
       "seguros.ipid",
@@ -5596,6 +5774,7 @@
       "seguros.operational_events",
       "seguros.oportunidad_figura",
       "seguros.oportunidad_historial",
+      "seguros.oportunidad_oferta",
       "seguros.oportunidades",
       "seguros.peticiones",
       "seguros.poliza_coberturas",
@@ -5625,7 +5804,16 @@
       "seguros.solicitud_cambio_documentos",
       "seguros.solicitud_datos",
       "seguros.tarificacion_precios",
+      "seguros.tarificacion_trabajos",
       "seguros.tarificaciones",
+      "seguros.tarificador_acompanamiento",
+      "seguros.tarificador_coberturas_presupuesto",
+      "seguros.tarificador_conocimiento",
+      "seguros.tarificador_fichas",
+      "seguros.tarificador_grabacion_pantallas",
+      "seguros.tarificador_grabaciones",
+      "seguros.tarificador_intervenciones",
+      "seguros.tarificador_sesiones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
       "seguros.whatsapp_outbound_messages"
@@ -5935,6 +6123,7 @@
       "trading_watchlist"
     ],
     "rrhh": [
+      "rrhh.acceso_otps",
       "rrhh.contratos_laborales",
       "rrhh.documentos",
       "rrhh.empleados",
@@ -6048,6 +6237,11 @@
       "id": "github-vigia",
       "name": "github-vigia",
       "description": "Agente PROGRAMADO mensual (día 15) que vigila el ecosistema GitHub/OSS — releases de los repos curados en docs/VIGIA-OSS.md, descubrimiento por vertical, y deps npm desactualizadas o con CVE. Actualiza docs/VIGIA-OSS.md, Telegram + PR draft solo para bumps seguros. Úsala si Alberto pide \"revisa las novedades de GitHub / del ecosistema\". Sin secretos."
+    },
+    {
+      "id": "google-contactos",
+      "name": "google-contactos",
+      "description": ">"
     },
     {
       "id": "ia-rest-maestro",
@@ -6574,7 +6768,8 @@
         "capacidad": "informes",
         "label": "Informes",
         "tiene": [
-          "ialimp"
+          "ialimp",
+          "rrhh"
         ],
         "falta": [
           "almacen",
@@ -6585,7 +6780,6 @@
           "housesevillana",
           "ia-rest",
           "mariscos",
-          "rrhh",
           "sivra",
           "transporte"
         ]
@@ -6635,10 +6829,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 42,
+    "packages": 43,
     "capacidades": 23,
-    "skills": 43,
-    "apis": 1549,
+    "skills": 44,
+    "apis": 1647,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

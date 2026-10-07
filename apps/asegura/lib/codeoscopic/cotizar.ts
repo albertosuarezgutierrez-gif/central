@@ -7,7 +7,7 @@
 //   1. Config          → si está apagada o incompleta, no hay llamada.
 //   2. Ámbito          → sin correduría no hay libro contra el que contar.
 //   3. Libro           → si no se puede leer, NO se cotiza (fail closed).
-//   4. Tope            → decisión pura, ya probada.
+//   4. Tope            → decisión pura, ya probada (consultas/día y EUROS/mes).
 //   5. Reserva         → se escribe ANTES de llamar.
 //   6. Llamada         → un solo intento.
 //   7. Cierre          → facturable, o descartado CON evidencia.
@@ -31,6 +31,8 @@ import { cotizacionSimulada } from './simulacion.ts'
 import { enlazarPresupuestoConOportunidad } from './oportunidad-presupuesto.ts'
 import { aniosDelCuerpo, aplicarTopesHistorial, topesDelMensaje, type TopesHistorial } from '@central/module-seguros'
 import { guardarTopesHistorial, leerTopesHistorial } from './topes-historial.ts'
+import { comprobarTopeEuros } from './tope-euros-bd.ts'
+import { traducirMotoNoApta400 } from './carnet-moto.ts'
 import {
   guardarSinTumbar,
   type ContextoCotizacion,
@@ -64,7 +66,18 @@ export type ResultadoCotizacion =
       /** Años del seguro anterior recortados a un tope aprendido («totalYearsInsured 10→8»). Vacío = ninguno. */
       ajustesHistorial?: string[]
     }
-  | { ok: false; razon: 'apagado' | 'mal-configurado' | 'sin-libro' | 'tope' | 'vendor'; mensaje: string }
+  | {
+      ok: false
+      razon: 'apagado' | 'mal-configurado' | 'sin-libro' | 'tope' | 'vendor'
+      mensaje: string
+      /**
+       * `true` SOLO con PRUEBA de que no hubo cargo (`ErrorCodeoscopic.pruebaQueNoHuboCargo`: auth,
+       * conexión o 400 de validación; consumo `descartado`). Nunca timeout, 5xx ni red: ahí «no se sabe».
+       */
+      sinCargo?: true
+      /** Clase del error del vendor cuando `sinCargo` (la ruta decide 422 vs 502 con ella). */
+      claveVendor?: string
+    }
 
 export type PeticionCotizacion = {
   correduriaId: string
@@ -280,6 +293,11 @@ export async function cotizar(
   const veredicto = puedeCotizar(consumo, config.topes)
   if (!veredicto.permitido) return { ok: false, razon: 'tope', mensaje: veredicto.explicacion }
 
+  // 4a — Tope en EUROS del mes (decisión de Alberto, 29/09/2026): aviso a 60 €, bloqueo a 70 € hasta
+  // que amplíe por Telegram. Fail-closed: sin poder leer el gasto del mes, no se llama.
+  const euros = await comprobarTopeEuros(p.correduriaId, COSTE_COTIZACION_CENTS, env)
+  if (!euros.ok) return { ok: false, razon: euros.razon, mensaje: euros.mensaje }
+
   // 4b — Topes APRENDIDOS del historial del seguro anterior (29/09/2026): el máximo declarado se
   // recorta a lo que el vendor ya rechazó una vez, para que ese 400 no vuelva a salir.
   const topes = deps.topes ?? (deps.guardar ? null : { leer: leerTopesHistorial, guardar: guardarTopesHistorial })
@@ -353,7 +371,13 @@ export async function cotizar(
           }
         }
       }
-      return { ok: false, razon: 'vendor', mensaje: e.message }
+      return {
+        ok: false,
+        razon: 'vendor',
+        mensaje: (e.clase === 'validacion' ? traducirMotoNoApta400(e.detalle) : null) ?? e.message,
+        sinCargo: true,
+        claveVendor: e.clase,
+      }
     }
 
     // Timeout, 5xx o respuesta ilegible: la reserva se queda ABIERTA y sigue

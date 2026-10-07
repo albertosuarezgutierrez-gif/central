@@ -8,7 +8,7 @@ description: Agente PROGRAMADO mensual (día 8) que vigila los LÍMITES de la in
 Vigila **los techos**: cuánto queda para que un proveedor deje de servir. Entorno **efímero**: cada
 pasada es completa e idempotente; el estado vive en **`docs/VIGIA-INFRA.md`** (commiteado).
 
-> 🔥 **Por qué existe.** Van tres sustos del mismo tipo, y ninguno lo cazó una alerta:
+> 🔥 **Por qué existe.** Van cuatro sustos del mismo tipo, y ninguno lo cazó una alerta:
 > - **15/07/2026** — ~600 US$ de Build CPU Minutes en un mes porque cada push reconstruía los once
 >   proyectos Vercel (PR #904).
 > - **04/09/2026** — cuota `api-deployments-paid-per-hour` (450/h, **de cuenta**) agotada por una
@@ -16,8 +16,11 @@ pasada es completa e idempotente; el estado vive en **`docs/VIGIA-INFRA.md`** (c
 > - **21/09/2026** — `central` en **644 MB** sobre un tope de 500 (plan Free), con la cartera de la
 >   correduría, las finanzas y todas las apps dentro. Lo vio Claude en Chrome **de refilón**,
 >   mirando otra cosa.
+> - **04/10/2026** — `central` (plan Free) con egress de 5,138 GB en el ciclo (tope ~5 GB) y la gracia
+>   vencida desde el 10/07: riesgo de 402 en todas las apps. Otra vez de refilón. Alberto lo pasó a
+>   **Pro** ese mismo día: los topes a vigilar ya son los de Pro.
 >
-> Los tres eran medibles con una consulta. El problema nunca fue el límite: fue que nadie miraba.
+> Los cuatro eran medibles con una consulta. El problema nunca fue el límite: fue que nadie miraba.
 
 > ⚠️ **REGLA DURA — un límite que no has medido NO está bien.** Si una llamada falla, devuelve
 > vacío o viene truncada, eso es **«no lo sé»**, y así se escribe en el informe. Jamás «dentro de

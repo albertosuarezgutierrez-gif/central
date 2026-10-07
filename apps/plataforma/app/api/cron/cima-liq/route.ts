@@ -193,6 +193,14 @@ export async function GET(req: NextRequest) {
   const casado = casarAbonos(periodosLiq, abonos, reglas)
 
   const avisos: string[] = []
+  // Un abono que liquida varias remesas y trae de MÁS: el sobrante no se reparte (no hay columna ni
+  // criterio para saber a qué periodo va), se deja constancia aquí.
+  for (const e of casado.excedentes) {
+    avisos.push(
+      `${nombreCompania(e.codigo)}: el abono ${e.abonoId.slice(0, 8)} (${eur(e.importe)}) liquida varias remesas por ${eur(e.sumaRemesas)} ` +
+      `y sobran ${eur(e.excedente)} sin repartir. Revísalo.`,
+    )
+  }
   let pendientes = 0
 
   for (const f of filas) {

@@ -25,6 +25,7 @@ const MARGEN = 56
 
 const METODOS: Record<string, string> = {
   otp_email: 'código de un solo uso enviado al correo electrónico del firmante',
+  otp_whatsapp: 'código de acceso del presupuesto enviado por WhatsApp al móvil del firmante',
 }
 
 function fechaHoraMadrid(iso: string): string {

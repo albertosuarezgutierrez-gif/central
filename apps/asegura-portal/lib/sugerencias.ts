@@ -9,7 +9,7 @@
 // mecanismo real de acceso — `portal_vinculo` (mis fichas) y
 // `portal_autorizacion` vigente (lo que me han concedido) — nunca contra la
 // columna vieja, que ni siquiera está en el modelo Prisma de esta app.
-import { estadoAutorizacion, relacionesSugeribles, type SugerenciaRelacion } from '@central/module-seguros-portal'
+import { ALCANCE_FLOTA, estadoAutorizacion, relacionesSugeribles, type SugerenciaRelacion } from '@central/module-seguros-portal'
 import type { RelacionFila } from '@central/module-seguros'
 
 import { prisma } from './db'
@@ -47,6 +47,8 @@ export async function sugerenciasDeIdentidad(identidadId: string): Promise<Suger
       where: {
         OR: [{ autorizadoClienteId: { in: misIds } }, { autorizadoIdentidadId: identidadId }],
         revocadoEn: null,
+        // Ser jefe de flota de una sociedad no es «ya me deja ver sus seguros» (05/10/2026).
+        alcance: { not: ALCANCE_FLOTA },
       },
       select: { otorganteClienteId: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
     }),

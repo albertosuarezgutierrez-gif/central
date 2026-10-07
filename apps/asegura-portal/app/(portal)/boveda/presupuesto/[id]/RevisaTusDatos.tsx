@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import type { DatosCotizados } from '@/lib/presupuesto-firma'
+import { TEXTOS_OFERTAS } from '@/lib/presupuesto-ofertas-vista'
 
 /**
  * «Revisa tus datos» — lo PRIMERO de la pantalla del presupuesto (dictado de Alberto, 28/09/2026).
@@ -15,11 +16,13 @@ import type { DatosCotizados } from '@/lib/presupuesto-firma'
  *  - El DNI llega ya enmascarado desde asegura; aquí no se toca.
  *  - «Hay un dato que no es correcto» avisa a la correduría; con eso ya no se emite nada.
  */
-export function RevisaTusDatos({ presupuestoId, datos, corredor, telefono }: {
+export function RevisaTusDatos({ presupuestoId, datos, corredor, telefono, origen = 'codeoscopic' }: {
   presupuestoId: string
   datos: DatosCotizados | null
   corredor: boolean
   telefono: { tel: string; texto: string } | null
+  /** `ofertas`: no hay petición a ninguna compañía de la que «se calculó el precio»; se revisa quién es el tomador. */
+  origen?: 'codeoscopic' | 'ofertas'
 }) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
@@ -61,14 +64,18 @@ export function RevisaTusDatos({ presupuestoId, datos, corredor, telefono }: {
 
       {datos === null || datos.estado === 'sin_datos' ? (
         <p className="pendiente" style={{ margin: 0 }}>
-          {datos?.motivo ?? 'No hemos podido leer los datos con los que se calculó tu precio. Llámanos y lo revisamos contigo: no se emite nada hasta entonces.'}
+          {datos?.motivo ?? (origen === 'ofertas' ? TEXTOS_OFERTAS.sinDatos : 'No hemos podido leer los datos con los que se calculó tu precio. Llámanos y lo revisamos contigo: no se emite nada hasta entonces.')}
           {llamar}
         </p>
       ) : (
         <>
           <p style={{ margin: '0 0 12px' }}>
-            Estos son los datos con los que las compañías han calculado tu precio. Comprueba que son correctos:
-            <strong> el precio y la póliza dependen de ellos</strong>. Si alguno no lo es, dínoslo antes de aceptar.
+            {origen === 'ofertas' ? TEXTOS_OFERTAS.revisaIntro : (
+              <>
+                Estos son los datos con los que las compañías han calculado tu precio. Comprueba que son correctos:
+                <strong> el precio y la póliza dependen de ellos</strong>. Si alguno no lo es, dínoslo antes de aceptar.
+              </>
+            )}
           </p>
 
           <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0, 1fr)' }}>

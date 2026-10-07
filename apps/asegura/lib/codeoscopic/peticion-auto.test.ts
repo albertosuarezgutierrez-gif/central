@@ -530,3 +530,10 @@ test('segundo apellido: obligatorio con Dni; con Nie no', () => {
   assert.ok(revisarDatosAuto({ ...BASE, apellido2: '  ' }).some((x) => x.campo === 'apellido2'))
   assert.equal(revisarDatosAuto({ ...BASE, dni: 'X1234567L', nacionalidad: 'MAR', apellido2: null }).some((x) => x.campo === 'apellido2'), false)
 })
+
+test('Mapfre: el nº de póliza anterior viaja sin el sufijo de versión («4840402030 01» → «4840402030»)', () => {
+  const m = construirPeticionAuto({ ...CON_HISTORIAL, companiaAnteriorCodigo: 'C0058', polizaAnterior: '4840402030 01' }) as any
+  assert.equal(m.risk.previousInsurance.policyNumber, '4840402030')
+  const o = construirPeticionAuto({ ...CON_HISTORIAL, polizaAnterior: '4840402030 01' }) as any
+  assert.equal(o.risk.previousInsurance.policyNumber, '484040203001')
+})

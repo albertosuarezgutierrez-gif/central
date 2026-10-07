@@ -32,3 +32,10 @@ test('🪤 la vista de corredor no pide código ni firma: el veto va antes', () 
   assert.ok(veto > 0 && veto < src.indexOf('pedirCodigoCarta(identidad.id') && veto < src.indexOf('firmarCarta(identidad.id'))
   assert.doesNotMatch(src, /b\.identidadId|clienteId/)
 })
+
+import { MENSAJE_VARIAS_FICHAS } from './mensajes-ficha.ts'
+
+test('🪤 varias_fichas tiene mensaje propio (no el de «sin ficha»)', () => {
+  assert.deepEqual(interpretarPreparada(409, { estado: 'varias_fichas' }), { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS })
+  assert.deepEqual(interpretarCodigoCarta(409, { estado: 'varias_fichas' }), { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS })
+})

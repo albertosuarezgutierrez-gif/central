@@ -28,6 +28,8 @@ import {
 import { avisosCompania, comunesParrilla, partirSinLeer } from '@/lib/correduria/parrilla-coherencia'
 import PrepararPresupuesto from './poliza/[id]/retarificar/PrepararPresupuesto'
 import { pedirPreciosGuardados, type RespuestaPreciosGuardados } from './garantias-acciones'
+import type { PrimaActualLista } from './ListaPrecios'
+import { textoPagasProponemos } from '@/lib/correduria/competencia-oportunidad'
 
 const PAGINA = 50
 
@@ -45,7 +47,10 @@ export default function FiltroGarantias({
   tarificacionId,
   simulado,
   emitir,
+  actual = null,
 }: {
+  /** «Pagas X → te proponemos Y» (03/10/2026): lo que paga hoy en la competencia, anualizado. `null` = no se enseña comparación. */
+  actual?: PrimaActualLista | null
   /** Ramo de la parrilla (`auto`, `moto`, `hogar`, `decesos`, `salud`, `vida`). Sin catálogo → sin interruptores. */
   ramo: string | null
   /** De dónde se lee lo guardado: la póliza (retarificar) o el cliente + ramo (cliente nuevo). */
@@ -209,21 +214,6 @@ export default function FiltroGarantias({
               <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, overflowWrap: 'anywhere' }}>{o.modalidad}</span>
             )}
             {lineaFranquicia && <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>{lineaFranquicia}</span>}
-            {textoDescuentos(o.descuentos) && (
-              <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>{textoDescuentos(o.descuentos)}</span>
-            )}
-            {typeof o.bloqueo === 'string' && (
-              <span style={{ display: 'block', fontSize: 12, color: 'var(--negative)', fontWeight: 600 }}>{textoBloqueoCorredor(o.bloqueo, o.compania)}</span>
-            )}
-            {o.reparos.map((m) => (
-              <span key={m} style={{ display: 'block', fontSize: 12, color: 'var(--warning)', fontWeight: 600, overflowWrap: 'anywhere' }}>⚠️ {m}</span>
-            ))}
-            {dif && dif.noIncluye.length > 0 && (
-              <span style={{ display: 'block', fontSize: 12 }}>No incluye: {resumirLista(dif.noIncluye)}</span>
-            )}
-            {dif && dif.sinConfirmar.length > 0 && (
-              <span style={{ display: 'block', fontSize: 12, color: 'var(--warning)' }}>Sin confirmar: {resumirLista(dif.sinConfirmar)}</span>
-            )}
           </span>
           <span style={{ flex: '0 0 auto', textAlign: 'right' }}>
             <strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{sinPrima ? '—' : eur(o.primaEur as number)}</strong>
@@ -241,6 +231,31 @@ export default function FiltroGarantias({
           </button>
         )}
         </div>
+        {(Boolean(actual && textoPagasProponemos(actual.anual, o.primaEur)) || Boolean(textoDescuentos(o.descuentos)) || typeof o.bloqueo === 'string' || o.reparos.length > 0 || (dif !== null && (dif.noIncluye.length > 0 || dif.sinConfirmar.length > 0))) && (
+          <div
+            onClick={preparado || sinPrima ? undefined : () => setElegidas((s) => alternar(s, o.id))}
+            style={{ width: '100%', minWidth: 0, overflowWrap: 'anywhere', padding: '0 4px 10px 38px', fontSize: 13, lineHeight: 1.3, background: marcada ? 'var(--primary-light)' : 'transparent', cursor: preparado || sinPrima ? 'default' : 'pointer' }}
+          >
+              {actual && textoPagasProponemos(actual.anual, o.primaEur) && (
+                <span style={{ display: 'block', fontSize: 12, overflowWrap: 'anywhere' }}>{textoPagasProponemos(actual.anual, o.primaEur)}</span>
+              )}
+              {textoDescuentos(o.descuentos) && (
+                <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, overflowWrap: 'anywhere' }}>{textoDescuentos(o.descuentos)}</span>
+              )}
+              {typeof o.bloqueo === 'string' && (
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--negative)', fontWeight: 600, overflowWrap: 'anywhere' }}>{textoBloqueoCorredor(o.bloqueo, o.compania)}</span>
+              )}
+              {o.reparos.map((m) => (
+                <span key={m} style={{ display: 'block', fontSize: 12, color: 'var(--warning)', fontWeight: 600, overflowWrap: 'anywhere' }}>⚠️ {m}</span>
+              ))}
+              {dif && dif.noIncluye.length > 0 && (
+                <span style={{ display: 'block', fontSize: 12, overflowWrap: 'anywhere' }}>No incluye: {resumirLista(dif.noIncluye)}</span>
+              )}
+              {dif && dif.sinConfirmar.length > 0 && (
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--warning)', overflowWrap: 'anywhere' }}>Sin confirmar: {resumirLista(dif.sinConfirmar)}</span>
+              )}
+          </div>
+        )}
         {av.textos.length > 0 && (
           <details style={{ padding: '0 4px 8px 38px' }}>
             <summary style={{ cursor: 'pointer', minHeight: 44, paddingTop: 12, fontSize: 12, color: av.revision ? 'var(--warning)' : 'var(--muted)', fontWeight: av.revision ? 600 : 400 }}>
@@ -287,6 +302,11 @@ export default function FiltroGarantias({
         Marca las opciones que le quieres mandar. Leer esto es gratis: no vuelve a cotizar.
       </p>
 
+      {actual && (
+        actual.anual !== null
+          ? <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>Hoy paga {eur(actual.anual)}/año{actual.compania ? ` con ${actual.compania}` : ''}: cada opción lo compara.</p>
+          : actual.motivo && <p style={{ fontSize: 12, marginTop: 0, color: 'var(--warning)', overflowWrap: 'anywhere' }}>{actual.motivo}</p>
+      )}
       {carga.estado === 'cargando' && <p className="muted">Leyendo la cotización guardada…</p>}
       {carga.estado === 'error' && (
         <p className="err">

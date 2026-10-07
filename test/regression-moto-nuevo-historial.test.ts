@@ -14,7 +14,7 @@ import { join } from 'node:path'
 const RUTA = join(
   import.meta.dirname,
   '..',
-  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx',
+  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx',
 )
 const fuente = readFileSync(RUTA, 'utf8')
 
@@ -63,7 +63,7 @@ test('el desplegable de compañías degrada a texto libre si el directorio no se
 })
 
 test('MotoNuevo: los km al año van como corrección solo si se escriben (vacío = supuesto de la media)', () => {
-  const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx', import.meta.url), 'utf8')
+  const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
   assert.match(src, /const kmLeidos = kilometrosDesdeTexto\(kmAnuales\)/)
   assert.match(src, /\.\.\.\(kmLeidos !== null \? \{ kmAnuales: kmLeidos \} : \{\}\),/)
   // Un km mal escrito apaga el botón: no se paga un precio con un dato que no se ha entendido.
@@ -71,7 +71,7 @@ test('MotoNuevo: los km al año van como corrección solo si se escriben (vacío
 })
 
 test('MotoNuevo: la moto de la última tarificación se precarga sin pisar lo tecleado, y la media supuesta no pasa a km declarados', () => {
-  const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx', import.meta.url), 'utf8')
+  const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
   // Sin variante retomada, la última tarificación no pisa lo que ya hay (30/09/2026: con retomada, manda lo pagado).
   assert.match(src, /setCodigoVehiculo\(\(c\) => \(retomada \? v\.codigoVehiculo : c \|\| v\.codigoVehiculo\)\)/)
   assert.match(src, /setMatricula\(\(m\) => \(retomada \? v\.matricula! : m \|\| v\.matricula!\)\)/)

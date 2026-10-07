@@ -2,10 +2,12 @@ import { NextResponse, after } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
 import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
+import { prepararPresupuestoTrasTarificar } from '@/lib/presupuesto-tras-tarificar'
 import { prepararRetarificacionNuevaMoto, respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
 import { anotarVehiculoDeCotizacion, prepararVariante } from '@/lib/oportunidad-riesgo'
+import { anotarBonusTarificacion } from '@/lib/seguro-anterior-candidatas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,13 +35,16 @@ export const maxDuration = 180
  *    `clienteOrigenDe()`, así que un `clienteId` de otra correduría es un
  *    404, no una cotización.
  *
- * A diferencia de una póliza existente, aquí no hay «compañía anterior» que
- * declarar: se cotiza DE CALLE (`aseguradoAntes: false`, ver
- * `precalificarMotoNueva()`), sin el bonus por antigüedad que sí lleva
- * retarificar una póliza real.
+ * 🚗 El vehículo es NUEVO, pero el historial es del CONDUCTOR (03/10/2026, Alberto): ya NO se cotiza
+ * de calle por defecto. Se declara como seguro anterior la mejor póliza de motor que conocemos del
+ * cliente (cartera en vigor + competencia leída de su PDF; regla en `elegirSeguroAnteriorParaImputar`)
+ * y la respuesta dice cuál y por qué (`seguroAnterior`). Si sus años sin siniestros no constan, se
+ * declara el máximo y el precio sale con `bonusSupuesto: true` (condicionado a SINCO/certificado; la
+ * emisión lo exige verificado). El corredor elige otra con `seguroAnteriorId` o la apaga con
+ * `sinSeguroAnterior: true`; si declara el historial a mano (`correcciones.aseguradoAntes`), manda él.
  *
  * ── Cuerpo ──────────────────────────────────────────────────────────────────
- *   { clienteId, confirmado: true, solicitadoPor?, resueltos?, correcciones? }
+ *   { clienteId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, seguroAnteriorId?, sinSeguroAnterior? }
  *
  * ── Respuesta ───────────────────────────────────────────────────────────────
  * La MISMA que `POST /api/operador/codeoscopic/retarificar`, campo por campo
@@ -110,6 +115,8 @@ export const POST = auditado(async (req: Request) => {
     cuerpo: {
       resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
       correcciones: variante.v.correcciones,
+      ...(typeof cuerpo.seguroAnteriorId === 'string' && cuerpo.seguroAnteriorId.trim() !== '' ? { seguroAnteriorId: cuerpo.seguroAnteriorId.trim() } : {}),
+      ...(cuerpo.sinSeguroAnterior === true ? { sinSeguroAnterior: true } : {}),
     } satisfies CuerpoRetarificacion,
   })
   // Corta ANTES del vendor (422 faltan datos · 404 cliente · 409 moto no
@@ -131,9 +138,15 @@ export const POST = auditado(async (req: Request) => {
   if (correduria && variante.v.contexto && r.ok && r.guardado.estado === 'guardada') {
     await anotarVehiculoDeCotizacion(correduria.id, { oportunidadId: variante.v.contexto.oportunidadId, cuerpo, actor: solicitadoPor })
   }
+  // Qué seguro anterior se declaró y si el bonus fue SUPUESTO: la emisión lo lee para exigir la
+  // verificación. Nunca lanza (la cotización ya está pagada); si no queda anotado, la emisión lo
+  // tratará como «no se sabe» y pedirá verificación igualmente.
+  if (r.ok && r.guardado.estado === 'guardada' && p.seguroAnterior) {
+    await anotarBonusTarificacion(p.peticion.correduriaId, r.guardado.cotizacionId, { bonusSupuesto: p.seguroAnterior.bonusSupuesto, publico: p.seguroAnterior })
+  }
   // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
   const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)
-  if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => undefined))
+  if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => prepararPresupuestoTrasTarificar(aCompletar, solicitadoPor)).then(() => undefined))
 
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })

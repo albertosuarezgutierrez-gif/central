@@ -62,7 +62,7 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/recaptacion-email-lote', schedule: '0 7 * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
-  { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },
+  { path: '/api/cron/resumen-mensual', schedule: '0 8 5 * *' },
   { path: '/api/cron/facturas-conciliar-gmail', schedule: '30 6 * * *' },
   { path: '/api/cron/contable-proactivo', schedule: '0 9 * * 1' },
   { path: '/api/cron/concursos-ingesta', schedule: '30 */6 * * *' },
@@ -194,6 +194,17 @@ export const CRON_JOBS: CronJob[] = [
   // Cada 5 min: es un aviso de «acaba de pasar», no un resumen. La marca de
   // agua NO avanza si el Telegram no sale. Ver el fichero de la ruta.
   { path: '/api/cron/correduria-actividad', schedule: '*/5 * * * *' },
+  // Tope de gasto de Avant2 en EUROS (03/10/2026, decisión de Alberto 29/09): manda por Telegram el
+  // aviso de 60 € y cada BLOQUEO (70 €…) con el botón «Autorizar +30 €». Cada 5 min: mientras el
+  // bloqueo no llega, no se tarifica. asegura decide y anota; este job solo avisa y marca.
+  { path: '/api/cron/correduria-tope-avant2', schedule: '*/5 * * * *' },
+  // WhatsApp de la correduría (05/10/2026): aviso por Telegram cuando Meta desconecta (PARTNER_REMOVED,
+  // p. ej. 14 días sin abrir la app del móvil), da de baja o reconecta el número. asegura decide y guarda.
+  { path: '/api/cron/correduria-whatsapp-conexion', schedule: '*/10 * * * *' },
+  // Verificación humana del tarificador (08/10/2026): un portal (Generali…) pide un código SMS/OTP y el trabajo
+  // acaba `requiere_humano`. Avisa a Alberto UNA vez por trabajo (marca en asegura, solo si el Telegram salió)
+  // para que entre en el portal, valide y pulse Reintentar. Sin datos personales en el mensaje.
+  { path: '/api/cron/tarificador-verificacion', schedule: '*/10 * * * *' },
   // Seguimiento de presupuestos enviados (28/09/2026): 08:12, 13:12 y 18:12 UTC — horario de oficina
   // para que el «¿le llamas?» llegue cuando se puede llamar. Asegura decide qué toca (48 h sin abrir,
   // 72 h sin elegir, un aviso por etapa); este job solo avisa y marca lo avisado.

@@ -3,7 +3,9 @@
 import { fingerprint, huellasDe } from './fingerprint'
 import { evaluar } from './reglas'
 import { conciliar, mapeaPropiedadAlquiler } from './conciliar'
-import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, log, type DatosGasto } from './imputar'
+import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, escribirTitular, log, type DatosGasto } from './imputar'
+import { asignarTitular } from './asignar-titular'
+import { contextoTitularSiAplicado } from './contexto-titular'
 import { esBooking, parseBooking, bookingFingerprint } from './booking'
 import { esPresupuesto } from './clasificar'
 import { pareceIngresoDeCorreduria } from './no-es-gasto'
@@ -103,12 +105,6 @@ export async function procesarFactura(
     return { decision: 'error', fingerprint: fp, total, proveedor, motivo }
   }
 
-  // Duplicado → no imputar.
-  if (await existeDuplicado({ fingerprint: fp, numero_factura: data.numero_factura ?? null, fecha: data.fecha, total })) {
-    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'duplicado', payload: { total } })
-    return { decision: 'duplicado', fingerprint: fp, total, proveedor }
-  }
-
   // Se busca la regla bajo TODAS las huellas del proveedor (NIF y nombre), no solo bajo la que
   // esta factura genera: el mismo proveedor está registrado bajo una u otra según si el PDF traía
   // el NIF. Ver `huellasDe`. Con override (Booking por establecimiento) manda el override.
@@ -125,6 +121,12 @@ export async function procesarFactura(
   // Propiedad: regla > mapeo de alquiler por concepto > por defecto del origen
   // (p.ej. la carpeta "Personal" → prop_personal) > nada.
   const propiedad = veredicto.propiedad || mapeaPropiedadAlquiler(data.concepto || '') || ctx.propiedadPorDefecto || null
+
+  // Duplicado → no imputar.
+  if (await existeDuplicado({ fingerprint: fp, numero_factura: data.numero_factura ?? null, fecha: data.fecha, total, proveedor, nif_proveedor: nifEmisorFiable ? data.nif_proveedor ?? null : null, propiedad })) {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'duplicado', payload: { total } })
+    return { decision: 'duplicado', fingerprint: fp, total, proveedor }
+  }
   const categoria = data.categoria || veredicto.categoria || 'OTRO'
 
   // Conciliación de importes: si no cuadra, no auto-imputar.
@@ -178,6 +180,19 @@ export async function procesarFactura(
     confianza: veredicto.confianza,
     motivo_revision: revisado ? null : motivo ?? null,
   })
+
+  // A quién va (sociedad/negocio). Sin la migración `2026-10-04_gastos_titular.sql` aplicada,
+  // `contextoTitularSiAplicado()` da null y no se hace NADA: el gasto queda como antes.
+  const ctxTit = await contextoTitularSiAplicado().catch(() => null)
+  if (ctxTit && gastoId) {
+    await escribirTitular(gastoId, asignarTitular({
+      nif_cliente: data.nif_cliente ?? null,
+      cliente: data.cliente ?? null,
+      nif_proveedor: datos.nif_proveedor ?? null,
+      proveedor,
+      propiedad,
+    }, ctxTit))
+  }
 
   if (revisado) await reforzarRegla(datos)
   await log({ fuente: ctx.fuente, fingerprint: fp, gasto_id: gastoId, decision, confianza: veredicto.confianza, motivo })

@@ -17,7 +17,7 @@ test('reRate manda la fecha de efecto en mainQuote cuando se le pasa', () => {
   const ruta = leer('apps/asegura/app/api/operador/codeoscopic/oferta/route.ts')
   // Las opciones del ReRate se componen antes (catálogo por defecto + descuento del corredor):
   // lo que se vigila es que la fecha corregida siga viajando junto a ellas.
-  assert.match(ruta, /productOptionsCorredor \?\? precio\.productOptions \?\? opcionesPorDefecto\(compania, producto\)/)
+  assert.match(ruta, /productOptionsCorredor \?\? opcionesParaReRate\(precio\.productOptions, compania, producto\)/)
   assert.match(ruta, /opcionesRerate,\s*fechaEfectoCorregida,/)
 })
 
@@ -40,7 +40,7 @@ test('la pantalla de emisión manda producto, prima y la fecha elegida', () => {
   for (const f of [
     'apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/retarificador.tsx',
     'apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/AutoNuevo.tsx',
-    'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx',
+    'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx',
     'apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/Formulario.tsx',
   ]) {
     const usos = leer(f).split('<Emision').length - 1

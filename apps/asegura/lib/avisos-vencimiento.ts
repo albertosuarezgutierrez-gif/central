@@ -40,7 +40,6 @@
  * fuera al propio tomador.
  */
 import { createMailTransporter } from '@central/core-email'
-import { decryptField } from '@central/module-seguros-pii'
 import {
   emailAlternativo,
   etiquetaRol,
@@ -113,51 +112,8 @@ function diaUtc(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
 }
 
-/**
- * Descifra sin convertir un fallo en una ausencia silenciosa: `null` significa
- * «no se ha podido leer», y quien llama lo cuenta como «sin canal» en vez de
- * como «este cliente no tiene email». Mismo criterio que `lib/cartera-ficha.ts`.
- */
-function descifrar(v: string | null | undefined): string | null {
-  if (typeof v !== 'string' || v.trim() === '') return null
-  if (!v.startsWith('v1:')) return v.trim()
-  try {
-    const claro = decryptField(v)
-    return typeof claro === 'string' && claro.trim() !== '' && !claro.startsWith('v1:') ? claro.trim() : null
-  } catch {
-    return null
-  }
-}
-
-/** Una dirección que no tiene forma de dirección no es un canal: es basura con forma de dato. */
-function pareceEmail(v: string | null): v is string {
-  return typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
-}
-
-export type ClienteConEmails = {
-  emailOptOutAt: Date | null
-  email: string | null
-  emails: { email: string; esPrincipal: boolean; createdAt: Date }[]
-}
-
-/**
- * El email al que escribir: principal → el más antiguo de `cliente_emails` → la
- * columna suelta de la ficha. `null` = no hay a quién escribir (o está de baja).
- */
-export function destinatarioDeCliente(c: ClienteConEmails): string | null {
-  // Baja de correo: no se le escribe, y no es un fallo. Es un «no».
-  if (c.emailOptOutAt) return null
-  const orden = [...c.emails].sort((a, b) => {
-    if (a.esPrincipal !== b.esPrincipal) return a.esPrincipal ? -1 : 1
-    return a.createdAt.getTime() - b.createdAt.getTime()
-  })
-  for (const e of orden) {
-    const claro = descifrar(e.email)
-    if (pareceEmail(claro)) return claro
-  }
-  const suelto = descifrar(c.email)
-  return pareceEmail(suelto) ? suelto : null
-}
+import { descifrar, pareceEmail, emailAvisable, destinatarioDeCliente, type ClienteConEmails } from './avisos-vencimiento-reglas.ts'
+export { destinatarioDeCliente, type ClienteConEmails }
 
 // ── Persona de referencia (19/09/2026) ───────────────────────────────────────
 // Solo se consultan estas dos fuentes cuando `destinatarioDeCliente()` de la
@@ -198,7 +154,7 @@ async function leerIntervinientesDePoliza(
       const deFicha = f.cliente ? `${f.cliente.nombre} ${f.cliente.apellidos}`.trim() || null : null
       // 🚨 `descifrar()` solo comprueba que el cifrado se abrió, no que lo de
       // dentro TENGA FORMA de email — a diferencia de `destinatarioDeCliente`,
-      // que pasa todo por `pareceEmail()` antes de devolverlo. Esta fila puede
+      // que pasa todo por `emailAvisable()` antes de devolverlo. Esta fila puede
       // acabar como destinatario de un `sendMail`, así que se valida aquí
       // también: un valor que no parece email es tan «sin canal» como uno vacío.
       // Y si el interviniente está enlazado a SU PROPIA ficha de cliente y esa
@@ -209,7 +165,7 @@ async function leerIntervinientesDePoliza(
       // habría probado el de la ficha, que puede ser el bueno.
       const emailPropio = descifrar(f.email)
       const emailDeFicha = f.cliente && !f.cliente.emailOptOutAt ? descifrar(f.cliente.email) : null
-      const email = pareceEmail(emailPropio) ? emailPropio : pareceEmail(emailDeFicha) ? emailDeFicha : null
+      const email = emailAvisable(emailPropio) ? emailPropio : emailAvisable(emailDeFicha) ? emailDeFicha : null
       return {
         id: f.id, polizaId: f.polizaId, rol: String(f.rol),
         nombre: propio ?? deFicha, nombreIlegible: false,

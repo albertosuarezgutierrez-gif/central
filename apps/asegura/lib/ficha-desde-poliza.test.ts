@@ -23,7 +23,8 @@ test('🪤 la nota y la auditoría cuentan lo ESCRITO (RETURNING), no lo propues
 })
 
 test('🪤 quién vuelca lo decide puedeVolcarEnFicha (portal: solo la ficha propia)', () => {
-  const i = orquesta.indexOf('puedeVolcarEnFicha({')
+  // `quienSube` lo comparten el volcado y las figuras (`puedeAbrirFiguras`, más estricto).
+  const i = orquesta.indexOf('const identificado = puedeVolcarEnFicha(quienSube)')
   assert.ok(i > 0 && i < orquesta.indexOf('await volcarPolizaEnFicha('))
   assert.match(orquesta, /const volcado = identificado\n\s+\? await volcarPolizaEnFicha\(/)
 })

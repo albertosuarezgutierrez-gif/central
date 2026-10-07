@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
     id: body.id,
     con: body.con,
     deAbsorbida: Array.isArray(body.deAbsorbida) ? body.deAbsorbida : [],
+    // Identidad distinta en la que se queda la de la ficha que se conserva (sin decidir, asegura no fusiona).
+    conservar: Array.isArray(body.conservar) ? body.conservar : [],
     confirmarSinDni: body.confirmarSinDni === true,
     actor: guarda.session.email,
   })

@@ -42,6 +42,7 @@ const PERMITIDOS_DATOS_ESPECIFICOS: Record<string, string> = {
   'apps/asegura-portal/lib/datos-poliza-cima.ts': 'lo que CIMA sirve al asegurado, filtrado por NIVEL y por lista blanca',
   'apps/asegura-portal/lib/datos-poliza-cima.test.ts': 'test de lo anterior',
   'apps/asegura-portal/lib/presupuesto.ts': 'bien y ubicación de la póliza para el presupuesto (dirección descifrada por clave)',
+  'apps/asegura-portal/lib/flota.ts': 'flota de empresa (05/10/2026): matrícula/marca por `describirBien` y `fechaMatriculacion` por clave (`matriculacionDeCompania`); no viaja a la pantalla',
   'packages/module-seguros-portal/src/bien-asegurado.ts': 'describe el bien (matrícula/dirección) por clave concreta',
   'packages/module-seguros-portal/src/bien-asegurado.test.ts': 'test de lo anterior',
 }

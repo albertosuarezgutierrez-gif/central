@@ -80,6 +80,15 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 | **Luxury Busto** (C/ Bustos Tavera 22, **bajo derecha**, 41003) | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
 | **Monte Carmelo 68** | — | **Vivienda habitual** (no es turístico; su IBI = personal) |
 
+### Inmuebles que explotaba Punto y Coma SL en 2024 (requerimiento AEAT oct-2026)
+Además de Busto Reform / Luxury Busto (propiedad de la SL), en 2024 la SL explotaba:
+- **Socorro** (50/50 Alberto+Pilar) y **Sanlúcar** (C/ de las Cruces 13, de Alberto; vendido 03/09/2024): cesión a la SL a 500 €/mes/inmueble según los **contratos aportados a la Inspección en 2024** (IS 2021-22).
+- **Pisos 3, 10 y 12 del edificio San Luis 9** (familia de Alberto, «San Luis 9 CB»): la SL como **arrendataria** (pagaba alquiler a la madre de Alberto).
+- **Villasís / Dúplex** (= Lasso de la Vega 4) **hasta la donación a Alberto de mayo-2024**; desde entonces IRPF de Alberto.
+Cuentas (terminaciones): BBVA …9871 = SL; …0855 = común Alberto+Pilar; …8219 = titular sin identificar.
+
+> ⚠️ Matiz (04/10/2026): «no hay contrato» choca con los contratos a 500 €/mes aportados a la Inspección en 2024 — ver SKILL.md § Requerimiento AEAT 2024.
+>
 > **Riesgo recurrente — Socorro:** las plataformas (Booking/Airbnb) ingresan en una **cuenta de
 > Punto y Coma SL**, pero **ingresar ahí ≠ tributar ahí**: **no hay contrato** de cesión piso→SL y
 > la sociedad no calculó sus pagos a cuenta sobre esos ingresos. Por tanto Socorro **debe

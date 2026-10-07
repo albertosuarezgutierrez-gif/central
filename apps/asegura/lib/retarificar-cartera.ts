@@ -62,6 +62,12 @@ import {
 } from '@/lib/codeoscopic/desde-cartera-hogar'
 import { supuestosVigentes } from '@central/module-seguros'
 import {
+  CONDICION_BONUS_SUPUESTO,
+  bonusSupuestoFinal,
+  imputarSeguroAnterior,
+  type SeguroAnteriorPublico,
+} from '@/lib/seguro-anterior-candidatas'
+import {
   construirPeticionAuto,
   revisarDatosAuto,
   type DatosAuto,
@@ -128,6 +134,7 @@ import {
   estadosCiviles,
   municipiosPorCp,
   lineasDeSeguro,
+  profesiones,
   hogarDisponible,
   motoDisponible,
   catalogoHogar,
@@ -157,8 +164,11 @@ import {
   type DisponibilidadDecesos,
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
+import { comprobarRolesRamo } from '@/lib/codeoscopic/comprobar-roles'
+import { errorAseguradosEnCuerpo, leerAseguradosAdicionales } from '@/lib/codeoscopic/asegurados'
 import { resumirCrudo, type ResumenCrudo } from '@/lib/codeoscopic/crudo'
-import { choqueCarnetVersion } from '@/lib/codeoscopic/carnet-moto'
+import { respuestaFalloCotizacion } from '@/lib/codeoscopic/fallo-cotizacion'
+import { avisoCilindradaDesconocida, choqueCarnetVersion, choqueReglaTrafico } from '@/lib/codeoscopic/carnet-moto'
 import type { PeticionCotizacion, ResultadoCotizacion } from '@/lib/codeoscopic/cotizar'
 import { MARCA_SIMULACION } from '@/lib/codeoscopic/simulacion'
 import { resumirCotizacion } from '@/lib/codeoscopic/respuesta'
@@ -177,6 +187,11 @@ export type CuerpoRetarificacion = {
    *  ya haya un proyecto vigente sin emitir. Solo para cuando de verdad hace
    *  falta una cotización nueva (los datos del riesgo cambiaron). */
   forzarNuevo?: boolean
+  /** Vehículo NUEVO (auto/moto): la póliza del cliente que el corredor elige como seguro anterior
+   *  (`poliza:<uuid>` · `oportunidad:<uuid>`). Sin ella, la propone la regla. */
+  seguroAnteriorId?: string
+  /** Vehículo NUEVO: `true` = no declarar seguro anterior (de calle). */
+  sinSeguroAnterior?: boolean
 }
 
 export type ProyectoVigente = {
@@ -382,6 +397,8 @@ export type PreparadoRetarificacion =
       peticion: PeticionCotizacion
       supuestos: Supuesto[] | SupuestoHogar[] | SupuestoMoto[] | SupuestoVida[] | SupuestoSalud[] | SupuestoDecesos[]
       fuenteRiesgo?: 'poliza' | 'gemela' | 'catastro' | null
+      /** Vehículo NUEVO: qué seguro anterior se ha imputado (o por qué ninguno) y si el bonus es supuesto. */
+      seguroAnterior?: SeguroAnteriorPublico
     }
   /** Ya hay respuesta y NO se ha llamado al vendor: se devuelve tal cual. */
   | { estado: 'corte'; respuesta: ResultadoRetarificar }
@@ -396,12 +413,8 @@ export function respuestaRetarificacion(
   preparado: Extract<PreparadoRetarificacion, { estado: 'listo' }>,
 ): ResultadoRetarificar {
   if (!r.ok) {
-    // 402 cuando el freno es el TOPE: eso no es un fallo, es el tope haciendo
-    // su trabajo, y la pantalla lo cuenta distinto de un error del vendor.
-    return {
-      status: r.razon === 'tope' ? 402 : r.razon === 'vendor' ? 502 : 503,
-      cuerpo: { error: r.mensaje, razon: r.razon },
-    }
+    // Con prueba de no-cargo lleva `gastado: '0,00€'` (422 `validacion`); si no, 402 tope / 502 / 503.
+    return respuestaFalloCotizacion(r)
   }
 
   return {
@@ -439,6 +452,9 @@ export function respuestaRetarificacion(
       // la fuga ya existía aquí antes de la mudanza.
       supuestos: sanearSupuestos(preparado.supuestos),
       ...(preparado.fuenteRiesgo !== undefined ? { fuenteRiesgo: preparado.fuenteRiesgo } : {}),
+      // Vehículo NUEVO (03/10/2026): qué póliza se imputó como seguro anterior y por qué, y si el
+      // bonus va SUPUESTO (precio condicionado a SINCO/certificado; no se emite sin verificar).
+      ...(preparado.seguroAnterior ? { seguroAnterior: preparado.seguroAnterior, bonusSupuesto: preparado.seguroAnterior.bonusSupuesto } : {}),
     },
   }
 }
@@ -559,8 +575,9 @@ async function reparoCarnetMoto(
   config: Parameters<typeof limitesCarnetMoto>[0],
   tipo: string | null | undefined,
   version: VersionMotoElegida | null,
-): Promise<{ campo: 'tipoCarnet'; motivo: string } | null> {
-  if (!tipo) return null
+  esSupuesto = false,
+): Promise<{ reparo: { campo: 'tipoCarnet'; motivo: string } | null; aviso: string | null }> {
+  if (!tipo) return { reparo: null, aviso: null }
   // Las dos lecturas son GET de catálogo gratis e independientes: en paralelo.
   const [limites, motor] = await Promise.all([
     limitesCarnetMoto(config).catch((): null => null),
@@ -570,23 +587,44 @@ async function reparoCarnetMoto(
         )
       : null,
   ])
-  if (limites === null || limites.length === 0) return null
+  // 1. Regla de tráfico FIJA (no del catálogo): corta aunque el catálogo no se lea.
+  if (motor) {
+    const trafico = choqueReglaTrafico(tipo, motor)
+    if (trafico) return { reparo: { campo: 'tipoCarnet', motivo: trafico }, aviso: null }
+  }
+  const aviso = avisoCilindradaDesconocida(tipo, esSupuesto, motor)
+  if (limites === null || limites.length === 0) return { reparo: null, aviso }
   const carnet = limites.find((l) => l.id === tipo)
   if (!carnet) {
     return {
-      campo: 'tipoCarnet',
-      motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${limites.map((l) => l.id).join(', ')})`,
+      reparo: {
+        campo: 'tipoCarnet',
+        motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${limites.map((l) => l.id).join(', ')})`,
+      },
+      aviso: null,
     }
   }
-  if (!motor) return null
+  if (!motor) return { reparo: null, aviso }
   const choque = choqueCarnetVersion(carnet, motor)
-  if (!choque) return null
+  if (!choque) return { reparo: null, aviso }
   // El carné sale de la ficha, o es el B supuesto si la ficha no trae uno de moto:
   // el arreglo está en la ficha del cliente, no en esta pantalla.
   return {
-    campo: 'tipoCarnet',
-    motivo: `${choque}. Si el conductor tiene otro carné de moto, dalo de alta en su ficha (con su fecha) y vuelve a pedir el precio`,
+    reparo: {
+      campo: 'tipoCarnet',
+      motivo: `${choque}. Si el conductor tiene otro carné de moto, dalo de alta en su ficha (con su fecha) y vuelve a pedir el precio`,
+    },
+    aviso: null,
   }
+}
+
+/** Añade el aviso al supuesto `tipoCarnet` (visible en pantalla junto al supuesto); sin supuesto, lo añade como uno nuevo. */
+function conAvisoCarnet<T extends { campo: string; valor: unknown; porque: string; optimista?: boolean }>(
+  supuestos: T[],
+  aviso: string | null,
+): T[] {
+  if (!aviso) return supuestos
+  return supuestos.map((s) => (s.campo === 'tipoCarnet' ? { ...s, porque: `${s.porque} — ${aviso}` } : s))
 }
 
 /**
@@ -625,10 +663,12 @@ async function prepararMoto(
   if (moto.estado !== 'disponible') {
     return paraPreparado({ error: 'moto no tarifica para esta organización (o no se ha podido comprobar)', moto }, 409)
   }
-  const reparoCarnet = await reparoCarnetMoto(
+  const supuestosVivosMoto = supuestosVigentes(pre.supuestos, cuerpo.correcciones)
+  const { reparo: reparoCarnet, aviso: avisoCarnet } = await reparoCarnetMoto(
     cfg.config,
     (datos.conductor ?? datos).tipoCarnet, // el carné que cuenta es el de quien CONDUCE
     versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+    supuestosVivosMoto.some((x) => x.campo === 'tipoCarnet'),
   )
   if (reparoCarnet) return paraPreparado({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422)
 
@@ -639,7 +679,7 @@ async function prepararMoto(
     return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
   }
   peticion.externalId = `poliza-${polizaId}`
-  return { peticion, motivo: 'defensa-cartera', supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones) }
+  return { peticion, motivo: 'defensa-cartera', supuestos: conAvisoCarnet(supuestosVivosMoto, avisoCarnet) }
 }
 
 // ─── HOGAR ───────────────────────────────────────────────────────────────────
@@ -1000,21 +1040,34 @@ export async function prepararRetarificacionNuevaAuto(entrada: {
 
   const pre = precalificarAutoNueva(origen.cliente, resueltos, hoyIso())
 
+  // 🚗 El vehículo es NUEVO, el historial es del CONDUCTOR (03/10/2026): se declara como seguro
+  // anterior la mejor póliza de motor suya que conocemos (o la que elija el corredor).
+  const imp = await imputarSeguroAnterior({
+    correduriaId: correduria.id, clienteId, tipoNuevo: 'auto', cliente: origen.cliente,
+    cuerpo: { seguroAnteriorId: cuerpo.seguroAnteriorId, sinSeguroAnterior: cuerpo.sinSeguroAnterior },
+    correcciones: cuerpo.correcciones, hoy: hoyIso(),
+  })
+  if (!imp.ok) return { estado: 'corte', respuesta: sinGasto({ error: imp.mensaje, causa: imp.causa }, imp.status) }
+  const supuestosBase: Supuesto[] = [...pre.supuestos, ...(imp.historial?.supuestos ?? [])]
+
   // Las correcciones del corredor mandan sobre lo supuesto: es una persona
   // diciendo el dato de verdad. Se revisa OTRA VEZ con el resultado, porque una
   // corrección puede arreglar un hueco y también puede romper otra regla.
   const datos: Partial<DatosAuto> = {
     ...pre.datos,
+    ...(imp.historial?.datos ?? {}),
     ...limpiarCorrecciones<DatosAuto>(cuerpo.correcciones),
   }
-  const faltan = revisarDatosAuto(datos)
+  const seguroAnterior = conBonusFinal(imp.publico, bonusSupuestoFinal(datos, cuerpo.correcciones, imp.historial))
+  // Vehículo NUEVO: la matrícula puede no existir aún (`matricula-nueva.ts`).
+  const faltan = revisarDatosAuto(datos, { vehiculoNuevo: true })
   if (faltan.length > 0) {
-    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan }, 422) }
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan, seguroAnterior }, 422) }
   }
 
   let peticion: Record<string, unknown>
   try {
-    peticion = construirPeticionAuto(datos as DatosAuto)
+    peticion = construirPeticionAuto(datos as DatosAuto, { vehiculoNuevo: true })
   } catch (e) {
     return {
       estado: 'corte',
@@ -1036,8 +1089,9 @@ export async function prepararRetarificacionNuevaAuto(entrada: {
       // ficha — misma jugada que hogar sin póliza.
       contexto: { ramo: 'auto', puerta: 'corredor', polizaId: null, clienteId },
     },
-    supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones),
+    supuestos: supuestosVigentes(supuestosBase, cuerpo.correcciones),
     fuenteRiesgo: null,
+    seguroAnterior,
   }
 }
 
@@ -1095,13 +1149,25 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
 
   const pre = precalificarMotoNueva(origen.cliente, resueltos, hoyIso())
 
+  // 🏍️ Igual que auto (03/10/2026): el historial es del conductor, no de la moto.
+  const imp = await imputarSeguroAnterior({
+    correduriaId: correduria.id, clienteId, tipoNuevo: 'moto', cliente: origen.cliente,
+    cuerpo: { seguroAnteriorId: cuerpo.seguroAnteriorId, sinSeguroAnterior: cuerpo.sinSeguroAnterior },
+    correcciones: cuerpo.correcciones, hoy: hoyIso(),
+  })
+  if (!imp.ok) return { estado: 'corte', respuesta: sinGasto({ error: imp.mensaje, causa: imp.causa }, imp.status) }
+  const supuestosBase: SupuestoMoto[] = [...pre.supuestos, ...(imp.historial?.supuestos ?? [])]
+
   const datos: Partial<DatosMoto> = {
     ...pre.datos,
+    ...(imp.historial?.datos ?? {}),
     ...limpiarCorrecciones<DatosMoto>(cuerpo.correcciones),
   }
-  const faltan = revisarDatosMoto(datos)
+  const seguroAnterior = conBonusFinal(imp.publico, bonusSupuestoFinal(datos, cuerpo.correcciones, imp.historial))
+  // Vehículo NUEVO: la matrícula puede no existir aún (`matricula-nueva.ts`).
+  const faltan = revisarDatosMoto(datos, { vehiculoNuevo: true })
   if (faltan.length > 0) {
-    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan }, 422) }
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan, seguroAnterior }, 422) }
   }
 
   // ── El id del ramo: de `/insurance-lines` (gratis), nunca escrito a mano ──
@@ -1120,10 +1186,12 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       ),
     }
   }
-  const reparoCarnet = await reparoCarnetMoto(
+  const supuestosVivosNueva = supuestosVigentes(supuestosBase, cuerpo.correcciones)
+  const { reparo: reparoCarnet, aviso: avisoCarnet } = await reparoCarnetMoto(
     cfg.config,
     (datos.conductor ?? datos).tipoCarnet, // el carné que cuenta es el de quien CONDUCE
     versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+    supuestosVivosNueva.some((x) => x.campo === 'tipoCarnet'),
   )
   if (reparoCarnet) {
     return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422) }
@@ -1131,7 +1199,7 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
 
   let peticion: Record<string, unknown>
   try {
-    peticion = construirPeticionMoto(datos as DatosMoto, moto.id)
+    peticion = construirPeticionMoto(datos as DatosMoto, moto.id, { vehiculoNuevo: true })
   } catch (e) {
     return {
       estado: 'corte',
@@ -1149,8 +1217,9 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       solicitadoPor,
       contexto: { ramo: 'moto', puerta: 'corredor', polizaId: null, clienteId },
     },
-    supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones),
+    supuestos: conAvisoCarnet(supuestosVivosNueva, avisoCarnet),
     fuenteRiesgo: null,
+    seguroAnterior,
   }
 }
 
@@ -1179,6 +1248,10 @@ async function prepararRetarificacionNuevaGenerica<D, S>(entrada: {
   disponible: (lineas: Opcion[]) => DisponibilidadVida | DisponibilidadSalud | DisponibilidadDecesos
 }): Promise<PreparadoRetarificacion> {
   const { clienteId, solicitadoPor, ramo, resueltos, correcciones, precalificar, revisar, construir, disponible } = entrada
+
+  // Validación de forma ANTES de tocar nada: un 422 claro, nunca un 500 ni una lista recortada en silencio.
+  const malAsegurados = errorAseguradosEnCuerpo(resueltos, correcciones)
+  if (malAsegurados) return { estado: 'corte', respuesta: sinGasto({ error: malAsegurados }, 422) }
 
   const correduria = await correduriaUnica().catch(() => null)
   if (!correduria) {
@@ -1223,6 +1296,39 @@ async function prepararRetarificacionNuevaGenerica<D, S>(entrada: {
     }
   }
 
+  // 🚨 Lo que el vendor EXIGE de verdad (`GET /{ramo}/person-roles`, gratis), antes de gastar los 0,50€.
+  // Fail-closed: si no se puede leer, no se cotiza. Lo que pida y no sepamos mandar sale como «dato que falta».
+  const roles = await comprobarRolesRamo(cfg.config, ramo, {
+    datos: datos as Record<string, unknown>,
+    adicionales: Array.isArray((datos as { aseguradosAdicionales?: unknown }).aseguradosAdicionales)
+      ? ((datos as { aseguradosAdicionales: Record<string, unknown>[] }).aseguradosAdicionales)
+      : [],
+  })
+  if (roles.estado === 'no_disponible') {
+    return { estado: 'corte', respuesta: sinGasto({ error: roles.motivo, causa: 'person_roles' }, 503) }
+  }
+  if (roles.faltan.length > 0) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: roles.faltan }, 422) }
+  }
+
+  // La profesión (solo vida) se valida contra el catálogo del vendor: un código que no está es un 400 pagado.
+  const profesion = (datos as { profesion?: unknown }).profesion
+  if (ramo === 'vida' && typeof profesion === 'string' && profesion.trim() !== '') {
+    const catalogoProfesiones = await profesiones(cfg.config).catch(() => null)
+    if (catalogoProfesiones === null || catalogoProfesiones.length === 0) {
+      return {
+        estado: 'corte',
+        respuesta: sinGasto({ error: 'no se ha podido leer el catálogo de profesiones (CNO-11): no se valida la profesión y no se cotiza', causa: 'profesiones' }, 503),
+      }
+    }
+    if (!catalogoProfesiones.some((p) => p.id === profesion.trim())) {
+      return {
+        estado: 'corte',
+        respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: [{ campo: 'profesion', motivo: `el código «${profesion.trim()}» no está en el catálogo de profesiones del vendor` }] }, 422),
+      }
+    }
+  }
+
   let peticion: Record<string, unknown>
   try {
     peticion = construir(datos, linea.id)
@@ -1257,6 +1363,8 @@ export function prepararRetarificacionNuevaVida(entrada: {
     estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
     capital: numero(entrada.cuerpo.resueltos?.capital),
     duracionAnios: numero(entrada.cuerpo.resueltos?.duracionAnios),
+    profesion: cadena(entrada.cuerpo.resueltos?.profesion),
+    fumador: booleano(entrada.cuerpo.resueltos?.fumador),
   }
   return prepararRetarificacionNuevaGenerica<ResueltosVidaNueva, SupuestoVida>({
     clienteId: entrada.clienteId,
@@ -1280,6 +1388,7 @@ export function prepararRetarificacionNuevaSalud(entrada: {
     estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
     capital: numero(entrada.cuerpo.resueltos?.capital),
     modalidadDeseada: cadena(entrada.cuerpo.resueltos?.modalidadDeseada),
+    asegurados: leerAseguradosAdicionales(entrada.cuerpo.resueltos?.asegurados),
   }
   return prepararRetarificacionNuevaGenerica<ResueltosSaludNueva, SupuestoSalud>({
     clienteId: entrada.clienteId,
@@ -1302,6 +1411,7 @@ export function prepararRetarificacionNuevaDecesos(entrada: {
   const resueltos: ResueltosDecesosNueva = {
     estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
     capital: numero(entrada.cuerpo.resueltos?.capital),
+    asegurados: leerAseguradosAdicionales(entrada.cuerpo.resueltos?.asegurados),
   }
   return prepararRetarificacionNuevaGenerica<ResueltosDecesosNueva, SupuestoDecesos>({
     clienteId: entrada.clienteId,
@@ -1408,6 +1518,9 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
         return { estado: 'ok', opciones: await tiposDeCarnet(config) }
       case 'estados-civiles':
         return { estado: 'ok', opciones: await estadosCiviles(config) }
+      // Profesiones CNO-11 de nivel 4 (vida, 07/10/2026): el selector de la oportunidad las elige del catálogo (gratis).
+      case 'profesiones':
+        return { estado: 'ok', opciones: await profesiones(config) }
       case 'municipios': {
         const cp = params.get('cp')
         if (!cp) return { estado: 'invalido', mensaje: 'falta cp' }
@@ -1562,6 +1675,11 @@ export async function resolverCatalogoCrudo(params: URLSearchParams): Promise<Re
 }
 
 // ─── Utilidades ──────────────────────────────────────────────────────────────
+
+/** El seguro anterior público con la marca de bonus decidida sobre los datos FINALES (tras correcciones). */
+function conBonusFinal(p: SeguroAnteriorPublico, bonusSupuesto: boolean): SeguroAnteriorPublico {
+  return { ...p, bonusSupuesto, condicion: bonusSupuesto ? CONDICION_BONUS_SUPUESTO : null }
+}
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null

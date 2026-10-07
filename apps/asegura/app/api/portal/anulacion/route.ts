@@ -41,7 +41,7 @@ export async function GET(req: Request) {
 const STATUS: Record<string, number> = {
   codigo_enviado: 200, firmada: 200, no_encontrada: 404, carta_incompleta: 409, sin_email: 422, sin_correo_configurado: 503,
   fallo_envio: 502, espera: 429, limite_codigos: 429, carta_cambiada: 409, sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422,
-  nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, error: 503,
+  nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, sin_permiso: 403, error: 503,
 }
 
 export const POST = auditado(async (req: Request) => {

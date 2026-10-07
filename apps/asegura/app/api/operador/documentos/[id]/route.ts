@@ -88,6 +88,9 @@ export const POST = auditado(async (req: Request, ctx: Ctx) => {
     clienteSube: fila.clienteId,
     origen: 'ficha',
     actor: req.headers.get('x-actor') ?? 'corredor',
+    // Lo leído se guarda con ESTE documento (05/10/2026): sin esto, releer un documento subido antes
+    // de que existiera `extraccion` lo dejaba en NULL para siempre (4 de 5 pólizas de Estibaliz).
+    documentoId: id,
     fichero: { contenido: d.contenido, mime: d.mime, nombre: d.nombre },
   })
   return NextResponse.json({ estado: 'ok', oportunidad })

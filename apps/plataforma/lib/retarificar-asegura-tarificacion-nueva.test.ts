@@ -26,7 +26,7 @@ test('la caducidad viaja: una tarificación con efecto pasado se marca y la pant
   const r = interpretarTarificacionNueva(200, { estado: 'ok', cotizacionId: 't', projectId: 'p', caducada: true, precios: [] })
   assert.equal(r.estado === 'ok' && r.guardada.caducada, true)
   const { readFileSync } = await import('node:fs')
-  const fuente = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx', import.meta.url), 'utf8')
+  const fuente = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
   assert.match(fuente, /!r\.guardada\.caducada/)
   assert.match(fuente, /guardado: \{ estado: 'guardada', cotizacionId: g\.cotizacionId \}/)
 })

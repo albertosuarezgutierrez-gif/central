@@ -34,7 +34,7 @@ test('plataforma: la póliza de moto abre la pantalla de moto en modo póliza', 
 })
 
 test('plataforma: en modo póliza el precio se pide por /retarificar de ESA póliza', () => {
-  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
+  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx')
   assert.match(
     moto,
     /poliza\s*\n?\s*\?\s*await pedirCotizacion\(\{\s*polizaId: poliza\.id,/,
@@ -44,7 +44,7 @@ test('plataforma: en modo póliza el precio se pide por /retarificar de ESA pól
 })
 
 test('plataforma: en modo póliza un hueco que no se arregla en pantalla apaga el botón', () => {
-  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
+  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx')
   assert.match(
     moto,
     /\|\| \(poliza !== null && huerfanos\.length > 0\)/,
@@ -54,7 +54,7 @@ test('plataforma: en modo póliza un hueco que no se arregla en pantalla apaga e
 })
 
 test('emisión de moto: el precio de una póliza se puede emitir con el MISMO panel que auto', () => {
-  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
+  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx')
   assert.match(moto, /import \{ Emision \} from '\.\.\/\.\.\/\.\.\/poliza\/\[id\]\/retarificar\/emision'/)
   // Desde el 28/09/2026 también sin póliza (cliente NUEVO); la carta de baja solo
   // se anuncia cuando hay una póliza de la cartera que sustituir…
@@ -78,7 +78,7 @@ test('carné × cilindrada: las dos vías de moto cruzan el carné con la versi�
   const llamadas = src.match(/reparoCarnetMoto\(\s*cfg\.config,\s*\(datos\.conductor \?\? datos\)\.tipoCarnet,[^\n]*\n\s*versionMotoElegida\(cuerpo\.resueltos, datos\.codigoVehiculo\),/g) ?? []
   assert.equal(llamadas.length, 2, 'moto de cartera y moto nueva: sin la versión, un A1 tarifica una 600 cc (y el carné es el de quien CONDUCE)')
   assert.match(src, /const choque = choqueCarnetVersion\(carnet, motor\)/)
-  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
+  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx')
   assert.equal(
     (moto.match(/\.\.\.version,\s*\n\s*codigoVehiculo,/g) ?? []).length,
     2,

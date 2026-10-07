@@ -187,8 +187,13 @@ export type SenalIngesta = {
     | 'cobertura_descartada'
     | 'parciales'
     | 'renovaciones'
-    | 'duplicados_vivos'
-  tipo: 'perdida' | 'hueco'
+    | 'polizas_duplicadas'
+  /**
+   * `info` (04/10/2026): MEDIDO pero no es pérdida ni hueco — se enseña sin
+   * rojo y sin la etiqueta «Sin comprobar». No cuenta para el veredicto ni para
+   * el contador de la pestaña (solo `perdida` lo hace).
+   */
+  tipo: 'perdida' | 'hueco' | 'info'
   titulo: string
   detalle: string
   /** Cuántos elementos. `null` = consta el problema pero no cuántos son. */
@@ -393,11 +398,11 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       detalle: 'No significa que lleguen: significa que hoy no se ha podido mirar.',
     })
   }
-  if (s.duplicadosVivos === null) {
+  if (s.polizasDuplicadas === null) {
     out.push({
-      clave: 'duplicados_vivos', tipo: 'hueco', n: null,
-      titulo: 'Sin comprobar si hay números de póliza duplicados entre filas vivas',
-      detalle: 'No significa que no haya ninguno: significa que hoy no se ha podido medir.',
+      clave: 'polizas_duplicadas', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar si hay pólizas vivas duplicadas',
+      detalle: 'No significa que no las haya: significa que hoy no se ha podido mirar (la cartera o las marcas «no duplicado»).',
     })
   }
   if (s.huerfanas !== null && s.huerfanas > 0 && s.huerfanasReparto === null) {
@@ -475,18 +480,6 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
     })
   }
 
-  // 🧬 Duplicados vivos: SOLO con total > 0. `null`/`undefined` = no se pudo medir y NO se pinta como 0
-  // (el hueco, si lo hay, ya lo declara `s.huecos`); `{ total: 0 }` = se miró y no hay: nada que pintar.
-  if (s.duplicadosVivos != null && s.duplicadosVivos.total > 0) {
-    const d = s.duplicadosVivos
-    out.push({
-      clave: 'duplicados_vivos', tipo: 'hueco', n: d.total,
-      titulo: `${d.total} número(s) de póliza duplicados entre filas vivas`,
-      detalle: 'Sin contar comodines (PENDIENTE, 0, 1, S/N…). Hay que decidir si son la misma póliza: ' +
-        'se revisa en /correduria/revision; la fusión no es automática.',
-    })
-  }
-
   if (s.crudo !== null && s.crudo.pendientes > 0 && s.crudo.purgaInminente === 0) {
     out.push({
       clave: 'crudo', tipo: 'hueco', n: s.crudo.pendientes,
@@ -495,6 +488,26 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
         (s.crudo.masAntiguaHoras !== null
           ? `El más viejo lleva ${Math.floor(s.crudo.masAntiguaHoras / 24)} días. `
           : '') + 'Sin prisa: ninguno caduca dentro de la ventana de aviso.',
+    })
+  }
+
+  // 🔁 Pólizas vivas duplicadas: INFORMATIVA. No es una avería de CIMA ni hay
+  // nada que se pierda; es orden pendiente (fusionar, o marcar «no duplicado»
+  // si son pólizas distintas de verdad). Si fuera `perdida`, la pestaña estaría
+  // en rojo hasta que alguien las revisara, y se dejaría de mirar.
+  const dup = s.polizasDuplicadas ?? []
+  if (dup.length > 0) {
+    const porEntidad = new Map<string, number>()
+    for (const g of dup) porEntidad.set(g.entidad, (porEntidad.get(g.entidad) ?? 0) + 1)
+    const fichas = dup.reduce((n, g) => n + g.fichas, 0)
+    out.push({
+      clave: 'polizas_duplicadas', tipo: 'info', n: dup.length,
+      titulo: `${dup.length} grupo(s) de pólizas vivas con el mismo número y compañía (${fichas} fichas)`,
+      detalle:
+        [...porEntidad.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .map(([e, n]) => `${e}: ${n}`).join(' · ') +
+        '. Si son la misma póliza, fusiónalas; si son pólizas distintas (p. ej. de clientes distintos), ' +
+        'márcalas como «no duplicado» y dejarán de salir aquí.',
     })
   }
 

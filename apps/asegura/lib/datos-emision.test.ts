@@ -12,7 +12,7 @@ test('🪤 solo se rellena con lo PROPIO del tomador: intervinientes con SU clie
 
 test('🪤 el portal no elige ficha: sale de portal_vinculo', () => {
   const portal = src.slice(src.indexOf('export async function datosParaEmitirDePortal'))
-  assert.match(portal, /fichaPropiaDe\(correduriaId, identidadId\)/)
+  assert.match(portal, /fichaPropiaDeRecurso\(correduriaId, identidadId, 'presupuesto', presupuestoId\)/)
   // Y la ficha tiene que ser la del TOMADOR del presupuesto (el portal deja verlo también por canal).
   assert.match(portal, /if \(p\.clienteId !== ficha\.clienteId\) return \{ estado: 'otra_ficha' \}/)
   assert.match(portal, /datosParaEmitir\(correduriaId, ficha\.clienteId\)/)
@@ -26,4 +26,11 @@ test('🪤 el correo sale de la MISMA regla que los avisos (estadoEmailDeFicha),
   assert.match(src, /estadoEmailDeFicha\(correduriaId, clienteId\)/)
   assert.doesNotMatch(src, /select c\.email|c\.email,/)
   assert.match(src, /c\.merged_into_cliente_id is null/)
+})
+
+test('🪤 H3: ficha NO vinculada e inexistente dan lo mismo (`no_encontrado`); `sin_permiso` aparte; `otra_ficha` ya no sale de `ajena`', () => {
+  const portal = src.slice(src.indexOf('export async function datosParaEmitirDePortal'))
+  assert.match(portal, /if \(ficha\.estado === 'ajena'\) return \{ estado: 'no_encontrado' \}/)
+  assert.doesNotMatch(portal, /ficha\.motivo/)
+  assert.match(portal, /if \(ficha\.estado !== 'ok'\) return ficha/) // sin_permiso viaja tal cual
 })

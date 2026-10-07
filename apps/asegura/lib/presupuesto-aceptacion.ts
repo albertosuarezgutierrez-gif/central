@@ -4,6 +4,11 @@
 // en claro; llama al puente (`/api/portal/presupuesto`) con su identidad y aquí se resuelve la ficha
 // por `portal_vinculo`. Solo el TOMADOR firma, y solo con un código nuevo al correo de su ficha.
 //
+// 07/10/2026 — Segunda puerta: quien entró con el CÓDIGO DEL WHATSAPP no tiene identidad del portal
+// (puede no tener correo). El portal manda entonces el token del enlace (`tokenWhatsapp`) y la ficha
+// sale del PROPIO presupuesto (`fichaDeTokenWhatsapp`). Firma con ese mismo código (`otp_whatsapp`)
+// o, si tiene correo, con el de siempre: cualquiera de los dos.
+//
 // Si la opción elegida es de OTRA compañía (por código DGS, nunca por nombre), en el mismo acto firma
 // la anulación de su póliza actual, a su vencimiento. Esa anulación nace `firmada` pero la cola de
 // aprobaciones NO la propone hasta que el presupuesto conste EMITIDO (ver `lib/aprobaciones.ts`).
@@ -19,18 +24,21 @@ import {
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso } from './contacto-portal'
 import { ipidDeOpcion } from './ipid'
 import { encryptField } from '@central/module-seguros-pii'
 import { cuentaDeFicha, type CuentaFicha } from './codeoscopic/cuenta-ficha'
 import {
-  lineaCuentaAviso, lineaCuentaDocumento, lineaCuentaHistorial, mascaraCuenta, resolverCuentaFirma, textoAutorizacion, type CuentaElegida,
+  lineaCuentaAviso, lineaCuentaDocumento, lineaCuentaHistorial, mascaraCuenta, resolverCuentaFirma, textoAutorizacionDe, textoAutorizacionOfertas, type CuentaElegida,
 } from './presupuesto-cuenta'
 import { estadoEmailDeFicha } from './email-ficha'
 import {
   MAX_TEXTO_REPORTE, TEXTO_CONFIRMACION_DATOS, URL_PLATAFORMA_DEFECTO, anexoDatosFirmados, avisoAceptacion, avisoDatosIncorrectos,
-  enlaceFichaCliente, leerDatosCotizados, type DatosCotizados, type GrupoDatos,
+  enlaceFichaCliente, escaparHtml, leerDatosCotizados, type DatosCotizados, type GrupoDatos,
 } from './datos-cotizados'
+import { origenPresupuesto } from './presupuesto-origen'
+import { datosAceptacionOfertas, gruposAceptacionOfertas, gruposRevisionOfertas, lineaEmitirEnCompania } from './ofertas-reglas'
+import { fichaDeTokenWhatsapp, gastarCodigoWhatsapp } from './presupuesto-codigo-whatsapp'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const MINUTOS_CODIGO = 10
@@ -46,6 +54,8 @@ const hoyMadrid = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Euro
 
 type Fila = {
   id: string; clienteId: string; polizaId: string | null; ramo: string; tomador: string
+  /** `codeoscopic` | `ofertas` (sin petición a Avant2: se emite en la compañía). Otro valor = no se firma. */
+  origen: string
   creadoAt: Date; venceEl: Date; enviadoAt: Date | null; vistoAt: Date | null; elegidoAt: Date | null
   aceptadoAt: Date | null; emitidoAt: Date | null; retiradoAt: Date | null; enlaceGeneradoAt: Date | null
   otpHash: string | null; otpExpira: Date | null
@@ -72,7 +82,7 @@ type Fila = {
 
 async function leer(correduriaId: string, clienteId: string, presupuestoId: string, opcionId: string): Promise<Fila | null> {
   const [f] = await prismaAsegura().$queryRaw<Omit<Fila, 'ipidHuella' | 'ipidsMostrados'>[]>`
-    select p.id::text as id, p.cliente_id::text as "clienteId", p.poliza_id::text as "polizaId", p.ramo,
+    select p.id::text as id, p.cliente_id::text as "clienteId", p.poliza_id::text as "polizaId", p.ramo, p.origen,
            trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
            p.creado_at as "creadoAt", p.vence_el as "venceEl", p.enviado_at as "enviadoAt", p.visto_at as "vistoAt",
            p.elegido_at as "elegidoAt", p.aceptado_at as "aceptadoAt", p.emitido_at as "emitidoAt",
@@ -135,6 +145,10 @@ type Compuesto = {
 function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado: 'ok' }>, cuenta: CuentaElegida): Compuesto | null {
   const prima = f.prima === null ? null : Number(f.prima)
   if (prima === null || !Number.isFinite(prima)) return null
+  // La casilla y el documento dependen del origen (puerta CERRADA): desconocido → no se compone nada.
+  const via = origenPresupuesto(f.origen)
+  const confirmacion = textoAutorizacionDe({ origen: f.origen, conIpid: !!f.ipidHuella, mediador: MEDIADOR.marca, compania: f.compania })
+  if (via === null || confirmacion === null) return null
   const firmeza = f.firmeza === 'firme' || f.firmeza === 'condicionado' ? f.firmeza : 'estimado'
   let anulacion: Compuesto['anulacion'] = null
   let sinAnulacion: string | null = null
@@ -171,21 +185,39 @@ function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado:
     },
     necesidades: f.necesidades,
     ipid: f.ipidHuella ? { huella: f.ipidHuella } : null,
-  }) + '\n\n' + lineaCuentaDocumento(cuenta) + '\n\n' + anexoDatosFirmados(datos, textoAutorizacion(!!f.ipidHuella))
+    ...(via === 'ofertas' ? { via } : {}),
+  }) + '\n\n' + lineaCuentaDocumento(cuenta) + '\n\n' + anexoDatosFirmados(datos, confirmacion, via)
   // La huella cubre las DOS cartas: si cambia cualquiera, no se firma lo que no se leyó.
   // Los datos cotizados van DENTRO de `documento`, así que también los cubre.
   return {
     documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion, datos,
-    confirmacionDatos: textoAutorizacion(!!f.ipidHuella), cuenta: { origen: cuenta.origen, mascara: cuenta.mascara },
+    confirmacionDatos: confirmacion, cuenta: { origen: cuenta.origen, mascara: cuenta.mascara },
   }
 }
 
-type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
+type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 type Base = { f: Fila; clienteId: string } | { estado: 'no_encontrado' } | { estado: 'no_admite'; motivo: string } | SinFicha
 
-async function base(correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string): Promise<Base> {
+/**
+ * Quién llama desde el portal: su identidad (entró con su correo) o el token del enlace de un
+ * presupuesto que abrió con el código del WhatsApp. Nunca un `clienteId`.
+ */
+export type AccesoPortal = { identidadId: string } | { tokenWhatsapp: string }
+
+/** La ficha dueña del presupuesto para ESE acceso. Mismos desenlaces que `fichaPropiaDeRecurso`. */
+async function fichaDeAcceso(correduriaId: string, acceso: AccesoPortal, presupuestoId: string) {
+  if ('tokenWhatsapp' in acceso) {
+    const f = await fichaDeTokenWhatsapp(correduriaId, acceso.tokenWhatsapp, presupuestoId)
+    return f ? { estado: 'ok' as const, clienteId: f.clienteId } : { estado: 'ajena' as const }
+  }
+  // La ficha es la DUEÑA del presupuesto si está vinculada con nivel de operar; con varias no se elige.
+  return fichaPropiaDeRecurso(correduriaId, acceso.identidadId, 'presupuesto', presupuestoId)
+}
+
+async function base(correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string): Promise<Base> {
   if (!UUID.test(presupuestoId) || !UUID.test(opcionId)) return { estado: 'no_encontrado' }
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  const ficha = await fichaDeAcceso(correduriaId, acceso, presupuestoId)
+  if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const f = await leer(correduriaId, ficha.clienteId, presupuestoId, opcionId)
   if (!f) return { estado: 'no_encontrado' }
@@ -205,6 +237,15 @@ type BloqueoDatos = { estado: 'sin_datos'; motivo: string } | { estado: 'datos_e
 
 function datosDe(f: Fila): Extract<DatosCotizados, { estado: 'ok' }> | BloqueoDatos {
   if (f.datosEnRevision) return { estado: 'datos_en_revision', motivo: MOTIVO_EN_REVISION }
+  const origen = origenPresupuesto(f.origen)
+  // Ofertas de compañías (PDF): no hay petición a Avant2 de la que leer «con qué datos se calculó». El
+  // cliente confirma quién es el tomador y QUÉ oferta elige, y que la emisión la tramita el corredor
+  // con la compañía. 🚨 Sin `tarificaciones`: este camino nunca lee la petición ni toca Codeoscopic.
+  if (origen === 'ofertas') {
+    return datosAceptacionOfertas(gruposAceptacionOfertas({ tomador: f.tomador, compania: f.compania, producto: f.producto }))
+  }
+  // Un origen que no se reconoce no se firma (fail-closed): no se sabe qué se estaría autorizando.
+  if (origen !== 'codeoscopic') return { estado: 'sin_datos', motivo: 'No sabemos de dónde salen los precios de este presupuesto. Llámanos y lo revisamos contigo: no se emite nada hasta entonces.' }
   const d = leerDatosCotizados(f.peticion, f.ramo)
   return d.estado === 'ok' ? d : { estado: 'sin_datos', motivo: d.motivo }
 }
@@ -234,9 +275,9 @@ export type ResultadoPreparar =
 
 /** Lo que el cliente va a firmar con esa opción. No escribe nada. */
 export async function prepararAceptacion(
-  correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string, entrada: EntradaCuenta | null = null,
+  correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string, entrada: EntradaCuenta | null = null,
 ): Promise<ResultadoPreparar> {
-  const b = await base(correduriaId, identidadId, presupuestoId, opcionId)
+  const b = await base(correduriaId, acceso, presupuestoId, opcionId)
   if (!('f' in b)) return b
   const d = datosDe(b.f)
   if (d.estado !== 'ok') return d
@@ -263,8 +304,8 @@ function enmascarar(email: string): string {
   return d ? `${u.slice(0, 1)}***@${d}` : '***'
 }
 
-export async function pedirCodigoAceptacion(correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string): Promise<ResultadoCodigo> {
-  const b = await base(correduriaId, identidadId, presupuestoId, opcionId)
+export async function pedirCodigoAceptacion(correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string): Promise<ResultadoCodigo> {
+  const b = await base(correduriaId, acceso, presupuestoId, opcionId)
   if (!('f' in b)) return b
   const ficha = await estadoEmailDeFicha(correduriaId, b.clienteId)
   if (ficha.estado === 'ilegible') return { estado: 'sin_correo_configurado', motivo: 'no se puede leer el correo de tu ficha' }
@@ -327,17 +368,20 @@ export type ResultadoFirma =
 
 export async function firmarAceptacion(
   correduriaId: string,
-  identidadId: string,
+  acceso: AccesoPortal,
   presupuestoId: string,
   opcionId: string,
   datos: {
     codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean
     cuenta: EntradaCuenta | null
+    /** Qué código teclea: el de un solo uso al correo (por defecto) o el de acceso del WhatsApp. */
+    via?: 'correo' | 'whatsapp'
   },
 ): Promise<ResultadoFirma> {
   // La casilla va lo PRIMERO: antes de tocar la BD y antes de gastar un intento del código.
   if (datos.datosConfirmados !== true) return { estado: 'sin_confirmar_datos' }
-  const b = await base(correduriaId, identidadId, presupuestoId, opcionId)
+  const identidadId = 'identidadId' in acceso ? acceso.identidadId : null
+  const b = await base(correduriaId, acceso, presupuestoId, opcionId)
   if (!('f' in b)) return b
   const { f, clienteId } = b
   // Fail-closed: con los datos ilegibles o avisados como incorrectos, no se autoriza la emisión.
@@ -361,15 +405,28 @@ export async function firmarAceptacion(
     if (!cuentaCifrada || !cuentaCifrada.startsWith('v1:')) return { estado: 'sin_cifrado' }
   }
   // Control exclusivo: sin código no hay firma, aunque la sesión esté abierta.
-  if (!f.otpHash || !f.otpExpira) return { estado: 'sin_codigo' }
-  // El intento se gasta ANTES de comparar y en una sola sentencia.
-  const [gastado] = await prismaAsegura().$queryRaw<{ hash: string; intentos: number }[]>`
-    update presupuesto set firma_otp_intentos = firma_otp_intentos + 1
-    where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid and aceptado_at is null
-      and firma_otp_hash is not null and firma_otp_expira > now() and firma_otp_intentos < ${MAX_INTENTOS}::int
-    returning firma_otp_hash as hash, firma_otp_intentos as intentos`
-  if (!gastado) return f.otpExpira.getTime() < Date.now() ? { estado: 'codigo_caducado' } : { estado: 'demasiados_intentos' }
-  if (hashCodigo(datos.codigo.trim()) !== gastado.hash) return { estado: 'codigo_incorrecto', quedan: Math.max(0, MAX_INTENTOS - gastado.intentos) }
+  let metodo: 'otp_email' | 'otp_whatsapp' = 'otp_email'
+  if (datos.via === 'whatsapp') {
+    // El código del WhatsApp solo se comprueba con el token del enlace (va atado a él): sin el
+    // acceso por WhatsApp no hay con qué compararlo, y eso es «sin código», no «incorrecto».
+    if (!('tokenWhatsapp' in acceso)) return { estado: 'sin_codigo' }
+    const w = await gastarCodigoWhatsapp(correduriaId, acceso.tokenWhatsapp, datos.codigo.trim(), presupuestoId)
+    if (w.estado === 'incorrecto') return { estado: 'codigo_incorrecto', quedan: w.quedan }
+    if (w.estado === 'bloqueado') return { estado: 'demasiados_intentos' }
+    if (w.estado === 'caducado') return { estado: 'codigo_caducado' }
+    if (w.estado !== 'valido') return { estado: 'sin_codigo' }
+    metodo = 'otp_whatsapp'
+  } else {
+    if (!f.otpHash || !f.otpExpira) return { estado: 'sin_codigo' }
+    // El intento se gasta ANTES de comparar y en una sola sentencia.
+    const [gastado] = await prismaAsegura().$queryRaw<{ hash: string; intentos: number }[]>`
+      update presupuesto set firma_otp_intentos = firma_otp_intentos + 1
+      where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid and aceptado_at is null
+        and firma_otp_hash is not null and firma_otp_expira > now() and firma_otp_intentos < ${MAX_INTENTOS}::int
+      returning firma_otp_hash as hash, firma_otp_intentos as intentos`
+    if (!gastado) return f.otpExpira.getTime() < Date.now() ? { estado: 'codigo_caducado' } : { estado: 'demasiados_intentos' }
+    if (hashCodigo(datos.codigo.trim()) !== gastado.hash) return { estado: 'codigo_incorrecto', quedan: Math.max(0, MAX_INTENTOS - gastado.intentos) }
+  }
   if (!nombreCoincide(datos.nombre, f.tomador)) return { estado: 'nombre_no_coincide' }
 
   const hoy = hoyMadrid()
@@ -386,7 +443,7 @@ export async function firmarAceptacion(
     documento_id: documentoId,
     bytes: new TextEncoder().encode(texto),
     contexto,
-    metodo: 'otp_email',
+    metodo,
     nombre_confirmado: datos.nombre,
   })
   const evidencia = await firmar(presupuestoId, c.documento)
@@ -470,13 +527,18 @@ export async function firmarAceptacion(
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
       values (${correduriaId}::uuid, ${clienteId}::uuid, ${f.polizaId}::uuid, cast('gestion' as tipo_historial_interno),
               ${`El cliente aceptó en el portal el presupuesto de ${f.compania}${c.anulacion ? ' y firmó la anulación de su póliza actual' : ''}. ` +
-                `Confirmó con la casilla los datos con los que se calculó el precio y autorizó la emisión (huella ${c.datos.huella.slice(0, 12)}). ` +
+                (f.origen === 'ofertas' ? `Presupuesto de OFERTAS (PDF): se emite en ${f.compania}, no por Avant2. ` : '') +
+                (f.origen === 'ofertas'
+                  ? `Confirmó con la casilla sus datos y la oferta elegida, y autorizó a ${MEDIADOR.marca} a gestionar la contratación con ${f.compania} en sus condiciones (huella ${c.datos.huella.slice(0, 12)}). `
+                  : `Confirmó con la casilla los datos con los que se calculó el precio y autorizó la emisión (huella ${c.datos.huella.slice(0, 12)}). `) +
                 `${lineaCuentaHistorial(c.cuenta)} ` +
                 (f.ipidHuella ? 'Tenía en el portal la ficha IPID de la opción.' : 'No había ficha IPID de la opción en el portal: hay que mandársela antes de emitir.')})`
   } catch (e) {
     console.error('[presupuesto-aceptacion] historial no anotado:', e instanceof Error ? e.message : e)
   }
-  const aviso = avisoAceptacion({
+  // Ofertas: el corredor emite EN LA COMPAÑÍA (no hay emisión por API). Se dice lo primero del aviso.
+  const avisoOfertas = f.origen === 'ofertas' ? `${escaparHtml(lineaEmitirEnCompania(f.compania))}\n` : ''
+  const aviso = avisoOfertas + avisoAceptacion({
     tomador: f.tomador, ramo: f.ramo, compania: f.compania, producto: f.producto,
     primaEur: f.prima === null ? null : Number(f.prima), franquiciaEur: f.franquicia === null ? null : Number(f.franquicia),
     datos: c.datos, anulacionCompania: c.anulacion?.compania ?? null, sinAnulacion: c.sinAnulacion,
@@ -491,17 +553,18 @@ const urlPlataforma = () => process.env.PLATAFORMA_URL?.trim() || URL_PLATAFORMA
 // ─── «Revisa tus datos» fuera de la firma: leerlos y avisar de uno que no es correcto ──────────
 
 type Propio = {
-  clienteId: string; ramo: string; tomador: string; peticion: unknown
+  clienteId: string; ramo: string; origen: string; tomador: string; peticion: unknown
   datosEnRevision: boolean; retirado: boolean; emitido: boolean
 }
 
 /** El presupuesto, solo si es de la ficha de esta identidad. Mismo reparto que `base`, sin opción. */
-async function propio(correduriaId: string, identidadId: string, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {
+async function propio(correduriaId: string, acceso: AccesoPortal, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  const ficha = await fichaDeAcceso(correduriaId, acceso, presupuestoId)
+  if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const [f] = await prismaAsegura().$queryRaw<Omit<Propio, 'clienteId'>[]>`
-    select p.ramo, trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
+    select p.ramo, p.origen, trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
            (select t.peticion from tarificaciones t where t.id = p.tarificacion_id and t.correduria_id = p.correduria_id) as peticion,
            exists (select 1 from presupuesto_evento ev where ev.presupuesto_id = p.id and ev.tipo = ${TIPO_DATOS_INCORRECTOS}) as "datosEnRevision",
            (p.retirado_at is not null) as retirado, (p.emitido_at is not null) as emitido
@@ -516,9 +579,17 @@ export type ResultadoDatos =
   | { estado: 'no_encontrado' } | SinFicha
 
 /** Los datos con los que se calculó el precio, para el bloque «Revisa tus datos». No escribe nada. */
-export async function datosCotizadosDelPresupuesto(correduriaId: string, identidadId: string, presupuestoId: string): Promise<ResultadoDatos> {
-  const p = await propio(correduriaId, identidadId, presupuestoId)
+export async function datosCotizadosDelPresupuesto(correduriaId: string, acceso: AccesoPortal, presupuestoId: string): Promise<ResultadoDatos> {
+  const p = await propio(correduriaId, acceso, presupuestoId)
   if ('estado' in p) return p
+  // Ofertas: no hay petición a Avant2; se enseña quién es el tomador y quién emite (sin tarificaciones).
+  if (p.origen === 'ofertas') {
+    return { estado: 'ok', datos: gruposRevisionOfertas(p.tomador), confirmacionDatos: textoAutorizacionOfertas(MEDIADOR.marca, 'la compañía que elija', false), enRevision: p.datosEnRevision }
+  }
+  // Puerta cerrada: solo un `codeoscopic` tiene petición de la que leer «con qué se calculó».
+  if (origenPresupuesto(p.origen) !== 'codeoscopic') {
+    return { estado: 'sin_datos', motivo: 'No sabemos de dónde salen los precios de este presupuesto. Llámanos y lo revisamos contigo: no se emite nada hasta entonces.', enRevision: p.datosEnRevision }
+  }
   const d = leerDatosCotizados(p.peticion, p.ramo)
   if (d.estado !== 'ok') return { estado: 'sin_datos', motivo: d.motivo, enRevision: p.datosEnRevision }
   return { estado: 'ok', datos: d.grupos, confirmacionDatos: TEXTO_CONFIRMACION_DATOS, enRevision: p.datosEnRevision }
@@ -538,11 +609,11 @@ export type ResultadoReporte =
  * Alberto lo manda el portal por Telegram con el texto que devuelve esto.
  */
 export async function reportarDatosIncorrectos(
-  correduriaId: string, identidadId: string, presupuestoId: string, textoCrudo: string,
+  correduriaId: string, acceso: AccesoPortal, presupuestoId: string, textoCrudo: string,
 ): Promise<ResultadoReporte> {
   const texto = textoCrudo.trim().slice(0, MAX_TEXTO_REPORTE)
   if (texto.length < 3) return { estado: 'invalido' }
-  const p = await propio(correduriaId, identidadId, presupuestoId)
+  const p = await propio(correduriaId, acceso, presupuestoId)
   if ('estado' in p) return p
   if (p.retirado || p.emitido) return { estado: 'no_admite', motivo: 'Este presupuesto ya no admite cambios: escríbenos o llámanos.' }
   const db = prismaAsegura()

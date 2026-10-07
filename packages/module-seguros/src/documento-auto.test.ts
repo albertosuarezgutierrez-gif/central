@@ -145,3 +145,10 @@ test('cifCompania: el CIF de la aseguradora, limpio; lo que no tiene forma de CI
   assert.equal(normalizarAutoLeido({ cifCompania: '12345678Z' }).cifCompania, null) // un DNI no es un CIF
   assert.equal(normalizarAutoLeido({}).cifCompania, null)
 })
+
+test('combustible: texto del documento; los marcadores de cajón son null', () => {
+  assert.equal(normalizarAutoLeido({ combustible: ' Gasolina ' }).combustible, 'Gasolina')
+  assert.equal(normalizarAutoLeido({ combustible: 'no consta' }).combustible, null)
+  assert.equal(normalizarAutoLeido({}).combustible, null)
+  assert.equal(normalizarAutoLeido(null).combustible, null)
+})

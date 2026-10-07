@@ -28,11 +28,11 @@ const TEXTOS: Record<MotivoRevision, TextoMotivo> = {
   },
   ramo_sin_acunar: {
     titulo: 'Emitida en un ramo que no se acuña sola',
-    que: 'Hogar, salud, vida o decesos con nº de póliza: la intranet no los acuña sola. Regístrala a mano.',
+    que: 'Ramo que la intranet no acuña (no es auto, moto, hogar, vida, salud ni decesos: RC, comercio, mascotas…) con nº de póliza. Regístrala a mano.',
   },
   emitida_sin_acunar: {
     titulo: 'Emitida, pero no se pudo acuñar',
-    que: 'Auto o moto aprobada con nº de póliza, pero el acuñado no cuajó (p. ej. falta el código DGS). Revisa el detalle.',
+    que: 'Emisión aprobada con nº de póliza (auto, moto, hogar, vida, salud o decesos), pero el acuñado no cuajó (p. ej. falta el código DGS). Revisa el detalle.',
   },
   estado_desconocido: {
     titulo: 'Estado de la solicitud desconocido',
@@ -40,7 +40,7 @@ const TEXTOS: Record<MotivoRevision, TextoMotivo> = {
   },
   bloqueada: {
     titulo: 'El registro se negó',
-    que: 'La intranet se negó a registrar la emisión (409/422). El motivo está en el detalle.',
+    que: 'La intranet se negó a registrar la emisión (409/422), p. ej. una posible póliza duplicada (mismo nº y compañía ya en la cartera del cliente). El motivo está en el detalle.',
   },
 }
 

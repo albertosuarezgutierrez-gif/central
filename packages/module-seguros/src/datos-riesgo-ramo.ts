@@ -39,6 +39,7 @@ import {
 import {
   admiteDatosCapital,
   aplicarEdicionCapital,
+  datosCapitalVacios,
   faltanDatosCapital,
   leerDatosCapital,
   motivoNoConfirmableCapital,
@@ -148,7 +149,7 @@ export function leerBloqueDeRamo(ramo: string, info: unknown, precarga?: Obj | n
     return { clave, datos: base as unknown as Obj, faltan: faltanDatosVivienda(base), dePoliza: propios === null && precarga != null && Object.keys(precarga).length > 0 }
   }
   if (clave === 'datosCapital') {
-    const d = leerDatosCapital(i.datosCapital) ?? { capital: null, duracionAnios: null, modalidadDeseada: null, confirmadoAt: null }
+    const d = leerDatosCapital(i.datosCapital) ?? datosCapitalVacios()
     return { clave, datos: d as unknown as Obj, faltan: faltanDatosCapital(d, ramo as 'vida' | 'salud' | 'decesos'), dePoliza: false }
   }
   if (clave === 'datosComercio') {

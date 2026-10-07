@@ -24,6 +24,7 @@ real medido, orden de trabajo). Después, según lo que toques:
 - **Ingesta de CIMA (EIAC/TIREA, cuarentena, cobertura de campos, caja negra del webhook y el
   diagnóstico de «la ingesta está muda») → skill `cima-ingesta`.** La regla 6 de aquí abajo dice
   QUÉ no se hace sin spec; el CÓMO de la tubería está allí.
+- Google Contacts (agenda del móvil/WhatsApp) → skill `google-contactos`.
 
 ## 🚨 No romper
 
@@ -68,8 +69,9 @@ real medido, orden de trabajo). Después, según lo que toques:
    (32.520 fichas, vencimientos 2013-2018) son volcado histórico = **leads**, jamás «clientes».
 3. **Toda escritura** va por `/api/operador/*` de asegura con `correduriaId` explícito y deja fila en
    `historial_interno`. Reglas puras en `@central/module-seguros` con test.
-4. **Identidad solo documentada** (DNI recibido en la ficha); contacto y dirección libres; el DNI
-   entero no cruza el puerto (enmascarado).
+4. **Identidad acreditada** (cambio de nombre/apellidos/DNI): documento con DNI recibido, o póliza con DNI
+   coincidente, o **motivo obligatorio del corredor** con auditoría; el portal NUNCA la edita. Contacto y
+   dirección libres; el DNI entero no cruza el puerto (enmascarado).
 5. **Autorización para ver seguros ajenos es direccional** y se da desde la ficha de quien autoriza.
 6. **Emisión y conciliación CIMA: spec + OK de Alberto antes de código.** Hoy CIMA empareja por
    número + nombre de compañía y pisa; una emitida sin marcar se duplica o se sobreescribe.
@@ -257,5 +259,20 @@ orden en §9.
     y confirman POR RAMO: `datosVehiculo` (auto/moto), `datosVivienda` (hogar), `datosCapital` (vida/salud/decesos),
     `datosRiesgoLibre` (RC/comercio/comunidades/otros). Cada clave guarda el campo confirmado (se sella al confirmar,
     se borra al editar). Se pide precio desde la oportunidad en los 6 ramos tarificables; personas editan datos sin salir
-    (carné si conductor). Catálogo de versión solo en pantalla de precio; editar marca/modelo/versión borra codigoVehiculo.
+    (carné si conductor). La VERSIÓN del catálogo (gratis) se elige en el propio bloque «Datos del vehículo» (`SelectorCatalogoVehiculo`: marca→modelo→combustible→versión, sufijo `-moto`, garaje `garajes-moto` en moto) y se guarda con los 7 campos juntos; de ahí «Pedir precio →» va a `rutaVariante` (nunca a retarificar la póliza vieja ni cotiza solo: 0,50€). Editar marca/modelo/versión a mano borra codigoVehiculo. En moto la última tarificación NO manda si el riesgo trae otra moto (`previoPuedeMandar`). Guardián `test/regression-datos-vehiculo-catalogo.test.ts`.
     Precarga desde polizas.datos_especificos sin confirmar.
+    **Pedir precio desde la oportunidad en todos los ramos (07/10/2026):** el botón PRINCIPAL de la pantalla del riesgo es SIEMPRE
+    pedir precio con los datos de la oportunidad (`accionesPrecio().principal` = `rutaVariante`), con o sin póliza; «Retarificar con
+    los datos de la póliza» (riesgo VIEJO de la póliza) solo es secundario. Dentro de cada bloque de datos hay un «Pedir precio →»
+    (`BotonPedirPrecio`, solo navega; comunidades: ancla a `#presupuestos`). Hogar: `faltan` incluye referencia catastral y
+    `propietarioEsTomador`; sin referencia el buscador del Catastro parte de tipo de vía + calle + nº + municipio (`busquedaCatastroDeVivienda`).
+    Vida guarda `profesion` (CNO-11, 4 cifras) y `fumador` (sin duración); salud/decesos guardan `asegurados` SIN DNI (jsonb en claro; el DNI
+    de la cartera va cifrado). Guardián `test/regression-precio-principal.test.ts`.
+    **Regla única (05/10/2026): el riesgo se rellena UNA vez (documento o corredor) en `info_riesgo.datosVehiculo` y toda
+    pantalla de auto lo lee de ahí; nunca se vuelve a pedir lo que ya consta.** Subir una póliza escribe marca/modelo/versión/
+    matrícula/matriculación (sin confirmar; lo que no viene = null) y, solo con coincidencia EXACTA e inequívoca en el catálogo
+    GRATIS, marcaId/modeloId/motorId/codigoVehiculo (nunca `?registrationPlate=`; catálogo caído = sin ids). AutoNuevo precarga
+    en cascada PARCIAL (`precarga-vehiculo.ts`), el texto sin id va a la caja de búsqueda y una variante retomada manda sobre todo.
+
+## Presupuestos de compañías por bot (tarificador RPA)
+Se piden desde la oportunidad (`/correduria/oportunidad/[id]`); estado, decisiones y plan en `docs/TARIFICADOR-RPA.md`.

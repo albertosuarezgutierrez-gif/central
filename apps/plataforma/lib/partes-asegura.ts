@@ -102,6 +102,12 @@ export type ParteSiniestro = {
   hayTerceros: boolean | null
   /** Tipo que marcó el cliente, ya en texto («Agua o fuga»). `null` = no marcó nada o no llegó. */
   tipoSiniestro: string | null
+  /**
+   * Lo que el cliente contestó por RAMO, ya en texto (lo compone asegura con
+   * `lineasDatosRamoParte`). Es su DECLARACIÓN —la culpa incluida—, no lo que
+   * diga la compañía. `[]` = no contestó nada o un asegura antiguo no lo manda.
+   */
+  datosRamo: { etiqueta: string; valor: string }[]
   estado: ParteEstado
   /** 🚨 La ÚNICA fuente de «la compañía ya lo sabe». Ver la cabecera. */
   comunicado: boolean
@@ -123,6 +129,47 @@ export type ParteSiniestro = {
   creadoEn: string | null
   /** `null` = asegura no lo calculó (o llegó con forma rara): «sin calcular», nunca 0 días. */
   plazo: PlazoParte | null
+  /**
+   * Con qué siniestro PODRÍA ser (misma póliza, fecha ±3 días). Solo propone.
+   * `null` = no aplica, no se pudo calcular o un asegura antiguo no lo manda —
+   * NUNCA «no hay siniestro».
+   */
+  sugerencia: SugerenciaVinculo | null
+}
+
+export type CandidatoVinculo = {
+  id: string
+  referencia: string | null
+  /** `YYYY-MM-DD`; `null` = no se sabe cuándo pasó. */
+  fecha: string | null
+  origen: 'cima' | 'gestionado_correduria'
+  estado: string
+  tipo: string | null
+}
+
+export type SugerenciaVinculo = { tipo: 'fuerte' | 'ambiguo' | 'ninguno'; candidatos: CandidatoVinculo[] }
+
+/** `sugerencia` del puerto, o `null` si no tiene forma (no se supone «ninguno»). */
+export function leerSugerencia(v: unknown): SugerenciaVinculo | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (o.tipo !== 'fuerte' && o.tipo !== 'ambiguo' && o.tipo !== 'ninguno') return null
+  if (!Array.isArray(o.candidatos)) return null
+  const candidatos: CandidatoVinculo[] = o.candidatos.flatMap((x) => {
+    if (typeof x !== 'object' || x === null) return []
+    const c = x as Record<string, unknown>
+    const id = cadena(c.id)
+    if (id === null) return []
+    return [{
+      id,
+      referencia: cadena(c.referencia),
+      fecha: cadena(c.fecha),
+      origen: c.origen === 'cima' ? 'cima' as const : 'gestionado_correduria' as const,
+      estado: cadena(c.estado) ?? 'desconocido',
+      tipo: cadena(c.tipo),
+    }]
+  })
+  return { tipo: o.tipo, candidatos }
 }
 
 function cadena(v: unknown): string | null {
@@ -144,6 +191,17 @@ function entero(v: unknown): number | null {
  */
 export function triestado(v: unknown): boolean | null {
   return typeof v === 'boolean' ? v : null
+}
+
+/** Solo pares `{etiqueta, valor}` de texto; cualquier otra forma se ignora (no lanza). */
+function lineasRamo(v: unknown): { etiqueta: string; valor: string }[] {
+  if (!Array.isArray(v)) return []
+  return v.flatMap((x) => {
+    if (typeof x !== 'object' || x === null) return []
+    const etiqueta = cadena((x as Record<string, unknown>).etiqueta)
+    const valor = cadena((x as Record<string, unknown>).valor)
+    return etiqueta !== null && valor !== null ? [{ etiqueta, valor }] : []
+  })
 }
 
 function persona(v: unknown): PersonaParte | null {
@@ -194,6 +252,7 @@ export function leerParte(v: unknown): ParteSiniestro | null {
     hayHeridos: triestado(p.hayHeridos),
     hayTerceros: triestado(p.hayTerceros),
     tipoSiniestro: cadena(p.tipoSiniestroTexto),
+    datosRamo: lineasRamo(p.datosRamo),
     estado: estado as ParteEstado,
     // Conservador a propósito: si el campo no llega, NO se afirma que la
     // compañía lo sepa. El error caro es el contrario — decir «comunicado» de
@@ -209,6 +268,7 @@ export function leerParte(v: unknown): ParteSiniestro | null {
     polizaDesligadaEn: cadena(p.polizaDesligadaEn),
     creadoEn: cadena(p.creadoEn),
     plazo: plazo(p.plazo),
+    sugerencia: leerSugerencia(p.sugerencia),
   }
 }
 
@@ -334,6 +394,14 @@ export function textoMotivoParte(motivo: string): string {
       return 'ese cambio ya no es posible sobre este parte (alguien lo movió antes). Recarga la página.'
     case 'datos_invalidos':
       return 'asegura no ha aceptado los datos del cambio.'
+    case 'ya_vinculado':
+      return 'ese parte ya está vinculado a un siniestro. Recarga la página.'
+    case 'no_vinculable':
+      return 'ese parte está descartado o ya abierto en la compañía: no se vincula.'
+    case 'siniestro_fusionado':
+      return 'ese siniestro se fusionó con otro de la compañía: elige el siniestro vigente.'
+    case 'poliza_distinta':
+      return 'el parte va sobre otra póliza que ese siniestro: no se vinculan.'
     default:
       return motivo
   }

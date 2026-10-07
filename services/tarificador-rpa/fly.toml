@@ -1,0 +1,11 @@
+# App Fly del worker del tarificador RPA de Grupo ASegura (org grupo-asegura, región cdg).
+# NO es un servicio: no escucha HTTP, no se auto-arranca, no hay máquina permanente. apps/asegura crea
+# UNA máquina por trabajo con la API de Machines (auto_destroy, restart no) y la máquina sale sola.
+# Por eso no hay [http_service] ni [[services]]: lo vigila test/regression-tarificador-rpa.test.ts.
+app = "asegura-tarificador"
+primary_region = "cdg"
+
+# Sin [build]: la imagen se construye desde la RAÍZ con --dockerfile explícito (ver README).
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"

@@ -1,0 +1,101 @@
+# Construye y sube a Fly la imagen del worker del tarificador RPA (services/tarificador-rpa), SIN terminal:
+# GitHub → Actions → «Tarificador RPA · imagen» → Run workflow. Solo manual (workflow_dispatch).
+#
+# Secreto de repo: FLY_API_TOKEN_TARIFICADOR. La PRIMERA vez, token de ORGANIZACIÓN grupo-asegura (para poder
+# crear la app); después, sustitúyelo por el token deploy de la app y revoca el de organización.
+# Resultado: referencia `registry.fly.io/asegura-tarificador:<etiqueta>` en el resumen del run.
+name: Tarificador RPA · imagen
+
+on:
+  workflow_dispatch:
+    inputs:
+      etiqueta:
+        description: 'Etiqueta de la imagen (minúsculas, números, . _ -)'
+        required: true
+        default: 'v20261005'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  imagen:
+    name: Construir y subir imagen
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ETIQUETA: ${{ inputs.etiqueta }}
+      FLYCTL_VERSION: '0.4.112'
+    steps:
+      - uses: actions/checkout@v4
+
+      # flyctl de una release FIJA de superfly/flyctl bajada con `gh` (preinstalado) y verificada con el
+      # fichero de checksums de esa release (se localiza por patrón: no se llama `checksums.txt`). Sin
+      # `curl | sh` ni el token de Fly en este paso. Historia: setup-flyctl@1.5 murió en silencio (run #2);
+      # 0.4.111 no existía (run #3); la release no trae `checksums.txt` (run #5).
+      - name: Instalar flyctl
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/flyctl"
+          mkdir -p "$dir" "$HOME/.fly/bin"
+          gh release download "v${FLYCTL_VERSION}" --repo superfly/flyctl --dir "$dir" \
+            --pattern "flyctl_${FLYCTL_VERSION}_Linux_x86_64.tar.gz" --pattern '*checksums*'
+          ls -1 "$dir"
+          archivo="flyctl_${FLYCTL_VERSION}_Linux_x86_64.tar.gz"
+          sumas="$(cd "$dir" && ls | grep -i "checksums.*\.txt$" | head -n1 || true)"
+          if [ -z "$sumas" ]; then echo "::error::La release v${FLYCTL_VERSION} no trae fichero de checksums"; exit 1; fi
+          linea="$(cd "$dir" && grep " \*\?${archivo}\$" "$sumas" || true)"
+          if [ -z "$linea" ]; then echo "::error::${archivo} no aparece en ${sumas}"; exit 1; fi
+          (cd "$dir" && echo "$linea" | sha256sum -c -)
+          tar -xzf "$dir/$archivo" -C "$HOME/.fly/bin" flyctl
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+          "$HOME/.fly/bin/flyctl" version
+
+      - name: Comprobar secreto y etiqueta
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_TARIFICADOR }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::error::Falta el secreto de repo FLY_API_TOKEN_TARIFICADOR (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          if ! printf '%s' "$ETIQUETA" | grep -Eq '^[a-z0-9._-]+$'; then
+            echo "::error::Etiqueta no válida: solo minúsculas, números, punto, guion y guion bajo."
+            exit 1
+          fi
+
+      - name: Crear la app si no existe
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_TARIFICADOR }}
+        run: |
+          if ! flyctl status --app asegura-tarificador >/dev/null 2>&1; then
+            flyctl apps create asegura-tarificador --org grupo-asegura || {
+              echo "::error::el token no puede crear apps: usa un token de organización la primera vez o crea la app a mano"
+              exit 1
+            }
+          fi
+
+      - name: Construir y subir la imagen
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_TARIFICADOR }}
+        run: |
+          flyctl deploy . \
+            --config services/tarificador-rpa/fly.toml \
+            --dockerfile services/tarificador-rpa/Dockerfile \
+            --build-only --push --remote-only \
+            --image-label "$ETIQUETA"
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Imagen subida"
+            echo
+            echo "\`registry.fly.io/asegura-tarificador:${ETIQUETA}\`"
+            echo
+            echo "Ponla en Vercel (central-asegura) como \`TARIFICADOR_FLY_IMAGE\`."
+          } >> "$GITHUB_STEP_SUMMARY"

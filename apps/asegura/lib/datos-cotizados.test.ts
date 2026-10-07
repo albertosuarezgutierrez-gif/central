@@ -139,3 +139,15 @@ test('los avisos de Telegram escapan el HTML y enlazan a la ficha con la pestañ
   assert.match(sinFranquicia, /Franquicia: no la declara el producto/)
   assert.match(avisoDatosIncorrectos({ tomador: 'x', ramo: 'auto', texto: '<script>', enlaceFicha: 'u' }), /&lt;script&gt;/)
 })
+
+test('🪤 anexo firmado: Codeoscopic byte a byte igual; ofertas sin «el precio depende de estos datos»', async () => {
+  const { anexoDatosFirmados } = await import('./datos-cotizados.ts')
+  const d = { estado: 'ok' as const, grupos: [], texto: 'DATOS', huella: 'h' }
+  const viejo = 'DATOS\n\nEl tomador ha marcado: «' + TEXTO_CONFIRMACION_DATOS + '» ' +
+    'El precio y la póliza dependen de estos datos: si alguno no fuera correcto, hay que corregirlo antes de emitir.'
+  assert.equal(anexoDatosFirmados(d), viejo)
+  assert.equal(anexoDatosFirmados(d, TEXTO_CONFIRMACION_DATOS, 'codeoscopic'), viejo)
+  const o = anexoDatosFirmados(d, 'X', 'ofertas')
+  assert.doesNotMatch(o, /El precio y la póliza dependen|emitir\./)
+  assert.match(o, /en las condiciones de la oferta elegida/)
+})

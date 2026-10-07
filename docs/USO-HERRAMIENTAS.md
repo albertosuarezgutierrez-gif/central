@@ -167,49 +167,51 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 244 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 288 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 238 | 32.507 | 24.712.886 | 0 | 0 |
-| `otro` | 234 | 7.833 | 22.224.660 | 11.494.037 | 0 |
-| `lectura-directa` | 213 | 5.633 | 14.807.629 | 0 | 0 |
-| `mcp:github` | 218 | 5.442 | 4.530.681 | 50.091.159 | 89 |
-| `escritura` | 166 | 3.438 | 49.599.992 | 0 | 0 |
-| `sql` | 154 | 3.238 | 1.597.115 | 2.351.230 | 13 |
-| `mcp:Claude_Code_Remote` | 138 | 1.463 | 302.492 | 5.301.463 | 14 |
-| `mcp:Booking-com` | 20 | 564 | 2.370.364 | 0 | 0 |
-| `mcp:Vercel` | 56 | 560 | 813.164 | 201.411 | 14 |
-| `mcp:Gmail` | 29 | 367 | 568.888 | 0 | 15 |
-| `mcp:Supabase` | 100 | 287 | 27.521 | 0 | 2 |
-| `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
-| `agente:general-purpose` | 48 | 204 | 151.041 | 4.442.959 | 0 |
-| `agente:agente-architect` | 38 | 113 | 85.401 | 3.377.131 | 0 |
-| `mcp:Google-Drive` | 13 | 95 | 88.235 | 0 | 2 |
-| `mcp:Google_Drive` | 16 | 87 | 110.438 | 0 | 19 |
+| `bash` | 280 | 37.980 | 30.603.418 | 0 | 0 |
+| `otro` | 276 | 9.276 | 24.405.771 | 14.677.255 | 0 |
+| `lectura-directa` | 249 | 6.511 | 22.216.928 | 0 | 0 |
+| `mcp:github` | 250 | 5.826 | 4.755.490 | 51.247.577 | 90 |
+| `escritura` | 189 | 3.825 | 53.575.579 | 0 | 0 |
+| `sql` | 176 | 3.674 | 1.832.157 | 2.351.230 | 15 |
+| `mcp:Claude_Code_Remote` | 142 | 1.480 | 304.843 | 5.301.463 | 14 |
+| `mcp:Gmail` | 38 | 1.123 | 1.108.057 | 0 | 70 |
+| `mcp:Booking-com` | 27 | 765 | 3.236.630 | 0 | 0 |
+| `mcp:Vercel` | 61 | 604 | 885.822 | 202.197 | 16 |
+| `agente:general-purpose` | 78 | 367 | 243.286 | 6.660.474 | 0 |
+| `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
+| `mcp:Supabase` | 110 | 311 | 29.810 | 0 | 4 |
+| `mcp:Interactive-Brokers--IBKR-` | 6 | 298 | 369.157 | 0 | 0 |
+| `mcp:claude-code-remote` | 23 | 167 | 15.334 | 16.312 | 0 |
+| `agente:agente-architect` | 50 | 160 | 118.243 | 5.031.048 | 0 |
+| `mcp:Google-Drive` | 17 | 122 | 108.754 | 0 | 2 |
+| `agente:agente-mecanico` | 35 | 85 | 61.652 | 4.268.098 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
-| `agente:agente-mecanico` | 24 | 64 | 53.111 | 2.581.775 | 0 |
-| `mcp:OpenSEO` | 3 | 62 | 51.007 | 0 | 2 |
-| `agente:Explore` | 27 | 61 | 30.351 | 1.408.318 | 0 |
-| `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
-| `agente:rastreador-codigo` | 32 | 55 | 19.312 | 649.514 | 0 |
+| `agente:Explore` | 32 | 74 | 36.887 | 2.118.846 | 0 |
+| `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
+| `agente:rastreador-codigo` | 42 | 70 | 21.539 | 651.535 | 0 |
+| `mcp:Resend` | 7 | 61 | 31.515 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
-| `mcp:claude-code-remote` | 3 | 39 | 3.813 | 0 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
-| `agente:general` | 8 | 12 | 8.332 | 512.187 | 0 |
+| `agente:general` | 9 | 13 | 8.369 | 512.187 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
-| `mcp:Supabase_asegura` | 9 | 9 | 2.935 | 0 | 0 |
+| `mcp:Supabase_asegura` | 11 | 11 | 2.942 | 0 | 0 |
+| `agente:lector-correo` | 3 | 10 | 4.219 | 0 | 0 |
+| `mcp:Google_Calendar` | 2 | 7 | 5.018 | 0 | 0 |
+| `agente:verificador-esceptico` | 5 | 7 | 1.867 | 3.046 | 0 |
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:openrouter` | 2 | 5 | 14.639 | 0 | 0 |
-| `agente:verificador-esceptico` | 3 | 3 | 1.369 | 1.923 | 0 |
 | `agente:Plan` | 2 | 2 | 1.832 | 12.062 | 0 |
 | `mcp:ccd_session` | 2 | 2 | 175 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
-| `mcp:Google_Calendar` | 1 | 1 | 272 | 0 | 0 |
+| `agente:jefe-contabilidad` | 1 | 2 | 418 | 7.630 | 0 |
 <!-- ahorro:fin -->

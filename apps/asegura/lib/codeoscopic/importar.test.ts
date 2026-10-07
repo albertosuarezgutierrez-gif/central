@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  documentoTomador, fraccionamientoDeOferta, matriculaProyecto, normalizarMatricula, ofertasDelProyecto, quoteCrudo, ramoDeLinea, titularProyecto,
+  documentoTomador, fraccionamientoDeOferta, matriculaProyecto, normalizarMatricula, ofertasDelProyecto, quoteCrudo, ramoDeLinea, RAMO_DE_LINEA, RAMOS_IMPORTABLES, titularProyecto,
 } from './importar.ts'
 
 // Forma REAL de un `GET /insurances/{id}` (proyecto hecho a mano en la web de Avant2,
@@ -53,7 +53,8 @@ test('una fecha de efecto pasada bloquea aunque no traiga caducidad', () => {
 
 test('ramo, tomador y quote crudo', () => {
   assert.equal(ramoDeLinea(crudo), 'auto')
-  assert.equal(ramoDeLinea({ insuranceLine: { id: 'Home' } }), null)
+  assert.equal(ramoDeLinea({ insuranceLine: { id: 'Pets' } }), null)
+  assert.equal(ramoDeLinea({}), null)
   assert.equal(documentoTomador(crudo), '00000000T')
   assert.equal(documentoTomador({}), null)
   assert.equal(quoteCrudo(crudo, 'Q2024763856')?.premium, 520.97)
@@ -106,4 +107,27 @@ test('una póliza ya sustituida no se vuelve a sustituir: lo bloquean el import 
   // (Desde el 28/09/2026 la póliza llega vía `ctx`, y la guarda solo aplica en modo sustitución.)
   const guarda = "if (ctx.modo === 'sustitucion' && ctx.sustituida)"
   assert.ok(emi.indexOf(guarda) > 0 && emi.indexOf(guarda) < emi.indexOf('enviarEmision('))
+})
+
+// ─── Ramos de personas y hogar: ids EXACTOS del vendor (referencia § ramos) ───
+test('🎯 los seis `insuranceLine.id` del vendor mapean a nuestro ramo, con su mayúscula', () => {
+  const casos: [string, string][] = [
+    ['Car', 'auto'], ['Motorcycle', 'moto'], ['Home', 'hogar'],
+    ['TermLife', 'vida'], ['Health', 'salud'], ['Burial', 'decesos'],
+  ]
+  for (const [id, ramo] of casos) assert.equal(ramoDeLinea({ insuranceLine: { id } }), ramo, id)
+  assert.deepEqual(Object.keys(RAMO_DE_LINEA).sort(), casos.map(([id]) => id).sort(), 'ni más ni menos ids')
+})
+
+test('un id en minúsculas o inventado NO se adivina: null, nunca «auto»', () => {
+  for (const id of ['termlife', 'term-life', 'salud', 'HEALTH', 'Life', 'Pets', '']) {
+    assert.equal(ramoDeLinea({ insuranceLine: { id } }), null, id)
+  }
+})
+
+test('/importar sigue siendo solo de vehículo: vida, salud, decesos y hogar tienen ramo pero no son importables', () => {
+  assert.deepEqual([...RAMOS_IMPORTABLES], ['auto', 'moto'])
+  for (const id of ['Home', 'TermLife', 'Health', 'Burial']) {
+    assert.ok(!RAMOS_IMPORTABLES.includes(ramoDeLinea({ insuranceLine: { id } }) as string), id)
+  }
 })

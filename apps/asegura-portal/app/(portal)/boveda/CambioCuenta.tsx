@@ -5,6 +5,8 @@
 // el corredor en la compañía, y la pantalla lo dice para que nadie crea que ya está hecho.
 import { useState } from 'react'
 
+import { MENSAJE_VARIAS_FICHAS } from '@/lib/mensajes-ficha'
+
 type Estado =
   | { tipo: 'idle' }
   | { tipo: 'enviando' }
@@ -23,7 +25,7 @@ const AVISO_CONFIRMAR: Record<string, string> = {
   codigo_no_valido: 'El código no es correcto o ha caducado. Pide uno nuevo.',
   iban_invalido: 'Esa cuenta no es un IBAN válido.',
   sin_ficha: 'Todavía no tenemos tu ficha enlazada. Llámanos y lo cambiamos por teléfono.',
-  varias_fichas: 'Tu acceso está enlazado a varias fichas. Llámanos y lo cambiamos por teléfono.',
+  varias_fichas: MENSAJE_VARIAS_FICHAS,
   sin_puente: 'Ahora mismo no podemos guardarlo. Inténtalo más tarde o llámanos.',
   error: 'No se ha podido guardar. Inténtalo otra vez o llámanos.',
 }

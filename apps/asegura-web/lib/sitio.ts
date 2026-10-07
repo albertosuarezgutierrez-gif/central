@@ -162,6 +162,9 @@ export const NAV = [
   { href: '/seguros/flota', texto: 'Flota de vehículos' },
   { href: '/seguros/auto', texto: 'Auto y moto' },
   { href: '/seguros/vida-y-salud', texto: 'Vida y salud' },
+  // 03/10/2026: página de intención de salud (ver `lib/ramos.ts`); al pie,
+  // fuera de la cabecera (`FUERA_DE_CABECERA`).
+  { href: '/seguros/salud-sin-copago', texto: 'Salud sin copago' },
   // 27/09/2026: al pie y fuera de la cabecera (ver `FUERA_DE_CABECERA`).
   { href: '/seguros/decesos', texto: 'Decesos' },
   { href: '/seguros/seguro-perro', texto: 'Seguro de perro' },
@@ -232,6 +235,7 @@ const FUERA_DE_CABECERA: readonly string[] = [
   '/seguros/seguro-perro',
   '/seguros/impago-alquiler',
   '/seguros/patinete-electrico',
+  '/seguros/salud-sin-copago',
 ]
 
 export const NAV_CABECERA = NAV.filter(

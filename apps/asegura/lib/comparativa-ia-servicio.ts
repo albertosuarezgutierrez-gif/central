@@ -2,7 +2,8 @@
 // Lo puro (prompt, cifras, validación, tope) vive en `comparativa-ia.ts` y tiene sus cepos.
 //
 // Se llama SOLO desde el puente del portal (`/api/portal/presupuesto`): el portal no llama a la IA
-// directamente. La ficha sale de `portal_vinculo` (`fichaPropiaDe`), nunca de un id que mande nadie.
+// directamente. La ficha sale de `portal_vinculo` (`fichaPropiaDeRecurso`: la dueña del presupuesto, si está
+// vinculada con nivel de operar), nunca de un id que mande nadie.
 //
 // Dónde se guarda (sin migración, a propósito): en `presupuesto_evento`, que ya es append-only.
 //   · `resumen_ia`        → el resumen, generado UNA vez por presupuesto (la caché es el evento).
@@ -12,7 +13,7 @@
 
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso } from './contacto-portal'
 import { iaTexto } from './ia'
 import { URL_PLATAFORMA_DEFECTO, enlaceFichaCliente, escaparHtml } from './datos-cotizados'
 import { coberturasDeSobre } from './codeoscopic/coberturas-presupuesto'
@@ -29,12 +30,13 @@ export const TIPO_PIDE_LLAMADA = 'pide_llamada'
 const MAX_LLAMADAS_DIA = 3
 const TIMEOUT_IA_MS = 20_000
 
-export type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
+export type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 type Propio = { clienteId: string; ramo: string; tomador: string; retirado: boolean }
 
 export async function propio(correduriaId: string, identidadId: string, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const [f] = await prismaAsegura().$queryRaw<Omit<Propio, 'clienteId'>[]>`
     select p.ramo, trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador, (p.retirado_at is not null) as retirado

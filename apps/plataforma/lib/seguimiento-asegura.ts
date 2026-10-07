@@ -441,10 +441,26 @@ export function rotuloMotivo(m: string | null): string | null {
 
 const ROTULO_RAMO: Record<RamoOportunidad, string> = {
   auto: 'Auto', moto: 'Moto', hogar: 'Hogar', vida: 'Vida', salud: 'Salud', decesos: 'Decesos',
-  responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes', otros: 'Otros',
+  responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes',
+  empresas: 'Empresas / pymes', rc_profesional: 'RC profesional', dyo: 'D&O (directivos)', flotas: 'Flotas', transporte_mercancias: 'Transporte de mercancías', ciberriesgos: 'Ciberriesgos', decenal: 'Decenal / construcción', embarcaciones: 'Embarcaciones', mascotas: 'Mascotas', impago_alquiler: 'Impago de alquiler', viaje: 'Viaje', caucion: 'Caución',
+  otros: 'Otros',
 }
 export const RAMOS_OPORTUNIDAD_UI: readonly { valor: RamoOportunidad; rotulo: string }[] =
   RAMOS_OPORTUNIDAD.map((valor) => ({ valor, rotulo: ROTULO_RAMO[valor] }))
+/** Ramo válido de `?ramo=` para preseleccionar en el alta; `null` si no es uno conocido. */
+export function ramoInicialValido(v: string | null | undefined): RamoOportunidad | null {
+  return RAMOS_OPORTUNIDAD.find((r) => r === v) ?? null
+}
+/** Ramos que se trabajan con ofertas de compañías (sin tarificador): los de RAMOS_OPORTUNIDAD que no están entre los tarificables. */
+export function ramosConOfertas(tarificables: readonly { etiqueta: string }[]): readonly { valor: RamoOportunidad; rotulo: string }[] {
+  const precio = new Set(tarificables.map((t) => t.etiqueta.toLowerCase()))
+  return RAMOS_OPORTUNIDAD_UI.filter((r) => !precio.has(r.valor))
+}
+/** URL de «oportunidad nueva» de una ficha; sin ramo, el alta se abre sin ramo preseleccionado («Otro ramo»). */
+export function urlOportunidadNueva(clienteId: string, ramo?: RamoOportunidad | null): string {
+  const base = `/correduria/cliente/${clienteId}?tab=oportunidades&oportunidad=nueva`
+  return ramo ? `${base}&ramo=${ramo}` : base
+}
 export function rotuloRamo(r: string | null): string {
   return r === null ? 'Sin ramo' : (ROTULO_RAMO as Record<string, string>)[r] ?? r
 }
@@ -647,7 +663,7 @@ export function diasSinRespuesta(ultimoContactoEn: string | null, ahora: Date = 
 
 export type Reenvio = { status: number; json: unknown }
 
-async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
+async function llamar(path: string, init: RequestInit, timeoutMs = 15_000): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   const base = (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
@@ -656,7 +672,7 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
       ...init,
       headers: { ...(await cabecerasPuerto(secret)), ...(init.body ? { 'content-type': 'application/json' } : {}) },
       cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {
@@ -710,6 +726,58 @@ export function interpretarContactosMovil(status: number, j: unknown): { contact
     return [{ clienteId: x.clienteId, nombre: txt(x.nombre), apellidos: txt(x.apellidos), telefono: txt(x.telefono), email: txt(x.email), grupo: x.grupo }]
   })
   return { contactos, clientesSinLeer: typeof o.clientesSinLeer === 'number' ? o.clientesSinLeer : 0 }
+}
+
+/** Cola de revisión de la sincronización con Google Contacts (50 por página, cursor `despuesDe`). */
+export function revisionesGoogleAsegura(despuesDe: string | null): Promise<Reenvio> {
+  return llamar(`/api/operador/google-contactos/revision${despuesDe ? `?despuesDe=${encodeURIComponent(despuesDe)}` : ''}`, { method: 'GET' })
+}
+export function resolverRevisionGoogleAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/revision', { method: 'POST', body: JSON.stringify(body) })
+}
+/** MOTE de la ficha (solo para la agenda de Google de Alberto; AISLADO: nunca en correos/portal/PDF). */
+export function moteClienteAsegura(clienteId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/cliente/mote?clienteId=${encodeURIComponent(clienteId)}`, { method: 'GET' })
+}
+export function guardarMoteClienteAsegura(body: { clienteId: string; mote: string | null; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/mote', { method: 'PUT', body: JSON.stringify(body) })
+}
+/** «Ordenar agenda»: informe SOLO LECTURA de la agenda de Google (lee la agenda entera: hasta ~2 min). */
+export function ordenarAgendaGoogleAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/ordenar', { method: 'GET' }, 115_000)
+}
+/** Estado de la conexión con Google Contacts (cuenta, simulada, activada). */
+export function estadoGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos', { method: 'GET' })
+}
+/** Simulación SOLO LECTURA (lee la agenda entera de Google: hasta ~2 min). */
+export function simularGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/simular', { method: 'POST', body: '{}' }, 115_000)
+}
+/** «Simulación revisada: sincroniza». El `actor` lo pone quien llama desde la SESIÓN. */
+export function activarGoogleContactosAsegura(actor: string): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/activar', { method: 'POST', body: JSON.stringify({ actor }) })
+}
+/** Ticket de un solo uso (2 min) para arrancar el OAuth de Google desde el panel: asegura devuelve la URL de `conectar`. */
+export function ticketGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/ticket', { method: 'POST', body: '{}' })
+}
+/** Revoca en Google y borra token y vínculos; con `borrarContactos` borra antes los que CREÓ el CRM. */
+export function desconectarGoogleContactosAsegura(borrarContactos: boolean): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/desconectar', { method: 'POST', body: JSON.stringify({ borrarContactos }) }, 115_000)
+}
+
+/** Estado de la conexión de WhatsApp (Embedded Signup / Coexistence) y qué variables faltan en asegura. */
+export function conexionWhatsappAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/conexion', { method: 'GET' })
+}
+/** Cierre del Embedded Signup: asegura canjea el `code`, suscribe la WABA y pide las syncs (varias llamadas a Meta). */
+export function altaWhatsappAsegura(body: { code: string; waba_id: string; phone_number_id: string; business_id: string | null }): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/alta', { method: 'POST', body: JSON.stringify(body) }, 55_000)
+}
+/** El Telegram del evento de conexión `eventoAt` ya salió: asegura lo marca. */
+export function whatsappAvisadoAsegura(eventoAt: string): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/conexion', { method: 'POST', body: JSON.stringify({ accion: 'avisado', eventoAt }) })
 }
 
 export function tareasHoyAsegura(): Promise<Reenvio> {
@@ -926,11 +994,33 @@ export function valorLegible(campo: SolicitudDatos['campos'][number], v: string 
   return f ? `${f[3]}/${f[2]}/${f[1]}` : v
 }
 
+/**
+ * Lead web de auto/moto recién dado de alta (06/10/2026): abre su oportunidad y crea el enlace de datos
+ * en UNA llamada (`/api/operador/solicitud-datos/lead-web`). Timeout de 8 s: el aviso de Telegram espera
+ * por esto y nunca debe perderse; si no llega a tiempo, sale sin enlace. La respuesta lleva el token en
+ * la URL: no se loguea.
+ */
+export const TIMEOUT_ENLACE_LEAD_MS = 8_000
+export function solicitudLeadWebAsegura(body: { clienteId: string; ramo: 'auto' | 'moto' }): Promise<Reenvio> {
+  return llamar('/api/operador/solicitud-datos/lead-web', { method: 'POST', body: JSON.stringify(body) }, TIMEOUT_ENLACE_LEAD_MS)
+}
 export function solicitudesDatosAsegura(oportunidadId: string): Promise<Reenvio> {
   return llamar(`/api/operador/solicitud-datos?oportunidadId=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
 }
 export function accionSolicitudDatosAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/solicitud-datos', { method: 'POST', body: JSON.stringify(body) })
+}
+
+// ─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──
+export function borradoresPresupuestoAsegura(clienteId: string, ramo: string): Promise<Reenvio> {
+  return llamar(`/api/operador/borrador-presupuesto?clienteId=${encodeURIComponent(clienteId)}&ramo=${encodeURIComponent(ramo)}`, { method: 'GET' })
+}
+export function guardarBorradorPresupuestoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/borrador-presupuesto', { method: 'POST', body: JSON.stringify(body) })
+}
+export function borrarBorradorPresupuestoAsegura(clienteId: string, ramo: string, oportunidadId: string | null): Promise<Reenvio> {
+  const q = `clienteId=${encodeURIComponent(clienteId)}&ramo=${encodeURIComponent(ramo)}${oportunidadId ? `&oportunidadId=${encodeURIComponent(oportunidadId)}` : ''}`
+  return llamar(`/api/operador/borrador-presupuesto?${q}`, { method: 'DELETE' })
 }
 
 // ─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────

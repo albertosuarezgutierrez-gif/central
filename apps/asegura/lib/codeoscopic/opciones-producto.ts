@@ -87,7 +87,27 @@ export function opcionesPorDefecto(compania: string, ramo: string | null = 'auto
   // (proceso Node reutilizado en serverless) — devolver la misma referencia dejaría
   // una mutación accidental del caller filtrarse a la siguiente petición.
   if (c.includes('allianz')) return ALLIANZ_AUTO_320200.map((o) => ({ ...o }))
+  // Generali auto (05/10/2026): el id `commercialDiscountNumber` está medido en moto/hogar, NO en auto
+  // (sin captura del formulario). Por eso aquí solo sirve con el filtro de `opcionesParaReRate`:
+  // si el vendor ya devolvió sus opciones y no traen el id, no se manda (un id inexistente = 400 de 0,50€).
+  if (c.includes('generali')) return GENERALI_DESCUENTO.map((o) => ({ ...o }))
   return null
+}
+
+/**
+ * PURO. Las opciones de producto del ReRate: las que el vendor devolvió para ESE precio (`delVendor`)
+ * y, si no hay, el catálogo por defecto. Generali auto: si el vendor devolvió opciones, el descuento
+ * por defecto solo se aplica si traen `commercialDiscountNumber`; si no lo traen, se reenvían tal cual
+ * (nunca se inventa un id). Sin opciones del vendor (`null`) no se puede comprobar y manda el catálogo.
+ */
+export function opcionesParaReRate(delVendor: unknown, compania: string, ramo: string | null = 'auto'): unknown {
+  if (delVendor == null) return opcionesPorDefecto(compania, ramo)
+  const esGeneraliAuto = (ramo ?? 'auto') === 'auto' && compania.trim().toLowerCase().includes('generali')
+  if (!esGeneraliAuto || !Array.isArray(delVendor)) return delVendor
+  const id = GENERALI_DESCUENTO[0].id
+  if (!delVendor.some((o) => o && typeof o === 'object' && (o as { id?: unknown }).id === id)) return delVendor
+  const r = conDescuentos(delVendor, { commercialDiscountNumber: DESCUENTO_POR_DEFECTO })
+  return r.ok ? r.opciones : delVendor
 }
 
 // ── Descuento comercial en preemisión (29/09/2026) ──

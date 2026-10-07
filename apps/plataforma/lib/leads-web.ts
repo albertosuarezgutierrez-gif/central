@@ -19,11 +19,12 @@
 // - El aviso y el historial llevan nombre/teléfono/email (Alberto los necesita
 //   para llamar); DNI no se pide y por tanto nunca viaja.
 //
-// Test: `test/regression-leads-web.test.ts`.
+// Test: `lib/leads-web.test.ts` (junto al módulo; no existe `test/regression-leads-web.test.ts`).
 
 import { escapeHtml } from '@central/core-telegram'
-import { normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
+import { nombreDePila, normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
 import type { ResultadoEscritura } from './cliente-edicion-asegura'
+import { enlaceWhatsappConMensaje, urlWhatsapp } from './telefono-wa.ts'
 
 // ─── Formulario ──────────────────────────────────────────────────────────────
 
@@ -178,6 +179,52 @@ export function interpretarAltaLead(r: ResultadoEscritura): ResultadoLead {
   }
 }
 
+// ─── Enlace al formulario de datos (auto/moto) ───────────────────────────────
+
+/**
+ * ¿Se pide a asegura el enlace `/datos/[token]` para este lead? (06/10/2026, Alberto: automático.)
+ * SOLO ficha NUEVA, ramo auto/moto y un teléfono al que se pueda abrir WhatsApp (la misma regla que
+ * pinta la línea 📲 del aviso: `urlWhatsapp`). Sin móvil, o con un fijo, el enlace no le llegaría
+ * nunca: no se crea ni oportunidad ni token. Una ficha que ya existía NUNCA: el formulario es anónimo,
+ * el enlace va al teléfono tecleado y la página trae rellenos el DNI y el nacimiento de la ficha
+ * (quien escribiera el email de un cliente y su propio móvil los vería). Asegura lo comprueba otra vez.
+ */
+export function ramoEnlaceDatos(tipoSeguro: TipoSeguroLead, resultado: ResultadoLead, telefono: string | null): 'auto' | 'moto' | null {
+  if (resultado.estado !== 'nueva') return null
+  if (!telefono || urlWhatsapp(telefono) === null) return null
+  return tipoSeguro === 'auto' || tipoSeguro === 'moto' ? tipoSeguro : null
+}
+
+export const HOST_PORTAL_POR_DEFECTO = 'clientes.grupoasegura.es'
+
+/** El host del portal del cliente: el de `ASEGURA_PORTAL_URL` si plataforma lo tiene, si no el de producción. */
+export function hostPortalCliente(url: string | undefined = process.env.ASEGURA_PORTAL_URL): string {
+  try {
+    if (url) return new URL(url).host.toLowerCase()
+  } catch {
+    /* mal formada: el de producción */
+  }
+  return HOST_PORTAL_POR_DEFECTO
+}
+
+export type EnlaceDatos = { estado: 'ok'; url: string } | { estado: 'tope' } | { estado: 'sin_enlace' }
+
+/**
+ * Respuesta del puerto → enlace. Solo vale `https://<host del portal exacto>/datos/<token>`; todo lo
+ * demás (otro host, otra ruta, `url: null` de una viva, error, timeout) es «sin enlace» y el aviso
+ * sale con el texto de siempre. El 429 `tope` se distingue para decírselo a Alberto.
+ */
+export function interpretarEnlaceDatos(status: number, json: unknown, hostPortal: string = hostPortalCliente()): EnlaceDatos {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : null
+  if (status === 429 && o?.estado === 'tope') return { estado: 'tope' }
+  if (status !== 201 || o?.estado !== 'ok' || typeof o.url !== 'string') return { estado: 'sin_enlace' }
+  const m = /^https:\/\/([^/?#@]+)\/datos\/[A-Za-z0-9_-]{40,60}$/.exec(o.url)
+  if (!m || m[1].toLowerCase() !== hostPortal.toLowerCase()) return { estado: 'sin_enlace' }
+  return { estado: 'ok', url: o.url }
+}
+
+export const LINEA_TOPE_LEADS_WEB = '⚠️ tope diario de leads web alcanzado: formulario no generado'
+
 // ─── Aviso Telegram ──────────────────────────────────────────────────────────
 
 export const URL_PLATAFORMA_POR_DEFECTO = 'https://plataforma-ten-flame.vercel.app'
@@ -200,6 +247,43 @@ export type AvisoLead = {
   /** Por qué no hay ficha (solo si `ficha === null`). */
   motivo?: string
   base?: string
+  /** Enlace al formulario de datos (auto/moto, ficha nueva). Sin él, el WhatsApp pide las fotos. */
+  urlDatos?: string | null
+  /** El tope diario de oportunidades web impidió generar el enlace: se dice en el aviso. */
+  topeLeadsWeb?: boolean
+}
+
+/**
+ * Texto prellenado del WhatsApp al lead. Solo el nombre de pila (`nombreDePila` de
+ * `@central/module-seguros`: si duda —coma, inicial, empresa, vacío— saluda sin nombre).
+ * Los ramos de vehículo piden la documentación para tarificar; el resto va genérico.
+ * Se usa solo `nombre`: pasarle también los apellidos no aporta y arriesga la coma.
+ */
+export function mensajeWhatsappLead(a: { nombre: string; tipoSeguro?: TipoSeguroLead | null; urlDatos?: string | null }): string {
+  const pila = nombreDePila(a.nombre)
+  const saludo = pila ? `Hola ${pila}` : 'Hola'
+  const intro = `${saludo}, soy Alberto, de Grupo ASegura, tu persona de contacto.`
+  const t = a.tipoSeguro ?? null
+  if (t === 'auto' || t === 'moto') {
+    const ramo = ETIQUETA_TIPO_SEGURO[t].toLowerCase()
+    // Con enlace (ficha nueva): el formulario sin login del portal. Sin él, las fotos por WhatsApp.
+    if (a.urlDatos) {
+      return `${intro} He visto tu solicitud de seguro de ${ramo}. Para prepararte la propuesta, rellena este formulario (2 minutos, puedes subir foto del permiso de circulación y del carné): ${a.urlDatos}. Si lo prefieres, mándamelas por aquí. Gracias.`
+    }
+    return `${intro} He visto tu solicitud de seguro de ${ramo}. Para prepararte la propuesta, ¿me puedes enviar una foto del permiso de circulación, una foto del carné de conducir (por delante y por detrás) y tu código postal? Gracias.`
+  }
+  if (t === 'flota') {
+    return `${intro} He visto tu solicitud de seguro para tu flota de vehículos. Para prepararte la propuesta, ¿me puedes enviar una foto del permiso de circulación de cada vehículo, una foto del carné de conducir de los conductores (por delante y por detrás) y tu código postal? Gracias.`
+  }
+  if (t === 'patinete-electrico') {
+    // El patinete no tiene permiso de circulación: se pide el modelo, la edad y el CP.
+    return `${intro} He visto tu solicitud de seguro para tu patinete eléctrico. Para prepararte la propuesta, ¿me puedes decir la marca y el modelo del patinete, tu fecha de nacimiento y tu código postal? Gracias.`
+  }
+  if (t) {
+    // Etiquetas como «Seguro de perro» u «Otro seguro» ya dicen «seguro»: no se antepone.
+    return `${intro} He visto tu solicitud: ${ETIQUETA_TIPO_SEGURO[t].toLowerCase()}. ¿Cuándo te viene bien que te llame, o me puedes pasar los datos para estudiarlo? Gracias.`
+  }
+  return `${intro} He visto tu solicitud. ¿Cuándo te viene bien que te llame, o me puedes pasar los datos para estudiarlo? Gracias.`
 }
 
 /** HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`. */
@@ -210,8 +294,11 @@ export function textoTelegramLead(a: AvisoLead): string {
     `👤 ${quien} · quiere <b>${escapeHtml(ETIQUETA_TIPO_SEGURO[a.tipoSeguro].toLowerCase())}</b>`,
   ]
   if (a.telefono) lineas.push(`📞 ${escapeHtml(a.telefono)}`)
+  const wa = a.telefono ? enlaceWhatsappConMensaje(a.telefono, mensajeWhatsappLead(a)) : null
+  if (wa) lineas.push(`📲 <a href="${escapeHtml(wa)}">Escribir por WhatsApp</a>`)
   if (a.email) lineas.push(`✉️ ${escapeHtml(a.email)}`)
   if (a.comentario) lineas.push(`💬 ${escapeHtml(a.comentario)}`)
+  if (a.topeLeadsWeb) lineas.push(LINEA_TOPE_LEADS_WEB)
   if (a.ficha) {
     const url = urlFichaCliente(a.ficha.id, a.base)
     lineas.push(

@@ -28,18 +28,23 @@
 //   tecleada, `nota`.
 
 import {
+  MOTIVO_CAMBIO_REQUERIDO,
+  MOTIVO_DOCUMENTO_REQUERIDO,
   WHERE_CARTERA_VIVA,
   claveTipoCarnet,
   coincidenciaBloquea,
-  documentoAcredita,
+  acreditarCambioConDocumento,
+  camposIdentidadTocados,
   estadoDocumento,
   etiquetaContacto,
+  marcaAcreditaFicha,
   normalizarContacto,
   revisarAlta,
   revisarCarnet,
   revisarEdicion,
   seraPrincipalAlAnadir,
   nombrePendiente,
+  textoCambioIdentidadConMotivo,
   textoHistorialAlta,
   textoHistorialEdicion,
   tipoDocumento,
@@ -51,6 +56,7 @@ import {
   type EdicionCliente,
   type TipoContacto,
   type TipoHistorial,
+  SALUDO_POR_SEXO,
 } from '@central/module-seguros'
 import { anotarCambio } from './auditoria'
 import {
@@ -63,6 +69,7 @@ import {
   encryptField,
 } from '@central/module-seguros-pii'
 import { prismaAsegura } from './asegura-db'
+import { hoyParaCarnet, textoHistorialCarnet, type OrigenCarnet } from './carnets-portal-reglas'
 
 // ─── Cifrado ─────────────────────────────────────────────────────────────────
 
@@ -81,11 +88,13 @@ export function campoIlegible(v: string | null | undefined): boolean {
   return typeof v === 'string' && v.startsWith('v1:') && descifrarCampo(v) === null
 }
 
-type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; campo?: string; coincidencias?: Coincidencia[]; forzable?: boolean; polizasVivas?: number; status: 404 | 409 | 422 | 500 }
+type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; campo?: string; coincidencias?: Coincidencia[]; forzable?: boolean; polizasVivas?: number; status: 400 | 404 | 409 | 422 | 500 }
 
-function invalido(motivo: string, campo?: string): Fallo {
-  return { ok: false, estado: 'invalido', motivo, campo, status: 422 }
+function invalido(motivo: string, campo?: string, status: 400 | 422 = 422): Fallo {
+  return { ok: false, estado: 'invalido', motivo, campo, status }
 }
+/** Identidad sin documento ni motivo: 400 (05/10/2026), el resto de rechazos de forma, 422. */
+const STATUS_SIN_ACREDITAR = new Set([MOTIVO_DOCUMENTO_REQUERIDO, MOTIVO_CAMBIO_REQUERIDO])
 function noEncontrado(): Fallo {
   return { ok: false, estado: 'no_encontrado', motivo: 'El cliente no existe en esta correduría.', status: 404 }
 }
@@ -609,35 +618,59 @@ export type ResultadoEdicion = { ok: true } | Fallo
 
 /**
  * Aplica una edición ya revisada por las reglas puras. Si toca identidad,
- * exige que `documentoId` sea un documento de tipo DNI, recibido, DE ESTE
- * cliente: un documento de otra ficha no acredita nada.
+ * exige que `documentoId` sea un documento DE ESTE cliente que acredite: un DNI
+ * recibido, o (05/10/2026) una póliza cuyo DNI leído es el de la ficha
+ * (`marcaAcreditaFicha` sobre su `extraccion`). Un documento de otra ficha no
+ * acredita nada.
+ *
+ * `permiteMotivo` (05/10/2026, Alberto: «yo puedo editar cualquier dato»): el
+ * corredor desde plataforma (puerto de operador) puede cambiar la identidad SIN
+ * documento con un `motivo` escrito, que queda en el historial con el antes y el
+ * después. El portal del cliente NUNCA lo pasa.
  */
 export async function editarCliente(
   correduriaId: string,
   clienteId: string,
   edicion: EdicionCliente,
   actor: string,
+  opciones: { permiteMotivo?: boolean } = {},
 ): Promise<ResultadoEdicion> {
+  const permiteMotivo = opciones.permiteMotivo === true
+  const rechazo = (x: { motivo: string; campo?: string }) => invalido(x.motivo, x.campo, STATUS_SIN_ACREDITAR.has(x.motivo) ? 400 : 422)
   // Primera pasada sin la ficha: un dato mal tecleado se rechaza sin tocar la BD.
-  const previa = revisarEdicion(edicion, { fichaSinNombre: true })
-  if (!previa.ok) return invalido(previa.motivo, previa.campo)
+  // (Sin la ficha no se sabe si los apellidos solo se completan: ahí no se exige motivo todavía.)
+  const previa = revisarEdicion(edicion, { fichaSinNombre: true, permiteMotivo })
+  const soloApellidos = Object.keys(edicion.identidad ?? {}).every((k) => k === 'apellidos')
+  const previaPideMotivo = !previa.ok && soloApellidos && (previa.motivo === MOTIVO_CAMBIO_REQUERIDO || previa.motivo === MOTIVO_DOCUMENTO_REQUERIDO)
+  if (!previa.ok && !previaPideMotivo) return rechazo(previa)
   try {
     const db = prismaAsegura()
     const c = await clienteDe(correduriaId, clienteId)
     if (!c) return noEncontrado()
     // La excepción «ficha sin nombre» la decide lo que hay en la BD, nunca quien llama.
-    const r = revisarEdicion(edicion, { fichaSinNombre: nombrePendiente(c.nombre) })
-    if (!r.ok) return invalido(r.motivo, r.campo)
+    const r = revisarEdicion(edicion, { fichaSinNombre: nombrePendiente(c.nombre), permiteMotivo, apellidosActuales: c.apellidos })
+    if (!r.ok) return rechazo(r)
+    const ident = r.tocaIdentidad
+      ? await db.cliente.findFirst({ where: { id: clienteId, correduriaId }, select: { dni: true, dniLookupHash: true, fechaNacimiento: true } })
+      : null
 
-    // Sin documento solo llega aquí el caso «rellenar nombre en ficha sin nombre».
+    // Sin documento solo llega aquí «rellenar nombre en ficha sin nombre» o el cambio con motivo.
+    // Con documento: una PÓLIZA acredita solo nombre y apellidos (05/10/2026); si además toca DNI o
+    // fecha de nacimiento, vale únicamente con motivo (y vía motivo permitida), y se registra como motivo.
+    let motivoCambio = r.motivoCambio
     if (r.tocaIdentidad && edicion.documentoId) {
       const d = await db.documento.findFirst({
         where: { id: edicion.documentoId ?? '', correduriaId, clienteId },
-        select: { tipo: true, estado: true },
+        select: { tipo: true, estado: true, extraccion: true },
       })
-      if (!d || !documentoAcredita({ tipo: tipoDocumento(d.tipo), estado: estadoDocumento(d.estado) })) {
-        return invalido('documento_no_acredita', 'documentoId')
-      }
+      const dniCoincideFicha = d ? marcaAcreditaFicha(d.extraccion, { clienteId, dniLookupHash: ident?.dniLookupHash ?? null }) : null
+      const acr = acreditarCambioConDocumento(
+        d ? { tipo: tipoDocumento(d.tipo), estado: estadoDocumento(d.estado), dniCoincideFicha } : null,
+        camposIdentidadTocados(r.identidad),
+        { motivo: edicion.motivo, permiteMotivo },
+      )
+      if (!acr.ok) return invalido(acr.motivo, 'documentoId')
+      if (acr.via === 'motivo') motivoCambio = acr.motivoCambio
     }
 
     const data: Record<string, unknown> = { updatedAt: new Date() }
@@ -664,6 +697,7 @@ export async function editarCliente(
     if (r.libre.ciudad !== undefined) data.ciudad = r.libre.ciudad
     if (r.libre.provincia !== undefined) data.provincia = r.libre.provincia
     if (r.libre.notas !== undefined) data.notas = r.libre.notas
+    if (r.sexo !== undefined) data.saludo = SALUDO_POR_SEXO[r.sexo]
 
     await db.cliente.update({ where: { id: clienteId }, data })
     // Anotar cambios de auditoria (sin antes/despues)
@@ -688,7 +722,24 @@ export async function editarCliente(
         anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'notas' })
       }
     }
-    await anotarHistorial(correduriaId, clienteId, 'gestion', textoHistorialEdicion(r, { actor, documentoId: edicion.documentoId }))
+    if (r.sexo !== undefined) anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'saludo' })
+    const texto = motivoCambio
+      ? [
+          textoCambioIdentidadConMotivo({
+            actor,
+            motivo: motivoCambio,
+            antes: { nombre: c.nombre, apellidos: c.apellidos, dni: descifrarCampo(ident?.dni), fechaNacimiento: descifrarCampo(ident?.fechaNacimiento) },
+            despues: {
+              nombre: r.identidad.nombre,
+              apellidos: r.identidad.apellidos,
+              dni: r.identidad.dni === undefined ? undefined : (r.identidad.dni?.valor ?? null),
+              fechaNacimiento: r.identidad.fechaNacimiento,
+            },
+          }),
+          Object.keys(r.libre).length > 0 || r.sexo !== undefined ? textoHistorialEdicion({ ...r, identidad: {} }, { actor }) : null,
+        ].filter(Boolean).join(' ')
+      : textoHistorialEdicion(r, { actor, documentoId: edicion.documentoId })
+    await anotarHistorial(correduriaId, clienteId, 'gestion', texto)
     return { ok: true }
   } catch (e) {
     if (esUnicoViolado(e)) return conflicto([], false)
@@ -1008,11 +1059,21 @@ export async function altaCliente(
 
 export type ResultadoCarnet = { ok: true; id: string } | Fallo
 
+/**
+ * Quién escribe el carné y cómo consta en `historial_interno`. Por defecto, el corredor desde plataforma
+ * (tipo `gestion`, texto de siempre). Desde el portal (`/api/portal/carnets`) lo hace el CLIENTE: tipo
+ * `contacto` y el prefijo compartido que el muro clasifica como suyo (`carnets-portal-reglas.ts`).
+ */
+function origenCarnet(entrada: { actor: string; origen?: OrigenCarnet }): { tipo: TipoHistorial; origen: OrigenCarnet } {
+  const origen: OrigenCarnet = entrada.origen ?? { origen: 'plataforma', actor: entrada.actor }
+  return { tipo: origen.origen === 'portal' ? 'contacto' : 'gestion', origen }
+}
+
 /** Añade (`id` ausente) o corrige (`id` de un carné de la ficha) un carné: tipo y fecha de expedición. */
 export async function guardarCarnet(
   correduriaId: string,
   clienteId: string,
-  entrada: { id?: unknown; tipo: unknown; fecha: unknown; actor: string },
+  entrada: { id?: unknown; tipo: unknown; fecha: unknown; actor: string; origen?: OrigenCarnet },
 ): Promise<ResultadoCarnet> {
   try {
     const db = prismaAsegura()
@@ -1025,7 +1086,7 @@ export async function guardarCarnet(
       tipo: entrada.tipo,
       fecha: entrada.fecha,
       fechaNacimiento: descifrarCampo(c.fechaNacimiento),
-      hoy: new Date().toISOString().slice(0, 10),
+      hoy: hoyParaCarnet(),
     })
     if (!r.ok) return invalido(r.motivo, r.campo)
     const id = typeof entrada.id === 'string' && entrada.id.trim() !== '' ? entrada.id.trim() : null
@@ -1042,7 +1103,8 @@ export async function guardarCarnet(
     const antes = anterior ? claveTipoCarnet(anterior.tipo) : null
     const que = !anterior ? `Carné ${r.tipo} añadido` : antes !== r.tipo ? `Carné ${antes} cambiado a ${r.tipo}` : `Fecha del carné ${r.tipo} corregida`
     anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'carnet' })
-    await anotarHistorial(correduriaId, clienteId, 'gestion', `${que} desde plataforma por ${entrada.actor}`)
+    const h = origenCarnet(entrada)
+    await anotarHistorial(correduriaId, clienteId, h.tipo, textoHistorialCarnet(que, h.origen))
     return { ok: true, id: nuevo }
   } catch (e) {
     return fallo(e)
@@ -1053,7 +1115,7 @@ export async function guardarCarnet(
 export async function borrarCarnet(
   correduriaId: string,
   clienteId: string,
-  entrada: { id: string; actor: string },
+  entrada: { id: string; actor: string; origen?: OrigenCarnet },
 ): Promise<ResultadoCarnet> {
   try {
     if (!(await clienteDe(correduriaId, clienteId))) return noEncontrado()
@@ -1062,7 +1124,8 @@ export async function borrarCarnet(
     if (!k) return { ok: false, estado: 'no_encontrado', motivo: 'Ese carné ya no está en la ficha. Recarga.', status: 404 }
     await db.clienteCarnetConducir.delete({ where: { id: k.id } })
     anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'carnet' })
-    await anotarHistorial(correduriaId, clienteId, 'gestion', `Carné ${claveTipoCarnet(k.tipo)} retirado de la ficha desde plataforma por ${entrada.actor}`)
+    const h = origenCarnet(entrada)
+    await anotarHistorial(correduriaId, clienteId, h.tipo, textoHistorialCarnet(`Carné ${claveTipoCarnet(k.tipo)} retirado de la ficha`, h.origen))
     return { ok: true, id: k.id }
   } catch (e) {
     return fallo(e)

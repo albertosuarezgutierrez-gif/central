@@ -52,3 +52,38 @@ test('el ramo va con el id EXACTO que se le pasa, y la referencia nuestra solo s
   const con = construirPeticionSalud({ ...BASE, referenciaExterna: 'cot-000001' }, LINEA) as any
   assert.equal(con.externalId, 'cot-000001')
 })
+
+// ─── Asegurados adicionales (03/10/2026) ─────────────────────────────────────
+const HIJA = { nombre: 'Hija', apellido1: 'Apellido', fechaNacimiento: '2015-03-02', sexo: 'mujer' as const }
+
+test('los adicionales viajan en risk.insureds DETRÁS del tomador, que sigue primero', () => {
+  const c = construirPeticionSalud({ ...BASE, aseguradosAdicionales: [HIJA, { ...HIJA, nombre: 'Otro', sexo: 'hombre' }] }, LINEA) as any
+  assert.equal(c.risk.insureds.length, 3)
+  assert.deepEqual(c.risk.insureds[0], c.holder)
+  assert.deepEqual(c.risk.insureds[1], { name: 'Hija', surname: 'Apellido', birthDate: '2015-03-02', gender: { id: 'Female' } })
+  assert.equal(c.risk.insureds[2].gender.id, 'Male')
+})
+
+test('un adicional sin DNI no manda identificationDocument; con DNI sí, normalizado, y apellido2 obligatorio', () => {
+  const sin = construirPeticionSalud({ ...BASE, aseguradosAdicionales: [HIJA] }, LINEA) as any
+  assert.equal(sin.risk.insureds[1].identificationDocument, undefined)
+  const con = construirPeticionSalud({ ...BASE, aseguradosAdicionales: [{ ...HIJA, apellido2: 'Segundo', dni: '00000000t' }] }, LINEA) as any
+  assert.deepEqual(con.risk.insureds[1].identificationDocument, { type: { id: 'Dni' }, id: '00000000T' })
+  assert.equal(con.risk.insureds[1].surname2, 'Segundo')
+  assert.ok(revisarDatosSalud({ ...BASE, aseguradosAdicionales: [{ ...HIJA, dni: '00000000t' }] }).some((x) => /apellido2/.test(x.motivo)))
+})
+
+test('un adicional incompleto o con DNI mal formado se reclama ANTES de gastar', () => {
+  const r = revisarDatosSalud({ ...BASE, aseguradosAdicionales: [{ ...HIJA, fechaNacimiento: '' , sexo: '' as never }, { ...HIJA, dni: '12345678A', apellido2: 'S' }] })
+  const ms = r.filter((x) => x.campo === 'aseguradosAdicionales').map((x) => x.motivo)
+  assert.ok(ms.some((m) => /asegurado adicional 1:.*fechaNacimiento.*sexo/.test(m)), ms.join('|'))
+  assert.ok(ms.some((m) => /asegurado adicional 2:.*dni/.test(m)), ms.join('|'))
+  assert.throws(() => construirPeticionSalud({ ...BASE, aseguradosAdicionales: [{ ...HIJA, nombre: '' }] }, LINEA), /codeoscopic_datos_incompletos/)
+})
+
+test('sin adicionales (o lista vacía) la petición es la de siempre: solo el tomador', () => {
+  for (const aseguradosAdicionales of [undefined, null, []]) {
+    const c = construirPeticionSalud({ ...BASE, aseguradosAdicionales }, LINEA) as any
+    assert.deepEqual(c.risk.insureds, [c.holder])
+  }
+})

@@ -258,6 +258,32 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
             </div>
           </div>
 
+          {/* Autoliquidación pendiente (IVA de proveedores extranjeros) — informativo para la asesoría */}
+          {d.fiscal.autoliquidacionPendiente.trimestres.some(t => t.facturas.length > 0) && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '4px' }}>🌍 Autoliquidación pendiente (IVA proveedores extranjeros)</div>
+              <div style={{ fontSize: '10px', color: 'var(--muted)', marginBottom: '12px' }}>Informativo: no cambia los totales de arriba. Base × 21 % devengado y deducible (303 adquisiciones intracomunitarias / inversión del sujeto pasivo; 349 solo UE).</div>
+              <div style={{ overflowX: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: '8px', fontSize: '12px', minWidth: '320px' }}>
+                  {['Trim.', 'Base', 'Cuota 21 %', 'Facturas'].map(h => (
+                    <div key={h} style={{ fontWeight: 600, color: 'var(--muted)', textAlign: h !== 'Trim.' ? 'right' : 'left' }}>{h}</div>
+                  ))}
+                  {d.fiscal.autoliquidacionPendiente.trimestres.filter(t => t.facturas.length > 0).map(t => (
+                    <>
+                      <div key={`aq${t.q}`} style={{ fontWeight: 600, padding: '5px 0', borderBottom: '1px solid var(--border)' }}>Q{t.q}</div>
+                      <div style={{ textAlign: 'right', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>{fmt(t.base)}</div>
+                      <div style={{ textAlign: 'right', padding: '5px 0', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>{fmt(t.cuota)}</div>
+                      <div style={{ textAlign: 'right', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>{t.facturas.length}</div>
+                    </>
+                  ))}
+                </div>
+              </div>
+              {d.fiscal.autoliquidacionPendiente.sinClasificar > 0 && (
+                <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '8px' }}>{d.fiscal.autoliquidacionPendiente.sinClasificar} factura(s) sin clasificar (proveedor sin país conocido o cuota sin extraer): no se sabe si requieren autoliquidación.</div>
+              )}
+            </div>
+          )}
+
           {/* Deducciones y cuota */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>

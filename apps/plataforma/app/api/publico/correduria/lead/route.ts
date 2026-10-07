@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIp, rateLimit } from '@/lib/rate-limit'
 import { altaClienteAsegura, historialClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
+import { solicitudLeadWebAsegura } from '@/lib/seguimiento-asegura'
 import {
   interpretarAltaLead,
+  interpretarEnlaceDatos,
+  ramoEnlaceDatos,
+  type EnlaceDatos,
   notasAlta,
   revisarLeadWeb,
   textoHistorialContacto,
@@ -72,7 +76,24 @@ export async function POST(req: NextRequest) {
     motivo = resultado.motivo
   }
 
-  const aviso = textoTelegramLead({ ...lead, ficha, motivo })
+  // Auto/moto con ficha NUEVA: oportunidad + enlace al formulario de datos (06/10/2026). FAIL-SOFT:
+  // el puerto tiene 8 s; cualquier fallo, tope o respuesta rara = aviso con el texto de siempre.
+  // La respuesta lleva el token en la URL: ni se loguea ni se guarda.
+  let enlace: EnlaceDatos = { estado: 'sin_enlace' }
+  const ramoEnlace = ramoEnlaceDatos(lead.tipoSeguro, resultado, lead.telefono)
+  if (ramoEnlace && ficha) {
+    // `llamar` no lanza: red, timeout o puerto caído vuelven como 502/503 → sin enlace.
+    const s = await solicitudLeadWebAsegura({ clienteId: ficha.id, ramo: ramoEnlace })
+    enlace = interpretarEnlaceDatos(s.status, s.json)
+  }
+
+  const aviso = textoTelegramLead({
+    ...lead,
+    ficha,
+    motivo,
+    urlDatos: enlace.estado === 'ok' ? enlace.url : null,
+    topeLeadsWeb: enlace.estado === 'tope',
+  })
   if (resultado.estado === 'existente' && motivo) {
     // `ficha` presente pero con aviso de historial fallido: se añade al texto.
     await tgAviso('correduria.lead-nuevo', `${aviso}\n⚠️ ${motivo}`).catch(() => {})

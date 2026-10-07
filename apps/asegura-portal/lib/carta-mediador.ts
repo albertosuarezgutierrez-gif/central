@@ -6,6 +6,7 @@
  * Intérpretes PUROS: un 401, un 5xx o un corte NUNCA es «firmada» — la persona creería que ya somos
  * su corredor y nadie lo habría registrado.
  */
+import { MENSAJE_SOLO_CONSULTA, MENSAJE_VARIAS_FICHAS } from './mensajes-ficha.ts'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
@@ -24,7 +25,9 @@ const SIN_FICHA = 'No podemos asociar la carta a tu ficha desde aquí. Escríben
 
 function noDisponible(o: Record<string, unknown>): { estado: 'no_disponible'; motivo: string } | null {
   if (o.estado === 'otra_ficha') return { estado: 'no_disponible', motivo: OTRA }
-  if (o.estado === 'sin_ficha' || o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: SIN_FICHA }
+  if (o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS }
+  if (o.estado === 'sin_permiso') return { estado: 'no_disponible', motivo: MENSAJE_SOLO_CONSULTA }
+  if (o.estado === 'sin_ficha') return { estado: 'no_disponible', motivo: SIN_FICHA }
   if (o.estado === 'no_encontrado') return { estado: 'no_disponible', motivo: 'Este presupuesto ya no está disponible. Recarga la página.' }
   if (o.estado === 'no_disponible' && typeof o.motivo === 'string') return { estado: 'no_disponible', motivo: o.motivo }
   return null

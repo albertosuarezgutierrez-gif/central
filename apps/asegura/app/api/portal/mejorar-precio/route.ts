@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
     const r = await pedirMejorarPrecio(correduria.id, identidadId, polizaId, body)
-    const status = r.estado === 'ok' ? 200 : r.estado === 'invalido' ? 422 : r.estado === 'no_encontrada' ? 404 : 409
+    const status = r.estado === 'ok' ? 200 : r.estado === 'invalido' ? 422 : r.estado === 'no_encontrada' ? 404 : r.estado === 'sin_permiso' ? 403 : 409
     return NextResponse.json(r, { status })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('portal/mejorar-precio', e) }, { status: 503 })

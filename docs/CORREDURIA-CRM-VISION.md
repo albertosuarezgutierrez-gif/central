@@ -109,6 +109,7 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 | Portal del cliente leyendo la cartera | ✅ Fase 4 (02/09): al canjear el código, `vincularIdentidad` casa el email por índice ciego (`PII_LOOKUP_KEY`) con UNA ficha → `portal_vinculo`; varias fichas → `ambiguo` (no se adivina). La bóveda enseña las pólizas vivas de CIMA con `camposVisibles(nivel)`. **Sin desplegar**: falta contraseña del rol + `DATABASE_URL` + `PII_LOOKUP_KEY` en el proyecto Vercel del portal (sin confirmar que exista) | `asegura-portal/lib/vinculo.ts` · `lib/cartera-lectura.ts` |
 | Autorizados en el portal | ✅ grant a `prisma_asegura_portal` sobre `cliente_relaciones` y sección «Seguros que te han autorizado a ver» (`clientesVisiblesPara`, nivel `completo` porque la relación es un booleano) | `module-seguros/relaciones.ts` |
 | Apertura/seguimiento de siniestro desde la ficha | ✅ abrir (origen `gestionado_correduria`), seguimiento (tramitador, perito, gravedad, reserva, indemnización, notas fechadas), estado por transiciones, documentos del parte; en uno de CIMA el estado lo fija la compañía. La referencia de la compañía se guarda también en `id_siniestro_entidad` para que el pull de CIMA case en vez de duplicar | `module-seguros/siniestros.ts` · `asegura/lib/cartera-siniestros.ts` · `/api/operador/siniestro` · `plataforma/…/Siniestros.tsx` |
+| Parte del portal ↔ siniestro y alta manual ↔ CIMA (03/10/2026) | ✅ alta manual con nº y fecha de declaración, también DESDE un parte (queda vinculado; 409 `duplicado` si CIMA ya lo tiene); vínculo a mano desde la ficha; cron horario `siniestros-vinculo` en asegura: vincula solo fuerte (póliza + ±3 días + único de CIMA) y funde el alta manual en el de CIMA sin borrar (`fusionado_en_siniestro_id`, lecturas lo ocultan). Vinculado ≠ comunicado: sin CIMA ni nº el parte queda `recibido`. SQL `2026-10-03d` | `module-seguros/siniestro-vinculo.ts` · `asegura/lib/siniestros-vinculo.ts` · `plataforma/…/PartesSinVincular.tsx` |
 | «Por qué ha subido la prima» | ✅ `evolucionPrima()`: prima por ANUALIDAD (aniversario a aniversario, recibos `CA`/`NP`; los `SU` aparte) + siniestros del ciclo anterior → `sube_por_siniestros` · `sube_sin_siniestro` (candidata a retarificar; ≤5 % parece tarifa general) · `no_atribuible` (siniestros sin fecha) · `igual` · `baja` · `sin_datos`. Cobertura medida: 29 vivas con dos anualidades, 25 con una, 13 sin recibos → para la mayoría la respuesta honesta es «CIMA no manda la anualidad anterior» | `module-seguros/prima-evolucion.ts` · `cartera-poliza.ts` / `cartera-ficha.ts` (`evolucionPrima`) · plataforma `EvolucionPrima.tsx` |
 
 ## 5. La pieza crítica: conciliar Codeoscopic ↔ CIMA
@@ -150,6 +151,22 @@ Lo que pasará sin cambiar nada, en orden de probabilidad:
 4. Guardián nocturno en la auditoría: **dos pólizas vivas con el mismo número y compañía = aviso**.
 5. Hasta que exista esto, la ficha ya distingue «viva (CIMA)» de lo demás; una emitida sin confirmar
    se enseñará como **«pendiente de confirmación por CIMA»**, nunca como viva.
+
+## 5.1 Tarificación de vehículo nuevo con bonificación imputada (03/10/2026)
+
+Al tarificar un vehículo nuevo, se imputa bonificación del **conductor** (no del vehículo). Descubrimiento:
+auto/moto-nuevo descartaban `seguroAnterior`, asumiendo erróneamente sin histórico.
+
+**Decisiones Alberto:** (a) elegir póliza a imputar (turismo > moto, efecto antiguo sin siniestros, override
+corredor); (b) años desconocidos → PRESUPUESTO tarifica máximo «bonusSupuesto», EMISIÓN bloqueada sin
+verificar (art. 10 LCS); (c) leer-documento completa nº póliza/matrícula/canal/cesión/modalidad.
+
+**PR1** (agente-architect, rama ccr-7156a8bc-i5qt5c): imputación + bloqueo + extracción.
+
+**PR2 pendiente (tras PR1):** aviso 45 días vencimientos competencia, plurianuales RCI como objetivo, «pagas
+X → Y» anualizado (sin ahorro si no asegura), pack coche+moto opcional (interruptor, desactivado).
+
+**Codeoscopic:** 0,50€/riesgo, 90 días vista, Allianz vinculación (insuredFamilyInAllianz, dtoVentaCruzada).
 
 ## 6. Leads: cómo entran y cómo se convierten
 

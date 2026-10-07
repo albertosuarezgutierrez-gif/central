@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { FACTOR_BANDA, type Regla } from './reglas'
 import { huellasDe } from './fingerprint'
+import { mismoGastoPorHuella, TOLERANCIA_DIAS, TOLERANCIA_IMPORTE } from './duplicado'
+import type { AsignacionTitular } from './asignar-titular'
 
 export interface DatosGasto {
   fecha: string
@@ -60,12 +62,16 @@ export async function getRegla(huella: string | string[]): Promise<Regla | null>
   }
 }
 
-// Dedup: misma huella+fecha+importe, o mismo número de factura.
+// Dedup: nº de factura exacto, misma huella+importe (±7 días), o HUELLA de gasto (proveedor + importe
+// ±0,02 € + fecha ±3 días) cuando no hay dos números distintos: ver `duplicado.ts`.
 export async function existeDuplicado(d: {
   fingerprint: string
   numero_factura?: string | null
   fecha: string
   total: number
+  proveedor?: string | null
+  nif_proveedor?: string | null
+  propiedad?: string | null
 }): Promise<boolean> {
   // Dedup por nº de factura exacto, o por misma huella + mismo importe dentro de
   // ±7 días (pilla "presupuesto+factura" del mismo gasto, sin chocar con los
@@ -78,7 +84,23 @@ export async function existeDuplicado(d: {
           AND abs(coalesce(total,0) - ${d.total}) < 0.01)
     LIMIT 1
   `)
-  return rows.length > 0
+  if (rows.length > 0) return true
+
+  // Por huella de gasto. Los candidatos (mismo importe ±0,02 y fecha ±3 días) son pocos: el cotejo
+  // de proveedor/NIF/número se hace en el helper puro. Se excluyen los placeholders de gastos fijos
+  // (origen='fijo'): la factura real los sustituye en `insertarGasto`, no es un duplicado.
+  const cand = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT proveedor, nif_proveedor, numero_factura, propiedad, fecha::text AS fecha, total::float8 AS total
+    FROM gastos
+    WHERE coalesce(origen, '') <> 'fijo'
+      AND fecha BETWEEN ${d.fecha}::date - ${TOLERANCIA_DIAS}::int AND ${d.fecha}::date + ${TOLERANCIA_DIAS}::int
+      AND abs(coalesce(total,0) - ${d.total}) <= ${TOLERANCIA_IMPORTE + 0.001}
+    LIMIT 50
+  `)
+  return cand.some((c) => mismoGastoPorHuella(
+    { proveedor: d.proveedor, nif_proveedor: d.nif_proveedor, numero_factura: d.numero_factura, propiedad: d.propiedad, fecha: d.fecha, total: d.total },
+    { proveedor: c.proveedor, nif_proveedor: c.nif_proveedor, numero_factura: c.numero_factura, propiedad: c.propiedad, fecha: c.fecha, total: Number(c.total) },
+  ))
 }
 
 export async function insertarGasto(
@@ -111,6 +133,26 @@ export async function insertarGasto(
     RETURNING id
   `)
   return rows[0]?.id as string
+}
+
+/**
+ * Escribe a quién va el gasto (sociedad/negocio o motivo de pendiente). Solo lo llama quien ya
+ * comprobó `contextoTitularSiAplicado()` (columnas creadas por `2026-10-04_gastos_titular.sql`).
+ *
+ * Va APARTE del INSERT a propósito: el INSERT no cambia ni una coma respecto a antes de la
+ * migración, y si esto falla el gasto queda «sin evaluar» (todo NULL), que es el estado
+ * conservador — nunca un titular a medias. Solo rellena filas sin evaluar: no pisa lo manual.
+ */
+export async function escribirTitular(gastoId: string, a: AsignacionTitular): Promise<void> {
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE gastos SET
+      sociedad_id = ${a.sociedadId}::uuid,
+      negocio_id = ${a.negocioId}::uuid,
+      titular_fuente = ${a.fuente},
+      titular_pendiente = ${a.pendiente}
+    WHERE id = ${gastoId}::uuid
+      AND sociedad_id IS NULL AND titular_fuente IS NULL AND titular_pendiente IS NULL
+  `).catch((e) => console.error('[imputar] no se pudo escribir el titular (queda sin evaluar):', e))
 }
 
 // Crea o refuerza la regla aprendida tras una confirmación/imputación.

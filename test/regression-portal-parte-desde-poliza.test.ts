@@ -24,6 +24,15 @@
 //     demás van PLEGADAS detrás de un botón (Alberto: «¿por qué salen todas?»),
 //     pero el botón existe siempre que haya más de una.
 //
+// ─── 03/10/2026: UN solo camino para cualquier póliza ───────────────────────
+// Alberto, desde la póliza de hogar de su padre (autorizada SIN alcance de
+// partes): le salían los teléfonos de TODAS las compañías, porque el enlace de
+// la ficha iba sin `?poliza=` cuando la póliza no admitía parte. Y aclaró: el
+// flujo es el mismo para toda póliza (propia, ajena, de cualquier ramo): su
+// compañía y, debajo, el parte de ESA póliza, sin selector. La única diferencia
+// es la autorización (`puedeParte`). Lo decide el helper puro `vistaDelParte`
+// (`packages/module-seguros-portal/src/parte-entrada.ts`, con su test).
+//
 // Ninguno de los tres rompe nada, ninguno da error y los tres se descubren el
 // día que hace falta.
 
@@ -73,6 +82,13 @@ test('🚨 el boton de la ficha lleva SU poliza, no la pestaña pelada', () => {
     'el botón de la ficha tiene que llevar la póliza en la URL: sin ella se aterriza en la pestaña ' +
       'genérica y hay que volver a encontrar la póliza en un desplegable con las demás.',
   )
+  // 03/10/2026: SIEMPRE, también sin alcance de partes. Una rama a la pestaña
+  // pelada es exactamente el fallo de la póliza de hogar ajena.
+  assert.doesNotMatch(
+    FICHA,
+    /href="\/boveda\?vista=siniestro"/,
+    'ninguna variante del botón de la ficha puede ir a la pestaña sin la póliza',
+  )
 })
 
 test('🚨 con una poliza en la URL, el parte va ANTES del historial', () => {
@@ -95,7 +111,7 @@ test('🚨 el parte va SIEMPRE antes del historial, y la poliza se comprueba con
   // está acotada a esta identidad.
   assert.match(
     BOVEDA,
-    /polizasParte\.some\(\(p\) => p\.valor === polizaInicial\)/,
+    /entradaValida\(opcionesParte, polizaInicial\)/,
     'la póliza del enlace tiene que comprobarse contra la lista ya acotada a esta sesión',
   )
   assert.match(
@@ -113,46 +129,48 @@ test('🚨 el parte va SIEMPRE antes del historial, y la poliza se comprueba con
   assert.equal(vista.slice(0, historial).split('<ParteSiniestro').length - 1, 1, 'un solo parte, siempre arriba')
 })
 
-test('🚨 la compañia de la poliza elegida se pone DELANTE, con el helper que tiene cepo', () => {
+test('🚨 la compañia de la poliza sale del helper puro con cepo, igual para TODA póliza', () => {
   assert.match(
     PARTE,
-    /canalesConCompaniaPrimero\(/,
-    'ordenar es una regla con test propio (nunca recorta, nunca promueve «la más parecida»). ' +
-      'Rehacerla en el JSX la deja sin cepo.',
+    /const vista = vistaDelParte\(opciones, polizaVista\)/,
+    'qué compañía se enseña es una regla con test propio (nunca otra compañía, nunca la lista entera ' +
+      'en lugar de la suya). Rehacerla en el JSX la deja sin cepo.',
+  )
+  assert.match(PARTE, /<CanalesCompania vista=\{vista\}/, 'el bloque de canales pinta lo que decide el helper')
+  // Sin ramas por tipo de póliza: una sola lista con `puedeParte`.
+  assert.doesNotMatch(PARTE, /soloTelefonos/, 'no hay una segunda lista de pólizas «de solo teléfonos»')
+})
+
+test('🚨 la compañia que manda es la de entrada (fijada) o la elegida AHORA, nunca una vieja', () => {
+  // Fijada desde la ficha no se puede cambiar (sin «Cambiar»); en la pestaña
+  // general manda la selección viva del formulario.
+  assert.match(
+    PARTE,
+    /const polizaVista = entrada \?\? \(abierto \? form\.poliza : consulta\)/,
+    'la compañía se deriva de la entrada o de la selección viva del formulario',
   )
   assert.match(
     PARTE,
-    /destacada=\{companiaElegida\}/,
-    'el bloque de canales tiene que recibir la compañía elegida',
+    /polizaValida === null && \(\s*<button[\s\S]{0,160}setPaso\('poliza'\)/,
+    'con la póliza fijada desde su ficha no se ofrece «Cambiar»',
   )
 })
 
-test('🚨 la compañia destacada sale de la poliza ELEGIDA AHORA, no de la del enlace', () => {
-  // Si saliera de `polizaInicial`, cambiar de póliza en el desplegable dejaría
-  // el teléfono de la anterior en primer lugar y marcado como «la tuya».
-  assert.match(
-    PARTE,
-    /polizas\.find\(\(p\) => p\.valor === form\.poliza\)\?\.canal\.nombre/,
-    'la compañía destacada se deriva de la selección viva del formulario',
-  )
-})
-
-test('🚨 poner una compañia delante NO es quedarse solo con ella', () => {
-  // El recorte es la forma más fácil de «arreglar» esta pantalla, y le diría a
-  // quien llegó desde la póliza equivocada —el coche de su padre, el piso en
-  // vez del local— que no hay nadie más a quien llamar.
-  const i = PARTE.indexOf('canalesConCompaniaPrimero(')
-  const tras = PARTE.slice(i, i + 260)
-  assert.doesNotMatch(tras, /\.filter\(/, 'no se filtra la lista de compañías')
-  assert.doesNotMatch(tras, /\.slice\(/, 'no se recorta la lista de compañías')
+test('🚨 enseñar una compañía NO es quedarse solo con ella', () => {
+  // El recorte le diría a quien llegó desde la póliza equivocada —el coche de su
+  // padre, el piso en vez del local— que no hay nadie más a quien llamar.
+  const i = PARTE.indexOf('vistaDelParte(')
+  const tras = PARTE.slice(i, i + 120)
+  assert.doesNotMatch(tras, /\.filter\(/, 'no se filtra lo que devuelve el helper')
+  assert.doesNotMatch(tras, /\.slice\(/, 'no se recorta lo que devuelve el helper')
 })
 
 test('🚨 con una poliza elegida las demas companias se PLIEGAN, no desaparecen', () => {
   // Plegar es lo que pidió Alberto; borrar es el fallo 3 de la cabecera.
-  assert.match(PARTE, /otrasPlegadas &&[\s\S]{0,80}<button[^>]*onClick=\{\(\) => setOtrasAbiertasPara\(clave\)\}/,
+  assert.match(PARTE, /n > 0 &&[\s\S]{0,40}<button[\s\S]{0,200}onClick=\{\(\) => setOtrasAbiertasPara\(/,
     'con las demás plegadas tiene que haber un botón que las despliegue')
-  assert.match(PARTE, /Ver las otras \$\{numOtras\} compañías/, 'el botón dice cuántas hay detrás')
-  assert.match(PARTE, /const numOtras = canales\.length - 1/, 'el recuento sale de la lista ENTERA')
+  assert.match(PARTE, /Ver las otras \$\{n\} compañías/, 'el botón dice cuántas hay detrás')
+  assert.match(PARTE, /const n = otras\.length/, 'el recuento sale de la lista ENTERA del helper')
 })
 
 test('🚨 desde Siniestros, el SEGURO se elige PRIMERO y «No sé cuál» es una salida del paso 1', () => {

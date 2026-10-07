@@ -19,6 +19,8 @@ export type ContactosMovil = {
   leads: number
   /** Clientes cuyo contacto no se pudo leer (consulta caída): NO van y se cuenta. */
   clientesSinLeer: number
+  /** De cada lead, su póliza en otra compañía (para la nota de Google Contacts). Fechas ISO. */
+  detalleLeads: Map<string, { ramo: string; aseguradora: string | null; vencimiento: string | null }>
 }
 
 export async function contactosMovil(correduriaId: string): Promise<ContactosMovil> {
@@ -48,5 +50,6 @@ export async function contactosMovil(correduriaId: string): Promise<ContactosMov
     clientes: deClientes.length,
     leads: deLeads.length,
     clientesSinLeer: contactos === null ? clientes.length : 0,
+    detalleLeads: new Map(leads.map(l => [l.clienteId, { ramo: l.ramo, aseguradora: l.aseguradora, vencimiento: l.vencimientoEstimado || null }])),
   }
 }

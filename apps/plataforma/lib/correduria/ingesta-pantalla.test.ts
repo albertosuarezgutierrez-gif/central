@@ -458,14 +458,49 @@ test('cobertura: sin descartadas (null o ausente) no hay fila de descartados', (
   }
 })
 
-test('duplicados vivos: solo se pinta con total > 0; 0 no pinta; null/undefined NO son 0', () => {
-  const con = senalesIngesta({ ...saludBase, duplicadosVivos: { total: 30, muestra: [{ numero: 'A1', filas: 2, dgs: null }] } })
-  const d = con.find(v => v.clave === 'duplicados_vivos')
-  assert.equal(d?.n, 30)
-  assert.equal(d?.tipo, 'hueco')
-  assert.ok(!senalesIngesta({ ...saludBase, duplicadosVivos: { total: 0, muestra: [] } }).some(v => v.clave === 'duplicados_vivos'))
-  assert.ok(!senalesIngesta({ ...saludBase, duplicadosVivos: undefined }).some(v => v.clave === 'duplicados_vivos'))
-  const nula = senalesIngesta({ ...saludBase, duplicadosVivos: null }).find(v => v.clave === 'duplicados_vivos')
-  assert.equal(nula?.n, null)
-  assert.match(nula?.titulo ?? '', /Sin comprobar/)
+// ── 🔁 Pólizas vivas duplicadas (04/10/2026) — informativa ──────────────────
+
+const grupoDup = { entidad: 'C0109', ref: '0ae40684-0000-0000-0000-000000000001', fichas: 2 }
+
+test('🔁 duplicadas: salen como INFO (ni pérdida ni «sin comprobar») y no encienden la tarjeta', () => {
+  const s = saludIngesta({
+    cuarentena: [], polizasDuplicadas: [grupoDup, { ...grupoDup, entidad: 'C0613', ref: 'b' }],
+    rechazos: [], silencio: [], crudo: { pendientes: 0, purgaInminente: 0, masAntiguaHoras: null },
+    cobertura: { rutas: 0, rutasNuncaLeidas: 0, entidadesObservadas: 1, porTipo: [] },
+    cajaNegra: { capturaActiva: true, cuerpos: 0, posts: 0, horasDesdeUltimo: null, sinCuerpo: 0 },
+    ultimoPull: { horas: 3, procesados: 1 }, parciales: [],
+  })
+  const r = senalesIngesta(s).filter(x => x.clave === 'polizas_duplicadas')
+  assert.equal(r.length, 1)
+  assert.equal(r[0].tipo, 'info')
+  assert.equal(r[0].n, 2)
+  assert.match(r[0].detalle, /C0109: 1 · C0613: 1/)
+  const v = { estado: 'ok' as const, salud: s, huerfanasTruncadas: false, huerfanasSinAmbito: null }
+  assert.equal(veredictoIngesta(v), 'ok')
+  assert.equal(hayQueEnsenar(v), false)
+  assert.deepEqual(contadorIngesta(v), { n: 0, parcial: false })
+})
+
+test('duplicadas: `null` es HUECO; `[]` y `undefined` no pintan nada', () => {
+  const hueco = senalesIngesta(saludIngesta({ cuarentena: [], polizasDuplicadas: null }))
+    .filter(x => x.clave === 'polizas_duplicadas')
+  assert.equal(hueco.length, 1)
+  assert.equal(hueco[0].tipo, 'hueco')
+  for (const polizasDuplicadas of [[], undefined]) {
+    assert.equal(
+      senalesIngesta(saludIngesta({ cuarentena: [], polizasDuplicadas })).some(x => x.clave === 'polizas_duplicadas'),
+      false,
+    )
+  }
+})
+
+test('🪤 el cron manda el aviso INFORMATIVO de duplicadas en `ok` solo cuando cambian (sin recordatorio)', () => {
+  // Sin esta rama, con la ingesta en `ok` el Telegram nunca sonaría: la firma
+  // cambia, pero el aviso solo salía en `degradada`/`parcial`.
+  const ruta = readFileSync(
+    join(import.meta.dirname, '..', '..', 'app', 'api', 'cron', 'correduria-ingesta', 'route.ts'), 'utf8')
+  assert.match(ruta, /const avisoDuplicadas = salud\.estado === 'ok' && decision\.avisar && decision\.motivo !== 'recordatorio'\s*&& cambioDuplicadasEnFirma\(firmaPrevia, actual\)/)
+  assert.match(ruta, /if \(avisoDuplicadas\) \{\s*const textoDup = textoPolizasDuplicadas\(salud\.polizasDuplicadas\)\s*await tgAviso/)
+  // Y en el aviso normal va al final, como informativo.
+  assert.match(ruta, /recado \+ duplicadas(?: \+ anulaciones)?,/)
 })

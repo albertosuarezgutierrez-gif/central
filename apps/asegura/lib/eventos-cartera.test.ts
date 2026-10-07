@@ -53,3 +53,19 @@ test('🚨 el cierre de oportunidades ganadas va en su PROPIO punto de guardado 
   const tras = d.slice(d.indexOf('}, { timeout: 30_000 }).then('))
   assert.match(tras, /for \(const g of ganadas\) anotarCambio\(/)
 })
+
+test('el motivo CIMA decide la retención: se consulta tras decidirRetencion y SI no abre llamada', () => {
+  assert.match(src, /p\.datos_especificos->'anulacion'->>'motivo' as motivo/)
+  const decide = src.indexOf('decidirRetencion({')
+  const plan = src.indexOf('planRetencionPorMotivo(p.motivo)')
+  const inserta = src.indexOf('insert into oportunidades')
+  assert.ok(decide > 0 && decide < plan && plan < inserta, 'el plan por motivo va antes de abrir la oportunidad')
+  assert.match(src, /if \(!plan\.abrir\) return null/)
+})
+
+test('el aviso de fugas lee motivo, fecha de anulación y último recibo (sin contacto)', () => {
+  assert.match(src, /left join lateral \(\s*select r\.situacion::text as situacion from poliza_recibos r where r\.poliza_id = e\.entidad_id/)
+  assert.match(src, /textoFechaAnulacion\(an\?\.fecha, hoy\)/)
+  assert.match(src, /textoUltimoRecibo\(f\.recibo, cat\)/)
+  assert.doesNotMatch(src.slice(src.indexOf('async function describirFugas')), /telefono|email|dni/i)
+})

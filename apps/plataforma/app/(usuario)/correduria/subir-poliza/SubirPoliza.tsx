@@ -21,7 +21,7 @@ function fecha(iso: string): string {
 export default function SubirPoliza() {
   const fichero = useRef<HTMLInputElement>(null)
   // Sin `clienteId`: aquí no hay ficha de partida. `crear` abre la oportunidad y guarda el fichero (29/09/2026).
-  const { leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta, conOportunidad } = useLeerPoliza({ tomador: true, crear: true })
+  const { leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta, figuras, identidad, conOportunidad } = useLeerPoliza({ tomador: true, crear: true })
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -43,7 +43,7 @@ export default function SubirPoliza() {
         </button>
         {motivoError && <div role="status" style={{ color: 'var(--negative)' }}>No se ha podido leer: {motivoError}.</div>}
       </div>
-      <AvisosLectura oportunidad={oportunidad} ficha={ficha} sinGuardar={sinGuardar} fichaIncierta={fichaIncierta} />
+      <AvisosLectura oportunidad={oportunidad} ficha={ficha} sinGuardar={sinGuardar} fichaIncierta={fichaIncierta} figuras={figuras} identidad={identidad} />
       {lectura && <Resultado l={lectura} conOportunidad={conOportunidad} />}
     </div>
   )

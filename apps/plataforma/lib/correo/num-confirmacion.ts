@@ -50,13 +50,30 @@ function sinUrls(texto: string): string {
   return texto.replace(/https?:\/\/\S+/gi, ' ').replace(/\bwww\.\S+/gi, ' ')
 }
 
+// Remitentes de Expedia que NO publican nº de reserva en claro: el aviso de MENSAJE de huésped
+// (Partner Central) y el marketing (expediagroup). Cualquier número suelto ahí es del alojamiento.
+const REMITENTE_EXPEDIA = /@(?:[\w.-]+\.)?(?:expediapartnercentral|expediagroup|expedia)\.com\b/i
+
+// 🚨 05/10/2026: «Te ha escrito Reka Bekesi, huésped de Expedia» (xxxx@m.expediapartnercentral.com)
+// produjo un 🚨 «reserva 102699405 que Smoobu NO tiene». 102699405 es el ID de ALOJAMIENTO de
+// Expedia (`htid=102699405` en el enlace al centro de mensajes), no una reserva; el correo no trae
+// ninguna. Un número etiquetado como htid / id de alojamiento nunca es un código de reserva.
+const IDS_ALOJAMIENTO = /(?:\bhtid|\bhotel[\s_-]?id|\bproperty[\s_-]?id|\bid\s+de(?:l|\s+la)?\s+(?:alojamiento|propiedad|establecimiento))\s*[=:#]?\s*(\d{6,})/gi
+
 /**
  * Nº de confirmación de la OTA tal cual lo publica el correo, o null si no lo dice.
  * Booking lo pone en claro («Número de confirmación: 5815945265»); el resto de canales caen al
- * primer número largo suelto — pero SIEMPRE sobre el texto sin enlaces.
+ * primer número largo suelto — pero SIEMPRE sobre el texto sin enlaces, sin IDs de alojamiento
+ * y, si el remitente es Expedia, SOLO con la etiqueta explícita (sin ella, no se sabe: null).
  */
-export function extraerNumConfirmacionDe(subject: string, cuerpo: string): string | null {
-  const texto = sinUrls(`${subject}\n${cuerpo}`)
-  const m = texto.match(/confirmaci[oó]n[:\s#]*([0-9]{6,})/i) || texto.match(/\b(\d{9,})\b/)
-  return m ? m[1] : null
+export function extraerNumConfirmacionDe(subject: string, cuerpo: string, from?: string): string | null {
+  const bruto = `${subject}\n${cuerpo}`
+  const alojamiento = new Set<string>()
+  for (const m of bruto.matchAll(IDS_ALOJAMIENTO)) alojamiento.add(m[1])
+  const texto = sinUrls(bruto)
+  const etiquetado = texto.match(/confirmaci[oó]n[:\s#]*([0-9]{6,})/i)
+  if (etiquetado && !alojamiento.has(etiquetado[1])) return etiquetado[1]
+  if (from && REMITENTE_EXPEDIA.test(from)) return null
+  for (const m of texto.matchAll(/\b(\d{9,})\b/g)) if (!alojamiento.has(m[1])) return m[1]
+  return null
 }

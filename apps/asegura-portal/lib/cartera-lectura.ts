@@ -211,6 +211,12 @@ export type PolizaPortal = {
   renovacionSinConfirmar: boolean
   /** CIMA la ha traído. `false` = emitida por nosotros y la compañía aún no la confirma. */
   confirmadaCima: boolean
+  /**
+   * Cuándo se marcó esta póliza como SUSTITUIDA (baja por cambio de compañía o por sustitución). `null` = no lo está.
+   * Interno: el puente de asegura exige `sustituida_at IS NULL` para aceptar «mejorar el precio»
+   * (`sqlCarteraEnVigor`), así que quien ofrezca esa acción debe filtrar por lo mismo.
+   */
+  sustituidaAt: Date | null
   /** Id de la póliza a la que esta sustituye (cambio de compañía). Interno: sirve para cruzar. */
   sustituyeAId: string | null
   /** La póliza a la que sustituye, SOLO si este lector también la ve. `null` = ninguna o no visible. */
@@ -903,7 +909,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             // siniestros de la cartera viva el portal enseñaba 7 y los 60
             // CERRADOS no los veía nadie. El historial es lo que un cliente
             // pregunta al renovar.
-            where: { polizaId: { in: polizaIds } },
+            // Sin las altas manuales ya FUSIONADAS en el siniestro de CIMA (03/10/2026):
+            // son el mismo siniestro y el cliente lo vería dos veces.
+            where: { polizaId: { in: polizaIds }, fusionadoEnSiniestroId: null },
             select: {
               id: true,
               polizaId: true,
@@ -1063,6 +1071,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         p.eiacXmlHash !== null &&
         vigenciaPoliza({ estado: p.estado, fechaVencimiento }, hoy) === 'no_vigente',
       confirmadaCima: p.idPolizaEntidad !== null,
+      sustituidaAt: p.sustituidaAt ?? null,
       sustituyeAId: p.polizaOrigenId !== null && sustituidas.has(p.polizaOrigenId) ? p.polizaOrigenId : null,
       // Los dos se deciden POR LECTOR en `titular()`, con lo que ese lector puede ver.
       sustituyeA: null,

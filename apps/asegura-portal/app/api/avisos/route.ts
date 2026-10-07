@@ -3,11 +3,12 @@ import { NextResponse } from 'next/server'
 import { autorizacionesDeIdentidad } from '@/lib/autorizaciones'
 import { avisosDe, type Avisos } from '@/lib/avisos'
 import { avisosLeidosDeIdentidad } from '@/lib/avisos-leidos'
-import { anulacionesPendientes } from '@/lib/anulacion-firma'
+import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { carnetsDeIdentidad } from '@/lib/carnets'
 import { felicitacionesDeIdentidad } from '@/lib/felicitaciones'
 import { reparosDeMisDatos } from '@/lib/mis-datos'
 import { obligacionesDeIdentidad } from '@/lib/obligaciones'
+import { sinObligacionesDePolizasConBaja } from '@/lib/vencimientos'
 import { peticionesDeIdentidad } from '@/lib/peticiones'
 import { partesAvisoDeIdentidad } from '@/lib/partes-aviso'
 import { polizasNuevasDeIdentidad } from '@/lib/polizas-nuevas'
@@ -81,9 +82,14 @@ export async function GET() {
     ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
     : null
 
+  const obligacionesLeidas = obligaciones.status === 'fulfilled' ? obligaciones.value : null
+  // Una póliza con baja en marcha no «renueva» ni «vence»: sale de los avisos. Sin firmas legibles (`null`) se deja tal cual.
+  const conBaja = firmas.status === 'fulfilled' && firmas.value !== null ? polizasConBajaEnMarcha(firmas.value, { conConfirmadas: true }) : null
+  const obligacionesVisibles = obligacionesLeidas === null ? null : sinObligacionesDePolizasConBaja(obligacionesLeidas, conBaja)
+
   const respuesta: Avisos = avisosDe({
     autorizaciones: autorizaciones.status === 'fulfilled' ? autorizaciones.value : null,
-    obligaciones: obligaciones.status === 'fulfilled' ? obligaciones.value : null,
+    obligaciones: obligacionesVisibles,
     peticiones: peticiones.status === 'fulfilled' ? peticiones.value.recibidas : null,
     datos: datos.status === 'fulfilled' ? datos.value : null,
     carnets: carnets.status === 'fulfilled' ? carnets.value : null,

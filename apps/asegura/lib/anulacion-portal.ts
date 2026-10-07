@@ -14,11 +14,13 @@
 
 import { createHash, randomInt } from 'node:crypto'
 import { FirmaPropia, TEXTO_CONSENTIMIENTO, nombreCoincide } from '@central/core-firma'
-import { MEDIADOR, cartaAnulacion, type TipoAnulacion } from '@central/module-seguros'
+import { HORAS_RETENCION_PORTAL, MEDIADOR, cartaAnulacion, type TipoAnulacion } from '@central/module-seguros'
+import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso, fichasOperablesDe } from './contacto-portal'
 import { estadoEmailDeFicha } from './email-ficha'
+import { solicitarAnulacionConDeps, type DbSolicitud, type ResultadoSolicitudPortal } from './anulacion-solicitud'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const MINUTOS_CODIGO = 10
@@ -28,6 +30,17 @@ export const SEGUNDOS_ENTRE_CODIGOS = 60
 /** Tope de códigos por anulación y día: cada código reinicia los intentos, así que sin tope no hay límite. */
 export const MAX_CODIGOS_DIA = 5
 
+/**
+ * 🚨 La COMPUERTA de la firma. Una baja pedida desde el portal (`origen = 'portal'`) NO se puede firmar hasta que el
+ * corredor la libere (`liberada_at`) o pasen `HORAS_RETENCION_PORTAL` horas desde que se pidió: es el margen para
+ * llamar al cliente antes de que la carta salga hacia la compañía. Las del corredor, siempre. Un ÚNICO fragmento,
+ * con el alias `a`, en TODA consulta que lleva a una firma (`pendientesDe` —que alimentan la lista, el código y la
+ * firma— y las tres escrituras de `pedirCodigoFirma` y `firmarAnulacion`): si una se quedara sin él, la retención se
+ * saltaría por ahí. Misma regla que `liberadaParaFirma` (módulo) y que el CHECK `anulacion_portal_retenida` (BD).
+ */
+export const LIBERADA_SQL = `(a.origen <> 'portal' or a.liberada_at is not null or now() >= a.created_at + interval '${HORAS_RETENCION_PORTAL} hours')`
+const LIBERADA = Prisma.raw(LIBERADA_SQL)
+
 const hashCodigo = (c: string) => createHash('sha256').update(c).digest('hex')
 
 function hoyMadrid(): string {
@@ -36,6 +49,7 @@ function hoyMadrid(): string {
 
 export type AnulacionParaFirmar = {
   id: string
+  polizaId: string
   numeroPoliza: string | null
   compania: string | null
   ramo: string | null
@@ -57,6 +71,7 @@ export type AnulacionParaFirmar = {
 /** Una baja que el cliente YA firmó (últimos 60 días): el portal la enseña en vez de hacerla desaparecer. */
 export type AnulacionFirmada = {
   id: string
+  polizaId: string
   numeroPoliza: string | null
   compania: string | null
   tipo: TipoAnulacion
@@ -67,6 +82,16 @@ export type AnulacionFirmada = {
   confirmadaEl: string | null
   /** El PDF firmado está archivado en su póliza (lo ve en el portal). `false` = no consta: no se promete. */
   justificante: boolean
+}
+
+/** Una baja que el cliente pidió y el corredor aún REVISA (retenida): no se puede firmar hasta `liberaSolaAt`. */
+export type AnulacionEnRevision = {
+  id: string
+  polizaId: string
+  numeroPoliza: string | null
+  compania: string | null
+  /** ISO: cuándo se libera sola si el corredor no lo hace antes. */
+  liberaSolaAt: string
 }
 
 /** Días que una baja firmada sigue a la vista en el portal. */
@@ -90,8 +115,20 @@ async function pendientesDe(correduriaId: string, clienteId: string, anulacionId
            a.firma_otp_hash as "otpHash", a.firma_otp_expira as "otpExpira", a.firma_otp_intentos as "otpIntentos"
     from anulacion a join polizas p on p.id = a.poliza_id join clientes c on c.id = a.cliente_id
     where a.correduria_id = ${correduriaId}::uuid and a.cliente_id = ${clienteId}::uuid
-      and a.estado = 'solicitada' and (${filtroId}::uuid is null or a.id = ${filtroId}::uuid)
+      and a.estado = 'solicitada' and ${LIBERADA} and (${filtroId}::uuid is null or a.id = ${filtroId}::uuid)
     order by a.fecha_efecto`
+}
+
+/** Las que pidió y siguen RETENIDAS (la negación exacta de la compuerta): se enseñan como «la estamos revisando». */
+async function enRevisionDe(correduriaId: string, clienteId: string): Promise<AnulacionEnRevision[]> {
+  const filas = await prismaAsegura().$queryRaw<{ id: string; polizaId: string; numeroPoliza: string | null; compania: string | null; liberaSolaAt: Date }[]>`
+    select a.id::text as id, a.poliza_id::text as "polizaId", p.numero_poliza as "numeroPoliza", p.aseguradora as compania,
+           a.created_at + make_interval(hours => ${HORAS_RETENCION_PORTAL}::int) as "liberaSolaAt"
+    from anulacion a join polizas p on p.id = a.poliza_id
+    where a.correduria_id = ${correduriaId}::uuid and a.cliente_id = ${clienteId}::uuid
+      and a.estado = 'solicitada' and not ${LIBERADA}
+    order by a.created_at`
+  return filas.map((f) => ({ ...f, liberaSolaAt: f.liberaSolaAt.toISOString() }))
 }
 
 function carta(p: Pendiente, fechaCarta: string): string | null {
@@ -101,16 +138,11 @@ function carta(p: Pendiente, fechaCarta: string): string | null {
   })
 }
 
-type Ficha = Awaited<ReturnType<typeof fichaPropiaDe>>
-type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
-
-function sinFicha(f: Ficha): SinFicha | null {
-  return f.estado === 'ok' ? null : f
-}
+type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 
 /** `consentimiento` es el texto EXACTO que queda en la evidencia: el portal enseña este, no una copia. */
 export type LecturaParaFirmar =
-  | { estado: 'ok'; anulaciones: AnulacionParaFirmar[]; consentimiento: string; firmadas: AnulacionFirmada[] }
+  | { estado: 'ok'; anulaciones: AnulacionParaFirmar[]; consentimiento: string; firmadas: AnulacionFirmada[]; enRevision: AnulacionEnRevision[] }
   | SinFicha
 
 /** El código mandado sigue sirviendo: no ha caducado y le quedan intentos. Puro. */
@@ -121,7 +153,7 @@ export function codigoVigente(p: { otpHash: string | null; otpExpira: Date | nul
 
 async function firmadasDe(correduriaId: string, clienteId: string): Promise<AnulacionFirmada[]> {
   return prismaAsegura().$queryRaw<AnulacionFirmada[]>`
-    select a.id::text as id, p.numero_poliza as "numeroPoliza", p.aseguradora as compania, a.tipo,
+    select a.id::text as id, a.poliza_id::text as "polizaId", p.numero_poliza as "numeroPoliza", p.aseguradora as compania, a.tipo,
            to_char(a.fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto", a.estado,
            to_char(a.firmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "firmadaEl",
            to_char(a.comunicada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "comunicadaEl",
@@ -136,19 +168,27 @@ async function firmadasDe(correduriaId: string, clienteId: string): Promise<Anul
 }
 
 export async function anulacionesParaFirmar(correduriaId: string, identidadId: string): Promise<LecturaParaFirmar> {
-  const f = await fichaPropiaDe(correduriaId, identidadId)
-  if (f.estado !== 'ok') return sinFicha(f)!
+  // Lista de TODAS las fichas en las que puede operar (el portal le enseña las pólizas de todas): cada
+  // anulación sigue siendo de su ficha, y firmarla resuelve la ficha por la propia anulación.
+  const f = await fichasOperablesDe(correduriaId, identidadId)
+  if (f.estado !== 'ok') return f
   const hoy = hoyMadrid()
   const ahora = new Date()
-  const [filas, firmadas] = await Promise.all([pendientesDe(correduriaId, f.clienteId), firmadasDe(correduriaId, f.clienteId)])
+  const porFicha = await Promise.all(
+    f.clienteIds.map((id) => Promise.all([pendientesDe(correduriaId, id), firmadasDe(correduriaId, id), enRevisionDe(correduriaId, id)])),
+  )
+  const filas = porFicha.flatMap((x) => x[0]).sort((a, b) => a.fechaEfecto.localeCompare(b.fechaEfecto))
+  const firmadas = porFicha.flatMap((x) => x[1]).sort((a, b) => b.firmadaEl.localeCompare(a.firmadaEl))
+  const enRevision = porFicha.flatMap((x) => x[2]).sort((a, b) => a.liberaSolaAt.localeCompare(b.liberaSolaAt))
   return {
     estado: 'ok',
     consentimiento: TEXTO_CONSENTIMIENTO,
     firmadas,
+    enRevision,
     anulaciones: filas.map((p) => {
       const texto = carta(p, hoy)
       return {
-        id: p.id, numeroPoliza: p.numeroPoliza, compania: p.compania, ramo: p.ramo, tipo: p.tipo,
+        id: p.id, polizaId: p.polizaId, numeroPoliza: p.numeroPoliza, compania: p.compania, ramo: p.ramo, tipo: p.tipo,
         fechaEfecto: p.fechaEfecto, carta: texto, cartaHash: texto ? huella(texto) : null,
         codigoCaducaEn: codigoVigente(p, ahora),
       }
@@ -177,8 +217,10 @@ function enmascarar(email: string): string {
 
 export async function pedirCodigoFirma(correduriaId: string, identidadId: string, anulacionId: string): Promise<ResultadoCodigo> {
   if (!UUID.test(anulacionId)) return { estado: 'no_encontrada' }
-  const f = await fichaPropiaDe(correduriaId, identidadId)
-  if (f.estado !== 'ok') return sinFicha(f)!
+  // La ficha es la DUEÑA de esa anulación, si es una de las vinculadas con nivel de operar.
+  const f = await fichaPropiaDeRecurso(correduriaId, identidadId, 'anulacion', anulacionId)
+  if (f.estado === 'ajena') return { estado: 'no_encontrada' }
+  if (f.estado !== 'ok') return f
   const [p] = await pendientesDe(correduriaId, f.clienteId, anulacionId)
   if (!p) return { estado: 'no_encontrada' }
   if (!carta(p, hoyMadrid())) return { estado: 'carta_incompleta' }
@@ -196,11 +238,11 @@ export async function pedirCodigoFirma(correduriaId: string, identidadId: string
   // UNA sentencia con sus dos frenos: 60 s desde el anterior y tope diario. Leer y luego escribir
   // dejaría pasar dos peticiones a la vez, y cada una es un correo al cliente.
   const n = await prismaAsegura().$executeRaw`
-    update anulacion set firma_otp_hash = ${hashCodigo(codigo)}, firma_otp_intentos = 0,
+    update anulacion a set firma_otp_hash = ${hashCodigo(codigo)}, firma_otp_intentos = 0,
            firma_otp_expira = now() + make_interval(mins => ${MINUTOS_CODIGO}::int),
            firma_otp_envios = case when firma_otp_envios_dia = current_date then firma_otp_envios + 1 else 1 end,
            firma_otp_envios_dia = current_date, updated_at = now()
-    where id = ${anulacionId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'solicitada'
+    where a.id = ${anulacionId}::uuid and a.correduria_id = ${correduriaId}::uuid and a.estado = 'solicitada' and ${LIBERADA}
       and (firma_otp_expira is null
            or firma_otp_expira <= now() + make_interval(secs => ${MINUTOS_CODIGO * 60 - SEGUNDOS_ENTRE_CODIGOS}::int))
       and (firma_otp_envios_dia is distinct from current_date or firma_otp_envios < ${MAX_CODIGOS_DIA}::int)`
@@ -208,7 +250,7 @@ export async function pedirCodigoFirma(correduriaId: string, identidadId: string
     const [e] = await prismaAsegura().$queryRaw<{ agotado: boolean; faltan: number | null }[]>`
       select (firma_otp_envios_dia = current_date and firma_otp_envios >= ${MAX_CODIGOS_DIA}::int) as agotado,
              ceil(extract(epoch from (firma_otp_expira - now())) - ${MINUTOS_CODIGO * 60 - SEGUNDOS_ENTRE_CODIGOS})::int as faltan
-      from anulacion where id = ${anulacionId}::uuid and estado = 'solicitada'`
+      from anulacion a where a.id = ${anulacionId}::uuid and a.estado = 'solicitada' and ${LIBERADA}`
     if (!e) return { estado: 'no_encontrada' }
     if (e.agotado) return { estado: 'limite_codigos' }
     return { estado: 'espera', segundos: Math.max(1, e.faltan ?? SEGUNDOS_ENTRE_CODIGOS) }
@@ -247,8 +289,10 @@ export async function firmarAnulacion(
   datos: { codigo: string; nombre: string; cartaHash: string; ip: string | null; userAgent: string | null },
 ): Promise<ResultadoFirma> {
   if (!UUID.test(anulacionId)) return { estado: 'no_encontrada' }
-  const f = await fichaPropiaDe(correduriaId, identidadId)
-  if (f.estado !== 'ok') return sinFicha(f)!
+  // La ficha es la DUEÑA de esa anulación, si es una de las vinculadas con nivel de operar.
+  const f = await fichaPropiaDeRecurso(correduriaId, identidadId, 'anulacion', anulacionId)
+  if (f.estado === 'ajena') return { estado: 'no_encontrada' }
+  if (f.estado !== 'ok') return f
   const [p] = await pendientesDe(correduriaId, f.clienteId, anulacionId)
   if (!p) return { estado: 'no_encontrada' }
 
@@ -257,8 +301,8 @@ export async function firmarAnulacion(
   // El intento se GASTA antes de comparar y en una sola sentencia: leer el contador y sumar después
   // dejaría que cien peticiones a la vez leyeran todas «0 intentos».
   const [gastado] = await prismaAsegura().$queryRaw<{ hash: string; intentos: number }[]>`
-    update anulacion set firma_otp_intentos = firma_otp_intentos + 1
-    where id = ${anulacionId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'solicitada'
+    update anulacion a set firma_otp_intentos = firma_otp_intentos + 1
+    where a.id = ${anulacionId}::uuid and a.correduria_id = ${correduriaId}::uuid and a.estado = 'solicitada' and ${LIBERADA}
       and firma_otp_hash is not null and firma_otp_expira > now() and firma_otp_intentos < ${MAX_INTENTOS}::int
     returning firma_otp_hash as hash, firma_otp_intentos as intentos`
   if (!gastado) return p.otpExpira.getTime() < Date.now() ? { estado: 'codigo_caducado' } : { estado: 'demasiados_intentos' }
@@ -296,10 +340,10 @@ export async function firmarAnulacion(
       returning id::text as id`
     if (!fila) return false
     const n = await tx.$executeRaw`
-      update anulacion set estado = 'firmada', firmada_at = now(), firma_id = ${fila.id}::uuid, carta_texto = ${texto},
+      update anulacion a set estado = 'firmada', firmada_at = now(), firma_id = ${fila.id}::uuid, carta_texto = ${texto},
              firma_nota = 'Firmada por el cliente en el portal (código al correo)',
              firma_otp_hash = null, firma_otp_expira = null, updated_at = now()
-      where id = ${anulacionId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'solicitada'`
+      where a.id = ${anulacionId}::uuid and a.correduria_id = ${correduriaId}::uuid and a.estado = 'solicitada' and ${LIBERADA}`
     if (n === 0) throw new Error('el expediente cambió mientras se firmaba')
     return true
   })
@@ -315,4 +359,15 @@ export async function firmarAnulacion(
     console.error('[anulacion-portal] historial no anotado:', e instanceof Error ? e.message : e)
   }
   return { estado: 'firmada', firmadaEl: hoy }
+}
+
+/**
+ * El cliente pide su baja desde el portal. La póliza tiene que ser SUYA (su ficha, por el vínculo) y estar en vigor; nace
+ * retenida (ver `LIBERADA_SQL`). Toda la decisión vive en `anulacion-solicitud.ts` (probada con una BD simulada).
+ */
+export function solicitarAnulacionPortal(correduriaId: string, identidadId: string, cuerpo: unknown): Promise<ResultadoSolicitudPortal> {
+  return solicitarAnulacionConDeps(
+    { db: prismaAsegura() as unknown as DbSolicitud, ficha: (c, i, polizaId) => fichaPropiaDeRecurso(c, i, 'poliza', polizaId), hoy: hoyMadrid, anotar: anotarCambio },
+    correduriaId, identidadId, cuerpo,
+  )
 }

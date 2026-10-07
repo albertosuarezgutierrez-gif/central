@@ -93,3 +93,60 @@ export function choqueCarnetVersion(carnet: LimiteCarnet, motor: MotorVersion): 
   if (excesos.length === 0) return null
   return `el carné ${carnet.id} no cubre esta versión: ${excesos.join(' y ')}`
 }
+
+// ─── Regla de tráfico FIJA (no del catálogo del vendor) ──────────────────────
+// Caso real (Kymco Grand Dink 300, conductor con solo carné B en ficha): se mandó
+// el B como supuesto y el vendor contestó 400 «cannot be used by the primary driver».
+// No costó nada, pero la regla es de tráfico y no cambia: se corta ANTES, gratis y
+// con la frase que explica qué hacer. Carné B (con ≥3 años) solo hasta 125 cc / 11 kW;
+// AM ≤50 cc; A1 ≤125 cc y 11 kW; A2 ≤35 kW; A sin límite. Misma tolerancia de
+// redondeo que arriba (`MARGEN_*`).
+const REGLA_TRAFICO: Record<string, { maxCc: number | null; maxKw: number | null }> = {
+  AM: { maxCc: 50, maxKw: null },
+  A1: { maxCc: 125, maxKw: 11 },
+  A2: { maxCc: null, maxKw: 35 },
+  A: { maxCc: null, maxKw: null },
+  B: { maxCc: 125, maxKw: 11 },
+}
+
+/**
+ * El motivo por el que ese tipo de carné NO puede conducir esa moto según la
+ * norma de tráfico, o `null` (cabe, tipo desconocido, o falta el dato: «no se sabe»
+ * NO es «cabe»; el aviso de cilindrada desconocida lo da `avisoCilindradaDesconocida`).
+ */
+export function choqueReglaTrafico(tipo: string, motor: MotorVersion): string | null {
+  const regla = REGLA_TRAFICO[tipo.trim().toUpperCase()]
+  if (!regla) return null
+  const tipoN = tipo.trim().toUpperCase()
+  const pasaCc = regla.maxCc !== null && motor.cc !== null && motor.cc > regla.maxCc + MARGEN_CC
+  const pasaKw = regla.maxKw !== null && motor.kw !== null && motor.kw > regla.maxKw + MARGEN_KW
+  if (!pasaCc && !pasaKw) return null
+  const que = pasaCc ? `${motor.cc} cc` : `${motor.kw} kW`
+  if (tipoN === 'B') {
+    return (
+      `La moto tiene ${que} y exige carné A2 o A; en la ficha del conductor solo consta el B. ` +
+      'Añade su carné de moto (con fecha) y vuelve a pedir precio.'
+    )
+  }
+  return `La moto tiene ${que} y el carné ${tipoN} no la cubre (norma de tráfico). Revisa el carné de moto en la ficha del conductor y vuelve a pedir precio.`
+}
+
+/** B supuesto y versión sin cilindrada legible: no se puede descartar el choque. Aviso, no silencio. */
+export function avisoCilindradaDesconocida(tipo: string, esSupuesto: boolean, motor: MotorVersion | null): string | null {
+  if (!esSupuesto || tipo.trim().toUpperCase() !== 'B') return null
+  if (motor !== null && motor.cc !== null) return null
+  return (
+    'AVISO: no se ha podido leer la cilindrada de esta versión y el carné B es un supuesto; ' +
+    'si la moto supera 125 cc el vendor la rechazará (sin cargo). Comprueba la cilindrada o añade su carné de moto a la ficha.'
+  )
+}
+
+/** El 400 del vendor «The motorbike with base7 code X cannot be used by the primary driver» → castellano. `null` = otro mensaje. */
+export function traducirMotoNoApta400(detalle: string): string | null {
+  if (!/motorbike[^\n]*cannot be used by the primary driver/i.test(detalle)) return null
+  const code = /base7 code\s+([0-9A-Za-z]+)/i.exec(detalle)?.[1]
+  return (
+    `El carné del conductor no habilita esta moto${code ? ` (código Base7 ${code})` : ''}: ` +
+    'añade su carné de moto (con fecha) en la ficha y vuelve a pedir precio. No se ha cobrado nada.'
+  )
+}
