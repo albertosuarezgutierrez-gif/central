@@ -46,11 +46,37 @@ export function cuerpoExcedeTope(contentLength: string | null): boolean {
   return Number.isFinite(n) && n > MAX_CUERPO_BYTES
 }
 
+/**
+ * Lee un stream con tope en BYTES: al pasar `max` cancela el stream y devuelve `null` (→ 413). Sin Content-Length
+ * (o mentiroso) el tope sigue valiendo, porque se cuenta lo que llega, no lo que se anuncia.
+ */
+export async function leerCuerpoConTope(body: ReadableStream<Uint8Array> | null, max: number = MAX_CUERPO_BYTES): Promise<string | null> {
+  if (!body) return ''
+  const reader = body.getReader()
+  const trozos: Uint8Array[] = []
+  let total = 0
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > max) {
+        await reader.cancel().catch(() => {})
+        return null
+      }
+      trozos.push(value)
+    }
+  } catch {
+    return ''
+  }
+  return Buffer.concat(trozos).toString('utf8')
+}
+
 export type Guardado = { token: string; caducaEn: Date }
 
 /** Cuerpo del PUT `{ token, caducaEn }` (lo que manda `almacenHttp().guardar`). */
 export function leerGuardado(texto: string, ahora: number): Lectura<Guardado> {
-  if (texto.length > MAX_CUERPO_BYTES) return { ok: false, status: 413, motivo: 'cuerpo_grande' }
+  if (Buffer.byteLength(texto, 'utf8') > MAX_CUERPO_BYTES) return { ok: false, status: 413, motivo: 'cuerpo_grande' }
   let body: unknown
   try {
     body = JSON.parse(texto)

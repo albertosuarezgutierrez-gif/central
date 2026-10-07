@@ -6,7 +6,9 @@
 --    Vercel, ni esta BD tienen la clave: aquí no se puede abrir. La caducidad buena va DENTRO del blob (autenticada);
 --    `caduca_en` es la copia para que asegura conteste 404 y borre lo caducado sin poder leerlo.
 -- 🛡️ Solo `prisma_seguros` (la app, puerto del worker). Ni `crm_seguros`, ni el portal del cliente, ni anon/authenticated.
---    RLS activada SIN políticas: cerrada para cualquier rol sin BYPASSRLS.
+--    RLS activada SIN políticas: cerrada para cualquier rol sin BYPASSRLS. `prisma_seguros` ES BYPASSRLS (bootstrap
+--    2026-08-19), así que no necesita política; igual que el resto de tablas de `seguros`. No añadir políticas: abrirían
+--    la tabla a roles sin BYPASSRLS.
 --
 -- Idempotente (IF NOT EXISTS). Se deshace con:  DROP TABLE seguros.tarificador_sesiones;
 BEGIN;

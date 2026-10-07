@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { correduriaUnica } from '@/lib/cartera'
 import { borrarSesion, guardarSesion, leerSesion } from '@/lib/tarificador-sesion'
-import { clasificarErrorBd, codigoErrorParaLog, cuerpoExcedeTope, leerCompania, leerGuardado } from '@/lib/tarificador-sesion-reglas'
+import { clasificarErrorBd, codigoErrorParaLog, cuerpoExcedeTope, leerCompania, leerCuerpoConTope, leerGuardado } from '@/lib/tarificador-sesion-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -49,7 +49,8 @@ export async function PUT(req: Request, ctx: Ctx) {
   const c = leerCompania((await ctx.params).compania)
   if (!c.ok) return NextResponse.json({ estado: 'error', motivo: c.motivo }, { status: c.status })
   if (cuerpoExcedeTope(req.headers.get('content-length'))) return NextResponse.json({ estado: 'error', motivo: 'cuerpo_grande' }, { status: 413 })
-  const texto = await req.text().catch(() => '')
+  const texto = await leerCuerpoConTope(req.body)
+  if (texto === null) return NextResponse.json({ estado: 'error', motivo: 'cuerpo_grande' }, { status: 413 })
   const g = leerGuardado(texto, Date.now())
   if (!g.ok) return NextResponse.json({ estado: 'error', motivo: g.motivo }, { status: g.status })
   try {

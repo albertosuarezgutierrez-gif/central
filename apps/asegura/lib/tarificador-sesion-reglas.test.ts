@@ -16,6 +16,7 @@ import {
   cuerpoExcedeTope,
   estaCaducada,
   leerCompania,
+  leerCuerpoConTope,
   leerGuardado,
 } from './tarificador-sesion-reglas.ts'
 // El CLIENTE real (worker): el token que sella es el que esta ruta tiene que aceptar.
@@ -144,4 +145,22 @@ test('cepo SQL: GRANTs solo a prisma_seguros, RLS activada y sin políticas abie
   for (const g of sinCom.match(/GRANT [^;]+;/g) ?? []) assert.match(g, /TO prisma_seguros;$/, g)
   assert.match(sinCom, /REVOKE ALL ON seguros\.tarificador_sesiones FROM PUBLIC, anon, authenticated, crm_seguros;/)
   assert.match(sinCom, /UNIQUE \(correduria_id, compania\)/)
+})
+
+test('leerGuardado mide el cuerpo en BYTES, no en caracteres UTF-16', () => {
+  // '€' = 1 carácter UTF-16, 3 bytes: MAX/2 caracteres ya pasan del tope en bytes.
+  const r = leerGuardado('€'.repeat(Math.floor(MAX_CUERPO_BYTES / 2)), AHORA)
+  assert.deepEqual(r.ok === false && [r.status, r.motivo], [413, 'cuerpo_grande'])
+  assert.equal('€'.repeat(10).length < MAX_CUERPO_BYTES, true)
+})
+
+test('leerCuerpoConTope corta por BYTES leídos aunque no haya Content-Length', async () => {
+  const stream = (trozos: Uint8Array[]) => new ReadableStream<Uint8Array>({ start(c) { trozos.forEach((t) => c.enqueue(t)); c.close() } })
+  const enc = new TextEncoder()
+  assert.equal(await leerCuerpoConTope(stream([enc.encode('{"a":'), enc.encode('1}')]), 100), '{"a":1}')
+  assert.equal(await leerCuerpoConTope(stream([new Uint8Array(60), new Uint8Array(41)]), 100), null)
+  assert.equal(await leerCuerpoConTope(stream([new Uint8Array(100)]), 100) === null, false)
+  assert.equal(await leerCuerpoConTope(stream([enc.encode('€'.repeat(40))]), 100), null) // 120 bytes
+  assert.equal(await leerCuerpoConTope(null, 100), '')
+  assert.match(readFileSync(join(APP, 'app/api/tarificador/sesion/[compania]/route.ts'), 'utf8'), /leerCuerpoConTope\(req\.body\)/)
 })
