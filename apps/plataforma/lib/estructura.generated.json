@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-06T14:43:56Z",
+  "generadoEn": "2026-10-07T10:13:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 217
+        "evidencias": 218
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 159
+        "evidencias": 160
       },
       "rrhh": {
         "estado": "no",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 17
+        "evidencias": 22
       },
       "asegura-portal": {
         "estado": "no",
@@ -4199,6 +4199,7 @@
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
       "/api/operador/tareas-hoy",
+      "/api/operador/tarificador/avisos-verificacion",
       "/api/operador/tarificador/coberturas",
       "/api/operador/tarificador/encolar",
       "/api/operador/tarificador/fichas",
@@ -4209,6 +4210,7 @@
       "/api/operador/tarificador/grabaciones/[id]/pantallas",
       "/api/operador/tarificador/intervenciones",
       "/api/operador/tarificador/oportunidad",
+      "/api/operador/tarificador/oportunidad/[id]/propuesta",
       "/api/operador/tarificador/panel",
       "/api/operador/tarificador/trabajo/[id]",
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
@@ -5226,6 +5228,7 @@
       "/api/correduria/tarificador/grabaciones/[id]/analizar",
       "/api/correduria/tarificador/grabaciones/[id]/pantallas",
       "/api/correduria/tarificador/oportunidad",
+      "/api/correduria/tarificador/oportunidad/[id]/propuesta",
       "/api/correduria/tarificador/panel",
       "/api/correduria/tarificador/trabajo/[id]",
       "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
@@ -5287,6 +5290,7 @@
       "/api/cron/subastas-ingesta",
       "/api/cron/subastas-mercado",
       "/api/cron/subastas-radar",
+      "/api/cron/tarificador-verificacion",
       "/api/cron/trading-backtest",
       "/api/cron/trading-cohetes-rebalanceo",
       "/api/cron/trading-cohetes-track",
@@ -6816,7 +6820,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1633,
+    "apis": 1637,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
