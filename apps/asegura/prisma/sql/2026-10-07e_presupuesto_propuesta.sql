@@ -176,6 +176,13 @@ GRANT SELECT, INSERT, UPDATE ON seguros.presupuesto_propuesta_contador TO prisma
 GRANT SELECT, INSERT, UPDATE ON seguros.presupuesto_propuesta          TO prisma_seguros;
 GRANT SELECT, INSERT         ON seguros.presupuesto_propuesta_item     TO prisma_seguros;
 GRANT EXECUTE ON FUNCTION seguros.siguiente_referencia_propuesta(uuid, timestamptz) TO prisma_seguros;
+-- Los default privileges del schema (`prisma_seguros=arwd`, ver 2026-10-06c) dan DELETE/UPDATE a toda tabla
+-- nueva aunque el GRANT de arriba sea más corto: se quitan a mano. El item es la FOTO de lo que se enseñó
+-- (solo SELECT + INSERT). REVOKE es idempotente.
+REVOKE DELETE, TRUNCATE ON seguros.presupuesto_propuesta_contador FROM prisma_seguros;
+REVOKE DELETE, TRUNCATE ON seguros.presupuesto_propuesta          FROM prisma_seguros;
+REVOKE DELETE, TRUNCATE ON seguros.presupuesto_propuesta_item     FROM prisma_seguros;
+REVOKE UPDATE           ON seguros.presupuesto_propuesta_item     FROM prisma_seguros;
 
 COMMIT;
 

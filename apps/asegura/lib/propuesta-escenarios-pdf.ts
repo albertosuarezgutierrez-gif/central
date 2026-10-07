@@ -56,7 +56,7 @@ export async function pdfPropuestaEscenarios(v: VistaPropuesta): Promise<Uint8Ar
   const ref = `Referencia ${v.referencia}`
   texto(ref, A4[0] - M - negrita.widthOfTextAtSize(ref, 8.5), y - 22, negrita, 8.5, PRIMARIO)
   y -= altoLogo + 22
-  texto(`Tu seguro de ${RAMOS[v.ramo] ?? v.ramo}: ${v.escenarios.length} escenarios`, M, y - 20, titulo, 20, PRIMARIO); y -= 30
+  texto(`${v.ramo ? `Tu seguro de ${RAMOS[v.ramo] ?? v.ramo}` : 'Tu seguro (sin ramo)'}: ${v.escenarios.length} escenarios`, M, y - 20, titulo, 20, PRIMARIO); y -= 30
   texto(`Preparada para ${v.cliente}`, M, y - 11, normal, 11, TENUE); y -= 26
   parrafo(
     'En cada escenario cambia quién figura como tomador, conductor o propietario, y con ello el precio. Van ordenados ' +

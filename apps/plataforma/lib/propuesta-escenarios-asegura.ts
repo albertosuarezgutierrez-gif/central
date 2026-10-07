@@ -27,7 +27,8 @@ export type EscenarioPropuesta = {
 export type Propuesta = {
   id: string
   referencia: string
-  creadoAt: string
+  /** `null` = no consta (no la cadena vacía). */
+  creadoAt: string | null
   canalAviso: 'email' | 'whatsapp_enlace' | null
   avisadoAt: string | null
   retiradaAt: string | null
@@ -59,7 +60,7 @@ function leerPropuesta(v: unknown): Propuesta | null {
     }]
   })
   return {
-    id: p.id as string, referencia: p.referencia as string, creadoAt: txt(p.creadoAt) ?? '',
+    id: p.id as string, referencia: p.referencia as string, creadoAt: txt(p.creadoAt),
     canalAviso: p.canalAviso === 'email' || p.canalAviso === 'whatsapp_enlace' ? p.canalAviso : null,
     avisadoAt: txt(p.avisadoAt), retiradaAt: txt(p.retiradaAt), escenarios,
   }

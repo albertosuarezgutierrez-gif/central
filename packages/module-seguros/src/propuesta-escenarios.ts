@@ -9,8 +9,9 @@
  * una cosa y la tarificación otra.
  *
  * 🚨 Personas por IDENTIDAD (DNI): dos personas con el mismo nombre de pila y distinto DNI NO se funden —
- *    se escriben con el nombre completo para que el cliente sepa cuál es cuál. Sin DNI no se afirma que
- *    sean la misma persona.
+ *    se escriben con el nombre completo para que el cliente sepa cuál es cuál. Sin DNI la identidad es la
+ *    ficha (`clienteId`) o, si no hay, la propia figura: dos personas sin DNI y con el mismo nombre NO son la
+ *    misma (el nombre nunca es identidad).
  * 🚨 Dato que no consta ≠ dato vacío: una figura que falta en la petición es «no consta», nunca el tomador
  *    por suposición; una prima ilegible es `null` y nunca entra en «la más económica».
  */
@@ -20,8 +21,11 @@ const obj = (v: unknown): Obj | null => (typeof v === 'object' && v !== null && 
 const txt = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
 const entero = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 99 ? v : null)
 
-/** Una persona de la petición: la identidad es el DNI; los nombres son solo para enseñarla. */
-export type PersonaEscenario = { dni: string | null; pila: string | null; completo: string | null }
+/**
+ * Una persona de la petición: la identidad es el DNI; sin DNI, su ficha (`clienteId`, si se sabe); sin
+ * ninguno, la propia figura. Los nombres son solo para enseñarla.
+ */
+export type PersonaEscenario = { dni: string | null; pila: string | null; completo: string | null; clienteId?: string | null }
 
 export type FigurasEscenario = {
   tomador: PersonaEscenario | null
@@ -55,9 +59,19 @@ export function figurasDePeticion(peticion: unknown): FigurasEscenario | null {
   }
 }
 
-/** Clave de identidad: el DNI; sin DNI, un id que NUNCA coincide con el de alguien que sí lo tiene. */
+const figuraSinIdentidad = new WeakMap<PersonaEscenario, string>()
+let siguienteFigura = 0
+
+/**
+ * Clave de identidad: el DNI; sin DNI, la ficha (`cliente:`); sin ninguno, una clave PROPIA de esa figura
+ * (`figura:`), que no coincide con ninguna otra. Nunca el nombre: dos «Ana García» sin DNI no se funden.
+ */
 export function identidadPersona(p: PersonaEscenario): string {
-  return p.dni ? `dni:${p.dni}` : `sin-dni:${(p.completo ?? p.pila ?? '').toLowerCase()}`
+  if (p.dni) return `dni:${p.dni}`
+  if (p.clienteId) return `cliente:${p.clienteId}`
+  let k = figuraSinIdentidad.get(p)
+  if (!k) { k = `figura:${++siguienteFigura}`; figuraSinIdentidad.set(p, k) }
+  return k
 }
 
 /**
@@ -162,6 +176,8 @@ export type EscenarioEntrada = {
   referencia: string | null
   ramo: string
   figuras: FigurasEscenario | null
+  /** Ficha del tomador del presupuesto: identidad del `holder` cuando la petición no trae su DNI. */
+  tomadorClienteId?: string | null
   seguroAnterior: SeguroAnteriorEscenario
   opciones: readonly OpcionEscenario[]
 }
@@ -200,7 +216,15 @@ const porPrima = (a: number | null, b: number | null) => (a === null ? (b === nu
  * que se eligieron) y marca «la más económica»: el escenario de prima mínima. Un empate exacto marca a los
  * dos (son igual de económicos; elegir uno sería inventar). Sin ninguna prima legible, no se marca ninguno.
  */
-export function ordenarEscenarios(entrada: readonly EscenarioEntrada[]): EscenarioOrdenado[] {
+/** Sin DNI, el tomador se identifica por la ficha del presupuesto (si se sabe). */
+function conFichaDelTomador(e: EscenarioEntrada): EscenarioEntrada {
+  const t = e.figuras?.tomador
+  if (!e.figuras || !t || t.dni || t.clienteId || !e.tomadorClienteId) return e
+  return { ...e, figuras: { ...e.figuras, tomador: { ...t, clienteId: e.tomadorClienteId } } }
+}
+
+export function ordenarEscenarios(entradaOriginal: readonly EscenarioEntrada[]): EscenarioOrdenado[] {
+  const entrada = entradaOriginal.map(conFichaDelTomador)
   const nombres = nombresParaEtiquetas(entrada.map((e) => e.figuras))
   const conMinimo = entrada.map((e, i) => {
     const opciones = [...e.opciones].sort((a, b) => porPrima(a.primaEur, b.primaEur))

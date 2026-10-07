@@ -130,12 +130,13 @@ function estadoAviso(p: Propuesta): { texto: string; tono: 'neutral' | 'info' | 
 }
 
 /** A quién irá cada aviso: uno por TOMADOR (identidad = su ficha), con sus escenarios. */
-function destinatarios(p: Propuesta): Array<{ clienteId: string; nombre: string; numeros: number[] }> {
-  const out: Array<{ clienteId: string; nombre: string; numeros: number[] }> = []
+/** `enlazado` = algún escenario suyo tiene el WhatsApp abierto y sin confirmar (su botón «Ya lo he mandado»). */
+function destinatarios(p: Propuesta): Array<{ clienteId: string; nombre: string; numeros: number[]; enlazado: boolean }> {
+  const out: Array<{ clienteId: string; nombre: string; numeros: number[]; enlazado: boolean }> = []
   for (const e of p.escenarios) {
     const g = out.find((x) => x.clienteId === e.tomador.clienteId)
-    if (g) g.numeros.push(e.numero)
-    else out.push({ clienteId: e.tomador.clienteId, nombre: e.tomador.nombre ?? 'tomador sin nombre', numeros: [e.numero] })
+    if (g) { g.numeros.push(e.numero); g.enlazado ||= e.estado === 'enlazado' }
+    else out.push({ clienteId: e.tomador.clienteId, nombre: e.tomador.nombre ?? 'tomador sin nombre', numeros: [e.numero], enlazado: e.estado === 'enlazado' })
   }
   return out
 }
@@ -188,9 +189,14 @@ function TarjetaPropuesta({ p, onCambio }: { p: Propuesta; onCambio: () => void 
           <>
             <button type="button" disabled={ocupado} onClick={() => setConfirmando('email')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Enviar por correo…</button>
             <button type="button" disabled={ocupado} onClick={() => setConfirmando('whatsapp_enlace')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Preparar WhatsApp…</button>
-            {p.canalAviso === 'whatsapp_enlace' && (
-              <button type="button" disabled={ocupado} onClick={() => void accion({ accion: 'confirmar_whatsapp' })} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Ya lo he mandado</button>
-            )}
+            {/* Un botón por TOMADOR: confirmar el de Ana no puede marcar como enviado el de Rafael. */}
+            {p.canalAviso === 'whatsapp_enlace' && destinatarios(p).filter((d) => d.enlazado).map((d) => (
+              <button key={d.clienteId} type="button" disabled={ocupado}
+                onClick={() => { if (window.confirm(`¿Le has mandado ya el WhatsApp a ${d.nombre} desde tu móvil?`)) void accion({ accion: 'confirmar_whatsapp', clienteId: d.clienteId }) }}
+                style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal', height: 'auto' }}>
+                Ya lo he mandado a {d.nombre}
+              </button>
+            ))}
             <button type="button" disabled={ocupado} onClick={() => void accion({ accion: 'retirar' })} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, marginLeft: 'auto' }}>Retirar</button>
           </>
         )}

@@ -20,6 +20,7 @@ import {
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { crearBarreraLote, type ResultadoCorreoLote } from './barrera-lote'
+import { escenariosDelTomador, estadoDelLote, separarYaEnviados } from './propuesta-aviso-grupos'
 import { rechazoDeRemitente } from './correo-invitacion-portal'
 import { confirmarWhatsapp, ejecutarAviso, prepararAviso, type AvisoPreparado, type CanalAviso, type ParteLote, type ResultadoEnvio } from './envio-presupuesto'
 import { coberturasIncluidas } from './presupuesto-pdf'
@@ -55,7 +56,8 @@ export type VistaPropuesta = {
   avisadoAt: string | null
   retiradaAt: string | null
   cliente: string
-  ramo: string
+  /** `null` = ni la oportunidad ni el presupuesto dicen el ramo: se enseña «sin ramo», nunca se supone. */
+  ramo: string | null
   escenarios: EscenarioVista[]
 }
 
@@ -193,6 +195,7 @@ export async function leerPropuesta(correduriaId: string, id: string, ahora: Dat
     referencia: x.referencia,
     ramo: x.ramo,
     figuras: figurasDePeticion(x.peticion),
+    tomadorClienteId: x.cliente_id,
     seguroAnterior: anteriores[i]!,
     opciones: opciones.filter((o) => o.presupuesto_id === x.id).map((o) => ({
       compania: o.compania, producto: o.producto, modalidad: o.modalidad, primaEur: numero(o.prima), coberturas: coberturasIncluidas(o.coberturas),
@@ -229,7 +232,7 @@ export async function leerPropuesta(correduriaId: string, id: string, ahora: Dat
     avisadoAt: cab.avisado_at ? cab.avisado_at.toISOString() : null,
     retiradaAt: cab.retirada_at ? cab.retirada_at.toISOString() : null,
     cliente: cab.cliente ?? 'Cliente',
-    ramo: cab.tipo ?? items[0]?.ramo ?? 'auto',
+    ramo: cab.tipo ?? items[0]?.ramo ?? null,
     escenarios,
   }
 }
@@ -260,7 +263,12 @@ export async function retirarPropuesta(correduriaId: string, e: { id: string; ac
 // ─── Avisar (lo pulsa Alberto) ───────────────────────────────────────────────
 
 /** El resultado de cada presupuesto, tal cual lo dio `avisarPresupuesto` (o `confirmarWhatsapp`). */
-export type ResultadoItem = { presupuestoId: string; numero: number; resultado: ResultadoEnvio }
+export type ResultadoItem = {
+  presupuestoId: string
+  numero: number
+  /** `resultado_desconocido` = el envío reventó a mitad: no se sabe si salió (no es «no salió»). */
+  resultado: ResultadoEnvio | { estado: 'error'; motivo: 'resultado_desconocido'; detalle: string }
+}
 /** Un aviso por TOMADOR (identidad = su ficha). */
 export type GrupoAviso = {
   clienteId: string
@@ -285,7 +293,10 @@ export function gruposPorTomador<T extends { numero: number; tomador: { clienteI
   return out
 }
 
-function textoError(r: ResultadoEnvio): string {
+/** Sello (append-only) de que el correo del lote de ESTE tomador salió: un reintento no se lo reenvía. */
+const SELLO_GRUPO = 'propuesta_aviso_enviado'
+
+function textoError(r: ResultadoItem['resultado']): string {
   return r.estado === 'error' ? r.detalle : ''
 }
 
@@ -300,9 +311,19 @@ export async function avisarPropuesta(
   if (!v) return error('no_encontrado', 'Esa propuesta no existe en esta correduría.')
   if (v.retiradaAt) return error('retirada', 'Esta propuesta está retirada: prepara otra.')
 
+  // Por correo, el tomador cuyo correo YA salió (reintento tras un parcial) no se toca: ni se le reenvía ni se le
+  // rota la llave (el enlace que tiene sigue abriendo). Por WhatsApp no aplica: no sale nada por red.
+  const todos = gruposPorTomador(v.escenarios)
+  const { pendientes: tomadores, yaEnviados } = e.canal === 'email'
+    ? separarYaEnviados(todos, await presupuestosConCorreoDelLote(correduriaId, v))
+    : { pendientes: todos, yaEnviados: [] as typeof todos }
+  const gruposYaEnviados: GrupoAviso[] = yaEnviados.map((g) => ({
+    clienteId: g.clienteId, nombre: g.nombre, numeros: g.escenarios.map((x) => x.numero), estado: 'enviado',
+    detalle: 'Su correo ya salió en un envío anterior: no se le reenvía.',
+  }))
+
   // ── Fase 1: VALIDAR TODO, sin escribir nada. Cada escenario de cada tomador pasa sus guardas
   // (`prepararAviso`: solo lee). Si uno solo no puede, no se rota ninguna llave de ningún escenario.
-  const tomadores = gruposPorTomador(v.escenarios)
   const preparados: Array<{ g: (typeof tomadores)[number]; numeros: number[]; preps: Array<{ x: EscenarioVista; prep: AvisoPreparado | ResultadoEnvio }> }> = []
   for (const g of tomadores) {
     const preps: Array<{ x: EscenarioVista; prep: AvisoPreparado | ResultadoEnvio }> = []
@@ -325,18 +346,33 @@ export async function avisarPropuesta(
         ? { estado: 'error' as const, motivo: 'lote_cancelado' as const, detalle: `Otro escenario de la propuesta no se puede avisar. ${intacto}` }
         : prep as ResultadoEnvio,
     })))
-    return { estado: 'error', grupos, items }
+    const todosLosGrupos = [...gruposYaEnviados, ...grupos]
+    return { estado: estadoDelLote(todosLosGrupos).estado, grupos: todosLosGrupos, items }
   }
 
   // ── Fase 2: escribir.
-  const grupos: GrupoAviso[] = []
+  const grupos: GrupoAviso[] = [...gruposYaEnviados]
   const items: ResultadoItem[] = []
   const listos = preparados.map((t) => ({ ...t, preps: t.preps.map((y) => ({ x: y.x, prep: y.prep as AvisoPreparado })) }))
   if (e.canal === 'email') {
+    // Cada tomador es SU correo: si uno revienta, los demás siguen y se devuelve `parcial` con lo que salió.
     for (const t of listos) {
-      const r = await avisarGrupoPorCorreo(correduriaId, v, t.preps)
+      let r: Awaited<ReturnType<typeof avisarGrupoPorCorreo>>
+      try {
+        r = await avisarGrupoPorCorreo(correduriaId, v, t.preps)
+      } catch (err) {
+        console.error('[asegura/propuesta] el aviso de un tomador reventó a mitad:', err instanceof Error ? err.message : err)
+        const detalle = 'El envío falló a mitad: no se sabe si este correo ha salido. Mira el presupuesto antes de reintentar.'
+        grupos.push({ clienteId: t.g.clienteId, nombre: t.g.nombre, numeros: t.numeros, estado: 'error', detalle })
+        for (const { x } of t.preps) items.push({ presupuestoId: x.presupuestoId, numero: x.numero, resultado: { estado: 'error', motivo: 'resultado_desconocido', detalle } })
+        continue
+      }
       items.push(...r.items)
-      grupos.push({ clienteId: t.g.clienteId, nombre: t.g.nombre, numeros: t.numeros, ...r.grupo })
+      let detalle = r.grupo.detalle
+      if (r.grupo.estado === 'enviado' && !(await sellarGrupoEnviado(correduriaId, v, t.g.clienteId, t.preps.map(({ x }) => x.presupuestoId), e.actor))) {
+        detalle += ' (No se ha podido anotar que salió: un reintento se lo volvería a mandar.)'
+      }
+      grupos.push({ clienteId: t.g.clienteId, nombre: t.g.nombre, numeros: t.numeros, ...r.grupo, detalle })
     }
   } else {
     // WhatsApp: no sale nada por red, así que TODAS las rotaciones van en UNA transacción: un compare-and-swap
@@ -360,18 +396,52 @@ export async function avisarPropuesta(
           enlaces: enl.map((x) => ({ numero: x.numero, enlace: x.enlace, codigo: x.codigo })),
           venceEl: new Date(Math.min(...enl.map((x) => new Date(x.venceEl).getTime()))),
         })
-        grupos.push({ clienteId: t.g.clienteId, nombre: t.g.nombre, numeros: t.numeros, estado: 'enlace', detalle: 'Ábrelo y mándalo desde tu móvil; luego pulsa «Ya lo he mandado».', mensaje, whatsapp: `https://wa.me/?text=${encodeURIComponent(mensaje)}` })
+        grupos.push({ clienteId: t.g.clienteId, nombre: t.g.nombre, numeros: t.numeros, estado: 'enlace', detalle: 'Ábrelo y mándalo desde tu móvil; luego pulsa «Ya lo he mandado» de este tomador.', mensaje, whatsapp: `https://wa.me/?text=${encodeURIComponent(mensaje)}` })
       }
     }
   }
 
-  const bien = grupos.filter((g) => g.estado !== 'error').length
-  if (bien > 0) {
+  // El lote solo consta como avisado cuando han salido TODOS los tomadores (con uno a medias, no).
+  // (Si no salía nada nuevo y ya constaba avisada por este canal, no se le cambia la fecha.)
+  const lote = estadoDelLote(grupos)
+  if (lote.marcarAvisado && (listos.length > 0 || v.avisadoAt === null || v.canalAviso !== e.canal)) {
     await prismaAsegura().$executeRaw`
       update presupuesto_propuesta set canal_aviso = ${e.canal}, avisado_at = ${ahora}
       where id = ${v.id}::uuid and correduria_id = ${correduriaId}::uuid`
   }
-  return { estado: bien === grupos.length ? 'ok' : bien === 0 ? 'error' : 'parcial', grupos, items }
+  return { estado: lote.estado, grupos, items }
+}
+
+/** Los presupuestos de ESTA propuesta cuyo correo de lote ya salió (sello append-only en `presupuesto_evento`). */
+async function presupuestosConCorreoDelLote(correduriaId: string, v: VistaPropuesta): Promise<Set<string>> {
+  const ids = v.escenarios.map((x) => x.presupuestoId)
+  if (ids.length === 0) return new Set()
+  const filas = await prismaAsegura().$queryRaw<Array<{ id: string }>>`
+    select distinct ev.presupuesto_id::text as id
+    from presupuesto_evento ev
+    join presupuesto pr on pr.id = ev.presupuesto_id and pr.correduria_id = ${correduriaId}::uuid
+    where ev.tipo = ${SELLO_GRUPO} and ev.detalle->>'propuestaId' = ${v.id} and ev.presupuesto_id = any(${ids}::uuid[])`
+  return new Set(filas.map((f) => f.id))
+}
+
+/** Anota que el correo de este tomador salió. `false` = no se pudo anotar (el correo SÍ salió). */
+async function sellarGrupoEnviado(correduriaId: string, v: VistaPropuesta, clienteId: string, ids: string[], actor: string): Promise<boolean> {
+  try {
+    const detalle = JSON.stringify({ actor, propuestaId: v.id, referencia: v.referencia, canal: 'email', clienteId })
+    await prismaAsegura().$transaction(async (tx) => {
+      for (const id of ids) {
+        const n = await tx.$executeRaw`
+          insert into presupuesto_evento (presupuesto_id, tipo, origen, detalle)
+          select pr.id, ${SELLO_GRUPO}, 'corredor', ${detalle}::jsonb
+          from presupuesto pr where pr.id = ${id}::uuid and pr.correduria_id = ${correduriaId}::uuid`
+        if (n !== 1) throw new Error('presupuesto_propuesta: sello de grupo sin fila')
+      }
+    })
+    return true
+  } catch (err) {
+    console.error('[asegura/propuesta] no se pudo sellar el grupo enviado:', err instanceof Error ? err.message : err)
+    return false
+  }
 }
 
 class RotacionPerdida extends Error {
@@ -450,15 +520,23 @@ async function mandarCorreoLote(correduriaId: string, clienteId: string, destino
   return rechazoDeRemitente(r.motivo ?? '') ? 'remitente_no_verificado' : 'rechazado'
 }
 
-/** Alberto dice que los WhatsApp del lote ya salieron: cada presupuesto se confirma IGUAL que uno suelto. */
+/**
+ * Alberto dice que el WhatsApp de UN tomador ya salió (cada grupo tiene su botón): solo se confirman los escenarios
+ * de ESE tomador, y cada uno IGUAL que un presupuesto suelto. Confirmar otro tomador sería afirmar un envío que no
+ * consta.
+ */
 export async function confirmarWhatsappPropuesta(
-  correduriaId: string, e: { id: string; actor: string }, ahora: Date = new Date(),
+  correduriaId: string, e: { id: string; clienteId: string; actor: string }, ahora: Date = new Date(),
 ): Promise<{ estado: 'ok' | 'parcial' | 'error'; items: ResultadoItem[] } | ErrorPropuesta> {
+  if (!UUID.test(e.clienteId)) return error('datos_invalidos', 'Falta el tomador cuyo WhatsApp se confirma.')
   const v = await leerPropuesta(correduriaId, e.id, ahora)
   if (!v) return error('no_encontrado', 'Esa propuesta no existe en esta correduría.')
+  if (v.retiradaAt) return error('retirada', 'Esta propuesta está retirada: no hay nada que confirmar.')
   if (v.canalAviso !== 'whatsapp_enlace') return error('no_vigente', 'Esta propuesta no se avisó por WhatsApp: no hay nada que confirmar.')
+  const suyos = escenariosDelTomador(v.escenarios, e.clienteId)
+  if (suyos.length === 0) return error('no_encontrado', 'Ese tomador no está en esta propuesta.')
   const items: ResultadoItem[] = []
-  for (const x of v.escenarios) {
+  for (const x of suyos) {
     if (x.estado !== 'enlazado') continue
     items.push({ presupuestoId: x.presupuestoId, numero: x.numero, resultado: await confirmarWhatsapp(correduriaId, { id: x.presupuestoId, actor: e.actor }, ahora) })
   }

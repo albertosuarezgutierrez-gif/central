@@ -12,7 +12,7 @@ export const maxDuration = 60
  *
  *   GET   ?oportunidadId=                         → sus propuestas
  *   POST  { oportunidadId, presupuestoIds }       → la prepara como BORRADOR (no avisa a nadie)
- *   PATCH { id, accion:'avisar', canal, confirmar:true } | { id, accion:'confirmar_whatsapp' } | { id, accion:'retirar' }
+ *   PATCH { id, accion:'avisar', canal, confirmar:true } | { id, accion:'confirmar_whatsapp', clienteId } | { id, accion:'retirar' }
  *
  * 🚨 El `actor` lo pone el SERVIDOR con el email de la sesión y va el ÚLTIMO del cuerpo reenviado.
  * 🚨 `confirmar:true` solo lo manda el botón final de Alberto: sin él, asegura no avisa a nadie (428).
@@ -43,6 +43,8 @@ export async function PATCH(req: Request) {
   // Solo lo que el puerto entiende; nada más viaja (y el `actor`, el último, lo pone el servidor).
   const limpio: Record<string, unknown> = { id: cuerpo.id, accion: cuerpo.accion }
   if (cuerpo.accion === 'avisar') { limpio.canal = cuerpo.canal; limpio.confirmar = cuerpo.confirmar === true }
+  // Un botón por tomador: el WhatsApp confirmado es el de ESA ficha, no el de todo el lote.
+  if (cuerpo.accion === 'confirmar_whatsapp') limpio.clienteId = typeof cuerpo.clienteId === 'string' ? cuerpo.clienteId : null
   const r = await accionPropuestaAsegura(limpio, guarda.session.email)
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

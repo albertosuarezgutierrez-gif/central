@@ -26,7 +26,7 @@ const STATUS: Record<FalloPropuesta, number> = {
  *   GET   ?id=                    → una propuesta
  *   POST  { oportunidadId, presupuestoIds: [≥2], actor } → la prepara como BORRADOR (no avisa a nadie)
  *   PATCH { id, accion:'avisar', canal:'email'|'whatsapp_enlace', confirmar: true, actor } → avisa (lo pulsa Alberto)
- *   PATCH { id, accion:'confirmar_whatsapp', actor } → Alberto dice que los WhatsApp del lote ya salieron
+ *   PATCH { id, accion:'confirmar_whatsapp', clienteId, actor } → Alberto dice que el WhatsApp de ESE tomador ya salió
  *   PATCH { id, accion:'retirar', actor }
  *
  * 🚨 Sin la tabla (SQL 2026-10-07e sin aplicar) responde `sin_tabla` 503: NO es «no hay propuestas».
@@ -89,7 +89,9 @@ export const PATCH = auditado(async (req: Request) => {
       return NextResponse.json(r, { status })
     }
     if (cuerpo?.accion === 'confirmar_whatsapp') {
-      const r = await confirmarWhatsappPropuesta(correduria.id, { id, actor })
+      // Un botón por tomador: solo se confirman los escenarios de ESA ficha.
+      const clienteId = typeof cuerpo.clienteId === 'string' ? cuerpo.clienteId.trim() : ''
+      const r = await confirmarWhatsappPropuesta(correduria.id, { id, clienteId, actor })
       const status = r.estado === 'ok' ? 200 : r.estado === 'parcial' ? 207 : 'motivo' in r ? STATUS[r.motivo] : 409
       return NextResponse.json(r, { status })
     }

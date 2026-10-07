@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  correoPropuesta, etiquetaEscenario, figurasDePeticion, mensajePropuestaWhatsapp, nombresParaEtiquetas, ordenarEscenarios,
+  correoPropuesta, etiquetaEscenario, figurasDePeticion, identidadPersona, mensajePropuestaWhatsapp, nombresParaEtiquetas, ordenarEscenarios,
   seguroAnteriorDePeticion, textoSeguroAnterior, type EscenarioEntrada,
 } from './propuesta-escenarios.ts'
 
@@ -42,6 +42,21 @@ test('sin DNI no se afirma que sea la misma persona que otra con DNI', () => {
   const anaSinDni = persona(null, 'Ana', 'García')
   const nombres = nombresParaEtiquetas([figurasDePeticion(coche(ANA, RAFAEL, anaSinDni))])
   assert.equal(nombres.size, 3)
+})
+
+test('🪤 dos personas sin DNI y con el MISMO nombre no se funden; la misma ficha sí es la misma persona', () => {
+  const anaA = persona(null, 'Ana', 'García')
+  const anaB = persona(null, 'Ana', 'García')
+  // Sin DNI ni ficha: cada figura es su propia identidad.
+  const nombres = nombresParaEtiquetas([figurasDePeticion(coche(anaA, RAFAEL, anaA)), figurasDePeticion(coche(anaB, RAFAEL, anaB))])
+  assert.equal(nombres.size, 5, 'cuatro «Ana García» sin DNI ni ficha son cuatro identidades + Rafael')
+  // Con la ficha del tomador: dos fichas distintas no se funden; la misma ficha en dos escenarios, sí.
+  const e = (id: string, pet: unknown, ficha: string): EscenarioEntrada => ({ ...escenario(id, pet, [100]), tomadorClienteId: ficha })
+  const distintas = ordenarEscenarios([e('1', coche(anaA, RAFAEL, RAFAEL), 'ficha-1'), e('2', coche(anaB, RAFAEL, RAFAEL), 'ficha-2')])
+  const ids = distintas.map((x) => identidadPersona(x.figuras!.tomador!))
+  assert.notEqual(ids[0], ids[1])
+  const misma = ordenarEscenarios([e('1', coche(anaA, RAFAEL, RAFAEL), 'ficha-1'), e('2', coche(anaB, RAFAEL, RAFAEL), 'ficha-1')])
+  assert.equal(identidadPersona(misma[0]!.figuras!.tomador!), identidadPersona(misma[1]!.figuras!.tomador!))
 })
 
 test('una figura que no viene es «no consta», nunca el tomador por suposición; fuera de vehículo, solo el tomador', () => {
