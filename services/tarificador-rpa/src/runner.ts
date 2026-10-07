@@ -27,12 +27,13 @@ import {
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
-import { ErrorTarificador, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, type Clasificacion } from './errores.ts'
+import { ErrorTarificador, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, type Clasificacion } from './errores.ts'
 import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { htmlConMarcos } from './evidencia.ts'
 import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
 import { enSerie, sesionEpac } from './sesion.ts'
+import { exigirSinVerificacion } from './verificacion.ts'
 import type { AdaptadorPortal, ContextoPortal } from './adaptador.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
@@ -56,6 +57,7 @@ type Intento =
 
 type Comun = {
   trabajoId: string
+  compania: string
   adaptador: AdaptadorPortal
   riesgo: RiesgoComunidad
   credenciales: Credenciales
@@ -96,6 +98,8 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       trasLogin: async () => {
         logueado = true
         log('tras_login')
+        // ¿Pide un código (SMS/OTP)? Entonces NO se sigue ni se rellena nada: requiere_humano (verificacion.ts).
+        await exigirSinVerificacion(page, k.compania)
       },
       adjuntarPdf: (nombre: string, contenido: Uint8Array): PdfRef => {
         pdfs.push({ nombre, base64: Buffer.from(contenido).toString('base64') })
@@ -142,6 +146,10 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       .filter({ visible: true })
       .count()
       .then((n) => n > 0, () => false)
+    // Una pantalla de código/SMS manda sobre cualquier otra clasificación (un timeout de selector, p. ej.): no se reintenta.
+    if (clasificar(error).tipo === 'portal') {
+      await exigirSinVerificacion(page, k.compania).catch((e: unknown) => { error = e })
+    }
     const c = clasificarIntento(error, { logueado, loginVisible, ultimo5xx })
     const captura = await page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null)
     // Con el HTML de los marcos: el formulario de ePAC vive en el iframe `appArea`.
@@ -231,7 +239,7 @@ async function main(): Promise<number> {
   }, Math.max(limite - Date.now(), 60_000) + 45_000)
   respaldo.unref()
 
-  const k: Comun = { trabajoId: trabajo.id, adaptador, riesgo: v.riesgo, credenciales, formador, log }
+  const k: Comun = { trabajoId: trabajo.id, compania: trabajo.compania, adaptador, riesgo: v.riesgo, credenciales, formador, log }
 
   // Un trabajo a la vez por proceso (hoy la máquina solo hace uno; si atiende varios, siguen en serie).
   return enSerie(async () => {
@@ -273,6 +281,9 @@ async function main(): Promise<number> {
         ...(evidencia.captura && evidencia.captura.length <= MAX_BYTES_EVIDENCIA ? { capturaBase64: evidencia.captura.toString('base64') } : {}),
         ...(htmlRedactado && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024 ? { html: htmlRedactado } : {}),
       }
+      // El worker no tiene canal de avisos (ni Telegram ni BD: variables prohibidas): el aviso a Alberto sale de
+      // asegura/plataforma al leer este resultado (`requiere_humano` + mensaje «<Compañía> pide verificación…»).
+      if (c.mensaje.startsWith(`${MOTIVO_VERIFICACION_HUMANA}:`)) log('requiere_verificacion_humana', { compania: trabajo.compania })
       const st = await enviarResultado(cfg, cuerpo)
       log('resultado_error_enviado', { status: st, tipo: c.tipo, transitorio: c.transitorio, intentos: primerFallo ? 2 : 1, mensaje: redactar(c.mensaje).slice(0, 300) })
       return 1

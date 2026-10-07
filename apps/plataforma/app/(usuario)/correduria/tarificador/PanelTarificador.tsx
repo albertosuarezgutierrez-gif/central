@@ -13,6 +13,7 @@ import {
   leerRespuestaPanel,
   porcentaje,
   type AlertaTarifa,
+  type CostePanel,
   type MetricasPeriodo,
   type PanelTarificador as Panel,
   type Renovacion,
@@ -77,6 +78,7 @@ export default function PanelTarificador() {
       {panel && (
         <>
           <Salud d7={panel.metricas.d7} d30={panel.metricas.d30} intervenciones={panel.intervenciones} />
+          <Coste coste={panel.coste} />
           <Fallos fallos={panel.metricas.fallos} />
           <Renovaciones lista={panel.renovaciones.lista} activas={panel.interruptores.renovaciones} />
           <Alertas alertas={panel.alertasTarifa} />
@@ -124,6 +126,69 @@ function Salud({ d7, d30, intervenciones }: { d7: MetricasPeriodo; d30: Metricas
           )}
         </div>
       </div>
+    </section>
+  )
+}
+
+const importe4 = (n: number | null) => (n === null ? 'no consta' : n < 0.01 ? `${n.toLocaleString('es-ES', { minimumFractionDigits: 4 })}€` : eur(n))
+
+function Coste({ coste }: { coste: Panel['coste'] }) {
+  const [ver, setVer] = useState(PASO)
+  if (!coste || !coste.disponible) {
+    return (
+      <section style={cardStyle}>
+        <CardHeader title="Coste por tarificación" />
+        <p className="muted" style={{ margin: 0 }}>No se ha podido calcular el coste{coste && !coste.disponible ? ` (${coste.motivo})` : ' (asegura aún no lo envía)'}.</p>
+      </section>
+    )
+  }
+  const r = coste.resumen
+  const c: CostePanel = coste
+  return (
+    <section style={cardStyle}>
+      <CardHeader title="Coste por tarificación" sub="Fly (segundos de ejecución × tarifa estimada) + IA. «No consta» = no se sabe, no es 0 €." />
+      <div style={rejilla}>
+        <div style={fila}>
+          <span className="muted" style={{ fontSize: 12 }}>Coste medio por tarificación (30 días)</span>
+          <strong style={{ fontSize: 22 }}>{importe4(r.costeMedioEur)}</strong>
+          <span className="muted" style={{ fontSize: 12 }}>
+            Fly por trabajo: {importe4(r.flyMedioPorTrabajoEur)}{r.iaIncluida ? ' · incluye IA' : ' · sin IA (no consta)'}
+          </span>
+        </div>
+        <div style={fila}>
+          <span className="muted" style={{ fontSize: 12 }}>Coste del mes ({r.mes})</span>
+          <strong style={{ fontSize: 22 }}>{importe4(r.costeMesEur)}</strong>
+          <span className="muted" style={{ fontSize: 12 }}>{r.trabajosMes} trabajos terminados</span>
+        </div>
+        <div style={fila}>
+          <span className="muted" style={{ fontSize: 12 }}>Proyección</span>
+          <span style={{ fontSize: 13 }}>100 tarificaciones: <strong>{importe4(r.proyeccion100Eur)}</strong></span>
+          <span style={{ fontSize: 13 }}>1.000 tarificaciones: <strong>{importe4(r.proyeccion1000Eur)}</strong></span>
+        </div>
+      </div>
+      <p className="muted" style={{ fontSize: 12, margin: '12px 0 8px' }}>
+        La IA no se puede asociar a cada trabajo: se prorratea por día entre los trabajos terminados ese día (incluye otros usos de IA de asegura, así que es una cota por arriba). Tarifa Fly orientativa: {c.tarifaFlyEurPorSeg.toLocaleString('es-ES', { maximumFractionDigits: 7 })} €/s.
+      </p>
+      {c.filas.length > 0 && (
+        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+          {c.filas.slice(0, ver).map((f) => (
+            <li key={`${f.dia}|${f.compania}`} style={{ ...fila, gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'start' }}>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ overflowWrap: 'anywhere' }}>{fecha(f.dia)} · {f.compania}</strong>
+                <span className="muted" style={{ display: 'block', fontSize: 12 }}>
+                  {f.trabajos} trabajos ({f.ok} con precio) · Fly {importe4(f.flyEur)} · IA {importe4(f.iaEur)}
+                </span>
+              </div>
+              <strong>{importe4(f.totalEur)}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+      {c.filas.length > ver && (
+        <button type="button" onClick={() => setVer((v) => v + PASO)} style={{ ...btnStyle('sutil'), minHeight: 44, marginTop: 8 }}>
+          Ver más ({c.filas.length - ver})
+        </button>
+      )}
     </section>
   )
 }

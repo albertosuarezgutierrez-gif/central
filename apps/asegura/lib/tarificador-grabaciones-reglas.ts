@@ -8,7 +8,7 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR: el mapa es documentación. Ningún botón de él se pulsa desde aquí.
 
-import { BLOQUEO_GRABADOR, MAX_BYTES_PANTALLA, MAX_PANTALLAS, TIPOS_CAMPO_MAPA } from '@central/module-tarificacion'
+import { BLOQUEO_GRABADOR, MAX_BYTES_PANTALLA, MAX_PANTALLAS, TIPOS_CAMPO_MAPA, redactarHtmlGrabacion, separarGrabacion } from '@central/module-tarificacion'
 
 export const SQL_GRABACIONES = 'apps/asegura/prisma/sql/2026-10-07b_tarificador_grabaciones.sql'
 export const MENSAJE_TABLA_SIN_CREAR = `Las grabaciones aún no están activas: falta aplicar ${SQL_GRABACIONES} en la base.`
@@ -73,7 +73,64 @@ export function comprobarSubida(nombre: string, bytes: number, html: string, yaS
   return null
 }
 
+export type PantallaPlanificada = { nombre: string; html: string; contenido: Buffer }
+
+/**
+ * Prepara una subida (una pantalla suelta o el fichero MULTIPANTALLA `grabacion-….html` del modo automático):
+ * lo separa en pantallas ORDENADAS, RE-REDACTA cada una por separado (también su aviso de login) y aplica los
+ * topes por pantalla (4 MB, que parezca HTML) y los de la grabación (40 pantallas entre las ya subidas y las nuevas).
+ * El tope TOTAL de la petición lo pone la ruta (4 MB: límite de cuerpo de Vercel); la UI trocea lo mayor.
+ * Una pantalla suelta conserva su nombre; las de un multipantalla se llaman `<nombre sin .html>-p01.html`…
+ */
+export function planificarSubida(nombre: string, htmlSubido: string, yaSubidas: number): { ok: true; pantallas: PantallaPlanificada[]; multipantalla: boolean } | { ok: false; mensaje: string } {
+  const s = separarGrabacion(htmlSubido)
+  if (s.pantallas.length === 0) return { ok: false, mensaje: 'el fichero no tiene ninguna pantalla' }
+  if (yaSubidas + s.pantallas.length > MAX_PANTALLAS) return { ok: false, mensaje: `la grabación ya tiene ${yaSubidas} pantallas y el fichero trae ${s.pantallas.length} (máximo ${MAX_PANTALLAS})` }
+  const base = nombre.replace(/\.html?$/i, '')
+  const pantallas: PantallaPlanificada[] = []
+  for (const [i, crudo] of s.pantallas.entries()) {
+    const html = redactarHtmlGrabacion(crudo)
+    const contenido = Buffer.from(html, 'utf8')
+    const n = s.multipantalla ? `${base}-p${String(i + 1).padStart(2, '0')}.html` : nombre
+    const motivo = comprobarSubida(n, contenido.length, html, yaSubidas + i)
+    if (motivo) return { ok: false, mensaje: s.multipantalla ? `pantalla ${i + 1} del fichero: ${motivo}` : motivo }
+    pantallas.push({ nombre: n, html, contenido })
+  }
+  return { ok: true, pantallas, multipantalla: s.multipantalla }
+}
+
 // ─── IA ─────────────────────────────────────────────────────────────────────
+
+/** Tope de opciones que se le pide a la IA por select (la salida larga trunca el JSON en pantallas grandes). */
+export const MAX_OPCIONES_IA = 25
+/** Tokens de salida y espera de la llamada de análisis (la pasarela acota a 55 s; la ruta dura 60). */
+export const MAX_TOKENS_ANALISIS = 12_000
+export const TIMEOUT_ANALISIS_MS = 55_000
+
+/**
+ * ¿La respuesta de la IA parece CORTADA a media salida? Hay un `{` pero las llaves/corchetes no cierran (fuera de
+ * cadenas) o termina dentro de una cadena. Un JSON completo (aunque inválido por otra cosa) devuelve false.
+ */
+export function respuestaIACortada(texto: string): boolean {
+  if (typeof texto !== 'string') return false
+  const t = texto.replace(/```(?:json)?/gi, '')
+  const i = t.indexOf('{')
+  if (i < 0) return false
+  let prof = 0, enCadena = false, escape = false
+  for (let k = i; k < t.length; k++) {
+    const c = t[k]
+    if (enCadena) {
+      if (escape) escape = false
+      else if (c === '\\') escape = true
+      else if (c === '"') enCadena = false
+      continue
+    }
+    if (c === '"') enCadena = true
+    else if (c === '{' || c === '[') prof++
+    else if (c === '}' || c === ']') { prof--; if (prof <= 0) return false }
+  }
+  return true
+}
 
 export function sistemaAnalisis(): string {
   return [
@@ -91,6 +148,8 @@ export function sistemaAnalisis(): string {
     '- marco: la ruta del marco donde está el elemento («appArea», «appArea/datos») o null si está en la página principal.',
     '- obligatorio: true si lleva required/aria-required, un asterisco en la etiqueta o lo dice el texto.',
     '- opciones: el TEXTO visible de las opciones de un select (o de un grupo de radios); null si no aplica.',
+    `  MÁXIMO ${MAX_OPCIONES_IA} opciones por campo (las primeras si hay más; no las listes todas). Sé COMPACTO: textos cortos,`,
+    '  sin explicaciones largas; "funcion" y "notas" en pocas palabras o null.',
     '- botones: todo lo que se pulsa (button, input submit/button, enlaces con aspecto de botón, pestañas).',
     '  "seguro" = navegar, siguiente/anterior, calcular/recalcular, pestañas de datos, ver detalle.',
     `  "prohibido" = cualquier cosa que emita, contrate, formalice, grabe, archive, acepte de forma definitiva, firme,`,

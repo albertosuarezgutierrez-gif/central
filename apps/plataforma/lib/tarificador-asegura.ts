@@ -80,3 +80,19 @@ export async function descargarPdfTarificador(id: string, indice: number): Promi
     signal: AbortSignal.timeout(50_000),
   })
 }
+
+/** Recomendación de una oportunidad (ranking, motivos, calidad) en JSON. Solo lectura; no envía nada. */
+export function leerPropuestaOportunidad(oportunidadId: string): Promise<Reenvio> {
+  return puerto(`oportunidad/${encodeURIComponent(oportunidadId)}/propuesta?formato=json`, { method: 'GET' }, 50_000)
+}
+
+/** La propuesta comercial en PDF (streaming). `null` = sin secreto configurado. Solo DESCARGA: nunca se envía. */
+export async function descargarPropuestaOportunidad(oportunidadId: string): Promise<Response | null> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return null
+  return fetch(`${urlAsegura()}/api/operador/tarificador/oportunidad/${encodeURIComponent(oportunidadId)}/propuesta`, {
+    headers: await cabecerasPuerto(secret),
+    cache: 'no-store',
+    signal: AbortSignal.timeout(55_000),
+  })
+}

@@ -43,6 +43,12 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 - **Generali** pide SMS → reutilizar sesión + aviso Telegram.
 - **13 pólizas Allianz sin `prima_anual` = por diseño** (no es un fallo a revisar).
 
+## Grabador v3, propuesta por oportunidad y aviso de verificación (07/10/2026)
+- **Grabador v3 automático:** recorre las pantallas solo y entrega UN fichero multi-pantalla (separador `MARCA_PANTALLA`); si pasa de 4 MB se trocea en el navegador. El servidor re-redacta cada pantalla (`redactarHtmlGrabacion`).
+- **Rendimiento de la redacción:** el patrón de correo de `PATRONES_PERSONALES` (`packages/module-tarificacion/src/formador.ts`) era cuadrático con tramos largos sin espacios (data: URIs base64 de cientos de KB: 100 KB ≈ 15 s). Ahora `(?<![A-Z0-9._%+-])` lo hace lineal; el bookmarklet lo hereda (usa los mismos patrones). Test: 1,6 MB con 500 KB seguidos < 1 s.
+- **Propuesta por oportunidad:** PDF/JSON con recomendación de compañía y control de calidad (QC). Ruta asegura `/api/operador/tarificador/oportunidad/[id]`, proxy `/api/correduria/tarificador/oportunidad/[id]` en plataforma y bloque «Recomendación» en `PresupuestosCompanias`.
+- **Aviso de verificación humana:** cron de plataforma cada 10 min (`/api/cron/tarificador-verificacion`) lee `/api/operador/tarificador/avisos-verificacion` de asegura y avisa por Telegram. Interruptor `correduria.tarificador-verificacion`. **Orden de despliegue: asegura antes que plataforma.**
+
 ## Interruptores y env (Vercel `central-asegura`)
 `TARIFICADOR_RPA_ACTIVO` (=1; apagado por defecto) · `TARIFICADOR_FORMADOR_ACTIVO` · `TARIFICADOR_RENOVACIONES_ACTIVO` · `TARIFICADOR_GRABADOR_MAX_LLAMADAS` · `TARIFICADOR_WORKER_SECRET` · `FLY_API_TOKEN` · `TARIFICADOR_FLY_APP` · `TARIFICADOR_FLY_IMAGE` · `TARIFICADOR_API_URL`.
 

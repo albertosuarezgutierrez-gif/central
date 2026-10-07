@@ -15,6 +15,7 @@ import { prisma } from './tenant'
 import { barrerTarificadorRpa, encolarTrabajo, lanzarPendientes } from './tarificador'
 import { ofertasPublicas } from './tarificador-lectura-reglas'
 import { rpaActivo } from './tarificador-reglas'
+import { calcularCoste, type CostePanel, type IaDia } from './tarificador-coste-reglas'
 import {
   DIAS_SIN_REPETIR,
   ORIGEN_RENOVACION,
@@ -233,6 +234,8 @@ export type PanelTarificador = {
   intervenciones: IntervencionesResumen
   renovaciones: { porEstado: Record<EstadoRenovacion, number>; lista: Renovacion[] }
   alertasTarifa: AlertaTarifa[]
+  /** Coste por tarificación (Fly + IA). `no_consta` = no se pudo leer nada que lo permita. */
+  coste: CostePanel | { disponible: false; motivo: string }
 }
 
 /** La tabla de intervenciones puede no existir aún (SQL del formador sin aplicar): se dice, no se pinta 0. */
@@ -260,12 +263,26 @@ async function leerIntervenciones(correduriaId: string): Promise<IntervencionesR
   }
 }
 
+/** Gasto de IA de asegura por día (Madrid) desde la pasarela. `null` = no se pudo leer (tabla ausente o sin permiso): no es 0. */
+async function leerIaPorDia(): Promise<IaDia[] | null> {
+  try {
+    const f = await prisma.$queryRaw<{ dia: string; eur: number | null }[]>`
+      select to_char(creada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as dia, sum(coste_eur)::float8 as eur
+      from public.ai_usos
+      where app = 'asegura' and creada_at > now() - interval '40 days'
+      group by 1`
+    return f.map((x) => ({ dia: x.dia, eur: x.eur === null ? null : Number(x.eur) }))
+  } catch {
+    return null
+  }
+}
+
 export async function leerPanelTarificador(correduriaId: string, env: Record<string, string | undefined> = process.env, ahora = new Date()): Promise<PanelTarificador> {
-  const [metr, completados, intervenciones, renov] = await Promise.all([
-    prisma.$queryRaw<{ estado: string; created_at: Date; iniciado_at: Date | null; terminado_at: Date | null; error: unknown }[]>`
-      select estado, created_at, iniciado_at, terminado_at, error
+  const [metr, completados, intervenciones, renov, iaDias] = await Promise.all([
+    prisma.$queryRaw<{ compania: string; estado: string; created_at: Date; iniciado_at: Date | null; terminado_at: Date | null; error: unknown }[]>`
+      select compania, estado, created_at, iniciado_at, terminado_at, error
       from seguros.tarificacion_trabajos
-      where correduria_id = ${correduriaId}::uuid and created_at > now() - interval '30 days'
+      where correduria_id = ${correduriaId}::uuid and created_at > now() - interval '40 days'
       order by created_at desc
       limit 5000`,
     prisma.$queryRaw<{ id: string; terminado_at: Date | null; created_at: Date; riesgo: unknown; respuesta: unknown }[]>`
@@ -278,6 +295,7 @@ export async function leerPanelTarificador(correduriaId: string, env: Record<str
       limit 500`,
     leerIntervenciones(correduriaId),
     leerRenovaciones(correduriaId, ahora),
+    leerIaPorDia(),
   ])
   const metricas = calcularMetricas(
     metr.map((t) => ({
@@ -304,5 +322,16 @@ export async function leerPanelTarificador(correduriaId: string, env: Record<str
     intervenciones,
     renovaciones: { porEstado: contarPorEstado(renov), lista: renov.slice(0, 100).map(sinRiesgo) },
     alertasTarifa,
+    coste: calcularCoste(
+      metr.map((t) => ({
+        compania: t.compania,
+        estado: t.estado,
+        creadoEn: t.created_at.toISOString(),
+        iniciadoEn: t.iniciado_at?.toISOString() ?? null,
+        terminadoEn: t.terminado_at?.toISOString() ?? null,
+      })),
+      iaDias,
+      ahora,
+    ),
   }
 }

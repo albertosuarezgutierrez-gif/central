@@ -679,6 +679,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Cada 5 minutos, y solo cuando ha pasado algo',
   },
   {
+    id: 'correduria.tarificador-verificacion', categoria: 'correduria',
+    titulo: 'El bot de presupuestos necesita una verificación',
+    que: 'Un portal de compañía (Generali…) ha pedido un código SMS o una verificación y el bot se ha parado: hay que entrar en su portal, validar y pulsar Reintentar. Un aviso por trabajo, solo con la compañía y el ramo (sin datos del cliente).',
+    cuando: 'Cada 10 minutos, y solo cuando algún trabajo se ha parado así',
+  },
+  {
     id: 'correduria.tope-avant2', categoria: 'correduria',
     titulo: 'Gasto de Avant2 (tarificar): aviso a 60 € y bloqueo a 70 €',
     que: 'Lo gastado en el mes en Avant2 (cada tarificación, ReRate, límites de hogar o envío cuenta 0,50€). Un aviso al cruzar 60€ y, al llegar al tope (70€, o el ampliado), el BLOQUEO con el botón «Autorizar +30€». ⚠️ Si lo silencias, el botón de desbloqueo no te llega y no se puede tarificar hasta reactivarlo.',

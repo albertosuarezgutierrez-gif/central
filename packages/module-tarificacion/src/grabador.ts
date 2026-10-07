@@ -18,6 +18,29 @@ export const FIN_MARCA_MARCO = '" -->'
 /** Tope por fichero: el límite de cuerpo de una función de Vercel es 4,5 MB (y hay dos saltos). */
 export const MAX_BYTES_PANTALLA = 4 * 1024 * 1024
 export const MAX_PANTALLAS = 40
+/**
+ * Tope TOTAL del fichero multipantalla (`grabacion-….html`, hasta 40 pantallas): 32 MB. Cada pantalla sigue con su
+ * tope de 4 MB, y UNA petición de subida no pasa de 4 MB (límite de cuerpo de Vercel): la UI trocea en el navegador lo que
+ * pase de ahí y sube pantalla a pantalla.
+ */
+export const MAX_BYTES_GRABACION = 32 * 1024 * 1024
+
+/** Separador de pantallas del fichero multipantalla: una línea `<!-- grabador:pantalla 2/5 · motivo · hora -->`. El marcador neutraliza esta cadena dentro del HTML de la página. */
+export const MARCA_PANTALLA = '<!-- grabador:pantalla '
+const RE_SEPARADOR_PANTALLA = /^<!-- grabador:pantalla\b[^\n]*-->[ \t]*\r?\n?/m
+const RE_SEPARADOR_PANTALLA_G = new RegExp(RE_SEPARADOR_PANTALLA.source, 'gm')
+
+/**
+ * Separa un fichero de grabación en sus pantallas, EN ORDEN. Un fichero sin separadores (el modo manual de siempre) es
+ * una sola pantalla. En el multipantalla, lo que haya antes del primer separador es la cabecera del fichero y se
+ * descarta; las pantallas vacías también. No redacta: eso lo hace `redactarHtmlGrabacion` pantalla a pantalla.
+ */
+export function separarGrabacion(texto: string): { multipantalla: boolean; pantallas: string[] } {
+  const t = String(texto)
+  if (!RE_SEPARADOR_PANTALLA.test(t)) return { multipantalla: false, pantallas: [t] }
+  const trozos = t.split(RE_SEPARADOR_PANTALLA_G).slice(1)
+  return { multipantalla: true, pantallas: trozos.map((x) => x.replace(/\s+$/, '')).filter((x) => x.trim() !== '') }
+}
 
 /** name/id/autocomplete de un campo cuyo VALOR no sale nunca (además de type=password y type=hidden). */
 export const PATRON_CAMPO_SENSIBLE = /pass|pwd|clave|token|otp|pin|secret|cvv|cvc|csrf|viewstate/i

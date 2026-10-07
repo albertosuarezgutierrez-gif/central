@@ -18,6 +18,7 @@ import {
   mensajePedido, prepararPedido, sembrarDesdeRiesgoLibre, ultimoPorCompania,
   type ExtrasFormulario, type FormularioComun, type LecturaPresupuestos, type ResultadoPedido, type RiesgoLibreParaBots, type TrabajoCompania,
 } from '@/lib/presupuestos-companias'
+import { claveTrabajosConOferta, leerRecomendacion, type VistaRecomendacion } from '@/lib/propuesta-recomendacion'
 
 const CAMPO: CSSProperties = { display: 'grid', gap: 4, minWidth: 0, fontSize: 12, color: 'var(--muted)' }
 const INPUT: CSSProperties = { minHeight: 44, padding: '0 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 14, width: '100%', boxSizing: 'border-box', minWidth: 0 }
@@ -313,6 +314,9 @@ export default function PresupuestosCompanias({ oportunidadId, ramo, riesgoLibre
           {ultimos.map((t) => <TarjetaTrabajo key={t.id} t={t} nombre={nombres[t.compania] ?? t.compania} />)}
         </div>
       )}
+      {trabajos !== null && claveTrabajosConOferta(trabajos) !== '' && (
+        <Recomendacion oportunidadId={oportunidadId} clave={claveTrabajosConOferta(trabajos)} />
+      )}
       {agotado && enCurso && (
         <div role="status" style={{ fontSize: 13, display: 'grid', gap: 8 }}>
           Sigue en curso y he dejado de preguntar. El resultado se guarda igualmente; vuelve más tarde o sigue esperando.
@@ -372,5 +376,84 @@ function TarjetaTrabajo({ t, nombre, anterior = false }: { t: TrabajoCompania; n
         )
       })}
     </div>
+  )
+}
+
+type LecturaRecomendacion = { estado: 'cargando' } | { estado: 'ok'; vista: VistaRecomendacion } | { estado: 'error'; texto: string }
+
+/**
+ * «Recomendación» (08/10/2026): la compañía que mejor encaja (puntos, motivos, reservas), las ofertas con errores de
+ * calidad (salen con aviso y NO se recomiendan) y «Descargar propuesta (PDF)». 🚨 SOLO descarga: nada la envía al cliente.
+ */
+function Recomendacion({ oportunidadId, clave }: { oportunidadId: string; clave: string }) {
+  const [l, setL] = useState<LecturaRecomendacion>({ estado: 'cargando' })
+  useEffect(() => {
+    let vivo = true
+    setL({ estado: 'cargando' })
+    void (async () => {
+      try {
+        const r = await fetch(`/api/correduria/tarificador/oportunidad/${encodeURIComponent(oportunidadId)}/propuesta?formato=json`, { cache: 'no-store' })
+        const j = await r.json().catch(() => null)
+        const vista = r.ok ? leerRecomendacion(j) : null
+        if (!vivo) return
+        setL(vista ? { estado: 'ok', vista } : { estado: 'error', texto: `No se ha podido calcular la recomendación (${r.status}). No es que no haya: no se ha podido mirar.` })
+      } catch {
+        if (vivo) setL({ estado: 'error', texto: 'No se ha podido calcular la recomendación (red). No es que no haya: no se ha podido mirar.' })
+      }
+    })()
+    return () => { vivo = false }
+  }, [oportunidadId, clave])
+
+  const caja: CSSProperties = { border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }
+  if (l.estado === 'cargando') return <p role="status" style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Calculando la recomendación…</p>
+  if (l.estado === 'error') return <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--warning)', overflowWrap: 'anywhere' }}>{l.texto}</p>
+  const { recomendada, ofertas, avisos } = l.vista
+  const conErrores = ofertas.filter((o) => !o.recomendable)
+  const precio = (c: string) => ofertas.find((o) => o.compania === c && o.recomendable)?.primaAnualEur ?? null
+  const precioRec = recomendada ? precio(recomendada.compania) : null
+  return (
+    <section aria-labelledby="recomendacion-titulo" style={caja}>
+      <div id="recomendacion-titulo" style={{ fontSize: 14, fontWeight: 600 }}>Recomendación</div>
+      {recomendada ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, overflowWrap: 'anywhere' }}>
+            {recomendada.compania}{recomendada.producto ? ` · ${recomendada.producto}` : ''}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+            {precioRec !== null ? `${eur(precioRec)} / año · ` : ''}{recomendada.puntos.toLocaleString('es-ES', { maximumFractionDigits: 1 })} / 100 puntos
+            {recomendada.empate ? ' · empata con otra: decide el corredor' : ''}
+          </div>
+          {recomendada.motivos.length > 0 && (
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, display: 'grid', gap: 2 }}>
+              {recomendada.motivos.map((m) => <li key={m} style={{ overflowWrap: 'anywhere' }}>{m}</li>)}
+            </ul>
+          )}
+          {recomendada.reservas.length > 0 && (
+            <div style={{ fontSize: 12, lineHeight: 1.4, padding: '8px 10px', borderRadius: 8, background: 'var(--warning-bg)', color: 'var(--warning)' }}>
+              <strong>A verificar:</strong>
+              <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>{recomendada.reservas.map((m) => <li key={m} style={{ overflowWrap: 'anywhere' }}>{m}</li>)}</ul>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Ninguna oferta se puede recomendar todavía: mira los avisos de abajo.</p>
+      )}
+      {conErrores.map((o) => (
+        <div key={`${o.compania}-${o.producto}`} role="alert" style={{ fontSize: 12, lineHeight: 1.4, padding: '8px 10px', borderRadius: 8, background: 'var(--warning-bg)', color: 'var(--negative)', overflowWrap: 'anywhere' }}>
+          <strong>{o.compania} ({eur(o.primaAnualEur)} / año) no se recomienda:</strong> {o.errores.join(' ')}
+        </div>
+      ))}
+      {avisos.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--muted)', display: 'grid', gap: 2 }}>
+          {avisos.map((a) => <li key={a} style={{ overflowWrap: 'anywhere' }}>{a}</li>)}
+        </ul>
+      )}
+      <a href={`/api/correduria/tarificador/oportunidad/${encodeURIComponent(oportunidadId)}/propuesta`} style={{ ...btnStyle('secundario'), textDecoration: 'none', justifySelf: 'start', minHeight: 44 }}>
+        <Download size={16} aria-hidden /> Descargar propuesta (PDF)
+      </a>
+      <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
+        Solo se descarga: no se envía nada al cliente. Revísala antes de comunicársela.
+      </p>
+    </section>
   )
 }
