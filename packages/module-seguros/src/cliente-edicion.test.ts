@@ -167,6 +167,29 @@ test('alta: nombre + algo por lo que encontrarla; provincia sale del CP; DNI rep
   assert.equal(coincidenciaBloquea([{ id: '1', nombre: 'x', por: 'dni', tipo: 'cliente' }]), true)
 })
 
+test('persona de contacto: solo con DNI se puede crear; DNI inválido falla; con DNI repetido se bloquea', () => {
+  const soloDni = revisarAlta({ nombre: 'Ana', dni: ' 12345678-z ', fuente: 'recomendacion' })
+  assert.equal(soloDni.ok, true)
+  if (soloDni.ok) {
+    assert.equal(soloDni.alta.dni, '12345678Z')
+    assert.equal(soloDni.alta.telefono, null)
+    assert.equal(soloDni.alta.email, null)
+  }
+  const completa = revisarAlta({
+    nombre: 'Ana', dni: '12345678Z', fechaNacimiento: '1980-05-02', direccion: 'Calle Sierpes 1',
+    codigoPostal: '41004', ciudad: 'Sevilla',
+  })
+  assert.equal(completa.ok && completa.alta.fechaNacimiento, '1980-05-02')
+  assert.equal(completa.ok && completa.alta.direccion, 'Calle Sierpes 1')
+  assert.equal(completa.ok && completa.alta.provincia, 'Sevilla')
+  const mal = revisarAlta({ nombre: 'Ana', dni: '12345678A', telefono: '600123456' })
+  assert.equal(mal.ok, false)
+  if (!mal.ok) assert.equal(mal.campo, 'dni')
+  assert.equal(revisarAlta({ nombre: 'Ana', apellidos: 'X' }).ok, false)
+  // NIF ya en la cartera: coincidencia por dni bloquea, no se fuerza.
+  assert.equal(coincidenciaBloquea([{ id: '1', nombre: 'Ana', por: 'dni', tipo: 'lead' }]), true)
+})
+
 test('fuente del alta: vacía = null (no se inventa «otros»), desconocida se rechaza, canal = contacto', () => {
   assert.deepEqual(fuenteOrigen(undefined), { ok: true, valor: null })
   assert.deepEqual(fuenteOrigen('  '), { ok: true, valor: null })
