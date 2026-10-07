@@ -17,7 +17,7 @@ import {
   validarPantallaMapa,
 } from './grabador.ts'
 import { MARCA_LOGIN } from './grabador.ts'
-import { FUENTE_GRABADOR, codigoBookmarklet, configGrabador, urlBookmarklet } from './grabador-bookmarklet.ts'
+import { AVISO_MARCO_NO_LEGIBLE, FUENTE_GRABADOR, codigoBookmarklet, configGrabador, urlBookmarklet } from './grabador-bookmarklet.ts'
 
 describe('clasificarBoton', () => {
   it('PROHIBIDO: emitir, contratar, formalizar, grabar, archivar, aceptar definitivo, firmar, pagar…', () => {
@@ -187,6 +187,35 @@ describe('redactarHtmlGrabacion: login y datos de personas', () => {
   })
 })
 
+describe('redactarHtmlGrabacion: atributos de sesión y texto del usuario', () => {
+  const html = [
+    '<button id="b1" type="button" session="3f2b8c1e-4d5a-4b6c-9d7e-1a2b3c4d5e6f" sessionid="SID-INV-1" data-token="TKN-INV-2" auth="AUT-INV-3" csrf="CSR-INV-4" jsessionid="JS-INV-5">Calcular</button>',
+    '<div data-ref="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" title="op 11111111-2222-3333-4444-555555555555 fin">x</div>',
+    '<a href="/p?op=99999999-8888-7777-6666-555555555555">ir</a>',
+    '<span id="nombreUsuario">Fulano Inventado</span>',
+    '<div class="cuenta-activa"><b>COD-INV-9911</b></div>',
+    '<span aria-label="Perfil del agente">Perfil-Inv-X</span>',
+    '<div class="login-page"><h1>Bienvenido al portal</h1><form><input name="q"></form></div>',
+    '<div class="account-wrap"><p>Texto largo de maquetación ' + 'x'.repeat(250) + '</p></div>',
+    '<p>Otro texto normal</p>',
+  ].join('\n')
+  const r = redactarHtmlGrabacion(html)
+  it('atributos session/sessionid/token/auth/csrf/jsessionid y cualquier UUID → [DATO]', () => {
+    for (const crudo of ['3f2b8c1e', 'SID-INV-1', 'TKN-INV-2', 'AUT-INV-3', 'CSR-INV-4', 'JS-INV-5', 'aaaaaaaa-bbbb', '11111111-2222', '99999999-8888']) expect(r, crudo).not.toContain(crudo)
+    expect(r).toContain('session="[DATO]"')
+    expect(r).toContain('title="op [DATO] fin"')
+    expect(r).toContain('id="b1"')
+    expect(r).toContain('>Calcular<')
+  })
+  it('texto de elementos de usuario/cuenta/perfil → [DATO]; maquetación y contenedores grandes no', () => {
+    for (const crudo of ['Fulano Inventado', 'COD-INV-9911', 'Perfil-Inv-X']) expect(r, crudo).not.toContain(crudo)
+    expect(r).toContain('<span id="nombreUsuario">[DATO]</span>')
+    expect(r).toContain('<b>[DATO]</b>')
+    for (const ok of ['Bienvenido al portal', 'Texto largo de maquetación', 'Otro texto normal']) expect(r, ok).toContain(ok)
+  })
+  it('es idempotente', () => expect(redactarHtmlGrabacion(r)).toBe(r))
+})
+
 describe('recortarHtmlParaIA', () => {
   const html = `<html><head><style>.x{}</style></head><body><div class="carcasa"><span>Menú</span></div>
 ${MARCA_MARCO}appArea" -->
@@ -219,6 +248,11 @@ describe('bookmarklet: forma', () => {
     expect(fuente.match(/\.click\s*\(/g)?.length).toBe(1)
     expect(fuente).toMatch(/a\.download = nombre;?\s*a\.click\(\)/)
     expect(fuente).not.toMatch(/appendChild\(a\)/)
+  })
+  it('lleva el aviso de marcos ilegibles en español y la URL completa solo en el alert', () => {
+    expect(AVISO_MARCO_NO_LEGIBLE).toBe('Esta pantalla tiene el formulario en un marco que no se puede leer. Abre este enlace en una pestaña nueva y vuelve a pulsar el marcador: ')
+    expect(configGrabador().aviso).toBe(AVISO_MARCO_NO_LEGIBLE)
+    expect(FUENTE_GRABADOR).toMatch(/win\.alert\(aviso\)/)
   })
   it('es autocontenido: lleva los patrones del formador y la marca de marcos', () => {
     const cfg = configGrabador()

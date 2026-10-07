@@ -15,7 +15,11 @@
 //    <noscript>/<template>; contraseñas, ocultos, campos cuyo name/id/autocomplete casa con
 //    PATRON_CAMPO_SENSIBLE o PATRON_CAMPO_USUARIO (usuario/login) → [REDACTADO]; si la página (o un marco) tiene un
 //    input password es una PANTALLA DE LOGIN: se marca en la cabecera (MARCA_LOGIN) y TODOS sus campos de texto se tapan; DNI/NIE/CIF, IBAN, correo, teléfono… (PATRONES_PERSONALES del
-//    formador) → [DATO] en textos, valores y atributos; parámetros de sesión de las URL tapados.
+//    formador) → [DATO] en textos, valores y atributos; parámetros de sesión de las URL tapados; atributos de
+//    sesión (session, token, auth, csrf…) y cualquier UUID en un atributo → [DATO]; el TEXTO de los elementos
+//    cuyo id/class/aria-label dice usuario/login/cuenta/perfil (cabecera del portal) → [DATO].
+// 🔒 Marcos de OTRO origen (no legibles): la cabecera lista su URL SIN query ni #; y se avisa con un alert() que lleva
+//    la URL completa (solo en pantalla, nunca en el fichero) para abrirla en pestaña nueva y grabar desde ahí.
 //
 // La función va como TEXTO (`FUENTE_GRABADOR`), no como función serializada con `toString()`: los
 // compiladores inyectan ayudantes (`__name` de esbuild, visto en rojo el 07/10/2026) que en el portal no
@@ -23,9 +27,12 @@
 
 import { PATRONES_PERSONALES, MARCA_DATO_PERSONAL } from './formador.ts'
 import { MARCA_REDACTADO } from './redactar.ts'
-import { FIN_MARCA_MARCO, MARCA_LOGIN, MARCA_MARCO, PATRON_CAMPO_SENSIBLE, PATRON_CAMPO_PERSONAL, PATRON_CAMPO_USUARIO, PATRON_MEDIADOR, PATRON_PARAM_SENSIBLE } from './grabador.ts'
+import { FIN_MARCA_MARCO, MARCA_LOGIN, MARCA_MARCO, PATRON_CAMPO_SENSIBLE, PATRON_CAMPO_PERSONAL, PATRON_CAMPO_USUARIO, PATRON_MEDIADOR, PATRON_PARAM_SENSIBLE, PATRON_ATRIBUTO_SESION, PATRON_UUID, PATRON_ELEMENTO_USUARIO, MAX_TEXTO_ELEMENTO_USUARIO } from './grabador.ts'
 
-export const VERSION_GRABADOR = 1
+export const VERSION_GRABADOR = 2
+
+/** Texto del alert() cuando hay marcos de otro origen; se le pega la URL completa del marco. */
+export const AVISO_MARCO_NO_LEGIBLE = 'Esta pantalla tiene el formulario en un marco que no se puede leer. Abre este enlace en una pestaña nueva y vuelve a pulsar el marcador: '
 
 export type ConfigGrabador = {
   version: number
@@ -36,6 +43,11 @@ export type ConfigGrabador = {
   personal: [string, string]
   mediador: [string, string]
   param: [string, string]
+  sesion: [string, string]
+  uuid: [string, string]
+  elemUsuario: [string, string]
+  maxTextoUsuario: number
+  aviso: string
   marca: string
   finMarca: string
   redactado: string
@@ -52,6 +64,11 @@ export function configGrabador(): ConfigGrabador {
     personal: [PATRON_CAMPO_PERSONAL.source, PATRON_CAMPO_PERSONAL.flags],
     mediador: [PATRON_MEDIADOR.source, PATRON_MEDIADOR.flags],
     param: [PATRON_PARAM_SENSIBLE.source, PATRON_PARAM_SENSIBLE.flags],
+    sesion: [PATRON_ATRIBUTO_SESION.source, PATRON_ATRIBUTO_SESION.flags],
+    uuid: [PATRON_UUID.source, PATRON_UUID.flags],
+    elemUsuario: [PATRON_ELEMENTO_USUARIO.source, PATRON_ELEMENTO_USUARIO.flags],
+    maxTextoUsuario: MAX_TEXTO_ELEMENTO_USUARIO,
+    aviso: AVISO_MARCO_NO_LEGIBLE,
     marca: MARCA_MARCO,
     finMarca: FIN_MARCA_MARCO,
     redactado: MARCA_REDACTADO,
@@ -60,7 +77,7 @@ export function configGrabador(): ConfigGrabador {
 }
 
 /** Fuente JS (ES5, sin tipos: no pasa por ningún compilador) de `grabarPantalla(win, cfg, descargar)` →
- *  `{ nombre, html, marcosSinLeer }`. Si `descargar`, además lo descarga. Corre EN EL NAVEGADOR del portal. */
+ *  `{ nombre, html, marcosSinLeer, urlsSinLeer, aviso }`. Si `descargar`, además lo descarga. Corre EN EL NAVEGADOR del portal. */
 export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, descargar) {
   var PII = []
   for (var p = 0; p < cfg.patrones.length; p++) PII.push(new RegExp(cfg.patrones[p][0], cfg.patrones[p][1]))
@@ -71,6 +88,12 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var SIN_TEXTO = { checkbox: 1, radio: 1, submit: 1, button: 1, reset: 1, image: 1, file: 1, range: 1, color: 1 }
   var hayLogin = false
   var PARAM = new RegExp(cfg.param[0], cfg.param[1].replace('g', ''))
+  var SESION = new RegExp(cfg.sesion[0], cfg.sesion[1].replace('g', ''))
+  var UUID = new RegExp(cfg.uuid[0], cfg.uuid[1].indexOf('g') >= 0 ? cfg.uuid[1] : cfg.uuid[1] + 'g')
+  var ELEM_USU = new RegExp(cfg.elemUsuario[0], cfg.elemUsuario[1].replace('g', ''))
+  var NO_USU = { html: 1, body: 1, head: 1, main: 1, form: 1, table: 1, script: 1, style: 1, input: 1, select: 1, textarea: 1, option: 1, button: 1 }
+  var urlsSinLeer = []
+  var urlsCompletas = []
   var ATR_SELECTOR = { id: 1, name: 1, 'class': 1, 'for': 1, type: 1, role: 1, style: 1 }
   var ATR_URL = { href: 1, src: 1, action: 1, formaction: 1 }
   var sinLeer = 0
@@ -86,6 +109,9 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   function redUrl(u) {
     return red(u)
       .replace(/([?&#;])([^=&#?;]*)=([^&#?;]*)/g, function (m, sep, k) { return PARAM.test(k) ? sep + k + '=' + cfg.redactado : m })
+  }
+  function sinParametros(u) {
+    return red(String(u || '').replace(/[?#].*$/, '').replace(/;[^\/]*/g, '')).replace(UUID, cfg.dato)
   }
   function sensible(el, login) {
     var t = String(el.getAttribute('type') || '').toLowerCase()
@@ -144,9 +170,26 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
         if (ATR_SELECTOR[n]) continue
         if (esCampo && (n === 'value' || n === 'data-valor')) continue
         var val = attrs[b].value
-        var nuevo = ATR_URL[n] ? redUrl(val) : red(val)
+        if (SESION.test(n)) { if (val !== '' && val !== cfg.dato) el.setAttribute(attrs[b].name, cfg.dato); continue }
+        var nuevo = (ATR_URL[n] ? redUrl(val) : red(val)).replace(UUID, cfg.dato)
         if (nuevo !== val) el.setAttribute(attrs[b].name, nuevo)
       }
+    }
+    // Texto de la cabecera con el usuario/cuenta: elementos cortos, sin controles dentro.
+    var usu = clon.querySelectorAll('*')
+    for (var u = 0; u < usu.length; u++) {
+      var eu = usu[u]
+      var tu = String(eu.tagName).toLowerCase()
+      if (NO_USU[tu]) continue
+      var ad = [eu.getAttribute('id'), eu.getAttribute('class'), eu.getAttribute('aria-label')]
+      var marcado = false
+      for (var z = 0; z < ad.length; z++) if (ad[z] && ELEM_USU.test(ad[z])) marcado = true
+      if (!marcado || eu.querySelector('input,select,textarea,form,table,button')) continue
+      if (String(eu.textContent || '').replace(/^\s+|\s+$/g, '').length > cfg.maxTextoUsuario) continue
+      var wu = doc.createTreeWalker(eu, 4, null)
+      var nu = []
+      while (wu.nextNode()) nu.push(wu.currentNode)
+      for (var y = 0; y < nu.length; y++) if (/\S/.test(nu[y].nodeValue)) nu[y].nodeValue = cfg.dato
     }
     var textos = []
     var w = doc.createTreeWalker(clon, 4, null)
@@ -172,7 +215,11 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
     for (var m = 0; m < marcos.length; m++) {
       var nombre = String(marcos[m].getAttribute('name') || marcos[m].getAttribute('id') || '#' + m).replace(/["\/]/g, '_')
       rutas.push(ruta ? ruta + '/' + nombre : nombre)
-      if (marcosClon[m]) { marcosClon[m].setAttribute('data-grabador-marco', rutas[m]); marcosClon[m].removeAttribute('srcdoc') }
+      if (marcosClon[m]) {
+        marcosClon[m].setAttribute('data-grabador-marco', rutas[m]); marcosClon[m].removeAttribute('srcdoc')
+        var srcMarco = marcosClon[m].getAttribute('src')
+        if (srcMarco) marcosClon[m].setAttribute('src', sinParametros(srcMarco))
+      }
     }
     limpiar(doc, clon)
     var html = String(clon.outerHTML).split(cfg.marca).join('<!-- (marco) ')
@@ -181,7 +228,12 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
       var d = null
       try { d = marcos[f].contentDocument } catch (e) { d = null }
       if (d && d.documentElement) serializar(d, rutas[f], partes)
-      else { sinLeer++; partes.push(cfg.marca + rutas[f] + cfg.finMarca + '\n<!-- grabador: marco de otro origen o vacío; no se ha podido leer -->') }
+      else {
+        sinLeer++
+        var srcCompleta = String(marcos[f].src || '')
+        if (srcCompleta && srcCompleta.indexOf('about:') !== 0) { urlsSinLeer.push(sinParametros(srcCompleta)); urlsCompletas.push(srcCompleta) }
+        partes.push(cfg.marca + rutas[f] + cfg.finMarca + '\n<!-- grabador: marco de otro origen o vacío; no se ha podido leer -->')
+      }
     }
   }
 
@@ -194,7 +246,7 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var sello = d.getFullYear() + dos(d.getMonth() + 1) + dos(d.getDate()) + '-' + dos(d.getHours()) + dos(d.getMinutes()) + dos(d.getSeconds())
   var titulo = red(String(win.document.title || '')).replace(/--/g, '- -')
   var cabecera = '<!-- grabador ASegura v' + cfg.version + ' · ' + d.toISOString() + ' · ' + host + redUrl(String(loc.pathname || '')).replace(/--/g, '- -') +
-    ' · «' + titulo + '» · marcos sin leer: ' + sinLeer + ' -->\n' + (hayLogin ? cfg.login + '\n' : '')
+    ' · «' + titulo + '» · marcos sin leer: ' + sinLeer + ' -->\n' + (urlsSinLeer.length ? '<!-- grabador: marcos sin leer (sin query ni tokens): ' + urlsSinLeer.join(' | ').replace(/--/g, '- -').replace(/>/g, '%3E') + ' -->\n' : '') + (hayLogin ? cfg.login + '\n' : '')
   var html = cabecera + partes.join('\n')
   var nombre = 'pantalla-' + host + '-' + sello + '.html'
   if (descargar) {
@@ -206,7 +258,11 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
     a.click()
     win.setTimeout(function () { win.URL.revokeObjectURL(url) }, 5000)
   }
-  return { nombre: nombre, html: html, marcosSinLeer: sinLeer }
+  // Aviso EN PANTALLA (con la URL completa, que NO va al fichero) para abrir el marco en una pestaña nueva.
+  var aviso = ''
+  for (var v = 0; v < urlsCompletas.length; v++) aviso += (aviso ? '\n\n' : '') + cfg.aviso + urlsCompletas[v]
+  if (descargar && aviso) { try { win.alert(aviso) } catch (e) { } }
+  return { nombre: nombre, html: html, marcosSinLeer: sinLeer, urlsSinLeer: urlsSinLeer, aviso: aviso }
 }`
 
 /** Código JS (sin `javascript:`) que ejecuta el marcador. */

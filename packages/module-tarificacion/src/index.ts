@@ -189,4 +189,4 @@ export {
   type MapaGrabacion,
   type PantallaSeparada,
 } from './grabador.ts'
-export { VERSION_GRABADOR, FUENTE_GRABADOR, configGrabador, codigoBookmarklet, urlBookmarklet, type ConfigGrabador } from './grabador-bookmarklet.ts'
+export { VERSION_GRABADOR, FUENTE_GRABADOR, configGrabador, AVISO_MARCO_NO_LEGIBLE, codigoBookmarklet, urlBookmarklet, type ConfigGrabador } from './grabador-bookmarklet.ts'
