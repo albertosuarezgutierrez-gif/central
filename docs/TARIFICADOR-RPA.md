@@ -41,6 +41,8 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 - **Allianz ePAC, entrada común**: «Venta → Nueva Alta» abre un popup compartido por todos los productos (Particulares: HOGAR, Negocio Plus = Comercio, Comunidades…; Empresas: RC PYME) → paso de entrada compartido entre bots de Allianz.
 - **RC PYME**: pantalla de resultado mapeada (primas en `#tableTarifaAnual_{0,1,2}_0`). PROHIBIDOS: Archivar, Aceptar `#btnAccept`→emision_ipid, Datos emisión, Proyecto ampliado, Pago fraccionado. Seguros: Datos básicos, Proyecto, IPID, Retarificar. Faltan por mapear Datos básicos y Proyecto.
 - **Generali** pide SMS → reutilizar sesión + aviso Telegram.
+  - Hecho en el worker (07/10): `src/boveda-sesion.ts` + `src/sesion-manual.ts`; adaptador con `sesion: 'manual'` = sin CRED_*, el robot NUNCA hace login; reutiliza el storageState que inició Alberto, sellado AES-256-GCM (fly secret `TARIFICADOR_SESION_KEY`; asegura guarda el blob opaco), caducidad máx. `TARIFICADOR_SESION_MAX_HORAS` (8 h, techo 24). Sin sesión/caducada/rechazada → se borra y `requiere_humano` + Telegram.
+  - ⏳ Pendiente: ruta `GET|PUT|DELETE /api/tarificador/sesion/<compania>` + tabla en asegura, el fly secret, y el ALTA de la sesión (opciones: script local con navegador visible en el PC de Alberto que sella y sube; o máquina Fly con navegador remoto por `fly proxy`).
 - **13 pólizas Allianz sin `prima_anual` = por diseño** (no es un fallo a revisar).
 
 ## Grabador v3, propuesta por oportunidad y aviso de verificación (07/10/2026)

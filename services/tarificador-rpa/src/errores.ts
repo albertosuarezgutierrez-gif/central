@@ -27,8 +27,9 @@ export const MOTIVO_VERIFICACION_HUMANA = 'requiere_verificacion_humana'
  */
 export class ErrorVerificacionHumana extends ErrorTarificador {
   readonly motivo = MOTIVO_VERIFICACION_HUMANA
-  constructor(compania: string) {
-    super('captcha', `${MOTIVO_VERIFICACION_HUMANA}: ${textoAvisoVerificacion(compania)}`)
+  /** `texto`: aviso alternativo (p. ej. `textoAvisoSesionManual`); el prefijo del motivo no cambia (lo lee asegura). */
+  constructor(compania: string, texto: string = textoAvisoVerificacion(compania)) {
+    super('captcha', `${MOTIVO_VERIFICACION_HUMANA}: ${texto}`)
     this.name = 'ErrorVerificacionHumana'
   }
 }

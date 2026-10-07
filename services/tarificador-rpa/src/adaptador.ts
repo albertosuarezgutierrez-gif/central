@@ -30,9 +30,20 @@ export type ContextoPortal = ContextoTarificacion & {
    * si sirve, se salta el login; si no, hace login normal. Nunca se le dan las cookies: solo esta bandera.
    */
   sesionReutilizada: boolean
+  /**
+   * Portal de sesión MANUAL (el adaptador declara `sesion: 'manual'`; p. ej. Generali, SMS en el acceso). El contexto
+   * arranca con la sesión que inició Alberto a mano (src/sesion-manual.ts). El adaptador NUNCA hace login ni toca la
+   * pantalla de código: si ve el login, lanza o sigue y el runner lo trata como sesión rechazada (se borra y avisa).
+   */
+  sesionManual: boolean
 }
 
 export type AdaptadorPortal = TarificadorAdapter<Page, RiesgoComunidad, ContextoPortal> & {
   /** Clave de la credencial: fly secrets `CRED_<clave>_USER` / `CRED_<clave>_PASS`. */
   readonly credencial: string
+  /**
+   * `'manual'`: el portal pide SMS en el acceso. El robot no tiene credenciales de ese portal (no se leen los CRED_*),
+   * solo reutiliza la sesión sellada que dio de alta una persona; sin ella, `requiere_humano` sin abrir el navegador.
+   */
+  readonly sesion?: 'manual'
 }
