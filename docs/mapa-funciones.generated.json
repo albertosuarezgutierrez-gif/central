@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-06T16:01:36Z",
-  "sha": "3b3792c6a3f10e69ffd7dc8b73dcedbce8a71bf2",
+  "generadoEn": "2026-10-07T07:28:48Z",
+  "sha": "f876b783f2f71fbc91555ab9abb7f68fcf5ac808",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -193874,7 +193874,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is RamoFicha",
-          "linea": 97
+          "linea": 135
         },
         {
           "nombre": "garantiasFicha",
@@ -193882,7 +193882,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "readonly GarantiaFicha[]",
-          "linea": 102,
+          "linea": 140,
           "resumen": "Garantías del ramo; un ramo sin catálogo devuelve [] (todo irá a `extras`, nunca a una clave inventada)."
         },
         {
@@ -193891,7 +193891,7 @@
           "exportada": true,
           "params": "ramo: string, clave: string",
           "retorno": "GarantiaFicha | null",
-          "linea": 106
+          "linea": 144
         },
         {
           "nombre": "normalizarLiteral",
@@ -193899,7 +193899,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 111,
+          "linea": 149,
           "resumen": "Minúsculas, sin tildes, solo letras/números y espacios simples."
         },
         {
@@ -193908,13 +193908,13 @@
           "exportada": true,
           "params": "ramo: string, literal: string",
           "retorno": "string | null",
-          "linea": 119,
+          "linea": 157,
           "resumen": "Literal de la compañía → clave del catálogo, o `null` si no se reconoce (va a `extras`). Palabras completas; gana el sinónimo MÁS LARGO (así «RC por agua» no cae en «rc» ni en «daños por agua»)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4e351fab05e2"
+      "hash": "a4c4b3d06bca"
     },
     {
       "ruta": "packages/module-tarificacion/src/fichas.ts",
@@ -194312,6 +194312,68 @@
       "hash": "32a19edcaa8a"
     },
     {
+      "ruta": "packages/module-tarificacion/src/formulario-comercio.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Formulario CANÓNICO de Comercio / Negocio (multirriesgo de comercio) (08/10/2026). PURO: ni BD, ni red. Datos de riesgo comunes del mercado español. Todavía no hay ninguna compañía registrada (la primera: Allianz ePAC «Calcula el seguro de tu Negocio», ramo interno 2038 subramo 0002, portal sin grab",
+      "exporta": [
+        "validarFormularioComercio"
+      ],
+      "funciones": [
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 44
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], max = 300",
+          "retorno": "string | null",
+          "linea": 46
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], permitirCero = false",
+          "retorno": "number | null",
+          "linea": 53,
+          "resumen": "Importe en euros (número, no texto). `permitirCero`: 0 es un dato válido (p. ej. sin existencias)."
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], min: number, max: number",
+          "retorno": "number | null",
+          "linea": 63
+        },
+        {
+          "nombre": "booleano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[]",
+          "retorno": "boolean | null",
+          "linea": 70
+        },
+        {
+          "nombre": "validarFormularioComercio",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: unknown, hoy: Date = new Date()",
+          "retorno": "ValidacionFormularioComercio",
+          "linea": 76
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4b95a8cda202"
+    },
+    {
       "ruta": "packages/module-tarificacion/src/formulario-rc.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "Formulario CANÓNICO de RC general / de actividad (08/10/2026). PURO: ni BD, ni red. Datos de riesgo comunes a cualquier compañía. Todavía no hay ninguna registrada (la primera: Occident, pendiente de grabar su portal): este ramo existe solo a nivel canónico y NO está en `RamoRpa`. Importes en EUROS ",
@@ -194399,7 +194461,7 @@
           "exportada": true,
           "params": "",
           "retorno": "ConfigGrabador",
-          "linea": 40
+          "linea": 45
         },
         {
           "nombre": "codigoBookmarklet",
@@ -194407,7 +194469,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 190,
+          "linea": 213,
           "resumen": "Código JS (sin `javascript:`) que ejecuta el marcador."
         },
         {
@@ -194416,19 +194478,20 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 197,
+          "linea": 220,
           "resumen": "La URL `javascript:` del marcador (para el <a> que se arrastra a favoritos)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f8186a44bbc"
+      "hash": "7a10d2327aff"
     },
     {
       "ruta": "packages/module-tarificacion/src/grabador.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "GRABADOR del tarificador RPA (07/10/2026) — reglas PURAS. Para dar de alta una compañía/ramo nueva en el bot sin ir a ciegas: Alberto hace un presupuesto FICTICIO a mano en el portal y en cada pantalla pulsa el marcador «Grabar pantalla ASegura» (`grabador-bookmarklet.ts`). Aquí vive lo que comparte",
       "exporta": [
+        "tienePasswordHtml",
         "normalizarGrabador",
         "clasificarBoton",
         "redactarUrl",
@@ -194445,12 +194508,21 @@
       ],
       "funciones": [
         {
+          "nombre": "tienePasswordHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "boolean",
+          "linea": 45,
+          "resumen": "¿El HTML tiene algún `<input type=password>` (en la página o en un marco)?"
+        },
+        {
           "nombre": "normalizarGrabador",
           "kind": "function",
           "exportada": true,
           "params": "s: string | null | undefined",
           "retorno": "string",
-          "linea": 36,
+          "linea": 63,
           "resumen": "Sin tildes, minúsculas y espacios colapsados."
         },
         {
@@ -194459,7 +194531,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[]",
           "retorno": "",
-          "linea": 45,
+          "linea": 72,
           "resumen": "Clase de un botón a partir de TODO lo que lo describe (texto, selector, id, onclick…). PROHIBIDO si cualquiera casa con el guard de emisión (incluido «Aceptar», siempre contextual) o con `BLOQUEO_GRAB"
         },
         {
@@ -194468,7 +194540,7 @@
           "exportada": false,
           "params": "crudo: string | undefined",
           "retorno": "string | null",
-          "linea": 62
+          "linea": 89
         },
         {
           "nombre": "atributos",
@@ -194476,7 +194548,7 @@
           "exportada": false,
           "params": "cuerpo: string",
           "retorno": "Map<string, string | null>",
-          "linea": 68
+          "linea": 95
         },
         {
           "nombre": "escaparAttr",
@@ -194484,7 +194556,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 75,
+          "linea": 102,
           "resumen": "Sin tocar `&`: el valor viene del HTML con sus entidades ya escritas (re-escaparlas no sería idempotente)."
         },
         {
@@ -194493,25 +194565,25 @@
           "exportada": true,
           "params": "url: string",
           "retorno": "string",
-          "linea": 78,
+          "linea": 105,
           "resumen": "Tapa los valores de los parámetros sensibles de una URL (y un `;jsessionid=`)."
         },
         {
           "nombre": "esCampoSensible",
           "kind": "function",
           "exportada": true,
-          "params": "a: { type?: string | null; name?: string | null; id?: string | null; autocomplete?: string | null }",
+          "params": "a: { type?: string | null; name?: string | null; id?: string | null; autocomplete?: string | null; etiqueta?: string | null; tag?: string }, login = false",
           "retorno": "boolean",
-          "linea": 84,
+          "linea": 111,
           "resumen": "¿El control es de los que nunca enseñan su valor?"
         },
         {
           "nombre": "redactarEtiqueta",
           "kind": "function",
           "exportada": false,
-          "params": "tag: string, cuerpo: string",
+          "params": "tag: string, cuerpo: string, login: boolean",
           "retorno": "string",
-          "linea": 90
+          "linea": 122
         },
         {
           "nombre": "redactarHtmlGrabacion",
@@ -194519,7 +194591,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 112,
+          "linea": 144,
           "resumen": "Lo que asegura hace con el HTML que sube Alberto ANTES de guardarlo (aunque el bookmarklet ya lo haya hecho): fuera `<script>`; contraseñas, ocultos y campos sensibles por nombre a `[REDACTADO]`; DNI/"
         },
         {
@@ -194528,7 +194600,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "PantallaSeparada",
-          "linea": 134,
+          "linea": 169,
           "resumen": "Deshace los marcadores de marco (como `separarMarcos` del worker, con la ruta como texto)."
         },
         {
@@ -194537,7 +194609,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 148
+          "linea": 183
         },
         {
           "nombre": "recortarHtmlParaIA",
@@ -194545,7 +194617,7 @@
           "exportada": true,
           "params": "html: string, maxChars = 60_000",
           "retorno": "string",
-          "linea": 180,
+          "linea": 215,
           "resumen": "HTML recortado a lo que sirve para mapear la pantalla (formularios, tablas, botones, textos), sin scripts, estilos ni valores de los campos, y por debajo de `maxChars`. Los marcos (donde suelen estar "
         },
         {
@@ -194554,7 +194626,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 217
+          "linea": 252
         },
         {
           "nombre": "soloClaves",
@@ -194562,7 +194634,7 @@
           "exportada": false,
           "params": "o: Record<string, unknown>, permitidas: readonly string[], donde: string",
           "retorno": "string | null",
-          "linea": 219
+          "linea": 254
         },
         {
           "nombre": "texto",
@@ -194570,7 +194642,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, donde: string, { opcional = false, pii = true } = {}",
           "retorno": "Lectura<string | null>",
-          "linea": 224
+          "linea": 259
         },
         {
           "nombre": "selectorValido",
@@ -194578,7 +194650,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "boolean",
-          "linea": 234,
+          "linea": 269,
           "resumen": "Un selector CSS razonable: una línea, sin llaves ni `javascript:`."
         },
         {
@@ -194587,7 +194659,7 @@
           "exportada": false,
           "params": "v: unknown, donde: string, opcional = false",
           "retorno": "Lectura<string | null>",
-          "linea": 238
+          "linea": 273
         },
         {
           "nombre": "booleano",
@@ -194595,7 +194667,7 @@
           "exportada": false,
           "params": "v: unknown, donde: string",
           "retorno": "Lectura<boolean>",
-          "linea": 244
+          "linea": 279
         },
         {
           "nombre": "lista",
@@ -194603,7 +194675,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, donde: string",
           "retorno": "Lectura<unknown[]>",
-          "linea": 248
+          "linea": 283
         },
         {
           "nombre": "validarPantallaMapa",
@@ -194611,7 +194683,7 @@
           "exportada": true,
           "params": "raw: unknown, pantalla: number",
           "retorno": "",
-          "linea": 259,
+          "linea": 294,
           "resumen": "Valida lo que devuelve la IA para UNA pantalla con un esquema ESTRICTO (claves cerradas, tipos, tamaños) y aplica la regla de seguridad: todo botón que casa con el guard de emisión o con `BLOQUEO_GRAB"
         },
         {
@@ -194620,7 +194692,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "MapaGrabacion | null",
-          "linea": 347,
+          "linea": 382,
           "resumen": "Relee un mapa GUARDADO (jsonb) con el mismo esquema: lo que no valide se descarta (no se enseña un mapa a medias como bueno). Vuelve a aplicar la clasificación de botones por si la regla se endureció."
         },
         {
@@ -194629,7 +194701,7 @@
           "exportada": true,
           "params": "mapa: MapaGrabacion | null, p: PantallaMapa",
           "retorno": "MapaGrabacion",
-          "linea": 371,
+          "linea": 406,
           "resumen": "Sustituye (o añade) la pantalla en el mapa, en orden."
         },
         {
@@ -194638,7 +194710,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "unknown",
-          "linea": 377,
+          "linea": 412,
           "resumen": "JSON de la respuesta de la IA (tolera ```json … ``` y texto alrededor). `null` si no hay objeto."
         },
         {
@@ -194647,13 +194719,13 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "boolean",
-          "linea": 391,
+          "linea": 426,
           "resumen": "Nombre de fichero aceptable para una pantalla: `.html`/`.htm`, sin rutas, ≤ 200."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b7e424a1169b"
+      "hash": "b2ab1bef856e"
     },
     {
       "ruta": "packages/module-tarificacion/src/guard-emision.ts",
@@ -196826,7 +196898,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4385,
-    "funciones": 15489
+    "archivos": 4386,
+    "funciones": 15496
   }
 }
