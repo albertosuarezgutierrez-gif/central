@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { Badge, btnStyle } from '@/components/ui'
+import type { ReactNode } from 'react'
+import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
   etiquetaFuente,
@@ -35,6 +36,32 @@ const fecha = (iso: string | null) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5,
 
 export const LINEAS_POR_PAGINA = 15
 
+// ─── Chip ────────────────────────────────────────────────────────────────────
+// Antes los chips eran `Badge` (radio 999) dentro de un contenedor flex con
+// `align-content: stretch`: al crecer la tarjeta se estiraban en vertical y se
+// pintaban como círculos enormes. Aquí la altura es FIJA y el chip no crece
+// (`flex: 0 0 auto`, `alignSelf: flex-start`); el texto largo se recorta.
+type TonoChip = 'neutral' | 'positivo' | 'aviso' | 'info' | 'negativo'
+const COLOR_CHIP: Record<TonoChip, { fg: string; bg: string }> = {
+  neutral: { fg: 'var(--muted)', bg: 'var(--primary-light)' },
+  positivo: { fg: 'var(--positive)', bg: 'var(--positive-bg)' },
+  negativo: { fg: 'var(--negative)', bg: 'var(--negative-bg)' },
+  aviso: { fg: 'var(--warning)', bg: 'var(--warning-bg)' },
+  info: { fg: 'var(--info)', bg: 'var(--info-bg)' },
+}
+
+export function Chip({ tono = 'neutral', children, title }: { tono?: TonoChip; children: ReactNode; title?: string }) {
+  const c = COLOR_CHIP[tono]
+  return (
+    <span title={title} style={{
+      display: 'inline-flex', alignItems: 'center', flex: '0 0 auto', alignSelf: 'flex-start',
+      height: 22, maxWidth: '100%', boxSizing: 'border-box', padding: '0 8px', borderRadius: 11,
+      fontSize: 11, fontWeight: 600, lineHeight: '22px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      background: c.bg, color: c.fg,
+    }}>{children}</span>
+  )
+}
+
 // ─── Chips de una compañía (lista) ───────────────────────────────────────────
 
 export function ChipsAcuerdos({ codigo, r }: { codigo: string; r: RespuestaAcuerdos }) {
@@ -44,15 +71,15 @@ export function ChipsAcuerdos({ codigo, r }: { codigo: string; r: RespuestaAcuer
   if (acuerdos.length === 0 && claves.length === 0) return <span style={{ fontSize: 11, ...gris }}>Sin acuerdo cargado</span>
   const sinCotejar = acuerdos.filter((a) => a.revisadoAt === null).length
   return (
-    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
+    <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', gap: 4, minWidth: 0 }}>
       {acuerdos.map((a) => (
-        <Badge key={a.id} tono={a.revisadoAt ? 'positivo' : 'aviso'} title={a.revisadoAt ? `Cotejado el ${fecha(a.revisadoAt.slice(0, 10))}` : 'Extracto sin cotejar con el documento original'}>
+        <Chip key={a.id} tono={a.revisadoAt ? 'positivo' : 'aviso'} title={a.revisadoAt ? `Cotejado el ${fecha(a.revisadoAt.slice(0, 10))}` : 'Extracto sin cotejar con el documento original'}>
           {etiquetaFuente(a)}{a.revisadoAt ? '' : ' · sin cotejar'}
-        </Badge>
+        </Chip>
       ))}
       {claves.map((c) => <ChipClave key={c.id} c={c} />)}
       {acuerdos.length > 0 && claves.length === 0 && (
-        <Badge tono="neutral" title="Ninguna clave de mediador registrada para esta compañía: la productividad del acuerdo queda pendiente.">sin clave registrada</Badge>
+        <Chip tono="neutral" title="Ninguna clave de mediador registrada para esta compañía: la productividad del acuerdo queda pendiente.">sin clave registrada</Chip>
       )}
       {sinCotejar > 1 && <span style={{ fontSize: 11, ...gris }}>{sinCotejar} sin cotejar</span>}
     </span>
@@ -62,9 +89,9 @@ export function ChipsAcuerdos({ codigo, r }: { codigo: string; r: RespuestaAcuer
 function ChipClave({ c }: { c: Clave }) {
   const estado = c.estado.valor === null ? `«${c.estado.crudo}»` : (ETIQUETA_ESTADO_CLAVE[c.estado.valor] ?? c.estado.valor)
   return (
-    <Badge tono={c.estado.valor === 'activa' ? 'info' : 'neutral'} title={c.codigosCima.length ? `Códigos en CIMA: ${c.codigosCima.join(', ')}` : 'Sin códigos de CIMA asignados'}>
+    <Chip tono={c.estado.valor === 'activa' ? 'info' : 'neutral'} title={c.codigosCima.length ? `Códigos en CIMA: ${c.codigosCima.join(', ')}` : 'Sin códigos de CIMA asignados'}>
       Clave {c.etiqueta ?? '(sin etiqueta)'} · {estado}
-    </Badge>
+    </Chip>
   )
 }
 
@@ -132,8 +159,8 @@ export function TarjetaAcuerdo({ a, objetivos, onCotejado }: {
           <span style={{ fontSize: 12, ...gris }}> · {vigencia}</span>
         </div>
         {revisadoAt
-          ? <Badge tono="positivo" title="Cotejado con el documento original">Cotejado el {fecha(revisadoAt.slice(0, 10))}</Badge>
-          : <Badge tono="aviso" title="Extracto sin cotejar: ningún objetivo se da por bueno hasta cotejarlo">Sin cotejar</Badge>}
+          ? <Chip tono="positivo" title="Cotejado con el documento original">Cotejado el {fecha(revisadoAt.slice(0, 10))}</Chip>
+          : <Chip tono="aviso" title="Extracto sin cotejar: ningún objetivo se da por bueno hasta cotejarlo">Sin cotejar</Chip>}
       </div>
 
       {a.claveId === null && (

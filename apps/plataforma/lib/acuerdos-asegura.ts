@@ -11,6 +11,7 @@
 // 🔒 Las cifras de APROMES (PDF privado de asociados) llegan por la red en tiempo
 // de ejecución y NUNCA se escriben en el repo: ni aquí, ni en tests, ni en fixtures.
 
+import { panelControl, type AcuerdoControl, type FilaCartera, type ObjetivoEvaluadoControl, type PanelControl } from '@central/module-seguros'
 import { eur } from './dinero.ts'
 
 // ─── Tipos (espejo del DTO de asegura) ───────────────────────────────────────
@@ -116,6 +117,9 @@ export type RespuestaProductividad =
       sinCompania: number | null
       produccion: Produccion[]
       objetivos: ObjetivoEvaluado[]
+      /** Cartera EN VIGOR por compañía × ramo. `null` = no consta en la respuesta (≠ «sin cartera»). */
+      cartera: FilaCartera[] | null
+      carteraSinCompania: number | null
     }
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string }
@@ -252,6 +256,20 @@ function leerEstadoObjetivo(v: unknown): EstadoObjetivo | null {
   }
 }
 
+/** Todas las filas legibles o `null`: una cartera a medias parecería una cartera pequeña. */
+function leerCartera(v: unknown): FilaCartera[] | null {
+  if (!Array.isArray(v)) return null
+  const filas: FilaCartera[] = []
+  for (const x of v) {
+    const o = obj(x)
+    const c = cadena(o?.companiaCodigoDgs), r = cadena(o?.ramo)
+    const polizas = numOnull(o?.polizas), prima = numOnull(o?.prima), sinPrima = numOnull(o?.sinPrima)
+    if (!o || !c || !r || polizas === null || prima === null || sinPrima === null) return null
+    filas.push({ companiaCodigoDgs: c, ramo: r, polizas, prima, sinPrima })
+  }
+  return filas
+}
+
 export function interpretarProductividad(status: number, json: unknown): RespuestaProductividad {
   if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
   const o = obj(json) ?? {}
@@ -275,6 +293,8 @@ export function interpretarProductividad(status: number, json: unknown): Respues
       if (!e || !estado) return null
       return { acuerdoId: String(e.acuerdoId), objetivoId: String(e.objetivoId), companiaCodigoDgs: String(e.companiaCodigoDgs), estado }
     }).filter((x): x is ObjetivoEvaluado => x !== null),
+    cartera: leerCartera(o.cartera),
+    carteraSinCompania: numOnull(o.carteraSinCompania),
   }
 }
 
@@ -350,4 +370,37 @@ export function resumenCompania(codigo: string, r: RespuestaAcuerdos) {
     sinClave: acuerdos.filter((a) => a.claveId === null).length,
     lineas: acuerdos.reduce((s, a) => s + a.comisiones.length, 0),
   }
+}
+
+/** Texto de un motivo de objetivo pendiente (el mismo que `semaforoObjetivo`, sin el punto). */
+export function textoMotivoPendiente(motivo: string): string {
+  return TEXTO_MOTIVO[motivo] ?? motivo
+}
+
+/**
+ * El panel «Objetivos y producción» (cartera en vigor × acuerdos × objetivos).
+ * `null` si los acuerdos no se han podido leer: sin ellos no hay panel que pintar
+ * (se dice, no se pinta «sin acuerdos»). Sin productividad legible, la cartera es
+ * `null` («sin dato») y los objetivos salen pendientes: nunca ceros.
+ */
+export function construirPanelControl(ra: RespuestaAcuerdos | null, rp: RespuestaProductividad | null): PanelControl | null {
+  if (!ra || ra.estado !== 'ok') return null
+  const acuerdos: AcuerdoControl[] = ra.acuerdos.map((a) => ({
+    id: a.id,
+    companiaCodigoDgs: a.companiaCodigoDgs,
+    fuente: etiquetaFuente(a),
+    revisado: a.revisadoAt !== null,
+    comisiones: a.comisiones.map((l) => ({ ramo: l.ramo, pctNp: l.pctNp, pctCartera: l.pctCartera })),
+    objetivos: a.objetivos.map((o) => ({ id: o.id, base: o.base.valor, ramos: o.ramos })),
+  }))
+  const objetivos: ObjetivoEvaluadoControl[] = rp && rp.estado === 'ok'
+    ? rp.objetivos.map((o) => ({
+        acuerdoId: o.acuerdoId,
+        objetivoId: o.objetivoId,
+        estado: o.estado.color === 'pendiente'
+          ? { color: 'pendiente' as const, motivo: o.estado.motivo }
+          : { color: o.estado.color, medido: o.estado.medido, umbral: o.estado.umbral, falta: o.estado.falta },
+      }))
+    : []
+  return panelControl({ acuerdos, objetivos, cartera: rp && rp.estado === 'ok' ? rp.cartera : null })
 }

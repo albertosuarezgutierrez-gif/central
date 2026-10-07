@@ -1412,3 +1412,23 @@ export type {
   EstadoObjetivo,
   ObjetivoParaEvaluar,
 } from './acuerdos-productividad.ts'
+
+// Panel de control de Compañías: cartera en vigor × acuerdos (07/10/2026).
+export {
+  agregarCarteraVigor,
+  totalesPorCompania,
+  panelControl,
+  MARGEN_COMISION_PUNTOS,
+} from './acuerdos-control.ts'
+export type {
+  PolizaVigor,
+  FilaCartera,
+  TotalCartera,
+  AcuerdoControl,
+  ObjetivoEvaluadoControl,
+  EstadoObjetivoControl,
+  ObjetivoCandidata,
+  CandidataRamo,
+  RamoControl,
+  PanelControl,
+} from './acuerdos-control.ts'
