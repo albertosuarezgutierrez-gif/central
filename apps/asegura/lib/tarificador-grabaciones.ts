@@ -226,7 +226,7 @@ export async function analizarGrabacion(correduriaId: string, id: string, modo: 
     const prompt = promptAnalisis({ compania: g[0].compania, ramo: g[0].ramo, producto: g[0].producto, pantalla: p.orden, total: total[0].n, html })
     let respuesta: string
     try {
-      respuesta = await iaTexto(prompt, { system, maxTokens: 4000, timeoutMs: 60_000, privado: true })
+      respuesta = await iaTexto(prompt, { system, maxTokens: 4000, timeoutMs: 50_000, privado: true, categoria: 'contexto' })
     } catch (e) {
       mal++
       await marcarError(p.pid, `la IA no ha respondido: ${e instanceof Error ? e.message : String(e)}`)
