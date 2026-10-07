@@ -42,7 +42,8 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 - **RC PYME**: pantalla de resultado mapeada (primas en `#tableTarifaAnual_{0,1,2}_0`). PROHIBIDOS: Archivar, Aceptar `#btnAccept`→emision_ipid, Datos emisión, Proyecto ampliado, Pago fraccionado. Seguros: Datos básicos, Proyecto, IPID, Retarificar. Faltan por mapear Datos básicos y Proyecto.
 - **Generali** pide SMS → reutilizar sesión + aviso Telegram.
   - Hecho en el worker (07/10): `src/boveda-sesion.ts` + `src/sesion-manual.ts`; adaptador con `sesion: 'manual'` = sin CRED_*, el robot NUNCA hace login; reutiliza el storageState que inició Alberto, sellado AES-256-GCM (fly secret `TARIFICADOR_SESION_KEY`; asegura guarda el blob opaco), caducidad máx. `TARIFICADOR_SESION_MAX_HORAS` (8 h, techo 24). Sin sesión/caducada/rechazada → se borra y `requiere_humano` + Telegram.
-  - ⏳ Pendiente: ruta `GET|PUT|DELETE /api/tarificador/sesion/<compania>` + tabla en asegura, el fly secret, y el ALTA de la sesión (opciones: script local con navegador visible en el PC de Alberto que sella y sube; o máquina Fly con navegador remoto por `fly proxy`).
+  - Hecho en asegura (07/10): `GET|PUT|DELETE /api/tarificador/sesion/[compania]` (Bearer del worker, lista blanca de slugs de `TELEFONOS_COMPANIAS`, token ≤1 MB, caduca ≤25 h, GET 404+borra la caducada, DELETE idempotente, 503 `sesion_sin_activar`) + tabla `tarificador_sesiones` — ⏳ aplicar `apps/asegura/prisma/sql/2026-10-07e_tarificador_sesiones.sql`.
+  - ⏳ Pendiente: el fly secret, y el ALTA de la sesión (opciones: script local con navegador visible en el PC de Alberto que sella y sube; o máquina Fly con navegador remoto por `fly proxy`).
 - **13 pólizas Allianz sin `prima_anual` = por diseño** (no es un fallo a revisar).
 
 ## Grabador v3, propuesta por oportunidad y aviso de verificación (07/10/2026)
@@ -62,6 +63,9 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 - Hecho: entrada común «Nueva Alta» (`allianz/entrada.ts`, compartida con Comunidades; pestaña Empresas por texto, TODO selectores reales); lector de primas de `#tarifaViewForm` (`rc-pyme.ts`: 27 inputs readonly sin id; neta idx 0, impuestos 6, total 12; fail-closed si no son 27 o no cuadra); guard ampliado (menu3/4/5, #btnAccept, #btnFracciona, «Pago fraccionado»).
 - HUECO: «Datos básicos» (td#menu1: actividad con tabla de códigos Allianz, facturación, empleados, límites, ámbito, siniestros) lanza `ErrorMapaIncompleto`. Faltan también: nombre de la tarjeta RC PYME en el modal, cómo se llega a Calcular (`#btnRetarifa` duplicado: anclar por sección), Proyecto/IPID (PDF), pantalla de bloqueos, mapeo a `OfertaNormalizada` y ramo `rc_pyme` en el contrato.
 - Prohibido siempre: Archivar, Proyecto ampliado, Datos emisión, Aceptar (#btnAccept → emision_ipid), Pago fraccionado.
+
+## Allianz Negocio 2038 (en construcción)
+- `allianz/comercio.ts` (`COMERCIO_ACTIVO=false`, no registrado): hecho paso 4 «Datos» (tomador canónico `tomador.ts`, solo `fill`, RGPD intacto) y lector de prima `.alz-presupuesto-precio span` (fail-closed); HUECO pasos 1-3 (`ErrorMapaIncompleto`); prohibido «Siguiente» (#idbtnAceptar → Revisión), bloqueado en el guard.
 
 ## Rutina «Médico del bot tarificador»
 `trig_011zoZZAiTQnQ48qEWdRJq2Y`: laborables 8:52 Madrid; mira Supabase + repo; abre PR **draft**; **nunca mergea**.

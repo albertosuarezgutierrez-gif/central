@@ -29,6 +29,10 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   /btn[\s_+-]*accept/i,
   /btn[\s_+-]*fracciona/i,
   /pago[\s_+-]*fraccionado/i,
+  // Allianz «Negocio» (app 2038, 07/10/2026): #idbtnAceptar «Siguiente» (onclick botonSiguienteOk()) avanza a «5. Revisión»,
+  // que puede persistir el tomador real; también los enlaces del stepper con el mismo handler. Bloqueado aunque se permita «Aceptar».
+  /idbtn[\s_+-]*aceptar/i,
+  /boton[\s_+-]*siguiente[\s_+-]*ok/i,
 ]
 
 // «Aceptar» es CONTEXTUAL (ver fases.ts): en Datos Básicos solo avanza a «Tarificar»; en Tarificar avanza

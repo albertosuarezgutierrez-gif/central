@@ -7,6 +7,7 @@
 //
 // 🚨 Tres estados: `null` = «no consta», nunca 0/false. `0` empleados o `0` existencias son DATOS.
 import { normalizarCnae } from './formulario-rc.ts'
+import { validarTomador, type Tomador } from './tomador.ts'
 
 export const REGIMENES_LOCAL = ['propiedad', 'alquiler'] as const
 export type RegimenLocal = (typeof REGIMENES_LOCAL)[number]
@@ -37,6 +38,8 @@ export type FormularioComercio = {
   limiteRcExplotacionEur: number | null
   numEmpleados: number
   facturacionAnualEur: number | null
+  /** Tomador (opcional: solo lo exigen los portales que lo piden). `null`/ausente = no consta. */
+  tomador?: Tomador | null
 }
 
 export type ValidacionFormularioComercio = { ok: true; formulario: FormularioComercio } | { ok: false; errores: string[] }
@@ -130,6 +133,13 @@ export function validarFormularioComercio(entrada: unknown, hoy: Date = new Date
   if (empleados === null && vacio(e.numEmpleados)) errores.push('numEmpleados: obligatorio (0 si no hay empleados)')
   const facturacion = importe(e.facturacionAnualEur, 'facturacionAnualEur', errores)
 
+  let tomador: Tomador | null = null
+  if (!vacio(e.tomador)) {
+    const t = validarTomador(e.tomador, hoy)
+    if (t.ok) tomador = t.tomador
+    else errores.push(...t.errores)
+  }
+
   if (errores.length || regimen === null || codigoPostal === null || superficie === null || empleados === null) return { ok: false, errores }
   return {
     ok: true,
@@ -153,6 +163,7 @@ export function validarFormularioComercio(entrada: unknown, hoy: Date = new Date
       limiteRcExplotacionEur: limiteRc,
       numEmpleados: empleados,
       facturacionAnualEur: facturacion,
+      tomador,
     },
   }
 }
