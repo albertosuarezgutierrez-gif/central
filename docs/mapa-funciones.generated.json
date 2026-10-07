@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-07T12:04:07Z",
-  "sha": "173ed26275d35f1cb023cf9928ad1eecc4a190d9",
+  "generadoEn": "2026-10-07T14:27:12Z",
+  "sha": "470a42830a069912bc4da9c4e88ac2c4f3ff5d6a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -92360,7 +92360,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "788546be2c6c"
+      "hash": "0b2eb513fd5f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Formacion.tsx",
@@ -93467,13 +93467,13 @@
           "exportada": true,
           "params": "{ titulo, ...props }: Parameters<typeof ListaPrecios<P>>[0] & { titulo?: string }",
           "retorno": null,
-          "linea": 142,
+          "linea": 146,
           "resumen": "La misma lista, PLEGADA: cuando debajo está «Qué verá el cliente» (que ya enseña todos los precios de la más barata a la más cara), repetirla abierta eran dos listas de 31 filas seguidas. Aquí queda s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cef34cfaff9b"
+      "hash": "35ad722f37cf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/EscribirIndiceDni.tsx",
@@ -197702,13 +197702,14 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1ebe6012665"
+      "hash": "0e90fe9927f9"
     },
     {
       "ruta": "packages/module-tarificacion/src/guard-emision.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "TARIFICAR ≠ EMITIR (05/10/2026). El bot entra en portales donde, a dos clics de la cotización, está el botón que CONTRATA una póliza de verdad a nombre de un cliente. Este guard es la barrera: si la URL a la que se navega o el botón que se va a pulsar casa con el patrón, el trabajo se aborta como `e",
       "exporta": [
+        "decodificarUrlTolerante",
         "pareceEmision",
         "comprobarUrl",
         "comprobarBoton"
@@ -197720,8 +197721,17 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 52,
+          "linea": 59,
           "resumen": "Quita tildes para que «Emisión» o «Formalización» no se escapen por un acento."
+        },
+        {
+          "nombre": "decodificarUrlTolerante",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 66,
+          "resumen": "Decodifica %-secuencias UTF-8 válidas UNA A UNA: una secuencia mal formada (`%E0%A4%A`) no apaga la decodificación del resto (fail-closed)."
         },
         {
           "nombre": "pareceEmision",
@@ -197729,7 +197739,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 56
+          "linea": 76
         },
         {
           "nombre": "comprobarUrl",
@@ -197737,7 +197747,7 @@
           "exportada": true,
           "params": "url: string, opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 70,
+          "linea": 86,
           "resumen": "Lanza si la URL casa con el patrón."
         },
         {
@@ -197746,13 +197756,13 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[], opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 79,
+          "linea": 95,
           "resumen": "Lanza si el botón a pulsar casa con el patrón. Se mira TODO lo que lo describe (texto visible, `aria-label`, `title`, `value`, `id`, `name`, `href`): un botón con icono y `id=\"btnEmitir\"` también es e"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2bfbfaba8ce6"
+      "hash": "90ccc3cc8b63"
     },
     {
       "ruta": "packages/module-tarificacion/src/importes.ts",
@@ -199982,6 +199992,6 @@
   ],
   "resumen": {
     "archivos": 4442,
-    "funciones": 15756
+    "funciones": 15757
   }
 }
