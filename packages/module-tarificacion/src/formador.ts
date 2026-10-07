@@ -26,6 +26,8 @@ export const PATRONES_PERSONALES: readonly RegExp[] = [
   /\b[ABCDEFGHJNPQRSUVW][\s-]?\d{7}[\s-]?[0-9A-J]\b/gi,
   // Teléfono español (9 cifras empezando por 6-9, con prefijo opcional y separadores).
   /(?:\+?34[\s-]?)?\b[6-9]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}\b/g,
+  // Id de usuario de portal (dos letras + 6 cifras, p. ej. PA123456).
+  /\b[A-Z]{2}\d{6}\b/g,
   // Matrícula (0000 BBB).
   /\b\d{4}[\s-]?[BCDFGHJKLMNPRSTVWXYZ]{3}\b/gi,
   // Cualquier otra tirada de 7+ cifras (cuentas, pólizas, referencias catastrales numéricas).

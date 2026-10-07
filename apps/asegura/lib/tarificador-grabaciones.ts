@@ -14,9 +14,11 @@ import {
   recortarHtmlParaIA,
   redactarDatosPersonales,
   validarPantallaMapa,
+  type PantallaMapa,
   type MapaGrabacion,
 } from '@central/module-tarificacion'
 import { prisma } from './tenant'
+import { CONCURRENCIA_TROZOS, PRESUPUESTO_LOTE_MS, fusionarTrozos, inyectarMarco, trocearHtmlIA } from './tarificador-grabaciones-trozos'
 import { iaTexto } from './ia'
 import {
   LOTE_ANALISIS,
@@ -219,39 +221,53 @@ export async function analizarGrabacion(correduriaId: string, id: string, modo: 
     update seguros.tarificador_grabacion_pantallas set analisis_estado = 'error', analisis_error = ${limpiarError(m)}, analizada_at = now()
     where id = ${pid}::uuid and correduria_id = ${correduriaId}::uuid`
 
+  const inicioLote = Date.now()
   for (const p of lote) {
-    // Reserva de la llamada contra el tope (atómica).
+    // Un lote no EMPIEZA pantallas pasado su presupuesto de tiempo: la UI repite con las pendientes.
+    if (procesadas > 0 && Date.now() - inicioLote > PRESUPUESTO_LOTE_MS) break
+    const doc = await prisma.$queryRaw<{ contenido: Uint8Array | null }[]>`
+      select contenido from seguros.documentos where id = ${p.documento_id}::uuid and correduria_id = ${correduriaId}::uuid`
+    // Pantalla grande → varios trozos (cada uno, una llamada de salida corta). Las llamadas se reservan JUNTAS.
+    const trozos = doc[0]?.contenido ? trocearHtmlIA(recortarHtmlParaIA(Buffer.from(doc[0].contenido).toString('utf8'), MAX_CHARS_IA)) : []
+    const llamadas = Math.max(1, trozos.length)
     const reserva = await prisma.$queryRaw<{ n: number }[]>`
-      update seguros.tarificador_grabaciones set llamadas_ia = llamadas_ia + 1, updated_at = now()
-      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and llamadas_ia < ${max}::int
+      update seguros.tarificador_grabaciones set llamadas_ia = llamadas_ia + ${llamadas}::int, updated_at = now()
+      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and llamadas_ia + ${llamadas}::int <= ${max}::int
       returning llamadas_ia as n`
     if (!reserva[0]) { tope = true; break }
     procesadas++
-    const doc = await prisma.$queryRaw<{ contenido: Uint8Array | null }[]>`
-      select contenido from seguros.documentos where id = ${p.documento_id}::uuid and correduria_id = ${correduriaId}::uuid`
-    if (!doc[0]?.contenido) { mal++; await marcarError(p.pid, 'el fichero de la pantalla no está'); continue }
-    const html = recortarHtmlParaIA(Buffer.from(doc[0].contenido).toString('utf8'), MAX_CHARS_IA)
+    if (!trozos.length) { mal++; await marcarError(p.pid, 'el fichero de la pantalla no está o no tiene contenido útil'); continue }
     const system = sistemaAnalisis()
-    const prompt = promptAnalisis({ compania: g[0].compania, ramo: g[0].ramo, producto: g[0].producto, pantalla: p.orden, total: total[0].n, html })
-    let respuesta: string
-    try {
-      respuesta = await iaTexto(prompt, { system, maxTokens: MAX_TOKENS_ANALISIS, timeoutMs: TIMEOUT_ANALISIS_MS, privado: true, categoria: 'contexto' })
-    } catch (e) {
-      mal++
-      await marcarError(p.pid, `la IA no ha respondido: ${e instanceof Error ? e.message : String(e)}`)
-      continue
+    const partes: PantallaMapa[] = []
+    let fallo: string | null = null
+    let forzadosTrozos = 0
+    for (let i = 0; i < trozos.length && !fallo; i += CONCURRENCIA_TROZOS) {
+      const ola = trozos.slice(i, i + CONCURRENCIA_TROZOS)
+      const rs = await Promise.all(ola.map(async (t, k) => {
+        const prompt = promptAnalisis({ compania: g[0].compania, ramo: g[0].ramo, producto: g[0].producto, pantalla: p.orden, total: total[0].n, html: t.html, trozo: { n: i + k + 1, de: trozos.length } })
+        let respuesta: string
+        try {
+          respuesta = await iaTexto(prompt, { system, maxTokens: MAX_TOKENS_ANALISIS, timeoutMs: TIMEOUT_ANALISIS_MS, privado: true, categoria: 'contexto' })
+        } catch (e) {
+          return { error: `la IA no ha respondido: ${e instanceof Error ? e.message : String(e)}` }
+        }
+        const coste = costeEstimadoGrabador(system.length + prompt.length, respuesta.length)
+        await prisma.$executeRaw`update seguros.tarificador_grabaciones set coste_estimado = coste_estimado + ${coste}::numeric
+          where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+        const json = extraerJsonIA(respuesta)
+        if (json === null && respuestaIACortada(respuesta)) return { error: `la respuesta de la IA se cortó (trozo ${i + k + 1} de ${trozos.length}): ${respuesta.length} caracteres sin cerrar el JSON` }
+        const v = validarPantallaMapa(inyectarMarco(json, t.marco), p.orden)
+        if (!v.ok) return { error: `la respuesta de la IA no cumple el esquema: ${v.errores.slice(0, 3).join('; ')}` }
+        return { v }
+      }))
+      for (const r of rs) {
+        if ('error' in r && r.error) { fallo ??= r.error; continue }
+        if ('v' in r && r.v) { partes.push(r.v.pantalla); forzadosTrozos += r.v.forzados }
+      }
     }
-    const coste = costeEstimadoGrabador(system.length + prompt.length, respuesta.length)
-    await prisma.$executeRaw`update seguros.tarificador_grabaciones set coste_estimado = coste_estimado + ${coste}::numeric
-      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
-    const json = extraerJsonIA(respuesta)
-    if (json === null && respuestaIACortada(respuesta)) {
-      mal++
-      await marcarError(p.pid, `la respuesta de la IA se cortó (pantalla demasiado grande): ${respuesta.length} caracteres sin cerrar el JSON`)
-      continue
-    }
-    const v = validarPantallaMapa(json, p.orden)
-    if (!v.ok) { mal++; await marcarError(p.pid, `la respuesta de la IA no cumple el esquema: ${v.errores.slice(0, 3).join('; ')}`); continue }
+    if (fallo) { mal++; await marcarError(p.pid, fallo); continue }
+    const fus = fusionarTrozos(p.orden, partes)
+    const v = { pantalla: fus.pantalla, forzados: forzadosTrozos + fus.forzados }
     forzados += v.forzados
     await prisma.$transaction(async (tx) => {
       const m = await tx.$queryRaw<{ mapa: unknown }[]>`
