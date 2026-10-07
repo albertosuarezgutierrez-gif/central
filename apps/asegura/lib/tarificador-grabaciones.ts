@@ -18,7 +18,7 @@ import {
   type MapaGrabacion,
 } from '@central/module-tarificacion'
 import { prisma } from './tenant'
-import { CONCURRENCIA_TROZOS, PRESUPUESTO_LOTE_MS, fusionarTrozos, inyectarMarco, trocearHtmlIA } from './tarificador-grabaciones-trozos'
+import { CONCURRENCIA_TROZOS, MAX_CHARS_ENTRADA_TROCEO, PRESUPUESTO_LOTE_MS, errorPantallaExcedeTope, esperarOla, fusionarTrozos, inyectarMarco, trocearHtmlIA } from './tarificador-grabaciones-trozos'
 import { iaTexto } from './ia'
 import {
   LOTE_ANALISIS,
@@ -228,8 +228,10 @@ export async function analizarGrabacion(correduriaId: string, id: string, modo: 
     const doc = await prisma.$queryRaw<{ contenido: Uint8Array | null }[]>`
       select contenido from seguros.documentos where id = ${p.documento_id}::uuid and correduria_id = ${correduriaId}::uuid`
     // Pantalla grande → varios trozos (cada uno, una llamada de salida corta). Las llamadas se reservan JUNTAS.
-    const trozos = doc[0]?.contenido ? trocearHtmlIA(recortarHtmlParaIA(Buffer.from(doc[0].contenido).toString('utf8'), MAX_CHARS_IA)) : []
+    const trozos = doc[0]?.contenido ? trocearHtmlIA(recortarHtmlParaIA(Buffer.from(doc[0].contenido).toString('utf8'), MAX_CHARS_ENTRADA_TROCEO)).map((t) => ({ ...t, html: t.html.slice(0, MAX_CHARS_IA) })) : []
     const llamadas = Math.max(1, trozos.length)
+    const excede = errorPantallaExcedeTope(llamadas, max)
+    if (excede) { procesadas++; mal++; await marcarError(p.pid, excede); continue }
     const reserva = await prisma.$queryRaw<{ n: number }[]>`
       update seguros.tarificador_grabaciones set llamadas_ia = llamadas_ia + ${llamadas}::int, updated_at = now()
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and llamadas_ia + ${llamadas}::int <= ${max}::int
@@ -243,7 +245,7 @@ export async function analizarGrabacion(correduriaId: string, id: string, modo: 
     let forzadosTrozos = 0
     for (let i = 0; i < trozos.length && !fallo; i += CONCURRENCIA_TROZOS) {
       const ola = trozos.slice(i, i + CONCURRENCIA_TROZOS)
-      const rs = await Promise.all(ola.map(async (t, k) => {
+      const rs = await esperarOla(ola.map(async (t, k) => {
         const prompt = promptAnalisis({ compania: g[0].compania, ramo: g[0].ramo, producto: g[0].producto, pantalla: p.orden, total: total[0].n, html: t.html, trozo: { n: i + k + 1, de: trozos.length } })
         let respuesta: string
         try {

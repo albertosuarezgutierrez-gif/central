@@ -20,6 +20,22 @@ export const CONCURRENCIA_TROZOS = 10
 /** Milisegundos tras los que un lote deja de EMPEZAR pantallas nuevas (la UI repite con las pendientes; la ruta dura 300 s). */
 export const PRESUPUESTO_LOTE_MS = 100_000
 
+/** Tope de caracteres del HTML recortado ANTES de trocear (solo evita absurdos; el límite fino es por trozo). */
+export const MAX_CHARS_ENTRADA_TROCEO = 600_000
+
+/** Llamadas que cuesta una pantalla; si supera el TOTAL permitido nunca se podrá analizar: mensaje accionable (si no, null). */
+export function errorPantallaExcedeTope(llamadas: number, max: number): string | null {
+  return llamadas > max
+    ? `pantalla demasiado grande: ${llamadas} trozos > tope de ${max} llamadas; sube TARIFICADOR_GRABADOR_MAX_LLAMADAS (máx. 200) y pulsa «Reintentar»`
+    : null
+}
+
+/** Como Promise.all, pero un rechazo se convierte en `{ error }` y no aborta a los hermanos ya lanzados. */
+export async function esperarOla<T>(ps: Promise<T>[]): Promise<(T | { error: string })[]> {
+  const rs = await Promise.allSettled(ps)
+  return rs.map((r) => (r.status === 'fulfilled' ? r.value : { error: `error interno al analizar el trozo: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}` }))
+}
+
 const TOKENS_CONTROL = 55
 const TOKENS_BOTON = 45
 const TOKENS_OPCION = 6

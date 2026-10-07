@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { leerMapaGuardado, validarPantallaMapa, recortarHtmlParaIA, type PantallaMapa } from '@central/module-tarificacion'
 import {
-  PRESUPUESTO_SALIDA_TOKENS, MAX_OPCIONES_TROZO, adelgazarHtml, estimarSalidaTokens, fusionarTrozos, inyectarMarco, trocearHtmlIA,
+  PRESUPUESTO_SALIDA_TOKENS, MAX_OPCIONES_TROZO, adelgazarHtml, estimarSalidaTokens, fusionarTrozos, inyectarMarco, trocearHtmlIA, MAX_CHARS_ENTRADA_TROCEO, errorPantallaExcedeTope, esperarOla,
 } from './tarificador-grabaciones-trozos.ts'
 import { MAX_LLAMADAS_POR_DEFECTO, promptAnalisis, sistemaAnalisis } from './tarificador-grabaciones-reglas.ts'
 
@@ -104,4 +104,21 @@ test('la fusión de ~300 campos cabe en el mapa guardado (límites del esquema)'
   assert.equal(r.pantalla.campos.length, 300)
   const releido = leerMapaGuardado(JSON.parse(JSON.stringify({ version: 1, pantallas: [r.pantalla] })))
   assert.equal(releido?.pantallas[0]?.campos.length, 300)
+})
+
+test('pantalla grande: se trocea ENTERA (sin recortar a 60k antes) y el final no se pierde', () => {
+  const html = recortarHtmlParaIA(pantallaGrande(), MAX_CHARS_ENTRADA_TROCEO)
+  assert.ok(html.length > 60_000 && !html.includes('[recortado]'))
+  assert.ok(trocearHtmlIA(html).map((t) => t.html).join('').includes('id="t299"'))
+})
+
+test('trozos > tope total: error claro y accionable; si cabe, null', () => {
+  assert.match(errorPantallaExcedeTope(70, 60) ?? '', /70 trozos > tope de 60.*TARIFICADOR_GRABADOR_MAX_LLAMADAS/)
+  assert.equal(errorPantallaExcedeTope(60, 60), null)
+})
+
+test('un trozo que lanza no aborta la ola: los hermanos se devuelven', async () => {
+  const r = await esperarOla([Promise.resolve({ v: 1 }), Promise.reject(new Error('bd caída'))])
+  assert.deepEqual(r[0], { v: 1 })
+  assert.match((r[1] as { error: string }).error, /bd caída/)
 })
