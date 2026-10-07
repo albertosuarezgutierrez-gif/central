@@ -13,7 +13,6 @@ import {
   leerMapaGuardado,
   recortarHtmlParaIA,
   redactarDatosPersonales,
-  redactarHtmlGrabacion,
   validarPantallaMapa,
   type MapaGrabacion,
 } from '@central/module-tarificacion'
@@ -25,7 +24,7 @@ import {
   MAX_TOKENS_ANALISIS,
   TIMEOUT_ANALISIS_MS,
   respuestaIACortada,
-  comprobarSubida,
+  planificarSubida,
   costeEstimadoGrabador,
   maxLlamadasGrabador,
   promptAnalisis,
@@ -115,14 +114,15 @@ export async function leerGrabacion(correduriaId: string, id: string): Promise<D
 }
 
 export type ResultadoSubida =
-  | { estado: 'ok'; orden: number; documentoId: string; bytes: number }
+  | { estado: 'ok'; orden: number; documentoId: string; bytes: number; pantallas: number; ordenes: number[] }
   | { estado: 'no_encontrada' }
   | { estado: 'rechazada'; mensaje: string }
 
-/** Guarda una pantalla (re-redactada) al final de la grabación. La numeración la pone el servidor. */
+/**
+ * Guarda una pantalla —o las de un fichero multipantalla, en orden— (re-redactadas) al final de la grabación, en UNA
+ * transacción (o entran todas o ninguna). La numeración la pone el servidor. `orden`/`documentoId` = los de la primera.
+ */
 export async function subirPantalla(correduriaId: string, id: string, nombre: string, htmlSubido: string): Promise<ResultadoSubida> {
-  const html = redactarHtmlGrabacion(htmlSubido)
-  const contenido = Buffer.from(html, 'utf8')
   return prisma.$transaction(async (tx) => {
     const g = await tx.$queryRaw<{ compania: string; ramo: string }[]>`
       select compania, ramo from seguros.tarificador_grabaciones
@@ -131,25 +131,31 @@ export async function subirPantalla(correduriaId: string, id: string, nombre: st
     if (!g[0]) return { estado: 'no_encontrada' as const }
     const n = await tx.$queryRaw<{ n: number; max: number | null }[]>`
       select count(*)::int as n, max(orden)::int as max from seguros.tarificador_grabacion_pantallas where grabacion_id = ${id}::uuid`
-    const ya = n[0]?.n ?? 0
-    const motivo = comprobarSubida(nombre, contenido.length, html, ya)
-    if (motivo) return { estado: 'rechazada' as const, mensaje: motivo }
-    const orden = (n[0]?.max ?? 0) + 1
-    const sha = createHash('sha256').update(contenido).digest('hex')
-    const doc = await tx.$queryRaw<{ id: string }[]>`
-      insert into seguros.documentos
-        (correduria_id, tarificador_grabacion_id, tipo, estado, nombre_fichero, mime_type, size_bytes, sha256, contenido, notas, subido_por, visible_por_cliente)
-      values (${correduriaId}::uuid, ${id}::uuid, 'otro', 'recibido', ${nombre}, 'text/html', ${contenido.length}::int, ${sha}, ${contenido},
-              ${`Grabador del tarificador: pantalla ${orden} (${g[0].compania} · ${g[0].ramo}), HTML redactado`}, 'corredor', false)
-      returning id::text as id`
-    await tx.$executeRaw`
-      insert into seguros.tarificador_grabacion_pantallas (correduria_id, grabacion_id, orden, documento_id, nombre_fichero, size_bytes)
-      values (${correduriaId}::uuid, ${id}::uuid, ${orden}::int, ${doc[0].id}::uuid, ${nombre}, ${contenido.length}::int)`
-    // Una pantalla nueva deja el mapa validado a medias: se quita la validación.
+    const plan = planificarSubida(nombre, htmlSubido, n[0]?.n ?? 0)
+    if (!plan.ok) return { estado: 'rechazada' as const, mensaje: plan.mensaje }
+    let orden = n[0]?.max ?? 0
+    const ordenes: number[] = []
+    let primero: { documentoId: string; bytes: number } | null = null
+    for (const p of plan.pantallas) {
+      orden++
+      const sha = createHash('sha256').update(p.contenido).digest('hex')
+      const doc = await tx.$queryRaw<{ id: string }[]>`
+        insert into seguros.documentos
+          (correduria_id, tarificador_grabacion_id, tipo, estado, nombre_fichero, mime_type, size_bytes, sha256, contenido, notas, subido_por, visible_por_cliente)
+        values (${correduriaId}::uuid, ${id}::uuid, 'otro', 'recibido', ${p.nombre}, 'text/html', ${p.contenido.length}::int, ${sha}, ${p.contenido},
+                ${`Grabador del tarificador: pantalla ${orden} (${g[0].compania} · ${g[0].ramo}), HTML redactado`}, 'corredor', false)
+        returning id::text as id`
+      await tx.$executeRaw`
+        insert into seguros.tarificador_grabacion_pantallas (correduria_id, grabacion_id, orden, documento_id, nombre_fichero, size_bytes)
+        values (${correduriaId}::uuid, ${id}::uuid, ${orden}::int, ${doc[0].id}::uuid, ${p.nombre}, ${p.contenido.length}::int)`
+      ordenes.push(orden)
+      primero ??= { documentoId: doc[0].id, bytes: p.contenido.length }
+    }
+    // Pantallas nuevas dejan el mapa validado a medias: se quita la validación.
     await tx.$executeRaw`
       update seguros.tarificador_grabaciones set mapa_validado = false, validado_por = null, validado_at = null, updated_at = now()
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
-    return { estado: 'ok' as const, orden, documentoId: doc[0].id, bytes: contenido.length }
+    return { estado: 'ok' as const, orden: ordenes[0], documentoId: primero!.documentoId, bytes: primero!.bytes, pantallas: ordenes.length, ordenes }
   })
 }
 

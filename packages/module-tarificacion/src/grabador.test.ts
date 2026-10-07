@@ -17,7 +17,8 @@ import {
   validarPantallaMapa,
 } from './grabador.ts'
 import { MARCA_LOGIN } from './grabador.ts'
-import { AVISO_MARCO_NO_LEGIBLE, FUENTE_GRABADOR, codigoBookmarklet, configGrabador, urlBookmarklet } from './grabador-bookmarklet.ts'
+import { MARCA_PANTALLA, separarGrabacion } from './grabador.ts'
+import { AVISO_MARCO_NO_LEGIBLE, FUENTE_GRABADOR, FUENTE_GRABADOR_AUTO, VERSION_GRABADOR, codigoBookmarklet, codigoBookmarkletManual, configGrabador, urlBookmarklet } from './grabador-bookmarklet.ts'
 
 describe('clasificarBoton', () => {
   it('PROHIBIDO: emitir, contratar, formalizar, grabar, archivar, aceptar definitivo, firmar, pagar…', () => {
@@ -263,5 +264,49 @@ describe('bookmarklet: forma', () => {
     expect(() => new Function(codigo)).not.toThrow()
     // Sin ayudantes de compilador (`__name`, `_to_consumable_array`…): en el portal no existen.
     expect(codigo).not.toMatch(/__name|_to_consumable|_object_spread|__spreadArray/)
+  })
+  it('modo manual y automático: sin red ni storage, sin ayudantes de compilador, ES5 y un solo click() propio', () => {
+    expect(VERSION_GRABADOR).toBe(3)
+    for (const c of [codigoBookmarkletManual(), codigo]) {
+      expect(() => new Function(c)).not.toThrow()
+      expect(c).not.toMatch(/__name|_to_consumable|_object_spread|__spreadArray/)
+    }
+    expect(FUENTE_GRABADOR_AUTO.match(/\.click\s*\(/g)?.length).toBe(1)
+    expect(FUENTE_GRABADOR_AUTO).toMatch(/a\.download = 'grabacion-'/)
+    // ES5 a propósito: ni flechas, ni let/const, ni plantillas, ni `?.`.
+    expect(FUENTE_GRABADOR_AUTO).not.toMatch(/=>|\blet\b|\bconst\b|`|\?\./)
+    // El indicador queda fuera de la captura.
+    expect(FUENTE_GRABADOR).toMatch(/data-asegura-grabador/)
+  })
+})
+
+describe('separarGrabacion (fichero multipantalla)', () => {
+  const sep = (n: number, t = 'inicio') => `${MARCA_PANTALLA}${n}/3 · ${t} · 10:00:0${n} -->`
+  it('un fichero sin separadores es UNA pantalla (modo manual)', () => {
+    expect(separarGrabacion('<html>a</html>')).toEqual({ multipantalla: false, pantallas: ['<html>a</html>'] })
+  })
+  it('separa en orden, descarta la cabecera del fichero y las pantallas vacías', () => {
+    const t = `<!-- grabacion ASegura v3 -->\n${sep(1)}\n<!-- grabador ASegura v3 -->\n<html>uno</html>\n${sep(2)}\n<html>dos</html>\n${sep(3)}\n\n`
+    const r = separarGrabacion(t)
+    expect(r.multipantalla).toBe(true)
+    expect(r.pantallas).toEqual(['<!-- grabador ASegura v3 -->\n<html>uno</html>', '<html>dos</html>'])
+  })
+  it('el separador solo cuenta al principio de línea', () => {
+    expect(separarGrabacion(`<p>${MARCA_PANTALLA}1/1 --></p>`).multipantalla).toBe(false)
+  })
+})
+
+describe('redactarHtmlGrabacion: rendimiento con tramos largos sin espacios', () => {
+  it('1,6 MB con un data: URI de 500 KB seguidos se redacta en menos de 1 s (no cuadrático)', () => {
+    const b64 = 'iVBORw0KGgoAAAANSUhEUgAA'.repeat(Math.ceil(500_000 / 24)).slice(0, 500_000)
+    const relleno = '<div><p>Texto normal 123 456</p></div>\n'.repeat(Math.ceil(1_150_000 / 36))
+    const html = `${relleno}<img src="data:image/png;base64,${b64}">`
+    expect(html.length).toBeGreaterThan(1_600_000)
+    const t = Date.now()
+    const out = redactarHtmlGrabacion(html)
+    expect(Date.now() - t).toBeLessThan(1000)
+    expect(out.length).toBeGreaterThan(1_000_000)
+    // Y sigue redactando el correo pegado a un tramo largo.
+    expect(redactarHtmlGrabacion(`<p>${'a'.repeat(50_000)} juan.perez@correo.es</p>`)).not.toContain('juan.perez@')
   })
 })

@@ -64,6 +64,35 @@ test('el grabador tapa atributos de sesión, UUID y texto de usuario, y avisa de
   assert.match(bm, /urlsSinLeer\.join/, 'la cabecera no lista las URL de los marcos sin leer')
 })
 
+test('grabación automática (v3): separador compartido, redacción POR PANTALLA en servidor, dedupe y panel fuera de la captura', () => {
+  const gr = leer('packages/module-tarificacion/src/grabador.ts')
+  const bm = leer('packages/module-tarificacion/src/grabador-bookmarklet.ts')
+  const reglas = leer('apps/asegura/lib/tarificador-grabaciones-reglas.ts')
+  const subida = leer('apps/asegura/lib/tarificador-grabaciones.ts')
+  const plat = leer('apps/plataforma/lib/tarificador-grabaciones.ts')
+  assert.match(bm, /export const VERSION_GRABADOR = 3\b/)
+  assert.match(gr, /export function separarGrabacion\b/)
+  // El servidor separa y re-redacta CADA pantalla (no el fichero entero de una vez) y la subida pasa por ahí.
+  assert.match(reglas, /for \(const \[i, crudo\] of s\.pantallas\.entries\(\)\)[\s\S]*?redactarHtmlGrabacion\(crudo\)/, 'asegura no re-redacta pantalla a pantalla')
+  assert.match(subida, /planificarSubida\(/, 'subirPantalla no pasa por planificarSubida')
+  assert.ok(!/redactarHtmlGrabacion\(htmlSubido\)/.test(subida), 'subirPantalla redacta el fichero entero sin separar')
+  // Dedupe por huella del HTML redactado, y un solo alert por grabación.
+  assert.match(bm, /if \(vistas\[h\]\)/, 'el modo automático ya no deduplica por huella')
+  assert.match(bm, /huella\(r\.cuerpo\)/, 'la huella no es la del HTML redactado')
+  assert.match(bm, /!avisado/, 'el aviso de marco ilegible ya no sale una sola vez')
+  // El indicador no entra en la captura, ni se neutraliza mal el separador dentro de la página.
+  assert.match(bm, /clon\.querySelectorAll\('\[data-asegura-grabador\]'\)/, 'el indicador entra en la captura')
+  assert.match(bm, /split\(cfg\.sepPantalla\)/, 'una página puede inyectar un separador de pantalla')
+  // Misma constante de topes en las tres capas (módulo, asegura, plataforma).
+  assert.match(gr, /MAX_BYTES_GRABACION = 32 \* 1024 \* 1024/)
+  assert.match(plat, /MAX_BYTES_GRABACION = 32 \* 1024 \* 1024/)
+  // Sin almacenamiento del navegador ni red en el modo automático.
+  for (const prohibido of [/localStorage|sessionStorage|indexedDB|window\.name|\.cookie\b/, /\bfetch\s*\(|XMLHttpRequest|sendBeacon/]) {
+    const auto = bm.slice(bm.indexOf('FUENTE_GRABADOR_AUTO = '), bm.indexOf('/** Código JS del marcador MANUAL'))
+    assert.ok(!prohibido.test(auto.replace(/^\s*\/\/.*$/gm, '').replace(/nada de almacenamiento[^\n]*/, '')), String(prohibido))
+  }
+})
+
 test('el SQL de grabaciones es aditivo, idempotente y sin DELETE para la app', () => {
   const sql = leer('apps/asegura/prisma/sql/2026-10-07b_tarificador_grabaciones.sql')
   const codigo = sql.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n')
