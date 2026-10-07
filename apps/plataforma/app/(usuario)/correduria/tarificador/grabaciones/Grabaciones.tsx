@@ -13,6 +13,7 @@ import {
   mensajeError,
   mover,
   ordenInicial,
+  prepararEnvios,
   tamano,
   type DetalleGrabacion,
   type ResultadoAnalisis,
@@ -41,7 +42,7 @@ async function pedir(url: string, init?: RequestInit): Promise<{ status: number;
   }
 }
 
-export default function Grabaciones({ bookmarklet }: { bookmarklet: string }) {
+export default function Grabaciones({ bookmarklet, bookmarkletManual }: { bookmarklet: string; bookmarkletManual: string }) {
   const [lista, setLista] = useState<ResumenGrabacion[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -60,7 +61,7 @@ export default function Grabaciones({ bookmarklet }: { bookmarklet: string }) {
 
   return (
     <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-      <Instrucciones bookmarklet={bookmarklet} />
+      <Instrucciones bookmarklet={bookmarklet} bookmarkletManual={bookmarkletManual} />
       <NuevaGrabacion onCreada={(id) => { setAbierta(id); void cargar() }} />
       <section style={cardStyle}>
         <CardHeader
@@ -105,11 +106,12 @@ export default function Grabaciones({ bookmarklet }: { bookmarklet: string }) {
   )
 }
 
-function Instrucciones({ bookmarklet }: { bookmarklet: string }) {
+function Instrucciones({ bookmarklet, bookmarkletManual }: { bookmarklet: string; bookmarkletManual: string }) {
   const enlace = useRef<HTMLAnchorElement>(null)
   // React 19 bloquea `href="javascript:…"` en JSX: el marcador se pone a mano en el DOM.
   useEffect(() => { enlace.current?.setAttribute('href', bookmarklet) }, [bookmarklet])
   const [copiado, setCopiado] = useState(false)
+  const [copiadoManual, setCopiadoManual] = useState(false)
   return (
     <section style={cardStyle}>
       <CardHeader title="Cómo grabar" sub="Una vez por compañía/ramo nuevo. El marcador no manda nada a ningún sitio: solo descarga un fichero." />
@@ -137,11 +139,20 @@ function Instrucciones({ bookmarklet }: { bookmarklet: string }) {
           <span className="muted" style={{ display: 'block', fontSize: 12 }}>
             Si tu navegador no deja arrastrar: crea un marcador nuevo, llámalo «Grabar pantalla ASegura» y pega el código como dirección.
           </span>
+          <span className="muted" style={{ display: 'block', fontSize: 12 }}>
+            ¿Prefieres una pantalla por pulsación (modo manual de siempre)?{' '}
+            <button
+              type="button"
+              onClick={() => { void navigator.clipboard?.writeText(bookmarkletManual).then(() => setCopiadoManual(true)).catch(() => setCopiadoManual(false)) }}
+              style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}
+            >
+              {copiadoManual ? 'Copiado' : 'Copiar el código manual'}
+            </button>
+          </span>
         </li>
-        <li>Crea abajo una grabación (compañía, ramo, producto).</li>
-        <li>Entra en el portal de la compañía y haz un presupuesto <strong>ficticio</strong> a mano (datos inventados).</li>
-        <li>En CADA pantalla, con los datos ya puestos, pulsa el marcador: se descarga <code>pantalla-…html</code>. No pulses nunca emitir/contratar.</li>
-        <li>Sube aquí los ficheros en orden y pulsa «Analizar»; revisa el mapa y márcalo como validado.</li>
+        <li>Crea abajo una grabación (compañía, ramo, producto) y entra en el portal de la compañía: haz un presupuesto <strong>ficticio</strong> a mano (datos inventados). No pulses nunca emitir/contratar.</li>
+        <li>Pulsa el marcador UNA vez: queda «grabando» (cuadro azul abajo a la derecha) y guarda sola cada pantalla nueva. «Guardar pantalla ahora» fuerza una; «Terminar y descargar» baja UN fichero <code>grabacion-…html</code> con todas.</li>
+        <li>Si la página se recarga entera se pierde lo grabado: termina y descarga antes, o vuelve a pulsar el marcador después (se juntan por nombre y fecha). Sube aquí el fichero (o varios) y pulsa «Analizar».</li>
       </ol>
       <p className="muted" style={{ margin: '8px 0 0', fontSize: 12 }}>
         El marcador lee la página y sus marcos del mismo portal, tapa contraseñas, campos ocultos, DNI, IBAN, correos y teléfonos,
@@ -305,13 +316,20 @@ function Pantallas({ g, ocupado, setOcupado, onSubidas }: { g: DetalleGrabacion;
     if (errs.length) return setErrores(errs)
     const fallos: string[] = []
     let subidos = 0
+    let yaSubidas = g.pantallas
     for (const [i, f] of elegidos.entries()) {
-      setOcupado(`Subiendo ${i + 1} de ${elegidos.length}: ${f.name}`)
-      const html = await f.file.text()
-      const r = await pedir(`${API}/${g.id}/pantallas?${new URLSearchParams({ nombre: f.name })}`, { method: 'POST', headers: { 'content-type': 'text/html; charset=utf-8' }, body: html })
-      const e = mensajeError(r.status, r.json, f.name)
+      const { envios, error } = prepararEnvios(f.name, await f.file.text(), yaSubidas)
       // Al primer fallo se para: si no, el orden de las pantallas quedaría con huecos.
-      if (e) { fallos.push(e); break }
+      if (error) { fallos.push(error); break }
+      let bien = true
+      for (const [j, e] of envios.entries()) {
+        setOcupado(`Subiendo ${i + 1} de ${elegidos.length}: ${f.name}${envios.length > 1 ? ` (parte ${j + 1}/${envios.length})` : ''}`)
+        const r = await pedir(`${API}/${g.id}/pantallas?${new URLSearchParams({ nombre: e.nombre })}`, { method: 'POST', headers: { 'content-type': 'text/html; charset=utf-8' }, body: e.html })
+        const err = mensajeError(r.status, r.json, e.nombre)
+        if (err) { fallos.push(err); bien = false; break }
+        yaSubidas += (r.json as { pantallas?: number } | null)?.pantallas ?? 1
+      }
+      if (!bien) break
       subidos++
     }
     setElegidos((l) => l.slice(subidos))

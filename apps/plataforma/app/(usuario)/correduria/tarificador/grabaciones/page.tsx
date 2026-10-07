@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Clapperboard } from 'lucide-react'
-import { urlBookmarklet } from '@central/module-tarificacion'
+import { urlBookmarklet, urlBookmarkletManual } from '@central/module-tarificacion'
 import { PageHeader, Pagina } from '@/components/ui'
 import Grabaciones from './Grabaciones'
 
@@ -28,7 +28,7 @@ export default function GrabacionesPage() {
             </>}
           />
         </div>
-        <Grabaciones bookmarklet={urlBookmarklet()} />
+        <Grabaciones bookmarklet={urlBookmarklet()} bookmarkletManual={urlBookmarkletManual()} />
       </div>
     </Pagina>
   )

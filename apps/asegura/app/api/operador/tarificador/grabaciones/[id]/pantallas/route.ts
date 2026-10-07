@@ -15,6 +15,8 @@ type Ctx = { params: Promise<{ id: string }> }
  * `POST /api/operador/tarificador/grabaciones/[id]/pantallas?nombre=pantalla-….html` — cuerpo = el HTML que
  * descargó el bookmarklet (`text/html`, ≤ 4 MB: el límite de cuerpo de Vercel es 4,5 MB). Se RE-REDACTA aquí
  * antes de guardarlo y se pone al FINAL de la grabación (la numeración la lleva el servidor). Máx. 40.
+ * El cuerpo puede ser el fichero MULTIPANTALLA del modo automático (`grabacion-….html`): se separa en pantallas
+ * ordenadas y cada una se re-redacta aparte (todo o nada). Tope de la PETICIÓN: 4 MB (Vercel); la UI trocea lo mayor.
  * No es JSON a propósito: `auditado()` no copia el cuerpo (solo registra la escritura).
  */
 export const POST = auditado(async (req: Request, ctx: Ctx) => {

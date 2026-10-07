@@ -8,7 +8,7 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR: el mapa es documentación. Ningún botón de él se pulsa desde aquí.
 
-import { BLOQUEO_GRABADOR, MAX_BYTES_PANTALLA, MAX_PANTALLAS, TIPOS_CAMPO_MAPA } from '@central/module-tarificacion'
+import { BLOQUEO_GRABADOR, MAX_BYTES_PANTALLA, MAX_PANTALLAS, TIPOS_CAMPO_MAPA, redactarHtmlGrabacion, separarGrabacion } from '@central/module-tarificacion'
 
 export const SQL_GRABACIONES = 'apps/asegura/prisma/sql/2026-10-07b_tarificador_grabaciones.sql'
 export const MENSAJE_TABLA_SIN_CREAR = `Las grabaciones aún no están activas: falta aplicar ${SQL_GRABACIONES} en la base.`
@@ -71,6 +71,32 @@ export function comprobarSubida(nombre: string, bytes: number, html: string, yaS
   if (!/<html|<body|<form|<!-- grabador ASegura/i.test(html.slice(0, 200_000))) return 'no parece una página HTML'
   if (!nombre) return 'falta el nombre del fichero'
   return null
+}
+
+export type PantallaPlanificada = { nombre: string; html: string; contenido: Buffer }
+
+/**
+ * Prepara una subida (una pantalla suelta o el fichero MULTIPANTALLA `grabacion-….html` del modo automático):
+ * lo separa en pantallas ORDENADAS, RE-REDACTA cada una por separado (también su aviso de login) y aplica los
+ * topes por pantalla (4 MB, que parezca HTML) y los de la grabación (40 pantallas entre las ya subidas y las nuevas).
+ * El tope TOTAL de la petición lo pone la ruta (4 MB: límite de cuerpo de Vercel); la UI trocea lo mayor.
+ * Una pantalla suelta conserva su nombre; las de un multipantalla se llaman `<nombre sin .html>-p01.html`…
+ */
+export function planificarSubida(nombre: string, htmlSubido: string, yaSubidas: number): { ok: true; pantallas: PantallaPlanificada[]; multipantalla: boolean } | { ok: false; mensaje: string } {
+  const s = separarGrabacion(htmlSubido)
+  if (s.pantallas.length === 0) return { ok: false, mensaje: 'el fichero no tiene ninguna pantalla' }
+  if (yaSubidas + s.pantallas.length > MAX_PANTALLAS) return { ok: false, mensaje: `la grabación ya tiene ${yaSubidas} pantallas y el fichero trae ${s.pantallas.length} (máximo ${MAX_PANTALLAS})` }
+  const base = nombre.replace(/\.html?$/i, '')
+  const pantallas: PantallaPlanificada[] = []
+  for (const [i, crudo] of s.pantallas.entries()) {
+    const html = redactarHtmlGrabacion(crudo)
+    const contenido = Buffer.from(html, 'utf8')
+    const n = s.multipantalla ? `${base}-p${String(i + 1).padStart(2, '0')}.html` : nombre
+    const motivo = comprobarSubida(n, contenido.length, html, yaSubidas + i)
+    if (motivo) return { ok: false, mensaje: s.multipantalla ? `pantalla ${i + 1} del fichero: ${motivo}` : motivo }
+    pantallas.push({ nombre: n, html, contenido })
+  }
+  return { ok: true, pantallas, multipantalla: s.multipantalla }
 }
 
 // ─── IA ─────────────────────────────────────────────────────────────────────

@@ -18,7 +18,8 @@ export const PATRONES_PERSONALES: readonly RegExp[] = [
   // IBAN español (y cualquiera con forma de IBAN), con o sin espacios.
   /\b[A-Z]{2}\d{2}(?:[\s-]?[A-Z0-9]{4}){3,7}(?:[\s-]?[A-Z0-9]{1,4})?\b/gi,
   // Correo.
-  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+  // (?<!…): solo arranca al principio de la tirada; sin él, una tirada larga sin «@» es cuadrática (100 KB ≈ 15 s).
+  /(?<![A-Z0-9._%+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
   // DNI / NIE / CIF.
   /\b\d{8}[\s-]?[A-Z]\b/gi,
   /\b[XYZ][\s-]?\d{7}[\s-]?[A-Z]\b/gi,

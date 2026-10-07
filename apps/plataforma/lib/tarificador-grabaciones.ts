@@ -1,10 +1,13 @@
 // GRABADOR del tarificador RPA — reglas PURAS de la pantalla /correduria/tarificador/grabaciones (07/10/2026).
 // Las usan el componente cliente y las rutas; `node --test`.
-import type { MapaGrabacion } from '@central/module-tarificacion'
+import { separarGrabacion, type MapaGrabacion } from '@central/module-tarificacion'
 
 /** Mismos topes que asegura (`MAX_BYTES_PANTALLA`, `MAX_PANTALLAS` de @central/module-tarificacion). */
 export const MAX_BYTES_FICHERO = 4 * 1024 * 1024
 export const MAX_FICHEROS = 40
+/** Fichero multipantalla del modo automático (`grabacion-….html`, hasta 40 pantallas): tope total 32 MB (= MAX_BYTES_GRABACION del módulo). */
+export const MAX_BYTES_GRABACION = 32 * 1024 * 1024
+const esMultipantalla = (nombre: string) => /^grabacion-/i.test(nombre)
 
 export type ResumenGrabacion = {
   id: string
@@ -52,14 +55,34 @@ export function comprobarFicheros(ficheros: readonly FicheroElegido[], yaSubidas
   for (const f of ficheros) {
     if (!/\.html?$/i.test(f.name)) errores.push(`«${f.name}» no es un .html.`)
     else if (f.size <= 0) errores.push(`«${f.name}» está vacío.`)
-    else if (f.size > MAX_BYTES_FICHERO) errores.push(`«${f.name}» pasa de 4 MB.`)
+    else if (f.size > (esMultipantalla(f.name) ? MAX_BYTES_GRABACION : MAX_BYTES_FICHERO)) errores.push(`«${f.name}» pasa de ${esMultipantalla(f.name) ? 32 : 4} MB.`)
   }
   return errores
 }
 
+export type Envio = { nombre: string; html: string }
+
 /**
- * Orden inicial: por nombre. El bookmarklet nombra `pantalla-<host>-AAAAMMDD-HHMMSS.html`, así que por nombre
- * es el orden en que se grabaron. Alberto puede reordenar antes de subir.
+ * Qué peticiones hace falta para subir un fichero. Una petición no pasa de 4 MB (límite de cuerpo de Vercel): un
+ * fichero que cabe se manda tal cual (asegura lo separa en pantallas, todo o nada); un multipantalla mayor se TROCEA
+ * aquí, pantalla a pantalla y en orden (`<nombre>-p01.html`…, como las nombra asegura). `error` si no cabe en la grabación.
+ */
+export function prepararEnvios(nombre: string, texto: string, yaSubidas: number): { envios: Envio[]; error: string | null } {
+  const bytes = new TextEncoder().encode(texto).length
+  const s = separarGrabacion(texto)
+  if (bytes <= MAX_BYTES_FICHERO && !(s.multipantalla && s.pantallas.length === 0)) {
+    if (yaSubidas + s.pantallas.length > MAX_FICHEROS) return { envios: [], error: `«${nombre}» trae ${s.pantallas.length} pantallas y solo caben ${Math.max(0, MAX_FICHEROS - yaSubidas)} más.` }
+    return { envios: [{ nombre, html: texto }], error: null }
+  }
+  if (!s.multipantalla || s.pantallas.length === 0) return { envios: [], error: `«${nombre}» pasa de 4 MB.` }
+  if (yaSubidas + s.pantallas.length > MAX_FICHEROS) return { envios: [], error: `«${nombre}» trae ${s.pantallas.length} pantallas y solo caben ${Math.max(0, MAX_FICHEROS - yaSubidas)} más.` }
+  const base = nombre.replace(/\.html?$/i, '')
+  return { envios: s.pantallas.map((html, i) => ({ nombre: `${base}-p${String(i + 1).padStart(2, '0')}.html`, html })), error: null }
+}
+
+/**
+ * Orden inicial: por nombre. El marcador nombra `pantalla-<host>-AAAAMMDD-HHMMSS.html` (manual) o
+ * `grabacion-<host>-AAAAMMDD-HHMMSS.html` (automático, varias pantallas), así que por nombre es el orden en que se grabaron. Alberto puede reordenar antes de subir.
  */
 export function ordenInicial<T extends FicheroElegido>(ficheros: readonly T[]): T[] {
   return [...ficheros].sort((a, b) => a.name.localeCompare(b.name, 'es', { numeric: true }))

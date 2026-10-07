@@ -7,6 +7,9 @@
 // actual de cada control en `data-valor` (los <select> llevan sus <option> y la elegida con `selected`),
 // REDACTA antes de salir y DESCARGA un `pantalla-<host>-<fecha>.html`.
 //
+// v3 (07/10/2026): MODO AUTOMÁTICO (`FUENTE_GRABADOR_AUTO`, el marcador por defecto): una pulsación y graba sola
+// cada pantalla nueva; al terminar baja UN `grabacion-<host>-<fecha>.html`. El manual de siempre sigue (`codigoBookmarkletManual`).
+//
 // 🔒 Sin red a propósito: los portales pueden bloquear peticiones externas por CSP, y lo que no sale no se
 //    filtra. Ni fetch, ni XHR, ni beacons, ni cookies, ni storage (lo vigila grabador.test.ts).
 // 🔒 No pulsa NADA del portal: el único `click()` es el del <a download> que crea él mismo, sin colgarlo del
@@ -27,9 +30,14 @@
 
 import { PATRONES_PERSONALES, MARCA_DATO_PERSONAL } from './formador.ts'
 import { MARCA_REDACTADO } from './redactar.ts'
-import { FIN_MARCA_MARCO, MARCA_LOGIN, MARCA_MARCO, PATRON_CAMPO_SENSIBLE, PATRON_CAMPO_PERSONAL, PATRON_CAMPO_USUARIO, PATRON_MEDIADOR, PATRON_PARAM_SENSIBLE, PATRON_ATRIBUTO_SESION, PATRON_UUID, PATRON_ELEMENTO_USUARIO, MAX_TEXTO_ELEMENTO_USUARIO } from './grabador.ts'
+import { FIN_MARCA_MARCO, MARCA_PANTALLA, MARCA_LOGIN, MARCA_MARCO, PATRON_CAMPO_SENSIBLE, PATRON_CAMPO_PERSONAL, PATRON_CAMPO_USUARIO, PATRON_MEDIADOR, PATRON_PARAM_SENSIBLE, PATRON_ATRIBUTO_SESION, PATRON_UUID, PATRON_ELEMENTO_USUARIO, MAX_TEXTO_ELEMENTO_USUARIO } from './grabador.ts'
 
-export const VERSION_GRABADOR = 2
+export const VERSION_GRABADOR = 3
+
+/** Modo automático: nodos añadidos/quitados que cuentan como «mutación grande», espera (debounce) y sondeo de URL. */
+export const UMBRAL_NODOS_GRABADOR = 20
+export const ESPERA_CAPTURA_MS = 1500
+export const SONDEO_MS = 600
 
 /** Texto del alert() cuando hay marcos de otro origen; se le pega la URL completa del marco. */
 export const AVISO_MARCO_NO_LEGIBLE = 'Esta pantalla tiene el formulario en un marco que no se puede leer. Abre este enlace en una pestaña nueva y vuelve a pulsar el marcador: '
@@ -50,6 +58,10 @@ export type ConfigGrabador = {
   aviso: string
   marca: string
   finMarca: string
+  sepPantalla: string
+  umbralNodos: number
+  esperaMs: number
+  sondeoMs: number
   redactado: string
   dato: string
 }
@@ -71,6 +83,10 @@ export function configGrabador(): ConfigGrabador {
     aviso: AVISO_MARCO_NO_LEGIBLE,
     marca: MARCA_MARCO,
     finMarca: FIN_MARCA_MARCO,
+    sepPantalla: MARCA_PANTALLA,
+    umbralNodos: UMBRAL_NODOS_GRABADOR,
+    esperaMs: ESPERA_CAPTURA_MS,
+    sondeoMs: SONDEO_MS,
     redactado: MARCA_REDACTADO,
     dato: MARCA_DATO_PERSONAL,
   }
@@ -209,6 +225,8 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
     for (var q = 0; q < origs.length; q++) if (String(origs[q].getAttribute('type') || '').toLowerCase() === 'password') login = true
     if (login) hayLogin = true
     for (var i = 0; i < origs.length && i < clons.length; i++) anotar(origs[i], clons[i], login)
+    var panel = clon.querySelectorAll('[data-asegura-grabador]')
+    for (var pn = 0; pn < panel.length; pn++) if (panel[pn].parentNode) panel[pn].parentNode.removeChild(panel[pn])
     var marcos = doc.querySelectorAll('iframe,frame')
     var marcosClon = clon.querySelectorAll('iframe,frame')
     var rutas = []
@@ -222,7 +240,7 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
       }
     }
     limpiar(doc, clon)
-    var html = String(clon.outerHTML).split(cfg.marca).join('<!-- (marco) ')
+    var html = String(clon.outerHTML).split(cfg.marca).join('<!-- (marco) ').split(cfg.sepPantalla).join('<!-- (pantalla) ')
     partes.push(ruta === null ? html : cfg.marca + ruta + cfg.finMarca + '\n' + html)
     for (var f = 0; f < marcos.length; f++) {
       var d = null
@@ -247,7 +265,8 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var titulo = red(String(win.document.title || '')).replace(/--/g, '- -')
   var cabecera = '<!-- grabador ASegura v' + cfg.version + ' · ' + d.toISOString() + ' · ' + host + redUrl(String(loc.pathname || '')).replace(/--/g, '- -') +
     ' · «' + titulo + '» · marcos sin leer: ' + sinLeer + ' -->\n' + (urlsSinLeer.length ? '<!-- grabador: marcos sin leer (sin query ni tokens): ' + urlsSinLeer.join(' | ').replace(/--/g, '- -').replace(/>/g, '%3E') + ' -->\n' : '') + (hayLogin ? cfg.login + '\n' : '')
-  var html = cabecera + partes.join('\n')
+  var cuerpo = partes.join('\n')
+  var html = cabecera + cuerpo
   var nombre = 'pantalla-' + host + '-' + sello + '.html'
   if (descargar) {
     var blob = new win.Blob([html], { type: 'text/html;charset=utf-8' })
@@ -262,17 +281,176 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var aviso = ''
   for (var v = 0; v < urlsCompletas.length; v++) aviso += (aviso ? '\n\n' : '') + cfg.aviso + urlsCompletas[v]
   if (descargar && aviso) { try { win.alert(aviso) } catch (e) { } }
-  return { nombre: nombre, html: html, marcosSinLeer: sinLeer, urlsSinLeer: urlsSinLeer, aviso: aviso }
+  return { nombre: nombre, html: html, cuerpo: cuerpo, host: host, sello: sello, marcosSinLeer: sinLeer, urlsSinLeer: urlsSinLeer, aviso: aviso }
 }`
 
-/** Código JS (sin `javascript:`) que ejecuta el marcador. */
-export function codigoBookmarklet(): string {
+/** Fuente JS (ES5) del MODO AUTOMÁTICO `grabadorAuto(win, cfg, grabar)`: un indicador flotante (shadow DOM abierto, fuera de
+ *  toda captura) y una captura por cada cambio de pantalla (URL/hash/marcos del mismo origen, o mutación grande del DOM con
+ *  debounce). Dedupe por huella del HTML ya redactado. El estado vive SOLO en memoria de la pestaña (nada de almacenamiento
+ *  que el portal pudiera leer): si la página se recarga entera, se pierde y el indicador lo avisa. Al terminar descarga UN
+ *  fichero con todas las pantallas. Sin red, sin cookies; el único click() es el del <a download> propio. */
+export const FUENTE_GRABADOR_AUTO = String.raw`function grabadorAuto(win, cfg, grabar) {
+  var doc = win.document
+  var previo = doc.querySelector('[data-asegura-grabador]')
+  if (previo && previo.__ahora) { previo.__ahora(); return }
+  var pantallas = []
+  var vistas = {}
+  var activo = true
+  var temporizador = null
+  var pendientes = 0
+  var firmaPrev = null
+  var observadores = []
+  var avisado = false
+  var ocupado = false
+  var host = String(win.location.hostname || 'local').replace(/[^a-z0-9.-]/gi, '_')
+
+  function huella(s) {
+    var h = 5381
+    for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0
+    return h + ':' + s.length
+  }
+  function dos(x) { return (x < 10 ? '0' : '') + x }
+  function hora(d) { return dos(d.getHours()) + ':' + dos(d.getMinutes()) + ':' + dos(d.getSeconds()) }
+
+  var caja = doc.createElement('div')
+  caja.setAttribute('data-asegura-grabador', '1')
+  caja.style.cssText = 'all:initial;position:fixed;right:12px;bottom:12px;z-index:2147483647'
+  var raiz = caja.attachShadow ? caja.attachShadow({ mode: 'open' }) : caja
+  var marco = doc.createElement('div')
+  marco.style.cssText = 'font:12px/1.35 system-ui,sans-serif;background:#fff;color:#111;border:2px solid #3364ee;border-radius:10px;padding:8px 10px;width:230px;box-shadow:0 2px 10px rgba(0,0,0,.3)'
+  function linea(css, texto) { var e = doc.createElement('div'); e.style.cssText = css; e.textContent = texto; marco.appendChild(e); return e }
+  var titulo = linea('font-weight:700;font-size:13px', '')
+  var estado = linea('margin:2px 0 4px;color:#444', 'Navega con normalidad: cada pantalla nueva se guarda sola.')
+  linea('margin:0 0 6px;color:#8a5a00;font-size:11px', 'Si la pagina se recarga entera se pierde lo grabado: pulsa Terminar antes de salir, o vuelve a pulsar el marcador despues (se juntan por nombre y fecha).')
+  function boton(texto, fn) {
+    var b = doc.createElement('button')
+    b.type = 'button'
+    b.textContent = texto
+    b.style.cssText = 'display:block;width:100%;margin:3px 0 0;padding:6px 8px;font:12px system-ui,sans-serif;border:1px solid #3364ee;border-radius:6px;background:#3364ee;color:#fff;cursor:pointer'
+    b.addEventListener('click', fn)
+    marco.appendChild(b)
+    return b
+  }
+  function pintar(msg) {
+    titulo.textContent = '\u25CF Grabando \u00B7 ' + pantallas.length + ' pantalla' + (pantallas.length === 1 ? '' : 's')
+    if (msg) estado.textContent = msg
+  }
+
+  function capturar(motivo) {
+    if (!activo || ocupado) return false
+    ocupado = true
+    var r
+    try { r = grabar(win, cfg, false) } finally { ocupado = false }
+    pendientes = 0
+    if (r.aviso && !avisado) { avisado = true; try { win.alert(r.aviso) } catch (e) { } }
+    var h = huella(r.cuerpo)
+    if (vistas[h]) { pintar('Esta pantalla ya estaba guardada.'); return false }
+    vistas[h] = 1
+    pantallas.push({ html: r.html, motivo: motivo, hora: hora(new Date()) })
+    pintar('Guardada: ' + motivo + '.')
+    return true
+  }
+  function programar(motivo) {
+    if (!activo) return
+    if (temporizador) win.clearTimeout(temporizador)
+    temporizador = win.setTimeout(function () { temporizador = null; capturar(motivo) }, cfg.esperaMs)
+  }
+
+  function recorrer(d, firmas, ruta) {
+    var href = ''
+    try { href = String(d.location.href) } catch (e) { href = '?' }
+    firmas.push(ruta + '=' + href)
+    if (!d.__asegObs) {
+      d.__asegObs = true
+      try {
+        var mo = new win.MutationObserver(function (muts) {
+          for (var i = 0; i < muts.length; i++) {
+            var m = muts[i]
+            if (m.target === caja) continue
+            var n = 0
+            for (var a = 0; a < m.addedNodes.length; a++) if (m.addedNodes[a] !== caja) n++
+            pendientes += n + m.removedNodes.length
+          }
+          if (pendientes >= cfg.umbralNodos) programar('cambio de pantalla')
+        })
+        mo.observe(d.documentElement, { childList: true, subtree: true })
+        observadores.push(mo)
+      } catch (e) { }
+    }
+    var marcos = d.querySelectorAll('iframe,frame')
+    for (var f = 0; f < marcos.length; f++) {
+      var hijo = null
+      try { hijo = marcos[f].contentDocument } catch (e) { hijo = null }
+      if (hijo && hijo.documentElement) recorrer(hijo, firmas, ruta + '/' + f)
+      else firmas.push(ruta + '/' + f + '=ilegible')
+    }
+  }
+  function sondear() {
+    if (!activo) return
+    var firmas = []
+    recorrer(doc, firmas, 'p')
+    var firma = firmas.join('|')
+    if (firmaPrev !== null && firma !== firmaPrev) programar('navegacion')
+    firmaPrev = firma
+  }
+
+  function detener() {
+    activo = false
+    if (temporizador) win.clearTimeout(temporizador)
+    win.clearInterval(intervalo)
+    for (var i = 0; i < observadores.length; i++) observadores[i].disconnect()
+    if (caja.parentNode) caja.parentNode.removeChild(caja)
+  }
+  function terminar() {
+    capturar('final')
+    var n = pantallas.length
+    var d = new Date()
+    var sello = d.getFullYear() + dos(d.getMonth() + 1) + dos(d.getDate()) + '-' + dos(d.getHours()) + dos(d.getMinutes()) + dos(d.getSeconds())
+    var texto = '<!-- grabacion ASegura v' + cfg.version + ' \u00B7 multipantalla \u00B7 ' + host + ' \u00B7 ' + d.toISOString() + ' \u00B7 pantallas: ' + n + ' -->\n'
+    for (var i = 0; i < n; i++) texto += cfg.sepPantalla + (i + 1) + '/' + n + ' \u00B7 ' + pantallas[i].motivo + ' \u00B7 ' + pantallas[i].hora + ' -->\n' + pantallas[i].html + '\n'
+    detener()
+    if (!n) return
+    var blob = new win.Blob([texto], { type: 'text/html;charset=utf-8' })
+    var url = win.URL.createObjectURL(blob)
+    var a = doc.createElement('a')
+    a.href = url
+    a.download = 'grabacion-' + host + '-' + sello + '.html'
+    a.click()
+    win.setTimeout(function () { win.URL.revokeObjectURL(url) }, 5000)
+  }
+
+  boton('Guardar pantalla ahora', function () { capturar('guardada a mano') })
+  boton('Terminar y descargar', terminar)
+  raiz.appendChild(marco)
+  var stop = function (e) { e.stopPropagation() }
+  var evs = ['click', 'mousedown', 'mouseup', 'keydown', 'keyup', 'pointerdown', 'pointerup']
+  for (var k = 0; k < evs.length; k++) caja.addEventListener(evs[k], stop)
+  caja.__ahora = function () { capturar('guardada a mano') }
+  ;(doc.body || doc.documentElement).appendChild(caja)
+  var intervalo = win.setInterval(sondear, cfg.sondeoMs)
+  sondear()
+  capturar('inicio')
+}`
+
+/** Código JS del marcador MANUAL de siempre (una pantalla por pulsación → `pantalla-….html`). */
+export function codigoBookmarkletManual(): string {
   // Sin sangrías (ninguna cadena del fuente cruza líneas): el marcador pesa menos.
   return '(function(){var g=' + FUENTE_GRABADOR.replace(/\n\s+/g, '\n') + ';try{g(window,' + JSON.stringify(configGrabador()) +
     ',true)}catch(e){alert("Grabar pantalla ASegura: no se ha podido grabar ("+(e&&e.message)+")")}})();void 0'
 }
 
 /** La URL `javascript:` del marcador (para el <a> que se arrastra a favoritos). */
+export function urlBookmarkletManual(): string {
+  return 'javascript:' + encodeURIComponent(codigoBookmarkletManual())
+}
+
+/** Código JS (sin `javascript:`) del marcador AUTOMÁTICO: una pulsación → graba sola cada pantalla nueva. */
+export function codigoBookmarklet(): string {
+  return '(function(){var g=' + FUENTE_GRABADOR.replace(/\n\s+/g, '\n') + ';var a=' + FUENTE_GRABADOR_AUTO.replace(/\n\s+/g, '\n') + ';try{a(window,' + JSON.stringify(configGrabador()) +
+    ',g)}catch(e){alert("Grabar pantalla ASegura: no se ha podido grabar ("+(e&&e.message)+")")}})();void 0'
+}
+
+/** La URL `javascript:` del marcador automático (para el <a> que se arrastra a favoritos). */
 export function urlBookmarklet(): string {
   return 'javascript:' + encodeURIComponent(codigoBookmarklet())
 }
