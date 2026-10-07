@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-07T07:28:48Z",
-  "sha": "f876b783f2f71fbc91555ab9abb7f68fcf5ac808",
+  "generadoEn": "2026-10-07T09:41:22Z",
+  "sha": "0fca445ab882d33f5f688186fa1c41937bd70bde",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -20555,7 +20555,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 56
+          "linea": 63
         },
         {
           "nombre": "codigoMediador",
@@ -20563,7 +20563,7 @@
           "exportada": false,
           "params": "json: unknown",
           "retorno": "unknown",
-          "linea": 58
+          "linea": 65
         },
         {
           "nombre": "productividadCartera",
@@ -20571,12 +20571,12 @@
           "exportada": true,
           "params": "correduriaId: string, anio: number, hoy: string",
           "retorno": "Promise<ProductividadCartera>",
-          "linea": 65
+          "linea": 72
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ff609f7d5174"
+      "hash": "31ee9b25f408"
     },
     {
       "ruta": "apps/asegura/lib/acuerdos.ts",
@@ -41382,7 +41382,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "fd10e4df0e42"
+      "hash": "ae69054c567b"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-lectura-reglas.ts",
@@ -89445,21 +89445,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 27,
-          "resumen": "Compañías: contactos, claves, acuerdos y producción en UN sitio (06/10/2026, fase 2 de acuerdos con compañías — decisión de Alberto: sin pestaña nueva). Una tarjeta por compañía con contactos o con ac"
-        },
-        {
-          "nombre": "TarjetaCompania",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ c, ra, rp }: { c: Compania ra: RespuestaAcuerdos | null rp: RespuestaProductividad | null }",
-          "retorno": null,
-          "linea": 70
+          "linea": 22,
+          "resumen": "Compañías: contactos, claves, acuerdos y producción en UN sitio (06/10/2026, fase 2 de acuerdos con compañías — decisión de Alberto: sin pestaña nueva). Rediseño 07/10/2026: panel «Objetivos y producc"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f71f3b73c568"
+      "hash": "24c49afceb6c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/[codigo]/FichaCompania.tsx",
@@ -89523,6 +89515,7 @@
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/AcuerdosVista.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
+        "Chip",
         "ChipsAcuerdos",
         "ProduccionCompania",
         "TarjetaAcuerdo",
@@ -89535,7 +89528,15 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 34
+          "linea": 35
+        },
+        {
+          "nombre": "Chip",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ tono = 'neutral', children, title }: { tono?: TonoChip; children: ReactNode; title?: string }",
+          "retorno": null,
+          "linea": 53
         },
         {
           "nombre": "ChipsAcuerdos",
@@ -89543,7 +89544,7 @@
           "exportada": true,
           "params": "{ codigo, r }: { codigo: string; r: RespuestaAcuerdos }",
           "retorno": null,
-          "linea": 40
+          "linea": 67
         },
         {
           "nombre": "ChipClave",
@@ -89551,7 +89552,7 @@
           "exportada": false,
           "params": "{ c }: { c: Clave }",
           "retorno": null,
-          "linea": 62
+          "linea": 89
         },
         {
           "nombre": "ProduccionCompania",
@@ -89559,7 +89560,7 @@
           "exportada": true,
           "params": "{ codigo, p, enCima, compacto = false }: { codigo: string p: RespuestaProductividad enCima: boolean | null compacto?: boolean }",
           "retorno": null,
-          "linea": 73
+          "linea": 100
         },
         {
           "nombre": "TarjetaAcuerdo",
@@ -89567,7 +89568,7 @@
           "exportada": true,
           "params": "{ a, objetivos, onCotejado }: { a: Acuerdo objetivos: ObjetivoEvaluado[] onCotejado?: (revisadoAt: string) => void }",
           "retorno": null,
-          "linea": 118
+          "linea": 145
         },
         {
           "nombre": "LineasPaginadas",
@@ -89575,7 +89576,7 @@
           "exportada": false,
           "params": "{ lineas }: { lineas: Acuerdo['comisiones'] }",
           "retorno": null,
-          "linea": 172
+          "linea": 199
         },
         {
           "nombre": "ObjetivosAcuerdo",
@@ -89583,7 +89584,7 @@
           "exportada": false,
           "params": "{ a, objetivos }: { a: Acuerdo; objetivos: ObjetivoEvaluado[] }",
           "retorno": null,
-          "linea": 215
+          "linea": 242
         },
         {
           "nombre": "CotejarBoton",
@@ -89591,12 +89592,12 @@
           "exportada": true,
           "params": "{ acuerdoId, onHecho }: { acuerdoId: string; onHecho: (revisadoAt: string) => void }",
           "retorno": null,
-          "linea": 249
+          "linea": 276
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b68f7e1b98bb"
+      "hash": "03c3bd14addb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/ComisionReal.tsx",
@@ -89651,6 +89652,42 @@
       "hash": "837bc53e7911"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/companias/ListaCompanias.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ListaCompanias"
+      ],
+      "funciones": [
+        {
+          "nombre": "ListaCompanias",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ companias, acuerdos, productividad }: { companias: Compania[] /** `null` = aún cargando. */ acuerdos: RespuestaAcuerdos | null productividad: RespuestaProductividad | null }",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "FilaCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c, abierta, alternar, acuerdos, productividad, total }: { c: Compania abierta: boolean alternar: () => void acuerdos: RespuestaAcuerdos | null productividad: RespuestaProductividad | null total: { polizas: number; prima: number; sinPrima:",
+          "retorno": null,
+          "linea": 97
+        },
+        {
+          "nombre": "DetalleCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c, acuerdos, productividad }: { c: Compania; acuerdos: RespuestaAcuerdos | null; productividad: RespuestaProductividad | null }",
+          "retorno": null,
+          "linea": 140
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c1a8a67284c3"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -89663,37 +89700,65 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24,
+          "linea": 22,
           "resumen": "salen además las compañías con acuerdo aunque aún no tengan contacto."
-        },
-        {
-          "nombre": "ListaCompanias",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ companias, acuerdos }: { companias: Compania[]; acuerdos: RespuestaAcuerdos }",
-          "retorno": null,
-          "linea": 64
-        },
-        {
-          "nombre": "TarjetaCompania",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ c, acuerdos }: { c: Compania; acuerdos: RespuestaAcuerdos }",
-          "retorno": null,
-          "linea": 93
-        },
-        {
-          "nombre": "TarjetaContacto",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ ct }: { ct: Contacto }",
-          "retorno": null,
-          "linea": 117
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4007e0d62197"
+      "hash": "84e2acc25d92"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/companias/PanelControl.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PanelControl"
+      ],
+      "funciones": [
+        {
+          "nombre": "unidad",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "base: string | null, n: number",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "CeldaObjetivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ o }: { o: ObjetivoCandidata }",
+          "retorno": null,
+          "linea": 26
+        },
+        {
+          "nombre": "FilaCandidata",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c, nombre, recomendada }: { c: CandidataRamo; nombre: string; recomendada: boolean }",
+          "retorno": null,
+          "linea": 50
+        },
+        {
+          "nombre": "TarjetaRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r, nombres }: { r: RamoControl; nombres: ReadonlyMap<string, string> }",
+          "retorno": null,
+          "linea": 87
+        },
+        {
+          "nombre": "PanelControl",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ panel, nombres, carteraLeida, anio }: { /** `null` = los acuerdos no se han podido leer (o aún cargan). */ panel: Panel | null nombres: ReadonlyMap<string, string> carteraLeida: boolean anio: number | null }",
+          "retorno": null,
+          "linea": 121
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "97659192a537"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/TelefonoContacto.tsx",
@@ -95652,7 +95717,7 @@
           "exportada": false,
           "params": "tono: 'warning' | 'negative' | 'positive'",
           "retorno": "React.CSSProperties",
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "fecha",
@@ -95660,7 +95725,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "pedir",
@@ -95668,7 +95733,7 @@
           "exportada": false,
           "params": "url: string, init?: RequestInit",
           "retorno": "Promise<",
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "Grabaciones",
@@ -95676,7 +95741,7 @@
           "exportada": true,
           "params": "{ bookmarklet }: { bookmarklet: string }",
           "retorno": null,
-          "linea": 43
+          "linea": 44
         },
         {
           "nombre": "Instrucciones",
@@ -95684,7 +95749,7 @@
           "exportada": false,
           "params": "{ bookmarklet }: { bookmarklet: string }",
           "retorno": null,
-          "linea": 107
+          "linea": 108
         },
         {
           "nombre": "NuevaGrabacion",
@@ -95692,7 +95757,7 @@
           "exportada": false,
           "params": "{ onCreada }: { onCreada: (id: string) => void }",
           "retorno": null,
-          "linea": 153
+          "linea": 154
         },
         {
           "nombre": "Detalle",
@@ -95700,7 +95765,7 @@
           "exportada": false,
           "params": "{ id, onCambio }: { id: string; onCambio: () => void }",
           "retorno": null,
-          "linea": 187
+          "linea": 188
         },
         {
           "nombre": "Pantallas",
@@ -95708,7 +95773,7 @@
           "exportada": false,
           "params": "{ g, ocupado, setOcupado, onSubidas }: { g: DetalleGrabacion; ocupado: string | null; setOcupado: (s: string | null) => void; onSubidas: () => Promise<void> }",
           "retorno": null,
-          "linea": 287
+          "linea": 292
         },
         {
           "nombre": "MapaPantalla",
@@ -95716,7 +95781,7 @@
           "exportada": false,
           "params": "{ p }: { p: PantallaMapa }",
           "retorno": null,
-          "linea": 364
+          "linea": 369
         },
         {
           "nombre": "Bloque",
@@ -95724,12 +95789,12 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode[] }",
           "retorno": null,
-          "linea": 407
+          "linea": 412
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "489f81a132cc"
+      "hash": "22cf0a91671c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/tarificador/grabaciones/page.tsx",
@@ -101396,13 +101461,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 13,
+          "linea": 14,
           "resumen": "Pasarela IA — completion de texto. La lógica (Director + OpenRouter + cadena gratis + caché) vive en `lib/pasarela.ts::chatConDirector`, reutilizable por los agentes internos. Este route solo hace de "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/ai/chat",
-      "hash": "0d2740dc593d"
+      "hash": "8372e9a72889"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/codigo/route.ts",
@@ -114902,7 +114967,9 @@
         "textoSuma",
         "etiquetaFuente",
         "semaforoObjetivo",
-        "resumenCompania"
+        "resumenCompania",
+        "textoMotivoPendiente",
+        "construirPanelControl"
       ],
       "funciones": [
         {
@@ -114911,7 +114978,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "O | null",
-          "linea": 126
+          "linea": 130
         },
         {
           "nombre": "cadena",
@@ -114919,7 +114986,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 127
+          "linea": 131
         },
         {
           "nombre": "numOnull",
@@ -114927,7 +114994,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 129,
+          "linea": 133,
           "resumen": "Número o `null`. Un texto, un NaN o un `undefined` NO se convierten en 0."
         },
         {
@@ -114936,7 +115003,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "unknown[]",
-          "linea": 130
+          "linea": 134
         },
         {
           "nombre": "cadenas",
@@ -114944,7 +115011,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string[]",
-          "linea": 131
+          "linea": 135
         },
         {
           "nombre": "cerrado",
@@ -114952,7 +115019,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Cerrado | null",
-          "linea": 133
+          "linea": 137
         },
         {
           "nombre": "leerLinea",
@@ -114960,7 +115027,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "LineaAcuerdo | null",
-          "linea": 141
+          "linea": 145
         },
         {
           "nombre": "leerTramo",
@@ -114968,7 +115035,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Tramo | null",
-          "linea": 153
+          "linea": 157
         },
         {
           "nombre": "leerObjetivo",
@@ -114976,7 +115043,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Objetivo | null",
-          "linea": 160
+          "linea": 164
         },
         {
           "nombre": "leerAcuerdo",
@@ -114984,7 +115051,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Acuerdo | null",
-          "linea": 177
+          "linea": 181
         },
         {
           "nombre": "leerClave",
@@ -114992,7 +115059,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Clave | null",
-          "linea": 192
+          "linea": 196
         },
         {
           "nombre": "errorDe",
@@ -115000,7 +115067,7 @@
           "exportada": false,
           "params": "status: number, o: O",
           "retorno": "",
-          "linea": 202
+          "linea": 206
         },
         {
           "nombre": "interpretarAcuerdos",
@@ -115008,7 +115075,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaAcuerdos",
-          "linea": 206
+          "linea": 210
         },
         {
           "nombre": "leerSuma",
@@ -115016,7 +115083,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Suma | null",
-          "linea": 221
+          "linea": 225
         },
         {
           "nombre": "leerProduccion",
@@ -115024,7 +115091,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Produccion | null",
-          "linea": 228
+          "linea": 232
         },
         {
           "nombre": "leerEstadoObjetivo",
@@ -115032,7 +115099,16 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "EstadoObjetivo | null",
-          "linea": 238
+          "linea": 242
+        },
+        {
+          "nombre": "leerCartera",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "FilaCartera[] | null",
+          "linea": 260,
+          "resumen": "Todas las filas legibles o `null`: una cartera a medias parecería una cartera pequeña."
         },
         {
           "nombre": "interpretarProductividad",
@@ -115040,7 +115116,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaProductividad",
-          "linea": 255
+          "linea": 273
         },
         {
           "nombre": "textoPct",
@@ -115048,7 +115124,7 @@
           "exportada": true,
           "params": "v: number | null",
           "retorno": "string",
-          "linea": 284,
+          "linea": 304,
           "resumen": "Un % pactado. `null` → «—» (no consta). Un 0 explícito → «0 %»."
         },
         {
@@ -115057,7 +115133,7 @@
           "exportada": true,
           "params": "s: Suma | null",
           "retorno": "string",
-          "linea": 292,
+          "linea": 312,
           "resumen": "Una suma de producción. `null` (no se pudo leer) → «sin datos»; sin recibos → «sin recibos» (no «0,00€»); con ilegibles → el importe leído y cuántos faltan."
         },
         {
@@ -115066,7 +115142,7 @@
           "exportada": true,
           "params": "a: Pick<Acuerdo, 'fuente' | 'fuenteNombre'>",
           "retorno": "string",
-          "linea": 301
+          "linea": 321
         },
         {
           "nombre": "semaforoObjetivo",
@@ -115074,7 +115150,7 @@
           "exportada": true,
           "params": "e: EstadoObjetivo",
           "retorno": "Semaforo",
-          "linea": 331,
+          "linea": 351,
           "resumen": "El semáforo de un objetivo. `pendiente` es SIEMPRE ⚪ con su motivo: jamás verde."
         },
         {
@@ -115083,13 +115159,31 @@
           "exportada": true,
           "params": "codigo: string, r: RespuestaAcuerdos",
           "retorno": null,
-          "linea": 342,
+          "linea": 362,
           "resumen": "Resumen de una compañía para la lista: acuerdos, cuántos sin cotejar, si hay clave."
+        },
+        {
+          "nombre": "textoMotivoPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: string",
+          "retorno": "string",
+          "linea": 376,
+          "resumen": "Texto de un motivo de objetivo pendiente (el mismo que `semaforoObjetivo`, sin el punto)."
+        },
+        {
+          "nombre": "construirPanelControl",
+          "kind": "function",
+          "exportada": true,
+          "params": "ra: RespuestaAcuerdos | null, rp: RespuestaProductividad | null",
+          "retorno": "PanelControl | null",
+          "linea": 386,
+          "resumen": "El panel «Objetivos y producción» (cartera en vigor × acuerdos × objetivos). `null` si los acuerdos no se han podido leer: sin ellos no hay panel que pintar (se dice, no se pinta «sin acuerdos»). Sin "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "25d43451dab0"
+      "hash": "e5a9d9bdac7a"
     },
     {
       "ruta": "apps/plataforma/lib/adapters/ialimp.ts",
@@ -152174,7 +152268,8 @@
         "ordenInicial",
         "mover",
         "tamano",
-        "estadoGrabacion"
+        "estadoGrabacion",
+        "avisoSinPendientes"
       ],
       "funciones": [
         {
@@ -152236,11 +152331,20 @@
           "retorno": "",
           "linea": 84,
           "resumen": "Estado de la grabación en una palabra (para la insignia)."
+        },
+        {
+          "nombre": "avisoSinPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "pantallas: readonly { estado: 'pendiente' | 'ok' | 'error' }[]",
+          "retorno": "string | null",
+          "linea": 93,
+          "resumen": "Aviso previo a «Analizar» (modo pendientes) cuando no hay nada nuevo que analizar; null = hay trabajo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9f285cec5444"
+      "hash": "a8bd113706bf"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-panel.ts",
@@ -152818,6 +152922,27 @@
       ],
       "rutaApi": null,
       "hash": "a8d5d65c2e3a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/timeout-ia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Timeout contra el proveedor que el caller puede pedir a la pasarela (`body.timeoutMs`). Puro (sin `@/`) → testeable con node --test. Tope bajo el `maxDuration` (60 s) de la ruta.",
+      "exporta": [
+        "acotarTimeoutMs"
+      ],
+      "funciones": [
+        {
+          "nombre": "acotarTimeoutMs",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedido: unknown",
+          "retorno": "number",
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "060ac7e70662"
     },
     {
       "ruta": "apps/plataforma/lib/trading-acceso.ts",
@@ -168553,7 +168678,7 @@
           "exportada": true,
           "params": "config: GatewayConfig, system: string, user: string, opts: { maxTokens?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 52,
+          "linea": 54,
           "resumen": "Búsqueda web + síntesis a través de la pasarela (Gemini por debajo)."
         },
         {
@@ -168562,7 +168687,7 @@
           "exportada": true,
           "params": "config: GatewayConfig, messages: NimToolMessage[], tools: unknown[], opts: { system?: string; model?: string; maxTokens?: number; timeoutMs?: number; cliente?: string; privado?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 66,
+          "linea": 68,
           "resumen": "Function-calling a través de la pasarela (NIM por debajo). Devuelve el mensaje del modelo (`content` y/o `tool_calls`); la vertical ejecuta las herramientas y reenvía los resultados. No usa `llamar` p"
         },
         {
@@ -168571,7 +168696,7 @@
           "exportada": true,
           "params": "config: GatewayConfig, system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; model?: string; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 84,
+          "linea": 86,
           "resumen": "Visión (OCR / análisis de imágenes) a través de la pasarela (NIM vision por debajo)."
         },
         {
@@ -168580,13 +168705,13 @@
           "exportada": true,
           "params": "config: GatewayConfig, prompt: string, opts: GatewayVideoOpts = {},",
           "retorno": "Promise<string>",
-          "linea": 105,
+          "linea": 107,
           "resumen": "Generación de vídeo IA a través de la pasarela (fal.ai WAN 2.1 por debajo). Devuelve la URL del MP4."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "20991eb9f175"
+      "hash": "fb1b938d081d"
     },
     {
       "ruta": "packages/core-ai/src/gemini.ts",
@@ -178418,6 +178543,72 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "79398c489b51"
+    },
+    {
+      "ruta": "packages/module-seguros/src/acuerdos-control.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Panel de control «Objetivos y producción» de Compañías (07/10/2026): cruza la cartera EN VIGOR por compañía × ramo con los acuerdos y los objetivos evaluados, para decidir qué compañía interesa en cada ramo. Lo PURO: sin red ni React. Spec: docs/superpowers/specs/2026-10-06-correduria-acuerdos-compa",
+      "exporta": [
+        "agregarCarteraVigor",
+        "totalesPorCompania",
+        "panelControl"
+      ],
+      "funciones": [
+        {
+          "nombre": "redondear",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "agregarCarteraVigor",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizas: readonly PolizaVigor[]",
+          "retorno": "",
+          "linea": 35,
+          "resumen": "Agrupa pólizas en vigor por compañía × ramo. Sin compañía (o sin ramo) no se puede asignar: se cuenta en `sinCompania` / `sinRamo` y NO se reparte."
+        },
+        {
+          "nombre": "totalesPorCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "cartera: readonly FilaCartera[] | null",
+          "retorno": "Map<string, TotalCartera> | null",
+          "linea": 61,
+          "resumen": "Total por compañía (todas sus filas) o `null` si la cartera no se ha leído."
+        },
+        {
+          "nombre": "objetivoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "acuerdo: AcuerdoControl, ramo: string, evaluados: ReadonlyMap<string, ObjetivoEvaluadoControl>,",
+          "retorno": "ObjetivoCandidata",
+          "linea": 145
+        },
+        {
+          "nombre": "avanceDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: CandidataRamo",
+          "retorno": "number",
+          "linea": 167
+        },
+        {
+          "nombre": "panelControl",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { acuerdos: readonly AcuerdoControl[] objetivos: readonly ObjetivoEvaluadoControl[] /** `null` = la cartera no se ha podido leer. */ cartera: readonly FilaCartera[] | null }",
+          "retorno": "PanelControl",
+          "linea": 179,
+          "resumen": "Por ramo, qué compañías tienen acuerdo (mejor línea de cada una), con su producción en cartera y el avance de su objetivo, y cuál conviene. Recomendada: entre las candidatas con % de nueva producción "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "35199b9f3d23"
     },
     {
       "ruta": "packages/module-seguros/src/acuerdos-productividad.ts",
@@ -194461,7 +194652,7 @@
           "exportada": true,
           "params": "",
           "retorno": "ConfigGrabador",
-          "linea": 45
+          "linea": 57
         },
         {
           "nombre": "codigoBookmarklet",
@@ -194469,7 +194660,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 213,
+          "linea": 269,
           "resumen": "Código JS (sin `javascript:`) que ejecuta el marcador."
         },
         {
@@ -194478,19 +194669,20 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 220,
+          "linea": 276,
           "resumen": "La URL `javascript:` del marcador (para el <a> que se arrastra a favoritos)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7a10d2327aff"
+      "hash": "4b69535b8ce9"
     },
     {
       "ruta": "packages/module-tarificacion/src/grabador.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "GRABADOR del tarificador RPA (07/10/2026) — reglas PURAS. Para dar de alta una compañía/ramo nueva en el bot sin ir a ciegas: Alberto hace un presupuesto FICTICIO a mano en el portal y en cada pantalla pulsa el marcador «Grabar pantalla ASegura» (`grabador-bookmarklet.ts`). Aquí vive lo que comparte",
       "exporta": [
+        "redactarTextoUsuario",
         "tienePasswordHtml",
         "normalizarGrabador",
         "clasificarBoton",
@@ -194508,12 +194700,21 @@
       ],
       "funciones": [
         {
+          "nombre": "redactarTextoUsuario",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 56,
+          "resumen": "Tapa el TEXTO de los elementos de usuario/cuenta (ver `PATRON_ELEMENTO_USUARIO`). Idempotente."
+        },
+        {
           "nombre": "tienePasswordHtml",
           "kind": "function",
           "exportada": true,
           "params": "html: string",
           "retorno": "boolean",
-          "linea": 45,
+          "linea": 92,
           "resumen": "¿El HTML tiene algún `<input type=password>` (en la página o en un marco)?"
         },
         {
@@ -194522,7 +194723,7 @@
           "exportada": true,
           "params": "s: string | null | undefined",
           "retorno": "string",
-          "linea": 63,
+          "linea": 110,
           "resumen": "Sin tildes, minúsculas y espacios colapsados."
         },
         {
@@ -194531,7 +194732,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[]",
           "retorno": "",
-          "linea": 72,
+          "linea": 119,
           "resumen": "Clase de un botón a partir de TODO lo que lo describe (texto, selector, id, onclick…). PROHIBIDO si cualquiera casa con el guard de emisión (incluido «Aceptar», siempre contextual) o con `BLOQUEO_GRAB"
         },
         {
@@ -194540,7 +194741,7 @@
           "exportada": false,
           "params": "crudo: string | undefined",
           "retorno": "string | null",
-          "linea": 89
+          "linea": 136
         },
         {
           "nombre": "atributos",
@@ -194548,7 +194749,7 @@
           "exportada": false,
           "params": "cuerpo: string",
           "retorno": "Map<string, string | null>",
-          "linea": 95
+          "linea": 142
         },
         {
           "nombre": "escaparAttr",
@@ -194556,7 +194757,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 102,
+          "linea": 149,
           "resumen": "Sin tocar `&`: el valor viene del HTML con sus entidades ya escritas (re-escaparlas no sería idempotente)."
         },
         {
@@ -194565,7 +194766,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": "string",
-          "linea": 105,
+          "linea": 152,
           "resumen": "Tapa los valores de los parámetros sensibles de una URL (y un `;jsessionid=`)."
         },
         {
@@ -194574,7 +194775,7 @@
           "exportada": true,
           "params": "a: { type?: string | null; name?: string | null; id?: string | null; autocomplete?: string | null; etiqueta?: string | null; tag?: string }, login = false",
           "retorno": "boolean",
-          "linea": 111,
+          "linea": 158,
           "resumen": "¿El control es de los que nunca enseñan su valor?"
         },
         {
@@ -194583,7 +194784,7 @@
           "exportada": false,
           "params": "tag: string, cuerpo: string, login: boolean",
           "retorno": "string",
-          "linea": 122
+          "linea": 169
         },
         {
           "nombre": "redactarHtmlGrabacion",
@@ -194591,7 +194792,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 144,
+          "linea": 193,
           "resumen": "Lo que asegura hace con el HTML que sube Alberto ANTES de guardarlo (aunque el bookmarklet ya lo haya hecho): fuera `<script>`; contraseñas, ocultos y campos sensibles por nombre a `[REDACTADO]`; DNI/"
         },
         {
@@ -194600,7 +194801,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "PantallaSeparada",
-          "linea": 169,
+          "linea": 220,
           "resumen": "Deshace los marcadores de marco (como `separarMarcos` del worker, con la ruta como texto)."
         },
         {
@@ -194609,7 +194810,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 183
+          "linea": 234
         },
         {
           "nombre": "recortarHtmlParaIA",
@@ -194617,7 +194818,7 @@
           "exportada": true,
           "params": "html: string, maxChars = 60_000",
           "retorno": "string",
-          "linea": 215,
+          "linea": 266,
           "resumen": "HTML recortado a lo que sirve para mapear la pantalla (formularios, tablas, botones, textos), sin scripts, estilos ni valores de los campos, y por debajo de `maxChars`. Los marcos (donde suelen estar "
         },
         {
@@ -194626,7 +194827,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 252
+          "linea": 303
         },
         {
           "nombre": "soloClaves",
@@ -194634,7 +194835,7 @@
           "exportada": false,
           "params": "o: Record<string, unknown>, permitidas: readonly string[], donde: string",
           "retorno": "string | null",
-          "linea": 254
+          "linea": 305
         },
         {
           "nombre": "texto",
@@ -194642,7 +194843,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, donde: string, { opcional = false, pii = true } = {}",
           "retorno": "Lectura<string | null>",
-          "linea": 259
+          "linea": 310
         },
         {
           "nombre": "selectorValido",
@@ -194650,7 +194851,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "boolean",
-          "linea": 269,
+          "linea": 320,
           "resumen": "Un selector CSS razonable: una línea, sin llaves ni `javascript:`."
         },
         {
@@ -194659,7 +194860,7 @@
           "exportada": false,
           "params": "v: unknown, donde: string, opcional = false",
           "retorno": "Lectura<string | null>",
-          "linea": 273
+          "linea": 324
         },
         {
           "nombre": "booleano",
@@ -194667,7 +194868,7 @@
           "exportada": false,
           "params": "v: unknown, donde: string",
           "retorno": "Lectura<boolean>",
-          "linea": 279
+          "linea": 330
         },
         {
           "nombre": "lista",
@@ -194675,7 +194876,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, donde: string",
           "retorno": "Lectura<unknown[]>",
-          "linea": 283
+          "linea": 334
         },
         {
           "nombre": "validarPantallaMapa",
@@ -194683,7 +194884,7 @@
           "exportada": true,
           "params": "raw: unknown, pantalla: number",
           "retorno": "",
-          "linea": 294,
+          "linea": 345,
           "resumen": "Valida lo que devuelve la IA para UNA pantalla con un esquema ESTRICTO (claves cerradas, tipos, tamaños) y aplica la regla de seguridad: todo botón que casa con el guard de emisión o con `BLOQUEO_GRAB"
         },
         {
@@ -194692,7 +194893,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "MapaGrabacion | null",
-          "linea": 382,
+          "linea": 433,
           "resumen": "Relee un mapa GUARDADO (jsonb) con el mismo esquema: lo que no valide se descarta (no se enseña un mapa a medias como bueno). Vuelve a aplicar la clasificación de botones por si la regla se endureció."
         },
         {
@@ -194701,7 +194902,7 @@
           "exportada": true,
           "params": "mapa: MapaGrabacion | null, p: PantallaMapa",
           "retorno": "MapaGrabacion",
-          "linea": 406,
+          "linea": 457,
           "resumen": "Sustituye (o añade) la pantalla en el mapa, en orden."
         },
         {
@@ -194710,7 +194911,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "unknown",
-          "linea": 412,
+          "linea": 463,
           "resumen": "JSON de la respuesta de la IA (tolera ```json … ``` y texto alrededor). `null` si no hay objeto."
         },
         {
@@ -194719,13 +194920,13 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "boolean",
-          "linea": 426,
+          "linea": 477,
           "resumen": "Nombre de fichero aceptable para una pantalla: `.html`/`.htm`, sin rutas, ≤ 200."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2ab1bef856e"
+      "hash": "62b1bba647d9"
     },
     {
       "ruta": "packages/module-tarificacion/src/guard-emision.ts",
@@ -196898,7 +197099,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4386,
-    "funciones": 15496
+    "archivos": 4390,
+    "funciones": 15513
   }
 }
