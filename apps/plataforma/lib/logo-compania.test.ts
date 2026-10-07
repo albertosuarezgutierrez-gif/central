@@ -18,7 +18,7 @@ test('con logo no se repite el nombre de la compañía (Alberto, 28/09/2026)', (
 })
 
 test('moto y coche nuevos no pintan dos listas de precios abiertas seguidas', () => {
-  for (const f of ['moto-nuevo/MotoNuevo.tsx', 'auto-nuevo/AutoNuevo.tsx']) {
+  for (const f of ['moto-nuevo/CotizadorMoto.tsx', 'auto-nuevo/AutoNuevo.tsx']) {
     const src = readFileSync(new URL(`../app/(usuario)/correduria/cliente/[id]/${f}`, import.meta.url), 'utf8')
     assert.doesNotMatch(src, /<table/, `${f}: la tabla de precios se salía del móvil`)
     // Desde el 29/09/2026 se emite en cada fila de «Qué verá el cliente»: ni lista plegada debajo ni

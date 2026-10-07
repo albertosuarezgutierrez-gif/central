@@ -144,7 +144,7 @@ test('construirCuerpo: las claves coinciden con las de AutoNuevo.tsx y MotoNuevo
   const { fileURLToPath } = await import('node:url')
   const leer = (p: string) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8')
   const auto = leer('../app/(usuario)/correduria/cliente/[id]/auto-nuevo/AutoNuevo.tsx')
-  const moto = leer('../app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
+  const moto = leer('../app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx')
   for (const k of ['codigoVehiculo', 'garaje', 'estadoCivilId', 'municipioId', 'matricula', 'fechaMatriculacion', 'garajeEsSupuesto']) {
     assert.match(auto, new RegExp(`resueltos: \\{[\\s\\S]*?\\b${k}\\b`), `auto: ${k}`)
     assert.match(moto, new RegExp(`\\b${k}\\b`), `moto: ${k}`)

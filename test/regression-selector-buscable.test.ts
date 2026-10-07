@@ -23,7 +23,7 @@ const leer = (f: string) => readFileSync(join(ROOT, f), 'utf8')
 const PANTALLAS = [
   'apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/retarificador.tsx',
   'apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/AutoNuevo.tsx',
-  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx',
+  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx',
   'apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SelectorCatalogoVehiculo.tsx',
 ]
 

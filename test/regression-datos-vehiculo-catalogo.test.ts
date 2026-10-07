@@ -43,7 +43,7 @@ test('DatosVehiculo no pide precio: el botón vive en el bloque único de Riesgo
 })
 
 test('MotoNuevo: la moto de la última tarificación no manda si el riesgo trae otra', () => {
-  const src = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
+  const src = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx')
   assert.match(src, /previoPuedeMandar\(datosRiesgo, v\.codigoVehiculo, retomada\)/)
   assert.match(src, /planPrecargaVehiculo\(datosRiesgo, retomada\)/)
 })

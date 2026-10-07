@@ -22,6 +22,7 @@ export function BloqueFigura({
   onPersona,
   civiles,
   empresa = false,
+  soloCondiciones = false,
 }: {
   rol: RolExtra
   nombre: string | null
@@ -32,6 +33,12 @@ export function BloqueFigura({
   civiles: { id: string; nombre: string }[]
   /** Su ficha es una EMPRESA: se declara con CIF y razón social, sin estado civil ni nacimiento. */
   empresa?: boolean
+  /**
+   * Cotizador EMBEBIDO en la oportunidad (07/10/2026): la ficha se edita en «Intervinientes», así que aquí solo se
+   * pide lo que es de la COTIZACIÓN (estado civil y, si falta, la fecha del carné de quien conduce). Lo demás que
+   * falte se dice y bloquea (`figuraCompleta`), nunca se teclea por segunda vez.
+   */
+  soloCondiciones?: boolean
 }) {
   function set<K extends keyof PersonaForm>(campo: K, valor: PersonaForm[K]) {
     onPersona({ ...persona, [campo]: valor })
@@ -40,6 +47,9 @@ export function BloqueFigura({
   const pedir = (c: CampoFigura) => (faltan === null ? c !== 'fechaCarnet' || conCarnet : faltan.includes(c))
   const obligatorio = (c: CampoFigura) => faltan !== null && faltan.includes(c)
   const sinFicha = faltan !== null && faltan.some((c) => !esCampoFigura(c))
+  // En modo condiciones solo se teclean estado civil y carné: el resto de lo que falte se completa en su ficha.
+  const enFicha = soloCondiciones && faltan !== null ? faltan.filter((c) => esCampoFigura(c) && c !== 'fechaCarnet') : []
+  const enPantalla = (c: CampoFigura) => !soloCondiciones || c === 'fechaCarnet'
   return (
     <div>
       <p style={{ margin: 0, fontSize: 13 }}>
@@ -56,7 +66,12 @@ export function BloqueFigura({
           Su ficha no se puede usar para cotizar ({faltan!.filter((c) => !esCampoFigura(c)).join(', ')}). Cámbialo en la pantalla del riesgo.
         </p>
       )}
-      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 8 }}>
+      {enFicha.length > 0 && (
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--negative)' }}>
+          A su ficha le falta {enFicha.join(', ')}: complétalo en «Intervinientes» («Editar datos») antes de pedir precio.
+        </p>
+      )}
+      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', marginTop: 8 }}>
         {!empresa && (
           <Campo etiqueta="Estado civil" falta={persona.estadoCivil === ''} ayuda="La ficha no lo guarda como lo pide la compañía: elígelo.">
             <select value={persona.estadoCivil} onChange={(e) => set('estadoCivil', e.target.value)} style={input}>
@@ -65,27 +80,27 @@ export function BloqueFigura({
             </select>
           </Campo>
         )}
-        {pedir('dni') && (
+        {enPantalla('dni') && pedir('dni') && (
           <Campo etiqueta={empresa ? 'CIF' : 'DNI/NIF'} falta={obligatorio('dni') && !persona.dni.trim()}>
             <input value={persona.dni} onChange={(e) => set('dni', e.target.value)} style={input} />
           </Campo>
         )}
-        {pedir('nombre') && (
+        {enPantalla('nombre') && pedir('nombre') && (
           <Campo etiqueta={empresa ? 'Razón social' : 'Nombre'} falta={obligatorio('nombre') && !persona.nombre.trim()}>
             <input value={persona.nombre} onChange={(e) => set('nombre', e.target.value)} style={input} />
           </Campo>
         )}
-        {!empresa && pedir('apellido1') && (
+        {!empresa && enPantalla('apellido1') && pedir('apellido1') && (
           <Campo etiqueta="Primer apellido" falta={obligatorio('apellido1') && !persona.apellido1.trim()}>
             <input value={persona.apellido1} onChange={(e) => set('apellido1', e.target.value)} style={input} />
           </Campo>
         )}
-        {!empresa && pedir('fechaNacimiento') && (
+        {!empresa && enPantalla('fechaNacimiento') && pedir('fechaNacimiento') && (
           <Campo etiqueta="Fecha de nacimiento" falta={obligatorio('fechaNacimiento') && !persona.fechaNacimiento}>
             <input type="date" value={persona.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} style={input} />
           </Campo>
         )}
-        {!empresa && pedir('sexo') && (
+        {!empresa && enPantalla('sexo') && pedir('sexo') && (
           <Campo etiqueta="Sexo" falta={obligatorio('sexo') && persona.sexo === ''}>
             <select value={persona.sexo} onChange={(e) => set('sexo', e.target.value as PersonaForm['sexo'])} style={input}>
               <option value="">Elige</option>
@@ -94,7 +109,7 @@ export function BloqueFigura({
             </select>
           </Campo>
         )}
-        {pedir('telefono') && (
+        {enPantalla('telefono') && pedir('telefono') && (
           <Campo etiqueta="Móvil" falta={obligatorio('telefono') && !persona.telefono.trim()}>
             <input value={persona.telefono} onChange={(e) => set('telefono', e.target.value)} style={input} />
           </Campo>

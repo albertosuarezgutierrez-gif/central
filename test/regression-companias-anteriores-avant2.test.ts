@@ -33,7 +33,8 @@ test('moto nuevo usa el catálogo de moto de Avant2 antes que el directorio', ()
     leer('apps/asegura/lib/retarificar-cartera.ts'),
     /case 'companias-anteriores-moto':\s*return \{ estado: 'ok', opciones: await companiasAnterioresMoto\(config\) \}/,
   )
-  const page = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/page.tsx')
+  // 07/10/2026: la lectura vive en `datos-cotizador.ts`, que comparten la página completa y el bloque de la oportunidad.
+  const page = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/datos-cotizador.ts')
   assert.match(page, /catalogoAsegura\(\{ tipo: 'companias-anteriores-moto' \}\)/)
   assert.match(page, /anteriores\.estado === 'ok' && anteriores\.opciones\.length > 0\s*\? anteriores\.opciones/)
 })

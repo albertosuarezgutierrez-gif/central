@@ -162,7 +162,7 @@ test('🪤 editarDatosRiesgo: el SELECT y el UPDATE filtran por correduria_id (a
 })
 
 test('🪤 el aviso «no se pudo enlazar a la oportunidad» se pinta en las 6 pantallas de precio de cliente nuevo', () => {
-  for (const [dir, f] of [['auto-nuevo', 'AutoNuevo.tsx'], ['moto-nuevo', 'MotoNuevo.tsx'], ['hogar-nuevo', 'Formulario.tsx'], ['vida-nuevo', 'VidaNuevo.tsx'], ['salud-nuevo', 'SaludNuevo.tsx'], ['decesos-nuevo', 'DecesosNuevo.tsx']]) {
+  for (const [dir, f] of [['auto-nuevo', 'AutoNuevo.tsx'], ['moto-nuevo', 'CotizadorMoto.tsx'], ['hogar-nuevo', 'Formulario.tsx'], ['vida-nuevo', 'VidaNuevo.tsx'], ['salud-nuevo', 'SaludNuevo.tsx'], ['decesos-nuevo', 'DecesosNuevo.tsx']]) {
     const p = activas(leer(join(CORR, 'cliente/[id]', dir, f)))
     assert.match(p, /<EnlaceOportunidad guardado=\{r\.guardado\} \/>/, `${dir} pinta el enlace/aviso`)
   }
