@@ -1,8 +1,8 @@
 {
  "sesion": "88eed4b3-d0fb-5d72-93a0-085b366e1f63",
  "inicio": "2026-10-07T15:06:29.987Z",
- "fin": "2026-10-07T15:20:30.007Z",
- "llamadas": 55,
+ "fin": "2026-10-07T16:24:58.011Z",
+ "llamadas": 85,
  "categorias": {
   "lectura-directa": {
    "llamadas": 13,
@@ -17,14 +17,14 @@
    }
   },
   "bash": {
-   "llamadas": 32,
-   "chars_in": 12125,
-   "chars_out": 39417,
+   "llamadas": 39,
+   "chars_in": 14183,
+   "chars_out": 48208,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 32
+    "Bash": 39
    }
   },
   "agente:general-purpose": {
@@ -39,21 +39,22 @@
    }
   },
   "otro": {
-   "llamadas": 3,
-   "chars_in": 2850,
-   "chars_out": 601,
+   "llamadas": 17,
+   "chars_in": 3117,
+   "chars_out": 125635,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "SubagentHandback": 1,
-    "ToolSearch": 2
+    "ToolSearch": 5,
+    "ReadNotifications": 11
    }
   },
   "mcp:github": {
-   "llamadas": 5,
-   "chars_in": 101955,
-   "chars_out": 1410,
+   "llamadas": 8,
+   "chars_in": 102424,
+   "chars_out": 15355,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -61,18 +62,34 @@
     "mcp__github__create_branch": 1,
     "mcp__github__push_files": 2,
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 1
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__get_job_logs": 1,
+    "mcp__github__pull_request_read": 1,
+    "mcp__github__merge_pull_request": 1
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 1,
-   "chars_in": 73,
-   "chars_out": 239,
+   "llamadas": 3,
+   "chars_in": 516,
+   "chars_out": 473,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 1
+    "mcp__claude-code-remote__subscribe_pr_activity": 1,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 1,
+    "mcp__claude-code-remote__send_later": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 4,
+   "chars_in": 541,
+   "chars_out": 6377,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_deployments": 4
    }
   }
  }
