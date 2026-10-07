@@ -167,11 +167,11 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 282 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 283 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 274 | 36.764 | 29.124.871 | 0 | 0 |
+| `bash` | 275 | 36.781 | 29.160.613 | 0 | 0 |
 | `otro` | 271 | 9.061 | 24.050.681 | 14.630.812 | 0 |
 | `lectura-directa` | 244 | 6.288 | 21.895.370 | 0 | 0 |
 | `mcp:github` | 245 | 5.743 | 4.718.736 | 51.240.397 | 89 |
@@ -182,7 +182,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Booking-com` | 27 | 765 | 3.236.630 | 0 | 0 |
 | `mcp:Vercel` | 61 | 604 | 885.822 | 202.197 | 16 |
 | `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
-| `agente:general-purpose` | 73 | 326 | 222.533 | 5.640.998 | 0 |
+| `agente:general-purpose` | 74 | 327 | 223.702 | 5.663.694 | 0 |
 | `mcp:Supabase` | 108 | 307 | 29.419 | 0 | 4 |
 | `mcp:Interactive-Brokers--IBKR-` | 6 | 298 | 369.157 | 0 | 0 |
 | `agente:agente-architect` | 47 | 147 | 110.052 | 4.983.270 | 0 |
