@@ -22,6 +22,13 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   /recuperacion[\s_+-]*de[\s_+-]*contrasena/i,
   /archivar/i,
   /proyecto[\s_+-]*ampliado/i,
+  // Allianz «RC PYME» (app 1430, 07/10/2026): pestañas td#menu3 Archivar · menu4 Proyecto ampliado · menu5 Datos
+  // emisión (id EXACTO: las descripciones se miran una a una), div#btnAccept «Aceptar» (llama a emision_ipid) y
+  // div#btnFracciona «Pago fraccionado». «Datos emisión» ya casa con PATRON_EMISION (`emisi`).
+  /^\s*menu[345]\s*$/i,
+  /btn[\s_+-]*accept/i,
+  /btn[\s_+-]*fracciona/i,
+  /pago[\s_+-]*fraccionado/i,
 ]
 
 // «Aceptar» es CONTEXTUAL (ver fases.ts): en Datos Básicos solo avanza a «Tarificar»; en Tarificar avanza

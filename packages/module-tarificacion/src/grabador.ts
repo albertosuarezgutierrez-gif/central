@@ -53,7 +53,7 @@ export const PATRON_CAMPO_USUARIO = /user|usuari|login|logon|signin|sign-in|j_us
  * postal, correo, códigos de mediador/agente). Solo name/id/aria-label/placeholder de inputs de texto y textareas:
  * selects, checkboxes y radios (riesgo, coberturas) no entran. Ante la duda, tapa.
  */
-export const PATRON_CAMPO_PERSONAL = /nombre|apellid|razon_?social|naci|fullDate|address|direcc|domicil|calle|mail|^(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)|_(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)$/i
+export const PATRON_CAMPO_PERSONAL = /nombre|apellid|razon_?social|naci|fnac|fullDate|address|direcc|domicil|calle|mail|(?<![a-z])(?:tel|telf|tlf|telefono|telefon|movil|mobil|phone|celular|dni|nif|nie|cif|cp|pc|iban|ccc|cuenta|idnumber|numdoc|documento)(?:[^a-z]|$|\d|(?:tom|aseg|prop|cond|ben|tit)(?:[^a-z]|$))|_(?:pc|doc|cp)$|codpostal|poblacion|municip|localidad|street|iban|^(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)|_(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)$|(?:cod|codigo|agente|sucmed|colaborador)(?:tom|aseg|prop|cond|ben|tit)$/i
 
 /** Código de mediador («209-C/12/0000», también con trozos ya tapados `[DATO]`) con su nombre opcional
  *  («… - Nombre Apellidos»): TODO sale `[DATO]` y el nombre se aprende para taparlo donde más aparezca
@@ -129,7 +129,7 @@ export function tienePasswordHtml(html: string): boolean {
 }
 
 /** Parámetros de URL cuyo valor se tapa (sesiones, firmas, tokens). */
-export const PATRON_PARAM_SENSIBLE = /sess|token|auth|key|sig|code|ticket|pass|pwd|clave|csrf|uid|user|usuari|(?:^|[^a-z])sid(?:$|[^a-z])|checksum|hash|firma|customer|agente|mediador|colaborador/i
+export const PATRON_PARAM_SENSIBLE = /sess|token|auth|key|sig|code|ticket|pass|pwd|clave|csrf|uid|user|usuari|(?:^|[^a-z])sid(?:$|[^a-z])|checksum|hash|firma|customer|agente|mediador|colaborador|pfestate|state-?id/i
 
 // Palabras que hacen PROHIBIDO un botón del mapa. Incluye TODO `BLOQUEO_FORMADOR` del worker
 // (services/tarificador-rpa/src/formador.ts; lo vigila test/regression-tarificador-grabador.test.ts) y suma las

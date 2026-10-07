@@ -189,6 +189,27 @@ describe('redactarHtmlGrabacion: login y datos de personas', () => {
   })
 })
 
+describe('redactarHtmlGrabacion: formularios de alta (tomador/asegurado/propietario)', () => {
+  const nombres = ['nombreTom', 'apellido1Tom', 'fNaciTom', 'fNacAseg', 'telefono1Tom', 'movilProp', 'telfAseg', 'mailTom', 'idNumberTom_doc', 'dniProp', 'nifTom', 'cifAseg', 'ibanTom', 'cuentaProp', 'Empresa_address_pc', 'Prop_address_town', 'Prop_address_street', 'cpAseg', 'codAgenteTom', 'codigoProp', 'nombreAgente']
+  const html = nombres.map((n) => `<input type="text" id="${n}" name="${n}" value="valor-inventado-xyz" data-valor="valor-inventado-xyz">`).join('\n') +
+    '\n<a href="/ep/alta?pfestate-uid=ESTADO-INV-123&amp;paso=2">ir</a><a href="https://p.es/x#pfestate-uid=ESTADO-INV-456">y</a>' +
+    '\n<input type="text" id="specsTeLlamamos" name="specsTeLlamamos" value="valor-ok-abc" data-valor="valor-ok-abc"><input type="text" name="hotelReserva" value="valor-ok-def"><input type="text" name="importeCapital" value="valor-ok-ghi">'
+  const r = redactarHtmlGrabacion(html)
+  it('tapa value y data-valor de cada campo personal, con sufijos Tom/Aseg/Prop', () => {
+    expect(r).not.toContain('valor-inventado-xyz')
+    for (const n of nombres) expect(r, n).toContain(`id="${n}"`)
+  })
+  it('tapa pfestate-uid en URLs (query y fragmento) y no toca el resto', () => {
+    expect(r).not.toContain('ESTADO-INV')
+    expect(r).toContain('pfestate-uid=[REDACTADO]')
+    expect(r).toContain('paso=2')
+  })
+  it('no tapa campos que no son personales (falsos positivos de «tel», «cuenta»…)', () => {
+    for (const ok of ['valor-ok-abc', 'valor-ok-def', 'valor-ok-ghi']) expect(r, ok).toContain(ok)
+  })
+  it('es idempotente', () => expect(redactarHtmlGrabacion(r)).toBe(r))
+})
+
 describe('redactarHtmlGrabacion: atributos de sesión y texto del usuario', () => {
   const html = [
     '<button id="b1" type="button" session="3f2b8c1e-4d5a-4b6c-9d7e-1a2b3c4d5e6f" sessionid="SID-INV-1" data-token="TKN-INV-2" auth="AUT-INV-3" csrf="CSR-INV-4" jsessionid="JS-INV-5">Calcular</button>',

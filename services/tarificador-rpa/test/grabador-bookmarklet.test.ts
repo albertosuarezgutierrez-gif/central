@@ -127,7 +127,7 @@ test('bookmarklet: serializa marcos del mismo origen, anota valores, redacta y d
     // Lo que el bot necesita para mapear sigue ahí (el marco del cotizador no tiene password).
     assert.match(s.marcos[0].html, /id="importeCapital"[^>]*data-valor="150000"/)
     assert.match(s.marcos[0].html, /id="fechaEfecto"[^>]*data-valor="15\/11\/2026"/)
-    assert.match(s.marcos[0].html, /id="dni"[^>]*data-valor="\[DATO\]"/)
+    assert.match(s.marcos[0].html, /id="dni"[^>]*data-valor="\[(?:DATO|REDACTADO)\]"/)
 
     // Redacción: nada personal, ni contraseñas, ni ocultos, ni tokens, ni scripts, ni cookies.
     for (const crudo of [
@@ -274,7 +274,7 @@ test('bookmarklet automático: 3 pantallas por navegación simulada, dedupe, red
     // La pantalla 1 es de LOGIN (hay password): marcada y con todo tapado.
     assert.match(g.pantallas[0], /PANTALLA DE LOGIN/)
     assert.ok(!g.pantallas[1].includes('PANTALLA DE LOGIN'), 'el login de una pantalla no se hereda a las demás')
-    assert.match(g.pantallas[1], /id="iban"[^>]*data-valor="\[DATO\]"|data-valor="\[DATO\]"[^>]*id="iban"/)
+    assert.match(g.pantallas[1], /id="iban"[^>]*data-valor="\[(?:DATO|REDACTADO)\]"|data-valor="\[(?:DATO|REDACTADO)\]"[^>]*id="iban"/)
     // Separadores claros, uno por pantalla.
     assert.equal(texto.match(/^<!-- grabador:pantalla \d\/3 · /gm)?.length, 3)
     // Redacción en CADA pantalla (también en las capturadas solas) y el indicador no se cuela.
@@ -322,6 +322,42 @@ test('bookmarklet: tapa titular, código de mediador, ids de portal, firmas, dat
     assert.ok(html.includes('src="data:image/omitida"'))
     assert.match(html, /id="hash"[^>]*value="\[REDACTADO\]"|value="\[REDACTADO\]"[^>]*id="hash"/)
     for (const ok of ['paso=2', 'paso=3', 'Tiempo sesión: 29:51', 'data-valor="150000"']) assert.ok(html.includes(ok), `falta «${ok}» en ${html.slice(html.indexOf('<body'), html.indexOf('<body') + 1600)}`)
+  } finally {
+    await browser.close()
+  }
+})
+
+// Formulario de alta (ePAC «Negocio», paso Datos, 07/10/2026): nombre, apellidos, nacimiento, teléfono, documento y
+// dirección del tomador/propietario con sufijos Tom/Prop. Valores INVENTADOS que no casan con ningún patrón de dato
+// (solo el NOMBRE del campo los delata) + parámetro pfestate-uid en la URL.
+const ALTA = `<!doctype html><html><head><title>Alta inventada</title></head><body>
+<form action="http://portal.test/srv?pfestate-uid=ESTADO-INV-77&paso=2">
+<input id="nombreTom" name="nombreTom" type="text"><input id="apellido1Tom" name="apellido1Tom" type="text">
+<input id="fNaciTom" name="fNaciTom" type="text"><input id="telefono1Tom" name="telefono1Tom" type="tel">
+<input id="idNumberTom_doc" name="idNumberTom_doc" type="text"><input id="Prop_address_pc" name="Prop_address_pc" type="text">
+<input id="Prop_address_street" name="Prop_address_street" type="text"><input id="codAgenteTom" name="codAgenteTom" type="text">
+<input id="specsTeLlamamos" name="specsTeLlamamos" type="text"><input id="importeCapital" name="importeCapital" type="text">
+</form><a href="/x#pfestate-uid=ESTADO-INV-88">ir</a></body></html>`
+
+test('bookmarklet: tapa los datos del tomador por el NOMBRE del campo (sufijos Tom/Prop) y pfestate-uid', async (t) => {
+  const browser = await lanzar()
+  if (!browser) return t.skip('sin Chromium disponible (instala el de Playwright o define GRABADOR_CHROMIUM)')
+  try {
+    const ctx = await browser.newContext({ acceptDownloads: true })
+    const page = await ctx.newPage()
+    await page.route('http://portal.test/', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: ALTA }))
+    await page.goto('http://portal.test/')
+    await page.evaluate(() => {
+      const ids = ['nombreTom', 'apellido1Tom', 'fNaciTom', 'telefono1Tom', 'idNumberTom_doc', 'Prop_address_pc', 'Prop_address_street', 'codAgenteTom']
+      for (const id of ids) (document.getElementById(id) as HTMLInputElement).value = 'valor-inventado-xyz'
+      ;(document.getElementById('specsTeLlamamos') as HTMLInputElement).value = 'valor-ok-abc'
+      ;(document.getElementById('importeCapital') as HTMLInputElement).value = 'valor-ok-def'
+    })
+    const descarga = page.waitForEvent('download')
+    await page.evaluate(codigoBookmarkletManual())
+    const html = readFileSync((await (await descarga).path())!, 'utf8')
+    for (const crudo of ['valor-inventado-xyz', 'ESTADO-INV']) assert.ok(!html.includes(crudo), `se ha escapado «${crudo}»`)
+    for (const ok of ['valor-ok-abc', 'valor-ok-def', 'paso=2']) assert.ok(html.includes(ok), `falta «${ok}»`)
   } finally {
     await browser.close()
   }

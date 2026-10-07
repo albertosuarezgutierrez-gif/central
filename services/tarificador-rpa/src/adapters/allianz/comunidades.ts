@@ -25,6 +25,7 @@ import type { CoberturaOferta, DesglosePrima, FranquiciaOferta, ModalidadPortal,
 import type { AdaptadorPortal, ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { esperarPdf } from '../../descarga-pdf.ts'
+import { abrirNuevaAlta, textoExacto } from './entrada.ts'
 import { acompanar, claveCampo, resolverConFormador, type PasoAcompanado, type ResolucionFormador } from '../../formador.ts'
 
 /**
@@ -307,16 +308,6 @@ function dato<T>(v: T | null | undefined, campo: string): T {
   return v
 }
 
-/**
- * Genera una RegExp para búsqueda de texto insensible a mayúsculas y tolerante con espacios.
- * Escapa metacaracteres de regex y devuelve: `^\\s*<escapado>\\s*$` (insensible a mayúsculas).
- * Sirve para localizar textos en el DOM donde las mayúsculas son solo CSS (e.g., «Nueva Alta»).
- */
-function textoExacto(t: string): RegExp {
-  const escapado = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`^\\s*${escapado}\\s*$`, 'i')
-}
-
 /** Tipo de control resuelto: decide cómo se rellena. */
 export type TipoControl = 'texto' | 'select' | 'checkbox' | 'nx-dropdown' | 'otro'
 
@@ -484,7 +475,7 @@ async function abrirEntrada(page: Page): Promise<void> {
  * Sesión reutilizada (src/sesion.ts): con las cookies de un trabajo anterior (en memoria, TTL 10 min) se abre la
  * entrada y, si aparece la cabecera logueada, NO se hace login. Si no aparece, `false`: login normal.
  */
-async function sesionSirve(page: Page, ctx: ContextoPortal): Promise<boolean> {
+export async function sesionSirve(page: Page, ctx: ContextoPortal): Promise<boolean> {
   await abrirEntrada(page)
   await ctx.exigirSinCaptcha()
   const ok = await page.getByText('Mediador principal').first().waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false)
@@ -492,7 +483,7 @@ async function sesionSirve(page: Page, ctx: ContextoPortal): Promise<boolean> {
   return ok
 }
 
-async function login(page: Page, ctx: ContextoPortal): Promise<void> {
+export async function login(page: Page, ctx: ContextoPortal): Promise<void> {
   await abrirEntrada(page)
   await ctx.exigirSinCaptcha()
   // Login por etiqueta/rol (captura del 05/10/2026). Tracing apagado: lo vigila el guardián de la raíz.
@@ -522,18 +513,8 @@ async function login(page: Page, ctx: ContextoPortal): Promise<void> {
 }
 
 async function abrirComunidades(page: Page, ctx: ContextoPortal): Promise<void> {
-  // Ruta dada por Alberto: botón id «link_new_policy» «Nueva Alta» (cabecera de la home) → modal «Nueva Alta»
-  // con acordeones → «Particulares» → tarjeta «Comunidades» → «Comunidades 2020».
-  // El texto del DOM es «Nueva Alta» (las mayúsculas son CSS). «Nueva alta» es NAVEGACIÓN para cotizar, no
-  // emisión (el guard ya no la bloquea). Alternativa en el menú: «Venta» → «Nueva Alta». El modal tiene «CERRAR».
-  await ctx.pulsar(
-    page.locator('#link_new_policy').or(page.getByRole('button', { name: textoExacto('Nueva Alta') })).first(),
-  )
-  await ctx.pausa()
-  const modal = page.getByRole('dialog').filter({ hasText: /nueva alta/i }).first()
-  await ctx.pulsar(modal.getByText(textoExacto('Particulares')).first())
-  await ctx.pausa()
-  await ctx.pulsar(modal.getByText(textoExacto('Comunidades')).first())
+  // Ruta dada por Alberto: «Nueva Alta» → modal → «Particulares» → «Comunidades» (paso común: entrada.ts).
+  await abrirNuevaAlta(page, ctx, { pestana: 'Particulares', producto: 'Comunidades' })
   await page.getByText(textoExacto(TITULO_FORMULARIO)).first().waitFor()
   await ctx.exigirSinCaptcha()
 }

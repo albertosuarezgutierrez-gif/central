@@ -55,6 +55,12 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 ## SQL aplicados (`apps/asegura/prisma/sql/`)
 `2026-10-05_tarificador_rpa` · `2026-10-06b_tarificador_formador` · `2026-10-06c_tarificador_formador_revoke` · `07b` · `07c` (los dos últimos, de la sesión del 07/10; ver su cabecera). Mira `2026-10-06_tipo_seguro_ramos_ofertas` para los ramos de ofertas.
 
+## Allianz RC PYME (en construcción)
+- App 1430 (`/drrg01/pme1430`). **No registrado** en `adapters/index.ts` (`RC_PYME_ACTIVO = false`); el tipo `RamoRpa` aún solo admite `comunidades`.
+- Hecho: entrada común «Nueva Alta» (`allianz/entrada.ts`, compartida con Comunidades; pestaña Empresas por texto, TODO selectores reales); lector de primas de `#tarifaViewForm` (`rc-pyme.ts`: 27 inputs readonly sin id; neta idx 0, impuestos 6, total 12; fail-closed si no son 27 o no cuadra); guard ampliado (menu3/4/5, #btnAccept, #btnFracciona, «Pago fraccionado»).
+- HUECO: «Datos básicos» (td#menu1: actividad con tabla de códigos Allianz, facturación, empleados, límites, ámbito, siniestros) lanza `ErrorMapaIncompleto`. Faltan también: nombre de la tarjeta RC PYME en el modal, cómo se llega a Calcular (`#btnRetarifa` duplicado: anclar por sección), Proyecto/IPID (PDF), pantalla de bloqueos, mapeo a `OfertaNormalizada` y ramo `rc_pyme` en el contrato.
+- Prohibido siempre: Archivar, Proyecto ampliado, Datos emisión, Aceptar (#btnAccept → emision_ipid), Pago fraccionado.
+
 ## Rutina «Médico del bot tarificador»
 `trig_011zoZZAiTQnQ48qEWdRJq2Y`: laborables 8:52 Madrid; mira Supabase + repo; abre PR **draft**; **nunca mergea**.
 
