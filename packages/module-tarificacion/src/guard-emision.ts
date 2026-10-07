@@ -60,15 +60,24 @@ function plano(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
 
+const SECUENCIA_PCT = /%[0-7][0-9a-f]|%[cd][0-9a-f]%[89ab][0-9a-f]|%e[0-9a-f](?:%[89ab][0-9a-f]){2}|%f[0-7](?:%[89ab][0-9a-f]){3}/gi
+
+/** Decodifica %-secuencias UTF-8 válidas UNA A UNA: una secuencia mal formada (`%E0%A4%A`) no apaga la decodificación del resto (fail-closed). */
+export function decodificarUrlTolerante(s: string): string {
+  return s.replace(SECUENCIA_PCT, (m) => {
+    try {
+      return decodeURIComponent(m)
+    } catch {
+      return m
+    }
+  })
+}
+
 export function pareceEmision(texto: string | null | undefined, opciones: OpcionesGuard = {}): boolean {
   if (typeof texto !== 'string' || texto === '') return false
   let t = plano(texto)
   // Las URL pueden venir codificadas (`%C3%A9mitir`, `contrat%61r`): se decodifica si se puede.
-  try {
-    t = plano(decodeURIComponent(t))
-  } catch {
-    /* no era URI válida: se mira tal cual */
-  }
+  t = plano(decodificarUrlTolerante(t))
   if (PATRON_EMISION.test(t) || TEXTOS_BLOQUEADOS_ALTA.some((r) => r.test(t))) return true
   return !opciones.permitirAceptar && PATRON_ACEPTAR.test(t)
 }

@@ -7,7 +7,7 @@
 //
 // Este fichero es PURO (sin Playwright): lo prueba test/occident-guarda.test.ts, con su cepo.
 
-import { EmisionBloqueadaError, pareceEmision } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, decodificarUrlTolerante, pareceEmision } from '@central/module-tarificacion'
 import { ErrorTarificador } from '../../errores.ts'
 
 /**
@@ -29,12 +29,7 @@ export const PROHIBIDOS_OCCIDENT: readonly { motivo: string; patron: RegExp }[] 
 ]
 
 function plano(t: string): string {
-  let s = t.normalize('NFD').replace(/[̀-ͯ]/g, '')
-  try {
-    s = decodeURIComponent(s).normalize('NFD').replace(/[̀-ͯ]/g, '')
-  } catch {
-    /* no era URI válida: tal cual */
-  }
+  const s = decodificarUrlTolerante(t.normalize('NFD').replace(/[̀-ͯ]/g, '')).normalize('NFD').replace(/[̀-ͯ]/g, '')
   return s.toLowerCase()
 }
 

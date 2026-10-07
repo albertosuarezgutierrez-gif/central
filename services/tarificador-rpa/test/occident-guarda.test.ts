@@ -64,3 +64,11 @@ test('mapa incompleto: el paso de contraseña del SSO es un hueco tipado, no un 
   assert.equal(SEL.ssoContrasena, null)
   assert.throws(() => selObligatorio(SEL.ssoContrasena, 'la contraseña'), (e: unknown) => e instanceof ErrorMapaIncompleto && e.tipo === 'portal' && /mapa incompleto: falta la contraseña/.test(e.message))
 })
+
+test('guarda Occident: una %-secuencia mal formada no desactiva la decodificación (fail-closed)', () => {
+  for (const u of ['/%65mitir?x=%E0%A4%A', '/contrat%61r?x=%E0%A4%A', '/emisi%C3%B3n?x=%E0%A4%A', '/%67rabar?z=%']) {
+    assert.ok(textoProhibidoOccident(u), `debería ser prohibido: ${u}`)
+    assert.throws(() => comprobarUrlOccident(`https://portaloccident.gco.global${u}`), EmisionBloqueadaError)
+  }
+  assert.equal(motivoProhibidoOccident('/tarificar?x=%E0%A4%A'), null)
+})

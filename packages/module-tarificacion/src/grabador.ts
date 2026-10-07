@@ -129,7 +129,7 @@ export function tienePasswordHtml(html: string): boolean {
 }
 
 /** Parámetros de URL cuyo valor se tapa (sesiones, firmas, tokens). */
-export const PATRON_PARAM_SENSIBLE = /sess|token|auth|key|sig|code|ticket|pass|pwd|clave|csrf|uid|user|usuari|(?:^|[^a-z])sid(?:$|[^a-z])|checksum|hash|firma|customer|agente|mediador|colaborador|pfestate|state-?id/i
+export const PATRON_PARAM_SENSIBLE = /sess|token|auth|key|sig|code|ticket|pass|pwd|clave|csrf|uid|user|usuari|(?:^|[^a-z])sid(?:$|[^a-z])|checksum|hash|firma|customer|agente|mediador|colaborador|pfestate|state[-_]?id/i
 
 // Palabras que hacen PROHIBIDO un botón del mapa. Incluye TODO `BLOQUEO_FORMADOR` del worker
 // (services/tarificador-rpa/src/formador.ts; lo vigila test/regression-tarificador-grabador.test.ts) y suma las

@@ -382,3 +382,12 @@ describe('redactarHtmlGrabacion: titular, ids de portal, firmas e imágenes (fug
     expect(Date.now() - t0).toBeLessThan(1000)
   })
 })
+
+describe('redactarHtmlGrabacion: variantes de state id', () => {
+  it('tapa state_id, state-id, stateid, pfestate y pfestate-uid', () => {
+    const html = '<a href="/x?state_id=INV-A1&amp;state-id=INV-B2&amp;stateid=INV-C3&amp;pfestate=INV-D4&amp;pfestate-uid=INV-E5&amp;paso=2">ir</a>'
+    const r = redactarHtmlGrabacion(html)
+    expect(r).not.toMatch(/INV-[A-E]\d/)
+    expect(r).toContain('paso=2')
+  })
+})
