@@ -88,3 +88,11 @@ export function estadoGrabacion(g: Pick<ResumenGrabacion, 'pantallas' | 'analiza
   if (g.analizadas < g.pantallas) return { texto: `${g.analizadas}/${g.pantallas} analizadas`, tono: 'info' }
   return { texto: 'Mapa por validar', tono: 'aviso' }
 }
+
+/** Aviso previo a «Analizar» (modo pendientes) cuando no hay nada nuevo que analizar; null = hay trabajo. */
+export function avisoSinPendientes(pantallas: readonly { estado: 'pendiente' | 'ok' | 'error' }[]): string | null {
+  if (pantallas.some((p) => p.estado === 'pendiente')) return null
+  const fallidas = pantallas.filter((p) => p.estado === 'error').length
+  if (fallidas > 0) return `No hay pantallas nuevas. Hay ${fallidas} que fallaron: pulsa «Reintentar las que fallaron».`
+  return 'Todas las pantallas ya están analizadas.'
+}
