@@ -30,8 +30,13 @@ export function crearBarreraLote<P>(n: number, enviar: (partes: P[]) => Promise<
       partes.push(parte)
       if (partes.length >= n) {
         cerrada = true
-        // Un envío que LANZA no deja a nadie esperando: cuenta como no salido.
-        enviar([...partes]).then(resolver, () => resolver('rechazado'))
+        // Un envío que LANZA no deja a nadie esperando: cuenta como no salido. También si lanza de forma
+        // SÍNCRONA (un `enviar` no-async): sin el try, `unirse` lanzaría y los que ya esperaban no se resolverían nunca.
+        try {
+          enviar([...partes]).then(resolver, () => resolver('rechazado'))
+        } catch {
+          resolver('rechazado')
+        }
       }
       return resultado
     },

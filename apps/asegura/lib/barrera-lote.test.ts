@@ -26,6 +26,16 @@ test('un envío que lanza cuenta como no salido (nadie se queda esperando)', asy
   assert.deepEqual(await Promise.all([b.unirse('a'), b.unirse('b')]), ['rechazado', 'rechazado'])
 })
 
+test('🪤 un envío que lanza de forma SÍNCRONA tampoco deja a nadie esperando: todos reciben «rechazado»', async () => {
+  const enviarSincrono = ((): Promise<ResultadoCorreoLote> => { throw new Error('smtp') }) as (p: string[]) => Promise<ResultadoCorreoLote>
+  const b = crearBarreraLote<string>(2, enviarSincrono)
+  const primero = b.unirse('a')
+  // El último en unirse dispara el envío: no debe lanzar, y el que ya esperaba debe resolverse.
+  const ultimo = b.unirse('b')
+  const limite = new Promise<'pendiente'>((r) => setTimeout(() => r('pendiente'), 200))
+  assert.deepEqual(await Promise.race([Promise.all([primero, ultimo]), limite]), ['rechazado', 'rechazado'])
+})
+
 test('abortar después de salir no cambia nada', async () => {
   const b = crearBarreraLote<string>(1, async () => 'enviado')
   const r = b.unirse('a')
