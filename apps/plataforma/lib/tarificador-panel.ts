@@ -53,6 +53,34 @@ export type PanelTarificador = {
     | { disponible: false; motivo: string }
   renovaciones: { porEstado: Record<EstadoRenovacion, number>; lista: Renovacion[] }
   alertasTarifa: AlertaTarifa[]
+  /** Opcional: asegura de una versión anterior no lo manda. */
+  coste?: CostePanel | { disponible: false; motivo: string }
+}
+
+export type FilaCoste = {
+  dia: string
+  compania: string
+  trabajos: number
+  ok: number
+  segundos: number | null
+  flyEur: number | null
+  iaEur: number | null
+  totalEur: number | null
+}
+export type CostePanel = {
+  disponible: true
+  tarifaFlyEurPorSeg: number
+  resumen: {
+    mes: string
+    costeMesEur: number | null
+    trabajosMes: number
+    costeMedioEur: number | null
+    flyMedioPorTrabajoEur: number | null
+    iaIncluida: boolean
+    proyeccion100Eur: number | null
+    proyeccion1000Eur: number | null
+  }
+  filas: FilaCoste[]
 }
 
 export type LecturaPanel = { ok: true; panel: PanelTarificador } | { ok: false; mensaje: string }

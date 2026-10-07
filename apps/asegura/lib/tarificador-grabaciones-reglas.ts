@@ -75,6 +75,37 @@ export function comprobarSubida(nombre: string, bytes: number, html: string, yaS
 
 // ─── IA ─────────────────────────────────────────────────────────────────────
 
+/** Tope de opciones que se le pide a la IA por select (la salida larga trunca el JSON en pantallas grandes). */
+export const MAX_OPCIONES_IA = 25
+/** Tokens de salida y espera de la llamada de análisis (la pasarela acota a 55 s; la ruta dura 60). */
+export const MAX_TOKENS_ANALISIS = 12_000
+export const TIMEOUT_ANALISIS_MS = 55_000
+
+/**
+ * ¿La respuesta de la IA parece CORTADA a media salida? Hay un `{` pero las llaves/corchetes no cierran (fuera de
+ * cadenas) o termina dentro de una cadena. Un JSON completo (aunque inválido por otra cosa) devuelve false.
+ */
+export function respuestaIACortada(texto: string): boolean {
+  if (typeof texto !== 'string') return false
+  const t = texto.replace(/```(?:json)?/gi, '')
+  const i = t.indexOf('{')
+  if (i < 0) return false
+  let prof = 0, enCadena = false, escape = false
+  for (let k = i; k < t.length; k++) {
+    const c = t[k]
+    if (enCadena) {
+      if (escape) escape = false
+      else if (c === '\\') escape = true
+      else if (c === '"') enCadena = false
+      continue
+    }
+    if (c === '"') enCadena = true
+    else if (c === '{' || c === '[') prof++
+    else if (c === '}' || c === ']') { prof--; if (prof <= 0) return false }
+  }
+  return true
+}
+
 export function sistemaAnalisis(): string {
   return [
     'Eres analista de formularios de portales de compañías de seguros españolas. Recibes el HTML RECORTADO de UNA',
@@ -91,6 +122,8 @@ export function sistemaAnalisis(): string {
     '- marco: la ruta del marco donde está el elemento («appArea», «appArea/datos») o null si está en la página principal.',
     '- obligatorio: true si lleva required/aria-required, un asterisco en la etiqueta o lo dice el texto.',
     '- opciones: el TEXTO visible de las opciones de un select (o de un grupo de radios); null si no aplica.',
+    `  MÁXIMO ${MAX_OPCIONES_IA} opciones por campo (las primeras si hay más; no las listes todas). Sé COMPACTO: textos cortos,`,
+    '  sin explicaciones largas; "funcion" y "notas" en pocas palabras o null.',
     '- botones: todo lo que se pulsa (button, input submit/button, enlaces con aspecto de botón, pestañas).',
     '  "seguro" = navegar, siguiente/anterior, calcular/recalcular, pestañas de datos, ver detalle.',
     `  "prohibido" = cualquier cosa que emita, contrate, formalice, grabe, archive, acepte de forma definitiva, firme,`,

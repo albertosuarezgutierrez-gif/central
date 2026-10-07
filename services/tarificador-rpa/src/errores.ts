@@ -2,6 +2,7 @@
 // decide el estado (`estadoTrasError`): solo `infra` se reintenta, y UNA vez.
 
 import { EmisionBloqueadaError, type TipoError } from '@central/module-tarificacion'
+import { textoAvisoVerificacion } from './aviso.ts'
 
 export class ErrorTarificador extends Error {
   readonly tipo: TipoError
@@ -12,6 +13,23 @@ export class ErrorTarificador extends Error {
     this.name = 'ErrorTarificador'
     this.tipo = tipo
     this.transitorio = tipo === 'portal' && opciones.transitorio === true
+  }
+}
+
+/** Motivo clasificado de «hace falta una persona en el portal» (segundo factor / SMS / sesión no recuperable). */
+export const MOTIVO_VERIFICACION_HUMANA = 'requiere_verificacion_humana'
+
+/**
+ * El portal pide un código (SMS/OTP/segundo factor) o la sesión no se recupera sin persona. NO reintentable.
+ * En el cable viaja como `tipo: 'captcha'`: `TipoError` vive en @central/module-tarificacion (contrato con asegura,
+ * que rechaza tipos que no conoce) y `captcha` ya significa «requiere una persona» → `requiere_humano`. El motivo
+ * fino va al principio del mensaje (`requiere_verificacion_humana: …`) para que el panel lo distinga.
+ */
+export class ErrorVerificacionHumana extends ErrorTarificador {
+  readonly motivo = MOTIVO_VERIFICACION_HUMANA
+  constructor(compania: string) {
+    super('captcha', `${MOTIVO_VERIFICACION_HUMANA}: ${textoAvisoVerificacion(compania)}`)
+    this.name = 'ErrorVerificacionHumana'
   }
 }
 

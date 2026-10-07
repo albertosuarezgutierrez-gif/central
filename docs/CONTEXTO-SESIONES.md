@@ -1089,6 +1089,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (07/10/2026) Tarificador: recomendador, control de calidad, propuesta PDF, coste y verificación humana
+- module-tarificacion: `recomendar()` (ranking explicable por perfil, sin IA; sin precio anual → descartada) y `controlarCalidad()` (errores bloquean, avisos no). Sin conectar aún a la oportunidad.
+- asegura: `propuesta-comercial.ts` + `-pdf.ts` (pdf-lib, marca ASegura, «No consta» nunca 0; solo genera, no envía). Falta ruta/botón y cargador de la oportunidad.
+- Panel: coste por tarificación (IA prorrateada por día = cota superior; Fly con tarifa a revisar).
+- Worker: `requiere_verificacion_humana` (OTP/SMS detectado tras login → para sin rellenar; viaja como tipo `captcha`). Falta el push a Telegram.
+- Análisis de grabaciones: maxTokens 12000, ≤25 opciones/select, error claro si la IA se corta.
+
 ## (07/10/2026) IA del análisis arreglada (#4405) + RC PYME mapeada + UX «Analizar»
 - #4405: la pasarela respeta `timeoutMs` (tope 55 s) y el análisis de grabaciones usa categoría `contexto` → gemini-2.5-flash (~5 s, ~0,006 €/pantalla grande). Antes: llama-3.3 con timeout a 25 s.
 - Allianz ePAC: «Venta → Nueva Alta» abre un popup común a todos los productos (Negocio Plus = Comercio en Particulares; RC PYME en Empresas) → paso de entrada compartido entre bots de Allianz.

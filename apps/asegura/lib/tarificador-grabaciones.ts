@@ -22,6 +22,9 @@ import { iaTexto } from './ia'
 import {
   LOTE_ANALISIS,
   MAX_CHARS_IA,
+  MAX_TOKENS_ANALISIS,
+  TIMEOUT_ANALISIS_MS,
+  respuestaIACortada,
   comprobarSubida,
   costeEstimadoGrabador,
   maxLlamadasGrabador,
@@ -226,7 +229,7 @@ export async function analizarGrabacion(correduriaId: string, id: string, modo: 
     const prompt = promptAnalisis({ compania: g[0].compania, ramo: g[0].ramo, producto: g[0].producto, pantalla: p.orden, total: total[0].n, html })
     let respuesta: string
     try {
-      respuesta = await iaTexto(prompt, { system, maxTokens: 4000, timeoutMs: 50_000, privado: true, categoria: 'contexto' })
+      respuesta = await iaTexto(prompt, { system, maxTokens: MAX_TOKENS_ANALISIS, timeoutMs: TIMEOUT_ANALISIS_MS, privado: true, categoria: 'contexto' })
     } catch (e) {
       mal++
       await marcarError(p.pid, `la IA no ha respondido: ${e instanceof Error ? e.message : String(e)}`)
@@ -235,7 +238,13 @@ export async function analizarGrabacion(correduriaId: string, id: string, modo: 
     const coste = costeEstimadoGrabador(system.length + prompt.length, respuesta.length)
     await prisma.$executeRaw`update seguros.tarificador_grabaciones set coste_estimado = coste_estimado + ${coste}::numeric
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
-    const v = validarPantallaMapa(extraerJsonIA(respuesta), p.orden)
+    const json = extraerJsonIA(respuesta)
+    if (json === null && respuestaIACortada(respuesta)) {
+      mal++
+      await marcarError(p.pid, `la respuesta de la IA se cortó (pantalla demasiado grande): ${respuesta.length} caracteres sin cerrar el JSON`)
+      continue
+    }
+    const v = validarPantallaMapa(json, p.orden)
     if (!v.ok) { mal++; await marcarError(p.pid, `la respuesta de la IA no cumple el esquema: ${v.errores.slice(0, 3).join('; ')}`); continue }
     forzados += v.forzados
     await prisma.$transaction(async (tx) => {
