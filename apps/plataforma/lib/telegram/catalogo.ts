@@ -691,6 +691,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Cada 5 minutos, solo cuando se cruza 60€ (una vez al mes) o se bloquea',
   },
   {
+    id: 'correduria.whatsapp-conexion', categoria: 'correduria',
+    titulo: 'WhatsApp de la correduría desconectado o reconectado',
+    que: 'Cuando Meta corta la conexión del WhatsApp Business con el CRM (p. ej. la app del móvil lleva 14 días sin abrirse, se cambió el número o se desconectó desde el móvil), la da de baja o la recupera. Sin datos personales: solo el estado y el motivo. Mientras esté desconectado NO entran mensajes en el CRM. Si lo silencias, el estado sigue en /correduria/ajustes/whatsapp.',
+    cuando: 'Cada 10 minutos, solo cuando cambia la conexión',
+  },
+  {
     id: 'correduria.fuga-cartera', categoria: 'correduria',
     titulo: 'Posible pérdida de cartera',
     que: 'Una póliza viva que CIMA da de baja, que anuncia que no renovará («anula al vencimiento») o que deja de aparecer, SIN una sustitución registrada. Un mensaje por pasada con el tomador (enlazado a su ficha), la compañía y el número; se revisa en /correduria → Hoy (pérdida con motivo, o no es pérdida).',

@@ -47,6 +47,14 @@
       "schedule": "43 * * * *"
     },
     {
+      "path": "/api/cron/whatsapp-analizar",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/whatsapp-retencion",
+      "schedule": "25 3 * * *"
+    },
+    {
       "path": "/api/cron/google-contactos",
       "schedule": "37 * * * *"
     },
