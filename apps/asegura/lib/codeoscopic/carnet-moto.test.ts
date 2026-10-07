@@ -59,3 +59,52 @@ test('choqueCarnetVersion: sin dato NO hay choque (no se bloquea lo que no se ha
   assert.equal(choqueCarnetVersion(a1, { cc: null, kw: null }), null)
   assert.match(choqueCarnetVersion(a1, { cc: null, kw: 20 }) ?? '', /20 kW/)
 })
+
+// ─── Regla de tráfico fija (caso Kymco Grand Dink 300, base7 02770680002) ────
+import { avisoCilindradaDesconocida, choqueReglaTrafico, traducirMotoNoApta400 } from './carnet-moto.ts'
+import { respuestaFalloCotizacion } from './fallo-cotizacion.ts'
+
+test('regla de tráfico: B + 299 cc corta con la frase de la ficha', () => {
+  const m = choqueReglaTrafico('B', { cc: 299, kw: null })
+  assert.equal(
+    m,
+    'La moto tiene 299 cc y exige carné A2 o A; en la ficha del conductor solo consta el B. ' +
+      'Añade su carné de moto (con fecha) y vuelve a pedir precio.',
+  )
+})
+test('regla de tráfico: A2 + 299 cc pasa; B + 125 cc pasa; A sin límite', () => {
+  assert.equal(choqueReglaTrafico('A2', { cc: 299, kw: 20 }), null)
+  assert.equal(choqueReglaTrafico('B', { cc: 125, kw: 11 }), null)
+  assert.equal(choqueReglaTrafico('A', { cc: 1300, kw: 130 }), null)
+  assert.match(choqueReglaTrafico('B', { cc: null, kw: 20 }) ?? '', /20 kW/)
+  assert.match(choqueReglaTrafico('AM', { cc: 125, kw: null }) ?? '', /AM/)
+  assert.match(choqueReglaTrafico('A2', { cc: 600, kw: 50 }) ?? '', /50 kW/)
+  assert.equal(choqueReglaTrafico('B', { cc: null, kw: null }), null, 'sin dato no se afirma choque')
+})
+test('cilindrada desconocida con B supuesto avisa; con B de ficha o con dato no', () => {
+  assert.match(avisoCilindradaDesconocida('B', true, { cc: null, kw: null }) ?? '', /AVISO/)
+  assert.match(avisoCilindradaDesconocida('B', true, null) ?? '', /cilindrada/)
+  assert.equal(avisoCilindradaDesconocida('B', true, { cc: 125, kw: null }), null)
+  assert.equal(avisoCilindradaDesconocida('B', false, null), null)
+  assert.equal(avisoCilindradaDesconocida('A2', true, null), null)
+})
+test('el 400 «cannot be used by the primary driver» se traduce; otros 400 no', () => {
+  const t = traducirMotoNoApta400(
+    'codeoscopic_validacion: {"message":"The motorbike with base7 code 02770680002 cannot be used by the primary driver"}',
+  )
+  assert.match(t ?? '', /02770680002/)
+  assert.match(t ?? '', /No se ha cobrado nada/)
+  assert.equal(traducirMotoNoApta400('{"message":"The phone of the holder is mandatory."}'), null)
+})
+test('respuestaFalloCotizacion: 400 sin cargo = 422 validacion con gastado; timeout/5xx sin cifra', () => {
+  const v = respuestaFalloCotizacion({ ok: false, razon: 'vendor', mensaje: 'x', sinCargo: true, claveVendor: 'validacion' })
+  assert.equal(v.status, 422)
+  assert.equal(v.cuerpo.gastado, '0,00€')
+  assert.equal(v.cuerpo.causa, 'validacion')
+  const c = respuestaFalloCotizacion({ ok: false, razon: 'vendor', mensaje: 'x', sinCargo: true, claveVendor: 'conexion' })
+  assert.equal(c.status, 502)
+  assert.equal(c.cuerpo.gastado, '0,00€')
+  const t = respuestaFalloCotizacion({ ok: false, razon: 'vendor', mensaje: 'timeout' })
+  assert.equal(t.status, 502)
+  assert.equal('gastado' in t.cuerpo, false)
+})

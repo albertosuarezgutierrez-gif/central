@@ -1,13 +1,13 @@
 'use client'
 
-// La pantalla del riesgo (29/09/2026): cabecera · intervinientes · presupuestos P1…Pn · nueva variante.
+// La pantalla del riesgo (29/09/2026): cabecera · datos · intervinientes · pedir precio (bloque único) · presupuestos P1…Pn · historial.
 // Tras cualquier cambio de figuras se RELEE el riesgo entero del puerto: lo que se pinta es siempre
 // lo que asegura tiene, nunca una suposición local de cómo quedó.
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
-import { Badge, BtnLink, PageHeader, cardStyle } from '@/components/ui'
+import { Badge, BtnLink, PageHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { ROTULO_ESTADO, rotuloRamo } from '@/lib/seguimiento-asegura'
 import type { LecturaRiesgo, Riesgo } from '@/lib/riesgo-asegura'
@@ -22,7 +22,7 @@ import PasarOportunidad from './PasarOportunidad'
 import PresupuestosCompanias from './PresupuestosCompanias'
 import { fechaEs } from './piezas-riesgo'
 import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
-import { avisoRamoSinTarifa } from '@/lib/presupuestos-companias'
+import { avisoRamoSinTarifa, companiasDisponibles } from '@/lib/presupuestos-companias'
 
 export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
@@ -56,8 +56,9 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   const estado = (ROTULO_ESTADO as Record<string, string>)[op.estado] ?? (op.estado || 'Estado sin leer')
   const ramo = ramoVariante(op.ramo)
   const acciones = accionesPrecio({ ramo: op.ramo, polizaId: op.polizaId, tomadorId: tomadorDelRiesgo(riesgo), oportunidadId: op.id })
+  const hayBots = !acciones.principal && companiasDisponibles(op.ramo).length > 0
   const esVehiculo = op.ramo === 'auto' || op.ramo === 'moto'
-  // Lo que falta del riesgo NO bloquea «Nueva variante» (la pantalla de precio lo pide), pero se dice.
+  // Lo que falta del riesgo NO bloquea «Pedir precio» (la pantalla de precio lo pide), pero se dice.
   const bloqueDatos = riesgo.datosRiesgo
   const faltaDatos = !ramo
     ? null
@@ -130,43 +131,45 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
         onError={(texto) => setAviso({ ok: false, texto })}
       />
 
-      <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
-
-      {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
-      <PresupuestosCompanias
-        oportunidadId={op.id}
-        ramo={op.ramo}
-        riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
-      />
-
-      <HistorialVariantes riesgo={riesgo} />
-
-      <section style={{ ...cardStyle, display: 'grid', gap: 8 }}>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>Nueva variante</div>
-        {faltaDatos && (
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
-            {faltaDatos} Puedes seguir: la pantalla de precio lo pedirá.
-          </p>
-        )}
+      {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
+          secundario (póliza) y el coste de 0,50€ viven aquí y en ningún otro sitio de la página. */}
+      <section id="pedir-precio" aria-labelledby="pedir-precio-titulo" style={{ ...cardStyle, display: 'grid', gap: 8, minWidth: 0 }}>
+        <div id="pedir-precio-titulo" style={{ fontSize: 14, fontWeight: 600 }}>Pedir precio</div>
         {acciones.principal ? (
           <>
+            {faltaDatos && (
+              <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
+                {faltaDatos} Puedes seguir: la pantalla de precio lo pedirá.
+              </p>
+            )}
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
               {op.polizaId && acciones.secundario
-                ? 'Este riesgo es de una póliza en cartera. Lo normal es pedir precio con lo que has editado arriba; retarificar la póliza usa sus datos de hoy.'
-                : 'Se pide precio con los intervinientes y los datos de arriba.'}{' '}
+                ? 'Este riesgo es de una póliza en cartera. Lo normal es pedir precio con los intervinientes y los datos de esta página; retarificar la póliza usa sus datos de hoy.'
+                : 'Se pide precio con los intervinientes y los datos de esta página.'}{' '}
               En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.
             </p>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))' }}>
-              <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
+              <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
                 <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>{acciones.principal.nota}</span>
               </div>
               {acciones.secundario && (
-                <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
+                <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
                   <BtnLink href={acciones.secundario.href} variante="secundario">{acciones.secundario.etiqueta}</BtnLink>
                   <span style={{ fontSize: 12, color: 'var(--muted)' }}>{acciones.secundario.nota}</span>
                 </div>
               )}
+            </div>
+          </>
+        ) : hayBots ? (
+          <>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
+              Este ramo se cotiza con los bots de compañía: el formulario de presupuestos de más abajo va ya sembrado con el capital y la dirección de los datos; allí eliges compañías y lo pides.
+            </p>
+            <div>
+              <a href="#presupuestos" style={{ ...btnStyle('primario', 'md'), minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', maxWidth: '100%' }}>
+                Ir a pedir presupuestos →
+              </a>
             </div>
           </>
         ) : (
@@ -177,6 +180,17 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
           </p>
         )}
       </section>
+
+      <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
+
+      {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
+      <PresupuestosCompanias
+        oportunidadId={op.id}
+        ramo={op.ramo}
+        riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
+      />
+
+      <HistorialVariantes riesgo={riesgo} />
     </div>
   )
 }

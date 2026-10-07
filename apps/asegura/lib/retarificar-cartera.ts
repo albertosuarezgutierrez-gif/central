@@ -167,7 +167,8 @@ import {
 import { comprobarRolesRamo } from '@/lib/codeoscopic/comprobar-roles'
 import { errorAseguradosEnCuerpo, leerAseguradosAdicionales } from '@/lib/codeoscopic/asegurados'
 import { resumirCrudo, type ResumenCrudo } from '@/lib/codeoscopic/crudo'
-import { choqueCarnetVersion } from '@/lib/codeoscopic/carnet-moto'
+import { respuestaFalloCotizacion } from '@/lib/codeoscopic/fallo-cotizacion'
+import { avisoCilindradaDesconocida, choqueCarnetVersion, choqueReglaTrafico } from '@/lib/codeoscopic/carnet-moto'
 import type { PeticionCotizacion, ResultadoCotizacion } from '@/lib/codeoscopic/cotizar'
 import { MARCA_SIMULACION } from '@/lib/codeoscopic/simulacion'
 import { resumirCotizacion } from '@/lib/codeoscopic/respuesta'
@@ -412,12 +413,8 @@ export function respuestaRetarificacion(
   preparado: Extract<PreparadoRetarificacion, { estado: 'listo' }>,
 ): ResultadoRetarificar {
   if (!r.ok) {
-    // 402 cuando el freno es el TOPE: eso no es un fallo, es el tope haciendo
-    // su trabajo, y la pantalla lo cuenta distinto de un error del vendor.
-    return {
-      status: r.razon === 'tope' ? 402 : r.razon === 'vendor' ? 502 : 503,
-      cuerpo: { error: r.mensaje, razon: r.razon },
-    }
+    // Con prueba de no-cargo lleva `gastado: '0,00€'` (422 `validacion`); si no, 402 tope / 502 / 503.
+    return respuestaFalloCotizacion(r)
   }
 
   return {
@@ -578,8 +575,9 @@ async function reparoCarnetMoto(
   config: Parameters<typeof limitesCarnetMoto>[0],
   tipo: string | null | undefined,
   version: VersionMotoElegida | null,
-): Promise<{ campo: 'tipoCarnet'; motivo: string } | null> {
-  if (!tipo) return null
+  esSupuesto = false,
+): Promise<{ reparo: { campo: 'tipoCarnet'; motivo: string } | null; aviso: string | null }> {
+  if (!tipo) return { reparo: null, aviso: null }
   // Las dos lecturas son GET de catálogo gratis e independientes: en paralelo.
   const [limites, motor] = await Promise.all([
     limitesCarnetMoto(config).catch((): null => null),
@@ -589,23 +587,44 @@ async function reparoCarnetMoto(
         )
       : null,
   ])
-  if (limites === null || limites.length === 0) return null
+  // 1. Regla de tráfico FIJA (no del catálogo): corta aunque el catálogo no se lea.
+  if (motor) {
+    const trafico = choqueReglaTrafico(tipo, motor)
+    if (trafico) return { reparo: { campo: 'tipoCarnet', motivo: trafico }, aviso: null }
+  }
+  const aviso = avisoCilindradaDesconocida(tipo, esSupuesto, motor)
+  if (limites === null || limites.length === 0) return { reparo: null, aviso }
   const carnet = limites.find((l) => l.id === tipo)
   if (!carnet) {
     return {
-      campo: 'tipoCarnet',
-      motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${limites.map((l) => l.id).join(', ')})`,
+      reparo: {
+        campo: 'tipoCarnet',
+        motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${limites.map((l) => l.id).join(', ')})`,
+      },
+      aviso: null,
     }
   }
-  if (!motor) return null
+  if (!motor) return { reparo: null, aviso }
   const choque = choqueCarnetVersion(carnet, motor)
-  if (!choque) return null
+  if (!choque) return { reparo: null, aviso }
   // El carné sale de la ficha, o es el B supuesto si la ficha no trae uno de moto:
   // el arreglo está en la ficha del cliente, no en esta pantalla.
   return {
-    campo: 'tipoCarnet',
-    motivo: `${choque}. Si el conductor tiene otro carné de moto, dalo de alta en su ficha (con su fecha) y vuelve a pedir el precio`,
+    reparo: {
+      campo: 'tipoCarnet',
+      motivo: `${choque}. Si el conductor tiene otro carné de moto, dalo de alta en su ficha (con su fecha) y vuelve a pedir el precio`,
+    },
+    aviso: null,
   }
+}
+
+/** Añade el aviso al supuesto `tipoCarnet` (visible en pantalla junto al supuesto); sin supuesto, lo añade como uno nuevo. */
+function conAvisoCarnet<T extends { campo: string; valor: unknown; porque: string; optimista?: boolean }>(
+  supuestos: T[],
+  aviso: string | null,
+): T[] {
+  if (!aviso) return supuestos
+  return supuestos.map((s) => (s.campo === 'tipoCarnet' ? { ...s, porque: `${s.porque} — ${aviso}` } : s))
 }
 
 /**
@@ -644,10 +663,12 @@ async function prepararMoto(
   if (moto.estado !== 'disponible') {
     return paraPreparado({ error: 'moto no tarifica para esta organización (o no se ha podido comprobar)', moto }, 409)
   }
-  const reparoCarnet = await reparoCarnetMoto(
+  const supuestosVivosMoto = supuestosVigentes(pre.supuestos, cuerpo.correcciones)
+  const { reparo: reparoCarnet, aviso: avisoCarnet } = await reparoCarnetMoto(
     cfg.config,
     (datos.conductor ?? datos).tipoCarnet, // el carné que cuenta es el de quien CONDUCE
     versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+    supuestosVivosMoto.some((x) => x.campo === 'tipoCarnet'),
   )
   if (reparoCarnet) return paraPreparado({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422)
 
@@ -658,7 +679,7 @@ async function prepararMoto(
     return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
   }
   peticion.externalId = `poliza-${polizaId}`
-  return { peticion, motivo: 'defensa-cartera', supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones) }
+  return { peticion, motivo: 'defensa-cartera', supuestos: conAvisoCarnet(supuestosVivosMoto, avisoCarnet) }
 }
 
 // ─── HOGAR ───────────────────────────────────────────────────────────────────
@@ -1165,10 +1186,12 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       ),
     }
   }
-  const reparoCarnet = await reparoCarnetMoto(
+  const supuestosVivosNueva = supuestosVigentes(supuestosBase, cuerpo.correcciones)
+  const { reparo: reparoCarnet, aviso: avisoCarnet } = await reparoCarnetMoto(
     cfg.config,
     (datos.conductor ?? datos).tipoCarnet, // el carné que cuenta es el de quien CONDUCE
     versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+    supuestosVivosNueva.some((x) => x.campo === 'tipoCarnet'),
   )
   if (reparoCarnet) {
     return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422) }
@@ -1194,7 +1217,7 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       solicitadoPor,
       contexto: { ramo: 'moto', puerta: 'corredor', polizaId: null, clienteId },
     },
-    supuestos: supuestosVigentes(supuestosBase, cuerpo.correcciones),
+    supuestos: conAvisoCarnet(supuestosVivosNueva, avisoCarnet),
     fuenteRiesgo: null,
     seguroAnterior,
   }

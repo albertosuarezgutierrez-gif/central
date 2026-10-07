@@ -347,7 +347,9 @@ export default function Retarificador({
         }),
       })
       const j = (await res.json()) as Record<string, unknown>
-      if (res.status === 422) {
+      // 422 `causa: 'validacion'` = 400 del vendor SIN cargo (lleva `gastado: '0,00€'`): es un error con su
+      // mensaje, no una lista vacía de «faltan datos».
+      if (res.status === 422 && j.causa !== 'validacion') {
         setResultado({ estado: 'faltan', faltan: (j.faltan as Reparo[]) ?? [] })
         return
       }

@@ -18,8 +18,7 @@ import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import {
   AVISO_COMERCIO, AVISO_RIESGO_LIBRE, BIENES_COMERCIO, CATALOGO_HOGAR_DE_CAMPO, COMPANIAS_COMERCIO, ESPEC_POR_COMPANIA, ETIQUETA_COMPANIA_COMERCIO, ESPEC_CAPITAL, ESPEC_COMERCIO, ESPEC_LIBRE, ESPEC_VIVIENDA,
   ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_CAMPO_LIBRE, ETIQUETA_CAMPO_VIVIENDA, ETIQUETA_REGIMEN_LOCAL,
-  MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, camposCapitalDelRamo, soloLoQueCambia, textoFaltanCapital, textoFaltanComercio,
-  textoFaltanVivienda,
+  MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, camposCapitalDelRamo, soloLoQueCambia, textoFaltanComercio,
   type AseguradoAdicional, type CampoCapital, type CompaniaComercio, type PorCompaniaComercio, type CampoFaltaComercio, type CampoVivienda, type CapitalComercio, type EspecCampo, type MedidaComercio, type RamoCapital,
 } from '@central/module-seguros'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
@@ -27,9 +26,7 @@ import { eur } from '@/lib/dinero'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
 import AseguradosAdicionales, { aseguradosDeRiesgo, aseguradosParaEnviar, type AseguradoForm } from '../../cliente/[id]/AseguradosAdicionales'
 import { SelectorBuscable } from '../../SelectorBuscable'
-import { avisoRamoSinTarifa, companiasDisponibles } from '@/lib/presupuestos-companias'
-import BotonPedirPrecio from './BotonPedirPrecio'
-import { motivoSinPrecioRamo, ramoVariante, rutaVariante, tomadorDelRiesgo } from './variante'
+import { avisoRamoSinTarifa } from '@/lib/presupuestos-companias'
 import { fechaEs, llamarDatosRiesgo, motivoDe } from './piezas-riesgo'
 import {
   capitalesDeFilas, filaCapitalVacia, filaMedidaVacia, filasDeCapitales, filasDeMedidas, formDeCompanias, listaAMandar, medidasDeFilas, porCompaniaAMandar,
@@ -69,15 +66,13 @@ function deForm(spec: readonly EspecCampo[], form: Form): Record<string, unknown
 }
 
 /** El marco común: cabecera con el sello, aviso de lo que falta, botones. */
-function Marco({ titulo, ayuda, confirmadoAt, dePoliza, aviso, nota, precio, editando, bloqueado, enviando, errorForm, onEditar, onConfirmar, onGuardar, onCancelar, lectura, formulario }: {
+function Marco({ titulo, ayuda, confirmadoAt, dePoliza, aviso, nota, editando, bloqueado, enviando, errorForm, onEditar, onConfirmar, onGuardar, onCancelar, lectura, formulario }: {
   titulo: string
   ayuda: string
   confirmadoAt: string | null
   dePoliza: boolean
   aviso: string | null
   nota?: string | null
-  /** «Pedir precio →» del ramo (solo en lectura: mientras se edita no hay a dónde ir). */
-  precio?: React.ReactNode
   editando: boolean
   bloqueado: boolean
   enviando: boolean
@@ -113,7 +108,6 @@ function Marco({ titulo, ayuda, confirmadoAt, dePoliza, aviso, nota, precio, edi
               </button>
             )}
           </div>
-          {precio}
         </>
       ) : (
         <form onSubmit={onGuardar} style={{ display: 'grid', gap: 10, minWidth: 0 }}>
@@ -167,14 +161,6 @@ function useEdicion(clave: 'datosVivienda' | 'datosCapital' | 'datosComercio' | 
 
 const euros = (v: unknown) => (typeof v === 'number' ? eur(v) : null)
 
-/** «Pedir precio →» de hogar/vida/salud/decesos: enlace a la pantalla de precio del ramo con la oportunidad (nunca cotiza). */
-function PrecioDelBloque({ riesgo, ocupado }: { riesgo: Riesgo; ocupado: boolean }) {
-  const op = riesgo.oportunidad
-  const ramo = ramoVariante(op.ramo)
-  const href = ramo ? rutaVariante(ramo, tomadorDelRiesgo(riesgo), op.id) : null
-  return <BotonPedirPrecio href={href} motivo={motivoSinPrecioRamo({ ramoCotizable: ramo !== null, editando: false, ocupado })} />
-}
-
 // ─── Vivienda (hogar) ────────────────────────────────────────────────────────
 
 const GRUPOS_VIVIENDA: Array<{ titulo: string; campos: CampoVivienda[] }> = [
@@ -186,7 +172,7 @@ const GRUPOS_VIVIENDA: Array<{ titulo: string; campos: CampoVivienda[] }> = [
 const CAMPOS_EUROS = new Set<string>(['capitalContinente', 'capitalContenido', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor'])
 
 function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }) {
-  const { d, faltan, dePoliza } = props
+  const { d, dePoliza } = props
   const [catalogos, setCatalogos] = useState<Record<string, Opcion[] | 'error'>>({})
   const [municipios, setMunicipios] = useState<Opcion[] | null>(null)
   const [notaMunicipio, setNotaMunicipio] = useState<string | null>(null)
@@ -251,16 +237,13 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
     }))
   }
 
-  const aviso = textoFaltanVivienda(faltan as CampoVivienda[])
-
   return (
     <Marco
       titulo="Datos de la vivienda"
       ayuda="Lo que se sabe de la casa. Al pedir precio se precargan aquí y lo que se use se anota de vuelta."
       nota="Con la referencia catastral, la pantalla de precio lee dirección, m² y año del Catastro; aquí se cuentan igual mientras no estén anotados. Sin referencia, la pantalla de precio abre el buscador del Catastro con la calle, el número y el municipio de aquí."
       confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
-      aviso={aviso}
-      precio={<PrecioDelBloque riesgo={props.riesgo} ocupado={E.bloqueado} />}
+      aviso={null}
       editando={E.editando} bloqueado={E.bloqueado} enviando={E.enviando} errorForm={E.errorForm}
       onEditar={E.abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={E.enviar} onCancelar={() => E.setEditando(false)}
       lectura={
@@ -353,7 +336,7 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
 // ─── Capital y persona (vida, salud, decesos) ────────────────────────────────
 
 function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }) {
-  const { riesgo, d, faltan, dePoliza } = props
+  const { riesgo, d, dePoliza } = props
   const ramo = riesgo.oportunidad.ramo as RamoCapital
   const campos = camposCapitalDelRamo(ramo)
   const conAsegurados = (campos as readonly string[]).includes('asegurados')
@@ -417,8 +400,7 @@ function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: strin
         : 'Lo que se sabe de lo que quiere el cliente y de quién más se asegura. Al pedir precio se precarga aquí y lo que se use se anota de vuelta.'}
       nota={ramo === 'vida' ? null : `En ${ramo} el capital es opcional: no viaja a la compañía, queda para el expediente.`}
       confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
-      aviso={textoFaltanCapital(faltan as CampoCapital[])}
-      precio={<PrecioDelBloque riesgo={riesgo} ocupado={E.bloqueado} />}
+      aviso={null}
       editando={E.editando} bloqueado={E.bloqueado} enviando={E.enviando} errorForm={E.errorForm}
       onEditar={abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={enviar} onCancelar={() => E.setEditando(false)}
       lectura={
@@ -738,9 +720,6 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
   const E = useEdicion('datosRiesgoLibre', props, ESPEC_LIBRE, d, 'los datos del riesgo')
   const claves = ['descripcion', 'direccion', 'capital', 'notas'] as const
   const ramo = props.riesgo.oportunidad.ramo
-  // Comunidades se cotiza con los bots de compañía (formulario de la propia oportunidad, `#presupuestos`): ahí lleva el
-  // botón, no a otra ruta. Los ramos sin ningún bot siguen siendo «se cotiza fuera».
-  const hayBots = companiasDisponibles(ramo).length > 0
   return (
     <Marco
       titulo="Datos del riesgo"
@@ -748,8 +727,6 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
       nota={avisoRamoSinTarifa(ramo, AVISO_RIESGO_LIBRE)}
       confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
       aviso={null}
-      precio={hayBots ? <BotonPedirPrecio ancla="#presupuestos" motivo={motivoSinPrecioRamo({ ramoCotizable: true, editando: false, ocupado: E.bloqueado })}
-        nota="Abre el formulario de presupuestos de compañías de más abajo, ya sembrado con el capital y la dirección de aquí; allí eliges compañías y lo pides." /> : undefined}
       editando={E.editando} bloqueado={E.bloqueado} enviando={E.enviando} errorForm={E.errorForm}
       onEditar={E.abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={E.enviar} onCancelar={() => E.setEditando(false)}
       lectura={
