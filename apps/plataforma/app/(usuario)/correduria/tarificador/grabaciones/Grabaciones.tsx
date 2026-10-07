@@ -7,6 +7,7 @@ import { Badge, CardHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
   MAX_FICHEROS,
+  avisoSinPendientes,
   comprobarFicheros,
   estadoGrabacion,
   mensajeError,
@@ -202,6 +203,10 @@ function Detalle({ id, onCambio }: { id: string; onCambio: () => void }) {
   const analizar = async (modo: 'pendientes' | 'reintentar' | 'todas') => {
     if (modo === 'todas' && !window.confirm('Se borra el mapa y se vuelven a analizar TODAS las pantallas (gasta IA). ¿Seguir?')) return
     setNota(null)
+    if (modo === 'pendientes' && g) {
+      const aviso = avisoSinPendientes(g.pantallasLista)
+      if (aviso) { setNota({ texto: aviso, tono: g.conError > 0 ? 'warning' : 'positive' }); return }
+    }
     let ronda = 0
     let ultimo: ResultadoAnalisis | null = null
     let m: typeof modo = modo

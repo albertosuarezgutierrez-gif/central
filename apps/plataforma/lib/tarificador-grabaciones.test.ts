@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { MAX_BYTES_FICHERO, MAX_FICHEROS, comprobarFicheros, estadoGrabacion, mensajeError, mover, ordenInicial, tamano } from './tarificador-grabaciones.ts'
+import { avisoSinPendientes, MAX_BYTES_FICHERO, MAX_FICHEROS, comprobarFicheros, estadoGrabacion, mensajeError, mover, ordenInicial, tamano } from './tarificador-grabaciones.ts'
 
 test('mensajeError: bien → null; SQL sin aplicar, red, tamaño y causa legibles', () => {
   assert.equal(mensajeError(201, { id: 'x' }, 'Crear'), null)
@@ -43,4 +43,11 @@ test('la pantalla pone el marcador por el DOM (React 19 bloquea href="javascript
   const panel = readFileSync(join(dir, 'PanelTarificador.tsx'), 'utf8')
   assert.match(panel, /href="\/correduria\/tarificador\/grabaciones"/)
   assert.match(panel, /href="\/correduria\/tarificador\/fichas"/)
+})
+
+test('avisoSinPendientes: con pendientes null; sin ellas distingue fallidas de todo analizado', () => {
+  assert.equal(avisoSinPendientes([{ estado: 'ok' }, { estado: 'pendiente' }, { estado: 'error' }]), null)
+  assert.equal(avisoSinPendientes([{ estado: 'ok' }, { estado: 'error' }, { estado: 'error' }]), 'No hay pantallas nuevas. Hay 2 que fallaron: pulsa «Reintentar las que fallaron».')
+  assert.equal(avisoSinPendientes([{ estado: 'ok' }]), 'Todas las pantallas ya están analizadas.')
+  assert.equal(avisoSinPendientes([]), 'Todas las pantallas ya están analizadas.')
 })

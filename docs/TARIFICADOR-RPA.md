@@ -36,6 +36,13 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 - **Fichas** `/correduria/tarificador/fichas`: catálogo de garantías, validador anti-alucinación, validación humana, «Extraer coberturas» del PDF y `compararOfertas` (comparador determinista).
 - **Aviso de infraseguro** (1.100 / 1.400 / 1.800 €/m²): cifras **PENDIENTES de validar por Alberto**.
 
+- **Grabador v2**: tapa la pantalla de login, los datos de personas/mediador y los tokens de sesión; avisa con enlace si el formulario está en un marco de otro origen (Occident: `catalanaaplicaciones.gco.global`).
+- **Análisis de grabaciones**: categoría IA `contexto` (gemini-2.5-flash, ~5 s, ~0,006 €/pantalla grande); la pasarela ya respeta `timeoutMs` (tope 55 s).
+- **Allianz ePAC, entrada común**: «Venta → Nueva Alta» abre un popup compartido por todos los productos (Particulares: HOGAR, Negocio Plus = Comercio, Comunidades…; Empresas: RC PYME) → paso de entrada compartido entre bots de Allianz.
+- **RC PYME**: pantalla de resultado mapeada (primas en `#tableTarifaAnual_{0,1,2}_0`). PROHIBIDOS: Archivar, Aceptar `#btnAccept`→emision_ipid, Datos emisión, Proyecto ampliado, Pago fraccionado. Seguros: Datos básicos, Proyecto, IPID, Retarificar. Faltan por mapear Datos básicos y Proyecto.
+- **Generali** pide SMS → reutilizar sesión + aviso Telegram.
+- **13 pólizas Allianz sin `prima_anual` = por diseño** (no es un fallo a revisar).
+
 ## Interruptores y env (Vercel `central-asegura`)
 `TARIFICADOR_RPA_ACTIVO` (=1; apagado por defecto) · `TARIFICADOR_FORMADOR_ACTIVO` · `TARIFICADOR_RENOVACIONES_ACTIVO` · `TARIFICADOR_GRABADOR_MAX_LLAMADAS` · `TARIFICADOR_WORKER_SECRET` · `FLY_API_TOKEN` · `TARIFICADOR_FLY_APP` · `TARIFICADOR_FLY_IMAGE` · `TARIFICADOR_API_URL`.
 
