@@ -45,6 +45,8 @@ export function gatewayChat(
   return llamar(config, '/api/ai/chat', {
     messages, system: opts.system, model: opts.model, maxTokens: opts.maxTokens,
     cliente: opts.cliente, privado: opts.privado, cache: opts.cache, categoria: opts.categoria,
+    // La pasarela acota el timeout contra el proveedor con este valor (sin él, 25 s por defecto).
+    timeoutMs: opts.timeoutMs,
   }, opts.timeoutMs ?? 25_000)
 }
 
