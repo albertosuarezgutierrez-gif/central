@@ -27,16 +27,20 @@ function conduceEnRiesgo(rol: RolFigura, ramo: string, figuras: FiguraRiesgo[]):
   return rol === 'tomador' && !figuras.some((g) => g.rol === 'conductor_habitual')
 }
 
-export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
+export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEditando }: {
   riesgo: Riesgo
   ocupado: boolean
   onCambio: (texto: string) => void
   onError: (texto: string) => void
+  /** Avisa de que hay un cambio de persona A MEDIAS (eligiendo, alta nueva, editando ficha o guardando). */
+  onEditando?: (aMedias: boolean) => void
 }) {
   const [abierto, setAbierto] = useState<RolFigura | null>(null)
   const [nueva, setNueva] = useState<RolFigura | null>(null)
   const [editando, setEditando] = useState<RolFigura | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const aMedias = abierto !== null || nueva !== null || editando !== null || enviando
+  useEffect(() => { onEditando?.(aMedias) }, [aMedias, onEditando])
   const op = riesgo.oportunidad
   // Los enlaces de datos de este riesgo, UNA lectura para todas las figuras (luego se reparten por persona).
   const conEnlace = ramoConEnlaceDatos(op.ramo)

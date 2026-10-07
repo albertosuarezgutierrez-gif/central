@@ -9,7 +9,7 @@ import { join } from 'node:path'
 // con el tomador en todos los papeles». Este cepo lee el fuente de la pantalla y de su acción.
 
 const BASE = join(import.meta.dirname, '..', 'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo')
-const pantalla = readFileSync(join(BASE, 'MotoNuevo.tsx'), 'utf8')
+const pantalla = readFileSync(join(BASE, 'CotizadorMoto.tsx'), 'utf8')
 const accion = readFileSync(join(BASE, 'acciones.ts'), 'utf8')
 const activas = (s: string) => s.split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n')
 

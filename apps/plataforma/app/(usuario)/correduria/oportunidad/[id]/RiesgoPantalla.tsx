@@ -5,7 +5,7 @@
 // lo que asegura tiene, nunca una suposición local de cómo quedó.
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { Badge, BtnLink, PageHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
@@ -19,6 +19,7 @@ import FigurasRiesgo from './FigurasRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
+import PedirPrecioMoto from './PedirPrecioMoto'
 import PresupuestosCompanias from './PresupuestosCompanias'
 import { fechaEs } from './piezas-riesgo'
 import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
@@ -31,6 +32,16 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   useEffect(() => { setRiesgo(inicial) }, [inicial])
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
   const [recargando, setRecargando] = useState(false)
+  // Moto (07/10/2026, Fase 1): el cotizador se abre AQUÍ. Lo que está a medias arriba lo bloquea, y mientras se paga
+  // no se deja editar el riesgo (`ocupado`).
+  const [motoAbierto, setMotoAbierto] = useState(false)
+  const [editandoVehiculo, setEditandoVehiculo] = useState(false)
+  const [editandoFiguras, setEditandoFiguras] = useState(false)
+  const [cotizandoMoto, setCotizandoMoto] = useState(false)
+  // La variante recién pedida: «Presupuestos de este riesgo» la abre con sus precios para emitir sin salir.
+  const [abrirPrecios, setAbrirPrecios] = useState<string | null>(null)
+  const alEditarVehiculo = useCallback((b: boolean) => setEditandoVehiculo(b), [])
+  const alEditarFiguras = useCallback((b: boolean) => setEditandoFiguras(b), [])
   const op = riesgo.oportunidad
 
   async function recargar(texto?: string) {
@@ -58,6 +69,8 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   const acciones = accionesPrecio({ ramo: op.ramo, polizaId: op.polizaId, tomadorId: tomadorDelRiesgo(riesgo), oportunidadId: op.id })
   const hayBots = !acciones.principal && companiasDisponibles(op.ramo).length > 0
   const esVehiculo = op.ramo === 'auto' || op.ramo === 'moto'
+  const esMoto = op.ramo === 'moto'
+  const ocupado = recargando || cotizandoMoto
   // Lo que falta del riesgo NO bloquea «Pedir precio» (la pantalla de precio lo pide), pero se dice.
   const bloqueDatos = riesgo.datosRiesgo
   const faltaDatos = !ramo
@@ -111,9 +124,10 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
       {esVehiculo ? (
         <DatosVehiculo
           riesgo={riesgo}
-          ocupado={recargando}
+          ocupado={ocupado}
           onCambio={(texto) => void recargar(texto)}
           onError={(texto) => setAviso({ ok: false, texto })}
+          onEditando={alEditarVehiculo}
         />
       ) : (
         <DatosRiesgo
@@ -126,9 +140,10 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
 
       <FigurasRiesgo
         riesgo={riesgo}
-        ocupado={recargando}
+        ocupado={ocupado}
         onCambio={(texto) => void recargar(texto)}
         onError={(texto) => setAviso({ ok: false, texto })}
+        onEditando={alEditarFiguras}
       />
 
       {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
@@ -139,19 +154,29 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
           <>
             {faltaDatos && (
               <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
-                {faltaDatos} Puedes seguir: la pantalla de precio lo pedirá.
+                {faltaDatos} {esMoto ? 'Complétalo arriba, en «Datos del vehículo»: el bloque de precio no lo vuelve a pedir.' : 'Puedes seguir: la pantalla de precio lo pedirá.'}
               </p>
             )}
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
               {op.polizaId && acciones.secundario
                 ? 'Este riesgo es de una póliza en cartera. Lo normal es pedir precio con los intervinientes y los datos de esta página; retarificar la póliza usa sus datos de hoy.'
                 : 'Se pide precio con los intervinientes y los datos de esta página.'}{' '}
-              En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.
+              {esMoto ? 'Se confirma aquí mismo, sin salir de esta página' : 'En la siguiente pantalla se confirma'}; pedir precio cuesta 0,50€.
             </p>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))' }}>
               <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
-                <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>{acciones.principal.nota}</span>
+                {/* Moto: el cotizador se despliega en este mismo bloque; ningún enlace a la pantalla de moto-nuevo. */}
+                {esMoto ? (
+                  <button type="button" onClick={() => setMotoAbierto(true)} disabled={motoAbierto} aria-expanded={motoAbierto} aria-controls="pedir-precio-moto"
+                    style={{ ...btnStyle('primario', 'md'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal', height: 'auto' }}>
+                    {acciones.principal.etiqueta}
+                  </button>
+                ) : (
+                  <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
+                )}
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  {esMoto ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : acciones.principal.nota}
+                </span>
               </div>
               {acciones.secundario && (
                 <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
@@ -160,6 +185,25 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
                 </div>
               )}
             </div>
+            {esMoto && motoAbierto && (
+              <div id="pedir-precio-moto" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
+                <PedirPrecioMoto
+                  riesgo={riesgo}
+                  editandoVehiculo={editandoVehiculo}
+                  editandoFiguras={editandoFiguras}
+                  recargando={recargando}
+                  onCotizando={setCotizandoMoto}
+                  onCotizado={(id) => {
+                    setMotoAbierto(false)
+                    setCotizandoMoto(false)
+                    setAbrirPrecios(id)
+                    void recargar('Precio pedido y guardado en «Presupuestos de este riesgo»: desde ahí se emite.')
+                  }}
+                  onDesfase={() => void recargar()}
+                  onCerrar={() => setMotoAbierto(false)}
+                />
+              </div>
+            )}
           </>
         ) : hayBots ? (
           <>
@@ -190,7 +234,7 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
         riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
       />
 
-      <HistorialVariantes riesgo={riesgo} />
+      <HistorialVariantes riesgo={riesgo} abrirPrecios={abrirPrecios} />
     </div>
   )
 }

@@ -39,11 +39,13 @@ function hoyLocal(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date())
 }
 
-export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError }: {
+export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEditando }: {
   riesgo: Riesgo
   ocupado: boolean
   onCambio: (texto: string) => void
   onError: (texto: string) => void
+  /** Avisa de que hay algo A MEDIAS (editando, eligiendo versión o guardando): el cotizador embebido no cotiza mientras. */
+  onEditando?: (aMedias: boolean) => void
 }) {
   const d = riesgo.datosVehiculo
   const op = riesgo.oportunidad
@@ -55,6 +57,8 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError }: {
   const [buscando, setBuscando] = useState(false)
   const [notaMatricula, setNotaMatricula] = useState<string | null>(null)
   const [eligiendo, setEligiendo] = useState(false)
+  const aMedias = editando || eligiendo || enviando
+  useEffect(() => { onEditando?.(aMedias) }, [aMedias, onEditando])
 
   // El catálogo de garajes (gratis) sirve para el selector y para enseñar el nombre, no el id.
   useEffect(() => {

@@ -11,7 +11,7 @@ const BASE = 'apps/plataforma/app/(usuario)/correduria/cliente/[id]/'
 // Moto delega en pedirPrecio(forzarNuevo): la guarda va ahí para cubrir también «Descartar y pedir precio de cero».
 const PANTALLAS: Array<[string, string, string]> = [
   ['auto-nuevo/AutoNuevo.tsx', 'cotizar', ''],
-  ['moto-nuevo/MotoNuevo.tsx', 'pedirPrecio', 'forzarNuevo: boolean'],
+  ['moto-nuevo/CotizadorMoto.tsx', 'pedirPrecio', 'forzarNuevo: boolean'],
   ['vida-nuevo/VidaNuevo.tsx', 'cotizar', ''],
   ['salud-nuevo/SaludNuevo.tsx', 'cotizar', ''],
   ['decesos-nuevo/DecesosNuevo.tsx', 'cotizar', ''],
