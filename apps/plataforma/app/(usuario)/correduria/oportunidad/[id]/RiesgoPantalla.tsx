@@ -15,12 +15,14 @@ import { textoFaltanCapital, textoFaltanVehiculo, textoFaltanVivienda, type Camp
 import { LogoCompaniaEnLinea } from '../../CeldaCompania'
 import DatosRiesgo from './DatosRiesgo'
 import DatosVehiculo from './DatosVehiculo'
+import DuplicarOtroTomador from './DuplicarOtroTomador'
 import FigurasRiesgo from './FigurasRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
 import PedirPrecioMoto from './PedirPrecioMoto'
 import PresupuestosCompanias from './PresupuestosCompanias'
+import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs } from './piezas-riesgo'
 import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
 import { avisoRamoSinTarifa, companiasDisponibles } from '@/lib/presupuestos-companias'
@@ -185,6 +187,14 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
                 </div>
               )}
             </div>
+            {/* Escenarios (07/10/2026): otra persona de tomador sin tocar figura a figura. */}
+            <DuplicarOtroTomador
+              riesgo={riesgo}
+              ocupado={ocupado || editandoFiguras || editandoVehiculo || motoAbierto}
+              onCambio={(texto) => void recargar(texto)}
+              onError={(texto) => setAviso({ ok: false, texto })}
+              onRecargar={() => void recargar()}
+            />
             {esMoto && motoAbierto && (
               <div id="pedir-precio-moto" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
                 <PedirPrecioMoto
@@ -235,6 +245,9 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
       />
 
       <HistorialVariantes riesgo={riesgo} abrirPrecios={abrirPrecios} />
+
+      {/* Varios presupuestos de este riesgo en UNA propuesta (07/10/2026). Preparar no avisa a nadie. */}
+      <PropuestaEscenarios riesgo={riesgo} />
     </div>
   )
 }

@@ -1579,6 +1579,44 @@ model PresupuestoEvento {
   @@map("presupuesto_evento")
 }
 
+/// PROPUESTA DE ESCENARIOS (07/10/2026, 2026-10-07e_presupuesto_propuesta.sql): varios presupuestos de la
+/// MISMA oportunidad que se enseñan juntos (otro tomador, otro conductor…). Sin copia de precios ni de
+/// figuras: el documento lee cada presupuesto y su petición. Crearla NO avisa a nadie (borrador).
+/// El código la lee por SQL crudo (`lib/propuesta-escenarios.ts`); el modelo está para que el schema
+/// diga la verdad sobre la BD.
+model PresupuestoPropuesta {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId  String    @map("correduria_id") @db.Uuid
+  oportunidadId String    @map("oportunidad_id") @db.Uuid
+  /// `ASP-AA-NNNN`. La pone la BD (trigger + contador propio) e inmutable.
+  referencia    String?   @default(dbgenerated())
+  creadoAt      DateTime  @default(now()) @map("creado_at") @db.Timestamptz(6)
+  creadoPor     String    @map("creado_por")
+  /// Último aviso del lote. `whatsapp_enlace` = se abrió WhatsApp, NO prueba que saliera.
+  canalAviso    String?   @map("canal_aviso")
+  avisadoAt     DateTime? @map("avisado_at") @db.Timestamptz(6)
+  retiradaAt    DateTime? @map("retirada_at") @db.Timestamptz(6)
+
+  items PresupuestoPropuestaItem[]
+
+  @@index([correduriaId, oportunidadId, creadoAt(sort: Desc)], map: "idx_presupuesto_propuesta_oportunidad")
+  @@map("presupuesto_propuesta")
+}
+
+model PresupuestoPropuestaItem {
+  propuestaId   String   @map("propuesta_id") @db.Uuid
+  presupuestoId String   @map("presupuesto_id") @db.Uuid
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  orden         Int      @db.SmallInt
+
+  propuesta PresupuestoPropuesta @relation(fields: [propuestaId], references: [id], onDelete: Cascade)
+
+  @@id([propuestaId, presupuestoId])
+  @@unique([propuestaId, orden], map: "presupuesto_propuesta_item_orden_unico")
+  @@index([presupuestoId], map: "idx_presupuesto_propuesta_item_presupuesto")
+  @@map("presupuesto_propuesta_item")
+}
+
 /// La evidencia de una firma. Genérica desde el día uno porque la carta de
 /// nombramiento de mediador firma igual, y una segunda tabla de firmas sería un
 /// segundo criterio de qué cuenta como firma.

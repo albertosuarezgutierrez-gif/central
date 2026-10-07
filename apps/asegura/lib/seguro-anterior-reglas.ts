@@ -16,7 +16,8 @@ import {
 import type { ClienteCartera } from './codeoscopic/desde-cartera.ts'
 
 export type LecturaCandidatas =
-  | { ok: true; candidatas: CandidataSeguroAnterior[] }
+  /** `conyugeNoMirado`: no se pudieron leer las relaciones, así que NO se sabe si hay pólizas del cónyuge. */
+  | { ok: true; candidatas: CandidataSeguroAnterior[]; conyugeNoMirado?: boolean }
   | { ok: false; motivo: string }
 
 /** La fecha de carné MÁS ANTIGUA de la ficha: los años que lleva conduciendo (techo del bonus). */
@@ -44,6 +45,8 @@ export type SeguroAnteriorPublico = {
    */
   bonusSupuesto: boolean
   condicion: string | null
+  /** `true` = no se pudo comprobar el cónyuge (≠ «no tiene»). */
+  conyugeNoMirado?: boolean
 }
 
 export const CONDICION_BONUS_SUPUESTO =
@@ -96,6 +99,9 @@ export async function imputarConLectura(entrada: {
         '`sinSeguroAnterior: true` si de verdad no tiene.',
     }
   }
+  return marcarConyuge(decidir(lectura), lectura.conyugeNoMirado === true)
+
+  function decidir(lectura: Extract<LecturaCandidatas, { ok: true }>): Imputacion {
   const r = elegirSeguroAnteriorParaImputar(lectura.candidatas, entrada.tipoNuevo, { clienteId: entrada.clienteId, elegidaId })
   if (r.estado === 'error') return { ok: false, status: 422, causa: r.causa, mensaje: r.mensaje }
 
@@ -137,6 +143,11 @@ export async function imputarConLectura(entrada: {
       condicion: historial.bonusSupuesto ? CONDICION_BONUS_SUPUESTO : null,
     },
   }
+  }
+}
+
+function marcarConyuge(i: Imputacion, noMirado: boolean): Imputacion {
+  return noMirado && i.ok ? { ...i, publico: { ...i.publico, conyugeNoMirado: true } } : i
 }
 
 /**

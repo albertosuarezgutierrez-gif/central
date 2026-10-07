@@ -25,6 +25,8 @@ import {
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { catalogoCompanias } from './emision'
+import { listarRelaciones } from './cartera-relaciones'
+import { conyugesDe } from './seguro-anterior-conyuge'
 import { imputarConLectura, imputarParaPrecalificar, type Imputacion, type LecturaCandidatas, type SeguroAnteriorPublico } from './seguro-anterior-reglas'
 
 export {
@@ -48,8 +50,17 @@ function fecha(d: Date | string | null): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
 }
 
+type OportunidadFila = {
+  id: string; cliente_id: string | null; tipo: string; aseguradora: string | null; numero_poliza: string | null
+  matricula: string | null; vehiculo: string | null; seguro_anterior: unknown
+}
+
 /** Las pólizas de motor conocidas de UNA ficha. Gratis (solo BD). */
-export async function candidatasSeguroAnterior(correduriaId: string, clienteId: string): Promise<LecturaCandidatas> {
+export async function candidatasSeguroAnterior(
+  correduriaId: string,
+  clienteId: string,
+  opciones: { soloCartera?: boolean } = {},
+): Promise<LecturaCandidatas> {
   if (!UUID.test(clienteId) || !UUID.test(correduriaId)) return { ok: false, motivo: 'identificador no válido' }
   try {
     const db = prismaAsegura()
@@ -70,10 +81,7 @@ export async function candidatasSeguroAnterior(correduriaId: string, clienteId: 
           and ${Prisma.raw(sqlCarteraEnVigor('p'))}
         order by p.id
         limit ${TECHO}`),
-      db.$queryRaw<{
-        id: string; cliente_id: string | null; tipo: string; aseguradora: string | null; numero_poliza: string | null
-        matricula: string | null; vehiculo: string | null; seguro_anterior: unknown
-      }[]>(Prisma.sql`
+      opciones.soloCartera ? Promise.resolve<OportunidadFila[]>([]) : db.$queryRaw<OportunidadFila[]>(Prisma.sql`
         select o.id::text as id, o.cliente_id::text as cliente_id, o.tipo::text as tipo,
                nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora,
                coalesce(nullif(trim(o.numero_poliza), ''), nullif(trim(o.poliza_competencia->>'nPoliza'), ''),
@@ -146,14 +154,36 @@ export async function candidatasSeguroAnterior(correduriaId: string, clienteId: 
   }
 }
 
+/**
+ * Las del tomador + las pólizas de motor EN VIGOR de su cónyuge/pareja (07/10/2026, ver `conyugesDe`): la
+ * bonificación va con el tomador, pero muchas compañías aceptan la del cónyuge. Del cónyuge solo se leen
+ * pólizas de cartera en vigor (mismo criterio `sqlCarteraEnVigor`), marcadas `delConyuge` para que solo
+ * se puedan elegir a mano. Si NO se pueden leer las relaciones (o las pólizas del cónyuge) se sirve lo del
+ * tomador con `conyugeNoMirado: true`: el fallo no tumba la cotización ni se presenta como «no tiene».
+ */
+export async function candidatasSeguroAnteriorConConyuge(correduriaId: string, clienteId: string): Promise<LecturaCandidatas> {
+  const propias = await candidatasSeguroAnterior(correduriaId, clienteId)
+  if (!propias.ok) return propias
+  const relaciones = await listarRelaciones(correduriaId, clienteId)
+  if (relaciones === null) return { ...propias, conyugeNoMirado: true }
+  const candidatas = [...propias.candidatas]
+  let conyugeNoMirado = false
+  for (const c of conyugesDe(relaciones, clienteId)) {
+    const suyas = await candidatasSeguroAnterior(correduriaId, c.id, { soloCartera: true })
+    if (!suyas.ok) { conyugeNoMirado = true; continue }
+    candidatas.push(...suyas.candidatas.map((x) => ({ ...x, delConyuge: c.nombre })))
+  }
+  return conyugeNoMirado ? { ok: true, candidatas, conyugeNoMirado } : { ok: true, candidatas }
+}
+
 /** Imputa el seguro anterior leyendo las candidatas de la BD (la decisión es `imputarConLectura`, pura). */
 export function imputarSeguroAnterior(entrada: Omit<Parameters<typeof imputarConLectura>[0], 'leer'>): Promise<Imputacion> {
-  return imputarConLectura({ ...entrada, leer: candidatasSeguroAnterior })
+  return imputarConLectura({ ...entrada, leer: candidatasSeguroAnteriorConConyuge })
 }
 
 /** Igual, para la precalificación gratis: nunca lanza (ver `imputarParaPrecalificar`). */
 export function imputarSeguroAnteriorGratis(entrada: Omit<Parameters<typeof imputarConLectura>[0], 'leer'>): Promise<Imputacion> {
-  return imputarParaPrecalificar({ ...entrada, leer: candidatasSeguroAnterior })
+  return imputarParaPrecalificar({ ...entrada, leer: candidatasSeguroAnteriorConConyuge })
 }
 
 /**
