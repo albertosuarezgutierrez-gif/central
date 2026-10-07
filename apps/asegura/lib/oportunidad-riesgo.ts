@@ -775,10 +775,12 @@ export async function abrirRiesgoDePoliza(
     const [pol] = await tx.$queryRaw<Array<{
       cliente_id: string; tipo: string; aseguradora: string | null; datos: Record<string, unknown> | null
       numero_poliza: string | null; dgs: string | null; vencimiento: string | null
+      import_ref: string | null; eiac_xml_hash: string | null; estado: string | null; sustituida_at: Date | null
     }>>`
       select p.cliente_id::text as cliente_id, p.tipo::text as tipo, p.aseguradora, p.datos_especificos as datos,
              p.numero_poliza, p.codigo_entidad_dgs as dgs,
-             to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento
+             to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento,
+             p.import_ref, p.eiac_xml_hash, p.estado::text as estado, p.sustituida_at
       from seguros.polizas p
       join seguros.clientes c on c.id = p.cliente_id and c.correduria_id = p.correduria_id and c.merged_into_cliente_id is null
       where p.id = ${e.polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null`
@@ -795,6 +797,7 @@ export async function abrirRiesgoDePoliza(
     // El seguro anterior de esta póliza (compañía, nº, periodo): lo lee la pantalla de precio de `poliza_competencia`.
     const comp = competenciaDePoliza({
       aseguradora: pol.aseguradora, numeroPoliza: pol.numero_poliza, codigoDgs: pol.dgs, fechaVencimiento: pol.vencimiento,
+      importRef: pol.import_ref, eiacXmlHash: pol.eiac_xml_hash, estado: pol.estado, sustituidaAt: pol.sustituida_at,
       matricula: pol.tipo === 'auto' || pol.tipo === 'moto'
         ? (typeof pol.datos?.matricula === 'string' ? pol.datos.matricula : null) : null,
     })

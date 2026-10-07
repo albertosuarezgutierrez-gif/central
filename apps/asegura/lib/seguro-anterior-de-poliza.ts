@@ -2,7 +2,7 @@
 // Al abrir el riesgo de una póliza para retarificarla, la pantalla de precio no debe pedir a mano su
 // compañía, nº ni periodo. Puro y sin E/S. Tres estados: dato que la póliza no tiene = `null`/ausente;
 // nunca se inventa una fecha, ni siniestros/bonus (eso solo lo da el documento o el declarado).
-import { seguroAnteriorDe, type SeguroAnterior } from '@central/module-seguros'
+import { esCarteraEnVigor, seguroAnteriorDe, type SeguroAnterior } from '@central/module-seguros'
 
 export type PolizaParaAnterior = {
   aseguradora: string | null
@@ -12,6 +12,11 @@ export type PolizaParaAnterior = {
   fechaVencimiento: string | null
   /** Solo auto/moto: la matrícula de ESA póliza. */
   matricula: string | null
+  /** Para decidir si está viva (`esCarteraEnVigor`): una anulada/cancelada/sustituida NO es seguro anterior. */
+  importRef: string | null
+  eiacXmlHash: string | null
+  estado: string | null
+  sustituidaAt?: unknown
 }
 
 export type PolizaCompetencia = {
@@ -44,6 +49,9 @@ function efectoDeVencimiento(v: string | null): string | null {
  * `numero_poliza`. `null` = la póliza no aporta nada utilizable (no se escribe nada).
  */
 export function competenciaDePoliza(p: PolizaParaAnterior): { poliza: PolizaCompetencia; numeroPoliza: string | null } | null {
+  // Criterio del corredor (07/10/2026): la bonificación es del tomador y una póliza ANULADA (p. ej. por
+  // siniestralidad) no se propone como seguro anterior; se elige en el desplegable. Solo se precarga si está viva.
+  if (!esCarteraEnVigor({ importRef: p.importRef, eiacXmlHash: p.eiacXmlHash, estado: p.estado, sustituidaAt: p.sustituidaAt })) return null
   const aseguradora = limpio(p.aseguradora)
   const numeroPoliza = limpio(p.numeroPoliza)
   const sa = seguroAnteriorDe({

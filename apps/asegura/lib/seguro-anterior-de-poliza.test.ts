@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { competenciaDePoliza } from './seguro-anterior-de-poliza.ts'
 
-const base = { aseguradora: 'Mapfre', numeroPoliza: '2002300386316', codigoDgs: null, fechaVencimiento: '2026-08-10', matricula: '1234 abc' }
+const base = { aseguradora: 'Mapfre', numeroPoliza: '2002300386316', codigoDgs: null, fechaVencimiento: '2026-08-10', matricula: '1234 abc', importRef: null, eiacXmlHash: null, estado: 'en_vigor' }
 
 test('precarga compañía, nº, periodo y matrícula de la póliza', () => {
   const r = competenciaDePoliza(base)!
@@ -33,10 +33,18 @@ test('fecha con forma rara o texto vacío no pasan como dato', () => {
 })
 
 test('póliza sin nada utilizable → null', () => {
-  assert.equal(competenciaDePoliza({ aseguradora: ' ', numeroPoliza: null, codigoDgs: null, fechaVencimiento: null, matricula: null }), null)
+  assert.equal(competenciaDePoliza({ aseguradora: ' ', numeroPoliza: null, codigoDgs: null, fechaVencimiento: null, matricula: null, importRef: null, eiacXmlHash: null, estado: 'en_vigor' }), null)
 })
 
 test('efecto = vencimiento − 1 año; 29-feb → 28-feb; sin vencimiento válido → null (nunca la fecha de alta)', () => {
   assert.equal(competenciaDePoliza({ ...base, fechaVencimiento: '2028-02-29' })!.poliza.seguroAnterior?.fechaEfecto, '2027-02-28')
   assert.equal(competenciaDePoliza({ ...base, fechaVencimiento: null })!.poliza.seguroAnterior?.fechaEfecto, null)
+})
+
+test('póliza anulada/cancelada/sustituida/volcado histórico → nada (ni seguroAnterior ni nº)', () => {
+  assert.ok(competenciaDePoliza(base))
+  assert.equal(competenciaDePoliza({ ...base, estado: 'cancelada' }), null)
+  assert.equal(competenciaDePoliza({ ...base, estado: null }), null)
+  assert.equal(competenciaDePoliza({ ...base, sustituidaAt: new Date() }), null)
+  assert.equal(competenciaDePoliza({ ...base, importRef: 'intranet:1' }), null)
 })
