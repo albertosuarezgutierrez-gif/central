@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bookmark, RefreshCw, Upload, Wand2, ArrowUp, ArrowDown, X } from 'lucide-react'
+import { Bookmark, RefreshCw, Upload, Wand2, ArrowUp, ArrowDown, X, Trash2 } from 'lucide-react'
 import type { PantallaMapa } from '@central/module-tarificacion'
 import { Badge, CardHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
@@ -15,6 +15,7 @@ import {
   ordenInicial,
   prepararEnvios,
   tamano,
+  textoConfirmarBorrado,
   type DetalleGrabacion,
   type ResultadoAnalisis,
   type ResumenGrabacion,
@@ -95,7 +96,7 @@ export default function Grabaciones({ bookmarklet, bookmarkletManual }: { bookma
                   <button type="button" onClick={() => setAbierta(abiertaEsta ? null : g.id)} style={{ ...btnStyle(abiertaEsta ? 'sutil' : 'secundario', 'sm'), minHeight: 44, justifySelf: 'start' }}>
                     {abiertaEsta ? 'Cerrar' : 'Abrir'}
                   </button>
-                  {abiertaEsta && <Detalle id={g.id} onCambio={() => void cargar()} />}
+                  {abiertaEsta && <Detalle id={g.id} onCambio={() => void cargar()} onBorrada={() => { setAbierta(null); void cargar() }} />}
                 </li>
               )
             })}
@@ -196,7 +197,7 @@ function NuevaGrabacion({ onCreada }: { onCreada: (id: string) => void }) {
   )
 }
 
-function Detalle({ id, onCambio }: { id: string; onCambio: () => void }) {
+function Detalle({ id, onCambio, onBorrada }: { id: string; onCambio: () => void; onBorrada: () => void }) {
   const [g, setG] = useState<DetalleGrabacion | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<string | null>(null)
@@ -255,6 +256,16 @@ function Detalle({ id, onCambio }: { id: string; onCambio: () => void }) {
     onCambio()
   }
 
+  const borrar = async () => {
+    if (!g || !window.confirm(textoConfirmarBorrado(g))) return
+    setNota(null)
+    setOcupado('Borrando la grabación…')
+    const r = await pedir(`${API}/${id}`, { method: 'DELETE' })
+    const e = mensajeError(r.status, r.json, 'Borrar')
+    if (e) { setNota({ texto: e, tono: 'warning' }); setOcupado(null); return }
+    onBorrada() // la lista se recarga sin desmontar; esta fila desaparece al no estar ya en ella
+  }
+
   if (error) return <p role="alert" style={aviso('warning')}>{error}</p>
   if (!g) return <p className="muted" style={{ margin: 0 }}>Cargando la grabación…</p>
   const completo = g.pantallas > 0 && g.analizadas === g.pantallas && !!g.mapa
@@ -294,6 +305,11 @@ function Detalle({ id, onCambio }: { id: string; onCambio: () => void }) {
           </div>
         </div>
       )}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+        <button type="button" disabled={!!ocupado} onClick={() => void borrar()} style={{ ...btnStyle('sutil'), minHeight: 44, color: 'var(--negative)', maxWidth: '100%' }}>
+          <Trash2 size={15} strokeWidth={1.75} aria-hidden /> Borrar grabación
+        </button>
+      </div>
     </div>
   )
 }

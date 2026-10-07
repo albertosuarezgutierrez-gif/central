@@ -19,6 +19,25 @@ export function esTablaSinCrear(e: unknown): boolean {
   return /does not exist|no existe|42P01|42703/i.test(m)
 }
 
+export const SQL_BORRAR_GRABACIONES = 'apps/asegura/prisma/sql/2026-10-07d_tarificador_grabaciones_borrar.sql'
+export const MENSAJE_BORRAR_SIN_PERMISO = `Borrar grabaciones aún no está activo: falta aplicar ${SQL_BORRAR_GRABACIONES} en la base.`
+export const MENSAJE_BORRAR_REFERENCIADA = 'No se puede borrar: alguna pantalla de la grabación está usada por otra ficha o documento.'
+
+/** Orden OBLIGADO del borrado (respeta las FKs): pantallas (apuntan a documentos y grabación) → documentos → grabación. */
+export const ORDEN_BORRADO_GRABACION = ['tarificador_grabacion_pantallas', 'documentos', 'tarificador_grabaciones'] as const
+
+/** ¿El error es «permission denied» (falta el GRANT DELETE del SQL de borrado)? */
+export function esPermisoDenegado(e: unknown): boolean {
+  const m = e instanceof Error ? e.message : String(e)
+  return /permission denied|42501|permiso denegado/i.test(m)
+}
+
+/** ¿El error es una violación de FK (23503): otra tabla apunta a un documento de la grabación? */
+export function esFkViolada(e: unknown): boolean {
+  const m = e instanceof Error ? e.message : String(e)
+  return /foreign key|23503|viola la llave|viola la restricci/i.test(m)
+}
+
 // ─── Tope de coste ───────────────────────────────────────────────────────────
 
 export const MAX_LLAMADAS_POR_DEFECTO = 60

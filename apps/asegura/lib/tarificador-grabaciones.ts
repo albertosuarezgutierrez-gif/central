@@ -176,6 +176,28 @@ export async function marcarValidado(correduriaId: string, id: string, validado:
   return { estado: 'ok', validado }
 }
 
+export type ResultadoBorrar = { estado: 'ok'; pantallas: number } | { estado: 'no_encontrada' }
+
+/**
+ * Borra la grabación y TODO lo suyo en UNA transacción, en el orden de `ORDEN_BORRADO_GRABACION` (las FKs no tienen
+ * cascada): pantallas → documentos (el HTML vive en `seguros.documentos`, en BD, no hay storage externo) → grabación.
+ * Bloquea la fila (`for update`) para que no entre una subida a mitad. Todo filtrado por correduría.
+ */
+export async function borrarGrabacion(correduriaId: string, id: string): Promise<ResultadoBorrar> {
+  return prisma.$transaction(async (tx) => {
+    const g = await tx.$queryRaw<{ id: string }[]>`
+      select id::text as id from seguros.tarificador_grabaciones where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid for update`
+    if (!g[0]) return { estado: 'no_encontrada' as const }
+    const pantallas = await tx.$executeRaw`
+      delete from seguros.tarificador_grabacion_pantallas where grabacion_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+    await tx.$executeRaw`
+      delete from seguros.documentos where tarificador_grabacion_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+    await tx.$executeRaw`
+      delete from seguros.tarificador_grabaciones where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+    return { estado: 'ok' as const, pantallas }
+  })
+}
+
 export type ModoAnalisis = 'pendientes' | 'reintentar' | 'todas'
 export type ResultadoAnalisis =
   | { estado: 'no_encontrada' }

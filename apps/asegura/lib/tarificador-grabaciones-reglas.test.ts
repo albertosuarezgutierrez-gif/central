@@ -96,3 +96,26 @@ test('subida multipantalla: separa en orden, re-redacta CADA pantalla y respeta 
   const grande = planificarSubida('g.html', pant(1, '<div>fila de relleno</div>'.repeat(Math.ceil(5 * 1024 * 1024 / 26))), 0)
   assert.ok(!grande.ok && /pantalla 1 del fichero.*MB/.test(grande.mensaje))
 })
+
+test('borrado: errores de permiso y de FK se distinguen; el orden obligado es pantallas → documentos → grabación', async () => {
+  const { esPermisoDenegado, esFkViolada, ORDEN_BORRADO_GRABACION } = await import('./tarificador-grabaciones-reglas.ts')
+  assert.equal(esPermisoDenegado(new Error('permission denied for table tarificador_grabaciones')), true)
+  assert.equal(esPermisoDenegado(new Error('relation does not exist')), false)
+  assert.equal(esFkViolada(new Error('update or delete on table "documentos" violates foreign key constraint')), true)
+  assert.equal(esFkViolada(new Error('permission denied')), false)
+  assert.deepEqual([...ORDEN_BORRADO_GRABACION], ['tarificador_grabacion_pantallas', 'documentos', 'tarificador_grabaciones'])
+})
+
+// Cepo: borrarGrabacion borra en el orden de las FKs, todo por correduría y la ruta DELETE va auditada.
+test('borrado (guardián de fuente): orden de los DELETE, filtro de correduría y ruta auditada', () => {
+  const lib = readFileSync(join(import.meta.dirname, 'tarificador-grabaciones.ts'), 'utf8')
+  const cuerpo = lib.slice(lib.indexOf('export async function borrarGrabacion'), lib.indexOf('export type ModoAnalisis'))
+  const a = cuerpo.search(/delete from \w+\.tarificador_grabacion_pantallas/)
+  const b = cuerpo.search(/delete from \w+\.documentos/)
+  const c = cuerpo.search(/delete from \w+\.tarificador_grabaciones /)
+  assert.ok(a > 0 && b > a && c > b, 'pantallas → documentos → grabación')
+  assert.equal((cuerpo.match(/correduria_id = \$\{correduriaId\}::uuid/g) ?? []).length, 4, 'cada sentencia filtra por correduría')
+  const ruta = readFileSync(join(import.meta.dirname, '..', 'app/api/operador/tarificador/grabaciones/[id]/route.ts'), 'utf8')
+  assert.match(ruta, /export const DELETE = auditado\(/)
+  assert.match(ruta, /operadorAutorizado\(req\)[\s\S]*borrarGrabacion/)
+})

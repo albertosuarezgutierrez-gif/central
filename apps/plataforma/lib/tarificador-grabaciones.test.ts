@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { avisoSinPendientes, MAX_BYTES_GRABACION, prepararEnvios, MAX_BYTES_FICHERO, MAX_FICHEROS, comprobarFicheros, estadoGrabacion, mensajeError, mover, ordenInicial, tamano } from './tarificador-grabaciones.ts'
+import { avisoSinPendientes, MAX_BYTES_GRABACION, prepararEnvios, MAX_BYTES_FICHERO, MAX_FICHEROS, comprobarFicheros, estadoGrabacion, mensajeError, textoConfirmarBorrado, mover, ordenInicial, tamano } from './tarificador-grabaciones.ts'
 
 test('mensajeError: bien → null; SQL sin aplicar, red, tamaño y causa legibles', () => {
   assert.equal(mensajeError(201, { id: 'x' }, 'Crear'), null)
@@ -69,4 +69,11 @@ test('multipantalla: se admite hasta 32 MB, y lo que pasa de 4 MB se trocea por 
   // No caben en la grabación / una pantalla suelta enorme.
   assert.match(prepararEnvios('grabacion-a.html', corto, 39).error!, /solo caben 1/)
   assert.match(prepararEnvios('pantalla-a.html', '<html>' + 'x'.repeat(MAX_BYTES_FICHERO + 10), 0).error!, /4 MB/)
+})
+
+test('textoConfirmarBorrado: lleva el nombre de la grabación y el aviso de que no se deshace', () => {
+  const t = textoConfirmarBorrado({ compania: 'Mapfre', ramo: 'comunidades', producto: null })
+  assert.match(t, /«Mapfre · comunidades»/)
+  assert.match(t, /Se borrará la grabación y todas sus pantallas\. No se puede deshacer\./)
+  assert.match(textoConfirmarBorrado({ compania: 'A', ramo: 'B', producto: 'Hogar Plus' }), /A · B · Hogar Plus/)
 })

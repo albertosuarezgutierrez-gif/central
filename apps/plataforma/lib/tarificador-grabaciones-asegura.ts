@@ -21,6 +21,10 @@ export function validarGrabacionAsegura(id: string, validado: boolean) {
   return puerto(base(id), { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ validado }) }, 15_000)
 }
 
+export function borrarGrabacionAsegura(id: string) {
+  return puerto(base(id), { method: 'DELETE' }, 15_000)
+}
+
 /** El HTML va tal cual (text/html), no en JSON: así asegura no lo duplica en memoria para auditar. */
 export function subirPantallaAsegura(id: string, nombre: string, html: string) {
   const q = new URLSearchParams({ nombre })
