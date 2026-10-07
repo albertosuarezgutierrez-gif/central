@@ -194,10 +194,17 @@ export const ETIQUETA_CAMPO: Record<CampoIdentidad | CampoLibre, string> = {
   direccion: 'dirección', codigoPostal: 'código postal', ciudad: 'ciudad', provincia: 'provincia', notas: 'notas',
 }
 
+export type SexoFicha = 'hombre' | 'mujer'
+export const SEXOS_FICHA: readonly SexoFicha[] = ['hombre', 'mujer']
+/** Código de `clientes.saludo` para cada sexo (el que ya lee `sexoDeSaludo` de asegura). */
+export const SALUDO_POR_SEXO: Record<SexoFicha, '1' | '2'> = { hombre: '1', mujer: '2' }
+
 /** `null` en un campo = borrarlo; ausente = no tocarlo. */
 export type EdicionCliente = {
   identidad?: Partial<Record<CampoIdentidad, string | null>>
   libre?: Partial<Record<CampoLibre, string | null>>
+  /** Sexo (`clientes.saludo`: hombre '1' · mujer '2'). Ausente = no tocarlo; no hay forma de «borrarlo» ni valor por defecto. */
+  sexo?: SexoFicha
   /** El documento de identidad que acredita el cambio. Obligatorio si se toca identidad (salvo `motivo`). */
   documentoId?: string | null
   /**
@@ -220,13 +227,14 @@ export type EdicionRevisada =
       ok: true
       identidad: IdentidadRevisada
       libre: Partial<Record<CampoLibre, string | null>>
+      sexo?: SexoFicha
       tocaIdentidad: boolean
       /** El cambio de identidad va SIN documento, con este motivo (ya validado). */
       motivoCambio?: string
       /** Solo se COMPLETARON los apellidos (sin documento ni motivo): lo que había y lo que queda. */
       apellidosCompletados?: { antes: string; despues: string }
     }
-  | { ok: false; motivo: string; campo?: CampoIdentidad | CampoLibre }
+  | { ok: false; motivo: string; campo?: CampoIdentidad | CampoLibre | 'sexo' }
 
 /** `'documento_requerido'` es el motivo que la pantalla convierte en «pide el DNI». */
 export const MOTIVO_DOCUMENTO_REQUERIDO = 'documento_requerido'
@@ -343,8 +351,11 @@ export function revisarEdicion(e: EdicionCliente, ctx: {
     libre[campo] = s
   }
 
+  if (e.sexo !== undefined && !SEXOS_FICHA.includes(e.sexo)) return { ok: false, motivo: 'Sexo no válido: hombre o mujer.', campo: 'sexo' }
+  const sexo = e.sexo !== undefined ? { sexo: e.sexo } : {}
+
   const tocaIdentidad = Object.keys(identidad).length > 0
-  if (!tocaIdentidad && Object.keys(libre).length === 0) return { ok: false, motivo: 'No hay nada que cambiar.' }
+  if (!tocaIdentidad && Object.keys(libre).length === 0 && e.sexo === undefined) return { ok: false, motivo: 'No hay nada que cambiar.' }
   const soloRellenaNombre = ctx.fichaSinNombre === true && identidad.nombre !== undefined
     && Object.keys(identidad).every((k) => k === 'nombre' || k === 'apellidos')
   // Completar apellidos («Slava» → «Slava Antoli») tampoco es corregir: sin motivo. Si el motivo viene
@@ -354,7 +365,7 @@ export function revisarEdicion(e: EdicionCliente, ctx: {
     && !motivoCambioValido(e.motivo)
   if (tocaIdentidad && !e.documentoId && !soloRellenaNombre && completaSolo) {
     return {
-      ok: true, identidad, libre, tocaIdentidad,
+      ok: true, identidad, libre, ...sexo, tocaIdentidad,
       apellidosCompletados: { antes: (ctx.apellidosActuales ?? '').replace(/\s+/g, ' ').trim(), despues: identidad.apellidos ?? '' },
     }
   }
@@ -364,9 +375,9 @@ export function revisarEdicion(e: EdicionCliente, ctx: {
     if (!ctx.permiteMotivo) return { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO }
     const motivoCambio = motivoCambioValido(e.motivo)
     if (!motivoCambio) return { ok: false, motivo: MOTIVO_CAMBIO_REQUERIDO }
-    return { ok: true, identidad, libre, tocaIdentidad, motivoCambio }
+    return { ok: true, identidad, libre, ...sexo, tocaIdentidad, motivoCambio }
   }
-  return { ok: true, identidad, libre, tocaIdentidad }
+  return { ok: true, identidad, libre, ...sexo, tocaIdentidad }
 }
 
 /**
@@ -460,6 +471,7 @@ export function textoHistorialEdicion(
     if (c === 'direccion' || c === 'notas') partes.push(v === null ? `${ETIQUETA_CAMPO[c]} borrada` : `${ETIQUETA_CAMPO[c]} cambiada`)
     else partes.push(v === null ? `${ETIQUETA_CAMPO[c]} borrado` : `${ETIQUETA_CAMPO[c]} → ${v}`)
   }
+  if (r.sexo) partes.push(`sexo → ${r.sexo}`)
   return `Edición desde plataforma por ${ctx.actor}: ${partes.join(' · ')}`
 }
 

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { repartirSegurosCliente, estaHuerfana, estadoVencimiento, vencimientoPoliza, segurosDeReparto, contarOportunidades, precargaAlta } from './seguros-cliente.ts'
+import { aniversarioOportunidad, repartirSegurosCliente, estaHuerfana, estadoVencimiento, vencimientoPoliza, segurosDeReparto, contarOportunidades, precargaAlta } from './seguros-cliente.ts'
 import type { PolizaDeclaradaFicha, PolizaFicha } from '../ficha-asegura'
 import type { OportunidadDeCliente } from '../seguimiento-asegura'
 
@@ -415,4 +415,21 @@ test('estadoVencimiento usa el día de Madrid: a las 00:30 del 30/09 el 29/09 ya
 test('precarga: un ramo que el alta no admite queda vacío', () => {
   assert.equal(precargaAlta(pol('x', { tipo: 'inventado' }), hoy30).ramo, '')
   assert.equal(precargaAlta(pol('y', { tipo: 'hogar' }), hoy30).ramo, 'hogar')
+})
+
+test('oportunidades: el vencimiento es un aniversario (año da igual), orden por próxima ocurrencia; con nosotros no cambia', () => {
+  const hoy = new Date('2026-10-06T10:00:00Z')
+  const sinTarea = { proximaTarea: null }
+  const r = repartirSegurosCliente({
+    polizas: [], declaradas: [], hoy,
+    oportunidades: [
+      opo('a', { fechaFinVigencia: '2024-06-01', ...sinTarea }),
+      opo('b', { fechaFinVigencia: '2017-12-24', ramo: 'hogar', ...sinTarea }),
+      opo('c', { fechaFinVigencia: null, ramo: 'vida', ...sinTarea }),
+    ],
+  })
+  assert.deepEqual(r.oportunidades.map(s => s.id), ['b', 'a', 'c'])
+  assert.equal(aniversarioOportunidad('2024-06-01', hoy), '2027-06-01')
+  assert.equal(aniversarioOportunidad('1900-01-01', hoy), null)
+  assert.equal(aniversarioOportunidad(null, hoy), null)
 })

@@ -48,6 +48,10 @@ test('faltan para tarificar: actividad, familia, empleados, situación, superfic
   assert.deepEqual(faltanDatosComercio({ ...d, capitales: [] }), ['capitales'], 'revisado y vacío tampoco')
   assert.deepEqual(faltanDatosComercio({ ...d, capitales: [{ bien: 'CONTENIDO', importe: 0, modalidad: null, descripcion: null }] }), ['capitales'], 'un capital de 0 no basta')
   assert.match(textoFaltanComercio(['superficie', 'capitales']) ?? '', /^Falta para tarificar: la superficie construida, al menos un capital/)
+  // Sin ruta de tarifa (el comercio se cotiza fuera) no se promete «tarificar».
+  const sinRuta = textoFaltanComercio(['superficie'], { hayRutaTarifa: false }) ?? ''
+  assert.match(sinRuta, /^Falta en la ficha del comercio: la superficie construida\.$/)
+  assert.doesNotMatch(sinRuta, /tarificar/)
   assert.equal(textoFaltanComercio([]), null)
 })
 

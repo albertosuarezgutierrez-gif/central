@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { camposVisibles, NIVELES, type Nivel } from './acceso.ts'
+import { camposVisibles, NIVELES, NIVELES_QUE_OPERAN, nivelPuedeOperar, type Nivel } from './acceso.ts'
 
 test('el tomador ve prima e IBAN', () => {
   const v = camposVisibles('completo')
@@ -42,4 +42,11 @@ test('los niveles son crecientes: lo que ve uno lo ve el siguiente', () => {
 
 test('NIVELES enumera exactamente los cuatro, en orden creciente', () => {
   assert.deepEqual([...NIVELES], ['tarjeta', 'completo', 'gestionar', 'administrar'])
+})
+
+test('🪤 solo gestionar y administrar OPERAN; tarjeta, completo y lo desconocido no', () => {
+  assert.deepEqual([...NIVELES_QUE_OPERAN], ['gestionar', 'administrar'])
+  assert.equal(nivelPuedeOperar('gestionar'), true)
+  assert.equal(nivelPuedeOperar('administrar'), true)
+  for (const n of ['tarjeta', 'completo', '', 'admin', 'GESTIONAR']) assert.equal(nivelPuedeOperar(n), false, n)
 })

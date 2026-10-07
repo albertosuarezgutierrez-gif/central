@@ -4,7 +4,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { accionAnulacion, anulacionesAbiertas, anulacionesDePoliza, crearAnulacion } from '@/lib/anulaciones'
+import { accionAnulacion, anulacionesAbiertas, anulacionesDePoliza, crearAnulacion, liberarAnulacion } from '@/lib/anulaciones'
 import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
@@ -18,6 +18,9 @@ export const dynamic = 'force-dynamic'
  *         → 201 { estado:'creada', id, advertencia } · 404 · 409 ya_abierta · 422 invalida
  *   PATCH { id, accion:'marcar_firmada'|'marcar_comunicada'|'confirmar'|'desistir', nota?, actor }
  *         → { estado:'hecho', nuevo } · 404 · 409 no_permitida · 422 invalida
+ *   PATCH { id, accion:'liberar', actor } — «Liberar para firma» una baja pedida por el CLIENTE desde el portal (retenida
+ *         48 h). Aparte de ACCIONES_ANULACION: no es una transición de estado. 409 si no es del portal o ya está liberada.
+ *         marcar_firmada de una retenida → 409; desistir de una del portal exige `nota` (422).
  */
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -63,6 +66,17 @@ export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const cuerpo = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const id = typeof cuerpo?.id === 'string' ? cuerpo.id : ''
+  if (cuerpo?.accion === 'liberar') {
+    try {
+      if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
+      const correduria = await correduriaUnica()
+      if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' })
+      const r = await liberarAnulacion(correduria.id, id, actorDe(cuerpo))
+      return NextResponse.json(r, { status: STATUS_ACCION[r.estado] ?? 500 })
+    } catch (e) {
+      return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/anulaciones', e) }, { status: 500 })
+    }
+  }
   const accion = ACCIONES_ANULACION.find((a) => a === cuerpo?.accion) as AccionAnulacion | undefined
   if (!accion) return NextResponse.json({ estado: 'invalida', motivo: 'acción no válida' }, { status: 422 })
   const nota = typeof cuerpo?.nota === 'string' ? cuerpo.nota : null

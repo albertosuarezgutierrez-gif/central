@@ -23,6 +23,22 @@
 
 import { motivosSilencio, type SilencioEntidad } from './silencio-entidad.ts'
 import type { GrupoVivoDuplicado } from './duplicados.ts'
+import {
+  evaluarAnulacionesEnBloque,
+  ordenarRetraso,
+  textoAnulacionesEnBloque,
+  textoPosiblesBajas,
+  textoRenovacionesAnuladas,
+  textoRetrasoAnulacion,
+  tramoFirmaAnulaciones,
+  TRAMO_ANULACIONES_VACIO,
+  hayAnulacionNuevaEnTramo,
+  type AnulacionEnBloque,
+  type FicheroAnulacionFila,
+  type PosiblesBajasPorCompania,
+  type RenovacionAnuladaPorCompania,
+  type RetrasoAnulacion,
+} from './anulacion-bloque.ts'
 
 /**
  * Qué se sabe de la ingesta. **Cuatro estados, y el cuarto no es ninguno de los
@@ -449,6 +465,19 @@ export type EntradaSalud = {
    * viejo) · `null` = se pidió y no se pudo mirar (hueco) · `[]` = ninguno.
    */
   polizasDuplicadas?: GrupoVivoDuplicado[] | null
+  /**
+   * 📉 Anulaciones (06/10/2026). INFORMATIVAS: no degradan. Mismos tres estados
+   * que `renovacionesSinLlegar`. `anulacionesPorFichero` son las filas CRUDAS por
+   * fichero POL de las últimas 48 h; el umbral (≥30% y ≥10) lo aplica
+   * `evaluarAnulacionesEnBloque`.
+   */
+  anulacionesPorFichero?: FicheroAnulacionFila[] | null
+  /** Renovaciones que la compañía ANULÓ (≠ «no llegan»): no cuentan como hueco de CIMA. */
+  renovacionesAnuladas?: RenovacionAnuladaPorCompania[] | null
+  /** Mediana de días anulación → llegada, por compañía. */
+  retrasoAnulacion?: RetrasoAnulacion[] | null
+  /** Pre-aviso: último recibo anulado sin reemisión, póliza aún en vigor. */
+  posiblesBajas?: PosiblesBajasPorCompania[] | null
 }
 
 export type SaludIngesta = {
@@ -537,6 +566,14 @@ export type SaludIngesta = {
    * Mismos tres estados que `renovacionesSinLlegar`.
    */
   polizasDuplicadas?: GrupoVivoDuplicado[] | null
+  /** 📉 Ficheros POL en anulación en bloque (INFORMATIVA). Tres estados. */
+  anulacionesEnBloque?: AnulacionEnBloque[] | null
+  /** Renovaciones anuladas por la compañía (INFORMATIVA, fuera de `renovacionesSinLlegar`). */
+  renovacionesAnuladas?: RenovacionAnuladaPorCompania[] | null
+  /** Retraso anulación → llegada por compañía (INFORMATIVA). */
+  retrasoAnulacion?: RetrasoAnulacion[] | null
+  /** Posible baja en camino (INFORMATIVA). */
+  posiblesBajas?: PosiblesBajasPorCompania[] | null
 }
 
 /** `2026-06-18` → `18/06`. Una fecha ilegible no se inventa: `null`. */
@@ -641,6 +678,10 @@ export function saludIngesta(
       renovacionesSinLlegar: null,
       emisionesSinAviso: null,
       polizasDuplicadas: null,
+      anulacionesEnBloque: null,
+      renovacionesAnuladas: null,
+      retrasoAnulacion: null,
+      posiblesBajas: null,
     }
   }
 
@@ -911,6 +952,19 @@ export function saludIngesta(
     hueco('No se ha podido comprobar si hay pólizas vivas duplicadas.')
   }
 
+  // 📉 Anulaciones: INFORMATIVAS (fuera de `motivos` y de `hayPerdida`). Solo el
+  // `null` es hueco: no haber podido mirar no autoriza a decir «no hay».
+  const tri = <T, R>(v: T[] | null | undefined, f: (x: T[]) => R): R | null | undefined =>
+    v === undefined ? undefined : Array.isArray(v) ? f(v) : null
+  const anulacionesEnBloque = tri(e.anulacionesPorFichero, evaluarAnulacionesEnBloque)
+  const renovacionesAnuladas = tri(e.renovacionesAnuladas, l => l.filter(r => r.polizas > 0))
+  const retrasoAnulacion = tri(e.retrasoAnulacion, ordenarRetraso)
+  const posiblesBajas = tri(e.posiblesBajas, l => l.filter(g => g.numeros.length > 0))
+  if (anulacionesEnBloque === null) hueco('No se ha podido comprobar si algún fichero POL trae anulaciones en bloque.')
+  if (renovacionesAnuladas === null) hueco('No se ha podido comprobar qué renovaciones ha anulado la compañía.')
+  if (posiblesBajas === null) hueco('No se ha podido comprobar si hay recibos anulados sin reemisión.')
+  // El retraso es solo una medida: sin ella no hay hueco que declarar.
+
   const hayPerdida =
     (emisionesSinAviso !== undefined && emisionesSinAviso !== null && emisionesSinAviso.length > 0) ||
     (renovacionesSinLlegar !== undefined && renovacionesSinLlegar !== null && renovacionesSinLlegar.length > 0) ||
@@ -952,6 +1006,10 @@ export function saludIngesta(
     renovacionesSinLlegar,
     emisionesSinAviso,
     polizasDuplicadas,
+    anulacionesEnBloque,
+    renovacionesAnuladas,
+    retrasoAnulacion,
+    posiblesBajas,
   }
 }
 
@@ -981,7 +1039,14 @@ export function detalleSalud(s: SaludIngesta): string {
   // 🔁 Informativa, con su propio separador y en los tres estados (mismo motivo
   // que `importantes`: si colgara de `motivos`, en `ok` no se vería nunca).
   const textoDup = textoPolizasDuplicadas(s.polizasDuplicadas)
-  const duplicadas = textoDup ? ` · informativo: ${textoDup}` : ''
+  const textoAnul = [
+    textoAnulacionesEnBloque(s.anulacionesEnBloque),
+    textoRenovacionesAnuladas(s.renovacionesAnuladas),
+    textoPosiblesBajas(s.posiblesBajas),
+    textoRetrasoAnulacion(s.retrasoAnulacion),
+  ].filter(Boolean)
+  const duplicadas = (textoDup ? ` · informativo: ${textoDup}` : '') +
+    textoAnul.map(t => ` · informativo: ${t}`).join('')
   if (s.estado === 'degradada') {
     return `ingesta CIMA DEGRADADA · ${s.motivos.join(' · ')}${importantes}${duplicadas}`
   }
@@ -1133,7 +1198,7 @@ export function firmaAvisoIngesta(salud: SaludIngesta): string {
   const dup = salud.polizasDuplicadas === null
     ? '[?]'
     : `[${(salud.polizasDuplicadas ?? []).map(g => `${g.entidad}=${g.ref.slice(0, 8)}`).sort().join(',')}]`
-  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}:${pull}:${renov}:${emis}:${dup}`
+  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}:${pull}:${renov}:${emis}:${dup}:${tramoFirmaAnulaciones({ bloque: salud.anulacionesEnBloque, bajas: salud.posiblesBajas, anuladas: salud.renovacionesAnuladas })}`
 }
 
 /**
@@ -1148,6 +1213,32 @@ export function cambioDuplicadasEnFirma(previa: string | null, actual: string): 
   const hoy = tramo(actual)
   if (previa === null) return hoy !== '[]'
   return tramo(previa) !== hoy
+}
+
+/**
+ * ¿Hay una señal de anulación NUEVA entre dos firmas ya normalizadas? Solo cuenta lo que aparece:
+ * las señales son ventanas deslizantes (48/72 h) y su caducidad no es un cambio. Una firma previa
+ * `null` solo cuenta si hoy hay algo.
+ */
+export function cambioAnulacionesEnFirma(previa: string | null, actual: string): boolean {
+  const tramo = (f: string) => f.split(':')[9] ?? TRAMO_ANULACIONES_VACIO
+  const hoy = tramo(actual)
+  if (previa === null) return hoy !== TRAMO_ANULACIONES_VACIO
+  return hayAnulacionNuevaEnTramo(tramo(previa), hoy)
+}
+
+/**
+ * La firma previa con el tramo de anulaciones puesto al de hoy. Se usa para DECIDIR el aviso: un
+ * cambio solo en las señales de anulación (nuevas o caducadas) no es una avería nueva, no debe
+ * sonar como `cambio` ni reiniciar `abiertaDesde`. Las nuevas se avisan aparte (info propia).
+ */
+export function firmaPreviaIgnorandoAnulaciones(previa: string | null, actual: string): string | null {
+  if (previa === null) return null
+  const t = previa.split(':')
+  const a = actual.split(':')
+  if (t.length !== a.length || a.length < 10) return previa
+  t[9] = a[9]!
+  return t.join(':')
 }
 
 /**
@@ -1171,11 +1262,16 @@ export function cambioDuplicadasEnFirma(previa: string | null, actual: string): 
 export function normalizarFirmaIngesta(firma: string | null): string | null {
   if (firma === null) return null
   const tramos = firma.split(':').length
-  if (tramos === 5) return `${firma}:ok:[]:[]:[]`
-  if (tramos === 6) return `${firma}:[]:[]:[]`
-  if (tramos === 7) return `${firma}:[]:[]`
-  if (tramos === 8) return `${firma}:[]`
-  return firma
+  let f = firma
+  if (tramos === 5) f = `${f}:ok:[]:[]:[]`
+  else if (tramos === 6) f = `${f}:[]:[]:[]`
+  else if (tramos === 7) f = `${f}:[]:[]`
+  else if (tramos === 8) f = `${f}:[]`
+  // Las anteriores al 06/10/2026 no traían el tramo de anulaciones (nueve): `[//]`.
+  if (f.split(':').length === 9) f = `${f}:${TRAMO_ANULACIONES_VACIO}`
+  // El tramo vacío con el separador de antes (`|`, que además rompía la cabecera guardada).
+  if (f.endsWith(':[||]')) f = `${f.slice(0, -5)}:${TRAMO_ANULACIONES_VACIO}`
+  return f
 }
 
 /**

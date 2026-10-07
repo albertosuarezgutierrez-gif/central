@@ -3229,6 +3229,21 @@ h1 em {
   vertical-align: -2px;
   color: var(--primary);
 }
+.instalar-alt { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.instalar-alt p { margin: 0 0 6px; }
+.instalar-copiar {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+}
 .instalar-globo-cerrar {
   width: 100%;
   min-height: 44px;
@@ -3494,6 +3509,21 @@ h1 em {
   color: var(--text);
   font-size: 14px;
 }
+
+/* «Mis carnés» (06/10/2026): reutiliza las filas de contactos; el formulario va en línea (no en modal), en
+   una sola columna que cabe a 320 px, con los mismos campos de 44 px de «Mis datos». */
+.mis-carnets-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 0;
+}
+.mis-carnets-form-titulo { margin: 0; font-weight: 600; font-size: 14px; }
+.mis-carnets-form input[type='date'] { min-height: 44px; }
 
 /* La banda de «vista de corredor» (08/09/2026): Alberto mirando el portal como
    lo ve un cliente. En el flujo, encima de la navegación; el ámbar es el tono

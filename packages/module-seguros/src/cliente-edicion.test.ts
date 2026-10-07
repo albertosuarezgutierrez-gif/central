@@ -319,3 +319,19 @@ test('con cambio de nombre, DNI o fecha a la vez, la regla de siempre; con motiv
   const conMotivo = revisarEdicion({ identidad: { apellidos: 'Slava Antoli' }, motivo: 'segundo apellido por teléfono' }, CTX('Slava'))
   assert.equal(conMotivo.ok && conMotivo.motivoCambio !== undefined, true)
 })
+
+test('sexo: solo hombre/mujer, ausente no cambia nada, solo-sexo es una edición válida sin documento ni motivo', () => {
+  const ok = revisarEdicion({ sexo: 'mujer' })
+  assert.equal(ok.ok, true)
+  if (ok.ok) {
+    assert.equal(ok.sexo, 'mujer')
+    assert.equal(ok.tocaIdentidad, false)
+    assert.match(textoHistorialEdicion(ok, { actor: 'a@b.es' }), /sexo → mujer/)
+  }
+  const mal = revisarEdicion({ sexo: 'otro' as never })
+  assert.equal(mal.ok, false)
+  const nada = revisarEdicion({})
+  assert.equal(nada.ok, false)
+  const sinSexo = revisarEdicion({ libre: { ciudad: 'Sevilla' } })
+  assert.equal(sinSexo.ok && sinSexo.sexo, undefined)
+})

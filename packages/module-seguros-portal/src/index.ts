@@ -1,4 +1,4 @@
-export { NIVELES, camposVisibles } from './acceso.ts'
+export { NIVELES, NIVELES_QUE_OPERAN, nivelPuedeOperar, camposVisibles } from './acceso.ts'
 // Qué COSA está asegurada (el coche, el piso). Lee `bien-asegurado.ts` antes de
 // tocarlo: `cosa` y `ubicacion` salen separados porque la dirección de un hogar
 // es un dato de la PERSONA y no la ve un tercero.
@@ -458,6 +458,7 @@ export {
   PREFIJO_HISTORIAL_SUGERENCIA,
   PREFIJO_HISTORIAL_DATOS_PRESUPUESTO,
   PREFIJO_HISTORIAL_CUENTA_PROPIA,
+  PREFIJO_HISTORIAL_CARNET_PROPIO,
   CAMPOS_CONTACTO_PROPIO,
   CAMPOS_DIRECCION_PROPIA,
   CAMPOS_CANAL_PROPIO,

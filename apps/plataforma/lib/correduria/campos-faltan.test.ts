@@ -78,8 +78,7 @@ test('todo campo de ficha sigue clasificado como ficha (es lo que abre el bloque
 test('auto-nuevo monta los editores de la ficha en vez de mandar a salir', () => {
   assert.doesNotMatch(AUTO_NUEVO, /Esto no se arregla desde esta pantalla/, 'el aviso que obligaba a salir ya no existe')
   assert.match(AUTO_NUEVO, /Datos del tomador en la ficha/)
-  assert.match(AUTO_NUEVO, /<EditarCliente[\s\S]*?onGuardado=\{alGuardarFicha\}/, 'identidad: mismo componente que la ficha')
-  assert.match(AUTO_NUEVO, /<EditarDireccion[\s\S]*?onGuardado=\{alGuardarFicha\}/, 'dirección: mismo componente que la ficha')
+  assert.match(AUTO_NUEVO, /<PanelDatosCliente[\s\S]*?onGuardado=\{alGuardarFicha\}/, 'identidad y dirección: el MISMO panel que la ficha')
   assert.match(PAGE_AUTO_NUEVO, /fichaTomador=\{/, 'page.tsx carga identidad, documentos y contacto')
 })
 

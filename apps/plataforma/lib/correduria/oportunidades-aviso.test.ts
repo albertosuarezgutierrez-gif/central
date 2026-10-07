@@ -27,7 +27,7 @@ test('el bloque: cliente, ramo, compañía actual y vencimiento; nada nuevo → 
   const ok = { estado: 'ok' as const, oportunidades: [op()], truncado: false }
   const b = bloqueOportunidades(ok, [op(), op({ id: 'c', cliente: 'Luis', aseguradora: null, fueCliente: true })]) ?? ''
   assert.match(b, /45 días/)
-  assert.match(b, /Ana López — .* en Línea Directa, vence el 13\/11\/2026 \(45 d\)/)
+  assert.match(b, /Ana López — .* en Línea Directa, vence cada año el 13 de noviembre \(45 d\)/)
   assert.doesNotMatch(b, /\*López\*/)
   assert.match(b, /Luis — .*compañía no consta.*sin mandar precio/)
   assert.equal(bloqueOportunidades(ok, []), null)

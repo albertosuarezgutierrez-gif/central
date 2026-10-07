@@ -441,10 +441,26 @@ export function rotuloMotivo(m: string | null): string | null {
 
 const ROTULO_RAMO: Record<RamoOportunidad, string> = {
   auto: 'Auto', moto: 'Moto', hogar: 'Hogar', vida: 'Vida', salud: 'Salud', decesos: 'Decesos',
-  responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes', otros: 'Otros',
+  responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes',
+  empresas: 'Empresas / pymes', rc_profesional: 'RC profesional', dyo: 'D&O (directivos)', flotas: 'Flotas', transporte_mercancias: 'Transporte de mercancías', ciberriesgos: 'Ciberriesgos', decenal: 'Decenal / construcción', embarcaciones: 'Embarcaciones', mascotas: 'Mascotas', impago_alquiler: 'Impago de alquiler', viaje: 'Viaje', caucion: 'Caución',
+  otros: 'Otros',
 }
 export const RAMOS_OPORTUNIDAD_UI: readonly { valor: RamoOportunidad; rotulo: string }[] =
   RAMOS_OPORTUNIDAD.map((valor) => ({ valor, rotulo: ROTULO_RAMO[valor] }))
+/** Ramo válido de `?ramo=` para preseleccionar en el alta; `null` si no es uno conocido. */
+export function ramoInicialValido(v: string | null | undefined): RamoOportunidad | null {
+  return RAMOS_OPORTUNIDAD.find((r) => r === v) ?? null
+}
+/** Ramos que se trabajan con ofertas de compañías (sin tarificador): los de RAMOS_OPORTUNIDAD que no están entre los tarificables. */
+export function ramosConOfertas(tarificables: readonly { etiqueta: string }[]): readonly { valor: RamoOportunidad; rotulo: string }[] {
+  const precio = new Set(tarificables.map((t) => t.etiqueta.toLowerCase()))
+  return RAMOS_OPORTUNIDAD_UI.filter((r) => !precio.has(r.valor))
+}
+/** URL de «oportunidad nueva» de una ficha; sin ramo, el alta se abre sin ramo preseleccionado («Otro ramo»). */
+export function urlOportunidadNueva(clienteId: string, ramo?: RamoOportunidad | null): string {
+  const base = `/correduria/cliente/${clienteId}?tab=oportunidades&oportunidad=nueva`
+  return ramo ? `${base}&ramo=${ramo}` : base
+}
 export function rotuloRamo(r: string | null): string {
   return r === null ? 'Sin ramo' : (ROTULO_RAMO as Record<string, string>)[r] ?? r
 }
@@ -978,6 +994,16 @@ export function valorLegible(campo: SolicitudDatos['campos'][number], v: string 
   return f ? `${f[3]}/${f[2]}/${f[1]}` : v
 }
 
+/**
+ * Lead web de auto/moto recién dado de alta (06/10/2026): abre su oportunidad y crea el enlace de datos
+ * en UNA llamada (`/api/operador/solicitud-datos/lead-web`). Timeout de 8 s: el aviso de Telegram espera
+ * por esto y nunca debe perderse; si no llega a tiempo, sale sin enlace. La respuesta lleva el token en
+ * la URL: no se loguea.
+ */
+export const TIMEOUT_ENLACE_LEAD_MS = 8_000
+export function solicitudLeadWebAsegura(body: { clienteId: string; ramo: 'auto' | 'moto' }): Promise<Reenvio> {
+  return llamar('/api/operador/solicitud-datos/lead-web', { method: 'POST', body: JSON.stringify(body) }, TIMEOUT_ENLACE_LEAD_MS)
+}
 export function solicitudesDatosAsegura(oportunidadId: string): Promise<Reenvio> {
   return llamar(`/api/operador/solicitud-datos?oportunidadId=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
 }

@@ -1495,6 +1495,9 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
         return { estado: 'ok', opciones: await tiposDeCarnet(config) }
       case 'estados-civiles':
         return { estado: 'ok', opciones: await estadosCiviles(config) }
+      // Profesiones CNO-11 de nivel 4 (vida, 07/10/2026): el selector de la oportunidad las elige del catálogo (gratis).
+      case 'profesiones':
+        return { estado: 'ok', opciones: await profesiones(config) }
       case 'municipios': {
         const cp = params.get('cp')
         if (!cp) return { estado: 'invalido', mensaje: 'falta cp' }

@@ -204,6 +204,36 @@ const CAMPO_FALTA: Record<string, string> = {
   dni: 'DNI', nombre: 'nombre', apellido1: 'apellido', fechaNacimiento: 'fecha de nacimiento',
   sexo: 'sexo', telefono: 'móvil', fechaCarnet: 'fecha del carnet', ficha: 'ficha',
   empresa_no_conduce: 'es una empresa y no puede conducir (asigna un conductor habitual persona)',
+  estadoCivil: 'estado civil (no consta; se elige del catálogo en la pantalla de precio)',
+}
+/**
+ * Dónde se rellena cada clave que puede devolver `faltanDeFigura()` (apps/asegura/lib/oportunidad-riesgo.ts).
+ * · `completar`: bloque «Falta por completar» del modal «Editar datos» (sexo → `clientes.saludo`, móvil → teléfono principal).
+ * · `formulario`: formulario del propio modal (identidad: DNI/nombre/apellidos/nacimiento; carné: sección de carnés de `PanelDatosCliente`).
+ * · `cambiar`: no es un dato que teclear: se resuelve con «Cambiar» (poner a una persona como conductor).
+ * · `pantalla_precio`: el estado civil del vendor es un id de catálogo y se elige en la pantalla de precio del ramo
+ *   (vida, salud, decesos); la ficha no tiene editor de estado civil. Se avisa, no se bloquea.
+ * · `sin_ficha`: la figura no tiene ficha legible; no hay nada que editar hasta que exista.
+ * Un test lee `faltanDeFigura` y falla si aparece una clave sin entrada aquí.
+ */
+export const EDITOR_DE_FALTA: Record<string, 'completar' | 'formulario' | 'cambiar' | 'sin_ficha' | 'pantalla_precio'> = {
+  dni: 'formulario', nombre: 'formulario', apellido1: 'formulario', fechaNacimiento: 'formulario', fechaCarnet: 'formulario',
+  sexo: 'completar', telefono: 'completar', estadoCivil: 'pantalla_precio',
+  empresa_no_conduce: 'cambiar', ficha: 'sin_ficha',
+}
+
+/** Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»). */
+export function rotulosFaltaEnFormulario(f: string[] | null): string[] {
+  return (f ?? []).filter((k) => EDITOR_DE_FALTA[k] === 'formulario').map((k) => CAMPO_FALTA[k] ?? k)
+}
+
+/** ¿La ficha de la figura NO tiene móvil? `null` (no se pudo leer la ficha) = no se sabe → false: no se ofrece escribir a ciegas. */
+export function faltaMovil(f: string[] | null): boolean {
+  return f !== null && f.includes('telefono')
+}
+/** ¿La ficha de la figura NO tiene sexo? Misma regla que `faltaMovil`: `null` = no se sabe → false. */
+export function faltaSexo(f: string[] | null): boolean {
+  return f !== null && f.includes('sexo')
 }
 export function textoFaltan(f: string[] | null): string | null {
   if (f === null) return 'No se pudo leer su ficha'

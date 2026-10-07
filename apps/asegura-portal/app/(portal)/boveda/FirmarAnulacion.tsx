@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-import type { AnulacionFirmada, AnulacionPendiente } from '@/lib/anulacion-firma'
+import type { AnulacionEnRevision, AnulacionFirmada, AnulacionPendiente } from '@/lib/anulacion-firma'
 import { avisarPendienteResuelto } from './PendienteDeTi'
 
 /**
@@ -20,15 +20,25 @@ import { avisarPendienteResuelto } from './PendienteDeTi'
  *    correo recarga la página, y volver al botón hacía pedir otro código que anulaba el leído.
  *  - Lo ya firmado no desaparece: sale abajo con su estado (firmada → enviada → confirmada).
  */
-export function FirmarAnulacion({ anulaciones, firmadas, consentimiento, corredor }: {
+export function FirmarAnulacion({ anulaciones, firmadas, enRevision = [], consentimiento, corredor }: {
   anulaciones: AnulacionPendiente[]
   firmadas: AnulacionFirmada[]
+  /** Bajas que pidió el cliente y revisamos: aún no se pueden firmar. */
+  enRevision?: AnulacionEnRevision[]
   consentimiento: string
   corredor: boolean
 }) {
-  if (anulaciones.length === 0 && firmadas.length === 0) return null
+  if (anulaciones.length === 0 && firmadas.length === 0 && enRevision.length === 0) return null
   return (
     <>
+      {enRevision.length > 0 && (
+        <section className="seccion" aria-labelledby="revision-titulo">
+          <h2 id="revision-titulo">Baja que has pedido</h2>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {enRevision.map((r) => <EnRevision key={r.id} r={r} />)}
+          </div>
+        </section>
+      )}
       {anulaciones.length > 0 && (
         <section className="seccion" aria-labelledby="firma-titulo">
           <h2 id="firma-titulo">Pendiente de tu firma</h2>
@@ -46,6 +56,20 @@ export function FirmarAnulacion({ anulaciones, firmadas, consentimiento, corredo
         </section>
       )}
     </>
+  )
+}
+
+function EnRevision({ r }: { r: AnulacionEnRevision }) {
+  const poliza = [r.compania, r.numeroPoliza ? `nº ${r.numeroPoliza}` : null].filter(Boolean).join(' · ')
+  const f = new Date(r.liberaSolaAt)
+  const cuando = `${f.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' })} a las ${f.toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })}`
+  return (
+    <article className="vencimiento-tarjeta">
+      <strong style={{ fontSize: 15, overflowWrap: 'anywhere' }}>Baja de tu póliza{poliza ? ` · ${poliza}` : ''}</strong>
+      <p style={{ margin: 0, fontSize: 14 }}>
+        La estamos revisando; podrás firmarla a partir del {cuando}. Te llamaremos antes, y si ya hemos hablado podrás firmarla en cuanto la liberemos.
+      </p>
+    </article>
   )
 }
 

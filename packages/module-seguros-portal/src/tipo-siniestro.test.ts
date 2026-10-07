@@ -29,7 +29,7 @@ test('todos los ramos de póliza tienen lista, y todas acaban en «otro»', () =
 
 test('ramo desconocido o sin póliza: no se pregunta', () => {
   assert.equal(opcionesTipoSiniestro(null).length, 0)
-  assert.equal(opcionesTipoSiniestro('impago_alquiler').length, 0)
+  assert.equal(opcionesTipoSiniestro('nave_espacial').length, 0)
   assert.equal(ramoDelParte('  Hogar '), 'hogar')
   assert.equal(ramoDelParte('__proto__'), null)
 })

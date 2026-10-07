@@ -37,6 +37,7 @@ export type TipoActividad =
   | 'acceso_fallido'
   | 'direccion'
   | 'cuenta'
+  | 'carnet'
   | 'sugerencia'
   | 'datos_presupuesto'
   | 'cotizacion_incoherente'
@@ -86,6 +87,12 @@ export const ACTIVIDADES: readonly Definicion[] = [
     label: 'Pidió cambiar la cuenta de sus recibos',
     origen: 'cliente',
     riesgo: 'La compañía sigue cargando en la cuenta vieja hasta que se la cambies tú: hazlo y márcalo en «Hoy».',
+  },
+  {
+    v: 'carnet',
+    label: 'Cambió sus carnés de conducir',
+    origen: 'cliente',
+    riesgo: 'La antigüedad del carné tarifica en auto y moto: revisa si afecta a alguna de sus pólizas.',
   },
   { v: 'parte', label: 'Abrió un parte de siniestro', origen: 'cliente', riesgo: 'Hay alguien esperando respuesta.' },
   {

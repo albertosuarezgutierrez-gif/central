@@ -1,5 +1,5 @@
 'use client'
-import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, BookUser, MessageCircle } from 'lucide-react'
+import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, BookUser, Bot, MessageCircle } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 
 /**
@@ -128,6 +128,13 @@ export default function AccionesCabecera() {
             style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
           >
             <MessageCircle size={15} strokeWidth={1.75} aria-hidden /> WhatsApp Business
+          </a>
+          {/* Salud del bot de Allianz, renovaciones de comunidades y cambios de tarifa (07/10/2026). */}
+          <a
+            href="/correduria/tarificador"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <Bot size={15} strokeWidth={1.75} aria-hidden /> Tarificador (bot)
           </a>
         </div>
       </details>

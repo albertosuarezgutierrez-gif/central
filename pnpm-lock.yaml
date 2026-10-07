@@ -166,6 +166,9 @@ importers:
       '@central/module-seguros-portal':
         specifier: workspace:*
         version: link:../../packages/module-seguros-portal
+      '@central/module-tarificacion':
+        specifier: workspace:*
+        version: link:../../packages/module-tarificacion
       '@pdf-lib/fontkit':
         specifier: ^1.1.1
         version: 1.1.1
@@ -767,6 +770,9 @@ importers:
       '@central/module-subastas':
         specifier: workspace:*
         version: link:../../packages/module-subastas
+      '@central/module-tarificacion':
+        specifier: workspace:*
+        version: link:../../packages/module-tarificacion
       '@central/module-trading':
         specifier: workspace:*
         version: link:../../packages/module-trading
@@ -1277,6 +1283,9 @@ importers:
       '@central/core-fiscal':
         specifier: workspace:*
         version: link:../core-fiscal
+      '@central/core-identity':
+        specifier: workspace:*
+        version: link:../core-identity
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../module-seguros
@@ -1288,6 +1297,8 @@ importers:
       '@central/core-catastro':
         specifier: workspace:*
         version: link:../core-catastro
+
+  packages/module-tarificacion: {}
 
   packages/module-trading: {}
 

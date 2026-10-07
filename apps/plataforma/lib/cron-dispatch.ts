@@ -201,6 +201,10 @@ export const CRON_JOBS: CronJob[] = [
   // WhatsApp de la correduría (05/10/2026): aviso por Telegram cuando Meta desconecta (PARTNER_REMOVED,
   // p. ej. 14 días sin abrir la app del móvil), da de baja o reconecta el número. asegura decide y guarda.
   { path: '/api/cron/correduria-whatsapp-conexion', schedule: '*/10 * * * *' },
+  // Verificación humana del tarificador (08/10/2026): un portal (Generali…) pide un código SMS/OTP y el trabajo
+  // acaba `requiere_humano`. Avisa a Alberto UNA vez por trabajo (marca en asegura, solo si el Telegram salió)
+  // para que entre en el portal, valide y pulse Reintentar. Sin datos personales en el mensaje.
+  { path: '/api/cron/tarificador-verificacion', schedule: '*/10 * * * *' },
   // Seguimiento de presupuestos enviados (28/09/2026): 08:12, 13:12 y 18:12 UTC — horario de oficina
   // para que el «¿le llamas?» llegue cuando se puede llamar. Asegura decide qué toca (48 h sin abrir,
   // 72 h sin elegir, un aviso por etapa); este job solo avisa y marca lo avisado.

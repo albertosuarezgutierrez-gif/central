@@ -19,8 +19,10 @@ import FigurasRiesgo from './FigurasRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
+import PresupuestosCompanias from './PresupuestosCompanias'
 import { fechaEs } from './piezas-riesgo'
-import { etiquetaRiesgo, ramoVariante, retarificaEnRiesgo, rutaVariante, tomadorDelRiesgo } from './variante'
+import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
+import { avisoRamoSinTarifa } from '@/lib/presupuestos-companias'
 
 export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
@@ -53,6 +55,7 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   const titulo = [rotuloRamo(op.ramo), etiqueta].filter(Boolean).join(' · ')
   const estado = (ROTULO_ESTADO as Record<string, string>)[op.estado] ?? (op.estado || 'Estado sin leer')
   const ramo = ramoVariante(op.ramo)
+  const acciones = accionesPrecio({ ramo: op.ramo, polizaId: op.polizaId, tomadorId: tomadorDelRiesgo(riesgo), oportunidadId: op.id })
   const esVehiculo = op.ramo === 'auto' || op.ramo === 'moto'
   // Lo que falta del riesgo NO bloquea «Nueva variante» (la pantalla de precio lo pide), pero se dice.
   const bloqueDatos = riesgo.datosRiesgo
@@ -129,6 +132,13 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
 
       <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
 
+      {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
+      <PresupuestosCompanias
+        oportunidadId={op.id}
+        ramo={op.ramo}
+        riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
+      />
+
       <HistorialVariantes riesgo={riesgo} />
 
       <section style={{ ...cardStyle, display: 'grid', gap: 8 }}>
@@ -138,42 +148,30 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
             {faltaDatos} Puedes seguir: la pantalla de precio lo pedirá.
           </p>
         )}
-        {retarificaEnRiesgo(op.ramo) && op.polizaId ? (
+        {acciones.principal ? (
           <>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-              Este riesgo es de una póliza en cartera. En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.
+              {op.polizaId && acciones.secundario
+                ? 'Este riesgo es de una póliza en cartera. Lo normal es pedir precio con lo que has editado arriba; retarificar la póliza usa sus datos de hoy.'
+                : 'Se pide precio con los intervinientes y los datos de arriba.'}{' '}
+              En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.
             </p>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))' }}>
-              <div style={{ display: 'grid', gap: 4 }}>
-                <BtnLink href={`/correduria/poliza/${encodeURIComponent(op.polizaId)}/retarificar?${new URLSearchParams({ oportunidad: op.id }).toString()}`} variante="primario">
-                  Retarificar con las mismas personas
-                </BtnLink>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Como la póliza de hoy: su tomador, {esVehiculo ? 'su vehículo' : 'su vivienda'} y su historial.</span>
+              <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
+                <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>{acciones.principal.nota}</span>
               </div>
-              {ramo && (
-              <div style={{ display: 'grid', gap: 4 }}>
-                <BtnLink href={rutaVariante(ramo, tomadorDelRiesgo(riesgo), op.id)} variante="secundario">
-                  Con otro tomador
-                </BtnLink>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Con los intervinientes y los datos de arriba, como un presupuesto nuevo.</span>
-              </div>
+              {acciones.secundario && (
+                <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
+                  <BtnLink href={acciones.secundario.href} variante="secundario">{acciones.secundario.etiqueta}</BtnLink>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>{acciones.secundario.nota}</span>
+                </div>
               )}
-            </div>
-          </>
-        ) : ramo ? (
-          <>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-              Se pide precio con los intervinientes de arriba. En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.
-            </p>
-            <div>
-              <BtnLink href={rutaVariante(ramo, tomadorDelRiesgo(riesgo), op.id)} variante="primario">
-                Nueva variante (pedir precio)
-              </BtnLink>
             </div>
           </>
         ) : (
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-            Este ramo se cotiza fuera (no hay tarifa a la que pedir precio desde aquí): los datos de arriba son para el expediente. La{' '}
+            {avisoRamoSinTarifa(op.ramo, 'Este ramo se cotiza fuera (no hay tarifa a la que pedir precio desde aquí): los datos de arriba son para el expediente.')} La{' '}
             <Link href={`/correduria/cliente/${encodeURIComponent(op.clienteId)}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>ficha del cliente</Link>{' '}
             sigue siendo el sitio de sus pólizas y gestiones.
           </p>

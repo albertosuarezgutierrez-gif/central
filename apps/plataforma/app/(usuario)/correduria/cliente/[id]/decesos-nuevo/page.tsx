@@ -116,7 +116,7 @@ export default async function DecesosNuevoPage({ params, searchParams }: { param
       <DecesosNuevo
         clienteId={clienteId}
         variante={variante}
-        inicial={c ? { capital: c.capital } : null}
+        inicial={c ? { capital: c.capital, asegurados: c.asegurados } : null}
         etiquetaCliente={pre.pre.etiquetaCliente}
         faltanInicial={pre.pre.faltan}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}

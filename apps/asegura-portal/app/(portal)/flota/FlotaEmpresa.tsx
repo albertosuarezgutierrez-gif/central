@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
+import { hoyMadrid } from '@central/module-seguros'
 
 import type { EstadoAutorizacion, ItvVehiculo, PapelFlota, VehiculoFlota, VencimientoFlota } from '@central/module-seguros-portal'
 
@@ -88,7 +89,7 @@ function EditarMatriculacion({ empresaId, v }: { empresaId: string; v: VehiculoF
   const [valor, setValor] = useState(v.matriculacionDeclarada ?? '')
   const [enCurso, setEnCurso] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const hoy = new Date().toISOString().slice(0, 10)
+  const hoy = hoyMadrid()
 
   if (v.clave === null) {
     return <p className="suave" style={{ margin: '8px 0 0', fontSize: 14 }}>No conocemos su matrícula: escríbenos y la anotamos.</p>

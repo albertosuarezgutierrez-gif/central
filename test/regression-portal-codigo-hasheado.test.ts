@@ -53,8 +53,12 @@ test('al verificar se compara HASH contra HASH', () => {
   assert.doesNotMatch(llamada, /\n\s*codigo,/, 'pasar el código en claro no compara nada: nadie podría entrar')
 })
 
+// La lógica del código vive en `@central/core-identity/codigo-otp` desde el 05/10/2026 (la comparte
+// el Portal del Empleado de rrhh); `module-seguros-portal/src/codigo.ts` solo la re-exporta.
+const CODIGO_OTP = 'packages/core-identity/src/codigo-otp.ts'
+
 test('estadoCodigo NO compara con === y usa la comparación en tiempo constante', () => {
-  const fuente = sinComentarios(leer('packages/module-seguros-portal/src/codigo.ts'))
+  const fuente = sinComentarios(leer(CODIGO_OTP))
   const i = pos(fuente, 'export function estadoCodigo')
   const cuerpo = fuente.slice(i)
   assert.match(cuerpo, /igualEnTiempoConstante\(\s*entradaHash\s*,\s*guardado\.codigoHash\s*\)/)
@@ -63,7 +67,7 @@ test('estadoCodigo NO compara con === y usa la comparación en tiempo constante'
 })
 
 test('el bucle de comparación no corta al primer carácter distinto', () => {
-  const fuente = sinComentarios(leer('packages/module-seguros-portal/src/codigo.ts'))
+  const fuente = sinComentarios(leer(CODIGO_OTP))
   const i = pos(fuente, 'export function igualEnTiempoConstante')
   const cuerpo = fuente.slice(i, fuente.indexOf('\n}', i))
   assert.match(cuerpo, /dif\s*\|=/, 'se acumula la diferencia, no se compara carácter a carácter')
@@ -75,8 +79,11 @@ test('el bucle de comparación no corta al primer carácter distinto', () => {
 test('el módulo del código NO puede importar node:crypto (lo carga el navegador)', () => {
   // Misma razón que `generarCodigo`: el barril lo importan componentes de
   // cliente y `node:crypto` revienta el build de producción.
-  const fuente = sinComentarios(leer('packages/module-seguros-portal/src/codigo.ts'))
-  assert.doesNotMatch(fuente, /from\s*'node:crypto'/)
+  for (const f of ['packages/module-seguros-portal/src/codigo.ts', CODIGO_OTP]) {
+    const fuente = sinComentarios(leer(f))
+    assert.doesNotMatch(fuente, /from\s*'node:crypto'/, f)
+    assert.doesNotMatch(fuente, /^import\b/m, `${f}: sin imports (lo carga el navegador vía el barril)`)
+  }
 })
 
 test('el hash del código reutiliza la pimienta del canal, sin una segunda forma de hashear', () => {

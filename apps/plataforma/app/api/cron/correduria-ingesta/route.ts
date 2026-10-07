@@ -19,13 +19,19 @@ import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
-import { leerIngestaCima, saludDesdeRespuesta } from '@/lib/correduria/ingesta-cima'
+import { leerIngestaCima, saludDesdeRespuesta, leerCabecera, componerCabecera } from '@/lib/correduria/ingesta-cima'
 import { senalesIngesta, sinFicheroAtascado } from '@/lib/correduria/ingesta-pantalla'
 import {
   detalleSalud,
   decidirAvisoIngesta,
   firmaAvisoIngesta,
   normalizarFirmaIngesta,
+  cambioAnulacionesEnFirma,
+  firmaPreviaIgnorandoAnulaciones,
+  textoAnulacionesEnBloque,
+  textoRenovacionesAnuladas,
+  textoPosiblesBajas,
+  textoRetrasoAnulacion,
   textoHuerfanas,
   textoPolizasDuplicadas,
   cambioDuplicadasEnFirma,
@@ -37,25 +43,20 @@ export const maxDuration = 60
 
 const AGENTE = 'correduria_ingesta'
 
-/**
- * La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`.
- *
- * Va delante y separada del texto humano por ` · `. El formato viejo era solo
- * la firma, así que un `detalle` sin `|` se lee como «no se sabe cuándo se
- * avisó» → y eso hace sonar (`primera`). Es lo correcto en el primer despliegue:
- * suena una vez y a partir de ahí ya lleva la cuenta.
- */
-function leerCabecera(detalle: string | null): { firma: string | null; aviso: Date | null; abierta: Date | null } {
-  if (detalle === null) return { firma: null, aviso: null, abierta: null }
-  const cabeza = detalle.split(' · ')[0] ?? ''
-  const [f, aviso, abierta] = cabeza.split('|')
-  const fecha = (v: string | undefined): Date | null => {
-    if (!v) return null
-    const d = new Date(v)
-    // Una fecha ilegible NO es «hace poco»: es «no lo sabemos», y eso avisa.
-    return Number.isNaN(d.getTime()) ? null : d
-  }
-  return { firma: f || null, aviso: fecha(aviso), abierta: fecha(abierta) }
+/** Líneas informativas de anulaciones; el retraso (A) va siempre que haya bloque o baja. */
+function textosAnulaciones(salud: {
+  anulacionesEnBloque?: Parameters<typeof textoAnulacionesEnBloque>[0]
+  renovacionesAnuladas?: Parameters<typeof textoRenovacionesAnuladas>[0]
+  posiblesBajas?: Parameters<typeof textoPosiblesBajas>[0]
+  retrasoAnulacion?: Parameters<typeof textoRetrasoAnulacion>[0]
+}): string[] {
+  const out = [
+    textoAnulacionesEnBloque(salud.anulacionesEnBloque),
+    textoRenovacionesAnuladas(salud.renovacionesAnuladas),
+    textoPosiblesBajas(salud.posiblesBajas),
+    textoRetrasoAnulacion(salud.retrasoAnulacion),
+  ]
+  return out.filter(t => t !== '')
 }
 
 export async function GET(req: NextRequest) {
@@ -85,11 +86,15 @@ export async function GET(req: NextRequest) {
   // «lleva 59 días» en vez de «otra vez esto».
   // Las firmas guardadas antes del tramo del cron se leen en el formato de hoy.
   const firmaPrevia = normalizarFirmaIngesta(previo.firma)
-  const mismaAveria = firmaPrevia !== null && firmaPrevia === actual
+  // 📉 Las señales de anulación son ventanas deslizantes (48/72 h): que entren o caduquen NO es una
+  // avería nueva. Para decidir el aviso y la antigüedad se compara con el tramo de hoy; las señales
+  // nuevas se avisan aparte (línea informativa propia) más abajo.
+  const firmaComparable = firmaPreviaIgnorandoAnulaciones(firmaPrevia, actual)
+  const mismaAveria = firmaComparable !== null && firmaComparable === actual
   const abiertaDesde = mismaAveria ? (previo.abierta ?? previo.aviso) : ahora
 
   const decision = decidirAvisoIngesta({
-    firmaAnterior: firmaPrevia,
+    firmaAnterior: firmaComparable,
     firmaActual: actual,
     ultimoAvisoEn: previo.aviso,
     abiertaDesde,
@@ -100,7 +105,7 @@ export async function GET(req: NextRequest) {
   // `ahora` reiniciaría el reloj del recordatorio cada mañana y la avería no
   // volvería a sonar NUNCA — que es exactamente el fallo que esto arregla.
   const avisoGuardado = decision.avisar ? ahora : previo.aviso
-  const cabecera = `${actual}|${avisoGuardado?.toISOString() ?? ''}|${abiertaDesde?.toISOString() ?? ''}`
+  const cabecera = componerCabecera(actual, avisoGuardado, abiertaDesde)
   const detalleGuardado = `${cabecera} · ${detalle}`
 
   if (salud.estado === 'sin_datos') {
@@ -215,10 +220,12 @@ export async function GET(req: NextRequest) {
     // 🔁 Informativo, al final: no es pérdida y no debe tapar lo de arriba.
     const textoDup = textoPolizasDuplicadas(salud.polizasDuplicadas)
     const duplicadas = textoDup ? `\n\nℹ️ ${textoDup}` : ''
+    // 📉 Informativo: anulaciones (06/10/2026). Mismo sitio y mismo criterio.
+    const anulaciones = textosAnulaciones(salud).map(t => `\n\nℹ️ ${t}`).join('')
     await tgAviso('correduria.ingesta',
       titular + '\n' +
       salud.motivos.map(m => `• ${m}`).join('\n') +
-      prima + entidades + pedidos + sinAmbito + recorte + sinComprobar + antiguedad + recado + duplicadas,
+      prima + entidades + pedidos + sinAmbito + recorte + sinComprobar + antiguedad + recado + duplicadas + anulaciones,
     ).catch(() => {})
   }
 
@@ -237,6 +244,24 @@ export async function GET(req: NextRequest) {
     ).catch(() => {})
   }
 
+  // 📉 Aviso INFORMATIVO propio cuando ENTRA una señal de anulación nueva (bloque, posible baja,
+  // renovación anulada). Solo lo nuevo: la caducidad de una ventana no suena. Sin recordatorio.
+  // Si hoy ya sale la alarma completa (ingesta no `ok`), esas líneas van dentro de ella.
+  const alarmaCompleta = salud.estado !== 'ok' && decision.avisar
+  const avisoAnulaciones = !alarmaCompleta && cambioAnulacionesEnFirma(firmaPrevia, actual)
+  if (avisoAnulaciones) {
+    const textos = textosAnulaciones(salud)
+    if (textos.length > 0) {
+      await tgAviso('correduria.ingesta',
+        'ℹ️ <b>Anulaciones en la cartera</b>\n' +
+        textos.map(t => `• ${t}`).join('\n') +
+        (salud.estado === 'ok'
+          ? '\n\nLa ingesta de CIMA va bien: esto es información, no una avería.'
+          : '\n\nAparte de esto, la ingesta ya tiene su propio aviso abierto: esto es solo información.'),
+      ).catch(() => {})
+    }
+  }
+
   await registrarLatido(AGENTE, true, detalleGuardado)
   return NextResponse.json({
     ok: true,
@@ -249,7 +274,7 @@ export async function GET(req: NextRequest) {
     reprocesables: salud.huerfanasReparto?.totalReprocesar ?? null,
     objetosEnRevision: salud.objetosEnRevision,
     huecos: salud.huecos.length,
-    avisado: (cambio && salud.estado !== 'ok') || avisoDuplicadas,
+    avisado: (cambio && salud.estado !== 'ok') || avisoDuplicadas || avisoAnulaciones,
     motivoAviso: decision.avisar ? decision.motivo : null,
     detalle,
   })

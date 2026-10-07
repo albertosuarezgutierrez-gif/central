@@ -284,6 +284,7 @@ export const CAMPOS_POR_RAMO_SINIESTRO: Readonly<Record<RamoSiniestro, readonly 
   moto: CAMPOS_ACCIDENTE_VEHICULO,
   hogar: CAMPOS_HOGAR,
   comercio: CAMPOS_HOGAR,
+  empresas: CAMPOS_HOGAR,
   comunidades: CAMPOS_HOGAR,
   responsabilidad_civil: CAMPOS_RC,
   vida: CAMPOS_PERSONALES,
@@ -291,6 +292,18 @@ export const CAMPOS_POR_RAMO_SINIESTRO: Readonly<Record<RamoSiniestro, readonly 
   decesos: CAMPOS_PERSONALES,
   accidentes: CAMPOS_PERSONALES,
   // Cajón de sastre: sin catálogo propio, solo lo que ya trae la cabecera.
+  // Ramos nuevos de oportunidad (06/10/2026): sin catálogo de siniestro propio todavía, como `otros`.
+  rc_profesional: [],
+  dyo: [],
+  flotas: [],
+  transporte_mercancias: [],
+  ciberriesgos: [],
+  decenal: [],
+  embarcaciones: [],
+  mascotas: [],
+  impago_alquiler: [],
+  viaje: [],
+  caucion: [],
   otros: [],
 }
 

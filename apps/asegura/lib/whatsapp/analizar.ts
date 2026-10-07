@@ -270,8 +270,7 @@ function depsBd(correduriaId: string, c: Reclamada): DepsEjecutor {
         clienteId,
         { ramo: p.ramo, fechaFinVigencia: p.fechaFinVigencia ?? undefined, aseguradora: p.aseguradora ?? undefined, tipoTarea: 'llamada', fechaTarea: p.fechaTarea, nota: p.nota ?? `WhatsApp: interés en ${p.ramo.replace('_', ' ')}` },
         ACTOR_IA,
-        undefined,
-        'whatsapp_ia',
+        { origen: 'whatsapp_ia' },
       )
       if (r.ok) return { ok: true, id: r.id }
       return { ok: false, motivo: r.estado === 'duplicada' ? 'ya_hay_abierta' : r.estado }

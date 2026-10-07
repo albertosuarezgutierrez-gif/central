@@ -127,6 +127,12 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
   // tienen que decidir por el navegador, no dar una sola frase para todos.
   assert.match(almacen, /navegadorIOS\(navigator\.userAgent\)/, 'las instrucciones de iOS ya no miran qué navegador es')
   assert.match(almacen, /nav === 'chrome'/, 'se perdió la rama de Chrome en iPhone (Compartir en la barra de la dirección)')
+  // Sin salida a Safari, quien su navegador no puede (Chrome < iOS 16.4, vista
+  // de Gmail) se queda sin camino: es el caso real del 06/10/2026.
+  assert.match(almacen, /puedeAnadirDesdeNavegador\(navigator\.userAgent\)/, 'las instrucciones de iOS dejaron de contemplar navegadores que no pueden añadir')
+  assert.match(almacen, /Copiar enlace/, 'se perdió el botón de copiar enlace para abrir en Safari')
+  assert.match(leer('app/layout.tsx'), /appleWebApp:\s*\{\s*capable:\s*true/, 'el layout perdió apple-mobile-web-app-capable')
+  assert.match(leer('app/layout.tsx'), /apple:\s*\[/, 'el layout perdió el apple-touch-icon')
   // Pasos numerados, no un párrafo.
   assert.match(almacen, /<ol className="instalar-pasos">/, 'las instrucciones de iOS dejaron de ser pasos numerados')
   // Y el botón enseña esas instrucciones en su globo (no un texto propio que se

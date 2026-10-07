@@ -375,6 +375,8 @@ async function viejasReales(correduriaId: string, limite: number): Promise<FilaR
     from tarificacion_precios p
     join tarificaciones t on t.id = p.tarificacion_id
     where t.correduria_id = ${correduriaId}::uuid
+      -- solo Avant2; to_jsonb vale aunque la columna canal aún no exista
+      and coalesce(to_jsonb(t) ->> 'canal', 'codeoscopic') = 'codeoscopic'
       and p.coberturas is not null
       and p.garantias is not null
       and coalesce((p.garantias->>'version')::int, 0) < ${VERSION_CATALOGO}::int

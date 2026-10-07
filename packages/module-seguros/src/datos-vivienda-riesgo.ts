@@ -21,6 +21,7 @@ export const ESPEC_VIVIENDA = [
   { clave: 'direccion', etiqueta: 'Dirección', tipo: { t: 'texto', max: 200 } },
   { clave: 'cp', etiqueta: 'Código postal', tipo: { t: 'cp' } },
   { clave: 'municipio', etiqueta: 'Municipio', tipo: { t: 'texto', max: 80 } },
+  { clave: 'provincia', etiqueta: 'Provincia', tipo: { t: 'texto', max: 60 } },
   { clave: 'municipioId', etiqueta: 'Municipio (catálogo)', tipo: { t: 'entero', min: 1, max: 99_999_999 } },
   { clave: 'tipoViaId', etiqueta: 'Tipo de vía', tipo: { t: 'id' } },
   { clave: 'nombreVia', etiqueta: 'Nombre de la calle', tipo: { t: 'texto', max: 80 } },
@@ -44,6 +45,7 @@ export const ESPEC_VIVIENDA = [
   { clave: 'ventanasSeguras', etiqueta: 'Ventanas seguras', tipo: { t: 'bool' } },
   { clave: 'urbanizacionCerrada', etiqueta: 'Urbanización cerrada', tipo: { t: 'bool' } },
   { clave: 'vigilante', etiqueta: 'Vigilante', tipo: { t: 'bool' } },
+  { clave: 'propietarioEsTomador', etiqueta: 'El propietario es el tomador', tipo: { t: 'bool' } },
   { clave: 'capitalContinente', etiqueta: 'Capital de continente (€)', tipo: { t: 'numero', min: 0, max: 100_000_000 } },
   { clave: 'capitalContenido', etiqueta: 'Capital de contenido (€)', tipo: { t: 'numero', min: 0, max: 100_000_000 } },
   { clave: 'joyasEnCajaFuerte', etiqueta: 'Joyas en caja fuerte (€)', tipo: { t: 'numero', min: 0, max: 100_000 } },
@@ -53,19 +55,19 @@ export const ESPEC_VIVIENDA = [
 ] as const satisfies Espec
 
 export type CampoVivienda =
-  | 'referenciaCatastral' | 'direccion' | 'cp' | 'municipio' | 'municipioId' | 'tipoViaId' | 'nombreVia' | 'numeroVia'
+  | 'referenciaCatastral' | 'direccion' | 'cp' | 'municipio' | 'provincia' | 'municipioId' | 'tipoViaId' | 'nombreVia' | 'numeroVia'
   | 'planta' | 'puertaVivienda' | 'metrosCuadrados' | 'anioConstruccion' | 'habitaciones' | 'anioUltimaReforma'
   | 'tipoVivienda' | 'uso' | 'ocupacion' | 'ubicacion' | 'material' | 'calidad' | 'alarma' | 'puertasSecundarias'
-  | 'asentamiento' | 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante'
+  | 'asentamiento' | 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador'
   | 'capitalContinente' | 'capitalContenido' | 'joyasEnCajaFuerte' | 'joyasFueraDeCaja' | 'objetosDeValor' | 'perrosPeligrosos'
 
 export type DatosViviendaRiesgo = {
   [K in CampoVivienda]: K extends
-    | 'referenciaCatastral' | 'direccion' | 'cp' | 'municipio' | 'tipoViaId' | 'nombreVia' | 'numeroVia' | 'planta'
+    | 'referenciaCatastral' | 'direccion' | 'cp' | 'municipio' | 'provincia' | 'tipoViaId' | 'nombreVia' | 'numeroVia' | 'planta'
     | 'puertaVivienda' | 'tipoVivienda' | 'uso' | 'ocupacion' | 'ubicacion' | 'material' | 'calidad' | 'alarma'
     | 'puertasSecundarias' | 'asentamiento'
     ? string | null
-    : K extends 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante'
+    : K extends 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador'
       ? boolean | null
       : number | null
 } & { confirmadoAt: string | null }
@@ -121,7 +123,7 @@ export function incoherenciaVivienda(d: DatosViviendaRiesgo): string | null {
 }
 
 /**
- * Lo que FALTA para pedir precio: los obligatorios de `revisarDatosHogar` que son de la vivienda. `null` (sin
+ * Lo que FALTA para pedir precio: la referencia catastral (la pantalla de precio no avanza sin ella) y los obligatorios de `revisarDatosHogar` que son de la vivienda. `null` (sin
  * ficha) = «falta todo». Capital: hace falta continente O contenido mayor que 0 (un inquilino asegura solo
  * contenido); si no hay ninguno, se marca `capitalContinente`. Joyas/objetos/perros son opcionales (`null` = 0
  * para el vendor).
@@ -130,13 +132,16 @@ export function faltanDatosVivienda(datos: Partial<DatosViviendaRiesgo> | null |
   const d = datos ?? {}
   const f: CampoVivienda[] = []
   const txt = (k: CampoVivienda) => { if (!d[k]) f.push(k) }
+  // La pantalla de precio (`hogar-nuevo`) no pasa del buscador sin referencia catastral: se pide aquí también.
+  txt('referenciaCatastral')
   for (const k of ['cp', 'tipoViaId', 'nombreVia', 'numeroVia'] as const) txt(k)
   if (d.municipioId === null || d.municipioId === undefined) f.push('municipioId')
   for (const k of ['metrosCuadrados', 'anioConstruccion', 'habitaciones'] as const) {
     if (d[k] === null || d[k] === undefined) f.push(k)
   }
   for (const k of ['tipoVivienda', 'uso', 'ocupacion', 'ubicacion', 'material', 'calidad', 'alarma', 'puertasSecundarias', 'asentamiento'] as const) txt(k)
-  for (const k of ['puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada'] as const) {
+  // `propietarioEsTomador` lo exige `revisarDatosHogar` (peticion-hogar.ts) igual que las tres protecciones.
+  for (const k of ['puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada', 'propietarioEsTomador'] as const) {
     if (typeof d[k] !== 'boolean') f.push(k)
   }
   if (!((d.capitalContinente ?? 0) > 0) && !((d.capitalContenido ?? 0) > 0)) f.push('capitalContinente')
@@ -185,6 +190,7 @@ export function precargaViviendaDePoliza(datos: unknown): Partial<Omit<DatosVivi
   const candidato: Record<string, unknown> = {
     direccion: t('direccion'),
     municipio: t('localidad'),
+    provincia: t('provincia'),
     cp: t('cp'),
     metrosCuadrados: n('metrosCuadrados'),
     // `anioConstruccionCima` es el de la compañía (Antigüedad del EIAC): no se precarga como dato declarado.
@@ -265,7 +271,7 @@ export function inicialesHogarDeRiesgo(
   const correcciones: Record<string, unknown> = {}
   if (!d) return { resueltos, correcciones }
   const delCatastro = d.referenciaCatastral === null || d.confirmadoAt !== null
-  const R = ['municipioId', 'tipoViaId', 'tipoVivienda', 'uso', 'ocupacion', 'ubicacion', 'material', 'calidad', 'alarma', 'puertasSecundarias', 'asentamiento'] as const
+  const R = ['municipioId', 'tipoViaId', 'tipoVivienda', 'uso', 'ocupacion', 'ubicacion', 'material', 'calidad', 'alarma', 'puertasSecundarias', 'asentamiento', 'propietarioEsTomador'] as const
   for (const k of R) if (d[k] !== null) resueltos[k] = d[k]
   const C = ['nombreVia', 'numeroVia', 'planta', 'puertaVivienda', 'habitaciones', 'anioUltimaReforma', 'puertaPrincipalBlindada', 'ventanasSeguras',
     'urbanizacionCerrada', 'vigilante', 'capitalContinente', 'capitalContenido', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos'] as const
@@ -274,4 +280,25 @@ export function inicialesHogarDeRiesgo(
     for (const k of ['metrosCuadrados', 'anioConstruccion', 'cp'] as const) if (d[k] !== null) correcciones[k] = d[k]
   }
   return { resueltos, correcciones }
+}
+
+/**
+ * Con qué se rellena el buscador del Catastro de `hogar-nuevo` cuando el riesgo NO tiene referencia catastral
+ * (07/10/2026). Antes solo salía `direccion` (texto libre, a veces ni existía aunque hubiera calle y número). Ahora, si
+ * hay calle estructurada: tipo de vía + calle + número (el Catastro exige «tipo, nombre y número»), con municipio y
+ * provincia del riesgo; si no, la dirección escrita. `tipoViaNombre` = el nombre del catálogo de vías para `tipoViaId`
+ * (el id solo se usa si ya es una palabra, p. ej. «Calle»; un código numérico no es un tipo de vía). Todo lo que no
+ * se sabe queda `null`: el buscador no inventa «Sevilla».
+ */
+export function busquedaCatastroDeVivienda(
+  d: Pick<DatosViviendaRiesgo, 'direccion' | 'tipoViaId' | 'nombreVia' | 'numeroVia' | 'municipio' | 'provincia'> | null | undefined,
+  tipoViaNombre?: string | null,
+): { direccion: string | null; municipio: string | null; provincia: string | null } {
+  if (!d) return { direccion: null, municipio: null, provincia: null }
+  const t = (v: string | null | undefined) => (typeof v === 'string' && v.trim() !== '' ? v.trim().replace(/\s+/g, ' ') : null)
+  const tipoVia = t(tipoViaNombre) ?? (t(d.tipoViaId) !== null && /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ. ]+$/.test(d.tipoViaId ?? '') ? t(d.tipoViaId) : null)
+  const calle = t(d.nombreVia)
+  const numero = t(d.numeroVia)
+  const estructurada = calle !== null && numero !== null ? [tipoVia, calle, numero].filter((x): x is string => x !== null).join(' ') : null
+  return { direccion: estructurada ?? t(d.direccion) ?? calle, municipio: t(d.municipio), provincia: t(d.provincia) }
 }

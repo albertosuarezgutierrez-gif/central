@@ -91,7 +91,7 @@ export const TAXONOMIA_POR_RAMO: Readonly<Record<RamoOferta, readonly GarantiaCa
 export function ramoOfertaDe(ramoOportunidad: string | null | undefined): RamoOferta {
   const r = (ramoOportunidad ?? '').trim().toLowerCase()
   if (r === 'comunidades') return 'comunidades'
-  if (r === 'comercio' || r === 'pymes' || r === 'pyme') return 'comercio'
+  if (r === 'comercio' || r === 'empresas' || r === 'pymes' || r === 'pyme') return 'comercio'
   if (r === 'hogar') return 'hogar'
   return 'generico'
 }

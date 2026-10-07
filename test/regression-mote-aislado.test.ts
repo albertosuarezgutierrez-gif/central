@@ -38,8 +38,7 @@ const PERMITIDOS = new Set([
   'apps/asegura/app/api/operador/cliente/mote/route.ts',
   'apps/plataforma/app/api/correduria/cliente-mote/route.ts',
   'apps/plataforma/lib/seguimiento-asegura.ts',
-  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/MoteAgenda.tsx',
-  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/Cabecera.tsx',
+  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/PanelDatosCliente.tsx',
   // Esquema
   'apps/asegura/prisma/asegura.prisma',
   'apps/asegura/prisma/sql/2026-10-05d_google_contactos_unificar.sql',
