@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-07T12:04:07Z",
-  "sha": "173ed26275d35f1cb023cf9928ad1eecc4a190d9",
+  "generadoEn": "2026-10-07T15:01:32Z",
+  "sha": "387b4de9d3a384b4c0df598971fcb07b91e0b86c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4737,20 +4737,20 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CuentaFicha",
-          "linea": 34
+          "linea": 36
         },
         {
           "nombre": "AceptarOpcion",
           "kind": "function",
           "exportada": true,
-          "params": "{ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos, perdidas = null, origen = 'codeoscopic' }: { presupuestoId: string opcionId: string prima: number | null compania: string corredor: boolean /** Por qué no se puede aceptar ",
+          "params": "{ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos, perdidas = null, origen = 'codeoscopic', codigoWhatsapp = false }: { presupuestoId: string opcionId: string prima: number | null compania: string corredor: boolean /** Por ",
           "retorno": null,
-          "linea": 43
+          "linea": 45
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4b34bf50b2c0"
+      "hash": "bee3ccf109e4"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/CompararIA.tsx",
@@ -4887,7 +4887,7 @@
           "nombre": "EstudioOfertas",
           "kind": "function",
           "exportada": true,
-          "params": "{ presupuestoId, opciones, caducado, puedeAceptar, bloqueoDatos, corredor, pdf, }: { presupuestoId: string opciones: OpcionCliente[] caducado: boolean puedeAceptar: boolean bloqueoDatos: string | null corredor: boolean /** Se ofrece el PDF ",
+          "params": "{ presupuestoId, opciones, caducado, puedeAceptar, bloqueoDatos, corredor, pdf, codigoWhatsapp = false, }: { presupuestoId: string opciones: OpcionCliente[] caducado: boolean puedeAceptar: boolean bloqueoDatos: string | null corredor: boole",
           "retorno": null,
           "linea": 22,
           "resumen": "El estudio de un presupuesto de origen `ofertas` (ramos libres: comunidades, comercio…): una tarjeta por compañía, la recomendada por el corredor destacada, y el cuadro garantía × compañía. Componente"
@@ -4895,7 +4895,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dab9fd99c519"
+      "hash": "ef761034a8d0"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/LogoCompania.tsx",
@@ -4951,7 +4951,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 44,
+          "linea": 45,
           "resumen": "El presupuesto, ya con sesión. **Solo lectura**: en este PR no se elige, no se firma y no sale nada hacia ninguna compañía (eso es el PR 4). Quién lo puede ver lo decide `presupuestoDeSesion()` y **so"
         },
         {
@@ -4960,12 +4960,12 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 288
+          "linea": 296
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "40bad128158b"
+      "hash": "2dacfcc49ba9"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/RestoDeOpciones.tsx",
@@ -5062,7 +5062,7 @@
           "nombre": "TodasLasOpciones",
           "kind": "function",
           "exportada": true,
-          "params": "{ presupuestoId, ramo, opciones, necesidades, coberturasActual, corredor, puedeAceptar, bloqueoDatos, telefono }: { presupuestoId: string ramo: RamoGarantias | null /** Las no ocultas (el filtro `ocultaAt: null` ya lo aplica `leerOpciones`)",
+          "params": "{ presupuestoId, ramo, opciones, necesidades, coberturasActual, corredor, puedeAceptar, bloqueoDatos, telefono, codigoWhatsapp = false }: { presupuestoId: string ramo: RamoGarantias | null /** Las no ocultas (el filtro `ocultaAt: null` ya l",
           "retorno": null,
           "linea": 43,
           "resumen": "«Todas las opciones»: la lista ENTERA de precios congelados (la portada incluida, marcada «Recomendada»), con los interruptores de garantías, paginada de 10 en 10. · Los interruptores salen PRESELECCI"
@@ -5073,13 +5073,13 @@
           "exportada": false,
           "params": "{ lista, fila }: { lista: OpcionCliente[]; fila: (o: OpcionCliente) => React.ReactNode }",
           "retorno": null,
-          "linea": 262,
+          "linea": 265,
           "resumen": "Las que no dicen si incluyen lo marcado: también paginadas, dentro del plegable perezoso."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4dc03b780075"
+      "hash": "9f7266572190"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/Recordatorios.tsx",
@@ -6687,13 +6687,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19,
-          "resumen": "POST /api/presupuesto/datos — «Hay un dato que no es correcto» en «Revisa tus datos». { presupuestoId, texto } → queda en el historial de su ficha y avisa a Alberto por Telegram. Con el aviso dado, la"
+          "linea": 20,
+          "resumen": "la vista de corredor no escribe como el cliente (403)."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/presupuesto/datos",
-      "hash": "d69fd4d6e7a1"
+      "hash": "ccff519552c1"
     },
     {
       "ruta": "apps/asegura-portal/app/api/presupuesto/firma/route.ts",
@@ -6708,13 +6708,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 22,
+          "linea": 24,
           "resumen": "POST /api/presupuesto/firma — el cliente firma su aceptación de opción (pieza 4). { accion: 'preparar', presupuestoId, opcionId, cuenta? } → sin cuenta, la de su ficha ENMASCARADA; con ella, documento"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/presupuesto/firma",
-      "hash": "c85d4a598b7f"
+      "hash": "e6e5eb8e2e34"
     },
     {
       "ruta": "apps/asegura-portal/app/api/presupuesto/ia/route.ts",
@@ -6757,6 +6757,27 @@
       "tablas": [],
       "rutaApi": "/api/presupuesto/pdf",
       "hash": "6ec230869538"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/presupuesto/whatsapp/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "POST /api/presupuesto/whatsapp — «Tengo el código del WhatsApp» en la carátula (07/10/2026). { token, codigo } → si vale, cookie de acceso a ESE presupuesto (4 h) y `{ estado: 'ok' }`. El código lo co"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/presupuesto/whatsapp",
+      "hash": "489e634e0d51"
     },
     {
       "ruta": "apps/asegura-portal/app/api/push/desuscribir/route.ts",
@@ -7843,6 +7864,26 @@
       "hash": "edf3cf6915f0"
     },
     {
+      "ruta": "apps/asegura-portal/app/presupuesto/[token]/CodigoWhatsapp.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CodigoWhatsapp"
+      ],
+      "funciones": [
+        {
+          "nombre": "CodigoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ token }: { token: string }",
+          "retorno": null,
+          "linea": 22
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fffdaac82541"
+    },
+    {
       "ruta": "apps/asegura-portal/app/presupuesto/[token]/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -7855,7 +7896,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 54,
+          "linea": 59,
           "resumen": "La carátula del enlace del presupuesto. PÚBLICA a propósito —vive fuera del grupo `(portal)`— porque a quien se le manda un presupuesto puede no haber entrado nunca al portal. ────────────────────────"
         },
         {
@@ -7864,12 +7905,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 80
+          "linea": 90
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a2e1c439afc3"
+      "hash": "5b8b9774aa22"
     },
     {
       "ruta": "apps/asegura-portal/app/RegistrarSW.tsx",
@@ -8255,7 +8296,9 @@
         "crearSesion",
         "crearSesionCorredor",
         "leerCorredor",
-        "verificarSesion"
+        "verificarSesion",
+        "crearAccesoWhatsapp",
+        "verificarAccesoWhatsapp"
       ],
       "funciones": [
         {
@@ -8325,11 +8368,27 @@
           "params": "token: string",
           "retorno": "Promise<SesionPortal | null>",
           "linea": 105
+        },
+        {
+          "nombre": "crearAccesoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AccesoWhatsapp",
+          "retorno": "Promise<string>",
+          "linea": 133
+        },
+        {
+          "nombre": "verificarAccesoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "jwt: string",
+          "retorno": "Promise<AccesoWhatsapp | null>",
+          "linea": 142
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "89a720cd05a4"
+      "hash": "abb9c4633147"
     },
     {
       "ruta": "apps/asegura-portal/lib/autorizaciones.ts",
@@ -11765,7 +11824,9 @@
         "datosListosParaAceptar",
         "datosCotizados",
         "interpretarReporte",
-        "reportarDatosIncorrectos"
+        "reportarDatosIncorrectos",
+        "interpretarAccesoWhatsapp",
+        "comprobarCodigoWhatsapp"
       ],
       "funciones": [
         {
@@ -11774,7 +11835,7 @@
           "exportada": false,
           "params": "j: unknown",
           "retorno": "Record<string, unknown>",
-          "linea": 34
+          "linea": 41
         },
         {
           "nombre": "interpretarCodigo",
@@ -11782,7 +11843,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "ResultadoCodigo",
-          "linea": 41
+          "linea": 48
         },
         {
           "nombre": "interpretarFirma",
@@ -11790,7 +11851,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "ResultadoFirma",
-          "linea": 63
+          "linea": 70
         },
         {
           "nombre": "puente",
@@ -11798,7 +11859,7 @@
           "exportada": false,
           "params": "",
           "retorno": "",
-          "linea": 108
+          "linea": 115
         },
         {
           "nombre": "llamar",
@@ -11806,7 +11867,7 @@
           "exportada": false,
           "params": "ruta: string, init: RequestInit",
           "retorno": "Promise<",
-          "linea": 115
+          "linea": 122
         },
         {
           "nombre": "leerCuentaFicha",
@@ -11814,7 +11875,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CuentaFichaPortal | null",
-          "linea": 167,
+          "linea": 174,
           "resumen": "`null` = forma rara. Una máscara que no es «**** XXXX» NO se pinta: podría ser el IBAN entero."
         },
         {
@@ -11823,31 +11884,31 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "PreparadoAceptacion | null",
-          "linea": 175
+          "linea": 182
         },
         {
           "nombre": "prepararAceptacion",
           "kind": "function",
           "exportada": true,
-          "params": "identidadId: string, presupuestoId: string, opcionId: string, cuenta: EntradaCuenta | null = null,",
+          "params": "acceso: AccesoPuente, presupuestoId: string, opcionId: string, cuenta: EntradaCuenta | null = null,",
           "retorno": "Promise<PreparadoAceptacion | null>",
-          "linea": 215
+          "linea": 222
         },
         {
           "nombre": "pedirCodigoAceptacion",
           "kind": "function",
           "exportada": true,
-          "params": "identidadId: string, presupuestoId: string, opcionId: string",
+          "params": "acceso: AccesoPuente, presupuestoId: string, opcionId: string",
           "retorno": "Promise<ResultadoCodigo>",
-          "linea": 224
+          "linea": 231
         },
         {
           "nombre": "firmarAceptacion",
           "kind": "function",
           "exportada": true,
-          "params": "identidadId: string, presupuestoId: string, opcionId: string, datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean cuenta: EntradaCuenta },",
+          "params": "acceso: AccesoPuente, presupuestoId: string, opcionId: string, datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean cuenta: EntradaCuenta /** El código del co",
           "retorno": "Promise<ResultadoFirma>",
-          "linea": 232
+          "linea": 239
         },
         {
           "nombre": "leerEntradaCuenta",
@@ -11855,7 +11916,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EntradaCuenta | null",
-          "linea": 255,
+          "linea": 264,
           "resumen": "La cuenta que manda el navegador, sin fiarse de nada. `null` = no hay una elección legible. El IBAN se recorta de tamaño y se pasa tal cual: lo valida asegura (módulo 97), que es quien decide."
         },
         {
@@ -11864,7 +11925,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "DatosCotizados | null",
-          "linea": 277,
+          "linea": 286,
           "resumen": "`null` = no se ha podido leer (401, 5xx, corte o forma rara). Se trata igual que `sin_datos`."
         },
         {
@@ -11873,16 +11934,16 @@
           "exportada": true,
           "params": "d: DatosCotizados | null",
           "retorno": "boolean",
-          "linea": 302,
+          "linea": 311,
           "resumen": "¿Se puede ofrecer aceptar? Solo con los datos leídos y sin un aviso de error pendiente."
         },
         {
           "nombre": "datosCotizados",
           "kind": "function",
           "exportada": true,
-          "params": "identidadId: string, presupuestoId: string",
+          "params": "acceso: AccesoPuente, presupuestoId: string",
           "retorno": "Promise<DatosCotizados | null>",
-          "linea": 306
+          "linea": 315
         },
         {
           "nombre": "interpretarReporte",
@@ -11890,20 +11951,37 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "ResultadoReporte",
-          "linea": 321
+          "linea": 330
         },
         {
           "nombre": "reportarDatosIncorrectos",
           "kind": "function",
           "exportada": true,
-          "params": "identidadId: string, presupuestoId: string, texto: string",
+          "params": "acceso: AccesoPuente, presupuestoId: string, texto: string",
           "retorno": "Promise<ResultadoReporte>",
-          "linea": 333
+          "linea": 342
+        },
+        {
+          "nombre": "interpretarAccesoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, j: unknown",
+          "retorno": "ResultadoAccesoWhatsapp",
+          "linea": 376,
+          "resumen": "🚨 Solo un 200 con `valido` y un id con forma de uuid abre: un 401, un 5xx o un corte NO."
+        },
+        {
+          "nombre": "comprobarCodigoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "tokenWhatsapp: string, codigo: string",
+          "retorno": "Promise<ResultadoAccesoWhatsapp>",
+          "linea": 386
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b38c618b511e"
+      "hash": "6e537b098f4e"
     },
     {
       "ruta": "apps/asegura-portal/lib/presupuesto-ia.ts",
@@ -12267,13 +12345,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 384,
+          "linea": 386,
           "resumen": "`''` si está limpio; si no, la lista de infracciones lista para un `assert`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "914c3a2d8a52"
+      "hash": "50b926444fb7"
     },
     {
       "ruta": "apps/asegura-portal/lib/presupuesto.ts",
@@ -12281,6 +12359,8 @@
       "resumen": "El presupuesto, visto desde el PORTAL. Solo lectura (PR 2): ni se elige, ni se firma, ni se manda nada. Lo único que este fichero escribe son dos sellos que no son del cliente sino SOBRE el cliente: `visto_at` y la telemetría. Diseño: `docs/superpowers/specs/2026-09-21-asegura-presupuesto-al-cliente",
       "exporta": [
         "caratulaPorToken",
+        "accesoWhatsappDe",
+        "accesoPuenteDe",
         "presupuestoDeSesion",
         "presupuestosPendientesDeIdentidad"
       ],
@@ -12291,8 +12371,26 @@
           "exportada": true,
           "params": "tokenCrudo: unknown",
           "retorno": "Promise<Caratula>",
-          "linea": 159,
+          "linea": 162,
           "resumen": "Resuelve el token del enlace, SIN sesión y SIN contar nada. 🚨 Devuelve `{estado, id}` y ni un dato más: hasta que hay sesión no hay a quien enseñarle nada. Y los cuatro finales malos se colapsan en `"
+        },
+        {
+          "nombre": "accesoWhatsappDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<",
+          "linea": 198,
+          "resumen": "El token del acceso por WhatsApp a ESE presupuesto, o `null`. Fallo de BD = `null` (no abre)."
+        },
+        {
+          "nombre": "accesoPuenteDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<",
+          "linea": 219,
+          "resumen": "Con qué se llama al puente para ESTE presupuesto: el token del WhatsApp si entró así (va primero: es la puerta de este presupuesto en concreto), si no la identidad de la sesión. `corredor` = es Albert"
         },
         {
           "nombre": "presupuestoDeSesion",
@@ -12300,7 +12398,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<LecturaPresupuesto>",
-          "linea": 192,
+          "linea": 236,
           "resumen": "El presupuesto `id`, para la identidad de la cookie. El `id` viene de la URL, así que **la autorización va antes de cualquier otra lectura**: primero se decide si esta persona lo puede ver y solo desp"
         },
         {
@@ -12309,7 +12407,7 @@
           "exportada": false,
           "params": "opciones: OpcionCliente[], actual: ActualCliente | null",
           "retorno": "SinEquivalente | null",
-          "linea": 343,
+          "linea": 396,
           "resumen": "Por qué no hay «la equivalente». Se DERIVA, porque el motivo que calculó `elegirPortada()` al preparar no se guarda en ninguna columna (lo devuelve `PresupuestoPreparado` y muere ahí). 🚨 Los dos moti"
         },
         {
@@ -12318,7 +12416,7 @@
           "exportada": false,
           "params": "presupuestoId: string, correduriaId: string",
           "retorno": "Promise<OpcionCliente[]>",
-          "linea": 349
+          "linea": 402
         },
         {
           "nombre": "leerActual",
@@ -12326,7 +12424,7 @@
           "exportada": false,
           "params": "polizaId: string, clienteId: string, correduriaId: string",
           "retorno": "Promise<ActualCliente | null>",
-          "linea": 412,
+          "linea": 465,
           "resumen": "La póliza que se compara. Se lee por su id **y** por el `cliente_id` del presupuesto: un `poliza_id` que apuntara a otra ficha no puede pintar aquí la casa de otro. Y se exige cartera VIVA: una del vo"
         },
         {
@@ -12335,7 +12433,7 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "",
-          "linea": 471,
+          "linea": 524,
           "resumen": "El bien, en corto. No se usa `describirBien()` del módulo porque aquí no hace falta la ficha entera: en la cabecera de la comparativa cabe una línea. La dirección viaja CIFRADA dentro de `datos_especi"
         },
         {
@@ -12344,7 +12442,7 @@
           "exportada": false,
           "params": "d: Record<string, unknown>",
           "retorno": "string | null",
-          "linea": 479
+          "linea": 532
         },
         {
           "nombre": "sellarVisto",
@@ -12352,7 +12450,7 @@
           "exportada": false,
           "params": "id: string, clienteId: string, vistoAt: Date | null",
           "retorno": "Promise<void>",
-          "linea": 515,
+          "linea": 568,
           "resumen": "`enviado → visto`, filtrado por el `cliente_id` que YA se ha autorizado arriba, y solo la primera vez (`coalesce(visto_at, now())` escrito como un `where vistoAt: null`). Best-effort a propósito: el p"
         },
         {
@@ -12361,7 +12459,7 @@
           "exportada": false,
           "params": "presupuestoId: string",
           "retorno": "Promise<void>",
-          "linea": 538,
+          "linea": 591,
           "resumen": "Alguien con sesión ha abierto un presupuesto que no es suyo. Se anota para que Alberto lo sepa (§3.1) — no para bloquear a nadie. ⚠️ **Se anota UNA vez por hora y por presupuesto**, no una por recarga"
         },
         {
@@ -12370,7 +12468,7 @@
           "exportada": false,
           "params": "identidadId: string",
           "retorno": "Promise<string | null>",
-          "linea": 559,
+          "linea": 612,
           "resumen": "Cómo salió el último intento de vínculo de esta identidad. Se LEE del sello que dejó el canje del código: aquí no existe el correo en claro, así que no se puede recalcular."
         },
         {
@@ -12379,7 +12477,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 573,
+          "linea": 626,
           "resumen": "Prisma devuelve `numeric` como `Decimal`. Se convierte en UN solo sitio."
         },
         {
@@ -12388,7 +12486,7 @@
           "exportada": false,
           "params": "donde: string, e: unknown",
           "retorno": "void",
-          "linea": 580,
+          "linea": 633,
           "resumen": "El motivo sí se registra; ni el token, ni el hash del canal, ni el correo."
         },
         {
@@ -12397,13 +12495,13 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<PresupuestoParaPendientes[] | null>",
-          "linea": 597,
+          "linea": 650,
           "resumen": "`null` = no se ha podido leer. Nunca `[]` por un fallo: eso se leería como «no tienes ninguno»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7af6de687f8b"
+      "hash": "1c38f40211a0"
     },
     {
       "ruta": "apps/asegura-portal/lib/push-suscripcion.ts",
@@ -12661,7 +12759,8 @@
       "ambito": "apps/asegura-portal",
       "exporta": [
         "getIdentidad",
-        "requireIdentidad"
+        "requireIdentidad",
+        "getAccesoWhatsapp"
       ],
       "funciones": [
         {
@@ -12679,13 +12778,22 @@
           "params": "",
           "retorno": null,
           "linea": 22
+        },
+        {
+          "nombre": "getAccesoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<AccesoWhatsapp | null>",
+          "linea": 33,
+          "resumen": "La cookie de acceso por el CÓDIGO DEL WHATSAPP (07/10/2026), o `null`. NO es una identidad: solo dice «abrió el presupuesto X con su código». Quien la use tiene que comprobar que el id es el que pide "
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "b1eeef5117e4"
+      "hash": "332a08ddb86b"
     },
     {
       "ruta": "apps/asegura-portal/lib/solicitud-datos.ts",
@@ -20157,7 +20265,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/portal/presupuesto",
-      "hash": "2225461713b3"
+      "hash": "8162b9db7997"
     },
     {
       "ruta": "apps/asegura/app/api/portal/solicitud-datos/documento/route.ts",
@@ -20372,6 +20480,60 @@
       "tablas": [],
       "rutaApi": "/api/tarificador/resultado",
       "hash": "62ec3b88892c"
+    },
+    {
+      "ruta": "apps/asegura/app/api/tarificador/sesion/[compania]/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "SIN_CORREDURIA",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "errorBd",
+          "kind": "function",
+          "exportada": false,
+          "params": "op: string, compania: string, e: unknown",
+          "retorno": "NextResponse",
+          "linea": 26
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: Ctx",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "PUT",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: Ctx",
+          "retorno": null,
+          "linea": 47
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: Ctx",
+          "retorno": null,
+          "linea": 66
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/tarificador/sesion/[compania]",
+      "hash": "f149d045f999"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/trabajo/[id]/route.ts",
@@ -33194,7 +33356,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "lineasJustificante",
@@ -33202,7 +33364,7 @@
           "exportada": true,
           "params": "e: EvidenciaFirma",
           "retorno": "string[]",
-          "linea": 40,
+          "linea": 41,
           "resumen": "Las líneas del justificante, puras (lo que se pinta debajo de la carta)."
         },
         {
@@ -33211,7 +33373,7 @@
           "exportada": false,
           "params": "font: PDFFont, t: string",
           "retorno": "string",
-          "linea": 52,
+          "linea": 53,
           "resumen": "Helvetica solo sabe WinAnsi: lo que no está se cambia por «?» en vez de romper el PDF."
         },
         {
@@ -33220,7 +33382,7 @@
           "exportada": false,
           "params": "font: PDFFont, texto: string, tam: number, ancho: number",
           "retorno": "string[]",
-          "linea": 57
+          "linea": 58
         },
         {
           "nombre": "pdfDocumentoFirmado",
@@ -33228,13 +33390,13 @@
           "exportada": true,
           "params": "texto: string, evidencia: EvidenciaFirma",
           "retorno": "Promise<Uint8Array>",
-          "linea": 80,
+          "linea": 81,
           "resumen": "La carta tal cual y, debajo, el justificante de la firma."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "024d7b2a7f62"
+      "hash": "38734be62659"
     },
     {
       "ruta": "apps/asegura/lib/documento-portal.ts",
@@ -33996,7 +34158,7 @@
           "exportada": true,
           "params": "token: string, base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es',",
           "retorno": "string | null",
-          "linea": 56,
+          "linea": 61,
           "resumen": "La carátula del portal para ese token. `null` = sin URL https: no se avisa."
         },
         {
@@ -34005,7 +34167,7 @@
           "exportada": false,
           "params": "motivo: FalloEnvio, detalle: string",
           "retorno": "ResultadoEnvio",
-          "linea": 74
+          "linea": 79
         },
         {
           "nombre": "avisarPresupuesto",
@@ -34013,7 +34175,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; canal: CanalAviso; actor: string }, ahora: Date = new Date(),",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 93
+          "linea": 104
         },
         {
           "nombre": "enlaceDirectoPresupuesto",
@@ -34021,7 +34183,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, correo: string, caratula: string",
           "retorno": "Promise<string | null>",
-          "linea": 210,
+          "linea": 247,
           "resumen": "La llave de acceso directo del correo, con destino la carátula de ESTE presupuesto. `null` = no se pudo atar al correo (sin `PII_LOOKUP_KEY`) o guardar: el correo sale con el enlace de siempre."
         },
         {
@@ -34030,7 +34192,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; actor: string }, ahora: Date = new Date(),",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 227,
+          "linea": 264,
           "resumen": "Alberto dice que el WhatsApp ya salió de su móvil. Solo sobre un enlace generado y sin envío: no se confirma lo que no se ha abierto."
         },
         {
@@ -34039,7 +34201,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: string, destino: string, c: { asunto: string; texto: string; html: string },",
           "retorno": "Promise<ResultadoCorreo>",
-          "linea": 260
+          "linea": 297
         },
         {
           "nombre": "marcarEmitido",
@@ -34047,7 +34209,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; actor: string },",
           "retorno": "Promise<",
-          "linea": 277,
+          "linea": 314,
           "resumen": "Alberto marca el presupuesto aceptado como EMITIDO (la compañía ya ha emitido la póliza). Es lo que desbloquea el envío de la anulación de la póliza vieja, si la hubo. Solo sobre uno aceptado."
         }
       ],
@@ -34057,7 +34219,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "f0c6f07aaf04"
+      "hash": "b7187d9df289"
     },
     {
       "ruta": "apps/asegura/lib/error-cartera.ts",
@@ -37906,7 +38068,7 @@
           "exportada": false,
           "params": "c: string",
           "retorno": null,
-          "linea": 45
+          "linea": 51
         },
         {
           "nombre": "huella",
@@ -37914,7 +38076,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": null,
-          "linea": 46
+          "linea": 52
         },
         {
           "nombre": "hoyMadrid",
@@ -37922,7 +38084,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 47
+          "linea": 53
         },
         {
           "nombre": "leer",
@@ -37930,7 +38092,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, presupuestoId: string, opcionId: string",
           "retorno": "Promise<Fila | null>",
-          "linea": 77
+          "linea": 83
         },
         {
           "nombre": "componer",
@@ -37938,15 +38100,24 @@
           "exportada": false,
           "params": "f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado: 'ok' }>, cuenta: CuentaElegida",
           "retorno": "Compuesto | null",
-          "linea": 139
+          "linea": 145
+        },
+        {
+          "nombre": "fichaDeAcceso",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string",
+          "retorno": null,
+          "linea": 208,
+          "resumen": "La ficha dueña del presupuesto para ESE acceso. Mismos desenlaces que `fichaPropiaDeRecurso`."
         },
         {
           "nombre": "base",
           "kind": "function",
           "exportada": false,
-          "params": "correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string",
+          "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string",
           "retorno": "Promise<Base>",
-          "linea": 195
+          "linea": 217
         },
         {
           "nombre": "datosDe",
@@ -37954,7 +38125,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "Extract<DatosCotizados,",
-          "linea": 217
+          "linea": 238
         },
         {
           "nombre": "cuentaDe",
@@ -37962,16 +38133,16 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, f: Fila",
           "retorno": "Promise<",
-          "linea": 241,
+          "linea": 262,
           "resumen": "La cuenta de la ficha; la de la póliza solo si es SUYA y está en vigor (si no, ni su máscara se enseña)."
         },
         {
           "nombre": "prepararAceptacion",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string, entrada: EntradaCuenta | null = null,",
+          "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string, entrada: EntradaCuenta | null = null,",
           "retorno": "Promise<ResultadoPreparar>",
-          "linea": 256,
+          "linea": 277,
           "resumen": "Lo que el cliente va a firmar con esa opción. No escribe nada."
         },
         {
@@ -37980,23 +38151,23 @@
           "exportada": false,
           "params": "email: string",
           "retorno": "string",
-          "linea": 281
+          "linea": 302
         },
         {
           "nombre": "pedirCodigoAceptacion",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string",
+          "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string",
           "retorno": "Promise<ResultadoCodigo>",
-          "linea": 286
+          "linea": 307
         },
         {
           "nombre": "firmarAceptacion",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string, datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean cuenta: EntradaCuenta",
+          "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string, datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean cuenta: EntradaCuent",
           "retorno": "Promise<ResultadoFirma>",
-          "linea": 348
+          "linea": 369
         },
         {
           "nombre": "urlPlataforma",
@@ -38004,33 +38175,33 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 514
+          "linea": 551
         },
         {
           "nombre": "propio",
           "kind": "function",
           "exportada": false,
-          "params": "correduriaId: string, identidadId: string, presupuestoId: string",
+          "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string",
           "retorno": "Promise<Propio |",
-          "linea": 524,
+          "linea": 561,
           "resumen": "El presupuesto, solo si es de la ficha de esta identidad. Mismo reparto que `base`, sin opción."
         },
         {
           "nombre": "datosCotizadosDelPresupuesto",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, identidadId: string, presupuestoId: string",
+          "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string",
           "retorno": "Promise<ResultadoDatos>",
-          "linea": 546,
+          "linea": 582,
           "resumen": "Los datos con los que se calculó el precio, para el bloque «Revisa tus datos». No escribe nada."
         },
         {
           "nombre": "reportarDatosIncorrectos",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, identidadId: string, presupuestoId: string, textoCrudo: string,",
+          "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, textoCrudo: string,",
           "retorno": "Promise<ResultadoReporte>",
-          "linea": 575,
+          "linea": 611,
           "resumen": "«Hay un dato que no es correcto»: queda en `presupuesto_evento` (append-only; con él la firma desde el portal queda cerrada, ver `datosDe`) y en el historial interno de la ficha. El aviso a Alberto lo"
         }
       ],
@@ -38049,7 +38220,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "8dfc8e59556a"
+      "hash": "da2f93c97db9"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-actividad-servicio.ts",
@@ -38139,6 +38310,50 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c7e409073ae4"
+    },
+    {
+      "ruta": "apps/asegura/lib/presupuesto-codigo-whatsapp.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El CÓDIGO DE ACCESO del presupuesto por WhatsApp, del lado de asegura (07/10/2026). Alberto manda el enlace A MANO por WhatsApp (`whatsapp_enlace` → wa.me). Con el enlace va un código de 6 dígitos propio de ese presupuesto: abre la carátula del portal y sirve para firmar, también a quien no tiene co",
+      "exporta": [
+        "gastarCodigoWhatsapp",
+        "fichaDeTokenWhatsapp",
+        "movilDeFicha"
+      ],
+      "funciones": [
+        {
+          "nombre": "gastarCodigoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, token: string, codigo: string, presupuestoId: string | null = null, ahora: Date = new Date(),",
+          "retorno": "Promise<ResultadoCodigoWhatsapp>",
+          "linea": 41,
+          "resumen": "Comprueba (y GASTA un intento de) el código de WhatsApp del presupuesto de ese `token`. `presupuestoId`, si viene, tiene que ser el del token: la firma lo pasa para que un token de otro presupuesto no"
+        },
+        {
+          "nombre": "fichaDeTokenWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, token: string, presupuestoId: string, ahora: Date = new Date()",
+          "retorno": "Promise<",
+          "linea": 106,
+          "resumen": "La ficha dueña del presupuesto, para quien entró con el código del WhatsApp (el portal guarda el token en su cookie de acceso, que solo pone tras un código válido). `null` = el token ya no es el de es"
+        },
+        {
+          "nombre": "movilDeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<MovilDeFicha>",
+          "linea": 124,
+          "resumen": "¿Tiene la ficha un móvil al que se le pueda mandar un WhatsApp? Ilegible ≠ inexistente: un teléfono que la clave PII no abre NO cuenta como «no tiene» (se arregla en Vercel)."
+        }
+      ],
+      "tablas": [
+        "presupuesto"
+      ],
+      "rutaApi": null,
+      "hash": "479a5a2e71f8"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-cuenta.ts",
@@ -42770,6 +42985,142 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4a7df3a38856"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-sesion-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Sesión MANUAL del tarificador RPA, lado asegura — reglas PURAS (07/10/2026). Ver tarificador-sesion.ts, la ruta app/api/tarificador/sesion/[compania]/route.ts y services/tarificador-rpa/src/sesion-manual.ts (el cliente). 🔒 El token es OPACO: asegura no tiene la clave y no lo abre. Aquí solo se vali",
+      "exporta": [
+        "leerCompania",
+        "cuerpoExcedeTope",
+        "leerCuerpoConTope",
+        "leerGuardado",
+        "estaCaducada",
+        "clasificarErrorBd",
+        "codigoErrorParaLog"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "Lectura<string>",
+          "linea": 30,
+          "resumen": "Compañía del segmento de la URL: minúsculas, slug, y en la lista blanca."
+        },
+        {
+          "nombre": "cuerpoExcedeTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "contentLength: string | null",
+          "retorno": "boolean",
+          "linea": 43,
+          "resumen": "¿El Content-Length anunciado ya pasa del tope? (Sin cabecera o ilegible: se decide tras leer.)"
+        },
+        {
+          "nombre": "leerCuerpoConTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: ReadableStream<Uint8Array> | null, max: number = MAX_CUERPO_BYTES",
+          "retorno": "Promise<string | null>",
+          "linea": 53,
+          "resumen": "Lee un stream con tope en BYTES: al pasar `max` cancela el stream y devuelve `null` (→ 413). Sin Content-Length (o mentiroso) el tope sigue valiendo, porque se cuenta lo que llega, no lo que se anunci"
+        },
+        {
+          "nombre": "leerGuardado",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, ahora: number",
+          "retorno": "Lectura<Guardado>",
+          "linea": 78,
+          "resumen": "Cuerpo del PUT `{ token, caducaEn }` (lo que manda `almacenHttp().guardar`)."
+        },
+        {
+          "nombre": "estaCaducada",
+          "kind": "function",
+          "exportada": true,
+          "params": "caducaEn: Date | null | undefined, ahora: number",
+          "retorno": "boolean",
+          "linea": 100,
+          "resumen": "Caducada = `caduca_en` ya alcanzado. Una fecha ilegible cuenta como caducada (estado conservador: no se sirve)."
+        },
+        {
+          "nombre": "esPermisoDenegado",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 106,
+          "resumen": "¿Permiso denegado (42501)? = el GRANT del SQL no está aplicado."
+        },
+        {
+          "nombre": "clasificarErrorBd",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "",
+          "linea": 113,
+          "resumen": "Error de BD → qué contesta la ruta. Tabla o GRANT ausentes = SQL sin aplicar (503 claro); el resto, 503 genérico."
+        },
+        {
+          "nombre": "codigoErrorParaLog",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "string",
+          "linea": 122,
+          "resumen": "Lo ÚNICO que se loguea de un error de BD: su SQLSTATE / código Prisma. Nunca el mensaje: un CHECK violado de Postgres trae «Failing row contains (…)» con la fila entera, blob incluido."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "09546322cb7d"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-sesion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Sesión MANUAL del tarificador RPA — la parte con BD (07/10/2026). Reglas puras en tarificador-sesion-reglas.ts; SQL en apps/asegura/prisma/sql/2026-10-07e_tarificador_sesiones.sql. 🛡️ Todo filtrado por `correduria_id` (lo resuelve la ruta con `correduriaUnica()`: el worker no trae correduría). 🔒 E",
+      "exporta": [
+        "leerSesion",
+        "guardarSesion",
+        "borrarSesion"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, compania: string, ahora: number = Date.now()",
+          "retorno": "Promise<string | null>",
+          "linea": 11,
+          "resumen": "El token vivo, o `null` si no hay o ha caducado (y entonces se BORRA: no se deja basura que parezca viva)."
+        },
+        {
+          "nombre": "guardarSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, compania: string, token: string, caducaEn: Date",
+          "retorno": "Promise<void>",
+          "linea": 29,
+          "resumen": "Upsert por (correduría, compañía)."
+        },
+        {
+          "nombre": "borrarSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, compania: string",
+          "retorno": "Promise<number>",
+          "linea": 38,
+          "resumen": "Idempotente: borrar lo que no hay no es un error. Devuelve cuántas filas se fueron (0 o 1)."
+        }
+      ],
+      "tablas": [
+        "seguros",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "bac31a68dc67"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-verificacion-reglas.ts",
@@ -92360,7 +92711,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "788546be2c6c"
+      "hash": "0b2eb513fd5f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Formacion.tsx",
@@ -93467,13 +93818,13 @@
           "exportada": true,
           "params": "{ titulo, ...props }: Parameters<typeof ListaPrecios<P>>[0] & { titulo?: string }",
           "retorno": null,
-          "linea": 142,
+          "linea": 146,
           "resumen": "La misma lista, PLEGADA: cuando debajo está «Qué verá el cliente» (que ya enseña todos los precios de la más barata a la más cara), repetirla abierta eran dos listas de 31 filas seguidas. Aquí queda s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cef34cfaff9b"
+      "hash": "35ad722f37cf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/EscribirIndiceDni.tsx",
@@ -172270,7 +172621,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "56d7eb3eb7f9"
+      "hash": "3a09aeba22c4"
     },
     {
       "ruta": "packages/core-fiscal/src/es/aeat.ts",
@@ -177566,6 +177917,57 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "031a2257a440"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/codigo-whatsapp.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "El CÓDIGO DE ACCESO del presupuesto que Alberto manda a mano por WhatsApp (07/10/2026). Por qué existe: el presupuesto se abre y se firma con un código, y el de siempre va SOLO al correo. Sin correo en la ficha no había puerta. Este código lo genera asegura al abrir el WhatsApp, viaja DENTRO del men",
+      "exporta": [
+        "formatoCodigoWhatsapp",
+        "hashCodigoWhatsapp",
+        "estadoCodigoWhatsapp",
+        "intentosQuedan"
+      ],
+      "funciones": [
+        {
+          "nombre": "formatoCodigoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: unknown",
+          "retorno": "codigo is string",
+          "linea": 29
+        },
+        {
+          "nombre": "hashCodigoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, codigo: string",
+          "retorno": "Promise<string>",
+          "linea": 34,
+          "resumen": "El hash que se guarda (y con el que se compara). Atado al token del enlace: ver la cabecera."
+        },
+        {
+          "nombre": "estadoCodigoWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "g: CodigoWhatsappGuardado, entradaHash: string, ahora: Date",
+          "retorno": "EstadoCodigoWhatsapp",
+          "linea": 56,
+          "resumen": "El desenlace de un intento. `entradaHash` = `hashCodigoWhatsapp(token, lo tecleado)`. 🚨 `sin_codigo` NO es «incorrecto»: no hay nada con qué comparar, y un hash nulo o con forma rara jamás puede dar "
+        },
+        {
+          "nombre": "intentosQuedan",
+          "kind": "function",
+          "exportada": true,
+          "params": "intentosTrasFallo: number",
+          "retorno": "number",
+          "linea": 64,
+          "resumen": "Los intentos que le quedan tras un fallo (para el texto «te quedan N»)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "88b3b5f44e5d"
     },
     {
       "ruta": "packages/module-seguros-portal/src/consentimiento.ts",
@@ -189275,7 +189677,7 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "string | null",
-          "linea": 36,
+          "linea": 41,
           "resumen": "La línea de «me faltan N datos tuyos», o `null` si no hay que decirla."
         },
         {
@@ -189284,7 +189686,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 41
+          "linea": 46
         },
         {
           "nombre": "saludo",
@@ -189292,15 +189694,16 @@
           "exportada": false,
           "params": "nombre: string | null",
           "retorno": "string",
-          "linea": 45
+          "linea": 50
         },
         {
           "nombre": "mensajePresupuestoWhatsapp",
           "kind": "function",
           "exportada": true,
-          "params": "d: DatosAvisoPresupuesto",
+          "params": "d: DatosAvisoPresupuesto & { codigo: string }",
           "retorno": "string",
-          "linea": 50
+          "linea": 61,
+          "resumen": "El WhatsApp que Alberto manda a mano. Lleva el CÓDIGO DE ACCESO propio de este presupuesto (`codigo-whatsapp.ts` de module-seguros-portal): lo pide el enlace para abrirlo y para firmar. Va ANTES del e"
         },
         {
           "nombre": "escapar",
@@ -189308,7 +189711,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 60
+          "linea": 73
         },
         {
           "nombre": "correoPresupuesto",
@@ -189316,12 +189719,12 @@
           "exportada": true,
           "params": "d: DatosAvisoPresupuesto",
           "retorno": "CorreoPresupuesto",
-          "linea": 72
+          "linea": 85
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1588016d4e5d"
+      "hash": "6b7249c80e52"
     },
     {
       "ruta": "packages/module-seguros/src/mensaje-recibo-devuelto.ts",
@@ -192645,7 +193048,8 @@
       "exporta": [
         "aE164",
         "esTelefonoValido",
-        "variantesIndiceTelefono"
+        "variantesIndiceTelefono",
+        "esMovilWhatsapp"
       ],
       "funciones": [
         {
@@ -192673,11 +193077,20 @@
           "retorno": "string[]",
           "linea": 39,
           "resumen": "Las cadenas de DÍGITOS con las que puede estar guardado ese teléfono en el índice ciego (`telefono_lookup_hash` = HMAC de solo-dígitos, sin normalizar el prefijo): `34600112233` y `600112233` son hash"
+        },
+        {
+          "nombre": "esMovilWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined, region: CountryCode = REGION_POR_DEFECTO",
+          "retorno": "boolean",
+          "linea": 60,
+          "resumen": "¿Se le puede mandar un WhatsApp a este número? (07/10/2026: el presupuesto por WhatsApp sin correo en la ficha.) Válido y, si es español, MÓVIL (6xx/7xx): a un fijo no le llega nada. Un extranjero vál"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "710b9dc4678a"
+      "hash": "b866eea54270"
     },
     {
       "ruta": "packages/module-seguros/src/telefonos-companias.ts",
@@ -197224,7 +197637,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 44
+          "linea": 47
         },
         {
           "nombre": "texto",
@@ -197232,7 +197645,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], max = 300",
           "retorno": "string | null",
-          "linea": 46
+          "linea": 49
         },
         {
           "nombre": "importe",
@@ -197240,7 +197653,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], permitirCero = false",
           "retorno": "number | null",
-          "linea": 53,
+          "linea": 56,
           "resumen": "Importe en euros (número, no texto). `permitirCero`: 0 es un dato válido (p. ej. sin existencias)."
         },
         {
@@ -197249,7 +197662,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], min: number, max: number",
           "retorno": "number | null",
-          "linea": 63
+          "linea": 66
         },
         {
           "nombre": "booleano",
@@ -197257,7 +197670,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "boolean | null",
-          "linea": 70
+          "linea": 73
         },
         {
           "nombre": "validarFormularioComercio",
@@ -197265,12 +197678,12 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFormularioComercio",
-          "linea": 76
+          "linea": 79
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4b95a8cda202"
+      "hash": "a3cc69cd9b84"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-rc.ts",
@@ -197702,13 +198115,14 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1ebe6012665"
+      "hash": "0e90fe9927f9"
     },
     {
       "ruta": "packages/module-tarificacion/src/guard-emision.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "TARIFICAR ≠ EMITIR (05/10/2026). El bot entra en portales donde, a dos clics de la cotización, está el botón que CONTRATA una póliza de verdad a nombre de un cliente. Este guard es la barrera: si la URL a la que se navega o el botón que se va a pulsar casa con el patrón, el trabajo se aborta como `e",
       "exporta": [
+        "decodificarUrlTolerante",
         "pareceEmision",
         "comprobarUrl",
         "comprobarBoton"
@@ -197720,8 +198134,17 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 52,
+          "linea": 63,
           "resumen": "Quita tildes para que «Emisión» o «Formalización» no se escapen por un acento."
+        },
+        {
+          "nombre": "decodificarUrlTolerante",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 70,
+          "resumen": "Decodifica %-secuencias UTF-8 válidas UNA A UNA: una secuencia mal formada (`%E0%A4%A`) no apaga la decodificación del resto (fail-closed)."
         },
         {
           "nombre": "pareceEmision",
@@ -197729,7 +198152,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 56
+          "linea": 80
         },
         {
           "nombre": "comprobarUrl",
@@ -197737,7 +198160,7 @@
           "exportada": true,
           "params": "url: string, opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 70,
+          "linea": 90,
           "resumen": "Lanza si la URL casa con el patrón."
         },
         {
@@ -197746,13 +198169,13 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[], opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 79,
+          "linea": 99,
           "resumen": "Lanza si el botón a pulsar casa con el patrón. Se mira TODO lo que lo describe (texto visible, `aria-label`, `title`, `value`, `id`, `name`, `href`): un botón con icono y `id=\"btnEmitir\"` también es e"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2bfbfaba8ce6"
+      "hash": "b7b896f88cf3"
     },
     {
       "ruta": "packages/module-tarificacion/src/importes.ts",
@@ -198192,6 +198615,92 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "083aa79cb54f"
+    },
+    {
+      "ruta": "packages/module-tarificacion/src/tomador.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Bloque canónico del TOMADOR (08/10/2026). PURO: ni BD, ni red. Reutilizable por los formularios canónicos (hoy `formulario-comercio.ts`; Comunidades conserva sus `documentoIdentidad`/`tipoDocumento` sueltos en `riesgo.ts`). Persona física: nombre + primer apellido + documento (DNI/NIE) + fecha de na",
+      "exporta": [
+        "normalizarDocumento",
+        "esDniNie",
+        "esCif",
+        "normalizarTelefono",
+        "validarTomador"
+      ],
+      "funciones": [
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 33
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], max = 200",
+          "retorno": "string | null",
+          "linea": 35
+        },
+        {
+          "nombre": "normalizarDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: string",
+          "retorno": "string",
+          "linea": 44,
+          "resumen": "Normaliza un documento: mayúsculas, sin espacios, puntos ni guiones."
+        },
+        {
+          "nombre": "esDniNie",
+          "kind": "function",
+          "exportada": true,
+          "params": "doc: string",
+          "retorno": "boolean",
+          "linea": 49,
+          "resumen": "DNI (8 dígitos + letra) o NIE (X/Y/Z + 7 dígitos + letra) con la letra de control correcta."
+        },
+        {
+          "nombre": "esCif",
+          "kind": "function",
+          "exportada": true,
+          "params": "doc: string",
+          "retorno": "boolean",
+          "linea": 59,
+          "resumen": "CIF (letra + 7 dígitos + control dígito/letra según el tipo de entidad)."
+        },
+        {
+          "nombre": "fechaIsoReal",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "boolean",
+          "linea": 74,
+          "resumen": "Fecha ISO real (no 31/02) → `true`."
+        },
+        {
+          "nombre": "normalizarTelefono",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "string | null",
+          "linea": 82,
+          "resumen": "Teléfono español: 9 dígitos que empiezan por 6-9 (admite +34/0034 y separadores)."
+        },
+        {
+          "nombre": "validarTomador",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: unknown, hoy: Date = new Date(), prefijo = 'tomador'",
+          "retorno": "ValidacionTomador",
+          "linea": 89
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e04ee0f824cd"
     },
     {
       "ruta": "packages/module-trading/src/backtest.ts",
@@ -199981,7 +200490,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4442,
-    "funciones": 15756
+    "archivos": 4450,
+    "funciones": 15799
   }
 }
