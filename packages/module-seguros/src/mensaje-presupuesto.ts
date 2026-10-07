@@ -50,8 +50,8 @@ function saludo(nombre: string | null): string {
 export function mensajePresupuestoWhatsapp(d: DatosAvisoPresupuesto): string {
   return [
     `${saludo(d.nombre)}. Soy Alberto, de Grupo ASegura.`,
-    `Te he preparado un presupuesto de seguro. Lo puedes ver aquí: ${d.enlace}`,
-    `Para abrirlo entra con tu correo ${d.email}: te llegará un código.`,
+    `Te he preparado un presupuesto de seguro. Al abrir el enlace te pedirá un código de acceso de 6 dígitos, que te llegará por correo a ${d.email}.`,
+    `Lo puedes ver aquí: ${d.enlace}`,
     `Es válido hasta el ${fechaEs(d.venceEl)}. Cualquier duda, me dices.`,
     lineaDatosQueFaltan(d.faltanDatos),
   ].filter((l): l is string => l !== null).join('\n\n')

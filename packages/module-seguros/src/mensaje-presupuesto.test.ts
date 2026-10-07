@@ -21,6 +21,14 @@ test('el WhatsApp dice con qué correo entrar; sin nombre saluda sin «null»', 
   assert.doesNotMatch(mensajePresupuestoWhatsapp({ ...d, nombre: '  ' }), /null|undefined/)
 })
 
+test('🪤 el WhatsApp avisa ANTES del enlace del código de 6 dígitos, por correo, y de la fecha', () => {
+  const w = mensajePresupuestoWhatsapp(d)
+  assert.ok(w.indexOf('código de acceso de 6 dígitos') < w.indexOf(d.enlace))
+  assert.match(w, /por correo a jose@x\.es/)
+  assert.match(w, /08\/10\/2026/)
+  assert.match(w, /Grupo ASegura/)
+})
+
 test('el HTML del correo escapa el enlace', () => {
   assert.match(correoPresupuesto({ ...d, enlace: 'https://x.es/p/"><b>' }).html, /&quot;&gt;&lt;b&gt;/)
 })
