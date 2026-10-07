@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(07/10/2026)** — Correduría · Compañías rediseñada: lista plegable por compañía (`companias/ListaCompanias.tsx`, perezosa, 50 + «Ver más», orden por pólizas vivas) y panel «Objetivos y producción» (`PanelControl.tsx`): por ramo, compañías con acuerdo, comisión NP/cartera, cartera en vigor y avance al objetivo + compañía recomendada (mejor comisión NP; empate ≤1 pt → objetivo más avanzado; sin cotejar = «Provisional»). Chips arreglados (`Chip` en `AcuerdosVista.tsx`). Helper puro `module-seguros/acuerdos-control.ts` (+test, cepo visto fallar). Datos: `apps/asegura/lib/acuerdos-productividad.ts` devuelve `cartera` compañía×ramo con `WHERE_CARTERA_EN_VIGOR` → **hay que desplegar asegura para que el panel tenga cifras**. Pendiente: `clave_id` NULL en acuerdos APROMES → objetivos sin avance; ramos de acuerdo sin mapear no cruzan.
+
 **(06/10/2026)** — Tarificador RPA: creada la guía viva `docs/TARIFICADOR-RPA.md` (arquitectura, DOM de ePAC Comunidades, precio verificado 347,55/342,77 €, seguridad, formador, renovaciones, grabador, fichas, env, SQL, rutina «Médico del bot», decisiones de Alberto y plan). Enlazada desde `apps/asegura/CLAUDE.md`, skill `correduria-crm` y el README del servicio.
 Decisiones: Allianz NO se avisa; nunca desplegar imagen desde rama sin OK. Plan: 1) cotización real Allianz desde Oportunidades, 2) Comunidades con Occident vía grabador, 3) RC Occident, 4) Comercio.
 Pendiente: validar umbrales de infraseguro (1.100/1.400/1.800 €/m²), revisar 13 pólizas Allianz sin prima, rotar contraseña de Occident.

@@ -17,9 +17,12 @@
 
 import {
   WHERE_CARTERA_VIVA,
+  WHERE_CARTERA_EN_VIGOR,
+  agregarCarteraVigor,
   evaluarObjetivo,
   produccionPorCompania,
   type EstadoObjetivo,
+  type FilaCartera,
   type ProduccionCompania,
   type ReciboProduccion,
 } from '@central/module-seguros'
@@ -51,6 +54,10 @@ export type ProductividadCartera =
       sinCompania: number
       produccion: ProduccionCompania[]
       objetivos: ObjetivoEvaluado[]
+      /** Cartera EN VIGOR de hoy por compañía × ramo (`esCarteraEnVigor`), para el panel de control. */
+      cartera: FilaCartera[]
+      /** Pólizas en vigor sin código DGS (o sin ramo): no se asignan a ninguna compañía. */
+      carteraSinCompania: number
     }
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null)
@@ -97,6 +104,17 @@ export async function productividadCartera(correduriaId: string, anio: number, h
       orderBy: { fechaEfectoActual: 'desc' },
       take: LIMITE_RECIBOS_PRODUCTIVIDAD + 1,
     })
+    // Cartera de HOY (otra pregunta que la producción del periodo, spec §3.1): pólizas en vigor.
+    const vigor = await prismaAsegura().poliza.findMany({
+      where: { AND: [{ correduriaId, mergedIntoPolizaId: null }, WHERE_CARTERA_EN_VIGOR] },
+      select: { codigoEntidadDgs: true, tipo: true, primaAnual: true },
+    })
+    const carteraVigor = agregarCarteraVigor(vigor.map((p) => ({
+      companiaCodigoDgs: p.codigoEntidadDgs,
+      ramo: p.tipo,
+      primaAnual: p.primaAnual === null ? null : Number(p.primaAnual.toString()),
+    })))
+
     const truncado = filas.length > LIMITE_RECIBOS_PRODUCTIVIDAD
     const leidas = truncado ? filas.slice(0, LIMITE_RECIBOS_PRODUCTIVIDAD) : filas
 
@@ -154,6 +172,8 @@ export async function productividadCartera(correduriaId: string, anio: number, h
       sinCompania,
       produccion: produccionPorCompania(recibos, periodo),
       objetivos,
+      cartera: carteraVigor.filas,
+      carteraSinCompania: carteraVigor.sinCompania + carteraVigor.sinRamo,
     }
   } catch (e) {
     return { estado: 'error', causa: registrarErrorCartera('operador/companias/productividad', e) }
