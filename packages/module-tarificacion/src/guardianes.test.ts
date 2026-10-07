@@ -19,6 +19,23 @@ import {
   nombresCredencial,
 } from './index.ts'
 
+describe('guard de emisión · Allianz RC PYME (07/10/2026)', () => {
+  it.each(['menu3', 'menu4', 'menu5', 'MENU5', 'btnAccept', 'btnFracciona', 'Pago fraccionado', 'Proyecto ampliado', 'Datos emisión', 'Archivar', 'emision_ipid()'])(
+    'bloquea «%s»',
+    (d) => {
+      expect(pareceEmision(d)).toBe(true)
+      // ni siquiera con el permiso de «Aceptar» (el de Datos Básicos de Comunidades): lo prohibido sigue prohibido
+      if (d !== 'btnAccept') expect(() => comprobarBoton([null, d])).toThrow(EmisionBloqueadaError)
+    },
+  )
+  it('btnAccept sigue bloqueado aunque se permita «Aceptar»', () => {
+    expect(() => comprobarBoton(['btnAccept'], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+  })
+  it.each(['menu1', 'menu2', 'menu6', 'btnRetarifa', 'Datos básicos', 'Proyecto', 'IPID', 'Nueva Alta'])('deja pasar «%s»', (d) => {
+    expect(pareceEmision(d)).toBe(false)
+  })
+})
+
 describe('guard de emisión', () => {
   it.each([
     'https://epac.allianz.es/poliza/emitir?id=1',

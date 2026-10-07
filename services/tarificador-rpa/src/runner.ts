@@ -8,6 +8,8 @@
 // aleatorios y desde un contexto NUEVO (sin cookies). Nunca datos/credenciales/captcha/emisión/guard; `infra` lo
 // reintenta ya el orquestador con otra máquina. El intento queda en los avisos (ok) o en el mensaje (error).
 // Sesión (src/sesion.ts): el storageState de ePAC solo en MEMORIA, TTL 10 min, invalidado ante cualquier fallo.
+// Sesión MANUAL (07/10/2026, src/sesion-manual.ts; Generali, SMS en el acceso): sin credenciales; solo la sesión que
+// inició Alberto, sellada AES-GCM en asegura. Sin ella o rechazada → requiere_humano y aviso; el robot nunca hace login.
 //
 // 🚨 TARIFICAR ≠ EMITIR (guard.ts). 🔑 Credenciales solo de fly secrets, solo en memoria, sin tracing
 //    (nunca se arranca `context.tracing`) y con todo lo que sale pasado por el redactor.
@@ -27,13 +29,16 @@ import {
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
-import { ErrorTarificador, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, type Clasificacion } from './errores.ts'
+import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, type Clasificacion } from './errores.ts'
 import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { htmlConMarcos } from './evidencia.ts'
 import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
-import { enSerie, sesionEpac } from './sesion.ts'
+import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
+import { textoAvisoSesionManual } from './aviso.ts'
+import { caducidadMaximaMs, claveSesion } from './boveda-sesion.ts'
+import { GestorSesionManual, almacenHttp } from './sesion-manual.ts'
 import type { AdaptadorPortal, ContextoPortal } from './adaptador.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
@@ -55,7 +60,28 @@ type Intento =
   | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] }
   | { ok: false; c: Clasificacion; evidencia: Evidencia }
 
+/**
+ * De dónde sale y a dónde vuelve la sesión del navegador en un intento.
+ * · ePAC (por defecto): caché en MEMORIA del proceso (sesion.ts), invalidada ante cualquier fallo.
+ * · manual (Generali): la sesión que inició Alberto (sesion-manual.ts); se BORRA solo si el portal la rechaza.
+ */
+type FuenteSesion = {
+  manual: boolean
+  previa: () => EstadoNavegador | null
+  alExito: (estado: EstadoNavegador) => Promise<void>
+  /** `rechazada` = el portal devolvió al login o pidió código con esta sesión. */
+  alFallo: (rechazada: boolean) => Promise<void>
+}
+
+const fuenteEpac: FuenteSesion = {
+  manual: false,
+  previa: () => sesionEpac.obtener(),
+  alExito: async (e) => sesionEpac.guardar(e),
+  alFallo: async () => sesionEpac.invalidar(),
+}
+
 type Comun = {
+  sesion: FuenteSesion
   trabajoId: string
   compania: string
   adaptador: AdaptadorPortal
@@ -69,7 +95,7 @@ type Comun = {
 async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Intento> {
   const { log } = k
   const pdfs: { nombre: string; base64: string }[] = []
-  const previa = sesionEpac.obtener()
+  const previa = k.sesion.previa()
   // Contexto LIMPIO por intento; solo lleva cookies si hay una sesión viva en memoria (nunca de disco).
   const context = await browser.newContext({
     locale: 'es-ES',
@@ -95,6 +121,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       pausa: () => dormir(azar(PAUSA_MIN_MS, PAUSA_MAX_MS)),
       pausaAccion: () => dormir(azar(PAUSA_ACCION_MIN_MS, PAUSA_ACCION_MAX_MS)),
       sesionReutilizada: previa !== null,
+      sesionManual: k.sesion.manual,
       trasLogin: async () => {
         logueado = true
         log('tras_login')
@@ -136,11 +163,10 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     if (resultado && !error) {
       // Sesión buena: se guarda EN MEMORIA (sin `path`: nunca a disco) para el siguiente trabajo de este proceso.
       const estado = await context.storageState().catch(() => null)
-      if (estado) sesionEpac.guardar(estado)
+      if (estado) await k.sesion.alExito(estado).catch(() => log('sesion_no_guardada'))
       return { ok: true, ofertas: resultado.ofertas, pdfs }
     }
 
-    sesionEpac.invalidar()
     const loginVisible = await page
       .locator('input[type="password"]')
       .filter({ visible: true })
@@ -150,13 +176,18 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     if (clasificar(error).tipo === 'portal') {
       await exigirSinVerificacion(page, k.compania).catch((e: unknown) => { error = e })
     }
+    // Sesión manual que el portal rechaza (vuelta al login o pantalla de código): se borra y requiere_humano. El robot
+    // nunca reintenta ni hace login aquí: eso pediría otro SMS.
+    const rechazada = k.sesion.manual && (loginVisible || error instanceof ErrorVerificacionHumana)
+    if (rechazada) error = new ErrorVerificacionHumana(k.compania, textoAvisoSesionManual(k.compania))
+    await k.sesion.alFallo(rechazada).catch(() => log('sesion_no_borrada'))
     const c = clasificarIntento(error, { logueado, loginVisible, ultimo5xx })
     const captura = await page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null)
     // Con el HTML de los marcos: el formulario de ePAC vive en el iframe `appArea`.
     const html = await htmlConMarcos(page, 2 * 1024 * 1024).catch(() => null)
     return { ok: false, c, evidencia: { url: page.url(), captura, html } }
   } catch (e) {
-    sesionEpac.invalidar()
+    await k.sesion.alFallo(false).catch(() => undefined)
     throw e
   } finally {
     await context.close().catch(() => undefined)
@@ -211,16 +242,51 @@ async function main(): Promise<number> {
     await fallo('datos', `riesgo inválido: ${v.errores.join('; ')}`)
     return 1
   }
-  let credenciales: Credenciales
-  try {
-    const n = nombresCredencial(adaptador.credencial)
-    const usuario = env[n.usuario] ?? ''
-    const contrasena = env[n.contrasena] ?? ''
-    if (!usuario || !contrasena) throw new Error(`faltan los fly secrets ${n.usuario} / ${n.contrasena}`)
-    credenciales = { usuario, contrasena }
-  } catch (e) {
-    await fallo('credenciales', e instanceof Error ? e.message : String(e))
-    return 1
+  // Portal de sesión MANUAL (SMS en el acceso): sin credenciales, solo la sesión sellada que inició Alberto. Sin ella,
+  // requiere_humano SIN abrir el navegador (intentar entrar pediría otro SMS).
+  let fuente: FuenteSesion = fuenteEpac
+  if (adaptador.sesion === 'manual') {
+    let gestor: GestorSesionManual
+    try {
+      gestor = new GestorSesionManual(almacenHttp(cfg), { clave: claveSesion(env), maxMs: caducidadMaximaMs(env) })
+    } catch (e) {
+      await fallo('credenciales', e instanceof Error ? e.message : String(e))
+      return 1
+    }
+    const carga = await gestor.cargar(trabajo.compania).catch((e: unknown) => ({ estado: 'error' as const, e }))
+    if (carga.estado === 'error') {
+      // Almacén caído ≠ «no hay sesión»: infraestructura (el orquestador lo reintenta), no un aviso a Alberto.
+      const c = clasificar(carga.e)
+      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo: c.tipo === 'portal' ? 'infra' : c.tipo, mensaje: redactar(c.mensaje).slice(0, 2000), url: null } })
+      return 1
+    }
+    if (carga.estado === 'falta') {
+      const e = new ErrorVerificacionHumana(trabajo.compania, textoAvisoSesionManual(trabajo.compania))
+      log('requiere_verificacion_humana', { compania: trabajo.compania, sesion: carga.motivo })
+      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo: e.tipo, mensaje: e.message, url: null } })
+      return 1
+    }
+    const sesion = carga.sesion
+    fuente = {
+      manual: true,
+      previa: () => sesion.valor,
+      alExito: (estado) => gestor.refrescar(trabajo.compania, estado, sesion.caduca),
+      alFallo: async (rechazada) => { if (rechazada) await gestor.invalidar(trabajo.compania) },
+    }
+  }
+
+  let credenciales: Credenciales = { usuario: '', contrasena: '' }
+  if (!fuente.manual) {
+    try {
+      const n = nombresCredencial(adaptador.credencial)
+      const usuario = env[n.usuario] ?? ''
+      const contrasena = env[n.contrasena] ?? ''
+      if (!usuario || !contrasena) throw new Error(`faltan los fly secrets ${n.usuario} / ${n.contrasena}`)
+      credenciales = { usuario, contrasena }
+    } catch (e) {
+      await fallo('credenciales', e instanceof Error ? e.message : String(e))
+      return 1
+    }
   }
 
   // Formador con IA: lo enciende asegura (`TARIFICADOR_FORMADOR_ACTIVO`); si no responde, apagado.
@@ -239,7 +305,7 @@ async function main(): Promise<number> {
   }, Math.max(limite - Date.now(), 60_000) + 45_000)
   respaldo.unref()
 
-  const k: Comun = { trabajoId: trabajo.id, compania: trabajo.compania, adaptador, riesgo: v.riesgo, credenciales, formador, log }
+  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, riesgo: v.riesgo, credenciales, formador, log }
 
   // Un trabajo a la vez por proceso (hoy la máquina solo hace uno; si atiende varios, siguen en serie).
   return enSerie(async () => {
