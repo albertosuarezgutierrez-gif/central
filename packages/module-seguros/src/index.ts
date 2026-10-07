@@ -1435,3 +1435,9 @@ export type {
   RamoControl,
   PanelControl,
 } from './acuerdos-control.ts'
+export {
+  figurasDePeticion, identidadPersona, nombresParaEtiquetas, etiquetaEscenario, seguroAnteriorDePeticion, textoSeguroAnterior,
+  coberturasClave, ordenarEscenarios, mensajePropuestaWhatsapp, correoPropuesta, MAX_COBERTURAS_CLAVE,
+  type PersonaEscenario, type FigurasEscenario, type SeguroAnteriorEscenario, type OpcionEscenario, type EscenarioEntrada,
+  type EscenarioOrdenado, type DatosAvisoPropuesta, type DatosWhatsappPropuesta,
+} from './propuesta-escenarios.ts'

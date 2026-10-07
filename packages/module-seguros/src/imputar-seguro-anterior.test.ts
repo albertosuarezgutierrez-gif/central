@@ -188,3 +188,21 @@ test('código DGS por nombre: solo si encaja con UNA', () => {
   assert.equal(codigoDgsPorNombre(cat, 'Generali'), null)
   assert.equal(codigoDgsPorNombre([...cat, { codigoDgs: 'M0083', nombreComun: 'Mapfre' }], 'Mapfre'), null)
 })
+
+test('cónyuge: se ofrece, pero la regla automática NUNCA la elige; solo si la elige el corredor', () => {
+  const suya = cand({ id: 'poliza:suya', clienteId: 'c2', delConyuge: 'Ana Ruiz', seguro: seguro({ fechaEfecto: '2005-01-01', numeroPoliza: '7000000003' }) })
+  const ajena = cand({ id: 'poliza:ajena', clienteId: 'c3', seguro: seguro({ fechaEfecto: '2001-01-01' }) })
+  const auto = elegirSeguroAnteriorParaImputar([suya, ajena, coche], 'auto', { clienteId: 'c1' })
+  assert.ok(auto.estado === 'ok')
+  if (auto.estado !== 'ok') return
+  assert.equal(auto.elegida?.id, 'poliza:coche', 'aunque la del cónyuge sea más antigua')
+  assert.deepEqual(auto.alternativas.map(a => a.id), ['poliza:suya'], 'la ajena sin vínculo no entra')
+  assert.deepEqual(auto.descartadas.map(d => d.id), ['poliza:ajena'])
+  assert.equal(candidataPublica(auto.alternativas[0]).delConyuge, 'Ana Ruiz')
+
+  const sola = elegirSeguroAnteriorParaImputar([suya], 'auto', { clienteId: 'c1' })
+  assert.ok(sola.estado === 'ok' && sola.elegida === null && sola.alternativas.length === 1, 'sin propias: no se imputa la del cónyuge sola')
+
+  const a_mano = elegirSeguroAnteriorParaImputar([suya, coche], 'auto', { clienteId: 'c1', elegidaId: 'poliza:suya' })
+  assert.ok(a_mano.estado === 'ok' && a_mano.elegida?.id === 'poliza:suya' && a_mano.avisos.some(a => /cónyuge/.test(a)))
+})

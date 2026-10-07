@@ -39,6 +39,7 @@ import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
 import { fechaEfectoDe } from './presupuesto'
 import { admiteCodeoscopic, decidirSalida } from './presupuesto-origen'
 import { movilDeFicha } from './presupuesto-codigo-whatsapp'
+import type { BarreraLote, ResultadoCorreoLote } from './barrera-lote'
 
 export type CanalAviso = 'email' | 'whatsapp_enlace'
 
@@ -47,10 +48,23 @@ export type FalloEnvio =
   /** Origen `ofertas`: alguna opción no sale de una oferta REVISADA. `origen_desconocido`: no se sabe de dónde salen los precios. */
   | 'sin_revisar' | 'origen_desconocido'
   | 'sin_proveedor' | 'remitente_no_verificado' | 'rechazado'
+  /** Aviso de un LOTE (propuesta de escenarios): otro presupuesto del lote no pudo salir, así que no sale ninguno. */
+  | 'lote_cancelado'
+
+/**
+ * Lo que un presupuesto aporta al correo ÚNICO de su lote (`lib/barrera-lote.ts`): su enlace y a quién va.
+ * Se une a la barrera EXACTAMENTE donde mandaría su correo (tras el compare-and-swap y la llave directa).
+ */
+export type ParteLote = { presupuestoId: string; clienteId: string; email: string; nombre: string | null; enlace: string; venceEl: Date }
 
 export type ResultadoEnvio =
   | { estado: 'enviado'; email: string; venceEl: string }
-  | { estado: 'enlace'; mensaje: string; whatsapp: string }
+  /**
+   * `enlace`, `email` y `venceEl` van aparte para que el LOTE componga un único mensaje con varios escenarios.
+   * `email` null = por WhatsApp no se le nombra ningún correo (entra con el código que va en `mensaje`).
+   * `codigo` es el código de acceso de ESTE enlace (el mismo que ya va en `mensaje`): el lote lo pone junto a su enlace.
+   */
+  | { estado: 'enlace'; mensaje: string; whatsapp: string; enlace: string; email: string | null; venceEl: string; codigo: string }
   | { estado: 'confirmado'; venceEl: string }
   | { estado: 'error'; motivo: FalloEnvio; detalle: string }
 
@@ -76,7 +90,9 @@ export function enlacePresupuesto(
   return url.toString()
 }
 
-function error(motivo: FalloEnvio, detalle: string): ResultadoEnvio {
+type ErrorEnvio = Extract<ResultadoEnvio, { estado: 'error' }>
+
+function error(motivo: FalloEnvio, detalle: string): ErrorEnvio {
   return { estado: 'error', motivo, detalle }
 }
 
@@ -101,14 +117,24 @@ const TEXTO_SIN_EMAIL: Record<string, string> = {
   ilegible: 'El correo de la ficha no se puede descifrar (PII_ENCRYPTION_KEY). Se arregla en Vercel, no llamando al cliente.',
 }
 
+type EntradaAviso = { id: string; canal: CanalAviso; actor: string }
+
 export async function avisarPresupuesto(
   correduriaId: string,
-  entrada: { id: string; canal: CanalAviso; actor: string },
+  entrada: EntradaAviso & {
+    /** Solo correo: este presupuesto es parte de un LOTE y su correo sale JUNTO con el de los demás (uno solo). */
+    lote?: BarreraLote<ParteLote>
+  },
   ahora: Date = new Date(),
 ): Promise<ResultadoEnvio> {
-  const db = prismaAsegura()
-  const p = await db.presupuesto.findFirst({
-    where: { id: entrada.id, correduriaId },
+  const prep = await prepararAviso(correduriaId, entrada, ahora)
+  if (prep.estado === 'error') return prep
+  return ejecutarAviso(prep, entrada.lote ?? null)
+}
+
+function leerFilaAviso(correduriaId: string, id: string) {
+  return prismaAsegura().presupuesto.findFirst({
+    where: { id, correduriaId },
     select: {
       id: true, clienteId: true, tarificacionId: true, origen: true, oportunidadId: true, tokenHash: true, canalAviso: true, creadoAt: true, venceEl: true,
       whatsappCodigoHash: true, whatsappCodigoIntentos: true,
@@ -116,6 +142,31 @@ export async function avisarPresupuesto(
       necesidades: true,
     },
   })
+}
+
+/**
+ * Un aviso que ha pasado TODAS las guardas y aún no ha escrito nada: token, código y enlace ya generados
+ * en memoria. El LOTE prepara todos sus presupuestos antes de que ninguno rote su llave (`propuesta-escenarios.ts`).
+ */
+export type AvisoPreparado = {
+  estado: 'preparado'
+  correduriaId: string
+  entrada: EntradaAviso
+  ahora: Date
+  p: NonNullable<Awaited<ReturnType<typeof leerFilaAviso>>>
+  token: string
+  codigoWhatsapp: string | null
+  enlace: string
+  venceSiSale: Date
+  nombre: string | null
+  emailAcceso: string | null
+  datos: { nombre: string | null; enlace: string; venceEl: Date; email: string | null; faltanDatos: number | null }
+}
+
+/** Fase 1: SOLO LEE. Todas las guardas; ninguna escritura. */
+export async function prepararAviso(correduriaId: string, entrada: EntradaAviso, ahora: Date = new Date()): Promise<AvisoPreparado | ErrorEnvio> {
+  const db = prismaAsegura()
+  const p = await leerFilaAviso(correduriaId, entrada.id)
   if (!p) return error('no_encontrado', 'Ese presupuesto no existe en esta correduría.')
   const estado = estadoPresupuesto(p, ahora)
   if (!AVISABLE.has(estado)) return error('no_enviable', `Está ${estado}: ya no se le avisa. Prepara otro si hace falta.`)
@@ -186,6 +237,22 @@ export async function avisarPresupuesto(
     ? null
     : await datosParaEmitir(correduriaId, p.clienteId).then((r) => r?.faltanCliente ?? null).catch(() => null)
   const datos = { nombre, enlace, venceEl: venceSiSale, email: emailAcceso, faltanDatos }
+  return {
+    estado: 'preparado', correduriaId, entrada: { id: entrada.id, canal: entrada.canal, actor: entrada.actor }, ahora,
+    p, token, codigoWhatsapp, enlace, venceSiSale, nombre, emailAcceso, datos,
+  }
+}
+
+/** Lo que `ejecutarAviso` escribe: el cliente de siempre o la transacción del lote de WhatsApp. */
+export type DbAviso = Pick<ReturnType<typeof prismaAsegura>, 'presupuesto' | 'presupuestoEvento'>
+
+/**
+ * Fase 2: escribe. Compare-and-swap del token y, según canal, sello del enlace o envío del correo.
+ * `lote`: solo correo, se une a la barrera en vez de mandar el suyo. `db`: el lote de WhatsApp pasa su
+ * transacción, para que un compare-and-swap perdido deshaga las rotaciones de los demás.
+ */
+export async function ejecutarAviso(prep: AvisoPreparado, lote: BarreraLote<ParteLote> | null = null, db: DbAviso = prismaAsegura()): Promise<ResultadoEnvio> {
+  const { correduriaId, entrada, ahora, p, token, codigoWhatsapp, enlace, venceSiSale, nombre, emailAcceso, datos } = prep
 
   // Compare-and-swap sobre el hash anterior: el segundo clic no encuentra la fila.
   const nuevoHash = await hashTokenVista(token)
@@ -210,7 +277,7 @@ export async function avisarPresupuesto(
       data: { presupuestoId: p.id, tipo: 'enlace_generado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'whatsapp_enlace' } },
     })
     // Sin número: WhatsApp le deja elegir el chat. El número del hogar no identifica a nadie.
-    return { estado: 'enlace', mensaje, whatsapp: `https://wa.me/?text=${encodeURIComponent(mensaje)}` }
+    return { estado: 'enlace', mensaje, whatsapp: `https://wa.me/?text=${encodeURIComponent(mensaje)}`, enlace, email: emailAcceso, venceEl: venceSiSale.toISOString(), codigo: codigoWhatsapp! }
   }
 
   // Acceso directo a la intranet (un solo uso, 24 h): el botón entra sin código y cae en la carátula,
@@ -218,7 +285,8 @@ export async function avisarPresupuesto(
   // Por correo `emailAcceso` es SIEMPRE el de la ficha: sin él se cortó arriba, antes de escribir.
   const correo = emailAcceso as string
   const directo = await enlaceDirectoPresupuesto(correduriaId, p.clienteId, correo, enlace)
-  const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', correo, correoPresupuesto({ ...datos, enlaceDirecto: directo }))
+  const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', correo, correoPresupuesto({ ...datos, enlaceDirecto: directo }),
+    lote ? { barrera: lote, parte: { presupuestoId: p.id, clienteId: p.clienteId, email: correo, nombre, enlace: directo ?? enlace, venceEl: venceSiSale } } : null)
   if (envio !== 'enviado') {
     // No salió: se devuelve la llave anterior para que el enlace que el cliente ya tuviera siga abriendo.
     await db.presupuesto.updateMany({ where: { id: p.id, tokenHash: nuevoHash }, data: { tokenHash: p.tokenHash, canalAviso: p.canalAviso, whatsappCodigoHash: p.whatsappCodigoHash, whatsappCodigoIntentos: p.whatsappCodigoIntentos } })
@@ -227,6 +295,7 @@ export async function avisarPresupuesto(
     })
     if (envio === 'sin_proveedor') return error('sin_proveedor', 'No hay proveedor de correo configurado en asegura. No ha salido nada.')
     if (envio === 'remitente_no_verificado') return error('remitente_no_verificado', MOTIVO_REMITENTE)
+    if (envio === 'cancelado') return error('lote_cancelado', 'Otro escenario de la propuesta no se podía avisar, así que no ha salido ninguno. Este presupuesto está como estaba.')
     return error('rechazado', 'El proveedor rechazó el correo. No consta que haya salido; el enlace anterior, si lo había, sigue abriendo.')
   }
   await db.presupuesto.update({
@@ -292,11 +361,14 @@ export async function confirmarWhatsapp(
   return { estado: 'confirmado', venceEl: p.venceEl.toISOString() }
 }
 
-type ResultadoCorreo = 'enviado' | 'sin_proveedor' | 'remitente_no_verificado' | 'rechazado'
+type ResultadoCorreo = ResultadoCorreoLote
 
 async function mandarCorreo(
   correduriaId: string, clienteId: string, tipo: string, destino: string, c: { asunto: string; texto: string; html: string },
+  lote: { barrera: BarreraLote<ParteLote>; parte: ParteLote } | null = null,
 ): Promise<ResultadoCorreo> {
+  // Parte de un lote: el correo individual NO sale; sale el del lote, una vez, cuando se han unido todos.
+  if (lote) return lote.barrera.unirse(lote.parte)
   // Import dinámico: igual que el resto de correos de asegura, para que los cepos
   // con `node --test` puedan cargar el módulo sin resolver `@central/core-email`.
   const { enviarCorreoSeguido } = await import('./correo-envio')
