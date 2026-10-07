@@ -61,7 +61,7 @@ const EDITORES: { nombre: string; patron: RegExp; permitidos: string[] }[] = [
   { nombre: 'identidad (EditarCliente)', patron: /<EditarCliente\b/, permitidos: [] },
   { nombre: 'dirección (EditarDireccion)', patron: /<EditarDireccion\b/, permitidos: [] },
   { nombre: 'carnés (EditarCarnets)', patron: /<EditarCarnets\b/, permitidos: [] },
-  { nombre: 'dirección (DireccionConfirmable)', patron: /<DireccionConfirmable\b/, permitidos: [PANEL, 'NuevoCliente.tsx', 'poliza/[id]/EditarDireccionRiesgo.tsx'] },
+  { nombre: 'dirección (DireccionConfirmable)', patron: /<DireccionConfirmable\b/, permitidos: [PANEL, 'NuevoCliente.tsx', 'poliza/[id]/EditarDireccionRiesgo.tsx', 'Relaciones.tsx'] }, // Relaciones: ALTA de persona de contacto (ficha nueva, como NuevoCliente), no edita una existente
   { nombre: 'carnés (TIPOS_CARNET en un select)', patron: /TIPOS_CARNET\.map\(/, permitidos: [PANEL] },
   { nombre: 'mote (MoteAgenda)', patron: /<MoteAgenda\b/, permitidos: [] },
   { nombre: 'poner nombre (PonerNombre)', patron: /<PonerNombre\b/, permitidos: [] },

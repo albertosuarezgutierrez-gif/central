@@ -8668,3 +8668,8 @@ lo pide el bot (auto y moto caían a la «fecha del conductor», que para una fi
 El PDF abre con «Revisa tus datos» (los mismos grupos que el portal, `leerDatosCotizados`, DNI enmascarado); las
 recomendadas (con papel) van en tarjeta y el resto en tabla compacta (`repartirOpciones`). DNI ENTERO en el PDF (va al propio
 tomador para revisar la emisión; `leerDatosCotizados(..., {documentoCompleto})`, portal y firma siguen enmascarados).
+
+## (07/10/2026) Correduría: «Nueva persona de contacto» no se podía crear sin teléfono/email
+El alta exigía «DNI, teléfono o email» pero el formulario (`Relaciones.tsx` → `AltaPersona`) no tenía DNI. Añadidos DNI/NIE/CIF,
+fecha de nacimiento y dirección (DireccionConfirmable + CP → población/provincia). Solo UI: `revisarAlta` y el puerto ya los
+admitían y deduplican por DNI. Test nuevo en `module-seguros/src/cliente-edicion.test.ts` (visto en rojo).
