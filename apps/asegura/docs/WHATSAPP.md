@@ -47,7 +47,7 @@ Estado (05/10/2026): código listo, **apagado**, sin credenciales ni SQL. Sin c�
   negocio y Tech Provider (revisión de app con `whatsapp_business_management` y `whatsapp_business_messaging`);
   2) Facebook Login for Business → Configuración con la plantilla «WhatsApp Embedded Signup» → su id a
   `NEXT_PUBLIC_WHATSAPP_ES_CONFIG_ID`; 3) en «Allowed domains» / «Valid OAuth redirect URIs» del login, el dominio
-  de plataforma (`https://plataforma-ten-flame.vercel.app`); 4) webhook `https://api.grupoasegura.es/api/webhooks/whatsapp`
+  de plataforma (`https://crm.grupoasegura.es`: Meta rechaza `*.vercel.app`); 4) webhook `https://api.grupoasegura.es/api/webhooks/whatsapp`
   con el verify token, campos: `messages`, `smb_message_echoes`, `history`, `smb_app_state_sync`, `account_update`;
   5) en el móvil, al conectar: **«No compartir chats»**. Abrir la app al menos cada 14 días (si no, PARTNER_REMOVED).
 
@@ -65,10 +65,15 @@ Estado (05/10/2026): código listo, **apagado**, sin credenciales ni SQL. Sin c�
 | `WHATSAPP_IMPORTAR_HISTORIAL` | `1` = el historial se guarda en crudo (sin importar); si no, se descarta |
 | `NEXT_PUBLIC_META_APP_ID` · `NEXT_PUBLIC_WHATSAPP_ES_CONFIG_ID` | en **plataforma**: SDK JS y configuración del ES |
 
-## Pasos pendientes
-- **SQL** (gate DDL: PR + 2 ojos), en orden: `2026-10-05b_whatsapp_crm.sql` y `2026-10-05f_whatsapp_conexion.sql`.
-  Decidir el `REVOKE` comentado a `crm_seguros`. Envs de la tabla + redeploy de asegura y plataforma.
-- Plataforma: pintar la bandeja y la pestaña de la ficha; botón «no es personal» (hoy no hay reclasificación).
+## Estado (07/10/2026)
+- Hecho: SQL 05b y 05f aplicados; envs puestas (salvo `ASEGURA_WHATSAPP_*`: apagado); app Meta 2876291632747697
+  (portfolio 1111884827984949, config_id 1106985788466271); webhook verificado con los 5 campos.
+- Bloqueo: el Embedded Signup responde «no puede incorporar clientes». Falta: verificación de empresa (EN REVISIÓN
+  desde 07/10, autónomo «Alberto Suárez Gutiérrez») → Tech Provider → revisión de app y publicarla.
+- Pendiente: quitar en Meta los 8 campos que suscribe solo (`calls`, `security`…); decidir el `REVOKE` a
+  `crm_seguros`; plataforma: bandeja, pestaña de la ficha y botón «no es personal».
+- NUNCA registrar el número por la API/MCP de Meta (`register`/`add_phone_number`): lo saca del móvil.
+
 ## RGPD
 - **Base legal**: interés legítimo / medidas precontractuales (art. 6.1.b y f RGPD) para quien escribe a la
   correduría por un asunto de seguros. Lo personal (familia, amigos) no es tratamiento de la correduría: la IA
