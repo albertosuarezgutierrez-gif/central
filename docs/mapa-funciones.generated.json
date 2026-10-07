@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-07T07:28:48Z",
-  "sha": "f876b783f2f71fbc91555ab9abb7f68fcf5ac808",
+  "generadoEn": "2026-10-07T08:48:56Z",
+  "sha": "dabd98994980d68565303a1c029fecabf6374c7a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -194461,7 +194461,7 @@
           "exportada": true,
           "params": "",
           "retorno": "ConfigGrabador",
-          "linea": 45
+          "linea": 57
         },
         {
           "nombre": "codigoBookmarklet",
@@ -194469,7 +194469,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 213,
+          "linea": 269,
           "resumen": "Código JS (sin `javascript:`) que ejecuta el marcador."
         },
         {
@@ -194478,19 +194478,20 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 220,
+          "linea": 276,
           "resumen": "La URL `javascript:` del marcador (para el <a> que se arrastra a favoritos)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7a10d2327aff"
+      "hash": "4b69535b8ce9"
     },
     {
       "ruta": "packages/module-tarificacion/src/grabador.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "GRABADOR del tarificador RPA (07/10/2026) — reglas PURAS. Para dar de alta una compañía/ramo nueva en el bot sin ir a ciegas: Alberto hace un presupuesto FICTICIO a mano en el portal y en cada pantalla pulsa el marcador «Grabar pantalla ASegura» (`grabador-bookmarklet.ts`). Aquí vive lo que comparte",
       "exporta": [
+        "redactarTextoUsuario",
         "tienePasswordHtml",
         "normalizarGrabador",
         "clasificarBoton",
@@ -194508,12 +194509,21 @@
       ],
       "funciones": [
         {
+          "nombre": "redactarTextoUsuario",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 56,
+          "resumen": "Tapa el TEXTO de los elementos de usuario/cuenta (ver `PATRON_ELEMENTO_USUARIO`). Idempotente."
+        },
+        {
           "nombre": "tienePasswordHtml",
           "kind": "function",
           "exportada": true,
           "params": "html: string",
           "retorno": "boolean",
-          "linea": 45,
+          "linea": 92,
           "resumen": "¿El HTML tiene algún `<input type=password>` (en la página o en un marco)?"
         },
         {
@@ -194522,7 +194532,7 @@
           "exportada": true,
           "params": "s: string | null | undefined",
           "retorno": "string",
-          "linea": 63,
+          "linea": 110,
           "resumen": "Sin tildes, minúsculas y espacios colapsados."
         },
         {
@@ -194531,7 +194541,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[]",
           "retorno": "",
-          "linea": 72,
+          "linea": 119,
           "resumen": "Clase de un botón a partir de TODO lo que lo describe (texto, selector, id, onclick…). PROHIBIDO si cualquiera casa con el guard de emisión (incluido «Aceptar», siempre contextual) o con `BLOQUEO_GRAB"
         },
         {
@@ -194540,7 +194550,7 @@
           "exportada": false,
           "params": "crudo: string | undefined",
           "retorno": "string | null",
-          "linea": 89
+          "linea": 136
         },
         {
           "nombre": "atributos",
@@ -194548,7 +194558,7 @@
           "exportada": false,
           "params": "cuerpo: string",
           "retorno": "Map<string, string | null>",
-          "linea": 95
+          "linea": 142
         },
         {
           "nombre": "escaparAttr",
@@ -194556,7 +194566,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 102,
+          "linea": 149,
           "resumen": "Sin tocar `&`: el valor viene del HTML con sus entidades ya escritas (re-escaparlas no sería idempotente)."
         },
         {
@@ -194565,7 +194575,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": "string",
-          "linea": 105,
+          "linea": 152,
           "resumen": "Tapa los valores de los parámetros sensibles de una URL (y un `;jsessionid=`)."
         },
         {
@@ -194574,7 +194584,7 @@
           "exportada": true,
           "params": "a: { type?: string | null; name?: string | null; id?: string | null; autocomplete?: string | null; etiqueta?: string | null; tag?: string }, login = false",
           "retorno": "boolean",
-          "linea": 111,
+          "linea": 158,
           "resumen": "¿El control es de los que nunca enseñan su valor?"
         },
         {
@@ -194583,7 +194593,7 @@
           "exportada": false,
           "params": "tag: string, cuerpo: string, login: boolean",
           "retorno": "string",
-          "linea": 122
+          "linea": 169
         },
         {
           "nombre": "redactarHtmlGrabacion",
@@ -194591,7 +194601,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 144,
+          "linea": 193,
           "resumen": "Lo que asegura hace con el HTML que sube Alberto ANTES de guardarlo (aunque el bookmarklet ya lo haya hecho): fuera `<script>`; contraseñas, ocultos y campos sensibles por nombre a `[REDACTADO]`; DNI/"
         },
         {
@@ -194600,7 +194610,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "PantallaSeparada",
-          "linea": 169,
+          "linea": 220,
           "resumen": "Deshace los marcadores de marco (como `separarMarcos` del worker, con la ruta como texto)."
         },
         {
@@ -194609,7 +194619,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 183
+          "linea": 234
         },
         {
           "nombre": "recortarHtmlParaIA",
@@ -194617,7 +194627,7 @@
           "exportada": true,
           "params": "html: string, maxChars = 60_000",
           "retorno": "string",
-          "linea": 215,
+          "linea": 266,
           "resumen": "HTML recortado a lo que sirve para mapear la pantalla (formularios, tablas, botones, textos), sin scripts, estilos ni valores de los campos, y por debajo de `maxChars`. Los marcos (donde suelen estar "
         },
         {
@@ -194626,7 +194636,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 252
+          "linea": 303
         },
         {
           "nombre": "soloClaves",
@@ -194634,7 +194644,7 @@
           "exportada": false,
           "params": "o: Record<string, unknown>, permitidas: readonly string[], donde: string",
           "retorno": "string | null",
-          "linea": 254
+          "linea": 305
         },
         {
           "nombre": "texto",
@@ -194642,7 +194652,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, donde: string, { opcional = false, pii = true } = {}",
           "retorno": "Lectura<string | null>",
-          "linea": 259
+          "linea": 310
         },
         {
           "nombre": "selectorValido",
@@ -194650,7 +194660,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "boolean",
-          "linea": 269,
+          "linea": 320,
           "resumen": "Un selector CSS razonable: una línea, sin llaves ni `javascript:`."
         },
         {
@@ -194659,7 +194669,7 @@
           "exportada": false,
           "params": "v: unknown, donde: string, opcional = false",
           "retorno": "Lectura<string | null>",
-          "linea": 273
+          "linea": 324
         },
         {
           "nombre": "booleano",
@@ -194667,7 +194677,7 @@
           "exportada": false,
           "params": "v: unknown, donde: string",
           "retorno": "Lectura<boolean>",
-          "linea": 279
+          "linea": 330
         },
         {
           "nombre": "lista",
@@ -194675,7 +194685,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, donde: string",
           "retorno": "Lectura<unknown[]>",
-          "linea": 283
+          "linea": 334
         },
         {
           "nombre": "validarPantallaMapa",
@@ -194683,7 +194693,7 @@
           "exportada": true,
           "params": "raw: unknown, pantalla: number",
           "retorno": "",
-          "linea": 294,
+          "linea": 345,
           "resumen": "Valida lo que devuelve la IA para UNA pantalla con un esquema ESTRICTO (claves cerradas, tipos, tamaños) y aplica la regla de seguridad: todo botón que casa con el guard de emisión o con `BLOQUEO_GRAB"
         },
         {
@@ -194692,7 +194702,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "MapaGrabacion | null",
-          "linea": 382,
+          "linea": 433,
           "resumen": "Relee un mapa GUARDADO (jsonb) con el mismo esquema: lo que no valide se descarta (no se enseña un mapa a medias como bueno). Vuelve a aplicar la clasificación de botones por si la regla se endureció."
         },
         {
@@ -194701,7 +194711,7 @@
           "exportada": true,
           "params": "mapa: MapaGrabacion | null, p: PantallaMapa",
           "retorno": "MapaGrabacion",
-          "linea": 406,
+          "linea": 457,
           "resumen": "Sustituye (o añade) la pantalla en el mapa, en orden."
         },
         {
@@ -194710,7 +194720,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "unknown",
-          "linea": 412,
+          "linea": 463,
           "resumen": "JSON de la respuesta de la IA (tolera ```json … ``` y texto alrededor). `null` si no hay objeto."
         },
         {
@@ -194719,13 +194729,13 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "boolean",
-          "linea": 426,
+          "linea": 477,
           "resumen": "Nombre de fichero aceptable para una pantalla: `.html`/`.htm`, sin rutas, ≤ 200."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2ab1bef856e"
+      "hash": "62b1bba647d9"
     },
     {
       "ruta": "packages/module-tarificacion/src/guard-emision.ts",
@@ -196899,6 +196909,6 @@
   ],
   "resumen": {
     "archivos": 4386,
-    "funciones": 15496
+    "funciones": 15497
   }
 }
