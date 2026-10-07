@@ -5,7 +5,7 @@
 // verificado. Cubre al TOMADOR y a los asegurados adicionales que se añadan
 // (`insureds[]`); la prestación de referencia es una nota que NO viaja.
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
@@ -103,7 +103,20 @@ export default function DecesosNuevo({
   const faltaAlgo = faltaCivil || aManoSinRellenar.length > 0 || huerfanos.length > 0 || asegurados.some((a) => !aseguradoCompleto(a))
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
+  // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
+  // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
+  const cotizandoEnVuelo = useRef(false)
   async function cotizar() {
+    if (cotizandoEnVuelo.current) return
+    cotizandoEnVuelo.current = true
+    try {
+      await cotizarSinGuarda()
+    } finally {
+      cotizandoEnVuelo.current = false
+    }
+  }
+
+  async function cotizarSinGuarda() {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionDecesos({
       clienteId,

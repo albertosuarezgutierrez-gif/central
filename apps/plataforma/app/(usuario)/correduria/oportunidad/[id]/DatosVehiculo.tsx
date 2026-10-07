@@ -4,23 +4,21 @@
 // moto sin salir de la pantalla. Se guarda en `info_riesgo.datosVehiculo` de asegura (PATCH del riesgo);
 // la pantalla de pedir precio (auto-nuevo / moto-nuevo) lo PRECARGA desde ahí.
 //
-// Un campo sin dato se pinta «sin dato» (nunca «0» ni vacío); lo que falta para pedir precio se dice.
+// Un campo sin dato se pinta «sin dato» (nunca «0» ni vacío). Lo que falta lo dice el bloque único «Pedir precio».
 // La VERSIÓN del catálogo (gratis) se elige aquí mismo (`SelectorCatalogoVehiculo`) y se guarda con los 7 campos juntos;
-// desde aquí «Pedir precio →» lleva a la pantalla de precio con todo precargado (nunca cotiza solo: son 0,50€).
+// El botón de precio NO está aquí: vive en el bloque único de `RiesgoPantalla`.
 // En la edición a mano, marca/modelo/versión van como texto libre y la consulta por matrícula (gratis).
 
 import { useEffect, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
-import { ETIQUETA_CAMPO_VEHICULO, soloLoQueCambia, textoFaltanVehiculo, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { ETIQUETA_CAMPO_VEHICULO, soloLoQueCambia, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada, normalizarMatricula } from '@central/module-seguros/matricula'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
-import Link from 'next/link'
 import { fechaEs, llamarDatosRiesgo, motivoDe } from './piezas-riesgo'
 import type { Riesgo } from '@/lib/riesgo-asegura'
 import SelectorCatalogoVehiculo from './SelectorCatalogoVehiculo'
-import { motivoSinPrecio, payloadVersion, ramoCatalogo, tipoGaraje, type SeleccionVersion } from './catalogo-vehiculo'
-import { ramoVariante, rutaVariante, tomadorDelRiesgo } from './variante'
+import { payloadVersion, ramoCatalogo, tipoGaraje, type SeleccionVersion } from './catalogo-vehiculo'
 
 const campo: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44,
@@ -70,7 +68,6 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError }: {
   if (d === null) return null // ramo sin vehículo, o asegura aún no lo manda: no se inventa un bloque vacío
   const bloqueado = enviando || ocupado
   const nombreGaraje = (id: string | null) => (id === null ? null : garajes?.find((g) => g.id === id)?.nombre ?? id)
-  const aviso = textoFaltanVehiculo(riesgo.faltanVehiculo)
   const sinDato = <span style={{ color: 'var(--muted)', fontStyle: 'normal' }}>sin dato</span>
   const filas: Array<[string, React.ReactNode]> = [
     [ETIQUETA_CAMPO_VEHICULO.matricula, d.matricula ?? sinDato],
@@ -87,8 +84,6 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError }: {
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
   const ramoCat = ramoCatalogo(op.ramo)
-  const ramoV = ramoVariante(op.ramo)
-  const motivoPrecio = motivoSinPrecio(d, { editando, eligiendo, ocupado: bloqueado, ramoCotizable: ramoV !== null })
 
   // Elegir versión del catálogo: los 7 campos JUNTOS (si no, asegura borra los ids). Gratis; no pide precio.
   function elegirVersion(s: SeleccionVersion) {
@@ -152,15 +147,13 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError }: {
         <div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>Datos del vehículo</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-            Lo que se sabe {op.ramo === 'moto' ? 'de la moto' : 'del coche'}. Elige la versión del catálogo aquí (gratis) y pide precio con todo precargado; lo que se use se anota de vuelta.
+            Lo que se sabe {op.ramo === 'moto' ? 'de la moto' : 'del coche'}. Elige la versión del catálogo aquí (gratis); el precio se pide en el bloque «Pedir precio», con todo precargado, y lo que se use se anota de vuelta.
           </div>
         </div>
         <Badge tono={d.confirmadoAt ? 'positivo' : 'aviso'}>
           {d.confirmadoAt ? `Confirmados el ${fechaEs(d.confirmadoAt)}` : 'Sin confirmar'}
         </Badge>
       </div>
-
-      {aviso && <div style={{ fontSize: 13, color: 'var(--warning)' }} role="status">{aviso}</div>}
 
       {!editando ? (
         <>
@@ -202,25 +195,6 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError }: {
               </button>
             )}
           </div>
-          {ramoV && (
-            <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
-              {motivoPrecio === null ? (
-                <Link
-                  href={rutaVariante(ramoV, tomadorDelRiesgo(riesgo), op.id)}
-                  style={{ ...btnStyle('primario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 'fit-content', maxWidth: '100%' }}
-                >
-                  Pedir precio →
-                </Link>
-              ) : (
-                <button type="button" disabled aria-disabled="true" style={{ ...btnStyle('primario', 'sm'), minHeight: 44, width: 'fit-content', maxWidth: '100%', opacity: 0.5, cursor: 'not-allowed' }}>
-                  Pedir precio →
-                </button>
-              )}
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                {motivoPrecio ?? 'Abre la pantalla de precio con estos datos precargados; allí se confirma y pedir precio cuesta 0,50€.'}
-              </span>
-            </div>
-          )}
         </>
       ) : (
         <form onSubmit={enviarEdicion} style={{ display: 'grid', gap: 10, minWidth: 0 }}>

@@ -12,6 +12,7 @@ import { join } from 'node:path'
 const ROOT = join(import.meta.dirname, '..')
 const DIR = 'apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/'
 const leer = (f: string) => readFileSync(join(ROOT, f), 'utf8')
+const activas = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
 
 test('DatosVehiculo no vuelve a pedir `garajes` a pelo para moto: el tipo sale de tipoGaraje(ramo)', () => {
   const src = leer(DIR + 'DatosVehiculo.tsx')
@@ -31,11 +32,12 @@ test('elegir versión guarda los 7 campos juntos y el selector pide el catálogo
   assert.doesNotMatch(sel, /tipo:\s*'(marcas|modelos|versiones)(-moto)?'/, 'los tipos salen de tiposCatalogo(ramo)')
 })
 
-test('Pedir precio → solo enlaza a rutaVariante: ni retarificar la póliza vieja ni cotizar', () => {
-  const src = leer(DIR + 'DatosVehiculo.tsx')
-  assert.match(src, /Pedir precio →/)
-  assert.match(src, /href=\{rutaVariante\(ramoV, tomadorDelRiesgo\(riesgo\), op\.id\)\}/)
-  assert.doesNotMatch(src, /retarificar|pedirCotizacion|cotizar/i)
+test('DatosVehiculo no pide precio: el botón vive en el bloque único de RiesgoPantalla (solo navega, nunca cotiza)', () => {
+  const src = activas(leer(DIR + 'DatosVehiculo.tsx'))
+  assert.doesNotMatch(src, /Pedir precio →|rutaVariante|retarificar|pedirCotizacion|cotizar/i)
+  const pant = leer(DIR + 'RiesgoPantalla.tsx')
+  assert.match(pant, /href=\{acciones\.principal\.href\}/)
+  assert.doesNotMatch(pant, /pedirCotizacion|cotizar\(/)
   const sel = leer(DIR + 'SelectorCatalogoVehiculo.tsx')
   assert.doesNotMatch(sel, /pedirCotizacion|cotizar/i)
 })

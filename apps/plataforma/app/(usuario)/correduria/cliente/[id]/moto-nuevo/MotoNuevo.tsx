@@ -533,7 +533,20 @@ export default function MotoNuevo({
   }
 
   /** `forzarNuevo` SOLO tras «Descartar y pedir precio de cero» (modo póliza). */
+  // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
+  // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
+  const cotizandoEnVuelo = useRef(false)
   async function pedirPrecio(forzarNuevo: boolean) {
+    if (cotizandoEnVuelo.current) return
+    cotizandoEnVuelo.current = true
+    try {
+      await pedirPrecioSinGuarda(forzarNuevo)
+    } finally {
+      cotizandoEnVuelo.current = false
+    }
+  }
+
+  async function pedirPrecioSinGuarda(forzarNuevo: boolean) {
     setResultado({ estado: 'cotizando' })
     const correccionesFinal: Record<string, unknown> = {
       ...correcciones,

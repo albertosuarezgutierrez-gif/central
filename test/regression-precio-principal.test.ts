@@ -13,7 +13,7 @@
 //  5. Que cambiar el CP deje el municipio del catálogo de OTRO código postal.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const ROOT = join(import.meta.dirname, '..')
@@ -39,16 +39,36 @@ test('🪤 variante.ts: el principal usa rutaVariante (oportunidad) y el secunda
   assert.doesNotMatch(f.slice(0, f.indexOf('const secundario')), /retarificar/i, 'el principal no menciona retarificar')
 })
 
-test('🪤 «Pedir precio →» de los bloques SOLO navega: ni cotiza, ni llama a asegura, ni retarifica', () => {
-  const b = activas(leer(DIR + 'BotonPedirPrecio.tsx'))
-  assert.doesNotMatch(b, /fetch\(|pedirCotizacion|cotizar|retarificar|useEffect|onClick/i, 'un enlace o un botón deshabilitado, nada más')
-  assert.match(b, /Pedir precio →/)
-  assert.match(b, /minHeight: 44/, 'botón de ≥44 px')
-  const d = activas(leer(DIR + 'DatosRiesgo.tsx'))
-  assert.doesNotMatch(d, /pedirCotizacion|cotizarAsegura/)
-  assert.match(d, /rutaVariante\(ramo, tomadorDelRiesgo\(riesgo\), op\.id\)/, 'hogar, vida, salud y decesos van a la pantalla de precio de su ramo con la oportunidad')
-  assert.equal((d.match(/precio=\{/g) ?? []).length, 3, 'hogar, capital (vida/salud/decesos) y comunidades llevan su botón')
-  assert.match(d, /<BotonPedirPrecio ancla="#presupuestos"/, 'comunidades: el formulario de los bots de la propia oportunidad, no un enlace a otra ruta')
+test('🪤 UN ÚNICO bloque «Pedir precio» (Fase 0): los bloques de Datos no llevan botón, ni aviso «Falta para pedir precio», ni rutaVariante', () => {
+  assert.equal(existsSync(join(ROOT, DIR + 'BotonPedirPrecio.tsx')), false, 'BotonPedirPrecio se borró: no hay segundo botón de precio')
+  for (const f of ['DatosRiesgo.tsx', 'DatosVehiculo.tsx']) {
+    const d = activas(leer(DIR + f))
+    assert.doesNotMatch(d, /pedirCotizacion|cotizarAsegura|rutaVariante|BotonPedirPrecio|Pedir precio →|0,50€|textoFaltanVehiculo|textoFaltanVivienda|textoFaltanCapital/, f + ': el precio vive solo en RiesgoPantalla')
+    assert.doesNotMatch(d, /precio=\{/, f + ': ningún bloque de datos pasa un botón de precio')
+  }
+  const r = activas(leer(DIR + 'RiesgoPantalla.tsx'))
+  assert.equal((r.match(/Falta para pedir precio|\{faltaDatos\}/g) ?? []).length, 1, 'el aviso de lo que falta se pinta UNA vez')
+  assert.equal((r.match(/0,50€/g) ?? []).length, 1, 'el coste de 0,50€ se dice UNA vez en la pantalla del riesgo')
+  assert.doesNotMatch(r, /Nueva variante/, 'el bloque «Nueva variante» ya no existe: su contenido es «Pedir precio»')
+  assert.equal((r.match(/<section id="pedir-precio"/g) ?? []).length, 1)
+  const i = (t: string) => r.indexOf(t)
+  assert.ok(i('<FigurasRiesgo') < i('id="pedir-precio"') && i('id="pedir-precio"') < i('<OfertasOportunidad'), 'el bloque va justo después de Intervinientes y antes de Ofertas/Presupuestos')
+  assert.match(r, /<a href="#presupuestos"/, 'comunidades: el bloque único lleva al formulario de bots, no a rutaVariante')
+})
+
+test('🪤 la página de la oportunidad tiene UN solo enlace a rutaVariante (el principal de accionesPrecio)', () => {
+  const carpeta = join(ROOT, DIR)
+  const usos: string[] = []
+  for (const f of readdirSync(carpeta)) {
+    if (!/\.tsx?$/.test(f) || /\.test\.ts$/.test(f)) continue
+    const n = (activas(readFileSync(join(carpeta, f), 'utf8')).match(/\brutaVariante\(/g) ?? []).length
+    for (let k = 0; k < n; k++) usos.push(f)
+  }
+  // variante.ts (la define y la usa accionesPrecio) + HistorialVariantes (retomar una variante concreta, `?tarificacion=`).
+  const fuera = usos.filter((f) => f !== 'variante.ts' && f !== 'HistorialVariantes.tsx')
+  assert.deepEqual(fuera, [], 'ningún bloque de datos ni RiesgoPantalla arma su propio enlace a la pantalla de precio')
+  assert.equal(usos.filter((f) => f === 'variante.ts').length, 2, 'definición + el principal de accionesPrecio, nada más')
+  assert.equal((activas(leer(DIR + 'RiesgoPantalla.tsx')).match(/acciones\.principal\.href/g) ?? []).length, 1, 'un solo enlace principal en la pantalla')
 })
 
 test('hogar sin referencia: el buscador del Catastro parte de la calle del riesgo, no solo del texto libre', () => {

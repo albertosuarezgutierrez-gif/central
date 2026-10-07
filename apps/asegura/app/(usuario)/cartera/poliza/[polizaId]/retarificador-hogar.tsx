@@ -237,7 +237,8 @@ export default function RetarificadorHogar({
         body: JSON.stringify({ ...extra, resueltos: cuerpoResueltos(), correcciones: cuerpoCorrecciones() }),
       })
       const j = (await res.json()) as Record<string, unknown>
-      if (res.status === 422) {
+      // 422 `causa: 'validacion'` = 400 del vendor SIN cargo: error del vendor con su mensaje, no «faltan datos».
+      if (res.status === 422 && j.causa !== 'validacion') {
         setResultado({ estado: 'faltan', faltan: (j.faltan as { campo: string; motivo: string }[]) ?? [] })
         return
       }
@@ -246,7 +247,7 @@ export default function RetarificadorHogar({
         setResultado({
           estado: 'error',
           mensaje,
-          clase: res.status === 402 ? 'tope' : res.status === 409 ? 'ramo' : res.status === 502 ? 'vendor' : 'otro',
+          clase: res.status === 402 ? 'tope' : res.status === 409 ? 'ramo' : res.status === 502 || res.status === 422 ? 'vendor' : 'otro',
         })
         return
       }

@@ -15,7 +15,7 @@
 // por corrección es el precio, y es barato: no hay ningún cargo de por medio
 // hasta el botón final.
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FlaskConical, Loader2, Pencil, X } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
@@ -174,7 +174,20 @@ export default function Formulario({
     return { ...resueltos, supuestos }
   }
 
+  // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
+  // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
+  const cotizandoEnVuelo = useRef(false)
   async function cotizar() {
+    if (cotizandoEnVuelo.current) return
+    cotizandoEnVuelo.current = true
+    try {
+      await cotizarSinGuarda()
+    } finally {
+      cotizandoEnVuelo.current = false
+    }
+  }
+
+  async function cotizarSinGuarda() {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionHogar({
       clienteId,

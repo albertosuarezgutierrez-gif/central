@@ -747,6 +747,11 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
     // El riesgo no es de esta póliza: asegura corta ANTES del vendor. No es «faltan datos».
     return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('Este riesgo no es de esta póliza: no se ha pedido precio.'), gastoDesconocido: !cero }
   }
+  if (status === 422 && r.causa === 'validacion') {
+    // El vendor rechazó el cuerpo (400) con PRUEBA de no-cargo: asegura lo declara con `gastado: '0,00€'`.
+    // No es «faltan datos» (no hay lista) ni «no se sabe si se ha cobrado»: `cero` lo dice.
+    return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('El vendor ha rechazado la petición.'), gastoDesconocido: !cero }
+  }
   if (status === 422) {
     return { estado: 'faltan', faltan: Array.isArray(r.faltan) ? (r.faltan as Reparo[]) : [] }
   }

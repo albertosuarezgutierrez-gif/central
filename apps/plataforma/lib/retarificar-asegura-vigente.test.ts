@@ -159,3 +159,17 @@ test('el riesgo de una póliza de hogar se retarifica dentro de él Y hogar-nuev
   for (const r of ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos']) assert.equal(ramoVariante(r), r, r)
   for (const r of ['responsabilidad_civil', 'comercio', 'comunidades', 'otros', '']) assert.equal(ramoVariante(r), null, r)
 })
+
+test('422 validacion CON gastado 0,00€ = «no se ha cobrado»; 502 con/sin gastado; timeout/5xx = no se sabe', () => {
+  const v = interpretarRetarificacion(422, { error: 'moto no apta', causa: 'validacion', gastado: '0,00€' })
+  assert.equal(v.estado, 'error')
+  assert.equal(v.estado === 'error' && v.gastoDesconocido, false)
+  const sin422 = interpretarRetarificacion(422, { error: 'moto no apta', causa: 'validacion' })
+  assert.equal(sin422.estado === 'error' && sin422.gastoDesconocido, true)
+  const c502 = interpretarRetarificacion(502, { error: 'x', razon: 'vendor', gastado: '0,00€' })
+  assert.equal(c502.estado === 'error' && c502.gastoDesconocido, false)
+  const s502 = interpretarRetarificacion(502, { error: 'timeout', razon: 'vendor' })
+  assert.equal(s502.estado === 'error' && s502.gastoDesconocido, true)
+  const s503 = interpretarRetarificacion(500, { error: 'boom' })
+  assert.equal(s503.estado === 'error' && s503.gastoDesconocido, true)
+})
