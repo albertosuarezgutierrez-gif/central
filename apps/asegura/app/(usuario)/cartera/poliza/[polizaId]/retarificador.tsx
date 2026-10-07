@@ -61,7 +61,7 @@ type Resultado =
       supuestos: Supuesto[]
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; sinCargo?: boolean }
 
 // Los tipos `VehiculoConocido` / `VersionCandidata` viven en
 // `lib/codeoscopic/desde-cartera.ts` y se importan arriba: el contrato lo fija
@@ -358,6 +358,7 @@ export default function Retarificador({
           estado: 'error',
           mensaje: String(j.error ?? `error ${res.status}`),
           tope: res.status === 402,
+          sinCargo: j.gastado === '0,00€',
         })
         return
       }
@@ -806,6 +807,7 @@ export default function Retarificador({
           <p className="err" style={{ marginTop: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}
             {formatearErrorVendor(resultado.mensaje)}
+            {resultado.sinCargo && !/no se ha cobrado nada/i.test(resultado.mensaje) ? ' No se ha cobrado nada.' : ''}
           </p>
         )}
 

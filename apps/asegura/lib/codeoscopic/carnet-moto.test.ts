@@ -108,3 +108,10 @@ test('respuestaFalloCotizacion: 400 sin cargo = 422 validacion con gastado; time
   assert.equal(t.status, 502)
   assert.equal('gastado' in t.cuerpo, false)
 })
+
+test('retarificador: el error 422 de validación enseña «No se ha cobrado nada» desde `gastado`', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../../app/(usuario)/cartera/poliza/[polizaId]/retarificador.tsx', import.meta.url), 'utf8')
+  assert.match(src, /sinCargo: j\.gastado === '0,00€'/)
+  assert.match(src, /resultado\.sinCargo[^\n]*No se ha cobrado nada/)
+})
