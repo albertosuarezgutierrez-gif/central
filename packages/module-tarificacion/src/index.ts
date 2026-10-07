@@ -95,6 +95,19 @@ export {
   type ValidacionFormularioComercio,
 } from './formulario-comercio.ts'
 
+// Tomador canónico (08/10/2026): bloque reutilizable por los formularios.
+export {
+  TIPOS_TOMADOR,
+  validarTomador,
+  normalizarDocumento,
+  normalizarTelefono,
+  esDniNie,
+  esCif,
+  type Tomador,
+  type TipoTomador,
+  type ValidacionTomador,
+} from './tomador.ts'
+
 // Fichas de producto y coberturas (07/10/2026): catálogo canónico, validador anti-alucinación y comparador.
 export {
   RAMOS_FICHA,

@@ -36,6 +36,17 @@ describe('guard de emisión · Allianz RC PYME (07/10/2026)', () => {
   })
 })
 
+describe('guard de emisión · Allianz Negocio 2038 (07/10/2026)', () => {
+  // «Siguiente» (#idbtnAceptar, botonSiguienteOk()) avanza a «5. Revisión»: PROHIBIDO, también con permitirAceptar.
+  it.each(['idbtnAceptar', 'IDBTNACEPTAR', 'botonSiguienteOk()', 'javascript:botonSiguienteOk()'])('bloquea «%s» aunque se permita «Aceptar»', (d) => {
+    expect(pareceEmision(d, { permitirAceptar: true })).toBe(true)
+    expect(() => comprobarBoton([null, d], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+  })
+  it.each(['nombreTom', 'Tom_address_pc', 'mailTom', 'btnVolver', 'idNumberTom_doc'])('deja pasar el campo «%s»', (d) => {
+    expect(pareceEmision(d, { permitirAceptar: true })).toBe(false)
+  })
+})
+
 describe('guard de emisión', () => {
   it.each([
     'https://epac.allianz.es/poliza/emitir?id=1',
