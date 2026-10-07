@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-07T15:01:32Z",
-  "sha": "387b4de9d3a384b4c0df598971fcb07b91e0b86c",
+  "generadoEn": "2026-10-07T15:32:44Z",
+  "sha": "fe165158a8839992104dc518d2993b07184ba471",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -97121,7 +97121,7 @@
           "exportada": true,
           "params": "{ clienteId, nombreFicha, inicial, personas = null, renderPapeles, tipoPersona = null, }: { clienteId: string nombreFicha: string inicial: RelacionCartera[] | null /** Qué es la ficha de la que cuelga el contacto. Solo ordena los tipos que ",
           "retorno": null,
-          "linea": 80,
+          "linea": 83,
           "resumen": "Relaciones de un cliente de la correduría (cónyuge, hijos, empresa…) y la AUTORIZACIÓN para ver los seguros del otro, desde la ficha de plataforma. Semántica (fijada en `@central/module-seguros/relaci"
         },
         {
@@ -97130,7 +97130,7 @@
           "exportada": false,
           "params": "{ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: { p: PersonaFicha<RelacionCartera> nombreFicha: string ocupado: string | null renderPapeles?: (p: PersonaFicha<Rela",
           "retorno": null,
-          "linea": 458,
+          "linea": 461,
           "resumen": "UNA persona, con sus dos caras: lo que dice CIMA (en qué pólizas sale y como qué) y lo que hemos anotado nosotros (qué es de la ficha, si está autorizada). 🚨 Juntarlas NO es fundirlas: la procedencia"
         },
         {
@@ -97139,7 +97139,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha }: { r: RelacionCartera; nombreFicha: string }",
           "retorno": null,
-          "linea": 614,
+          "linea": 617,
           "resumen": "Quién ve qué, en una línea. Sale de los MISMOS helpers puros que el detalle (`insigniaAcceso` / `explicarSentidoAcceso`, este en el `title`), para que el resumen no pueda decir otra cosa que lo desple"
         },
         {
@@ -97148,7 +97148,7 @@
           "exportada": false,
           "params": "tono: Tono",
           "retorno": "React.CSSProperties",
-          "linea": 633,
+          "linea": 636,
           "resumen": "Una insignia que SÍ parte línea: con nombres largos, `Badge` (nowrap) se sale a 320 px."
         },
         {
@@ -97157,7 +97157,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo }: { r: RelacionCartera nombreFicha: string ocupado: string | null onAvisar: (r: RelacionCartera, invertido: boolean) => void aviso: { clave: string; texto: st",
           "retorno": null,
-          "linea": 657,
+          "linea": 660,
           "resumen": "Lo que hemos anotado NOSOTROS sobre esa persona: qué es de la ficha y si está autorizada a ver sus seguros. Ya no pinta el nombre ni su propio `<li>`: vive dentro de la fila de la persona, debajo de l"
         },
         {
@@ -97166,7 +97166,7 @@
           "exportada": false,
           "params": "{ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar, onAvisar, formulario, pie }: { /** Quién cede SUS seguros. */ otorga: string /** Quién los ve (o los vería). */ recibe: string /** ¿Los ve HOY? Lo dice el puerto, y manda sobre",
           "retorno": null,
-          "linea": 799,
+          "linea": 802,
           "resumen": "UN sentido del acceso: quién ve los seguros de quién, con su insignia, su frase y sus botones — nunca los del otro sentido. 🚨 La insignia y la frase salen de `insigniaAcceso` / `explicarSentidoAcceso"
         },
         {
@@ -97175,7 +97175,7 @@
           "exportada": false,
           "params": "{ r, enCurso, onCambiarTipo }: { r: RelacionCartera enCurso: boolean onCambiarTipo: (r: RelacionCartera, tipo: string) => void }",
           "retorno": null,
-          "linea": 927,
+          "linea": 930,
           "resumen": "«Cambiar el tipo» de un vínculo que ya existe. Va PLEGADO y en tono sutil a propósito: corregir una etiqueta es raro comparado con autorizar o quitar, y un desplegable abierto en cada vínculo conviert"
         },
         {
@@ -97184,7 +97184,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha, enCurso, onAutorizar, esSociedad }: { r: RelacionCartera nombreFicha: string enCurso: boolean onAutorizar: ( r: RelacionCartera, autoriza: boolean, extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentaci",
           "retorno": null,
-          "linea": 987,
+          "linea": 990,
           "resumen": "El alta de una autorización, con el ALCANCE siempre elegido a mano. 🚨 Hasta el 20/09/2026 esto solo existía para SOCIEDADES: entre dos personas físicas el botón simple mandaba `autorizar()` sin `alca"
         },
         {
@@ -97193,7 +97193,7 @@
           "exportada": false,
           "params": "{ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: { clienteId: string nombreFicha: string /** Las que ya tienen relación: no se ofrecen, pero si la búsqueda las encuentra se DICE (con qué tipo)",
           "retorno": null,
-          "linea": 1072
+          "linea": 1075
         },
         {
           "nombre": "AltaPersona",
@@ -97201,7 +97201,7 @@
           "exportada": false,
           "params": "{ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta, onCrear, onCancelar, onBuscar }: { nombreFicha: string tipoPersona: 'fisica' | 'juridica' | null ocupado: boolean /** Lo que se tecleó en el buscador, para no escribir el nombre d",
           "retorno": null,
-          "linea": 1301,
+          "linea": 1304,
           "resumen": "Crear la ficha de la persona que lleva los seguros de esta otra (el administrador de una sociedad, típicamente) y vincularla, sin salir de aquí. Por qué una ficha propia y no un campo «persona de cont"
         },
         {
@@ -97210,7 +97210,7 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaRelaciones, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 1528
+          "linea": 1573
         },
         {
           "nombre": "Campo",
@@ -97218,7 +97218,7 @@
           "exportada": false,
           "params": "{ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1545
+          "linea": 1590
         }
       ],
       "tablas": [
@@ -97227,7 +97227,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "7d7fdf5a366b"
+      "hash": "1a42fcd233ab"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/renovacion-sin-recibir.ts",
