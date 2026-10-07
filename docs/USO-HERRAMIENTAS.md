@@ -171,24 +171,24 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 280 | 37.980 | 30.603.418 | 0 | 0 |
-| `otro` | 276 | 9.276 | 24.405.771 | 14.677.255 | 0 |
-| `lectura-directa` | 249 | 6.511 | 22.216.928 | 0 | 0 |
-| `mcp:github` | 250 | 5.826 | 4.755.490 | 51.247.577 | 90 |
-| `escritura` | 189 | 3.825 | 53.575.579 | 0 | 0 |
-| `sql` | 176 | 3.674 | 1.832.157 | 2.351.230 | 15 |
+| `bash` | 280 | 38.184 | 30.779.910 | 0 | 0 |
+| `otro` | 276 | 9.320 | 24.489.921 | 14.718.399 | 0 |
+| `lectura-directa` | 249 | 6.525 | 22.240.318 | 0 | 0 |
+| `mcp:github` | 250 | 5.836 | 4.767.043 | 51.247.577 | 90 |
+| `escritura` | 190 | 3.848 | 53.932.431 | 0 | 0 |
+| `sql` | 176 | 3.689 | 1.834.276 | 2.351.230 | 15 |
 | `mcp:Claude_Code_Remote` | 142 | 1.480 | 304.843 | 5.301.463 | 14 |
 | `mcp:Gmail` | 38 | 1.123 | 1.108.057 | 0 | 70 |
 | `mcp:Booking-com` | 27 | 765 | 3.236.630 | 0 | 0 |
 | `mcp:Vercel` | 61 | 604 | 885.822 | 202.197 | 16 |
-| `agente:general-purpose` | 78 | 367 | 243.286 | 6.660.474 | 0 |
+| `agente:general-purpose` | 78 | 369 | 243.681 | 6.674.535 | 0 |
 | `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
-| `mcp:Supabase` | 110 | 311 | 29.810 | 0 | 4 |
+| `mcp:Supabase` | 110 | 312 | 29.815 | 0 | 4 |
 | `mcp:Interactive-Brokers--IBKR-` | 6 | 298 | 369.157 | 0 | 0 |
-| `mcp:claude-code-remote` | 23 | 167 | 15.334 | 16.312 | 0 |
-| `agente:agente-architect` | 50 | 160 | 118.243 | 5.031.048 | 0 |
+| `mcp:claude-code-remote` | 23 | 170 | 15.821 | 16.312 | 0 |
+| `agente:agente-architect` | 50 | 165 | 120.624 | 5.069.382 | 0 |
 | `mcp:Google-Drive` | 17 | 122 | 108.754 | 0 | 2 |
-| `agente:agente-mecanico` | 35 | 85 | 61.652 | 4.268.098 | 0 |
+| `agente:agente-mecanico` | 36 | 87 | 62.148 | 4.284.447 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `agente:Explore` | 32 | 74 | 36.887 | 2.118.846 | 0 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
