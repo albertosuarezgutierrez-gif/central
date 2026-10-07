@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-07T15:46:23Z",
+  "generadoEn": "2026-10-07T16:24:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 228
+        "evidencias": 230
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 165
+        "evidencias": 166
       },
       "rrhh": {
         "estado": "no",
@@ -4182,6 +4182,8 @@
       "/api/operador/presupuesto",
       "/api/operador/presupuesto/garantias-filtradas",
       "/api/operador/presupuesto/pdf",
+      "/api/operador/presupuesto/propuesta",
+      "/api/operador/presupuesto/propuesta/pdf",
       "/api/operador/presupuesto/referencia",
       "/api/operador/presupuesto/seguimiento",
       "/api/operador/quejas",
@@ -5216,6 +5218,8 @@
       "/api/correduria/portal-invitaciones",
       "/api/correduria/presupuesto",
       "/api/correduria/presupuesto/pdf",
+      "/api/correduria/presupuesto/propuesta",
+      "/api/correduria/presupuesto/propuesta/pdf",
       "/api/correduria/quejas",
       "/api/correduria/radar-recibos",
       "/api/correduria/recibo-devolucion",
@@ -5790,6 +5794,9 @@
       "seguros.presupuesto",
       "seguros.presupuesto_evento",
       "seguros.presupuesto_opcion",
+      "seguros.presupuesto_propuesta",
+      "seguros.presupuesto_propuesta_contador",
+      "seguros.presupuesto_propuesta_item",
       "seguros.presupuesto_referencia_contador",
       "seguros.queja",
       "seguros.recibo_devolucion",
@@ -6832,7 +6839,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1647,
+    "apis": 1651,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
