@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-07T11:32:54Z",
+  "generadoEn": "2026-10-07T14:54:55Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 225
+        "evidencias": 226
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4247,6 +4247,7 @@
       "/api/tarificador/formador/revisar-paso",
       "/api/tarificador/formador/sugerir",
       "/api/tarificador/resultado",
+      "/api/tarificador/sesion/[compania]",
       "/api/tarificador/trabajo/[id]",
       "/api/webhooks/codeoscopic",
       "/api/webhooks/resend",
@@ -5811,6 +5812,7 @@
       "seguros.tarificador_grabacion_pantallas",
       "seguros.tarificador_grabaciones",
       "seguros.tarificador_intervenciones",
+      "seguros.tarificador_sesiones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
       "seguros.whatsapp_outbound_messages"
@@ -6829,7 +6831,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1645,
+    "apis": 1646,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
