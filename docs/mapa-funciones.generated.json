@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-07T15:01:32Z",
-  "sha": "387b4de9d3a384b4c0df598971fcb07b91e0b86c",
+  "generadoEn": "2026-10-07T15:46:23Z",
+  "sha": "658e18ac47ed3f0bed4a0bb56ed17bb057d8e04c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -36949,7 +36949,7 @@
           "exportada": false,
           "params": "n: string | null, a: string | null",
           "retorno": null,
-          "linea": 131
+          "linea": 132
         },
         {
           "nombre": "precargaDePolizaDeOportunidad",
@@ -36957,7 +36957,7 @@
           "exportada": false,
           "params": "db: ConsultaSql, correduriaId: string, polizaId: string | null, ramo: string,",
           "retorno": "Promise<Record<string, unknown> | null>",
-          "linea": 140,
+          "linea": 141,
           "resumen": "La precarga del bloque de datos desde la póliza de la que nace la oportunidad (`datos_especificos` + objeto asegurado): solo para los ramos donde el bien vive ahí (vivienda, comercio y libres) y solo "
         },
         {
@@ -36966,7 +36966,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string",
           "retorno": "Promise<Riesgo | null>",
-          "linea": 162
+          "linea": 163
         },
         {
           "nombre": "asignarFigura",
@@ -36974,7 +36974,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string rol: unknown clienteId: string actor: string /** * Solo si el rol está LIBRE (03/10/2026, la subida de una póliza): `on conflict do nothing`, así * una asignación a mano o simultánea no se pi",
           "retorno": "Promise<ResultadoFigura>",
-          "linea": 323,
+          "linea": 324,
           "resumen": "Asigna una ficha a un rol del riesgo. La persona tiene que ser quien lleva la oportunidad o alguien VINCULADO a ella (relaciones, sin «Sin vínculo»): así nadie acaba de tomador de un riesgo ajeno por "
         },
         {
@@ -36983,7 +36983,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; rol: unknown; actor: string },",
           "retorno": "Promise<ResultadoFigura>",
-          "linea": 375,
+          "linea": 376,
           "resumen": "Quita una figura: ese rol vuelve a ser «el mismo que el tomador» (o el cliente, si es el tomador)."
         },
         {
@@ -36992,7 +36992,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; rol: unknown; tipoRelacion: unknown; persona: Record<string, unknown>; actor: string },",
           "retorno": null,
-          "linea": 397,
+          "linea": 398,
           "resumen": "«Mírame a nombre de mi padre»: da de alta a la persona (lead), la vincula al cliente de la oportunidad y la asigna al rol, sin salir de la pantalla. Si el DNI ya existe, no se crea: se devuelve la fic"
         },
         {
@@ -37001,7 +37001,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; figuras: FigurasVariante | null; ramo?: string },",
           "retorno": "Promise<",
-          "linea": 478,
+          "linea": 479,
           "resumen": "Comprueba lo que manda la pantalla para cotizar una VARIANTE: la oportunidad es de esta correduría y cada figura es una ficha de ella. Gratis, antes de gastar."
         },
         {
@@ -37010,7 +37010,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ramo: string = 'auto',",
           "retorno": "Promise<PersonaFigura | EmpresaFigura | null>",
-          "linea": 509,
+          "linea": 510,
           "resumen": "Los datos de una figura sacados de SU ficha, para armar la petición en el servidor (el DNI no viaja a la pantalla). Lo que la ficha no tiene se queda sin poner y lo completa el corredor: aquí no se su"
         },
         {
@@ -37019,7 +37019,7 @@
           "exportada": true,
           "params": "p: PersonaFigura | EmpresaFigura | null, conCarnet: boolean, personas: { pideEstadoCivil: boolean; estadoCivilFicha: string | null | undefined } = { pideEstadoCivil: false, estadoCivilFicha: undefined },",
           "retorno": "string[]",
-          "linea": 556,
+          "linea": 557,
           "resumen": "Qué le falta a una figura para poder cotizar. El estado civil del vendor es un id de catálogo que se elige en la pantalla de precio; en AUTO y MOTO se pide siempre allí y no se avisa aquí. En vida, sa"
         },
         {
@@ -37028,7 +37028,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "boolean",
-          "linea": 578,
+          "linea": 579,
           "resumen": "Ramos de personas: la pantalla de precio exige estado civil (catálogo del vendor) del tomador."
         },
         {
@@ -37037,7 +37037,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { tomadorId: string; ramo: 'auto' | 'moto' | 'hogar' | 'vida' | 'salud' | 'decesos'; cuerpo: Record<string, unknown>; correcciones: Record<string, unknown> | undefined },",
           "retorno": "Promise<",
-          "linea": 602,
+          "linea": 603,
           "resumen": "Prepara una cotización que es VARIANTE de un riesgo (auto-, moto-, hogar-, vida-, salud- o decesos-nuevo con `oportunidadId`; 30/09/2026: los cuatro últimos, con solo el tomador como figura). Gratis. "
         },
         {
@@ -37046,7 +37046,7 @@
           "exportada": false,
           "params": "f: EmpresaFigura, tecleado: Record<string, unknown>",
           "retorno": "Promise<DatosEmpresa>",
-          "linea": 664,
+          "linea": 665,
           "resumen": "La empresa propietaria lista para la petición: lo tecleado en la pantalla (`dni`/`nombre`, los mismos campos que una persona) manda sobre la ficha, y la dirección se resuelve contra los catálogos del "
         },
         {
@@ -37055,7 +37055,7 @@
           "exportada": true,
           "params": "e: Pick<DatosEmpresa, 'municipioResidenciaId' | 'nombreVia' | 'numeroVia' | 'tipoVia'>",
           "retorno": "string[]",
-          "linea": 694,
+          "linea": 695,
           "resumen": "Qué le falta a la dirección de una empresa propietaria para poder EMITIR. Puro."
         },
         {
@@ -37064,7 +37064,7 @@
           "exportada": false,
           "params": "v: unknown, tomadorId: string, soloTomador: boolean",
           "retorno": "FigurasVariante | null",
-          "linea": 704,
+          "linea": 705,
           "resumen": "Solo roles conocidos y uuids; el tomador siempre es quien cotiza (el cliente de la ruta)."
         },
         {
@@ -37073,7 +37073,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, a: string, b: string",
           "retorno": "Promise<Comparacion | null>",
-          "linea": 728,
+          "linea": 729,
           "resumen": "Dos variantes del MISMO riesgo, campo a campo y compañía a compañía. Gratis, solo lectura."
         },
         {
@@ -37082,7 +37082,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { polizaId: string; actor: string },",
           "retorno": "Promise<",
-          "linea": 767,
+          "linea": 768,
           "resumen": "Abre (o devuelve la abierta) la oportunidad de ESTA póliza para retarificarla, con las figuras que CIMA/la ficha ya tienen enlazadas a una persona. Gratis. Nunca toca la póliza."
         },
         {
@@ -37091,7 +37091,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, polizaId: string,",
           "retorno": "Promise<",
-          "linea": 842,
+          "linea": 866,
           "resumen": "Retarificar la póliza DENTRO de su riesgo: la oportunidad tiene que ser de esta correduría y de ESTA póliza. Gratis, antes de gastar. Devuelve el contexto que cuelga la tarificación de ella."
         },
         {
@@ -37100,7 +37100,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; clave: ClaveDatosRiesgo; datos: unknown; confirmar: boolean; actor: string },",
           "retorno": "Promise<ResultadoDatosRiesgo>",
-          "linea": 880,
+          "linea": 904,
           "resumen": "Edita (y/o confirma) los datos del riesgo de una oportunidad, de CUALQUIER ramo. `clave` dice qué bloque (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`) y T"
         },
         {
@@ -37109,7 +37109,7 @@
           "exportada": false,
           "params": "correduriaId: string, e: { oportunidadId: string; clave: ClaveDatosRiesgo; valor: Record<string, unknown>; actor: string },",
           "retorno": "Promise<void>",
-          "linea": 919,
+          "linea": 943,
           "resumen": "Write-back de una cotización con `?oportunidad=`: anota en el riesgo lo que se USÓ para pedir precio (sin sellar `confirmadoAt`; si algo cambió respecto a lo guardado, el sello se borra). Solo claves "
         },
         {
@@ -37118,7 +37118,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; cuerpo: unknown; actor: string },",
           "retorno": "Promise<void>",
-          "linea": 932
+          "linea": 956
         },
         {
           "nombre": "anotarViviendaDeCotizacion",
@@ -37126,7 +37126,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; cuerpo: unknown; catastro?: { metrosCuadrados?: number | null; anioConstruccion?: number | null; codigoPostal?: string | null } | null; actor: string },",
           "retorno": "Promise<void>",
-          "linea": 940,
+          "linea": 964,
           "resumen": "Hogar: `catastro` es lo que la ruta acaba de leer del Catastro (m², año, CP), que rellena lo que no se tecleó."
         },
         {
@@ -37135,16 +37135,17 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; ramo: RamoCapital; cuerpo: unknown; actor: string },",
           "retorno": "Promise<void>",
-          "linea": 947
+          "linea": 971
         }
       ],
       "tablas": [
         "lateral",
+        "object",
         "seguros",
         "set"
       ],
       "rutaApi": null,
-      "hash": "a1f3764dd809"
+      "hash": "0c444961a0fb"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-seguimiento.ts",
@@ -40494,6 +40495,45 @@
       ],
       "rutaApi": null,
       "hash": "47c6b41e40be"
+    },
+    {
+      "ruta": "apps/asegura/lib/seguro-anterior-de-poliza.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El seguro anterior que una póliza de la cartera ya sabe de sí misma (07/10/2026). Al abrir el riesgo de una póliza para retarificarla, la pantalla de precio no debe pedir a mano su compañía, nº ni periodo. Puro y sin E/S. Tres estados: dato que la póliza no tiene = `null`/ausente; nunca se inventa u",
+      "exporta": [
+        "competenciaDePoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpio",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": "string | null",
+          "linea": 28
+        },
+        {
+          "nombre": "efectoDeVencimiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "string | null",
+          "linea": 37,
+          "resumen": "Efecto del periodo vigente = vencimiento − 1 año (mismo día/mes; 29-feb → 28-feb). La fecha de alta de la póliza NO sirve: es el alta original, no el efecto del periodo (haría descartar la prima por «"
+        },
+        {
+          "nombre": "competenciaDePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaParaAnterior",
+          "retorno": "",
+          "linea": 51,
+          "resumen": "Lo que va en `oportunidades.poliza_competencia` (clave `aseguradora` + `seguroAnterior`) y en `numero_poliza`. `null` = la póliza no aporta nada utilizable (no se escribe nada)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4287566fb22c"
     },
     {
       "ruta": "apps/asegura/lib/seguro-anterior-reglas.ts",
@@ -91199,7 +91239,7 @@
           "exportada": true,
           "params": "{ reparto, siniestros, clienteId, hoy }: { reparto: RepartoSeguros siniestros: SiniestroCartera[] | null clienteId: string hoy: Date }",
           "retorno": null,
-          "linea": 24,
+          "linea": 26,
           "resumen": "Los seguros del cliente en tres cubos, cada uno una tarjeta que se pincha entera (24/09/2026): «con nosotros» → su póliza; «oportunidad» → su seguimiento de venta; «ya no existe», plegado al final. Lo"
         },
         {
@@ -91208,7 +91248,7 @@
           "exportada": false,
           "params": "{ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 85
+          "linea": 87
         },
         {
           "nombre": "Rejilla",
@@ -91216,7 +91256,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 97
+          "linea": 99
         },
         {
           "nombre": "Vacio",
@@ -91224,7 +91264,7 @@
           "exportada": false,
           "params": "{ children, aviso }: { children: React.ReactNode; aviso?: boolean }",
           "retorno": null,
-          "linea": 101
+          "linea": 103
         },
         {
           "nombre": "dias",
@@ -91232,7 +91272,7 @@
           "exportada": false,
           "params": "iso: string, hoy: Date",
           "retorno": "number",
-          "linea": 111
+          "linea": 113
         },
         {
           "nombre": "textoVence",
@@ -91240,7 +91280,7 @@
           "exportada": false,
           "params": "fecha: string | null | undefined, hoy: Date, fuente = 'anotado', opciones: { vencidaSiPasada?: boolean; anual?: boolean } = {}",
           "retorno": "string",
-          "linea": 127,
+          "linea": 129,
           "resumen": "pasado o sin fecha → «vencimiento desconocido», con lo último que se anotó solo como contexto."
         },
         {
@@ -91249,7 +91289,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string",
-          "linea": 143
+          "linea": 145
         },
         {
           "nombre": "avisosOportunidad",
@@ -91257,7 +91297,7 @@
           "exportada": false,
           "params": "o: OportunidadDeCliente, hoy: Date",
           "retorno": "Aviso[]",
-          "linea": 147
+          "linea": 149
         },
         {
           "nombre": "TarjetaSeguro",
@@ -91265,7 +91305,7 @@
           "exportada": false,
           "params": "{ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: Ctx; eliminable?: boolean }",
           "retorno": null,
-          "linea": 163
+          "linea": 165
         },
         {
           "nombre": "Chip",
@@ -91273,12 +91313,12 @@
           "exportada": false,
           "params": "{ a }: { a: Aviso }",
           "retorno": null,
-          "linea": 317
+          "linea": 330
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ea383eb9d0d8"
+      "hash": "c4cc3e261862"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabContactos.tsx",
@@ -91505,6 +91545,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e32936f7207c"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TarificarOportunidad.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TarificarOportunidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "TarificarOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ destino, tomadorId }: { destino: DestinoTarificar; tomadorId: string }",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "«Tarificar» en la tarjeta de Oportunidades (07/10/2026). SOLO abre la pantalla de precio del ramo (`…-nuevo?oportunidad=`), donde se confirma y se paga: este botón nunca cotiza. Si la póliza no tiene "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2ad3749861fb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/VerDniCompleto.tsx",
@@ -97121,7 +97182,7 @@
           "exportada": true,
           "params": "{ clienteId, nombreFicha, inicial, personas = null, renderPapeles, tipoPersona = null, }: { clienteId: string nombreFicha: string inicial: RelacionCartera[] | null /** Qué es la ficha de la que cuelga el contacto. Solo ordena los tipos que ",
           "retorno": null,
-          "linea": 80,
+          "linea": 83,
           "resumen": "Relaciones de un cliente de la correduría (cónyuge, hijos, empresa…) y la AUTORIZACIÓN para ver los seguros del otro, desde la ficha de plataforma. Semántica (fijada en `@central/module-seguros/relaci"
         },
         {
@@ -97130,7 +97191,7 @@
           "exportada": false,
           "params": "{ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: { p: PersonaFicha<RelacionCartera> nombreFicha: string ocupado: string | null renderPapeles?: (p: PersonaFicha<Rela",
           "retorno": null,
-          "linea": 458,
+          "linea": 461,
           "resumen": "UNA persona, con sus dos caras: lo que dice CIMA (en qué pólizas sale y como qué) y lo que hemos anotado nosotros (qué es de la ficha, si está autorizada). 🚨 Juntarlas NO es fundirlas: la procedencia"
         },
         {
@@ -97139,7 +97200,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha }: { r: RelacionCartera; nombreFicha: string }",
           "retorno": null,
-          "linea": 614,
+          "linea": 617,
           "resumen": "Quién ve qué, en una línea. Sale de los MISMOS helpers puros que el detalle (`insigniaAcceso` / `explicarSentidoAcceso`, este en el `title`), para que el resumen no pueda decir otra cosa que lo desple"
         },
         {
@@ -97148,7 +97209,7 @@
           "exportada": false,
           "params": "tono: Tono",
           "retorno": "React.CSSProperties",
-          "linea": 633,
+          "linea": 636,
           "resumen": "Una insignia que SÍ parte línea: con nombres largos, `Badge` (nowrap) se sale a 320 px."
         },
         {
@@ -97157,7 +97218,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo }: { r: RelacionCartera nombreFicha: string ocupado: string | null onAvisar: (r: RelacionCartera, invertido: boolean) => void aviso: { clave: string; texto: st",
           "retorno": null,
-          "linea": 657,
+          "linea": 660,
           "resumen": "Lo que hemos anotado NOSOTROS sobre esa persona: qué es de la ficha y si está autorizada a ver sus seguros. Ya no pinta el nombre ni su propio `<li>`: vive dentro de la fila de la persona, debajo de l"
         },
         {
@@ -97166,7 +97227,7 @@
           "exportada": false,
           "params": "{ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar, onAvisar, formulario, pie }: { /** Quién cede SUS seguros. */ otorga: string /** Quién los ve (o los vería). */ recibe: string /** ¿Los ve HOY? Lo dice el puerto, y manda sobre",
           "retorno": null,
-          "linea": 799,
+          "linea": 802,
           "resumen": "UN sentido del acceso: quién ve los seguros de quién, con su insignia, su frase y sus botones — nunca los del otro sentido. 🚨 La insignia y la frase salen de `insigniaAcceso` / `explicarSentidoAcceso"
         },
         {
@@ -97175,7 +97236,7 @@
           "exportada": false,
           "params": "{ r, enCurso, onCambiarTipo }: { r: RelacionCartera enCurso: boolean onCambiarTipo: (r: RelacionCartera, tipo: string) => void }",
           "retorno": null,
-          "linea": 927,
+          "linea": 930,
           "resumen": "«Cambiar el tipo» de un vínculo que ya existe. Va PLEGADO y en tono sutil a propósito: corregir una etiqueta es raro comparado con autorizar o quitar, y un desplegable abierto en cada vínculo conviert"
         },
         {
@@ -97184,7 +97245,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha, enCurso, onAutorizar, esSociedad }: { r: RelacionCartera nombreFicha: string enCurso: boolean onAutorizar: ( r: RelacionCartera, autoriza: boolean, extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentaci",
           "retorno": null,
-          "linea": 987,
+          "linea": 990,
           "resumen": "El alta de una autorización, con el ALCANCE siempre elegido a mano. 🚨 Hasta el 20/09/2026 esto solo existía para SOCIEDADES: entre dos personas físicas el botón simple mandaba `autorizar()` sin `alca"
         },
         {
@@ -97193,7 +97254,7 @@
           "exportada": false,
           "params": "{ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: { clienteId: string nombreFicha: string /** Las que ya tienen relación: no se ofrecen, pero si la búsqueda las encuentra se DICE (con qué tipo)",
           "retorno": null,
-          "linea": 1072
+          "linea": 1075
         },
         {
           "nombre": "AltaPersona",
@@ -97201,7 +97262,7 @@
           "exportada": false,
           "params": "{ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta, onCrear, onCancelar, onBuscar }: { nombreFicha: string tipoPersona: 'fisica' | 'juridica' | null ocupado: boolean /** Lo que se tecleó en el buscador, para no escribir el nombre d",
           "retorno": null,
-          "linea": 1301,
+          "linea": 1304,
           "resumen": "Crear la ficha de la persona que lleva los seguros de esta otra (el administrador de una sociedad, típicamente) y vincularla, sin salir de aquí. Por qué una ficha propia y no un campo «persona de cont"
         },
         {
@@ -97210,7 +97271,7 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaRelaciones, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 1528
+          "linea": 1573
         },
         {
           "nombre": "Campo",
@@ -97218,7 +97279,7 @@
           "exportada": false,
           "params": "{ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1545
+          "linea": 1590
         }
       ],
       "tablas": [
@@ -97227,7 +97288,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "7d7fdf5a366b"
+      "hash": "1a42fcd233ab"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/renovacion-sin-recibir.ts",
@@ -130443,6 +130504,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7fe9c60c7ef1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/tarificar-oportunidad.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Tarificar» desde la tarjeta de Oportunidades de la ficha (07/10/2026). PURO: decide a dónde lleva el botón. No cotiza nada: solo ABRE la pantalla de precio (`…-nuevo?oportunidad=`), donde el usuario confirma (0,50 €). Reutiliza `ramoVariante`/`rutaVariante` (la misma ruta que «Pedir precio» del rie",
+      "exporta": [
+        "destinoTarificar"
+      ],
+      "funciones": [
+        {
+          "nombre": "destinoTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { ramo: string | null tomadorId: string /** Oportunidad ABIERTA de este seguro, si la hay. */ oportunidadId: string | null polizaId: string | null }",
+          "retorno": "DestinoTarificar",
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "86ecfc2e0cf8"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/tope-avant2.ts",
@@ -200490,7 +200572,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4450,
-    "funciones": 15799
+    "archivos": 4453,
+    "funciones": 15804
   }
 }
