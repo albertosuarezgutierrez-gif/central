@@ -806,9 +806,9 @@ export async function abrirRiesgoDePoliza(
       if (comp) {
         await tx.$executeRaw`
           update seguros.oportunidades
-          set poliza_competencia = ${JSON.stringify(comp.poliza)}::jsonb || coalesce(poliza_competencia, '{}'::jsonb),
+          set poliza_competencia = (${JSON.stringify(comp.poliza)}::jsonb || coalesce(poliza_competencia, '{}'::jsonb)) || jsonb_build_object('seguroAnterior', ${JSON.stringify(comp.poliza)}::jsonb -> 'seguroAnterior'),
               numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${comp.numeroPoliza}), updated_at = now()
-          where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid and (poliza_competencia is null or poliza_competencia->'seguroAnterior' is null)`
+          where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid and (poliza_competencia is null or jsonb_typeof(poliza_competencia->'seguroAnterior') is distinct from 'object')`
       }
       if (ya.poliza_id === null) {
         await tx.$executeRaw`

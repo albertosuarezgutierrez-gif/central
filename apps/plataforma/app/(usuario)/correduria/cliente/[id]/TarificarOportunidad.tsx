@@ -35,12 +35,10 @@ export default function TarificarOportunidad({ destino, tomadorId }: { destino: 
     try {
       const r = await fetch('/api/correduria/oportunidad/de-poliza', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ polizaId: destino.polizaId }) })
       const json = (await r.json().catch(() => null)) as { estado?: string; motivo?: string; oportunidadId?: string } | null
-      if (!r.ok || json?.estado !== 'ok' || !json.oportunidadId) { setError(`No se ha podido abrir su seguimiento: ${json?.motivo ?? `HTTP ${r.status}`}`); return }
+      if (!r.ok || json?.estado !== 'ok' || !json.oportunidadId) { setError(`No se ha podido abrir su seguimiento: ${json?.motivo ?? `HTTP ${r.status}`}`); setOcupado(false); return }
       router.push(rutaVariante(destino.ramo, tomadorId, json.oportunidadId))
     } catch {
-      setError('Sin conexión: no se ha abierto nada. Reintenta.')
-    } finally {
-      setOcupado(false)
+      setError('Sin conexión: no se ha abierto nada. Reintenta.'); setOcupado(false)
     }
   }
   return (
