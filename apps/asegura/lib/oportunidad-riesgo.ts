@@ -774,11 +774,10 @@ export async function abrirRiesgoDePoliza(
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`riesgo-poliza:${e.polizaId}`}))`
     const [pol] = await tx.$queryRaw<Array<{
       cliente_id: string; tipo: string; aseguradora: string | null; datos: Record<string, unknown> | null
-      numero_poliza: string | null; dgs: string | null; inicio: string | null; vencimiento: string | null
+      numero_poliza: string | null; dgs: string | null; vencimiento: string | null
     }>>`
       select p.cliente_id::text as cliente_id, p.tipo::text as tipo, p.aseguradora, p.datos_especificos as datos,
              p.numero_poliza, p.codigo_entidad_dgs as dgs,
-             to_char(coalesce(p.fecha_inicio, p.fecha_efecto_inicial), 'YYYY-MM-DD') as inicio,
              to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento
       from seguros.polizas p
       join seguros.clientes c on c.id = p.cliente_id and c.correduria_id = p.correduria_id and c.merged_into_cliente_id is null
@@ -795,18 +794,18 @@ export async function abrirRiesgoDePoliza(
       order by (poliza_id is not null) desc, created_at desc limit 1`
     // El seguro anterior de esta póliza (compañía, nº, periodo): lo lee la pantalla de precio de `poliza_competencia`.
     const comp = competenciaDePoliza({
-      aseguradora: pol.aseguradora, numeroPoliza: pol.numero_poliza, codigoDgs: pol.dgs, fechaInicio: pol.inicio, fechaVencimiento: pol.vencimiento,
+      aseguradora: pol.aseguradora, numeroPoliza: pol.numero_poliza, codigoDgs: pol.dgs, fechaVencimiento: pol.vencimiento,
       matricula: pol.tipo === 'auto' || pol.tipo === 'moto'
         ? (typeof pol.datos?.matricula === 'string' ? pol.datos.matricula : null) : null,
     })
     if (ya) {
-      // Una oportunidad abierta de antes sin seguro anterior se rellena; la que ya tiene el suyo (leído del papel) no se pisa.
+      // Una abierta de antes sin `seguroAnterior` se rellena; lo que ya trae (leído del papel o declarado) gana.
       if (comp) {
         await tx.$executeRaw`
           update seguros.oportunidades
-          set poliza_competencia = ${JSON.stringify(comp.poliza)}::jsonb,
+          set poliza_competencia = ${JSON.stringify(comp.poliza)}::jsonb || coalesce(poliza_competencia, '{}'::jsonb),
               numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${comp.numeroPoliza}), updated_at = now()
-          where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid and poliza_competencia is null`
+          where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid and (poliza_competencia is null or poliza_competencia->'seguroAnterior' is null)`
       }
       if (ya.poliza_id === null) {
         await tx.$executeRaw`

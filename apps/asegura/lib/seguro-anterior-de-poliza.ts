@@ -9,7 +9,6 @@ export type PolizaParaAnterior = {
   numeroPoliza: string | null
   codigoDgs: string | null
   /** aaaa-mm-dd o null. */
-  fechaInicio: string | null
   fechaVencimiento: string | null
   /** Solo auto/moto: la matrícula de ESA póliza. */
   matricula: string | null
@@ -27,6 +26,20 @@ function limpio(s: string | null): string | null {
 }
 
 /**
+ * Efecto del periodo vigente = vencimiento − 1 año (mismo día/mes; 29-feb → 28-feb). La fecha de alta de la póliza
+ * NO sirve: es el alta original, no el efecto del periodo (haría descartar la prima por «posible plurianual»).
+ */
+function efectoDeVencimiento(v: string | null): string | null {
+  const m = typeof v === 'string' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(v) : null
+  if (!m) return null
+  const [anio, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const d = new Date(Date.UTC(anio, mes - 1, dia))
+  if (d.getUTCFullYear() !== anio || d.getUTCMonth() !== mes - 1 || d.getUTCDate() !== dia) return null
+  const dd = mes === 2 && dia === 29 ? 28 : dia
+  return `${String(anio - 1).padStart(4, '0')}-${m[2]}-${String(dd).padStart(2, '0')}`
+}
+
+/**
  * Lo que va en `oportunidades.poliza_competencia` (clave `aseguradora` + `seguroAnterior`) y en
  * `numero_poliza`. `null` = la póliza no aporta nada utilizable (no se escribe nada).
  */
@@ -35,7 +48,7 @@ export function competenciaDePoliza(p: PolizaParaAnterior): { poliza: PolizaComp
   const numeroPoliza = limpio(p.numeroPoliza)
   const sa = seguroAnteriorDe({
     codigoDgs: p.codigoDgs,
-    fechaEfecto: p.fechaInicio,
+    fechaEfecto: efectoDeVencimiento(p.fechaVencimiento),
     fechaVencimiento: p.fechaVencimiento,
     numeroPoliza,
     matricula: p.matricula,

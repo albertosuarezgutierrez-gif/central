@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { btnStyle } from '@/components/ui'
 import { rutaVariante } from '../../oportunidad/[id]/variante'
 import type { DestinoTarificar } from '@/lib/correduria/tarificar-oportunidad'
@@ -13,6 +13,7 @@ import type { DestinoTarificar } from '@/lib/correduria/tarificar-oportunidad'
  */
 export default function TarificarOportunidad({ destino, tomadorId }: { destino: DestinoTarificar; tomadorId: string }) {
   const router = useRouter()
+  const idMotivo = useId()
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const estilo = { ...btnStyle('primario', 'sm'), minHeight: 44 }
@@ -23,8 +24,8 @@ export default function TarificarOportunidad({ destino, tomadorId }: { destino: 
   if (destino.tipo === 'no') {
     return (
       <span style={{ display: 'grid', gap: 2, flexBasis: '100%' }}>
-        <button type="button" disabled aria-describedby="sin-tarifa" style={estilo}>Tarificar</button>
-        <span id="sin-tarifa" style={{ fontSize: 12, color: 'var(--muted)' }}>{destino.motivo}</span>
+        <button type="button" disabled aria-describedby={idMotivo} style={estilo}>Tarificar</button>
+        <span id={idMotivo} style={{ fontSize: 12, color: 'var(--muted)' }}>{destino.motivo}</span>
       </span>
     )
   }
