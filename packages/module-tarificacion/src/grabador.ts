@@ -35,6 +35,53 @@ export const PATRON_CAMPO_PERSONAL = /nombre|apellid|razon_?social|naci|fullDate
 /** Cabecera con el mediador en el texto: «209-C/12/0000 - Nombre Apellidos» → el nombre se tapa. */
 export const PATRON_MEDIADOR = /(\b\d{1,4}-[A-Za-z](?:\/\w+)+)\s+-\s+[^<>\n]+/g
 
+/** Atributos (por NOMBRE) que llevan tokens de sesión: `session="…"`, `sessionid`, `data-token`, `auth`, `csrf`, `jsessionid`… → el valor sale `[DATO]`. */
+export const PATRON_ATRIBUTO_SESION = /session|token|auth|csrf/i
+
+/** Cualquier valor de atributo con forma de UUID (id de sesión, de operación…) → `[DATO]` (solo esa parte del valor). */
+export const PATRON_UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi
+
+/** id/class/aria-label de un elemento que MUESTRA el usuario o la cuenta (cabecera del portal): su TEXTO sale `[DATO]`. */
+export const PATRON_ELEMENTO_USUARIO = /user|usuario|username|login|perfil|account|cuenta/i
+
+/** Un elemento «de usuario» solo se tapa si es corto (un nombre/código) y no contiene controles: un contenedor grande
+ *  con clase «login-page» o «account» es maquetación, no el dato. Misma regla en cliente y servidor. */
+export const MAX_TEXTO_ELEMENTO_USUARIO = 200
+
+const TAGS_NO_USUARIO = new Set(['html', 'body', 'head', 'main', 'form', 'table', 'script', 'style', 'input', 'select', 'textarea', 'option', 'button'])
+const TAGS_VACIOS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'])
+const TAGS_CONTROL = new Set(['input', 'select', 'textarea', 'form', 'table', 'button'])
+
+/** Tapa el TEXTO de los elementos de usuario/cuenta (ver `PATRON_ELEMENTO_USUARIO`). Idempotente. */
+export function redactarTextoUsuario(html: string): string {
+  const tokens = String(html).split(/(<!--[\s\S]*?-->|<[^>]*>)/)
+  const esTag = (t: string) => t.length > 1 && t[0] === '<' && t[1] !== '!' && t[1] !== '/'
+  const nombreTag = (t: string) => /^<\/?([a-zA-Z][a-zA-Z0-9-]*)/.exec(t)?.[1]?.toLowerCase() ?? ''
+  const tapar = new Set<number>()
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]
+    if (!esTag(t) || t.endsWith('/>')) continue
+    const tag = nombreTag(t)
+    if (!tag || TAGS_NO_USUARIO.has(tag) || TAGS_VACIOS.has(tag)) continue
+    const a = atributos(t.slice(1 + tag.length, -1))
+    if (![a.get('id'), a.get('class'), a.get('aria-label')].some((x) => typeof x === 'string' && PATRON_ELEMENTO_USUARIO.test(x))) continue
+    let fin = -1
+    let prof = 1
+    for (let j = i + 1; j < tokens.length && fin < 0; j++) {
+      const u = tokens[j]
+      if (!u.startsWith('<') || u.startsWith('<!--') || nombreTag(u) !== tag) continue
+      if (u[1] === '/') { if (--prof === 0) fin = j } else if (!u.endsWith('/>')) prof++
+    }
+    // Sin cierre: solo el texto que sigue a la etiqueta.
+    const hasta = fin < 0 ? Math.min(i + 2, tokens.length) : fin
+    const rango = tokens.slice(i + 1, hasta)
+    if (rango.some((u) => esTag(u) && TAGS_CONTROL.has(nombreTag(u)))) continue
+    if (rango.filter((u) => !u.startsWith('<')).join('').trim().length > MAX_TEXTO_ELEMENTO_USUARIO) continue
+    for (let j = i + 1; j < hasta; j++) if (!tokens[j].startsWith('<') && tokens[j].trim()) tapar.add(j)
+  }
+  return tokens.map((t, i) => (tapar.has(i) ? MARCA_DATO_PERSONAL : t)).join('')
+}
+
 /** Cabecera de una grabación con input type=password: es una PANTALLA DE LOGIN y sus campos de texto van tapados. */
 export const MARCA_LOGIN = '<!-- grabador: PANTALLA DE LOGIN (campos tapados) -->'
 
@@ -129,8 +176,10 @@ function redactarEtiqueta(tag: string, cuerpo: string, login: boolean): string {
     const v = valorAtributo(crudo) ?? ''
     if (sensible && (n === 'value' || n === 'data-valor')) return `${nombre}="${MARCA_REDACTADO}"`
     if (ATRIBUTOS_SELECTOR.has(n)) return todo
-    if (ATRIBUTOS_URL.has(n)) return `${nombre}="${escaparAttr(redactarUrl(redactarDatosPersonales(v)))}"`
-    const r = redactarDatosPersonales(v)
+    if (PATRON_ATRIBUTO_SESION.test(n)) return v === '' ? todo : `${nombre}="${MARCA_DATO_PERSONAL}"`
+    const sinUuid = (x: string) => x.replace(PATRON_UUID, MARCA_DATO_PERSONAL)
+    if (ATRIBUTOS_URL.has(n)) return `${nombre}="${escaparAttr(sinUuid(redactarUrl(redactarDatosPersonales(v))))}"`
+    const r = sinUuid(redactarDatosPersonales(v))
     return r === v ? todo : `${nombre}="${escaparAttr(r)}"`
   })
 }
@@ -154,6 +203,8 @@ export function redactarHtmlGrabacion(html: string): string {
   // Etiquetas de apertura (los comentarios `<!-- … -->` y `</cierre>` no casan: empiezan por ! o /).
   out = out.replace(/<([a-zA-Z][a-zA-Z0-9-]*)(\s[^<>]*?)?(\/?)>/g, (_t, tag: string, cuerpo: string | undefined, cierre: string) =>
     `<${tag}${cuerpo ? redactarEtiqueta(tag.toLowerCase(), cuerpo, login) : ''}${cierre}>`)
+  // Texto de la cabecera del portal con el usuario/cuenta (no es un input).
+  out = redactarTextoUsuario(out)
   // Texto entre etiquetas.
   out = out.replace(/>([^<]+)</g, (_t, texto: string) => `>${redactarDatosPersonales(texto).replace(PATRON_MEDIADOR, (_m, cod: string) => `${cod} - ${MARCA_DATO_PERSONAL}`)}<`)
   out = redactar(out, [])

@@ -49,8 +49,10 @@ const COTIZADOR = `<html><head><script>window.secretoJs = "SECRETO_DEL_JS"</scri
 const PORTAL = `<!doctype html><html><head><title>Cotizador de Hogar</title><style>body{}</style></head><body>
 <form id="login"><input id="usuario" name="usuario"><input id="pass" name="clave" type="password"></form>
 <a href="/siguiente?paso=2&sessionid=SES-12345">Siguiente</a>
+<div id="cabecera"><span id="nombreUsuario">Fulano Inventado</span><div class="cuenta-activa"><b>COD-INVENTADO-9911</b></div><span aria-label="Perfil del agente">Perfil-Inventado-X</span></div>
+<button id="btnCalcular" type="button" session="3f2b8c1e-4d5a-4b6c-9d7e-1a2b3c4d5e6f" data-token="TKN-INVENTADO-1" csrf="CSRF-INVENTADO-2" data-ref="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee">Calcular</button>
 <iframe name="cotizador" src="/cotizador"></iframe>
-<iframe name="externo" src="http://otro-origen.test/"></iframe>
+<iframe name="externo" src="http://otro-origen.test/formulario/hogar?token=TOK-URL-555&id=77#frag-secreto"></iframe>
 </body></html>`
 
 test('bookmarklet: serializa marcos del mismo origen, anota valores, redacta y descarga sin red', async (t) => {
@@ -62,7 +64,7 @@ test('bookmarklet: serializa marcos del mismo origen, anota valores, redacta y d
     const page = await ctx.newPage()
     await page.route('http://portal.test/', (r) => r.fulfill({ contentType: 'text/html', body: PORTAL }))
     await page.route('http://portal.test/cotizador', (r) => r.fulfill({ contentType: 'text/html', body: COTIZADOR }))
-    await page.route('http://otro-origen.test/', (r) => r.fulfill({ contentType: 'text/html', body: '<html><body><input id="ajeno" value="NO_SE_VE"></body></html>' }))
+    await page.route('http://otro-origen.test/**', (r) => r.fulfill({ contentType: 'text/html', body: '<html><body><input id="ajeno" value="NO_SE_VE"></body></html>' }))
     await page.goto('http://portal.test/')
     await page.waitForFunction(() => {
       const f = document.querySelector('iframe[name=cotizador]') as HTMLIFrameElement | null
@@ -83,6 +85,8 @@ test('bookmarklet: serializa marcos del mismo origen, anota valores, redacta y d
       ['tom_address_street', 'Calle Falsa'], ['tom_address_pc', '41999'], ['mail1', 'inventado'], ['codAgente', 'AG7731'], ['importeCapital', '150000'], ['fechaEfecto', '15/11/2026']]) await cot.fill('#' + id, v)
     await page.frame({ name: 'interno' })!.fill('#matricula', '1234 BCD')
 
+    const avisos: string[] = []
+    page.on('dialog', (dl) => { avisos.push(dl.message()); void dl.dismiss() })
     const peticiones: string[] = []
     page.on('request', (r) => { if (/^https?:/.test(r.url())) peticiones.push(r.url()) })
     const descarga = page.waitForEvent('download')
@@ -101,7 +105,13 @@ test('bookmarklet: serializa marcos del mismo origen, anota valores, redacta y d
     assert.match(s.marcos[1].html, /id="matricula"/)
     assert.match(s.marcos[2].html, /otro origen/)
     assert.ok(!html.includes('NO_SE_VE'), 'un marco de otro origen no se lee')
-    assert.match(s.principal, /^<!-- grabador ASegura v1 /)
+    // Marco no legible: la cabecera lista su URL SIN query ni #, y el alert lleva la URL completa (solo en pantalla).
+    assert.match(s.principal, /marcos sin leer: 1 -->/)
+    assert.match(s.principal, /<!-- grabador: marcos sin leer \(sin query ni tokens\): http:\/\/otro-origen\.test\/formulario\/hogar -->/)
+    for (const crudo of ['TOK-URL-555', 'frag-secreto', 'id=77']) assert.ok(!html.includes(crudo), `la URL del marco filtra «${crudo}» en el fichero`)
+    assert.equal(avisos.length, 1)
+    assert.equal(avisos[0], 'Esta pantalla tiene el formulario en un marco que no se puede leer. Abre este enlace en una pestaña nueva y vuelve a pulsar el marcador: http://otro-origen.test/formulario/hogar?token=TOK-URL-555&id=77#frag-secreto')
+    assert.match(s.principal, /^<!-- grabador ASegura v2 /)
     assert.match(s.principal, /data-grabador-marco="cotizador"/)
 
     // Valores anotados (sin datos personales) y opciones del select.
@@ -121,10 +131,68 @@ test('bookmarklet: serializa marcos del mismo origen, anota valores, redacta y d
     // Redacción: nada personal, ni contraseñas, ni ocultos, ni tokens, ni scripts, ni cookies.
     for (const crudo of [
       'Contrasena.Secreta.99', 'usuario-prueba', 'Marta', 'Inventadez', 'Razon Inventada', '01/02/1980', '1980-02-01', 'Calle Falsa', '41999', 'AG7731', 'Mediadora Inventada', '12345678Z', 'ana.perez@correo.es', 'ES91 2100', '612 345 678', '1234 BCD',
+      'Fulano Inventado', 'COD-INVENTADO-9911', 'Perfil-Inventado-X', '3f2b8c1e-4d5a', 'TKN-INVENTADO-1', 'CSRF-INVENTADO-2', 'aaaaaaaa-bbbb',
       'VIEWSTATE-SECRETO', 'TOK-INTERNO-777', 'SES-12345', 'SECRETO_DEL_JS', 'COOKIE_SECRETA_42', '<script',
     ]) assert.ok(!html.includes(crudo), `se ha escapado «${crudo}»`)
     assert.match(s.principal, /id="pass"[^>]*value="\[REDACTADO\]"|value="\[REDACTADO\]"[^>]*id="pass"/)
     assert.match(s.marcos[1].html, /id="btnEmitir"/)
+    // Atributos de sesión y UUID → [DATO]; texto del usuario/cuenta de la cabecera → [DATO]; el resto de la cabecera sigue.
+    assert.match(s.principal, /id="btnCalcular"[^>]*session="\[DATO\]"/)
+    assert.match(s.principal, /data-token="\[DATO\]"/)
+    assert.match(s.principal, /data-ref="\[DATO\]"/)
+    assert.match(s.principal, /<span id="nombreUsuario">\[DATO\]<\/span>/)
+    assert.match(s.principal, /<b>\[DATO\]<\/b>/)
+    assert.match(s.principal, />Calcular<\/button>/)
+  } finally {
+    await browser.close()
+  }
+})
+
+// Marco de otro origen como ÚNICO contenido relevante: igualmente se descarga el fichero y se avisa con el alert.
+test('bookmarklet: marco ilegible único → descarga el fichero igualmente y avisa con la URL completa', async (t) => {
+  const browser = await lanzar()
+  if (!browser) return t.skip('sin Chromium disponible (instala el de Playwright o define GRABADOR_CHROMIUM)')
+  try {
+    const ctx = await browser.newContext({ acceptDownloads: true })
+    const page = await ctx.newPage()
+    await page.route('http://portal.test/', (r) => r.fulfill({ contentType: 'text/html', body: '<html><head><title>Portal</title></head><body><iframe id="f1" src="http://catalana.test/app/form?sessionid=SES-AJENA-9&a=1"></iframe><iframe src="http://otra.test/x;jsessionid=JS-77?q=1"></iframe></body></html>' }))
+    await page.route(/http:\/\/(catalana|otra)\.test\/.*/, (r) => r.fulfill({ contentType: 'text/html', body: '<html><body>ajeno</body></html>' }))
+    await page.goto('http://portal.test/')
+    await page.waitForLoadState('load')
+    const avisos: string[] = []
+    page.on('dialog', (dl) => { avisos.push(dl.message()); void dl.dismiss() })
+    const descarga = page.waitForEvent('download')
+    await page.evaluate(codigoBookmarklet())
+    const html = readFileSync((await (await descarga).path())!, 'utf8')
+    assert.match(html, /marcos sin leer: 2 -->/)
+    assert.match(html, /marcos sin leer \(sin query ni tokens\): http:\/\/catalana\.test\/app\/form \| http:\/\/otra\.test\/x -->/)
+    for (const crudo of ['SES-AJENA-9', 'JS-77', 'a=1', 'q=1']) assert.ok(!html.includes(crudo), `el fichero filtra «${crudo}»`)
+    // UN solo alert (varios marcos → un párrafo por marco, cada uno con su URL completa).
+    assert.equal(avisos.length, 1)
+    const parrafos = avisos[0].split('\n\n')
+    assert.equal(parrafos.length, 2)
+    assert.match(parrafos[0], /^Esta pantalla tiene el formulario en un marco que no se puede leer\. .*marcador: http:\/\/catalana\.test\/app\/form\?sessionid=SES-AJENA-9&a=1$/)
+    assert.match(parrafos[1], /marcador: http:\/\/otra\.test\/x;jsessionid=JS-77\?q=1$/)
+  } finally {
+    await browser.close()
+  }
+})
+
+test('bookmarklet: sin marcos ilegibles no hay alert ni línea de marcos', async (t) => {
+  const browser = await lanzar()
+  if (!browser) return t.skip('sin Chromium disponible (instala el de Playwright o define GRABADOR_CHROMIUM)')
+  try {
+    const ctx = await browser.newContext({ acceptDownloads: true })
+    const page = await ctx.newPage()
+    await page.route('http://portal.test/', (r) => r.fulfill({ contentType: 'text/html', body: '<html><body><p>hola</p></body></html>' }))
+    await page.goto('http://portal.test/')
+    const avisos: string[] = []
+    page.on('dialog', (dl) => { avisos.push(dl.message()); void dl.dismiss() })
+    const descarga = page.waitForEvent('download')
+    await page.evaluate(codigoBookmarklet())
+    const html = readFileSync((await (await descarga).path())!, 'utf8')
+    assert.deepEqual(avisos, [])
+    assert.ok(!html.includes('sin query ni tokens'))
   } finally {
     await browser.close()
   }

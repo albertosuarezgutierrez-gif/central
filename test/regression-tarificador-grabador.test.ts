@@ -48,6 +48,22 @@ test('el grabador tapa usuario, login y datos de personas en AMBAS capas (client
   assert.match(bm, /if \(login && /, 'el bookmarklet no tapa los campos de una pantalla de login')
 })
 
+test('el grabador tapa atributos de sesión, UUID y texto de usuario, y avisa de los marcos ilegibles, en AMBAS capas', () => {
+  const gr = leer('packages/module-tarificacion/src/grabador.ts')
+  const bm = leer('packages/module-tarificacion/src/grabador-bookmarklet.ts')
+  for (const n of ['PATRON_ATRIBUTO_SESION', 'PATRON_UUID', 'PATRON_ELEMENTO_USUARIO', 'MAX_TEXTO_ELEMENTO_USUARIO']) {
+    assert.match(gr, new RegExp(`export const ${n}\\b`), `grabador.ts ya no exporta ${n}`)
+    assert.match(bm, new RegExp(`\\b${n}\\b`), `el bookmarklet no usa ${n}`)
+  }
+  assert.match(gr, /redactarTextoUsuario\(out\)/, 'el servidor no tapa el texto del usuario')
+  assert.match(gr, /PATRON_ATRIBUTO_SESION\.test\(n\)/, 'el servidor no tapa los atributos de sesión')
+  assert.match(gr, /replace\(PATRON_UUID/, 'el servidor no tapa los UUID')
+  assert.match(bm, /SESION\.test\(n\)/, 'el bookmarklet no tapa los atributos de sesión')
+  assert.match(bm, /ELEM_USU\.test/, 'el bookmarklet no tapa el texto del usuario')
+  assert.match(bm, /win\.alert\(aviso\)/, 'el bookmarklet no avisa con alert() de los marcos ilegibles')
+  assert.match(bm, /urlsSinLeer\.join/, 'la cabecera no lista las URL de los marcos sin leer')
+})
+
 test('el SQL de grabaciones es aditivo, idempotente y sin DELETE para la app', () => {
   const sql = leer('apps/asegura/prisma/sql/2026-10-07b_tarificador_grabaciones.sql')
   const codigo = sql.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n')
