@@ -1106,7 +1106,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (07/10/2026) Correduría · botón «Tarificar» en Oportunidades de la ficha
 - `TarificarOportunidad.tsx` + helper puro `lib/correduria/tarificar-oportunidad.ts` (test). Reutiliza `rutaVariante()`/`ramoVariante()` → `/<ramo>-nuevo?oportunidad=`.
 - Sin seguimiento: abre uno con `POST /api/correduria/oportunidad/de-poliza` (gratis) y navega. Nunca cotiza: Codeoscopic se confirma en destino.
-- Ramos sin tarifa (Otros, RC, Comercio, Comunidad): deshabilitado con motivo. Sin probar en navegador.
+- Ramos sin tarifa (Otros, RC, Comercio, Comunidad): deshabilitado con motivo. Sin probar en navegador. + `abrirRiesgoDePoliza` (asegura) precarga `poliza_competencia` (compañía, nº, DGS, inicio/vto) vía helper `seguro-anterior-de-poliza.ts`.
 
 ## (05/10/2026) WhatsApp Cloud API → CRM correduría (fases 1-2, solo ENTRANTE)
 - `apps/asegura`: webhook `/api/webhooks/whatsapp` (HMAC + Zod, dedupe wamid, `messages` + `smb_message_echoes`), crons `whatsapp-analizar` (IA, lista blanca de 6 acciones) y `whatsapp-retencion`; helpers `aE164`/`redactarPii` en module-seguros. Sin código de envío.
