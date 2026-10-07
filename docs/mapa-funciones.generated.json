@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-07T11:32:54Z",
-  "sha": "66cde1c0867ded48b7c9c7bb94adb7668de7950f",
+  "generadoEn": "2026-10-07T11:58:49Z",
+  "sha": "3f243e23c0a73c96014f9c04b9bc4359989b245d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -89880,7 +89880,8 @@
         "pedirCatalogo",
         "pedirPrecalificacionMoto",
         "pedirCotizacionMoto",
-        "pedirTarificacionGuardadaMoto"
+        "pedirTarificacionGuardadaMoto",
+        "abrirCotizadorMotoDeOportunidad"
       ],
       "funciones": [
         {
@@ -89889,7 +89890,7 @@
           "exportada": true,
           "params": "params: Record<string, string>",
           "retorno": "Promise<RespuestaCatalogo>",
-          "linea": 21,
+          "linea": 28,
           "resumen": "Un catálogo del vendor (marcas, modelos, versiones, experiencia…). **Gratis.**"
         },
         {
@@ -89898,7 +89899,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string }",
           "retorno": "Promise<RespuestaPrecalificacionMotoNueva>",
-          "linea": 26,
+          "linea": 33,
           "resumen": "La ficha de la persona (municipios, estado civil, huecos, consumo). **Gratis.**"
         },
         {
@@ -89907,7 +89908,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> /** Variante de un riesgo (29/09/2026): la oportunidad, sus figuras (rol → ficha) y la nota. Sin ocasional: moto no lo admite. */ varian",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 36,
+          "linea": 46,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `cotizarMotoNuevaAsegura()`, en el servidor y en un solo sitio — no se acepta desde el cliente. 🚫 No reintenta."
         },
         {
@@ -89916,13 +89917,117 @@
           "exportada": true,
           "params": "entrada: { clienteId: string oportunidadId?: string | null tarificacionId?: string | null }",
           "retorno": "Promise<RespuestaTarificacionNueva>",
-          "linea": 64,
+          "linea": 78,
           "resumen": "La última tarificación de moto de este cliente, para retomarla sin pagar otra vez. **Gratis.** Con `oportunidadId` (variante de un riesgo) busca la de ESE riesgo y, con `tarificacionId`, esa variante "
+        },
+        {
+          "nombre": "abrirCotizadorMotoDeOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { oportunidadId: string }",
+          "retorno": "Promise<AperturaCotizadorMoto>",
+          "linea": 103,
+          "resumen": "El bloque «Pedir precio» de una oportunidad de MOTO (07/10/2026): relee el RIESGO en el servidor (lo que hay en asegura ahora, no lo que pinta el navegador) y lo que el cotizador necesita, solo al ABR"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45857392fee6"
+      "hash": "2c78c815d35d"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CotizadorMoto",
+        "PreciosVarianteMoto"
+      ],
+      "funciones": [
+        {
+          "nombre": "CotizadorMoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ embebido = false, bloqueo = null, onCotizando, onCotizado, clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, poliza = null, otroVehiculo = null, var",
+          "retorno": null,
+          "linea": 130
+        },
+        {
+          "nombre": "hoyLocal",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 1212,
+          "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
+        },
+        {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 1217
+        },
+        {
+          "nombre": "Campo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 1222
+        },
+        {
+          "nombre": "Contador",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
+          "retorno": null,
+          "linea": 1236
+        },
+        {
+          "nombre": "Precios",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r, simulacion, emitible = false, sustituye = true, clienteId, actual = null, }: { /** «Pagas X → te proponemos Y» (03/10/2026): lo que paga hoy, anualizado. `null` = sin comparación. */ actual?: ReturnType<typeof primaActualParaLista> r: ",
+          "retorno": null,
+          "linea": 1255
+        },
+        {
+          "nombre": "PreciosVarianteMoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId, oportunidadId, tarificacionId, simulado }: { /** El tomador de ESA variante (la tarificación es suya). */ clienteId: string oportunidadId: string tarificacionId: string /** La variante es una simulación: se enseña, nunca se emi",
+          "retorno": null,
+          "linea": 1376,
+          "resumen": "«Presupuestos de este riesgo» → «Ver precios y emitir» (07/10/2026, oportunidad de MOTO): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con el MISMO panel de emisión que tras "
+        }
+      ],
+      "tablas": [
+        "lucide",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "b3fac592c426"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/datos-cotizador.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Servidor: lo que el cotizador de moto necesita leer antes de pintarse (catálogos de garaje y estado civil, precalificación de la persona, compañías, seguro que tiene hoy, pack). Lo comparten la página completa `moto-nuevo/page.tsx` y el bloque «Pedir precio» de la oportunidad (acción `abrirCotizador",
+      "exporta": [
+        "datosCotizadorMoto"
+      ],
+      "funciones": [
+        {
+          "nombre": "datosCotizadorMoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string, oportunidadId: string | null",
+          "retorno": "Promise<DatosCotizadorMoto>",
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "527a0e956ace"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx",
@@ -89935,58 +90040,14 @@
           "nombre": "MotoNuevo",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, poliza = null, otroVehiculo = null, variante = null, datosRiesgo: datosRiesgoProp = null, anterior",
+          "params": "props: Omit<ComponentProps<typeof CotizadorMoto>, 'embebido' | 'bloqueo' | 'onCotizando' | 'onCotizado'>",
           "retorno": null,
-          "linea": 121
-        },
-        {
-          "nombre": "hoyLocal",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": "string",
-          "linea": 1134,
-          "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
-        },
-        {
-          "nombre": "fechaCorta",
-          "kind": "function",
-          "exportada": false,
-          "params": "iso: string",
-          "retorno": "string",
-          "linea": 1139
-        },
-        {
-          "nombre": "Campo",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
-          "retorno": null,
-          "linea": 1144
-        },
-        {
-          "nombre": "Contador",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
-          "retorno": null,
-          "linea": 1158
-        },
-        {
-          "nombre": "Precios",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ r, simulacion, emitible = false, sustituye = true, clienteId, actual = null, }: { /** «Pagas X → te proponemos Y» (03/10/2026): lo que paga hoy, anualizado. `null` = sin comparación. */ actual?: ReturnType<typeof primaActualParaLista> r: ",
-          "retorno": null,
-          "linea": 1177
+          "linea": 13
         }
       ],
-      "tablas": [
-        "lucide",
-        "react"
-      ],
+      "tablas": [],
       "rutaApi": null,
-      "hash": "a75b63c4b5c7"
+      "hash": "c0faa8ecc71c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/page.tsx",
@@ -90001,13 +90062,13 @@
           "exportada": true,
           "params": "{ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 43,
+          "linea": 39,
           "resumen": "**Presupuesto de moto SIN póliza, DENTRO de `/correduria`.** Hermana de `.../auto-nuevo`, construida el mismo día por el mismo motivo: Alberto no quiere saltar de pantalla para presupuestar una oportu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c1bfcd8b53b9"
+      "hash": "c68bd8080a1f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/NotasCliente.tsx",
@@ -93578,7 +93639,7 @@
           "nombre": "BloqueFigura",
           "kind": "function",
           "exportada": true,
-          "params": "{ rol, nombre, faltan, persona, onPersona, civiles, empresa = false, }: { rol: RolExtra nombre: string | null /** `null` = no se pudo leer su ficha: se deja teclear todo, y lo tecleado manda. */ faltan: string[] | null persona: PersonaForm ",
+          "params": "{ rol, nombre, faltan, persona, onPersona, civiles, empresa = false, soloCondiciones = false, }: { rol: RolExtra nombre: string | null /** `null` = no se pudo leer su ficha: se deja teclear todo, y lo tecleado manda. */ faltan: string[] | n",
           "retorno": null,
           "linea": 17,
           "resumen": "Un papel que ocupa OTRA ficha: su nombre, su estado civil y solo lo que falte en su ficha."
@@ -93589,12 +93650,12 @@
           "exportada": false,
           "params": "{ etiqueta, falta, ayuda, children }: { etiqueta: string; falta: boolean; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 112
+          "linea": 127
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "30a8d92e66ef"
+      "hash": "c8eb3de957ce"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/cargar-variante.tsx",
@@ -93781,6 +93842,38 @@
       "hash": "6f53f28762d6"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/cotizador-embebido.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Reglas PURAS del cotizador de moto EMBEBIDO en la oportunidad (07/10/2026, Fase 1 «la oportunidad es la única página»). El cotizador lee el vehículo y las figuras del RIESGO; si eso cambia mientras está abierto, lo que tiene en memoria es el riesgo ANTERIOR y pagar 0,50€ con él sería cotizar otra mo",
+      "exporta": [
+        "firmaRiesgoMoto",
+        "motivoBloqueoCotizador"
+      ],
+      "funciones": [
+        {
+          "nombre": "firmaRiesgoMoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Riesgo",
+          "retorno": "string",
+          "linea": 13,
+          "resumen": "Huella de lo que el cotizador usa del riesgo: el vehículo (sin el sello de confirmación, que no cambia ningún dato), los papeles y quién ocupa cada uno (con lo que le falta en su ficha). Dos lecturas "
+        },
+        {
+          "nombre": "motivoBloqueoCotizador",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { editandoVehiculo: boolean editandoFiguras: boolean recargando: boolean /** La pantalla ya trae OTRO riesgo que el que se leyó al abrir el cotizador. */ riesgoCambiado: boolean /** Lo que el servidor leyó al abrir no coincide con lo que",
+          "retorno": "string | null",
+          "linea": 27,
+          "resumen": "Por qué AHORA no se puede pedir precio desde el cotizador embebido (`null` = nada lo impide). Orden: lo que el corredor tiene a medias arriba manda (así sabe qué cerrar); después, la relectura en curs"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "791cfe26f3b8"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/DatosRiesgo.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -93915,7 +94008,7 @@
           "nombre": "DatosVehiculo",
           "kind": "function",
           "exportada": true,
-          "params": "{ riesgo, ocupado, onCambio, onError }: { riesgo: Riesgo ocupado: boolean onCambio: (texto: string) => void onError: (texto: string) => void }",
+          "params": "{ riesgo, ocupado, onCambio, onError, onEditando }: { riesgo: Riesgo ocupado: boolean onCambio: (texto: string) => void onError: (texto: string) => void /** Avisa de que hay algo A MEDIAS (editando, eligiendo versión o guardando): el cotiza",
           "retorno": null,
           "linea": 42
         }
@@ -93924,7 +94017,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "14fce880cb92"
+      "hash": "3a4eb72850e8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/EditarFichaModal.tsx",
@@ -94040,14 +94133,14 @@
           "nombre": "FigurasRiesgo",
           "kind": "function",
           "exportada": true,
-          "params": "{ riesgo, ocupado, onCambio, onError }: { riesgo: Riesgo ocupado: boolean onCambio: (texto: string) => void onError: (texto: string) => void }",
+          "params": "{ riesgo, ocupado, onCambio, onError, onEditando }: { riesgo: Riesgo ocupado: boolean onCambio: (texto: string) => void onError: (texto: string) => void /** Avisa de que hay un cambio de persona A MEDIAS (eligiendo, alta nueva, editando fic",
           "retorno": null,
           "linea": 30
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "252f33989b3e"
+      "hash": "0ed03d535cc1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/HistorialVariantes.tsx",
@@ -94060,17 +94153,17 @@
           "nombre": "HistorialVariantes",
           "kind": "function",
           "exportada": true,
-          "params": "{ riesgo }: { riesgo: Riesgo }",
+          "params": "{ riesgo, abrirPrecios = null }: { riesgo: Riesgo /** La variante recién pedida desde el bloque «Pedir precio» (moto): se abre con sus precios para emitir. */ abrirPrecios?: string | null }",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "Fila",
           "kind": "function",
           "exportada": false,
-          "params": "{ v, primera, abrir, otroTomador, comparable, marcada, onMarcar }: { v: VarianteRiesgo; primera: boolean; abrir: string | null; otroTomador: boolean comparable: boolean; marcada: boolean; onMarcar: () => void }",
+          "params": "{ v, primera, abrir, precios, otroTomador, comparable, marcada, onMarcar }: { v: VarianteRiesgo; primera: boolean; abrir: string | null; otroTomador: boolean /** Moto: los precios y «Emitir» de esta variante, plegados en la propia fila. `nu",
           "retorno": null,
-          "linea": 83
+          "linea": 112
         },
         {
           "nombre": "Cambios",
@@ -94078,12 +94171,12 @@
           "exportada": false,
           "params": "{ cambios, primera }: { cambios: VarianteRiesgo['cambios']; primera: boolean }",
           "retorno": null,
-          "linea": 129
+          "linea": 170
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c85de540ac2f"
+      "hash": "8c934f5d5ffe"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/NotaVariante.tsx",
@@ -94386,6 +94479,34 @@
       "hash": "877758968283"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PedirPrecioMoto.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PedirPrecioMoto"
+      ],
+      "funciones": [
+        {
+          "nombre": "PedirPrecioMoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ riesgo, editandoVehiculo, editandoFiguras, recargando, onCotizando, onCotizado, onDesfase, onCerrar }: { riesgo: Riesgo editandoVehiculo: boolean editandoFiguras: boolean recargando: boolean onCotizando: (enVuelo: boolean) => void /** La ",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "Montaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ carga, bloqueo, onCotizando, onCotizado }: { carga: Extract<Carga, { estado: 'ok' }> bloqueo: string | null onCotizando: (enVuelo: boolean) => void onCotizado: (tarificacionId: string) => void }",
+          "retorno": null,
+          "linea": 110
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2b3d32274c78"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/piezas-comercio.ts",
       "ambito": "apps/plataforma",
       "resumen": "Piezas PURAS del formulario «Datos del comercio» (30/09/2026): las dos listas (capitales y medidas de protección) viven en el formulario como FILAS de texto y de ahí van al PATCH como lista entera. Aquí, la conversión filas ↔ lista y el «¿ha cambiado algo?» que decide qué se manda (nunca el formular",
@@ -94603,12 +94724,12 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Riesgo }",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2f95aa5ada36"
+      "hash": "f9e41d64630a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SelectorCatalogoVehiculo.tsx",
@@ -95870,7 +95991,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "32a212a24fd0"
+      "hash": "df3a909caab5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/ImportarAvant2.tsx",
@@ -199791,7 +199912,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4438,
-    "funciones": 15741
+    "archivos": 4442,
+    "funciones": 15749
   }
 }
