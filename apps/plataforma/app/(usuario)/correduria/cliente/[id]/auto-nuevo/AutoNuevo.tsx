@@ -27,7 +27,7 @@ import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
-import { planPrecargaVehiculo, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
+import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import {
   borrarBorrador,
@@ -791,6 +791,9 @@ export default function AutoNuevo({
         if (!r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada)
         const v = r.guardada.vehiculo
         if (!v) return
+        // 07/10/2026 (igual que MotoNuevo): si el riesgo trae OTRO coche (otro código, o marca/modelo sin poder probar que sea
+        // el mismo), el de la última tarificación no manda: ni su versión ni su matrícula, km o garaje son de este coche.
+        if (!previoPuedeMandar(datosRiesgo, v.codigoVehiculo, retomada)) return
         // Con el vehículo del riesgo ya cargado (y sin variante retomada) la última tarificación no lo pisa.
         if (!riesgoManda) {
           setPrevio(v)

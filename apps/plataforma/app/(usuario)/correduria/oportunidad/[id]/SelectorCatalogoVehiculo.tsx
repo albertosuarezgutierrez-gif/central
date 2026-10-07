@@ -50,6 +50,10 @@ export default function SelectorCatalogoVehiculo({ ramo, datos, deshabilitado, o
   const [fallo, setFallo] = useState<string | null>(null)
   const [intento, setIntento] = useState(0)
   const arrancado = useRef(false)
+  // Cambiar de marca/modelo/combustible deprisa lanza varias lecturas: solo vale la ÚLTIMA. Si llegara tarde la de otro
+  // combustible, se elegiría una versión de una lista que no es la del combustible que se ve en pantalla.
+  const peticionModelos = useRef(0)
+  const peticionVersiones = useRef(0)
 
   // Carga inicial (y reintento): marcas + motores (coche) y, si el riesgo trae ids, la cascada precargada hasta donde llegue.
   useEffect(() => {
@@ -78,8 +82,9 @@ export default function SelectorCatalogoVehiculo({ ramo, datos, deshabilitado, o
         setModeloId(c.modeloId)
         if (!c.motorId || !mt.some((m) => m.id === c.motorId)) return
         setCargando('versiones')
+        const n = ++peticionVersiones.current
         const vs = await catalogo(paramsVersiones(ramo, c.marcaId, c.modeloId, c.motorId))
-        if (!vivo) return
+        if (!vivo || n !== peticionVersiones.current) return
         setVersiones(vs)
         if (c.codigoVehiculo && vs.some((x) => x.id === c.codigoVehiculo)) setCodigoVehiculo(c.codigoVehiculo)
       } catch (e) {
@@ -94,30 +99,47 @@ export default function SelectorCatalogoVehiculo({ ramo, datos, deshabilitado, o
   }, [intento])
 
   async function cargarModelos(id: string) {
+    const n = ++peticionModelos.current
     setCargando('modelos')
     setFallo(null)
-    try { setModelos(await catalogo(paramsModelos(ramo, id))) }
-    catch (e) { setFallo((e as Error).message || 'sin respuesta') }
-    finally { setCargando(null) }
+    try {
+      const mo = await catalogo(paramsModelos(ramo, id))
+      if (n !== peticionModelos.current) return
+      setModelos(mo)
+    } catch (e) {
+      if (n === peticionModelos.current) setFallo((e as Error).message || 'sin respuesta')
+    } finally {
+      if (n === peticionModelos.current) setCargando(null)
+    }
   }
 
   async function cargarVersiones(marca: string, modelo: string, motor: string) {
+    const n = ++peticionVersiones.current
     setCargando('versiones')
     setFallo(null)
-    try { setVersiones(await catalogo(paramsVersiones(ramo, marca, modelo, motor))) }
-    catch (e) { setFallo((e as Error).message || 'sin respuesta') }
-    finally { setCargando(null) }
+    try {
+      const vs = await catalogo(paramsVersiones(ramo, marca, modelo, motor))
+      if (n !== peticionVersiones.current) return
+      setVersiones(vs)
+    } catch (e) {
+      if (n === peticionVersiones.current) setFallo((e as Error).message || 'sin respuesta')
+    } finally {
+      if (n === peticionVersiones.current) setCargando(null)
+    }
   }
 
   function alElegirMarca(id: string) {
+    peticionVersiones.current++
     setMarcaId(id); setModeloId(''); setCodigoVehiculo(''); setModelos([]); setVersiones([])
     if (id) void cargarModelos(id)
   }
   function alElegirModelo(id: string) {
+    peticionVersiones.current++
     setModeloId(id); setCodigoVehiculo(''); setVersiones([])
     if (id && motorId) void cargarVersiones(marcaId, id, motorId)
   }
   function alElegirMotor(id: string) {
+    peticionVersiones.current++
     setMotorId(id); setCodigoVehiculo(''); setVersiones([])
     if (id && modeloId) void cargarVersiones(marcaId, modeloId, id)
   }

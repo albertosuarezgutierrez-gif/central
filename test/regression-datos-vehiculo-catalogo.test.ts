@@ -45,3 +45,14 @@ test('MotoNuevo: la moto de la última tarificación no manda si el riesgo trae 
   assert.match(src, /previoPuedeMandar\(datosRiesgo, v\.codigoVehiculo, retomada\)/)
   assert.match(src, /planPrecargaVehiculo\(datosRiesgo, retomada\)/)
 })
+
+test('AutoNuevo: el coche de la última tarificación tampoco manda si el riesgo trae otro', () => {
+  const src = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/AutoNuevo.tsx')
+  assert.match(src, /previoPuedeMandar\(datosRiesgo, v\.codigoVehiculo, retomada\)/)
+})
+
+test('SelectorCatalogoVehiculo: una respuesta tardía de modelos/versiones (otro combustible) no pisa la lista vigente', () => {
+  const sel = leer(DIR + 'SelectorCatalogoVehiculo.tsx')
+  assert.match(sel, /if \(n !== peticionVersiones\.current\) return/)
+  assert.match(sel, /if \(n !== peticionModelos\.current\) return/)
+})

@@ -279,11 +279,14 @@ test('asegurados: validación fila a fila, NUNCA se guarda un DNI, [] ≠ null',
   const borrar = validarAseguradosAdicionales(null, { hoy: HOY })
   assert.ok(borrar.ok && borrar.valor === null, 'null = sin mirar')
   assert.equal(textoAseguradosAdicionales([]), 'ninguno')
+  assert.doesNotMatch(textoAseguradosAdicionales([ana as never]) ?? '', /1990/, 'sin fecha de nacimiento en el historial')
+  assert.equal(leerDatosCapital({ asegurados: [{ nombre: 'X' }] })?.asegurados, null, 'filas ilegibles = no se sabe, nunca «ninguno»')
+  assert.deepEqual(leerDatosCapital({ asegurados: [] })?.asegurados, [], '[] guardado = revisado, ninguno')
 })
 
 test('asegurados: se guardan por ramo (no en vida), se anotan de la cotización y se leen sin fiarse', () => {
   const salud = calcularEdicionRiesgo({ ramo: 'salud', clave: 'datosCapital', info: {}, parcial: { asegurados: [ana] }, confirmar: false, ahora: AHORA, hoy: HOY })
-  assert.ok(salud.ok && salud.cambios.some((c) => c.campo === 'asegurados' && c.despues === 'Ana Pérez (1990-05-17)'))
+  assert.ok(salud.ok && salud.cambios.some((c) => c.campo === 'asegurados' && c.despues === 'Ana Pérez'), 'el historial no copia la fecha de nacimiento')
   const luego = leerDatosCapital(salud.ok ? salud.infoNueva.datosCapital : null)
   assert.equal(luego?.asegurados?.length, 1)
   assert.equal(Object.hasOwn(luego?.asegurados?.[0] ?? {}, 'dni'), false)

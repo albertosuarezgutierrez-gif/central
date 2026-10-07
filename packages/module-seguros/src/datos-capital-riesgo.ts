@@ -93,7 +93,8 @@ function leerAsegurados(bruto: unknown): AseguradoAdicional[] | null {
     if (nombre === null || apellido1 === null || fechaNacimiento === null || sexo === null) continue
     out.push({ nombre, apellido1, apellido2: textoLeido(x.apellido2), fechaNacimiento, sexo })
   }
-  return out
+  // Una lista con filas pero ninguna legible NO es «revisado, ninguno»: es «no se sabe» (null), nunca [].
+  return bruto.length > 0 && out.length === 0 ? null : out
 }
 
 const fechaValida = (s: string, hoy: string): boolean => {
@@ -142,7 +143,8 @@ export function validarAseguradosAdicionales(
 export function textoAseguradosAdicionales(l: readonly AseguradoAdicional[] | null): string | null {
   if (l === null) return null
   if (l.length === 0) return 'ninguno'
-  return l.map((a) => `${a.nombre} ${a.apellido1} (${a.fechaNacimiento})`).join(' · ')
+  // 🔒 Sin fecha de nacimiento: el historial es de solo añadir y quedaría una copia en claro aunque luego se borre del riesgo.
+  return l.map((a) => `${a.nombre} ${a.apellido1}`).join(' · ')
 }
 
 // ─── Lectura, validación, edición ────────────────────────────────────────────
