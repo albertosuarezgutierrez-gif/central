@@ -30,7 +30,7 @@
 
 import { PATRONES_PERSONALES, MARCA_DATO_PERSONAL } from './formador.ts'
 import { MARCA_REDACTADO } from './redactar.ts'
-import { FIN_MARCA_MARCO, MARCA_PANTALLA, MARCA_LOGIN, MARCA_MARCO, PATRON_CAMPO_SENSIBLE, PATRON_CAMPO_PERSONAL, PATRON_CAMPO_USUARIO, PATRON_MEDIADOR, PATRON_PARAM_SENSIBLE, PATRON_ATRIBUTO_SESION, PATRON_UUID, PATRON_ELEMENTO_USUARIO, MAX_TEXTO_ELEMENTO_USUARIO } from './grabador.ts'
+import { FIN_MARCA_MARCO, MARCA_PANTALLA, MARCA_LOGIN, MARCA_MARCO, PATRON_CAMPO_SENSIBLE, PATRON_CAMPO_PERSONAL, PATRON_CAMPO_USUARIO, PATRON_MEDIADOR, PATRON_PARAM_SENSIBLE, PATRON_ATRIBUTO_SESION, PATRON_UUID, PATRON_ELEMENTO_USUARIO, MAX_TEXTO_ELEMENTO_USUARIO, PATRON_IMAGEN_BASE64, PATRON_ULTIMO_ACCESO, MARCA_IMAGEN_OMITIDA } from './grabador.ts'
 
 export const VERSION_GRABADOR = 3
 
@@ -54,6 +54,9 @@ export type ConfigGrabador = {
   sesion: [string, string]
   uuid: [string, string]
   elemUsuario: [string, string]
+  imagen: [string, string]
+  imagenMarca: string
+  ultimo: [string, string]
   maxTextoUsuario: number
   aviso: string
   marca: string
@@ -79,6 +82,9 @@ export function configGrabador(): ConfigGrabador {
     sesion: [PATRON_ATRIBUTO_SESION.source, PATRON_ATRIBUTO_SESION.flags],
     uuid: [PATRON_UUID.source, PATRON_UUID.flags],
     elemUsuario: [PATRON_ELEMENTO_USUARIO.source, PATRON_ELEMENTO_USUARIO.flags],
+    imagen: [PATRON_IMAGEN_BASE64.source, PATRON_IMAGEN_BASE64.flags],
+    imagenMarca: MARCA_IMAGEN_OMITIDA,
+    ultimo: [PATRON_ULTIMO_ACCESO.source, PATRON_ULTIMO_ACCESO.flags],
     maxTextoUsuario: MAX_TEXTO_ELEMENTO_USUARIO,
     aviso: AVISO_MARCO_NO_LEGIBLE,
     marca: MARCA_MARCO,
@@ -101,6 +107,9 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var USU = new RegExp(cfg.usuario[0], cfg.usuario[1].replace('g', ''))
   var PERS = new RegExp(cfg.personal[0], cfg.personal[1].replace('g', ''))
   var MED = new RegExp(cfg.mediador[0], cfg.mediador[1])
+  var IMG = new RegExp(cfg.imagen[0], cfg.imagen[1])
+  var ULT = new RegExp(cfg.ultimo[0], cfg.ultimo[1])
+  var NOMBRES = []
   var SIN_TEXTO = { checkbox: 1, radio: 1, submit: 1, button: 1, reset: 1, image: 1, file: 1, range: 1, color: 1 }
   var hayLogin = false
   var PARAM = new RegExp(cfg.param[0], cfg.param[1].replace('g', ''))
@@ -115,12 +124,28 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var sinLeer = 0
 
   function red(s) {
-    var o = String(s)
+    // Mediador (código + nombre) PRIMERO: los patrones personales partirían el código. El nombre se aprende.
+    var o = String(s).replace(MED, function (m, cod, nom) {
+      nom = String(nom || '').replace(/^\s+|\s+$/g, '')
+      if (nom.length >= 4) NOMBRES.push(nom)
+      return cfg.dato
+    })
     for (var k = 0; k < PII.length; k++) {
       PII[k].lastIndex = 0
       o = o.replace(PII[k], function (m) { return /\d/.test(m) || m.indexOf('@') >= 0 ? cfg.dato : m })
     }
-    return o.replace(MED, function (m, cod) { return cod + ' - ' + cfg.dato })
+    return o
+  }
+  // Pasada final sobre el HTML serializado: imágenes base64, fecha/hora del último acceso y nombres aprendidos.
+  function fin(h) {
+    h = String(h).replace(IMG, cfg.imagenMarca).replace(ULT, function (m, pre, resto) { return /\d/.test(resto) ? pre + cfg.dato : m })
+    var vistos = {}
+    var alt = []
+    for (var n = 0; n < NOMBRES.length; n++) if (!vistos[NOMBRES[n].toLowerCase()]) { vistos[NOMBRES[n].toLowerCase()] = 1; alt.push(NOMBRES[n]) }
+    if (!alt.length) return h
+    alt.sort(function (x, y) { return y.length - x.length })
+    for (var q = 0; q < alt.length; q++) alt[q] = alt[q].replace(/[.*+?^$()|[\]\\{}]/g, '\\$&').replace(/\s+/g, '\\s+')
+    return h.replace(new RegExp(alt.join('|'), 'gi'), cfg.dato)
   }
   function redUrl(u) {
     return red(u)
@@ -131,7 +156,7 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   }
   function sensible(el, login) {
     var t = String(el.getAttribute('type') || '').toLowerCase()
-    if (t === 'password' || t === 'hidden') return true
+    if (t === 'password' || t === 'hidden' || el.hasAttribute('hidden')) return true
     if (login && String(el.tagName).toLowerCase() !== 'select' && !SIN_TEXTO[t]) return true
     var a = [el.getAttribute('name'), el.getAttribute('id'), el.getAttribute('autocomplete')]
     for (var j = 0; j < a.length; j++) if (a[j] && SENS.test(a[j])) return true
@@ -183,13 +208,21 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
       for (var a = 0; a < el.attributes.length; a++) attrs.push(el.attributes[a])
       for (var b = 0; b < attrs.length; b++) {
         var n = String(attrs[b].name).toLowerCase()
+        var val = attrs[b].value
+        if (val.indexOf('data:image') >= 0) { val = val.replace(IMG, cfg.imagenMarca); el.setAttribute(attrs[b].name, val) }
         if (ATR_SELECTOR[n]) continue
         if (esCampo && (n === 'value' || n === 'data-valor')) continue
-        var val = attrs[b].value
         if (SESION.test(n)) { if (val !== '' && val !== cfg.dato) el.setAttribute(attrs[b].name, cfg.dato); continue }
         var nuevo = (ATR_URL[n] ? redUrl(val) : red(val)).replace(UUID, cfg.dato)
         if (nuevo !== val) el.setAttribute(attrs[b].name, nuevo)
       }
+    }
+    var textos = []
+    var w = doc.createTreeWalker(clon, 4, null)
+    while (w.nextNode()) textos.push(w.currentNode)
+    for (var t = 0; t < textos.length; t++) {
+      var r = red(textos[t].nodeValue)
+      if (r !== textos[t].nodeValue) textos[t].nodeValue = r
     }
     // Texto de la cabecera con el usuario/cuenta: elementos cortos, sin controles dentro.
     var usu = clon.querySelectorAll('*')
@@ -206,13 +239,6 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
       var nu = []
       while (wu.nextNode()) nu.push(wu.currentNode)
       for (var y = 0; y < nu.length; y++) if (/\S/.test(nu[y].nodeValue)) nu[y].nodeValue = cfg.dato
-    }
-    var textos = []
-    var w = doc.createTreeWalker(clon, 4, null)
-    while (w.nextNode()) textos.push(w.currentNode)
-    for (var t = 0; t < textos.length; t++) {
-      var r = red(textos[t].nodeValue)
-      if (r !== textos[t].nodeValue) textos[t].nodeValue = r
     }
   }
   function serializar(doc, ruta, partes) {
@@ -265,7 +291,8 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var titulo = red(String(win.document.title || '')).replace(/--/g, '- -')
   var cabecera = '<!-- grabador ASegura v' + cfg.version + ' · ' + d.toISOString() + ' · ' + host + redUrl(String(loc.pathname || '')).replace(/--/g, '- -') +
     ' · «' + titulo + '» · marcos sin leer: ' + sinLeer + ' -->\n' + (urlsSinLeer.length ? '<!-- grabador: marcos sin leer (sin query ni tokens): ' + urlsSinLeer.join(' | ').replace(/--/g, '- -').replace(/>/g, '%3E') + ' -->\n' : '') + (hayLogin ? cfg.login + '\n' : '')
-  var cuerpo = partes.join('\n')
+  cabecera = fin(cabecera)
+  var cuerpo = fin(partes.join('\n'))
   var html = cabecera + cuerpo
   var nombre = 'pantalla-' + host + '-' + sello + '.html'
   if (descargar) {

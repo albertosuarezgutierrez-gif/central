@@ -103,8 +103,8 @@ export function planificarSubida(nombre: string, htmlSubido: string, yaSubidas: 
 
 /** Tope de opciones que se le pide a la IA por select (la salida larga trunca el JSON en pantallas grandes). */
 export const MAX_OPCIONES_IA = 25
-/** Tokens de salida y espera de la llamada de análisis (la pasarela acota a 55 s; la ruta dura 60). */
-export const MAX_TOKENS_ANALISIS = 12_000
+/** Tokens de salida y espera de CADA llamada (un trozo pide ≤ ~3.500 estimados; la pasarela acota a 55 s). */
+export const MAX_TOKENS_ANALISIS = 6_000
 export const TIMEOUT_ANALISIS_MS = 55_000
 
 /**
@@ -135,21 +135,21 @@ export function respuestaIACortada(texto: string): boolean {
 export function sistemaAnalisis(): string {
   return [
     'Eres analista de formularios de portales de compañías de seguros españolas. Recibes el HTML RECORTADO de UNA',
-    'pantalla de un presupuesto ficticio (sin valores de campos ni scripts). Los marcos (iframes) van separados con',
-    '«### marco «ruta»». Devuelve SOLO un objeto JSON, sin texto alrededor, con EXACTAMENTE estas claves:',
-    '{"titulo": string (qué pantalla es, ≤160),',
-    ` "campos": [{"etiqueta": string, "selector": string, "tipo": ${TIPOS_CAMPO_MAPA.map((t) => `"${t}"`).join('|')}, "obligatorio": boolean, "opciones": string[]|null, "marco": string|null}],`,
-    ' "botones": [{"texto": string, "selector": string, "clase": "seguro"|"prohibido", "funcion": string|null, "marco": string|null}],',
-    ' "primas": [{"etiqueta": string, "selector": string|null, "marco": string|null}],',
+    'pantalla (o un TROZO de ella, de un solo marco) de un presupuesto ficticio (sin valores de campos ni scripts).',
+    'Devuelve SOLO un objeto JSON, sin texto alrededor, con EXACTAMENTE estas claves (NO incluyas «marco»: lo pone el servidor):',
+    '{"titulo": string (qué pantalla es, ≤60),',
+    ` "campos": [{"etiqueta": string, "selector": string, "tipo": ${TIPOS_CAMPO_MAPA.map((t) => `"${t}"`).join('|')}, "obligatorio": boolean, "opciones": string[]|null}],`,
+    ' "botones": [{"texto": string, "selector": string, "clase": "seguro"|"prohibido", "funcion": string|null}],',
+    ' "primas": [{"etiqueta": string, "selector": string|null}],',
     ' "notas": string|null}',
     'Reglas:',
     '- selector: el más ESTABLE. Primero #id (si el id no parece autogenerado), luego [name="…"], luego un selector',
     '  corto por etiqueta asociada o atributos. Nada de :nth-child salvo que no haya otra cosa. Una sola línea.',
-    '- marco: la ruta del marco donde está el elemento («appArea», «appArea/datos») o null si está en la página principal.',
     '- obligatorio: true si lleva required/aria-required, un asterisco en la etiqueta o lo dice el texto.',
     '- opciones: el TEXTO visible de las opciones de un select (o de un grupo de radios); null si no aplica.',
-    `  MÁXIMO ${MAX_OPCIONES_IA} opciones por campo (las primeras si hay más; no las listes todas). Sé COMPACTO: textos cortos,`,
-    '  sin explicaciones largas; "funcion" y "notas" en pocas palabras o null.',
+    `  MÁXIMO ${MAX_OPCIONES_IA} opciones por campo (las primeras si hay más; no las listes todas), cada una ≤60 caracteres.`,
+    '  Sé COMPACTO: etiquetas ≤80 caracteres, "funcion" ≤5 palabras o null, "notas" null salvo algo imprescindible.',
+    '- Lista CADA campo visible UNA sola vez; ignora los ocultos. Si el HTML es un trozo, mapea solo lo que ves en él.',
     '- botones: todo lo que se pulsa (button, input submit/button, enlaces con aspecto de botón, pestañas).',
     '  "seguro" = navegar, siguiente/anterior, calcular/recalcular, pestañas de datos, ver detalle.',
     `  "prohibido" = cualquier cosa que emita, contrate, formalice, grabe, archive, acepte de forma definitiva, firme,`,
@@ -159,10 +159,10 @@ export function sistemaAnalisis(): string {
   ].join('\n')
 }
 
-export function promptAnalisis(c: { compania: string; ramo: string; producto: string | null; pantalla: number; total: number; html: string }): string {
+export function promptAnalisis(c: { compania: string; ramo: string; producto: string | null; pantalla: number; total: number; html: string; trozo?: { n: number; de: number } }): string {
   return [
     `Compañía: ${c.compania}. Ramo: ${c.ramo}.${c.producto ? ` Producto: ${c.producto}.` : ''}`,
-    `Pantalla ${c.pantalla} de ${c.total}.`,
+    `Pantalla ${c.pantalla} de ${c.total}.${c.trozo && c.trozo.de > 1 ? ` Trozo ${c.trozo.n} de ${c.trozo.de} de esta pantalla (mapea solo este trozo).` : ''}`,
     'HTML recortado:',
     c.html,
   ].join('\n')

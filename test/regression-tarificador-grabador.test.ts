@@ -64,6 +64,33 @@ test('el grabador tapa atributos de sesión, UUID y texto de usuario, y avisa de
   assert.match(bm, /urlsSinLeer\.join/, 'la cabecera no lista las URL de los marcos sin leer')
 })
 
+test('el grabador tapa titular, ids de portal, ocultos/firmas, imágenes base64 y «Último acceso» en AMBAS capas (fugas de ePAC, 07/10/2026)', () => {
+  const gr = leer('packages/module-tarificacion/src/grabador.ts')
+  const bm = leer('packages/module-tarificacion/src/grabador-bookmarklet.ts')
+  const fo = leer('packages/module-tarificacion/src/formador.ts')
+  for (const n of ['PATRON_IMAGEN_BASE64', 'PATRON_ULTIMO_ACCESO']) {
+    assert.match(gr, new RegExp(`export const ${n}\\b`), `grabador.ts ya no exporta ${n}`)
+    assert.match(bm, new RegExp(`\\b${n}\\b`), `el bookmarklet no usa ${n}`)
+  }
+  // Id de usuario de portal (AA000000): en PATRONES_PERSONALES, que viajan al navegador por cfg.patrones.
+  assert.ok(fo.includes('/\\b[A-Z]{2}\\d{6}\\b/g'), 'PATRONES_PERSONALES ya no tapa el id de usuario de portal')
+  // Ocultos por atributo `hidden`, uid/checksum/firma/signature/hash por nombre.
+  assert.match(gr, /a\.hidden\) return true/, 'el servidor no trata el atributo hidden como campo oculto')
+  assert.match(bm, /hasAttribute\('hidden'\)/, 'el bookmarklet no trata el atributo hidden como campo oculto')
+  assert.match(gr, /PATRON_CAMPO_SENSIBLE = \/[^\n]*checksum\|firma\|signature\|hash\|[^\n]*uid/, 'PATRON_CAMPO_SENSIBLE no cubre uid/checksum/firma/signature/hash')
+  assert.match(gr, /PATRON_PARAM_SENSIBLE = \/[^\n]*uid\|user\|usuari[^\n]*checksum/, 'PATRON_PARAM_SENSIBLE no cubre uid/user/checksum')
+  assert.match(gr, /PATRON_ATRIBUTO_SESION = \/[^\n]*user[^\n]*checksum/, 'PATRON_ATRIBUTO_SESION no cubre los data-* de usuario/firma')
+  assert.match(gr, /n === 'data-value'/, 'el servidor no tapa data-value de un campo sensible')
+  // Titular: el nombre aprendido del mediador se tapa en TODO el HTML, y el mediador va ANTES que los patrones personales.
+  assert.match(gr, /taparNombresAprendidos\(redactarFinalGrabacion\(out\), nombres\)/, 'el servidor no tapa el nombre aprendido en todo el HTML')
+  assert.match(gr, /replace\(PATRON_MEDIADOR[\s\S]*?return redactarDatosPersonales\(t\)/, 'el servidor aplica los patrones personales antes que el mediador')
+  assert.match(bm, /NOMBRES\.push\(nom\)/, 'el bookmarklet no aprende el nombre del mediador')
+  assert.match(bm, /var cuerpo = fin\(partes\.join/, 'el bookmarklet no hace la pasada final (nombres, imágenes, último acceso)')
+  assert.match(bm, /replace\(IMG, cfg\.imagenMarca\)/, 'el bookmarklet no quita las imágenes base64')
+  assert.match(bm, /replace\(ULT, /, 'el bookmarklet no tapa el último acceso')
+  assert.match(gr, /replace\(PATRON_IMAGEN_BASE64, MARCA_IMAGEN_OMITIDA\)/, 'el servidor no quita las imágenes base64')
+})
+
 test('grabación automática (v3): separador compartido, redacción POR PANTALLA en servidor, dedupe y panel fuera de la captura', () => {
   const gr = leer('packages/module-tarificacion/src/grabador.ts')
   const bm = leer('packages/module-tarificacion/src/grabador-bookmarklet.ts')

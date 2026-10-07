@@ -82,7 +82,7 @@ describe('validarPantallaMapa', () => {
       ['javascript:', (p) => { p.botones[0].selector = 'javascript:alert(1)' }],
       ['sin título', (p) => { delete p.titulo }],
       ['campos no lista', (p) => { p.campos = {} }],
-      ['demasiados botones', (p) => { p.botones = Array.from({ length: 101 }, () => p.botones[0]) }],
+      ['demasiados botones', (p) => { p.botones = Array.from({ length: 251 }, () => p.botones[0]) }],
     ]
     for (const [nombre, romper] of casos) {
       const p = pantallaBuena()
@@ -181,7 +181,8 @@ describe('redactarHtmlGrabacion: login y datos de personas', () => {
   it('tapa nombres, nacimiento, dirección, correo, códigos de mediador y el nombre de la cabecera', () => {
     expect(rf).not.toContain('valor-personal-prueba')
     expect(rf).not.toContain('Marta Mediadora')
-    expect(rf).toContain('209-C/12/0000 - [DATO]')
+    expect(rf).not.toContain('209-C/12/0000')
+    expect(rf).toContain('<div id="app-header">[DATO]</div>')
   })
   it('deja importes, fechas de efecto, selects y checkboxes/radios', () => {
     for (const ok of ['data-valor="150000"', 'data-valor="15/11/2026"', 'data-valor="piso"', '>Piso<', 'data-valor="marcado"', 'data-valor="sin_marcar"']) expect(rf, ok).toContain(ok)
@@ -308,5 +309,55 @@ describe('redactarHtmlGrabacion: rendimiento con tramos largos sin espacios', ()
     expect(out.length).toBeGreaterThan(1_000_000)
     // Y sigue redactando el correo pegado a un tramo largo.
     expect(redactarHtmlGrabacion(`<p>${'a'.repeat(50_000)} juan.perez@correo.es</p>`)).not.toContain('juan.perez@')
+  })
+})
+
+describe('redactarHtmlGrabacion: titular, ids de portal, firmas e imágenes (fugas de ePAC, 07/10/2026)', () => {
+  const html = [
+    '<span class="nx-dropdown">999-Z/[DATO]/0000 - Zulema Inventada Prueba</span>',
+    '<div id="cdk-describedby-message-1">Zulema Inventada Prueba</div>',
+    '<span>999-Z/77/0001</span>',
+    '<div class="mediador-box">Texto-Inv-Med</div>',
+    '<form action="https://p.test/srv?action=start&amp;version=WM&amp;pfestate-uid=ZZ987654&amp;pfestate-agente7=77&amp;customerId=C-INV-1">',
+    '<input hidden="" name="uid" data-valor="ZZ987654" value="ZZ987654">',
+    '<input hidden="" name="otro" data-valor="OCULTO-INV-1" value="OCULTO-INV-1">',
+    '<input type="text" name="checksum" data-valor="CHK-INV-2" value="CHK-INV-2">',
+    '<input type="text" name="firma" data-valor="FIRMA-INV-3" value="FIRMA-INV-3">',
+    '<input name="signature" data-valor="SIGN-INV-4" value="SIGN-INV-4"><input id="hash" data-valor="HASH-INV-5" value="HASH-INV-5">',
+    '<input name="importe" data-valor="150000" value="150000">',
+    '</form>',
+    '<a href="/p?user=USR-INV-6&sid=SID-INV-7&usuario=USU-INV-8&paso=2" data-uid="UID-INV-9" data-userref="REF-INV-10">ir</a>',
+    '<div data-extra="ref ZZ111222 fin">Portal ZZ333444 abierto</div>',
+    '<img class="broker-logo" src="data:image/jpg;base64,/9j/4Qo1RXhpZgAATU0AKgAAAAgABwEAAAQAAAABAAAAAA==">',
+    '<div style="background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==)">x</div>',
+    '<div>Tiempo sesión: 29:51<br>Último acceso: <br>3/4/2098 7:05</div>',
+    '<p>Ultimo acceso: 1/2/2098 9:07</p><p>Última conexión <b>5/6/2097 6:08</b></p>',
+  ].join('\n')
+  const r = redactarHtmlGrabacion(html)
+  it('nombre del titular (aprendido del mediador) y código de mediador, también en descripciones ocultas', () => {
+    for (const crudo of ['Zulema', 'Inventada Prueba', '999-Z', '0001', 'Texto-Inv-Med']) expect(r, crudo).not.toContain(crudo)
+    expect(r).toContain('<div id="cdk-describedby-message-1">[DATO]</div>')
+  })
+  it('ids de usuario de portal (AA000000) en atributos, URLs y texto; parámetros de identidad/sesión de las URL', () => {
+    for (const crudo of ['ZZ987654', 'ZZ111222', 'ZZ333444', 'C-INV-1', 'USR-INV-6', 'SID-INV-7', 'USU-INV-8', 'agente7=77']) expect(r, crudo).not.toContain(crudo)
+    expect(r).toContain('paso=2')
+    expect(r).toContain('version=WM')
+  })
+  it('ocultos (atributo hidden), uid, checksum, firma, signature, hash: value Y data-valor tapados; data-* de usuario/sesión', () => {
+    for (const crudo of ['OCULTO-INV-1', 'CHK-INV-2', 'FIRMA-INV-3', 'SIGN-INV-4', 'HASH-INV-5', 'UID-INV-9', 'REF-INV-10']) expect(r, crudo).not.toContain(crudo)
+    expect(r).toContain('data-valor="150000"')
+  })
+  it('imágenes base64 fuera (también en style) y fecha/hora de «Último acceso» tapada', () => {
+    expect(r).not.toMatch(/base64,/)
+    expect(r).toContain('src="data:image/omitida"')
+    for (const crudo of ['3/4/2098', '7:05', '1/2/2098', '9:07', '5/6/2097', '6:08']) expect(r, crudo).not.toContain(crudo)
+    expect(r).toContain('Tiempo sesión: 29:51')
+  })
+  it('es idempotente y lineal (500 KB de base64 y de texto, < 1 s)', () => {
+    expect(redactarHtmlGrabacion(r)).toBe(r)
+    const grande = '<img src="data:image/jpg;base64,' + 'QUJD'.repeat(60000) + '">' + '<p>texto 1234567 abcdef</p>'.repeat(6000)
+    const t0 = Date.now()
+    redactarHtmlGrabacion(grande)
+    expect(Date.now() - t0).toBeLessThan(1000)
   })
 })

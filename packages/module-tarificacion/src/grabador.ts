@@ -43,7 +43,7 @@ export function separarGrabacion(texto: string): { multipantalla: boolean; panta
 }
 
 /** name/id/autocomplete de un campo cuyo VALOR no sale nunca (además de type=password y type=hidden). */
-export const PATRON_CAMPO_SENSIBLE = /pass|pwd|clave|token|otp|pin|secret|cvv|cvc|csrf|viewstate/i
+export const PATRON_CAMPO_SENSIBLE = /pass|pwd|clave|token|otp|pin|secret|cvv|cvc|csrf|viewstate|checksum|firma|signature|hash|(?:^|[^a-z])uid(?:$|[^a-z])/i
 
 /** name/id/autocomplete/aria-label/placeholder de un campo de USUARIO de login: su valor tampoco sale nunca. */
 export const PATRON_CAMPO_USUARIO = /user|usuari|login|logon|signin|sign-in|j_username/i
@@ -55,17 +55,26 @@ export const PATRON_CAMPO_USUARIO = /user|usuari|login|logon|signin|sign-in|j_us
  */
 export const PATRON_CAMPO_PERSONAL = /nombre|apellid|razon_?social|naci|fullDate|address|direcc|domicil|calle|mail|^(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)|_(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)$/i
 
-/** Cabecera con el mediador en el texto: «209-C/12/0000 - Nombre Apellidos» → el nombre se tapa. */
-export const PATRON_MEDIADOR = /(\b\d{1,4}-[A-Za-z](?:\/\w+)+)\s+-\s+[^<>\n]+/g
+/** Código de mediador («209-C/12/0000», también con trozos ya tapados `[DATO]`) con su nombre opcional
+ *  («… - Nombre Apellidos»): TODO sale `[DATO]` y el nombre se aprende para taparlo donde más aparezca
+ *  (descripciones ocultas, aria…). Se aplica ANTES que los patrones personales (que partían el código). */
+export const PATRON_MEDIADOR = /(\b\d{1,4}-[A-Za-z](?:\/(?:\w|\[DATO\])+)+)(?:\s+-\s+([^<>\n"]+))?/g
+
+/** Imagen incrustada (logo/foto del mediador): no aporta al mapa y puede ser una foto → fuera. Lineal (clase + un solo cuantificador). */
+export const PATRON_IMAGEN_BASE64 = /data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+\/=%_-]+/gi
+export const MARCA_IMAGEN_OMITIDA = 'data:image/omitida'
+
+/** «Último acceso: <fecha/hora>» (también «Última conexión», con etiquetas de por medio): la fecha/hora sale `[DATO]`. */
+export const PATRON_ULTIMO_ACCESO = /([uú]ltim[oa]\s+(?:acceso|conexi[oó]n)(?:\s*(?:<[^>]*>|:)){0,4}\s*)([^<]{0,40})/gi
 
 /** Atributos (por NOMBRE) que llevan tokens de sesión: `session="…"`, `sessionid`, `data-token`, `auth`, `csrf`, `jsessionid`… → el valor sale `[DATO]`. */
-export const PATRON_ATRIBUTO_SESION = /session|token|auth|csrf/i
+export const PATRON_ATRIBUTO_SESION = /session|token|auth|csrf|user|usuari|checksum|signature|firma|hash|(?:^|[^a-z])(?:uid|sid)(?:$|[^a-z])/i
 
 /** Cualquier valor de atributo con forma de UUID (id de sesión, de operación…) → `[DATO]` (solo esa parte del valor). */
 export const PATRON_UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi
 
 /** id/class/aria-label de un elemento que MUESTRA el usuario o la cuenta (cabecera del portal): su TEXTO sale `[DATO]`. */
-export const PATRON_ELEMENTO_USUARIO = /user|usuario|username|login|perfil|account|cuenta/i
+export const PATRON_ELEMENTO_USUARIO = /user|usuario|username|login|perfil|account|cuenta|mediador|broker/i
 
 /** Un elemento «de usuario» solo se tapa si es corto (un nombre/código) y no contiene controles: un contenedor grande
  *  con clase «login-page» o «account» es maquetación, no el dato. Misma regla en cliente y servidor. */
@@ -120,7 +129,7 @@ export function tienePasswordHtml(html: string): boolean {
 }
 
 /** Parámetros de URL cuyo valor se tapa (sesiones, firmas, tokens). */
-export const PATRON_PARAM_SENSIBLE = /sess|token|auth|key|sig|code|ticket|pass|pwd|clave|csrf/i
+export const PATRON_PARAM_SENSIBLE = /sess|token|auth|key|sig|code|ticket|pass|pwd|clave|csrf|uid|user|usuari|(?:^|[^a-z])sid(?:$|[^a-z])|checksum|hash|firma|customer|agente|mediador|colaborador/i
 
 // Palabras que hacen PROHIBIDO un botón del mapa. Incluye TODO `BLOQUEO_FORMADOR` del worker
 // (services/tarificador-rpa/src/formador.ts; lo vigila test/regression-tarificador-grabador.test.ts) y suma las
@@ -177,10 +186,39 @@ export function redactarUrl(url: string): string {
     .replace(/([?&#;])([^=&#?;]*)=([^&#?;]*)/g, (m, sep: string, k: string) => (PATRON_PARAM_SENSIBLE.test(k) ? `${sep}${k}=${MARCA_REDACTADO}` : m))
 }
 
+/** Texto/valor: mediador (código + nombre) primero, luego datos personales. `nombres` recoge los nombres aprendidos. */
+export function redactarTextoGrabacion(texto: string, nombres?: Set<string>): string {
+  const t = String(texto).replace(PATRON_MEDIADOR, (_m, _cod: string, nombre: string | undefined) => {
+    const n = (nombre ?? '').trim()
+    if (nombres && n.length >= 4) nombres.add(n)
+    return MARCA_DATO_PERSONAL
+  })
+  return redactarDatosPersonales(t)
+}
+
+function escaparRegexGrab(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
+}
+
+/** Tapa, en TODO el HTML, los nombres aprendidos del mediador/titular (sin distinguir mayúsculas). */
+export function taparNombresAprendidos(html: string, nombres: Iterable<string>): string {
+  const lista = [...new Set([...nombres].map((n) => n.trim()).filter((n) => n.length >= 4))].sort((a, b) => b.length - a.length)
+  if (lista.length === 0) return html
+  return html.replace(new RegExp(lista.map(escaparRegexGrab).join('|'), 'gi'), MARCA_DATO_PERSONAL)
+}
+
+/** Pasada final sobre el HTML serializado: imágenes base64 y fecha/hora del último acceso. Idempotente y lineal. */
+export function redactarFinalGrabacion(html: string): string {
+  return html
+    .replace(PATRON_IMAGEN_BASE64, MARCA_IMAGEN_OMITIDA)
+    .replace(PATRON_ULTIMO_ACCESO, (m, pre: string, resto: string) => (/\d/.test(resto) ? pre + MARCA_DATO_PERSONAL : m))
+}
+
 /** ¿El control es de los que nunca enseñan su valor? */
-export function esCampoSensible(a: { type?: string | null; name?: string | null; id?: string | null; autocomplete?: string | null; etiqueta?: string | null; tag?: string }, login = false): boolean {
+export function esCampoSensible(a: { type?: string | null; name?: string | null; id?: string | null; autocomplete?: string | null; etiqueta?: string | null; tag?: string; hidden?: boolean }, login = false): boolean {
   const t = (a.type ?? '').toLowerCase()
-  if (t === 'password' || t === 'hidden') return true
+  // `hidden` (atributo booleano, no type) también es un campo oculto: uid, checksum, tokens de formulario…
+  if (t === 'password' || t === 'hidden' || a.hidden) return true
   // Pantalla de login (hay un password en la grabación): ningún campo de texto sale, sea cual sea su nombre.
   if (login && a.tag !== 'select' && !TIPOS_SIN_TEXTO.has(t)) return true
   if ([a.name, a.id, a.autocomplete].some((x) => typeof x === 'string' && PATRON_CAMPO_SENSIBLE.test(x))) return true
@@ -189,20 +227,20 @@ export function esCampoSensible(a: { type?: string | null; name?: string | null;
   return conTexto && !TIPOS_SIN_TEXTO.has(t) && [a.name, a.id, a.autocomplete, a.etiqueta].some((x) => typeof x === 'string' && PATRON_CAMPO_PERSONAL.test(x))
 }
 
-function redactarEtiqueta(tag: string, cuerpo: string, login: boolean): string {
+function redactarEtiqueta(tag: string, cuerpo: string, login: boolean, nombres: Set<string>): string {
   const attrs = atributos(cuerpo)
   const sensible = (tag === 'input' || tag === 'textarea' || tag === 'select') &&
-    esCampoSensible({ type: attrs.get('type'), name: attrs.get('name'), id: attrs.get('id'), autocomplete: attrs.get('autocomplete'), etiqueta: `${attrs.get('aria-label') ?? ''} ${attrs.get('placeholder') ?? ''}`, tag }, login)
+    esCampoSensible({ type: attrs.get('type'), name: attrs.get('name'), id: attrs.get('id'), autocomplete: attrs.get('autocomplete'), etiqueta: `${attrs.get('aria-label') ?? ''} ${attrs.get('placeholder') ?? ''}`, tag, hidden: attrs.has('hidden') }, login)
   return cuerpo.replace(RE_ATRIBUTO, (todo, nombre: string, _igual: string | undefined, crudo: string | undefined) => {
     if (crudo === undefined) return todo
     const n = nombre.toLowerCase()
     const v = valorAtributo(crudo) ?? ''
-    if (sensible && (n === 'value' || n === 'data-valor')) return `${nombre}="${MARCA_REDACTADO}"`
+    if (sensible && (n === 'value' || n === 'data-valor' || n === 'data-value')) return `${nombre}="${MARCA_REDACTADO}"`
     if (ATRIBUTOS_SELECTOR.has(n)) return todo
     if (PATRON_ATRIBUTO_SESION.test(n)) return v === '' ? todo : `${nombre}="${MARCA_DATO_PERSONAL}"`
     const sinUuid = (x: string) => x.replace(PATRON_UUID, MARCA_DATO_PERSONAL)
-    if (ATRIBUTOS_URL.has(n)) return `${nombre}="${escaparAttr(sinUuid(redactarUrl(redactarDatosPersonales(v))))}"`
-    const r = sinUuid(redactarDatosPersonales(v))
+    if (ATRIBUTOS_URL.has(n)) return `${nombre}="${escaparAttr(sinUuid(redactarUrl(redactarTextoGrabacion(v, nombres))))}"`
+    const r = sinUuid(redactarTextoGrabacion(v, nombres))
     return r === v ? todo : `${nombre}="${escaparAttr(r)}"`
   })
 }
@@ -216,6 +254,9 @@ function redactarEtiqueta(tag: string, cuerpo: string, login: boolean): string {
 export function redactarHtmlGrabacion(html: string): string {
   const login = tienePasswordHtml(html)
   let out = String(html).replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '').replace(/<script\b[^>]*\/?>/gi, '')
+  out = out.replace(PATRON_IMAGEN_BASE64, MARCA_IMAGEN_OMITIDA)
+  const nombres = new Set<string>()
+  for (const m of out.matchAll(PATRON_MEDIADOR)) if ((m[2] ?? '').trim().length >= 4) nombres.add(m[2].trim())
   // Textarea sensible: su contenido es el valor.
   out = out.replace(/<textarea\b([^>]*)>([\s\S]*?)<\/textarea\s*>/gi, (todo, cuerpo: string) => {
     const a = atributos(cuerpo)
@@ -225,12 +266,12 @@ export function redactarHtmlGrabacion(html: string): string {
   })
   // Etiquetas de apertura (los comentarios `<!-- … -->` y `</cierre>` no casan: empiezan por ! o /).
   out = out.replace(/<([a-zA-Z][a-zA-Z0-9-]*)(\s[^<>]*?)?(\/?)>/g, (_t, tag: string, cuerpo: string | undefined, cierre: string) =>
-    `<${tag}${cuerpo ? redactarEtiqueta(tag.toLowerCase(), cuerpo, login) : ''}${cierre}>`)
+    `<${tag}${cuerpo ? redactarEtiqueta(tag.toLowerCase(), cuerpo, login, nombres) : ''}${cierre}>`)
   // Texto de la cabecera del portal con el usuario/cuenta (no es un input).
   out = redactarTextoUsuario(out)
   // Texto entre etiquetas.
-  out = out.replace(/>([^<]+)</g, (_t, texto: string) => `>${redactarDatosPersonales(texto).replace(PATRON_MEDIADOR, (_m, cod: string) => `${cod} - ${MARCA_DATO_PERSONAL}`)}<`)
-  out = redactar(out, [])
+  out = out.replace(/>([^<]+)</g, (_t, texto: string) => `>${redactarTextoGrabacion(texto, nombres)}<`)
+  out = redactar(taparNombresAprendidos(redactarFinalGrabacion(out), nombres), [])
   // Una pantalla con contraseña queda marcada como LOGIN (idempotente).
   return login && !out.includes(MARCA_LOGIN) ? `${MARCA_LOGIN}\n${out}` : out
 }
@@ -320,7 +361,8 @@ export type PrimaMapa = { etiqueta: string; selector: string | null; marco: stri
 export type PantallaMapa = { pantalla: number; titulo: string; campos: CampoMapa[]; botones: BotonMapa[]; primas: PrimaMapa[]; notas: string | null }
 export type MapaGrabacion = { version: 1; pantallas: PantallaMapa[] }
 
-export const LIMITES_MAPA = { campos: 200, botones: 100, primas: 40, opciones: 300 } as const
+// Una pantalla grande (Allianz ePAC: ~300 campos) se analiza en varios trozos y se fusiona: el tope es del conjunto.
+export const LIMITES_MAPA = { campos: 600, botones: 250, primas: 80, opciones: 300 } as const
 
 type Lectura<T> = { ok: true; valor: T } | { ok: false; error: string }
 const obj = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)

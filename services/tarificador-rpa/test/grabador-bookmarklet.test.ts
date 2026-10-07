@@ -288,3 +288,41 @@ test('bookmarklet automático: 3 pantallas por navegación simulada, dedupe, red
     await browser.close()
   }
 })
+
+// Fugas de una grabación real de ePAC (07/10/2026): titular, código de mediador, id de usuario de portal, firmas,
+// atributos data-*, imagen base64 y «Último acceso». Página SINTÉTICA con valores inventados; mismo resultado que en servidor.
+const EPAC = `<!doctype html><html><head><title>Portal inventado</title></head><body>
+<span class="dd">999-Z/77/0000 - Zulema Inventada Prueba</span><div id="cdk-describedby-message-1">Zulema Inventada Prueba</div><span>999-Z/77/0001</span>
+<form action="http://portal.test/srv?action=start&pfestate-uid=ZZ987654&customerId=C-INV-1&paso=2">
+<input hidden name="uid" value="ZZ987654"><input hidden name="otro" value="OCULTO-INV-1">
+<input type="text" name="checksum" value="CHK-INV-2"><input type="text" name="firma" value="FIRMA-INV-3"><input name="signature" value="SIGN-INV-4"><input id="hash" value="HASH-INV-5">
+<input name="importe" value="150000"></form>
+<a href="/p?user=USR-INV-6&sid=SID-INV-7&paso=3" data-uid="UID-INV-9" data-userref="REF-INV-10">ir</a>
+<div data-extra="ref ZZ111222 fin">Portal ZZ333444 abierto</div>
+<img class="broker-logo" src="data:image/jpg;base64,/9j/4Qo1RXhpZgAATU0AKgAAAAgABwEAAAQAAAABAAAAAA==">
+<div style="background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==)">x</div>
+<div>Tiempo sesión: 29:51<br>Último acceso: <br>3/4/2098 7:05</div>
+</body></html>`
+
+test('bookmarklet: tapa titular, código de mediador, ids de portal, firmas, data-* , imágenes base64 y último acceso', async (t) => {
+  const browser = await lanzar()
+  if (!browser) return t.skip('sin Chromium disponible (instala el de Playwright o define GRABADOR_CHROMIUM)')
+  try {
+    const ctx = await browser.newContext({ acceptDownloads: true })
+    const page = await ctx.newPage()
+    await page.route('http://portal.test/', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: EPAC }))
+    await page.goto('http://portal.test/')
+    const descarga = page.waitForEvent('download')
+    await page.evaluate(codigoBookmarkletManual())
+    const d = await descarga
+    const html = readFileSync((await d.path())!, 'utf8')
+    for (const crudo of ['Zulema', 'Inventada Prueba', '999-Z', 'ZZ987654', 'ZZ111222', 'ZZ333444', 'C-INV-1', 'OCULTO-INV-1', 'CHK-INV-2', 'FIRMA-INV-3', 'SIGN-INV-4', 'HASH-INV-5', 'USR-INV-6', 'SID-INV-7', 'UID-INV-9', 'REF-INV-10', 'base64,', '3/4/2098', '7:05'])
+      assert.ok(!html.includes(crudo), `se ha escapado «${crudo}»`)
+    assert.ok(html.includes('<div id="cdk-describedby-message-1">[DATO]</div>'), 'el nombre aprendido también se tapa en la descripción oculta')
+    assert.ok(html.includes('src="data:image/omitida"'))
+    assert.match(html, /id="hash"[^>]*value="\[REDACTADO\]"|value="\[REDACTADO\]"[^>]*id="hash"/)
+    for (const ok of ['paso=2', 'paso=3', 'Tiempo sesión: 29:51', 'data-valor="150000"']) assert.ok(html.includes(ok), `falta «${ok}» en ${html.slice(html.indexOf('<body'), html.indexOf('<body') + 1600)}`)
+  } finally {
+    await browser.close()
+  }
+})
