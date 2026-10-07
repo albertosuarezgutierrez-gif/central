@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
-import { leerGrabacion, marcarValidado } from '@/lib/tarificador-grabaciones'
-import { SIN_CORREDURIA, UUID, errorGrabaciones, quienEscribe } from '@/lib/tarificador-grabaciones-http'
+import { borrarGrabacion, leerGrabacion, marcarValidado } from '@/lib/tarificador-grabaciones'
+import { SIN_CORREDURIA, UUID, errorBorrado, errorGrabaciones, quienEscribe } from '@/lib/tarificador-grabaciones-http'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,5 +45,24 @@ export const PATCH = auditado(async (req: Request, ctx: Ctx) => {
     return NextResponse.json(r)
   } catch (e) {
     return errorGrabaciones('operador/tarificador/grabaciones/[id]', e)
+  }
+})
+
+/**
+ * `DELETE /api/operador/tarificador/grabaciones/[id]` — Alberto borra la grabación con sus pantallas y los HTML
+ * (una transacción; ver `borrarGrabacion`). 404 si no existe; 409 si un documento lo usa otra ficha.
+ */
+export const DELETE = auditado(async (req: Request, ctx: Ctx) => {
+  if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const { id } = await ctx.params
+  if (!UUID.test(id)) return NextResponse.json({ estado: 'error', mensaje: 'id no es un uuid' }, { status: 400 })
+  try {
+    const correduria = await correduriaUnica()
+    if (!correduria) return SIN_CORREDURIA()
+    const r = await borrarGrabacion(correduria.id, id)
+    if (r.estado === 'no_encontrada') return NextResponse.json(r, { status: 404 })
+    return NextResponse.json(r)
+  } catch (e) {
+    return errorBorrado('operador/tarificador/grabaciones/[id]', e)
   }
 })

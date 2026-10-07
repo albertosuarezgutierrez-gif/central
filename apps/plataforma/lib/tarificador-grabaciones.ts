@@ -45,6 +45,12 @@ export function mensajeError(status: number, json: unknown, que: string): string
   return `${que}: no ha ido bien${detalle ? ` (${detalle})` : ` (HTTP ${status})`}.`
 }
 
+/** Texto del `window.confirm` de borrar una grabación (lleva su nombre: compañía · ramo · producto). */
+export function textoConfirmarBorrado(g: { compania: string; ramo: string; producto: string | null }): string {
+  const nombre = [g.compania, g.ramo, g.producto].filter(Boolean).join(' · ')
+  return `¿Borrar la grabación «${nombre}»?\n\nSe borrará la grabación y todas sus pantallas. No se puede deshacer.`
+}
+
 export type FicheroElegido = { name: string; size: number }
 
 /** Comprueba los ficheros elegidos ANTES de subir nada: extensión, tamaño y cuántos caben. */
