@@ -1107,8 +1107,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 ## (07/10/2026) Correduría · cónyuge en seguro anterior + propuesta conjunta de escenarios
 - Desplegable de seguro anterior: grupo «del cónyuge/pareja», orden por antigüedad, aviso si no se pudo mirar.
-- Propuesta conjunta: `seguros.presupuesto_propuesta` (+item), SQL `2026-10-07e_presupuesto_propuesta.sql` PENDIENTE de aplicar. PDF junta escenarios; aviso uno por tomador (el portal solo enseña lo suyo), WhatsApp con código por escenario, valida todo antes de rotar enlaces.
+- Propuesta conjunta: `seguros.presupuesto_propuesta` (+item), SQL `2026-10-07e_presupuesto_propuesta.sql` APLICADO en producción (07/10/2026), verificado: RLS en las 3 tablas, prisma_seguros sin DELETE/TRUNCATE ni UPDATE en item, triggers presentes; solo faltan los COMMENT ON (cosméticos). PDF junta escenarios; aviso uno por tomador (el portal solo enseña lo suyo), WhatsApp con código por escenario, valida todo antes de rotar enlaces.
 - «Duplicar con otro tomador» en la oportunidad. Rafael/Ana (Mercedes 5802-JMJ) preparado: Rafael tomador, Ana conductora.
+- Pendiente Alberto: teclear en la ficha de Ana Isabel Dañino (lead 6a986813) DNI, nacimiento y carné (van cifrados, no por SQL).
 
 ## (07/10/2026) Correduría · botón «Tarificar» en Oportunidades de la ficha
 - `TarificarOportunidad.tsx` + helper puro `lib/correduria/tarificar-oportunidad.ts` (test). Reutiliza `rutaVariante()`/`ramoVariante()` → `/<ramo>-nuevo?oportunidad=`.
