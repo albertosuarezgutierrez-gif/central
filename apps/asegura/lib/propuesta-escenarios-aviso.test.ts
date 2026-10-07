@@ -10,7 +10,8 @@ const avisar = src.slice(src.indexOf('export async function avisarPropuesta'), s
 test('🪤 ningún escenario rota su llave antes de que TODOS hayan pasado sus guardas', () => {
   const validar = avisar.indexOf('await prepararAviso(')
   const corte = avisar.indexOf('if (hayFallo) {')
-  const corteVuelve = avisar.indexOf("return { estado: 'error', grupos, items }", corte)
+  // El corte vuelve con el estado del lote (hay grupos ya enviados que pueden hacerlo parcial), sin pasar por ninguna escritura.
+  const corteVuelve = avisar.indexOf('return { estado: estadoDelLote(todosLosGrupos).estado, grupos: todosLosGrupos, items }', corte)
   const primeraEscritura = Math.min(
     ...['avisarGrupoPorCorreo(', 'rotarWhatsappLote(', 'ejecutarAviso(', 'avisarPresupuesto('].map((s) => avisar.indexOf(s)).filter((i) => i >= 0),
   )
