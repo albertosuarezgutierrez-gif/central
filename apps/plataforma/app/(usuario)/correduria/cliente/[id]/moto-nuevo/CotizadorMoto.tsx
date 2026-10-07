@@ -574,6 +574,14 @@ export default function CotizadorMoto({
     try {
       onCotizando?.(true)
       await pedirPrecioSinGuarda(forzarNuevo)
+    } catch (e) {
+      // Una excepción (red, timeout, fallo del servidor) NO es una respuesta de error: sin esto la pantalla se
+      // quedaba en «cotizando» y el cobro, desconocido, no se avisaba. Se desconoce si se cobró → gastoDesconocido.
+      setResultado({
+        estado: 'error',
+        mensaje: `No se ha podido completar la consulta (${e instanceof Error ? e.message : 'error desconocido'}).`,
+        gastoDesconocido: true,
+      })
     } finally {
       cotizandoEnVuelo.current = false
       onCotizando?.(false)

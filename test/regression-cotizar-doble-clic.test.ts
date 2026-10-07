@@ -29,3 +29,10 @@ for (const [f, fn, args] of PANTALLAS) {
     assert.match(cuerpo, /if \(cotizandoEnVuelo\.current\) return\s*\n\s*cotizandoEnVuelo\.current = true\s*\n\s*try \{[\s\S]*\} finally \{\s*\n\s*cotizandoEnVuelo\.current = false/, 'si hay una en vuelo, return; se libera en finally')
   })
 }
+
+test('🪤 moto: pedirPrecio() captura excepciones y las pinta como error con cobro DESCONOCIDO (no se queda en «cotizando»)', () => {
+  const src = readFileSync(join(ROOT, BASE + 'moto-nuevo/CotizadorMoto.tsx'), 'utf8')
+  const ini = src.indexOf('async function pedirPrecio(forzarNuevo: boolean) {')
+  const cuerpo = src.slice(ini, src.indexOf('\n  }\n', ini))
+  assert.match(cuerpo, /\} catch \(e\) \{[\s\S]*estado: 'error'[\s\S]*gastoDesconocido: true[\s\S]*\} finally \{/)
+})
