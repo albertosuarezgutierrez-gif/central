@@ -127,7 +127,7 @@ export default async function VidaNuevoPage({ params, searchParams }: { params: 
       <VidaNuevo
         clienteId={clienteId}
         variante={variante}
-        inicial={c ? { capital: c.capital, duracionAnios: c.duracionAnios } : null}
+        inicial={c ? { capital: c.capital, profesion: c.profesion, fumador: c.fumador } : null}
         etiquetaCliente={pre.pre.etiquetaCliente}
         faltanInicial={pre.pre.faltan}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}

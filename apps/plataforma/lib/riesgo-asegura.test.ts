@@ -185,8 +185,17 @@ test('interpretarRiesgo: datosRiesgo de cada ramo — clave rara o datos ilegibl
     assert.deepEqual(v.faltan, ['uso'])
     assert.equal(v.dePoliza, true)
   }
-  const c = leer({ clave: 'datosCapital', datos: { capital: 0, duracionAnios: null }, faltan: ['capital'], tarifica: true })
+  const c = leer({ clave: 'datosCapital', datos: { capital: 0, profesion: '2612', fumador: false, asegurados: [{ nombre: 'Ana', apellido1: 'Pérez', fechaNacimiento: '1990-05-17', sexo: 'mujer' }, { nombre: 'x' }] }, faltan: ['capital'], tarifica: true })
   assert.equal(c?.clave === 'datosCapital' && c.datos.capital, 0, 'un 0 declarado es un dato')
+  if (c?.clave === 'datosCapital') {
+    assert.equal(c.datos.profesion, '2612')
+    assert.equal(c.datos.fumador, false, 'no fuma es un dato, no un vacío')
+    assert.equal(c.datos.asegurados?.length, 1, 'una fila a medias no se inventa')
+    assert.equal(Object.hasOwn(c.datos.asegurados?.[0] ?? {}, 'dni'), false, 'el riesgo no lleva DNI')
+  }
+  const sinFumador = leer({ clave: 'datosCapital', datos: { capital: 5 }, faltan: [], tarifica: true })
+  assert.equal(sinFumador?.clave === 'datosCapital' && sinFumador.datos.fumador, null, 'sin dato es null')
+  assert.equal(sinFumador?.clave === 'datosCapital' && sinFumador.datos.asegurados, null, 'sin mirar ≠ []')
   const k = leer({ clave: 'datosComercio', datos: { actividad: 'Bar', regimenLocal: 'inquilino', capitales: [{ bien: 'CONTENIDO', importe: 0 }], medidasProteccion: null }, faltan: ['capitales', 4], dePoliza: true, tarifica: false })
   assert.equal(k?.clave, 'datosComercio')
   if (k?.clave === 'datosComercio') {

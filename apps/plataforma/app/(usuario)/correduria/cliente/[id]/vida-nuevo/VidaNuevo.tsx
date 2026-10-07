@@ -89,13 +89,14 @@ export default function VidaNuevo({
   /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
   variante?: VarianteNueva | null
   /** Lo que el riesgo ya sabe (`info_riesgo.datosCapital`): precarga; `null` = no se sabe, nunca 0. */
-  inicial?: { capital: number | null; duracionAnios: number | null } | null
+  inicial?: { capital: number | null; profesion: string | null; fumador: boolean | null } | null
 }) {
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
   const [capital, setCapital] = useState(inicial?.capital != null ? String(inicial.capital) : '')
   // Datos del asegurado que viajan al vendor. Vacío = «no se sabe» (no se manda), nunca un «no» por defecto.
-  const [profesion, setProfesion] = useState('')
-  const [fumador, setFumador] = useState<'' | 'si' | 'no'>('')
+  // Precargados de `info_riesgo.datosCapital` si el riesgo los trae (se editan en la oportunidad); `null` = sin dato.
+  const [profesion, setProfesion] = useState(inicial?.profesion ?? '')
+  const [fumador, setFumador] = useState<'' | 'si' | 'no'>(inicial?.fumador === true ? 'si' : inicial?.fumador === false ? 'no' : '')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')

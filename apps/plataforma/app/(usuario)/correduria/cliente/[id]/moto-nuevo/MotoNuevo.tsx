@@ -26,6 +26,7 @@ import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
+import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
@@ -241,33 +242,37 @@ export default function MotoNuevo({
   const limitesEfecto = limitesFechaEfecto()
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
-  // ── Precarga desde el riesgo (30/09/2026) ───────────────────────────────────
-  // Prioridad: variante RETOMADA (`?tarificacion=`, lo pagado manda) > riesgo. Solo se precarga el vehículo
-  // entero (versión + ids del catálogo): con la versión sola no se puede repoblar el selector.
+  // ── Precarga desde el riesgo (30/09/2026; PARCIAL desde el 07/10/2026) ──────────────────────────────────
+  // Prioridad: variante RETOMADA (`?tarificacion=`, lo pagado manda) > riesgo. Igual que AutoNuevo
+  // (`lib/correduria/precarga-vehiculo.ts`): la cascada marca → modelo → combustible → versión se precarga hasta donde
+  // llegue el riesgo y el texto sin id va a la caja de búsqueda como pista (nunca como selección).
   const retomada = (variante?.tarificacionId ?? null) !== null
-  const riesgoManda =
-    poliza === null && !retomada && !!(datosRiesgo?.codigoVehiculo && datosRiesgo.marcaId && datosRiesgo.modeloId && datosRiesgo.motorId)
+  const plan = planPrecargaVehiculo(datosRiesgo, retomada)
+  const riesgoManda = plan.completa
+  const avisoDelRiesgo = 'precargado · sin confirmar'
   useEffect(() => {
-    if (!riesgoManda || !datosRiesgo) return
+    const c = plan.cascada
+    if (!c) return
     let vivo = true
     void (async () => {
       try {
         setCargando('modelos')
-        const ms = await catalogo(`tipo=modelos-moto&marcaId=${encodeURIComponent(datosRiesgo.marcaId!)}`)
+        const ms = await catalogo(`tipo=modelos-moto&marcaId=${encodeURIComponent(c.marcaId)}`)
         if (!vivo) return
-        setMarcaId(datosRiesgo.marcaId!)
+        setMarcaId(c.marcaId)
         setModelos(ms)
-        if (!ms.some((m) => m.id === datosRiesgo.modeloId)) return
-        setModeloId(datosRiesgo.modeloId!)
-        setMotorId(datosRiesgo.motorId!)
+        if (c.motorId && MOTORES.some((m) => m.id === c.motorId)) setMotorId(c.motorId)
+        if (!c.modeloId || !ms.some((m) => m.id === c.modeloId)) return
+        setModeloId(c.modeloId)
+        if (!c.motorId) return
         setCargando('versiones')
         const vs = await catalogo(
-          `tipo=versiones-moto&marcaId=${encodeURIComponent(datosRiesgo.marcaId!)}` +
-            `&modeloId=${encodeURIComponent(datosRiesgo.modeloId!)}&motor=${encodeURIComponent(datosRiesgo.motorId!)}`,
+          `tipo=versiones-moto&marcaId=${encodeURIComponent(c.marcaId)}` +
+            `&modeloId=${encodeURIComponent(c.modeloId)}&motor=${encodeURIComponent(c.motorId)}`,
         )
         if (!vivo) return
         setVersiones(vs)
-        if (vs.some((x) => x.id === datosRiesgo.codigoVehiculo)) setCodigoVehiculo(datosRiesgo.codigoVehiculo!)
+        if (c.codigoVehiculo && vs.some((x) => x.id === c.codigoVehiculo)) setCodigoVehiculo(c.codigoVehiculo)
       } catch {
         // Precargar el vehículo es una comodidad: si el catálogo falla, se elige a mano.
       } finally {
@@ -297,6 +302,9 @@ export default function MotoNuevo({
         if (!r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada)
         const v = r.guardada.vehiculo
         if (!v) return
+        // 07/10/2026: si el riesgo trae OTRA moto (otro código, o marca/modelo sin poder probar que sea la misma), la moto de
+        // la última tarificación no manda: ni su versión ni sus datos (matrícula, km, garaje) son de esta moto.
+        if (!previoPuedeMandar(datosRiesgo, v.codigoVehiculo, retomada)) return
         // Con el vehículo del riesgo ya cargado (y sin variante retomada) la última tarificación no lo pisa.
         if (!riesgoManda) {
           setPrevio(v)
@@ -673,9 +681,10 @@ export default function MotoNuevo({
         )}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           {!(usarPrevio && previo) && (<>
-          <Campo etiqueta="Marca" falta={false}>
+          <Campo etiqueta="Marca" falta={false} aviso={sigueSinConfirmar(plan, datosRiesgo?.marcaId, marcaId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={marcaId}
+              pista={marcaId ? null : plan.pistaMarca}
               onCambiar={(v) => void alElegirMarca(v)}
               opciones={marcas}
               deshabilitado={cargando === 'marcas'}
@@ -685,9 +694,10 @@ export default function MotoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Modelo" falta={false}>
+          <Campo etiqueta="Modelo" falta={false} aviso={sigueSinConfirmar(plan, datosRiesgo?.modeloId, modeloId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={modeloId}
+              pista={modeloId ? null : plan.pistaModelo}
               onCambiar={alElegirModelo}
               opciones={modelos}
               deshabilitado={!marcaId || cargando === 'modelos'}
@@ -697,7 +707,7 @@ export default function MotoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Combustible" falta={motorId === ''} faltaTexto="lo elige el corredor">
+          <Campo etiqueta="Combustible" falta={motorId === ''} faltaTexto="lo elige el corredor" aviso={sigueSinConfirmar(plan, datosRiesgo?.motorId, motorId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={motorId}
               onCambiar={alElegirMotor}
@@ -708,9 +718,10 @@ export default function MotoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Versión" falta={faltaVersion} faltaTexto="la elige el corredor">
+          <Campo etiqueta="Versión" falta={faltaVersion} faltaTexto="la elige el corredor" aviso={sigueSinConfirmar(plan, datosRiesgo?.codigoVehiculo, codigoVehiculo) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={codigoVehiculo}
+              pista={codigoVehiculo ? null : plan.pistaVersion}
               onCambiar={setCodigoVehiculo}
               opciones={versiones}
               deshabilitado={!modeloId || !motorId || cargando === 'versiones'}
@@ -1117,12 +1128,13 @@ function fechaCorta(iso: string): string {
   return `${d}/${m}/${a}`
 }
 
-function Campo({ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }) {
+function Campo({ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }) {
   return (
     <div style={{ minWidth: 0 }}>
       <label style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
         <span>{etiqueta}</span>
         {falta && <Badge tono="aviso">falta{faltaTexto ? ` · ${faltaTexto}` : ''}</Badge>}
+        {!falta && aviso && <Badge tono="aviso">{aviso}</Badge>}
       </label>
       {children}
       {ayuda && <span style={{ color: 'var(--muted)', fontSize: 12, display: 'block', marginTop: 4 }}>{ayuda}</span>}

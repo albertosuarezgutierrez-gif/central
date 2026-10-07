@@ -2,7 +2,7 @@
 // cotizan una VARIANTE (29/09/2026, docs/superpowers/specs/2026-09-29-riesgo-figuras-variantes-design.md).
 // PURO y server-safe: se calcula en el `page.tsx` a partir de la lectura del riesgo y viaja como prop.
 
-import type { RolFigura } from '@central/module-seguros'
+import type { AseguradoAdicional, RolFigura } from '@central/module-seguros'
 import type { Riesgo } from '@/lib/riesgo-asegura'
 
 /** Los papeles que NO son el tomador: los que una variante puede poner en otra ficha. */
@@ -56,10 +56,22 @@ export function varianteDeRiesgo(r: Riesgo, tomadorId: string, tarificacionId: s
   return { oportunidadId: r.oportunidad.id, tarificacionId, etiqueta: etiquetaRiesgo(r), figuras, nombres, faltan, empresas }
 }
 
-/** El capital que el riesgo ya sabe (vida, salud, decesos). `null` = el riesgo no trae ese bloque; un campo sin dato, `null`. */
-export function capitalDeRiesgo(r: Riesgo): { capital: number | null; duracionAnios: number | null; modalidadDeseada: string | null } | null {
+/**
+ * Lo que el riesgo ya sabe de la persona (vida, salud, decesos) para sembrar la pantalla de precio. `null` = el riesgo
+ * no trae ese bloque; un campo sin dato, `null` (nunca 0, «no fuma» ni «ninguno»). La duración de vida se quitó el
+ * 03/10/2026 y ya no se siembra.
+ */
+export function capitalDeRiesgo(r: Riesgo): {
+  capital: number | null
+  modalidadDeseada: string | null
+  profesion: string | null
+  fumador: boolean | null
+  asegurados: AseguradoAdicional[] | null
+} | null {
   const d = r.datosRiesgo
-  return d?.clave === 'datosCapital' ? { capital: d.datos.capital, duracionAnios: d.datos.duracionAnios, modalidadDeseada: d.datos.modalidadDeseada } : null
+  return d?.clave === 'datosCapital'
+    ? { capital: d.datos.capital, modalidadDeseada: d.datos.modalidadDeseada, profesion: d.datos.profesion, fumador: d.datos.fumador, asegurados: d.datos.asegurados }
+    : null
 }
 
 /** La vivienda que el riesgo ya sabe (hogar). `null` = el riesgo no trae ese bloque. */
@@ -119,6 +131,50 @@ export function rutaVariante(ramo: RamoVarianteNuevo, tomadorId: string, oportun
   // con un cartel de «abierta desde el historial».
   if (tarificacionId && ramoRetomable(ramo)) q.set('tarificacion', tarificacionId)
   return `/correduria/cliente/${encodeURIComponent(tomadorId)}/${ramo}-nuevo?${q.toString()}`
+}
+
+/** Ruta de «Retarificar con los datos de la póliza» (`/poliza/{id}/retarificar?oportunidad=`): el riesgo VIEJO de la póliza. */
+export function rutaRetarificarPoliza(polizaId: string, oportunidadId: string): string {
+  return `/correduria/poliza/${encodeURIComponent(polizaId)}/retarificar?${new URLSearchParams({ oportunidad: oportunidadId }).toString()}`
+}
+
+export type AccionPrecio = { href: string; etiqueta: string; nota: string }
+
+/**
+ * Qué botones de «pedir precio» ofrece la pantalla del riesgo (07/10/2026, Alberto: editar los datos del riesgo →
+ * elegir del catálogo → pedir precio, todo desde la misma pantalla). 🚨 El PRINCIPAL es SIEMPRE pedir precio con los
+ * datos de la OPORTUNIDAD (`rutaVariante`), con o sin póliza: lo que el corredor acaba de editar. «Retarificar con los
+ * datos de la póliza» (`retarificaEnRiesgo`) tarifica el riesgo VIEJO de la póliza y solo es SECUNDARIO. Ninguno cotiza
+ * solo: llevan a la pantalla de precio, donde se confirma (0,50€). Ramo sin tarifa → ambos `null`.
+ */
+export function accionesPrecio(e: { ramo: string; polizaId: string | null; tomadorId: string; oportunidadId: string }): { principal: AccionPrecio | null; secundario: AccionPrecio | null } {
+  const ramo = ramoVariante(e.ramo)
+  if (!ramo) return { principal: null, secundario: null }
+  const principal: AccionPrecio = {
+    href: rutaVariante(ramo, e.tomadorId, e.oportunidadId),
+    etiqueta: 'Pedir precio con los datos de la oportunidad',
+    nota: 'Con los intervinientes y los datos de arriba. En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.',
+  }
+  const secundario: AccionPrecio | null = e.polizaId && retarificaEnRiesgo(e.ramo)
+    ? {
+        href: rutaRetarificarPoliza(e.polizaId, e.oportunidadId),
+        etiqueta: 'Retarificar con los datos de la póliza',
+        nota: 'Usa los datos de la póliza de hoy (su tomador, su vehículo o vivienda y su historial), NO los de arriba. Cuesta 0,50€.',
+      }
+    : null
+  return { principal, secundario }
+}
+
+/**
+ * Por qué «Pedir precio →» (dentro del bloque de datos) no está disponible, o `null` si lo está. Solo navega a la
+ * pantalla de precio: nunca cotiza. Lo que falte del riesgo NO bloquea (esa pantalla lo pide y corregirlo es gratis);
+ * bloquean editar a medias, guardar en curso y un ramo sin tarifa.
+ */
+export function motivoSinPrecioRamo(e: { ramoCotizable: boolean; editando: boolean; ocupado: boolean }): string | null {
+  if (!e.ramoCotizable) return 'Este ramo no se cotiza desde aquí.'
+  if (e.editando) return 'Termina de editar los datos primero.'
+  if (e.ocupado) return 'Guardando…'
+  return null
 }
 
 /** `searchParams` → un texto limpio o `null` (uuid u otro id opaco; nunca un array). */

@@ -18,7 +18,8 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import { pedirCotizacionDecesos } from './acciones'
 import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
 import { FallosTarificacion } from '../../../FallosTarificacion'
-import AseguradosAdicionales, { aseguradoCompleto, aseguradosParaEnviar, type AseguradoForm } from '../AseguradosAdicionales'
+import AseguradosAdicionales, { aseguradoCompleto, aseguradosDeRiesgo, aseguradosParaEnviar, type AseguradoForm } from '../AseguradosAdicionales'
+import type { AseguradoAdicional } from '@central/module-seguros'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -76,13 +77,13 @@ export default function DecesosNuevo({
   /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
   variante?: VarianteNueva | null
   /** Lo que el riesgo ya sabe (`info_riesgo.datosCapital`): precarga; `null` = no se sabe, nunca 0. */
-  inicial?: { capital: number | null } | null
+  inicial?: { capital: number | null; asegurados: AseguradoAdicional[] | null } | null
 }) {
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
   const [capital, setCapital] = useState(inicial?.capital != null ? String(inicial.capital) : '')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   // Asegurados además del tomador (`insureds[1..]`): sí viajan al vendor.
-  const [asegurados, setAsegurados] = useState<AseguradoForm[]>([])
+  const [asegurados, setAsegurados] = useState<AseguradoForm[]>(() => aseguradosDeRiesgo(inicial?.asegurados))
   // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
   const limitesEfecto = limitesFechaEfecto()

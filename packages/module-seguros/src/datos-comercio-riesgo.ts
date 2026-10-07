@@ -420,9 +420,15 @@ export function faltanDatosComercio(datos: Partial<DatosComercioRiesgo> | null |
   return f
 }
 
-export function textoFaltanComercio(faltan: readonly CampoFaltaComercio[] | null | undefined): string | null {
+/**
+ * El aviso de lo que falta. «Para tarificar» solo si HAY ruta de tarifa (`hayRutaTarifa`, por defecto sí): hoy el
+ * comercio se cotiza fuera, y decir «falta para tarificar» prometía un botón que no existe (07/10/2026).
+ * Sin ruta: «Falta en la ficha del comercio» (para el expediente y para tarificar con la compañía).
+ */
+export function textoFaltanComercio(faltan: readonly CampoFaltaComercio[] | null | undefined, opciones: { hayRutaTarifa?: boolean } = {}): string | null {
   if (faltan === null || faltan === undefined || faltan.length === 0) return null
-  return `Falta para tarificar: ${faltan.map((c) => ETIQUETA_FALTA[c]).join(', ')}.`
+  const prefijo = opciones.hayRutaTarifa === false ? 'Falta en la ficha del comercio' : 'Falta para tarificar'
+  return `${prefijo}: ${faltan.map((c) => ETIQUETA_FALTA[c]).join(', ')}.`
 }
 
 // ─── Edición ─────────────────────────────────────────────────────────────────
