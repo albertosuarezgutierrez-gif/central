@@ -88,27 +88,8 @@ export default function ListaPrecios<P extends PrecioLista>({
                   <div style={{ color: 'var(--muted)', fontSize: 12 }}>
                     {p.franquiciaEur === null || p.franquiciaEur === undefined ? 'franquicia no declarada' : p.franquiciaEur === 0 ? 'sin franquicia' : `franquicia ${eur(p.franquiciaEur)}`}
                   </div>
-                  {detalle && <div style={{ fontSize: 12, marginTop: 4 }}>{detalle(p)}</div>}
-                  {actual && (() => {
-                    const t = textoPagasProponemos(actual.anual, p.primaEur)
-                    return t ? (
-                      <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text)', overflowWrap: 'anywhere' }}>
-                        {t}{esMismaCompaniaQueLaActual(actual.compania, p.compania) === true ? ' · es su compañía actual' : ''}
-                      </div>
-                    ) : null
-                  })()}
-                  {!todasEstimadas && p.firmeza !== 'firme' && (
-                    <Badge tono="aviso" title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge>
-                  )}
-                  {simulado && <Badge tono="aviso">simulado</Badge>}
-                  {bloqueoCompania(p.avisos) !== null && (
-                    <div style={{ fontSize: 12, color: 'var(--negative)', fontWeight: 600, marginTop: 4 }}>{textoBloqueoCorredor(bloqueoCompania(p.avisos) as string, p.compania)}</div>
-                  )}
-                  {reparosFila.map((m) => (
-                    <div key={m} style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 600, marginTop: 4, overflowWrap: 'anywhere' }}>⚠️ {m}</div>
-                  ))}
                 </div>
-                <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
+                <div style={{ flex: '0 0 auto', textAlign: 'right', minWidth: 0 }}>
                   <strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{p.primaEur === null || p.primaEur === undefined ? '—' : eur(p.primaEur)}</strong>
                   <div style={{ color: 'var(--muted)', fontSize: 11 }}>al año</div>
                 </div>
@@ -125,6 +106,29 @@ export default function ListaPrecios<P extends PrecioLista>({
                   </button>
                 )}
               </div>
+              {(detalle || actual || p.firmeza !== 'firme' || simulado || bloqueoCompania(p.avisos) !== null || reparosFila.length > 0) && (
+                <div style={{ paddingBottom: 10, minWidth: 0, width: '100%', overflowWrap: 'anywhere' }}>
+                  {detalle && <div style={{ fontSize: 12, marginTop: 4 }}>{detalle(p)}</div>}
+                  {actual && (() => {
+                    const t = textoPagasProponemos(actual.anual, p.primaEur)
+                    return t ? (
+                      <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text)', overflowWrap: 'anywhere' }}>
+                        {t}{esMismaCompaniaQueLaActual(actual.compania, p.compania) === true ? ' · es su compañía actual' : ''}
+                      </div>
+                    ) : null
+                  })()}
+                  {!todasEstimadas && p.firmeza !== 'firme' && (
+                    <Badge tono="aviso" title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge>
+                  )}
+                  {simulado && <Badge tono="aviso">simulado</Badge>}
+                  {bloqueoCompania(p.avisos) !== null && (
+                    <div style={{ fontSize: 12, color: 'var(--negative)', fontWeight: 600, marginTop: 4, overflowWrap: 'anywhere' }}>{textoBloqueoCorredor(bloqueoCompania(p.avisos) as string, p.compania)}</div>
+                  )}
+                  {reparosFila.map((m) => (
+                    <div key={m} style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 600, marginTop: 4, overflowWrap: 'anywhere' }}>⚠️ {m}</div>
+                  ))}
+                </div>
+              )}
               {abiertaEsta && emision && puedeEmitir && <div style={{ paddingBottom: 10 }}>{emision(p, () => setAbierta(null))}</div>}
             </li>
           )
