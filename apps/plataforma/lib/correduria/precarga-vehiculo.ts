@@ -53,3 +53,22 @@ export function planPrecargaVehiculo(datos: DatosVehiculoRiesgo | null | undefin
 export function sigueSinConfirmar(plan: PrecargaVehiculo, precargado: string | null | undefined, actual: string): boolean {
   return plan.sinConfirmar && !!precargado && precargado === actual
 }
+
+/**
+ * ¿La moto/coche de la ÚLTIMA tarificación puede mandar sobre el vehículo del riesgo? (07/10/2026)
+ * La última tarificación solo guarda el `codigoVehiculo` (sin texto). Si el riesgo trae OTRO vehículo, la anterior no manda:
+ *  - el riesgo trae `codigoVehiculo` y es distinto → otra moto;
+ *  - el riesgo no trae código pero sí marca/modelo (texto o ids) → no se puede probar que sea la misma: conservador, no manda.
+ * Si el riesgo no sabe nada del vehículo, o trae el MISMO código, o se retoma una variante (lo pagado manda), sí puede.
+ */
+export function previoPuedeMandar(
+  datos: DatosVehiculoRiesgo | null | undefined,
+  codigoPrevio: string | null | undefined,
+  retomada: boolean,
+): boolean {
+  if (retomada) return true
+  if (!datos) return true
+  if (datos.codigoVehiculo) return datos.codigoVehiculo === (codigoPrevio ?? null)
+  const traeOtroVehiculo = !!(datos.marcaId || datos.modeloId || datos.marca || datos.modelo || datos.version)
+  return !traeOtroVehiculo
+}

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { planPrecargaVehiculo, sigueSinConfirmar } from './precarga-vehiculo.ts'
+import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from './precarga-vehiculo.ts'
 import { datosVehiculoVacios, type DatosVehiculoRiesgo } from '@central/module-seguros'
 
 const d = (o: Partial<DatosVehiculoRiesgo> = {}): DatosVehiculoRiesgo => ({ ...datosVehiculoVacios(), ...o })
@@ -57,4 +57,17 @@ test('sin confirmar: solo mientras no haya sello y el valor siga siendo el preca
   const conf = planPrecargaVehiculo(d({ marcaId: '1', confirmadoAt: '2026-10-01T10:00:00Z' }), false)
   assert.equal(conf.sinConfirmar, false)
   assert.equal(sigueSinConfirmar(conf, '1', '1'), false)
+})
+
+test('previoPuedeMandar: la anterior manda salvo que el riesgo traiga otra moto', () => {
+  assert.equal(previoPuedeMandar(null, 'A', false), true)
+  assert.equal(previoPuedeMandar(d(), 'A', false), true)
+  assert.equal(previoPuedeMandar(d({ codigoVehiculo: 'A', marcaId: '1' }), 'A', false), true)
+  assert.equal(previoPuedeMandar(d({ codigoVehiculo: 'B', marcaId: '1' }), 'A', false), false)
+  assert.equal(previoPuedeMandar(d({ codigoVehiculo: 'B' }), null, false), false)
+  // sin código pero con marca/modelo (ids o texto): no se puede probar que sea la misma → no manda
+  assert.equal(previoPuedeMandar(d({ marca: 'Yamaha', modelo: 'MT-07' }), 'A', false), false)
+  assert.equal(previoPuedeMandar(d({ marcaId: '3', modeloId: '4' }), 'A', false), false)
+  // variante retomada: lo pagado manda siempre
+  assert.equal(previoPuedeMandar(d({ codigoVehiculo: 'B' }), 'A', true), true)
 })
