@@ -86,6 +86,15 @@ export {
   type ValidacionFormularioRC,
 } from './formulario-rc.ts'
 
+// Formulario canónico de Comercio / Negocio (08/10/2026): ramo sin compañía registrada todavía.
+export {
+  REGIMENES_LOCAL,
+  validarFormularioComercio,
+  type FormularioComercio,
+  type RegimenLocal,
+  type ValidacionFormularioComercio,
+} from './formulario-comercio.ts'
+
 // Fichas de producto y coberturas (07/10/2026): catálogo canónico, validador anti-alucinación y comparador.
 export {
   RAMOS_FICHA,

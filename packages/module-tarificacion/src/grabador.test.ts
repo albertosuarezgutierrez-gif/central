@@ -16,6 +16,7 @@ import {
   separarMarcosGrabacion,
   validarPantallaMapa,
 } from './grabador.ts'
+import { MARCA_LOGIN } from './grabador.ts'
 import { FUENTE_GRABADOR, codigoBookmarklet, configGrabador, urlBookmarklet } from './grabador-bookmarklet.ts'
 
 describe('clasificarBoton', () => {
@@ -151,6 +152,38 @@ describe('redactarHtmlGrabacion (servidor)', () => {
   it('es idempotente', () => expect(redactarHtmlGrabacion(r)).toBe(r))
   it('redactarUrl', () => {
     expect(redactarUrl('https://p.es/a;jsessionid=99?x=1&sessionId=abc&auth_token=q')).toBe('https://p.es/a;jsessionid=[REDACTADO]?x=1&sessionId=[REDACTADO]&auth_token=[REDACTADO]')
+  })
+})
+
+describe('redactarHtmlGrabacion: login y datos de personas', () => {
+  const login = '<html><body><form><input type="text" name="username" autocomplete="off" maxlength="25" value="usuario-prueba" data-valor="usuario-prueba"><input type="text" name="campoLibre" value="otro-texto-prueba" data-valor="otro-texto-prueba"><input type="password" name="pw" value="Clave.Prueba.1" data-valor="Clave.Prueba.1"><input type="checkbox" name="recordar" data-valor="marcado"></form></body></html>'
+  const rl = redactarHtmlGrabacion(login)
+  it('pantalla de login: marca, tapa usuario y cualquier texto, deja el checkbox', () => {
+    for (const crudo of ['usuario-prueba', 'otro-texto-prueba', 'Clave.Prueba.1']) expect(rl, crudo).not.toContain(crudo)
+    expect(rl).toContain(MARCA_LOGIN)
+    expect(rl).toContain('data-valor="marcado"')
+    expect(redactarHtmlGrabacion(rl)).toBe(rl)
+  })
+  it('usuario por nombre aunque no haya password', () => {
+    const r = redactarHtmlGrabacion('<input name="j_username" value="usuario-prueba"><input id="userId" data-valor="usuario-prueba">')
+    expect(r).not.toContain('usuario-prueba')
+    expect(r).not.toContain(MARCA_LOGIN)
+  })
+  const ficha = [
+    '<div id="app-header">209-C/12/0000 - Marta Mediadora Inventada</div>',
+    ...['nombre1', 'apellido1', 'apellido2', 'razonSocial1', 'fNaci1', 'tom_fullDate', 'tom_address_pc', 'tom_address_town', 'tom_address_flat', 'mail1', 'codAgente', 'sucmed'].map((n) => `<input type="text" name="${n}" value="valor-personal-prueba" data-valor="valor-personal-prueba">`),
+    '<input type="text" name="importeCapital" value="150000" data-valor="150000"><input type="text" name="fechaEfecto" data-valor="15/11/2026">',
+    '<select id="tipoRiesgo" name="tipoRiesgo" data-valor="piso"><option value="piso" selected>Piso</option></select>',
+    '<input type="checkbox" name="cobRobo" data-valor="marcado"><input type="radio" name="nombreCobertura" data-valor="sin_marcar">',
+  ].join('\n')
+  const rf = redactarHtmlGrabacion(ficha)
+  it('tapa nombres, nacimiento, dirección, correo, códigos de mediador y el nombre de la cabecera', () => {
+    expect(rf).not.toContain('valor-personal-prueba')
+    expect(rf).not.toContain('Marta Mediadora')
+    expect(rf).toContain('209-C/12/0000 - [DATO]')
+  })
+  it('deja importes, fechas de efecto, selects y checkboxes/radios', () => {
+    for (const ok of ['data-valor="150000"', 'data-valor="15/11/2026"', 'data-valor="piso"', '>Piso<', 'data-valor="marcado"', 'data-valor="sin_marcar"']) expect(rf, ok).toContain(ok)
   })
 })
 

@@ -12,8 +12,9 @@
 // 🔒 No pulsa NADA del portal: el único `click()` es el del <a download> que crea él mismo, sin colgarlo del
 //    documento (así ni siquiera burbujea a los manejadores del portal).
 // 🔒 Redacción (la misma que repite asegura en servidor, `redactarHtmlGrabacion`): fuera <script>/<style>/
-//    <noscript>/<template>; contraseñas, ocultos y campos cuyo name/id/autocomplete casa con
-//    PATRON_CAMPO_SENSIBLE → [REDACTADO]; DNI/NIE/CIF, IBAN, correo, teléfono… (PATRONES_PERSONALES del
+//    <noscript>/<template>; contraseñas, ocultos, campos cuyo name/id/autocomplete casa con
+//    PATRON_CAMPO_SENSIBLE o PATRON_CAMPO_USUARIO (usuario/login) → [REDACTADO]; si la página (o un marco) tiene un
+//    input password es una PANTALLA DE LOGIN: se marca en la cabecera (MARCA_LOGIN) y TODOS sus campos de texto se tapan; DNI/NIE/CIF, IBAN, correo, teléfono… (PATRONES_PERSONALES del
 //    formador) → [DATO] en textos, valores y atributos; parámetros de sesión de las URL tapados.
 //
 // La función va como TEXTO (`FUENTE_GRABADOR`), no como función serializada con `toString()`: los
@@ -22,7 +23,7 @@
 
 import { PATRONES_PERSONALES, MARCA_DATO_PERSONAL } from './formador.ts'
 import { MARCA_REDACTADO } from './redactar.ts'
-import { FIN_MARCA_MARCO, MARCA_MARCO, PATRON_CAMPO_SENSIBLE, PATRON_PARAM_SENSIBLE } from './grabador.ts'
+import { FIN_MARCA_MARCO, MARCA_LOGIN, MARCA_MARCO, PATRON_CAMPO_SENSIBLE, PATRON_CAMPO_PERSONAL, PATRON_CAMPO_USUARIO, PATRON_MEDIADOR, PATRON_PARAM_SENSIBLE } from './grabador.ts'
 
 export const VERSION_GRABADOR = 1
 
@@ -30,6 +31,10 @@ export type ConfigGrabador = {
   version: number
   patrones: [string, string][]
   sensible: [string, string]
+  usuario: [string, string]
+  login: string
+  personal: [string, string]
+  mediador: [string, string]
   param: [string, string]
   marca: string
   finMarca: string
@@ -42,6 +47,10 @@ export function configGrabador(): ConfigGrabador {
     version: VERSION_GRABADOR,
     patrones: PATRONES_PERSONALES.map((r) => [r.source, r.flags] as [string, string]),
     sensible: [PATRON_CAMPO_SENSIBLE.source, PATRON_CAMPO_SENSIBLE.flags],
+    usuario: [PATRON_CAMPO_USUARIO.source, PATRON_CAMPO_USUARIO.flags],
+    login: MARCA_LOGIN,
+    personal: [PATRON_CAMPO_PERSONAL.source, PATRON_CAMPO_PERSONAL.flags],
+    mediador: [PATRON_MEDIADOR.source, PATRON_MEDIADOR.flags],
     param: [PATRON_PARAM_SENSIBLE.source, PATRON_PARAM_SENSIBLE.flags],
     marca: MARCA_MARCO,
     finMarca: FIN_MARCA_MARCO,
@@ -56,6 +65,11 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var PII = []
   for (var p = 0; p < cfg.patrones.length; p++) PII.push(new RegExp(cfg.patrones[p][0], cfg.patrones[p][1]))
   var SENS = new RegExp(cfg.sensible[0], cfg.sensible[1].replace('g', ''))
+  var USU = new RegExp(cfg.usuario[0], cfg.usuario[1].replace('g', ''))
+  var PERS = new RegExp(cfg.personal[0], cfg.personal[1].replace('g', ''))
+  var MED = new RegExp(cfg.mediador[0], cfg.mediador[1])
+  var SIN_TEXTO = { checkbox: 1, radio: 1, submit: 1, button: 1, reset: 1, image: 1, file: 1, range: 1, color: 1 }
+  var hayLogin = false
   var PARAM = new RegExp(cfg.param[0], cfg.param[1].replace('g', ''))
   var ATR_SELECTOR = { id: 1, name: 1, 'class': 1, 'for': 1, type: 1, role: 1, style: 1 }
   var ATR_URL = { href: 1, src: 1, action: 1, formaction: 1 }
@@ -67,22 +81,28 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
       PII[k].lastIndex = 0
       o = o.replace(PII[k], function (m) { return /\d/.test(m) || m.indexOf('@') >= 0 ? cfg.dato : m })
     }
-    return o
+    return o.replace(MED, function (m, cod) { return cod + ' - ' + cfg.dato })
   }
   function redUrl(u) {
     return red(u)
       .replace(/([?&#;])([^=&#?;]*)=([^&#?;]*)/g, function (m, sep, k) { return PARAM.test(k) ? sep + k + '=' + cfg.redactado : m })
   }
-  function sensible(el) {
+  function sensible(el, login) {
     var t = String(el.getAttribute('type') || '').toLowerCase()
     if (t === 'password' || t === 'hidden') return true
+    if (login && String(el.tagName).toLowerCase() !== 'select' && !SIN_TEXTO[t]) return true
     var a = [el.getAttribute('name'), el.getAttribute('id'), el.getAttribute('autocomplete')]
     for (var j = 0; j < a.length; j++) if (a[j] && SENS.test(a[j])) return true
+    a.push(el.getAttribute('aria-label'), el.getAttribute('placeholder'))
+    for (var k = 0; k < a.length; k++) if (a[k] && USU.test(a[k])) return true
+    // Datos de personas, direcciones y códigos de mediador: solo en campos de texto (no selects, checkboxes ni radios).
+    var tg = String(el.tagName).toLowerCase()
+    if (tg !== 'select' && !SIN_TEXTO[t]) for (var m = 0; m < a.length; m++) if (a[m] && PERS.test(a[m])) return true
     return false
   }
-  function anotar(o, c) {
+  function anotar(o, c, login) {
     var tag = String(o.tagName).toLowerCase()
-    if (sensible(o)) {
+    if (sensible(o, login)) {
       c.setAttribute('data-valor', cfg.redactado)
       if (c.hasAttribute('value') || tag === 'input') c.setAttribute('value', cfg.redactado)
       if (tag === 'textarea') c.textContent = cfg.redactado
@@ -142,7 +162,10 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
     var origs = doc.querySelectorAll('input,select,textarea')
     var clon = raiz.cloneNode(true)
     var clons = clon.querySelectorAll('input,select,textarea')
-    for (var i = 0; i < origs.length && i < clons.length; i++) anotar(origs[i], clons[i])
+    var login = false
+    for (var q = 0; q < origs.length; q++) if (String(origs[q].getAttribute('type') || '').toLowerCase() === 'password') login = true
+    if (login) hayLogin = true
+    for (var i = 0; i < origs.length && i < clons.length; i++) anotar(origs[i], clons[i], login)
     var marcos = doc.querySelectorAll('iframe,frame')
     var marcosClon = clon.querySelectorAll('iframe,frame')
     var rutas = []
@@ -171,7 +194,7 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var sello = d.getFullYear() + dos(d.getMonth() + 1) + dos(d.getDate()) + '-' + dos(d.getHours()) + dos(d.getMinutes()) + dos(d.getSeconds())
   var titulo = red(String(win.document.title || '')).replace(/--/g, '- -')
   var cabecera = '<!-- grabador ASegura v' + cfg.version + ' · ' + d.toISOString() + ' · ' + host + redUrl(String(loc.pathname || '')).replace(/--/g, '- -') +
-    ' · «' + titulo + '» · marcos sin leer: ' + sinLeer + ' -->\n'
+    ' · «' + titulo + '» · marcos sin leer: ' + sinLeer + ' -->\n' + (hayLogin ? cfg.login + '\n' : '')
   var html = cabecera + partes.join('\n')
   var nombre = 'pantalla-' + host + '-' + sello + '.html'
   if (descargar) {
