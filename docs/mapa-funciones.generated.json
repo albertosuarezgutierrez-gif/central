@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-07T07:28:48Z",
-  "sha": "f876b783f2f71fbc91555ab9abb7f68fcf5ac808",
+  "generadoEn": "2026-10-07T10:13:09Z",
+  "sha": "f273bf7259d20c87a4a350f3e768f40e712ba8e8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -19381,6 +19381,27 @@
       "hash": "fc9a43956f06"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/tarificador/avisos-verificacion/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`GET /api/operador/tarificador/avisos-verificacion` — los trabajos del bot que acabaron en `requiere_humano` por una VERIFICACIÓN (SMS/OTP) y de los que aún no se ha avisado a Alberto. Solo id, compañ"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/tarificador/avisos-verificacion",
+      "hash": "ed1d56252cd2"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/tarificador/coberturas/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -19485,7 +19506,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/grabaciones/[id]/pantallas",
-      "hash": "385b2ebe112d"
+      "hash": "b282dc0704bb"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/grabaciones/[id]/route.ts",
@@ -19549,6 +19570,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/intervenciones",
       "hash": "8e694d65b2f2"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/tarificador/oportunidad/[id]/propuesta/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 23,
+          "resumen": "`GET /api/operador/tarificador/oportunidad/[id]/propuesta[?formato=json]` (08/10/2026) — la propuesta comercial de una oportunidad: ofertas de los bots + fichas → comparador → control de calidad por o"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/tarificador/oportunidad/[id]/propuesta",
+      "hash": "96d49315e5c1"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/oportunidad/route.ts",
@@ -20555,7 +20597,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 56
+          "linea": 63
         },
         {
           "nombre": "codigoMediador",
@@ -20563,7 +20605,7 @@
           "exportada": false,
           "params": "json: unknown",
           "retorno": "unknown",
-          "linea": 58
+          "linea": 65
         },
         {
           "nombre": "productividadCartera",
@@ -20571,12 +20613,12 @@
           "exportada": true,
           "params": "correduriaId: string, anio: number, hoy: string",
           "retorno": "Promise<ProductividadCartera>",
-          "linea": 65
+          "linea": 72
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ff609f7d5174"
+      "hash": "31ee9b25f408"
     },
     {
       "ruta": "apps/asegura/lib/acuerdos.ts",
@@ -38903,6 +38945,279 @@
       "hash": "d95a8830c5f8"
     },
     {
+      "ruta": "apps/asegura/lib/propuesta-comercial-pdf.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Pinta el `ModeloPropuesta` en PDF con la vía de la casa (pdf-lib + fuentes/logo de `presupuesto-pdf-recursos`). Sin lógica de negocio: todo el texto viene ya decidido por `construirPropuesta`. No envía nada.",
+      "exporta": [
+        "pdfPropuesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "pdfPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: ModeloPropuesta",
+          "retorno": "Promise<Uint8Array>",
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8b16a9dc9d4d"
+    },
+    {
+      "ruta": "apps/asegura/lib/propuesta-comercial.ts",
+      "ambito": "apps/asegura",
+      "resumen": "PROPUESTA COMERCIAL de Grupo ASegura (07/10/2026): el documento que ve el cliente cuando hay presupuestos de varias compañías para una oportunidad. PURO (sin BD ni PDF): `construirPropuesta` devuelve el modelo y el PDF (`propuesta-comercial-pdf.ts`) solo lo pinta. NO envía nada: generar el fichero ≠",
+      "exporta": [
+        "ramoTexto",
+        "textoCeldaPropuesta",
+        "construirPropuesta",
+        "nombreFicheroPropuesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "ramoTexto",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "ramo: string",
+          "retorno": "string",
+          "linea": 52
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: unknown",
+          "retorno": "n is number",
+          "linea": 58
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 59
+        },
+        {
+          "nombre": "textoFranquicia",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: NonNullable<CeldaComparador['franquicia']>",
+          "retorno": "string",
+          "linea": 61
+        },
+        {
+          "nombre": "textoCeldaPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CeldaComparador | undefined",
+          "retorno": "string",
+          "linea": 69,
+          "resumen": "Una celda del cuadro en lenguaje llano. Sin dato → «No consta» (jamás 0 ni «no cubre»)."
+        },
+        {
+          "nombre": "construirPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosPropuesta",
+          "retorno": "ModeloPropuesta",
+          "linea": 85
+        },
+        {
+          "nombre": "nombreFicheroPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: Pick<ModeloPropuesta, 'cliente' | 'ramo' | 'fecha' | 'referencia'>",
+          "retorno": "string",
+          "linea": 140
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bbfea9315a70"
+    },
+    {
+      "ruta": "apps/asegura/lib/propuesta-oportunidad-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Propuesta de una OPORTUNIDAD (08/10/2026): de los trabajos del tarificador + las fichas de producto + el formulario guardado → comparador → control de calidad por oferta → recomendación → modelo del PDF. PURO: sin BD ni red (el cargador con SQL está en `propuesta-oportunidad.ts`). NO envía nada: gen",
+      "exporta": [
+        "nombreCompania",
+        "trabajosVigentes",
+        "ofertasDeTrabajos",
+        "ofertaComparable",
+        "perfilDeFormulario",
+        "ensamblarPropuesta",
+        "jsonPropuesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 25
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 27
+        },
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 28
+        },
+        {
+          "nombre": "nombreCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string",
+          "retorno": "string",
+          "linea": 32,
+          "resumen": "«allianz» → «Allianz» (la clave del bot, legible)."
+        },
+        {
+          "nombre": "periodo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 77
+        },
+        {
+          "nombre": "trabajosVigentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: readonly TrabajoParaPropuesta[]",
+          "retorno": "TrabajoParaPropuesta[]",
+          "linea": 83,
+          "resumen": "El trabajo `ok` más reciente de cada compañía (los demás estados no aportan ofertas)."
+        },
+        {
+          "nombre": "ofertasDeTrabajos",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: readonly TrabajoParaPropuesta[]",
+          "retorno": "OfertaCruda[]",
+          "linea": 97,
+          "resumen": "`respuesta.ofertas[]` (canal rpa) de los trabajos vigentes → ofertas con precio anual válido. Sin precio no es oferta."
+        },
+        {
+          "nombre": "ofertaComparable",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: OfertaCruda, ramo: string, presupuestos: readonly PresupuestoExtraido[]",
+          "retorno": "OfertaComparable",
+          "linea": 130,
+          "resumen": "La oferta como la compara `compararOfertas`: precio SIEMPRE el anual del portal; capitales solo si salieron del PDF de ESA oferta."
+        },
+        {
+          "nombre": "afirma",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean | null",
+          "linea": 146
+        },
+        {
+          "nombre": "numero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 155
+        },
+        {
+          "nombre": "perfilDeFormulario",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string, f: Record<string, unknown> | null, hoy: string",
+          "retorno": "",
+          "linea": 165,
+          "resumen": "Perfil del recomendador y capitales pedidos, desde el formulario guardado. Lo que no consta no suma nada."
+        },
+        {
+          "nombre": "lineaIncidencias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: ResultadoCalidad",
+          "retorno": "string",
+          "linea": 216,
+          "resumen": "Texto en una línea de las incidencias de una oferta."
+        },
+        {
+          "nombre": "ensamblarPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaPropuesta",
+          "retorno": "ResultadoPropuesta",
+          "linea": 218
+        },
+        {
+          "nombre": "jsonPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Extract<ResultadoPropuesta, { estado: 'ok' }>",
+          "retorno": "Omit<typeof r, 'modelo'>",
+          "linea": 294,
+          "resumen": "El JSON de la ruta: sin el modelo del PDF. Cliente: solo nombre y referencia."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "050b1aea5a96"
+    },
+    {
+      "ruta": "apps/asegura/lib/propuesta-oportunidad.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Cargador con BD de la propuesta de una oportunidad (08/10/2026). Solo SELECT, todo por `correduria_id`. El ensamblado (comparador + calidad + recomendación) es PURO y vive en `propuesta-oportunidad-reglas.ts`. 🚨 Sin tabla de fichas (SQL 2026-10-07c sin aplicar) NO es «sin fichas»: se degrada a «las",
+      "exporta": [
+        "referenciaOportunidad",
+        "cargarPropuestaOportunidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 14
+        },
+        {
+          "nombre": "referenciaOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "importRef: string | null, id: string",
+          "retorno": "string",
+          "linea": 22,
+          "resumen": "`OP-` + 8 primeros del id si la oportunidad no tiene referencia propia (`import_ref`)."
+        },
+        {
+          "nombre": "cargarPropuestaOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, oportunidadId: string, ahora: Date = new Date()",
+          "retorno": "Promise<CargaPropuesta>",
+          "linea": 27
+        }
+      ],
+      "tablas": [
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "b06ea2656ee2"
+    },
+    {
       "ruta": "apps/asegura/lib/puente-portal.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -40603,6 +40918,92 @@
       "hash": "58bdd73aca3e"
     },
     {
+      "ruta": "apps/asegura/lib/tarificador-coste-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Coste por tarificación del bot (07/10/2026). PURO: sin BD ni red (`node --test`). Dos partes: IA (tabla `ai_usos`, app='asegura') + máquina de Fly (segundos de ejecución × tarifa). 🚨 Dato que no hay ≠ 0: sin lectura de `ai_usos`, o con suma 0 (columna con DEFAULT 0), la IA es `null` («no consta»); ",
+      "exporta": [
+        "diaMadrid",
+        "segundosEjecucion",
+        "costeFly",
+        "sumarConocidos",
+        "iaConocida",
+        "calcularCoste"
+      ],
+      "funciones": [
+        {
+          "nombre": "r4",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 74
+        },
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 75
+        },
+        {
+          "nombre": "diaMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string | null",
+          "linea": 77
+        },
+        {
+          "nombre": "segundosEjecucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: Pick<TrabajoCoste, 'iniciadoEn' | 'terminadoEn'>",
+          "retorno": "number | null",
+          "linea": 83,
+          "resumen": "Segundos de ejecución (iniciado→terminado); `null` si falta un extremo o no cuadra."
+        },
+        {
+          "nombre": "costeFly",
+          "kind": "function",
+          "exportada": true,
+          "params": "segundos: number | null, eurPorSeg: number = FLY_EUR_POR_SEG",
+          "retorno": "number | null",
+          "linea": 90,
+          "resumen": "Euros de Fly de `segundos`; `null` si no consta."
+        },
+        {
+          "nombre": "sumarConocidos",
+          "kind": "function",
+          "exportada": true,
+          "params": "xs: (number | null)[]",
+          "retorno": "number | null",
+          "linea": 95,
+          "resumen": "Suma lo que conste; si nada consta, `null` (nunca 0)."
+        },
+        {
+          "nombre": "iaConocida",
+          "kind": "function",
+          "exportada": true,
+          "params": "suma: number | null | undefined",
+          "retorno": "number | null",
+          "linea": 101,
+          "resumen": "Una suma de `ai_usos` que sale 0 (DEFAULT 0) o negativa no es un coste conocido."
+        },
+        {
+          "nombre": "calcularCoste",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: TrabajoCoste[], ia: IaDia[] | null, ahora: Date, eurPorSeg: number = FLY_EUR_POR_SEG,",
+          "retorno": "CostePanel",
+          "linea": 105
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b6830c35bfa1"
+    },
+    {
       "ruta": "apps/asegura/lib/tarificador-fichas-ia.ts",
       "ambito": "apps/asegura",
       "resumen": "Fichas de producto del tarificador — la parte con PDF + IA (07/10/2026). Sin BD. PDF del proyecto → texto con marcas de página (`textoPdfParse`, el mismo de pólizas/ofertas) → IA por la pasarela (`iaTexto`, `privado`, categoría `redaccion` como la lectura de ofertas) → JSON → VALIDACIÓN DETERMINISTA",
@@ -41227,6 +41628,8 @@
         "maxLlamadasGrabador",
         "leerAltaGrabacion",
         "comprobarSubida",
+        "planificarSubida",
+        "respuestaIACortada",
         "sistemaAnalisis",
         "promptAnalisis"
       ],
@@ -41275,12 +41678,30 @@
           "resumen": "Comprueba una subida antes de tocar la BD. `bytes` = tamaño en UTF-8."
         },
         {
+          "nombre": "planificarSubida",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, htmlSubido: string, yaSubidas: number",
+          "retorno": "",
+          "linea": 85,
+          "resumen": "Prepara una subida (una pantalla suelta o el fichero MULTIPANTALLA `grabacion-….html` del modo automático): lo separa en pantallas ORDENADAS, RE-REDACTA cada una por separado (también su aviso de logi"
+        },
+        {
+          "nombre": "respuestaIACortada",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 114,
+          "resumen": "¿La respuesta de la IA parece CORTADA a media salida? Hay un `{` pero las llaves/corchetes no cierran (fuera de cadenas) o termina dentro de una cadena. Un JSON completo (aunque inválido por otra cosa"
+        },
+        {
           "nombre": "sistemaAnalisis",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 78
+          "linea": 135
         },
         {
           "nombre": "promptAnalisis",
@@ -41288,12 +41709,12 @@
           "exportada": true,
           "params": "c: { compania: string; ramo: string; producto: string | null; pantalla: number; total: number; html: string }",
           "retorno": "string",
-          "linea": 103
+          "linea": 162
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db37cee86437"
+      "hash": "e74f1b03bb24"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-grabaciones.ts",
@@ -41314,7 +41735,7 @@
           "exportada": false,
           "params": "r: FilaResumen",
           "retorno": "ResumenGrabacion",
-          "linea": 57
+          "linea": 59
         },
         {
           "nombre": "listarGrabaciones",
@@ -41322,7 +41743,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResumenGrabacion[]>",
-          "linea": 64
+          "linea": 66
         },
         {
           "nombre": "crearGrabacion",
@@ -41330,7 +41751,7 @@
           "exportada": true,
           "params": "correduriaId: string, alta: AltaGrabacion, creadoPor: string",
           "retorno": "Promise<string>",
-          "linea": 80
+          "linea": 82
         },
         {
           "nombre": "leerGrabacion",
@@ -41338,7 +41759,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<DetalleGrabacion | null>",
-          "linea": 91
+          "linea": 93
         },
         {
           "nombre": "subirPantalla",
@@ -41346,8 +41767,8 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, nombre: string, htmlSubido: string",
           "retorno": "Promise<ResultadoSubida>",
-          "linea": 120,
-          "resumen": "Guarda una pantalla (re-redactada) al final de la grabación. La numeración la pone el servidor."
+          "linea": 125,
+          "resumen": "Guarda una pantalla —o las de un fichero multipantalla, en orden— (re-redactadas) al final de la grabación, en UNA transacción (o entran todas o ninguna). La numeración la pone el servidor. `orden`/`d"
         },
         {
           "nombre": "marcarValidado",
@@ -41355,7 +41776,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, validado: boolean, quien: string",
           "retorno": "Promise<ResultadoValidar>",
-          "linea": 156,
+          "linea": 165,
           "resumen": "Validación HUMANA del mapa (o quitarla). Solo con mapa y todas las pantallas analizadas."
         },
         {
@@ -41364,7 +41785,7 @@
           "exportada": false,
           "params": "m: string",
           "retorno": null,
-          "linea": 174
+          "linea": 183
         },
         {
           "nombre": "analizarGrabacion",
@@ -41372,7 +41793,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, modo: ModoAnalisis",
           "retorno": "Promise<ResultadoAnalisis>",
-          "linea": 181,
+          "linea": 190,
           "resumen": "`reintentar` vuelve a poner en cola las que fallaron."
         }
       ],
@@ -41382,7 +41803,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "fd10e4df0e42"
+      "hash": "378319c63ab4"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-lectura-reglas.ts",
@@ -41851,7 +42272,7 @@
           "exportada": true,
           "params": "ahora: Date = new Date()",
           "retorno": "string",
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "numeroONull",
@@ -41859,7 +42280,7 @@
           "exportada": false,
           "params": "s: string | null",
           "retorno": "number | null",
-          "linea": 91
+          "linea": 92
         },
         {
           "nombre": "leerRenovaciones",
@@ -41867,7 +42288,7 @@
           "exportada": false,
           "params": "correduriaId: string, ahora: Date",
           "retorno": "Promise<RenovacionInterna[]>",
-          "linea": 97
+          "linea": 98
         },
         {
           "nombre": "sinRiesgo",
@@ -41875,7 +42296,7 @@
           "exportada": false,
           "params": "{ riesgo: _r, ...r }: RenovacionInterna",
           "retorno": "Renovacion",
-          "linea": 157
+          "linea": 158
         },
         {
           "nombre": "contarPorEstado",
@@ -41883,7 +42304,7 @@
           "exportada": false,
           "params": "lista: { estado: EstadoRenovacion }[]",
           "retorno": "Record<EstadoRenovacion, number>",
-          "linea": 159
+          "linea": 160
         },
         {
           "nombre": "contarRenovacionesBot",
@@ -41891,7 +42312,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 165
+          "linea": 166
         },
         {
           "nombre": "ejecutarRenovacionesTarificador",
@@ -41899,7 +42320,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined> = process.env, ahora = new Date()",
           "retorno": "Promise<ResumenRenovaciones>",
-          "linea": 192,
+          "linea": 193,
           "resumen": "Pasada del cron de renovaciones. APAGADO salvo `TARIFICADOR_RENOVACIONES_ACTIVO=1`; con el RPA apagado solo cuenta. Encendido: barre la cola (relanza lo pendiente) y encola COMO MUCHO una renovación p"
         },
         {
@@ -41908,8 +42329,17 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<IntervencionesResumen>",
-          "linea": 239,
+          "linea": 242,
           "resumen": "La tabla de intervenciones puede no existir aún (SQL del formador sin aplicar): se dice, no se pinta 0."
+        },
+        {
+          "nombre": "leerIaPorDia",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<IaDia[] | null>",
+          "linea": 267,
+          "resumen": "Gasto de IA de asegura por día (Madrid) desde la pasarela. `null` = no se pudo leer (tabla ausente o sin permiso): no es 0."
         },
         {
           "nombre": "leerPanelTarificador",
@@ -41917,16 +42347,17 @@
           "exportada": true,
           "params": "correduriaId: string, env: Record<string, string | undefined> = process.env, ahora = new Date()",
           "retorno": "Promise<PanelTarificador>",
-          "linea": 263
+          "linea": 280
         }
       ],
       "tablas": [
         "clientes",
         "polizas",
+        "public",
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "2826e7162e88"
+      "hash": "19276ff42080"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-reglas.ts",
@@ -42009,6 +42440,89 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4a7df3a38856"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-verificacion-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Aviso de VERIFICACIÓN HUMANA del tarificador (08/10/2026). PURO. Cuando un portal pide un código (SMS/OTP) el worker acaba el trabajo como `requiere_humano` con el mensaje `requiere_verificacion_humana: <Compañía> pide verificación: entra en su portal, valida y pulsa Reintentar` (services/tarificado",
+      "exporta": [
+        "esVerificacionHumana",
+        "yaAvisado",
+        "avisosPendientes"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 16
+        },
+        {
+          "nombre": "esVerificacionHumana",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string, error: unknown",
+          "retorno": "boolean",
+          "linea": 20,
+          "resumen": "¿Es un `requiere_humano` por verificación (y no un CAPTCHA u otra causa)?"
+        },
+        {
+          "nombre": "yaAvisado",
+          "kind": "function",
+          "exportada": true,
+          "params": "error: unknown",
+          "retorno": "boolean",
+          "linea": 27,
+          "resumen": "¿Ya se avisó de ESTE fallo?"
+        },
+        {
+          "nombre": "avisosPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaVerificacion[]",
+          "retorno": "AvisoVerificacion[]",
+          "linea": 33,
+          "resumen": "Filas del trabajo → los avisos que TOCAN (verificación humana, sin marca), sin datos personales."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "46ad0441a82c"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-verificacion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Aviso de verificación humana — la parte con BD (08/10/2026). Reglas puras en `tarificador-verificacion-reglas.ts`. Plataforma (cron) lee `pendientesVerificacion` y, SOLO si el Telegram salió, llama a `marcarAvisadosVerificacion`. Todo por `correduria_id`. Sin SQL nuevo: la marca vive en el jsonb `er",
+      "exporta": [
+        "pendientesVerificacion",
+        "marcarAvisadosVerificacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "pendientesVerificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<AvisoVerificacion[]>",
+          "linea": 12
+        },
+        {
+          "nombre": "marcarAvisadosVerificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ids: readonly string[]",
+          "retorno": "Promise<number>",
+          "linea": 26,
+          "resumen": "Marca (idempotente) los trabajos avisados. Devuelve cuántos se marcaron ahora; los ya marcados no cuentan."
+        }
+      ],
+      "tablas": [
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "c41903037b3e"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-worker-auth.ts",
@@ -89445,21 +89959,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 27,
-          "resumen": "Compañías: contactos, claves, acuerdos y producción en UN sitio (06/10/2026, fase 2 de acuerdos con compañías — decisión de Alberto: sin pestaña nueva). Una tarjeta por compañía con contactos o con ac"
-        },
-        {
-          "nombre": "TarjetaCompania",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ c, ra, rp }: { c: Compania ra: RespuestaAcuerdos | null rp: RespuestaProductividad | null }",
-          "retorno": null,
-          "linea": 70
+          "linea": 22,
+          "resumen": "Compañías: contactos, claves, acuerdos y producción en UN sitio (06/10/2026, fase 2 de acuerdos con compañías — decisión de Alberto: sin pestaña nueva). Rediseño 07/10/2026: panel «Objetivos y producc"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f71f3b73c568"
+      "hash": "24c49afceb6c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/[codigo]/FichaCompania.tsx",
@@ -89523,6 +90029,7 @@
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/AcuerdosVista.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
+        "Chip",
         "ChipsAcuerdos",
         "ProduccionCompania",
         "TarjetaAcuerdo",
@@ -89535,7 +90042,15 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 34
+          "linea": 35
+        },
+        {
+          "nombre": "Chip",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ tono = 'neutral', children, title }: { tono?: TonoChip; children: ReactNode; title?: string }",
+          "retorno": null,
+          "linea": 53
         },
         {
           "nombre": "ChipsAcuerdos",
@@ -89543,7 +90058,7 @@
           "exportada": true,
           "params": "{ codigo, r }: { codigo: string; r: RespuestaAcuerdos }",
           "retorno": null,
-          "linea": 40
+          "linea": 67
         },
         {
           "nombre": "ChipClave",
@@ -89551,7 +90066,7 @@
           "exportada": false,
           "params": "{ c }: { c: Clave }",
           "retorno": null,
-          "linea": 62
+          "linea": 89
         },
         {
           "nombre": "ProduccionCompania",
@@ -89559,7 +90074,7 @@
           "exportada": true,
           "params": "{ codigo, p, enCima, compacto = false }: { codigo: string p: RespuestaProductividad enCima: boolean | null compacto?: boolean }",
           "retorno": null,
-          "linea": 73
+          "linea": 100
         },
         {
           "nombre": "TarjetaAcuerdo",
@@ -89567,7 +90082,7 @@
           "exportada": true,
           "params": "{ a, objetivos, onCotejado }: { a: Acuerdo objetivos: ObjetivoEvaluado[] onCotejado?: (revisadoAt: string) => void }",
           "retorno": null,
-          "linea": 118
+          "linea": 145
         },
         {
           "nombre": "LineasPaginadas",
@@ -89575,7 +90090,7 @@
           "exportada": false,
           "params": "{ lineas }: { lineas: Acuerdo['comisiones'] }",
           "retorno": null,
-          "linea": 172
+          "linea": 199
         },
         {
           "nombre": "ObjetivosAcuerdo",
@@ -89583,7 +90098,7 @@
           "exportada": false,
           "params": "{ a, objetivos }: { a: Acuerdo; objetivos: ObjetivoEvaluado[] }",
           "retorno": null,
-          "linea": 215
+          "linea": 242
         },
         {
           "nombre": "CotejarBoton",
@@ -89591,12 +90106,12 @@
           "exportada": true,
           "params": "{ acuerdoId, onHecho }: { acuerdoId: string; onHecho: (revisadoAt: string) => void }",
           "retorno": null,
-          "linea": 249
+          "linea": 276
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b68f7e1b98bb"
+      "hash": "03c3bd14addb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/ComisionReal.tsx",
@@ -89651,6 +90166,42 @@
       "hash": "837bc53e7911"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/companias/ListaCompanias.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ListaCompanias"
+      ],
+      "funciones": [
+        {
+          "nombre": "ListaCompanias",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ companias, acuerdos, productividad }: { companias: Compania[] /** `null` = aún cargando. */ acuerdos: RespuestaAcuerdos | null productividad: RespuestaProductividad | null }",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "FilaCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c, abierta, alternar, acuerdos, productividad, total }: { c: Compania abierta: boolean alternar: () => void acuerdos: RespuestaAcuerdos | null productividad: RespuestaProductividad | null total: { polizas: number; prima: number; sinPrima:",
+          "retorno": null,
+          "linea": 97
+        },
+        {
+          "nombre": "DetalleCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c, acuerdos, productividad }: { c: Compania; acuerdos: RespuestaAcuerdos | null; productividad: RespuestaProductividad | null }",
+          "retorno": null,
+          "linea": 140
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c1a8a67284c3"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -89663,37 +90214,65 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24,
+          "linea": 22,
           "resumen": "salen además las compañías con acuerdo aunque aún no tengan contacto."
-        },
-        {
-          "nombre": "ListaCompanias",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ companias, acuerdos }: { companias: Compania[]; acuerdos: RespuestaAcuerdos }",
-          "retorno": null,
-          "linea": 64
-        },
-        {
-          "nombre": "TarjetaCompania",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ c, acuerdos }: { c: Compania; acuerdos: RespuestaAcuerdos }",
-          "retorno": null,
-          "linea": 93
-        },
-        {
-          "nombre": "TarjetaContacto",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ ct }: { ct: Contacto }",
-          "retorno": null,
-          "linea": 117
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4007e0d62197"
+      "hash": "84e2acc25d92"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/companias/PanelControl.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PanelControl"
+      ],
+      "funciones": [
+        {
+          "nombre": "unidad",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "base: string | null, n: number",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "CeldaObjetivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ o }: { o: ObjetivoCandidata }",
+          "retorno": null,
+          "linea": 26
+        },
+        {
+          "nombre": "FilaCandidata",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c, nombre, recomendada }: { c: CandidataRamo; nombre: string; recomendada: boolean }",
+          "retorno": null,
+          "linea": 50
+        },
+        {
+          "nombre": "TarjetaRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r, nombres }: { r: RamoControl; nombres: ReadonlyMap<string, string> }",
+          "retorno": null,
+          "linea": 87
+        },
+        {
+          "nombre": "PanelControl",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ panel, nombres, carteraLeida, anio }: { /** `null` = los acuerdos no se han podido leer (o aún cargan). */ panel: Panel | null nombres: ReadonlyMap<string, string> carteraLeida: boolean anio: number | null }",
+          "retorno": null,
+          "linea": 121
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "97659192a537"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/TelefonoContacto.tsx",
@@ -92645,7 +93224,7 @@
           "exportada": true,
           "params": "{ oportunidadId, ramo }: { oportunidadId: string; ramo: string }",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "TarjetaTrabajo",
@@ -92653,7 +93232,16 @@
           "exportada": false,
           "params": "{ t, nombre, anterior = false }: { t: TrabajoCompania; nombre: string; anterior?: boolean }",
           "retorno": null,
-          "linea": 315
+          "linea": 319
+        },
+        {
+          "nombre": "Recomendacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ oportunidadId, clave }: { oportunidadId: string; clave: string }",
+          "retorno": null,
+          "linea": 361,
+          "resumen": "«Recomendación» (08/10/2026): la compañía que mejor encaja (puntos, motivos, reservas), las ofertas con errores de calidad (salen con aviso y NO se recomiendan) y «Descargar propuesta (PDF)». 🚨 SOLO "
         }
       ],
       "tablas": [
@@ -92661,7 +93249,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "0ce65a543736"
+      "hash": "69d8db6da0dd"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/RiesgoPantalla.tsx",
@@ -95652,7 +96240,7 @@
           "exportada": false,
           "params": "tono: 'warning' | 'negative' | 'positive'",
           "retorno": "React.CSSProperties",
-          "linea": 29
+          "linea": 31
         },
         {
           "nombre": "fecha",
@@ -95660,7 +96248,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 32
+          "linea": 34
         },
         {
           "nombre": "pedir",
@@ -95668,23 +96256,23 @@
           "exportada": false,
           "params": "url: string, init?: RequestInit",
           "retorno": "Promise<",
-          "linea": 34
+          "linea": 36
         },
         {
           "nombre": "Grabaciones",
           "kind": "function",
           "exportada": true,
-          "params": "{ bookmarklet }: { bookmarklet: string }",
+          "params": "{ bookmarklet, bookmarkletManual }: { bookmarklet: string; bookmarkletManual: string }",
           "retorno": null,
-          "linea": 43
+          "linea": 45
         },
         {
           "nombre": "Instrucciones",
           "kind": "function",
           "exportada": false,
-          "params": "{ bookmarklet }: { bookmarklet: string }",
+          "params": "{ bookmarklet, bookmarkletManual }: { bookmarklet: string; bookmarkletManual: string }",
           "retorno": null,
-          "linea": 107
+          "linea": 109
         },
         {
           "nombre": "NuevaGrabacion",
@@ -95692,7 +96280,7 @@
           "exportada": false,
           "params": "{ onCreada }: { onCreada: (id: string) => void }",
           "retorno": null,
-          "linea": 153
+          "linea": 165
         },
         {
           "nombre": "Detalle",
@@ -95700,7 +96288,7 @@
           "exportada": false,
           "params": "{ id, onCambio }: { id: string; onCambio: () => void }",
           "retorno": null,
-          "linea": 187
+          "linea": 199
         },
         {
           "nombre": "Pantallas",
@@ -95708,7 +96296,7 @@
           "exportada": false,
           "params": "{ g, ocupado, setOcupado, onSubidas }: { g: DetalleGrabacion; ocupado: string | null; setOcupado: (s: string | null) => void; onSubidas: () => Promise<void> }",
           "retorno": null,
-          "linea": 287
+          "linea": 303
         },
         {
           "nombre": "MapaPantalla",
@@ -95716,7 +96304,7 @@
           "exportada": false,
           "params": "{ p }: { p: PantallaMapa }",
           "retorno": null,
-          "linea": 364
+          "linea": 387
         },
         {
           "nombre": "Bloque",
@@ -95724,12 +96312,12 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode[] }",
           "retorno": null,
-          "linea": 407
+          "linea": 430
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "489f81a132cc"
+      "hash": "f9cee4ab2909"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/tarificador/grabaciones/page.tsx",
@@ -95750,7 +96338,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "591e5c7ea044"
+      "hash": "35aba617f893"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/tarificador/page.tsx",
@@ -95786,7 +96374,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "importe",
@@ -95794,7 +96382,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "PanelTarificador",
@@ -95802,7 +96390,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "Periodo",
@@ -95810,7 +96398,7 @@
           "exportada": false,
           "params": "{ m }: { m: MetricasPeriodo }",
           "retorno": null,
-          "linea": 90
+          "linea": 92
         },
         {
           "nombre": "Salud",
@@ -95818,7 +96406,23 @@
           "exportada": false,
           "params": "{ d7, d30, intervenciones }: { d7: MetricasPeriodo; d30: MetricasPeriodo; intervenciones: Panel['intervenciones'] }",
           "retorno": null,
-          "linea": 103
+          "linea": 105
+        },
+        {
+          "nombre": "importe4",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": null,
+          "linea": 133
+        },
+        {
+          "nombre": "Coste",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ coste }: { coste: Panel['coste'] }",
+          "retorno": null,
+          "linea": 135
         },
         {
           "nombre": "Fallos",
@@ -95826,7 +96430,7 @@
           "exportada": false,
           "params": "{ fallos }: { fallos: Panel['metricas']['fallos'] }",
           "retorno": null,
-          "linea": 131
+          "linea": 196
         },
         {
           "nombre": "TarjetaRenovacion",
@@ -95834,7 +96438,7 @@
           "exportada": false,
           "params": "{ r }: { r: Renovacion }",
           "retorno": null,
-          "linea": 155
+          "linea": 220
         },
         {
           "nombre": "GrupoRenovaciones",
@@ -95842,7 +96446,7 @@
           "exportada": false,
           "params": "{ titulo, lista, vacio }: { titulo: string; lista: Renovacion[]; vacio: string }",
           "retorno": null,
-          "linea": 181
+          "linea": 246
         },
         {
           "nombre": "Renovaciones",
@@ -95850,7 +96454,7 @@
           "exportada": false,
           "params": "{ lista, activas }: { lista: Renovacion[]; activas: boolean }",
           "retorno": null,
-          "linea": 202
+          "linea": 267
         },
         {
           "nombre": "Alertas",
@@ -95858,12 +96462,12 @@
           "exportada": false,
           "params": "{ alertas }: { alertas: AlertaTarifa[] }",
           "retorno": null,
-          "linea": 221
+          "linea": 286
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c7527ca940da"
+      "hash": "197278254fe3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/useAcuerdos.ts",
@@ -101396,13 +102000,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 13,
+          "linea": 14,
           "resumen": "Pasarela IA — completion de texto. La lógica (Director + OpenRouter + cadena gratis + caché) vive en `lib/pasarela.ts::chatConDirector`, reutilizable por los agentes internos. Este route solo hace de "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/ai/chat",
-      "hash": "0d2740dc593d"
+      "hash": "8372e9a72889"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/codigo/route.ts",
@@ -106268,6 +106872,27 @@
       "hash": "0dfc2a596a43"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/tarificador/oportunidad/[id]/propuesta/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "GET /api/correduria/tarificador/oportunidad/[id]/propuesta[?formato=json] — la propuesta comercial de la oportunidad. Por defecto el PDF (descarga, en streaming desde asegura); con `?formato=json` la "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/tarificador/oportunidad/[id]/propuesta",
+      "hash": "376290ebc659"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/tarificador/oportunidad/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -108031,6 +108656,27 @@
       "tablas": [],
       "rutaApi": "/api/cron/subastas-radar",
       "hash": "043f45149e74"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/tarificador-verificacion/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Aviso de verificación humana del tarificador (08/10/2026): un portal (Generali…) pide un código SMS/OTP y el trabajo del bot acaba `requiere_humano`. Asegura dice QUÉ trabajos faltan por avisar; aquí se manda UN Telegram po",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/tarificador-verificacion",
+      "hash": "e20e3cc0c010"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-backtest/route.ts",
@@ -114902,7 +115548,9 @@
         "textoSuma",
         "etiquetaFuente",
         "semaforoObjetivo",
-        "resumenCompania"
+        "resumenCompania",
+        "textoMotivoPendiente",
+        "construirPanelControl"
       ],
       "funciones": [
         {
@@ -114911,7 +115559,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "O | null",
-          "linea": 126
+          "linea": 130
         },
         {
           "nombre": "cadena",
@@ -114919,7 +115567,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 127
+          "linea": 131
         },
         {
           "nombre": "numOnull",
@@ -114927,7 +115575,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 129,
+          "linea": 133,
           "resumen": "Número o `null`. Un texto, un NaN o un `undefined` NO se convierten en 0."
         },
         {
@@ -114936,7 +115584,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "unknown[]",
-          "linea": 130
+          "linea": 134
         },
         {
           "nombre": "cadenas",
@@ -114944,7 +115592,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string[]",
-          "linea": 131
+          "linea": 135
         },
         {
           "nombre": "cerrado",
@@ -114952,7 +115600,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Cerrado | null",
-          "linea": 133
+          "linea": 137
         },
         {
           "nombre": "leerLinea",
@@ -114960,7 +115608,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "LineaAcuerdo | null",
-          "linea": 141
+          "linea": 145
         },
         {
           "nombre": "leerTramo",
@@ -114968,7 +115616,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Tramo | null",
-          "linea": 153
+          "linea": 157
         },
         {
           "nombre": "leerObjetivo",
@@ -114976,7 +115624,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Objetivo | null",
-          "linea": 160
+          "linea": 164
         },
         {
           "nombre": "leerAcuerdo",
@@ -114984,7 +115632,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Acuerdo | null",
-          "linea": 177
+          "linea": 181
         },
         {
           "nombre": "leerClave",
@@ -114992,7 +115640,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Clave | null",
-          "linea": 192
+          "linea": 196
         },
         {
           "nombre": "errorDe",
@@ -115000,7 +115648,7 @@
           "exportada": false,
           "params": "status: number, o: O",
           "retorno": "",
-          "linea": 202
+          "linea": 206
         },
         {
           "nombre": "interpretarAcuerdos",
@@ -115008,7 +115656,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaAcuerdos",
-          "linea": 206
+          "linea": 210
         },
         {
           "nombre": "leerSuma",
@@ -115016,7 +115664,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Suma | null",
-          "linea": 221
+          "linea": 225
         },
         {
           "nombre": "leerProduccion",
@@ -115024,7 +115672,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Produccion | null",
-          "linea": 228
+          "linea": 232
         },
         {
           "nombre": "leerEstadoObjetivo",
@@ -115032,7 +115680,16 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "EstadoObjetivo | null",
-          "linea": 238
+          "linea": 242
+        },
+        {
+          "nombre": "leerCartera",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "FilaCartera[] | null",
+          "linea": 260,
+          "resumen": "Todas las filas legibles o `null`: una cartera a medias parecería una cartera pequeña."
         },
         {
           "nombre": "interpretarProductividad",
@@ -115040,7 +115697,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaProductividad",
-          "linea": 255
+          "linea": 273
         },
         {
           "nombre": "textoPct",
@@ -115048,7 +115705,7 @@
           "exportada": true,
           "params": "v: number | null",
           "retorno": "string",
-          "linea": 284,
+          "linea": 304,
           "resumen": "Un % pactado. `null` → «—» (no consta). Un 0 explícito → «0 %»."
         },
         {
@@ -115057,7 +115714,7 @@
           "exportada": true,
           "params": "s: Suma | null",
           "retorno": "string",
-          "linea": 292,
+          "linea": 312,
           "resumen": "Una suma de producción. `null` (no se pudo leer) → «sin datos»; sin recibos → «sin recibos» (no «0,00€»); con ilegibles → el importe leído y cuántos faltan."
         },
         {
@@ -115066,7 +115723,7 @@
           "exportada": true,
           "params": "a: Pick<Acuerdo, 'fuente' | 'fuenteNombre'>",
           "retorno": "string",
-          "linea": 301
+          "linea": 321
         },
         {
           "nombre": "semaforoObjetivo",
@@ -115074,7 +115731,7 @@
           "exportada": true,
           "params": "e: EstadoObjetivo",
           "retorno": "Semaforo",
-          "linea": 331,
+          "linea": 351,
           "resumen": "El semáforo de un objetivo. `pendiente` es SIEMPRE ⚪ con su motivo: jamás verde."
         },
         {
@@ -115083,13 +115740,31 @@
           "exportada": true,
           "params": "codigo: string, r: RespuestaAcuerdos",
           "retorno": null,
-          "linea": 342,
+          "linea": 362,
           "resumen": "Resumen de una compañía para la lista: acuerdos, cuántos sin cotejar, si hay clave."
+        },
+        {
+          "nombre": "textoMotivoPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: string",
+          "retorno": "string",
+          "linea": 376,
+          "resumen": "Texto de un motivo de objetivo pendiente (el mismo que `semaforoObjetivo`, sin el punto)."
+        },
+        {
+          "nombre": "construirPanelControl",
+          "kind": "function",
+          "exportada": true,
+          "params": "ra: RespuestaAcuerdos | null, rp: RespuestaProductividad | null",
+          "retorno": "PanelControl | null",
+          "linea": 386,
+          "resumen": "El panel «Objetivos y producción» (cartera en vigor × acuerdos × objetivos). `null` si los acuerdos no se han podido leer: sin ellos no hay panel que pintar (se dice, no se pinta «sin acuerdos»). Sin "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "25d43451dab0"
+      "hash": "e5a9d9bdac7a"
     },
     {
       "ruta": "apps/plataforma/lib/adapters/ialimp.ts",
@@ -128845,7 +129520,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 252,
+          "linea": 256,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -128854,7 +129529,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 282,
+          "linea": 286,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -128863,7 +129538,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 304
+          "linea": 308
         },
         {
           "nombre": "ventanaMinutos",
@@ -128871,7 +129546,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 312,
+          "linea": 316,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -128880,13 +129555,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 324,
+          "linea": 328,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f51f80dd0a2d"
+      "hash": "0ffb4d287d96"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -137618,6 +138293,62 @@
       ],
       "rutaApi": null,
       "hash": "460b5ba8a7e3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/propuesta-recomendacion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Recomendación de una oportunidad (08/10/2026): lectura PURA de la respuesta JSON de `/api/correduria/tarificador/oportunidad/[id]/propuesta?formato=json` (asegura). Lo que no se entiende no se pinta. 🚨 Solo descarga: nada de aquí envía la propuesta al cliente.",
+      "exporta": [
+        "leerRecomendacion",
+        "claveTrabajosConOferta"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 21
+        },
+        {
+          "nombre": "textos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string[]",
+          "linea": 23
+        },
+        {
+          "nombre": "mensajes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string[]",
+          "linea": 24
+        },
+        {
+          "nombre": "leerRecomendacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "VistaRecomendacion | null",
+          "linea": 28,
+          "resumen": "JSON de la propuesta → vista, o `null` si no es la forma conocida (`estado: 'ok'` con ofertas)."
+        },
+        {
+          "nombre": "claveTrabajosConOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: readonly { id: string; estado: string; ofertas: readonly unknown[] }[]",
+          "retorno": "string",
+          "linea": 49,
+          "resumen": "Clave de lo que hay que releer: los trabajos que ya tienen oferta. Cambia cuando llega un resultado nuevo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "90b895be610d"
     },
     {
       "ruta": "apps/plataforma/lib/proyeccion-fiscal.ts",
@@ -151833,7 +152564,9 @@
         "leerPresupuestosOportunidad",
         "pedirPresupuestosOportunidad",
         "leerTrabajoTarificador",
-        "descargarPdfTarificador"
+        "descargarPdfTarificador",
+        "leerPropuestaOportunidad",
+        "descargarPropuestaOportunidad"
       ],
       "funciones": [
         {
@@ -151913,11 +152646,29 @@
           "retorno": "Promise<Response | null>",
           "linea": 74,
           "resumen": "El PDF de una oferta (streaming). `null` = sin secreto configurado."
+        },
+        {
+          "nombre": "leerPropuestaOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "oportunidadId: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 85,
+          "resumen": "Recomendación de una oportunidad (ranking, motivos, calidad) en JSON. Solo lectura; no envía nada."
+        },
+        {
+          "nombre": "descargarPropuestaOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "oportunidadId: string",
+          "retorno": "Promise<Response | null>",
+          "linea": 90,
+          "resumen": "La propuesta comercial en PDF (streaming). `null` = sin secreto configurado. Solo DESCARGA: nunca se envía."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3427c2d8893a"
+      "hash": "e8f263564c78"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-fichas-asegura.ts",
@@ -152171,19 +152922,29 @@
       "exporta": [
         "mensajeError",
         "comprobarFicheros",
+        "prepararEnvios",
         "ordenInicial",
         "mover",
         "tamano",
-        "estadoGrabacion"
+        "estadoGrabacion",
+        "avisoSinPendientes"
       ],
       "funciones": [
+        {
+          "nombre": "esMultipantalla",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "nombre: string",
+          "retorno": null,
+          "linea": 10
+        },
         {
           "nombre": "obj",
           "kind": "arrow",
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 30
+          "linea": 33
         },
         {
           "nombre": "mensajeError",
@@ -152191,7 +152952,7 @@
           "exportada": true,
           "params": "status: number, json: unknown, que: string",
           "retorno": "string | null",
-          "linea": 33,
+          "linea": 36,
           "resumen": "Mensaje legible de una respuesta que no ha ido bien (o `null` si fue bien)."
         },
         {
@@ -152200,8 +152961,17 @@
           "exportada": true,
           "params": "ficheros: readonly FicheroElegido[], yaSubidas: number",
           "retorno": "string[]",
-          "linea": 48,
+          "linea": 51,
           "resumen": "Comprueba los ficheros elegidos ANTES de subir nada: extensión, tamaño y cuántos caben."
+        },
+        {
+          "nombre": "prepararEnvios",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, texto: string, yaSubidas: number",
+          "retorno": "",
+          "linea": 70,
+          "resumen": "Qué peticiones hace falta para subir un fichero. Una petición no pasa de 4 MB (límite de cuerpo de Vercel): un fichero que cabe se manda tal cual (asegura lo separa en pantallas, todo o nada); un mult"
         },
         {
           "nombre": "ordenInicial",
@@ -152209,8 +152979,8 @@
           "exportada": true,
           "params": "ficheros: readonly T[]",
           "retorno": "T[]",
-          "linea": 64,
-          "resumen": "Orden inicial: por nombre. El bookmarklet nombra `pantalla-<host>-AAAAMMDD-HHMMSS.html`, así que por nombre es el orden en que se grabaron. Alberto puede reordenar antes de subir."
+          "linea": 87,
+          "resumen": "Orden inicial: por nombre. El marcador nombra `pantalla-<host>-AAAAMMDD-HHMMSS.html` (manual) o `grabacion-<host>-AAAAMMDD-HHMMSS.html` (automático, varias pantallas), así que por nombre es el orden e"
         },
         {
           "nombre": "mover",
@@ -152218,7 +152988,7 @@
           "exportada": true,
           "params": "lista: readonly T[], i: number, delta: -1 | 1",
           "retorno": "T[]",
-          "linea": 68
+          "linea": 91
         },
         {
           "nombre": "tamano",
@@ -152226,7 +152996,7 @@
           "exportada": true,
           "params": "bytes: number",
           "retorno": "string",
-          "linea": 76
+          "linea": 99
         },
         {
           "nombre": "estadoGrabacion",
@@ -152234,13 +153004,22 @@
           "exportada": true,
           "params": "g: Pick<ResumenGrabacion, 'pantallas' | 'analizadas' | 'conError' | 'mapaValidado'>",
           "retorno": "",
-          "linea": 84,
+          "linea": 107,
           "resumen": "Estado de la grabación en una palabra (para la insignia)."
+        },
+        {
+          "nombre": "avisoSinPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "pantallas: readonly { estado: 'pendiente' | 'ok' | 'error' }[]",
+          "retorno": "string | null",
+          "linea": 116,
+          "resumen": "Aviso previo a «Analizar» (modo pendientes) cuando no hay nada nuevo que analizar; null = hay trabajo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9f285cec5444"
+      "hash": "b7a5aead68a3"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-panel.ts",
@@ -152260,7 +153039,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 60
+          "linea": 88
         },
         {
           "nombre": "leerRespuestaPanel",
@@ -152268,7 +153047,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaPanel",
-          "linea": 63,
+          "linea": 91,
           "resumen": "La respuesta del proxy → panel, o un mensaje que dice POR QUÉ no hay panel (nunca un panel vacío)."
         },
         {
@@ -152277,7 +153056,7 @@
           "exportada": true,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 81,
+          "linea": 109,
           "resumen": "66,7 % · `null` → «—»."
         },
         {
@@ -152286,7 +153065,7 @@
           "exportada": true,
           "params": "seg: number | null",
           "retorno": "string",
-          "linea": 86,
+          "linea": 114,
           "resumen": "185 → «3 min 5 s» · `null` → «—»."
         },
         {
@@ -152295,7 +153074,7 @@
           "exportada": true,
           "params": "actual: number | null, allianz: number | null",
           "retorno": "number | null",
-          "linea": 96,
+          "linea": 124,
           "resumen": "Allianz − actual (negativo = Allianz más barata). Sin uno de los dos datos → `null` (no se compara)."
         },
         {
@@ -152304,13 +153083,104 @@
           "exportada": true,
           "params": "lista: Renovacion[]",
           "retorno": "",
-          "linea": 110,
+          "linea": 138,
           "resumen": "Los tres grupos de la pantalla: cotizadas · pendientes (en cola, por cotizar o fallidas) · faltan datos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c12a7fe1ae8c"
+      "hash": "4492e34c54fa"
+    },
+    {
+      "ruta": "apps/plataforma/lib/tarificador-verificacion-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Aviso de VERIFICACIÓN HUMANA del tarificador (08/10/2026): plataforma lee de asegura los trabajos que acabaron `requiere_humano` por una verificación (SMS/OTP) y avisa a Alberto por Telegram UNA vez por trabajo. Dos partes, como el seguimiento de presupuestos: lo PURO (`interpretarVerificaciones`, `",
+      "exporta": [
+        "interpretarVerificaciones",
+        "componerAvisoVerificacion",
+        "leerVerificacionesAsegura",
+        "marcarVerificacionesAvisadas"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 20
+        },
+        {
+          "nombre": "interpretarVerificaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaVerificaciones",
+          "linea": 23,
+          "resumen": "PURO. La respuesta del puerto → pendientes, o un error CON causa. Una fila rara no desaparece: se cuenta."
+        },
+        {
+          "nombre": "escapar",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 43
+        },
+        {
+          "nombre": "nombre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: string",
+          "retorno": "string",
+          "linea": 44
+        },
+        {
+          "nombre": "componerAvisoVerificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: VerificacionPendiente",
+          "retorno": "string",
+          "linea": 47,
+          "resumen": "PURO. El Telegram (HTML) de UN trabajo parado: solo compañía y ramo."
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 54
+        },
+        {
+          "nombre": "pedir",
+          "kind": "function",
+          "exportada": false,
+          "params": "init: RequestInit",
+          "retorno": "Promise<",
+          "linea": 58
+        },
+        {
+          "nombre": "leerVerificacionesAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<RespuestaVerificaciones>",
+          "linea": 70
+        },
+        {
+          "nombre": "marcarVerificacionesAvisadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: string[]",
+          "retorno": "Promise<boolean>",
+          "linea": 81,
+          "resumen": "Marca los trabajos como avisados (idempotente al otro lado). `true` solo con `{estado:'ok'}`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "901a7a4476f8"
     },
     {
       "ruta": "apps/plataforma/lib/telefono-wa.ts",
@@ -152498,7 +153368,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 757
+          "linea": 763
         },
         {
           "nombre": "avisosDe",
@@ -152506,7 +153376,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 762,
+          "linea": 768,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -152515,13 +153385,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 772,
+          "linea": 778,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fc7cc77b23c0"
+      "hash": "ac1c2d72af95"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -152818,6 +153688,27 @@
       ],
       "rutaApi": null,
       "hash": "a8d5d65c2e3a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/timeout-ia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Timeout contra el proveedor que el caller puede pedir a la pasarela (`body.timeoutMs`). Puro (sin `@/`) → testeable con node --test. Tope bajo el `maxDuration` (60 s) de la ruta.",
+      "exporta": [
+        "acotarTimeoutMs"
+      ],
+      "funciones": [
+        {
+          "nombre": "acotarTimeoutMs",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedido: unknown",
+          "retorno": "number",
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "060ac7e70662"
     },
     {
       "ruta": "apps/plataforma/lib/trading-acceso.ts",
@@ -168553,7 +169444,7 @@
           "exportada": true,
           "params": "config: GatewayConfig, system: string, user: string, opts: { maxTokens?: number; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 52,
+          "linea": 54,
           "resumen": "Búsqueda web + síntesis a través de la pasarela (Gemini por debajo)."
         },
         {
@@ -168562,7 +169453,7 @@
           "exportada": true,
           "params": "config: GatewayConfig, messages: NimToolMessage[], tools: unknown[], opts: { system?: string; model?: string; maxTokens?: number; timeoutMs?: number; cliente?: string; privado?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 66,
+          "linea": 68,
           "resumen": "Function-calling a través de la pasarela (NIM por debajo). Devuelve el mensaje del modelo (`content` y/o `tool_calls`); la vertical ejecuta las herramientas y reenvía los resultados. No usa `llamar` p"
         },
         {
@@ -168571,7 +169462,7 @@
           "exportada": true,
           "params": "config: GatewayConfig, system: string, images: ImageInput[], userText: string, opts: { maxTokens?: number; model?: string; timeoutMs?: number } = {},",
           "retorno": "Promise<string>",
-          "linea": 84,
+          "linea": 86,
           "resumen": "Visión (OCR / análisis de imágenes) a través de la pasarela (NIM vision por debajo)."
         },
         {
@@ -168580,13 +169471,13 @@
           "exportada": true,
           "params": "config: GatewayConfig, prompt: string, opts: GatewayVideoOpts = {},",
           "retorno": "Promise<string>",
-          "linea": 105,
+          "linea": 107,
           "resumen": "Generación de vídeo IA a través de la pasarela (fal.ai WAN 2.1 por debajo). Devuelve la URL del MP4."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "20991eb9f175"
+      "hash": "fb1b938d081d"
     },
     {
       "ruta": "packages/core-ai/src/gemini.ts",
@@ -178418,6 +179309,72 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "79398c489b51"
+    },
+    {
+      "ruta": "packages/module-seguros/src/acuerdos-control.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Panel de control «Objetivos y producción» de Compañías (07/10/2026): cruza la cartera EN VIGOR por compañía × ramo con los acuerdos y los objetivos evaluados, para decidir qué compañía interesa en cada ramo. Lo PURO: sin red ni React. Spec: docs/superpowers/specs/2026-10-06-correduria-acuerdos-compa",
+      "exporta": [
+        "agregarCarteraVigor",
+        "totalesPorCompania",
+        "panelControl"
+      ],
+      "funciones": [
+        {
+          "nombre": "redondear",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "agregarCarteraVigor",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizas: readonly PolizaVigor[]",
+          "retorno": "",
+          "linea": 35,
+          "resumen": "Agrupa pólizas en vigor por compañía × ramo. Sin compañía (o sin ramo) no se puede asignar: se cuenta en `sinCompania` / `sinRamo` y NO se reparte."
+        },
+        {
+          "nombre": "totalesPorCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "cartera: readonly FilaCartera[] | null",
+          "retorno": "Map<string, TotalCartera> | null",
+          "linea": 61,
+          "resumen": "Total por compañía (todas sus filas) o `null` si la cartera no se ha leído."
+        },
+        {
+          "nombre": "objetivoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "acuerdo: AcuerdoControl, ramo: string, evaluados: ReadonlyMap<string, ObjetivoEvaluadoControl>,",
+          "retorno": "ObjetivoCandidata",
+          "linea": 145
+        },
+        {
+          "nombre": "avanceDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: CandidataRamo",
+          "retorno": "number",
+          "linea": 167
+        },
+        {
+          "nombre": "panelControl",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { acuerdos: readonly AcuerdoControl[] objetivos: readonly ObjetivoEvaluadoControl[] /** `null` = la cartera no se ha podido leer. */ cartera: readonly FilaCartera[] | null }",
+          "retorno": "PanelControl",
+          "linea": 179,
+          "resumen": "Por ramo, qué compañías tienen acuerdo (mejor línea de cada una), con su producción en cartera y el avance de su objetivo, y cuál conviene. Recomendada: entre las candidatas con % de nueva producción "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "35199b9f3d23"
     },
     {
       "ruta": "packages/module-seguros/src/acuerdos-productividad.ts",
@@ -193748,6 +194705,59 @@
       "hash": "1e71c8b7c989"
     },
     {
+      "ruta": "packages/module-tarificacion/src/control-calidad.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Control de calidad ANTES de enseñar o enviar un resultado de tarificación (08/10/2026). PURO. Los ERRORES bloquean (no se enseña ni se envía); los AVISOS se enseñan junto al resultado. No toca reloj ni red: `hoy` llega de fuera (ISO AAAA-MM-DD) para que sea determinista y testeable.",
+      "exporta": [
+        "controlarCalidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": "s is string",
+          "linea": 55
+        },
+        {
+          "nombre": "esNum",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: unknown",
+          "retorno": "n is number",
+          "linea": 61
+        },
+        {
+          "nombre": "dinero",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 63
+        },
+        {
+          "nombre": "iguales",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: unknown, b: unknown",
+          "retorno": "boolean",
+          "linea": 68
+        },
+        {
+          "nombre": "controlarCalidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "oferta: ControlOferta, solicitud: ControlSolicitud, hoy: string, opciones: OpcionesCalidad = {}",
+          "retorno": "ResultadoCalidad",
+          "linea": 74
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ee4ffa28d87f"
+    },
+    {
       "ruta": "packages/module-tarificacion/src/entorno.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "Qué entorno recibe la máquina del worker (05/10/2026). 🚨 El worker NUNCA tiene la cartera ni el canal que gasta dinero: ni `DATABASE_URL`/`DIRECT_URL` (habla con asegura SOLO por HTTP, con su Bearer), ni ningún `CODEOSCOPIC_*`. Dos barreras: 1. El orquestador construye el env de la máquina desde un",
@@ -194252,7 +195262,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Tapa datos personales reconocibles. Puro: no conoce secretos (eso lo hace `crearRedactor`)."
         },
         {
@@ -194261,7 +195271,7 @@
           "exportada": true,
           "params": "texto: unknown, redactarSecretos: (t: string) => string = (t) => t, max = 300",
           "retorno": "string | null",
-          "linea": 46,
+          "linea": 47,
           "resumen": "Texto de un aviso del portal listo para salir del worker: credenciales fuera (`redactarSecretos`, el redactor del worker), datos personales fuera, espacios colapsados y recortado a `max`. Vacío o no-s"
         },
         {
@@ -194270,7 +195280,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 66
+          "linea": 67
         },
         {
           "nombre": "eurEs",
@@ -194278,7 +195288,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 67
+          "linea": 68
         },
         {
           "nombre": "coherenciaPrecio",
@@ -194286,7 +195296,7 @@
           "exportada": true,
           "params": "v: ValoresLeidos, modalidadPedida: ModalidadPortal | null",
           "retorno": "IncidenciaPrecio[]",
-          "linea": 77,
+          "linea": 78,
           "resumen": "Determinista. Tolerancia del cuadre: el mayor de 0,05 € y el 0,2 % del total (redondeos del portal). Bloqueante = el precio no puede ir a un cliente tal cual (sin total, total ≤ 0, negativo, descuadre"
         },
         {
@@ -194295,7 +195305,7 @@
           "exportada": true,
           "params": "umbral = UMBRAL_ACOMPANAMIENTO",
           "retorno": "EstadoAcompanamiento",
-          "linea": 114,
+          "linea": 115,
           "resumen": "Sin fila = acompañado desde cero (compañía/ramo nueva)."
         },
         {
@@ -194304,12 +195314,12 @@
           "exportada": true,
           "params": "e: EstadoAcompanamiento, evento: EventoAcompanamiento",
           "retorno": "EstadoAcompanamiento",
-          "linea": 118
+          "linea": 119
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "32a19edcaa8a"
+      "hash": "f88a38f36970"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-comercio.ts",
@@ -194451,6 +195461,8 @@
       "resumen": "eslint-disable",
       "exporta": [
         "configGrabador",
+        "codigoBookmarkletManual",
+        "urlBookmarkletManual",
         "codigoBookmarklet",
         "urlBookmarklet"
       ],
@@ -194461,7 +195473,25 @@
           "exportada": true,
           "params": "",
           "retorno": "ConfigGrabador",
-          "linea": 45
+          "linea": 69
+        },
+        {
+          "nombre": "codigoBookmarkletManual",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 436,
+          "resumen": "Código JS del marcador MANUAL de siempre (una pantalla por pulsación → `pantalla-….html`)."
+        },
+        {
+          "nombre": "urlBookmarkletManual",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 443,
+          "resumen": "La URL `javascript:` del marcador (para el <a> que se arrastra a favoritos)."
         },
         {
           "nombre": "codigoBookmarklet",
@@ -194469,8 +195499,8 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 213,
-          "resumen": "Código JS (sin `javascript:`) que ejecuta el marcador."
+          "linea": 448,
+          "resumen": "Código JS (sin `javascript:`) del marcador AUTOMÁTICO: una pulsación → graba sola cada pantalla nueva."
         },
         {
           "nombre": "urlBookmarklet",
@@ -194478,19 +195508,21 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 220,
-          "resumen": "La URL `javascript:` del marcador (para el <a> que se arrastra a favoritos)."
+          "linea": 454,
+          "resumen": "La URL `javascript:` del marcador automático (para el <a> que se arrastra a favoritos)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7a10d2327aff"
+      "hash": "0edd0742aa46"
     },
     {
       "ruta": "packages/module-tarificacion/src/grabador.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "GRABADOR del tarificador RPA (07/10/2026) — reglas PURAS. Para dar de alta una compañía/ramo nueva en el bot sin ir a ciegas: Alberto hace un presupuesto FICTICIO a mano en el portal y en cada pantalla pulsa el marcador «Grabar pantalla ASegura» (`grabador-bookmarklet.ts`). Aquí vive lo que comparte",
       "exporta": [
+        "separarGrabacion",
+        "redactarTextoUsuario",
         "tienePasswordHtml",
         "normalizarGrabador",
         "clasificarBoton",
@@ -194508,12 +195540,30 @@
       ],
       "funciones": [
         {
+          "nombre": "separarGrabacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "",
+          "linea": 38,
+          "resumen": "Separa un fichero de grabación en sus pantallas, EN ORDEN. Un fichero sin separadores (el modo manual de siempre) es una sola pantalla. En el multipantalla, lo que haya antes del primer separador es l"
+        },
+        {
+          "nombre": "redactarTextoUsuario",
+          "kind": "function",
+          "exportada": true,
+          "params": "html: string",
+          "retorno": "string",
+          "linea": 79,
+          "resumen": "Tapa el TEXTO de los elementos de usuario/cuenta (ver `PATRON_ELEMENTO_USUARIO`). Idempotente."
+        },
+        {
           "nombre": "tienePasswordHtml",
           "kind": "function",
           "exportada": true,
           "params": "html: string",
           "retorno": "boolean",
-          "linea": 45,
+          "linea": 115,
           "resumen": "¿El HTML tiene algún `<input type=password>` (en la página o en un marco)?"
         },
         {
@@ -194522,7 +195572,7 @@
           "exportada": true,
           "params": "s: string | null | undefined",
           "retorno": "string",
-          "linea": 63,
+          "linea": 133,
           "resumen": "Sin tildes, minúsculas y espacios colapsados."
         },
         {
@@ -194531,7 +195581,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[]",
           "retorno": "",
-          "linea": 72,
+          "linea": 142,
           "resumen": "Clase de un botón a partir de TODO lo que lo describe (texto, selector, id, onclick…). PROHIBIDO si cualquiera casa con el guard de emisión (incluido «Aceptar», siempre contextual) o con `BLOQUEO_GRAB"
         },
         {
@@ -194540,7 +195590,7 @@
           "exportada": false,
           "params": "crudo: string | undefined",
           "retorno": "string | null",
-          "linea": 89
+          "linea": 159
         },
         {
           "nombre": "atributos",
@@ -194548,7 +195598,7 @@
           "exportada": false,
           "params": "cuerpo: string",
           "retorno": "Map<string, string | null>",
-          "linea": 95
+          "linea": 165
         },
         {
           "nombre": "escaparAttr",
@@ -194556,7 +195606,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 102,
+          "linea": 172,
           "resumen": "Sin tocar `&`: el valor viene del HTML con sus entidades ya escritas (re-escaparlas no sería idempotente)."
         },
         {
@@ -194565,7 +195615,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": "string",
-          "linea": 105,
+          "linea": 175,
           "resumen": "Tapa los valores de los parámetros sensibles de una URL (y un `;jsessionid=`)."
         },
         {
@@ -194574,7 +195624,7 @@
           "exportada": true,
           "params": "a: { type?: string | null; name?: string | null; id?: string | null; autocomplete?: string | null; etiqueta?: string | null; tag?: string }, login = false",
           "retorno": "boolean",
-          "linea": 111,
+          "linea": 181,
           "resumen": "¿El control es de los que nunca enseñan su valor?"
         },
         {
@@ -194583,7 +195633,7 @@
           "exportada": false,
           "params": "tag: string, cuerpo: string, login: boolean",
           "retorno": "string",
-          "linea": 122
+          "linea": 192
         },
         {
           "nombre": "redactarHtmlGrabacion",
@@ -194591,7 +195641,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 144,
+          "linea": 216,
           "resumen": "Lo que asegura hace con el HTML que sube Alberto ANTES de guardarlo (aunque el bookmarklet ya lo haya hecho): fuera `<script>`; contraseñas, ocultos y campos sensibles por nombre a `[REDACTADO]`; DNI/"
         },
         {
@@ -194600,7 +195650,7 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "PantallaSeparada",
-          "linea": 169,
+          "linea": 243,
           "resumen": "Deshace los marcadores de marco (como `separarMarcos` del worker, con la ruta como texto)."
         },
         {
@@ -194609,7 +195659,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 183
+          "linea": 257
         },
         {
           "nombre": "recortarHtmlParaIA",
@@ -194617,7 +195667,7 @@
           "exportada": true,
           "params": "html: string, maxChars = 60_000",
           "retorno": "string",
-          "linea": 215,
+          "linea": 289,
           "resumen": "HTML recortado a lo que sirve para mapear la pantalla (formularios, tablas, botones, textos), sin scripts, estilos ni valores de los campos, y por debajo de `maxChars`. Los marcos (donde suelen estar "
         },
         {
@@ -194626,7 +195676,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 252
+          "linea": 326
         },
         {
           "nombre": "soloClaves",
@@ -194634,7 +195684,7 @@
           "exportada": false,
           "params": "o: Record<string, unknown>, permitidas: readonly string[], donde: string",
           "retorno": "string | null",
-          "linea": 254
+          "linea": 328
         },
         {
           "nombre": "texto",
@@ -194642,7 +195692,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, donde: string, { opcional = false, pii = true } = {}",
           "retorno": "Lectura<string | null>",
-          "linea": 259
+          "linea": 333
         },
         {
           "nombre": "selectorValido",
@@ -194650,7 +195700,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "boolean",
-          "linea": 269,
+          "linea": 343,
           "resumen": "Un selector CSS razonable: una línea, sin llaves ni `javascript:`."
         },
         {
@@ -194659,7 +195709,7 @@
           "exportada": false,
           "params": "v: unknown, donde: string, opcional = false",
           "retorno": "Lectura<string | null>",
-          "linea": 273
+          "linea": 347
         },
         {
           "nombre": "booleano",
@@ -194667,7 +195717,7 @@
           "exportada": false,
           "params": "v: unknown, donde: string",
           "retorno": "Lectura<boolean>",
-          "linea": 279
+          "linea": 353
         },
         {
           "nombre": "lista",
@@ -194675,7 +195725,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, donde: string",
           "retorno": "Lectura<unknown[]>",
-          "linea": 283
+          "linea": 357
         },
         {
           "nombre": "validarPantallaMapa",
@@ -194683,7 +195733,7 @@
           "exportada": true,
           "params": "raw: unknown, pantalla: number",
           "retorno": "",
-          "linea": 294,
+          "linea": 368,
           "resumen": "Valida lo que devuelve la IA para UNA pantalla con un esquema ESTRICTO (claves cerradas, tipos, tamaños) y aplica la regla de seguridad: todo botón que casa con el guard de emisión o con `BLOQUEO_GRAB"
         },
         {
@@ -194692,7 +195742,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "MapaGrabacion | null",
-          "linea": 382,
+          "linea": 456,
           "resumen": "Relee un mapa GUARDADO (jsonb) con el mismo esquema: lo que no valide se descarta (no se enseña un mapa a medias como bueno). Vuelve a aplicar la clasificación de botones por si la regla se endureció."
         },
         {
@@ -194701,7 +195751,7 @@
           "exportada": true,
           "params": "mapa: MapaGrabacion | null, p: PantallaMapa",
           "retorno": "MapaGrabacion",
-          "linea": 406,
+          "linea": 480,
           "resumen": "Sustituye (o añade) la pantalla en el mapa, en orden."
         },
         {
@@ -194710,7 +195760,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "unknown",
-          "linea": 412,
+          "linea": 486,
           "resumen": "JSON de la respuesta de la IA (tolera ```json … ``` y texto alrededor). `null` si no hay objeto."
         },
         {
@@ -194719,13 +195769,13 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "boolean",
-          "linea": 426,
+          "linea": 500,
           "resumen": "Nombre de fichero aceptable para una pantalla: `.html`/`.htm`, sin rutas, ≤ 200."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2ab1bef856e"
+      "hash": "d221b8c6754f"
     },
     {
       "ruta": "packages/module-tarificacion/src/guard-emision.ts",
@@ -194937,6 +195987,112 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a2bf73398a48"
+    },
+    {
+      "ruta": "packages/module-tarificacion/src/recomendador.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Recomendador EXPLICABLE y determinista (sin IA) sobre la salida de `compararOfertas` (08/10/2026). PURO. Puntuación 0-100 = (1-pesoPrecio) · adecuación de coberturas + pesoPrecio · precio ANUAL normalizado. · Adecuación: por cada garantía con peso, puntos de la celda (incluida con límite/franquicia,",
+      "exporta": [
+        "pesosPorDefecto",
+        "pesosParaPerfil",
+        "recomendar"
+      ],
+      "funciones": [
+        {
+          "nombre": "pesosPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string",
+          "retorno": "Record<string, number>",
+          "linea": 104,
+          "resumen": "Pesos por defecto de cada ramo (copia: se puede mutar). Ramo desconocido → `{}` (todas las garantías pesan 1)."
+        },
+        {
+          "nombre": "pesosParaPerfil",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string, perfil: PerfilCliente = {}, forzados: Record<string, number> = {}",
+          "retorno": "Record<string, number>",
+          "linea": 109,
+          "resumen": "Pesos del ramo ajustados al perfil (lo que se sabe del cliente sube la importancia de su garantía), más los forzados."
+        },
+        {
+          "nombre": "redondear",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number, d = 2",
+          "retorno": null,
+          "linea": 142
+        },
+        {
+          "nombre": "dinero",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 144,
+          "resumen": "Formato español: 1.234,56€ (puntos de miles, coma decimal, € detrás)."
+        },
+        {
+          "nombre": "leer",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CeldaComparador",
+          "retorno": "Lectura",
+          "linea": 151
+        },
+        {
+          "nombre": "valorLimite",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CeldaComparador",
+          "retorno": "number | null",
+          "linea": 158
+        },
+        {
+          "nombre": "puntosValor",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CeldaComparador, x: Contexto",
+          "retorno": "number",
+          "linea": 162
+        },
+        {
+          "nombre": "puntosFranq",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CeldaComparador, x: Contexto",
+          "retorno": "number",
+          "linea": 169
+        },
+        {
+          "nombre": "puntosCelda",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CeldaComparador, lectura: Lectura, x: Contexto",
+          "retorno": "number",
+          "linea": 175
+        },
+        {
+          "nombre": "contextoFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "fila: FilaComparador, pedido: number | null",
+          "retorno": "Contexto",
+          "linea": 185
+        },
+        {
+          "nombre": "recomendar",
+          "kind": "function",
+          "exportada": true,
+          "params": "tabla: TablaComparador, perfil: PerfilCliente = {}, opciones: OpcionesRecomendador = {}",
+          "retorno": "Recomendacion",
+          "linea": 195
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "81a1e5d8c64b"
     },
     {
       "ruta": "packages/module-tarificacion/src/redactar.ts",
@@ -196898,7 +198054,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4386,
-    "funciones": 15496
+    "archivos": 4405,
+    "funciones": 15599
   }
 }
