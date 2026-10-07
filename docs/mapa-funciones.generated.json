@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-07T12:04:07Z",
-  "sha": "173ed26275d35f1cb023cf9928ad1eecc4a190d9",
+  "generadoEn": "2026-10-07T14:12:48Z",
+  "sha": "4f6575bf16639b2ab6af8217f377d279331d6169",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -93467,13 +93467,13 @@
           "exportada": true,
           "params": "{ titulo, ...props }: Parameters<typeof ListaPrecios<P>>[0] & { titulo?: string }",
           "retorno": null,
-          "linea": 142,
+          "linea": 146,
           "resumen": "La misma lista, PLEGADA: cuando debajo está «Qué verá el cliente» (que ya enseña todos los precios de la más barata a la más cara), repetirla abierta eran dos listas de 31 filas seguidas. Aquí queda s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cef34cfaff9b"
+      "hash": "35ad722f37cf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/EscribirIndiceDni.tsx",
