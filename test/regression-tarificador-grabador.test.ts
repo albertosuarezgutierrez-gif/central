@@ -37,6 +37,17 @@ test('la marca de marcos del grabador es la de las evidencias del worker', () =>
   assert.equal(marca(gr, 'FIN_MARCA_MARCO'), marca(ev, 'FIN_MARCA'))
 })
 
+test('el grabador tapa usuario, login y datos de personas en AMBAS capas (cliente y servidor)', () => {
+  const gr = leer('packages/module-tarificacion/src/grabador.ts')
+  const bm = leer('packages/module-tarificacion/src/grabador-bookmarklet.ts')
+  for (const n of ['PATRON_CAMPO_USUARIO', 'PATRON_CAMPO_PERSONAL', 'PATRON_MEDIADOR', 'MARCA_LOGIN']) {
+    assert.match(gr, new RegExp(`export const ${n}\\b`), `grabador.ts ya no exporta ${n}`)
+    assert.match(bm, new RegExp(`\\b${n}\\b`), `el bookmarklet no usa ${n}`)
+  }
+  assert.match(gr, /login && a\.tag !== 'select'/, 'el servidor no tapa los campos de una pantalla de login')
+  assert.match(bm, /if \(login && /, 'el bookmarklet no tapa los campos de una pantalla de login')
+})
+
 test('el SQL de grabaciones es aditivo, idempotente y sin DELETE para la app', () => {
   const sql = leer('apps/asegura/prisma/sql/2026-10-07b_tarificador_grabaciones.sql')
   const codigo = sql.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n')

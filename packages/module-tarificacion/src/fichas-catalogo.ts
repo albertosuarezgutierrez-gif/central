@@ -10,7 +10,7 @@
 // · Una garantía que no casa NO se fuerza a una clave: va a `extras` con su literal (nunca se inventa clave).
 // · Extensible: otro ramo = otra entrada en `CATALOGO_FICHAS` (y su valor en `RAMOS_FICHA`).
 
-export const RAMOS_FICHA = ['comunidades', 'rc'] as const
+export const RAMOS_FICHA = ['comunidades', 'rc', 'comercio'] as const
 export type RamoFicha = (typeof RAMOS_FICHA)[number]
 
 export type GrupoGarantiaFicha = 'danos' | 'rc' | 'asistencia' | 'juridica' | 'otros'
@@ -89,9 +89,47 @@ const RC: readonly GarantiaFicha[] = [
   g('retroactividad', 'Retroactividad / cobertura de reclamaciones', 'otros', 'servicio', ['retroactividad', 'periodo de retroactividad', 'reclamaciones presentadas', 'claims made']),
 ]
 
+// Comercio / Negocio — multirriesgo de comercio (08/10/2026). Ramo canónico sin compañía registrada todavía
+// (la primera: Allianz ePAC, ramo 2038/0002). Capitales = continente/contenido/existencias del presupuesto.
+// Los sinónimos de robo/expoliación y RC viven aquí, no se comparten con comunidades (otro ramo, otra lectura).
+const COMERCIO: readonly GarantiaFicha[] = [
+  // ── Capitales ──
+  g('continente', 'Continente / edificio', 'danos', 'capital', ['continente', 'edificio', 'edificacion', 'capital continente', 'capital edificio']),
+  g('contenido', 'Contenido (mobiliario, instalaciones, maquinaria)', 'danos', 'capital', ['contenido', 'mobiliario', 'capital contenido', 'mobiliario y maquinaria', 'instalaciones y mobiliario', 'enseres']),
+  g('existencias', 'Existencias / mercancías', 'danos', 'capital', ['existencias', 'mercancias', 'capital existencias', 'stock', 'mercaderias']),
+  // ── Daños ──
+  g('incendio', 'Incendio, explosión y caída del rayo', 'danos', 'servicio', ['incendio', 'explosion', 'caida del rayo', 'incendio y explosion', 'incendio explosion y caida de rayo']),
+  g('fenomenos_atmosfericos', 'Fenómenos atmosféricos', 'danos', 'limite', ['fenomenos atmosfericos', 'fenomenos meteorologicos', 'lluvia viento pedrisco y nieve', 'lluvia viento', 'pedrisco', 'tormenta']),
+  g('danos_agua', 'Daños por agua', 'danos', 'limite', ['danos por agua', 'danos agua', 'escape de agua', 'escapes de agua', 'derrame de agua']),
+  g('danos_electricos', 'Daños eléctricos', 'danos', 'limite', ['danos electricos', 'dano electrico', 'sobretension', 'cortocircuito']),
+  g('robo_continente', 'Robo y daños al continente', 'danos', 'limite', ['robo continente', 'robo del continente', 'danos al continente por robo', 'robo y danos al continente', 'danos por robo al continente']),
+  g('robo_contenido', 'Robo del contenido', 'danos', 'limite', ['robo contenido', 'robo del contenido', 'robo de mobiliario', 'robo de mobiliario y maquinaria', 'robo de existencias', 'robo y hurto']),
+  g('expoliacion', 'Expoliación / atraco', 'danos', 'limite', ['expoliacion', 'atraco', 'expoliacion y atraco', 'expoliacion en el establecimiento']),
+  g('dinero_efectivo', 'Dinero en efectivo (caja, tránsito)', 'danos', 'limite', ['dinero en efectivo', 'dinero en caja', 'dinero en caja fuerte', 'efectivo', 'dinero en transito', 'fondos y valores']),
+  g('rotura_cristales', 'Rotura de cristales, lunas y espejos', 'danos', 'limite', ['rotura de cristales', 'cristales', 'lunas', 'rotura de lunas', 'espejos', 'vidrios', 'cristales y espejos']),
+  g('rotulos', 'Rótulos y letreros luminosos', 'danos', 'limite', ['rotulos', 'rotulos y letreros', 'letreros', 'rotulos luminosos', 'rotulos y letreros luminosos', 'anuncios luminosos']),
+  g('averia_maquinaria', 'Avería de maquinaria / equipos electrónicos', 'danos', 'limite', ['averia de maquinaria', 'averias de maquinaria', 'rotura de maquinaria', 'maquinaria', 'equipos electronicos', 'averia de equipos electronicos', 'equipos informaticos']),
+  g('bienes_refrigerados', 'Bienes refrigerados (avería de frío)', 'danos', 'limite', ['bienes refrigerados', 'mercancias refrigeradas', 'perdida de frio', 'averia de frio', 'camaras frigorificas', 'productos refrigerados', 'congelados']),
+  g('actos_vandalicos', 'Actos vandálicos o malintencionados', 'danos', 'limite', ['actos vandalicos', 'vandalismo', 'actos malintencionados', 'danos maliciosos']),
+  g('gastos_desescombro', 'Gastos de demolición y desescombro', 'danos', 'limite', ['desescombro', 'demolicion', 'gastos de demolicion', 'salvamento', 'gastos de extincion']),
+  g('perdida_beneficios', 'Pérdida de beneficios / paralización del negocio', 'otros', 'limite', ['perdida de beneficios', 'paralizacion del negocio', 'paralizacion', 'lucro cesante', 'interrupcion del negocio', 'perdida de margen bruto', 'gastos permanentes']),
+  // ── Responsabilidad civil ──
+  g('rc_explotacion', 'RC de explotación', 'rc', 'limite', ['rc explotacion', 'responsabilidad civil de explotacion', 'responsabilidad civil explotacion', 'explotacion', 'rc general', 'responsabilidad civil general', 'rc de la actividad', 'responsabilidad civil']),
+  g('rc_patronal', 'RC patronal', 'rc', 'limite', ['rc patronal', 'responsabilidad civil patronal', 'patronal']),
+  g('sublimite_victima_patronal', 'Sublímite por víctima (RC patronal)', 'rc', 'limite', ['sublimite por victima', 'limite por victima', 'sublimite victima', 'maximo por victima']),
+  g('rc_locativa', 'RC locativa (daños al local alquilado)', 'rc', 'limite', ['rc locativa', 'responsabilidad civil locativa', 'locativa', 'danos al local arrendado', 'responsabilidad del arrendatario']),
+  g('rc_productos', 'RC de productos', 'rc', 'limite', ['rc productos', 'responsabilidad civil de productos', 'responsabilidad civil productos', 'productos entregados']),
+  // ── Asistencia y jurídico ──
+  g('asistencia', 'Asistencia 24 h (urgencias, cerrajería)', 'asistencia', 'servicio', ['asistencia', 'asistencia 24 horas', 'asistencia 24 h', 'servicio de urgencia', 'urgencias 24', 'reparaciones urgentes', 'cerrajeria', 'asistencia al negocio']),
+  g('defensa_juridica', 'Defensa jurídica y reclamación de daños', 'juridica', 'limite', ['defensa juridica', 'defensa legal', 'proteccion juridica', 'reclamacion de danos', 'defensa penal', 'gastos de defensa']),
+  // ── Otros ──
+  g('franquicia_general', 'Franquicia general de la póliza', 'otros', 'limite', ['franquicia', 'franquicia general', 'franquicia por siniestro', 'franquicia a cargo del asegurado']),
+]
+
 export const CATALOGO_FICHAS: Readonly<Record<RamoFicha, readonly GarantiaFicha[]>> = {
   comunidades: COMUNIDADES,
   rc: RC,
+  comercio: COMERCIO,
 }
 
 export function esRamoFicha(v: unknown): v is RamoFicha {

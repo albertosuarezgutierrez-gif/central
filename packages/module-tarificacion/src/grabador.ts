@@ -8,7 +8,7 @@
 //    PROHIBIDO aunque la IA diga «seguro»: la IA solo puede SUBIR la clase, nunca bajarla.
 
 import { pareceEmision } from './guard-emision.ts'
-import { redactarDatosPersonales } from './formador.ts'
+import { MARCA_DATO_PERSONAL, redactarDatosPersonales } from './formador.ts'
 import { MARCA_REDACTADO, redactar } from './redactar.ts'
 
 /** Mismo formato que `services/tarificador-rpa/src/evidencia.ts` (lo vigila un test de la raíz). */
@@ -21,6 +21,33 @@ export const MAX_PANTALLAS = 40
 
 /** name/id/autocomplete de un campo cuyo VALOR no sale nunca (además de type=password y type=hidden). */
 export const PATRON_CAMPO_SENSIBLE = /pass|pwd|clave|token|otp|pin|secret|cvv|cvc|csrf|viewstate/i
+
+/** name/id/autocomplete/aria-label/placeholder de un campo de USUARIO de login: su valor tampoco sale nunca. */
+export const PATRON_CAMPO_USUARIO = /user|usuari|login|logon|signin|sign-in|j_username/i
+
+/**
+ * Campos de TEXTO con datos de personas o de quien opera (nombre, apellidos, razón social, nacimiento, dirección
+ * postal, correo, códigos de mediador/agente). Solo name/id/aria-label/placeholder de inputs de texto y textareas:
+ * selects, checkboxes y radios (riesgo, coberturas) no entran. Ante la duda, tapa.
+ */
+export const PATRON_CAMPO_PERSONAL = /nombre|apellid|razon_?social|naci|fullDate|address|direcc|domicil|calle|mail|^(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)|_(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)$/i
+
+/** Cabecera con el mediador en el texto: «209-C/12/0000 - Nombre Apellidos» → el nombre se tapa. */
+export const PATRON_MEDIADOR = /(\b\d{1,4}-[A-Za-z](?:\/\w+)+)\s+-\s+[^<>\n]+/g
+
+/** Cabecera de una grabación con input type=password: es una PANTALLA DE LOGIN y sus campos de texto van tapados. */
+export const MARCA_LOGIN = '<!-- grabador: PANTALLA DE LOGIN (campos tapados) -->'
+
+/** Tipos de input que no llevan texto del usuario (en una pantalla de login se dejan como están). */
+const TIPOS_SIN_TEXTO = new Set(['checkbox', 'radio', 'submit', 'button', 'reset', 'image', 'file', 'range', 'color'])
+
+/** ¿El HTML tiene algún `<input type=password>` (en la página o en un marco)? */
+export function tienePasswordHtml(html: string): boolean {
+  for (const m of String(html).matchAll(/<input\b([^>]*)>/gi)) {
+    if ((atributos(m[1] ?? '').get('type') ?? '').trim().toLowerCase() === 'password') return true
+  }
+  return false
+}
 
 /** Parámetros de URL cuyo valor se tapa (sesiones, firmas, tokens). */
 export const PATRON_PARAM_SENSIBLE = /sess|token|auth|key|sig|code|ticket|pass|pwd|clave|csrf/i
@@ -81,16 +108,21 @@ export function redactarUrl(url: string): string {
 }
 
 /** ¿El control es de los que nunca enseñan su valor? */
-export function esCampoSensible(a: { type?: string | null; name?: string | null; id?: string | null; autocomplete?: string | null }): boolean {
+export function esCampoSensible(a: { type?: string | null; name?: string | null; id?: string | null; autocomplete?: string | null; etiqueta?: string | null; tag?: string }, login = false): boolean {
   const t = (a.type ?? '').toLowerCase()
   if (t === 'password' || t === 'hidden') return true
-  return [a.name, a.id, a.autocomplete].some((x) => typeof x === 'string' && PATRON_CAMPO_SENSIBLE.test(x))
+  // Pantalla de login (hay un password en la grabación): ningún campo de texto sale, sea cual sea su nombre.
+  if (login && a.tag !== 'select' && !TIPOS_SIN_TEXTO.has(t)) return true
+  if ([a.name, a.id, a.autocomplete].some((x) => typeof x === 'string' && PATRON_CAMPO_SENSIBLE.test(x))) return true
+  if ([a.name, a.id, a.autocomplete, a.etiqueta].some((x) => typeof x === 'string' && PATRON_CAMPO_USUARIO.test(x))) return true
+  const conTexto = !a.tag || a.tag !== 'select'
+  return conTexto && !TIPOS_SIN_TEXTO.has(t) && [a.name, a.id, a.autocomplete, a.etiqueta].some((x) => typeof x === 'string' && PATRON_CAMPO_PERSONAL.test(x))
 }
 
-function redactarEtiqueta(tag: string, cuerpo: string): string {
+function redactarEtiqueta(tag: string, cuerpo: string, login: boolean): string {
   const attrs = atributos(cuerpo)
   const sensible = (tag === 'input' || tag === 'textarea' || tag === 'select') &&
-    esCampoSensible({ type: attrs.get('type'), name: attrs.get('name'), id: attrs.get('id'), autocomplete: attrs.get('autocomplete') })
+    esCampoSensible({ type: attrs.get('type'), name: attrs.get('name'), id: attrs.get('id'), autocomplete: attrs.get('autocomplete'), etiqueta: `${attrs.get('aria-label') ?? ''} ${attrs.get('placeholder') ?? ''}`, tag }, login)
   return cuerpo.replace(RE_ATRIBUTO, (todo, nombre: string, _igual: string | undefined, crudo: string | undefined) => {
     if (crudo === undefined) return todo
     const n = nombre.toLowerCase()
@@ -110,20 +142,23 @@ function redactarEtiqueta(tag: string, cuerpo: string): string {
  * parámetros de sesión de las URL tapados; y `password=…`/`Bearer …` sueltos por el redactor de siempre.
  */
 export function redactarHtmlGrabacion(html: string): string {
+  const login = tienePasswordHtml(html)
   let out = String(html).replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '').replace(/<script\b[^>]*\/?>/gi, '')
   // Textarea sensible: su contenido es el valor.
   out = out.replace(/<textarea\b([^>]*)>([\s\S]*?)<\/textarea\s*>/gi, (todo, cuerpo: string) => {
     const a = atributos(cuerpo)
-    return esCampoSensible({ name: a.get('name'), id: a.get('id'), autocomplete: a.get('autocomplete') })
+    return esCampoSensible({ name: a.get('name'), id: a.get('id'), autocomplete: a.get('autocomplete'), etiqueta: `${a.get('aria-label') ?? ''} ${a.get('placeholder') ?? ''}` }, login)
       ? `<textarea${cuerpo}>${MARCA_REDACTADO}</textarea>`
       : todo
   })
   // Etiquetas de apertura (los comentarios `<!-- … -->` y `</cierre>` no casan: empiezan por ! o /).
   out = out.replace(/<([a-zA-Z][a-zA-Z0-9-]*)(\s[^<>]*?)?(\/?)>/g, (_t, tag: string, cuerpo: string | undefined, cierre: string) =>
-    `<${tag}${cuerpo ? redactarEtiqueta(tag.toLowerCase(), cuerpo) : ''}${cierre}>`)
+    `<${tag}${cuerpo ? redactarEtiqueta(tag.toLowerCase(), cuerpo, login) : ''}${cierre}>`)
   // Texto entre etiquetas.
-  out = out.replace(/>([^<]+)</g, (_t, texto: string) => `>${redactarDatosPersonales(texto)}<`)
-  return redactar(out, [])
+  out = out.replace(/>([^<]+)</g, (_t, texto: string) => `>${redactarDatosPersonales(texto).replace(PATRON_MEDIADOR, (_m, cod: string) => `${cod} - ${MARCA_DATO_PERSONAL}`)}<`)
+  out = redactar(out, [])
+  // Una pantalla con contraseña queda marcada como LOGIN (idempotente).
+  return login && !out.includes(MARCA_LOGIN) ? `${MARCA_LOGIN}\n${out}` : out
 }
 
 // ─── Recorte para la IA ─────────────────────────────────────────────────────
