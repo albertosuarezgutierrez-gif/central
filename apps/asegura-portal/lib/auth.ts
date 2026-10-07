@@ -105,5 +105,46 @@ export function leerCorredor(payload: Record<string, unknown>): SesionCorredor |
 export async function verificarSesion(token: string): Promise<SesionPortal | null> {
   const payload = await verifyToken(token, SECRET())
   if (!payload) return null
-  return { identidadId: payload.identidadId as string, corredor: leerCorredor(payload) }
+  // Sin `identidadId` no es una sesión (p. ej. la cookie de acceso por WhatsApp, firmada con el
+  // mismo secreto, puesta a mano en la cookie de sesión): nadie, nunca una identidad `undefined`.
+  if (typeof payload.identidadId !== 'string' || payload.identidadId === '') return null
+  return { identidadId: payload.identidadId, corredor: leerCorredor(payload) }
+}
+
+// ─── El acceso por el CÓDIGO DEL WHATSAPP (07/10/2026) ──────────────────────
+//
+// Quien abre `/presupuesto/<token>` con el código que Alberto le mandó por WhatsApp NO tiene
+// identidad del portal (puede no tener ni correo). Lo que recibe es una cookie APARTE que vale
+// para ESE presupuesto y nada más: ni bóveda, ni pólizas, ni otro presupuesto. Lleva el token del
+// enlace porque el código va atado a él (`hashCodigoWhatsapp`) y porque cada lectura comprueba
+// que ese token SIGUE siendo el del presupuesto: si Alberto regenera el enlace o lo avisa por
+// correo, el token rota y esta cookie deja de abrir sola.
+//
+// 🚨 No es una sesión: no tiene `identidadId`, y `verificarSesion` la rechaza aunque alguien la
+// copie en la cookie de sesión. Y la sesión no vale aquí: se exige el claim `accesoWhatsapp`.
+
+export const COOKIE_ACCESO_WHATSAPP = 'asegura_portal_presupuesto'
+/** Una visita para leer y firmar, no una cuenta: 4 h (como la vista de corredor). */
+export const ACCESO_WHATSAPP_SEGUNDOS = 4 * 60 * 60
+export const COOKIE_OPTS_ACCESO_WHATSAPP = { ...COOKIE_OPTS, maxAge: ACCESO_WHATSAPP_SEGUNDOS } as const
+
+export type AccesoWhatsapp = { presupuestoId: string; token: string }
+
+export async function crearAccesoWhatsapp(a: AccesoWhatsapp): Promise<string> {
+  const { token } = await createToken({
+    claims: { accesoWhatsapp: { presupuestoId: a.presupuestoId, token: a.token } },
+    secret: SECRET(),
+    expiresIn: `${ACCESO_WHATSAPP_SEGUNDOS}s`,
+  })
+  return token
+}
+
+export async function verificarAccesoWhatsapp(jwt: string): Promise<AccesoWhatsapp | null> {
+  const payload = await verifyToken(jwt, SECRET())
+  if (!payload || payload.identidadId !== undefined) return null
+  const a = payload.accesoWhatsapp
+  if (typeof a !== 'object' || a === null) return null
+  const { presupuestoId, token } = a as Record<string, unknown>
+  if (typeof presupuestoId !== 'string' || typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return null
+  return { presupuestoId, token }
 }

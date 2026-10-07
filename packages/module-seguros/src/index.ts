@@ -1338,7 +1338,7 @@ export {
   type MotivoPropuesta,
 } from './identidad-documentada.ts'
 export { polizaAnteriorParaTarificar, CODIGOS_DGS_MAPFRE } from './poliza-anterior.ts'
-export { aE164 } from './telefono-e164.ts'
+export { aE164, esMovilWhatsapp } from './telefono-e164.ts'
 export { telefonoParaFicha, formasHashTelefono } from './whatsapp-telefono.ts'
 export { redactarPii, type OpcionesRedaccion } from './redactar-pii.ts'
 

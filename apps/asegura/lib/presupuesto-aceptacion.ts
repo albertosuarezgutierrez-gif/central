@@ -4,6 +4,11 @@
 // en claro; llama al puente (`/api/portal/presupuesto`) con su identidad y aquí se resuelve la ficha
 // por `portal_vinculo`. Solo el TOMADOR firma, y solo con un código nuevo al correo de su ficha.
 //
+// 07/10/2026 — Segunda puerta: quien entró con el CÓDIGO DEL WHATSAPP no tiene identidad del portal
+// (puede no tener correo). El portal manda entonces el token del enlace (`tokenWhatsapp`) y la ficha
+// sale del PROPIO presupuesto (`fichaDeTokenWhatsapp`). Firma con ese mismo código (`otp_whatsapp`)
+// o, si tiene correo, con el de siempre: cualquiera de los dos.
+//
 // Si la opción elegida es de OTRA compañía (por código DGS, nunca por nombre), en el mismo acto firma
 // la anulación de su póliza actual, a su vencimiento. Esa anulación nace `firmada` pero la cola de
 // aprobaciones NO la propone hasta que el presupuesto conste EMITIDO (ver `lib/aprobaciones.ts`).
@@ -33,6 +38,7 @@ import {
 } from './datos-cotizados'
 import { origenPresupuesto } from './presupuesto-origen'
 import { datosAceptacionOfertas, gruposAceptacionOfertas, gruposRevisionOfertas, lineaEmitirEnCompania } from './ofertas-reglas'
+import { fichaDeTokenWhatsapp, gastarCodigoWhatsapp } from './presupuesto-codigo-whatsapp'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const MINUTOS_CODIGO = 10
@@ -192,10 +198,25 @@ function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado:
 type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 type Base = { f: Fila; clienteId: string } | { estado: 'no_encontrado' } | { estado: 'no_admite'; motivo: string } | SinFicha
 
-async function base(correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string): Promise<Base> {
-  if (!UUID.test(presupuestoId) || !UUID.test(opcionId)) return { estado: 'no_encontrado' }
+/**
+ * Quién llama desde el portal: su identidad (entró con su correo) o el token del enlace de un
+ * presupuesto que abrió con el código del WhatsApp. Nunca un `clienteId`.
+ */
+export type AccesoPortal = { identidadId: string } | { tokenWhatsapp: string }
+
+/** La ficha dueña del presupuesto para ESE acceso. Mismos desenlaces que `fichaPropiaDeRecurso`. */
+async function fichaDeAcceso(correduriaId: string, acceso: AccesoPortal, presupuestoId: string) {
+  if ('tokenWhatsapp' in acceso) {
+    const f = await fichaDeTokenWhatsapp(correduriaId, acceso.tokenWhatsapp, presupuestoId)
+    return f ? { estado: 'ok' as const, clienteId: f.clienteId } : { estado: 'ajena' as const }
+  }
   // La ficha es la DUEÑA del presupuesto si está vinculada con nivel de operar; con varias no se elige.
-  const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  return fichaPropiaDeRecurso(correduriaId, acceso.identidadId, 'presupuesto', presupuestoId)
+}
+
+async function base(correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string): Promise<Base> {
+  if (!UUID.test(presupuestoId) || !UUID.test(opcionId)) return { estado: 'no_encontrado' }
+  const ficha = await fichaDeAcceso(correduriaId, acceso, presupuestoId)
   if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const f = await leer(correduriaId, ficha.clienteId, presupuestoId, opcionId)
@@ -254,9 +275,9 @@ export type ResultadoPreparar =
 
 /** Lo que el cliente va a firmar con esa opción. No escribe nada. */
 export async function prepararAceptacion(
-  correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string, entrada: EntradaCuenta | null = null,
+  correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string, entrada: EntradaCuenta | null = null,
 ): Promise<ResultadoPreparar> {
-  const b = await base(correduriaId, identidadId, presupuestoId, opcionId)
+  const b = await base(correduriaId, acceso, presupuestoId, opcionId)
   if (!('f' in b)) return b
   const d = datosDe(b.f)
   if (d.estado !== 'ok') return d
@@ -283,8 +304,8 @@ function enmascarar(email: string): string {
   return d ? `${u.slice(0, 1)}***@${d}` : '***'
 }
 
-export async function pedirCodigoAceptacion(correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string): Promise<ResultadoCodigo> {
-  const b = await base(correduriaId, identidadId, presupuestoId, opcionId)
+export async function pedirCodigoAceptacion(correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string): Promise<ResultadoCodigo> {
+  const b = await base(correduriaId, acceso, presupuestoId, opcionId)
   if (!('f' in b)) return b
   const ficha = await estadoEmailDeFicha(correduriaId, b.clienteId)
   if (ficha.estado === 'ilegible') return { estado: 'sin_correo_configurado', motivo: 'no se puede leer el correo de tu ficha' }
@@ -347,17 +368,20 @@ export type ResultadoFirma =
 
 export async function firmarAceptacion(
   correduriaId: string,
-  identidadId: string,
+  acceso: AccesoPortal,
   presupuestoId: string,
   opcionId: string,
   datos: {
     codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean
     cuenta: EntradaCuenta | null
+    /** Qué código teclea: el de un solo uso al correo (por defecto) o el de acceso del WhatsApp. */
+    via?: 'correo' | 'whatsapp'
   },
 ): Promise<ResultadoFirma> {
   // La casilla va lo PRIMERO: antes de tocar la BD y antes de gastar un intento del código.
   if (datos.datosConfirmados !== true) return { estado: 'sin_confirmar_datos' }
-  const b = await base(correduriaId, identidadId, presupuestoId, opcionId)
+  const identidadId = 'identidadId' in acceso ? acceso.identidadId : null
+  const b = await base(correduriaId, acceso, presupuestoId, opcionId)
   if (!('f' in b)) return b
   const { f, clienteId } = b
   // Fail-closed: con los datos ilegibles o avisados como incorrectos, no se autoriza la emisión.
@@ -381,15 +405,28 @@ export async function firmarAceptacion(
     if (!cuentaCifrada || !cuentaCifrada.startsWith('v1:')) return { estado: 'sin_cifrado' }
   }
   // Control exclusivo: sin código no hay firma, aunque la sesión esté abierta.
-  if (!f.otpHash || !f.otpExpira) return { estado: 'sin_codigo' }
-  // El intento se gasta ANTES de comparar y en una sola sentencia.
-  const [gastado] = await prismaAsegura().$queryRaw<{ hash: string; intentos: number }[]>`
-    update presupuesto set firma_otp_intentos = firma_otp_intentos + 1
-    where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid and aceptado_at is null
-      and firma_otp_hash is not null and firma_otp_expira > now() and firma_otp_intentos < ${MAX_INTENTOS}::int
-    returning firma_otp_hash as hash, firma_otp_intentos as intentos`
-  if (!gastado) return f.otpExpira.getTime() < Date.now() ? { estado: 'codigo_caducado' } : { estado: 'demasiados_intentos' }
-  if (hashCodigo(datos.codigo.trim()) !== gastado.hash) return { estado: 'codigo_incorrecto', quedan: Math.max(0, MAX_INTENTOS - gastado.intentos) }
+  let metodo: 'otp_email' | 'otp_whatsapp' = 'otp_email'
+  if (datos.via === 'whatsapp') {
+    // El código del WhatsApp solo se comprueba con el token del enlace (va atado a él): sin el
+    // acceso por WhatsApp no hay con qué compararlo, y eso es «sin código», no «incorrecto».
+    if (!('tokenWhatsapp' in acceso)) return { estado: 'sin_codigo' }
+    const w = await gastarCodigoWhatsapp(correduriaId, acceso.tokenWhatsapp, datos.codigo.trim(), presupuestoId)
+    if (w.estado === 'incorrecto') return { estado: 'codigo_incorrecto', quedan: w.quedan }
+    if (w.estado === 'bloqueado') return { estado: 'demasiados_intentos' }
+    if (w.estado === 'caducado') return { estado: 'codigo_caducado' }
+    if (w.estado !== 'valido') return { estado: 'sin_codigo' }
+    metodo = 'otp_whatsapp'
+  } else {
+    if (!f.otpHash || !f.otpExpira) return { estado: 'sin_codigo' }
+    // El intento se gasta ANTES de comparar y en una sola sentencia.
+    const [gastado] = await prismaAsegura().$queryRaw<{ hash: string; intentos: number }[]>`
+      update presupuesto set firma_otp_intentos = firma_otp_intentos + 1
+      where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid and aceptado_at is null
+        and firma_otp_hash is not null and firma_otp_expira > now() and firma_otp_intentos < ${MAX_INTENTOS}::int
+      returning firma_otp_hash as hash, firma_otp_intentos as intentos`
+    if (!gastado) return f.otpExpira.getTime() < Date.now() ? { estado: 'codigo_caducado' } : { estado: 'demasiados_intentos' }
+    if (hashCodigo(datos.codigo.trim()) !== gastado.hash) return { estado: 'codigo_incorrecto', quedan: Math.max(0, MAX_INTENTOS - gastado.intentos) }
+  }
   if (!nombreCoincide(datos.nombre, f.tomador)) return { estado: 'nombre_no_coincide' }
 
   const hoy = hoyMadrid()
@@ -406,7 +443,7 @@ export async function firmarAceptacion(
     documento_id: documentoId,
     bytes: new TextEncoder().encode(texto),
     contexto,
-    metodo: 'otp_email',
+    metodo,
     nombre_confirmado: datos.nombre,
   })
   const evidencia = await firmar(presupuestoId, c.documento)
@@ -521,10 +558,9 @@ type Propio = {
 }
 
 /** El presupuesto, solo si es de la ficha de esta identidad. Mismo reparto que `base`, sin opción. */
-async function propio(correduriaId: string, identidadId: string, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {
+async function propio(correduriaId: string, acceso: AccesoPortal, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
-  // La ficha es la DUEÑA del presupuesto si está vinculada con nivel de operar; con varias no se elige.
-  const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  const ficha = await fichaDeAcceso(correduriaId, acceso, presupuestoId)
   if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const [f] = await prismaAsegura().$queryRaw<Omit<Propio, 'clienteId'>[]>`
@@ -543,8 +579,8 @@ export type ResultadoDatos =
   | { estado: 'no_encontrado' } | SinFicha
 
 /** Los datos con los que se calculó el precio, para el bloque «Revisa tus datos». No escribe nada. */
-export async function datosCotizadosDelPresupuesto(correduriaId: string, identidadId: string, presupuestoId: string): Promise<ResultadoDatos> {
-  const p = await propio(correduriaId, identidadId, presupuestoId)
+export async function datosCotizadosDelPresupuesto(correduriaId: string, acceso: AccesoPortal, presupuestoId: string): Promise<ResultadoDatos> {
+  const p = await propio(correduriaId, acceso, presupuestoId)
   if ('estado' in p) return p
   // Ofertas: no hay petición a Avant2; se enseña quién es el tomador y quién emite (sin tarificaciones).
   if (p.origen === 'ofertas') {
@@ -573,11 +609,11 @@ export type ResultadoReporte =
  * Alberto lo manda el portal por Telegram con el texto que devuelve esto.
  */
 export async function reportarDatosIncorrectos(
-  correduriaId: string, identidadId: string, presupuestoId: string, textoCrudo: string,
+  correduriaId: string, acceso: AccesoPortal, presupuestoId: string, textoCrudo: string,
 ): Promise<ResultadoReporte> {
   const texto = textoCrudo.trim().slice(0, MAX_TEXTO_REPORTE)
   if (texto.length < 3) return { estado: 'invalido' }
-  const p = await propio(correduriaId, identidadId, presupuestoId)
+  const p = await propio(correduriaId, acceso, presupuestoId)
   if ('estado' in p) return p
   if (p.retirado || p.emitido) return { estado: 'no_admite', motivo: 'Este presupuesto ya no admite cambios: escríbenos o llámanos.' }
   const db = prismaAsegura()

@@ -40,7 +40,7 @@ import { Plegable } from './RestoDeOpciones'
  * 📱 Escritorio: interruptores a la izquierda y lista a la derecha. Móvil: chips que se envuelven
  * encima de la lista. Lo decide `globals.css` (`.todas-*`), no dos árboles.
  */
-export function TodasLasOpciones({ presupuestoId, ramo, opciones, necesidades, coberturasActual, corredor, puedeAceptar, bloqueoDatos, telefono }: {
+export function TodasLasOpciones({ presupuestoId, ramo, opciones, necesidades, coberturasActual, corredor, puedeAceptar, bloqueoDatos, telefono, codigoWhatsapp = false }: {
   presupuestoId: string
   ramo: RamoGarantias | null
   /** Las no ocultas (el filtro `ocultaAt: null` ya lo aplica `leerOpciones`). */
@@ -53,6 +53,8 @@ export function TodasLasOpciones({ presupuestoId, ramo, opciones, necesidades, c
   puedeAceptar: boolean
   bloqueoDatos: string | null
   telefono: { tel: string; texto: string }
+  /** Entró con el código del WhatsApp: puede firmar con ese mismo código. */
+  codigoWhatsapp?: boolean
 }) {
   const interruptores = useMemo(() => (ramo === null ? [] : interruptoresGarantias(ramo, opciones)), [ramo, opciones])
   const inicial = useMemo(() => preseleccion(ramo, necesidades, interruptores), [ramo, necesidades, interruptores])
@@ -157,6 +159,7 @@ export function TodasLasOpciones({ presupuestoId, ramo, opciones, necesidades, c
             compania={o.compania}
             corredor={corredor}
             bloqueoDatos={bloqueoDatos}
+            codigoWhatsapp={codigoWhatsapp}
             perdidas={avisoPerdidas(ramo, o.garantias, actual)}
           />
         )}

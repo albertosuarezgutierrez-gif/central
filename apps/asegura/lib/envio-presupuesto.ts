@@ -7,10 +7,14 @@
 //     Alberto abre en su móvil y manda él. Se sella `enlace_generado_at`; el
 //     `enviado_at` solo cuando él confirma «ya lo he mandado».
 //
-// La IDENTIDAD es siempre el correo: el aviso lleva a la carátula del portal, y
-// ahí se entra con un código al correo de la ficha. Por eso los dos canales exigen
-// que la ficha tenga un correo legible — un WhatsApp a quien no puede recibir el
-// código le lleva a una puerta que no abre.
+// La puerta del portal es un CÓDIGO:
+//   · por correo, el de un solo uso que pide la persona en la carátula (exige que su
+//     correo resuelva a ESTA ficha: si no, vería «no es tuyo»);
+//   · por WhatsApp (07/10/2026), además, un código de 6 dígitos propio de este
+//     presupuesto que va EN el mensaje (`presupuesto-codigo-whatsapp.ts`), hasheado y
+//     atado al token: regenerar el enlace = código nuevo, y avisar por correo lo borra.
+//     Así el WhatsApp sale también a quien NO tiene correo, si hay un móvil válido en
+//     la ficha. Sin correo afirmable y sin móvil: no se avisa (una puerta que no abre).
 //
 // 🔑 El token en claro no se guarda en ningún sitio. Al avisar se genera uno
 // NUEVO y se rota el hash con un compare-and-swap sobre el anterior: dos clics
@@ -22,7 +26,7 @@
 // ficha ve el presupuesto por la rama del vínculo (`portal_vinculo.cliente_id`).
 
 import { calcularVencimiento, correoPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp } from '@central/module-seguros'
-import { generarTokenVista, hashTokenVista } from '@central/module-seguros-portal'
+import { generarCodigo, generarTokenVista, hashCodigoWhatsapp, hashTokenVista } from '@central/module-seguros-portal'
 
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 
@@ -34,6 +38,7 @@ import { estadoEmailDeFicha } from './email-ficha'
 import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
 import { fechaEfectoDe } from './presupuesto'
 import { admiteCodeoscopic, decidirSalida } from './presupuesto-origen'
+import { movilDeFicha } from './presupuesto-codigo-whatsapp'
 
 export type CanalAviso = 'email' | 'whatsapp_enlace'
 
@@ -83,6 +88,12 @@ const TEXTO_SIN_ACCESO: Record<string, string> = {
   no_comprobado: 'No se ha podido comprobar que su correo le lleve a esta ficha en el portal (PII_LOOKUP_KEY o consulta caída). No se avisa a ciegas.',
 }
 
+const TEXTO_SIN_MOVIL = 'Y no tiene un móvil válido (6xx/7xx) al que mandarle el código por WhatsApp.'
+const TEXTO_SIN_CORREO_NI_MOVIL =
+  'La ficha no tiene un correo con el que entrar ni un móvil válido (6xx/7xx) al que mandarle el código. Añade uno de los dos a su ficha.'
+const TEXTO_SIN_MOVIL_ILEGIBLE =
+  'El correo o el teléfono de la ficha no se pueden descifrar (PII_ENCRYPTION_KEY). Se arregla en Vercel, no llamando al cliente.'
+
 const TEXTO_SIN_EMAIL: Record<string, string> = {
   no_encontrado: 'La ficha del cliente no existe o está fusionada.',
   baja_de_correo: 'El cliente se dio de baja de correo: no se le avisa por ningún canal que lleve a un código por correo.',
@@ -100,6 +111,7 @@ export async function avisarPresupuesto(
     where: { id: entrada.id, correduriaId },
     select: {
       id: true, clienteId: true, tarificacionId: true, origen: true, oportunidadId: true, tokenHash: true, canalAviso: true, creadoAt: true, venceEl: true,
+      whatsappCodigoHash: true, whatsappCodigoIntentos: true,
       enlaceGeneradoAt: true, enviadoAt: true, vistoAt: true, elegidoAt: true, aceptadoAt: true, emitidoAt: true, retiradoAt: true,
       necesidades: true,
     },
@@ -129,21 +141,40 @@ export async function avisarPresupuesto(
   if (!salida.ok) return error(salida.motivo, salida.detalle)
 
   const ficha = await estadoEmailDeFicha(correduriaId, p.clienteId)
-  if (ficha.estado !== 'ok') return error('sin_email', TEXTO_SIN_EMAIL[ficha.estado] ?? 'No hay un correo al que mandar el código.')
-  // El portal enseña el presupuesto por el VÍNCULO con la ficha, y ese vínculo solo se forma si su
-  // correo resuelve a ESTA ficha. Avisar a quien luego vería «este presupuesto no es tuyo» es peor
-  // que no avisar: misma predicción que la invitación al portal.
-  const portal = await estadoPortalDeFicha(correduriaId, p.clienteId)
-  if (portal?.estado !== 'invitable' && portal?.estado !== 'ya_entra') {
-    return error('sin_acceso', TEXTO_SIN_ACCESO[portal?.estado ?? 'no_comprobado'] ?? TEXTO_SIN_ACCESO.no_comprobado!)
+  // El correo con el que se le dice que puede entrar. `null` (solo por WhatsApp) = no se nombra ninguno.
+  let emailAcceso: string | null
+  if (entrada.canal === 'email') {
+    if (ficha.estado !== 'ok') return error('sin_email', TEXTO_SIN_EMAIL[ficha.estado] ?? 'No hay un correo al que mandar el código.')
+    // El portal enseña el presupuesto por el VÍNCULO con la ficha, y ese vínculo solo se forma si su
+    // correo resuelve a ESTA ficha. Avisar a quien luego vería «este presupuesto no es tuyo» es peor
+    // que no avisar: misma predicción que la invitación al portal.
+    const portal = await estadoPortalDeFicha(correduriaId, p.clienteId)
+    if (portal?.estado !== 'invitable' && portal?.estado !== 'ya_entra') {
+      return error('sin_acceso', TEXTO_SIN_ACCESO[portal?.estado ?? 'no_comprobado'] ?? TEXTO_SIN_ACCESO.no_comprobado!)
+    }
+    emailAcceso = ficha.email
+  } else {
+    // Por WhatsApp se entra con el código del propio mensaje. El correo se le nombra como
+    // alternativa SOLO si se puede afirmar que le lleva a esta ficha; si no, hace falta un móvil.
+    const portal = ficha.estado === 'ok' ? await estadoPortalDeFicha(correduriaId, p.clienteId) : null
+    const conCorreo = (portal?.estado === 'invitable' || portal?.estado === 'ya_entra') && portal.emailInvitacion ? portal.emailInvitacion : null
+    if (conCorreo === null) {
+      const movil = await movilDeFicha(correduriaId, p.clienteId)
+      if (movil !== 'ok') {
+        if (ficha.estado === 'no_encontrado' || movil === 'no_encontrado') return error('sin_email', TEXTO_SIN_EMAIL.no_encontrado!)
+        if (ficha.estado === 'ilegible' || movil === 'ilegible') return error('sin_email', TEXTO_SIN_MOVIL_ILEGIBLE)
+        if (ficha.estado === 'ok') {
+          return error('sin_acceso', `${TEXTO_SIN_ACCESO[portal?.estado ?? 'no_comprobado'] ?? TEXTO_SIN_ACCESO.no_comprobado!} ${TEXTO_SIN_MOVIL}`)
+        }
+        return error('sin_email', TEXTO_SIN_CORREO_NI_MOVIL)
+      }
+    }
+    emailAcceso = conCorreo
   }
-  // Por WhatsApp se le dice con qué correo entrar: solo si se puede afirmar cuál.
-  if (entrada.canal === 'whatsapp_enlace' && !portal.emailInvitacion) {
-    return error('sin_acceso', 'No se puede afirmar con qué correo entrará, así que por WhatsApp no se le nombra ninguno. Mándalo por correo.')
-  }
-  const emailAcceso = entrada.canal === 'whatsapp_enlace' ? portal.emailInvitacion! : ficha.email
 
   const token = generarTokenVista()
+  // El código de acceso del WhatsApp: nuevo en cada enlace. Solo se guarda su hash, atado al token.
+  const codigoWhatsapp = entrada.canal === 'whatsapp_enlace' ? generarCodigo() : null
   const enlace = enlacePresupuesto(token)
   if (!enlace) return error('sin_enlace', 'Falta ASEGURA_PORTAL_URL o no es https: sin enlace no hay presupuesto que abrir. No se ha tocado nada.')
 
@@ -158,10 +189,14 @@ export async function avisarPresupuesto(
 
   // Compare-and-swap sobre el hash anterior: el segundo clic no encuentra la fila.
   const nuevoHash = await hashTokenVista(token)
+  const nuevoCodigoHash = codigoWhatsapp === null ? null : await hashCodigoWhatsapp(token, codigoWhatsapp)
   const rotado = await db.presupuesto.updateMany({
     where: { id: p.id, correduriaId, tokenHash: p.tokenHash, retiradoAt: null, elegidoAt: null, aceptadoAt: null, emitidoAt: null },
     data: {
       tokenHash: nuevoHash,
+      // El código va CON el token: regenerar el enlace = código nuevo; avisar por correo lo borra.
+      whatsappCodigoHash: nuevoCodigoHash,
+      whatsappCodigoIntentos: 0,
       canalAviso: entrada.canal,
       // El WhatsApp promete «válido hasta»: esa fecha se guarda ya, no al confirmar.
       ...(entrada.canal === 'whatsapp_enlace' ? { venceEl: venceSiSale, ...(p.enlaceGeneradoAt === null ? { enlaceGeneradoAt: ahora } : {}) } : {}),
@@ -170,7 +205,7 @@ export async function avisarPresupuesto(
   if (rotado.count === 0) return error('ocupado', 'Otro clic lo está enviando o ha cambiado a la vez. Recarga antes de repetir.')
 
   if (entrada.canal === 'whatsapp_enlace') {
-    const mensaje = mensajePresupuestoWhatsapp(datos)
+    const mensaje = mensajePresupuestoWhatsapp({ ...datos, codigo: codigoWhatsapp! })
     await db.presupuestoEvento.create({
       data: { presupuestoId: p.id, tipo: 'enlace_generado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'whatsapp_enlace' } },
     })
@@ -180,11 +215,13 @@ export async function avisarPresupuesto(
 
   // Acceso directo a la intranet (un solo uso, 24 h): el botón entra sin código y cae en la carátula,
   // que con sesión lleva al presupuesto. Si no se puede atar al correo, va el enlace de siempre.
-  const directo = await enlaceDirectoPresupuesto(correduriaId, p.clienteId, ficha.email, enlace)
-  const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', ficha.email, correoPresupuesto({ ...datos, enlaceDirecto: directo }))
+  // Por correo `emailAcceso` es SIEMPRE el de la ficha: sin él se cortó arriba, antes de escribir.
+  const correo = emailAcceso as string
+  const directo = await enlaceDirectoPresupuesto(correduriaId, p.clienteId, correo, enlace)
+  const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', correo, correoPresupuesto({ ...datos, enlaceDirecto: directo }))
   if (envio !== 'enviado') {
     // No salió: se devuelve la llave anterior para que el enlace que el cliente ya tuviera siga abriendo.
-    await db.presupuesto.updateMany({ where: { id: p.id, tokenHash: nuevoHash }, data: { tokenHash: p.tokenHash, canalAviso: p.canalAviso } })
+    await db.presupuesto.updateMany({ where: { id: p.id, tokenHash: nuevoHash }, data: { tokenHash: p.tokenHash, canalAviso: p.canalAviso, whatsappCodigoHash: p.whatsappCodigoHash, whatsappCodigoIntentos: p.whatsappCodigoIntentos } })
     await db.presupuestoEvento.create({
       data: { presupuestoId: p.id, tipo: 'envio_fallido', origen: 'sistema', detalle: { actor: entrada.actor, canal: 'email', motivo: envio } },
     })
@@ -200,7 +237,7 @@ export async function avisarPresupuesto(
       eventos: { create: [{ tipo: 'enviado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'email', reenvio: p.enviadoAt !== null } }] },
     },
   })
-  return { estado: 'enviado', email: ficha.email, venceEl: venceSiSale.toISOString() }
+  return { estado: 'enviado', email: correo, venceEl: venceSiSale.toISOString() }
 }
 
 /**

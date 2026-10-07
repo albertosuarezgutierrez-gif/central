@@ -1504,6 +1504,11 @@ model Presupuesto {
   referencia       String?   @default(dbgenerated())
   /// Primer PDF descargado para el cliente. NO prueba que se enviara (no es enviadoAt). NULL = no consta.
   documentoDescargadoAt DateTime? @map("documento_descargado_at") @db.Timestamptz(6)
+  /// Código de acceso mandado por WhatsApp, HASHEADO y atado al token (`hashCodigoWhatsapp`).
+  /// NULL = el enlace no salió por WhatsApp: no hay código. `2026-10-07_presupuesto_codigo_whatsapp.sql`
+  whatsappCodigoHash     String? @map("whatsapp_codigo_hash")
+  /// Fallos seguidos del código de WhatsApp (tope `MAX_INTENTOS`). Un acierto lo pone a 0.
+  whatsappCodigoIntentos Int     @default(0) @map("whatsapp_codigo_intentos") @db.SmallInt
 
   opciones PresupuestoOpcion[]
   eventos  PresupuestoEvento[]

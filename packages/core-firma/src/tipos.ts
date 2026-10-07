@@ -18,7 +18,12 @@ export interface ContextoFirma {
 }
 
 /** Cómo se ejerció el control exclusivo del firmante (eIDAS art.26.c). */
-export type MetodoFirma = 'sesion_token' | 'otp_email'
+/**
+ * `otp_whatsapp` (07/10/2026): el código de acceso propio de un presupuesto, que el corredor manda
+ * a mano por WhatsApp al móvil de la ficha. Vale hasta que vence o se regenera (no es de un solo
+ * uso) y lleva tope de fallos. Se registra con su nombre: no se hace pasar por `otp_email`.
+ */
+export type MetodoFirma = 'sesion_token' | 'otp_email' | 'otp_whatsapp'
 
 /** Lo que la vertical pasa al proveedor para firmar. */
 export interface EntradaFirma {
