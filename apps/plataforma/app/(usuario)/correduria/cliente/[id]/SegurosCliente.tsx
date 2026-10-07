@@ -13,6 +13,8 @@ import { TIPOS, fmt } from './piezas'
 import EliminarDeOportunidades, { RecuperarLead } from './EliminarDeOportunidades'
 import EditarVencimiento from './EditarVencimiento'
 import DescartarVolcado from './DescartarVolcado'
+import TarificarOportunidad from './TarificarOportunidad'
+import { destinoTarificar } from '@/lib/correduria/tarificar-oportunidad'
 
 /**
  * Los seguros del cliente en tres cubos, cada uno una tarjeta que se pincha
@@ -301,11 +303,22 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
       />
     </>
   )
-  if (!quitar && !vencimiento && !accionesDerivada) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
+  // «Tarificar» (07/10/2026): abre la pantalla de precio del ramo con lo que la oportunidad ya sabe (nunca cotiza).
+  // Póliza sin seguimiento: abre el suyo antes. Una oportunidad cerrada o una aportada sin seguimiento no la llevan.
+  const tarificar = !eliminable || s.clase === 'declarada' || (s.clase === 'oportunidad' && !abierta) ? null : (
+    <TarificarOportunidad
+      tomadorId={ctx.clienteId}
+      destino={destinoTarificar(s.clase === 'poliza'
+        ? { ramo: s.poliza.tipo, tomadorId: ctx.clienteId, oportunidadId: abiertaDe(s.oportunidad) ?? null, polizaId: s.poliza.id }
+        : { ramo: s.oportunidad.ramo, tomadorId: ctx.clienteId, oportunidadId: s.oportunidad.id, polizaId: null })}
+    />
+  )
+  if (!quitar && !vencimiento && !accionesDerivada && !tarificar) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
   return (
     <div style={{ ...tarjetaSeguro, gap: 8 }}>
       <Link href={href} prefetch={false} style={{ display: 'grid', gap: 4, alignContent: 'start', color: 'inherit', textDecoration: 'none' }}>{cuerpo}</Link>
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'start' }}>
+        {tarificar}
         {accionesDerivada}
         {!derivada && vencimiento}
         {!derivada && quitar && <div style={{ display: 'grid', flex: '1 1 auto' }}>{quitar}</div>}
