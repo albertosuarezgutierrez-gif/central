@@ -17,6 +17,7 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-07 · psd2-health-check** · hizo: canal 200; frescura psd2 OK (último mov 06/10, hace 1 día; mov_30d 44 vs prev 36; sin_fecha 0); latido enviado; dudas: —; fallos: —; PRs/commits: —
 - **2026-10-06 · trading-analista** · hizo: NAV 34.084,54€→/saldo, cartera (2 pos.)→/cartera, libro 0 nuevas + latido; 24 símbolos de velas (70) por 5 subagentes uno a uno; /analizar 22 analizados, 0 compras; /puntuar 1 cerrada; Telegram enviado; dudas: SPCX y VST vetados como «suplantación» (cierre +15%/+11% frente a su referencia vieja, parecen movimientos reales, no verificado); vela de hoy con volumen parcial y 2ª fuente un día atrasada a las 20:15 UTC; fallos: `canal-aviso.sh` no admite payloads grandes (arg demasiado largo) → usé un POST por fichero desde el scratchpad; PRs/commits: —
 - **2026-10-06 · facturas-correo** · hizo: Vía B sana (copia 05/10); 26 candidatos Gmail revisados, archivado Anthropic Receipt 2594-3325 (180€, seguros) en 10-Octubre-2026 + fila `facturas_drive` + etiqueta Procesada; barrido 4.0: Si Que Brilla 1.128,48€ y Supabase 25USD siguen `sin_revisar` (cargo aún no entra, banco hasta 05/10); dudas: ticket bp 06/10 (¿correduría o personal?), cargos Anthropic 170€ del 01 y 02/10 sin factura en `facturas_drive` ni conciliar; fallos: —; PRs/commits: —
 
