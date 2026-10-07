@@ -1259,17 +1259,17 @@ export {
 } from './datos-riesgo-generico.ts'
 export type { CambioCampo, ErrorCampo, Espec, EspecCampo, TipoCampoRiesgo, ValorCampo } from './datos-riesgo-generico.ts'
 export {
-  CAMPOS_VIVIENDA, CATALOGO_HOGAR_DE_CAMPO, ESPEC_VIVIENDA, ETIQUETA_CAMPO_VIVIENDA, admiteDatosVivienda, aplicarEdicionVivienda,
+  CAMPOS_VIVIENDA, CATALOGO_HOGAR_DE_CAMPO, ESPEC_VIVIENDA, busquedaCatastroDeVivienda, ETIQUETA_CAMPO_VIVIENDA, admiteDatosVivienda, aplicarEdicionVivienda,
   datosViviendaDeCotizacion, datosViviendaVacios, faltanDatosVivienda, incoherenciaVivienda, inicialesHogarDeRiesgo,
   leerDatosVivienda, motivoNoConfirmableVivienda, precargaViviendaDePoliza, textoFaltanVivienda, validarDatosViviendaRiesgo,
 } from './datos-vivienda-riesgo.ts'
 export type { CampoCatalogoVivienda, CampoVivienda, DatosViviendaRiesgo, ValidacionVivienda } from './datos-vivienda-riesgo.ts'
 export {
-  CAMPOS_CAPITAL, ESPEC_CAPITAL, ETIQUETA_CAMPO_CAPITAL, admiteDatosCapital, aplicarEdicionCapital, camposCapitalDelRamo,
+  CAMPOS_CAPITAL, ESPEC_CAPITAL, ETIQUETA_CAMPO_CAPITAL, MAX_ASEGURADOS, admiteDatosCapital, aplicarEdicionCapital, camposCapitalDelRamo,
   datosCapitalDeCotizacion, datosCapitalVacios, faltanDatosCapital, leerDatosCapital, motivoNoConfirmableCapital,
-  textoFaltanCapital, validarDatosCapitalRiesgo,
+  textoAseguradosAdicionales, textoFaltanCapital, validarAseguradosAdicionales, validarDatosCapitalRiesgo,
 } from './datos-capital-riesgo.ts'
-export type { CampoCapital, DatosCapitalRiesgo, RamoCapital, ValidacionCapital } from './datos-capital-riesgo.ts'
+export type { AseguradoAdicional, CampoCapital, DatosCapitalRiesgo, RamoCapital, ValidacionCapital, ValorEdicionCapital } from './datos-capital-riesgo.ts'
 export {
   AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, admiteDatosRiesgoLibre, aplicarEdicionLibre,
   datosRiesgoLibreVacios, faltanDatosRiesgoLibre, leerDatosRiesgoLibre, motivoNoConfirmableLibre, precargaLibreDePoliza,

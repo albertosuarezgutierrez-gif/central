@@ -6,7 +6,8 @@ import { join } from 'node:path'
 
 import {
   companiasDisponibles, comunConRiesgo, extrasConGuardado, extrasIniciales, formularioComunInicial, idOportunidadCreada,
-  leerPresupuestos, mensajePedido, prepararPedido, ramosConBot, ultimoPorCompania, type FormularioComun,
+  leerPresupuestos, mensajePedido, prepararPedido, ramosConBot, ultimoPorCompania, sembrarDesdeRiesgoLibre, avisoRamoSinTarifa,
+  AVISO_COTIZA_POR_BOTS, type FormularioComun,
 } from './presupuestos-companias.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -119,8 +120,39 @@ test('la ficha ya no cotiza: solo enlaza a la oportunidad; la oportunidad monta 
   assert.ok(!boton.includes('tarificador/encolar') && !boton.includes('tarificador/oportunidad'), 'el botón de la ficha no encola nada')
   assert.match(boton, /#presupuestos/)
   const pantalla = readFileSync(join(APP, 'app/(usuario)/correduria/oportunidad/[id]/RiesgoPantalla.tsx'), 'utf8')
-  assert.match(pantalla, /<PresupuestosCompanias oportunidadId=\{op\.id\} ramo=\{op\.ramo\} \/>/)
+  assert.match(pantalla, /<PresupuestosCompanias\s+oportunidadId=\{op\.id\}\s+ramo=\{op\.ramo\}\s+riesgoLibre=\{/, 'y le pasa el capital y la dirección del riesgo para sembrar el formulario')
   const seccion = readFileSync(join(APP, 'app/(usuario)/correduria/oportunidad/[id]/PresupuestosCompanias.tsx'), 'utf8')
   assert.match(seccion, /prepararPedido\(f, extras, elegidas, disponibles\)/, 'se valida antes de encolar')
   assert.match(seccion, /LOTE_ANTERIORES/, 'las peticiones anteriores no se montan de golpe')
+  assert.match(seccion, /sembrarDesdeRiesgoLibre\(f0, libreRef\.current\)/, 'lo guardado/previo manda y el riesgo solo rellena huecos')
+})
+
+test('siembra desde «Datos del riesgo»: capital y dirección solo en los campos vacíos; lo tecleado manda; null ≠ 0', () => {
+  const base = formularioComunInicial(null, HOY)
+  const a = sembrarDesdeRiesgoLibre(base, { capital: 1500000, direccion: 'Calle Socorro 24, 41003 Sevilla' })
+  assert.equal(a.formulario.capitalContinente, '1.500.000')
+  assert.equal(a.formulario.via, 'Calle Socorro 24, 41003 Sevilla')
+  assert.equal(a.formulario.codigoPostal, '41003')
+  assert.deepEqual(a.sembrados, ['capital', 'dirección', 'código postal'])
+  // Lo ya puesto no se pisa.
+  const lleno2 = { ...base, capitalContinente: '900.000', via: 'Avenida X 1', codigoPostal: '41010' }
+  const b = sembrarDesdeRiesgoLibre(lleno2, { capital: 1500000, direccion: 'Calle Socorro 24, 41003' })
+  assert.equal(b.formulario.capitalContinente, '900.000')
+  assert.equal(b.formulario.via, 'Avenida X 1')
+  assert.equal(b.formulario.codigoPostal, '41010')
+  assert.deepEqual(b.sembrados, [])
+  // Sin dato no se inventa: capital 0 o null y dirección vacía no siembran nada; dos CP distintos no se adivinan.
+  for (const libre of [null, undefined, { capital: null, direccion: null }, { capital: 0, direccion: '  ' }]) {
+    const c = sembrarDesdeRiesgoLibre(base, libre)
+    assert.deepEqual(c.formulario, base)
+    assert.deepEqual(c.sembrados, [])
+  }
+  assert.equal(sembrarDesdeRiesgoLibre(base, { capital: null, direccion: 'Pl. 41001 y 41002' }).formulario.codigoPostal, base.codigoPostal)
+  assert.equal(sembrarDesdeRiesgoLibre(base, { capital: null, direccion: 'Ref 1234567' }).formulario.codigoPostal, base.codigoPostal, 'siete cifras no son un CP')
+})
+
+test('el aviso de «se cotiza fuera» solo si ningún bot cotiza el ramo', () => {
+  assert.equal(avisoRamoSinTarifa('comunidades', 'FUERA'), AVISO_COTIZA_POR_BOTS)
+  assert.match(AVISO_COTIZA_POR_BOTS, /bots/)
+  for (const r of ['comercio', 'responsabilidad_civil', 'otros']) assert.equal(avisoRamoSinTarifa(r, 'FUERA'), 'FUERA', r)
 })

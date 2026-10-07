@@ -204,18 +204,21 @@ const CAMPO_FALTA: Record<string, string> = {
   dni: 'DNI', nombre: 'nombre', apellido1: 'apellido', fechaNacimiento: 'fecha de nacimiento',
   sexo: 'sexo', telefono: 'móvil', fechaCarnet: 'fecha del carnet', ficha: 'ficha',
   empresa_no_conduce: 'es una empresa y no puede conducir (asigna un conductor habitual persona)',
+  estadoCivil: 'estado civil (no consta; se elige del catálogo en la pantalla de precio)',
 }
 /**
  * Dónde se rellena cada clave que puede devolver `faltanDeFigura()` (apps/asegura/lib/oportunidad-riesgo.ts).
  * · `completar`: bloque «Falta por completar» del modal «Editar datos» (sexo → `clientes.saludo`, móvil → teléfono principal).
  * · `formulario`: formulario del propio modal (identidad: DNI/nombre/apellidos/nacimiento; carné: sección de carnés de `PanelDatosCliente`).
  * · `cambiar`: no es un dato que teclear: se resuelve con «Cambiar» (poner a una persona como conductor).
+ * · `pantalla_precio`: el estado civil del vendor es un id de catálogo y se elige en la pantalla de precio del ramo
+ *   (vida, salud, decesos); la ficha no tiene editor de estado civil. Se avisa, no se bloquea.
  * · `sin_ficha`: la figura no tiene ficha legible; no hay nada que editar hasta que exista.
  * Un test lee `faltanDeFigura` y falla si aparece una clave sin entrada aquí.
  */
-export const EDITOR_DE_FALTA: Record<string, 'completar' | 'formulario' | 'cambiar' | 'sin_ficha'> = {
+export const EDITOR_DE_FALTA: Record<string, 'completar' | 'formulario' | 'cambiar' | 'sin_ficha' | 'pantalla_precio'> = {
   dni: 'formulario', nombre: 'formulario', apellido1: 'formulario', fechaNacimiento: 'formulario', fechaCarnet: 'formulario',
-  sexo: 'completar', telefono: 'completar',
+  sexo: 'completar', telefono: 'completar', estadoCivil: 'pantalla_precio',
   empresa_no_conduce: 'cambiar', ficha: 'sin_ficha',
 }
 

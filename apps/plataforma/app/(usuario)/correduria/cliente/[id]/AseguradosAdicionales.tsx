@@ -8,6 +8,7 @@
 // «dato que falta» y no cotiza.
 
 import { btnStyle, cardStyle } from '@/components/ui'
+import type { AseguradoAdicional } from '@central/module-seguros'
 
 export type AseguradoForm = {
   nombre: string
@@ -24,6 +25,17 @@ export const ASEGURADO_VACIO: AseguradoForm = { nombre: '', apellido1: '', apell
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
   fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%',
+}
+
+/**
+ * Los asegurados anotados en el riesgo (`datosCapital.asegurados`) como filas del formulario; `null` = ninguno anotado.
+ * 🔒 El riesgo no guarda DNI/NIE ni nacionalidad: salen vacíos y se teclean aquí si la compañía los exige.
+ */
+export function aseguradosDeRiesgo(l: readonly AseguradoAdicional[] | null | undefined): AseguradoForm[] {
+  return (l ?? []).map((a) => ({
+    nombre: a.nombre, apellido1: a.apellido1, apellido2: a.apellido2 ?? '', fechaNacimiento: a.fechaNacimiento, sexo: a.sexo,
+    dni: '', nacionalidad: '',
+  }))
 }
 
 /** ¿Está completo lo mínimo de uno? (el servidor revisa el resto: DNI, letra, NIE…). */
@@ -44,16 +56,20 @@ export default function AseguradosAdicionales({
   lista,
   onChange,
   deshabilitado = false,
+  sinDni = false,
 }: {
   lista: AseguradoForm[]
   onChange: (l: AseguradoForm[]) => void
   deshabilitado?: boolean
+  /** En «Datos del riesgo» de la oportunidad no se pide ni se guarda el DNI (se teclea al pedir precio). */
+  sinDni?: boolean
 }) {
   const cambiar = (i: number, parte: Partial<AseguradoForm>) => onChange(lista.map((a, j) => (j === i ? { ...a, ...parte } : a)))
   return (
     <div style={{ marginTop: 16 }}>
       <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 8px' }}>
         Asegurados además del tomador (viajan en <code>insureds[]</code>). Parentesco y capital por persona no existen en la API: no se piden.
+        {sinDni && ' El DNI no se guarda en el riesgo: se teclea al pedir precio si la compañía lo exige.'}
       </p>
       {lista.map((a, i) => (
         <div key={i} style={{ ...cardStyle, padding: 12, marginBottom: 10 }}>
@@ -78,10 +94,12 @@ export default function AseguradosAdicionales({
                 <option value="mujer">Mujer</option>
               </select>
             </Celda>
+            {!sinDni && (
             <Celda etiqueta="DNI / NIE (opcional)" ayuda="Solo si el vendor no lo exige puede quedar vacío; si lo exige, el servidor lo dirá sin gastar.">
               <input value={a.dni} onChange={(e) => cambiar(i, { dni: e.target.value })} style={input} />
             </Celda>
-            {/^[XYZxyz]/.test(a.dni.trim()) && (
+            )}
+            {!sinDni && /^[XYZxyz]/.test(a.dni.trim()) && (
               <Celda etiqueta="Nacionalidad (ISO de 3 letras)" falta={a.nacionalidad.trim() === ''}>
                 <input value={a.nacionalidad} onChange={(e) => cambiar(i, { nacionalidad: e.target.value })} placeholder="MAR" style={input} />
               </Celda>

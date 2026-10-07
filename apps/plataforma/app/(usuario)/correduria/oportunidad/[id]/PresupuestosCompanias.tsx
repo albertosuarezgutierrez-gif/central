@@ -15,8 +15,8 @@ import {
 } from '@/lib/tarificador-asegura-reglas'
 import {
   comunConRiesgo, companiasDisponibles, extrasConGuardado, extrasIniciales, formularioComunInicial, leerPresupuestos,
-  mensajePedido, prepararPedido, ultimoPorCompania,
-  type ExtrasFormulario, type FormularioComun, type LecturaPresupuestos, type ResultadoPedido, type TrabajoCompania,
+  mensajePedido, prepararPedido, sembrarDesdeRiesgoLibre, ultimoPorCompania,
+  type ExtrasFormulario, type FormularioComun, type LecturaPresupuestos, type ResultadoPedido, type RiesgoLibreParaBots, type TrabajoCompania,
 } from '@/lib/presupuestos-companias'
 
 const CAMPO: CSSProperties = { display: 'grid', gap: 4, minWidth: 0, fontSize: 12, color: 'var(--muted)' }
@@ -28,7 +28,12 @@ const LOTE_ANTERIORES = 10
 
 type Lectura = { estado: 'cargando' } | { estado: 'ok'; datos: LecturaPresupuestos } | { estado: 'error'; texto: string }
 
-export default function PresupuestosCompanias({ oportunidadId, ramo }: { oportunidadId: string; ramo: string }) {
+export default function PresupuestosCompanias({ oportunidadId, ramo, riesgoLibre = null }: {
+  oportunidadId: string
+  ramo: string
+  /** Capital y dirección del bloque «Datos del riesgo» de la oportunidad: siembran los campos vacíos del formulario. */
+  riesgoLibre?: RiesgoLibreParaBots | null
+}) {
   const disponibles = useMemo(() => companiasDisponibles(ramo), [ramo])
   const nombres = useMemo(() => Object.fromEntries(disponibles.map((c) => [c.compania, c.nombre])), [disponibles])
 
@@ -47,6 +52,9 @@ export default function PresupuestosCompanias({ oportunidadId, ramo }: { oportun
   const [verAnteriores, setVerAnteriores] = useState(0)
   const tocado = useRef(false)
   const precargado = useRef(false)
+  // Lo del riesgo se lee UNA vez, en la primera lectura: reeditar «Datos del riesgo» no pisa lo que se esté tecleando aquí.
+  const libreRef = useRef(riesgoLibre)
+  libreRef.current = riesgoLibre
 
   const set = <K extends keyof FormularioComun>(k: K, v: FormularioComun[K]) => { tocado.current = true; setF((x) => ({ ...x, [k]: v })) }
   const setExtra = (compania: string, clave: string, v: string) => {
@@ -74,22 +82,41 @@ export default function PresupuestosCompanias({ oportunidadId, ramo }: { oportun
       const d = await leer()
       if (precargado.current) return
       precargado.current = true
-      if (!d) { setAbierto(true); return }
+      if (!d) {
+        setAbierto(true)
+        // Aunque no se hayan podido leer los trabajos, el riesgo de arriba ya está en pantalla: siembra igual.
+        if (!tocado.current) {
+          const s = sembrarDesdeRiesgoLibre(formularioComunInicial(null), libreRef.current)
+          setF(s.formulario)
+          if (s.sembrados.length > 0) setOrigen(`${s.sembrados.join(', ')} de «Datos del riesgo» — revísalos`)
+        }
+        return
+      }
       if (d.trabajos.length === 0) setAbierto(true)
       if (d.trabajos.some((t) => sigueEnCurso(t.estado))) setSondeoDesde(Date.now())
       if (tocado.current) return
       const base = formularioComunInicial(null)
+      let f0 = base
+      let origen0: string | null = null
       if (d.guardado) {
-        setF(comunConRiesgo(base, d.guardado.formulario))
+        f0 = comunConRiesgo(base, d.guardado.formulario)
         setExtras((x) => extrasConGuardado(x, disponibles, d.guardado!.extras, null))
         const guardadas = d.guardado.companias.filter((c) => disponibles.some((x) => x.compania === c))
         if (guardadas.length) setElegidas(guardadas)
-        setOrigen(`Formulario guardado en esta oportunidad${d.guardado.actualizadoEn ? ` (${fechaCorta(d.guardado.actualizadoEn)})` : ''} — revísalo`)
+        origen0 = `Formulario guardado en esta oportunidad${d.guardado.actualizadoEn ? ` (${fechaCorta(d.guardado.actualizadoEn)})` : ''} — revísalo`
       } else if (d.previo) {
-        setF(comunConRiesgo(base, d.previo.riesgo))
+        f0 = comunConRiesgo(base, d.previo.riesgo)
         setExtras((x) => extrasConGuardado(x, disponibles, null, d.previo!.riesgo))
-        setOrigen(`Datos de la última petición del cliente${d.previo.creadoEn ? ` (${fechaCorta(d.previo.creadoEn)})` : ''} — revísalos`)
+        origen0 = `Datos de la última petición del cliente${d.previo.creadoEn ? ` (${fechaCorta(d.previo.creadoEn)})` : ''} — revísalos`
       }
+      // Lo que falte se completa con el capital y la dirección de «Datos del riesgo» (nunca pisa lo anterior).
+      const sembrado = sembrarDesdeRiesgoLibre(f0, libreRef.current)
+      setF(sembrado.formulario)
+      if (sembrado.sembrados.length > 0) {
+        const delRiesgo = `${sembrado.sembrados.join(', ')} de «Datos del riesgo» — revísalos`
+        origen0 = origen0 ? `${origen0}; ${delRiesgo}` : delRiesgo
+      }
+      setOrigen(origen0)
     })()
   }, [disponibles, leer])
 

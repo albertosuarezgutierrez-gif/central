@@ -4,11 +4,12 @@ import {
   calcularEdicionRiesgo, claveDatosDeRamo, leerBloqueDeRamo, precargaDePoliza, ramoTarificable,
 } from './datos-riesgo-ramo.ts'
 import {
-  CATALOGO_HOGAR_DE_CAMPO, aplicarEdicionVivienda, datosViviendaDeCotizacion, datosViviendaVacios, faltanDatosVivienda,
+  CATALOGO_HOGAR_DE_CAMPO, aplicarEdicionVivienda, busquedaCatastroDeVivienda, datosViviendaDeCotizacion, datosViviendaVacios, faltanDatosVivienda,
   inicialesHogarDeRiesgo, leerDatosVivienda, precargaViviendaDePoliza, validarDatosViviendaRiesgo,
 } from './datos-vivienda-riesgo.ts'
 import {
-  aplicarEdicionCapital, datosCapitalDeCotizacion, faltanDatosCapital, leerDatosCapital, validarDatosCapitalRiesgo,
+  aplicarEdicionCapital, camposCapitalDelRamo, datosCapitalDeCotizacion, faltanDatosCapital, leerDatosCapital, textoAseguradosAdicionales,
+  validarAseguradosAdicionales, validarDatosCapitalRiesgo,
 } from './datos-capital-riesgo.ts'
 import { aplicarEdicionLibre, faltanDatosRiesgoLibre, validarDatosRiesgoLibre } from './datos-riesgo-libre.ts'
 import { numeroDesdeTexto, soloLoQueCambia } from './datos-riesgo-generico.ts'
@@ -31,6 +32,7 @@ test('cada ramo tiene su clave y los libres se cotizan fuera', () => {
 
 // ─── Vivienda ────────────────────────────────────────────────────────────────
 const viviendaCompleta = {
+  referenciaCatastral: '1234567VK4713C0001AA', propietarioEsTomador: true, provincia: 'Sevilla',
   cp: '41003', municipioId: 41091, tipoViaId: 'Calle', nombreVia: 'Socorro', numeroVia: '24', metrosCuadrados: 90, anioConstruccion: 1985,
   habitaciones: 3, tipoVivienda: 'MiddleFloor', uso: 'Owner', ocupacion: 'MainResidence', ubicacion: 'Urban', material: 'Brick',
   calidad: 'Normal', alarma: 'None', puertasSecundarias: 'None', asentamiento: 'Replacement', puertaPrincipalBlindada: false,
@@ -41,7 +43,10 @@ test('vivienda: faltan = los obligatorios de revisarDatosHogar; null (sin ficha)
   const todo = faltanDatosVivienda(null)
   for (const k of ['cp', 'municipioId', 'tipoViaId', 'nombreVia', 'numeroVia', 'metrosCuadrados', 'anioConstruccion', 'habitaciones',
     'tipoVivienda', 'uso', 'ocupacion', 'ubicacion', 'material', 'calidad', 'alarma', 'puertasSecundarias', 'asentamiento',
-    'puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada', 'capitalContinente']) assert.ok(todo.includes(k as never), k)
+    'puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada', 'capitalContinente',
+    // 07/10/2026: lo que la pantalla de precio exige y antes no se decía (sin referencia no pasa del buscador).
+    'referenciaCatastral', 'propietarioEsTomador']) assert.ok(todo.includes(k as never), k)
+  assert.ok(!todo.includes('provincia' as never), 'la provincia solo prerrellena el buscador: no es obligatoria')
   const v = validarDatosViviendaRiesgo(viviendaCompleta, { hoy: HOY })
   assert.ok(v.ok)
   const { datos } = aplicarEdicionVivienda(null, v.valor, { confirmar: false, ahora: AHORA })
@@ -177,7 +182,24 @@ test('iniciales de hogar: catálogos a resueltos, resto a correcciones; el Catas
   assert.equal(b.correcciones.metrosCuadrados, 90)
   const c = inicialesHogarDeRiesgo({ ...d, referenciaCatastral: null })
   assert.equal(c.correcciones.metrosCuadrados, 90)
+  assert.equal(a.resueltos.propietarioEsTomador, true, 'sí/no del propietario se siembra como resuelto (false también es un dato)')
+  assert.equal(inicialesHogarDeRiesgo({ ...d, propietarioEsTomador: false }).resueltos.propietarioEsTomador, false)
+  assert.equal(Object.hasOwn(inicialesHogarDeRiesgo({ ...d, propietarioEsTomador: null }).resueltos, 'propietarioEsTomador'), false, 'null no se siembra')
+  assert.equal(Object.hasOwn(a.correcciones, 'provincia') || Object.hasOwn(a.resueltos, 'provincia'), false, 'la provincia solo es del buscador, no viaja a la cotización')
   assert.deepEqual(inicialesHogarDeRiesgo(null), { resueltos: {}, correcciones: {} })
+})
+
+test('buscador del Catastro: tipo de vía + calle + número + municipio/provincia del riesgo; sin inventar', () => {
+  const v = (x: object) => x as never
+  assert.deepEqual(
+    busquedaCatastroDeVivienda(v({ tipoViaId: '7', nombreVia: 'Socorro', numeroVia: '24', municipio: 'Sevilla', provincia: 'Sevilla', direccion: 'otra' }), 'Calle'),
+    { direccion: 'Calle Socorro 24', municipio: 'Sevilla', provincia: 'Sevilla' }, 'la calle estructurada manda sobre el texto libre')
+  assert.equal(busquedaCatastroDeVivienda(v({ tipoViaId: 'Calle', nombreVia: 'San  Vicente', numeroVia: '40' })).direccion, 'Calle San Vicente 40', 'un id que ya es una palabra vale')
+  assert.equal(busquedaCatastroDeVivienda(v({ tipoViaId: '7', nombreVia: 'Socorro', numeroVia: '24' })).direccion, 'Socorro 24', 'un código numérico no es un tipo de vía')
+  assert.equal(busquedaCatastroDeVivienda(v({ nombreVia: 'Socorro', direccion: 'Calle Socorro 24, 2º' })).direccion, 'Calle Socorro 24, 2º', 'sin número no hay calle completa: manda lo escrito')
+  assert.deepEqual(busquedaCatastroDeVivienda(v({ direccion: 'Calle A 1' })), { direccion: 'Calle A 1', municipio: null, provincia: null }, 'sin municipio: null, nunca «Sevilla»')
+  assert.deepEqual(busquedaCatastroDeVivienda(null), { direccion: null, municipio: null, provincia: null })
+  assert.equal(busquedaCatastroDeVivienda(v({ nombreVia: 'Socorro' })).direccion, 'Socorro', 'solo calle: se enseña para completarla')
 })
 
 test('catálogos de hogar: nueve campos, uno por catálogo', () => {
@@ -193,33 +215,94 @@ test('capital: en vida falta el capital; en salud y decesos no falta nada; null 
   assert.deepEqual(faltanDatosCapital(null, 'decesos'), [])
   const v = validarDatosCapitalRiesgo({ capital: 0 }, { hoy: HOY })
   assert.equal(v.ok, false, 'un capital de 0 no es un capital')
-  assert.ok(validarDatosCapitalRiesgo({ capital: '120.000', duracionAnios: '20' }, { hoy: HOY, ramo: 'vida' }).ok)
-  const salud = validarDatosCapitalRiesgo({ duracionAnios: 20 }, { hoy: HOY, ramo: 'salud' })
-  assert.equal(salud.ok, false, 'la duración no existe en salud')
-  assert.ok(validarDatosCapitalRiesgo({ duracionAnios: null }, { hoy: HOY, ramo: 'salud' }).ok, 'borrarla sí se admite')
+  assert.ok(validarDatosCapitalRiesgo({ capital: '120.000', profesion: '2612', fumador: false }, { hoy: HOY, ramo: 'vida' }).ok)
+  assert.equal(validarDatosCapitalRiesgo({ capital: 1, duracionAnios: 20 }, { hoy: HOY, ramo: 'vida' }).ok, false, 'la duración se quitó de vida (03/10/2026): ya no se acepta')
+  assert.ok(validarDatosCapitalRiesgo({ duracionAnios: null }, { hoy: HOY, ramo: 'vida' }).ok, 'borrar una heredada sí se admite')
+  assert.deepEqual(camposCapitalDelRamo('vida'), ['capital', 'profesion', 'fumador'])
+  assert.equal(validarDatosCapitalRiesgo({ duracionAnios: 20 }, { hoy: HOY, ramo: 'salud' }).ok, false, 'la duración no existe en salud')
   assert.equal(validarDatosCapitalRiesgo({ duracionAnios: 0 }, { hoy: HOY }).ok, false)
+  // Profesión: 4 cifras (CNO-11 nivel 4); fumador: sí/no/null. Ni la profesión ni el fumador existen en salud/decesos.
+  const err = (p: unknown, ramo: 'vida' | 'salud' | 'decesos') => { const x = validarDatosCapitalRiesgo(p, { hoy: HOY, ramo }); return x.ok ? [] : x.errores.map((e) => e.campo) }
+  assert.deepEqual(err({ profesion: '261' }, 'vida'), ['profesion'])
+  assert.deepEqual(err({ profesion: '26123' }, 'vida'), ['profesion'])
+  assert.deepEqual(err({ profesion: 'abcd' }, 'vida'), ['profesion'])
+  assert.deepEqual(err({ fumador: 'no' }, 'vida'), ['fumador'])
+  assert.deepEqual(err({ profesion: '2612' }, 'salud'), ['profesion'])
+  assert.deepEqual(err({ fumador: true }, 'decesos'), ['fumador'])
+  const ok = validarDatosCapitalRiesgo({ profesion: ' 2612 ', fumador: false }, { hoy: HOY, ramo: 'vida' })
+  assert.ok(ok.ok && ok.valor.profesion === '2612' && ok.valor.fumador === false, 'fumar «no» es un dato, no un vacío')
+  assert.ok(validarDatosCapitalRiesgo({ profesion: null, fumador: null }, { hoy: HOY, ramo: 'vida' }).ok, 'null borra')
 })
 
 test('capital: fusión sin pisar claves viejas, sello y discriminante', () => {
   const info = { origen: 'x', presupuestoCodeoscopic: '41999' }
-  const r = calcularEdicionRiesgo({ ramo: 'vida', clave: 'datosCapital', info, parcial: { capital: 150000, duracionAnios: 20 }, confirmar: true, ahora: AHORA, hoy: HOY })
+  const r = calcularEdicionRiesgo({ ramo: 'vida', clave: 'datosCapital', info, parcial: { capital: 150000, profesion: '2612', fumador: false }, confirmar: true, ahora: AHORA, hoy: HOY })
   assert.ok(r.ok)
   assert.equal(r.infoNueva.origen, 'x')
   assert.equal(r.infoNueva.presupuestoCodeoscopic, '41999')
   assert.equal((r.datos as { confirmadoAt: string }).confirmadoAt, AHORA)
   const luego = leerDatosCapital(r.infoNueva.datosCapital)
-  assert.deepEqual(luego && [luego.capital, luego.duracionAnios, luego.modalidadDeseada], [150000, 20, null])
+  assert.deepEqual(luego && [luego.capital, luego.profesion, luego.fumador, luego.modalidadDeseada, luego.asegurados], [150000, '2612', false, null, null])
   const edit = aplicarEdicionCapital(luego, { capital: 200000 }, { confirmar: false, ahora: AHORA })
   assert.equal(edit.datos.confirmadoAt, null)
   assert.equal(calcularEdicionRiesgo({ ramo: 'salud', clave: 'datosCapital', info: {}, parcial: {}, confirmar: true, ahora: AHORA }).ok, false, 'sin datos no se confirma')
 })
 
 test('write-back de capital: solo lo declarado y de ese ramo', () => {
-  assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { estadoCivilId: '1', capital: 100000, duracionAnios: 15 } }, 'vida', { hoy: HOY }), { capital: 100000, duracionAnios: 15 })
+  assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { estadoCivilId: '1', capital: 100000, duracionAnios: 15, profesion: '2612', fumador: false } }, 'vida', { hoy: HOY }), { capital: 100000, profesion: '2612', fumador: false }, 'la duración ya no se anota; fumador=false sí es un dato')
+  assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { capital: 100000, profesion: '26', fumador: true } }, 'vida', { hoy: HOY }), { capital: 100000, fumador: true }, 'una profesión inválida se descarta, el resto se conserva')
   assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { capital: 5000, modalidadDeseada: 'Copago' } }, 'salud', { hoy: HOY }), { capital: 5000, modalidadDeseada: 'Copago' })
   assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { capital: 5000, duracionAnios: 9 } }, 'decesos', { hoy: HOY }), { capital: 5000 })
   assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { capital: '' } }, 'vida', { hoy: HOY }), {})
   assert.deepEqual(datosCapitalDeCotizacion(null, 'vida'), {})
+})
+
+// ─── Asegurados adicionales (salud y decesos, 07/10/2026) ───────────────────
+const ana = { nombre: 'Ana', apellido1: 'Pérez', apellido2: 'Gil', fechaNacimiento: '1990-05-17', sexo: 'mujer' }
+const anaConDni = { ...ana, dni: '12345678Z', nacionalidad: 'ESP' }
+
+test('asegurados: validación fila a fila, NUNCA se guarda un DNI, [] ≠ null', () => {
+  const v = validarAseguradosAdicionales([anaConDni], { hoy: HOY })
+  assert.ok(v.ok && v.valor?.length === 1)
+  assert.deepEqual(v.ok && v.valor?.[0], ana, 'el DNI y la nacionalidad que vengan se ignoran: en info_riesgo no se escribe ningún documento')
+  assert.equal(JSON.stringify(v).includes('12345678'), false)
+  const motivo = (l: unknown) => { const x = validarAseguradosAdicionales(l, { hoy: HOY }); return x.ok ? null : x.errores.map((e) => e.motivo).join(' ') }
+  assert.match(motivo([{ ...ana, nombre: '' }]) ?? '', /Asegurado 1: falta el nombre/)
+  assert.match(motivo([{ ...ana, apellido1: null }]) ?? '', /primer apellido/)
+  assert.match(motivo([ana, { ...ana, fechaNacimiento: '2999-01-01' }]) ?? '', /Asegurado 2: .*no futura/)
+  assert.match(motivo([{ ...ana, fechaNacimiento: '1990-02-31' }]) ?? '', /real/)
+  assert.match(motivo([{ ...ana, sexo: '' }]) ?? '', /hombre o mujer/)
+  assert.match(motivo({}) ?? '', /lista/)
+  assert.match(motivo(Array.from({ length: 11 }, () => ana)) ?? '', /como mucho 10/)
+  const vacia = validarAseguradosAdicionales([], { hoy: HOY })
+  assert.ok(vacia.ok && Array.isArray(vacia.valor) && vacia.valor.length === 0, '[] = revisado, ninguno')
+  const borrar = validarAseguradosAdicionales(null, { hoy: HOY })
+  assert.ok(borrar.ok && borrar.valor === null, 'null = sin mirar')
+  assert.equal(textoAseguradosAdicionales([]), 'ninguno')
+})
+
+test('asegurados: se guardan por ramo (no en vida), se anotan de la cotización y se leen sin fiarse', () => {
+  const salud = calcularEdicionRiesgo({ ramo: 'salud', clave: 'datosCapital', info: {}, parcial: { asegurados: [ana] }, confirmar: false, ahora: AHORA, hoy: HOY })
+  assert.ok(salud.ok && salud.cambios.some((c) => c.campo === 'asegurados' && c.despues === 'Ana Pérez (1990-05-17)'))
+  const luego = leerDatosCapital(salud.ok ? salud.infoNueva.datosCapital : null)
+  assert.equal(luego?.asegurados?.length, 1)
+  assert.equal(Object.hasOwn(luego?.asegurados?.[0] ?? {}, 'dni'), false)
+  const vida = calcularEdicionRiesgo({ ramo: 'vida', clave: 'datosCapital', info: {}, parcial: { asegurados: [ana] }, confirmar: false, ahora: AHORA, hoy: HOY })
+  assert.equal(vida.ok, false, 'una vida no tiene asegurados adicionales')
+  // Sin cambios no se reescribe; quitar todos los asegurados («[]») sí es un cambio y borra el sello.
+  const sellado = { ...luego!, confirmadoAt: '2026-10-01T10:00:00.000Z' }
+  const igual = calcularEdicionRiesgo({ ramo: 'salud', clave: 'datosCapital', info: { datosCapital: sellado }, parcial: { asegurados: luego!.asegurados }, confirmar: false, ahora: AHORA, hoy: HOY })
+  assert.ok(igual.ok && !igual.hayQueEscribir && igual.datos.confirmadoAt === '2026-10-01T10:00:00.000Z')
+  const quitar = calcularEdicionRiesgo({ ramo: 'salud', clave: 'datosCapital', info: { datosCapital: sellado }, parcial: { asegurados: [] }, confirmar: false, ahora: AHORA, hoy: HOY })
+  assert.ok(quitar.ok && quitar.hayQueEscribir && quitar.datos.confirmadoAt === null)
+  // Write-back: solo con filas; [] (la cotización no llevaba asegurados) no borra ni afirma «ninguno».
+  assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { asegurados: [anaConDni] } }, 'decesos', { hoy: HOY }), { asegurados: [ana] }, 'la cotización manda el DNI al vendor; al riesgo no se anota')
+  assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { asegurados: [] } }, 'salud', { hoy: HOY }), {})
+  assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { capital: 5, asegurados: [{ ...ana, sexo: '' }] } }, 'salud', { hoy: HOY }), { capital: 5 }, 'un asegurado inválido se descarta sin tirar el resto')
+  assert.deepEqual(datosCapitalDeCotizacion({ resueltos: { asegurados: [ana] } }, 'vida', { hoy: HOY }), {}, 'en vida no se anota')
+  // Lectura: una fila a medias no se inventa.
+  assert.deepEqual(leerDatosCapital({ asegurados: [{ nombre: 'Luis' }, ana] })?.asegurados?.map((a) => a.nombre), ['Ana'])
+  assert.equal(leerDatosCapital({ asegurados: 'x' })?.asegurados, null)
 })
 
 // ─── Libre ───────────────────────────────────────────────────────────────────

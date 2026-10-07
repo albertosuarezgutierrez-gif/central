@@ -14,6 +14,7 @@ import {
   formularioConUltimoRiesgo,
   formularioInicial,
   importeDeTexto,
+  importeParaCampo,
   leerTrabajoBot,
   type FormularioRiesgo,
   type TrabajoBot,
@@ -50,6 +51,40 @@ export function formularioComunInicial(
   hoy: Date = new Date(),
 ): FormularioComun {
   return quitarAllianz(formularioInicial(c ?? null, hoy))
+}
+
+/** Lo del riesgo libre (`info_riesgo.datosRiesgoLibre`) que puede sembrar el formulario de los bots. */
+export type RiesgoLibreParaBots = { capital: number | null; direccion: string | null }
+
+/**
+ * Siembra el formulario de los bots (comunidades) con el capital y la dirección del bloque «Datos del riesgo» de la
+ * oportunidad (07/10/2026), SOLO en los campos que están vacíos: lo ya guardado o tecleado manda siempre. El capital
+ * va a «capital de edificación»; la dirección entera, al campo de la calle (se revisa), y el código postal solo si la
+ * dirección trae uno y solo uno de 5 cifras. Sin capital > 0 o sin dirección, nada: `null` ≠ 0, no se inventa.
+ * Devuelve qué se sembró para decirlo en pantalla («revísalos»).
+ */
+export function sembrarDesdeRiesgoLibre(f: FormularioComun, libre: RiesgoLibreParaBots | null | undefined): { formulario: FormularioComun; sembrados: string[] } {
+  const formulario: FormularioComun = { ...f }
+  const sembrados: string[] = []
+  if (libre && typeof libre.capital === 'number' && Number.isFinite(libre.capital) && libre.capital > 0 && formulario.capitalContinente.trim() === '') {
+    formulario.capitalContinente = importeParaCampo(libre.capital)
+    sembrados.push('capital')
+  }
+  const dir = typeof libre?.direccion === 'string' ? libre.direccion.replace(/\s+/g, ' ').trim() : ''
+  if (dir !== '') {
+    if (formulario.via.trim() === '') { formulario.via = dir; sembrados.push('dirección') }
+    const cps = [...new Set(dir.match(/(?<!\d)\d{5}(?!\d)/g) ?? [])]
+    if (cps.length === 1 && formulario.codigoPostal.trim() === '') { formulario.codigoPostal = cps[0]; sembrados.push('código postal') }
+  }
+  return { formulario, sembrados }
+}
+
+/** Texto cuando un ramo SIN tarifa de Codeoscopic sí tiene bots de compañía (hoy, comunidades). */
+export const AVISO_COTIZA_POR_BOTS = 'Este ramo se cotiza con los bots de las compañías («Presupuestos de compañías», más abajo), no con la tarifa de Codeoscopic. Los datos de este bloque siembran ese formulario y quedan en el expediente.'
+
+/** El aviso de un ramo sin tarifa: el de «se cotiza fuera» solo si de verdad no hay ningún bot que lo cotice. */
+export function avisoRamoSinTarifa(ramo: string, avisoPorDefecto: string): string {
+  return companiasDisponibles(ramo).length > 0 ? AVISO_COTIZA_POR_BOTS : avisoPorDefecto
 }
 
 /** Extras iniciales de cada compañía: el `porDefecto` que declara su capacidad, o vacío. */

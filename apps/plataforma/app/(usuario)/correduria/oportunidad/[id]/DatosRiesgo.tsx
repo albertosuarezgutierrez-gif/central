@@ -20,11 +20,16 @@ import {
   ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_CAMPO_LIBRE, ETIQUETA_CAMPO_VIVIENDA, ETIQUETA_REGIMEN_LOCAL,
   MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, camposCapitalDelRamo, soloLoQueCambia, textoFaltanCapital, textoFaltanComercio,
   textoFaltanVivienda,
-  type CampoCapital, type CompaniaComercio, type PorCompaniaComercio, type CampoFaltaComercio, type CampoVivienda, type CapitalComercio, type EspecCampo, type MedidaComercio, type RamoCapital,
+  type AseguradoAdicional, type CampoCapital, type CompaniaComercio, type PorCompaniaComercio, type CampoFaltaComercio, type CampoVivienda, type CapitalComercio, type EspecCampo, type MedidaComercio, type RamoCapital,
 } from '@central/module-seguros'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
+import AseguradosAdicionales, { aseguradosDeRiesgo, aseguradosParaEnviar, type AseguradoForm } from '../../cliente/[id]/AseguradosAdicionales'
+import { SelectorBuscable } from '../../SelectorBuscable'
+import { avisoRamoSinTarifa, companiasDisponibles } from '@/lib/presupuestos-companias'
+import BotonPedirPrecio from './BotonPedirPrecio'
+import { motivoSinPrecioRamo, ramoVariante, rutaVariante, tomadorDelRiesgo } from './variante'
 import { fechaEs, llamarDatosRiesgo, motivoDe } from './piezas-riesgo'
 import {
   capitalesDeFilas, filaCapitalVacia, filaMedidaVacia, filasDeCapitales, filasDeMedidas, formDeCompanias, listaAMandar, medidasDeFilas, porCompaniaAMandar,
@@ -64,13 +69,15 @@ function deForm(spec: readonly EspecCampo[], form: Form): Record<string, unknown
 }
 
 /** El marco común: cabecera con el sello, aviso de lo que falta, botones. */
-function Marco({ titulo, ayuda, confirmadoAt, dePoliza, aviso, nota, editando, bloqueado, enviando, errorForm, onEditar, onConfirmar, onGuardar, onCancelar, lectura, formulario }: {
+function Marco({ titulo, ayuda, confirmadoAt, dePoliza, aviso, nota, precio, editando, bloqueado, enviando, errorForm, onEditar, onConfirmar, onGuardar, onCancelar, lectura, formulario }: {
   titulo: string
   ayuda: string
   confirmadoAt: string | null
   dePoliza: boolean
   aviso: string | null
   nota?: string | null
+  /** «Pedir precio →» del ramo (solo en lectura: mientras se edita no hay a dónde ir). */
+  precio?: React.ReactNode
   editando: boolean
   bloqueado: boolean
   enviando: boolean
@@ -106,6 +113,7 @@ function Marco({ titulo, ayuda, confirmadoAt, dePoliza, aviso, nota, editando, b
               </button>
             )}
           </div>
+          {precio}
         </>
       ) : (
         <form onSubmit={onGuardar} style={{ display: 'grid', gap: 10, minWidth: 0 }}>
@@ -159,13 +167,21 @@ function useEdicion(clave: 'datosVivienda' | 'datosCapital' | 'datosComercio' | 
 
 const euros = (v: unknown) => (typeof v === 'number' ? eur(v) : null)
 
+/** «Pedir precio →» de hogar/vida/salud/decesos: enlace a la pantalla de precio del ramo con la oportunidad (nunca cotiza). */
+function PrecioDelBloque({ riesgo, ocupado }: { riesgo: Riesgo; ocupado: boolean }) {
+  const op = riesgo.oportunidad
+  const ramo = ramoVariante(op.ramo)
+  const href = ramo ? rutaVariante(ramo, tomadorDelRiesgo(riesgo), op.id) : null
+  return <BotonPedirPrecio href={href} motivo={motivoSinPrecioRamo({ ramoCotizable: ramo !== null, editando: false, ocupado })} />
+}
+
 // ─── Vivienda (hogar) ────────────────────────────────────────────────────────
 
 const GRUPOS_VIVIENDA: Array<{ titulo: string; campos: CampoVivienda[] }> = [
-  { titulo: 'Dónde está', campos: ['referenciaCatastral', 'direccion', 'tipoViaId', 'nombreVia', 'numeroVia', 'planta', 'puertaVivienda', 'cp', 'municipio'] },
+  { titulo: 'Dónde está', campos: ['referenciaCatastral', 'direccion', 'tipoViaId', 'nombreVia', 'numeroVia', 'planta', 'puertaVivienda', 'cp', 'municipio', 'provincia'] },
   { titulo: 'Cómo es', campos: ['metrosCuadrados', 'anioConstruccion', 'anioUltimaReforma', 'habitaciones', 'tipoVivienda', 'uso', 'ocupacion', 'ubicacion', 'material', 'calidad'] },
   { titulo: 'Protecciones', campos: ['alarma', 'puertasSecundarias', 'puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada', 'vigilante'] },
-  { titulo: 'Qué se asegura', campos: ['capitalContinente', 'capitalContenido', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos', 'asentamiento'] },
+  { titulo: 'Qué se asegura', campos: ['propietarioEsTomador', 'capitalContinente', 'capitalContenido', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos', 'asentamiento'] },
 ]
 const CAMPOS_EUROS = new Set<string>(['capitalContinente', 'capitalContenido', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor'])
 
@@ -221,15 +237,30 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
     }
   }
 
+  // El municipio del catálogo es de UN código postal: al cambiar el CP se suelta (y su lista de candidatos) para que no
+  // quede un municipio de otra zona guardado junto al CP nuevo. Si se vuelve al CP guardado, se recupera.
+  function alCambiarCp(e: React.ChangeEvent<HTMLInputElement>) {
+    const cp = e.target.value
+    const igualAlGuardado = cp.trim() === ((d.cp as string | null) ?? '')
+    setMunicipios(null)
+    setNotaMunicipio(igualAlGuardado ? null : 'Has cambiado el código postal: busca de nuevo el municipio.')
+    E.setForm((f) => ({
+      ...f, cp,
+      municipioId: igualAlGuardado && d.municipioId != null ? String(d.municipioId) : '',
+      municipio: igualAlGuardado ? ((d.municipio as string | null) ?? '') : '',
+    }))
+  }
+
   const aviso = textoFaltanVivienda(faltan as CampoVivienda[])
 
   return (
     <Marco
       titulo="Datos de la vivienda"
       ayuda="Lo que se sabe de la casa. Al pedir precio se precargan aquí y lo que se use se anota de vuelta."
-      nota="Con la referencia catastral, la pantalla de precio lee dirección, m² y año del Catastro; aquí se cuentan igual mientras no estén anotados."
+      nota="Con la referencia catastral, la pantalla de precio lee dirección, m² y año del Catastro; aquí se cuentan igual mientras no estén anotados. Sin referencia, la pantalla de precio abre el buscador del Catastro con la calle, el número y el municipio de aquí."
       confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
       aviso={aviso}
+      precio={<PrecioDelBloque riesgo={props.riesgo} ocupado={E.bloqueado} />}
       editando={E.editando} bloqueado={E.bloqueado} enviando={E.enviando} errorForm={E.errorForm}
       onEditar={E.abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={E.enviar} onCancelar={() => E.setEditando(false)}
       lectura={
@@ -285,7 +316,7 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
                   const numerico = c.tipo.t === 'entero' || c.tipo.t === 'numero'
                   return (
                     <label key={k} style={etiquetaCss}>{et}
-                      <input value={E.form[k] ?? ''} onChange={E.set(k)} inputMode={numerico ? 'decimal' : k === 'cp' ? 'numeric' : undefined}
+                      <input value={E.form[k] ?? ''} onChange={k === 'cp' ? alCambiarCp : E.set(k)} inputMode={numerico ? 'decimal' : k === 'cp' ? 'numeric' : undefined}
                         maxLength={c.tipo.t === 'texto' ? c.tipo.max : k === 'referenciaCatastral' ? 24 : undefined} style={campoCss} />
                     </label>
                   )
@@ -319,33 +350,81 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
   )
 }
 
-// ─── Capital (vida, salud, decesos) ──────────────────────────────────────────
+// ─── Capital y persona (vida, salud, decesos) ────────────────────────────────
 
 function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }) {
   const { riesgo, d, faltan, dePoliza } = props
   const ramo = riesgo.oportunidad.ramo as RamoCapital
   const campos = camposCapitalDelRamo(ramo)
-  const E = useEdicion('datosCapital', props, ESPEC_CAPITAL.filter((c) => (campos as readonly string[]).includes(c.clave)), d, 'el capital')
+  const conAsegurados = (campos as readonly string[]).includes('asegurados')
+  const spec = ESPEC_CAPITAL.filter((c) => (campos as readonly string[]).includes(c.clave))
+  const E = useEdicion('datosCapital', props, spec, d, 'el capital')
+  const guardados = d.asegurados as AseguradoAdicional[] | null
+  const [aseg, setAseg] = useState<AseguradoForm[]>(() => aseguradosDeRiesgo(guardados))
+  // Profesión (vida): catálogo CNO-11 de nivel 4 del vendor (gratis). Si no se puede leer, se teclea el código de 4 cifras.
+  const [profesiones, setProfesiones] = useState<Opcion[] | 'error' | null>(null)
+  useEffect(() => {
+    if (ramo !== 'vida') return
+    let vivo = true
+    pedirCatalogo({ tipo: 'profesiones' })
+      .then((r) => { if (vivo) setProfesiones(r.estado === 'ok' && r.opciones.length > 0 ? r.opciones : 'error') })
+      .catch(() => { if (vivo) setProfesiones('error') })
+    return () => { vivo = false }
+  }, [ramo])
+  const listaProfesiones = Array.isArray(profesiones) ? profesiones : null
+
+  const abrir = () => { setAseg(aseguradosDeRiesgo(guardados)); E.abrir() }
+  const enviar = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Solo lo que DIFIERE de lo guardado, la lista incluida: sin tocarla no se reenvía (ni se pisa a otro que la editara).
+    const cambios = soloLoQueCambia(d, deForm(spec, E.form))
+    if (conAsegurados) {
+      const nuevo = aseguradosParaEnviar(aseg)
+      if (JSON.stringify(nuevo) !== JSON.stringify(aseguradosParaEnviar(aseguradosDeRiesgo(guardados)))) cambios.asegurados = nuevo
+    }
+    if (Object.keys(cambios).length === 0) { E.setEditando(false); return }
+    void E.guardar(cambios, false)
+  }
+
+  const nombreProfesion = (v: unknown): string | null => (typeof v === 'string' ? listaProfesiones?.find((o) => o.id === v)?.nombre ?? null : null)
   const filaLectura = (k: CampoCapital): React.ReactNode => {
     const v = d[k]
+    if (k === 'asegurados') {
+      if (guardados === null) return sinDato
+      if (guardados.length === 0) return 'Ninguno'
+      // Sin DNI en pantalla de lectura: es un dato de otra persona y aquí no hace falta.
+      return (
+        <ul style={listaCss}>
+          {guardados.map((a, i) => <li key={i} style={{ fontWeight: 600 }}>{`${a.nombre} ${a.apellido1}${a.apellido2 ? ` ${a.apellido2}` : ''} · ${fechaEs(a.fechaNacimiento) ?? a.fechaNacimiento} · ${a.sexo === 'mujer' ? 'mujer' : 'hombre'}`}</li>)}
+        </ul>
+      )
+    }
     if (v === null || v === undefined) return sinDato
     if (k === 'capital') return euros(v) ?? sinDato
-    if (k === 'duracionAnios') return `${v} ${v === 1 ? 'año' : 'años'}`
+    if (k === 'fumador') return v === true ? 'Fuma' : v === false ? 'No fuma' : sinDato
+    if (k === 'profesion') { const n = nombreProfesion(v); return n ? `${String(v)} · ${n}` : String(v) }
     return String(v)
   }
+  const profesionActual = E.form.profesion ?? ''
+  const opcionesProfesion: Opcion[] = listaProfesiones === null ? [] : profesionActual !== '' && !listaProfesiones.some((o) => o.id === profesionActual) ? [{ id: profesionActual, nombre: profesionActual }, ...listaProfesiones] : listaProfesiones
+  const profesionMal = profesionActual.trim() !== '' && !/^\d{4}$/.test(profesionActual.trim())
+
   return (
     <Marco
-      titulo="Capital del seguro"
-      ayuda={ramo === 'vida' ? 'Capital y duración que quiere el cliente. Al pedir precio se precargan aquí.' : 'Lo que se sabe de lo que quiere el cliente. Al pedir precio se precarga aquí.'}
+      titulo={ramo === 'vida' ? 'Capital y asegurado' : 'Capital y asegurados'}
+      ayuda={ramo === 'vida'
+        ? 'Capital, profesión y si fuma: lo que viaja a la compañía en vida. Al pedir precio se precargan aquí y lo que se use se anota de vuelta.'
+        : 'Lo que se sabe de lo que quiere el cliente y de quién más se asegura. Al pedir precio se precarga aquí y lo que se use se anota de vuelta.'}
       nota={ramo === 'vida' ? null : `En ${ramo} el capital es opcional: no viaja a la compañía, queda para el expediente.`}
       confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
       aviso={textoFaltanCapital(faltan as CampoCapital[])}
+      precio={<PrecioDelBloque riesgo={riesgo} ocupado={E.bloqueado} />}
       editando={E.editando} bloqueado={E.bloqueado} enviando={E.enviando} errorForm={E.errorForm}
-      onEditar={E.abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={E.enviar} onCancelar={() => E.setEditando(false)}
+      onEditar={abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={enviar} onCancelar={() => E.setEditando(false)}
       lectura={
         <dl style={{ ...REJILLA, margin: 0 }}>
           {campos.map((k) => (
-            <div key={k} style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+            <div key={k} style={{ display: 'grid', gap: 2, minWidth: 0, ...(k === 'asegurados' ? { gridColumn: '1 / -1' } : {}) }}>
               <dt style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{ETIQUETA_CAMPO_CAPITAL[k]}</dt>
               <dd style={{ margin: 0, fontWeight: 600, overflowWrap: 'anywhere' }}>{filaLectura(k)}</dd>
             </div>
@@ -353,13 +432,51 @@ function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: strin
         </dl>
       }
       formulario={
-        <div style={REJILLA}>
-          {campos.map((k) => (
-            <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_CAPITAL[k]}
-              <input value={E.form[k] ?? ''} onChange={E.set(k)} inputMode={k === 'modalidadDeseada' ? undefined : 'decimal'}
-                placeholder={k === 'capital' ? 'p. ej. 150.000' : undefined} maxLength={k === 'modalidadDeseada' ? 80 : undefined} style={campoCss} />
-            </label>
-          ))}
+        <div style={{ display: 'grid', gap: 10, minWidth: 0 }}>
+          <div style={REJILLA}>
+            {campos.filter((k) => k !== 'asegurados').map((k) => {
+              if (k === 'fumador') {
+                return (
+                  <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_CAPITAL[k]}
+                    <select value={E.form[k] ?? ''} onChange={E.set(k)} style={campoCss}>
+                      <option value="">Sin dato</option><option value="no">No fuma</option><option value="si">Fuma</option>
+                    </select>
+                  </label>
+                )
+              }
+              if (k === 'profesion') {
+                return (
+                  <div key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_CAPITAL[k]}
+                    {listaProfesiones !== null ? (
+                      <SelectorBuscable
+                        valor={profesionActual}
+                        onCambiar={(id) => E.setForm((f) => ({ ...f, profesion: id }))}
+                        opciones={opcionesProfesion}
+                        deshabilitado={E.bloqueado}
+                        textoVacio="Sin dato"
+                        nombre="profesión" plural="profesiones" marcador="p. ej. médico, camarero…" style={campoCss}
+                      />
+                    ) : (
+                      <input value={profesionActual} onChange={E.set(k)} inputMode="numeric" maxLength={4} placeholder="2612" style={campoCss} />
+                    )}
+                    <span style={{ fontSize: 11, color: profesionMal ? 'var(--negative)' : 'var(--muted)', fontWeight: 400 }}>
+                      {profesiones === null ? 'Cargando el catálogo de profesiones…'
+                        : profesiones === 'error' ? 'No se ha podido leer el catálogo de profesiones: teclea el código CNO-11 de 4 cifras.'
+                        : 'Del catálogo CNO-11 del vendor. Déjala en «Sin dato» si no se sabe: solo es obligatoria si la compañía la exige.'}
+                      {profesionMal ? ' Son 4 cifras.' : ''}
+                    </span>
+                  </div>
+                )
+              }
+              return (
+                <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_CAPITAL[k]}
+                  <input value={E.form[k] ?? ''} onChange={E.set(k)} inputMode={k === 'modalidadDeseada' ? undefined : 'decimal'}
+                    placeholder={k === 'capital' ? 'p. ej. 150.000' : undefined} maxLength={k === 'modalidadDeseada' ? 80 : undefined} style={campoCss} />
+                </label>
+              )
+            })}
+          </div>
+          {conAsegurados && <AseguradosAdicionales lista={aseg} onChange={setAseg} deshabilitado={E.bloqueado} sinDni />}
         </div>
       }
     />
@@ -387,8 +504,8 @@ function legiblePC(etiqueta: string, v: unknown): React.ReactNode {
 }
 const listaCss: React.CSSProperties = { margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }
 
-function DatosComercio(props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }) {
-  const { d, faltan, dePoliza } = props
+function DatosComercio(props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean; tarifica: boolean }) {
+  const { d, faltan, dePoliza, tarifica } = props
   const E = useEdicion('datosComercio', props, ESPEC_COMERCIO, d, 'los datos del comercio')
   const guardadosCap = d.capitales as CapitalComercio[] | null
   const guardadasMed = d.medidasProteccion as MedidaComercio[] | null
@@ -431,7 +548,7 @@ function DatosComercio(props: Props & { d: Record<string, unknown>; faltan: stri
       ayuda="Lo que manda la compañía por CIMA (actividad, situación, superficie, capitales, protección) y si el local es tuyo o alquilado."
       nota={AVISO_COMERCIO}
       confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
-      aviso={textoFaltanComercio(faltan as CampoFaltaComercio[])}
+      aviso={textoFaltanComercio(faltan as CampoFaltaComercio[], { hayRutaTarifa: tarifica })}
       editando={E.editando} bloqueado={E.bloqueado} enviando={E.enviando} errorForm={E.errorForm}
       onEditar={abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={enviar} onCancelar={() => E.setEditando(false)}
       lectura={
@@ -620,13 +737,19 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
   const { d, dePoliza } = props
   const E = useEdicion('datosRiesgoLibre', props, ESPEC_LIBRE, d, 'los datos del riesgo')
   const claves = ['descripcion', 'direccion', 'capital', 'notas'] as const
+  const ramo = props.riesgo.oportunidad.ramo
+  // Comunidades se cotiza con los bots de compañía (formulario de la propia oportunidad, `#presupuestos`): ahí lleva el
+  // botón, no a otra ruta. Los ramos sin ningún bot siguen siendo «se cotiza fuera».
+  const hayBots = companiasDisponibles(ramo).length > 0
   return (
     <Marco
       titulo="Datos del riesgo"
       ayuda="Lo que se asegura, dónde y por cuánto."
-      nota={AVISO_RIESGO_LIBRE}
+      nota={avisoRamoSinTarifa(ramo, AVISO_RIESGO_LIBRE)}
       confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
       aviso={null}
+      precio={hayBots ? <BotonPedirPrecio ancla="#presupuestos" motivo={motivoSinPrecioRamo({ ramoCotizable: true, editando: false, ocupado: E.bloqueado })}
+        nota="Abre el formulario de presupuestos de compañías de más abajo, ya sembrado con el capital y la dirección de aquí; allí eliges compañías y lo pides." /> : undefined}
       editando={E.editando} bloqueado={E.bloqueado} enviando={E.enviando} errorForm={E.errorForm}
       onEditar={E.abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={E.enviar} onCancelar={() => E.setEditando(false)}
       lectura={
@@ -665,6 +788,6 @@ export default function DatosRiesgo(props: Props) {
   const d = b.datos as unknown as Record<string, unknown>
   if (b.clave === 'datosVivienda') return <DatosVivienda {...props} d={d} faltan={b.faltan} dePoliza={b.dePoliza} />
   if (b.clave === 'datosCapital') return <DatosCapital {...props} d={d} faltan={b.faltan} dePoliza={b.dePoliza} />
-  if (b.clave === 'datosComercio') return <DatosComercio {...props} d={d} faltan={b.faltan} dePoliza={b.dePoliza} />
+  if (b.clave === 'datosComercio') return <DatosComercio {...props} d={d} faltan={b.faltan} dePoliza={b.dePoliza} tarifica={b.tarifica} />
   return <DatosLibre {...props} d={d} dePoliza={b.dePoliza} />
 }

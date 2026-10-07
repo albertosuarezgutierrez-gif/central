@@ -281,7 +281,11 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       (op.tipo === 'auto' || op.tipo === 'moto') &&
       (f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || (f.rol === 'tomador' && !hayConductor))
     f.empresa = p !== null && p.tipo === 'juridica'
-    f.faltan = p === null ? null : faltanDeFigura(p, conduce)
+    // Estado civil de la ficha (texto libre del CRM) solo en los ramos de personas: se lee aparte para no meterlo en
+    // `personaDeFicha` (ahí viajaría al vendor como si fuera un id de catálogo).
+    const pideCivil = ramoPideEstadoCivil(op.tipo) && !f.empresa
+    const civil = pideCivil ? await clienteOrigenDe(correduriaId, f.clienteId).then((o) => (o ? o.cliente.estadoCivil : undefined)).catch(() => undefined) : undefined
+    f.faltan = p === null ? null : faltanDeFigura(p, conduce, { pideEstadoCivil: pideCivil, estadoCivilFicha: civil })
   }
 
   return {
@@ -543,8 +547,17 @@ export async function personaDeFicha(
   }
 }
 
-/** Qué le falta a una figura para poder cotizar (el estado civil lo elige el corredor del catálogo). */
-export function faltanDeFigura(p: PersonaFigura | EmpresaFigura | null, conCarnet: boolean): string[] {
+/**
+ * Qué le falta a una figura para poder cotizar. El estado civil del vendor es un id de catálogo que se elige en la
+ * pantalla de precio; en AUTO y MOTO se pide siempre allí y no se avisa aquí. En vida, salud y decesos (07/10/2026) la
+ * pantalla de precio no pasa sin él, así que se avisa si la ficha NO lo trae (`pideEstadoCivil`; `estadoCivilFicha`
+ * `undefined` = no se pudo leer: no se afirma que falte).
+ */
+export function faltanDeFigura(
+  p: PersonaFigura | EmpresaFigura | null,
+  conCarnet: boolean,
+  personas: { pideEstadoCivil: boolean; estadoCivilFicha: string | null | undefined } = { pideEstadoCivil: false, estadoCivilFicha: undefined },
+): string[] {
   if (!p) return ['ficha']
   const f: string[] = []
   // Empresa: CIF y razón social (en los campos de la pantalla, `dni` y `nombre`). Conducir, nunca:
@@ -557,7 +570,13 @@ export function faltanDeFigura(p: PersonaFigura | EmpresaFigura | null, conCarne
   }
   for (const k of ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'sexo', 'telefono'] as const) if (!p[k]) f.push(k)
   if (conCarnet && !p.fechaCarnet) f.push('fechaCarnet')
+  if (personas.pideEstadoCivil && personas.estadoCivilFicha !== undefined && !(personas.estadoCivilFicha ?? '').trim()) f.push('estadoCivil')
   return f
+}
+
+/** Ramos de personas: la pantalla de precio exige estado civil (catálogo del vendor) del tomador. */
+export function ramoPideEstadoCivil(ramo: string): boolean {
+  return ramo === 'vida' || ramo === 'salud' || ramo === 'decesos'
 }
 
 /** Qué rol de figura va a qué clave de `DatosAuto` (lo que ya sabe construir la petición). */
