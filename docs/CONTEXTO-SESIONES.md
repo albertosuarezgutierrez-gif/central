@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(07/10/2026)** — Correduría · Código de acceso del presupuesto DENTRO del WhatsApp (decisión de Alberto: el envío automático por WhatsApp no funciona). Hash atado al token, caduca con `vence_el`, tope 5 intentos, cookie 4 h solo de ese presupuesto; firma `otp_whatsapp`; envío sin correo si hay móvil. SQL `apps/asegura/prisma/sql/2026-10-07_presupuesto_codigo_whatsapp.sql` ANTES de desplegar asegura. Riesgo: firma sin correo no cumple `cumpleArt26.b`.
+
 **(07/10/2026)** — Correduría · Presupuesto al portal: verificado que la parrilla del cliente ya filtra por garantías (130/132 opciones Codeoscopic con `garantias`). El WhatsApp avisa ANTES del enlace de que pedirá un código de 6 dígitos que llega SOLO por correo (`mensaje-presupuesto.ts`). Pendiente: botón «quiero cambiar algo»; código por WhatsApp en `/presupuesto/[token]` (hoy solo email).
 
 **(07/10/2026)** — WhatsApp → CRM (Grupo ASegura): PR #4292 MERGEADO; SQL 05b+05f aplicados; envs en Vercel (canal e IA APAGADOS). Meta: dominio `crm.grupoasegura.es`, webhook `api.grupoasegura.es/api/webhooks/whatsapp` verificado (quitar los 8 campos extra). Alta bloqueada por Meta: verificación de empresa EN REVISIÓN → Tech Provider → revisión/publicación de la app. Conector MCP «WhatsApp Business Tools»: SOLO lectura + webhooks, NUNCA add/register número ni enviar. Estado en `apps/asegura/docs/WHATSAPP.md`.

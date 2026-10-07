@@ -14,6 +14,13 @@
 import { MENSAJE_SOLO_CONSULTA, MENSAJE_VARIAS_FICHAS } from './mensajes-ficha.ts'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
 
+/**
+ * Con qué llama el portal al puente: la identidad de la SESIÓN, o —si entró con el código del
+ * WhatsApp (07/10/2026)— el token del enlace de ESE presupuesto, sacado de su cookie de acceso
+ * (`accesoPuenteDe` de `lib/presupuesto.ts`). Nunca del cuerpo de la petición.
+ */
+export type AccesoPuente = { identidadId: string } | { tokenWhatsapp: string }
+
 export type ResultadoCodigo =
   | { estado: 'codigo_enviado'; email: string; minutos: number }
   | { estado: 'espera'; segundos: number }
@@ -213,16 +220,16 @@ export function interpretarPreparar(status: number, j: unknown): PreparadoAcepta
 }
 
 export async function prepararAceptacion(
-  identidadId: string, presupuestoId: string, opcionId: string, cuenta: EntradaCuenta | null = null,
+  acceso: AccesoPuente, presupuestoId: string, opcionId: string, cuenta: EntradaCuenta | null = null,
 ): Promise<PreparadoAceptacion | null> {
   const r = await llamar('/api/portal/presupuesto', {
-    method: 'POST', body: JSON.stringify({ accion: 'preparar', identidadId, presupuestoId, opcionId, ...(cuenta ? { cuenta } : {}) }),
+    method: 'POST', body: JSON.stringify({ accion: 'preparar', ...acceso, presupuestoId, opcionId, ...(cuenta ? { cuenta } : {}) }),
   })
   return r ? interpretarPreparar(r.status, r.json) : null
 }
 
-export async function pedirCodigoAceptacion(identidadId: string, presupuestoId: string, opcionId: string): Promise<ResultadoCodigo> {
-  const r = await llamar('/api/portal/presupuesto', { method: 'POST', body: JSON.stringify({ accion: 'codigo', identidadId, presupuestoId, opcionId }) })
+export async function pedirCodigoAceptacion(acceso: AccesoPuente, presupuestoId: string, opcionId: string): Promise<ResultadoCodigo> {
+  const r = await llamar('/api/portal/presupuesto', { method: 'POST', body: JSON.stringify({ accion: 'codigo', ...acceso, presupuestoId, opcionId }) })
   if (!r) return { estado: 'error' }
   const res = interpretarCodigo(r.status, r.json)
   if (res.estado === 'error') console.warn('[portal/presupuesto] el código no salió:', r.status, obj(r.json).estado)
@@ -230,17 +237,19 @@ export async function pedirCodigoAceptacion(identidadId: string, presupuestoId: 
 }
 
 export async function firmarAceptacion(
-  identidadId: string,
+  acceso: AccesoPuente,
   presupuestoId: string,
   opcionId: string,
   datos: {
     codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean
     cuenta: EntradaCuenta
+    /** El código del correo (por defecto) o el de acceso del WhatsApp. */
+    via: 'correo' | 'whatsapp'
   },
 ): Promise<ResultadoFirma> {
   const r = await llamar('/api/portal/presupuesto', {
     method: 'POST',
-    body: JSON.stringify({ accion: 'firmar', identidadId, presupuestoId, opcionId, ...datos }),
+    body: JSON.stringify({ accion: 'firmar', ...acceso, presupuestoId, opcionId, ...datos }),
   })
   if (!r) return { estado: 'error' }
   const res = interpretarFirma(r.status, r.json)
@@ -303,8 +312,8 @@ export function datosListosParaAceptar(d: DatosCotizados | null): boolean {
   return d !== null && d.estado === 'ok' && !d.enRevision
 }
 
-export async function datosCotizados(identidadId: string, presupuestoId: string): Promise<DatosCotizados | null> {
-  const r = await llamar('/api/portal/presupuesto', { method: 'POST', body: JSON.stringify({ accion: 'datos', identidadId, presupuestoId }) })
+export async function datosCotizados(acceso: AccesoPuente, presupuestoId: string): Promise<DatosCotizados | null> {
+  const r = await llamar('/api/portal/presupuesto', { method: 'POST', body: JSON.stringify({ accion: 'datos', ...acceso, presupuestoId }) })
   if (!r) return null
   const res = interpretarDatosCotizados(r.status, r.json)
   if (!res) console.warn('[portal/presupuesto] los datos cotizados no se han podido leer:', r.status, obj(r.json).estado)
@@ -330,13 +339,55 @@ export function interpretarReporte(status: number, j: unknown): ResultadoReporte
   return { estado: 'error' }
 }
 
-export async function reportarDatosIncorrectos(identidadId: string, presupuestoId: string, texto: string): Promise<ResultadoReporte> {
+export async function reportarDatosIncorrectos(acceso: AccesoPuente, presupuestoId: string, texto: string): Promise<ResultadoReporte> {
   const r = await llamar('/api/portal/presupuesto', {
     method: 'POST',
-    body: JSON.stringify({ accion: 'datos_incorrectos', identidadId, presupuestoId, texto }),
+    body: JSON.stringify({ accion: 'datos_incorrectos', ...acceso, presupuestoId, texto }),
   })
   if (!r) return { estado: 'error' }
   const res = interpretarReporte(r.status, r.json)
   if (res.estado === 'error') console.warn('[portal/presupuesto] respuesta no esperada al avisar de un dato:', r.status, obj(r.json).estado)
+  return res
+}
+
+// ─── El código del WHATSAPP en la carátula (07/10/2026) ──────────────────────
+//
+// El portal no puede comprobarlo él: el rol no tiene GRANT sobre el hash (su única escritura
+// concedida es `visto_at`) y el intento hay que reservarlo con una escritura. Lo hace asegura por
+// el puente (`acceso_whatsapp`). Aquí solo se interpreta la respuesta, PURO.
+
+export type ResultadoAccesoWhatsapp =
+  | { estado: 'valido'; presupuestoId: string }
+  | { estado: 'incorrecto'; quedan: number | null }
+  | { estado: 'bloqueado' }
+  | { estado: 'caducado' }
+  /** El enlace no salió por WhatsApp (o se avisó después por correo): que entre con su correo. */
+  | { estado: 'sin_codigo' }
+  /** El token ya no es de ningún presupuesto vivo (regenerado, retirado o inventado). */
+  | { estado: 'no_encontrado' }
+  /** Puente sin configurar: 503 `canal_no_disponible`, no «ha fallado». */
+  | { estado: 'canal_no_disponible' }
+  /** No se sabe qué ha pasado (corte, 5xx, forma rara): 502. */
+  | { estado: 'error' }
+
+const UUID_PUENTE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** 🚨 Solo un 200 con `valido` y un id con forma de uuid abre: un 401, un 5xx o un corte NO. */
+export function interpretarAccesoWhatsapp(status: number, j: unknown): ResultadoAccesoWhatsapp {
+  const o = obj(j)
+  if (status === 200 && o.estado === 'valido') {
+    return typeof o.presupuestoId === 'string' && UUID_PUENTE.test(o.presupuestoId) ? { estado: 'valido', presupuestoId: o.presupuestoId } : { estado: 'error' }
+  }
+  if (o.estado === 'incorrecto') return { estado: 'incorrecto', quedan: typeof o.quedan === 'number' ? o.quedan : null }
+  if (o.estado === 'bloqueado' || o.estado === 'caducado' || o.estado === 'sin_codigo' || o.estado === 'no_encontrado') return { estado: o.estado }
+  return { estado: 'error' }
+}
+
+export async function comprobarCodigoWhatsapp(tokenWhatsapp: string, codigo: string): Promise<ResultadoAccesoWhatsapp> {
+  if (!puente()) return { estado: 'canal_no_disponible' }
+  const r = await llamar('/api/portal/presupuesto', { method: 'POST', body: JSON.stringify({ accion: 'acceso_whatsapp', tokenWhatsapp, codigo }) })
+  if (!r) return { estado: 'error' }
+  const res = interpretarAccesoWhatsapp(r.status, r.json)
+  if (res.estado === 'error') console.warn('[portal/presupuesto] respuesta no esperada al comprobar el código del WhatsApp:', r.status, obj(r.json).estado)
   return res
 }

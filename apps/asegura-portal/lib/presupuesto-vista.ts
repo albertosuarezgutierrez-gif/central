@@ -367,6 +367,8 @@ export function copyFijo(): string[] {
     AVISO_NO_ES_CONTRATACION,
     TEXTO_CARATULA.titulo,
     TEXTO_CARATULA.cuerpo,
+    TEXTO_CARATULA.conWhatsapp,
+    TEXTO_CARATULA.conCorreo,
     TEXTO_CARATULA.enlaceMuerto,
     TEXTO_AJENO,
     TEXTO_VINCULO_AMBIGUO,
@@ -403,7 +405,9 @@ export function revisarCopyFijo(): string {
 export const TEXTO_CARATULA = {
   titulo: 'Tienes un presupuesto preparado',
   cuerpo:
-    'Alberto Suárez, de Grupo ASegura, te ha preparado un presupuesto. Es personal, así que no se enseña aquí: entra con tu correo y te mando un código de un solo uso para verlo.',
+    'Alberto Suárez, de Grupo ASegura, te ha preparado un presupuesto. Es personal, así que no se enseña aquí: escribe el código de acceso que te mandé por WhatsApp, o entra con tu correo y te mando un código de un solo uso.',
+  conWhatsapp: '¿Te lo he mandado por WhatsApp?',
+  conCorreo: 'O entra con tu correo',
   enlaceMuerto:
     'Este enlace ya no sirve. Puede que haya caducado o que se haya retirado. Escríbeme y te preparo otro.',
 } as const

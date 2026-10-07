@@ -20,7 +20,7 @@ import { LogoCompania } from './LogoCompania'
  * 🚨 «No figura» ≠ «No»: una garantía que la oferta no menciona no se pinta como excluida.
  */
 export function EstudioOfertas({
-  presupuestoId, opciones, caducado, puedeAceptar, bloqueoDatos, corredor, pdf,
+  presupuestoId, opciones, caducado, puedeAceptar, bloqueoDatos, corredor, pdf, codigoWhatsapp = false,
 }: {
   presupuestoId: string
   opciones: OpcionCliente[]
@@ -30,6 +30,8 @@ export function EstudioOfertas({
   corredor: boolean
   /** Se ofrece el PDF (ya enviado). */
   pdf: boolean
+  /** Entró con el código del WhatsApp: puede firmar con ese mismo código. */
+  codigoWhatsapp?: boolean
 }) {
   const orden = ordenarOfertas(opciones)
   const cuadro = cuadroOfertas(orden)
@@ -90,6 +92,7 @@ export function EstudioOfertas({
                         compania={o.compania}
                         corredor={corredor}
                         bloqueoDatos={bloqueoDatos}
+                        codigoWhatsapp={codigoWhatsapp}
                         origen="ofertas"
                       />
                     </div>

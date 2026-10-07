@@ -49,7 +49,8 @@ import { decryptField } from '@central/module-seguros-pii'
 
 import { hashCanal } from './auth'
 import { prisma } from './db'
-import { getIdentidad } from './session'
+import { getAccesoWhatsapp, getIdentidad } from './session'
+import type { AccesoPuente } from './presupuesto-firma'
 import { coberturasDeOpcion, type CoberturasOpcion } from './tabla-coberturas'
 import { garantiasDeJson } from './todas-las-opciones'
 import { origenVista, type OrigenVista } from './presupuesto-ofertas-vista'
@@ -123,6 +124,8 @@ export type PresupuestoCliente = {
   vistaDeCorredor: boolean
   /** Lo que el cliente pidió, según lo anotó el corredor. `null` = no consta por escrito. */
   necesidades: string | null
+  /** Entró con el CÓDIGO DEL WHATSAPP (no con su correo): puede firmar con ese mismo código. */
+  accesoWhatsapp: boolean
 }
 
 export type LecturaPresupuesto =
@@ -180,6 +183,47 @@ export async function caratulaPorToken(tokenCrudo: unknown): Promise<Caratula> {
   }
 }
 
+// ─── La segunda puerta: el código del WhatsApp (07/10/2026) ──────────────────
+//
+// Quien entra con el código que Alberto le mandó por WhatsApp no tiene identidad (puede no tener
+// correo). Lleva una cookie APARTE (`lib/auth.ts`) que vale para UN presupuesto. Aquí se comprueba,
+// en cada lectura, que:
+//   · el id que pide es el de la cookie (la cookie no abre otro presupuesto);
+//   · el token de la cookie SIGUE siendo el del presupuesto (si se regeneró el enlace o se avisó por
+//     correo, el token rotó y no abre);
+//   · no está retirado ni vencido (el código del WhatsApp vale hasta `vence_el`).
+// El código ya se comprobó en asegura antes de poner la cookie; aquí no se vuelve a ver.
+
+/** El token del acceso por WhatsApp a ESE presupuesto, o `null`. Fallo de BD = `null` (no abre). */
+export async function accesoWhatsappDe(id: string): Promise<{ token: string } | null> {
+  if (!UUID.test(id)) return null
+  const a = await getAccesoWhatsapp()
+  if (!a || a.presupuestoId !== id || !formatoTokenVistaValido(a.token)) return null
+  try {
+    const fila = await prisma.presupuesto.findFirst({
+      where: { id, tokenHash: await hashTokenVista(a.token), retiradoAt: null, venceEl: { gt: new Date() } },
+      select: { id: true },
+    })
+    return fila ? { token: a.token } : null
+  } catch (e) {
+    registrar('accesoWhatsappDe', e)
+    return null
+  }
+}
+
+/**
+ * Con qué se llama al puente para ESTE presupuesto: el token del WhatsApp si entró así (va
+ * primero: es la puerta de este presupuesto en concreto), si no la identidad de la sesión.
+ * `corredor` = es Alberto con la vista de corredor (no firma).
+ */
+export async function accesoPuenteDe(id: string): Promise<{ acceso: AccesoPuente; corredor: boolean } | null> {
+  const identidad = await getIdentidad()
+  const corredor = identidad !== null && identidad.corredor !== null
+  const w = await accesoWhatsappDe(id)
+  if (w) return { acceso: { tokenWhatsapp: w.token }, corredor }
+  return identidad ? { acceso: { identidadId: identidad.id }, corredor } : null
+}
+
 // ─── La pantalla de dentro ───────────────────────────────────────────────────
 
 /**
@@ -191,9 +235,10 @@ export async function caratulaPorToken(tokenCrudo: unknown): Promise<Caratula> {
  */
 export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuesto> {
   const identidad = await getIdentidad()
-  if (!identidad) return { estado: 'sin_sesion' }
-  const identidadId = identidad.id
-  const vistaDeCorredor = identidad.corredor !== null
+  // Segunda puerta: el código del WhatsApp, SOLO para este presupuesto (ver `accesoWhatsappDe`).
+  const porWhatsapp = (await accesoWhatsappDe(id)) !== null
+  if (!identidad && !porWhatsapp) return { estado: 'sin_sesion' }
+  const vistaDeCorredor = identidad !== null && identidad.corredor !== null
 
   if (!UUID.test(id)) return { estado: 'no_encontrado' }
 
@@ -221,64 +266,71 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
     })
     if (!p) return { estado: 'no_encontrado' }
 
-    // ── ¿Quién mira? ──────────────────────────────────────────────────────
-    //
-    // Rama (b): el vínculo identidad ↔ ficha, que es la costura de siempre. El
-    // `where` lleva el `identidadId` de la cookie DENTRO, no comprobado en la
-    // línea siguiente.
-    const vinculo = await prisma.portalVinculo.findFirst({
-      where: { identidadId, clienteId: p.clienteId },
-      select: { id: true, correduriaId: true },
-    })
-
-    // Rama (a): el canal por el que entró es el mismo al que se avisó.
-    //
-    // 🚨 `destinoHash === null` **no es «no coincide»**: es «no consta a quién
-    // se avisó» (hoy, todas las filas — el envío es el PR 3). Un `null` que
-    // entrara en la comparación daría acceso a cualquiera cuyo canal hashee a
-    // `null`, o sea a nadie, pero escrito de forma que el día que alguien
-    // relaje el tipo se abra solo. Se corta antes.
-    let porCanal = false
-    if (p.destinoHash !== null && p.destinoHash !== '') {
-      const canal = await prisma.portalCanal.findFirst({
-        where: { identidadId, valorHash: p.destinoHash },
-        select: { id: true },
+    // Por el código del WhatsApp ya está autorizado (cookie de ESTE id + token vigente). Si no,
+    // las dos ramas de siempre, que parten de la identidad de la cookie de sesión.
+    if (!porWhatsapp) {
+      // Inalcanzable (se cortó arriba), pero escrito para fallar CERRADO si alguien mueve ese corte.
+      if (identidad === null) return { estado: 'sin_sesion' }
+      const identidadId = identidad.id
+      // ── ¿Quién mira? ──────────────────────────────────────────────────────
+      //
+      // Rama (b): el vínculo identidad ↔ ficha, que es la costura de siempre. El
+      // `where` lleva el `identidadId` de la cookie DENTRO, no comprobado en la
+      // línea siguiente.
+      const vinculo = await prisma.portalVinculo.findFirst({
+        where: { identidadId, clienteId: p.clienteId },
+        select: { id: true, correduriaId: true },
       })
-      porCanal = canal !== null
-    }
 
-    // 🚨 Cinturón de la rama (a), simétrico al de la (b) de más abajo:
-    // `portal_canal` no lleva `correduria_id` (un canal es de la identidad, no
-    // de una correduria), así que no hay con qué comprobarlo directamente. Lo
-    // que SÍ se puede comprobar es que esta identidad no tenga ya un vínculo
-    // establecido con OTRA correduria: si lo tiene, coincidir por canal aquí
-    // no basta para creer que es la misma persona en ESTA correduria. Hoy es
-    // inalcanzable (una sola correduria en todo el sistema), pero el día que
-    // haya una segunda, esta guarda ya está puesta.
-    if (porCanal) {
-      const otraCorreduria = await prisma.portalVinculo.findFirst({
-        where: { identidadId, correduriaId: { not: p.correduriaId } },
-        select: { id: true },
-      })
-      if (otraCorreduria !== null) porCanal = false
-    }
+      // Rama (a): el canal por el que entró es el mismo al que se avisó.
+      //
+      // 🚨 `destinoHash === null` **no es «no coincide»**: es «no consta a quién
+      // se avisó» (hoy, todas las filas — el envío es el PR 3). Un `null` que
+      // entrara en la comparación daría acceso a cualquiera cuyo canal hashee a
+      // `null`, o sea a nadie, pero escrito de forma que el día que alguien
+      // relaje el tipo se abra solo. Se corta antes.
+      let porCanal = false
+      if (p.destinoHash !== null && p.destinoHash !== '') {
+        const canal = await prisma.portalCanal.findFirst({
+          where: { identidadId, valorHash: p.destinoHash },
+          select: { id: true },
+        })
+        porCanal = canal !== null
+      }
 
-    if (vinculo === null && !porCanal) {
-      // ¿Es que su correo está en dos fichas? Entonces no es «esto no es tuyo»:
-      // es «no lo hemos podido decidir», y se dice con la misma frase que ya
-      // usa la bóveda. Un «no eres tú» sobre un empate es una acusación falsa.
-      const estadoVinculo = await ultimoVinculoDe(identidadId)
-      if (estadoVinculo === 'ambiguo') return { estado: 'vinculo_ambiguo' }
-      await anotarAperturaAjena(p.id)
-      return { estado: 'ajeno' }
-    }
+      // 🚨 Cinturón de la rama (a), simétrico al de la (b) de más abajo:
+      // `portal_canal` no lleva `correduria_id` (un canal es de la identidad, no
+      // de una correduria), así que no hay con qué comprobarlo directamente. Lo
+      // que SÍ se puede comprobar es que esta identidad no tenga ya un vínculo
+      // establecido con OTRA correduria: si lo tiene, coincidir por canal aquí
+      // no basta para creer que es la misma persona en ESTA correduria. Hoy es
+      // inalcanzable (una sola correduria en todo el sistema), pero el día que
+      // haya una segunda, esta guarda ya está puesta.
+      if (porCanal) {
+        const otraCorreduria = await prisma.portalVinculo.findFirst({
+          where: { identidadId, correduriaId: { not: p.correduriaId } },
+          select: { id: true },
+        })
+        if (otraCorreduria !== null) porCanal = false
+      }
 
-    // Cinturón: el presupuesto y el vínculo tienen que ser de la MISMA
-    // correduría. Con un rol sin RLS, un id de otra correduría no falla: da los
-    // datos de otro.
-    if (vinculo !== null && vinculo.correduriaId !== p.correduriaId) {
-      await anotarAperturaAjena(p.id)
-      return { estado: 'ajeno' }
+      if (vinculo === null && !porCanal) {
+        // ¿Es que su correo está en dos fichas? Entonces no es «esto no es tuyo»:
+        // es «no lo hemos podido decidir», y se dice con la misma frase que ya
+        // usa la bóveda. Un «no eres tú» sobre un empate es una acusación falsa.
+        const estadoVinculo = await ultimoVinculoDe(identidadId)
+        if (estadoVinculo === 'ambiguo') return { estado: 'vinculo_ambiguo' }
+        await anotarAperturaAjena(p.id)
+        return { estado: 'ajeno' }
+      }
+
+      // Cinturón: el presupuesto y el vínculo tienen que ser de la MISMA
+      // correduría. Con un rol sin RLS, un id de otra correduría no falla: da los
+      // datos de otro.
+      if (vinculo !== null && vinculo.correduriaId !== p.correduriaId) {
+        await anotarAperturaAjena(p.id)
+        return { estado: 'ajeno' }
+      }
     }
 
     const hoy = new Date()
@@ -316,6 +368,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
         actual,
         vistaDeCorredor,
         necesidades: p.necesidades?.trim() || null,
+        accesoWhatsapp: porWhatsapp,
       },
     }
   } catch (e) {

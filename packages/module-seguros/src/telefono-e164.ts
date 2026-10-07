@@ -50,3 +50,18 @@ export function variantesIndiceTelefono(raw: string | null | undefined, region: 
   }
   return [...out]
 }
+
+/**
+ * ¿Se le puede mandar un WhatsApp a este número? (07/10/2026: el presupuesto por WhatsApp sin
+ * correo en la ficha.) Válido y, si es español, MÓVIL (6xx/7xx): a un fijo no le llega nada.
+ * Un extranjero válido se acepta (con los metadatos mínimos no se distingue móvil de fijo).
+ * Un comodín de compañía («600000000», todo el mismo dígito) NO es de nadie.
+ */
+export function esMovilWhatsapp(raw: string | null | undefined, region: CountryCode = REGION_POR_DEFECTO): boolean {
+  const e164 = aE164(raw, region)
+  if (e164 === null) return false
+  const nacional = e164.startsWith('+34') ? e164.slice(3) : e164.slice(1)
+  if (/^(\d)\1+$/.test(nacional.slice(1)) || /^(\d)\1+$/.test(nacional)) return false
+  if (e164.startsWith('+34')) return /^\+34[67]\d{8}$/.test(e164)
+  return true
+}

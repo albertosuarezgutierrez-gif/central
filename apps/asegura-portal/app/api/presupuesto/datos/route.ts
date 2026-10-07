@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { tgSend } from '@central/core-telegram'
 
 import { reportarDatosIncorrectos } from '@/lib/presupuesto-firma'
-import { requireIdentidad } from '@/lib/session'
+import { accesoPuenteDe } from '@/lib/presupuesto'
 
 export const runtime = 'nodejs'
 
@@ -14,24 +14,20 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  *
  * Con el aviso dado, la aceptación de ESE presupuesto queda cerrada desde el portal (lo decide
  * asegura): los datos del precio están congelados en su tarificación y corregirlos es retarificar.
- * La identidad sale de la SESIÓN; la vista de corredor no escribe como el cliente (403).
+ * Quién avisa sale de la SESIÓN o del acceso por WhatsApp de ESTE presupuesto (`accesoPuenteDe`);
+ * la vista de corredor no escribe como el cliente (403).
  */
 export async function POST(req: Request) {
-  let identidad
-  try {
-    identidad = await requireIdentidad()
-  } catch {
-    return NextResponse.json({ estado: 'sin_sesion' }, { status: 401 })
-  }
-  if (identidad.corredor) return NextResponse.json({ estado: 'solo_lectura' }, { status: 403 })
-
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const presupuestoId = typeof b?.presupuestoId === 'string' ? b.presupuestoId.trim() : ''
   const texto = typeof b?.texto === 'string' ? b.texto.trim() : ''
   if (!UUID.test(presupuestoId)) return NextResponse.json({ estado: 'no_disponible', motivo: 'Faltan datos.' }, { status: 422 })
+  const puerta = await accesoPuenteDe(presupuestoId)
+  if (!puerta) return NextResponse.json({ estado: 'sin_sesion' }, { status: 401 })
+  if (puerta.corredor) return NextResponse.json({ estado: 'solo_lectura' }, { status: 403 })
   if (texto.length < 3) return NextResponse.json({ estado: 'reintentar', motivo: 'Cuéntanos en unas palabras qué dato no es correcto.' }, { status: 422 })
 
-  const r = await reportarDatosIncorrectos(identidad.id, presupuestoId, texto.slice(0, 1000))
+  const r = await reportarDatosIncorrectos(puerta.acceso, presupuestoId, texto.slice(0, 1000))
   if (r.estado === 'ok') {
     // Best-effort, como el aviso de aceptación: el registro de verdad ya está en su ficha.
     try {
