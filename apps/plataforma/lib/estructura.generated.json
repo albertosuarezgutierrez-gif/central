@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-07T10:13:09Z",
+  "generadoEn": "2026-10-07T11:32:54Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -367,7 +367,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "asegura-portal": {
         "estado": "usado",
@@ -691,7 +691,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 218
+        "evidencias": 225
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 160
+        "evidencias": 165
       },
       "rrhh": {
         "estado": "no",
@@ -2257,7 +2257,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 57
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 24
       },
       "asegura-portal": {
         "estado": "no",
@@ -3973,6 +3973,7 @@
       "module-documental"
     ],
     "module-seguros": [
+      "core-ai",
       "module-seguros-pii",
       "module-seguros-portal"
     ],
@@ -4048,6 +4049,8 @@
       "/api/cron/revision-anual",
       "/api/cron/siniestros-vinculo",
       "/api/cron/tarificador-renovaciones",
+      "/api/cron/whatsapp-analizar",
+      "/api/cron/whatsapp-retencion",
       "/api/google-contactos/callback",
       "/api/google-contactos/conectar",
       "/api/operador/actividad",
@@ -4217,6 +4220,9 @@
       "/api/operador/tarificador/ultimo-riesgo",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
+      "/api/operador/whatsapp/alta",
+      "/api/operador/whatsapp/conexion",
+      "/api/operador/whatsapp/conversaciones",
       "/api/portal/anulacion",
       "/api/portal/anulacion/solicitar",
       "/api/portal/carnets",
@@ -4243,7 +4249,8 @@
       "/api/tarificador/resultado",
       "/api/tarificador/trabajo/[id]",
       "/api/webhooks/codeoscopic",
-      "/api/webhooks/resend"
+      "/api/webhooks/resend",
+      "/api/webhooks/whatsapp"
     ],
     "asegura-portal": [
       "/api/acceso/solicitar",
@@ -5234,6 +5241,7 @@
       "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
       "/api/correduria/tarificador/ultimo-riesgo",
       "/api/correduria/vencimientos",
+      "/api/correduria/whatsapp-conexion",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
       "/api/cron/blog-asegura",
@@ -5262,6 +5270,7 @@
       "/api/cron/correduria-siniestros",
       "/api/cron/correduria-sustituciones",
       "/api/cron/correduria-tope-avant2",
+      "/api/cron/correduria-whatsapp-conexion",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
@@ -6820,7 +6829,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1637,
+    "apis": 1645,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
