@@ -66,7 +66,7 @@ Estado (05/10/2026): código listo, **apagado**, sin credenciales ni SQL. Sin c�
 | `NEXT_PUBLIC_META_APP_ID` · `NEXT_PUBLIC_WHATSAPP_ES_CONFIG_ID` | en **plataforma**: SDK JS y configuración del ES |
 
 ## Pasos pendientes
-- **SQL** (gate DDL: PR + 2 ojos), en orden: `2026-10-05b_whatsapp_crm.sql` y `2026-10-05e_whatsapp_conexion.sql`.
+- **SQL** (gate DDL: PR + 2 ojos), en orden: `2026-10-05b_whatsapp_crm.sql` y `2026-10-05f_whatsapp_conexion.sql`.
   Decidir el `REVOKE` comentado a `crm_seguros`. Envs de la tabla + redeploy de asegura y plataforma.
 - Plataforma: pintar la bandeja y la pestaña de la ficha; botón «no es personal» (hoy no hay reclasificación).
 ## RGPD

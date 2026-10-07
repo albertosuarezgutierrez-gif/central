@@ -6,7 +6,8 @@
 //   1. Secretos (WHATSAPP_APP_ID, WHATSAPP_APP_SECRET con requireSecret) y versión → si falta algo, 503.
 //   2. Cuerpo (Zod estricto) → 422.
 //   3. Cifrado del token disponible (encryptField da `v1:`) → si no, 503. ANTES del canje: el `code` es de
-//      UN SOLO USO y un token que no se puede guardar cifrado no se guarda en claro.
+//      UN SOLO USO y un token que no se puede guardar cifrado no se guarda en claro. Igual con el almacén
+//      (columnas del SQL 2026-10-05f legibles): si no, 503 `sin_esquema` sin tocar Meta.
 //   4. Canje del code → token de negocio. 5. Se guarda (ids + token cifrado) ANTES de seguir.
 //   6. Suscribir la app a la WABA. 7-8. Syncs de Coexistence (contactos, luego historial; una vez cada uno,
 //      solo si la suscripción fue bien: si no, el webhook del historial se perdería). 9. Verificación.
@@ -35,6 +36,11 @@ export type DepsAlta = {
   cifrar: (texto: string) => string
   /** WHATSAPP_PHONE_NUMBER_ID del webhook (para avisar si no casa con el número conectado). */
   numeroDelWebhook: string | null
+  /**
+   * Comprueba, ANTES del canje, que donde se guarda la conexión existe y se puede leer (columnas del SQL
+   * 2026-10-05f). Lanza si no. Sin esto, un esquema sin aplicar quemaba el `code` (un solo uso) y el token.
+   */
+  comprobarAlmacen: () => Promise<void>
   guardarAlta: (d: { wabaId: string; phoneNumberId: string; businessId: string | null; tokenCifrado: string }) => Promise<void>
   guardarSuscripcion: () => Promise<void>
   guardarSync: (tipo: 'contactos' | 'historial', requestId: string | null) => Promise<void>
@@ -76,6 +82,9 @@ export async function darDeAltaWhatsapp(cuerpo: unknown, deps: DepsAlta): Promis
   const businessId = v.data.business_id ?? null
 
   if (!cifradoDisponible(deps.cifrar)) return { status: 503, cuerpo: { estado: 'sin_clave_pii', motivo: 'sin PII_ENCRYPTION_KEY el token no se guarda (y el code no se gasta)' } }
+  if (!(await intentar(deps.comprobarAlmacen))) {
+    return { status: 503, cuerpo: { estado: 'sin_esquema', motivo: 'no se puede leer la conexión en BD (¿SQL 2026-10-05f sin aplicar?): el code no se gasta' } }
+  }
 
   const g = deps.graph(deps.version)
   const canje = await g.canjearCodigo({ appId, appSecret, code })

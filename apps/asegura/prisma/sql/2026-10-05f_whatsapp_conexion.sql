@@ -1,4 +1,4 @@
--- 2026-10-05e — WhatsApp: CONEXIÓN de la correduría por Embedded Signup v4 (Tech Provider, sin BSP) con
+-- 2026-10-05f — WhatsApp: CONEXIÓN de la correduría por Embedded Signup v4 (Tech Provider, sin BSP) con
 -- el número de la app WhatsApp Business en Coexistence. Código: lib/whatsapp/{graph,alta,conexion,eventos}.ts,
 -- POST /api/operador/whatsapp/alta, GET|POST /api/operador/whatsapp/conexion, webhook (account_update,
 -- history, smb_app_state_sync, edit/revoke). Doc: apps/asegura/docs/WHATSAPP.md.

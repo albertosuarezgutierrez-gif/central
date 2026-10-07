@@ -8,7 +8,7 @@ import { auditado } from '@/lib/auditoria'
 import { darDeAltaWhatsapp } from '@/lib/whatsapp/alta'
 import { crearClienteGraph, versionGraph } from '@/lib/whatsapp/graph'
 import { secretoWhatsapp } from '@/lib/whatsapp/secretos'
-import { guardarAltaConexion, guardarSuscripcion, guardarSync, guardarVerificacion } from '@/lib/whatsapp/conexion'
+import { guardarAltaConexion, guardarSuscripcion, guardarSync, guardarVerificacion, leerConexion } from '@/lib/whatsapp/conexion'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -34,6 +34,10 @@ export const POST = auditado(async (req: Request) => {
       graph: (version) => crearClienteGraph({ version }),
       cifrar: encryptField,
       numeroDelWebhook: secretoWhatsapp('WHATSAPP_PHONE_NUMBER_ID'),
+      // Lee las columnas del SQL 2026-10-05f: si falta, falla AQUÍ, antes de gastar el code.
+      comprobarAlmacen: async () => {
+        if ((await leerConexion(id)) === null) throw new Error('correduría sin fila')
+      },
       guardarAlta: (d) => guardarAltaConexion(id, d),
       guardarSuscripcion: () => guardarSuscripcion(id),
       guardarSync: (tipo, requestId) => guardarSync(id, tipo, requestId),

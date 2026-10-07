@@ -81,9 +81,18 @@ export type Eventos = {
   otroNumero: number
 }
 
+function esDeEsteNumero(pnid: string | undefined, phoneNumberId: string | null, wabaId: string | null, entradaId: string | undefined): boolean {
+  if (phoneNumberId !== null) return pnid === undefined || pnid === phoneNumberId
+  return wabaId !== null && entradaId === wabaId
+}
+
 const codigos = (e: { code: number }[] | undefined) => (e ?? []).map((x) => x.code)
 
-export function extraerEventos(body: WebhookWhatsapp, phoneNumberId: string): Eventos {
+/**
+ * `phoneNumberId` null = no hay número configurado: `history` y `smb_app_state_sync` se aceptan solo si la
+ * WABA de la entrada (`entry[].id`) es `wabaId` (la guardada en BD). Con número, manda el número.
+ */
+export function extraerEventos(body: WebhookWhatsapp, phoneNumberId: string | null, wabaId: string | null = null): Eventos {
   const out: Eventos = { historial: [], contactosSync: 0, cuentas: [], noAdmitidos: 0, otroNumero: 0 }
   for (const entrada of body.entry) {
     for (const cambio of entrada.changes) {
@@ -91,7 +100,7 @@ export function extraerEventos(body: WebhookWhatsapp, phoneNumberId: string): Ev
         const v = zHistorial.safeParse(cambio.value)
         if (!v.success) continue
         const pnid = v.data.metadata?.phone_number_id
-        if (pnid !== undefined && pnid !== phoneNumberId) {
+        if (!esDeEsteNumero(pnid, phoneNumberId, wabaId, entrada.id)) {
           out.otroNumero++
           continue
         }
@@ -115,7 +124,7 @@ export function extraerEventos(body: WebhookWhatsapp, phoneNumberId: string): Ev
         const v = zEstadoApp.safeParse(cambio.value)
         if (!v.success) continue
         const pnid = v.data.metadata?.phone_number_id
-        if (pnid !== undefined && pnid !== phoneNumberId) {
+        if (!esDeEsteNumero(pnid, phoneNumberId, wabaId, entrada.id)) {
           out.otroNumero++
           continue
         }

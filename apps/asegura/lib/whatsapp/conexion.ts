@@ -1,6 +1,6 @@
 // La CONEXIÓN de WhatsApp de la correduría (Tech Provider + Embedded Signup + Coexistence): lo que se
 // guarda en `corredurias` (columnas heredadas wa_phone_number_id / wa_business_account_id /
-// wa_access_token + las de prisma/sql/2026-10-05e_whatsapp_conexion.sql). Doc: docs/WHATSAPP.md.
+// wa_access_token + las de prisma/sql/2026-10-05f_whatsapp_conexion.sql). Doc: docs/WHATSAPP.md.
 //
 // Las columnas nuevas NO están en el modelo Prisma a propósito: sin el SQL aplicado, añadirlas al modelo
 // rompería cualquier lectura de `correduria` sin `select`. Aquí todo va en SQL crudo y, sin el SQL, falla
@@ -105,6 +105,13 @@ export async function leerConexion(correduriaId: string): Promise<Conexion | nul
  * Guarda ids + token CIFRADO y reinicia lo que es de la conexión anterior (syncs, historial, verificación).
  * El alta no avisa por Telegram (la ha hecho Alberto): se marca como avisada.
  */
+/** Los ids guardados tras el alta, para filtrar el webhook (consulta parametrizada). Sin SQL aplicado/columnas → lanza. */
+export async function leerDestinoWebhook(correduriaId: string): Promise<{ phoneNumberId: string | null; wabaId: string | null } | null> {
+  const [f] = await prismaAsegura().$queryRaw<{ wa_phone_number_id: string | null; wa_business_account_id: string | null }[]>(Prisma.sql`
+    select wa_phone_number_id, wa_business_account_id from corredurias where id = ${correduriaId}::uuid`)
+  return f ? { phoneNumberId: f.wa_phone_number_id, wabaId: f.wa_business_account_id } : null
+}
+
 export async function guardarAltaConexion(
   correduriaId: string,
   d: { wabaId: string; phoneNumberId: string; businessId: string | null; tokenCifrado: string },

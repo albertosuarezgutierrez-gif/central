@@ -3,7 +3,7 @@
 //
 //   WHATSAPP_APP_SECRET        HMAC de X-Hub-Signature-256 (App Secret de la app de Meta).
 //   WHATSAPP_VERIFY_TOKEN      el token que se teclea en Meta al dar de alta el webhook.
-//   WHATSAPP_PHONE_NUMBER_ID   solo se procesa lo que llega a ESTE número (metadata.phone_number_id).
+//   WHATSAPP_PHONE_NUMBER_ID   (opcional) solo se procesa lo que llega a ESTE número; sin ella, el de BD (corredurias.wa_phone_number_id).
 //   ASEGURA_WHATSAPP_ACTIVO    '1' = se guarda y procesa. Otra cosa = 200 sin guardar nada.
 //   ASEGURA_WHATSAPP_IA_ACTIVO '1' = el cron analiza con IA. Otra cosa = no se llama a la IA.
 //   WHATSAPP_RETENCION_DIAS    días que se conserva el texto de los mensajes (por defecto 730).

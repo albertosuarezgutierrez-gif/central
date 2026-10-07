@@ -6,8 +6,9 @@ import { secretoWhatsapp } from '@/lib/whatsapp/secretos'
 import { verificarFirmaMeta, verificarSuscripcion } from '@/lib/whatsapp/firma'
 import { extraerMensajes, zWebhookWhatsapp } from '@/lib/whatsapp/payload'
 import { guardarCrudos, guardarNoReconocido, procesarPendientes } from '@/lib/whatsapp/procesar'
+import { hayDestino, resolverDestino } from '@/lib/whatsapp/destino'
 import { extraerEventos } from '@/lib/whatsapp/eventos'
-import { hayEventosDeCuenta, registrarEventosWebhook } from '@/lib/whatsapp/conexion'
+import { hayEventosDeCuenta, leerDestinoWebhook, registrarEventosWebhook } from '@/lib/whatsapp/conexion'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -21,7 +22,7 @@ export const maxDuration = 60
 //          2) ASEGURA_WHATSAPP_ACTIVO≠'1' → 200 sin guardar nada (un 4xx/5xx haría reintentar a Meta);
 //          3) Zod safeParse; 4) guarda el crudo (dedupe por wamid); 5) 200 rápido; 6) procesa en `after`.
 // Solo `messages` (entrantes) y `smb_message_echoes` (lo que Alberto escribe desde el móvil en
-// Coexistence); `statuses` se ignoran. Solo lo dirigido a WHATSAPP_PHONE_NUMBER_ID. Ediciones y
+// Coexistence); `statuses` se ignoran. Solo lo dirigido al phone_number_id válido (env WHATSAPP_PHONE_NUMBER_ID o, sin ella, el guardado en BD tras el alta; sin ninguno: 200 sin procesar). Ediciones y
 // borrados (`edit`/`revoke`) entran como mensajes y se aplican al original al procesar.
 // Eventos de CUENTA (`account_update`, `history`, `smb_app_state_sync`; lib/whatsapp/eventos.ts): no
 // llevan texto de nadie, así que se registran AUNQUE el canal esté apagado (el alta se hace antes de
@@ -38,8 +39,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const appSecret = secretoWhatsapp('WHATSAPP_APP_SECRET')
-  const numeroId = secretoWhatsapp('WHATSAPP_PHONE_NUMBER_ID')
-  if (!appSecret || !numeroId) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
+  if (!appSecret) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
 
   const cuerpoCrudo = await req.text()
   if (!verificarFirmaMeta(cuerpoCrudo, req.headers.get('x-hub-signature-256'), appSecret)) {
@@ -54,8 +54,25 @@ export async function POST(req: Request) {
   const v = parseado === undefined ? null : zWebhookWhatsapp.safeParse(parseado)
   const activo = whatsappActivo()
 
+  // A qué número/WABA pertenece: la env si está puesta; si no, lo guardado en BD tras el alta.
+  const envNumero = secretoWhatsapp('WHATSAPP_PHONE_NUMBER_ID')
+  let bd: { phoneNumberId: string | null; wabaId: string | null } | null = null
+  if (!envNumero && aseguraConfigurada()) {
+    try {
+      const c = await correduriaUnica()
+      bd = c ? await leerDestinoWebhook(c.id) : null
+    } catch (e) {
+      console.error('[webhooks/whatsapp] no se pudo leer el número guardado:', e instanceof Error ? e.name : e)
+      return NextResponse.json({ estado: 'error' }, { status: 500 })
+    }
+  }
+  const destino = resolverDestino(envNumero, bd)
+  // Ni número ni WABA configurados: firmado por Meta pero no sabemos de quién es → 200 sin procesar (no 503: reintentaría).
+  if (!hayDestino(destino)) return NextResponse.json({ estado: 'sin_destino' })
+  const numeroId = destino.phoneNumberId
+
   // Eventos de cuenta: con el canal encendido o apagado (no llevan datos personales).
-  const eventos = v?.success ? extraerEventos(v.data, numeroId) : null
+  const eventos = v?.success ? extraerEventos(v.data, numeroId, destino.wabaId) : null
   // Sin BD y con el canal apagado no se devuelve 503 (Meta reintentaría y podría desactivar el webhook).
   if (eventos && hayEventosDeCuenta(eventos) && (aseguraConfigurada() || activo)) {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -88,6 +105,9 @@ export async function POST(req: Request) {
     console.error('[webhooks/whatsapp] no se pudo resolver la correduría:', e instanceof Error ? e.name : e)
     return NextResponse.json({ estado: 'error' }, { status: 500 })
   }
+
+  // Solo WABA (sin phone id): los eventos de cuenta ya se registraron; los mensajes no se guardan.
+  if (numeroId === null) return NextResponse.json({ estado: 'sin_numero' })
 
   if (!v || !v.success) {
     // Firmado por Meta pero con una forma que no conocemos: se guarda tal cual (no se pierde) y 200.

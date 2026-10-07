@@ -6,7 +6,7 @@ import { crearClienteGraph, type FetchLike } from './graph.ts'
 
 const CUERPO = { code: 'CODIGO-ES-123', waba_id: '111', phone_number_id: '222', business_id: '333' }
 
-function montar(opciones: { secretos?: Record<string, string>; respuestas?: Array<{ status: number; json: unknown }>; cifrar?: (t: string) => string; numero?: string | null } = {}) {
+function montar(opciones: { secretos?: Record<string, string>; respuestas?: Array<{ status: number; json: unknown }>; cifrar?: (t: string) => string; numero?: string | null; almacen?: () => Promise<void> } = {}) {
   const urls: string[] = []
   const guardados: Record<string, unknown> = {}
   const respuestas = [...(opciones.respuestas ?? [])]
@@ -22,6 +22,7 @@ function montar(opciones: { secretos?: Record<string, string>; respuestas?: Arra
     graph: (version) => crearClienteGraph({ version, fetch: f }),
     cifrar: opciones.cifrar ?? ((t) => `v1:iv:${Buffer.from(t).toString('base64')}:tag`),
     numeroDelWebhook: opciones.numero === undefined ? '222' : opciones.numero,
+    comprobarAlmacen: opciones.almacen ?? (async () => {}),
     guardarAlta: async (d) => { guardados.alta = d },
     guardarSuscripcion: async () => { guardados.suscripcion = true },
     guardarSync: async (tipo, id) => { guardados[`sync_${tipo}`] = id },
@@ -53,6 +54,15 @@ test('sin cifrado disponible (encryptField devuelve el texto tal cual) → 503 A
   assert.equal(r.status, 503)
   assert.equal(r.cuerpo.estado, 'sin_clave_pii')
   assert.equal(urls.length, 0)
+})
+
+test('almacén ilegible (SQL 2026-10-05f sin aplicar) → 503 sin_esquema ANTES del canje (el code no se gasta)', async () => {
+  const { deps, urls, guardados } = montar({ respuestas: TODO_OK, almacen: async () => { throw new Error('column "wa_conexion_estado" does not exist') } })
+  const r = await darDeAltaWhatsapp(CUERPO, deps)
+  assert.equal(r.status, 503)
+  assert.equal(r.cuerpo.estado, 'sin_esquema')
+  assert.equal(urls.length, 0, 'no se llama a Meta: el code sigue sin gastar')
+  assert.equal(guardados.alta, undefined)
 })
 
 test('cuerpo inválido (id no numérico, campo extra) → 422 sin llamar a Meta', async () => {

@@ -215,7 +215,7 @@ export default function WhatsappConexion() {
           <p style={{ ...pMuted, color: 'var(--negative)' }}>
             <ConIcono i={TriangleAlert}>
               No se ha podido leer el estado (no significa que esté desconectado).
-              {datos?.causa === 'esquema' ? ' Falta aplicar el SQL 2026-10-05e_whatsapp_conexion.sql en asegura.' : datos?.causa ? ` Causa: ${datos.causa}.` : ''}
+              {datos?.causa === 'esquema' ? ' Falta aplicar el SQL 2026-10-05f_whatsapp_conexion.sql en asegura.' : datos?.causa ? ` Causa: ${datos.causa}.` : ''}
             </ConIcono>
           </p>
         )}

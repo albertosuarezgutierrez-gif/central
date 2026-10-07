@@ -40,7 +40,7 @@ export async function GET(req: Request) {
     const numeroCoincide = env && conexion?.phoneNumberId ? env === conexion.phoneNumberId : null
     return NextResponse.json({ estado: 'ok', conexion, configuracion: { ...configuracion, numeroCoincide } })
   } catch (e) {
-    // Sin el SQL 2026-10-05e aplicado esto sale como `esquema`: la pantalla lo dice, no pinta «desconectada».
+    // Sin el SQL 2026-10-05f aplicado esto sale como `esquema`: la pantalla lo dice, no pinta «desconectada».
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/whatsapp/conexion', e), configuracion }, { status: 500 })
   }
 }

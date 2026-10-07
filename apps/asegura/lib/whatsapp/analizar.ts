@@ -18,6 +18,7 @@ import { crearOportunidad } from '../oportunidad-seguimiento'
 import { SISTEMA, construirPrompt, construirTranscripcion, parsearAnalisis, type ContextoParaIA, type MensajeTranscripcion } from './analisis'
 import { ACTOR_IA, ORIGEN_TAREA_IA, ejecutar, planificar, type ClienteContexto, type ContextoEjecucion, type DepsEjecutor, type ResultadoPaso } from './ejecutor'
 import { purgarTextoConversacion } from './retencion'
+import { excluidaPorOptOut } from './optout'
 
 const ESTADOS_ABIERTOS = ['competencia', 'en_negociacion', 'pendiente_cliente']
 const MAX_INTENTOS = 3
@@ -36,7 +37,7 @@ function descifrar(v: string | null | undefined): string | null {
   }
 }
 
-type Reclamada = { id: string; estado: string; cliente_id: string | null; clientes_candidatos: number | null; perfil: string | null; telefono: string | null; intentos: number }
+type Reclamada = { opt_out_conv?: boolean; id: string; estado: string; cliente_id: string | null; clientes_candidatos: number | null; perfil: string | null; telefono: string | null; intentos: number }
 
 export type ResumenAnalisis = { analizadas: number; fallidas: number; saltadas: number; acciones: number }
 
@@ -49,6 +50,8 @@ export async function analizarPendientes(correduriaId: string, limite = 10): Pro
         where correduria_id = ${correduriaId}::uuid and wa_telefono_hash is not null
           and estado in ('abierta', 'pendiente_clasificar')
           and ultimo_mensaje_at is not null
+          and wa_opt_out_at is null
+          and not exists (select 1 from clientes cl where cl.id = conversaciones.cliente_id and cl.wa_opt_out_at is not null)
           and ultimo_mensaje_at > coalesce(analizada_hasta, '-infinity'::timestamptz)
           and ultimo_mensaje_at < now() - interval '10 minutes'
           and (analisis_reclamado_at is null or analisis_reclamado_at < now() - interval '30 minutes')
@@ -56,7 +59,8 @@ export async function analizarPendientes(correduriaId: string, limite = 10): Pro
         limit ${limite}
         for update skip locked)
     returning c.id::text as id, c.estado, c.cliente_id::text as cliente_id, c.clientes_candidatos,
-              c.wa_perfil_nombre_cifrado as perfil, c.wa_telefono_cifrado as telefono, c.analisis_intentos as intentos`)
+              c.wa_perfil_nombre_cifrado as perfil, c.wa_telefono_cifrado as telefono, c.analisis_intentos as intentos,
+              c.wa_opt_out_at is not null as opt_out_conv`)
   const r: ResumenAnalisis = { analizadas: 0, fallidas: 0, saltadas: 0, acciones: 0 }
   for (const c of reclamadas) {
     try {
@@ -125,8 +129,8 @@ async function analizarUna(correduriaId: string, c: Reclamada): Promise<number |
        where id = ${c.id}::uuid and correduria_id = ${correduriaId}::uuid`)
 
   const cliente = c.cliente_id ? await clienteVivo(correduriaId, c.cliente_id) : null
-  // Opt-out: ni IA ni acciones.
-  if (cliente?.optOut) {
+  // Opt-out (conversación o ficha, también tras fusiones): ni IA ni acciones.
+  if (excluidaPorOptOut(c, cliente)) {
     await cerrar()
     return 'saltada'
   }
