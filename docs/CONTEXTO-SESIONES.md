@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(07/10/2026)** — Correduría · duplicados: asegura#875 mergeado (la ingesta CIMA adopta la ficha viva en vez de crear un duplicado). La migración 0107 (índice único) NO está aplicada: hay 8 grupos que la violarían, 4 de clientes distintos.
+#4183: vigía de duplicados, bandeja `/correduria/revision`, avisos CIMA↔ficha diagnosticables (`cima_sincro_resumen`) y aviso de duplicados nuevos; al fusionar con main se reutiliza SU criterio (`agruparDuplicadas`, señal `polizasDuplicadas`) y se retira `esNumeroPolizaComodin`/`duplicadosVivos`.
+Pendiente: esos 8 grupos; sembrar la bandeja con el OK de Alberto; aplicar 0107 por el gate; riesgo del `onConflictDoUpdate` de asegura, que puede reasignar una póliza a otro cliente.
+
 **(07/10/2026)** — Correduría · Código de acceso del presupuesto DENTRO del WhatsApp (decisión de Alberto: el envío automático por WhatsApp no funciona). Hash atado al token, caduca con `vence_el`, tope 5 intentos, cookie 4 h solo de ese presupuesto; firma `otp_whatsapp`; envío sin correo si hay móvil. SQL `apps/asegura/prisma/sql/2026-10-07_presupuesto_codigo_whatsapp.sql` ANTES de desplegar asegura. Riesgo: firma sin correo no cumple `cumpleArt26.b`.
 
 **(07/10/2026)** — Correduría · Presupuesto al portal: verificado que la parrilla del cliente ya filtra por garantías (130/132 opciones Codeoscopic con `garantias`). El WhatsApp avisa ANTES del enlace de que pedirá un código de 6 dígitos que llega SOLO por correo (`mensaje-presupuesto.ts`). Pendiente: botón «quiero cambiar algo»; código por WhatsApp en `/presupuesto/[token]` (hoy solo email).
@@ -117,6 +121,14 @@ Reglas: DNI → su ficha o nueva (DNI en ficha con otro nombre → aviso, no se 
 Línea «Hay un conductor joven/novel: revisar antes de tarificar» (accion `conductor_joven_novel`) en el historial de la oportunidad. Respuesta `figuras[{rol,clienteId,creada}]` + `avisosFiguras`; pintado en `LeerPoliza.tsx`. Sin SQL nuevo.
 
 **(03/10/2026, SEO)** — 🔎 Pasada SEO mensual (OpenSEO, rutina trig_015R…): keywords en seo-asegura/references/keywords.md §5; mejora CTR de 2 artículos del blog (preaviso 363 impr/0 clics → título más específico; como-dar-de-baja 202 impr/1 clic → descripción más operativa). Pendiente de Alberto: marcar generate_lead como evento clave en GA4, gestionar reseñas (1), 301 de /mejoramos-tu-seguro/.
+
+**(03/10/2026)** — 🧬 Duplicados vivos: fusionada la Mapfre 236788463 (lote `mapfre-carga-2026-previa-manuales`); lote `doble-import-intranet-2026-10` (30 parejas, estado no tocado).
+Nuevo: vigía `/api/operador/duplicados/vivos` (tras el merge con main usa el criterio único `duplicadasCartera`/`agruparDuplicadas`, sin SQL ni comodines propios) y bandeja `/correduria/revision`
+(casos en `operational_events`: `poliza_revision_manual` / `poliza_revision_resuelta`; «misma» NO fusiona, la fusión va por CTE con OK de Alberto). Sin commitear al cierre.
+Pendiente: las 309 pólizas activas con el vencimiento pasado; la SIEMBRA de casos en la bandeja (otra sesión, con OK de Alberto).
+PR #4183 (sin commitear): Graphify — `casoId` de la bandeja a minúsculas (Zod); recuento «sin leer» ilegible = `null`; el cero delante de letras («0A12») NO se reprodujo (SQL = helper; gap menor: el SQL quita tildes y el helper no).
+Avisos CIMA↔ficha: `compararConCima` normaliza antes de avisar (`mismoValorNormalizado`; fecha en otro formato → acción `normalizar`, motivo `formato`); el cron registra `cima_sincro_resumen` (sin PII) y lista «campo · nº póliza» (≤10) en Telegram.
+Vigía diario de duplicados NUEVOS en `correduria-sustituciones` (`gruposDuplicadosNuevos`; lo visto = evento `duplicados_vivos_visto` vía `/api/operador/duplicados/vistos`). Pendiente: commit/push y verlo en prod.
 
 **(03/10/2026, CIMA «todo guardado y pintado»)** — asegura#874 (LOO-806): el resto del SIN (sin PII) se guarda en `siniestros.cima_extra`; un SIN más viejo solo rellena huecos. El medidor guarda `cima_cobertura_campos.excluido_motivo` y separa «descartado por privacidad» de «sin leer». El resto del SIN solo cuenta como leído si la columna existe. Lista de excluidos ampliada (DNI/NIF/CIF, matrícula, cuentas, perceptor, implicados, lesiones, fallecidos).
 DDL 0106 aplicado en prod (`seguros.`) el 03/10 tras CI verde y OK de Alberto. Audit en operational_events `e9eb789b`. El portal no tiene grant sobre la columna.
