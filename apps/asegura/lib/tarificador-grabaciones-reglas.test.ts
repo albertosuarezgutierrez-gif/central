@@ -9,6 +9,8 @@ import {
   esTablaSinCrear,
   leerAltaGrabacion,
   maxLlamadasGrabador,
+  MAX_OPCIONES_IA,
+  respuestaIACortada,
   promptAnalisis,
   sistemaAnalisis,
 } from './tarificador-grabaciones-reglas.ts'
@@ -56,4 +58,18 @@ test('rutas del grabador: Bearer de operador, escrituras auditadas, sin SQL en l
     for (const m of src.matchAll(/export (?:const|async function) (POST|PATCH|PUT|DELETE)\b[^\n]*/g)) assert.match(m[0], /auditado\(/, `${r}: ${m[1]} sin auditado()`)
     assert.ok(!/\bseguros\s*\.\s*[a-z_]/i.test(src), `${r}: el SQL va en lib/, no en la ruta`)
   }
+})
+
+test('el prompt pide un tope de opciones por select y salida compacta', () => {
+  assert.equal(MAX_OPCIONES_IA, 25)
+  assert.match(sistemaAnalisis(), /MÁXIMO 25 opciones/)
+})
+
+test('respuestaIACortada: JSON cortado sí; completo, sin llaves o con llaves en cadenas no', () => {
+  assert.equal(respuestaIACortada('{"titulo":"x","campos":[{"etiqueta":"a","opciones":["1","2'), true)
+  assert.equal(respuestaIACortada('```json\n{"campos":[{"a":1},{"a":'), true)
+  assert.equal(respuestaIACortada('{"t":"llave } dentro","c":[1,2'), true)
+  assert.equal(respuestaIACortada('{"t":"a","c":[]}'), false)
+  assert.equal(respuestaIACortada('Aquí: {"t":"}"} fin'), false)
+  assert.equal(respuestaIACortada('no hay json'), false)
 })

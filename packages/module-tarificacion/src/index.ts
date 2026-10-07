@@ -190,3 +190,25 @@ export {
   type PantallaSeparada,
 } from './grabador.ts'
 export { VERSION_GRABADOR, FUENTE_GRABADOR, configGrabador, AVISO_MARCO_NO_LEGIBLE, codigoBookmarklet, urlBookmarklet, type ConfigGrabador } from './grabador-bookmarklet.ts'
+
+// Recomendador explicable y control de calidad previo a enseñar/enviar (08/10/2026).
+export {
+  pesosPorDefecto,
+  pesosParaPerfil,
+  recomendar,
+  type PerfilCliente,
+  type OpcionesRecomendador,
+  type TipoFlagRiesgo,
+  type FlagRiesgo,
+  type OfertaRecomendada,
+  type OfertaDescartada,
+  type Recomendacion,
+} from './recomendador.ts'
+export {
+  controlarCalidad,
+  type ControlOferta,
+  type ControlSolicitud,
+  type IncidenciaCalidad,
+  type ResultadoCalidad,
+  type OpcionesCalidad,
+} from './control-calidad.ts'
