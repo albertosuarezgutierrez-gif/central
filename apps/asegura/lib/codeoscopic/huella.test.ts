@@ -77,7 +77,7 @@ test('la comprobación y la reserva comparten transacción bajo advisory lock', 
   const cuerpo = src.slice(i, src.indexOf('export async function consumoEmision'))
   assert.match(cuerpo, /\$transaction/)
   assert.match(cuerpo, /pg_advisory_xact_lock\(hashtext\(/)
-  assert.ok(cuerpo.indexOf('pg_advisory_xact_lock') < cuerpo.indexOf('insert into seguros.codeoscopic_consumo'))
+  assert.ok(cuerpo.indexOf('pg_advisory_xact_lock') < cuerpo.search(/insert into \S*codeoscopic_consumo/))
 })
 
 test('el duplicado responde 409 sin cargo y con mensaje legible', () => {

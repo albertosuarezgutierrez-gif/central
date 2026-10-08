@@ -142,7 +142,7 @@ export async function reservarSinDuplicado(input: {
        where correduria_id = ${input.correduriaId}::uuid
          and huella = ${input.huella}
          and estado in ('reservado', 'facturable')
-         and creado_at >= now() - make_interval(mins => ${VENTANA_DUPLICADO_MIN})
+         and creado_at >= now() - make_interval(mins => ${VENTANA_DUPLICADO_MIN}::int)
        order by creado_at desc`
     const previas: FilaPrevia[] = filas.map((f) => ({ estado: f.estado, creadoAt: new Date(f.creado_at), intentoId: f.intento_id }))
     const copias = new Map<string, { respuesta: unknown; cotizacionId: string }>()
