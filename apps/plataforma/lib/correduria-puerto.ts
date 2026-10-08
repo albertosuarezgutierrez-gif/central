@@ -942,16 +942,6 @@ export function interpretarDuplicados(status: number, json: unknown): Duplicados
   return { estado: 'ok', total, muestra }
 }
 
-export async function duplicadosAsegura(): Promise<DuplicadosVivosPuerto> {
-  try {
-    const r = await pedir('/api/operador/duplicados/vivos')
-    if (r === null) return { estado: 'sin_configurar' }
-    return interpretarDuplicados(r.status, r.json)
-  } catch {
-    return { estado: 'error', motivo: 'red' }
-  }
-}
-
 // ── Bandeja de revisión manual de pólizas (03/10/2026) ─────────────────────
 //
 // `GET/POST /api/operador/revision`. Los casos viven en `seguros.operational_events` de asegura.
