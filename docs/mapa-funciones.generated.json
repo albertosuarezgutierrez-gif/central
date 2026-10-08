@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-08T13:55:31Z",
-  "sha": "59f582458bc21751545823107a838672884e0243",
+  "generadoEn": "2026-10-08T14:41:08Z",
+  "sha": "7a02ce590b0f4e5073994b197a0208b261c3bbc6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -96730,7 +96730,7 @@
           "exportada": false,
           "params": "p: Poliza, cancelada: boolean",
           "retorno": "(Acceso &",
-          "linea": 131,
+          "linea": 148,
           "resumen": "Las baldosas de la póliza, cada una con su dato y su contenido. `null` en el dato = no se pinta: no es «0»."
         },
         {
@@ -96739,7 +96739,7 @@
           "exportada": false,
           "params": "{ o }: { o: ObjetoFicha | null | undefined }",
           "retorno": null,
-          "linea": 323,
+          "linea": 340,
           "resumen": "Qué asegura. Si la copia de CIMA no lo trae y la GEMELA del volcado sí (10 de las 109 vivas: la casa de Rota está en la copia de junio), se enseña la gemela y se dice de dónde sale. Sin gemela informa"
         },
         {
@@ -96748,7 +96748,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 344
+          "linea": 361
         },
         {
           "nombre": "Sustitucion",
@@ -96756,7 +96756,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 398,
+          "linea": 415,
           "resumen": "Cambio de compañía por retarificación (20/09/2026). Dos caras, no excluyentes: esta póliza puede a la vez venir de sustituir a otra Y estar ya sustituida por una tercera (si se retarifica dos veces). "
         },
         {
@@ -96765,7 +96765,7 @@
           "exportada": false,
           "params": "{ lista }: { lista: Poliza['coberturas'] }",
           "retorno": null,
-          "linea": 431
+          "linea": 448
         },
         {
           "nombre": "fechaCorta",
@@ -96773,7 +96773,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string",
-          "linea": 487
+          "linea": 504
         },
         {
           "nombre": "CapitalCobertura",
@@ -96781,7 +96781,7 @@
           "exportada": false,
           "params": "{ capital, descripcion }: { capital: string | null; descripcion: string | null }",
           "retorno": null,
-          "linea": 493
+          "linea": 510
         },
         {
           "nombre": "Limites",
@@ -96789,7 +96789,7 @@
           "exportada": false,
           "params": "{ detalle }: { detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 505
+          "linea": 522
         },
         {
           "nombre": "Franquicia",
@@ -96797,7 +96797,7 @@
           "exportada": false,
           "params": "{ texto, detalle }: { texto: string | null; detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 520
+          "linea": 537
         },
         {
           "nombre": "contextoWhatsapp",
@@ -96805,7 +96805,7 @@
           "exportada": false,
           "params": "p: Poliza",
           "retorno": "ContextoWhatsappDevuelto | null",
-          "linea": 542,
+          "linea": 559,
           "resumen": "Con quién se abre el WhatsApp de un recibo devuelto: el móvil del tomador y, si no tiene, el de alguien de su póliza (se dice de quién). `null` = no hay a quién escribir por ahí."
         },
         {
@@ -96814,7 +96814,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 556
+          "linea": 573
         },
         {
           "nombre": "comisionEnRiesgo",
@@ -96822,7 +96822,7 @@
           "exportada": false,
           "params": "lista: Poliza['listaRecibos']",
           "retorno": "number | null",
-          "linea": 595,
+          "linea": 612,
           "resumen": "Suma la comisión de los recibos DEVUELTOS que la traen; `null` si ninguno la trae (no es 0€)."
         },
         {
@@ -96831,7 +96831,7 @@
           "exportada": false,
           "params": "m: string | null",
           "retorno": "string",
-          "linea": 602,
+          "linea": 619,
           "resumen": "`manual:cobrado` (botón «Cobrado de nuevo») o `cima:<situación>` (lo resolvió la ingesta)."
         },
         {
@@ -96840,7 +96840,7 @@
           "exportada": false,
           "params": "{ lista }: { lista: Poliza['historialDevoluciones'] }",
           "retorno": null,
-          "linea": 613,
+          "linea": 630,
           "resumen": "Las devoluciones que avisó la compañía por correo, también las ya resueltas: si un cliente devuelve recibos a menudo, es aquí donde se ve. `null` = no se pudo leer y se dice; `[]` no pinta nada."
         },
         {
@@ -96849,7 +96849,7 @@
           "exportada": false,
           "params": "{ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null; puedeBaja: boolean }",
           "retorno": null,
-          "linea": 637
+          "linea": 654
         },
         {
           "nombre": "Intervinientes",
@@ -96857,7 +96857,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 737,
+          "linea": 754,
           "resumen": "El TOMADOR va SIEMPRE, y el primero: no es un interviniente sino el titular de la póliza, así que no está en `poliza_intervinientes` y antes no salía. Alberto lo vio el 02/09/2026 en la 6930FBP, donde"
         },
         {
@@ -96866,7 +96866,7 @@
           "exportada": false,
           "params": "{ filas }: { filas: Fila[] }",
           "retorno": null,
-          "linea": 768,
+          "linea": 785,
           "resumen": "Lista etiqueta → valor. Solo recibe filas con dato: lo que no consta ni llega aquí."
         },
         {
@@ -96875,7 +96875,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 786,
+          "linea": 803,
           "resumen": "Todos los riesgos que manda CIMA (una póliza puede asegurar dos casas o dos barcos). La dirección llega YA descifrada de asegura, como la del riesgo principal; si allí no se pudo descifrar se dice, nu"
         },
         {
@@ -96884,7 +96884,7 @@
           "exportada": false,
           "params": "{ codigo }: { codigo: string }",
           "retorno": null,
-          "linea": 823,
+          "linea": 840,
           "resumen": "Situación de la póliza según la compañía (EIAC §13.3.32): «EV» → «En Vigor». Fuera de tabla, el código y se dice."
         },
         {
@@ -96893,7 +96893,7 @@
           "exportada": false,
           "params": "{ codigo }: { codigo: string }",
           "retorno": null,
-          "linea": 830,
+          "linea": 847,
           "resumen": "Clase de comisión de un recibo: traducida; fuera de tabla, el código con su título."
         },
         {
@@ -96902,7 +96902,7 @@
           "exportada": false,
           "params": "{ label, valor, nota, color }: { label: string; valor: string | null; nota?: string; color?: string }",
           "retorno": null,
-          "linea": 838
+          "linea": 855
         },
         {
           "nombre": "NoSePudo",
@@ -96910,7 +96910,7 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 855
+          "linea": 872
         },
         {
           "nombre": "estadoBajaCima",
@@ -96918,7 +96918,7 @@
           "exportada": false,
           "params": "b: NonNullable<Poliza['bajaVerificada']>",
           "retorno": "string",
-          "linea": 876,
+          "linea": 893,
           "resumen": "Lo que CIMA ha dicho desde que se dio de baja a mano: nada, que la confirma, o que la sigue dando en vigor."
         },
         {
@@ -96927,7 +96927,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 883,
+          "linea": 900,
           "resumen": "`dd/mm/aaaa`. Una fecha centinela (1900-01-01, 9999-12-31) o ilegible no es fecha: «—», nunca «01/01/1900»."
         },
         {
@@ -96936,7 +96936,7 @@
           "exportada": false,
           "params": "{ e, retarificar }: { e: Poliza['estimacion']; retarificar: { href: string; rotulo: string } | null }",
           "retorno": null,
-          "linea": 900,
+          "linea": 917,
           "resumen": "─── ¿Merece la pena pedir precio? ──────────────────────────────────────── Va pegada a la evolución de la prima porque responde a la MISMA pregunta: pedir precio cuesta 0,50€ reales y esto dice si com"
         },
         {
@@ -96945,7 +96945,7 @@
           "exportada": false,
           "params": "{ etiqueta, eur: importe }: { etiqueta: string; eur: number }",
           "retorno": null,
-          "linea": 975,
+          "linea": 992,
           "resumen": "Un número ESTIMADO: `≈`, tamaño y color propios para no confundirlo con una prima real."
         },
         {
@@ -96954,7 +96954,7 @@
           "exportada": false,
           "params": "v: NonNullable<Poliza['estimacion']>['veredicto']",
           "retorno": "React.CSSProperties",
-          "linea": 990
+          "linea": 1007
         },
         {
           "nombre": "CapitalesHogar",
@@ -96962,7 +96962,7 @@
           "exportada": false,
           "params": "{ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }",
           "retorno": null,
-          "linea": 1010,
+          "linea": 1027,
           "resumen": "─── Capitales de hogar ─────────────────────────────────────────────────── SEIS estados y ninguno se colapsa con otro. Los dos que muerden: · `solo_sublimites`: `mayorEur` NO es el continente — pintar"
         },
         {
@@ -96971,12 +96971,12 @@
           "exportada": false,
           "params": "{ titulo, c }: { titulo: string; c: CapitalAsegurado | null }",
           "retorno": null,
-          "linea": 1024
+          "linea": 1041
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "366bafa31f61"
+      "hash": "c265977dc4e3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/PersonasPoliza.tsx",
