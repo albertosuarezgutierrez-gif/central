@@ -601,12 +601,6 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 06:35, junto al seguimiento de sustituciones, y solo si hay alguna',
   },
   {
-    id: 'correduria.duplicados-nuevos', categoria: 'correduria',
-    titulo: 'Pólizas duplicadas nuevas en la cartera',
-    que: 'Números de póliza que han pasado a tener dos o más fichas vivas desde el último aviso (número y compañía, sin datos personales): hay que revisarlas y fusionar si son la misma.',
-    cuando: 'Todos los días a las 06:35, junto al seguimiento de sustituciones, y solo si hay grupos nuevos',
-  },
-  {
     id: 'correduria.emision-retenida', categoria: 'correduria',
     titulo: 'Emisiones retenidas por la compañía (riesgo condicionado)',
     que: 'Pólizas emitidas desde Avant2 que la compañía dejó retenidas y que han cambiado: liberadas (ya en cartera) o rechazadas, más cuántas siguen retenidas.',

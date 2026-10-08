@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(08/10/2026)** — Correduría · duplicados: #4183 mergeado; aviso de duplicados unificado: se queda el de main (`polizasDuplicadas` en `correduria-ingesta`, `correduria.ingesta`).
+Retirado el vigía duplicado del cron `correduria-sustituciones` (`duplicados-aviso.ts`, catálogo `correduria.duplicados-nuevos`, lectura/escritura de `duplicados/vistos` en el puerto). La ruta `apps/asegura/.../duplicados/vistos` queda sin consumidor (no borrada).
+Corrige el 07/10: la 0107 de asegura es índice de BÚSQUEDA (no único, asegura#879), nada la bloquea; 9 grupos aparentes, 0 fusiones (2 = decide Alberto por tomador vigente). asegura#884: la ingesta ya no reasigna `cliente_id` (evento `cima_poliza_cliente_discrepante`) + override `proxy-addr` 2.0.8 (critical). Pendiente con OK: SQL bandeja revisión y marca «no duplicado» (scratchpad, no aplicados).
+
 **(07/10/2026)** — Correduría · duplicados: asegura#875 mergeado (la ingesta CIMA adopta la ficha viva en vez de crear un duplicado). La migración 0107 (índice único) NO está aplicada: hay 8 grupos que la violarían, 4 de clientes distintos.
 #4183: vigía de duplicados, bandeja `/correduria/revision`, avisos CIMA↔ficha diagnosticables (`cima_sincro_resumen`) y aviso de duplicados nuevos; al fusionar con main se reutiliza SU criterio (`agruparDuplicadas`, señal `polizasDuplicadas`) y se retira `esNumeroPolizaComodin`/`duplicadosVivos`.
 Pendiente: esos 8 grupos; sembrar la bandeja con el OK de Alberto; aplicar 0107 por el gate; riesgo del `onConflictDoUpdate` de asegura, que puede reasignar una póliza a otro cliente.
