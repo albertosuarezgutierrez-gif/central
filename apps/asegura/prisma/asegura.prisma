@@ -1504,6 +1504,11 @@ model Presupuesto {
   referencia       String?   @default(dbgenerated())
   /// Primer PDF descargado para el cliente. NO prueba que se enviara (no es enviadoAt). NULL = no consta.
   documentoDescargadoAt DateTime? @map("documento_descargado_at") @db.Timestamptz(6)
+  /// Código de acceso mandado por WhatsApp, HASHEADO y atado al token (`hashCodigoWhatsapp`).
+  /// NULL = el enlace no salió por WhatsApp: no hay código. `2026-10-07_presupuesto_codigo_whatsapp.sql`
+  whatsappCodigoHash     String? @map("whatsapp_codigo_hash")
+  /// Fallos seguidos del código de WhatsApp (tope `MAX_INTENTOS`). Un acierto lo pone a 0.
+  whatsappCodigoIntentos Int     @default(0) @map("whatsapp_codigo_intentos") @db.SmallInt
 
   opciones PresupuestoOpcion[]
   eventos  PresupuestoEvento[]
@@ -1572,6 +1577,44 @@ model PresupuestoEvento {
 
   @@index([presupuestoId, ocurridoAt])
   @@map("presupuesto_evento")
+}
+
+/// PROPUESTA DE ESCENARIOS (07/10/2026, 2026-10-07e_presupuesto_propuesta.sql): varios presupuestos de la
+/// MISMA oportunidad que se enseñan juntos (otro tomador, otro conductor…). Sin copia de precios ni de
+/// figuras: el documento lee cada presupuesto y su petición. Crearla NO avisa a nadie (borrador).
+/// El código la lee por SQL crudo (`lib/propuesta-escenarios.ts`); el modelo está para que el schema
+/// diga la verdad sobre la BD.
+model PresupuestoPropuesta {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId  String    @map("correduria_id") @db.Uuid
+  oportunidadId String    @map("oportunidad_id") @db.Uuid
+  /// `ASP-AA-NNNN`. La pone la BD (trigger + contador propio) e inmutable.
+  referencia    String?   @default(dbgenerated())
+  creadoAt      DateTime  @default(now()) @map("creado_at") @db.Timestamptz(6)
+  creadoPor     String    @map("creado_por")
+  /// Último aviso del lote. `whatsapp_enlace` = se abrió WhatsApp, NO prueba que saliera.
+  canalAviso    String?   @map("canal_aviso")
+  avisadoAt     DateTime? @map("avisado_at") @db.Timestamptz(6)
+  retiradaAt    DateTime? @map("retirada_at") @db.Timestamptz(6)
+
+  items PresupuestoPropuestaItem[]
+
+  @@index([correduriaId, oportunidadId, creadoAt(sort: Desc)], map: "idx_presupuesto_propuesta_oportunidad")
+  @@map("presupuesto_propuesta")
+}
+
+model PresupuestoPropuestaItem {
+  propuestaId   String   @map("propuesta_id") @db.Uuid
+  presupuestoId String   @map("presupuesto_id") @db.Uuid
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  orden         Int      @db.SmallInt
+
+  propuesta PresupuestoPropuesta @relation(fields: [propuestaId], references: [id], onDelete: Cascade)
+
+  @@id([propuestaId, presupuestoId])
+  @@unique([propuestaId, orden], map: "presupuesto_propuesta_item_orden_unico")
+  @@index([presupuestoId], map: "idx_presupuesto_propuesta_item_presupuesto")
+  @@map("presupuesto_propuesta_item")
 }
 
 /// La evidencia de una firma. Genérica desde el día uno porque la carta de

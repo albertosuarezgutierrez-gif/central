@@ -507,6 +507,17 @@ export {
 } from './vista-corredor.ts'
 export type { EstadoEnlaceVista } from './vista-corredor.ts'
 
+// Código de acceso del presupuesto mandado a mano por WhatsApp (07/10/2026): hash atado al token,
+// tope de fallos y caducidad en `vence_el`. Lo genera y lo comprueba asegura.
+export {
+  MAX_INTENTOS_WHATSAPP,
+  formatoCodigoWhatsapp,
+  hashCodigoWhatsapp,
+  estadoCodigoWhatsapp,
+  intentosQuedan,
+} from './codigo-whatsapp.ts'
+export type { EstadoCodigoWhatsapp, CodigoWhatsappGuardado } from './codigo-whatsapp.ts'
+
 // Sugerir pedir acceso a partir de relaciones YA CONOCIDAS (12/09/2026). Lee
 // su cabecera: sugerir no es conceder, y una relación «Sin vínculo» no se
 // sugiere nunca — misma guarda que ya usa `clientesVisiblesPara()`.

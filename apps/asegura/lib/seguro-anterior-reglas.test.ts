@@ -103,3 +103,13 @@ test('precalificar (gratis): una EXCEPCIÓN al leer/imputar degrada a no_disponi
   const ok = await imputarParaPrecalificar({ ...base, tipoNuevo: 'auto', cuerpo: {}, correcciones: undefined, leer: leer([COCHE]) })
   assert.ok(ok.ok && ok.publico.estado === 'imputado')
 })
+
+test('cónyuge no mirado: la lectura lo declara y el público lo lleva (también sin elegida)', async () => {
+  const conFallo = (cs: CandidataSeguroAnterior[], conyugeNoMirado?: boolean) => async (): Promise<LecturaCandidatas> => ({ ok: true, candidatas: cs, conyugeNoMirado })
+  for (const cs of [[COCHE], []]) {
+    const r = await imputarSeguroAnterior({ ...base, tipoNuevo: 'auto', cuerpo: {}, correcciones: undefined, leer: conFallo(cs, true) })
+    assert.ok(r.ok && r.publico.conyugeNoMirado === true)
+  }
+  const bien = await imputarSeguroAnterior({ ...base, tipoNuevo: 'auto', cuerpo: {}, correcciones: undefined, leer: conFallo([COCHE]) })
+  assert.ok(bien.ok && !bien.publico.conyugeNoMirado)
+})

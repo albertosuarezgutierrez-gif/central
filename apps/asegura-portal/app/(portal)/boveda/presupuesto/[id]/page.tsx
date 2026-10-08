@@ -16,6 +16,7 @@ import { MOTIVO_EN_REVISION, MOTIVO_SIN_DATOS, datosCotizados, datosListosParaAc
 import { MEDIADOR, ramoDeCatalogo, telefonoLegible } from '@central/module-seguros'
 import { datosParaContratar } from '@/lib/datos-emision'
 import { getIdentidad } from '@/lib/session'
+import { accesoPuenteDe } from '@/lib/presupuesto'
 import { avisoPerdidas, garantiasDeActual } from '@/lib/todas-las-opciones'
 
 export const dynamic = 'force-dynamic'
@@ -105,9 +106,13 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const mostrarDatos = !p.retirado && !p.caducado && p.emitidoAt === null && p.enviadoAt !== null
   // «Revisa tus datos»: mientras no esté emitido ni retirado. `null` = no se han podido leer.
   const mostrarCotizados = !p.retirado && p.emitidoAt === null
-  const identidad = mostrarDatos || mostrarCotizados ? await getIdentidad() : null
+  // «Datos para contratar» va por la identidad (su puente no admite el acceso por WhatsApp): quien
+  // entró con el código del WhatsApp no lo ve, en vez de ver «no podemos comprobarlo» para siempre.
+  const identidad = mostrarDatos && !p.accesoWhatsapp ? await getIdentidad() : null
   const datos = identidad && mostrarDatos ? await datosParaContratar(identidad.id, p.id) : null
-  const cotizados = identidad && mostrarCotizados ? await datosCotizados(identidad.id, p.id) : null
+  // «Revisa tus datos» (y con él, poder aceptar): con la sesión o con el acceso por WhatsApp.
+  const puerta = mostrarCotizados ? await accesoPuenteDe(p.id) : null
+  const cotizados = puerta && mostrarCotizados ? await datosCotizados(puerta.acceso, p.id) : null
   // Fail-closed: sin datos legibles (o con un aviso de error pendiente) no se ofrece aceptar.
   const bloqueoDatos = datosListosParaAceptar(cotizados)
     ? null
@@ -204,6 +209,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           puedeAceptar={puedeAceptar}
           bloqueoDatos={bloqueoDatos}
           corredor={p.vistaDeCorredor}
+          codigoWhatsapp={p.accesoWhatsapp}
           pdf={puedeDescargarPdf(p)}
         />
       ) : (
@@ -237,6 +243,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
                 compania={o.compania}
                 corredor={p.vistaDeCorredor}
                 bloqueoDatos={bloqueoDatos}
+                codigoWhatsapp={p.accesoWhatsapp}
                 perdidas={avisoPerdidas(ramoCat, o.garantias, garantiasActual)}
               />
             )}
@@ -247,7 +254,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       )}
 
       {/* La comparativa es la portada (§4.1): lo que falta para contratar va debajo. */}
-      {mostrarDatos && !deOfertas && <DatosParaContratar datos={datos} corredor={p.vistaDeCorredor} />}
+      {mostrarDatos && !deOfertas && !p.accesoWhatsapp && <DatosParaContratar datos={datos} corredor={p.vistaDeCorredor} />}
 
       {/* «Todas las opciones»: la lista entera (portada incluida, marcada «Recomendada») con los
           interruptores de garantías, paginada. Solo si hay algo más que la portada: si no, sería la
@@ -262,6 +269,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           corredor={p.vistaDeCorredor}
           puedeAceptar={puedeAceptar}
           bloqueoDatos={bloqueoDatos}
+          codigoWhatsapp={p.accesoWhatsapp}
           telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
         />
       )}

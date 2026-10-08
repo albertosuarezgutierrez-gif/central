@@ -65,11 +65,13 @@ test('🪤 preparar: 500/401 → null, jamás aceptado', () => {
 
 test('🪤 la vista de corredor no firma: el veto va ANTES de llamar al puente', () => {
   const fuente = readFileSync(new URL('../app/api/presupuesto/firma/route.ts', import.meta.url), 'utf8')
-  const veto = fuente.indexOf('identidad.corredor')
+  const veto = fuente.indexOf('if (puerta.corredor)')
   assert.ok(veto > 0, 'falta el veto de la vista de corredor')
-  assert.ok(veto < fuente.indexOf('pedirCodigoAceptacion(identidad.id'), 'el veto tiene que ir antes de pedir el código')
-  assert.ok(veto < fuente.indexOf('firmarAceptacion(identidad.id'), 'el veto tiene que ir antes de firmar')
-  assert.doesNotMatch(fuente, /b\.identidadId|clienteId/, 'la identidad sale de la sesión, nunca del cuerpo')
+  assert.ok(veto < fuente.indexOf('pedirCodigoAceptacion(acceso'), 'el veto tiene que ir antes de pedir el código')
+  assert.ok(veto < fuente.indexOf('firmarAceptacion(acceso'), 'el veto tiene que ir antes de firmar')
+  // Quién firma sale de la sesión o de la cookie de acceso por WhatsApp (`accesoPuenteDe`), nunca del cuerpo.
+  assert.match(fuente, /const puerta = await accesoPuenteDe\(presupuestoId\)/)
+  assert.doesNotMatch(fuente, /b\.identidadId|b\.tokenWhatsapp|b\.token\b|clienteId/, 'ni la identidad ni el token salen del cuerpo')
 })
 
 test('🪤 una carta de anulación a medias no se enseña para firmar', async () => {
@@ -116,7 +118,7 @@ const comparativa = readFileSync(new URL('../app/(portal)/boveda/presupuesto/[id
 test('🪤 firma sin cuenta: el portal no la manda, y el rechazo del servidor (IBAN inválido) se traduce', () => {
   // La ruta corta ANTES de llamar al puente si no hay una elección de cuenta legible.
   const corte = rutaFirma.indexOf("if (!cuenta) return NextResponse.json({ estado: 'reintentar', motivo: MOTIVO_SIN_CUENTA }")
-  assert.ok(corte > 0 && corte < rutaFirma.indexOf('firmarAceptacion(identidad.id'), 'sin cuenta no se llama a firmar')
+  assert.ok(corte > 0 && corte < rutaFirma.indexOf('firmarAceptacion(acceso'), 'sin cuenta no se llama a firmar')
   assert.equal(leerEntradaCuenta(undefined), null)
   assert.equal(leerEntradaCuenta({ eleccion: 'otra', iban: '   ' }), null)
   assert.equal(leerEntradaCuenta({ eleccion: 'sí' }), null)
@@ -154,4 +156,21 @@ import { MENSAJE_VARIAS_FICHAS } from './mensajes-ficha.ts'
 test('🪤 varias_fichas tiene mensaje propio en código y firma (no «presupuesto no disponible»)', () => {
   assert.deepEqual(interpretarCodigo(409, { estado: 'varias_fichas' }), { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS })
   assert.deepEqual(interpretarFirma(409, { estado: 'varias_fichas' }), { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS })
+})
+
+// ─── El código del WhatsApp en la carátula (07/10/2026) ──────────────────────
+test('🪤 código del WhatsApp: solo un 200 `valido` con id abre; un 401, un 5xx, un corte o una forma rara NO', async () => {
+  const { interpretarAccesoWhatsapp } = await import('./presupuesto-firma.ts')
+  const id = '0b6f2f0e-3c1a-4d2b-9e8f-1a2b3c4d5e6f'
+  assert.deepEqual(interpretarAccesoWhatsapp(200, { estado: 'valido', presupuestoId: id }), { estado: 'valido', presupuestoId: id })
+  assert.equal(interpretarAccesoWhatsapp(200, { estado: 'valido' }).estado, 'error')
+  assert.equal(interpretarAccesoWhatsapp(200, { estado: 'valido', presupuestoId: 'x' }).estado, 'error')
+  assert.equal(interpretarAccesoWhatsapp(401, { estado: 'valido', presupuestoId: id }).estado, 'error')
+  assert.equal(interpretarAccesoWhatsapp(503, { estado: 'error' }).estado, 'error')
+  assert.equal(interpretarAccesoWhatsapp(0, null).estado, 'error')
+  assert.deepEqual(interpretarAccesoWhatsapp(422, { estado: 'incorrecto', quedan: 3 }), { estado: 'incorrecto', quedan: 3 })
+  for (const e of ['bloqueado', 'caducado', 'sin_codigo', 'no_encontrado'] as const) assert.equal(interpretarAccesoWhatsapp(409, { estado: e }).estado, e)
+  // La pantalla firma con el código del WhatsApp solo si se eligió esa vía.
+  assert.match(aceptar, /accion: 'firmar',[^)]*cuenta: paso\.eleccion, via: paso\.via/)
+  assert.match(aceptar, /Tengo el código del WhatsApp/)
 })

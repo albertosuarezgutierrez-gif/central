@@ -53,6 +53,11 @@ export type CandidataSeguroAnterior = {
   etiqueta?: string | null
   /** Cómo se obtuvo algún dato que no venía tal cual (p. ej. el código DGS deducido del nombre). */
   notas?: string[]
+  /**
+   * Nombre del CÓNYUGE/pareja del tomador cuando la póliza es SUYA (vínculo `Cónyuge/Pareja de Hecho`
+   * comprobado por quien lee). Solo se ofrece para que el corredor la elija: nunca se imputa sola.
+   */
+  delConyuge?: string | null
 }
 
 /** Lo que el vendor exige para declarar un seguro anterior y la candidata no trae. */
@@ -178,16 +183,22 @@ export function elegirSeguroAnteriorParaImputar(
 ): ImputacionSeguroAnterior | ErrorImputacion {
   const descartadas: { id: string; porque: string }[] = []
   const propias: CandidataSeguroAnterior[] = []
+  const delConyuge: CandidataSeguroAnterior[] = []
   for (const c of candidatas) {
     if (c.clienteId === null) descartadas.push({ id: c.id, porque: 'no se sabe de qué ficha es: no se imputa a nadie' })
-    else if (c.clienteId !== opciones.clienteId) descartadas.push({ id: c.id, porque: 'es de otra ficha: el historial es de cada persona' })
-    else propias.push(c)
+    else if (c.clienteId === opciones.clienteId) propias.push(c)
+    else if (typeof c.delConyuge === 'string' && c.delConyuge.trim() !== '') delConyuge.push(c)
+    else descartadas.push({ id: c.id, porque: 'es de otra ficha: el historial es de cada persona' })
   }
 
-  const evaluadas: CandidataEvaluada[] = fundirDuplicadas(propias)
-    .map(c => ({ ...c, faltan: faltanDe(c), conSiniestrosConocidos: conSiniestros(c) }))
-    .sort(comparar)
-  const declarables = evaluadas.filter(c => c.faltan.length === 0)
+  const evaluar = (cs: CandidataSeguroAnterior[]): CandidataEvaluada[] =>
+    fundirDuplicadas(cs)
+      .map(c => ({ ...c, faltan: faltanDe(c), conSiniestrosConocidos: conSiniestros(c) }))
+      .sort(comparar)
+  // Las del cónyuge van DESPUÉS y solo se pueden elegir a mano: la regla automática no las toca.
+  const evaluadasPropias = evaluar(propias)
+  const evaluadas: CandidataEvaluada[] = [...evaluadasPropias, ...evaluar(delConyuge)]
+  const declarables = evaluadasPropias.filter(c => c.faltan.length === 0)
   const avisos: string[] = []
 
   if (opciones.elegidaId) {
@@ -207,6 +218,7 @@ export function elegirSeguroAnteriorParaImputar(
       }
     }
     avisos.push(...avisosDe(e, tipoNuevo))
+    if (e.delConyuge) avisos.push(`Se declara una póliza del cónyuge (${e.delConyuge}): solo vale si la compañía admite la bonificación del cónyuge/pareja.`)
     return {
       estado: 'ok',
       elegida: e,
@@ -218,7 +230,7 @@ export function elegirSeguroAnteriorParaImputar(
     }
   }
 
-  const primera = evaluadas[0]
+  const primera = evaluadasPropias[0]
   const elegida = declarables[0] ?? null
   if (primera && elegida && primera.id !== elegida.id) {
     avisos.push(
@@ -230,7 +242,7 @@ export function elegirSeguroAnteriorParaImputar(
       estado: 'ok',
       elegida: null,
       porque:
-        evaluadas.length === 0
+        evaluadasPropias.length === 0
           ? 'no conocemos ninguna póliza de auto o moto de este cliente: se cotiza sin seguro anterior'
           : 'ninguna de sus pólizas de motor trae compañía (código DGS) y nº de póliza a la vez: se cotiza sin seguro anterior hasta completarla',
       alternativas: evaluadas,
@@ -488,6 +500,8 @@ export type CandidataPublica = {
   tipoVehiculo: TipoVehiculoCandidata
   compania: string | null
   etiqueta: string | null
+  /** Nombre del cónyuge/pareja si la póliza es SUYA (no del tomador); `null` = es del tomador. */
+  delConyuge: string | null
   numeroPoliza: string | null
   codigoDgs: string | null
   fechaEfecto: string | null
@@ -508,6 +522,7 @@ export function candidataPublica(c: CandidataEvaluada): CandidataPublica {
     tipoVehiculo: c.tipoVehiculo,
     compania: c.compania,
     etiqueta: c.etiqueta ?? null,
+    delConyuge: c.delConyuge?.trim() || null,
     numeroPoliza: c.seguro.numeroPoliza ?? null,
     codigoDgs: c.seguro.codigoDgs,
     fechaEfecto: c.seguro.fechaEfecto,

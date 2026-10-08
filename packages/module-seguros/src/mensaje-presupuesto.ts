@@ -4,8 +4,9 @@
 // 🚨 El aviso NO lleva precio, ni compañía, ni el bien asegurado. Puede caer en un
 // buzón compartido o en el móvil de un hogar (740 números compartidos por 1.599
 // fichas), y un presupuesto de salud, vida o decesos roza el dato de salud. Lo que
-// abre el contenido es el código de un solo uso al correo de la persona, en el
-// portal; el aviso solo dice QUE hay algo y DÓNDE mirarlo.
+// abre el contenido es un código: el de un solo uso al correo de la persona o, si
+// el aviso salió por WhatsApp, el código de acceso que va en ese mismo mensaje
+// (07/10/2026). El aviso solo dice QUE hay algo y DÓNDE mirarlo.
 //
 // El texto vive aquí, en el módulo puro, para pasar por `revisarCopy()` como el
 // resto de mensajes a clientes.
@@ -17,8 +18,12 @@ export type DatosAvisoPresupuesto = {
   enlace: string
   /** Hasta cuándo vale. Se pinta en hora de Madrid como fecha, sin hora. */
   venceEl: Date
-  /** El correo con el que tiene que entrar: el mismo al que va el código. */
-  email: string
+  /**
+   * El correo con el que puede entrar (le llega un código de un solo uso). En el correo es el
+   * destinatario; en el WhatsApp, `null` = no se puede afirmar con cuál entraría (o no tiene):
+   * entonces el mensaje no nombra ninguno y se entra con el código del propio WhatsApp.
+   */
+  email: string | null
   /**
    * Cuántos datos suyos faltan para poder emitir (§4bis). Solo el NÚMERO: el aviso nunca pide el DNI
    * ni la cuenta — un correo que pide datos no se distingue de un phishing. `null`/0 = no se menciona.
@@ -47,10 +52,18 @@ function saludo(nombre: string | null): string {
   return n ? `Hola, ${n.split(/\s+/)[0]}` : 'Hola'
 }
 
-export function mensajePresupuestoWhatsapp(d: DatosAvisoPresupuesto): string {
+/**
+ * El WhatsApp que Alberto manda a mano. Lleva el CÓDIGO DE ACCESO propio de este presupuesto
+ * (`codigo-whatsapp.ts` de module-seguros-portal): lo pide el enlace para abrirlo y para firmar.
+ * Va ANTES del enlace, para que lo lea antes de pulsar. Si se puede afirmar su correo, se le dice
+ * que también puede entrar con él (le llegará otro código): es verdad sin haber mandado nada.
+ */
+export function mensajePresupuestoWhatsapp(d: DatosAvisoPresupuesto & { codigo: string }): string {
+  const email = d.email?.trim() || null
   return [
     `${saludo(d.nombre)}. Soy Alberto, de Grupo ASegura.`,
-    `Te he preparado un presupuesto de seguro. Al abrir el enlace te pedirá un código de acceso de 6 dígitos, que te llegará por correo a ${d.email}.`,
+    `Te he preparado un presupuesto de seguro. Al abrir el enlace te pedirá un código de acceso: tu código de acceso es ${d.codigo}. Te servirá también para aceptarlo si te convence.`,
+    email ? `Si lo prefieres, también puedes entrar con tu correo ${email}: te llegará otro código.` : null,
     `Lo puedes ver aquí: ${d.enlace}`,
     `Es válido hasta el ${fechaEs(d.venceEl)}. Cualquier duda, me dices.`,
     lineaDatosQueFaltan(d.faltanDatos),

@@ -12,6 +12,17 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(08/10/2026)** — Correduría · duplicados: #4183 mergeado; aviso de duplicados unificado: se queda el de main (`polizasDuplicadas` en `correduria-ingesta`, `correduria.ingesta`).
+Retirado el vigía duplicado del cron `correduria-sustituciones` (`duplicados-aviso.ts`, catálogo `correduria.duplicados-nuevos`, lectura/escritura de `duplicados/vistos` en el puerto). La ruta `apps/asegura/.../duplicados/vistos` queda sin consumidor (no borrada).
+Borrados después: ruta `duplicados/vistos`, `cartera-duplicados-vistos.ts`, `duplicados-vistos.ts` (+test) de asegura y `duplicadosAsegura` del puerto de plataforma.
+Corrige el 07/10: la 0107 de asegura es índice de BÚSQUEDA (no único, asegura#879), nada la bloquea; 9 grupos aparentes, 0 fusiones (2 = decide Alberto por tomador vigente). asegura#884: la ingesta ya no reasigna `cliente_id` (evento `cima_poliza_cliente_discrepante`) + override `proxy-addr` 2.0.8 (critical). Aplicado con OK de Alberto: bandeja de revisión sembrada (28 casos: 5 fichas + 23 «PENDIENTE») y Mapfre 0005919201037 marcada «no duplicado». Cerrado después: Mapfre 5919201223 y Generali G UV 410010322 → `cancelada` + `baja_verificada_at` (Alberto confirma anuladas; 4 fichas, sin fusionar). S0H152914 SÍ existe como «S0 H15 2914» (sin DGS, 2 fichas legacy pol/pol2:9600, clientes distintos, vencida 22/03/2015): la de pol2 pasaba por «activa» → `vencida` con OK de Alberto + audit `poliza_estado_corregido_manual`. Ojo: buscar números siempre normalizados (sin espacios). Las «13 renovaciones renumeradas» eran riesgos distintos vigentes: 0 pares reales, nada sembrado. asegura#885: tomador sin ficha + póliza existente → no crea cliente huérfano.
+
+**(07/10/2026)** — Correduría · duplicados: asegura#875 mergeado (la ingesta CIMA adopta la ficha viva en vez de crear un duplicado). La migración 0107 (índice único) NO está aplicada: hay 8 grupos que la violarían, 4 de clientes distintos.
+#4183: vigía de duplicados, bandeja `/correduria/revision`, avisos CIMA↔ficha diagnosticables (`cima_sincro_resumen`) y aviso de duplicados nuevos; al fusionar con main se reutiliza SU criterio (`agruparDuplicadas`, señal `polizasDuplicadas`) y se retira `esNumeroPolizaComodin`/`duplicadosVivos`.
+Pendiente: esos 8 grupos; sembrar la bandeja con el OK de Alberto; aplicar 0107 por el gate; riesgo del `onConflictDoUpdate` de asegura, que puede reasignar una póliza a otro cliente.
+
+**(07/10/2026)** — Correduría · Código de acceso del presupuesto DENTRO del WhatsApp (decisión de Alberto: el envío automático por WhatsApp no funciona). Hash atado al token, caduca con `vence_el`, tope 5 intentos, cookie 4 h solo de ese presupuesto; firma `otp_whatsapp`; envío sin correo si hay móvil. SQL `apps/asegura/prisma/sql/2026-10-07_presupuesto_codigo_whatsapp.sql` ANTES de desplegar asegura. Riesgo: firma sin correo no cumple `cumpleArt26.b`.
+
 **(07/10/2026)** — Correduría · Presupuesto al portal: verificado que la parrilla del cliente ya filtra por garantías (130/132 opciones Codeoscopic con `garantias`). El WhatsApp avisa ANTES del enlace de que pedirá un código de 6 dígitos que llega SOLO por correo (`mensaje-presupuesto.ts`). Pendiente: botón «quiero cambiar algo»; código por WhatsApp en `/presupuesto/[token]` (hoy solo email).
 
 **(07/10/2026)** — WhatsApp → CRM (Grupo ASegura): PR #4292 MERGEADO; SQL 05b+05f aplicados; envs en Vercel (canal e IA APAGADOS). Meta: dominio `crm.grupoasegura.es`, webhook `api.grupoasegura.es/api/webhooks/whatsapp` verificado (quitar los 8 campos extra). Alta bloqueada por Meta: verificación de empresa EN REVISIÓN → Tech Provider → revisión/publicación de la app. Conector MCP «WhatsApp Business Tools»: SOLO lectura + webhooks, NUNCA add/register número ni enviar. Estado en `apps/asegura/docs/WHATSAPP.md`.
@@ -115,6 +126,14 @@ Reglas: DNI → su ficha o nueva (DNI en ficha con otro nombre → aviso, no se 
 Línea «Hay un conductor joven/novel: revisar antes de tarificar» (accion `conductor_joven_novel`) en el historial de la oportunidad. Respuesta `figuras[{rol,clienteId,creada}]` + `avisosFiguras`; pintado en `LeerPoliza.tsx`. Sin SQL nuevo.
 
 **(03/10/2026, SEO)** — 🔎 Pasada SEO mensual (OpenSEO, rutina trig_015R…): keywords en seo-asegura/references/keywords.md §5; mejora CTR de 2 artículos del blog (preaviso 363 impr/0 clics → título más específico; como-dar-de-baja 202 impr/1 clic → descripción más operativa). Pendiente de Alberto: marcar generate_lead como evento clave en GA4, gestionar reseñas (1), 301 de /mejoramos-tu-seguro/.
+
+**(03/10/2026)** — 🧬 Duplicados vivos: fusionada la Mapfre 236788463 (lote `mapfre-carga-2026-previa-manuales`); lote `doble-import-intranet-2026-10` (30 parejas, estado no tocado).
+Nuevo: vigía `/api/operador/duplicados/vivos` (tras el merge con main usa el criterio único `duplicadasCartera`/`agruparDuplicadas`, sin SQL ni comodines propios) y bandeja `/correduria/revision`
+(casos en `operational_events`: `poliza_revision_manual` / `poliza_revision_resuelta`; «misma» NO fusiona, la fusión va por CTE con OK de Alberto). Sin commitear al cierre.
+Pendiente: las 309 pólizas activas con el vencimiento pasado; la SIEMBRA de casos en la bandeja (otra sesión, con OK de Alberto).
+PR #4183 (sin commitear): Graphify — `casoId` de la bandeja a minúsculas (Zod); recuento «sin leer» ilegible = `null`; el cero delante de letras («0A12») NO se reprodujo (SQL = helper; gap menor: el SQL quita tildes y el helper no).
+Avisos CIMA↔ficha: `compararConCima` normaliza antes de avisar (`mismoValorNormalizado`; fecha en otro formato → acción `normalizar`, motivo `formato`); el cron registra `cima_sincro_resumen` (sin PII) y lista «campo · nº póliza» (≤10) en Telegram.
+Vigía diario de duplicados NUEVOS en `correduria-sustituciones` (`gruposDuplicadosNuevos`; lo visto = evento `duplicados_vivos_visto` vía `/api/operador/duplicados/vistos`). Pendiente: commit/push y verlo en prod.
 
 **(03/10/2026, CIMA «todo guardado y pintado»)** — asegura#874 (LOO-806): el resto del SIN (sin PII) se guarda en `siniestros.cima_extra`; un SIN más viejo solo rellena huecos. El medidor guarda `cima_cobertura_campos.excluido_motivo` y separa «descartado por privacidad» de «sin leer». El resto del SIN solo cuenta como leído si la columna existe. Lista de excluidos ampliada (DNI/NIF/CIF, matrícula, cuentas, perceptor, implicados, lesiones, fallecidos).
 DDL 0106 aplicado en prod (`seguros.`) el 03/10 tras CI verde y OK de Alberto. Audit en operational_events `e9eb789b`. El portal no tiene grant sobre la columna.
@@ -1102,6 +1121,17 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 2 (auditoría + «que haga el trabajo por mí»).** Herramientas nuevas: `estado_oportunidad`, `cerrar_tarea`, `ver_siniestro`/`seguir_siniestro`, `contacto_cliente`, `ver_riesgo` y **`precio_hogar`** (Catastro → ficha de hogar → mismo cobro/cola que coche). Arreglos: descripciones por modo (en autónomo ya no dicen «botón»), **huella entre mensajes** (tabla `correduria_asistente_huella`, 30 min, `repetir=true`), `forzar` prohibido en el mismo turno, DNI tapado rechazado, timeout duro. Migración aplicada (huella + ramo `hogar`). Medido antes: 0 👍/👎 en 25 turnos; `preparar_emision` 5/5 fallaba por pasar nº de póliza en vez de uuid (regla nueva en el prompt).
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
+
+## (07/10/2026) Correduría · cónyuge en seguro anterior + propuesta conjunta de escenarios
+- Desplegable de seguro anterior: grupo «del cónyuge/pareja», orden por antigüedad, aviso si no se pudo mirar.
+- Propuesta conjunta: `seguros.presupuesto_propuesta` (+item), SQL `2026-10-07e_presupuesto_propuesta.sql` APLICADO en producción (07/10/2026), verificado: RLS en las 3 tablas, prisma_seguros sin DELETE/TRUNCATE ni UPDATE en item, triggers presentes; solo faltan los COMMENT ON (cosméticos). PDF junta escenarios; aviso uno por tomador (el portal solo enseña lo suyo), WhatsApp con código por escenario, valida todo antes de rotar enlaces.
+- «Duplicar con otro tomador» en la oportunidad. Rafael/Ana (Mercedes 5802-JMJ) preparado: Rafael tomador, Ana conductora.
+- Pendiente Alberto: teclear en la ficha de Ana Isabel Dañino (lead 6a986813) DNI, nacimiento y carné (van cifrados, no por SQL).
+
+## (07/10/2026) Correduría · botón «Tarificar» en Oportunidades de la ficha
+- `TarificarOportunidad.tsx` + helper puro `lib/correduria/tarificar-oportunidad.ts` (test). Reutiliza `rutaVariante()`/`ramoVariante()` → `/<ramo>-nuevo?oportunidad=`.
+- Sin seguimiento: abre uno con `POST /api/correduria/oportunidad/de-poliza` (gratis) y navega. Nunca cotiza: Codeoscopic se confirma en destino.
+- Ramos sin tarifa (Otros, RC, Comercio, Comunidad): deshabilitado con motivo. Sin probar en navegador. + `abrirRiesgoDePoliza` (asegura) precarga `poliza_competencia` (compañía, nº, DGS, inicio/vto) vía helper `seguro-anterior-de-poliza.ts`.
 
 ## (05/10/2026) WhatsApp Cloud API → CRM correduría (fases 1-2, solo ENTRANTE)
 - `apps/asegura`: webhook `/api/webhooks/whatsapp` (HMAC + Zod, dedupe wamid, `messages` + `smb_message_echoes`), crons `whatsapp-analizar` (IA, lista blanca de 6 acciones) y `whatsapp-retencion`; helpers `aE164`/`redactarPii` en module-seguros. Sin código de envío.
@@ -8666,3 +8696,8 @@ lo pide el bot (auto y moto caían a la «fecha del conductor», que para una fi
 El PDF abre con «Revisa tus datos» (los mismos grupos que el portal, `leerDatosCotizados`, DNI enmascarado); las
 recomendadas (con papel) van en tarjeta y el resto en tabla compacta (`repartirOpciones`). DNI ENTERO en el PDF (va al propio
 tomador para revisar la emisión; `leerDatosCotizados(..., {documentoCompleto})`, portal y firma siguen enmascarados).
+
+## (07/10/2026) Correduría: «Nueva persona de contacto» no se podía crear sin teléfono/email
+El alta exigía «DNI, teléfono o email» pero el formulario (`Relaciones.tsx` → `AltaPersona`) no tenía DNI. Añadidos DNI/NIE/CIF,
+fecha de nacimiento y dirección (DireccionConfirmable + CP → población/provincia). Solo UI: `revisarAlta` y el puerto ya los
+admitían y deduplican por DNI. Test nuevo en `module-seguros/src/cliente-edicion.test.ts` (visto en rojo).

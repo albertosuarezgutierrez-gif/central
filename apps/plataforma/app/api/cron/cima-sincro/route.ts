@@ -6,11 +6,16 @@
 // esperan su decisión y, si hay, se avisa por Telegram con el enlace a la
 // pantalla donde se deciden (/correduria → Hoy).
 //
+// Antes de declarar un conflicto se normalizan los dos lados (nombre, fecha, teléfono, email: ver
+// `compararConCima`); lo que solo difiere en el formato se copia con motivo `formato`. El cron registra
+// `cima_sincro_resumen` (sin valores ni PII) y el Telegram lista «campo · nº póliza» (10 como máximo).
+//
 // 🚨 «No se ha podido comparar» también avisa: un fallo del puerto no puede
 // leerse como «todo coincide».
 import { NextRequest, NextResponse } from 'next/server'
 import { tgAviso } from '@/lib/telegram/avisos'
 import { accionSincroCimaAsegura, contadorSincroCima, interpretarSincroCima, sincroCimaAsegura } from '@/lib/cima-sincro-asegura'
+import { conflictosDeLectura, copiadosDeRespuesta, lineasConflictos } from '@/lib/correduria/cima-sincro-resumen'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -30,13 +35,26 @@ export async function GET(req: NextRequest) {
   const l = interpretarSincroCima(est.status, est.json)
   const n = contadorSincroCima(l)
 
+  // Resumen sin valores ni PII (póliza, campo, motivo/tipo) en `operational_events` de asegura, para diagnosticar el aviso.
+  // Un fallo al registrarlo no tapa el aviso (se dice aparte).
+  const copiados = rell.status === 200 ? copiadosDeRespuesta(r) : null
+  const conflictos = conflictosDeLectura(l)
+  // Solo si hay algo que contar (un día sin copias ni conflictos no deja evento) y con el tope del puerto (500).
+  const hayResumen = (copiados?.length ?? 0) + conflictos.length > 0
+  let resumenRegistrado = false
+  if (hayResumen) {
+    const rr = await accionSincroCimaAsegura({ accion: 'resumen', copiados: (copiados ?? []).slice(0, 500), conflictos: conflictos.slice(0, 500) })
+    resumenRegistrado = rr.status === 200
+  }
+
   const base = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : ''
   const lineas: string[] = []
   if (aplicados === null) lineas.push(`⚠️ No se han podido rellenar los huecos desde CIMA (HTTP ${rell.status}).`)
   else if (aplicados > 0 || fallidos) lineas.push(`🔄 ${aplicados} dato(s) copiados de CIMA a las fichas${fallidos ? ` · ${fallidos} sin aplicar` : ''}.`)
   if (n === null) lineas.push('⚠️ No se ha podido comparar las fichas con CIMA: no significa que coincidan.')
-  else if (n > 0) lineas.push(`🔀 ${n} dato(s) de fichas distintos de lo que manda CIMA: decide en ${base}/correduria (Hoy).`)
+  else if (n > 0) lineas.push(`🔀 ${n} dato(s) de fichas distintos de lo que manda CIMA: decide en ${base}/correduria (Hoy).`, ...lineasConflictos(conflictos))
+  if (hayResumen && !resumenRegistrado) lineas.push('⚠️ No se ha podido registrar el resumen de la sincro (cima_sincro_resumen).')
 
   if (lineas.length > 0) await tgAviso('correduria.cima-diferencias', lineas.join('\n'))
-  return NextResponse.json({ ok: aplicados !== null && n !== null, aplicados, fallidos, diferencias: n })
+  return NextResponse.json({ ok: aplicados !== null && n !== null, aplicados, fallidos, diferencias: n, resumenRegistrado })
 }

@@ -1093,6 +1093,9 @@ export {
   esPolizaDeCoche,
   huellaDecisionCima,
   esCampoCima,
+  fechaIsoFlexible,
+  mismoValorNormalizado,
+  motivoCopiadoCima,
   type CampoCima,
   type FichaParaCima,
   type DatosCima,
@@ -1338,7 +1341,7 @@ export {
   type MotivoPropuesta,
 } from './identidad-documentada.ts'
 export { polizaAnteriorParaTarificar, CODIGOS_DGS_MAPFRE } from './poliza-anterior.ts'
-export { aE164 } from './telefono-e164.ts'
+export { aE164, esMovilWhatsapp } from './telefono-e164.ts'
 export { telefonoParaFicha, formasHashTelefono } from './whatsapp-telefono.ts'
 export { redactarPii, type OpcionesRedaccion } from './redactar-pii.ts'
 
@@ -1435,3 +1438,9 @@ export type {
   RamoControl,
   PanelControl,
 } from './acuerdos-control.ts'
+export {
+  figurasDePeticion, identidadPersona, nombresParaEtiquetas, etiquetaEscenario, seguroAnteriorDePeticion, textoSeguroAnterior,
+  coberturasClave, ordenarEscenarios, mensajePropuestaWhatsapp, correoPropuesta, MAX_COBERTURAS_CLAVE,
+  type PersonaEscenario, type FigurasEscenario, type SeguroAnteriorEscenario, type OpcionEscenario, type EscenarioEntrada,
+  type EscenarioOrdenado, type DatosAvisoPropuesta, type DatosWhatsappPropuesta,
+} from './propuesta-escenarios.ts'

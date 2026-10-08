@@ -12,6 +12,7 @@
  */
 import { prisma } from '@/lib/tenant'
 import { mismaPersonaPorNombre } from './misma-persona'
+import { competenciaDePoliza } from './seguro-anterior-de-poliza'
 import { carnetDeNuevaPersona } from './carnet-nueva-persona'
 import { encryptField } from '@central/module-seguros-pii'
 import { altaCliente } from '@/lib/cartera-edicion'
@@ -771,8 +772,15 @@ export async function abrirRiesgoDePoliza(
   if (!UUID.test(e.polizaId)) return { ok: false, status: 400, motivo: 'id no válido' }
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`riesgo-poliza:${e.polizaId}`}))`
-    const [pol] = await tx.$queryRaw<Array<{ cliente_id: string; tipo: string; aseguradora: string | null; datos: Record<string, unknown> | null }>>`
-      select p.cliente_id::text as cliente_id, p.tipo::text as tipo, p.aseguradora, p.datos_especificos as datos
+    const [pol] = await tx.$queryRaw<Array<{
+      cliente_id: string; tipo: string; aseguradora: string | null; datos: Record<string, unknown> | null
+      numero_poliza: string | null; dgs: string | null; vencimiento: string | null
+      import_ref: string | null; eiac_xml_hash: string | null; estado: string | null; sustituida_at: Date | null
+    }>>`
+      select p.cliente_id::text as cliente_id, p.tipo::text as tipo, p.aseguradora, p.datos_especificos as datos,
+             p.numero_poliza, p.codigo_entidad_dgs as dgs,
+             to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento,
+             p.import_ref, p.eiac_xml_hash, p.estado::text as estado, p.sustituida_at
       from seguros.polizas p
       join seguros.clientes c on c.id = p.cliente_id and c.correduria_id = p.correduria_id and c.merged_into_cliente_id is null
       where p.id = ${e.polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null`
@@ -786,7 +794,22 @@ export async function abrirRiesgoDePoliza(
         and (poliza_id = ${e.polizaId}::uuid or (poliza_id is null and info_riesgo->>'polizaId' = ${e.polizaId}))
         and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
       order by (poliza_id is not null) desc, created_at desc limit 1`
+    // El seguro anterior de esta póliza (compañía, nº, periodo): lo lee la pantalla de precio de `poliza_competencia`.
+    const comp = competenciaDePoliza({
+      aseguradora: pol.aseguradora, numeroPoliza: pol.numero_poliza, codigoDgs: pol.dgs, fechaVencimiento: pol.vencimiento,
+      importRef: pol.import_ref, eiacXmlHash: pol.eiac_xml_hash, estado: pol.estado, sustituidaAt: pol.sustituida_at,
+      matricula: pol.tipo === 'auto' || pol.tipo === 'moto'
+        ? (typeof pol.datos?.matricula === 'string' ? pol.datos.matricula : null) : null,
+    })
     if (ya) {
+      // Una abierta de antes sin `seguroAnterior` se rellena; lo que ya trae (leído del papel o declarado) gana.
+      if (comp) {
+        await tx.$executeRaw`
+          update seguros.oportunidades
+          set poliza_competencia = (${JSON.stringify(comp.poliza)}::jsonb || coalesce(poliza_competencia, '{}'::jsonb)) || jsonb_build_object('seguroAnterior', ${JSON.stringify(comp.poliza)}::jsonb -> 'seguroAnterior'),
+              numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${comp.numeroPoliza}), updated_at = now()
+          where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid and (poliza_competencia is null or jsonb_typeof(poliza_competencia->'seguroAnterior') is distinct from 'object')`
+      }
       if (ya.poliza_id === null) {
         await tx.$executeRaw`
           update seguros.oportunidades set poliza_id = ${e.polizaId}::uuid, updated_at = now()
@@ -805,9 +828,10 @@ export async function abrirRiesgoDePoliza(
       ...(pre ? { [pre.clave]: { ...pre.valor, confirmadoAt: null } } : {}),
     }
     const [o] = await tx.$queryRaw<Array<{ id: string }>>`
-      insert into seguros.oportunidades (correduria_id, cliente_id, tipo, fuente, estado, info_riesgo, poliza_id)
+      insert into seguros.oportunidades (correduria_id, cliente_id, tipo, fuente, estado, info_riesgo, poliza_id, poliza_competencia, numero_poliza)
       values (${correduriaId}::uuid, ${pol.cliente_id}::uuid, cast(${pol.tipo} as seguros.tipo_seguro), 'renovacion', 'en_negociacion',
-              ${JSON.stringify(info)}::jsonb, ${e.polizaId}::uuid)
+              ${JSON.stringify(info)}::jsonb, ${e.polizaId}::uuid,
+              ${comp ? JSON.stringify(comp.poliza) : null}::jsonb, ${comp?.numeroPoliza ?? null})
       returning id::text as id`
 
     const roles = rolesDelRamo(pol.tipo)

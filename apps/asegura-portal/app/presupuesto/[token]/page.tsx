@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation'
 
 import { EntrarConCodigo } from '../../invitacion/[token]/Invitacion'
 import { MarcaAsegura } from '../../MarcaAsegura'
-import { caratulaPorToken } from '@/lib/presupuesto'
+import { CodigoWhatsapp } from './CodigoWhatsapp'
+import { accesoWhatsappDe, caratulaPorToken } from '@/lib/presupuesto'
 import { TEXTO_CARATULA } from '@/lib/presupuesto-vista'
 import { getIdentidad } from '@/lib/session'
 
@@ -45,6 +46,10 @@ export const dynamic = 'force-dynamic'
  *      oráculo con el que averiguar tokens válidos a base de probar.
  *   2. Sin sesión → la carátula y el formulario de código, con el destino
  *      prerellenado desde `?d=` (mismo patrón que el correo de acceso).
+ *   2b. (07/10/2026) Con el CÓDIGO DEL WHATSAPP → la misma pantalla de dentro, solo
+ *      para ESTE presupuesto (`accesoWhatsappDe`). El código va en el WhatsApp
+ *      que Alberto manda a mano; quien no lo tiene entra con su correo, como antes.
+ *      🚨 El token sigue sin abrir nada: sin uno de los dos códigos no se ve nada.
  *   3. Con sesión → derecho a la pantalla de dentro (`/boveda/presupuesto/<id>`),
  *      que es la que decide si
  *      esta persona lo puede ver. **Aquí no se comprueba**: la autorización
@@ -57,6 +62,8 @@ export default async function CaratulaPresupuesto({ params }: { params: Promise<
   const caratula = await caratulaPorToken(token)
   if (caratula.estado === 'muerta') return <EnlaceMuerto />
 
+  // Ya entró con el código del WhatsApp (cookie de ESTE presupuesto y token vigente), o tiene sesión.
+  if ((await accesoWhatsappDe(caratula.id)) !== null) redirect(`/boveda/presupuesto/${caratula.id}`)
   const identidad = await getIdentidad()
   if (identidad !== null) redirect(`/boveda/presupuesto/${caratula.id}`)
 
@@ -71,6 +78,9 @@ export default async function CaratulaPresupuesto({ params }: { params: Promise<
           {TEXTO_CARATULA.cuerpo}
         </p>
         {/* 🚨 Ni una línea más antes de entrar. */}
+        <h2 style={{ fontSize: '1.05rem', margin: '16px 0 0' }}>{TEXTO_CARATULA.conWhatsapp}</h2>
+        <CodigoWhatsapp token={token} />
+        <h2 style={{ fontSize: '1.05rem', margin: '20px 0 0' }}>{TEXTO_CARATULA.conCorreo}</h2>
         <EntrarConCodigo leerEnlace />
       </div>
     </main>

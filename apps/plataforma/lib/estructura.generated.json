@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-07T11:32:54Z",
+  "generadoEn": "2026-10-08T08:08:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2203,11 +2203,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 225
+        "evidencias": 231
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 122
+        "evidencias": 123
       },
       "asegura-web": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 165
+        "evidencias": 167
       },
       "rrhh": {
         "estado": "no",
@@ -2311,11 +2311,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 37
+        "evidencias": 38
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 96
+        "evidencias": 97
       },
       "asegura-web": {
         "estado": "usado",
@@ -4135,6 +4135,7 @@
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
       "/api/operador/duplicados/no-duplicado",
+      "/api/operador/duplicados/vivos",
       "/api/operador/emision/aviso",
       "/api/operador/eventos",
       "/api/operador/eventos/detectar",
@@ -4182,6 +4183,8 @@
       "/api/operador/presupuesto",
       "/api/operador/presupuesto/garantias-filtradas",
       "/api/operador/presupuesto/pdf",
+      "/api/operador/presupuesto/propuesta",
+      "/api/operador/presupuesto/propuesta/pdf",
       "/api/operador/presupuesto/referencia",
       "/api/operador/presupuesto/seguimiento",
       "/api/operador/quejas",
@@ -4193,6 +4196,7 @@
       "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
       "/api/operador/retencion/descartar",
+      "/api/operador/revision",
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
       "/api/operador/siniestro/terceros",
@@ -4247,6 +4251,7 @@
       "/api/tarificador/formador/revisar-paso",
       "/api/tarificador/formador/sugerir",
       "/api/tarificador/resultado",
+      "/api/tarificador/sesion/[compania]",
       "/api/tarificador/trabajo/[id]",
       "/api/webhooks/codeoscopic",
       "/api/webhooks/resend",
@@ -4301,6 +4306,7 @@
       "/api/presupuesto/firma",
       "/api/presupuesto/ia",
       "/api/presupuesto/pdf",
+      "/api/presupuesto/whatsapp",
       "/api/push/desuscribir",
       "/api/push/preferencias",
       "/api/push/suscribir",
@@ -5214,11 +5220,14 @@
       "/api/correduria/portal-invitaciones",
       "/api/correduria/presupuesto",
       "/api/correduria/presupuesto/pdf",
+      "/api/correduria/presupuesto/propuesta",
+      "/api/correduria/presupuesto/propuesta/pdf",
       "/api/correduria/quejas",
       "/api/correduria/radar-recibos",
       "/api/correduria/recibo-devolucion",
       "/api/correduria/renovaciones/contacto",
       "/api/correduria/retencion/descartar",
+      "/api/correduria/revision",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
       "/api/correduria/siniestro/terceros",
@@ -5788,6 +5797,9 @@
       "seguros.presupuesto",
       "seguros.presupuesto_evento",
       "seguros.presupuesto_opcion",
+      "seguros.presupuesto_propuesta",
+      "seguros.presupuesto_propuesta_contador",
+      "seguros.presupuesto_propuesta_item",
       "seguros.presupuesto_referencia_contador",
       "seguros.queja",
       "seguros.recibo_devolucion",
@@ -5811,6 +5823,7 @@
       "seguros.tarificador_grabacion_pantallas",
       "seguros.tarificador_grabaciones",
       "seguros.tarificador_intervenciones",
+      "seguros.tarificador_sesiones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
       "seguros.whatsapp_outbound_messages"
@@ -6829,7 +6842,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1645,
+    "apis": 1654,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

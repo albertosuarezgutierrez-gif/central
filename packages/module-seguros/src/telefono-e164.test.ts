@@ -32,3 +32,11 @@ test('variantes del índice ciego: con prefijo, nacional y 00', () => {
   assert.ok(v.includes('0034600112233'))
   assert.deepEqual(variantesIndiceTelefono(null), [])
 })
+
+test('🪤 móvil para WhatsApp: español 6xx/7xx sí; fijo, comodín, cifrado o basura no', async () => {
+  const { esMovilWhatsapp } = await import('./telefono-e164.ts')
+  for (const si of ['600 11 22 33', '+34 712 345 678', '0034612345678', '+44 7911 123456']) assert.ok(esMovilWhatsapp(si), si)
+  for (const no of ['954 123 456', '900 123 456', '600000000', '666666666', 'v1:abc:def:ghi', '', null, undefined, 'hola']) {
+    assert.ok(!esMovilWhatsapp(no), String(no))
+  }
+})
