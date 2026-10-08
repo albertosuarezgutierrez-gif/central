@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-07T20:13:22Z",
+  "generadoEn": "2026-10-08T08:08:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4135,7 +4135,6 @@
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
       "/api/operador/duplicados/no-duplicado",
-      "/api/operador/duplicados/vistos",
       "/api/operador/duplicados/vivos",
       "/api/operador/emision/aviso",
       "/api/operador/eventos",
@@ -6843,7 +6842,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1655,
+    "apis": 1654,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
