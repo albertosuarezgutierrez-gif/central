@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-08T08:08:38Z",
+  "generadoEn": "2026-10-08T13:55:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 27
       },
       "asegura-portal": {
         "estado": "no",
@@ -4207,6 +4207,8 @@
       "/api/operador/sustituciones",
       "/api/operador/tareas-hoy",
       "/api/operador/tarificador/avisos-verificacion",
+      "/api/operador/tarificador/bandeja",
+      "/api/operador/tarificador/bandeja/[id]",
       "/api/operador/tarificador/coberturas",
       "/api/operador/tarificador/encolar",
       "/api/operador/tarificador/fichas",
@@ -4221,6 +4223,7 @@
       "/api/operador/tarificador/panel",
       "/api/operador/tarificador/trabajo/[id]",
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
+      "/api/operador/tarificador/trabajo/[id]/traza",
       "/api/operador/tarificador/ultimo-riesgo",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
@@ -5235,6 +5238,8 @@
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
       "/api/correduria/tareas-hoy",
+      "/api/correduria/tarificador/bandeja",
+      "/api/correduria/tarificador/bandeja/[id]",
       "/api/correduria/tarificador/coberturas",
       "/api/correduria/tarificador/encolar",
       "/api/correduria/tarificador/fichas",
@@ -5248,6 +5253,7 @@
       "/api/correduria/tarificador/panel",
       "/api/correduria/tarificador/trabajo/[id]",
       "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
+      "/api/correduria/tarificador/trabajo/[id]/traza",
       "/api/correduria/tarificador/ultimo-riesgo",
       "/api/correduria/vencimientos",
       "/api/correduria/whatsapp-conexion",
@@ -5814,6 +5820,7 @@
       "seguros.solicitud_cambio_documentos",
       "seguros.solicitud_datos",
       "seguros.tarificacion_precios",
+      "seguros.tarificacion_trabajo_pasos",
       "seguros.tarificacion_trabajos",
       "seguros.tarificaciones",
       "seguros.tarificador_acompanamiento",
@@ -6842,7 +6849,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1654,
+    "apis": 1660,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
