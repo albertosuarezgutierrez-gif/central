@@ -616,6 +616,7 @@ export function desenlaceCotizacion(r: RespuestaRetarificar, primaActual: number
     case 'no_encontrada':
     case 'sin_configurar':
     case 'proyecto_vigente':
+    case 'duplicado_cotizacion':
       return { estado: 'sin_gasto', texto: `✖️ No se ha pedido (0€): ${esc(r.mensaje)}`, resumen: { estado: r.estado } }
     case 'error':
       return r.gastoDesconocido

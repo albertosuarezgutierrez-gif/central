@@ -8,14 +8,14 @@ import { join } from 'node:path'
 
 const ROOT = join(import.meta.dirname, '..')
 const BASE = 'apps/plataforma/app/(usuario)/correduria/cliente/[id]/'
-// Moto delega en pedirPrecio(forzarNuevo): la guarda va ahí para cubrir también «Descartar y pedir precio de cero».
+// `forzar` = recotización explícita tras el 409 duplicado (08/10/2026). Moto delega en pedirPrecio(forzarNuevo): la guarda va ahí para cubrir también «Descartar y pedir precio de cero».
 const PANTALLAS: Array<[string, string, string]> = [
-  ['auto-nuevo/AutoNuevo.tsx', 'cotizar', ''],
-  ['moto-nuevo/CotizadorMoto.tsx', 'pedirPrecio', 'forzarNuevo: boolean'],
-  ['vida-nuevo/VidaNuevo.tsx', 'cotizar', ''],
-  ['salud-nuevo/SaludNuevo.tsx', 'cotizar', ''],
-  ['decesos-nuevo/DecesosNuevo.tsx', 'cotizar', ''],
-  ['hogar-nuevo/Formulario.tsx', 'cotizar', ''],
+  ['auto-nuevo/AutoNuevo.tsx', 'cotizar', 'forzar = false'],
+  ['moto-nuevo/CotizadorMoto.tsx', 'pedirPrecio', 'forzarNuevo: boolean, forzar = false'],
+  ['vida-nuevo/VidaNuevo.tsx', 'cotizar', 'forzar = false'],
+  ['salud-nuevo/SaludNuevo.tsx', 'cotizar', 'forzar = false'],
+  ['decesos-nuevo/DecesosNuevo.tsx', 'cotizar', 'forzar = false'],
+  ['hogar-nuevo/Formulario.tsx', 'cotizar', 'forzar = false'],
 ]
 
 for (const [f, fn, args] of PANTALLAS) {
@@ -32,7 +32,7 @@ for (const [f, fn, args] of PANTALLAS) {
 
 test('🪤 moto: pedirPrecio() captura excepciones y las pinta como error con cobro DESCONOCIDO (no se queda en «cotizando»)', () => {
   const src = readFileSync(join(ROOT, BASE + 'moto-nuevo/CotizadorMoto.tsx'), 'utf8')
-  const ini = src.indexOf('async function pedirPrecio(forzarNuevo: boolean) {')
+  const ini = src.indexOf('async function pedirPrecio(forzarNuevo: boolean, forzar = false) {')
   const cuerpo = src.slice(ini, src.indexOf('\n  }\n', ini))
   assert.match(cuerpo, /\} catch \(e\) \{[\s\S]*estado: 'error'[\s\S]*gastoDesconocido: true[\s\S]*\} finally \{/)
 })

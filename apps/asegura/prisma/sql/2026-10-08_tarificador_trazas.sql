@@ -8,7 +8,7 @@
 --   1. `tarificacion_trabajos.bot_version`: versión semver del adaptador que ejecutó el trabajo (NULL = anterior a
 --      este cambio o no informada). Se escribe al TERMINAR el trabajo (ok o error).
 --   2. `tarificacion_trabajo_pasos`: una fila por paso del bot (login, navegación, formulario, tarificar, lectura de
---      primas): nombre del paso, inicio, duración, ok y, si falló, un CÓDIGO de error (infra, portal, datos…).
+--      primas): nº de intento del trabajo (`intento`), nombre del paso, inicio, duración, ok y, si falló, un CÓDIGO de error (infra, portal, datos…).
 --
 -- 🔒 NADA de datos personales ni valores de formulario: solo nombre de paso, tiempos y código de error. El mensaje
 --    de error (ya redactado) sigue viviendo en `tarificacion_trabajos.error`. `captura_ref` = 'documento:<uuid>'
@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS seguros.tarificacion_trabajo_pasos (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   trabajo_id     uuid NOT NULL REFERENCES seguros.tarificacion_trabajos (id),
   correduria_id  uuid NOT NULL REFERENCES seguros.corredurias (id),
+  intento        integer NOT NULL DEFAULT 1 CHECK (intento BETWEEN 0 AND 100),
   paso           text NOT NULL CHECK (paso ~ '^[a-z0-9_]{1,40}$'),
   inicio         timestamptz NOT NULL,
   duracion_ms    integer NOT NULL CHECK (duracion_ms BETWEEN 0 AND 3600000),
@@ -42,7 +43,10 @@ CREATE TABLE IF NOT EXISTS seguros.tarificacion_trabajo_pasos (
 );
 
 CREATE INDEX IF NOT EXISTS tarificacion_trabajo_pasos_por_trabajo
-  ON seguros.tarificacion_trabajo_pasos (correduria_id, trabajo_id, inicio);
+  ON seguros.tarificacion_trabajo_pasos (correduria_id, trabajo_id, intento, inicio);
+-- Índice propio sobre trabajo_id: la FK y la lectura por trabajo no dependen de que la correduría vaya delante.
+CREATE INDEX IF NOT EXISTS tarificacion_trabajo_pasos_trabajo_id
+  ON seguros.tarificacion_trabajo_pasos (trabajo_id);
 
 COMMENT ON TABLE seguros.tarificacion_trabajo_pasos IS
   'Traza de un trabajo del tarificador RPA: un paso por fila (nombre, inicio, duración, ok, código de error). '

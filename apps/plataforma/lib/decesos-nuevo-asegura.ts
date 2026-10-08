@@ -162,6 +162,8 @@ export async function cotizarDecesosNuevaAsegura(entrada: {
    */
   oportunidadId?: string | null
   nota?: string | null
+  /** Recotización EXPLÍCITA tras un 409 `duplicado` (0,50€ otra vez): salta la guarda anti-duplicado de asegura. */
+  forzar?: boolean
 }): Promise<RespuestaRetarificar> {
   try {
     const r = await pedir(
@@ -175,6 +177,8 @@ export async function cotizarDecesosNuevaAsegura(entrada: {
           solicitadoPor: entrada.solicitadoPor ?? 'plataforma',
           ...(entrada.resueltos ? { resueltos: entrada.resueltos } : {}),
           ...(entrada.correcciones ? { correcciones: entrada.correcciones } : {}),
+          // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
+          ...(entrada.forzar === true ? { forzar: true } : {}),
           ...(entrada.oportunidadId ? { oportunidadId: entrada.oportunidadId } : {}),
           ...(entrada.oportunidadId && entrada.nota && entrada.nota.trim() !== '' ? { nota: entrada.nota.trim().slice(0, 200) } : {}),
         }),

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { duracionPaso, leerRespuestaBandeja, leerRespuestaTraza, paginacionBandeja, rotuloCodigo, rotuloPaso } from './tarificador-bandeja.ts'
+import { duracionPaso, leerRespuestaBandeja, leerRespuestaTraza, agruparPorIntento, paginacionBandeja, rotuloCodigo, rotuloPaso } from './tarificador-bandeja.ts'
 
 const ITEM = {
   id: '11111111-1111-4111-8111-111111111111', compania: 'allianz', ramo: 'comunidades', estado: 'requiere_humano',
@@ -36,6 +36,18 @@ test('traza: lectura defensiva y 404', () => {
   assert.equal(r.ok && r.traza.pasos.length, 1)
   assert.equal(leerRespuestaTraza(404, null).ok, false)
   assert.equal(leerRespuestaTraza(200, { pasos: [] }).ok, true)
+})
+
+test('traza: pasos agrupados por intento (sin intento = 1)', () => {
+  const r = leerRespuestaTraza(200, { pasos: [
+    { intento: 1, paso: 'login', inicio: 'a', duracionMs: 1, ok: false, errorCodigo: 'infra' },
+    { intento: 2, paso: 'login', inicio: 'b', duracionMs: 1, ok: true },
+    { paso: 'tarificar', inicio: 'c', duracionMs: 1, ok: true },
+  ] })
+  assert.ok(r.ok)
+  if (!r.ok) return
+  const g = agruparPorIntento(r.traza.pasos)
+  assert.deepEqual(g.map((x) => [x.intento, x.pasos.length]), [[1, 2], [2, 1]])
 })
 
 test('rótulos y duraciones', () => {

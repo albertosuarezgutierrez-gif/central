@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { leerMetaWorker, leerResultadoWorker } from './tarificador-reglas.ts'
-import { leerPaginacion, proyectarItemBandeja, proyectarPaso, tipoDeError } from './tarificador-bandeja-reglas.ts'
+import { leerPaginacion, proyectarItemBandeja, proyectarPaso, tipoDeError, yaEnElDestino } from './tarificador-bandeja-reglas.ts'
 
 const JOB = '11111111-1111-4111-8111-111111111111'
 const fila = (extra: Record<string, unknown> = {}) => ({
@@ -47,8 +47,21 @@ test('paginación: valores por defecto ante basura, tope de 100', () => {
 })
 
 test('paso de traza: proyección sin tocar nada más', () => {
-  const p = proyectarPaso({ paso: 'login', inicio: new Date('2026-10-08T10:00:00Z'), duracion_ms: 1500, ok: false, error_codigo: 'portal', captura_ref: null })
-  assert.deepEqual(p, { paso: 'login', inicio: '2026-10-08T10:00:00.000Z', duracionMs: 1500, ok: false, errorCodigo: 'portal', capturaRef: null })
+  const p = proyectarPaso({ intento: 2, paso: 'login', inicio: new Date('2026-10-08T10:00:00Z'), duracion_ms: 1500, ok: false, error_codigo: 'portal', captura_ref: null })
+  assert.deepEqual(p, { intento: 2, paso: 'login', inicio: '2026-10-08T10:00:00.000Z', duracionMs: 1500, ok: false, errorCodigo: 'portal', capturaRef: null })
+})
+
+test('paso de traza: sin intento (fila anterior) se lee como intento 1', () => {
+  assert.equal(proyectarPaso({ intento: null, paso: 'login', inicio: '2026-10-08T10:00:00Z', duracion_ms: 1, ok: true, error_codigo: null, captura_ref: null }).intento, 1)
+})
+
+test('reintentar sobre pendiente o en_curso es sin_cambios; sobre un fallo no; cancelar solo si ya cancelado', () => {
+  assert.equal(yaEnElDestino('reintentar', 'pendiente'), true)
+  assert.equal(yaEnElDestino('reintentar', 'en_curso'), true)
+  assert.equal(yaEnElDestino('reintentar', 'requiere_humano'), false)
+  assert.equal(yaEnElDestino('reintentar', 'error_definitivo'), false)
+  assert.equal(yaEnElDestino('cancelar', 'cancelado'), true)
+  assert.equal(yaEnElDestino('cancelar', 'en_curso'), false)
 })
 
 // ─── La traza que llega del worker ───────────────────────────────────────────
@@ -93,4 +106,19 @@ test('sin pasos ni versión (worker antiguo) el resultado sigue siendo válido',
   const r = leerResultadoWorker({ trabajoId: JOB, resultado: 'error', error: { tipo: 'portal', mensaje: 'x' } })
   assert.equal(r.ok, true)
   if (r.ok) assert.deepEqual([r.r.pasos, r.r.botVersion], [[], null])
+})
+
+test('🪤 la traza se guarda FUERA de la transacción del resultado, en su propio try/catch con console.warn', async () => {
+  const { readFileSync } = await import('node:fs')
+  const f = readFileSync(new URL('./tarificador.ts', import.meta.url), 'utf8')
+  const ini = f.indexOf('export async function registrarResultado')
+  const fin = f.indexOf('async function guardarTarificacionRpa')
+  const cuerpo = f.slice(ini, fin)
+  const cierreTx = cuerpo.indexOf('\n  })\n')
+  const llamada = cuerpo.indexOf('guardarPasos(')
+  assert.ok(cierreTx > 0 && llamada > cierreTx, 'guardarPasos debe llamarse tras cerrar la transacción')
+  assert.doesNotMatch(cuerpo.slice(0, cierreTx), /guardarPasos\(/)
+  assert.match(cuerpo.slice(llamada), /guardarPasos\(prisma,[\s\S]*catch[\s\S]*console\.warn/)
+  // Sin datos personales en el aviso: solo el id del trabajo y el mensaje del error.
+  assert.doesNotMatch(cuerpo.slice(llamada), /riesgo|cliente_id|JSON\.stringify/)
 })

@@ -23,7 +23,7 @@ export type ItemBandeja = {
 
 export type Bandeja = { total: number; hayMas: boolean; items: ItemBandeja[] }
 
-export type PasoTrazaVista = { paso: string; inicio: string; duracionMs: number; ok: boolean; errorCodigo: string | null; capturaRef: string | null }
+export type PasoTrazaVista = { intento: number; paso: string; inicio: string; duracionMs: number; ok: boolean; errorCodigo: string | null; capturaRef: string | null }
 export type TrazaVista = { botVersion: string | null; pasos: PasoTrazaVista[] }
 
 const obj = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
@@ -82,6 +82,7 @@ export function leerRespuestaTraza(status: number, json: unknown): LecturaTraza 
     const paso = str(q?.paso), inicio = str(q?.inicio)
     if (!q || !paso || !inicio || typeof q.ok !== 'boolean') continue
     pasos.push({
+      intento: typeof q.intento === 'number' && Number.isInteger(q.intento) && q.intento >= 0 ? q.intento : 1,
       paso, inicio, ok: q.ok,
       duracionMs: typeof q.duracionMs === 'number' && Number.isFinite(q.duracionMs) && q.duracionMs >= 0 ? q.duracionMs : 0,
       errorCodigo: str(q.errorCodigo),
@@ -89,6 +90,17 @@ export function leerRespuestaTraza(status: number, json: unknown): LecturaTraza 
     })
   }
   return { ok: true, traza: { botVersion: str(o.botVersion), pasos } }
+}
+
+/** Agrupa los pasos por intento del trabajo (orden de llegada). Un solo intento → un solo grupo. */
+export function agruparPorIntento(pasos: PasoTrazaVista[]): { intento: number; pasos: PasoTrazaVista[] }[] {
+  const grupos: { intento: number; pasos: PasoTrazaVista[] }[] = []
+  for (const p of pasos) {
+    const g = grupos.find((x) => x.intento === p.intento)
+    if (g) g.pasos.push(p)
+    else grupos.push({ intento: p.intento, pasos: [p] })
+  }
+  return grupos.sort((a, b) => a.intento - b.intento)
 }
 
 const ROTULO_PASO: Record<string, string> = {

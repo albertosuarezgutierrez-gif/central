@@ -8,6 +8,7 @@
 
 import { useRef, useState } from 'react'
 import { FlaskConical } from 'lucide-react'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
@@ -53,7 +54,7 @@ type Resultado =
       guardado: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 export default function SaludNuevo({
   clienteId,
@@ -108,19 +109,20 @@ export default function SaludNuevo({
   // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
   // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
   const cotizandoEnVuelo = useRef(false)
-  async function cotizar() {
+  async function cotizar(forzar = false) {
     if (cotizandoEnVuelo.current) return
     cotizandoEnVuelo.current = true
     try {
-      await cotizarSinGuarda()
+      await cotizarSinGuarda(forzar)
     } finally {
       cotizandoEnVuelo.current = false
     }
   }
 
-  async function cotizarSinGuarda() {
+  async function cotizarSinGuarda(forzar: boolean) {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionSalud({
+      forzar,
       clienteId,
       resueltos: {
         estadoCivilId,
@@ -141,6 +143,9 @@ export default function SaludNuevo({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
       case 'ramo':
@@ -293,6 +298,9 @@ export default function SaludNuevo({
             {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
         )}
         {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} clienteId={clienteId} />}
       </div>

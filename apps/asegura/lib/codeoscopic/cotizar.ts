@@ -315,7 +315,13 @@ export async function cotizar(
   // 5 — Reserva ANTES de llamar, con la guarda anti-duplicado en la MISMA transacción (huella del
   // cuerpo YA recortado: es lo que de verdad viajaría). Sin ella, doble clic = dos cargos de 0,50 €.
   const intentoId = randomUUID()
-  const huella = huellaCotizacion({ cuerpo: p.cuerpo, ramo: p.contexto?.ramo, correduriaId: p.correduriaId })
+  const huella = huellaCotizacion({
+    cuerpo: p.cuerpo,
+    ramo: p.contexto?.ramo,
+    correduriaId: p.correduriaId,
+    oportunidadId: p.contexto?.oportunidadId,
+    polizaId: p.contexto?.polizaId,
+  })
   let reserva
   try {
     reserva = await reservarSinDuplicado({

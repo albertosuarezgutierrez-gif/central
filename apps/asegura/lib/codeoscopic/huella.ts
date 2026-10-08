@@ -20,10 +20,21 @@ export function jsonCanonico(v: unknown): string {
   return `{${claves.map((k) => `${JSON.stringify(k)}:${jsonCanonico(o[k])}`).join(',')}}`
 }
 
-/** sha256 (hex) de cuerpo canónico + ramo + correduría. Solo la huella llega a la BD. */
-export function huellaCotizacion(e: { cuerpo: unknown; ramo: string | null | undefined; correduriaId: string }): string {
+/**
+ * sha256 (hex) de cuerpo canónico + ramo + correduría + contexto (`oportunidadId ?? polizaId`). El contexto evita que
+ * la misma petición lanzada desde OTRA oportunidad/póliza reutilice la copia de precios de la primera (quedaría
+ * colgada del sitio equivocado). Solo la huella llega a la BD.
+ */
+export function huellaCotizacion(e: {
+  cuerpo: unknown
+  ramo: string | null | undefined
+  correduriaId: string
+  oportunidadId?: string | null
+  polizaId?: string | null
+}): string {
+  const contexto = e.oportunidadId ?? e.polizaId ?? ''
   return createHash('sha256')
-    .update(`${e.correduriaId}\n${e.ramo ?? ''}\n${jsonCanonico(e.cuerpo)}`)
+    .update(`${e.correduriaId}\n${e.ramo ?? ''}\n${contexto}\n${jsonCanonico(e.cuerpo)}`)
     .digest('hex')
 }
 

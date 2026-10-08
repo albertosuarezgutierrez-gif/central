@@ -45,12 +45,15 @@ export async function pedirCotizacionAuto(entrada: {
   /** Seguro anterior (vehículo nuevo, 03/10/2026): la póliza elegida por el corredor, o `sinSeguroAnterior`. */
   seguroAnteriorId?: string | null
   sinSeguroAnterior?: boolean
+  /** Recotización EXPLÍCITA tras el aviso de duplicado (0,50€ otra vez). */
+  forzar?: boolean
 }): Promise<RespuestaRetarificar> {
   return cotizarAutoNuevaAsegura({
     clienteId: entrada.clienteId,
     solicitadoPor: 'plataforma/correduria',
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
+    forzar: entrada.forzar === true,
     oportunidadId: entrada.variante?.oportunidadId ?? null,
     figuras: entrada.variante?.figuras ?? null,
     nota: entrada.variante?.nota ?? null,

@@ -74,9 +74,19 @@ export function leerPaginacion(limite: string | null, desde: string | null): { l
   }
 }
 
-export type FilaPaso = { paso: string; inicio: Date | string; duracion_ms: number; ok: boolean; error_codigo: string | null; captura_ref: string | null }
-export type PasoLectura = Omit<PasoTraza, 'paso' | 'errorCodigo'> & { paso: string; errorCodigo: string | null; capturaRef: string | null }
+/**
+ * Idempotencia de la bandeja: «Reintentar» sobre un trabajo que YA está en marcha (`pendiente` o `en_curso`) no es un
+ * conflicto sino `sin_cambios` (doble clic, otra pestaña). «Cancelar» sobre `cancelado` también.
+ */
+export function yaEnElDestino(accion: string, estado: string): boolean {
+  if (accion === 'reintentar') return estado === 'pendiente' || estado === 'en_curso'
+  if (accion === 'cancelar') return estado === 'cancelado'
+  return false
+}
+
+export type FilaPaso = { intento: number | null; paso: string; inicio: Date | string; duracion_ms: number; ok: boolean; error_codigo: string | null; captura_ref: string | null }
+export type PasoLectura = Omit<PasoTraza, 'paso' | 'errorCodigo'> & { intento: number; paso: string; errorCodigo: string | null; capturaRef: string | null }
 
 export function proyectarPaso(f: FilaPaso): PasoLectura {
-  return { paso: f.paso, inicio: iso(f.inicio), duracionMs: f.duracion_ms, ok: f.ok, errorCodigo: f.error_codigo, capturaRef: f.captura_ref }
+  return { intento: f.intento ?? 1, paso: f.paso, inicio: iso(f.inicio), duracionMs: f.duracion_ms, ok: f.ok, errorCodigo: f.error_codigo, capturaRef: f.captura_ref }
 }

@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui'
-import { duracionPaso, leerRespuestaTraza, rotuloCodigo, rotuloPaso, type TrazaVista } from '@/lib/tarificador-bandeja'
+import { agruparPorIntento, duracionPaso, leerRespuestaTraza, rotuloCodigo, rotuloPaso, type TrazaVista } from '@/lib/tarificador-bandeja'
 
 export default function TrazaTrabajo({ trabajoId }: { trabajoId: string }) {
   const [estado, setEstado] = useState<{ cargando: boolean; traza: TrazaVista | null; error: string | null }>({ cargando: true, traza: null, error: null })
@@ -37,15 +37,22 @@ export default function TrazaTrabajo({ trabajoId }: { trabajoId: string }) {
       {traza.pasos.length === 0 ? (
         <p className="muted" style={{ margin: 0, fontSize: 13 }}>Este trabajo no registró traza (es anterior a esta función o el bot no llegó a empezar).</p>
       ) : (
-        <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 4, fontSize: 13 }}>
-          {traza.pasos.map((p, i) => (
-            <li key={`${p.inicio}-${i}`} style={{ overflowWrap: 'anywhere' }}>
-              <strong>{rotuloPaso(p.paso)}</strong> · {duracionPaso(p.duracionMs)}{' '}
-              {p.ok ? <Badge tono="positivo">ok</Badge> : <Badge tono="negativo">falló: {rotuloCodigo(p.errorCodigo)}</Badge>}
-              {p.capturaRef && <span className="muted"> · con captura guardada</span>}
-            </li>
+        <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
+          {agruparPorIntento(traza.pasos).map((g, _i, todos) => (
+            <div key={g.intento} style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+              {todos.length > 1 && <p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>Intento {g.intento}</p>}
+              <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 4, fontSize: 13 }}>
+                {g.pasos.map((p, i) => (
+                  <li key={`${p.inicio}-${i}`} style={{ overflowWrap: 'anywhere' }}>
+                    <strong>{rotuloPaso(p.paso)}</strong> · {duracionPaso(p.duracionMs)}{' '}
+                    {p.ok ? <Badge tono="positivo">ok</Badge> : <Badge tono="negativo">falló: {rotuloCodigo(p.errorCodigo)}</Badge>}
+                    {p.capturaRef && <span className="muted"> · con captura guardada</span>}
+                  </li>
+                ))}
+              </ol>
+            </div>
           ))}
-        </ol>
+        </div>
       )}
     </div>
   )

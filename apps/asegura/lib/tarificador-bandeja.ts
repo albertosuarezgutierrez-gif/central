@@ -2,7 +2,7 @@
 // Reglas de estado y motivo legible: `@central/module-tarificacion` (`bandeja.ts`); proyección: `tarificador-bandeja-reglas.ts`.
 import { decidirAccionBandeja, ESTADOS_BANDEJA, type AccionBandeja } from '@central/module-tarificacion'
 import { prisma } from './tenant'
-import { proyectarItemBandeja, proyectarPaso, tipoDeError, type FilaBandeja, type FilaPaso, type ItemBandeja, type PasoLectura } from './tarificador-bandeja-reglas'
+import { proyectarItemBandeja, proyectarPaso, tipoDeError, yaEnElDestino, type FilaBandeja, type FilaPaso, type ItemBandeja, type PasoLectura } from './tarificador-bandeja-reglas'
 
 export type ListaBandeja = { total: number; items: ItemBandeja[]; hayMas: boolean }
 
@@ -41,8 +41,7 @@ export async function aplicarAccionBandeja(correduriaId: string, id: string, acc
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid for update`
     const f = filas[0]
     if (!f) return { estado: 'no_encontrado' as const }
-    const destino = accion === 'reintentar' ? 'pendiente' : 'cancelado'
-    if (f.estado === destino) return { estado: 'sin_cambios' as const, estadoTrabajo: f.estado }
+    if (yaEnElDestino(accion, f.estado)) return { estado: 'sin_cambios' as const, estadoTrabajo: f.estado }
     const d = decidirAccionBandeja(accion, f.estado, tipoDeError(f.error))
     if (!d.ok) return { estado: 'conflicto' as const, motivo: d.motivo, estadoTrabajo: f.estado }
     if (accion === 'reintentar') {
@@ -69,9 +68,9 @@ export async function leerTrazaTrabajo(correduriaId: string, id: string): Promis
     select bot_version from seguros.tarificacion_trabajos where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
   if (!t[0]) return null
   const p = await prisma.$queryRaw<FilaPaso[]>`
-    select paso, inicio, duracion_ms, ok, error_codigo, captura_ref
+    select intento, paso, inicio, duracion_ms, ok, error_codigo, captura_ref
     from seguros.tarificacion_trabajo_pasos
     where trabajo_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
-    order by inicio, id`
+    order by intento, inicio, id`
   return { botVersion: t[0].bot_version, pasos: p.map(proyectarPaso) }
 }

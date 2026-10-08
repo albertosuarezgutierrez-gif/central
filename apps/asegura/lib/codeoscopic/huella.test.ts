@@ -23,6 +23,20 @@ test('huella distinta ante cambio de dato, de ramo o de correduría; undefined n
   assert.match(base, /^[0-9a-f]{64}$/)
 })
 
+test('la huella distingue el contexto (oportunidad ?? póliza); sin contexto es la de siempre', () => {
+  const cuerpo = { a: 1 }
+  const sin = huellaCotizacion({ cuerpo, ramo: 'auto', correduriaId: C })
+  const o1 = huellaCotizacion({ cuerpo, ramo: 'auto', correduriaId: C, oportunidadId: 'op-1' })
+  const o2 = huellaCotizacion({ cuerpo, ramo: 'auto', correduriaId: C, oportunidadId: 'op-2' })
+  const p1 = huellaCotizacion({ cuerpo, ramo: 'auto', correduriaId: C, polizaId: 'pol-1' })
+  assert.notEqual(o1, o2)
+  assert.notEqual(o1, sin)
+  assert.notEqual(p1, sin)
+  // la oportunidad manda sobre la póliza; null equivale a ausente
+  assert.equal(huellaCotizacion({ cuerpo, ramo: 'auto', correduriaId: C, oportunidadId: 'op-1', polizaId: 'pol-9' }), o1)
+  assert.equal(huellaCotizacion({ cuerpo, ramo: 'auto', correduriaId: C, oportunidadId: null, polizaId: null }), sin)
+})
+
 test('la huella no contiene el cuerpo ni datos personales', () => {
   const h = huellaCotizacion({ cuerpo: { nif: '12345678Z', nombre: 'Ana' }, ramo: 'auto', correduriaId: C })
   assert.doesNotMatch(h, /12345678Z|Ana/)

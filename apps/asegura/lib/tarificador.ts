@@ -231,21 +231,22 @@ export type ResultadoRegistro =
   | { estado: 'no_encontrado' }
 
 export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoRegistro> {
-  return prisma.$transaction(async (tx) => {
+  // La TRAZA va FUERA de la transacción del resultado: el resultado del trabajo jamás depende de ella.
+  type Interno = { res: ResultadoRegistro; traza: { t: FilaTrabajo; captura: 'con_captura' | null } | null }
+  const interno: Interno = await prisma.$transaction(async (tx) => {
     const filas = await tx.$queryRaw<FilaTrabajo[]>`
       select id::text as id, correduria_id::text as correduria_id, cliente_id::text as cliente_id,
              poliza_id::text as poliza_id, oportunidad_id::text as oportunidad_id, compania, ramo, riesgo,
              estado, intentos, solicitado_por
       from seguros.tarificacion_trabajos where id = ${r.trabajoId}::uuid for update`
     const t = filas[0]
-    if (!t) return { estado: 'no_encontrado' as const }
+    if (!t) return { res: { estado: 'no_encontrado' as const }, traza: null }
     // Un resultado tardío (el barrido ya dio el lease por vencido) NO pisa lo decidido.
-    if (t.estado !== 'en_curso') return { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }
+    if (t.estado !== 'en_curso') return { res: { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }, traza: null }
 
     if (r.tipo === 'error') {
       const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, r.botVersion)
-      await guardarPasos(tx, t, r.pasos, r.captura ? 'con_captura' : null)
-      return { estado: 'registrado' as const, estadoTrabajo: estado }
+      return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: r.captura ? 'con_captura' as const : null } }
     }
 
     const docs: string[] = []
@@ -259,9 +260,17 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
           lease_hasta = null, error = null, terminado_at = now(), updated_at = now(),
           bot_version = coalesce(${r.botVersion}, bot_version)
       where id = ${t.id}::uuid`
-    await guardarPasos(tx, t, r.pasos, null)
-    return { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }
+    return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }, traza: { t, captura: null } }
   })
+  if (interno.traza) {
+    try {
+      await guardarPasos(prisma, interno.traza.t, r.pasos, interno.traza.captura)
+    } catch (e) {
+      // Sin datos personales: solo el id del trabajo y el mensaje del error.
+      console.warn('[tarificador] no se pudo guardar la traza del trabajo', interno.traza.t.id, e instanceof Error ? e.message : String(e))
+    }
+  }
+  return interno.res
 }
 
 async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]): Promise<string> {
@@ -326,7 +335,7 @@ async function guardarAdjunto(
  * (`documento:<uuid>` = `evidencia_documento_id`); sin mecanismo de captura → `captura_ref` NULL. Las filas son
  * inmutables y el POST del resultado es idempotente (el segundo llega con el trabajo ya fuera de `en_curso` → 409).
  */
-async function guardarPasos(tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id'>, pasos: PasoTraza[], captura: 'con_captura' | null): Promise<void> {
+async function guardarPasos(tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null): Promise<void> {
   if (!pasos.length) return
   let ultimoFallido = -1
   pasos.forEach((p, i) => { if (!p.ok) ultimoFallido = i })
@@ -338,8 +347,8 @@ async function guardarPasos(tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id'>
   for (let i = 0; i < pasos.length; i++) {
     const p = pasos[i]
     await tx.$executeRaw`
-      insert into seguros.tarificacion_trabajo_pasos (trabajo_id, correduria_id, paso, inicio, duracion_ms, ok, error_codigo, captura_ref)
-      values (${t.id}::uuid, ${t.correduria_id}::uuid, ${p.paso}, ${p.inicio}::timestamptz, ${p.duracionMs}::int, ${p.ok}, ${p.errorCodigo},
+      insert into seguros.tarificacion_trabajo_pasos (trabajo_id, correduria_id, intento, paso, inicio, duracion_ms, ok, error_codigo, captura_ref)
+      values (${t.id}::uuid, ${t.correduria_id}::uuid, ${t.intentos}::int, ${p.paso}, ${p.inicio}::timestamptz, ${p.duracionMs}::int, ${p.ok}, ${p.errorCodigo},
               ${i === ultimoFallido ? capturaRef : null})`
   }
 }
