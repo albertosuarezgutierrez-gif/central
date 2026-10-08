@@ -55,6 +55,17 @@ test('la ficha solo ofrece «El cliente se va» en un recibo devuelto de una pó
   assert.match(page, /\{x\.situacion === 'devuelto' && puedeBaja && <ClienteSeVa reciboId=\{x\.id\} \/>\}/)
 })
 
+test('la cabecera pinta matrícula (auto/moto) o dirección (hogar/comunidades) del riesgo principal', () => {
+  const page = leer('apps/plataforma/app/(usuario)/correduria/poliza/[id]/page.tsx')
+  // 1. Extrae el primer riesgo de p.contrato?.riesgos
+  assert.match(page, /const riesgoPrincipal = p\.contrato\?\.riesgos\?\.\[0\]/)
+  // 2. Decide por ramo: auto/moto → matrícula; hogar/comunidades → dirección
+  assert.match(page, /\['auto', 'moto'\]\.includes\(String\(p\.tipo\)\.toLowerCase\(\)\)/)
+  assert.match(page, /admiteDireccionRiesgo\(p\.tipo\)/)
+  // 3. Pinta el Dato en la grilla de cabecera
+  assert.match(page, /\{datoRiesgo && <Dato label=\{datoRiesgo\.label\} valor=\{datoRiesgo\.valor\} nota=\{datoRiesgo\.nota\} \/\>\}/)
+})
+
 test('la tarea del impago no se cuelga de una póliza ya dada de baja (mismo candado)', () => {
   const src = leer('apps/asegura/lib/devoluciones-recibo.ts')
   const tarea = src.slice(src.indexOf('async function asegurarTareaDevolucion'), src.indexOf('async function anotarHito'))
