@@ -6,6 +6,10 @@ import type { ResultadoCotizacion } from './cotizar.ts'
 export function respuestaFalloCotizacion(
   r: Extract<ResultadoCotizacion, { ok: false }>,
 ): { status: number; cuerpo: Record<string, unknown> } {
+  // Duplicado: no se llamó, luego no hay cargo (409, y la pantalla lo muestra legible).
+  if (r.razon === 'duplicado') {
+    return { status: 409, cuerpo: { error: r.mensaje, razon: r.razon, causa: 'duplicado', gastado: '0,00€' } }
+  }
   if (r.sinCargo === true) {
     const validacion = r.claveVendor === 'validacion'
     return {

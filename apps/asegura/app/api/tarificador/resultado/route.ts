@@ -11,6 +11,8 @@ export const dynamic = 'force-dynamic'
  * `TARIFICADOR_WORKER_SECRET` (comparación en tiempo constante). Dos formas:
  *   `{ trabajoId, resultado: 'ok', ofertas: OfertaNormalizada[], pdfs: [{ nombre, base64 }] }`
  *   `{ trabajoId, resultado: 'error', error: { tipo, mensaje, url? }, capturaBase64?, html? }`
+ * Ambas formas admiten `pasos` (traza: paso, inicio, duracionMs, ok, errorCodigo; sin datos personales) y
+ * `botVersion` (semver del adaptador); la traza va a `tarificacion_trabajo_pasos` y la versión a `bot_version`.
  * Las ofertas van a `tarificaciones`/`tarificacion_precios` con `canal = 'rpa'`; los PDF, la captura
  * y el HTML (ya redactado por el worker) a `documentos`. Un trabajo que ya no está `en_curso` (lease
  * vencido) responde 409 y no pisa nada.
@@ -24,6 +26,8 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null)
   const l = leerResultadoWorker(body)
   if (!l.ok) return NextResponse.json({ estado: 'error', errores: l.errores }, { status: 400 })
+  // Traza descartada por traer claves no permitidas: se avisa (sin valores) y el resultado se guarda igual.
+  if (l.r.trazaRechazada) console.warn('[tarificador] traza descartada', l.r.trabajoId, l.r.trazaRechazada.join(' | '))
   try {
     const r = await registrarResultado(l.r)
     if (r.estado === 'no_encontrado') return NextResponse.json(r, { status: 404 })

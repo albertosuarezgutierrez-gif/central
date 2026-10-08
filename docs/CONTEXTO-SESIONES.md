@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(08/10/2026)** — Tarificador · traza por paso + bandeja «Necesita tu atención» (`/correduria/tarificador`) + `bot_version` por adaptador; y anti-duplicado de Codeoscopic (huella sha256 del cuerpo, ventana 15 min, `forzar` solo operador, 409 sin cargo).
+Codeoscopic cobra 0,50 € por cada POST /insurances con 200, aunque se repita. Bot propio ≈0,002 €/compañía (supuesto, no medido); a volumen actual (28/mes) el argumento es fiabilidad, no coste.
+🚨 SQL `2026-10-08_tarificador_trazas.sql` y `2026-10-08_codeoscopic_huella.sql` ANTES de mergear: sin ellos falla el guardado de resultados del RPA y se bloquean las cotizaciones.
+Decisiones: JEV (TypeSafe) solo PREPARE como recuperación de selectores, siempre tras guard-emision. Matrícula: consulta solo en la intranet donde se tarifica de verdad; vehículo canónico cuando llegue la grabación de auto Allianz. Prompt «ERP Symfony» descartado: no hay PHP en el stack.
+
 **(08/10/2026)** — Correduría · duplicados: #4183 mergeado; aviso de duplicados unificado: se queda el de main (`polizasDuplicadas` en `correduria-ingesta`, `correduria.ingesta`).
 Retirado el vigía duplicado del cron `correduria-sustituciones` (`duplicados-aviso.ts`, catálogo `correduria.duplicados-nuevos`, lectura/escritura de `duplicados/vistos` en el puerto). La ruta `apps/asegura/.../duplicados/vistos` queda sin consumidor (no borrada).
 Borrados después: ruta `duplicados/vistos`, `cartera-duplicados-vistos.ts`, `duplicados-vistos.ts` (+test) de asegura y `duplicadosAsegura` del puerto de plataforma.

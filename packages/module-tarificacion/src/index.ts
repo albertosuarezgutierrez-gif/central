@@ -228,3 +228,30 @@ export {
   type ResultadoCalidad,
   type OpcionesCalidad,
 } from './control-calidad.ts'
+
+// Traza por trabajo, versión del bot y bandeja «Necesita tu atención» (08/10/2026).
+export {
+  PASOS_TRAZA,
+  CODIGOS_ERROR_TRAZA,
+  MAX_PASOS_TRAZA,
+  PATRON_VERSION_BOT,
+  esNombrePasoTraza,
+  esCodigoErrorTraza,
+  esVersionBot,
+  validarTraza,
+  crearTraza,
+  type NombrePasoTraza,
+  type CodigoErrorTraza,
+  type PasoTraza,
+  type ValidacionTraza,
+  type Traza,
+} from './traza.ts'
+export {
+  ESTADOS_BANDEJA,
+  ACCIONES_BANDEJA,
+  esAccionBandeja,
+  decidirAccionBandeja,
+  motivoLegible,
+  type AccionBandeja,
+  type DecisionBandeja,
+} from './bandeja.ts'

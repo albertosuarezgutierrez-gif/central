@@ -1180,34 +1180,43 @@ export const allianzComunidades: AdaptadorPortal = {
   compania: 'allianz',
   ramo: 'comunidades',
   credencial: 'ALLIANZ_EPAC',
+  version: '0.1.0',
   async tarificar(page, riesgo, ctx) {
     // UNA modalidad por trabajo (por defecto estándar). Querer las dos = DOS trabajos (dos pasadas):
     // tras «Aceptar» el formulario avanza y no hay vuelta atrás sin riesgo de dejar el portal a medias.
     const modalidad: ModalidadPortal = riesgo.modalidad ?? 'estandar'
-    if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
-    await ctx.trasLogin()
+    await ctx.paso('login', async () => {
+      if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
+      await ctx.trasLogin()
+    })
     await acompanarPaso(page, ctx, 'login', 'Cabecera de ePAC logueada (aparece «Mediador principal»)')
-    await abrirComunidades(page, ctx)
     // El formulario vive en un iframe (`appArea`): todo lo que sigue se busca en su marco.
-    const formulario = await marcoFormulario(page)
+    const formulario = await ctx.paso('navegacion', async () => {
+      await abrirComunidades(page, ctx)
+      return marcoFormulario(page)
+    })
     ctx.log(`formulario en el marco «${formulario.name() || '(sin nombre)'}»`)
-    await rellenarRiesgo(formulario, page, riesgo, ctx)
+    await ctx.paso('formulario', () => rellenarRiesgo(formulario, page, riesgo, ctx))
     await acompanarPaso(page, ctx, 'formulario', 'Datos Básicos de «Comunidades 2020» con todos los campos rellenados', { modalidadPedida: modalidad })
     // Término REAL antes de Calcular (ePAC lo ajusta al día 1 del mes); en Tarificar se vuelve a leer y manda aquella.
     const terminoDatosBasicos = await leerFechaTermino(formulario, 'fechaTermino')
-    const resultado = await calcular(page, ctx)
+    const resultado = await ctx.paso('tarificar', () => calcular(page, ctx))
     await acompanarPaso(page, ctx, 'tras_calcular', '«COSTE ANUAL DEL SEG. SEGÚN OPCIÓN» con importe tras pulsar Calcular', { modalidadPedida: modalidad })
     const calculo = await leerCalculo(resultado, ctx, modalidad)
     // Varias opciones (apagado por defecto): variantes recalculadas en Datos Básicos y base RESTAURADA antes del avance.
     const extra = riesgo.opciones ? await calcularVariantes(page, resultado, ctx, modalidad, calculo.costeDatosBasicos) : { ofertas: [], avisos: [] }
     // Datos Básicos → elegir modalidad → «Aceptar» (SOLO avanza a Tarificar; guardado por fases).
-    await ctx.elegirOpcion(modalidad)
-    await ctx.pausa()
-    await ctx.avanzarATarificar()
-    await ctx.exigirSinCaptcha()
+    await ctx.paso('tarificar', async () => {
+      await ctx.elegirOpcion(modalidad)
+      await ctx.pausa()
+      await ctx.avanzarATarificar()
+      await ctx.exigirSinCaptcha()
+    })
     // Tras el avance el servlet puede recargar o cambiar de marco: se busca el que trae «Prima Total».
-    const tarificar = await marcoCon(page, (r) => filaPorEtiqueta(r, 'Prima Total'), 'Prima Total')
-    const primas = await leerPrimas(tarificar)
+    const { tarificar, primas } = await ctx.paso('lectura_primas', async () => {
+      const marco = await marcoCon(page, (r) => filaPorEtiqueta(r, 'Prima Total'), 'Prima Total')
+      return { tarificar: marco, primas: await leerPrimas(marco) }
+    })
     await acompanarPaso(page, ctx, 'resultado', 'Pestaña Tarificar con Prima Neta, Impuestos y Prima Total (anual y sucesivos)', {
       valoresLeidos: { primaNetaEur: primas.anual.primaNetaEur, impuestosEur: primas.anual.impuestosEur, primaTotalEur: primas.anual.primaTotalEur },
       modalidadPedida: modalidad,

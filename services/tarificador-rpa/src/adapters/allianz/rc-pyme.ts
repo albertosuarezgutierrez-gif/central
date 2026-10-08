@@ -89,6 +89,7 @@ export const allianzRcPyme = {
   compania: 'allianz',
   ramo: 'rc_pyme',
   credencial: 'ALLIANZ_EPAC',
+  version: '0.1.0',
   async tarificar(page: Page, riesgo: FormularioRC, ctx: ContextoPortal): Promise<never> {
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
     await ctx.trasLogin()

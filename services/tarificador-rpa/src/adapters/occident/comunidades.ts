@@ -128,10 +128,13 @@ export const occidentComunidades: AdaptadorPortal = {
   compania: 'occident',
   ramo: 'comunidades',
   credencial: 'OCCIDENT_PORTAL',
+  version: '0.1.0',
   async tarificar(page, _riesgo, ctx) {
-    await login(page, ctx)
-    await ctx.trasLogin()
-    await abrirFormulario(page, ctx)
-    return rellenarYLeerPrima(ctx)
+    await ctx.paso('login', async () => {
+      await login(page, ctx)
+      await ctx.trasLogin()
+    })
+    await ctx.paso('navegacion', () => abrirFormulario(page, ctx))
+    return ctx.paso('formulario', () => rellenarYLeerPrima(ctx))
   },
 }

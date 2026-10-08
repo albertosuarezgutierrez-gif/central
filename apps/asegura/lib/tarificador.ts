@@ -15,6 +15,7 @@ import {
   franquiciaGeneral,
   puedeAutomatizar,
   type OfertaNormalizada,
+  type PasoTraza,
   type RiesgoComunidad,
   type TipoError,
 } from '@central/module-tarificacion'
@@ -242,7 +243,8 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     if (t.estado !== 'en_curso') return { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }
 
     if (r.tipo === 'error') {
-      const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html })
+      const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, r.botVersion)
+      await guardarPasos(tx, t, r.pasos, r.captura ? 'con_captura' : null)
       return { estado: 'registrado' as const, estadoTrabajo: estado }
     }
 
@@ -254,8 +256,10 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     await tx.$executeRaw`
       update seguros.tarificacion_trabajos
       set estado = 'ok', tarificacion_id = ${tarificacionId}::uuid, evidencia_documento_id = ${docs[0] ?? null}::uuid,
-          lease_hasta = null, error = null, terminado_at = now(), updated_at = now()
+          lease_hasta = null, error = null, terminado_at = now(), updated_at = now(),
+          bot_version = coalesce(${r.botVersion}, bot_version)
       where id = ${t.id}::uuid`
+    await guardarPasos(tx, t, r.pasos, null)
     return { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }
   })
 }
@@ -316,6 +320,30 @@ async function guardarAdjunto(
   return filas[0].id
 }
 
+/**
+ * Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco
+ * claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso fallido apunta a ella
+ * (`documento:<uuid>` = `evidencia_documento_id`); sin mecanismo de captura → `captura_ref` NULL. Las filas son
+ * inmutables y el POST del resultado es idempotente (el segundo llega con el trabajo ya fuera de `en_curso` → 409).
+ */
+async function guardarPasos(tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id'>, pasos: PasoTraza[], captura: 'con_captura' | null): Promise<void> {
+  if (!pasos.length) return
+  let ultimoFallido = -1
+  pasos.forEach((p, i) => { if (!p.ok) ultimoFallido = i })
+  let capturaRef: string | null = null
+  if (captura && ultimoFallido >= 0) {
+    const f = await tx.$queryRaw<{ id: string | null }[]>`select evidencia_documento_id::text as id from seguros.tarificacion_trabajos where id = ${t.id}::uuid`
+    capturaRef = f[0]?.id ? `documento:${f[0].id}` : null
+  }
+  for (let i = 0; i < pasos.length; i++) {
+    const p = pasos[i]
+    await tx.$executeRaw`
+      insert into seguros.tarificacion_trabajo_pasos (trabajo_id, correduria_id, paso, inicio, duracion_ms, ok, error_codigo, captura_ref)
+      values (${t.id}::uuid, ${t.correduria_id}::uuid, ${p.paso}, ${p.inicio}::timestamptz, ${p.duracionMs}::int, ${p.ok}, ${p.errorCodigo},
+              ${i === ultimoFallido ? capturaRef : null})`
+  }
+}
+
 /** Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra). */
 async function marcarFallo(
   db: Db,
@@ -323,6 +351,7 @@ async function marcarFallo(
   intentos: number,
   error: { tipo: TipoError; mensaje: string; url: string | null },
   evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null,
+  botVersion: string | null = null,
 ): Promise<string> {
   const estado = estadoTrasError(error.tipo, intentos)
   let capturaId: string | null = null
@@ -338,6 +367,7 @@ async function marcarFallo(
     update seguros.tarificacion_trabajos
     set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
         evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
+        bot_version = coalesce(${botVersion}, bot_version),
         terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
     where id = ${id}::uuid and estado = 'en_curso'`
   return estado
