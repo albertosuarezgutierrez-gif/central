@@ -952,50 +952,6 @@ export async function duplicadosAsegura(): Promise<DuplicadosVivosPuerto> {
   }
 }
 
-// ── Duplicados vivos ya avisados (03/10/2026) ───────────────────────────────
-//
-// `GET/POST /api/operador/duplicados/vistos`: claves `numero|dgs` del último aviso del cron diario
-// (evento `duplicados_vivos_visto` en asegura). `claves: null` = nunca se guardó (todo es nuevo).
-// 🚨 Un fallo de lectura es `error`, nunca «ninguna vista»: el cron decide qué hacer.
-
-export type DuplicadosVistosPuerto =
-  | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo: MotivoPuerto }
-  | { estado: 'ok'; claves: string[] | null }
-
-export function interpretarDuplicadosVistos(status: number, json: unknown): DuplicadosVistosPuerto {
-  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
-  if (status !== 200 || typeof json !== 'object' || json === null) {
-    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
-  }
-  const o = json as Record<string, unknown>
-  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
-  if (o.estado !== 'ok') return { estado: 'error', motivo: 'asegura_error' }
-  if (o.claves === null) return { estado: 'ok', claves: null }
-  if (!Array.isArray(o.claves) || o.claves.some((c) => typeof c !== 'string')) return { estado: 'error', motivo: 'respuesta_ilegible' }
-  return { estado: 'ok', claves: o.claves as string[] }
-}
-
-export async function duplicadosVistosAsegura(): Promise<DuplicadosVistosPuerto> {
-  try {
-    const r = await pedir('/api/operador/duplicados/vistos')
-    if (r === null) return { estado: 'sin_configurar' }
-    return interpretarDuplicadosVistos(r.status, r.json)
-  } catch {
-    return { estado: 'error', motivo: 'red' }
-  }
-}
-
-/** `true` solo si asegura confirmó que lo guardó. */
-export async function guardarDuplicadosVistosAsegura(claves: string[]): Promise<boolean> {
-  try {
-    const r = await pedirPost('/api/operador/duplicados/vistos', { claves })
-    return r !== null && r.status === 200
-  } catch {
-    return false
-  }
-}
-
 // ── Bandeja de revisión manual de pólizas (03/10/2026) ─────────────────────
 //
 // `GET/POST /api/operador/revision`. Los casos viven en `seguros.operational_events` de asegura.
