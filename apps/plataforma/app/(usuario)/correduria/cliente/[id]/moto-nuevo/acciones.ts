@@ -52,6 +52,8 @@ export async function pedirCotizacionMoto(entrada: {
   /** Seguro anterior (vehículo nuevo, 03/10/2026): la póliza elegida por el corredor, o `sinSeguroAnterior`. */
   seguroAnteriorId?: string | null
   sinSeguroAnterior?: boolean
+  /** Recotización EXPLÍCITA tras el aviso de duplicado (0,50€ otra vez). */
+  forzar?: boolean
 }): Promise<RespuestaRetarificar> {
   // 0,50€ reales: una acción de servidor es un POST que cualquiera con sesión de plataforma puede lanzar (el
   // middleware solo mira la sesión, no la correduría). Sin acceso, se corta ANTES de hablar con asegura.
@@ -62,6 +64,7 @@ export async function pedirCotizacionMoto(entrada: {
     solicitadoPor: 'plataforma/correduria',
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
+    forzar: entrada.forzar === true,
     oportunidadId: entrada.variante?.oportunidadId ?? null,
     figuras: entrada.variante?.figuras ?? null,
     nota: entrada.variante?.nota ?? null,

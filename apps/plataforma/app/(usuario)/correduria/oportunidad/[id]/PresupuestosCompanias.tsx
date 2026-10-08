@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { Bot, Download } from 'lucide-react'
 import { btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
+import TrazaTrabajo from '../../tarificador/TrazaTrabajo'
 import {
   SONDEO_MAX_MS, SONDEO_MS, estimarInfraseguro, fechaCorta, sigueEnCurso, vistaPrecio, vistaTrabajo,
 } from '@/lib/tarificador-asegura-reglas'
@@ -345,6 +346,7 @@ export default function PresupuestosCompanias({ oportunidadId, ramo, riesgoLibre
 
 function TarjetaTrabajo({ t, nombre, anterior = false }: { t: TrabajoCompania; nombre: string; anterior?: boolean }) {
   const v = vistaTrabajo(t, nombre)
+  const [trazaAbierta, setTrazaAbierta] = useState(false)
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, opacity: anterior ? 0.8 : 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
@@ -353,6 +355,14 @@ function TarjetaTrabajo({ t, nombre, anterior = false }: { t: TrabajoCompania; n
       </div>
       <div style={{ fontSize: 14, fontWeight: 600, color: v.tono === 'error' ? 'var(--negative)' : 'var(--text)' }}>{v.titulo}</div>
       {v.detalle && <div style={{ fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{v.detalle}</div>}
+      {t.error && (
+        <>
+          <button type="button" onClick={() => setTrazaAbierta((a) => !a)} aria-expanded={trazaAbierta} style={{ ...btnStyle('sutil', 'sm'), justifySelf: 'start', minHeight: 44 }}>
+            {trazaAbierta ? 'Ocultar traza' : 'Ver traza'}
+          </button>
+          {trazaAbierta && <TrazaTrabajo trabajoId={t.id} />}
+        </>
+      )}
       {t.estado === 'ok' && t.ofertas.map((o, i) => {
         const p = vistaPrecio(o, o.fechaTerminoPortal)
         return (

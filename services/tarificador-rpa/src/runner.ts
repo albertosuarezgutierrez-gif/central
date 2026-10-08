@@ -19,7 +19,9 @@ import {
   nombresCredencial,
   redactarHtml,
   secretosDelEntorno,
+  crearTraza,
   validarRiesgoComunidad,
+  type Traza,
   variablesProhibidas,
   type Credenciales,
   type OfertaNormalizada,
@@ -88,6 +90,7 @@ type Comun = {
   riesgo: RiesgoComunidad
   credenciales: Credenciales
   formador: ContextoFormador | undefined
+  traza: Traza
   log: (m: string, d?: Record<string, unknown>) => void
 }
 
@@ -141,6 +144,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,
+      paso: k.traza.paso,
     }
 
     let resultado: { ofertas: OfertaNormalizada[] } | null = null
@@ -305,7 +309,10 @@ async function main(): Promise<number> {
   }, Math.max(limite - Date.now(), 60_000) + 45_000)
   respaldo.unref()
 
-  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, riesgo: v.riesgo, credenciales, formador, log }
+  // Traza del trabajo (pasos con tiempos y código de error, sin datos): acumula los dos intentos y viaja en el POST del resultado.
+  const traza = crearTraza((e) => clasificar(e).tipo)
+  const meta = () => ({ pasos: traza.pasos(), botVersion: adaptador.version })
+  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, riesgo: v.riesgo, credenciales, formador, traza, log }
 
   // Un trabajo a la vez por proceso (hoy la máquina solo hace uno; si atiende varios, siguen en serie).
   return enSerie(async () => {
@@ -331,7 +338,7 @@ async function main(): Promise<number> {
       await cerrarFormador(formador, r.ok ? 'ok' : 'error')
       if (r.ok) {
         const ofertas = nota ? r.ofertas.map((o) => ({ ...o, avisos: [...o.avisos, `Cotizado al ${nota}`] })) : r.ofertas
-        const st = await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'ok', ofertas, pdfs: r.pdfs })
+        const st = await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'ok', ofertas, pdfs: r.pdfs, ...meta() })
         log('resultado_ok_enviado', { status: st, ofertas: ofertas.length, intentos: primerFallo ? 2 : 1 })
         return st >= 200 && st < 300 ? 0 : 1
       }
@@ -346,6 +353,7 @@ async function main(): Promise<number> {
         error: { tipo: c.tipo, mensaje: redactar(mensaje).slice(0, 2000), url: redactar(evidencia.url).slice(0, 500) },
         ...(evidencia.captura && evidencia.captura.length <= MAX_BYTES_EVIDENCIA ? { capturaBase64: evidencia.captura.toString('base64') } : {}),
         ...(htmlRedactado && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024 ? { html: htmlRedactado } : {}),
+        ...meta(),
       }
       // El worker no tiene canal de avisos (ni Telegram ni BD: variables prohibidas): el aviso a Alberto sale de
       // asegura/plataforma al leer este resultado (`requiere_humano` + mensaje «<Compañía> pide verificación…»).
@@ -359,7 +367,7 @@ async function main(): Promise<number> {
       const c = clasificar(e)
       const tipo = c.tipo === 'portal' ? 'infra' : c.tipo
       await cerrarFormador(formador, 'error')
-      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo, mensaje: redactar(c.mensaje).slice(0, 2000), url: null } })
+      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo, mensaje: redactar(c.mensaje).slice(0, 2000), url: null }, ...meta() })
       log('fallo_navegador', { mensaje: redactar(c.mensaje).slice(0, 300) })
       return 1
     } finally {

@@ -145,6 +145,8 @@ export const POST = auditado(async (req: Request) => {
   }
 
   // ── La única línea que cuesta dinero, por el único embudo ────────────────
+  // Recotización explícita: salta la guarda anti-duplicado (15 min) SOLO si el operador la pide; nunca por defecto.
+  if (cuerpo.forzar === true) p.peticion.forzar = true
   const r = await cotizar(p.peticion)
   // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
   const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)

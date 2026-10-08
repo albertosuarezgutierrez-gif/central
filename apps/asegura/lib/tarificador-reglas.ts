@@ -4,7 +4,7 @@
 // (app `asegura-tarificador`, auto_destroy) por trabajo, y el worker le pide el riesgo y le devuelve
 // el resultado por HTTP con su propio Bearer (`TARIFICADOR_WORKER_SECRET`). TARIFICAR ≠ EMITIR.
 
-import { envDeMaquina, esTipoError, validarOfertas, type OfertaNormalizada, type TipoError } from '@central/module-tarificacion'
+import { envDeMaquina, esTipoError, esVersionBot, validarOfertas, validarTraza, type OfertaNormalizada, type PasoTraza, type TipoError } from '@central/module-tarificacion'
 
 /** Interruptor general. APAGADO salvo `TARIFICADOR_RPA_ACTIVO=1` exacto (fail-closed). */
 export function rpaActivo(env: Record<string, string | undefined>): boolean {
@@ -59,15 +59,29 @@ export function peticionMaquina(cfg: ConfigFly, jobId: string): { url: string; i
 
 // ─── El cuerpo del POST /api/tarificador/resultado ───────────────────────────
 
+/** Traza y versión del bot (08/10/2026). `pasos` vacío = sin traza (o rechazada: ver `trazaRechazada`). */
+export type MetaWorker = { pasos: PasoTraza[]; botVersion: string | null; trazaRechazada?: string[] }
+
 export type ResultadoWorker =
-  | { tipo: 'ok'; trabajoId: string; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; contenido: Buffer }[] }
-  | {
+  | ({ tipo: 'ok'; trabajoId: string; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; contenido: Buffer }[] } & MetaWorker)
+  | ({
       tipo: 'error'
       trabajoId: string
       error: { tipo: TipoError; mensaje: string; url: string | null }
       captura: Buffer | null
       html: string | null
-    }
+    } & MetaWorker)
+
+/**
+ * Traza y versión del cuerpo del worker. La traza es ACCESORIA: si trae una clave que no es de las cinco permitidas
+ * (p. ej. un dato personal) se descarta ENTERA y el resultado del trabajo se guarda igual (`trazaRechazada` dice por qué,
+ * sin repetir valores). Una versión que no sea semver → `null`.
+ */
+export function leerMetaWorker(e: Record<string, unknown>): MetaWorker {
+  const v = validarTraza(e.pasos)
+  const botVersion = esVersionBot(e.botVersion) ? e.botVersion : null
+  return v.ok ? { pasos: v.pasos, botVersion } : { pasos: [], botVersion, trazaRechazada: v.errores.slice(0, 5) }
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const obj = (v: unknown): Record<string, unknown> | null =>
@@ -113,7 +127,7 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const v = validarOfertas(e.ofertas, lista.length)
     if (!v.ok) errores.push(...v.errores)
     if (errores.length || !v.ok) return { ok: false, errores }
-    return { ok: true, r: { tipo: 'ok', trabajoId, ofertas: v.ofertas, pdfs } }
+    return { ok: true, r: { tipo: 'ok', trabajoId, ofertas: v.ofertas, pdfs, ...leerMetaWorker(e) } }
   }
 
   if (e.resultado === 'error') {
@@ -127,7 +141,7 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     if (html && Buffer.byteLength(html, 'utf8') > MAX_BYTES_HTML) errores.push('html supera el techo')
     const url = typeof err?.url === 'string' ? err.url.slice(0, 500) : null
     if (errores.length) return { ok: false, errores }
-    return { ok: true, r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url }, captura, html } }
+    return { ok: true, r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url }, captura, html, ...leerMetaWorker(e) } }
   }
 
   return { ok: false, errores: ['resultado tiene que ser «ok» o «error»'] }

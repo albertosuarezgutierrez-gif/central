@@ -93,6 +93,8 @@ export const POST = auditado(async (req: Request) => {
     p.peticion.contexto = { ...p.peticion.contexto, ...variante.v.contexto }
   }
 
+  // Recotización explícita: salta la guarda anti-duplicado (15 min) SOLO si el operador la pide; nunca por defecto.
+  if (cuerpo.forzar === true) p.peticion.forzar = true
   const r = await cotizar(p.peticion)
   // Lo usado para pedir precio se anota en el riesgo (`info_riesgo.datosCapital`), DESPUÉS de guardar la
   // tarificación. Nunca lanza: la cotización ya está pagada (0,50€, no idempotente, regla 20).

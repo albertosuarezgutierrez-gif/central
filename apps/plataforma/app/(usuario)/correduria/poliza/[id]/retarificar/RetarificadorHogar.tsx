@@ -29,6 +29,7 @@ import type {
   Reparo,
   Supuesto,
 } from '@/lib/hogar-retarificar-asegura'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { pedirCotizacion } from './acciones'
 import { pedirLimitesHogar, pedirPrecalificacionHogar } from './acciones-hogar'
 import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
@@ -81,7 +82,7 @@ type Resultado =
       supuestos: Supuesto[]
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 function euroODash(n: number | null | undefined): string {
   return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
@@ -197,12 +198,13 @@ export default function RetarificadorHogar({
     }
   }
 
-  async function cotizar() {
+  async function cotizar(forzar = false) {
     setResultado({ estado: 'cotizando' })
     let r: Awaited<ReturnType<typeof pedirCotizacion>>
     try {
       r = await pedirCotizacion({
         polizaId,
+        forzar,
         resueltos: cuerpoResueltosFinal(),
         correcciones,
         referencia,
@@ -219,6 +221,9 @@ export default function RetarificadorHogar({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
       case 'ramo':
@@ -439,6 +444,9 @@ export default function RetarificadorHogar({
               </>
             )}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
         )}
 
         {resultado.estado === 'ok' && <Precios r={resultado} primaActual={pre.primaActual} />}

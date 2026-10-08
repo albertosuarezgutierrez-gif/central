@@ -2,7 +2,7 @@
 // de Playwright y un contexto con `pulsar()` (el único modo de pulsar algo: guardado contra emisión).
 
 import type { Locator, Page } from 'playwright'
-import type { ModalidadPortal } from '@central/module-tarificacion'
+import type { ModalidadPortal, NombrePasoTraza } from '@central/module-tarificacion'
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
 
@@ -36,11 +36,18 @@ export type ContextoPortal = ContextoTarificacion & {
    * pantalla de código: si ve el login, lanza o sigue y el runner lo trata como sesión rechazada (se borra y avisa).
    */
   sesionManual: boolean
+  /**
+   * Traza (08/10/2026): ejecuta `fn` como un paso con nombre (de `PASOS_TRAZA`), midiendo duración y código de error, y
+   * RELANZA lo que lance `fn`. No altera el flujo. Nunca se le pasa ningún valor del formulario: solo el nombre del paso.
+   */
+  paso: <T>(nombre: NombrePasoTraza, fn: () => Promise<T>) => Promise<T>
 }
 
 export type AdaptadorPortal = TarificadorAdapter<Page, RiesgoComunidad, ContextoPortal> & {
   /** Clave de la credencial: fly secrets `CRED_<clave>_USER` / `CRED_<clave>_PASS`. */
   readonly credencial: string
+  /** Versión semver del adaptador (empieza en '0.1.0'); el trabajo la guarda en `bot_version`. Súbela al tocar su navegación. */
+  readonly version: string
   /**
    * `'manual'`: el portal pide SMS en el acceso. El robot no tiene credenciales de ese portal (no se leen los CRED_*),
    * solo reutiliza la sesión sellada que dio de alta una persona; sin ella, `requiere_humano` sin abrir el navegador.

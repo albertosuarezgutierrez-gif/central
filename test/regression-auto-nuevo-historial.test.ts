@@ -37,7 +37,7 @@ test('los años del historial nacen en el máximo (o lo leído), no vacíos', ()
 })
 
 test('activarlo manda los CINCO campos que el vendor exige juntos, nunca aseguradoAntes suelto', () => {
-  const cotizar = fuente.slice(fuente.indexOf('async function cotizar()'), fuente.indexOf('return (\n    <div'))
+  const cotizar = fuente.slice(fuente.indexOf('async function cotizarSinGuarda('), fuente.indexOf('return (\n    <div'))
   assert.match(cotizar, /if \(tieneSeguroActual\) \{/)
   // Líneas activas dentro del cuerpo del `if`, sin comentarios: una asignación
   // comentada («// correccionesFinal.x = …») sigue conteniendo la subcadena y

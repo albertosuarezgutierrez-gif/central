@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Bot } from 'lucide-react'
 import { PageHeader, Pagina } from '@/components/ui'
+import BandejaAtencion from './BandejaAtencion'
 import PanelTarificador from './PanelTarificador'
 
 export const dynamic = 'force-dynamic'
@@ -29,6 +30,7 @@ export default function TarificadorPage() {
             </>}
           />
         </div>
+        <BandejaAtencion />
         <PanelTarificador />
       </div>
     </Pagina>

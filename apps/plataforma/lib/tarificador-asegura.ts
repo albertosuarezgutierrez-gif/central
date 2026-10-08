@@ -96,3 +96,22 @@ export async function descargarPropuestaOportunidad(oportunidadId: string): Prom
     signal: AbortSignal.timeout(55_000),
   })
 }
+
+/** Bandeja «Necesita tu atención»: trabajos del bot que esperan a una persona (solo lectura). */
+export function leerBandejaTarificador(limite: number, desde: number): Promise<Reenvio> {
+  return puerto(`bandeja?${new URLSearchParams({ limite: String(limite), desde: String(desde) })}`, { method: 'GET' }, 15_000)
+}
+
+/** Reintentar (→ pendiente) o cancelar un trabajo de la bandeja. Solo precio: nunca emite. */
+export function resolverTrabajoBandeja(id: string, accion: 'reintentar' | 'cancelar'): Promise<Reenvio> {
+  return puerto(`bandeja/${encodeURIComponent(id)}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ accion }),
+  }, 30_000)
+}
+
+/** Traza de un trabajo (pasos con duración y error) y versión del bot. */
+export function leerTrazaTarificador(id: string): Promise<Reenvio> {
+  return puerto(`trabajo/${encodeURIComponent(id)}/traza`, { method: 'GET' }, 15_000)
+}

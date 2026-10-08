@@ -24,6 +24,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import ListaPrecios from '../../../ListaPrecios'
 import FiltroGarantias from '../../../FiltroGarantias'
@@ -110,7 +111,7 @@ type Resultado =
       seguroAnterior?: SeguroAnteriorImputado | null
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; proyectoVigente?: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; proyectoVigente?: boolean; duplicado?: boolean }
 
 /**
  * Modo PÓLIZA (retarificar una moto de la cartera, 23/09/2026): la misma
@@ -568,12 +569,12 @@ export default function CotizadorMoto({
   // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
   // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
   const cotizandoEnVuelo = useRef(false)
-  async function pedirPrecio(forzarNuevo: boolean) {
+  async function pedirPrecio(forzarNuevo: boolean, forzar = false) {
     if (cotizandoEnVuelo.current) return
     cotizandoEnVuelo.current = true
     try {
       onCotizando?.(true)
-      await pedirPrecioSinGuarda(forzarNuevo)
+      await pedirPrecioSinGuarda(forzarNuevo, forzar)
     } catch (e) {
       // Una excepción (red, timeout, fallo del servidor) NO es una respuesta de error: sin esto la pantalla se
       // quedaba en «cotizando» y el cobro, desconocido, no se avisaba. Se desconoce si se cobró → gastoDesconocido.
@@ -588,7 +589,7 @@ export default function CotizadorMoto({
     }
   }
 
-  async function pedirPrecioSinGuarda(forzarNuevo: boolean) {
+  async function pedirPrecioSinGuarda(forzarNuevo: boolean, forzar: boolean) {
     // Embebido: el riesgo se está editando o recargando → no se paga con datos que van a cambiar.
     if (bloqueo !== null) return
     setResultado({ estado: 'cotizando' })
@@ -631,10 +632,12 @@ export default function CotizadorMoto({
           resueltos: resueltosPoliza,
           correcciones: correccionesFinal,
           ...(forzarNuevo ? { forzarNuevo: true } : {}),
+          ...(forzar ? { forzar: true } : {}),
           // Retarificar la póliza como variante de SU riesgo («con las mismas personas», 29/09/2026).
           variante: variante ? { oportunidadId: variante.oportunidadId, nota } : null,
         })
       : await pedirCotizacionMoto({
+      forzar,
       clienteId,
       ...(tieneSeguroActual ? {} : eleccionParaCotizar(seguroImputado, eleccionAnterior)),
       variante: variante ? { oportunidadId: variante.oportunidadId, figuras: figs as Record<string, string>, nota } : null,
@@ -677,6 +680,9 @@ export default function CotizadorMoto({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
         setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, proyectoVigente: true })
@@ -1191,6 +1197,9 @@ export default function CotizadorMoto({
             {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void pedirPrecio(false, true)} deshabilitado={!puedePulsar} />
         )}
         {resultado.estado === 'error' && resultado.proyectoVigente && poliza && (
           <button

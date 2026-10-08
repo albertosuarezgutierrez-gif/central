@@ -15,6 +15,7 @@ import {
   franquiciaGeneral,
   puedeAutomatizar,
   type OfertaNormalizada,
+  type PasoTraza,
   type RiesgoComunidad,
   type TipoError,
 } from '@central/module-tarificacion'
@@ -230,20 +231,22 @@ export type ResultadoRegistro =
   | { estado: 'no_encontrado' }
 
 export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoRegistro> {
-  return prisma.$transaction(async (tx) => {
+  // La TRAZA va FUERA de la transacción del resultado: el resultado del trabajo jamás depende de ella.
+  type Interno = { res: ResultadoRegistro; traza: { t: FilaTrabajo; captura: 'con_captura' | null } | null }
+  const interno: Interno = await prisma.$transaction(async (tx) => {
     const filas = await tx.$queryRaw<FilaTrabajo[]>`
       select id::text as id, correduria_id::text as correduria_id, cliente_id::text as cliente_id,
              poliza_id::text as poliza_id, oportunidad_id::text as oportunidad_id, compania, ramo, riesgo,
              estado, intentos, solicitado_por
       from seguros.tarificacion_trabajos where id = ${r.trabajoId}::uuid for update`
     const t = filas[0]
-    if (!t) return { estado: 'no_encontrado' as const }
+    if (!t) return { res: { estado: 'no_encontrado' as const }, traza: null }
     // Un resultado tardío (el barrido ya dio el lease por vencido) NO pisa lo decidido.
-    if (t.estado !== 'en_curso') return { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }
+    if (t.estado !== 'en_curso') return { res: { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }, traza: null }
 
     if (r.tipo === 'error') {
-      const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html })
-      return { estado: 'registrado' as const, estadoTrabajo: estado }
+      const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, r.botVersion)
+      return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: r.captura ? 'con_captura' as const : null } }
     }
 
     const docs: string[] = []
@@ -254,10 +257,20 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     await tx.$executeRaw`
       update seguros.tarificacion_trabajos
       set estado = 'ok', tarificacion_id = ${tarificacionId}::uuid, evidencia_documento_id = ${docs[0] ?? null}::uuid,
-          lease_hasta = null, error = null, terminado_at = now(), updated_at = now()
+          lease_hasta = null, error = null, terminado_at = now(), updated_at = now(),
+          bot_version = coalesce(${r.botVersion}, bot_version)
       where id = ${t.id}::uuid`
-    return { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }
+    return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }, traza: { t, captura: null } }
   })
+  if (interno.traza) {
+    try {
+      await guardarPasos(prisma, interno.traza.t, r.pasos, interno.traza.captura)
+    } catch (e) {
+      // Sin datos personales: solo el id del trabajo y el mensaje del error.
+      console.warn('[tarificador] no se pudo guardar la traza del trabajo', interno.traza.t.id, e instanceof Error ? e.message : String(e))
+    }
+  }
+  return interno.res
 }
 
 async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]): Promise<string> {
@@ -316,6 +329,30 @@ async function guardarAdjunto(
   return filas[0].id
 }
 
+/**
+ * Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco
+ * claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso fallido apunta a ella
+ * (`documento:<uuid>` = `evidencia_documento_id`); sin mecanismo de captura → `captura_ref` NULL. Las filas son
+ * inmutables y el POST del resultado es idempotente (el segundo llega con el trabajo ya fuera de `en_curso` → 409).
+ */
+async function guardarPasos(tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null): Promise<void> {
+  if (!pasos.length) return
+  let ultimoFallido = -1
+  pasos.forEach((p, i) => { if (!p.ok) ultimoFallido = i })
+  let capturaRef: string | null = null
+  if (captura && ultimoFallido >= 0) {
+    const f = await tx.$queryRaw<{ id: string | null }[]>`select evidencia_documento_id::text as id from seguros.tarificacion_trabajos where id = ${t.id}::uuid`
+    capturaRef = f[0]?.id ? `documento:${f[0].id}` : null
+  }
+  for (let i = 0; i < pasos.length; i++) {
+    const p = pasos[i]
+    await tx.$executeRaw`
+      insert into seguros.tarificacion_trabajo_pasos (trabajo_id, correduria_id, intento, paso, inicio, duracion_ms, ok, error_codigo, captura_ref)
+      values (${t.id}::uuid, ${t.correduria_id}::uuid, ${t.intentos}::int, ${p.paso}, ${p.inicio}::timestamptz, ${p.duracionMs}::int, ${p.ok}, ${p.errorCodigo},
+              ${i === ultimoFallido ? capturaRef : null})`
+  }
+}
+
 /** Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra). */
 async function marcarFallo(
   db: Db,
@@ -323,6 +360,7 @@ async function marcarFallo(
   intentos: number,
   error: { tipo: TipoError; mensaje: string; url: string | null },
   evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null,
+  botVersion: string | null = null,
 ): Promise<string> {
   const estado = estadoTrasError(error.tipo, intentos)
   let capturaId: string | null = null
@@ -338,6 +376,7 @@ async function marcarFallo(
     update seguros.tarificacion_trabajos
     set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
         evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
+        bot_version = coalesce(${botVersion}, bot_version),
         terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
     where id = ${id}::uuid and estado = 'en_curso'`
   return estado
