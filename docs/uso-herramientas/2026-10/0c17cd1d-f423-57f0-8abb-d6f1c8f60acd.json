@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-08T12:41:33.579Z",
- "llamadas": 3143,
+ "fin": "2026-10-08T12:48:09.235Z",
+ "llamadas": 3154,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -29,27 +29,27 @@
    }
   },
   "bash": {
-   "llamadas": 1804,
-   "chars_in": 1623719,
-   "chars_out": 7801800,
+   "llamadas": 1805,
+   "chars_in": 1623896,
+   "chars_out": 7807446,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1804
+    "Bash": 1805
    }
   },
   "otro": {
-   "llamadas": 447,
-   "chars_in": 306110,
-   "chars_out": 3462263,
+   "llamadas": 455,
+   "chars_in": 306356,
+   "chars_out": 3516499,
    "errores": 0,
    "archivos_citados": 24,
    "chars_citados": 369626,
    "tools": {
     "SubagentHandback": 102,
-    "ToolSearch": 65,
-    "ReadNotifications": 266,
+    "ToolSearch": 68,
+    "ReadNotifications": 271,
     "SendMessage": 10,
     "SendUserFile": 1,
     "AskUserQuestion": 1,
@@ -108,14 +108,14 @@
    }
   },
   "mcp:Supabase": {
-   "llamadas": 10,
-   "chars_in": 21360,
-   "chars_out": 4055,
+   "llamadas": 11,
+   "chars_in": 21362,
+   "chars_out": 4446,
    "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__list_projects": 3,
+    "mcp__Supabase__list_projects": 4,
     "mcp__Supabase__apply_migration": 5,
     "mcp__Supabase__get_advisors": 2
    }
@@ -229,14 +229,15 @@
    }
   },
   "mcp:Supabase_asegura": {
-   "llamadas": 1,
-   "chars_in": 39,
-   "chars_out": 13,
+   "llamadas": 2,
+   "chars_in": 41,
+   "chars_out": 63,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase_asegura__list_tables": 1
+    "mcp__Supabase_asegura__list_tables": 1,
+    "mcp__Supabase_asegura__get_project_url": 1
    }
   }
  }
