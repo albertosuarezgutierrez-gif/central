@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-08T12:09:36.879Z",
- "llamadas": 3054,
+ "fin": "2026-10-08T12:41:33.579Z",
+ "llamadas": 3143,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -29,27 +29,27 @@
    }
   },
   "bash": {
-   "llamadas": 1736,
-   "chars_in": 1572340,
-   "chars_out": 7376168,
+   "llamadas": 1804,
+   "chars_in": 1623719,
+   "chars_out": 7801800,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1736
+    "Bash": 1804
    }
   },
   "otro": {
-   "llamadas": 430,
-   "chars_in": 297146,
-   "chars_out": 3338464,
+   "llamadas": 447,
+   "chars_in": 306110,
+   "chars_out": 3462263,
    "errores": 0,
    "archivos_citados": 24,
    "chars_citados": 369626,
    "tools": {
-    "SubagentHandback": 99,
-    "ToolSearch": 64,
-    "ReadNotifications": 253,
+    "SubagentHandback": 102,
+    "ToolSearch": 65,
+    "ReadNotifications": 266,
     "SendMessage": 10,
     "SendUserFile": 1,
     "AskUserQuestion": 1,
@@ -58,14 +58,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 67,
-   "chars_in": 170170,
-   "chars_out": 174024,
+   "llamadas": 68,
+   "chars_in": 172588,
+   "chars_out": 176663,
    "errores": 0,
-   "archivos_citados": 115,
-   "chars_citados": 8077797,
+   "archivos_citados": 119,
+   "chars_citados": 8112847,
    "tools": {
-    "Agent": 67
+    "Agent": 68
    }
   },
   "agente:lector-correo": {
@@ -96,14 +96,14 @@
    }
   },
   "sql": {
-   "llamadas": 113,
-   "chars_in": 54766,
-   "chars_out": 330970,
+   "llamadas": 114,
+   "chars_in": 55049,
+   "chars_out": 331490,
    "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase_asegura__execute_sql": 6,
+    "mcp__Supabase_asegura__execute_sql": 7,
     "mcp__Supabase__execute_sql": 107
    }
   },
@@ -153,14 +153,14 @@
    }
   },
   "agente:agente-architect": {
-   "llamadas": 9,
-   "chars_in": 20497,
-   "chars_out": 22271,
+   "llamadas": 10,
+   "chars_in": 22100,
+   "chars_out": 24109,
    "errores": 0,
-   "archivos_citados": 11,
-   "chars_citados": 101759,
+   "archivos_citados": 12,
+   "chars_citados": 1080322,
    "tools": {
-    "Agent": 9
+    "Agent": 10
    }
   },
   "escritura": {
@@ -187,9 +187,9 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 50,
-   "chars_in": 5687,
-   "chars_out": 18066,
+   "llamadas": 51,
+   "chars_in": 5971,
+   "chars_out": 18174,
    "errores": 0,
    "archivos_citados": 4,
    "chars_citados": 65246,
@@ -197,7 +197,8 @@
     "mcp__claude-code-remote__subscribe_pr_activity": 26,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 22,
     "mcp__claude-code-remote__create_trigger": 1,
-    "mcp__claude-code-remote__get_trigger": 1
+    "mcp__claude-code-remote__get_trigger": 1,
+    "mcp__claude-code-remote__send_later": 1
    }
   },
   "mcp:Vercel": {
