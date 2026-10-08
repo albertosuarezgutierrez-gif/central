@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { opcionesPorDefecto, opcionesEmisionPorDefecto, conProductoPorDefecto, conDescuentos, descuentosDelCuerpo } from './opciones-producto.ts'
+import { opcionesPorDefecto, opcionesParaReRate, opcionesEmisionPorDefecto, conProductoPorDefecto, conDescuentos, descuentosDelCuerpo } from './opciones-producto.ts'
 
 test('opcionesPorDefecto: Allianz trae las 14 opciones portadas del CRM, con naturalPhenomena=false', () => {
   const o = opcionesPorDefecto('Allianz')
@@ -120,8 +120,53 @@ test('conProductoPorDefecto: familiaAllianz sin marcar (u omitido) sigue en fals
 test('opcionesPorDefecto: las de Allianz son de AUTO; moto u hogar no las heredan', () => {
   assert.ok(opcionesPorDefecto('Allianz', 'auto'))
   assert.ok(opcionesPorDefecto('Allianz', null), 'sin ramo conocido se mantiene el comportamiento de auto')
-  assert.equal(opcionesPorDefecto('Allianz', 'moto'), null)
-  assert.equal(opcionesPorDefecto('Allianz', 'hogar'), null)
+  // Moto/hogar: solo los dos campos de descuento, no las 14 de auto.
+  assert.equal(opcionesPorDefecto('Allianz', 'moto')!.length, 2)
+  assert.equal(opcionesPorDefecto('Allianz', 'hogar')!.length, 2)
+})
+
+const ids = (o: { id: string; value: unknown }[] | null) => Object.fromEntries((o ?? []).map((x) => [x.id, x.value]))
+
+test('opcionesPorDefecto: Allianz moto → dtoCap y dtoVentaCruzada a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Allianz', 'moto')), { dtoCap: 50, dtoVentaCruzada: 50 })
+})
+test('opcionesPorDefecto: Allianz hogar → dtoCap y dtoVentaCruzada a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Allianz', 'hogar')), { dtoCap: 50, dtoVentaCruzada: 50 })
+})
+test('opcionesPorDefecto: Generali moto → commercialDiscountNumber a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Generali', 'moto')), { commercialDiscountNumber: 50 })
+})
+test('opcionesPorDefecto: Generali hogar → commercialDiscountNumber a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Generali Seguros', 'hogar')), { commercialDiscountNumber: 50 })
+})
+test('opcionesPorDefecto: Occident y Fidelidade siguen sin catálogo en moto/hogar; comissionType nunca', () => {
+  for (const c of ['Occident', 'Catalana Occidente', 'Fidelidade'])
+    for (const r of ['moto', 'hogar']) assert.equal(opcionesPorDefecto(c, r), null, `${c} ${r}`)
+  assert.equal(opcionesPorDefecto('Occident', 'auto'), null)
+  for (const c of ['Allianz', 'Generali', 'Occident', 'Fidelidade'])
+    for (const r of ['moto', 'hogar'])
+      assert.equal((opcionesPorDefecto(c, r) ?? []).some((o) => o.id === 'comissionType'), false, `${c} ${r}`)
+})
+
+test('opcionesPorDefecto: Generali auto → commercialDiscountNumber a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Generali', 'auto')), { commercialDiscountNumber: 50 })
+})
+test('opcionesParaReRate: Generali auto con opciones del vendor que traen el id → lo sube a 50 sin tocar el resto', () => {
+  const vendor = [{ id: 'commercialDiscountNumber', type: 'number', value: 0 }, { id: 'codigoFlota', type: 'string', value: 'x' }]
+  assert.deepEqual(opcionesParaReRate(vendor, 'Generali Seguros', 'auto'), [
+    { id: 'commercialDiscountNumber', type: 'number', value: 50 },
+    { id: 'codigoFlota', type: 'string', value: 'x' },
+  ])
+  assert.equal(vendor[0].value, 0, 'no muta la entrada')
+})
+test('opcionesParaReRate: Generali auto con opciones del vendor SIN el id → no se inventa (evita un 400 de 0,50€)', () => {
+  const vendor = [{ id: 'otra', type: 'string', value: 'x' }]
+  assert.deepEqual(opcionesParaReRate(vendor, 'Generali', 'auto'), vendor)
+})
+test('opcionesParaReRate: sin opciones del vendor → catálogo; otras compañías → las del vendor tal cual', () => {
+  assert.deepEqual(ids(opcionesParaReRate(null, 'Generali', 'auto') as { id: string; value: unknown }[]), { commercialDiscountNumber: 50 })
+  const vendor = [{ id: 'commercialDiscountNumber', type: 'number', value: 0 }]
+  assert.deepEqual(opcionesParaReRate(vendor, 'Allianz', 'auto'), vendor)
 })
 
 test('descuento en preemisión: límites del formulario real (CAP 0-99, venta cruzada 0-100), sin tocar el catálogo', () => {
@@ -155,4 +200,15 @@ test('descuento en preemisión: límites del formulario real (CAP 0-99, venta cr
   // Otra compañía (sin el campo) no se inventa la opción: se rechaza antes de gastar.
   assert.equal(conDescuentos(null, { dtoCap: 10 }).ok, false)
   assert.equal(conDescuentos([{ id: 'otro', type: 'number', value: 1 }], { dtoCap: 10 }).ok, false)
+})
+
+test('🪤 consentimientos del Submit: solo Allianz AUTO; en moto/hogar no se firma nada por defecto', () => {
+  assert.ok(opcionesEmisionPorDefecto('Allianz', 'auto'))
+  assert.ok(opcionesEmisionPorDefecto('Allianz'), 'sin ramo = auto, como siempre')
+  assert.equal(opcionesEmisionPorDefecto('Allianz', 'moto'), null)
+  assert.equal(opcionesEmisionPorDefecto('Allianz', 'hogar'), null)
+  const campos = { quote: { id: 'Q1' } }
+  assert.deepEqual(conProductoPorDefecto(campos, 'Allianz', { ramo: 'hogar' }), campos)
+  assert.deepEqual(conProductoPorDefecto(campos, 'Allianz', { ramo: 'moto' }), campos)
+  assert.ok((conProductoPorDefecto(campos, 'Allianz', { ramo: 'auto' }) as any).product)
 })

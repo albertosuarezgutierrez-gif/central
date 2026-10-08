@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { evaluaReceptor, nifProveedorEsNuestro, normalizaNombreReceptor } from './receptor.ts'
+import { evaluaReceptor, nifProveedorEsNuestro, normalizaNombreReceptor, normalizaNifReceptor } from './receptor.ts'
 
 const TITULARES = [
   { nif: '28823484E', nombre: 'Alberto Suárez Gutiérrez' },
@@ -68,4 +68,11 @@ test('nifProveedorEsNuestro pilla el NIF del cliente colado como emisor', () => 
 test('normalizaNombreReceptor quita forma jurídica, acentos y puntuación', () => {
   assert.equal(normalizaNombreReceptor('PUNTO Y COMA GESTION, S.L.'), 'punto y coma gestion')
   assert.equal(normalizaNombreReceptor('El Triunfo CB'), 'el triunfo')
+})
+
+test('normalizaNifReceptor quita el prefijo ES y la etiqueta NIF pegada', () => {
+  assert.equal(normalizaNifReceptor('ES NIF28823484E'), '28823484E')
+  assert.equal(normalizaNifReceptor('NIF: 28823484E'), '28823484E')
+  assert.equal(normalizaNifReceptor('ES A-81864498'), 'A81864498')
+  assert.equal(normalizaNifReceptor('28823484E'), '28823484E')
 })

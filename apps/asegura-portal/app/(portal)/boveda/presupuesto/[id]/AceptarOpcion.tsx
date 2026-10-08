@@ -1,14 +1,18 @@
 'use client'
 import { useState } from 'react'
+import { MENSAJE_VARIAS_FICHAS } from '@/lib/mensajes-ficha'
 import { eur } from '@/lib/dinero'
 import { listaY, type AvisoPerdidas } from '@/lib/todas-las-opciones'
+import { TEXTOS_OFERTAS } from '@/lib/presupuesto-ofertas-vista'
 
 /**
  * Aceptar una opción del presupuesto (pieza 4-d).
  *
  * Reglas:
  *  - El documento se enseña ENTERO antes de firmar: se firma lo que se ha leído.
- *  - La sesión del portal no basta: hace falta un código nuevo al correo.
+ *  - La sesión del portal no basta: hace falta un código nuevo al correo. Quien entró con el
+ *    código del WhatsApp (07/10/2026) firma con ESE mismo código, sin tener que pedir el del
+ *    correo (puede no tener); si tiene correo, puede pedirlo igualmente. Vale cualquiera.
  *  - El texto de consentimiento es el que devuelve asegura, el mismo que queda
  *    en la evidencia de la firma; aquí no se escribe una copia.
  *  - La vista de corredor lee pero no firma (el servidor también lo niega).
@@ -21,7 +25,7 @@ type CuentaFicha = { mascara: string | null; aviso: string | null }
 type Eleccion = { eleccion: 'ficha' } | { eleccion: 'otra'; iban: string }
 type PasoCuenta = { paso: 'cuenta'; cuentaFicha: CuentaFicha }
 type PasoRev = { paso: 'revisar'; cuentaFicha: CuentaFicha; eleccion: Eleccion; cuentaMascara: string; consentimiento: string; confirmacionDatos: string; documento: string; documentoHash: string; anulacion: { compania: string; numeroPoliza: string; fechaEfecto: string; carta: string; advertencia: string | null } | null; sinAnulacion: string | null }
-type PasoCodigo = { paso: 'codigo'; email: string; minutos: number; consentimiento: string; confirmacionDatos: string; documentoHash: string; eleccion: Eleccion }
+type PasoCodigo = { paso: 'codigo'; via: 'correo' | 'whatsapp'; email: string; minutos: number; consentimiento: string; confirmacionDatos: string; documentoHash: string; eleccion: Eleccion }
 
 const AVISO_CUENTA: Record<string, string> = {
   ilegible: 'Tenemos una cuenta guardada que ahora mismo no podemos leer. Indícanos en cuál quieres domiciliar los recibos.',
@@ -38,7 +42,7 @@ function leerCuentaFicha(v: unknown): CuentaFicha {
   }
 }
 
-export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos, perdidas = null }: {
+export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos, perdidas = null, origen = 'codeoscopic', codigoWhatsapp = false }: {
   presupuestoId: string
   opcionId: string
   prima: number | null
@@ -48,6 +52,10 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
   bloqueoDatos: string | null
   /** Lo que deja de tener frente a su seguro actual (`avisoPerdidas`). `null` = nada que avisar. */
   perdidas?: AvisoPerdidas | null
+  /** De dónde salen los precios: en `ofertas` lo que se confirma es el tomador y la oferta, no «los datos con los que se calculó». */
+  origen?: 'codeoscopic' | 'ofertas'
+  /** Entró con el código del WhatsApp: se le ofrece firmar con ese mismo código. */
+  codigoWhatsapp?: boolean
 }) {
   const [paso, setPaso] = useState<{ paso: 'inicio' } | PasoCuenta | PasoRev | PasoCodigo | { paso: 'aceptada'; aceptadoEl: string }>({ paso: 'inicio' })
   // La cuenta: «usar la de mi ficha» o «usar otra» (con el IBAN tecleado).
@@ -146,14 +154,27 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
     const fijo: Record<string, string> = {
       no_encontrado: 'Este presupuesto ya no está disponible. Recarga la página.',
       sin_ficha: 'Este presupuesto ya no está disponible. Recarga la página.',
-      varias_fichas: 'Este presupuesto ya no está disponible. Recarga la página.',
+      varias_fichas: MENSAJE_VARIAS_FICHAS,
       sin_precio: 'La opción no tiene precio. Escríbeme para revisarla.',
     }
     setAviso(fijo[estado] ?? 'No hemos podido preparar la aceptación. Inténtalo en unos minutos o llámanos.')
   }
 
-  async function pedirCodigo() {
+  /** «Tengo el código del WhatsApp»: no se pide nada, se teclea el que ya tiene. */
+  function usarCodigoWhatsapp() {
     if (paso.paso !== 'revisar') return
+    setAviso(null)
+    setPaso({
+      paso: 'codigo', via: 'whatsapp', email: '', minutos: 0,
+      consentimiento: paso.consentimiento, confirmacionDatos: paso.confirmacionDatos, documentoHash: paso.documentoHash,
+      eleccion: paso.eleccion,
+    })
+    setCodigo('')
+  }
+
+  async function pedirCodigo() {
+    if (paso.paso !== 'revisar' && paso.paso !== 'codigo') return
+    const actual = paso
     setOcupado(true)
     setAviso(null)
     const r = await enviar({ accion: 'codigo' })
@@ -161,9 +182,9 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
 
     if (r?.j.estado === 'codigo_enviado' && typeof r.j.email === 'string') {
       setPaso({
-        paso: 'codigo', email: r.j.email, minutos: typeof r.j.minutos === 'number' ? r.j.minutos : 10,
-        consentimiento: paso.consentimiento, confirmacionDatos: paso.confirmacionDatos, documentoHash: paso.documentoHash,
-        eleccion: paso.eleccion,
+        paso: 'codigo', via: 'correo', email: r.j.email, minutos: typeof r.j.minutos === 'number' ? r.j.minutos : 10,
+        consentimiento: actual.consentimiento, confirmacionDatos: actual.confirmacionDatos, documentoHash: actual.documentoHash,
+        eleccion: actual.eleccion,
       })
       setCodigo('')
       return
@@ -183,7 +204,7 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
     if (paso.paso !== 'codigo') return
     setOcupado(true)
     setAviso(null)
-    const r = await enviar({ accion: 'firmar', codigo, nombre, documentoHash: paso.documentoHash, datosConfirmados: confirma, cuenta: paso.eleccion })
+    const r = await enviar({ accion: 'firmar', codigo, nombre, documentoHash: paso.documentoHash, datosConfirmados: confirma, cuenta: paso.eleccion, via: paso.via })
     setOcupado(false)
 
     if (r?.j.estado === 'aceptado' && typeof r.j.aceptadoEl === 'string') {
@@ -350,6 +371,15 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
 
               {corredor ? (
                 <p className="suave" style={{ margin: 0, fontSize: 14 }}>Vista de corredor: la firma la hace el cliente con un código a su correo.</p>
+              ) : codigoWhatsapp ? (
+                <>
+                  <button type="button" className="boton" style={{ minHeight: 48 }} disabled={ocupado} onClick={usarCodigoWhatsapp}>
+                    Tengo el código del WhatsApp
+                  </button>
+                  <button type="button" className="boton-tenue" style={{ minHeight: 44 }} disabled={ocupado} onClick={pedirCodigo}>
+                    {ocupado ? 'Enviando…' : 'Prefiero que me mandes un código al correo'}
+                  </button>
+                </>
               ) : (
                 <button type="button" className="boton" style={{ minHeight: 48 }} disabled={ocupado} onClick={pedirCodigo}>
                   {ocupado ? 'Enviando…' : 'Mandarme un código para firmar'}
@@ -359,7 +389,9 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
           ) : paso.paso === 'codigo' ? (
             <div style={{ display: 'grid', gap: 10 }}>
               <p className="suave" style={{ margin: 0, fontSize: 14 }}>
-                Te hemos mandado un código a {paso.email}. Caduca en {paso.minutos} minutos.
+                {paso.via === 'whatsapp'
+                  ? 'Escribe el código de acceso que te mandé por WhatsApp (el mismo con el que has entrado).'
+                  : `Te hemos mandado un código a ${paso.email}. Caduca en ${paso.minutos} minutos.`}
               </p>
               <label style={{ display: 'grid', gap: 4, fontSize: 14 }}>
                 Código
@@ -378,7 +410,7 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
                   type="checkbox" checked={confirma} onChange={(e) => setConfirma(e.target.checked)}
                   style={{ width: 22, height: 22, flex: '0 0 auto', marginTop: 1 }}
                 />
-                <span>{paso.confirmacionDatos} <span className="suave">(los de «Revisa tus datos», arriba)</span></span>
+                <span>{paso.confirmacionDatos} <span className="suave">{origen === 'ofertas' ? TEXTOS_OFERTAS.casillaPista : '(los de «Revisa tus datos», arriba)'}</span></span>
               </label>
               <button
                 type="button" className="boton" style={{ minHeight: 48 }}
@@ -386,8 +418,8 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
               >
                 {ocupado ? 'Firmando…' : 'Firmar y aceptar'}
               </button>
-              <button type="button" className="boton-tenue" disabled={ocupado} onClick={pedirCodigo}>
-                Mandarme otro código
+              <button type="button" className="boton-tenue" style={{ minHeight: 44 }} disabled={ocupado} onClick={pedirCodigo}>
+                {paso.via === 'whatsapp' ? 'Prefiero que me mandes un código al correo' : 'Mandarme otro código'}
               </button>
             </div>
           ) : null}

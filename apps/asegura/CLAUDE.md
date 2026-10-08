@@ -75,6 +75,9 @@
   401). Arranca APAGADO (`CODEOSCOPIC_TARIFICACION_ACTIVA`). Contador persistente `seguros.codeoscopic_consumo`:
   sin libro no se cotiza; una cotización sin desenlace CUENTA como gastada. ReRate y Submit pasan por su propio
   embudo (`libro-emision.ts`, motivos y topes separados; su coste va en env y **0 = «sin confirmar», no gratis**).
+  Codeoscopic (correo 02/10/2026, hilo «Duda»): se factura por cada `POST /insurances` con HTTP 200 (aunque sea el
+  mismo riesgo; 4xx/5xx no cuentan), solo en producción; septiembre = 28 facturables. ReRate y Submit no aparecen
+  como facturables: resuelto por inferencia; confirmación explícita no pedida.
   Ningún botón público ni vigilancia periódica tarifica.
 - **Se guarda TODO lo del vendor:** `tarificaciones.respuesta` (escritura aparte que no lanza; no sale por el
   puerto), `fallos` (NULL = anterior al 29/09 ≠ `[]`) y por precio `id_precio`, forma/frecuencia de pago y meses.
@@ -99,8 +102,8 @@
   `x-client-app`/`x-user-email`).
 - La API REST solo cubre auto, moto, hogar, salud, decesos y vida. **RC, comercios y comunidades: no hay endpoint**
   (se llama a la compañía).
-- El webhook de Codeoscopic apunta aún al CRM de Manuel; el receptor propio (`/api/webhooks/codeoscopic`) guarda y
-  no acuña. Repuntarlo es gestión de Alberto.
+- **Descubrimiento autónomo de emisiones:** plataforma corre cron `correduria-descubrir-emisiones` (`10,40 5-21 * * *` UTC) que consulta GET /insurances (gratis), acuña por hash de DNI, y pone pendientes en cola `seguros.codeoscopic_emisiones_revision`. Rotación en anillo: tope 40 llamadas/pasada, latido rojo tras 3 pasadas seguidas con pendientes por tope. **Acuñar solo por `registrarPolizaEmitida` (compuerta atómica `ya_acunada`)**, nunca por otro camino.
+- **Webhook nuevo en `https://api.grupoasegura.es/api/webhooks/codeoscopic`** (Vercel central-asegura, CNAME IONOS): guarda, no acuña. Contacto: `soporteapi@codeoscopic.com` / Juan Manuel. PENDIENTE: Codeoscopic cambie URL (confía en certificado 30/09/2026; reintentan ~30 min hasta 200/204).
 
 ## ✉️ Correos y crons (todos con cerrojos)
 - Tres cerrojos: `CRON_SECRET` Bearer, **modo cuenta por defecto** (`ASEGURA_AVISOS_ACTIVOS=1` para enviar;
@@ -123,6 +126,9 @@
 
 ## Oportunidad/riesgo/correduría
 - **Datos del riesgo por ramo (PR #4127):** módulo puro `@central/module-seguros/datos-riesgo-{generico,ramo,vivienda,capital,libre}.ts` con claves `datosVehiculo|datosVivienda|datosCapital|datosRiesgoLibre` en `info_riesgo`. PATCH `/api/operador/oportunidad/riesgo` edita una clave (400 si no es del ramo); precarga desde `polizas.datos_especificos` (nunca confirmada). Helper `leerRiesgo()` con validación pura `calcularEdicionRiesgo()`.
+
+## Tarificador RPA (bots Playwright)
+Guía viva (arquitectura, DOM de ePAC, seguridad, interruptores, plan): **`docs/TARIFICADOR-RPA.md`**. TARIFICAR ≠ EMITIR; guardián `test/regression-tarificador-rpa.test.ts`.
 
 ## Cuando dudes
 Busca el tema en `docs/claude-md/ASEGURA-completo-2026-09-30.md` antes de suponer: casi todo lo de aquí ya se midió

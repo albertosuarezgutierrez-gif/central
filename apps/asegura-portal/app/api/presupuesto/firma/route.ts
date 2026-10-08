@@ -5,7 +5,7 @@ import { tgSend } from '@central/core-telegram'
 import {
   MOTIVO_SIN_CASILLA, MOTIVO_SIN_CUENTA, firmarAceptacion, leerEntradaCuenta, pedirCodigoAceptacion, prepararAceptacion,
 } from '@/lib/presupuesto-firma'
-import { requireIdentidad } from '@/lib/session'
+import { accesoPuenteDe } from '@/lib/presupuesto'
 
 export const runtime = 'nodejs'
 
@@ -14,19 +14,14 @@ export const runtime = 'nodejs'
  *   { accion: 'preparar', presupuestoId, opcionId, cuenta? }   → sin cuenta, la de su ficha ENMASCARADA; con ella, documento + hash
  *     (`cuenta`: { eleccion: 'ficha' } | { eleccion: 'otra', iban }. El IBAN viaja a asegura, que lo valida; aquí no se registra.)
  *   { accion: 'codigo', presupuestoId, opcionId }              → código de 6 cifras a su correo
- *   { accion: 'firmar', presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados: true, cuenta } → firma la aceptación
+ *   { accion: 'firmar', presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados: true, cuenta, via? } → firma la aceptación
+ *     (`via: 'whatsapp'` = el código es el de acceso del WhatsApp; si no, el del correo)
  *
- * La identidad sale de la SESIÓN, nunca del cuerpo. 🚨 La vista de corredor
- * es de solo lectura: Alberto no firma una aceptación por el cliente (403).
+ * Quién firma sale de la SESIÓN o de la cookie de acceso por WhatsApp de ESTE presupuesto
+ * (`accesoPuenteDe`), nunca del cuerpo. 🚨 La vista de corredor es de solo lectura: Alberto no
+ * firma una aceptación por el cliente (403).
  */
 export async function POST(req: Request) {
-  let identidad
-  try {
-    identidad = await requireIdentidad()
-  } catch {
-    return NextResponse.json({ estado: 'sin_sesion' }, { status: 401 })
-  }
-
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const presupuestoId = typeof b?.presupuestoId === 'string' ? b.presupuestoId.trim() : ''
   const opcionId = typeof b?.opcionId === 'string' ? b.opcionId.trim() : ''
@@ -41,9 +36,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ estado: 'no_disponible', motivo: 'Id inválido.' }, { status: 422 })
   }
 
+  const puerta = await accesoPuenteDe(presupuestoId)
+  if (!puerta) return NextResponse.json({ estado: 'sin_sesion' }, { status: 401 })
+  const { acceso } = puerta
+
   if (b.accion === 'preparar') {
     // Preparar es solo lectura: se permite a la vista de corredor.
-    const r = await prepararAceptacion(identidad.id, presupuestoId, opcionId, leerEntradaCuenta(b.cuenta))
+    const r = await prepararAceptacion(acceso, presupuestoId, opcionId, leerEntradaCuenta(b.cuenta))
     if (!r) return NextResponse.json({ estado: 'error' }, { status: 502 })
     const status = r.estado === 'ok' || r.estado === 'elegir_cuenta' ? 200
       : r.estado === 'sin_cuenta' || r.estado === 'iban_invalido' ? 422
@@ -52,10 +51,10 @@ export async function POST(req: Request) {
   }
 
   // Para código y firma: veto de corredor
-  if (identidad.corredor) return NextResponse.json({ estado: 'solo_lectura' }, { status: 403 })
+  if (puerta.corredor) return NextResponse.json({ estado: 'solo_lectura' }, { status: 403 })
 
   if (b.accion === 'codigo') {
-    const r = await pedirCodigoAceptacion(identidad.id, presupuestoId, opcionId)
+    const r = await pedirCodigoAceptacion(acceso, presupuestoId, opcionId)
     const status = r.estado === 'codigo_enviado' ? 200 : r.estado === 'espera' ? 429 : r.estado === 'no_disponible' ? 409 : 502
     return NextResponse.json(r, { status })
   }
@@ -78,7 +77,7 @@ export async function POST(req: Request) {
     const cuenta = leerEntradaCuenta(b.cuenta)
     if (!cuenta) return NextResponse.json({ estado: 'reintentar', motivo: MOTIVO_SIN_CUENTA }, { status: 422 })
 
-    const r = await firmarAceptacion(identidad.id, presupuestoId, opcionId, {
+    const r = await firmarAceptacion(acceso, presupuestoId, opcionId, {
       codigo,
       nombre,
       documentoHash,
@@ -86,6 +85,8 @@ export async function POST(req: Request) {
       userAgent: normalizarUserAgent(req.headers.get('user-agent')),
       datosConfirmados: true,
       cuenta,
+      // El código del WhatsApp solo con el acceso por WhatsApp: con la sesión, el del correo.
+      via: b.via === 'whatsapp' && 'tokenWhatsapp' in acceso ? 'whatsapp' : 'correo',
     })
 
     if (r.estado === 'aceptado') {

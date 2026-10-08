@@ -10,7 +10,7 @@
 import { POLIZA_ESTADOS_VIGENTES, datosDelTomador, huecosParaEmitirDesdeFicha, type DatosParaEmitir, type ValorLeido } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso } from './contacto-portal'
 import { estadoEmailDeFicha } from './email-ficha'
 import { partirDireccion } from './codeoscopic/direccion'
 
@@ -82,7 +82,7 @@ export async function datosParaEmitir(correduriaId: string, clienteId: string): 
 
 export type DatosParaEmitirPortal =
   | ({ estado: 'ok' } & DatosParaEmitir)
-  | { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'otra_ficha' } | { estado: 'no_encontrado' }
+  | { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'otra_ficha' } | { estado: 'no_encontrado' }
   | { estado: 'error'; causa: string }
 
 /**
@@ -92,7 +92,11 @@ export type DatosParaEmitirPortal =
  * SU ficha, o colgarle su DNI, mezclaría dos personas: `otra_ficha` y no se enseña nada.
  */
 export async function datosParaEmitirDePortal(correduriaId: string, identidadId: string, presupuestoId: string): Promise<DatosParaEmitirPortal> {
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  // La ficha es la DUEÑA del presupuesto si está vinculada con nivel de operar (con varias, la elige él).
+  const ficha = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  // 🚨 Ficha no vinculada y presupuesto inexistente dan LO MISMO (`no_encontrado`): `otra_ficha` sería un oráculo
+  // de «ese presupuesto existe en la ficha de otra persona».
+  if (ficha.estado === 'ajena') return { estado: 'no_encontrado' }
   if (ficha.estado !== 'ok') return ficha
   const [p] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>`
     select cliente_id::text as "clienteId" from presupuesto where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`

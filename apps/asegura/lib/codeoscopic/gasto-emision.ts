@@ -20,11 +20,10 @@
 // CONTARLAS.
 //
 // ─── Las tres decisiones que lo hacen reversible ─────────────────────────────
-//  1. **El coste va en una env y arranca en 0.** Si resultan ser gratis, hoy no
-//     estamos inflando ningún euro; si resultan costar, se pone la cifra y el
-//     libro empieza a sumarla sin tocar código. Y **0 aquí NO significa
-//     «gratis»**: significa «no confirmado» — por eso `describirCoste()` lo dice
-//     con palabras en vez de pintar un `0,00€` que se leería como «no cuesta».
+//  1. **El coste va en una env y arranca en 0,50 € (desde el 29/09/2026; antes 0).**
+//     Si resultan ser gratis, se pone la env a 0 y nada más cambia. Y **0 aquí NO
+//     significa «gratis»**: significa «no confirmado» — por eso `describirCoste()`
+//     lo dice con palabras en vez de pintar un `0,00€` que se leería como «no cuesta».
 //  2. **Los contadores van SEPARADOS de los de cotizar** (`consumo.ts` filtra
 //     por `motivo`). Si se mezclaran, agotar el tope de cotizar apagaría la
 //     emisión —y al revés— sin que nadie supiera por qué; y la cifra de
@@ -81,12 +80,13 @@ export const ENV_TOPE_MENSUAL: Record<OperacionEmision, string> = {
 }
 
 /**
- * 🚨 **CERO por defecto, y a propósito.** No está confirmado que estas dos
- * llamadas facturen, así que el libro cuenta la LÍNEA (que es lo que arreglaba
- * el agujero) y no le pone precio. El día que Codeoscopic conteste, se pone la
- * cifra en la env y nada más cambia.
+ * **0,50 € por defecto (decisión de Alberto, 29/09/2026).** Hasta ese día era 0 = «sin
+ * confirmar», y el libro contaba la línea sin ponerle precio. Desde el tope en EUROS
+ * (`tope-euros.ts`) cada ReRate, Submit o recomendación de capital cuenta 0,50 € mientras
+ * Codeoscopic no confirme su coste por escrito. Una env explícita (también `0`, si se confirma
+ * que es gratis) manda sobre este defecto.
  */
-export const COSTE_EMISION_CENTS_DEFECTO = 0
+export const COSTE_EMISION_CENTS_DEFECTO = 50
 
 /** Techo contra el dedo gordo: un `5000` donde iba `50` serían 50,00€ por ReRate. */
 export const COSTE_EMISION_CENTS_MAXIMO = 500

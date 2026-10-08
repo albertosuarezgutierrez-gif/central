@@ -2,11 +2,13 @@
 
 // Hermana de `.../vida-nuevo/VidaNuevo.tsx`, mismo patrón para SALUD.
 // 🚧 Ver el aviso de `page.tsx`: el `risk` que se manda al vendor NO está
-// verificado. `modalidadDeseada` es una nota para el corredor: NUNCA viaja al
-// vendor (no hay campo confirmado donde ponerla).
+// verificado. `modalidadDeseada` y el importe son notas para el corredor: NUNCA
+// viajan al vendor (no hay campo confirmado donde ponerlas). Los asegurados
+// adicionales SÍ viajan (`insureds[1..]`).
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FlaskConical } from 'lucide-react'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
@@ -18,6 +20,8 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import { pedirCotizacionSalud } from './acciones'
 import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
 import { FallosTarificacion } from '../../../FallosTarificacion'
+import AseguradosAdicionales, { aseguradoCompleto, aseguradosDeRiesgo, aseguradosParaEnviar, type AseguradoForm } from '../AseguradosAdicionales'
+import type { AseguradoAdicional } from '@central/module-seguros'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -26,10 +30,12 @@ const input: React.CSSProperties = {
 
 const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefined> = {
   dni: { etiqueta: 'DNI', tipo: 'text' },
+  email: { etiqueta: 'Correo electrónico', tipo: 'email' },
   nombre: { etiqueta: 'Nombre', tipo: 'text' },
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
 }
 
 type Resultado =
@@ -48,7 +54,7 @@ type Resultado =
       guardado: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 export default function SaludNuevo({
   clienteId,
@@ -73,12 +79,14 @@ export default function SaludNuevo({
   /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
   variante?: VarianteNueva | null
   /** Lo que el riesgo ya sabe (`info_riesgo.datosCapital`): precarga; `null` = no se sabe, nunca 0. */
-  inicial?: { capital: number | null; modalidadDeseada: string | null } | null
+  inicial?: { capital: number | null; modalidadDeseada: string | null; asegurados: AseguradoAdicional[] | null } | null
 }) {
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
   const [capital, setCapital] = useState(inicial?.capital != null ? String(inicial.capital) : '')
   const [modalidadDeseada, setModalidadDeseada] = useState(inicial?.modalidadDeseada ?? '')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
+  // Asegurados además del tomador (`insureds[1..]`): sí viajan al vendor.
+  const [asegurados, setAsegurados] = useState<AseguradoForm[]>(() => aseguradosDeRiesgo(inicial?.asegurados))
   // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
   const limitesEfecto = limitesFechaEfecto()
@@ -94,15 +102,31 @@ export default function SaludNuevo({
 
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
-  const faltaAlgo = faltaCivil || aManoSinRellenar.length > 0
+  // Un hueco que esta pantalla no sabe resolver (p. ej. «dato que falta: weight», o person-roles ilegible) también bloquea: no se paga un 400 evitable.
+  const faltaAlgo = faltaCivil || aManoSinRellenar.length > 0 || huerfanos.length > 0 || asegurados.some((a) => !aseguradoCompleto(a))
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
-  async function cotizar() {
+  // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
+  // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
+  const cotizandoEnVuelo = useRef(false)
+  async function cotizar(forzar = false) {
+    if (cotizandoEnVuelo.current) return
+    cotizandoEnVuelo.current = true
+    try {
+      await cotizarSinGuarda(forzar)
+    } finally {
+      cotizandoEnVuelo.current = false
+    }
+  }
+
+  async function cotizarSinGuarda(forzar: boolean) {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionSalud({
+      forzar,
       clienteId,
       resueltos: {
         estadoCivilId,
+        ...(asegurados.length > 0 ? { asegurados: aseguradosParaEnviar(asegurados) } : {}),
         ...(Number(capital) > 0 ? { capital: Number(capital) } : {}),
         // Solo con oportunidad y solo para el expediente (se anota en el riesgo): asegura no la manda al vendor.
         ...(variante && modalidadDeseada.trim() !== '' ? { modalidadDeseada: modalidadDeseada.trim() } : {}),
@@ -119,6 +143,9 @@ export default function SaludNuevo({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
       case 'ramo':
@@ -163,10 +190,10 @@ export default function SaludNuevo({
       <div style={cardStyle}>
         <CardHeader title="1 · La cobertura" sub="La API de salud no tiene campo de capital ni de modalidad: la compañía cotiza su producto para el asegurado. Estos dos datos son notas para ti y NO viajan." />
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Campo etiqueta="Importe de referencia (€)" falta={false} ayuda="Opcional. Nota para el corredor: NO viaja al vendor (la API no tiene ese campo).">
+          <Campo etiqueta="Nota: importe de referencia (€) — no viaja" falta={false} ayuda="Opcional. Nota para el corredor: NO viaja al vendor (la API no tiene ese campo).">
             <input type="number" min={0} step={1000} value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="15000" style={input} />
           </Campo>
-          <Campo etiqueta="Modalidad deseada" falta={false} ayuda="Nota para el corredor: NO viaja al vendor (no hay campo confirmado).">
+          <Campo etiqueta="Nota: modalidad deseada — no viaja" falta={false} ayuda="Nota para el corredor: NO viaja al vendor (no hay campo confirmado).">
             <input value={modalidadDeseada} onChange={(e) => setModalidadDeseada(e.target.value)} placeholder="p. ej. con dental" style={input} />
           </Campo>
           <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
@@ -219,6 +246,8 @@ export default function SaludNuevo({
           </div>
         )}
 
+        <AseguradosAdicionales lista={asegurados} onChange={setAsegurados} deshabilitado={cotizando} />
+
         {huerfanos.length > 0 && (
           <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--negative)', padding: 12 }}>
             <strong style={{ color: 'var(--negative)' }}>Esto no se arregla desde esta pantalla:</strong>
@@ -226,7 +255,7 @@ export default function SaludNuevo({
               {huerfanos.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-              Hay que corregirlo en la ficha del cliente. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              Hay que corregirlo en la ficha del cliente: mientras tanto no se puede pedir precio (no se gasta nada).
             </p>
           </div>
         )}
@@ -269,6 +298,9 @@ export default function SaludNuevo({
             {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
         )}
         {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} clienteId={clienteId} />}
       </div>

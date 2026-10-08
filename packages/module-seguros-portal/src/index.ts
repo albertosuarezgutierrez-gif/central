@@ -1,8 +1,8 @@
-export { NIVELES, camposVisibles } from './acceso.ts'
+export { NIVELES, NIVELES_QUE_OPERAN, nivelPuedeOperar, camposVisibles } from './acceso.ts'
 // Qué COSA está asegurada (el coche, el piso). Lee `bien-asegurado.ts` antes de
 // tocarlo: `cosa` y `ubicacion` salen separados porque la dirección de un hogar
 // es un dato de la PERSONA y no la ve un tercero.
-export { describirBien, describirBienConGemela, componerUbicacion, bienTieneAlgo, esRamoInmueble, BIEN_VACIO } from './bien-asegurado.ts'
+export { describirBien, describirBienConGemela, pulirDatoVehiculo, componerUbicacion, bienTieneAlgo, esRamoInmueble, BIEN_VACIO } from './bien-asegurado.ts'
 export type { BienAsegurado } from './bien-asegurado.ts'
 export type { Nivel, CamposVisibles } from './acceso.ts'
 export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar, debeSustituir } from './procedencia.ts'
@@ -92,8 +92,42 @@ export type {
 } from './avisos.ts'
 export { CORTE_AVISO_POLIZA_NUEVA, DIAS_AVISO_POLIZA_NUEVA, polizasNuevasParaAviso } from './poliza-nueva.ts'
 export { DIAS_AVISO_PARTE, partesParaAviso } from './parte-aviso.ts'
-export { TIPOS_SINIESTRO, ETIQUETA_TIPO_SINIESTRO, opcionesTipoSiniestro, esTipoSiniestro } from './tipo-siniestro.ts'
-export type { TipoSiniestro } from './tipo-siniestro.ts'
+export {
+  TIPOS_SINIESTRO,
+  ETIQUETA_TIPO_SINIESTRO,
+  TIPOS_POR_RAMO,
+  opcionesTipoSiniestro,
+  esTipoSiniestro,
+  ramoDelParte,
+  codigosEiacSugeridos,
+} from './tipo-siniestro.ts'
+export type { TipoSiniestro, TipoDeRamo } from './tipo-siniestro.ts'
+export {
+  CAMPOS_PARTE_POR_RAMO,
+  MAX_TEXTO_LISTA,
+  MAX_TELEFONO,
+  camposParteDeRamo,
+  campoAplica,
+  normalizarDatosRamoParte,
+  lineasDatosRamoParte,
+  datosClaveParte,
+  CLAVES_PII_PARTE,
+  esClavePiiParte,
+  partirDatosRamoParte,
+  unirDatosRamoParte,
+} from './parte-ramo.ts'
+export type {
+  CampoParte,
+  CampoParteSimple,
+  CampoParteMulti,
+  CampoParteLista,
+  SubcampoLista,
+  ElementoLista,
+  ValorParte,
+  DatosRamoParte,
+  ContextoParte,
+  LineaDatoRamo,
+} from './parte-ramo.ts'
 export type { ParteFilaAviso, ParteParaAviso } from './parte-aviso.ts'
 export type { FilaPolizaNueva, PolizaNuevaParaAviso } from './poliza-nueva.ts'
 export {
@@ -149,6 +183,7 @@ export {
   parsearFechaHecho,
   plazoComunicacion,
   normalizarParte,
+  aplicarRamoAlParte,
   bloqueDatosVehiculo,
   componerDescripcion,
   ZONAS_VEHICULO,
@@ -283,6 +318,8 @@ export type { DatosAvisoParteNuevo } from './aviso-parte-nuevo.ts'
 export type { DatosParteWhatsapp } from './parte-whatsapp.ts'
 export type { FilaCompania, LineaAsistenciaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania.ts'
+export { vistaDelParte, entradaValida } from './parte-entrada.ts'
+export type { OpcionEntradaParte, VistaParte } from './parte-entrada.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
 // (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
 // existen en la BD pero NO se escriben: no hay pantalla que los pida.
@@ -350,9 +387,17 @@ export {
   explicarSiniestro,
 } from './siniestro-historial.ts'
 export type { EstadoSiniestro, SiniestroHistorial, ExplicacionSiniestro } from './siniestro-historial.ts'
+export { seguimientoDeParte, indemnizadoDe, peritoAsignadoDe, PASOS_PARTE } from './parte-seguimiento.ts'
+export type {
+  SeguimientoParte,
+  SiniestroParaSeguimiento,
+  PasoVisibleParte,
+  ClavePasoParte,
+  EntradaSeguimientoParte,
+} from './parte-seguimiento.ts'
 export { tramitacionSiniestro, importeNumero } from './siniestro-tramitacion.ts'
 export type { PasoTramitacion, TramitacionSiniestro } from './siniestro-tramitacion.ts'
-export { detalleSiniestroCompania } from './siniestro-detalle.ts'
+export { detalleSiniestroCompania, descripcionRiesgoLegible, normalizarCodigoCoberturaNumerico } from './siniestro-detalle.ts'
 export type { DetalleSiniestroCompania, ContactoGestion } from './siniestro-detalle.ts'
 export {
   SITUACIONES_RECIBO,
@@ -365,6 +410,7 @@ export {
   fechaDeRecibo,
   estadoRecibos,
   resumirRecibos,
+  fechaDeCobro,
 } from './recibo-historial.ts'
 export type { SituacionRecibo, ReciboHistorial, ResumenRecibos } from './recibo-historial.ts'
 export {
@@ -412,6 +458,7 @@ export {
   PREFIJO_HISTORIAL_SUGERENCIA,
   PREFIJO_HISTORIAL_DATOS_PRESUPUESTO,
   PREFIJO_HISTORIAL_CUENTA_PROPIA,
+  PREFIJO_HISTORIAL_CARNET_PROPIO,
   CAMPOS_CONTACTO_PROPIO,
   CAMPOS_DIRECCION_PROPIA,
   CAMPOS_CANAL_PROPIO,
@@ -459,6 +506,17 @@ export {
   enlaceVistaCorredor,
 } from './vista-corredor.ts'
 export type { EstadoEnlaceVista } from './vista-corredor.ts'
+
+// Código de acceso del presupuesto mandado a mano por WhatsApp (07/10/2026): hash atado al token,
+// tope de fallos y caducidad en `vence_el`. Lo genera y lo comprueba asegura.
+export {
+  MAX_INTENTOS_WHATSAPP,
+  formatoCodigoWhatsapp,
+  hashCodigoWhatsapp,
+  estadoCodigoWhatsapp,
+  intentosQuedan,
+} from './codigo-whatsapp.ts'
+export type { EstadoCodigoWhatsapp, CodigoWhatsappGuardado } from './codigo-whatsapp.ts'
 
 // Sugerir pedir acceso a partir de relaciones YA CONOCIDAS (12/09/2026). Lee
 // su cabecera: sugerir no es conceder, y una relación «Sin vínculo» no se
@@ -518,3 +576,60 @@ export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } fro
 export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'
 export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima } from './avisos-cima.ts'
 export type { EventoCima, PlanAvisos, PolizaParaAviso, TipoAvisoCima } from './avisos-cima.ts'
+export { vistaCobertura, capitalDeCobertura, nombreCobertura, LIMITES_LEGALES, type CoberturaVista, type CapitalVista } from './cobertura-vista.ts'
+// Personas de la póliza y terceros del siniestro (CIMA, asegura#880): lista blanca de lo que ve el cliente.
+export {
+  CAMPOS_TERCERO_CLIENTE,
+  CAMPOS_TERCERO_PROHIBIDOS,
+  CAMPOS_FIGURA_PROPIA,
+  CAMPOS_FIGURA_AJENA,
+  terceroParaCliente,
+  tercerosParaCliente,
+  figuraPropiaParaCliente,
+  figuraAjenaParaCliente,
+  documentoIdentidad,
+  personasParaCliente,
+} from './personas-cliente.ts'
+export type {
+  CampoTerceroCliente,
+  TerceroCliente,
+  FiguraPropiaCliente,
+  FiguraAjenaCliente,
+  FiguraConDocumento,
+  PersonasParaCliente,
+} from './personas-cliente.ts'
+// Qué pólizas ajenas abre figurar en ellas: la usan la cartera del portal y el puente de asegura.
+export { figurasEnPolizas, nivelMasAlto, ordenarRoles } from './figuras-en-polizas.ts'
+export type { FilaInterviniente, PolizaDeTomador, FiguraEnPoliza } from './figuras-en-polizas.ts'
+
+// Flota de una empresa (05/10/2026): dueño + jefe de flota (`portal_autorizacion` con alcance `flota`, que NO es un `Alcance`).
+export {
+  ALCANCE_FLOTA,
+  DIAS_PRONTO_FLOTA,
+  RAMOS_FLOTA,
+  TEXTO_JEFE_FLOTA,
+  TITULO_JEFE_FLOTA,
+  VERSION_TEXTO_JEFE_FLOTA,
+  claveVehiculo,
+  empresaPermitida,
+  empresasConFlota,
+  esRamoFlota,
+  fechaMatriculacionValida,
+  itvDeVehiculo,
+  matriculacionDeCompania,
+  puedeEditarVehiculo,
+  puedeNombrarJefeFlota,
+  vehiculosDeFlota,
+  vencimientoFlota,
+  wherePolizasFlota,
+} from './flota.ts'
+export type {
+  AutorizacionFlotaFila,
+  FuenteMatriculacion,
+  ItvVehiculo,
+  PapelFlota,
+  RamoFlota,
+  VehiculoFlota,
+  VehiculoFlotaEntrada,
+  VencimientoFlota,
+} from './flota.ts'

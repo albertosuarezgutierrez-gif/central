@@ -19,7 +19,7 @@ import { ErrorCodeoscopic, peticion } from './codeoscopic/cliente'
 import { redactarCrudoVendor } from './codeoscopic/emitir'
 import { documentoTomador, fraccionamientoDeOferta, ramoDeLinea } from './codeoscopic/importar'
 import { riesgoDeTarificacion } from './codeoscopic/contexto-emision'
-import { coincideCompania } from './emision-externa-reglas'
+import { coincideCompania, hayPolizaDuplicada, quoteDataAGuardar } from './emision-externa-reglas'
 import { describirEmisionExterna, estadoProyectoDe, leerEmisionExterna, resumenEmision, type EmisionResumen } from './codeoscopic/emision-externa'
 
 /** Igual que `MARGEN_EN_VUELO_MIN` de `codeoscopic/emitir-envio.ts`: mismo candado, misma semántica. */
@@ -37,6 +37,11 @@ export type EntradaSincronizar = {
   actor: string
   /** `false` = vista previa: lee el vendor y decide, sin tocar la BD. */
   escribir: boolean
+  /**
+   * El `GET /insurances/{id}` YA leído (el descubrimiento lo lee para casar el tomador y no lo
+   * repite). Sin él se lee aquí. Solo cambia de dónde sale el crudo: las comprobaciones son las mismas.
+   */
+  crudo?: unknown
 }
 
 export type ResultadoSincronizar =
@@ -146,7 +151,7 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
   if (cfg.estado !== 'lista') return fallo(503, 'Codeoscopic no está configurado', 'vendor')
   let crudo: unknown
   try {
-    crudo = await peticion(cfg.config, { metodo: 'GET', path: `/insurances/${projectId}`, timeoutMs: cfg.config.timeoutGenericoMs })
+    crudo = entrada.crudo !== undefined ? entrada.crudo : await peticion(cfg.config, { metodo: 'GET', path: `/insurances/${projectId}`, timeoutMs: cfg.config.timeoutGenericoMs })
   } catch (e) {
     const causa = e instanceof ErrorCodeoscopic ? `vendor:${e.clase}${e.status ? ` ${e.status}` : ''}` : `vendor: ${e instanceof Error ? e.message : String(e)}`
     return fallo(502, causa, 'vendor')
@@ -154,7 +159,7 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
 
   // ── Bloqueos (fail-closed) ──
   const ramo = ramoDeLinea(crudo)
-  if (!ramo) bloqueos.push('solo se registran emisiones de auto y moto')
+  if (!ramo) bloqueos.push('ramo del proyecto no reconocido (solo auto, moto, hogar, vida, salud y decesos): no se registra')
   const doc = documentoTomador(crudo)
   const hashTomador = doc ? computeDniLookupHash(doc) : null
   if (!hashTomador) bloqueos.push('el proyecto no trae documento del tomador: no se demuestra de quién es')
@@ -181,7 +186,18 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
   try {
     const db = prismaAsegura()
     // 🚨 Nunca el crudo sin redactar: trae IBAN/DNI/email del tomador y `quote_data` es jsonb sin cifrar.
-    const quoteData = JSON.stringify(redactarCrudoVendor(crudo))
+    // En vida/salud/decesos, además, solo una lista blanca (sin nombres, fechas de nacimiento ni salud).
+    const quoteData = JSON.stringify(quoteDataAGuardar(ramo, crudo, resumenEmision(emision), redactarCrudoVendor))
+    if (accion === 'acunar' && clienteId && numeroPoliza) {
+      // Una póliza con el mismo nº y compañía ya en la cartera del cliente: acuñar otra la DUPLICARÍA.
+      const existentes = await db.$queryRaw<{ aseguradora: string | null; numeroPoliza: string | null }[]>`
+        select aseguradora, numero_poliza as "numeroPoliza" from polizas
+        where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid and merged_into_poliza_id is null
+          and numero_poliza is not null`
+      if (hayPolizaDuplicada(existentes, compania, numeroPoliza)) {
+        return fallo(409, `posible_duplicado: este cliente ya tiene en la cartera la póliza nº ${numeroPoliza} de ${compania}: no se acuña otra, se revisa a mano`)
+      }
+    }
     const insercion = estadoProyecto ?? 'preemision'
     const filas = await db.$queryRaw<{ estado: string }[]>`
       insert into codeoscopic_projects (correduria_id, project_id_codeoscopic, producto, cliente_id, oportunidad_id, aseguradora, estado, quote_data)
@@ -222,8 +238,9 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
           ? `«${compania}» no tiene código DGS en companias_dgs: acuña la póliza nº ${numeroPoliza} a mano.`
           : `el proyecto no dice la compañía: acuña la póliza nº ${numeroPoliza} a mano.`
       } else {
-        // Candado de `/emitir` (`submit_in_flight_at`): sin él, el cron de retenidas y el botón podrían
-        // acuñar dos pólizas del mismo proyecto (la guarda «ya acuñada» de `registrarPolizaEmitida` no es atómica).
+        // Candado de `/emitir` (`submit_in_flight_at`). La exclusión del acuñado la da ya la BD
+        // (compuerta atómica de `registrarPolizaEmitida`, `lib/acunado-unico.ts`); el candado sirve para
+        // que, si `/emitir` está a medias, acuñe ÉL (con su póliza de origen y su correo al cliente).
         const reclamada = await db.$queryRaw<{ id: string }[]>`
           update codeoscopic_projects set submit_in_flight_at = now()
           where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${projectId}
@@ -243,6 +260,8 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
             clienteId,
             actor: entrada.actor,
             catalogo: catalogo ?? undefined,
+            // La póliza que se retarificaba: la antigua queda sustituida (igual que `/emitir`).
+            polizaOrigenId: fila?.poliza_id ?? null,
             proyecto: {
               projectIdCodeoscopic: projectId,
               producto: ramo,
@@ -254,6 +273,13 @@ export async function sincronizarEmisionExterna(correduriaId: string, entrada: E
               fraccionamiento: fraccionamientoDeOferta(crudo, emision.quoteId),
             },
           })
+          if (!acunado.ok && acunado.estado === 'ya_acunada') {
+            // Otra operación (botón, webhook, otra pasada) lo acuñó mientras tanto: idempotente, ya está.
+            const [ahora] = await db.$queryRaw<FilaProyecto[]>`
+              select estado::text as estado, poliza_id::text as poliza_id, cliente_id::text as cliente_id, oportunidad_id::text as oportunidad_id, aseguradora
+              from codeoscopic_projects where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${projectId} limit 1`
+            return await yaEmitida(correduriaId, projectId, ahora ?? { estado: 'emitida', poliza_id: acunado.polizaId, cliente_id: null, oportunidad_id: null, aseguradora: null })
+          }
           if (!acunado.ok) {
             estado = 'emitido_sin_acunar'
             mensaje = `La compañía ya tiene la póliza nº ${numeroPoliza} pero no se ha podido registrar en la cartera: ${acunado.motivo}`

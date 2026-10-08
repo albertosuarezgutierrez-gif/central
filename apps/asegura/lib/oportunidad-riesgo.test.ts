@@ -135,6 +135,17 @@ test('fuera de auto/moto la variante solo lleva al tomador y ningún rol de más
 test('a hogar, vida, salud y decesos no se les pide fecha de carné (solo conduce quien conduce en auto/moto)', () => {
   const c = cuerpoDe('leerRiesgo')
   assert.match(c, /\(op\.tipo === 'auto' \|\| op\.tipo === 'moto'\) &&/)
-  assert.match(c, /faltanDeFigura\(p, conduce\)/)
+  assert.match(c, /faltanDeFigura\(p, conduce, \{ pideEstadoCivil: pideCivil, estadoCivilFicha: civil \}\)/)
   assert.match(src, /if \(conCarnet && !p\.fechaCarnet\) f\.push\('fechaCarnet'\)/, 'el carné solo se exige si conCarnet')
+})
+
+test('vida, salud y decesos avisan si la ficha no trae estado civil (la pantalla de precio no pasa sin él); auto y moto no', () => {
+  const f = src.slice(src.indexOf('export function faltanDeFigura'), src.indexOf('/** Ramos de personas'))
+  assert.match(f, /personas\.pideEstadoCivil && personas\.estadoCivilFicha !== undefined && !\(personas\.estadoCivilFicha \?\? ''\)\.trim\(\)\) f\.push\('estadoCivil'\)/, 'undefined = no se pudo leer: no se afirma que falte')
+  assert.match(f, /pideEstadoCivil: false, estadoCivilFicha: undefined/, 'por defecto (auto, moto) no se pide')
+  assert.match(src, /export function ramoPideEstadoCivil\(ramo: string\): boolean \{\s*return ramo === 'vida' \|\| ramo === 'salud' \|\| ramo === 'decesos'/)
+  const c = cuerpoDe('leerRiesgo')
+  assert.match(c, /const pideCivil = ramoPideEstadoCivil\(op\.tipo\) && !f\.empresa/, 'una empresa no tiene estado civil')
+  // El texto de la ficha NO entra en `personaDeFicha`: viajaría al vendor como si fuera un id de catálogo.
+  assert.doesNotMatch(cuerpoDe('personaDeFicha').split('/**')[0], /estadoCivil/)
 })

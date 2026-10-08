@@ -29,6 +29,9 @@ export type TipoEventoCartera = (typeof TIPOS_EVENTO_CARTERA)[number]
 /** Las que pueden ser una PÉRDIDA de cartera: las mira una persona. */
 export const TIPOS_FUGA: readonly TipoEventoCartera[] = ['POLIZA_ANULA_AL_VENCIMIENTO', 'POLIZA_BAJA', 'POLIZA_DESAPARECIDA']
 
+/** Motivo de anulación que trae el POL de EIAC (`polizas.datos_especificos.anulacion`). */
+export type AnulacionEiac = { fecha: string | null; motivo: string | null; detalle: string | null }
+
 export type HuellaPoliza = {
   id: string
   clienteId: string
@@ -39,6 +42,8 @@ export type HuellaPoliza = {
   sustituida: boolean
   /** Lápida de fusión: si desaparece por eso, no es una pérdida. */
   fusionada: boolean
+  /** Motivo CIMA de la anulación si lo trae; ausente/null = «no se sabe», nunca «sin motivo». */
+  anulacion?: AnulacionEiac | null
 }
 export type HuellaRecibo = { id: string; polizaId: string; clienteId: string; situacion: string | null }
 export type HuellaSiniestro = { id: string; clienteId: string; polizaId: string | null; estado: string }
@@ -85,7 +90,7 @@ export function detectarCambios(anterior: Foto | null, actual: Foto): Deteccion 
     if (eraVigente && !esEstadoVigente(p.estado)) {
       const tipo = p.estado === 'anula_al_vencimiento' ? 'POLIZA_ANULA_AL_VENCIMIENTO' : 'POLIZA_BAJA'
       // El vencimiento va en la clave: la misma póliza puede anunciar su baja otro año, y eso es otra pérdida.
-      ev({ tipo, entidad: 'poliza', id: p.id, clienteId: p.clienteId, datos: { antes: a.estado, despues: p.estado, vencimiento: p.vencimiento, sustituida: p.sustituida } }, `${p.estado}:${p.vencimiento ?? 'sin-fecha'}`)
+      ev({ tipo, entidad: 'poliza', id: p.id, clienteId: p.clienteId, datos: { antes: a.estado, despues: p.estado, vencimiento: p.vencimiento, sustituida: p.sustituida, ...datosAnulacion(p.anulacion) } }, `${p.estado}:${p.vencimiento ?? 'sin-fecha'}`)
     }
     if (a.vencimiento && p.vencimiento && p.vencimiento > a.vencimiento) {
       ev({ tipo: 'POLIZA_RENOVADA', entidad: 'poliza', id: p.id, clienteId: p.clienteId, datos: { antes: a.vencimiento, despues: p.vencimiento } }, p.vencimiento)
@@ -144,6 +149,93 @@ export function fotoSospechosa(anterior: Foto | null, actual: Foto): boolean {
  */
 export function esFugaSinExplicar(e: Pick<EventoCartera, 'tipo' | 'datos'>): boolean {
   return TIPOS_FUGA.includes(e.tipo) && e.datos.sustituida !== true
+}
+
+// ── Motivo de la anulación (C0058 de EIAC) ──
+
+export type CategoriaMotivo = 'impago' | 'competencia' | 'siniestralidad'
+const MOTIVOS_ANULACION: Record<string, { categoria: CategoriaMotivo; texto: string }> = {
+  IM: { categoria: 'impago', texto: 'impago' },
+  EX: { categoria: 'competencia', texto: 'se va a otra compañía (mejor precio o venta)' },
+  SI: { categoria: 'siniestralidad', texto: 'siniestralidad (la compañía no renueva)' },
+}
+
+const limpio = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+
+/** Lee `datos_especificos.anulacion` sin fiarse de su forma. `null` si no hay nada utilizable. */
+export function leerAnulacion(v: unknown): AnulacionEiac | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const fecha = limpio(o.fecha)
+  const a: AnulacionEiac = {
+    fecha: fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : null,
+    motivo: limpio(typeof o.motivo === 'number' ? String(o.motivo) : o.motivo),
+    detalle: limpio(o.detalle),
+  }
+  return a.fecha || a.motivo || a.detalle ? a : null
+}
+
+/** Va al `datos` del evento: solo lo que hay (sin claves vacías, que no se confundan con «sin motivo»). */
+export function datosAnulacion(a: AnulacionEiac | null | undefined): Record<string, string> {
+  const r: Record<string, string> = {}
+  if (a?.motivo) r.motivoCima = a.motivo
+  if (a?.fecha) r.fechaAnulacion = a.fecha
+  return r
+}
+
+export function categoriaMotivo(motivo: string | null | undefined): CategoriaMotivo | null {
+  return MOTIVOS_ANULACION[(motivo ?? '').trim().toUpperCase()]?.categoria ?? null
+}
+
+/**
+ * Motivo legible. Código conocido → su texto; desconocido → «motivo CIMA <código>»;
+ * sin anulación o sin motivo → `null` (no se inventa). 🔒 El detalle libre de la compañía NO se usa
+ * (puede traer datos personales): ni se manda en el aviso ni se guarda en el evento.
+ */
+export function textoMotivoAnulacion(a: AnulacionEiac | null | undefined): string | null {
+  if (!a) return null
+  const conocido = MOTIVOS_ANULACION[(a.motivo ?? '').trim().toUpperCase()]
+  if (conocido) return conocido.texto
+  return a.motivo ? `motivo CIMA ${a.motivo.slice(0, 20)}` : null
+}
+
+const fechaCorta = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+const DIAS_AVISO_TARDIO = 7
+
+/** «anulada el 25/08/2026» solo si la anulación es más de 7 días anterior a hoy (ambas `YYYY-MM-DD`). */
+export function textoFechaAnulacion(fecha: string | null | undefined, hoy: string): string | null {
+  if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return null
+  const dias = Math.round((Date.parse(`${hoy}T00:00:00Z`) - Date.parse(`${fecha}T00:00:00Z`)) / 86_400_000)
+  return Number.isFinite(dias) && dias > DIAS_AVISO_TARDIO ? `anulada el ${fechaCorta(fecha)}` : null
+}
+
+/**
+ * Estado del último recibo, solo si añade algo: con impago declarado, «devuelto» es redundante;
+ * `null` = no se sabe (no hay recibo o sin situación) y no se dice nada.
+ */
+export function textoUltimoRecibo(situacion: string | null | undefined, categoria: CategoriaMotivo | null): string | null {
+  const s = (situacion ?? '').trim().toLowerCase()
+  if (s === 'devuelto') return categoria === 'impago' ? null : 'último recibo devuelto'
+  if (s === 'anulado') return 'último recibo anulado'
+  if (s === 'cobrado') return 'último recibo cobrado'
+  if (s === 'pendiente' || s === 'emitido') return 'último recibo sin cobrar'
+  return null
+}
+
+export type PlanRetencion = { abrir: boolean; /** Se añade al texto de la llamada. */ nota: string | null }
+
+/**
+ * Qué hacer con la retención según el motivo. Siniestralidad: la compañía no quiere renovar, no se
+ * recupera con ella → no se abre llamada alta. Impago y «otra compañía» → llamada de prioridad alta.
+ * Sin motivo o desconocido → comportamiento de siempre.
+ */
+export function planRetencionPorMotivo(motivo: string | null | undefined): PlanRetencion {
+  switch (categoriaMotivo(motivo)) {
+    case 'siniestralidad': return { abrir: false, nota: 'no recuperable con esa compañía; ofrecer otra' }
+    case 'impago': return { abrir: true, nota: 'Motivo CIMA: impago (recuperable si paga).' }
+    case 'competencia': return { abrir: true, nota: 'Motivo CIMA: se va a la competencia; mejorar precio.' }
+    default: return { abrir: true, nota: null }
+  }
 }
 
 const NOMBRE_EVENTO: Record<TipoEventoCartera, string> = {

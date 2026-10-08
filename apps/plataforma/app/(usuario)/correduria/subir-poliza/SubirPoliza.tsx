@@ -1,64 +1,27 @@
 'use client'
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
-import { prepararAdjunto } from '@/lib/imagen-cliente'
-import { interpretarLecturaOportunidad, rotuloRamo, type LecturaDocumentoOportunidad, type FichaTomador } from '@/lib/seguimiento-asegura'
-import { interpretarOportunidadDocumento, type AvisoOportunidadDocumento } from '@/lib/oportunidad-documento'
-
-type Lectura = Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>
+import { rotuloRamo, type FichaTomador } from '@/lib/seguimiento-asegura'
+import { AvisosLectura, enlaceStyle as enlace, useLeerPoliza, type LecturaOk as Lectura } from '../LeerPoliza'
 
 function fecha(iso: string): string {
   const [a, m, d] = iso.split('-')
   return `${d}/${m}/${a}`
 }
 
-const enlace = { ...btnStyle('secundario', 'sm'), minHeight: 44, textDecoration: 'none', justifyContent: 'flex-start' } as const
-
 /**
  * Lee el documento por `/api/correduria/oportunidad/leer` (puerto `leer-documento`
  * de asegura) y enseña adónde ir: la póliza si ya es nuestra, la ficha del
  * tomador si la tiene, o el alta. Tres estados en cada dato: `null` = no se ha
- * leído (y se dice), nunca un «no hay».
+ * leído (y se dice), nunca un «no hay». La lectura y los avisos son los de
+ * `../LeerPoliza`, los mismos de la ficha del cliente.
  */
 export default function SubirPoliza() {
   const fichero = useRef<HTMLInputElement>(null)
-  const [leyendo, setLeyendo] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [lectura, setLectura] = useState<Lectura | null>(null)
-  const [oportunidad, setOportunidad] = useState<AvisoOportunidadDocumento | null>(null)
-  const [sinGuardar, setSinGuardar] = useState(false)
-
-  async function leer(f: File) {
-    setLeyendo(true)
-    setError(null)
-    setLectura(null)
-    setOportunidad(null)
-    let status = 0
-    let json: unknown = null
-    try {
-      const a = await prepararAdjunto(f)
-      const res = await fetch('/api/correduria/oportunidad/leer', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        // `crear`: abre (o completa) la oportunidad y guarda el fichero en la ficha del tomador (29/09/2026).
-        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName, tomador: true, crear: true }),
-      })
-      status = res.status
-      json = await res.json().catch(() => null)
-    } catch {
-      json = { error: 'sin conexión' }
-    }
-    setLeyendo(false)
-    const l = interpretarLecturaOportunidad(status, json)
-    if (l.estado === 'error') { setError(`No se ha podido leer: ${l.motivo}.`); return }
-    setLectura(l)
-    const j = json as Record<string, unknown> | null
-    setOportunidad(interpretarOportunidadDocumento(j?.oportunidad))
-    // asegura dice si guardó el fichero; si no lo dice (versión anterior), no se afirma nada.
-    setSinGuardar(j?.oportunidad != null && j?.ficheroGuardado === false)
-  }
+  // Sin `clienteId`: aquí no hay ficha de partida. `crear` abre la oportunidad y guarda el fichero (29/09/2026).
+  const { leer, leyendo, motivoError, lectura, oportunidad, ficha, sinGuardar, fichaIncierta, figuras, identidad, conOportunidad } = useLeerPoliza({ tomador: true, crear: true })
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -76,24 +39,12 @@ export default function SubirPoliza() {
           onClick={() => fichero.current?.click()}
           style={{ ...btnStyle('primario'), minHeight: 44, justifySelf: 'start' }}
         >
-          {leyendo ? 'Leyendo el documento…' : lectura || error ? 'Leer otro documento' : 'Elegir PDF o foto'}
+          {leyendo ? 'Leyendo el documento…' : lectura || motivoError ? 'Leer otro documento' : 'Elegir PDF o foto'}
         </button>
-        {error && <div role="status" style={{ color: 'var(--negative)' }}>{error}</div>}
+        {motivoError && <div role="status" style={{ color: 'var(--negative)' }}>No se ha podido leer: {motivoError}.</div>}
       </div>
-      {oportunidad && (
-        <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, color: oportunidad.tono === 'aviso' ? 'var(--negative)' : 'var(--text)' }}>
-          <span>{oportunidad.texto}</span>
-          {oportunidad.clienteId && (
-            <Link href={`/correduria/cliente/${encodeURIComponent(oportunidad.clienteId)}?tab=oportunidades`} style={enlace}>Ver su ficha y la oportunidad →</Link>
-          )}
-        </div>
-      )}
-      {sinGuardar && (
-        <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
-          El fichero NO se ha guardado en ninguna ficha: súbelo desde la ficha del cliente si quieres conservarlo.
-        </p>
-      )}
-      {lectura && <Resultado l={lectura} conOportunidad={Boolean(oportunidad?.clienteId)} />}
+      <AvisosLectura oportunidad={oportunidad} ficha={ficha} sinGuardar={sinGuardar} fichaIncierta={fichaIncierta} figuras={figuras} identidad={identidad} />
+      {lectura && <Resultado l={lectura} conOportunidad={conOportunidad} />}
     </div>
   )
 }

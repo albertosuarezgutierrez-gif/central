@@ -2,11 +2,15 @@
 // clave. Módulo PURO (sin BD ni red) → testeable con `node --test`. La persistencia y la IA
 // viven en categorizar.ts, que reexporta todo esto para no romper los imports existentes.
 
+import { esDevolucionAeat } from './devolucion-aeat.ts'
+
 // Taxonomía cerrada de categorías (la IA debe elegir una de estas).
 export const CATEGORIAS = [
   'nomina', 'proveedor', 'impuestos', 'suministros', 'alquiler',
   'comision_bancaria', 'cobro_cliente', 'transferencia', 'tarjeta',
   'prestamo', 'seguro', 'otros',
+  // 'devolucion_impuestos': abono de la AEAT → fuera del resultado (no es ingreso).
+  'devolucion_impuestos',
 ] as const
 export type Categoria = typeof CATEGORIAS[number]
 
@@ -16,6 +20,7 @@ export const CATEGORIA_LABEL: Record<Categoria, string> = {
   suministros: '💡 Suministros', alquiler: '🏠 Alquiler', comision_bancaria: '🏦 Comisión',
   cobro_cliente: '💰 Cobro cliente', transferencia: '🔁 Transferencia', tarjeta: '💳 Tarjeta',
   prestamo: '📉 Préstamo', seguro: '🛡️ Seguro', otros: '• Otros',
+  devolucion_impuestos: '↩️ Devolución de impuestos',
 }
 
 // Mapa categoría → cuenta PGC orientativa (Plan General Contable español).
@@ -23,6 +28,7 @@ const PGC: Record<Categoria, string> = {
   nomina: '640', proveedor: '600', impuestos: '475', suministros: '628',
   alquiler: '621', comision_bancaria: '626', cobro_cliente: '700',
   transferencia: '572', tarjeta: '572', prestamo: '170', seguro: '625', otros: '629',
+  devolucion_impuestos: '4709',
 }
 
 export function pgcDe(cat: string): string {
@@ -45,6 +51,11 @@ export function categorizarPorReglas(concepto: string | null, contraparte: strin
   // una compra de tarjeta es 'tarjeta' sea cual sea el comercio; el análisis de consumo vive en
   // `subcategoria` (keywords propias) y el negocio/deducibilidad en `destino`.
   if (has('PAGO CON TARJETA', 'COMPRA EN ', 'COMPRA TARJ')) return 'tarjeta'
+  // Cuota de préstamo («CUOTA PTMO <ref>», hipoteca de la vivienda habitual): ANTES de
+  // seguro/nómina/impuestos, que casan con texto ajeno del mismo concepto.
+  if (/CUOTA\s+(PTMO|PRESTAMO|PRÉSTAMO)/i.test(concepto ?? '')) return 'prestamo'
+  // Abono de la AEAT (devolución de IRPF/IVA): no es un ingreso del negocio.
+  if (esDevolucionAeat(concepto, importe)) return 'devolucion_impuestos'
   if (has('SEGURO', 'GENERALI', 'MAPFRE', ' AXA', 'ALLIANZ', 'MUTUA', 'ZURICH', 'REALE', 'CASER', 'LINEA DIRECTA', 'PELAYO')) return 'seguro'
   if (has('NOMINA', 'NÓMINA', 'PAGA EXTRA', 'SALARIO', 'PAGO DE NOMINA')) return 'nomina'
   // OJO: NO usar 'HACIENDA' a secas — casa con comercios llamados "Hacienda …" (misma lección

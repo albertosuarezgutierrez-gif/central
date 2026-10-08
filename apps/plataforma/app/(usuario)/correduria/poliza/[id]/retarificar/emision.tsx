@@ -148,6 +148,11 @@ type EstadoPanel =
       cuentaAviso: AvisoCuenta | null
       opciones: OpcionesEmitir
     }
+  /**
+   * Vehículo NUEVO (03/10/2026): el bonus se tarificó SUPUESTO (años sin siniestros al máximo porque no
+   * constaban) y asegura no emite sin verificarlo. No ha enviado nada; se reenvía con `bonusVerificado`.
+   */
+  | { paso: 'bonus_sin_verificar'; mensaje: string; projectId: string; cuenta: CuentaConocida | null; cuentaAviso: AvisoCuenta | null; opciones: OpcionesEmitir }
   /** asegura se niega antes de enviar y no hay nada que confirmar aquí. */
   | { paso: 'bloqueado'; causa: CausaBloqueo; mensaje: string }
   /** Interruptor `CODEOSCOPIC_EMISION_NUEVO` apagado: reintentar no sirve. */
@@ -165,7 +170,15 @@ type OpcionesEmitir = {
   acunarExistente?: boolean
   duplicadoConfirmado?: boolean
   figurasConfirmadas?: string[]
+  bonusVerificado?: { fuente: FuenteBonus }
 }
+
+type FuenteBonus = 'certificado' | 'sinco' | 'dato_confirmado'
+const FUENTES_BONUS: { id: FuenteBonus; nombre: string }[] = [
+  { id: 'certificado', nombre: 'Certificado de siniestralidad de la compañía anterior' },
+  { id: 'sinco', nombre: 'Consulta SINCO hecha' },
+  { id: 'dato_confirmado', nombre: 'Dato confirmado por el cliente (por escrito)' },
+]
 
 const TITULO_DUPLICADO: Record<CausaDuplicado, string> = {
   ya_en_cartera: 'Esta matrícula ya está asegurada en la cartera',
@@ -198,6 +211,7 @@ const ETIQUETAS_HUECO: Record<string, { etiqueta: string; tipo: string; pista?: 
   nombre: { etiqueta: 'Nombre', tipo: 'text' },
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
   sexo: { etiqueta: 'Sexo (hombre/mujer)', tipo: 'text' },
   estadoCivil: { etiqueta: 'Estado civil', tipo: 'text' },
   telefono: { etiqueta: 'Teléfono móvil', tipo: 'tel' },
@@ -382,8 +396,15 @@ export function Emision({
   ofertaImportada = null,
   sustituye = true,
   ramo = null,
+  familiaAllianz: familiaAllianzPrevia = null,
   onCerrar,
 }: {
+  /**
+   * Pack coche + moto (03/10/2026): `{ valor: true, motivo }` marca de partida «familiares asegurados en Allianz»
+   * (el cliente tiene póliza viva en Allianz o se ha tarifado el pack). `null` = como siempre: sin marcar.
+   * Sigue siendo una casilla que el corredor puede quitar.
+   */
+  familiaAllianz?: { valor: true; motivo: string } | null
   /** Ausente cuando la oferta viene importada de Avant2: ahí no hay cotización nuestra. */
   tarificacionId?: string
   compania: string
@@ -429,9 +450,11 @@ export function Emision({
   // secas, lleva descuento (bonificación de cartera). Por defecto sigue en
   // `false` en asegura (no se inventa un ahorro sin comprobarlo); esta caja
   // es la única forma de decirlo cuando el corredor SÍ lo sabe.
-  const [familiaAllianz, setFamiliaAllianz] = useState(false)
+  const [familiaAllianz, setFamiliaAllianz] = useState(familiaAllianzPrevia?.valor === true)
   // Casillas del paso `confirmar_figuras`. Nada preseleccionado: se marcan a mano.
   const [figurasMarcadas, setFigurasMarcadas] = useState<Set<string>>(() => new Set())
+  // Vehículo nuevo con bonus SUPUESTO (03/10/2026): cómo lo ha verificado el corredor antes de emitir.
+  const [fuenteBonus, setFuenteBonus] = useState<FuenteBonus | ''>('')
   // La oferta desde la que se pulsó «Emitir»: «Volver» del aviso legal regresa a ELLA (con la
   // cuenta, la fecha y lo tecleado), no cierra el panel entero (decisión 29/09/2026).
   const ofertaAntesDeEmitir = useRef<Extract<EstadoPanel, { paso: 'oferta' }> | null>(null)
@@ -506,7 +529,25 @@ export function Emision({
     for (const campo of pendientes) void pedirCatalogoCampo(campo)
   }, [estado])
 
-  async function confirmarPrecio(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
+  // Guarda SÍNCRONA contra el doble clic (07/10/2026): confirmar el precio (ReRate) y emitir (Submit) no son
+  // idempotentes y no se deshacen solos. El estado de React llega tarde (un segundo clic en el mismo tick aún ve el
+  // botón activo); el ref no. Una sola llamada en vuelo a la vez, sea cual sea el paso.
+  const llamadaEnVuelo = useRef(false)
+  async function unaALaVez(f: () => Promise<void>) {
+    if (llamadaEnVuelo.current) return
+    llamadaEnVuelo.current = true
+    try {
+      await f()
+    } finally {
+      llamadaEnVuelo.current = false
+    }
+  }
+
+  function confirmarPrecio(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
+    return unaALaVez(() => confirmarPrecioSinGuarda(conCorrecciones, conProductOptions))
+  }
+
+  async function confirmarPrecioSinGuarda(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
     if (!tarificacionId) {
       setEstado({ paso: 'error', mensaje: 'Este proyecto viene de Avant2: el precio se confirma allí y se vuelve a importar.' })
       return
@@ -595,7 +636,16 @@ export function Emision({
     setEstado({ paso: 'error', mensaje: r.mensaje })
   }
 
-  async function emitir(
+  function emitir(
+    projectId: string,
+    cuenta: CuentaConocida | null,
+    aviso: AvisoCuenta | null,
+    opciones: OpcionesEmitir = {},
+  ) {
+    return unaALaVez(() => emitirSinGuarda(projectId, cuenta, aviso, opciones))
+  }
+
+  async function emitirSinGuarda(
     projectId: string,
     cuenta: CuentaConocida | null,
     aviso: AvisoCuenta | null,
@@ -659,7 +709,12 @@ export function Emision({
       familiaEnAllianz: esAllianz && familiaAllianz,
       duplicadoConfirmado: opciones.duplicadoConfirmado === true,
       ...(opciones.figurasConfirmadas ? { figurasConfirmadas: opciones.figurasConfirmadas } : {}),
+      ...(opciones.bonusVerificado ? { bonusVerificado: opciones.bonusVerificado } : {}),
     })
+    if (r.estado === 'error' && r.causa === 'bonus_sin_verificar') {
+      setEstado({ paso: 'bonus_sin_verificar', mensaje: r.mensaje, projectId, cuenta, cuentaAviso: aviso, opciones })
+      return
+    }
     if (r.estado === 'confirmar_figuras') {
       // Un segundo 409 (p. ej. otras exigidas) se repinta con las casillas vacías: lo marcado
       // antes confirmaba OTRA lista.
@@ -1090,6 +1145,7 @@ export function Emision({
               />
               <span style={{ fontSize: 13 }}>
                 El tomador ya tiene familiares asegurados en Allianz (aplica el descuento)
+                {familiaAllianzPrevia && <span className="muted" style={{ display: 'block', fontSize: 12 }}>Marcado de partida: {familiaAllianzPrevia.motivo}.</span>}
               </span>
             </label>
           )}
@@ -1275,6 +1331,33 @@ export function Emision({
             }}
           >
             Emitir igualmente
+          </button>
+        </div>
+      )}
+
+      {estado.paso === 'bonus_sin_verificar' && (
+        <div style={{ marginTop: 14, border: '2px solid var(--warning)', background: 'var(--warning-bg)', borderRadius: 10, padding: 12, display: 'grid', gap: 10, minWidth: 0 }}>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+            <Ico i={AlertTriangle} /> Bonus supuesto: hay que verificarlo antes de emitir
+          </p>
+          <p style={{ margin: 0 }}>{estado.mensaje}</p>
+          <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>
+            ¿Cómo lo has verificado?
+            <select value={fuenteBonus} onChange={(e) => setFuenteBonus(e.target.value as FuenteBonus | '')} style={{ minHeight: 44, maxWidth: '100%' }}>
+              <option value="">Elige cómo</option>
+              {FUENTES_BONUS.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={fuenteBonus === ''}
+            style={{ minHeight: 44 }}
+            onClick={() => {
+              if (fuenteBonus === '') return
+              emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { ...estado.opciones, bonusVerificado: { fuente: fuenteBonus } })
+            }}
+          >
+            Emitir con el bonus verificado
           </button>
         </div>
       )}

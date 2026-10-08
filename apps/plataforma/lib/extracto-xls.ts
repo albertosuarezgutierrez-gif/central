@@ -55,6 +55,20 @@ function mapColumnas(fila: unknown[]): Cols | null {
     : null
 }
 
+const cent = (n: number) => Math.round(n * 100)
+
+export function movimientoFinal(movs: MovimientoN43[]): MovimientoN43 {
+  const maxF = movs.reduce((m, x) => (x.fechaOperacion > m ? x.fechaOperacion : m), movs[0].fechaOperacion)
+  const cand = movs.filter(m => m.fechaOperacion === maxF)
+  if (cand.length === 1) return cand[0]
+  // Encadenado: c es antecesor de d si c.saldo === d.saldo - d.importe. El final no es antecesor de nadie.
+  const finales = cand.filter(c => c.saldoPosterior != null && !cand.some(d =>
+    d !== c && d.saldoPosterior != null && cent(c.saldoPosterior!) === cent(d.saldoPosterior! - d.importe)))
+  if (finales.length === 1) return finales[0]
+  const descendente = movs[0].fechaOperacion > movs[movs.length - 1].fechaOperacion
+  return descendente ? cand[0] : cand[cand.length - 1]
+}
+
 export function parseExtractoXls(
   buf: Buffer,
   opts: { iban?: string; banco?: string } = {},
@@ -99,9 +113,11 @@ export function parseExtractoXls(
   }
   if (movimientos.length === 0) return []
 
-  // Saldo actual = saldo del movimiento más reciente (robusto al orden del fichero:
-  // Kutxa lista ascendente, BBVA descendente). Fechas = min/max.
-  const masReciente = movimientos.reduce((a, b) => Date.parse(b.fechaOperacion) >= Date.parse(a.fechaOperacion) ? b : a)
+  // Saldo final = saldo del movimiento CRONOLÓGICAMENTE último. Entre los de la fecha más
+  // reciente (empate habitual: varios movimientos el mismo día) se elige el que no es
+  // antecesor de otro por encadenado (saldo - importe = saldo del otro) y, si eso no
+  // decide, el orden del fichero: ascendente (Kutxa) → el último; descendente (BBVA) → el primero.
+  const masReciente = movimientoFinal(movimientos)
   const fechasOrden = movimientos.map(m => m.fechaOperacion).filter(Boolean).sort()
   return [{
     ccc: (opts.iban || 'CUENTA-IMPORTADA').trim(),

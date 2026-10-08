@@ -9,7 +9,7 @@ import ExpedienteEmpleado from './ExpedienteEmpleado'
 
 export default async function Page() {
   let s
-  try { s = await getSesionEmpleado() } catch (e) { if (e instanceof AuthError) redirect('/'); throw e }
+  try { s = await getSesionEmpleado() } catch (e) { if (e instanceof AuthError) redirect('/e/entrar'); throw e }
   const [documentos, branding] = await Promise.all([
     listarExpediente(s.empresa_id, s.empleado_id, ACTOR_TITULAR),
     getBranding(s.empresa_id),

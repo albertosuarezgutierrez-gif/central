@@ -62,6 +62,11 @@ import {
   estadoRecibos,
   resumirRecibos,
   fechaReciboFiable,
+  vistaCobertura,
+  capitalDeCobertura,
+  nombreCobertura,
+  normalizarCodigoCoberturaNumerico,
+  type CoberturaVista,
   tonoSituacionRecibo,
   type ReciboHistorial,
   type ResumenRecibos,
@@ -100,7 +105,14 @@ import { getIdentidad } from './session'
  * exactamente el mismo fallo que pintar «Tipo 1107» en un siniestro. No se pide
  * al `select`, así que no hay nada que se pueda colar en pantalla por descuido.
  */
-export type ReciboPortal = ReciboHistorial
+export type ReciboPortal = ReciboHistorial & {
+  /** `clase_recibo` EIAC (CA/NP/SU…) tal cual; `null` = no consta. */
+  clase: string | null
+  /** Efecto del recibo (`fecha_efecto_actual`); `null` = no consta o centinela. */
+  fechaEfecto: Date | null
+  /** Día en que pasó a su situación actual; `null` = no consta o centinela. */
+  fechaSituacion: Date | null
+}
 
 export type RecibosPortal = ResumenRecibos & {
   /**
@@ -186,6 +198,8 @@ export type PolizaPortal = {
   fechaEmision: Date | null
   /** Desde cuándo corre el periodo actual (EIAC). `null` = no se pinta. */
   fechaEfectoActual: Date | null
+  /** Cuándo se solicitó la póliza (EIAC). `null` = no consta O no visible en este nivel (`coberturas`): no se pinta. */
+  fechaSolicitud: Date | null
   estado: string
   vigencia: Vigencia
   /**
@@ -197,6 +211,12 @@ export type PolizaPortal = {
   renovacionSinConfirmar: boolean
   /** CIMA la ha traído. `false` = emitida por nosotros y la compañía aún no la confirma. */
   confirmadaCima: boolean
+  /**
+   * Cuándo se marcó esta póliza como SUSTITUIDA (baja por cambio de compañía o por sustitución). `null` = no lo está.
+   * Interno: el puente de asegura exige `sustituida_at IS NULL` para aceptar «mejorar el precio»
+   * (`sqlCarteraEnVigor`), así que quien ofrezca esa acción debe filtrar por lo mismo.
+   */
+  sustituidaAt: Date | null
   /** Id de la póliza a la que esta sustituye (cambio de compañía). Interno: sirve para cruzar. */
   sustituyeAId: string | null
   /** La póliza a la que sustituye, SOLO si este lector también la ve. `null` = ninguna o no visible. */
@@ -265,6 +285,11 @@ export type PolizaPortal = {
     lista: string[]
     /** Capital de cada cobertura, alineado con `lista`; `null` = no informado. */
     capitales?: (number | 'ilimitado' | null)[]
+    /**
+     * Capital (con «sin capital propio» / «ilimitado»), franquicia y vigencia propia de cada
+     * cobertura, alineado con `lista` (`vistaCobertura`). Cada campo `null` = no se pinta.
+     */
+    detalle?: CoberturaVista[]
   } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
@@ -848,7 +873,12 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       : await Promise.all([
           prisma.polizaCobertura.findMany({
             where: { polizaId: { in: polizaIds } },
-            select: { polizaId: true, descripcion: true, codigo: true, numeroOrden: true, capitalAsegurado: true },
+            select: {
+              polizaId: true, descripcion: true, codigo: true, numeroOrden: true, capitalAsegurado: true,
+              franquicia: true, fechaInicio: true, fechaFin: true,
+              // Solo para leer el LÍMITE por siniestro (`capitalDeCobertura`); la prima y demás NO salen de la lectura.
+              datosExtra: true,
+            },
             orderBy: { numeroOrden: 'asc' },
           }),
           prisma.polizaRecibo.findMany({
@@ -864,6 +894,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               // CA/NP: el recibo de anualidad. Allianz manda la prima y la
               // renovación SOLO ahí (27/09/2026). Tiene GRANT desde el 02/09.
               claseRecibo: true,
+              // Para «cobrado el…». Tiene GRANT desde el 02/09. NUNCA comisiones ni prima neta aquí.
+              fechaSituacion: true,
               // 🚨 `formaPago` NO se pide: es un código del EIAC (`CC`/`OF`/`TA`).
               // Ver la cabecera de `ReciboPortal`.
             },
@@ -877,7 +909,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             // siniestros de la cartera viva el portal enseñaba 7 y los 60
             // CERRADOS no los veía nadie. El historial es lo que un cliente
             // pregunta al renovar.
-            where: { polizaId: { in: polizaIds } },
+            // Sin las altas manuales ya FUSIONADAS en el siniestro de CIMA (03/10/2026):
+            // son el mismo siniestro y el cliente lo vería dos veces.
+            where: { polizaId: { in: polizaIds }, fusionadoEnSiniestroId: null },
             select: {
               id: true,
               polizaId: true,
@@ -949,6 +983,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const aPortal = (p: (typeof polizas)[number], ve: CamposVisibles): PolizaPortal => {
     const cobs = coberturasPor.get(p.id) ?? []
     const recs = recibosPor.get(p.id) ?? []
+    // Código de cobertura de ESTA póliza → nombre (la reserva de un siniestro llega por código).
+    const nombresPorCodigo: Record<string, string> = {}
+    for (const c of cobs) {
+      const n = nombreCobertura((c.descripcion ?? '').trim())
+      const k = normalizarCodigoCoberturaNumerico(c.codigo ?? '')
+      if (k !== null && n !== '') nombresPorCodigo[k] = n
+    }
     // Allianz no manda prima en la póliza ni avanza su vencimiento al renovar:
     // solo el recibo anual (27/09/2026). Los recibos son los de ESTA póliza,
     // ya leídos arriba bajo el mismo `polizaIds` autorizado: no se amplía nada.
@@ -1009,7 +1050,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               descripcion: x.descripcionCima,
               tramitador: { nombre: x.tramitadorNombre, telefono: x.tramitadorTelefono, email: x.tramitadorEmail },
               perito: { nombre: x.peritoNombre, telefono: x.peritoTelefono, email: x.peritoEmail },
-            }),
+            }, nombresPorCodigo),
           })),
         )
       : null
@@ -1022,6 +1063,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       fechaVencimiento,
       fechaEmision: p.fechaEmision,
       fechaEfectoActual: p.fechaEfectoActual,
+      fechaSolicitud: ve.coberturas ? p.fechaSolicitud : null,
       estado: p.estado,
       vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento }, hoy),
       renovacionSinConfirmar:
@@ -1029,6 +1071,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         p.eiacXmlHash !== null &&
         vigenciaPoliza({ estado: p.estado, fechaVencimiento }, hoy) === 'no_vigente',
       confirmadaCima: p.idPolizaEntidad !== null,
+      sustituidaAt: p.sustituidaAt ?? null,
       sustituyeAId: p.polizaOrigenId !== null && sustituidas.has(p.polizaOrigenId) ? p.polizaOrigenId : null,
       // Los dos se deciden POR LECTOR en `titular()`, con lo que ese lector puede ver.
       sustituyeA: null,
@@ -1051,7 +1094,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         ? {
             total: cobs.length,
             // Sin `slice`: la lista va entera. Ver el comentario del tipo.
-            ...listaCoberturas(cobs),
+            ...listaCoberturas(cobs, { inicio: p.fechaEfectoActual ?? p.fechaInicio, fin: p.fechaVencimiento }),
           }
         : null,
       recibos: ve.recibos ? recibosDePoliza(recs) : null,
@@ -1334,6 +1377,9 @@ type ReciboFila = {
   primaTotal: string | null
   fechaEmision: Date | null
   fechaVencimiento: Date | null
+  fechaEfectoActual?: Date | null
+  claseRecibo?: string | null
+  fechaSituacion?: Date | null
 }
 
 /**
@@ -1353,20 +1399,31 @@ type ReciboFila = {
  * se sabe leer sale `null` («no informado»), nunca «0,00€».
  */
 function listaCoberturas(
-  cobs: Array<{ descripcion: string | null; codigo: string | null; capitalAsegurado: string | null }>,
-): { lista: string[]; capitales: (number | 'ilimitado' | null)[] } {
+  cobs: Array<{
+    descripcion: string | null
+    codigo: string | null
+    capitalAsegurado: string | null
+    franquicia: string | null
+    fechaInicio: Date | null
+    fechaFin: Date | null
+    datosExtra?: unknown
+  }>,
+  periodoPoliza: { inicio: Date | null; fin: Date | null },
+): { lista: string[]; capitales: (number | 'ilimitado' | null)[]; detalle: CoberturaVista[] } {
   const lista: string[] = []
   const capitales: (number | 'ilimitado' | null)[] = []
+  const detalle: CoberturaVista[] = []
   for (const c of cobs) {
-    const nombre = (c.descripcion ?? c.codigo ?? '').trim()
+    const nombre = nombreCobertura((c.descripcion ?? c.codigo ?? '').trim())
     if (!nombre) continue
     // El MISMO lector que el resto de la cartera: un «1.500» o un texto raro
     // no se adivina (sale `null`), y «INF» es ilimitado, no «sin importe».
-    const cap = interpretarCapital(c.capitalAsegurado)
+    const cap = capitalDeCobertura(c)
     lista.push(nombre)
     capitales.push(cap.tipo === 'importe' && cap.importe > 0 ? cap.importe : cap.tipo === 'ilimitado' ? 'ilimitado' : null)
+    detalle.push(vistaCobertura(c, periodoPoliza))
   }
-  return { lista, capitales }
+  return { lista, capitales, detalle }
 }
 
 function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
@@ -1377,6 +1434,9 @@ function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
     // `fecha_emision` 0001-01-01, que es un «no lo sé» con forma de dato.
     fechaEmision: fechaReciboFiable(r.fechaEmision),
     fechaVencimiento: fechaReciboFiable(r.fechaVencimiento),
+    clase: (r.claseRecibo ?? '').trim() || null,
+    fechaEfecto: fechaReciboFiable(r.fechaEfectoActual),
+    fechaSituacion: fechaReciboFiable(r.fechaSituacion),
   }))
   const historial = ordenarRecibos(crudos)
   return {

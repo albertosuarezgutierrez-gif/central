@@ -3,9 +3,14 @@
  * `seguros.oportunidades.info_riesgo.datosComercio` para verlos, editarlos y CONFIRMARLOS en la pantalla del
  * riesgo. Sustituye al riesgo libre SOLO en este ramo (RC, comunidades y otros siguen en `datosRiesgoLibre`).
  *
- * Campos = los que manda CIMA en `RiesgoComercios` del EIAC (docs/CIMA-CAMPOS.md) + UNO propio que CIMA no da y
- * hace falta para tarificar (`regimenLocal`). Decisión de Alberto: nada más (ni cocina, ni aforo, ni empleados);
- * se añadirá lo que el día a día pida.
+ * Campos = los que manda CIMA en `RiesgoComercios` del EIAC (docs/CIMA-CAMPOS.md) + los propios que CIMA no da y
+ * hacen falta para tarificar (`regimenLocal`, y desde el 03/10/2026 las preguntas COMUNES de los pasos Comercio y
+ * Seguro de Avant2: familia, empleados, facturación, situación, edificio, reforma, materiales, calidad,
+ * conservación, instalación eléctrica, aforo y superficie exterior; docs/correduria/COMERCIO-AVANT2-VS-CIMA.md §5).
+ * Las preguntas PROPIAS de cada compañía (paso Productos: Occident y Reale) van aparte, en `porCompania`.
+ * Los desplegables de Avant2 de los que el doc solo recoge UN valor visto (situación, tipo de edificio, materiales,
+ * calidad, familia…) son TEXTO LIBRE: no se inventa un catálogo. La modalidad de continente ya vive en
+ * `capitales[CONTINENTE].modalidad`.
  *
  * Nombres alineados con lo que el mapper de CIMA ya escribe en `polizas.datos_especificos`, para que al emitir
  * no haya dos formas del mismo dato:
@@ -67,11 +72,87 @@ export const ESPEC_COMERCIO = [
   { clave: 'anioConstruccion', etiqueta: 'Año de construcción (antigüedad)', tipo: { t: 'entero', min: 1500, max: 'anioTope' } },
   { clave: 'zona', etiqueta: 'Zona (código de la compañía)', tipo: { t: 'texto', max: 40 } },
   { clave: 'regimenLocal', etiqueta: 'Local en propiedad o alquiler', tipo: { t: 'id' } },
+  // ─── Comunes de Avant2 (03/10/2026). sí/no = boolean|null: `null` es «no se sabe», nunca `false` por defecto. ───
+  { clave: 'familiaActividad', etiqueta: 'Familia de actividad', tipo: { t: 'texto', max: 80 } },
+  { clave: 'numeroEmpleados', etiqueta: 'Número de empleados', tipo: { t: 'entero', min: 0, max: 100_000 } },
+  { clave: 'facturacionAnual', etiqueta: 'Facturación anual (€)', tipo: { t: 'numero', min: 0, max: 10_000_000_000 } },
+  { clave: 'situacion', etiqueta: 'Situación del local', tipo: { t: 'texto', max: 80 } },
+  { clave: 'tipoEdificio', etiqueta: 'Tipo de edificio', tipo: { t: 'texto', max: 120 } },
+  { clave: 'soloPlantaBaja', etiqueta: 'El edificio solo tiene planta baja', tipo: { t: 'bool' } },
+  { clave: 'reformado', etiqueta: 'Reformado', tipo: { t: 'bool' } },
+  { clave: 'anioReforma', etiqueta: 'Año de la reforma', tipo: { t: 'entero', min: 1500, max: 'anioTope' } },
+  { clave: 'materiales', etiqueta: 'Materiales de construcción', tipo: { t: 'texto', max: 80 } },
+  { clave: 'calidadConstruccion', etiqueta: 'Calidad de la construcción', tipo: { t: 'texto', max: 80 } },
+  { clave: 'conservacionBuena', etiqueta: 'Buen estado de conservación', tipo: { t: 'bool' } },
+  { clave: 'instalacionElectricaRevisada', etiqueta: 'Instalación eléctrica revisada', tipo: { t: 'bool' } },
+  { clave: 'aforo', etiqueta: 'Aforo (personas)', tipo: { t: 'entero', min: 1, max: 100_000 } },
+  { clave: 'superficieExterior', etiqueta: 'Superficie exterior / terraza (m²)', tipo: { t: 'numero', min: 0, max: 1_000_000 } },
 ] as const satisfies Espec
 
-export type CampoComercio =
-  | 'actividad' | 'direccion' | 'otrosDatosVia' | 'cp' | 'localidad' | 'provincia' | 'metrosCuadrados' | 'superficieTotal'
-  | 'anioConstruccion' | 'zona' | 'regimenLocal' | 'capitales' | 'medidasProteccion'
+// ─── Preguntas PROPIAS de cada compañía (paso «Productos» de Avant2, §5.2 del doc) ───────────────────────────
+// Solo se piden al cotizar con esa compañía; no cuentan para «falta para tarificar». Los desplegables de los que
+// el doc solo recoge un valor visto son texto libre.
+
+export const COMPANIAS_COMERCIO = ['occident', 'reale'] as const
+export type CompaniaComercio = (typeof COMPANIAS_COMERCIO)[number]
+export const ETIQUETA_COMPANIA_COMERCIO: Record<CompaniaComercio, string> = { occident: 'Occident', reale: 'Reale' }
+
+/** Occident: 17 campos (la fila de basculantes del doc son 2 preguntas). */
+export const ESPEC_OCCIDENT = [
+  { clave: 'descuento', etiqueta: 'Descuento (%)', tipo: { t: 'numero', min: 0, max: 100 } },
+  { clave: 'colectivo', etiqueta: 'Forma parte de un colectivo con condiciones especiales', tipo: { t: 'bool' } },
+  { clave: 'actividadSecundaria', etiqueta: 'Actividad secundaria', tipo: { t: 'bool' } },
+  { clave: 'basculantesConPuertaPeatonal', etiqueta: 'Basculantes con anclajes laterales y cerradura de seguridad, con puerta peatonal', tipo: { t: 'bool' } },
+  { clave: 'basculantesSinPuertaPeatonal', etiqueta: 'Basculantes con anclajes laterales y cerradura de seguridad, sin puerta peatonal', tipo: { t: 'bool' } },
+  { clave: 'actividadTemporada', etiqueta: 'Actividad de temporada', tipo: { t: 'bool' } },
+  { clave: 'aforoMaximo', etiqueta: 'Aforo máximo autorizado (local y terraza)', tipo: { t: 'entero', min: 1, max: 100_000 } },
+  { clave: 'contratarRoboContenido', etiqueta: 'Contratar robo del contenido', tipo: { t: 'bool' } },
+  { clave: 'superficieLocal', etiqueta: 'Superficie de local (m²)', tipo: { t: 'numero', min: 0, max: 1_000_000, sobreMin: true } },
+  { clave: 'superficieExterior', etiqueta: 'Superficie de zona exterior (m²)', tipo: { t: 'numero', min: 0, max: 1_000_000 } },
+  { clave: 'superficieAlmacen', etiqueta: 'Superficie de almacenamiento (m²)', tipo: { t: 'numero', min: 0, max: 1_000_000 } },
+  { clave: 'superficieZonaComun', etiqueta: 'Superficie de zona común (m²)', tipo: { t: 'numero', min: 0, max: 1_000_000 } },
+  { clave: 'bienesTercerosIncluidos', etiqueta: 'Bienes de terceros incluidos en los capitales', tipo: { t: 'bool' } },
+  { clave: 'capitalObjetosValor', etiqueta: 'Capital de objetos de valor (€)', tipo: { t: 'numero', min: 0, max: 1_000_000_000 } },
+  { clave: 'periodosMercancias', etiqueta: 'Tiene períodos de mercancías', tipo: { t: 'bool' } },
+  { clave: 'formaAseguramientoExterior', etiqueta: 'Forma de aseguramiento (zona exterior)', tipo: { t: 'texto', max: 80 } },
+  { clave: 'capitalArbolado', etiqueta: 'Capital de arbolado, jardines y plantas', tipo: { t: 'texto', max: 80 } },
+] as const satisfies Espec
+
+/** Reale: 21 campos (el robo de continente a primer riesgo son 2: sí/no + capital). */
+export const ESPEC_REALE = [
+  { clave: 'campana', etiqueta: 'Campaña comercial', tipo: { t: 'texto', max: 80 } },
+  { clave: 'sotano', etiqueta: 'Tiene sótano', tipo: { t: 'bool' } },
+  { clave: 'almacen', etiqueta: 'Tiene almacén', tipo: { t: 'bool' } },
+  { clave: 'aforo', etiqueta: 'Aforo', tipo: { t: 'entero', min: 1, max: 100_000 } },
+  { clave: 'huecosAltosOInaccesibles', etiqueta: 'Huecos a más de 5 m de altura o sin huecos accesibles', tipo: { t: 'bool' } },
+  { clave: 'centroComercial', etiqueta: 'Ubicado en centro comercial', tipo: { t: 'bool' } },
+  { clave: 'franquicia', etiqueta: 'Franquicia', tipo: { t: 'texto', max: 80 } },
+  { clave: 'roboContinentePrimerRiesgo', etiqueta: 'Robo de continente a primer riesgo', tipo: { t: 'bool' } },
+  { clave: 'capitalRoboContinente', etiqueta: 'Capital de robo de continente (€)', tipo: { t: 'numero', min: 0, max: 1_000_000_000 } },
+  { clave: 'desperfectosRoboContinente', etiqueta: 'Desperfectos por robo al continente', tipo: { t: 'bool' } },
+  { clave: 'roboContenido', etiqueta: 'Robo de contenido', tipo: { t: 'bool' } },
+  { clave: 'tipoCoberturaRobo', etiqueta: 'Tipo de cobertura de robo', tipo: { t: 'texto', max: 80 } },
+  { clave: 'capitalMetalicoFueraCaja', etiqueta: 'Capital de robo y expoliación de metálico fuera de caja (€)', tipo: { t: 'numero', min: 0, max: 1_000_000_000 } },
+  { clave: 'capitalMetalicoCajaFuerte', etiqueta: 'Capital de robo y expoliación de metálico en caja fuerte (€)', tipo: { t: 'numero', min: 0, max: 1_000_000_000 } },
+  { clave: 'capitalTransporteFondos', etiqueta: 'Capital de expoliación durante transporte de fondos (€)', tipo: { t: 'numero', min: 0, max: 1_000_000_000 } },
+  { clave: 'rcIntoxicacionesAlimenticias', etiqueta: 'RC intoxicaciones alimenticias', tipo: { t: 'bool' } },
+  { clave: 'indemnizacionDiariaPrimerRiesgo', etiqueta: 'Indemnización diaria a primer riesgo', tipo: { t: 'bool' } },
+  { clave: 'capitalRcObjetosConfiados', etiqueta: 'Capital RC objetos confiados', tipo: { t: 'texto', max: 80 } },
+  { clave: 'rcTrabajosFuera', etiqueta: 'RC trabajos fuera', tipo: { t: 'bool' } },
+  { clave: 'capitalDanosEsteticos', etiqueta: 'Capital de daños estéticos (€)', tipo: { t: 'numero', min: 0, max: 1_000_000_000 } },
+  { clave: 'transporteMercancias', etiqueta: 'Capital de transporte de mercancías (sí/no)', tipo: { t: 'bool' } },
+] as const satisfies Espec
+
+export const ESPEC_POR_COMPANIA = { occident: ESPEC_OCCIDENT, reale: ESPEC_REALE } as const satisfies Record<CompaniaComercio, Espec>
+
+type ValorBloque = string | number | boolean | null
+/** Un bloque de compañía: TODAS sus claves, `null` = no se sabe. */
+export type BloqueCompania<E extends Espec> = { [K in E[number]['clave']]: ValorBloque }
+export type PorCompaniaComercio = { occident?: BloqueCompania<typeof ESPEC_OCCIDENT>; reale?: BloqueCompania<typeof ESPEC_REALE> }
+/** Edición parcial: por compañía, solo las claves que vienen; la compañía a `null` = borrar su bloque. */
+export type EdicionPorCompania = { [C in CompaniaComercio]?: Partial<BloqueCompania<(typeof ESPEC_POR_COMPANIA)[C]>> | null }
+
+export type CampoComercio = (typeof ESPEC_COMERCIO)[number]['clave'] | 'capitales' | 'medidasProteccion' | 'porCompania'
 
 export type CapitalComercio = { bien: BienComercio; importe: number; modalidad: string | null; descripcion: string | null }
 export type MedidaComercio = { medida: string; valor: string | null }
@@ -88,17 +169,34 @@ export type DatosComercioRiesgo = {
   anioConstruccion: number | null
   zona: string | null
   regimenLocal: RegimenLocal | null
+  familiaActividad: string | null
+  numeroEmpleados: number | null
+  facturacionAnual: number | null
+  situacion: string | null
+  tipoEdificio: string | null
+  soloPlantaBaja: boolean | null
+  reformado: boolean | null
+  anioReforma: number | null
+  materiales: string | null
+  calidadConstruccion: string | null
+  conservacionBuena: boolean | null
+  instalacionElectricaRevisada: boolean | null
+  aforo: number | null
+  superficieExterior: number | null
+  /** `null` = sin mirar · `{}`/bloques = lo de cada compañía (preguntas propias del paso Productos). */
+  porCompania: PorCompaniaComercio | null
   /** `null` = sin mirar · `[]` = revisado, no hay · filas. */
   capitales: CapitalComercio[] | null
   medidasProteccion: MedidaComercio[] | null
   confirmadoAt: string | null
 }
 
-export const CAMPOS_COMERCIO: readonly CampoComercio[] = [...ESPEC_COMERCIO.map((c) => c.clave), 'capitales', 'medidasProteccion']
+export const CAMPOS_COMERCIO: readonly CampoComercio[] = [...ESPEC_COMERCIO.map((c) => c.clave), 'capitales', 'medidasProteccion', 'porCompania']
 export const ETIQUETA_CAMPO_COMERCIO: Record<CampoComercio, string> = {
   ...(Object.fromEntries(ESPEC_COMERCIO.map((c) => [c.clave, c.etiqueta])) as Record<(typeof ESPEC_COMERCIO)[number]['clave'], string>),
   capitales: 'Capitales asegurados',
   medidasProteccion: 'Medidas de protección',
+  porCompania: 'Preguntas propias de cada compañía',
 }
 
 export const AVISO_COMERCIO = 'Este ramo se cotiza fuera: por ahora los datos quedan para el expediente y para tarificar con la compañía.'
@@ -141,17 +239,41 @@ function leerMedidas(bruto: unknown): MedidaComercio[] | null {
   return out
 }
 
+/**
+ * Lo guardado en `porCompania`: solo las compañías conocidas, cada bloque leído sin fiarse (campo de otro tipo =
+ * `null`). `null` si no es un objeto. Una compañía ausente sigue ausente (no se inventa un bloque de `null`s).
+ */
+/** Un bloque con todas las claves `null` no es dato («no se sabe» ≠ revisado): se descarta. Sin compañías, `null`. */
+const bloqueVacio = (b: unknown): boolean => !esObj(b) || Object.values(b).every((v) => v === null || v === undefined)
+function podarPorCompania(o: Record<string, unknown>): PorCompaniaComercio | null {
+  const out: Record<string, unknown> = {}
+  for (const c of COMPANIAS_COMERCIO) if (c in o && !bloqueVacio(o[c])) out[c] = o[c]
+  return Object.keys(out).length === 0 ? null : (out as PorCompaniaComercio)
+}
+
+function leerPorCompania(bruto: unknown): PorCompaniaComercio | null {
+  if (!esObj(bruto)) return null
+  const out: Record<string, unknown> = {}
+  for (const c of COMPANIAS_COMERCIO) {
+    if (!esObj(bruto[c])) continue
+    const { confirmadoAt: _ignorado, ...bloque } = leerBloque(ESPEC_POR_COMPANIA[c], bruto[c]) as Record<string, ValorBloque>
+    out[c] = bloque
+  }
+  return podarPorCompania(out)
+}
+
 export function datosComercioVacios(): DatosComercioRiesgo {
-  return { ...(vaciosDe(ESPEC_COMERCIO) as Omit<DatosComercioRiesgo, 'capitales' | 'medidasProteccion'>), capitales: null, medidasProteccion: null }
+  return { ...(vaciosDe(ESPEC_COMERCIO) as Omit<DatosComercioRiesgo, 'capitales' | 'medidasProteccion' | 'porCompania'>), capitales: null, medidasProteccion: null, porCompania: null }
 }
 
 /** Lo guardado en `info_riesgo.datosComercio`. Un campo de otro tipo es «no se sabe»; lo que no se reconoce se ignora. */
 export function leerDatosComercio(bruto: unknown): DatosComercioRiesgo | null {
   if (!esObj(bruto)) return null
-  const base = leerBloque(ESPEC_COMERCIO, bruto) as Record<string, string | number | null>
+  const base = leerBloque(ESPEC_COMERCIO, bruto) as Record<string, string | number | boolean | null>
   return {
-    ...(base as unknown as Omit<DatosComercioRiesgo, 'capitales' | 'medidasProteccion' | 'regimenLocal'>),
+    ...(base as unknown as Omit<DatosComercioRiesgo, 'capitales' | 'medidasProteccion' | 'regimenLocal' | 'porCompania'>),
     regimenLocal: regimenLeido(bruto.regimenLocal),
+    porCompania: leerPorCompania(bruto.porCompania),
     capitales: leerCapitales(bruto.capitales),
     medidasProteccion: leerMedidas(bruto.medidasProteccion),
   }
@@ -159,7 +281,7 @@ export function leerDatosComercio(bruto: unknown): DatosComercioRiesgo | null {
 
 // ─── Validación de una edición PARCIAL ───────────────────────────────────────
 
-export type ValorEdicionComercio = Partial<Omit<DatosComercioRiesgo, 'confirmadoAt'>>
+export type ValorEdicionComercio = Partial<Omit<DatosComercioRiesgo, 'confirmadoAt' | 'porCompania'>> & { porCompania?: EdicionPorCompania | null }
 export type ValidacionComercio = { ok: true; valor: ValorEdicionComercio } | { ok: false; errores: ErrorCampo[] }
 
 function textoOpcional(v: unknown, max: number): string | null | 'invalido' {
@@ -213,6 +335,24 @@ export function validarMedidasComercio(v: unknown): { ok: true; valor: MedidaCom
   return errores.length > 0 ? { ok: false, errores } : { ok: true, valor }
 }
 
+/** Valida `porCompania`: `null` = borrar todo; por compañía, `null` = borrar su bloque u objeto parcial de sus claves. */
+export function validarPorCompania(v: unknown): { ok: true; valor: EdicionPorCompania | null } | { ok: false; errores: ErrorCampo[] } {
+  if (v === null) return { ok: true, valor: null }
+  if (!esObj(v)) return { ok: false, errores: [{ campo: 'porCompania', motivo: 'Preguntas de compañía: tiene que ser un objeto.' }] }
+  const errores: ErrorCampo[] = []
+  const valor: Record<string, unknown> = {}
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date())
+  for (const c of COMPANIAS_COMERCIO) {
+    if (!Object.prototype.hasOwnProperty.call(v, c)) continue
+    const x = v[c]
+    if (x === null) { valor[c] = null; continue }
+    const r = validarParcial(ESPEC_POR_COMPANIA[c], x, { hoy, nombreBloque: ETIQUETA_COMPANIA_COMERCIO[c] })
+    if (r.ok) valor[c] = r.valor
+    else errores.push(...r.errores.map((e) => ({ campo: `porCompania.${c}.${e.campo}`, motivo: `${ETIQUETA_COMPANIA_COMERCIO[c]} · ${e.motivo}` })))
+  }
+  return errores.length > 0 ? { ok: false, errores } : { ok: true, valor: valor as EdicionPorCompania }
+}
+
 /**
  * Valida una edición PARCIAL (solo las claves que vienen). Vacío/`null` = borrar ese dato. Las claves que no son
  * del bloque se ignoran (no se cuelan al JSON guardado).
@@ -236,40 +376,59 @@ export function validarDatosComercioRiesgo(parcial: unknown, opciones: { hoy?: s
     if (m.ok) valor.medidasProteccion = m.valor
     else errores.push(...m.errores)
   }
+  if (Object.prototype.hasOwnProperty.call(parcial, 'porCompania')) {
+    const p = validarPorCompania(parcial.porCompania === undefined ? null : parcial.porCompania)
+    if (p.ok) valor.porCompania = p.valor
+    else errores.push(...p.errores)
+  }
   return errores.length > 0 ? { ok: false, errores } : { ok: true, valor: valor as ValorEdicionComercio }
 }
 
 // ─── «Qué falta» para tarificar ──────────────────────────────────────────────
 
-export type CampoFaltaComercio = 'actividad' | 'situacion' | 'superficie' | 'regimenLocal' | 'capitales'
+export type CampoFaltaComercio = 'actividad' | 'familiaActividad' | 'numeroEmpleados' | 'situacion' | 'superficie' | 'regimenLocal' | 'capitales' | 'modalidadContinente'
 
 const ETIQUETA_FALTA: Record<CampoFaltaComercio, string> = {
   actividad: 'la actividad',
+  familiaActividad: 'la familia de actividad',
+  numeroEmpleados: 'el número de empleados',
   situacion: 'la situación del local (calle, código postal y población)',
   superficie: 'la superficie construida',
   regimenLocal: 'si el local es en propiedad o en alquiler',
   capitales: 'al menos un capital asegurado (mayor que 0)',
+  modalidadContinente: 'la modalidad de valoración del continente',
 }
 
 /**
- * Lo que FALTA para tarificar un comercio: actividad, situación (calle + CP + población), superficie construida,
- * régimen del local y al menos un capital. `null` (sin ficha) = «falta todo». Un capital de 0 no basta (no hay
+ * Lo que FALTA para tarificar un comercio: actividad, familia, empleados, situación (calle + CP + población), superficie construida,
+ * régimen del local, al menos un capital y la modalidad si hay continente. Lo de cada compañía NO cuenta. `null` (sin ficha) = «falta todo». Un capital de 0 no basta (no hay
  * nada que tarificar), pero sí cuenta como dato en la ficha.
  */
 export function faltanDatosComercio(datos: Partial<DatosComercioRiesgo> | null | undefined): CampoFaltaComercio[] {
   const d = datos ?? {}
   const f: CampoFaltaComercio[] = []
   if (!d.actividad) f.push('actividad')
+  if (!d.familiaActividad) f.push('familiaActividad')
+  // 0 empleados es un dato (autónomo); solo `null` = no se sabe. Avant2 lo exige.
+  if (d.numeroEmpleados === null || d.numeroEmpleados === undefined) f.push('numeroEmpleados')
   if (!d.direccion || !d.cp || !d.localidad) f.push('situacion')
   if (d.metrosCuadrados === null || d.metrosCuadrados === undefined) f.push('superficie')
   if (!d.regimenLocal) f.push('regimenLocal')
   if (!(d.capitales ?? []).some((c) => c.importe > 0)) f.push('capitales')
+  // Con capital de CONTINENTE (> 0) Avant2 exige la modalidad (valor de reposición, real…).
+  if ((d.capitales ?? []).some((c) => c.bien === 'CONTINENTE' && c.importe > 0 && !c.modalidad)) f.push('modalidadContinente')
   return f
 }
 
-export function textoFaltanComercio(faltan: readonly CampoFaltaComercio[] | null | undefined): string | null {
+/**
+ * El aviso de lo que falta. «Para tarificar» solo si HAY ruta de tarifa (`hayRutaTarifa`, por defecto sí): hoy el
+ * comercio se cotiza fuera, y decir «falta para tarificar» prometía un botón que no existe (07/10/2026).
+ * Sin ruta: «Falta en la ficha del comercio» (para el expediente y para tarificar con la compañía).
+ */
+export function textoFaltanComercio(faltan: readonly CampoFaltaComercio[] | null | undefined, opciones: { hayRutaTarifa?: boolean } = {}): string | null {
   if (faltan === null || faltan === undefined || faltan.length === 0) return null
-  return `Falta para tarificar: ${faltan.map((c) => ETIQUETA_FALTA[c]).join(', ')}.`
+  const prefijo = opciones.hayRutaTarifa === false ? 'Falta en la ficha del comercio' : 'Falta para tarificar'
+  return `${prefijo}: ${faltan.map((c) => ETIQUETA_FALTA[c]).join(', ')}.`
 }
 
 // ─── Edición ─────────────────────────────────────────────────────────────────
@@ -314,6 +473,32 @@ export function aplicarEdicionComercio(
       datos.medidasProteccion = nuevo
     }
   }
+  if (Object.prototype.hasOwnProperty.call(valor, 'porCompania')) {
+    const ed = valor.porCompania ?? null
+    const previoPC = previo.porCompania
+    if (ed === null) {
+      if (previoPC !== null) { cambios.push({ campo: 'porCompania', antes: 'con datos', despues: null }); datos.porCompania = null }
+    } else {
+      const nuevo: Record<string, unknown> = { ...(previoPC ?? {}) }
+      let toco = false
+      for (const c of COMPANIAS_COMERCIO) {
+        if (!Object.prototype.hasOwnProperty.call(ed, c)) continue
+        const e = ed[c]
+        const bloquePrevio = previoPC?.[c]
+        if (e === null || e === undefined) {
+          if (bloquePrevio !== undefined) { delete nuevo[c]; toco = true; cambios.push({ campo: `porCompania.${c}`, antes: 'con datos', despues: null }) }
+          continue
+        }
+        const r = aplicarEdicionBloque(ESPEC_POR_COMPANIA[c], (bloquePrevio ?? null) as Record<string, never> | null, e as Record<string, never>, { confirmar: false, ahora: '' })
+        if (r.cambios.length === 0) continue
+        const { confirmadoAt: _ignorado, ...bloque } = r.datos
+        nuevo[c] = bloque
+        toco = true
+        cambios.push(...r.cambios.map((x) => ({ ...x, campo: `porCompania.${c}.${x.campo}` })))
+      }
+      if (toco) datos.porCompania = podarPorCompania(nuevo)
+    }
+  }
   // Mismo sello que el resto: se confirma → `ahora`; cualquier cambio sin confirmar (también de las listas) → se borra.
   if (opciones.confirmar) datos.confirmadoAt = opciones.ahora
   else if (cambios.length > 0) datos.confirmadoAt = null
@@ -322,7 +507,7 @@ export function aplicarEdicionComercio(
 
 /** Sin nada que afirmar no hay nada que confirmar. Una lista `[]` (revisada, vacía) sí es algo que afirmar. */
 export function motivoNoConfirmableComercio(d: DatosComercioRiesgo): string | null {
-  return CAMPOS_COMERCIO.some((k) => d[k] !== null) ? null : 'No se puede confirmar un comercio sin ningún dato.'
+  return CAMPOS_COMERCIO.some((k) => (k === 'porCompania' ? d.porCompania !== null && podarPorCompania(d.porCompania) !== null : d[k] !== null)) ? null : 'No se puede confirmar un comercio sin ningún dato.'
 }
 
 // ─── Precarga desde la póliza ────────────────────────────────────────────────

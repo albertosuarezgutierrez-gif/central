@@ -41,6 +41,10 @@ export type ResueltosVidaNueva = {
    */
   capital: number | null
   duracionAnios: number | null
+  /** Código CNO-11 de la profesión del asegurado. 🚨 Nunca se supone: lo teclea el corredor. */
+  profesion?: string | null
+  /** ¿Fuma? `null` = no se sabe. 🚨 Nunca se supone `false`: abarataría el precio sin base. */
+  fumador?: boolean | null
 }
 
 export function precalificarVidaNueva(
@@ -73,6 +77,8 @@ export function precalificarVidaNueva(
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
     capital: resueltos.capital ?? undefined,
     duracionAnios: resueltos.duracionAnios ?? undefined,
+    profesion: limpio(resueltos.profesion) ?? undefined,
+    fumador: typeof resueltos.fumador === 'boolean' ? resueltos.fumador : undefined,
     fechaEfecto,
   }
 

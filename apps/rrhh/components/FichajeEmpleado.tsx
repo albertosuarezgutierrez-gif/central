@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { MENSAJE_UBICACION_REQUERIDA } from '@/lib/ubicacion-fichaje'
 
 type Fichaje = {
   id: string; estado: string; entrada_at: string; salida_at: string | null
@@ -85,6 +86,7 @@ export default function FichajeEmpleado() {
   const [cargando, setCargando] = useState(true)
   const [fichando, setFichando] = useState(false)
   const [msg, setMsg] = useState('')
+  const [sinUbicacion, setSinUbicacion] = useState(false)
 
   async function recargar() {
     const r = await fetch('/api/e/fichaje')
@@ -94,17 +96,20 @@ export default function FichajeEmpleado() {
   useEffect(() => { recargar() }, [])
 
   async function fichar() {
-    setFichando(true); setMsg('')
-    let lat: number | null = null, lng: number | null = null
+    setFichando(true); setMsg(''); setSinUbicacion(false)
+    let lat: number, lng: number
     try {
+      if (!navigator.geolocation) throw new Error('sin geolocalización')
       const pos = await new Promise<GeolocationPosition>((res, rej) =>
-        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }))
+        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }))
       lat = pos.coords.latitude; lng = pos.coords.longitude
-    } catch { setMsg('Sin GPS — se fichará sin ubicación') }
+    } catch {
+      setSinUbicacion(true); setMsg(MENSAJE_UBICACION_REQUERIDA); setFichando(false); return
+    }
     const r = await fetch('/api/e/fichaje', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lat, lng }) })
     const j = await r.json().catch(() => ({}))
     if (r.ok) { await recargar(); setMsg(j.accion === 'entrada' ? 'Entrada registrada ✓' : `Salida registrada · ${j.fichaje.horas_totales ?? 0} h`) }
-    else setMsg(j.error ?? 'Error al fichar')
+    else { setSinUbicacion(j.codigo === 'ubicacion_requerida'); setMsg(j.error ?? 'Error al fichar') }
     setFichando(false)
   }
 
@@ -135,7 +140,12 @@ export default function FichajeEmpleado() {
       >
         {fichando ? 'Registrando…' : activo ? '⏹ Fichar salida' : '▶ Fichar entrada'}
       </button>
-      {msg && <p className="mt-2 text-center text-xs text-ink-3">{msg}</p>}
+      {msg && <p className={`mt-2 text-center text-xs ${sinUbicacion ? 'text-alert' : 'text-ink-3'}`} role="alert">{msg}</p>}
+      {sinUbicacion && (
+        <button onClick={fichar} disabled={fichando} className="mt-2 w-full min-h-[44px] py-3 text-base font-semibold">
+          Reintentar
+        </button>
+      )}
 
       <CalendarioMes fichajes={historial} />
     </section>

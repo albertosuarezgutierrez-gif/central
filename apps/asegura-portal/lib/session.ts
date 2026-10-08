@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { COOKIE_NAME, verificarSesion } from './auth'
+import { COOKIE_ACCESO_WHATSAPP, COOKIE_NAME, verificarAccesoWhatsapp, verificarSesion, type AccesoWhatsapp } from './auth'
 import { prisma } from './db'
 
 export async function getIdentidad() {
@@ -23,4 +23,16 @@ export async function requireIdentidad() {
   const i = await getIdentidad()
   if (!i) throw new Error('Sin sesión de portal')
   return i
+}
+
+/**
+ * La cookie de acceso por el CÓDIGO DEL WHATSAPP (07/10/2026), o `null`. NO es una identidad: solo
+ * dice «abrió el presupuesto X con su código». Quien la use tiene que comprobar que el id es el que
+ * pide y que el token sigue siendo el del presupuesto (`accesoWhatsappDe` de `lib/presupuesto.ts`).
+ */
+export async function getAccesoWhatsapp(): Promise<AccesoWhatsapp | null> {
+  const jar = await cookies()
+  const valor = jar.get(COOKIE_ACCESO_WHATSAPP)?.value
+  if (!valor) return null
+  return verificarAccesoWhatsapp(valor)
 }

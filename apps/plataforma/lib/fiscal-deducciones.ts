@@ -103,6 +103,18 @@ export const IMPORTES_POR_ANIO: Record<number, ImportesAnio> = {
   },
 }
 
+/**
+ * Donativos (Ley 49/2002 art. 19, redacción RDL 6/2023, BOE-A-2023-25758, vigente desde 1-1-2024;
+ * AEAT manual IRPF 2024/2025 «Porcentajes de deducción»): 80 % de los primeros 250 € y 40 % del resto
+ * (45 % si hubo donativos ≥ misma cuantía a la misma entidad los 2 ejercicios anteriores, o sea 3 años).
+ * Ejercicios ≤ 2023: 80 % de los primeros 150 €, 35 % del resto (40 % si recurrente 3 años previos).
+ */
+export function parametrosDonativo(anio: number): { tramo: number; pctTramo: number; pctResto: number; pctRestoRecurrente: number } {
+  return anio >= 2024
+    ? { tramo: 250, pctTramo: 0.8, pctResto: 0.4, pctRestoRecurrente: 0.45 }
+    : { tramo: 150, pctTramo: 0.8, pctResto: 0.35, pctRestoRecurrente: 0.4 }
+}
+
 export function importesDe(anio: number): ImportesAnio {
   // Si no hay tabla del año pedido, usa la más reciente disponible.
   if (IMPORTES_POR_ANIO[anio]) return IMPORTES_POR_ANIO[anio]
@@ -122,6 +134,8 @@ export type PerfilFiscal = {
   ascendientesACargo: number
   ascendientesMayores75: number
   donativosAnual: number
+  /** Donativos recurrentes (≥ misma cuantía a la misma entidad 3 años seguidos): resto al 45 %. */
+  donativosRecurrentes?: boolean
   // Gasto en actividades deportivas (Andalucía D.A.1ª Ley 7/2021): 15% sobre base máx. €100.
   gastoDeportivoAnual: number
 }
@@ -247,7 +261,9 @@ export function calcularDeducciones(
       lineas.push({
         clave: 'guarderia', ambito: 'estatal', reembolsable: true,
         concepto: 'Incremento por gastos de guardería/custodia',
-        importe: Math.min(perfil.gastoGuarderiaAnual, imp.maternidadGuarderiaMax),
+        // Art. 81 LIRPF (AEAT, incremento por gastos de custodia): hasta 1.000 € POR HIJO < 3.
+        // El nº de hijos elegibles sale de `descendientes` (menores3); nunca se asume 1.
+        importe: Math.min(perfil.gastoGuarderiaAnual, imp.maternidadGuarderiaMax * menores3.length),
       })
     }
   }
@@ -279,12 +295,14 @@ export function calcularDeducciones(
     }
   }
 
-  // Donativos / mecenazgo (Ley 49/2002): 80 % primeros €150, 40 % resto. Base de deducción topada
+  // Donativos / mecenazgo (Ley 49/2002): 80 % primeros €250 (150 hasta 2023), 40 % resto; ver parametrosDonativo. Base de deducción topada
   // al 10 % de la base liquidable (si la conocemos): el exceso donado no genera deducción ese año.
   if (perfil.donativosAnual > 0) {
     const topeBase = baseParaLimites !== undefined ? Math.max(0, baseParaLimites * 0.1) : Infinity
     const d = Math.min(perfil.donativosAnual, topeBase)
-    const importe = Math.round(Math.min(d, 150) * 0.8 + Math.max(0, d - 150) * 0.4)
+    const dn = parametrosDonativo(anio)
+    const pctResto = perfil.donativosRecurrentes ? dn.pctRestoRecurrente : dn.pctResto
+    const importe = Math.round(Math.min(d, dn.tramo) * dn.pctTramo + Math.max(0, d - dn.tramo) * pctResto)
     if (importe > 0) {
       lineas.push({ clave: 'donativos', ambito: 'estatal', reembolsable: false, concepto: 'Deducción por donativos/mecenazgo (Ley 49/2002)', importe })
     }

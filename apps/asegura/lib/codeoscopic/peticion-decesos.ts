@@ -12,15 +12,25 @@
 // Un decesos real suele cubrir a TODA la familia, no solo al tomador — pero sin
 // el contrato del vendor no se sabe si eso es un array `insuredFamilyMembers`,
 // varias pólizas o un capital por cabeza. Se construye aquí SOLO el caso
-// individual (el tomador es el único asegurado); la cobertura familiar queda
-// como hueco conocido, no como algo resuelto en silencio.
+// individual MÁS los asegurados adicionales que teclee el corredor
+// (`aseguradosAdicionales` → `risk.insureds[1..]`, ver `asegurados.ts`). Parentesco
+// y capital por cabeza NO existen en el esquema: no se mandan.
 //
 // `POST /insurances` cuesta 0,50€ y NO es idempotente.
 
 import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
+import {
+  construirAsegurado,
+  revisarAseguradosAdicionales,
+  type AseguradoAdicional,
+} from './asegurados.ts'
 
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
 export type DatosDecesos = DatosPersona & {
+  /** Asegurados ADICIONALES al tomador (`risk.insureds[1..]`): nombre, apellidos, nacimiento, sexo y
+   * DNI opcional. El tomador es siempre el primero. Vacío/ausente = solo el tomador. */
+  aseguradosAdicionales?: AseguradoAdicional[] | null
+
   /** Capital / prestación garantizada, en euros. */
   capital?: number | null
 
@@ -55,12 +65,17 @@ export function revisarDatosDecesos(d: Partial<DatosDecesos>): ReparoDecesos[] {
   else if (!RE_FECHA.test(String(d.fechaEfecto)))
     r.push({ campo: 'fechaEfecto', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
 
+  if (Array.isArray(d.aseguradosAdicionales)) {
+    for (const m of revisarAseguradosAdicionales(d.aseguradosAdicionales))
+      r.push({ campo: 'aseguradosAdicionales', motivo: m })
+  }
+
   return r
 }
 
 /**
- * 🚧 La forma de `risk` es una SUPOSICIÓN (ver cabecera del fichero): solo
- * cubre al TOMADOR como único asegurado. Lanza si los datos no pasan
+ * 🚧 La forma de `risk` es una SUPOSICIÓN (ver cabecera del fichero): el tomador
+ * más los adicionales que se den. Lanza si los datos no pasan
  * `revisarDatosDecesos`.
  */
 export function construirPeticionDecesos(d: DatosDecesos, lineaId: string): Record<string, unknown> {
@@ -74,11 +89,12 @@ export function construirPeticionDecesos(d: DatosDecesos, lineaId: string): Reco
   const persona = construirPersona(d)
 
   // Forma según la referencia oficial (23/09/2026): `insureds` (obligatorio),
-  // array de `NaturalPerson_V1`. Hoy solo el tomador. El capital NO viaja: la
+  // array de `NaturalPerson_V1`: el tomador y los adicionales. El capital NO viaja: la
   // referencia no documenta campo para él, y un nombre inventado es lo que
   // tenía bloqueado el ramo.
+  // Los adicionales (nombre, apellidos, nacimiento, sexo, DNI opcional) van detrás del tomador.
   const riesgo: Record<string, unknown> = {
-    insureds: [persona],
+    insureds: [persona, ...(d.aseguradosAdicionales ?? []).map(construirAsegurado)],
   }
 
   const cuerpo: Record<string, unknown> = {

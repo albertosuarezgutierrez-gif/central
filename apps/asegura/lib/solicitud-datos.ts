@@ -50,6 +50,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TOKEN = /^[A-Za-z0-9_-]{40,60}$/
 const CARNETS_MOTO = new Set(['A', 'A2', 'A1', 'AM'])
 
+/** El enlace del portal para un token en claro. Solo se construye al crear la solicitud (el token no se guarda). */
+export function urlPortalSolicitud(token: string): string {
+  const base = (process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es').replace(/\/+$/, '')
+  return `${base}/datos/${token}`
+}
+
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex')
 }
@@ -106,44 +112,61 @@ export async function crearSolicitud(
       where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid`)
     if (!fig || fig.n === 0) return { ok: false, estado: 'invalido', motivo: 'Esa persona no figura en este riesgo.', status: 422 }
   }
-  const origen = await clienteOrigenDe(correduriaId, persona)
-  if (!origen) return { ok: false, estado: 'no_encontrado', motivo: 'No se encuentra la ficha de esa persona.', status: 404 }
-  const carnets = (await listarCarnets(correduriaId, persona, origen.cliente.fechaNacimiento)) ?? []
+  const campos = await camposParaPersona(correduriaId, persona, ramo)
+  if (!campos) return { ok: false, estado: 'no_encontrado', motivo: 'No se encuentra la ficha de esa persona.', status: 404 }
+  const r = await prismaAsegura().$transaction((tx) =>
+    insertarSolicitud(tx, { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero, estadoOportunidad: o.estado }))
+  // El token solo existe en claro al crearla: una viva no lo puede devolver (solo guardamos su hash).
+  return { ok: true, id: r.id, token: r.token, nueva: r.nueva, ramo, caduca: r.caduca.toISOString(), tercero }
+}
+
+/** Qué se le pide a esa persona según lo que ya hay en su ficha. `null` = no se encuentra la ficha. */
+export async function camposParaPersona(correduriaId: string, personaId: string, ramo: RamoSolicitud): Promise<CampoSolicitud[] | null> {
+  const origen = await clienteOrigenDe(correduriaId, personaId)
+  if (!origen) return null
+  const carnets = (await listarCarnets(correduriaId, personaId, origen.cliente.fechaNacimiento)) ?? []
   const conFecha = carnets.filter((c) => c.fechaExpedicion !== null)
-  const campos = camposSolicitud(ramo, {
+  return camposSolicitud(ramo, {
     dni: origen.cliente.dni !== null,
     fechaNacimiento: origen.cliente.fechaNacimiento !== null,
     codigoPostal: origen.cliente.codigoPostal !== null,
     carnetMoto: conFecha.some((c) => CARNETS_MOTO.has(c.tipo.toUpperCase())),
     carnetCoche: conFecha.some((c) => c.tipo.toUpperCase() === 'B') || origen.cliente.fechaCarnet !== null,
   })
+}
 
+/**
+ * La escritura de la solicitud, DENTRO de la transacción que le pasen (la propia de `crearSolicitud`, o la
+ * del alta de la oportunidad del lead web: así o quedan las dos o ninguna). Una viva por persona y
+ * oportunidad: si ya la hay, la devuelve sin token. `token` en claro solo si es nueva.
+ */
+export async function insertarSolicitud(
+  tx: Prisma.TransactionClient,
+  p: { correduriaId: string; oportunidadId: string; personaId: string; ramo: RamoSolicitud; campos: CampoSolicitud[]; actor: string; tercero: boolean; estadoOportunidad: string },
+): Promise<{ id: string; caduca: Date; nueva: boolean; token: string | null }> {
+  const { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero } = p
+  await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`solicitud:${oportunidadId}:${persona}`}))`)
+  const [viva] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
+    select id::text as id, caduca_at as caduca from solicitud_datos
+    where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid
+      and estado = 'pendiente' and caduca_at > now()`)
+  if (viva) return { id: viva.id, caduca: viva.caduca, nueva: false, token: null }
+  // Una pendiente ya caducada deja sitio (índice «una viva por oportunidad»).
+  await tx.$executeRaw(Prisma.sql`
+    update solicitud_datos set estado = 'anulada'
+    where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid
+      and estado = 'pendiente'`)
   const token = randomBytes(32).toString('base64url')
-  const r = await db.$transaction(async (tx) => {
-    await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`solicitud:${oportunidadId}:${persona}`}))`)
-    const [viva] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
-      select id::text as id, caduca_at as caduca from solicitud_datos
-      where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid
-        and estado = 'pendiente' and caduca_at > now()`)
-    if (viva) return { id: viva.id, caduca: viva.caduca, nueva: false }
-    // Una pendiente ya caducada deja sitio (índice «una viva por oportunidad»).
-    await tx.$executeRaw(Prisma.sql`
-      update solicitud_datos set estado = 'anulada'
-      where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid
-        and estado = 'pendiente'`)
-    const [n] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
-      insert into solicitud_datos (correduria_id, oportunidad_id, cliente_id, ramo, token_hash, campos, caduca_at, creada_por, tercero)
-      values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${persona}::uuid, ${ramo}, ${hashToken(token)},
-              ${JSON.stringify(campos)}::jsonb, now() + make_interval(days => ${DIAS_SOLICITUD}::int), ${actor}, ${tercero})
-      returning id::text as id, caduca_at as caduca`)
-    await tx.$executeRaw(Prisma.sql`
-      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
-      values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'datos_pedidos', cast(${o.estado} as estado_comercial),
-              cast(${o.estado} as estado_comercial), ${JSON.stringify({ solicitudId: n.id, campos: campos.length, tercero })}::jsonb, ${actor})`)
-    return { id: n.id, caduca: n.caduca, nueva: true }
-  })
-  // El token solo existe en claro al crearla: una viva no lo puede devolver (solo guardamos su hash).
-  return { ok: true, id: r.id, token: r.nueva ? token : null, nueva: r.nueva, ramo, caduca: r.caduca.toISOString(), tercero }
+  const [n] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
+    insert into solicitud_datos (correduria_id, oportunidad_id, cliente_id, ramo, token_hash, campos, caduca_at, creada_por, tercero)
+    values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${persona}::uuid, ${ramo}, ${hashToken(token)},
+            ${JSON.stringify(campos)}::jsonb, now() + make_interval(days => ${DIAS_SOLICITUD}::int), ${actor}, ${tercero})
+    returning id::text as id, caduca_at as caduca`)
+  await tx.$executeRaw(Prisma.sql`
+    insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+    values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'datos_pedidos', cast(${p.estadoOportunidad} as estado_comercial),
+            cast(${p.estadoOportunidad} as estado_comercial), ${JSON.stringify({ solicitudId: n.id, campos: campos.length, tercero })}::jsonb, ${actor})`)
+  return { id: n.id, caduca: n.caduca, nueva: true, token }
 }
 
 function estadoEfectivo(estado: string, caduca: Date): SolicitudResumen['estado'] {

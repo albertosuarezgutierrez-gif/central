@@ -113,6 +113,8 @@ export async function pedirCotizacion(entrada: {
   forzarNuevo?: boolean
   /** Variante del riesgo de esta póliza (`?oportunidad=`): la tarificación se cuelga de él. */
   variante?: { oportunidadId: string; nota?: string | null } | null
+  /** Recotización EXPLÍCITA tras el aviso de duplicado (0,50€ otra vez). */
+  forzar?: boolean
 }): Promise<RespuestaRetarificar> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
@@ -125,6 +127,7 @@ export async function pedirCotizacion(entrada: {
     catastro: entrada.catastro ?? null,
     referencia: entrada.referencia,
     forzarNuevo: entrada.forzarNuevo === true,
+    forzar: entrada.forzar === true,
     oportunidadId: entrada.variante?.oportunidadId ?? null,
     nota: entrada.variante?.nota ?? null,
   })
@@ -193,6 +196,8 @@ export async function pedirEmision(entrada: {
   duplicadoConfirmado?: boolean
   /** Casillas marcadas tras un 409 `confirmar_figuras` (arts. 10 y 89 LCS). Ver `emitirAsegura`. */
   figurasConfirmadas?: string[]
+  /** Vehículo nuevo con bonus SUPUESTO (03/10/2026): cómo lo verificó el corredor. Ver `emitirAsegura`. */
+  bonusVerificado?: { fuente: 'certificado' | 'sinco' | 'dato_confirmado'; nota?: string | null } | null
 }): Promise<RespuestaEmitir> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
@@ -208,6 +213,9 @@ export async function pedirEmision(entrada: {
     duplicadoConfirmado: entrada.duplicadoConfirmado === true,
     ...(Array.isArray(entrada.figurasConfirmadas)
       ? { figurasConfirmadas: entrada.figurasConfirmadas.filter((x): x is string => typeof x === 'string') }
+      : {}),
+    ...(entrada.bonusVerificado && ['certificado', 'sinco', 'dato_confirmado'].includes(entrada.bonusVerificado.fuente)
+      ? { bonusVerificado: { fuente: entrada.bonusVerificado.fuente, nota: entrada.bonusVerificado.nota ?? null } }
       : {}),
   })
 }

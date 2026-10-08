@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 
+import { requireSecret } from '@central/core-identity'
 import { secretosIguales } from '@central/module-seguros-pii'
 
 /**
@@ -24,8 +25,17 @@ export function autorizaCron(p: { secret?: string | null; bearer?: string | null
   return secretosIguales(p.bearer, p.secret)
 }
 
+/** `CRON_SECRET` por `requireSecret` (sin fallback): si falta, `undefined` → se deniega. */
+function leerCronSecret(): string | undefined {
+  try {
+    return requireSecret('CRON_SECRET')
+  } catch {
+    return undefined
+  }
+}
+
 export function isCronAuthorized(req: NextRequest | Request): boolean {
-  const secret = process.env.CRON_SECRET
+  const secret = leerCronSecret()
   if (!secret) {
     console.error('[asegura/cron-auth] CRON_SECRET NO definido — se DENIEGA todo (revisa las envs de central-asegura)')
   }

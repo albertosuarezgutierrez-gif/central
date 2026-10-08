@@ -49,6 +49,7 @@ export const CAMPOS_CON_VALOR: ReadonlySet<string> = new Set([
   'evento.estado',
   'oportunidad.estado',
   'aprobacion.estado',
+  'acuerdo.revisado_at',
 ])
 
 /** Tope por fila: una escritura masiva no convierte la auditoría en un volcado. */

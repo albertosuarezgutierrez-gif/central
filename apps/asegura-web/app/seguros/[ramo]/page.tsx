@@ -199,12 +199,15 @@ export default async function PaginaRamo({ params }: Props) {
             quería un seguro de comercio, que es un dato plausible y falso.
             las páginas de intención (`SOLO_INTENCION`: RC de fontaneros y
             de autónomos) no son un ramo nuevo en BD (sigue siendo `responsabilidad_civil`): marca la
-            opción general, igual que vida-y-salud comparte una sola. */}
+            opción general, igual que vida-y-salud comparte una sola.
+            `salud-sin-copago` (también de intención) marca «Salud». */}
         <Formulario
           ramoPorDefecto={
             ramo.slug === 'vida-y-salud'
               ? 'vida'
-              : SOLO_INTENCION.includes(ramo.slug)
+              : ramo.slug === 'salud-sin-copago'
+                ? 'salud'
+                : SOLO_INTENCION.includes(ramo.slug)
                 ? 'responsabilidad-civil'
                 : ramo.slug
           }

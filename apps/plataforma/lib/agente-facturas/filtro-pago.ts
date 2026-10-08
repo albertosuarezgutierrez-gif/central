@@ -18,10 +18,18 @@ import { detectarCompania, COMPANIA_OTRAS } from '../correduria.ts'
 /** Más vieja que esto, la factura no se ofrece para pagar: es histórico, no una deuda de hoy. */
 export const DIAS_MAX_ANTIGUEDAD = 90
 
-export type MotivoApartar = 'antigua' | 'emitida_por_ti' | 'ajena' | 'aseguradora'
+export type MotivoApartar = 'antigua' | 'emitida_por_ti' | 'ajena' | 'aseguradora' | 'no_es_factura'
+
+/**
+ * Tipos de documento que SÍ son un gasto devengado y pagable. Cualquier otro tipo CONOCIDO
+ * (circular, formulario de inscripción, certificado de donativo, presupuesto, proforma, otro)
+ * se aparta. Un tipo ausente (`null`, la IA no lo dio) NO aparta: estado conservador.
+ */
+export const TIPOS_DOCUMENTO_PAGABLES = ['factura', 'recibo', 'justificante_pago'] as const
 
 export type DecisionPago =
-  | { pagar: true }
+  /** `permitirPagar: false` = pasa, pero sin nº de factura ni desglose fiscal: se avisa SIN botón ✅ Pagar. */
+  | { pagar: true; permitirPagar: boolean; motivoRevision?: 'sin_numero_ni_iva' | 'tipo_dudoso' }
   | { pagar: false; motivo: MotivoApartar; detalle: string }
 
 export interface DatosFactura {
@@ -30,6 +38,20 @@ export interface DatosFactura {
   nif_proveedor?: string | null
   cliente?: string | null
   nif_cliente?: string | null
+  tipo_documento?: string | null
+  numero_factura?: string | null
+  base_imponible?: number | null
+  iva?: number | null
+}
+
+function normalizaTipoDocumento(t: unknown): string | null {
+  if (typeof t !== 'string') return null
+  const n = t.trim().toLowerCase().replace(/[\s-]+/g, '_')
+  return n || null
+}
+
+function hayDesgloseFiscal(d: DatosFactura): boolean {
+  return (typeof d.base_imponible === 'number' && d.base_imponible > 0) || (typeof d.iva === 'number' && d.iva > 0)
 }
 
 function diasEntre(fechaIso: string, hoy: Date): number | null {
@@ -73,5 +95,17 @@ export function decidirAvisoPago(d: DatosFactura, titulares: Titular[], hoy: Dat
     }
   }
 
-  return { pagar: true }
+  // 5. Documento que la IA clasifica como algo que NO es factura/recibo (circular, inscripción,
+  //    donativo, presupuesto, proforma…). `null` = no se sabe → no aparta.
+  const tipo = normalizaTipoDocumento(d.tipo_documento)
+  //    `otro` NO es concluyente (la IA no supo clasificarlo): pasa sin botón Pagar y con aviso.
+  if (tipo === 'otro') return { pagar: true, permitirPagar: false, motivoRevision: 'tipo_dudoso' }
+  if (tipo && !(TIPOS_DOCUMENTO_PAGABLES as readonly string[]).includes(tipo)) {
+    return { pagar: false, motivo: 'no_es_factura', detalle: `documento de tipo «${tipo}», no es una factura` }
+  }
+
+  // Pasa, pero sin nº de factura NI desglose fiscal no se ofrece pagar de un toque.
+  const sinNumero = !(d.numero_factura?.trim())
+  if (sinNumero && !hayDesgloseFiscal(d)) return { pagar: true, permitirPagar: false, motivoRevision: 'sin_numero_ni_iva' }
+  return { pagar: true, permitirPagar: true }
 }

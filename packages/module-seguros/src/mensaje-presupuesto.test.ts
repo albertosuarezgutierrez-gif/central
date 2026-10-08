@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { correoPresupuesto, mensajePresupuestoWhatsapp } from './mensaje-presupuesto.ts'
 import { revisarCopy } from './copy-regulado.ts'
 
-const d = { nombre: 'JOSÉ SUÁREZ SALAS', enlace: 'https://clientes.grupoasegura.es/presupuesto/abc', venceEl: new Date('2026-10-08T10:00:00Z'), email: 'jose@x.es' }
+const d = { nombre: 'JOSÉ SUÁREZ SALAS', enlace: 'https://clientes.grupoasegura.es/presupuesto/abc', venceEl: new Date('2026-10-08T10:00:00Z'), email: 'jose@x.es' as string | null, codigo: '305172' }
 
 test('🪤 el aviso no lleva precio, compañía ni bien: solo quién, dónde y hasta cuándo', () => {
   for (const t of [mensajePresupuestoWhatsapp(d), correoPresupuesto(d).texto, correoPresupuesto(d).html]) {
@@ -14,11 +14,30 @@ test('🪤 el aviso no lleva precio, compañía ni bien: solo quién, dónde y h
   }
 })
 
-test('el WhatsApp dice con qué correo entrar; sin nombre saluda sin «null»', () => {
+test('el WhatsApp dice con qué correo PUEDE entrar; sin nombre saluda sin «null»', () => {
   assert.match(mensajePresupuestoWhatsapp(d), /jose@x\.es/)
   assert.match(mensajePresupuestoWhatsapp(d), /^Hola, JOSÉ\./)
   assert.match(mensajePresupuestoWhatsapp({ ...d, nombre: null }), /^Hola\. /)
   assert.doesNotMatch(mensajePresupuestoWhatsapp({ ...d, nombre: '  ' }), /null|undefined/)
+})
+
+test('🪤 el WhatsApp lleva SU código de acceso ANTES del enlace, y la fecha', () => {
+  const w = mensajePresupuestoWhatsapp(d)
+  assert.match(w, /tu código de acceso es 305172/)
+  assert.ok(w.indexOf('305172') < w.indexOf(d.enlace), 'el código se lee antes de pulsar el enlace')
+  assert.ok(w.indexOf('jose@x.es') < w.indexOf(d.enlace))
+  assert.match(w, /también puedes entrar con tu correo jose@x\.es: te llegará otro código/)
+  assert.match(w, /08\/10\/2026/)
+  assert.match(w, /Grupo ASegura/)
+})
+
+test('🪤 sin correo en la ficha el WhatsApp NO nombra ninguno ni promete un código por correo', () => {
+  for (const email of [null, '', '   ']) {
+    const w = mensajePresupuestoWhatsapp({ ...d, email })
+    assert.match(w, /tu código de acceso es 305172/)
+    assert.doesNotMatch(w, /correo|@|null|undefined/)
+    assert.deepEqual(revisarCopy(w), [])
+  }
 })
 
 test('el HTML del correo escapa el enlace', () => {

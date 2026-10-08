@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
 import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
+import { prepararPresupuestoTrasTarificar } from '@/lib/presupuesto-tras-tarificar'
 import { prepararRetarificacionNuevaVida, respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
@@ -96,6 +97,8 @@ export const POST = auditado(async (req: Request) => {
     p.peticion.contexto = { ...p.peticion.contexto, ...variante.v.contexto }
   }
 
+  // Recotización explícita: salta la guarda anti-duplicado (15 min) SOLO si el operador la pide; nunca por defecto.
+  if (cuerpo.forzar === true) p.peticion.forzar = true
   const r = await cotizar(p.peticion)
   // Lo usado para pedir precio se anota en el riesgo (`info_riesgo.datosCapital`), DESPUÉS de guardar la
   // tarificación. Nunca lanza: la cotización ya está pagada (0,50€, no idempotente, regla 20).
@@ -104,7 +107,7 @@ export const POST = auditado(async (req: Request) => {
   }
   // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
   const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)
-  if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => undefined))
+  if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => prepararPresupuestoTrasTarificar(aCompletar, solicitadoPor)).then(() => undefined))
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })
 })

@@ -14,6 +14,8 @@
 // email de los intervinientes van CIFRADOS (95 de 95): descifra quien lee la
 // BD, aquí solo se decide a quién se llama.
 
+import { esCanalCorreduria } from './canal-correduria.ts'
+
 export type IntervinienteFicha = {
   polizaId: string
   /** `propietario` · `conductor_habitual` · `conductor_ocasional` · `contacto` ·
@@ -48,6 +50,12 @@ export type IntervinienteFicha = {
   esTomador: boolean
   /** `cima` o `manual`. */
   origen: string
+  /**
+   * Del conductor (CIMA, cifrados en la BD y ya descifrados por asegura): `AAAA-MM-DD`.
+   * Opcional: asegura vieja no los manda, y `null` = no se sabe (nunca «sin carné»).
+   */
+  fechaCarnet?: string | null
+  fechaNacimiento?: string | null
 }
 
 const ROLES: Record<string, string> = {
@@ -90,6 +98,9 @@ export type ContactoEfectivo = {
   /** `true` cuando asegura NO informa intervinientes: entonces «sin teléfono»
    *  solo significa «el tomador no lo tiene», no «nadie lo tiene». */
   intervinientesSinMirar: boolean
+  /** El teléfono/email de la FICHA del tomador es un canal de la correduría (se puso porque la
+   *  compañía lo exige): no es suyo, se salta para buscar al contacto real y se pinta como tal. */
+  canalCorreduria: { telefono: boolean; email: boolean }
 }
 
 /**
@@ -110,13 +121,18 @@ export function contactoEfectivo(
   tomador: { telefono: string | null; email: string | null },
   intervinientes: IntervinienteFicha[] | null,
 ): ContactoEfectivo {
+  const canalTel = esCanalCorreduria(tomador.telefono)
+  const canalEmail = esCanalCorreduria(tomador.email)
+  const telPropio = canalTel ? null : tomador.telefono
+  const emailPropio = canalEmail ? null : tomador.email
   const base: ContactoEfectivo = {
-    telefono: tomador.telefono,
-    email: tomador.email,
-    viaTelefono: tomador.telefono ? 'tomador' : null,
-    viaEmail: tomador.email ? 'tomador' : null,
+    telefono: telPropio,
+    email: emailPropio,
+    viaTelefono: telPropio ? 'tomador' : null,
+    viaEmail: emailPropio ? 'tomador' : null,
     quien: null,
     intervinientesSinMirar: intervinientes === null,
+    canalCorreduria: { telefono: canalTel, email: canalEmail },
   }
   if (intervinientes === null || (base.telefono && base.email)) return base
 
@@ -128,7 +144,7 @@ export function contactoEfectivo(
   })
 
   if (!base.telefono) {
-    const t = candidatos.find((i) => i.telefono)
+    const t = candidatos.find((i) => i.telefono && !esCanalCorreduria(i.telefono))
     if (t) {
       base.telefono = t.telefono
       base.viaTelefono = t.esTomador ? 'tomador_en_poliza' : 'interviniente'
@@ -138,7 +154,7 @@ export function contactoEfectivo(
     }
   }
   if (!base.email) {
-    const e = candidatos.find((i) => i.email)
+    const e = candidatos.find((i) => i.email && !esCanalCorreduria(i.email))
     if (e) {
       base.email = e.email
       base.viaEmail = e.esTomador ? 'tomador_en_poliza' : 'interviniente'

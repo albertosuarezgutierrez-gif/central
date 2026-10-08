@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detectarCambios, esFugaSinExplicar, fotoSospechosa, type Foto, type HuellaPoliza } from './detector-cartera.ts'
+import { datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, leerAnulacion, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo, type Foto, type HuellaPoliza } from './detector-cartera.ts'
 
 const pol = (id: string, o: Partial<HuellaPoliza> = {}): HuellaPoliza => ({
   id, clienteId: 'c-' + id, estado: 'en_vigor', vencimiento: '2027-01-10', sustituida: false, fusionada: false, ...o,
@@ -87,4 +87,65 @@ test('freno de cordura: desaparecer más del 20 % de golpe es una foto rota, no 
   assert.equal(fotoSospechosa(foto(muchas), foto([])), true)
   assert.equal(fotoSospechosa(null, foto([])), false)
   assert.equal(fotoSospechosa(foto(muchas.slice(0, 5)), foto([])), false, 'con pocas pólizas no se juzga')
+})
+
+test('la baja guarda el motivo CIMA en el evento; sin motivo no añade claves', () => {
+  const antes = foto([pol('a'), pol('b')])
+  const d = detectarCambios(antes, foto([
+    pol('a', { estado: 'cancelada', anulacion: { fecha: '2026-08-25', motivo: 'IM', detalle: 'Impago' } }),
+    pol('b', { estado: 'cancelada' }),
+  ]))
+  const a = d.eventos.find((e) => e.id === 'a')!
+  const b = d.eventos.find((e) => e.id === 'b')!
+  assert.equal(a.datos.motivoCima, 'IM')
+  assert.equal(a.datos.fechaAnulacion, '2026-08-25')
+  assert.equal('motivoCima' in b.datos, false)
+})
+
+test('motivo legible: conocido, desconocido con detalle, desconocido sin detalle y ausente', () => {
+  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'IM', detalle: null }), 'impago')
+  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'ex', detalle: null }), 'se va a otra compañía (mejor precio o venta)')
+  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'SI', detalle: null }), 'siniestralidad (la compañía no renueva)')
+  // PII: el detalle libre nunca sale, con o sin motivo conocido.
+  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'ZZ', detalle: 'Fallecimiento del tomador' }), 'motivo CIMA ZZ')
+  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: 'ZZ', detalle: null }), 'motivo CIMA ZZ')
+  assert.equal(textoMotivoAnulacion({ fecha: null, motivo: null, detalle: 'Fallecimiento del tomador' }), null)
+  assert.deepEqual(datosAnulacion({ fecha: '2026-01-01', motivo: 'ZZ', detalle: 'Fallecimiento del tomador' }), { motivoCima: 'ZZ', fechaAnulacion: '2026-01-01' })
+  assert.equal(textoMotivoAnulacion(null), null)
+  assert.equal(textoMotivoAnulacion({ fecha: '2026-01-01', motivo: null, detalle: null }), null)
+})
+
+test('leerAnulacion no se fía de la forma y datosAnulacion solo emite lo que hay', () => {
+  assert.equal(leerAnulacion(null), null)
+  assert.equal(leerAnulacion('x'), null)
+  assert.deepEqual(leerAnulacion({ fecha: '25/08/2026', motivo: 7 }), { fecha: null, motivo: '7', detalle: null })
+  assert.deepEqual(datosAnulacion(null), {})
+})
+
+test('fecha de anulación: solo si es más de 7 días anterior a hoy', () => {
+  assert.equal(textoFechaAnulacion('2026-08-25', '2026-09-24'), 'anulada el 25/08/2026')
+  assert.equal(textoFechaAnulacion('2026-09-20', '2026-09-24'), null)
+  assert.equal(textoFechaAnulacion('2026-09-17', '2026-09-24'), null)
+  assert.equal(textoFechaAnulacion('2026-09-16', '2026-09-24'), 'anulada el 16/09/2026')
+  assert.equal(textoFechaAnulacion(null, '2026-09-24'), null)
+  assert.equal(textoFechaAnulacion('basura', '2026-09-24'), null)
+})
+
+test('último recibo: solo si añade; devuelto con impago es redundante; sin dato = nada', () => {
+  assert.equal(textoUltimoRecibo('devuelto', null), 'último recibo devuelto')
+  assert.equal(textoUltimoRecibo('devuelto', 'impago'), null)
+  assert.equal(textoUltimoRecibo('cobrado', 'impago'), 'último recibo cobrado')
+  assert.equal(textoUltimoRecibo('anulado', null), 'último recibo anulado')
+  assert.equal(textoUltimoRecibo(null, null), null)
+})
+
+test('retención según motivo: SI no abre, IM y EX abren con nota, sin motivo como siempre', () => {
+  assert.equal(planRetencionPorMotivo('SI').abrir, false)
+  assert.match(planRetencionPorMotivo('SI').nota ?? '', /no recuperable con esa compañía; ofrecer otra/)
+  assert.equal(planRetencionPorMotivo('IM').abrir, true)
+  assert.match(planRetencionPorMotivo('IM').nota ?? '', /recuperable si paga/)
+  assert.equal(planRetencionPorMotivo('EX').abrir, true)
+  assert.match(planRetencionPorMotivo('EX').nota ?? '', /mejorar precio/)
+  assert.deepEqual(planRetencionPorMotivo(null), { abrir: true, nota: null })
+  assert.deepEqual(planRetencionPorMotivo('ZZ'), { abrir: true, nota: null })
 })

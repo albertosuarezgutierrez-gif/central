@@ -26,6 +26,7 @@ import {
 } from '@/lib/correduria/borrador-local'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision, CoberturasOferta } from './emision'
 import FiltroGarantias from '../../../FiltroGarantias'
@@ -192,7 +193,7 @@ type Resultado =
    * existir — y la pantalla tiene que decir «no sé si ha salido», nunca «no se
    * ha gastado».
    */
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 // `Precio`, `Fallo`, `Supuesto` y `Reparo` se importan de
 // `@/lib/retarificar-asegura`, que es quien lee la respuesta del puerto: el
@@ -844,10 +845,11 @@ export default function Retarificador({
    * No hay reintento automático en ningún camino: `POST /insurances` no es
    * idempotente y repetir crea otro proyecto y otro cargo.
    */
-  async function cotizar() {
+  async function cotizar(forzar = false) {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacion({
       polizaId,
+      forzar,
       resueltos: {
         codigoVehiculo,
         garaje,
@@ -874,6 +876,9 @@ export default function Retarificador({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
         // El guardián de asegura ha cortado SIN cobrar: ya hay un precio pagado
@@ -1558,6 +1563,9 @@ export default function Retarificador({
             <Ico i={resultado.tope ? OctagonAlert : AlertTriangle} /> {resultado.tope ? 'Tope alcanzado: ' : ''}
             {resultado.mensaje}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
         )}
 
         {resultado.estado === 'ok' && (
@@ -2570,6 +2578,7 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
   // Lo que el SUBMIT exige y la ficha puede no traer (12/09/2026): se teclea
   // ANTES de pagar. Hasta hoy `nombreVia` caía en «no se arregla desde esta

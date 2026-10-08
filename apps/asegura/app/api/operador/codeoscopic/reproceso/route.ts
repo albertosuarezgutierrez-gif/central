@@ -44,12 +44,15 @@ export async function GET(req: Request) {
     const cabeceras = await prisma.$queryRaw<Cabecera[]>`
       select id::text as id, project_id_codeoscopic, creado_at, ramo, respuesta
       from tarificaciones
+      -- solo Avant2 (las demás vías no tienen respuesta del vendor); to_jsonb vale aunque la columna canal aún no exista
       where correduria_id = ${correduria.id}::uuid and simulado = false and respuesta is not null
+        and coalesce(to_jsonb(tarificaciones) ->> 'canal', 'codeoscopic') = 'codeoscopic'
       order by creado_at desc
       limit ${limite}`
     const [{ sinRespuesta }] = await prisma.$queryRaw<{ sinRespuesta: bigint }[]>`
       select count(*) as "sinRespuesta" from tarificaciones
-      where correduria_id = ${correduria.id}::uuid and simulado = false and respuesta is null`
+      where correduria_id = ${correduria.id}::uuid and simulado = false and respuesta is null
+        and coalesce(to_jsonb(tarificaciones) ->> 'canal', 'codeoscopic') = 'codeoscopic'`
     const ids = cabeceras.map((c) => c.id)
     const filas = ids.length === 0 ? [] : await prisma.$queryRaw<FilaPrecio[]>`
       select tarificacion_id::text as tarificacion_id, compania, categoria, modalidad, prima_eur, franquicia_eur, id_precio
@@ -77,6 +80,7 @@ export async function GET(req: Request) {
       join tarificaciones t on t.id = p.tarificacion_id
       cross join lateral jsonb_array_elements(p.coberturas->'lista') e
       where t.correduria_id = ${correduria.id}::uuid and jsonb_typeof(p.coberturas->'lista') = 'array'
+        and coalesce(to_jsonb(t) ->> 'canal', 'codeoscopic') = 'codeoscopic'
       group by 1, 2`
     const coberturasNuevas = nombres.flatMap((n) => {
       const ramo = ramoDeCatalogo(n.ramo)

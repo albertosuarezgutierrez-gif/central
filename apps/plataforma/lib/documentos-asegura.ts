@@ -40,6 +40,9 @@ export function leerDocumento(v: unknown): DocumentoResumen | null {
     siniestroId: cadena(o.siniestroId),
     creado: o.creado,
     revisadoEn: cadena(o.revisadoEn),
+    // Solo pólizas de la ficha (05/10/2026): `true` = su DNI es el de la ficha y acredita la
+    // identidad. Cualquier otra cosa (ausente, versión anterior de asegura) = no se sabe → `null`.
+    ...(o.tipo === 'poliza' ? { dniCoincideFicha: typeof o.dniCoincideFicha === 'boolean' ? o.dniCoincideFicha : null } : {}),
   }
 }
 

@@ -51,17 +51,38 @@ póliza 05139; API `C0109` Allianz póliza 8846622.
 
 ## Campos de descuento por compañía (lo que han devuelto las compañías en nuestras 311 tarificaciones)
 
-| Compañía | Producto | Campo | Id interno | Máximo |
+| Compañía | Ramo | Campos disponibles | Id interno | Máximo |
 |---|---|---|---|---|
-| Allianz | Autos | Descuento comercial % (CAP) / (venta cruzada) | `dtoCap` / `dtoVentaCruzada` | ❓ (el vendor admite 0-99 / 0-100) |
-| Allianz | Motos | idem | ❓ (probablemente iguales) | ❓ |
-| Allianz | Hogar | idem | ❓ | ❓ |
-| Generali | Motos | Descuento comercial % | ❓ | ❓ |
-| Occident | Autos y Motos | Descuento comercial | ❓ | ❓ (se mandó 30) |
-| Mapfre | Autos y Motos | no ha salido ninguno | — | ❓ |
-| Reale | Autos | no ha salido ninguno; Motos no devuelve opciones | — | ❓ |
+| Allianz | Autos | Descuento comercial % (CAP) / (venta cruzada) + Tipo de comisión (A) | `dtoCap` / `dtoVentaCruzada` | Vendor permite 0-99 / 0-100; recorta a su tope (≤20%) |
+| Allianz | Motos | Descuento comercial % (CAP) / (venta cruzada) + Tipo de comisión (A) | `dtoCap` / `dtoVentaCruzada` (03/10) | ✅ Se manda 50; tope real desconocido (web 50 devuelve igual precio) |
+| Allianz | Hogar | Descuento comercial % (CAP) / (venta cruzada) | `dtoCap` / `dtoVentaCruzada` (03/10) | ✅ Se manda 50; antes 0/0 |
+| Generali | Motos | Descuento comercial % | `commercialDiscountNumber` (03/10) | ✅ Se manda 50; la compañía recorta sola (~12 %), sin error |
+| Generali | Hogar | Descuento comercial % + Código Flota | `commercialDiscountNumber` (03/10) | ✅ Se manda 50 (Código Flota no se toca) |
+| Generali | Autos | Descuento comercial % (visible 0,00 en el proyecto) | `commercialDiscountNumber` (05/10, SUPUESTO por moto/hogar; sin captura de auto ni rastro en BD) | ⚠️ Se manda 50 solo si las `productOptions` que devolvió el vendor traen ese id (`opcionesParaReRate`); si no lo traen, no se manda. Sin opciones del vendor se manda el catálogo sin poder comprobar. Pendiente: confirmar el id y el precio resultante en el primer ReRate real |
+| Occident | Autos | Descuento comercial + Colectivo | no consta | 30 por defecto (estimado, sin confirmar) |
+| Occident | Motos | Descuento comercial + Colectivo | `commercialDiscount` (03/10) | NO se manda: trae 30 de serie, máximo sin medir |
+| Occident | Hogar | Descuento comercial + Colectivo | `discount` (03/10) | NO se manda: trae 30 de serie, máximo sin medir |
+| Fidelidade | Hogar | Descuento (vacío) | `discount` (03/10) | NO se manda: máximo sin medir |
+| Mapfre | Autos | sin campo de descuento | — | no disponible |
+| Mapfre | Motos | sin campo de descuento | — | no disponible |
+| Reale | Autos | sin descuento manual; solo Campaña comercial (no disponibles) | — | no disponible |
+| Reale | Motos | sin descuento manual; solo Campaña comercial (no disponibles) | — | no disponible |
+| Reale | Hogar | sin descuento manual; Campaña comercial + Producto comercial (REALE HOGAR) | — | no disponible |
 
 Que no haya salido un campo no prueba que no exista: hay que abrir el formulario de cada compañía.
+
+### Decisiones de Alberto (03/10/2026)
+
+- El descuento por defecto se queda en **50** (se valoró 30 y se descartó, PR #4166 cerrado sin mergear). La compañía recorta sola a su máximo; es lo mismo que se decidió el 29/09.
+- `comissionType` NO se toca: afecta a la comisión con la compañía.
+- Aplicar en los dos campos de Allianz (CAP + venta cruzada).
+
+### Pendiente
+
+- Sacar los ids internos de los campos de descuento de Allianz moto/hogar, Generali moto/hogar, Occident y Fidelidade. Las opciones con id NO se guardan en BD (`respuesta.ts:198` las deja en memoria como `productOptions`; `tarificacion_precios.opciones` solo guarda etiqueta/valor).
+- Vías: un prompt de Claude en Chrome que lea el `id`/`name` de los inputs del iframe `product-form.avant.codeoscopic.io`, o el GET gratuito `/api/operador/codeoscopic/proyecto?projectId=` (necesita `ASEGURA_OPERADOR_SECRET`).
+- Con los ids, ampliar `opcionesPorDefecto()` (`apps/asegura/lib/codeoscopic/opciones-producto.ts`, hoy solo Allianz auto) para mandar 50 en moto y hogar.
+- Marcar como resueltos los puntos 1 y 2 de «Para comprobar en la pantalla de Avant2»: el 1 en parte (los máximos reales siguen sin medirse) y el 2 del todo (Mapfre y Reale sin descuento).
 
 **Prueba de Alberto en la web (29/09/2026, proyecto 40961885, misma moto que el 40956228):** solo tres
 compañías dejan meter descuento en moto: Allianz (CAP + venta cruzada), Generali y Catalana Occidente
@@ -86,17 +107,24 @@ exacto de Allianz (prueba con 10 % para ver si baja el precio) y confirmar el pr
 4. [x] **«Experiencia: 1»** = `ThisMotorcycle` («Esta Motocicleta»), lo mismo que mandamos.
 5. [ ] **Facturación:** si la web tiene sección de consumo o facturas, comprobar si cada re-tarificación
    (confirmar precio) cuenta como una consulta de 0,50€ o solo cuenta la tarificación.
+   Resuelto por inferencia del correo de Codeoscopic 02/10/2026 (se factura 0,50 € por cada `POST /insurances` con
+   HTTP 200; ReRate y Submit no aparecen como facturables); confirmación explícita no pedida.
 6. [x] **¿La API ve los presupuestos hechos en la web?** Sí (ver la comparación de arriba).
 7. [ ] **Tipo de comisión** (`comissionType`, en Allianz «A»): qué opciones da la web y si afecta a la prima.
 
 ## Para preguntar a Codeoscopic (borradores sin enviar, los manda Alberto)
 
-- ¿El ReRate y el Submit se facturan? → `docs/BORRADOR-CODEOSCOPIC-COSTE-RERATE-SUBMIT.md`.
-- ¿Vale el historial de un coche para asegurar una moto? ¿Hay algún código estructurado de «bonus
-  verificado» o solo texto en `messages[]`? (soporteapi@codeoscopic.com)
+- ¿El ReRate y el Submit se facturan? → **Resuelto por inferencia (no aparecen como facturables); confirmación explícita no pedida.**
+- ¿Vale el historial de un coche para asegurar una moto? ¿Hay algún código estructurado de «bonus verificado» o solo texto en `messages[]`?
+- ✅ **GET /insurances, resuelto con la especificación OpenAPI del portal (03/10/2026):**
+  - `fromDate`/`toDate` (yyyy-MM-dd, obligatorias sin id/externalId, rango ≤1 año) filtran por fecha de CREACIÓN del proyecto, salvo con `policyApplicationSubmitted=true`, que filtra por fecha de la solicitud de emisión (es lo que usa el cron).
+  - No hay filtro por fecha de modificación.
+  - `pageNumber` (por defecto 1) y `pageSize` (por defecto 10, ≤100); `X-Total-Count` solo en la página 1.
+  - Ordenación: no consta.
+  - Sin `X-User-Email`, alcance de toda la correduría.
 
 ## Pendiente en código
 
-- Descuento por defecto en el ReRate = **50 %** (decisión de Alberto 29/09: la compañía recorta a su máximo y lo va variando). Hoy solo Allianz auto lo lleva; Allianz moto, Generali y Catalana Occidente necesitan el id exacto del campo (traer el 40961885 a plataforma y leer sus opciones).
-- Aviso «bonificación NO verificada» a partir de `messages[]` (p. ej. Mapfre: «el cliente identificado
-  no aparece asociado a una póliza de otra compañía»).
+- Descuento por defecto en el ReRate = **50 %**. ✅ Ya lo llevan Allianz auto/moto/hogar y Generali moto/hogar (ids leídos el 03/10/2026). Pendiente: Occident y Fidelidade (máximos sin medir). `comissionType` no se manda nunca.
+- Aviso «bonificación NO verificada» a partir de `messages[]`.
+- ✅ **Descubrimiento autónomo:** cron `correduria-descubrir-emisiones` implementado (plataforma, `10,40 5-21 * * *` UTC); cola de revisión `seguros.codeoscopic_emisiones_revision` activa; rotación en anillo 40 llamadas/pasada. Acuñado atómico vía `registrarPolizaEmitida` (PR #4158, mergeado). URL del webhook cambiada a `api.grupoasegura.es` (PENDIENTE que Codeoscopic actualice de su lado).

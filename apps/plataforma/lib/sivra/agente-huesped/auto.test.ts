@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { decidirAutoEnvio } from './auto.ts'
+import { decidirAutoEnvio as decidirAutoEnvioReal } from './auto.ts'
 import type { Decision } from './decidir.ts'
 
 // Hasta el 04/09/2026 esta regla —la única que decide si un huésped recibe un mensaje sin que
@@ -17,6 +17,8 @@ const base: Decision = {
   motivo: '',
   fuente: 'ia',
 }
+// `pregunta` es obligatoria en la función real; estos casos no dependen del texto.
+const decidirAutoEnvio = (d: Decision) => decidirAutoEnvioReal(d, '')
 const con = (p: Partial<Decision>): Decision => ({ ...base, ...p })
 
 test('auto por CORTESÍA', () => assert.deepEqual(decidirAutoEnvio(base), { auto: true, via: 'cortesia' }))

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { compararFichas, identidadFusion, revisarElecciones } from './fusion-fichas.ts'
+import { compararFichas, identidadFusion, identidadSinDecidir, revisarElecciones } from './fusion-fichas.ts'
 
 const v = (valor: string | null, ilegible = false) => ({ valor, ilegible })
 
@@ -63,4 +63,17 @@ test('solo se puede elegir donde hay dos valores distintos', () => {
   assert.equal(revisarElecciones(['notas'], c).ok, false) // iguales: elegir no cambia nada
   assert.equal(revisarElecciones(['dni'], c).ok, false) // el DNI no se elige
   assert.deepEqual(revisarElecciones(undefined, c), { ok: true, deAbsorbida: [] })
+})
+
+test('identidad que difiere (caso Estibaliz): no se resuelve por omisión; hay que decirlo', () => {
+  const v = (valor: string) => ({ valor, ilegible: false })
+  const campos = compararFichas(
+    { nombre: v('Estibaliz'), apellidos: v('Slava'), notas: v('a') },
+    { nombre: v('ESTIBALIZ'), apellidos: v('ESLAVA ANTOLI'), notas: v('b') },
+  )
+  // Solo los apellidos difieren (el nombre es igual salvo mayúsculas); las notas no son identidad.
+  assert.deepEqual(identidadSinDecidir(campos, [], undefined), ['apellidos'])
+  assert.deepEqual(identidadSinDecidir(campos, ['apellidos'], undefined), [])
+  assert.deepEqual(identidadSinDecidir(campos, [], ['apellidos']), [])
+  assert.deepEqual(identidadSinDecidir(campos, [], 'apellidos'), ['apellidos'])
 })

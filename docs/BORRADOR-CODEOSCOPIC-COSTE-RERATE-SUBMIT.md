@@ -1,5 +1,9 @@
 # Borrador — correo a Codeoscopic sobre el coste del ReRate y del Submit
 
+> ✅ **Resuelto por inferencia del correo de Codeoscopic 02/10/2026** (hilo «Duda»): se factura 0,50 € por cada
+> `POST /insurances` con HTTP 200 (4xx/5xx no cuentan), solo en producción; septiembre = 28 llamadas facturables.
+> ReRate y Submit no aparecen como facturables. Confirmación explícita no pedida: el borrador queda como opción.
+
 > 🚨 **SIN ENVIAR.** Lo manda Alberto, no un agente (regla de comunicaciones salientes de
 > `CLAUDE.md`: nada sale a un tercero sin su OK para ESE envío concreto).
 > Destinatario: Juan Manuel Fernández (Codeoscopic / Avant2), que ya contestó el 21/09/2026.

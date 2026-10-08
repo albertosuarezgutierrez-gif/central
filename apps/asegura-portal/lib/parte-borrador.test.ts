@@ -51,3 +51,42 @@ test('un formulario sin tocar no merece borrador', () => {
   assert.equal(merecePena({ descripcion: ' ', lugar: '', fechaHecho: '' }), false)
   assert.equal(merecePena({ descripcion: 'x', lugar: '', fechaHecho: '' }), true)
 })
+
+// ── Respuestas por ramo (03/10/2026) ─────────────────────────────────────────
+const PLANTILLA_RAMO = { ...PLANTILLA, datosRamo: {} as Record<string, unknown> }
+const DATOS_RAMO = {
+  existeAtestado: 'si',
+  estanciasAfectadas: ['cocina', 'bano'],
+  contrarios: [{ conductor: 'Pepa Ruiz', matricula: '1234ABC', telefono: '600111222' }],
+}
+
+test('las respuestas por ramo, listas incluidas, sobreviven a guardar y leer', () => {
+  const bruto = JSON.stringify({ guardadoEn: AHORA - 1000, form: { ...PLANTILLA_RAMO, descripcion: 'golpe', datosRamo: DATOS_RAMO } })
+  assert.deepEqual(leerBorrador(bruto, PLANTILLA_RAMO, AHORA)?.form.datosRamo, DATOS_RAMO)
+})
+
+test('las respuestas por ramo caducan con el resto del borrador', () => {
+  const bruto = JSON.stringify({ guardadoEn: AHORA - CADUCA_MS - 1, form: { ...PLANTILLA_RAMO, datosRamo: DATOS_RAMO } })
+  assert.equal(leerBorrador(bruto, PLANTILLA_RAMO, AHORA), null)
+})
+
+test('datosRamo manipulado: se queda solo lo que tiene forma de formulario', () => {
+  const bruto = JSON.stringify({
+    guardadoEn: AHORA - 1000,
+    form: {
+      ...PLANTILLA_RAMO,
+      datosRamo: {
+        ok: 'si',
+        numero: 3,
+        objeto: { a: 1 },
+        mixto: ['a', 1],
+        'mala clave': 'x',
+        lista: [{ nombre: 'Ana', edad: 3, otro: { x: 1 } }],
+        largo: 'x'.repeat(501),
+      },
+    },
+  })
+  assert.deepEqual(leerBorrador(bruto, PLANTILLA_RAMO, AHORA)?.form.datosRamo, { ok: 'si', lista: [{ nombre: 'Ana' }] })
+  const roto = JSON.stringify({ guardadoEn: AHORA - 1000, form: { ...PLANTILLA_RAMO, datosRamo: 'basura' } })
+  assert.deepEqual(leerBorrador(roto, PLANTILLA_RAMO, AHORA)?.form.datosRamo, {})
+})

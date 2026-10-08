@@ -365,3 +365,16 @@ test('🚨 leído el vencimiento de ESTE año, el del año que viene vuelve a sa
   assert.equal(esClaveDescartable(este.avisos[0]!.clave), true, 'la ruta de «leído» rechazaría la clave con ciclo')
   assert.equal(claveAviso({ tipo: 'poliza_modificada', id: 'c1' }), 'poliza_modificada:c1')
 })
+
+test('🪤 con varios titulares el aviso del carné NOMBRA a quién es; con uno, «tu carné» como siempre', () => {
+  const carnets = [
+    { id: 'c-a', tipo: 'B', fechaCaducidad: fecha(10), titular: 'Ana Pérez' },
+    { id: 'c-b', tipo: 'A2', fechaCaducidad: fecha(-3), titular: 'Blas Gómez' },
+    { id: 'c-yo', tipo: 'C', fechaCaducidad: fecha(5), titular: null },
+  ]
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
+  const por = new Map(r.avisos.map((a) => [a.id, a.titulo]))
+  assert.equal(por.get('c-a'), 'El carné de conducir (B) de Ana Pérez caduca pronto')
+  assert.equal(por.get('c-b'), 'Nos consta que el carné de conducir (A2) de Blas Gómez está caducado')
+  assert.equal(por.get('c-yo'), 'Tu carné de conducir (C) caduca pronto')
+})

@@ -16,6 +16,12 @@ export type Anulacion = {
   compania: string | null
   tipo: TipoAnulacion
   solicitadaPor: string
+  /** `portal` = la pidió el cliente (retenida 48 h, hay que llamarle); `corredor` = como siempre. Ausente (asegura vieja) = corredor. */
+  origen: 'corredor' | 'portal'
+  /** Cuándo se liberó para firma. `null` = no liberada. */
+  liberadaAt: string | null
+  /** Solo si está RETENIDA: cuándo se libera sola (ISO). `null` = no retenida. */
+  liberaSolaAt: string | null
   motivo: MotivoAnulacion
   motivoTexto: string | null
   fechaEfecto: string
@@ -49,6 +55,22 @@ export function textoDesenlaceAnulacion(d: DesenlaceAnulacion, motivo?: string |
   }
 }
 
+/**
+ * La cuenta atrás de una baja retenida: «se libera sola en 1 d 4 h» / «en 35 min» / «ya se puede firmar».
+ * `null` si la fecha no se entiende (no se inventa un plazo).
+ */
+export function cuentaAtrasLiberacion(liberaSolaAt: string | null, ahora: Date): string | null {
+  if (!liberaSolaAt) return null
+  const t = Date.parse(liberaSolaAt)
+  if (Number.isNaN(t)) return null
+  const min = Math.ceil((t - ahora.getTime()) / 60_000)
+  if (min <= 0) return 'ya se puede firmar'
+  const d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60
+  if (d > 0) return `se libera sola en ${d} d${h ? ` ${h} h` : ''}`
+  if (h > 0) return `se libera sola en ${h} h${m ? ` ${m} min` : ''}`
+  return `se libera sola en ${m} min`
+}
+
 function texto(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v : null
 }
@@ -67,6 +89,8 @@ export function leerAnulacion(v: unknown): Anulacion | null {
     estado: estado as EstadoAnulacion, tipo: tipo as TipoAnulacion, motivo: motivo as MotivoAnulacion,
     cliente: texto(o.cliente), numeroPoliza: texto(o.numeroPoliza), compania: texto(o.compania),
     solicitadaPor: texto(o.solicitadaPor) ?? 'desconocido', motivoTexto: texto(o.motivoTexto),
+    origen: o.origen === 'portal' ? 'portal' : 'corredor',
+    liberadaAt: texto(o.liberadaAt), liberaSolaAt: texto(o.liberaSolaAt),
     creada: texto(o.creada) ?? '', firmadaAt: texto(o.firmadaAt), firmaNota: texto(o.firmaNota),
     comunicadaAt: texto(o.comunicadaAt), confirmadaAt: texto(o.confirmadaAt),
     esperaEmision: o.esperaEmision === true,

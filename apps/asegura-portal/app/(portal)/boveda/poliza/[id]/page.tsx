@@ -8,8 +8,13 @@ import { vigenciaRiesgo } from '@/lib/datos-poliza-cima'
 import { documentosDePoliza } from '@/lib/documentos-poliza'
 import { fechaEs } from '@/lib/fechas'
 import { rolesLegibles } from '@/lib/intervinientes'
+import { partesDeIdentidad } from '@/lib/partes-siniestro'
+import { personasDePoliza } from '@/lib/personas-poliza'
+import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { getIdentidad } from '@/lib/session'
 
+import { SeguimientoDeParte } from '../../SeguimientoParte'
+import { PersonasDeTuPoliza, TercerosDeTusSiniestros } from '../../PersonasPoliza'
 import {
   AvisoReciboDevuelto,
   textoSustitucion,
@@ -96,6 +101,22 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   const p = poliza
   // Solo las propias: `documentosDePoliza` lo vuelve a comprobar contra la cartera, no se fía de `deOtro`.
   const documentos = deOtro ? null : await documentosDePoliza(identidad.id, p.id)
+  // Partes de ESTA póliza con su estado. Se cruzan con la cartera ya leída arriba (sin lectura
+  // nueva de siniestros); sin alcance de ver siniestros (`null`) no sale nada. Si los partes no se
+  // pueden leer, la sección se calla: la ficha no se cae por esto y no se afirma nada.
+  const partesPoliza = await partesDeIdentidad(identidad.id).then(
+    (l) => l.filter((x) => x.polizaId === p.id),
+    () => [],
+  )
+  // Personas de CIMA (asegura PR 880) por el puente: el id viaja, pero asegura vuelve a comprobar que la
+  // póliza es de esta identidad (tomador propio o figura en ella). Sin puente o sin dato → `null` y se calla.
+  // Una póliza vista por AUTORIZACIÓN no pide nada: sus personas no son de quien mira.
+  const personas = deOtro && figuraComo === null ? null : await personasDePoliza(identidad.id, p.id)
+  const seguimientos = seguimientosDePartes(partesPoliza, cartera)
+  const partesConEstado = partesPoliza.flatMap((x) => {
+    const seg = seguimientos.get(x.id) ?? null
+    return seg ? [{ id: x.id, fecha: fechaEs(x.fechaHecho), seg }] : []
+  })
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = RAMO[p.ramo] ?? p.ramo
   // Lo que CIMA manda del contrato, ya filtrado por nivel y por lista blanca
@@ -103,6 +124,7 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   const dc = p.datosCompania
   const emitida = fechaEs(p.fechaEmision)
   const efectoActual = fechaEs(p.fechaEfectoActual)
+  const solicitada = fechaEs(p.fechaSolicitud)
 
   return (
     <>
@@ -181,6 +203,7 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
           {/* Fechas del EIAC: `null` = la compañía no la ha mandado, y no se pinta. */}
           {emitida && <Dato etiqueta="Fecha de emisión" valor={emitida} />}
           {efectoActual && <Dato etiqueta="Periodo actual desde" valor={efectoActual} />}
+          {solicitada && <Dato etiqueta="Fecha de solicitud" valor={solicitada} />}
           {/* Sin vencimiento no hay calendario: se dice, porque el silencio
               aquí se lee como «ya te avisaremos» y no vamos a poder. */}
           <Dato
@@ -244,6 +267,39 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
               </dd>
             </>
           )}
+          {/* Beneficiarios (nivel `iban`: son datos de personas): orden, nombre y préstamo. Nunca DNI. */}
+          {dc.beneficiarios !== null && dc.beneficiarios.length > 0 && (
+            <>
+              <dt>{dc.beneficiarios.length === 1 ? 'Beneficiario' : 'Beneficiarios'}</dt>
+              <dd>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
+                  {dc.beneficiarios.map((b, i) => (
+                    <li key={i} style={{ overflowWrap: 'anywhere' }}>
+                      {[b.nombre, b.prestamo && `préstamo ${b.prestamo.toLowerCase()}`].filter(Boolean).join(' · ')}
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </>
+          )}
+          {/* Suplementos (nivel `coberturas`): número, fecha y clase. El texto libre no se enseña. */}
+          {dc.suplementos !== null && dc.suplementos.length > 0 && (
+            <>
+              <dt>{dc.suplementos.length === 1 ? 'Suplemento' : 'Suplementos'}</dt>
+              <dd>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
+                  {dc.suplementos.map((sp, i) => {
+                    const f = sp.fecha ? fechaEs(new Date(`${sp.fecha}T00:00:00Z`)) : null
+                    return (
+                      <li key={i} style={{ overflowWrap: 'anywhere' }}>
+                        {[sp.numero && `Nº ${sp.numero}`, f, sp.descripcion].filter(Boolean).join(' · ')}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </dd>
+            </>
+          )}
         </dl>
 
         <Coberturas p={p} />
@@ -251,6 +307,8 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
 
       {/* La documentación ORIGINAL de la compañía (el PDF de la póliza). `null` = no es tuya o tu nivel
           no la ve: no se pinta. `[]` = aún no nos la ha entregado, y se dice. */}
+      {personas && <PersonasDeTuPoliza propias={personas.propias} otras={personas.otras} />}
+
       {documentos !== null && (
         <section className="seccion" aria-labelledby="documentos-titulo">
           <h2 id="documentos-titulo">Documentos de tu póliza</h2>
@@ -300,6 +358,26 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
         </section>
       )}
 
+      {/* Terceros de CIMA: solo dentro de la sección de siniestros que el nivel ya enseña, y solo de
+          siniestros que están en la cartera AUTORIZADA (el id del puente filtra, no abre). */}
+      {p.siniestros !== null && personas?.terceros && (
+        <TercerosDeTusSiniestros siniestros={p.siniestros} terceros={personas.terceros} />
+      )}
+
+      {partesConEstado.length > 0 && (
+        <section className="seccion" aria-labelledby="partes-titulo">
+          <h2 id="partes-titulo">Partes que nos has dado de esta póliza</h2>
+          <ul className="cartera">
+            {partesConEstado.map((x) => (
+              <li key={x.id} className="cartera-card">
+                <h3>{x.fecha ? `Siniestro del ${x.fecha}` : 'Siniestro'}</h3>
+                <SeguimientoDeParte s={x.seg} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="seccion" aria-labelledby="pasa-titulo">
         <h2 id="pasa-titulo">Si te ha pasado algo</h2>
         <p className="suave" style={{ margin: '0 0 12px', fontSize: 14, lineHeight: 1.5 }}>
@@ -320,17 +398,16 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
             un seguro concreto no debería tener que volver a encontrarlo en un
             desplegable con las demás. */}
         <p style={{ margin: 0 }}>
-          {/* Sin el alcance `partes`, una póliza de otro solo da sus teléfonos: el
-              parte no se le ofrece porque la ruta lo rechazaría (`polizasParaParte`). */}
-          {polizasParaParte(cartera).has(p.id) ? (
-            <Link className="boton auto" href={`/boveda?vista=siniestro&poliza=cartera:${p.id}`}>
-              Ver los teléfonos de {p.compania} y dar parte
-            </Link>
-          ) : (
-            <Link className="boton auto" href="/boveda?vista=siniestro">
-              Ver los teléfonos de {p.compania}
-            </Link>
-          )}
+          {/* 03/10/2026: el enlace lleva SIEMPRE `?poliza=`, sea la póliza propia
+              o ajena, con o sin alcance para dar partes. Antes, sin el alcance,
+              iba a la pestaña general y salían las compañías de toda la cartera.
+              Qué se puede hacer allí (parte o solo teléfono) lo decide la
+              pantalla con `puedeParte`, y la ruta lo vuelve a comprobar (403). */}
+          <Link className="boton auto" href={`/boveda?vista=siniestro&poliza=cartera:${p.id}`}>
+            {polizasParaParte(cartera).has(p.id)
+              ? `Ver los teléfonos de ${p.compania} y dar parte`
+              : `Ver los teléfonos de ${p.compania}`}
+          </Link>
         </p>
       </section>
 

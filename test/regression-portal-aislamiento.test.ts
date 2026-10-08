@@ -267,10 +267,16 @@ const COLUMNAS_PROHIBIDAS: Record<string, string[]> = {
     'polizaEmitidaId',
     'salida',
     'tarificacionId',
+    // Ofertas multicompañía (05/10/2026, 2026-10-05_oportunidad_ofertas.sql): solo se
+    // concede `origen`. La oportunidad y el estudio (con la narrativa y la evidencia
+    // de los PDFs) son internos: al cliente le llegan en el PDF, no por columna.
+    'oportunidadId',
+    'estudio',
   ],
   // El id del quote del vendor («Q7601460») es la llave del ReRate —la llamada
-  // que cuesta dinero—, no un dato del cliente.
-  PresupuestoOpcion: ['referenciaVendor'],
+  // que cuesta dinero—, no un dato del cliente. `ofertaId` apunta al staging
+  // interno de la oportunidad (evidencia literal y notas de revisión).
+  PresupuestoOpcion: ['referenciaVendor', 'ofertaId'],
   // Lo escribe el corredor; el portal solo pregunta SI ya anotó una apertura
   // ajena, no qué dice.
   PresupuestoEvento: ['detalle'],

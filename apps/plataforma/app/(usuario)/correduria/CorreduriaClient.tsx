@@ -1,10 +1,11 @@
 'use client'
 
 import ContactosMovil from './ContactosMovil'
+import AvisoGoogleContactos from './AvisoGoogleContactos'
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { CalendarClock, Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity } from 'lucide-react'
+import { CalendarClock, Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity, ClipboardCheck } from 'lucide-react'
 import { Pagina, Badge, btnStyle } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
@@ -24,7 +25,6 @@ import Calidad from './Calidad'
 import SinCanal from './SinCanal'
 import ExportRgpd from './ExportRgpd'
 import Companias from './Companias'
-import ComisionesPactadas from './ComisionesPactadas'
 import RadarRecibos from './RadarRecibos'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
@@ -41,6 +41,7 @@ import ListaCartera from './ListaCartera'
 import LeadsWebConversion from './LeadsWebConversion'
 import GarantiasFiltradas from './GarantiasFiltradas'
 import PanelIngesta, { AvisoIngesta } from './Ingesta'
+import EmisionesRevision from './EmisionesRevision'
 import Secciones, { type ContadoresSeccion } from './Secciones'
 import HoyCockpit from './HoyCockpit'
 import {
@@ -190,6 +191,8 @@ export default function CorreduriaClient() {
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [, setNClientes] = useState<number | null | undefined>(undefined)
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
+  // Emisiones de Avant2 en revisión (undefined = aún no contestó · null = no se pudo leer · n).
+  const [nEmisiones, setNEmisiones] = useState<number | null | undefined>(undefined)
   const [nTareasHoy, setNTareasHoy] = useState<number | null | undefined>(undefined)
   // Su contador ya NO se suma en «Hoy» (ver el comentario junto a `agregarContadores`
   // de la sección `hoy`, más abajo): el valor no hace falta, solo la función.
@@ -288,7 +291,7 @@ export default function CorreduriaClient() {
   const cDatos = montada('mas')
     ? agregarContadores([nCalidad, nDuplicadas, nSinCanal, nExportRgpd, nFormacion])
     : undefined
-  const cMas = combinarContadores([cIngesta, cDatos, nBlog === undefined ? undefined : agregarContadores([nBlog])])
+  const cMas = combinarContadores([cIngesta, cDatos, nBlog === undefined ? undefined : agregarContadores([nBlog]), nEmisiones === undefined ? undefined : agregarContadores([nEmisiones])])
 
   // Lo que la franja de «Hoy» llama avisos: todas las colas de los bloques de
   // debajo. Son EXACTAMENTE las que suma el badge de la pestaña (más las tareas),
@@ -335,7 +338,7 @@ export default function CorreduriaClient() {
         contador: cMas,
         // Rojo solo con pérdida MEDIDA en la ingesta; lo demás es ámbar.
         tono: (cIngesta != null && cIngesta.n > 0 ? 'malo' : 'aviso') as 'malo' | 'aviso',
-        title: 'Señales de pérdida de datos de CIMA, artículos del blog pendientes de tu OK, pólizas duplicadas y clientes a los que no se puede avisar',
+        title: 'Señales de pérdida de datos de CIMA, emisiones de Avant2 a revisar, artículos del blog pendientes de tu OK, pólizas duplicadas y clientes a los que no se puede avisar',
       },
     }),
   }
@@ -473,6 +476,8 @@ export default function CorreduriaClient() {
           Es la herramienta de trabajo; «Cartera» es la foto. */}
       <div role="tabpanel" aria-label="Clientes" className="corr-panel" style={panel('clientes')}>
         {montada('clientes') && <ContactosMovil />}
+        {/* Google Contactos vive en su vista (menú «…» → «Google Contactos»); aquí solo el aviso si hay revisiones. */}
+        {montada('clientes') && <AvisoGoogleContactos />}
         {montada('clientes') && <ListaCartera onContador={setNClientes} />}
 
         {/* El bloque «Recaptación» (leads del volcado a los que volver a
@@ -641,6 +646,9 @@ export default function CorreduriaClient() {
         <SubMas id="ingesta" Icono={Antenna} titulo="Ingesta de CIMA" primero />
         <PanelIngesta datos={ingesta} />
 
+        <SubMas id="emisiones" Icono={ClipboardCheck} titulo="Emisiones a revisar" />
+        <EmisionesRevision onContador={setNEmisiones} primero />
+
         <SubMas id="redes" Icono={Megaphone} titulo="Redes y blog" />
         <Blog onContador={setNBlog} />
         {montada('mas') && <Redes />}
@@ -678,12 +686,11 @@ export default function CorreduriaClient() {
 
         <h3 style={SUBTITULO_MAS}>Referencia</h3>
 
-        {/* Directorio de contacto por compañía, minado del correo. Sin
-            contador: es referencia, no trabajo pendiente. */}
+        {/* Compañías: contactos, claves, acuerdos y producción en un solo
+            sitio (06/10/2026). El cuadro firmado frente al % real de CIMA
+            (antes «Comisiones por compañía», bloque aparte) vive ahora en la
+            ficha de cada compañía. Sin contador: es referencia. */}
         <Companias />
-
-        {/* Cuadro de comisiones firmado por compañía frente al % real de los recibos. Referencia, sin contador. */}
-        <ComisionesPactadas />
 
         {/* Qué compañías reconocidas nunca han avisado de un recibo por correo
             (20/09/2026). Sin contador: es radar, no trabajo pendiente. */}

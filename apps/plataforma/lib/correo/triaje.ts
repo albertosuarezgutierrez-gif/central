@@ -25,6 +25,8 @@ import { textoPdfPorFilas } from './pdf-filas'
 import { leerResultadosPuerto, textoAvisoDevolucion } from './devolucion-aviso'
 import { registrarDevolucionesAsegura } from '@/lib/correduria-puerto'
 import { urlFichaCliente } from '@/lib/leads-web'
+import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
+import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -94,7 +96,10 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
       let filaId: bigint | null = null
       try {
         // Skip: ya lo cazó un filtro Gmail existente o una pasada anterior de triaje.
-        if (yaEtiquetado(correo.labels)) { stats.saltados++; continue }
+        // Excepción: la factura mensual de Sique Brilla se procesa aunque un filtro Gmail ya la
+        // haya etiquetado (`Facturas/*`); el dedupe por Message-ID de abajo evita avisar dos veces.
+        const facturaSique = esCorreoFacturaSique(correo.from, correo.subject)
+        if (!facturaSique && yaEtiquetado(correo.labels)) { stats.saltados++; continue }
 
         // Dedupe ANTES de actuar: si la fila ya existe (otra pasada), no re-actuamos.
         const ins = await prisma.$queryRaw<{ id: bigint }[]>`
@@ -115,6 +120,15 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           accion = 'sombra'
           stats.sombra++
         } else {
+          // Factura mensual de Sique Brilla → lee el PDF, cuadra con las salidas, guarda y avisa.
+          // Best-effort: un fallo aquí no impide etiquetar el correo como contabilidad.
+          if (facturaSique) {
+            await procesarCorreoFacturaSique(correo).catch(async (e) => {
+              console.error('[triaje] factura Sique Brilla', e instanceof Error ? e.message : 'error')
+              await tgAviso('facturas.siquebrilla-cuadre', '⚠️ Ha llegado la factura de Sique Brilla pero no he podido cuadrarla. Revísala a mano.').catch(() => null)
+            })
+          }
+
           // Etiquetar / archivar.
           if (ruta.etiqueta) { await sesion.etiquetar(correo.uid, ruta.etiqueta); stats.etiquetados++; accion = 'etiquetada' }
           if (ruta.archivar) { await sesion.archivar(correo.uid); stats.archivados++; accion = 'etiquetada_archivada' }

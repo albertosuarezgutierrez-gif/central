@@ -30,3 +30,4 @@ export {
   secretosIguales,
   bearerAutorizado,
 } from './secreto.ts'
+export { cifrarJsonEstricto, descifrarJsonEstricto } from './json-cifrado.ts'

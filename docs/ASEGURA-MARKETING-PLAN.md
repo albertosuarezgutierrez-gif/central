@@ -568,3 +568,68 @@ la base histórica se puede usar y cómo, que es la pregunta que condiciona todo
 **Criterio de parada de este plan ampliado, igual que el §4 general:** si en 6 semanas ninguna de
 las acciones de "Alberto" se ha hecho, el problema no es de canal ni de herramienta — es de ritmo,
 y no lo arregla escribir más plan.
+
+---
+
+## 8. Plan B2B — pymes, gremios y franquicias (05/10/2026)
+
+> Desarrolla y sustituye en detalle la «B2B del propio grupo» de la Fase 3.2 y la fila 3 de §7.0
+> (no es una Fase 3 nueva: esa fase queda como la Fase 0 de este plan). Decidido por Alberto el
+> 05/10/2026. Cada fase lleva una meta medible; si no se mide, no se pasa a la siguiente.
+
+### 8.1 Frenos de partida (con fuente)
+
+- **Portal sin multiusuario de empresa ni vista de flota** — spec
+  `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`, en construcción.
+- **Codeoscopic no tarifica RC / comercio / flota / ciber** (`apps/asegura/CLAUDE.md`) → toda
+  cotización B2B es **manual** a compañía.
+- **Cartera viva a 06/09/2026: 80 clientes / 110 pólizas, 74 % auto, 0 flotas.** No hay base B2B
+  propia que explotar; hay que construirla.
+- **LSSI art. 21 aplica también a personas jurídicas:** nada de email/WhatsApp en frío, ni listas
+  compradas o scrapeadas (refuerza §7.1).
+- **No prometer ahorro ni precio** (RDL 3/2020), tampoco en B2B.
+
+**Canales legales:** (1) las 32.520 fichas históricas (dictamen del abogado 14/09/2026,
+`docs/ASEGURA-CONSULTA-ABOGADO.md`); (2) llamada a teléfono publicado por la propia empresa, con
+interés legítimo documentado + **Lista Robinson** (LGT 11/2022 art. 66, Circular AEPD 1/2023);
+(3) visita presencial; (4) LinkedIn manual de Alberto.
+
+### 8.2 Fases
+
+| Fase | Segmento | Qué se hace | Meta medible |
+|---|---|---|---|
+| **0** (4-6 sem) | Empresas del propio grupo | Piloto con Joaquín Jaén/almacén, Mariscos González, transporte, Sique Brilla y restaurantes de ia.rest, más el **mínimo «empresa» del portal**: bien asegurado, vista de flota con ITV, rol jefe de flota | **3 casos documentados con cifras** |
+| **1** | Flotas pequeñas (2-20 vehículos), Sevilla | Vertical: ITV, conductores, QR de vehículo, parte desde el móvil. Canal: histórico filtrado empresa+auto (**108 relaciones «empresa»**), llamada/visita a transporte y reparto | Nº de flotas contactadas → cotizadas → cerradas (definir objetivo al cerrar la Fase 0) |
+| **2** | Asociaciones y gremios | Portal con la marca de la asociación (`@central/brand`) como servicio al asociado; póliza colectiva/marco | 1 acuerdo firmado y nº de asociados dados de alta |
+| **3** | Franquicias medianas andaluzas (10-60 locales) | Ángulo: **control del cumplimiento de seguros de toda la red** para el franquiciador; póliza marco + alta por franquiciado | 1 franquiciador piloto; % de locales con seguro en regla |
+
+**Fase 1 — alternativa:** hostelería, solo si ia.rest tiene restaurantes reales (**pendiente de
+verificar**, ver §8.5).
+
+**Fase 2 — gremios objetivo:** instaladores, fontaneros (ya hay landing `rc-fontaneros`),
+administradores de fincas, hostelería de Sevilla, ATA/UPTA. **Retribución a la asociación:**
+«allegador» si solo deriva; si asesora o cierra operaciones = **colaborador externo** (RDL 3/2020:
+registro, formación, RC). 🚨 **VALIDAR CON EL ABOGADO antes de firmar nada.**
+
+**Fase 3 — contexto:** AEF, ~1.295 redes / 77.526 establecimientos (verificar cifra y año antes
+de citarla fuera de este documento).
+
+### 8.3 Ciber: gancho, no producto estrella
+
+El ciber lo vende cualquier banco o aseguradora directa (Hiscox ~79-129 €/año): no es donde
+competir. Es la **puerta de entrada**: landing **«chequeo ciber de 10 minutos»** con datos de
+INCIBE (122.223 incidentes en 2025 — **verificar la cifra** antes de publicarla) que termina en
+una **cita de revisión del paquete pyme**: RC + comercio + accidentes de convenio + ciber.
+Sin precio ni promesa de ahorro en la landing.
+
+### 8.4 Agentes en B2B
+
+- **Sí:** investigan objetivos en **fuentes públicas**, segmentan el histórico y **redactan
+  borradores que Alberto envía** (regla global de comunicaciones salientes).
+- **No:** envío automático a no clientes. **WhatsApp solo con opt-in** (hoy `wa_opt_in = 0`).
+
+### 8.5 Pendientes de decisión
+
+1. **Consulta al abogado** sobre la retribución a asociaciones (allegador vs colaborador externo).
+2. **Verificar los clientes reales de ia.rest** (condiciona la alternativa hostelería de la Fase 1).
+3. **Medir el % de empresas en la cartera:** `tipo_persona` está vacío (idea J, parser CIMA, §7.1).

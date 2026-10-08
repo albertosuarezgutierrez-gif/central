@@ -10,6 +10,7 @@ import { esReglaCalidad } from '@central/module-seguros'
 import { leerRetarificacion } from './ficha-asegura.ts'
 import { cabecerasPuerto } from './puerto-actor.ts'
 import { interpretarOportunidadesAviso, type LecturaOportunidadesAviso } from './correduria/oportunidades-aviso.ts'
+import { interpretarCola, interpretarResolucion, type ColaRevision, type Resolucion as ResolucionRevision } from './correduria/emisiones-revision.ts'
 
 export type MotivoPuerto = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
 
@@ -844,10 +845,14 @@ export type SustitucionPendiente = {
   polizaNueva: { id: string; aseguradora: string; numeroPoliza: string | null } | null
 }
 
+/** Póliza sustituida que sigue viva (posible doble seguro). Sin datos personales. */
+export type DobleSeguroPendiente = { polizaViejaId: string; polizaNuevaId: string; texto: string }
+
 export type Sustituciones =
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: MotivoPuerto }
-  | { estado: 'ok'; filas: SustitucionPendiente[] }
+  /** `dobleSeguro`: `null` = asegura no lo manda o no pudo leerlo (≠ `[]`, ninguno). */
+  | { estado: 'ok'; filas: SustitucionPendiente[]; dobleSeguro: DobleSeguroPendiente[] | null }
 
 function leerRelacionadaPuerto(v: unknown): { id: string; aseguradora: string; numeroPoliza: string | null } | null {
   if (typeof v !== 'object' || v === null) return null
@@ -884,7 +889,15 @@ export function interpretarSustituciones(status: number, json: unknown): Sustitu
         })
         .filter((x): x is SustitucionPendiente => x !== null)
     : []
-  return { estado: 'ok', filas }
+  const dobleSeguro = Array.isArray(o.dobleSeguro)
+    ? o.dobleSeguro.flatMap((f): DobleSeguroPendiente[] => {
+        if (typeof f !== 'object' || f === null) return []
+        const x = f as Record<string, unknown>
+        const polizaViejaId = cadena(x.polizaViejaId), polizaNuevaId = cadena(x.polizaNuevaId), texto = cadena(x.texto)
+        return polizaViejaId && polizaNuevaId && texto ? [{ polizaViejaId, polizaNuevaId, texto }] : []
+      })
+    : null
+  return { estado: 'ok', filas, dobleSeguro }
 }
 
 export async function sustitucionesAsegura(): Promise<Sustituciones> {
@@ -894,6 +907,141 @@ export async function sustitucionesAsegura(): Promise<Sustituciones> {
     return interpretarSustituciones(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Vigía de duplicados vivos (03/10/2026) ─────────────────────────────────
+//
+// `GET /api/operador/duplicados/vivos`: números de póliza repetidos entre filas vivas (sin fusionar, sin
+// comodines). Sin datos personales. 🚨 Un fallo de lectura NUNCA es «0 duplicados»: es `error`.
+
+export type DuplicadosVivosPuerto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'ok'; total: number; muestra: Array<{ numero: string; filas: number; dgs: string | null }> }
+
+export function interpretarDuplicados(status: number, json: unknown): DuplicadosVivosPuerto {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: 'asegura_error' }
+  const total = entero(o.total)
+  // Todo-o-nada: sin total o con una fila ilegible NO se devuelve una cuenta a medias.
+  if (total === null || !Array.isArray(o.muestra)) return { estado: 'error', motivo: 'respuesta_ilegible' }
+  const muestra: Array<{ numero: string; filas: number; dgs: string | null }> = []
+  for (const f of o.muestra) {
+    const x = typeof f === 'object' && f !== null ? (f as Record<string, unknown>) : null
+    const numero = x ? cadena(x.numero) : null
+    const filas = x ? entero(x.filas) : null
+    if (numero === null || filas === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    muestra.push({ numero, filas, dgs: cadena(x?.dgs) })
+  }
+  return { estado: 'ok', total, muestra }
+}
+
+// ── Bandeja de revisión manual de pólizas (03/10/2026) ─────────────────────
+//
+// `GET/POST /api/operador/revision`. Los casos viven en `seguros.operational_events` de asegura.
+// Sin PII: número, compañía, estado, fechas y nº de recibos/siniestros. «Son la misma» NO fusiona:
+// solo registra la decisión (la fusión la aplica una sesión con el método CTE y el OK de Alberto).
+// 🚨 Un fallo de lectura NUNCA es «no hay casos»: es `error`.
+
+export type DecisionRevision = 'misma' | 'distintas' | 'descartar'
+
+export type PolizaRevision = {
+  id: string
+  numeroPoliza: string | null
+  aseguradora: string
+  dgs: string | null
+  estado: string
+  fechaInicio: string | null
+  fechaVencimiento: string | null
+  recibos: number
+  siniestros: number
+}
+
+export type CasoRevision = {
+  casoId: string
+  numero: string
+  motivo: string
+  abiertoAt: string
+  polizas: PolizaRevision[]
+  /** `null` = no se pudo medir (no es «0 sin leer»). */
+  polizasNoLeidas: number | null
+}
+
+export type BandejaRevision =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'ok'; casos: CasoRevision[] }
+
+function leerPolizaRevision(v: unknown): PolizaRevision | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const id = cadena(o.id)
+  const recibos = entero(o.recibos)
+  const siniestros = entero(o.siniestros)
+  if (id === null || recibos === null || siniestros === null) return null
+  return {
+    id, numeroPoliza: cadena(o.numeroPoliza), aseguradora: cadena(o.aseguradora) ?? '', dgs: cadena(o.dgs),
+    estado: cadena(o.estado) ?? '', fechaInicio: cadena(o.fechaInicio), fechaVencimiento: cadena(o.fechaVencimiento),
+    recibos, siniestros,
+  }
+}
+
+export function interpretarRevision(status: number, json: unknown): BandejaRevision {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (o.estado !== 'ok' || !Array.isArray(o.casos)) return { estado: 'error', motivo: o.estado === 'ok' ? 'respuesta_ilegible' : 'asegura_error' }
+  const casos: CasoRevision[] = []
+  for (const f of o.casos) {
+    const x = typeof f === 'object' && f !== null ? (f as Record<string, unknown>) : null
+    const casoId = x ? cadena(x.casoId) : null
+    const polizas = x && Array.isArray(x.polizas) ? x.polizas.map(leerPolizaRevision) : null
+    // Todo-o-nada: un caso ilegible hace ilegible la lista (callar un caso sería decir «no hay»).
+    if (x === null || casoId === null || polizas === null || polizas.some((p) => p === null)) {
+      return { estado: 'error', motivo: 'respuesta_ilegible' }
+    }
+    casos.push({
+      casoId, numero: cadena(x.numero) ?? '', motivo: cadena(x.motivo) ?? '', abiertoAt: cadena(x.abiertoAt) ?? '',
+      polizas: polizas as PolizaRevision[], polizasNoLeidas: entero(x.polizasNoLeidas),
+    })
+  }
+  return { estado: 'ok', casos }
+}
+
+export async function revisionAsegura(): Promise<BandejaRevision> {
+  try {
+    const r = await pedir('/api/operador/revision')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarRevision(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+export type ResolucionBandejaPolizas =
+  | { estado: 'ok' }
+  | { estado: 'sin_configurar' }
+  /** `invalido` 422 · `no_existe` 404 · `ya_resuelto` 409 · `error`: no se sabe si se guardó. */
+  | { estado: 'invalido' | 'no_existe' | 'ya_resuelto' | 'error' }
+
+export async function resolverRevisionAsegura(casoId: string, decision: DecisionRevision, nota?: string): Promise<ResolucionBandejaPolizas> {
+  try {
+    const r = await pedirPost('/api/operador/revision', { casoId, decision, ...(nota ? { nota } : {}) })
+    if (r === null) return { estado: 'sin_configurar' }
+    if (r.status === 200) return { estado: 'ok' }
+    const e = typeof r.json === 'object' && r.json !== null ? (r.json as Record<string, unknown>).estado : null
+    return e === 'invalido' || e === 'no_existe' || e === 'ya_resuelto' ? { estado: e } : { estado: 'error' }
+  } catch {
+    return { estado: 'error' }
   }
 }
 
@@ -989,6 +1137,42 @@ export async function retenidasAsegura(): Promise<Retenidas> {
     const r = await pedirPost('/api/operador/codeoscopic/retenidas', {}, 55_000)
     if (r === null) return { estado: 'sin_configurar' }
     return interpretarRetenidas(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/**
+ * Descubrimiento AUTOMÁTICO de emisiones de Avant2 (03/10/2026). Solo lee el vendor (gratis); asegura
+ * registra lo que puede demostrar y deja el resto en revisión. La lectura de la respuesta es PURA y
+ * vive en `lib/correduria/descubrir-emisiones-aviso.ts`. Timeout largo: asegura puede tardar hasta
+ * ~4 min (su `maxDuration` es 300 y corta su propia pasada a los 240 s).
+ */
+export async function descubrirEmisionesAsegura(): Promise<{ status: number; json: unknown } | null> {
+  return pedirPost('/api/operador/codeoscopic/descubrir-emisiones', {}, 280_000)
+}
+
+/**
+ * Cola de REVISIÓN del descubrimiento (03/10/2026): las emisiones de Avant2 que no se pudieron registrar
+ * solas. La lectura de la respuesta es PURA (`lib/correduria/emisiones-revision.ts`); un fallo es
+ * `error`, nunca «cola vacía».
+ */
+export async function emisionesRevisionAsegura(limite = 50, desde = 0): Promise<ColaRevision> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/emisiones-revision?limite=${limite}&desde=${desde}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarCola(r.status, r.json, desde)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** «Marcar revisada»: idempotente en asegura (`resuelta`/`ya_resuelta`). El actor viaja en `x-actor`. */
+export async function resolverEmisionRevisionAsegura(id: string, nota: string | null): Promise<ResolucionRevision> {
+  try {
+    const r = await pedirPost(`/api/operador/codeoscopic/emisiones-revision/${encodeURIComponent(id)}/resolver`, nota ? { nota } : {})
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarResolucion(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }

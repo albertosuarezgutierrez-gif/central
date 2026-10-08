@@ -238,7 +238,7 @@ export function SinEquivalenteAviso({ motivo }: { motivo: SinEquivalente | null 
  * 2» sobre una tarificación de ocho, y ese número es justo el que sostiene la
  * afirmación legal. Se dice lo que se puede probar.
  */
-export function Mediador({ companiasEnPortada }: { companiasEnPortada: number }) {
+export function Mediador({ companiasEnPortada, textoCompanias }: { companiasEnPortada: number; textoCompanias?: string }) {
   const { nombre, figura, claveDgsfp, email, telefono } = MEDIADOR.identidad
   return (
     <section className="seccion presu-mediador">
@@ -249,7 +249,7 @@ export function Mediador({ companiasEnPortada }: { companiasEnPortada: number })
       </p>
       <p style={{ margin: '0 0 8px' }}>
         El asesoramiento se presta <strong>sobre la base de un análisis objetivo</strong>:{' '}
-        {textoCompaniasConsultadas(companiasEnPortada)}
+        {textoCompanias ?? textoCompaniasConsultadas(companiasEnPortada)}
       </p>
       <p className="suave" style={{ margin: '0 0 8px' }}>
         {NO_EXCLUSIVIDAD}

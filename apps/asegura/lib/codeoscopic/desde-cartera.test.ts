@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { hoyEnMadrid } from './fecha-efecto.ts'
 import {
   precalificarAuto,
   precalificarAutoNueva,
@@ -260,6 +261,12 @@ test('los apellidos se parten dejando el ÚLTIMO como segundo apellido', () => {
   assert.deepEqual(partirApellidos('de la Torre Ruiz'), { primero: 'de la Torre', segundo: 'Ruiz' })
   assert.deepEqual(partirApellidos('Pérez'), { primero: 'Pérez', segundo: null })
   assert.deepEqual(partirApellidos(null), { primero: null, segundo: null })
+  assert.deepEqual(partirApellidos('García de la Torre'), { primero: 'García', segundo: 'de la Torre' })
+  assert.deepEqual(partirApellidos('de la Rosa García'), { primero: 'de la Rosa', segundo: 'García' })
+  assert.deepEqual(partirApellidos('De la Rosa'), { primero: 'De la Rosa', segundo: null })
+  assert.deepEqual(partirApellidos('Martín del Río'), { primero: 'Martín', segundo: 'del Río' })
+  assert.deepEqual(partirApellidos('Van Der Berg'), { primero: 'Van Der', segundo: 'Berg' })
+  assert.deepEqual(partirApellidos('García de'), { primero: 'García de', segundo: null })
 })
 
 test('el tratamiento del CRM da el sexo: 1 hombre, 2 mujer, y el resto NO se adivina', () => {
@@ -362,8 +369,9 @@ test('la fecha de efecto es a 15 días (el presupuesto sigue valiendo al emitir)
   assert.equal(precalificarMotoNueva(CLIENTE, RESUELTOS_MOTO_NUEVA, HOY).datos.fechaEfecto, '2026-09-16')
 })
 
-test('sin matrícula no se puede cotizar: la teclea el corredor, no sale de ninguna póliza', () => {
-  assert.ok(preNueva({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'))
+test('vehículo NUEVO sin matrícula (03/10/2026): se cotiza con versión + matriculación prevista; sin versión, falta', () => {
+  assert.equal(preNueva({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'), false)
+  assert.ok(preNueva({}, { matricula: null, codigoVehiculo: null }).faltan.some((f) => f.campo === 'matricula'))
 })
 
 test('el garaje solo se marca como supuesto si de verdad lo es', () => {
@@ -393,7 +401,7 @@ const RESUELTOS_MOTO_NUEVA: ResueltosMotoNueva = {
 }
 
 function preMoto(c: Partial<ClienteCartera> = {}, r: Partial<ResueltosMotoNueva> = {}) {
-  return precalificarMotoNueva({ ...CLIENTE, ...c }, { ...RESUELTOS_MOTO_NUEVA, ...r }, HOY)
+  return precalificarMotoNueva({ ...CLIENTE, ...c }, { ...RESUELTOS_MOTO_NUEVA, ...r }, hoyEnMadrid())
 }
 
 test('moto: sin póliza previa, con todo resuelto no falta nada', () => {
@@ -413,6 +421,8 @@ test('moto: sin experiencia de conducción, se supone ThisMotorcycle y se marca 
   const r = preMoto()
   assert.equal(r.datos.experienciaConduccion, 'ThisMotorcycle')
   assert.ok(r.supuestos.some((s) => s.campo === 'experienciaConduccion'))
+  // Suponer «ya ha llevado ESTA moto» abarata: es un supuesto OPTIMISTA, como el carnet B.
+  assert.equal(r.supuestos.find((s) => s.campo === 'experienciaConduccion')!.optimista, true)
   assert.equal(r.faltan.length, 0)
 })
 
@@ -424,8 +434,9 @@ test('moto: con experiencia elegida, NO se supone nada', () => {
   assert.ok(r.faltan.some((f) => f.campo === 'motoAnteriorCodigo'))
 })
 
-test('moto: sin matrícula no se puede cotizar', () => {
-  assert.ok(preMoto({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'))
+test('moto NUEVA sin matrícula (03/10/2026): se cotiza con versión + matriculación prevista; sin versión, falta', () => {
+  assert.equal(preMoto({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'), false)
+  assert.ok(preMoto({}, { matricula: null, codigoVehiculo: null }).faltan.some((f) => f.campo === 'matricula'))
 })
 
 test('moto: NINGÚN supuesto rellena un dato personal', () => {

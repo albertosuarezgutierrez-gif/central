@@ -429,7 +429,9 @@ input, select, textarea, button { font: inherit; }
     border-radius: calc(var(--radius) * 1.8);
     box-shadow: var(--shadow);
     margin: 8px 8px 8px 0;
-    padding: 40px 32px 72px;
+    /* A la derecha 80 px, no 32: el botón flotante de WhatsApp (56 px + 16 de margen, sobre una isla con 8 de
+     * margen) tapaba el borde de las tarjetas en escritorio (03/10/2026). */
+    padding: 40px 80px 72px 32px;
     /* La atmósfera de marca es un `::before` absoluto: sin esto se sale por las
      * esquinas redondeadas de la isla y se ve un rectángulo azul asomando. */
     overflow: clip;
@@ -3227,6 +3229,21 @@ h1 em {
   vertical-align: -2px;
   color: var(--primary);
 }
+.instalar-alt { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.instalar-alt p { margin: 0 0 6px; }
+.instalar-copiar {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+}
 .instalar-globo-cerrar {
   width: 100%;
   min-height: 44px;
@@ -3492,6 +3509,21 @@ h1 em {
   color: var(--text);
   font-size: 14px;
 }
+
+/* «Mis carnés» (06/10/2026): reutiliza las filas de contactos; el formulario va en línea (no en modal), en
+   una sola columna que cabe a 320 px, con los mismos campos de 44 px de «Mis datos». */
+.mis-carnets-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 0;
+}
+.mis-carnets-form-titulo { margin: 0; font-weight: 600; font-size: 14px; }
+.mis-carnets-form input[type='date'] { min-height: 44px; }
 
 /* La banda de «vista de corredor» (08/09/2026): Alberto mirando el portal como
    lo ve un cliente. En el flujo, encima de la navegación; el ámbar es el tono
@@ -4163,3 +4195,59 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
   .todas-filtros { position: sticky; top: 16px; }
 }
 
+
+/* ── Seguimiento de un parte: Recibido → Comunicado → En tramitación → Cerrado ──
+   Cuatro pasos en 2×2 hasta 480 px (nada a 320 px queda en una columna de 70 px). */
+.parte-seguimiento { margin-top: 10px; min-width: 0; }
+.parte-pasos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.parte-pasos li {
+  font-size: 12px;
+  line-height: 1.3;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.parte-pasos li.hecho { color: var(--text); }
+.parte-pasos li.actual {
+  background: var(--positive-bg);
+  border-color: color-mix(in oklab, var(--ok) 30%, var(--panel));
+  color: var(--positive);
+  font-weight: 600;
+}
+@media (min-width: 480px) {
+  .parte-pasos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.parte-seguimiento-texto { margin: 8px 0 0; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.parte-seguimiento-texto.ojo { color: var(--warning); font-weight: 600; }
+
+/* ─── Presupuesto de ofertas (F4, 05/10/2026) ─────────────────────────────── */
+/* La recomendada por el corredor se destaca con el borde, no con otro tamaño. */
+.presu-tarjeta[data-recomendada='si'] { border: 2px solid var(--primary); }
+.presu-anual { font-size: 13px; font-weight: 400; color: var(--muted); }
+.presu-clave { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
+.presu-clave li { margin-bottom: 3px; overflow-wrap: anywhere; }
+
+/* El cuadro comparativo: tabla desde 700 px, tarjetas por garantía por debajo (≥ 320 px sin scroll lateral). */
+.ofertas-tabla { display: none; }
+.ofertas-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.ofertas-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+  min-width: 0;
+}
+@media (min-width: 700px) {
+  .ofertas-tabla { display: block; }
+  .ofertas-cards { display: none; }
+}

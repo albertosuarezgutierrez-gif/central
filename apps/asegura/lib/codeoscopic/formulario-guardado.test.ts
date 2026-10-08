@@ -2,6 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { extraerFormularioAuto } from './formulario-guardado.ts'
 import { construirPeticionAuto, type DatosAuto } from './peticion-auto.ts'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
+
+// Fecha de efecto válida SIEMPRE (ni pasada ni a >90 días): relativa a hoy, no cableada.
+const FECHA_EFECTO = sumarDias(hoyEnMadrid(), 15)
 
 // El fixture sale del propio constructor real (`construirPeticionAuto`), no
 // se escribe a mano: así el test no puede divergir en silencio del formato
@@ -10,6 +14,7 @@ const DATOS: DatosAuto = {
   dni: '12345678z',
   nombre: 'Pilar',
   apellido1: 'Franco Ruz',
+  apellido2: 'Segundo',
   fechaNacimiento: '1980-05-10',
   sexo: 'mujer',
   estadoCivil: 'Married',
@@ -22,7 +27,7 @@ const DATOS: DatosAuto = {
   cpCirculacion: '41003',
   municipioCirculacionId: 41091,
   garaje: 'Garage',
-  fechaEfecto: '2026-10-01',
+  fechaEfecto: FECHA_EFECTO,
 }
 
 test('recupera el tipo de vía (catálogo) y la calle completa + correo tecleados (12/09/2026)', () => {
@@ -98,4 +103,12 @@ test('extraerHistorialGuardado: lee el previousInsurance de la petición pagada;
   assert.equal(extraerHistorialGuardado({ risk: {} }), null)
   assert.equal(extraerHistorialGuardado({ risk: { previousInsurance: { ...pet.risk.previousInsurance, yearsWithoutAccidents: undefined } } }), null)
   assert.equal(extraerHistorialGuardado(null), null)
+})
+
+test('guarda segundo apellido y nacionalidad para no volver a pedirlos', () => {
+  const f = extraerFormularioAuto(
+    construirPeticionAuto({ ...DATOS, dni: 'X1234567L', nacionalidad: 'mar' }),
+  )
+  assert.equal(f.correcciones.apellido2, 'Segundo')
+  assert.equal(f.correcciones.nacionalidad, 'MAR')
 })

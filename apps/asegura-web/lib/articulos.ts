@@ -82,9 +82,9 @@ export const ARTICULOS: readonly Articulo[] = [
   {
     slug: 'preaviso-un-mes-no-renovar-seguro',
     h1: 'El preaviso de un mes para no renovar tu seguro',
-    title: 'Preaviso de un mes para no renovar el seguro',
+    title: 'Hasta qué día puedes avisar para no renovar',
     description:
-      'Tu póliza no se decide el día que vence, sino un mes antes. Qué dice el artículo 22 de la Ley de Contrato de Seguro y cómo calcular tu fecha real.',
+      'Tu seguro se renueva automáticamente. Tienes un mes antes del vencimiento para avisar si no quieres prórroga. Cómo calcular tu fecha real según el art. 22 LCS.',
     fecha: '2026-09-07',
     consulta: 'preaviso de un mes para cancelar el seguro',
     resumen:
@@ -422,6 +422,61 @@ export const ARTICULOS: readonly Articulo[] = [
       { pregunta: '¿Puedo contratar un seguro con efecto retroactivo?', respuesta: 'No. Un seguro no puede cubrir algo que ya ha pasado. La fecha de efecto siempre es presente o futura. Si ya has tenido un siniestro, no puedes contratar un seguro para cubrirlo después.' },
       { pregunta: '¿Qué pasa si tengo un siniestro el mismo día que contrato pero antes de pagar?', respuesta: 'No está cubierto. Sin pago no hay cobertura, aunque hayas firmado la propuesta. El contrato solo surte efecto cuando se completa el pago y llega la fecha de efecto acordada.' },
       { pregunta: '¿Puedo cancelar un seguro antes de que empiece a cubrir?', respuesta: 'Depende de cómo lo hayas contratado. Si lo contrataste a distancia, por internet o por teléfono, la ley te da un plazo para desistir sin tener que explicar por qué, y en los seguros de vida ese plazo es más largo. Fuera de esos casos, si puedes anularlo y con qué coste lo marcan las condiciones de tu póliza. Antes de firmar, pregunta cómo se anula y qué pasa con la prima que ya hayas pagado.' },
+    ],
+  },
+  {
+    slug: 'quien-ve-los-seguros-de-mi-empresa',
+    h1: 'Cómo controlar quién ve los seguros de tu empresa',
+    title: 'Cómo controlar quién ve los seguros',
+    description: 'Compartir carpetas con las pólizas es perder el control. Te explicamos cómo delegar accesos por niveles y con caducidad.',
+    fecha: '2026-10-01',
+    resumen: 'Compartir la carpeta de las pólizas en red o nube es la forma más común de perder el control: nadie sabe quién mira qué, y cuando alguien deja la empresa nadie se acuerda de quitarle el acceso.',
+    consulta: 'cómo controlar quién ve los seguros de mi empresa',
+    ramos: ['comercio', 'flota'],
+    secciones: [
+      {
+        titulo: 'El problema de compartir la carpeta de las pólizas',
+        parrafos: [
+          'La mayoría de empresas guarda las pólizas en una carpeta compartida de red o en la nube. Parece práctico: todo el mundo que lo necesite puede entrar. Pero es ahí donde empieza el problema.',
+          'Nadie lleva un registro de quién tiene acceso. Con el tiempo, esa carpeta la ven personas que ya no trabajan en la empresa, empleados que cambiaron de puesto y ya no deberían verla, o becarios que entraron hace meses y nadie se acordó de quitar.',
+          'Tampoco sabes quién ha abierto qué documento ni cuándo. Si hay una fuga de información, un problema con un dato sensible o simplemente quieres saber quién consultó la póliza del coche de dirección, no tienes forma de saberlo.',
+          'Y cuando alguien se va de la empresa, rara vez te acuerdas de revisar todos los accesos compartidos. El resultado: exempleados con acceso a información que ya no les corresponde.',
+        ],
+      },
+      {
+        titulo: 'Cómo funciona la delegación por niveles',
+        parrafos: [
+          'La solución pasa por un sistema de permisos que te permite decidir exactamente qué puede ver y hacer cada persona. No es todo o nada: puedes ajustar el acceso según la responsabilidad real de cada uno.',
+          'Por ejemplo, un conductor puede ver solo la tarjeta del seguro de su vehículo. Nada más. Ni las primas, ni los recibos, ni el resto de pólizas de la empresa.',
+          'El responsable de administración puede ver también las primas y los recibos de todas las pólizas, pero sin capacidad de gestión.',
+          'Y el gerente o la persona de RRHH puede además gestionar: abrir un parte, modificar datos del tomador, añadir o quitar vehículos o personas aseguradas.',
+          'Cada acceso se da de forma individual, con nombre y apellidos. Y cada uno entra con su propio usuario, no con una clave compartida que todos conocen.',
+        ],
+      },
+      {
+        titulo: 'Accesos que caducan solos y registro de actividad',
+        parrafos: [
+          'Un acceso delegado no es para siempre. Puedes establecer que caduque en una fecha concreta: cuando acabe el contrato de un becario, cuando termine la temporada si es personal eventual, o simplemente cada año para revisarlo.',
+          'Si no renuevas el acceso, se cierra solo. No hace falta que te acuerdes de quitarlo manualmente ni que revises carpetas compartidas cada vez que alguien se va.',
+          'Además, queda registro de quién ha consultado cada documento y cuándo. Si necesitas saber quién vio la póliza de un seguro concreto, tienes el historial completo.',
+          'Esto no solo te da control: también te protege. Si hay cualquier incidencia, puedes demostrar quién tenía acceso y quién no, y qué hizo cada uno.',
+        ],
+      },
+      {
+        titulo: 'Cómo se aplica esto en el día a día',
+        parrafos: [
+          'Imagina que tienes una flota de vehículos. Cada conductor recibe acceso solo a la tarjeta de su coche. Si cambia de vehículo, le quitas el acceso al anterior y le das el nuevo.',
+          'Tu gestor administrativo ve todas las pólizas, las primas y los recibos, pero no puede abrir partes ni modificar coberturas. Solo consulta.',
+          'Tú, como responsable, tienes acceso completo. Puedes gestionar cualquier póliza, abrir partes, cambiar datos y delegar nuevos accesos.',
+          'Y cuando un empleado deja la empresa, no tienes que revisar carpetas ni cambiar contraseñas. Su acceso caduca automáticamente o lo revocas con un clic.',
+          'Si quieres ver cómo funciona esto en la práctica, pregúntanos. Te enseñamos el sistema en marcha y cómo aplicarlo a tu empresa.',
+        ],
+      },
+    ],
+    faq: [
+      { pregunta: '¿Puedo dar acceso temporal a alguien externo, como un asesor?', respuesta: 'Sí. Puedes crear un acceso con fecha de caducidad concreta y limitado solo a las pólizas que necesite ver. Cuando expire, se cierra solo y ya no puede entrar.' },
+      { pregunta: '¿Qué pasa si alguien necesita ver más de lo que le he dado?', respuesta: 'Puedes ampliar sus permisos en cualquier momento. El cambio es inmediato y queda registrado quién lo autorizó y cuándo.' },
+      { pregunta: '¿El registro de actividad lo veo yo o solo lo ve el corredor?', respuesta: 'Lo ves tú. Es tu información y tú decides quién accede a ella. El corredor solo interviene si se lo pides.' },
     ],
   },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
@@ -798,9 +853,9 @@ export const ARTICULOS: readonly Articulo[] = [
   {
     slug: 'como-dar-de-baja-un-seguro-a-tiempo',
     h1: 'Cómo dar de baja un seguro a tiempo, paso a paso',
-    title: 'Cómo dar de baja un seguro a tiempo',
+    title: 'Cómo dar de baja un seguro: pasos y plazo',
     description:
-      'Para no renovar un seguro hay que avisar por escrito un mes antes del vencimiento. Qué lleva la carta, por dónde enviarla y qué hacer después.',
+      'Qué lleva la carta de baja, por dónde enviarla y plazo. Pasos para dar de baja un seguro sin errores y con comprobante de envío.',
     fecha: '2026-09-19',
     consulta: 'cómo dar de baja un seguro',
     resumen:

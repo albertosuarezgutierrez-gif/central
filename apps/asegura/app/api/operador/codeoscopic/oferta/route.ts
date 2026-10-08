@@ -15,7 +15,7 @@ import {
   completarPersonas,
   type ResultadoCompletar,
 } from '@/lib/codeoscopic/emitir'
-import { conDescuentos, descuentosDelCuerpo, opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
+import { conDescuentos, descuentosDelCuerpo, opcionesParaReRate, opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import {
   interpretarError400,
   interpretarCamposProducto,
@@ -187,7 +187,7 @@ export const POST = auditado(async (req: Request) => {
   // del vendor (el PATCH de fecha o de personas invalida sus cotizaciones aunque sea gratis).
   if (descuentosPedidos && !productOptionsCorredor && !opcionesPorDefecto(compania, producto)) {
     return NextResponse.json(
-      { estado: 'error', causa: 'descuento_no_disponible', mensaje: 'esta compañía no admite ajustar el descuento en el ReRate (solo Allianz coche lo tiene catalogado)' },
+      { estado: 'error', causa: 'descuento_no_disponible', mensaje: 'esta compañía no admite ajustar el descuento en el ReRate (solo está catalogado en Allianz coche, moto y hogar, y en Generali coche, moto y hogar)' },
       { status: 422 },
     )
   }
@@ -371,7 +371,7 @@ export const POST = auditado(async (req: Request) => {
         // que facture), pero la LÍNEA se abre igual: lo conservador es contarla.
         // Un 400 del vendor es `pruebaQueNoHuboCargo` y el embudo la descarta
         // con evidencia; un 5xx o un corte se quedan contados.
-        const opcionesBase = productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania, producto)
+        const opcionesBase = productOptionsCorredor ?? opcionesParaReRate(precio.productOptions, compania, producto)
         let opcionesRerate = opcionesBase
         if (descuentosPedidos) {
           const conDto = conDescuentos(opcionesBase, descuentosPedidos, productOptionsCorredor ? 'formulario' : 'catalogo')

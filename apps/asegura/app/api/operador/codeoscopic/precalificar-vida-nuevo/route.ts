@@ -7,6 +7,7 @@ import { resolverConfig, explicarConfig, simulacionActiva } from '@/lib/codeosco
 import { estadoConsumo } from '@/lib/codeoscopic/cotizar'
 import { estadosCiviles, emparejar, lineasDeSeguro, vidaDisponible, type Opcion } from '@/lib/codeoscopic/catalogos'
 import { sanearSupuestos, sanearReparos, type SupuestoPublico, type ReparoPublico } from '@/lib/codeoscopic/precalificar-publica'
+import { comprobarRolesRamo, unirFaltanConRoles } from '@/lib/codeoscopic/comprobar-roles'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 
 export const runtime = 'nodejs'
@@ -104,13 +105,17 @@ export async function GET(req: Request) {
   const consumo = await estadoConsumo(correduriaId)
 
   const supuestos: SupuestoPublico[] = sanearSupuestos(pre.supuestos)
-  const faltan: ReparoPublico[] = sanearReparos(pre.faltan)
+  // Lo que el vendor EXIGE de verdad (`GET /term-life/person-roles`, gratis) y aún no tenemos. Fail-closed:
+  // si no se puede leer, sale un hueco bloqueante `person-roles` y no se cotiza.
+  const roles = await comprobarRolesRamo(cfg, 'vida', { datos: pre.datos as Record<string, unknown> })
+  const faltan: ReparoPublico[] = sanearReparos(unirFaltanConRoles(pre.faltan, roles))
 
   return NextResponse.json(
     {
       estado: 'ok',
       etiquetaCliente: origen.etiqueta,
       faltan,
+      roles: roles.estado === 'ok' ? { estado: 'ok' } : { estado: 'no_disponible', motivo: roles.motivo },
       supuestos,
       estadoCivil,
       estadoCivilMotivo,

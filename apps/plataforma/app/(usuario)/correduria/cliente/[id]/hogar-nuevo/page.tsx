@@ -8,7 +8,8 @@ import { Pagina, PageHeader, cardStyle, CardHeader, btnStyle } from '@/component
 import Formulario from './Formulario'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
 import { paramTexto, viviendaDeRiesgo } from '../../../oportunidad/[id]/variante'
-import { inicialesHogarDeRiesgo } from '@central/module-seguros'
+import { busquedaCatastroDeVivienda, inicialesHogarDeRiesgo } from '@central/module-seguros'
+import { catalogoAsegura } from '@/lib/retarificar-asegura'
 
 export const dynamic = 'force-dynamic'
 
@@ -171,6 +172,12 @@ export default async function HogarNuevoPage({
   // PROPONE y se avisa de que puede no ser la vivienda. Consultar el Catastro sigue siendo un clic.
   if (referencia === null) {
     const deFicha = ficha.estado === 'ok' ? direccionDeFicha(ficha.ficha.contacto) : null
+    // Sin referencia, el buscador parte de la calle del riesgo (tipo de vía + calle + número + municipio y provincia),
+    // no solo de su texto libre. El nombre del tipo de vía es del catálogo (gratis); si no se lee, se sigue sin él.
+    const tipoViaNombre = vivienda?.tipoViaId && vivienda.nombreVia
+      ? await catalogoAsegura({ tipo: 'vias' }).then((c) => (c.estado === 'ok' ? c.opciones.find((o) => o.id === vivienda.tipoViaId)?.nombre ?? null : null)).catch(() => null)
+      : null
+    const busca = busquedaCatastroDeVivienda(vivienda, tipoViaNombre)
     return (
       <Pagina>
         {cabecera}
@@ -183,11 +190,11 @@ export default async function HogarNuevoPage({
           clienteId={clienteId}
           oportunidad={oportunidad}
           // Sin referencia catastral pero con la dirección del riesgo, se parte de ella (mejor que la de la ficha).
-          direccion={vivienda?.direccion ?? deFicha?.direccion ?? ''}
+          direccion={busca.direccion ?? deFicha?.direccion ?? ''}
           // Con dirección de la ficha pero sin municipio, el campo sale VACÍO: el «SEVILLA» por defecto
           // se leería como dato del cliente junto a su calle.
-          municipio={vivienda?.municipio ?? (deFicha ? (deFicha.municipio ?? '') : municipio)}
-          provincia={deFicha ? (deFicha.provincia ?? '') : provincia}
+          municipio={busca.municipio ?? (deFicha ? (deFicha.municipio ?? '') : municipio)}
+          provincia={busca.provincia ?? (deFicha ? (deFicha.provincia ?? '') : provincia)}
         />
       </Pagina>
     )

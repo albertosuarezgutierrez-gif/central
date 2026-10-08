@@ -42,15 +42,23 @@ export async function pedirCotizacionAuto(entrada: {
   correcciones?: Record<string, unknown>
   /** Variante de un riesgo (29/09/2026): la oportunidad, sus figuras (rol → ficha) y la nota. */
   variante?: { oportunidadId: string; figuras?: Record<string, string>; nota?: string | null } | null
+  /** Seguro anterior (vehículo nuevo, 03/10/2026): la póliza elegida por el corredor, o `sinSeguroAnterior`. */
+  seguroAnteriorId?: string | null
+  sinSeguroAnterior?: boolean
+  /** Recotización EXPLÍCITA tras el aviso de duplicado (0,50€ otra vez). */
+  forzar?: boolean
 }): Promise<RespuestaRetarificar> {
   return cotizarAutoNuevaAsegura({
     clienteId: entrada.clienteId,
     solicitadoPor: 'plataforma/correduria',
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
+    forzar: entrada.forzar === true,
     oportunidadId: entrada.variante?.oportunidadId ?? null,
     figuras: entrada.variante?.figuras ?? null,
     nota: entrada.variante?.nota ?? null,
+    seguroAnteriorId: entrada.seguroAnteriorId ?? null,
+    sinSeguroAnterior: entrada.sinSeguroAnterior === true,
   })
 }
 

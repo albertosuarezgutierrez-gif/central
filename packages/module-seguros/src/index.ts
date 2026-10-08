@@ -89,10 +89,48 @@ export {
   objetoAsegurado,
   pareceMatricula,
   formatCapitales,
+  fichaObjeto,
+  bastidorOperador,
+  type DatoObjeto,
   type ObjetoAsegurado,
   type EstadoObjeto,
   type EntradaObjeto,
 } from './objeto.ts'
+export { lineaFichaObjeto, lineaConductor } from './ficha-objeto-linea.ts'
+
+export { etiquetaClave, claveEiacConocida, CLAVES_EIAC, type TablaClaveEiac } from './claves-eiac.ts'
+export {
+  etiquetaPapel,
+  figuraDeCima,
+  terceroDeCima,
+  figurasDePoliza,
+  tercerosDeSiniestro,
+  vidaDePoliza,
+  decesosDePoliza,
+  personasDePoliza,
+  leerPersonasPuerto,
+  textoDomicilio,
+  textoBeneficiario,
+  actividadesVida,
+  textoDuracionPrestamo,
+  PAPELES_FIGURA_CIMA,
+  ACTIVIDADES_VIDA,
+  MAX_FIGURAS_CIMA,
+  type DescifrarFigura,
+  type PapelFiguraCima,
+  type DomicilioCimaFigura,
+  type FiguraFicha,
+  type TerceroFicha,
+  type PrestamoFicha,
+  type VidaFicha,
+  type DecesosFicha,
+  type PersonasPoliza,
+  type ActividadVida,
+} from './figuras-cima.ts'
+export { fechaPintable, diaIsoPintable } from './fecha-pintable.ts'
+export { alertaVencimiento, hoyMadrid } from './alerta-vencimiento.ts'
+export type { AlertaVencimiento, EstadoAlertaVencimiento } from './alerta-vencimiento.ts'
+export { ETIQUETA_POTENCIA, ETIQUETA_USO_VEHICULO } from './objeto.ts'
 
 export {
   MODALIDADES_RC,
@@ -131,6 +169,10 @@ export {
   textoRenovacionesSinLlegar,
   HORAS_EMISION_SIN_AVISO,
   textoEmisionesSinAviso,
+  textoPolizasDuplicadas,
+  cambioDuplicadasEnFirma,
+  cambioAnulacionesEnFirma,
+  firmaPreviaIgnorandoAnulaciones,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
@@ -152,6 +194,32 @@ export {
   type RenovacionSinLlegar,
   type EmisionSinAviso,
 } from './ingesta.ts'
+
+export {
+  HORAS_VENTANA_ANULACION_BLOQUE,
+  HORAS_RECIBO_ANULADO_SIN_REEMISION,
+  UMBRAL_ANULACION_BLOQUE,
+  MIN_ANULADAS_BLOQUE,
+  evaluarAnulacionesEnBloque,
+  agruparPosiblesBajas,
+  textoAnulacionesEnBloque,
+  textoRenovacionesAnuladas,
+  textoRetrasoAnulacion,
+  textoPosiblesBajas,
+  type FicheroAnulacionFila,
+  type AnulacionEnBloque,
+  type RetrasoAnulacion,
+  type RenovacionAnuladaPorCompania,
+  type PosibleBaja,
+  type PosiblesBajasPorCompania,
+} from './anulacion-bloque.ts'
+export {
+  corteSiniestros,
+  textoCorteSiniestros,
+  HORAS_CORTE_SINIESTROS,
+  type CorteSiniestros,
+  type EntradaCorte,
+} from './corte-siniestros.ts'
 export {
   veredictoEntidad,
   silencioPorEntidad,
@@ -315,6 +383,7 @@ export {
   normalizarTelefono,
   normalizarEmail,
   normalizarContacto,
+  seraPrincipalAlAnadir,
   normalizarDni,
   etiquetasIdentidad,
   enmascararDni,
@@ -326,7 +395,16 @@ export {
   nombrePendiente,
   documentoAcredita,
   documentosAcreditativos,
+  acreditarCambioConDocumento,
+  documentoCubreCampos,
+  camposIdentidadTocados,
+  estadoDocumentosIdentidad,
+  CAMPOS_QUE_ACREDITA_POLIZA,
+  type AcreditacionCambio,
   textoHistorialEdicion,
+  MOTIVO_CAMBIO_REQUERIDO,
+  MOTIVO_CAMBIO_MINIMO,
+  motivoCambioValido,
   revisarAlta,
   coincidenciaBloquea,
   FUENTES_ORIGEN,
@@ -348,6 +426,9 @@ export {
   type CampoIdentidad,
   type CampoLibre,
   type EdicionCliente,
+  type SexoFicha,
+  SEXOS_FICHA,
+  SALUDO_POR_SEXO,
   type IdentidadRevisada,
   type EdicionRevisada,
   type AltaCliente,
@@ -396,8 +477,27 @@ export {
 export {
   normalizarNumeroPoliza,
   polizasDuplicadas,
+  claveParNoDuplicado,
+  grupoResueltoNoDuplicado,
+  numeroPolizaComparable,
+  agruparDuplicadas,
+  gruposVivosDuplicados,
+  origenFicha,
+  ORIGENES_FICHA,
+  paresNoDuplicado,
+  limpiarMotivoNoDuplicado,
+  MOTIVO_NO_DUPLICADO_MAX,
+  MAX_POLIZAS_MARCA,
+  type FichaClaveDuplicado,
+  type GrupoFichas,
+  type OrigenFicha,
+  type EntradaOrigenFicha,
+  type FichaDuplicada,
+  type MarcaNoDuplicado,
   type PolizaParaDuplicados,
   type GrupoDuplicado,
+  type PolizaParaVigiaDuplicadas,
+  type GrupoVivoDuplicado,
 } from './duplicados.ts'
 export {
   ESTADOS_SINIESTRO,
@@ -428,6 +528,22 @@ export {
 } from './siniestros.ts'
 
 export {
+  DIAS_VENTANA_VINCULO,
+  candidatosDeParte,
+  cambiosDeFusion,
+  conocidoPorCompania,
+  diasEntre,
+  emparejarManualConCima,
+  emparejarParte,
+  fusionesAutomaticas,
+  normalizarNumeroSiniestro,
+  vinculosAutomaticos,
+  type CamposCorredor,
+  type EmparejamientoSiniestro,
+  type ParteParaVincular,
+  type SiniestroCandidato,
+} from './siniestro-vinculo.ts'
+export {
   EIAC_TIPOLOGIA_SINIESTRO,
   descripcionEiacSiniestro,
 } from './eiac-siniestros.ts'
@@ -438,6 +554,7 @@ export {
   MAX_TEXTO_RAMO_SINIESTRO,
   camposDeRamoSiniestro,
   normalizarDatosRamoSiniestro,
+  normalizarValorCampoSiniestro,
   type TipoCampo as TipoCampoRamoSiniestro,
   type OpcionCampo as OpcionCampoRamoSiniestro,
   type CampoRamoSiniestro,
@@ -525,6 +642,34 @@ export {
 } from './ficha-historicas.ts'
 export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type CarnetRevisado, type TipoCarnet } from './carnet-ficha.ts'
+// Lo que una póliza subida sabe del TOMADOR y la ficha no: parche que solo rellena huecos (03/10/2026).
+export {
+  CLAVES_EXTRACCION_GUARDABLES,
+  CLAVES_PERSONALES_EXTRACCION,
+  DIAS_VENCIMIENTO_URGENTE,
+  companiaLegible,
+  companiaPorNombre,
+  cifDeEmpresa,
+  esTomadorEmpresa,
+  extraccionSinPii,
+  identificadorFiscal,
+  contactoTomadorVacio,
+  emailNormalizado,
+  normalizarContactoTomador,
+  parcheFichaDesdePoliza,
+  parcheVacio,
+  polizaFinanciada,
+  telefonoEspanol,
+  vencimientoUrgente,
+  type ConductorPrincipalLeido,
+  type ContactoTomadorLeido,
+  type ExtraccionFicha,
+  type FichaActual,
+  type MotivoParche,
+  type ParcheFicha,
+  type ResultadoParche,
+} from './datos-ficha-de-poliza.ts'
+export { fechaTextoAIso } from './fecha-texto.ts'
 export { anioCumpleanos, diaMadrid, esCumpleanos } from './cumpleanos.ts'
 export { ordenarHistorialRiesgo, type EslabonHistorial, type EslabonRiesgo } from './historial-riesgo.ts'
 export { agruparCalidad, esReglaCalidad, ORDEN_REGLAS, REGLAS_CALIDAD, type GrupoCalidad, type IncidenciaCalidad, type ReglaCalidad } from './calidad-dato.ts'
@@ -801,7 +946,7 @@ export {
 } from './lead-competencia.ts'
 export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
 export {
-  ESTADOS_ALTA, MOTIVOS_PERDIDA, MOTIVOS_PERDIDA_VENTA, MOTIVO_DESCARTE, PRIORIDADES_TAREA, RAMOS_OPORTUNIDAD, TIPOS_TAREA, aplicarAccion,
+  ESTADOS_ALTA, ESTADOS_ALTA_SERVIDOR, MOTIVOS_PERDIDA, MOTIVOS_PERDIDA_VENTA, MOTIVO_DESCARTE, PRIORIDADES_TAREA, RAMOS_OPORTUNIDAD, TIPOS_TAREA, aplicarAccion,
   seguroAnteriorDe, validarAltaOportunidad, validarEdicionOportunidad, validarTarea,
 } from './oportunidad-seguimiento.ts'
 export {
@@ -839,19 +984,19 @@ export {
 export type { DecisionActividad, MarcaActividad } from './actividad-aviso.ts'
 export { libroVcard, nombreVisible, vcardContacto } from './vcard.ts'
 export type { ContactoMovil, GrupoContacto } from './vcard.ts'
-export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, detectarCambios, esFugaSinExplicar, fotoSospechosa, fotoVacia, nombreEvento } from './detector-cartera.ts'
-export type { Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
+export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, categoriaMotivo, datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, fotoVacia, leerAnulacion, nombreEvento, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo } from './detector-cartera.ts'
+export type { AnulacionEiac, CategoriaMotivo, PlanRetencion, Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
 export { ORIGEN_RETENCION, decidirRetencion } from './retencion-fuga.ts'
 export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
 export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, TIPOS_ANULACION_ENVIO_SOLO, anulacionSeEnviaSola, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
 export type { AccionAprobacion, Borrador, BuzonCompania, Decision, EntradaAnulacionCompania, EntradaReciboDevuelto, EstadoAprobacion, Politica } from './aprobaciones.ts'
 export {
-  ACCIONES_ANULACION, DIAS_ESPERA_CONFIRMACION, ESTADOS_ANULACION, ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION,
-  ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION, MOTIVOS_ANULACION, SOLICITANTES_ANULACION, TIPOS_ANULACION,
-  cartaAnulacion, resolucionDeAnulacion, siguientePaso as siguientePasoAnulacion, transicion as transicionAnulacion, validarSolicitud as validarSolicitudAnulacion,
+  ACCIONES_ANULACION, DIAS_AVISO_VENCIMIENTO_PORTAL, DIAS_ESPERA_CONFIRMACION, DIAS_LIBERACION_DIRECTA, ESTADOS_ANULACION, ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION,
+  ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION, HORAS_RETENCION_PORTAL, MOTIVOS_ANULACION, MOTIVOS_PORTAL, SOLICITANTES_ANULACION, TIPOS_ANULACION,
+  cartaAnulacion, eurosEs as eurosAnulacionEs, liberaSolaAt, parsearEuros as parsearEurosAnulacion, textoOfertaPrecio, MAX_TEXTO_PRECIO_PORTAL, liberadaParaFirma, resolucionDeAnulacion, solicitudDesdePortal, siguientePaso as siguientePasoAnulacion, transicion as transicionAnulacion, validarSolicitud as validarSolicitudAnulacion,
 } from './anulacion.ts'
 export type {
-  AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
+  AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, MotivoPortal, OrigenAnulacion, ResultadoSolicitudPortal, SolicitudPortal, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
 } from './anulacion.ts'
 export { NECESIDADES_MAX, NECESIDADES_MIN, anulacionPorCambio, documentoAceptacion, esCambioCompania, lineaVistoAntes, validarNecesidades, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'
 export { deducirNecesidades, grupoNecesidades, preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades, type GrupoNecesidades, type OpcionPregunta, type PreguntaNecesidad, type RespuestasNecesidades, type ValidacionRespuestas } from './necesidades-idd.ts'
@@ -868,6 +1013,7 @@ export {
   type EstadoQueja, type CanalQueja, type MotivoQueja, type PlazoQueja, type AltaQueja, type QuejaInforme, type InformeSac,
 } from './queja.ts'
 export { SUSTITUCION_DIAS_ANTES, SUSTITUCION_DIAS_DESPUES, claveRiesgo, detectarSustituciones, devueltoPorSustitucion, solicitudPorSustitucion, sustituidasARetirar, type DuplicidadDetectada, type PolizaParaSustitucion, type ResultadoSustituciones, type RiesgoComun, type SustitucionDetectada } from './sustitucion-auto.ts'
+export { DOBLE_SEGURO_DIAS_TOLERANCIA, avisoDobleSeguro, type AvisoDobleSeguro, type NuevaParaDobleSeguro, type ViejaParaDobleSeguro } from './doble-seguro.ts'
 export { informeMediacion, type ReciboInforme, type FilaInforme, type InformeMediacion } from './informe-mediacion.ts'
 export { HORAS_MINIMAS_IDD, clavePersona, resumenFormacion, validarAltaFormacion, validarBajaFormacion, type BajaFormacion, type RegistroFormacion, type EstadoFormacion, type ResumenPersona, type ResumenFormacion, type AltaFormacion } from './formacion.ts'
 export { MAX_BYTES_IPID, claveProducto, revisarIpid } from './ipid.ts'
@@ -947,6 +1093,9 @@ export {
   esPolizaDeCoche,
   huellaDecisionCima,
   esCampoCima,
+  fechaIsoFlexible,
+  mismoValorNormalizado,
+  motivoCopiadoCima,
   type CampoCima,
   type FichaParaCima,
   type DatosCima,
@@ -959,6 +1108,8 @@ export {
   identidadFusion,
   dniIlegibleSinIndice,
   revisarElecciones,
+  GRUPOS_IDENTIDAD_FUSION,
+  identidadSinDecidir,
   type GrupoFusion,
   type ValorFusion,
   type EstadoCampoFusion,
@@ -967,7 +1118,7 @@ export {
   type DniFusion,
   type RevisionElecciones,
 } from './fusion-fichas.ts'
-export { claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type SeguroOportunidad } from './compania-oportunidad.ts'
+export { claveCompania, claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type SeguroOportunidad } from './compania-oportunidad.ts'
 export {
   CATALOGO_GARANTIAS,
   GARANTIAS_DE_LEY,
@@ -1030,6 +1181,43 @@ export {
   type HitoDevolucion,
   type EntradaTareaDevolucion,
 } from './seguimiento-devolucion.ts'
+// Las figuras de una póliza de motor que no son el tomador: quién, con qué rol, y qué lead se reutiliza (03/10/2026).
+export {
+  ANIOS_CONDUCTOR_NOVEL,
+  DETALLE_ROL_FIGURA,
+  EDAD_CONDUCTOR_JOVEN,
+  MAX_FIGURAS,
+  NOTA_CONDUCTOR_JOVEN_NOVEL,
+  ROLES_FIGURA_LEIDOS,
+  CAMPOS_FIGURA,
+  accionFiguraSinNombre,
+  conductoresDelPlan,
+  contactoSoloDelTomador,
+  detalleRelacionFigura,
+  esOtraPersona,
+  esPersonaDeContacto,
+  faltaDniOCarne,
+  figurasSinNombre,
+  hayConductorJovenONovel,
+  leadSinDniReutilizable,
+  normalizarFigurasLeidas,
+  notaFiguraSinNombre,
+  parcheFigura,
+  planFiguras,
+  tareaPedirDniYCarne,
+  type CampoFigura,
+  type CamposFigura,
+  type CandidatoLeadSinDni,
+  type DomicilioFigura,
+  type FiguraLeida,
+  type FiguraSinNombre,
+  type LecturaFiguras,
+  type ParcheFigura,
+  type PersonaFigura,
+  type PlanFiguras,
+  type RolFiguraLeido,
+  type TomadorFiguras,
+} from './figuras-poliza.ts'
 export { ROLES_FIGURA, ETIQUETA_ROL, rolesDelRamo, esRolFigura, limpiarFiguras, diferenciasVariante, resumenDiferencias, type RolFigura, type FigurasVariante, type Diferencia } from './variantes-riesgo.ts'
 
 export { ibanValido, normalizarIban } from './iban.ts'
@@ -1042,15 +1230,31 @@ export type { CampoAniosVendor, TopesHistorial } from './historial-maximo.ts'
 // Regla única de las oportunidades: aviso a Alberto 45 días antes del vencimiento (29/09/2026).
 export {
   DIAS_AVISO_OPORTUNIDAD, ESTADOS_OPORTUNIDAD_ABIERTA,
-  avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, fechaVencimientoDudosa, MESES_VENCIMIENTO_MAX, planTareaTrasVencimiento, vencimientoDelCiclo,
+  avisosOportunidadDeHoy, claveAvisoOportunidad, diaMesEs, fechaAvisoOportunidad, fechaVencimientoDudosa, MESES_VENCIMIENTO_MAX, planLlamadaAnual, planTareaTrasVencimiento, vencimientoDelCiclo,
 } from './oportunidad-aviso.ts'
-export type { AvisoOportunidad, FechaDudosa, OportunidadParaAviso, PlanTareaVencimiento } from './oportunidad-aviso.ts'
+export type { AvisoOportunidad, EstadoAvisoVencimiento, FechaDudosa, OportunidadParaAviso, PlanLlamadaAnual, PlanTareaVencimiento } from './oportunidad-aviso.ts'
+export { estadoAvisoVencimiento } from './oportunidad-aviso.ts'
+export {
+  CANALES_FINANCIERA,
+  ahorroFrenteActual,
+  esCanalFinanciera,
+  esMismaCompaniaQueLaActual,
+  objetivoPrioritario,
+  periodoEnAnios,
+  periodoEnMeses,
+  primaActualAnualizada,
+} from './competencia-poliza.ts'
+export type { AhorroFrenteActual, MotivoPrioritario, ObjetivoPrioritario, PrimaAnualizada } from './competencia-poliza.ts'
+export { costePack, cuadroPack, decidirFamiliaAllianz, tienePolizaAllianzEnVigor } from './pack-vehiculos.ts'
+export type { CuadroPack, DecisionFamiliaAllianz, FilaPack, LadoPack, PolizaParaFamilia, PrecioPack } from './pack-vehiculos.ts'
 export {
   CAMPOS_VEHICULO, ETIQUETA_CAMPO_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
   datosVehiculoVacios, faltanDatosVehiculo, fusionarInfoRiesgo, hoyMadridVehiculo, incoherenciaFechasVehiculo,
   leerDatosVehiculo, motivoNoConfirmable, textoFaltanVehiculo, validarDatosVehiculoRiesgo,
 } from './datos-vehiculo-riesgo.ts'
 export type { CambioVehiculo, CampoVehiculo, DatosVehiculoRiesgo, ErrorVehiculo, ValidacionVehiculo } from './datos-vehiculo-riesgo.ts'
+export { SIN_IDS_CATALOGO, datosVehiculoDeDocumento } from './datos-vehiculo-documento.ts'
+export type { IdsCatalogoVehiculo, VehiculoLeido } from './datos-vehiculo-documento.ts'
 
 // Datos del riesgo por ramo (30/09/2026): vivienda, capital y riesgo libre, con el mismo patrón que el vehículo.
 export {
@@ -1058,17 +1262,17 @@ export {
 } from './datos-riesgo-generico.ts'
 export type { CambioCampo, ErrorCampo, Espec, EspecCampo, TipoCampoRiesgo, ValorCampo } from './datos-riesgo-generico.ts'
 export {
-  CAMPOS_VIVIENDA, CATALOGO_HOGAR_DE_CAMPO, ESPEC_VIVIENDA, ETIQUETA_CAMPO_VIVIENDA, admiteDatosVivienda, aplicarEdicionVivienda,
+  CAMPOS_VIVIENDA, CATALOGO_HOGAR_DE_CAMPO, ESPEC_VIVIENDA, busquedaCatastroDeVivienda, ETIQUETA_CAMPO_VIVIENDA, admiteDatosVivienda, aplicarEdicionVivienda,
   datosViviendaDeCotizacion, datosViviendaVacios, faltanDatosVivienda, incoherenciaVivienda, inicialesHogarDeRiesgo,
   leerDatosVivienda, motivoNoConfirmableVivienda, precargaViviendaDePoliza, textoFaltanVivienda, validarDatosViviendaRiesgo,
 } from './datos-vivienda-riesgo.ts'
 export type { CampoCatalogoVivienda, CampoVivienda, DatosViviendaRiesgo, ValidacionVivienda } from './datos-vivienda-riesgo.ts'
 export {
-  CAMPOS_CAPITAL, ESPEC_CAPITAL, ETIQUETA_CAMPO_CAPITAL, admiteDatosCapital, aplicarEdicionCapital, camposCapitalDelRamo,
+  CAMPOS_CAPITAL, ESPEC_CAPITAL, ETIQUETA_CAMPO_CAPITAL, MAX_ASEGURADOS, admiteDatosCapital, aplicarEdicionCapital, camposCapitalDelRamo,
   datosCapitalDeCotizacion, datosCapitalVacios, faltanDatosCapital, leerDatosCapital, motivoNoConfirmableCapital,
-  textoFaltanCapital, validarDatosCapitalRiesgo,
+  textoAseguradosAdicionales, textoFaltanCapital, validarAseguradosAdicionales, validarDatosCapitalRiesgo,
 } from './datos-capital-riesgo.ts'
-export type { CampoCapital, DatosCapitalRiesgo, RamoCapital, ValidacionCapital } from './datos-capital-riesgo.ts'
+export type { AseguradoAdicional, CampoCapital, DatosCapitalRiesgo, RamoCapital, ValidacionCapital, ValorEdicionCapital } from './datos-capital-riesgo.ts'
 export {
   AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, admiteDatosRiesgoLibre, aplicarEdicionLibre,
   datosRiesgoLibreVacios, faltanDatosRiesgoLibre, leerDatosRiesgoLibre, motivoNoConfirmableLibre, precargaLibreDePoliza,
@@ -1076,13 +1280,14 @@ export {
 } from './datos-riesgo-libre.ts'
 export type { CampoRiesgoLibre, DatosRiesgoLibre, ValidacionLibre } from './datos-riesgo-libre.ts'
 export {
-  AVISO_COMERCIO, BIENES_COMERCIO, CAMPOS_COMERCIO, ESPEC_COMERCIO, ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_REGIMEN_LOCAL,
+  AVISO_COMERCIO, BIENES_COMERCIO, CAMPOS_COMERCIO, COMPANIAS_COMERCIO, ESPEC_COMERCIO, ESPEC_OCCIDENT, ESPEC_POR_COMPANIA, ESPEC_REALE, ETIQUETA_COMPANIA_COMERCIO, ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_REGIMEN_LOCAL,
   MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, admiteDatosComercio, aplicarEdicionComercio, datosComercioVacios,
   faltanDatosComercio, leerDatosComercio, motivoNoConfirmableComercio, precargaComercioDePoliza, textoCapitalesComercio,
-  textoFaltanComercio, textoMedidasComercio, validarCapitalesComercio, validarDatosComercioRiesgo, validarMedidasComercio,
+  textoFaltanComercio, textoMedidasComercio, validarCapitalesComercio, validarDatosComercioRiesgo, validarMedidasComercio, validarPorCompania,
 } from './datos-comercio-riesgo.ts'
 export type {
-  BienComercio, CampoComercio, CampoFaltaComercio, CapitalComercio, DatosComercioRiesgo, MedidaComercio, RegimenLocal,
+  BienComercio, BloqueCompania, CampoComercio, CampoFaltaComercio, CapitalComercio, CompaniaComercio, DatosComercioRiesgo, EdicionPorCompania,
+  MedidaComercio, PorCompaniaComercio, RegimenLocal,
   ValidacionComercio, ValorEdicionComercio,
 } from './datos-comercio-riesgo.ts'
 export {
@@ -1090,3 +1295,152 @@ export {
   leerBloqueDeRamo, precargaDePoliza, ramoTarificable,
 } from './datos-riesgo-ramo.ts'
 export type { BloqueDatos, CambioRiesgo, ClaveDatosRiesgo, ResultadoEdicionRiesgo } from './datos-riesgo-ramo.ts'
+
+// Imputar el bonus del conductor a un vehículo NUEVO desde sus otras pólizas de motor (03/10/2026).
+export {
+  elegirSeguroAnteriorParaImputar,
+  historialParaImputar,
+  maximoAniosSinSiniestros,
+  aniosCompletos,
+  aniosAseguradoAcreditados,
+  origenesHistorialManual,
+  candidataPublica,
+  decidirBloqueoBonus,
+  verificacionBonusDe,
+  codigoDgsPorNombre,
+  FUENTES_VERIFICACION_BONUS,
+} from './imputar-seguro-anterior.ts'
+export type {
+  TipoVehiculoNuevo,
+  TipoVehiculoCandidata,
+  OrigenCandidata,
+  CandidataSeguroAnterior,
+  CandidataEvaluada,
+  CandidataPublica,
+  FaltaDeclarar,
+  ImputacionSeguroAnterior,
+  ErrorImputacion,
+  HistorialImputado,
+  CampoHistorial,
+  FuenteVerificacionBonus,
+  VerificacionBonus,
+  BloqueoBonus,
+} from './imputar-seguro-anterior.ts'
+
+export { personaDeFicha, esTelefonoComodin } from './persona-ficha.ts'
+export { esCanalCorreduria } from './canal-correduria.ts'
+export {
+  marcaAcreditaFicha,
+  propuestaIdentidadDesdePoliza,
+  capitalizarNombre,
+  normalizarParaComparar,
+  enmascararFecha,
+  textoCambioIdentidadConMotivo,
+  type MarcaIdentidadDocumento,
+  type PropuestaIdentidad,
+  type MotivoPropuesta,
+} from './identidad-documentada.ts'
+export { polizaAnteriorParaTarificar, CODIGOS_DGS_MAPFRE } from './poliza-anterior.ts'
+export { aE164, esMovilWhatsapp } from './telefono-e164.ts'
+export { telefonoParaFicha, formasHashTelefono } from './whatsapp-telefono.ts'
+export { redactarPii, type OpcionesRedaccion } from './redactar-pii.ts'
+
+export {
+  TAXONOMIA_POR_RAMO, ramoOfertaDe, garantiasDelRamo, garantiaCanonica, normalizarGarantia, normalizarTexto,
+} from './coberturas-taxonomia.ts'
+export type { RamoOferta, GrupoGarantia, TipoValorGarantia, GarantiaCanonica } from './coberturas-taxonomia.ts'
+export { compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2 } from './comparar-ofertas.ts'
+export type {
+  OfertaNormalizada, ValorGarantia, ResultadoComparacion, FilaMatriz, CeldaMatriz, ResumenOferta, AlertaInfraseguro,
+} from './comparar-ofertas.ts'
+
+// Acuerdos con compañías (comisión por ramo, rappel, clave de mediador) — 06/10/2026.
+// Spec: docs/superpowers/specs/2026-10-06-correduria-acuerdos-companias-design.md
+export {
+  FUENTES_ACUERDO,
+  ESTADOS_CLAVE,
+  CANALES_CLAVE,
+  TIPOS_OBJETIVO,
+  AMBITOS_OBJETIVO,
+  BASES_OBJETIVO,
+  CRITERIOS_COBRO,
+  deLista,
+  leerPct,
+  leerTramos,
+  normalizarCodigoCima,
+  atribuirClave,
+  conflictosCodigos,
+  lineaAplicable,
+  ramoDesdeTexto,
+  leerSeedAcuerdos,
+} from './acuerdos.ts'
+export type {
+  FuenteAcuerdo,
+  EstadoClave,
+  CanalClave,
+  TipoObjetivo,
+  AmbitoObjetivo,
+  BaseObjetivo,
+  CriterioCobro,
+  RamoAcuerdo,
+  LecturaPct,
+  Tramo,
+  LecturaTramos,
+  ClaveParaAtribuir,
+  Atribucion,
+  ConflictoCodigo,
+  LineaAcuerdo,
+  AcuerdoParaCalculo,
+  ConsultaLinea,
+  Candidata,
+  LineaAplicable,
+  SeedComision,
+  SeedObjetivo,
+  SeedAcuerdo,
+  LecturaSeed,
+} from './acuerdos.ts'
+
+// Productividad por compañía frente a los acuerdos (fase 2, 06/10/2026).
+export {
+  produccionPorCompania,
+  evaluarObjetivo,
+  esCodigoProducto,
+  TEXTO_PENDIENTE,
+  DIAS_MINIMOS_PROYECCION,
+  DIAS_ALERTA,
+} from './acuerdos-productividad.ts'
+export type {
+  ReciboProduccion,
+  Suma,
+  ProduccionCompania,
+  MotivoPendiente,
+  ColorObjetivo,
+  EstadoObjetivo,
+  ObjetivoParaEvaluar,
+} from './acuerdos-productividad.ts'
+
+// Panel de control de Compañías: cartera en vigor × acuerdos (07/10/2026).
+export {
+  agregarCarteraVigor,
+  totalesPorCompania,
+  panelControl,
+  MARGEN_COMISION_PUNTOS,
+} from './acuerdos-control.ts'
+export type {
+  PolizaVigor,
+  FilaCartera,
+  TotalCartera,
+  AcuerdoControl,
+  ObjetivoEvaluadoControl,
+  EstadoObjetivoControl,
+  ObjetivoCandidata,
+  CandidataRamo,
+  RamoControl,
+  PanelControl,
+} from './acuerdos-control.ts'
+export {
+  figurasDePeticion, identidadPersona, nombresParaEtiquetas, etiquetaEscenario, seguroAnteriorDePeticion, textoSeguroAnterior,
+  coberturasClave, ordenarEscenarios, mensajePropuestaWhatsapp, correoPropuesta, MAX_COBERTURAS_CLAVE,
+  type PersonaEscenario, type FigurasEscenario, type SeguroAnteriorEscenario, type OpcionEscenario, type EscenarioEntrada,
+  type EscenarioOrdenado, type DatosAvisoPropuesta, type DatosWhatsappPropuesta,
+} from './propuesta-escenarios.ts'

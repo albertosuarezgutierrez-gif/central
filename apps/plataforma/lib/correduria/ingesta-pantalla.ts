@@ -184,9 +184,16 @@ export type SenalIngesta = {
     | 'caja_negra'
     | 'emisiones_sin_aviso'
     | 'cobertura'
+    | 'cobertura_descartada'
     | 'parciales'
     | 'renovaciones'
-  tipo: 'perdida' | 'hueco'
+    | 'polizas_duplicadas'
+  /**
+   * `info` (04/10/2026): MEDIDO pero no es pérdida ni hueco — se enseña sin
+   * rojo y sin la etiqueta «Sin comprobar». No cuenta para el veredicto ni para
+   * el contador de la pestaña (solo `perdida` lo hace).
+   */
+  tipo: 'perdida' | 'hueco' | 'info'
   titulo: string
   detalle: string
   /** Cuántos elementos. `null` = consta el problema pero no cuántos son. */
@@ -391,6 +398,13 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       detalle: 'No significa que lleguen: significa que hoy no se ha podido mirar.',
     })
   }
+  if (s.polizasDuplicadas === null) {
+    out.push({
+      clave: 'polizas_duplicadas', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar si hay pólizas vivas duplicadas',
+      detalle: 'No significa que no las haya: significa que hoy no se ha podido mirar (la cartera o las marcas «no duplicado»).',
+    })
+  }
   if (s.huerfanas !== null && s.huerfanas > 0 && s.huerfanasReparto === null) {
     out.push({
       clave: 'huerfanas', tipo: 'hueco', n: null,
@@ -457,6 +471,15 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
     })
   }
 
+  // «Descartado por privacidad» ≠ «sin leer»: se excluye a propósito y se muestra aparte.
+  if (s.cobertura !== null && (s.cobertura.rutasDescartadas ?? 0) > 0) {
+    out.push({
+      clave: 'cobertura_descartada', tipo: 'hueco', n: s.cobertura.rutasDescartadas ?? null,
+      titulo: `${s.cobertura.rutasDescartadas} campos descartados por privacidad`,
+      detalle: 'Se excluyen a propósito (datos personales): no cuentan como «sin leer» ni hay que mapearlos.',
+    })
+  }
+
   if (s.crudo !== null && s.crudo.pendientes > 0 && s.crudo.purgaInminente === 0) {
     out.push({
       clave: 'crudo', tipo: 'hueco', n: s.crudo.pendientes,
@@ -465,6 +488,26 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
         (s.crudo.masAntiguaHoras !== null
           ? `El más viejo lleva ${Math.floor(s.crudo.masAntiguaHoras / 24)} días. `
           : '') + 'Sin prisa: ninguno caduca dentro de la ventana de aviso.',
+    })
+  }
+
+  // 🔁 Pólizas vivas duplicadas: INFORMATIVA. No es una avería de CIMA ni hay
+  // nada que se pierda; es orden pendiente (fusionar, o marcar «no duplicado»
+  // si son pólizas distintas de verdad). Si fuera `perdida`, la pestaña estaría
+  // en rojo hasta que alguien las revisara, y se dejaría de mirar.
+  const dup = s.polizasDuplicadas ?? []
+  if (dup.length > 0) {
+    const porEntidad = new Map<string, number>()
+    for (const g of dup) porEntidad.set(g.entidad, (porEntidad.get(g.entidad) ?? 0) + 1)
+    const fichas = dup.reduce((n, g) => n + g.fichas, 0)
+    out.push({
+      clave: 'polizas_duplicadas', tipo: 'info', n: dup.length,
+      titulo: `${dup.length} grupo(s) de pólizas vivas con el mismo número y compañía (${fichas} fichas)`,
+      detalle:
+        [...porEntidad.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .map(([e, n]) => `${e}: ${n}`).join(' · ') +
+        '. Si son la misma póliza, fusiónalas; si son pólizas distintas (p. ej. de clientes distintos), ' +
+        'márcalas como «no duplicado» y dejarán de salir aquí.',
     })
   }
 

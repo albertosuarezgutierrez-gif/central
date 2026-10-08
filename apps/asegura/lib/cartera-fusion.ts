@@ -18,6 +18,9 @@ import {
   enmascararDni,
   esCarteraViva,
   identidadFusion,
+  identidadSinDecidir,
+  ETIQUETA_GRUPO_FUSION,
+  GRUPOS_IDENTIDAD_FUSION,
   revisarElecciones,
   type CampoFusion,
   type GrupoFusion,
@@ -25,7 +28,7 @@ import {
   type ValorFusion,
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
-import { campoIlegible, descifrarCampo } from './cartera-edicion'
+import { anotarHistorialCliente, campoIlegible, descifrarCampo } from './cartera-edicion'
 
 const SELECT = {
   id: true,
@@ -252,6 +255,10 @@ const MOTIVOS_BD: Record<string, ResultadoFusion> = {
  * `confirmarSinDni`: si una de las dos no tiene DNI (o lo tiene ilegible), la
  * identidad no se puede comprobar por el identificador y la fusión exige que el
  * corredor lo diga.
+ * `conservar` (05/10/2026): los grupos de IDENTIDAD que difieren y en los que se queda el de la
+ * ficha que se conserva. Nombre, apellidos o fecha de nacimiento distintos no se resuelven por
+ * omisión (`identidadSinDecidir`): o van en `deAbsorbida` o en `conservar`, y la decisión queda en
+ * el historial de la ficha que se queda (con los dos valores de nombre/apellidos).
  */
 export async function fusionar(
   correduriaId: string,
@@ -260,6 +267,7 @@ export async function fusionar(
   deAbsorbida: unknown,
   confirmarSinDni: boolean,
   actor: string,
+  conservar?: unknown,
 ): Promise<ResultadoFusion> {
   const cmp = await comparar(correduriaId, supId, lapId)
   if (cmp.estado !== 'ok') return cmp
@@ -276,6 +284,13 @@ export async function fusionar(
       motivo: r.motivo === 'grupo_desconocido' ? `Campo no permitido: ${r.grupo}.` : `En «${r.grupo}» ya no hay dos valores distintos: recarga.`,
     }
   }
+  const sinDecidir = identidadSinDecidir(campos, r.deAbsorbida, conservar)
+  if (sinDecidir.length > 0) {
+    return {
+      estado: 'invalido',
+      motivo: `Las dos fichas no dicen lo mismo en ${sinDecidir.map((g) => ETIQUETA_GRUPO_FUSION[g].toLowerCase()).join(', ')}: elige con cuál se queda (no se descarta en silencio).`,
+    }
+  }
   const ilegibles = [superviviente, absorbida].filter((f) => f.dniIlegible).map((f) => `«${f.nombre}»`)
   const justificacion =
     identidad === 'mismo_dni'
@@ -288,6 +303,7 @@ export async function fusionar(
       Prisma.sql`select fusionar_clientes(${correduriaId}::uuid, ${supId}::uuid, ${lapId}::uuid, ${r.deAbsorbida}::text[], ${justificacion}, ${actor}, ${cmp.dniIlegibles}::text[]) as res`,
     )
     const res = filas[0]?.res ?? {}
+    await anotarDecisionIdentidad(correduriaId, supId, campos, r.deAbsorbida, actor)
     return {
       estado: 'ok',
       elegidos: Array.isArray(res.elegidos) ? (res.elegidos as string[]) : [],
@@ -300,4 +316,24 @@ export async function fusionar(
     if (clave) return MOTIVOS_BD[clave]
     throw e
   }
+}
+
+/**
+ * La decisión sobre la identidad que difería, en el historial de la ficha que se queda (05/10/2026).
+ * La función SQL solo dice «Elegido de la otra: …»; esto dice también lo que se DESCARTÓ. Nombre y
+ * apellidos con sus dos valores (ya están en claro en la ficha); la fecha de nacimiento sin valores
+ * (va cifrada). Best-effort: la fusión ya está hecha.
+ */
+async function anotarDecisionIdentidad(correduriaId: string, supId: string, campos: CampoFusion[], deAbsorbida: GrupoFusion[], actor: string): Promise<void> {
+  const lineas = campos
+    .filter((c) => c.estado === 'distinto' && GRUPOS_IDENTIDAD_FUSION.includes(c.grupo))
+    .map((c) => {
+      const deOtra = deAbsorbida.includes(c.grupo)
+      if (c.grupo === 'fecha_nacimiento') return `fecha de nacimiento: se queda la de ${deOtra ? 'la fusionada' : 'esta ficha'}`
+      const queda = deOtra ? c.absorbida.valor : c.superviviente.valor
+      const fuera = deOtra ? c.superviviente.valor : c.absorbida.valor
+      return `${ETIQUETA_GRUPO_FUSION[c.grupo].toLowerCase()}: se queda «${queda ?? ''}» y se descarta «${fuera ?? ''}»`
+    })
+  if (lineas.length === 0) return
+  await anotarHistorialCliente(correduriaId, supId, 'gestion', `Fusión — identidad distinta entre las dos fichas, decidida por ${actor}: ${lineas.join('; ')}.`).catch(() => null)
 }

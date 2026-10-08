@@ -18,23 +18,41 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
-import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
+import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import {
   borrarBorrador,
   claveBorradorAutoNuevo,
   guardarBorrador,
   leerBorrador,
+  leerBorradorAutoNuevoConSello,
 } from '@/lib/correduria/borrador-local'
+import {
+  DEBOUNCE_SERVIDOR_MS,
+  borradorServidorPara,
+  borrarBorradorServidor,
+  elegirMasReciente,
+  esBorradorVacio,
+  guardarBorradorServidor,
+  leerBorradoresServidor,
+  textoIndicador,
+  type EstadoNube,
+} from '@/lib/correduria/borrador-servidor'
 import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
+import type { ContactoFicha } from '@/lib/ficha-asegura'
+import { textoFaltaEnFicha, type IdentidadFicha } from '@/lib/cliente-edicion-asegura'
+import type { DocumentoResumen } from '@central/module-seguros'
+import PanelDatosCliente from '../PanelDatosCliente'
 
 import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
@@ -54,6 +72,12 @@ import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 import { FallosTarificacion } from '../../../FallosTarificacion'
+import { AvisoBonusSupuesto, PanelSeguroImputado, eleccionParaCotizar } from '../../../SeguroAnteriorImputado'
+import { describirCandidata, type SeguroAnteriorImputado } from '@/lib/correduria/seguro-anterior-imputado'
+import { decidirFamiliaAllianz } from '@central/module-seguros'
+import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
+import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
+import PackVehiculos from '../PackVehiculos'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -67,6 +91,7 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
 }
 
@@ -155,9 +180,11 @@ type Resultado =
       supuestos: Supuesto[] | null
       /** Qué pasó con la copia guardada: su `cotizacionId` es de lo que sale el presupuesto. */
       guardado?: unknown
+      /** Seguro anterior declarado y si el bonus va SUPUESTO (03/10/2026). `null`/ausente = no consta. */
+      seguroAnterior?: SeguroAnteriorImputado | null
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 export default function AutoNuevo({
   clienteId,
@@ -178,7 +205,22 @@ export default function AutoNuevo({
   datosRiesgo = null,
   anterior = null,
   anteriorAmbiguo = null,
+  seguroImputado = null,
+  otroVehiculo = null,
+  carteraAllianz = null,
+  fichaTomador = null,
 }: {
+  /** Pack coche + moto (03/10/2026): la otra oportunidad del cliente. `null` = no se han podido leer sus oportunidades. */
+  otroVehiculo?: OtroVehiculo | null
+  /**
+   * Lo que hace falta para corregir la FICHA del tomador sin salir (identidad, documentos y dirección),
+   * leído igual que lo lee la pestaña Contactos. `null` = no se ha podido leer la ficha: no se ofrece edición.
+   */
+  fichaTomador?: { identidad: IdentidadFicha | null; documentos: DocumentoResumen[] | null; contacto: ContactoFicha; juridica: boolean } | null
+  /** `true` = tiene una póliza en vigor en Allianz (cartera); `null` = no se pudo mirar. Solo cuenta con el pack encendido. */
+  carteraAllianz?: boolean | null
+  /** Vehículo NUEVO (03/10/2026): la póliza de motor del cliente que asegura propone como seguro anterior. */
+  seguroImputado?: SeguroAnteriorImputado | null
   /**
    * Los datos del vehículo del RIESGO (30/09/2026, `info_riesgo.datosVehiculo`): se PRECARGAN aquí y lo que
    * se use al pedir precio se anota de vuelta. Prioridad: variante retomada (`?tarificacion=`) > riesgo >
@@ -340,12 +382,45 @@ export default function AutoNuevo({
   const [companiaActualCodigo, setCompaniaActualCodigo] = useState(() =>
     anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '')
   const [companiaActualLibre, setCompaniaActualLibre] = useState(() => (companias === null ? sa?.codigoDgs ?? '' : ''))
-  const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.replace(/\s+/g, '') ?? '')
+  const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.trim() ?? '')
   const [aniosAsegurado, setAniosAsegurado] = useState(String(historial.aniosAsegurado))
   const [aniosEnCompania, setAniosEnCompania] = useState(String(historial.aniosEnCompania))
   const [aniosSinSiniestros, setAniosSinSiniestros] = useState(String(historial.aniosSinSiniestros))
   const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5))
   const [matriculaAnterior, setMatriculaAnterior] = useState('')
+  // Estado de partida de lo que restaura un borrador: si gana el del servidor sobre el local, el ganador SUSTITUYE
+  // al estado completo (no se mezcla con lo que ya aplicó el local).
+  const estadoInicial = useRef<Record<string, unknown> | null>(null)
+  if (estadoInicial.current === null) {
+    estadoInicial.current = {
+      marcaId, modeloId, motorId, codigoVehiculo, matricula, matriculacion, matriculacionEstimada, garaje, kmAnuales,
+      fechaCompra, remolqueLigero, estadoCivilId, municipioId, correcciones, zonaCarnet, tipoCarnet,
+      ocasionalDistinto, ocasional, propietarioDistinto, propietario, conductorDistinto, conductor,
+      tieneSeguroActual, companiaActualCodigo, companiaActualLibre, polizaActualDigitos, aniosAsegurado,
+      aniosEnCompania, aniosSinSiniestros, siniestrosUltimos5,
+    }
+  }
+  const tokenRestauracion = useRef(0)
+  function restablecerInicial() {
+    const i = estadoInicial.current as Record<string, any>
+    setMarcaId(i.marcaId); setModeloId(i.modeloId); setMotorId(i.motorId); setCodigoVehiculo(i.codigoVehiculo)
+    setMatricula(i.matricula); setMatriculacion(i.matriculacion); setMatriculacionEstimada(i.matriculacionEstimada)
+    setGaraje(i.garaje); setKmAnuales(i.kmAnuales); setFechaCompra(i.fechaCompra); setRemolqueLigero(i.remolqueLigero)
+    setEstadoCivilId(i.estadoCivilId); setMunicipioId(i.municipioId); setCorrecciones(i.correcciones)
+    setZonaCarnet(i.zonaCarnet); setTipoCarnet(i.tipoCarnet)
+    setOcasionalDistinto(i.ocasionalDistinto); setOcasional(i.ocasional)
+    setPropietarioDistinto(i.propietarioDistinto); setPropietario(i.propietario)
+    setConductorDistinto(i.conductorDistinto); setConductor(i.conductor)
+    setTieneSeguroActual(i.tieneSeguroActual); setCompaniaActualCodigo(i.companiaActualCodigo)
+    setCompaniaActualLibre(i.companiaActualLibre); setPolizaActualDigitos(i.polizaActualDigitos)
+    setAniosAsegurado(i.aniosAsegurado); setAniosEnCompania(i.aniosEnCompania)
+    setAniosSinSiniestros(i.aniosSinSiniestros); setSiniestrosUltimos5(i.siniestrosUltimos5)
+  }
+  // Vehículo NUEVO (03/10/2026): qué póliza suya se declara como seguro anterior si no se teclea a mano.
+  // '' = la que proponga asegura al cotizar.
+  // Pack coche + moto: apagado por defecto; sin tocarlo, la pantalla es la de siempre.
+  const [pack, setPack] = useState({ activo: false, tarificado: false })
+  const [eleccionAnterior, setEleccionAnterior] = useState(() => seguroImputado?.elegida?.id ?? '')
 
   // ── Borrador local: lo tecleado NO se pierde al salir de la pantalla ───────
   //
@@ -360,11 +435,15 @@ export default function AutoNuevo({
 
   // ── Precarga desde el riesgo (30/09/2026) ───────────────────────────────────
   // Prioridad: variante RETOMADA (`?tarificacion=`, lo pagado manda) > riesgo > borrador local.
-  // El vehículo del riesgo solo se precarga entero (versión + ids del catálogo): con la versión sola no se
-  // puede repoblar el selector, y media cascada confunde más que ayuda.
+  // Precarga PARCIAL en cascada (05/10/2026, `lib/correduria/precarga-vehiculo.ts`): lo que el riesgo trae (del documento o de
+  // la corredora) se precarga hasta donde llegue —marca → modelo → combustible → versión—, y el texto sin id va a la caja de
+  // búsqueda. `riesgoManda` sigue siendo «el riesgo trae la cascada ENTERA»: entonces gana a la última tarificación y al borrador.
   const retomada = (variante?.tarificacionId ?? null) !== null
-  const riesgoManda =
-    !retomada && !!(datosRiesgo?.codigoVehiculo && datosRiesgo.marcaId && datosRiesgo.modeloId && datosRiesgo.motorId)
+  const plan = planPrecargaVehiculo(datosRiesgo, retomada)
+  const riesgoManda = plan.completa
+  // Si el borrador restaura su propia cascada, la del riesgo (más vieja) se aparta para no pisarla al llegar tarde.
+  const cascadaRiesgo = useRef(0)
+  const avisoDelRiesgo = 'precargado · sin confirmar'
 
   /** Rehace la cascada marca → modelo+motor → versión (gratis) para que `codigoVehiculo` sea uno que el catálogo reconoce. */
   async function poblarCascada(v: { marcaId: string; modeloId?: string; motorId?: string; codigoVehiculo?: string }, vivo: () => boolean) {
@@ -399,21 +478,99 @@ export default function AutoNuevo({
   }
 
   useEffect(() => {
-    if (!riesgoManda || !datosRiesgo) return
+    if (!plan.cascada) return
     let vivo = true
-    void poblarCascada(
-      { marcaId: datosRiesgo.marcaId!, modeloId: datosRiesgo.modeloId!, motorId: datosRiesgo.motorId!, codigoVehiculo: datosRiesgo.codigoVehiculo! },
-      () => vivo,
-    )
+    const token = cascadaRiesgo.current
+    void poblarCascada(plan.cascada, () => vivo && cascadaRiesgo.current === token)
     return () => { vivo = false }
     // Una vez, al abrir la pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ── Borrador en SERVIDOR (05/10/2026): segunda línea, sobrevive a cerrar el navegador y a cambiar de
+  // equipo (`lib/correduria/borrador-servidor.ts`). El local sigue siendo la primera y se pinta YA; al
+  // llegar el del servidor se queda el MÁS RECIENTE. 🚨 Nada sube al servidor hasta haber leído el suyo
+  // (`reconciliado`): si no, los valores por defecto de una pantalla recién abierta pisarían un borrador
+  // bueno tecleado en otro equipo. Y solo sube lo que difiere de lo último que el servidor tiene
+  // (`baseServidor`; `null` = «hay que subirlo»).
+  const [nube, setNube] = useState<EstadoNube>(null)
+  const reconciliado = useRef(false)
+  const baseServidor = useRef<string | null>(null)
+  const marcaCambio = useRef(0)
+  const temporizadorNube = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Tras pagar: no se guarda nada más (ni local ni servidor) y se aborta el POST en vuelo, que si no podría
+  // llegar DESPUÉS del DELETE y resucitar el borrador ya pagado.
+  const bloqueado = useRef(false)
+  const abortSubida = useRef<AbortController | null>(null)
+  const vacio = (d: unknown) => esBorradorVacio(d, estadoInicial.current)
+
+  function subirBorrador(keepalive: boolean) {
+    const datos = ultimoBorrador.current
+    if (bloqueado.current || !reconciliado.current || !datos || vacio(datos)) return
+    const json = JSON.stringify(datos)
+    if (json === baseServidor.current) return
+    if (!keepalive) setNube({ tipo: 'guardando' })
+    const ctl = new AbortController()
+    if (!keepalive) {
+      abortSubida.current?.abort()
+      abortSubida.current = ctl
+    }
+    void guardarBorradorServidor(
+      { clienteId, oportunidadId: variante?.oportunidadId ?? null, ramo: 'auto', datos, guardadoEn: marcaCambio.current || Date.now() },
+      { keepalive, signal: ctl.signal },
+    ).then((t) => {
+      if (keepalive || bloqueado.current) return
+      if (t === null) {
+        setNube({ tipo: 'solo_local' })
+        return
+      }
+      baseServidor.current = json
+      setNube({ tipo: 'guardado', en: t })
+    })
+  }
+  function programarSubida() {
+    if (temporizadorNube.current) clearTimeout(temporizadorNube.current)
+    temporizadorNube.current = setTimeout(() => subirBorrador(false), DEBOUNCE_SERVIDOR_MS)
+  }
+
   useEffect(() => {
-    const b = leerBorrador<BorradorAutoNuevo>(claveBorrador)
-    if (!b) return
     let vivo = true
+    const local = leerBorradorAutoNuevoConSello<BorradorAutoNuevo>(clienteId, variante?.oportunidadId)
+    if (local) aplicarBorrador(local.datos)
+    void leerBorradoresServidor(clienteId, 'auto').then((filas) => {
+      if (!vivo) return
+      let subirLocal = false
+      if (filas === null) {
+        // No se ha podido leer (≠ «no hay»): se sigue con lo local y se dice.
+        setNube({ tipo: 'solo_local' })
+      } else {
+        const srv = borradorServidorPara<BorradorAutoNuevo>(filas, variante?.oportunidadId)
+        const elegido = elegirMasReciente(local, srv, vacio)
+        if (elegido?.origen === 'servidor') {
+          // El del servidor gana: sustituye el estado completo, no se suma a lo que aplicó el local.
+          restablecerInicial()
+          aplicarBorrador(elegido.borrador.datos)
+          setNube({ tipo: 'guardado', en: elegido.borrador.guardadoEn })
+        } else if (elegido?.origen === 'local') {
+          // Lo de este equipo es más nuevo (p. ej. tecleado sin red): se sube.
+          subirLocal = true
+          marcaCambio.current = elegido.borrador.guardadoEn
+        }
+      }
+      // La base se fija cuando React ya ha pintado lo restaurado.
+      setTimeout(() => {
+        if (!vivo) return
+        reconciliado.current = true
+        baseServidor.current = subirLocal ? null : JSON.stringify(ultimoBorrador.current)
+        if (subirLocal) programarSubida()
+      }, 50)
+    })
+    return () => {
+      vivo = false
+    }
+
+    function aplicarBorrador(b: BorradorAutoNuevo) {
+      const token = ++tokenRestauracion.current
 
     // Lo que no depende de ningún catálogo se restaura tal cual.
     // Lo que el RIESGO ya trae manda sobre el borrador (30/09/2026).
@@ -465,20 +622,22 @@ export default function AutoNuevo({
     // desplegable de versión llegue poblado y `codigoVehiculo` siga siendo un
     // código que el catálogo reconoce, no una cadena suelta del borrador.
     if (b.marcaId && !riesgoManda) {
-      void poblarCascada({ marcaId: b.marcaId, modeloId: b.modeloId, motorId: b.motorId, codigoVehiculo: b.codigoVehiculo }, () => vivo)
+      if (plan.cascada) {
+        cascadaRiesgo.current++
+        setModeloId(''); setMotorId(''); setCodigoVehiculo('')
+      }
+      void poblarCascada({ marcaId: b.marcaId, modeloId: b.modeloId, motorId: b.motorId, codigoVehiculo: b.codigoVehiculo }, () => vivo && tokenRestauracion.current === token)
     }
-
-    return () => {
-      vivo = false
     }
     // Se restaura UNA vez al abrir la pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Autoguardado: cualquier cambio se guarda, aunque no se llegue a cotizar.
+  const ultimoBorrador = useRef<BorradorAutoNuevo | null>(null)
+  const borradorPendiente = useRef(false)
   useEffect(() => {
-    const t = setTimeout(() => {
-      guardarBorrador<BorradorAutoNuevo>(claveBorrador, {
+    const datos: BorradorAutoNuevo = {
         marcaId,
         modeloId,
         motorId,
@@ -509,8 +668,24 @@ export default function AutoNuevo({
         aniosEnCompania,
         aniosSinSiniestros,
         siniestrosUltimos5,
-      })
+    }
+    ultimoBorrador.current = datos
+    // Formulario igual al de partida: nada que guardar (no pisa un borrador bueno con valores por defecto).
+    if (bloqueado.current || vacio(datos)) {
+      borradorPendiente.current = false
+      return
+    }
+    borradorPendiente.current = true
+    const t = setTimeout(() => {
+      if (bloqueado.current) return
+      guardarBorrador<BorradorAutoNuevo>(claveBorrador, datos)
+      borradorPendiente.current = false
     }, 400)
+    // Servidor: debounce más largo; antes de reconciliar no sube nada (ver arriba).
+    if (reconciliado.current && JSON.stringify(datos) !== baseServidor.current) {
+      marcaCambio.current = Date.now()
+      programarSubida()
+    }
     return () => clearTimeout(t)
   }, [
     claveBorrador,
@@ -546,6 +721,68 @@ export default function AutoNuevo({
     siniestrosUltimos5,
   ])
 
+  // Corregir la ficha SIN salir (el panel único `PanelDatosCliente`): tras guardar, el servidor vuelve a precalificar
+  // (`router.refresh()` del editor) y llegan municipios y huecos nuevos SIN remontar la pantalla, así que lo
+  // tecleado se queda. Aquí solo se vuelve a casar lo que depende de esas listas.
+  const clavesMunicipios = listaMunicipios.map((m) => m.id).join(',')
+  useEffect(() => {
+    setMunicipioId((cur) =>
+      listaMunicipios.some((m) => m.id === cur) ? cur : listaMunicipios.length === 1 ? listaMunicipios[0].id : '',
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clavesMunicipios])
+  const [fichaAbierta, setFichaAbierta] = useState(false)
+  const [fichaMontada, setFichaMontada] = useState(false)
+  const [fichaGuardada, setFichaGuardada] = useState(false)
+  function alGuardarFicha() {
+    // El borrador se vuelca YA (sin esperar a los 400 ms): el refresco que sigue no puede costar lo tecleado.
+    if (!bloqueado.current && ultimoBorrador.current && !vacio(ultimoBorrador.current)) guardarBorrador<BorradorAutoNuevo>(claveBorrador, ultimoBorrador.current)
+    borradorPendiente.current = false
+    setFichaGuardada(true)
+  }
+
+  // Al salir de la pantalla (enlace a la ficha, atrás…) dentro de los 400 ms del último cambio, el
+  // temporizador se cancelaba y lo último tecleado se perdía: se vuelca el pendiente al desmontar.
+  useEffect(() => {
+    return () => {
+      if (borradorPendiente.current && ultimoBorrador.current) {
+        guardarBorrador<BorradorAutoNuevo>(claveBorrador, ultimoBorrador.current)
+        borradorPendiente.current = false
+      }
+    }
+  }, [claveBorrador])
+
+  // Cerrar la pestaña, cambiar de app en el móvil o navegar fuera: se vuelca YA lo pendiente, en local
+  // y en servidor (`keepalive`: la petición termina aunque la página se cierre). Al volver la red, se
+  // reintenta lo que no subió.
+  useEffect(() => {
+    function volcar() {
+      if (bloqueado.current) return
+      if (borradorPendiente.current && ultimoBorrador.current) {
+        guardarBorrador<BorradorAutoNuevo>(claveBorrador, ultimoBorrador.current)
+        borradorPendiente.current = false
+      }
+      if (temporizadorNube.current) clearTimeout(temporizadorNube.current)
+      subirBorrador(true)
+    }
+    function alCambiarVisibilidad() {
+      if (document.visibilityState === 'hidden') volcar()
+    }
+    function alVolverRed() {
+      subirBorrador(false)
+    }
+    document.addEventListener('visibilitychange', alCambiarVisibilidad)
+    window.addEventListener('pagehide', volcar)
+    window.addEventListener('online', alVolverRed)
+    return () => {
+      document.removeEventListener('visibilitychange', alCambiarVisibilidad)
+      window.removeEventListener('pagehide', volcar)
+      window.removeEventListener('online', alVolverRed)
+      volcar()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveBorrador])
+
   useEffect(() => {
     if (!variante) return
     let vivo = true
@@ -555,6 +792,9 @@ export default function AutoNuevo({
         if (!r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada)
         const v = r.guardada.vehiculo
         if (!v) return
+        // 07/10/2026 (igual que MotoNuevo): si el riesgo trae OTRO coche (otro código, o marca/modelo sin poder probar que sea
+        // el mismo), el de la última tarificación no manda: ni su versión ni su matrícula, km o garaje son de este coche.
+        if (!previoPuedeMandar(datosRiesgo, v.codigoVehiculo, retomada)) return
         // Con el vehículo del riesgo ya cargado (y sin variante retomada) la última tarificación no lo pisa.
         if (!riesgoManda) {
           setPrevio(v)
@@ -659,7 +899,9 @@ export default function AutoNuevo({
   // Con un conductor habitual en otra ficha, el «falta conductor» de la precalificación ya está cubierto.
   const faltanTomador = (faltanInicial ?? []).filter((f) => !(f.campo === 'conductor' && (figs.conductor_habitual || conductorDistintoEf)))
   const faltaMunicipio = !municipioId
-  const faltaMatricula = !matricula.trim()
+  // Vehículo NUEVO (03/10/2026): la matrícula ya no es obligatoria — un vehículo recién comprado se tarifica
+  // antes de matricularse con la versión y la fecha de matriculación PREVISTA (≤ 90 días). Lo valida asegura.
+  const faltaMatricula = false
   const faltaMatriculacion = !matriculacion
   const estimacion = fechaMatriculacionEstimada(matricula, hoyLocal())
 
@@ -716,6 +958,12 @@ export default function AutoNuevo({
     (c) => Boolean(CAMPOS_A_MANO[c]),
   )
 
+  // Con reparos de ficha el bloque se despliega solo (y sigue siendo plegable a mano).
+  const nReparosFicha = reparos.ficha.length
+  useEffect(() => {
+    if (nReparosFicha > 0) { setFichaAbierta(true); setFichaMontada(true) }
+  }, [nReparosFicha])
+
   const faltaPropietario = propietarioDistintoEf && !personaCompleta(propietario, false)
   const faltaConductor = conductorDistintoEf && !personaCompleta(conductor, true)
   const faltaOcasional = ocasionalDistintoEf && !personaCompleta(ocasional, true)
@@ -764,7 +1012,20 @@ export default function AutoNuevo({
     faltaFigura || figuraRepetida
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
-  async function cotizar() {
+  // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
+  // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
+  const cotizandoEnVuelo = useRef(false)
+  async function cotizar(forzar = false) {
+    if (cotizandoEnVuelo.current) return
+    cotizandoEnVuelo.current = true
+    try {
+      await cotizarSinGuarda(forzar)
+    } finally {
+      cotizandoEnVuelo.current = false
+    }
+  }
+
+  async function cotizarSinGuarda(forzar: boolean) {
     setResultado({ estado: 'cotizando' })
     const correccionesFinal: Record<string, unknown> = { ...correcciones }
     // En blanco = no se ha preguntado: no se manda nada y sigue mandando el
@@ -795,9 +1056,15 @@ export default function AutoNuevo({
       correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
       if (siniestrosUltimos5.trim() !== '') correccionesFinal.siniestrosUltimos5 = Number(siniestrosUltimos5)
+      // De dónde salen los años (03/10/2026, criterio conservador): solo cuentan como DATO si no pasan de
+      // lo que acredita su póliza leída — la MISMA regla que la imputación automática. Lo precargado al
+      // máximo o tecleado por encima va SUPUESTO y la emisión pedirá verificarlo.
+      Object.assign(correccionesFinal, origenesHistorialManual({ seguro: sa, aniosAsegurado: Number(aniosAsegurado), aniosSinSiniestros: Number(aniosSinSiniestros), hoy: limitesFechaEfecto().min }))
     }
     const r = await pedirCotizacionAuto({
+      forzar,
       clienteId,
+      ...(tieneSeguroActual ? {} : eleccionParaCotizar(seguroImputado, eleccionAnterior)),
       variante: variante
         ? { oportunidadId: variante.oportunidadId, figuras: figs as Record<string, string>, nota }
         : null,
@@ -836,6 +1103,9 @@ export default function AutoNuevo({
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
         return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
+        return
       case 'proyecto_vigente':
       case 'ramo':
       case 'no_encontrada':
@@ -851,7 +1121,18 @@ export default function AutoNuevo({
         // llevaba datos personales, así que se borra en cuanto sobra. Una
         // cotización SIMULADA no ha pagado nada y puede querer repetirse, así
         // que ahí el borrador se queda.
-        if (!r.simulado) borrarBorrador(claveBorrador)
+        if (!r.simulado) {
+          bloqueado.current = true
+          abortSubida.current?.abort()
+          borradorPendiente.current = false
+          borrarBorrador(claveBorrador)
+          // El del servidor, igual y en el mismo momento (no antes). Lo que haya en vuelo se cancela y
+          // lo pintado pasa a ser la base, para que el debounce no lo vuelva a crear.
+          if (temporizadorNube.current) clearTimeout(temporizadorNube.current)
+          baseServidor.current = JSON.stringify(ultimoBorrador.current)
+          void borrarBorradorServidor(clienteId, 'auto', variante?.oportunidadId ?? null)
+          setNube(null)
+        }
         setResultado({
           estado: 'ok',
           coste: r.coste,
@@ -863,6 +1144,7 @@ export default function AutoNuevo({
           fallos: r.fallos,
           supuestos: r.supuestos,
           guardado: r.guardado,
+          seguroAnterior: r.seguroAnterior ?? null,
         })
         return
       default: {
@@ -875,6 +1157,14 @@ export default function AutoNuevo({
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       {variante && <NotaVariante nota={nota} onNota={setNota} />}
+      {textoIndicador(nube) && (
+        <p
+          aria-live="polite"
+          style={{ margin: 0, justifySelf: 'end', fontSize: 12, color: nube?.tipo === 'solo_local' ? 'var(--warning)' : 'var(--muted)' }}
+        >
+          {textoIndicador(nube)}
+        </p>
+      )}
       {faltanInicial === null && (
         <div style={{ ...cardStyle, borderColor: 'var(--negative)', color: 'var(--negative)', fontSize: 13 }}>
           No se ha podido precalificar la ficha de {etiquetaCliente || 'este cliente'}: no se sabe qué datos
@@ -897,9 +1187,10 @@ export default function AutoNuevo({
         )}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           {!(usarPrevio && previo) && (<>
-          <Campo etiqueta="Marca" falta={false}>
+          <Campo etiqueta="Marca" falta={false} aviso={sigueSinConfirmar(plan, datosRiesgo?.marcaId, marcaId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={marcaId}
+              pista={marcaId ? null : plan.pistaMarca}
               onCambiar={(v) => void alElegirMarca(v)}
               opciones={marcas}
               deshabilitado={cargando === 'marcas'}
@@ -909,9 +1200,10 @@ export default function AutoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Modelo" falta={false}>
+          <Campo etiqueta="Modelo" falta={false} aviso={sigueSinConfirmar(plan, datosRiesgo?.modeloId, modeloId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={modeloId}
+              pista={modeloId ? null : plan.pistaModelo}
               onCambiar={alElegirModelo}
               opciones={modelos}
               deshabilitado={!marcaId || cargando === 'modelos'}
@@ -921,7 +1213,7 @@ export default function AutoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Combustible" falta={motorId === ''} faltaTexto="lo elige el corredor">
+          <Campo etiqueta="Combustible" falta={motorId === ''} faltaTexto="lo elige el corredor" aviso={sigueSinConfirmar(plan, datosRiesgo?.motorId, motorId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={motorId}
               onCambiar={alElegirMotor}
@@ -933,9 +1225,10 @@ export default function AutoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Versión" falta={faltaVersion} faltaTexto="la elige el corredor">
+          <Campo etiqueta="Versión" falta={faltaVersion} faltaTexto="la elige el corredor" aviso={sigueSinConfirmar(plan, datosRiesgo?.codigoVehiculo, codigoVehiculo) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={codigoVehiculo}
+              pista={codigoVehiculo ? null : plan.pistaVersion}
               onCambiar={setCodigoVehiculo}
               opciones={versiones}
               deshabilitado={!modeloId || !motorId || cargando === 'versiones'}
@@ -947,12 +1240,13 @@ export default function AutoNuevo({
             />
           </Campo>
           </>)}
-          <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
+          <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="La teclea el corredor. Si el vehículo aún no está matriculado, déjala vacía y pon la fecha de matriculación prevista (máx. 90 días); con seguro anterior hará falta la matrícula de esa póliza.">
             <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
           </Campo>
           <Campo
             etiqueta="Fecha de matriculación"
             falta={faltaMatriculacion}
+            aviso={!matriculacionEstimada && sigueSinConfirmar(plan, plan.fechaMatriculacion, matriculacion) ? avisoDelRiesgo : undefined}
             ayuda={
               matriculacionEstimada && fuenteMatriculacion === 'avant2'
                 ? 'Consultada a Avant2 por la matrícula. El propio proveedor la da como aproximada: confírmala con la ficha técnica.'
@@ -1131,15 +1425,56 @@ export default function AutoNuevo({
 
         {reparos.ficha.length > 0 && (
           <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--negative)', padding: 12 }}>
-            <strong style={{ color: 'var(--negative)' }}>Esto no se arregla desde esta pantalla:</strong>
+            <strong style={{ color: 'var(--negative)' }}>Corrígelo aquí abajo: se guarda en la ficha del cliente.</strong>
             <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
               {reparos.ficha.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-              Se corrige en la <a href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--brand)' }}>ficha
-              del cliente</a> (pestaña Contactos). Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              Abre «Datos del tomador en la ficha» (justo debajo), guarda y esta pantalla se actualiza sola, sin
+              perder lo que llevas tecleado. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              {reparos.ficha.some((f) => f.campo === 'email') && (
+                <> El correo se cambia en la <a href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--brand)' }}>ficha del cliente</a> (pestaña Contactos).</>
+              )}
             </p>
           </div>
+        )}
+
+        {fichaTomador && (
+          <details
+            open={fichaAbierta}
+            onToggle={(e) => { const o = e.currentTarget.open; setFichaAbierta(o); if (o) setFichaMontada(true) }}
+            style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 10, padding: '0 12px' }}
+          >
+            <summary style={{ cursor: 'pointer', userSelect: 'none', minHeight: 44, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14, fontWeight: 700 }}>
+              Datos del tomador en la ficha
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>identidad · dirección (se guarda en la ficha)</span>
+              {reparos.ficha.length > 0 && <Badge tono="aviso">{reparos.ficha.length === 1 ? 'falta 1 dato' : `faltan ${reparos.ficha.length} datos`}</Badge>}
+            </summary>
+            {/* Montaje perezoso, y una vez montado se queda: plegarlo no tira lo escrito en sus formularios. */}
+            {(fichaMontada || fichaAbierta) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18, padding: '4px 0 14px' }}>
+                {reparos.ficha.length > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    {textoFaltaEnFicha(reparos.ficha.map((f) => f.campo))}
+                  </div>
+                )}
+                <PanelDatosCliente
+                  clienteId={clienteId}
+                  identidad={fichaTomador.identidad}
+                  documentos={fichaTomador.documentos}
+                  contacto={fichaTomador.contacto}
+                  juridica={fichaTomador.juridica}
+                  secciones={['identidad', 'direccion']}
+                  onGuardado={alGuardarFicha}
+                />
+                {fichaGuardada && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    Guardado en la ficha: los huecos de arriba se han recalculado y lo tecleado en esta pantalla sigue ahí.
+                  </div>
+                )}
+              </div>
+            )}
+          </details>
         )}
 
         {reparos.desconocidos.length > 0 && (
@@ -1252,6 +1587,9 @@ export default function AutoNuevo({
             Tiene {anteriorAmbiguo} oportunidades de auto abiertas con su póliza leída: tarifica desde la oportunidad de ese coche para precargarla.
           </p>
         )}
+        {!tieneSeguroActual && seguroImputado && (
+          <PanelSeguroImputado s={seguroImputado} valor={eleccionAnterior} onCambio={setEleccionAnterior} />
+        )}
 
         {tieneSeguroActual && (
           <>
@@ -1339,6 +1677,19 @@ export default function AutoNuevo({
         )}
       </div>
 
+      <PackVehiculos
+        clienteId={clienteId}
+        ramoActual="auto"
+        otro={otroVehiculo}
+        estadoCivilId={estadoCivilId}
+        municipioId={municipioId}
+        fechaEfecto={fechaEfecto}
+        preciosActuales={resultado.estado === 'ok' && !resultado.simulado ? resultado.precios : null}
+        puedePedir={simulacion || consumoPermite}
+        llamadasHechas={resultado.estado === 'ok' && !resultado.simulado ? 1 : 0}
+        onPack={setPack}
+      />
+
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
@@ -1386,7 +1737,21 @@ export default function AutoNuevo({
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} clienteId={clienteId} />}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
+        )}
+        {resultado.estado === 'ok' && (
+          <Precios
+            r={resultado}
+            simulacion={simulacion}
+            clienteId={clienteId}
+            actual={primaActualParaLista(anterior)}
+            familiaAllianz={(() => {
+              const d = decidirFamiliaAllianz({ packActivo: pack.activo, packTarificado: pack.tarificado, carteraAllianz })
+              return d.familia === true ? { valor: true as const, motivo: d.motivo } : null
+            })()}
+          />
+        )}
       </div>
     </div>
   )
@@ -1476,12 +1841,13 @@ function fechaCorta(iso: string): string {
   return `${d}/${m}/${a}`
 }
 
-function Campo({ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }) {
+function Campo({ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }) {
   return (
     <div style={{ minWidth: 0 }}>
       <label style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
         <span>{etiqueta}</span>
         {falta && <Badge tono="aviso">falta{faltaTexto ? ` · ${faltaTexto}` : ''}</Badge>}
+        {!falta && aviso && <Badge tono="aviso">{aviso}</Badge>}
       </label>
       {children}
       {ayuda && <span style={{ color: 'var(--muted)', fontSize: 12, display: 'block', marginTop: 4 }}>{ayuda}</span>}
@@ -1508,7 +1874,15 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
   )
 }
 
-function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }) {
+function Precios({ r, simulacion, clienteId, actual, familiaAllianz }: {
+  r: Extract<Resultado, { estado: 'ok' }>
+  simulacion: boolean
+  clienteId: string
+  /** «Pagas X → te proponemos Y»: lo que paga hoy, anualizado. `null` = sin oportunidad de la que sacarlo. */
+  actual: ReturnType<typeof primaActualParaLista>
+  /** `insuredFamilyInAllianz` de partida (pack encendido + cartera Allianz o pack tarifado). `null` = no se toca. */
+  familiaAllianz: { valor: true; motivo: string } | null
+}) {
   // Emitir a un cliente NUEVO (28/09/2026): asegura enlazó el proyecto a la ficha y a
   // esta tarificación al confirmar el precio, así que no hace falta póliza previa.
   const cotizacionId = cotizacionIdDe(r.guardado)
@@ -1530,13 +1904,19 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         idPrecio={p.id ?? null}
         sustituye={false}
         ramo="auto"
+        familiaAllianz={familiaAllianz}
         onCerrar={cerrar}
       />
     ),
+    actual,
   }
   return (
     <div style={{ marginTop: 12 }}>
       <EnlaceOportunidad guardado={r.guardado} />
+      {r.seguroAnterior?.elegida && (
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '6px 0' }}>Seguro anterior declarado: {describirCandidata(r.seguroAnterior.elegida)}</p>
+      )}
+      {r.seguroAnterior?.bonusSupuesto && <AvisoBonusSupuesto condicion={r.seguroAnterior.condicion} />}
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
           <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>
@@ -1560,7 +1940,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         <>
           {/* «Qué verá el cliente» enseña todos los precios y, desde el 29/09/2026, cada fila se emite
               ahí mismo: ya no hay una segunda lista plegada debajo para emitir. */}
-          <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionId} simulado={r.simulado} emitir={puedeEmitir ? (o, cerrar) => (
+          <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionId} simulado={r.simulado} actual={actual} emitir={puedeEmitir ? (o, cerrar) => (
                 <Emision
                   tarificacionId={cotizacionId as string}
                   compania={o.compania ?? ''}
@@ -1571,6 +1951,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
                   idPrecio={o.idVendor}
                   sustituye={false}
                   ramo="auto"
+                  familiaAllianz={familiaAllianz}
                   onCerrar={cerrar}
                 />
               ) : undefined} />

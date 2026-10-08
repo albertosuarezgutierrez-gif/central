@@ -105,7 +105,7 @@ Pegar tal cual:
 > 6. `POST /insurances/{id}/offers`: ¿el `effectiveDate` opcional permite cambiar la fecha de efecto
 >    de un proyecto ya cotizado?
 > 7. Esquema exacto de `actions[]` de una quote (`ReRate` y `SubmitPolicyApplication`), con ejemplo.
-> 8. ¿Se dice en algún sitio si `POST .../offers` y `POST .../policy-applications` son facturables?
+> 8. ¿Se dice en algún sitio si `POST .../offers` y `POST .../policy-applications` son facturables? *(Resuelto por inferencia del correo 02/10/2026: no aparecen como facturables; confirmación explícita no pedida.)*
 > 9. Lista completa de `status.id` de solicitudes (`/policy-application-statuses`), si hay ejemplo.
 > 10. Flujo de `RevisedQuote`: ¿cómo se reenvía? ¿Va `revisedQuote.id` en `quote.id`?
 > 11. `issuedDocuments[]` (`InsuranceFile_V1`): duración hasta `expirationDateTime` y qué documentos

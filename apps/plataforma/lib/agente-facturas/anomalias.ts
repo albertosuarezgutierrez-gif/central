@@ -2,7 +2,7 @@
 // resuelven en el flujo principal vía evaluar()/existeDuplicado()).
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { estadoCargo, esAviso, type VeredictoCargo } from './domiciliados'
+import { estadoCargo, esAviso, type VeredictoCargo, type CuentaCobertura, cuentasParadas as cuentasParadasDe } from './domiciliados'
 
 export interface ReglaFaltante {
   fingerprint: string
@@ -67,15 +67,22 @@ export interface GastoDomiciliado {
   veredicto: VeredictoCargo
 }
 
-/** Hasta qué fecha llega el extracto de las cuentas corrientes. NULL si no se sabe. */
-async function coberturaBanco(): Promise<string | null> {
+/** Última fecha sincronizada de cada cuenta activa (corriente o tarjeta) con movimientos en 180 días. */
+export async function coberturaPorCuenta(hoy: string, cuentaId?: string, incluirOcultas = false): Promise<CuentaCobertura[]> {
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT MAX(m.fecha_operacion)::text AS hasta
-    FROM v_movimientos_activos m
-    JOIN cuentas_bancarias cb ON cb.id = m.cuenta_bancaria_id
-    WHERE cb.tipo = 'corriente'
+    SELECT cb.id::text AS id, COALESCE(cb.alias, cb.banco, cb.iban_mascara, cb.id::text) AS nombre,
+           cb.iban_mascara, MAX(m.fecha_operacion)::text AS ultimo
+    FROM cuentas_bancarias cb
+    JOIN v_movimientos_activos m ON m.cuenta_bancaria_id = cb.id
+    WHERE ${incluirOcultas ? Prisma.sql`TRUE` : Prisma.sql`cb.oculta IS NOT TRUE`}
+      ${cuentaId ? Prisma.sql`AND cb.cuenta_id = ${cuentaId}::uuid` : Prisma.empty}
+    GROUP BY cb.id, cb.alias, cb.banco, cb.iban_mascara
+    ${incluirOcultas ? Prisma.empty : Prisma.sql`HAVING MAX(m.fecha_operacion) >= ${hoy}::date - 180`}
   `)
-  return rows[0]?.hasta ?? null
+  return rows.map((r) => ({
+    nombre: `${r.nombre}${r.iban_mascara && r.nombre !== r.iban_mascara ? ` ${String(r.iban_mascara).slice(-4)}` : ''}`,
+    ultimo: r.ultimo ?? null,
+  }))
 }
 
 /**
@@ -86,8 +93,8 @@ async function coberturaBanco(): Promise<string | null> {
 export async function domiciliadosSinCargo(
   hoy: string,
   diasAtras = 90,
-): Promise<{ avisos: GastoDomiciliado[]; sinCobertura: number; sinFecha: number }> {
-  const cobertura = await coberturaBanco()
+): Promise<{ avisos: GastoDomiciliado[]; sinCobertura: number; sinFecha: number; cuentasParadas: CuentaCobertura[] }> {
+  const cuentas = await coberturaPorCuenta(hoy)
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT g.id::text, g.proveedor, g.total::float AS total,
            g.fecha_vencimiento::text AS fecha_vencimiento,
@@ -100,6 +107,7 @@ export async function domiciliadosSinCargo(
            ) AS cargo_casado
     FROM gastos g
     WHERE g.fecha_vencimiento IS NOT NULL
+      AND (g.raw_extraction->>'domiciliado') = 'true' -- solo domiciliación EXPLÍCITA; null = no se sabe
       AND g.total > 0
       AND g.fecha_vencimiento::date >= ${hoy}::date - (${diasAtras}::int)
       AND NOT (g.revisado = false AND g.origen IS NOT NULL)
@@ -109,14 +117,19 @@ export async function domiciliadosSinCargo(
   const avisos: GastoDomiciliado[] = []
   let sinCobertura = 0
   let sinFecha = 0
+  const paradasMap = new Map<string, CuentaCobertura>()
   for (const r of rows) {
     const veredicto = estadoCargo({
       fechaCargo: r.fecha_vencimiento,
       hoy,
       cargoCasado: r.cargo_casado === true,
-      bancoHasta: cobertura,
+      bancoHasta: null,
+      cuentas,
     })
-    if (veredicto.estado === 'sin_cobertura') sinCobertura++
+    if (veredicto.estado === 'sin_cobertura') {
+      sinCobertura++
+      for (const c of cuentasParadasDe(cuentas, r.fecha_vencimiento)) paradasMap.set(c.nombre, c)
+    }
     if (veredicto.estado === 'sin_fecha') sinFecha++
     if (!esAviso(veredicto)) continue
     avisos.push({
@@ -127,5 +140,5 @@ export async function domiciliadosSinCargo(
       veredicto,
     })
   }
-  return { avisos, sinCobertura, sinFecha }
+  return { avisos, sinCobertura, sinFecha, cuentasParadas: [...paradasMap.values()] }
 }

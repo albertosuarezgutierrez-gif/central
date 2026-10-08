@@ -7,11 +7,51 @@ import { prisma } from '@/lib/db'
 import { getTesoreria } from '@/lib/tesoreria'
 import { fmtEur } from '@/lib/banca'
 import { enviarAvisoEmail } from '@/lib/notificaciones'
+import { Prisma } from '@prisma/client'
+import { tgAviso } from '@/lib/telegram/avisos'
+import { escapeHtml } from '@/lib/telegram'
+import { frescuraCuentas, textoFrescura, picosGasto, fusionarPicos, textoPicos } from '@/lib/banca-vigilancia'
+import { cuentasConUltimoMovimiento, cargosMovimientos, cargosGastos } from '@/lib/banca-vigilancia-datos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const UMBRAL = Number(process.env.BANCA_ALERTA_UMBRAL ?? 0)   // avisa si proyectado < umbral
+
+// Anti-spam: como mucho 1 aviso de cada tipo cada ~día (bitácora `telegram_avisos_log`, mismo
+// patrón que canario-lead). Best-effort: si la consulta falla se avisa igual (mejor duplicado que silencio).
+async function avisadoHacePoco(id: string): Promise<boolean> {
+  try {
+    const f = await prisma.$queryRaw<Array<{ n: bigint }>>(Prisma.sql`
+      SELECT COUNT(*) AS n FROM telegram_avisos_log
+      WHERE aviso_id = ${id} AND estado = 'enviado' AND enviado_at > now() - interval '20 hours'`)
+    return Number(f[0]?.n ?? 0) > 0
+  } catch { return false }
+}
+
+const hoyMadrid = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date())
+
+/** Avisos Telegram de banca (frescura por cuenta + picos de gasto). Nunca rompe el cron. */
+async function avisosTelegramBanca(): Promise<{ frescura: boolean; picos: boolean }> {
+  const res = { frescura: false, picos: false }
+  const hoy = hoyMadrid()
+  try {
+    const texto = textoFrescura(frescuraCuentas(await cuentasConUltimoMovimiento(), hoy), escapeHtml)
+    if (texto && !(await avisadoHacePoco('finanzas.banca-frescura'))) {
+      await tgAviso('finanzas.banca-frescura', texto, { html: true })
+      res.frescura = true
+    }
+  } catch (e) { console.error('[banca-alertas] frescura:', e) }
+  try {
+    const [mov, gas] = await Promise.all([cargosMovimientos(), cargosGastos().catch(() => [])])
+    const texto = textoPicos(fusionarPicos(picosGasto(mov, hoy), picosGasto(gas, hoy)), escapeHtml)
+    if (texto && !(await avisadoHacePoco('finanzas.gasto-pico'))) {
+      await tgAviso('finanzas.gasto-pico', texto, { html: true })
+      res.picos = true
+    }
+  } catch (e) { console.error('[banca-alertas] picos:', e) }
+  return res
+}
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
@@ -51,5 +91,6 @@ export async function GET(req: NextRequest) {
     avisados += 1
   }
 
-  return NextResponse.json({ ok: true, cuentas: cuentas.length, avisados })
+  const telegram = await avisosTelegramBanca()
+  return NextResponse.json({ ok: true, cuentas: cuentas.length, avisados, telegram })
 }

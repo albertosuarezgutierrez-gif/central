@@ -45,7 +45,7 @@ test('la fecha grande del quinto tile es el LÍMITE DE AVISO, no el vencimiento'
   // vencimiento como fecha de acción deja creer que hay 30 días más de los que
   // hay — el plazo ya se pasó cuando el cliente mira el calendario.
   const cab = leer('Cabecera.tsx')
-  assert.match(cab, /valor=\{fmt\(proximo\.limiteAviso\)\}/)
+  assert.match(cab, /valor=\{fmt\((?:proximo|a)\.limiteAviso(?: as string)?\)\}/)
   assert.match(cab, /Hay que avisar antes del/)
   assert.ok(cab.includes('vence el ${fmt(proximo.vencimiento)}'), 'el vencimiento se dice, pero debajo')
 })

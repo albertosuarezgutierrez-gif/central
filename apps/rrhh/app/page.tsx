@@ -6,7 +6,10 @@ export default function Home() {
       <div>
         <Wordmark className="text-4xl" />
         <p className="text-ink-2 mt-3">Portal del Empleado — casa de marcas.</p>
-        <a href="/login" className="mt-5 inline-block rounded-[10px] bg-accent px-4 py-2 font-semibold text-white no-underline hover:bg-accent-ink">
+        <a href="/e/entrar" className="mt-5 mr-2 inline-block rounded-[10px] bg-accent px-4 py-2.5 font-semibold text-white no-underline hover:bg-accent-ink">
+          Acceso empleado
+        </a>
+        <a href="/login" className="mt-5 inline-block rounded-[10px] bg-accent px-4 py-2.5 font-semibold text-white no-underline hover:bg-accent-ink">
           Acceso responsable
         </a>
       </div>

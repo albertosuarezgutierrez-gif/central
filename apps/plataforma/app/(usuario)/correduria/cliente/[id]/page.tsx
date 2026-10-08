@@ -189,6 +189,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
             lista={ficha.siniestros}
             polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
             documentos={ficha.documentos}
+            clienteId={ficha.id}
           />
         </>
       )}
