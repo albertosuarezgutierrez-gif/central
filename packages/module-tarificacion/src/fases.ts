@@ -21,6 +21,7 @@ export class MaquinaFases {
   private opcionUsada = false
   private aceptarUsado = false
   private ventanaAceptar = false
+  private emisionUsada = false
 
   fase(): FaseTarificacion {
     return this.fase_
@@ -68,5 +69,17 @@ export class MaquinaFases {
     if (this.fase_ !== 'tarificar') this.bloquear('proyecto', 'solo se abre desde Tarificar')
     if (pestana !== 'tarificar') this.bloquear('proyecto', `la pestaña activa no es Tarificar (${pestana ?? 'desconocida'})`)
     this.fase_ = 'proyecto'
+  }
+
+  /**
+   * EMISIÓN autorizada (10/10/2026, emision.ts): el «Aceptar» de Tarificar, SOLO desde Tarificar (no tras «Proyecto»),
+   * con la pestaña verificada en el DOM y UNA vez por trabajo. No basta con esto: además hace falta un `PermisoEmision`
+   * válido (`usarPermisoEmision`), que solo existe tras canjear el token de Alberto. Sin él, todo sigue bloqueado.
+   */
+  autorizarEmision(pestana: PestanaActiva): void {
+    if (this.fase_ !== 'tarificar') this.bloquear('emision', 'solo desde Tarificar')
+    if (pestana !== 'tarificar') this.bloquear('emision', `la pestaña activa no es Tarificar (${pestana ?? 'desconocida'})`)
+    if (this.emisionUsada) this.bloquear('emision', 'ya se pulsó una vez en este trabajo')
+    this.emisionUsada = true
   }
 }

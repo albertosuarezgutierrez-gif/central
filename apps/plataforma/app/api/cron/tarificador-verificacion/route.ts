@@ -11,18 +11,53 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { tgSend } from '@/lib/telegram'
 import { avisoPermitido, avisoEnviado } from '@/lib/telegram/avisos'
 import { componerAvisoVerificacion, leerVerificacionesAsegura, marcarVerificacionesAvisadas } from '@/lib/tarificador-verificacion-asegura'
+import { tgSendButtons, tgSendPhoto } from '@central/core-telegram'
+import { botonesEmision, componerAvisoEmision, leerAvisosEmision, marcarAvisosEmision } from '@/lib/tarificador-emision-asegura'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+/**
+ * EMISIÓN del robot (10/10/2026): peticiones de botón (captura de la pantalla previa + «✅ Emitir»/«❌ Cancelar») y
+ * desenlaces. Va al chat de Alberto sin pasar por el catálogo de silenciables: es la respuesta a una emisión que él
+ * mismo pidió, y callarla dejaría la solicitud caducar sin que lo sepa. Solo se marca en asegura lo que salió.
+ */
+async function avisarEmisiones(): Promise<Record<string, unknown>> {
+  const lectura = await leerAvisosEmision()
+  if (lectura.estado === 'sin_configurar' || lectura.estado === 'sin_esquema') return { estado: lectura.estado }
+  if (lectura.estado === 'error') {
+    console.error('[tarificador-emision] no se pudo leer los avisos:', lectura.causa)
+    return { estado: 'sin_datos', causa: lectura.causa }
+  }
+  const avisados: string[] = []
+  const sinEnviar: string[] = []
+  for (const a of lectura.pendientes) {
+    const texto = componerAvisoEmision(a)
+    let salio: boolean
+    if (a.tipo === 'pedir_autorizacion') {
+      // La captura primero (si la hay); los botones, en su propio mensaje (sendPhoto no lleva teclado aquí).
+      if (a.capturaBase64) await tgSendPhoto({ data: Buffer.from(a.capturaBase64, 'base64'), nombre: 'pantalla-previa.png' }, '🖊️ Pantalla previa a emitir').catch(() => null)
+      salio = (await tgSendButtons(texto, botonesEmision(a.trabajoId)).catch(() => null)) !== null
+    } else {
+      salio = (await tgSend(texto).catch(() => null)) !== null
+    }
+    if (salio) avisados.push(a.trabajoId)
+    else sinEnviar.push(a.trabajoId)
+  }
+  const marcados = await marcarAvisosEmision(avisados)
+  if (!marcados) console.error('[tarificador-emision] avisados pero sin marcar en asegura (puede repetirse):', avisados)
+  return { estado: 'ok', pendientes: lectura.pendientes.length, avisados: avisados.length, sinEnviar: sinEnviar.length, ilegibles: lectura.ilegibles, marcados }
+}
+
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const emision = await avisarEmisiones().catch((e: unknown) => ({ estado: 'error', causa: e instanceof Error ? e.message : String(e) }))
 
   const lectura = await leerVerificacionesAsegura()
   if (lectura.estado !== 'ok') {
     const causa = lectura.estado === 'sin_configurar' ? 'puerto sin configurar (ASEGURA_OPERADOR_SECRET)' : lectura.causa
     console.error('[tarificador-verificacion] no se pudo leer los trabajos parados:', causa)
-    return NextResponse.json({ ok: false, estado: 'sin_datos', causa })
+    return NextResponse.json({ ok: false, estado: 'sin_datos', causa, emision })
   }
 
   // ⚠️ Id LITERAL en las dos llamadas: `lib/telegram/catalogo.test.ts` lee el fuente.
@@ -49,5 +84,6 @@ export async function GET(req: NextRequest) {
     sinEnviar: sinEnviar.length,
     ilegibles: lectura.ilegibles,
     silenciado: !permitido,
+    emision,
   })
 }

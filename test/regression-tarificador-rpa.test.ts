@@ -168,6 +168,11 @@ test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan po
     if (acciones < 0) continue
     const nombre = fn.slice(0, fn.indexOf('('))
     const previo = fn.slice(0, acciones)
+    // La emisión autorizada (10/10/2026) NO cuenta con la fase sola: además tiene que gastar el permiso de un solo uso.
+    if (nombre === 'pulsarEmisionAutorizada') {
+      assert.ok(/fases\.autorizarEmision\(/.test(previo) && /usarPermisoEmision\(/.test(previo), `${nombre}: click sin fase de emisión Y permiso de un solo uso`)
+      continue
+    }
     assert.match(previo, /comprobarBoton\(|fases\.autorizar(Aceptar|Opcion|Proyecto)\(/, `${nombre}: click/check sin pasar antes por el guard`)
   }
   const aceptar = funciones.find((f) => f.startsWith('pulsarAvance'))!
@@ -294,4 +299,27 @@ test('formador en el adaptador ePAC: FALLBACK acotado (campos + «Calcular»), a
   // 8. setChecked solo sobre una casilla confirmada por tipoControl (no pasa por el guard).
   const m = src.slice(src.indexOf('async function marcar'), src.indexOf('async function login'))
   assert.ok(m.indexOf("(await tipoControl(campo)) !== 'checkbox'") > -1 && m.indexOf("(await tipoControl(campo)) !== 'checkbox'") < m.indexOf('setChecked('), 'marcar tiene que comprobar que es una casilla antes de setChecked')
+})
+
+test('EMISIÓN (10/10/2026): un solo camino para pulsar el botón de emitir, y solo con permiso de un solo uso', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarEmisionAutorizada'))
+  assert.ok(fn, 'falta pulsarEmisionAutorizada en guard.ts')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'esBotonDeListaBlanca(', 'fases.autorizarEmision(', 'pestanaActiva(', 'usarPermisoEmision(']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < clic, `pulsarEmisionAutorizada: «${paso}» tiene que ir ANTES del clic`)
+  }
+  assert.ok(fn!.indexOf('usarPermisoEmision(') < fn!.indexOf('abrir('), 'la ventana de red se abre DESPUÉS de gastar el permiso')
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  // Nadie más la llama salvo el flujo de emisión del worker, y solo tras un canje OK.
+  const llamadas = ficheros(join(SRV, 'src')).filter((f) => !f.endsWith('/src/guard.ts') && /pulsarEmisionAutorizada\(/.test(sinComentarios(readFileSync(f, 'utf8'))))
+  assert.deepEqual(llamadas.map((f) => relative(RAIZ, f)), ['services/tarificador-rpa/src/emision.ts'])
+  const em = sinComentarios(readFileSync(join(SRV, 'src/emision.ts'), 'utf8'))
+  assert.ok(em.indexOf('canjearToken(') > -1 && em.indexOf('canjearToken(') < em.indexOf('crearPermisoEmision('), 'el permiso solo se crea tras el canje')
+  assert.match(em, /if \(!canje\.ok\)/)
+  assert.match(em, /botonDelCanjeValido\(/)
+  // El guard del módulo no se toca para emitir: sigue sin saber nada de permisos.
+  const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
+  assert.ok(!/permiso/i.test(g), 'guard-emision.ts no puede conocer el permiso: el guard queda INTACTO por defecto')
 })

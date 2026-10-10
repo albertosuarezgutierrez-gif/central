@@ -1,8 +1,17 @@
 # Diseño: emisión asistida por el robot del tarificador (10/10/2026)
 
-> Estado: DISEÑO, nada implementado. Decisión de Alberto: el MISMO robot (`services/tarificador-rpa`) podrá
-> emitir, pero solo con su autorización por Telegram. Hoy `guard-emision.ts` bloquea TODA emisión y eso
-> **no cambia por defecto**. Sin datos personales en este documento.
+> Estado (10/10/2026): **IMPLEMENTADO en código, apagado** (F0+F1 juntas para Allianz Comunidades). Falta: aplicar
+> `apps/asegura/prisma/sql/2026-10-10_tarificador_emision.sql`, poner las envs y una primera prueba con Alberto delante.
+> Decisiones de Alberto: sin tope diario; solo él solicita (`TARIFICADOR_EMISION_SOLICITANTE`) y autoriza
+> (`TARIFICADOR_EMISION_TELEGRAM_ID` en asegura + `from.id == TELEGRAM_CHAT_ID` en plataforma); solicitud 24 h, token 15 min;
+> tolerancia 0 €; IPID obligatorio (`presupuesto.ipid_huella`, se copia al firmar; los aceptados antes no emiten);
+> anulación de la vieja MANUAL (no se escribe `presupuesto.emitido_at`); interruptor `TARIFICADOR_EMISION_ACTIVA=1` en
+> asegura Y como fly secret de la máquina. Diferencias con lo de abajo: el token NO se crea al pulsar sino al entregarlo a
+> la máquina 2 (una sola entrega, `token_hash IS NULL`), y la emisión pide `trabajoOrigenId` (la tarificación cuyo riesgo
+> se emite). Lo que ePAC enseña DESPUÉS del «Aceptar» de Tarificar no está grabado: sin nº de póliza inequívoco el trabajo
+> queda `requiere_humano` (incierto) y se mira el portal. Código: `module-tarificacion/src/emision.ts`,
+> `tarificador-rpa/src/{emision,guard}.ts`, `asegura/lib/tarificador-emision*.ts`, `plataforma/lib/tarificador-emision-asegura.ts`.
+> Sin datos personales en este documento.
 
 ## 0. Principios
 1. Por defecto sigue todo cerrado: sin token válido, el guard aborta como hoy (`error_definitivo`, tipo `emision`).

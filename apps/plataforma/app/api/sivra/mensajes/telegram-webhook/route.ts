@@ -31,6 +31,7 @@ import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } 
 import { esPreguntaPatrimonio, esComandoPatrimonio } from '@/lib/patrimonio-chat'
 import { decidirBlogPr } from '@/lib/correduria/blog-pr'
 import { ACCION_BOTON_TOPE, ampliarTopeAvant2 } from '@/lib/correduria/tope-avant2'
+import { PREFIJO_EMISION, autorizarEnAsegura, decidirBotonEmision, lineaTrasPulsar } from '@/lib/tarificador-emision-asegura'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -787,6 +788,29 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         return NextResponse.json({ ok: true })
       }
 
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── EMISIÓN del robot del tarificador (emi_ok / emi_no, 10/10/2026) ──────────────────────
+    // Autoriza (o cancela) que el robot pulse UN botón de emisión UNA vez en el portal de la compañía. Solo la PERSONA
+    // autorizada (from.id = TELEGRAM_CHAT_ID; en un grupo cualquiera podría pulsar). Se contesta YA y asegura (que vuelve
+    // a comprobar el id, la caducidad de 24 h y el presupuesto) va en after(). Doble pulsación = idempotente en asegura.
+    if (prefix === PREFIJO_EMISION) {
+      const d = decidirBotonEmision(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.decision === 'ok' ? '⏳ Autorizando…' : 'Cancelando…')
+      const original = escapeHtml(cb.message?.caption ?? cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const r = await autorizarEnAsegura({ trabajoId: d.trabajoId, decision: d.decision, autorizadoPor: d.autorizadoPor })
+        const linea = lineaTrasPulsar(d.decision, r)
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
       return NextResponse.json({ ok: true })
     }
 

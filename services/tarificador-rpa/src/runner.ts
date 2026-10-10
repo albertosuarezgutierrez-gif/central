@@ -42,6 +42,7 @@ import { textoAvisoSesionManual } from './aviso.ts'
 import { caducidadMaximaMs, claveSesion } from './boveda-sesion.ts'
 import { GestorSesionManual, almacenHttp } from './sesion-manual.ts'
 import type { AdaptadorPortal, ContextoPortal } from './adaptador.ts'
+import { ejecutarEmision } from './emision.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
 /** Techo absoluto del trabajo (dos intentos + espera), por si el lease no llega legible. */
@@ -291,6 +292,12 @@ async function main(): Promise<number> {
       await fallo('credenciales', e instanceof Error ? e.message : String(e))
       return 1
     }
+  }
+
+  // EMISIÓN asistida (10/10/2026, src/emision.ts): otro flujo, con su propio navegador y sin formador ni reintento.
+  // Sin la fase o con el interruptor de la máquina apagado, `ejecutarEmision` responde `no_emitida` sin abrir el portal.
+  if (trabajo.modo === 'emision') {
+    return ejecutarEmision({ cfg, trabajo, adaptador, riesgo: v.riesgo, credenciales, env, traza: crearTraza((e) => clasificar(e).tipo), log, redactar })
   }
 
   // Formador con IA: lo enciende asegura (`TARIFICADOR_FORMADOR_ACTIVO`); si no responde, apagado.

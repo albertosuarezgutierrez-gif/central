@@ -46,13 +46,14 @@ export type ResultadoAccion =
  */
 export async function aplicarAccionBandeja(correduriaId: string, id: string, accion: AccionBandeja): Promise<ResultadoAccion> {
   return prisma.$transaction(async (tx) => {
-    const filas = await tx.$queryRaw<{ estado: string; error: unknown; compania: string }[]>`
-      select estado, error, compania from seguros.tarificacion_trabajos
-      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid for update`
+    // `modo` por to_jsonb: sin el SQL de emisión (2026-10-10) la columna no existe y sale null (= tarificar).
+    const filas = await tx.$queryRaw<{ estado: string; error: unknown; compania: string; modo: string | null }[]>`
+      select t.estado, t.error, t.compania, to_jsonb(t)->>'modo' as modo from seguros.tarificacion_trabajos t
+      where t.id = ${id}::uuid and t.correduria_id = ${correduriaId}::uuid for update`
     const f = filas[0]
     if (!f) return { estado: 'no_encontrado' as const }
     if (yaEnElDestino(accion, f.estado)) return { estado: 'sin_cambios' as const, estadoTrabajo: f.estado }
-    const d = decidirAccionBandeja(accion, f.estado, tipoDeError(f.error))
+    const d = decidirAccionBandeja(accion, f.estado, tipoDeError(f.error), f.modo)
     if (!d.ok) return { estado: 'conflicto' as const, motivo: d.motivo, estadoTrabajo: f.estado }
     if (accion === 'reintentar') {
       await tx.$executeRaw`

@@ -12,6 +12,7 @@ import {
   MAX_INTENTOS,
   claveCompania,
   estadoTrasError,
+  estadoTrasErrorEmision,
   franquiciaGeneral,
   puedeAutomatizar,
   type OfertaNormalizada,
@@ -21,6 +22,7 @@ import {
 } from '@central/module-tarificacion'
 import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
+import { caducarEmisiones } from './tarificador-emision'
 import { LEASE_MS, configFly, peticionMaquina, rpaActivo, type ConfigFly, type ResultadoWorker } from './tarificador-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
@@ -129,7 +131,8 @@ export async function reclamarSiguiente(correduriaId: string, compania: string):
           on ci.correduria_id = w.correduria_id and ci.compania = w.compania and ci.ramo = w.ramo
          and ci.activo and ci.modo = 'rpa_autorizada'
         where w.correduria_id = ${correduriaId}::uuid and w.compania = ${clave}
-          and w.estado = 'pendiente' and w.intentos < ${MAX_INTENTOS}
+          -- autorizado_emision: Alberto pulsó «Emitir»; la máquina 2 reanuda (no es un reintento: intentos a 0).
+          and w.estado in ('pendiente', 'autorizado_emision') and w.intentos < ${MAX_INTENTOS}
         order by w.created_at
         for update of w skip locked
         limit 1)
@@ -198,16 +201,19 @@ async function destruirMaquina(cfg: ConfigFly, machineId: string, f: typeof fetc
 
 // ─── Lo que ve el worker ─────────────────────────────────────────────────────
 
-export type TrabajoParaWorker = { id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta: string }
+export type TrabajoParaWorker = { id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta: string; modo: 'tarificar' | 'emision' }
 
-/** Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. */
+/**
+ * Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb
+ * (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo añade la ruta (`emisionParaWorker`).
+ */
 export async function trabajoParaWorker(id: string): Promise<TrabajoParaWorker | null> {
-  const filas = await prisma.$queryRaw<{ id: string; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date }[]>`
-    select id::text as id, compania, ramo, riesgo, lease_hasta
-    from seguros.tarificacion_trabajos
-    where id = ${id}::uuid and estado = 'en_curso' and lease_hasta > now()`
+  const filas = await prisma.$queryRaw<{ id: string; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date; modo: string | null }[]>`
+    select t.id::text as id, t.compania, t.ramo, t.riesgo, t.lease_hasta, to_jsonb(t)->>'modo' as modo
+    from seguros.tarificacion_trabajos t
+    where t.id = ${id}::uuid and t.estado = 'en_curso' and t.lease_hasta > now()`
   const f = filas[0]
-  return f ? { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, leaseHasta: f.lease_hasta.toISOString() } : null
+  return f ? { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, leaseHasta: f.lease_hasta.toISOString(), modo: f.modo === 'emision' ? 'emision' : 'tarificar' } : null
 }
 
 // ─── Resultado ───────────────────────────────────────────────────────────────
@@ -237,13 +243,15 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
   const conBot = await hayBotVersion()
   type Interno = { res: ResultadoRegistro; traza: { t: FilaTrabajo; captura: 'con_captura' | null } | null }
   const interno: Interno = await prisma.$transaction(async (tx) => {
-    const filas = await tx.$queryRaw<FilaTrabajo[]>`
-      select id::text as id, correduria_id::text as correduria_id, cliente_id::text as cliente_id,
-             poliza_id::text as poliza_id, oportunidad_id::text as oportunidad_id, compania, ramo, riesgo,
-             estado, intentos, solicitado_por
-      from seguros.tarificacion_trabajos where id = ${r.trabajoId}::uuid for update`
+    const filas = await tx.$queryRaw<(FilaTrabajo & { modo: string | null })[]>`
+      select w.id::text as id, w.correduria_id::text as correduria_id, w.cliente_id::text as cliente_id,
+             w.poliza_id::text as poliza_id, w.oportunidad_id::text as oportunidad_id, w.compania, w.ramo, w.riesgo,
+             w.estado, w.intentos, w.solicitado_por, to_jsonb(w)->>'modo' as modo
+      from seguros.tarificacion_trabajos w where w.id = ${r.trabajoId}::uuid for update`
     const t = filas[0]
     if (!t) return { res: { estado: 'no_encontrado' as const }, traza: null }
+    // Un trabajo de EMISIÓN no devuelve ofertas por aquí: su resultado va por /api/tarificador/emision/resultado.
+    if (t.modo === 'emision' && r.tipo !== 'error') return { res: { estado: 'conflicto' as const, motivo: 'trabajo de emisión: usa /api/tarificador/emision/resultado' }, traza: null }
     // Un resultado tardío (el barrido ya dio el lease por vencido) NO pisa lo decidido.
     if (t.estado !== 'en_curso') return { res: { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }, traza: null }
 
@@ -374,7 +382,12 @@ async function marcarFallo(
   botVersion: string | null = null,
   conBotVersion = false,
 ): Promise<string> {
-  const estado = estadoTrasError(error.tipo, intentos)
+  // EMISIÓN (10/10/2026): nunca se reintenta sola (tras el clic, el estado en la compañía es incierto) → requiere_humano,
+  // con tipo `emision` (la bandeja no la deja reintentar) y el aviso a Alberto rearmado.
+  const modoFila = await db.$queryRaw<{ modo: string | null }[]>`select to_jsonb(t)->>'modo' as modo from seguros.tarificacion_trabajos t where t.id = ${id}::uuid`
+  const deEmision = modoFila[0]?.modo === 'emision'
+  if (deEmision) error = { ...error, tipo: 'emision', mensaje: `[emisión, ${error.tipo}] ${error.mensaje}`.slice(0, 2000) }
+  const estado = deEmision ? estadoTrasErrorEmision() : estadoTrasError(error.tipo, intentos)
   let capturaId: string | null = null
   let htmlId: string | null = null
   if (evidencia?.captura) {
@@ -400,6 +413,7 @@ async function marcarFallo(
           terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
       where id = ${id}::uuid and estado = 'en_curso'`
   }
+  if (deEmision) await db.$executeRaw`update seguros.tarificacion_trabajos set emision_avisada_at = null where id = ${id}::uuid and estado = 'requiere_humano'`
   return estado
 }
 
@@ -407,6 +421,7 @@ async function marcarFallo(
 
 export type ResumenBarrido = {
   omitido?: string
+  emisionesCaducadas?: { solicitudes: number; autorizaciones: number }
   leasesVencidos: number
   reencolados: number
   cancelados: number
@@ -435,6 +450,12 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
     if (fly.ok && v.fly_machine_id) await destruirMaquina(fly.cfg, v.fly_machine_id, deps.fetch)
     r.leasesVencidos++
   }
+
+  // Emisión: 24 h sin botón, o autorización caducada sin máquina → cancelado (nunca se emite tarde).
+  r.emisionesCaducadas = await caducarEmisiones(correduriaId).catch((e: unknown) => {
+    console.error('[tarificador] caducar emisiones', e instanceof Error ? e.message.slice(0, 200) : e)
+    return { solicitudes: 0, autorizaciones: 0 }
+  })
 
   r.reencolados = await prisma.$executeRaw`
     update seguros.tarificacion_trabajos set estado = 'pendiente', updated_at = now()
