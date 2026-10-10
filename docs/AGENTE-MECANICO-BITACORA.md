@@ -12,6 +12,7 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (10/10/2026) Docs: 3 F4 de CONTEXTO-SESIONES.md marcadas como aplicadas + entrada fase 0 de ramos; spec riesgo unificado (auto+moto embebidos, RAMOS_PRESUPUESTO) — agente-mecanico — ok (solo docs, sin tsc)
 - (10/10/2026) Entrada en CONTEXTO-SESIONES.md: auto embebido en riesgo, KM_AUTO_POR_DEFECTO, años asegurado y diseño unificado (solo docs) — agente-mecanico — ok (sin tsc: no se tocó código)
 - (10/10/2026) F3 solo auto: entrada nueva en CONTEXTO-SESIONES.md (km-auto y modoPapel, sin tocar código) — agente-mecanico — ok (solo docs, sin verificación de tsc por no tocar código)
 - (06/10/2026) fix(tarificador): ramo NULL sin valor por defecto en fichas; SQL 07b/07c marcados como aplicados — agente-mecanico — ok (tsc limpio, 7 tests pass, prisma generate ok)

@@ -42,3 +42,21 @@ test('limpiarFiguras descarta roles y ids que no son', () => {
   assert.equal(limpiarFiguras({ jefe: u }), null)
   assert.deepEqual(rolesDelRamo('moto'), ['tomador', 'propietario', 'conductor_habitual'])
 })
+
+test('H1: vida/salud/decesos/RC con distinto capital NO salen como «mismos datos»: son no comparables', () => {
+  for (const linea of ['Life', 'Health', 'Funeral', 'CommercialLiability', undefined]) {
+    const p = (capital: number) => ({ ...(linea ? { insuranceLine: { id: linea } } : {}), effectiveDate: '2026-10-01', holder: persona('1A', 'M'), risk: { insured: persona('1A', 'M'), deathBenefit: capital } })
+    assert.equal(diferenciasVariante(p(100000), p(200000)), null, String(linea))
+    assert.equal(diferenciasVariante(p(100000), p(100000)), null, `${linea} idéntica tampoco se afirma`)
+    assert.equal(resumenDiferencias(diferenciasVariante(p(1), p(2))), 'No se puede comparar con la anterior')
+  }
+})
+
+test('H1: ramos con comparador (coche, moto, hogar) siguen comparando; mezclar vehículo y hogar no se compara', () => {
+  const hogar = (cp: string) => ({ insuranceLine: { id: 'Home' }, effectiveDate: '2026-10-01', holder: persona('1A', 'M'), risk: { address: { postalCode: cp } } })
+  assert.deepEqual(diferenciasVariante(hogar('41003'), hogar('11520'))!.map((x) => x.campo), ['CP de la vivienda'])
+  assert.deepEqual(diferenciasVariante(hogar('41003'), hogar('41003')), [])
+  const coche = { ...moto(persona('1A', 'M')), insuranceLine: { id: 'Car' } }
+  assert.deepEqual(diferenciasVariante(coche, coche), [])
+  assert.equal(diferenciasVariante(coche, hogar('41003')), null)
+})
