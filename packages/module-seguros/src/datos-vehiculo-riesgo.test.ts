@@ -212,3 +212,49 @@ test('D2: repetir el mismo texto de marca/modelo no rompe el catálogo elegido',
   assert.equal(r.datos.codigoVehiculo, '111')
   assert.equal(r.cambios.length, 0)
 })
+
+// ── Tipo de vehículo y cilindrada (10/10/2026): opcionales, null = pendiente ──
+
+test('tipoVehiculo y cilindradaCc: sin dato son null (pendiente), nunca un valor de cajón ni 0', () => {
+  const v = datosVehiculoVacios()
+  assert.equal(v.tipoVehiculo, null)
+  assert.equal(v.cilindradaCc, null)
+  const leido = leerDatosVehiculo({ matricula: '1234BCD', tipoVehiculo: 'avioneta', cilindradaCc: 0 })
+  assert.equal(leido?.tipoVehiculo, null, 'un tipo desconocido es «no se sabe», no «otro»')
+  assert.equal(leido?.cilindradaCc, null, '0 cc no es una cilindrada')
+  assert.equal(leerDatosVehiculo({ matricula: '1234BCD', cilindradaCc: '125' })?.cilindradaCc, null, 'un texto en JSON guardado es «no se sabe»')
+})
+
+test('tipoVehiculo: acepta los cinco tipos (con o sin tilde/mayúsculas), rechaza el resto, vacío = borrar', () => {
+  for (const t of ['coche', 'moto', 'furgoneta', 'camión', 'otro']) assert.equal(ok({ tipoVehiculo: t }).tipoVehiculo, t)
+  assert.equal(ok({ tipoVehiculo: ' Camion ' }).tipoVehiculo, 'camión')
+  assert.equal(ok({ tipoVehiculo: 'COCHE' }).tipoVehiculo, 'coche')
+  assert.deepEqual(errores({ tipoVehiculo: 'avioneta' }), ['tipoVehiculo'])
+  assert.deepEqual(errores({ tipoVehiculo: 3 }), ['tipoVehiculo'])
+  assert.equal(ok({ tipoVehiculo: '' }).tipoVehiculo, null)
+  assert.equal(ok({ tipoVehiculo: null }).tipoVehiculo, null)
+  assert.equal(Object.prototype.hasOwnProperty.call(ok({ matricula: '1234BCD' }), 'tipoVehiculo'), false, 'ausente = no se toca')
+})
+
+test('cilindradaCc: entero positivo (acepta «1.598»), rechaza 0, negativos, decimales y exceso; vacío = borrar', () => {
+  assert.equal(ok({ cilindradaCc: 125 }).cilindradaCc, 125)
+  assert.equal(ok({ cilindradaCc: '1.598' }).cilindradaCc, 1598)
+  assert.equal(ok({ cilindradaCc: '650' }).cilindradaCc, 650)
+  for (const malo of [0, -5, 124.5, 25000, 'abc', '1,5', '12.34']) assert.deepEqual(errores({ cilindradaCc: malo }), ['cilindradaCc'], String(malo))
+  assert.equal(ok({ cilindradaCc: '' }).cilindradaCc, null)
+  assert.equal(ok({ cilindradaCc: null }).cilindradaCc, null)
+})
+
+test('tipoVehiculo y cilindradaCc se guardan, se leen de vuelta y editarlos quita el sello de confirmado', () => {
+  const previo = { ...datosVehiculoVacios(), matricula: '1234BCD', confirmadoAt: '2026-09-30T10:00:00Z' }
+  const { datos, cambios } = aplicarEdicionVehiculo(previo, ok({ tipoVehiculo: 'moto', cilindradaCc: 689 }), { confirmar: false, ahora: '2026-10-10T09:00:00Z' })
+  assert.deepEqual(cambios.map((c) => c.campo).sort(), ['cilindradaCc', 'tipoVehiculo'])
+  assert.equal(datos.confirmadoAt, null)
+  const releido = leerDatosVehiculo(JSON.parse(JSON.stringify(datos)))
+  assert.equal(releido?.tipoVehiculo, 'moto')
+  assert.equal(releido?.cilindradaCc, 689)
+  // Lo guardado antes de esta fecha no los trae: se leen como pendiente, y no cuentan como «falta para pedir precio».
+  const viejo = leerDatosVehiculo({ matricula: '1234BCD', codigoVehiculo: '1', fechaMatriculacion: '2019-01-01', kmAnuales: 5000, garaje: 'G' })
+  assert.equal(viejo?.tipoVehiculo, null)
+  assert.deepEqual(faltanDatosVehiculo(viejo), [])
+})

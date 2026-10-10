@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
-import { ETIQUETA_CAMPO_VEHICULO, soloLoQueCambia, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { ETIQUETA_CAMPO_VEHICULO, TIPOS_VEHICULO, soloLoQueCambia, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada, normalizarMatricula } from '@central/module-seguros/matricula'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
@@ -27,13 +27,17 @@ const campo: React.CSSProperties = {
 const etiquetaCss: React.CSSProperties = { display: 'grid', gap: 4, fontSize: 13, fontWeight: 600, minWidth: 0 }
 const REJILLA: React.CSSProperties = { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }
 
-type Form = { matricula: string; marca: string; modelo: string; version: string; fechaMatriculacion: string; fechaCompra: string; kmAnuales: string; garaje: string }
+type Form = { matricula: string; marca: string; modelo: string; version: string; fechaMatriculacion: string; fechaCompra: string; kmAnuales: string; garaje: string; tipoVehiculo: string; cilindradaCc: string }
 
 const aForm = (d: DatosVehiculoRiesgo | null): Form => ({
   matricula: d?.matricula ?? '', marca: d?.marca ?? '', modelo: d?.modelo ?? '', version: d?.version ?? '',
   fechaMatriculacion: d?.fechaMatriculacion ?? '', fechaCompra: d?.fechaCompra ?? '',
   kmAnuales: d?.kmAnuales != null ? String(d.kmAnuales) : '', garaje: d?.garaje ?? '',
+  tipoVehiculo: d?.tipoVehiculo ?? '', cilindradaCc: d?.cilindradaCc != null ? String(d.cilindradaCc) : '',
 })
+
+const conMiles = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+const capital = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
 
 function hoyLocal(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date())
@@ -78,6 +82,8 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
     [ETIQUETA_CAMPO_VEHICULO.marca, d.marca ?? sinDato],
     [ETIQUETA_CAMPO_VEHICULO.modelo, d.modelo ?? sinDato],
     [ETIQUETA_CAMPO_VEHICULO.version, d.version ?? sinDato],
+    [ETIQUETA_CAMPO_VEHICULO.tipoVehiculo, d.tipoVehiculo ? capital(d.tipoVehiculo) : sinDato],
+    [ETIQUETA_CAMPO_VEHICULO.cilindradaCc, d.cilindradaCc !== null ? `${conMiles(d.cilindradaCc)} cc` : sinDato],
     [ETIQUETA_CAMPO_VEHICULO.codigoVehiculo, d.codigoVehiculo ? `elegida (código ${d.codigoVehiculo})` : sinDato],
     [ETIQUETA_CAMPO_VEHICULO.fechaMatriculacion, fechaEs(d.fechaMatriculacion) ?? sinDato],
     [ETIQUETA_CAMPO_VEHICULO.fechaCompra, fechaEs(d.fechaCompra) ?? sinDato],
@@ -218,6 +224,14 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
             <label style={etiquetaCss}>Marca<input value={form.marca} onChange={set('marca')} maxLength={60} style={campo} /></label>
             <label style={etiquetaCss}>Modelo<input value={form.modelo} onChange={set('modelo')} maxLength={80} style={campo} /></label>
             <label style={etiquetaCss}>Versión<input value={form.version} onChange={set('version')} maxLength={120} style={campo} /></label>
+            <label style={etiquetaCss}>
+              Tipo de vehículo
+              <select value={form.tipoVehiculo} onChange={set('tipoVehiculo')} style={campo}>
+                <option value="">Sin dato</option>
+                {TIPOS_VEHICULO.map((t) => <option key={t} value={t}>{capital(t)}</option>)}
+              </select>
+            </label>
+            <label style={etiquetaCss}>Cilindrada (cc)<input inputMode="numeric" value={form.cilindradaCc} onChange={set('cilindradaCc')} placeholder="p. ej. 689" style={campo} /></label>
             <label style={etiquetaCss}>Fecha de matriculación<input type="date" max={hoyLocal()} value={form.fechaMatriculacion} onChange={set('fechaMatriculacion')} style={campo} /></label>
             <label style={etiquetaCss}>Fecha de compra<input type="date" max={hoyLocal()} value={form.fechaCompra} onChange={set('fechaCompra')} style={campo} /></label>
             <label style={etiquetaCss}>Kilómetros al año<input inputMode="numeric" value={form.kmAnuales} onChange={set('kmAnuales')} placeholder="p. ej. 12.000" style={campo} /></label>
