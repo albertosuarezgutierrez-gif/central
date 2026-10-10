@@ -167,28 +167,28 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 297 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 298 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 289 | 39.048 | 31.697.424 | 0 | 0 |
-| `otro` | 285 | 9.539 | 24.802.266 | 14.751.291 | 0 |
-| `lectura-directa` | 256 | 6.753 | 22.547.155 | 0 | 0 |
-| `mcp:github` | 258 | 5.899 | 4.822.279 | 52.300.942 | 90 |
-| `escritura` | 195 | 3.894 | 55.306.331 | 0 | 0 |
+| `bash` | 290 | 39.174 | 31.804.721 | 0 | 0 |
+| `otro` | 286 | 9.562 | 24.820.374 | 14.751.291 | 0 |
+| `lectura-directa` | 256 | 6.797 | 22.627.671 | 0 | 0 |
+| `mcp:github` | 259 | 5.905 | 4.826.175 | 52.300.942 | 90 |
+| `escritura` | 195 | 3.918 | 55.703.303 | 0 | 0 |
 | `sql` | 181 | 3.746 | 1.864.357 | 2.351.230 | 15 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 39 | 1.126 | 1.115.270 | 0 | 70 |
-| `mcp:Booking-com` | 28 | 789 | 3.337.030 | 0 | 0 |
-| `mcp:Vercel` | 63 | 618 | 894.993 | 202.197 | 16 |
-| `agente:general-purpose` | 81 | 405 | 262.655 | 8.172.334 | 0 |
+| `mcp:Booking-com` | 29 | 818 | 3.443.816 | 0 | 0 |
+| `mcp:Vercel` | 64 | 625 | 907.237 | 203.717 | 16 |
+| `agente:general-purpose` | 81 | 409 | 264.065 | 8.209.247 | 0 |
 | `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
 | `mcp:Interactive-Brokers--IBKR-` | 7 | 351 | 429.469 | 0 | 0 |
 | `mcp:Supabase` | 111 | 315 | 30.109 | 0 | 4 |
-| `mcp:claude-code-remote` | 25 | 187 | 17.072 | 16.312 | 0 |
-| `agente:agente-architect` | 52 | 171 | 124.651 | 5.336.306 | 0 |
+| `mcp:claude-code-remote` | 25 | 188 | 17.132 | 16.312 | 0 |
+| `agente:agente-architect` | 52 | 174 | 126.115 | 5.370.437 | 0 |
 | `mcp:Google-Drive` | 18 | 123 | 109.510 | 0 | 2 |
-| `agente:agente-mecanico` | 39 | 92 | 63.879 | 4.883.242 | 0 |
+| `agente:agente-mecanico` | 39 | 94 | 64.463 | 4.890.362 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `agente:Explore` | 33 | 75 | 37.211 | 2.124.852 | 0 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
