@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-08T12:48:09.235Z",
- "llamadas": 3154,
+ "fin": "2026-10-10T07:46:36.096Z",
+ "llamadas": 3170,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -29,27 +29,27 @@
    }
   },
   "bash": {
-   "llamadas": 1805,
-   "chars_in": 1623896,
-   "chars_out": 7807446,
+   "llamadas": 1808,
+   "chars_in": 1624497,
+   "chars_out": 7847207,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1805
+    "Bash": 1808
    }
   },
   "otro": {
-   "llamadas": 455,
-   "chars_in": 306356,
-   "chars_out": 3516499,
+   "llamadas": 462,
+   "chars_in": 306437,
+   "chars_out": 3563372,
    "errores": 0,
    "archivos_citados": 24,
    "chars_citados": 369626,
    "tools": {
     "SubagentHandback": 102,
-    "ToolSearch": 68,
-    "ReadNotifications": 271,
+    "ToolSearch": 69,
+    "ReadNotifications": 277,
     "SendMessage": 10,
     "SendUserFile": 1,
     "AskUserQuestion": 1,
@@ -58,14 +58,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 68,
-   "chars_in": 172588,
-   "chars_out": 176663,
+   "llamadas": 69,
+   "chars_in": 174772,
+   "chars_out": 179068,
    "errores": 0,
-   "archivos_citados": 119,
-   "chars_citados": 8112847,
+   "archivos_citados": 122,
+   "chars_citados": 8155711,
    "tools": {
-    "Agent": 68
+    "Agent": 69
    }
   },
   "agente:lector-correo": {
@@ -96,14 +96,14 @@
    }
   },
   "sql": {
-   "llamadas": 114,
-   "chars_in": 55049,
-   "chars_out": 331490,
+   "llamadas": 117,
+   "chars_in": 56444,
+   "chars_out": 333182,
    "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase_asegura__execute_sql": 7,
+    "mcp__Supabase_asegura__execute_sql": 10,
     "mcp__Supabase__execute_sql": 107
    }
   },
@@ -187,9 +187,9 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 51,
-   "chars_in": 5971,
-   "chars_out": 18174,
+   "llamadas": 53,
+   "chars_in": 6393,
+   "chars_out": 19400,
    "errores": 0,
    "archivos_citados": 4,
    "chars_citados": 65246,
@@ -198,7 +198,8 @@
     "mcp__claude-code-remote__unsubscribe_pr_activity": 22,
     "mcp__claude-code-remote__create_trigger": 1,
     "mcp__claude-code-remote__get_trigger": 1,
-    "mcp__claude-code-remote__send_later": 1
+    "mcp__claude-code-remote__send_later": 2,
+    "mcp__claude-code-remote__delete_trigger": 1
    }
   },
   "mcp:Vercel": {
