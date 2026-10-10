@@ -25,7 +25,7 @@ F4 ya aplicada: seguros.presupuesto_propuesta(+_item,+_contador) existen en el S
 **(10/10/2026)** — Correduría · F3 (solo auto): supuesto de 10.000 km y papel sin figura.
 Los 10.000 km por defecto de AutoNuevo (decisión 25/09) dejan de ser dato del cliente: viajan como `resueltos.kmAnualesSupuestos` (supuesto marcado, aviso en pantalla, no entra en el riesgo). Helper `apps/plataforma/lib/correduria/km-auto.ts`.
 Con `?oportunidad=` el papel sin figura es del tomador y se cambia en «Intervinientes» (`modoPapel` en `figuras-form.ts`); cerradas 2 fugas de datos tecleados que no se guardaban.
-Pendiente: embeber el cotizador auto en la pantalla de riesgo como moto (`PedirPrecioMoto`); el asistente Telegram `correduria-tarificacion-tg` sigue proponiendo 10.000 km como «media».
+Pendiente: el asistente Telegram `correduria-tarificacion-tg` sigue proponiendo 10.000 km como «media».
 F4 ya aplicada: seguros.presupuesto_propuesta(+_item,+_contador) existen en el Supabase `central` (ref wswbehlcuxqxyinousql), donde vive el schema seguros. OJO: el conector `Supabase_asegura` (ASEGURA-prod-eu, uijsgeocgdaxkhvwtjqs) es la foto congelada del Supabase de Manuel, NO tiene schema seguros. Orden de despliegue: asegura antes que plataforma.
 
 **(10/10/2026)** — Correduría · Auditoría y unificación de Tarificar/Riesgo en `/correduria`.
