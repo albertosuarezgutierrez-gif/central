@@ -24,7 +24,7 @@ export interface DefinicionRamo {
 }
 
 const COTIZADOR: Record<RamoRiesgo, TipoCotizador> = {
-  auto: 'embebido', moto: 'embebido', hogar: 'pantalla', vida: 'pantalla', salud: 'pantalla', decesos: 'pantalla',
+  auto: 'embebido', moto: 'embebido', hogar: 'embebido', vida: 'pantalla', salud: 'pantalla', decesos: 'pantalla',
   comercio: 'fuera', rc: 'fuera', comunidades: 'bots', otros: 'fuera',
 }
 const COMPARABLE: Record<RamoRiesgo, boolean> = {

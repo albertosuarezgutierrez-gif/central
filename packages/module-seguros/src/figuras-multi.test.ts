@@ -30,6 +30,10 @@ test('salud y decesos: varios asegurados (hasta 10); hogar, vida y comercio: uno
   assert.equal(maxDelRol('decesos', 'asegurado'), 10)
   for (const r of ['hogar', 'vida', 'comercio']) assert.equal(maxDelRol(r, 'asegurado'), 1, r)
   assert.deepEqual(rolesDelRamo('rc'), ['tomador'])
+  // Hogar (fase 3): propietario de la vivienda (una persona, sin migración) + asegurado.
+  assert.deepEqual(rolesDelRamo('hogar'), ['tomador', 'propietario', 'asegurado'])
+  assert.equal(maxDelRol('hogar', 'propietario'), 1)
+  assert.deepEqual(rolesDelRamo('vida'), ['tomador', 'asegurado'])
   assert.equal(maxDelRol('auto', 'asegurado'), 0)
   assert.equal(maxDelRol('salud', 'propietario'), 0)
   assert.ok(esRolMultiple('asegurado'))

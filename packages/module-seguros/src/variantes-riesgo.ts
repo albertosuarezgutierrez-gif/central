@@ -44,15 +44,17 @@ export const MAX_ASEGURADOS_PERSONAS = 10
 
 /**
  * Los papeles de cada ramo con su cardinalidad: FUENTE ÚNICA (la pantalla y el puerto leen de aquí).
- * Auto/moto: exactamente los de siempre (moto: el vendor no tiene conductor ocasional). Hogar, vida y comercio:
- * un asegurado (puede no ser el tomador). Salud y decesos: varios asegurados. El resto: solo tomador.
+ * Auto/moto: exactamente los de siempre (moto: el vendor no tiene conductor ocasional). Hogar: propietario de la
+ * vivienda y un asegurado (ninguno tiene por qué ser el tomador). Vida y comercio: un asegurado (puede no ser el tomador). Salud y decesos: varios asegurados. El resto: solo tomador.
  * Beneficiarios de vida: NO son figura (decisión de Alberto, 10/10/2026): cláusula de texto al emitir.
  */
 export function cardinalidadesDelRamo(ramo: string): readonly CardinalidadRol[] {
   const uno = (rol: RolFigura, min: 0 | 1 = 0): CardinalidadRol => ({ rol, min, max: 1 })
   if (ramo === 'auto') return [uno('tomador', 1), uno('propietario'), uno('conductor_habitual'), uno('conductor_ocasional')]
   if (ramo === 'moto') return [uno('tomador', 1), uno('propietario'), uno('conductor_habitual')]
-  if (ramo === 'hogar' || ramo === 'vida' || ramo === 'comercio') return [uno('tomador', 1), { rol: 'asegurado', min: 0, max: 1 }]
+  // Hogar (fase 3, 10/10/2026): el propietario de la vivienda puede no ser el tomador (rol de una persona, sin migración).
+  if (ramo === 'hogar') return [uno('tomador', 1), uno('propietario'), { rol: 'asegurado', min: 0, max: 1 }]
+  if (ramo === 'vida' || ramo === 'comercio') return [uno('tomador', 1), { rol: 'asegurado', min: 0, max: 1 }]
   if (ramo === 'salud' || ramo === 'decesos') return [uno('tomador', 1), { rol: 'asegurado', min: 0, max: MAX_ASEGURADOS_PERSONAS }]
   return [uno('tomador', 1)]
 }

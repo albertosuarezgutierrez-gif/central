@@ -14,12 +14,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { btnStyle, cardStyle } from '@/components/ui'
 import type { Riesgo } from '@/lib/riesgo-asegura'
-import { firmaRiesgoVehiculo, motivoBloqueoCotizador } from './cotizador-embebido'
+import { bloqueObjetoDeRamo, firmaRiesgo, motivoBloqueoCotizador } from './cotizador-embebido'
 
 /** Lo que `RiesgoPantalla` le da a CUALQUIER cotizador embebido (el contrato del registro `COTIZADOR_EMBEBIDO`). */
 export type PropsPedirPrecioEmbebido = {
   riesgo: Riesgo
-  editandoVehiculo: boolean
+  /** El bloque del objeto del riesgo (vehículo, vivienda…) tiene una edición a medias. */
+  editandoObjeto: boolean
   editandoFiguras: boolean
   recargando: boolean
   onCotizando: (enVuelo: boolean) => void
@@ -59,9 +60,9 @@ export default function PedirPrecioEmbebido<A extends { estado: 'ok'; riesgo: Ri
   sinRiesgo: string
   montar: (m: MontajeEmbebido<A>) => ReactNode
 }) {
-  const { riesgo, editandoVehiculo, editandoFiguras, recargando, onCotizando, onCotizado, onDesfase, onCerrar } = props
+  const { riesgo, editandoObjeto, editandoFiguras, recargando, onCotizando, onCotizado, onDesfase, onCerrar } = props
   const oportunidadId = riesgo.oportunidad.id
-  const firmaActual = firmaRiesgoVehiculo(riesgo)
+  const firmaActual = firmaRiesgo(riesgo)
   const [carga, setCarga] = useState<Carga<A>>({ estado: 'cargando' })
   const [cotizando, setCotizando] = useState(false)
   const peticion = useRef(0)
@@ -69,14 +70,14 @@ export default function PedirPrecioEmbebido<A extends { estado: 'ok'; riesgo: Ri
 
   async function cargar() {
     const pet = ++peticion.current
-    const firmaBase = firmaRiesgoVehiculo(riesgo)
+    const firmaBase = firmaRiesgo(riesgo)
     setCarga({ estado: 'cargando' })
     try {
       const r = await abrir({ oportunidadId })
       if (pet !== peticion.current) return
       if (r.estado !== 'ok') { setCarga({ estado: 'error', mensaje: (r as { mensaje: string }).mensaje }); return }
       const ok = r as A
-      const firmaServidor = firmaRiesgoVehiculo(ok.riesgo)
+      const firmaServidor = firmaRiesgo(ok.riesgo)
       setCarga({ estado: 'ok', apertura: ok, firmaBase, firmaServidor, n: ++montajes.current })
       // La pantalla pinta un riesgo que ya no es el guardado: que se relea (y entonces se vuelve a abrir solo).
       if (firmaServidor !== firmaBase) onDesfase()
@@ -97,11 +98,11 @@ export default function PedirPrecioEmbebido<A extends { estado: 'ok'; riesgo: Ri
   // El riesgo de la pantalla cambió (se guardó arriba, se cambió una persona…): se relee y el cotizador se monta
   // de nuevo, sin nada de lo anterior. Nunca a mitad de una cotización ni con algo a medio editar.
   useEffect(() => {
-    if (riesgoCambiado && !cotizando && !editandoVehiculo && !editandoFiguras && !recargando) void cargar()
+    if (riesgoCambiado && !cotizando && !editandoObjeto && !editandoFiguras && !recargando) void cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [riesgoCambiado, cotizando, editandoVehiculo, editandoFiguras, recargando])
+  }, [riesgoCambiado, cotizando, editandoObjeto, editandoFiguras, recargando])
 
-  const bloqueo = motivoBloqueoCotizador({ editandoVehiculo, editandoFiguras, recargando, riesgoCambiado, pantallaDesfasada })
+  const bloqueo = motivoBloqueoCotizador({ editandoObjeto, objeto: bloqueObjetoDeRamo(riesgo.oportunidad.ramo), editandoFiguras, recargando, riesgoCambiado, pantallaDesfasada })
 
   function alCotizar(enVuelo: boolean) {
     setCotizando(enVuelo)

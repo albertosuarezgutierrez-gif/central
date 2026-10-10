@@ -22,6 +22,7 @@ const CORR = 'apps/plataforma/app/(usuario)/correduria/'
 const OP = CORR + 'oportunidad/[id]/'
 const MOTO = CORR + 'cliente/[id]/moto-nuevo/'
 const AUTO = CORR + 'cliente/[id]/auto-nuevo/'
+const HOGAR = CORR + 'cliente/[id]/hogar-nuevo/'
 const leer = (f: string) => readFileSync(join(ROOT, f), 'utf8')
 const activas = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
 
@@ -37,23 +38,26 @@ test('🪤 RiesgoPantalla: con cotizador embebido el principal es un BOTÓN que 
   assert.doesNotMatch(r, /moto-nuevo|auto-nuevo/, 'ningún enlace a moto-nuevo ni auto-nuevo en la pantalla del riesgo')
   // Mientras se paga no se deja editar el riesgo.
   assert.match(r, /const ocupado = recargando \|\| cotizandoEmbebido/)
-  assert.equal((r.match(/ocupado=\{ocupado\}/g) ?? []).length, 2, 'Datos del vehículo e Intervinientes, ocupados mientras se cotiza')
-  assert.match(r, /onEditando=\{alEditarVehiculo\}/)
+  assert.equal((r.match(/ocupado=\{ocupado\}/g) ?? []).length, 3, 'Datos del vehículo, Datos del riesgo (vivienda) e Intervinientes, ocupados mientras se cotiza')
+  // 10/10/2026 (hogar): el bloque del objeto, sea vehículo o vivienda, avisa de lo que tiene a medias.
+  assert.equal((r.match(/onEditando=\{alEditarObjeto\}/g) ?? []).length, 2, 'DatosVehiculo y DatosRiesgo bloquean el cotizador al editar')
   assert.match(r, /onEditando=\{alEditarFiguras\}/)
   assert.match(r, /<HistorialVariantes riesgo=\{riesgo\} abrirPrecios=\{abrirPrecios\} \/>/)
   // Llegar con #pedir-precio solo ABRE (lee gratis); nada cotiza sin el clic.
   assert.match(r, /if \(acciones\.principal && abrirAlCargar\(window\.location\.hash, op\.ramo\)\) setCotizadorAbierto\(true\)/)
 })
 
-test('🪤 registro: moto y auto dados de alta, y el tipo obliga a registrar cada ramo de la lista', () => {
+test('🪤 registro: moto, auto y hogar dados de alta, y el tipo obliga a registrar cada ramo de la lista', () => {
   const c = activas(leer(OP + 'cotizadores-embebidos.tsx'))
-  assert.match(c, /COTIZADOR_EMBEBIDO: Record<RamoCotizadorEmbebido, ComponentType<PropsPedirPrecioEmbebido>> = \{\s*auto: PedirPrecioAuto,\s*moto: PedirPrecioMoto,\s*\}/)
-  assert.match(c, /PRECIOS_VARIANTE: Record<RamoCotizadorEmbebido, ComponentType<PropsPreciosVariante>> = \{\s*auto: PreciosVarianteAuto,\s*moto: PreciosVarianteMoto,\s*\}/)
+  assert.match(c, /COTIZADOR_EMBEBIDO: Record<RamoCotizadorEmbebido, ComponentType<PropsPedirPrecioEmbebido>> = \{\s*auto: PedirPrecioAuto,\s*moto: PedirPrecioMoto,\s*hogar: PedirPrecioHogar,\s*\}/)
+  assert.match(c, /PRECIOS_VARIANTE: Record<RamoCotizadorEmbebido, ComponentType<PropsPreciosVariante>> = \{\s*auto: PreciosVarianteAuto,\s*moto: PreciosVarianteMoto,\s*hogar: PreciosVarianteHogar,\s*\}/)
 })
 
 test('🪤 la carcasa común (PedirPrecioEmbebido): bloqueo, relectura y una instancia nueva por lectura del riesgo', () => {
   const p = activas(leer(OP + 'PedirPrecioEmbebido.tsx'))
-  assert.match(p, /const bloqueo = motivoBloqueoCotizador\(\{ editandoVehiculo, editandoFiguras, recargando, riesgoCambiado, pantallaDesfasada \}\)/)
+  assert.match(p, /const bloqueo = motivoBloqueoCotizador\(\{ editandoObjeto, objeto: bloqueObjetoDeRamo\(riesgo\.oportunidad\.ramo\), editandoFiguras, recargando, riesgoCambiado, pantallaDesfasada \}\)/)
+  // La huella cubre el objeto de CUALQUIER ramo (vivienda incluida), no solo el vehículo.
+  assert.match(p, /const firmaActual = firmaRiesgo\(riesgo\)/)
   assert.match(p, /const riesgoCambiado = carga\.estado === 'ok' && carga\.firmaBase !== firmaActual/)
   assert.match(p, /if \(firmaServidor !== firmaBase\) onDesfase\(\)/)
   // Los catálogos y el riesgo se leen al ABRIR el bloque (acción de servidor), no en cada visita de la página.
@@ -77,7 +81,7 @@ for (const [fichero, cotizador, accion] of [
   })
 }
 
-for (const [dir, Ramo, ramo] of [[MOTO, 'Moto', 'moto'], [AUTO, 'Auto', 'auto']] as const) {
+for (const [dir, Ramo, ramo] of [[MOTO, 'Moto', 'moto'], [AUTO, 'Auto', 'auto'], [HOGAR, 'Hogar', 'hogar']] as const) {
 test(`🪤 la acción que abre el bloque exige acceso a la correduría y que el riesgo sea de ${ramo}`, () => {
   const a = activas(leer(dir + 'acciones.ts'))
   const f = a.slice(a.indexOf(`export async function abrirCotizador${Ramo}DeOportunidad`))
@@ -164,4 +168,37 @@ test('🪤 Emision: recibe idPrecio y modalidad en cada panel del cotizador, y l
   assert.match(e, /if \(llamadaEnVuelo\.current\) return\s*\n\s*llamadaEnVuelo\.current = true\s*\n\s*try \{[\s\S]*?\} finally \{\s*\n\s*llamadaEnVuelo\.current = false/)
   assert.match(e, /return unaALaVez\(\(\) => confirmarPrecioSinGuarda\(/)
   assert.match(e, /return unaALaVez\(\(\) => emitirSinGuarda\(/)
+})
+
+test('🪤 HOGAR (10/10/2026): PedirPrecioHogar monta el Formulario de hogar-nuevo EMBEBIDO, con bloqueo y key por lectura', () => {
+  const p = activas(leer(OP + 'PedirPrecioHogar.tsx'))
+  assert.match(p, /<PedirPrecioEmbebido<AperturaOk>\s*\n\s*props=\{props\}\s*\n\s*abrir=\{abrirCotizadorHogarDeOportunidad\}/)
+  const montaje = p.slice(p.indexOf('<Formulario'), p.indexOf('/>', p.indexOf('<Formulario')))
+  assert.match(montaje, /\n\s*embebido\n/, 'modo embebido («solo condiciones»)')
+  assert.match(montaje, /key=\{n\}/)
+  // Lo de arriba a medias manda; después, la contradicción propietario/vivienda: nunca se pierde ninguno de los dos.
+  assert.match(montaje, /bloqueo=\{bloqueo \?\? fig\.bloqueo\}/)
+  assert.match(p, /if \(referencia === null \|\| pre === null\) \{/, 'sin referencia catastral no se monta (no se cotiza a ciegas)')
+})
+
+test('🪤 HOGAR: el Formulario embebido no paga bloqueado, solo deja tocar condiciones y avisa el coste como moto/auto', () => {
+  const c = activas(leer(HOGAR + 'Formulario.tsx'))
+  assert.match(c, /bloqueo === null &&\s*\n\s*consumoPermite/, 'el botón se apaga con el riesgo a medias')
+  assert.match(c, /soloLectura=\{embebido && !filaHogarEditableEmbebida\(f\.campo\)\}/, 'vivienda y personas se corrigen arriba')
+  assert.match(c, /const sePuedeTocar = !soloLectura && /)
+  assert.match(c, /Este clic gasta 0,50€ reales\./)
+  assert.match(c, /if \(embebido && onCotizado\) \{\s*\n\s*const id = cotizacionIdDe\(r\.guardado\)\s*\n\s*if \(id !== null\) onCotizado\(id\)/)
+  const pv = c.slice(c.indexOf('export function PreciosVarianteHogar'))
+  assert.match(pv, /<PreciosVarianteGuardada[\s\S]*leer=\{pedirTarificacionGuardadaHogar\}/)
+  // La pantalla completa hogar-nuevo sigue montándolo sin `embebido`.
+  const page = activas(leer(HOGAR + 'page.tsx'))
+  assert.match(page, /<Formulario clienteId=\{clienteId\} referencia=\{referencia\} preInicial=\{pre\.pre\} variante=\{variante\} iniciales=\{hayIniciales \? iniciales : null\} \/>/)
+})
+
+test('🪤 HOGAR: abrir el bloque deriva «el tomador es el propietario» de Intervinientes (no deja que asegura suponga «sí»)', () => {
+  const a = activas(leer(HOGAR + 'acciones.ts'))
+  const f = a.slice(a.indexOf('export async function abrirCotizadorHogarDeOportunidad'))
+  assert.match(f, /const propietarioEsTomador = propietarioEsTomadorDeRiesgo\(/)
+  assert.match(f, /if \(propietarioEsTomador !== null\) iniciales\.resueltos\.propietarioEsTomador = propietarioEsTomador/)
+  assert.match(f, /if \(l\.riesgo\.datosRiesgo === null\) return \{ estado: 'error'/, 'sin el bloque de la vivienda no se cotiza')
 })

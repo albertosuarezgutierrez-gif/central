@@ -36,8 +36,10 @@ import type {
   Reparo,
   Supuesto,
 } from '@/lib/hogar-nuevo-asegura'
-import { pedirCotizacionHogar, pedirPrecalificacionHogar } from './acciones'
+import { pedirCotizacionHogar, pedirPrecalificacionHogar, pedirTarificacionGuardadaHogar } from './acciones'
 import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
+import { dondeSeCorrigeHogar, filaHogarEditableEmbebida, textoDondeSeCorrige } from '../../../oportunidad/[id]/cotizador-hogar'
+import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 type Grupo = 'donde' | 'como' | 'protecciones' | 'capitales' | 'tomador' | 'cotizacion'
 
@@ -96,6 +98,10 @@ export default function Formulario({
   preInicial,
   variante = null,
   iniciales = null,
+  embebido = false,
+  bloqueo = null,
+  onCotizando,
+  onCotizado,
 }: {
   clienteId: string
   referencia: string
@@ -104,6 +110,16 @@ export default function Formulario({
   variante?: VarianteNueva | null
   /** Lo que el riesgo ya sabe de la vivienda (la precalificación de `preInicial` ya lo incluye). */
   iniciales?: { resueltos: Record<string, unknown>; correcciones: Record<string, unknown> } | null
+  /**
+   * Dentro del bloque «Pedir precio» del riesgo (10/10/2026, `PedirPrecioHogar`): «solo condiciones». La vivienda y
+   * las personas son las del riesgo (se corrigen arriba); aquí solo la fecha de efecto y lo personal que falte.
+   */
+  embebido?: boolean
+  /** Embebido: por qué AHORA no se puede pagar (riesgo a medias o releyéndose). `null` = nada lo impide. */
+  bloqueo?: string | null
+  onCotizando?: (enVuelo: boolean) => void
+  /** Embebido: la cotización quedó guardada y enlazada a la oportunidad (regla 9). */
+  onCotizado?: (tarificacionId: string) => void
 }) {
   const [pre, setPre] = useState(preInicial)
   const [resueltos, setResueltos] = useState<Record<string, unknown>>(iniciales?.resueltos ?? {})
@@ -182,13 +198,24 @@ export default function Formulario({
     if (cotizandoEnVuelo.current) return
     cotizandoEnVuelo.current = true
     try {
+      onCotizando?.(true)
       await cotizarSinGuarda(forzar)
+    } catch (e) {
+      // Una excepción (red, timeout) NO es una respuesta de error: no se sabe si se cobró (mismo criterio que moto).
+      setResultado({
+        estado: 'error',
+        mensaje: `No se ha podido completar la consulta (${e instanceof Error ? e.message : 'error desconocido'}).`,
+        gastoDesconocido: true,
+      })
     } finally {
       cotizandoEnVuelo.current = false
+      onCotizando?.(false)
     }
   }
 
   async function cotizarSinGuarda(forzar: boolean) {
+    // Embebido: el riesgo se está editando o releyendo → no se paga con datos que van a cambiar.
+    if (bloqueo !== null) return
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionHogar({
       forzar,
@@ -229,6 +256,12 @@ export default function Formulario({
           supuestos: r.supuestos,
           guardado: r.guardado,
         })
+        // Embebido: guardada y enlazada → el padre relee el riesgo y la abre en «Presupuestos de este riesgo» (desde
+        // ahí se emite). Sin id guardado se queda aquí, a la vista: no se pierde un precio pagado.
+        if (embebido && onCotizado) {
+          const id = cotizacionIdDe(r.guardado)
+          if (id !== null) onCotizado(id)
+        }
         return
       default: {
         const _exhaustivo: never = r
@@ -245,6 +278,7 @@ export default function Formulario({
     pre.resumen.listo &&
     !cotizando &&
     !recalculando &&
+    bloqueo === null &&
     consumoPermite
 
   return (
@@ -263,9 +297,13 @@ export default function Formulario({
             {pre.resumen.faltan.map((f) => (
               <li key={f.campo} style={{ marginBottom: 6 }}>
                 <strong>{f.etiqueta}</strong>: {f.falta}{' '}
-                <button type="button" onClick={() => abrir(f)} style={{ ...btnStyle('sutil', 'sm'), padding: 0 }}>
-                  corregir ↓
-                </button>
+                {embebido && !filaHogarEditableEmbebida(f.campo) ? (
+                  <span style={{ color: 'var(--muted)' }}>{textoDondeSeCorrige(dondeSeCorrigeHogar(f))}</span>
+                ) : (
+                  <button type="button" onClick={() => abrir(f)} style={{ ...btnStyle('sutil', 'sm'), padding: 0 }}>
+                    corregir ↓
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -291,6 +329,7 @@ export default function Formulario({
                   guardar={() => guardar(f)}
                   deshacer={() => deshacer(f)}
                   pre={pre}
+                  soloLectura={embebido && !filaHogarEditableEmbebida(f.campo)}
                 />
               ))}
             </div>
@@ -332,17 +371,25 @@ export default function Formulario({
           </p>
         )}
 
+        {/* Mismo aviso de coste que moto y auto: un clic, un cargo; la petición no es idempotente. */}
+        <p style={{ fontSize: 13 }}>
+          <strong style={{ color: 'var(--negative)' }}>Este clic gasta 0,50€ reales.</strong> Un solo intento:
+          la petición no es idempotente, así que reintentar crea otro proyecto y otro cargo.
+        </p>
+        {bloqueo !== null && (
+          <p role="status" style={{ color: 'var(--warning)', fontSize: 13, fontWeight: 600, margin: '8px 0 0' }}>{bloqueo}</p>
+        )}
         <button
           type="button"
           onClick={() => void cotizar()}
           disabled={!puedePulsar}
-          style={{ ...btnStyle('primario'), width: '100%', maxWidth: 420, marginTop: 8 }}
+          style={{ ...btnStyle('primario'), width: '100%', maxWidth: 420, marginTop: 8, minHeight: 44 }}
         >
-          {cotizando ? 'Cotizando… (puede tardar hasta 2 min)' : 'Pedir precio (0,50€)'}
+          {cotizando ? 'Cotizando… (puede tardar hasta 2 min)' : 'Pedir precio — cuesta 0,50€'}
         </button>
         {!pre.resumen.listo && (
           <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-            El botón se enciende cuando no falte nada arriba. Corregir la ficha no cuesta nada.
+            El botón se enciende cuando no falte nada arriba. {embebido ? 'Corregir los datos del riesgo no cuesta nada.' : 'Corregir la ficha no cuesta nada.'}
           </p>
         )}
 
@@ -393,6 +440,7 @@ function FilaFicha({
   guardar,
   deshacer,
   pre,
+  soloLectura = false,
 }: {
   fila: Fila
   editando: boolean
@@ -403,8 +451,10 @@ function FilaFicha({
   guardar: () => void
   deshacer: () => void
   pre: PrecalificacionHogar
+  /** Embebido: la fila es del riesgo (vivienda o persona) y se corrige arriba, no aquí. */
+  soloLectura?: boolean
 }) {
-  const sePuedeTocar = fila.editable || fila.falta !== null
+  const sePuedeTocar = !soloLectura && (fila.editable || fila.falta !== null)
 
   return (
     <div
@@ -425,6 +475,9 @@ function FilaFicha({
               {fila.optimista && <Badge tono="aviso">esto puede subir</Badge>}
               {fila.falta !== null && <Badge tono="negativo">falta: {fila.falta}</Badge>}
             </div>
+            {soloLectura && fila.falta !== null && (
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{textoDondeSeCorrige(dondeSeCorrigeHogar(fila))}</div>
+            )}
             {fila.porque && (
               <details style={{ marginTop: 4 }}>
                 <summary style={{ color: 'var(--muted)', fontSize: 12, cursor: 'pointer', minHeight: 44 }}>por qué</summary>
@@ -641,3 +694,37 @@ function Precios({ r, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; cl
   )
 }
 
+
+/**
+ * «Ver precios y emitir» de una variante de hogar YA PEDIDA, en «Presupuestos de este riesgo» (10/10/2026). La lectura
+ * y sus guardas (ESA variante, no caducada) son las comunes (`PreciosVarianteGuardada`); aquí, la lista de hogar.
+ */
+export function PreciosVarianteHogar({ clienteId, oportunidadId, tarificacionId, simulado }: {
+  clienteId: string
+  oportunidadId: string
+  tarificacionId: string
+  simulado: boolean
+}) {
+  return (
+    <PreciosVarianteGuardada
+      clienteId={clienteId} oportunidadId={oportunidadId} tarificacionId={tarificacionId}
+      leer={pedirTarificacionGuardadaHogar}
+      pintar={(g) => (
+        <Precios
+          clienteId={clienteId}
+          r={{
+            estado: 'ok',
+            coste: '0 € (ya estaba pagada)',
+            restantesHoy: null,
+            simulado,
+            avisoSimulacion: null,
+            resumen: resumenGuardada(g),
+            precios: g.precios,
+            supuestos: [],
+            guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+          }}
+        />
+      )}
+    />
+  )
+}

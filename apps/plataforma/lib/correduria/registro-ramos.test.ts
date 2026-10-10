@@ -37,3 +37,11 @@ test('tipo desconocido: null, no una definición inventada', () => {
   assert.equal(definicionDeRamo('barco'), null)
   assert.equal(definicionDeRamo(null), null)
 })
+
+test('hogar (fase 3): embebido, con propietario y asegurado como personas y la vivienda como objeto', () => {
+  const h = REGISTRO_RAMOS.hogar
+  assert.equal(h.cotizador, 'embebido')
+  assert.deepEqual(h.roles, ['tomador', 'propietario', 'asegurado'])
+  assert.equal(h.claveObjeto, 'datosVivienda')
+  assert.equal(h.comparable, true)
+})

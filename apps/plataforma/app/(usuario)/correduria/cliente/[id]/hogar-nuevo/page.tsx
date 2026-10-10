@@ -8,6 +8,7 @@ import { Pagina, PageHeader, cardStyle, CardHeader, btnStyle } from '@/component
 import Formulario from './Formulario'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
 import { paramTexto, viviendaDeRiesgo } from '../../../oportunidad/[id]/variante'
+import { propietarioEsTomadorDeRiesgo } from '../../../oportunidad/[id]/cotizador-hogar'
 import { busquedaCatastroDeVivienda, inicialesHogarDeRiesgo } from '@central/module-seguros'
 import { catalogoAsegura } from '@/lib/retarificar-asegura'
 
@@ -204,6 +205,11 @@ export default async function HogarNuevoPage({
   // Con `?oportunidad=`, lo que el riesgo ya sabe de la vivienda entra como lo declarado (catálogos → `resueltos`,
   // el resto → `correcciones`); sin ella, o sin datos, la precalificación es la de siempre.
   const iniciales = inicialesHogarDeRiesgo(vivienda)
+  // Con riesgo: el propietario de «Intervinientes» manda sobre el supuesto de asegura («el tomador es el dueño»).
+  const propietarioEsTomador = carga.estado === 'ok'
+    ? propietarioEsTomadorDeRiesgo({ figuras: carga.riesgo.figuras, tomadorId: clienteId, propietarioEsTomador: vivienda?.propietarioEsTomador ?? null })
+    : null
+  if (propietarioEsTomador !== null) iniciales.resueltos.propietarioEsTomador = propietarioEsTomador
   const hayIniciales = Object.keys(iniciales.resueltos).length + Object.keys(iniciales.correcciones).length > 0
   const pre = await precalificarHogarNuevoAsegura({
     clienteId,

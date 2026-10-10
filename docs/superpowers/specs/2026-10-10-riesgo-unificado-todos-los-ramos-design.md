@@ -166,3 +166,6 @@ Riesgos transversales:
 beneficiarios de vida como texto; archivar con `archivada_at`; bots y tecleados en la misma lista P1..Pn, marcados y sin
 emitir; hogar antes que los ramos de personas). Fase 0 implementada: H1 en `variantes-riesgo.ts` y
 `apps/plataforma/lib/correduria/registro-ramos.ts` (registro puro + guardián; `RiesgoPantalla` aún no lo lee).
+Fase 3 (hogar, 10/10/2026): cotizador de hogar embebido (`PedirPrecioHogar` + `Formulario` en modo «solo condiciones»),
+roles de hogar tomador + propietario + asegurado, huella `firmaRiesgo` con la vivienda, precarga del Catastro en
+«Datos de la vivienda». Huecos riesgo ↔ cotizador: `hogar-huecos.md`. Pendiente: siniestros de la póliza en el historial.
