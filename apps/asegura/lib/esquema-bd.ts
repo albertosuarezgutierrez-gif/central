@@ -15,6 +15,5 @@ async function consultar(e: ElementoEsquema): Promise<boolean> {
 
 export const esquema = crearEsquemaOpcional({ consultar })
 
-export const hayHuella = () => esquema.existeColumna('codeoscopic_consumo', 'huella')
 export const hayBotVersion = () => esquema.existeColumna('tarificacion_trabajos', 'bot_version')
 export const hayPasos = () => esquema.existeTabla('tarificacion_trabajo_pasos')

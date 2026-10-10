@@ -12,7 +12,10 @@ import { prisma } from '../tenant.ts'
 import { COSTE_COTIZACION_CENTS } from './config.ts'
 import { MOTIVO_LIMITES, MOTIVO_RERATE, MOTIVO_SUBMIT, type OperacionEmision } from './gasto-emision.ts'
 import type { Consumo } from './contador.ts'
-import { hayHuella } from '../esquema-bd.ts'
+import { esquema } from '../esquema-bd.ts'
+
+/** ¿Existe ya la columna `huella` (SQL 2026-10-08)? Vive aquí: solo este fichero nombra el libro. */
+const hayHuella = () => esquema.existeColumna('codeoscopic_consumo', 'huella')
 import { decidirDuplicado, VENTANA_DUPLICADO_MIN, type FilaPrevia } from './huella.ts'
 
 export type Reserva = { intentoId: string; correduriaId: string }
