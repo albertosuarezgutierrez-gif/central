@@ -31,6 +31,7 @@ import {
   maxLlamadasGrabador,
   promptAnalisis,
   sistemaAnalisis,
+  filtrarPrimasMapa,
   type AltaGrabacion,
 } from './tarificador-grabaciones-reglas'
 
@@ -291,7 +292,7 @@ export async function analizarGrabacion(correduriaId: string, id: string, modo: 
     }
     if (fallo) { mal++; await marcarError(p.pid, fallo); continue }
     const fus = fusionarTrozos(p.orden, partes)
-    const v = { pantalla: fus.pantalla, forzados: forzadosTrozos + fus.forzados }
+    const v = { pantalla: { ...fus.pantalla, primas: filtrarPrimasMapa(fus.pantalla).primas }, forzados: forzadosTrozos + fus.forzados }
     forzados += v.forzados
     await prisma.$transaction(async (tx) => {
       const m = await tx.$queryRaw<{ mapa: unknown }[]>`
