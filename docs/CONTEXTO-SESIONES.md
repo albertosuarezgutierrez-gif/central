@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(10/10/2026)** — Correduría · F3 (solo auto): supuesto de 10.000 km y papel sin figura.
+Los 10.000 km por defecto de AutoNuevo (decisión 25/09) dejan de ser dato del cliente: viajan como `resueltos.kmAnualesSupuestos` (supuesto marcado, aviso en pantalla, no entra en el riesgo). Helper `apps/plataforma/lib/correduria/km-auto.ts`.
+Con `?oportunidad=` el papel sin figura es del tomador y se cambia en «Intervinientes» (`modoPapel` en `figuras-form.ts`); cerradas 2 fugas de datos tecleados que no se guardaban.
+Pendiente: embeber el cotizador auto en la pantalla de riesgo como moto (`PedirPrecioMoto`); el asistente Telegram `correduria-tarificacion-tg` sigue proponiendo 10.000 km como «media».
+Pendiente F4: SQL `2026-10-07e_presupuesto_propuesta` sin aplicar (lo aplica Alberto a mano o por Chrome; permisos de producción denegados al agente). Orden de despliegue: asegura antes que plataforma.
+
 **(10/10/2026)** — Correduría · Auditoría y unificación de Tarificar/Riesgo en `/correduria`.
 Hecho F1: `SeccionCard` en `apps/plataforma/components/ui.tsx`; botón único «Tarificar y ver riesgo →» (`TarificarOportunidad`); retarificar de póliza pasa a `<Pagina>`+`PageHeader`.
 Hecho F2: bloque «Historial» en `RiesgoPantalla` (`lib/historial-riesgo.ts`, tres estados null/0/dato); `tipoVehiculo` y `cilindradaCc` en module-seguros; `historial` en el puerto riesgo de asegura.
