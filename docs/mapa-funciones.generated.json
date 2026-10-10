@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-08T14:41:08Z",
-  "sha": "7a02ce590b0f4e5073994b197a0208b261c3bbc6",
+  "generadoEn": "2026-10-10T08:03:57Z",
+  "sha": "39eb2222b6b2b9b970f9f38498fb0826ef68a126",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -27374,12 +27374,21 @@
       ],
       "funciones": [
         {
+          "nombre": "hayHuella",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "¿Existe ya la columna `huella` (SQL 2026-10-08)? Vive aquí: solo este fichero nombra el libro."
+        },
+        {
           "nombre": "anotarImportadaWeb",
           "kind": "function",
           "exportada": true,
           "params": "tx: { $executeRaw: typeof prisma.$executeRaw }, e: { correduriaId: string; intentoId: string; solicitadoPor: string; projectId: string },",
           "retorno": "Promise<void>",
-          "linea": 30,
+          "linea": 34,
           "resumen": "La línea del libro de un presupuesto traído de la web. Va DENTRO de la transacción que guarda la tarificación (la FK `intento_id` la exige): o se escriben las dos, o ninguna."
         },
         {
@@ -27388,7 +27397,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<Consumo>",
-          "linea": 60,
+          "linea": 64,
           "resumen": "Cuenta lo consumido hoy y este mes por esta correduría **en COTIZACIONES** (`POST /insurances`, 0,50€). 🚨 Desde el 21/09/2026 excluye los motivos de EMISIÓN (`rerate` / `submit`), que llevan su propi"
         },
         {
@@ -27397,7 +27406,7 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string }",
           "retorno": "Promise<Reserva>",
-          "linea": 102,
+          "linea": 106,
           "resumen": "Abre la reserva ANTES de llamar al vendor. El orden importa: si se escribiera después, una caída entre la llamada y el INSERT dejaría un cargo real sin rastro en el libro — y el tope contaría de menos"
         },
         {
@@ -27406,7 +27415,7 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string huella: string forzar?: boolean }",
           "retorno": "Promise<ReservaAntiDuplicado>",
-          "linea": 129,
+          "linea": 133,
           "resumen": "Comprueba duplicado y RESERVA en la misma transacción, bajo `pg_advisory_xact_lock(hashtext(huella))`: dos pestañas con la misma petición se serializan y la segunda ve la reserva de la primera. Sin `f"
         },
         {
@@ -27415,7 +27424,7 @@
           "exportada": true,
           "params": "correduriaId: string, operacion: OperacionEmision,",
           "retorno": "Promise<Consumo>",
-          "linea": 182,
+          "linea": 193,
           "resumen": "Lo consumido hoy y este mes en UNA operación de emisión (`rerate` / `submit`). 🚨 Mismo contrato que `consumoActual`: **NO atrapa errores**. Si no se puede leer el libro, el llamante (`libro-emision.t"
         },
         {
@@ -27424,7 +27433,7 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string operacion: OperacionEmision solicitadoPor: string costeCents: number projectId: string | null }",
           "retorno": "Promise<Reserva>",
-          "linea": 228,
+          "linea": 239,
           "resumen": "Abre la reserva de un ReRate o de un Submit ANTES de llamar al vendor. Gemela de `reservar()`, con dos diferencias que son el motivo de que exista aparte en vez de un parámetro opcional: el `motivo` e"
         },
         {
@@ -27433,7 +27442,7 @@
           "exportada": true,
           "params": "intentoId: string",
           "retorno": "Promise<void>",
-          "linea": 255,
+          "linea": 266,
           "resumen": "Cierra como facturable una línea de emisión. Aparte de `cerrarFacturable()` por una razón concreta: allí el `projectId` es lo que devuelve la cotización y no se conocía antes de llamar, así que el cie"
         },
         {
@@ -27442,7 +27451,7 @@
           "exportada": true,
           "params": "intentoId: string, projectId: string",
           "retorno": "Promise<void>",
-          "linea": 266,
+          "linea": 277,
           "resumen": "El vendor respondió: hay proyecto y, por tanto, cargo."
         },
         {
@@ -27451,7 +27460,7 @@
           "exportada": true,
           "params": "intentoId: string, evidencia: string, errorCodigo: string,",
           "retorno": "Promise<void>",
-          "linea": 288,
+          "linea": 299,
           "resumen": "Cierra como NO facturable. Exige evidencia por contrato (y por CHECK en BD). Solo hay tres evidencias admisibles, y todas significan que el vendor no llegó a tarificar: fallo de autenticación (401/403"
         },
         {
@@ -27460,7 +27469,7 @@
           "exportada": true,
           "params": "correduriaId: string, costes: { rerate: number; submit: number; limites: number },",
           "retorno": "Promise<number | null>",
-          "linea": 313,
+          "linea": 324,
           "resumen": "Lo gastado este mes natural (Madrid) en el libro, en céntimos. Lo lee el tope en euros (`tope-euros-bd.ts`), que no toca la tabla: el libro solo se mira desde aquí. Las líneas de ReRate/Submit/límites"
         }
       ],
@@ -27469,7 +27478,7 @@
         "ventana"
       ],
       "rutaApi": null,
-      "hash": "74443475dbb8"
+      "hash": "013522cc1c08"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/contador.ts",
@@ -34603,6 +34612,67 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d6400a501b17"
+    },
+    {
+      "ruta": "apps/asegura/lib/esquema-bd.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Instancia real de `esquema-opcional.ts` contra la BD (schema `seguros`). Ver ese fichero.",
+      "exporta": [
+        "hayBotVersion",
+        "hayPasos"
+      ],
+      "funciones": [
+        {
+          "nombre": "consultar",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: ElementoEsquema",
+          "retorno": "Promise<boolean>",
+          "linea": 5
+        },
+        {
+          "nombre": "hayBotVersion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "hayPasos",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [
+        "information_schema"
+      ],
+      "rutaApi": null,
+      "hash": "34e1879e940f"
+    },
+    {
+      "ruta": "apps/asegura/lib/esquema-opcional.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Tolerancia a esquema NO migrado (08/10/2026). El código de #4458 salió antes que sus SQL; esto deja que las columnas/tabla nuevas sean OPCIONALES: se comprueba si existen (cache con TTL, para que al aplicar el SQL se active solo) y, si no, se cae al comportamiento anterior. 🔒 Solo para cosas ADITIV",
+      "exporta": [
+        "crearEsquemaOpcional"
+      ],
+      "funciones": [
+        {
+          "nombre": "crearEsquemaOpcional",
+          "kind": "function",
+          "exportada": true,
+          "params": "deps: DepsEsquema",
+          "retorno": null,
+          "linea": 22
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ec372e933998"
     },
     {
       "ruta": "apps/asegura/lib/estado-migracion.ts",
@@ -42094,7 +42164,7 @@
           "exportada": true,
           "params": "correduriaId: string, limite: number, desde: number",
           "retorno": "Promise<ListaBandeja>",
-          "linea": 10,
+          "linea": 11,
           "resumen": "Trabajos que esperan a una persona (`requiere_humano`, `error_definitivo`), los más recientes primero."
         },
         {
@@ -42103,7 +42173,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, accion: AccionBandeja",
           "retorno": "Promise<ResultadoAccion>",
-          "linea": 37,
+          "linea": 47,
           "resumen": "Reintentar (→ `pendiente`) o cancelar (→ `cancelado`) un trabajo de la bandeja. `for update` + transición válida solo desde los estados permitidos. IDEMPOTENTE: pedir el estado en el que ya está es `s"
         },
         {
@@ -42112,7 +42182,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<TrazaTrabajo | null>",
-          "linea": 66,
+          "linea": 76,
           "resumen": "Traza de un trabajo (pasos en orden) + versión del bot. `null` = el trabajo no es de esta correduría."
         }
       ],
@@ -42120,7 +42190,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "8c4e10f233f1"
+      "hash": "e980a5c5668d"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-coste-reglas.ts",
@@ -44054,7 +44124,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<Integracion | null>",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "encolarTrabajo",
@@ -44062,7 +44132,7 @@
           "exportada": true,
           "params": "e: EntradaEncolar",
           "retorno": "Promise<ResultadoEncolar>",
-          "linea": 56
+          "linea": 57
         },
         {
           "nombre": "reclamarSiguiente",
@@ -44070,7 +44140,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string",
           "retorno": "Promise<Reclamado | null>",
-          "linea": 106,
+          "linea": 107,
           "resumen": "Reclama el pendiente más antiguo de (correduría, compañía) si hay hueco bajo `max_concurrencia` y la integración SIGUE autorizada. El cerrojo consultivo por compañía serializa a dos lanzadores simultá"
         },
         {
@@ -44079,7 +44149,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 145
+          "linea": 146
         },
         {
           "nombre": "lanzarPendientes",
@@ -44087,7 +44157,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 150,
+          "linea": 151,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -44096,7 +44166,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 172
+          "linea": 173
         },
         {
           "nombre": "destruirMaquina",
@@ -44104,7 +44174,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 186,
+          "linea": 187,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -44113,7 +44183,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 203,
+          "linea": 204,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo."
         },
         {
@@ -44122,7 +44192,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 233
+          "linea": 234
         },
         {
           "nombre": "guardarTarificacionRpa",
@@ -44130,7 +44200,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 276
+          "linea": 287
         },
         {
           "nombre": "guardarAdjunto",
@@ -44138,7 +44208,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 316
+          "linea": 327
         },
         {
           "nombre": "guardarPasos",
@@ -44146,16 +44216,16 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 338,
+          "linea": 349,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
           "nombre": "marcarFallo",
           "kind": "function",
           "exportada": false,
-          "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null, botVersion: string | null = null,",
+          "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null, botVersion: string | null = null, conBotVersion ",
           "retorno": "Promise<string>",
-          "linea": 357,
+          "linea": 368,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -44164,7 +44234,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 404,
+          "linea": 425,
           "resumen": "4. lanza lo que quepa por compañía."
         }
       ],
@@ -44173,7 +44243,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "52bc81c89809"
+      "hash": "a2753e3b4ed3"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -202427,7 +202497,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4492,
-    "funciones": 15955
+    "archivos": 4494,
+    "funciones": 15960
   }
 }
