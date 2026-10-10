@@ -35,6 +35,45 @@
 - **2026-10-05 · conectores-vigia** · hizo: preflight canal 200, ListConnectors, higiene de cuenta, doc actualizado; dudas: Graphify conectado pese a estar retirado; fallos: canario (Paso 3) imposible, todos `enabledInChat:false`; Pasos 0-bis/1/2 no ejecutados en profundidad; PRs/commits: claude/vigilant-euler-7sitkm
 - **2026-10-04 · mercado-booking** · hizo: plan max=24 (556 candidatas, 532 recortadas); 24/24 ventanas medidas = 239 comps `booking_mcp` (eventos 25/10 y 1/11 refrescados; meses ene/mar/abr-27). Medianas/noche aprox. aforo 12: 25/10 ≈ 780€, 1/11 ≈ 450€, 9/1/27 ≈ 310€, 13/3 ≈ 545€, 27/3 ≈ 1.000€ (Feria-Semana Santa), 17/4 ≈ 1.000€; escaparate 1/4 (House 11-14/10 = 2.024€ total); dudas: —; fallos: escaparate sin disponibilidad en Busto Reform, Dúplex y Luxury Busto (hueco, 3/4); 1 propio descartado (HOUSE SEVILLANA, aforo 12 25/10); PRs/commits: —
 - **2026-10-04 · facturas-correo** · hizo: Vía B sana (última copia 04/10); 4.0 sin filas `sin_revisar` (todas revisada_sin_cargo); archivadas en `10-Octubre-2026` (carpeta creada, id 1uqbZzfYF1EXBzbsm3Vw4Vb-zJNsH_Ttl) SIQUE sept 1.128,48€ (cuadra ×1,21; `limpieza_facturas` ya existía; cargo aún no en banco) y Supabase 25,00 USD, ambas en `facturas_drive` y con `Procesada`; conciliados por contrato/ref 3 cargos Endesa 28/09 (Socorro −159,00, Luxury −108,44, Reform −81,63); Booking/Petroprix ya Procesada; ruido clickedu/checkqrpay/Occident descartado; dudas: destino de Supabase (no hay regla; archivado como SaaS de negocio), cargo Endesa −56,52 del 25/09 sin imputar (¿dúplex? sin email), Socorro P26CON039980996 sigue en PDF-pendiente (solo enlace Endesa, importe por banco); fallos: `gmail-adjuntos` CONNECTION_CLOSED (Vía A caída, no necesaria); Revisar: 1 hilo (Asecon), Extraccion-fallida: 0 por search_threads; PRs/commits: —
+- **2026-09-28 · buscador-ia** · hizo: pasada semanal — watch de deprecación (texto/visión/
+  embeddings), Paso 1.5 (OpenRouter) y descubrimiento. Hallazgo: `gemini-2.5-flash` (1er preferido
+  de `contexto`/`registral` en `PREFERIDOS` del cron `ia-director-refresh`) deja de darse a keys
+  nuevas de Google; curado anteponiendo `gemini-3.8-flash` (mismo id ya vivo en la cadena directa)
+  en las dos listas, sin retirar el viejo. Groq de pago sin presupuesto sigue abierto (hallazgo del
+  21/09, sin novedad esta semana, no se repite Telegram). dudas: —; fallos: —; PRs/commits: ver PR
+  de esta rama (`apps/plataforma/app/api/cron/ia-director-refresh/route.ts` + `docs/BUSCADOR-IA.md`).
+- **2026-09-27 · mercado-booking** · hizo: segunda pasada diaria del día — 238 comparables reales
+  de Booking en las 24 ventanas de mercado del plan (`max=24`, `candidatas=508`, `recortadas=484` —
+  no agota el plan; ventanas casi todas de evento Q1 2027 en Santa Cruz/Betis-Sevilla + una de
+  octubre 2026); paso 2-bis (escaparate propio) 2/4 medidas (Dúplex center 545,84€/3n y HOUSE
+  SEVILLANA 2.328€/3n), Busto Reform y Luxury Busto sin disponibilidad en Booking para 06-08/10 —
+  hueco del conector, contado como `escaparateSinRespuesta`, no como "el canal cuadra"; 2 anuncios
+  propios de HOUSE SEVILLANA detectados y descartados de los comparables de mercado (aforo 12,
+  ventanas 2027-02-23/25 y 2027-02-28/03-02) antes de escribir. Latido `ok:true`. dudas: —;
+  fallos: —; PRs/commits: — (solo escritura vía `/api/sivra/mercado/ingest`; este commit solo anota
+  la bitácora y `CONTEXTO-SESIONES.md`).
+- **2026-09-27 · facturas-correo** · hizo: pasada disparada por trigger. Salud Vía B OK
+  (`dias_caido=1`, última copia 26/09 en `_buzon_pdf`); Vía A (`gmail-adjuntos`) sigue sin
+  provisionar (`CONNECTION_CLOSED`, no bloquea). Barrido 4.0 (`v_facturas_sin_cargo`): 0 filas
+  `sin_revisar` — todo lo abierto ya tiene `sin_cargo_motivo` de pasadas previas. Candidatos Gmail
+  (`newer_than:3d`) y subidas manuales (`_subir_aqui` + raíz 2026): 0 facturas nuevas, solo mensajes
+  de huéspedes de Booking (ruido, descartado). Backlog persistente revisado: Endesa Socorro
+  P26CON034910794 (ago) ya estaba conciliado por banco (−37,87€, 24/08) desde una pasada anterior,
+  se mantiene `Facturas/PDF-pendiente` a propósito (falta el PDF, no el número); Endesa Socorro
+  P26CON039980996 (13/09) sigue sin cargo bancario que casar — normal, aún no le toca. dudas: la
+  factura ASECON 1804 (150€+IVA=181,50€, «ESTUDIO-PREPARACION-PRESENTACION RENTA», sin pagar según
+  su recordatorio del 24/09) sigue en `Facturas/Revisar` sin decidir si es gasto de gestoría
+  deducible o gasto personal — para tu decisión, Alberto. fallos: —. PRs/commits: — (sin cambios de
+  código; solo `agente_salud` en Supabase).
+- **2026-09-27 · mercado-booking** · hizo: pasada diaria completa — 235 comparables reales de
+  Booking en las 24 ventanas de mercado del plan (tope `max=24`, quedaron 484 ventanas casando el
+  filtro para pasadas siguientes; mayoría fechas de evento Q4 2026/Q1 2027 — FIBES TIS2026, Betis y
+  Sevilla FC, calendario); paso 2-bis (escaparate propio) 2/4 ventanas medidas (Dúplex center y
+  HOUSE SEVILLANA), 2 sin disponibilidad esas fechas en Booking (Busto Reform, Luxury Busto) — hueco
+  del conector, no fallo; 5 anuncios propios de HOUSE SEVILLANA detectados y descartados de los
+  comparables de mercado (aforo 12, ventanas 10-06, 01-17, 01-31, 02-07, 02-14) antes de escribir.
+  Latido `ok:true`. dudas: —; fallos: —; PRs/commits: — (solo escritura vía `/api/sivra/mercado/ingest`,
+  este commit solo anota la bitácora).
 
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
