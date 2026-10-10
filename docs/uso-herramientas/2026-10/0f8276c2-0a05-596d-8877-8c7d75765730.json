@@ -1,8 +1,8 @@
 {
  "sesion": "0f8276c2-0a05-596d-8877-8c7d75765730",
  "inicio": "2026-10-08T15:53:22.757Z",
- "fin": "2026-10-08T15:53:26.454Z",
- "llamadas": 6,
+ "fin": "2026-10-10T07:12:08.665Z",
+ "llamadas": 81,
  "categorias": {
   "agente:rastreador-codigo": {
    "llamadas": 1,
@@ -27,15 +27,96 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 4,
-   "chars_in": 599,
-   "chars_out": 20780,
+   "llamadas": 41,
+   "chars_in": 7454,
+   "chars_out": 185353,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 3,
-    "Read": 1
+    "Grep": 24,
+    "Read": 17
+   }
+  },
+  "otro": {
+   "llamadas": 5,
+   "chars_in": 5218,
+   "chars_out": 612,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "SubagentHandback": 1,
+    "ToolSearch": 3,
+    "SendMessage": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 3093,
+   "chars_out": 3328,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 20579,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "bash": {
+   "llamadas": 19,
+   "chars_in": 9117,
+   "chars_out": 78269,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 19
+   }
+  },
+  "sql": {
+   "llamadas": 8,
+   "chars_in": 3280,
+   "chars_out": 10063,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__execute_sql": 1,
+    "mcp__Supabase__execute_sql": 7
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 3,
+   "chars_in": 7716,
+   "chars_out": 169037,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 1,
+    "Edit": 2
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2511,
+   "chars_out": 2732,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 44605,
+   "tools": {
+    "Agent": 1
    }
   }
  }
