@@ -121,6 +121,7 @@ central#4228: vigía ya no da «objetos en revisión» de ficheros que el reproc
 Pendiente: FK compuesta correduría en poliza_no_duplicado; ingesta no quita ceros; reclamar a Mapfre 10 renovaciones desde 05/06.
 
 **(04/10/2026)** — pasada agentes-entrenador: poda de bitácora (16 entradas procesadas, 27/09→04/10) en PR docs-only, sin cambios de prompt. Backlog PR claude/*: 0 entradas ≥2 semanas (el más antiguo #3755, 27/09, dentro del rango).
+**(04/10/2026, auditoría profunda)** — Código sano: 13/13 typecheck, 1318 tests. 🔴 trading-analista sin dispararse desde el 29/09 (acción Alberto en claude.ai). 🟢 mercado_booking arreglado (#4118); pricing evento falso id=1294 (año) → validación en código, descartar fila pendiente Alberto; CIMA queueDepth falsa alarma. 🟡 Codeoscopic respuesta Alberto pendiente confirmar. Detalle: `docs/AUDITORIA-2026-10.md`.
 
 **(03/10/2026, early/late check-in y maletas)** — Compuerta: early/late/maletas NUNCA auto-envío, siempre propuesta por Telegram. Semáforo puro `cambio-horario.ts` (rojo/amarillo/verde; dato desconocido = amarillo); botones `hsp_chsi`/`hsp_chhasta`/`hsp_chno`/`hsp_chlimp`.
 Política Alberto: GRATIS (también más allá de las 12:00, `salida.ts`: se consulta y confirma según limpieza/calendario) y SIN pedir reseña (Booking/Airbnb prohíben incentivar). «No» en rojo ofrece consignas de `CONSIGNA_POR_ZONA`.
@@ -1352,6 +1353,10 @@ vinculadas con nivel gestionar/administrar; cuenta, contacto, documento suelto y
 - Campos de parte por ramo (`parte-ramo.ts`, 36 tipos con códigos EIAC ocultos, listas de contrarios/afectados/heridos, triestado) + vista en /correduria. ✅ SQL `2026-10-03_portal_parte_datos_ramo.sql` y `2026-10-03d_siniestro_vinculo_parte_fusion.sql` APLICADOS en prod el 04/10 (verificado).
 - Monte Carmelo 68 (Generali): no hay SIN de CIMA desde 28/09; check-in programado 10/10.
 - Antes pendiente: campos de parte por ramo según EIAC/CIMA (propuesta hecha: catálogo `EIAC_TIPOLOGIA_SINIESTRO` 182 códigos + `siniestro-ramo.ts`), a decidir con Alberto. El MCP `Supabase_asegura` apunta a OTRA BD: usar la de `central`.
+## (30/09/2026) — Escaparate propio: el plan ya no pide ventanas OCUPADAS
+- mercado-booking llevaba 2 días con 0/4 escaparate: el plan pedía 9-12/oct y los 4 pisos estaban reservados → Booking «sin disponibilidad» → no se guarda nada → mañana pide lo mismo.
+- `planEscaparate` descarta candidatas con `libre === false` (helper puro `ventanaLibre`: alguna noche `available=0` o `noches < min_stay`); `null` = no consta, no se descarta. Si todas están ocupadas, hueco declarado.
+- `mercado/plan` lee `available`/`min_stay` de `rate_snapshots`. Tests 19/19 (cepo visto en rojo), tsc 0. PR #4118.
 
 ## (03/10/2026) Ficha correduría: contacto delegado + canal de la correduría
 - `esCanalCorreduria()` (module-seguros, datos de `MEDIADOR`): hola@grupoasegura.es y el móvil de Alberto, que se ponen cuando la compañía exige contacto, NO son del cliente. `contactoEfectivo` los salta y añade `canalCorreduria`; `estadoEmailDeFicha` (asegura) no escribe ahí.

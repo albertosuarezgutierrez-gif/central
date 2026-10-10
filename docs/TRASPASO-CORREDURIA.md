@@ -163,7 +163,7 @@
 > entra en el proyecto de Manuel como `postgres`** (el `execute_sql` va como `supabase_read_only_user`),
 > así que se creó un rol temporal `traspaso_lectura` (SELECT-only), se copió por `dblink` desde central
 > y **se dio de baja el rol y se vació el secreto** al terminar. El origen sigue siendo la fuente viva
-> (CIMA entra allí y las apps leen de allí); la copia es una foto. Siguiente paso: repuntar lectura +
+> (hasta el 02/09/2026: CIMA entra allí y las apps leen de allí); la copia es una foto. Siguiente paso: repuntar lectura +
 > ingesta, no antes de las DOS pruebas (descifrar y buscar) sobre la copia — siguen pendientes de las
 > claves, que llegan con el Vercel de Manuel.
 >
