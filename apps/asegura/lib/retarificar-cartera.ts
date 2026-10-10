@@ -1036,6 +1036,9 @@ export async function prepararRetarificacionNuevaAuto(entrada: {
     codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
     garaje: cadena(cuerpo.resueltos?.garaje),
     garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
+    // Los km por defecto de la pantalla viajan como SUPUESTO (10/10/2026); si además llega
+    // `correcciones.kmAnuales` (dato del cliente), la corrección manda y retira el supuesto.
+    kmAnualesSupuestos: numero(cuerpo.resueltos?.kmAnualesSupuestos),
   }
 
   const pre = precalificarAutoNueva(origen.cliente, resueltos, hoyIso())
