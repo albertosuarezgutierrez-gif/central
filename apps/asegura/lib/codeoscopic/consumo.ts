@@ -12,6 +12,7 @@ import { prisma } from '../tenant.ts'
 import { COSTE_COTIZACION_CENTS } from './config.ts'
 import { MOTIVO_LIMITES, MOTIVO_RERATE, MOTIVO_SUBMIT, type OperacionEmision } from './gasto-emision.ts'
 import type { Consumo } from './contador.ts'
+import { hayHuella } from '../esquema-bd.ts'
 import { decidirDuplicado, VENTANA_DUPLICADO_MIN, type FilaPrevia } from './huella.ts'
 
 export type Reserva = { intentoId: string; correduriaId: string }
@@ -134,6 +135,13 @@ export async function reservarSinDuplicado(input: {
   huella: string
   forzar?: boolean
 }): Promise<ReservaAntiDuplicado> {
+  // Esquema sin migrar (columna `huella` aún no existe): se reserva como antes de #4458 — SIN huella ni
+  // deduplicación, pero CON reserva en libro (los topes se siguen aplicando antes, en cotizar). Si la
+  // comprobación falla se asume «no existe». Nunca relaja la reserva: solo omite la deduplicación.
+  if (!(await hayHuella())) {
+    await reservar({ correduriaId: input.correduriaId, intentoId: input.intentoId, motivo: input.motivo, solicitadoPor: input.solicitadoPor })
+    return { resultado: 'reservada' }
+  }
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${input.huella}))`
     const filas = await tx.$queryRaw<{ intento_id: string; estado: FilaPrevia['estado']; creado_at: Date }[]>`

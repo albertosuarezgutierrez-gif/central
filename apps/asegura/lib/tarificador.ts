@@ -20,6 +20,7 @@ import {
   type TipoError,
 } from '@central/module-tarificacion'
 import { prisma } from './tenant'
+import { hayBotVersion, hayPasos } from './esquema-bd'
 import { LEASE_MS, configFly, peticionMaquina, rpaActivo, type ConfigFly, type ResultadoWorker } from './tarificador-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
@@ -232,6 +233,8 @@ export type ResultadoRegistro =
 
 export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoRegistro> {
   // La TRAZA va FUERA de la transacción del resultado: el resultado del trabajo jamás depende de ella.
+  // Esquema opcional (SQL de 08/10/2026 puede no estar aplicado): se omite `bot_version` / la traza si no existen.
+  const conBot = await hayBotVersion()
   type Interno = { res: ResultadoRegistro; traza: { t: FilaTrabajo; captura: 'con_captura' | null } | null }
   const interno: Interno = await prisma.$transaction(async (tx) => {
     const filas = await tx.$queryRaw<FilaTrabajo[]>`
@@ -245,7 +248,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     if (t.estado !== 'en_curso') return { res: { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }, traza: null }
 
     if (r.tipo === 'error') {
-      const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, r.botVersion)
+      const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, conBot ? r.botVersion : null, conBot)
       return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: r.captura ? 'con_captura' as const : null } }
     }
 
@@ -254,15 +257,23 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
       docs.push(await guardarAdjunto(tx, t, { nombre: p.nombre, mime: 'application/pdf', contenido: p.contenido, notas: `Oferta de ${t.compania} (${t.ramo}) obtenida por el tarificador RPA` }))
     }
     const tarificacionId = await guardarTarificacionRpa(tx, t, r.ofertas, docs)
-    await tx.$executeRaw`
-      update seguros.tarificacion_trabajos
-      set estado = 'ok', tarificacion_id = ${tarificacionId}::uuid, evidencia_documento_id = ${docs[0] ?? null}::uuid,
-          lease_hasta = null, error = null, terminado_at = now(), updated_at = now(),
-          bot_version = coalesce(${r.botVersion}, bot_version)
-      where id = ${t.id}::uuid`
+    if (conBot) {
+      await tx.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set estado = 'ok', tarificacion_id = ${tarificacionId}::uuid, evidencia_documento_id = ${docs[0] ?? null}::uuid,
+            lease_hasta = null, error = null, terminado_at = now(), updated_at = now(),
+            bot_version = coalesce(${r.botVersion}, bot_version)
+        where id = ${t.id}::uuid`
+    } else {
+      await tx.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set estado = 'ok', tarificacion_id = ${tarificacionId}::uuid, evidencia_documento_id = ${docs[0] ?? null}::uuid,
+            lease_hasta = null, error = null, terminado_at = now(), updated_at = now()
+        where id = ${t.id}::uuid`
+    }
     return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }, traza: { t, captura: null } }
   })
-  if (interno.traza) {
+  if (interno.traza && (await hayPasos())) {
     try {
       await guardarPasos(prisma, interno.traza.t, r.pasos, interno.traza.captura)
     } catch (e) {
@@ -361,6 +372,7 @@ async function marcarFallo(
   error: { tipo: TipoError; mensaje: string; url: string | null },
   evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null,
   botVersion: string | null = null,
+  conBotVersion = false,
 ): Promise<string> {
   const estado = estadoTrasError(error.tipo, intentos)
   let capturaId: string | null = null
@@ -372,13 +384,22 @@ async function marcarFallo(
     htmlId = await guardarAdjunto(db, evidencia.trabajo, { nombre: `fallo-${id.slice(0, 8)}.html`, mime: 'text/html', contenido: Buffer.from(evidencia.html, 'utf8'), notas: `HTML (redactado) del fallo del tarificador RPA (${error.tipo})` })
   }
   const err = JSON.stringify({ ...error, html_documento_id: htmlId, en: new Date().toISOString() })
-  await db.$executeRaw`
-    update seguros.tarificacion_trabajos
-    set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
-        evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
-        bot_version = coalesce(${botVersion}, bot_version),
-        terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
-    where id = ${id}::uuid and estado = 'en_curso'`
+  if (conBotVersion) {
+    await db.$executeRaw`
+      update seguros.tarificacion_trabajos
+      set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
+          evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
+          bot_version = coalesce(${botVersion}, bot_version),
+          terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
+      where id = ${id}::uuid and estado = 'en_curso'`
+  } else {
+    await db.$executeRaw`
+      update seguros.tarificacion_trabajos
+      set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
+          evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
+          terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
+      where id = ${id}::uuid and estado = 'en_curso'`
+  }
   return estado
 }
 
