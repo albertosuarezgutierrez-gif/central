@@ -328,6 +328,13 @@ Alberto (pago + `destino` si se archiva); 2 Endesa Socorro 24 en `PDF-pendiente`
 portal, sin adjunto) — una ya conciliada por banco, falta el PDF. `v_facturas_sin_cargo`: 0 filas
 sin revisar. Detalle en `docs/AGENTES-BITACORA.md`.
 
+**(28/09/2026)** — Auditoría ligera: el PR #3755 (auditoría del 27/09) llevaba >24h sin
+automergear tocando solo registro. Causa: `docs/FEEDBACK-AGENTES.md` faltaba en `es_registro()`
+de `.github/workflows/rutinas-automerge.yml` (mismo patrón que `docs/VIGIA-*.md` el 21/08).
+Corregido + añadido a `ESTADO_DE_AGENTES` de `test/regression-automerge-registro.test.ts` (visto
+en rojo sin el fix). Heartbeat/correduría/precio sanos; `oscilantes` de pricing sigue subiendo
+(10→47→56) anotado en `FEEDBACK-AGENTES.md`. PR draft con el fix + informe, Telegram enviado.
+
 **(28/09/2026)** — Alerta «Se están perdiendo datos de CIMA»: el bloque de 46 objetos (REC 40 · POL 6) y la caja negra de Codeoscopic (131 envíos) eran FALSOS POSITIVOS. Medido: los 52 recibos en review están en `poliza_recibos` y las 6 pólizas (comunidades/embarcaciones) en cartera sin duplicado, todo entrado con el rescate del 24/09, que NO emite parte nuevo → el vigía se quedaba con el del 15/09. Fix: el vigía (`apps/asegura/lib/ingesta.ts`) respeta un `cima_residuo_resuelto_manual` POSTERIOR al último parte (el REC 261 del 12/07 ya lo tenía y se ignoraba); emitidos los 5 cierres tras comprobar objeto a objeto. Codeoscopic: el receptor ya acepta el array desde el 19/09 08:07 (2 eventos guardados, `project_not_found`); fila de la caja negra marcada `reprocesado_at`. Real y pendiente: Mapfre sin POL (10 renovaciones) → reclamar en ticket SAU-24238. PR #3821 **MERGEADO** (1579a34).
 
 **(28/09/2026)** — Ficha cliente correduría: (1) las baldosas de acceso dicen algo siempre que se sepa (`detallesAccesos` en `cliente/[id]/tabs.ts`, puro+test): Contactos = «2 teléfonos · 1 correo · 3 personas» (antes solo personas de pólizas), ceros leídos se dicen, `null` no se pinta. (2) Portal «su correo lleva a OTRA ficha»: asegura devuelve `otrasFichas` (id+nombre, solo de la propia correduría) y la ficha las enlaza. El WhatsApp sigue oculto A PROPÓSITO en ese estado (el portal entra por correo → acabaría en la otra ficha); ahora se dice. Medido: 92 fichas con correo `es_principal` en `cliente_emails` pero sin hash en `clientes` porque el backfill no escribe choques → todas `resuelve_a_otra`; se arreglan fusionando/corrigiendo, no con código. PR #3812 **MERGEADO** (8150fce).
