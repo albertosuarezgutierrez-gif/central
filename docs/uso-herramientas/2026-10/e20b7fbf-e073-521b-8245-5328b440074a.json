@@ -1,8 +1,8 @@
 {
  "sesion": "e20b7fbf-e073-521b-8245-5328b440074a",
  "inicio": "2026-10-10T07:11:19.502Z",
- "fin": "2026-10-10T07:11:25.380Z",
- "llamadas": 12,
+ "fin": "2026-10-10T07:43:28.948Z",
+ "llamadas": 76,
  "categorias": {
   "agente:rastreador-codigo": {
    "llamadas": 2,
@@ -27,27 +27,49 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 8,
-   "chars_in": 1149,
-   "chars_out": 39706,
+   "llamadas": 59,
+   "chars_in": 11267,
+   "chars_out": 218655,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Glob": 1,
-    "Grep": 4,
-    "Read": 3
+    "Glob": 3,
+    "Grep": 35,
+    "Read": 21
    }
   },
   "bash": {
-   "llamadas": 1,
-   "chars_in": 214,
-   "chars_out": 7526,
+   "llamadas": 10,
+   "chars_in": 5865,
+   "chars_out": 62974,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1
+    "Bash": 10
+   }
+  },
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 13506,
+   "chars_out": 183,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "SubagentHandback": 3
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2373,
+   "chars_out": 2594,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 47023,
+   "tools": {
+    "Agent": 1
    }
   }
  }
