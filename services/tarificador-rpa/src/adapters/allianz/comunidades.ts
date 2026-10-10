@@ -1176,11 +1176,65 @@ export async function descargarProyecto(page: Page, raiz: Raiz, ctx: ContextoPor
   }
 }
 
+// ─────────── EMISIÓN asistida (10/10/2026, docs/TARIFICADOR-EMISION-DISENO.md) ───────────
+// El adaptador SOLO lleva la página a la pantalla PREVIA (pestaña Tarificar, primas leídas) por el MISMO camino que al
+// tarificar, sin variantes y SIN «Proyecto» (la emisión exige seguir en la fase Tarificar). No pulsa el botón de emitir:
+// lo pulsa el runner con el permiso de un solo uso (guard.ts → pulsarEmisionAutorizada). Lo que ePAC enseña DESPUÉS del
+// clic no está grabado: aquí solo se intenta LEER un nº de póliza inequívoco; si no, `null` y el trabajo queda
+// `requiere_humano` (estado incierto: se mira el portal a mano).
+
+/** Nº de póliza en un texto de pantalla, solo si va pegado a «póliza» y tiene forma de número de póliza. `null` = no consta. */
+export function numeroPolizaDeTexto(texto: string | null | undefined): string | null {
+  const t = String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const m = [...t.matchAll(/poliza\s*(?:n[ºo°.]*|numero|num\.?)?\s*[:#]?\s*([0-9][0-9/.-]{5,24}[0-9])\b/gi)].map((x) => x[1])
+  const distintos = [...new Set(m)]
+  // Dos números distintos junto a «póliza», o una pantalla que habla de la póliza que se REEMPLAZA (su número podría ser
+  // el que se lee): ambiguo → no se afirma ninguno (el trabajo queda «incierto» y se mira el portal).
+  if (/reemplaz|sustitu|anterior/i.test(t)) return null
+  return distintos.length === 1 ? distintos[0] : null
+}
+
+export const emisionComunidades = {
+  async hastaPantallaPrevia(page: Page, riesgo: RiesgoComunidad, ctx: ContextoPortal): Promise<{ primaCents: number | null }> {
+    const modalidad: ModalidadPortal = riesgo.modalidad ?? 'estandar'
+    await ctx.paso('login', async () => {
+      if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
+      await ctx.trasLogin()
+    })
+    const formulario = await ctx.paso('navegacion', async () => {
+      await abrirComunidades(page, ctx)
+      return marcoFormulario(page)
+    })
+    await ctx.paso('formulario', () => rellenarRiesgo(formulario, page, riesgo, ctx))
+    const resultado = await ctx.paso('tarificar', () => calcular(page, ctx))
+    await leerCalculo(resultado, ctx, modalidad)
+    await ctx.paso('tarificar', async () => {
+      await ctx.elegirOpcion(modalidad)
+      await ctx.pausa()
+      await ctx.avanzarATarificar()
+      await ctx.exigirSinCaptcha()
+    })
+    const primas = await ctx.paso('lectura_primas', async () => leerPrimas(await marcoCon(page, (r) => filaPorEtiqueta(r, 'Prima Total'), 'Prima Total')))
+    const total = primas.anual.primaTotalEur
+    return { primaCents: total !== null && Number.isFinite(total) && total > 0 ? Math.round(total * 100) : null }
+  },
+  async leerNumeroPoliza(page: Page): Promise<string | null> {
+    const textos: string[] = []
+    for (const f of page.frames()) {
+      if (f.isDetached()) continue
+      textos.push(await f.locator('body').innerText({ timeout: 5_000 }).catch(() => ''))
+    }
+    const numeros = [...new Set(textos.map(numeroPolizaDeTexto).filter((n): n is string => n !== null))]
+    return numeros.length === 1 ? numeros[0] : null
+  },
+}
+
 export const allianzComunidades: AdaptadorPortal = {
   compania: 'allianz',
   ramo: 'comunidades',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.0',
+  version: '0.2.0',
+  emision: emisionComunidades,
   async tarificar(page, riesgo, ctx) {
     // UNA modalidad por trabajo (por defecto estándar). Querer las dos = DOS trabajos (dos pasadas):
     // tras «Aceptar» el formulario avanza y no hay vuelta atrás sin riesgo de dejar el portal a medias.

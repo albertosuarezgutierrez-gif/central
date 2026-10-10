@@ -17,3 +17,6 @@ export const esquema = crearEsquemaOpcional({ consultar })
 
 export const hayBotVersion = () => esquema.existeColumna('tarificacion_trabajos', 'bot_version')
 export const hayPasos = () => esquema.existeTabla('tarificacion_trabajo_pasos')
+// Emisión asistida (SQL 2026-10-10_tarificador_emision): sin él, la emisión responde 503 y la firma no guarda ipid_huella.
+export const hayEmision = () => esquema.existeTabla('tarificacion_emision_autorizacion')
+export const hayIpidHuella = () => esquema.existeColumna('presupuesto', 'ipid_huella')

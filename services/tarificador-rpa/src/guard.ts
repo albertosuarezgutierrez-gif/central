@@ -8,13 +8,34 @@
 //      `test/regression-tarificador-rpa.test.ts` en la raíz.)
 
 import type { BrowserContext, Frame, Locator, Page, Request } from 'playwright'
-import { EmisionBloqueadaError, MaquinaFases, comprobarBoton, parametrosParecenEmision, pareceEmision, type ModalidadPortal, type PestanaActiva } from '@central/module-tarificacion'
+import {
+  EmisionBloqueadaError,
+  MaquinaFases,
+  comprobarBoton,
+  esBotonDeListaBlanca,
+  parametrosParecenEmision,
+  pareceEmision,
+  usarPermisoEmision,
+  type ModalidadPortal,
+  type PermisoEmision,
+  type PestanaActiva,
+} from '@central/module-tarificacion'
 
-export type GuardEmision = { violacion(): EmisionBloqueadaError | null; comprobar(): void; fases: MaquinaFases }
+/**
+ * Ventana de RED de la emisión autorizada (10/10/2026): se abre SOLO dentro de `pulsarEmisionAutorizada`, después de
+ * gastar el permiso de un solo uso y justo antes de su único clic, para que las peticiones que ESE clic provoca (que casan
+ * con el patrón de emisión) no se aborten. Dura como mucho `VENTANA_RED_EMISION_MS` y el runner la cierra en cuanto lee
+ * el resultado. Mientras está abierta el robot no pulsa nada más (`pulsar()` sigue cerrado: comprueba el patrón igual).
+ */
+export const VENTANA_RED_EMISION_MS = 90_000
+export type VentanaRed = { abierta(): boolean; cerrar(): void }
+
+export type GuardEmision = { violacion(): EmisionBloqueadaError | null; comprobar(): void; fases: MaquinaFases; ventana: VentanaRed }
 
 export async function instalarGuardEmision(context: BrowserContext): Promise<GuardEmision> {
   let violacion: EmisionBloqueadaError | null = null
   const fases = new MaquinaFases()
+  let ventanaHasta = 0
   await context.route('**/*', async (route) => {
     const req = route.request()
     const url = req.url()
@@ -23,6 +44,11 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       const op = { permitirAceptar: fases.aceptarEnVuelo() }
       const porUrl = pareceEmision(url, op) || parametrosParecenEmision(url, op)
       const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
+      if ((porUrl || porCuerpo) && Date.now() < ventanaHasta) {
+        // Consecuencia del ÚNICO clic autorizado (ventana abierta por pulsarEmisionAutorizada): pasa.
+        await route.continue()
+        return
+      }
       if (porUrl || porCuerpo) {
         // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
         violacion ??= new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
@@ -32,14 +58,23 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     }
     await route.continue()
   })
-  return {
+  const g: GuardEmision = {
     fases,
+    ventana: {
+      abierta: () => Date.now() < ventanaHasta,
+      cerrar: () => { ventanaHasta = 0 },
+    },
     violacion: () => violacion,
     comprobar() {
       if (violacion) throw violacion
     },
   }
+  ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
+  return g
 }
+
+/** Solo `pulsarEmisionAutorizada` (este fichero) puede abrir la ventana: no hay `abrir` en el objeto público. */
+const ABRIR_VENTANA = new WeakMap<GuardEmision, (ms: number) => void>()
 
 /** Cuerpo de la petición como texto (`null` si no tiene). Si no se puede leer como texto, sus bytes en UTF-8. */
 function cuerpoDe(req: Request): string | null {
@@ -193,4 +228,41 @@ export async function pulsarProyecto(page: Page, boton: Locator, guard: GuardEmi
   comprobarBoton(desc)
   await boton.click()
   guard.comprobar()
+}
+
+/**
+ * EMISIÓN AUTORIZADA (10/10/2026): el ÚNICO camino del worker para pulsar un botón de emisión, y una sola vez. Exige, en
+ * este orden y sin atajos:
+ *   1. el guard de siempre limpio (`guard.comprobar()`);
+ *   2. la máquina de fases: solo desde Tarificar, con la pestaña verificada en el DOM, una vez (`autorizarEmision`);
+ *   3. EXACTAMENTE un control visible con el id y el texto del permiso, en un solo marco;
+ *   4. `usarPermisoEmision`: un permiso creado tras canjear el token de Alberto, de ESTE trabajo y ESTE hash, sin usar,
+ *      y que ese control sea su botón (nada de RGPD, SMS/OTP, contraseñas, pago fraccionado ni anulaciones).
+ * Solo entonces abre la ventana de red y pulsa. Cualquier fallo lanza `EmisionBloqueadaError` (o un error) SIN pulsar.
+ */
+export async function pulsarEmisionAutorizada(page: Page, guard: GuardEmision, permiso: PermisoEmision, vinculo: { trabajoId: string; hashDatos: string }): Promise<void> {
+  guard.comprobar()
+  if (!permiso || typeof permiso !== 'object' || !esBotonDeListaBlanca(permiso.boton)) throw new EmisionBloqueadaError('fase', 'emisión sin permiso válido')
+  guard.fases.autorizarEmision(await pestanaActiva(page))
+  const { id, texto } = permiso.boton
+  if (!/^[A-Za-z][\w-]{0,63}$/.test(id)) throw new EmisionBloqueadaError('boton', `id de botón no válido en el permiso: ${id.slice(0, 40)}`)
+  const c = await enMarcos(page, (f) =>
+    f
+      .locator(`#${id}`)
+      .filter({ hasText: new RegExp(`^\\s*${texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`) })
+      .locator('visible=true'),
+  )
+  if (c.total !== 1 || c.marcos !== 1 || !c.locator) throw new EmisionBloqueadaError('boton', `no hay exactamente un control visible «${texto}» (#${id})`)
+  const boton = c.locator.first()
+  usarPermisoEmision(permiso, vinculo, await descripcion(boton))
+  const abrir = ABRIR_VENTANA.get(guard)
+  if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de emisión')
+  abrir(VENTANA_RED_EMISION_MS)
+  try {
+    await boton.click()
+  } catch (e) {
+    // El clic falló (o no se sabe si salió): la ventana de red se cierra YA, antes de que el runner haga nada más.
+    guard.ventana.cerrar()
+    throw e
+  }
 }

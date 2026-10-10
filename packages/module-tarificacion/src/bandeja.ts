@@ -31,13 +31,15 @@ export type DecisionBandeja = { ok: true; a: EstadoTrabajo } | { ok: false; moti
 
 /**
  * ¿Se puede aplicar `accion` a un trabajo en `estado` (con error de tipo `tipoError`)? Estado desconocido → no.
- * `tipoError` solo importa para reintentar (`emision` prohibido).
+ * `tipoError` y `modo` solo importan para reintentar (`emision` prohibido en los dos).
  */
-export function decidirAccionBandeja(accion: unknown, estado: unknown, tipoError?: unknown): DecisionBandeja {
+export function decidirAccionBandeja(accion: unknown, estado: unknown, tipoError?: unknown, modo?: unknown): DecisionBandeja {
   if (!esAccionBandeja(accion)) return { ok: false, motivo: 'acción desconocida' }
   if (!esEstadoTrabajo(estado)) return { ok: false, motivo: 'estado desconocido' }
   if (!DESDE[accion].includes(estado)) return { ok: false, motivo: `no se puede ${accion} un trabajo en estado ${estado}` }
   if (accion === 'reintentar' && tipoError === 'emision') return { ok: false, motivo: 'un trabajo abortado por el guard de emisión no se reintenta' }
+  // Un trabajo de EMISIÓN (10/10/2026) nunca se reintenta: tras el clic el estado en la compañía es incierto. Se pide otro.
+  if (accion === 'reintentar' && modo === 'emision') return { ok: false, motivo: 'un trabajo de emisión no se reintenta: se pide una emisión nueva' }
   return { ok: true, a: A[accion] }
 }
 
