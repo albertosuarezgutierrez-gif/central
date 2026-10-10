@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { INDICE_FIGURA_MULTI, INDICE_FIGURA_ROL_UNICO, INDICE_FIGURA_VIEJO, ROLES_FIGURA_MULTIPLES } from '@central/module-seguros'
 
 // Figuras multi (asegurados), 10/10/2026. Lee el FUENTE (lo que vigila vive en SQL crudo, donde tsc no mira).
@@ -15,10 +17,33 @@ const cuerpo = (nombre: string) => {
   return src.slice(i, j < 0 ? undefined : i + 10 + j)
 }
 
-test('todo «on conflict (oportunidad_id, rol)» lleva el predicado del índice parcial (vale con y sin migración)', () => {
-  const todos = src.match(/on conflict \(oportunidad_id, rol\)[^`]*/g) ?? []
-  assert.ok(todos.length >= 3, 'deberían ser al menos asignar, asignar soloSiLibre y abrirRiesgoDePoliza')
-  for (const c of todos) assert.match(c, /^on conflict \(oportunidad_id, rol\) where rol <> 'asegurado' do /, c)
+// Recorre apps/ y packages/ (.ts/.tsx/.sql). Saltan dependencias, builds y worktrees.
+const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
+const SALTAR = new Set(['node_modules', '.next', 'generated', '.claude', '.git', 'worktrees'])
+const ficheros = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    if (e.isDirectory()) return SALTAR.has(e.name) ? [] : ficheros(join(dir, e.name))
+    return /\.(ts|tsx|sql)$/.test(e.name) ? [join(dir, e.name)] : []
+  })
+const CONFLICTO = /on\s+conflict\s*\(\s*oportunidad_id\s*,\s*rol\s*\)/gi
+const PREDICADO = /^\s*where\s+rol\s*<>\s*'asegurado'/i
+const SIN_LINEAS_SQL = (f: string, t: string) => (f.endsWith('.sql') ? t.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n') : t)
+
+test('todo «on conflict (oportunidad_id, rol)» de apps/ y packages/ lleva el predicado del índice parcial (vale con y sin migración)', () => {
+  const yo = fileURLToPath(import.meta.url)
+  const vistos: string[] = []
+  const malos: string[] = []
+  for (const f of [...ficheros(join(RAIZ, 'apps')), ...ficheros(join(RAIZ, 'packages'))]) {
+    if (f === yo) continue
+    const t = SIN_LINEAS_SQL(f, readFileSync(f, 'utf8'))
+    for (const m of t.matchAll(CONFLICTO)) {
+      const rel = f.slice(RAIZ.length + 1)
+      vistos.push(rel)
+      if (!PREDICADO.test(t.slice((m.index ?? 0) + m[0].length))) malos.push(`${rel}: ${m[0]} sin where rol <> 'asegurado'`)
+    }
+  }
+  assert.ok(vistos.filter((r) => r.endsWith('oportunidad-riesgo.ts')).length >= 3, 'el escáner debe ver al menos asignar, asignar soloSiLibre y abrirRiesgoDePoliza')
+  assert.deepEqual(malos, [], 'on conflict (oportunidad_id, rol) sin predicado: Postgres no infiere el índice parcial')
 })
 
 test('el predicado del código es IDÉNTICO al del índice parcial del SQL (si no, Postgres no lo infiere)', () => {
