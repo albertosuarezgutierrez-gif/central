@@ -199,7 +199,8 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
       if (!j || !('estado' in j)) { setCatastro({ estado: 'aviso', texto: `No se ha podido consultar el Catastro (${(j as { error?: string } | null)?.error ?? `HTTP ${res.status}`}). No significa que la vivienda no exista: no se ha podido mirar.` }); return }
       if (j.estado === 'ok') {
         const pre = precargaCatastroVivienda(E.form, j.referencia, j.precalificacion.datos)
-        if (Object.keys(pre.cambios).length > 0) E.setForm((f) => ({ ...f, ...pre.cambios }))
+        // El relleno se calcula sobre el formulario de AHORA (no el de antes de la consulta): no pisa lo escrito mientras tanto.
+        if (Object.keys(pre.cambios).length > 0) E.setForm((f) => ({ ...f, ...precargaCatastroVivienda(f, j.referencia, j.precalificacion.datos).cambios }))
         setCatastro({ estado: 'hecho', pre })
         return
       }
@@ -347,7 +348,7 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
                     <button type="button" disabled={E.bloqueado || catastro.estado === 'consultando'} onClick={() => void leerCatastro()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
                       {catastro.estado === 'consultando' ? 'Consultando el Catastro…' : 'Rellenar desde el Catastro (gratis)'}
                     </button>
-                    <CatastroResultado c={catastro} onElegir={(referencia) => void leerCatastro({ referencia })} />
+                    <CatastroResultado c={catastro} deshabilitado={E.bloqueado || catastro.estado === 'consultando'} onElegir={(referencia) => void leerCatastro({ referencia })} />
                     <button type="button" disabled={E.bloqueado} onClick={() => void buscarMunicipios()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
                       Buscar municipio por código postal
                     </button>
@@ -386,7 +387,7 @@ type CatastroLectura =
   | { estado: 'elegir'; via: string; inmuebles: Array<{ refCompleta: string; planta: string | null; puerta: string | null }> }
 
 /** Qué ha hecho el Catastro con el formulario: lo rellenado, lo que difiere (sin tocar) o el piso a elegir. */
-function CatastroResultado({ c, onElegir }: { c: CatastroLectura; onElegir: (referencia: string) => void }) {
+function CatastroResultado({ c, onElegir, deshabilitado }: { c: CatastroLectura; onElegir: (referencia: string) => void; deshabilitado: boolean }) {
   if (c.estado === 'idle' || c.estado === 'consultando') return null
   if (c.estado === 'aviso') return <span role="status" style={{ fontSize: 12, color: 'var(--warning)' }}>{c.texto}</span>
   if (c.estado === 'elegir') {
@@ -395,7 +396,7 @@ function CatastroResultado({ c, onElegir }: { c: CatastroLectura; onElegir: (ref
         {/* Con dos o más pisos no se elige a ciegas: elige una persona. */}
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>{c.inmuebles.length} inmuebles en {c.via}: ¿cuál es?</span>
         {c.inmuebles.map((i) => (
-          <button key={i.refCompleta} type="button" onClick={() => onElegir(i.refCompleta)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, justifyContent: 'flex-start' }}>
+          <button key={i.refCompleta} type="button" disabled={deshabilitado} onClick={() => onElegir(i.refCompleta)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, justifyContent: 'flex-start' }}>
             Pl. {i.planta ?? '?'} · Pta. {i.puerta ?? '?'}
           </button>
         ))}

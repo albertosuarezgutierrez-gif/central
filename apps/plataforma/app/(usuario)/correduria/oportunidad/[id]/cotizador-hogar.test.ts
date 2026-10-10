@@ -48,3 +48,12 @@ test('todo el tomador (o sin figuras extra): ni bloqueo ni avisos', () => {
   assert.deepEqual(figurasFrenteAPeticionHogar({ figuras: [tom], tomadorId: 'c1', propietarioEsTomador: null }), { bloqueo: null, avisos: [] })
   assert.deepEqual(figurasFrenteAPeticionHogar({ figuras: [tom, prop('c1'), { rol: 'asegurado', clienteId: 'c1', nombre: 'Ana' }], tomadorId: 'c1', propietarioEsTomador: true }), { bloqueo: null, avisos: [] })
 })
+
+test('pantalla completa hogar-nuevo: pasa el bloqueo de figurasFrenteAPeticionHogar al Formulario', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../../cliente/[id]/hogar-nuevo/page.tsx', import.meta.url), 'utf8')
+  assert.match(src, /figurasFrenteAPeticionHogar\(/)
+  assert.match(src, /<Formulario[^>]*bloqueo=\{bloqueo\}/)
+  // propietario otra persona + vivienda «propietario es tomador: sí» → bloqueo
+  assert.ok(figurasFrenteAPeticionHogar({ figuras: [tom, prop('c2')], tomadorId: 'c1', propietarioEsTomador: true }).bloqueo)
+})

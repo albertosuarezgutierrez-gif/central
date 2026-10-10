@@ -23,6 +23,8 @@ export interface DefinicionRamo {
   comparable: boolean
 }
 
+// Prioridad de cotización (Alberto, 10/10/2026): BOT primero (gratis); Avant2/CDS solo como respaldo y con OK de coste (0,50 €).
+// Metadato, no conducta: `cotizador` sigue diciendo lo que hay HOY. Ver docs/TARIFICADOR-MATRIZ.md.
 const COTIZADOR: Record<RamoRiesgo, TipoCotizador> = {
   auto: 'embebido', moto: 'embebido', hogar: 'embebido', vida: 'pantalla', salud: 'pantalla', decesos: 'pantalla',
   comercio: 'fuera', rc: 'fuera', comunidades: 'bots', otros: 'fuera',

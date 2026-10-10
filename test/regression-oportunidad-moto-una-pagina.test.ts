@@ -192,7 +192,7 @@ test('🪤 HOGAR: el Formulario embebido no paga bloqueado, solo deja tocar cond
   assert.match(pv, /<PreciosVarianteGuardada[\s\S]*leer=\{pedirTarificacionGuardadaHogar\}/)
   // La pantalla completa hogar-nuevo sigue montándolo sin `embebido`.
   const page = activas(leer(HOGAR + 'page.tsx'))
-  assert.match(page, /<Formulario clienteId=\{clienteId\} referencia=\{referencia\} preInicial=\{pre\.pre\} variante=\{variante\} iniciales=\{hayIniciales \? iniciales : null\} \/>/)
+  assert.match(page, /<Formulario clienteId=\{clienteId\} referencia=\{referencia\} preInicial=\{pre\.pre\} variante=\{variante\} iniciales=\{hayIniciales \? iniciales : null\} bloqueo=\{bloqueo\} \/>/)
 })
 
 test('🪤 HOGAR: abrir el bloque deriva «el tomador es el propietario» de Intervinientes (no deja que asegura suponga «sí»)', () => {

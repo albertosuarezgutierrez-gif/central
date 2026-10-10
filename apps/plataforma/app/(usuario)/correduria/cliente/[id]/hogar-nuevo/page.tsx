@@ -8,7 +8,7 @@ import { Pagina, PageHeader, cardStyle, CardHeader, btnStyle } from '@/component
 import Formulario from './Formulario'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
 import { paramTexto, viviendaDeRiesgo } from '../../../oportunidad/[id]/variante'
-import { propietarioEsTomadorDeRiesgo } from '../../../oportunidad/[id]/cotizador-hogar'
+import { figurasFrenteAPeticionHogar, propietarioEsTomadorDeRiesgo } from '../../../oportunidad/[id]/cotizador-hogar'
 import { busquedaCatastroDeVivienda, inicialesHogarDeRiesgo } from '@central/module-seguros'
 import { catalogoAsegura } from '@/lib/retarificar-asegura'
 
@@ -210,6 +210,10 @@ export default async function HogarNuevoPage({
     ? propietarioEsTomadorDeRiesgo({ figuras: carga.riesgo.figuras, tomadorId: clienteId, propietarioEsTomador: vivienda?.propietarioEsTomador ?? null })
     : null
   if (propietarioEsTomador !== null) iniciales.resueltos.propietarioEsTomador = propietarioEsTomador
+  // Con riesgo, la contradicción propietario↔vivienda bloquea el precio (igual que en el embebido PedirPrecioHogar).
+  const bloqueo = carga.estado === 'ok'
+    ? figurasFrenteAPeticionHogar({ figuras: carga.riesgo.figuras, tomadorId: clienteId, propietarioEsTomador: vivienda?.propietarioEsTomador ?? null }).bloqueo
+    : null
   const hayIniciales = Object.keys(iniciales.resueltos).length + Object.keys(iniciales.correcciones).length > 0
   const pre = await precalificarHogarNuevoAsegura({
     clienteId,
@@ -238,7 +242,7 @@ export default async function HogarNuevoPage({
   return (
     <Pagina>
       {cabecera}
-      <Formulario clienteId={clienteId} referencia={referencia} preInicial={pre.pre} variante={variante} iniciales={hayIniciales ? iniciales : null} />
+      <Formulario clienteId={clienteId} referencia={referencia} preInicial={pre.pre} variante={variante} iniciales={hayIniciales ? iniciales : null} bloqueo={bloqueo} />
     </Pagina>
   )
 }

@@ -112,6 +112,13 @@ interface CotizadorEmbebido<R> {
 }
 ```
 
+**Orden del cotizador por ramo (decisión de Alberto, 10/10/2026): BOT primero, Avant2 como respaldo.** Los bots (RPA que
+entran en el portal de la compañía) son gratis; Avant2/Codeoscopic cobra 0,50 €/cotización. Un ramo pide precio por bot
+si hay bot grabado y activo; Avant2 (`tipo:'embebido'`) solo como respaldo y **siempre con OK explícito de Alberto para
+ese coste**. Estado de grabaciones y bots: `docs/TARIFICADOR-MATRIZ.md` (prioridad arriba). Lo que cambia esta decisión
+en el diseño: el objetivo de auto/moto/hogar de Allianz pasa a bot (hoy, Avant2); el `tipo:'bots'` de comunidades ya es
+el camino previsto; ningún cotizador embebido nuevo se activa sin OK de coste.
+
 Reglas del contrato: (1) la huella se compara al abrir y antes de pagar (patrón `cotizador-embebido.ts`, generalizado:
 `firmaRiesgo(r, claveObjeto)`); (2) el cotizador **no edita** objeto ni personas, solo condiciones de la cotización;
 (3) confirmación explícita de 0,50€ dentro del componente; (4) un guardián lee el registro y exige que todo ramo de

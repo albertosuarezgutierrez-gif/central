@@ -1,15 +1,19 @@
 # Tarificador — matriz (compañía × ramo) y checklist de grabaciones (actualizada 10/10/2026)
 
-Regla: lo que tarifica Codeoscopic/Avant2 se queda allí; robot propio solo donde Codeoscopic NO cubre.
+> **Prioridad (decisión de Alberto, 10/10/2026): BOT primero; Avant2 solo como respaldo y siempre con OK explícito del coste.**
+> Los bots (RPA que entran en el portal de la compañía) son GRATIS: se crearon para ahorrar el coste de Avant2/Codeoscopic
+> (0,50 €/cotización). Orden: bot de la compañía → Avant2 (solo si el bot no sirve y Alberto da el OK de coste).
+
+Regla (superada en lo que contradiga la prioridad de arriba): lo que tarifica Codeoscopic/Avant2 se queda allí; robot propio solo donde Codeoscopic NO cubre.
 Fuentes: `docs/CODEOSCOPIC-PLAN-RAMOS-2026-09.md` (RC, comercio y comunidades «no existen en la API», confirmado por Codeoscopic 21/09),
 `docs/CODEOSCOPIC-PENDIENTES.md` (auto/moto/hogar con Allianz, Generali y Occident), `docs/TARIFICADOR-RPA.md` y
 `services/tarificador-rpa/src/adapters/*`. Ramos de oportunidad: `RAMOS_OPORTUNIDAD` (23 valores; aquí los 9 relevantes).
 
 | Ramo | Allianz | Occident (Catalana Occidente) | Generali |
 |---|---|---|---|
-| Auto | Avant2 + robot: en construcción (`allianz/auto.ts`, `AUTO_ACTIVO=false`, sin registrar; consulta por matrícula → vehículo canónico hecha; falta el formulario de Turismos y el avance a Tarificar) | Avant2 | Avant2 |
-| Moto | Avant2 + robot: en construcción (`allianz/auto.ts` → `allianzMoto`, mismo estado; lector de primas hecho con la grabación del 09/10) | Avant2 | Avant2 |
-| Hogar | Avant2 | Avant2 | Avant2 |
+| Auto | Avant2 + robot: en construcción (`allianz/auto.ts`, `AUTO_ACTIVO=false`, sin registrar; consulta por matrícula → vehículo canónico hecha; falta el formulario de Turismos y el avance a Tarificar; objetivo: bot, hoy Avant2 como respaldo) | Avant2 (respaldo); bot sin grabar: ninguna grabación llega a precio | Avant2 (respaldo); bot sin grabar: ninguna grabación llega a precio |
+| Moto | Avant2 + robot: en construcción (`allianz/auto.ts` → `allianzMoto`, mismo estado; lector de primas hecho con la grabación del 09/10; objetivo: bot, hoy Avant2 como respaldo) | Avant2 (respaldo); bot sin grabar | Avant2 (respaldo); bot sin grabar |
+| Hogar | objetivo: bot Allianz (grabación incompleta, regrabar Nueva Alta→HOGAR→precio); hoy: Avant2 como respaldo | Avant2 (respaldo); bot sin grabar | Avant2 (respaldo); bot sin grabar |
 | Vida riesgo | sin confirmar (el ejemplo oficial lista Allianz Vida-Riesgo; la cuenta real no está medida) | sin confirmar | sin confirmar |
 | Salud | sin confirmar | sin confirmar | sin confirmar |
 | Decesos | sin confirmar | sin confirmar | sin confirmar |
@@ -18,7 +22,7 @@ Fuentes: `docs/CODEOSCOPIC-PLAN-RAMOS-2026-09.md` (RC, comercio y comunidades «
 | RC (pyme/general) | robot: en construcción (`allianz/rc-pyme.ts`, `RC_PYME_ACTIVO=false`; falta Datos básicos) | robot: no empezado (primer objetivo del plan tras comunidades) | robot: no empezado |
 
 Recuento (27 celdas): Avant2 = 9 (2 de ellas con robot propio en construcción: Allianz auto y moto) · robot activo = 1 · robot en construcción = 3 (+2 sobre Avant2) · robot no empezado = 5 · sin confirmar = 9.
-Nota (10/10/2026): auto/moto de Allianz siguen por Avant2; el robot propio existe porque Alberto grabó el flujo y sirve de plan B y de banco para el vehículo canónico (`module-tarificacion/src/vehiculo.ts`), reutilizable por otras compañías.
+Nota (10/10/2026): auto/moto de Allianz tienen como objetivo el bot (prioridad de arriba) y hoy siguen por Avant2 como respaldo; el robot propio existe porque Alberto grabó el flujo y es el banco para el vehículo canónico (`module-tarificacion/src/vehiculo.ts`), reutilizable por otras compañías.
 Nota: Avant2 en vida/salud/decesos: la petición existe en código (`peticion-vida/salud/decesos.ts`, sin estrenar) pero qué compañía responde no consta; confirmar con la lista de `GET /insurance-lines/*/products` de la cuenta. Resto de ramos de oportunidad (accidentes, empresas, rc_profesional, dyo, flotas, ciberriesgos...): fuera de alcance, sin confirmar.
 
 ## Grabaciones recibidas (07-09/10/2026)
