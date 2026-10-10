@@ -221,6 +221,15 @@ export {
   type EntradaCorte,
 } from './corte-siniestros.ts'
 export {
+  corteSiniestrosPorCompania,
+  textoCorteSiniestrosPorCompania,
+  FACTOR_CADENCIA_SIN,
+  MIN_FICHEROS_SIN,
+  type EntradaCortePorCompania,
+  type CompaniaCortada,
+  type CortePorCompania,
+} from './corte-siniestros-compania.ts'
+export {
   veredictoEntidad,
   silencioPorEntidad,
   motivosSilencio,
