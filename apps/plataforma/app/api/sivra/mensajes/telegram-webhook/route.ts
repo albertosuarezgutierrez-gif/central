@@ -32,6 +32,8 @@ import { esPreguntaPatrimonio, esComandoPatrimonio } from '@/lib/patrimonio-chat
 import { decidirBlogPr } from '@/lib/correduria/blog-pr'
 import { ACCION_BOTON_TOPE, ampliarTopeAvant2 } from '@/lib/correduria/tope-avant2'
 import { PREFIJO_EMISION, autorizarEnAsegura, decidirBotonEmision, lineaTrasPulsar } from '@/lib/tarificador-emision-asegura'
+import { requireSecret } from '@central/core-identity'
+import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -806,7 +808,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       const mensajeId: number | undefined = cb.message?.message_id
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
       after(async () => {
-        const r = await autorizarEnAsegura({ trabajoId: d.trabajoId, decision: d.decision, autorizadoPor: d.autorizadoPor })
+        const r = await autorizarEnAsegura({ trabajoId: d.trabajoId, decision: d.decision, hashCorto: d.hashCorto, autorizadoPor: d.autorizadoPor }, () => requireSecret(ENV_FIRMA_AUTORIZACION))
         const linea = lineaTrasPulsar(d.decision, r)
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})

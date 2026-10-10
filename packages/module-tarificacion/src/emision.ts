@@ -8,7 +8,7 @@
 //    atado a (trabajo, hash de datos, botón). Cualquier otro botón, otro trabajo, otro hash o un segundo uso → bloqueado.
 // 🚨 Nunca, ni con permiso: RGPD, SMS/OTP, contraseñas, Pago fraccionado (`NUNCA_CON_PERMISO`).
 
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { EmisionBloqueadaError } from './guard-emision.ts'
 import { claveCompania } from './registro.ts'
 
@@ -179,6 +179,69 @@ export function decidirAutorizacion(e: {
   if (e.estado !== 'pendiente_autorizacion_emision') return { ok: false, motivo: `el trabajo no espera autorización (${e.estado ?? 'desconocido'})` }
   if (!e.pedidaAt || e.ahora.getTime() - e.pedidaAt.getTime() >= VALIDEZ_SOLICITUD_MS) return { ok: false, motivo: 'solicitud caducada (24 h)' }
   return { ok: true }
+}
+
+// ─── Firma del botón (factor independiente del puerto de operador) ───────────
+
+/**
+ * Secreto que SOLO tienen el webhook de Telegram de plataforma y asegura (revisión de seguridad 10/10/2026): el Bearer
+ * `ASEGURA_OPERADOR_SECRET` lo tienen más piezas, y con él solo NO se puede autorizar una emisión. Plataforma firma con
+ * HMAC-SHA256 (trabajo, decisión, hash corto de la pantalla previa, from.id, timestamp) y asegura lo verifica en tiempo
+ * constante. Sin secreto (o de menos de 32 caracteres) → nadie autoriza.
+ */
+export const ENV_FIRMA_AUTORIZACION = 'TARIFICADOR_EMISION_WEBHOOK_SECRET'
+/** Antigüedad máxima de una firma (s). La pulsación se reenvía en `after()`, al instante. */
+export const VENTANA_FIRMA_S = 90
+/** Reloj adelantado tolerado (s). */
+const FUTURO_FIRMA_S = 30
+/** Caracteres del hash de datos que viajan en el `callback_data` (≤ 64 bytes): `emi_ok:<uuid>:<16 hex>` = 60. */
+export const LARGO_HASH_CORTO = 16
+export const hashCortoEmision = (hashDatos: string): string => String(hashDatos).slice(0, LARGO_HASH_CORTO).toLowerCase()
+
+export type CamposFirmaAutorizacion = { trabajoId: string; decision: 'ok' | 'no'; hashCorto: string; autorizadoPor: string; ts: number }
+
+const UUID_FIRMA = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export const secretoFirmaValido = (s: unknown): s is string => typeof s === 'string' && s.length >= 32
+
+/** Campos bien formados o `null` (nada se firma ni se verifica a medias). */
+export function camposFirmaAutorizacion(o: unknown): CamposFirmaAutorizacion | null {
+  const r = (typeof o === 'object' && o !== null ? o : {}) as Record<string, unknown>
+  const trabajoId = typeof r.trabajoId === 'string' && UUID_FIRMA.test(r.trabajoId) ? r.trabajoId.toLowerCase() : null
+  const decision = r.decision === 'ok' || r.decision === 'no' ? r.decision : null
+  const hashCorto = typeof r.hashCorto === 'string' && new RegExp(`^[0-9a-f]{${LARGO_HASH_CORTO}}$`).test(r.hashCorto) ? r.hashCorto : null
+  const autorizadoPor = typeof r.autorizadoPor === 'string' && /^\d{3,20}$/.test(r.autorizadoPor) ? r.autorizadoPor : null
+  const ts = typeof r.ts === 'number' && Number.isSafeInteger(r.ts) && r.ts > 0 ? r.ts : null
+  if (!trabajoId || !decision || !hashCorto || !autorizadoPor || ts === null) return null
+  return { trabajoId, decision, hashCorto, autorizadoPor, ts }
+}
+
+const canonicoFirma = (c: CamposFirmaAutorizacion): string =>
+  ['emi-aut-v1', c.trabajoId.toLowerCase(), c.decision, c.hashCorto, c.autorizadoPor, String(c.ts)].join('\n')
+
+/** HMAC-SHA256 (hex) de la pulsación. Lanza sin secreto válido o con campos mal formados (fail-closed). */
+export function firmarAutorizacionEmision(secreto: string, c: CamposFirmaAutorizacion): string {
+  if (!secretoFirmaValido(secreto)) throw new Error(`${ENV_FIRMA_AUTORIZACION} ausente o corto (mín. 32)`)
+  const v = camposFirmaAutorizacion(c)
+  if (!v) throw new Error('campos de la autorización mal formados')
+  return createHmac('sha256', secreto).update(canonicoFirma(v)).digest('hex')
+}
+
+export type VerificacionFirma = { ok: true; campos: CamposFirmaAutorizacion } | { ok: false; motivo: 'sin_secreto' | 'campos' | 'sin_firma' | 'firma_distinta' | 'caducada' | 'futura' }
+
+/** Verifica la firma del cuerpo (`trabajoId, decision, hashCorto, autorizadoPor, ts, firma`) en tiempo constante. */
+export function verificarFirmaAutorizacionEmision(secreto: string | null | undefined, cuerpo: unknown, ahoraMs: number): VerificacionFirma {
+  if (!secretoFirmaValido(secreto)) return { ok: false, motivo: 'sin_secreto' }
+  const c = camposFirmaAutorizacion(cuerpo)
+  if (!c) return { ok: false, motivo: 'campos' }
+  const firma = (cuerpo as { firma?: unknown }).firma
+  if (typeof firma !== 'string' || !/^[0-9a-f]{64}$/.test(firma)) return { ok: false, motivo: 'sin_firma' }
+  const esperada = Buffer.from(createHmac('sha256', secreto).update(canonicoFirma(c)).digest('hex'), 'hex')
+  const recibida = Buffer.from(firma, 'hex')
+  if (recibida.length !== esperada.length || !timingSafeEqual(recibida, esperada)) return { ok: false, motivo: 'firma_distinta' }
+  const ahoraS = Math.floor(ahoraMs / 1000)
+  if (c.ts > ahoraS + FUTURO_FIRMA_S) return { ok: false, motivo: 'futura' }
+  if (ahoraS - c.ts > VENTANA_FIRMA_S) return { ok: false, motivo: 'caducada' }
+  return { ok: true, campos: c }
 }
 
 // ─── Canje (espejo puro del UPDATE atómico de asegura) ───────────────────────

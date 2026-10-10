@@ -258,5 +258,11 @@ export async function pulsarEmisionAutorizada(page: Page, guard: GuardEmision, p
   const abrir = ABRIR_VENTANA.get(guard)
   if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de emisión')
   abrir(VENTANA_RED_EMISION_MS)
-  await boton.click()
+  try {
+    await boton.click()
+  } catch (e) {
+    // El clic falló (o no se sabe si salió): la ventana de red se cierra YA, antes de que el runner haga nada más.
+    guard.ventana.cerrar()
+    throw e
+  }
 }

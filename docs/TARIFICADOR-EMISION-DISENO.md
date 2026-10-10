@@ -3,7 +3,7 @@
 > Estado (10/10/2026): **IMPLEMENTADO en código, apagado** (F0+F1 juntas para Allianz Comunidades). Falta: aplicar
 > `apps/asegura/prisma/sql/2026-10-10_tarificador_emision.sql`, poner las envs y una primera prueba con Alberto delante.
 > Decisiones de Alberto: sin tope diario; solo él solicita (`TARIFICADOR_EMISION_SOLICITANTE`) y autoriza
-> (`TARIFICADOR_EMISION_TELEGRAM_ID` en asegura + `from.id == TELEGRAM_CHAT_ID` en plataforma); solicitud 24 h, token 15 min;
+> (`TARIFICADOR_EMISION_TELEGRAM_ID` en asegura + `from.id == TELEGRAM_CHAT_ID` en plataforma + firma HMAC del cuerpo con `TARIFICADOR_EMISION_WEBHOOK_SECRET`, que el Bearer de operador solo no sustituye); solicitud 24 h, token 15 min;
 > tolerancia 0 €; IPID obligatorio (`presupuesto.ipid_huella`, se copia al firmar; los aceptados antes no emiten);
 > anulación de la vieja MANUAL (no se escribe `presupuesto.emitido_at`); interruptor `TARIFICADOR_EMISION_ACTIVA=1` en
 > asegura Y como fly secret de la máquina. Diferencias con lo de abajo: el token NO se crea al pulsar sino al entregarlo a

@@ -6,12 +6,15 @@
 //     desenlace (emitida / parada). Solo si salió, se marca en asegura.
 //   · webhook de Telegram, prefijo `emi`: SOLO `from.id == TELEGRAM_CHAT_ID` (no basta el chat: en un grupo cualquiera
 //     pulsaría). Se contesta el botón YA y la llamada a asegura va en `after()`. Asegura vuelve a comprobar el id.
+//     🔐 La llamada va FIRMADA (HMAC con `TARIFICADOR_EMISION_WEBHOOK_SECRET`, que solo tienen este webhook y asegura):
+//     el Bearer de operador solo no autoriza. El botón lleva el hash corto de la pantalla previa que se enseñó.
 //   · solicitar: proxy de `/correduria` → asegura, SOLO para el correo de `TARIFICADOR_EMISION_SOLICITANTE`.
 //
 // 🚨 Sin datos personales en Telegram: iniciales, referencia del presupuesto, compañía, ramo y prima. La captura de la
 //    pantalla previa SÍ va (la pide el diseño para que Alberto vea lo que autoriza) y solo al chat de Alberto.
 // 🚨 Nunca se manda nada a terceros: todo va al chat de Alberto.
 
+import { ENV_FIRMA_AUTORIZACION, LARGO_HASH_CORTO, firmarAutorizacionEmision, hashCortoEmision } from '@central/module-tarificacion'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 export const PREFIJO_EMISION = 'emi'
@@ -21,7 +24,8 @@ const entero = (v: unknown): number | null => (typeof v === 'number' && Number.i
 
 // ─── Botón (PURO) ────────────────────────────────────────────────────────────
 
-export type DecisionBotonEmision = { ok: true; trabajoId: string; decision: 'ok' | 'no'; autorizadoPor: string } | { ok: false; toast: string }
+export type DecisionBotonEmision = { ok: true; trabajoId: string; decision: 'ok' | 'no'; hashCorto: string; autorizadoPor: string } | { ok: false; toast: string }
+const HASH_CORTO = new RegExp(`^[0-9a-f]{${LARGO_HASH_CORTO}}$`)
 
 /**
  * ¿Vale esta pulsación de `emi_<accion>:<trabajoId>`? Solo la PERSONA autorizada (from.id EXACTO = `TELEGRAM_CHAT_ID`,
@@ -33,8 +37,9 @@ export function decidirBotonEmision(cb: { from?: { id?: unknown } | null } | nul
   if (!esperado || !quien || quien !== esperado) return { ok: false, toast: 'Solo el titular puede hacerlo' }
   if (accion !== 'ok' && accion !== 'no') return { ok: false, toast: 'Botón no válido' }
   const trabajoId = args[0] ?? ''
-  if (!UUID.test(trabajoId) || args.length !== 1) return { ok: false, toast: 'Botón no válido' }
-  return { ok: true, trabajoId, decision: accion, autorizadoPor: quien }
+  const hashCorto = args[1] ?? ''
+  if (!UUID.test(trabajoId) || !HASH_CORTO.test(hashCorto) || args.length !== 2) return { ok: false, toast: 'Botón no válido' }
+  return { ok: true, trabajoId, decision: accion, hashCorto, autorizadoPor: quien }
 }
 
 // ─── Avisos (PURO) ───────────────────────────────────────────────────────────
@@ -51,6 +56,8 @@ export type AvisoEmision = {
   mensaje: string | null
   caducaAt: string | null
   capturaBase64: string | null
+  /** Hash de la pantalla previa (64 hex). Obligatorio en `pedir_autorizacion`: sin él no hay botón que firmar. */
+  hashDatos: string | null
 }
 
 export type LecturaAvisosEmision = { estado: 'ok'; pendientes: AvisoEmision[]; ilegibles: number } | { estado: 'sin_configurar' } | { estado: 'sin_esquema' } | { estado: 'error'; causa: string }
@@ -68,11 +75,12 @@ export function interpretarAvisosEmision(status: number, json: unknown): Lectura
     const trabajoId = cadena(r.trabajoId)
     const tipo = r.tipo === 'pedir_autorizacion' || r.tipo === 'emitida' || r.tipo === 'requiere_humano' ? r.tipo : null
     const compania = cadena(r.compania)
-    if (!trabajoId || !UUID.test(trabajoId) || !tipo || !compania) { ilegibles++; continue }
+    const hashDatos = typeof r.hashDatos === 'string' && /^[0-9a-f]{64}$/.test(r.hashDatos) ? r.hashDatos : null
+    if (!trabajoId || !UUID.test(trabajoId) || !tipo || !compania || (tipo === 'pedir_autorizacion' && !hashDatos)) { ilegibles++; continue }
     pendientes.push({
       trabajoId, tipo, compania, ramo: cadena(r.ramo) ?? '', iniciales: cadena(r.iniciales) ?? '—', referencia: cadena(r.referencia),
       primaCents: entero(r.primaCents), numeroPoliza: cadena(r.numeroPoliza), mensaje: cadena(r.mensaje), caducaAt: cadena(r.caducaAt),
-      capturaBase64: cadena(r.capturaBase64),
+      capturaBase64: cadena(r.capturaBase64), hashDatos,
     })
   }
   return { estado: 'ok', pendientes, ilegibles }
@@ -109,9 +117,10 @@ export function componerAvisoEmision(a: AvisoEmision): string {
   return `⚠️ <b>Emisión parada</b>\n${cab}\n${escapar(a.mensaje ?? 'El robot necesita que una persona lo mire.')}\nNo se reintenta solo.`
 }
 
-/** Botones de la petición. callback_data ≤ 64 bytes: `emi_ok:` + uuid = 43. */
-export function botonesEmision(trabajoId: string): { texto: string; callback: string }[][] {
-  return [[{ texto: '✅ Emitir', callback: `${PREFIJO_EMISION}_ok:${trabajoId}` }, { texto: '❌ Cancelar', callback: `${PREFIJO_EMISION}_no:${trabajoId}` }]]
+/** Botones de la petición, atados a la pantalla previa enseñada. callback_data ≤ 64 bytes: `emi_ok:<uuid>:<16 hex>` = 60. */
+export function botonesEmision(trabajoId: string, hashDatos: string): { texto: string; callback: string }[][] {
+  const h = hashCortoEmision(hashDatos)
+  return [[{ texto: '✅ Emitir', callback: `${PREFIJO_EMISION}_ok:${trabajoId}:${h}` }, { texto: '❌ Cancelar', callback: `${PREFIJO_EMISION}_no:${trabajoId}:${h}` }]]
 }
 
 /** Texto tras pulsar (sustituye los botones del mensaje). */
@@ -170,10 +179,29 @@ export async function marcarAvisosEmision(ids: string[]): Promise<boolean> {
   }
 }
 
-/** Reenvía la decisión del botón a asegura. Devuelve `{estado, motivo}` para pintar la línea del mensaje. */
-export async function autorizarEnAsegura(d: { trabajoId: string; decision: 'ok' | 'no'; autorizadoPor: string }): Promise<{ estado: string; motivo: string | null }> {
+/**
+ * Cuerpo FIRMADO de la pulsación (PURO salvo el reloj): HMAC-SHA256 de (trabajo, decisión, hash corto, from.id, ts) con
+ * el secreto propio del webhook. Lanza sin secreto válido (fail-closed: no se llama a asegura).
+ */
+export function cuerpoFirmadoAutorizacion(secreto: string, d: { trabajoId: string; decision: 'ok' | 'no'; hashCorto: string; autorizadoPor: string }, ahoraMs = Date.now()) {
+  const campos = { trabajoId: d.trabajoId, decision: d.decision, hashCorto: d.hashCorto, autorizadoPor: d.autorizadoPor, ts: Math.floor(ahoraMs / 1000) }
+  return { ...campos, firma: firmarAutorizacionEmision(secreto, campos) }
+}
+
+/**
+ * Reenvía la decisión del botón a asegura, firmada. `leerSecreto` = `() => requireSecret(ENV_FIRMA_AUTORIZACION)` en el
+ * webhook (aquí no se importa core-identity: este fichero lo carga `node --test`). Si lanza, NO se llama a asegura.
+ * Devuelve `{estado, motivo}` para pintar la línea del mensaje.
+ */
+export async function autorizarEnAsegura(d: { trabajoId: string; decision: 'ok' | 'no'; hashCorto: string; autorizadoPor: string }, leerSecreto: () => string): Promise<{ estado: string; motivo: string | null }> {
+  let cuerpo: ReturnType<typeof cuerpoFirmadoAutorizacion>
   try {
-    const r = await puerto('/autorizar', { method: 'POST', body: JSON.stringify(d) }, 'sistema:telegram-emision')
+    cuerpo = cuerpoFirmadoAutorizacion(leerSecreto(), d)
+  } catch {
+    return { estado: 'error', motivo: `firma sin configurar (${ENV_FIRMA_AUTORIZACION})` }
+  }
+  try {
+    const r = await puerto('/autorizar', { method: 'POST', body: JSON.stringify(cuerpo) }, 'sistema:telegram-emision')
     if (r === null) return { estado: 'error', motivo: 'puerto sin configurar' }
     const j = (r.json ?? {}) as Record<string, unknown>
     return { estado: cadena(j.estado) ?? `HTTP ${r.status}`, motivo: cadena(j.motivo) ?? cadena(j.mensaje) }

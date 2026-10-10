@@ -23,6 +23,7 @@ import {
 import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
 import { caducarEmisiones } from './tarificador-emision'
+import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { LEASE_MS, configFly, peticionMaquina, rpaActivo, type ConfigFly, type ResultadoWorker } from './tarificador-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
@@ -386,7 +387,18 @@ async function marcarFallo(
   // con tipo `emision` (la bandeja no la deja reintentar) y el aviso a Alberto rearmado.
   const modoFila = await db.$queryRaw<{ modo: string | null }[]>`select to_jsonb(t)->>'modo' as modo from seguros.tarificacion_trabajos t where t.id = ${id}::uuid`
   const deEmision = modoFila[0]?.modo === 'emision'
-  if (deEmision) error = { ...error, tipo: 'emision', mensaje: `[emisión, ${error.tipo}] ${error.mensaje}`.slice(0, 2000) }
+  // Si el token YA se canjeó (autorización consumida sin desenlace), el clic pudo salir: INCIERTO, y la autorización queda
+  // marcada `incierto` (bloquea pedir otra emisión del presupuesto hasta que una persona lo resuelva mirando ePAC).
+  let incierta = false
+  if (deEmision) {
+    const aut = await db.$queryRaw<{ id: string; consumido_at: Date | null; resultado: string | null }[]>`
+      select a.id::text as id, a.consumido_at, a.resultado from seguros.tarificacion_emision_autorizacion a where a.trabajo_id = ${id}::uuid`
+    const a = aut[0]
+    incierta = autorizacionSinResolver(a ? { consumidoAt: a.consumido_at, resultado: a.resultado } : null)
+    if (incierta) await db.$executeRaw`update seguros.tarificacion_emision_autorizacion set resultado = 'incierto' where id = ${a!.id}::uuid and resultado is null`
+    const prefijo = incierta ? `${MENSAJE_EMISION_INCIERTA} Detalle: ` : ''
+    error = { ...error, tipo: 'emision', mensaje: `${prefijo}[emisión, ${error.tipo}] ${error.mensaje}`.slice(0, 2000) }
+  }
   const estado = deEmision ? estadoTrasErrorEmision() : estadoTrasError(error.tipo, intentos)
   let capturaId: string | null = null
   let htmlId: string | null = null

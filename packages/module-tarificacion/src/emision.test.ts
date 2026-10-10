@@ -12,7 +12,10 @@ import {
   decidirCanje,
   emisionActiva,
   eurosACentimos,
+  firmarAutorizacionEmision,
   generarTokenEmision,
+  hashCortoEmision,
+  verificarFirmaAutorizacionEmision,
   hashDatosEmision,
   hashTokenEmision,
   pareceEmision,
@@ -253,5 +256,42 @@ describe('emisión · estados y bandeja', () => {
     expect(decidirAccionBandeja('reintentar', 'requiere_humano', 'infra', 'emision').ok).toBe(false)
     expect(decidirAccionBandeja('reintentar', 'requiere_humano', 'infra', 'tarificar').ok).toBe(true)
     expect(decidirAccionBandeja('cancelar', 'requiere_humano', 'infra', 'emision').ok).toBe(true)
+  })
+})
+
+describe('emisión · firma del botón (factor independiente del Bearer de operador)', () => {
+  const S = 'k'.repeat(40)
+  const AHORA = 1_760_000_000_000
+  const campos = { trabajoId: T1, decision: 'ok' as const, hashCorto: hashCortoEmision(H1), autorizadoPor: '123456789', ts: Math.floor(AHORA / 1000) }
+  const firmado = { ...campos, firma: firmarAutorizacionEmision(S, campos) }
+
+  it('firma correcta y reciente → ok', () => {
+    expect(verificarFirmaAutorizacionEmision(S, firmado, AHORA)).toEqual({ ok: true, campos })
+  })
+  it('sin firma, firma de otro secreto o mal formada → no', () => {
+    expect(verificarFirmaAutorizacionEmision(S, campos, AHORA)).toMatchObject({ ok: false, motivo: 'sin_firma' })
+    expect(verificarFirmaAutorizacionEmision(S, { ...campos, firma: firmarAutorizacionEmision('z'.repeat(40), campos) }, AHORA)).toMatchObject({ ok: false, motivo: 'firma_distinta' })
+    expect(verificarFirmaAutorizacionEmision(S, { ...firmado, firma: 'x' }, AHORA)).toMatchObject({ ok: false, motivo: 'sin_firma' })
+  })
+  it('cualquier campo cambiado tras firmar → firma_distinta (trabajo, decisión, hash, from.id, ts)', () => {
+    for (const cambio of [{ trabajoId: T2 }, { decision: 'no' }, { hashCorto: hashCortoEmision(H2) }, { autorizadoPor: '987654321' }, { ts: campos.ts - 1 }]) {
+      expect(verificarFirmaAutorizacionEmision(S, { ...firmado, ...cambio }, AHORA), JSON.stringify(cambio)).toMatchObject({ ok: false, motivo: 'firma_distinta' })
+    }
+  })
+  it('timestamp corto: viejo (> 90 s) o futuro (> 30 s) → no', () => {
+    expect(verificarFirmaAutorizacionEmision(S, firmado, AHORA + 91_000)).toMatchObject({ ok: false, motivo: 'caducada' })
+    expect(verificarFirmaAutorizacionEmision(S, firmado, AHORA + 89_000).ok).toBe(true)
+    expect(verificarFirmaAutorizacionEmision(S, firmado, AHORA - 31_000)).toMatchObject({ ok: false, motivo: 'futura' })
+  })
+  it('sin secreto o secreto corto → nadie (y no se puede firmar)', () => {
+    expect(verificarFirmaAutorizacionEmision(undefined, firmado, AHORA)).toMatchObject({ ok: false, motivo: 'sin_secreto' })
+    expect(verificarFirmaAutorizacionEmision('', firmado, AHORA)).toMatchObject({ ok: false, motivo: 'sin_secreto' })
+    expect(verificarFirmaAutorizacionEmision('corto', firmado, AHORA)).toMatchObject({ ok: false, motivo: 'sin_secreto' })
+    expect(() => firmarAutorizacionEmision('corto', campos)).toThrow()
+  })
+  it('campos mal formados → no se firma ni se verifica', () => {
+    expect(verificarFirmaAutorizacionEmision(S, { ...firmado, autorizadoPor: 'alberto' }, AHORA)).toMatchObject({ ok: false, motivo: 'campos' })
+    expect(verificarFirmaAutorizacionEmision(S, { ...firmado, hashCorto: H1 }, AHORA)).toMatchObject({ ok: false, motivo: 'campos' })
+    expect(() => firmarAutorizacionEmision(S, { ...campos, trabajoId: 'x' })).toThrow()
   })
 })

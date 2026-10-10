@@ -101,6 +101,25 @@ COMMENT ON TABLE seguros.tarificacion_emision_autorizacion IS
   'Autorización de Alberto (Telegram) para que el robot pulse UN botón de emisión UNA vez. Token solo como SHA-256, '
   'atado a trabajo + hash de datos (prima, opción, riesgo, botón). Rastro de auditoría: sin DELETE.';
 
+-- Inmutabilidad (revisión de seguridad 10/10/2026): una autorización CONSUMIDA no vuelve a estar disponible
+-- (consumido_at no se borra ni se cambia) y el token entregado no se sustituye (token_hash no cambia una vez puesto).
+-- Así, ni un bug ni el rol de la app pueden «recargar» un permiso de emisión ya gastado. Idempotente.
+CREATE OR REPLACE FUNCTION seguros.tarificacion_emision_autorizacion_inmutable() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.consumido_at IS NOT NULL AND NEW.consumido_at IS DISTINCT FROM OLD.consumido_at THEN
+    RAISE EXCEPTION 'tarificacion_emision_autorizacion %: consumido_at no se puede deshacer ni cambiar', OLD.id USING ERRCODE = 'check_violation';
+  END IF;
+  IF OLD.token_hash IS NOT NULL AND NEW.token_hash IS DISTINCT FROM OLD.token_hash THEN
+    RAISE EXCEPTION 'tarificacion_emision_autorizacion %: token_hash no se puede cambiar una vez entregado', OLD.id USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS tarificacion_emision_autorizacion_inmutable ON seguros.tarificacion_emision_autorizacion;
+CREATE TRIGGER tarificacion_emision_autorizacion_inmutable
+  BEFORE UPDATE ON seguros.tarificacion_emision_autorizacion
+  FOR EACH ROW EXECUTE FUNCTION seguros.tarificacion_emision_autorizacion_inmutable();
+
 ALTER TABLE seguros.tarificacion_emision_autorizacion ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON seguros.tarificacion_emision_autorizacion FROM PUBLIC, anon, authenticated, crm_seguros;
 GRANT SELECT, INSERT, UPDATE ON seguros.tarificacion_emision_autorizacion TO prisma_seguros;
@@ -114,5 +133,9 @@ COMMIT;
 -- Ensayo (BEGIN … ROLLBACK):
 --   · insertar un trabajo modo 'emision' sin presupuesto_id → 23514;
 --   · dos trabajos 'emision' vivos con el mismo presupuesto_id → 23505;
---   · una autorización con expira_at = autorizado_at + 16 min → 23514.
+--   · una autorización con expira_at = autorizado_at + 16 min → 23514;
+--   · update … set consumido_at = null (o token_hash = otro) sobre una consumida/entregada → 23514 (trigger).
+-- Resolver una emisión INCIERTA (bloquea pedir otra del mismo presupuesto) tras mirar ePAC, a mano:
+--   update seguros.tarificacion_emision_autorizacion set resultado = 'emitida' | 'fallo', numero_poliza = '…'
+--   where trabajo_id = '…' and resultado is distinct from 'emitida';
 -- ════════════════════════════════════════════════════════════════════════════

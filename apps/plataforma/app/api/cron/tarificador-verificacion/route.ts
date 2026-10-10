@@ -35,9 +35,11 @@ async function avisarEmisiones(): Promise<Record<string, unknown>> {
     const texto = componerAvisoEmision(a)
     let salio: boolean
     if (a.tipo === 'pedir_autorizacion') {
+      // Sin hash de la pantalla previa no hay botón que firmar: no se manda (interpretarAvisosEmision ya lo descarta).
+      if (!a.hashDatos) { sinEnviar.push(a.trabajoId); continue }
       // La captura primero (si la hay); los botones, en su propio mensaje (sendPhoto no lleva teclado aquí).
       if (a.capturaBase64) await tgSendPhoto({ data: Buffer.from(a.capturaBase64, 'base64'), nombre: 'pantalla-previa.png' }, '🖊️ Pantalla previa a emitir').catch(() => null)
-      salio = (await tgSendButtons(texto, botonesEmision(a.trabajoId)).catch(() => null)) !== null
+      salio = (await tgSendButtons(texto, botonesEmision(a.trabajoId, a.hashDatos)).catch(() => null)) !== null
     } else {
       salio = (await tgSend(texto).catch(() => null)) !== null
     }

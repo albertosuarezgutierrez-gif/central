@@ -26,7 +26,7 @@ import type { AdaptadorPortal, ContextoPortal } from './adaptador.ts'
 import { canjearToken, enviarResultadoEmision, type Config, type CuerpoEmision, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { clasificar } from './errores.ts'
-import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarEmisionAutorizada, pulsarProyecto } from './guard.ts'
+import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarEmisionAutorizada, pulsarProyecto, type GuardEmision } from './guard.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 
 const TOPE_MS = 4 * 60_000
@@ -85,13 +85,22 @@ export async function ejecutarEmision(d: DepsEmision): Promise<number> {
   const fase = trabajo.emision!.fase
 
   let browser: Browser | null = null
+  let guard: GuardEmision | null = null
   let pulsado = false
+  /** Cierra la ventana de red de emisión y el navegador (idempotente). Tras un fallo, ANTES de reintentar enviar nada. */
+  const cerrarTodo = async () => {
+    guard?.ventana.cerrar()
+    const b = browser
+    browser = null
+    await b?.close().catch(() => undefined)
+  }
   let tope: ReturnType<typeof setTimeout> | undefined
   try {
     browser = await chromium.launch({ headless: true })
     // Contexto LIMPIO (sin sesión en memoria ni de disco): la emisión siempre entra con login propio.
     const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid', acceptDownloads: false })
-    const guard = await instalarGuardEmision(context)
+    const g = await instalarGuardEmision(context)
+    guard = g
     const page = await context.newPage()
     page.setDefaultTimeout(TOPE_PASO_MS)
     page.setDefaultNavigationTimeout(TOPE_PASO_MS)
@@ -116,11 +125,11 @@ export async function ejecutarEmision(d: DepsEmision): Promise<number> {
       adjuntarPdf: () => { throw new Error('emision: no se adjuntan PDF') },
       pulsar: async (boton) => {
         await ctx.pausaAccion()
-        await pulsar(boton, guard)
+        await pulsar(boton, g)
       },
-      elegirOpcion: (m) => elegirOpcion(page, guard, m),
-      avanzarATarificar: () => pulsarAvance(page, guard),
-      abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
+      elegirOpcion: (m) => elegirOpcion(page, g, m),
+      avanzarATarificar: () => pulsarAvance(page, g),
+      abrirProyecto: (pestana) => pulsarProyecto(page, pestana, g),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: undefined,
       paso: d.traza.paso,
@@ -128,7 +137,7 @@ export async function ejecutarEmision(d: DepsEmision): Promise<number> {
 
     const flujo = async (): Promise<number> => {
       const { primaCents } = await emision.hastaPantallaPrevia(page, d.riesgo, ctx)
-      guard.comprobar()
+      g.comprobar()
       if (primaCents === null) {
         return enviar({ trabajoId: trabajo.id, resultado: 'no_emitida', motivo: 'no se pudo leer la prima de la pantalla previa', capturaBase64: await captura() })
       }
@@ -146,13 +155,15 @@ export async function ejecutarEmision(d: DepsEmision): Promise<number> {
         return enviar({ trabajoId: trabajo.id, resultado: 'no_emitida', motivo: 'el botón del canje no es el de la lista blanca', capturaBase64: await captura() })
       }
       const permiso = crearPermisoEmision({ trabajoId: trabajo.id, hashDatos: canje.hashDatos, boton: canje.boton })
-      if (!ctx.pulsarEmision) ctx.pulsarEmision = (p, v) => pulsarEmisionAutorizada(page, guard, p, v)
+      if (!ctx.pulsarEmision) ctx.pulsarEmision = (p, v) => pulsarEmisionAutorizada(page, g, p, v)
       // El guard rechaza ANTES de pulsar con `EmisionBloqueadaError` (fase, DOM, permiso): eso es «no emitida». Cualquier
       // otro fallo desde aquí es «incierto» (el clic pudo salir).
       pulsado = true
       try {
         await ctx.pulsarEmision(permiso, { trabajoId: trabajo.id, hashDatos: canje.hashDatos })
       } catch (e) {
+        // Fallo del clic: ventana de red cerrada YA (antes de capturas o envíos con reintentos).
+        g.ventana.cerrar()
         if (e instanceof EmisionBloqueadaError) pulsado = false
         throw e
       }
@@ -160,7 +171,7 @@ export async function ejecutarEmision(d: DepsEmision): Promise<number> {
       await dormir(ESPERA_TRAS_CLIC_MS)
       const numeroPoliza = await emision.leerNumeroPoliza(page).catch(() => null)
       const imagen = await captura()
-      guard.ventana.cerrar()
+      g.ventana.cerrar()
       if (numeroPoliza) return enviar({ trabajoId: trabajo.id, resultado: 'emitida', numeroPoliza, capturaBase64: imagen })
       return enviar({ trabajoId: trabajo.id, resultado: 'incierto', motivo: 'tras pulsar no se leyó un nº de póliza inequívoco', capturaBase64: imagen })
     }
@@ -172,12 +183,16 @@ export async function ejecutarEmision(d: DepsEmision): Promise<number> {
       }),
     ])
   } catch (e) {
+    // Primero se corta todo (ventana de red, navegador y con él el flujo que siguiera vivo tras el tope); DESPUÉS se
+    // envía el resultado, que puede tardar reintentos.
+    clearTimeout(tope)
+    await cerrarTodo()
     const c = clasificar(e)
     const motivo = limpio(`${c.tipo}: ${c.mensaje}`)
     log('emision_fallo', { pulsado, motivo })
     return enviar({ trabajoId: trabajo.id, resultado: pulsado ? 'incierto' : 'no_emitida', motivo })
   } finally {
     clearTimeout(tope)
-    await browser?.close().catch(() => undefined)
+    await cerrarTodo()
   }
 }

@@ -100,6 +100,33 @@ test('permiso correcto: pulsa ESE botón una vez y la petición que provoca pasa
   await page.context().close()
 })
 
+test('si el clic autorizado FALLA, la ventana de red se cierra en el acto (nada de emisión pasa después)', async () => {
+  // Una capa encima del botón: el permiso se gasta y la ventana se abre, pero el clic no llega a salir (timeout).
+  const { page, guard, pulsados } = await pantallaPrevia('<div style="position:fixed;inset:0;z-index:9;background:#fff">tapa</div>')
+  page.setDefaultTimeout(800)
+  await assert.rejects(pulsarEmisionAutorizada(page, guard, permiso(), { trabajoId: T1, hashDatos: H1 }))
+  assert.deepEqual(await pulsados(), [])
+  assert.equal(guard.ventana.abierta(), false, 'la ventana de red no puede quedar abierta tras un clic fallido')
+  const fin = peticionEmision(page)
+  await page.evaluate((u) => { fetch(u, { method: 'POST', body: 'action=contract' }).catch(() => {}) }, URL_EMITE)
+  await fin
+  assert.ok(guard.violacion() instanceof EmisionBloqueadaError, 'con la ventana cerrada, una petición de emisión se aborta')
+  await page.context().close()
+})
+
+test('runner: en el catch se cierran ventana de red y navegador ANTES de enviar el resultado (que reintenta)', () => {
+  const src = readFileSync(join(import.meta.dirname, '../src/emision.ts'), 'utf8')
+  const intento = src.slice(src.indexOf('await ctx.pulsarEmision(permiso'), src.indexOf("log('emision_pulsada')"))
+  assert.ok(intento.indexOf('g.ventana.cerrar()') > -1 && intento.indexOf('g.ventana.cerrar()') < intento.indexOf('throw e'), 'catch del clic: cerrar la ventana antes de relanzar')
+  const fallo = src.slice(src.indexOf('  } catch (e) {\n    // Primero se corta todo'), src.indexOf('  } finally {'))
+  assert.ok(fallo.length > 0, 'falta el catch general')
+  const cierra = fallo.indexOf('await cerrarTodo()')
+  assert.ok(cierra > -1 && cierra < fallo.indexOf('enviar('), 'catch general: cerrarTodo() antes de enviar')
+  const ct = src.slice(src.indexOf('const cerrarTodo = async () => {'), src.indexOf('const cerrarTodo = async () => {') + 300)
+  assert.match(ct, /guard\?\.ventana\.cerrar\(\)/)
+  assert.match(ct, /close\(\)/)
+})
+
 test('token/permiso usado dos veces (otra página, mismo permiso) → bloqueado', async () => {
   const p = permiso()
   const a = await pantallaPrevia()

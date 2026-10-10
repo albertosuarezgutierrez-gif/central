@@ -23,6 +23,7 @@ import {
   decidirCanje,
   emisionActiva,
   generarTokenEmision,
+  hashCortoEmision,
   hashDatosEmision,
   hashTokenEmision,
   precondicionesEmision,
@@ -34,7 +35,7 @@ import {
 } from '@central/module-tarificacion'
 import { prisma } from './tenant'
 import { hayEmision } from './esquema-bd'
-import { autorizadorEmision, estadoTrasResultado, iniciales, mensajePrimaDistinta, type ResultadoEmisionWorker } from './tarificador-emision-reglas'
+import { autorizacionSinResolver, autorizadorEmision, estadoTrasResultado, iniciales, mensajeEmisionTardia, mensajePrimaDistinta, type ResultadoEmisionWorker } from './tarificador-emision-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 type Db = Pick<Tx, '$queryRaw' | '$executeRaw'>
@@ -115,12 +116,21 @@ export async function solicitarEmision(e: EntradaSolicitar): Promise<{ estado: '
   const pre = precondicionesEmision(p, o, t.ramo, new Date())
   if (!pre.ok) return rechazo(409, pre.motivo)
   try {
+    // 🚨 Una autorización CONSUMIDA sin desenlace (canje OK y luego nada, o `incierto`) = la póliza puede estar emitida en
+    //    la compañía. Mientras exista, no se pide otra emisión del mismo presupuesto (aunque el trabajo se cancelara en la
+    //    bandeja): una persona mira ePAC y deja el `resultado` resuelto. En el MISMO INSERT (sin hueco entre mirar y escribir).
     const filas = await prisma.$queryRaw<{ id: string }[]>`
       insert into seguros.tarificacion_trabajos
         (correduria_id, oportunidad_id, cliente_id, compania, ramo, riesgo, solicitado_por, modo, presupuesto_id, opcion_id, trabajo_origen_id)
-      values (${e.correduriaId}::uuid, ${p.oportunidadId}::uuid, ${p.clienteId}::uuid, ${t.compania}, ${t.ramo},
-              ${JSON.stringify(t.riesgo)}::jsonb, ${e.solicitadoPor}, 'emision', ${p.id}::uuid, ${o.id}::uuid, ${t.id}::uuid)
+      select ${e.correduriaId}::uuid, ${p.oportunidadId}::uuid, ${p.clienteId}::uuid, ${t.compania}, ${t.ramo},
+             ${JSON.stringify(t.riesgo)}::jsonb, ${e.solicitadoPor}, 'emision', ${p.id}::uuid, ${o.id}::uuid, ${t.id}::uuid
+      where not exists (
+        select 1 from seguros.tarificacion_emision_autorizacion a
+        join seguros.tarificacion_trabajos w on w.id = a.trabajo_id
+        where w.presupuesto_id = ${p.id}::uuid and w.correduria_id = ${e.correduriaId}::uuid
+          and a.consumido_at is not null and (a.resultado is null or a.resultado = 'incierto'))
       returning id::text as id`
+    if (!filas[0]) return rechazo(409, 'emision_incierta_sin_resolver: hay una autorización ya usada sin desenlace para este presupuesto (la póliza puede estar emitida): revisa ePAC antes de pedir otra')
     return { estado: 'encolado', trabajoId: filas[0].id, compania: t.compania }
   } catch (err) {
     // Índice único parcial: ya hay una emisión viva (o incierta) para este presupuesto.
@@ -140,18 +150,21 @@ export type EmisionParaWorker = { fase: 'preparar' } | { fase: 'ejecutar'; token
  */
 export async function emisionParaWorker(trabajoId: string, env: Record<string, string | undefined> = process.env): Promise<EmisionParaWorker | null> {
   if (!emisionActiva(env) || !(await hayEmision())) return null
+  // ¿Hay autorización? Solo por trabajo_id: si se filtrara también por en_curso/lease, un lease que vence entre la ruta y
+  // esta consulta haría pasar un trabajo YA autorizado por «preparar». El estado vivo se exige al ENTREGAR el token.
   const aut = await prisma.$queryRaw<{ id: string; token_hash: string | null; consumido_at: Date | null; expira_at: Date; prima_cents: number }[]>`
     select a.id::text as id, a.token_hash, a.consumido_at, a.expira_at, a.prima_cents
     from seguros.tarificacion_emision_autorizacion a
-    join seguros.tarificacion_trabajos t on t.id = a.trabajo_id
-    where a.trabajo_id = ${trabajoId}::uuid and t.estado = 'en_curso' and t.lease_hasta > now()`
+    where a.trabajo_id = ${trabajoId}::uuid`
   const a = aut[0]
   if (!a) return { fase: 'preparar' }
   if (a.token_hash || a.consumido_at || a.expira_at.getTime() <= Date.now()) return null
   const token = generarTokenEmision()
   const n = await prisma.$executeRaw`
-    update seguros.tarificacion_emision_autorizacion set token_hash = ${hashTokenEmision(token)}, entregado_at = now()
-    where id = ${a.id}::uuid and token_hash is null and consumido_at is null and expira_at > now()`
+    update seguros.tarificacion_emision_autorizacion a set token_hash = ${hashTokenEmision(token)}, entregado_at = now()
+    where a.id = ${a.id}::uuid and a.token_hash is null and a.consumido_at is null and a.expira_at > now()
+      and exists (select 1 from seguros.tarificacion_trabajos t
+                  where t.id = a.trabajo_id and t.estado = 'en_curso' and t.lease_hasta > now())`
   return n === 1 ? { fase: 'ejecutar', token, primaCents: a.prima_cents } : null
 }
 
@@ -167,9 +180,9 @@ export async function canjearEmision(e: { trabajoId: string; token: string; prim
   const c = await cerrojos()
   if (c) return { ok: false, status: c.status, motivo: c.motivo }
   return prisma.$transaction(async (tx) => {
-    const ts = await tx.$queryRaw<{ id: string; estado: string; modo: string | null; compania: string; ramo: string; presupuesto_id: string; opcion_id: string; riesgo: unknown; lease_vivo: boolean }[]>`
-      select t.id::text as id, t.estado, to_jsonb(t)->>'modo' as modo, t.compania, t.ramo, t.presupuesto_id::text as presupuesto_id,
-             t.opcion_id::text as opcion_id, t.riesgo, (t.lease_hasta > now()) as lease_vivo
+    const ts = await tx.$queryRaw<{ id: string; correduria_id: string; estado: string; modo: string | null; compania: string; ramo: string; presupuesto_id: string; opcion_id: string; riesgo: unknown; lease_vivo: boolean }[]>`
+      select t.id::text as id, t.correduria_id::text as correduria_id, t.estado, to_jsonb(t)->>'modo' as modo, t.compania, t.ramo,
+             t.presupuesto_id::text as presupuesto_id, t.opcion_id::text as opcion_id, t.riesgo, (t.lease_hasta > now()) as lease_vivo
       from seguros.tarificacion_trabajos t where t.id = ${e.trabajoId}::uuid for update`
     const t = ts[0]
     if (!t || t.modo !== 'emision' || t.estado !== 'en_curso' || !t.lease_vivo) return { ok: false as const, status: 409, motivo: 'trabajo_no_en_curso' }
@@ -184,7 +197,18 @@ export async function canjearEmision(e: { trabajoId: string; token: string; prim
     const d = decidirCanje(f ? { trabajoId: f.trabajo_id, tokenHash: f.token_hash, hashDatos: f.hash_datos, expiraAt: f.expira_at, consumidoAt: f.consumido_at } : null, {
       trabajoId: t.id, token: e.token, hashDatos, ahora: new Date(),
     })
+    // El presupuesto pudo retirarse, caducar, emitirse o cambiar de opción/prima desde que Alberto pulsó: se re-comprueba
+    // AQUÍ, en la misma transacción que consume el token (fila del presupuesto bloqueada en lectura hasta el commit).
+    let motivoPresupuesto: string | null = null
     if (d.ok) {
+      await tx.$queryRaw`select 1 from seguros.presupuesto where id = ${t.presupuesto_id}::uuid and correduria_id = ${t.correduria_id}::uuid for share`
+      const p = await leerPresupuesto(tx, t.correduria_id, t.presupuesto_id)
+      const o = p ? await leerOpcion(tx, p.id, t.opcion_id) : null
+      const pre = p && o ? precondicionesEmision(p, o, t.ramo, new Date()) : { ok: false as const, motivo: 'presupuesto u opción ya no están' }
+      if (!pre.ok) motivoPresupuesto = pre.motivo
+      else if (!primaCoincide(e.primaCents, pre.primaCents)) motivoPresupuesto = 'la prima aceptada ya no es la de la pantalla'
+    }
+    if (d.ok && !motivoPresupuesto) {
       const ok = await tx.$executeRaw`
         update seguros.tarificacion_emision_autorizacion set consumido_at = now()
         where token_hash = ${tokenHash} and trabajo_id = ${t.id}::uuid and consumido_at is null and expira_at > now() and hash_datos = ${hashDatos}`
@@ -192,6 +216,13 @@ export async function canjearEmision(e: { trabajoId: string; token: string; prim
     }
     // Fallido: el token (si es de ESTE trabajo) se consume igualmente; el motivo queda en la auditoría.
     const resultado = !d.ok && d.motivo === 'hash_distinto' ? 'hash_distinto' : !d.ok && d.motivo === 'caducado' ? 'caducada' : 'rechazado_canje'
+    if (motivoPresupuesto) {
+      await tx.$executeRaw`
+        update seguros.tarificacion_emision_autorizacion
+        set consumido_at = coalesce(consumido_at, now()), resultado = coalesce(resultado, 'rechazado_canje')
+        where token_hash = ${tokenHash} and trabajo_id = ${t.id}::uuid`
+      return { ok: false as const, status: 409, motivo: `presupuesto: ${motivoPresupuesto}` }
+    }
     await tx.$executeRaw`
       update seguros.tarificacion_emision_autorizacion
       set consumido_at = coalesce(consumido_at, now()), resultado = coalesce(resultado, ${resultado})
@@ -224,10 +255,30 @@ export async function registrarResultadoEmision(r: ResultadoEmisionWorker): Prom
       from seguros.tarificacion_trabajos t where t.id = ${r.trabajoId}::uuid for update`
     const t = ts[0]
     if (!t) return { estado: 'no_encontrado' as const }
-    if (t.modo !== 'emision' || t.estado !== 'en_curso') return { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }
-    const aut = await tx.$queryRaw<{ id: string; consumido_at: Date | null }[]>`
-      select id::text as id, consumido_at from seguros.tarificacion_emision_autorizacion where trabajo_id = ${t.id}::uuid for update`
+    if (t.modo !== 'emision') return { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }
+    const aut = await tx.$queryRaw<{ id: string; consumido_at: Date | null; resultado: string | null }[]>`
+      select id::text as id, consumido_at, resultado from seguros.tarificacion_emision_autorizacion where trabajo_id = ${t.id}::uuid for update`
     const a = aut[0] ?? null
+
+    // `emitida` TARDÍO: el barrido ya dio el lease por vencido (requiere_humano, INCIERTO) pero el robot sí pulsó y ahora
+    // trae el nº de póliza. Se GUARDA (no se pierde con un 409): resuelve la autorización y se re-avisa a Alberto. El
+    // trabajo sigue en requiere_humano (terminal; solo una persona lo cierra) con el nº en el mensaje.
+    if (t.estado === 'requiere_humano' && r.resultado === 'emitida' && a && autorizacionSinResolver({ consumidoAt: a.consumido_at, resultado: a.resultado })) {
+      const evidencia = r.captura ? await guardarCaptura(tx, t, `emision-despues-${t.id.slice(0, 8)}.png`, r.captura, 'Pantalla tras pulsar emitir (robot del tarificador, respuesta tardía)') : null
+      await tx.$executeRaw`
+        update seguros.tarificacion_emision_autorizacion
+        set resultado = ${r.numeroPoliza ? 'emitida' : 'incierto'}, numero_poliza = coalesce(${r.numeroPoliza}, numero_poliza),
+            evidencia_posterior_id = coalesce(${evidencia}::uuid, evidencia_posterior_id)
+        where id = ${a.id}::uuid`
+      await tx.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set emision_numero_poliza = coalesce(${r.numeroPoliza}, emision_numero_poliza),
+            error = ${JSON.stringify({ tipo: 'emision', mensaje: mensajeEmisionTardia(r.numeroPoliza), en: new Date().toISOString() })}::jsonb,
+            emision_avisada_at = null, evidencia_documento_id = coalesce(${evidencia}::uuid, evidencia_documento_id), updated_at = now()
+        where id = ${t.id}::uuid and estado = 'requiere_humano'`
+      return { estado: 'registrado' as const, estadoTrabajo: 'requiere_humano' }
+    }
+    if (t.estado !== 'en_curso') return { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }
 
     if (r.resultado === 'pre_emision') {
       if (a) return { estado: 'conflicto' as const, motivo: 'ya autorizado: la pantalla previa no se vuelve a pedir' }
@@ -288,7 +339,7 @@ export async function registrarResultadoEmision(r: ResultadoEmisionWorker): Prom
 
 export type ResultadoAutorizar = { estado: 'autorizado' | 'cancelado' | 'sin_cambios'; trabajoId: string; compania: string } | Fallo
 
-export async function autorizarEmision(e: { correduriaId: string; trabajoId: string; decision: 'ok' | 'no'; autorizadoPor: string }, env: Record<string, string | undefined> = process.env): Promise<ResultadoAutorizar> {
+export async function autorizarEmision(e: { correduriaId: string; trabajoId: string; decision: 'ok' | 'no'; hashCorto: string; autorizadoPor: string }, env: Record<string, string | undefined> = process.env): Promise<ResultadoAutorizar> {
   // Rechazar no necesita el interruptor (cerrar siempre se puede); autorizar, sí.
   if (e.decision === 'ok') {
     const c = await cerrojos(env)
@@ -304,6 +355,10 @@ export async function autorizarEmision(e: { correduriaId: string; trabajoId: str
       where t.id = ${e.trabajoId}::uuid and t.correduria_id = ${e.correduriaId}::uuid for update`
     const t = ts[0]
     if (!t || t.modo !== 'emision') return rechazo(404, 'trabajo_de_emision_no_encontrado')
+    // El botón va atado a la pantalla previa que se le ENSEÑÓ (hash corto en el callback_data, dentro de la firma).
+    if (!t.emision_hash_datos || hashCortoEmision(t.emision_hash_datos) !== String(e.hashCorto).toLowerCase()) {
+      return rechazo(409, 'el botón no es el de la pantalla previa actual')
+    }
     if (e.decision === 'no') {
       if (t.estado === 'cancelado') return { estado: 'sin_cambios' as const, trabajoId: t.id, compania: t.compania }
       if (t.estado !== 'pendiente_autorizacion_emision') return rechazo(409, `el trabajo no espera autorización (${t.estado})`)
@@ -353,14 +408,16 @@ export type AvisoEmision = {
   mensaje: string | null
   caducaAt: string | null
   capturaBase64: string | null
+  /** SHA-256 de los datos de la pantalla previa (solo en `pedir_autorizacion`): su prefijo va en el botón firmado. */
+  hashDatos: string | null
 }
 
 /** Lo que falta por avisar: peticiones de botón (en plazo), emitidas y paradas. Sin NIF, sin dirección: iniciales. */
 export async function avisosEmisionPendientes(correduriaId: string): Promise<AvisoEmision[] | null> {
   if (!(await hayEmision())) return null
-  const filas = await prisma.$queryRaw<{ id: string; estado: string; compania: string; ramo: string; nombre: string | null; apellidos: string | null; referencia: string | null; prima: number | null; numero: string | null; error: { mensaje?: unknown } | null; pedida: Date | null; captura: Buffer | null }[]>`
+  const filas = await prisma.$queryRaw<{ id: string; estado: string; compania: string; ramo: string; nombre: string | null; apellidos: string | null; referencia: string | null; prima: number | null; numero: string | null; error: { mensaje?: unknown } | null; pedida: Date | null; hash: string | null; captura: Buffer | null }[]>`
     select t.id::text as id, t.estado, t.compania, t.ramo, c.nombre, c.apellidos, p.referencia, t.emision_prima_cents as prima,
-           t.emision_numero_poliza as numero, t.error, t.emision_pedida_at as pedida,
+           t.emision_numero_poliza as numero, t.error, t.emision_pedida_at as pedida, t.emision_hash_datos as hash,
            case when d.size_bytes <= 4194304 then d.contenido else null end as captura
     from seguros.tarificacion_trabajos t
     join seguros.clientes c on c.id = t.cliente_id and c.correduria_id = t.correduria_id
@@ -384,6 +441,7 @@ export async function avisosEmisionPendientes(correduriaId: string): Promise<Avi
     caducaAt: f.pedida ? new Date(f.pedida.getTime() + VALIDEZ_SOLICITUD_MS).toISOString() : null,
     // Solo la captura de la pantalla PREVIA viaja con la petición (la de después se mira en la ficha).
     capturaBase64: f.estado === 'pendiente_autorizacion_emision' && f.captura ? Buffer.from(f.captura).toString('base64') : null,
+    hashDatos: f.estado === 'pendiente_autorizacion_emision' ? f.hash : null,
   }))
 }
 

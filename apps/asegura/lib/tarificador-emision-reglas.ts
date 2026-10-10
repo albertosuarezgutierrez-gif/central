@@ -2,7 +2,7 @@
 // precondiciones) vive en `@central/module-tarificacion` (emision.ts); aquí, lo propio del puerto de asegura: leer los
 // cuerpos del worker, a qué estado pasa el trabajo y los textos (sin datos personales salvo iniciales).
 
-import { pareceTokenEmision, type TipoError } from '@central/module-tarificacion'
+import { pareceTokenEmision, verificarFirmaAutorizacionEmision, ENV_FIRMA_AUTORIZACION, type CamposFirmaAutorizacion, type TipoError } from '@central/module-tarificacion'
 import { MAX_BYTES_ADJUNTO } from './tarificador-reglas.ts'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -12,6 +12,19 @@ export const ENV_AUTORIZADOR = 'TARIFICADOR_EMISION_TELEGRAM_ID'
 export function autorizadorEmision(env: Record<string, string | undefined>): string | null {
   const v = (env[ENV_AUTORIZADOR] ?? '').trim()
   return /^\d{3,20}$/.test(v) ? v : null
+}
+
+/**
+ * Puerta de `POST /api/operador/tarificador/emision/autorizar` (revisión de seguridad 10/10/2026). El Bearer de operador
+ * NO basta: el cuerpo tiene que venir firmado (HMAC) con `TARIFICADOR_EMISION_WEBHOOK_SECRET`, que solo tiene el webhook de
+ * Telegram de plataforma. Sin secreto → 503 (nadie autoriza); sin firma, firma mala o vieja → 403; campos raros → 400.
+ */
+export function comprobarFirmaAutorizar(cuerpo: unknown, secreto: string | null, ahoraMs: number): { ok: true; campos: CamposFirmaAutorizacion } | { ok: false; status: 400 | 403 | 503; motivo: string } {
+  const v = verificarFirmaAutorizacionEmision(secreto, cuerpo, ahoraMs)
+  if (v.ok) return v
+  if (v.motivo === 'sin_secreto') return { ok: false, status: 503, motivo: `firma sin configurar (${ENV_FIRMA_AUTORIZACION})` }
+  if (v.motivo === 'campos') return { ok: false, status: 400, motivo: "trabajoId (uuid), decision ('ok'|'no'), hashCorto, autorizadoPor y ts son obligatorios" }
+  return { ok: false, status: 403, motivo: `firma no válida (${v.motivo})` }
 }
 
 const objeto = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
@@ -83,6 +96,24 @@ export function estadoTrasResultado(r: Exclude<ResultadoEmisionWorker, { resulta
     resultadoAutorizacion: 'incierto',
     error: { tipo: 'emision', mensaje: 'Se pulsó emitir en el portal y no se pudo confirmar el nº de póliza: mira el portal de la compañía ANTES de nada (puede estar emitida). No se reintenta.' },
   }
+}
+
+/**
+ * El lease de un trabajo de emisión venció (o el worker cayó) DESPUÉS de canjear el token: el clic pudo salir. Lo que
+ * escribe el barrido en el error (lo lee Alberto en el Telegram y en la bandeja). Empieza por «INCIERTO» a propósito.
+ */
+export const MENSAJE_EMISION_INCIERTA = 'INCIERTO: la póliza puede estar emitida, revisar ePAC antes de cualquier acción. El robot canjeó el permiso y no devolvió resultado a tiempo. No se reintenta ni se puede pedir otra emisión de este presupuesto hasta resolverlo.'
+
+/** ¿Hay una autorización CONSUMIDA sin desenlace? (canje OK y luego nada, o `incierto`). Entonces el clic pudo salir. */
+export function autorizacionSinResolver(a: { consumidoAt: Date | null; resultado: string | null } | null | undefined): boolean {
+  return !!a?.consumidoAt && (a.resultado === null || a.resultado === 'incierto')
+}
+
+/** `emitida` que llega DESPUÉS de que el barrido diera el lease por vencido: se guarda el nº y se re-avisa. */
+export function mensajeEmisionTardia(numeroPoliza: string | null): string {
+  return numeroPoliza
+    ? `Emitida (respuesta tardía del robot, tras vencer su plazo): póliza ${numeroPoliza}. Compruébala en ePAC, regístrala en la ficha y, si sustituye a otra, ANULA la anterior a mano.`
+    : `${MENSAJE_EMISION_INCIERTA} (El robot respondió tarde «emitida» sin un nº de póliza legible.)`
 }
 
 /** Mensaje cuando la prima de la pantalla previa no es EXACTAMENTE la aceptada (tolerancia 0 €). */
