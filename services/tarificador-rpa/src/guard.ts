@@ -1,12 +1,14 @@
 // Barrera de EMISIÓN en el navegador (05/10/2026). TARIFICAR ≠ EMITIR.
 //   1. Toda navegación (y toda petición que no sea GET) a una URL que casa con el patrón se ABORTA
-//      antes de salir, y el trabajo queda marcado → `error_definitivo`.
+//      antes de salir, y el trabajo queda marcado → `error_definitivo`. También si la ACCIÓN viaja en los
+//      parámetros: la query de la URL o, en las que no son GET, el CUERPO (`action=store` del framework
+//      legado de ePAC: la URL es siempre la misma y la acción va en el POST).
 //   2. Los adaptadores NO hacen `.click()`: usan `pulsar()`, que mira el texto, aria-label, title,
 //      value, id, name y href del elemento y se niega a pulsar si casa con el patrón. (Lo vigila
 //      `test/regression-tarificador-rpa.test.ts` en la raíz.)
 
-import type { BrowserContext, Frame, Locator, Page } from 'playwright'
-import { EmisionBloqueadaError, MaquinaFases, comprobarBoton, pareceEmision, type ModalidadPortal, type PestanaActiva } from '@central/module-tarificacion'
+import type { BrowserContext, Frame, Locator, Page, Request } from 'playwright'
+import { EmisionBloqueadaError, MaquinaFases, comprobarBoton, parametrosParecenEmision, pareceEmision, type ModalidadPortal, type PestanaActiva } from '@central/module-tarificacion'
 
 export type GuardEmision = { violacion(): EmisionBloqueadaError | null; comprobar(): void; fases: MaquinaFases }
 
@@ -16,10 +18,17 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   await context.route('**/*', async (route) => {
     const req = route.request()
     const url = req.url()
-    if ((req.isNavigationRequest() || req.method() !== 'GET') && pareceEmision(url, { permitirAceptar: fases.aceptarEnVuelo() })) {
-      violacion ??= new EmisionBloqueadaError('url', url)
-      await route.abort('blockedbyclient')
-      return
+    const noGet = req.method() !== 'GET'
+    if (req.isNavigationRequest() || noGet) {
+      const op = { permitirAceptar: fases.aceptarEnVuelo() }
+      const porUrl = pareceEmision(url, op) || parametrosParecenEmision(url, op)
+      const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
+      if (porUrl || porCuerpo) {
+        // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
+        violacion ??= new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
+        await route.abort('blockedbyclient')
+        return
+      }
     }
     await route.continue()
   })
@@ -29,6 +38,15 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     comprobar() {
       if (violacion) throw violacion
     },
+  }
+}
+
+/** Cuerpo de la petición como texto (`null` si no tiene). Si no se puede leer como texto, sus bytes en UTF-8. */
+function cuerpoDe(req: Request): string | null {
+  try {
+    return req.postData()
+  } catch {
+    return req.postDataBuffer()?.toString('utf8') ?? null
   }
 }
 

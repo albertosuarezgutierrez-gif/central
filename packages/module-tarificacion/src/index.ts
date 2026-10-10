@@ -34,7 +34,7 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, type OpcionesGuard } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, type OpcionesGuard } from './guard-emision.ts'
 export { MaquinaFases, type FaseTarificacion, type PestanaActiva } from './fases.ts'
 export { MARCA_REDACTADO, esVariableSecreta, secretosDelEntorno, redactar, redactarHtml, crearRedactor } from './redactar.ts'
 export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCredencial } from './entorno.ts'
@@ -45,6 +45,8 @@ export { claveCompania, crearRegistro, type RegistroAdaptadores } from './regist
 export {
   MARCA_DATO_PERSONAL,
   redactarDatosPersonales,
+  redactarVehiculos,
+  PATRONES_VEHICULO,
   limpiarTextoAviso,
   coherenciaPrecio,
   UMBRAL_ACOMPANAMIENTO,

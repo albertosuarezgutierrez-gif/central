@@ -62,18 +62,37 @@ describe('lectura del portal → Vehiculo', () => {
     expect(r).toEqual({
       tipo: 'ok',
       vehiculo: { marca: 'MARCA PRUEBA', modelo: 'MODELO X', version: V1.etiqueta, combustible: 'diesel', potenciaCv: 150, fechaMatriculacion: '2019-03-05', codigoCatalogo: 'C001' },
+      opcion: V1,
     })
   })
-  it('versión ya fijada por el portal y sin elección → vale esa; lo que no se lee queda null', () => {
-    const r = vehiculoDesdeLectura({ ...base, versionSeleccionada: V2, combustible: 'raro', potencia: '150', fechaMatriculacion: '31/02/2019', codigoCatalogo: 'H-77' })
+  it('versión preseleccionada por el portal + 2 candidatas y SIN elección → ambigua (un <select> siempre tiene una puesta)', () => {
+    const r = vehiculoDesdeLectura({ ...base, versionSeleccionada: V2, codigoCatalogo: 'H-77' })
+    expect(r.tipo).toBe('ambigua')
+    if (r.tipo === 'ambigua') expect(r.opciones).toEqual([V1, V2])
+  })
+  it('una sola candidata (la preseleccionada) y sin elección → vale esa; lo que no se lee queda null', () => {
+    const r = vehiculoDesdeLectura({ ...base, versiones: [{ etiqueta: 'Seleccione', codigo: '' }, V2], versionSeleccionada: V2, combustible: 'raro', potencia: '150', fechaMatriculacion: '31/02/2019', codigoCatalogo: 'H-77' })
     expect(r.tipo).toBe('ok')
     if (r.tipo === 'ok') {
       expect(r.vehiculo.version).toBe(V2.etiqueta)
+      expect(r.opcion).toEqual(V2)
       expect(r.vehiculo.combustible).toBeNull()
       expect(r.vehiculo.potenciaCv).toBeNull() // sin unidad ni unidad por defecto: no se asume
       expect(r.vehiculo.fechaMatriculacion).toBeNull() // 31/02 no existe
       expect(r.vehiculo.codigoCatalogo).toBe('H-77')
     }
+  })
+  it('con elección DISTINTA de la preseleccionada → la elegida, con SU código (no el hidden del portal)', () => {
+    const r = vehiculoDesdeLectura({ ...base, versionSeleccionada: V1, codigoCatalogo: 'C001' }, { codigo: 'C002' })
+    expect(r.tipo).toBe('ok')
+    if (r.tipo === 'ok') {
+      expect(r.opcion).toEqual(V2)
+      expect(r.vehiculo.version).toBe(V2.etiqueta)
+      expect(r.vehiculo.codigoCatalogo).toBe('C002')
+    }
+  })
+  it('elección que no casa con la única candidata → ambigua (no se ignora la elección)', () => {
+    expect(vehiculoDesdeLectura({ ...base, versiones: [V1] }, { codigo: 'C002' }).tipo).toBe('ambigua')
   })
   it('sin marca o modelo (la consulta no devolvió nada) → incompleto', () => {
     expect(vehiculoDesdeLectura({ ...base, marca: 'Seleccione', modelo: null })).toEqual({ tipo: 'incompleto', faltan: ['marca', 'modelo'] })

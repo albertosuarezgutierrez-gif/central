@@ -162,30 +162,34 @@ export type LecturaVehiculoPortal = {
 }
 
 export type ResultadoVehiculo =
-  | { tipo: 'ok'; vehiculo: Vehiculo }
+  | { tipo: 'ok'; vehiculo: Vehiculo; /** Opción del desplegable que hay que dejar FIJADA en el portal. */ opcion: CandidatoVersion }
   | { tipo: 'ambigua'; opciones: CandidatoVersion[] }
   | { tipo: 'incompleto'; faltan: string[] }
 
 /**
  * Lectura del portal → `Vehiculo`. Marca y modelo obligatorios (sin ellos la consulta no ha devuelto nada:
- * `incompleto`). La versión la decide `resolverVersion` sobre las opciones; si el portal ya trae UNA seleccionada y
- * no hay elección explícita que la contradiga, vale esa (el portal la ha resuelto él con la matrícula).
+ * `incompleto`). La versión la decide SIEMPRE `resolverVersion` sobre las opciones del desplegable: que el portal
+ * traiga una preseleccionada NO cuenta como elección (un `<select>` sin opción vacía siempre tiene la primera puesta),
+ * así que con 2+ candidatas y sin elección explícita → `ambigua`. Solo si el desplegable no lista opciones se usa la
+ * preseleccionada como única candidata.
+ *
+ * `codigoCatalogo`: con elección explícita es el código de la OPCIÓN elegida (el hidden del portal refleja lo que el
+ * portal tenía puesto ANTES y no vale); sin elección, el hidden del portal y, si falta, el de la opción.
  */
 export function vehiculoDesdeLectura(l: LecturaVehiculoPortal, eleccion: EleccionVersion | null = null): ResultadoVehiculo {
   const marca = l.marca && !esOpcionVacia(l.marca) ? espacios(l.marca) : null
   const modelo = l.modelo && !esOpcionVacia(l.modelo) ? espacios(l.modelo) : null
   const faltan = [marca ? null : 'marca', modelo ? null : 'modelo'].filter((x): x is string => x !== null)
   if (faltan.length) return { tipo: 'incompleto', faltan }
-  let version: CandidatoVersion | null = null
   const sel = l.versionSeleccionada && !esOpcionVacia(l.versionSeleccionada.etiqueta) ? l.versionSeleccionada : null
   const hayEleccion = Boolean(eleccion?.codigo?.trim() || eleccion?.etiqueta?.trim())
-  if (sel && !hayEleccion) version = { etiqueta: espacios(sel.etiqueta), codigo: sel.codigo?.trim() || null }
-  else {
-    const r = resolverVersion(l.versiones.length ? l.versiones : sel ? [sel] : [], eleccion)
-    if (r.tipo === 'ambigua') return r
-    if (r.tipo === 'ninguna') return { tipo: 'incompleto', faltan: ['version'] }
-    version = r.candidato
-  }
+  const r = resolverVersion(l.versiones.length ? l.versiones : sel ? [sel] : [], hayEleccion ? eleccion : null)
+  if (r.tipo === 'ambigua') return r
+  if (r.tipo === 'ninguna') return { tipo: 'incompleto', faltan: ['version'] }
+  const version = r.candidato
+  // Una elección que NO casa con la única candidata no se ignora: se pregunta (nunca «la que había»).
+  if (hayEleccion && !casaEleccion(version, eleccion!)) return { tipo: 'ambigua', opciones: [version] }
+  const codigoPortal = l.codigoCatalogo?.trim() || null
   return {
     tipo: 'ok',
     vehiculo: {
@@ -195,7 +199,14 @@ export function vehiculoDesdeLectura(l: LecturaVehiculoPortal, eleccion: Eleccio
       combustible: normalizarCombustible(l.combustible),
       potenciaCv: potenciaCvDesdeTexto(l.potencia, l.unidadPotencia),
       fechaMatriculacion: fechaIsoDesdeTexto(l.fechaMatriculacion),
-      codigoCatalogo: l.codigoCatalogo?.trim() || version.codigo || null,
+      codigoCatalogo: hayEleccion ? version.codigo : codigoPortal || version.codigo || null,
     },
+    opcion: version,
   }
+}
+
+function casaEleccion(c: CandidatoVersion, e: EleccionVersion): boolean {
+  const cod = e.codigo?.trim() || null
+  if (cod !== null) return c.codigo === cod
+  return Boolean(e.etiqueta?.trim()) && clave(c.etiqueta) === clave(e.etiqueta!)
 }

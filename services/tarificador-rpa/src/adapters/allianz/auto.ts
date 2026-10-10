@@ -18,6 +18,7 @@
 
 import type { Frame, Locator, Page } from 'playwright'
 import {
+  comprobarBoton,
   esOpcionVacia,
   importeEs,
   mensajeEleccionVersion,
@@ -85,6 +86,28 @@ export const SEL_DATOS_BASICOS = {
   siniestros: '#numDisasters',
 } as const
 
+// ───────────────────────── guard de los CAMBIOS de campo ─────────────────────────
+
+/**
+ * Antes de CUALQUIER cambio en un control del portal (`fill` + `change`, `selectOption`, `setChecked`): sus
+ * manejadores (`onchange`, `onclick`, `oninput`…) y su identidad pasan por el guard de emisión. Un cambio dispara el
+ * JavaScript del portal igual que un clic: si ese manejador archiva/emite/avanza, se para ANTES de tocar nada.
+ */
+export async function comprobarCampo(campo: Locator): Promise<void> {
+  // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+  const desc = await campo.evaluate(
+    (el, attrs) => {
+      const h = el as HTMLElement & { name?: unknown }
+      return [h.id || null, typeof h.name === 'string' ? h.name : null, ...attrs.map((n) => h.getAttribute(n))]
+    },
+    ATRIBUTOS_CAMPO,
+  )
+  comprobarBoton(desc)
+}
+
+/** Lo que describe un control antes de cambiarlo: etiquetas y TODOS los manejadores que un cambio puede disparar. */
+const ATRIBUTOS_CAMPO = ['aria-label', 'title', 'onchange', 'onclick', 'oninput', 'onblur', 'onfocus', 'onfocusout', 'onkeydown', 'onkeyup', 'onkeypress', 'onmousedown', 'onmouseup', 'formaction']
+
 // ───────────────────────── consulta por matrícula → vehículo ─────────────────────────
 
 /** Lee lo que el portal dejó tras la consulta (solo lectura). Un campo que no está → `null`. */
@@ -131,6 +154,7 @@ export async function leerVehiculoPortal(raiz: Pick<Frame, 'locator'>): Promise<
 export async function consultarMatricula(raiz: Pick<Frame, 'locator'>, matricula: string, page: Pick<Page, 'waitForTimeout'>, timeoutMs = 20_000): Promise<LecturaVehiculoPortal> {
   const campo = raiz.locator(SEL_VEHICULO.matricula).first()
   if ((await campo.count()) === 0) throw new ErrorTarificador('portal', 'allianz/auto: no aparece el campo de matrícula')
+  await comprobarCampo(campo)
   await campo.fill(matricula)
   await campo.dispatchEvent('change')
   const fin = Date.now() + timeoutMs
@@ -149,18 +173,24 @@ export async function consultarMatricula(raiz: Pick<Frame, 'locator'>, matricula
 
 /**
  * Lectura → vehículo canónico, o para. Varias versiones sin elección → `ErrorEleccionVersion` (requiere_humano);
- * sin marca/modelo/versión → error `datos`. Si hay elección y el portal tiene otra fijada, se fija la elegida en el
- * `<select>` nativo (por su código, nunca por parecido).
+ * sin marca/modelo/versión → error `datos`. La versión resuelta se deja FIJADA en el `<select>` nativo por el código
+ * de SU opción (nunca por el hidden `mobileCode`, que refleja lo que el portal tenía antes, ni por parecido); después se
+ * RELEE el desplegable y, si no tiene ese código, se aborta (`portal`): el resultado nunca anuncia una versión que el
+ * portal no tiene puesta.
  */
 export async function resolverVehiculo(raiz: Pick<Frame, 'locator'>, lectura: LecturaVehiculoPortal, form: Pick<FormularioAuto, 'eleccionVersion'>): Promise<Vehiculo> {
   const r = vehiculoDesdeLectura(lectura, form.eleccionVersion ?? null)
   if (r.tipo === 'ambigua') throw new ErrorEleccionVersion(r.opciones)
   if (r.tipo === 'incompleto') throw new ErrorTarificador('datos', `allianz/auto: el portal no da ${r.faltan.join(', ')} del vehículo`)
-  const elegido = r.vehiculo.codigoCatalogo
-  const actual = lectura.versionSeleccionada?.codigo ?? null
-  if (form.eleccionVersion && elegido && actual !== elegido && lectura.versiones.some((v) => v.codigo === elegido)) {
-    await raiz.locator(SEL_VEHICULO.version).first().selectOption(elegido)
+  const codigo = r.opcion.codigo
+  const select = raiz.locator(SEL_VEHICULO.version).first()
+  if ((await select.count()) === 0) throw new ErrorTarificador('portal', 'allianz/auto: no aparece el desplegable de versión')
+  if (!codigo) throw new ErrorTarificador('portal', 'allianz/auto: la versión resuelta no tiene código en el desplegable: no se puede fijar')
+  if ((await select.inputValue()) !== codigo) {
+    await comprobarCampo(select)
+    await select.selectOption(codigo)
   }
+  if ((await select.inputValue()) !== codigo) throw new ErrorTarificador('portal', 'allianz/auto: el portal no dejó fijada la versión resuelta')
   return r.vehiculo
 }
 
@@ -182,12 +212,16 @@ export async function rellenarDatosBasicos(raiz: Pick<Frame, 'locator'>, f: Form
   for (const [sel, valor] of planDatosBasicos(f)) {
     const campo = raiz.locator(sel).first()
     if ((await campo.count()) === 0) throw new ErrorTarificador('portal', `allianz/auto: no aparece el campo ${sel} de Datos básicos`)
+    await comprobarCampo(campo)
     await campo.fill(valor)
     await campo.dispatchEvent('change')
   }
   if (f.garajeNoche !== null) {
     const g = raiz.locator(SEL_DATOS_BASICOS.garajeNoche).first()
-    if ((await g.count()) > 0) await g.setChecked(f.garajeNoche)
+    if ((await g.count()) > 0) {
+      await comprobarCampo(g)
+      await g.setChecked(f.garajeNoche)
+    }
   }
 }
 

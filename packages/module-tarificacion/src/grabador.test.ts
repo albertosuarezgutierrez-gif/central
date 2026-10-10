@@ -224,6 +224,27 @@ describe('redactarHtmlGrabacion: vehículo (matrícula, su fecha y bastidor; All
   })
 })
 
+describe('redactarHtmlGrabacion: vehículo en TEXTO, opciones y nombres de campo (revisión 10/10/2026, datos inventados)', () => {
+  const campos = ['numVIN', 'vehicleVin', 'plateNumber', 'numberPlate', 'registrationDate']
+  const html =
+    campos.map((n) => `<input type="text" id="${n}" name="${n}" value="valor-vehiculo-abc">`).join('\n') +
+    '\n<p>Antiguas: SE-0000-ZZ · M 0000 ZZ · B-0000-Z; actual 0000 BBB</p>' +
+    '\n<p>Bastidor AAAAAAAAA00000000 y ZZZZZZZZZZZZZZZZ9</p>' +
+    '\n<select id="selBastidor"><option value="BBBBBBBBB11111111">BBBBBBBBB11111111</option></select>' +
+    '\n<p>Versión 1.5 TSI de 2019 · 150 CV · provincia</p><input type="text" id="provincia" value="valor-ok-prov">'
+  const r = redactarHtmlGrabacion(html)
+  it('tapa numVIN/vehicleVin/plateNumber/numberPlate/registrationDate', () => {
+    expect(r).not.toContain('valor-vehiculo-abc')
+  })
+  it.each(['SE-0000-ZZ', 'M 0000 ZZ', 'B-0000-Z', '0000 BBB', 'AAAAAAAAA', '00000000', 'ZZZZZZZZZZZZZZZZ9', 'BBBBBBBBB', '11111111'])('no deja «%s» ni un trozo', (x) => {
+    expect(r).not.toContain(x)
+  })
+  it('no tapa la versión, el año suelto ni «provincia»', () => {
+    expect(r).toContain('Versión 1.5 TSI de 2019 · 150 CV · provincia')
+    expect(r).toContain('valor-ok-prov')
+  })
+})
+
 describe('redactarHtmlGrabacion: atributos de sesión y texto del usuario', () => {
   const html = [
     '<button id="b1" type="button" session="3f2b8c1e-4d5a-4b6c-9d7e-1a2b3c4d5e6f" sessionid="SID-INV-1" data-token="TKN-INV-2" auth="AUT-INV-3" csrf="CSR-INV-4" jsessionid="JS-INV-5">Calcular</button>',

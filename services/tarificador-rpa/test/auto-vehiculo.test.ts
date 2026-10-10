@@ -9,6 +9,7 @@ import {
   allianzAuto,
   allianzMoto,
   AUTO_ACTIVO,
+  comprobarCampo,
   consultarMatricula,
   ErrorEleccionVersion,
   ErrorMapaIncompleto,
@@ -21,6 +22,7 @@ import {
   resolverVehiculo,
 } from '../src/adapters/allianz/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
+import { instalarGuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { clasificar } from '../src/errores.ts'
 import { comprobarBoton, EmisionBloqueadaError, estadoTrasError, motivoLegible, type FormularioAuto } from '@central/module-tarificacion'
@@ -104,6 +106,62 @@ test('con la elección de la bandeja → vehículo canónico y la versión fijad
   const v = await resolverVehiculo(page.mainFrame(), l, { eleccionVersion: { codigo: 'C002' } })
   assert.deepEqual(v, { marca: 'MARCA PRUEBA', modelo: 'MODELO X', version: '1.5 TSI Sport', combustible: null, potenciaCv: null, fechaMatriculacion: '2019-03-05', codigoCatalogo: 'C002' })
   assert.equal(await page.locator('#version').inputValue(), 'C002')
+})
+
+test('portal con OTRA versión fijada y elección distinta → se fija la ELEGIDA por su código y se relee', async () => {
+  await page.setContent(HTML(['1.5 TSI Style', '1.5 TSI Sport'], true))
+  const l = await consultarMatricula(page.mainFrame(), form.matricula, page, 3_000)
+  assert.equal(await page.locator('#version').inputValue(), 'C001', 'el portal deja puesta la primera')
+  const v = await resolverVehiculo(page.mainFrame(), l, { eleccionVersion: { codigo: 'C002' } })
+  assert.equal(v.version, '1.5 TSI Sport')
+  assert.equal(v.codigoCatalogo, 'C002')
+  assert.equal(await page.locator('#version').inputValue(), 'C002')
+})
+
+test('portal con una versión preseleccionada y 2 candidatas, sin elección → requiere_humano (no vale la preseleccionada)', async () => {
+  await page.setContent(HTML(['1.5 TSI Style', '1.5 TSI Sport'], true))
+  const l = await consultarMatricula(page.mainFrame(), form.matricula, page, 3_000)
+  await assert.rejects(resolverVehiculo(page.mainFrame(), l, form), (e) => e instanceof ErrorEleccionVersion)
+})
+
+test('si el portal NO deja fijada la versión elegida (la revierte) → aborta, no anuncia otra', async () => {
+  await page.setContent(HTML(['1.5 TSI Style', '1.5 TSI Sport'], true))
+  const l = await consultarMatricula(page.mainFrame(), form.matricula, page, 3_000)
+  await page.locator('#version').evaluate((el) => el.addEventListener('change', () => ((el as HTMLSelectElement).value = 'C001')))
+  await assert.rejects(resolverVehiculo(page.mainFrame(), l, { eleccionVersion: { codigo: 'C002' } }), (e) => e instanceof ErrorTarificador && e.tipo === 'portal')
+})
+
+test('comprobarCampo: un manejador de cambio que archiva/emite se para ANTES de escribir', async () => {
+  for (const h of [`onchange="sendActionEvent('store')"`, 'onclick="validar_aceptar()"', 'oninput="emitirPoliza()"', 'onblur="goSelected(\'contract\')"']) {
+    await page.setContent(`<input id="licensePlate" ${h}><input id="garageNight" type="checkbox" ${h}>`)
+    await assert.rejects(consultarMatricula(page.mainFrame(), form.matricula, page, 300), EmisionBloqueadaError, h)
+    assert.equal(await page.locator('#licensePlate').inputValue(), '', `no ha escrito con ${h}`)
+    await assert.rejects(comprobarCampo(page.locator('#garageNight')), EmisionBloqueadaError)
+  }
+  await page.setContent('<input id="licensePlate" onchange="consultaVehiculo()">')
+  await comprobarCampo(page.locator('#licensePlate'))
+})
+
+test('guard de red: POST con la acción de archivar/emitir en el CUERPO (o en la query) se aborta', async () => {
+  const ctx = await browser.newContext()
+  try {
+    for (const [url, cuerpo, bloquea] of [
+      ['http://127.0.0.1:9/app/control.do', 'version=1&action=store', true],
+      ['http://127.0.0.1:9/app/control.do', 'action=contract', true],
+      ['http://127.0.0.1:9/app/control.do?action=store', 'x=1', true],
+      ['http://127.0.0.1:9/app/control.do', 'action=calcular&direccion=planta+baja', false],
+    ] as const) {
+      const guard = await instalarGuardEmision(ctx)
+      const p = await ctx.newPage()
+      await p.evaluate(([u, b]) => fetch(u, { method: 'POST', body: b, headers: { 'content-type': 'application/x-www-form-urlencoded' } }).catch(() => null), [url, cuerpo])
+      assert.equal(guard.violacion() !== null, bloquea, `${url} · ${cuerpo}`)
+      if (bloquea) assert.ok(!guard.violacion()!.message.includes(cuerpo), 'el cuerpo no va al mensaje')
+      await p.close()
+      await ctx.unrouteAll()
+    }
+  } finally {
+    await ctx.close()
+  }
 })
 
 test('una sola versión fijada por el portal → ok sin persona', async () => {
