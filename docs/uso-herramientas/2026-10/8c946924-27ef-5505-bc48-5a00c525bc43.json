@@ -1,0 +1,30 @@
+{
+ "sesion": "8c946924-27ef-5505-bc48-5a00c525bc43",
+ "inicio": "2026-10-10T10:50:39.823Z",
+ "fin": "2026-10-10T10:50:39.847Z",
+ "llamadas": 2,
+ "categorias": {
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2253,
+   "chars_out": 2474,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 83,
+   "chars_out": 15222,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 27144,
+   "tools": {
+    "mcp__github__list_pull_requests": 1
+   }
+  }
+ }
+}
