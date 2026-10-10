@@ -27,7 +27,7 @@ import { tgAviso } from '@/lib/telegram'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { leerIngestaCima } from '@/lib/correduria/ingesta-cima'
-import { decidirRespaldoPull, corteSiniestros, textoCorteSiniestros } from '@central/module-seguros'
+import { decidirRespaldoPull, corteSiniestros, textoCorteSiniestros, corteSiniestrosPorCompania, textoCorteSiniestrosPorCompania, type EntradaCortePorCompania } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 // El pull espera al adaptador Java (~200 s). El dispatch corta a los 280 s.
@@ -35,6 +35,7 @@ export const maxDuration = 300
 
 const AGENTE = 'cima_pull_respaldo'
 const AGENTE_CORTE = 'cima_siniestros_corte'
+const AGENTE_CORTE_COMPANIA = 'cima_siniestros_corte_compania'
 const URL_POR_DEFECTO = 'https://app.grupoasegura.com/api/crons/cima-pull'
 
 /** Lo que dejó la pasada anterior, para no repetir el mismo aviso dos veces al día. */
@@ -81,6 +82,37 @@ async function avisarCorteSiniestros(
   return 'alerta'
 }
 
+/**
+ * Alerta de corte de SINIESTROS POR COMPAÑÍA (22/09/2026: Generali dejó de mandar SIN y el global,
+ * que mira el agregado, no lo vio). Una compañía con pólizas en vigor que alguna vez mandó SIN y lleva
+ * más de 3 veces su cadencia habitual (mínimo 7 días) sin hacerlo; con menos de 3 ficheros SIN no se vigila. Sin histórico de SIN no se alerta. Mismo antispam que el global: como mucho UN
+ * aviso por día de Madrid, marca `alerta AAAA-MM-DD` en el latido `cima_siniestros_corte_compania`.
+ * `entidades` null = no se pudo leer la ingesta: queda como no-ok, no como «va bien».
+ */
+async function avisarCorteSiniestrosPorCompania(
+  entidades: EntradaCortePorCompania[] | null,
+): Promise<string> {
+  if (entidades === null) {
+    await registrarLatido(AGENTE_CORTE_COMPANIA, false, 'sin dato: no se pudo leer la ingesta por compañía')
+    return 'sin_dato'
+  }
+  const { alertas, sinHistorico } = corteSiniestrosPorCompania(entidades)
+  if (alertas.length === 0) {
+    await registrarLatido(AGENTE_CORTE_COMPANIA, true, sinHistorico.length > 0 ? `ok · sin histórico SIN: ${sinHistorico.join(',')}` : 'ok')
+    return 'ok'
+  }
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date())
+  const marca = `alerta ${hoy}`
+  try {
+    const filas = await prisma.$queryRaw<Array<{ detalle: string | null }>>(Prisma.sql`
+      SELECT detalle FROM agente_latidos WHERE agente = ${AGENTE_CORTE_COMPANIA}`)
+    if (filas[0]?.detalle?.startsWith(marca)) return 'alerta_ya_avisada'
+  } catch { /* si no se puede leer, se avisa igual: perder el aviso es peor que duplicarlo */ }
+  await tgAviso('correduria.cima-siniestros-corte', textoCorteSiniestrosPorCompania(alertas)).catch(() => {})
+  await registrarLatido(AGENTE_CORTE_COMPANIA, false, `${marca} · ${alertas.map(a => a.entidad).join(',')}`)
+  return 'alerta'
+}
+
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
@@ -88,6 +120,9 @@ export async function GET(req: NextRequest) {
   const ultimoPull = ingesta.estado === 'ok' ? ingesta.salud.ultimoPull : null
   // Antes de decidir el respaldo: la alerta no depende de que haya que lanzar el pull.
   await avisarCorteSiniestros(ingesta.estado === 'ok' ? ingesta.salud.diasSinPersistir : null).catch(() => {})
+  await avisarCorteSiniestrosPorCompania(
+    ingesta.estado === 'ok' && ingesta.salud.silencio !== null ? ingesta.salud.silencio : null,
+  ).catch(() => {})
   // Franja FIJA (`?franja=…`, 25/09/2026): CIMA recomienda descargar a las 16:00 y a las
   // 20:30 de Madrid, que es cuando las compañías ya han dejado sus ficheros. Esas pasadas
   // no dependen de Actions: disparan siempre, y su éxito no se avisa (es lo normal).

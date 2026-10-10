@@ -418,6 +418,25 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       GROUP BY v.entidad
     `)
 
+    // Corte de SIN por compañía: último fichero SIN (`created_at`) y pólizas EN VIGOR por entidad.
+    // Fallo de lectura → `null` y los campos quedan AUSENTES (no se sabe), jamás 0 ni «nunca».
+    const sinRaw = await db.$queryRawUnsafe<
+      Array<{ entidad: string | null; ultimo: Date | null; primero: Date | null; n: bigint | null; nombre: string | null; en_vigor: bigint | null }>
+    >(`
+      SELECT f.entidad, f.ultimo, f.primero, f.n,
+             (SELECT d.nombre_comun FROM companias_dgs d WHERE d.codigo_dgs = f.entidad) AS nombre,
+             (SELECT COUNT(*) FROM polizas p
+               WHERE p.codigo_entidad_dgs = f.entidad AND ${sqlCarteraEnVigor('p')}) AS en_vigor
+      FROM (
+        SELECT codigo_entidad AS entidad,
+               MAX(created_at) FILTER (WHERE tipo_objeto = 'SIN') AS ultimo,
+               MIN(created_at) FILTER (WHERE tipo_objeto = 'SIN') AS primero,
+               COUNT(*) FILTER (WHERE tipo_objeto = 'SIN') AS n
+        FROM cima_ficheros WHERE codigo_entidad IS NOT NULL GROUP BY 1
+      ) f
+    `).catch(() => null)
+    const porSin = sinRaw === null ? null : new Map(sinRaw.map(r => [r.entidad ?? '', r]))
+
     const porCartera = new Map(carteraRaw.map(r => [r.entidad ?? '', r]))
     const entidades: EntidadIngesta[] = ritmoRaw.map(r => {
       const clave = r.entidad ?? ''
@@ -433,6 +452,13 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
         vivas: c ? Number(c.vivas ?? 0) : 0,
         vencidasEnSilencio: c ? n(c.vencidas) : 0,
         vencen90d: c ? n(c.proximas) : 0,
+        ...(porSin?.has(clave) ? {
+          nombre: porSin.get(clave)!.nombre,
+          enVigor: n(porSin.get(clave)!.en_vigor),
+          ultimoSin: porSin.get(clave)!.ultimo === null ? null : new Date(porSin.get(clave)!.ultimo as Date).toISOString(),
+          sinN: n(porSin.get(clave)!.n),
+          primerSin: porSin.get(clave)!.primero === null ? null : new Date(porSin.get(clave)!.primero as Date).toISOString(),
+        } : {}),
       }
     })
 

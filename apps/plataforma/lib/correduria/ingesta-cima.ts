@@ -100,6 +100,10 @@ function esEntidad(v: unknown): v is EntidadIngesta {
     && numONull(e.diasSinFichero) && numONull(e.huecoMaximo)
     && typeof e.huecosObservados === 'number' && Number.isFinite(e.huecosObservados)
     && numONull(e.vivas) && numONull(e.vencidasEnSilencio) && opcional(e.vencen90d)
+    && opcional(e.enVigor) && opcional(e.sinN)
+    && (e.primerSin === undefined || e.primerSin === null || typeof e.primerSin === 'string')
+    && (e.ultimoSin === undefined || e.ultimoSin === null || typeof e.ultimoSin === 'string')
+    && (e.nombre === undefined || e.nombre === null || typeof e.nombre === 'string')
 }
 
 /**
