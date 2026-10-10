@@ -688,4 +688,58 @@ decisión de Alberto). Como la rama de esta tarea no permite push directo a `mai
 harness) + aviso Telegram inmediato por el hallazgo 🔴.
 
 ---
+
+## ✅ Pasada ligera — 27/09/2026 (II)
+
+**Rango:** 19 commits desde la pasada profunda del mismo día (`df47050`) hasta `e91206c`
+(idealista-radar costa norte). Sesión concurrente: en paralelo se abrieron y ya casi se
+mergean solos `#3752` (regenerar radiografía de estructura) y `#3753` (prospección solo en
+borradores) — no se duplica ese trabajo aquí, solo se confirma que no chocan con nada de esta
+pasada.
+
+**Memoria/skills:** los 19 commits del rango YA tienen entrada en `CONTEXTO-SESIONES.md`
+(verificado uno a uno por PR/keyword) — carril 1 vacío, nada que reconciliar. `apps`
+(13) sigue cuadrando con la matriz de `tests.yml` (13). Sin cambios de lockfile/manifiestos
+en el rango.
+
+**Heartbeat (2-bis):** sano salvo lo ya conocido. `ses_transporte` y `psd2_health_check`
+(sesión BBVA `CLOSED`) sin cambios, ya avisados repetidamente — pendientes de Alberto.
+🟡 **`sivra_mercado_booking` sigue empeorando**: 66,4 h sin `ok=true` (era 60,4 h ayer;
+umbral 30 h ×2,2), pero SÍ trae comparables reales (237, 0 fallos) — falla solo en 4
+ventanas de "escaparate propio" sin disponibilidad esa fecha, que no es un fallo de la
+rutina sino un criterio de `ok` demasiado estricto. Anotado en `FEEDBACK-AGENTES.md` para
+el entrenador semanal (no se toca el comportamiento del agente desde aquí).
+Comprobado también el heartbeat de dominio `movimientos_bancarios`: el agregado marca 74 h
+sin fila nueva (BBVA lleva 386 h — el CLOSED ya conocido; Kutxabank 74 h), pero es huella de
+ACTIVIDAD no de salud (fin de semana sin cargos nuevos) y el guardián fino
+`psd2_health_check` no lo marca mudo salvo BBVA — no se reporta como hallazgo nuevo, solo se
+deja escrito el borde del umbral por si el lunes sigue igual.
+
+**Backlog de PRs (2-ter):** sano. Los 44 PRs zombis de la pasada profunda de esta mañana
+están confirmados cerrados (verificado contra la API, no solo la memoria) — quedan 3 PRs
+`claude/*` abiertos, los tres de <1h de vida. `rutinas-automerge.yml` corriendo con normalidad
+(>15 runs en 20 min). Único punto de atención: `#3748` (asistente correduría, draft) tiene
+`mergeable_state: dirty` por un choque de memoria entre sesiones concurrentes en
+`CONTEXTO-SESIONES.md` — a resolver por Alberto cuando lo saque de draft, no bloquea nada hoy.
+
+**Correduría (2-quater):** 🟢 sano. CIMA entrando (`cima_pull_completed` hace 13,6 h),
+cuarentena de 159 ficheros sin cambios (backlog ya conocido), gasto trivial (13
+cotizaciones/7d, 5,00€), aislamiento intacto (el único cambio en sus 4 guardianes,
+`regression-portal-aislamiento` del PR #3683, AMPLÍA la comprobación, no la debilita).
+Nota: el MCP `Supabase-asegura` sigue apuntando a la foto congelada de Manuel
+(`uijsgeocgdaxkhvwtjqs`), no al proyecto compartido — hay que pedir el proyecto correcto
+explícitamente al usar `Supabase` a secas.
+
+**Salud del precio (2bis):** 🟠 `oscilantes=47`, igual que ayer (se había frenado la mejora
+que venía de 103→10→47; hoy ni sube ni baja). `noches_ultima_pasada=3` frente a las 132 de
+ayer — no dispara umbral (≠0) pero es una caída fuerte a vigilar si se repite. Resto sano:
+`rail_baja_roto=0`, `bajo_minimo=0`, `rail_alza_sin_justificar=0`, `horas_desde_ultima_pasada=1,7h`,
+las 4 palancas con `enabled`/`apply_enabled=true` y suelo puesto.
+
+**Carril 1:** ninguno (memoria ya al día). **Carril 2:** nota de `FEEDBACK-AGENTES.md` sobre
+el criterio de `ok` de `mercado-booking` (texto, sin código) + esta entrada. Sin código que
+tocar y sin hallazgo `⛔`/🔴 nuevo — no se manda Telegram (los pendientes conocidos ya se
+avisaron en pasadas anteriores; re-avisar lo mismo cada pasada sería ruido).
+
+---
 <!-- verificado: 2026-09-27 -->
