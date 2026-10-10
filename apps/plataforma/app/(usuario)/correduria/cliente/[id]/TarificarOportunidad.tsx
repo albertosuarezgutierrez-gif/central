@@ -3,12 +3,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { btnStyle } from '@/components/ui'
-import { rutaVariante } from '../../oportunidad/[id]/variante'
+import { rutaPedirPrecio } from '../../oportunidad/[id]/cotizador-embebido'
 import type { DestinoTarificar } from '@/lib/correduria/tarificar-oportunidad'
 
 /**
  * «Tarificar →» en la tarjeta de Oportunidades (07/10/2026). SOLO abre la pantalla de precio del ramo
- * (`…-nuevo?oportunidad=`), donde se confirma y se paga: este botón nunca cotiza. Si la póliza no tiene
+ * (`rutaPedirPrecio`: auto y moto, la propia oportunidad en «Pedir precio»; el resto, `…-nuevo?oportunidad=`), donde se confirma y se paga: este botón nunca cotiza. Si la póliza no tiene
  * seguimiento, antes lo abre (gratis). Ramo sin tarifa: no hay pantalla de precio y, con `riesgoHref`, el botón
  * pasa a ser «Ver riesgo →» (si no, deshabilitado con motivo). Con tarifa, el acceso al riesgo lo da el
  * enlace secundario «Ver riesgo →» de la fila (OportunidadesCliente), no este botón.
@@ -47,7 +47,7 @@ export default function TarificarOportunidad({ destino, tomadorId, riesgoHref }:
       const r = await fetch('/api/correduria/oportunidad/de-poliza', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ polizaId: destino.polizaId }) })
       const json = (await r.json().catch(() => null)) as { estado?: string; motivo?: string; oportunidadId?: string } | null
       if (!r.ok || json?.estado !== 'ok' || !json.oportunidadId) { setError(`No se ha podido abrir su seguimiento: ${json?.motivo ?? `HTTP ${r.status}`}`); setOcupado(false); return }
-      router.push(rutaVariante(destino.ramo, tomadorId, json.oportunidadId))
+      router.push(rutaPedirPrecio(destino.ramo, tomadorId, json.oportunidadId))
     } catch {
       setError('Sin conexión: no se ha abierto nada. Reintenta.'); setOcupado(false)
     }

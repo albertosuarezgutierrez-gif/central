@@ -3,6 +3,16 @@
 // La pantalla de presupuesto de AUTO SIN PÓLIZA («oportunidad nueva»), DENTRO
 // de `/correduria` — mismo diseño que el resto del panel (`components/ui.tsx`).
 //
+// Dos modos (10/10/2026, igual que `moto-nuevo/CotizadorMoto.tsx`):
+//   - COMPLETO (por defecto): la pantalla `auto-nuevo` («➕ Presupuestar» de la ficha, con o sin `?oportunidad=`).
+//     Catálogo, matrícula, figuras, borrador… como siempre.
+//   - `embebido` (bloque «Pedir precio» de la oportunidad, `oportunidad/[id]/PedirPrecioAuto.tsx`): el coche y las
+//     figuras salen del RIESGO («Datos del vehículo» / «Intervinientes», que se editan arriba). Aquí solo las
+//     condiciones de la cotización: garaje, km, compra, remolque, efecto, estado civil/municipio/carné, seguro
+//     actual. Sin borrador (lo de arriba ya está guardado en el riesgo), sin pack y sin retomar la última
+//     tarificación (las variantes pedidas están en «Presupuestos de este riesgo»). Si arriba se edita o el riesgo
+//     cambia, la carcasa (`PedirPrecioEmbebido.tsx`) lo bloquea (`bloqueo`) o lo recarga.
+//
 // Es la hermana de `.../poliza/[id]/retarificar/retarificador.tsx` (mismo
 // catálogo marca→modelo→motor→versión, gratis, del vendor), pero MÁS SIMPLE
 // a propósito: sin póliza no hay «lo que ya sabemos» que reconciliar —
@@ -27,7 +37,7 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
-import { kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from '@/lib/correduria/km-auto'
+import { KM_AUTO_POR_DEFECTO, kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from '@/lib/correduria/km-auto'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
@@ -81,6 +91,7 @@ import { decidirFamiliaAllianz } from '@central/module-seguros'
 import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
 import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
+import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -190,6 +201,10 @@ type Resultado =
   | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 export default function AutoNuevo({
+  embebido = false,
+  bloqueo = null,
+  onCotizando,
+  onCotizado,
   clienteId,
   matriculaInicial = '',
   etiquetaCliente,
@@ -213,6 +228,17 @@ export default function AutoNuevo({
   carteraAllianz = null,
   fichaTomador = null,
 }: {
+  /**
+   * Modo OPORTUNIDAD (10/10/2026): coche y figuras del riesgo, sin catálogo, borrador ni formularios de figuras; solo
+   * las condiciones de la cotización. `datosRiesgo` y `variante` son entonces OBLIGATORIOS (los lee la carcasa).
+   */
+  embebido?: boolean
+  /** Motivo por el que AHORA no se puede pedir precio (datos del riesgo en edición, recargando…). `null` = nada lo impide. */
+  bloqueo?: string | null
+  /** Avisa a la carcasa de que hay una cotización EN VUELO (para no dejar editar el riesgo mientras se paga). */
+  onCotizando?: (enVuelo: boolean) => void
+  /** Embebido: la cotización quedó GUARDADA (su id); el padre relee el riesgo y la abre en «Presupuestos de este riesgo». */
+  onCotizado?: (tarificacionId: string) => void
   /** Pack coche + moto (03/10/2026): la otra oportunidad del cliente. `null` = no se han podido leer sus oportunidades. */
   otroVehiculo?: OtroVehiculo | null
   /**
@@ -260,14 +286,17 @@ export default function AutoNuevo({
   const [modelos, setModelos] = useState<Opcion[]>([])
   const [versiones, setVersiones] = useState<Opcion[]>([])
   const [motores, setMotores] = useState<Opcion[]>([])
-  const [marcaId, setMarcaId] = useState('')
-  const [modeloId, setModeloId] = useState('')
-  const [motorId, setMotorId] = useState('')
-  const [codigoVehiculo, setCodigoVehiculo] = useState('')
+  // Embebido: el coche ES el del riesgo (ids del catálogo elegidos en «Datos del vehículo»); aquí no se cambia.
+  const [marcaId, setMarcaId] = useState(embebido ? datosRiesgo?.marcaId ?? '' : '')
+  const [modeloId, setModeloId] = useState(embebido ? datosRiesgo?.modeloId ?? '' : '')
+  const [motorId, setMotorId] = useState(embebido ? datosRiesgo?.motorId ?? '' : '')
+  const [codigoVehiculo, setCodigoVehiculo] = useState(embebido ? datosRiesgo?.codigoVehiculo ?? '' : '')
   const [cargando, setCargando] = useState<string | null>(null)
   const [fallo, setFallo] = useState<string | null>(null)
 
   useEffect(() => {
+    // Embebido no pinta el catálogo: no se piden las marcas.
+    if (embebido) return
     let vivo = true
     setCargando('marcas')
     void catalogo('tipo=marcas')
@@ -314,7 +343,7 @@ export default function AutoNuevo({
   // con el supuesto convertiría un «no lo sé» en un dato afirmado.
   // Por defecto 10.000 km/año y compra = matriculación (Alberto, 25/09/2026):
   // se ven en pantalla y el corredor los cambia si el cliente dice otra cosa.
-  const [kmAnuales, setKmAnuales] = useState(datosRiesgo?.kmAnuales != null ? String(datosRiesgo.kmAnuales) : String(KM_ANUALES_POR_DEFECTO))
+  const [kmAnuales, setKmAnuales] = useState(datosRiesgo?.kmAnuales != null ? String(datosRiesgo.kmAnuales) : String(KM_AUTO_POR_DEFECTO))
   // 10/10/2026 (`lib/correduria/km-auto.ts`): los 10.000 de partida NO son dato del cliente. Viajan como SUPUESTO y no se
   // anotan en el riesgo; pasan a dato si los trae el riesgo, si el corredor toca el campo o si la cifra es otra.
   const kmDelRiesgo = datosRiesgo?.kmAnuales != null
@@ -488,10 +517,12 @@ export default function AutoNuevo({
   }
 
   useEffect(() => {
-    if (!plan.cascada) return
+    // Embebido: los ids ya vienen del riesgo (arriba); no hay cascada que poblar.
+    const c = embebido ? null : plan.cascada
+    if (!c) return
     let vivo = true
     const token = cascadaRiesgo.current
-    void poblarCascada(plan.cascada, () => vivo && cascadaRiesgo.current === token)
+    void poblarCascada(c, () => vivo && cascadaRiesgo.current === token)
     return () => { vivo = false }
     // Una vez, al abrir la pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -510,7 +541,9 @@ export default function AutoNuevo({
   const temporizadorNube = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Tras pagar: no se guarda nada más (ni local ni servidor) y se aborta el POST en vuelo, que si no podría
   // llegar DESPUÉS del DELETE y resucitar el borrador ya pagado.
-  const bloqueado = useRef(false)
+  // Embebido: NUNCA hay borrador (ni local ni servidor): lo del coche ya está guardado en el riesgo y las condiciones
+  // se teclean en el momento. Nace bloqueado y el restaurado de abajo no corre.
+  const bloqueado = useRef(embebido)
   const abortSubida = useRef<AbortController | null>(null)
   const vacio = (d: unknown) => esBorradorVacio(d, estadoInicial.current)
 
@@ -544,6 +577,7 @@ export default function AutoNuevo({
   }
 
   useEffect(() => {
+    if (embebido) return
     let vivo = true
     const local = leerBorradorAutoNuevoConSello<BorradorAutoNuevo>(clienteId, variante?.oportunidadId)
     if (local) aplicarBorrador(local.datos)
@@ -794,7 +828,9 @@ export default function AutoNuevo({
   }, [claveBorrador])
 
   useEffect(() => {
-    if (!variante) return
+    // Embebido: el coche es el del riesgo y las variantes ya pedidas están en «Presupuestos de este riesgo»: la
+    // última tarificación NO precarga nada aquí (sería cotizar con el coche anterior).
+    if (!variante || embebido) return
     let vivo = true
     pedirTarificacionGuardadaAuto({ clienteId, oportunidadId: variante.oportunidadId, tarificacionId: variante.tarificacionId })
       .then((r) => {
@@ -818,9 +854,9 @@ export default function AutoNuevo({
         if (v.matricula) setMatricula((m) => (retomada ? v.matricula! : m || v.matricula!))
         // Los km solo si se DECLARARON (ni la media ni los 10.000 de la pantalla son un dato del cliente:
         // `kmDeclaradoDeGuardada`) y el corredor no ha tecleado otra cifra.
-        const kmGuardados = kmDeclaradoDeGuardada(v.kmAnuales, KM_ANUALES_POR_DEFECTO)
+        const kmGuardados = kmDeclaradoDeGuardada(v.kmAnuales, KM_AUTO_POR_DEFECTO)
         if (kmGuardados !== null) {
-          setKmAnuales((k) => (retomada || k === String(KM_ANUALES_POR_DEFECTO) ? String(kmGuardados) : k))
+          setKmAnuales((k) => (retomada || k === String(KM_AUTO_POR_DEFECTO) ? String(kmGuardados) : k))
         }
         if (v.garaje && (retomada || !garajeElegido.current) && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
       })
@@ -920,7 +956,8 @@ export default function AutoNuevo({
   // la fecha a Avant2, gratis; mientras tanto, o si no responde, vale la
   // estimación por la serie nacional. Solo rellena si la fecha está vacía o la
   // puso la propia estimación: nunca pisa una fecha tecleada por el corredor.
-  const puedeRellenarFecha = matriculacion === '' || matriculacionEstimada
+  // Embebido: la fecha es la del riesgo; si falta, se pone en «Datos del vehículo», no se estima aquí en silencio.
+  const puedeRellenarFecha = !embebido && (matriculacion === '' || matriculacionEstimada)
   useEffect(() => {
     if (!puedeRellenarFecha) return
     const placa = matricula.trim()
@@ -998,7 +1035,7 @@ export default function AutoNuevo({
   // `kilometrosDesdeTexto` (@central/module-seguros).
   const kmLeidos = kilometrosDesdeTexto(kmAnuales)
   const kmInvalido = kmAnuales.trim() !== '' && kmLeidos === null
-  const kmSupuestos = kmLeidos !== null && !kmEsDeclarado({ texto: kmAnuales, porDefecto: KM_ANUALES_POR_DEFECTO, delRiesgo: kmDelRiesgo, tocado: kmTocado })
+  const kmSupuestos = kmLeidos !== null && !kmEsDeclarado({ texto: kmAnuales, porDefecto: KM_AUTO_POR_DEFECTO, delRiesgo: kmDelRiesgo, tocado: kmTocado })
 
   // Un coche no se compra antes de matricularse. El vendor no lo comprueba: se
   // traga las dos fechas y tarifica, así que el disparate solo se vería en el
@@ -1022,7 +1059,7 @@ export default function AutoNuevo({
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
     aManoSinRellenar.length > 0 || faltaPropietario || faltaConductor || faltaHistorial || kmInvalido || compraInvalida || faltaOcasional || ocasionalDuplicado ||
     faltaFigura || figuraRepetida
-  const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
+  const puedePulsar = !cotizando && !faltaAlgo && bloqueo === null && (simulacion || consumoPermite)
 
   // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
   // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
@@ -1031,19 +1068,31 @@ export default function AutoNuevo({
     if (cotizandoEnVuelo.current) return
     cotizandoEnVuelo.current = true
     try {
+      onCotizando?.(true)
       await cotizarSinGuarda(forzar)
+    } catch (e) {
+      // Una excepción (red, timeout, fallo del servidor) NO es una respuesta de error: sin esto la pantalla se quedaba
+      // en «cotizando» y el cobro, desconocido, no se avisaba (mismo arreglo que moto, 07/10/2026).
+      setResultado({
+        estado: 'error',
+        mensaje: `No se ha podido completar la consulta (${e instanceof Error ? e.message : 'error desconocido'}).`,
+        gastoDesconocido: true,
+      })
     } finally {
       cotizandoEnVuelo.current = false
+      onCotizando?.(false)
     }
   }
 
   async function cotizarSinGuarda(forzar: boolean) {
+    // Embebido: el riesgo se está editando o recargando → no se paga con datos que van a cambiar.
+    if (bloqueo !== null) return
     setResultado({ estado: 'cotizando' })
     const correccionesFinal: Record<string, unknown> = { ...correcciones }
     // En blanco = no se ha preguntado: no se manda nada y sigue mandando el
     // supuesto del precalificador. DECLARADOS, manda el corredor (corrección); los 10.000 de partida van como
     // SUPUESTO en `resueltos.kmAnualesSupuestos` (misma cifra al vendor, pero marcada).
-    const km = kmParaCotizar({ texto: kmAnuales, porDefecto: KM_ANUALES_POR_DEFECTO, delRiesgo: kmDelRiesgo, tocado: kmTocado })
+    const km = kmParaCotizar({ texto: kmAnuales, porDefecto: KM_AUTO_POR_DEFECTO, delRiesgo: kmDelRiesgo, tocado: kmTocado })
     if (km.correccion !== null) correccionesFinal.kmAnuales = km.correccion
     if (fechaCompra !== '' && !compraInvalida) correccionesFinal.fechaCompra = fechaCompra
     if (remolqueLigero) correccionesFinal.remolqueLigero = true
@@ -1161,6 +1210,12 @@ export default function AutoNuevo({
           guardado: r.guardado,
           seguroAnterior: r.seguroAnterior ?? null,
         })
+        // Embebido: guardada y enlazada a la oportunidad → el padre relee el riesgo y la abre en «Presupuestos de este
+        // riesgo» (desde ahí se emite). Sin id guardado se queda aquí, a la vista: no se pierde un precio pagado.
+        if (embebido && onCotizado) {
+          const id = cotizacionIdDe(r.guardado)
+          if (id !== null) onCotizado(id)
+        }
         return
       default: {
         const _exhaustivo: never = r
@@ -1189,9 +1244,29 @@ export default function AutoNuevo({
       )}
 
       <div style={cardStyle}>
-        <CardHeader title="1 · El vehículo" sub="Marca, modelo, combustible y versión: todo del catálogo de Codeoscopic, gratis." />
+        <CardHeader
+          title={embebido ? '1 · Condiciones del coche' : '1 · El vehículo'}
+          sub={embebido ? 'El coche, la matrícula y la versión son los de «Datos del vehículo»: se cambian allí. Aquí, solo lo de esta cotización.' : 'Marca, modelo, combustible y versión: todo del catálogo de Codeoscopic, gratis.'}
+        />
         {fallo && <p style={{ color: 'var(--negative)', fontSize: 13 }}>{fallo}</p>}
-        {usarPrevio && previo && (
+        {embebido && (
+          <div style={{ display: 'grid', gap: 4, marginBottom: 10, fontSize: 13, minWidth: 0, overflowWrap: 'anywhere' }}>
+            <span>
+              <strong>Coche:</strong>{' '}
+              {[datosRiesgo?.marca, datosRiesgo?.modelo, datosRiesgo?.version].filter(Boolean).join(' · ') || <span style={{ color: 'var(--muted)' }}>sin dato</span>}
+              {codigoVehiculo ? ` (código ${codigoVehiculo})` : ''}
+              {' · '}<strong>Matrícula:</strong> {matricula.trim() !== '' ? matricula.trim().toUpperCase() : <span style={{ color: 'var(--muted)' }}>sin matricular</span>}
+              {' · '}<strong>Matriculación:</strong> {matriculacion ? fechaCorta(matriculacion) : <span style={{ color: 'var(--muted)' }}>sin dato</span>}
+            </span>
+            {faltaVersion && (
+              <span style={{ color: 'var(--negative)' }}>Falta elegir la versión del catálogo (marca, modelo, combustible y versión): hazlo en «Datos del vehículo».</span>
+            )}
+            {faltaMatriculacion && (
+              <span style={{ color: 'var(--negative)' }}>Falta la fecha de matriculación (o la prevista, si aún no está matriculado): ponla en «Datos del vehículo».</span>
+            )}
+          </div>
+        )}
+        {!embebido && usarPrevio && previo && (
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}>
             <span>
               <strong>El mismo vehículo que en la variante guardada</strong>
@@ -1201,7 +1276,7 @@ export default function AutoNuevo({
           </div>
         )}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          {!(usarPrevio && previo) && (<>
+          {!embebido && !(usarPrevio && previo) && (<>
           <Campo etiqueta="Marca" falta={false} aviso={sigueSinConfirmar(plan, datosRiesgo?.marcaId, marcaId) ? avisoDelRiesgo : undefined}>
             <SelectorBuscable
               valor={marcaId}
@@ -1255,6 +1330,7 @@ export default function AutoNuevo({
             />
           </Campo>
           </>)}
+          {!embebido && (<>
           <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="La teclea el corredor. Si el vehículo aún no está matriculado, déjala vacía y pon la fecha de matriculación prevista (máx. 90 días); con seguro anterior hará falta la matrícula de esa póliza.">
             <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
           </Campo>
@@ -1283,6 +1359,7 @@ export default function AutoNuevo({
               style={input}
             />
           </Campo>
+          </>)}
           <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda="Lo elige el corredor; viaja marcado como supuesto.">
             <select value={garaje} onChange={(e) => { garajeElegido.current = true; setGaraje(e.target.value) }} style={input}>
               <option value="">Elige garaje</option>
@@ -1294,13 +1371,13 @@ export default function AutoNuevo({
             falta={kmInvalido}
             faltaTexto="no se entiende como kilometraje (dígitos, y el punto solo como separador de miles)"
             aviso={kmSupuestos ? 'supuesto · no lo ha dicho el cliente' : undefined}
-            ayuda={`Por defecto ${KM_ANUALES_POR_DEFECTO.toLocaleString('es-ES')}, que viaja marcado como supuesto y no se guarda en el riesgo. Es factor de precio de primer orden: si el cliente dice una cifra (aunque sea esa), tecléala.`}
+            ayuda={`Por defecto ${KM_AUTO_POR_DEFECTO.toLocaleString('es-ES')}, que viaja marcado como supuesto y no se guarda en el riesgo. Es factor de precio de primer orden: si el cliente dice una cifra (aunque sea esa), tecléala.`}
           >
             <input
               inputMode="numeric"
               value={kmAnuales}
               onChange={(e) => { setKmTocado(true); setKmAnuales(e.target.value) }}
-              placeholder={String(KM_ANUALES_POR_DEFECTO)}
+              placeholder={String(KM_AUTO_POR_DEFECTO)}
               style={input}
             />
           </Campo>
@@ -1446,8 +1523,10 @@ export default function AutoNuevo({
               {reparos.ficha.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-              Abre «Datos del tomador en la ficha» (justo debajo), guarda y esta pantalla se actualiza sola, sin
-              perder lo que llevas tecleado. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              {embebido
+                ? 'Corrígelo arriba, en «Intervinientes» («Editar datos» del tomador); después cierra y vuelve a abrir este bloque para que se relea (gratis).'
+                : 'Abre «Datos del tomador en la ficha» (justo debajo), guarda y esta pantalla se actualiza sola, sin perder lo que llevas tecleado.'}
+              {' '}Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
               {reparos.ficha.some((f) => f.campo === 'email') && (
                 <> El correo se cambia en la <a href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--brand)' }}>ficha del cliente</a> (pestaña Contactos).</>
               )}
@@ -1455,7 +1534,8 @@ export default function AutoNuevo({
           </div>
         )}
 
-        {fichaTomador && (
+        {/* Embebido: la ficha del tomador se corrige arriba («Intervinientes»), una sola fuente. */}
+        {fichaTomador && !embebido && (
           <details
             open={fichaAbierta}
             onToggle={(e) => { const o = e.currentTarget.open; setFichaAbierta(o); if (o) setFichaMontada(true) }}
@@ -1517,7 +1597,7 @@ export default function AutoNuevo({
           }
         />
         {modoPapel('propietario', figs, conRiesgo) === 'riesgo' && variante ? (
-          <PapelDelTomador rol="propietario" oportunidadId={variante.oportunidadId} />
+          <PapelDelTomador rol="propietario" oportunidadId={variante.oportunidadId} aqui={embebido} />
         ) : figs.propietario ? (
           <BloqueFigura rol="propietario" nombre={variante?.nombres.propietario ?? null} faltan={variante?.faltan.propietario ?? null} empresa={variante?.empresas.propietario ?? false}
             persona={figCorr.propietario} onPersona={(p) => setFigCorr((f) => ({ ...f, propietario: p }))} civiles={civiles} soloCondiciones />
@@ -1534,7 +1614,7 @@ export default function AutoNuevo({
         )}
         <div style={{ height: 12 }} />
         {modoPapel('conductor_habitual', figs, conRiesgo) === 'riesgo' && variante ? (
-          <PapelDelTomador rol="conductor_habitual" oportunidadId={variante.oportunidadId} />
+          <PapelDelTomador rol="conductor_habitual" oportunidadId={variante.oportunidadId} aqui={embebido} />
         ) : figs.conductor_habitual ? (
           <BloqueFigura rol="conductor_habitual" nombre={variante?.nombres.conductor_habitual ?? null} faltan={variante?.faltan.conductor_habitual ?? null} empresa={variante?.empresas.conductor_habitual ?? false}
             persona={figCorr.conductor_habitual} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_habitual: p }))} civiles={civiles} soloCondiciones />
@@ -1551,7 +1631,7 @@ export default function AutoNuevo({
         )}
         <div style={{ height: 12 }} />
         {modoPapel('conductor_ocasional', figs, conRiesgo) === 'riesgo' && variante ? (
-          <PapelDelTomador rol="conductor_ocasional" oportunidadId={variante.oportunidadId} />
+          <PapelDelTomador rol="conductor_ocasional" oportunidadId={variante.oportunidadId} aqui={embebido} />
         ) : figs.conductor_ocasional ? (
           <BloqueFigura rol="conductor_ocasional" nombre={variante?.nombres.conductor_ocasional ?? null} faltan={variante?.faltan.conductor_ocasional ?? null} empresa={variante?.empresas.conductor_ocasional ?? false}
             persona={figCorr.conductor_ocasional} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_ocasional: p }))} civiles={civiles} soloCondiciones />
@@ -1699,6 +1779,8 @@ export default function AutoNuevo({
         )}
       </div>
 
+      {/* Embebido (oportunidad): sin pack; el pack coche + moto sigue en la pantalla completa de la ficha. */}
+      {!embebido && (
       <PackVehiculos
         clienteId={clienteId}
         ramoActual="auto"
@@ -1711,6 +1793,7 @@ export default function AutoNuevo({
         llamadasHechas={resultado.estado === 'ok' && !resultado.simulado ? 1 : 0}
         onPack={setPack}
       />
+      )}
 
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
@@ -1728,7 +1811,10 @@ export default function AutoNuevo({
 
         <Contador consumo={consumo} simulacion={simulacion} />
 
-        <button type="button" onClick={() => void cotizar()} disabled={!puedePulsar} style={{ ...btnStyle('primario'), width: '100%', maxWidth: 420, marginTop: 12 }}>
+        {bloqueo !== null && (
+          <p role="status" style={{ color: 'var(--warning)', fontSize: 13, fontWeight: 600, margin: '8px 0 0' }}>{bloqueo}</p>
+        )}
+        <button type="button" onClick={() => void cotizar()} disabled={!puedePulsar} style={{ ...btnStyle('primario'), width: '100%', maxWidth: 420, marginTop: 12, minHeight: 44 }}>
           {cotizando ? (simulacion ? 'Simulando…' : 'Cotizando… (puede tardar hasta 2 min)') : simulacion ? 'Simular precio — no cuesta nada' : 'Pedir precio — cuesta 0,50€'}
         </button>
         {faltaAlgo && (
@@ -1850,7 +1936,6 @@ function BloquePersona({
   )
 }
 
-const KM_ANUALES_POR_DEFECTO = 10000
 
 /** Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes. */
 function hoyLocal(): string {
@@ -1867,7 +1952,12 @@ function fechaCorta(iso: string): string {
  * Un papel del RIESGO sin figura propia (10/10/2026): lo ocupa el tomador. Si es otra persona, se asigna en
  * «Intervinientes» de la oportunidad (con «+ Nueva persona»), que es la única fuente: aquí no se teclea suelta.
  */
-function PapelDelTomador({ rol, oportunidadId }: { rol: 'propietario' | 'conductor_habitual' | 'conductor_ocasional'; oportunidadId: string }) {
+function PapelDelTomador({ rol, oportunidadId, aqui = false }: {
+  rol: 'propietario' | 'conductor_habitual' | 'conductor_ocasional'
+  oportunidadId: string
+  /** Embebido en la propia oportunidad: «Intervinientes» está arriba, en esta misma página (sin enlace). */
+  aqui?: boolean
+}) {
   const texto =
     rol === 'conductor_ocasional'
       ? 'Conductor ocasional: no hay ninguno en el riesgo.'
@@ -1875,11 +1965,15 @@ function PapelDelTomador({ rol, oportunidadId }: { rol: 'propietario' | 'conduct
   return (
     <p style={{ margin: 0, fontSize: 13 }}>
       <strong>{texto}</strong>{' '}
+      {aqui ? (
+        <span style={{ color: 'var(--muted)' }}>Si es otra persona, asígnala arriba, en «Intervinientes».</span>
+      ) : (
       <span style={{ color: 'var(--muted)' }}>
         Si es otra persona, asígnala en{' '}
         <Link href={`/correduria/oportunidad/${oportunidadId}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>«Intervinientes» del riesgo</Link>{' '}
         y vuelve.
       </span>
+      )}
     </p>
   )
 }
@@ -2026,5 +2120,48 @@ function Precios({ r, simulacion, clienteId, actual, familiaAllianz }: {
   )
 }
 
+
+/**
+ * «Presupuestos de este riesgo» → «Ver precios y emitir» (10/10/2026, oportunidad de AUTO; hermano de
+ * `PreciosVarianteMoto`): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con el MISMO panel de
+ * emisión que tras cotizar (`Emision` con `idPrecio` y `modalidad`). Sin cambiar de URL. La lectura y sus guardas (ESA
+ * variante, no caducada) son las comunes de `PreciosVarianteGuardada`. `insuredFamilyInAllianz` no se toca aquí
+ * (`familiaAllianz={null}`): depende del pack, que vive en la pantalla completa.
+ */
+export function PreciosVarianteAuto({ clienteId, oportunidadId, tarificacionId, simulado }: {
+  /** El tomador de ESA variante (la tarificación es suya). */
+  clienteId: string
+  oportunidadId: string
+  tarificacionId: string
+  /** La variante es una simulación: se enseña, nunca se emite. */
+  simulado: boolean
+}) {
+  return (
+    <PreciosVarianteGuardada
+      clienteId={clienteId} oportunidadId={oportunidadId} tarificacionId={tarificacionId}
+      leer={pedirTarificacionGuardadaAuto}
+      pintar={(g) => (
+        <Precios
+          r={{
+            estado: 'ok',
+            coste: '0 € (ya estaba pagada)',
+            restantesHoy: null,
+            simulado,
+            avisoSimulacion: null,
+            resumen: resumenGuardada(g),
+            precios: g.precios,
+            fallos: g.fallos,
+            supuestos: null,
+            guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+          }}
+          simulacion={false}
+          clienteId={clienteId}
+          actual={null}
+          familiaAllianz={null}
+        />
+      )}
+    />
+  )
+}
 
 /** Reparos que ESTA pantalla resuelve con un desplegable o una caja. */

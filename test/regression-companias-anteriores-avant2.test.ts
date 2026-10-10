@@ -21,7 +21,8 @@ test('asegura sirve el catálogo de compañías anteriores de Avant2', () => {
 })
 
 test('auto nuevo usa ese catálogo antes que el directorio de la correduría', () => {
-  const page = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/page.tsx')
+  // 10/10/2026: la lectura vive en `datos-cotizador.ts`, que comparten la página completa y el bloque de la oportunidad.
+  const page = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/datos-cotizador.ts')
   assert.match(page, /catalogoAsegura\(\{ tipo: 'companias-anteriores' \}\)/)
   assert.match(page, /anteriores\.estado === 'ok' && anteriores\.opciones\.length > 0\s*\? anteriores\.opciones/)
 })

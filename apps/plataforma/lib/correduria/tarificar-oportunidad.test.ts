@@ -2,9 +2,16 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { destinoTarificar } from './tarificar-oportunidad.ts'
 
-test('con seguimiento abierto: enlace a la pantalla de precio del ramo con ?oportunidad= (nunca cotiza)', () => {
-  const d = destinoTarificar({ ramo: 'auto', tomadorId: 'c1', oportunidadId: 'op1', polizaId: 'p1' })
-  assert.deepEqual(d, { tipo: 'enlace', href: '/correduria/cliente/c1/auto-nuevo?oportunidad=op1' })
+test('con seguimiento abierto, auto y moto: a la propia oportunidad, bloque «Pedir precio» (nunca cotiza)', () => {
+  for (const ramo of ['auto', 'moto']) {
+    const d = destinoTarificar({ ramo, tomadorId: 'c1', oportunidadId: 'op1', polizaId: 'p1' })
+    assert.deepEqual(d, { tipo: 'enlace', href: '/correduria/oportunidad/op1#pedir-precio' }, ramo)
+  }
+})
+
+test('con seguimiento abierto, ramo sin cotizador embebido: su pantalla de precio con ?oportunidad=', () => {
+  const d = destinoTarificar({ ramo: 'hogar', tomadorId: 'c1', oportunidadId: 'op1', polizaId: 'p1' })
+  assert.deepEqual(d, { tipo: 'enlace', href: '/correduria/cliente/c1/hogar-nuevo?oportunidad=op1' })
 })
 
 test('póliza sin seguimiento: primero se abre (de-poliza) y luego se navega', () => {

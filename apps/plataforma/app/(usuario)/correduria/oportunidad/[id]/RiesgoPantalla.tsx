@@ -21,7 +21,8 @@ import HistorialRiesgo from './HistorialRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
-import PedirPrecioMoto from './PedirPrecioMoto'
+import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
+import { abrirAlCargar, ramoCotizadorEmbebido } from './cotizador-embebido'
 import PresupuestosCompanias from './PresupuestosCompanias'
 import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs } from './piezas-riesgo'
@@ -35,12 +36,12 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
   useEffect(() => { setRiesgo(inicial) }, [inicial])
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
   const [recargando, setRecargando] = useState(false)
-  // Moto (07/10/2026, Fase 1): el cotizador se abre AQUÍ. Lo que está a medias arriba lo bloquea, y mientras se paga
-  // no se deja editar el riesgo (`ocupado`).
-  const [motoAbierto, setMotoAbierto] = useState(false)
+  // Cotizador EMBEBIDO (moto 07/10/2026, auto 10/10/2026; registro `COTIZADOR_EMBEBIDO`): se abre AQUÍ. Lo que está a
+  // medias arriba lo bloquea, y mientras se paga no se deja editar el riesgo (`ocupado`). Los demás ramos, como siempre.
+  const [cotizadorAbierto, setCotizadorAbierto] = useState(false)
   const [editandoVehiculo, setEditandoVehiculo] = useState(false)
   const [editandoFiguras, setEditandoFiguras] = useState(false)
-  const [cotizandoMoto, setCotizandoMoto] = useState(false)
+  const [cotizandoEmbebido, setCotizandoEmbebido] = useState(false)
   // La variante recién pedida: «Presupuestos de este riesgo» la abre con sus precios para emitir sin salir.
   const [abrirPrecios, setAbrirPrecios] = useState<string | null>(null)
   const alEditarVehiculo = useCallback((b: boolean) => setEditandoVehiculo(b), [])
@@ -72,8 +73,16 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
   const acciones = accionesPrecio({ ramo: op.ramo, polizaId: op.polizaId, tomadorId: tomadorDelRiesgo(riesgo), oportunidadId: op.id })
   const hayBots = !acciones.principal && companiasDisponibles(op.ramo).length > 0
   const esVehiculo = op.ramo === 'auto' || op.ramo === 'moto'
-  const esMoto = op.ramo === 'moto'
-  const ocupado = recargando || cotizandoMoto
+  const ramoEmbebido = ramoCotizadorEmbebido(op.ramo)
+  const CotizadorEmbebido = ramoEmbebido ? COTIZADOR_EMBEBIDO[ramoEmbebido] : null
+  const ocupado = recargando || cotizandoEmbebido
+  // Llegar con `#pedir-precio` («Tarificar →» de la ficha, `rutaPedirPrecio`) abre el cotizador: solo LEE (gratis);
+  // pedir precio sigue necesitando el clic de confirmación (0,50€).
+  useEffect(() => {
+    if (acciones.principal && abrirAlCargar(window.location.hash, op.ramo)) setCotizadorAbierto(true)
+    // Una vez, al llegar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Lo que falta del riesgo NO bloquea «Pedir precio» (la pantalla de precio lo pide), pero se dice.
   const bloqueDatos = riesgo.datosRiesgo
   const faltaDatos = !ramo
@@ -160,20 +169,20 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
           <>
             {faltaDatos && (
               <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
-                {faltaDatos} {esMoto ? 'Complétalo arriba, en «Datos del vehículo»: el bloque de precio no lo vuelve a pedir.' : 'Puedes seguir: la pantalla de precio lo pedirá.'}
+                {faltaDatos} {CotizadorEmbebido ? 'Complétalo arriba, en «Datos del vehículo»: el bloque de precio no lo vuelve a pedir.' : 'Puedes seguir: la pantalla de precio lo pedirá.'}
               </p>
             )}
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
               {op.polizaId && acciones.secundario
                 ? 'Este riesgo es de una póliza en cartera. Lo normal es pedir precio con los intervinientes y los datos de esta página; retarificar la póliza usa sus datos de hoy.'
                 : 'Se pide precio con los intervinientes y los datos de esta página.'}{' '}
-              {esMoto ? 'Se confirma aquí mismo, sin salir de esta página' : 'En la siguiente pantalla se confirma'}; pedir precio cuesta 0,50€.
+              {CotizadorEmbebido ? 'Se confirma aquí mismo, sin salir de esta página' : 'En la siguiente pantalla se confirma'}; pedir precio cuesta 0,50€.
             </p>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))' }}>
               <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
-                {/* Moto: el cotizador se despliega en este mismo bloque; ningún enlace a la pantalla de moto-nuevo. */}
-                {esMoto ? (
-                  <button type="button" onClick={() => setMotoAbierto(true)} disabled={motoAbierto} aria-expanded={motoAbierto} aria-controls="pedir-precio-moto"
+                {/* Cotizador embebido: se despliega en este mismo bloque; ningún enlace a la pantalla `…-nuevo` de su ramo. */}
+                {CotizadorEmbebido ? (
+                  <button type="button" onClick={() => setCotizadorAbierto(true)} disabled={cotizadorAbierto} aria-expanded={cotizadorAbierto} aria-controls="pedir-precio-cotizador"
                     style={{ ...btnStyle('primario', 'md'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal', height: 'auto' }}>
                     {acciones.principal.etiqueta}
                   </button>
@@ -181,7 +190,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                   <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
                 )}
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {esMoto ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : acciones.principal.nota}
+                  {CotizadorEmbebido ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : acciones.principal.nota}
                 </span>
               </div>
               {acciones.secundario && (
@@ -194,27 +203,27 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
             {/* Escenarios (07/10/2026): otra persona de tomador sin tocar figura a figura. */}
             <DuplicarOtroTomador
               riesgo={riesgo}
-              ocupado={ocupado || editandoFiguras || editandoVehiculo || motoAbierto}
+              ocupado={ocupado || editandoFiguras || editandoVehiculo || cotizadorAbierto}
               onCambio={(texto) => void recargar(texto)}
               onError={(texto) => setAviso({ ok: false, texto })}
               onRecargar={() => void recargar()}
             />
-            {esMoto && motoAbierto && (
-              <div id="pedir-precio-moto" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
-                <PedirPrecioMoto
+            {CotizadorEmbebido && cotizadorAbierto && (
+              <div id="pedir-precio-cotizador" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
+                <CotizadorEmbebido
                   riesgo={riesgo}
                   editandoVehiculo={editandoVehiculo}
                   editandoFiguras={editandoFiguras}
                   recargando={recargando}
-                  onCotizando={setCotizandoMoto}
+                  onCotizando={setCotizandoEmbebido}
                   onCotizado={(id) => {
-                    setMotoAbierto(false)
-                    setCotizandoMoto(false)
+                    setCotizadorAbierto(false)
+                    setCotizandoEmbebido(false)
                     setAbrirPrecios(id)
                     void recargar('Precio pedido y guardado en «Presupuestos de este riesgo»: desde ahí se emite.')
                   }}
                   onDesfase={() => void recargar()}
-                  onCerrar={() => setMotoAbierto(false)}
+                  onCerrar={() => setCotizadorAbierto(false)}
                 />
               </div>
             )}

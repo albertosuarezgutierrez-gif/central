@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { firmaRiesgoMoto, motivoBloqueoCotizador } from './cotizador-embebido.ts'
+import { RAMOS_COTIZADOR_EMBEBIDO, abrirAlCargar, firmaRiesgoMoto, firmaRiesgoVehiculo, motivoBloqueoCotizador, ramoCotizadorEmbebido, rutaPedirPrecio } from './cotizador-embebido.ts'
+import { RAMOS_VARIANTE, rutaVariante } from './variante.ts'
 import { interpretarRiesgo } from '../../../../../lib/riesgo-asegura.ts'
 
 function riesgo(extra: { datosVehiculo?: Record<string, unknown>; figuras?: unknown[]; variantes?: unknown[]; roles?: string[]; clienteId?: string } = {}) {
@@ -51,4 +52,28 @@ test('bloqueo: editar arriba manda; luego relectura; luego desfase; sin nada, nu
   assert.match(motivoBloqueoCotizador({ ...nada, recargando: true, riesgoCambiado: true })!, /Releyendo/)
   assert.match(motivoBloqueoCotizador({ ...nada, riesgoCambiado: true })!, /han cambiado/)
   assert.match(motivoBloqueoCotizador({ ...nada, pantallaDesfasada: true })!, /no coincide/)
+})
+
+test('registro: auto y moto se cotizan DENTRO de la oportunidad; el resto de ramos sigue con su pantalla', () => {
+  assert.deepEqual([...RAMOS_COTIZADOR_EMBEBIDO].sort(), ['auto', 'moto'])
+  for (const r of RAMOS_COTIZADOR_EMBEBIDO) assert.ok((RAMOS_VARIANTE as readonly string[]).includes(r), `${r} tiene que ser un ramo cotizable`)
+  for (const r of ['hogar', 'vida', 'salud', 'decesos', 'comunidades', 'otros', '', null, undefined]) assert.equal(ramoCotizadorEmbebido(r), null, String(r))
+})
+
+test('rutaPedirPrecio: auto y moto → la oportunidad con #pedir-precio; hogar… → su pantalla …-nuevo?oportunidad=', () => {
+  assert.equal(rutaPedirPrecio('auto', 'c1', 'op 1'), '/correduria/oportunidad/op%201#pedir-precio')
+  assert.equal(rutaPedirPrecio('moto', 'c1', 'op1'), '/correduria/oportunidad/op1#pedir-precio')
+  for (const r of ['hogar', 'vida', 'salud', 'decesos'] as const) assert.equal(rutaPedirPrecio(r, 'c1', 'op1'), rutaVariante(r, 'c1', 'op1'), r)
+})
+
+test('abrirAlCargar: solo con el ancla exacta y un ramo con cotizador embebido', () => {
+  assert.equal(abrirAlCargar('#pedir-precio', 'auto'), true)
+  assert.equal(abrirAlCargar('#pedir-precio', 'moto'), true)
+  assert.equal(abrirAlCargar('#pedir-precio', 'hogar'), false)
+  assert.equal(abrirAlCargar('', 'auto'), false)
+  assert.equal(abrirAlCargar('#presupuestos', 'auto'), false)
+})
+
+test('la huella es la misma para coche y moto (firmaRiesgoMoto es un alias)', () => {
+  assert.equal(firmaRiesgoMoto, firmaRiesgoVehiculo)
 })

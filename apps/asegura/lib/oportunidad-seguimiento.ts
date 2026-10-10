@@ -28,6 +28,8 @@ import {
   planLlamada,
   planLlamadaAnual,
   planTareaTrasVencimiento,
+  CLAVES_HISTORIAL_DECLARADO,
+  historialDeclaradoDe,
   seguroAnteriorDe,
   validarAltaOportunidad,
   validarEdicionOportunidad,
@@ -802,9 +804,11 @@ export async function editarOportunidad(
   if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
   const c = v.cambios
   const r = await prismaAsegura().$transaction(async tx => {
-    const [fila] = await tx.$queryRaw<(FilaOportunidad & { prima: number | null; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null })[]>(Prisma.sql`
+    const [fila] = await tx.$queryRaw<(FilaOportunidad & { prima: number | null; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; aniosAsegurado: string | null; aniosEnCompania: string | null })[]>(Prisma.sql`
       select id::text as id, cliente_id::text as "clienteId", tipo::text as ramo, estado::text as estado,
              fecha_fin_vigencia as "fechaFin", prima_bruta::float8 as prima,
+             case when jsonb_typeof(poliza_competencia->'historialDeclarado') = 'object' then poliza_competencia->'historialDeclarado'->>'aniosAsegurado' end as "aniosAsegurado",
+             case when jsonb_typeof(poliza_competencia->'historialDeclarado') = 'object' then poliza_competencia->'historialDeclarado'->>'aniosEnCompania' end as "aniosEnCompania",
              nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora,
              ${Prisma.raw(sqlNumeroPoliza(''))} as "numeroPoliza",
              nullif(trim(info_riesgo->>'matricula'), '') as matricula
@@ -834,6 +838,20 @@ export async function editarOportunidad(
     if (c.fechaFinVigencia !== undefined && c.fechaFinVigencia !== finAntes) detalle.fechaFinVigencia = { antes: finAntes, despues: c.fechaFinVigencia }
     if (c.prima !== undefined && c.prima !== fila.prima) detalle.prima = { antes: fila.prima, despues: c.prima }
     if (c.aseguradora !== undefined && c.aseguradora !== fila.aseguradora) detalle.aseguradora = { cambiado: true, vacio: c.aseguradora === null }
+    // Historial declarado: en `poliza_competencia.historialDeclarado`, NUNCA dentro de `seguroAnterior` (ahí un
+    // `{aniosAsegurado}` sin compañía pasaba por un seguro anterior leído). Solo las claves enviadas; `null` las quita
+    // (vuelven a «sin dato»): nunca se escribe un null ni se pisa el resto.
+    const poner: Record<string, number> = {}
+    const quitar: string[] = []
+    for (const k of CLAVES_HISTORIAL_DECLARADO) {
+      const nuevo = c.historial?.[k]
+      if (nuevo === undefined) continue
+      const antes = historialDeclaradoDe({ [k]: fila[k] })[k]
+      if (nuevo === antes) continue
+      detalle[k] = { antes, despues: nuevo }
+      if (nuevo === null) quitar.push(k)
+      else poner[k] = nuevo
+    }
     if (Object.keys(detalle).length === 0) return { ok: true as const, sinCambios: true as const, clienteId: fila.clienteId, tarea: null }
     await tx.$executeRaw(Prisma.sql`
       update oportunidades set
@@ -846,6 +864,16 @@ export async function editarOportunidad(
           else jsonb_set(coalesce(poliza_competencia, '{}'::jsonb), '{aseguradora}', to_jsonb(${c.aseguradora ?? ''}::text)) end,
         updated_at = now()
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+    if (Object.keys(poner).length > 0 || quitar.length > 0) {
+      await tx.$executeRaw(Prisma.sql`
+        update oportunidades set
+          poliza_competencia = jsonb_set(
+            coalesce(poliza_competencia, '{}'::jsonb), '{historialDeclarado}',
+            (case when jsonb_typeof(poliza_competencia->'historialDeclarado') = 'object' then poliza_competencia->'historialDeclarado' else '{}'::jsonb end
+              - ${quitar}::text[]) || ${JSON.stringify(poner)}::jsonb),
+          updated_at = now()
+        where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+    }
     let tarea: { accion: 'crear' | 'mover'; fecha: string } | null = null
     if (opciones.reprogramar && detalle.fechaFinVigencia) {
       // La próxima de seguimiento (la misma que enseña la tarjeta). Se MUEVE, no se cierra: una

@@ -60,6 +60,7 @@ import { describirCandidata, type SeguroAnteriorImputado } from '@/lib/correduri
 import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
 import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
+import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -1390,53 +1391,30 @@ export function PreciosVarianteMoto({ clienteId, oportunidadId, tarificacionId, 
   /** La variante es una simulación: se enseña, nunca se emite. */
   simulado: boolean
 }) {
-  type Carga =
-    | { estado: 'cargando' }
-    | { estado: 'error'; mensaje: string }
-    | { estado: 'caducada'; fechaEfecto: string | null }
-    | { estado: 'ok'; r: Extract<Resultado, { estado: 'ok' }> }
-  const [carga, setCarga] = useState<Carga>({ estado: 'cargando' })
-  useEffect(() => {
-    let vivo = true
-    setCarga({ estado: 'cargando' })
-    pedirTarificacionGuardadaMoto({ clienteId, oportunidadId, tarificacionId })
-      .then((r) => {
-        if (!vivo) return
-        if (r.estado === 'ninguna') { setCarga({ estado: 'error', mensaje: 'No se encuentra esta variante guardada: no se puede emitir desde aquí.' }); return }
-        if (r.estado !== 'ok') { setCarga({ estado: 'error', mensaje: `No se han podido leer sus precios: ${r.mensaje}` }); return }
-        const g = r.guardada
-        // Nunca otra en su lugar: si asegura devolviera otra tarificación (la última del cliente), no se emite.
-        if (g.cotizacionId !== tarificacionId) { setCarga({ estado: 'error', mensaje: 'Lo leído no es esta variante: no se emite desde aquí.' }); return }
-        if (g.caducada) { setCarga({ estado: 'caducada', fechaEfecto: g.fechaEfecto }); return }
-        setCarga({
-          estado: 'ok',
-          r: {
+  // La lectura y sus guardas (ESA variante, no caducada) son comunes a todos los ramos: `PreciosVarianteGuardada`.
+  return (
+    <PreciosVarianteGuardada
+      clienteId={clienteId} oportunidadId={oportunidadId} tarificacionId={tarificacionId}
+      leer={pedirTarificacionGuardadaMoto}
+      pintar={(g) => (
+        <Precios
+          r={{
             estado: 'ok',
             coste: '0 € (ya estaba pagada)',
             restantesHoy: null,
             simulado,
             avisoSimulacion: null,
-            resumen: `Tarificación del ${new Date(g.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}${g.fechaEfecto ? ` · efecto ${fechaCorta(g.fechaEfecto)}` : ''}`,
+            resumen: resumenGuardada(g),
             precios: g.precios,
             fallos: g.fallos,
             supuestos: null,
             guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
-          },
-        })
-      })
-      .catch(() => { if (vivo) setCarga({ estado: 'error', mensaje: 'No se han podido leer sus precios (sin conexión).' }) })
-    return () => { vivo = false }
-  }, [clienteId, oportunidadId, tarificacionId, simulado])
-  if (carga.estado === 'cargando') return <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Leyendo sus precios (gratis)…</p>
-  if (carga.estado === 'error') return <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{carga.mensaje}</p>
-  if (carga.estado === 'caducada') {
-    return (
-      <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
-        Su fecha de efecto{carga.fechaEfecto ? ` (${fechaCorta(carga.fechaEfecto)})` : ''} ya ha pasado: la compañía no la confirma ni la emite. Pide precio de nuevo en el bloque «Pedir precio».
-      </p>
-    )
-  }
-  return <Precios r={carga.r} simulacion={false} emitible sustituye={false} clienteId={clienteId} />
+          }}
+          simulacion={false} emitible sustituye={false} clienteId={clienteId}
+        />
+      )}
+    />
+  )
 }
 
 /** Reparos que ESTA pantalla resuelve con un desplegable o una caja. */

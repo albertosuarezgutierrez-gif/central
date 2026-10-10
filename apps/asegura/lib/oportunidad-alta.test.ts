@@ -58,3 +58,19 @@ test('una póliza que se va no se puede cerrar como «abierta por error»', () =
   const fugas = readFileSync(new URL('../../plataforma/app/api/correduria/fugas/route.ts', import.meta.url), 'utf8')
   assert.match(fugas, /motivos: MOTIVOS_PERDIDA_VENTA/)
 })
+
+test('editar: los años declarados van a historialDeclarado, NUNCA dentro de seguroAnterior', () => {
+  // Dentro de seguroAnterior, unos años sin compañía pasaban por un seguro anterior leído (bloqueaba la precarga
+  // desde la póliza y la resubida del documento los pisaba con el `||` de primer nivel).
+  assert.match(editar, /jsonb_set\(\s*coalesce\(poliza_competencia, '\{\}'::jsonb\), '\{historialDeclarado\}'/)
+  assert.match(editar, /poliza_competencia->'historialDeclarado'->>'aniosAsegurado'/)
+  assert.doesNotMatch(editar, /'\{seguroAnterior\}'|'seguroAnterior'->>'anios/)
+  // Merge SOLO dentro de la clave (quita las enviadas a null, añade las demás) y con el filtro de correduría.
+  assert.match(editar, /else '\{\}'::jsonb end\s+- \$\{quitar\}::text\[\]\) \|\| \$\{JSON\.stringify\(poner\)\}::jsonb\),\s+updated_at = now\(\)\s+where id = \$\{id\}::uuid and correduria_id = \$\{correduriaId\}::uuid/)
+  assert.match(editar, /detalle\[k\] = \{ antes, despues: nuevo \}/)
+})
+
+test('resubir la póliza: el parche de poliza_competencia es de PRIMER nivel (no borra historialDeclarado)', () => {
+  assert.match(crear, /coalesce\(poliza_competencia, '\{\}'::jsonb\) \|\| \$\{JSON\.stringify\(parche\)\}::jsonb end/)
+  assert.doesNotMatch(crear, /historialDeclarado/, 'el parche no trae (ni pisa) el historial declarado')
+})

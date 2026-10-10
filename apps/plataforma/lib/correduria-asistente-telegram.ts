@@ -27,9 +27,10 @@ import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { estadoCivilPorDefecto, SOLO_PARA_EL_PRECIO } from './supuestos-presupuesto'
 import {
   aplicarSexoDeducido, avisoAlEmitir, construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, filtrarCatalogo, huecosPendientes, leerEntrada,
-  MAX_TARIFICACIONES_DIA, MOTORES_MOTO, textoPropuesta, TIPOS_CATALOGO, ventaCruzada,
+  KM_AUTO_POR_DEFECTO, MAX_TARIFICACIONES_DIA, MOTORES_MOTO, textoPropuesta, TIPOS_CATALOGO, ventaCruzada,
   type Emparejado, type Pieza, type CampoTarif, type RamoTarif, type TipoCatalogo,
 } from './correduria-tarificacion-tg'
+import { kmDeclaradoDeGuardada } from './correduria/km-auto'
 import { interpretarPreparado, prepararPresupuestoAsegura, retirarPresupuestoAsegura, textoAviso } from '@/lib/presupuesto-asegura'
 import { editarClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
 import { documentosAsegura, leerDocumentoOportunidadAsegura, subirDocumentoAsegura } from '@/lib/documentos-asegura'
@@ -660,7 +661,8 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     revisarAlEmitir: revisar,
     tomadorDni: identidad ? identidad.dniEnmascarado : null,
     fechaMatriculacion: guardada.vehiculo?.fechaMatriculacion ?? null,
-    kmAnuales: guardada.vehiculo?.kmAnuales ?? null,
+    // Los 10.000/15.000 de una tarificación guardada pueden ser supuestos: no se enseñan como dato.
+    kmAnuales: kmDeclaradoDeGuardada(guardada.vehiculo?.kmAnuales ?? null, KM_AUTO_POR_DEFECTO),
     anterior: guardada.historialPrevio
       ? { companiaCodigo: guardada.historialPrevio.companiaCodigo, aniosAsegurado: guardada.historialPrevio.aniosAsegurado, aniosSinSiniestros: guardada.historialPrevio.aniosSinSiniestros }
       : null,

@@ -5,9 +5,9 @@
  * es «0 opciones», es «no se pudo leer».
  */
 import {
-  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda, seguroAnteriorDe,
+  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda, historialDeclaradoDe, seguroAnteriorDe,
   type CampoVehiculo, type ClaveDatosRiesgo, type DatosCapitalRiesgo, type DatosComercioRiesgo, type DatosRiesgoLibre, type DatosVehiculoRiesgo, type DatosViviendaRiesgo,
-  type RolFigura, type Diferencia, type SeguroAnterior,
+  type RolFigura, type Diferencia, type SeguroAnterior, type HistorialDeclaradoRiesgo,
 } from '@central/module-seguros'
 
 export type FiguraRiesgo = {
@@ -88,6 +88,8 @@ export type Riesgo = {
 
 export type HistorialRiesgo = {
   seguroAnterior: SeguroAnterior | null
+  /** Años asegurado / en la compañía DECLARADOS (fuera de `seguroAnterior`). Asegura sin la clave = los dos `null` (sin dato). */
+  historialDeclarado: HistorialDeclaradoRiesgo
   carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
 }
 
@@ -98,6 +100,7 @@ export function leerHistorialRiesgo(bruto: unknown): HistorialRiesgo | null {
   const c = o.carnet === null || o.carnet === undefined ? null : obj(o.carnet)
   return {
     seguroAnterior: seguroAnteriorDe(o.seguroAnterior),
+    historialDeclarado: historialDeclaradoDe(o.historialDeclarado),
     carnet: c ? { fecha: txt(c.fecha), conductor: esRolFigura(c.conductor) ? c.conductor : null, legible: c.legible === true } : null,
   }
 }

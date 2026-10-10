@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(10/10/2026)** — Correduría · Auto se cotiza embebido en la pantalla de riesgo, como moto.
+Registro por ramo `RAMOS_COTIZADOR_EMBEBIDO` en `oportunidad/[id]/cotizador-embebido.ts`; piezas comunes `PedirPrecioEmbebido`/`PreciosVarianteGuardada`; «Tarificar →» va a `#pedir-precio`.
+Constante única `KM_AUTO_POR_DEFECTO` en `lib/correduria/km-auto.ts`; Telegram manda km sin cifra como supuesto.
+«Años asegurado / en compañía» se guardan en `seguroAnterior` (JSON) y son editables desde `HistorialRiesgo`.
+Diseño común para todos los ramos: `docs/superpowers/specs/2026-10-10-riesgo-unificado-todos-los-ramos-design.md` (fases 0→auto→figuras multi→hogar→decesos→vida→salud→presupuestos unificados; 5 decisiones abiertas para Alberto).
+Pendiente F4: SQL `2026-10-07e_presupuesto_propuesta` sin aplicar (Alberto, vía Chrome).
+
 **(10/10/2026)** — Correduría · F3 (solo auto): supuesto de 10.000 km y papel sin figura.
 Los 10.000 km por defecto de AutoNuevo (decisión 25/09) dejan de ser dato del cliente: viajan como `resueltos.kmAnualesSupuestos` (supuesto marcado, aviso en pantalla, no entra en el riesgo). Helper `apps/plataforma/lib/correduria/km-auto.ts`.
 Con `?oportunidad=` el papel sin figura es del tomador y se cambia en «Intervinientes» (`modoPapel` en `figuras-form.ts`); cerradas 2 fugas de datos tecleados que no se guardaban.

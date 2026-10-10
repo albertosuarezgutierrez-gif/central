@@ -11,7 +11,8 @@ import { eur } from '@/lib/dinero'
 import { estadoPresupuestoVariante, ordenarParaComparar, type Riesgo, type VarianteRiesgo } from '@/lib/riesgo-asegura'
 import { LogoCompaniaEnLinea } from '../../CeldaCompania'
 import CompararVariantes from './CompararVariantes'
-import { PreciosVarianteMoto } from '../../cliente/[id]/moto-nuevo/CotizadorMoto'
+import { PRECIOS_VARIANTE } from './cotizadores-embebidos'
+import { ramoCotizadorEmbebido } from './cotizador-embebido'
 import { fechaEs } from './piezas-riesgo'
 import { ramoRetomable, ramoVariante, rutaVariante, tomadorDelRiesgo } from './variante'
 
@@ -20,13 +21,16 @@ const MAX_COMPARAR = 2
 
 export default function HistorialVariantes({ riesgo, abrirPrecios = null }: {
   riesgo: Riesgo
-  /** La variante recién pedida desde el bloque «Pedir precio» (moto): se abre con sus precios para emitir. */
+  /** La variante recién pedida desde el bloque «Pedir precio» (cotizador embebido): se abre con sus precios para emitir. */
   abrirPrecios?: string | null
 }) {
   const op = riesgo.oportunidad
-  // MOTO (07/10/2026, Fase 1): los precios de una variante y su «Emitir» se abren AQUÍ (`<Emision>` en la misma
-  // página), no en la pantalla de moto-nuevo. Una retarificación de póliza sigue abriéndose en SU pantalla.
-  const preciosAqui = op.ramo === 'moto'
+  // Ramos con cotizador embebido (moto 07/10/2026, auto 10/10/2026; `PRECIOS_VARIANTE`): los precios de una variante y
+  // su «Emitir» se abren AQUÍ (`<Emision>` en la misma página), no en la pantalla `…-nuevo`. Una retarificación de
+  // póliza sigue abriéndose en SU pantalla.
+  const ramoEmbebido = ramoCotizadorEmbebido(op.ramo)
+  const PreciosVariante = ramoEmbebido ? PRECIOS_VARIANTE[ramoEmbebido] : null
+  const preciosAqui = PreciosVariante !== null
   const [conPrecios, setConPrecios] = useState<string | null>(null)
   const yaAbierta = useRef<string | null>(null)
   useEffect(() => {
@@ -69,7 +73,7 @@ export default function HistorialVariantes({ riesgo, abrirPrecios = null }: {
                 // en blanco y pedir precio ahí sería pagar otra vez por un presupuesto sin póliza.
                 v.polizaId
                   ? `/correduria/poliza/${encodeURIComponent(v.polizaId)}/retarificar?oportunidad=${encodeURIComponent(op.id)}`
-                  // Moto: sin enlace a otra pantalla; sus precios se abren aquí abajo («Ver precios y emitir»).
+                  // Cotizador embebido: sin enlace a otra pantalla; sus precios se abren aquí abajo («Ver precios y emitir»).
                   : preciosAqui ? null
                   // Solo auto y moto retoman su tarificación guardada: en los demás ramos «Abrir» sería una
                   // pantalla de precio en blanco (pagar otra vez), así que no se ofrece.
@@ -77,11 +81,11 @@ export default function HistorialVariantes({ riesgo, abrirPrecios = null }: {
               }
               precios={
                 // La tarificación es de SU tomador: con él se lee (gratis). Sin tomador que conste, no se ofrece.
-                preciosAqui && !v.polizaId && v.tomador.clienteId !== null
+                PreciosVariante && !v.polizaId && v.tomador.clienteId !== null
                   ? {
                       abierto: conPrecios === v.id,
                       alternar: () => setConPrecios((x) => (x === v.id ? null : v.id)),
-                      panel: <PreciosVarianteMoto clienteId={v.tomador.clienteId} oportunidadId={op.id} tarificacionId={v.id} simulado={v.simulado} />,
+                      panel: <PreciosVariante clienteId={v.tomador.clienteId} oportunidadId={op.id} tarificacionId={v.id} simulado={v.simulado} />,
                     }
                   : null
               }
@@ -111,7 +115,7 @@ export default function HistorialVariantes({ riesgo, abrirPrecios = null }: {
 
 function Fila({ v, primera, abrir, precios, otroTomador, comparable, marcada, onMarcar }: {
   v: VarianteRiesgo; primera: boolean; abrir: string | null; otroTomador: boolean
-  /** Moto: los precios y «Emitir» de esta variante, plegados en la propia fila. `null` = no se ofrece. */
+  /** Cotizador embebido: los precios y «Emitir» de esta variante, plegados en la propia fila. `null` = no se ofrece. */
   precios: { abierto: boolean; alternar: () => void; panel: React.ReactNode } | null
   comparable: boolean; marcada: boolean; onMarcar: () => void
 }) {

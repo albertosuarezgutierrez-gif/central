@@ -38,7 +38,7 @@ test('los tres viajan al puerto, y solo cuando el corredor los ha dicho', () => 
   // si son DATO del cliente; los 10.000 de partida van como supuesto (`resueltos.kmAnualesSupuestos`).
   assert.match(
     fuente,
-    /const km = kmParaCotizar\(\{ texto: kmAnuales, porDefecto: KM_ANUALES_POR_DEFECTO, delRiesgo: kmDelRiesgo, tocado: kmTocado \}\)/,
+    /const km = kmParaCotizar\(\{ texto: kmAnuales, porDefecto: KM_AUTO_POR_DEFECTO, delRiesgo: kmDelRiesgo, tocado: kmTocado \}\)/,
     'los kilómetros pasan por el helper puro que separa dato de supuesto',
   )
   assert.match(fuente, /if \(km\.correccion !== null\) correccionesFinal\.kmAnuales = km\.correccion/, 'como corrección, solo el dato')
@@ -58,9 +58,12 @@ test('los tres viajan al puerto, y solo cuando el corredor los ha dicho', () => 
 })
 
 test('los kilómetros nacen en 10.000, visibles y editables', () => {
-  assert.match(fuente, /const KM_ANUALES_POR_DEFECTO = 10000\b/)
+  // 10/10/2026: UNA sola constante para la pantalla y el asistente de Telegram, en `lib/correduria/km-auto.ts`.
+  assert.match(readFileSync(join(import.meta.dirname, '..', 'apps/plataforma/lib/correduria/km-auto.ts'), 'utf8'), /export const KM_AUTO_POR_DEFECTO = 10000\b/)
+  assert.match(fuente, /import \{ KM_AUTO_POR_DEFECTO,[^}]*\} from '@\/lib\/correduria\/km-auto'/)
+  assert.doesNotMatch(fuente, /const KM_(ANUALES|AUTO)_POR_DEFECTO =/, 'ni una copia local de la constante')
   // 30/09/2026: los km del riesgo mandan si los trae; si no, nacen en el defecto.
-  assert.match(fuente, /const \[kmAnuales, setKmAnuales\] = useState\(datosRiesgo\?\.kmAnuales != null \? String\(datosRiesgo\.kmAnuales\) : String\(KM_ANUALES_POR_DEFECTO\)\)/)
+  assert.match(fuente, /const \[kmAnuales, setKmAnuales\] = useState\(datosRiesgo\?\.kmAnuales != null \? String\(datosRiesgo\.kmAnuales\) : String\(KM_AUTO_POR_DEFECTO\)\)/)
   assert.doesNotMatch(fuente, /\b15000\b/, 'el supuesto viejo no vuelve como valor')
 })
 
@@ -73,7 +76,8 @@ test('el garaje nace en GARAJE, nunca en la calle (29/09/2026; antes «vía púb
 
 test('la fecha de matriculación se estima por la matrícula, sin pisar la del corredor', () => {
   assert.match(fuente, /import \{ fechaMatriculacionEstimada \} from '@central\/module-seguros\/matricula'/)
-  assert.match(fuente, /const puedeRellenarFecha = matriculacion === '' \|\| matriculacionEstimada/, 'solo rellena vacía o ya estimada')
+  // 10/10/2026: embebido en la oportunidad la fecha es la del riesgo (no se estima aquí en silencio).
+  assert.match(fuente, /const puedeRellenarFecha = !embebido && \(matriculacion === '' \|\| matriculacionEstimada\)/, 'solo rellena vacía o ya estimada')
   assert.match(fuente, /if \(!puedeRellenarFecha\) return/)
   assert.match(fuente, /\}, \[matricula\]\)/, 'se recalcula con CADA matrícula, también la restaurada del borrador')
   assert.match(fuente, /tipo=fecha-matriculacion&matricula=/, 'consulta la fecha a Avant2 (/car/registration-date)')

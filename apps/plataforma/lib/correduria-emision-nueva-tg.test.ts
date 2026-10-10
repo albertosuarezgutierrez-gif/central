@@ -287,7 +287,7 @@ test('prepararEmisionNueva rellena los datos del botón desde la tarificación, 
   const f = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   const b = f.slice(f.indexOf('async function prepararEmisionNueva'), f.indexOf('async function supuestosDelPrecio'))
   // `?? null`: un campo undefined desaparece al guardarse en jsonb y la huella del botón ya no cuadraría.
-  for (const campo of ['tomadorDni:', 'fechaMatriculacion: guardada.vehiculo?.fechaMatriculacion ?? null', 'kmAnuales: guardada.vehiculo?.kmAnuales ?? null', 'anterior:', 'correo: correoDeEmision(portal)']) {
+  for (const campo of ['tomadorDni:', 'fechaMatriculacion: guardada.vehiculo?.fechaMatriculacion ?? null', 'kmAnuales: kmDeclaradoDeGuardada(guardada.vehiculo?.kmAnuales ?? null', 'anterior:', 'correo: correoDeEmision(portal)']) {
     assert.ok(b.includes(campo), `falta ${campo}`)
   }
 })
