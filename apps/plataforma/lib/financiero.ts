@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { eur } from './dinero'
 import { sqlGastoDePisos } from './sivra/gasto-de-pisos'
+import { sqlGastoVigente } from './gasto-vigente'
 
 export type ResumenFinanciero = {
   ingresosYtd: number
@@ -68,12 +69,14 @@ export async function getResumenSivra(anio: number, propertyId?: string | null):
             WHERE EXTRACT(YEAR FROM fecha) = ${anio}
               AND propiedad = ${propertyId}
               AND ${Prisma.raw(sqlGastoDePisos())}
+              AND ${Prisma.raw(sqlGastoVigente())}
           `
         : prisma.$queryRaw<Array<{ total: unknown }>>`
             SELECT COALESCE(SUM(total), 0)::float AS total
             FROM gastos
             WHERE EXTRACT(YEAR FROM fecha) = ${anio}
               AND ${Prisma.raw(sqlGastoDePisos())}
+              AND ${Prisma.raw(sqlGastoVigente())}
           `,
       // Solo reservas con checkout ya pasado (cobradas/cerradas a día de hoy)
       propertyId

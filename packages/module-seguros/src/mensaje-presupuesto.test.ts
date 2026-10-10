@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { correoPresupuesto, mensajePresupuestoWhatsapp } from './mensaje-presupuesto.ts'
 import { revisarCopy } from './copy-regulado.ts'
 
-const d = { nombre: 'JOSÉ SUÁREZ SALAS', enlace: 'https://clientes.grupoasegura.es/presupuesto/abc', venceEl: new Date('2026-10-08T10:00:00Z'), email: 'jose@x.es' }
+const d = { nombre: 'JOSÉ SUÁREZ SALAS', enlace: 'https://clientes.grupoasegura.es/presupuesto/abc', venceEl: new Date('2026-10-08T10:00:00Z'), email: 'jose@x.es' as string | null, codigo: '305172' }
 
 test('🪤 el aviso no lleva precio, compañía ni bien: solo quién, dónde y hasta cuándo', () => {
   for (const t of [mensajePresupuestoWhatsapp(d), correoPresupuesto(d).texto, correoPresupuesto(d).html]) {
@@ -14,11 +14,30 @@ test('🪤 el aviso no lleva precio, compañía ni bien: solo quién, dónde y h
   }
 })
 
-test('el WhatsApp dice con qué correo entrar; sin nombre saluda sin «null»', () => {
+test('el WhatsApp dice con qué correo PUEDE entrar; sin nombre saluda sin «null»', () => {
   assert.match(mensajePresupuestoWhatsapp(d), /jose@x\.es/)
   assert.match(mensajePresupuestoWhatsapp(d), /^Hola, JOSÉ\./)
   assert.match(mensajePresupuestoWhatsapp({ ...d, nombre: null }), /^Hola\. /)
   assert.doesNotMatch(mensajePresupuestoWhatsapp({ ...d, nombre: '  ' }), /null|undefined/)
+})
+
+test('🪤 el WhatsApp lleva SU código de acceso ANTES del enlace, y la fecha', () => {
+  const w = mensajePresupuestoWhatsapp(d)
+  assert.match(w, /tu código de acceso es 305172/)
+  assert.ok(w.indexOf('305172') < w.indexOf(d.enlace), 'el código se lee antes de pulsar el enlace')
+  assert.ok(w.indexOf('jose@x.es') < w.indexOf(d.enlace))
+  assert.match(w, /también puedes entrar con tu correo jose@x\.es: te llegará otro código/)
+  assert.match(w, /08\/10\/2026/)
+  assert.match(w, /Grupo ASegura/)
+})
+
+test('🪤 sin correo en la ficha el WhatsApp NO nombra ninguno ni promete un código por correo', () => {
+  for (const email of [null, '', '   ']) {
+    const w = mensajePresupuestoWhatsapp({ ...d, email })
+    assert.match(w, /tu código de acceso es 305172/)
+    assert.doesNotMatch(w, /correo|@|null|undefined/)
+    assert.deepEqual(revisarCopy(w), [])
+  }
 })
 
 test('el HTML del correo escapa el enlace', () => {
@@ -40,4 +59,24 @@ test('🪤 los datos que faltan se CUENTAN, nunca se piden: ni DNI, ni IBAN, ni 
   assert.doesNotMatch(correoPresupuesto({ ...d, faltanDatos: 0 }).texto, /faltan?/)
   assert.doesNotMatch(correoPresupuesto(d).texto, /faltan?/)
   assert.deepEqual(revisarCopy(c.texto), revisarCopy(correoPresupuesto(d).texto))
+})
+
+test('🪤 el correo lleva la marca (logo y botón) y el enlace también en texto por si el botón no abre', () => {
+  const h = correoPresupuesto(d).html
+  assert.match(h, /logotipo-asegura-correo\.png/)
+  assert.match(h, /background:#3364ee[^"]*"[^>]*>Ver mi presupuesto<\/a>/)
+  assert.equal(h.match(/clientes\.grupoasegura\.es\/presupuesto\/abc/g)?.length, 3)
+})
+
+test('🪤 con enlace directo: el botón entra sin código, el de siempre queda al pie y firmar sigue con código', () => {
+  const directo = 'https://clientes.grupoasegura.es/#d=jose%40x.es&e=TOKEN'
+  const c = correoPresupuesto({ ...d, enlaceDirecto: directo })
+  assert.match(c.html, /href="https:\/\/clientes\.grupoasegura\.es\/#d=jose%40x\.es&amp;e=TOKEN"[^>]*>Ver mi presupuesto/)
+  assert.match(c.html, /24 horas[^<]*<br><a href="https:\/\/clientes\.grupoasegura\.es\/presupuesto\/abc"/)
+  assert.match(c.html, /fírmala con el código/)
+  assert.match(c.texto, /vale una vez, durante 24 horas/)
+  assert.ok(c.texto.includes(directo) && c.texto.includes(d.enlace))
+  // Sin enlace directo, el de siempre.
+  assert.doesNotMatch(correoPresupuesto(d).html, /#d=/)
+  assert.deepEqual(revisarCopy(c.texto), [])
 })

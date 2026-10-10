@@ -182,10 +182,18 @@ export type SenalIngesta = {
     | 'cron'
     | 'crudo'
     | 'caja_negra'
+    | 'emisiones_sin_aviso'
     | 'cobertura'
+    | 'cobertura_descartada'
     | 'parciales'
     | 'renovaciones'
-  tipo: 'perdida' | 'hueco'
+    | 'polizas_duplicadas'
+  /**
+   * `info` (04/10/2026): MEDIDO pero no es pérdida ni hueco — se enseña sin
+   * rojo y sin la etiqueta «Sin comprobar». No cuenta para el veredicto ni para
+   * el contador de la pestaña (solo `perdida` lo hace).
+   */
+  tipo: 'perdida' | 'hueco' | 'info'
   titulo: string
   detalle: string
   /** Cuántos elementos. `null` = consta el problema pero no cuántos son. */
@@ -326,6 +334,20 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
     })
   }
 
+  // 📭 Emisiones de Codeoscopic sin aviso del webhook (ver `EmisionSinAviso`).
+  const emis = s.emisionesSinAviso ?? []
+  if (emis.length > 0) {
+    out.push({
+      clave: 'emisiones_sin_aviso', tipo: 'perdida', n: emis.length,
+      titulo: `${emis.length} emisión(es) de Codeoscopic sin aviso de su webhook`,
+      detalle:
+        emis.map(e => `${e.proyecto}${e.aseguradora ? ` (${e.aseguradora})` : ''}`).join(' · ') +
+        '. Emitidas hace más de un día y el webhook no ha dicho nada: el aviso no llega o se rechaza ' +
+        '(credenciales). La póliza ya está registrada; lo que se pierde es enterarse de un rechazo o una ' +
+        'aprobación tardía de la compañía.',
+    })
+  }
+
   if (s.cajaNegra !== null && s.cajaNegra.cuerpos > 0) {
     out.push({
       clave: 'caja_negra', tipo: 'perdida', n: s.cajaNegra.cuerpos,
@@ -367,6 +389,20 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       clave: 'renovaciones', tipo: 'hueco', n: null,
       titulo: 'Sin comprobar si hay renovaciones que no han llegado',
       detalle: 'No significa que hayan llegado todas: significa que hoy no se ha podido mirar.',
+    })
+  }
+  if (s.emisionesSinAviso === null) {
+    out.push({
+      clave: 'emisiones_sin_aviso', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar si las emisiones de Codeoscopic reciben su aviso',
+      detalle: 'No significa que lleguen: significa que hoy no se ha podido mirar.',
+    })
+  }
+  if (s.polizasDuplicadas === null) {
+    out.push({
+      clave: 'polizas_duplicadas', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar si hay pólizas vivas duplicadas',
+      detalle: 'No significa que no las haya: significa que hoy no se ha podido mirar (la cartera o las marcas «no duplicado»).',
     })
   }
   if (s.huerfanas !== null && s.huerfanas > 0 && s.huerfanasReparto === null) {
@@ -435,6 +471,15 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
     })
   }
 
+  // «Descartado por privacidad» ≠ «sin leer»: se excluye a propósito y se muestra aparte.
+  if (s.cobertura !== null && (s.cobertura.rutasDescartadas ?? 0) > 0) {
+    out.push({
+      clave: 'cobertura_descartada', tipo: 'hueco', n: s.cobertura.rutasDescartadas ?? null,
+      titulo: `${s.cobertura.rutasDescartadas} campos descartados por privacidad`,
+      detalle: 'Se excluyen a propósito (datos personales): no cuentan como «sin leer» ni hay que mapearlos.',
+    })
+  }
+
   if (s.crudo !== null && s.crudo.pendientes > 0 && s.crudo.purgaInminente === 0) {
     out.push({
       clave: 'crudo', tipo: 'hueco', n: s.crudo.pendientes,
@@ -443,6 +488,26 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
         (s.crudo.masAntiguaHoras !== null
           ? `El más viejo lleva ${Math.floor(s.crudo.masAntiguaHoras / 24)} días. `
           : '') + 'Sin prisa: ninguno caduca dentro de la ventana de aviso.',
+    })
+  }
+
+  // 🔁 Pólizas vivas duplicadas: INFORMATIVA. No es una avería de CIMA ni hay
+  // nada que se pierda; es orden pendiente (fusionar, o marcar «no duplicado»
+  // si son pólizas distintas de verdad). Si fuera `perdida`, la pestaña estaría
+  // en rojo hasta que alguien las revisara, y se dejaría de mirar.
+  const dup = s.polizasDuplicadas ?? []
+  if (dup.length > 0) {
+    const porEntidad = new Map<string, number>()
+    for (const g of dup) porEntidad.set(g.entidad, (porEntidad.get(g.entidad) ?? 0) + 1)
+    const fichas = dup.reduce((n, g) => n + g.fichas, 0)
+    out.push({
+      clave: 'polizas_duplicadas', tipo: 'info', n: dup.length,
+      titulo: `${dup.length} grupo(s) de pólizas vivas con el mismo número y compañía (${fichas} fichas)`,
+      detalle:
+        [...porEntidad.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .map(([e, n]) => `${e}: ${n}`).join(' · ') +
+        '. Si son la misma póliza, fusiónalas; si son pólizas distintas (p. ej. de clientes distintos), ' +
+        'márcalas como «no duplicado» y dejarán de salir aquí.',
     })
   }
 
@@ -501,6 +566,23 @@ export function hayQueEnsenar(v: VistaIngesta | null): boolean {
 }
 
 /** El titular de la tarjeta. Nunca promete calma sobre algo que no se ha mirado. */
+/**
+ * ¿Las pérdidas medidas son SOLO de las que no tienen fichero atascado detrás
+ * (renovaciones que no llegan, emisiones sin aviso del webhook)? Entonces
+ * «se están perdiendo datos de CIMA» mandaría a buscar algo que no existe.
+ * La usan el título de la pantalla Y el titular del Telegram: con dos
+ * criterios, los dos dirían cosas distintas del mismo hecho.
+ */
+export function sinFicheroAtascado(
+  perdidas: Array<Pick<SenalIngesta, 'clave'>>,
+): 'renovaciones' | 'emisiones' | 'ambas' | null {
+  if (perdidas.length === 0) return null
+  const renov = perdidas.some(x => x.clave === 'renovaciones')
+  const emis = perdidas.some(x => x.clave === 'emisiones_sin_aviso')
+  if (!perdidas.every(x => x.clave === 'renovaciones' || x.clave === 'emisiones_sin_aviso')) return null
+  return renov && emis ? 'ambas' : renov ? 'renovaciones' : 'emisiones'
+}
+
 export function tituloIngesta(v: VistaIngesta | null): string {
   const ver = veredictoIngesta(v)
   if (ver === null) return 'Comprobando la ingesta de CIMA…'
@@ -512,10 +594,11 @@ export function tituloIngesta(v: VistaIngesta | null): string {
   if (ver === 'incidencia') {
     // Si lo ÚNICO medido son renovaciones que no llegan, se dice eso: «se están
     // perdiendo datos» mandaría a buscar un fichero atascado que no existe.
-    const perdidas = senalesIngesta(s).filter(x => x.tipo === 'perdida')
-    if (perdidas.length > 0 && perdidas.every(x => x.clave === 'renovaciones')) {
-      return 'Hay renovaciones que no han llegado por CIMA'
-    }
+    const sinAtasco = sinFicheroAtascado(senalesIngesta(s).filter(x => x.tipo === 'perdida'))
+    if (sinAtasco === 'renovaciones') return 'Hay renovaciones que no han llegado por CIMA'
+    // Igual con el webhook de Codeoscopic: no es CIMA, y no hay fichero que buscar.
+    if (sinAtasco === 'emisiones') return 'El webhook de Codeoscopic no avisa de las emisiones'
+    if (sinAtasco === 'ambas') return 'Hay renovaciones sin llegar y emisiones sin aviso de Codeoscopic'
     return 'Se están perdiendo datos de CIMA'
   }
   return 'La ingesta de CIMA solo se ha podido comprobar a medias'

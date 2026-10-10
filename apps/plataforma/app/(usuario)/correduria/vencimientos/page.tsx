@@ -1,3 +1,4 @@
+import { Pagina } from '@/components/ui'
 import VencimientosClient from './VencimientosClient'
 
 export const dynamic = 'force-dynamic'
@@ -9,5 +10,5 @@ export const dynamic = 'force-dynamic'
  * Los datos llegan por el puerto de asegura; esta página no toca la cartera.
  */
 export default function VencimientosPage() {
-  return <VencimientosClient />
+  return <Pagina ancho="tabla"><VencimientosClient /></Pagina>
 }

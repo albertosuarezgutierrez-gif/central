@@ -1,8 +1,9 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { PhoneCall } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock, PhoneCall } from 'lucide-react'
 import { eur } from '@/lib/dinero'
+import { Ico, FILA } from './iconos'
 import { MOTIVOS_PUERTO, type EnRiesgo, type Impagados } from '@/lib/correduria-puerto'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { BtnLink, Badge, type Tono } from '@/components/ui'
@@ -126,8 +127,8 @@ export default function Retencion({
   if (datos.estado === 'sin_configurar') {
     return (
       <Bloque titulo="A quién llamar hoy" Icono={PhoneCall} primero={primero}>
-        <p style={pMuted}>
-          ⏳ El puerto con asegura no está conectado. <strong>No lo leas como «no hay nadie a quien
+        <p style={{ ...pMuted, ...FILA }}>
+          <Ico i={Clock} size={12} /> El puerto con asegura no está conectado. <strong>No lo leas como «no hay nadie a quien
           llamar»</strong>: es que desde aquí no se puede mirar.
         </p>
       </Bloque>
@@ -137,8 +138,8 @@ export default function Retencion({
   if (datos.estado === 'error') {
     return (
       <Bloque titulo="A quién llamar hoy" Icono={PhoneCall} tono="malo" primero={primero}>
-        <p style={{ ...pMuted, color: 'var(--negative)' }}>
-          ⚠️ No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} <strong>No significa que esté
+        <p style={{ ...pMuted, ...FILA, color: 'var(--negative)' }}>
+          <Ico i={AlertTriangle} size={12} /> No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} <strong>No significa que esté
           todo cobrado.</strong>
         </p>
       </Bloque>
@@ -369,7 +370,7 @@ function Fila({ f, onDescartada }: { f: EnRiesgo; onDescartada: () => void }) {
             fontWeight: 600, fontSize: 13, opacity: obrando ? 0.6 : 1,
           }}
         >
-          {obrando ? 'Guardando…' : `✅ Gestionada`}
+          {obrando ? 'Guardando…' : <><Ico i={CheckCircle2} size={13} /> Gestionada</>}
         </button>
       </div>
 
@@ -420,12 +421,12 @@ function Huecos({ datos }: { datos: Extract<Impagados, { estado: 'ok' }> }) {
             color: datos.truncado === true ? 'var(--warning)' : 'var(--muted)',
           }}
         >
-          {datos.truncado === true ? '⚠️ ' : ''}{techo}
+          {datos.truncado === true ? <Ico i={AlertTriangle} size={12} /> : null}{techo}
         </p>
       )}
       {partes.length > 0 && (
-        <p style={pMuted}>
-          ⚠️ Esto no es todo lo que puede estar sin cobrar: {partes.join(' · ')}.
+        <p style={{ ...pMuted, ...FILA }}>
+          <Ico i={AlertTriangle} size={12} /> Esto no es todo lo que puede estar sin cobrar: {partes.join(' · ')}.
         </p>
       )}
     </div>

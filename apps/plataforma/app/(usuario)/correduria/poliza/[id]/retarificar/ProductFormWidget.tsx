@@ -11,7 +11,7 @@
 // Chrome): script `https://product-form.avant.codeoscopic.io/js.js`, clase
 // `AvantProductForm(elementoODivId, dataCallback)`.
 //
-// 🚨 El iframe NO puede guardar el token OAuth2 (RFC 6749 §4.4: un cliente de
+// IMPORTANTE: El iframe NO puede guardar el token OAuth2 (RFC 6749 §4.4: un cliente de
 // navegador no es confidencial) — su `dataCallback` reenvía cada sub-petición
 // del widget (catálogos, sub-formularios) a `pedirProductForm` (acción de
 // servidor → asegura → Codeoscopic, con las credenciales reales). El CSP que

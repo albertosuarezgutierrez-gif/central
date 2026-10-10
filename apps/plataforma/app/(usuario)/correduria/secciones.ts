@@ -75,9 +75,9 @@ export const SECCIONES: readonly Seccion[] = ['hoy', 'clientes', 'cartera', 'com
  * así que una avería de CIMA o un artículo del blog esperando se siguen viendo
  * desde cualquier pestaña.
  */
-export type BloqueMas = 'actividad' | 'datos' | 'ingesta' | 'redes'
+export type BloqueMas = 'actividad' | 'datos' | 'emisiones' | 'ingesta' | 'redes'
 
-export const BLOQUES_MAS: readonly BloqueMas[] = ['ingesta', 'redes', 'datos', 'actividad']
+export const BLOQUES_MAS: readonly BloqueMas[] = ['ingesta', 'emisiones', 'redes', 'datos', 'actividad']
 
 /** Adónde puede mandar un enlace o un botón: una sección, o un bloque de «Más». */
 export type Destino = Seccion | BloqueMas

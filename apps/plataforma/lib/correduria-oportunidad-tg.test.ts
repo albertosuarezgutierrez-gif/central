@@ -11,17 +11,17 @@ import { cuerpoAlta, fechaPrimerPaso, prepararAlta, resultadoAlta, textoAlta } f
 
 const HOY = '2026-09-27'
 const leida = (o: Partial<Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>> = {}): LecturaDocumentoOportunidad => ({
-  estado: 'ok', ramo: 'auto', compania: 'Línea Directa', numeroPoliza: '05209179001-00', vence: '2027-02-03', prima: 691.24, ...o,
+  estado: 'ok', ramo: 'auto', compania: 'Línea Directa', numeroPoliza: '05200000035-00', vence: '2027-02-03', prima: 691.24, ...o,
 })
 
-test('lo leído del documento rellena la oportunidad y el primer paso cae 60 días antes del vencimiento', () => {
+test('lo leído del documento rellena la oportunidad y el primer paso cae 45 días antes del vencimiento', () => {
   const r = prepararAlta({}, [leida()], HOY)
   assert.ok(r.ok)
   assert.equal(r.alta.ramo, 'auto')
   assert.equal(r.alta.aseguradora, 'Línea Directa')
   assert.equal(r.alta.prima, 691.24)
   assert.equal(r.alta.fechaFinVigencia, '2027-02-03')
-  assert.equal(r.alta.fechaTarea, '2026-12-05')
+  assert.equal(r.alta.fechaTarea, '2026-12-20')
   assert.deepEqual(r.alta.documentos, { leidos: 1, fallidos: [] })
 })
 
@@ -43,13 +43,24 @@ test('de varios documentos se toma el primer valor de cada campo (dos PDFs de la
 })
 
 test('un vencimiento que ya pasó se proyecta a la siguiente renovación anual y se dice', () => {
-  // El recibo real de Línea Directa (0194DRY): «Vigencia 18/11/24 al 18/11/25», carta del 03/02/25.
+  // El recibo real de Línea Directa (2222CCC): «Vigencia 18/11/24 al 18/11/25», carta del 03/02/25.
   const r = prepararAlta({}, [leida({ vence: '2025-11-18' })], HOY)
   assert.ok(r.ok)
   assert.equal(r.alta.venceDescartado, '2025-11-18')
   assert.equal(r.alta.fechaFinVigencia, '2026-11-18')
-  assert.equal(r.alta.fechaTarea, '2026-09-28', 'a menos de 60 días: la llamada es ya')
+  assert.equal(r.alta.fechaTarea, '2026-10-04', '45 días antes del vencimiento proyectado')
   assert.match(textoAlta('X', r.alta), /siguiente renovación, el 18\/11\/2026/)
+})
+
+test('un vencimiento a más de 13 meses (año mal escaneado o dictado) se avisa, sin corregirlo', () => {
+  const r = prepararAlta({}, [leida({ vence: '2028-02-03' })], HOY)
+  assert.ok(r.ok)
+  assert.equal(r.alta.fechaFinVigencia, '2028-02-03', 'no se adivina el año bueno')
+  assert.match(textoAlta('X', r.alta), /⚠️ El vencimiento \(03\/02\/2028\) está a más de 13 meses/)
+  const bien = prepararAlta({}, [leida()], HOY)
+  assert.ok(bien.ok)
+  assert.equal(bien.alta.avisoVence, null)
+  assert.doesNotMatch(textoAlta('X', bien.alta), /más de 13 meses/)
 })
 
 test('siguienteRenovacion: aniversario siguiente, 29/02 cae en 28/02, y más de dos años sin papel no se adivina', async () => {
@@ -106,10 +117,10 @@ test('el cuerpo es el del botón «Abrir» de la ficha: nace «por contactar» c
   assert.equal(b.accion, 'crear')
   assert.equal(b.estado, 'competencia')
   assert.equal(b.tipoTarea, 'llamada')
-  assert.equal(b.fechaTarea, '2026-12-05')
-  assert.match(String(b.nota), /05209179001-00/)
+  assert.equal(b.fechaTarea, '2026-12-20')
+  assert.match(String(b.nota), /05200000035-00/)
   // El nº viaja aparte: es lo que distingue dos seguros del mismo ramo (dos coches).
-  assert.equal(b.numeroPoliza, '05209179001-00')
+  assert.equal(b.numeroPoliza, '05200000035-00')
   assert.equal(b.actor, 'agente:asistente-telegram')
 })
 
@@ -377,7 +388,7 @@ test('webhook: descarta reintentos de Telegram y contesta rápido a la corredur�
   // ningún manejarCorreduriaTg se espera dentro de la petición: el único await es el de correduriaSegura (en after)
   assert.equal(src.match(/await manejarCorreduriaTg\(/g)?.length, 1)
   assert.match(src, /async function correduriaSegura[^]*?await manejarCorreduriaTg\(texto\)\.catch/)
-  assert.match(src, /action === 'guardar' \|\| action === 'actualizar'\) && String\(cb\.from/)
+  assert.match(src, /action === 'guardar' \|\| action === 'actualizar'(?: \|\| action === '\w+')*\) && String\(cb\.from/)
 })
 
 test('tras abrir: guardar en la ficha es de un solo uso y tarificar es un ENLACE (no cotiza desde Telegram)', () => {
@@ -387,6 +398,14 @@ test('tras abrir: guardar en la ficha es de un solo uso y tarificar es un ENLACE
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   assert.match(src, /WHERE id = \$\{oportId\} AND estado IN \('abierta', 'duplicada'\) AND documentos_guardados_at IS NULL/)
   assert.doesNotMatch(src.slice(src.indexOf('async function ofrecerSiguientes'), src.indexOf('async function guardarDocumentosEnFicha')), /cotizar|retarificar/i)
+})
+
+test('duplicada: los documentos se guardan SOLOS en la ficha, sin botón (28/09/2026)', () => {
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  const abrir = src.slice(src.indexOf('async function abrirOportunidad'), src.indexOf('// ── Acciones del día a día'))
+  assert.match(abrir, /if \(existenteId\) \{[\s\S]*?if \(\(fila\.documentos \?\? \[\]\)\.length > 0\) await guardarDocumentosEnFicha\(id\)/)
+  const existente = src.slice(src.indexOf('async function ofrecerSobreExistente'), src.indexOf('async function actualizarExistente'))
+  assert.doesNotMatch(existente, /cas_guardar/, 'no se vuelve a ofrecer el botón: ya se guarda solo')
 })
 
 test('mañana: las tareas de hoy van dentro del aviso de renovaciones, y «no se pudo leer» se dice', () => {
@@ -401,7 +420,7 @@ test('mañana: las tareas de hoy van dentro del aviso de renovaciones, y «no se
   assert.doesNotMatch(b, /\*Ruiz\*/) // un nombre con * no rompe el Markdown
   const cron = readFileSync(fileURLToPath(new URL('../app/api/cron/correduria-renovaciones/route.ts', import.meta.url)), 'utf8')
   assert.match(cron, /bloqueLlamadasHoy\(/)
-  assert.match(cron, /\[renovaciones, llamadas\]\.filter\(Boolean\)/)
+  assert.match(cron, /\[renovaciones, oportunidades, llamadas\]\.filter\(Boolean\)/)
 })
 
 test('revisión: si el webhook revienta se desmarca el update, y el asistente en after avisa si falla (lee el FUENTE)', () => {
@@ -457,7 +476,7 @@ test('actualizar: resultado honesto y el flujo cableado (lee el FUENTE)', async 
   // guardar en ficha también cuando ya tenía una
   assert.match(src, /estado IN \('abierta', 'duplicada'\) AND documentos_guardados_at IS NULL/)
   const hook = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
-  assert.match(hook, /action === 'guardar' \|\| action === 'actualizar'\) && String\(cb\.from/)
+  assert.match(hook, /action === 'guardar' \|\| action === 'actualizar'(?: \|\| action === '\w+')*\) && String\(cb\.from/)
 })
 
 test('otro seguro del mismo ramo (otro coche) NO se ofrece como «actualizar la existente»', async () => {
@@ -481,7 +500,7 @@ test('«ya es nuestra»: con la póliza en nuestra cartera en vigor no se propon
   assert.equal(polizaYaNuestra([leida({ enCartera: [] })]), null)
   assert.equal(polizaYaNuestra([leida({ enCartera: null })]), null, 'no se ha podido mirar ≠ es nuestra')
   assert.deepEqual(polizaYaNuestra([leida({ enCartera: [{ polizaId: 'p1', clienteId: 'c1', aseguradora: 'Reale' }] })]),
-    { numero: '05209179001-00', clienteId: 'c1', aseguradora: 'Reale' })
+    { numero: '05200000035-00', clienteId: 'c1', aseguradora: 'Reale' })
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   const proponer = src.slice(src.indexOf('async function proponerOportunidad'), src.indexOf('/** Botón «Abrir».'))
   // Se comprueba ANTES de preparar el alta y de mandar el botón.
@@ -490,22 +509,22 @@ test('«ya es nuestra»: con la póliza en nuestra cartera en vigor no se propon
 
 test('la lectura trae el coche y «en cartera»; la oportunidad lo lleva y lo enseña', async () => {
   const { interpretarLecturaOportunidad } = await import('./seguimiento-asegura.ts')
-  const l = interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto', compania: 'Línea Directa', matricula: '0194DRY', vehiculo: 'Chevrolet Aveo',
+  const l = interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto', compania: 'Línea Directa', matricula: '2222CCC', vehiculo: 'Chevrolet Aveo',
     enCartera: [{ polizaId: 'p', clienteId: 'c', aseguradora: 'X' }, { basura: 1 }] })
   assert.ok(l.estado === 'ok')
-  assert.equal(l.matricula, '0194DRY')
+  assert.equal(l.matricula, '2222CCC')
   assert.equal(l.enCartera?.length, 1)
   assert.equal(interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto' }).estado === 'ok' && (interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto' }) as { enCartera?: unknown }).enCartera, null)
-  const r = prepararAlta({}, [leida({ matricula: '0194DRY', vehiculo: 'Chevrolet Aveo' })], HOY)
+  const r = prepararAlta({}, [leida({ matricula: '2222CCC', vehiculo: 'Chevrolet Aveo' })], HOY)
   assert.ok(r.ok)
-  assert.equal(cuerpoAlta('c1', r.alta, 'x').matricula, '0194DRY')
-  assert.match(textoAlta('Rafael', r.alta), /Vehículo: Chevrolet Aveo · 0194DRY/)
+  assert.equal(cuerpoAlta('c1', r.alta, 'x').matricula, '2222CCC')
+  assert.match(textoAlta('Rafael', r.alta), /Vehículo: Chevrolet Aveo · 2222CCC/)
 })
 
 test('tarificar auto lleva la matrícula leída; los demás ramos, el enlace de siempre', async () => {
   const { enlaceTarificar } = await import('./correduria-oportunidad-tg.ts')
-  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'auto', matricula: '0194DRY' }), 'https://x/c/1/auto-nuevo?matricula=0194DRY')
-  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'hogar', matricula: '0194DRY' }), 'https://x/c/1/hogar-nuevo')
+  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'auto', matricula: '2222CCC' }), 'https://x/c/1/auto-nuevo?matricula=2222CCC')
+  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'hogar', matricula: '2222CCC' }), 'https://x/c/1/hogar-nuevo')
   assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'otros', matricula: null }), null)
 })
 
@@ -514,4 +533,21 @@ test('documento marcado «de un cliente»: el asistente propone solo, sin pregun
   const cli = src.slice(src.indexOf("if (accion === 'cli') {"), src.indexOf("if (accion === 'gasto') {"))
   assert.match(cli, /manejarCorreduriaTg\(ORDEN_DOCUMENTO_CLIENTE\)/)
   assert.doesNotMatch(cli, /Dime qué hago/)
+})
+
+test('presupuesto: «rescata el presupuesto … de la moto 2121NST» va a la correduría', () => {
+  assert.equal(clasificarDestino('rescata el presupuesto de manuel piña franco de la moto 2121NST y mandasela a manuel para que elija'), 'correduria')
+  assert.equal(clasificarDestino('presupuesto del seguro de hogar de Ana'), 'correduria')
+  assert.equal(clasificarDestino('presupuesto de la reforma del baño'), 'contable')
+  assert.ok(HERRAMIENTAS.some((h) => h.function.name === 'enviar_presupuesto'))
+})
+
+test('presupuesto: sin tarificación del servidor o sin necesidades no hay botón; con ellas, avisa del correo', () => {
+  assert.equal(prepararAccion('presupuesto', { clienteId: 'c', necesidades: 'Quiere todo riesgo con franquicia baja' }, HOY).ok, false)
+  assert.equal(prepararAccion('presupuesto', { clienteId: 'c', tarificacionId: 't', necesidades: 'barato' }, HOY).ok, false)
+  const p = prepararAccion('presupuesto', { clienteId: 'c', tarificacionId: 't', resumen: '3 precios', necesidades: 'Quiere terceros ampliado, uso diario' }, HOY)
+  assert.ok(p.ok)
+  assert.deepEqual(p.accion.cuerpo, { tarificacionId: 't', necesidades: 'Quiere terceros ampliado, uso diario' })
+  assert.match(textoAccion('Manuel', p.accion), /manda un correo al cliente/)
+  assert.match(textoAccion('Manuel', p.accion), /3 precios/)
 })

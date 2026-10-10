@@ -1,0 +1,120 @@
+{
+ "sesion": "64ad37af-cc55-5151-af0f-1ab2a92d400c",
+ "inicio": "2026-09-30T07:29:57.603Z",
+ "fin": "2026-09-30T08:50:24.373Z",
+ "llamadas": 304,
+ "categorias": {
+  "otro": {
+   "llamadas": 43,
+   "chars_in": 23628,
+   "chars_out": 242656,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 31101,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 6,
+    "ReadNotifications": 23,
+    "SubagentHandback": 6,
+    "SendMessage": 1,
+    "Monitor": 6
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 9,
+   "chars_in": 4730,
+   "chars_out": 10948,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__pull_request_read": 2,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__unsubscribe_pr_activity": 1
+   }
+  },
+  "sql": {
+   "llamadas": 22,
+   "chars_in": 11437,
+   "chars_out": 49520,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 22
+   }
+  },
+  "bash": {
+   "llamadas": 216,
+   "chars_in": 189785,
+   "chars_out": 1141216,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 216
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 288,
+   "chars_out": 1711,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 1,
+    "mcp__Claude_Code_Remote__delete_trigger": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 4,
+   "chars_in": 24682,
+   "chars_out": 62745,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1,
+    "Write": 3
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 8382,
+   "chars_out": 8593,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 169616,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 6,
+   "chars_in": 35007,
+   "chars_out": 36204,
+   "errores": 0,
+   "archivos_citados": 16,
+   "chars_citados": 927917,
+   "tools": {
+    "Agent": 6
+   }
+  }
+ }
+}

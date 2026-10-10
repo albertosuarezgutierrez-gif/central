@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   interpretarVistaIngesta,
   veredictoIngesta,
@@ -9,6 +11,7 @@ import {
   senalesIngesta,
   hayPerdida,
   hayHuecos,
+  sinFicheroAtascado,
 } from './ingesta-pantalla.ts'
 import { saludIngesta, silencioPorEntidad } from '@central/module-seguros'
 
@@ -118,8 +121,8 @@ test('la avería real del 01/09/2026: pérdida medida, con su reparto por clave'
       huerfanas: 2,
       huerfanasResolubles: 1,
       huerfanasDetalle: [
-        { entidad: 'C0468', entidadNombre: 'Occident', clave: '8-92361', idPolizaEntidad: '8-10.745.696-P', recibos: 2, siniestros: 0, prima: 120.5, ultimoEn: '2026-08-30', enCartera: 'ausente' },
-        { entidad: 'C0468', entidadNombre: 'Occident', clave: '8-92361', idPolizaEntidad: '8-10.745.700-P', recibos: 0, siniestros: 1, prima: null, ultimoEn: '2026-08-29', enCartera: 'viva' },
+        { entidad: 'C0468', entidadNombre: 'Occident', clave: '8-92361', idPolizaEntidad: '8-10.000.033-P', recibos: 2, siniestros: 0, prima: 120.5, ultimoEn: '2026-08-30', enCartera: 'ausente' },
+        { entidad: 'C0468', entidadNombre: 'Occident', clave: '8-92361', idPolizaEntidad: '8-10.000.034-P', recibos: 0, siniestros: 1, prima: null, ultimoEn: '2026-08-29', enCartera: 'viva' },
       ],
       primaPerdida: 7721.71,
       rechazos: [],
@@ -380,4 +383,124 @@ test('renovaciones: si son lo ÚNICO medido, el título lo dice (no «se pierden
   })
   const v = { estado: 'ok' as const, salud: s, huerfanasTruncadas: false, huerfanasSinAmbito: null }
   assert.equal(tituloIngesta(v), 'Hay renovaciones que no han llegado por CIMA')
+})
+
+// ── 📭 Emisiones de Codeoscopic sin aviso del webhook (28/09/2026) ───────────
+
+const emitida = { proyecto: '40769244', aseguradora: 'Allianz', horas: 262 }
+
+test('emisiones sin aviso: salen como PÉRDIDA con el proyecto y la compañía', () => {
+  const s = saludIngesta({ cuarentena: [], emisionesSinAviso: [emitida] })
+  const r = senalesIngesta(s).filter(x => x.clave === 'emisiones_sin_aviso')
+  assert.equal(r.length, 1)
+  assert.equal(r[0].tipo, 'perdida')
+  assert.match(r[0].detalle, /40769244 \(Allianz\)/)
+})
+
+test('emisiones sin aviso: `null` es HUECO y `[]` no pinta nada', () => {
+  const hueco = senalesIngesta(saludIngesta({ cuarentena: [], emisionesSinAviso: null }))
+    .filter(x => x.clave === 'emisiones_sin_aviso')
+  assert.equal(hueco.length, 1)
+  assert.equal(hueco[0].tipo, 'hueco')
+  assert.equal(
+    senalesIngesta(saludIngesta({ cuarentena: [], emisionesSinAviso: [] })).some(x => x.clave === 'emisiones_sin_aviso'),
+    false,
+  )
+})
+
+test('emisiones sin aviso: si son lo ÚNICO medido, el título no culpa a CIMA', () => {
+  const s = saludIngesta({
+    cuarentena: [], emisionesSinAviso: [emitida],
+    rechazos: [], silencio: [], crudo: { pendientes: 0, purgaInminente: 0, masAntiguaHoras: null },
+    cobertura: { rutas: 0, rutasNuncaLeidas: 0, entidadesObservadas: 1, porTipo: [] },
+    cajaNegra: { capturaActiva: true, cuerpos: 0, posts: 0, horasDesdeUltimo: null, sinCuerpo: 0 },
+    ultimoPull: { horas: 3, procesados: 1 }, parciales: [],
+  })
+  const v = { estado: 'ok' as const, salud: s, huerfanasTruncadas: false, huerfanasSinAmbito: null }
+  assert.equal(tituloIngesta(v), 'El webhook de Codeoscopic no avisa de las emisiones')
+})
+
+test('sinFicheroAtascado: solo renovaciones, solo emisiones, las dos, o algo más', () => {
+  assert.equal(sinFicheroAtascado([]), null)
+  assert.equal(sinFicheroAtascado([{ clave: 'renovaciones' }]), 'renovaciones')
+  assert.equal(sinFicheroAtascado([{ clave: 'emisiones_sin_aviso' }]), 'emisiones')
+  assert.equal(sinFicheroAtascado([{ clave: 'renovaciones' }, { clave: 'emisiones_sin_aviso' }]), 'ambas')
+  // Con cualquier pérdida de CIMA de verdad, el titular vuelve a ser el de CIMA.
+  assert.equal(sinFicheroAtascado([{ clave: 'emisiones_sin_aviso' }, { clave: 'cuarentena' }]), null)
+})
+
+test('🚨 el titular del Telegram usa la MISMA función que el título de la pantalla', () => {
+  // Con dos criterios, pantalla y alarma dirían cosas distintas del mismo hecho.
+  const ruta = readFileSync(
+    join(import.meta.dirname, '..', '..', 'app', 'api', 'cron', 'correduria-ingesta', 'route.ts'), 'utf8')
+  assert.match(ruta, /sinFicheroAtascado\(perdidas\)/)
+  assert.match(ruta, /El webhook de Codeoscopic no avisa de las emisiones/)
+})
+
+test('cobertura: los descartados por privacidad salen aparte, no dentro de «sin leer»', () => {
+  const s = senalesIngesta({
+    ...saludBase,
+    cobertura: { rutas: 300, rutasNuncaLeidas: 20, rutasDescartadas: 9, entidadesObservadas: 3, porTipo: [{ tipoObjeto: 'POL', rutas: 300, nuncaLeidas: 20 }] },
+  })
+  assert.equal(s.find(v => v.clave === 'cobertura')?.n, 20)
+  const d = s.find(v => v.clave === 'cobertura_descartada')
+  assert.equal(d?.n, 9)
+  assert.equal(d?.tipo, 'hueco')
+})
+
+test('cobertura: sin descartadas (null o ausente) no hay fila de descartados', () => {
+  for (const rutasDescartadas of [null, undefined, 0]) {
+    const s = senalesIngesta({
+      ...saludBase,
+      cobertura: { rutas: 300, rutasNuncaLeidas: 20, rutasDescartadas, entidadesObservadas: 3, porTipo: [] },
+    })
+    assert.ok(!s.some(v => v.clave === 'cobertura_descartada'))
+  }
+})
+
+// ── 🔁 Pólizas vivas duplicadas (04/10/2026) — informativa ──────────────────
+
+const grupoDup = { entidad: 'C0109', ref: '0ae40684-0000-0000-0000-000000000001', fichas: 2 }
+
+test('🔁 duplicadas: salen como INFO (ni pérdida ni «sin comprobar») y no encienden la tarjeta', () => {
+  const s = saludIngesta({
+    cuarentena: [], polizasDuplicadas: [grupoDup, { ...grupoDup, entidad: 'C0613', ref: 'b' }],
+    rechazos: [], silencio: [], crudo: { pendientes: 0, purgaInminente: 0, masAntiguaHoras: null },
+    cobertura: { rutas: 0, rutasNuncaLeidas: 0, entidadesObservadas: 1, porTipo: [] },
+    cajaNegra: { capturaActiva: true, cuerpos: 0, posts: 0, horasDesdeUltimo: null, sinCuerpo: 0 },
+    ultimoPull: { horas: 3, procesados: 1 }, parciales: [],
+  })
+  const r = senalesIngesta(s).filter(x => x.clave === 'polizas_duplicadas')
+  assert.equal(r.length, 1)
+  assert.equal(r[0].tipo, 'info')
+  assert.equal(r[0].n, 2)
+  assert.match(r[0].detalle, /C0109: 1 · C0613: 1/)
+  const v = { estado: 'ok' as const, salud: s, huerfanasTruncadas: false, huerfanasSinAmbito: null }
+  assert.equal(veredictoIngesta(v), 'ok')
+  assert.equal(hayQueEnsenar(v), false)
+  assert.deepEqual(contadorIngesta(v), { n: 0, parcial: false })
+})
+
+test('duplicadas: `null` es HUECO; `[]` y `undefined` no pintan nada', () => {
+  const hueco = senalesIngesta(saludIngesta({ cuarentena: [], polizasDuplicadas: null }))
+    .filter(x => x.clave === 'polizas_duplicadas')
+  assert.equal(hueco.length, 1)
+  assert.equal(hueco[0].tipo, 'hueco')
+  for (const polizasDuplicadas of [[], undefined]) {
+    assert.equal(
+      senalesIngesta(saludIngesta({ cuarentena: [], polizasDuplicadas })).some(x => x.clave === 'polizas_duplicadas'),
+      false,
+    )
+  }
+})
+
+test('🪤 el cron manda el aviso INFORMATIVO de duplicadas en `ok` solo cuando cambian (sin recordatorio)', () => {
+  // Sin esta rama, con la ingesta en `ok` el Telegram nunca sonaría: la firma
+  // cambia, pero el aviso solo salía en `degradada`/`parcial`.
+  const ruta = readFileSync(
+    join(import.meta.dirname, '..', '..', 'app', 'api', 'cron', 'correduria-ingesta', 'route.ts'), 'utf8')
+  assert.match(ruta, /const avisoDuplicadas = salud\.estado === 'ok' && decision\.avisar && decision\.motivo !== 'recordatorio'\s*&& cambioDuplicadasEnFirma\(firmaPrevia, actual\)/)
+  assert.match(ruta, /if \(avisoDuplicadas\) \{\s*const textoDup = textoPolizasDuplicadas\(salud\.polizasDuplicadas\)\s*await tgAviso/)
+  // Y en el aviso normal va al final, como informativo.
+  assert.match(ruta, /recado \+ duplicadas(?: \+ anulaciones)?,/)
 })

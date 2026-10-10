@@ -15,6 +15,7 @@
 import { createHash } from 'node:crypto'
 import {
   estadoDocumento,
+  marcaAcreditaFicha,
   mimeDocumento,
   mimeParaServir,
   revisarDocumento,
@@ -24,6 +25,7 @@ import {
 } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { reutilizaDocumentoPrevio } from './cartera-documentos-reglas'
 
 export type Destino = { clienteId?: string | null; polizaId?: string | null; siniestroId?: string | null }
 
@@ -132,13 +134,22 @@ export async function listarDocumentos(
     if (d.polizaId) or.push({ polizaId: d.polizaId })
     if (d.siniestroId) or.push({ siniestroId: d.siniestroId })
     if (or.length === 0) return []
-    const filas = await db.documento.findMany({
-      where: { correduriaId, OR: or },
-      select: SELECT_RESUMEN,
-      orderBy: { createdAt: 'desc' },
-      take: 200,
+    // Por ficha (05/10/2026): las pólizas cuyo DNI leído es el de la ficha cuentan como documento
+    // acreditativo de su identidad (`dniCoincideFicha`, de la marca guardada en `extraccion`).
+    const [filas, ficha] = await Promise.all([
+      db.documento.findMany({
+        where: { correduriaId, OR: or },
+        select: { ...SELECT_RESUMEN, extraccion: true },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+      d.clienteId ? db.cliente.findFirst({ where: { id: d.clienteId, correduriaId }, select: { dniLookupHash: true } }) : null,
+    ])
+    return filas.map(({ extraccion, ...f }) => {
+      const r = aResumen(f)
+      if (r.tipo !== 'poliza' || !d.clienteId || f.clienteId !== d.clienteId) return r
+      return { ...r, dniCoincideFicha: marcaAcreditaFicha(extraccion, { clienteId: d.clienteId, dniLookupHash: ficha?.dniLookupHash ?? null }) }
     })
-    return filas.map(aResumen)
   } catch {
     return null
   }
@@ -163,8 +174,9 @@ export type Guardado =
   | { ok: false; motivo: string; status: 400 | 404 | 415 | 500 }
 
 /**
- * Guarda un fichero. Devuelve `repetido: true` si ya había uno con el mismo
- * sha256 colgado del mismo cliente (se guarda igual: puede ser otra póliza).
+ * Guarda un fichero. Por defecto SIEMPRE crea una fila nueva y `repetido: true` indica que ya había
+ * otra con el mismo sha256 en el mismo cliente (puede ser otra póliza). Solo con
+ * `reutilizarSiIdentico: true` (opt-in) NO se guarda otra copia: se devuelve la existente.
  */
 export async function guardarDocumento(
   correduriaId: string,
@@ -177,6 +189,8 @@ export async function guardarDocumento(
     subidoPor?: 'corredor' | 'cliente' | 'agente'
     /** El cliente lo ve en su portal. Solo para la documentación ORIGINAL de la compañía (la póliza). */
     visiblePorCliente?: boolean
+    /** Opt-in (por defecto false): si ya hay uno idéntico (cliente+destino+sha256) se devuelve ese en vez de guardar otro. */
+    reutilizarSiIdentico?: boolean
   },
 ): Promise<Guardado> {
   const reparo = revisarDocumento({ type: entrada.mime, size: entrada.contenido.length, name: entrada.nombre })
@@ -198,6 +212,18 @@ export async function guardarDocumento(
   try {
     const db = prismaAsegura()
     const sha256 = createHash('sha256').update(entrada.contenido).digest('hex')
+    if (reutilizaDocumentoPrevio(entrada)) {
+      // Mismo fichero (sha256) en el mismo cliente y mismo destino: NO se guarda otro (06/10/2026,
+      // póliza 18162048 subida dos veces). Se devuelve el que ya estaba, con `repetido: true`.
+      const previo = destino.clienteId !== null
+        ? await db.documento.findFirst({
+            where: { correduriaId, clienteId: destino.clienteId, polizaId: destino.polizaId, siniestroId: destino.siniestroId, sha256, estado: { not: 'pedido' } },
+            select: SELECT_RESUMEN,
+            orderBy: { createdAt: 'asc' },
+          })
+        : null
+      if (previo) return { ok: true, documento: aResumen(previo), repetido: true }
+    }
     const repetido =
       destino.clienteId !== null &&
       (await db.documento.count({ where: { correduriaId, clienteId: destino.clienteId, sha256 } })) > 0

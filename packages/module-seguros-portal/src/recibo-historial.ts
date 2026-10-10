@@ -51,6 +51,12 @@ export type ReciboHistorial = {
   importe: number | null
   fechaEmision: Date | null
   fechaVencimiento: Date | null
+  /**
+   * Cuándo cambió a su situación actual (en un `cobrado`, el COBRO). Opcional: las listas que no la
+   * traen siguen valiendo. Nunca se sustituye por la emisión: «cobrado el 21/05» cuando se cobró el
+   * 13/07 es un dato falso con forma de dato.
+   */
+  fechaSituacion?: Date | null
 }
 
 function normalizar(situacion: string): string {
@@ -223,6 +229,21 @@ export function resumirRecibos(
     anulados,
     proximoAlCobro: alCobro[0] ?? null,
     devueltos: ordenados.filter((r) => tonoSituacionRecibo(r.situacion) === 'devuelto').length,
-    ultimoCobrado: ordenados.find((r) => normalizar(r.situacion) === 'cobrado') ?? null,
+    ultimoCobrado: ultimoCobrado(ordenados),
   }
+}
+
+/** El `cobrado` de fecha de COBRO más reciente; sin ninguna fecha de cobro, el primero de la lista. */
+function ultimoCobrado(ordenados: readonly ReciboHistorial[]): ReciboHistorial | null {
+  const cobrados = ordenados.filter((r) => normalizar(r.situacion) === 'cobrado')
+  const t = (r: ReciboHistorial) => r.fechaSituacion?.getTime() ?? Number.NEGATIVE_INFINITY
+  return cobrados.reduce<ReciboHistorial | null>((mejor, r) => (mejor === null || t(r) > t(mejor) ? r : mejor), null)
+}
+
+/**
+ * La fecha en que se COBRÓ un recibo cobrado (`fecha_situacion`), o `null`. Sin ella no se dice
+ * fecha: la de emisión es otra cosa.
+ */
+export function fechaDeCobro(r: ReciboHistorial): Date | null {
+  return normalizar(r.situacion) === 'cobrado' ? (r.fechaSituacion ?? null) : null
 }

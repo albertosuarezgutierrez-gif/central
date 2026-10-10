@@ -1,6 +1,7 @@
-import { MEDIADOR, NO_EXCLUSIVIDAD } from '@central/module-seguros'
+import { MEDIADOR, NO_EXCLUSIVIDAD, bloqueoCompania, textoBloqueoCliente } from '@central/module-seguros'
 
 import { eur } from '@/lib/dinero'
+import { LogoCompania } from './LogoCompania'
 import { NombrarCorredor } from './NombrarCorredor'
 import type { ActualCliente, OpcionCliente } from '@/lib/presupuesto'
 import {
@@ -16,6 +17,9 @@ import {
   type EstadoGarantia,
   type SinEquivalente,
 } from '@/lib/presupuesto-vista'
+
+/** Lo que se dice cuando una opción no tiene ficha IPID subida. No bloquea la aceptación. */
+export const TEXTO_SIN_IPID = 'La ficha informativa de este producto te la enviamos antes de emitir.'
 
 /**
  * Las piezas de la comparativa. Componentes de SERVIDOR: aquí no hay estado ni
@@ -52,7 +56,7 @@ export function Actual({ actual }: { actual: ActualCliente | null }) {
   return (
     <section className="seccion">
       <p className="antetitulo">Lo que tienes hoy</p>
-      <h2 style={{ margin: '2px 0 10px' }}>{actual.compania}</h2>
+      <div style={{ margin: '4px 0 10px' }}><LogoCompania nombre={actual.compania} alto={36} /></div>
       <dl className="ficha-datos">
         {actual.bien !== null && (
           <>
@@ -104,7 +108,7 @@ export function Tarjeta({ o, caducado }: { o: OpcionCliente; caducado: boolean }
   return (
     <article className="presu-tarjeta" data-caducado={caducado ? 'si' : undefined}>
       {papel !== null && <p className="presu-papel">{papel}</p>}
-      <h3 className="presu-compania">{o.compania}</h3>
+      <div className="presu-compania"><LogoCompania nombre={o.compania} alto={34} /></div>
       <p className="presu-producto">
         {o.producto}
         {o.modalidad !== null && o.modalidad.trim() !== '' ? ` · ${o.modalidad}` : ''}
@@ -127,6 +131,7 @@ export function Tarjeta({ o, caducado }: { o: OpcionCliente; caducado: boolean }
         <p className="presu-nivel">Cobertura: {o.grupoCobertura}</p>
       )}
 
+      {bloqueoCompania(o.avisos) !== null && <p className="presu-bloqueo">⚠️ {textoBloqueoCliente()}</p>}
       {o.avisos.length > 0 && (
         <ul className="presu-avisos">
           {o.avisos.map((a, i) => (
@@ -193,10 +198,11 @@ export function Garantias({ o, actual }: { o: OpcionCliente; actual: ActualClien
         </ul>
       )}
 
-      {/* La ficha IPID es la que cita la aceptación firmada: se enseña con la opción, no aparte. */}
+      {/* La ficha IPID (información previa, RDL 3/2020) es la que cita la aceptación firmada: se enseña
+          con la opción, no aparte. Sin ella no se bloquea: se dice, y la aceptación registra que no estaba. */}
       {o.ipidId
-        ? <p style={{ margin: '8px 0 0' }}><a href={`/api/ipid/${o.ipidId}`} target="_blank" rel="noopener noreferrer">Ficha de información del producto (IPID) de {o.compania} ↗</a></p>
-        : <p className="suave" style={{ margin: '8px 0 0' }}>Todavía no tengo la ficha de información del producto (IPID) de esta opción. Pídemela antes de aceptar.</p>}
+        ? <p style={{ margin: '8px 0 0' }}><a href={`/api/ipid/${o.ipidId}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, overflowWrap: 'anywhere' }}>Ficha informativa del producto (IPID) de {o.compania} ↗</a></p>
+        : <p className="suave" style={{ margin: '8px 0 0' }}>{TEXTO_SIN_IPID}</p>}
 
       {/* La comparación es de NOMBRES de garantía, no de capitales: el snapshot
           congela las coberturas como textos sueltos. Decirlo es la diferencia
@@ -232,7 +238,7 @@ export function SinEquivalenteAviso({ motivo }: { motivo: SinEquivalente | null 
  * 2» sobre una tarificación de ocho, y ese número es justo el que sostiene la
  * afirmación legal. Se dice lo que se puede probar.
  */
-export function Mediador({ companiasEnPortada }: { companiasEnPortada: number }) {
+export function Mediador({ companiasEnPortada, textoCompanias }: { companiasEnPortada: number; textoCompanias?: string }) {
   const { nombre, figura, claveDgsfp, email, telefono } = MEDIADOR.identidad
   return (
     <section className="seccion presu-mediador">
@@ -243,7 +249,7 @@ export function Mediador({ companiasEnPortada }: { companiasEnPortada: number })
       </p>
       <p style={{ margin: '0 0 8px' }}>
         El asesoramiento se presta <strong>sobre la base de un análisis objetivo</strong>:{' '}
-        {textoCompaniasConsultadas(companiasEnPortada)}
+        {textoCompanias ?? textoCompaniasConsultadas(companiasEnPortada)}
       </p>
       <p className="suave" style={{ margin: '0 0 8px' }}>
         {NO_EXCLUSIVIDAD}

@@ -26,8 +26,10 @@
 // resto → `null`. Y la regla de siempre: `reserva: null` = «la compañía no lo
 // informa», NUNCA 0; `siniestros: null` = «no se pudo leer», NUNCA `[]`.
 
-import type { OrigenSiniestro, TramitacionCruda } from '@central/module-seguros'
+import type { OrigenSiniestro, TerceroFicha, TramitacionCruda } from '@central/module-seguros'
+import { tercerosDeSiniestro } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { leerDetalleCima, type DetalleCima } from './siniestro-detalle-cima.ts'
 
 
 /** Un siniestro tal y como lo sirve el puerto de asegura. */
@@ -84,11 +86,64 @@ export type SiniestroCartera = {
    */
   tramitacionCima: TramitacionCruda | null
   /**
+   * Detalle que manda la compañía por CIMA desde el 28/09/2026 (declaración,
+   * DAA, responsabilidad, reserva desglosada, recobros, convenios, expedientes,
+   * vehículos, asistencias, contacto…). PII ya descifrada por asegura; un `v1:`
+   * que se colara se tapa como `null` en `leerDetalleCima()`. `null` = CIMA no
+   * manda nada de esto, o asegura es anterior y no lo sirve.
+   */
+  detalleCima: DetalleCima | null
+  /**
    * Terceros y testigos. `null` = no se ha podido consultar (o asegura no lo
    * manda) — NUNCA «no hay ninguno», que es `[]`. Exclusivo de siniestros
    * `gestionado_correduria`.
    */
   terceros: TerceroCartera[] | null
+  /**
+   * Terceros que manda la COMPAÑÍA por CIMA (asegura#880): papel, nombre, domicilio, teléfono,
+   * email, matrícula, compañía y responsabilidad, ya descifrados por asegura (un `v1:` colado se
+   * tapa). `null` = no consta (anterior a #880, o asegura viejo) ≠ `[]`.
+   */
+  tercerosCima: TerceroFicha[] | null
+  /**
+   * Partes del portal VINCULADOS (lo que contó el cliente), en orden de llegada.
+   * `null` = asegura no lo manda (versión anterior) — NUNCA «no hay parte», que es `[]`.
+   */
+  partes: ParteVinculadoCartera[] | null
+}
+
+/** Un parte del portal ya vinculado a un siniestro. */
+export type ParteVinculadoCartera = {
+  id: string
+  fechaHecho: string | null
+  horaAproximada: string | null
+  descripcion: string | null
+  estado: string
+  /** 🚨 Solo `true` si el puerto lo afirma (`comunicadoACompania`). Ausente → `false`, el conservador. */
+  comunicado: boolean
+  vinculo: 'alta_desde_parte' | 'manual' | 'auto_cima' | null
+  creadoEn: string | null
+}
+
+function partesVinculadas(v: unknown): ParteVinculadoCartera[] | null {
+  if (!Array.isArray(v)) return null
+  return v.flatMap((x) => {
+    if (typeof x !== 'object' || x === null) return []
+    const p = x as Record<string, unknown>
+    const id = cadena(p.id)
+    if (!id) return []
+    const vinculo = p.vinculo === 'alta_desde_parte' || p.vinculo === 'manual' || p.vinculo === 'auto_cima' ? p.vinculo : null
+    return [{
+      id,
+      fechaHecho: cadena(p.fechaHecho),
+      horaAproximada: cadena(p.horaAproximada),
+      descripcion: cadena(p.descripcion),
+      estado: cadena(p.estado) ?? 'desconocido',
+      comunicado: p.comunicado === true,
+      vinculo,
+      creadoEn: cadena(p.creadoEn),
+    }]
+  })
 }
 
 /** Un tercero o testigo tal y como lo sirve el puerto de asegura. */
@@ -209,7 +264,10 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     datosRamo: datosRamoDe(s.datosRamo),
     danosCima: danosCimaDe(s.danosCima),
     tramitacionCima: tramitacionDe(s.tramitacionCima),
+    detalleCima: leerDetalleCima(s.detalleCima),
     terceros: terceros(s.terceros),
+    tercerosCima: tercerosDeSiniestro(s.tercerosCima),
+    partes: partesVinculadas(s.partes),
   }
 }
 
@@ -274,6 +332,20 @@ const RAMOS_POR_TIPO_POLIZA: Record<string, readonly string[]> = {
   // Accidentes (convenio/colectivo): cubre asistencia sanitaria, fallecimiento
   // e invalidez por accidente — no hay coche ni inmueble que dañar.
   accidentes: ['salud', 'vida', 'general'],
+  // Ramos nuevos de oportunidad (06/10/2026). Empresas = daños como un comercio y flotas = vehículos;
+  // el resto, sin ramo de siniestro propio aún: solo el general (conservador).
+  empresas: ['hogar', 'general'],
+  flotas: ['auto', 'general'],
+  rc_profesional: ['general'],
+  dyo: ['general'],
+  transporte_mercancias: ['general'],
+  ciberriesgos: ['general'],
+  decenal: ['general'],
+  embarcaciones: ['general'],
+  mascotas: ['general'],
+  impago_alquiler: ['general'],
+  viaje: ['general'],
+  caucion: ['general'],
 }
 
 /**
@@ -301,6 +373,8 @@ export type RespuestaSiniestro =
   | { estado: 'ok'; siniestro: SiniestroCartera; aviso: string | null; ignorados: string[] }
   | { estado: 'invalido'; motivo: string }
   | { estado: 'no_encontrado'; motivo: string | null }
+  /** El alta manual ya la mandó la compañía por CIMA: no se crea otra; `siniestroId` es ese. */
+  | { estado: 'duplicado'; motivo: string; siniestroId: string }
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string }
 
@@ -308,6 +382,11 @@ export function interpretarSiniestro(status: number, json: unknown): RespuestaSi
   if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
   const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
   if (o.estado === 'sin_configurar' || status === 503) return { estado: 'sin_configurar' }
+  if (o.estado === 'duplicado' && cadena(o.siniestroId)) {
+    return { estado: 'duplicado', motivo: cadena(o.motivo) ?? 'ya está en CIMA', siniestroId: cadena(o.siniestroId) as string }
+  }
+  // El parte desde el que se registraba no se pudo vincular: nada se creó.
+  if (o.estado === 'parte_no_vinculable') return { estado: 'invalido', motivo: cadena(o.motivo) ?? 'el parte no se puede vincular' }
   if (status === 404 || o.estado === 'no_encontrado') return { estado: 'no_encontrado', motivo: cadena(o.motivo) }
   if (status === 422 || o.estado === 'invalido') return { estado: 'invalido', motivo: cadena(o.motivo) ?? 'datos no válidos' }
   if (status === 200 && o.estado === 'ok') {

@@ -173,6 +173,19 @@ export const PREFIJO_HISTORIAL_CONTACTO_PROPIO = 'El cliente actualizó desde el
 export const PREFIJO_HISTORIAL_SUGERENCIA = '💡 Sugerencia del cliente desde el portal:'
 
 /**
+ * El cliente pide cambiar la cuenta de domiciliación desde el portal (29/09/2026). El texto lleva
+ * solo la máscara («**** 1234»): el IBAN completo vive cifrado en `cambio_cuenta_solicitud`.
+ */
+export const PREFIJO_HISTORIAL_CUENTA_PROPIA = '🏦 El cliente pidió desde el portal cambiar la cuenta de sus recibos'
+
+/**
+ * El cliente da de alta, corrige o quita uno de SUS carnés de conducir desde el portal (06/10/2026). Lo
+ * compone `apps/asegura` (`guardarCarnet`/`borrarCarnet` con origen portal): el muro lo clasifica como
+ * `carnet` y el aviso por Telegram de plataforma lo recoge. El texto nunca lleva la fecha (va cifrada).
+ */
+export const PREFIJO_HISTORIAL_CARNET_PROPIO = '🪪 El cliente cambió desde el portal sus carnés de conducir:'
+
+/**
  * La nota que deja el cliente al completar el enlace de datos de un presupuesto
  * (24/09/2026). Lleva prefijo fijo por lo mismo que las dos de arriba: el muro de
  * actividad la clasifica como del cliente y el aviso por Telegram la recoge.

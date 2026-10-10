@@ -11,10 +11,13 @@
 // 🚨 Los textos citan plazos y nada más. No prometen ahorro ni afirman qué pasa si la compañía no
 // avisa a tiempo: eso no está confirmado jurídicamente y sería asesorar.
 
-import { normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
+import { DIAS_AVISO_OPORTUNIDAD, normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
 
+// ⚖️ 70 se queda A PROPÓSITO (29/09/2026): es un correo a la PERSONA que se apuntó ella misma en la web
+// (doble opt-in) pidiendo que le avisemos, y solo cita plazos legales — no es contactar a un lead ni
+// ofrecer precio. Lo que va a Alberto (la oportunidad) sigue la regla única de 45 días.
 export const DIAS_AVISO_1 = 70
-export const DIAS_AVISO_2 = 45
+export const DIAS_AVISO_2 = DIAS_AVISO_OPORTUNIDAD
 export const DIAS_COMPANIA = 60
 export const DIAS_TOMADOR = 30
 /** Horas que vale el enlace de confirmación. Pasado ese tiempo la fila se queda sin confirmar y no cuenta. */

@@ -175,3 +175,10 @@ test('el mensaje no puede contar nada de sus seguros', () => {
     assert.ok(!texto.toLowerCase().includes(prohibido.toLowerCase()), `el mensaje no puede nombrar «${prohibido}»`)
   }
 })
+
+test('movilParaInvitar salta el teléfono de la correduría y los comodines', async () => {
+  const { MEDIADOR } = await import('@central/module-seguros')
+  assert.equal(movilParaInvitar([MEDIADOR.identidad.telefono]), null)
+  assert.equal(movilParaInvitar([MEDIADOR.identidad.telefono, '612 34 56 78']), '612 34 56 78')
+  assert.equal(movilParaInvitar(['666666666', '612 34 56 78']), '612 34 56 78')
+})

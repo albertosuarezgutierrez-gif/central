@@ -11,12 +11,17 @@ import { avisarConflictoGuia } from './conflictos'
 import { horarioPiso } from './horarios'
 import { nocheAnteriorLibre, entradaMismoDiaLibre, sumarDias, estanciasFiables, combinarFuentes } from './disponibilidad'
 import { setEnviados, corregirAtribucion, atribuirEmisor } from './atribucion'
+import { textosNocheTodos } from './noche'
+import { textosEsperaTodos } from './rancio'
 import { bloqueParking } from './parking'
 import { bloqueEquipaje } from './equipaje'
 import { bloqueLlegada } from './llegada'
 import { bloqueSalida } from './salida'
 
-export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string }
+// `emisor`: las señales CRUDAS de Smoobu con las que se decidió `from` (y qué campos traía el
+// mensaje). Solo diagnóstico: el 28/09/2026 (reserva 154692216) mensajes escritos por Alberto
+// fuera de Smoobu entraron como del huésped y no había forma de ver por qué.
+export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string; emisor?: Record<string, unknown> }
 export type Aprendizaje = { categoria: string; pregunta_norm: string; respuesta_final: string }
 export type Contexto = {
   bookingId: string
@@ -51,6 +56,7 @@ export type Contexto = {
   historial: MensajeHist[]
   enviados: Set<string>   // respuestas que YA enviamos (normalizadas) — para no respondernos a nosotros
   aprendizajes: Aprendizaje[]
+  preguntaTs?: string     // cuándo escribió el huésped lo que se contesta (lo pone el orquestador)
 }
 
 function strip(html: string): string {
@@ -121,6 +127,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
       from: atribuirEmisor(m),   // `type`/`sent_by_owner` nativos de Smoobu (no solo `sent_by_owner`)
       text: asunto ? `${asunto}\n${cuerpo}`.trim() : cuerpo,
       ts: m.created_at || m.createdAt || '',
+      emisor: { type: m.type ?? null, sent_by_owner: m.sent_by_owner ?? null, sender: m.sender ?? null, campos: Object.keys(m || {}) },
     }
   }).filter(m => m.text)
 
@@ -128,12 +135,19 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   // vacío), así que nuestra propia respuesta puede reaparecer en el hilo como si fuera del huésped.
   // Cruzando el historial con nuestros envíos corregimos esa atribución → 'host' (y el agente deja de
   // responderse a sí mismo). Lo consumen el guard `ultimoMsg.from==='host'` y `esEcoPropio`.
+  // `mensajes_enviados` es el registro de TODO lo que sale (acuses, programados, lo editado por
+  // Alberto…); `mensajes_log` se mantiene para lo enviado antes de que ese registro existiera. Los
+  // textos fijos de las guardias van siempre, por si la escritura del registro falló.
   const enviadosRows = await prisma.$queryRaw<{ respuesta: string }[]>(Prisma.sql`
-    SELECT respuesta FROM mensajes_log
-    WHERE booking_id = ${bookingId} AND auto_sent = true AND respuesta <> ''
-    ORDER BY created_at DESC LIMIT 30
+    (SELECT respuesta FROM mensajes_log
+     WHERE booking_id = ${bookingId} AND auto_sent = true AND respuesta <> ''
+     ORDER BY created_at DESC LIMIT 30)
+    UNION ALL
+    (SELECT texto AS respuesta FROM mensajes_enviados
+     WHERE booking_id = ${bookingId}
+     ORDER BY created_at DESC LIMIT 60)
   `).catch(() => [])
-  const enviados = setEnviados(enviadosRows.map((r: { respuesta: string }) => r.respuesta))
+  const enviados = setEnviados([...enviadosRows.map((r: { respuesta: string }) => r.respuesta), ...textosNocheTodos(), ...textosEsperaTodos()])
   // Smoobu manda cada automático POR DUPLICADO (8 de los 25 mensajes del hilo de la reserva
   // 152291091 eran copias) y esas copias se comían la ventana de contexto del modelo.
   const historial = dedupHilo(corregirAtribucion(historialRaw, enviados))

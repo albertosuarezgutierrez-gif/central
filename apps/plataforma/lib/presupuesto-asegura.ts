@@ -13,6 +13,7 @@
 // sobre una cotización YA PAGADA. El envío es el PR 3 del §6 de la spec.
 
 import type { EstadoPresupuesto } from '@central/module-seguros'
+import { CATALOGO_GARANTIAS, esGarantiaDeLey, ramoDeCatalogo } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type OpcionPresupuesto = {
@@ -29,6 +30,10 @@ export type OpcionPresupuesto = {
 
 export type PresupuestoPreparado = {
   id: string
+  /** Referencia propia `AS-AA-NNNN` que se le da al cliente. `null` = asegura no la manda (versión anterior o migración sin aplicar). */
+  referencia: string | null
+  /** `true` = ya había uno vigente con las mismas opciones en documento y es ése (misma referencia). */
+  reutilizado: boolean
   estado: EstadoPresupuesto
   venceEl: string
   /** 🚨 El precio no lo ha dado ninguna compañía: NO se puede enviar. */
@@ -37,12 +42,18 @@ export type PresupuestoPreparado = {
   lecturaActual: string
   motivoSinEquivalente: string | null
   avisoEscala: string | null
+  /** Las recomendadas (portada). */
   opciones: OpcionPresupuesto[]
   preciosTotales: number
+  /** Cuántas más ve el cliente debajo («ver todas»). `null` = asegura no lo dice (versión anterior). */
+  enLista: number | null
+  /** Cuántas quitó el corredor. `null` = no consta. */
+  ocultas: number | null
 }
 
 export type RespuestaPreparar =
-  | { estado: 'ok'; presupuesto: PresupuestoPreparado; token: string }
+  /** `token` = `null` cuando se REUTILIZA uno ya preparado (su enlace no se rota). */
+  | { estado: 'ok'; presupuesto: PresupuestoPreparado; token: string | null }
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string; detalle?: string }
 
@@ -105,7 +116,9 @@ export function interpretarPreparado(status: number, json: unknown): RespuestaPr
 
   const p = o.presupuesto
   const token = cadena(o.token)
-  if (typeof p !== 'object' || p === null || token === null) {
+  const reutilizado = typeof p === 'object' && p !== null && (p as Record<string, unknown>).reutilizado === true
+  // Sin token solo vale si asegura dice que REUTILIZA uno ya preparado (su enlace no se rota).
+  if (typeof p !== 'object' || p === null || (token === null && !reutilizado)) {
     return { estado: 'error', motivo: 'respuesta_ilegible', detalle: 'Falta el presupuesto o su enlace.' }
   }
   const q = p as Record<string, unknown>
@@ -125,6 +138,8 @@ export function interpretarPreparado(status: number, json: unknown): RespuestaPr
     token,
     presupuesto: {
       id,
+      referencia: cadena(q.referencia),
+      reutilizado,
       estado: (cadena(q.estado) ?? 'borrador') as EstadoPresupuesto,
       venceEl,
       simulado: q.simulado === true,
@@ -133,6 +148,8 @@ export function interpretarPreparado(status: number, json: unknown): RespuestaPr
       avisoEscala: cadena(q.avisoEscala),
       opciones,
       preciosTotales: num(q.preciosTotales) ?? opciones.length,
+      enLista: num(q.enLista),
+      ocultas: num(q.ocultas),
     },
   }
 }
@@ -182,7 +199,7 @@ function urlAsegura(): string {
 
 export type Reenvio = { status: number; json: unknown }
 
-async function puerto(init: RequestInit, query = ''): Promise<Reenvio> {
+async function puerto(init: RequestInit, query = '', topeMs = 30_000): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
@@ -190,12 +207,40 @@ async function puerto(init: RequestInit, query = ''): Promise<Reenvio> {
       ...init,
       headers: { ...(init.headers ?? {}), ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(topeMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {
     return { status: 502, json: { estado: 'error', motivo: 'red' } }
   }
+}
+
+/** Tope del sello de descarga: el PDF ya está listo y Alberto esperando; el sello no lo bloquea. */
+export const SELLO_DESCARGA_MS = 3_000
+
+/**
+ * Sella en asegura que se ha descargado el PDF para el cliente (`documento_descargado_at` + evento).
+ * NO es «enviado». `false` = no consta que se haya sellado (sin secreto, red, error o tope agotado):
+ * quien llama sirve el PDF igual —el documento es correcto— y el sello simplemente no consta.
+ */
+export async function marcarDescargadoAsegura(id: string, actor: string, topeMs = SELLO_DESCARGA_MS): Promise<boolean> {
+  const r = await puerto({
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id, accion: 'documento_descargado', actor }),
+  }, '', topeMs)
+  return r.status === 200
+}
+
+/** El PDF del presupuesto (bytes en streaming). `null` = sin secreto configurado. */
+export async function descargarPdfPresupuestoAsegura(id: string): Promise<Response | null> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return null
+  return fetch(`${urlAsegura()}/api/operador/presupuesto/pdf?id=${encodeURIComponent(id)}`, {
+    headers: await cabecerasPuerto(secret),
+    cache: 'no-store',
+    signal: AbortSignal.timeout(50_000),
+  })
 }
 
 export function listarPresupuestosAsegura(q: { clienteId?: string; polizaId?: string }): Promise<Reenvio> {
@@ -209,13 +254,74 @@ export function listarPresupuestosAsegura(q: { clienteId?: string; polizaId?: st
  * 🚨 El `actor` lo pone el SERVIDOR (el email de la sesión) y va el ÚLTIMO del
  * cuerpo: un cliente que mandara su propio `actor` no puede firmar el
  * presupuesto con otro nombre. Mismo patrón que `/api/correduria/partes`.
+ *
+ * `ocultar` (28/09/2026) se valida AQUÍ antes de salir: uno mal formado NO se
+ * quita en silencio —el cliente vería justo lo que el corredor quiso quitar—,
+ * se devuelve 400 sin llamar al puerto. Uno vacío se omite (= nada oculto).
  */
-export function prepararPresupuestoAsegura(cuerpo: Record<string, unknown>): Promise<Reenvio> {
+export async function prepararPresupuestoAsegura(cuerpo: Record<string, unknown>): Promise<Reenvio> {
+  const ocultar = normalizarOcultar(cuerpo.ocultar)
+  if (ocultar === null) {
+    return { status: 400, json: { estado: 'error', motivo: 'datos_invalidos', detalle: 'La lista de lo que se oculta al cliente está mal formada.' } }
+  }
+  const resto: Record<string, unknown> = { ...cuerpo }
+  delete resto.ocultar
   return puerto({
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(cuerpo),
+    body: JSON.stringify(ocultar ? { ocultar, ...resto } : resto), // `actor` sigue el último
   })
+}
+
+// ─── Ocultar al cliente antes de preparar (28/09/2026) ───────────────────────
+
+/** Lo que el corredor quita del presupuesto: compañías enteras (por nombre) y precios sueltos (uuid de `tarificacion_precios`). */
+export type OcultarPresupuesto = { companias: string[]; precios: string[] }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const MAX_OCULTAR = 200
+
+/**
+ * PURO. `undefined` = no se oculta nada (ausente o las dos listas vacías) · `null` = MAL formado
+ * (no se adivina) · el objeto limpio (sin duplicados, recortado, uuids en minúsculas). Mismas reglas
+ * que `leerOcultar` de asegura, para que lo que aquí pasa allí no sea un 400.
+ */
+export function normalizarOcultar(v: unknown): OcultarPresupuesto | null | undefined {
+  if (v === undefined || v === null) return undefined
+  if (typeof v !== 'object' || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  const lista = (x: unknown): string[] | null => {
+    if (x === undefined || x === null) return []
+    if (!Array.isArray(x) || x.length > MAX_OCULTAR || !x.every((s) => typeof s === 'string')) return null
+    return [...new Set((x as string[]).map((s) => s.trim()))]
+  }
+  const companias = lista(o.companias)
+  const precios = lista(o.precios)
+  if (companias === null || precios === null) return null
+  if (companias.some((c) => c === '' || c.length > 120)) return null
+  if (precios.some((p) => !UUID.test(p))) return null
+  if (companias.length === 0 && precios.length === 0) return undefined
+  return { companias, precios: precios.map((p) => p.toLowerCase()) }
+}
+
+/** PURO. El cuerpo que manda la pantalla a `/api/correduria/presupuesto` (sin `actor`: lo pone el servidor). */
+export function cuerpoPreparar(e: { tarificacionId: string; ocultar?: OcultarPresupuesto | null }): Record<string, unknown> {
+  const ocultar = normalizarOcultar(e.ocultar ?? undefined)
+  return ocultar ? { tarificacionId: e.tarificacionId, ocultar } : { tarificacionId: e.tarificacionId }
+}
+
+/**
+ * PURO. La frase de un error al preparar. `todas_ocultas` (422 de asegura) no es una avería: es que
+ * se ha quitado todo y no queda nada que enseñar.
+ */
+export function mensajeErrorPreparar(r: { motivo: string; detalle?: string }): string {
+  if (r.motivo === 'todas_ocultas') {
+    return 'Has ocultado todas las opciones: no queda nada que enseñarle al cliente. Vuelve a mostrar al menos una.'
+  }
+  if (r.motivo === 'datos_invalidos') {
+    return `No se ha preparado nada: los datos enviados no son válidos${r.detalle ? ` (${r.detalle})` : ''}.`
+  }
+  return r.detalle ? `${r.motivo}: ${r.detalle}` : r.motivo
 }
 
 export function retirarPresupuestoAsegura(cuerpo: Record<string, unknown>): Promise<Reenvio> {
@@ -233,9 +339,15 @@ export type EstadoPresupuestoLista =
 
 export type PresupuestoEnLista = {
   id: string
+  /** Referencia propia `AS-AA-NNNN`. `null` = asegura no la manda (versión anterior). */
+  referencia: string | null
+  /** Primer PDF descargado (NO es «enviado»). `null` = no consta. */
+  documentoDescargadoAt: string | null
   estado: EstadoPresupuestoLista
   /** `null` si la versión de asegura desplegada no lo manda: entonces no se cruzan los datos para emitir. */
   clienteId: string | null
+  /** Ramo del presupuesto. `null` = asegura no lo manda (versión anterior). */
+  ramo: string | null
   creadoAt: string
   venceEl: string
   enviadoAt: string | null
@@ -245,6 +357,47 @@ export type PresupuestoEnLista = {
   desdeEur: number | null
   /** Exigencias y necesidades escritas. `null` = no constan (o asegura aún no las manda): no se puede avisar. */
   necesidades: string | null
+  /** Opciones visibles con sus garantías. `null` = asegura no las manda (versión anterior): no se pintan. */
+  detalle: OpcionEnLista[] | null
+}
+
+export type EstadoGarantiaLista = 'si' | 'no' | 'no_consta'
+
+/** Una opción visible. `garantias: null` = no se clasificó: todo «no consta», nunca «no». */
+export type OpcionEnLista = { id: string; compania: string; modalidad: string | null; primaEur: number | null; garantias: Record<string, EstadoGarantiaLista> | null }
+
+function leerOpcionEnLista(v: unknown): OpcionEnLista | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.id !== 'string' || typeof o.compania !== 'string') return null
+  let garantias: Record<string, EstadoGarantiaLista> | null = null
+  if (o.garantias && typeof o.garantias === 'object' && !Array.isArray(o.garantias)) {
+    garantias = {}
+    for (const [k, e] of Object.entries(o.garantias as Record<string, unknown>)) if (e === 'si' || e === 'no' || e === 'no_consta') garantias[k] = e
+  }
+  return {
+    id: o.id, compania: o.compania,
+    modalidad: typeof o.modalidad === 'string' && o.modalidad !== '' ? o.modalidad : null,
+    primaEur: typeof o.primaEur === 'number' ? o.primaEur : null,
+    garantias,
+  }
+}
+
+/**
+ * La tabla «qué cubre cada opción» del catálogo del ramo: una fila por garantía, una celda por opción.
+ * Se quitan las filas en las que NINGUNA opción dice sí ni no (todo «no consta» no ayuda a elegir).
+ * `null` = el ramo no tiene catálogo.
+ */
+export function filasCoberturas(
+  ramo: string | null,
+  opciones: readonly OpcionEnLista[],
+): { clave: string; etiqueta: string; estados: EstadoGarantiaLista[] }[] | null {
+  const r = ramoDeCatalogo(ramo)
+  if (!r) return null
+  return CATALOGO_GARANTIAS[r]
+    // La de ley (RC obligatoria en auto/moto) es «sí» en todas aunque el precio se guardara sin leerla.
+    .map((g) => ({ clave: g.clave, etiqueta: g.etiqueta, estados: opciones.map((o) => (esGarantiaDeLey(r, g.clave) ? 'si' : o.garantias?.[g.clave] ?? 'no_consta')) }))
+    .filter((f) => f.estados.some((e) => e !== 'no_consta'))
 }
 
 /** Mientras no esté aceptado, retirado ni caducado, las necesidades se pueden escribir o corregir. */
@@ -262,11 +415,13 @@ export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
   const id = s(o.id), estado = s(o.estado), creadoAt = s(o.creadoAt), venceEl = s(o.venceEl)
   if (!id || !estado || !creadoAt || !venceEl || !ESTADOS.includes(estado as EstadoPresupuestoLista)) return null
   return {
-    id, estado: estado as EstadoPresupuestoLista, clienteId: s(o.clienteId), creadoAt, venceEl,
+    id, referencia: s(o.referencia), documentoDescargadoAt: s(o.documentoDescargadoAt),
+    estado: estado as EstadoPresupuestoLista, clienteId: s(o.clienteId), ramo: s(o.ramo), creadoAt, venceEl,
     enviadoAt: s(o.enviadoAt), enlaceGeneradoAt: s(o.enlaceGeneradoAt), vistoAt: s(o.vistoAt),
     opciones: typeof o.opciones === 'number' ? o.opciones : 0,
     desdeEur: typeof o.desdeEur === 'number' ? o.desdeEur : null,
     necesidades: s(o.necesidades),
+    detalle: Array.isArray(o.detalle) ? o.detalle.map(leerOpcionEnLista).filter((x): x is OpcionEnLista => x !== null) : null,
   }
 }
 
@@ -342,4 +497,12 @@ export function fraseDatosEmision(v: unknown): { texto: string; alerta: boolean 
   if (ilegibles) partes.push(`⚠ ${ilegibles} dato${ilegibles === 1 ? '' : 's'} no abre${ilegibles === 1 ? '' : 'n'}: revisa la clave PII de asegura`)
   if (!partes.length) return { texto: 'Datos para emitir: completos ✓', alerta: false }
   return { texto: `Datos para emitir: ${partes.join(' · ')}.`, alerta: ilegibles > 0 || cliente.length > 0 }
+}
+
+/** El id de la cotización guardada (`guardado` de la respuesta de cotizar). `null` = no quedó guardada:
+ *  sin él no hay de qué preparar un presupuesto ni a qué pedir la emisión. */
+export function cotizacionIdDe(guardado: unknown): string | null {
+  if (typeof guardado !== 'object' || guardado === null) return null
+  const g = guardado as Record<string, unknown>
+  return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
 }

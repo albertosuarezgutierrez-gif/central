@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
     const token = typeof b?.token === 'string' ? b.token.trim() : ''
     const respuestas = b?.respuestas && typeof b.respuestas === 'object' && !Array.isArray(b.respuestas) ? (b.respuestas as Record<string, unknown>) : {}
-    const r = await responderSolicitud(token, respuestas)
+    const r = await responderSolicitud(token, respuestas, b?.consentimiento === true)
     if (r.ok) return NextResponse.json({ estado: 'ok' })
     return NextResponse.json(r, { status: r.estado === 'errores' ? 422 : 410 })
   } catch (e) {

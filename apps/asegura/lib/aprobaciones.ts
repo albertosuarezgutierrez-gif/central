@@ -23,6 +23,7 @@ import { campoIlegible, descifrarCampo } from './cartera-edicion'
 import { pdfDocumentoFirmado } from './documento-firmado-pdf'
 import { rechazoDeRemitente } from './correo-invitacion-portal.ts'
 import { estadoEmailDeFicha } from './email-ficha'
+import { canalBajaCompania, MOTIVO_NO_CORREO_ALLIANZ } from './canal-baja.ts'
 
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
 
@@ -33,16 +34,22 @@ export const ORIGEN_RECIBO_DEVUELTO = 'recibo_devuelto'
 /** `true` si ha dejado una propuesta nueva. Idempotente por `clave` (una por recibo y vencimiento). */
 export async function proponerReciboDevuelto(tx: Tx, correduriaId: string, reciboId: string, eventoId: string | null): Promise<boolean> {
   if (POLITICA.enviar_correo_cliente === 'prohibido') return false
-  const [r] = await tx.$queryRaw<{ clienteId: string; polizaId: string; ramo: string | null; compania: string | null; numeroPoliza: string | null; importe: string | null; vencimiento: string | null }[]>`
+  const [r] = await tx.$queryRaw<{ clienteId: string; polizaId: string; ramo: string | null; compania: string | null; numeroPoliza: string | null; importe: string | null; vencimiento: string | null; motivoCuenta: boolean }[]>`
     select p.cliente_id::text as "clienteId", p.id::text as "polizaId", p.tipo::text as ramo, p.aseguradora as compania,
            p.numero_poliza as "numeroPoliza", r.prima_total as importe,
-           to_char(r.fecha_vencimiento at time zone 'Europe/Madrid', 'YYYY-MM-DD') as vencimiento
+           -- El recibo VENCE el día de su efecto: desde ahí corre el mes del art. 15 LCS.
+           -- \`fecha_vencimiento\` es el fin del periodo que cubre (un año después en un anual).
+           to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as vencimiento,
+           -- La compañía avisó por correo con un motivo de CUENTA (IBAN o titular): se le pide revisarla.
+           exists (select 1 from recibo_devolucion d where d.correduria_id = r.correduria_id
+                     and d.codigo_entidad_dgs = r.codigo_entidad_dgs and d.id_recibo_norm = ltrim(r.id_recibo, '0')
+                     and d.resuelta_at is null and d.tipo_motivo = 'cuenta') as "motivoCuenta"
     from poliza_recibos r join polizas p on p.id = r.poliza_id
     where r.id = ${reciboId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null`
   if (!r) return false
   const b = borradorReciboDevuelto({
     ramo: r.ramo, compania: r.compania, numeroPoliza: r.numeroPoliza,
-    importe: importeEiac(r.importe), vencimiento: r.vencimiento, hoy: new Date(),
+    importe: importeEiac(r.importe), vencimiento: r.vencimiento, hoy: new Date(), motivoCuenta: r.motivoCuenta,
   })
   if (!b) return false
   const ins = await tx.$queryRaw<{ id: string }[]>`
@@ -68,10 +75,10 @@ export const ORIGEN_ANULACION = 'anulacion'
 export async function proponerAnulacionesFirmadas(correduriaId: string): Promise<number> {
   if (POLITICA.enviar_correo_compania === 'prohibido') return 0
   const db = prismaAsegura()
-  const filas = await db.$queryRaw<{ id: string; clienteId: string; polizaId: string; tomador: string; compania: string | null; numeroPoliza: string | null; tipo: 'no_renovacion' | 'inmediata' | 'sustitucion'; fechaEfecto: string; firmadaEl: string; docHash: string }[]>`
+  const filas = await db.$queryRaw<{ id: string; clienteId: string; polizaId: string; tomador: string; compania: string | null; dgs: string | null; numeroPoliza: string | null; tipo: 'no_renovacion' | 'inmediata' | 'sustitucion'; fechaEfecto: string; firmadaEl: string; docHash: string }[]>`
     select a.id::text as id, a.cliente_id::text as "clienteId", a.poliza_id::text as "polizaId",
            trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
-           coalesce(cd.nombre_comun, p.aseguradora) as compania, p.numero_poliza as "numeroPoliza", a.tipo,
+           coalesce(cd.nombre_comun, p.aseguradora) as compania, p.codigo_entidad_dgs as dgs, p.numero_poliza as "numeroPoliza", a.tipo,
            to_char(a.fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto",
            to_char(a.firmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "firmadaEl", f.doc_hash as "docHash"
     from anulacion a
@@ -86,6 +93,8 @@ export async function proponerAnulacionesFirmadas(correduriaId: string): Promise
                       and x.estado in ('pendiente', 'enviando', 'ejecutada', 'rechazada'))`
   let n = 0
   for (const f of filas) {
+    // Allianz no recibe bajas por correo: se tramitan en el PUE (docs/ALLIANZ-PUE.md). No se propone nada.
+    if (canalBajaCompania(f.dgs) === 'pue_allianz') continue
     if (!f.compania || !f.numeroPoliza) {
       // La ficha de la póliza dice «falta comunicarla»; aquí no hay con qué redactar el correo.
       console.warn('[aprobaciones] anulación firmada sin compañía o número de póliza, no se propone:', f.id)
@@ -116,6 +125,8 @@ export type EnvioTrasFirma =
   | { estado: 'en_cola'; motivo: string }
   /** Se cortó esperando al proveedor: pudo salir. Sale en «a medias», NUNCA se reintenta sola. */
   | { estado: 'incierto'; motivo: string }
+  /** Allianz: no sale por correo. La anulación sigue `firmada` esperando a que Alberto la tramite en el PUE. */
+  | { estado: 'pue'; motivo: string }
 
 /**
  * La carta que el cliente acaba de FIRMAR sale sola hacia su compañía (regla `anulacionSeEnviaSola`
@@ -126,8 +137,13 @@ export type EnvioTrasFirma =
  */
 export async function enviarAnulacionTrasFirma(correduriaId: string, anulacionId: string): Promise<EnvioTrasFirma> {
   if (!UUID.test(anulacionId)) return { estado: 'en_cola', motivo: 'anulación no válida' }
-  await proponerAnulacionesFirmadas(correduriaId)
   const db = prismaAsegura()
+  // Allianz NUNCA por correo: se para antes de proponer nada. La anulación queda `firmada` (pendiente de PUE).
+  const [ca] = await db.$queryRaw<{ dgs: string | null }[]>`
+    select p.codigo_entidad_dgs as dgs from anulacion n join polizas p on p.id = n.poliza_id
+    where n.id = ${anulacionId}::uuid and n.correduria_id = ${correduriaId}::uuid`
+  if (ca && canalBajaCompania(ca.dgs) === 'pue_allianz') return { estado: 'pue', motivo: 'Allianz: se tramita en el PUE' }
+  await proponerAnulacionesFirmadas(correduriaId)
   const [a] = await db.$queryRaw<{ id: string; tipo: string; dgs: string | null; propuesta: { asunto?: unknown; texto?: unknown } | null }[]>`
     select x.id::text as id, n.tipo::text as tipo, p.codigo_entidad_dgs as dgs, x.propuesta
     from aprobacion x join anulacion n on n.id = x.anulacion_id join polizas p on p.id = n.poliza_id
@@ -241,6 +257,13 @@ export async function retirarObsoletas(correduriaId: string): Promise<void> {
     from anulacion n
     where a.correduria_id = ${correduriaId}::uuid and a.estado = 'pendiente' and a.accion = 'enviar_correo_compania'
       and n.id = a.anulacion_id and n.estado <> 'firmada'`
+  // Una propuesta de correo de anulación a Allianz (anterior a la regla del PUE) no se manda: se retira.
+  await db.$executeRaw`
+    update aprobacion a set estado = 'caducada', decidida_at = now(), decidida_por = 'sistema:allianz_pue',
+           resultado = 'Allianz se tramita en el PUE, no por correo: no se envía.'
+    from anulacion n join polizas p on p.id = n.poliza_id
+    where a.correduria_id = ${correduriaId}::uuid and a.estado = 'pendiente' and a.accion = 'enviar_correo_compania'
+      and n.id = a.anulacion_id and upper(trim(p.codigo_entidad_dgs)) = 'C0109'`
   // Igual con la carta: enviada a mano por fuera o desistida, no se manda otra vez.
   await db.$executeRaw`
     update aprobacion a set estado = 'caducada', decidida_at = now(), decidida_por = 'sistema:carta_cambiada',
@@ -320,6 +343,8 @@ export type ResultadoDecision =
   | { estado: 'incierto'; motivo: string }
   /** Un envío a medias cerrado a mano tras mirarlo en el proveedor. */
   | { estado: 'cerrada' }
+  /** Allianz no recibe bajas por correo: se tramita en el PUE. No se ha enviado ni tocado nada (409). */
+  | { estado: 'pue'; motivo: string }
 
 /** Cortes de red o de espera: el proveedor pudo haber aceptado el mensaje antes de cortarse. */
 export function falloIncierto(mensaje: string): boolean {
@@ -334,14 +359,14 @@ const MOTIVO_SIN_EMAIL: Record<'no_encontrado' | 'baja_de_correo' | 'sin_email',
 
 type Adjunto = { nombre: string; contenido: string | Buffer; tipo: string }
 
-type FirmaGuardada = { firmante: string | null; metodo: string | null; sello: Date | null; docHash: string | null }
+export type FirmaGuardada = { firmante: string | null; metodo: string | null; sello: Date | null; docHash: string | null }
 
 /**
  * Lo que se adjunta a la compañía: el ORIGINAL en texto (el que respalda la huella de la firma) y, si hay
  * evidencia, el mismo texto en PDF con el justificante debajo — un `.txt` suelto se lee como un borrador.
  * Si el PDF no se puede montar, sale el original solo: nunca se bloquea un envío por la presentación.
  */
-async function adjuntosFirmados(base: string, texto: string, f: FirmaGuardada | undefined): Promise<Adjunto[]> {
+export async function adjuntosFirmados(base: string, texto: string, f: FirmaGuardada | undefined): Promise<Adjunto[]> {
   const original: Adjunto = { nombre: `${base}.txt`, contenido: texto, tipo: 'text/plain; charset=utf-8' }
   if (!f?.docHash || !f.sello) return [original]
   // El justificante CERTIFICA la huella ante la compañía: si el texto que se adjunta no la cumple, no se certifica nada.
@@ -508,6 +533,13 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
 
   // Antes de reclamar: sin destinatario no se toca la fila (sigue pendiente para cuando haya correo).
   const paraCompania = a.accion === 'enviar_correo_compania'
+  // Allianz no recibe bajas por correo, ni aprobando a mano una propuesta vieja: se tramita en el PUE.
+  if (paraCompania && a.anulacionId) {
+    const [n] = await db.$queryRaw<{ dgs: string | null }[]>`
+      select p.codigo_entidad_dgs as dgs from anulacion n join polizas p on p.id = n.poliza_id
+      where n.id = ${a.anulacionId}::uuid and n.correduria_id = ${correduriaId}::uuid`
+    if (n && canalBajaCompania(n.dgs) === 'pue_allianz') return { estado: 'pue', motivo: MOTIVO_NO_CORREO_ALLIANZ }
+  }
   let destino: string
   let adjuntos: Adjunto[] | undefined
   let compania: string | null = null
@@ -592,7 +624,7 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
   return { estado: 'fallida', motivo: envio.motivo }
 }
 
-async function anotarHistorial(correduriaId: string, clienteId: string, polizaId: string | null, nota: string): Promise<void> {
+export async function anotarHistorial(correduriaId: string, clienteId: string, polizaId: string | null, nota: string): Promise<void> {
   try {
     await prismaAsegura().$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)

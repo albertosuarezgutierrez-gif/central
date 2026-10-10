@@ -229,8 +229,11 @@ export type MatriculacionEstimada = {
   readonly hasta: string
   /** Posición en la serie nacional de la que sale todo. */
   readonly ordinal: number
-  /** Marca explícita de que el dato está CALCULADO, no consultado. */
-  readonly metodo: 'interpolacion_serie_nacional'
+  /**
+   * Marca explícita de que el dato está CALCULADO, no consultado.
+   * `extrapolacion_ultimo_tramo` = matrícula posterior a la tabla, acotada por `hoy`.
+   */
+  readonly metodo: 'interpolacion_serie_nacional' | 'extrapolacion_ultimo_tramo'
 }
 
 /**
@@ -246,14 +249,15 @@ export type MatriculacionEstimada = {
  *    extrapolar más allá de la tabla es inventarse el futuro. Si la matrícula
  *    es de verdad reciente, la respuesta correcta es actualizar la tabla.
  */
-export function fechaMatriculacionEstimada(valor: string): MatriculacionEstimada | null {
+export function fechaMatriculacionEstimada(valor: string, hoy?: string): MatriculacionEstimada | null {
   const ordinal = ordinalMatricula(valor)
   if (ordinal === null) return null
 
   // Búsqueda binaria del tramo [h0, h1) que contiene el ordinal.
   let lo = 0
   let hi = HITOS.length - 1
-  if (ordinal < HITOS[0]![1] || ordinal >= HITOS[hi]![1]) return null
+  if (ordinal >= HITOS[hi]![1]) return hoy ? extrapolarReciente(ordinal, hoy) : null
+  if (ordinal < HITOS[0]![1]) return null
   while (hi - lo > 1) {
     const medio = (lo + hi) >> 1
     if (HITOS[medio]![1] <= ordinal) lo = medio
@@ -281,5 +285,43 @@ export function fechaMatriculacionEstimada(valor: string): MatriculacionEstimada
     hasta: civilDesdeDias(hasta),
     ordinal,
     metodo: 'interpolacion_serie_nacional',
+  }
+}
+
+/** Margen de más allá de `hoy` que se tolera al extrapolar antes de declarar la matrícula imposible. */
+const HOLGURA_EXTRAPOLACION_DIAS = 20
+
+/**
+ * Matrícula POSTERIOR al último hito (la tabla solo tiene meses CERRADOS, así
+ * que una matrícula de este mes siempre cae aquí). Sin `hoy` no se estima; con
+ * él, el rango es cerrado y real: entre el último hito y hoy. El punto se
+ * extrapola al ritmo del último tramo y se recorta a `hoy`. Si el ritmo la
+ * pondría bastante más allá de hoy, no es reciente sino imposible (errata o
+ * serie aún no emitida) → `null`.
+ */
+function extrapolarReciente(ordinal: number, hoy: string): MatriculacionEstimada | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(hoy)
+  if (!m) return null
+  const diaHoy = diasDesdeCivil(Number(m[1]), Number(m[2]), Number(m[3]))
+  const [diaN, ordN] = HITOS[HITOS.length - 1]!
+  if (diaHoy <= diaN) return null
+  // Ritmo de los últimos 12 tramos (un mes suelto engaña: agosto emite un
+  // tercio que junio). La media da el punto; el mes más rápido, la cota de
+  // «imposible», para no descartar una matrícula real en un mes fuerte.
+  const tramos = HITOS.slice(-13)
+  let maximo = 0
+  for (let i = 1; i < tramos.length; i++) {
+    maximo = Math.max(maximo, (tramos[i]![1] - tramos[i - 1]![1]) / (tramos[i]![0] - tramos[i - 1]![0]))
+  }
+  const media = (ordN - tramos[0]![1]) / (diaN - tramos[0]![0]) // matrículas por día
+  const masPronto = diaN + Math.floor((ordinal - ordN) / maximo)
+  if (masPronto > diaHoy + HOLGURA_EXTRAPOLACION_DIAS) return null
+  const extrapolado = diaN + Math.round((ordinal - ordN) / media)
+  return {
+    estimada: civilDesdeDias(Math.min(extrapolado, diaHoy)),
+    desde: civilDesdeDias(diaN - MARGEN_DIAS),
+    hasta: civilDesdeDias(diaHoy),
+    ordinal,
+    metodo: 'extrapolacion_ultimo_tramo',
   }
 }

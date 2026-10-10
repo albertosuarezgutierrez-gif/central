@@ -101,9 +101,11 @@ test('Todos los archivos del punto 3 contienen origen=', () => {
   }
 })
 
-test('EnlaceMedido captura cta_portal_click con origen correcto', () => {
+// 30/09/2026: los accesos internos (herramientas, ramos, WhatsApp) van a
+// `acceso_click`; solo el portal cuenta como `cta_portal_click`.
+test('EnlaceMedido separa el clic al portal del resto de accesos', () => {
   const src = readFileSync(join(RAIZ, 'components', 'EnlaceMedido.tsx'), 'utf8')
-  assert.match(src, /medir\('cta_portal_click'/, 'EnlaceMedido debe capturar cta_portal_click')
+  assert.match(src, /href\.startsWith\(PORTAL_URL\) \? 'cta_portal_click' : 'acceso_click'/, 'EnlaceMedido debe distinguir portal / acceso')
   assert.match(src, /origen/i, 'EnlaceMedido debe usar el prop origen')
 })
 
@@ -123,4 +125,39 @@ test('Portal test sigue siendo válido con EnlaceMedido', () => {
   const src = readFileSync(join(RAIZ, 'lib', 'portal.test.ts'), 'utf8')
   // Solo verificar que el test sigue existiendo y que menciona PORTAL_URL
   assert.match(src, /PORTAL_URL/, 'portal.test.ts debe seguir siendo válido')
+})
+
+test('medir() manda el evento a GA4 cuando window.gtag existe, y el lead como generate_lead', () => {
+  const llamadas: unknown[][] = []
+  ;(globalThis as unknown as { window?: { gtag?: (...a: unknown[]) => void } }).window = {
+    gtag: (...a: unknown[]) => {
+      llamadas.push(a)
+    },
+  }
+  try {
+    assert.equal(medir('lead_enviado', { ramo: 'hogar' }), true, 'Con solo GA4 cargado debe devolver true')
+    assert.equal(medir('cta_portal_click', { origen: 'cabecera' }), true)
+    assert.deepEqual(llamadas, [
+      ['event', 'generate_lead', { ramo: 'hogar' }],
+      ['event', 'cta_portal_click', { origen: 'cabecera' }],
+    ])
+  } finally {
+    delete (globalThis as unknown as { window?: unknown }).window
+  }
+})
+
+test('medir() emite a los dos proveedores si los dos están cargados, y un fallo de uno no tapa al otro', () => {
+  const ph: string[] = []
+  const ga: unknown[][] = []
+  ;(globalThis as unknown as { window?: object }).window = {
+    posthog: { capture: (n: string) => { ph.push(n); throw new Error('caído') } },
+    gtag: (...a: unknown[]) => { ga.push(a) },
+  }
+  try {
+    assert.equal(medir('aviso_solicitado', { ramo: 'auto' }), true)
+    assert.deepEqual(ph, ['aviso_solicitado'])
+    assert.deepEqual(ga, [['event', 'aviso_solicitado', { ramo: 'auto' }]])
+  } finally {
+    delete (globalThis as unknown as { window?: unknown }).window
+  }
 })

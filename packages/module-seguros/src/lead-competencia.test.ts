@@ -37,8 +37,8 @@ test('la prima desconocida no resta; el teléfono pesa más que el correo', () =
 
 test('secuencia: espera, primer contacto, recordatorio, llamada, aparcar', () => {
   assert.equal(siguientePasoLead(80, 0, null).accion, 'esperar')
-  assert.equal(siguientePasoLead(80, 0, null).dentroDeDias, 20)
-  assert.equal(siguientePasoLead(50, 0, null).accion, 'primer_contacto')
+  assert.equal(siguientePasoLead(80, 0, null).dentroDeDias, 35)
+  assert.equal(siguientePasoLead(40, 0, null).accion, 'primer_contacto')
   assert.deepEqual(siguientePasoLead(40, 1, 3), { accion: 'recordatorio', motivo: 'no ha respondido al primer contacto', dentroDeDias: 4 })
   assert.equal(siguientePasoLead(30, 2, 20).accion, 'llamada')
   assert.equal(siguientePasoLead(30, 2, 20).dentroDeDias, 0)
@@ -64,7 +64,7 @@ test('LSSI 21.2: correo solo a quien fue cliente; sin teléfono ni relación pre
 })
 
 test('el paso se dice con el canal permitido: primer contacto sin correo es una llamada', () => {
-  const primer = siguientePasoLead(50, 0, null)
+  const primer = siguientePasoLead(40, 0, null)
   assert.equal(textoPasoLead(primer, 'solo_telefono'), 'Primera llamada')
   assert.equal(textoPasoLead(primer, 'telefono_y_correo'), 'Primer correo')
   assert.equal(textoPasoLead(primer, 'sin_canal_permitido'), 'Sin canal permitido')

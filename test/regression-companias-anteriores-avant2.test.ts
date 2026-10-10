@@ -26,6 +26,19 @@ test('auto nuevo usa ese catálogo antes que el directorio de la correduría', (
   assert.match(page, /anteriores\.estado === 'ok' && anteriores\.opciones\.length > 0\s*\? anteriores\.opciones/)
 })
 
+// Lo mismo en MOTO (29/09/2026): seguía con el directorio de 14 compañías.
+test('moto nuevo usa el catálogo de moto de Avant2 antes que el directorio', () => {
+  assert.match(leer('apps/asegura/lib/codeoscopic/catalogos.ts'), /catalogo\(config, '\/motorcycle\/insurance-companies'\)/)
+  assert.match(
+    leer('apps/asegura/lib/retarificar-cartera.ts'),
+    /case 'companias-anteriores-moto':\s*return \{ estado: 'ok', opciones: await companiasAnterioresMoto\(config\) \}/,
+  )
+  // 07/10/2026: la lectura vive en `datos-cotizador.ts`, que comparten la página completa y el bloque de la oportunidad.
+  const page = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/datos-cotizador.ts')
+  assert.match(page, /catalogoAsegura\(\{ tipo: 'companias-anteriores-moto' \}\)/)
+  assert.match(page, /anteriores\.estado === 'ok' && anteriores\.opciones\.length > 0\s*\? anteriores\.opciones/)
+})
+
 test('asegura sirve la fecha de matriculación de Avant2 sin degradar un fallo a «no hay»', () => {
   const r = leer('apps/asegura/lib/retarificar-cartera.ts')
   assert.match(r, /case 'fecha-matriculacion':/)

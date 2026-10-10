@@ -121,6 +121,14 @@ test('los metros y el año solo salen si son creíbles', () => {
   ])
 })
 
+test('los metros de CIMA traen decimales: "275.00" son 275 m², no 27.500', () => {
+  assert.deepEqual(describirBien('hogar', { metrosCuadrados: '275.00' }).detalles, ['275 m²'])
+  assert.deepEqual(describirBien('hogar', { metrosCuadrados: '90,5' }).detalles, ['91 m²'])
+  assert.deepEqual(describirBien('hogar', { metrosCuadrados: '1.234' }).detalles, ['1234 m²'])
+  assert.deepEqual(describirBien('hogar', { metrosCuadrados: 'unos 90' }).detalles, [])
+  assert.deepEqual(describirBien('hogar', { anioConstruccionCima: '2000' }).detalles, ['Construido en 2000'])
+})
+
 test('el ramo desconocido se resuelve por las CLAVES, no se pierde', () => {
   // Un ramo que no esté en las dos listas pero traiga matrícula sigue siendo un
   // vehículo: el catálogo de ramos crece y este fichero no puede quedarse atrás
@@ -257,4 +265,28 @@ test('las partidas OTROS son coberturas, no partidas del bien: no se repiten en 
     ],
   })
   assert.deepEqual(b.detalles, ['90 m²', 'CONTINENTE: 150.000,00 €'])
+})
+
+test('🔒 el bastidor (VIN) NUNCA llega a la forma del portal; la ficha CIMA sí (con códigos EIAC traducidos)', () => {
+  const VIN = 'VSSZZZ6JZ9R123456'
+  const b = describirBien('auto', {
+    marca: 'SEAT', modelo: 'IBIZA', matricula: '1234ABC', bastidor: VIN,
+    valorVehiculo: '12000', combustible: 'GA', remolque: false,
+  })
+  assert.ok(!JSON.stringify(b).includes(VIN), 'el bastidor se ha colado en el bien del portal')
+  assert.ok(b.detalles.includes('Valor del vehículo: 12.000,00€'))
+  assert.ok(b.detalles.includes('Combustible: Gasolina'))
+  const h = describirBien('hogar', { localidad: 'Sevilla', zona: 'PO', bastidor: VIN })
+  assert.ok(!JSON.stringify(h).includes(VIN))
+  assert.ok(h.detalles.includes('Zona: Zona poblada'))
+})
+
+test('ficha del vehículo para el cliente: uso oculto, potencia en CV, PMA solo si es creíble', () => {
+  const a = describirBien('auto', { marca: 'RENAULT', modelo: 'CLIO', matricula: '1234ABC', usoVehiculo: 'PA', potencia: '65', pma: '7' })
+  assert.ok(!a.detalles.some((x) => x.startsWith('Uso')), 'sin tabla oficial el uso no se pinta ni se traduce')
+  assert.ok(a.detalles.includes('Potencia: 65 CV'))
+  assert.ok(!a.detalles.some((x) => x.includes('PMA') || x.includes('Masa máxima')), 'PMA de 7 kg no es un dato')
+  const b = describirBien('auto', { matricula: '1234ABC', usoVehiculo: 'ZZ', pma: '1820' })
+  assert.ok(!b.detalles.some((x) => x.startsWith('Uso')), 'un código de uso que no sabemos leer no se pinta')
+  assert.ok(b.detalles.includes('Masa máxima autorizada (PMA): 1.820 kg'))
 })

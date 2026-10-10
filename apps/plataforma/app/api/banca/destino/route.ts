@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import type { Destino } from '@/lib/destino'
-import { claveReferencia, claveComercio, claveReglaValida } from '@/lib/correduria'
+import { z } from 'zod'
+import { camposSeguros } from '@/lib/destino-campos'
+import { COMPANIAS_CONOCIDAS, claveReferencia, claveComercio, claveReglaValida } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
+
+const BodySchema = z.object({
+  id: z.string().optional(),
+  destino: z.string().optional(),
+  compania: z.enum(COMPANIAS_CONOCIDAS).nullish(),
+})
 
 const DESTINOS: Destino[] = ['turistico_pisos', 'turistico_duplex', 'seguros', 'traspaso_interno', 'personal']
 
@@ -15,7 +23,9 @@ export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const { id, destino } = await req.json().catch(() => ({})) as { id?: string; destino?: string }
+  const parsed = BodySchema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: 'compañía inválida' }, { status: 400 })
+  const { id, destino, compania } = parsed.data
   if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
   if (!destino || !DESTINOS.includes(destino as Destino)) {
     return NextResponse.json({ error: 'destino inválido' }, { status: 400 })
@@ -33,8 +43,13 @@ export async function POST(req: NextRequest) {
   // `requiere_revision`: un destino confirmado ya está clasificado, así que dejar el flag lo
   // convertía en un zombie que seguía saliendo en la bandeja «Gastos por revisar» (mismo saneo
   // que aplicó /api/banca/confirmar el 2026-07-10; este endpoint era el último que lo olvidaba).
+  // Seguros + compañía → la guarda y marca comision_seguro; seguros sin compañía no pisa la existente.
+  const cs = camposSeguros(destino, compania)
   await prisma.$executeRaw`
-    UPDATE movimientos_bancarios SET destino = ${destino}, destino_confirmado = true, requiere_revision = false, compania_seguros = NULL WHERE id = ${id}::uuid
+    UPDATE movimientos_bancarios SET destino = ${destino}, destino_confirmado = true, requiere_revision = false,
+      compania_seguros = CASE WHEN ${cs.limpiarCompania}::boolean THEN NULL ELSE COALESCE(${cs.compania}::text, compania_seguros) END,
+      subcategoria = COALESCE(${cs.subcategoria}::text, subcategoria)
+    WHERE id = ${id}::uuid
   `
 
   // APRENDIZAJE: si el concepto trae un código de referencia (DNI de la pensión, código de

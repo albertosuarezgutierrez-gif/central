@@ -50,6 +50,12 @@ export type DatosAceptacion = {
   necesidades: string | null
   /** La ficha IPID de la opción elegida que el portal enseñaba. `null` = no había ninguna. */
   ipid: { huella: string } | null
+  /**
+   * De dónde salen los precios. `ofertas` = PDF de compañías revisados por el corredor: no hay «precio
+   * calculado» ni emisión automática, se autoriza al mediador a gestionar la contratación con la
+   * compañía. Ausente = `codeoscopic`, cuyo texto NO cambia (la huella de lo firmado depende de él).
+   */
+  via?: 'codeoscopic' | 'ofertas'
 }
 
 /** Límites de la declaración de necesidades (los mismos que el CHECK de la BD). */
@@ -148,10 +154,20 @@ export function documentoAceptacion(d: DatosAceptacion): string {
     '',
     `Yo, ${d.tomador.trim()}, acepto la opción de ${o.compania}${o.producto ? ` (${o.producto})` : ''} por ${eur(o.primaEur)} al año` +
       `${o.franquiciaEur !== null ? `, con franquicia de ${eur(o.franquiciaEur)}` : ''}; ${FIRMEZA[o.firmeza]}.`,
-    `Presupuesto calculado el ${fechaEs(d.calculadoEl)} y válido hasta el ${fechaEs(d.venceEl)}.`,
-    '',
-    `Con esta aceptación encargo a mi corredor, ${d.mediador} (DGSFP ${d.claveDgsfp}), que tramite la contratación. ` +
-      'NO es todavía el contrato: la compañía tiene que confirmar el precio y emitir la póliza, y no hay cobertura hasta que la emita y se me comunique.',
+    ...(d.via === 'ofertas'
+      ? [
+          `Presupuesto preparado el ${fechaEs(d.calculadoEl)} con la oferta escrita de ${o.compania} y válido hasta el ${fechaEs(d.venceEl)}.`,
+          '',
+          `Con esta aceptación autorizo a mi corredor, ${d.mediador} (DGSFP ${d.claveDgsfp}), a gestionar en mi nombre la contratación con ${o.compania} ` +
+            'en las condiciones de la oferta elegida. NO es todavía el contrato: la compañía tiene que confirmar la oferta y emitir la póliza, ' +
+            'y no hay cobertura hasta que la emita y se me comunique.',
+        ]
+      : [
+          `Presupuesto calculado el ${fechaEs(d.calculadoEl)} y válido hasta el ${fechaEs(d.venceEl)}.`,
+          '',
+          `Con esta aceptación encargo a mi corredor, ${d.mediador} (DGSFP ${d.claveDgsfp}), que tramite la contratación. ` +
+            'NO es todavía el contrato: la compañía tiene que confirmar el precio y emitir la póliza, y no hay cobertura hasta que la emita y se me comunique.',
+        ]),
     '',
     lineaVistoAntes(d.vistoAntes),
     '',

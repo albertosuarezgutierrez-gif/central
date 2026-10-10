@@ -47,6 +47,44 @@ test('🚨 una cobertura a medias NO se completa con ceros', () => {
   assert.equal(r.bloques[0].cobertura, null)
 })
 
+test('🚨 oportunidades: sin el campo es «no se sabe» (null), 0 es «ninguna»', () => {
+  const sin = interpretarBusqueda(200, BUSQUEDA_OK)
+  assert.equal(sin.estado, 'ok')
+  if (sin.estado !== 'ok') return
+  assert.equal(sin.bloques[0].hallazgos[0].oportunidadesAbiertas, null)
+
+  for (const n of [0, 2]) {
+    const con = structuredClone(BUSQUEDA_OK)
+    ;(con.bloques[0].hallazgos[0] as Record<string, unknown>).oportunidadesAbiertas = n
+    const r = interpretarBusqueda(200, con)
+    assert.equal(r.estado, 'ok')
+    if (r.estado !== 'ok') return
+    assert.equal(r.bloques[0].hallazgos[0].oportunidadesAbiertas, n)
+  }
+})
+
+test('🚨 aparcadas y siguiente paso: ausentes = null; un paso a medias se descarta', () => {
+  const sin = interpretarBusqueda(200, BUSQUEDA_OK)
+  assert.equal(sin.estado, 'ok')
+  if (sin.estado !== 'ok') return
+  assert.equal(sin.bloques[0].hallazgos[0].oportunidadesAparcadas, null)
+  assert.equal(sin.bloques[0].hallazgos[0].siguientePaso, null)
+
+  const con = structuredClone(BUSQUEDA_OK)
+  const paso = { oportunidadId: 'o1', estado: 'en_negociacion', tipo: 'llamada', fechaLimite: '2026-09-30' }
+  Object.assign(con.bloques[0].hallazgos[0], { oportunidadesAparcadas: 1, siguientePaso: paso })
+  const r = interpretarBusqueda(200, con)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.bloques[0].hallazgos[0].oportunidadesAparcadas, 1)
+  assert.deepEqual(r.bloques[0].hallazgos[0].siguientePaso, paso)
+
+  const roto = structuredClone(BUSQUEDA_OK)
+  Object.assign(roto.bloques[0].hallazgos[0], { siguientePaso: { ...paso, fechaLimite: null } })
+  const r2 = interpretarBusqueda(200, roto)
+  assert.equal(r2.estado === 'ok' && r2.bloques[0].hallazgos[0].siguientePaso, null)
+})
+
 test('🚨 «no se ha buscado» no es «no hay resultados»', () => {
   const corto = interpretarBusqueda(200, { estado: 'ok', termino: 'jo', buscable: false, bloques: [], distintos: 0 })
   assert.equal(corto.estado, 'ok')

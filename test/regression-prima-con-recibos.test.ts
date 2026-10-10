@@ -65,3 +65,8 @@ test('prima: el aviso de renovación sin confirmar sigue en la tarjeta del clien
   const src = readFileSync('apps/plataforma/app/(usuario)/correduria/cliente/[id]/SegurosCliente.tsx', 'utf8')
   assert.match(src, /Renovación sin confirmar por la compañía/)
 })
+
+test('prima: el aviso de vencimiento pasa la BRUTA a primaConRecibos (no la neta suelta)', () => {
+  const src = readFileSync('apps/asegura/lib/avisos-vencimiento.ts', 'utf8')
+  assert.match(src, /primaConRecibos\(\s*\{[^}]*primaBruta:/)
+})

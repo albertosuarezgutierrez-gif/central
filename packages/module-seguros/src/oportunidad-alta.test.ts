@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { MOTIVO_DESCARTE, aplicarAccion, validarAltaOportunidad, validarEdicionOportunidad } from './oportunidad-seguimiento.ts'
+import { MOTIVO_DESCARTE, aplicarAccion, seguroAnteriorDe, validarAltaOportunidad, validarEdicionOportunidad } from './oportunidad-seguimiento.ts'
 
 const hoy = new Date(Date.UTC(2026, 8, 24))
 
@@ -49,4 +49,22 @@ test('el motivo de descartar no vale para una venta perdida ni para «no le inte
   const { planLlamada } = await import('./llamada-resultado.ts')
   assert.equal(MOTIVOS_PERDIDA_VENTA.includes(MOTIVO_DESCARTE), false)
   assert.equal(planLlamada({ resultado: 'no_interesa', motivo: MOTIVO_DESCARTE }, 'competencia', hoy).ok, false)
+})
+
+test('alta: el seguro anterior (bonus) se guarda saneado; 0 siniestros es un dato', () => {
+  const r = validarAltaOportunidad({ ramo: 'moto', fechaTarea: '2026-09-25', seguroAnterior: { codigoDgs: ' c0058 ', aniosSinSiniestros: 5, siniestrosUltimos5: 0, fechaEfecto: '2026-02-30' } }, hoy)
+  assert.ok(r.ok)
+  assert.deepEqual(r.alta.seguroAnterior, { codigoDgs: 'C0058', fechaEfecto: null, aniosSinSiniestros: 5, siniestrosUltimos5: 0 })
+  assert.equal(seguroAnteriorDe({ aniosSinSiniestros: 'varios', siniestrosUltimos5: -1, codigoDgs: 'Mapfre' }), null, 'basura con forma de dato no se guarda')
+  assert.equal(seguroAnteriorDe(undefined), null)
+  assert.equal(seguroAnteriorDe({ aniosSinSiniestros: '7' })?.aniosSinSiniestros, 7)
+})
+
+test('pendiente_cliente: solo cuando el alta la abre el servidor (lead web)', () => {
+  const hoy = new Date('2026-09-24T00:00:00Z')
+  const d = { ramo: 'auto', estado: 'pendiente_cliente', fechaTarea: '2026-09-24' }
+  assert.equal(validarAltaOportunidad(d, hoy).ok, false, 'desde la pantalla no')
+  const r = validarAltaOportunidad(d, hoy, { desdeServidor: true })
+  assert.ok(r.ok && r.alta.estado === 'pendiente_cliente')
+  assert.equal(validarAltaOportunidad({ ...d, estado: 'ganada' }, hoy, { desdeServidor: true }).ok, false, 'ni el servidor la abre ganada')
 })

@@ -35,7 +35,7 @@
 
 import { resolverConfig, type ConfigCodeoscopic, type ResolucionConfig } from './config.ts'
 import { peticion } from './cliente.ts'
-import { leerCotizacion, type Cotizacion, type Precio } from './respuesta.ts'
+import { firmezaDe, leerCotizacion, type Cotizacion, type Precio } from './respuesta.ts'
 import { CLAVES_ELEMENTO_EMAIL, type ClaveElementoEmail } from './persona.ts'
 
 /**
@@ -78,35 +78,70 @@ export async function refrescarProyecto(
  *
  *  🚨 25/09/2026: una compañía puede devolver VARIOS precios del mismo nivel
  *  (Reale llegó a 8) y hasta hoy se cogía el PRIMERO — el ReRate confirmaba un
- *  producto distinto de la fila que el corredor pulsó. Con `pista` (producto y
- *  prima de la fila) se desempata: primero el mismo producto, luego la prima
- *  más cercana. Sin pista, el comportamiento de siempre. */
+ *  producto distinto de la fila que el corredor pulsó.
+ *
+ *  🚨 30/09/2026: desempatar por «la prima más cercana» tampoco valía. El
+ *  `producto` es el MISMO en todas las modalidades de una compañía (tres Mapfre
+ *  «Mapfre Autos»; la moto con franquicia 450€ y 600€ a 2,49€ de distancia), y
+ *  tras un PATCH del proyecto (correcciones, reparación desde la ficha, fecha
+ *  de efecto) el vendor re-tarifica: basta que las primas suban un 0,6 % para
+ *  que «la más cercana» sea OTRA modalidad, y se confirma y emite esa. La llave
+ *  es compañía + categoría + MODALIDAD (única en las 396 filas guardadas):
+ *  - con `modalidad` en la pista: exactamente una, o `null` (no se adivina);
+ *  - sin ella (pestaña vieja): solo vale una prima IDÉNTICA; si hay varias
+ *    candidatas y ninguna casa al céntimo, `null`. Fallar cerrado cuesta volver
+ *    a pedir precio; fallar abierto emite una póliza que nadie eligió. */
 export function encontrarPrecio(
   cotizacion: Cotizacion,
   compania: string,
   categoria: string,
-  pista: { producto?: string | null; primaEur?: number | null } = {},
+  pista: { producto?: string | null; primaEur?: number | null; modalidad?: string | null; idPrecio?: string | null } = {},
 ): Precio | null {
-  const normCompania = compania.trim().toLowerCase()
-  const normCategoria = categoria.trim().toLowerCase()
+  const norm = (s: string | null | undefined) => (s ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
   const candidatos = cotizacion.precios.filter(
-    (p) =>
-      p.compania.trim().toLowerCase() === normCompania &&
-      (p.categoria ?? '').trim().toLowerCase() === normCategoria,
+    (p) => norm(p.compania) === norm(compania) && norm(p.categoria) === norm(categoria),
   )
+  // 🔑 30/09/2026: el `id` del vendor (el `mainQuote.id` guardado en `tarificacion_precios.id_precio`)
+  // es la IDENTIDAD del precio; compañía + nivel + modalidad solo lo describen. Si el proyecto
+  // aún lo trae, es ese y ningún otro — siempre que sea de la compañía y el nivel pedidos: un id
+  // que apunta a otra fila es una incoherencia, y se falla cerrado. Si ya no está (el vendor
+  // re-tarificó tras un PATCH y renumeró), se cae a la llave descriptiva de abajo, y la pantalla
+  // enseña el cambio de prima antes de emitir.
+  const idPrecio = (pista.idPrecio ?? '').trim()
+  if (idPrecio !== '') {
+    const porId = cotizacion.precios.filter((p) => p.id === idPrecio)
+    if (porId.length === 1) {
+      const p = porId[0]
+      // Un id que no es de esta compañía/nivel, o cuya modalidad no es la pulsada, no se emite.
+      if (!candidatos.includes(p)) return null
+      if (norm(pista.modalidad) !== '' && norm(p.modalidad) !== norm(pista.modalidad)) return null
+      return p
+    }
+    // Id repetido (no debería pasar): no identifica nada, decide la llave descriptiva de abajo.
+  }
+  if (norm(pista.modalidad) !== '') {
+    const exactos = candidatos.filter((p) => norm(p.modalidad) === norm(pista.modalidad))
+    if (exactos.length <= 1) return exactos[0] ?? null
+    // Cada ReRate deja en el proyecto OTRO mainQuote con la misma modalidad, ya con caducidad
+    // (fixture real 2026-09-26: Allianz 435,37€ sin caducidad + 432,82€ y 520,97€ confirmados).
+    // El de la parrilla es el de la tarificación, el que NO la trae. Sin esto, confirmar dos veces
+    // el mismo precio (cerrar el panel y volver, o Telegram tras la pantalla) daba 409 siempre.
+    const originales = exactos.filter((p) => p.expiraEn == null)
+    if (originales.length === 1) return originales[0]
+    return primaIdentica(originales.length > 1 ? originales : exactos, pista.primaEur)
+  }
   if (candidatos.length <= 1) return candidatos[0] ?? null
-  const normProducto = pista.producto?.trim().toLowerCase()
-  const mismoProducto = normProducto
-    ? candidatos.filter((p) => p.producto.trim().toLowerCase() === normProducto)
-    : []
+  const mismoProducto = norm(pista.producto) !== '' ? candidatos.filter((p) => norm(p.producto) === norm(pista.producto)) : []
   const pool = mismoProducto.length > 0 ? mismoProducto : candidatos
-  const prima = pista.primaEur
-  if (prima == null || !Number.isFinite(prima)) return pool[0]
-  return pool.reduce((mejor, p) => {
-    const d = p.primaEur == null ? Infinity : Math.abs(p.primaEur - prima)
-    const dm = mejor.primaEur == null ? Infinity : Math.abs(mejor.primaEur - prima)
-    return d < dm ? p : mejor
-  })
+  if (pool.length === 1) return pool[0]
+  return primaIdentica(pool, pista.primaEur)
+}
+
+/** El único precio con la prima exacta al céntimo, o `null` (varios o ninguno: no se adivina). */
+function primaIdentica(pool: readonly Precio[], prima: number | null | undefined): Precio | null {
+  if (prima == null || !Number.isFinite(prima)) return null
+  const iguales = pool.filter((p) => p.primaEur != null && Math.abs(p.primaEur - prima) < 0.005)
+  return iguales.length === 1 ? iguales[0] : null
 }
 
 // ─── 2. ReRate: confirma el precio con la compañía ───────────────────────────
@@ -165,9 +200,9 @@ export function leerOferta(raw: unknown): Oferta {
       return [str(p.text), str(p.description)].filter(Boolean).join(': ')
     })
     .filter((t) => t !== '')
-  const estimate = mainQuote.estimate
-  const firmeza: Oferta['firmeza'] =
-    estimate === true ? 'estimado' : avisos.length > 0 ? 'condicionado' : estimate === false ? 'firme' : 'estimado'
+  // La MISMA regla que la parrilla (30/09/2026): un mensaje `info` no condiciona el precio. Con una
+  // regla propia, un precio «firme» en la parrilla salía «condicionado» al confirmarlo.
+  const firmeza: Oferta['firmeza'] = firmezaDe(mainQuote.estimate, mensajes)
 
   return {
     offerId: id,

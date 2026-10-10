@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const token = typeof b?.token === 'string' ? b.token.trim() : ''
   if (!/^[A-Za-z0-9_-]{40,60}$/.test(token)) return NextResponse.json({ estado: 'muerta' }, { status: 410 })
-  const r = await llamarPuenteSolicitud({ metodo: 'POST', token, respuestas: b?.respuestas ?? {} })
+  const r = await llamarPuenteSolicitud({ metodo: 'POST', token, respuestas: b?.respuestas ?? {}, consentimiento: b?.consentimiento === true })
   if (!r) return NextResponse.json({ error: 'sin_puente' }, { status: 503 })
   return NextResponse.json(r.json ?? { error: `HTTP ${r.status}` }, { status: r.status })
 }

@@ -38,7 +38,10 @@ import {
   PREFIJO_HISTORIAL_CONTACTO_PROPIO,
   PREFIJO_HISTORIAL_SUGERENCIA,
   PREFIJO_HISTORIAL_DATOS_PRESUPUESTO,
+  PREFIJO_HISTORIAL_CUENTA_PROPIA,
+  PREFIJO_HISTORIAL_CARNET_PROPIO,
 } from '@central/module-seguros-portal'
+import { PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE } from '@central/module-seguros'
 
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
@@ -90,6 +93,12 @@ function consultaEventos(
   const prefContacto = `${PREFIJO_HISTORIAL_CONTACTO_PROPIO}%`
   const prefSugerencia = `${PREFIJO_HISTORIAL_SUGERENCIA}%`
   const prefDatos = `${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO}%`
+  const prefCuenta = `${PREFIJO_HISTORIAL_CUENTA_PROPIA}%`
+  // 06/10/2026: alta/cambio/baja de un carné de conducir hecha por el cliente en el portal.
+  const prefCarnet = `${PREFIJO_HISTORIAL_CARNET_PROPIO}%`
+  // 30/09/2026: la anota el sistema al guardar una cotización cuyos precios no cuadran
+  // (`coherencia-cotizacion.ts`). Sale siempre, como las del portal: es trabajo para hoy.
+  const prefCotizacion = `${PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE}%`
 
   return prismaAsegura().$queryRaw<FilaEvento[]>`
     with vinc as (
@@ -164,7 +173,10 @@ function consultaEventos(
         and h.created_at >= ${desde}
         and h.texto not like ${prefContacto}
         and h.texto not like ${prefSugerencia}
-        and h.texto not like ${prefDatos}`
+        and h.texto not like ${prefDatos}
+        and h.texto not like ${prefCuenta}
+        and h.texto not like ${prefCarnet}
+        and h.texto not like ${prefCotizacion}`
       }
 
       union all
@@ -173,13 +185,17 @@ function consultaEventos(
       -- cliente»: las escribió él, aunque vivan en la tabla de la ficha.
       select h.id::text,
              case when h.texto like ${prefContacto} then 'direccion'
-                  when h.texto like ${prefDatos} then 'datos_presupuesto' else 'sugerencia' end,
+                  when h.texto like ${prefDatos} then 'datos_presupuesto'
+                  when h.texto like ${prefCuenta} then 'cuenta'
+                  when h.texto like ${prefCarnet} then 'carnet'
+                  when h.texto like ${prefCotizacion} then 'cotizacion_incoherente' else 'sugerencia' end,
              h.created_at at time zone 'UTC', h.cliente_id, h.texto
       from historial_interno h
       where h.correduria_id = ${correduriaId}::uuid
         and h.deleted_at is null
         and h.created_at >= ${desde}
-        and (h.texto like ${prefContacto} or h.texto like ${prefSugerencia} or h.texto like ${prefDatos})
+        and (h.texto like ${prefContacto} or h.texto like ${prefSugerencia} or h.texto like ${prefDatos} or h.texto like ${prefCuenta}
+             or h.texto like ${prefCarnet} or h.texto like ${prefCotizacion})
     )
     select e.id, e.tipo, e.fecha, e.cliente_id, e.texto,
            c.nombre, c.apellidos,

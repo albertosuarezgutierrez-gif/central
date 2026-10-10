@@ -27,7 +27,7 @@ export const POST = auditado(async (req: Request) => {
     const r = await registrarLlamada(
       correduria.id,
       b.oportunidadId,
-      { resultado: b.resultado, nota: b.nota, volverEl: b.volverEl, motivo: b.motivo },
+      { resultado: b.resultado, nota: b.nota, volverEl: b.volverEl, motivo: b.motivo, canal: b.canal },
       actor,
     )
     if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })

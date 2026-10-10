@@ -34,13 +34,14 @@
 //    Y por lo mismo: **NO se reintenta automáticamente**. `POST /insurances` no
 //    es idempotente; un reintento crea otro proyecto y otro cargo.
 
+import { leerSeguroAnteriorImputado, type SeguroAnteriorImputado } from './correduria/seguro-anterior-imputado.ts'
 import { describirCausaAsegura, MOTIVOS_PUERTO, type MotivoPuerto } from './correduria-puerto.ts'
 // `PolizaCliente` y `CompaniaCatalogo` SÍ se importan (no se copian como `Precio`
 // y compañía): viven en `@central/module-seguros`, que es el paquete compartido
 // de verdad, y son el contrato de `defensaDeCartera()` — que es quien los va a
 // consumir. Duplicarlos aquí sería crear una segunda definición del argumento de
 // una función que ya se importa de ese mismo sitio.
-import type { CompaniaCatalogo, PolizaCliente } from '@central/module-seguros'
+import type { CompaniaCatalogo, DescuentoComercial, GarantiasClasificadas, PolizaCliente } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
@@ -565,6 +566,8 @@ export type Precio = {
   id?: string
   compania?: string | null
   producto?: string | null
+  /** Modalidad de la compañía («Incendio + Robo»). Solo en una cotización RECUPERADA; ausente = no consta. */
+  modalidad?: string | null
   /** Prima total del periodo, en euros. `null` = la compañía no la dio; NO es 0. */
   primaEur?: number | null
   /**
@@ -591,6 +594,21 @@ export type Precio = {
    *  `null`/ausente = ninguna oferta lo contiene, o cotización recuperada de BD. */
   ofertaId?: string | null
   avisos?: string[]
+  /**
+   * 🔑 Id de la fila en `seguros.tarificacion_precios` (uuid). SOLO llega en una cotización
+   * RECUPERADA (`GET .../tarificacion`) y es la clave para ocultar esa opción en el presupuesto.
+   * 🚨 NO es `id` (el del vendor, que es el que usa el ReRate): mezclarlos mandaría un uuid
+   * nuestro a Codeoscopic. `undefined` = no viene (respuesta fresca del POST, o asegura antigua).
+   */
+  precioId?: string
+  /**
+   * Garantías clasificadas de este precio. `undefined` = asegura no manda el campo;
+   * `null` = todavía no se han leído sus coberturas («no se sabe», NUNCA «no incluye nada»).
+   */
+  garantias?: GarantiasClasificadas | null
+  /** Descuentos comerciales con los que la compañía tarificó este precio. `undefined` = asegura no
+   *  manda el campo; `null` = sus opciones aún no se han leído; `[]` = la compañía no manda ninguno. */
+  descuentos?: DescuentoComercial[] | null
 }
 
 export type Fallo = {
@@ -626,6 +644,11 @@ export type RespuestaRetarificar =
   /** 409 · el ramo no se retarifica todavía (hoy solo auto, moto y hogar). */
   | { estado: 'ramo'; mensaje: string }
   /**
+   * 409 `razon: 'duplicado'` (08/10/2026): asegura ya tiene una cotización idéntica en curso o de hace <15 min y NO ha
+   * llamado a la compañía ni cobrado nada. Solo reenviando la misma petición con `forzar: true` se recotiza (0,50€).
+   */
+  | { estado: 'duplicado_cotizacion'; mensaje: string }
+  /**
    * 409 · ya hay un proyecto de Codeoscopic con oferta confirmada y sin caducar
    * para esta póliza (guardián de reutilización de asegura, PR #2790). NO es un
    * fallo: es el precio que ya está pagado, y se confirma con «Emitir», no
@@ -653,6 +676,9 @@ export type RespuestaRetarificar =
       guardado: unknown
       /** Proyecto del vendor (para leer coberturas por oferta). `null` = no vino. */
       projectId: string | null
+      /** Vehículo NUEVO (03/10/2026): qué póliza del cliente se declaró como seguro anterior y si el
+       *  bonus va SUPUESTO (condicionado a SINCO/certificado). `null` = no aplica o asegura no lo mandó. */
+      seguroAnterior?: SeguroAnteriorImputado | null
     }
 
 /**
@@ -713,14 +739,32 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
       supuestos: Array.isArray(r.supuestos) ? (r.supuestos as Supuesto[]) : [],
       guardado: r.guardado ?? null,
       projectId: typeof r.projectId === 'string' || typeof r.projectId === 'number' ? String(r.projectId) : null,
+      seguroAnterior: leerSeguroAnteriorImputado(r.seguroAnterior),
     }
   }
 
+  // Vehículo NUEVO (03/10/2026): la póliza elegida como seguro anterior no vale, o no se pudieron leer
+  // sus pólizas. asegura corta ANTES del vendor: no es «faltan datos» ni «sin configurar».
+  if ((status === 422 && (r.causa === 'elegida_desconocida' || r.causa === 'elegida_no_declarable')) || (status === 503 && r.causa === 'seguro_anterior_no_disponible')) {
+    return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('No se ha podido decidir el seguro anterior: no se ha pedido precio.'), gastoDesconocido: !cero }
+  }
+  if (status === 422 && r.causa === 'variante') {
+    // El riesgo no es de esta póliza: asegura corta ANTES del vendor. No es «faltan datos».
+    return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('Este riesgo no es de esta póliza: no se ha pedido precio.'), gastoDesconocido: !cero }
+  }
+  if (status === 422 && r.causa === 'validacion') {
+    // El vendor rechazó el cuerpo (400) con PRUEBA de no-cargo: asegura lo declara con `gastado: '0,00€'`.
+    // No es «faltan datos» (no hay lista) ni «no se sabe si se ha cobrado»: `cero` lo dice.
+    return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('El vendor ha rechazado la petición.'), gastoDesconocido: !cero }
+  }
   if (status === 422) {
     return { estado: 'faltan', faltan: Array.isArray(r.faltan) ? (r.faltan as Reparo[]) : [] }
   }
   if (status === 402) {
     return { estado: 'tope', mensaje: mensajeDe('Se ha alcanzado el tope de cotizaciones.') }
+  }
+  if (status === 409 && (r.razon === 'duplicado' || r.causa === 'duplicado')) {
+    return { estado: 'duplicado_cotizacion', mensaje: mensajeDe('Cotización idéntica reciente: no se ha vuelto a pagar nada.') }
   }
   if (status === 409) {
     // Dos 409 distintos con el mismo código: el ramo que no se retarifica y el
@@ -908,6 +952,15 @@ export type PeticionRetarificar = {
    * ese gesto, pedir precio con un proyecto vigente se rechaza sin cobrar.
    */
   forzarNuevo?: boolean
+  /** Recotización EXPLÍCITA tras un 409 `duplicado` (0,50€ otra vez): salta la guarda anti-duplicado de asegura. */
+  forzar?: boolean
+  /**
+   * Variante del RIESGO de esta póliza (29/09/2026): la tarificación se cuelga de esa oportunidad.
+   * asegura comprueba, antes de gastar, que el riesgo es de esta póliza (422 `causa: 'variante'`).
+   */
+  oportunidadId?: string | null
+  /** Nota libre de la variante (≤200), solo con `oportunidadId`. */
+  nota?: string | null
 }
 
 /**
@@ -944,6 +997,9 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
           ...(p.referencia ? { referencia: p.referencia } : {}),
           // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
           ...(p.forzarNuevo === true ? { forzarNuevo: true } : {}),
+          ...(p.forzar === true ? { forzar: true } : {}),
+          ...(p.oportunidadId ? { oportunidadId: p.oportunidadId } : {}),
+          ...(p.oportunidadId && p.nota && p.nota.trim() !== '' ? { nota: p.nota.trim().slice(0, 200) } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,
@@ -1156,6 +1212,12 @@ export async function ofertaAsegura(p: {
    *  precios del mismo nivel (`encontrarPrecio` de asegura, 25/09/2026). */
   producto?: string
   primaEur?: number
+  /** Modalidad de la fila pulsada: compañía + nivel + modalidad es la llave única del precio.
+   *  Sin ella asegura solo casa una prima idéntica (30/09/2026, ver `encontrarPrecio`). */
+  modalidad?: string
+  /** 🔑 `mainQuote.id` del vendor de la fila pulsada: la IDENTIDAD del precio. Si el proyecto aún
+   *  lo trae, asegura confirma ESE; si no (re-tarificado), cae a compañía + nivel + modalidad. */
+  idPrecio?: string
   /** Fecha de efecto NUEVA (aaaa-mm-dd). Desde el 25/09/2026 viaja en el propio
    *  ReRate (`mainQuote.effectiveDate`, la vía documentada por el vendor). */
   fechaEfectoCorregida?: string
@@ -1166,6 +1228,9 @@ export async function ofertaAsegura(p: {
    *  un `faltan_producto` anterior (`ProductFormWidget::getProductOptions()`,
    *  reenviado TAL CUAL — ver `apps/asegura/.../oferta/route.ts`). */
   productOptions?: unknown[]
+  /** Descuento comercial ajustado por el corredor (Allianz coche). Asegura lo valida con los
+   *  límites del formulario real antes de llamar a la compañía. */
+  descuentos?: { dtoCap?: number; dtoVentaCruzada?: number }
 }): Promise<RespuestaOferta> {
   try {
     const r = await pedir(
@@ -1330,7 +1395,78 @@ export type RespuestaEmitir =
       status?: number; causa?: string | null; quizaDeclarado?: boolean | null
     }
   | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null; trasEmision: TrasEmision | null }
-  | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
+  /** `yaAcunada` (03/10/2026): asegura contestó `acunado.estado === 'ya_acunada'` — la póliza SÍ está en
+   *  la cartera, la registró otra vía (descubrimiento/webhook) a la vez. `mensaje` ya lo dice. */
+  | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null; yaAcunada?: boolean }
+  /** 409 · cliente NUEVO (28/09/2026): asegura cree que es un duplicado y NO ha enviado
+   *  nada. `ya_en_cartera` = la matrícula ya tiene póliza en vigor (quizá en otra ficha:
+   *  el mensaje trae su nº ENMASCARADO); `ya_emitido` = otro proyecto emitido del mismo
+   *  cliente y ramo en 30 días. Se salta reenviando con `duplicadoConfirmado: true`. */
+  | { estado: 'duplicado'; causa: CausaDuplicado; mensaje: string; polizas: string[] }
+  /** 409/404 · asegura se niega ANTES de enviar nada y no hay nada que confirmar:
+   *  hay que arreglar el origen (ficha, DNI, retarificar desde la ficha buena). */
+  | { estado: 'bloqueado'; causa: CausaBloqueo; mensaje: string }
+  /** 503 · el interruptor `CODEOSCOPIC_EMISION_NUEVO` está apagado. No es una avería
+   *  pasajera: reintentar no sirve hasta que se encienda. */
+  | { estado: 'nuevo_apagado'; mensaje: string }
+  /** 409 · la variante que se emite cambia personas (tomador/propietario/conductor
+   *  habitual) o el CP de circulación respecto a la primera del riesgo (29/09/2026).
+   *  Declarar otro conductor o domicilio para pagar menos es ocultación del riesgo
+   *  (arts. 10 y 89 LCS). asegura NO ha enviado nada: se reenvía con
+   *  `figurasConfirmadas` conteniendo todas las `exigidas`. */
+  | { estado: 'confirmar_figuras'; mensaje: string; cambios: CambioFiguras[]; exigidas: FiguraExigida[]; conductorHabitual: string | null }
+
+export type CampoFigura = 'tomador' | 'propietario' | 'conductor_habitual' | 'conductor_ocasional' | 'cp'
+/** `antes`/`despues` son NOMBRES (o el CP), tal y como los manda asegura. */
+export type CambioFiguras = { campo: CampoFigura; antes: string | null; despues: string | null }
+export type FiguraExigida = 'conductor' | 'cp' | 'cliente'
+
+const CAMPOS_FIGURA: readonly CampoFigura[] = ['tomador', 'propietario', 'conductor_habitual', 'conductor_ocasional', 'cp']
+const FIGURAS_EXIGIBLES: readonly FiguraExigida[] = ['conductor', 'cp', 'cliente']
+
+/** PURO. Todo o nada: si un solo cambio o una sola exigida no tiene forma válida
+ *  (o no hay ninguna exigida), devuelve `null` y el 409 degrada a error genérico
+ *  — nunca a «emitido» ni a un panel con casillas inventadas. */
+export function leerConfirmarFiguras(r: Record<string, unknown>): { cambios: CambioFiguras[]; exigidas: FiguraExigida[]; conductorHabitual: string | null } | null {
+  const { cambios, exigidas } = r
+  if (!Array.isArray(cambios) || !Array.isArray(exigidas) || exigidas.length === 0) return null
+  const textoONulo = (v: unknown) => v === null || typeof v === 'string'
+  const cs: CambioFiguras[] = []
+  for (const c of cambios) {
+    if (typeof c !== 'object' || c === null) return null
+    const o = c as Record<string, unknown>
+    if (!CAMPOS_FIGURA.includes(o.campo as CampoFigura) || !textoONulo(o.antes) || !textoONulo(o.despues)) return null
+    cs.push({ campo: o.campo as CampoFigura, antes: (o.antes as string | null), despues: (o.despues as string | null) })
+  }
+  const es: FiguraExigida[] = []
+  for (const e of exigidas) {
+    if (!FIGURAS_EXIGIBLES.includes(e as FiguraExigida)) return null
+    if (!es.includes(e as FiguraExigida)) es.push(e as FiguraExigida)
+  }
+  // El conductor habitual de la variante que se emite (aunque no cambie). Ausente o raro = no se sabe.
+  const conductorHabitual = typeof r.conductorHabitual === 'string' && r.conductorHabitual.trim() !== '' ? r.conductorHabitual.trim() : null
+  return { cambios: cs, exigidas: es, conductorHabitual }
+}
+
+export type CausaDuplicado = 'ya_en_cartera' | 'ya_emitido'
+export type CausaBloqueo = 'identidad' | 'proyecto_liberado' | 'cliente_distinto' | 'tomador_fusionado'
+
+/** Lo que se le dice al corredor por cada causa nueva de `/emitir` (cliente nuevo). */
+export const TEXTO_CAUSA_EMITIR: Record<CausaDuplicado | CausaBloqueo, string> = {
+  ya_en_cartera: 'Esta matrícula ya tiene una póliza en vigor en la cartera.',
+  ya_emitido: 'A este cliente ya se le emitió otra póliza de este ramo en los últimos 30 días.',
+  identidad: 'El DNI del tomador del proyecto no coincide con el de la ficha (o la ficha no tiene DNI).',
+  proyecto_liberado:
+    'Este proyecto se hizo para sustituir una póliza y ya no está enlazado a ella: emitirlo como cliente nuevo dejaría dos seguros. Retarifica desde la póliza.',
+  cliente_distinto: 'El proyecto, la póliza o la tarificación son de otro cliente distinto al de esta ficha.',
+  tomador_fusionado: 'El tomador de esta póliza se fusionó en otra ficha: retarifica desde la ficha buena.',
+}
+
+/** Quita la coletilla técnica (`duplicadoConfirmado: true`) que asegura añade para
+ *  quien llama al puerto a mano: en pantalla la confirmación es un botón. */
+function sinColetillaTecnica(m: string): string {
+  return m.replace(/\s*Si aun así es una póliza nueva, confirma con `duplicadoConfirmado: true`\.?\s*$/, '').trim()
+}
 
 export type SolicitudEmisionVista = {
   id: string | null
@@ -1368,6 +1504,11 @@ export function leerSolicitudes(v: unknown): SolicitudEmisionVista[] {
 export const TIMEOUT_EMITIR_MS = 170_000
 
 /** PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable. */
+/** Lo que se dice cuando asegura no acuña porque OTRA vía ya lo hizo a la vez (`ya_acunada`). */
+export const TEXTO_YA_ACUNADA =
+  'La compañía la ha aceptado y la póliza ya está en la cartera: ya la registró el descubrimiento automático; ' +
+  'revisa en la ficha si hay que dar de baja la anterior y avisar al cliente.'
+
 export function interpretarEmitir(status: number, json: unknown): RespuestaEmitir {
   const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
   if (status === 401 || status === 403) {
@@ -1387,6 +1528,41 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
   if (status === 409 && r.causa === 'en-vuelo') {
     return { estado: 'en_vuelo', mensaje: cadenaONulo(r.mensaje) ?? 'Ya hay un envío de este proyecto en curso.' }
   }
+  if (status === 409 && (r.causa === 'ya_en_cartera' || r.causa === 'ya_emitido')) {
+    const causa: CausaDuplicado = r.causa
+    const m = cadenaONulo(r.mensaje)
+    return {
+      estado: 'duplicado',
+      causa,
+      mensaje: (m ? sinColetillaTecnica(m) : '') || TEXTO_CAUSA_EMITIR[causa],
+      polizas: Array.isArray(r.polizas) ? r.polizas.filter((x): x is string => typeof x === 'string') : [],
+    }
+  }
+  if (status === 409 && r.causa === 'confirmar_figuras') {
+    const leido = leerConfirmarFiguras(r)
+    if (leido) {
+      return {
+        estado: 'confirmar_figuras',
+        mensaje:
+          cadenaONulo(r.mensaje) ??
+          'Esta variante cambia las personas o el CP del riesgo respecto a la primera. No se ha emitido nada.',
+        ...leido,
+      }
+    }
+    // Forma ilegible: cae al error genérico de abajo (409 → asegura_error), nunca a «emitido».
+  }
+  if (
+    (status === 409 && (r.causa === 'identidad' || r.causa === 'proyecto_liberado' || r.causa === 'cliente_distinto')) ||
+    (status === 404 && r.causa === 'tomador_fusionado')
+  ) {
+    const causa = r.causa as CausaBloqueo
+    return { estado: 'bloqueado', causa, mensaje: cadenaONulo(r.mensaje) ?? TEXTO_CAUSA_EMITIR[causa] }
+  }
+  // El interruptor del modo NUEVO comparte `causa: 'apagado'` con el general; lo
+  // distingue el nombre de su variable en el mensaje (asegura no manda otra señal).
+  if (status === 503 && r.causa === 'apagado' && /CODEOSCOPIC_EMISION_NUEVO/.test(cadenaONulo(r.mensaje) ?? '')) {
+    return { estado: 'nuevo_apagado', mensaje: 'La emisión a clientes nuevos está apagada en central-asegura (CODEOSCOPIC_EMISION_NUEVO). No se ha enviado nada.' }
+  }
   if (status === 409 && r.causa === 'reintento_sin_confirmar') {
     return {
       estado: 'reintento_sin_confirmar',
@@ -1403,6 +1579,10 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
   }
   if (status === 200) {
     if (r.estado === 'emitido_sin_acunar') {
+      const acunado = typeof r.acunado === 'object' && r.acunado !== null ? (r.acunado as Record<string, unknown>) : null
+      if (acunado?.estado === 'ya_acunada') {
+        return { estado: 'emitido_sin_acunar', mensaje: TEXTO_YA_ACUNADA, referenciaVendor: cadenaONulo(r.referenciaVendor), yaAcunada: true }
+      }
       return {
         estado: 'emitido_sin_acunar',
         mensaje: cadenaONulo(r.mensaje) ?? 'Codeoscopic aceptó la emisión pero no se pudo acuñar sola.',
@@ -1459,6 +1639,17 @@ export async function emitirAsegura(p: {
    *  Allianz (bonificación real de cartera). NUNCA se manda por defecto — ver
    *  `conProductoPorDefecto` en asegura, que es quien decide el valor final. */
   familiaEnAllianz?: boolean
+  /** Cliente NUEVO: el corredor ha visto el 409 `ya_en_cartera`/`ya_emitido` y
+   *  confirma que es otra póliza. Solo se manda cuando es true. */
+  duplicadoConfirmado?: boolean
+  /** Las casillas que el corredor ha marcado tras el 409 `confirmar_figuras`
+   *  (`conductor`/`cp`/`cliente`). Solo viaja si viene. */
+  figurasConfirmadas?: string[]
+  /** La oferta que se ENSEÑÓ (Telegram): si la aceptada del proyecto ya es otra, asegura no envía nada (409). */
+  offerIdEsperado?: string
+  /** Vehículo NUEVO con bonus SUPUESTO (03/10/2026): cómo lo ha verificado el corredor. Sin él, asegura
+   *  contesta 422 `bonus_sin_verificar` (`estado: 'error'`, `causa`) sin enviar nada. */
+  bonusVerificado?: { fuente: 'certificado' | 'sinco' | 'dato_confirmado'; nota?: string | null } | null
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1476,6 +1667,10 @@ export async function emitirAsegura(p: {
           ...(p.reintentoConfirmado === true ? { reintentoConfirmado: true } : {}),
           ...(p.acunarExistente === true ? { acunarExistente: true } : {}),
           ...(p.familiaEnAllianz === true ? { familiaEnAllianz: true } : {}),
+          ...(p.duplicadoConfirmado === true ? { duplicadoConfirmado: true } : {}),
+          ...(Array.isArray(p.figurasConfirmadas) ? { figurasConfirmadas: p.figurasConfirmadas } : {}),
+          ...(p.offerIdEsperado ? { offerIdEsperado: p.offerIdEsperado } : {}),
+          ...(p.bonusVerificado ? { bonusVerificado: p.bonusVerificado } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,
@@ -1596,6 +1791,30 @@ function opcionalPrecio<T>(v: unknown, leer: (x: unknown) => T | null): T | null
   return v === undefined ? undefined : leer(v)
 }
 
+const UUID_PRECIO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** El jsonb `{version, porClave}` validado por forma. Cualquier otra cosa → `null` («no se sabe»). */
+function leerGarantias(v: unknown): GarantiasClasificadas | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.version !== 'number' || typeof o.porClave !== 'object' || o.porClave === null || Array.isArray(o.porClave)) return null
+  const porClave: GarantiasClasificadas['porClave'] = {}
+  for (const [k, e] of Object.entries(o.porClave as Record<string, unknown>)) {
+    if (e === 'si' || e === 'no' || e === 'no_consta') porClave[k] = e
+  }
+  return { version: o.version, porClave }
+}
+
+/** `descuentos` de un precio guardado, validado. `null` = no se han leído; forma rara → `null`. */
+export function leerDescuentos(v: unknown): DescuentoComercial[] | null {
+  if (!Array.isArray(v)) return null
+  const validos = v.filter((d): d is DescuentoComercial =>
+    !!d && typeof (d as DescuentoComercial).etiqueta === 'string' && typeof (d as DescuentoComercial).pct === 'number' && Number.isFinite((d as DescuentoComercial).pct))
+  // Un elemento ilegible convierte la lista en «no se sabe»: pintar solo los legibles
+  // (o «sin descuento comercial» si no queda ninguno) afirmaría algo que no se ha leído.
+  return validos.length === v.length ? validos : null
+}
+
 function leerPreciosGuardados(v: unknown): Precio[] | null {
   if (!Array.isArray(v)) return null
   return v.map((raw): Precio => {
@@ -1606,9 +1825,21 @@ function leerPreciosGuardados(v: unknown): Precio[] | null {
       // en una cotización recuperada esto será `undefined` = «no se sabe». Lo que
       // NO se hace es rellenarlo con la posición: sería una clave que parece
       // estable y no lo es, que es justo lo que se está arreglando.
-      ...(typeof x.id === 'string' && x.id.trim() !== '' ? { id: x.id.trim() } : {}),
+      // Desde el 28/09/2026 asegura manda aquí el uuid de `tarificacion_precios`: ese va a
+      // `precioId`, nunca a `id` (el del vendor, que es el que se manda al ReRate).
+      ...(typeof x.id === 'string' && x.id.trim() !== ''
+        ? UUID_PRECIO.test(x.id.trim()) ? { precioId: x.id.trim().toLowerCase() } : { id: x.id.trim() }
+        : {}),
+      // 30/09/2026: una cotización RECUPERADA trae el del vendor aparte (`idVendor`, de
+      // `tarificacion_precios.id_precio`), porque su `id` es ya el uuid de la fila.
+      ...(typeof x.idVendor === 'string' && x.idVendor.trim() !== '' && !UUID_PRECIO.test(x.idVendor.trim())
+        ? { id: x.idVendor.trim() }
+        : {}),
+      ...(x.garantias === undefined ? {} : { garantias: leerGarantias(x.garantias) }),
+      ...(x.descuentos === undefined ? {} : { descuentos: leerDescuentos(x.descuentos) }),
       compania: cadenaONulo(x.compania),
       producto: cadenaONulo(x.producto),
+      ...(x.modalidad === undefined ? {} : { modalidad: cadenaONulo(x.modalidad) }),
       categoria: cadenaONulo(x.categoria),
       primaEur: numeroONulo(x.primaEur),
       entradaEur: opcionalPrecio(x.entradaEur, numeroONulo),
@@ -1690,6 +1921,134 @@ export async function tarificacionGuardadaAsegura(polizaId: string): Promise<Res
       motivo: 'red',
       mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})`,
     }
+  }
+}
+
+/** La última tarificación de un cliente NUEVO (sin póliza), para retomarla sin pagar otra vez. */
+export type TarificacionNuevaGuardada = {
+  cotizacionId: string
+  projectId: string
+  creadaEn: string
+  fechaEfecto: string | null
+  /** Efecto ya pasado: la compañía no confirma ni emite. No se ofrece retomarla. */
+  caducada: boolean
+  precios: Precio[]
+  /** Coche y moto: el vehículo con el que se pidió, para volver a pedir precio sin dictarlo. `null` = no consta. */
+  vehiculo: VehiculoGuardado | null
+  /** El último seguro anterior declarado para este cliente y vehículo (de esta u otra variante). `null` = no consta. */
+  historialPrevio: HistorialPrevio | null
+  /**
+   * Los productos que NO dieron precio. 🚨 `null` = no se guardaron (cotización anterior al
+   * 29/09/2026 o asegura más viejo): NO es «ninguno falló».
+   */
+  fallos: Fallo[] | null
+}
+
+export type HistorialPrevio = {
+  companiaCodigo: string
+  poliza: string
+  aniosAsegurado: number
+  aniosEnCompania: number
+  aniosSinSiniestros: number
+  matricula: string | null
+}
+
+/** PURO: el `historialPrevio` de asegura, validado por forma. Completo o `null`, nunca a medias. */
+export function leerHistorialPrevio(v: unknown): HistorialPrevio | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const n = (x: unknown) => (typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 80 ? x : null)
+  const companiaCodigo = cadenaONulo(o.companiaCodigo)
+  const poliza = cadenaONulo(o.poliza)
+  const a = n(o.aniosAsegurado), c = n(o.aniosEnCompania), s = n(o.aniosSinSiniestros)
+  if (!companiaCodigo || !poliza || a === null || c === null || s === null) return null
+  return { companiaCodigo, poliza, aniosAsegurado: a, aniosEnCompania: c, aniosSinSiniestros: s, matricula: cadenaONulo(o.matricula) }
+}
+
+export type VehiculoGuardado = {
+  codigoVehiculo: string
+  matricula: string | null
+  fechaMatriculacion: string | null
+  kmAnuales: number | null
+  /** Id del catálogo de garajes con el que se pidió. `null` = no consta (NO «vía pública»). */
+  garaje: string | null
+}
+
+/** PURO: el `vehiculo` de asegura, validado por forma. Sin código de versión no hay vehículo (nunca a medias). */
+export function leerVehiculoGuardado(v: unknown): VehiculoGuardado | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const codigoVehiculo = cadenaONulo(o.codigoVehiculo)
+  if (!codigoVehiculo) return null
+  const km = o.kmAnuales
+  return {
+    codigoVehiculo,
+    matricula: cadenaONulo(o.matricula),
+    fechaMatriculacion: cadenaONulo(o.fechaMatriculacion),
+    kmAnuales: typeof km === 'number' && Number.isFinite(km) && km >= 0 ? km : null,
+    garaje: cadenaONulo(o.garaje),
+  }
+}
+
+export type RespuestaTarificacionNueva =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string }
+  | { estado: 'ninguna' }
+  | { estado: 'ok'; guardada: TarificacionNuevaGuardada }
+
+/** PURO: la respuesta de `GET .../tarificacion?clienteId=&ramo=` → estados de la pantalla. */
+export function interpretarTarificacionNueva(status: number, json: unknown): RespuestaTarificacionNueva {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado', mensaje: MOTIVOS_PUERTO.secreto_rechazado }
+  if (status === 200 && r.estado === 'ninguna') return { estado: 'ninguna' }
+  if (status === 200 && r.estado === 'ok') {
+    const precios = leerPreciosGuardados(r.precios)
+    if (!precios || typeof r.cotizacionId !== 'string' || typeof r.projectId !== 'string') {
+      return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible }
+    }
+    return {
+      estado: 'ok',
+      guardada: {
+        cotizacionId: r.cotizacionId,
+        projectId: r.projectId,
+        creadaEn: cadenaONulo(r.creadaEn) ?? '',
+        fechaEfecto: cadenaONulo(r.fechaEfecto),
+        caducada: r.caducada === true,
+        precios,
+        vehiculo: leerVehiculoGuardado(r.vehiculo),
+        historialPrevio: leerHistorialPrevio(r.historialPrevio),
+        fallos: Array.isArray(r.fallos) ? (r.fallos as Fallo[]) : null,
+      },
+    }
+  }
+  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje: cadenaONulo(r.mensaje) ?? 'Codeoscopic no está configurado en central-asegura.' }
+  const detalle = describirCausaAsegura(typeof r.causa === 'string' ? r.causa : undefined)
+  return { estado: 'error', motivo: 'asegura_error', mensaje: [cadenaONulo(r.mensaje), detalle].filter((x): x is string => !!x).join(' — ') || `error ${status}` }
+}
+
+/**
+ * `GET .../tarificacion?clienteId=&ramo=` — **gratis**, solo lee lo ya pagado.
+ * Con `filtro` (29/09/2026, el riesgo como pantalla) busca la del RIESGO (`oportunidadId`) y, si
+ * viene, una variante concreta (`tarificacionId`), no la última del cliente en ese ramo.
+ */
+export async function tarificacionNuevaGuardadaAsegura(
+  clienteId: string,
+  ramo: 'auto' | 'moto' | 'hogar' | 'decesos' | 'salud' | 'vida',
+  filtro?: { oportunidadId?: string | null; tarificacionId?: string | null },
+): Promise<RespuestaTarificacionNueva> {
+  const extra =
+    (filtro?.oportunidadId ? `&oportunidadId=${encodeURIComponent(filtro.oportunidadId)}` : '') +
+    (filtro?.tarificacionId ? `&tarificacionId=${encodeURIComponent(filtro.tarificacionId)}` : '')
+  try {
+    const r = await pedir(
+      `/api/operador/codeoscopic/tarificacion?clienteId=${encodeURIComponent(clienteId)}&ramo=${ramo}${extra}`,
+      { method: 'GET' },
+      TIMEOUT_TARIFICACION_GUARDADA_MS,
+    )
+    if (r === null) return { estado: 'sin_configurar', mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).' }
+    return interpretarTarificacionNueva(r.status, r.json)
+  } catch (e) {
+    return { estado: 'error', motivo: 'red', mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})` }
   }
 }
 

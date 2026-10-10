@@ -51,6 +51,17 @@ test('siniestros: la apertura exige póliza, tipo del catálogo, descripción y 
   assert.equal(revisarApertura({ ...base, polizaId: '' }, HOY).ok, false)
 })
 
+test('siniestros: la fecha de declaración a la compañía es opcional, no futura ni anterior al hecho', () => {
+  const base = { polizaId: 'p1', tipo: 'colision', fechaHora: '2026-09-01T09:30:00Z', descripcion: 'Alcance por detrás en semáforo' }
+  const sinFecha = revisarApertura(base, HOY)
+  assert.ok(sinFecha.ok && sinFecha.apertura.fechaDeclaracion === null)
+  const mismoDia = revisarApertura({ ...base, fechaDeclaracion: '2026-09-01' }, HOY)
+  assert.ok(mismoDia.ok && mismoDia.apertura.fechaDeclaracion === '2026-09-01')
+  assert.deepEqual(revisarApertura({ ...base, fechaDeclaracion: '2026-08-31' }, HOY), { ok: false, motivo: 'la fecha de declaración es anterior a la del siniestro' })
+  assert.deepEqual(revisarApertura({ ...base, fechaDeclaracion: '2026-09-05' }, HOY), { ok: false, motivo: 'la fecha de declaración está en el futuro' })
+  assert.deepEqual(revisarApertura({ ...base, fechaDeclaracion: '01/09/2026' }, HOY), { ok: false, motivo: 'fecha de declaración no válida' })
+})
+
 test('siniestros: el estado de uno de CIMA no se toca a mano; en los nuestros solo las transiciones del cuadro', () => {
   assert.equal(revisarTransicion('cima', 'abierto', 'cerrado').ok, false)
   assert.ok(revisarTransicion('gestionado_correduria', 'abierto', 'en_tramitacion').ok)

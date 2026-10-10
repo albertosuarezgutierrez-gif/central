@@ -35,6 +35,8 @@ export type RecibosPoliza = {
     importe: number | null
     fechaEmision: string | null
     fechaVencimiento: string | null
+    /** Día en que vence la prima (art. 15 LCS). `null` = el puerto no la manda o no se sabe. */
+    fechaEfecto: string | null
     formaPago: string | null
   } | null
 }
@@ -46,6 +48,10 @@ export type ObjetoFicha = {
   nota: string | null
   /** El desglose entero (RC/comercio/otros); `null` en el resto de ramos. */
   coberturas: string[] | null
+  /** Ficha del bien (vehículo/inmueble) de CIMA: solo lo informado; códigos EIAC crudos. Opcional: asegura viejo no lo manda. */
+  ficha?: Array<{ etiqueta: string; valor: string }> | null
+  /** 🔒 Solo operador (VIN). Nunca se reenvía al portal del cliente. */
+  bastidor?: string | null
 }
 
 /** El recargo por fraccionar: TRES estados. `sin_datos` nunca se pinta como 0€. */
@@ -173,6 +179,9 @@ export type IntervinienteFicha = {
    */
   telefonoPropio: boolean | null
   emailPropio: boolean | null
+  /** Del conductor, `AAAA-MM-DD`. `null`/ausente = asegura no lo manda o no se sabe. */
+  fechaCarnet?: string | null
+  fechaNacimiento?: string | null
 }
 
 export type Ficha = {
@@ -206,6 +215,11 @@ export type Ficha = {
    * lo tiene» — y la pantalla lo dice así, no como «nadie lo tiene».
    */
   intervinientes: IntervinienteFicha[] | null
+  /**
+   * Pólizas de OTRO tomador donde este cliente FIGURA (propietario, asegurado,
+   * conductor…). `null` = no llegó (asegura antigua o fallo). NO es «ninguna».
+   */
+  figuraEn: PolizaFiguraFicha[] | null
   /** Documentos del cliente con estado pedido/recibido/revisado. `null` = no informado / no se pudo. */
   documentos: DocumentoResumen[] | null
   /**
@@ -358,6 +372,43 @@ function leerBienDeclarada(v: unknown): BienDeclarada {
   }
 }
 
+export type PolizaFiguraFicha = {
+  id: string
+  /** `null` = no llegó; no se rellena con el cajón «otro». */
+  tipo: string | null
+  aseguradora: string
+  numeroPoliza: string | null
+  estado: string
+  fechaVencimiento: string | null
+  enVigor: boolean
+  tomador: { id: string; nombre: string }
+  roles: string[]
+}
+
+/** Igual que `leerDeclaradas`: bloque ausente o con forma rara → `null`, nunca `[]`. */
+export function leerFiguraEn(v: unknown): PolizaFiguraFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: PolizaFiguraFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const d = fila as Record<string, unknown>
+    const t = typeof d.tomador === 'object' && d.tomador !== null ? (d.tomador as Record<string, unknown>) : null
+    if (typeof d.id !== 'string' || !t || typeof t.id !== 'string') continue
+    out.push({
+      id: d.id,
+      tipo: cadena(d.tipo),
+      aseguradora: cadena(d.aseguradora) ?? '',
+      numeroPoliza: cadena(d.numeroPoliza),
+      estado: cadena(d.estado) ?? '',
+      fechaVencimiento: cadena(d.fechaVencimiento),
+      enVigor: d.enVigor === true,
+      tomador: { id: t.id, nombre: cadena(t.nombre) ?? '' },
+      roles: Array.isArray(d.roles) ? d.roles.filter((x): x is string => typeof x === 'string') : [],
+    })
+  }
+  return out
+}
+
 export type PolizaDeclaradaFicha = {
   id: string
   compania: string | null
@@ -436,6 +487,19 @@ function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
 }
 
+/** La ficha del bien (pares etiqueta/valor), o `null` si no llega o está vacía. Una fila rara se salta. */
+export function leerFichaObjeto(v: unknown): Array<{ etiqueta: string; valor: string }> | null {
+  if (!Array.isArray(v)) return null
+  const out: Array<{ etiqueta: string; valor: string }> = []
+  for (const d of v) {
+    if (typeof d !== 'object' || d === null) continue
+    const o = d as Record<string, unknown>
+    if (typeof o.etiqueta !== 'string' || typeof o.valor !== 'string' || o.valor.trim() === '') continue
+    out.push({ etiqueta: o.etiqueta, valor: o.valor.trim() })
+  }
+  return out.length > 0 ? out : null
+}
+
 export function leerObjeto(v: unknown): ObjetoFicha | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
@@ -446,6 +510,10 @@ export function leerObjeto(v: unknown): ObjetoFicha | null {
     detalle: cadena(o.detalle),
     nota: cadena(o.nota),
     coberturas: Array.isArray(o.coberturas) ? o.coberturas.filter((c): c is string => typeof c === 'string') : null,
+    // Hasta el 03/10/2026 se descartaba aquí: la ficha del bien llegaba por el puerto y no se pintaba.
+    ficha: leerFichaObjeto(o.ficha),
+    // 🔒 Solo operador (esta es su pantalla): el VIN sigue el mismo camino que la ficha.
+    bastidor: cadena(o.bastidor),
   }
 }
 
@@ -481,6 +549,7 @@ export function leerRecibos(v: unknown): RecibosPoliza | null {
             importe: numero((u as Record<string, unknown>).importe),
             fechaEmision: cadena((u as Record<string, unknown>).fechaEmision),
             fechaVencimiento: cadena((u as Record<string, unknown>).fechaVencimiento),
+            fechaEfecto: cadena((u as Record<string, unknown>).fechaEfecto),
             formaPago: cadena((u as Record<string, unknown>).formaPago),
           }
         : null,
@@ -633,6 +702,8 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
       origen: cadena(i.origen) ?? 'sin_informar',
       telefonoPropio: typeof i.telefonoPropio === 'boolean' ? i.telefonoPropio : null,
       emailPropio: typeof i.emailPropio === 'boolean' ? i.emailPropio : null,
+      fechaCarnet: cadena(i.fechaCarnet),
+      fechaNacimiento: cadena(i.fechaNacimiento),
     })
   }
   return out
@@ -800,6 +871,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       polizas,
       siniestros,
       intervinientes: leerIntervinientes(f.intervinientes),
+      figuraEn: leerFiguraEn(f.figuraEn),
       documentos: leerDocumentos(f.documentos),
       contactos: leerContactos(f.contactos),
       identidad: leerIdentidad(f.identidad),
@@ -913,12 +985,6 @@ export function urlRetarificar(polizaId: string): string {
   return `/correduria/poliza/${polizaId}/retarificar`
 }
 
-/** Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura
- *  porque comparte pantalla con la cotización que sale de lo leído. Gratis. */
-export function urlSubirPoliza(): string {
-  return `${urlAsegura()}/cartera/subir`
-}
-
 /**
  * Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la
  * cartera), **DENTRO de plataforma** desde el 07/09/2026. El riesgo sale del
@@ -982,12 +1048,12 @@ export function urlDecesosNuevo(clienteId: string): string {
  * otra ofrece una opción que la pantalla hermana no conoce.
  */
 export const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => string; sinVerificar?: boolean }[] = [
-  { etiqueta: '🚗 Auto', url: urlAutoNuevo },
-  { etiqueta: '🏠 Hogar', url: urlHogarNuevo },
-  { etiqueta: '🏍️ Moto', url: urlMotoNuevo },
-  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo },
-  { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
-  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo },
+  { etiqueta: 'Auto', url: urlAutoNuevo },
+  { etiqueta: 'Hogar', url: urlHogarNuevo },
+  { etiqueta: 'Moto', url: urlMotoNuevo },
+  { etiqueta: 'Vida', url: urlVidaNuevo },
+  { etiqueta: 'Salud', url: urlSaludNuevo, sinVerificar: true },
+  { etiqueta: 'Decesos', url: urlDecesosNuevo },
 ]
 
 function leerLeadDescartado(v: unknown): { fecha: string; motivo: string | null } | null {

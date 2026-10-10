@@ -27,6 +27,7 @@
 
 import { revisarDatosHogar, type DatosHogar, type ReparoHogar } from './peticion-hogar.ts'
 import { partirApellidos, sexoDeSaludo, diaSiguiente, type ClienteCartera } from './desde-cartera.ts'
+import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
 import { partirDireccion, direccionDesdeCatastro, type DireccionPartida } from './direccion.ts'
 import type { ViviendaCatastro } from '@central/core-catastro'
 
@@ -50,6 +51,12 @@ export type CatastroHogar = {
   anioConstruccion: number | null
   codigoPostal: string | null
   uso: string | null
+  /**
+   * La referencia catastral (20) con la que se consultó. Viaja como
+   * `risk.address.cadastralReference` (campo opcional del esquema). Solo se
+   * pone cuando consta de verdad: nunca se deduce de la dirección.
+   */
+  referencia?: string | null
   /**
    * La dirección oficial del Catastro, YA TROCEADA (con `paramsDnploc` de
    * `@central/core-catastro`, que entiende el formato propio del Catastro
@@ -162,13 +169,13 @@ export function precalificarHogarCartera(
   const fechaEfecto =
     vencimiento && vencimiento >= hoy
       ? suponer('fechaEfecto', diaSiguiente(vencimiento), `el día siguiente al vencimiento de la póliza actual (${vencimiento})`)
-      : suponer(
-          'fechaEfecto',
-          diaSiguiente(hoy),
-          vencimiento
-            ? `la póliza actual venció el ${vencimiento}, así que se pide precio para mañana`
-            : 'la póliza actual no tiene fecha de vencimiento en la ficha, así que se pide precio para mañana',
-        )
+      : vencimiento
+          ? suponer('fechaEfecto', diaSiguiente(hoy), `la póliza actual venció el ${vencimiento}, así que se pide precio para mañana`)
+          : suponer(
+              'fechaEfecto',
+              sumarDias(hoy, DIAS_EFECTO_PRESUPUESTO_NUEVO),
+              `no consta el vencimiento de la póliza actual: efecto a ${DIAS_EFECTO_PRESUPUESTO_NUEVO} días para que el precio siga valiendo al emitir`,
+          )
 
   // ── El riesgo: póliza/gemela primero, Catastro para los huecos ──
   let fuenteRiesgo: PrecalificacionHogar['fuenteRiesgo'] = h?.fuente ?? null
@@ -293,6 +300,7 @@ export function precalificarHogarCartera(
     numeroVia: dir.numero ?? undefined,
     planta: dir.planta,
     puertaVivienda: dir.puerta,
+    referenciaCatastral: limpio(catastro?.referencia) ?? undefined,
 
     // ── Cómo es ──
     metrosCuadrados: metrosFinal ?? undefined,

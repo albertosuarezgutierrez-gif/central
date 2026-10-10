@@ -12,7 +12,8 @@ test('🪤 sin enlace ni correo ni precio real NO se toca la fila: todas las gua
   for (const g of [
     "if (!enlace) return error('sin_enlace'",
     "if (ficha.estado !== 'ok') return error('sin_email'",
-    "if (t?.simulado !== false) return error('simulado'",
+    // Simulado (Codeoscopic) y sin revisar (ofertas): una sola decisión pura, `decidirSalida` (presupuesto-origen.ts).
+    'if (!salida.ok) return error(salida.motivo, salida.detalle)',
     "if (!AVISABLE.has(estado)) return error('no_enviable'",
     "if (portal?.estado !== 'invitable' && portal?.estado !== 'ya_entra') {",
   ]) {
@@ -48,4 +49,12 @@ test('🪤 sin necesidades escritas no se avisa, y se comprueba ANTES de rotar e
   const nec = avisar.indexOf("error('sin_necesidades'")
   const rota = avisar.indexOf('tokenHash: nuevoHash')
   assert.ok(nec > 0 && rota > nec)
+})
+
+test('🪤 el correo lleva acceso directo (tras el compare-and-swap) y el WhatsApp no', () => {
+  const avisar = src.slice(src.indexOf('export async function avisarPresupuesto'), src.indexOf('export async function confirmarWhatsapp'))
+  const llave = avisar.indexOf('await enlaceDirectoPresupuesto(')
+  assert.ok(llave > avisar.indexOf('const rotado = await'), 'la llave solo se crea si este clic ganó el CAS')
+  assert.ok(llave > avisar.indexOf("if (entrada.canal === 'whatsapp_enlace') {\n    const mensaje"), 'el WhatsApp no lleva llave')
+  assert.match(avisar, /correoPresupuesto\(\{ \.\.\.datos, enlaceDirecto: directo \}\)/)
 })

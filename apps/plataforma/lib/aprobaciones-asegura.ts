@@ -35,7 +35,7 @@ export type LecturaAprobaciones =
   | { estado: 'ok'; pendientes: Aprobacion[]; inciertos: EnvioIncierto[] }
   | { estado: 'sin_datos'; causa: string }
 
-export type Desenlace = 'ejecutada' | 'rechazada' | 'cerrada' | 'no_encontrada' | 'ya_decidida' | 'sin_email' | 'sin_correo_configurado' | 'fallida' | 'incierto' | 'invalida' | 'error'
+export type Desenlace = 'ejecutada' | 'rechazada' | 'cerrada' | 'no_encontrada' | 'ya_decidida' | 'sin_email' | 'sin_correo_configurado' | 'fallida' | 'incierto' | 'pue' | 'invalida' | 'error'
 
 export type CuerpoDecision =
   | { id: string; decision: 'aprobar'; asunto: string; texto: string; contactoId?: string }
@@ -54,6 +54,7 @@ export function textoDesenlace(d: Desenlace, motivo?: string | null): string {
     case 'sin_correo_configurado': return `NO enviado: ${motivo ?? 'el correo de la correduría no está configurado'}. Sigue pendiente; reintentarlo no lo arregla.`
     case 'fallida': return `NO enviado: ${motivo ?? 'el proveedor rechazó el mensaje'}.`
     case 'incierto': return 'NO se sabe si ha salido: se cortó esperando al proveedor. Míralo en Resend antes de repetir; queda en «a medias».'
+    case 'pue': return `NO enviado: ${motivo ?? 'Allianz se tramita en el PUE, no por correo'}. Tramítala a mano en el PUE (bloque «Bajas de Allianz» de Hoy).`
     case 'invalida': return 'NO enviado: el asunto y el texto no pueden ir vacíos.'
     default: return 'NO se sabe si se ha enviado: no se ha podido hablar con asegura. Mira la lista antes de repetir.'
   }
@@ -141,7 +142,7 @@ export async function decidir(cuerpo: CuerpoDecision, actor: string): Promise<{ 
     })
     const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
     const estado = typeof j?.estado === 'string' ? j.estado : 'error'
-    const conocidos: Desenlace[] = ['ejecutada', 'rechazada', 'cerrada', 'no_encontrada', 'ya_decidida', 'sin_email', 'sin_correo_configurado', 'fallida', 'incierto', 'invalida']
+    const conocidos: Desenlace[] = ['ejecutada', 'rechazada', 'cerrada', 'no_encontrada', 'ya_decidida', 'sin_email', 'sin_correo_configurado', 'fallida', 'incierto', 'pue', 'invalida']
     return { status: res.status, desenlace: (conocidos as string[]).includes(estado) ? (estado as Desenlace) : 'error', motivo: texto(j?.motivo) }
   } catch {
     return { status: 504, desenlace: 'error', motivo: null }

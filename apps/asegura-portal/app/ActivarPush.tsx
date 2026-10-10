@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react'
  * worker en el layout raíz; aquí solo se pide permiso y se suscribe sobre él.
  */
 export function ActivarPush() {
-  const [estado, setEstado] = useState<'cargando' | 'sin_soporte' | 'activo' | 'inactivo' | 'trabajando' | 'error'>(
+  const [estado, setEstado] = useState<'cargando' | 'sin_soporte' | 'activo' | 'inactivo' | 'trabajando' | 'error' | 'error_desactivar'>(
     'cargando',
   )
 
@@ -76,17 +76,19 @@ export function ActivarPush() {
       }
       setEstado('inactivo')
     } catch {
-      setEstado('error')
+      // Sigue activa: se vuelve a enseñar «Desactivar» con el aviso, no el botón de ACTIVAR con
+      // «No se ha podido activar», que era lo que salía (29/09/2026).
+      setEstado('error_desactivar')
     }
   }
 
   return (
     <div className="campana-push">
-      {estado === 'activo' ? (
+      {estado === 'activo' || estado === 'error_desactivar' ? (
         <>
           <PreferenciasAvisos />
           <button type="button" className="campana-reintentar" onClick={desactivar}>
-            Desactivar avisos por notificación
+            {estado === 'error_desactivar' ? 'No se han podido desactivar — reintentar' : 'Desactivar avisos por notificación'}
           </button>
         </>
       ) : (

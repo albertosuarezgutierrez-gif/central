@@ -24,13 +24,20 @@ const RUTA = join(
 )
 const fuente = readFileSync(RUTA, 'utf8')
 
-test('el bloque de "seguro en vigor" existe y es OPT-IN (apagado por defecto)', () => {
-  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(false\)/)
+// 29/09/2026: arranca encendido SOLO si hay una póliza suya leída (`anterior`); sin ella, apagado.
+test('el bloque de "seguro en vigor" existe y es OPT-IN (apagado salvo póliza leída)', () => {
+  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(anterior !== null\)/)
+  assert.match(fuente, /anterior = null,/, 'sin póliza leída, `anterior` es null → apagado')
   assert.match(fuente, /Sí, tiene un seguro de auto en vigor ahora mismo/)
 })
 
+test('los años del historial nacen en el máximo (o lo leído), no vacíos', () => {
+  assert.match(fuente, /useState\(String\(historial\.aniosAsegurado\)\)/)
+  assert.match(fuente, /useState\(String\(historial\.aniosSinSiniestros\)\)/)
+})
+
 test('activarlo manda los CINCO campos que el vendor exige juntos, nunca aseguradoAntes suelto', () => {
-  const cotizar = fuente.slice(fuente.indexOf('async function cotizar()'), fuente.indexOf('return (\n    <div'))
+  const cotizar = fuente.slice(fuente.indexOf('async function cotizarSinGuarda('), fuente.indexOf('return (\n    <div'))
   assert.match(cotizar, /if \(tieneSeguroActual\) \{/)
   // Líneas activas dentro del cuerpo del `if`, sin comentarios: una asignación
   // comentada («// correccionesFinal.x = …») sigue conteniendo la subcadena y

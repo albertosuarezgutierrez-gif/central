@@ -73,7 +73,8 @@ export const CAMPO_VEHICULO_MAX = 60
 export const ANIOS_MAXIMOS_ATRAS = 5
 
 import { DIAS_COMUNICACION_LCS, plazoComunicacion as plazoBase } from '@central/module-seguros'
-import { esTipoSiniestro, type TipoSiniestro } from './tipo-siniestro.ts'
+import { esTipoSiniestro, opcionesTipoSiniestro, type TipoSiniestro } from './tipo-siniestro.ts'
+import { normalizarDatosRamoParte, type DatosRamoParte } from './parte-ramo.ts'
 
 
 export type ParteEntrada = {
@@ -92,6 +93,11 @@ export type ParteEntrada = {
   hayTerceros?: unknown
   /** Opcional (`tipo-siniestro.ts`). Un valor fuera de la lista se descarta a `null`, no rechaza el parte. */
   tipoSiniestro?: unknown
+  /**
+   * Campos del ramo (`parte-ramo.ts`). `normalizarParte` NO los mira: no sabe el
+   * ramo. Los acepta `aplicarRamoAlParte` con el ramo de la póliza AUTORIZADA.
+   */
+  datosRamo?: unknown
 }
 
 export type ParteNormalizado = {
@@ -105,6 +111,8 @@ export type ParteNormalizado = {
   hayTerceros: boolean | null
   /** `null` = no lo ha marcado. No es «otro». */
   tipoSiniestro: TipoSiniestro | null
+  /** `null` = nada contestado (o ramo desconocido). Ver `aplicarRamoAlParte`. */
+  datosRamo: DatosRamoParte | null
 }
 
 export type ResultadoParte =
@@ -357,6 +365,28 @@ export function normalizarParte(entrada: ParteEntrada, hoy: Date = new Date()): 
       // Clasificación, no dato del siniestro: si llega algo raro se pierde la
       // etiqueta, no el parte.
       tipoSiniestro: esTipoSiniestro(entrada.tipoSiniestro) ? entrada.tipoSiniestro : null,
+      // Sin ramo no hay catálogo: se descarta todo hasta que el SERVIDOR sepa la
+      // póliza (`aplicarRamoAlParte`). Si alguien se salta ese paso, se pierde el
+      // detalle, nunca se cuela una clave de otro ramo.
+      datosRamo: null,
     },
   }
+}
+
+/**
+ * Segundo paso del servidor, DESPUÉS de comprobar la pertenencia de la póliza:
+ * con el `ramo` de ESA póliza (leído de la cartera autorizada o de la declarada
+ * filtrada por identidad, nunca del cuerpo), se queda solo con:
+ *   · un `tipoSiniestro` que exista para ese ramo (si no, `null`), y
+ *   · las claves de `datos_ramo` de ese ramo (`normalizarDatosRamoParte`).
+ * Ramo desconocido o sin póliza → los dos a `null`.
+ */
+export function aplicarRamoAlParte(valor: ParteNormalizado, ramo: string | null | undefined, entrada: ParteEntrada): ParteNormalizado {
+  const tipo = valor.tipoSiniestro !== null && opcionesTipoSiniestro(ramo).includes(valor.tipoSiniestro) ? valor.tipoSiniestro : null
+  const datosRamo = normalizarDatosRamoParte(ramo, entrada.datosRamo, {
+    hayHeridos: valor.hayHeridos,
+    hayTerceros: valor.hayTerceros,
+    tipoSiniestro: tipo,
+  })
+  return { ...valor, tipoSiniestro: tipo, datosRamo }
 }

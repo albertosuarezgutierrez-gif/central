@@ -63,6 +63,7 @@ mapa para entenderlo y tocarlo con seguridad.
   de Claude Code — lo etiquetado se recoge en su pasada de las 08:00 (o un 2º disparo manual a las 15:00).
 - **Agente de huéspedes SIVRA:** el triaje delega los correos de huésped en `procesarMensajeHuesped`,
   que trae idempotencia propia (`claimMensaje`/`esEcoPropio`), así que no choca con la vía Smoobu (cron `*/3`).
+- **Factura mensual de Sique Brilla (03/10/2026):** correo de `limpiezascruzz@gmail.com` con «factura» en el asunto → el triaje (sin pasar por el clasificador ni por `yaEtiquetado`) lee el PDF (`lib/correo/imap.ts` conserva sus adjuntos por dirección exacta), `lib/sivra/factura-cuadre.ts` (puro) cuadra unidades por piso con los checkouts no cancelados del mes en `incomes` y la aritmética, guarda en `limpieza_facturas` (`fuente='correo_pdf'`, solo si la aritmética es sana) y avisa por Telegram (`facturas.siquebrilla-cuadre`) con `factura-cuadre-correo.ts`. Solo en modo vivo (`TRIAJE_DRY_RUN=false`). PDF ilegible → «no he podido leer la factura».
 - **/auditoria-diaria:** vigila la frescura de `correo_triaje` (heartbeat) y reconcilia `rutas.ts`
   contra `.claude/skills/` (skill nueva con correo entrante sin categoría → PR draft + Telegram).
 

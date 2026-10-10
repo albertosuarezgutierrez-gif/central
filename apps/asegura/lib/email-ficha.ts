@@ -22,6 +22,7 @@
  *     y cifrado, que es el fallo que esta app persigue por todas partes.
  */
 import { prismaAsegura } from './asegura-db'
+import { elegirEmailGuardado } from './email-ficha-reglas.ts'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 
 export type EmailDeFicha =
@@ -62,13 +63,7 @@ export async function estadoEmailDeFicha(correduriaId: string, clienteId: string
   )
   if (guardados.length === 0) return { estado: 'sin_email' }
 
-  for (const cifrado of guardados) {
-    if (campoIlegible(cifrado)) continue
-    const claro = descifrarCampo(cifrado)
-    if (claro && claro.trim() !== '') return { estado: 'ok', email: claro.trim() }
-  }
-  // Había direcciones y ninguna se pudo abrir: eso es un problema de clave.
-  return { estado: 'ilegible' }
+  return elegirEmailGuardado(guardados, { campoIlegible, descifrarCampo })
 }
 
 /** La dirección a secas. `null` = no hay ninguna utilizable, por el motivo que sea. */

@@ -2,7 +2,9 @@ import Link from 'next/link'
 
 import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { fechaEs } from '@/lib/fechas'
+import { figuraChip } from '@/lib/intervinientes'
 
+import { SolicitarBaja } from './SolicitarBaja'
 import { empiezaMasAdelante, ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBien } from './PolizaVista'
 
 /**
@@ -35,7 +37,7 @@ import { empiezaMasAdelante, ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBi
  * Lo que se va a la ficha: prima, recibos, coberturas, siniestros abiertos y
  * los teléfonos de la compañía.
  */
-export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | null }) {
+export function FilaPoliza({ p, deOtro, puedeSolicitarBaja = false, puedeMejorarPrecio = false }: { p: PolizaPortal; deOtro: string | null; puedeSolicitarBaja?: boolean; puedeMejorarPrecio?: boolean }) {
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = RAMO[p.ramo] ?? p.ramo
   // Si el titular ya es el bien, la compañía baja a la segunda línea; si no, el
@@ -96,6 +98,16 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
                 {ESTADO[p.estado] ?? p.estado}
               </span>
             )}
+            {/* Tu figura en la póliza (28/09/2026): «Tomador», «Propietario»… Sin
+                papel conocido no se pinta nada: no se inventa uno. */}
+            {p.figura && p.figura.length > 0 && <span className="chip">{figuraChip(p.figura)}</span>}
+            {/* La ficha que ves (tu empresa, quien te autorizó) figura en la póliza de OTRO tomador. */}
+            {p.figuraTitular && p.figuraTitular.roles.length > 0 && (
+              <span className="chip">
+                {figuraChip(p.figuraTitular.roles)}
+                {p.figuraTitular.tomador && ` · tomador ${p.figuraTitular.tomador}`}
+              </span>
+            )}
             {p.sustituyeA && (
               <span className="chip">
                 {empieza ? `Hasta entonces, ${p.sustituyeA.compania}` : `Sustituye a ${p.sustituyeA.compania}`}
@@ -109,6 +121,11 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
           ›
         </span>
       </Link>
+      {/* «Solicitar baja»: fuera del <Link> (un botón dentro de un enlace no es HTML válido). Solo en pólizas PROPIAS en vigor
+          y sin baja en marcha; lo decide la página, y el servidor lo vuelve a comprobar. */}
+      {puedeSolicitarBaja && (
+        <SolicitarBaja polizaId={p.id} puedeMejorarPrecio={puedeMejorarPrecio} titulo={tituloDePoliza(p)} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null} />
+      )}
     </li>
   )
 }

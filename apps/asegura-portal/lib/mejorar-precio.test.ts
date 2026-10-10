@@ -24,3 +24,16 @@ test('🪤 peticiones: no poder leerlas (null) no es «no has pedido nada» ([])
     [{ polizaId: 'p1', pedidoEl: '2026-09-20' }],
   )
 })
+
+import { MENSAJE_VARIAS_FICHAS } from './mensajes-ficha.ts'
+
+test('🪤 varias fichas y «no está en vigor» tienen texto propio, no «No encontramos esta póliza»', () => {
+  const varias = interpretarPedirPrecio(409, { estado: 'varias_fichas' })
+  assert.deepEqual(varias, { estado: 'no_disponible', motivo: MENSAJE_VARIAS_FICHAS })
+  const vigor = interpretarPedirPrecio(409, { estado: 'no_vigente' })
+  assert.equal(vigor.estado, 'no_disponible')
+  assert.match((vigor as { motivo: string }).motivo, /en vigor/)
+  assert.doesNotMatch((vigor as { motivo: string }).motivo, /No encontramos/)
+  const nf = interpretarPedirPrecio(404, { estado: 'no_encontrada' })
+  assert.match((nf as { motivo: string }).motivo, /No encontramos/)
+})

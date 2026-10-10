@@ -35,6 +35,9 @@ export async function enlazarPresupuestoConOportunidad(e: {
   const clienteCtx = e.contexto.clienteId && UUID.test(e.contexto.clienteId) ? e.contexto.clienteId : null
   if (!clienteCtx && !polizaId) return { estado: 'omitida', motivo: 'el presupuesto no dice de qué cliente es' }
 
+  const oportunidadCtx = e.contexto.oportunidadId && UUID.test(e.contexto.oportunidadId) ? e.contexto.oportunidadId : null
+  if (oportunidadCtx) return enlazarAOportunidadDada(e, oportunidadCtx)
+
   try {
     return await prisma.$transaction(async (tx) => {
       const [cli] = clienteCtx
@@ -93,6 +96,51 @@ export async function enlazarPresupuestoConOportunidad(e: {
         update seguros.tarificaciones set oportunidad_id = ${oportunidadId}::uuid
         where id = ${e.cotizacionId}::uuid and correduria_id = ${e.correduriaId}::uuid`
       return { estado: resultado, oportunidadId }
+    })
+  } catch (err) {
+    return { estado: 'no_enlazada', motivo: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+/**
+ * VARIANTE de un riesgo (29/09/2026): el corredor cotiza desde la pantalla de la oportunidad, quizá
+ * con OTRO tomador (un familiar). Se cuelga de ESA oportunidad —no de la primera abierta del
+ * tomador, que sería otra ficha—, comprobando que es de esta correduría y que el ramo cuadra.
+ * Nunca abre una oportunidad nueva: si la dada no vale, `no_enlazada` y la copia pagada queda.
+ */
+async function enlazarAOportunidadDada(
+  e: { correduriaId: string; contexto: ContextoCotizacion; cotizacionId: string; solicitadoPor: string },
+  oportunidadId: string,
+): Promise<EnlaceOportunidad> {
+  const ramo = ramoDeOportunidad(e.contexto.ramo)
+  try {
+    return await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`oportunidad-id:${oportunidadId}`}))`
+      const [op] = await tx.$queryRaw<{ id: string; estado: string; tipo: string; cliente_id: string }[]>`
+        select id::text as id, estado::text as estado, tipo::text as tipo, cliente_id::text as cliente_id
+        from seguros.oportunidades
+        where id = ${oportunidadId}::uuid and correduria_id = ${e.correduriaId}::uuid`
+      if (!op) return { estado: 'no_enlazada' as const, motivo: 'la oportunidad no es de esta correduría' }
+      if (ramo && op.tipo !== ramo) {
+        return { estado: 'no_enlazada' as const, motivo: `la oportunidad es de ${op.tipo} y el presupuesto de ${ramo}` }
+      }
+      const abierta = (ESTADOS_ABIERTA as readonly string[]).includes(op.estado)
+      const nuevo = abierta ? estadoTrasPresupuesto(op.estado) : op.estado
+      if (nuevo !== op.estado) {
+        await tx.$executeRaw`
+          update seguros.oportunidades set estado = cast(${nuevo} as seguros.estado_comercial), updated_at = now()
+          where id = ${op.id}::uuid and correduria_id = ${e.correduriaId}::uuid`
+      }
+      const tomadorDistinto = !!e.contexto.clienteId && e.contexto.clienteId !== op.cliente_id
+      await tx.$executeRaw`
+        insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+        values (${e.correduriaId}::uuid, ${op.id}::uuid, 'variante_cotizada', cast(${op.estado} as seguros.estado_comercial),
+                cast(${nuevo} as seguros.estado_comercial),
+                ${JSON.stringify({ cotizacionId: e.cotizacionId, tomadorDistinto })}::jsonb, ${e.solicitadoPor})`
+      await tx.$executeRaw`
+        update seguros.tarificaciones set oportunidad_id = ${op.id}::uuid
+        where id = ${e.cotizacionId}::uuid and correduria_id = ${e.correduriaId}::uuid`
+      return { estado: 'enlazada' as const, oportunidadId: op.id }
     })
   } catch (err) {
     return { estado: 'no_enlazada', motivo: err instanceof Error ? err.message : String(err) }

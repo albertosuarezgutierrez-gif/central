@@ -15,9 +15,17 @@
 // por corrección es el precio, y es barato: no hay ningún cargo de por medio
 // hasta el botón final.
 
-import { useState } from 'react'
-import { Loader2, Pencil, X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { FlaskConical, Loader2, Pencil, X } from 'lucide-react'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
+import { ConIcono } from '../../../iconos'
+import EnlaceOportunidad from '../../../EnlaceOportunidad'
+import { CeldaCompania } from '../../../CeldaCompania'
+import FiltroGarantias from '../../../FiltroGarantias'
+import ListaPrecios from '../../../ListaPrecios'
+import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
+import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { eur } from '@/lib/dinero'
 import type {
   Control as TipoControl,
@@ -29,6 +37,7 @@ import type {
   Supuesto,
 } from '@/lib/hogar-nuevo-asegura'
 import { pedirCotizacionHogar, pedirPrecalificacionHogar } from './acciones'
+import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
 
 type Grupo = 'donde' | 'como' | 'protecciones' | 'capitales' | 'tomador' | 'cotizacion'
 
@@ -75,26 +84,30 @@ type Resultado =
       resumen: string
       precios: Precio[]
       supuestos: Supuesto[]
+      /** Qué pasó con la copia guardada: su `cotizacionId` es de lo que sale el presupuesto. */
+      guardado?: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
-
-function euroODash(n: number | null | undefined): string {
-  return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
-}
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 export default function Formulario({
   clienteId,
   referencia,
   preInicial,
+  variante = null,
+  iniciales = null,
 }: {
   clienteId: string
   referencia: string
   preInicial: PrecalificacionHogar
+  /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
+  variante?: VarianteNueva | null
+  /** Lo que el riesgo ya sabe de la vivienda (la precalificación de `preInicial` ya lo incluye). */
+  iniciales?: { resueltos: Record<string, unknown>; correcciones: Record<string, unknown> } | null
 }) {
   const [pre, setPre] = useState(preInicial)
-  const [resueltos, setResueltos] = useState<Record<string, unknown>>({})
-  const [correcciones, setCorrecciones] = useState<Record<string, unknown>>({})
+  const [resueltos, setResueltos] = useState<Record<string, unknown>>(iniciales?.resueltos ?? {})
+  const [correcciones, setCorrecciones] = useState<Record<string, unknown>>(iniciales?.correcciones ?? {})
   const [recalculando, setRecalculando] = useState(false)
   const [editando, setEditando] = useState<string | null>(null)
   const [borrador, setBorrador] = useState('')
@@ -162,13 +175,28 @@ export default function Formulario({
     return { ...resueltos, supuestos }
   }
 
-  async function cotizar() {
+  // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
+  // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
+  const cotizandoEnVuelo = useRef(false)
+  async function cotizar(forzar = false) {
+    if (cotizandoEnVuelo.current) return
+    cotizandoEnVuelo.current = true
+    try {
+      await cotizarSinGuarda(forzar)
+    } finally {
+      cotizandoEnVuelo.current = false
+    }
+  }
+
+  async function cotizarSinGuarda(forzar: boolean) {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionHogar({
+      forzar,
       clienteId,
       referencia,
       resueltos: cuerpoResueltosFinal(),
       correcciones,
+      variante: variante ? { oportunidadId: variante.oportunidadId, nota: null } : null,
     })
     switch (r.estado) {
       case 'faltan':
@@ -176,6 +204,9 @@ export default function Formulario({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
       case 'ramo':
@@ -196,6 +227,7 @@ export default function Formulario({
           resumen: r.resumen,
           precios: r.precios,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
       default: {
@@ -294,7 +326,7 @@ export default function Formulario({
         )}
         {pre.resumen.optimistas.length > 0 && (
           <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-            ⚠️ {pre.resumen.optimistas.length} de los supuestos ABARATAN el precio (
+            {pre.resumen.optimistas.length} de los supuestos ABARATAN el precio (
             {pre.resumen.optimistas.map((f) => f.etiqueta.toLowerCase()).join(', ')}): si el cliente los desmiente,
             la prima real sube.
           </p>
@@ -329,7 +361,7 @@ export default function Formulario({
 
         {resultado.estado === 'error' && (
           <p style={{ color: 'var(--negative)', fontSize: 13, marginTop: 12, whiteSpace: 'pre-wrap' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}
+            {resultado.tope ? 'Tope alcanzado: ' : ''}
             {resultado.mensaje}
             {resultado.gastoDesconocido && (
               <>
@@ -339,8 +371,11 @@ export default function Formulario({
             )}
           </p>
         )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
+        )}
 
-        {resultado.estado === 'ok' && <Precios r={resultado} />}
+        {resultado.estado === 'ok' && <Precios r={resultado} clienteId={clienteId} />}
       </div>
     </div>
   )
@@ -530,12 +565,38 @@ function deTexto(f: Fila, t: string): unknown {
 
 // ─── El resultado ────────────────────────────────────────────────────────────
 
-function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
+function Precios({ r, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; clienteId: string }) {
+  // Emitir a un cliente NUEVO (28/09/2026): asegura enlazó el proyecto a la ficha y a
+  // esta tarificación al confirmar el precio, así que no hace falta póliza previa.
+  const cotizacionId = cotizacionIdDe(r.guardado)
+  const puedeEmitir = !r.simulado && cotizacionId !== null
+  const propsLista = {
+    precios: r.precios,
+    simulado: r.simulado,
+    puedeEmitir,
+    motivoNoEmitir: r.simulado ? 'Simulado: no hay proyecto real de Codeoscopic' : 'Esta cotización no quedó guardada: no se puede emitir sin su id',
+    emision: puedeEmitir
+      ? (p: (typeof r.precios)[number], cerrar: () => void) => (
+          <Emision
+            tarificacionId={cotizacionId as string}
+            compania={p.compania ?? ''}
+            categoria={p.categoria ?? ''}
+            primaEur={p.primaEur ?? null}
+            producto={p.producto ?? null}
+            modalidad={p.modalidad ?? null}
+            idPrecio={p.id ?? null}
+            sustituye={false}
+            onCerrar={cerrar}
+          />
+        )
+      : undefined,
+  }
   return (
     <div style={{ marginTop: 12 }}>
+      <EnlaceOportunidad guardado={r.guardado} />
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
-          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>
+          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>
           <p style={{ margin: '4px 0 0', fontSize: 13 }}>
             {r.avisoSimulacion ?? 'Precio inventado por central para probar la pantalla: ninguna compañía lo ha dado y no se ha gastado ni un céntimo.'}
           </p>
@@ -546,28 +607,23 @@ function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
         Coste de esta consulta: {r.coste}
         {r.restantesHoy !== null && <> · quedan hoy {r.restantesHoy}</>}.
       </p>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
-          <thead>
-            <tr>
-              <th style={th}>Compañía</th>
-              <th style={th}>Producto</th>
-              <th style={th}>Prima anual</th>
-              <th style={th}>Firmeza</th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.precios.map((p, i) => (
-              <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}>{p.compania ?? '—'}</td>
-                <td style={td}>{p.producto ?? '—'}</td>
-                <td style={td}>{euroODash(p.primaEur)}</td>
-                <td style={td}><Badge tono={p.firmeza === 'firme' ? 'positivo' : 'aviso'} title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {cotizacionId === null && <ListaPrecios {...propsLista} />}
+      {cotizacionId !== null && (
+        // Cada fila de «Qué verá el cliente» se emite ahí mismo (29/09/2026): sin segunda lista plegada.
+        <FiltroGarantias ramo="hogar" origen={{ clienteId, ramo: 'hogar' }} tarificacionId={cotizacionId} simulado={r.simulado} emitir={puedeEmitir ? (o, cerrar) => (
+                <Emision
+                  tarificacionId={cotizacionId as string}
+                  compania={o.compania ?? ''}
+                  categoria={o.categoria ?? ''}
+                  primaEur={o.primaEur}
+                  producto={o.producto}
+                  modalidad={o.modalidad}
+                  idPrecio={o.idVendor}
+                  sustituye={false}
+                  onCerrar={cerrar}
+                />
+              ) : undefined} />
+      )}
       {r.supuestos.length > 0 && (
         <>
           <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>Este precio sale con estos supuestos:</p>
@@ -585,5 +641,3 @@ function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
   )
 }
 
-const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', borderBottom: '1px solid var(--border)' }
-const td: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--border)' }

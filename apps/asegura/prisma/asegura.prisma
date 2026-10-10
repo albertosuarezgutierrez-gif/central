@@ -27,6 +27,18 @@ enum TipoSeguro {
   comercio
   comunidades
   accidentes
+  empresas
+  rc_profesional
+  dyo
+  flotas
+  transporte_mercancias
+  ciberriesgos
+  decenal
+  embarcaciones
+  mascotas
+  impago_alquiler
+  viaje
+  caucion
   otros
 
   @@map("tipo_seguro")
@@ -138,6 +150,7 @@ enum IntervinienteRol {
   contacto
   beneficiario
   asegurado
+  pagador
 
   @@map("interviniente_rol")
 }
@@ -370,6 +383,11 @@ model Poliza {
   // medido 31/08). NULL = «pendiente», nunca «no vence».
   fechaInicio             DateTime?        @map("fecha_inicio") @db.Date
   fechaVencimiento        DateTime?        @map("fecha_vencimiento") @db.Date
+  /// Fechas del EIAC (CIMA, 28/09/2026). NULL = CIMA no las ha mandado todavía.
+  fechaEmision            DateTime?        @map("fecha_emision") @db.Date
+  fechaEfectoActual       DateTime?        @map("fecha_efecto_actual") @db.Date
+  fechaSituacion          DateTime?        @map("fecha_situacion") @db.Date
+  fechaSolicitud          DateTime?        @map("fecha_solicitud") @db.Date
   primaAnual              Decimal?         @map("prima_anual") @db.Decimal(10, 2)
   primaMensual            Decimal?         @map("prima_mensual") @db.Decimal(10, 2)
   estado                  EstadoPoliza     @default(activa)
@@ -463,6 +481,11 @@ model PolizaRecibo {
   iban               String? // cifrado
   comisionBruta      String?       @map("comision_bruta")
   comisionLiquida    String?       @map("comision_liquida")
+  idRemesa           String?       @map("id_remesa") @db.VarChar(64)
+  gestionCobro       String?       @map("gestion_cobro") @db.VarChar(10)
+  claseComision      String?       @map("clase_comision") @db.VarChar(10)
+  baseComision       Decimal?      @map("base_comision") @db.Decimal(12, 2)
+  retencionIrpf      Decimal?      @map("retencion_irpf") @db.Decimal(12, 2)
   datosExtra         Json?         @map("datos_extra")
   eiacXmlHash        String?       @map("eiac_xml_hash")
   origen             ReciboOrigen  @default(cima)
@@ -554,11 +577,36 @@ model Siniestro {
   totalPagosCima       Decimal?           @map("total_pagos_cima") @db.Decimal(12, 2)
   /// `PosicionSiniestro` = CULPA (CU/RE/IN/NA), no estado.
   posicionCima         String?            @map("posicion_cima") @db.VarChar(2)
+  /// Huecos de CIMA (28/09/2026). Solo `origen='cima'`; NULL = CIMA no lo manda.
+  fechaDeclaracion          DateTime? @map("fecha_declaracion") @db.Date
+  daaCima                   Boolean?  @map("daa_cima")
+  responsabilidadCima       String?   @map("responsabilidad_cima") @db.VarChar(30)
+  totalRecobrosCima         Decimal?  @map("total_recobros_cima") @db.Decimal(12, 2)
+  reservaDesgloseCima       Json?     @map("reserva_desglose_cima")
+  conveniosCima             Json?     @map("convenios_cima")
+  expedientesCima           Json?     @map("expedientes_cima")
+  riesgoCima                Json?     @map("riesgo_cima")
+  contactoNombreCima        String?   @map("contacto_nombre_cima")
+  contactoTelefonoCima      String?   @map("contacto_telefono_cima")
+  vehiculoCima              Json?     @map("vehiculo_cima")
+  vehiculoContrarioCima     Json?     @map("vehiculo_contrario_cima")
+  asistenciasCima           Json?     @map("asistencias_cima")
+  refMediadorCima           String?   @map("ref_mediador_cima") @db.VarChar(50)
+  descripcionCima           String?   @map("descripcion_cima")
+  contactoObservacionesCima String?   @map("contacto_observaciones_cima")
+  /// Alta manual unida al siniestro de CIMA que llegó después (`siniestro-vinculo.ts`,
+  /// SQL 2026-10-03d). La fila se CONSERVA; toda lectura de ficha/portal filtra `null`.
+  fusionadoEnSiniestroId    String?   @map("fusionado_en_siniestro_id") @db.Uuid
+  fusionadoAt               DateTime? @map("fusionado_at") @db.Timestamptz(6)
 
   correduria      Correduria               @relation(fields: [correduriaId], references: [id])
   cliente         Cliente                  @relation(fields: [clienteId], references: [id])
   poliza          Poliza                   @relation(fields: [polizaId], references: [id])
   intervinientes  SiniestroInterviniente[]
+  fusionadoEn     Siniestro?               @relation("SiniestroFusion", fields: [fusionadoEnSiniestroId], references: [id])
+  fusionados      Siniestro[]              @relation("SiniestroFusion")
+  /// Partes del portal vinculados (FK desde el 03/10/2026).
+  partesPortal    PortalParteSiniestro[]
 
   @@map("siniestros")
 }
@@ -612,6 +660,7 @@ model CuentaEfectivo {
   otrosConceptos      String?   @map("otros_conceptos")
   retencionOtros      String?   @map("retencion_otros")
   remesas             String?
+  datosExtra          Json?     @map("datos_extra")
   eiacXmlHash         String?   @map("eiac_xml_hash")
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
@@ -703,6 +752,112 @@ model CompaniaContacto {
   @@map("compania_contactos")
 }
 
+// ─── Acuerdos con compañías y claves de mediador (06/10/2026, fase 1) ────────
+// SQL en prisma/sql/2026-10-06_seguros_acuerdos_companias.sql. Spec:
+// docs/superpowers/specs/2026-10-06-correduria-acuerdos-companias-design.md.
+// Todo lleva `correduriaId` (las hijas lo heredan de su cabecera) y se consulta
+// SIEMPRE filtrando por él (`lib/acuerdos.ts`). Los porcentajes NULL = «no
+// consta», nunca 0 %. Las columnas de texto con CHECK (estado, canal, fuente,
+// tipo, ámbito, base…) se validan con las listas cerradas de
+// `@central/module-seguros/acuerdos.ts`; un valor fuera de lista se declara,
+// no se adivina. Sin relación Prisma a `CompaniaDgs`/`Correduria` a propósito
+// (la FK vive en la BD): así no se toca el modelo que sirve el directorio.
+
+/// Clave de mediador del TENANT en una compañía. `codigosCima` = tal como los
+/// manda CIMA en `datos_especificos.mediador.codigoInterno`.
+model ClaveMediador {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId      String    @map("correduria_id") @db.Uuid
+  companiaCodigoDgs String    @map("compania_codigo_dgs") @db.VarChar(16)
+  estado            String
+  canal             String
+  asociacion        String?
+  codigosCima       String[]  @default([]) @map("codigos_cima")
+  etiqueta          String?
+  fechaAlta         DateTime? @map("fecha_alta") @db.Date
+  fechaBaja         DateTime? @map("fecha_baja") @db.Date
+  notas             String?
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  acuerdos AcuerdoCompania[]
+
+  @@index([correduriaId, companiaCodigoDgs])
+  @@map("claves_mediador")
+}
+
+/// Acuerdo con una compañía (compañía × fuente × vigencia). `claveId` NULL =
+/// sin clave asignada (productividad «pendiente»). `revisadoAt` NULL = extracto
+/// sin cotejar con el documento original: ningún semáforo se pinta verde.
+model AcuerdoCompania {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId       String    @map("correduria_id") @db.Uuid
+  companiaCodigoDgs  String    @map("compania_codigo_dgs") @db.VarChar(16)
+  fuente             String
+  fuenteNombre       String?   @map("fuente_nombre")
+  claveId            String?   @map("clave_id") @db.Uuid
+  vigenciaDesde      DateTime  @map("vigencia_desde") @db.Date
+  vigenciaHasta      DateTime? @map("vigencia_hasta") @db.Date
+  requisitosApertura String?   @map("requisitos_apertura")
+  letraPequena       String?   @map("letra_pequena")
+  documentoFuente    String    @map("documento_fuente")
+  revisadoAt         DateTime? @map("revisado_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  clave      ClaveMediador?    @relation(fields: [claveId], references: [id])
+  comisiones AcuerdoComision[]
+  objetivos  AcuerdoObjetivo[]
+
+  @@unique([correduriaId, companiaCodigoDgs, fuente, vigenciaDesde])
+  @@index([claveId])
+  @@map("acuerdos_compania")
+}
+
+/// Comisión pactada por ramo. `ramo` NULL = no mapeado (se pinta, no se usa para
+/// calcular). `pctNp`/`pctCartera` NULL = no consta, NUNCA 0 %.
+model AcuerdoComision {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  acuerdoId  String      @map("acuerdo_id") @db.Uuid
+  ramo       TipoSeguro?
+  ramoTexto  String      @map("ramo_texto")
+  producto   String?
+  modalidad  String?
+  pctNp      Decimal?    @map("pct_np") @db.Decimal(5, 2)
+  pctCartera Decimal?    @map("pct_cartera") @db.Decimal(5, 2)
+  notas      String?
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  acuerdo AcuerdoCompania @relation(fields: [acuerdoId], references: [id], onDelete: Cascade)
+
+  @@index([acuerdoId])
+  @@map("acuerdo_comisiones")
+}
+
+/// Objetivo de un acuerdo (rappel, mantener clave, apertura). `tramos` lo valida
+/// `leerTramos()`; `ramos` vacío = todos; `criterioCobro` NULL = el
+/// documento no lo dice.
+model AcuerdoObjetivo {
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  acuerdoId            String       @map("acuerdo_id") @db.Uuid
+  tipo                 String
+  ambito               String
+  base                 String
+  criterioCobro        String?      @map("criterio_cobro")
+  ramos                TipoSeguro[] @default([])
+  periodoDesde         DateTime     @map("periodo_desde") @db.Date
+  periodoHasta         DateTime     @map("periodo_hasta") @db.Date
+  tramos               Json         @default("[]")
+  siniestralidadMaxPct Decimal?     @map("siniestralidad_max_pct") @db.Decimal(5, 2)
+  condiciones          String?
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  acuerdo AcuerdoCompania @relation(fields: [acuerdoId], references: [id], onDelete: Cascade)
+
+  @@index([acuerdoId])
+  @@map("acuerdo_objetivos")
+}
+
 model Documento {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId      String    @map("correduria_id") @db.Uuid
@@ -727,6 +882,10 @@ model Documento {
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   revisadoAt        DateTime? @map("revisado_at") @db.Timestamptz(6)
   revisadoPor       String?   @map("revisado_por")
+  /// Lectura por IA de la póliza subida (03/10/2026, `prisma/sql/2026-10-03_documentos_extraccion.sql`).
+  /// NULL = no se leyó con IA. SIN PII del tomador (`extraccionSinPii`): de esos campos, solo si se leyeron.
+  /// Se escribe por SQL crudo en best-effort (`guardarExtraccion`); toda lectura de `documento` usa `select`.
+  extraccion        Json?
 
   @@index([correduriaId, clienteId])
   @@index([correduriaId, polizaId])
@@ -856,9 +1015,20 @@ model PortalParteSiniestro {
   hayTerceros         Boolean?          @map("hay_terceros")
   /// Opcional; lista cerrada = `TIPOS_SINIESTRO` de `@central/module-seguros-portal`. `null` = no lo marcó.
   tipoSiniestro       String?           @map("tipo_siniestro")
+  /// Respuestas por RAMO del cliente (`parte-ramo.ts` de `@central/module-seguros-portal`). `null` = nada contestado.
+  /// Clave ausente = «no lo sé». `culpaPropiaDeclarada` es DECLARACIÓN: nunca pisa la posición de la compañía.
+  datosRamo           Json?             @map("datos_ramo")
+  /// 🔒 Datos personales de TERCEROS del parte (`CLAVES_PII_PARTE`: contrarios, heridos, afectados, persona afectada),
+  /// en UN sobre AES-256-GCM `v1:` con `PII_ENCRYPTION_KEY`. Nunca en `datosRamo` (CHECK en BD). `null` = no dio ninguno.
+  datosRamoCifrado    String?           @map("datos_ramo_cifrado")
   estado              PortalParteEstado @default(enviado)
-  /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
+  /// El siniestro REAL al que se vincula. Ojo: vinculado ≠ comunicado; eso lo dice `estado`
+  /// (`abierto_en_compania`). Un alta manual sin nº de la compañía se vincula en `recibido`.
   siniestroId         String?           @map("siniestro_id") @db.Uuid
+  /// Cómo se vinculó: `alta_desde_parte` · `manual` · `auto_cima`. `null` con `siniestroId` = antes del 03/10/2026.
+  siniestroVinculo    String?           @map("siniestro_vinculo")
+  siniestroVinculadoAt DateTime?        @map("siniestro_vinculado_at") @db.Timestamptz(6)
+  siniestro           Siniestro?        @relation(fields: [siniestroId], references: [id])
   recibidoAt          DateTime?         @map("recibido_at") @db.Timestamptz(6)
   abiertoEnCompaniaAt DateTime?         @map("abierto_en_compania_at") @db.Timestamptz(6)
   descartadoAt        DateTime?         @map("descartado_at") @db.Timestamptz(6)
@@ -990,7 +1160,8 @@ model PortalCanal {
 
 model PortalBien {
   id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  identidadId String         @map("identidad_id") @db.Uuid
+  /// `null` = bien de una EMPRESA (`cliente_id`, flota del portal, 05/10/2026). Exactamente uno de los dos (CHECK en BD).
+  identidadId String?        @map("identidad_id") @db.Uuid
   tipo        PortalBienTipo
   nombre      String
   datos       Json           @default("{}")
@@ -1296,7 +1467,16 @@ model Presupuesto {
   /// NULL = venta nueva (no hay póliza que comparar), JAMÁS «no tiene seguro».
   polizaId         String?   @map("poliza_id") @db.Uuid
   ramo             String
-  tarificacionId   String    @map("tarificacion_id") @db.Uuid
+  /// La tarificación pagada en Avant2 de la que salen los precios. NULL SOLO con `origen = 'ofertas'`
+  /// (CHECKs de `2026-10-05_oportunidad_ofertas.sql`). Toda puerta a Codeoscopic pasa por
+  /// `admiteCodeoscopic()` de `lib/presupuesto-origen.ts`.
+  tarificacionId   String?   @map("tarificacion_id") @db.Uuid
+  /// `codeoscopic` (tarificación de Avant2) | `ofertas` (PDFs de compañías revisados; se emite en la compañía).
+  origen           String    @default("codeoscopic")
+  /// Solo `ofertas`: la oportunidad de la que sale (las de Codeoscopic la heredan de su tarificación).
+  oportunidadId    String?   @map("oportunidad_id") @db.Uuid
+  /// Solo `ofertas`: la comparación congelada (`compararOfertas`) + la narrativa validada.
+  estudio          Json?
   /// El token del enlace, HASHEADO. En claro solo existe en el mensaje que sale.
   tokenHash        String    @unique @map("token_hash")
   canalAviso       String?   @map("canal_aviso")
@@ -1319,6 +1499,16 @@ model Presupuesto {
   /// Exigencias y necesidades del cliente (art. 20 Ley 16/2018), escritas por el corredor. NULL = no constan.
   necesidades      String?
   necesidadesAt    DateTime? @map("necesidades_at") @db.Timestamptz(6)
+  /// Referencia propia AS-AA-NNNN que se le da al cliente (nunca el nº de Avant2). La pone la BD
+  /// al insertar (trigger, contador por correduría + año) y no se reescribe. 2026-09-30b_presupuesto_referencia.sql
+  referencia       String?   @default(dbgenerated())
+  /// Primer PDF descargado para el cliente. NO prueba que se enviara (no es enviadoAt). NULL = no consta.
+  documentoDescargadoAt DateTime? @map("documento_descargado_at") @db.Timestamptz(6)
+  /// Código de acceso mandado por WhatsApp, HASHEADO y atado al token (`hashCodigoWhatsapp`).
+  /// NULL = el enlace no salió por WhatsApp: no hay código. `2026-10-07_presupuesto_codigo_whatsapp.sql`
+  whatsappCodigoHash     String? @map("whatsapp_codigo_hash")
+  /// Fallos seguidos del código de WhatsApp (tope `MAX_INTENTOS`). Un acierto lo pone a 0.
+  whatsappCodigoIntentos Int     @default(0) @map("whatsapp_codigo_intentos") @db.SmallInt
 
   opciones PresupuestoOpcion[]
   eventos  PresupuestoEvento[]
@@ -1354,6 +1544,15 @@ model PresupuestoOpcion {
   /// puede ser dos a la vez, y eso se dice en vez de repartirlo.
   papeles          String[]  @default([])
   elegidaAt        DateTime? @map("elegida_at") @db.Timestamptz(6)
+  /// Fila de `tarificacion_precios` de la que sale (sin FK: aquella se reescribe).
+  precioId        String?   @map("precio_id") @db.Uuid
+  /// Garantías clasificadas (`clasificarCoberturas`). NULL = no se clasificó.
+  garantias       Json?
+  /// El corredor la quitó antes de enviar: congelada pero INVISIBLE. Filtra siempre `ocultaAt: null`.
+  ocultaAt        DateTime? @map("oculta_at") @db.Timestamptz(6)
+  /// Origen `ofertas`: la oferta (`oportunidad_oferta`) de la que sale. Una opción sale de UN sitio:
+  /// o `precioId` o `ofertaId` (CHECK `opcion_de_un_solo_origen`).
+  ofertaId        String?   @map("oferta_id") @db.Uuid
 
   presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
 
@@ -1378,6 +1577,44 @@ model PresupuestoEvento {
 
   @@index([presupuestoId, ocurridoAt])
   @@map("presupuesto_evento")
+}
+
+/// PROPUESTA DE ESCENARIOS (07/10/2026, 2026-10-07e_presupuesto_propuesta.sql): varios presupuestos de la
+/// MISMA oportunidad que se enseñan juntos (otro tomador, otro conductor…). Sin copia de precios ni de
+/// figuras: el documento lee cada presupuesto y su petición. Crearla NO avisa a nadie (borrador).
+/// El código la lee por SQL crudo (`lib/propuesta-escenarios.ts`); el modelo está para que el schema
+/// diga la verdad sobre la BD.
+model PresupuestoPropuesta {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId  String    @map("correduria_id") @db.Uuid
+  oportunidadId String    @map("oportunidad_id") @db.Uuid
+  /// `ASP-AA-NNNN`. La pone la BD (trigger + contador propio) e inmutable.
+  referencia    String?   @default(dbgenerated())
+  creadoAt      DateTime  @default(now()) @map("creado_at") @db.Timestamptz(6)
+  creadoPor     String    @map("creado_por")
+  /// Último aviso del lote. `whatsapp_enlace` = se abrió WhatsApp, NO prueba que saliera.
+  canalAviso    String?   @map("canal_aviso")
+  avisadoAt     DateTime? @map("avisado_at") @db.Timestamptz(6)
+  retiradaAt    DateTime? @map("retirada_at") @db.Timestamptz(6)
+
+  items PresupuestoPropuestaItem[]
+
+  @@index([correduriaId, oportunidadId, creadoAt(sort: Desc)], map: "idx_presupuesto_propuesta_oportunidad")
+  @@map("presupuesto_propuesta")
+}
+
+model PresupuestoPropuestaItem {
+  propuestaId   String   @map("propuesta_id") @db.Uuid
+  presupuestoId String   @map("presupuesto_id") @db.Uuid
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  orden         Int      @db.SmallInt
+
+  propuesta PresupuestoPropuesta @relation(fields: [propuestaId], references: [id], onDelete: Cascade)
+
+  @@id([propuestaId, presupuestoId])
+  @@unique([propuestaId, orden], map: "presupuesto_propuesta_item_orden_unico")
+  @@index([presupuestoId], map: "idx_presupuesto_propuesta_item_presupuesto")
+  @@map("presupuesto_propuesta_item")
 }
 
 /// La evidencia de una firma. Genérica desde el día uno porque la carta de
@@ -1409,4 +1646,157 @@ model Firma {
   @@unique([documentoTipo, documentoId], map: "firma_documento_unico")
   @@index([clienteId, creadaAt])
   @@map("firma")
+}
+
+// ─── Google Contacts (05/10/2026, `prisma/sql/2026-10-05b_google_contactos.sql`) ─────────────
+// Sin relaciones declaradas a propósito: las FK viven en la BD y así no se toca `Cliente`.
+// Reglas y plan de diff: `@central/module-seguros/google-contactos`.
+
+/// Conexión OAuth (una por correduría). `refreshTokenCifrado` SIEMPRE `v1:` (CHECK en BD).
+model GoogleContactosConexion {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId          String    @unique @map("correduria_id") @db.Uuid
+  cuentaGoogle          String?   @map("cuenta_google")
+  refreshTokenCifrado   String    @map("refresh_token_cifrado")
+  scopes                String[]  @default([])
+  grupoResourceName     String?   @map("grupo_resource_name")
+  syncToken             String?   @map("sync_token")
+  estado                String    @default("conectada")
+  ultimoError           String?   @map("ultimo_error")
+  conectadoPor          String?   @map("conectado_por")
+  conectadoEn           DateTime  @default(now()) @map("conectado_en") @db.Timestamptz(6)
+  ultimaSyncEn          DateTime? @map("ultima_sync_en") @db.Timestamptz(6)
+  ultimaSyncCompletaEn  DateTime? @map("ultima_sync_completa_en") @db.Timestamptz(6)
+  /// Simular → revisar → activar: sin `syncActivadaEn` el cron no escribe nada.
+  simuladaEn            DateTime? @map("simulada_en") @db.Timestamptz(6)
+  syncActivadaEn        DateTime? @map("sync_activada_en") @db.Timestamptz(6)
+  syncActivadaPor       String?   @map("sync_activada_por")
+  actualizadoEn         DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@map("google_contactos_conexion")
+}
+
+/// Ficha (o contacto de compañía) ↔ contacto de Google, con el hash de lo último ENVIADO.
+/// Exactamente uno de `clienteId` / `companiaContactoId` (CHECK en BD).
+model GoogleContactosVinculo {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  clienteId     String?  @map("cliente_id") @db.Uuid
+  companiaContactoId String? @map("compania_contacto_id") @db.Uuid
+  resourceName  String   @map("resource_name")
+  etag          String?
+  hashEnviado   String   @map("hash_enviado")
+  origen        String
+  estado        String   @default("activo")
+  lastSyncedAt  DateTime @default(now()) @map("last_synced_at") @db.Timestamptz(6)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([correduriaId, clienteId], map: "google_contactos_vinculo_cliente")
+  @@unique([correduriaId, companiaContactoId], map: "google_contactos_vinculo_compania")
+  @@unique([correduriaId, resourceName], map: "google_contactos_vinculo_recurso")
+  @@map("google_contactos_vinculo")
+}
+
+/// MOTE de una ficha (05/10/2026): cómo la llama Alberto en SU agenda («mamá», «Benito Pintor»).
+/// 🚨 AISLADO a propósito: tabla aparte y SIN relación Prisma con `Cliente`, para que ningún `include`
+/// lo arrastre a un correo, al portal, a un PDF o a un envío («Estimada Burra»). Solo lo leen la sync de
+/// Google, la ficha (edición) y la cola de revisión: guardián `test/regression-mote-aislado.test.ts`.
+/// Migración `prisma/sql/2026-10-05d_google_contactos_unificar.sql` (FK a clientes en SQL).
+model ClienteMote {
+  clienteId      String   @id @map("cliente_id") @db.Uuid
+  mote           String
+  actualizadoEn  DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+  actualizadoPor String?  @map("actualizado_por")
+
+  @@map("cliente_mote")
+}
+
+/// «Un número, un contacto» (05/10/2026): de QUIÉN es un teléfono compartido por varias fichas, elegido por
+/// Alberto en la cola («Este número es de…»). Por índice ciego (`computeTelefonoLookupHash`): el número no se
+/// guarda en claro. Solo presentación en Google: las fichas del CRM NO se fusionan.
+/// Migración `prisma/sql/2026-10-05e_google_contactos_titular_telefono.sql` (FK a clientes en SQL).
+model GoogleContactosTitularTelefono {
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  telefonoHash  String   @map("telefono_hash")
+  clienteId     String   @map("cliente_id") @db.Uuid
+  elegidoPor    String   @map("elegido_por")
+  elegidoEn     DateTime @default(now()) @map("elegido_en") @db.Timestamptz(6)
+
+  @@id([correduriaId, telefonoHash])
+  @@map("google_contactos_titular_telefono")
+}
+
+/// Tickets de inicio del OAuth ya CONSUMIDOS (un solo uso; `lib/google-oauth-ticket.ts`).
+/// Migración `prisma/sql/2026-10-05c_google_contactos_ticket.sql`.
+model GoogleContactosTicketUsado {
+  jti           String   @id
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  cuentaId      String   @map("cuenta_id")
+  caducaEn      DateTime @map("caduca_en") @db.Timestamptz(6)
+  usadoEn       DateTime @default(now()) @map("usado_en") @db.Timestamptz(6)
+
+  @@index([usadoEn], map: "google_contactos_ticket_usado_usado_en")
+  @@map("google_contactos_ticket_usado")
+}
+
+/// Cola de revisión: cambios en Google (CRM gana), borrados, ambiguos y propuestas de lead.
+/// `propuestaCifrada` = JSON de lo que había en Google, cifrado (`v1:`).
+model GoogleContactosRevision {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String    @map("correduria_id") @db.Uuid
+  clienteId        String?   @map("cliente_id") @db.Uuid
+  companiaContactoId String? @map("compania_contacto_id") @db.Uuid
+  resourceName     String    @map("resource_name")
+  tipo             String
+  campos           String[]  @default([])
+  propuestaCifrada String?   @map("propuesta_cifrada")
+  huella           String
+  estado           String    @default("pendiente")
+  /// Solo `duplicado_ambiguo`: por qué (MOTIVOS_DUPLICADO de module-seguros; CHECK en BD, migración 2026-10-05d).
+  /// `null` en filas anteriores = no se sabe → sin «Unificar».
+  motivo           String?
+  /// Solo `telefono_titular` («Este número es de…», migración 2026-10-05e): índice ciego del teléfono
+  /// (`computeTelefonoLookupHash`, nunca el número) y las fichas candidatas.
+  telefonoHash     String?   @map("telefono_hash")
+  candidatos       String[]  @default([]) @db.Uuid
+  /// aceptar_lead | descartar | mantener_crm | unificar | unificar_nombre_crm | usar_como_mote | elegir_titular | anadir_a_ficha
+  /// (null mientras está pendiente; CHECK en BD).
+  resolucion       String?
+  resueltoPor      String?   @map("resuelto_por")
+  resueltoEn       DateTime? @map("resuelto_en") @db.Timestamptz(6)
+  creadoEn         DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([correduriaId, huella], map: "google_contactos_revision_huella")
+  @@map("google_contactos_revision")
+}
+
+/// Ofertas (PDF) subidas a una OPORTUNIDAD (05/10/2026, `prisma/sql/2026-10-05_oportunidad_ofertas.sql`):
+/// la póliza actual del cliente (`rol = actual`) o el presupuesto de una compañía (`rol = oferta`), leídas
+/// por IA con evidencia y REVISADAS por el corredor antes de consolidarse en un presupuesto de origen
+/// `ofertas`. 🚨 NULL = no figura / no leído, nunca 0. No se borran (sin GRANT DELETE): se descartan.
+model OportunidadOferta {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId  String    @map("correduria_id") @db.Uuid
+  oportunidadId String    @map("oportunidad_id") @db.Uuid
+  /// El PDF. NULL = se borró después (la oferta y su evidencia literal quedan).
+  documentoId   String?   @map("documento_id") @db.Uuid
+  rol           String
+  compania      String?
+  producto      String?
+  primaNeta     Decimal?  @map("prima_neta") @db.Decimal(12, 2)
+  primaTotal    Decimal?  @map("prima_total") @db.Decimal(12, 2)
+  /// `OfertaNormalizada.garantias` (module-seguros) con evidencia {pagina, texto}. NULL = no se pudo leer.
+  garantias     Json?
+  datosExtra    Json?     @map("datos_extra")
+  /// extraida | revisada | descartada
+  estado        String    @default("extraida")
+  recomendada   Boolean   @default(false)
+  revisadaAt    DateTime? @map("revisada_at") @db.Timestamptz(6)
+  revisadaPor   String?   @map("revisada_por")
+  creadoPor     String    @map("creado_por")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@index([correduriaId, oportunidadId, createdAt], map: "oportunidad_oferta_por_oportunidad")
+  @@map("oportunidad_oferta")
 }

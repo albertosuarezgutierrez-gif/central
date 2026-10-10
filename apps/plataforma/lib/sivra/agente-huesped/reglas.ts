@@ -31,15 +31,26 @@ export function extractEarlyTime(text: string): { type: 'early_checkout' | 'earl
   return null
 }
 
+// Palabras cortas con límite de palabra: sin él, «car» casaba «card»/«carte» y un aviso de phishing
+// sobre la tarjeta acababa en `parking` (8 de 10 «parking» de sep-2026 no hablaban de aparcar).
 export function detectCategory(text: string): string | null {
   const t = text.toLowerCase()
-  if (/wifi|wi-fi|wlan|internet|contraseña|password|clave/.test(t)) return 'wifi'
-  if (/llave|key|clé|schlüssel|chiave|lockbox|código|code|caja|puerta|abrir|entrar|acceso/.test(t)) return 'acceso'
+  // Seguridad PRIMERO: los avisos de phishing mencionan tarjeta, enlace, reserva y código, y caían en
+  // parking/acceso/general. Era el tema más repetido de «general» en septiembre de 2026.
+  if (/whats\s?app|phishing|fraud|fraude|estafa|\bscam|arnaque|truffa|betrug|oplichting|frode/.test(t)) return 'seguridad'
+  if (/\b(wifi|wi-fi|wlan|internet|contraseña|password|clave)\b/.test(t)) return 'wifi'
+  // Límites con \p{L} y no \b: en JS \b no ve «é»/«ó» como letra y «clé»/«código» no casaban nunca.
+  if (/(?<!\p{L})(llaves?|keys?|keybox|clés?|schlüssel|chiavi|chiave|lockbox|códigos?|codes?|caja|puerta|abrir|entrar|acceso)(?!\p{L})/u.test(t)) return 'acceso'
   if (/check.?in|llegada|arrival|hora de entrada|from what time|a qué hora llegar/.test(t)) return 'checkin'
   // Equipaje ANTES que checkout: "dónde dejar las maletas" contiene "dejar" (patrón de checkout).
   if (/maleta|equipaje|luggage|consigna|locker|baggage|valig|bagagl|gep[aä]ck|guardar (las |mis )?(maletas|bolsas|cosas)/.test(t)) return 'equipaje'
+  // Aviso de que ya se van (no pide nada): antes que checkout, que casaba «salida»/«dejar».
+  if (/\b(salimos|nos vamos|ya nos hemos ido|leaving (now|the)|just left|we'?re leaving|nous partons|partiamo|stiamo uscendo|abreisen|verlassen)\b/.test(t)) return 'aviso_salida'
   if (/check.?out|salida|departure|hora de salida|dejar/.test(t)) return 'checkout'
-  if (/parking|aparcar|aparcamiento|coche|voiture|auto|car|garaje|garage|plaza/.test(t)) return 'parking'
+  if (/\b(parking|aparcar|aparcamiento|aparcado|coche|voiture|car|auto|garaje|garage|parcheggio)\b|plaza de (aparcamiento|parking|garaje)/.test(t)) return 'parking'
+  if (/\b(camas?|beds?|lits?|letti?|bett(en)?|sof[aá].?cama|sofa.?bed|supletoria)\b/.test(t)) return 'camas'
+  // Aviso de hora de llegada: pide solo acuse, no información.
+  if (/\b(llegaremos|llegamos en|estamos cerca|we'?ll arrive|we'?ll be there|arriving at|arriverons|arriveremo|kommen .{0,20} an)\b/.test(t)) return 'aviso_llegada'
   if (/normas|rules|règles|regeln|regole|fumar|smoking|fiesta|party|silencio/.test(t)) return 'normas'
   if (/emergencia|urgencia|problema|avería|contacto|teléfono|phone/.test(t)) return 'contacto'
   if (/toallas|towels|sábanas|linen|ropa de cama/.test(t)) return 'faq'
@@ -244,7 +255,35 @@ export function paresPregRespuesta(msgs: MsgMin[]): ParQA[] {
 // Los automáticos de Smoobu/Booking llevan ASUNTO; los mensajes escritos a mano, no.
 export function esAutomatico(subject: string, text: string): boolean {
   if ((subject || '').trim() !== '') return true
-  return /check.?in online|disponible para tu reserva|self.?check.?in|enregistrement en ligne/i.test(text || '')
+  const t = text || ''
+  // Frases propias de las plantillas de Smoobu: bastan por sí solas.
+  if (/disponible para tu reserva|enregistrement en ligne disponible/i.test(t)) return true
+  // Las genéricas, solo en textos largos: un huésped que escribe «ya hice el online check-in»
+  // (corto) no puede quedarse sin respuesta por mencionarlo.
+  // «self check-in» también va aquí: «Hi, how does the self check-in work?» es una pregunta real.
+  return t.length >= 120 && /check.?in online|online.?check.?in|self.?check.?in|registro online|online.?registrierung|registrazione online/i.test(t)
+}
+
+function sinAcentos(s: string): string {
+  return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
+// ¿Es una PLANTILLA nuestra (bienvenida, despedida, aviso) que Smoobu devuelve sin marca de emisor?
+// Las plantillas se dirigen al huésped por su nombre COMPLETO al principio y siguen hablando
+// («Bienvenue, Justine Delbos ! Nous…», «Obrigado por ficarem connosco, Mafalda Soares Caldas!…»).
+// Un huésped firma con su nombre al FINAL, así que el nombre tiene que ir en los primeros 80
+// caracteres y con texto detrás. Con solo el nombre de pila no se decide (demasiado común).
+// Caso: 154692216 y siete más en sep-2026, contestados solos como si fueran preguntas.
+export function esPlantillaHost(texto: string, guestName: string): boolean {
+  const partes = sinAcentos(guestName).split(' ').filter(p => p.length >= 2)
+  if (partes.length < 2) return false
+  const t = sinAcentos(texto)
+  const i = t.indexOf(partes.join(' '))
+  if (i < 0 || i > 80) return false
+  // Un huésped que se PRESENTA («Hello, this is Justine Delbos, we land at 15:00…») no es plantilla.
+  if (/\b(this is|i am|i'?m|my name is|soy|me llamo|je suis|c'?est|moi c'?est|ich bin|mein name ist|sono|mi chiamo|ik ben|sou|eu sou)\s*$/.test(t.slice(0, i))) return false
+  const resto = t.slice(i + partes.join(' ').length)
+  return /^\s?[,!.]/.test(resto) && resto.length >= 20
 }
 
 // ── ¿Por qué escala? Hueco de la GUÍA vs control de calidad CAÍDO ───────────

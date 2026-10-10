@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
 
     const r = await datosParaEmitirDePortal(correduria.id, identidadId, presupuestoId)
-    const status = r.estado === 'ok' ? 200 : r.estado === 'error' ? 503 : r.estado === 'no_encontrado' ? 404 : 409
+    const status = r.estado === 'ok' ? 200 : r.estado === 'error' ? 503 : r.estado === 'no_encontrado' ? 404 : r.estado === 'sin_permiso' ? 403 : 409
     return NextResponse.json(r, { status, headers: { 'cache-control': 'no-store' } })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('portal/datos-emision', e) }, { status: 503 })

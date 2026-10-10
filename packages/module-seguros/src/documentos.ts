@@ -47,6 +47,12 @@ export type DocumentoResumen = {
   siniestroId: string | null
   creado: string
   revisadoEn: string | null
+  /**
+   * Solo pólizas de una ficha (05/10/2026): ¿el DNI leído de esta póliza es el de la ficha
+   * (`marcaAcreditaFicha`)? `true` la hace valer como documento acreditativo de la identidad.
+   * `null`/ausente = no se sabe (no se leyó, o se leyó antes de que existiera la marca).
+   */
+  dniCoincideFicha?: boolean | null
 }
 
 export function etiquetaTipoDocumento(t: string): string {

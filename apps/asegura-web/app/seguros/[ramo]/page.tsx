@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { articulosDeRamo } from '@/lib/articulos'
 import { RAMOS, SOLO_INTENCION, ramoPorSlug } from '@/lib/ramos'
-import { OG_IMAGEN, url } from '@/lib/sitio'
+import { CALCULADORA_HIPOTECA, OG_IMAGEN, RAMOS_CON_CALCULADORA_HIPOTECA, url } from '@/lib/sitio'
 import { fichaFaq, fichaServicio, migas, jsonLd } from '@/lib/seo'
 import Formulario from '@/components/Formulario'
 import VentanaRenovacion from '@/components/VentanaRenovacion'
@@ -129,6 +129,19 @@ export default async function PaginaRamo({ params }: Props) {
           artículo enlaza a sus ramos y el ramo a sus artículos, así que el peso
           circula en los dos sentidos y quien llega buscando el producto encuentra
           la respuesta al problema concreto (y al revés). */}
+      {RAMOS_CON_CALCULADORA_HIPOTECA.includes(ramo.slug) && (
+        <section aria-labelledby="calc-hipoteca" style={{ ...panel, marginBottom: 28 }}>
+          <h2 id="calc-hipoteca" style={{ marginTop: 0 }}>¿El banco te pide su seguro por la hipoteca?</h2>
+          <p style={{ color: 'var(--muted)', fontSize: 15 }}>
+            Con el capital pendiente, los puntos que te bonifica y la prima que te cobra, sale lo que te cuesta
+            de verdad ese seguro.
+          </p>
+          <Link href={CALCULADORA_HIPOTECA} className="btn btn-outline">
+            Calcular el coste real
+          </Link>
+        </section>
+      )}
+
       {guias.length > 0 && (
         <section aria-labelledby="guias" style={{ marginBottom: 28 }}>
           <h2 id="guias">Guías sobre este seguro</h2>
@@ -186,12 +199,15 @@ export default async function PaginaRamo({ params }: Props) {
             quería un seguro de comercio, que es un dato plausible y falso.
             las páginas de intención (`SOLO_INTENCION`: RC de fontaneros y
             de autónomos) no son un ramo nuevo en BD (sigue siendo `responsabilidad_civil`): marca la
-            opción general, igual que vida-y-salud comparte una sola. */}
+            opción general, igual que vida-y-salud comparte una sola.
+            `salud-sin-copago` (también de intención) marca «Salud». */}
         <Formulario
           ramoPorDefecto={
             ramo.slug === 'vida-y-salud'
               ? 'vida'
-              : SOLO_INTENCION.includes(ramo.slug)
+              : ramo.slug === 'salud-sin-copago'
+                ? 'salud'
+                : SOLO_INTENCION.includes(ramo.slug)
                 ? 'responsabilidad-civil'
                 : ramo.slug
           }

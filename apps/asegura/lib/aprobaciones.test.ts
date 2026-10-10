@@ -108,3 +108,16 @@ test('🪤 envío tras la firma: aprueba la MISMA propuesta por decidirAprobacio
   assert.match(f, /x\.anulacion_id = \$\{anulacionId\}::uuid and x\.correduria_id = \$\{correduriaId\}::uuid/)
   assert.match(f, /x\.estado = 'pendiente' and x\.caduca_at >= now\(\)/)
 })
+
+test('🪤 Allianz (PUE): ninguna baja de Allianz sale por correo — ni propuesta, ni envío tras la firma, ni aprobación a mano', () => {
+  const proponer = src.slice(src.indexOf('export async function proponerAnulacionesFirmadas'), src.indexOf('export const ACTOR_ENVIO_TRAS_FIRMA'))
+  assert.match(proponer, /if \(canalBajaCompania\(f\.dgs\) === 'pue_allianz'\) continue/)
+  assert.ok(proponer.indexOf("canalBajaCompania(f.dgs)") < proponer.indexOf('insert into aprobacion'), 'se salta ANTES de insertar la propuesta')
+  const tras = src.slice(src.indexOf('export async function enviarAnulacionTrasFirma'), src.indexOf('export const ORIGEN_CARTA_MEDIADOR'))
+  assert.match(tras, /return \{ estado: 'pue', motivo: 'Allianz: se tramita en el PUE' \}/)
+  assert.ok(tras.indexOf("estado: 'pue'") < tras.indexOf('await proponerAnulacionesFirmadas('), 'para ANTES de proponer')
+  const decidir = src.slice(src.indexOf('export async function decidirAprobacion'))
+  const pue = decidir.indexOf("estado: 'pue', motivo: MOTIVO_NO_CORREO_ALLIANZ")
+  assert.ok(pue > 0 && pue < decidir.indexOf("set estado = 'enviando'") && pue < decidir.indexOf('await enviarCorreo('), 'el 409 va ANTES de reclamar y de enviar')
+  assert.match(src, /decidida_por = 'sistema:allianz_pue'/)
+})

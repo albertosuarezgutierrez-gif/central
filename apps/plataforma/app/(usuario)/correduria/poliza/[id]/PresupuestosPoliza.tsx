@@ -2,11 +2,12 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import {
-  ROTULO_ESTADO_PRESUPUESTO, accionesPresupuesto, fraseDatosEmision, leerPresupuestoEnLista, necesidadesEditables, textoAviso,
-  type PresupuestoEnLista,
+  ROTULO_ESTADO_PRESUPUESTO, accionesPresupuesto, filasCoberturas, fraseDatosEmision, leerPresupuestoEnLista, necesidadesEditables, textoAviso,
+  type EstadoGarantiaLista, type PresupuestoEnLista,
 } from '@/lib/presupuesto-asegura'
 import { eur } from '@/lib/dinero'
 import { btnStyle } from '@/components/ui'
+import { LogoCompaniaEnLinea } from '../../CeldaCompania'
 import { preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades } from '@central/module-seguros'
 
 /**
@@ -16,23 +17,32 @@ import { preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades } 
  * WhatsApp lo manda él desde su móvil (aquí solo se abre con el texto escrito), y por eso
  * «enlazado» no es «enviado» hasta que pulse «Ya lo he mandado».
  */
-export default function PresupuestosPoliza({ polizaId, ramo }: { polizaId: string; ramo?: string | null }) {
+export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId, titulo = 'Presupuestos' }: {
+  polizaId?: string
+  clienteId?: string
+  ramo?: string | null
+  /** En la ficha del cliente van dentro de «Oportunidades y presupuestos»: ahí se dice qué son. */
+  titulo?: string
+  /** Solo ESTE presupuesto: se monta justo tras prepararlo para mandarlo sin salir de la pantalla. */
+  soloId?: string
+}) {
+  const filtro = polizaId ? `polizaId=${encodeURIComponent(polizaId)}` : `clienteId=${encodeURIComponent(clienteId ?? '')}`
   const [lista, setLista] = useState<PresupuestoEnLista[] | null | 'error'>(null)
   const [datosEmision, setDatosEmision] = useState<Record<string, unknown>>({})
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
 
   const cargar = useCallback(() => {
-    fetch(`/api/correduria/presupuesto?polizaId=${encodeURIComponent(polizaId)}`, { cache: 'no-store' })
+    fetch(`/api/correduria/presupuesto?${filtro}`, { cache: 'no-store' })
       .then(async (r) => {
         const j = (await r.json().catch(() => null)) as { estado?: string; presupuestos?: unknown[]; datosEmision?: Record<string, unknown> } | null
         if (!r.ok || j?.estado !== 'ok' || !Array.isArray(j.presupuestos)) { setLista('error'); return }
         setDatosEmision(j.datosEmision && typeof j.datosEmision === 'object' ? j.datosEmision : {})
         const filas = j.presupuestos.map(leerPresupuestoEnLista)
-        setLista(filas.some((f) => f === null) ? 'error' : (filas as PresupuestoEnLista[]))
+        setLista(filas.some((f) => f === null) ? 'error' : (filas as PresupuestoEnLista[]).filter((f) => !soloId || f.id === soloId))
       })
       .catch(() => setLista('error'))
-  }, [polizaId])
+  }, [filtro, soloId])
   useEffect(() => { cargar() }, [cargar])
 
   async function patch(p: PresupuestoEnLista, cuerpo: Record<string, unknown>, ventana?: Window | null) {
@@ -74,21 +84,25 @@ export default function PresupuestosPoliza({ polizaId, ramo }: { polizaId: strin
 
   return (
     <section style={{ display: 'grid', gap: 10, padding: 14, border: '1px solid var(--border)', borderRadius: 12 }}>
-      <strong style={{ fontSize: 15 }}>Presupuestos</strong>
+      <strong style={{ fontSize: 15 }}>{soloId ? 'Mandárselo al cliente' : titulo}</strong>
       {lista.map((p) => {
         const a = accionesPresupuesto(p.estado)
         const libre = ocupado === null
         return (
           <div key={p.id} style={{ display: 'grid', gap: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 14 }}>
-              {ROTULO_ESTADO_PRESUPUESTO[p.estado]} · {p.opciones} opción{p.opciones === 1 ? '' : 'es'}
+            <span style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
+              {p.referencia && <strong>{p.referencia} · </strong>}
+              {!polizaId && p.ramo ? `${p.ramo.charAt(0).toUpperCase()}${p.ramo.slice(1)} · ` : ''}{ROTULO_ESTADO_PRESUPUESTO[p.estado]} · {p.opciones} opción{p.opciones === 1 ? '' : 'es'}
               {p.desdeEur !== null ? ` · desde ${eur(p.desdeEur)}` : ''} · vale hasta el {new Date(p.venceEl).toLocaleDateString('es-ES')}
+              {/* Descargar el PDF no prueba que saliera: se dice como descarga, nunca como «enviado». */}
+              {p.documentoDescargadoAt && p.estado === 'borrador' ? ` · PDF descargado el ${new Date(p.documentoDescargadoAt).toLocaleDateString('es-ES')}` : ''}
             </span>
             {p.clienteId && p.estado !== 'retirado' && p.estado !== 'emitido' && p.estado !== 'caducado' && (() => {
               const d = fraseDatosEmision(datosEmision[p.clienteId])
               return <span style={{ fontSize: 13, color: d.alerta ? 'var(--negative)' : 'var(--muted)' }}>{d.texto}</span>
             })()}
-            <Necesidades p={p} ramo={ramo ?? null} deshabilitado={!libre} onGuardar={(texto, respuestas) => void patch(p, { accion: 'necesidades', texto, respuestas })} />
+            {p.detalle && p.detalle.length > 0 && <CoberturasOpciones p={p} ramo={p.ramo ?? ramo ?? null} />}
+            <Necesidades p={p} ramo={p.ramo ?? ramo ?? null} deshabilitado={!libre} onGuardar={(texto, respuestas) => void patch(p, { accion: 'necesidades', texto, respuestas })} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {a.avisar && (
                 <button type="button" disabled={!libre} style={btnStyle('primario')} onClick={() => {
@@ -117,6 +131,14 @@ export default function PresupuestosPoliza({ polizaId, ramo }: { polizaId: strin
                   onClick={() => { if (window.confirm('¿La compañía ya ha EMITIDO la póliza nueva? Si el cliente firmó la anulación de la anterior, se te propondrá mandarla.')) void patch(p, { accion: 'emitido' }) }}>
                   Ya está emitida
                 </button>
+              )}
+              {p.opciones > 0 && p.estado !== 'retirado' && p.estado !== 'caducado' && (
+                // Solo descarga: no avisa a nadie. En pestaña nueva y sin `download`: si falla, se ve el error en vez de
+                // guardarse un «pdf» que dentro es un JSON.
+                <a href={`/api/correduria/presupuesto/pdf?id=${encodeURIComponent(p.id)}`} target="_blank" rel="noopener"
+                  style={{ ...btnStyle('secundario'), display: 'inline-flex', alignItems: 'center', minHeight: 44, textDecoration: 'none' }}>
+                  Descargar PDF
+                </a>
               )}
               {a.retirar && (
                 <button type="button" disabled={!libre} style={btnStyle('sutil')} onClick={() => {
@@ -188,5 +210,64 @@ function Necesidades({ p, ramo, deshabilitado, onGuardar }: {
         </button>
       </div>
     </details>
+  )
+}
+
+const MARCA: Record<EstadoGarantiaLista, { txt: string; color: string }> = {
+  si: { txt: '✓', color: 'var(--positive)' },
+  no: { txt: '✗', color: 'var(--negative)' },
+  no_consta: { txt: '—', color: 'var(--muted)' },
+}
+
+/**
+ * Qué cubre cada opción visible, para revisarlo ANTES de mandarlo. Plegado por defecto y montado solo
+ * al abrir. «—» = no consta (la compañía no lo dice o no se ha podido leer), nunca «no cubre».
+ */
+function CoberturasOpciones({ p, ramo }: { p: PresupuestoEnLista; ramo: string | null }) {
+  const [abierto, setAbierto] = useState(false)
+  const opciones = p.detalle ?? []
+  return (
+    <div style={{ display: 'grid', gap: 6 }}>
+      <button type="button" style={{ ...btnStyle('sutil'), justifySelf: 'start' }} aria-expanded={abierto} onClick={() => setAbierto((a) => !a)}>
+        {abierto ? '▾' : '▸'} Qué cubre cada opción
+      </button>
+      {abierto && (() => {
+        const filas = filasCoberturas(ramo, opciones)
+        if (filas === null) return <span style={{ fontSize: 13, color: 'var(--muted)' }}>Este ramo no tiene catálogo de coberturas: míralas en el PDF.</span>
+        if (filas.length === 0) return <span style={{ fontSize: 13, color: 'var(--muted)' }}>No constan las coberturas de estas opciones: míralas en el PDF.</span>
+        return (
+          <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 120 + opciones.length * 96 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '4px 6px' }} />
+                  {opciones.map((o) => (
+                    <th key={o.id} style={{ padding: '4px 6px', textAlign: 'center', verticalAlign: 'bottom', fontWeight: 400 }}>
+                      <div style={{ display: 'grid', gap: 2, justifyItems: 'center' }}>
+                        <LogoCompaniaEnLinea compania={o.compania} />
+                        {o.modalidad && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{o.modalidad}</span>}
+                        {o.primaEur !== null && <strong>{eur(o.primaEur)}</strong>}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map((f) => (
+                  <tr key={f.clave} style={{ borderTop: '1px solid var(--border)' }}>
+                    <td style={{ padding: '4px 6px' }}>{f.etiqueta}</td>
+                    {f.estados.map((e, i) => (
+                      <td key={opciones[i].id} title={e === 'no_consta' ? 'No consta' : e === 'si' ? 'Incluida' : 'No incluida'}
+                        style={{ padding: '4px 6px', textAlign: 'center', color: MARCA[e].color, fontWeight: 700 }}>{MARCA[e].txt}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>✓ incluida · ✗ no incluida · — no consta. El detalle exacto, en el PDF.</span>
+          </div>
+        )
+      })()}
+    </div>
   )
 }

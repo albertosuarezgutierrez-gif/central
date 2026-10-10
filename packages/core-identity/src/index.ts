@@ -16,3 +16,5 @@ export { nuevaPersonaId, normalizarDni, normalizarEmail, coincidenciaPersona, mi
 export { createSessionToken, verifySessionToken } from './token'
 export type { TokenResult, CreateSessionTokenOpts } from './token'
 export { requireSecret } from './secret'
+export { VALIDEZ_MINUTOS, MAX_INTENTOS, generarCodigo, esHashCodigo, igualEnTiempoConstante, estadoCodigo } from './codigo-otp'
+export type { EstadoCodigo, CodigoGuardado } from './codigo-otp'

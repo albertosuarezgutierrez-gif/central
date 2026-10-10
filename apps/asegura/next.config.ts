@@ -4,7 +4,9 @@ import path from 'path'
 const monorepoRoot = path.join(__dirname, '..', '..')
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@central/core-ai', '@central/core-catastro', '@central/core-email', '@central/core-firma', '@central/core-identity', '@central/core-vehiculos', '@central/module-seguros', '@central/module-seguros-pii', '@central/module-seguros-portal'],
+  transpilePackages: ['@central/core-ai', '@central/core-catastro', '@central/core-email', '@central/core-firma', '@central/core-identity', '@central/core-vehiculos', '@central/module-seguros', '@central/module-tarificacion', '@central/module-seguros-pii', '@central/module-seguros-portal'],
+  // pdfjs-dist (PDF con contraseña) solo publica ESM: se carga en runtime, sin empaquetar.
+  serverExternalPackages: ['pdfjs-dist'],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },
   // Deliberado (igual que el resto de verticales): el build de Vercel no bloquea por tipos.

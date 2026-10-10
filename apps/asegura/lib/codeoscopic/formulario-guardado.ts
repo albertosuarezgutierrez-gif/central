@@ -58,6 +58,8 @@ export function extraerFormularioAuto(peticion: unknown): FormularioAutoGuardado
   poner('dni', str(obj(holder.identificationDocument).id))
   poner('nombre', str(holder.name))
   poner('apellido1', str(holder.surname))
+  poner('apellido2', str(holder.surname2))
+  poner('nacionalidad', str(obj(holder.nationality).code))
   poner('telefono', telefono)
   poner('fechaNacimiento', str(holder.birthDate))
   poner('fechaCarnet', str(carnet.date))
@@ -78,5 +80,66 @@ export function extraerFormularioAuto(peticion: unknown): FormularioAutoGuardado
     municipioId: idEntero(obj(risk.circulationAddress).town),
     tipoViaId: idTexto(direccion.roadType),
     correcciones,
+  }
+}
+
+/**
+ * El vehículo de una petición de COCHE o MOTO nueva ya pagada (28/09/2026), para volver a pedir precio
+ * del mismo vehículo sin dictarlo otra vez. `null` si la petición no trae el código de la versión: sin él
+ * no hay vehículo que reutilizar, y no se rellena a medias.
+ */
+export type VehiculoGuardado = {
+  codigoVehiculo: string
+  matricula: string | null
+  fechaMatriculacion: string | null
+  kmAnuales: number | null
+  /** Id del catálogo de garajes (`risk.garageType.id`). Sin él, retomar caía en silencio a «vía
+   *  pública» (29/09/2026: una re-cotización pensada con garaje privado salió con NoGarage). */
+  garaje: string | null
+}
+
+export function extraerVehiculoGuardado(peticion: unknown): VehiculoGuardado | null {
+  const risk = obj(obj(peticion).risk)
+  const code = obj(risk.vehicle).code
+  const codigoVehiculo = typeof code === 'string' || typeof code === 'number' ? str(String(code)) : null
+  if (codigoVehiculo === null) return null
+  const km = risk.kilometersPerYear
+  return {
+    codigoVehiculo,
+    matricula: str(risk.registrationPlate),
+    fechaMatriculacion: str(risk.registrationDate),
+    kmAnuales: typeof km === 'number' && Number.isFinite(km) && km >= 0 ? Math.round(km) : null,
+    garaje: idTexto(risk.garageType),
+  }
+}
+
+/**
+ * El seguro anterior declarado en una petición (`risk.previousInsurance`), para no volver a
+ * dictarlo en la siguiente variante del mismo vehículo (29/09/2026: una variante sin él perdió la
+ * bonificación y el precio pasó de 200 a 360€). Completo o `null`: medio historial es un precio que
+ * la compañía corrige al emitir.
+ */
+export type HistorialGuardado = {
+  companiaCodigo: string
+  poliza: string
+  aniosAsegurado: number
+  aniosEnCompania: number
+  aniosSinSiniestros: number
+  matricula: string | null
+}
+
+export function extraerHistorialGuardado(peticion: unknown): HistorialGuardado | null {
+  const risk = obj(obj(peticion).risk)
+  const p = obj(risk.previousInsurance)
+  const codigo = str(obj(p.previousCompany).code)
+  const poliza = typeof p.policyNumber === 'number' ? String(p.policyNumber) : str(p.policyNumber)
+  const n = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 80 ? v : null)
+  const asegurado = n(p.totalYearsInsured)
+  const enCompania = n(p.yearsInPreviousCompany)
+  const sinSiniestros = n(p.yearsWithoutAccidents)
+  if (!codigo || !poliza || asegurado === null || enCompania === null || sinSiniestros === null) return null
+  return {
+    companiaCodigo: codigo, poliza, aniosAsegurado: asegurado, aniosEnCompania: enCompania, aniosSinSiniestros: sinSiniestros,
+    matricula: str(p.registrationPlate) ?? str(risk.registrationPlate),
   }
 }

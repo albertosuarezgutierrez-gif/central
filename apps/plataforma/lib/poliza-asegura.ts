@@ -8,10 +8,12 @@ import {
 } from './ficha-asegura.ts'
 import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 import type { DocumentoResumen, EvolucionPrima, Retarificabilidad, DatosCompaniaCima } from '@central/module-seguros'
-import { leerDatosCompaniaPuerto } from '@central/module-seguros'
+import { leerDatosCompaniaPuerto, leerPersonasPuerto, type PersonasPoliza } from '@central/module-seguros'
+import { cimaExtraTruncado, vistaCimaExtra, type GrupoCimaExtra } from './cima-extra-vista.ts'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { CapitalAsegurado, DetalleCobertura } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { leerContrato, leerFechasContrato, leerReciboExtra, type ContratoFicha, type FechasContratoFicha, type ReciboExtraFicha } from './poliza-contrato.ts'
 
 export type EslabonRiesgoFicha = {
   id: string
@@ -88,11 +90,44 @@ export type ReciboFicha = {
   fechaEmision: string | null
   fechaVencimiento: string | null
   formaPago: string | null
+  /**
+   * La compañía avisó POR CORREO de la devolución y aún no consta el cobro. `null` = no hay aviso
+   * abierto o asegura no lo manda (versión vieja): entonces no se ofrece «cobrado de nuevo».
+   */
+  devolucionCorreo: DevolucionCorreoFicha | null
+  /** Efecto del recibo: desde aquí corre el mes del art. 15 LCS. `null` = asegura no lo manda. */
+  fechaEfecto: string | null
+  /** `clase_recibo` CIMA (CA/NP/SU…). `null` = no consta o asegura no lo manda. */
+  clase: string | null
+  /** Día en que pasó a su situación actual. `null` = no consta. */
+  fechaSituacion: string | null
+  /** Prima neta (operador). `null` = no consta: nunca 0. */
+  primaNeta: number | null
+  /** Comisión líquida (operador). `null` = no consta: nunca 0. */
+  comisionLiquida: number | null
+  /** «Más datos de CIMA» del recibo (solo operador). `null` = aún no leído o asegura no lo manda: no se dice «sin datos». */
+  cimaExtra: GrupoCimaExtra[] | null
+  cimaExtraTruncado: boolean
+} & ReciboExtraFicha
+
+export type DevolucionCorreoFicha = { fecha: string; motivo: string | null; tipoMotivo: string | null }
+
+/** Una devolución avisada por correo, abierta o ya resuelta (`resueltaEn`). */
+export type DevolucionHistorialFicha = {
+  idRecibo: string
+  fecha: string
+  fechaEfecto: string | null
+  importe: number | null
+  motivo: string | null
+  tipoMotivo: string | null
+  resueltaEn: string | null
+  resueltaComo: string | null
 }
 
 export type Poliza = {
   id: string
-  cliente: { id: string; nombre: string }
+  /** `telefono`: el principal de la ficha. `null` = no consta o asegura (versión vieja) no lo manda. */
+  cliente: { id: string; nombre: string; telefono: string | null }
   tipo: string
   aseguradora: string
   codigoEntidadDgs: string | null
@@ -117,6 +152,11 @@ export type Poliza = {
   coberturas: CoberturaFicha[]
   recibos: RecibosPoliza | null
   listaRecibos: ReciboFicha[]
+  /** Devoluciones avisadas por correo. `null` = asegura no la manda o no pudo leerla (≠ `[]`, ninguna). */
+  historialDevoluciones: DevolucionHistorialFicha[] | null
+  /** Baja verificada por el corredor («el cliente se va»). `null` = no la hay o asegura no la manda. */
+  /** `estadoCima`: lo que CIMA dijo DESPUÉS de la baja (`null` = aún nada). */
+  bajaVerificada: { en: string; por: string | null; motivo: string | null; estadoCima: string | null; cimaEn: string | null } | null
   /** `null` = asegura no manda la lista (no es «sin siniestros», que es `[]`). */
   siniestros: SiniestroCartera[] | null
   /**
@@ -142,6 +182,13 @@ export type Poliza = {
   /** Lo que la compañía dice por CIMA y no es el objeto (anulación, reemplazada, suplementos…). `null` = no consta. */
   datosCompania: DatosCompaniaCima | null
   /**
+   * «Más datos de CIMA» (campos EIAC sin extractor, sin PII). `null` = aún no leído (asegura no lo manda o la
+   * póliza se ingirió antes): NO es «sin datos». `[]` = CIMA no trae más. Solo intranet del operador.
+   */
+  cimaExtra: GrupoCimaExtra[] | null
+  /** El lector cortó la lista a 400 campos. */
+  cimaExtraTruncado: boolean
+  /**
    * «¿Merece la pena gastarse los 0,50€ en pedir precio?». `null` = la versión
    * desplegada de asegura todavía no lo manda (o llega ilegible): NO es «no hay
    * horquilla», que se dice con `horquilla: null` + `sinBase`.
@@ -156,6 +203,16 @@ export type Poliza = {
    * `sustitucion.seguimiento === 'no_aplica'` con el objeto SÍ presente.
    */
   sustitucion: SustitucionFicha | null
+  /** Fechas de contrato de CIMA (emisión, efecto actual…). `null` = asegura no las manda o no trae ninguna. */
+  fechasContrato: FechasContratoFicha | null
+  /** Cobro, producto, mediador, riesgos, beneficiarios y prima dudosa. `null` = asegura no lo manda. Sin IBAN. */
+  contrato: ContratoFicha | null
+  /**
+   * Personas que manda CIMA (asegura#880): figuras de la póliza y persona asegurada de vida/decesos,
+   * ya descifradas por asegura (del documento solo «consta»). Cada parte `null` =
+   * no consta (póliza anterior a #880, o asegura viejo que no manda el campo).
+   */
+  personas: PersonasPoliza
 }
 
 export type PolizaRelacionadaFicha = {
@@ -405,6 +462,12 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       listaRecibos.push({
         id: o.id, situacion: cadena(o.situacion) ?? 'sin_informar', importe: numero(o.importe),
         fechaEmision: cadena(o.fechaEmision), fechaVencimiento: cadena(o.fechaVencimiento), formaPago: cadena(o.formaPago),
+        devolucionCorreo: leerDevolucionCorreo(o.devolucionCorreo),
+        fechaEfecto: fechaIsoOnull(o.fechaEfecto),
+        clase: cadena(o.clase), fechaSituacion: fechaIsoOnull(o.fechaSituacion),
+        primaNeta: numero(o.primaNeta), comisionLiquida: numero(o.comisionLiquida),
+        cimaExtra: vistaCimaExtra(o.cimaExtra), cimaExtraTruncado: cimaExtraTruncado(o.cimaExtraTruncado),
+        ...leerReciboExtra(o),
       })
     }
   }
@@ -425,7 +488,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
     estado: 'ok',
     poliza: {
       id: p.id,
-      cliente: { id: c.id, nombre: cadena(c.nombre) ?? 'sin nombre' },
+      cliente: { id: c.id, nombre: cadena(c.nombre) ?? 'sin nombre', telefono: cadena(c.telefono) },
       tipo: p.tipo,
       aseguradora: p.aseguradora,
       codigoEntidadDgs: cadena(p.codigoEntidadDgs),
@@ -451,6 +514,8 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       coberturas,
       recibos: leerRecibos(p.recibos),
       listaRecibos,
+      historialDevoluciones: leerHistorialDevoluciones(p.historialDevoluciones),
+      bajaVerificada: leerBajaVerificada(p.bajaVerificada),
       siniestros,
       historialRiesgo: leerHistorialRiesgo(p.historialRiesgo),
       intervinientes: leerIntervinientes(p.intervinientes),
@@ -461,9 +526,14 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       retarificacion: leerRetarificacion(p.retarificacion),
       evolucionPrima: leerEvolucionPrima(p.evolucionPrima),
       datosCompania: leerDatosCompaniaPuerto(p.datosCompania),
+      cimaExtra: vistaCimaExtra(p.cimaExtra),
+      cimaExtraTruncado: cimaExtraTruncado(p.cimaExtraTruncado),
       estimacion: leerEstimacion(p.estimacion),
       capitalesHogar: leerCapitalesHogar(p.capitalesHogar),
       sustitucion: leerSustitucion(p.sustitucion),
+      fechasContrato: leerFechasContrato(p.fechasContrato),
+      contrato: leerContrato(p.contrato),
+      personas: leerPersonasPuerto(p.personas),
     },
   }
 }
@@ -483,4 +553,48 @@ export async function polizaAsegura(id: string): Promise<RespuestaPoliza> {
   } catch {
     return { estado: 'error', motivo: 'red' }
   }
+}
+
+/** PURO. Una fila rara se descarta; una lista que no es lista es «no se sabe» (`null`). */
+export function leerHistorialDevoluciones(v: unknown): DevolucionHistorialFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const txt = (x: unknown): string | null => (typeof x === 'string' && x !== '' ? x : null)
+  return v.flatMap((x): DevolucionHistorialFicha[] => {
+    if (typeof x !== 'object' || x === null) return []
+    const o = x as Record<string, unknown>
+    const fecha = fechaIsoOnull(o.fecha)
+    const idRecibo = txt(o.idRecibo)
+    if (!fecha || !idRecibo) return []
+    return [{
+      idRecibo, fecha, fechaEfecto: fechaIsoOnull(o.fechaEfecto),
+      importe: typeof o.importe === 'number' && Number.isFinite(o.importe) ? o.importe : null,
+      motivo: txt(o.motivo), tipoMotivo: txt(o.tipoMotivo),
+      resueltaEn: fechaIsoOnull(o.resueltaEn), resueltaComo: txt(o.resueltaComo),
+    }]
+  })
+}
+
+function leerDevolucionCorreo(v: unknown): DevolucionCorreoFicha | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.fecha)) return null
+  return {
+    fecha: o.fecha,
+    motivo: typeof o.motivo === 'string' && o.motivo !== '' ? o.motivo : null,
+    tipoMotivo: typeof o.tipoMotivo === 'string' && o.tipoMotivo !== '' ? o.tipoMotivo : null,
+  }
+}
+
+function fechaIsoOnull(v: unknown): string | null {
+  return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null
+}
+
+/** La baja verificada del corredor. Sin fecha legible no se afirma nada: `null`. */
+export function leerBajaVerificada(v: unknown): Poliza['bajaVerificada'] {
+  if (!v || typeof v !== 'object') return null
+  const o = v as Record<string, unknown>
+  const en = typeof o.en === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.en) ? o.en : null
+  if (!en) return null
+  const txt = (x: unknown) => (typeof x === 'string' && x !== '' ? x : null)
+  return { en, por: txt(o.por), motivo: txt(o.motivo), estadoCima: txt(o.estadoCima), cimaEn: txt(o.cimaEn) }
 }

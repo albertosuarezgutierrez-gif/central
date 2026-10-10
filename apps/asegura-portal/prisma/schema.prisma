@@ -108,6 +108,7 @@ model PortalIdentidad {
   pushSuscripciones PortalPushSuscripcion[]
   avisosCima        PortalAvisoCima[]
   avisosSilenciados PortalAvisoSilenciado[]
+  avisosLeidos      PortalAvisoLeido[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -170,13 +171,26 @@ model PortalCodigo {
 
 model PortalBien {
   id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  identidadId String         @map("identidad_id") @db.Uuid
+  /// Dueño PERSONA (identidad del portal). `null` cuando el bien es de una EMPRESA
+  /// (`clienteId`): exactamente uno de los dos (CHECK `portal_bien_un_dueno`,
+  /// `prisma/sql/2026-10-05_portal_flota_empresa.sql`).
+  identidadId String?        @map("identidad_id") @db.Uuid
+  /// Empresa (ficha jurídica de la cartera) dueña del bien: el ancla del vehículo
+  /// de la flota. Solo la leen/escriben el dueño y el jefe de flota (`lib/flota.ts`).
+  clienteId   String?        @map("cliente_id") @db.Uuid
   tipo        PortalBienTipo
   nombre      String
   datos       Json           @default("{}")
+  /// Matrícula NORMALIZADA (`normalizarMatricula`). Clave del vehículo dentro de la empresa.
+  matricula   String?
+  /// `null` = no se sabe. Base del cálculo de la ITV (una estimación, nunca un «al día»).
+  fechaMatriculacion        DateTime? @map("fecha_matriculacion") @db.Date
+  creadoPorIdentidadId      String?   @map("creado_por_identidad_id") @db.Uuid
+  actualizadoPorIdentidadId String?   @map("actualizado_por_identidad_id") @db.Uuid
+  actualizadoEn             DateTime? @map("actualizado_en") @db.Timestamptz(6)
   creadoEn    DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
 
-  identidad    PortalIdentidad         @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  identidad    PortalIdentidad?        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
   polizas      PortalPolizaDeclarada[]
   obligaciones PortalObligacion[]
 
@@ -371,6 +385,21 @@ model PortalAvisoSilenciado {
   @@schema("seguros")
 }
 
+/// Aviso de la campana que la persona ya pulsó (29/09/2026): no vuelve a salir. Clave `tipo:id`
+/// (`claveAviso`), solo de tipos descartables. DDL: `prisma/sql/2026-09-29_portal_aviso_leido.sql`.
+/// Solo SELECT e INSERT: un aviso leído no se «des-lee».
+model PortalAvisoLeido {
+  identidadId String   @map("identidad_id") @db.Uuid
+  clave       String
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@id([identidadId, clave])
+  @@map("portal_aviso_leido")
+  @@schema("seguros")
+}
+
 /// El parte que abre el CLIENTE. Es una DECLARACIÓN de siniestro, no un
 /// siniestro: `seguros.siniestros` es la cartera que llena CIMA y el rol del
 /// portal no escribe en ella. DDL y motivos en
@@ -395,6 +424,12 @@ model PortalParteSiniestro {
   hayTerceros         Boolean?          @map("hay_terceros")
   /// Opcional; lista cerrada = `TIPOS_SINIESTRO` de `@central/module-seguros-portal`. `null` = no lo marcó.
   tipoSiniestro       String?           @map("tipo_siniestro")
+  /// Respuestas por RAMO del cliente (`parte-ramo.ts` de `@central/module-seguros-portal`). `null` = nada contestado.
+  /// Clave ausente = «no lo sé». `culpaPropiaDeclarada` es DECLARACIÓN: nunca pisa la posición de la compañía.
+  datosRamo           Json?             @map("datos_ramo")
+  /// 🔒 Datos personales de TERCEROS del parte (`CLAVES_PII_PARTE`: contrarios, heridos, afectados, persona afectada),
+  /// en UN sobre AES-256-GCM `v1:` con `PII_ENCRYPTION_KEY`. Nunca en `datosRamo` (CHECK en BD). `null` = no dio ninguno.
+  datosRamoCifrado    String?           @map("datos_ramo_cifrado")
   estado              PortalParteEstado @default(enviado)
   /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
   siniestroId         String?           @map("siniestro_id") @db.Uuid
@@ -744,6 +779,18 @@ enum TipoSeguro {
   comercio
   comunidades
   accidentes
+  empresas
+  rc_profesional
+  dyo
+  flotas
+  transporte_mercancias
+  ciberriesgos
+  decenal
+  embarcaciones
+  mascotas
+  impago_alquiler
+  viaje
+  caucion
   otros
 
   @@map("tipo_seguro")
@@ -818,6 +865,7 @@ enum IntervinienteRol {
   contacto
   beneficiario
   asegurado
+  pagador
 
   @@map("interviniente_rol")
   @@schema("seguros")
@@ -922,6 +970,11 @@ model Poliza {
   numeroPoliza       String?          @map("numero_poliza") @db.VarChar(100)
   fechaInicio        DateTime?        @map("fecha_inicio") @db.Date
   fechaVencimiento   DateTime?        @map("fecha_vencimiento") @db.Date
+  /// Fechas del EIAC (CIMA). El rol del portal tiene GRANT por columna (0103).
+  fechaEmision       DateTime?        @map("fecha_emision") @db.Date
+  fechaEfectoActual  DateTime?        @map("fecha_efecto_actual") @db.Date
+  /// Cuándo se solicitó (EIAC). GRANT de columna: prisma/sql/2026-10-03_polizas_fecha_solicitud_grant.sql.
+  fechaSolicitud     DateTime?        @map("fecha_solicitud") @db.Date
   primaAnual         Decimal?         @map("prima_anual") @db.Decimal(10, 2)
   primaMensual       Decimal?         @map("prima_mensual") @db.Decimal(10, 2)
   primaBruta         Decimal?         @map("prima_bruta") @db.Decimal(10, 2)
@@ -1033,6 +1086,22 @@ model Siniestro {
   pagosCima          Json?              @map("pagos_cima")
   indemnizacionCima  Decimal?           @map("indemnizacion_cima") @db.Decimal(12, 2)
   totalPagosCima     Decimal?           @map("total_pagos_cima") @db.Decimal(12, 2)
+  /// TODO el siniestro para el cliente (28/09/2026, «el seguro es suyo, tiene que
+  /// saber todo»). GRANT por columnas aplicado ANTES de declararlas. Siguen FUERA
+  /// `contacto_nombre_cima`/`contacto_telefono_cima` (cifrados) y `ref_mediador_cima`.
+  fechaDeclaracion   DateTime?          @map("fecha_declaracion") @db.Date
+  posicionCima       String?            @map("posicion_cima") @db.VarChar(10)
+  responsabilidadCima String?           @map("responsabilidad_cima") @db.VarChar(40)
+  daaCima            Boolean?           @map("daa_cima")
+  reservaCima        Decimal?           @map("reserva_cima") @db.Decimal(12, 2)
+  reservaDesgloseCima Json?             @map("reserva_desglose_cima")
+  totalRecobrosCima  Decimal?           @map("total_recobros_cima") @db.Decimal(12, 2)
+  expedientesCima    Json?              @map("expedientes_cima")
+  riesgoCima         Json?              @map("riesgo_cima")
+  vehiculoCima       Json?              @map("vehiculo_cima")
+  vehiculoContrarioCima Json?           @map("vehiculo_contrario_cima")
+  asistenciasCima    Json?              @map("asistencias_cima")
+  descripcionCima    String?            @map("descripcion_cima")
   tramitadorNombre   String?            @map("tramitador_nombre") @db.VarChar(255)
   tramitadorTelefono String?            @map("tramitador_telefono") @db.VarChar(30)
   tramitadorEmail    String?            @map("tramitador_email") @db.VarChar(255)
@@ -1044,6 +1113,9 @@ model Siniestro {
   gravedad           SiniestroGravedad?
   createdAt          DateTime           @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime           @map("updated_at") @db.Timestamptz(6)
+  /// Alta manual unida a un siniestro de CIMA (SQL 2026-10-03d de apps/asegura, con su GRANT).
+  /// La lectura del portal filtra `null`: si no, el cliente vería el mismo siniestro dos veces.
+  fusionadoEnSiniestroId String?        @map("fusionado_en_siniestro_id") @db.Uuid
 
   @@map("siniestros")
   @@schema("seguros")
@@ -1247,6 +1319,9 @@ model Presupuesto {
   retiradoAt   DateTime? @map("retirado_at") @db.Timestamptz(6)
   /// Exigencias y necesidades que anotó el corredor (IDD). Es lo que el cliente firma con la aceptación.
   necesidades  String?
+  /// `codeoscopic` | `ofertas` (PDFs de compañías: se emite en la compañía, no por Avant2). GRANT
+  /// SELECT(origen) en `apps/asegura/prisma/sql/2026-10-05_oportunidad_ofertas.sql`.
+  origen       String    @default("codeoscopic")
 
   opciones PresupuestoOpcion[]
   eventos  PresupuestoEvento[]
@@ -1280,6 +1355,12 @@ model PresupuestoOpcion {
   avisos         Json      @default("[]")
   papeles        String[]  @default([])
   elegidaAt      DateTime? @map("elegida_at") @db.Timestamptz(6)
+  /// Fila de `tarificacion_precios` de la que sale (sin FK: aquella se reescribe).
+  precioId      String?   @map("precio_id") @db.Uuid
+  /// Garantías clasificadas (`clasificarCoberturas`). NULL = no se clasificó.
+  garantias     Json?
+  /// El corredor la quitó antes de enviar: congelada pero INVISIBLE. Filtra siempre `ocultaAt: null`.
+  ocultaAt      DateTime? @map("oculta_at") @db.Timestamptz(6)
 
   presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
 

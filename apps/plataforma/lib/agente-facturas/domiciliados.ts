@@ -38,6 +38,34 @@ export interface EntradaCargo {
   bancoHasta: string | null
   /** Días de gracia; por defecto DIAS_GRACIA. */
   diasGracia?: number
+  /**
+   * Cobertura POR CUENTA (con movimientos recientes). Si viene, manda sobre `bancoHasta`:
+   * basta UNA cuenta con extracto anterior al cargo para no poder afirmar «sin cargo»
+   * (el cargo pudo caer en ella). Un MAX global tapaba las cuentas paradas.
+   */
+  cuentas?: CuentaCobertura[]
+}
+
+export interface CuentaCobertura {
+  nombre: string
+  /** Último movimiento sincronizado (YYYY-MM-DD) o null si no se sabe. */
+  ultimo: string | null
+}
+
+/**
+ * Solo cuenta como domiciliación la que la factura dice EXPLÍCITAMENTE (`domiciliado === true`).
+ * `null`/ausente = no se sabe (tarjeta, liquidación Booking...): NO se vigila ni se afirma «sin cargo».
+ */
+export function esDomiciliacionExplicita(raw: unknown): boolean {
+  if (!raw || typeof raw !== 'object') return false
+  const d = (raw as { domiciliado?: unknown }).domiciliado
+  return d === true || d === 'true'
+}
+
+/** Cuentas cuyo extracto no llega a la fecha de cargo (+ gracia). Sin fecha = parada. */
+export function cuentasParadas(cuentas: CuentaCobertura[], fechaCargo: string, diasGracia = DIAS_GRACIA): CuentaCobertura[] {
+  const limite = sumaDias(fechaCargo, diasGracia)
+  return cuentas.filter((c) => !c.ultimo || c.ultimo < limite)
 }
 
 export interface VeredictoCargo {
@@ -73,6 +101,20 @@ export function estadoCargo(e: EntradaCargo): VeredictoCargo {
   }
 
   // Vencida pero el banco no llega: declarar el hueco, NUNCA afirmar que falta el cargo.
+  if (e.cuentas) {
+    if (e.cuentas.length === 0) {
+      return { estado: 'sin_cobertura', motivo: 'no hay cuentas con movimientos recientes' }
+    }
+    const paradas = cuentasParadas(e.cuentas, e.fechaCargo, e.diasGracia ?? DIAS_GRACIA)
+    if (paradas.length > 0) {
+      const desde = paradas.map((c) => c.ultimo).filter((x): x is string => !!x).sort()[0]
+      return {
+        estado: 'sin_cobertura',
+        motivo: `cuentas sin sincronizar${desde ? ` desde ${desde}` : ''}: ${paradas.map((c) => c.nombre).join(', ')}`,
+      }
+    }
+    return { estado: 'sin_cargo', motivo: `domiciliada el ${e.fechaCargo} y sin cargo en cuenta` }
+  }
   if (!e.bancoHasta) {
     return { estado: 'sin_cobertura', motivo: 'no se sabe hasta qué fecha llega el extracto del banco' }
   }

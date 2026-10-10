@@ -277,3 +277,49 @@ export function reparosDeContacto(contacto: Record<CampoMisDatos, string | null>
   })
   return reparos.map((r) => ({ tipo: r.tipo, texto: textoReparoSitio(r) }))
 }
+
+export type ResultadoCambioCuenta =
+  | { estado: 'ok'; mascara: string }
+  | { estado: 'sin_cambios' }
+  | { estado: 'iban_invalido'; motivo: string }
+  | { estado: 'sin_ficha' }
+  | { estado: 'varias_fichas' }
+  | { estado: 'sin_puente' }
+  | { estado: 'error'; causa: string }
+
+/**
+ * Pide a asegura que deje PENDIENTE el cambio de cuenta (29/09/2026). No cambia la cuenta con la que
+ * carga la compañía: eso lo hace el corredor, y la pantalla lo dice. La ficha la decide asegura por el
+ * vínculo de la identidad, como en `guardarMisDatos`.
+ */
+export async function pedirCambioCuenta(identidadId: string, iban: string, identidadCreadaEn: string | null): Promise<ResultadoCambioCuenta> {
+  const p = puente()
+  if (!p) return { estado: 'sin_puente' }
+  const control = new AbortController()
+  const reloj = setTimeout(() => control.abort(), PORTAL_PUENTE_TIEMPO_MS)
+  try {
+    const res = await fetch(`${p.base}/api/portal/cuenta`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${p.secret}` },
+      body: JSON.stringify({ identidadId, iban, identidadCreadaEn }),
+      cache: 'no-store',
+      signal: control.signal,
+    })
+    const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    const estado = typeof j?.estado === 'string' ? j.estado : null
+    if (res.ok && estado === 'ok' && typeof j?.mascara === 'string') return { estado: 'ok', mascara: j.mascara }
+    if (res.ok && estado === 'sin_cambios') return { estado: 'sin_cambios' }
+    if (estado === 'iban_invalido') return { estado: 'iban_invalido', motivo: typeof j?.motivo === 'string' ? j.motivo : 'IBAN no válido' }
+    if (estado === 'sin_ficha') return { estado: 'sin_ficha' }
+    if (estado === 'varias_fichas') return { estado: 'varias_fichas' }
+    if (estado === 'sin_configurar') return { estado: 'sin_puente' }
+    console.error(`[portal/cambio-cuenta] respuesta inesperada del puente: ${res.status} ${estado ?? 'sin estado'}`)
+    return { estado: 'error', causa: `puente_${res.status}` }
+  } catch (e) {
+    const abortado = e instanceof Error && e.name === 'AbortError'
+    console.error('[portal/cambio-cuenta] el puente no respondió:', abortado ? 'timeout' : e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: abortado ? 'timeout' : 'red' }
+  } finally {
+    clearTimeout(reloj)
+  }
+}

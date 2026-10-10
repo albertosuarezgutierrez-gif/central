@@ -40,6 +40,7 @@ import {
 import { prismaAsegura } from './asegura-db'
 import { altaCliente, anotarHistorialCliente } from './cartera-edicion'
 import { guardarDocumento } from './cartera-documentos'
+import { oportunidadDesdeLectura } from './oportunidad-documento'
 
 export type EntradaPolizaDocumento = {
   lectura: LecturaPoliza
@@ -52,6 +53,9 @@ export type EntradaPolizaDocumento = {
   forzar?: boolean
   fichero: { nombre: string; mime: string; contenido: Buffer }
   actor: string
+  /** Lo que el lector supo del tomador empresa (`contacto`): se da de alta con SU CIF, nunca con el DNI del contacto. */
+  tomadorEsEmpresa?: boolean | null
+  cifTomador?: string | null
 }
 
 export type ResultadoPolizaDocumento =
@@ -110,7 +114,11 @@ export async function guardarPolizaDeDocumento(
   correduriaId: string,
   entrada: EntradaPolizaDocumento,
 ): Promise<ResultadoPolizaDocumento> {
-  const { alta, avisos: avisosAlta } = prepararAltaDesdeDocumento(entrada.lectura)
+  // Una empresa se da de alta con SU CIF, nunca con el DNI de su contacto (revisión PR 4168).
+  const { alta, avisos: avisosAlta } = prepararAltaDesdeDocumento(entrada.lectura, {
+    tomadorEsEmpresa: entrada.tomadorEsEmpresa ?? null,
+    cifTomador: entrada.cifTomador ?? null,
+  })
   const { declarada, avisos: avisosPoliza } = prepararDeclaradaDesdeDocumento(entrada.lectura)
   const avisos = [...avisosAlta, ...avisosPoliza]
 
@@ -220,6 +228,10 @@ export async function guardarPolizaDeDocumento(
       declarada.compania ? ')' : ''
     }.`,
   )
+
+  // Todo documento de seguro abre o completa su oportunidad (29/09/2026). Con lo ya leído: no se
+  // vuelve a pagar la IA. Un fallo aquí no deshace nada de lo guardado arriba.
+  await oportunidadDesdeLectura({ correduriaId, clienteSube: clienteId, lectura: entrada.lectura, origen: 'subir-poliza', actor: entrada.actor })
 
   return {
     ok: true,

@@ -76,6 +76,16 @@ export type EntidadIngesta = {
   vencidasEnSilencio: number | null
   /** Pólizas suyas que vencen en los próximos 90 días. `null` = no comprobado. */
   vencen90d?: number | null
+  /** Nombre común de la compañía (`companias_dgs.nombre_comun`). Ausente/`null` = no consta. */
+  nombre?: string | null
+  /** Pólizas EN VIGOR (`esCarteraEnVigor`; `vivas` es solo el origen). Ausente/`null` = no se contó. */
+  enVigor?: number | null
+  /** `max(created_at)` de sus ficheros SIN (ISO). Ausente/`null` = nunca mandó SIN o no se leyó. */
+  ultimoSin?: string | null
+  /** Nº de ficheros SIN de la compañía. Ausente/`null` = no se sabe. */
+  sinN?: number | null
+  /** `min(created_at)` de sus ficheros SIN (ISO). Ausente/`null` = no se sabe. */
+  primerSin?: string | null
 }
 
 export type SilencioEntidad = EntidadIngesta & {
@@ -122,8 +132,18 @@ export function veredictoEntidad(e: EntidadIngesta): SilencioEntidad {
 
   const motivos: string[] = []
 
-  // 1. La pérdida MEDIDA. No depende de ningún umbral discutible.
-  const perdida = e.vencidasEnSilencio !== null && e.vencidasEnSilencio > 0
+  // 1. La pérdida MEDIDA, pero SOLO como respaldo del ritmo. Una póliza que
+  //    vence sin fichero posterior es una renovación que no ha llegado (ya se
+  //    avisa aparte en «renovaciones sin llegar»), NO una compañía muda: si su
+  //    último fichero es reciente (< SUELO_DIAS), Mapfre sí manda.
+  //    Cuenta como silencio solo cuando ya hay ≥ SUELO_DIAS sin fichero Y la
+  //    vía de ritmo no puede decidir por falta de histórico (estado
+  //    conservador). Con histórico decide el ritmo, y solo el ritmo.
+  const dias = e.diasSinFichero
+  const hayBase = e.huecoMaximo !== null && e.huecosObservados >= MIN_HUECOS
+  const perdida =
+    e.vencidasEnSilencio !== null && e.vencidasEnSilencio > 0 &&
+    !hayBase && (dias === null || dias >= SUELO_DIAS)
   if (perdida) {
     motivos.push(
       `${e.entidad}: ${e.vencidasEnSilencio} renovación(es) vencieron sin que llegara su fichero`,
@@ -131,8 +151,6 @@ export function veredictoEntidad(e: EntidadIngesta): SilencioEntidad {
   }
 
   // 2. El ritmo roto. Solo se afirma con muestra suficiente.
-  const dias = e.diasSinFichero
-  const hayBase = e.huecoMaximo !== null && e.huecosObservados >= MIN_HUECOS
   const ritmoRoto =
     dias !== null && hayBase && dias >= SUELO_DIAS && dias > (e.huecoMaximo as number) * FACTOR_SILENCIO
 

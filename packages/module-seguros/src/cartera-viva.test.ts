@@ -30,7 +30,7 @@ test('el volcado histórico que CIMA nunca ha tocado es lead', () => {
 })
 
 test('🚨 el caso Reale: fila del volcado que la ingesta de CIMA mantiene al día', () => {
-  // `3021700291186` (C0613): import_ref de 2017 y suplemento 133 de agosto/2026.
+  // `3021700000001` (C0613): import_ref de 2017 y suplemento 133 de agosto/2026.
   // Con el filtro viejo (`import_ref IS NULL`) contaba como lead y escondía al cliente.
   const reale = { importRef: 'asegura_app:pol2:15143', eiacXmlHash: 'd41d8c' }
   assert.equal(esCarteraViva(reale), true)

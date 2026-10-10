@@ -32,6 +32,8 @@ export interface FacturaExtraida {
   irpf_porcentaje?: number | null
   irpf?: number | null
   total?: number | null
+  /** Moneda de `total` (ISO 4217 tras `normalizarDivisa`); null/ausente = no consta. */
+  divisa?: string | null
   categoria?: string | null
 }
 

@@ -1,7 +1,9 @@
 import { encryptField } from '@central/module-seguros-pii'
 import {
   compararConCima,
+  esPolizaDeCoche,
   huellaDecisionCima,
+  motivoCopiadoCima,
   nombrePropio,
   WHERE_CARTERA_VIVA,
   type CampoCima,
@@ -9,7 +11,8 @@ import {
   type DiferenciaCima,
   type FichaParaCima,
 } from '@central/module-seguros'
-import { prismaAsegura } from './asegura-db'
+import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { EVENTO_RESUMEN_SINCRO, type ResumenSincro } from './cima-sincro-resumen'
 import { anadirContacto, anotarHistorialCliente, campoIlegible, coincidencias, descifrarCampo } from './cartera-edicion'
 
 /**
@@ -97,7 +100,7 @@ async function fichasVivas(correduriaId: string, soloCliente?: string) {
       polizas: {
         // Solo cartera VIVA: el volcado de 2013-2018 no es «lo que manda CIMA».
         where: { AND: [{ mergedIntoPolizaId: null }, WHERE_CARTERA_VIVA] },
-        select: { id: true, tipo: true, numeroPoliza: true, fechaInicio: true },
+        select: { id: true, tipo: true, numeroPoliza: true, fechaInicio: true, datosEspecificos: true },
         // Las que no traen fecha, al final: si no, una sin fecha pasaría por la más reciente.
         orderBy: [{ fechaInicio: { sort: 'desc', nulls: 'last' } }],
       },
@@ -154,9 +157,10 @@ function cimaDe(c: Viva, porPoliza: Map<string, FilaInterviniente[]>): DatosCima
       const nac = descifrar(f.fechaNacimiento)
       if (!out.fechaNacimiento && nac) out.fechaNacimiento = nac
       const car = descifrar(f.fechaCarnet)
-      // CIMA no dice el tipo de carné. Solo se toma el del conductor de un AUTO,
+      // CIMA no dice el tipo de carné. Solo se toma el del conductor de un COCHE,
       // que es el B; el de una moto (A, o B para 125 cc) no se sabe de qué es.
-      if (!out.fechaCarnet && car && String(p.tipo) === 'auto') { out.fechaCarnet = car; out.ramoCarnet = 'auto' }
+      // Y moto se mira en el VEHÍCULO: muchas vienen con `tipo = 'auto'`.
+      if (!out.fechaCarnet && car && esPolizaDeCoche(String(p.tipo), p.datosEspecificos)) { out.fechaCarnet = car; out.ramoCarnet = 'auto' }
       const tel = descifrar(f.telefono)
       if (tel) out.telefonos.push(tel)
       const em = descifrar(f.email)
@@ -198,7 +202,7 @@ async function huellasDecididas(correduriaId: string): Promise<Set<string>> {
 type Analisis = { c: Viva; cima: DatosCimaInterno; diferencias: DiferenciaCima[] }
 
 /** Lo que se aplica sin preguntar (lo corre el cron). */
-const AUTOMATICAS: readonly DiferenciaCima['accion'][] = ['rellenar', 'anadir', 'completar', 'formatear', 'corregir']
+const AUTOMATICAS: readonly DiferenciaCima['accion'][] = ['rellenar', 'anadir', 'completar', 'formatear', 'corregir', 'normalizar']
 
 /**
  * Un teléfono o email que CIMA manda y que YA está en otra ficha no se copia
@@ -315,7 +319,7 @@ async function aplicarCampo(correduriaId: string, a: Analisis, d: DiferenciaCima
   }
   await anotarHistorialCliente(
     correduriaId, clienteId, 'gestion',
-    `${d.accion === 'rellenar' ? 'Completado' : d.accion === 'formatear' ? 'Nombre en formato propio' : d.accion === 'corregir' ? 'Errata corregida' : 'Actualizado'} desde CIMA: ${d.campo}${a.cima.poliza ? ` (póliza ${a.cima.poliza})` : ''} — ${actor}`,
+    `${d.accion === 'rellenar' ? 'Completado' : d.accion === 'formatear' ? 'Nombre en formato propio' : d.accion === 'normalizar' ? 'Formato normalizado' : d.accion === 'corregir' ? 'Errata corregida' : 'Actualizado'} desde CIMA: ${d.campo}${a.cima.poliza ? ` (póliza ${a.cima.poliza})` : ''} — ${actor}`,
   ).catch(() => undefined)
   return { campo: d.campo, ok: true }
 }
@@ -330,9 +334,11 @@ export async function aplicarSincroCima(
   correduriaId: string,
   modo: 'rellenar' | 'volcar',
   actor: string,
-): Promise<{ estado: 'ok'; aplicados: number; fallidos: { clienteId: string; campo: CampoCima; motivo: string }[] }> {
+): Promise<{ estado: 'ok'; aplicados: number; fallidos: { clienteId: string; campo: CampoCima; motivo: string }[]; copiados: ResumenSincro['copiados'] }> {
   const { lista } = await analizar(correduriaId)
   let aplicados = 0
+  /** Sin valores: solo nº de póliza, campo y por qué (para el resumen del cron). */
+  const copiados: ResumenSincro['copiados'] = []
   const fallidos: { clienteId: string; campo: CampoCima; motivo: string }[] = []
   for (const a of lista) {
     for (const d of a.diferencias) {
@@ -340,14 +346,18 @@ export async function aplicarSincroCima(
       if (d.aviso) { fallidos.push({ clienteId: a.c.id, campo: d.campo, motivo: `${d.aviso}: decide a mano` }); continue }
       try {
         const r = await aplicarCampo(correduriaId, a, d, actor)
-        if (r.ok) aplicados++
+        if (r.ok) {
+          aplicados++
+          const motivo = motivoCopiadoCima(d.accion)
+          if (motivo) copiados.push({ poliza: a.cima.poliza, campo: d.campo, motivo })
+        }
         else fallidos.push({ clienteId: a.c.id, campo: d.campo, motivo: r.motivo ?? 'no aplicado' })
       } catch (e) {
         fallidos.push({ clienteId: a.c.id, campo: d.campo, motivo: e instanceof Error ? e.message : 'error' })
       }
     }
   }
-  return { estado: 'ok', aplicados, fallidos }
+  return { estado: 'ok', aplicados, fallidos, copiados }
 }
 
 /** La decisión de Alberto sobre UNA diferencia de UNA ficha. */
@@ -377,4 +387,18 @@ export async function decidirDiferenciaCima(
     on conflict do nothing`
   await anotarHistorialCliente(correduriaId, clienteId, 'gestion', `Se mantiene el dato de la ficha frente a CIMA: ${campo} — ${actor}`).catch(() => undefined)
   return { estado: 'ok' }
+}
+
+/** `false` = no se pudo guardar (el cron lo cuenta como fallo, no lo da por registrado). */
+export async function registrarResumenSincro(correduriaId: string, d: ResumenSincro): Promise<boolean> {
+  if (!aseguraConfigurada()) return false
+  try {
+    await prismaAsegura().$executeRaw`
+      insert into operational_events (event_name, source, correduria_id, occurred_at, payload)
+      values (${EVENTO_RESUMEN_SINCRO}, 'cron-cima-sincro', ${correduriaId}::uuid, now(),
+              ${JSON.stringify(d)}::jsonb)`
+    return true
+  } catch {
+    return false
+  }
 }

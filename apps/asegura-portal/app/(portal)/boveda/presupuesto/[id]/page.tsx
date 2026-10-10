@@ -5,11 +5,19 @@ import { presupuestoDeSesion } from '@/lib/presupuesto'
 import { TEXTO_AJENO, TEXTO_VINCULO_AMBIGUO, textoCaducidad } from '@/lib/presupuesto-vista'
 
 import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fecha } from './Comparativa'
-import { Plegable } from './RestoDeOpciones'
+import { TodasLasOpciones } from './TodasLasOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
+import { EstudioOfertas } from './EstudioOfertas'
+import { TEXTOS_OFERTAS, puedeDescargarPdf, textoCompaniasOfertas, textoValidezOfertas } from '@/lib/presupuesto-ofertas-vista'
 import { DatosParaContratar } from './DatosParaContratar'
+import { RevisaTusDatos } from './RevisaTusDatos'
+import { ResumenOpciones } from './ResumenOpciones'
+import { MOTIVO_EN_REVISION, MOTIVO_SIN_DATOS, datosCotizados, datosListosParaAceptar } from '@/lib/presupuesto-firma'
+import { MEDIADOR, ramoDeCatalogo, telefonoLegible } from '@central/module-seguros'
 import { datosParaContratar } from '@/lib/datos-emision'
 import { getIdentidad } from '@/lib/session'
+import { accesoPuenteDe } from '@/lib/presupuesto'
+import { avisoPerdidas, garantiasDeActual } from '@/lib/todas-las-opciones'
 
 export const dynamic = 'force-dynamic'
 
@@ -85,13 +93,38 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   }
 
   const p = r.presupuesto
+  // 🚨 Un origen que no se reconoce no se pinta: no se sabe qué precios serían ni qué se aceptaría.
+  if (p.origen === null) {
+    return (
+      <Marco titulo="Lo está revisando el corredor">
+        <p className="pendiente" style={{ marginTop: 0 }}>{TEXTOS_OFERTAS.origenDesconocido}</p>
+      </Marco>
+    )
+  }
+  const deOfertas = p.origen === 'ofertas'
   // Qué falta para emitir (§4bis): solo mientras se puede contratar. `null` = no se pudo mirar.
   const mostrarDatos = !p.retirado && !p.caducado && p.emitidoAt === null && p.enviadoAt !== null
-  const identidad = mostrarDatos ? await getIdentidad() : null
-  const datos = identidad ? await datosParaContratar(identidad.id, p.id) : null
+  // «Revisa tus datos»: mientras no esté emitido ni retirado. `null` = no se han podido leer.
+  const mostrarCotizados = !p.retirado && p.emitidoAt === null
+  // «Datos para contratar» va por la identidad (su puente no admite el acceso por WhatsApp): quien
+  // entró con el código del WhatsApp no lo ve, en vez de ver «no podemos comprobarlo» para siempre.
+  const identidad = mostrarDatos && !p.accesoWhatsapp ? await getIdentidad() : null
+  const datos = identidad && mostrarDatos ? await datosParaContratar(identidad.id, p.id) : null
+  // «Revisa tus datos» (y con él, poder aceptar): con la sesión o con el acceso por WhatsApp.
+  const puerta = mostrarCotizados ? await accesoPuenteDe(p.id) : null
+  const cotizados = puerta && mostrarCotizados ? await datosCotizados(puerta.acceso, p.id) : null
+  // Fail-closed: sin datos legibles (o con un aviso de error pendiente) no se ofrece aceptar.
+  const bloqueoDatos = datosListosParaAceptar(cotizados)
+    ? null
+    : cotizados?.enRevision ? MOTIVO_EN_REVISION
+    : cotizados?.estado === 'sin_datos' ? cotizados.motivo : deOfertas ? TEXTOS_OFERTAS.sinDatos : MOTIVO_SIN_DATOS
   const portada = p.opciones.filter((o) => o.esPortada)
   const resto = p.opciones.filter((o) => !o.esPortada)
+  const ramoCat = ramoDeCatalogo(p.ramo)
+  const garantiasActual = ramoCat === null ? null : garantiasDeActual(ramoCat, p.actual?.coberturas ?? null)
   const companias = new Set(portada.map((o) => o.compania)).size
+  // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones».
+  const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
 
   return (
     <>
@@ -103,7 +136,9 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       {/* 🚨 Nunca «válido hasta el X» a secas: sonaría a compromiso de la
           compañía, y la compañía no ha comprometido nada. */}
       <p className={p.caducado ? 'pendiente' : 'suave'} style={{ marginTop: 0 }}>
-        {textoCaducidad(fecha(p.creadoAt), fecha(p.venceEl), p.caducado)}
+        {deOfertas
+          ? textoValidezOfertas(fecha(p.creadoAt), fecha(p.venceEl), p.caducado)
+          : textoCaducidad(fecha(p.creadoAt), fecha(p.venceEl), p.caducado)}
       </p>
 
       {p.retirado && (
@@ -121,6 +156,30 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         </p>
       )}
 
+      {/* ARRIBA del todo: los datos con los que se calculó el precio (dictado de Alberto, 28/09/2026). */}
+      {mostrarCotizados && (
+        <RevisaTusDatos
+          presupuestoId={p.id}
+          datos={cotizados}
+          corredor={p.vistaDeCorredor}
+          telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+          origen={p.origen}
+        />
+      )}
+
+      {/* Tras «Revisa tus datos»: resumen IA + tabla de coberturas por compañía + comparar dos con IA. */}
+      {!deOfertas && !p.retirado && portada.length > 0 && (
+        <ResumenOpciones
+          presupuestoId={p.id}
+          corredor={p.vistaDeCorredor}
+          telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+          opciones={portada.map((o) => ({
+            id: o.id, compania: o.compania, producto: o.producto,
+            primaEur: o.primaEur, franquiciaEur: o.franquiciaEur, coberturas: o.coberturasDetalle,
+          }))}
+        />
+      )}
+
       {p.necesidades && (
         <section className="seccion">
           <h2 style={{ marginTop: 0 }}>Lo que me pediste</h2>
@@ -132,7 +191,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         </section>
       )}
 
-      <Actual actual={p.actual} />
+      {(!deOfertas || p.actual !== null) && <Actual actual={p.actual} />}
 
       {p.aceptadoAt !== null && (
         <section className="seccion">
@@ -142,6 +201,19 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         </section>
       )}
 
+      {deOfertas ? (
+        <EstudioOfertas
+          presupuestoId={p.id}
+          opciones={p.opciones}
+          caducado={p.caducado}
+          puedeAceptar={puedeAceptar}
+          bloqueoDatos={bloqueoDatos}
+          corredor={p.vistaDeCorredor}
+          codigoWhatsapp={p.accesoWhatsapp}
+          pdf={puedeDescargarPdf(p)}
+        />
+      ) : (
+        <>
       <section className="seccion">
         <h2 style={{ marginTop: 0 }}>Lo que he encontrado</h2>
         <SinEquivalenteAviso motivo={p.motivoSinEquivalente} />
@@ -160,7 +232,6 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       </section>
 
       {portada.map((o) => {
-        const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
         return (
           <section className="seccion" key={`g-${o.id}`}>
             <Garantias o={o} actual={p.actual} />
@@ -171,30 +242,36 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
                 prima={o.primaEur}
                 compania={o.compania}
                 corredor={p.vistaDeCorredor}
+                bloqueoDatos={bloqueoDatos}
+                codigoWhatsapp={p.accesoWhatsapp}
+                perdidas={avisoPerdidas(ramoCat, o.garantias, garantiasActual)}
               />
             )}
           </section>
         )
       })}
+        </>
+      )}
 
       {/* La comparativa es la portada (§4.1): lo que falta para contratar va debajo. */}
-      {mostrarDatos && <DatosParaContratar datos={datos} corredor={p.vistaDeCorredor} />}
+      {mostrarDatos && !deOfertas && !p.accesoWhatsapp && <DatosParaContratar datos={datos} corredor={p.vistaDeCorredor} />}
 
-      {/* Cerrado por defecto y con montaje perezoso (regla de rendimiento).
-          ⚠️ Hoy `resto` está SIEMPRE vacío: el preparador congela solo las
-          opciones de portada y la lista larga se quedó en la tarificación, que
-          el portal no puede leer (§5.1: el cliente ve el snapshot y nada más).
-          Cuando se congelen todas, esto las pinta sin tocar nada. */}
-      {resto.length > 0 && (
-        <section className="seccion">
-          <Plegable titulo={`Ver el resto de opciones (${resto.length})`}>
-            <div className="presu-tarjetas">
-              {resto.map((o) => (
-                <Tarjeta key={o.id} o={o} caducado={p.caducado} />
-              ))}
-            </div>
-          </Plegable>
-        </section>
+      {/* «Todas las opciones»: la lista entera (portada incluida, marcada «Recomendada») con los
+          interruptores de garantías, paginada. Solo si hay algo más que la portada: si no, sería la
+          misma lista dos veces. */}
+      {!deOfertas && resto.length > 0 && (
+        <TodasLasOpciones
+          presupuestoId={p.id}
+          ramo={ramoDeCatalogo(p.ramo)}
+          opciones={p.opciones}
+          necesidades={p.necesidades}
+          coberturasActual={p.actual?.coberturas ?? null}
+          corredor={p.vistaDeCorredor}
+          puedeAceptar={puedeAceptar}
+          bloqueoDatos={bloqueoDatos}
+          codigoWhatsapp={p.accesoWhatsapp}
+          telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+        />
       )}
 
       <Salidas
@@ -204,7 +281,10 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         puedeNombrar={!p.retirado && p.aceptadoAt === null && p.emitidoAt === null && p.enviadoAt !== null}
         corredor={p.vistaDeCorredor}
       />
-      <Mediador companiasEnPortada={companias} />
+      <Mediador
+        companiasEnPortada={companias}
+        textoCompanias={deOfertas ? textoCompaniasOfertas(new Set(p.opciones.map((o) => o.compania)).size) : undefined}
+      />
 
       <p className="volver">
         <Link href="/boveda">← Volver a mis seguros</Link>

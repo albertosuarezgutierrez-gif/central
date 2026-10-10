@@ -73,6 +73,17 @@ export function normalizarEmail(v: unknown): Revisado<string> {
   return { ok: true, valor: s }
 }
 
+/**
+ * ¿El contacto que se añade queda como PRINCIPAL? El que se pide principal, sí; si la ficha no tiene
+ * ninguno, el primero sube solo… salvo `nuncaPrincipal` (03/10/2026): un email volcado desde un
+ * documento NO puede quedar principal nunca, porque el portal enlaza la sesión por el email
+ * principal y eso sería entregar la cuenta a quien subió el papel.
+ */
+export function seraPrincipalAlAnadir(e: { pedido: boolean; nuncaPrincipal: boolean; hayPrincipal: boolean }): boolean {
+  if (e.nuncaPrincipal) return false
+  return e.pedido || !e.hayPrincipal
+}
+
 export function normalizarContacto(tipo: TipoContacto, v: unknown): Revisado<string> {
   return tipo === 'telefono' ? normalizarTelefono(v) : normalizarEmail(v)
 }
@@ -183,12 +194,25 @@ export const ETIQUETA_CAMPO: Record<CampoIdentidad | CampoLibre, string> = {
   direccion: 'dirección', codigoPostal: 'código postal', ciudad: 'ciudad', provincia: 'provincia', notas: 'notas',
 }
 
+export type SexoFicha = 'hombre' | 'mujer'
+export const SEXOS_FICHA: readonly SexoFicha[] = ['hombre', 'mujer']
+/** Código de `clientes.saludo` para cada sexo (el que ya lee `sexoDeSaludo` de asegura). */
+export const SALUDO_POR_SEXO: Record<SexoFicha, '1' | '2'> = { hombre: '1', mujer: '2' }
+
 /** `null` en un campo = borrarlo; ausente = no tocarlo. */
 export type EdicionCliente = {
   identidad?: Partial<Record<CampoIdentidad, string | null>>
   libre?: Partial<Record<CampoLibre, string | null>>
-  /** El documento de identidad que acredita el cambio. Obligatorio si se toca identidad. */
+  /** Sexo (`clientes.saludo`: hombre '1' · mujer '2'). Ausente = no tocarlo; no hay forma de «borrarlo» ni valor por defecto. */
+  sexo?: SexoFicha
+  /** El documento de identidad que acredita el cambio. Obligatorio si se toca identidad (salvo `motivo`). */
   documentoId?: string | null
+  /**
+   * Sin documento (05/10/2026, Alberto: «yo puedo editar cualquier dato»): el motivo escrito del
+   * cambio, ≥5 caracteres. Solo vale si quien revisa lo permite (`ctx.permiteMotivo`: el corredor
+   * desde plataforma; NUNCA el portal del cliente).
+   */
+  motivo?: string | null
 }
 
 export type IdentidadRevisada = {
@@ -199,11 +223,31 @@ export type IdentidadRevisada = {
 }
 
 export type EdicionRevisada =
-  | { ok: true; identidad: IdentidadRevisada; libre: Partial<Record<CampoLibre, string | null>>; tocaIdentidad: boolean }
-  | { ok: false; motivo: string; campo?: CampoIdentidad | CampoLibre }
+  | {
+      ok: true
+      identidad: IdentidadRevisada
+      libre: Partial<Record<CampoLibre, string | null>>
+      sexo?: SexoFicha
+      tocaIdentidad: boolean
+      /** El cambio de identidad va SIN documento, con este motivo (ya validado). */
+      motivoCambio?: string
+      /** Solo se COMPLETARON los apellidos (sin documento ni motivo): lo que había y lo que queda. */
+      apellidosCompletados?: { antes: string; despues: string }
+    }
+  | { ok: false; motivo: string; campo?: CampoIdentidad | CampoLibre | 'sexo' }
 
 /** `'documento_requerido'` es el motivo que la pantalla convierte en «pide el DNI». */
 export const MOTIVO_DOCUMENTO_REQUERIDO = 'documento_requerido'
+/** Sin documento y sin un motivo de al menos `MOTIVO_CAMBIO_MINIMO` caracteres. */
+export const MOTIVO_CAMBIO_REQUERIDO = 'motivo_requerido'
+export const MOTIVO_CAMBIO_MINIMO = 5
+
+/** El motivo escrito de un cambio de identidad sin documento, o `null` si no llega al mínimo. */
+export function motivoCambioValido(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const s = v.replace(/\s+/g, ' ').trim()
+  return s.length >= MOTIVO_CAMBIO_MINIMO ? s.slice(0, 500) : null
+}
 
 /**
  * ¿La ficha está SIN NOMBRE? Vacío o el marcador literal `(sin nombre)` que la
@@ -213,6 +257,32 @@ export const MOTIVO_DOCUMENTO_REQUERIDO = 'documento_requerido'
 export function nombrePendiente(nombre: string | null | undefined): boolean {
   const s = (nombre ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
   return s === '' || s === '(sin nombre)' || s === 'sin nombre'
+}
+
+/** Minúsculas, sin tildes, espacios colapsados: para comparar apellidos, nunca para guardarlos. */
+function claveApellidos(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+/**
+ * ¿Escribir `nuevo` en apellidos es COMPLETAR (no corregir)? Sí si los actuales están vacíos/null, o si
+ * el nuevo empieza por el actual seguido de ESPACIO y añade palabras («Slava» → «Slava Antoli»). No vale
+ * «Slava» → «Slavaxx» ni cambiar o quitar palabras. Rellenar un hueco no es corregir una identidad.
+ * Una sola fuente: la usan la pantalla de plataforma y el servidor de asegura.
+ */
+export function completaApellidos(actual: string | null | undefined, nuevo: string | null | undefined): boolean {
+  const n = claveApellidos(nuevo ?? '')
+  if (n === '') return false
+  const a = claveApellidos(actual ?? '')
+  if (a === '') return true
+  return n.startsWith(a + ' ') && n.length > a.length + 1
+}
+
+/** `motivo` y documento al margen: ¿la edición SOLO toca apellidos y solo los completa? */
+export function edicionSoloCompletaApellidos(e: EdicionCliente, apellidosActuales: string | null | undefined): boolean {
+  const ks = Object.keys(e.identidad ?? {}).filter((k) => (e.identidad as Record<string, unknown>)[k] !== undefined)
+  if (ks.length !== 1 || ks[0] !== 'apellidos') return false
+  return completaApellidos(apellidosActuales, e.identidad?.apellidos)
 }
 
 /**
@@ -225,7 +295,15 @@ export function nombrePendiente(nombre: string | null | undefined): boolean {
  * rellena un hueco. DNI y fecha de nacimiento siguen exigiéndolo siempre, y
  * cambiar un nombre que YA existe, también.
  */
-export function revisarEdicion(e: EdicionCliente, ctx: { fichaSinNombre?: boolean } = {}): EdicionRevisada {
+export function revisarEdicion(e: EdicionCliente, ctx: {
+  fichaSinNombre?: boolean
+  permiteMotivo?: boolean
+  /**
+   * Los apellidos que HAY en la ficha (`null`/vacío = no tiene). `undefined` = no se sabe: no hay
+   * exención de «completar apellidos» (ante la duda, el estado conservador).
+   */
+  apellidosActuales?: string | null
+} = {}): EdicionRevisada {
   const identidad: IdentidadRevisada = {}
   const libre: Partial<Record<CampoLibre, string | null>> = {}
 
@@ -273,21 +351,100 @@ export function revisarEdicion(e: EdicionCliente, ctx: { fichaSinNombre?: boolea
     libre[campo] = s
   }
 
+  if (e.sexo !== undefined && !SEXOS_FICHA.includes(e.sexo)) return { ok: false, motivo: 'Sexo no válido: hombre o mujer.', campo: 'sexo' }
+  const sexo = e.sexo !== undefined ? { sexo: e.sexo } : {}
+
   const tocaIdentidad = Object.keys(identidad).length > 0
-  if (!tocaIdentidad && Object.keys(libre).length === 0) return { ok: false, motivo: 'No hay nada que cambiar.' }
+  if (!tocaIdentidad && Object.keys(libre).length === 0 && e.sexo === undefined) return { ok: false, motivo: 'No hay nada que cambiar.' }
   const soloRellenaNombre = ctx.fichaSinNombre === true && identidad.nombre !== undefined
     && Object.keys(identidad).every((k) => k === 'nombre' || k === 'apellidos')
-  if (tocaIdentidad && !e.documentoId && !soloRellenaNombre) return { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO }
-  return { ok: true, identidad, libre, tocaIdentidad }
+  // Completar apellidos («Slava» → «Slava Antoli») tampoco es corregir: sin motivo. Si el motivo viene
+  // informado, el cambio sigue la vía del motivo (queda con antes/después).
+  const completaSolo = ctx.apellidosActuales !== undefined
+    && edicionSoloCompletaApellidos({ identidad: e.identidad }, ctx.apellidosActuales)
+    && !motivoCambioValido(e.motivo)
+  if (tocaIdentidad && !e.documentoId && !soloRellenaNombre && completaSolo) {
+    return {
+      ok: true, identidad, libre, ...sexo, tocaIdentidad,
+      apellidosCompletados: { antes: (ctx.apellidosActuales ?? '').replace(/\s+/g, ' ').trim(), despues: identidad.apellidos ?? '' },
+    }
+  }
+  if (tocaIdentidad && !e.documentoId && !soloRellenaNombre) {
+    // El corredor puede cambiarla sin documento si dice POR QUÉ (05/10/2026). Quien no lo tiene
+    // permitido (el portal) sigue necesitando el documento, diga lo que diga el cuerpo.
+    if (!ctx.permiteMotivo) return { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO }
+    const motivoCambio = motivoCambioValido(e.motivo)
+    if (!motivoCambio) return { ok: false, motivo: MOTIVO_CAMBIO_REQUERIDO }
+    return { ok: true, identidad, libre, ...sexo, tocaIdentidad, motivoCambio }
+  }
+  return { ok: true, identidad, libre, ...sexo, tocaIdentidad }
 }
 
-/** Qué documento sirve para cambiar la identidad: uno de tipo DNI que HAYA LLEGADO. */
-export function documentoAcredita(d: Pick<DocumentoResumen, 'tipo' | 'estado'>): boolean {
-  return d.tipo === 'dni' && d.estado !== 'pedido'
+/**
+ * Qué documento sirve para cambiar la identidad: uno de tipo DNI que HAYA LLEGADO, o (05/10/2026)
+ * una PÓLIZA de la ficha cuyo DNI leído es el de la ficha (`dniCoincideFicha === true`, que sale de
+ * `marcaAcreditaFicha`; `null` = no se sabe, y no acredita).
+ */
+export function documentoAcredita(d: Pick<DocumentoResumen, 'tipo' | 'estado' | 'dniCoincideFicha'>): boolean {
+  if (d.estado === 'pedido') return false
+  if (d.tipo === 'dni') return true
+  return d.tipo === 'poliza' && d.dniCoincideFicha === true
 }
 
 export function documentosAcreditativos(docs: readonly DocumentoResumen[] | null): DocumentoResumen[] {
   return (docs ?? []).filter(documentoAcredita)
+}
+
+/**
+ * Qué campos acredita cada documento (Alberto, 05/10/2026): una PÓLIZA con el DNI de la ficha
+ * acredita SOLO nombre y apellidos; el DNI y la fecha de nacimiento no se corrigen «porque lo dice
+ * la póliza». El DNI-documento acredita todo.
+ */
+export const CAMPOS_QUE_ACREDITA_POLIZA: readonly CampoIdentidad[] = ['nombre', 'apellidos']
+
+/** ¿Este documento (ya acreditativo) cubre TODOS los campos de identidad que se tocan? */
+export function documentoCubreCampos(d: Pick<DocumentoResumen, 'tipo'>, campos: readonly CampoIdentidad[]): boolean {
+  if (d.tipo === 'dni') return true
+  if (d.tipo === 'poliza') return campos.every((c) => CAMPOS_QUE_ACREDITA_POLIZA.includes(c))
+  return false
+}
+
+export type AcreditacionCambio =
+  | { ok: true; via: 'documento' }
+  /** El documento no cubre lo que se toca, pero el corredor dijo por qué: se registra como MOTIVO. */
+  | { ok: true; via: 'motivo'; motivoCambio: string }
+  | { ok: false; motivo: 'documento_no_acredita' }
+
+/**
+ * Decide si un cambio de identidad que llega CON documento queda acreditado. Puro: lo usan el
+ * servidor (asegura) y la pantalla (plataforma) con la misma regla.
+ *  - Documento que no acredita (pedido, de otra ficha, póliza sin DNI coincidente) → rechazo.
+ *  - Póliza + DNI o fecha de nacimiento → solo con motivo, si quien llama lo permite (el corredor;
+ *    NUNCA el portal), y entonces el historial dice MOTIVO, no «acreditado con documento».
+ */
+export function acreditarCambioConDocumento(
+  d: Pick<DocumentoResumen, 'tipo' | 'estado' | 'dniCoincideFicha'> | null,
+  campos: readonly CampoIdentidad[],
+  ctx: { motivo?: string | null; permiteMotivo?: boolean } = {},
+): AcreditacionCambio {
+  if (!d || !documentoAcredita(d)) return { ok: false, motivo: 'documento_no_acredita' }
+  if (documentoCubreCampos(d, campos)) return { ok: true, via: 'documento' }
+  const motivoCambio = ctx.permiteMotivo === true ? motivoCambioValido(ctx.motivo) : null
+  return motivoCambio ? { ok: true, via: 'motivo', motivoCambio } : { ok: false, motivo: 'documento_no_acredita' }
+}
+
+/** Los campos de identidad que una edición revisada toca. */
+export function camposIdentidadTocados(identidad: IdentidadRevisada): CampoIdentidad[] {
+  return CAMPOS_IDENTIDAD.filter((c) => identidad[c] !== undefined)
+}
+
+/**
+ * Tres estados de la lista de Documentos para el bloque de identidad: `null` = no se pudo leer
+ * (NO se afirma que no haya DNI), `[]`/sin acreditativos = revisado y no hay, o los hay.
+ */
+export function estadoDocumentosIdentidad(docs: readonly DocumentoResumen[] | null): 'no_leidos' | 'ninguno' | 'hay' {
+  if (docs === null) return 'no_leidos'
+  return docs.some(documentoAcredita) ? 'hay' : 'ninguno'
 }
 
 /**
@@ -302,13 +459,19 @@ export function textoHistorialEdicion(
   const partes: string[] = []
   const ident = (Object.keys(r.identidad) as CampoIdentidad[]).map((c) => ETIQUETA_CAMPO[c])
   if (ident.length > 0) {
-    partes.push(`identidad (${ident.join(', ')})${ctx.documentoId ? ` acreditada con el documento ${ctx.documentoId}` : ' rellenada sin documento: la ficha no tenía nombre'}`)
+    if (!ctx.documentoId && r.apellidosCompletados) {
+      const { antes, despues } = r.apellidosCompletados
+      partes.push(`apellidos completados sin documento: ${antes === '' ? '(vacío)' : `"${antes}"`} → "${despues}"`)
+    } else {
+      partes.push(`identidad (${ident.join(', ')})${ctx.documentoId ? ` acreditada con el documento ${ctx.documentoId}` : ' rellenada sin documento: la ficha no tenía nombre'}`)
+    }
   }
   for (const c of Object.keys(r.libre) as CampoLibre[]) {
     const v = r.libre[c]
     if (c === 'direccion' || c === 'notas') partes.push(v === null ? `${ETIQUETA_CAMPO[c]} borrada` : `${ETIQUETA_CAMPO[c]} cambiada`)
     else partes.push(v === null ? `${ETIQUETA_CAMPO[c]} borrado` : `${ETIQUETA_CAMPO[c]} → ${v}`)
   }
+  if (r.sexo) partes.push(`sexo → ${r.sexo}`)
   return `Edición desde plataforma por ${ctx.actor}: ${partes.join(' · ')}`
 }
 

@@ -12,7 +12,7 @@ import { ibanEnmascarado } from '@/lib/codeoscopic/emitir-iban'
 import { hoyEnMadrid } from '@/lib/codeoscopic/fecha-efecto'
 import { FRASE_SIN_CONFIRMACION } from '@/lib/codeoscopic/reintento-emision'
 import {
-  documentoTomador, matriculaProyecto, normalizarMatricula, ofertasDelProyecto, quoteCrudo, ramoDeLinea, titularProyecto,
+  documentoTomador, matriculaProyecto, normalizarMatricula, ofertasDelProyecto, quoteCrudo, ramoDeLinea, RAMOS_IMPORTABLES, titularProyecto,
 } from '@/lib/codeoscopic/importar'
 
 export const runtime = 'nodejs'
@@ -98,7 +98,7 @@ function comprobar(ctx: Extract<Contexto, { ok: true }>) {
   // 🚨 Una póliza ya sustituida por otra emitida no se vuelve a sustituir: serían dos
   // contratos sobre el mismo riesgo (revisión de alto riesgo de la fase 3a, 26/09/2026).
   if (ctx.poliza.sustituida) bloqueos.push('esta póliza ya está sustituida por otra: no se emite una segunda encima')
-  if (!ramo) bloqueos.push('por ahora solo se importan proyectos de auto y moto')
+  if (!ramo || !RAMOS_IMPORTABLES.includes(ramo)) bloqueos.push('por ahora solo se importan proyectos de auto y moto')
   else if (ramo !== ctx.poliza.tipo) bloqueos.push(`el proyecto es de ${ramo} y la póliza de ${ctx.poliza.tipo}`)
   if (tomador === 'distinto') bloqueos.push('el tomador del proyecto no es el cliente de esta póliza (DNI distinto)')
   if (tomador === 'sin_dato') bloqueos.push('no se puede comprobar el tomador: falta el DNI en el proyecto o en la ficha')

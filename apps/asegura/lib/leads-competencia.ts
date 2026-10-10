@@ -18,6 +18,7 @@ import {
   pasoConTarea,
   siguientePasoLead,
   PREFIJO_LLAMADA_CONTESTADA,
+  PREFIJO_WHATSAPP_RESPONDIDO,
   sqlCarteraEnVigor,
   ventanaDe,
   type CanalLead,
@@ -28,6 +29,7 @@ import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { descifrarCampo } from './cartera-edicion'
 import { MARCA_CIERRE_AUTOMATICO, MARCA_CIERRE_LLAMADA } from './oportunidad-seguimiento'
+import { entraEnHorizonte, unaPorCliente } from './leads-horizonte'
 
 export type LeadCompetencia = {
   oportunidadId: string
@@ -58,11 +60,22 @@ export type LeadCompetencia = {
   canal: CanalLead
   puntuacion: number
   siguientePaso: PasoLead
+  /**
+   * Tiene una tarea de seguimiento pendiente CON fecha (la que manda sobre
+   * `siguientePaso` vía `pasoConTarea`). Sin esto, quien consume el carril no
+   * distingue una llamada pedida por el cliente de una de la secuencia.
+   */
+  tareaPendiente: boolean
 }
 
 export type ListaLeadsCompetencia = {
   leads: LeadCompetencia[]
-  /** Candidatos con fecha legible (uno por cliente), antes de cortar por horizonte. */
+  /**
+   * Candidatos con fecha legible (uno por cliente), antes de cortar por horizonte.
+   * El horizonte solo corta a los sin contactar: quien ya está en conversación
+   * (intentos, respondió o en seguimiento) se lista aunque venza más lejos
+   * (`entraEnHorizonte`), así que `leads` puede traer `dias > horizonteDias`.
+   */
   totalConFecha: number
   /** Con contacto guardado pero que no se ha podido descifrar: no se listan y se cuentan. */
   ilegibles: number
@@ -94,7 +107,10 @@ type Fila = {
   fechaFin: Date
   telefono: string | null
   email: string | null
-  intentos: number
+  /** Envíos de recaptación al CLIENTE (último año, sin rebotes ni quejas). */
+  intentosEnvios: number
+  /** Tareas de contacto cerradas de ESTA oportunidad (último año). */
+  intentosGestiones: number
   ultimoEnvioAt: Date | null
   respondio: boolean
   proximaTarea: { tipo: string; fechaLimite: string; observaciones: string } | null
@@ -132,21 +148,23 @@ export async function leadsCompetencia(
       -- Solo el último año: el «aparcar» es hasta el aniversario siguiente, no
       -- para siempre. Un rebote o una queja no es un intento que le llegara.
       -- Una llamada, un email o un WhatsApp registrados como tarea cerrada de
-      -- esta oportunidad también son un intento.
+      -- esta oportunidad también son un intento. Van en dos columnas (se suman
+      -- abajo): los envíos son del CLIENTE y las tareas de ESTA oportunidad, y
+      -- solo las segundas distinguen entre dos oportunidades del mismo cliente.
       (select count(*)::int from recaptacion_envios r
         where r.cliente_id = c.id and r.created_at > now() - interval '12 months'
-          and r.estado::text not in ('rebotado', 'queja'))
+          and r.estado::text not in ('rebotado', 'queja')) as "intentosEnvios",
       -- Solo las tareas creadas desde aquí: las 301 heredadas del volcado
       -- llevan fecha de junio de 2026 (la de la carga, no la de la llamada) y
       -- contarían como contactos recientes que no lo son.
-      + (select count(*)::int from gestiones g
+      (select count(*)::int from gestiones g
         where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
           and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
           and g.tipo::text in ('llamada', 'email', 'whatsapp')
           -- Las que cerró el sistema al ganar/perder no son un contacto: reabrir no suma intentos.
           and position(${MARCA_CIERRE_AUTOMATICO} in g.observaciones) = 0
           and position(${MARCA_CIERRE_LLAMADA} in g.observaciones) = 0
-          and g.updated_at > now() - interval '12 months') as intentos,
+          and g.updated_at > now() - interval '12 months') as "intentosGestiones",
       greatest(
         (select max(r.created_at) from recaptacion_envios r
           where r.cliente_id = c.id and r.created_at > now() - interval '12 months'),
@@ -159,12 +177,15 @@ export async function leadsCompetencia(
             and g.updated_at > now() - interval '12 months')
       ) as "ultimoEnvioAt",
       (exists (
+        -- 'enlace_abierto' NO: es el WhatsApp que abrió Alberto (se registra al pulsar), no una
+        -- respuesta del cliente. Contarlo ponía como «respondió» a los 155 de Recaptación.
         select 1 from recaptacion_envios r
-        where r.cliente_id = c.id and r.estado::text in ('enlace_abierto', 'abierto', 'pinchado')
+        where r.cliente_id = c.id and r.estado::text in ('abierto', 'pinchado')
       ) or coalesce((
         -- Una llamada que COGIÓ también es haber respondido, pero solo si es el
         -- ÚLTIMO contacto: tras varios «no contesta» vuelve a ser uno más.
-        select starts_with(g.observaciones, ${PREFIJO_LLAMADA_CONTESTADA}) from gestiones g
+        select (starts_with(g.observaciones, ${PREFIJO_LLAMADA_CONTESTADA})
+                or starts_with(g.observaciones, ${PREFIJO_WHATSAPP_RESPONDIDO})) from gestiones g
         where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
           and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
           and g.tipo::text in ('llamada', 'email', 'whatsapp')
@@ -214,24 +235,25 @@ export async function leadsCompetencia(
     limit ${TECHO}
   `)
 
-  // Un cliente, una fila: se queda su oportunidad que vence antes y el resto
-  // se cuenta. Varias filas del mismo cliente serían varios planes de contacto.
-  const porCliente = new Map<string, { f: Fila; venc: string; dias: number; otras: number }>()
+  // Un cliente, una fila: el resto de sus oportunidades se cuenta. Varias filas
+  // del mismo cliente serían varios planes de contacto. Manda la que está EN
+  // CONVERSACIÓN y, entre iguales, la que vence antes (`unaPorCliente`): si no,
+  // el horizonte de abajo podía esconder a un cliente con otra oportunidad en
+  // marcha solo porque la que vence antes está sin tocar.
+  const conFecha: (Fila & { venc: string; dias: number; intentos: number })[] = []
   for (const f of filas) {
     const venc = proximoAniversario(f.fechaFin.toISOString().slice(0, 10), hoy)
     if (venc === null) continue
-    const dias = diasHasta(venc, hoy)
-    const previa = porCliente.get(f.clienteId)
-    if (!previa) porCliente.set(f.clienteId, { f, venc, dias, otras: 0 })
-    else if (dias < previa.dias) porCliente.set(f.clienteId, { f, venc, dias, otras: previa.otras + 1 })
-    else previa.otras++
+    conFecha.push({ ...f, venc, dias: diasHasta(venc, hoy), intentos: f.intentosEnvios + f.intentosGestiones })
   }
+  const porCliente = unaPorCliente(conFecha)
 
   const leads: LeadCompetencia[] = []
   let totalConFecha = 0
   let ilegibles = 0
   let sinCanalPermitido = 0
-  for (const { f, venc, dias, otras } of porCliente.values()) {
+  for (const { elegida: f, otras } of porCliente.values()) {
+    const { venc, dias } = f
     const telefono = descifrarCampo(f.telefono)
     const email = descifrarCampo(f.email)
     // Guardado pero ilegible (clave PII, o una cadena vacía): no se lista como
@@ -249,7 +271,9 @@ export async function leadsCompetencia(
     totalConFecha++
     const ventana = ventanaDe(dias)
     porVentana[ventana]++
-    if (dias > horizonteDias) continue
+    // El horizonte solo esconde a quien NO se ha empezado a trabajar: quien ya
+    // está en conversación se lista aunque su aniversario caiga más lejos.
+    if (!entraEnHorizonte({ dias, horizonteDias, intentos: f.intentos, respondio: f.respondio, estado: f.estado })) continue
     const ultimo = f.ultimoEnvioAt ? f.ultimoEnvioAt.toISOString().slice(0, 10) : null
     leads.push({
       oportunidadId: f.oportunidadId,
@@ -290,6 +314,7 @@ export async function leadsCompetencia(
         f.proximaTarea,
         hoy,
       ),
+      tareaPendiente: f.proximaTarea !== null,
     })
   }
   // Probabilidad × prima: por puntuación y, a igualdad, lo que vence antes.

@@ -700,7 +700,12 @@ test('una cotización recuperada NO dice que ninguna compañía rechazó (21/09/
     'una cotización recuperada no persiste los fallos: `null` («no se guardaron»), nunca `[]`',
   )
   assert.match(src, /fallos:\s*Fallo\[\]\s*\|\s*null/, '`fallos` tiene que admitir el «no se sabe»')
-  assert.match(src, /r\.fallos === null \?/, 'y la pantalla tiene que distinguir los dos casos')
+  // Desde el 29/09/2026 la distinción vive en el componente compartido: la pantalla le pasa
+  // `r.fallos` TAL CUAL (sin `?? []`) y es `FallosTarificacion` quien dice «no se guardó».
+  assert.match(src, /<FallosTarificacion fallos=\{r\.fallos\} \/>/, 'la pantalla pasa los fallos sin colapsar el null')
+  const comp = leer('apps/plataforma/app/(usuario)/correduria/FallosTarificacion.tsx')
+  assert.match(comp, /if \(fallos === null\)/, 'y el componente tiene que distinguir los dos casos')
+  assert.match(comp, /no se guardó qué compañías no dieron precio/)
 })
 
 test('sin la cartera del cliente, la tabla NO afirma que se pueda emitir (21/09/2026)', () => {

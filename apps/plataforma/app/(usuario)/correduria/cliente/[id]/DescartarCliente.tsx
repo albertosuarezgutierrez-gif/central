@@ -1,7 +1,9 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Ban } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { ConIcono } from '../../iconos'
 import { interpretarDescarte, textoMotivo, type ResultadoDescarte } from '@/lib/cliente-edicion-asegura'
 
 /**
@@ -103,7 +105,7 @@ export default function DescartarCliente({
           gap: 10,
         }}
       >
-        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--negative)' }}>🚫 Ficha descartada</div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--negative)' }}><ConIcono i={Ban}>Ficha descartada</ConIcono></div>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--text)' }}>
           Esta ficha está fuera de la cartera: no sale en el buscador, ni en la lista, ni en los
           contadores, ni en los avisos. <strong>No se ha borrado nada</strong> — su historial, sus
@@ -273,7 +275,7 @@ function Resultado({ r, accion }: { r: ResultadoDescarte | null; accion: 'descar
             : `No se ha podido ${accion}: ${textoMotivo(r.motivo)}`
   return (
     <p style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }} role="alert">
-      ⚠️ {texto}
+      {texto}
     </p>
   )
 }

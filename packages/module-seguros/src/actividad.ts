@@ -36,8 +36,11 @@ export type TipoActividad =
   | 'acceso'
   | 'acceso_fallido'
   | 'direccion'
+  | 'cuenta'
+  | 'carnet'
   | 'sugerencia'
   | 'datos_presupuesto'
+  | 'cotizacion_incoherente'
   | 'parte'
   | 'poliza_declarada'
   | 'supresion'
@@ -79,6 +82,18 @@ export const ACTIVIDADES: readonly Definicion[] = [
     origen: 'cliente',
     riesgo: 'El domicilio tarifica en hogar y auto: revisa si afecta a alguna de sus pólizas.',
   },
+  {
+    v: 'cuenta',
+    label: 'Pidió cambiar la cuenta de sus recibos',
+    origen: 'cliente',
+    riesgo: 'La compañía sigue cargando en la cuenta vieja hasta que se la cambies tú: hazlo y márcalo en «Hoy».',
+  },
+  {
+    v: 'carnet',
+    label: 'Cambió sus carnés de conducir',
+    origen: 'cliente',
+    riesgo: 'La antigüedad del carné tarifica en auto y moto: revisa si afecta a alguna de sus pólizas.',
+  },
   { v: 'parte', label: 'Abrió un parte de siniestro', origen: 'cliente', riesgo: 'Hay alguien esperando respuesta.' },
   {
     v: 'acceso_fallido',
@@ -91,6 +106,12 @@ export const ACTIVIDADES: readonly Definicion[] = [
     label: 'Completó los datos para su presupuesto',
     origen: 'cliente',
     riesgo: 'Está esperando precio: tarifícalo hoy.',
+  },
+  {
+    v: 'cotizacion_incoherente',
+    label: 'Cotización con precios que no cuadran',
+    origen: 'ficha',
+    riesgo: 'Revisa las opciones marcadas en la parrilla antes de ofrecerlas o emitirlas.',
   },
   { v: 'poliza_declarada', label: 'Subió una póliza de otra compañía', origen: 'cliente', riesgo: null },
   { v: 'sugerencia', label: 'Escribió una sugerencia', origen: 'cliente', riesgo: null },

@@ -231,10 +231,12 @@ export function validarTarea(
 // ── Alta y edición a mano (Fase 1 del rediseño de la ficha, 24/09/2026) ─────
 
 /** Los del enum `tipo_seguro` de la BD, en su orden. */
-export const RAMOS_OPORTUNIDAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] as const
+export const RAMOS_OPORTUNIDAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'empresas', 'rc_profesional', 'dyo', 'flotas', 'transporte_mercancias', 'ciberriesgos', 'decenal', 'embarcaciones', 'mascotas', 'impago_alquiler', 'viaje', 'caucion', 'otros'] as const
 export type RamoOportunidad = (typeof RAMOS_OPORTUNIDAD)[number]
 /** Con qué estado puede nacer una oportunidad a mano: por contactar o ya interesado. */
 export const ESTADOS_ALTA: readonly EstadoOportunidad[] = ['competencia', 'en_negociacion']
+/** Los que además admite un alta que abre el servidor (`validarAltaOportunidad(…, { desdeServidor: true })`). */
+export const ESTADOS_ALTA_SERVIDOR: readonly EstadoOportunidad[] = [...ESTADOS_ALTA, 'pendiente_cliente']
 
 export type AltaValida = {
   ramo: RamoOportunidad
@@ -247,8 +249,15 @@ export type AltaValida = {
   /** El coche (auto/moto): identifica el seguro cuando falta el número y da nombre a la oportunidad. */
   matricula: string | null
   vehiculo: string | null
+  /** Lo que da el bonus (auto/moto), leído de la póliza que tiene hoy. `null` = no se sabe. */
+  seguroAnterior: SeguroAnterior | null
   /** El primer paso: nace con él, o no nace. */
   tarea: TareaValida
+  /**
+   * Póliza de concesionario / financiada (03/10/2026): el motivo leído («mediador RCI…», «cesión
+   * de derechos»). `null` = no consta que lo sea (no «se sabe que no»).
+   */
+  financiada: string | null
 }
 
 /**
@@ -259,18 +268,24 @@ export type AltaValida = {
  * de Vencimientos: eso lo dice la pantalla, no se inventa una fecha.
  */
 export function validarAltaOportunidad(
-  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; matricula?: unknown; vehiculo?: unknown; tipoTarea?: unknown; fechaTarea?: unknown; nota?: unknown },
+  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; matricula?: unknown; vehiculo?: unknown; seguroAnterior?: unknown; tipoTarea?: unknown; prioridadTarea?: unknown; fechaTarea?: unknown; nota?: unknown; financiada?: unknown },
   hoy: Date,
+  /**
+   * `desdeServidor` (06/10/2026): un alta que abre el SERVIDOR (lead web de auto/moto) puede nacer además en
+   * `pendiente_cliente` (esperando a que el cliente rellene el enlace). Desde la pantalla, nunca.
+   */
+  opciones: { desdeServidor?: boolean } = {},
 ): { ok: true; alta: AltaValida } | { ok: false; motivo: string } {
   const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
   if (!ramo) return { ok: false, motivo: 'Elige el ramo.' }
-  const estado = d.estado === undefined ? 'en_negociacion' : ESTADOS_ALTA.find(e => e === d.estado)
+  const permitidos = opciones.desdeServidor ? ESTADOS_ALTA_SERVIDOR : ESTADOS_ALTA
+  const estado = d.estado === undefined ? 'en_negociacion' : permitidos.find(e => e === d.estado)
   if (!estado) return { ok: false, motivo: 'Una oportunidad nueva nace «por contactar» o «interesado».' }
   const campos = camposEditables(d)
   if (!campos.ok) return campos
   const nota = texto(d.nota, 2000)
   const t = validarTarea(
-    { tipo: d.tipoTarea ?? 'llamada', prioridad: 'media', observaciones: nota ?? `Primer contacto: ${ramo.replace('_', ' ')}`, fechaLimite: d.fechaTarea },
+    { tipo: d.tipoTarea ?? 'llamada', prioridad: d.prioridadTarea ?? 'media', observaciones: nota ?? `Primer contacto: ${ramo.replace('_', ' ')}`, fechaLimite: d.fechaTarea },
     hoy,
   )
   if (!t.ok) return { ok: false, motivo: `Primer paso: ${t.motivo}` }
@@ -285,9 +300,80 @@ export function validarAltaOportunidad(
       numeroPoliza: texto(d.numeroPoliza, 60),
       matricula: claveMatricula(texto(d.matricula, 20)),
       vehiculo: texto(d.vehiculo, 80),
+      seguroAnterior: seguroAnteriorDe(d.seguroAnterior),
       tarea: t.tarea,
+      financiada: texto(d.financiada, 200),
     },
   }
+}
+
+/**
+ * El historial de la póliza que tiene hoy (29/09/2026): lo que da el bonus al tarificar auto o
+ * moto. Sale de la lectura de su póliza y se guarda con la oportunidad para no volver a teclearlo.
+ * Tres estados en cada campo: `null` = el documento no lo dice; `0` siniestros es un dato.
+ */
+export type SeguroAnterior = {
+  /** Código DGS de la compañía (C0058), si el documento lo trae literalmente. */
+  codigoDgs: string | null
+  fechaEfecto: string | null
+  aniosSinSiniestros: number | null
+  siniestrosUltimos5: number | null
+  // ── Identificación de esa póliza (03/10/2026, imputar el bonus a un vehículo NUEVO) ──
+  // Opcionales a propósito: ausente o `null` = «no se sabe» (nunca «no hay»). Lo guardado antes
+  // de esta fecha no los trae y sigue siendo válido.
+  /** Nº de la póliza: con él la compañía nueva contrasta el historial en SINCO. */
+  numeroPoliza?: string | null
+  /** Matrícula del vehículo de ESA póliza (no la del vehículo nuevo), normalizada. */
+  matricula?: string | null
+  /** Canal por el que se contrató: agente, banco o financiera tal cual se lee («RCI BANQUE»). */
+  canal?: string | null
+  /** `true` = cesión de derechos / beneficiario preferente a favor de una financiera; `false` = dice que no. */
+  cesionDerechos?: boolean | null
+  /** Modalidad leída (terceros, terceros ampliado, todo riesgo…), texto tal cual. */
+  modalidad?: string | null
+  // ── Plurianual (03/10/2026): para anualizar la prima y marcar el objetivo prioritario ──
+  /** `true` = póliza de varios años pagada de una vez (pago único); `false` = dice que no; ausente/`null` = no se sabe. */
+  pagoUnico?: boolean | null
+  /**
+   * Fin del periodo TAL COMO LO DICE EL DOCUMENTO (aaaa-mm-dd). No es `oportunidades.fecha_fin_vigencia`,
+   * que se corre de año en año hasta el próximo ciclo: con esa, el periodo efecto→vencimiento mentiría.
+   */
+  fechaVencimiento?: string | null
+}
+
+function entero(v: unknown, max: number): number | null {
+  const n = typeof v === 'string' && /^\d{1,3}$/.test(v.trim()) ? Number(v.trim()) : v
+  return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= max ? n : null
+}
+
+/** Lo sanea: un valor con forma rara se queda en `null`; sin ningún dato, `null` entero. */
+export function seguroAnteriorDe(v: unknown): SeguroAnterior | null {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  const codigo = typeof o.codigoDgs === 'string' ? o.codigoDgs.trim().toUpperCase() : ''
+  const s: SeguroAnterior = {
+    codigoDgs: /^[CM]\d{4}$/.test(codigo) ? codigo : null,
+    fechaEfecto: fechaIso(o.fechaEfecto),
+    aniosSinSiniestros: entero(o.aniosSinSiniestros, 70),
+    siniestrosUltimos5: entero(o.siniestrosUltimos5, 50),
+  }
+  // Los campos de identificación solo viajan si se saben: lo guardado antes del 03/10/2026 (y sus
+  // tests) siguen teniendo exactamente las cuatro claves de siempre.
+  const extra: Partial<SeguroAnterior> = {}
+  const numeroPoliza = texto(o.numeroPoliza, 60)
+  if (numeroPoliza) extra.numeroPoliza = numeroPoliza
+  const matricula = claveMatricula(texto(o.matricula, 20))
+  if (matricula) extra.matricula = matricula
+  const canal = texto(o.canal, 120)
+  if (canal) extra.canal = canal
+  if (typeof o.cesionDerechos === 'boolean') extra.cesionDerechos = o.cesionDerechos
+  const modalidad = texto(o.modalidad, 60)
+  if (modalidad) extra.modalidad = modalidad
+  if (typeof o.pagoUnico === 'boolean') extra.pagoUnico = o.pagoUnico
+  const fechaVencimiento = fechaIso(o.fechaVencimiento)
+  if (fechaVencimiento) extra.fechaVencimiento = fechaVencimiento
+  const todo: SeguroAnterior = { ...s, ...extra }
+  return Object.values(todo).every(x => x === null) ? null : todo
 }
 
 export type EdicionValida = {

@@ -22,16 +22,24 @@
 
 import {
   aplicarAccion,
+  companiaLegible,
+  estadoPresupuesto,
   mismoSeguro,
   planLlamada,
+  planLlamadaAnual,
+  planTareaTrasVencimiento,
+  seguroAnteriorDe,
   validarAltaOportunidad,
   validarEdicionOportunidad,
   validarTarea,
   type CambiosOportunidad,
   type EstadoOportunidad,
+  type EstadoPresupuesto,
   type PeticionAccion,
+  type SeguroAnterior,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
+import { puedeEscribirDatosVehiculo } from './oportunidad-vehiculo-previo'
 import { prismaAsegura } from './asegura-db'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -346,6 +354,42 @@ export async function crearTarea(
   return { ok: true, tareaId: r.tareaId }
 }
 
+/**
+ * Recurrencia anual de la llamada (06/10/2026; también tras «no contesta»/«otro día»/«quiere precio» el
+ * 07/10/2026): lo decide `planLlamadaAnual` (idempotente por la llamada pendiente más lejana). Se llama
+ * DENTRO de la transacción de quien cierra la llamada; la oportunidad se bloquea (`for update`) para que
+ * dos cierres a la vez no dupliquen, y se relee aquí para ver su estado ya tras cualquier transición.
+ */
+async function dejarLlamadaAnual(
+  tx: Tx, correduriaId: string, oportunidadId: string, clienteId: string | null,
+  tipoTareaCerrada: string, actor: string, hoyIso: string,
+): Promise<void> {
+  const [op] = await tx.$queryRaw<{ estado: string; aparcadaHasta: Date | null; fechaFin: Date | null }[]>(Prisma.sql`
+    select estado::text as estado, aparcada_hasta as "aparcadaHasta", fecha_fin_vigencia as "fechaFin"
+    from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+  if (!op) return
+  const [{ ultima }] = await tx.$queryRaw<{ ultima: string | null }[]>(Prisma.sql`
+    select max((fecha_limite at time zone 'Europe/Madrid')::date)::text as ultima from gestiones
+    where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
+      and tipo::text = 'llamada' and estado::text <> 'cerrada'`)
+  const plan = planLlamadaAnual({
+    tipoTareaCerrada, estado: op.estado, aparcadaHasta: op.aparcadaHasta?.toISOString().slice(0, 10) ?? null,
+    fechaFinVigencia: op.fechaFin?.toISOString().slice(0, 10) ?? null, ultimaLlamadaPendiente: ultima, hoy: hoyIso,
+  })
+  if (plan.accion !== 'crear') return
+  const [nueva] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+    insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
+    values (${correduriaId}::uuid, cast('llamada' as gestion_tipo), cast('media' as gestion_prioridad), 'pendiente',
+            ${`Llamar antes del vencimiento (${plan.vence}) — ciclo anual`}, (${plan.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid',
+            ${clienteId}::uuid, ${oportunidadId}::uuid, 'central:seguimiento')
+    returning id::text as id`)
+  await tx.$executeRaw(Prisma.sql`
+    insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+    values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'tarea_creada',
+            cast(${op.estado} as estado_comercial), cast(${op.estado} as estado_comercial),
+            ${JSON.stringify({ tareaId: nueva.id, tipo: 'llamada', fechaLimite: plan.fecha, ciclo: plan.vence, recurrencia: 'anual' })}::jsonb, ${actor})`)
+}
+
 export async function cerrarTarea(
   correduriaId: string,
   tareaId: string,
@@ -355,8 +399,8 @@ export async function cerrarTarea(
   if (!UUID.test(tareaId)) return { ok: false, estado: 'invalido', motivo: 'id de tarea no válido', status: 422 }
   const db = prismaAsegura()
   const r = await db.$transaction(async tx => {
-    const [t] = await tx.$queryRaw<{ oportunidadId: string | null; clienteId: string | null; estado: string }[]>(Prisma.sql`
-      select oportunidad_id::text as "oportunidadId", cliente_id::text as "clienteId", estado::text as estado
+    const [t] = await tx.$queryRaw<{ oportunidadId: string | null; clienteId: string | null; estado: string; tipo: string }[]>(Prisma.sql`
+      select oportunidad_id::text as "oportunidadId", cliente_id::text as "clienteId", estado::text as estado, tipo::text as tipo
       from gestiones where id = ${tareaId}::uuid and correduria_id = ${correduriaId}::uuid
         and oportunidad_id is not null for update`)
     if (!t) return 'no_encontrado' as const
@@ -372,6 +416,7 @@ export async function cerrarTarea(
         select ${correduriaId}::uuid, o.id, 'tarea_cerrada', o.estado, o.estado,
                ${JSON.stringify({ tareaId, conResultado: resultado !== null })}::jsonb, ${actor}
         from oportunidades o where o.id = ${t.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`)
+      await dejarLlamadaAnual(tx, correduriaId, t.oportunidadId, t.clienteId, t.tipo, actor, hoyUtc().toISOString().slice(0, 10))
     }
     return t
   })
@@ -391,7 +436,7 @@ export async function cerrarTarea(
 export async function registrarLlamada(
   correduriaId: string,
   oportunidadId: string,
-  datos: { resultado?: unknown; nota?: unknown; volverEl?: unknown; motivo?: unknown },
+  datos: { resultado?: unknown; nota?: unknown; volverEl?: unknown; motivo?: unknown; canal?: unknown },
   actor: string,
   hoy: Date = hoyUtc(),
 ): Promise<{ ok: true; resultado: string; siguienteTareaId: string | null } | Fallo> {
@@ -420,11 +465,23 @@ export async function registrarLlamada(
       where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
         and origen_trigger = 'central:seguimiento' and tipo::text = 'llamada' and estado <> 'cerrada'
         and fecha_limite <= (${hoyIso}::date + time '23:59:59') at time zone 'Europe/Madrid'`)
+    // La respuesta queda como gestión CERRADA del canal por el que llegó (llamada o WhatsApp).
     await tx.$executeRaw(Prisma.sql`
       insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
-      values (${correduriaId}::uuid, 'llamada', 'media', 'cerrada', ${plan.registro},
+      values (${correduriaId}::uuid, cast(${plan.canal} as gestion_tipo), 'media', 'cerrada', ${plan.registro},
               (${hoyIso}::date + time '23:59:59') at time zone 'Europe/Madrid',
               ${antes.clienteId}::uuid, ${oportunidadId}::uuid, 'central:seguimiento')`)
+    if (plan.optOut) {
+      // La baja que pidió: sin WhatsApp (la lista de leads deja de ver su teléfono) y sin correo.
+      // `coalesce`: una baja anterior conserva su fecha y su origen.
+      await tx.$executeRaw(Prisma.sql`
+        update clientes set
+          wa_opt_out_at = coalesce(wa_opt_out_at, now()),
+          wa_opt_out_source = coalesce(wa_opt_out_source, ${`respuesta_${plan.canal}`}),
+          email_opt_out_at = coalesce(email_opt_out_at, now()),
+          email_opt_out_source = coalesce(email_opt_out_source, ${`respuesta_${plan.canal}`})
+        where id = ${antes.clienteId}::uuid and correduria_id = ${correduriaId}::uuid`)
+    }
     let siguienteTareaId: string | null = null
     if (plan.siguiente) {
       const t = plan.siguiente
@@ -436,15 +493,19 @@ export async function registrarLlamada(
         returning id::text as id`)
       siguienteTareaId = nueva.id
     }
+    // Solo una LLAMADA cuenta para la recurrencia anual (no un WhatsApp). Las que aparcan la oportunidad
+    // (no_interesa, número equivocado, baja) las deja en 'aparcada' el helper: vuelven solas a su aniversario.
+    if (plan.canal === 'llamada') await dejarLlamadaAnual(tx, correduriaId, oportunidadId, antes.clienteId, 'llamada', actor, hoyIso)
     await tx.$executeRaw(Prisma.sql`
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
-      values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'llamada',
+      values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${plan.canal},
               cast(${antes.estado} as estado_comercial), cast(${despues.estado} as estado_comercial),
-              ${JSON.stringify({ resultado: plan.resultado, siguienteTareaId, fechaSiguiente: plan.siguiente?.fechaLimite ?? null })}::jsonb, ${actor})`)
-    return { ok: true as const, clienteId: antes.clienteId, registro: plan.resultado, siguienteTareaId }
+              ${JSON.stringify({ resultado: plan.resultado, canal: plan.canal, optOut: plan.optOut, siguienteTareaId, fechaSiguiente: plan.siguiente?.fechaLimite ?? null })}::jsonb, ${actor})`)
+    return { ok: true as const, clienteId: antes.clienteId, registro: plan.resultado, canal: plan.canal, siguienteTareaId }
   })
   if (!r.ok) return r
-  await anotarEnFicha(correduriaId, r.clienteId, `${ETIQUETA_LLAMADA[r.registro] ?? 'Llamada'} — por ${actor}`)
+  const etiqueta = ETIQUETA_LLAMADA[r.registro] ?? 'Llamada'
+  await anotarEnFicha(correduriaId, r.clienteId, `${r.canal === 'whatsapp' ? etiqueta.replace(/^Llamada/, 'WhatsApp') : etiqueta} — por ${actor}`)
   return { ok: true, resultado: r.registro, siguienteTareaId: r.siguienteTareaId }
 }
 
@@ -504,6 +565,8 @@ const ETIQUETA_LLAMADA: Record<string, string> = {
   otro_dia: 'Llamada: pide que le llamen otro día',
   no_contesta: 'Llamada: no contesta',
   no_interesa: 'Llamada: no le interesa (aparcada hasta el año que viene)',
+  numero_equivocado: 'Llamada: número equivocado (aparcada hasta el año que viene; corrige el teléfono)',
+  baja: 'Llamada: pidió no recibir más mensajes (baja de WhatsApp y correo; aparcada)',
 }
 
 export type TareaDeHoy = {
@@ -567,6 +630,36 @@ function sqlNumeroPoliza(p: string): string {
 
 /** Origen de las oportunidades abiertas a mano desde la ficha. */
 export const ORIGEN_MANUAL = 'ficha:manual'
+/** Oportunidad abierta sola por un lead del formulario web de auto/moto (06/10/2026, `lib/lead-web-solicitud.ts`). */
+export const ORIGEN_LEAD_WEB = 'web:lead'
+
+export type OpcionesAltaOportunidad = {
+  hoy?: Date
+  /** De dónde nace (`info_riesgo.origen`): a mano por defecto; `documento:*` si la abre un documento subido. */
+  origen?: string
+  /**
+   * `info_riesgo.datosVehiculo` leído de un documento (05/10/2026), ya estructurado y SIN confirmar. En una oportunidad nueva
+   * se escribe tal cual; en una ya abierta solo si no tenía `datosVehiculo` (lo de la corredora nunca se pisa).
+   */
+  datosVehiculo?: Record<string, unknown> | null
+  // ── Solo altas que abre el SERVIDOR (lead web, 06/10/2026), nunca desde la pantalla ──
+  /** Admite nacer en `pendiente_cliente` (`validarAltaOportunidad(…, { desdeServidor })`). */
+  desdeServidor?: boolean
+  /** La columna `oportunidades.fuente` (por defecto `venta_directa`). */
+  fuente?: 'web'
+  /** `oportunidad_historial.accion` del alta (texto libre; por defecto `creada_mano`). */
+  accionHistorial?: 'creada_web'
+  /**
+   * Máximo de oportunidades con ESTE `origen` creadas hoy (Europe/Madrid), contado en BD dentro de la misma
+   * transacción y bajo cerrojo (dos leads a la vez no se cuelan los dos con 19).
+   */
+  topeDiario?: number
+  /**
+   * Se ejecuta DENTRO de la transacción, tras crear (solo si se crea; nunca con una `duplicada`). Si lanza,
+   * no queda nada: ni la oportunidad, ni su tarea, ni su historial, ni cuenta para el tope.
+   */
+  trasCrear?: (tx: Prisma.TransactionClient, oportunidadId: string) => Promise<void>
+}
 
 /**
  * Abre una oportunidad a mano con su primer paso, en UNA transacción:
@@ -581,35 +674,88 @@ export async function crearOportunidad(
   clienteId: string,
   datos: Parameters<typeof validarAltaOportunidad>[0],
   actor: string,
-  hoy: Date = hoyUtc(),
-): Promise<{ ok: true; id: string } | Fallo | { ok: false; estado: 'duplicada'; motivo: string; status: 409; id: string }> {
+  opciones: OpcionesAltaOportunidad = {},
+): Promise<{ ok: true; id: string } | Fallo | { ok: false; estado: 'duplicada'; motivo: string; status: 409; id: string; completada: boolean } | { ok: false; estado: 'tope'; motivo: string; status: 429 }> {
+  const { hoy = hoyUtc(), origen = ORIGEN_MANUAL, datosVehiculo = null } = opciones
   if (!UUID.test(clienteId)) return { ok: false, estado: 'invalido', motivo: 'id de cliente no válido', status: 422 }
-  const v = validarAltaOportunidad(datos, hoy)
+  const v = validarAltaOportunidad(datos, hoy, { desdeServidor: opciones.desdeServidor === true })
   if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
   const a = v.alta
+  const fuente = opciones.fuente ?? 'venta_directa'
+  const accionHistorial = opciones.accionHistorial ?? 'creada_mano'
   const r = await prismaAsegura().$transaction(async tx => {
     const [cli] = await tx.$queryRaw<{ ok: number }[]>(Prisma.sql`
       select 1 as ok from clientes
       where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`)
     if (!cli) return { tipo: 'sin_cliente' as const }
     await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`oportunidad:${clienteId}:${a.ramo}`}))`)
-    const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null }[]>(Prisma.sql`
+    const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; vehiculo: string | null }[]>(Prisma.sql`
       select id::text as id, nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora,
              ${Prisma.raw(sqlNumeroPoliza(''))} as "numeroPoliza",
-             nullif(trim(info_riesgo->>'matricula'), '') as matricula from oportunidades
+             nullif(trim(info_riesgo->>'matricula'), '') as matricula,
+             nullif(trim(info_riesgo->>'vehiculo'), '') as vehiculo from oportunidades
       where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid
         and tipo::text = ${a.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
       order by created_at`)
     // Otro nº de póliza, o sin él otra compañía = otro seguro (el segundo
     // coche): se abre aparte. Sin dato para saberlo, cuenta como el mismo.
     const ya = abiertas.find(o => mismoSeguro(a, o) !== 'otra')
-    if (ya) return { tipo: 'duplicada' as const, id: ya.id }
-    const competencia = a.aseguradora ? JSON.stringify({ aseguradora: a.aseguradora }) : null
+    if (ya) {
+      // La póliza leída es de ESE seguro: su bonus y su número se quedan en la que ya había
+      // (29/09/2026). Sin esto, subir la póliza de un cliente con la oportunidad ya abierta perdía
+      // lo leído. Número y compañía solo rellenan un hueco; el bonus, más nuevo, sustituye al anterior.
+      // Una compañía guardada que no es un nombre («P.P.», la antefirma de una póliza MAPFRE leída el
+      // 03/10/2026) es un valor de cajón: cuenta como hueco.
+      const parche = {
+        ...(a.seguroAnterior ? { seguroAnterior: a.seguroAnterior } : {}),
+        ...(a.aseguradora && !companiaLegible(ya.aseguradora, null) ? { aseguradora: a.aseguradora } : {}),
+      }
+      // Póliza de concesionario/financiada: la marca se añade (no se quita nunca desde aquí).
+      const riesgo = a.financiada ? JSON.stringify({ financiada: a.financiada }) : null
+      // Si ya tenía el coche en las claves antiguas, el nuevo `datosVehiculo` solo entra si es el mismo coche.
+      const vehiculoNuevo = datosVehiculo && puedeEscribirDatosVehiculo(ya, datosVehiculo) ? JSON.stringify({ datosVehiculo }) : null
+      const numero = a.numeroPoliza && !ya.numeroPoliza ? a.numeroPoliza : null
+      // Vencimiento y prima solo rellenan un hueco (29/09/2026): un documento subido después no pisa
+      // lo que Alberto ya había anotado, pero tampoco se pierde si faltaba.
+      const [huecos] = await tx.$queryRaw<{ sinFecha: boolean; sinPrima: boolean }[]>(Prisma.sql`
+        select fecha_fin_vigencia is null as "sinFecha", prima_bruta is null as "sinPrima"
+        from oportunidades where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+      const fecha = a.fechaFinVigencia && huecos?.sinFecha ? a.fechaFinVigencia : null
+      const prima = a.prima !== null && huecos?.sinPrima ? a.prima : null
+      if (Object.keys(parche).length > 0 || numero || fecha || prima !== null || riesgo || vehiculoNuevo) {
+        await tx.$executeRaw(Prisma.sql`
+          update oportunidades set
+            poliza_competencia = case when ${Object.keys(parche).length === 0} then poliza_competencia
+              else coalesce(poliza_competencia, '{}'::jsonb) || ${JSON.stringify(parche)}::jsonb end,
+            info_riesgo = case when ${riesgo}::jsonb is null and ${vehiculoNuevo}::jsonb is null then info_riesgo
+              else coalesce(info_riesgo, '{}'::jsonb)
+                || coalesce(${riesgo}::jsonb, '{}'::jsonb)
+                || case when info_riesgo->'datosVehiculo' is not null then '{}'::jsonb else coalesce(${vehiculoNuevo}::jsonb, '{}'::jsonb) end
+              end,
+            numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${numero}),
+            fecha_fin_vigencia = coalesce(fecha_fin_vigencia, ${fecha}::date),
+            prima_bruta = coalesce(prima_bruta, ${prima}::numeric)
+          where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+        return { tipo: 'duplicada' as const, id: ya.id, completada: true }
+      }
+      return { tipo: 'duplicada' as const, id: ya.id, completada: false }
+    }
+    if (opciones.topeDiario !== undefined) {
+      await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`tope-oportunidad:${correduriaId}:${origen}`}))`)
+      const [n] = await tx.$queryRaw<{ n: number }[]>(Prisma.sql`
+        select count(*)::int as n from oportunidades
+        where correduria_id = ${correduriaId}::uuid and info_riesgo->>'origen' = ${origen}
+          and created_at >= ((now() at time zone 'Europe/Madrid')::date)::timestamp at time zone 'Europe/Madrid'`)
+      if ((n?.n ?? 0) >= opciones.topeDiario) return { tipo: 'tope' as const }
+    }
+    // El historial de la póliza que tiene hoy (lo que da el bonus) viaja con la compañía: es la misma póliza.
+    const comp = { ...(a.aseguradora ? { aseguradora: a.aseguradora } : {}), ...(a.seguroAnterior ? { seguroAnterior: a.seguroAnterior } : {}) }
+    const competencia = Object.keys(comp).length > 0 ? JSON.stringify(comp) : null
     const [o] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
       insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_competencia, info_riesgo, numero_poliza)
-      values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${a.ramo} as tipo_seguro), 'venta_directa',
+      values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${a.ramo} as tipo_seguro), cast(${fuente} as fuente_origen),
               cast(${a.estado} as estado_comercial), ${a.fechaFinVigencia}::date, ${a.prima}::numeric,
-              ${competencia}::jsonb, ${JSON.stringify({ origen: ORIGEN_MANUAL, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}) })}::jsonb,
+              ${competencia}::jsonb, ${JSON.stringify({ origen, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}), ...(a.financiada ? { financiada: a.financiada } : {}), ...(datosVehiculo ? { datosVehiculo } : {}) })}::jsonb,
               ${a.numeroPoliza})
       returning id::text as id`)
     await tx.$executeRaw(Prisma.sql`
@@ -620,16 +766,20 @@ export async function crearOportunidad(
     // Sin la nota libre: el historial no se puede borrar (supresión RGPD).
     await tx.$executeRaw(Prisma.sql`
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
-      values (${correduriaId}::uuid, ${o.id}::uuid, 'creada_mano', null, cast(${a.estado} as estado_comercial),
-              ${JSON.stringify({ ramo: a.ramo, fechaFinVigencia: a.fechaFinVigencia, prima: a.prima, conCompania: a.aseguradora !== null, primerPaso: { tipo: a.tarea.tipo, fecha: a.tarea.fechaLimite } })}::jsonb,
+      values (${correduriaId}::uuid, ${o.id}::uuid, ${accionHistorial}, null, cast(${a.estado} as estado_comercial),
+              ${JSON.stringify({ ramo: a.ramo, fechaFinVigencia: a.fechaFinVigencia, prima: a.prima, conCompania: a.aseguradora !== null, primerPaso: { tipo: a.tarea.tipo, fecha: a.tarea.fechaLimite }, ...(origen !== ORIGEN_MANUAL ? { origen } : {}) })}::jsonb,
               ${actor})`)
+    if (opciones.trasCrear) await opciones.trasCrear(tx, o.id)
     return { tipo: 'ok' as const, id: o.id }
   })
   if (r.tipo === 'sin_cliente') return { ok: false, estado: 'no_encontrado', motivo: 'Ese cliente no es de esta correduría.', status: 404 }
+  if (r.tipo === 'tope') return { ok: false, estado: 'tope', motivo: `Tope diario de ${opciones.topeDiario} oportunidades de este origen alcanzado.`, status: 429 }
   if (r.tipo === 'duplicada') {
-    return { ok: false, estado: 'duplicada', motivo: `Ya tiene una oportunidad de ${a.ramo.replace('_', ' ')} abierta: sigue esa.`, status: 409, id: r.id }
+    const extra = r.completada ? ' Le he guardado lo leído de la póliza (compañía, nº y bonus que faltaran).' : ''
+    return { ok: false, estado: 'duplicada', motivo: `Ya tiene una oportunidad de ${a.ramo.replace('_', ' ')} abierta: sigue esa.${extra}`, status: 409, id: r.id, completada: r.completada }
   }
-  await anotarEnFicha(correduriaId, clienteId, `Oportunidad ${a.ramo} abierta a mano; primer paso (${a.tarea.tipo}) el ${a.tarea.fechaLimite} — por ${actor}`)
+  const como = origen === ORIGEN_MANUAL ? 'a mano' : origen === ORIGEN_LEAD_WEB ? 'sola desde el formulario web' : 'sola desde un documento subido'
+  await anotarEnFicha(correduriaId, clienteId, `Oportunidad ${a.ramo} abierta ${como}; primer paso (${a.tarea.tipo}) el ${a.tarea.fechaLimite} — por ${actor}`)
   return { ok: true, id: r.id }
 }
 
@@ -643,7 +793,10 @@ export async function editarOportunidad(
   id: string,
   datos: Parameters<typeof validarEdicionOportunidad>[0],
   actor: string,
-): Promise<{ ok: true; oportunidad: OportunidadSeguimiento } | Fallo> {
+  // `reprogramar`: al cambiar el vencimiento, la próxima tarea de seguimiento va a 45 días antes
+  // (`planTareaTrasVencimiento`). Opcional: la corrección de otros campos no toca las tareas.
+  opciones: { reprogramar?: boolean; hoy?: Date } = {},
+): Promise<{ ok: true; oportunidad: OportunidadSeguimiento; tarea: { accion: 'crear' | 'mover'; fecha: string } | null } | Fallo> {
   if (!UUID.test(id)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
   const v = validarEdicionOportunidad(datos)
   if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
@@ -681,7 +834,7 @@ export async function editarOportunidad(
     if (c.fechaFinVigencia !== undefined && c.fechaFinVigencia !== finAntes) detalle.fechaFinVigencia = { antes: finAntes, despues: c.fechaFinVigencia }
     if (c.prima !== undefined && c.prima !== fila.prima) detalle.prima = { antes: fila.prima, despues: c.prima }
     if (c.aseguradora !== undefined && c.aseguradora !== fila.aseguradora) detalle.aseguradora = { cambiado: true, vacio: c.aseguradora === null }
-    if (Object.keys(detalle).length === 0) return { ok: true as const, sinCambios: true as const, clienteId: fila.clienteId }
+    if (Object.keys(detalle).length === 0) return { ok: true as const, sinCambios: true as const, clienteId: fila.clienteId, tarea: null }
     await tx.$executeRaw(Prisma.sql`
       update oportunidades set
         tipo = case when ${c.ramo !== undefined} then cast(${c.ramo ?? null} as tipo_seguro) else tipo end,
@@ -693,17 +846,48 @@ export async function editarOportunidad(
           else jsonb_set(coalesce(poliza_competencia, '{}'::jsonb), '{aseguradora}', to_jsonb(${c.aseguradora ?? ''}::text)) end,
         updated_at = now()
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+    let tarea: { accion: 'crear' | 'mover'; fecha: string } | null = null
+    if (opciones.reprogramar && detalle.fechaFinVigencia) {
+      // La próxima de seguimiento (la misma que enseña la tarjeta). Se MUEVE, no se cierra: una
+      // llamada cerrada cuenta como intento en `planLlamada`.
+      const [prox] = await tx.$queryRaw<{ id: string; fecha: string }[]>(Prisma.sql`
+        select id::text as id, to_char(fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD') as fecha
+        from gestiones
+        where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
+          and origen_trigger = 'central:seguimiento' and estado::text <> 'cerrada' and fecha_limite is not null
+        order by fecha_limite limit 1 for update`)
+      const plan = planTareaTrasVencimiento(c.fechaFinVigencia, prox ?? null, dia(opciones.hoy ?? hoyUtc())!)
+      if (plan.accion === 'mover') {
+        await tx.$executeRaw(Prisma.sql`
+          update gestiones set fecha_limite = (${plan.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid', updated_at = now()
+          where id = ${plan.tareaId}::uuid and correduria_id = ${correduriaId}::uuid`)
+        detalle.tarea = { tareaId: plan.tareaId, antes: plan.desde, despues: plan.fecha }
+        tarea = { accion: 'mover', fecha: plan.fecha }
+      } else if (plan.accion === 'crear') {
+        const [nueva] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+          insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
+          values (${correduriaId}::uuid, cast('llamada' as gestion_tipo), cast('media' as gestion_prioridad), 'pendiente',
+                  ${`Llamar antes del vencimiento (${c.fechaFinVigencia})`}, (${plan.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid',
+                  ${fila.clienteId}::uuid, ${id}::uuid, 'central:seguimiento')
+          returning id::text as id`)
+        detalle.tarea = { tareaId: nueva.id, creada: plan.fecha }
+        tarea = { accion: 'crear', fecha: plan.fecha }
+      }
+    }
     await tx.$executeRaw(Prisma.sql`
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
       values (${correduriaId}::uuid, ${id}::uuid, 'editada', cast(${fila.estado} as estado_comercial), cast(${fila.estado} as estado_comercial),
               ${JSON.stringify(detalle)}::jsonb, ${actor})`)
-    return { ok: true as const, sinCambios: false as const, clienteId: fila.clienteId, campos: Object.keys(detalle) }
+    return { ok: true as const, sinCambios: false as const, clienteId: fila.clienteId, campos: Object.keys(detalle).filter(k => k !== 'tarea'), tarea }
   })
   if (!r.ok) return r
-  if (!r.sinCambios) await anotarEnFicha(correduriaId, r.clienteId, `Oportunidad corregida (${r.campos.join(', ')}) — por ${actor}`)
+  if (!r.sinCambios) {
+    const extra = r.tarea ? `; llamada ${r.tarea.accion === 'mover' ? 'movida' : 'programada'} al ${r.tarea.fecha}` : ''
+    await anotarEnFicha(correduriaId, r.clienteId, `Oportunidad corregida (${r.campos.join(', ')})${extra} — por ${actor}`)
+  }
   const leida = await leerOportunidad(correduriaId, id)
   if (!leida) return { ok: false, estado: 'no_encontrado', motivo: 'Esa oportunidad no es de esta correduría.', status: 404 }
-  return { ok: true, oportunidad: leida.oportunidad }
+  return { ok: true, oportunidad: leida.oportunidad, tarea: r.tarea }
 }
 
 export type OportunidadDeCliente = OportunidadSeguimiento & {
@@ -713,14 +897,88 @@ export type OportunidadDeCliente = OportunidadSeguimiento & {
   /** El coche de esa oportunidad (auto/moto), si se leyó: distingue dos del mismo cliente. */
   matricula: string | null
   vehiculo: string | null
+  /** El historial de la póliza que tiene hoy (lo que da el bonus), si se leyó. */
+  seguroAnterior: SeguroAnterior | null
   prima: number | null
   fuente: string | null
   creada: string
   /** La tarea pendiente más próxima; `null` = no tiene ninguna (una abierta así está huérfana). */
   proximaTarea: { tipo: string; fechaLimite: string } | null
+  /** La póliza de la que cuelga (renovación/recaptación), o `null`: casa la oportunidad con SU tarjeta. */
+  polizaId: string | null
+  /** Sus precios pedidos (P1…Pn) y el último presupuesto al cliente. `variantes: 0` = aún no se ha pedido precio. */
+  presupuestos: ResumenPresupuestos
+  /**
+   * La emisión más reciente de esta oportunidad en Avant2 que sigue retenida, se rechazó o se
+   * acuñó (`codeoscopic_projects`). `null` = ningún proyecto emitido cuelga de ella. Una
+   * `riesgo_condicionado` es «retenida» DERIVADA: proyecto sin póliza (no hay estado propio).
+   */
+  emision: { projectId: string; estado: 'riesgo_condicionado' | 'rechazada' | 'emitida'; compania: string | null; desde: string } | null
+}
+
+/**
+ * El último presupuesto preparado para el cliente. El estado sale de `estadoPresupuesto()`, la MISMA
+ * regla que la lista de presupuestos: con otra, la línea de la oportunidad y la lista de debajo se
+ * contradirían (un enlace de WhatsApp sin confirmar, uno caducado, uno elegido).
+ */
+export type HitosPresupuesto = { creadoAt: string; estado: EstadoPresupuesto }
+
+/** Lo pedido para un riesgo. La mejor prima es la de un precio REAL (lo simulado no cuenta). */
+export type ResumenPresupuestos = {
+  variantes: number
+  mejorPrima: number | null
+  mejorCompania: string | null
+  presupuesto: HitosPresupuesto | null
+}
+
+/** Una tarificación del cliente que no cuelga de ninguna oportunidad (las anteriores al 24/09/2026). */
+export type PresupuestoSinOportunidad = {
+  tarificacionId: string
+  creadoAt: string
+  ramo: string | null
+  /** Retarificación de una póliza suya: se abre en su pantalla de retarificar. */
+  polizaId: string | null
+  simulado: boolean
+  mejorPrima: number | null
+  mejorCompania: string | null
+  presupuesto: HitosPresupuesto | null
 }
 
 const TECHO_POR_CLIENTE = 50
+const TECHO_SIN_OPORTUNIDAD = 30
+
+type JsonHitos = {
+  creadoAt: string; venceEl: string; enlaceGeneradoAt: string | null; enviadoAt: string | null; vistoAt: string | null
+  elegidoAt: string | null; aceptadoAt: string | null; emitidoAt: string | null; retiradoAt: string | null
+} | null
+type JsonResumen = { variantes: number; mejorPrima: number | null; mejorCompania: string | null; presupuesto: JsonHitos } | null
+
+/**
+ * Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2` y/o `pr`).
+ * LEFT JOIN desde el 05/10/2026: un presupuesto de OFERTAS no tiene tarificación (`t2` = NULL) y cuelga
+ * de su oportunidad por `pr.oportunidad_id`; con un INNER JOIN desaparecería de la ficha.
+ */
+function sqlHitos(filtro: Prisma.Sql): Prisma.Sql {
+  return Prisma.sql`(select json_build_object('creadoAt', pr.creado_at, 'venceEl', pr.vence_el, 'enlaceGeneradoAt', pr.enlace_generado_at,
+              'enviadoAt', pr.enviado_at, 'vistoAt', pr.visto_at, 'elegidoAt', pr.elegido_at,
+              'aceptadoAt', pr.aceptado_at, 'emitidoAt', pr.emitido_at, 'retiradoAt', pr.retirado_at)
+         from presupuesto pr left join tarificaciones t2 on t2.id = pr.tarificacion_id and t2.correduria_id = pr.correduria_id
+        where ${filtro} order by pr.creado_at desc limit 1)`
+}
+
+function hitos(j: JsonHitos): HitosPresupuesto | null {
+  if (!j) return null
+  return { creadoAt: j.creadoAt, estado: estadoPresupuesto(j, new Date()) }
+}
+
+function resumenPresupuestos(j: JsonResumen): ResumenPresupuestos {
+  return {
+    variantes: j?.variantes ?? 0,
+    mejorPrima: j?.mejorPrima ?? null,
+    mejorCompania: j?.mejorCompania ?? null,
+    presupuesto: hitos(j?.presupuesto ?? null),
+  }
+}
 
 /**
  * Las oportunidades de UN cliente: abiertas primero (las más nuevas arriba), luego las cerradas más
@@ -735,8 +993,12 @@ export async function oportunidadesDeCliente(
   if (!UUID.test(clienteId)) return null
   const filas = await prismaAsegura().$queryRaw<(FilaOportunidad & {
     aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; vehiculo: string | null
+    seguroAnterior: unknown
     prima: number | null; fuente: string | null; creada: Date
     proximaTarea: { tipo: string; fechaLimite: string } | null
+    polizaId: string | null
+    presupuestos: JsonResumen
+    emision: OportunidadDeCliente['emision']
   })[]>(Prisma.sql`
     select o.id::text as id, o.cliente_id::text as "clienteId", o.tipo::text as ramo, o.estado::text as estado,
            o.fecha_fin_vigencia as "fechaFin", o.motivo_perdida as "motivoPerdida",
@@ -747,14 +1009,51 @@ export async function oportunidadesDeCliente(
            ${Prisma.raw(sqlNumeroPoliza('o.'))} as "numeroPoliza",
            nullif(trim(o.info_riesgo->>'matricula'), '') as matricula,
            coalesce(nullif(trim(o.info_riesgo->>'vehiculo'), ''), nullif(trim(concat_ws(' ', o.info_riesgo->>'marca', o.info_riesgo->>'modelo')), '')) as vehiculo,
+           o.poliza_competencia->'seguroAnterior' as "seguroAnterior",
            o.prima_bruta::float8 as prima, o.fuente::text as fuente, o.created_at as creada,
+           o.poliza_id::text as "polizaId",
            (select json_build_object('tipo', g.tipo::text,
                      'fechaLimite', to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD'))
               from gestiones g
              where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
                and g.origen_trigger = 'central:seguimiento'
                and g.estado::text <> 'cerrada' and g.fecha_limite is not null
-             order by g.fecha_limite limit 1) as "proximaTarea"
+             order by g.fecha_limite limit 1) as "proximaTarea",
+           (select json_build_object(
+                     -- Precios pedidos: las tarificaciones de Avant2 + las ofertas de compañías (PDF) vivas.
+                     'variantes', count(distinct t.id)::int
+                       + (select count(*)::int from oportunidad_oferta f
+                           where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id
+                             and f.rol = 'oferta' and f.estado <> 'descartada'),
+                     -- El mejor precio REAL: de Avant2 (no simulado) o de una oferta REVISADA.
+                     'mejorPrima', (select b.prima from (
+                         select x2.prima_eur::float8 as prima, x2.compania from tarificaciones t3
+                           join tarificacion_precios x2 on x2.tarificacion_id = t3.id and x2.prima_eur is not null
+                          where t3.oportunidad_id = o.id and t3.correduria_id = o.correduria_id and not t3.simulado
+                         union all
+                         select f.prima_total::float8, f.compania from oportunidad_oferta f
+                          where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'oferta'
+                            and f.estado = 'revisada' and f.prima_total is not null
+                       ) b order by b.prima asc limit 1),
+                     'mejorCompania', (select b.compania from (
+                         select x2.prima_eur::float8 as prima, x2.compania from tarificaciones t3
+                           join tarificacion_precios x2 on x2.tarificacion_id = t3.id and x2.prima_eur is not null
+                          where t3.oportunidad_id = o.id and t3.correduria_id = o.correduria_id and not t3.simulado
+                         union all
+                         select f.prima_total::float8, f.compania from oportunidad_oferta f
+                          where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'oferta'
+                            and f.estado = 'revisada' and f.prima_total is not null
+                       ) b order by b.prima asc limit 1),
+                     'presupuesto', ${sqlHitos(Prisma.sql`(t2.oportunidad_id = o.id or pr.oportunidad_id = o.id) and pr.correduria_id = o.correduria_id`)})
+              from tarificaciones t
+             where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id) as presupuestos,
+           (select json_build_object('projectId', cp.project_id_codeoscopic, 'estado', cp.estado::text,
+                     'compania', cp.aseguradora,
+                     'desde', to_char(cp.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
+              from codeoscopic_projects cp
+             where cp.oportunidad_id = o.id and cp.correduria_id = o.correduria_id
+               and cp.estado::text in ('riesgo_condicionado', 'rechazada', 'emitida')
+             order by cp.updated_at desc limit 1) as emision
     from oportunidades o
     where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid
     order by (o.estado::text in ('ganada', 'perdida')), o.cerrada_at desc nulls last, o.created_at desc
@@ -766,13 +1065,57 @@ export async function oportunidadesDeCliente(
       numeroPoliza: f.numeroPoliza,
       matricula: f.matricula,
       vehiculo: f.vehiculo,
+      seguroAnterior: seguroAnteriorDe(f.seguroAnterior),
       prima: f.prima,
       fuente: f.fuente,
       creada: f.creada.toISOString(),
       proximaTarea: f.proximaTarea,
+      polizaId: f.polizaId,
+      presupuestos: resumenPresupuestos(f.presupuestos),
+      emision: f.emision ?? null,
     })),
     truncado: filas.length > TECHO_POR_CLIENTE,
   }
+}
+
+/**
+ * Lo tarificado para este cliente que no cuelga de ninguna oportunidad: las retarificaciones y altas
+ * anteriores al 24/09/2026, cuando aún no se enlazaban solas. Se ENSEÑAN tal cual, sin abrirles
+ * oportunidad: hacerlo ahora crearía tareas con semanas de retraso. Una retarificación no guarda
+ * `cliente_id`: el tomador es el de la póliza.
+ */
+export async function presupuestosSinOportunidad(
+  correduriaId: string,
+  clienteId: string,
+): Promise<PresupuestoSinOportunidad[] | null> {
+  if (!UUID.test(clienteId)) return null
+  const filas = await prismaAsegura().$queryRaw<{
+    id: string; creadoAt: Date; ramo: string | null; polizaId: string | null; simulado: boolean
+    mejorPrima: number | null; mejorCompania: string | null; presupuesto: JsonHitos
+  }[]>(Prisma.sql`
+    select t.id::text as id, t.creado_at as "creadoAt", t.ramo, t.poliza_id::text as "polizaId", t.simulado,
+           m.prima_eur::float8 as "mejorPrima", m.compania as "mejorCompania",
+           ${sqlHitos(Prisma.sql`t2.id = t.id`)} as presupuesto
+    from tarificaciones t
+    left join polizas pol on pol.id = t.poliza_id and pol.correduria_id = t.correduria_id
+    left join lateral (
+      select x.compania, x.prima_eur from tarificacion_precios x
+       where x.tarificacion_id = t.id and x.prima_eur is not null order by x.prima_eur asc limit 1
+    ) m on true
+    where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id is null
+      and coalesce(t.cliente_id, pol.cliente_id) = ${clienteId}::uuid
+    order by t.creado_at desc
+    limit ${TECHO_SIN_OPORTUNIDAD}`)
+  return filas.map(f => ({
+    tarificacionId: f.id,
+    creadoAt: f.creadoAt.toISOString(),
+    ramo: f.ramo,
+    polizaId: f.polizaId,
+    simulado: f.simulado,
+    mejorPrima: f.mejorPrima,
+    mejorCompania: f.mejorCompania,
+    presupuesto: hitos(f.presupuesto),
+  }))
 }
 
 async function anotarEnFicha(correduriaId: string, clienteId: string, texto: string): Promise<void> {

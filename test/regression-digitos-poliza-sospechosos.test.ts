@@ -17,7 +17,7 @@ const RUTA_AUTO = join(
 const RUTA_MOTO = join(
   import.meta.dirname,
   '..',
-  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx',
+  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx',
 )
 
 for (const [nombre, ruta] of [['auto-nuevo', RUTA_AUTO] as const, ['moto-nuevo', RUTA_MOTO] as const]) {

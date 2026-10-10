@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible } from './seguimiento-asegura.ts'
+import { colaLlamadas, diasSinRespuesta, guionLlamada, tramoLead, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible, ramoInicialValido, ramosConOfertas, urlOportunidadNueva } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -123,18 +123,28 @@ test('tareas de hoy: error no es «no hay», y una fila rota se cuenta', () => {
   assert.equal(r.tareas[0].cliente, null)
 })
 
-test('🪤 WhatsApp de seguimiento solo a quien fue cliente, y con el mes del aniversario', () => {
+test('🪤 WhatsApp de seguimiento a TODOS con teléfono (Alberto, 30/09/2026), con el mes del aniversario', () => {
   const r = interpretarLeads(200, { estado: 'ok', leads: [lead, { ...lead, oportunidadId: 'o2', fueCliente: true, canal: 'telefono_y_correo' }], porVentana: {} })
   assert.ok(r.estado === 'ok')
-  // Nunca fue cliente: WhatsApp es comunicación electrónica como el correo (LSSI 21.2).
-  assert.equal(whatsappDeLead(r.leads[0]), null)
-  const wa = whatsappDeLead(r.leads[1])
-  assert.ok(wa)
-  assert.equal(wa.telefono, '600')
-  assert.match(wa.mensaje, /por noviembre\?/)
-  // Sin teléfono, nada; y con fueCliente desconocido tampoco se abre la puerta.
+  // Nunca fue cliente: también (decisión de Alberto asumiendo el riesgo LSSI 21.1).
+  const nunca = whatsappDeLead(r.leads[0])
+  assert.ok(nunca)
+  assert.equal(nunca.telefono, '600')
+  assert.match(nunca.mensaje, /vence en noviembre\. ¿Te preparo un estudio sin compromiso\?/)
+  assert.ok(whatsappDeLead(r.leads[1]))
+  // Sin teléfono o sin canal (pidió la baja), nada.
   assert.equal(whatsappDeLead({ ...r.leads[1], telefono: null }), null)
-  assert.equal(whatsappDeLead({ ...r.leads[1], fueCliente: null }), null)
+  assert.equal(whatsappDeLead({ ...r.leads[1], canal: 'sin_canal_permitido' }), null)
+})
+
+test('tramo del lead: por enviar → esperando (tras el WhatsApp) → respondió', () => {
+  const base = { intentos: 0, respondioAntes: false, estado: 'competencia' as const }
+  assert.equal(tramoLead(base), 'por_enviar')
+  assert.equal(tramoLead({ ...base, intentos: 1 }), 'esperando')
+  assert.equal(tramoLead({ ...base, intentos: 1, respondioAntes: true }), 'respondio')
+  assert.equal(tramoLead({ ...base, estado: 'en_negociacion' }), 'respondio')
+  assert.equal(diasSinRespuesta(null), null)
+  assert.equal(diasSinRespuesta('2026-09-27T10:00:00Z', new Date('2026-09-30T11:00:00Z')), 3)
 })
 
 test('🪤 contactos del móvil: un fallo NO da una lista vacía (se importaría como «no tienes a nadie»)', () => {
@@ -184,12 +194,20 @@ test('abrir oportunidad: 409 duplicada enlaza la que ya hay', async () => {
 
 test('lectura para oportunidad: rellena lo leído y deja en null lo que no tiene forma', () => {
   const r = interpretarLecturaOportunidad(200, {
-    leido: true, ramo: 'hogar', compania: 'MAPFRE', numeroPoliza: '0732400243186',
+    leido: true, ramo: 'hogar', compania: 'MAPFRE', numeroPoliza: '0732400000003',
     fechaVencimiento: '2026-09-25', primaAnual: 312.456,
   })
-  assert.deepEqual(r, { estado: 'ok', ramo: 'hogar', compania: 'MAPFRE', numeroPoliza: '0732400243186', vence: '2026-09-25', prima: 312.46, matricula: null, vehiculo: null, enCartera: null })
+  assert.deepEqual(r, { estado: 'ok', ramo: 'hogar', compania: 'MAPFRE', numeroPoliza: '0732400000003', vence: '2026-09-25', prima: 312.46, matricula: null, vehiculo: null, seguroAnterior: null, enCartera: null })
   const raro = interpretarLecturaOportunidad(200, { leido: true, ramo: 'barco', compania: 'Allianz', fechaVencimiento: '25/09/2026', primaAnual: 0 })
-  assert.deepEqual(raro, { estado: 'ok', ramo: null, compania: 'Allianz', numeroPoliza: null, vence: null, prima: null, matricula: null, vehiculo: null, enCartera: null })
+  assert.deepEqual(raro, { estado: 'ok', ramo: null, compania: 'Allianz', numeroPoliza: null, vence: null, prima: null, matricula: null, vehiculo: null, seguroAnterior: null, enCartera: null })
+})
+
+test('lectura para oportunidad: el bonus de auto/moto viaja saneado', () => {
+  const r = interpretarLecturaOportunidad(200, { leido: true, ramo: 'moto', compania: 'Mapfre', seguroAnterior: { aniosSinSiniestros: 6, siniestrosUltimos5: 0, codigoDgs: 'C0058', fechaEfecto: null } })
+  assert.equal(r.estado === 'ok' && r.seguroAnterior?.aniosSinSiniestros, 6)
+  assert.equal(r.estado === 'ok' && r.seguroAnterior?.siniestrosUltimos5, 0, '0 siniestros es un dato, no un hueco')
+  const basura = interpretarLecturaOportunidad(200, { leido: true, ramo: 'moto', seguroAnterior: { aniosSinSiniestros: 'varios' } })
+  assert.equal(basura.estado === 'ok' && basura.seguroAnterior, null)
 })
 
 test('lectura para oportunidad: nada leído o fallo = error con motivo, nunca un formulario mudo', () => {
@@ -238,4 +256,44 @@ test('solicitudes de datos: se leen las válidas y las respuestas se pintan legi
   if (c.estado !== 'ok') return assert.fail('debía leerse')
   assert.equal(c.solicitudes[0].documentos?.length, 1, 'un documento sin id no se pinta')
   assert.equal(c.solicitudes[0].discrepancias?.[0].documento, '1234ABC')
+})
+
+test('buscador de leads (30/09/2026): nombre sin tildes, varias palabras, teléfono por dígitos, correo y compañía', async () => {
+  const { leadCoincide } = await import('./seguimiento-asegura.ts')
+  const l = { cliente: 'María Gutiérrez-Alcalá', aseguradora: 'Mapfre', ramo: 'auto', email: 'maria.g@gmail.com', telefono: '+34 600 123 456' }
+  assert.equal(leadCoincide(l, ''), true)
+  assert.equal(leadCoincide(l, '   '), true)
+  assert.equal(leadCoincide(l, 'gutierrez alcala'), true)
+  assert.equal(leadCoincide(l, 'MARIA mapfre'), true)
+  assert.equal(leadCoincide(l, 'maria allianz'), false, 'todas las palabras tienen que aparecer')
+  assert.equal(leadCoincide(l, '600 12'), true)
+  assert.equal(leadCoincide(l, '600123456'), true)
+  assert.equal(leadCoincide(l, '999'), false)
+  assert.equal(leadCoincide(l, 'maria 600'), true)
+  assert.equal(leadCoincide(l, 'allianz 600'), false, 'con palabras, el número no basta')
+  assert.equal(leadCoincide(l, 'maria.g@'), true)
+  assert.equal(leadCoincide(l, 'reale'), false)
+  // Sin teléfono ni nombre no revienta, y un número no casa por accidente.
+  assert.equal(leadCoincide({ cliente: null, aseguradora: null, ramo: null, email: null, telefono: null }, '600'), false)
+})
+
+test('ramoInicialValido: solo acepta ramos conocidos', () => {
+  assert.equal(ramoInicialValido('comunidades'), 'comunidades')
+  assert.equal(ramoInicialValido('otros'), 'otros')
+  assert.equal(ramoInicialValido('nave_espacial'), null)
+  assert.equal(ramoInicialValido(''), null)
+  assert.equal(ramoInicialValido(null), null)
+})
+
+test('ramosConOfertas: comunidades sí, tarificables (auto…) no', async () => {
+  const { RAMOS_PRESUPUESTO } = await import('./ficha-asegura.ts')
+  const valores = ramosConOfertas(RAMOS_PRESUPUESTO).map((r) => r.valor)
+  assert.deepEqual([...valores].sort(), ['accidentes', 'caucion', 'ciberriesgos', 'comercio', 'comunidades', 'decenal', 'dyo', 'embarcaciones', 'empresas', 'flotas', 'impago_alquiler', 'mascotas', 'otros', 'rc_profesional', 'responsabilidad_civil', 'transporte_mercancias', 'viaje'])
+  assert.ok(!valores.includes('auto' as never))
+})
+
+test('urlOportunidadNueva: con ramo lo preselecciona; «Otro ramo» (sin ramo) no lo lleva', () => {
+  assert.equal(urlOportunidadNueva('c1', 'viaje'), '/correduria/cliente/c1?tab=oportunidades&oportunidad=nueva&ramo=viaje')
+  assert.equal(urlOportunidadNueva('c1'), '/correduria/cliente/c1?tab=oportunidades&oportunidad=nueva')
+  assert.equal(urlOportunidadNueva('c1', null), '/correduria/cliente/c1?tab=oportunidades&oportunidad=nueva')
 })

@@ -10,11 +10,31 @@ import { tgSend } from '@/lib/telegram'
 export async function logMensaje(p: {
   bookingId: string; propertyId: string; categoria: string; pregunta: string; respuesta: string
   fuente: string; confidence: number; sentimiento: string; needs_human: boolean; auto_sent: boolean; edited: boolean
+  emisor?: Record<string, unknown> | null
 }): Promise<void> {
+  const emisor = p.emisor ? JSON.stringify(p.emisor) : null
   await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO mensajes_log (booking_id, property_id, categoria, pregunta, respuesta, fuente, confidence, sentimiento, needs_human, auto_sent, edited)
-    VALUES (${p.bookingId}, ${p.propertyId}, ${p.categoria}, ${p.pregunta}, ${p.respuesta}, ${p.fuente}, ${p.confidence}, ${p.sentimiento}, ${p.needs_human}, ${p.auto_sent}, ${p.edited})
+    INSERT INTO mensajes_log (booking_id, property_id, categoria, pregunta, respuesta, fuente, confidence, sentimiento, needs_human, auto_sent, edited, emisor_raw)
+    VALUES (${p.bookingId}, ${p.propertyId}, ${p.categoria}, ${p.pregunta}, ${p.respuesta}, ${p.fuente}, ${p.confidence}, ${p.sentimiento}, ${p.needs_human}, ${p.auto_sent}, ${p.edited}, ${emisor}::jsonb)
   `).catch(() => {})
+}
+
+// Marca como enviado el último borrador de la reserva y guarda el texto que salió DE VERDAD.
+// Hasta el 28/09/2026 solo se ponía `auto_sent = true`: el texto editado en Telegram se perdía y
+// `edited` era siempre false (0 de 142 en 30 días), así que no había forma de medir cuántos
+// borradores aprueba Alberto tal cual. Devuelve si se editó; `null` = no se pudo anotar.
+export async function marcarEnviadoLog(bookingId: string, textoFinal: string): Promise<boolean | null> {
+  const filas = await prisma.$queryRaw<{ edited: boolean }[]>(Prisma.sql`
+    UPDATE mensajes_log
+    SET auto_sent = true,
+        respuesta_enviada = ${textoFinal},
+        edited = regexp_replace(lower(coalesce(respuesta, '')), '\\s+', ' ', 'g')
+                 <> regexp_replace(lower(${textoFinal}), '\\s+', ' ', 'g')
+    WHERE booking_id = ${bookingId}
+      AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
+    RETURNING edited
+  `).catch(() => null)
+  return filas && filas[0] ? filas[0].edited : null
 }
 
 // Guarda lo que Alberto aprueba o corrige. DOS destinos, no uno:
@@ -35,10 +55,23 @@ export async function logMensaje(p: {
 // había prometido aprenderlo, se DICE en vez de dejar creer que quedó aprendido.
 export async function aprenderCorreccion(p: {
   propertyId: string; categoria: string; pregunta: string; respuestaFinal: string; huecoGuia?: boolean
+  /** `false` = Alberto aprobó el borrador de la IA sin tocarlo. `true`/`null` = lo escribió o no se sabe. */
+  editado?: boolean | null
 }): Promise<void> {
   if (p.huecoGuia === true || esHechoDelPiso(p.pregunta, p.respuestaFinal)) {
     const hecho = await destilarHecho({ pregunta: p.pregunta, respuesta: p.respuestaFinal })
     if (hecho) {
+      // Un borrador aprobado SIN tocar lo escribió la IA: aprobar un mensaje para un huésped no es
+      // validar un dato para todos los futuros (caso 154692216: «el piso ya está listo» se habría
+      // guardado como hecho de House Sevillana). Entra `propuesto` y se pregunta con dos botones.
+      if (p.editado === false) {
+        const id = await guardarHecho({ propertyId: p.propertyId, pregunta: p.pregunta, hecho, origen: 'agente', estado: 'propuesto' })
+        if (id) {
+          const { proponerHechos } = await import('./historico')
+          await proponerHechos([{ id, propertyId: p.propertyId, hecho }])
+        }
+        return
+      }
       await guardarHecho({ propertyId: p.propertyId, pregunta: p.pregunta, hecho, origen: 'alberto', estado: 'confirmado' })
       return
     }

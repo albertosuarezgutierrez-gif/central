@@ -122,7 +122,9 @@ export function veredictoSolicitud(estadoId: string | null | undefined): Veredic
   const s = estadoId.trim().toLowerCase()
   if (/^(approved|accepted|issued|emitida?)$/.test(s)) return 'aprobada'
   if (/^(rejected|denied|refused|cancel+ed|rechazada?)$/.test(s)) return 'rechazada'
-  if (/pending|review|held|hold|manual|revised|waiting|process/.test(s)) return 'pendiente'
+  // «Riesgo condicionado» (lo que pinta Avant2 cuando la compañía retiene la póliza, 30/09/2026)
+  // también es una solicitud VIVA: reenviarla sería la segunda póliza del mismo riesgo.
+  if (/pending|review|held|hold|manual|revised|waiting|process|condition|condicion/.test(s)) return 'pendiente'
   return 'desconocido'
 }
 
@@ -173,8 +175,8 @@ export function solicitudViva(solicitudes: readonly SolicitudEmision[]): Solicit
 
 /** El buzón que enlaza la fila del 500 en la tabla de errores del portal
  *  («report the issue, including the full response, to the API support team»).
- *  La cabecera del spec dice `soporteapi@codeoscopic.com`; el portal no aclara cuál. */
-export const SOPORTE_API_CODEOSCOPIC = 'soporteapi@avant2.es'
+ *  La cabecera del spec dice `soporteapi@codeoscopic.com` (avant2.es rebota desde oct-2026). */
+export const SOPORTE_API_CODEOSCOPIC = 'soporteapi@codeoscopic.com'
 
 export type ConsejoTrasFallo = { tipo: 'reportar' | 'reintentar_en_minutos'; texto: string }
 

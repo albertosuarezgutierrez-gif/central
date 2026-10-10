@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { POLITICA, anulacionSeEnviaSola, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
 
 const hoy = new Date('2026-09-23T10:00:00Z')
-const base = { ramo: 'auto', compania: 'MAPFRE', numeroPoliza: '3021700291186', importe: 225.97, vencimiento: '2026-09-10', hoy }
+const base = { ramo: 'auto', compania: 'MAPFRE', numeroPoliza: '3021700000001', importe: 225.97, vencimiento: '2026-09-10', hoy }
 
 test('mandar un correo a un cliente pide OK: la política no lo deja ir solo', () => {
   assert.equal(POLITICA.enviar_correo_cliente, 'aprobar')
@@ -14,8 +14,8 @@ test('en plazo: dice hasta cuándo se puede pagar sin perder cobertura, con impo
   assert.equal(b.urgente, false)
   assert.match(b.texto, /225,97€/)
   assert.match(b.texto, /antes del 10\/10\/2026/)
-  assert.match(b.texto, /terminada en 1186/)
-  assert.doesNotMatch(b.texto, /3021700291186/, 'nunca el número de póliza entero')
+  assert.match(b.texto, /terminada en 0001/)
+  assert.doesNotMatch(b.texto, /3021700000001/, 'nunca el número de póliza entero')
 })
 
 test('pasado el mes: en suspenso desde la fecha y vuelve a las 24 h; pasado medio año no se propone nada', () => {
@@ -121,4 +121,9 @@ test('envío solo al firmar: una inmediata o sin buzón recordado se queda en la
 
 test('la política general NO se relaja: la excepción vive aparte y solo para anulaciones firmadas', () => {
   assert.equal(POLITICA.enviar_correo_compania, 'aprobar')
+})
+
+test('motivo de cuenta: pide revisar la cuenta domiciliada; sin él, no lo menciona', () => {
+  assert.match(borradorReciboDevuelto({ ...base, motivoCuenta: true })!.texto, /cuenta correcta/)
+  assert.doesNotMatch(borradorReciboDevuelto(base)!.texto, /cuenta correcta/)
 })

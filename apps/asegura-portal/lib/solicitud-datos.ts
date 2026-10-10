@@ -7,7 +7,8 @@ import type { CampoSolicitud, RamoSolicitud } from '@central/module-seguros'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
 
 export type SolicitudLeida =
-  | { estado: 'ok'; ramo: RamoSolicitud; campos: CampoSolicitud[] }
+  /** `tercero`: son datos de otra persona del seguro; se pide su consentimiento. */
+  | { estado: 'ok'; ramo: RamoSolicitud; campos: CampoSolicitud[]; tercero: boolean }
   | { estado: 'muerta' }
   | { estado: 'completada' }
   | { estado: 'error' }
@@ -23,7 +24,7 @@ export function interpretarSolicitud(status: number, json: unknown): SolicitudLe
       (c): c is CampoSolicitud =>
         c !== null && typeof c === 'object' && typeof (c as CampoSolicitud).clave === 'string' && typeof (c as CampoSolicitud).etiqueta === 'string',
     )
-    if (campos.length > 0) return { estado: 'ok', ramo: o.ramo, campos }
+    if (campos.length > 0) return { estado: 'ok', ramo: o.ramo, campos, tercero: o.tercero === true }
   }
   return { estado: 'error' }
 }
@@ -35,7 +36,7 @@ function puente(): { base: string; secret: string } | null {
   return { base: base.replace(/\/+$/, ''), secret }
 }
 
-export async function llamarPuenteSolicitud(init: { metodo: 'GET'; token: string } | { metodo: 'POST'; token: string; respuestas: unknown }): Promise<{ status: number; json: unknown } | null> {
+export async function llamarPuenteSolicitud(init: { metodo: 'GET'; token: string } | { metodo: 'POST'; token: string; respuestas: unknown; consentimiento?: boolean }): Promise<{ status: number; json: unknown } | null> {
   const p = puente()
   if (!p) return null
   const control = new AbortController()
@@ -47,7 +48,7 @@ export async function llamarPuenteSolicitud(init: { metodo: 'GET'; token: string
     const res = await fetch(url, {
       method: init.metodo,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${p.secret}` },
-      body: init.metodo === 'POST' ? JSON.stringify({ token: init.token, respuestas: init.respuestas }) : undefined,
+      body: init.metodo === 'POST' ? JSON.stringify({ token: init.token, respuestas: init.respuestas, consentimiento: init.consentimiento === true }) : undefined,
       cache: 'no-store',
       signal: control.signal,
     })
@@ -98,7 +99,7 @@ export function interpretarDocSubido(status: number, json: unknown): DocSubido {
 }
 
 /** Reenvía el fichero al puente de asegura (multipart). `null` = el puente no respondió. */
-export async function subirDocPuente(token: string, fichero: File): Promise<{ status: number; json: unknown } | null> {
+export async function subirDocPuente(token: string, fichero: File, consentimiento = false): Promise<{ status: number; json: unknown } | null> {
   const p = puente()
   if (!p) return null
   const control = new AbortController()
@@ -107,6 +108,7 @@ export async function subirDocPuente(token: string, fichero: File): Promise<{ st
     const form = new FormData()
     form.set('token', token)
     form.set('documento', fichero, fichero.name || 'documento')
+    form.set('consentimiento', consentimiento ? '1' : '0')
     const res = await fetch(`${p.base}/api/portal/solicitud-datos/documento`, {
       method: 'POST',
       headers: { authorization: `Bearer ${p.secret}` },

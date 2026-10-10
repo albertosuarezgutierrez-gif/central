@@ -5,11 +5,14 @@ import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { anulacionesParaFirmar, firmarAnulacion, pedirCodigoFirma } from '@/lib/anulacion-portal'
 import { enviarAnulacionTrasFirma } from '@/lib/aprobaciones'
+import { entregarJustificanteAnulacion } from '@/lib/justificante-anulacion'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// after() envía a la compañía y el justificante al cliente: sin margen, la función muere antes de acabar.
+export const maxDuration = 60
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -38,7 +41,7 @@ export async function GET(req: Request) {
 const STATUS: Record<string, number> = {
   codigo_enviado: 200, firmada: 200, no_encontrada: 404, carta_incompleta: 409, sin_email: 422, sin_correo_configurado: 503,
   fallo_envio: 502, espera: 429, limite_codigos: 429, carta_cambiada: 409, sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422,
-  nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, error: 503,
+  nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, sin_permiso: 403, error: 503,
 }
 
 export const POST = auditado(async (req: Request) => {
@@ -75,6 +78,13 @@ export const POST = auditado(async (req: Request) => {
             console.log(`[portal/anulacion] ${anulacionId} firmada; envío a la compañía: ${envio.estado}${'motivo' in envio ? ` (${envio.motivo})` : ''}`)
           } catch (e) {
             console.error('[portal/anulacion] firmada; el envío automático falló, queda en la cola:', e instanceof Error ? e.message : e)
+          }
+          // Después del envío a la compañía, para que el correo al cliente diga la verdad («ya se lo hemos enviado»).
+          try {
+            const j = await entregarJustificanteAnulacion(correduria.id, anulacionId)
+            console.log(`[portal/anulacion] ${anulacionId} justificante al cliente: ${JSON.stringify(j)}`)
+          } catch (e) {
+            console.error('[portal/anulacion] firmada; el justificante al cliente falló:', e instanceof Error ? e.message : e)
           }
         })
       }

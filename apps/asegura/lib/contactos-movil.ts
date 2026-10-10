@@ -19,6 +19,8 @@ export type ContactosMovil = {
   leads: number
   /** Clientes cuyo contacto no se pudo leer (consulta caída): NO van y se cuenta. */
   clientesSinLeer: number
+  /** De cada lead, su póliza en otra compañía (para la nota de Google Contacts). Fechas ISO. */
+  detalleLeads: Map<string, { ramo: string; aseguradora: string | null; vencimiento: string | null }>
 }
 
 export async function contactosMovil(correduriaId: string): Promise<ContactosMovil> {
@@ -35,7 +37,9 @@ export async function contactosMovil(correduriaId: string): Promise<ContactosMov
     return { clienteId: c.id, nombre: c.nombre, apellidos: c.apellidos, telefono: k?.telefono ?? null, email: k?.email ?? null, grupo: 'cliente' }
   })
 
-  // Los mismos leads que la pestaña Leads de Vencimientos (ventana de 90 días).
+  // Los mismos leads que la pestaña Leads de Vencimientos: los que vencen en
+  // 90 días y, además, los que ya están en conversación (intentos, respondió o
+  // en seguimiento) aunque venzan más lejos (`entraEnHorizonte`).
   const { leads } = await leadsCompetencia(correduriaId, 90)
   const deLeads: ContactoMovil[] = leads.map(l => ({
     // El lead trae el nombre ya compuesto: va entero como «nombre».
@@ -46,5 +50,6 @@ export async function contactosMovil(correduriaId: string): Promise<ContactosMov
     clientes: deClientes.length,
     leads: deLeads.length,
     clientesSinLeer: contactos === null ? clientes.length : 0,
+    detalleLeads: new Map(leads.map(l => [l.clienteId, { ramo: l.ramo, aseguradora: l.aseguradora, vencimiento: l.vencimientoEstimado || null }])),
   }
 }

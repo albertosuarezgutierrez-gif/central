@@ -10,7 +10,7 @@ const OK = {
     {
       id: 'l1',
       compania: 'Generali',
-      numeroPoliza: '04Z113777894',
+      numeroPoliza: '04Z115550004',
       ramo: 'auto',
       estado: 'confirmado',
       fechaVencimiento: '2027-04-03T00:00:00.000Z',
@@ -21,7 +21,7 @@ const OK = {
       yaEnCartera: false,
       clienteId: 'c1',
       subidaEn: '2026-09-07T10:36:53.874Z',
-      documentoNombre: '04_Z11_3777894.pdf',
+      documentoNombre: '04_Z11_5550004.pdf',
       primaAnual: 412.5,
       titular: { tipo: 'empresa', nombre: 'GLOBAL 2 SL', cif: 'B91234567', cifValido: true },
       fichaEmpresaId: null,

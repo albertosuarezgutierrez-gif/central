@@ -122,3 +122,49 @@ export async function cuentaDeFicha(
   }
   return { iban: null, origen: null, aviso }
 }
+
+/**
+ * Qué cuenta firmó el cliente (origen y MÁSCARA) al aceptar en el portal un presupuesto de ESTA
+ * tarificación: `'nueva'` (la tecleó él; vive cifrada en `clientes.cuenta_bancaria`),
+ * `'ficha'` (la que ya teníamos) o `null` (no hay aceptación con cuenta, o no se
+ * pudo mirar: entonces manda el orden de siempre).
+ */
+export type CuentaAceptada = { origen: 'nueva' | 'ficha'; mascara: string | null }
+
+export async function origenCuentaAceptada(correduriaId: string, tarificacionId: string | null): Promise<CuentaAceptada | null> {
+  if (!tarificacionId) return null
+  try {
+    const [e] = await prismaAsegura().$queryRaw<{ origen: string | null; mascara: string | null }[]>`
+      select ev.detalle->'cuenta'->>'origen' as origen, ev.detalle->'cuenta'->>'mascara' as mascara
+      from presupuesto_evento ev
+      join presupuesto p on p.id = ev.presupuesto_id
+      where p.correduria_id = ${correduriaId}::uuid and p.tarificacion_id = ${tarificacionId}::uuid
+        and p.aceptado_at is not null and p.retirado_at is null and ev.tipo = 'aceptado'
+      order by ev.ocurrido_at desc
+      limit 1`
+    return e?.origen === 'nueva' || e?.origen === 'ficha' ? { origen: e.origen, mascara: e.mascara } : null
+  } catch (err) {
+    console.error('[cuenta-ficha] no se pudo leer la cuenta aceptada:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+
+export type PresupuestoAceptado = { id: string; compania: string; primaEur: number }
+
+/**
+ * El presupuesto ACEPTADO (sin emitir ni retirar) de esta tarificación y la opción que eligió el
+ * cliente. `null` = no hay ninguno (emisión sin presupuesto, p. ej. retarificar desde la ficha).
+ * 🚨 Si la consulta FALLA, lanza: «no se pudo mirar» no autoriza a emitir sin comprobar.
+ */
+export async function presupuestoAceptadoDe(correduriaId: string, tarificacionId: string | null): Promise<PresupuestoAceptado | null> {
+  if (!tarificacionId) return null
+  const [f] = await prismaAsegura().$queryRaw<{ id: string; compania: string; prima: string }[]>`
+    select p.id::text as id, o.compania, o.prima_eur::text as prima
+    from presupuesto p join presupuesto_opcion o on o.id = p.opcion_elegida_id and o.presupuesto_id = p.id
+    where p.correduria_id = ${correduriaId}::uuid and p.tarificacion_id = ${tarificacionId}::uuid
+      and p.aceptado_at is not null and p.emitido_at is null and p.retirado_at is null
+    order by p.aceptado_at desc
+    limit 1`
+  return f ? { id: f.id, compania: f.compania, primaEur: Number(f.prima) } : null
+}

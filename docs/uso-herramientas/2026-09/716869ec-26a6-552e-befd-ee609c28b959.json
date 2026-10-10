@@ -1,0 +1,104 @@
+{
+ "sesion": "716869ec-26a6-552e-befd-ee609c28b959",
+ "inicio": "2026-09-29T19:39:10.483Z",
+ "fin": "2026-09-29T20:57:24.825Z",
+ "llamadas": 109,
+ "categorias": {
+  "otro": {
+   "llamadas": 15,
+   "chars_in": 8003,
+   "chars_out": 32435,
+   "errores": 0,
+   "archivos_citados": 5,
+   "chars_citados": 1096396,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 4,
+    "SubagentHandback": 3,
+    "SendMessage": 2,
+    "ReadNotifications": 3,
+    "ReportFindings": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 17,
+   "chars_in": 5006,
+   "chars_out": 42352,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 17
+   }
+  },
+  "bash": {
+   "llamadas": 49,
+   "chars_in": 20525,
+   "chars_out": 152913,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 49
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1300,
+   "chars_out": 1495,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 37749,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 20,
+   "chars_in": 2723,
+   "chars_out": 291707,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 12,
+    "Read": 8
+   }
+  },
+  "mcp:github": {
+   "llamadas": 4,
+   "chars_in": 2283,
+   "chars_out": 10939,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 1417,
+   "tools": {
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 2
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 466,
+   "chars_out": 216,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 2
+   }
+  }
+ }
+}

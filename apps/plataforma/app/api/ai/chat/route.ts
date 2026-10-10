@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NimChatMessage } from '@central/core-ai'
 import { verificarSecreto, registrarUso, dentroDePresupuesto, PROVEEDOR_PASARELA } from '@/lib/ai-gateway'
 import { chatConDirector } from '@/lib/pasarela'
+import { acotarTimeoutMs } from '@/lib/timeout-ia'
 
 export const maxDuration = 60
 
@@ -35,8 +36,12 @@ export async function POST(req: Request) {
       app, endpoint: 'chat',
       system: typeof body?.system === 'string' ? body.system : undefined,
       modelo: typeof body?.model === 'string' ? body.model : undefined,
+      // Categoría del catálogo (p. ej. `redaccion` para la lectura de ofertas de asegura): modelo por
+      // tag SIN hop al decisor. Una categoría desconocida degrada al default (`elegirPorCategoria`).
+      categoria: typeof body?.categoria === 'string' && /^[a-z_]{2,30}$/.test(body.categoria) ? body.categoria : undefined,
       maxTokens: Number(body?.maxTokens) || 700,
-      timeoutMs: Number(body?.timeoutMs) || 25_000,
+      // Respeta el del caller (análisis largos) con tope bajo `maxDuration` (60 s); default 25 s.
+      timeoutMs: acotarTimeoutMs(body?.timeoutMs),
       clienteRef,
       privado: body?.privado === true,
       cacheSystem: body?.cacheSystem === true,

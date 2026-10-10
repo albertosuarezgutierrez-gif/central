@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { colorImporte } from '@/components/ui'
+import { COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { deducibleDeMovimiento } from '@/lib/deducibilidad'
 
 type SociedadOpt = { id: string; nombre: string }
@@ -450,7 +451,7 @@ export function ExportarBtn() {
 
 type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean; origen?: string; cuentaLabel?: string }
 type DupGrupoUI = { clave: string; confianza: 'alta' | 'baja'; importe: number; superaUmbral: boolean; movimientos: DupMov[] }
-type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado'; cuentaLabel?: string }
+type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'normal' | 'ignorado' | 'confirmado'; cuentaLabel?: string }
 
 // Bandeja "Posibles cargos duplicados": pares sospechosos de cobro doble. El dueño los resuelve
 // con un clic ("Es normal" / "Es un cobro doble"); la decisión persiste. Plegable de "ya
@@ -475,7 +476,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
     if (r.ok && d) { setRecl({ asunto: d.asunto, cuerpo: d.cuerpo }); setCopiado(false) }
   }
 
-  async function resolver(g: DupGrupoUI, estado: 'ignorado' | 'confirmado') {
+  async function resolver(g: DupGrupoUI, estado: 'normal' | 'confirmado') {
     setBusy(g.clave)
     const ids = g.movimientos.map(m => m.id)
     const r = await fetch('/api/banca/duplicados', {
@@ -543,7 +544,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
               <div className="banca-dup-acciones" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
                 <button disabled={busy === g.clave} onClick={() => redactar(g)} style={dupGhost}>📝 Reclamar</button>
                 <div className="banca-dup-sep" style={{ flex: 1 }} />
-                <button disabled={busy === g.clave} onClick={() => resolver(g, 'ignorado')} style={dupGhost}>Es normal</button>
+                <button disabled={busy === g.clave} onClick={() => resolver(g, 'normal')} style={dupGhost}>Es normal</button>
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'confirmado')} style={dupDanger}>Es un cobro doble</button>
               </div>
             </div>
@@ -953,13 +954,15 @@ export function IngresosPorRevisar({ ingresos, destinoLabel }: {
   destinoLabel: Record<string, string>
 }) {
   const [items, setItems] = useState(ingresos)
+  // Fila que ha elegido «seguros» y está eligiendo compañía antes de confirmar.
+  const [seguros, setSeguros] = useState<Record<string, string>>({})
   if (items.length === 0) return null
 
-  async function asignar(id: string, destino: string) {
+  async function asignar(id: string, destino: string, compania?: string) {
     setItems(prev => prev.filter(m => m.id !== id))
     await fetch('/api/banca/destino', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, destino }),
+      body: JSON.stringify(compania ? { id, destino, compania } : { id, destino }),
     }).catch(() => {})
   }
 
@@ -992,11 +995,28 @@ export function IngresosPorRevisar({ ingresos, destinoLabel }: {
               <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
             </div>
-            <select className="banca-ingr-select" defaultValue="" onChange={e => e.target.value && asignar(m.id, e.target.value)}
-              style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '160px' }}>
+            <select className="banca-ingr-select" value={m.id in seguros ? 'seguros' : ''}
+              onChange={e => {
+                const v = e.target.value
+                if (!v) return
+                if (v === 'seguros') setSeguros(p => ({ ...p, [m.id]: '' }))
+                else asignar(m.id, v)
+              }}
+              style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '160px', minHeight: '44px' }}>
               <option value="" disabled>Asignar negocio…</option>
               {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
             </select>
+            {m.id in seguros && (
+              <div className="banca-ingr-select" style={{ order: 2, flexShrink: 0, display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <select value={seguros[m.id]} onChange={e => setSeguros(p => ({ ...p, [m.id]: e.target.value }))}
+                  style={{ ...input, padding: '5px 6px', fontSize: '12px', flex: '1 1 140px', minWidth: 0, minHeight: '44px' }}>
+                  <option value="">Sin especificar</option>
+                  {COMPANIAS_CONOCIDAS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <button onClick={() => asignar(m.id, 'seguros', seguros[m.id] || undefined)}
+                  style={{ ...btn, minHeight: '44px', minWidth: '44px' }}>Confirmar</button>
+              </div>
+            )}
             <div className="banca-ingr-importe" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--positive)', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
         ))}

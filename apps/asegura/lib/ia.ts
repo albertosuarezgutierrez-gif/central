@@ -25,14 +25,19 @@ let avisadoDirecto = false
  */
 export async function iaTexto(
   prompt: string,
-  opts: { system?: string; maxTokens?: number; timeoutMs?: number; privado?: boolean } = {},
+  opts: {
+    system?: string; maxTokens?: number; timeoutMs?: number; privado?: boolean
+    /** Categoría del catálogo de la pasarela (p. ej. `redaccion`: un modelo más capaz que el flash por
+     *  defecto). Solo por la pasarela; en la llamada directa no aplica. */
+    categoria?: string
+  } = {},
 ): Promise<string> {
   const core = await import('@central/core-ai')
   if (viaIA() === 'pasarela') {
     return core.gatewayChat(
       { url: process.env.AI_GATEWAY_URL!, secret: process.env.AI_GATEWAY_SECRET!, app: 'asegura' },
       [{ role: 'user', content: prompt }],
-      { system: opts.system, maxTokens: opts.maxTokens, timeoutMs: opts.timeoutMs, privado: opts.privado },
+      { system: opts.system, maxTokens: opts.maxTokens, timeoutMs: opts.timeoutMs, privado: opts.privado, categoria: opts.categoria },
     )
   }
   if (!avisadoDirecto) {

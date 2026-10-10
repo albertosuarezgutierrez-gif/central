@@ -124,3 +124,43 @@ test('🚨 el cron del libro elige la cuenta por la lista de la correduría y ca
   assert.match(src, /casarAbonos\(/)
   assert.doesNotMatch(src, /mb\.compania_seguros = \$\{/, 'filtrar solo por la columna pierde los abonos que la matriz atribuye')
 })
+
+test('abono con compañía que liquida VARIAS remesas pendientes: banco_total = su remesa en cada periodo', () => {
+  const periodos = [mes('C0109', '2026-06', 300.5), mes('C0109', '2026-07', 250.03), mes('C0109', '2026-08', 154)]
+  const ab = [abono({ id: 'saldo', fecha: '2026-09-15', importe: 704.53, concepto: 'Transferencia saldo de la cuenta', companiaSeguros: 'Allianz' })]
+  const c = casarAbonos(periodos, ab, SIN_REGLAS)
+  const r = periodos.map((p) => bancoDePeriodo(p, c, ab))
+  assert.deepEqual(r.map((x) => x.total), [300.5, 250.03, 154])
+  assert.ok(r.every((x) => x.ids.length === 1 && x.ids[0] === 'saldo'))
+  assert.equal(c.excedentes.length, 0)
+})
+
+test('multi-remesa: si el abono supera la suma, el excedente queda registrado y NO se reparte', () => {
+  const periodos = [mes('C0109', '2026-06', 100), mes('C0109', '2026-07', 100)]
+  const ab = [abono({ id: 's', fecha: '2026-09-15', importe: 250, companiaSeguros: 'Allianz' })]
+  const c = casarAbonos(periodos, ab, SIN_REGLAS)
+  assert.deepEqual(periodos.map((p) => bancoDePeriodo(p, c, ab).total), [100, 100])
+  assert.deepEqual(c.excedentes, [{ abonoId: 's', codigo: 'C0109', importe: 250, sumaRemesas: 200, excedente: 50 }])
+})
+
+test('multi-remesa: no casa si el abono no cubre la suma, sin compañía asignada, o con remesas posteriores', () => {
+  const periodos = [mes('C0109', '2026-06', 100), mes('C0109', '2026-07', 100)]
+  const corto = [abono({ id: 'a', fecha: '2026-09-15', importe: 150, companiaSeguros: 'Allianz' })]
+  assert.equal(bancoDePeriodo(periodos[0], casarAbonos(periodos, corto, SIN_REGLAS), corto).total, null)
+  const sinCia = [abono({ id: 'b', fecha: '2026-09-15', importe: 200, concepto: 'saldo' })]
+  assert.equal(bancoDePeriodo(periodos[1], casarAbonos(periodos, sinCia, SIN_REGLAS), sinCia).total, null)
+  const antes = [abono({ id: 'c', fecha: '2026-06-20', importe: 200, companiaSeguros: 'Allianz' })]
+  assert.equal(bancoDePeriodo(periodos[1], casarAbonos(periodos, antes, SIN_REGLAS), antes).total, null)
+})
+
+test('multi-remesa: un abono normal que casa con el mes anterior no reclama remesas antiguas pendientes', () => {
+  const periodos = [mes('C0109', '2026-01', 100), mes('C0109', '2026-02', 100), mes('C0109', '2026-07', 50), mes('C0109', '2026-08', 45)]
+  const ab = [
+    abono({ id: 'jul', fecha: '2026-08-10', importe: 50, companiaSeguros: 'Allianz' }),
+    abono({ id: 'ago', fecha: '2026-09-10', importe: 300, companiaSeguros: 'Allianz' }),
+  ]
+  const c = casarAbonos(periodos, ab, SIN_REGLAS)
+  assert.equal(bancoDePeriodo(periodos[0], c, ab).total, null)
+  assert.equal(bancoDePeriodo(periodos[1], c, ab).total, null)
+  assert.deepEqual(bancoDePeriodo(periodos[3], c, ab).ids, ['ago'])
+})

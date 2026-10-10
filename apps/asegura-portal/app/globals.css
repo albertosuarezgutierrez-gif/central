@@ -429,7 +429,9 @@ input, select, textarea, button { font: inherit; }
     border-radius: calc(var(--radius) * 1.8);
     box-shadow: var(--shadow);
     margin: 8px 8px 8px 0;
-    padding: 40px 32px 72px;
+    /* A la derecha 80 px, no 32: el botón flotante de WhatsApp (56 px + 16 de margen, sobre una isla con 8 de
+     * margen) tapaba el borde de las tarjetas en escritorio (03/10/2026). */
+    padding: 40px 80px 72px 32px;
     /* La atmósfera de marca es un `::before` absoluto: sin esto se sale por las
      * esquinas redondeadas de la isla y se ve un rectángulo azul asomando. */
     overflow: clip;
@@ -1545,6 +1547,21 @@ h1 em {
   font-weight: 600;
   color: var(--text);
 }
+.siniestro-detalle {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+.siniestro-detalle > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 480px) {
+  .siniestro-detalle > div { grid-template-columns: 11rem minmax(0, 1fr); gap: 8px; }
+}
+.siniestro-detalle dt { color: var(--muted); }
+.siniestro-detalle dd { margin: 0; overflow-wrap: anywhere; }
+.siniestro-tramite ul { margin: 0 0 8px; padding-left: 1.1rem; }
 .siniestro-tramite ol {
   list-style: none;
   margin: 0;
@@ -3212,6 +3229,21 @@ h1 em {
   vertical-align: -2px;
   color: var(--primary);
 }
+.instalar-alt { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.instalar-alt p { margin: 0 0 6px; }
+.instalar-copiar {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+}
 .instalar-globo-cerrar {
   width: 100%;
   min-height: 44px;
@@ -3477,6 +3509,21 @@ h1 em {
   color: var(--text);
   font-size: 14px;
 }
+
+/* «Mis carnés» (06/10/2026): reutiliza las filas de contactos; el formulario va en línea (no en modal), en
+   una sola columna que cabe a 320 px, con los mismos campos de 44 px de «Mis datos». */
+.mis-carnets-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 0;
+}
+.mis-carnets-form-titulo { margin: 0; font-weight: 600; font-size: 14px; }
+.mis-carnets-form input[type='date'] { min-height: 44px; }
 
 /* La banda de «vista de corredor» (08/09/2026): Alberto mirando el portal como
    lo ve un cliente. En el flujo, encima de la navegación; el ámbar es el tono
@@ -3781,7 +3828,7 @@ h1 em {
   pointer-events: none;
   background: color-mix(in oklab, var(--bg) 55%, transparent);
 }
-.carga-as-marca { display: inline-flex; animation: carga-as-late 1.1s ease-in-out infinite; }
+.carga-as-marca { display: inline-flex; animation: carga-as-late 1s ease-in-out infinite; }
 .carga-as-texto {
   position: absolute;
   width: 1px; height: 1px;
@@ -3791,7 +3838,7 @@ h1 em {
 }
 @keyframes carga-as-entra { to { opacity: 1; } }
 @keyframes carga-as-late {
-  0%, 100% { transform: scale(0.92); opacity: 0.55; }
+  0%, 100% { transform: scale(0.9); opacity: 0.3; }
   50% { transform: scale(1); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -3881,6 +3928,7 @@ h1 em {
   color: var(--warning);
 }
 .presu-avisos li { margin-bottom: 4px; overflow-wrap: anywhere; }
+.presu-bloqueo { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: var(--peligro); overflow-wrap: anywhere; }
 
 .presu-sin-equivalente { margin-top: 0; }
 
@@ -4053,3 +4101,153 @@ h1 em {
 button.opcion { font: inherit; font-size: 15px; color: var(--text); text-align: left; }
 button.opcion[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-light); font-weight: 600; }
 
+/* ── «Todas las opciones» del presupuesto (29/09/2026) ─────────────────────────
+   Móvil: interruptores como chips que se envuelven ENCIMA de la lista. Desde 1024
+   (donde el portal ya pone su lateral): dos columnas, interruptores a la izquierda.
+   `minmax(0, 1fr)` en las pistas: un nombre de producto largo no arrastra la página. */
+.todas-rejilla { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.todas-filtros { min-width: 0; }
+.todas-filtros-titulo { margin: 0 0 6px; font-size: 15px; font-weight: 600; font-family: var(--display, inherit); }
+.todas-filtros-nota { margin: 0 0 8px; font-size: 13px; }
+.todas-interruptores { display: flex; flex-wrap: wrap; gap: 6px; }
+.todas-interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 8px 14px;
+  font: inherit;
+  font-family: var(--display, inherit);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.todas-interruptor:hover { border-color: var(--muted2); }
+.todas-interruptor[aria-pressed='true'] { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+.todas-cuenta { font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.todas-limpiar {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  min-height: 44px;
+  padding: 0 4px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.todas-lista-col { min-width: 0; }
+.todas-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.todas-fila {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px 14px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.todas-fila[data-recomendada='si'] { border-color: color-mix(in oklab, var(--accent) 45%, var(--border)); }
+.todas-fila-cabeza {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'logo datos' 'precio precio';
+  gap: 6px 12px;
+  align-items: center;
+}
+.aviso-perdidas { display: grid; gap: 8px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--negative); background: var(--negative-bg); font-size: 14px; }
+.aviso-perdidas-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.aviso-perdidas-check input { width: 20px; height: 20px; flex: none; }
+.todas-de-ley { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft, var(--border)); font-size: 14px; font-weight: 600; }
+.todas-logo { grid-area: logo; display: flex; align-items: center; max-width: 120px; }
+.todas-fila-datos { grid-area: datos; display: grid; gap: 2px; min-width: 0; }
+.todas-recomendada { width: fit-content; }
+.todas-producto { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.todas-precio { grid-area: precio; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.todas-prima { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.todas-firmeza { font-size: 12px; color: var(--muted); }
+@media (min-width: 560px) {
+  .todas-fila-cabeza { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'logo datos precio'; }
+  .todas-precio { flex-direction: column; align-items: flex-end; text-align: right; }
+}
+.todas-detalles { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+.todas-detalles li { overflow-wrap: anywhere; }
+.todas-acciones { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.todas-acciones .boton, .todas-acciones .boton-tenue { width: auto; }
+.todas-comparar { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; cursor: pointer; }
+.todas-comparar input { width: 20px; height: 20px; margin: 0; accent-color: var(--primary); }
+.todas-comparar:has(input:disabled) { color: var(--muted); cursor: not-allowed; }
+.todas-ver-mas { margin-top: 10px; }
+.todas-lista-col .presu-plegable summary { padding: 12px 0; min-height: 44px; box-sizing: border-box; font-size: 14px; }
+@media (min-width: 1024px) {
+  .todas-rejilla { grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+  .todas-interruptores { flex-direction: column; align-items: stretch; }
+  .todas-filtros { position: sticky; top: 16px; }
+}
+
+
+/* ── Seguimiento de un parte: Recibido → Comunicado → En tramitación → Cerrado ──
+   Cuatro pasos en 2×2 hasta 480 px (nada a 320 px queda en una columna de 70 px). */
+.parte-seguimiento { margin-top: 10px; min-width: 0; }
+.parte-pasos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.parte-pasos li {
+  font-size: 12px;
+  line-height: 1.3;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.parte-pasos li.hecho { color: var(--text); }
+.parte-pasos li.actual {
+  background: var(--positive-bg);
+  border-color: color-mix(in oklab, var(--ok) 30%, var(--panel));
+  color: var(--positive);
+  font-weight: 600;
+}
+@media (min-width: 480px) {
+  .parte-pasos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.parte-seguimiento-texto { margin: 8px 0 0; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.parte-seguimiento-texto.ojo { color: var(--warning); font-weight: 600; }
+
+/* ─── Presupuesto de ofertas (F4, 05/10/2026) ─────────────────────────────── */
+/* La recomendada por el corredor se destaca con el borde, no con otro tamaño. */
+.presu-tarjeta[data-recomendada='si'] { border: 2px solid var(--primary); }
+.presu-anual { font-size: 13px; font-weight: 400; color: var(--muted); }
+.presu-clave { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
+.presu-clave li { margin-bottom: 3px; overflow-wrap: anywhere; }
+
+/* El cuadro comparativo: tabla desde 700 px, tarjetas por garantía por debajo (≥ 320 px sin scroll lateral). */
+.ofertas-tabla { display: none; }
+.ofertas-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.ofertas-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+  min-width: 0;
+}
+@media (min-width: 700px) {
+  .ofertas-tabla { display: block; }
+  .ofertas-cards { display: none; }
+}

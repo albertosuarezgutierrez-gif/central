@@ -117,9 +117,7 @@ pregunta —otro rango, por dispositivo, por país, la evolución por día— es
 cuenta de servicio de solo lectura, sin credencial nueva:
 
 ```bash
-curl -s -X POST "$PLATAFORMA_URL/api/internal/gsc" -H "Authorization: Bearer $ALERTA_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"desde":"2026-08-01","hasta":"2026-08-31","dimensiones":["query","device"],"limite":50}'
+scripts/plataforma-gsc.sh POST '{"desde":"2026-08-01","hasta":"2026-08-31","dimensiones":["query","device"],"limite":50}'
 ```
 
 Sin cuerpo son los últimos 28 días consolidados por consulta. `GET` al mismo sitio lista a qué

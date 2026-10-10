@@ -12,7 +12,26 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (06/10/2026) fix(tarificador): ramo NULL sin valor por defecto en fichas; SQL 07b/07c marcados como aplicados — agente-mecanico — ok (tsc limpio, 7 tests pass, prisma generate ok)
+- (06/10/2026) helper textoExacto en tarificador-rpa/allianz/comunidades.ts, actualizar abrirComunidades para robustecer detectores de texto con variación CSS (mayúsculas, espacios) — agente-mecanico — ok (tsc limpio, 6/6 pruebas del helper pass)
+- (04/10/2026) crear agente jefe-contabilidad.md, reglas contables en perfil-fiscal/SKILL.md, actualizar CONTEXTO-SESIONES.md — sesión — ok
+- (03/10/2026) pasada SEO: CTR 2 artículos (preaviso 363 impr/0 clics, como-dar-de-baja 202 impr/1 clic) + keywords.md §5 — sesión — ok (189 tests articulos + ramos pass, 0 fail; tsc 0 errores)
+- 03/10/2026 · memoria+skill cierre CIMA (LOO-806) · ok
+- (03/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (migración 0105 cierre CIMA), SKILL.md cima-ingesta (rescate sinConfirmarTirea, recorte de lote, limpieza) — sesión — ok
+
+- (03/10/2026, tarde) actualización de memoria: CONTEXTO-SESIONES.md (estándares EIAC), SKILL.md cima-ingesta (📏 campos huecos + 🔑 Claves EIAC + 🗓️ Fechas de relleno), SKILL.md correduria-crm (etiquetas CIMA) — sesión — ok
+
+- (03/10/2026) verificación: apps/asegura prisma generate (2 schemas) + tsc ✓; apps/plataforma tsc 379 errors; apps/asegura-portal tsc 548 errors; root pnpm test 10969 pass (1296 tap + 3817 plataforma + 53 vitest + others), 0 fail — verificación — ok (uncommitted changes detectadas pero no modificadas)
+
+- (03/10/2026) wire etiquetaClave (EIAC) a fichaObjeto + bien-asegurado; traducir combustible/clase/categoría/uso/zona/inmueble/comunidad en 3 ficheros — agente-mecanico — ok (41 tests objeto.test.ts, 6 ficha-objeto-linea.test.ts, 32 bien-asegurado.test.ts all pass; unknown codes stay raw)
+
+- (03/10/2026) actualizar fechaEfecto en fixtures (2026-10-01 → 2026-11-02) en formulario-guardado.test.ts + peticion-hogar.test.ts — agente-mecanico — ok (3 tests fallidos; todos verdes tras fix; 1168 tests de asegura pasan)
+
+- (03/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (auditoría CIMA Allianz POL 131), SKILL.md cima-ingesta (riesgo_sin_bloque), AGENTE-MECANICO-BITACORA.md — sesión — ok
+
 - (27/09/2026) parking de House Sevillana «en el edificio» → San Juan de la Palma en sivra/messages ×5 + skill seo-house-sevillana (8 ficheros) — agente-mecanico — ok (no commiteó; JSON válido; afirmó errores de tsc «preexistentes» en sivra que eran falta de `prisma generate`: con él, tsc limpio).
+
+- (04/10/2026) actualización de memoria: CONTEXTO-SESIONES.md (CIMA/Allianz C0109 cierre), AGENTE-MECANICO-BITACORA.md — sesión — ok
 
 - (20/09/2026) tres artículos de siniestro por ramo en `apps/asegura-web/lib/articulos.ts` (coche / fuga de agua / salud) — agente-mecanico — ok (46 tests + tsc en verde; un solo retoque a mano: «te ahorra un viaje» → «te evita un viaje», que el cepo de copy no caza porque no es de precio)
 - (20/09/2026) embudo PostHog en `asegura-web` (`lib/medir.ts`, `EnlaceMedido`, 7 CTAs, formulario, calculadora, 11 tests con cepo visto en rojo) — agente-mecanico — ok con retoque: puso `calculadora_calculo` en el botón «+ Otro seguro» (la calculadora no tiene botón calcular); se movió a un `useEffect` al primer resultado con fecha
@@ -30,3 +49,14 @@
 - (26/09/2026) retirar «Mensajes con tu corredor» (4 capas, 21 ficheros) — agente-mecanico — fallo: commiteó pese a la prohibición y dejó plataforma SIN COMPILAR (ficha y CorreduriaClient importaban lo borrado; solo typecheckeó asegura-portal). Lo cerró la sesión.
 - (26/09/2026) lote 1 UX correduría, panel (44 px, bloques vacíos, textos) — agente-mecanico — fallo parcial: hizo 8 de ~16 ficheros y dos regresiones (Retención escondía el aviso de pólizas sin recibos; Quejas sin quejas perdía el botón de registrar). Completado y corregido por la sesión.
 - (26/09/2026) lote 1 UX correduría, fichas (bug «3»→«2c», PII, 44 px) — agente-mecanico — ok parcial: hizo el bug, la PII y los 44 px; dejó sin tocar todos los textos (TabContactos, DatosCompania, Documentos, Siniestros…). Completado por la sesión.
+| 28/09/2026 | envolver 7 páginas de correduría en <Pagina> | agente-mecanico | ok |
+| 29/09/2026 | campo «Fecha de efecto» en 5 pantallas de pedir precio | agente-mecanico | fallo: dos lanzamientos seguidos devolvieron «no hay tarea» sin tocar nada (perdió el prompt). Hecho por la sesión |
+| 30/09/2026 | asegura-web: cabecera con herramientas + chips móvil | agente-mecanico | fallo: montaba el panel solo al abrir (SEO), el chip móvil no abría nada, CSS con tokens inexistentes, no midió con Playwright y cambió el origen histórico del portal. Rehecho por la sesión |
+| 30/09/2026 | asegura-web: «siguiente paso» en 4 herramientas | agente-mecanico | ok parcial: anclas a formularios inexistentes (#presupuesto en páginas sin él, PORTAL_URL como «que me llamen») y quitó el bloque «Guardar mis pólizas». Corregido por la sesión |
+| 30/09/2026 | regla sesión ordena / agentes ejecutan en CLAUDE.md | agente-mecanico | ok |
+| 03/10/2026 | asegura-web: ramo `salud-sin-copago` + noindex/robots de asegura-portal | general-purpose | ok parcial: la 301 de /mejoramos-tu-seguro ya existía hacia /cambiar-de-correduria (decisión documentada) y no se cambió a / |
+| 03/10/2026 | anotación memoria CIMA: CONTEXTO-SESIONES.md (REC 261 Allianz), SKILL.md cima-ingesta (LI/RE §13.3.33), AGENTE-MECANICO-BITACORA.md | sesión | ok |
+| 03/10/2026 | memoria CIMA #877 | sesión | ok |
+| 06/10/2026 | asegura-portal: 4 ajustes del globo de instalar (InstalarBoton/instalacion) | agente-mecanico | ok |
+| 06/10/2026 | asegura-portal: texto Compartir Chrome iOS (instalacion.tsx) | agente-mecanico | ok |
+| 10/10/2026 | Tarificar/Riesgo /correduria: F1 SeccionCard + botón único, F2 bloque Historial (CONTEXTO-SESIONES entrada 10/10) | agente-mecanico | ok |

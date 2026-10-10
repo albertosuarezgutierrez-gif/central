@@ -6,7 +6,14 @@ import { Prisma } from '@prisma/client'
 import type { Decision } from './decidir'
 import type { Contexto } from './contexto'
 import { necesitaTraduccionPregunta, traduccionUtil, lineaTraduccion, tipoHueco } from './reglas'
-import { derivaAEspanol } from './idioma-salida'
+import { derivaAEspanol, asegurarIdioma } from './idioma-salida'
+import { enviarAlHuespedDetallado, type ResultadoEnvio } from './enviar'
+import { crearTareaIntranet } from '@/lib/sivra/extras/orden-limpieza'
+import {
+  peticionCambioHorario, resolverTipo, evaluarCambioHorario, extraerHoraPedida, botonesCambioHorario,
+  textoNegativa, textoAceptacion, tareaLimpieza, mencionaMaletas, asegurarCallback,
+  type PeticionHorario, type ReservaHorario, type Semaforo,
+} from './cambio-horario'
 
 const EMOJI = (urgente: boolean) => (urgente ? '🔴' : '💬')
 
@@ -68,6 +75,9 @@ function fmtFecha(f: string): string {
 
 // Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking).
 export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: Decision): Promise<void> {
+  // Entrada anticipada / salida tardía / maletas: propuesta propia con semáforo (nunca auto-envío).
+  const pet = peticionCambioHorario(pregunta, dec.categoria)
+  if (pet) return proponerCambioHorario(ctx, pregunta, dec, pet)
   const urgente = dec.sentimiento === 'negativo'
   const cabecera = `${EMOJI(urgente)} <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})` +
     `\n📅 Entrada ${fmtFecha(ctx.checkIn)} · Salida ${fmtFecha(ctx.checkOut)}`
@@ -126,6 +136,11 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   // Cierre de conversación (gracias/perfecto…): el agente avisa de que no hace falta responder y deja
   // descartar sin enviar nada (además de Enviar de cortesía, que sigue arriba).
   if (noRespuesta) botones.push([{ texto: '🚫 No responder', callback: `hsp_skip:${ctx.bookingId}` }])
+  // Ya contestado a mano (Smoobu/Booking/WhatsApp): cierra el pendiente sin enviar nada.
+  else botones.push([{ texto: '✋ Ya respondido', callback: `hsp_done:${ctx.bookingId}` }])
+  // El «mensaje del huésped» lo escribió Alberto fuera de Smoobu y llegó sin marca de emisor
+  // (reserva 154692216): se registra como nuestro para que el anti-eco no vuelva a tomarlo por pregunta.
+  botones.push([{ texto: '🙋 Ese mensaje es mío', callback: `hsp_mine:${ctx.bookingId}` }])
   // Retocar: aplicar una instrucción corta sobre el borrador (no reescribir entero).
   if (dec.reply) botones.push([{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${ctx.bookingId}` }])
   // Acción contextual: conceder late/early si la categoría lo pide.
@@ -160,7 +175,7 @@ export async function reproponerBorrador(
     `\n\nRevísalo y dale a ✅ Enviar, o sigue ajustando.`
   const botones: Boton[][] = [
     [{ texto: '✅ Enviar', callback: `hsp_send:${pend.booking_id}` }, { texto: '✏️ Modificar', callback: `hsp_edit:${pend.booking_id}` }],
-    [{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${pend.booking_id}` }],
+    [{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${pend.booking_id}` }, { texto: '✋ Ya respondido', callback: `hsp_done:${pend.booking_id}` }],
   ]
   const mid = await tgAvisoBotones('huespedes.borrador', cuerpo, botones)
   // Guarda el nuevo borrador como pendiente (el ✅ Enviar mandará ESTE texto) y resetea los modos.
@@ -176,6 +191,172 @@ export async function confirmarEnviado(messageId: number | null, texto: string):
   if (messageId) await tgEditMessage(messageId, `✅ Enviado al huésped:\n\n${escapeHtml(texto)}`)
 }
 
+export async function confirmarRespondidoFuera(messageId: number | null): Promise<void> {
+  if (messageId) await tgEditMessage(messageId, '✋ Respondido fuera del agente — pendiente cerrado, no se envió nada.')
+}
+
+export async function confirmarEsMio(messageId: number | null): Promise<void> {
+  if (messageId) await tgEditMessage(messageId, '🙋 Anotado: ese mensaje era tuyo, no del huésped. Pendiente cerrado y no volveré a tomarlo por pregunta.')
+}
+
 export async function confirmarDescartado(messageId: number | null): Promise<void> {
   if (messageId) await tgEditMessage(messageId, '🚫 Descartado — no se envió respuesta al huésped.')
+}
+
+
+// ───────────────────────── ENTRADA ANTICIPADA / SALIDA TARDÍA / MALETAS ─────────────────────────
+// Decisión de Alberto (03/10/2026): estas peticiones NUNCA salen solas. La propuesta lleva semáforo
+// (¿lo permite el calendario del piso?), la reserva colindante y cuatro botones; los textos son
+// GRATIS (sin coste) y sin petición de reseña. Lógica pura en `cambio-horario.ts`.
+
+const EMOJI_SEMAFORO: Record<Semaforo, string> = { rojo: '🔴', verde: '🟢', amarillo: '🟡' }
+
+/**
+ * Reservas del MISMO piso, deduplicadas por `reservationId` y SIN las de `reservas_canceladas`.
+ * `null` = no se pudo leer (≠ `[]` = no hay ninguna): el semáforo no puede ser verde con un null.
+ */
+export async function cargarReservasPropiedad(propertyId: string): Promise<ReservaHorario[] | null> {
+  if (!propertyId || propertyId === 'all') return null
+  try {
+    return await prisma.$queryRaw<ReservaHorario[]>(Prisma.sql`
+      SELECT DISTINCT ON (i."reservationId")
+             i."reservationId"::text AS "reservationId",
+             i."guestName" AS huesped,
+             (i."checkIn" AT TIME ZONE 'Europe/Madrid')::date::text AS "checkIn",
+             (i."checkOut" AT TIME ZONE 'Europe/Madrid')::date::text AS "checkOut"
+      FROM incomes i
+      WHERE i."propertyId" = ${propertyId}
+        AND i."reservationId" IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM reservas_canceladas rc WHERE rc.reservation_id = i."reservationId")
+      ORDER BY i."reservationId", i."createdAt" DESC, i."id" DESC
+    `)
+  } catch { return null }
+}
+
+type ReservaIncome = { guestName: string | null; checkIn: string | null; checkOut: string | null }
+async function cargarReserva(bookingId: string): Promise<ReservaIncome | null> {
+  try {
+    const r = await prisma.$queryRaw<ReservaIncome[]>(Prisma.sql`
+      SELECT "guestName",
+             (("checkIn") AT TIME ZONE 'Europe/Madrid')::date::text AS "checkIn",
+             (("checkOut") AT TIME ZONE 'Europe/Madrid')::date::text AS "checkOut"
+      FROM incomes WHERE "reservationId" = ${bookingId} LIMIT 1
+    `)
+    return r[0] ?? null
+  } catch { return null }
+}
+
+const hoyMadrid = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
+
+async function evaluarReserva(bookingId: string, propertyId: string, pet: PeticionHorario, pregunta: string, fechas: { checkIn: string | null; checkOut: string | null }) {
+  const tipo = resolverTipo(pet, pregunta, { hoy: hoyMadrid(), checkIn: fechas.checkIn })
+  const reservas = await cargarReservasPropiedad(propertyId)
+  const ev = evaluarCambioHorario({ tipo, reserva: { reservationId: bookingId, ...fechas }, reservasMismaPropiedad: reservas })
+  return { tipo, ev }
+}
+
+async function proponerCambioHorario(ctx: Contexto, pregunta: string, dec: Decision, pet: PeticionHorario): Promise<void> {
+  const { tipo, ev } = await evaluarReserva(ctx.bookingId, ctx.propertyId, pet, pregunta, { checkIn: ctx.checkIn || null, checkOut: ctx.checkOut || null })
+  const horaPedida = extraerHoraPedida(pregunta)
+  const otroIdioma = ctx.lang !== 'es'
+  const cabecera = `${EMOJI(dec.sentimiento === 'negativo')} <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})` +
+    `\n📅 Entrada ${fmtFecha(ctx.checkIn)} · Salida ${fmtFecha(ctx.checkOut)}`
+
+  // El «no» amable ya redactado (con consignas solo si aplica) y traducido al idioma del huésped.
+  const noEs = textoNegativa({
+    tipo, semaforo: ev.semaforo, propertyId: ctx.propertyId, nombre: ctx.guestName,
+    ofrecerMaletas: ev.semaforo === 'rojo' || pet.tipo === 'equipaje' || mencionaMaletas(pregunta),
+  })
+  const [noIdioma, pregEsRaw] = await Promise.all([
+    asegurarIdioma(noEs, ctx.lang),
+    necesitaTraduccionPregunta(pregunta, ctx.lang) ? traducirEs(pregunta) : Promise.resolve(''),
+  ])
+  const preguntaEs = traduccionUtil(pregunta, pregEsRaw)
+  const idiomaNota = otroIdioma ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
+  const etiqueta = (tipo === 'salida' ? 'salida tardía' : 'entrada anticipada') + (pet.tipo === 'equipaje' ? ' · maletas' : '')
+  const col = ev.colindante
+  const cuerpo = `<b>Huésped:</b> ${escapeHtml(pregunta)}` +
+    lineaTraduccion(preguntaEs, otroIdioma, escapeHtml) +
+    `\n\n${EMOJI_SEMAFORO[ev.semaforo]} <b>Semáforo ${ev.semaforo.toUpperCase()}</b> — ${etiqueta}` +
+    (horaPedida ? ` · pide ${horaPedida}` : ' · no he podido sacar la hora pedida') +
+    `\n<i>${escapeHtml(ev.motivo)}</i>` +
+    (col ? `\n👥 <b>Colindante:</b> ${escapeHtml(col.huesped || 'otra reserva')} (reserva ${escapeHtml(String(col.reservationId))}) · entrada ${fmtFecha(col.checkIn || '')} · salida ${fmtFecha(col.checkOut || '')}` : '') +
+    `\n\n<b>Si pulsas ❌ No, saldrá${idiomaNota}:</b>\n${escapeHtml(noIdioma.texto)}` +
+    (noIdioma.fallo ? avisoIdiomaEquivocado(ctx.lang) : lineaTraduccion(otroIdioma ? noEs : '', otroIdioma, escapeHtml)) +
+    `\n\n<i>Gratis: ningún texto menciona coste ni pide reseña. 🧹 Consultar limpieza solo deja nota — no envía nada al huésped.</i>`
+
+  const botones: Boton[][] = botonesCambioHorario({ bookingId: ctx.bookingId, tipo, semaforo: ev.semaforo, horaPedida })
+  // Salida de emergencia (no es decisión de las cuatro acciones): redactar a mano o cerrar si ya está contestado.
+  botones.push([
+    { texto: '✏️ Modificar', callback: asegurarCallback(`hsp_edit:${ctx.bookingId}`) },
+    { texto: '✋ Ya respondido', callback: asegurarCallback(`hsp_done:${ctx.bookingId}`) },
+  ])
+  const mid = await tgAvisoBotones('huespedes.borrador', `${cabecera}\n\n${cuerpo}`, botones)
+  // `borrador` = el «no» (lo que enviaría ❌ No y lo que Modificar/Retocar tomarían como base).
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, esperando_retoque, idioma, pregunta, hueco_guia, no_requiere_respuesta, recordatorio_at, acuse_espera_at)
+    VALUES (${ctx.bookingId}, ${ctx.propertyId}, ${noIdioma.texto}, ${dec.categoria}, ${mid}, false, false, ${ctx.lang}, ${pregunta || ''}, false, false, NULL, NULL)
+    ON CONFLICT (booking_id) DO UPDATE SET borrador = ${noIdioma.texto}, categoria = ${dec.categoria}, tg_message_id = ${mid}, esperando_edit = false, esperando_retoque = false, idioma = ${ctx.lang}, pregunta = ${pregunta || ''}, hueco_guia = false, no_requiere_respuesta = false, created_at = now(), recordatorio_at = NULL, acuse_espera_at = NULL
+  `).catch(() => {})
+}
+
+type PendCambio = { booking_id: string; property_id: string | null; idioma: string | null; pregunta: string | null; categoria: string | null }
+
+export type ResultadoAceptacion = {
+  ok: boolean
+  /** Texto corto para el toast del botón. */
+  toast: string
+  /** HTML para un mensaje aparte (aviso de por qué no se envió, o resumen de la tarea). */
+  aviso: string
+  /** Mensaje que salió al huésped (solo si ok). */
+  enviado?: string
+  /** Fallo de Smoobu: el webhook lo traduce con `avisoFalloEnvio`. */
+  fallo?: Extract<ResultadoEnvio, { ok: false }>
+}
+
+/**
+ * ✅ Sí / 🕐 Sí, hasta HH: vuelve a mirar el calendario (puede haber entrado una reserva desde que se
+ * propuso), manda el mensaje al huésped en SU idioma y crea la tarea en /invitado/limpieza. Si el
+ * calendario está ahora en ROJO, no envía nada. Si la tarea no se pudo crear, se DECLARA.
+ */
+export async function aceptarCambioHorario(pend: PendCambio, hora: string): Promise<ResultadoAceptacion> {
+  const bookingId = pend.booking_id
+  const propertyId = pend.property_id || ''
+  const pregunta = pend.pregunta || ''
+  const pet = peticionCambioHorario(pregunta, pend.categoria)
+  if (!pet) return { ok: false, toast: 'No se pudo', aviso: '🛑 No reconozco la petición de este pendiente. Usa ✏️ Modificar.' }
+  const res = await cargarReserva(bookingId)
+  if (!res) return { ok: false, toast: 'No se pudo leer la reserva', aviso: '🛑 <b>No he podido leer la reserva</b> (fechas): no envío una promesa a medias. Usa ✏️ Modificar.' }
+  const fechas = { checkIn: res.checkIn, checkOut: res.checkOut }
+  const { tipo, ev } = await evaluarReserva(bookingId, propertyId, pet, pregunta, fechas)
+  if (ev.semaforo === 'rojo') {
+    return { ok: false, toast: 'Ahora está en rojo', aviso: `🔴 <b>No se ha enviado nada.</b> El calendario está ahora en rojo: ${escapeHtml(ev.motivo)}\nPulsa ❌ No o ✏️ Modificar.` }
+  }
+  const idioma = pend.idioma || 'es'
+  const es = textoAceptacion({ tipo, hora, nombre: res.guestName })
+  const traducido = await asegurarIdioma(es, idioma)
+  if (traducido.fallo) {
+    return { ok: false, toast: 'No pude traducirlo', aviso: `🛑 <b>No se ha enviado nada:</b> no he podido traducir el mensaje a ${escapeHtml(idioma.toUpperCase())}. Usa ✏️ Modificar.` }
+  }
+  const envio = await enviarAlHuespedDetallado(bookingId, traducido.texto)
+  if (!envio.ok) return { ok: false, toast: envio.motivo.reintentable ? 'No se pudo enviar — reintenta' : 'No se pudo enviar — mira el aviso', aviso: '', fallo: envio }
+
+  const t = tareaLimpieza({ tipo, hora, checkIn: res.checkIn, checkOut: res.checkOut, huesped: res.guestName, reservationId: bookingId })
+  // `crearTareaIntranet` toma la fecha de `checkIn`: aquí es la fecha de la tarea (salida o entrada).
+  // El mensaje YA salió: un fallo aquí no puede propagarse; se declara con el aviso de «tarea NO creada».
+  let tareaId: string | null = null
+  if (t.fecha) {
+    try {
+      tareaId = await crearTareaIntranet({ piso: propertyId, checkIn: t.fecha, titulo: t.texto, instruccion: t.texto, huesped: res.guestName || undefined, propertyId })
+    } catch { tareaId = null }
+  }
+  const aviso = tareaId
+    ? `🧹 Tarea creada para la limpieza el ${fmtFecha(t.fecha || '')}: <i>${escapeHtml(t.texto)}</i>`
+    : `⚠️ <b>El mensaje salió, pero la tarea NO se ha creado</b> — la limpieza no lo ve. Créala a mano (🧹 Limpiadoras → Tareas): <i>${escapeHtml(t.texto)}</i>`
+  return { ok: true, toast: 'Enviado ✅', aviso, enviado: traducido.texto }
+}
+
+/** Texto del «no»: debe estar en el idioma del huésped (si el borrador salió en español, no se manda). */
+export function negativaListaParaEnviar(pend: { borrador: string | null; idioma: string | null }): boolean {
+  return !!(pend.borrador || '').trim() && !derivaAEspanol(pend.borrador || '', pend.idioma || 'es')
 }

@@ -35,8 +35,9 @@ import {
 } from './peticion-auto.ts'
 import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-moto.ts'
 import { partirDireccion, tipoViaDeFicha } from './direccion.ts'
-import { KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
+import { HISTORIAL_MAXIMO, KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
 import { TIPO_CARNET_SUPUESTO, ZONA_CARNET_SUPUESTA } from './persona.ts'
+import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
 export type Supuesto = {
@@ -93,6 +94,12 @@ export type ClienteCartera = {
    * principio; si falta, es un hueco que se pide ANTES de pagar.
    */
   email?: string | null
+  /**
+   * `clientes.tipo_persona`: `'juridica'` = empresa (va como propietaria con su
+   * CIF, nunca como conductora). `null`/`undefined` = no consta: se trata como
+   * persona, que es lo que era todo antes de existir el campo.
+   */
+  tipoPersona?: string | null
 }
 
 /**
@@ -199,8 +206,6 @@ export function tipoViaTextoDelTomador(cliente: Pick<ClienteCartera, 'direccion'
  */
 export const KM_ANUALES_POR_DEFECTO = KM_ANUALES_SUPUESTOS
 
-/** Años asegurado que se presumen cuando no consta el inicio de la relación. */
-const ANIOS_ASEGURADO_MINIMOS = 1
 
 /**
  * Nombres de pila que el CRM escribe cuando NO hay nombre. Son centinelas
@@ -221,15 +226,35 @@ function nombreUtil(v: string | null): string | null {
   return NOMBRES_CENTINELA.has(t.toLowerCase()) ? null : t
 }
 
-/** «Pérez García» → ['Pérez', 'García']. El vendor quiere los dos por separado. */
+const PARTICULAS_APELLIDO = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'i', 'san', 'santa', 'van', 'von', 'da', 'das', 'do', 'dos'])
+
+function esParticula(p: string): boolean {
+  return PARTICULAS_APELLIDO.has(p.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
+}
+
+/**
+ * «Pérez García» → ['Pérez', 'García']. El vendor quiere los dos por separado.
+ * Las partículas («de», «del», «la», «san», «van»…) se pegan a la palabra siguiente: «García de la Torre» →
+ * «García» / «de la Torre»; «De la Rosa» es UN apellido.
+ */
 export function partirApellidos(apellidos: string | null): { primero: string | null; segundo: string | null } {
   const t = nombreUtil(apellidos)
   if (t === null) return { primero: null, segundo: null }
-  const partes = t.split(/\s+/)
-  if (partes.length === 1) return { primero: partes[0], segundo: null }
-  // Con tres o más palabras el corte no es adivinable («de la Torre Ruiz»).
-  // Se parte por la mitad conservadora: la ÚLTIMA palabra es el segundo apellido.
-  return { primero: partes.slice(0, -1).join(' '), segundo: partes[partes.length - 1] }
+  const palabras = t.split(/\s+/)
+  const unidades: string[] = []
+  let pendiente: string[] = []
+  for (const w of palabras) {
+    pendiente.push(w)
+    if (!esParticula(w)) { unidades.push(pendiente.join(' ')); pendiente = [] }
+  }
+  // Partículas sueltas al final («García de»): no hay palabra a la que pegarlas, se quedan con la anterior.
+  if (pendiente.length > 0) {
+    if (unidades.length > 0) unidades[unidades.length - 1] += ' ' + pendiente.join(' ')
+    else unidades.push(pendiente.join(' '))
+  }
+  if (unidades.length === 1) return { primero: unidades[0], segundo: null }
+  // Con tres o más unidades el corte no es adivinable: la ÚLTIMA es el segundo apellido.
+  return { primero: unidades.slice(0, -1).join(' '), segundo: unidades[unidades.length - 1] }
 }
 
 /**
@@ -295,25 +320,30 @@ function historialDePoliza(
           diaSiguiente(vencimiento),
           `el día siguiente al vencimiento de la póliza actual (${vencimiento})`,
         ) as string)
-      : (suponer(
-          'fechaEfecto',
-          diaSiguiente(hoy),
-          vencimiento
-            ? `la póliza actual venció el ${vencimiento}, así que se pide precio para mañana`
-            : 'la póliza actual no tiene fecha de vencimiento en la ficha, así que se pide precio para mañana',
-        ) as string)
+      : ((vencimiento
+          ? suponer('fechaEfecto', diaSiguiente(hoy), `la póliza actual venció el ${vencimiento}, así que se pide precio para mañana`)
+          : suponer(
+              'fechaEfecto',
+              sumarDias(hoy, DIAS_EFECTO_PRESUPUESTO_NUEVO),
+              `no consta el vencimiento de la póliza actual: efecto a ${DIAS_EFECTO_PRESUPUESTO_NUEVO} días para que el precio siga valiendo al emitir`,
+            )) as string)
 
   // ── Historial: la póliza que estamos retarificando ES la anterior ──────────
   // Esto no es un supuesto: es el motivo por el que se pulsa el botón.
+  // 29/09/2026 (Alberto): los años asegurado se declaran al MÁXIMO. La compañía los contrasta con
+  // SINCO por el nº de póliza y aplica el bonus real; la antigüedad con NOSOTROS no es la del
+  // conductor (pudo estar asegurado antes en otra), así que solo sirve para «años en la compañía».
   const aniosReales = aniosEntre(limpio(poliza.fechaEfectoInicial), hoy)
+  const aniosEnCompania = aniosReales !== null && aniosReales > 0 ? aniosReales : HISTORIAL_MAXIMO.aniosEnCompania
   const aniosAsegurado =
-    aniosReales !== null && aniosReales > 0
+    aniosReales !== null && aniosReales >= HISTORIAL_MAXIMO.aniosAsegurado
       ? aniosReales
       : (suponer(
           'aniosAsegurado',
-          ANIOS_ASEGURADO_MINIMOS,
-          'no consta desde cuándo está asegurado, así que se cuenta solo un año — ' +
-            'si el dato real aparece, el precio solo puede mejorar',
+          HISTORIAL_MAXIMO.aniosAsegurado,
+          'se declara el máximo: la compañía contrasta el historial con SINCO por el nº de póliza ' +
+            'y aplica el bonus real',
+          true,
         ) as number)
 
   // Siniestralidad: decisión de negocio de Alberto. Ver cabecera del fichero.
@@ -335,7 +365,7 @@ function historialDePoliza(
     companiaAnteriorCodigo: limpio(poliza.codigoEntidadDgs),
     polizaAnterior: limpio(poliza.numeroPoliza),
     aniosAsegurado,
-    aniosEnCompania: aniosAsegurado,
+    aniosEnCompania,
     aniosSinSiniestros,
     siniestrosUltimos5: huboSiniestros ? poliza.siniestrosRegistrados : 0,
   }
@@ -377,7 +407,8 @@ export function precalificarAuto(
   const numeroViaDeFicha = direccionPartida?.numero ?? null
 
   const datos: Partial<DatosAuto> = {
-    // ── Persona ──
+    // ── Persona ── (una EMPRESA tomadora llega por los mismos campos: CIF y razón social)
+    ...(cliente.tipoPersona === 'juridica' ? { tomadorEsEmpresa: true } : {}),
     dni: limpio(cliente.dni) ?? undefined,
     nombre: nombreUtil(cliente.nombre) ?? undefined,
     apellido1: primero ?? undefined,
@@ -503,8 +534,9 @@ export function precalificarAutoNueva(
 
   const fechaEfecto = suponer(
     'fechaEfecto',
-    diaSiguiente(hoy),
-    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+    sumarDias(hoy, DIAS_EFECTO_PRESUPUESTO_NUEVO),
+    `presupuesto sin póliza que retarificar: efecto a ${DIAS_EFECTO_PRESUPUESTO_NUEVO} días para que el precio siga ` +
+      'valiendo al emitir (con efecto mañana caducaba al día siguiente y había que volver a pagar); si el cliente lo quiere antes, se pide con su fecha',
   ) as string
 
   // Ver `precalificarAuto()`: si la ficha ya trae una dirección, no se vuelve
@@ -515,7 +547,8 @@ export function precalificarAutoNueva(
       : null
 
   const datos: Partial<DatosAuto> = {
-    // ── Persona ──
+    // ── Persona ── (una EMPRESA tomadora llega por los mismos campos: CIF y razón social)
+    ...(cliente.tipoPersona === 'juridica' ? { tomadorEsEmpresa: true } : {}),
     dni: limpio(cliente.dni) ?? undefined,
     nombre: nombreUtil(cliente.nombre) ?? undefined,
     apellido1: primero ?? undefined,
@@ -524,7 +557,7 @@ export function precalificarAutoNueva(
     sexo: sexoDeSaludo(cliente.saludo) ?? undefined,
     estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
-    fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+    fechaCarnet: limpio(cliente.fechaCarnet) ?? carnetBDeFicha(cliente.carnets) ?? undefined,
     cpResidencia: limpio(cliente.codigoPostal),
     municipioResidenciaId: resueltos.municipioId,
     nombreVia: nombreViaDeFicha ?? undefined,
@@ -592,7 +625,7 @@ export function precalificarAutoNueva(
     })
   }
 
-  return { datos, supuestos, faltan: revisarDatosAuto(datos, { hoy }) }
+  return { datos, supuestos, faltan: revisarDatosAuto(datos, { hoy, vehiculoNuevo: true }) }
 }
 
 /**
@@ -694,8 +727,9 @@ export function precalificarMotoNueva(
 
   const fechaEfecto = suponer(
     'fechaEfecto',
-    diaSiguiente(hoy),
-    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+    sumarDias(hoy, DIAS_EFECTO_PRESUPUESTO_NUEVO),
+    `presupuesto sin póliza que retarificar: efecto a ${DIAS_EFECTO_PRESUPUESTO_NUEVO} días para que el precio siga ` +
+      'valiendo al emitir (con efecto mañana caducaba al día siguiente y había que volver a pagar); si el cliente lo quiere antes, se pide con su fecha',
   ) as string
 
   const experienciaConduccion =
@@ -705,6 +739,7 @@ export function precalificarMotoNueva(
       'ThisMotorcycle',
       'no se ha preguntado si el conductor viene de otra moto; se supone que ya ha llevado ESTA — ' +
         'corrígelo si no es el caso',
+      true,
     ) as string)
 
   // ── El carné: el de MOTO de la ficha, si consta. Tarificar una moto con la
@@ -713,15 +748,15 @@ export function precalificarMotoNueva(
   const carnet: Pick<Partial<DatosMoto>, 'fechaCarnet' | 'tipoCarnet' | 'zonaCarnet' | 'fechaCarnetB'> = deMoto
     ? { fechaCarnet: deMoto.fecha, tipoCarnet: deMoto.tipo, fechaCarnetB: carnetBDeFicha(cliente.carnets) }
     : {
-        fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+        fechaCarnet: limpio(cliente.fechaCarnet) ?? carnetBDeFicha(cliente.carnets) ?? undefined,
         tipoCarnet: suponer(
           'tipoCarnet',
           TIPO_CARNET_SUPUESTO,
           cliente.carnets === null
             ? 'no se han podido leer los carnés de la ficha; se declara el B con la fecha del conductor — ' +
                 'compruébalo: una moto de más de 125 cc exige carné de moto'
-            : 'no consta carné de moto (A, A2, A1, AM) con fecha en la ficha; se declara el B con la fecha ' +
-                'del conductor — una moto de más de 125 cc exige carné de moto, añádelo a la ficha',
+            : 'no consta carné de moto (A, A2, A1, AM) con fecha en la ficha; se declara el B (el de la ficha ' +
+                'o el del conductor) — vale hasta 125 cc; una moto mayor exige carné de moto, añádelo a la ficha',
           true,
         ) as string,
       }
@@ -732,7 +767,8 @@ export function precalificarMotoNueva(
   ) as string
 
   const datos: Partial<DatosMoto> = {
-    // ── Persona ──
+    // ── Persona ── (una EMPRESA tomadora llega por los mismos campos: CIF y razón social)
+    ...(cliente.tipoPersona === 'juridica' ? { tomadorEsEmpresa: true } : {}),
     dni: limpio(cliente.dni) ?? undefined,
     nombre: nombreUtil(cliente.nombre) ?? undefined,
     apellido1: primero ?? undefined,
@@ -784,7 +820,7 @@ export function precalificarMotoNueva(
     })
   }
 
-  return { datos, supuestos, faltan: revisarDatosMoto(datos) }
+  return { datos, supuestos, faltan: revisarDatosMoto(datos, { hoy, vehiculoNuevo: true }) }
 }
 
 // ─── MOTO, retarificar una póliza de la cartera ─────────────────────────────
@@ -805,7 +841,7 @@ export function precalificarMoto(
   hoy: string,
 ): PrecalificacionMoto {
   const base = precalificarMotoNueva(cliente, { ...resueltos, matricula: poliza.matricula }, hoy)
-  // La fecha de efecto de «nueva» (mañana) no vale aquí: la decide el vencimiento.
+  // La fecha de efecto de «nueva» (a 15 días) no vale aquí: la decide el vencimiento.
   const supuestos: SupuestoMoto[] = base.supuestos.filter((x) => x.campo !== 'fechaEfecto')
   const suponer = (campo: keyof DatosMoto, valor: unknown, porque: string, optimista = false) => {
     supuestos.push({ campo, valor, porque, optimista })

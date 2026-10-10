@@ -4,7 +4,8 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
 import { decidir } from '@/lib/sivra/agente-huesped/decidir'
-import { detectLang, detectCategory } from '@/lib/sivra/agente-huesped/reglas'
+import { detectLang, detectCategory, esAutomatico } from '@/lib/sivra/agente-huesped/reglas'
+import { decidirAutoEnvio } from '@/lib/sivra/agente-huesped/auto'
 import { idiomaConocido } from '@/lib/sivra/agente-huesped/idiomas'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
@@ -31,7 +32,7 @@ function strip(html: string): string {
 // asunto vacío y texto plano. (/api/threads NO trae `type` ni `sent_by_owner`, de ahí esta heurística.)
 function esMensajeAutomatico(subject: string, text: string): boolean {
   if (subject.trim() !== '') return true
-  return /check.?in online|disponible para tu reserva|self.?check.?in|c[oó]digo de acceso|how to (check|collect)|where to collect/i.test(text)
+  return esAutomatico('', text) || /c[oó]digo de acceso|how to (check|collect)|where to collect/i.test(text)
 }
 
 // Despedidas / cortesías que no necesitan respuesta.
@@ -83,8 +84,8 @@ export async function GET(req: NextRequest) {
         categoria: dec.categoria, needs_human: dec.needs_human, apoyada_en_fuente: !!dec.apoyada_en_fuente,
         sentimiento: dec.sentimiento, motivo: dec.motivo,
       },
-      seEnviariaSolo: !dec.needs_human && !!dec.reply && dec.sentimiento !== 'negativo'
-        && dec.requiere_respuesta !== false && (!!dec.apoyada_en_fuente || dec.es_cortesia === true),
+      // Misma regla que el envío real (incluida la compuerta de horario/maletas), no una copia.
+      seEnviariaSolo: decidirAutoEnvio(dec, pregunta).auto,
       borrador: dec.reply,
     })
   }
@@ -116,7 +117,7 @@ export async function GET(req: NextRequest) {
   // PENDIENTES RANCIOS — un borrador que escaló EN HORARIO y sigue sin que Alberto lo toque. Mismo
   // motivo para ir aquí arriba y fuera del try grande: si Smoobu falla al listar hilos, un huésped
   // que lleva horas esperando seguiría sin recibir nada. Solo actúa en horario de atención.
-  const rancios = await barrerPendientesRancios().catch(() => ({ recordados: 0, acusados: 0 }))
+  const rancios = await barrerPendientesRancios().catch(() => ({ recordados: 0, acusados: 0, cerrados: 0 }))
 
   const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {

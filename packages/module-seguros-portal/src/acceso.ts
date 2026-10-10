@@ -12,6 +12,18 @@
 export const NIVELES = ['tarjeta', 'completo', 'gestionar', 'administrar'] as const
 export type Nivel = (typeof NIVELES)[number]
 
+/**
+ * Niveles de `portal_vinculo` que dejan OPERAR (solicitar baja, mejorar el precio, firmar…). Es la misma lista
+ * que `NIVELES_QUE_OPERAN` de `apps/asegura/lib/ficha-de-poliza.ts` (el servidor); un test de asegura las compara.
+ * El portal la usa para NO ofrecer lo que el servidor rechazaría (`sin_permiso`). Un valor fuera del
+ * vocabulario NO opera.
+ */
+export const NIVELES_QUE_OPERAN = ['gestionar', 'administrar'] as const
+
+export function nivelPuedeOperar(nivel: string): boolean {
+  return (NIVELES_QUE_OPERAN as readonly string[]).includes(nivel)
+}
+
 export type CamposVisibles = {
   compania: boolean
   numeroPoliza: boolean

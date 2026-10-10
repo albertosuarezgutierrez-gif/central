@@ -1,0 +1,162 @@
+{
+ "sesion": "a6b8ff9a-2a6c-5811-9696-21c568e47357",
+ "inicio": "2026-09-29T10:01:57.616Z",
+ "fin": "2026-09-29T15:04:02.749Z",
+ "llamadas": 309,
+ "categorias": {
+  "otro": {
+   "llamadas": 99,
+   "chars_in": 20201,
+   "chars_out": 699684,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 22,
+    "WebSearch": 9,
+    "ReadNotifications": 57,
+    "SubagentHandback": 1,
+    "Artifact": 7,
+    "SendUserFile": 1
+   }
+  },
+  "bash": {
+   "llamadas": 127,
+   "chars_in": 89982,
+   "chars_out": 414925,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 127
+   }
+  },
+  "mcp:OpenSEO": {
+   "llamadas": 16,
+   "chars_in": 2046,
+   "chars_out": 48182,
+   "errores": 2,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__OpenSEO__list_projects": 1,
+    "mcp__OpenSEO__get_domain_overview": 3,
+    "mcp__OpenSEO__get_ranked_keywords": 2,
+    "mcp__OpenSEO__find_serp_competitors": 1,
+    "mcp__OpenSEO__get_search_console_performance": 3,
+    "mcp__OpenSEO__get_google_analytics_traffic_acquisition": 1,
+    "mcp__OpenSEO__get_google_analytics_measurement_health": 1,
+    "mcp__OpenSEO__run_site_audit": 1,
+    "mcp__OpenSEO__get_business_profile": 1,
+    "mcp__OpenSEO__get_audit_status": 1,
+    "mcp__OpenSEO__get_audit_issues": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 24,
+   "chars_in": 10024,
+   "chars_out": 74421,
+   "errores": 0,
+   "archivos_citados": 17,
+   "chars_citados": 2905883,
+   "tools": {
+    "mcp__github__search_pull_requests": 2,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__update_pull_request": 5,
+    "mcp__github__pull_request_read": 10,
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__merge_pull_request": 2,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__unsubscribe_pr_activity": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 23,
+   "chars_in": 13565,
+   "chars_out": 37618,
+   "errores": 1,
+   "archivos_citados": 5,
+   "chars_citados": 2662360,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 6,
+    "mcp__Claude_Code_Remote__create_session": 3,
+    "mcp__Claude_Code_Remote__list_triggers": 1,
+    "mcp__Claude_Code_Remote__get_trigger": 3,
+    "mcp__Claude_Code_Remote__create_trigger": 1,
+    "mcp__Claude_Code_Remote__update_trigger": 1,
+    "mcp__Claude_Code_Remote__get_session": 4,
+    "mcp__Claude_Code_Remote__delete_trigger": 2,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 1839,
+   "chars_out": 2059,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 18074,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 7,
+   "chars_in": 780,
+   "chars_out": 434442,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 6,
+    "Grep": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 1,
+   "chars_in": 65,
+   "chars_out": 42232,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__filter_project_envs": 1
+   }
+  },
+  "sql": {
+   "llamadas": 1,
+   "chars_in": 302,
+   "chars_out": 897,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 7,
+   "chars_in": 33788,
+   "chars_out": 40395,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 7
+   }
+  },
+  "mcp:Google_Drive": {
+   "llamadas": 3,
+   "chars_in": 477,
+   "chars_out": 29979,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 3
+   }
+  }
+ }
+}

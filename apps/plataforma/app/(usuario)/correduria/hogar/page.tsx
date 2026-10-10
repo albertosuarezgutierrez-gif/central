@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import HogarCatastro from './HogarCatastro'
-import { Home } from 'lucide-react'
+import { Home, Info, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
 import {
   lineasCodeoscopic,
   companiasCodeoscopic,
   type LineasCodeoscopic,
   type CompaniasCodeoscopic,
 } from '@/lib/correduria-puerto'
-import { PageHeader } from '@/components/ui'
+import { PageHeader, Pagina } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,22 +19,24 @@ export const dynamic = 'force-dynamic'
 export default async function HogarPage() {
   const [lineas, companias] = await Promise.all([lineasCodeoscopic(), companiasCodeoscopic('fidelidade')])
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div>
-        <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
-        <PageHeader
-          titulo="Presupuesto de hogar"
-          icono={<Home size={20} strokeWidth={1.75} />}
-          sub={<>
-            Con la referencia catastral —o la dirección— el Catastro da los m², el año de construcción
-            y el uso, gratis y sin preguntarle nada al cliente.
-          </>}
-        />
+    <Pagina ancho="tabla">
+      <div style={{ display: 'grid', gap: 16 }}>
+        <div>
+          <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
+          <PageHeader
+            titulo="Presupuesto de hogar"
+            icono={<Home size={20} strokeWidth={1.75} />}
+            sub={<>
+              Con la referencia catastral —o la dirección— el Catastro da los m², el año de construcción
+              y el uso, gratis y sin preguntarle nada al cliente.
+            </>}
+          />
+        </div>
+        <HogarCatastro />
+        <RamoHogar l={lineas} />
+        <CompaniasAvant2 c={companias} />
       </div>
-      <HogarCatastro />
-      <RamoHogar l={lineas} />
-      <CompaniasAvant2 c={companias} />
-    </div>
+    </Pagina>
   )
 }
 
@@ -52,14 +54,14 @@ function RamoHogar({ l }: { l: LineasCodeoscopic }) {
   if (l.estado === 'sin_configurar') {
     return (
       <div style={base}>
-        ❔ <strong>Cotizar en Codeoscopic:</strong> sin comprobar — {l.mensaje ?? 'falta la conexión con asegura'}.
+        <Info size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--muted)' }} /> <strong>Cotizar en Codeoscopic:</strong> sin comprobar — {l.mensaje ?? 'falta la conexión con asegura'}.
       </div>
     )
   }
   if (l.estado === 'error') {
     return (
       <div style={base}>
-        ⚠️ <strong>Cotizar en Codeoscopic:</strong> no se ha podido preguntar qué ramos tarifica ({l.motivo}).
+        <AlertTriangle size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--warning)' }} /> <strong>Cotizar en Codeoscopic:</strong> no se ha podido preguntar qué ramos tarifica ({l.motivo}).
         No significa que hogar no esté.
       </div>
     )
@@ -68,8 +70,8 @@ function RamoHogar({ l }: { l: LineasCodeoscopic }) {
   if (h.estado === 'disponible') {
     return (
       <div style={{ ...base, borderColor: '#4a8' }}>
-        ✅ <strong>Hogar tarifica en Codeoscopic</strong> (ramo <code>{h.id}</code> · {h.nombre}). Para
-        pedir precio de hogar de un cliente: abre su ficha y pulsa «Retarificar hogar ↗» en la póliza (hace
+        <CheckCircle2 size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--positive)' }} /> <strong>Hogar tarifica en Codeoscopic</strong> (ramo <code>{h.id}</code> · {h.nombre}). Para
+        pedir precio de hogar de un cliente: abre su ficha y pulsa «Retarificar hogar» en la póliza (hace
         falta que la póliza o su copia del volcado traigan m², año y CP). Cada cotización cuesta 0,50€ y se
         confirma en la pantalla de asegura.
       </div>
@@ -78,7 +80,7 @@ function RamoHogar({ l }: { l: LineasCodeoscopic }) {
   if (h.estado === 'ausente') {
     return (
       <div style={{ ...base, borderColor: '#c96' }}>
-        🚫 <strong>Hogar NO está entre los ramos contratados</strong> en Codeoscopic
+        <XCircle size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--negative)' }} /> <strong>Hogar NO está entre los ramos contratados</strong> en Codeoscopic
         {h.ramos.length > 0 ? ` (hay: ${h.ramos.join(', ')})` : ''}. Hay que pedirlo a Codeoscopic antes
         de poder cotizar.
       </div>
@@ -86,7 +88,7 @@ function RamoHogar({ l }: { l: LineasCodeoscopic }) {
   }
   return (
     <div style={base}>
-      ❔ <strong>Cotizar en Codeoscopic:</strong> la lista de ramos llegó vacía o no se entendió — no se
+      <Info size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--muted)' }} /> <strong>Cotizar en Codeoscopic:</strong> la lista de ramos llegó vacía o no se entendió — no se
       afirma nada.
     </div>
   )
@@ -109,14 +111,14 @@ function CompaniasAvant2({ c }: { c: CompaniasCodeoscopic }) {
   if (c.estado === 'sin_configurar') {
     return (
       <div style={base}>
-        ❔ <strong>Compañías en Avant2:</strong> sin comprobar — {c.mensaje ?? 'falta la conexión con asegura'}.
+        <Info size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--muted)' }} /> <strong>Compañías en Avant2:</strong> sin comprobar — {c.mensaje ?? 'falta la conexión con asegura'}.
       </div>
     )
   }
   if (c.estado === 'error') {
     return (
       <div style={base}>
-        ⚠️ <strong>Compañías en Avant2:</strong> no se ha podido preguntar ({c.motivo}). No significa que
+        <AlertTriangle size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--warning)' }} /> <strong>Compañías en Avant2:</strong> no se ha podido preguntar ({c.motivo}). No significa que
         Fidelidade no esté.
       </div>
     )
@@ -126,7 +128,7 @@ function CompaniasAvant2({ c }: { c: CompaniasCodeoscopic }) {
   if (b.estado === 'presente') {
     return (
       <div style={{ ...base, borderColor: '#4a8' }}>
-        ✅ <strong>Fidelidade está dada de alta en Avant2</strong> (<code>{b.id}</code> · {b.nombre})
+        <CheckCircle2 size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--positive)' }} /> <strong>Fidelidade está dada de alta en Avant2</strong> (<code>{b.id}</code> · {b.nombre})
         {b.ramos.length > 0 ? `, con producto en: ${b.ramos.join(', ')}` : ' — pero sin producto en ningún ramo todavía'}.
         {lista}
       </div>
@@ -135,7 +137,7 @@ function CompaniasAvant2({ c }: { c: CompaniasCodeoscopic }) {
   if (b.estado === 'ausente') {
     return (
       <div style={{ ...base, borderColor: '#c96' }}>
-        🚫 <strong>Fidelidade NO está entre las compañías abiertas</strong> en Avant2
+        <XCircle size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--negative)' }} /> <strong>Fidelidade NO está entre las compañías abiertas</strong> en Avant2
         {b.companias.length > 0 ? ` (hay: ${b.companias.join(', ')})` : ''}. Lo que te han confirmado no se ve
         por API: pídeles que lo revisen.
       </div>
@@ -143,7 +145,7 @@ function CompaniasAvant2({ c }: { c: CompaniasCodeoscopic }) {
   }
   return (
     <div style={base}>
-      ❔ <strong>Compañías en Avant2:</strong> la lista llegó vacía o no se entendió — no se afirma nada.{lista}
+      <Info size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--muted)' }} /> <strong>Compañías en Avant2:</strong> la lista llegó vacía o no se entendió — no se afirma nada.{lista}
     </div>
   )
 }

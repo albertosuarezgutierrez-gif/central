@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { minutosAtencion, peldanoRancio, textoEspera, MIN_RECORDATORIO, MIN_ACUSE_ESPERA } from './rancio.ts'
+import { minutosAtencion, peldanoRancio, respondidoFuera, textoEspera, textosEsperaTodos, MIN_RECORDATORIO, MIN_ACUSE_ESPERA } from './rancio.ts'
 import { esModoNoche } from './noche.ts'
 
 // La cuenta del barrido y la franja del modo noche tienen que ser la MISMA franja. Si divergen, el
@@ -80,4 +80,56 @@ test('el acuse de espera existe en todos los idiomas y no promete una hora', () 
     assert.ok(!/\d{1,2}\s*(min|minut|hour|hora)/i.test(t), `${l} promete un plazo concreto: ${t}`)
   }
   assert.equal(textoEspera('nl'), textoEspera('en'))  // idioma desconocido → inglés
+})
+
+// Reserva 154692216: preguntó a las 18:14 si el piso estaba listo y el acuse le llegó a las 09:14 del
+// día de salida. Ese día no se le promete respuesta; Alberto sí recibe el recordatorio.
+test('peldanoRancio: el día de salida no hay acuse, solo recordatorio', () => {
+  const base = { minutos: MIN_ACUSE_ESPERA + 10, acusado: false, noRequiereRespuesta: false }
+  assert.equal(peldanoRancio({ ...base, recordado: false, estanciaAcabando: true }), 'recordatorio')
+  assert.equal(peldanoRancio({ ...base, recordado: true, estanciaAcabando: true }), null)
+  // Sin fecha fiable se acusa como siempre: callar ante quien espera es el fallo caro.
+  assert.equal(peldanoRancio({ ...base, recordado: true, estanciaAcabando: undefined }), 'acuse')
+  assert.equal(peldanoRancio({ ...base, recordado: true, estanciaAcabando: false }), 'acuse')
+})
+
+// El acuse reaparece en el hilo de Smoobu sin marca de emisor. Si no está entre «lo que enviamos», el
+// agente lo toma por una pregunta del huésped y le redacta una respuesta (cinco ecos en 154692216).
+test('los acuses de espera y de noche cuentan como mensajes nuestros', async () => {
+  const { setEnviados, esEcoPropio } = await import('./atribucion.ts')
+  const { textosNocheTodos, textoAcuse, textoUltimoRecurso } = await import('./noche.ts')
+  const enviados = setEnviados([...textosEsperaTodos(), ...textosNocheTodos()])
+  for (const lang of ['es', 'en', 'fr', 'it', 'de', 'pt']) {
+    assert.ok(esEcoPropio(textoEspera(lang), enviados), `espera ${lang}`)
+    assert.ok(esEcoPropio(textoAcuse(lang, false), enviados), `acuse ${lang}`)
+    assert.ok(esEcoPropio(textoAcuse(lang, true), enviados), `acuse urgente ${lang}`)
+    assert.ok(esEcoPropio(textoUltimoRecurso(lang), enviados), `último recurso ${lang}`)
+  }
+})
+
+// Todo lo que sale hacia el huésped pasa por `enviarAlHuespedDetallado`; si deja de anotarlo, los
+// mensajes programados y lo que Alberto edita antes de enviar vuelven a leerse como preguntas.
+test('enviar.ts anota cada envío con éxito en mensajes_enviados y contexto.ts lo lee', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('./enviar.ts', import.meta.url), 'utf8')
+  const tramoOk = src.slice(src.indexOf('if (r.ok)'), src.indexOf('const detalle'))
+  assert.match(tramoOk, /registrarEnviado\(/)
+  assert.match(src, /INSERT INTO mensajes_enviados/)
+  const ctx = readFileSync(new URL('./contexto.ts', import.meta.url), 'utf8')
+  assert.match(ctx, /FROM mensajes_enviados/)
+  assert.match(ctx, /textosEsperaTodos\(\)/)
+  assert.match(ctx, /textosNocheTodos\(\)/)
+})
+
+test('respondidoFuera: respuesta manual del host tras la pregunta cierra el pendiente', () => {
+  const auto = (t: string) => t.startsWith('AUTO')
+  const h = (from: 'guest' | 'host', text: string) => ({ from, text })
+  assert.equal(respondidoFuera([h('guest', '¿el piso está listo?'), h('host', 'Sí, ya podéis entrar')], auto), 'Sí, ya podéis entrar')
+  // Automático detrás de la respuesta manual: sigue contando la manual.
+  assert.equal(respondidoFuera([h('guest', 'q'), h('host', 'manual'), h('host', 'AUTO checkout')], auto), 'manual')
+  // Solo automáticos tras la pregunta (acuse, plantilla): sigue pendiente.
+  assert.equal(respondidoFuera([h('guest', 'q'), h('host', 'AUTO acuse')], auto), null)
+  // El huésped volvió a escribir después de la respuesta: pendiente de nuevo.
+  assert.equal(respondidoFuera([h('guest', 'q'), h('host', 'manual'), h('guest', 'otra')], auto), null)
+  assert.equal(respondidoFuera([], auto), null)
 })

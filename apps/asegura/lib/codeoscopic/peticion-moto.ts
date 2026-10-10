@@ -11,7 +11,31 @@
 // `POST /insurances` cuesta 0,50€ y NO es idempotente: cada regla que sabemos se
 // comprueba ANTES de gastar, no después.
 
-import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
+import { polizaAnteriorParaTarificar } from '@central/module-seguros'
+import {
+  construirEmpresa,
+  construirPersona,
+  construirPropietario,
+  empresaDeTomador,
+  MOTIVO_TOMADOR_EMPRESA_SIN_CONDUCTOR,
+  revisarTomadorEmpresa,
+  documentoDe,
+  revisarPersona,
+  revisarPropietario,
+  type DatosPersona,
+  type DatosPropietario,
+} from './persona.ts'
+import { mismoDni } from './peticion-auto.ts'
+import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
+import { reparosMatricula, tieneMatricula } from './matricula-nueva.ts'
+
+/** El carné de quien CONDUCE la moto: fecha + tipo (A, A2, A1, AM o B) + zona, y el B si lo tiene. */
+export type CarnetMoto = {
+  fechaCarnet: string
+  tipoCarnet?: string | null
+  zonaCarnet?: string | null
+  fechaCarnetB?: string | null
+}
 
 export type ExperienciaConduccion = 'ThisMotorcycle' | 'OtherMotorcycle'
 
@@ -51,6 +75,10 @@ export type DatosMoto = DatosPersona & {
   aseguradoAntes?: boolean
   companiaAnteriorCodigo?: string | null // código DGS
   polizaAnterior?: string | null
+  /** Matrícula del vehículo de la póliza ANTERIOR. Con vehículo nuevo no es la actual: la compañía
+   *  busca el historial por esa matrícula y, con la del vehículo nuevo, no lo encuentra (Mapfre:
+   *  «el cliente identificado no aparece asociado…») y el bonus no se aplica. Vacía = la actual. */
+  matriculaAnterior?: string | null
   aniosAsegurado?: number | null
   aniosEnCompania?: number | null
   aniosSinSiniestros?: number | null
@@ -59,6 +87,28 @@ export type DatosMoto = DatosPersona & {
   // ── Cotización ──
   fechaEfecto: string
   referenciaExterna?: string | null
+
+  /**
+   * El TOMADOR es una EMPRESA (29/09/2026, ficha `tipo_persona = juridica`): los campos de persona
+   * de arriba traen su CIF (`dni`) y su razón social (`nombre`), y viaja como `JuridicalPerson_V1`
+   * (`empresaDeTomador`). Exige un `conductor` propio: el vendor no admite un CIF conduciendo.
+   * Sin `propietario`, la propietaria es la propia empresa.
+   */
+  tomadorEsEmpresa?: boolean
+
+  /**
+   * 🚧 El propietario, SOLO cuando es una persona DISTINTA del tomador (29/09/2026, entrega 2 del
+   * riesgo). Sin él, el tomador va de propietario. **Sin verificar contra el vendor**, igual que en
+   * auto: el primer intento real puede devolver un 400 con el nombre del campo real.
+   * Puede ser una EMPRESA (`DatosEmpresa`, CIF): el vendor admite `Cif` en `owner`, no en el conductor.
+   */
+  propietario?: DatosPropietario | null
+  /**
+   * 🚧 El conductor HABITUAL, SOLO cuando es DISTINTO del tomador, con SU carné (el de moto, si lo
+   * tiene). Con él, el carné del tomador deja de importar. Misma advertencia que `propietario`.
+   * No hay ocasional: el vendor no lo admite en moto.
+   */
+  conductor?: (DatosPersona & CarnetMoto) | null
 }
 
 /** Un problema concreto del formulario, señalando el campo. */
@@ -72,20 +122,60 @@ const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
  * Devuelve la lista de reparos: vacía significa que se puede cotizar. No lanza,
  * porque la UI tiene que poder pintar TODOS los problemas a la vez y no uno a uno.
  */
-export function revisarDatosMoto(d: Partial<DatosMoto>): ReparoMoto[] {
+/** `vehiculoNuevo` (moto-nuevo, 03/10/2026): la matrícula deja de ser obligatoria (`reparosMatricula`). */
+export function revisarDatosMoto(d: Partial<DatosMoto>, opciones: { vehiculoNuevo?: boolean; hoy?: string } = {}): ReparoMoto[] {
   const r: ReparoMoto[] = []
   const falta = (c: keyof DatosMoto, m = 'hace falta para poder cotizar') => r.push({ campo: c, motivo: m })
 
   // ── La persona: reglas compartidas con auto y hogar ──
-  for (const x of revisarPersona(d)) r.push(x as ReparoMoto)
+  // Tomador empresa: CIF y razón social en vez de nacimiento/sexo/estado civil, y un conductor aparte.
+  if (d.tomadorEsEmpresa) {
+    for (const x of revisarTomadorEmpresa(d)) r.push(x as ReparoMoto)
+    if (!d.conductor) r.push({ campo: 'conductor', motivo: MOTIVO_TOMADOR_EMPRESA_SIN_CONDUCTOR })
+  } else {
+    for (const x of revisarPersona(d)) r.push(x as ReparoMoto)
+  }
 
   // ── Obligatorios sin matiz ──
-  for (const c of ['codigoVehiculo', 'matricula', 'garaje', 'experienciaConduccion'] as const) {
+  for (const c of ['codigoVehiculo', 'garaje', 'experienciaConduccion'] as const) {
     if (!texto(d[c])) falta(c)
   }
-  for (const c of ['fechaCarnet', 'fechaMatriculacion', 'fechaEfecto'] as const) {
+  for (const x of reparosMatricula(d, opciones)) r.push(x)
+  // El carné del tomador solo cuenta si además conduce (el caso normal).
+  for (const c of [...(d.conductor || d.tomadorEsEmpresa ? [] : (['fechaCarnet'] as const)), 'fechaMatriculacion', 'fechaEfecto'] as const) {
     if (!texto(d[c])) falta(c)
     else if (!RE_FECHA.test(String(d[c]))) r.push({ campo: c, motivo: 'la fecha tiene que ser aaaa-mm-dd' })
+  }
+  // Efecto: ni anterior a hoy ni a más de 90 días (mismo cepo que auto; no se arregla tras pagar).
+  if (texto(d.fechaEfecto) && RE_FECHA.test(String(d.fechaEfecto))) {
+    const mal = motivoFechaEfectoInvalida(String(d.fechaEfecto))
+    if (mal) r.push({ campo: 'fechaEfecto', motivo: mal })
+  }
+
+  // ── Propietario y conductor distintos del tomador (opcionales) ──
+  if (d.propietario) {
+    const faltan = revisarPropietario(d.propietario)
+    if (faltan.length > 0) {
+      r.push({ campo: 'propietario', motivo: `datos del propietario incompletos: ${faltan.join(', ')}` })
+    }
+  }
+  if (d.conductor) {
+    const faltan = revisarPersona(d.conductor)
+    if (faltan.length > 0) {
+      r.push({ campo: 'conductor', motivo: `datos del conductor incompletos: ${faltan.map((f) => f.campo).join(', ')}` })
+    }
+    if (!texto(d.conductor.fechaCarnet)) r.push({ campo: 'conductor', motivo: 'el conductor necesita la fecha de su carné' })
+    else if (!RE_FECHA.test(String(d.conductor.fechaCarnet))) {
+      r.push({ campo: 'conductor', motivo: 'la fecha de carné del conductor tiene que ser aaaa-mm-dd' })
+    }
+  }
+  // 🚨 Mismo DNI con datos distintos = 400 del vendor («Two persons have been declared with the same
+  // identification by different data»). Si la figura ES el tomador, no es una figura distinta.
+  const dniTomador = String(d.dni ?? '').trim().toUpperCase()
+  for (const [c, p] of [['propietario', d.propietario], ['conductor', d.conductor]] as const) {
+    if (p && dniTomador !== '' && documentoDe(p) === dniTomador.replace(/[\s-]/g, '')) {
+      r.push({ campo: c, motivo: `el ${c} tiene el mismo DNI que el tomador: si es la misma persona, no lo declares aparte` })
+    }
   }
 
   if (d.kmAnuales === undefined || d.kmAnuales === null) falta('kmAnuales')
@@ -144,26 +234,36 @@ function numero(v: unknown): boolean {
  *
  * Lanza si los datos no pasan `revisarDatosMoto`.
  */
-export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<string, unknown> {
-  const reparos = revisarDatosMoto(d)
+export function construirPeticionMoto(d: DatosMoto, lineaId: string, opciones: { vehiculoNuevo?: boolean } = {}): Record<string, unknown> {
+  const reparos = revisarDatosMoto(d, { vehiculoNuevo: opciones.vehiculoNuevo })
   if (reparos.length > 0) {
     throw new Error(
       `codeoscopic_datos_incompletos: ${reparos.map((x) => `${x.campo} (${x.motivo})`).join(' · ')}`,
     )
   }
 
-  // 🚨 LA MISMA persona, proyectada IDÉNTICA en holder/owner/primaryDriver — ver
-  // el motivo en `peticion-auto.ts`.
-  const persona = construirPersona(d, {
-    fechaCarnet: d.fechaCarnet,
-    tipoCarnet: d.tipoCarnet,
-    zonaCarnet: d.zonaCarnet,
-    adicionales: d.fechaCarnetB && d.tipoCarnet && d.tipoCarnet !== 'B' ? [{ tipo: 'B', fecha: d.fechaCarnetB }] : [],
+  // 🚨 Por defecto LA MISMA persona, proyectada IDÉNTICA en holder/owner/primaryDriver — ver el
+  // motivo en `peticion-auto.ts`. Con propietario/conductor propios (DNI distinto) cada uno se
+  // proyecta con `construirPersona`, y el carné que viaja es el de quien conduce.
+  const carnetDe = (c: CarnetMoto) => ({
+    fechaCarnet: c.fechaCarnet,
+    tipoCarnet: c.tipoCarnet,
+    zonaCarnet: c.zonaCarnet,
+    adicionales: c.fechaCarnetB && c.tipoCarnet && c.tipoCarnet !== 'B' ? [{ tipo: 'B', fecha: c.fechaCarnetB }] : [],
   })
+  const persona = d.tomadorEsEmpresa ? construirEmpresa(empresaDeTomador(d)) : construirPersona(d, d.conductor ? {} : carnetDe(d))
+  const conductor = d.conductor ? construirPersona(d.conductor, carnetDe(d.conductor)) : persona
+  // Propietario que ES el conductor (mismo DNI): el MISMO objeto, o el vendor rechaza tras cobrar.
+  const propietario = d.propietario
+    ? d.conductor && mismoDni(documentoDe(d.propietario), d.conductor.dni)
+      ? conductor
+      : construirPropietario(d.propietario)
+    : persona
 
   const riesgo: Record<string, unknown> = {
     vehicle: { code: d.codigoVehiculo },
-    registrationPlate: d.matricula.toUpperCase().replace(/\s/g, ''),
+    // Sin matrícula (moto nueva) el campo se OMITE: ver `matricula-nueva.ts`.
+    ...(tieneMatricula(d) ? { registrationPlate: d.matricula.toUpperCase().replace(/\s/g, '') } : {}),
     registrationDate: d.fechaMatriculacion,
     purchaseDate: d.fechaCompra || d.fechaMatriculacion,
     kilometersPerYear: d.kmAnuales,
@@ -172,8 +272,8 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<str
       town: { id: d.municipioCirculacionId },
     },
     garageType: { id: d.garaje },
-    owner: persona,
-    primaryDriver: persona,
+    owner: propietario,
+    primaryDriver: conductor,
     drivingExperience: { id: d.experienciaConduccion },
     previouslyInsured: d.aseguradoAntes ?? false,
   }
@@ -184,9 +284,9 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<str
 
   if (d.aseguradoAntes) {
     const previa: Record<string, unknown> = {
-      policyNumber: d.polizaAnterior,
+      policyNumber: polizaAnteriorParaTarificar(d.polizaAnterior, d.companiaAnteriorCodigo),
       previousCompany: { code: d.companiaAnteriorCodigo },
-      registrationPlate: riesgo.registrationPlate,
+      registrationPlate: texto(d.matriculaAnterior) ? d.matriculaAnterior!.toUpperCase().replace(/\s/g, '') : riesgo.registrationPlate,
       totalYearsInsured: d.aniosAsegurado,
       yearsInPreviousCompany: d.aniosEnCompania,
       yearsWithoutAccidents: d.aniosSinSiniestros,

@@ -22,7 +22,7 @@ const STATUS: Record<string, number> = {
   ok: 200, codigo_enviado: 200, firmada: 200, ya_firmada: 409, no_disponible: 422, otra_ficha: 409, no_encontrado: 404,
   espera: 429, limite_codigos: 429, sin_email: 422, sin_correo_configurado: 503, fallo_envio: 502,
   sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422, nombre_no_coincide: 422,
-  carta_cambiada: 409, sin_ficha: 409, varias_fichas: 409, error: 503,
+  carta_cambiada: 409, sin_ficha: 409, varias_fichas: 409, sin_permiso: 403, error: 503,
 }
 
 export const POST = auditado(async (req: Request) => {

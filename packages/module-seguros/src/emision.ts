@@ -32,7 +32,7 @@ export type CompaniaDgs = {
   activa: boolean
 }
 
-export const TIPOS_SEGURO = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] as const
+export const TIPOS_SEGURO = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'empresas', 'rc_profesional', 'dyo', 'flotas', 'transporte_mercancias', 'ciberriesgos', 'decenal', 'embarcaciones', 'mascotas', 'impago_alquiler', 'viaje', 'caucion', 'otros'] as const
 export type TipoSeguro = (typeof TIPOS_SEGURO)[number]
 
 /** Máximo representable en `polizas.prima_anual numeric(10,2)`. */
@@ -53,6 +53,11 @@ export type ProyectoEmitido = {
   /** El riesgo tarificado (matrícula/versión, o dirección+m²+año): lo que CIMA NO manda. */
   riesgo: Record<string, unknown> | null
   fraccionamiento?: string | null
+  /**
+   * Opciones del producto con las que se emitió («Asistencia en Viaje: Estándar»). `null`/ausente =
+   * no se pudieron leer: no se guarda nada (no es «sin opciones»).
+   */
+  opciones?: readonly { etiqueta: string; valor: string }[] | null
 }
 
 export type PolizaEmitida = {
@@ -152,7 +157,12 @@ export function prepararPolizaEmitida(args: {
       fraccionamiento: proyecto.fraccionamiento ?? null,
       datosEspecificos: {
         ...(proyecto.riesgo ?? {}),
-        codeoscopic: { projectId: proyecto.projectIdCodeoscopic, emitidaEn: emitida.toISOString(), primaOfertada: prima.valor },
+        codeoscopic: {
+          projectId: proyecto.projectIdCodeoscopic,
+          emitidaEn: emitida.toISOString(),
+          primaOfertada: prima.valor,
+          ...(Array.isArray(proyecto.opciones) ? { opciones: proyecto.opciones.map((o) => ({ etiqueta: o.etiqueta, valor: o.valor })) } : {}),
+        },
       },
     },
   }

@@ -24,8 +24,12 @@ export type Tomador = {
   sello: string | null
 }
 
-export async function tomadorDe(l: LecturaPoliza): Promise<Tomador> {
-  const { alta } = prepararAltaDesdeDocumento(l)
+export async function tomadorDe(
+  l: LecturaPoliza,
+  /** Lo que el lector sabe del tomador empresa (`contacto` de `leerPoliza`): una empresa se busca por SU CIF. */
+  empresa: { tomadorEsEmpresa?: boolean | null; cifTomador?: string | null } = {},
+): Promise<Tomador> {
+  const { alta } = prepararAltaDesdeDocumento(l, empresa)
   if (!alta) return { nombre: null, conDni: false, coincidencias: null, posibles: null, sello: null }
   const nombre = `${alta.nombre} ${alta.apellidos}`.trim()
   const c = await correduriaUnica().catch(() => null)

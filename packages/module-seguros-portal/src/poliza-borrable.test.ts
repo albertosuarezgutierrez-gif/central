@@ -71,8 +71,8 @@ test('la foto ignora los blancos y no inventa una foto vacía', () => {
 
 test('una póliza desligada se sigue pudiendo nombrar', () => {
   assert.equal(
-    describirPolizaDesligada({ compania: 'Occident', numeroPoliza: '548238086', ramo: 'auto' }),
-    'Occident · auto · nº 548238086',
+    describirPolizaDesligada({ compania: 'Occident', numeroPoliza: '548000018', ramo: 'auto' }),
+    'Occident · auto · nº 548000018',
   )
   // Sin compañía ni ramo, el número solo NO se queda huérfano de etiqueta.
   assert.equal(

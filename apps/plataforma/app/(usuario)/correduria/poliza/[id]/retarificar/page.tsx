@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { AlertTriangle } from 'lucide-react'
+import { Ico, FILA } from '../../../iconos'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import {
   catalogoAsegura,
@@ -18,6 +20,10 @@ import { BuscadorCatastro, ElegirPiso } from './BuscadorCatastro'
 import { consultarHogar, normalizarReferencia } from '@/lib/correduria-hogar'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import MotoNuevo from '../../../cliente/[id]/moto-nuevo/MotoNuevo'
+import { cargarRiesgoDePoliza, ErrorVariante, FranjaVariante } from '../../../oportunidad/[id]/cargar-variante'
+import { paramTexto } from '../../../oportunidad/[id]/variante'
+import { CSS_RETARIFICADOR } from './estilos'
+import { Pagina, PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,6 +100,24 @@ export default async function RetarificarPage({
       </Marco>
     )
   }
+  // ── Variante del RIESGO de esta póliza (`?oportunidad=`, 29/09/2026) ──────
+  // «Retarificar con las mismas personas» desde la pantalla del riesgo: la tarificación se cuelga
+  // de esa oportunidad. Sin el parámetro, todo igual que siempre. Si el riesgo no se puede leer o
+  // no es de esta póliza, NO se monta el formulario que cuesta 0,50€. Va ANTES de hogar (también
+  // del paso del Catastro, que la arrastra en sus formularios): hogar se cuelga igual que auto/moto.
+  const cargaRiesgo = await cargarRiesgoDePoliza(paramTexto(sp.oportunidad), p.id)
+  if (cargaRiesgo.estado === 'error') {
+    return (
+      <Marco>
+        <Cabecera sub={ramo ? `${sub} · ${ramo}` : sub} polizaId={p.id} clienteId={p.cliente.id} />
+        <ErrorVariante oportunidadId={cargaRiesgo.oportunidadId} mensaje={cargaRiesgo.mensaje} />
+      </Marco>
+    )
+  }
+  const varianteRiesgo = cargaRiesgo.estado === 'ok' ? cargaRiesgo.variante : null
+  const franja = varianteRiesgo ? <FranjaVariante variante={varianteRiesgo} /> : null
+  const oportunidadVariante = varianteRiesgo?.oportunidadId ?? null
+
   // ── HOGAR sin m²/año/CP: el riesgo sale del Catastro (23/09/2026) ────────
   //
   // 22 de las 28 pólizas de hogar vivas no traen el riesgo (ni la póliza ni su
@@ -108,7 +132,12 @@ export default async function RetarificarPage({
   // cambiar de vivienda.
   const cambiandoVivienda = Boolean(cadena(sp.buscar) ?? cadena(sp.direccion) ?? cadena(sp.referencia))
   if (String(p.tipo).toLowerCase() === 'hogar' && !cancelada && (!p.retarificable || cambiandoVivienda)) {
-    const cab = <Cabecera sub={`${sub} · hogar`} polizaId={p.id} clienteId={p.cliente.id} />
+    const cab = (
+      <>
+        <Cabecera sub={`${sub} · hogar`} polizaId={p.id} clienteId={p.cliente.id} />
+        {franja}
+      </>
+    )
     const refParam = cadena(sp.referencia)
     let referencia = refParam ? normalizarReferencia(refParam) : null
     const direccion = cadena(sp.direccion)
@@ -129,13 +158,13 @@ export default async function RetarificarPage({
         referencia = r.referencia
       } else {
         const buscador = (
-          <BuscadorCatastro polizaId={p.id} direccion={direccion} municipio={municipio} provincia={provincia} deCliente={false} />
+          <BuscadorCatastro polizaId={p.id} direccion={direccion} municipio={municipio} provincia={provincia} deCliente={false} oportunidadId={oportunidadVariante} />
         )
         if (r.estado === 'elegir') {
           return (
             <Marco>
               {cab}
-              <ElegirPiso polizaId={p.id} via={r.via} inmuebles={r.inmuebles} />
+              <ElegirPiso polizaId={p.id} via={r.via} inmuebles={r.inmuebles} oportunidadId={oportunidadVariante} />
               {buscador}
             </Marco>
           )
@@ -163,6 +192,7 @@ export default async function RetarificarPage({
             municipio={c?.ciudad ?? municipio}
             provincia={c?.provincia ?? provincia}
             deCliente={Boolean(c?.direccion)}
+            oportunidadId={oportunidadVariante}
           />
         </Marco>
       )
@@ -176,14 +206,19 @@ export default async function RetarificarPage({
           <div className={`card ${preCat.estado === 'no_encontrado' ? 'muted' : 'err'}`}>
             No se ha podido precalificar el hogar con el Catastro: {preCat.mensaje}
           </div>
-          <BuscadorCatastro polizaId={p.id} direccion="" municipio={municipio} provincia={provincia} deCliente={false} />
+          <BuscadorCatastro polizaId={p.id} direccion="" municipio={municipio} provincia={provincia} deCliente={false} oportunidadId={oportunidadVariante} />
         </Marco>
       )
     }
     return (
       <Marco>
         {cab}
-        <RetarificadorHogar polizaId={p.id} preInicial={preCat.pre} referencia={referencia} />
+        <RetarificadorHogar
+          polizaId={p.id}
+          preInicial={preCat.pre}
+          referencia={referencia}
+          variante={oportunidadVariante ? { oportunidadId: oportunidadVariante } : null}
+        />
       </Marco>
     )
   }
@@ -228,7 +263,12 @@ export default async function RetarificarPage({
     return (
       <Marco>
         <Cabecera sub={`${sub} · hogar`} polizaId={p.id} clienteId={p.cliente.id} />
-        <RetarificadorHogar polizaId={p.id} preInicial={preHogar.pre} />
+        {franja}
+        <RetarificadorHogar
+          polizaId={p.id}
+          preInicial={preHogar.pre}
+          variante={oportunidadVariante ? { oportunidadId: oportunidadVariante } : null}
+        />
       </Marco>
     )
   }
@@ -269,6 +309,7 @@ export default async function RetarificarPage({
     return (
       <Marco>
         <Cabecera sub={`${sub} · moto`} polizaId={p.id} clienteId={p.cliente.id} />
+        {franja}
         {fallosCatalogoM.length > 0 && (
           <div className="card err">
             No se han podido leer los catálogos de garajes o estados civiles de Codeoscopic: sin ellos no hay ids
@@ -295,6 +336,7 @@ export default async function RetarificarPage({
           consumo={pm.consumo}
           simulacion={pm.simulacion}
           companias={null}
+          variante={varianteRiesgo}
         />
       </Marco>
     )
@@ -337,6 +379,7 @@ export default async function RetarificarPage({
   return (
     <Marco>
       <Cabecera sub={`${sub} · auto`} polizaId={p.id} clienteId={p.cliente.id} />
+      {franja}
 
       {falla && <div className="card err">{falla}</div>}
 
@@ -420,6 +463,7 @@ export default async function RetarificarPage({
         // `leerContextoDefensa`: nunca degrada a `[]`.
         contextoDefensa={leerContextoDefensa(pre?.carteraCompanias, p)}
         sinCarteraPorque={pre ? motivoSinCartera(pre.carteraCompanias) : falloPre}
+        variante={varianteRiesgo ? { oportunidadId: varianteRiesgo.oportunidadId } : null}
       />
     </Marco>
   )
@@ -460,7 +504,7 @@ function Supuestos({
   if (supuestos.length === 0) return null
   return (
     <div className="card">
-      <h2>⚠️ Lo que se ha supuesto</h2>
+      <h2 style={FILA}><Ico i={AlertTriangle} /> Lo que se ha supuesto</h2>
       <p className="muted">
         Ninguno de estos datos está en la ficha. El precio sale con ellos, así que forman parte de
         la letra pequeña: si alguno no es cierto, la prima real cambia.
@@ -502,7 +546,7 @@ function fallaCatalogos(garajes: RespuestaCatalogo, civiles: RespuestaCatalogo):
 
 function Cabecera({ sub, polizaId, clienteId }: { sub: string; polizaId?: string; clienteId?: string }) {
   return (
-    <div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
       <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Link href="/correduria">← Correduría</Link>
         {polizaId && (
@@ -518,8 +562,7 @@ function Cabecera({ sub, polizaId, clienteId }: { sub: string; polizaId?: string
           </>
         )}
       </div>
-      <h1 style={{ fontSize: 20, margin: '4px 0 2px' }}>Retarificar</h1>
-      {sub && <p className="muted" style={{ margin: 0 }}>{sub}</p>}
+      <PageHeader titulo="Retarificar" sub={sub || undefined} />
     </div>
   )
 }
@@ -590,7 +633,7 @@ function mensajeCatastro(r: { estado: 'ambigua' | 'no_encontrado' | 'direccion_i
 
 function Marco({ children }: { children: React.ReactNode }) {
   return (
-    <main style={{ maxWidth: 960, margin: '0 auto', padding: '20px 16px 48px' }}>
+    <Pagina ancho="lectura">
       <style>{CSS_RETARIFICADOR}</style>
       <div
         className="retarificar"
@@ -598,149 +641,6 @@ function Marco({ children }: { children: React.ReactNode }) {
       >
         {children}
       </div>
-    </main>
+    </Pagina>
   )
 }
-
-const CSS_RETARIFICADOR = `
-.retarificar {
-  --brand: var(--primary);
-  --brand-soft: var(--primary-light);
-  --panel: var(--surface);
-  --panel2: var(--bg);
-  --ok: var(--positive);
-  --warn: var(--warning);
-  --danger: var(--negative);
-}
-.retarificar .card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-}
-.retarificar .muted { color: var(--muted); }
-.retarificar h1 { font-size: 20px; margin: 0 0 4px; }
-.retarificar h2 { font-size: 16px; margin: 0 0 8px; }
-.retarificar h3 { font-size: 14px; margin: 0 0 6px; }
-.retarificar .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.retarificar table { width: 100%; border-collapse: collapse; min-width: 520px; }
-.retarificar th, .retarificar td {
-  text-align: left;
-  padding: 9px 10px;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-.retarificar th {
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .03em;
-}
-/* La tabla de precios: fila compacta (24 filas es lo normal en un presupuesto
-   real) y la última columna —el botón de confirmar— SIEMPRE visible, aunque
-   el resto de la fila necesite scroll horizontal en móvil. */
-.retarificar table.precios { min-width: 420px; }
-.retarificar table.precios th, .retarificar table.precios td { padding: 6px 8px; font-size: 13px; }
-.retarificar table.precios th:last-child, .retarificar table.precios td:last-child {
-  position: sticky;
-  right: 0;
-  background: var(--panel);
-  padding-left: 4px;
-  padding-right: 4px;
-  text-align: center;
-}
-/* 44px: el mínimo táctil de la regla Responsive del CLAUDE.md raíz — no 36px,
-   que quedaba por debajo justo en el único botón garantizado visible (el
-   sticky) en móvil. */
-.retarificar button.ghost.icono {
-  padding: 0;
-  width: 44px;
-  min-height: 44px;
-  min-width: 44px;
-  font-size: 16px;
-  line-height: 1;
-}
-.retarificar .badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  background: var(--brand-soft);
-  color: var(--brand);
-}
-.retarificar .badge.ok { background: var(--positive-bg); color: var(--ok); }
-.retarificar .badge.warn { background: var(--warning-bg); color: var(--warn); }
-.retarificar .badge.danger { background: var(--negative-bg); color: var(--danger); }
-.retarificar label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-.retarificar input, .retarificar select, .retarificar textarea, .retarificar button { font: inherit; }
-.retarificar input, .retarificar select, .retarificar textarea {
-  width: 100%;
-  padding: 9px 11px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-}
-/* 160px de mínimo: por debajo de 360px de viewport una sola columna, que es lo
-   que hace falta en el móvil de Alberto. */
-.retarificar .form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-}
-.retarificar button.primary {
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--brand);
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-  min-height: 44px;
-}
-.retarificar button.primary:disabled { opacity: .6; cursor: default; }
-.retarificar button.ghost {
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 600;
-  cursor: pointer;
-  min-height: 44px;
-}
-/* Toggle Sí/No de la maqueta de pre-emisión (preemision-mock.tsx) — el mismo
-   gesto azul/blanco que enseña Avant2, pero con los tokens de plataforma. */
-.retarificar .toggle-sino {
-  flex: 1;
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 600;
-  cursor: pointer;
-  min-height: 44px;
-}
-.retarificar .toggle-sino.activo {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
-}
-.retarificar .err {
-  background: var(--negative-bg);
-  color: var(--danger);
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 13px;
-}
-.retarificar a { color: var(--primary); }
-`

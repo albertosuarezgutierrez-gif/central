@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { Bike } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
-import { precalificarMotoNuevaAsegura, catalogoAsegura } from '@/lib/moto-nuevo-asegura'
-import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
+import { datosCotizadorMoto } from './datos-cotizador'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import MotoNuevo from './MotoNuevo'
+import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
+import { paramTexto } from '../../../oportunidad/[id]/variante'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,8 +36,11 @@ export const maxDuration = 180
  * ramo de moto se resuelve SIEMPRE contra `GET /insurance-lines`: por eso
  * esta ficha trae también `pre.moto` y la pantalla avisa si no está disponible.
  */
-export default async function MotoNuevoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MotoNuevoPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id: clienteId } = await params
+  // Variante de un riesgo (29/09/2026): `?oportunidad=` cuelga la tarificación de esa oportunidad.
+  const sp = await searchParams
+  const carga = await cargarVariante(paramTexto(sp.oportunidad), paramTexto(sp.tarificacion), clienteId, 'moto')
 
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
@@ -50,16 +54,23 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
         ← Ficha del cliente
       </Link>
       <PageHeader titulo="Presupuesto de moto" icono={<Bike size={20} strokeWidth={1.75} />} sub={sub} />
+      {carga.estado === 'ok' && <FranjaVariante variante={carga.variante} />}
     </div>
   )
 
-  const [garajes, civiles, pre, companiasResp] = await Promise.all([
-    catalogoAsegura({ tipo: 'garajes-moto' }),
-    catalogoAsegura({ tipo: 'estados-civiles' }),
-    precalificarMotoNuevaAsegura({ clienteId }),
-    companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
-  ])
-  const companias = companiasResp.estado === 'ok' ? companiasResp.companias : null
+  if (carga.estado === 'error') {
+    return (
+      <Pagina>
+        {cabecera}
+        <ErrorVariante oportunidadId={carga.oportunidadId} mensaje={carga.mensaje} />
+      </Pagina>
+    )
+  }
+  const variante = carga.estado === 'ok' ? carga.variante : null
+
+  // Lo mismo que lee el bloque «Pedir precio» de la oportunidad (`datos-cotizador.ts`): una sola fuente.
+  const { garajes, civiles, falloCatalogo, pre, companias, anterior, anteriorAmbiguo, otroVehiculo } =
+    await datosCotizadorMoto(clienteId, variante?.oportunidadId ?? null)
 
   if (pre.estado !== 'ok') {
     const tono = pre.estado === 'sin_configurar' ? 'var(--muted)' : 'var(--negative)'
@@ -89,7 +100,6 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
   // 🚨 Sin estos dos catálogos NO hay ids válidos que mandar, así que no se
   // puede cotizar: se dice, en vez de dejar los desplegables vacíos y sin
   // explicación (no es un problema de la ficha del cliente).
-  const fallosCatalogo = [garajes, civiles].filter((c) => c.estado !== 'ok')
 
   return (
     <Pagina>
@@ -100,7 +110,7 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
           Puedes seguir rellenando el vehículo abajo; el servidor cortará antes de gastar si al final no se puede.
         </div>
       )}
-      {fallosCatalogo.length > 0 && (
+      {falloCatalogo && (
         <div style={{ ...cardStyle, borderColor: 'var(--negative)', color: 'var(--negative)', fontSize: 13, marginBottom: 14 }}>
           No se han podido leer los catálogos de garajes o estados civiles de Codeoscopic. Sin ellos no hay ids
           válidos que mandar, así que no se puede cotizar todavía. Esto no es un problema de la ficha del cliente.
@@ -109,15 +119,22 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
       <MotoNuevo
         clienteId={clienteId}
         etiquetaCliente={pre.pre.etiquetaCliente}
+        seguroImputado={pre.pre.seguroAnterior}
         faltanInicial={pre.pre.faltan}
-        garajes={garajes.estado === 'ok' ? garajes.opciones : []}
-        civiles={civiles.estado === 'ok' ? civiles.opciones : []}
+        garajes={garajes}
+        civiles={civiles}
         municipios={pre.pre.municipios}
         municipiosMotivo={pre.pre.municipiosMotivo}
         estadoCivilMoto={pre.pre.estadoCivil}
         consumo={pre.pre.consumo}
         simulacion={pre.pre.simulacion}
         companias={companias}
+        variante={variante}
+        datosRiesgo={carga.estado === 'ok' ? carga.riesgo.datosVehiculo : null}
+        anterior={anterior}
+        anteriorAmbiguo={anteriorAmbiguo}
+        // Pack coche + moto (03/10/2026): el coche del cliente. `null` = no se han podido leer sus oportunidades.
+        otroVehiculo={otroVehiculo}
       />
     </Pagina>
   )

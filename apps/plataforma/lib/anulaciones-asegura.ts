@@ -16,6 +16,12 @@ export type Anulacion = {
   compania: string | null
   tipo: TipoAnulacion
   solicitadaPor: string
+  /** `portal` = la pidió el cliente (retenida 48 h, hay que llamarle); `corredor` = como siempre. Ausente (asegura vieja) = corredor. */
+  origen: 'corredor' | 'portal'
+  /** Cuándo se liberó para firma. `null` = no liberada. */
+  liberadaAt: string | null
+  /** Solo si está RETENIDA: cuándo se libera sola (ISO). `null` = no retenida. */
+  liberaSolaAt: string | null
   motivo: MotivoAnulacion
   motivoTexto: string | null
   fechaEfecto: string
@@ -27,6 +33,8 @@ export type Anulacion = {
   confirmadaAt: string | null
   /** Firmada con un presupuesto cuya póliza nueva aún no consta emitida. Ausente (asegura vieja) = false. */
   esperaEmision: boolean
+  /** Firmada en el portal: hay justificante que mandar al cliente. Ausente (asegura vieja) = false. */
+  firmaElectronica: boolean
   siguiente: { texto: string; alerta: boolean } | null
 }
 
@@ -47,6 +55,22 @@ export function textoDesenlaceAnulacion(d: DesenlaceAnulacion, motivo?: string |
   }
 }
 
+/**
+ * La cuenta atrás de una baja retenida: «se libera sola en 1 d 4 h» / «en 35 min» / «ya se puede firmar».
+ * `null` si la fecha no se entiende (no se inventa un plazo).
+ */
+export function cuentaAtrasLiberacion(liberaSolaAt: string | null, ahora: Date): string | null {
+  if (!liberaSolaAt) return null
+  const t = Date.parse(liberaSolaAt)
+  if (Number.isNaN(t)) return null
+  const min = Math.ceil((t - ahora.getTime()) / 60_000)
+  if (min <= 0) return 'ya se puede firmar'
+  const d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60
+  if (d > 0) return `se libera sola en ${d} d${h ? ` ${h} h` : ''}`
+  if (h > 0) return `se libera sola en ${h} h${m ? ` ${m} min` : ''}`
+  return `se libera sola en ${m} min`
+}
+
 function texto(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v : null
 }
@@ -65,9 +89,12 @@ export function leerAnulacion(v: unknown): Anulacion | null {
     estado: estado as EstadoAnulacion, tipo: tipo as TipoAnulacion, motivo: motivo as MotivoAnulacion,
     cliente: texto(o.cliente), numeroPoliza: texto(o.numeroPoliza), compania: texto(o.compania),
     solicitadaPor: texto(o.solicitadaPor) ?? 'desconocido', motivoTexto: texto(o.motivoTexto),
+    origen: o.origen === 'portal' ? 'portal' : 'corredor',
+    liberadaAt: texto(o.liberadaAt), liberaSolaAt: texto(o.liberaSolaAt),
     creada: texto(o.creada) ?? '', firmadaAt: texto(o.firmadaAt), firmaNota: texto(o.firmaNota),
     comunicadaAt: texto(o.comunicadaAt), confirmadaAt: texto(o.confirmadaAt),
     esperaEmision: o.esperaEmision === true,
+    firmaElectronica: o.firmaElectronica === true,
     siguiente: s && typeof s.texto === 'string' ? { texto: s.texto, alerta: s.alerta === true } : null,
   }
 }
@@ -120,5 +147,45 @@ export async function escribirAnulacion(metodo: 'POST' | 'PATCH', cuerpo: Record
     }
   } catch {
     return { status: 504, desenlace: 'error', motivo: null, advertencia: null }
+  }
+}
+
+export type ResultadoJustificante =
+  | { ok: true; archivo: string; correo: string }
+  | { ok: false; texto: string }
+
+/** Una frase por desenlace del justificante. El correo que no salió NO se lee como «enviado». */
+export function textoJustificante(archivo: string, correo: string): { ok: boolean; texto: string } {
+  const doc = archivo === 'archivado' ? 'guardado en su área de clientes' : archivo === 'ya_estaba' ? 'ya estaba en su área de clientes' : 'NO se ha podido guardar en su área de clientes'
+  const mail: Record<string, string> = {
+    enviado: 'Justificante enviado al cliente por correo',
+    sin_email: 'NO enviado: la ficha no tiene un correo utilizable',
+    sin_portal: 'NO enviado: falta la dirección del portal (ASEGURA_PORTAL_URL)',
+  }
+  return { ok: correo === 'enviado' && archivo !== 'fallo', texto: `${mail[correo] ?? 'NO se sabe si el correo ha salido: mira la ficha antes de repetir'} · documento ${doc}.` }
+}
+
+export async function mandarJustificante(id: string, actor: string): Promise<ResultadoJustificante> {
+  const b = base()
+  if (!b) return { ok: false, texto: 'Puerto sin configurar (falta ASEGURA_OPERADOR_SECRET).' }
+  try {
+    const res = await fetch(`${b.url}/justificante`, {
+      method: 'POST',
+      headers: { ...(await cabecerasPuerto(b.secreto)), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, actor }),
+      cache: 'no-store',
+      // PDF + archivo + correo con los reintentos de Resend: con 30 s un envío lento que SÍ sale se leía como «no se sabe».
+      signal: AbortSignal.timeout(90_000),
+    })
+    const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    if (res.status === 404 && j?.estado !== 'no_encontrada') return { ok: false, texto: 'asegura aún no tiene el justificante desplegado.' }
+    if (j?.estado === 'no_encontrada') return { ok: false, texto: 'No existe ese expediente.' }
+    if (j?.estado === 'sin_firma_electronica') return { ok: false, texto: 'No se firmó en el portal: no hay justificante electrónico que mandar.' }
+    if (j?.estado !== 'hecho' || typeof j.archivo !== 'string' || typeof j.correo !== 'string') {
+      return { ok: false, texto: 'NO se sabe si ha salido: no se ha podido hablar con asegura. Mira la ficha antes de repetir.' }
+    }
+    return { ok: true, archivo: j.archivo, correo: j.correo }
+  } catch {
+    return { ok: false, texto: 'NO se sabe si ha salido: no se ha podido hablar con asegura. Mira la ficha antes de repetir.' }
   }
 }

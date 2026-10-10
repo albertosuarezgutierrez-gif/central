@@ -1,9 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { Check } from 'lucide-react'
-import { btnStyle } from '@/components/ui'
+import { btnStyle, SeccionCard } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import PedirDatos from './PedirDatos'
 import {
@@ -20,7 +19,6 @@ import {
 type Panel = null | 'perder' | 'aparcar'
 
 /** Ramos con tarificador propio en la ficha (`/correduria/cliente/<id>/<ramo>-nuevo`). */
-const RAMOS_TARIFICABLES = new Set(['auto', 'moto', 'hogar', 'salud', 'vida', 'decesos'])
 type Envio = { estado: 'idle' } | { estado: 'enviando' } | { estado: 'error'; motivo: string }
 
 const PASOS: readonly { estado: EstadoOportunidad | 'cierre'; rotulo: string }[] = [
@@ -63,6 +61,12 @@ async function enviar(url: string, metodo: 'POST' | 'PATCH', body: Record<string
 const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   creada_mano: 'Abierta a mano desde la ficha',
   creada_portal: 'Pedida por el cliente desde su portal',
+  // Lead del formulario web de auto/moto (06/10/2026, `lib/lead-web-solicitud.ts` de asegura): nace con su enlace de datos.
+  creada_web: 'Abierta sola por el formulario web (con enlace de datos)',
+  // SQL 2026-09-30_recaptacion_a_oportunidades: las pólizas antiguas de Recaptación pasadas a oportunidad.
+  creada_recaptacion: 'Creada desde Recaptación (póliza antigua)',
+  // Mismo SQL, rellenando `fecha_fin_vigencia` de una oportunidad ya abierta sin fecha.
+  fecha_desde_recaptacion: 'Fecha estimada desde Recaptación (póliza antigua)',
   editada: 'Corregida (ramo, vencimiento, compañía o prima)',
   tarea_creada: 'Tarea creada',
   tarea_cerrada: 'Tarea cerrada',
@@ -70,6 +74,13 @@ const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   whatsapp: 'WhatsApp abierto',
   aparcar: 'Aparcada',
   reabrir: 'Reabierta',
+  // La pone la subida de una póliza de motor (03/10/2026): solo con fechas conocidas, sin datos personales.
+  conductor_joven_novel: 'Hay un conductor joven/novel: revisar antes de tarificar',
+  // Figura con rol y sin nombre en la póliza subida (`notaFiguraSinNombre` de module-seguros): no abre ficha.
+  conductor_adicional_sin_nombre: 'Hay un conductor adicional sin nombre en la póliza: complétalo a mano.',
+  conductor_habitual_sin_nombre: 'Hay un conductor habitual sin nombre en la póliza: complétalo a mano.',
+  propietario_sin_nombre: 'Hay un propietario del vehículo sin nombre en la póliza: complétalo a mano.',
+  figura_asignada: 'Figura asignada al riesgo',
 }
 
 /**
@@ -77,8 +88,6 @@ const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
  * (25/09/2026, Alberto: la página aparte «ocupa mucha pantalla»). Lo que la fila ya ofrece
  * —corregir, ganar con su póliza, descartar— no se repite aquí.
  */
-const bloque: React.CSSProperties = { display: 'grid', gap: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }
-const tituloBloque: React.CSSProperties = { margin: 0, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }
 
 export default function SeguimientoOportunidad({ id, telefono = null, onCambio }: { id: string; telefono?: string | null; onCambio?: () => void }) {
   const [datos, setDatos] = useState<LecturaOportunidad | null>(null)
@@ -134,7 +143,7 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
             color: i === indicePaso ? '#fff' : i < indicePaso ? 'var(--primary)' : 'var(--muted)',
             border: i > indicePaso ? '1px solid var(--border)' : '1px solid transparent',
           }}>
-            {i + 1} · {i === 3 && cerrada ? ROTULO_ESTADO[op.estado] : p.rotulo}{i < indicePaso ? ' ✓' : ''}
+            {i + 1} · {i === 3 && cerrada ? ROTULO_ESTADO[op.estado] : p.rotulo}
           </li>
         ))}
       </ol>
@@ -148,8 +157,7 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
       )}
       {aparcada && <p style={{ margin: 0, fontSize: 14, color: 'var(--warning)' }}>Aparcada hasta el {fecha(op.aparcadaHasta)}: no sale en Vencimientos hasta entonces.</p>}
 
-      <section style={bloque}>
-        <h3 style={tituloBloque}>Qué hago ahora</h3>
+      <SeccionCard titulo="Qué hago ahora" sinTarjeta>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {op.estado === 'competencia' && !aparcada && (
             <button type="button" disabled={enviando} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} onClick={() => accion({ accion: 'interesado' })}>Interesado</button>
@@ -171,24 +179,18 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
         {panel === 'perder' && <FormPerder enviando={enviando} onEnviar={accion} onCancelar={() => setPanel(null)} />}
         {panel === 'aparcar' && <FormAparcar enviando={enviando} hoy={hoy} onEnviar={accion} onCancelar={() => setPanel(null)} />}
         {envio.estado === 'error' && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{envio.motivo}</p>}
-      </section>
+      </SeccionCard>
 
-      {!cerrada && op.ramo !== null && RAMOS_TARIFICABLES.has(op.ramo) && (
-        <section style={bloque}>
-          <h3 style={tituloBloque}>Datos para tarificar</h3>
-          <div>
-            <Link href={`/correduria/cliente/${op.clienteId}/${op.ramo}-nuevo`} style={{ ...btnStyle('primario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
-              Tarificar {op.ramo === 'auto' ? 'coche' : op.ramo} →
-            </Link>
-          </div>
-          {(op.ramo === 'auto' || op.ramo === 'moto') && <PedirDatos oportunidadId={op.id} clienteId={op.clienteId} telefono={telefono} ramo={op.ramo} />}
-        </section>
+      {/* El botón «Tarificar →» (y el enlace «Ver riesgo →») viven en la fila (10/10/2026): aquí solo los datos que faltan. */}
+      {!cerrada && (op.ramo === 'auto' || op.ramo === 'moto') && (
+        <SeccionCard titulo="Datos para tarificar" sinTarjeta>
+          <PedirDatos oportunidadId={op.id} clienteId={op.clienteId} telefono={telefono} ramo={op.ramo} />
+        </SeccionCard>
       )}
 
       <Tareas oportunidadId={id} tareas={datos.tareas} descartadas={datos.tareasDescartadas} fueCliente={datos.fueCliente} cerrada={cerrada} hoy={hoy} onCambio={() => { cargar(); onCambio?.() }} />
 
-      <details style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-        <summary style={{ ...tituloBloque, cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>Historial ({datos.historial.length})</summary>
+      <SeccionCard titulo={`Historial (${datos.historial.length})`} plegable abierta={false} sinTarjeta>
         {datos.historial.length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Sin cambios registrados desde aquí todavía.</p>
         ) : datos.historial.map((h, i) => (
@@ -203,7 +205,7 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
           </div>
         ))}
         <span style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>El historial no se puede editar ni borrar: queda quién cambió qué y cuándo.</span>
-      </details>
+      </SeccionCard>
     </div>
   )
 }
@@ -307,11 +309,7 @@ function Tareas({ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, 
   // LSSI 21.2: por correo solo a quien fue cliente. Sin comprobar = no se ofrece.
   const tipos = TIPOS_TAREA_UI.filter(t => t.valor !== 'email' || fueCliente === true)
   return (
-    <section style={bloque}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h3 style={tituloBloque}>Tareas</h3>
-        <span style={{ fontSize: 13, color: 'var(--muted)' }}>{pendientes.length} pendiente(s)</span>
-      </div>
+    <SeccionCard titulo="Tareas" acciones={`${pendientes.length} pendiente(s)`} sinTarjeta>
       {pendientes.length === 0 && <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Nada pendiente. Toda oportunidad abierta debería tener una siguiente tarea con fecha.</p>}
       {pendientes.map(t => (
         <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) auto', gap: 12, alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--border)' }}>
@@ -362,6 +360,6 @@ function Tareas({ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, 
           ))}
         </details>
       )}
-    </section>
+    </SeccionCard>
   )
 }

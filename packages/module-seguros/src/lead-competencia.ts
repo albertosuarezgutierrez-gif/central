@@ -116,8 +116,10 @@ export function pasoConTarea(
     : { accion: 'tarea', motivo: `${que} (${cuando})`, dentroDeDias: Math.max(0, d) }
 }
 
-/** A cuántos días del aniversario se escribe por primera vez. */
-export const DIAS_PRIMER_CONTACTO = 60
+import { DIAS_AVISO_OPORTUNIDAD } from './oportunidad-aviso.ts'
+
+/** A cuántos días del aniversario se escribe por primera vez: nunca antes del aviso de la oportunidad. */
+export const DIAS_PRIMER_CONTACTO = DIAS_AVISO_OPORTUNIDAD
 export const DIAS_RECORDATORIO = 7
 export const DIAS_LLAMADA = 14
 export const MAX_INTENTOS = 3
@@ -126,7 +128,7 @@ export const MAX_INTENTOS_RESPONDIO = 5
 export const DIAS_ENTRE_LLAMADAS_RESPONDIO = 2
 
 /**
- * Qué toca con un lead, por reglas: primer contacto a 60 días del aniversario,
+ * Qué toca con un lead, por reglas: primer contacto a 45 días del aniversario,
  * recordatorio a los 7 días sin respuesta, llamada a los 14 y, tras 3 intentos
  * sin respuesta, se aparca hasta el año siguiente. `diasDesdeUltimo` = `null`
  * cuando nunca se le contactó. Un lead que ya RESPONDIÓ (abrió o pinchó) no
@@ -190,13 +192,20 @@ export function canalLead(d: { fueCliente: boolean; tieneTelefono: boolean; tien
 }
 
 /**
- * ¿Se le puede escribir por WhatsApp? WhatsApp es «comunicación electrónica»
- * (LSSI art. 21), el mismo régimen que el correo: sin consentimiento, solo a
- * quien FUE cliente. Un `fueCliente` desconocido (`null`) no abre la puerta.
+ * ¿Se le puede escribir por WhatsApp? Basta con tener teléfono.
+ *
+ * 🚨 Decisión de Alberto (30/09/2026): «a todos», también a quien NUNCA fue
+ * cliente. Hasta ese día solo se ofrecía a quien fue cliente, porque WhatsApp
+ * es comunicación electrónica (LSSI art. 21) y sin consentimiento solo cabe la
+ * relación contractual previa (21.2). Se le explicó el riesgo —enviarlo a quien
+ * no consintió es infracción de la LSSI, grave si es masivo— y lo asume. El
+ * mensaje sigue llevando la baja y quien la pide deja de tener canal
+ * (`wa_opt_out_at`). El correo NO cambia: sigue solo para quien fue cliente
+ * (`canalLead`).
  * Que el número sea un móvil lo decide la pantalla (`urlWhatsapp`), no esto.
  */
-export function puedeWhatsappLead(d: { fueCliente: boolean | null; tieneTelefono: boolean }): boolean {
-  return d.fueCliente === true && d.tieneTelefono
+export function puedeWhatsappLead(d: { tieneTelefono: boolean }): boolean {
+  return d.tieneTelefono
 }
 
 /**

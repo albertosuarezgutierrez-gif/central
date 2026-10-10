@@ -1,9 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
 import { Prisma } from '@/lib/generated/asegura-client'
 import { autorizacionBasica, filasWebhook, type FilaWebhook } from '@/lib/codeoscopic/webhook'
+import { sincronizarDesdeWebhook } from '@/lib/descubrir-emisiones'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 120
 
 // POST /api/webhooks/codeoscopic — el webhook que Codeoscopic tiene dado de alta
 // (HTTP Basic). Hoy apunta al CRM de Manuel (`app.grupoasegura.com`), que
@@ -12,8 +14,11 @@ export const dynamic = 'force-dynamic'
 // autenticado va a `codeoscopic_webhook_events` tal cual — un array, una fila
 // por elemento — con dedupe por hash; un cuerpo repetido suma `veces` y mueve
 // `ultimo_at`, así la cadencia del emisor queda en la tabla y no solo en el log.
-// NO acuña ni cambia el estado de ningún proyecto — la reconciliación sigue en
-// `GET /insurances/{id}`.
+// Tras guardar (03/10/2026), y SOLO después de contestar (`after`), intenta sincronizar
+// cada proyecto recibido con el descubrimiento (`sincronizarDesdeWebhook`: relee
+// `GET /insurances/{id}` y registra solo con tomador demostrado por documento). Es
+// best-effort: si falla, el cron `correduria-descubrir-emisiones` lo recoge, y la
+// respuesta al vendor NO cambia por ello (Codeoscopic reintenta hasta un 200/204).
 //
 // Envs: CODEOSCOPIC_WEBHOOK_BASIC_USER + CODEOSCOPIC_WEBHOOK_BASIC_PASS — los MISMOS
 // nombres que el CRM de Manuel (proyecto Vercel `asegura`), para copiarlas 1:1 sin
@@ -81,6 +86,13 @@ export async function POST(req: Request) {
       console.error('[webhooks/codeoscopic] no se pudo guardar el evento:', e instanceof Error ? e.message : e)
       return NextResponse.json({ estado: 'error', guardadas: nuevas + repetidas, de: filas.length }, { status: 500 })
     }
+  }
+  // Best-effort y DESPUÉS de responder: un fallo (o un vendor lento) aquí no puede tumbar el 200.
+  const ids = filas.map((f) => f.evento.proyectoId)
+  try {
+    after(() => sincronizarDesdeWebhook(ids))
+  } catch (e) {
+    console.error('[webhooks/codeoscopic] no se pudo programar la sync (lo recoge el cron):', e instanceof Error ? e.message : e)
   }
   const primera = filas[0]?.evento
   console.log(

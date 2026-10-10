@@ -2,15 +2,14 @@ import { PrismaClient } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient }
 
+/**
+ * UN cliente por proceso, también en producción. 🚨 Hasta el 28/09/2026 solo se guardaba fuera de
+ * producción, y como el `Proxy` de abajo llama aquí en CADA acceso, en Vercel cada consulta creaba
+ * un `PrismaClient` nuevo con su propio pool que nadie cerraba: el cron de coberturas abrió ~700
+ * conexiones en 2 minutos y agotó el pooler compartido (EMAXCONN, límite 200) para todas las apps.
+ */
 function cliente(): PrismaClient {
-  if (!globalForPrisma.prisma) {
-    const c = new PrismaClient()
-    // En producción cada instancia serverless quiere la suya; en desarrollo se
-    // reaprovecha para no abrir una conexión por recarga en caliente.
-    if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = c
-    return c
-  }
-  return globalForPrisma.prisma
+  return (globalForPrisma.prisma ??= new PrismaClient())
 }
 
 /**

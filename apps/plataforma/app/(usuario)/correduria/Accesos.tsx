@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 /**
  * Accesos directos de la correduría (24/09/2026, Alberto: «tiene que ser todo
@@ -21,7 +21,7 @@ export type Tono = 'malo' | 'aviso' | 'bien'
 
 export type Acceso = {
   id: string
-  icono: string
+  icono: ReactNode
   titulo: string
   /** Una línea con el dato: «12 · 1 devuelto». `null` = no se pinta (no es «0»). */
   detalle?: string | null
@@ -80,6 +80,8 @@ export function PanelAccesos({ accesos, inicial }: {
 }) {
   const valido = (v: string | null) => (v && accesos.some(a => a.id === v) ? v : null)
   const [abierto, setAbierto] = useState<string | null>(valido(inicial))
+  // Solo se hace scroll tras un clic del usuario, no al cargar la página con `?v=`.
+  const pedirScroll = useRef(false)
 
   // Al volver atrás con `replaceState` de por medio, el `?v=` de la barra manda.
   useEffect(() => {
@@ -96,8 +98,21 @@ export function PanelAccesos({ accesos, inicial }: {
     if (nuevo) url.searchParams.set('v', nuevo)
     else url.searchParams.delete('v')
     window.history.replaceState(null, '', url)
-    if (nuevo) requestAnimationFrame(() => document.getElementById(`acceso-${nuevo}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    pedirScroll.current = nuevo !== null
   }
+
+  // Tras MONTAR el contenido abierto (no antes: con `requestAnimationFrame` en el clic, el panel aún
+  // podía no existir y en móvil quedaba debajo de las 14 baldosas). `scrollIntoView` sube hasta el
+  // scroller real (en plataforma es `LayoutShell`, no `body`). Un segundo intento tras el pintado cubre
+  // contenido que cambia de alto al montarse.
+  useEffect(() => {
+    if (!pedirScroll.current || abierto === null) return
+    pedirScroll.current = false
+    const ir = () => document.getElementById(`acceso-${abierto}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    ir()
+    const t = setTimeout(ir, 250)
+    return () => clearTimeout(t)
+  }, [abierto])
 
   const actual = accesos.find(a => a.id === abierto)
   return (

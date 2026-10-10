@@ -4,12 +4,9 @@ import type { Retarificabilidad } from '@central/module-seguros'
  * El rótulo del enlace de retarificar — y **la flecha ↗ solo donde de verdad se
  * sale de plataforma**.
  *
- * Desde el 03/09/2026 auto se retarifica DENTRO de `/correduria`
- * (`urlRetarificar()` devuelve la ruta interna), así que su ↗ mentía: prometía
- * un salto de dominio que ya no ocurre. Hogar sigue saltando a `apps/asegura`
- * —su pantalla pide m², año, capitales y el Catastro del riesgo, y no está
- * portada— y esa flecha se queda porque avisa de lo que va a pasar: otro
- * dominio, otra sesión, y puede pedir contraseña.
+ * Auto (03/09/2026), moto y hogar (17/09/2026) se retarifican DENTRO de `/correduria`
+ * (`urlRetarificar()` devuelve la ruta interna para todas), así que ninguna lleva ↗: la flecha
+ * prometería un salto de dominio que ya no ocurre (quitada en hogar el 29/09/2026).
  *
  * Sin veredicto (`null`: una versión de asegura anterior al helper) no se sabe a
  * dónde lleva el enlace, así que se conserva la flecha: prometer que uno se
@@ -18,6 +15,6 @@ import type { Retarificabilidad } from '@central/module-seguros'
 export function rotuloRetarificar(r: Retarificabilidad | null | undefined): string {
   if (r?.ramo === 'auto') return 'Retarificar auto'
   if (r?.ramo === 'moto') return 'Retarificar moto'
-  if (r?.ramo === 'hogar') return 'Retarificar hogar ↗'
+  if (r?.ramo === 'hogar') return 'Retarificar hogar'
   return 'Retarificar ↗'
 }

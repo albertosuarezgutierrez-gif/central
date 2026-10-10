@@ -28,7 +28,7 @@
 // de la petición** (la acaba de escribir quien invita). De la BD no se puede
 // sacar ninguna —`portal_invitacion` guarda solo el hash—, así que reenviar
 // esto más tarde, desde un cron, es imposible a propósito.
-import { remitenteCorreo } from '@central/module-seguros'
+import { conMarcaCorreo, remitenteCorreo } from '@central/module-seguros'
 import { DIAS_VIGENCIA_INVITACION } from '@central/module-seguros-portal'
 
 /** Escapa lo que va dentro del HTML. `mensaje` lo escribe una persona. */
@@ -228,7 +228,7 @@ export async function enviarInvitacion(destino: string, d: DatosCorreoInvitacion
       ...(replyTo ? { replyTo } : {}),
       subject: asunto,
       text: texto,
-      html,
+      html: conMarcaCorreo(html),
     })
     return true
   } catch (e) {

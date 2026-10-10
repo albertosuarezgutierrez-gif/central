@@ -54,9 +54,11 @@ export async function POST(req: Request) {
 
   if (valor.polizaId !== null) {
     // Igual que en `/api/siniestros`: cuentan las propias y las que otro le ha
-    // autorizado a ver — si puede verla en su bóveda, puede ponerle un aviso.
+    // autorizado a ver — si puede verla en su bóveda, puede ponerle un aviso. Y
+    // (29/09/2026) aquellas en las que FIGURA (propietario, conductor…): el
+    // desplegable ya las ofrecía y la ruta contestaba «no es tuya».
     const cartera = await carteraDeIdentidad(identidad.id)
-    const suyas = new Set([...cartera.propias, ...cartera.autorizadas].flatMap((t) => t.polizas.map((p) => p.id)))
+    const suyas = new Set([...cartera.propias, ...cartera.autorizadas, ...cartera.intervinientes].flatMap((t) => t.polizas.map((p) => p.id)))
     if (!suyas.has(valor.polizaId)) return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })
   }
 

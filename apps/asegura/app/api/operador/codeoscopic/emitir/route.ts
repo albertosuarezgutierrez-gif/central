@@ -15,7 +15,7 @@ import {
 } from '@/lib/codeoscopic/emitir'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada, fechaEfectoDeOferta } from '@/lib/codeoscopic/fecha-efecto'
 import { consejoTrasFallo, intentoQuizaEmitido, rastroSolicitudEmision, solicitudViva, solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
-import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
+import { enviarEmision, soltarCandadoEnvio, tomarCandadoAcunado } from '@/lib/codeoscopic/emitir-envio'
 import {
   conCuentaBancaria,
   decidirCuentaEnvio,
@@ -26,14 +26,30 @@ import {
   ibanEnmascarado,
   ibanValido,
 } from '@/lib/codeoscopic/emitir-iban'
-import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { cuentaDeFicha, origenCuentaAceptada, presupuestoAceptadoDe, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { cuentaDistintaDeLaFirmada, discrepanciaConElegida, polizaParaCuenta } from '@/lib/presupuesto-cuenta'
+import { marcarEmitido } from '@/lib/envio-presupuesto'
+import { cerrarPresupuestosPorEmision } from '@/lib/presupuesto-referencia'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
-import { documentoTomador, fraccionamientoDeOferta } from '@/lib/codeoscopic/importar'
+import { documentoTomador, fraccionamientoDeOferta, matriculaProyecto } from '@/lib/codeoscopic/importar'
+import {
+  corteIdentidadNuevo,
+  decidirDuplicadoNuevo,
+  emisionNuevoActiva,
+  resolverContextoEmision,
+  type Duplicado,
+} from '@/lib/codeoscopic/contexto-emision'
+import { sqlCarteraEnVigor } from '@central/module-seguros'
+import { Prisma } from '@prisma/client'
 import { computeDniLookupHash } from '@central/module-seguros-pii'
 import { archivarDocumentoEmitido } from '@/lib/codeoscopic/archivar-documento'
+import { lectorOferta, opcionesOfertaAceptada } from '@/lib/codeoscopic/opciones-emitida'
 import { trasEmisionConTope } from '@/lib/tras-emision'
 import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
+import { copiarFigurasAPoliza, faltanConfirmaciones, leerCambiosDeFiguras, registrarConfirmacion, type Confirmacion } from '@/lib/emision-figuras'
+import { decidirBloqueoBonus, verificacionBonusDe, FUENTES_VERIFICACION_BONUS } from '@central/module-seguros'
+import { guardarVerificacionBonus, leerBonusTarificacion } from '@/lib/seguro-anterior-candidatas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -60,6 +76,11 @@ export const maxDuration = 240
  *   `reintento_sin_confirmar`): el corredor ha mirado el proyecto y no hay póliza.
  *   `acunarExistente: true` cuando el proyecto YA cuenta una `policyApplication` aprobada con
  *   nº de póliza (`solicitudes[]` del 409): se acuña ESA en la cartera y NO se envía nada.
+ *   `bonusVerificado: { fuente: 'certificado'|'sinco'|'dato_confirmado', nota? }` (03/10/2026): el bonus
+ *   de un vehículo nuevo se declaró SUPUESTO (o no consta) y el corredor ya lo ha verificado. Sin él → 422
+ *   `bonus_sin_verificar`, antes de llamar a nadie.
+ *   `duplicadoConfirmado: true` (solo cliente NUEVO, 28/09/2026): el corredor ha visto el 409
+ *   `ya_en_cartera`/`ya_emitido` y confirma que es otra póliza. Queda en el log.
  *
  * `cuentaConfirmada` es la MÁSCARA (`ES91…1332`) de la cuenta de cargo que la
  * pantalla enseñó tras el ReRate (`/oferta` → `cuenta`). Sin ella, una cuenta
@@ -110,14 +131,16 @@ export const POST = auditado(async (req: Request) => {
   const filas = await prisma.$queryRaw<
     {
       poliza_id: string | null
+      cliente_id: string | null
+      tarificacion_id: string | null
       aseguradora: string | null
       accepted_offer_id_codeoscopic: string | null
       estado: string | null
       error_mensaje: string | null
     }[]
   >`
-    select poliza_id::text as poliza_id, aseguradora, accepted_offer_id_codeoscopic,
-           estado::text as estado, error_mensaje
+    select poliza_id::text as poliza_id, cliente_id::text as cliente_id, tarificacion_id::text as tarificacion_id,
+           aseguradora, accepted_offer_id_codeoscopic, estado::text as estado, error_mensaje
     from codeoscopic_projects
     where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
   `
@@ -134,31 +157,230 @@ export const POST = auditado(async (req: Request) => {
       { status: 409 },
     )
   }
-  if (!p.poliza_id) {
+  // La oferta que el llamante ENSEÑÓ (29/09/2026, emisión por Telegram): si otro ReRate del mismo
+  // proyecto cambió la oferta aceptada desde entonces, no se emite — se emitiría una compañía o una
+  // prima que nadie ha visto. Opcional: la pantalla de emisión no lo manda.
+  const offerIdEsperado = cadena(cuerpo.offerIdEsperado)
+  if (offerIdEsperado && offerIdEsperado !== p.accepted_offer_id_codeoscopic) {
     return NextResponse.json(
       {
         estado: 'error',
-        causa: 'otro',
-        mensaje: 'este proyecto no está enlazado a ninguna póliza de la cartera: no se sabe de quién es',
+        causa: 'oferta_cambiada',
+        mensaje: 'la oferta confirmada del proyecto ya no es la que se enseñó: no se ha enviado nada. Pide el resumen otra vez.',
       },
       { status: 409 },
     )
   }
 
-  const polizas = await prisma.$queryRaw<
-    { cliente_id: string; tipo: string; fraccionamiento: string | null; datos_especificos: unknown; dni_lookup_hash: string | null; sustituida: boolean }[]
-  >`
-    select pol.cliente_id::text as cliente_id, pol.tipo::text as tipo, pol.fraccionamiento::text as fraccionamiento,
-           pol.datos_especificos, c.dni_lookup_hash,
-           (pol.sustituida_at is not null or exists (select 1 from polizas s where s.poliza_origen_id = pol.id)) as sustituida
-    from polizas pol join clientes c on c.id = pol.cliente_id
-    where pol.id = ${p.poliza_id}::uuid and pol.correduria_id = ${correduria.id}::uuid
-  `
-  const poliza = polizas[0]
-  if (!poliza) {
+  // ── De quién es el proyecto (28/09/2026, emisión a clientes NUEVOS) ──────
+  // Con `poliza_id` → sustitución de esa póliza (el camino de siempre). Sin ella
+  // pero con `cliente_id` + `tarificacion_id` (los graba `/oferta`) → cliente
+  // nuevo: ramo y riesgo de la tarificación, `polizaOrigenId = null`. Sin nada
+  // → 409 como hasta hoy. La decisión es pura (`resolverContextoEmision`); aquí
+  // solo se lee, y TODA lectura va por correduría y sin fichas fusionadas.
+  const polizas = p.poliza_id
+    ? await prisma.$queryRaw<
+        { cliente_id: string; tipo: string; fraccionamiento: string | null; datos_especificos: unknown; dni_lookup_hash: string | null; sustituida: boolean }[]
+      >`
+        select pol.cliente_id::text as cliente_id, pol.tipo::text as tipo, pol.fraccionamiento::text as fraccionamiento,
+               pol.datos_especificos, c.dni_lookup_hash,
+               (pol.sustituida_at is not null or exists (select 1 from polizas s where s.poliza_origen_id = pol.id)) as sustituida
+        from polizas pol join clientes c on c.id = pol.cliente_id
+        where pol.id = ${p.poliza_id}::uuid and pol.correduria_id = ${correduria.id}::uuid
+          and c.correduria_id = ${correduria.id}::uuid and c.merged_into_cliente_id is null
+      `
+    : []
+  // Diagnóstico, no lectura de ficha: si la póliza no se ha podido leer, ¿es porque
+  // su tomador está fusionado? Solo devuelve un booleano — nada de la ficha fusionada.
+  const tomadorFusionado =
+    p.poliza_id && polizas.length === 0
+      ? (
+          await prisma.$queryRaw<{ tomador_fusionado: boolean }[]>`
+            select c.merged_into_cliente_id is not null as tomador_fusionado
+            from polizas pol join clientes c on c.id = pol.cliente_id
+            where pol.id = ${p.poliza_id}::uuid and pol.correduria_id = ${correduria.id}::uuid
+              and c.correduria_id = ${correduria.id}::uuid
+          `
+        )[0]?.tomador_fusionado === true
+      : false
+  const modoNuevo = !p.poliza_id && !!p.cliente_id && !!p.tarificacion_id
+  const tarificaciones = modoNuevo
+    ? await prisma.$queryRaw<{ cliente_id: string | null; ramo: string | null; peticion: unknown; poliza_id: string | null }[]>`
+        select t.cliente_id::text as cliente_id, t.ramo, t.peticion, t.poliza_id::text as poliza_id
+        from tarificaciones t
+        where t.id = ${p.tarificacion_id}::uuid and t.correduria_id = ${correduria.id}::uuid and t.simulado = false
+      `
+    : []
+  const fichas = modoNuevo
+    ? await prisma.$queryRaw<{ id: string; dni_lookup_hash: string | null }[]>`
+        select c.id::text as id, c.dni_lookup_hash
+        from clientes c
+        where c.id = ${p.cliente_id}::uuid and c.correduria_id = ${correduria.id}::uuid and c.merged_into_cliente_id is null
+      `
+    : []
+  const pol = polizas[0]
+  const tar = tarificaciones[0]
+  const fic = fichas[0]
+  const resuelto = resolverContextoEmision({
+    proyecto: { polizaId: p.poliza_id, clienteId: p.cliente_id, tarificacionId: p.tarificacion_id },
+    poliza: pol
+      ? {
+          clienteId: pol.cliente_id,
+          tipo: pol.tipo,
+          fraccionamiento: pol.fraccionamiento,
+          datosEspecificos: pol.datos_especificos,
+          dniLookupHash: pol.dni_lookup_hash,
+          sustituida: pol.sustituida,
+        }
+      : null,
+    tarificacion: tar ? { clienteId: tar.cliente_id, ramo: tar.ramo, peticion: tar.peticion, polizaId: tar.poliza_id } : null,
+    ficha: fic ? { clienteId: fic.id, dniLookupHash: fic.dni_lookup_hash } : null,
+    polizaTomadorFusionado: tomadorFusionado,
+  })
+  if (!resuelto.ok) {
+    return NextResponse.json({ estado: 'error', causa: resuelto.causa, mensaje: resuelto.mensaje }, { status: resuelto.status })
+  }
+  const ctx = resuelto.ctx
+
+  // 🚗 Bonus SUPUESTO de un vehículo nuevo (03/10/2026): si al tarificar se declararon al MÁXIMO
+  // unos años sin siniestros que no constaban, no se emite sin verificarlos (certificado, SINCO o dato
+  // confirmado por el cliente). Fail-closed: NULL (tarificación anterior a la marca, o no se pudo
+  // leer) es «no se sabe», no «no se supuso». Acuñar una solicitud YA aprobada no envía nada: no se corta.
+  if (modoNuevo && tar && p.tarificacion_id && cuerpo.acunarExistente !== true) {
+    const riesgo = esObjeto(tar.peticion) && esObjeto(tar.peticion.risk) ? tar.peticion.risk : null
+    const previamenteAsegurado = riesgo && typeof riesgo.previouslyInsured === 'boolean' ? riesgo.previouslyInsured : null
+    const marca = await leerBonusTarificacion(correduria.id, p.tarificacion_id)
+    const deCuerpo = verificacionBonusDe(cuerpo.bonusVerificado)
+    const verificacion = deCuerpo ?? verificacionBonusDe(marca.verificacion)
+    const bloqueo = decidirBloqueoBonus({ ramo: tar.ramo, previamenteAsegurado, bonusSupuesto: marca.bonusSupuesto, verificacion })
+    if (bloqueo.bloquea) {
+      return NextResponse.json(
+        { estado: 'error', causa: bloqueo.causa, mensaje: bloqueo.mensaje, bonusSupuesto: marca.bonusSupuesto, fuentes: FUENTES_VERIFICACION_BONUS },
+        { status: 422 },
+      )
+    }
+    if (deCuerpo && marca.bonusSupuesto !== false) {
+      console.log(`[emitir] proyecto ${projectId}: bonus verificado por ${actor} (${deCuerpo.fuente}) — se sigue`)
+      await guardarVerificacionBonus(correduria.id, p.tarificacion_id, deCuerpo, actor)
+    }
+  }
+
+  // 🚨 Si el cliente aceptó en el portal un presupuesto de ESTA tarificación, lo que se emite tiene
+  // que ser la opción que FIRMÓ (compañía y prima). Fail-closed: si no se puede mirar, no se emite.
+  let aceptado: Awaited<ReturnType<typeof presupuestoAceptadoDe>>
+  try {
+    aceptado = await presupuestoAceptadoDe(correduria.id, p.tarificacion_id)
+  } catch (e) {
+    console.error('[emitir] no se pudo leer el presupuesto aceptado:', e instanceof Error ? e.message : e)
     return NextResponse.json(
-      { estado: 'error', causa: 'otro', mensaje: 'la póliza enlazada a este proyecto ya no existe' },
-      { status: 404 },
+      { estado: 'error', causa: 'otro', mensaje: 'No se ha podido comprobar si el cliente firmó un presupuesto de esta tarificación. No se ha emitido nada; reinténtalo.' },
+      { status: 503 },
+    )
+  }
+  if (aceptado) {
+    const motivo = discrepanciaConElegida({
+      companiaProyecto: p.aseguradora,
+      companiaElegida: aceptado.compania,
+      primaEnviada: numero(cuerpo.primaAnual),
+      primaElegida: aceptado.primaEur,
+    })
+    if (motivo) {
+      return NextResponse.json(
+        { estado: 'error', causa: 'otro', mensaje: `No es la opción que firmó el cliente: ${motivo}. Emite desde su fila o mándale otro presupuesto. No se ha emitido nada.` },
+        { status: 409 },
+      )
+    }
+  }
+  /**
+   * Cierra el presupuesto aceptado al acuñar la póliza y, desde el 30/09/2026, ata la póliza
+   * (`poliza_emitida_id`) a los presupuestos de ESTA tarificación que enseñaban esa compañía —también
+   * los emitidos desde su referencia sin firma en el portal. Best-effort: la póliza ya existe.
+   */
+  const cerrarPresupuesto = async (polizaId: string) => {
+    if (aceptado) {
+      await marcarEmitido(correduria.id, { id: aceptado.id, actor }).catch((e: unknown) =>
+        console.error('[emitir] póliza acuñada pero el presupuesto no se marcó emitido:', e instanceof Error ? e.message : e),
+      )
+    }
+    await cerrarPresupuestosPorEmision(correduria.id, { tarificacionId: p.tarificacion_id, polizaId, compania: p.aseguradora, actor }).catch((e: unknown) =>
+      console.error('[emitir] póliza acuñada pero no se ató a su presupuesto:', e instanceof Error ? e.message : e),
+    )
+  }
+  /** Tras acuñar: las figuras de la variante pasan a la póliza (29/09/2026). Best-effort: la póliza ya existe. */
+  const figurasAPoliza = async (polizaId: string) => {
+    if (!p.tarificacion_id) return
+    await copiarFigurasAPoliza(correduria.id, { polizaId, tarificacionId: p.tarificacion_id, actor }).catch((e: unknown) =>
+      console.error('[emitir] póliza acuñada pero sus figuras no pasaron a intervinientes:', e instanceof Error ? e.message : e),
+    )
+  }
+
+  // ── Emitir con OTRAS personas que la primera variante del riesgo (29/09/2026) ──
+  // Declarar a otro conductor o domicilio para pagar menos es ocultar el riesgo (arts. 10 y 89 LCS).
+  // Si la variante cambia tomador/propietario/conductor o CP respecto a P1, el corredor confirma
+  // antes del Submit y queda en el historial. FAIL-CLOSED: sin poder mirarlo no se emite. Acuñar
+  // una solicitud YA aprobada no envía nada nuevo, así que no se le pregunta.
+  if (p.tarificacion_id && cuerpo.acunarExistente !== true) {
+    const leidos = await leerCambiosDeFiguras(correduria.id, p.tarificacion_id).then(
+      (x) => ({ ok: true as const, x }),
+      (e: unknown) => ({ ok: false as const, e }),
+    )
+    if (!leidos.ok) {
+      console.error('[emitir] no se pudo comprobar las personas del riesgo:', leidos.e instanceof Error ? leidos.e.message : leidos.e)
+      return NextResponse.json(
+        { estado: 'error', causa: 'otro', mensaje: 'No se ha podido comprobar las personas del riesgo: no se ha emitido nada. Vuelve a probar.' },
+        { status: 503 },
+      )
+    }
+    if (leidos.x) {
+      const faltan = faltanConfirmaciones(leidos.x.exigidas, cuerpo.figurasConfirmadas)
+      if (faltan.length > 0) {
+        return NextResponse.json(
+          {
+            estado: 'error',
+            causa: 'confirmar_figuras',
+            mensaje:
+              'Esta variante cambia las personas o el CP del riesgo respecto a la primera. Confirma que es la realidad ' +
+              '(arts. 10 y 89 LCS) antes de emitir. No se ha emitido nada.',
+            cambios: leidos.x.cambios,
+            exigidas: leidos.x.exigidas,
+            conductorHabitual: leidos.x.conductorHabitual,
+          },
+          { status: 409 },
+        )
+      }
+      const registrado = await registrarConfirmacion(correduria.id, {
+        oportunidadId: leidos.x.oportunidadId,
+        tarificacionId: p.tarificacion_id,
+        cambios: leidos.x.cambios,
+        marcadas: leidos.x.exigidas as Confirmacion[],
+        actor,
+      }).then(() => true, (e: unknown) => {
+        console.error('[emitir] no se pudo dejar constancia de la confirmación:', e instanceof Error ? e.message : e)
+        return false
+      })
+      // Sin constancia no hay prueba de lo que se confirmó: no se emite.
+      if (!registrado) {
+        return NextResponse.json(
+          { estado: 'error', causa: 'otro', mensaje: 'No se ha podido guardar la confirmación en el historial del riesgo: no se ha emitido nada. Vuelve a probar.' },
+          { status: 503 },
+        )
+      }
+    }
+  }
+
+  // (iii) Interruptor PROPIO del modo nuevo, fail-closed: sin
+  // `CODEOSCOPIC_EMISION_NUEVO=1` un proyecto sin póliza sigue sin emitirse,
+  // aunque la emisión de sustituciones esté encendida.
+  if (ctx.modo === 'nuevo' && !emisionNuevoActiva()) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'apagado',
+        mensaje:
+          'la emisión a clientes NUEVOS (sin póliza previa en cartera) está apagada: falta ' +
+          '`CODEOSCOPIC_EMISION_NUEVO=1`. No se ha enviado nada.',
+      },
+      { status: 503 },
     )
   }
 
@@ -189,7 +411,7 @@ export const POST = auditado(async (req: Request) => {
   // La póliza NUEVA se paga como diga la oferta aceptada (anual/semestral…), no como
   // pagaba la que sustituye; sin dato en el proyecto se conserva el de la vieja.
   const fraccionamientoAcunado =
-    (crudoPrevio ? fraccionamientoDeOferta(crudoPrevio, p.accepted_offer_id_codeoscopic) : null) ?? poliza.fraccionamiento
+    (crudoPrevio ? fraccionamientoDeOferta(crudoPrevio, p.accepted_offer_id_codeoscopic) : null) ?? ctx.fraccionamientoBase
   const rastro = crudoPrevio ? rastroSolicitudEmision(crudoPrevio) : []
   // La forma que el portal SÍ documenta: `policyApplications[]` con `status.id` y
   // `policyNumber`. Es la única reconciliación posible (no hay webhook real).
@@ -205,6 +427,84 @@ export const POST = auditado(async (req: Request) => {
     proyectoLegible: crudoPrevio !== null,
     crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
   })
+
+  const docTomador = crudoPrevio ? documentoTomador(crudoPrevio) : null
+  const hashTomador = docTomador ? computeDniLookupHash(docTomador) : null
+
+  // ── Guardas del modo NUEVO (28/09/2026) — ANTES de acuñar y antes del Submit ──
+  // Sin póliza previa no hay nada que ancle de quién es el contrato ni que avise
+  // de que ya lo tiene, así que:
+  //   (i) identidad FAIL-CLOSED: DNI del tomador del proyecto == índice ciego de
+  //       la ficha, y los dos presentes (un proyecto ilegible tampoco pasa);
+  //  (ii) duplicado (decisión pura: `decidirDuplicadoNuevo`): en auto/moto con
+  //       matrícula se miran SIEMPRE las dos cosas — póliza EN VIGOR con esa
+  //       matrícula en TODA la correduría (no solo este cliente; de otra ficha solo
+  //       se dice que existe, con el nº enmascarado) Y proyecto `emitida` del mismo
+  //       cliente y producto en 30 días (un nuevo que acabó `emitido_sin_acunar` no
+  //       deja póliza en cartera). Resto de ramos (o sin matrícula): solo lo segundo.
+  //       Saltable con `duplicadoConfirmado: true`, que queda en el log.
+  if (ctx.modo === 'nuevo') {
+    const corte = corteIdentidadNuevo(hashTomador, ctx.dniLookupHash)
+    if (corte) {
+      return NextResponse.json({ estado: 'error', causa: 'identidad', mensaje: `${corte}. No se ha enviado nada.` }, { status: 409 })
+    }
+    const confirmado = cuerpo.duplicadoConfirmado === true
+    const matricula =
+      (crudoPrevio ? matriculaProyecto(crudoPrevio) : null) ??
+      (typeof ctx.riesgo?.matricula === 'string' ? ctx.riesgo.matricula : null)
+    let duplicado: Duplicado | null = null
+    try {
+      const mismas =
+        (ctx.tipo === 'auto' || ctx.tipo === 'moto') && matricula
+          ? await prisma.$queryRaw<{ id: string; numero_poliza: string | null; mismo_cliente: boolean }[]>(Prisma.sql`
+              select p.id::text as id, p.numero_poliza, (p.cliente_id = ${ctx.clienteId}::uuid) as mismo_cliente
+              from polizas p join clientes c on c.id = p.cliente_id
+              where p.correduria_id = ${correduria.id}::uuid and p.merged_into_poliza_id is null
+                and c.correduria_id = ${correduria.id}::uuid and c.merged_into_cliente_id is null
+                and upper(regexp_replace(coalesce(p.datos_especificos->>'matricula', ''), '[^A-Za-z0-9]', '', 'g')) = ${matricula}
+                and ${Prisma.raw(sqlCarteraEnVigor('p'))}
+              order by (p.cliente_id = ${ctx.clienteId}::uuid) desc
+              limit 20
+            `)
+          : []
+      const recientes = await prisma.$queryRaw<{ project_id_codeoscopic: string }[]>`
+        select cp.project_id_codeoscopic
+        from codeoscopic_projects cp
+        where cp.correduria_id = ${correduria.id}::uuid and cp.cliente_id = ${ctx.clienteId}::uuid
+          and cp.producto::text = ${ctx.tipo} and cp.estado = 'emitida'
+          and cp.project_id_codeoscopic <> ${projectId}
+          and cp.updated_at > now() - interval '30 days'
+      `
+      duplicado = decidirDuplicadoNuevo({
+        tipo: ctx.tipo,
+        matricula,
+        mismaMatricula: mismas.map((m) => ({ id: m.id, numeroPoliza: m.numero_poliza, mismoCliente: m.mismo_cliente })),
+        proyectosRecientes: recientes.map((r) => r.project_id_codeoscopic),
+      })
+    } catch (e) {
+      // Un duplicado que no se ha podido comprobar no es «no hay duplicado».
+      console.log(`[emitir] proyecto ${projectId}: no se pudo comprobar el duplicado —`, e instanceof Error ? e.message : String(e))
+      return NextResponse.json(
+        { estado: 'error', causa: 'otro', mensaje: 'No se ha podido comprobar si el cliente ya tiene esta póliza: no se emite. No se ha enviado nada.' },
+        { status: 503 },
+      )
+    }
+    if (duplicado && !confirmado) {
+      return NextResponse.json(
+        {
+          estado: 'error',
+          causa: duplicado.causa,
+          mensaje: `${duplicado.mensaje} No se ha enviado nada. Si aun así es una póliza nueva, confirma con \`duplicadoConfirmado: true\`.`,
+          ...(duplicado.polizas ? { polizas: duplicado.polizas } : {}),
+          confirmar: true,
+        },
+        { status: 409 },
+      )
+    }
+    if (duplicado && confirmado) {
+      console.log(`[emitir] proyecto ${projectId}: duplicado (${duplicado.causa}) CONFIRMADO por ${actor} — se sigue. ${duplicado.mensaje}`)
+    }
+  }
 
   // ── La compañía YA aprobó una solicitud: se acuña ESA, no se envía otra ──
   // Es el caso del 500 «Unknown error while waiting»: Codeoscopic dejó de
@@ -226,46 +526,77 @@ export const POST = auditado(async (req: Request) => {
         { status: 409 },
       )
     }
-    const catalogoAc = await catalogoCompanias()
-    const codigoDgsAc = catalogoAc?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
-    if (!codigoDgsAc) {
+    // 🔒 Mismo candado que el Submit (03/10/2026): sin él, el cron de descubrimiento podía acuñar
+    // este proyecto a la vez con SUS datos y se perdían la póliza de origen, el correo al cliente,
+    // la baja de la anterior, el cierre del presupuesto y las figuras. Ocupado → «en vuelo», sin acuñar.
+    const candadoAc = await tomarCandadoAcunado(correduria.id, projectId)
+    if (candadoAc.tipo !== 'tomado') {
       return NextResponse.json(
-        { estado: 'emitido_sin_acunar', mensaje: `«${p.aseguradora}» no tiene código DGS en companias_dgs: acúñala a mano${aprobada.numeroPoliza ? ` con el nº ${aprobada.numeroPoliza}` : ' (la compañía aún no ha dado número)'}.`, referenciaVendor: aprobada.numeroPoliza },
-        { status: 200 },
+        candadoAc.tipo === 'ya-emitida'
+          ? { estado: 'error', causa: 'ya_emitida', mensaje: `El proyecto ${projectId} ya consta como emitido: no se acuña otra póliza.` }
+          : {
+              estado: 'error',
+              causa: 'en-vuelo',
+              mensaje: `Otra operación está registrando el proyecto ${projectId} ahora mismo: no se acuña. Vuelve a mirarlo en un minuto.`,
+            },
+        { status: 409 },
       )
     }
-    const acunadoAc = await registrarPolizaEmitida(correduria.id, {
-      clienteId: poliza.cliente_id,
-      actor,
-      catalogo: catalogoAc ?? undefined,
-      polizaOrigenId: p.poliza_id,
-      proyecto: {
-        projectIdCodeoscopic: projectId,
-        producto: poliza.tipo,
-        codigoDgs: codigoDgsAc,
-        numeroPoliza: aprobada.numeroPoliza,
-        primaAnual: numero(cuerpo.primaAnual),
-        emitidaEn: aprobada.creadaEn ?? new Date().toISOString(),
-        riesgo: esObjeto(poliza.datos_especificos) ? poliza.datos_especificos : null,
-        fraccionamiento: fraccionamientoAcunado,
-      },
-    })
+    let acunadoAc: Awaited<ReturnType<typeof registrarPolizaEmitida>>
+    try {
+      const catalogoAc = await catalogoCompanias()
+      const codigoDgsAc = catalogoAc?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
+      if (!codigoDgsAc) {
+        return NextResponse.json(
+          { estado: 'emitido_sin_acunar', mensaje: `«${p.aseguradora}» no tiene código DGS en companias_dgs: acúñala a mano${aprobada.numeroPoliza ? ` con el nº ${aprobada.numeroPoliza}` : ' (la compañía aún no ha dado número)'}.`, referenciaVendor: aprobada.numeroPoliza },
+          { status: 200 },
+        )
+      }
+      const opcionesAc = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
+      acunadoAc = await registrarPolizaEmitida(correduria.id, {
+        clienteId: ctx.clienteId,
+        actor,
+        catalogo: catalogoAc ?? undefined,
+        polizaOrigenId: ctx.polizaOrigenId,
+        proyecto: {
+          projectIdCodeoscopic: projectId,
+          producto: ctx.tipo,
+          codigoDgs: codigoDgsAc,
+          numeroPoliza: aprobada.numeroPoliza,
+          primaAnual: numero(cuerpo.primaAnual),
+          emitidaEn: aprobada.creadaEn ?? new Date().toISOString(),
+          riesgo: ctx.riesgo,
+          fraccionamiento: fraccionamientoAcunado,
+          opciones: opcionesAc,
+        },
+      })
+    } finally {
+      await soltarCandadoEnvio(correduria.id, projectId, candadoAc.attemptId)
+    }
     console.log(
       `[emitir] proyecto ${projectId}: solicitud ${aprobada.id ?? '?'} ya aprobada por la compañía (póliza ${aprobada.numeroPoliza ?? 'sin número'}) — ` +
         (acunadoAc.ok ? 'acuñada sin reenviar' : `NO acuñada: ${acunadoAc.motivo}`),
     )
     // Best-effort: el PDF de la póliza puede venir ya en `issuedDocuments[]` del
     // proyecto que se acaba de leer (`crudoPrevio`) — sin gastar un GET extra.
+    if (acunadoAc.ok) {
+      await cerrarPresupuesto(acunadoAc.polizaId)
+      await figurasAPoliza(acunadoAc.polizaId)
+    }
     const archivadoAc = acunadoAc.ok
       ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunadoAc.polizaId, crudo: crudoPrevio })
       : { documentoGuardado: null, avisoDocumento: null }
     // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK).
-    const trasAc = acunadoAc.ok ? await trasEmisionConTope(correduria.id, { clienteId: poliza.cliente_id, polizaId: acunadoAc.polizaId, polizaOrigenId: p.poliza_id }) : null
+    const trasAc = acunadoAc.ok ? await trasEmisionConTope(correduria.id, { clienteId: ctx.clienteId, polizaId: acunadoAc.polizaId, polizaOrigenId: ctx.polizaOrigenId }) : null
     return NextResponse.json({
       estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
       trasEmision: trasAc,
       // Aquí no se ha enviado nada: si no se acuña, el motivo real es lo único útil.
-      ...(acunadoAc.ok ? {} : { mensaje: `La compañía ya tiene la póliza${aprobada.numeroPoliza ? ` nº ${aprobada.numeroPoliza}` : ''} pero no se ha podido registrar en la cartera: ${acunadoAc.motivo}` }),
+      ...(acunadoAc.ok
+        ? {}
+        : acunadoAc.estado === 'ya_acunada'
+          ? { mensaje: YA_ACUNADA_POR_OTRA_VIA }
+          : { mensaje: `La compañía ya tiene la póliza${aprobada.numeroPoliza ? ` nº ${aprobada.numeroPoliza}` : ''} pero no se ha podido registrar en la cartera: ${acunadoAc.motivo}` }),
       referenciaVendor: aprobada.numeroPoliza,
       acunado: acunadoAc,
       cuenta: null,
@@ -304,7 +635,8 @@ export const POST = auditado(async (req: Request) => {
 
   // ── Póliza ya sustituida por otra: no se emite una segunda encima (26/09/2026) ──
   // Solo en el camino del Submit: acuñar una solicitud ya aprobada (arriba) no manda nada nuevo.
-  if (poliza.sustituida) {
+  // Solo en modo SUSTITUCIÓN: un cliente nuevo no tiene póliza que sustituir.
+  if (ctx.modo === 'sustitucion' && ctx.sustituida) {
     return NextResponse.json(
       { estado: 'error', causa: 'otro', mensaje: 'esta póliza ya está sustituida por otra: no se emite una segunda encima' },
       { status: 409 },
@@ -316,9 +648,9 @@ export const POST = auditado(async (req: Request) => {
   // después de importarlo. Si el DNI del tomador ya no es el de la ficha, no se
   // emite: sería el contrato de otra persona colgado de esta póliza. Solo corta
   // cuando los DOS hashes existen y difieren — sin dato en un lado no se afirma.
-  const docTomador = crudoPrevio ? documentoTomador(crudoPrevio) : null
-  const hashTomador = docTomador ? computeDniLookupHash(docTomador) : null
-  if (hashTomador && poliza.dni_lookup_hash && hashTomador !== poliza.dni_lookup_hash) {
+  // (En modo NUEVO la guarda es más dura y ya ha corrido arriba, antes de acuñar
+  // o enviar nada: `corteIdentidadNuevo`, fail-closed.)
+  if (ctx.modo === 'sustitucion' && hashTomador && ctx.dniLookupHash && hashTomador !== ctx.dniLookupHash) {
     return NextResponse.json(
       {
         estado: 'error',
@@ -352,7 +684,25 @@ export const POST = auditado(async (req: Request) => {
       { status: 422 },
     )
   }
-  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, p.poliza_id, poliza.cliente_id) : SIN_CUENTA
+  // Si el cliente firmó en el portal una cuenta NUEVA, la de su ficha va primero (no la de la póliza vieja).
+  const aceptada = await origenCuentaAceptada(correduria.id, p.tarificacion_id)
+  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, polizaParaCuenta(ctx.polizaOrigenId, aceptada?.origen ?? null), ctx.clienteId) : SIN_CUENTA
+  // 🚨 Si la cuenta que se va a mandar (tecleada o de la ficha) NO es la que firmó en el portal, no se emite.
+  const cuentaAEnviar = ibanHumano ?? ficha.iban
+  if (cuentaDistintaDeLaFirmada(cuentaAEnviar, aceptada?.mascara)) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'faltan_campos',
+        mensaje:
+          `El cliente firmó la domiciliación en la cuenta ${aceptada!.mascara}, pero ${ibanHumano !== null ? 'la tecleada es' : 'la ficha da'} ${ibanEnmascarado(cuentaAEnviar!)}. ` +
+          'Usa la cuenta que firmó (pídesela si no la tienes). No se ha emitido nada.',
+        faltan: ['iban'],
+        campos: null,
+      },
+      { status: 422 },
+    )
+  }
   const decision = decidirCuentaEnvio({ ibanTecleado, ibanJson, ficha, cuentaConfirmada: cuerpo.cuentaConfirmada })
   if (decision.tipo === 'confirmar') {
     // La ficha tiene cuenta y nadie la ha confirmado: se pide ANTES de gastar
@@ -406,6 +756,7 @@ export const POST = auditado(async (req: Request) => {
   // asume por defecto, ver comentario de `conProductoPorDefecto`.
   const camposConProducto = conProductoPorDefecto(camposEnvio, p.aseguradora, {
     familiaAllianz: cuerpo.familiaEnAllianz === true,
+    ramo: ctx.tipo,
   })
 
   // GRATIS: lo que el vendor dice que hace falta. Informativo — no bloquea el
@@ -490,7 +841,7 @@ export const POST = auditado(async (req: Request) => {
       const pedidos = huecos.map((h) => h.campo)
       console.log(`[emitir] a la persona del proyecto ${projectId} le falta para emitir: ${pedidos.join(', ')}`)
       const deFicha = await valoresPersonaDesdeFicha(
-        { correduria_id: correduria.id, poliza_id: p.poliza_id, cliente_id: poliza.cliente_id },
+        { correduria_id: correduria.id, poliza_id: ctx.polizaOrigenId, cliente_id: ctx.clienteId },
         pedidos,
         r.config,
       )
@@ -541,7 +892,7 @@ export const POST = auditado(async (req: Request) => {
     projectId,
     offerId: p.accepted_offer_id_codeoscopic,
     campos: camposConProducto,
-    producto: poliza.tipo,
+    producto: ctx.tipo,
     solicitadoPor: actor,
     reintentoConfirmado: cuerpo.reintentoConfirmado === true,
   })
@@ -573,7 +924,7 @@ export const POST = auditado(async (req: Request) => {
     const todosSonDePersona = interp.campos.length > 0 && pedidos.length === interp.campos.length
     if (todosSonDePersona) {
       const deFicha = await valoresPersonaDesdeFicha(
-        { correduria_id: correduria.id, poliza_id: p.poliza_id, cliente_id: poliza.cliente_id },
+        { correduria_id: correduria.id, poliza_id: ctx.polizaOrigenId, cliente_id: ctx.clienteId },
         pedidos,
         r.config,
       )
@@ -618,7 +969,7 @@ export const POST = auditado(async (req: Request) => {
           projectId,
           offerId: p.accepted_offer_id_codeoscopic,
           campos: camposConProducto,
-          producto: poliza.tipo,
+          producto: ctx.tipo,
           solicitadoPor: actor,
           // El primer intento acabó en 400 (rechazo, no «quizá emitido»), así
           // que el candado deja pasar; el flag viaja igual por coherencia.
@@ -699,7 +1050,7 @@ export const POST = auditado(async (req: Request) => {
         const sugeridos =
           deFichaPrevio ??
           (await valoresPersonaDesdeFicha(
-            { correduria_id: correduria.id, poliza_id: p.poliza_id, cliente_id: poliza.cliente_id },
+            { correduria_id: correduria.id, poliza_id: ctx.polizaOrigenId, cliente_id: ctx.clienteId },
             pedidos,
             r.config,
           ))
@@ -739,68 +1090,85 @@ export const POST = auditado(async (req: Request) => {
     )
   }
 
-  // ── El vendor aceptó: se acuña la póliza en NUESTRA BD ──────────────────
-  // Persiste la respuesta CRUDA del Submit (incluido `issuedDocuments[]`, si
-  // el vendor lo manda aquí) en `quote_data` — hasta el 17/09/2026 se
-  // descartaba tras esta petición y no había forma de saber qué documentos
-  // había devuelto una emisión ya pasada. Best-effort: nunca bloquea el acuñado.
-  // 🚨 SIEMPRE `redactarCrudoVendor` antes de guardar: `crudo` trae IBAN/DNI/
-  // email/teléfono del tomador en texto plano (`quote`/`payment`/persona), y
-  // `quote_data` es jsonb sin cifrar (a diferencia de `clientes.iban/dni`).
-  await prisma.$executeRaw`
-    update codeoscopic_projects set quote_data = ${JSON.stringify(redactarCrudoVendor(envio.crudo))}::jsonb
-    where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
-  `.catch((e: unknown) => {
-    console.log(`[emitir] no se pudo guardar quote_data del proyecto ${projectId} —`, e instanceof Error ? e.message : String(e))
-  })
-
-  const catalogo = await catalogoCompanias()
-  const codigoDgs = catalogo?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
-  if (!codigoDgs) {
-    // El vendor YA aceptó el Submit: esto NO se pierde. Se deja constancia del
-    // aviso y de la respuesta cruda para que se acuñe a mano — un dato de
-    // nuestro catálogo que falta no puede borrar una emisión real.
-    return NextResponse.json({
-      estado: 'emitido_sin_acunar',
-      mensaje:
-        `Codeoscopic aceptó la emisión pero «${p.aseguradora}» no tiene código DGS en companias_dgs: ` +
-        'la póliza NO se ha acuñado sola. Añade el código y acúñala a mano con este `crudo`.',
-      referenciaVendor: envio.referenciaVendor,
-      crudo: redactarCrudoVendor(envio.crudo),
+  // 🔒 El candado del Submit (`submit_in_flight_at`) sigue puesto hasta aquí abajo (03/10/2026): así
+  // el cron de descubrimiento y el webhook no acuñan este proyecto en el hueco entre el Submit y el
+  // acuñado. La exclusión DURA del acuñado es de la BD (`lib/acunado-unico.ts`); esto decide QUIÉN
+  // acuña: el botón, con su póliza de origen y su correo al cliente.
+  const attemptIdEnvio = envio.attemptId
+  let acunado: Awaited<ReturnType<typeof registrarPolizaEmitida>>
+  try {
+    // ── El vendor aceptó: se acuña la póliza en NUESTRA BD ──────────────────
+    // Persiste la respuesta CRUDA del Submit (incluido `issuedDocuments[]`, si
+    // el vendor lo manda aquí) en `quote_data` — hasta el 17/09/2026 se
+    // descartaba tras esta petición y no había forma de saber qué documentos
+    // había devuelto una emisión ya pasada. Best-effort: nunca bloquea el acuñado.
+    // 🚨 SIEMPRE `redactarCrudoVendor` antes de guardar: `crudo` trae IBAN/DNI/
+    // email/teléfono del tomador en texto plano (`quote`/`payment`/persona), y
+    // `quote_data` es jsonb sin cifrar (a diferencia de `clientes.iban/dni`).
+    await prisma.$executeRaw`
+      update codeoscopic_projects set quote_data = ${JSON.stringify(redactarCrudoVendor(envio.crudo))}::jsonb
+      where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
+    `.catch((e: unknown) => {
+      console.log(`[emitir] no se pudo guardar quote_data del proyecto ${projectId} —`, e instanceof Error ? e.message : String(e))
     })
-  }
 
-  const acunado = await registrarPolizaEmitida(correduria.id, {
-    clienteId: poliza.cliente_id,
-    actor,
-    catalogo: catalogo ?? undefined,
-    polizaOrigenId: p.poliza_id,
-    proyecto: {
-      projectIdCodeoscopic: projectId,
-      producto: poliza.tipo,
-      codigoDgs,
-      numeroPoliza: envio.referenciaVendor,
-      primaAnual: numero(cuerpo.primaAnual),
-      emitidaEn: new Date().toISOString(),
-      riesgo: esObjeto(poliza.datos_especificos) ? poliza.datos_especificos : null,
-      fraccionamiento: fraccionamientoAcunado,
-    },
-  })
+    const catalogo = await catalogoCompanias()
+    const codigoDgs = catalogo?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
+    if (!codigoDgs) {
+      // El vendor YA aceptó el Submit: esto NO se pierde. Se deja constancia del
+      // aviso y de la respuesta cruda para que se acuñe a mano — un dato de
+      // nuestro catálogo que falta no puede borrar una emisión real.
+      return NextResponse.json({
+        estado: 'emitido_sin_acunar',
+        mensaje:
+          `Codeoscopic aceptó la emisión pero «${p.aseguradora}» no tiene código DGS en companias_dgs: ` +
+          'la póliza NO se ha acuñado sola. Añade el código y acúñala a mano con este `crudo`.',
+        referenciaVendor: envio.referenciaVendor,
+        crudo: redactarCrudoVendor(envio.crudo),
+      })
+    }
+
+    const opcionesEmitida = await opcionesOfertaAceptada(projectId, p.accepted_offer_id_codeoscopic, lectorOferta(r.config))
+    acunado = await registrarPolizaEmitida(correduria.id, {
+      clienteId: ctx.clienteId,
+      actor,
+      catalogo: catalogo ?? undefined,
+      polizaOrigenId: ctx.polizaOrigenId,
+      proyecto: {
+        projectIdCodeoscopic: projectId,
+        producto: ctx.tipo,
+        codigoDgs,
+        numeroPoliza: envio.referenciaVendor,
+        primaAnual: numero(cuerpo.primaAnual),
+        emitidaEn: new Date().toISOString(),
+        riesgo: ctx.riesgo,
+        fraccionamiento: fraccionamientoAcunado,
+        opciones: opcionesEmitida,
+      },
+    })
+  } finally {
+    await soltarCandadoEnvio(correduria.id, projectId, attemptIdEnvio)
+  }
 
   // Best-effort: el propio Submit puede traer ya `issuedDocuments[]` en su
   // respuesta (`envio.crudo`) — se descarga y archiva sin gastar otro GET.
   // Un fallo aquí nunca deshace el acuñado que ya se hizo arriba.
+  if (acunado.ok) {
+    await cerrarPresupuesto(acunado.polizaId)
+    await figurasAPoliza(acunado.polizaId)
+  }
   const archivado = acunado.ok
     ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunado.polizaId, crudo: envio.crudo })
     : { documentoGuardado: null, avisoDocumento: null }
 
   // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK). Después
   // del archivado: si el PDF ha llegado, el cliente ya lo encuentra al entrar.
-  const tras = acunado.ok ? await trasEmisionConTope(correduria.id, { clienteId: poliza.cliente_id, polizaId: acunado.polizaId, polizaOrigenId: p.poliza_id }) : null
+  const tras = acunado.ok ? await trasEmisionConTope(correduria.id, { clienteId: ctx.clienteId, polizaId: acunado.polizaId, polizaOrigenId: ctx.polizaOrigenId }) : null
 
   return NextResponse.json({
     estado: acunado.ok ? 'ok' : 'emitido_sin_acunar',
     trasEmision: tras,
+    ...(!acunado.ok && acunado.estado === 'ya_acunada' ? { mensaje: YA_ACUNADA_POR_OTRA_VIA } : {}),
     referenciaVendor: envio.referenciaVendor,
     acunado,
     // Con qué cuenta se ha emitido (enmascarada) y de dónde salió: la póliza
@@ -811,6 +1179,11 @@ export const POST = auditado(async (req: Request) => {
     crudo: redactarCrudoVendor(envio.crudo),
   })
 })
+
+/** `registrarPolizaEmitida` → `ya_acunada`: otra vía (cron, webhook, otro clic) ganó la carrera. NO acuñar a mano. */
+const YA_ACUNADA_POR_OTRA_VIA =
+  'La póliza de este proyecto YA está acuñada en la cartera (la registró otra vía a la vez: descubrimiento o webhook). ' +
+  'No se ha creado otra ni hay que acuñarla a mano; el correo al cliente y la baja de la anterior no se han lanzado desde aquí: revísalos en la ficha.'
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
