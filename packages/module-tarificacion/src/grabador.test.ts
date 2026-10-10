@@ -210,6 +210,20 @@ describe('redactarHtmlGrabacion: formularios de alta (tomador/asegurado/propieta
   it('es idempotente', () => expect(redactarHtmlGrabacion(r)).toBe(r))
 })
 
+describe('redactarHtmlGrabacion: vehículo (matrícula, su fecha y bastidor; Allianz Moto 09/10/2026)', () => {
+  // La grabación de Moto trajo `fechaMatriculacion` sin tapar: matrícula + fecha identifican al titular.
+  const nombres = ['licensePlate', 'fechaMatriculacion', 'fechaMatriculacion_fullDate', 'matricula', 'numBastidor', 'chasis', 'vin']
+  const html = nombres.map((n) => `<input type="text" id="${n}" name="${n}" value="valor-vehiculo-xyz" data-valor="valor-vehiculo-xyz">`).join('\n') +
+    '\n<input type="text" id="motorPower" value="valor-ok-cv"><input type="text" id="modelVersion" value="valor-ok-ver"><input type="text" id="convenio" value="valor-ok-conv">'
+  const r = redactarHtmlGrabacion(html)
+  it('tapa value y data-valor de matrícula, fecha de matriculación y bastidor', () => {
+    expect(r).not.toContain('valor-vehiculo-xyz')
+  })
+  it('no tapa potencia, versión ni campos que solo contienen «vin» dentro de otra palabra', () => {
+    for (const ok of ['valor-ok-cv', 'valor-ok-ver', 'valor-ok-conv']) expect(r, ok).toContain(ok)
+  })
+})
+
 describe('redactarHtmlGrabacion: atributos de sesión y texto del usuario', () => {
   const html = [
     '<button id="b1" type="button" session="3f2b8c1e-4d5a-4b6c-9d7e-1a2b3c4d5e6f" sessionid="SID-INV-1" data-token="TKN-INV-2" auth="AUT-INV-3" csrf="CSR-INV-4" jsessionid="JS-INV-5">Calcular</button>',

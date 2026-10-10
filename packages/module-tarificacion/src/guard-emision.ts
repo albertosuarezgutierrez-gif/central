@@ -33,6 +33,15 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   // que puede persistir el tomador real; también los enlaces del stepper con el mismo handler. Bloqueado aunque se permita «Aceptar».
   /idbtn[\s_+-]*aceptar/i,
   /boton[\s_+-]*siguiente[\s_+-]*ok/i,
+  // Allianz ePAC Autos/Moto («Motos-online», grabación del 09/10/2026): pestañas td#store «Archivar»
+  // (onclick sendActionEvent('store')) y td#contract «Emitir» (onclick validar_aceptar()); el «Aceptar» del pie de la
+  // pestaña Tarificar (div#o_N, onclick validar_aceptar()) también contrata. Bloqueados por id/handler aunque se
+  // permita «Aceptar»: «contract» (inglés) NO casa con `contrat`. «Datos básicos», «Riesgo municipio», «Tarificar»
+  // (td#rate) e «IPID» (documentoIPID) son navegación/lectura y pasan.
+  /^\s*(store|contract)\s*$/i,
+  /send[\s_+-]*action[\s_+-]*event\s*\(\s*['"]?store/i,
+  /contract/i,
+  /validar[\s_+-]*aceptar/i,
 ]
 
 // «Aceptar» es CONTEXTUAL (ver fases.ts): en Datos Básicos solo avanza a «Tarificar»; en Tarificar avanza

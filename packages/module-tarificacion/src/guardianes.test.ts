@@ -47,6 +47,23 @@ describe('guard de emisión · Allianz Negocio 2038 (07/10/2026)', () => {
   })
 })
 
+describe('guard de emisión · Allianz Autos/Moto (09/10/2026)', () => {
+  // td#store «Archivar», td#contract «Emitir» y el pie de Tarificar (validar_aceptar()): PROHIBIDOS también con permitirAceptar.
+  it.each(['store', 'STORE', "goSelected('store'); sendActionEvent('store');", 'contract', "goSelected('contract'); validar_aceptar();", 'validar_aceptar();', 'javascript:validarAceptar()'])(
+    'bloquea «%s» aunque se permita «Aceptar»',
+    (d) => {
+      expect(pareceEmision(d, { permitirAceptar: true })).toBe(true)
+      expect(() => comprobarBoton([null, d], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+    },
+  )
+  it.each(['rate', 'datosBasicos', 'riesgoMunicipio', 'IPID', "goSelected('IPID'); documentoIPID();", "goSelected('rate'); sendViewEvent('rate');", 'licensePlate', 'storeLocator', 'modality_0', 'mobileCode'])(
+    'deja pasar «%s»',
+    (d) => {
+      expect(pareceEmision(d, { permitirAceptar: true })).toBe(false)
+    },
+  )
+})
+
 describe('guard de emisión', () => {
   it.each([
     'https://epac.allianz.es/poliza/emitir?id=1',

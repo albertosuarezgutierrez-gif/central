@@ -255,3 +255,36 @@ export {
   type AccionBandeja,
   type DecisionBandeja,
 } from './bandeja.ts'
+
+// Vehículo canónico y formulario de auto/moto (10/10/2026): el robot lo rellena con la consulta por matrícula del portal.
+export {
+  COMBUSTIBLES,
+  PREFIJO_ELECCION_VERSION,
+  MAX_OPCIONES_VERSION,
+  esOpcionVacia,
+  resolverVersion,
+  mensajeEleccionVersion,
+  normalizarCombustible,
+  potenciaCvDesdeTexto,
+  fechaIsoDesdeTexto,
+  normalizarMatricula,
+  esMatriculaEspanola,
+  vehiculoDesdeLectura,
+  type Combustible,
+  type Vehiculo,
+  type CandidatoVersion,
+  type EleccionVersion,
+  type ResolucionVersion,
+  type LecturaVehiculoPortal,
+  type ResultadoVehiculo,
+} from './vehiculo.ts'
+export {
+  RAMOS_VEHICULO,
+  SEXOS_CONDUCTOR,
+  validarFormularioAuto,
+  type RamoVehiculo,
+  type SexoConductor,
+  type ConductorHabitual,
+  type FormularioAuto,
+  type ValidacionFormularioAuto,
+} from './formulario-auto.ts'
