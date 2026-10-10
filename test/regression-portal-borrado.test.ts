@@ -82,7 +82,11 @@ test('el DELETE de pólizas filtra por identidadId y consulta el ESTADO de los p
   const src = leer(`${APP}/app/api/polizas/[id]/route.ts`)
   const delete_ = src.slice(src.indexOf('export async function DELETE'))
   assert.notEqual(delete_, '', 'No hay handler DELETE de pólizas aportadas')
-  assert.match(delete_, /deleteMany\(\{\s*\n?\s*where:\s*\{\s*id,\s*identidadId:\s*identidad\.id\s*\}/)
+  // Desde el 10/10/2026 «quitar» es un borrado LÓGICO (Alberto: «nada se pierde»): `updateMany`
+  // de `eliminadaEn`, con la identidad DENTRO del where. El detalle lo vigila
+  // `regression-portal-declaradas-eliminadas.test.ts`.
+  assert.match(delete_, /portalPolizaDeclarada\.updateMany\(\{\s*\n?\s*where:\s*\{\s*id,\s*identidadId:\s*identidad\.id,/)
+  assert.doesNotMatch(delete_, /portalPolizaDeclarada\.deleteMany/, 'la póliza aportada ya no se borra de verdad')
   assert.match(delete_, /puedeBorrarDeclarada/)
   // `count` NO basta: lo que bloquea no es tener partes, es tener uno que la
   // compañía ya tramita. Con un contador esa distinción no se puede hacer.
@@ -91,18 +95,18 @@ test('el DELETE de pólizas filtra por identidadId y consulta el ESTADO de los p
   assert.match(delete_, /siniestroId:\s*true/)
 })
 
-test('🚨 el DELETE CONGELA la póliza en sus partes ANTES de borrarla', () => {
-  // El modo de fallo que esto persigue no rompe nada: la FK es
-  // `ON DELETE SET NULL`, así que borrar primero pone el vínculo a NULL solo y
-  // el parte queda sin poder decir de qué póliza hablaba. Nadie se entera.
+test('🚨 el DELETE CONGELA la póliza en sus partes ANTES de quitarla', () => {
+  // Con el borrado LÓGICO (10/10/2026) la fila sigue existiendo, pero la persona ya no la ve y el
+  // parte tiene que seguir diciendo de qué póliza hablaba en la bandeja del corredor: se congela
+  // igual, antes de marcarla y en la misma transacción.
   const src = leer(`${APP}/app/api/polizas/[id]/route.ts`)
   const delete_ = src.slice(src.indexOf('export async function DELETE'))
 
   const congelar = delete_.indexOf('polizaDesligadaAt')
-  const borrar = delete_.indexOf('portalPolizaDeclarada.deleteMany')
+  const borrar = delete_.indexOf('data: { eliminadaEn: ahora }')
   assert.notEqual(congelar, -1, 'El DELETE no congela la póliza en los partes')
-  assert.notEqual(borrar, -1, 'El DELETE no borra la póliza')
-  assert.ok(congelar < borrar, 'La congelación tiene que ir ANTES del borrado, no después')
+  assert.notEqual(borrar, -1, 'El DELETE no marca la póliza como eliminada')
+  assert.ok(congelar < borrar, 'La congelación tiene que ir ANTES de quitarla, no después')
 
   // Y el vínculo se corta a mano: si se dejara al `ON DELETE SET NULL`, el CHECK
   // `portal_parte_desligada_coherente` de la BD rechazaría la fila igualmente.
@@ -111,9 +115,14 @@ test('🚨 el DELETE CONGELA la póliza en sus partes ANTES de borrarla', () => 
   for (const campo of ['polizaDesligadaCompania', 'polizaDesligadaNumero', 'polizaDesligadaRamo']) {
     assert.match(delete_, new RegExp(campo), `Falta ${campo} en la foto congelada`)
   }
-  // La lectura de la póliza pide los tres campos ANTES del borrado: después ya
-  // no existirían.
-  assert.match(delete_, /select:\s*\{[^}]*compania:\s*true[^}]*\}/)
+  // La lectura de la póliza pide los tres campos ANTES de quitarla. Desde el 10/10/2026 van en
+  // `SELECT_HISTORIAL` (la misma lectura alimenta la foto y el historial): se comprueba que los trae.
+  assert.match(delete_, /select:\s*\{[^}]*(compania:\s*true|\.\.\.SELECT_HISTORIAL)[^}]*\}/)
+  if (/\.\.\.SELECT_HISTORIAL/.test(delete_)) {
+    const lib = leer(`${APP}/lib/declaradas-eliminadas.ts`)
+    const sel = lib.slice(lib.indexOf('export const SELECT_HISTORIAL'), lib.indexOf('satisfies Prisma.PortalPolizaDeclaradaSelect'))
+    for (const c of ['compania', 'numeroPoliza', 'ramo']) assert.match(sel, new RegExp(`${c}:\\s*true`), `SELECT_HISTORIAL sin ${c}`)
+  }
 })
 
 test('la migración de la foto existe y la BD exige que sea coherente', () => {

@@ -9,6 +9,7 @@ import {
 } from '@central/module-seguros-portal'
 
 import { prisma } from '@/lib/db'
+import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { getIdentidad } from '@/lib/session'
 
 import { AccionesCarta } from './AccionesCarta'
@@ -40,7 +41,7 @@ export default async function CartaNoRenovacion({ params }: { params: Promise<{ 
   if (!identidad) redirect('/')
 
   const p = await prisma.portalPolizaDeclarada.findFirst({
-    where: { id, identidadId: identidad.id },
+    where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
     select: { id: true, compania: true, numeroPoliza: true, ramo: true, fechaVencimiento: true, cartaEnviadaEn: true },
   })
   if (!p) notFound()

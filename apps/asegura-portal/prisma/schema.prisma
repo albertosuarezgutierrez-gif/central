@@ -109,6 +109,7 @@ model PortalIdentidad {
   avisosCima        PortalAvisoCima[]
   avisosSilenciados PortalAvisoSilenciado[]
   avisosLeidos      PortalAvisoLeido[]
+  historialDeclaradas PortalPolizaDeclaradaHistorial[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -271,12 +272,44 @@ model PortalPolizaDeclarada {
   cartaEnviadaEn       DateTime?         @map("carta_enviada_en") @db.Timestamptz(6)
   creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
   actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
+  /// 🚨 Borrado LÓGICO (10/10/2026, `prisma/sql/2026-10-10_declaradas_borrado_logico.sql`).
+  /// NULL = en la bóveda; con fecha = el cliente la quitó y sale en «Eliminadas», de donde la
+  /// puede restaurar. TODA lectura del portal la filtra con `DECLARADA_NO_ELIMINADA`
+  /// (`lib/declaradas-eliminadas.ts`); lo vigila `test/regression-portal-declaradas-eliminadas.test.ts`.
+  /// ⚠️ Declarada aquí ANTES de que exista en la BD = 42703 en toda lectura del modelo: el SQL va
+  /// antes del despliegue.
+  eliminadaEn          DateTime?         @map("eliminada_en") @db.Timestamptz(6)
 
   identidad PortalIdentidad        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
   bien      PortalBien?            @relation(fields: [bienId], references: [id])
   partes    PortalParteSiniestro[]
 
   @@map("portal_poliza_declarada")
+  @@schema("seguros")
+}
+
+/// Lo que el cliente hizo con cada póliza que aportó (10/10/2026). APPEND-ONLY: el rol solo
+/// INSERTA y LEE (sin UPDATE ni DELETE en la BD). `antes`/`despues` llevan SOLO los campos que
+/// cambiaron (lista blanca `CAMPOS_HISTORIAL`), nunca la fila entera ni `extraccionBruta`.
+///
+/// 🚨 `polizaId` SIN relación ni FK a propósito: el rastro tiene que sobrevivir a cualquier borrado
+/// físico de la póliza (una cascada se lo llevaría justo cuando hace falta). La identidad SÍ lleva
+/// FK en cascada, como todas las `portal_*`: si se suprime a la persona, su historial se va con ella.
+model PortalPolizaDeclaradaHistorial {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  polizaId    String   @map("poliza_id") @db.Uuid
+  identidadId String   @map("identidad_id") @db.Uuid
+  /// `creada` | `editada` | `eliminada` | `restaurada` (CHECK en la BD; `ACCIONES_HISTORIAL`).
+  accion      String
+  /// NULL = no aplica (una alta no tiene «antes»), nunca `{}`: se escribe `Prisma.DbNull`.
+  antes       Json?
+  despues     Json?
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@index([identidadId, polizaId, creadoEn(sort: Desc)], map: "idx_portal_poliza_historial_poliza")
+  @@map("portal_poliza_declarada_historial")
   @@schema("seguros")
 }
 

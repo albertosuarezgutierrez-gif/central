@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
 import { prisma } from '@/lib/db'
+import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { eur } from '@/lib/dinero'
 import { getIdentidad } from '@/lib/session'
 
@@ -47,7 +48,7 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
   if (!identidad) redirect('/')
 
   const p = await prisma.portalPolizaDeclarada.findFirst({
-    where: { id, identidadId: identidad.id },
+    where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
   })
   if (!p) notFound()
 

@@ -14,6 +14,7 @@ import { carteraALaVista, carteraDeIdentidad, cuentaComoEnVigor, polizasParaPart
 import { MEDIADOR, TIPOS_CARNET, telefonoLegible } from '@central/module-seguros'
 import { listarContactosPropios } from '@/lib/contactos-propios'
 import { prisma } from '@/lib/db'
+import { DECLARADA_ELIMINADA, DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { leerMisDatos, reparosDeContacto } from '@/lib/mis-datos'
@@ -33,6 +34,7 @@ import Link from 'next/link'
 import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { FilaDeclarada } from './FilaDeclarada'
+import { DeclaradasEliminadas, LIMITE_ELIMINADAS } from './DeclaradasEliminadas'
 import { FiltroVigencia } from './FiltroVigencia'
 import { GrupoPlegable } from './GrupoPlegable'
 import { HojasQr } from './HojasQr'
@@ -126,14 +128,24 @@ export default async function Boveda({
   // cargaría a la página entera; se lee UNA vez y la usan tanto el aviso
   // automático de «Mis seguros» (`AvisoContacto`) como la pestaña «Mis datos»
   // — el portal no calcula la vigencia (ver la cabecera de ese módulo).
-  const [cartera, declaradas, partes, companias, hojas, elegibles, contacto] = await Promise.all([
+  const [cartera, declaradas, eliminadas, partes, companias, hojas, elegibles, contacto] = await Promise.all([
     // Para pintar: sin las pólizas ya sustituidas por otra (la ficha y los partes usan la entera).
     carteraDeIdentidad(identidad.id).then(carteraALaVista),
     prisma.portalPolizaDeclarada.findMany({
-      where: { identidadId: identidad.id },
+      where: { identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
       orderBy: { creadaEn: 'desc' },
       take: 50,
     }),
+    // Las que QUITÓ (10/10/2026): nada se pierde, se pueden restaurar. Solo lo que pinta la fila, y
+    // una de más para saber si hay más de las que se enseñan (se dice, no se recorta en silencio).
+    vista === 'seguros'
+      ? prisma.portalPolizaDeclarada.findMany({
+          where: { identidadId: identidad.id, ...DECLARADA_ELIMINADA },
+          orderBy: { eliminadaEn: 'desc' },
+          take: LIMITE_ELIMINADAS + 1,
+          select: { id: true, compania: true, ramo: true, fechaVencimiento: true, eliminadaEn: true },
+        })
+      : Promise.resolve([]),
     partesDeIdentidad(identidad.id),
     companiasConCanal(),
     hojasDeIdentidad(identidad.id),
@@ -649,6 +661,21 @@ export default async function Boveda({
         )}
 
       </GrupoPlegable>
+
+      {/* Las que la persona QUITÓ de su bóveda (10/10/2026): plegadas, con «Restaurar». Sin ninguna
+          no se pinta nada — un bloque vacío se lee como avería. */}
+      {eliminadas.length > 0 && (
+        <DeclaradasEliminadas
+          filas={eliminadas.slice(0, LIMITE_ELIMINADAS).map((e) => ({
+            id: e.id,
+            compania: e.compania,
+            ramo: e.ramo,
+            fechaVencimiento: e.fechaVencimiento ? e.fechaVencimiento.toISOString().slice(0, 10) : null,
+            eliminadaEn: e.eliminadaEn ? e.eliminadaEn.toISOString() : null,
+          }))}
+          hayMas={eliminadas.length > LIMITE_ELIMINADAS}
+        />
+      )}
 
       {/* 🚨 Un plegable por TITULAR, no por cajón (19/09/2026). Alberto: «luego
           un grupo plegado “Seguros de Global 2”». Antes era una sección por

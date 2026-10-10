@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/db'
+import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -63,17 +64,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // segundo clic no reescriba la fecha. Pero entonces `count === 0` también
     // es «ya estaba sellada», así que se distingue con una lectura filtrada.
     const r = await prisma.portalPolizaDeclarada.updateMany({
-      where: { ...where, cartaGeneradaEn: null },
+      where: { ...where, ...DECLARADA_NO_ELIMINADA, cartaGeneradaEn: null },
       data: { cartaGeneradaEn: ahora },
     })
     count = r.count
     if (count === 0) {
-      const existe = await prisma.portalPolizaDeclarada.findFirst({ where, select: { id: true } })
+      const existe = await prisma.portalPolizaDeclarada.findFirst({ where: { ...where, ...DECLARADA_NO_ELIMINADA }, select: { id: true } })
       if (!existe) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
     }
   } else {
     const r = await prisma.portalPolizaDeclarada.updateMany({
-      where,
+      where: { ...where, ...DECLARADA_NO_ELIMINADA },
       data: {
         cartaEnviadaEn: accion === 'enviada' ? ahora : null,
         // Marcar «enviada» sin haber pasado por «copiar» (p. ej. la escribió a

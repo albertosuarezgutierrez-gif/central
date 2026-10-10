@@ -34,6 +34,7 @@ export const CATEGORIAS_EXPORT = [
   'acreditaciones',
   'bienes',
   'polizas_declaradas',
+  'polizas_declaradas_historial',
   'partes',
   'vinculos',
   'ficha_cartera',
@@ -88,6 +89,12 @@ export const FICHA_CATEGORIA: Record<CategoriaExport, Ficha> = {
     origen: 'aportado_por_ti',
     descripcion:
       'Lo que has escrito o subido tú sobre tus seguros, incluido lo que se extrajo automáticamente de los documentos que subiste.',
+  },
+  polizas_declaradas_historial: {
+    titulo: 'Qué has hecho con tus pólizas declaradas',
+    origen: 'aportado_por_ti',
+    descripcion:
+      'El registro de cuándo creaste, editaste, eliminaste o restauraste cada póliza que aportaste, con lo que había antes y después. Incluye las que has eliminado.',
   },
   partes: {
     titulo: 'Los partes que has abierto',

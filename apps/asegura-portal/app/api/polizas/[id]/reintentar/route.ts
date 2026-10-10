@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 
 import { avisarPolizaDeclaradaDesdeAlta } from '@/lib/aviso-poliza-declarada'
 import { prisma } from '@/lib/db'
+import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { extraerPoliza } from '@/lib/extraer-poliza'
 import { requireIdentidad } from '@/lib/session'
 
@@ -51,7 +52,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   // La misma comprobación que el PATCH: existe Y es tuya, en la misma consulta.
   const actual = await prisma.portalPolizaDeclarada.findFirst({
-    where: { id, identidadId: identidad.id },
+    where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
     select: { id: true },
   })
   if (!actual) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
@@ -77,7 +78,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // documento tiene que dejar la fila exactamente como habría quedado si la
   // contraseña se hubiera sabido desde el principio.
   const { count } = await prisma.portalPolizaDeclarada.updateMany({
-    where: { id, identidadId: identidad.id },
+    where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
     data: {
       compania: datos.compania,
       numeroPoliza: datos.numeroPoliza,

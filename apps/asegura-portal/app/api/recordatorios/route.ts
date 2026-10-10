@@ -4,6 +4,7 @@ import { normalizarRecordatorio, type EntradaRecordatorio } from '@central/modul
 
 import { carteraDeIdentidad } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
+import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { crearRecordatorio } from '@/lib/recordatorios'
 import { requireIdentidad } from '@/lib/session'
 
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
   // convierte la ruta en un oráculo de uuids válidos de la cartera ajena.
   if (valor.polizaDeclaradaId !== null) {
     const propia = await prisma.portalPolizaDeclarada.findFirst({
-      where: { id: valor.polizaDeclaradaId, identidadId: identidad.id },
+      where: { id: valor.polizaDeclaradaId, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
       select: { id: true },
     })
     if (!propia) return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })

@@ -6,6 +6,7 @@ import { normalizarTitular, type TitularDeclarado } from '@central/module-seguro
 import { avisarPolizaDeclaradaDesdeAlta } from '@/lib/aviso-poliza-declarada'
 import { guardarDocumentoPropio } from '@/lib/documento-portal'
 import { prisma } from '@/lib/db'
+import { fotoHistorial, SELECT_HISTORIAL } from '@/lib/declaradas-eliminadas'
 import { extraerPoliza } from '@/lib/extraer-poliza'
 import { normalizarAlta } from '@/lib/poliza-editable'
 import { rateLimit } from '@/lib/rate-limit'
@@ -131,64 +132,72 @@ async function altaConDocumento(req: Request, identidadId: string) {
     guardarDocumentoPropio(identidadId, { tipo: 'poliza', nombre: fichero.name, mime: fichero.type, contenido: buffer }),
   ])
 
-  const poliza = await prisma.portalPolizaDeclarada.create({
-    data: {
-      identidadId,
-      compania: datos.compania,
-      numeroPoliza: datos.numeroPoliza,
-      ramo: datos.ramo,
-      primaAnual: datos.primaAnual,
-      fechaVencimiento: datos.fechaVencimiento ? new Date(`${datos.fechaVencimiento}T00:00:00Z`) : null,
-      // Los tres del vehículo, si el documento los traía. `null` es lo normal:
-      // una póliza de hogar no tiene matrícula, y una de auto puede no traer el
-      // bastidor impreso. Se guardan ya validados por `extraer-poliza.ts` —un
-      // bastidor que no cumple la forma llega `null`, porque un VIN mal leído no
-      // es un dato incompleto, es OTRO coche.
-      matricula: datos.matricula,
-      bastidor: datos.bastidor,
-      // Medianoche UTC, igual que el vencimiento: la columna es `date` y así el
-      // día no se corre según la zona del servidor.
-      fechaMatriculacion: datos.fechaMatriculacion
-        ? new Date(`${datos.fechaMatriculacion}T00:00:00Z`)
-        : null,
-      // La referencia catastral del INMUEBLE, si el documento la traía. Solo la
-      // de 20 caracteres: una de 14 es la de la FINCA (el edificio) y llega
-      // `null` desde `extraer-poliza.ts` — guardarla traería los metros del
-      // edificio a una póliza de hogar, que es un dato plausible y equivocado.
-      referenciaCatastral: datos.referenciaCatastral,
-      // Los campos propios del RAMO que el documento traía, ya validados contra
-      // el catálogo del ramo detectado (`normalizarDatosRamo`, en el módulo
-      // puro): lo que la IA no supo leer bien no llega hasta aquí, llega `null`.
-      // `DbNull` es el NULL de SQL —la columna vacía, lo que `IS NULL` encuentra—
-      // y `JsonNull` guardaría el literal `null` DENTRO del JSON, que pasa todas
-      // las guardas de NULL. La distinción es la misma que la de `extraccionBruta`.
-      datosRamo: datos.datosRamo ?? Prisma.DbNull,
-      // Y de dónde salió cada uno de esos campos: aquí, TODOS del `documento`
-      // (los ha leído la IA del PDF o de la foto), que es distinto de lo que la
-      // persona teclea a ojo y distinto de lo que confirma del Catastro. Los
-      // orígenes se escriben en el MISMO paso que sus datos: uno sin el otro es
-      // una afirmación sobre un dato que no está.
-      datosRamoOrigen: datos.datosRamoOrigen ?? Prisma.DbNull,
-      // Las garantías que el documento enumera (20/09/2026). `null` = no se
-      // pudo leer (NULL de SQL, no `JsonNull`); `[]` = leídas, ninguna. Con
-      // ellas la póliza entra en el detector de solapamientos de la bóveda.
-      coberturas: datos.coberturas ?? Prisma.DbNull,
-      // Siempre `declarado`: lo ha aportado el usuario. Que lo haya leído una IA
-      // no lo convierte en dato verificado — al revés, es donde más se inventa.
-      procedencia: 'declarado',
-      confirmadaPorUsuario: false,
-      documentoNombre: fichero.name,
-      ...columnasTitular(titular),
-      // `camposRamo` entra en la extracción bruta para que quede constancia de
-      // que la 2ª pasada se intentó y no salió: sin él, una fila con
-      // `datos_ramo` a NULL no distingue «la póliza no lo trae» de «no se pudo
-      // mirar», y esa distinción es justo lo que hay que poder auditar después.
-      // `documentoGuardado` deja constancia de si el FICHERO llegó a la ficha
-      // del corredor (`seguros.documentos`) o por qué no, para poder auditarlo
-      // después sin tener que reproducir la subida.
-      extraccionBruta: { fuente, camposRamo, datos, documentoGuardado: documentoGuardado.estado },
-    },
-    select: { id: true },
+  // El alta y su primera línea de historial («creada»), juntas: si una falla, no queda la otra.
+  const poliza = await prisma.$transaction(async (tx) => {
+    const creada = await tx.portalPolizaDeclarada.create({
+      data: {
+        identidadId,
+        compania: datos.compania,
+        numeroPoliza: datos.numeroPoliza,
+        ramo: datos.ramo,
+        primaAnual: datos.primaAnual,
+        fechaVencimiento: datos.fechaVencimiento ? new Date(`${datos.fechaVencimiento}T00:00:00Z`) : null,
+        // Los tres del vehículo, si el documento los traía. `null` es lo normal:
+        // una póliza de hogar no tiene matrícula, y una de auto puede no traer el
+        // bastidor impreso. Se guardan ya validados por `extraer-poliza.ts` —un
+        // bastidor que no cumple la forma llega `null`, porque un VIN mal leído no
+        // es un dato incompleto, es OTRO coche.
+        matricula: datos.matricula,
+        bastidor: datos.bastidor,
+        // Medianoche UTC, igual que el vencimiento: la columna es `date` y así el
+        // día no se corre según la zona del servidor.
+        fechaMatriculacion: datos.fechaMatriculacion
+          ? new Date(`${datos.fechaMatriculacion}T00:00:00Z`)
+          : null,
+        // La referencia catastral del INMUEBLE, si el documento la traía. Solo la
+        // de 20 caracteres: una de 14 es la de la FINCA (el edificio) y llega
+        // `null` desde `extraer-poliza.ts` — guardarla traería los metros del
+        // edificio a una póliza de hogar, que es un dato plausible y equivocado.
+        referenciaCatastral: datos.referenciaCatastral,
+        // Los campos propios del RAMO que el documento traía, ya validados contra
+        // el catálogo del ramo detectado (`normalizarDatosRamo`, en el módulo
+        // puro): lo que la IA no supo leer bien no llega hasta aquí, llega `null`.
+        // `DbNull` es el NULL de SQL —la columna vacía, lo que `IS NULL` encuentra—
+        // y `JsonNull` guardaría el literal `null` DENTRO del JSON, que pasa todas
+        // las guardas de NULL. La distinción es la misma que la de `extraccionBruta`.
+        datosRamo: datos.datosRamo ?? Prisma.DbNull,
+        // Y de dónde salió cada uno de esos campos: aquí, TODOS del `documento`
+        // (los ha leído la IA del PDF o de la foto), que es distinto de lo que la
+        // persona teclea a ojo y distinto de lo que confirma del Catastro. Los
+        // orígenes se escriben en el MISMO paso que sus datos: uno sin el otro es
+        // una afirmación sobre un dato que no está.
+        datosRamoOrigen: datos.datosRamoOrigen ?? Prisma.DbNull,
+        // Las garantías que el documento enumera (20/09/2026). `null` = no se
+        // pudo leer (NULL de SQL, no `JsonNull`); `[]` = leídas, ninguna. Con
+        // ellas la póliza entra en el detector de solapamientos de la bóveda.
+        coberturas: datos.coberturas ?? Prisma.DbNull,
+        // Siempre `declarado`: lo ha aportado el usuario. Que lo haya leído una IA
+        // no lo convierte en dato verificado — al revés, es donde más se inventa.
+        procedencia: 'declarado',
+        confirmadaPorUsuario: false,
+        documentoNombre: fichero.name,
+        ...columnasTitular(titular),
+        // `camposRamo` entra en la extracción bruta para que quede constancia de
+        // que la 2ª pasada se intentó y no salió: sin él, una fila con
+        // `datos_ramo` a NULL no distingue «la póliza no lo trae» de «no se pudo
+        // mirar», y esa distinción es justo lo que hay que poder auditar después.
+        // `documentoGuardado` deja constancia de si el FICHERO llegó a la ficha
+        // del corredor (`seguros.documentos`) o por qué no, para poder auditarlo
+        // después sin tener que reproducir la subida.
+        extraccionBruta: { fuente, camposRamo, datos, documentoGuardado: documentoGuardado.estado },
+      },
+      select: { id: true, ...SELECT_HISTORIAL },
+    })
+    const { id: polizaId, ...foto } = creada
+    await tx.portalPolizaDeclaradaHistorial.create({
+      data: { polizaId, identidadId, accion: 'creada', antes: Prisma.DbNull, despues: fotoHistorial(foto) },
+    })
+    return creada
   })
 
   // Best-effort y no bloqueante: el aviso a Alberto no puede retrasar ni
@@ -237,35 +246,43 @@ async function altaAMano(req: Request, identidadId: string) {
   // viaja en el resto como la matrícula.
   const { datosRamo, datosRamoOrigen, ...resto } = datos
 
-  const poliza = await prisma.portalPolizaDeclarada.create({
-    data: {
-      identidadId,
-      ...resto,
-      datosRamo: datosRamo ?? Prisma.DbNull,
-      // El origen viaja pegado a sus datos, en la misma escritura: guardar los
-      // metros sin decir que los dio el Catastro los deja indistinguibles de una
-      // estimación a ojo, y es justo la pregunta que esta columna responde.
-      datosRamoOrigen: datosRamoOrigen ?? Prisma.DbNull,
-      ...columnasTitular(titular),
-      // Sigue siendo un dato APORTADO por el cliente, no verificado contra la
-      // compañía: `declarado`, igual que si viniera de un PDF.
-      procedencia: 'declarado',
-      // `true` desde el nacimiento, al contrario que en el alta con documento.
-      // `confirmadaPorUsuario` significa una sola cosa: «una persona ha revisado
-      // estos datos con sus ojos». En el PDF los adivina un extractor y la
-      // persona todavía no los ha mirado; aquí los ha tecleado ella, campo a
-      // campo, así que ya están revisados — dejarlo a `false` le pediría que
-      // confirmara lo que acaba de escribir.
-      confirmadaPorUsuario: true,
-      // No hubo documento ni extractor: los dos huecos se declaran, no se
-      // rellenan con un nombre de cajón ni con un JSON vacío. `DbNull` es el
-      // NULL de SQL (la columna vacía, lo que `IS NULL` encuentra); `JsonNull`
-      // guardaría el literal `null` DENTRO del JSON, que pasa todas las guardas
-      // de NULL y es otro «no lo sé» disfrazado de valor.
-      documentoNombre: null,
-      extraccionBruta: Prisma.DbNull,
-    },
-    select: { id: true },
+  // El alta y su primera línea de historial («creada»), juntas: si una falla, no queda la otra.
+  const poliza = await prisma.$transaction(async (tx) => {
+    const creada = await tx.portalPolizaDeclarada.create({
+      data: {
+        identidadId,
+        ...resto,
+        datosRamo: datosRamo ?? Prisma.DbNull,
+        // El origen viaja pegado a sus datos, en la misma escritura: guardar los
+        // metros sin decir que los dio el Catastro los deja indistinguibles de una
+        // estimación a ojo, y es justo la pregunta que esta columna responde.
+        datosRamoOrigen: datosRamoOrigen ?? Prisma.DbNull,
+        ...columnasTitular(titular),
+        // Sigue siendo un dato APORTADO por el cliente, no verificado contra la
+        // compañía: `declarado`, igual que si viniera de un PDF.
+        procedencia: 'declarado',
+        // `true` desde el nacimiento, al contrario que en el alta con documento.
+        // `confirmadaPorUsuario` significa una sola cosa: «una persona ha revisado
+        // estos datos con sus ojos». En el PDF los adivina un extractor y la
+        // persona todavía no los ha mirado; aquí los ha tecleado ella, campo a
+        // campo, así que ya están revisados — dejarlo a `false` le pediría que
+        // confirmara lo que acaba de escribir.
+        confirmadaPorUsuario: true,
+        // No hubo documento ni extractor: los dos huecos se declaran, no se
+        // rellenan con un nombre de cajón ni con un JSON vacío. `DbNull` es el
+        // NULL de SQL (la columna vacía, lo que `IS NULL` encuentra); `JsonNull`
+        // guardaría el literal `null` DENTRO del JSON, que pasa todas las guardas
+        // de NULL y es otro «no lo sé» disfrazado de valor.
+        documentoNombre: null,
+        extraccionBruta: Prisma.DbNull,
+      },
+      select: { id: true, ...SELECT_HISTORIAL },
+    })
+    const { id: polizaId, ...foto } = creada
+    await tx.portalPolizaDeclaradaHistorial.create({
+      data: { polizaId, identidadId, accion: 'creada', antes: Prisma.DbNull, despues: fotoHistorial(foto) },
+    })
+    return creada
   })
 
   const fechaVencimiento = datos.fechaVencimiento ? datos.fechaVencimiento.toISOString().slice(0, 10) : null
