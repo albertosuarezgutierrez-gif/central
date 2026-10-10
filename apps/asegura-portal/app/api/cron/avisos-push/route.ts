@@ -8,6 +8,7 @@ import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { mapConConcurrencia } from '@/lib/concurrencia'
 import { prisma } from '@/lib/db'
 import { obligacionesDebidasDeIdentidad } from '@/lib/obligaciones-debidas'
+import { OPCIONES_AVISO, cargarVapid, topicAviso } from '@/lib/push-vapid'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -31,12 +32,11 @@ const CONCURRENCIA_PUENTE = 5
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
-  const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || ''
-  if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+  const cargada = await cargarVapid()
+  if (!cargada.ok) {
     return NextResponse.json({ estado: 'error', causa: 'sin_vapid' }, { status: 503 })
   }
-  const vapid = { publicKey: VAPID_PUBLIC, privateKey: VAPID_PRIVATE, subject: 'mailto:hola@grupoasegura.es' }
+  const vapid = cargada.vapid
 
   const hoy = new Date()
   // El rango en SQL es una CRIBA (para no traer decenas de miles de filas de golpe); quien
@@ -129,7 +129,10 @@ export async function GET(req: Request) {
 
         let algunaOk = false
         for (const s of subs) {
-          const res = await sendWebPush(vapid, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.authKey } }, payload)
+          const res = await sendWebPush(vapid, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.authKey } }, payload, {
+            ...OPCIONES_AVISO,
+            topic: topicAviso(`obligacion:${o.id}`),
+          })
           if (res.ok) algunaOk = true
           // Suscripción muerta (404/410): se borra para no seguir intentando en cada pasada.
           if (res.gone) {

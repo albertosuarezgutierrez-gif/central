@@ -27,6 +27,7 @@ import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
+import { cuentaDeTitular } from '@/lib/declaradas-de-titular'
 import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { FilaDeclarada } from './FilaDeclarada'
@@ -669,10 +670,22 @@ export default async function Boveda({
             key={t.clienteId}
             antetitulo={b.grupo === 'empresas' ? 'Tu sociedad' : 'Te ha dado acceso'}
             titulo={t.nombre}
-            cuenta={t.polizas.length}
-            abierto={t.polizas.length === 0}
+            cuenta={cuentaDeTitular(t)}
+            abierto={cuentaDeTitular(t) === 0}
           >
-            <Titular titular={t} grupo={b.grupo} conNombre={false} hoy={hoy} />
+            {/* Con declaradas y sin cartera no se dice «sin pólizas vivas»: sí tiene seguros. */}
+            {(t.polizas.length > 0 || t.declaradas === undefined || t.declaradas.length === 0) && (
+              <Titular titular={t} grupo={b.grupo} conNombre={false} hoy={hoy} />
+            )}
+            {/* Las que ese titular AÑADIÓ en su portal (08/10/2026): misma fila,
+                pero con su cartel y sin enlace ni «Quitar» — no son de quien mira. */}
+            {t.declaradas !== undefined && t.declaradas.length > 0 && (
+              <ul className="polizas">
+                {t.declaradas.map((d) => (
+                  <FilaDeclarada key={d.id} p={d} avisoPartes={null} deOtro />
+                ))}
+              </ul>
+            )}
           </GrupoPlegable>
         )),
       )}

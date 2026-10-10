@@ -1,53 +1,140 @@
 'use client'
 import { useEffect, useState } from 'react'
 
+import { decidirVistaPush, type PermisoNotificaciones, type VistaPush } from '@/lib/push-estado'
+
+import { InstruccionesIOS, useInstalacion } from './instalacion'
+
 /**
  * Interruptor de avisos por notificación push (12/09/2026), dentro del panel de la campana: es el
  * sitio natural — «avisos» es justo lo que esto añade como canal.
  *
- * 🚨 Sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (o sin soporte del navegador) el interruptor NO SE PINTA:
- * un botón que falla al pulsarlo es peor que no ofrecerlo. `RegistrarSW` ya registró el service
- * worker en el layout raíz; aquí solo se pide permiso y se suscribe sobre él.
+ * Qué se enseña lo decide `decidirVistaPush` (`lib/push-estado.ts`, puro y con test): activadas,
+ * desactivadas o «bloqueadas por el navegador» (permiso denegado: se explica cómo desbloquear, sin
+ * botón de reintento que no puede funcionar). Sin soporte NO se calla: en iPhone/iPad sin instalar se
+ * manda a instalar la app (la guía es `InstruccionesIOS` de `instalacion.tsx`, la misma de la barra;
+ * el `ios` de `useInstalacion` ya significa «iOS y no instalada»), y en un navegador sin soporte se
+ * dice. Solo sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` no se pinta nada: ahí el fallo es nuestro.
+ * `RegistrarSW` ya registró el service worker en el layout raíz; aquí solo se pide permiso y se
+ * suscribe sobre él.
  */
+interface Lectura {
+  serviceWorker: boolean
+  pushManager: boolean
+  notificaciones: boolean
+  permiso: PermisoNotificaciones | null
+  suscripcionLocal: boolean
+}
+
+type Accion = 'reposo' | 'trabajando' | 'error' | 'error_desactivar'
+
+const CLAVE_PUBLICA = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
+/** Táctil ≥44 px: los botones de este panel son del tamaño de un dedo, no de un enlace. */
+const BOTON: React.CSSProperties = { minHeight: 44, padding: '0 4px', textAlign: 'left' }
+const TEXTO: React.CSSProperties = { fontSize: 13, color: 'var(--muted)', margin: '0 0 6px', lineHeight: 1.45 }
+
+function leerPermiso(): PermisoNotificaciones | null {
+  try {
+    return typeof Notification === 'undefined' ? null : Notification.permission
+  } catch {
+    return null
+  }
+}
+
 export function ActivarPush() {
-  const [estado, setEstado] = useState<'cargando' | 'sin_soporte' | 'activo' | 'inactivo' | 'trabajando' | 'error' | 'error_desactivar'>(
-    'cargando',
-  )
+  const instalacion = useInstalacion()
+  const [lectura, setLectura] = useState<Lectura | null>(null)
+  const [accion, setAccion] = useState<Accion>('reposo')
+  const [guiaAbierta, setGuiaAbierta] = useState(false)
 
   useEffect(() => {
     void (async () => {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-        setEstado('sin_soporte')
+      const base = {
+        serviceWorker: 'serviceWorker' in navigator,
+        pushManager: 'PushManager' in window,
+        notificaciones: 'Notification' in window,
+        permiso: leerPermiso(),
+      }
+      if (!base.serviceWorker || !base.pushManager || !base.notificaciones) {
+        setLectura({ ...base, suscripcionLocal: false })
         return
       }
       try {
         const registro = await navigator.serviceWorker.ready
         const sub = await registro.pushManager.getSubscription()
-        setEstado(sub ? 'activo' : 'inactivo')
+        setLectura({ ...base, suscripcionLocal: sub !== null })
       } catch {
-        setEstado('error')
+        setLectura({ ...base, suscripcionLocal: false })
+        setAccion('error')
       }
     })()
   }, [])
 
-  if (estado === 'cargando' || estado === 'sin_soporte') return null
+  // Hasta saber qué navegador es (la instalación se decide tras montar) no se pinta nada: evita
+  // enseñar «no admite avisos» un instante a quien está en iPhone.
+  if (lectura === null || instalacion === 'indeterminado') return null
+
+  const vista: VistaPush = decidirVistaPush({
+    ...lectura,
+    clavePublica: Boolean(CLAVE_PUBLICA),
+    iosSinInstalar: instalacion === 'ios',
+  })
+
+  if (vista === 'sin_configurar') return null
+
+  if (vista === 'instalar_ios') {
+    return (
+      <div className="campana-push">
+        <p style={TEXTO}>Para recibir avisos en iPhone, instala la app en tu pantalla de inicio.</p>
+        <button
+          type="button"
+          className="campana-reintentar"
+          style={BOTON}
+          aria-expanded={guiaAbierta}
+          onClick={() => setGuiaAbierta((a) => !a)}
+        >
+          {guiaAbierta ? 'Ocultar los pasos' : 'Ver cómo instalarla'}
+        </button>
+        {guiaAbierta && <InstruccionesIOS />}
+      </div>
+    )
+  }
+
+  if (vista === 'sin_soporte') {
+    return (
+      <div className="campana-push">
+        <p style={TEXTO}>Tu navegador no admite avisos.</p>
+      </div>
+    )
+  }
+
+  if (vista === 'bloqueadas') {
+    return (
+      <div className="campana-push">
+        <p style={TEXTO}>
+          Los avisos están <strong>bloqueados por el navegador</strong>. Para recibirlos, permite las notificaciones de
+          esta página en los ajustes del sitio (el icono junto a la dirección o, en el móvil, los ajustes del
+          navegador o de la app) y vuelve a abrir esta pantalla.
+        </p>
+      </div>
+    )
+  }
 
   const activar = async () => {
-    setEstado('trabajando')
+    setAccion('trabajando')
     try {
-      if (Notification.permission === 'denied') {
-        setEstado('error')
-        return
-      }
-      const permiso = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission()
+      const permiso = leerPermiso() === 'granted' ? 'granted' : await Notification.requestPermission()
+      setLectura((l) => (l ? { ...l, permiso } : l))
       if (permiso !== 'granted') {
-        setEstado('inactivo')
+        // `denied` pinta «bloqueadas» (sin reintento); `default` (lo cerró sin elegir) vuelve al botón.
+        setAccion('reposo')
         return
       }
       const registro = await navigator.serviceWorker.ready
       const sub = await registro.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+        applicationServerKey: urlBase64ToUint8Array(CLAVE_PUBLICA!),
       })
       const r = await fetch('/api/push/suscribir', {
         method: 'POST',
@@ -55,14 +142,15 @@ export function ActivarPush() {
         body: JSON.stringify(sub.toJSON()),
       })
       if (!r.ok) throw new Error(String(r.status))
-      setEstado('activo')
+      setLectura((l) => (l ? { ...l, suscripcionLocal: true } : l))
+      setAccion('reposo')
     } catch {
-      setEstado('error')
+      setAccion('error')
     }
   }
 
   const desactivar = async () => {
-    setEstado('trabajando')
+    setAccion('trabajando')
     try {
       const registro = await navigator.serviceWorker.ready
       const sub = await registro.pushManager.getSubscription()
@@ -74,27 +162,32 @@ export function ActivarPush() {
         })
         await sub.unsubscribe()
       }
-      setEstado('inactivo')
+      setLectura((l) => (l ? { ...l, suscripcionLocal: false } : l))
+      setAccion('reposo')
     } catch {
       // Sigue activa: se vuelve a enseñar «Desactivar» con el aviso, no el botón de ACTIVAR con
       // «No se ha podido activar», que era lo que salía (29/09/2026).
-      setEstado('error_desactivar')
+      setAccion('error_desactivar')
     }
   }
 
   return (
     <div className="campana-push">
-      {estado === 'activo' || estado === 'error_desactivar' ? (
+      {vista === 'activas' ? (
         <>
+          <p style={TEXTO}>Avisos por notificación: <strong>activados</strong>.</p>
           <PreferenciasAvisos />
-          <button type="button" className="campana-reintentar" onClick={desactivar}>
-            {estado === 'error_desactivar' ? 'No se han podido desactivar — reintentar' : 'Desactivar avisos por notificación'}
+          <button type="button" className="campana-reintentar" style={BOTON} onClick={desactivar} disabled={accion === 'trabajando'}>
+            {accion === 'error_desactivar' ? 'No se han podido desactivar — reintentar' : 'Desactivar avisos por notificación'}
           </button>
         </>
       ) : (
-        <button type="button" className="campana-reintentar" onClick={activar} disabled={estado === 'trabajando'}>
-          {estado === 'error' ? 'No se ha podido activar — reintentar' : 'Avisarme también con una notificación'}
-        </button>
+        <>
+          <p style={TEXTO}>Avisos por notificación: <strong>desactivados</strong>.</p>
+          <button type="button" className="campana-reintentar" style={BOTON} onClick={activar} disabled={accion === 'trabajando'}>
+            {accion === 'error' ? 'No se ha podido activar — reintentar' : 'Avisarme también con una notificación'}
+          </button>
+        </>
       )}
     </div>
   )

@@ -8,6 +8,7 @@ import { polizasNuevasDeIdentidad } from '@/lib/polizas-nuevas'
 import { polizasModificadasDeIdentidad } from '@/lib/polizas-modificadas'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
+import { OPCIONES_AVISO, cargarVapid, topicAviso } from '@/lib/push-vapid'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -40,12 +41,11 @@ const PRESUPUESTO_MS = 50_000
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
-  const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || ''
-  if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+  const cargada = await cargarVapid()
+  if (!cargada.ok) {
     return NextResponse.json({ estado: 'error', causa: 'sin_vapid' }, { status: 503 })
   }
-  const vapid = { publicKey: VAPID_PUBLIC, privateKey: VAPID_PRIVATE, subject: 'mailto:hola@grupoasegura.es' }
+  const vapid = cargada.vapid
 
   // Solo quien tiene un dispositivo suscrito: sin suscripción no hay a quién avisar. Su primera
   // pasada tras suscribirse es la semilla (se sella todo, no se envía nada).
@@ -115,11 +115,14 @@ export async function GET(req: Request) {
 
       const subs = await prisma.portalPushSuscripcion.findMany({ where: { identidadId } })
       let algunaOk = false
+      // Mismo conjunto de novedades = mismo topic: un reintento sustituye al aviso pendiente, no lo duplica.
+      const topic = topicAviso(`cima:${identidadId}:${plan.enviar.map((e) => e.clave).sort().join('|')}`)
       for (const s of subs) {
         const res = await sendWebPush(
           vapid,
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.authKey } },
           { ...texto, icon: '/icono-app', data: { url: '/boveda' } },
+          { ...OPCIONES_AVISO, topic },
         )
         if (res.ok) algunaOk = true
         if (res.gone) {

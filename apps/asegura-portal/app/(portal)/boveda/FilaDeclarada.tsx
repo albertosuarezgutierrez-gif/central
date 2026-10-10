@@ -29,6 +29,7 @@ import { IconoRamo, RAMO } from './PolizaVista'
 export function FilaDeclarada({
   p,
   avisoPartes,
+  deOtro = false,
 }: {
   p: {
     id: string
@@ -43,6 +44,12 @@ export function FilaDeclarada({
    * si no tiene ninguno. Lo calcula el padre con `avisoPartesConservados()`.
    */
   avisoPartes: string | null
+  /**
+   * La añadió QUIEN TE DIO ACCESO (08/10/2026), no tú: sin enlace a su ficha
+   * (`/boveda/anadida/[id]` es solo de su identidad y daría 404), sin «Quitar»
+   * y con su propio cartel. Que no se pueda confundir con una tuya.
+   */
+  deOtro?: boolean
 }) {
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
@@ -52,6 +59,23 @@ export function FilaDeclarada({
   const titulo = p.compania ?? 'Póliza sin compañía identificada'
   const meta = [ramo, vence ? `Vence el ${vence}` : 'Sin fecha de vencimiento'].filter(Boolean).join(' · ')
 
+  const cuerpo = (
+    <>
+      <IconoRamo ramo={p.ramo} />
+      <span className="poliza-cuerpo">
+        <span className="poliza-titulo">{titulo}</span>
+        <span className="poliza-meta">{meta}</span>
+        <span className="chips">
+          <span className="chip acento">{deOtro ? 'Añadida por su titular' : 'Añadida por ti'}</span>
+          {/* De dónde salió el dato: leído de un PDF por una IA, o tecleado.
+              Importa porque lo leído de un PDF puede estar mal y esta pantalla
+              es donde se corrige. */}
+          {p.deDocumento && <span className="chip">{deOtro ? 'Leída de su PDF' : 'Leída de tu PDF'}</span>}
+        </span>
+      </span>
+    </>
+  )
+
   return (
     <li
       className="poliza-fila"
@@ -60,23 +84,16 @@ export function FilaDeclarada({
       // correduría se lo va a avisar porque no la gestionamos.
       data-estado={p.fechaVencimiento === null ? 'aviso' : undefined}
     >
-      <Link href={`/boveda/anadida/${p.id}`} className="poliza-enlace">
-        <IconoRamo ramo={p.ramo} />
-        <span className="poliza-cuerpo">
-          <span className="poliza-titulo">{titulo}</span>
-          <span className="poliza-meta">{meta}</span>
-          <span className="chips">
-            <span className="chip acento">Añadida por ti</span>
-            {/* De dónde salió el dato: leído de un PDF por una IA, o tecleado.
-                Importa porque lo leído de un PDF puede estar mal y esta pantalla
-                es donde se corrige. */}
-            {p.deDocumento && <span className="chip">Leída de tu PDF</span>}
+      {deOtro ? (
+        <div className="poliza-enlace">{cuerpo}</div>
+      ) : (
+        <Link href={`/boveda/anadida/${p.id}`} className="poliza-enlace">
+          {cuerpo}
+          <span className="poliza-flecha" aria-hidden>
+            ›
           </span>
-        </span>
-        <span className="poliza-flecha" aria-hidden>
-          ›
-        </span>
-      </Link>
+        </Link>
+      )}
       {/* 🚨 Quitarla se ofrece AQUÍ, en la lista, y no solo al final de su ficha.
           Alberto (08/09/2026): «no puedo eliminar “Póliza sin compañía
           identificada”… el cliente se puede equivocar, puede crear y quitar las
@@ -85,9 +102,11 @@ export function FilaDeclarada({
           no se veía: una acción que hay que ir a buscar es una acción que no
           existe. Solo las APORTADAS lo llevan: `FilaPoliza` (cartera) no tiene
           esto, porque lo que entra por CIMA no lo borra el cliente. */}
-      <div className="poliza-acciones">
-        <EliminarPoliza id={p.id} titulo={titulo} avisoPartes={avisoPartes} />
-      </div>
+      {!deOtro && (
+        <div className="poliza-acciones">
+          <EliminarPoliza id={p.id} titulo={titulo} avisoPartes={avisoPartes} />
+        </div>
+      )}
     </li>
   )
 }
