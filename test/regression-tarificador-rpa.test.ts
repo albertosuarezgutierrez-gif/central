@@ -52,6 +52,65 @@ test('ningún fichero del worker pulsa con .click()/.dblclick()/.tap() salvo pul
   assert.match(guard, /isNavigationRequest\(\)/, 'el guard de navegación tiene que mirar las navegaciones')
 })
 
+// Más formas de «pulsar» que `.click()` (revisión 10/10/2026): Enter en un formulario, submit, eventos de ratón/teclado
+// sintéticos. Fuera de guard.ts están PROHIBIDAS sin excepción.
+const PULSACION_ENCUBIERTA = new RegExp(
+  [
+    String.raw`\.press\s*\(\s*[^)]*Enter`,
+    String.raw`keyboard\s*\.\s*(?:press|down|type|insertText)\s*\(`,
+    String.raw`\.(?:submit|requestSubmit)\s*\(`,
+    String.raw`dispatchEvent\(\s*['"\`](?:click|dblclick|submit|mousedown|mouseup|pointerdown|pointerup|keydown|keypress|keyup|touchstart|touchend|tap)`,
+    String.raw`new\s+(?:MouseEvent|PointerEvent|KeyboardEvent|SubmitEvent|TouchEvent)\b`,
+    String.raw`new\s+Event\(\s*['"\`](?:click|submit|keydown|keypress|keyup|mousedown|mouseup)`,
+  ].join('|'),
+)
+// Cambios que disparan los manejadores del portal (`onchange`/`onclick`): solo con `comprobarCampo(`/`comprobarBoton(`
+// en las 6 líneas anteriores. Las excepciones son las REVISADAS antes de esta regla (nº exacto: una nueva rompe).
+const CAMBIO_CON_MANEJADOR = /\.(?:check|uncheck|setChecked|dispatchEvent)\s*\(/
+const EXCEPCIONES_CAMBIO: Record<string, number> = {
+  // marcar(): checkbox solo por la vía determinista campoPorEtiqueta (ver el comentario 🔒 de comunidades.ts).
+  'services/tarificador-rpa/src/adapters/allianz/comunidades.ts': 1,
+  // fijarSelectOculto(): `change` de un <select> bootstrap oculto, valor validado contra sus opciones.
+  'services/tarificador-rpa/src/adapters/allianz/comercio.ts': 1,
+}
+
+/** Infracciones de la regla de pulsación en un fuente (sin comentarios). Exportada en el test para verla FALLAR. */
+function infraccionesPulsacion(rel: string, src: string): string[] {
+  const out: string[] = []
+  const lineas = src.split('\n')
+  let cambiosSinGuard = 0
+  lineas.forEach((l, i) => {
+    if (PULSACION_ENCUBIERTA.test(l)) out.push(`${rel}:${i + 1} pulsación encubierta`)
+    if (CAMBIO_CON_MANEJADOR.test(l) && !/comprobar(?:Campo|Boton)\(/.test(lineas.slice(Math.max(0, i - 6), i + 1).join('\n'))) cambiosSinGuard++
+  })
+  if (cambiosSinGuard !== (EXCEPCIONES_CAMBIO[rel] ?? 0)) out.push(`${rel}: ${cambiosSinGuard} check/setChecked/dispatchEvent sin comprobarCampo() (excepciones revisadas: ${EXCEPCIONES_CAMBIO[rel] ?? 0})`)
+  return out
+}
+
+test('ningún fichero del worker pulsa por la puerta de atrás (Enter, submit, eventos sintéticos, cambios sin guard)', () => {
+  const infractores: string[] = []
+  for (const f of ficheros(join(SRV, 'src'))) {
+    if (f.endsWith('/src/guard.ts')) continue
+    infractores.push(...infraccionesPulsacion(relative(RAIZ, f), sinComentarios(readFileSync(f, 'utf8'))))
+  }
+  assert.deepEqual(infractores, [], 'pulsar SOLO con ctx.pulsar(); cambiar un campo solo tras comprobarCampo()')
+})
+
+test('la regla de pulsación ve FALLAR cada forma (cepo del cepo)', () => {
+  const r = 'services/tarificador-rpa/src/adapters/x.ts'
+  for (const malo of [
+    "await campo.press('Enter')",
+    'await page.keyboard.press("Enter")',
+    'await form.evaluate((f) => f.submit())',
+    'await form.evaluate((f) => f.requestSubmit())',
+    "await boton.dispatchEvent('mousedown')",
+    "el.dispatchEvent(new MouseEvent('click'))",
+    "el.dispatchEvent(new Event('submit', { bubbles: true }))",
+  ]) assert.notDeepEqual(infraccionesPulsacion(r, malo), [], malo)
+  for (const malo of ['await c.check()', 'await c.setChecked(true)', "await c.dispatchEvent('change')"]) assert.notDeepEqual(infraccionesPulsacion(r, malo), [], malo)
+  assert.deepEqual(infraccionesPulsacion(r, "await comprobarCampo(c)\nawait c.fill(v)\nawait c.dispatchEvent('change')\nawait c.setChecked(true)"), [])
+})
+
 test('el worker nunca arranca tracing ni nombra la cartera o Codeoscopic', () => {
   for (const f of ficheros(join(SRV, 'src'))) {
     const src = sinComentarios(readFileSync(f, 'utf8'))

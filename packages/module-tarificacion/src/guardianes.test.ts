@@ -6,6 +6,7 @@ import {
   comprobarUrl,
   EmisionBloqueadaError,
   pareceEmision,
+  parametrosParecenEmision,
   puedeAutomatizar,
   MODOS_INTEGRACION,
   redactar,
@@ -45,6 +46,64 @@ describe('guard de emisión · Allianz Negocio 2038 (07/10/2026)', () => {
   it.each(['nombreTom', 'Tom_address_pc', 'mailTom', 'btnVolver', 'idNumberTom_doc'])('deja pasar el campo «%s»', (d) => {
     expect(pareceEmision(d, { permitirAceptar: true })).toBe(false)
   })
+})
+
+describe('guard de emisión · Allianz Autos/Moto (09/10/2026)', () => {
+  // td#store «Archivar», td#contract «Emitir» y el pie de Tarificar (validar_aceptar()): PROHIBIDOS también con permitirAceptar.
+  it.each(['store', 'STORE', "goSelected('store'); sendActionEvent('store');", 'contract', "goSelected('contract'); validar_aceptar();", 'validar_aceptar();', 'javascript:validarAceptar()'])(
+    'bloquea «%s» aunque se permita «Aceptar»',
+    (d) => {
+      expect(pareceEmision(d, { permitirAceptar: true })).toBe(true)
+      expect(() => comprobarBoton([null, d], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+    },
+  )
+  it.each(['rate', 'datosBasicos', 'riesgoMunicipio', 'IPID', "goSelected('IPID'); documentoIPID();", "goSelected('rate'); sendViewEvent('rate');", 'licensePlate', 'storeLocator', 'modality_0', 'mobileCode'])(
+    'deja pasar «%s»',
+    (d) => {
+      expect(pareceEmision(d, { permitirAceptar: true })).toBe(false)
+    },
+  )
+})
+
+describe('guard de red · acción en los parámetros (URL y cuerpo del POST, Autos/Moto 10/10/2026)', () => {
+  // El framework legado de ePAC manda la acción en el CUERPO (`action=store`) contra la misma URL de siempre.
+  it.each([
+    'action=store',
+    'version=1&action=STORE&x=2',
+    'pfAction=contract',
+    'https://portal.example/app/control.do?action=store&version=3',
+    '{"datos":{"evento":"emitirPoliza"}}',
+    'accion=Formalizar',
+    "js=sendActionEvent('store')",
+    'cmd=validar_aceptar',
+    'action=st%6Fre',
+  ])('bloquea «%s» (también con permitirAceptar)', (c) => {
+    expect(parametrosParecenEmision(c, { permitirAceptar: true })).toBe(true)
+  })
+  it('«Aceptar» como acción solo pasa con permitirAceptar', () => {
+    expect(parametrosParecenEmision('accion=Aceptar')).toBe(true)
+    expect(parametrosParecenEmision('accion=Aceptar', { permitirAceptar: true })).toBe(false)
+  })
+  it.each([
+    // Formas de las URL reales de las grabaciones (valores inventados): navegación y arranque de la app.
+    'https://portal.example/drrg21/SEAServlet?action=start&version=1&pfestate-uid=x',
+    'https://portal.example/drpc82/main/control.do?action=start&version=1',
+    'action=calcular&direccion=planta+baja&anulado=no',
+    'storeLocator=1&modo=rate',
+    '',
+  ])('deja pasar «%s» (el resto del cuerpo no se mira con el patrón general)', (c) => {
+    expect(parametrosParecenEmision(c)).toBe(false)
+  })
+})
+
+describe('guard de emisión · «contract» en URL (cotejado con las grabaciones, 10/10/2026)', () => {
+  it.each(['https://portal.example/app/contract.do', 'https://portal.example/app?doContract=1', 'https://portal.example/contractAction'])('bloquea «%s»', (u) => {
+    expect(() => comprobarUrl(u, { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+  })
+  it.each(['https://portal.example/drrg01/SEAServlet?action=start', 'https://portal.example/drpc82/main/control.do?action=start', 'https://portal.example/ngx-azs-epac/private/home', 'https://portal.example/ngx-azs-epac/private/application'])(
+    'las rutas de navegación grabadas pasan: «%s»',
+    (u) => expect(pareceEmision(u)).toBe(false),
+  )
 })
 
 describe('guard de emisión', () => {
@@ -174,6 +233,18 @@ describe('redactor de credenciales', () => {
     const r = redactarHtml(html, [])
     expect(r).not.toContain('loquesea')
     expect(r).toContain('Calle Socorro')
+  })
+
+  it('tapa matrículas (actual y antiguas) y VIN en textos, value y <option> del HTML de evidencia (datos inventados)', () => {
+    const html = [
+      '<input id="licensePlate" value="0000-BBB">',
+      '<p>Matrícula antigua SE-0000-ZZ y M 0000 ZZ, otra GC0000X</p>',
+      '<select id="bastidor"><option value="AAAAAAAAA00000000">AAAAAAAAA00000000</option><option>ZZZZZZZZZZZZZZZZ9</option></select>',
+      '<p>Versión 1.5 TSI de 2019, 150 CV</p>',
+    ].join('')
+    const r = redactarHtml(html, [])
+    for (const x of ['0000-BBB', 'SE-0000-ZZ', 'M 0000 ZZ', 'GC0000X', 'AAAAAAAAA', 'ZZZZZZZZZZZZZZZZ9']) expect(r, x).not.toContain(x)
+    expect(r).toContain('Versión 1.5 TSI de 2019, 150 CV')
   })
 })
 

@@ -67,6 +67,12 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 ## Allianz Negocio 2038 (en construcción)
 - `allianz/comercio.ts` (`COMERCIO_ACTIVO=false`, no registrado): hecho paso 4 «Datos» (tomador canónico `tomador.ts`, solo `fill`, RGPD intacto) y lector de prima `.alz-presupuesto-precio span` (fail-closed); HUECO pasos 1-3 (`ErrorMapaIncompleto`); prohibido «Siguiente» (#idbtnAceptar → Revisión), bloqueado en el guard.
 
+## Allianz Autos/Moto (en construcción, 10/10/2026)
+- `allianz/auto.ts` → `allianzAuto` y `allianzMoto` (`AUTO_ACTIVO=false`, no registrados). Mapa de la grabación de Moto del 09/10 (app legada «Motos-online» en el iframe `appArea`); se SUPONE que Turismos usa los mismos ids (la grabación de Auto del 08/10 no pudo leer el iframe).
+- Hecho: entrada (`entrada.ts`, sección «Autos», tarjeta por clase de icono `alz-icon-coches`/`alz-icon-moto`); consulta por matrícula (`#licensePlate` + `change`) → lectura de `#marca/#modelo/#version/#motorPower/#fechaMatriculacion/#mobileCode` → **vehículo canónico** (`module-tarificacion/src/vehiculo.ts`, reutilizable por otros bots); varias versiones sin elección → `requiere_humano` con las opciones (prefijo `requiere_eleccion_version:`, lo enseña `motivoLegible`); la elección vuelve en `FormularioAuto.eleccionVersion` (código o etiqueta EXACTA, nunca «la más parecida»); Datos básicos del conductor (`fill`); lector de primas de Tarificar (`td#<m>_B_A_<0|1>_0`) → `OfertaNormalizada` por modalidad.
+- HUECO: avance Riesgo municipio/Datos básicos → Tarificar (su handler lleva «aceptar»: hace falta una función guardada por FASE en `guard.ts`, como la de Comunidades) y el formulario real de Turismos. Combustible: Moto no lo enseña → `null`.
+- Prohibido siempre (guard ampliado): td#store «Archivar» (`sendActionEvent('store')`), td#contract «Emitir», el pie de Tarificar (`validar_aceptar()`). La matrícula nunca va a logs/mensajes; el grabador ahora tapa matrícula, fecha de matriculación y bastidor.
+
 ## Rutina «Médico del bot tarificador»
 `trig_011zoZZAiTQnQ48qEWdRJq2Y`: laborables 8:52 Madrid; mira Supabase + repo; abre PR **draft**; **nunca mergea**.
 

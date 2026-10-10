@@ -25,6 +25,14 @@ describe('limpiarTextoAviso / redactarDatosPersonales', () => {
   })
 })
 
+describe('redactarDatosPersonales: vehículo (datos inventados, 10/10/2026)', () => {
+  it('tapa matrículas antiguas y VIN enteros (sin dejar el prefijo); el año y la versión siguen', () => {
+    const t = redactarDatosPersonales('Moto SE-0000-ZZ, coche M 0000 ZZ, VIN AAAAAAAAA00000000 y ZZZZZZZZZZZZZZZZ9; Versión 1.5 TSI de 2019')
+    for (const x of ['SE-0000-ZZ', 'M 0000 ZZ', 'AAAAAAAAA', 'ZZZZZZZZZZZZZZZZ9']) expect(t, x).not.toContain(x)
+    expect(t).toContain('Versión 1.5 TSI de 2019')
+  })
+})
+
 describe('coherenciaPrecio', () => {
   it('cuadra: neta + impuestos = total, misma modalidad → sin incidencias', () => {
     expect(coherenciaPrecio({ primaNetaEur: 296.71, impuestosEur: 47.03, primaTotalEur: 343.74, modalidad: 'estandar' }, 'estandar')).toEqual([])

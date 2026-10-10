@@ -10,6 +10,7 @@
 //    arregla y el bot volvería a entrar en un portal con nuestra credencial hacia un paso prohibido.
 
 import { esEstadoTrabajo, esTipoError, type EstadoTrabajo } from './estados.ts'
+import { PREFIJO_ELECCION_VERSION } from './vehiculo.ts'
 
 /** Estados que aparecen en la bandeja: el bot ya no avanza solo. */
 export const ESTADOS_BANDEJA: readonly EstadoTrabajo[] = ['requiere_humano', 'error_definitivo']
@@ -59,6 +60,10 @@ const PREFIJO_VERIFICACION = 'requiere_verificacion_humana:'
 export function motivoLegible(error: unknown, estado?: unknown): string {
   const e = typeof error === 'object' && error !== null && !Array.isArray(error) ? (error as Record<string, unknown>) : null
   const mensaje = typeof e?.mensaje === 'string' ? e.mensaje : ''
+  // Versión de vehículo ambigua (vehiculo.ts): el mensaje ya es para una persona (solo nombres de catálogo).
+  if (mensaje.startsWith(PREFIJO_ELECCION_VERSION)) {
+    return `Hay que elegir la versión del vehículo:${mensaje.slice(PREFIJO_ELECCION_VERSION.length)}`.trim().slice(0, 600)
+  }
   if (mensaje.startsWith(PREFIJO_VERIFICACION)) {
     return mensaje.slice(PREFIJO_VERIFICACION.length).trim().slice(0, 300) || MOTIVO_POR_TIPO.captcha
   }

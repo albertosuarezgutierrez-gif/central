@@ -34,7 +34,7 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, type OpcionesGuard } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, type OpcionesGuard } from './guard-emision.ts'
 export { MaquinaFases, type FaseTarificacion, type PestanaActiva } from './fases.ts'
 export { MARCA_REDACTADO, esVariableSecreta, secretosDelEntorno, redactar, redactarHtml, crearRedactor } from './redactar.ts'
 export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCredencial } from './entorno.ts'
@@ -45,6 +45,8 @@ export { claveCompania, crearRegistro, type RegistroAdaptadores } from './regist
 export {
   MARCA_DATO_PERSONAL,
   redactarDatosPersonales,
+  redactarVehiculos,
+  PATRONES_VEHICULO,
   limpiarTextoAviso,
   coherenciaPrecio,
   UMBRAL_ACOMPANAMIENTO,
@@ -255,3 +257,36 @@ export {
   type AccionBandeja,
   type DecisionBandeja,
 } from './bandeja.ts'
+
+// Vehículo canónico y formulario de auto/moto (10/10/2026): el robot lo rellena con la consulta por matrícula del portal.
+export {
+  COMBUSTIBLES,
+  PREFIJO_ELECCION_VERSION,
+  MAX_OPCIONES_VERSION,
+  esOpcionVacia,
+  resolverVersion,
+  mensajeEleccionVersion,
+  normalizarCombustible,
+  potenciaCvDesdeTexto,
+  fechaIsoDesdeTexto,
+  normalizarMatricula,
+  esMatriculaEspanola,
+  vehiculoDesdeLectura,
+  type Combustible,
+  type Vehiculo,
+  type CandidatoVersion,
+  type EleccionVersion,
+  type ResolucionVersion,
+  type LecturaVehiculoPortal,
+  type ResultadoVehiculo,
+} from './vehiculo.ts'
+export {
+  RAMOS_VEHICULO,
+  SEXOS_CONDUCTOR,
+  validarFormularioAuto,
+  type RamoVehiculo,
+  type SexoConductor,
+  type ConductorHabitual,
+  type FormularioAuto,
+  type ValidacionFormularioAuto,
+} from './formulario-auto.ts'

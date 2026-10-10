@@ -50,10 +50,10 @@ export const PATRON_CAMPO_USUARIO = /user|usuari|login|logon|signin|sign-in|j_us
 
 /**
  * Campos de TEXTO con datos de personas o de quien opera (nombre, apellidos, razón social, nacimiento, dirección
- * postal, correo, códigos de mediador/agente). Solo name/id/aria-label/placeholder de inputs de texto y textareas:
+ * postal, correo, códigos de mediador/agente; matrícula, su fecha y bastidor: identifican al titular, 10/10/2026; `vin` sin lookbehind para `numVIN`/`vehicleVin`, y `plate`/`registration` para `plateNumber`/`numberPlate`/`registrationDate`). Solo name/id/aria-label/placeholder de inputs de texto y textareas:
  * selects, checkboxes y radios (riesgo, coberturas) no entran. Ante la duda, tapa.
  */
-export const PATRON_CAMPO_PERSONAL = /nombre|apellid|razon_?social|naci|fnac|fullDate|address|direcc|domicil|calle|mail|(?<![a-z])(?:tel|telf|tlf|telefono|telefon|movil|mobil|phone|celular|dni|nif|nie|cif|cp|pc|iban|ccc|cuenta|idnumber|numdoc|documento)(?:[^a-z]|$|\d|(?:tom|aseg|prop|cond|ben|tit)(?:[^a-z]|$))|_(?:pc|doc|cp)$|codpostal|poblacion|municip|localidad|street|iban|^(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)|_(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)$|(?:cod|codigo|agente|sucmed|colaborador)(?:tom|aseg|prop|cond|ben|tit)$/i
+export const PATRON_CAMPO_PERSONAL = /nombre|apellid|matric|licen[cs]e_?plate|plate|registration|bastidor|chasis|vin(?![a-z])|razon_?social|naci|fnac|fullDate|address|direcc|domicil|calle|mail|(?<![a-z])(?:tel|telf|tlf|telefono|telefon|movil|mobil|phone|celular|dni|nif|nie|cif|cp|pc|iban|ccc|cuenta|idnumber|numdoc|documento)(?:[^a-z]|$|\d|(?:tom|aseg|prop|cond|ben|tit)(?:[^a-z]|$))|_(?:pc|doc|cp)$|codpostal|poblacion|municip|localidad|street|iban|^(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)|_(cod|codigo|sucursal|agente|sucmed|colaborador|perfil)$|(?:cod|codigo|agente|sucmed|colaborador)(?:tom|aseg|prop|cond|ben|tit)$/i
 
 /** Código de mediador («209-C/12/0000», también con trozos ya tapados `[DATO]`) con su nombre opcional
  *  («… - Nombre Apellidos»): TODO sale `[DATO]` y el nombre se aprende para taparlo donde más aparezca
