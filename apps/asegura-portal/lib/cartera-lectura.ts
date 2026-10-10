@@ -72,6 +72,7 @@ import {
   type ResumenRecibos,
   type CamposVisibles,
   type Nivel,
+  IDENTIDAD_CORREDOR_ID,
 } from '@central/module-seguros-portal'
 import {
   esEstadoVigente,
@@ -89,6 +90,7 @@ import {
 
 import { decryptField } from '@central/module-seguros-pii'
 
+import { identidadesTitulares, TITULAR_TIPO_VISIBLE_A_TERCERO, type DeclaradaDeTitular } from './declaradas-de-titular'
 import { datosPolizaCima, primaAnualDudosa, type DatosPolizaCima } from './datos-poliza-cima'
 import { prisma } from './db'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
@@ -371,6 +373,12 @@ export type TitularPortal = {
     rolesPorPoliza: Record<string, string[]>
   }
   polizas: PolizaPortal[]
+  /**
+   * Presente SOLO en `autorizadas` abiertas ENTERAS por consentimiento: las que
+   * el titular añadió en su portal (`identidadesTitulares`). `undefined` = esta
+   * vía no aplica (propias, dueño, concesión suelta); `[]` = se miró y no hay.
+   */
+  declaradas?: DeclaradaDeTitular[]
 }
 
 /**
@@ -1299,6 +1307,56 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       autorizacion: { ids: idsFinales, alcances: alcancesFinales, caducaEn: caduca, partes: [...conPartes] },
     })
     autorizacionesUsadas.push(...idsFinales)
+  }
+
+  // ── Las que AÑADIÓ en su portal quien te abrió su ficha ENTERA (08/10/2026) ──
+  // Para quien mira es un seguro más de esa persona. La regla de QUIÉN es la
+  // titular de la ficha vive pura en `identidadesTitulares` (fail-closed); aquí
+  // solo se lee. 🔒 Solo fichas de `porOtorgante` —concesión sobre la ficha
+  // entera, nunca una suelta— y solo las autorizadas por consentimiento: el
+  // acceso de dueño se queda como estaba. Se buscan por `identidadId` de las
+  // identidades que la regla da por titulares, nunca por otra columna.
+  const fichasEnteras = autorizadas.map((t) => t.clienteId).filter((id) => porOtorgante.has(id))
+  if (fichasEnteras.length > 0) {
+    const candidatas = await prisma.portalVinculo.findMany({
+      where: { clienteId: { in: fichasEnteras }, identidadId: { not: identidadId } },
+      select: { identidadId: true },
+    })
+    const idsCandidatas = [...new Set(candidatas.map((v) => v.identidadId))]
+    const titulares = identidadesTitulares({
+      fichasEnteras,
+      // TODOS los vínculos de cada candidata: la regla necesita saber si tiene otra ficha.
+      vinculos:
+        idsCandidatas.length === 0
+          ? []
+          : await prisma.portalVinculo.findMany({
+              where: { identidadId: { in: idsCandidatas } },
+              select: { identidadId: true, clienteId: true, nivel: true, origen: true },
+            }),
+      identidadQueMira: identidadId,
+      identidadCorredor: IDENTIDAD_CORREDOR_ID,
+    })
+    const filasDeclaradas =
+      titulares.size === 0
+        ? []
+        : await prisma.portalPolizaDeclarada.findMany({
+            where: { identidadId: { in: [...titulares.keys()] }, titularTipo: TITULAR_TIPO_VISIBLE_A_TERCERO },
+            select: { id: true, identidadId: true, compania: true, ramo: true, fechaVencimiento: true, documentoNombre: true },
+            orderBy: { creadaEn: 'desc' },
+            take: 200,
+          })
+    for (const t of autorizadas) {
+      if (!fichasEnteras.includes(t.clienteId)) continue
+      t.declaradas = filasDeclaradas
+        .filter((d) => titulares.get(d.identidadId) === t.clienteId)
+        .map((d) => ({
+          id: d.id,
+          compania: d.compania,
+          ramo: d.ramo,
+          fechaVencimiento: d.fechaVencimiento,
+          deDocumento: d.documentoNombre !== null,
+        }))
+    }
   }
 
   // Las empresas del dueño: acceso TOTAL de sociedad (CIF, cuenta, dar parte), como las de un
