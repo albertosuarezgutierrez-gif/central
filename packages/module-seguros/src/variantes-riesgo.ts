@@ -113,6 +113,19 @@ const CAMPOS: Array<[string, string]> = [
   ['risk.occupancy', 'Uso de la vivienda'],
 ]
 
+/** Ids con los que el vendor nombra los ramos que SÍ comparamos (`insuranceLine.id`, minúsculas). */
+const LINEAS_VEHICULO = new Set(['car', 'auto', 'motorcycle', 'moto', 'motorbike'])
+const LINEAS_HOGAR = new Set(['home', 'hogar', 'household', 'homeowner'])
+
+/** El ramo de una petición si tiene comparador; `null` si no se lee o su ramo no se compara todavía. */
+function lineaComparable(peticion: unknown): 'vehiculo' | 'hogar' | null {
+  const id = escalar(en(peticion, 'insuranceLine.id') ?? en(peticion, 'insuranceLine'))?.toLowerCase()
+  if (!id) return null
+  if (LINEAS_VEHICULO.has(id)) return 'vehiculo'
+  if (LINEAS_HOGAR.has(id)) return 'hogar'
+  return null
+}
+
 /**
  * Qué cambia de la variante `antes` a la variante `despues`, en palabras. Las personas se comparan
  * por DNI: el mismo DNI con otro carnet o nacimiento es una CORRECCIÓN del dato; otro DNI es otra
@@ -120,6 +133,10 @@ const CAMPOS: Array<[string, string]> = [
  */
 export function diferenciasVariante(antes: unknown, despues: unknown): Diferencia[] | null {
   if (!obj(antes) || !obj(despues)) return null
+  // H1 (10/10/2026): solo se afirma «mismos datos» donde hay comparador. Vida, salud, decesos, RC… no
+  // tienen rutas comparadas (`risk.insured`, capital…): «no comparado» ≠ «igual». Línea ilegible = null.
+  const la = lineaComparable(antes)
+  if (la === null || la !== lineaComparable(despues)) return null
   const r: Diferencia[] = []
   for (const [ruta, campo] of PERSONAS) {
     const a = persona(en(antes, ruta))

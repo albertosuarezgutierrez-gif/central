@@ -31,7 +31,7 @@ Cotizador: **CDS** = Codeoscopic/Avant2 (API REST solo auto, moto, hogar, salud,
 | Ramo | 1 · Personas (rol) | 2 · Objeto del riesgo (clave `info_riesgo`) | 3 · Historial relevante | Cotizador hoy | Qué falta |
 |---|---|---|---|---|---|
 | **Moto** | tomador · propietario · conductor habitual (sin ocasional: el vendor no lo tiene) | `datosVehiculo` (matrícula, catálogo marca/modelo/versión, matriculación, compra, km, garaje, CP/municipio circulación, cilindrada) | seguro anterior (compañía, nº póliza, años sin siniestros, siniestros 5 años, matrícula de esa póliza) · carné moto del conductor · experiencia en moto | CDS **embebido** (`PedirPrecioMoto` + `CotizadorMoto`, huella `firmaRiesgoMoto`) | Pasarlo al registro (es la referencia; sin cambio de conducta). |
-| **Auto** | tomador · propietario · conductor habitual · 1 ocasional | `datosVehiculo` (+ remolque ligero) | igual que moto + carné B · supuesto de 10.000 km marcado (`km-auto.ts`) | CDS en **pantalla aparte** `cliente/[id]/auto-nuevo?oportunidad=` (`AutoNuevo.tsx`, 2.030 líneas) | Embeber (en curso, F3 de la memoria). Extraer `CotizadorAuto` como se hizo con moto. |
+| **Auto** | tomador · propietario · conductor habitual · 1 ocasional | `datosVehiculo` (+ remolque ligero) | igual que moto + carné B · supuesto de 10.000 km marcado (`km-auto.ts`) | CDS **embebido** en el riesgo (`RAMOS_COTIZADOR_EMBEBIDO`; PR #4477), antes en pantalla aparte `cliente/[id]/auto-nuevo?oportunidad=` (`AutoNuevo.tsx`, 2.030 líneas) | Ya embebido (PR #4477). |
 | **Hogar** | tomador · **asegurado/propietario de la vivienda** (falta: hoy solo tomador) · acreedor hipotecario (texto/entidad, no ficha) | `datosVivienda` (ref. catastral, dirección troceada, m², año, reforma, tipo, régimen, uso, materiales, alarma, blindada…; catálogos CDS) + capitales continente/contenido | seguro anterior · siniestros del hogar (nuestros: `siniestros` de la póliza si es renovación; ajenos: declarados) · años en la compañía | CDS en pantalla aparte `hogar-nuevo?oportunidad=`; retarifica póliza en riesgo (`retarificaEnRiesgo`) | Rol `asegurado`; `CotizadorHogar` embebido; comparador ya tiene CP/capitales/régimen (completar ref. catastral). |
 | **Vida** | tomador · **asegurado** (puede no ser el tomador) · beneficiarios (designación) | `datosCapital`: capital, profesión, fumador (duración retirada 03/10) | seguro de vida anterior / préstamo vinculado (no hay campo) | CDS en pantalla aparte `vida-nuevo`; 🚧 la forma de `risk` es una SUPOSICIÓN (`peticion-vida.ts`) | Rol `asegurado`; comparador de capital (H1); validar forma real con una cotización con OK (0,50€). |
 | **Salud** | tomador · asegurados (n, hasta 10) | `datosCapital`: modalidad deseada, capital (nota) + asegurados | seguro anterior (compañía, antigüedad → carencias) · preexistencias (no hay campo; dato de salud = categoría especial RGPD) | CDS en pantalla aparte `salud-nuevo` (🚧 «sin verificar» en el menú) | H2/H3 (asegurados como figuras), comparador `risk.insureds`, verificar esquema. |
@@ -115,14 +115,14 @@ interface CotizadorEmbebido<R> {
 Reglas del contrato: (1) la huella se compara al abrir y antes de pagar (patrón `cotizador-embebido.ts`, generalizado:
 `firmaRiesgo(r, claveObjeto)`); (2) el cotizador **no edita** objeto ni personas, solo condiciones de la cotización;
 (3) confirmación explícita de 0,50€ dentro del componente; (4) un guardián lee el registro y exige que todo ramo de
-`RAMOS_PRESUPUESTO` y de `claveDatosDeRamo` tenga entrada, que `tipo:'embebido'|'pantalla'` coincida con
+`RAMOS_PRESUPUESTO` (pendiente de crear como registro de este diseño; hoy existe un `RAMOS_PRESUPUESTO` distinto en `apps/plataforma/lib/ficha-asegura.ts`) y de `claveDatosDeRamo` tenga entrada, que `tipo:'embebido'|'pantalla'` coincida con
 `ramoVariante()` y que un ramo con `comparar: null` pinte «No se puede comparar». Brazos vistos en rojo.
 
 ## d) Plan por fases (un PR por ramo)
 
 | Fase | PR | Contenido | Riesgo |
 |---|---|---|---|
-| 0 | Registro + H1 | `registro-ramos.ts` con los 10 ramos apuntando a lo que hay HOY (moto embebido, resto `pantalla`/`bots`/`fuera`); `RiesgoPantalla` lee del registro sin cambiar conducta; `diferenciasVariante` → `null` en vida/salud/decesos/comercio/RC hasta tener comparador; guardián. | Bajo. Cero llamadas a CDS. |
+| 0 | Registro + H1 | `registro-ramos.ts` con los 10 ramos apuntando a lo que hay HOY (auto y moto embebidos (RAMOS_COTIZADOR_EMBEBIDO), resto `pantalla`/`bots`/`fuera`); `RiesgoPantalla` lee del registro sin cambiar conducta; `diferenciasVariante` → `null` en vida/salud/decesos/comercio/RC hasta tener comparador; guardián. | Bajo. Cero llamadas a CDS. |
 | 1 | **Auto** (en curso) | Extraer `CotizadorAuto` de `AutoNuevo.tsx` como `CotizadorMoto`; `abrirCotizadorAutoDeOportunidad`; firma con ocasional y remolque. | Medio: pantalla grande; F3 de la memoria toca el mismo fichero → coordinar, no en paralelo. |
 | 2 | Figuras multi + rol `asegurado` (asegura) | SQL de `oportunidad_figura` y `tarificaciones.figuras`; puerto y `rolesDelRamo` con cardinalidad. **Antes** de hogar/vida/salud/decesos. Asegura se despliega antes que plataforma. | Alto (migración, alto riesgo según CLAUDE.md → `agente-architect` revisa). |
 | 3 | **Hogar** | `CotizadorHogar` embebido; asegurado/propietario; historial con siniestros de la póliza enlazada. | Medio. Primera cotización embebida con OK (0,50€). |
@@ -161,3 +161,8 @@ Riesgos transversales:
    «Bot de compañía» / «Tecleado» y sin botón de emitir.
 5. **Orden tras auto:** Recomiendo **hogar antes que los ramos de personas**, y la migración de figuras multi (fase 2)
    antes de hogar; salud y vida al final por esquema sin verificar.
+
+**Aprobado por Alberto 10/10/2026:** las 5 decisiones, tal como se recomiendan (asegurados de salud/decesos como fichas;
+beneficiarios de vida como texto; archivar con `archivada_at`; bots y tecleados en la misma lista P1..Pn, marcados y sin
+emitir; hogar antes que los ramos de personas). Fase 0 implementada: H1 en `variantes-riesgo.ts` y
+`apps/plataforma/lib/correduria/registro-ramos.ts` (registro puro + guardián; `RiesgoPantalla` aún no lo lee).

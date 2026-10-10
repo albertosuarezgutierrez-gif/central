@@ -12,24 +12,27 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(10/10/2026)** — Correduría · Fase 0 de ramos (solo registro, sin cambio de conducta): `diferenciasVariante()` devuelve null fuera de coche/moto/hogar (no afirma «mismos datos»); registro puro de 10 ramos en `apps/plataforma/lib/correduria/registro-ramos.ts`.
+Las 5 decisiones del diseño común están aprobadas por Alberto. Siguiente: fase 2 (figuras multi, migración, alto riesgo) y `RiesgoPantalla` leyendo del registro.
+
 **(10/10/2026)** — Correduría · Auto se cotiza embebido en la pantalla de riesgo, como moto.
 Registro por ramo `RAMOS_COTIZADOR_EMBEBIDO` en `oportunidad/[id]/cotizador-embebido.ts`; piezas comunes `PedirPrecioEmbebido`/`PreciosVarianteGuardada`; «Tarificar →» va a `#pedir-precio`.
 Constante única `KM_AUTO_POR_DEFECTO` en `lib/correduria/km-auto.ts`; Telegram manda km sin cifra como supuesto.
 «Años asegurado / en compañía» se guardan en `seguroAnterior` (JSON) y son editables desde `HistorialRiesgo`.
 Diseño común para todos los ramos: `docs/superpowers/specs/2026-10-10-riesgo-unificado-todos-los-ramos-design.md` (fases 0→auto→figuras multi→hogar→decesos→vida→salud→presupuestos unificados; 5 decisiones abiertas para Alberto).
-Pendiente F4: SQL `2026-10-07e_presupuesto_propuesta` sin aplicar (Alberto, vía Chrome).
+F4 ya aplicada: seguros.presupuesto_propuesta(+_item,+_contador) existen en el Supabase `central` (ref wswbehlcuxqxyinousql), donde vive el schema seguros. OJO: el conector `Supabase_asegura` (ASEGURA-prod-eu, uijsgeocgdaxkhvwtjqs) es la foto congelada del Supabase de Manuel, NO tiene schema seguros.
 
 **(10/10/2026)** — Correduría · F3 (solo auto): supuesto de 10.000 km y papel sin figura.
 Los 10.000 km por defecto de AutoNuevo (decisión 25/09) dejan de ser dato del cliente: viajan como `resueltos.kmAnualesSupuestos` (supuesto marcado, aviso en pantalla, no entra en el riesgo). Helper `apps/plataforma/lib/correduria/km-auto.ts`.
 Con `?oportunidad=` el papel sin figura es del tomador y se cambia en «Intervinientes» (`modoPapel` en `figuras-form.ts`); cerradas 2 fugas de datos tecleados que no se guardaban.
-Pendiente: embeber el cotizador auto en la pantalla de riesgo como moto (`PedirPrecioMoto`); el asistente Telegram `correduria-tarificacion-tg` sigue proponiendo 10.000 km como «media».
-Pendiente F4: SQL `2026-10-07e_presupuesto_propuesta` sin aplicar (lo aplica Alberto a mano o por Chrome; permisos de producción denegados al agente). Orden de despliegue: asegura antes que plataforma.
+Pendiente: el asistente Telegram `correduria-tarificacion-tg` sigue proponiendo 10.000 km como «media».
+F4 ya aplicada: seguros.presupuesto_propuesta(+_item,+_contador) existen en el Supabase `central` (ref wswbehlcuxqxyinousql), donde vive el schema seguros. OJO: el conector `Supabase_asegura` (ASEGURA-prod-eu, uijsgeocgdaxkhvwtjqs) es la foto congelada del Supabase de Manuel, NO tiene schema seguros. Orden de despliegue: asegura antes que plataforma.
 
 **(10/10/2026)** — Correduría · Auditoría y unificación de Tarificar/Riesgo en `/correduria`.
 Hecho F1: `SeccionCard` en `apps/plataforma/components/ui.tsx`; botón único «Tarificar y ver riesgo →» (`TarificarOportunidad`); retarificar de póliza pasa a `<Pagina>`+`PageHeader`.
 Hecho F2: bloque «Historial» en `RiesgoPantalla` (`lib/historial-riesgo.ts`, tres estados null/0/dato); `tipoVehiculo` y `cilindradaCc` en module-seguros; `historial` en el puerto riesgo de asegura.
 Pendiente F3: Tarificar auto-nuevo/moto-nuevo deja su estado propio y lee de `oportunidad_figura`; sin verificar si AutoNuevo siembra `oportunidad_figura` ni el supuesto de 10.000 km.
-Pendiente F4: aplicar `apps/asegura/prisma/sql/2026-10-07e_presupuesto_propuesta.sql` (hoy sin aplicar → comparativa devuelve 503).
+F4 ya aplicada: seguros.presupuesto_propuesta(+_item,+_contador) existen en el Supabase `central` (ref wswbehlcuxqxyinousql), donde vive el schema seguros. OJO: el conector `Supabase_asegura` (ASEGURA-prod-eu, uijsgeocgdaxkhvwtjqs) es la foto congelada del Supabase de Manuel, NO tiene schema seguros.
 Pendiente: fuente para «años asegurado/en compañía» (no hay columna).
 
 **(08/10/2026)** — Tarificador · traza por paso + bandeja «Necesita tu atención» (`/correduria/tarificador`) + `bot_version` por adaptador; y anti-duplicado de Codeoscopic (huella sha256 del cuerpo, ventana 15 min, `forzar` solo operador, 409 sin cargo).
