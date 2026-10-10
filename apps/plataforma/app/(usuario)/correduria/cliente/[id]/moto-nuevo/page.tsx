@@ -1,11 +1,7 @@
 import Link from 'next/link'
 import { Bike } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
-import { precalificarMotoNuevaAsegura, catalogoAsegura } from '@/lib/moto-nuevo-asegura'
-import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
-import { interpretarOportunidadesCliente, oportunidadesClienteAsegura } from '@/lib/seguimiento-asegura'
-import { anteriorParaTarificar } from '@/lib/seguro-anterior'
-import { otroVehiculoDelCliente } from '@/lib/correduria/pack-otro-vehiculo'
+import { datosCotizadorMoto } from './datos-cotizador'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import MotoNuevo from './MotoNuevo'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
@@ -72,31 +68,9 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
   }
   const variante = carga.estado === 'ok' ? carga.variante : null
 
-  const [garajes, civiles, pre, companiasResp, ops, anteriores] = await Promise.all([
-    catalogoAsegura({ tipo: 'garajes-moto' }),
-    catalogoAsegura({ tipo: 'estados-civiles' }),
-    precalificarMotoNuevaAsegura({ clienteId }),
-    companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
-    // El seguro que tiene hoy, leído de su póliza (29/09/2026). Si no se puede leer, no se precarga: se teclea.
-    oportunidadesClienteAsegura(clienteId).then((r) => interpretarOportunidadesCliente(r.status, r.json)).catch(() => null),
-    catalogoAsegura({ tipo: 'companias-anteriores-moto' }),
-  ])
-  // Compañía anterior: catálogo de MERCADO de Avant2 (`/motorcycle/insurance-companies`), como en auto
-  // — el directorio de la correduría solo trae las 14 con las que trabaja Alberto, y el cliente puede venir
-  // de cualquiera. Su nombre del directorio va de alias para que «Mapfre» leído de una póliza case con el
-  // nombre largo del vendor. Si el catálogo falla, se cae al directorio; si falla también, código a mano.
-  const directorio = companiasResp.estado === 'ok' ? companiasResp.companias : null
-  const companias =
-    anteriores.estado === 'ok' && anteriores.opciones.length > 0
-      ? anteriores.opciones.map((o) => ({
-          codigoDgs: o.id,
-          nombreComun: o.nombre,
-          nombreCima: directorio?.find((c) => c.codigoDgs.toUpperCase() === o.id.toUpperCase())?.nombreComun ?? null,
-        }))
-      : directorio
-  const anterior = ops?.estado === 'ok'
-    ? anteriorParaTarificar(ops.oportunidades, { ramo: 'moto', oportunidadId: variante?.oportunidadId ?? null })
-    : null
+  // Lo mismo que lee el bloque «Pedir precio» de la oportunidad (`datos-cotizador.ts`): una sola fuente.
+  const { garajes, civiles, falloCatalogo, pre, companias, anterior, anteriorAmbiguo, otroVehiculo } =
+    await datosCotizadorMoto(clienteId, variante?.oportunidadId ?? null)
 
   if (pre.estado !== 'ok') {
     const tono = pre.estado === 'sin_configurar' ? 'var(--muted)' : 'var(--negative)'
@@ -126,7 +100,6 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
   // 🚨 Sin estos dos catálogos NO hay ids válidos que mandar, así que no se
   // puede cotizar: se dice, en vez de dejar los desplegables vacíos y sin
   // explicación (no es un problema de la ficha del cliente).
-  const fallosCatalogo = [garajes, civiles].filter((c) => c.estado !== 'ok')
 
   return (
     <Pagina>
@@ -137,7 +110,7 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
           Puedes seguir rellenando el vehículo abajo; el servidor cortará antes de gastar si al final no se puede.
         </div>
       )}
-      {fallosCatalogo.length > 0 && (
+      {falloCatalogo && (
         <div style={{ ...cardStyle, borderColor: 'var(--negative)', color: 'var(--negative)', fontSize: 13, marginBottom: 14 }}>
           No se han podido leer los catálogos de garajes o estados civiles de Codeoscopic. Sin ellos no hay ids
           válidos que mandar, así que no se puede cotizar todavía. Esto no es un problema de la ficha del cliente.
@@ -148,8 +121,8 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
         etiquetaCliente={pre.pre.etiquetaCliente}
         seguroImputado={pre.pre.seguroAnterior}
         faltanInicial={pre.pre.faltan}
-        garajes={garajes.estado === 'ok' ? garajes.opciones : []}
-        civiles={civiles.estado === 'ok' ? civiles.opciones : []}
+        garajes={garajes}
+        civiles={civiles}
         municipios={pre.pre.municipios}
         municipiosMotivo={pre.pre.municipiosMotivo}
         estadoCivilMoto={pre.pre.estadoCivil}
@@ -158,10 +131,10 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
         companias={companias}
         variante={variante}
         datosRiesgo={carga.estado === 'ok' ? carga.riesgo.datosVehiculo : null}
-        anterior={anterior?.estado === 'ok' ? anterior.anterior : null}
-        anteriorAmbiguo={anterior?.estado === 'ambiguo' ? anterior.n : null}
+        anterior={anterior}
+        anteriorAmbiguo={anteriorAmbiguo}
         // Pack coche + moto (03/10/2026): el coche del cliente. `null` = no se han podido leer sus oportunidades.
-        otroVehiculo={ops?.estado === 'ok' ? otroVehiculoDelCliente(ops.oportunidades, 'moto') : null}
+        otroVehiculo={otroVehiculo}
       />
     </Pagina>
   )

@@ -127,3 +127,20 @@ test('🚨 exige LAS DOS señales: otro servicio de la plataforma sí se paga ap
   assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Booking.com B.V.', concepto: 'Campaña de visibilidad patrocinada' }).esSospechoso, false)
   assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Asecon', concepto: 'comisión de estudio' }).esSospechoso, false)
 })
+
+test('indemnizaciones de seguro: Occident «Prestación de seguro» 2.032 EUR no es un gasto', () => {
+  const r = pareceIngresoDeCorreduria({ proveedor: 'Occident', concepto: 'Prestación de seguro' })
+  assert.equal(r.esSospechoso, true)
+  assert.equal(r.tipo, 'indemnizacion')
+  for (const c of ['Indemnización por siniestro', 'Liquidación de siniestro 123', 'Pago de siniestro']) {
+    assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Occident', concepto: c }).esSospechoso, true, c)
+  }
+  // Una prima/recibo que SÍ se paga no se marca.
+  assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Occident', concepto: 'Recibo seguro hogar póliza 123' }).esSospechoso, false)
+})
+
+test('recibo de PRIMA con «indemnización diaria por hospitalización» NO se descarta', () => {
+  const r = pareceIngresoDeCorreduria({ proveedor: 'Occident', concepto: 'Recibo de prima. Cobertura de indemnización diaria por hospitalización' })
+  assert.equal(r.esSospechoso, false)
+  assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Occident', concepto: 'Indemnización por siniestro 123' }).esSospechoso, true)
+})

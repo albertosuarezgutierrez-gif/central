@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "descripcion": "Acuerdos DIRECTOS de Alberto con compañías. Lo que entra por aquí nace SIN COTEJAR (revisado_at NULL): el seed no puede declarar un acuerdo cotejado. Lo valida leerSeedAcuerdos() de @central/module-seguros y lo vigila test/regression-carga-acuerdos.test.ts. Se carga con scripts/cargar-acuerdos.ts --seed. 🚨 Los acuerdos de APROMES NO van aquí ni en ningún fichero del repo: su PDF es de uso privado para asociados y prohíbe divulgarlo. Se cargan con scripts/cargar-acuerdos.ts --apromes desde un JSON FUERA del repo.",
+  "origen": "Las 7 filas de seguros.comision_pactada (creada fuera del repo el 28/09/2026), copiadas tal cual. La tabla original no se toca.",
+  "acuerdos": [
+    {
+      "compania": "C0109",
+      "fuente": "directo",
+      "fuente_nombre": null,
+      "clave": null,
+      "vigencia_desde": "2026-10-28",
+      "vigencia_hasta": null,
+      "requisitos_apertura": null,
+      "letra_pequena": null,
+      "documento_fuente": "Comunicación de Allianz (condiciones particulares de la carta de condiciones), captura del 28/09/2026",
+      "comisiones": [
+        {
+          "ramo": "responsabilidad_civil",
+          "ramo_texto": "RESPONSABILIDAD CIVIL PYME",
+          "producto": "1434",
+          "modalidad": "RC Vida privada",
+          "pct_np": 22.5,
+          "pct_cartera": 22.5,
+          "notas": "Ramo mapeado a responsabilidad_civil por el nombre del producto: cotejar."
+        },
+        {
+          "ramo": "responsabilidad_civil",
+          "ramo_texto": "RESPONSABILIDAD CIVIL PYME",
+          "producto": "1434",
+          "modalidad": "Explotaciones Agrícolas",
+          "pct_np": 17.5,
+          "pct_cartera": 17.5,
+          "notas": null
+        },
+        {
+          "ramo": "responsabilidad_civil",
+          "ramo_texto": "RESPONSABILIDAD CIVIL PYME",
+          "producto": "1434",
+          "modalidad": "Industria y comercio",
+          "pct_np": 17.5,
+          "pct_cartera": 17.5,
+          "notas": null
+        },
+        {
+          "ramo": "responsabilidad_civil",
+          "ramo_texto": "RESPONSABILIDAD CIVIL PYME",
+          "producto": "1434",
+          "modalidad": "Construcción",
+          "pct_np": 17.5,
+          "pct_cartera": 17.5,
+          "notas": null
+        },
+        {
+          "ramo": "responsabilidad_civil",
+          "ramo_texto": "RESPONSABILIDAD CIVIL PYME",
+          "producto": "1434",
+          "modalidad": "Profesional",
+          "pct_np": 17.5,
+          "pct_cartera": 17.5,
+          "notas": null
+        },
+        {
+          "ramo": "responsabilidad_civil",
+          "ramo_texto": "RESPONSABILIDAD CIVIL PYME",
+          "producto": "1434",
+          "modalidad": "Colectividades y Asoc",
+          "pct_np": 17.5,
+          "pct_cartera": 17.5,
+          "notas": null
+        },
+        {
+          "ramo": "responsabilidad_civil",
+          "ramo_texto": "RESPONSABILIDAD CIVIL PYME",
+          "producto": "1434",
+          "modalidad": "Varios",
+          "pct_np": 17.5,
+          "pct_cartera": 17.5,
+          "notas": null
+        }
+      ],
+      "objetivos": []
+    }
+  ]
+}

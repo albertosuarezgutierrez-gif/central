@@ -122,6 +122,18 @@ export const AVISOS: AvisoTelegram[] = [
 
   // ── 🏦 Banca y contable ───────────────────────────────────────────────────
   {
+    id: 'finanzas.banca-frescura', categoria: 'finanzas',
+    titulo: 'Cuenta o tarjeta sin movimientos nuevos',
+    que: 'Una línea por cuenta activa con más de 3 días sin movimiento nuevo (alias, últimos 4 del IBAN, último movimiento) y el recuento de cuentas ocultas con movimientos.',
+    cuando: 'Todos los días a las 07:00 (solo si hay alguna parada; máx. 1 al día)',
+  },
+  {
+    id: 'finanzas.gasto-pico', categoria: 'finanzas',
+    titulo: 'Gasto recurrente disparado',
+    que: 'Proveedores con 3+ cargos en 6 meses cuyo gasto de los últimos 30 días supera el doble de su media mensual previa.',
+    cuando: 'Todos los días a las 07:00 (solo si hay pico; máx. 1 al día)',
+  },
+  {
     id: 'finanzas.tarjeta-importada', categoria: 'finanzas',
     titulo: 'Extracto de tarjeta importado',
     que: 'Resumen del mes de la tarjeta: total, clasificados, deducible y top de gastos.',
@@ -161,7 +173,19 @@ export const AVISOS: AvisoTelegram[] = [
     id: 'finanzas.resumen-mensual', categoria: 'finanzas',
     titulo: 'Cierre de mes',
     que: 'El mes anterior narrado: resultado, P&L por piso y las cifras de /banca.',
-    cuando: 'Día 1 de cada mes a las 10:00',
+    cuando: 'Día 5 de cada mes a las 10:00',
+  },
+  {
+    id: 'finanzas.cierre-negocios', categoria: 'finanzas',
+    titulo: 'Cierre de mes por negocio',
+    que: 'Gastos, ingresos e IVA por negocio, lo pendiente de conciliar y los cargos sin factura (no deducibles).',
+    cuando: 'Día 5 de cada mes a las 10:00',
+  },
+  {
+    id: 'finanzas.suscripciones', categoria: 'finanzas',
+    titulo: 'Revisión de suscripciones',
+    que: 'Gastos recurrentes (≥3 de los últimos 4 meses) con coste mensual y anual: ¿sigue valiendo?',
+    cuando: 'Día 5 de cada mes a las 10:00',
   },
   {
     id: 'finanzas.resumen-semanal-gastos', categoria: 'finanzas',
@@ -258,7 +282,7 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'facturas.pagos-resumen-semanal', categoria: 'facturas',
     titulo: 'Pagos pendientes de la semana',
-    que: 'Lo que queda por pagar, con botón para pagarlo todo.',
+    que: 'Solo lo que exige transferencia a mano (lo domiciliado o de tarjeta va en una línea resumen), con botón para pagarlo.',
     cuando: 'Semanal',
   },
   {
@@ -625,6 +649,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'A las 09:00, 14:00 y 18:30 UTC, solo si Actions no ha traído CIMA',
   },
   {
+    id: 'correduria.cima-siniestros-corte', categoria: 'correduria',
+    titulo: 'CIMA: se cortan los siniestros',
+    que: 'No entra ningún fichero de siniestros (SIN) desde hace más de 7 días mientras pólizas o recibos sí llegan, o una compañía con pólizas en vigor que ya mandó SIN lleva más de 3 veces su cadencia habitual (mínimo 7 días) sin mandarlo (aviso por compañía, con código, nombre y fecha del último SIN): algo falla en el envío de siniestros.',
+    cuando: 'Como mucho una vez al día, en la pasada del respaldo de CIMA (09:00, 14:00, 18:30 UTC)',
+  },
+  {
     id: 'correduria.cima-liq', categoria: 'correduria',
     titulo: 'Liquidaciones de comisiones (CIMA)',
     que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',
@@ -649,10 +679,22 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Cada 5 minutos, y solo cuando ha pasado algo',
   },
   {
+    id: 'correduria.tarificador-verificacion', categoria: 'correduria',
+    titulo: 'El bot de presupuestos necesita una verificación',
+    que: 'Un portal de compañía (Generali…) ha pedido un código SMS o una verificación y el bot se ha parado: hay que entrar en su portal, validar y pulsar Reintentar. Un aviso por trabajo, solo con la compañía y el ramo (sin datos del cliente).',
+    cuando: 'Cada 10 minutos, y solo cuando algún trabajo se ha parado así',
+  },
+  {
     id: 'correduria.tope-avant2', categoria: 'correduria',
     titulo: 'Gasto de Avant2 (tarificar): aviso a 60 € y bloqueo a 70 €',
     que: 'Lo gastado en el mes en Avant2 (cada tarificación, ReRate, límites de hogar o envío cuenta 0,50€). Un aviso al cruzar 60€ y, al llegar al tope (70€, o el ampliado), el BLOQUEO con el botón «Autorizar +30€». ⚠️ Si lo silencias, el botón de desbloqueo no te llega y no se puede tarificar hasta reactivarlo.',
     cuando: 'Cada 5 minutos, solo cuando se cruza 60€ (una vez al mes) o se bloquea',
+  },
+  {
+    id: 'correduria.whatsapp-conexion', categoria: 'correduria',
+    titulo: 'WhatsApp de la correduría desconectado o reconectado',
+    que: 'Cuando Meta corta la conexión del WhatsApp Business con el CRM (p. ej. la app del móvil lleva 14 días sin abrirse, se cambió el número o se desconectó desde el móvil), la da de baja o la recupera. Sin datos personales: solo el estado y el motivo. Mientras esté desconectado NO entran mensajes en el CRM. Si lo silencias, el estado sigue en /correduria/ajustes/whatsapp.',
+    cuando: 'Cada 10 minutos, solo cuando cambia la conexión',
   },
   {
     id: 'correduria.fuga-cartera', categoria: 'correduria',

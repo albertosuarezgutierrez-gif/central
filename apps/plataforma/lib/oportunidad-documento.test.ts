@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarFigurasDocumento, interpretarOportunidadDocumento, textoCamposFigura, textoFigurasDocumento } from './oportunidad-documento.ts'
+import { interpretarFigurasDocumento, interpretarOportunidadDocumento, interpretarPropuestaIdentidad, textoCamposFigura, textoFigurasDocumento, textoPropuestaIdentidad } from './oportunidad-documento.ts'
 
 test('creada: dice cuándo vence y cuándo se llama', () => {
   const a = interpretarOportunidadDocumento({ estado: 'creada', clienteId: 'c1', vence: '2026-12-31', llamada: '2026-11-16', clienteNuevo: false, relacionado: false })
@@ -89,4 +89,20 @@ test('🪤 figuras: qué tiene / qué falta en su ficha, solo con booleanos; una
   assert.ok(tb.sinComprobar.includes('nombre'))
   assert.equal(c.campos, null)
   assert.equal(textoCamposFigura(c.campos), null)
+})
+
+test('propuesta de identidad: se lee entera o no se lee (no se inventa una a medias)', () => {
+  const ok = { clienteId: 'c1', documentoId: 'd1', propuesta: { nombre: 'Estibaliz', apellidos: 'Eslava Antoli', actual: { nombre: 'Estibaliz', apellidos: 'Slava' }, motivo: 'un_apellido' } }
+  const p = interpretarPropuestaIdentidad(ok)
+  assert.equal(p?.documentoId, 'd1')
+  assert.match(textoPropuestaIdentidad(p!), /«Estibaliz Eslava Antoli» y la ficha «Estibaliz Slava»: la ficha solo tiene un apellido/)
+  assert.equal(interpretarPropuestaIdentidad(null), null)
+  assert.equal(interpretarPropuestaIdentidad({ ...ok, documentoId: '' }), null)
+  assert.equal(interpretarPropuestaIdentidad({ ...ok, propuesta: { ...ok.propuesta, nombre: '' } }), null)
+})
+
+test('🪤 «yaExistia»: dice que no se ha duplicado y enlaza a la ficha', () => {
+  const a = interpretarOportunidadDocumento({ estado: 'actualizada', clienteId: 'c1', vence: '2027-03-01', llamada: '2027-01-15', completada: false, yaExistia: true })!
+  assert.match(a.texto, /Ya estaba subida: no se ha duplicado/)
+  assert.equal(a.clienteId, 'c1')
 })

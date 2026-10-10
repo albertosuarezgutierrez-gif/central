@@ -114,7 +114,7 @@ export default async function SaludNuevoPage({ params, searchParams }: { params:
       <SaludNuevo
         clienteId={clienteId}
         variante={variante}
-        inicial={c ? { capital: c.capital, modalidadDeseada: c.modalidadDeseada } : null}
+        inicial={c ? { capital: c.capital, modalidadDeseada: c.modalidadDeseada, asegurados: c.asegurados } : null}
         etiquetaCliente={pre.pre.etiquetaCliente}
         faltanInicial={pre.pre.faltan}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}

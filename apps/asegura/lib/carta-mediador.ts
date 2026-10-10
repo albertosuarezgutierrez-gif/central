@@ -21,7 +21,7 @@ import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 import { encryptField } from '@central/module-seguros-pii'
-import { fichaPropiaDe } from './contacto-portal'
+import { fichaPropiaDeRecurso } from './contacto-portal'
 import { estadoEmailDeFicha } from './email-ficha'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -53,7 +53,7 @@ type Guardas = {
   anulacionAbierta: boolean; cartaAceptada: boolean
 }
 
-type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
+type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'sin_permiso' } | { estado: 'error'; causa: string }
 type NoDisponible = { estado: 'no_disponible'; motivo: string } | { estado: 'otra_ficha' } | { estado: 'no_encontrado' }
 
 /**
@@ -63,7 +63,11 @@ type NoDisponible = { estado: 'no_disponible'; motivo: string } | { estado: 'otr
  */
 async function base(correduriaId: string, identidadId: string, presupuestoId: string): Promise<{ b: Base } | NoDisponible | SinFicha> {
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
-  const f = await fichaPropiaDe(correduriaId, identidadId)
+  // La ficha es la DUEÑA del presupuesto, si es una de las vinculadas con nivel de operar (con varias
+  // fichas vinculadas no se elige: la elige el presupuesto). Abajo se sigue exigiendo que la póliza sea suya.
+  const f = await fichaPropiaDeRecurso(correduriaId, identidadId, 'presupuesto', presupuestoId)
+  // 🚨 No vinculada e inexistente dan LO MISMO (`no_encontrado`): `otra_ficha` sería un oráculo de existencia.
+  if (f.estado === 'ajena') return { estado: 'no_encontrado' }
   if (f.estado !== 'ok') return f
   // 🚨 La compañía por su código DGS primero: el volcado escribe «(legacy)» en `aseguradora`, y lo que
   // quede de relleno lo rechaza `cartaNombramientoMediador` (nunca «A la atención de (legacy)»).

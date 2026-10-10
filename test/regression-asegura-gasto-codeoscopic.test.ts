@@ -337,7 +337,7 @@ test('la recomendación de capital de hogar abre su línea en el libro y va detr
 // (la reserva ya cuenta como gasto y la llamada saldría igual).
 test('🚨 los DOS embudos que gastan miran el tope en euros ANTES de reservar', () => {
   for (const [f, reserva] of [
-    ['apps/asegura/lib/codeoscopic/cotizar.ts', 'await reservar('],
+    ['apps/asegura/lib/codeoscopic/cotizar.ts', 'await reservarSinDuplicado('],
     ['apps/asegura/lib/codeoscopic/libro-emision.ts', 'await reservarEmision('],
   ] as const) {
     const src = FUENTE_LIBRO(f)

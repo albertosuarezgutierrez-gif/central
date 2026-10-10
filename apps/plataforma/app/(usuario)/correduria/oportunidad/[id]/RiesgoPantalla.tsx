@@ -1,13 +1,13 @@
 'use client'
 
-// La pantalla del riesgo (29/09/2026): cabecera · intervinientes · presupuestos P1…Pn · nueva variante.
+// La pantalla del riesgo (29/09/2026): cabecera · datos · intervinientes · historial del seguro y del carné · pedir precio (bloque único) · presupuestos P1…Pn · historial de variantes.
 // Tras cualquier cambio de figuras se RELEE el riesgo entero del puerto: lo que se pinta es siempre
 // lo que asegura tiene, nunca una suposición local de cómo quedó.
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
-import { Badge, BtnLink, PageHeader, cardStyle } from '@/components/ui'
+import { Badge, BtnLink, PageHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { ROTULO_ESTADO, rotuloRamo } from '@/lib/seguimiento-asegura'
 import type { LecturaRiesgo, Riesgo } from '@/lib/riesgo-asegura'
@@ -15,19 +15,36 @@ import { textoFaltanCapital, textoFaltanVehiculo, textoFaltanVivienda, type Camp
 import { LogoCompaniaEnLinea } from '../../CeldaCompania'
 import DatosRiesgo from './DatosRiesgo'
 import DatosVehiculo from './DatosVehiculo'
+import DuplicarOtroTomador from './DuplicarOtroTomador'
 import FigurasRiesgo from './FigurasRiesgo'
+import HistorialRiesgo from './HistorialRiesgo'
 import HistorialVariantes from './HistorialVariantes'
+import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
+import PedirPrecioMoto from './PedirPrecioMoto'
+import PresupuestosCompanias from './PresupuestosCompanias'
+import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs } from './piezas-riesgo'
-import { etiquetaRiesgo, ramoVariante, retarificaEnRiesgo, rutaVariante, tomadorDelRiesgo } from './variante'
+import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
+import { avisoRamoSinTarifa, companiasDisponibles } from '@/lib/presupuestos-companias'
 
-export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
+export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy: string }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
   // Editar una ficha desde el modal de «Editar datos» refresca la página del servidor (router.refresh):
   // el riesgo que llega de nuevo manda sobre el que había, y el aviso «Falta…» se actualiza solo.
   useEffect(() => { setRiesgo(inicial) }, [inicial])
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
   const [recargando, setRecargando] = useState(false)
+  // Moto (07/10/2026, Fase 1): el cotizador se abre AQUÍ. Lo que está a medias arriba lo bloquea, y mientras se paga
+  // no se deja editar el riesgo (`ocupado`).
+  const [motoAbierto, setMotoAbierto] = useState(false)
+  const [editandoVehiculo, setEditandoVehiculo] = useState(false)
+  const [editandoFiguras, setEditandoFiguras] = useState(false)
+  const [cotizandoMoto, setCotizandoMoto] = useState(false)
+  // La variante recién pedida: «Presupuestos de este riesgo» la abre con sus precios para emitir sin salir.
+  const [abrirPrecios, setAbrirPrecios] = useState<string | null>(null)
+  const alEditarVehiculo = useCallback((b: boolean) => setEditandoVehiculo(b), [])
+  const alEditarFiguras = useCallback((b: boolean) => setEditandoFiguras(b), [])
   const op = riesgo.oportunidad
 
   async function recargar(texto?: string) {
@@ -52,8 +69,12 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   const titulo = [rotuloRamo(op.ramo), etiqueta].filter(Boolean).join(' · ')
   const estado = (ROTULO_ESTADO as Record<string, string>)[op.estado] ?? (op.estado || 'Estado sin leer')
   const ramo = ramoVariante(op.ramo)
+  const acciones = accionesPrecio({ ramo: op.ramo, polizaId: op.polizaId, tomadorId: tomadorDelRiesgo(riesgo), oportunidadId: op.id })
+  const hayBots = !acciones.principal && companiasDisponibles(op.ramo).length > 0
   const esVehiculo = op.ramo === 'auto' || op.ramo === 'moto'
-  // Lo que falta del riesgo NO bloquea «Nueva variante» (la pantalla de precio lo pide), pero se dice.
+  const esMoto = op.ramo === 'moto'
+  const ocupado = recargando || cotizandoMoto
+  // Lo que falta del riesgo NO bloquea «Pedir precio» (la pantalla de precio lo pide), pero se dice.
   const bloqueDatos = riesgo.datosRiesgo
   const faltaDatos = !ramo
     ? null
@@ -106,9 +127,10 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
       {esVehiculo ? (
         <DatosVehiculo
           riesgo={riesgo}
-          ocupado={recargando}
+          ocupado={ocupado}
           onCambio={(texto) => void recargar(texto)}
           onError={(texto) => setAviso({ ok: false, texto })}
+          onEditando={alEditarVehiculo}
         />
       ) : (
         <DatosRiesgo
@@ -121,61 +143,115 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
 
       <FigurasRiesgo
         riesgo={riesgo}
-        ocupado={recargando}
+        ocupado={ocupado}
         onCambio={(texto) => void recargar(texto)}
         onError={(texto) => setAviso({ ok: false, texto })}
+        onEditando={alEditarFiguras}
       />
 
-      <HistorialVariantes riesgo={riesgo} />
+      {/* Historial (10/10/2026): seguro anterior, siniestros y carné, para verlos antes de pedir precio. Solo lectura. */}
+      <HistorialRiesgo riesgo={riesgo} hoy={hoy} />
 
-      <section style={{ ...cardStyle, display: 'grid', gap: 8 }}>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>Nueva variante</div>
-        {faltaDatos && (
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
-            {faltaDatos} Puedes seguir: la pantalla de precio lo pedirá.
-          </p>
-        )}
-        {retarificaEnRiesgo(op.ramo) && op.polizaId ? (
+      {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
+          secundario (póliza) y el coste de 0,50€ viven aquí y en ningún otro sitio de la página. */}
+      <section id="pedir-precio" aria-labelledby="pedir-precio-titulo" style={{ ...cardStyle, display: 'grid', gap: 8, minWidth: 0 }}>
+        <div id="pedir-precio-titulo" style={{ fontSize: 14, fontWeight: 600 }}>Pedir precio</div>
+        {acciones.principal ? (
           <>
+            {faltaDatos && (
+              <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
+                {faltaDatos} {esMoto ? 'Complétalo arriba, en «Datos del vehículo»: el bloque de precio no lo vuelve a pedir.' : 'Puedes seguir: la pantalla de precio lo pedirá.'}
+              </p>
+            )}
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-              Este riesgo es de una póliza en cartera. En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.
+              {op.polizaId && acciones.secundario
+                ? 'Este riesgo es de una póliza en cartera. Lo normal es pedir precio con los intervinientes y los datos de esta página; retarificar la póliza usa sus datos de hoy.'
+                : 'Se pide precio con los intervinientes y los datos de esta página.'}{' '}
+              {esMoto ? 'Se confirma aquí mismo, sin salir de esta página' : 'En la siguiente pantalla se confirma'}; pedir precio cuesta 0,50€.
             </p>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))' }}>
-              <div style={{ display: 'grid', gap: 4 }}>
-                <BtnLink href={`/correduria/poliza/${encodeURIComponent(op.polizaId)}/retarificar?${new URLSearchParams({ oportunidad: op.id }).toString()}`} variante="primario">
-                  Retarificar con las mismas personas
-                </BtnLink>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Como la póliza de hoy: su tomador, {esVehiculo ? 'su vehículo' : 'su vivienda'} y su historial.</span>
+              <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
+                {/* Moto: el cotizador se despliega en este mismo bloque; ningún enlace a la pantalla de moto-nuevo. */}
+                {esMoto ? (
+                  <button type="button" onClick={() => setMotoAbierto(true)} disabled={motoAbierto} aria-expanded={motoAbierto} aria-controls="pedir-precio-moto"
+                    style={{ ...btnStyle('primario', 'md'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal', height: 'auto' }}>
+                    {acciones.principal.etiqueta}
+                  </button>
+                ) : (
+                  <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
+                )}
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  {esMoto ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : acciones.principal.nota}
+                </span>
               </div>
-              {ramo && (
-              <div style={{ display: 'grid', gap: 4 }}>
-                <BtnLink href={rutaVariante(ramo, tomadorDelRiesgo(riesgo), op.id)} variante="secundario">
-                  Con otro tomador
-                </BtnLink>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Con los intervinientes y los datos de arriba, como un presupuesto nuevo.</span>
-              </div>
+              {acciones.secundario && (
+                <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
+                  <BtnLink href={acciones.secundario.href} variante="secundario">{acciones.secundario.etiqueta}</BtnLink>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>{acciones.secundario.nota}</span>
+                </div>
               )}
             </div>
+            {/* Escenarios (07/10/2026): otra persona de tomador sin tocar figura a figura. */}
+            <DuplicarOtroTomador
+              riesgo={riesgo}
+              ocupado={ocupado || editandoFiguras || editandoVehiculo || motoAbierto}
+              onCambio={(texto) => void recargar(texto)}
+              onError={(texto) => setAviso({ ok: false, texto })}
+              onRecargar={() => void recargar()}
+            />
+            {esMoto && motoAbierto && (
+              <div id="pedir-precio-moto" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
+                <PedirPrecioMoto
+                  riesgo={riesgo}
+                  editandoVehiculo={editandoVehiculo}
+                  editandoFiguras={editandoFiguras}
+                  recargando={recargando}
+                  onCotizando={setCotizandoMoto}
+                  onCotizado={(id) => {
+                    setMotoAbierto(false)
+                    setCotizandoMoto(false)
+                    setAbrirPrecios(id)
+                    void recargar('Precio pedido y guardado en «Presupuestos de este riesgo»: desde ahí se emite.')
+                  }}
+                  onDesfase={() => void recargar()}
+                  onCerrar={() => setMotoAbierto(false)}
+                />
+              </div>
+            )}
           </>
-        ) : ramo ? (
+        ) : hayBots ? (
           <>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-              Se pide precio con los intervinientes de arriba. En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.
+              Este ramo se cotiza con los bots de compañía: el formulario de presupuestos de más abajo va ya sembrado con el capital y la dirección de los datos; allí eliges compañías y lo pides.
             </p>
             <div>
-              <BtnLink href={rutaVariante(ramo, tomadorDelRiesgo(riesgo), op.id)} variante="primario">
-                Nueva variante (pedir precio)
-              </BtnLink>
+              <a href="#presupuestos" style={{ ...btnStyle('primario', 'md'), minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', maxWidth: '100%' }}>
+                Ir a pedir presupuestos →
+              </a>
             </div>
           </>
         ) : (
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-            Este ramo se cotiza fuera (no hay tarifa a la que pedir precio desde aquí): los datos de arriba son para el expediente. La{' '}
+            {avisoRamoSinTarifa(op.ramo, 'Este ramo se cotiza fuera (no hay tarifa a la que pedir precio desde aquí): los datos de arriba son para el expediente.')} La{' '}
             <Link href={`/correduria/cliente/${encodeURIComponent(op.clienteId)}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>ficha del cliente</Link>{' '}
             sigue siendo el sitio de sus pólizas y gestiones.
           </p>
         )}
       </section>
+
+      <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
+
+      {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
+      <PresupuestosCompanias
+        oportunidadId={op.id}
+        ramo={op.ramo}
+        riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
+      />
+
+      <HistorialVariantes riesgo={riesgo} abrirPrecios={abrirPrecios} />
+
+      {/* Varios presupuestos de este riesgo en UNA propuesta (07/10/2026). Preparar no avisa a nadie. */}
+      <PropuestaEscenarios riesgo={riesgo} />
     </div>
   )
 }

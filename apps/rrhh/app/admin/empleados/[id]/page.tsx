@@ -16,7 +16,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       SELECT id, nombre, apellidos, email, puesto, dni, nss, telefono, estado,
              domicilio, localidad, provincia, fecha_nacimiento, estado_civil,
              tipo_contrato, centro_trabajo, cuenta_cotizacion, categoria,
-             grupo_cotizacion, tipo_jornada, fecha_alta, acceso_token,
+             grupo_cotizacion, tipo_jornada, fecha_alta,
              fecha_reconocimiento_medico
       FROM rrhh.empleados WHERE id = ${id}::uuid AND empresa_id = ${empresa_id}::uuid LIMIT 1`),
     getBranding(empresa_id),

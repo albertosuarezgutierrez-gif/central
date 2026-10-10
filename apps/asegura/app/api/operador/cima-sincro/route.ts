@@ -5,7 +5,8 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { auditado } from '@/lib/auditoria'
-import { aplicarSincroCima, decidirDiferenciaCima, estadoSincroCima } from '@/lib/sincro-cima'
+import { aplicarSincroCima, decidirDiferenciaCima, estadoSincroCima, registrarResumenSincro } from '@/lib/sincro-cima'
+import { validarResumen } from '@/lib/cima-sincro-resumen'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,7 +16,8 @@ export const maxDuration = 300
  * Ficha ↔ CIMA (ver `lib/sincro-cima.ts`).
  *
  *   GET  → { estado:'ok', fichas, sinDatosCima, discrepancias[], rellenos, ilegibles }
- *   POST { accion:'rellenar'|'volcar', actor }                       → { aplicados, fallidos[] }
+ *   POST { accion:'rellenar'|'volcar', actor }                       → { aplicados, fallidos[], copiados[{poliza,campo,motivo}] }
+ *   POST { accion:'resumen', copiados[], conflictos[] }              → { estado:'ok' } · 422 · 500 (registra `cima_sincro_resumen`, sin valores ni PII)
  *   POST { accion:'usar_cima'|'mantener', clienteId, campo, valor, actor } → { estado:'ok' } · 404 · 409 (CIMA cambió) · 422
  */
 async function correduria(): Promise<{ r: NextResponse } | { id: string }> {
@@ -46,6 +48,12 @@ export const POST = auditado(async (req: Request) => {
     const accion = b?.accion
     if (accion === 'rellenar' || accion === 'volcar') {
       return NextResponse.json(await aplicarSincroCima(c.id, accion, actor))
+    }
+    if (accion === 'resumen') {
+      const v = validarResumen({ copiados: b?.copiados, conflictos: b?.conflictos })
+      if (!v.ok) return NextResponse.json({ estado: 'invalida', motivo: 'Resumen no válido.' }, { status: 422 })
+      const ok = await registrarResumenSincro(c.id, v.datos)
+      return ok ? NextResponse.json({ estado: 'ok' }) : NextResponse.json({ estado: 'error', motivo: 'no se pudo registrar' }, { status: 500 })
     }
     if (accion === 'usar_cima' || accion === 'mantener') {
       const clienteId = typeof b?.clienteId === 'string' ? b.clienteId : ''

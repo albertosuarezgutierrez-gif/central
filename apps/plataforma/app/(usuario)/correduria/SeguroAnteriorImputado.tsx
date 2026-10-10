@@ -8,7 +8,7 @@
 
 import { AlertTriangle } from 'lucide-react'
 import { ConIcono } from './iconos'
-import { describirCandidata, elegibles, type SeguroAnteriorImputado } from '@/lib/correduria/seguro-anterior-imputado'
+import { AVISO_CONYUGE_NO_MIRADO, agruparElegibles, describirCandidata, elegibles, type SeguroAnteriorImputado } from '@/lib/correduria/seguro-anterior-imputado'
 
 /** Valor del selector: id de la candidata, o `NINGUNO` = no declarar seguro anterior (de calle). */
 export const NINGUNO = 'ninguno'
@@ -23,6 +23,7 @@ export function eleccionParaCotizar(s: SeguroAnteriorImputado | null, valor: str
 
 export function PanelSeguroImputado({ s, valor, onCambio }: { s: SeguroAnteriorImputado; valor: string; onCambio: (v: string) => void }) {
   const opciones = elegibles(s)
+  const grupos = agruparElegibles(s)
   const elegida = opciones.find((c) => c.id === valor) ?? null
   return (
     <div style={{ marginTop: 10, display: 'grid', gap: 8, minWidth: 0, fontSize: 13 }}>
@@ -36,15 +37,24 @@ export function PanelSeguroImputado({ s, valor, onCambio }: { s: SeguroAnteriorI
         <label style={{ display: 'grid', gap: 4 }}>
           Cambiar la póliza que se declara
           <select value={valor} onChange={(e) => onCambio(e.target.value)} style={{ minHeight: 44, maxWidth: '100%' }}>
-            {opciones.map((c) => (
-              <option key={c.id} value={c.id}>
-                {describirCandidata(c)}{c.id === s.elegida?.id ? ' (propuesta)' : ''}
-              </option>
+            {[
+              { clave: 'propias', titulo: 'Del tomador', lista: grupos.propias },
+              { clave: 'conyuge', titulo: 'Del cónyuge/pareja', lista: grupos.conyuge },
+            ].filter((g) => g.lista.length > 0).map((g) => (
+              <optgroup key={g.clave} label={g.titulo}>
+                {g.lista.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {describirCandidata(c)}{c.id === s.elegida?.id ? ' (propuesta)' : ''}
+                  </option>
+                ))}
+              </optgroup>
             ))}
             <option value={NINGUNO}>No declarar seguro anterior</option>
           </select>
         </label>
       )}
+      {s.conyugeNoMirado && <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>{AVISO_CONYUGE_NO_MIRADO}</p>}
+      {grupos.avisoSinPropias && <p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>{grupos.avisoSinPropias}</p>}
       {s.avisos.map((a) => (
         <p key={a} style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>{a}</p>
       ))}

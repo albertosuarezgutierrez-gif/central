@@ -68,3 +68,13 @@ test('enviarAvisosIndependientes: el fallo del primero NO impide el segundo y se
   assert.equal(r.errores.length, 1)
   assert.match(r.errores[0], /^doble: /)
 })
+
+test('interpretarDuplicados: total y muestra; lo ilegible es error, nunca «0 duplicados»', async () => {
+  const { interpretarDuplicados } = await import('../correduria-puerto.ts')
+  const ok = interpretarDuplicados(200, { estado: 'ok', total: 2, muestra: [{ numero: 'A1', filas: 2, dgs: 'C0058' }, { numero: 'B2', filas: 3, dgs: null }] })
+  assert.deepEqual(ok, { estado: 'ok', total: 2, muestra: [{ numero: 'A1', filas: 2, dgs: 'C0058' }, { numero: 'B2', filas: 3, dgs: null }] })
+  assert.equal(interpretarDuplicados(200, { estado: 'ok', muestra: [] }).estado, 'error')
+  assert.equal(interpretarDuplicados(200, { estado: 'ok', total: 1, muestra: [{ numero: 'A1' }] }).estado, 'error')
+  assert.equal(interpretarDuplicados(401, null).estado, 'error')
+  assert.equal(interpretarDuplicados(200, { estado: 'sin_configurar' }).estado, 'sin_configurar')
+})

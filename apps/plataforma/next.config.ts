@@ -4,7 +4,7 @@ import path from 'path'
 const monorepoRoot = path.join(__dirname, '..', '..')
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@central/core-ai', '@central/core-catastro', '@central/core-email', '@central/core-telegram', '@central/core-identity', '@central/core-payments', '@central/module-concursos', '@central/module-contabilidad', '@central/module-intercompany', '@central/module-pagos', '@central/module-ses', '@central/module-seguros', '@central/module-subastas', '@central/module-trading'],
+  transpilePackages: ['@central/core-ai', '@central/core-catastro', '@central/core-email', '@central/core-telegram', '@central/core-identity', '@central/core-payments', '@central/module-concursos', '@central/module-contabilidad', '@central/module-intercompany', '@central/module-pagos', '@central/module-ses', '@central/module-seguros', '@central/module-subastas', '@central/module-tarificacion', '@central/module-trading'],
   // @hyzyla/pdfium: WASM del rasterizador de PDF (lib/subastas/rasterizar-pdf.ts) —
   // externo para que webpack no intente empaquetar el .wasm.
   serverExternalPackages: ['pdf-parse', '@hyzyla/pdfium'],
@@ -36,7 +36,9 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/(.*)',
-        headers: [{ key: 'Content-Security-Policy', value: "frame-src 'self' *.codeoscopic.io;" }],
+        // WhatsApp Embedded Signup (05/10/2026, /correduria/ajustes/whatsapp): el SDK JS de Facebook pinta
+        // iframes propios (facebook.com) para el popup de alta; solo se AMPLÍA frame-src, nada más.
+        headers: [{ key: 'Content-Security-Policy', value: "frame-src 'self' *.codeoscopic.io https://*.facebook.com https://*.facebook.net;" }],
       },
     ]
   },

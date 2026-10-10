@@ -78,7 +78,8 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
   const solicitudes = lectura?.estado === 'ok' ? lectura.solicitudes.filter((s) => s.tercero !== true) : []
   const completada = solicitudes.find((s) => s.estado === 'completada')
   const pendiente = solicitudes.find((s) => s.estado === 'pendiente')
-  const tarificar = `/correduria/cliente/${clienteId}/${ramo === 'moto' ? 'moto-nuevo' : 'auto-nuevo'}`
+  // Con `?oportunidad=` para volver al MISMO borrador (su clave lleva la oportunidad).
+  const tarificar = `/correduria/cliente/${clienteId}/${ramo === 'moto' ? 'moto-nuevo' : 'auto-nuevo'}?oportunidad=${encodeURIComponent(oportunidadId)}`
 
   return (
     <div style={{ display: 'grid', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 8 }}>

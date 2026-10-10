@@ -5,9 +5,10 @@ import { diasHastaVencimientoPortal, enVentanaVencimientos } from '@central/modu
 import { carteraDeIdentidad, type PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
+import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { peticionesPrecio } from '@/lib/mejorar-precio'
 import { getIdentidad } from '@/lib/session'
-import { primaQuePaga } from '@/lib/vencimientos'
+import { estadoMejorarPrecio, primaQuePaga, titularesQueOperan } from '@/lib/vencimientos'
 
 import { tituloDePoliza } from '../../PolizaVista'
 import { FormMejorar } from './FormMejorar'
@@ -29,13 +30,19 @@ export default async function MejorarPrecio({ params }: { params: Promise<{ id: 
 
   const cartera = await carteraDeIdentidad(identidad.id)
   let p: PolizaPortal | null = null
-  for (const t of cartera.propias) p = p ?? t.polizas.find((x) => x.id === id) ?? null
-  if (!p || p.vigencia !== 'vigente' || !p.fechaVencimiento) notFound()
+  // Solo fichas donde el vínculo OPERA (gestionar/administrar): de solo consulta, 404 como si no existiera.
+  for (const t of titularesQueOperan(cartera.propias)) p = p ?? t.polizas.find((x) => x.id === id) ?? null
+  if (!p) notFound()
+  // Baja en marcha (por firmar, en revisión, firmada o confirmada): ahí no se mejora el precio. `null` (puente
+  // caído) = se conserva el comportamiento de siempre, no se inventa una baja.
+  const firmas = await anulacionesPendientes(identidad.id)
+  const estado = estadoMejorarPrecio(p, firmas === null ? null : polizasConBajaEnMarcha(firmas, { conConfirmadas: true }))
+  if (estado === 'no_disponible' || !p.fechaVencimiento) notFound()
 
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
   const dias = diasHastaVencimientoPortal(p.fechaVencimiento.toISOString().slice(0, 10), hoy)
   const prima = primaQuePaga(p.prima)
-  const pedido = (await peticionesPrecio(identidad.id))?.find((x) => x.polizaId === p.id)?.pedidoEl ?? null
+  const pedido = estado === 'baja_en_marcha' ? null : ((await peticionesPrecio(identidad.id))?.find((x) => x.polizaId === p.id)?.pedidoEl ?? null)
 
   return (
     <>
@@ -51,7 +58,9 @@ export default async function MejorarPrecio({ params }: { params: Promise<{ id: 
         </span>
       </section>
 
-      {pedido ? (
+      {estado === 'baja_en_marcha' ? (
+        <p>Esta póliza ya tiene una baja en marcha, así que no hace falta mejorar su precio. Si has cambiado de idea, escríbenos o llámanos.</p>
+      ) : pedido ? (
         <p>Ya nos lo pediste el {fechaEs(new Date(`${pedido}T12:00:00Z`))}. Te contactamos antes de que renueve; no hace falta que lo vuelvas a pedir.</p>
       ) : !enVentanaVencimientos(dias) ? (
         // No renueva en los próximos 60 días: aún no hay precio de renovación

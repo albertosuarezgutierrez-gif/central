@@ -54,7 +54,7 @@ test('deducciones: maternidad 2.400, guardería 1.000, FN 1.200, Andalucía 200+
   const d = calcularDeducciones(PERFIL, HIJOS, 2025)
   const por = (k: string) => d.find(x => x.clave === k)?.importe ?? 0
   assert.equal(por('maternidad'), 2400) // 2 hijos < 3
-  assert.equal(por('guarderia'), 1000) // 1500 topado a 1000
+  assert.equal(por('guarderia'), 1500) // 2 hijos < 3 ⇒ tope 2×1000; 1500 no topa
   assert.equal(por('fn_general'), 1200)
   assert.equal(por('and_nacimiento'), 200) // 1 nacido en 2025
   assert.equal(por('and_fn'), 200)
@@ -105,10 +105,10 @@ test('FN autonómica Andalucía: se aplica bajo el límite de renta y se RETIRA 
 
 test('mecenazgo: la base de deducción se topa al 10 % de la base liquidable', () => {
   const perfilDon: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, conyugeTrabaja: false, gastoGuarderiaAnual: 0, donativosAnual: 1000 }
-  // Sin base conocida: 0,8×150 + 0,4×850 = 460
-  assert.equal(calcularDeducciones(perfilDon, [], 2025).find(x => x.clave === 'donativos')?.importe, 460)
-  // Base 5.000 → tope 500 → 0,8×150 + 0,4×350 = 260
-  assert.equal(calcularDeducciones(perfilDon, [], 2025, undefined, 5000).find(x => x.clave === 'donativos')?.importe, 260)
+  // Sin base conocida (2025): 0,8×250 + 0,4×750 = 500
+  assert.equal(calcularDeducciones(perfilDon, [], 2025).find(x => x.clave === 'donativos')?.importe, 500)
+  // Base 5.000 → tope 500 → 0,8×250 + 0,4×250 = 300
+  assert.equal(calcularDeducciones(perfilDon, [], 2025, undefined, 5000).find(x => x.clave === 'donativos')?.importe, 300)
 })
 
 // ── compararDeclaracion ──────────────────────────────────────────────────────
@@ -140,4 +140,26 @@ test('compararDeclaracion: las cuotas son ≥ 0 (el signo va en resultado) y la 
   assert.ok(c.separada.conyuge.cuota >= 0)
   assert.equal(c.recomendacion, c.ahorroConjunta >= 0 ? 'conjunta' : 'separada')
   assert.equal(Math.round(c.ahorroConjunta), Math.round(c.separada.total - c.conjunta.resultado))
+})
+
+// Ley 49/2002 art. 19 (RDL 6/2023): 80 % primeros 250 € + 40 % resto desde 2024; ≤2023: 150 € y 35 %.
+test('donativos 2026: 130 € = 104 €; 300 € = 200 + 20 = 220 €; recurrente 45 % del resto', () => {
+  const p = (n: number, extra: Partial<PerfilFiscal> = {}): PerfilFiscal => ({ ...PERFIL, familiaNumerosa: null, conyugeTrabaja: false, gastoGuarderiaAnual: 0, donativosAnual: n, ...extra })
+  const don = (perfil: PerfilFiscal, anio: number) => calcularDeducciones(perfil, [], anio).find(x => x.clave === 'donativos')?.importe
+  assert.equal(don(p(130), 2026), 104)
+  assert.equal(don(p(300), 2026), 220)
+  assert.equal(don(p(1000, { donativosRecurrentes: true }), 2026), 200 + 338) // 0,45×750 = 337,5 → 338
+})
+
+test('donativos 2023 (régimen anterior): tramo 150 €, 35 % del resto', () => {
+  const perfil: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, conyugeTrabaja: false, gastoGuarderiaAnual: 0, donativosAnual: 150 }
+  assert.equal(calcularDeducciones(perfil, [], 2023).find(x => x.clave === 'donativos')?.importe, 120)
+  assert.equal(calcularDeducciones({ ...perfil, donativosAnual: 250 }, [], 2023).find(x => x.clave === 'donativos')?.importe, 155) // 120 + 0,35×100
+})
+
+test('guardería: tope 1.000 € POR HIJO < 3 (2 hijos ⇒ 2.000)', () => {
+  const perfil: PerfilFiscal = { ...PERFIL, familiaNumerosa: null, gastoGuarderiaAnual: 5000 }
+  const dos: Descendiente[] = HIJOS.slice(1) // 2024 y 2025, ambos < 3 en 2025
+  assert.equal(calcularDeducciones(perfil, dos, 2025).find(x => x.clave === 'guarderia')?.importe, 2000)
+  assert.equal(calcularDeducciones(perfil, dos.slice(0, 1), 2025).find(x => x.clave === 'guarderia')?.importe, 1000)
 })

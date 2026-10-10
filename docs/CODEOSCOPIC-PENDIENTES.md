@@ -58,6 +58,7 @@ póliza 05139; API `C0109` Allianz póliza 8846622.
 | Allianz | Hogar | Descuento comercial % (CAP) / (venta cruzada) | `dtoCap` / `dtoVentaCruzada` (03/10) | ✅ Se manda 50; antes 0/0 |
 | Generali | Motos | Descuento comercial % | `commercialDiscountNumber` (03/10) | ✅ Se manda 50; la compañía recorta sola (~12 %), sin error |
 | Generali | Hogar | Descuento comercial % + Código Flota | `commercialDiscountNumber` (03/10) | ✅ Se manda 50 (Código Flota no se toca) |
+| Generali | Autos | Descuento comercial % (visible 0,00 en el proyecto) | `commercialDiscountNumber` (05/10, SUPUESTO por moto/hogar; sin captura de auto ni rastro en BD) | ⚠️ Se manda 50 solo si las `productOptions` que devolvió el vendor traen ese id (`opcionesParaReRate`); si no lo traen, no se manda. Sin opciones del vendor se manda el catálogo sin poder comprobar. Pendiente: confirmar el id y el precio resultante en el primer ReRate real |
 | Occident | Autos | Descuento comercial + Colectivo | no consta | 30 por defecto (estimado, sin confirmar) |
 | Occident | Motos | Descuento comercial + Colectivo | `commercialDiscount` (03/10) | NO se manda: trae 30 de serie, máximo sin medir |
 | Occident | Hogar | Descuento comercial + Colectivo | `discount` (03/10) | NO se manda: trae 30 de serie, máximo sin medir |

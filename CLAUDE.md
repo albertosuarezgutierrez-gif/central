@@ -35,6 +35,7 @@
   - 🚨 **32.600 fichas ≠ clientes.** Cliente = póliza viva de CIMA EN VIGOR: `esCarteraEnVigor()` de
     `packages/module-seguros/src/cartera-viva.ts` (origen: `esCarteraViva()`). Nunca `clientes.tipo`.
   - 🔑 Rotar la contraseña de un rol de BD y actualizar el `DATABASE_URL` de su proyecto Vercel es UN solo paso.
+  - 📇 Sincronización con Google Contacts (agenda/WhatsApp): skill `google-contactos`.
 - **`apps/asegura-portal`** — portal del CLIENTE (rol `prisma_asegura_portal` SIN BYPASSRLS; el aislamiento lo da
   el CÓDIGO). `canal_no_disponible` (503) ≠ «el envío falló» (502). `CLAUDE.md` propio.
 - **`apps/asegura-web`** — web pública (`grupoasegura.es` + `www`). **Sin BD a propósito**: el lead va a
@@ -94,6 +95,7 @@ y los `module-*` de cada vertical.
     memoria, diagnosticar CI. **Sin umbral de tamaño**: también el cambio de 1-2 archivos.
   - **Qué agente:** mecánico/bajo riesgo → `agente-mecanico` · código normal → `general-purpose` con `model: sonnet` ·
     localizar → `rastreador-codigo` · afirmar una ausencia/estado o validar un cepo → `verificador-esceptico` ·
+    leer correos y sus adjuntos (PDF/Excel) → `lector-correo` (Vía C: etiqueta `Claude/Adjuntos` → Drive) ·
     alto riesgo (datos de clientes, emisión, pagos, RLS, migraciones) → `agente-architect`.
     Si sonnet/haiku devuelven 429 de límite semanal, relanza con `model: opus`.
   - **En paralelo** cuando no se pisen archivos; lista explícita de archivos en cada prompt. Si dos agentes tocan

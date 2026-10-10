@@ -90,6 +90,11 @@ test('🪤 datos ilegibles o avisados como incorrectos → NO se autoriza (prepa
 
 test('🪤 los datos confirmados van DENTRO del documento firmado (y por tanto de su huella) y en el evento', () => {
   // Tras el documento van la cuenta (solo su máscara) y los datos con el texto EXACTO de la casilla marcada.
-  assert.match(src, /\}\) \+ '\\n\\n' \+ lineaCuentaDocumento\(cuenta\) \+ '\\n\\n' \+ anexoDatosFirmados\(datos, textoAutorizacion\(!!f\.ipidHuella\)\)/)
+  assert.match(src, /\}\) \+ '\\n\\n' \+ lineaCuentaDocumento\(cuenta\) \+ '\\n\\n' \+ anexoDatosFirmados\(datos, confirmacion, via\)/)
+  // La casilla sale de la puerta por origen, y un origen desconocido no compone (no se firma nada).
+  const comp = src.slice(src.indexOf('function componer'), src.indexOf('type SinFicha'))
+  assert.match(comp, /const confirmacion = textoAutorizacionDe\(\{ origen: f\.origen, conIpid: !!f\.ipidHuella/)
+  assert.match(comp, /if \(via === null \|\| confirmacion === null\) return null/)
+  assert.match(comp, /confirmacionDatos: confirmacion,/)
   assert.match(firmar, /datosConfirmados: true, datosHuella: c\.datos\.huella/)
 })

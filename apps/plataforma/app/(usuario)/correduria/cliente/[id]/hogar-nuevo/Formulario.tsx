@@ -15,8 +15,9 @@
 // por corrección es el precio, y es barato: no hay ningún cargo de por medio
 // hasta el botón final.
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FlaskConical, Loader2, Pencil, X } from 'lucide-react'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
@@ -87,7 +88,7 @@ type Resultado =
       guardado?: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 export default function Formulario({
   clienteId,
@@ -174,9 +175,23 @@ export default function Formulario({
     return { ...resueltos, supuestos }
   }
 
-  async function cotizar() {
+  // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
+  // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
+  const cotizandoEnVuelo = useRef(false)
+  async function cotizar(forzar = false) {
+    if (cotizandoEnVuelo.current) return
+    cotizandoEnVuelo.current = true
+    try {
+      await cotizarSinGuarda(forzar)
+    } finally {
+      cotizandoEnVuelo.current = false
+    }
+  }
+
+  async function cotizarSinGuarda(forzar: boolean) {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionHogar({
+      forzar,
       clienteId,
       referencia,
       resueltos: cuerpoResueltosFinal(),
@@ -189,6 +204,9 @@ export default function Formulario({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
       case 'ramo':
@@ -352,6 +370,9 @@ export default function Formulario({
               </>
             )}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
         )}
 
         {resultado.estado === 'ok' && <Precios r={resultado} clienteId={clienteId} />}

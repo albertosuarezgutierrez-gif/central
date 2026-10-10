@@ -50,7 +50,13 @@ const SANS = "'Nunito Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helve
 // acceso: no tiene nada que posicionar, y lo que resta se lo resta a
 // `grupoasegura.es`. Va en el layout RAÍZ para que no dependa de acordarse en
 // cada página nueva. Lo vigila `lib/noindex.test.ts`.
-export const metadata = { title: 'Mis seguros — Grupo ASegura', robots: { index: false, follow: false } }
+// iOS lee `appleWebApp` (no el manifiesto) para abrir la app añadida a inicio sin
+// barra del navegador y con su nombre corto; `icons.apple` es su icono (512 px, iOS lo reduce).
+const APPLE = {
+  appleWebApp: { capable: true, title: 'Mis seguros', statusBarStyle: 'default' as const },
+  icons: { apple: [{ url: '/icono-app', sizes: '512x512', type: 'image/png' }] },
+}
+export const metadata = { title: 'Mis seguros — Grupo ASegura', robots: { index: false, follow: false }, ...APPLE }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

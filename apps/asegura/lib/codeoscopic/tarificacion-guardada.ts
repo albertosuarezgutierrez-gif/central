@@ -81,6 +81,8 @@ export async function ultimaTarificacionRealAuto(
     where correduria_id = ${correduriaId}::uuid
       and poliza_id = ${polizaId}::uuid
       and simulado = false
+      -- solo Avant2; to_jsonb vale aunque la columna canal aún no exista
+      and coalesce(to_jsonb(tarificaciones) ->> 'canal', 'codeoscopic') = 'codeoscopic'
       and ramo = 'auto'
     order by creado_at desc
     limit 1
@@ -118,6 +120,8 @@ export async function ultimaTarificacionNueva(
       and cliente_id = ${clienteId}::uuid
       and poliza_id is null
       and simulado = false
+      -- solo Avant2; to_jsonb vale aunque la columna canal aún no exista
+      and coalesce(to_jsonb(tarificaciones) ->> 'canal', 'codeoscopic') = 'codeoscopic'
       and ramo = ${ramo}
       and (${oportunidadId}::uuid is null or oportunidad_id = ${oportunidadId}::uuid)
       and (${tarificacionId}::uuid is null or id = ${tarificacionId}::uuid)
@@ -140,6 +144,8 @@ async function ultimoHistorial(correduriaId: string, clienteId: string, ramo: 'a
     where correduria_id = ${correduriaId}::uuid
       and cliente_id = ${clienteId}::uuid
       and simulado = false
+      -- solo Avant2; to_jsonb vale aunque la columna canal aún no exista
+      and coalesce(to_jsonb(tarificaciones) ->> 'canal', 'codeoscopic') = 'codeoscopic'
       and ramo = ${ramo}
       and (${oportunidadId}::uuid is null or oportunidad_id = ${oportunidadId}::uuid)
       and peticion->'risk'->'previousInsurance' is not null

@@ -11,6 +11,7 @@
 // `POST /insurances` cuesta 0,50€ y NO es idempotente: cada regla que sabemos se
 // comprueba ANTES de gastar, no después.
 
+import { polizaAnteriorParaTarificar } from '@central/module-seguros'
 import {
   construirEmpresa,
   construirPersona,
@@ -283,7 +284,7 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string, opciones: {
 
   if (d.aseguradoAntes) {
     const previa: Record<string, unknown> = {
-      policyNumber: d.polizaAnterior,
+      policyNumber: polizaAnteriorParaTarificar(d.polizaAnterior, d.companiaAnteriorCodigo),
       previousCompany: { code: d.companiaAnteriorCodigo },
       registrationPlate: texto(d.matriculaAnterior) ? d.matriculaAnterior!.toUpperCase().replace(/\s/g, '') : riesgo.registrationPlate,
       totalYearsInsured: d.aniosAsegurado,

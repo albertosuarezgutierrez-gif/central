@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
+import { textoFalloEnlace } from '@/lib/entrada-enlace'
 
 
 /**
@@ -20,7 +21,7 @@ export function Entrada() {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [desdeEnlace, setDesdeEnlace] = useState(false)
-  // La llave del ENLACE DIRECTO del correo de avisos (un solo uso, 72 h). Mientras la hay, no se
+  // La llave del ENLACE DIRECTO del correo de avisos (un solo uso, 24 h). Mientras la hay, no se
   // pide código: se entra con un clic en «Entrar» (POST), nunca solo al abrir el enlace.
   const [enlace, setEnlace] = useState<string | null>(null)
 
@@ -268,6 +269,9 @@ export function Entrada() {
 }
 
 function textoError(codigo: string): string {
+  // Un fallo del ENLACE DIRECTO nunca cae al «Ha ocurrido un error.» genérico: dice qué pasó y
+  // cómo entrar (29/09/2026, «no puedo entrar error»). Ver `lib/entrada-enlace.ts`.
+  if (codigo.startsWith('enlace_')) return textoFalloEnlace(codigo.slice('enlace_'.length))
   const mapa: Record<string, string> = {
     canal_no_disponible: 'Ese canal todavía no está disponible.',
     destino_invalido: 'Revisa el correo o el móvil: el móvil va con prefijo, por ejemplo +34600123456.',
@@ -277,14 +281,10 @@ function textoError(codigo: string): string {
     ya_usado: 'Ese código ya se usó. Pide uno nuevo.',
     bloqueado: 'Demasiados intentos. Pide un código nuevo.',
     demasiados_intentos: 'Demasiados intentos desde esta conexión. Espera unos minutos y vuelve a probar.',
-    enlace_demasiados_intentos: 'Demasiados intentos desde esta conexión. Espera unos minutos y vuelve a probar.',
     codigo_corto: 'El código tiene 6 cifras. Revisa que esté completo.',
     datos_invalidos: 'Revisa el correo y el código.',
     incorrecto: 'El código no es correcto.',
     sin_codigo: 'Pide un código primero.',
-    enlace_ya_usado: 'Ese enlace ya se usó. Pide un código y entras igual.',
-    enlace_caducado: 'Ese enlace ha caducado. Pide un código y entras igual.',
-    enlace_incorrecto: 'Ese enlace no es válido para este correo. Pide un código.',
   }
   return mapa[codigo] ?? 'Ha ocurrido un error.'
 }

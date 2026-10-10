@@ -12,6 +12,11 @@ import { prisma } from '../tenant.ts'
 import { COSTE_COTIZACION_CENTS } from './config.ts'
 import { MOTIVO_LIMITES, MOTIVO_RERATE, MOTIVO_SUBMIT, type OperacionEmision } from './gasto-emision.ts'
 import type { Consumo } from './contador.ts'
+import { esquema } from '../esquema-bd.ts'
+
+/** ¿Existe ya la columna `huella` (SQL 2026-10-08)? Vive aquí: solo este fichero nombra el libro. */
+const hayHuella = () => esquema.existeColumna('codeoscopic_consumo', 'huella')
+import { decidirDuplicado, VENTANA_DUPLICADO_MIN, type FilaPrevia } from './huella.ts'
 
 export type Reserva = { intentoId: string; correduriaId: string }
 
@@ -112,6 +117,69 @@ export async function reservar(input: {
        ${input.motivo}, ${input.solicitadoPor}, ${COSTE_COTIZACION_CENTS})
   `
   return { intentoId: input.intentoId, correduriaId: input.correduriaId }
+}
+
+export type ReservaAntiDuplicado =
+  | { resultado: 'reservada' }
+  | { resultado: 'reutilizar'; intentoId: string; respuesta: unknown; cotizacionId: string }
+  | { resultado: 'bloquear'; intentoId: string; estado: 'reservado' | 'facturable' }
+
+/**
+ * Comprueba duplicado y RESERVA en la misma transacción, bajo `pg_advisory_xact_lock(hashtext(huella))`:
+ * dos pestañas con la misma petición se serializan y la segunda ve la reserva de la primera. Sin `forzar`,
+ * una fila con la misma huella reservada o facturable en los últimos 15 min impide la llamada.
+ * NO atrapa errores (fail-closed, como `reservar`): si no se puede comprobar, no se llama.
+ */
+export async function reservarSinDuplicado(input: {
+  correduriaId: string
+  intentoId: string
+  motivo: string
+  solicitadoPor: string
+  huella: string
+  forzar?: boolean
+}): Promise<ReservaAntiDuplicado> {
+  // Esquema sin migrar (columna `huella` aún no existe): se reserva como antes de #4458 — SIN huella ni
+  // deduplicación, pero CON reserva en libro (los topes se siguen aplicando antes, en cotizar). Si la
+  // comprobación falla se asume «no existe». Nunca relaja la reserva: solo omite la deduplicación.
+  if (!(await hayHuella())) {
+    await reservar({ correduriaId: input.correduriaId, intentoId: input.intentoId, motivo: input.motivo, solicitadoPor: input.solicitadoPor })
+    return { resultado: 'reservada' }
+  }
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${input.huella}))`
+    const filas = await tx.$queryRaw<{ intento_id: string; estado: FilaPrevia['estado']; creado_at: Date }[]>`
+      select intento_id::text as intento_id, estado, creado_at
+        from seguros.codeoscopic_consumo
+       where correduria_id = ${input.correduriaId}::uuid
+         and huella = ${input.huella}
+         and estado in ('reservado', 'facturable')
+         and creado_at >= now() - make_interval(mins => ${VENTANA_DUPLICADO_MIN}::int)
+       order by creado_at desc`
+    const previas: FilaPrevia[] = filas.map((f) => ({ estado: f.estado, creadoAt: new Date(f.creado_at), intentoId: f.intento_id }))
+    const copias = new Map<string, { respuesta: unknown; cotizacionId: string }>()
+    if (previas.length > 0 && input.forzar !== true) {
+      const t = await tx.$queryRaw<{ intento_id: string; id: string; respuesta: unknown }[]>`
+        select intento_id::text as intento_id, id::text as id, respuesta
+          from seguros.tarificaciones
+         where correduria_id = ${input.correduriaId}::uuid
+           and intento_id = any(${previas.map((f) => f.intentoId)}::uuid[])
+           and simulado = false and respuesta is not null`
+      for (const r of t) copias.set(r.intento_id, { respuesta: r.respuesta, cotizacionId: r.id })
+    }
+    const d = decidirDuplicado({ previas, copias: new Set(copias.keys()), ahora: new Date(), forzar: input.forzar })
+    if (d.accion === 'reutilizar') {
+      const c = copias.get(d.intentoId)!
+      return { resultado: 'reutilizar', intentoId: d.intentoId, ...c }
+    }
+    if (d.accion === 'bloquear') return { resultado: 'bloquear', intentoId: d.intentoId, estado: d.estado }
+    await tx.$executeRaw`
+      insert into seguros.codeoscopic_consumo
+        (correduria_id, intento_id, estado, motivo, solicitado_por, coste_cents, huella)
+      values
+        (${input.correduriaId}::uuid, ${input.intentoId}::uuid, 'reservado',
+         ${input.motivo}, ${input.solicitadoPor}, ${COSTE_COTIZACION_CENTS}, ${input.huella})`
+    return { resultado: 'reservada' }
+  })
 }
 
 /**

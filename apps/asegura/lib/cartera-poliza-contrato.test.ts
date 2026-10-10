@@ -11,7 +11,7 @@ const IBAN_CIFRADO = 'v1:AAAAIBANCIFRADOES7621000418450200051332'
 const DATOS = {
   matricula: '1234ABC', // clave vieja del riesgo principal: no es del contrato
   gestionCobro: 'CO', formaPago: 'CC', iban: IBAN_CIFRADO, ibanUltimos4: '1332', bic: 'CAIXESBBXXX',
-  titularCuentaDistinto: true, duracion: 'AN', clasePoliza: 'IN',
+  titularCuentaDistinto: true, duracion: 'AN', clasePoliza: 'IN', numeroSuplemento: '0003',
   mediador: { clase: 'CO', codigoInterno: '0170', nombre: 'Grupo ASegura' },
   producto: { modalidad: '12', descripcion: 'HOGAR PLUS' },
   primaAnualDudosa: true, primaTotalFichero: '190.29',
@@ -21,6 +21,22 @@ const DATOS = {
   ],
   beneficiarios: [{ orden: '1', prestamo: 'Préstamo hipotecario' }],
 }
+
+test('numeroSuplemento cruza el puerto; ausente = null', () => {
+  assert.equal(contratoCima(DATOS, descifrar)?.numeroSuplemento, '0003')
+  assert.equal(contratoCima({ ...DATOS, numeroSuplemento: undefined }, descifrar)?.numeroSuplemento, null)
+})
+
+test('convenio / nombreRiesgo / descripcionRiesgo cruzan el puerto; ausentes o cifrados = null', () => {
+  const c = contratoCima({ ...DATOS, convenio: '99000123456789', nombreRiesgo: 'Taller', descripcionRiesgo: 'Obra menor' }, descifrar)!
+  assert.equal(c.convenio, '99000123456789')
+  assert.equal(c.nombreRiesgo, 'Taller')
+  assert.equal(c.descripcionRiesgo, 'Obra menor')
+  const sin = contratoCima({ ...DATOS, convenio: 'v1:x:y:z', nombreRiesgo: '  ' }, descifrar)!
+  assert.equal(sin.convenio, null)
+  assert.equal(sin.nombreRiesgo, null)
+  assert.equal(sin.descripcionRiesgo, null)
+})
 
 test('el IBAN cifrado NUNCA sale del puerto (ni la clave ni el valor)', () => {
   const c = contratoCima(DATOS, descifrar)

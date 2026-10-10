@@ -1,11 +1,16 @@
 'use client'
+import { textoVenceCadaAño } from '@/lib/correduria/aniversario'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Trophy } from 'lucide-react'
+import Link from 'next/link'
 import { btnStyle } from '@/components/ui'
+import { destinoTarificar } from '@/lib/correduria/tarificar-oportunidad'
+import TarificarOportunidad from './TarificarOportunidad'
 import { eur } from '@/lib/dinero'
 import {
   RAMOS_OPORTUNIDAD_UI,
+  ramoInicialValido,
   ROTULO_ESTADO,
   TIPOS_TAREA_UI,
   interpretarOportunidadesCliente,
@@ -85,6 +90,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
 }) {
   const [lectura, setLectura] = useState<Lectura | null>(null)
   const [abriendo, setAbriendo] = useState(false)
+  const [ramoInicial, setRamoInicial] = useState<string | null>(null)
   // De qué fila del volcado nace el alta abierta (`?desde=<polizaId>`), si nace de una.
   const [desde, setDesde] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string; id?: string | null } | null>(null)
@@ -112,10 +118,12 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
   const params = useSearchParams()
   const pideNueva = params.get('oportunidad') === 'nueva'
   const pideDesde = params.get('desde')
+  const pideRamo = ramoInicialValido(params.get('ramo'))
   useEffect(() => {
     if (!pideNueva) return
     setAviso(null)
     setDesde(pideDesde && precargas[pideDesde] ? pideDesde : null)
+    setRamoInicial(pideRamo)
     setAbriendo(true)
     document.getElementById('oportunidades')?.scrollIntoView({ block: 'start' })
     // Se quita el parámetro: si se quedara, un segundo clic en el menú no cambiaría la URL
@@ -123,6 +131,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
     const url = new URL(window.location.href)
     url.searchParams.delete('oportunidad')
     url.searchParams.delete('desde')
+    url.searchParams.delete('ramo')
     window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
   }, [pideNueva])
 
@@ -184,8 +193,9 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
 
       {abriendo && (
         <FormAlta
-          key={desde ?? 'nueva'}
+          key={`${desde ?? 'nueva'}-${ramoInicial ?? ''}`}
           clienteId={clienteId}
+          ramoInicial={ramoInicial}
           precarga={desde ? precargas[desde] ?? null : null}
           onCancelar={() => setAbriendo(false)}
           onHecho={(t) => { setAviso(t); if (t.ok) setAbriendo(false); void cargar() }}
@@ -219,7 +229,7 @@ function SinOportunidad({ clienteId, lista }: { clienteId: string; lista: Presup
               <li key={p.tarificacionId} style={{ borderTop: '1px solid var(--border)', paddingTop: 6, overflowWrap: 'anywhere' }}>
                 <b>{rotuloRamo(p.ramo)}</b> <span style={{ color: 'var(--muted)' }}>{fmt(p.creadoAt.slice(0, 10))}</span>
                 <div>{textoSinOportunidad(p)}</div>
-                {ruta && <a href={ruta} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Abrir →</a>}
+                {ruta && <Link href={ruta} prefetch={false} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Abrir →</Link>}
               </li>
             )
           })}
@@ -240,7 +250,7 @@ function Resumen({ o }: { o: OportunidadDeCliente }) {
   const v = vistaCompetencia({ seguroAnterior: o.seguroAnterior, prima: o.prima, fechaFinVigencia: o.fechaFinVigencia, hoy: hoyMadrid() })
   if (o.fechaFinVigencia && v.aviso.estado === 'desconocido') partes.push(`vence ${fmt(o.fechaFinVigencia)} (fecha ilegible)`)
   else if (!o.fechaFinVigencia) partes.push('vencimiento desconocido: no se avisa (tampoco entra en Vencimientos)')
-  else partes.push(`vence ${fmt(o.fechaFinVigencia)}`)
+  else partes.push(textoVenceCadaAño(o.fechaFinVigencia)?.replace('Vence', 'vence') ?? `vence ${fmt(o.fechaFinVigencia)}`)
   return (
     <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
       <span style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}>{partes.join(' · ')}</span>
@@ -314,10 +324,16 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
         <button type="button" onClick={onAlternar} aria-expanded={desplegada} style={{ ...btnStyle(desplegada ? 'secundario' : 'primario', 'sm'), minHeight: 44 }}>
           {desplegada ? 'Plegar ▴' : 'Gestionar ▾'}
         </button>
-        {/* El riesgo como pantalla (29/09/2026): intervinientes y presupuestos P1…Pn de ESTE riesgo. */}
-        <a href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, color: 'var(--primary)', textDecoration: 'none' }}>
-          Abrir riesgo →
-        </a>
+        {/* UN solo botón hacia el precio y el riesgo (10/10/2026): abre la pantalla de precio del ramo
+            (confirmación de 0,50 € allí) con las figuras del riesgo; nunca cotiza desde aquí. */}
+        <TarificarOportunidad
+          tomadorId={o.clienteId}
+          destino={destinoTarificar({ ramo: o.ramo, tomadorId: o.clienteId, oportunidadId: o.id, polizaId: null })}
+          riesgoHref={`/correduria/oportunidad/${encodeURIComponent(o.id)}`}
+        />
+        {destinoTarificar({ ramo: o.ramo, tomadorId: o.clienteId, oportunidadId: o.id, polizaId: null }).tipo !== 'no' && (
+          <Link href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} prefetch={false} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Ver riesgo →</Link>
+        )}
       </div>
 
       {desplegada && <SeguimientoOportunidad id={o.id} telefono={telefono} onCambio={onRecargar} />}
@@ -390,7 +406,7 @@ function FilaCerrada({ o, desplegada, onAlternar, onRecargar }: { o: Oportunidad
       {cuando && <> el {cuando}</>}
       {o.estado === 'perdida' && !descartada && o.motivoPerdida && <span style={{ color: 'var(--muted)' }}> · {rotuloMotivo(o.motivoPerdida)}{o.competidor ? ` (${o.competidor})` : ''}</span>}
       {o.presupuestos && o.presupuestos.variantes > 0 && <span style={{ color: 'var(--muted)' }}> · {textoPresupuestos(o.presupuestos)}</span>}
-      {' '}<a href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Abrir riesgo →</a>
+      {' '}<Link href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} prefetch={false} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Ver riesgo →</Link>
       {desplegada && <div style={{ marginTop: 8 }}><SeguimientoOportunidad id={o.id} onCambio={onRecargar} /></div>}
     </li>
   )
@@ -412,17 +428,19 @@ export function textoSeguroAnterior(s: SeguroAnterior): string {
  * `inicial` (29/09/2026): una lectura ya hecha (la póliza subida en Documentos) rellena el
  * formulario al abrirlo, sin volver a pagar la lectura.
  */
-export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHecho, onRecargar }: {
+export function FormAlta({ clienteId, inicial, precarga = null, ramoInicial = null, onCancelar, onHecho, onRecargar }: {
   clienteId: string
   inicial?: LecturaOk | null
   /** Crear desde una fila del volcado: vehículo/aseguradora, y el vencimiento SOLO si es futuro. */
   precarga?: PrecargaAlta | null
+  /** Ramo preseleccionado (`?ramo=` del menú de la cabecera), ya validado. */
+  ramoInicial?: string | null
   onCancelar: () => void
   onHecho: (t: { ok: boolean; texto: string; id?: string | null }) => void
   /** Refresca la lista sin cerrar el formulario (el documento ya abrió la oportunidad por su cuenta). */
   onRecargar?: () => void
 }) {
-  const [ramo, setRamo] = useState(precarga?.ramo ?? '')
+  const [ramo, setRamo] = useState(precarga?.ramo ?? ramoInicial ?? '')
   const [estado, setEstado] = useState<'en_negociacion' | 'competencia'>(precarga ? 'competencia' : 'en_negociacion')
   const [vence, setVence] = useState(precarga?.fechaFinVigencia ?? '')
   const [compania, setCompania] = useState(precarga?.aseguradora ?? '')
@@ -512,7 +530,7 @@ export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHe
     const enEstaFicha = abierta.clienteId === clienteId
     return (
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)', border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
-        <AvisosLectura oportunidad={lector.oportunidad} ficha={lector.ficha} sinGuardar={lector.sinGuardar} fichaIncierta={lector.fichaIncierta} figuras={lector.figuras} />
+        <AvisosLectura oportunidad={lector.oportunidad} ficha={lector.ficha} sinGuardar={lector.sinGuardar} fichaIncierta={lector.fichaIncierta} figuras={lector.figuras} identidad={lector.identidad} />
         {!enEstaFicha && (
           <div role="status" style={{ overflowWrap: 'anywhere' }}>
             La oportunidad está en {abierta.clienteId ? 'la ficha del tomador del documento' : 'otra ficha'}, no en esta: aquí no aparecerá en la lista.
@@ -546,7 +564,7 @@ export function FormAlta({ clienteId, inicial, precarga = null, onCancelar, onHe
         {lecturaVista && <div role="status" style={{ color: lecturaVista.ok ? 'var(--positive)' : 'var(--negative)' }}>{lecturaVista.texto}</div>}
         {!lecturaVista && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento, prima y, en auto/moto, el bonus; abre la oportunidad sola y guarda el documento en la ficha del tomador.</div>}
         {/* Si no se abrió sola (error, ya es nuestra…), el aviso se enseña aquí y el formulario queda para abrirla a mano. */}
-        <AvisosLectura oportunidad={lector.oportunidad} ficha={lector.ficha} sinGuardar={lector.sinGuardar} fichaIncierta={lector.fichaIncierta} figuras={lector.figuras} />
+        <AvisosLectura oportunidad={lector.oportunidad} ficha={lector.ficha} sinGuardar={lector.sinGuardar} fichaIncierta={lector.fichaIncierta} figuras={lector.figuras} identidad={lector.identidad} />
       </div>
       {/* Bloqueado mientras lee: lo leído solo rellena lo vacío, y eso se decide con lo que había al pulsar. */}
       <fieldset disabled={leyendo} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'grid', gap: 10 }}>

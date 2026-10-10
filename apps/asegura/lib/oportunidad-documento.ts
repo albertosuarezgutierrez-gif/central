@@ -11,25 +11,33 @@
 // - La deduplicación es la de `crearOportunidad`: el mismo seguro ya abierto se COMPLETA, no se repite.
 // - El DNI del documento no sale de aquí.
 import {
+  admiteDatosVehiculo,
   companiaLegible,
   companiaPorNombre,
   extraccionSinPii,
   figurasSinNombre,
   normalizarContactoTomador,
+  normalizarDni,
   normalizarFigurasLeidas,
   planFiguras,
+  propuestaIdentidadDesdePoliza,
   polizaFinanciada,
   prepararAltaDesdeDocumento,
   seguroAnteriorDe,
   vencimientoUrgente,
   type ContactoTomadorLeido,
   type LecturaPoliza,
+  type MarcaIdentidadDocumento,
+  type PropuestaIdentidad,
 } from '@central/module-seguros'
+import { computeDniLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { altaCliente, altaLeadSinContacto, anotarHistorialCliente, coincidencias, descifrarCampo } from './cartera-edicion'
 import { crearRelacion } from './cartera-relaciones'
 import { crearOportunidad } from './oportunidad-seguimiento'
+import { datosVehiculoParaOportunidad } from './oportunidad-vehiculo-catalogo'
+import { catalogosVehiculoReales } from './oportunidad-vehiculo-catalogo-real'
 import { polizaEnCartera } from './poliza-en-cartera'
 import { leerPoliza, type ResultadoLecturaPoliza } from './documentos/extraer-poliza'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
@@ -42,6 +50,7 @@ import {
   esDocumentoDeSeguro,
   fechaLlamada,
   mismoNombre,
+  decidirOportunidadExistente,
   proximoVencimiento,
   ramoOportunidad,
 } from './oportunidad-documento-reglas'
@@ -59,6 +68,8 @@ export type ResultadoOportunidadDocumento =
       llamada: string
       /** `actualizada`: se rellenó algún hueco de la que ya había (false = ya lo tenía todo). */
       completada: boolean
+      /** `true` = esta póliza (mismo nº y compañía) ya tenía una oportunidad abierta: NO se ha creado otra. */
+      yaExistia?: boolean
       /**
        * Lo que la póliza sabía del tomador y se volcó a SU ficha (03/10/2026). `null` = no se intentó
        * (subida sin verificar, o documento sin tomador): no es «no había nada».
@@ -118,8 +129,10 @@ export async function oportunidadDesdeFichero(
     const lectura = await leerPoliza(e.fichero.contenido, e.fichero.mime, e.fichero.nombre, {
       contrasenas: clienteSube ? () => contrasenasDeLaFicha(e.correduriaId, clienteSube) : undefined,
     })
-    if (e.documentoId && lectura.fase !== 'ninguno') await guardarExtraccion(e.correduriaId, e.documentoId, lectura.bruto ?? null)
-    return await oportunidadDesdeLectura({ ...e, lectura })
+    const r = await oportunidadDesdeLecturaConIdentidad({ ...e, lectura })
+    // Con la MARCA de identidad (05/10/2026): con ella, esta póliza acredita la identidad de su ficha.
+    if (e.documentoId && lectura.fase !== 'ninguno') await guardarExtraccion(e.correduriaId, e.documentoId, lectura.bruto ?? null, r.marca)
+    return r.resultado
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo leer el documento:', err instanceof Error ? err.message : err)
     return { estado: 'error', motivo: err instanceof Error ? err.message : String(err) }
@@ -129,6 +142,32 @@ export async function oportunidadDesdeFichero(
 /** Con el documento ya leído (p. ej. `subir-poliza`, que lo leyó antes de guardar). */
 export async function oportunidadDesdeLectura(
   e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },
+): Promise<ResultadoOportunidadDocumento> {
+  return (await oportunidadDesdeLecturaConIdentidad(e)).resultado
+}
+
+/**
+ * Lo mismo, y además (05/10/2026) lo que el documento dice de la IDENTIDAD de la ficha del tomador,
+ * que NO va en el resultado (este viaja al navegador y al portal):
+ * - `marca`: para guardar con el documento (`guardarExtraccion`): el índice ciego del DNI leído, la
+ *   ficha y si ese DNI era el que la ficha YA tenía antes de leer (no el que el volcado le acaba de
+ *   escribir). Con ella la póliza cuenta como documento acreditativo (`marcaAcreditaFicha`).
+ * - `propuesta`: nombre/apellidos de la póliza si difieren de la ficha y el DNI coincide
+ *   (`propuestaIdentidadDesdePoliza`). Solo si sube el CORREDOR. NO se escribe: la confirma él.
+ */
+export async function oportunidadDesdeLecturaConIdentidad(
+  e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },
+): Promise<{ resultado: ResultadoOportunidadDocumento; marca: MarcaIdentidadDocumento | null; propuesta: { clienteId: string; propuesta: PropuestaIdentidad } | null }> {
+  const identidad: { marca: MarcaIdentidadDocumento | null; propuesta: { clienteId: string; propuesta: PropuestaIdentidad } | null } = { marca: null, propuesta: null }
+  const resultado = await oportunidadDesdeLecturaInterna(e, identidad)
+  // Sin oportunidad no hay ficha resuelta de la que fiarse: ni marca ni propuesta.
+  if (resultado.estado !== 'creada' && resultado.estado !== 'actualizada') return { resultado, marca: null, propuesta: null }
+  return { resultado, ...identidad }
+}
+
+async function oportunidadDesdeLecturaInterna(
+  e: EntradaOportunidadDocumento & { lectura: ResultadoLecturaPoliza | LecturaPoliza },
+  identidad: { marca: MarcaIdentidadDocumento | null; propuesta: { clienteId: string; propuesta: PropuestaIdentidad } | null },
 ): Promise<ResultadoOportunidadDocumento> {
   // Fuera del `try`: si algo falla DESPUÉS de elegir o crear la ficha, el `catch` devuelve su id
   // (no se afirma que no se tocó ninguna ficha).
@@ -234,6 +273,35 @@ export async function oportunidadDesdeLectura(
       clienteId,
       clienteSube,
     }
+    // La identidad, ANTES del volcado (que puede escribir el DNI del documento en una ficha sin DNI:
+    // ese DNI no puede luego «coincidir» consigo mismo). El DNI de la ficha de antes: el de la ficha
+    // donde se sube, o el que la encontró por su índice ciego (`dni_cartera`). Lead nuevo: ninguno.
+    if (alta?.dni && !empresa) {
+      let dniFichaAntes: string | null = null
+      let actual: { nombre: string | null; apellidos: string | null } | null = null
+      if (decision.tipo === 'ficha' && ficha && clienteId === ficha.id) {
+        dniFichaAntes = descifrarCampo(ficha.dni)
+        actual = ficha
+      } else if (decision.tipo === 'ficha' && decision.porque === 'dni_cartera') {
+        dniFichaAntes = alta.dni
+        actual = await db.cliente.findFirst({ where: { id: clienteId, correduriaId: e.correduriaId }, select: { nombre: true, apellidos: true } }).catch(() => null)
+      }
+      const a = normalizarDni(alta.dni)
+      const f = normalizarDni(dniFichaAntes ?? '')
+      const hash = computeDniLookupHash(alta.dni)
+      if (hash && verificado) identidad.marca = { dniHash: hash, clienteId, coincidiaConFicha: a.ok && f.ok && a.valor.valor === f.valor.valor }
+      if (actual && puedeAbrirFiguras(quienSube)) {
+        const p = propuestaIdentidadDesdePoliza({
+          dniFicha: dniFichaAntes,
+          dniLeido: alta.dni,
+          esEmpresa: empresa,
+          ficha: actual,
+          leido: { nombre: alta.nombre, apellidos: alta.apellidos },
+        })
+        if (p) identidad.propuesta = { clienteId, propuesta: p }
+      }
+    }
+
     const identificado = puedeVolcarEnFicha(quienSube)
     const volcado = identificado
       ? await volcarPolizaEnFicha({
@@ -299,7 +367,21 @@ export async function oportunidadDesdeLectura(
         ? `${urgente ? 'URGENTE — ' : ''}Llamar para su renovación: vence el ${fmt(vence)} (documento subido: ${e.origen})${sinVerificar}`
         : `Pedir la fecha de vencimiento: el documento subido (${e.origen}) no la trae legible${sinVerificar}`) + avisoFinanciada,
     }
-    const o = await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`)
+    // Regla única del riesgo (05/10/2026): el vehículo leído se guarda ESTRUCTURADO en `info_riesgo.datosVehiculo`
+    // (sin confirmar), con los ids del catálogo si se emparejan sin duda; toda pantalla de auto lo lee de ahí. Fail-soft:
+    // si el catálogo falla, o el documento no trae vehículo, la oportunidad se crea igual (con `vehiculo` texto, como siempre).
+    const datosVehiculo = admiteDatosVehiculo(datos.ramo)
+      ? await Promise.resolve().then(() => datosVehiculoParaOportunidad(datos.ramo, {
+          matricula: txt(d.matricula, 20), marca: txt(d.marca, 60), modelo: txt(d.modelo, 80), version: txt(d.version, 120),
+          combustible: txt(d.combustible, 40), fechaMatriculacion: txt(d.fechaMatriculacion, 10),
+        }, catalogosVehiculoReales())).catch(() => null)
+      : null
+    // 06/10/2026: la misma póliza (nº normalizado + compañía) ya abierta en esta ficha, en la de donde se
+    // subió o en una fusionada en ella: NO se abre otra (nº 18162048 subido dos veces = dos «competencia»).
+    const previa = await oportunidadAbiertaDeLaPoliza(e.correduriaId, [clienteId, clienteSube], datos.numeroPoliza, datos.aseguradora)
+    const o = previa
+      ? { ok: false as const, estado: 'duplicada' as const, motivo: 'ya existía', status: 409 as const, id: previa, completada: false }
+      : await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, { hoy, origen: `documento:${e.origen}`, datosVehiculo })
     const posiblesDuplicados = clienteNuevo ? compartenContacto.filter((id) => id !== clienteId) : []
     const conIdentificador = decision.tipo === 'lead' ? Boolean(decision.alta.dni) : Boolean(alta?.dni)
 
@@ -311,7 +393,7 @@ export async function oportunidadDesdeLectura(
     let figuras: FiguraResultado[] | null = null
     let avisosFiguras: string[] = []
     const opId = o.ok ? o.id : o.estado === 'duplicada' && 'id' in o ? o.id : null
-    if (opId && (datos.ramo === 'auto' || datos.ramo === 'moto')) {
+    if (opId && !previa && (datos.ramo === 'auto' || datos.ramo === 'moto')) {
       // La oportunidad ya existe: si las figuras fallan, no se devuelve `error`, se avisa.
       try {
         const plan = planFiguras(
@@ -347,11 +429,41 @@ export async function oportunidadDesdeLectura(
 
     const comun = { clienteId, clienteNuevo, relacionado, vence, llamada, ficha: volcado, financiada, posiblesDuplicados, conIdentificador, figuras, avisosFiguras }
     if (o.ok) return { estado: 'creada', oportunidadId: o.id, completada: false, ...comun }
-    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, completada: o.completada, ...comun }
+    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, completada: o.completada, ...(previa ? { yaExistia: true } : {}), ...comun }
     return { estado: 'error', motivo: o.motivo, clienteId }
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo abrir la oportunidad:', err instanceof Error ? err.message : err)
     return { estado: 'error', motivo: err instanceof Error ? err.message : String(err), ...(clienteId ? { clienteId } : {}) }
+  }
+}
+
+/**
+ * La oportunidad ABIERTA de esa misma póliza en las fichas dadas (y las fusionadas en ellas), o null.
+ * La decisión es `decidirOportunidadExistente` (pura). Si la consulta falla, null: se sigue como antes
+ * (`crearOportunidad` aún deduplica por ramo y seguro).
+ */
+async function oportunidadAbiertaDeLaPoliza(
+  correduriaId: string,
+  clientes: (string | null)[],
+  numeroPoliza: string | null,
+  aseguradora: string | null,
+): Promise<string | null> {
+  const ids = [...new Set(clientes.filter((c): c is string => !!c))]
+  if (ids.length === 0 || !numeroPoliza) return null
+  try {
+    const filas = await prismaAsegura().$queryRaw<{ id: string; estado: string; numeroPoliza: string | null; aseguradora: string | null }[]>(Prisma.sql`
+      select o.id::text as id, o.estado::text as estado, o.numero_poliza as "numeroPoliza",
+             nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora
+      from oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid
+        and (o.cliente_id = any(${ids}::uuid[])
+             or o.cliente_id in (select c.id from clientes c where c.correduria_id = ${correduriaId}::uuid and c.merged_into_cliente_id = any(${ids}::uuid[])))
+      order by o.created_at`)
+    const d = decidirOportunidadExistente({ numeroPoliza, aseguradora }, filas)
+    return d.accion === 'reutilizar' ? d.id : null
+  } catch (err) {
+    console.error('[oportunidad-documento] no se pudo buscar la oportunidad existente:', err instanceof Error ? err.message : err)
+    return null
   }
 }
 
@@ -381,12 +493,19 @@ async function leadMismoNombre(correduriaId: string, nombreCompleto: string): Pr
  * un campo SQL (en `clientes` van cifrados); de esos solo consta si se leyeron (`leidos`).
  * Best-effort: si falla (p. ej. la migración aún sin aplicar), el documento y la oportunidad siguen.
  */
-export async function guardarExtraccion(correduriaId: string, documentoId: string, bruto: Record<string, unknown> | null): Promise<void> {
+export async function guardarExtraccion(
+  correduriaId: string,
+  documentoId: string,
+  bruto: Record<string, unknown> | null,
+  /** 05/10/2026: la marca de identidad (índice ciego del DNI, nunca el DNI). Ver `marcaAcreditaFicha`. */
+  marca: MarcaIdentidadDocumento | null = null,
+): Promise<void> {
   const limpio = extraccionSinPii(bruto)
   if (!limpio) return
+  const guardado = marca ? { ...limpio, identidad: marca } : limpio
   try {
     await prismaAsegura().$executeRaw(Prisma.sql`
-      update documentos set extraccion = ${JSON.stringify(limpio)}::jsonb
+      update documentos set extraccion = ${JSON.stringify(guardado)}::jsonb
       where id = ${documentoId}::uuid and correduria_id = ${correduriaId}::uuid`)
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo guardar la extracción del documento:', err instanceof Error ? err.message : err)

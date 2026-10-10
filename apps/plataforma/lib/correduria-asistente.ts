@@ -10,7 +10,7 @@
 // - Lo que aprende son PREFERENCIAS de trabajo; los datos de un cliente van a la cartera, no a su memoria.
 
 import { createHash, createHmac } from 'node:crypto'
-import { TIPOS_RELACION } from '@central/module-seguros'
+import { RAMOS_OPORTUNIDAD, TIPOS_RELACION } from '@central/module-seguros'
 import { PATRON_REFERENCIA_TEXTO } from './correduria-emision-referencia-tg.ts'
 
 // ── ¿Es un mensaje para la correduría? ───────────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ export const HERRAMIENTAS = [
     {
       referencia: { type: 'string', description: 'Opcional: la referencia del presupuesto que dice Alberto, con forma AS-AA-NNNN (AS-26-0005). Con ella sobran clienteId, ramo y tarificacionId; compania/modalidad/primaEur solo sirven para elegir entre las opciones del documento.' },
       clienteId: { type: 'string', description: 'El clienteId INTERNO (uuid) del TOMADOR, sacado de buscar/ficha_cliente. Obligatorio si no hay referencia.' },
-      ramo: { type: 'string', enum: ['moto', 'auto'], description: 'Obligatorio si no hay referencia.' },
+      ramo: { type: 'string', enum: [...RAMOS_OPORTUNIDAD], description: 'Obligatorio si no hay referencia.' },
       compania: { type: 'string', description: 'Compañía tal cual la dice Alberto (Allianz, Mapfre…). Obligatoria si no hay referencia.' },
       modalidad: { type: 'string', description: 'Opcional: palabras de la modalidad o categoría («terceros ampliado», «incendio robo», «todo riesgo»)' },
       primaEur: { type: 'number', description: 'Opcional: la prima que dice Alberto, para desempatar («la de 200»)' },
@@ -194,7 +194,7 @@ export const HERRAMIENTAS = [
     {
       clienteId: { type: 'string', description: 'La ficha (sácala de buscar). NO lo pases si Alberto ha subido el documento y no dice de quién es: con usarDocumentos=true lo busco por el tomador.' },
       usarDocumentos: { type: 'boolean', description: 'true si Alberto se refiere a lo que acaba de subir' },
-      ramo: { type: 'string', enum: ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] },
+      ramo: { type: 'string', enum: ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'empresas', 'rc_profesional', 'dyo', 'flotas', 'transporte_mercancias', 'ciberriesgos', 'decenal', 'embarcaciones', 'mascotas', 'impago_alquiler', 'viaje', 'caucion', 'otros'] },
       compania: { type: 'string', description: 'Compañía con la que está ahora' },
       prima: { type: 'number', description: 'Prima anual actual en euros' },
       vence: { type: 'string', description: 'Vencimiento de su póliza actual (aaaa-mm-dd)' },

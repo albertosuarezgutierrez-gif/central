@@ -118,3 +118,48 @@ test('el aviso de Mapfre dice el tamaño de la cartera y lo que viene', () => {
   assert.match(texto, /12 más vencen en 90 días/)
   assert.match(texto, /su mayor hueco hasta ahora eran 2/)
 })
+
+// --- Las renovaciones sin llegar NO son «ha dejado de mandar» ------------------
+// Caso Mapfre real (05/10/2026): último fichero hace 4 días y una póliza que
+// vence hoy. Eso es una renovación pendiente (se avisa en «renovaciones sin
+// llegar»), no una compañía muda.
+
+test('Mapfre: último fichero hace 4 días + 1 póliza vence hoy → NO es silencio', () => {
+  const v = veredictoEntidad({
+    entidad: 'C0058', diasSinFichero: 4, huecoMaximo: 2, huecosObservados: 5,
+    vivas: 64, vencidasEnSilencio: 1, vencen90d: 12,
+  })
+  assert.equal(v.veredicto, 'ok')
+})
+
+test('fichero reciente (< suelo) sin histórico + vencidas → NO es silencio', () => {
+  const v = veredictoEntidad({
+    entidad: 'C0058', diasSinFichero: SUELO_DIAS - 1, huecoMaximo: null, huecosObservados: 0,
+    vivas: 64, vencidasEnSilencio: 3, vencen90d: null,
+  })
+  assert.notEqual(v.veredicto, 'silencio')
+})
+
+test('con histórico, ≥ suelo pero dentro de su ritmo + vencidas → NO es silencio (decide el ritmo)', () => {
+  const v = veredictoEntidad({
+    entidad: 'C0109', diasSinFichero: 20, huecoMaximo: 19, huecosObservados: 13,
+    vivas: 26, vencidasEnSilencio: 2, vencen90d: 5,
+  })
+  assert.equal(v.veredicto, 'ok')
+})
+
+test('20 días sin fichero, sin histórico y con vencidas → SIGUE siendo silencio (conservador)', () => {
+  const v = veredictoEntidad({
+    entidad: 'C0999', diasSinFichero: 20, huecoMaximo: null, huecosObservados: 0,
+    vivas: 3, vencidasEnSilencio: 2, vencen90d: null,
+  })
+  assert.equal(v.veredicto, 'silencio')
+})
+
+test('el ritmo roto sigue alarmando aunque no haya vencidas', () => {
+  const v = veredictoEntidad({
+    entidad: 'C0058', diasSinFichero: 30, huecoMaximo: 2, huecosObservados: 5,
+    vivas: 64, vencidasEnSilencio: 0, vencen90d: 0,
+  })
+  assert.equal(v.veredicto, 'silencio')
+})

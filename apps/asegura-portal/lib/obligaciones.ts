@@ -37,6 +37,8 @@ export type ObligacionVista = {
   avisada: boolean
   /** La póliza de la cartera de la que sale (`null` = propia o declarada): el aviso enlaza a su ficha. */
   polizaId: string | null
+  /** `poliza` (renovación de cartera) u otro (recordatorio propio): solo las de `poliza` se retiran si hay baja en marcha. */
+  tipo: string
 }
 
 /**
@@ -400,6 +402,7 @@ export async function obligacionesDeIdentidad(identidadId: string): Promise<Obli
     procedencia: f.procedencia,
     avisada: f.avisadaAt !== null,
     polizaId: f.polizaId,
+    tipo: f.tipo,
   }))
 }
 

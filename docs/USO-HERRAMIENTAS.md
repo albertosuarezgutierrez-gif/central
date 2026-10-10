@@ -167,33 +167,33 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 253 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 290 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 246 | 33.701 | 26.030.248 | 0 | 0 |
-| `otro` | 243 | 8.107 | 22.702.083 | 12.063.419 | 0 |
-| `lectura-directa` | 221 | 5.839 | 17.065.308 | 0 | 0 |
-| `mcp:github` | 226 | 5.511 | 4.565.986 | 50.346.761 | 89 |
-| `escritura` | 172 | 3.499 | 51.108.373 | 0 | 0 |
-| `sql` | 158 | 3.312 | 1.639.018 | 2.351.230 | 13 |
-| `mcp:Claude_Code_Remote` | 140 | 1.475 | 303.946 | 5.301.463 | 14 |
-| `mcp:Booking-com` | 21 | 588 | 2.475.618 | 0 | 0 |
-| `mcp:Vercel` | 56 | 560 | 813.164 | 201.411 | 14 |
-| `mcp:Gmail` | 29 | 367 | 568.888 | 0 | 15 |
-| `mcp:Supabase` | 103 | 290 | 27.815 | 0 | 2 |
-| `mcp:Interactive-Brokers--IBKR-` | 5 | 260 | 325.588 | 0 | 0 |
-| `agente:general-purpose` | 56 | 229 | 164.417 | 5.243.307 | 0 |
-| `agente:agente-architect` | 40 | 125 | 94.122 | 4.251.259 | 0 |
-| `mcp:Google-Drive` | 13 | 95 | 88.235 | 0 | 2 |
-| `mcp:Google_Drive` | 16 | 87 | 110.438 | 0 | 19 |
+| `bash` | 282 | 38.645 | 31.325.888 | 0 | 0 |
+| `otro` | 278 | 9.425 | 24.693.034 | 14.751.291 | 0 |
+| `lectura-directa` | 251 | 6.563 | 22.295.132 | 0 | 0 |
+| `mcp:github` | 251 | 5.862 | 4.773.424 | 51.247.577 | 90 |
+| `escritura` | 190 | 3.851 | 53.940.707 | 0 | 0 |
+| `sql` | 178 | 3.696 | 1.837.082 | 2.351.230 | 15 |
+| `mcp:Claude_Code_Remote` | 142 | 1.480 | 304.843 | 5.301.463 | 14 |
+| `mcp:Gmail` | 39 | 1.126 | 1.115.270 | 0 | 70 |
+| `mcp:Booking-com` | 27 | 765 | 3.236.630 | 0 | 0 |
+| `mcp:Vercel` | 61 | 604 | 885.822 | 202.197 | 16 |
+| `agente:general-purpose` | 78 | 386 | 253.751 | 7.731.323 | 0 |
+| `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
+| `mcp:Interactive-Brokers--IBKR-` | 7 | 351 | 429.469 | 0 | 0 |
+| `mcp:Supabase` | 110 | 313 | 29.913 | 0 | 4 |
+| `mcp:claude-code-remote` | 23 | 181 | 16.305 | 16.312 | 0 |
+| `agente:agente-architect` | 50 | 168 | 122.256 | 5.319.819 | 0 |
+| `mcp:Google-Drive` | 18 | 123 | 109.510 | 0 | 2 |
+| `agente:agente-mecanico` | 36 | 87 | 62.148 | 4.284.447 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
+| `agente:Explore` | 32 | 74 | 36.887 | 2.118.846 | 0 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
-| `agente:agente-mecanico` | 29 | 69 | 54.326 | 2.838.502 | 0 |
-| `agente:Explore` | 28 | 65 | 32.709 | 1.503.946 | 0 |
-| `agente:rastreador-codigo` | 34 | 59 | 19.732 | 649.514 | 0 |
-| `mcp:Resend` | 6 | 58 | 23.734 | 0 | 0 |
-| `mcp:claude-code-remote` | 8 | 58 | 5.756 | 0 | 0 |
+| `agente:rastreador-codigo` | 42 | 70 | 21.539 | 651.535 | 0 |
+| `mcp:Resend` | 7 | 61 | 31.515 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
@@ -201,15 +201,17 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `agente:general` | 9 | 13 | 8.369 | 512.187 | 0 |
+| `mcp:Supabase_asegura` | 11 | 12 | 2.954 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
-| `mcp:Supabase_asegura` | 9 | 9 | 2.935 | 0 | 0 |
+| `agente:lector-correo` | 3 | 10 | 4.219 | 0 | 0 |
+| `mcp:Google_Calendar` | 2 | 7 | 5.018 | 0 | 0 |
+| `agente:verificador-esceptico` | 5 | 7 | 1.867 | 3.046 | 0 |
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:openrouter` | 2 | 5 | 14.639 | 0 | 0 |
-| `agente:verificador-esceptico` | 4 | 4 | 1.406 | 1.923 | 0 |
 | `agente:Plan` | 2 | 2 | 1.832 | 12.062 | 0 |
 | `mcp:ccd_session` | 2 | 2 | 175 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
-| `mcp:Google_Calendar` | 1 | 1 | 272 | 0 | 0 |
+| `agente:jefe-contabilidad` | 1 | 2 | 418 | 7.630 | 0 |
 <!-- ahorro:fin -->

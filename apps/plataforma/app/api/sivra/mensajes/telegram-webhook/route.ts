@@ -19,7 +19,8 @@ import { resolverHecho } from '@/lib/sivra/agente-huesped/hechos'
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
 import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
-import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
+import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal, aplicarSinIvaExtranjero } from '@/lib/agente-facturas/pagos'
+import { PREFIJO_IVA, interpretarIva } from '@/lib/agente-facturas/anomalia-callbacks'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
 import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, tarificarDesdeBoton, registrarDocumentoTg, albumDeCorreduria, resolverDocumentoDudoso } from '@/lib/correduria-asistente-telegram'
@@ -349,6 +350,21 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         return NextResponse.json({ ok: true })
       }
 
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── IVA dudoso de proveedor extranjero (fiva_sin / fiva_rev) ─────────────
+    // Escribe en facturas_proveedor: solo la PERSONA autorizada (como pago_ y cas_).
+    if (prefix === PREFIJO_IVA) {
+      if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+        await tgAnswerCallback(cb.id, 'No autorizado')
+        return NextResponse.json({ ok: true })
+      }
+      const dec = interpretarIva(action, args)
+      if (!dec) { await tgAnswerCallback(cb.id, 'Botón no válido'); return NextResponse.json({ ok: true }) }
+      if (dec.accion === 'rev') { await tgAnswerCallback(cb.id, 'Ok, queda para revisar'); return NextResponse.json({ ok: true }) }
+      const hecho = await aplicarSinIvaExtranjero(dec.id)
+      await tgAnswerCallback(cb.id, hecho ? '🌍 IVA 0 (extranjero)' : 'Ya tenía IVA, no se toca')
       return NextResponse.json({ ok: true })
     }
 

@@ -51,9 +51,13 @@ import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { WHERE_CARTERA_VIVA, WHERE_CARTERA_EN_VIGOR, leerSitio, textoReparoSitio, caducidadCarnet, sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
-import { avisosActivos, destinatarioDeCliente, esSoloContar } from './avisos-vencimiento'
+import { avisosActivos, esSoloContar } from './avisos-vencimiento'
+import { descifrar } from './avisos-vencimiento-reglas'
 import { descifrarCampo } from './cartera-edicion'
-import { cuerpoAvisosIntranet, enviarAvisosIntranet } from './correo-avisos-intranet'
+import {
+  cuerpoAvisosIntranet, enviarAvisosIntranet, debeEscribirHoy, esTablaInexistente, elegirDestino, direccionesBloqueadas,
+  type DetalleAviso, type EventoRebote,
+} from './correo-avisos-intranet'
 import { avisosNuevos, claveAviso, enlacePortal, type Pendiente } from './avisos-intranet-reglas'
 import { detectarCambiosPolizas, type ResumenCambiosPoliza } from './poliza-cambios-detector'
 
@@ -66,8 +70,10 @@ export type ResumenAvisosIntranet = {
   avisos: number
   /** Correos aceptados por el proveedor. En modo cuenta es siempre 0. */
   enviados: number
-  /** Clientes con avisos y sin dirección utilizable (o de baja de correo). */
+  /** Clientes con avisos y sin dirección utilizable (de baja, interna, de la correduría o rebotada). */
   sinCanal: number
+  /** Clientes con avisos nuevos a los que NO se escribe hoy porque se les escribió hace <7 días (no se sella). */
+  enEspera: number
   /** Clientes con destinatario a los que el proveedor rechazó el mensaje. */
   fallidos: number
   /** Clientes a los que NO se escribe porque alguna de sus fuentes no se pudo leer. */
@@ -703,6 +709,50 @@ export async function crearEnlaceDirecto(
   return { enlace: urlEnlaceDirecto(base, correo, token), directo: true }
 }
 
+/**
+ * Ramo y tipo de cambio de las pólizas que van en el correo. Solo esos dos datos: el correo nunca
+ * lleva nº de póliza, matrícula, compañía ni importes.
+ */
+export function detallesDe(p: Pendiente, nuevos: readonly { tipo: string; id: string }[]): DetalleAviso[] {
+  const out: DetalleAviso[] = []
+  for (const a of nuevos) {
+    if (a.tipo === 'poliza_modificada') {
+      const m = p.polizasModificadas?.find((x) => x.id === a.id)
+      if (m) out.push({ tipo: 'poliza_modificada', ramo: m.ramo, campos: m.campos, estadoNuevo: m.estadoNuevo })
+    } else if (a.tipo === 'poliza_emitida') {
+      const m = p.polizasNuevas?.find((x) => x.id === a.id)
+      if (m) out.push({ tipo: 'poliza_emitida', ramo: m.ramo, sustituye: m.sustituyeA !== null })
+    }
+  }
+  return out
+}
+
+/**
+ * Direcciones del cliente que han rebotado (duro) o se han quejado, según los eventos de Resend que
+ * ya guarda el webhook (`correo_envio` + `correo_evento`). Lanza si no se puede leer.
+ */
+async function direccionesRebotadas(correduriaId: string, clienteId: string): Promise<Set<string>> {
+  let filas: { tipo: string; tipoRebote: string | null; destino: string }[]
+  try {
+    filas = await prismaAsegura().$queryRaw<{ tipo: string; tipoRebote: string | null; destino: string }[]>`
+    select e.tipo, e.detalle->>'tipoRebote' as "tipoRebote", v.destino_cifrado as destino
+    from correo_envio v join correo_evento e on e.resend_id = v.resend_id
+    where v.correduria_id = ${correduriaId}::uuid and v.cliente_id = ${clienteId}::uuid and e.tipo in ('email.bounced', 'email.complained', 'email.suppressed')`
+  } catch (e) {
+    // Con ASEGURA_FUENTE=origen (BD de Manuel) estas tablas pueden no existir: sin tabla no hay rebotes
+    // que conocer. Cualquier otro fallo sigue siendo «no he podido mirar» (lanza).
+    if (!esTablaInexistente(e)) throw e
+    console.warn('[asegura/avisos-intranet] correo_envio/correo_evento no existen en esta BD: sin rebotes conocidos')
+    return new Set()
+  }
+  const eventos: EventoRebote[] = []
+  for (const f of filas) {
+    const destino = descifrar(f.destino)
+    if (destino) eventos.push({ tipo: f.tipo, tipoRebote: f.tipoRebote, destino })
+  }
+  return direccionesBloqueadas(eventos)
+}
+
 export async function avisarIntranet(
   correduriaId: string,
   opciones: { hoy?: Date; forzarContar?: boolean } = {},
@@ -723,6 +773,7 @@ export async function avisarIntranet(
     avisos: 0,
     enviados: 0,
     sinCanal: 0,
+    enEspera: 0,
     fallidos: 0,
     ilegibles: 0,
     sinFicha: 0,
@@ -740,7 +791,7 @@ export async function avisarIntranet(
   for (const p of pendientes) {
     const sellos = await db.portalAvisoEnviado.findMany({
       where: { clienteId: p.clienteId },
-      select: { clave: true },
+      select: { clave: true, enviadoEn: true },
     })
     const cuenta = avisosNuevos(p, hoy, new Set(sellos.map((s) => s.clave)))
     if (cuenta === null) {
@@ -753,6 +804,14 @@ export async function avisarIntranet(
     resumen.clientes += 1
     resumen.avisos += nuevos.length
 
+    // Máximo UN correo por cliente cada 7 días (salvo avisos con fecha propia). Sin enviar y SIN sellar: lo pendiente sale junto en
+    // el primer correo que toque, y entre medias sigue en la campana.
+    const ultimoSello = sellos.reduce<Date | null>((m, x) => (m === null || x.enviadoEn > m ? x.enviadoEn : m), null)
+    if (!debeEscribirHoy(ultimoSello, hoy, nuevos.map((a) => a.tipo))) {
+      resumen.enEspera += 1
+      continue
+    }
+
     // El destinatario sale SIEMPRE de la ficha, nunca de un parámetro.
     const ficha = await db.cliente.findFirst({
       where: { id: p.clienteId, correduriaId },
@@ -762,7 +821,25 @@ export async function avisarIntranet(
         emails: { select: { email: true, esPrincipal: true, createdAt: true } },
       },
     })
-    const destino = ficha ? destinatarioDeCliente(ficha) : null
+    // Orden de siempre (principal → más antigua → columna suelta); baja de correo = no se escribe.
+    const candidatas = ficha && !ficha.emailOptOutAt
+      ? [
+          ...[...ficha.emails]
+            .sort((x, y) => (x.esPrincipal !== y.esPrincipal ? (x.esPrincipal ? -1 : 1) : x.createdAt.getTime() - y.createdAt.getTime()))
+            .map((e) => descifrar(e.email)),
+          descifrar(ficha.email),
+        ]
+      : []
+    let bloqueadas: Set<string>
+    try {
+      bloqueadas = await direccionesRebotadas(correduriaId, p.clienteId)
+    } catch (e) {
+      // «No he podido mirar los rebotes» no es «no hay»: a este cliente no se le escribe hoy.
+      console.error('[asegura/avisos-intranet] no se pudieron leer los rebotes:', e instanceof Error ? e.message : e)
+      resumen.ilegibles += 1
+      continue
+    }
+    const destino = elegirDestino(candidatas, bloqueadas)
     if (!destino) {
       resumen.sinCanal += 1
       continue
@@ -775,6 +852,7 @@ export async function avisarIntranet(
       {
         nombre: p.nombre,
         avisos: nuevos.map((a) => ({ tipo: a.tipo })),
+        detalles: detallesDe(p, nuevos),
         // El TOTAL de su campana, no el de los nuevos: si no, un correo que dice
         // «tienes 1 aviso» sobre una campana que marca 4 manda a resolver uno y
         // deja los otros tres donde estaban.

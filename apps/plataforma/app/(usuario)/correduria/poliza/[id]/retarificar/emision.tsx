@@ -529,7 +529,25 @@ export function Emision({
     for (const campo of pendientes) void pedirCatalogoCampo(campo)
   }, [estado])
 
-  async function confirmarPrecio(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
+  // Guarda SÍNCRONA contra el doble clic (07/10/2026): confirmar el precio (ReRate) y emitir (Submit) no son
+  // idempotentes y no se deshacen solos. El estado de React llega tarde (un segundo clic en el mismo tick aún ve el
+  // botón activo); el ref no. Una sola llamada en vuelo a la vez, sea cual sea el paso.
+  const llamadaEnVuelo = useRef(false)
+  async function unaALaVez(f: () => Promise<void>) {
+    if (llamadaEnVuelo.current) return
+    llamadaEnVuelo.current = true
+    try {
+      await f()
+    } finally {
+      llamadaEnVuelo.current = false
+    }
+  }
+
+  function confirmarPrecio(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
+    return unaALaVez(() => confirmarPrecioSinGuarda(conCorrecciones, conProductOptions))
+  }
+
+  async function confirmarPrecioSinGuarda(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
     if (!tarificacionId) {
       setEstado({ paso: 'error', mensaje: 'Este proyecto viene de Avant2: el precio se confirma allí y se vuelve a importar.' })
       return
@@ -618,7 +636,16 @@ export function Emision({
     setEstado({ paso: 'error', mensaje: r.mensaje })
   }
 
-  async function emitir(
+  function emitir(
+    projectId: string,
+    cuenta: CuentaConocida | null,
+    aviso: AvisoCuenta | null,
+    opciones: OpcionesEmitir = {},
+  ) {
+    return unaALaVez(() => emitirSinGuarda(projectId, cuenta, aviso, opciones))
+  }
+
+  async function emitirSinGuarda(
     projectId: string,
     cuenta: CuentaConocida | null,
     aviso: AvisoCuenta | null,

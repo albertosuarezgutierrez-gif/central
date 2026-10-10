@@ -18,8 +18,9 @@
 // verificado. El primer intento real puede fallar con un mensaje que pida un
 // campo distinto — la pantalla lo enseña entero, tal cual lo devuelve Codeoscopic.
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FlaskConical } from 'lucide-react'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
@@ -64,7 +65,7 @@ type Resultado =
       guardado: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 export default function VidaNuevo({
   clienteId,
@@ -89,13 +90,14 @@ export default function VidaNuevo({
   /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
   variante?: VarianteNueva | null
   /** Lo que el riesgo ya sabe (`info_riesgo.datosCapital`): precarga; `null` = no se sabe, nunca 0. */
-  inicial?: { capital: number | null; duracionAnios: number | null } | null
+  inicial?: { capital: number | null; profesion: string | null; fumador: boolean | null } | null
 }) {
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
   const [capital, setCapital] = useState(inicial?.capital != null ? String(inicial.capital) : '')
   // Datos del asegurado que viajan al vendor. Vacío = «no se sabe» (no se manda), nunca un «no» por defecto.
-  const [profesion, setProfesion] = useState('')
-  const [fumador, setFumador] = useState<'' | 'si' | 'no'>('')
+  // Precargados de `info_riesgo.datosCapital` si el riesgo los trae (se editan en la oportunidad); `null` = sin dato.
+  const [profesion, setProfesion] = useState(inicial?.profesion ?? '')
+  const [fumador, setFumador] = useState<'' | 'si' | 'no'>(inicial?.fumador === true ? 'si' : inicial?.fumador === false ? 'no' : '')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
   const [fechaEfecto, setFechaEfecto] = useState('')
@@ -123,9 +125,23 @@ export default function VidaNuevo({
   const faltaAlgo = faltaCivil || faltaCapital || faltaProfesion || faltaFumador || aManoSinRellenar.length > 0 || huerfanos.length > 0
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
-  async function cotizar() {
+  // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
+  // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
+  const cotizandoEnVuelo = useRef(false)
+  async function cotizar(forzar = false) {
+    if (cotizandoEnVuelo.current) return
+    cotizandoEnVuelo.current = true
+    try {
+      await cotizarSinGuarda(forzar)
+    } finally {
+      cotizandoEnVuelo.current = false
+    }
+  }
+
+  async function cotizarSinGuarda(forzar: boolean) {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionVida({
+      forzar,
       clienteId,
       resueltos: {
         estadoCivilId,
@@ -142,6 +158,9 @@ export default function VidaNuevo({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
       case 'ramo':
@@ -313,6 +332,9 @@ export default function VidaNuevo({
             {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
         )}
         {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} clienteId={clienteId} />}
       </div>

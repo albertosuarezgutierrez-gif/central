@@ -94,7 +94,7 @@ export function textosReferencia(referencia: string | null): { cabecera: string;
 }
 
 /** Lo que la fuente no tiene (un emoji) se cambia por «?» en vez de romper el PDF. */
-function paraFuente(font: PDFFont, t: string): string {
+export function paraFuente(font: PDFFont, t: string): string {
   const validos = new Set(font.getCharacterSet())
   const cabe = (c: string) => c === '\n' || validos.has(c.codePointAt(0)!)
   // Una letra con un diacrítico que la fuente no trae (ș, ł, č…) cae a su letra base antes que a «?».
@@ -103,7 +103,7 @@ function paraFuente(font: PDFFont, t: string): string {
     .join('')
 }
 
-function partir(font: PDFFont, texto: string, tam: number, ancho: number): string[] {
+export function partir(font: PDFFont, texto: string, tam: number, ancho: number): string[] {
   const salida: string[] = []
   for (const parrafo of texto.split('\n')) {
     let linea = ''
@@ -132,7 +132,7 @@ export function repartirOpciones<T extends { papeles: string[] }>(opciones: T[])
 }
 
 /** Una sola línea: lo que no cabe se corta con «…». */
-function recortar(font: PDFFont, t: string, tam: number, w: number): string {
+export function recortar(font: PDFFont, t: string, tam: number, w: number): string {
   let s = paraFuente(font, t)
   if (font.widthOfTextAtSize(s, tam) <= w) return s
   while (s.length > 1 && font.widthOfTextAtSize(`${s}…`, tam) > w) s = s.slice(0, -1)
@@ -141,7 +141,7 @@ function recortar(font: PDFFont, t: string, tam: number, w: number): string {
 
 const A4: [number, number] = [595.28, 841.89]
 const M = 44
-const hex = (h: string): RGB => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255)
+export const hex = (h: string): RGB => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255)
 // Paleta de `MARCA_ASEGURA` (@central/brand): primario #3364ee y acentoSuave #E3EFFF. Neutros sin tinte.
 const PRIMARIO = hex('#3364ee')
 const SUAVE = hex('#E3EFFF')

@@ -89,6 +89,13 @@ export type Casado = {
   porPeriodo: Map<string, string[]>
   /** Abonos de una compañía del libro que no se han podido atribuir a ningún periodo. */
   sinPeriodo: number
+  /**
+   * Periodos cubiertos por un abono que liquida VARIAS remesas a la vez: el total «en banco» de cada uno
+   * es SU remesa, no el importe entero del abono (que se repite en `porPeriodo` para todos ellos).
+   */
+  totalFijo: Map<string, number>
+  /** Abonos multi-remesa que superan la suma de remesas: el sobrante NO se reparte, queda aquí. */
+  excedentes: Array<{ abonoId: string; codigo: string; importe: number; sumaRemesas: number; excedente: number }>
 }
 
 /**
@@ -110,8 +117,12 @@ export function casarAbonos(
 ): Casado {
   const porPeriodo = new Map<string, string[]>()
   const porRemesa = new Set<string>()
+  const totalFijo = new Map<string, number>()
+  const excedentes: Casado['excedentes'] = []
   const codigosLibro = new Set(periodos.map((p) => p.codigo))
   let sinPeriodo = 0
+  /** Fecha del último abono casado por compañía: cota inferior del saldo multi-remesa. */
+  const ultimoAbono = new Map<string, string>()
   const orden = [...abonos].sort((x, y) => (x.fecha < y.fecha ? -1 : x.fecha > y.fecha ? 1 : x.id < y.id ? -1 : 1))
   for (const a of orden) {
     const codigo = codigoDeAbono(a, reglas)
@@ -134,6 +145,21 @@ export function casarAbonos(
       elegido = porImporte[0]
       if (elegido) porRemesa.add(clave(elegido))
       else {
+        // Un abono con compañía asignada que NO se parece a ninguna remesa suelta puede ser el saldo
+        // que liquida varias a la vez (Allianz: «Transferencia saldo de la cuenta» 704,53€).
+        const multi = a.companiaSeguros ? casarSaldoMultiRemesa(a, codigo, periodos, porPeriodo, porRemesa, ultimoAbono.get(codigo)) : null
+        if (multi) {
+          for (const p of multi.periodos) {
+            porPeriodo.set(clave(p), [a.id])
+            totalFijo.set(clave(p), p.remesa!)
+            porRemesa.add(clave(p))
+          }
+          if (multi.excedente > 0) {
+            excedentes.push({ abonoId: a.id, codigo, importe: a.importe, sumaRemesas: multi.suma, excedente: multi.excedente })
+          }
+          ultimoAbono.set(codigo, a.fecha)
+          continue
+        }
         const minimo = mitadMesAnterior(a.fecha)
         elegido = [...candidatos].reverse().find((p) => p.fin <= a.fecha && p.fin >= minimo)
       }
@@ -141,8 +167,35 @@ export function casarAbonos(
     if (!elegido) { sinPeriodo++; continue }
     const k = clave(elegido)
     porPeriodo.set(k, [...(porPeriodo.get(k) ?? []), a.id])
+    ultimoAbono.set(codigo, a.fecha)
   }
-  return { porPeriodo, sinPeriodo }
+  return { porPeriodo, sinPeriodo, totalFijo, excedentes }
+}
+
+/**
+ * Periodos PENDIENTES (con remesa, sin ningún abono casado) de la compañía, anteriores a la fecha del
+ * abono, que el abono cubre enteros: abono ≥ suma de remesas (±1€) y al menos DOS (con una sola ya
+ * manda el casado normal). Devuelve `null` si no aplica. Si el abono supera la suma, el sobrante se
+ * devuelve como `excedente` y NO se reparte: no hay forma de saber a qué periodo pertenece.
+ */
+export function casarSaldoMultiRemesa(
+  a: AbonoBanco,
+  codigo: string,
+  periodos: readonly PeriodoLiq[],
+  porPeriodo: ReadonlyMap<string, string[]>,
+  usados: ReadonlySet<string>,
+  /** Fecha del abono anterior ya casado de esta compañía: los periodos cerrados antes de él no se reclaman (sin cota si no hay). */
+  desde?: string,
+): { periodos: PeriodoLiq[]; suma: number; excedente: number } | null {
+  const pendientes = periodos.filter(
+    (p) => p.codigo === codigo && p.remesa !== null && p.remesa > 0 && p.fin <= a.fecha && (desde === undefined || p.fin > desde)
+      && !porPeriodo.has(clave(p)) && !usados.has(clave(p)),
+  )
+  if (pendientes.length < 2) return null
+  const suma = Math.round(pendientes.reduce((s, p) => s + p.remesa!, 0) * 100) / 100
+  if (a.importe < suma - TOLERANCIA_REMESA) return null
+  const excedente = Math.round((a.importe - suma) * 100) / 100
+  return { periodos: pendientes, suma, excedente: excedente > TOLERANCIA_REMESA ? excedente : 0 }
 }
 
 /** Total y abonos casados con un periodo. `total: null` = ningún abono identificado (no «0€ cobrados»). */
@@ -153,6 +206,8 @@ export function bancoDePeriodo(
 ): { total: number | null; ids: string[] } {
   const ids = casado.porPeriodo.get(clave(p)) ?? []
   if (ids.length === 0) return { total: null, ids }
+  const fijo = casado.totalFijo.get(clave(p))
+  if (fijo !== undefined) return { total: Math.round(fijo * 100) / 100, ids }
   const porId = new Map(abonos.map((a) => [a.id, a.importe]))
   const total = ids.reduce((s, id) => s + (porId.get(id) ?? 0), 0)
   return { total: Math.round(total * 100) / 100, ids }

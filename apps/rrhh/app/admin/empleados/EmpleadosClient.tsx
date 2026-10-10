@@ -5,7 +5,7 @@ import AdminShell from '@/components/AdminShell'
 import AsistentePanelAdmin from '@/components/AsistentePanelAdmin'
 
 type Vac = { aprobados: number; en_tramite: number; pendientes: number | null }
-type E = { id: string; nombre: string; apellidos: string | null; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; acceso_token: string | null; vacaciones?: Vac; fecha_reconocimiento_medico?: string | null }
+type E = { id: string; nombre: string; apellidos: string | null; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; vacaciones?: Vac; fecha_reconocimiento_medico?: string | null }
 
 function diasParaCaducarReconocimiento(fecha: string | null | undefined): number | null {
   if (!fecha) return null

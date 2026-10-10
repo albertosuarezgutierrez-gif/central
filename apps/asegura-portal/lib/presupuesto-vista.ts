@@ -19,6 +19,7 @@
 // portal para que subir sea mover el fichero.
 
 import { revisarCopy, explicarInfracciones, VALIDEZ_PRESUPUESTO_DIAS } from '@central/module-seguros'
+import { copyOfertas } from './presupuesto-ofertas-vista.ts'
 
 export { VALIDEZ_PRESUPUESTO_DIAS }
 
@@ -84,9 +85,9 @@ export function textoFranquicia(franquiciaEur: number | null, eur: (n: number) =
 
 // ─── Los papeles de la portada ───────────────────────────────────────────────
 
-export type PapelPortada = 'equivalente' | 'mas_barata' | 'mejor_cubierta'
+export type PapelPortada = 'equivalente' | 'mas_barata' | 'mejor_cubierta' | 'recomendada'
 
-export const PAPELES_CONOCIDOS: readonly PapelPortada[] = ['equivalente', 'mas_barata', 'mejor_cubierta']
+export const PAPELES_CONOCIDOS: readonly PapelPortada[] = ['equivalente', 'mas_barata', 'mejor_cubierta', 'recomendada']
 
 export function esPapel(v: unknown): v is PapelPortada {
   return typeof v === 'string' && (PAPELES_CONOCIDOS as readonly string[]).includes(v)
@@ -102,6 +103,8 @@ const ETIQUETA_PAPEL: Record<PapelPortada, string> = {
   equivalente: 'La equivalente a lo que tienes hoy',
   mas_barata: 'La de menor importe de tu misma cobertura',
   mejor_cubierta: 'La que más cubre',
+  // Presupuestos de ofertas (F4): la marca el CORREDOR tras revisar las ofertas, no la calcula el código.
+  recomendada: 'La que te recomienda tu corredor',
 }
 
 /**
@@ -364,6 +367,8 @@ export function copyFijo(): string[] {
     AVISO_NO_ES_CONTRATACION,
     TEXTO_CARATULA.titulo,
     TEXTO_CARATULA.cuerpo,
+    TEXTO_CARATULA.conWhatsapp,
+    TEXTO_CARATULA.conCorreo,
     TEXTO_CARATULA.enlaceMuerto,
     TEXTO_AJENO,
     TEXTO_VINCULO_AMBIGUO,
@@ -373,6 +378,7 @@ export function copyFijo(): string[] {
     textoCaducidad('1 de enero', '16 de enero', false),
     textoCaducidad('1 de enero', '16 de enero', true),
     textoCompaniasConsultadas(2),
+    ...copyOfertas(),
   ]
 }
 
@@ -399,7 +405,9 @@ export function revisarCopyFijo(): string {
 export const TEXTO_CARATULA = {
   titulo: 'Tienes un presupuesto preparado',
   cuerpo:
-    'Alberto Suárez, de Grupo ASegura, te ha preparado un presupuesto. Es personal, así que no se enseña aquí: entra con tu correo y te mando un código de un solo uso para verlo.',
+    'Alberto Suárez, de Grupo ASegura, te ha preparado un presupuesto. Es personal, así que no se enseña aquí: escribe el código de acceso que te mandé por WhatsApp, o entra con tu correo y te mando un código de un solo uso.',
+  conWhatsapp: '¿Te lo he mandado por WhatsApp?',
+  conCorreo: 'O entra con tu correo',
   enlaceMuerto:
     'Este enlace ya no sirve. Puede que haya caducado o que se haya retirado. Escríbeme y te preparo otro.',
 } as const

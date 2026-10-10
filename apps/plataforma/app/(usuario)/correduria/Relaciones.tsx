@@ -9,6 +9,7 @@ import {
   coincidenciaBloquea,
   combinarPersonaContacto,
   permiteAutorizar,
+  provinciaPorCp,
   revisarAlta,
   textoPersonaContacto,
   tiposContactoSugeridos,
@@ -21,6 +22,8 @@ import {
 import { AlertTriangle, CheckCircle2, CircleHelp, Clock, FileText, Lock, type LucideIcon, Mail, Phone, Plus, StickyNote, Unlock, Users, X } from 'lucide-react'
 import { btnStyle, type Tono } from '@/components/ui'
 import { Ico, FILA } from './iconos'
+import DireccionConfirmable from './DireccionConfirmable'
+import CiudadPorCp from './CiudadPorCp'
 import AccionesContacto from './AccionesContacto'
 import {
   ALCANCE_TEXTO_PORTAL,
@@ -1310,7 +1313,10 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
   onBuscar: () => void
 }) {
   const tipos = tiposContactoSugeridos(tipoPersona)
-  const [f, setF] = useState({ nombre: terminoInicial, apellidos: '', telefono: '', email: '' })
+  const [f, setF] = useState({
+    nombre: terminoInicial, apellidos: '', dni: '', fechaNacimiento: '', telefono: '', email: '',
+    direccion: '', codigoPostal: '', ciudad: '', provincia: '',
+  })
   const [tipo, setTipo] = useState<TipoRelacion>(tipos[0])
   const [observaciones, setObservaciones] = useState('')
   const [trabajando, setTrabajando] = useState(false)
@@ -1324,7 +1330,15 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
   const nombreCompleto = [f.nombre.trim(), f.apellidos.trim()].filter((x) => x !== '').join(' ') || 'esta persona'
 
   function set<K extends keyof typeof f>(k: K, v: string) {
-    setF((prev) => ({ ...prev, [k]: v }))
+    setF((prev) => {
+      const next = { ...prev, [k]: v }
+      // CP completo → su provincia (misma regla que el alta de cliente).
+      if (k === 'codigoPostal' && /^\d{5}$/.test(v.trim())) {
+        const p = provinciaPorCp(v)
+        if (p) next.provincia = p
+      }
+      return next
+    })
   }
 
   async function vincular(id: string): Promise<RespuestaRelaciones> {
@@ -1410,16 +1424,47 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
         </Campo>
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+        <Campo label="DNI / NIE / CIF" ayuda="Con el DNI basta para crear la ficha y es lo primero que se usa para no duplicarla.">
+          <input value={f.dni} onChange={(e) => set('dni', e.target.value)} placeholder="12345678Z" autoComplete="off" style={{ ...campo, ...(campoMal === 'dni' ? malo : {}) }} />
+        </Campo>
+        <Campo label="Fecha de nacimiento">
+          <input type="date" value={f.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} style={{ ...campo, ...(campoMal === 'fechaNacimiento' ? malo : {}) }} />
+        </Campo>
+      </div>
+
       {/* El teléfono y el email no son un adorno: son POR DONDE ENTRARÁ al
           portal el día que se le autorice (la identidad se prueba con un código
           de un solo uso a uno de los dos). Sin ninguno de los dos, ni se le
           puede dar acceso ni se vuelve a encontrar la ficha. */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
-        <Campo label="Teléfono" ayuda="Hace falta el teléfono o el email: es por donde entrará al portal cuando le des acceso.">
+        <Campo label="Teléfono" ayuda="Hace falta el DNI, el teléfono o el email. Teléfono o email son por donde entrará al portal cuando le des acceso.">
           <input type="tel" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} placeholder="600 000 000" style={{ ...campo, ...(campoMal === 'telefono' ? malo : {}) }} />
         </Campo>
         <Campo label="Email">
           <input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="nombre@dominio.es" style={{ ...campo, ...(campoMal === 'email' ? malo : {}) }} />
+        </Campo>
+      </div>
+
+      <Campo label="Dirección">
+        <DireccionConfirmable
+          value={f.direccion}
+          onChange={(v) => set('direccion', v)}
+          codigoPostal={f.codigoPostal}
+          ciudad={f.ciudad}
+          placeholder="Calle, número, piso"
+          style={{ ...campo, ...(campoMal === 'direccion' ? malo : {}) }}
+        />
+      </Campo>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+        <Campo label="Código postal">
+          <input value={f.codigoPostal} onChange={(e) => set('codigoPostal', e.target.value)} inputMode="numeric" maxLength={5} placeholder="41003" style={{ ...campo, ...(campoMal === 'codigoPostal' ? malo : {}) }} />
+        </Campo>
+        <Campo label="Población">
+          <CiudadPorCp cp={f.codigoPostal} ciudad={f.ciudad} onCiudad={(v) => set('ciudad', v)} style={campo} />
+        </Campo>
+        <Campo label="Provincia">
+          <input value={f.provincia} onChange={(e) => set('provincia', e.target.value)} style={{ ...campo, ...(campoMal === 'provincia' ? malo : {}) }} />
         </Campo>
       </div>
 

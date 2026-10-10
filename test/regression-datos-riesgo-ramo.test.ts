@@ -72,11 +72,11 @@ test('🪤 la acción que lee la ficha para editarla exige sesión de la corredu
   assert.ok(iGuarda < cuerpo.indexOf('fichaAsegura('), 'y antes de leer la ficha')
 })
 
-test('🪤 el modal «Editar datos»: cada formulario se remonta con SUS datos y cerrar con cambios sin guardar pregunta', () => {
+test('🪤 el modal «Editar datos»: monta el panel único y cerrar con cambios sin guardar pregunta', () => {
   const m = activas(leer(join(CORR, 'oportunidad/[id]/EditarFichaModal.tsx')))
   assert.doesNotMatch(m, /\bversion\b/, 'ya no hay una versión compartida que remonte los dos a la vez')
-  assert.match(m, /key=\{`c\$\{claveIdentidad\}`\}/)
-  assert.match(m, /key=\{`k\$\{claveCarnets\}`\}/)
+  assert.match(m, /<PanelDatosCliente\b[\s\S]*?onGuardado=/, 'el mismo editor que la ficha, sin uno propio')
+  assert.match(m, /todoGuardado/, 'solo se da por limpio si el panel guardó TODOS los tramos')
   assert.match(m, /window\.confirm\(/, 'avisa antes de perder lo tecleado')
   assert.match(m, /onClick=\{\(e\) => \{ if \(e\.target === e\.currentTarget\) cerrar\(\) \}\}/, 'también al clicar fuera')
   assert.match(m, /cerrarRef\.current\(\)/, 'y con Escape')
@@ -162,7 +162,7 @@ test('🪤 editarDatosRiesgo: el SELECT y el UPDATE filtran por correduria_id (a
 })
 
 test('🪤 el aviso «no se pudo enlazar a la oportunidad» se pinta en las 6 pantallas de precio de cliente nuevo', () => {
-  for (const [dir, f] of [['auto-nuevo', 'AutoNuevo.tsx'], ['moto-nuevo', 'MotoNuevo.tsx'], ['hogar-nuevo', 'Formulario.tsx'], ['vida-nuevo', 'VidaNuevo.tsx'], ['salud-nuevo', 'SaludNuevo.tsx'], ['decesos-nuevo', 'DecesosNuevo.tsx']]) {
+  for (const [dir, f] of [['auto-nuevo', 'AutoNuevo.tsx'], ['moto-nuevo', 'CotizadorMoto.tsx'], ['hogar-nuevo', 'Formulario.tsx'], ['vida-nuevo', 'VidaNuevo.tsx'], ['salud-nuevo', 'SaludNuevo.tsx'], ['decesos-nuevo', 'DecesosNuevo.tsx']]) {
     const p = activas(leer(join(CORR, 'cliente/[id]', dir, f)))
     assert.match(p, /<EnlaceOportunidad guardado=\{r\.guardado\} \/>/, `${dir} pinta el enlace/aviso`)
   }

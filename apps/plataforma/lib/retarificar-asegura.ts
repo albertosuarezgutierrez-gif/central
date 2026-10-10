@@ -644,6 +644,11 @@ export type RespuestaRetarificar =
   /** 409 · el ramo no se retarifica todavía (hoy solo auto, moto y hogar). */
   | { estado: 'ramo'; mensaje: string }
   /**
+   * 409 `razon: 'duplicado'` (08/10/2026): asegura ya tiene una cotización idéntica en curso o de hace <15 min y NO ha
+   * llamado a la compañía ni cobrado nada. Solo reenviando la misma petición con `forzar: true` se recotiza (0,50€).
+   */
+  | { estado: 'duplicado_cotizacion'; mensaje: string }
+  /**
    * 409 · ya hay un proyecto de Codeoscopic con oferta confirmada y sin caducar
    * para esta póliza (guardián de reutilización de asegura, PR #2790). NO es un
    * fallo: es el precio que ya está pagado, y se confirma con «Emitir», no
@@ -747,11 +752,19 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
     // El riesgo no es de esta póliza: asegura corta ANTES del vendor. No es «faltan datos».
     return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('Este riesgo no es de esta póliza: no se ha pedido precio.'), gastoDesconocido: !cero }
   }
+  if (status === 422 && r.causa === 'validacion') {
+    // El vendor rechazó el cuerpo (400) con PRUEBA de no-cargo: asegura lo declara con `gastado: '0,00€'`.
+    // No es «faltan datos» (no hay lista) ni «no se sabe si se ha cobrado»: `cero` lo dice.
+    return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('El vendor ha rechazado la petición.'), gastoDesconocido: !cero }
+  }
   if (status === 422) {
     return { estado: 'faltan', faltan: Array.isArray(r.faltan) ? (r.faltan as Reparo[]) : [] }
   }
   if (status === 402) {
     return { estado: 'tope', mensaje: mensajeDe('Se ha alcanzado el tope de cotizaciones.') }
+  }
+  if (status === 409 && (r.razon === 'duplicado' || r.causa === 'duplicado')) {
+    return { estado: 'duplicado_cotizacion', mensaje: mensajeDe('Cotización idéntica reciente: no se ha vuelto a pagar nada.') }
   }
   if (status === 409) {
     // Dos 409 distintos con el mismo código: el ramo que no se retarifica y el
@@ -939,6 +952,8 @@ export type PeticionRetarificar = {
    * ese gesto, pedir precio con un proyecto vigente se rechaza sin cobrar.
    */
   forzarNuevo?: boolean
+  /** Recotización EXPLÍCITA tras un 409 `duplicado` (0,50€ otra vez): salta la guarda anti-duplicado de asegura. */
+  forzar?: boolean
   /**
    * Variante del RIESGO de esta póliza (29/09/2026): la tarificación se cuelga de esa oportunidad.
    * asegura comprueba, antes de gastar, que el riesgo es de esta póliza (422 `causa: 'variante'`).
@@ -982,6 +997,7 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
           ...(p.referencia ? { referencia: p.referencia } : {}),
           // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
           ...(p.forzarNuevo === true ? { forzarNuevo: true } : {}),
+          ...(p.forzar === true ? { forzar: true } : {}),
           ...(p.oportunidadId ? { oportunidadId: p.oportunidadId } : {}),
           ...(p.oportunidadId && p.nota && p.nota.trim() !== '' ? { nota: p.nota.trim().slice(0, 200) } : {}),
         }),

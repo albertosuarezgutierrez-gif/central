@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { opcionesPorDefecto, opcionesEmisionPorDefecto, conProductoPorDefecto, conDescuentos, descuentosDelCuerpo } from './opciones-producto.ts'
+import { opcionesPorDefecto, opcionesParaReRate, opcionesEmisionPorDefecto, conProductoPorDefecto, conDescuentos, descuentosDelCuerpo } from './opciones-producto.ts'
 
 test('opcionesPorDefecto: Allianz trae las 14 opciones portadas del CRM, con naturalPhenomena=false', () => {
   const o = opcionesPorDefecto('Allianz')
@@ -142,10 +142,31 @@ test('opcionesPorDefecto: Generali hogar → commercialDiscountNumber a 50', () 
 test('opcionesPorDefecto: Occident y Fidelidade siguen sin catálogo en moto/hogar; comissionType nunca', () => {
   for (const c of ['Occident', 'Catalana Occidente', 'Fidelidade'])
     for (const r of ['moto', 'hogar']) assert.equal(opcionesPorDefecto(c, r), null, `${c} ${r}`)
-  assert.equal(opcionesPorDefecto('Generali', 'auto'), null)
+  assert.equal(opcionesPorDefecto('Occident', 'auto'), null)
   for (const c of ['Allianz', 'Generali', 'Occident', 'Fidelidade'])
     for (const r of ['moto', 'hogar'])
       assert.equal((opcionesPorDefecto(c, r) ?? []).some((o) => o.id === 'comissionType'), false, `${c} ${r}`)
+})
+
+test('opcionesPorDefecto: Generali auto → commercialDiscountNumber a 50', () => {
+  assert.deepEqual(ids(opcionesPorDefecto('Generali', 'auto')), { commercialDiscountNumber: 50 })
+})
+test('opcionesParaReRate: Generali auto con opciones del vendor que traen el id → lo sube a 50 sin tocar el resto', () => {
+  const vendor = [{ id: 'commercialDiscountNumber', type: 'number', value: 0 }, { id: 'codigoFlota', type: 'string', value: 'x' }]
+  assert.deepEqual(opcionesParaReRate(vendor, 'Generali Seguros', 'auto'), [
+    { id: 'commercialDiscountNumber', type: 'number', value: 50 },
+    { id: 'codigoFlota', type: 'string', value: 'x' },
+  ])
+  assert.equal(vendor[0].value, 0, 'no muta la entrada')
+})
+test('opcionesParaReRate: Generali auto con opciones del vendor SIN el id → no se inventa (evita un 400 de 0,50€)', () => {
+  const vendor = [{ id: 'otra', type: 'string', value: 'x' }]
+  assert.deepEqual(opcionesParaReRate(vendor, 'Generali', 'auto'), vendor)
+})
+test('opcionesParaReRate: sin opciones del vendor → catálogo; otras compañías → las del vendor tal cual', () => {
+  assert.deepEqual(ids(opcionesParaReRate(null, 'Generali', 'auto') as { id: string; value: unknown }[]), { commercialDiscountNumber: 50 })
+  const vendor = [{ id: 'commercialDiscountNumber', type: 'number', value: 0 }]
+  assert.deepEqual(opcionesParaReRate(vendor, 'Allianz', 'auto'), vendor)
 })
 
 test('descuento en preemisión: límites del formulario real (CAP 0-99, venta cruzada 0-100), sin tocar el catálogo', () => {

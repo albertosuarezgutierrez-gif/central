@@ -8,7 +8,7 @@ import {
 } from './ficha-asegura.ts'
 import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 import type { DocumentoResumen, EvolucionPrima, Retarificabilidad, DatosCompaniaCima } from '@central/module-seguros'
-import { leerDatosCompaniaPuerto } from '@central/module-seguros'
+import { leerDatosCompaniaPuerto, leerPersonasPuerto, type PersonasPoliza } from '@central/module-seguros'
 import { cimaExtraTruncado, vistaCimaExtra, type GrupoCimaExtra } from './cima-extra-vista.ts'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { CapitalAsegurado, DetalleCobertura } from '@central/module-seguros'
@@ -207,6 +207,12 @@ export type Poliza = {
   fechasContrato: FechasContratoFicha | null
   /** Cobro, producto, mediador, riesgos, beneficiarios y prima dudosa. `null` = asegura no lo manda. Sin IBAN. */
   contrato: ContratoFicha | null
+  /**
+   * Personas que manda CIMA (asegura#880): figuras de la póliza y persona asegurada de vida/decesos,
+   * ya descifradas por asegura (del documento solo «consta»). Cada parte `null` =
+   * no consta (póliza anterior a #880, o asegura viejo que no manda el campo).
+   */
+  personas: PersonasPoliza
 }
 
 export type PolizaRelacionadaFicha = {
@@ -527,6 +533,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       sustitucion: leerSustitucion(p.sustitucion),
       fechasContrato: leerFechasContrato(p.fechasContrato),
       contrato: leerContrato(p.contrato),
+      personas: leerPersonasPuerto(p.personas),
     },
   }
 }

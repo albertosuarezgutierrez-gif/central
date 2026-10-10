@@ -12,6 +12,7 @@
  */
 import { prisma } from '@/lib/tenant'
 import { mismaPersonaPorNombre } from './misma-persona'
+import { competenciaDePoliza } from './seguro-anterior-de-poliza'
 import { carnetDeNuevaPersona } from './carnet-nueva-persona'
 import { encryptField } from '@central/module-seguros-pii'
 import { altaCliente } from '@/lib/cartera-edicion'
@@ -40,6 +41,7 @@ import {
   precargaDePoliza,
   ramoTarificable,
   rolesDelRamo,
+  seguroAnteriorDe,
   type CampoVehiculo,
   type ClaveDatosRiesgo,
   type DatosVehiculoRiesgo,
@@ -47,6 +49,7 @@ import {
   type FigurasVariante,
   type RamoCapital,
   type RolFigura,
+  type SeguroAnterior,
 } from '@central/module-seguros'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -126,6 +129,16 @@ export type Riesgo = {
    * tarifa) y si lo que se ve es la PRECARGA de la póliza de la que nace (`dePoliza`, nunca confirmada).
    */
   datosRiesgo: { clave: ClaveDatosRiesgo; datos: Record<string, unknown>; faltan: string[]; dePoliza: boolean; tarifica: boolean }
+  /**
+   * El historial del riesgo para su pantalla (10/10/2026). `seguroAnterior`: lo leído del papel de la póliza de HOY
+   * (`poliza_competencia.seguroAnterior`, ya saneado); `null` = no se ha leído ninguno. `carnet`: solo en auto/moto
+   * (`null` = el ramo no lo usa); `fecha` aaaa-mm-dd o tal cual la guarda la ficha, `null` = la ficha no la tiene;
+   * `legible: false` = no se pudo leer la ficha del conductor (no es «sin carné»). Sin DNI ni IBAN.
+   */
+  historial: {
+    seguroAnterior: SeguroAnterior | null
+    carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
+  }
 }
 
 const nombreDe = (n: string | null, a: string | null) => `${n ?? ''} ${a ?? ''}`.trim() || 'Sin nombre'
@@ -165,14 +178,14 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     Array<{
       id: string; cliente_id: string; nombre: string | null; apellidos: string | null; tipo: string; estado: string
       poliza_id: string | null; info_riesgo: Record<string, unknown> | null; fecha_fin_vigencia: Date | null
-      aseguradora: string | null; aseguradora_actual: boolean; prima: string | null
+      aseguradora: string | null; aseguradora_actual: boolean; prima: string | null; seguro_anterior: unknown
     }>
   >`
     select o.id::text as id, o.cliente_id::text as cliente_id, c.nombre, c.apellidos, o.tipo::text as tipo,
            o.estado::text as estado, o.poliza_id::text as poliza_id, o.info_riesgo, o.fecha_fin_vigencia,
            coalesce(o.poliza_competencia->>'aseguradora', o.aseguradora_ganadora) as aseguradora,
            (o.poliza_competencia->>'aseguradora') is not null as aseguradora_actual,
-           o.prima_bruta::text as prima
+           o.prima_bruta::text as prima, o.poliza_competencia->'seguroAnterior' as seguro_anterior
     from seguros.oportunidades o
     join seguros.clientes c on c.id = o.cliente_id and c.correduria_id = o.correduria_id
     where o.id = ${oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`
@@ -272,6 +285,9 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
   if (!figuras.some((f) => f.rol === 'tomador')) {
     figuras.unshift({ rol: 'tomador', clienteId: op.cliente_id, nombre: nombreDe(op.nombre, op.apellidos), vinculo: null, porDefecto: true, faltan: null, empresa: false })
   }
+  // El carné del que CONDUCE (habitual si lo hay; si no, el tomador): fecha, de quién y si se pudo leer.
+  // Sin habitual ni tomador con ficha (solo ocasional) no se leyó ninguna: `legible: false` y `conductor: null`.
+  const carnetPorRol = new Map<RolFigura, { fecha: string | null; legible: boolean }>()
   for (const f of figuras) {
     const p = await personaDeFicha(correduriaId, f.clienteId, op.tipo === 'moto' ? 'moto' : 'auto').catch(() => null)
     // El carné solo cuenta en un riesgo de vehículo: a un tomador de hogar no se le pide.
@@ -281,7 +297,22 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       (op.tipo === 'auto' || op.tipo === 'moto') &&
       (f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || (f.rol === 'tomador' && !hayConductor))
     f.empresa = p !== null && p.tipo === 'juridica'
-    f.faltan = p === null ? null : faltanDeFigura(p, conduce)
+    if (conduce) {
+      const fecha = p !== null && 'fechaCarnet' in p && typeof p.fechaCarnet === 'string' && p.fechaCarnet.trim() !== '' ? p.fechaCarnet.trim() : null
+      carnetPorRol.set(f.rol, { fecha, legible: p !== null })
+    }
+    // Estado civil de la ficha (texto libre del CRM) solo en los ramos de personas: se lee aparte para no meterlo en
+    // `personaDeFicha` (ahí viajaría al vendor como si fuera un id de catálogo).
+    const pideCivil = ramoPideEstadoCivil(op.tipo) && !f.empresa
+    const civil = pideCivil ? await clienteOrigenDe(correduriaId, f.clienteId).then((o) => (o ? o.cliente.estadoCivil : undefined)).catch(() => undefined) : undefined
+    f.faltan = p === null ? null : faltanDeFigura(p, conduce, { pideEstadoCivil: pideCivil, estadoCivilFicha: civil })
+  }
+
+  const rolCarnet = (['conductor_habitual', 'tomador'] as const).find((r) => carnetPorRol.has(r)) ?? null
+  const carnetElegido = rolCarnet ? carnetPorRol.get(rolCarnet)! : null
+  const historial: Riesgo['historial'] = {
+    seguroAnterior: seguroAnteriorDe(op.seguro_anterior),
+    carnet: conVehiculo ? { fecha: carnetElegido?.fecha ?? null, conductor: rolCarnet, legible: carnetElegido?.legible ?? false } : null,
   }
 
   return {
@@ -306,6 +337,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     datosVehiculo,
     faltanVehiculo: datosVehiculo ? faltanDatosVehiculo(datosVehiculo) : null,
     datosRiesgo: { clave: bloque.clave, datos: bloque.datos, faltan: bloque.faltan, dePoliza: bloque.dePoliza, tarifica: ramoTarificable(op.tipo) },
+    historial,
   }
 }
 
@@ -543,8 +575,17 @@ export async function personaDeFicha(
   }
 }
 
-/** Qué le falta a una figura para poder cotizar (el estado civil lo elige el corredor del catálogo). */
-export function faltanDeFigura(p: PersonaFigura | EmpresaFigura | null, conCarnet: boolean): string[] {
+/**
+ * Qué le falta a una figura para poder cotizar. El estado civil del vendor es un id de catálogo que se elige en la
+ * pantalla de precio; en AUTO y MOTO se pide siempre allí y no se avisa aquí. En vida, salud y decesos (07/10/2026) la
+ * pantalla de precio no pasa sin él, así que se avisa si la ficha NO lo trae (`pideEstadoCivil`; `estadoCivilFicha`
+ * `undefined` = no se pudo leer: no se afirma que falte).
+ */
+export function faltanDeFigura(
+  p: PersonaFigura | EmpresaFigura | null,
+  conCarnet: boolean,
+  personas: { pideEstadoCivil: boolean; estadoCivilFicha: string | null | undefined } = { pideEstadoCivil: false, estadoCivilFicha: undefined },
+): string[] {
   if (!p) return ['ficha']
   const f: string[] = []
   // Empresa: CIF y razón social (en los campos de la pantalla, `dni` y `nombre`). Conducir, nunca:
@@ -557,7 +598,13 @@ export function faltanDeFigura(p: PersonaFigura | EmpresaFigura | null, conCarne
   }
   for (const k of ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'sexo', 'telefono'] as const) if (!p[k]) f.push(k)
   if (conCarnet && !p.fechaCarnet) f.push('fechaCarnet')
+  if (personas.pideEstadoCivil && personas.estadoCivilFicha !== undefined && !(personas.estadoCivilFicha ?? '').trim()) f.push('estadoCivil')
   return f
+}
+
+/** Ramos de personas: la pantalla de precio exige estado civil (catálogo del vendor) del tomador. */
+export function ramoPideEstadoCivil(ramo: string): boolean {
+  return ramo === 'vida' || ramo === 'salud' || ramo === 'decesos'
 }
 
 /** Qué rol de figura va a qué clave de `DatosAuto` (lo que ya sabe construir la petición). */
@@ -752,8 +799,15 @@ export async function abrirRiesgoDePoliza(
   if (!UUID.test(e.polizaId)) return { ok: false, status: 400, motivo: 'id no válido' }
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`riesgo-poliza:${e.polizaId}`}))`
-    const [pol] = await tx.$queryRaw<Array<{ cliente_id: string; tipo: string; aseguradora: string | null; datos: Record<string, unknown> | null }>>`
-      select p.cliente_id::text as cliente_id, p.tipo::text as tipo, p.aseguradora, p.datos_especificos as datos
+    const [pol] = await tx.$queryRaw<Array<{
+      cliente_id: string; tipo: string; aseguradora: string | null; datos: Record<string, unknown> | null
+      numero_poliza: string | null; dgs: string | null; vencimiento: string | null
+      import_ref: string | null; eiac_xml_hash: string | null; estado: string | null; sustituida_at: Date | null
+    }>>`
+      select p.cliente_id::text as cliente_id, p.tipo::text as tipo, p.aseguradora, p.datos_especificos as datos,
+             p.numero_poliza, p.codigo_entidad_dgs as dgs,
+             to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento,
+             p.import_ref, p.eiac_xml_hash, p.estado::text as estado, p.sustituida_at
       from seguros.polizas p
       join seguros.clientes c on c.id = p.cliente_id and c.correduria_id = p.correduria_id and c.merged_into_cliente_id is null
       where p.id = ${e.polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null`
@@ -767,7 +821,22 @@ export async function abrirRiesgoDePoliza(
         and (poliza_id = ${e.polizaId}::uuid or (poliza_id is null and info_riesgo->>'polizaId' = ${e.polizaId}))
         and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
       order by (poliza_id is not null) desc, created_at desc limit 1`
+    // El seguro anterior de esta póliza (compañía, nº, periodo): lo lee la pantalla de precio de `poliza_competencia`.
+    const comp = competenciaDePoliza({
+      aseguradora: pol.aseguradora, numeroPoliza: pol.numero_poliza, codigoDgs: pol.dgs, fechaVencimiento: pol.vencimiento,
+      importRef: pol.import_ref, eiacXmlHash: pol.eiac_xml_hash, estado: pol.estado, sustituidaAt: pol.sustituida_at,
+      matricula: pol.tipo === 'auto' || pol.tipo === 'moto'
+        ? (typeof pol.datos?.matricula === 'string' ? pol.datos.matricula : null) : null,
+    })
     if (ya) {
+      // Una abierta de antes sin `seguroAnterior` se rellena; lo que ya trae (leído del papel o declarado) gana.
+      if (comp) {
+        await tx.$executeRaw`
+          update seguros.oportunidades
+          set poliza_competencia = (${JSON.stringify(comp.poliza)}::jsonb || coalesce(poliza_competencia, '{}'::jsonb)) || jsonb_build_object('seguroAnterior', ${JSON.stringify(comp.poliza)}::jsonb -> 'seguroAnterior'),
+              numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${comp.numeroPoliza}), updated_at = now()
+          where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid and (poliza_competencia is null or jsonb_typeof(poliza_competencia->'seguroAnterior') is distinct from 'object')`
+      }
       if (ya.poliza_id === null) {
         await tx.$executeRaw`
           update seguros.oportunidades set poliza_id = ${e.polizaId}::uuid, updated_at = now()
@@ -786,9 +855,10 @@ export async function abrirRiesgoDePoliza(
       ...(pre ? { [pre.clave]: { ...pre.valor, confirmadoAt: null } } : {}),
     }
     const [o] = await tx.$queryRaw<Array<{ id: string }>>`
-      insert into seguros.oportunidades (correduria_id, cliente_id, tipo, fuente, estado, info_riesgo, poliza_id)
+      insert into seguros.oportunidades (correduria_id, cliente_id, tipo, fuente, estado, info_riesgo, poliza_id, poliza_competencia, numero_poliza)
       values (${correduriaId}::uuid, ${pol.cliente_id}::uuid, cast(${pol.tipo} as seguros.tipo_seguro), 'renovacion', 'en_negociacion',
-              ${JSON.stringify(info)}::jsonb, ${e.polizaId}::uuid)
+              ${JSON.stringify(info)}::jsonb, ${e.polizaId}::uuid,
+              ${comp ? JSON.stringify(comp.poliza) : null}::jsonb, ${comp?.numeroPoliza ?? null})
       returning id::text as id`
 
     const roles = rolesDelRamo(pol.tipo)

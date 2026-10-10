@@ -33,8 +33,10 @@ export interface DictamenReceptor {
 
 export function normalizaNifReceptor(s?: string | null): string {
   let v = (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  // CIF/NIF español a veces con prefijo de país "ES" (p.ej. "ES A-81864498").
-  if (v.length === 11 && v.startsWith('ES')) v = v.slice(2)
+  // CIF/NIF español a veces con prefijo de país "ES" (p.ej. "ES A-81864498") y/o la etiqueta
+  // "NIF/CIF/NIE" pegada ("ES NIF28823484E", así factura Anthropic): fuera ambos.
+  if (v.startsWith('ES') && v.length > 9) v = v.slice(2)
+  v = v.replace(/^(NIF|CIF|NIE)(?=[A-Z0-9]{9}$)/, '')
   return v
 }
 

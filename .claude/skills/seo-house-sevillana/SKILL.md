@@ -44,12 +44,10 @@ endpoint de plataforma, con la credencial que ya vive en Vercel:
 
 ```bash
 # Propiedades a las que llega la cuenta de servicio (míralo ANTES de decir «no hay datos»)
-curl -s "$PLATAFORMA_URL/api/internal/gsc" -H "Authorization: Bearer $ALERTA_TOKEN"
+scripts/plataforma-gsc.sh GET
 
 # Por qué consultas entra la landing (últimos 28 días consolidados)
-curl -s -X POST "$PLATAFORMA_URL/api/internal/gsc" -H "Authorization: Bearer $ALERTA_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"propiedad":"sc-domain:housesevillana.es","dimensiones":["query"],"limite":50}'
+scripts/plataforma-gsc.sh POST '{"propiedad":"sc-domain:housesevillana.es","dimensiones":["query"],"limite":50}'
 ```
 
 Antes de proponer keywords o reescribir copy, **mira qué consultas ya traen impresiones**: subir

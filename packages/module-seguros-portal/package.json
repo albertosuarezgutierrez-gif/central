@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@central/core-fiscal": "workspace:*",
+    "@central/core-identity": "workspace:*",
     "@central/module-seguros": "workspace:*"
   },
   "scripts": {

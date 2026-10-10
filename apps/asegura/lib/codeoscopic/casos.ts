@@ -262,6 +262,8 @@ async function casosDeCotizaciones(
       where co.correduria_id = ${correduriaId}::uuid
         and co.ramo = ${ramo}
         and not co.simulado
+        -- solo Avant2; to_jsonb vale aunque la columna canal aún no exista
+        and coalesce(to_jsonb(co) ->> 'canal', 'codeoscopic') = 'codeoscopic'
     `
   } catch (e) {
     // 🚨 Solo se traga «la tabla no existe». Un `catch` que se tragara todo y

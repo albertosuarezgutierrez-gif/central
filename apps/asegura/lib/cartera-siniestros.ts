@@ -26,12 +26,17 @@ import {
   type SeguimientoSiniestro,
   type IntervinienteEntrada,
   esVolcadoHistorico,
+  tercerosDeSiniestro,
+  type TerceroFicha,
 } from '@central/module-seguros'
 import { encryptField, encryptFieldNullable, decryptField, decryptFieldNullable } from '@central/module-seguros-pii'
+import { comunicadoACompania, type ParteEstado } from '@central/module-seguros-portal'
+import { anotarHistorial as anotarHistorialVinculo, duplicadoEnCima, promoverPartesComunicados, vincularParteEn, type ResultadoVincular } from './siniestros-vinculo'
 import { SELECT_DETALLE_CIMA, detalleCimaDeFila, type FilaDetalleCima } from './siniestro-detalle-cima'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { esColumnaAusente } from './pg-error'
 import type { SiniestroFicha, SiniestroIntervinienteFicha } from './cartera-ficha'
 
 /** Columnas que necesita `SiniestroFicha`. Lo usan la ficha de cliente, la de póliza y este módulo. */
@@ -69,6 +74,11 @@ export const SELECT_SINIESTRO = {
   totalPagosCima: true,
   posicionCima: true,
   ...SELECT_DETALLE_CIMA,
+  // Los partes del cliente vinculados (03/10/2026): la ficha pinta UN siniestro con su historial.
+  partesPortal: {
+    select: { id: true, fechaHecho: true, horaAproximada: true, descripcion: true, estado: true, siniestroVinculo: true, creadoEn: true },
+    orderBy: { creadoEn: 'asc' },
+  },
   intervinientes: {
     select: {
       id: true,
@@ -130,6 +140,17 @@ type FilaSiniestro = FilaDetalleCima & {
   totalPagosCima: unknown
   posicionCima: string | null
   intervinientes: FilaInterviniente[]
+  partesPortal: FilaParteVinculado[]
+}
+
+type FilaParteVinculado = {
+  id: string
+  fechaHecho: Date
+  horaAproximada: string | null
+  descripcion: string
+  estado: unknown
+  siniestroVinculo: string | null
+  creadoEn: Date
 }
 
 const ESTADOS_ABIERTO = new Set(['abierto', 'en_tramitacion'])
@@ -228,12 +249,65 @@ export function mapSiniestro(s: FilaSiniestro): SiniestroFicha {
     // PII descifrada AQUÍ; lo que no se descifra sale null (nunca `v1:`).
     detalleCima: detalleCimaDeFila(s, decryptField),
     terceros: s.intervinientes.map(mapInterviniente),
+    partes: s.partesPortal.map((p) => ({
+      id: p.id,
+      fechaHecho: p.fechaHecho.toISOString().slice(0, 10),
+      horaAproximada: p.horaAproximada,
+      descripcion: p.descripcion,
+      estado: String(p.estado),
+      // 🚨 De `comunicadoACompania`, nunca de `estado !== 'enviado'` (ver partes-portal.ts).
+      comunicado: comunicadoACompania(String(p.estado) as ParteEstado),
+      vinculo: p.siniestroVinculo === 'alta_desde_parte' || p.siniestroVinculo === 'manual' || p.siniestroVinculo === 'auto_cima' ? p.siniestroVinculo : null,
+      creadoEn: p.creadoEn.toISOString(),
+    })),
   }
+}
+
+// ─── Terceros de CIMA (asegura#880) ──────────────────────────────────────────
+
+/**
+ * `cima_extra -> 'terceros'` de esos siniestros, crudo (PII cifrada). Por SQL aparte y no por
+ * `SELECT_SINIESTRO` a propósito: `cima_extra` no está declarada en el schema de Prisma (la crea
+ * la migración 0106 del repo de la ingesta y puede no estar aplicada), y declararla antes del DDL
+ * tumbaría TODA lectura de siniestros. Columna ausente → `null` (no se sabe), cualquier otro fallo
+ * también `null` y se anota: la ficha no se cae por los terceros.
+ */
+export async function tercerosCimaCrudos(correduriaId: string, ids: string[]): Promise<Map<string, unknown> | null> {
+  if (ids.length === 0) return new Map()
+  try {
+    const filas = await prismaAsegura().$queryRaw<{ id: string; terceros: unknown }[]>`
+      select id::text as id, cima_extra -> 'terceros' as terceros
+      from siniestros
+      where correduria_id = ${correduriaId}::uuid and id = any(${ids}::uuid[])`
+    return new Map(filas.map((f) => [f.id, f.terceros]))
+  } catch (e) {
+    if (!esColumnaAusente(e)) console.error('[cartera-siniestros] terceros de CIMA ilegibles:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+/** Descifrado de los terceros (puede lanzar; `figuras-cima.ts` lo trata como ilegible, nunca `v1:`). */
+const descifrarTercero = (v: string): string | null => decryptField(v)
+
+/** Lo crudo de un siniestro → lista para la pantalla. `null` = no consta. */
+export function tercerosCimaDe(crudo: unknown): TerceroFicha[] | null {
+  return tercerosDeSiniestro(crudo, descifrarTercero)
+}
+
+/** Añade `tercerosCima` a cada siniestro ya mapeado (una sola consulta para todos). */
+export async function conTercerosCima(correduriaId: string, lista: SiniestroFicha[]): Promise<SiniestroFicha[]> {
+  const crudos = await tercerosCimaCrudos(correduriaId, lista.map((s) => s.id))
+  return lista.map((s) => ({ ...s, tercerosCima: crudos === null ? null : tercerosCimaDe(crudos.get(s.id)) }))
 }
 
 // ─── Resultado común ─────────────────────────────────────────────────────────
 
-type Fallo = { ok: false; estado: 'invalido' | 'no_encontrado' | 'error'; motivo: string; status: 404 | 422 | 500 }
+type Fallo =
+  | { ok: false; estado: 'invalido' | 'no_encontrado' | 'error'; motivo: string; status: 404 | 422 | 500 }
+  /** El alta manual ya está en CIMA (mismo nº, o póliza + fecha única): no se duplica; se vincula a ese. */
+  | { ok: false; estado: 'duplicado'; motivo: string; siniestroId: string; status: 409 }
+  /** El parte desde el que se registraba no se pudo vincular (ya vinculado, descartado, otra póliza). */
+  | { ok: false; estado: 'parte_no_vinculable'; motivo: string; error: Exclude<ResultadoVincular, { ok: true }>['error']; status: 409 | 422 | 404 | 400 }
 export type ResultadoSiniestro = { ok: true; siniestro: SiniestroFicha; aviso: string | null; ignorados: string[] } | Fallo
 
 const invalido = (motivo: string): Fallo => ({ ok: false, estado: 'invalido', motivo, status: 422 })
@@ -254,14 +328,14 @@ async function anotarHistorial(correduriaId: string, clienteId: string, texto: s
 /** Un siniestro de la correduría, o `null` si no existe en ella. */
 export async function leerSiniestro(correduriaId: string, id: string): Promise<SiniestroFicha | null> {
   const s = await prismaAsegura().siniestro.findFirst({ where: { id, correduriaId }, select: SELECT_SINIESTRO })
-  return s ? mapSiniestro(s) : null
+  return s ? (await conTercerosCima(correduriaId, [mapSiniestro(s)]))[0] : null
 }
 
 // ─── Apertura ────────────────────────────────────────────────────────────────
 
 export async function abrirSiniestro(
   correduriaId: string,
-  entrada: AperturaSiniestro & { actor: string },
+  entrada: AperturaSiniestro & { actor: string; /** Registrar DESDE un parte del portal: queda vinculado. */ parteId?: string | null },
 ): Promise<ResultadoSiniestro> {
   const r = revisarApertura(entrada)
   if (!r.ok) return invalido(r.motivo)
@@ -277,7 +351,26 @@ export async function abrirSiniestro(
   // (ver `cartera-viva.ts`); sobre esa sí se abre siniestro.
   if (esVolcadoHistorico(poliza)) return invalido('Esa póliza es del volcado histórico, no está viva en CIMA: no se abre un siniestro sobre ella.')
 
-  const creado = await db.siniestro.create({
+  // ¿Ya lo ha mandado la compañía por CIMA? Fuerte → no se duplica (409 con su id,
+  // para vincular el parte a ese). Ambiguo → se crea, pero avisando.
+  const enCima = await duplicadoEnCima(db, correduriaId, { polizaId: poliza.id, fechaHora: a.fechaHora, referencia: a.referencia })
+  if (enCima.tipo === 'fuerte') {
+    return {
+      ok: false,
+      estado: 'duplicado',
+      motivo: 'Ya hay un siniestro de CIMA en esa póliza que casa con este (mismo nº, o fecha a ±3 días y es el único). Si es el mismo, no se crea otro: vincúlale el parte. Si es OTRO, indica el nº de siniestro de la compañía y no se confundirán.',
+      siniestroId: enCima.siniestroId,
+      status: 409,
+    }
+  }
+  const avisoDuplicado =
+    enCima.tipo === 'ambiguo'
+      ? `Ojo: en esa póliza hay ${enCima.candidatos.length} siniestro(s) de CIMA en fechas cercanas. Si es el mismo, se unirá solo cuando case el nº de la compañía.`
+      : null
+  const parteId = typeof entrada.parteId === 'string' && entrada.parteId.trim() !== '' ? entrada.parteId.trim() : null
+
+  type Creado = Awaited<ReturnType<typeof crear>>
+  const crear = (tx: typeof db | Prisma.TransactionClient) => tx.siniestro.create({
     data: {
       correduriaId,
       clienteId: poliza.clienteId,
@@ -297,16 +390,53 @@ export async function abrirSiniestro(
       // La referencia de la compañía es la llave de CIMA: si ya la tenemos, el pull cae aquí.
       idSiniestroEntidad: a.referencia,
       codigoEntidadDgs: poliza.codigoEntidadDgs,
+      fechaDeclaracion: a.fechaDeclaracion === null ? null : new Date(`${a.fechaDeclaracion}T00:00:00Z`),
     },
     select: SELECT_SINIESTRO,
   })
+
+  let creado: Creado
+  if (parteId === null) {
+    creado = await crear(db)
+  } else {
+    // Alta + vínculo en UNA transacción: si el parte no se puede vincular, no queda un siniestro suelto.
+    const r = await db.$transaction(async (tx) => {
+      const nuevo = await crear(tx)
+      const v = await vincularParteEn(tx, correduriaId, { parteId, siniestroId: nuevo.id, vinculo: 'alta_desde_parte', actor: entrada.actor, diferirHistorial: true })
+      if (!v.ok) throw new ParteNoVinculable(v)
+      return { fila: await tx.siniestro.findFirstOrThrow({ where: { id: nuevo.id }, select: SELECT_SINIESTRO }), nota: v.nota ?? null }
+    }).catch((e: unknown) => {
+      if (e instanceof ParteNoVinculable) return e
+      throw e
+    })
+    if (r instanceof ParteNoVinculable) {
+      const motivos: Record<string, string> = {
+        datos_invalidos: 'El parte no es válido.',
+        no_encontrado: 'El parte no existe (o su póliza no es de esta correduría).',
+        ya_vinculado: 'Ese parte ya está vinculado a un siniestro.',
+        no_vinculable: 'Ese parte está descartado o ya abierto en la compañía: no se vincula.',
+        poliza_distinta: 'El parte va sobre otra póliza: elige la póliza del parte.',
+      }
+      return { ok: false, estado: 'parte_no_vinculable', error: r.fallo.error, motivo: motivos[r.fallo.error] ?? r.fallo.error, status: r.fallo.status }
+    }
+    creado = r.fila
+    // Best-effort TRAS el commit: dentro de la transacción un fallo del historial la dejaría abortada.
+    if (r.nota) await anotarHistorialVinculo(db, correduriaId, r.nota.clienteId, r.nota.texto)
+  }
   anotarCambio({ entidad: 'siniestro', id: creado.id, campo: 'estado', antes: null, despues: 'abierto' })
   await anotarHistorial(
     correduriaId,
     poliza.clienteId,
-    `${textoHistorialSiniestro({ accion: 'apertura', tipo: a.tipo, fechaHora: a.fechaHora, numeroPoliza: poliza.numeroPoliza, aviso: a.aviso })} por ${entrada.actor}`,
+    `${textoHistorialSiniestro({ accion: 'apertura', tipo: a.tipo, fechaHora: a.fechaHora, numeroPoliza: poliza.numeroPoliza, aviso: a.aviso })}${parteId ? ' desde un parte del portal' : ''} por ${entrada.actor}`,
   )
-  return { ok: true, siniestro: mapSiniestro(creado), aviso: a.aviso, ignorados: [] }
+  const aviso = [a.aviso, avisoDuplicado].filter(Boolean).join(' ') || null
+  return { ok: true, siniestro: mapSiniestro(creado), aviso, ignorados: [] }
+}
+
+class ParteNoVinculable extends Error {
+  constructor(readonly fallo: Exclude<ResultadoVincular, { ok: true }>) {
+    super(fallo.error)
+  }
 }
 
 // ─── Estado ──────────────────────────────────────────────────────────────────
@@ -360,7 +490,14 @@ export async function seguirSiniestro(
   }
   if (nota !== null) data.comentario = anadirNota(actual.comentario, nota)
 
-  const nuevo = await db.siniestro.update({ where: { id: s.id }, data, select: SELECT_SINIESTRO })
+  let nuevo = await db.siniestro.update({ where: { id: s.id }, data, select: SELECT_SINIESTRO })
+  // Con el nº de la compañía anotado, la compañía lo conoce: los partes vinculados
+  // pasan a `abierto_en_compania` (antes seguían en `recibido`).
+  if (typeof cambios.referencia === 'string' && cambios.referencia !== '') {
+    if ((await promoverPartesComunicados(db, s.id)) > 0) {
+      nuevo = await db.siniestro.findFirstOrThrow({ where: { id: s.id }, select: SELECT_SINIESTRO })
+    }
+  }
   anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'seguimiento' })
   await anotarHistorial(
     correduriaId,

@@ -1,0 +1,98 @@
+{
+ "sesion": "e20b7fbf-e073-521b-8245-5328b440074a",
+ "inicio": "2026-10-10T07:11:19.502Z",
+ "fin": "2026-10-10T07:53:34.314Z",
+ "llamadas": 161,
+ "categorias": {
+  "agente:rastreador-codigo": {
+   "llamadas": 2,
+   "chars_in": 1902,
+   "chars_out": 2372,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 1050,
+   "chars_out": 1296,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 24026,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 82,
+   "chars_in": 14211,
+   "chars_out": 347509,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Glob": 6,
+    "Grep": 47,
+    "Read": 29
+   }
+  },
+  "bash": {
+   "llamadas": 64,
+   "chars_in": 67570,
+   "chars_out": 245863,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 64
+   }
+  },
+  "otro": {
+   "llamadas": 7,
+   "chars_in": 19888,
+   "chars_out": 427,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "SubagentHandback": 7
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 3,
+   "chars_in": 4594,
+   "chars_out": 5231,
+   "errores": 0,
+   "archivos_citados": 8,
+   "chars_citados": 189416,
+   "tools": {
+    "Agent": 3
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 1149,
+   "chars_out": 1386,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 43834,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1076,
+   "chars_out": 967375,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  }
+ }
+}

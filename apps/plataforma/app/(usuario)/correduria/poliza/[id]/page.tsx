@@ -13,6 +13,7 @@ import ClienteSeVa from './ClienteSeVa'
 import WhatsappReciboDevuelto, { type ContextoWhatsappDevuelto } from './WhatsappReciboDevuelto'
 import HistorialRiesgo from './HistorialRiesgo'
 import CimaPoliza from './CimaPoliza'
+import PersonasPoliza, { hayPersonas } from './PersonasPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
 import AbrirRiesgo from './AbrirRiesgo'
 import CartaMediadorPoliza from './CartaMediadorPoliza'
@@ -24,7 +25,7 @@ import type { ObjetoFicha } from '@/lib/ficha-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { eur } from '@/lib/dinero'
-import { bloqueCobro, etiquetaGestionCobro, filasContrato, lugarRiesgo, primaParaPintar, vigenciaRiesgo, type Fila } from '@/lib/poliza-contrato'
+import { bloqueCobro, etiquetaGestionCobro, filasContrato, lugarRiesgo, primaParaPintar, vigenciaRiesgo, type Fila, type RiesgoFicha } from '@/lib/poliza-contrato'
 import { PageHeader, Pagina } from '@/components/ui'
 // Un solo estilo de panel para toda la correduría: el de la ficha del cliente.
 import { Tarjeta, tarjeta, th, td, sub } from '../../cliente/[id]/piezas'
@@ -54,6 +55,22 @@ export default async function PolizaPage({ params, searchParams }: {
   // UNA sola lectura del vencimiento (ver `alertaVencimiento`): nunca «venció» + «avisar antes de» a la vez.
   const venc = p.viva && !cancelada ? alertaVencimiento(p.fechaVencimiento) : null
   const prima = primaParaPintar(p, p.contrato)
+
+  // Dato principal del riesgo: matrícula (auto/moto) o dirección (hogar/comunidades)
+  const riesgoPrincipal = p.contrato?.riesgos?.[0] as RiesgoFicha | undefined
+  const datoRiesgo = riesgoPrincipal
+    ? (['auto', 'moto'].includes(String(p.tipo).toLowerCase())
+        ? riesgoPrincipal.matricula
+          ? { label: 'Matrícula', valor: riesgoPrincipal.matricula, nota: [riesgoPrincipal.marca, riesgoPrincipal.modelo].filter(Boolean).join(' ') || undefined }
+          : null
+        : admiteDireccionRiesgo(p.tipo)
+        ? riesgoPrincipal.direccion
+          ? { label: 'Dirección', valor: riesgoPrincipal.direccion, nota: [riesgoPrincipal.localidad, riesgoPrincipal.cp].filter(Boolean).join(' ') || undefined }
+          : riesgoPrincipal.direccionIlegible
+            ? { label: 'Dirección', valor: null, nota: 'cifrada, no se puede leer' }
+            : null
+        : null)
+    : null
 
   return (
     <Pagina ancho="tabla">
@@ -117,7 +134,8 @@ export default async function PolizaPage({ params, searchParams }: {
         {/* `primaAnualDudosa`: la del fichero es la del RECIBO y se dice; nunca se presenta como anual. */}
         <Dato label={prima.etiqueta} valor={prima.valor} nota={prima.nota} />
         <Dato label="Forma de pago" valor={p.pago ? etiquetaFraccionamiento(p.pago.fraccionamiento) : null} nota={p.pago?.formaCobro ?? undefined} />
-        <Dato label="Efecto inicial" valor={fechaPintable(p.fechaEfectoInicial)} nota="antigüedad con la compañía (bonus)" />
+<Dato label="Efecto inicial" valor={fechaPintable(p.fechaEfectoInicial)} nota="antigüedad con la compañía (bonus)" />
+        {datoRiesgo && <Dato label={datoRiesgo.label} valor={datoRiesgo.valor} nota={datoRiesgo.nota} />}
       </div>
 
       <PanelAccesos inicial={v ?? null} accesos={accesosPoliza(p, cancelada)} />
@@ -245,6 +263,14 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
         </>
       ),
     },
+    // Personas que manda CIMA (asegura PR 880): sin ninguna (póliza anterior o asegura viejo), no hay acceso.
+    ...(hayPersonas(p.personas)
+      ? [{
+          id: 'personas', icono: '🧑‍🤝‍🧑', titulo: p.personas.vida || p.personas.decesos ? 'Personas y persona asegurada' : 'Personas de la póliza',
+          detalle: p.personas.figuras?.length ? `${p.personas.figuras.length}` : null,
+          contenido: <Tarjeta titulo="Personas de la póliza (CIMA)"><PersonasPoliza p={p.personas} /></Tarjeta>,
+        }]
+      : []),
     {
       id: 'intervinientes', icono: '👥', titulo: 'Intervinientes',
       detalle: p.intervinientes === null ? null : p.intervinientes.length ? `${p.intervinientes.length}` : null,

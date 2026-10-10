@@ -910,6 +910,141 @@ export async function sustitucionesAsegura(): Promise<Sustituciones> {
   }
 }
 
+// ── Vigía de duplicados vivos (03/10/2026) ─────────────────────────────────
+//
+// `GET /api/operador/duplicados/vivos`: números de póliza repetidos entre filas vivas (sin fusionar, sin
+// comodines). Sin datos personales. 🚨 Un fallo de lectura NUNCA es «0 duplicados»: es `error`.
+
+export type DuplicadosVivosPuerto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'ok'; total: number; muestra: Array<{ numero: string; filas: number; dgs: string | null }> }
+
+export function interpretarDuplicados(status: number, json: unknown): DuplicadosVivosPuerto {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: 'asegura_error' }
+  const total = entero(o.total)
+  // Todo-o-nada: sin total o con una fila ilegible NO se devuelve una cuenta a medias.
+  if (total === null || !Array.isArray(o.muestra)) return { estado: 'error', motivo: 'respuesta_ilegible' }
+  const muestra: Array<{ numero: string; filas: number; dgs: string | null }> = []
+  for (const f of o.muestra) {
+    const x = typeof f === 'object' && f !== null ? (f as Record<string, unknown>) : null
+    const numero = x ? cadena(x.numero) : null
+    const filas = x ? entero(x.filas) : null
+    if (numero === null || filas === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    muestra.push({ numero, filas, dgs: cadena(x?.dgs) })
+  }
+  return { estado: 'ok', total, muestra }
+}
+
+// ── Bandeja de revisión manual de pólizas (03/10/2026) ─────────────────────
+//
+// `GET/POST /api/operador/revision`. Los casos viven en `seguros.operational_events` de asegura.
+// Sin PII: número, compañía, estado, fechas y nº de recibos/siniestros. «Son la misma» NO fusiona:
+// solo registra la decisión (la fusión la aplica una sesión con el método CTE y el OK de Alberto).
+// 🚨 Un fallo de lectura NUNCA es «no hay casos»: es `error`.
+
+export type DecisionRevision = 'misma' | 'distintas' | 'descartar'
+
+export type PolizaRevision = {
+  id: string
+  numeroPoliza: string | null
+  aseguradora: string
+  dgs: string | null
+  estado: string
+  fechaInicio: string | null
+  fechaVencimiento: string | null
+  recibos: number
+  siniestros: number
+}
+
+export type CasoRevision = {
+  casoId: string
+  numero: string
+  motivo: string
+  abiertoAt: string
+  polizas: PolizaRevision[]
+  /** `null` = no se pudo medir (no es «0 sin leer»). */
+  polizasNoLeidas: number | null
+}
+
+export type BandejaRevision =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'ok'; casos: CasoRevision[] }
+
+function leerPolizaRevision(v: unknown): PolizaRevision | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const id = cadena(o.id)
+  const recibos = entero(o.recibos)
+  const siniestros = entero(o.siniestros)
+  if (id === null || recibos === null || siniestros === null) return null
+  return {
+    id, numeroPoliza: cadena(o.numeroPoliza), aseguradora: cadena(o.aseguradora) ?? '', dgs: cadena(o.dgs),
+    estado: cadena(o.estado) ?? '', fechaInicio: cadena(o.fechaInicio), fechaVencimiento: cadena(o.fechaVencimiento),
+    recibos, siniestros,
+  }
+}
+
+export function interpretarRevision(status: number, json: unknown): BandejaRevision {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (o.estado !== 'ok' || !Array.isArray(o.casos)) return { estado: 'error', motivo: o.estado === 'ok' ? 'respuesta_ilegible' : 'asegura_error' }
+  const casos: CasoRevision[] = []
+  for (const f of o.casos) {
+    const x = typeof f === 'object' && f !== null ? (f as Record<string, unknown>) : null
+    const casoId = x ? cadena(x.casoId) : null
+    const polizas = x && Array.isArray(x.polizas) ? x.polizas.map(leerPolizaRevision) : null
+    // Todo-o-nada: un caso ilegible hace ilegible la lista (callar un caso sería decir «no hay»).
+    if (x === null || casoId === null || polizas === null || polizas.some((p) => p === null)) {
+      return { estado: 'error', motivo: 'respuesta_ilegible' }
+    }
+    casos.push({
+      casoId, numero: cadena(x.numero) ?? '', motivo: cadena(x.motivo) ?? '', abiertoAt: cadena(x.abiertoAt) ?? '',
+      polizas: polizas as PolizaRevision[], polizasNoLeidas: entero(x.polizasNoLeidas),
+    })
+  }
+  return { estado: 'ok', casos }
+}
+
+export async function revisionAsegura(): Promise<BandejaRevision> {
+  try {
+    const r = await pedir('/api/operador/revision')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarRevision(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+export type ResolucionBandejaPolizas =
+  | { estado: 'ok' }
+  | { estado: 'sin_configurar' }
+  /** `invalido` 422 · `no_existe` 404 · `ya_resuelto` 409 · `error`: no se sabe si se guardó. */
+  | { estado: 'invalido' | 'no_existe' | 'ya_resuelto' | 'error' }
+
+export async function resolverRevisionAsegura(casoId: string, decision: DecisionRevision, nota?: string): Promise<ResolucionBandejaPolizas> {
+  try {
+    const r = await pedirPost('/api/operador/revision', { casoId, decision, ...(nota ? { nota } : {}) })
+    if (r === null) return { estado: 'sin_configurar' }
+    if (r.status === 200) return { estado: 'ok' }
+    const e = typeof r.json === 'object' && r.json !== null ? (r.json as Record<string, unknown>).estado : null
+    return e === 'invalido' || e === 'no_existe' || e === 'ya_resuelto' ? { estado: e } : { estado: 'error' }
+  } catch {
+    return { estado: 'error' }
+  }
+}
+
 // ── Emisiones RETENIDAS por la compañía («riesgo condicionado», 30/09/2026) ──
 //
 // Alberto emite a veces desde la WEB de Avant2 y la compañía deja la póliza retenida. asegura

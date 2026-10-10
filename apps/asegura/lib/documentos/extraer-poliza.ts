@@ -105,7 +105,7 @@ Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
 {"ramo":string|null,"compania":string|null,"cifCompania":string|null,"codigoEntidadDgs":string|null,"numeroPoliza":string|null,
 "fechaEfecto":"YYYY-MM-DD"|null,"fechaVencimiento":"YYYY-MM-DD"|null,"primaAnual":number|null,
 "tomador":string|null,"dni":string|null,"fechaNacimiento":"YYYY-MM-DD"|null,
-"matricula":string|null,"marca":string|null,"modelo":string|null,"version":string|null,
+"matricula":string|null,"marca":string|null,"modelo":string|null,"version":string|null,"combustible":string|null,
 "fechaMatriculacion":"YYYY-MM-DD"|null,"fechaCarnet":"YYYY-MM-DD"|null,
 "aniosSinSiniestros":number|null,"siniestrosUltimos5":number|null,
 "direccion":string|null,"cp":string|null,"localidad":string|null,"metrosCuadrados":number|null,
@@ -144,7 +144,10 @@ Reglas, por orden de importancia:
 - "primaAnual" es el TOTAL que paga el cliente (con recargos, IPS y Consorcio),
   no la prima neta. Si el pago es fraccionado, el año completo, no el fraccionamiento.
 - "capitalContinente" y "capitalContenido" en euros, solo el número.
-- Los campos de VEHÍCULO (matricula, marca, modelo, version, fechaMatriculacion,
+- "combustible" es el tipo de combustible/motor del vehículo tal como lo escribe el documento
+  (p. ej. "Gasolina", "Diésel", "Eléctrico", "Híbrido"). Si no aparece, null: NO lo deduzcas de la
+  marca ni del modelo.
+- Los campos de VEHÍCULO (matricula, marca, modelo, version, combustible, fechaMatriculacion,
   fechaCarnet, aniosSinSiniestros, siniestrosUltimos5) solo tienen sentido si el
   ramo es auto o moto: en cualquier otro caso, todos a null.
 - Los campos de VIVIENDA (direccion, cp, localidad, metrosCuadrados,
@@ -263,12 +266,32 @@ function empaquetar(
   return { ramo, fase: 'contrato_solo', fuente, datos: auto, contacto, bruto }
 }
 
-/** Texto con `pdf-parse`; `''` si no abre (se dice aguas abajo). */
-async function textoPdfParse(buffer: Buffer): Promise<string> {
+/**
+ * Texto con `pdf-parse`; `''` si no abre (se dice aguas abajo). Exportado para `extraer-oferta.ts`
+ * (05/10/2026): con `marcarPaginas`, cada página va precedida de `[[Página N]]` para que la IA pueda
+ * citar DÓNDE leyó cada cifra (la evidencia). Sin la opción, el texto es el de siempre.
+ */
+export async function textoPdfParse(buffer: Buffer, opts: { marcarPaginas?: boolean } = {}): Promise<string> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pdfParse = require('pdf-parse')
-    return (await pdfParse(buffer)).text || ''
+    if (!opts.marcarPaginas) return (await pdfParse(buffer)).text || ''
+    let n = 0
+    // El render por defecto de pdf-parse, con la marca de página delante (pdf-parse llama a
+    // `pagerender` página a página y en orden).
+    const pagerender = async (pagina: { pageIndex?: number; getTextContent: (o: unknown) => Promise<{ items: { str: string; transform: number[] }[] }> }) => {
+      n += 1
+      const numero = typeof pagina.pageIndex === 'number' ? pagina.pageIndex + 1 : n
+      const contenido = await pagina.getTextContent({ normalizeWhitespace: false, disableCombineTextItems: false })
+      let ultimaY: number | undefined
+      let texto = ''
+      for (const item of contenido.items) {
+        texto += ultimaY === item.transform[5] || ultimaY === undefined ? item.str : `\n${item.str}`
+        ultimaY = item.transform[5]
+      }
+      return `[[Página ${numero}]]\n${texto}`
+    }
+    return (await pdfParse(buffer, { pagerender })).text || ''
   } catch (e) {
     console.warn('[asegura] pdf-parse falló:', e)
     return ''

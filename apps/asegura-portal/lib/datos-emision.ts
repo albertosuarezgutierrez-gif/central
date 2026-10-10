@@ -23,7 +23,7 @@ export type DatosParaContratar = { estado: 'ok'; datos: DatoParaContratar[]; fal
  * ficha — no se te enseñan tus datos ni se te pide nada, para no mezclar dos personas.
  * `varias_fichas`/`sin_ficha`: no es «vuelve en un rato», no va a cambiar solo.
  */
-export type ResultadoDatosParaContratar = DatosParaContratar | { estado: 'otra_ficha' | 'varias_fichas' | 'sin_ficha' }
+export type ResultadoDatosParaContratar = DatosParaContratar | { estado: 'otra_ficha' | 'varias_fichas' | 'sin_ficha' | 'sin_permiso' }
 
 const ESTADOS = ['ok', 'falta', 'en_revision', 'no_legible'] as const
 const APORTA = ['cliente_datos', 'cliente_dni', 'corredor'] as const
@@ -32,6 +32,7 @@ const APORTA = ['cliente_datos', 'cliente_dni', 'corredor'] as const
 export function interpretarDatosParaContratar(status: number, j: unknown): ResultadoDatosParaContratar | null {
   const o = typeof j === 'object' && j !== null ? (j as Record<string, unknown>) : null
   if (status === 409 && (o?.estado === 'otra_ficha' || o?.estado === 'varias_fichas' || o?.estado === 'sin_ficha')) return { estado: o.estado }
+  if (status === 403 && o?.estado === 'sin_permiso') return { estado: 'sin_permiso' }
   if (status !== 200 || o?.estado !== 'ok' || !Array.isArray(o.datos) || typeof o.faltanCliente !== 'number') return null
   const datos: DatoParaContratar[] = []
   for (const d of o.datos as unknown[]) {

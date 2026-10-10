@@ -1,14 +1,15 @@
 import Link from 'next/link'
 import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
-import { alertaVencimiento, contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { alertaVencimiento, contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { ramosConOfertas, urlOportunidadNueva } from '@/lib/seguimiento-asegura'
 import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
-import PonerNombre from './PonerNombre'
-import EditarCarnets from './EditarCarnets'
+import EditarFicha from './EditarFicha'
+import PedirPresupuestoBot from './PedirPresupuestoBot'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
 
@@ -80,10 +81,6 @@ export default function Cabecera({ ficha, resumen, seguros }: {
                     <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} juridica={juridica} />
                     {/* Persona jurídica: ni carnés de conducir ni «Añadir carné». */}
                     {!juridica && <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />}
-                    {/* `null` = asegura no manda el bloque: sin saber qué hay, no se ofrece editarlo. */}
-                    {!juridica && ficha.carnets !== null && (
-                      <EditarCarnets clienteId={ficha.id} carnets={ficha.carnets} fechaPoliza={ficha.dePolizas?.fechaCarnet ?? null} />
-                    )}
                   </span>
                 </details>
                 {conyuge && (
@@ -93,13 +90,22 @@ export default function Cabecera({ ficha, resumen, seguros }: {
                 )}
               </span>}
             />
-            {/* Ficha sin nombre: se rellena aquí, sin DNI (el nombre que ya existe sigue pidiéndolo). */}
-            {ficha.identidad && nombrePendiente(ficha.identidad.nombre) && (
-              <PonerNombre clienteId={ficha.id} apellidos={ficha.identidad.apellidos} />
-            )}
           </div>
         </div>
       </div>
+
+      {/* UN solo sitio donde se editan los datos personales (identidad, contacto, dirección, carnés
+          agenda), fuera de las pestañas: visible en todas. El resumen de arriba solo MUESTRA. */}
+      <EditarFicha
+        clienteId={ficha.id}
+        identidad={ficha.identidad}
+        documentos={ficha.documentos}
+        contacto={ficha.contacto}
+        contactos={ficha.contactos}
+        carnets={ficha.carnets}
+        fechaCarnetPoliza={ficha.dePolizas?.fechaCarnet ?? null}
+        juridica={juridica}
+      />
 
       <SiguientePaso ficha={{ ...ficha, contacto, intervinientes }} resumen={resumen} tiposVivos={tiposVivos} seguros={seguros} />
 
@@ -377,6 +383,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
             width: 240, maxWidth: '86vw',
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: 10, padding: 6, boxShadow: 'var(--shadow)',
+            maxHeight: 'min(70vh, 480px)', overflowY: 'auto', overscrollBehavior: 'contain',
           }}
         >
           <p style={{ margin: '4px 4px 4px', fontSize: 11, color: 'var(--muted)' }}>Con precio</p>
@@ -390,6 +397,18 @@ function Acciones({ clienteId }: { clienteId: string }) {
             >
               {r.etiqueta}
               {r.sinVerificar && <span title="esquema sin verificar" style={{ marginLeft: 'auto' }}><Ico i={Construction} size={12} /></span>}
+            </Link>
+          ))}
+          <p style={{ margin: '8px 4px 4px', fontSize: 11, color: 'var(--muted)', borderTop: '1px solid var(--border)', paddingTop: 6 }}>Con ofertas de compañías</p>
+          {ramosConOfertas(RAMOS_PRESUPUESTO).map(r => (
+            <Link
+              key={r.valor}
+              role="menuitem"
+              href={urlOportunidadNueva(clienteId, r.valor)}
+              title={`Oportunidad nueva de ${r.rotulo.toLowerCase()}: se apunta con su primer paso, sin tarificar`}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 10px', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}
+            >
+              {r.rotulo === 'Comercio' ? 'Comercio / pymes' : r.rotulo}
             </Link>
           ))}
           <Link
@@ -411,6 +430,8 @@ function Acciones({ clienteId }: { clienteId: string }) {
       <BtnLink href={`/correduria/cliente/${clienteId}?tab=documentos&subir=poliza`} variante="secundario">
         <Ico i={FileText} /> Subir póliza
       </BtnLink>
+      {/* Presupuesto por bots (07/10/2026): ya no se cotiza desde la ficha; abre la oportunidad con el formulario común. */}
+      <PedirPresupuestoBot clienteId={clienteId} />
     </div>
   )
 }
@@ -437,7 +458,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
   /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el
    *  mismo criterio que el rótulo de estado. */
   esCliente: boolean
-  c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
+  c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null; codigoPostal?: string | null }
   intervinientes: IntervinienteFicha[] | null
   piiClave: string | null
   /** Todos los teléfonos/emails; `null` = asegura no manda el bloque (no se afirma «solo uno»). */
@@ -452,7 +473,8 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
   const masEmail = contactos && contactos.emails.length > 1 ? contactos.emails.length - 1 : 0
   const mas = (n: number) => n > 0 ? <span style={{ fontSize: 11, color: 'var(--muted)' }} title={`${n} más, en la pestaña Contactos`}> (+{n})</span> : null
   const causaPii = piiClave === null ? 'la clave no abre este dato (asegura no dice por qué: versión anterior)' : CAUSA_PII[piiClave] ?? `estado de clave desconocido: ${piiClave}`
-  const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
+  // CP junto a la localidad («41003 Sevilla, Sevilla»); solo CP → el CP; nada → nada.
+  const sitio = [[c.codigoPostal, c.ciudad].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', ')
   const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
   // 🚨 De QUÉ póliza sale. GLOBAL 2 tiene tres furgonetas con TRES conductores
   // habituales distintos: sin esto la ficha pinta el número de uno de ellos como

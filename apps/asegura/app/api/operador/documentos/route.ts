@@ -74,6 +74,8 @@ export const POST = auditado(async (req: Request) => {
         visiblePorCliente: tipo === 'poliza' && polizaId !== null,
         notas: texto(form.get('notas')),
         subidoPor: 'corredor',
+        // Subida manual desde la ficha: el mismo fichero dos veces no duplica (opt-in; el resto de llamadores no).
+        reutilizarSiIdentico: true,
         nombre: fichero.name,
         mime: fichero.type,
         contenido,

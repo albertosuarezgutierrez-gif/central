@@ -5,9 +5,9 @@
  * es «0 opciones», es «no se pudo leer».
  */
 import {
-  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda,
+  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda, seguroAnteriorDe,
   type CampoVehiculo, type ClaveDatosRiesgo, type DatosCapitalRiesgo, type DatosComercioRiesgo, type DatosRiesgoLibre, type DatosVehiculoRiesgo, type DatosViviendaRiesgo,
-  type RolFigura, type Diferencia,
+  type RolFigura, type Diferencia, type SeguroAnterior,
 } from '@central/module-seguros'
 
 export type FiguraRiesgo = {
@@ -78,6 +78,28 @@ export type Riesgo = {
    * precarga de la póliza (`dePoliza`, nunca confirmada). `tarifica: false` = ramo que se cotiza fuera.
    */
   datosRiesgo: DatosRiesgoDeRamo | null
+  /**
+   * El historial para su bloque (10/10/2026). `null` = una versión de asegura que aún no lo manda: se dice «no se ha
+   * podido leer», no se pinta un historial vacío. Dentro, `seguroAnterior: null` = ninguno leído (≠ «sin seguro previo»)
+   * y `carnet: null` = el ramo no usa carné.
+   */
+  historial: HistorialRiesgo | null
+}
+
+export type HistorialRiesgo = {
+  seguroAnterior: SeguroAnterior | null
+  carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
+}
+
+/** Lee `historial` sin fiarse: forma rara = `null` («no se sabe»); el seguro anterior pasa por el mismo saneado que al guardarlo. */
+export function leerHistorialRiesgo(bruto: unknown): HistorialRiesgo | null {
+  if (typeof bruto !== 'object' || bruto === null || Array.isArray(bruto)) return null
+  const o = bruto as Record<string, unknown>
+  const c = o.carnet === null || o.carnet === undefined ? null : obj(o.carnet)
+  return {
+    seguroAnterior: seguroAnteriorDe(o.seguroAnterior),
+    carnet: c ? { fecha: txt(c.fecha), conductor: esRolFigura(c.conductor) ? c.conductor : null, legible: c.legible === true } : null,
+  }
 }
 
 export type DatosRiesgoDeRamo =
@@ -173,6 +195,7 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
       }),
       variantes,
       datosRiesgo: leerDatosRiesgoDeRamo(o.datosRiesgo),
+      historial: leerHistorialRiesgo(o.historial),
       datosVehiculo: leerDatosVehiculo(o.datosVehiculo),
       faltanVehiculo: Array.isArray(o.faltanVehiculo)
         ? o.faltanVehiculo.filter((c): c is CampoVehiculo => (CAMPOS_VEHICULO as readonly string[]).includes(c as string))
@@ -204,6 +227,36 @@ const CAMPO_FALTA: Record<string, string> = {
   dni: 'DNI', nombre: 'nombre', apellido1: 'apellido', fechaNacimiento: 'fecha de nacimiento',
   sexo: 'sexo', telefono: 'móvil', fechaCarnet: 'fecha del carnet', ficha: 'ficha',
   empresa_no_conduce: 'es una empresa y no puede conducir (asigna un conductor habitual persona)',
+  estadoCivil: 'estado civil (no consta; se elige del catálogo en la pantalla de precio)',
+}
+/**
+ * Dónde se rellena cada clave que puede devolver `faltanDeFigura()` (apps/asegura/lib/oportunidad-riesgo.ts).
+ * · `completar`: bloque «Falta por completar» del modal «Editar datos» (sexo → `clientes.saludo`, móvil → teléfono principal).
+ * · `formulario`: formulario del propio modal (identidad: DNI/nombre/apellidos/nacimiento; carné: sección de carnés de `PanelDatosCliente`).
+ * · `cambiar`: no es un dato que teclear: se resuelve con «Cambiar» (poner a una persona como conductor).
+ * · `pantalla_precio`: el estado civil del vendor es un id de catálogo y se elige en la pantalla de precio del ramo
+ *   (vida, salud, decesos); la ficha no tiene editor de estado civil. Se avisa, no se bloquea.
+ * · `sin_ficha`: la figura no tiene ficha legible; no hay nada que editar hasta que exista.
+ * Un test lee `faltanDeFigura` y falla si aparece una clave sin entrada aquí.
+ */
+export const EDITOR_DE_FALTA: Record<string, 'completar' | 'formulario' | 'cambiar' | 'sin_ficha' | 'pantalla_precio'> = {
+  dni: 'formulario', nombre: 'formulario', apellido1: 'formulario', fechaNacimiento: 'formulario', fechaCarnet: 'formulario',
+  sexo: 'completar', telefono: 'completar', estadoCivil: 'pantalla_precio',
+  empresa_no_conduce: 'cambiar', ficha: 'sin_ficha',
+}
+
+/** Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»). */
+export function rotulosFaltaEnFormulario(f: string[] | null): string[] {
+  return (f ?? []).filter((k) => EDITOR_DE_FALTA[k] === 'formulario').map((k) => CAMPO_FALTA[k] ?? k)
+}
+
+/** ¿La ficha de la figura NO tiene móvil? `null` (no se pudo leer la ficha) = no se sabe → false: no se ofrece escribir a ciegas. */
+export function faltaMovil(f: string[] | null): boolean {
+  return f !== null && f.includes('telefono')
+}
+/** ¿La ficha de la figura NO tiene sexo? Misma regla que `faltaMovil`: `null` = no se sabe → false. */
+export function faltaSexo(f: string[] | null): boolean {
+  return f !== null && f.includes('sexo')
 }
 export function textoFaltan(f: string[] | null): string | null {
   if (f === null) return 'No se pudo leer su ficha'

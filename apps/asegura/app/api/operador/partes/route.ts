@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { listarPartes, moverParte } from '@/lib/partes-portal'
+import { vincularParte } from '@/lib/siniestros-vinculo'
 import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
@@ -17,6 +18,16 @@ export const dynamic = 'force-dynamic'
  *   GET   ?estado=&clienteId=&limite=   → { estado:'ok', partes: [...] }
  *   PATCH { id, estado, siniestroId?, motivoDescarte?, actor? }
  *                                        → { estado:'ok', parte }
+ *   PATCH { id, accion:'vincular', siniestroId, actor? }
+ *                                        → { estado:'ok', parteId, siniestroId, estadoParte }
+ *       Vincula a mano un parte SIN vincular (enviado/recibido) a un siniestro de
+ *       esta correduría (`lib/siniestros-vinculo.ts`). Pasa a `abierto_en_compania`
+ *       solo si la compañía conoce el siniestro (CIMA o con su nº); si no, `recibido`.
+ *       Errores: 400 datos_invalidos · 404 no_encontrado · 409 ya_vinculado /
+ *       no_vinculable · 422 poliza_distinta.
+ *
+ * Cada parte sin vincular trae `sugerencia` ({ tipo: fuerte|ambiguo|ninguno,
+ * candidatos }) — solo PROPONE; ausente/null = no aplica.
  *
  * Reglas y ausencias en `lib/partes-portal.ts`. Tres que se ven desde fuera:
  *
@@ -63,6 +74,12 @@ export const PATCH = auditado(async (req: Request) => {
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
     if (!body) return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 })
+
+    if (body.accion === 'vincular') {
+      const v = await vincularParte(correduria.id, { parteId: body.id, siniestroId: body.siniestroId, actor: body.actor })
+      if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status })
+      return NextResponse.json({ estado: 'ok', parteId: v.parteId, siniestroId: v.siniestroId, estadoParte: v.estado })
+    }
 
     const r = await moverParte(correduria.id, {
       id: body.id,

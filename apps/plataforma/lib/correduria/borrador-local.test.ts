@@ -7,6 +7,7 @@ import {
   claveBorradorRetarificar,
   guardarBorrador,
   leerBorrador,
+  leerBorradorAutoNuevo,
   type AlmacenLocal,
 } from './borrador-local.ts'
 
@@ -146,4 +147,49 @@ test('dos clientes distintos guardan borradores independientes', () => {
   guardarBorrador(claveBorradorAutoNuevo('c2'), { matricula: '5655DSM' }, a, AHORA)
   assert.deepEqual(leerBorrador(claveBorradorAutoNuevo('c1'), a, AHORA), { matricula: '2222DDD' })
   assert.deepEqual(leerBorrador(claveBorradorAutoNuevo('c2'), a, AHORA), { matricula: '5655DSM' })
+})
+
+test('ir a la ficha y volver: la misma URL da la misma clave y recupera el borrador', () => {
+  const { a } = almacenFalso()
+  for (const op of [undefined, null, 'op1']) {
+    const ida = claveBorradorAutoNuevo('c1', op)
+    guardarBorrador(ida, { matricula: '2222DDD' }, a, AHORA)
+    // La vuelta recalcula la clave desde la misma URL: tiene que ser idéntica (sin `undefined` en el nombre).
+    assert.equal(claveBorradorAutoNuevo('c1', op), ida)
+    assert.deepEqual(leerBorrador(ida, a, AHORA), { matricula: '2222DDD' })
+  }
+  // `undefined` y `null` (sin ?oportunidad=) son el MISMO borrador; con oportunidad es otro, a propósito.
+  assert.equal(claveBorradorAutoNuevo('c1', undefined), claveBorradorAutoNuevo('c1', null))
+  assert.doesNotMatch(claveBorradorAutoNuevo('c1'), /undefined|null/)
+})
+
+function almacenConClaves(): { a: AlmacenLocal; datos: Map<string, string> } {
+  const datos = new Map<string, string>()
+  const a: AlmacenLocal = {
+    getItem: (k) => datos.get(k) ?? null,
+    setItem: (k, v) => void datos.set(k, v),
+    removeItem: (k) => void datos.delete(k),
+    key: (i) => [...datos.keys()][i] ?? null,
+    get length() { return datos.size },
+  }
+  return { a, datos }
+}
+
+test('auto nuevo: entrar sin ?oportunidad= recupera el borrador de su variante (y al revés); lo propio manda', () => {
+  const { a } = almacenConClaves()
+  guardarBorrador(claveBorradorAutoNuevo('c1', 'opA'), { matricula: 'AAA' }, a, AHORA - 1000)
+  guardarBorrador(claveBorradorAutoNuevo('c1', 'opB'), { matricula: 'BBB' }, a, AHORA)
+  guardarBorrador(claveBorradorAutoNuevo('c2', 'opC'), { matricula: 'CCC' }, a, AHORA)
+  assert.deepEqual(leerBorradorAutoNuevo('c1', null, a, AHORA), { matricula: 'BBB' }, 'el más reciente, solo de SU cliente')
+  assert.equal(leerBorradorAutoNuevo('c3', null, a, AHORA), null)
+  guardarBorrador(claveBorradorAutoNuevo('c1'), { matricula: 'SIN' }, a, AHORA)
+  assert.deepEqual(leerBorradorAutoNuevo('c1', 'opZ', a, AHORA), { matricula: 'SIN' }, 'con op y sin borrador propio, el del cliente')
+  assert.deepEqual(leerBorradorAutoNuevo('c1', 'opA', a, AHORA), { matricula: 'AAA' }, 'lo propio manda')
+  assert.deepEqual(leerBorradorAutoNuevo('c1', undefined, a, AHORA), { matricula: 'SIN' })
+})
+
+test('PedirDatos enlaza a la pantalla de tarificar CON ?oportunidad= (si no, abre otro borrador)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../../app/(usuario)/correduria/cliente/[id]/PedirDatos.tsx', import.meta.url), 'utf8')
+  assert.match(src, /const tarificar = .*\?oportunidad=\$\{encodeURIComponent\(oportunidadId\)\}/)
 })

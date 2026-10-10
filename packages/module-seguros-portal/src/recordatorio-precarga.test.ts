@@ -186,3 +186,12 @@ test('🚨 ningún título pasa de TITULO_MAX: el POST lo rechazaría y la perso
   assert.ok(precargas.length >= 2)
   for (const p of precargas) assert.ok(p.titulo.length <= TITULO_MAX, `${p.clave}: ${p.titulo.length}`)
 })
+
+test('🪤 con varios titulares la precarga del carné lleva el nombre; sin titular, el título de siempre', () => {
+  const { precargas } = precargasDeRecordatorio({
+    carnets: [{ ...CARNET, titular: 'Ana Pérez' }, { id: 'c2', tipo: 'A2', fechaCaducidad: '2028-01-01', titular: '  ' }],
+    polizas: [],
+    hoy: HOY,
+  })
+  assert.deepEqual(precargas.map((p) => p.titulo), ['Carnet de conducir (B) de Ana Pérez', 'Carnet de conducir (A2)'])
+})

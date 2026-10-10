@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { decidirFicha, esDocumentoDeSeguro, fichaDelDocumento, planTomador, posiblesDuplicadosPorContacto, puedeAbrirFiguras, puedeVolcarEnFicha, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad } from './oportunidad-documento-reglas.ts'
+import { decidirFicha, esDocumentoDeSeguro, fichaDelDocumento, planTomador, posiblesDuplicadosPorContacto, puedeAbrirFiguras, puedeVolcarEnFicha, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad, decidirOportunidadExistente } from './oportunidad-documento-reglas.ts'
 
 const HOY = new Date('2026-09-29T10:00:00Z')
 
@@ -32,6 +32,10 @@ test('🪤 mismo nombre sin orden; el padre no es el hijo', () => {
   assert.equal(mismoNombre('Manuel Piña', 'Manuel Antonio Piña Franco'), true)
   assert.equal(mismoNombre('Manuel Piña Ruiz', 'Manuel Antonio Piña Franco'), false)
   assert.equal(mismoNombre('Manuel', 'Manuel Antonio Piña Franco'), false)
+  // 🪤 apellidos pegados por el OCR: mismo nombre si sin espacios son idénticos
+  assert.equal(mismoNombre('JOSE ANTONIOMARTINAVILA', 'Jose Antonio Martin Avila', { exacto: true }), true)
+  assert.equal(mismoNombre('JOSE ANTONIOMARTINAVILA', 'Jose Antonio Martin Avila'), true)
+  assert.equal(mismoNombre('JOSE ANTONIOMARTINAVILA', 'Jose Antonio Martin Avila Ruiz', { exacto: true }), false)
   // Las partículas no cuentan para el mínimo de dos palabras.
   assert.equal(mismoNombre('María de la', 'María de la Paz Ruiz'), false)
   assert.equal(mismoNombre('Manuel Piña', 'Manuel Piña Ruiz', { exacto: true }), false)
@@ -146,4 +150,36 @@ test('🪤 figuras de la póliza: nunca desde el portal ni el enlace de datos, n
   assert.equal(puedeAbrirFiguras({ ...b, origen: 'portal' }), false)
   assert.equal(puedeAbrirFiguras({ ...b, origen: 'solicitud' }), false)
   assert.equal(puedeAbrirFiguras({ ...b, verificado: false }), false)
+})
+
+test('🪤 tomador con apellidos pegados en ficha sin DNI: misma ficha, no lead duplicado', () => {
+  const base = { clienteSube: 'yo', nombreFicha: 'Jose Antonio Martin Avila', dniFicha: null, tomador: 'JOSE ANTONIOMARTINAVILA', dniDocumento: '12345678Z', coincidencias: [] }
+  assert.deepEqual(decidirFicha(base), { tipo: 'ficha', clienteId: 'yo', porque: 'nombre' })
+  assert.deepEqual(decidirFicha({ ...base, tomador: 'JOSE ANTONIOMARTINRUIZ' }), { tipo: 'lead' })
+})
+
+test('🪤 «Maria Na» no casa con «Mariana» (iguales sin espacios exige ≥2 palabras en ambos lados)', () => {
+  assert.equal(mismoNombre('Mariana', 'Maria Na'), false)
+  assert.equal(mismoNombre('Maria Na', 'Mariana'), false)
+  assert.equal(mismoNombre('JOSE ANTONIOMARTINAVILA', 'Jose Antonio Martin Avila'), true)
+})
+
+test('🪤 mismo documento subido dos veces: se reutiliza la oportunidad abierta (no se crea otra)', () => {
+  const ex = [{ id: 'op1', estado: 'competencia', numeroPoliza: '18162048', aseguradora: 'Línea Directa' }]
+  assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18162048', aseguradora: 'Línea Directa' }, ex), { accion: 'reutilizar', id: 'op1' })
+  assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18.162.048', aseguradora: 'LINEA DIRECTA ASEGURADORA' }, ex), { accion: 'reutilizar', id: 'op1' })
+  assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: ' 18-162 048 ', aseguradora: null }, ex), { accion: 'reutilizar', id: 'op1' })
+  assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18162048', aseguradora: 'Línea Directa' }, [{ ...ex[0], aseguradora: null }]), { accion: 'reutilizar', id: 'op1' })
+})
+
+test('🪤 otro nº, otra compañía, sin nº, o existente cerrada/descartada: se crea', () => {
+  const ab = { id: 'op1', estado: 'en_negociacion', numeroPoliza: '18162048', aseguradora: 'Línea Directa' }
+  assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18162049', aseguradora: 'Línea Directa' }, [ab]), { accion: 'crear' })
+  assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18162048', aseguradora: 'Mapfre' }, [ab]), { accion: 'crear' })
+  assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: null, aseguradora: 'Línea Directa' }, [ab]), { accion: 'crear' })
+  assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18162048', aseguradora: 'Línea Directa' }, [{ ...ab, numeroPoliza: null }]), { accion: 'crear' })
+  for (const estado of ['ganada', 'perdida', 'descartada']) {
+    assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18162048', aseguradora: 'Línea Directa' }, [{ ...ab, estado }]), { accion: 'crear' })
+  }
+  assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18162048', aseguradora: 'Línea Directa' }, []), { accion: 'crear' })
 })

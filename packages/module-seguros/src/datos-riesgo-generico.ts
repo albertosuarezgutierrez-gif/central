@@ -21,6 +21,8 @@ export type TipoCampoRiesgo =
   /** Número con decimales; `min` incluido salvo `sobreMin` (estrictamente mayor). */
   | { t: 'numero'; min: number; max: number; sobreMin?: boolean }
   | { t: 'bool' }
+  /** Código numérico de N cifras (p. ej. la profesión CNO-11 de nivel 4: `2612`). */
+  | { t: 'codigo'; digitos: number }
 
 export type EspecCampo = { clave: string; etiqueta: string; tipo: TipoCampoRiesgo }
 export type Espec = readonly EspecCampo[]
@@ -132,6 +134,12 @@ export function validarParcial(
         else mal('sí o no.')
         break
       }
+      case 'codigo': {
+        const x = texto(typeof v === 'number' ? String(v) : v, 20)
+        if (x === 'invalido' || (x !== null && !new RegExp(`^\\d{${t.digitos}}$`).test(x))) mal(`${t.digitos} cifras.`)
+        else valor[c.clave] = x
+        break
+      }
     }
   }
   return errores.length > 0 ? { ok: false, errores } : { ok: true, valor }
@@ -156,7 +164,7 @@ export function leerBloque(spec: Espec, bruto: unknown): Record<string, ValorCam
   for (const c of spec) {
     const v = o[c.clave]
     switch (c.tipo.t) {
-      case 'texto': case 'id': case 'cp': case 'referencia':
+      case 'texto': case 'id': case 'cp': case 'referencia': case 'codigo':
         out[c.clave] = typeof v === 'string' && v.trim() !== '' ? v.trim() : null
         break
       case 'entero': case 'numero':

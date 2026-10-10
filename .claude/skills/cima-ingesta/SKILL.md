@@ -149,6 +149,15 @@ suyos: el envío diario no estaba configurado en el portal de mediadores de Mapf
 nuestra tubería. Lección: si una compañía enmudece, lo primero es preguntar a CIMA si la
 compañía tiene activado el envío automático, antes de buscar el fallo en el código.
 
+🚨 **Bajas que llegan tarde (06/10/2026).** El POL Mapfre del 05/10 trajo 47 pólizas, 25 en AN; bajas
+hechas semanas antes (renovación anulada 15/07, recibo anulado 25/08) llegaron ese día **junto con sus REC**:
+el retraso es de la compañía, no de la tubería, y un aviso por «recibo anulado» no habría avisado antes.
+En Mapfre, Automóviles y No Vida no tenían suscritos los ficheros de pólizas (solo Empresas).
+El POL trae `DatosAnulacion` → `polizas.datos_especificos.anulacion {fecha, motivo, detalle}`
+(C0058: IM impago, EX otra entidad/venta, SI siniestralidad). **`baja_motivo` es el motivo del CORREDOR, no el de CIMA.**
+El vigía lo usa: motivo y fecha real en el aviso de fugas, agrupado por cliente, retención según motivo
+(SI no abre llamada), renovación anulada ≠ «no llega», aviso de anulación en bloque y retraso por compañía.
+
 ## Diagnóstico: la ingesta está muda, ¿dónde miro?
 
 En este orden, y **sin saltarse el paso 0**:
@@ -259,6 +268,8 @@ hay algo que mirar** (regla de Alberto: el panel enseña errores). Lógica pura 
   falló» son cosas distintas; se normaliza en la frontera HTTP, que es donde el
   tipo miente (`esSalud` tolera campos nuevos, así que una `apps/asegura` vieja
   los manda como `undefined`).
+
+- **Ficha ↔ CIMA, normalizar antes de avisar (03/10/2026):** `compararConCima` iguala nombre (conjunto de palabras sin tildes), fecha (ISO), teléfono (sin 34) y email (minúsculas) antes de declarar conflicto; el mismo dato en otro formato se copia con motivo `formato`. El cron `cima-sincro` registra `cima_sincro_resumen` en `operational_events` (`{copiados:[{poliza,campo,motivo}], conflictos:[{poliza,campo,tipo}]}`, sin valores ni PII) para diagnosticar el aviso.
 
 ## 📦 La caja negra del webhook de Codeoscopic
 

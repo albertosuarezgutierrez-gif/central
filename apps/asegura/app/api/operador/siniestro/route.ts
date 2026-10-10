@@ -21,7 +21,12 @@ export const dynamic = 'force-dynamic'
  *
  *   GET   ?id=<siniestroId>                     → { estado:'ok', siniestro }
  *   POST  { polizaId, tipo, fechaHora, descripcion, lugar*?, seConsideraCulpable?,
- *           gravedad?, referencia?, actor }     → abre uno (origen gestionado_correduria)
+ *           gravedad?, referencia?, fechaDeclaracion?, parteId?, actor }
+ *                                               → abre uno (origen gestionado_correduria).
+ *           Con `parteId` lo registra DESDE ese parte del portal y lo deja vinculado
+ *           (en la misma transacción). 409 `duplicado` + `siniestroId` si ya lo
+ *           mandó la compañía por CIMA (no se crea otro); 409/422
+ *           `parte_no_vinculable` si el parte no se puede vincular.
  *   PATCH { siniestroId, estado, actor }        → cambia el estado (solo los nuestros)
  *   PATCH { siniestroId, referencia?, gravedad?, tramitador*?, perito*?,
  *           reservaImporte?, indemnizacionImporte?, nota?, actor } → seguimiento
@@ -66,6 +71,8 @@ export const POST = auditado(async (req: Request) => {
       seConsideraCulpable: typeof b.seConsideraCulpable === 'boolean' ? b.seConsideraCulpable : null,
       gravedad: cadena(b.gravedad),
       referencia: cadena(b.referencia),
+      fechaDeclaracion: cadena(b.fechaDeclaracion),
+      parteId: cadena(b.parteId),
       actor: cadena(b.actor) ?? 'plataforma',
     }),
   )
