@@ -6,6 +6,8 @@ import RiesgoPantalla from './RiesgoPantalla'
 
 export const dynamic = 'force-dynamic'
 
+const hoyMadrid = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+
 /**
  * El riesgo como pantalla (29/09/2026, docs/superpowers/specs/2026-09-29-riesgo-figuras-variantes-design.md §5).
  * «Nosotros aseguramos riesgos: el riesgo no cambia, lo que cambia es la persona». Aquí viven las
@@ -20,7 +22,7 @@ export default async function OportunidadPage({ params }: { params: Promise<{ id
   if (lectura.estado === 'ok') {
     return (
       <Pagina>
-        <RiesgoPantalla inicial={lectura.riesgo} />
+        <RiesgoPantalla inicial={lectura.riesgo} hoy={hoyMadrid()} />
       </Pagina>
     )
   }

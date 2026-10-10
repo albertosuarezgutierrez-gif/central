@@ -16,7 +16,7 @@ import {
 } from "@/lib/sivra/mercado-cobertura"
 import { NOMBRE_PORTAL } from "@/lib/sivra/mercado-propios"
 import {
-  planEscaparate, type CandidataEscaparate, type PisoEscaparate,
+  planEscaparate, ventanaLibre, type CandidataEscaparate, type PisoEscaparate,
 } from "@/lib/sivra/escaparate-plan"
 
 export const dynamic = "force-dynamic"
@@ -187,14 +187,21 @@ export async function GET(req: NextRequest) {
     const aforoPorPiso = new Map<string, number>()
     for (const f of filas) aforoPorPiso.set(f.property_id, Number(f.max_guests) > 0 ? Number(f.max_guests) : 4)
 
-    const base = await prisma.$queryRaw<{ property_id: string; rate_date: Date; precio: number }[]>(Prisma.sql`
-      SELECT property_id, rate_date, price_live AS precio
+    const base = await prisma.$queryRaw<
+      { property_id: string; rate_date: Date; precio: number; available: number | null; min_stay: number | null }[]
+    >(Prisma.sql`
+      SELECT property_id, rate_date, price_live AS precio, available, min_stay
       FROM rate_snapshots
       WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
         AND rate_date >= CURRENT_DATE AND price_live IS NOT NULL`)
     const precioNoche = new Map<string, number>()
+    const nocheLibre = new Map<string, number | null>()
+    const estanciaMin = new Map<string, number | null>()
     for (const b of base) {
-      precioNoche.set(`${b.property_id}|${new Date(b.rate_date).toISOString().slice(0, 10)}`, Number(b.precio))
+      const k = `${b.property_id}|${new Date(b.rate_date).toISOString().slice(0, 10)}`
+      precioNoche.set(k, Number(b.precio))
+      nocheLibre.set(k, b.available == null ? null : Number(b.available))
+      estanciaMin.set(k, b.min_stay == null ? null : Number(b.min_stay))
     }
 
     const medidas = await prisma.$queryRaw<
@@ -210,14 +217,19 @@ export async function GET(req: NextRequest) {
         for (const noches of NOCHES_ESCAPARATE) {
           let total = 0
           let completa = true
+          const libres: (number | null)[] = []
           for (let i = 0; i < noches; i++) {
             const dia = new Date(new Date(`${checkin}T00:00:00Z`).getTime() + i * 86_400_000)
               .toISOString().slice(0, 10)
             const precio = precioNoche.get(`${propertyId}|${dia}`)
             if (precio == null) { completa = false; break }
             total += precio
+            libres.push(nocheLibre.get(`${propertyId}|${dia}`) ?? null)
           }
-          candidatasPiso.push({ checkin, noches, baseTotal: completa ? total : null })
+          candidatasPiso.push({
+            checkin, noches, baseTotal: completa ? total : null,
+            libre: ventanaLibre(libres, noches, estanciaMin.get(`${propertyId}|${checkin}`) ?? null),
+          })
         }
       }
       return {

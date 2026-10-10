@@ -41,6 +41,7 @@ import {
   precargaDePoliza,
   ramoTarificable,
   rolesDelRamo,
+  seguroAnteriorDe,
   type CampoVehiculo,
   type ClaveDatosRiesgo,
   type DatosVehiculoRiesgo,
@@ -48,6 +49,7 @@ import {
   type FigurasVariante,
   type RamoCapital,
   type RolFigura,
+  type SeguroAnterior,
 } from '@central/module-seguros'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -127,6 +129,16 @@ export type Riesgo = {
    * tarifa) y si lo que se ve es la PRECARGA de la póliza de la que nace (`dePoliza`, nunca confirmada).
    */
   datosRiesgo: { clave: ClaveDatosRiesgo; datos: Record<string, unknown>; faltan: string[]; dePoliza: boolean; tarifica: boolean }
+  /**
+   * El historial del riesgo para su pantalla (10/10/2026). `seguroAnterior`: lo leído del papel de la póliza de HOY
+   * (`poliza_competencia.seguroAnterior`, ya saneado); `null` = no se ha leído ninguno. `carnet`: solo en auto/moto
+   * (`null` = el ramo no lo usa); `fecha` aaaa-mm-dd o tal cual la guarda la ficha, `null` = la ficha no la tiene;
+   * `legible: false` = no se pudo leer la ficha del conductor (no es «sin carné»). Sin DNI ni IBAN.
+   */
+  historial: {
+    seguroAnterior: SeguroAnterior | null
+    carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
+  }
 }
 
 const nombreDe = (n: string | null, a: string | null) => `${n ?? ''} ${a ?? ''}`.trim() || 'Sin nombre'
@@ -166,14 +178,14 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     Array<{
       id: string; cliente_id: string; nombre: string | null; apellidos: string | null; tipo: string; estado: string
       poliza_id: string | null; info_riesgo: Record<string, unknown> | null; fecha_fin_vigencia: Date | null
-      aseguradora: string | null; aseguradora_actual: boolean; prima: string | null
+      aseguradora: string | null; aseguradora_actual: boolean; prima: string | null; seguro_anterior: unknown
     }>
   >`
     select o.id::text as id, o.cliente_id::text as cliente_id, c.nombre, c.apellidos, o.tipo::text as tipo,
            o.estado::text as estado, o.poliza_id::text as poliza_id, o.info_riesgo, o.fecha_fin_vigencia,
            coalesce(o.poliza_competencia->>'aseguradora', o.aseguradora_ganadora) as aseguradora,
            (o.poliza_competencia->>'aseguradora') is not null as aseguradora_actual,
-           o.prima_bruta::text as prima
+           o.prima_bruta::text as prima, o.poliza_competencia->'seguroAnterior' as seguro_anterior
     from seguros.oportunidades o
     join seguros.clientes c on c.id = o.cliente_id and c.correduria_id = o.correduria_id
     where o.id = ${oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`
@@ -273,6 +285,9 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
   if (!figuras.some((f) => f.rol === 'tomador')) {
     figuras.unshift({ rol: 'tomador', clienteId: op.cliente_id, nombre: nombreDe(op.nombre, op.apellidos), vinculo: null, porDefecto: true, faltan: null, empresa: false })
   }
+  // El carné del que CONDUCE (habitual si lo hay; si no, el tomador): fecha, de quién y si se pudo leer.
+  // Sin habitual ni tomador con ficha (solo ocasional) no se leyó ninguna: `legible: false` y `conductor: null`.
+  const carnetPorRol = new Map<RolFigura, { fecha: string | null; legible: boolean }>()
   for (const f of figuras) {
     const p = await personaDeFicha(correduriaId, f.clienteId, op.tipo === 'moto' ? 'moto' : 'auto').catch(() => null)
     // El carné solo cuenta en un riesgo de vehículo: a un tomador de hogar no se le pide.
@@ -282,11 +297,22 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       (op.tipo === 'auto' || op.tipo === 'moto') &&
       (f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || (f.rol === 'tomador' && !hayConductor))
     f.empresa = p !== null && p.tipo === 'juridica'
+    if (conduce) {
+      const fecha = p !== null && 'fechaCarnet' in p && typeof p.fechaCarnet === 'string' && p.fechaCarnet.trim() !== '' ? p.fechaCarnet.trim() : null
+      carnetPorRol.set(f.rol, { fecha, legible: p !== null })
+    }
     // Estado civil de la ficha (texto libre del CRM) solo en los ramos de personas: se lee aparte para no meterlo en
     // `personaDeFicha` (ahí viajaría al vendor como si fuera un id de catálogo).
     const pideCivil = ramoPideEstadoCivil(op.tipo) && !f.empresa
     const civil = pideCivil ? await clienteOrigenDe(correduriaId, f.clienteId).then((o) => (o ? o.cliente.estadoCivil : undefined)).catch(() => undefined) : undefined
     f.faltan = p === null ? null : faltanDeFigura(p, conduce, { pideEstadoCivil: pideCivil, estadoCivilFicha: civil })
+  }
+
+  const rolCarnet = (['conductor_habitual', 'tomador'] as const).find((r) => carnetPorRol.has(r)) ?? null
+  const carnetElegido = rolCarnet ? carnetPorRol.get(rolCarnet)! : null
+  const historial: Riesgo['historial'] = {
+    seguroAnterior: seguroAnteriorDe(op.seguro_anterior),
+    carnet: conVehiculo ? { fecha: carnetElegido?.fecha ?? null, conductor: rolCarnet, legible: carnetElegido?.legible ?? false } : null,
   }
 
   return {
@@ -311,6 +337,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     datosVehiculo,
     faltanVehiculo: datosVehiculo ? faltanDatosVehiculo(datosVehiculo) : null,
     datosRiesgo: { clave: bloque.clave, datos: bloque.datos, faltan: bloque.faltan, dePoliza: bloque.dePoliza, tarifica: ramoTarificable(op.tipo) },
+    historial,
   }
 }
 

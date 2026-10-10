@@ -100,6 +100,42 @@
   las fuentes. `qwen/qwen3.7-flash` sigue a $0,03/$0,13, sin mini-eval (sin key). **Visión NIM:**
   `llama-3.2-11b-vision-instruct` sin aviso de EOL en docs NVIDIA (lista de EOL no lo menciona);
   riesgo abierto sin cambios (no verificable sin `NVIDIA_API_KEY`). Resto sin novedades.
+- **2026-09-28 · pasada semanal — 🟡 HALLAZGO: `google/gemini-2.5-flash` (1er preferido de las
+  categorías `contexto` y `registral` en las listas `PREFERIDOS` del cron `ia-director-refresh`)
+  deja de darse a API keys NUEVAS — Google enruta el tráfico estándar a `gemini-3.6-flash`.**
+  Confirmado por WebSearch (foro oficial de Google AI Developers + varios issues de terceros
+  reportando 404 "no longer available to new users" / "not found for API version v1beta" con keys
+  recién creadas). Nuestra `OPENROUTER_API_KEY` es antigua y puede seguir sirviendo bajo cuota
+  "grandfathered" — no es la muerte total anunciada para el 16/10 que ya vigilábamos, es un
+  escalón intermedio que la acerca. **Curación aplicada (PR, no Telegram-solo-aviso — encaja en
+  "swap de un id en riesgo con reemplazo vigente ya identificado", Paso 1.5):** se antepone
+  `google/gemini-3.8-flash` en las dos listas — es el MISMO id al que ya resuelve `gemini-flash-
+  latest` en la cadena directa (confirmado vivo, GA 02/09/2026, visión soportada, $0,75/$3,75 por M)
+  — y se deja `gemini-2.5-flash` de suplente inmediato, sin retirarlo (sigue funcionando hoy). La
+  categoría `registral` (lectura de certificaciones de cargas, "equivocarse cuesta decenas de miles
+  de €") recibe el mismo tratamiento por el mismo motivo, con más margen porque conserva 3 suplentes
+  detrás. Verificado: `pnpm test` 3458+53/0 fallos, `tsc --noEmit` limpio en `apps/plataforma`.
+  **Sin mini-eval en vivo** (sin `OPENROUTER_API_KEY` en esta sesión) — el cron real elegirá el
+  primero que exista en su próxima pasada contra el catálogo público, así que el riesgo de un id
+  inventado es nulo (o vive en el catálogo o el cron cae al siguiente de la lista, avisando).
+  **Resto de la cadena directa confirmado vivo por WebSearch (sin keys de proveedor en esta
+  sesión):** OpenRouter `deepseek/deepseek-v4.1-flash` sigue vivo (pricing con fuentes dispersas
+  $0,035-0,30/$0,29-1,20 según fuente/hora pico — sin key para saber cuál pesa el tráfico real, no
+  es una señal nueva, ya se veía la semana pasada); Kimi `kimi-k2.6` sin sunset propio; Cerebras
+  `gpt-oss-120b` vivo, free tier 1M tok/día confirmado de nuevo, sigue INACTIVO sin key; **Visión**
+  (NIM `llama-3.2-11b-vision-instruct`) sigue en riesgo ABIERTO sin poder verificarse (WebFetch a
+  `catalog.ngc.nvidia.com`/`build.nvidia.com` bloqueado por el proxy, sin `NVIDIA_API_KEY`) — mismo
+  estado que la semana pasada, sin novedad; **Embeddings** `openai/text-embedding-3-small`
+  confirmado NO deprecado (la alerta del 23/10 que se vigilaba la semana pasada era, según el propio
+  foro de OpenAI, un email retractado — sin acción). **Groq** `openai/gpt-oss-120b` sigue de PAGO
+  desde el 11/09 ($0,15/$0,60 por M) y el eslabón sigue SIN presupuesto ni tarifa cargada en
+  `pasarela.ts` — **sin novedad respecto al hallazgo crítico del 21/09**, decisión de Alberto
+  pendiente; no se repite el aviso Telegram por no haber nada nuevo que decidir (regla "sin
+  novedades → sin ruido" aplicada a un hallazgo YA comunicado, no a uno nuevo). **Descubrimiento
+  (Paso 2):** nada nuevo cruza el listón — `Qwen3.7 Flash` sigue el más citado por precio
+  ($0,03/$0,13 por M) sin mini-eval (sin key); el resto del mercado de pago 2026 (GPT-6 Astra/Sol/
+  Luna, Claude Opus 5.5) son flagships fuera de la franja de esta cadena de respaldo. Preflight
+  Telegram 200 OK → aviso enviado (hallazgo de la deprecación acelerada de Gemini 2.5 Flash).
 
 - **2026-09-21 · pasada semanal — 🔴 HALLAZGO CRÍTICO: Groq retiró gratis a `openai/gpt-oss-120b`
   el 11/09/2026, y en la cadena es el ÚNICO eslabón sin presupuesto ni tarifa cargada.** Cinco

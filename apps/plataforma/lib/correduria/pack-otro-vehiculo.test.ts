@@ -8,7 +8,7 @@ const AHORA = new Date('2026-10-03T10:00:00Z')
 const datos = (o: Partial<DatosVehiculoRiesgo> = {}): DatosVehiculoRiesgo => ({
   matricula: '1234ABC', marca: 'Marca', modelo: 'Modelo', version: 'V1', codigoVehiculo: '99001', marcaId: '1', modeloId: '2', motorId: 'Gasoline',
   fechaMatriculacion: '2025-05-01', fechaCompra: null, kmAnuales: null, garaje: '3', cpCirculacion: null, municipioCirculacion: null,
-  municipioCirculacionId: null, remolqueLigero: null, confirmadoAt: null, ...o,
+  municipioCirculacionId: null, remolqueLigero: null, tipoVehiculo: null, cilindradaCc: null, confirmadoAt: null, ...o,
 })
 
 const op = (o: Record<string, unknown> = {}) => ({ id: 'o1', ramo: 'moto', estado: 'competencia', matricula: '1234ABC', vehiculo: 'Moto de prueba', ...o })

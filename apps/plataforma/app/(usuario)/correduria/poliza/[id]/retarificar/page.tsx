@@ -23,6 +23,7 @@ import MotoNuevo from '../../../cliente/[id]/moto-nuevo/MotoNuevo'
 import { cargarRiesgoDePoliza, ErrorVariante, FranjaVariante } from '../../../oportunidad/[id]/cargar-variante'
 import { paramTexto } from '../../../oportunidad/[id]/variante'
 import { CSS_RETARIFICADOR } from './estilos'
+import { Pagina, PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -545,7 +546,7 @@ function fallaCatalogos(garajes: RespuestaCatalogo, civiles: RespuestaCatalogo):
 
 function Cabecera({ sub, polizaId, clienteId }: { sub: string; polizaId?: string; clienteId?: string }) {
   return (
-    <div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
       <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Link href="/correduria">← Correduría</Link>
         {polizaId && (
@@ -561,8 +562,7 @@ function Cabecera({ sub, polizaId, clienteId }: { sub: string; polizaId?: string
           </>
         )}
       </div>
-      <h1 style={{ fontSize: 20, margin: '4px 0 2px' }}>Retarificar</h1>
-      {sub && <p className="muted" style={{ margin: 0 }}>{sub}</p>}
+      <PageHeader titulo="Retarificar" sub={sub || undefined} />
     </div>
   )
 }
@@ -633,7 +633,7 @@ function mensajeCatastro(r: { estado: 'ambigua' | 'no_encontrado' | 'direccion_i
 
 function Marco({ children }: { children: React.ReactNode }) {
   return (
-    <main style={{ maxWidth: 960, margin: '0 auto', padding: '20px 16px 48px' }}>
+    <Pagina ancho="lectura">
       <style>{CSS_RETARIFICADOR}</style>
       <div
         className="retarificar"
@@ -641,6 +641,6 @@ function Marco({ children }: { children: React.ReactNode }) {
       >
         {children}
       </div>
-    </main>
+    </Pagina>
   )
 }

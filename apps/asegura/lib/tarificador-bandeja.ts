@@ -2,6 +2,7 @@
 // Reglas de estado y motivo legible: `@central/module-tarificacion` (`bandeja.ts`); proyección: `tarificador-bandeja-reglas.ts`.
 import { decidirAccionBandeja, ESTADOS_BANDEJA, type AccionBandeja } from '@central/module-tarificacion'
 import { prisma } from './tenant'
+import { hayBotVersion, hayPasos } from './esquema-bd'
 import { proyectarItemBandeja, proyectarPaso, tipoDeError, yaEnElDestino, type FilaBandeja, type FilaPaso, type ItemBandeja, type PasoLectura } from './tarificador-bandeja-reglas'
 
 export type ListaBandeja = { total: number; items: ItemBandeja[]; hayMas: boolean }
@@ -9,8 +10,17 @@ export type ListaBandeja = { total: number; items: ItemBandeja[]; hayMas: boolea
 /** Trabajos que esperan a una persona (`requiere_humano`, `error_definitivo`), los más recientes primero. */
 export async function listarBandeja(correduriaId: string, limite: number, desde: number): Promise<ListaBandeja> {
   const estados = [...ESTADOS_BANDEJA]
-  const filas = await prisma.$queryRaw<FilaBandeja[]>`
+  // Esquema opcional: sin la columna `bot_version` (SQL sin aplicar) → null («no se sabe»), no 500.
+  const filas = (await hayBotVersion())
+    ? await prisma.$queryRaw<FilaBandeja[]>`
     select id::text as id, compania, ramo, estado, intentos, error, oportunidad_id::text as oportunidad_id, bot_version,
+           coalesce(terminado_at, updated_at) as fecha
+    from seguros.tarificacion_trabajos
+    where correduria_id = ${correduriaId}::uuid and estado = any(${estados}::text[])
+    order by coalesce(terminado_at, updated_at) desc, id
+    limit ${limite}::int offset ${desde}::int`
+    : await prisma.$queryRaw<FilaBandeja[]>`
+    select id::text as id, compania, ramo, estado, intentos, error, oportunidad_id::text as oportunidad_id, null::text as bot_version,
            coalesce(terminado_at, updated_at) as fecha
     from seguros.tarificacion_trabajos
     where correduria_id = ${correduriaId}::uuid and estado = any(${estados}::text[])
@@ -64,13 +74,19 @@ export type TrazaTrabajo = { botVersion: string | null; pasos: PasoLectura[] }
 
 /** Traza de un trabajo (pasos en orden) + versión del bot. `null` = el trabajo no es de esta correduría. */
 export async function leerTrazaTrabajo(correduriaId: string, id: string): Promise<TrazaTrabajo | null> {
-  const t = await prisma.$queryRaw<{ bot_version: string | null }[]>`
+  // Esquema opcional: sin columna/tabla (SQL sin aplicar) → versión null y sin pasos, no 500.
+  const t = (await hayBotVersion())
+    ? await prisma.$queryRaw<{ bot_version: string | null }[]>`
     select bot_version from seguros.tarificacion_trabajos where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+    : await prisma.$queryRaw<{ bot_version: string | null }[]>`
+    select null::text as bot_version from seguros.tarificacion_trabajos where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
   if (!t[0]) return null
-  const p = await prisma.$queryRaw<FilaPaso[]>`
+  const p = (await hayPasos())
+    ? await prisma.$queryRaw<FilaPaso[]>`
     select intento, paso, inicio, duracion_ms, ok, error_codigo, captura_ref
     from seguros.tarificacion_trabajo_pasos
     where trabajo_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
     order by intento, inicio, id`
+    : []
   return { botVersion: t[0].bot_version, pasos: p.map(proyectarPaso) }
 }

@@ -107,6 +107,53 @@ export const cardStyle: CSSProperties = {
   borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)',
 }
 
+/**
+ * Sección de una tarjeta: título uniforme (14 px, negrita) y, si `plegable`, `<details>` nativo
+ * (accesible por teclado, sin JS). Sustituye a los `tituloBloque` locales (12 px mayúsculas, 13 px…)
+ * que cada pantalla redefinía. `sinTarjeta` la usa DENTRO de otra tarjeta: solo filete superior.
+ */
+export function SeccionCard({ titulo, acciones, plegable, abierta = true, sinTarjeta, children }: {
+  titulo: ReactNode
+  /** A la derecha del título (contadores, enlaces). */
+  acciones?: ReactNode
+  plegable?: boolean
+  /** Solo con `plegable`: abierta de inicio. */
+  abierta?: boolean
+  /** Anidada en otra tarjeta: sin fondo ni sombra, separada por un filete. */
+  sinTarjeta?: boolean
+  children: ReactNode
+}) {
+  const caja: CSSProperties = sinTarjeta
+    ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }
+    : { ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }
+  const tit: CSSProperties = { margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text)' }
+  const acc = acciones ? <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400 }}>{acciones}</span> : null
+  const filaCab: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', minHeight: 44 }
+  if (plegable) {
+    return (
+      <details open={abierta} style={caja}>
+        <summary style={{ ...filaCab, cursor: 'pointer' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <span className="seccion-chev" aria-hidden style={{ color: 'var(--muted)', fontSize: 12 }}>▸</span>
+            <span style={tit}>{titulo}</span>
+          </span>
+          {acc}
+        </summary>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10, marginTop: 10 }}>{children}</div>
+      </details>
+    )
+  }
+  return (
+    <section style={caja}>
+      <div style={{ ...filaCab, minHeight: 0 }}>
+        <h3 style={tit}>{titulo}</h3>
+        {acc}
+      </div>
+      {children}
+    </section>
+  )
+}
+
 /** Cabecera de tarjeta: título discreto a la izquierda, acción/enlace a la derecha. */
 export function CardHeader({ title, sub, action }: { title: ReactNode; sub?: ReactNode; action?: ReactNode }) {
   return (

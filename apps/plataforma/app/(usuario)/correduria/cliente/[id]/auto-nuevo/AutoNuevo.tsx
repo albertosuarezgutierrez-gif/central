@@ -17,6 +17,7 @@
 // auto ya hace.
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Flag, FlaskConical } from 'lucide-react'
 import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
@@ -25,7 +26,8 @@ import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
-import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from '@/lib/correduria/km-auto'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
@@ -63,6 +65,7 @@ import {
   PERSONA_VACIA,
   figuraCompleta,
   figuraParaPuerto,
+  modoPapel,
   type PersonaForm,
 } from '../../../oportunidad/[id]/figuras-form'
 import { BloqueFigura } from '../../../oportunidad/[id]/BloqueFigura'
@@ -312,6 +315,10 @@ export default function AutoNuevo({
   // Por defecto 10.000 km/año y compra = matriculación (Alberto, 25/09/2026):
   // se ven en pantalla y el corredor los cambia si el cliente dice otra cosa.
   const [kmAnuales, setKmAnuales] = useState(datosRiesgo?.kmAnuales != null ? String(datosRiesgo.kmAnuales) : String(KM_ANUALES_POR_DEFECTO))
+  // 10/10/2026 (`lib/correduria/km-auto.ts`): los 10.000 de partida NO son dato del cliente. Viajan como SUPUESTO y no se
+  // anotan en el riesgo; pasan a dato si los trae el riesgo, si el corredor toca el campo o si la cifra es otra.
+  const kmDelRiesgo = datosRiesgo?.kmAnuales != null
+  const [kmTocado, setKmTocado] = useState(false)
   // Vacío = sigue a la matriculación (se pinta esa fecha y no se manda nada:
   // el precalificador ya usa la de matriculación como compra).
   const [fechaCompra, setFechaCompra] = useState(datosRiesgo?.fechaCompra ?? '')
@@ -357,9 +364,12 @@ export default function AutoNuevo({
     conductor_habitual: PERSONA_VACIA,
     conductor_ocasional: PERSONA_VACIA,
   })
-  const propietarioDistintoEf = !figs.propietario && propietarioDistinto
-  const conductorDistintoEf = !figs.conductor_habitual && conductorDistinto
-  const ocasionalDistintoEf = !figs.conductor_ocasional && ocasionalDistinto
+  // 10/10/2026: con riesgo, un papel sin figura lo ocupa el tomador del riesgo; otra persona se asigna en
+  // «Intervinientes» (una sola fuente de verdad). La casilla «es otra persona» solo vale sin riesgo (`modoPapel`).
+  const conRiesgo = variante !== null
+  const propietarioDistintoEf = modoPapel('propietario', figs, conRiesgo) === 'libre' && propietarioDistinto
+  const conductorDistintoEf = modoPapel('conductor_habitual', figs, conRiesgo) === 'libre' && conductorDistinto
+  const ocasionalDistintoEf = modoPapel('conductor_ocasional', figs, conRiesgo) === 'libre' && ocasionalDistinto
 
   // La variante guardada de ESTE riesgo (gratis): retomarla sin pagar y, si es el mismo coche,
   // no volver a dictarlo. Solo en modo variante: sin riesgo, «la última del cliente» podría ser
@@ -806,10 +816,11 @@ export default function AutoNuevo({
           setMatriculacionEstimada(false)
         }
         if (v.matricula) setMatricula((m) => (retomada ? v.matricula! : m || v.matricula!))
-        // Los km solo si se DECLARARON (la media supuesta no es un dato del cliente) y el corredor
-        // no ha tecleado otra cifra.
-        if (v.kmAnuales !== null && v.kmAnuales !== KM_ANUALES_SUPUESTOS) {
-          setKmAnuales((k) => (retomada || k === String(KM_ANUALES_POR_DEFECTO) ? String(v.kmAnuales) : k))
+        // Los km solo si se DECLARARON (ni la media ni los 10.000 de la pantalla son un dato del cliente:
+        // `kmDeclaradoDeGuardada`) y el corredor no ha tecleado otra cifra.
+        const kmGuardados = kmDeclaradoDeGuardada(v.kmAnuales, KM_ANUALES_POR_DEFECTO)
+        if (kmGuardados !== null) {
+          setKmAnuales((k) => (retomada || k === String(KM_ANUALES_POR_DEFECTO) ? String(kmGuardados) : k))
         }
         if (v.garaje && (retomada || !garajeElegido.current) && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
       })
@@ -987,6 +998,7 @@ export default function AutoNuevo({
   // `kilometrosDesdeTexto` (@central/module-seguros).
   const kmLeidos = kilometrosDesdeTexto(kmAnuales)
   const kmInvalido = kmAnuales.trim() !== '' && kmLeidos === null
+  const kmSupuestos = kmLeidos !== null && !kmEsDeclarado({ texto: kmAnuales, porDefecto: KM_ANUALES_POR_DEFECTO, delRiesgo: kmDelRiesgo, tocado: kmTocado })
 
   // Un coche no se compra antes de matricularse. El vendor no lo comprueba: se
   // traga las dos fechas y tarifica, así que el disparate solo se vería en el
@@ -1029,8 +1041,10 @@ export default function AutoNuevo({
     setResultado({ estado: 'cotizando' })
     const correccionesFinal: Record<string, unknown> = { ...correcciones }
     // En blanco = no se ha preguntado: no se manda nada y sigue mandando el
-    // supuesto del precalificador. Con valor, manda el corredor.
-    if (kmLeidos !== null) correccionesFinal.kmAnuales = kmLeidos
+    // supuesto del precalificador. DECLARADOS, manda el corredor (corrección); los 10.000 de partida van como
+    // SUPUESTO en `resueltos.kmAnualesSupuestos` (misma cifra al vendor, pero marcada).
+    const km = kmParaCotizar({ texto: kmAnuales, porDefecto: KM_ANUALES_POR_DEFECTO, delRiesgo: kmDelRiesgo, tocado: kmTocado })
+    if (km.correccion !== null) correccionesFinal.kmAnuales = km.correccion
     if (fechaCompra !== '' && !compraInvalida) correccionesFinal.fechaCompra = fechaCompra
     if (remolqueLigero) correccionesFinal.remolqueLigero = true
     if (fechaEfecto !== '') correccionesFinal.fechaEfecto = fechaEfecto
@@ -1076,6 +1090,7 @@ export default function AutoNuevo({
         matricula: matricula.trim().toUpperCase(),
         fechaMatriculacion: matriculacion,
         garajeEsSupuesto: true,
+        ...(km.supuesto !== null ? { kmAnualesSupuestos: km.supuesto } : {}),
         // Lo que se ha usado, para anotarlo en el riesgo (`info_riesgo.datosVehiculo`): asegura ignora esta
         // clave al cotizar. Km y garaje solo si son un dato declarado (no el supuesto de la pantalla), y sin
         // nombres ni ids si el coche viene de una variante guardada (la cascada de aquí no lo describe).
@@ -1088,7 +1103,7 @@ export default function AutoNuevo({
                 marcaId: usarPrevio && previo ? null : marcaId || null,
                 modeloId: usarPrevio && previo ? null : modeloId || null,
                 motorId: usarPrevio && previo ? null : motorId || null,
-                kmAnuales: kmLeidos !== null && (datosRiesgo?.kmAnuales != null || kmAnuales !== String(KM_ANUALES_POR_DEFECTO)) ? kmLeidos : null,
+                kmAnuales: km.paraRiesgo,
                 garaje: garajeElegido.current ? garaje : null,
               },
             }
@@ -1278,12 +1293,13 @@ export default function AutoNuevo({
             etiqueta="Kilómetros al año"
             falta={kmInvalido}
             faltaTexto="no se entiende como kilometraje (dígitos, y el punto solo como separador de miles)"
-            ayuda={`Por defecto ${KM_ANUALES_POR_DEFECTO.toLocaleString('es-ES')}. Es factor de precio de primer orden: si el cliente sabe otra cifra, cámbiala.`}
+            aviso={kmSupuestos ? 'supuesto · no lo ha dicho el cliente' : undefined}
+            ayuda={`Por defecto ${KM_ANUALES_POR_DEFECTO.toLocaleString('es-ES')}, que viaja marcado como supuesto y no se guarda en el riesgo. Es factor de precio de primer orden: si el cliente dice una cifra (aunque sea esa), tecléala.`}
           >
             <input
               inputMode="numeric"
               value={kmAnuales}
-              onChange={(e) => setKmAnuales(e.target.value)}
+              onChange={(e) => { setKmTocado(true); setKmAnuales(e.target.value) }}
               placeholder={String(KM_ANUALES_POR_DEFECTO)}
               style={input}
             />
@@ -1495,14 +1511,16 @@ export default function AutoNuevo({
         <CardHeader
           title="2b · ¿Propietario o conductor distintos?"
           sub={
-            Object.keys(figs).length > 0
-              ? 'Los papeles que el riesgo pone en otra ficha salen de esa ficha: aquí solo se pide su estado civil y lo que falte.'
+            conRiesgo
+              ? 'Las personas son las de «Intervinientes» del riesgo: salen de su ficha y se cambian allí. Aquí solo lo de esta cotización (estado civil y carné).'
               : 'Por defecto se cotiza como si el tomador fuera también el dueño del coche y quien lo conduce. Marca solo lo que sea distinto de verdad.'
           }
         />
-        {figs.propietario ? (
+        {modoPapel('propietario', figs, conRiesgo) === 'riesgo' && variante ? (
+          <PapelDelTomador rol="propietario" oportunidadId={variante.oportunidadId} />
+        ) : figs.propietario ? (
           <BloqueFigura rol="propietario" nombre={variante?.nombres.propietario ?? null} faltan={variante?.faltan.propietario ?? null} empresa={variante?.empresas.propietario ?? false}
-            persona={figCorr.propietario} onPersona={(p) => setFigCorr((f) => ({ ...f, propietario: p }))} civiles={civiles} />
+            persona={figCorr.propietario} onPersona={(p) => setFigCorr((f) => ({ ...f, propietario: p }))} civiles={civiles} soloCondiciones />
         ) : (
           <BloquePersona
             etiqueta="El propietario del coche es otra persona o empresa"
@@ -1515,9 +1533,11 @@ export default function AutoNuevo({
           />
         )}
         <div style={{ height: 12 }} />
-        {figs.conductor_habitual ? (
+        {modoPapel('conductor_habitual', figs, conRiesgo) === 'riesgo' && variante ? (
+          <PapelDelTomador rol="conductor_habitual" oportunidadId={variante.oportunidadId} />
+        ) : figs.conductor_habitual ? (
           <BloqueFigura rol="conductor_habitual" nombre={variante?.nombres.conductor_habitual ?? null} faltan={variante?.faltan.conductor_habitual ?? null} empresa={variante?.empresas.conductor_habitual ?? false}
-            persona={figCorr.conductor_habitual} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_habitual: p }))} civiles={civiles} />
+            persona={figCorr.conductor_habitual} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_habitual: p }))} civiles={civiles} soloCondiciones />
         ) : (
           <BloquePersona
             etiqueta="El conductor habitual es otra persona (hijo, empleado…)"
@@ -1530,9 +1550,11 @@ export default function AutoNuevo({
           />
         )}
         <div style={{ height: 12 }} />
-        {figs.conductor_ocasional ? (
+        {modoPapel('conductor_ocasional', figs, conRiesgo) === 'riesgo' && variante ? (
+          <PapelDelTomador rol="conductor_ocasional" oportunidadId={variante.oportunidadId} />
+        ) : figs.conductor_ocasional ? (
           <BloqueFigura rol="conductor_ocasional" nombre={variante?.nombres.conductor_ocasional ?? null} faltan={variante?.faltan.conductor_ocasional ?? null} empresa={variante?.empresas.conductor_ocasional ?? false}
-            persona={figCorr.conductor_ocasional} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_ocasional: p }))} civiles={civiles} />
+            persona={figCorr.conductor_ocasional} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_ocasional: p }))} civiles={civiles} soloCondiciones />
         ) : (
           <BloquePersona
             etiqueta="Lo conduce también otra persona de forma habitual (conductor ocasional)"
@@ -1839,6 +1861,27 @@ function hoyLocal(): string {
 function fechaCorta(iso: string): string {
   const [a, m, d] = iso.split('-')
   return `${d}/${m}/${a}`
+}
+
+/**
+ * Un papel del RIESGO sin figura propia (10/10/2026): lo ocupa el tomador. Si es otra persona, se asigna en
+ * «Intervinientes» de la oportunidad (con «+ Nueva persona»), que es la única fuente: aquí no se teclea suelta.
+ */
+function PapelDelTomador({ rol, oportunidadId }: { rol: 'propietario' | 'conductor_habitual' | 'conductor_ocasional'; oportunidadId: string }) {
+  const texto =
+    rol === 'conductor_ocasional'
+      ? 'Conductor ocasional: no hay ninguno en el riesgo.'
+      : `${rol === 'propietario' ? 'Propietario' : 'Conductor habitual'}: el tomador (según el riesgo).`
+  return (
+    <p style={{ margin: 0, fontSize: 13 }}>
+      <strong>{texto}</strong>{' '}
+      <span style={{ color: 'var(--muted)' }}>
+        Si es otra persona, asígnala en{' '}
+        <Link href={`/correduria/oportunidad/${oportunidadId}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>«Intervinientes» del riesgo</Link>{' '}
+        y vuelve.
+      </span>
+    </p>
+  )
 }
 
 function Campo({ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }) {

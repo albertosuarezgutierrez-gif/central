@@ -103,6 +103,13 @@ jobs:
             case "$1" in
               docs/CONTEXTO-SESIONES.md) return 0 ;;
               docs/AGENTES-BITACORA.md)  return 0 ;;
+              # Checklist de rendimiento para `agentes-entrenador` (semanal): la auditoría SOLO
+              # anota aquí patrones detectados, nunca cambia el comportamiento de un agente desde
+              # este fichero — es registro puro, igual que AGENTES-BITACORA.md. Faltaba en esta
+              # lista (detectado 28/09/2026, PR #3755 atascado >24h tocando solo este fichero +
+              # AUDITORIA-*.md): cualquier PR de auditoría que anote aquí un hallazgo de
+              # rendimiento cae fuera del carril 1 aunque sea 100% registro.
+              docs/FEEDBACK-AGENTES.md)  return 0 ;;
               docs/AUTO-APLICADOS.md)    return 0 ;;
               docs/AUDITORIA-*.md)       return 0 ;;
               docs/memoria/*.md)         return 0 ;;

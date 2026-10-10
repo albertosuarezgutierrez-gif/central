@@ -651,7 +651,7 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'correduria.cima-siniestros-corte', categoria: 'correduria',
     titulo: 'CIMA: se cortan los siniestros',
-    que: 'No entra ningún fichero de siniestros (SIN) desde hace más de 72 h mientras pólizas o recibos sí llegan: algo falla en el envío de siniestros.',
+    que: 'No entra ningún fichero de siniestros (SIN) desde hace más de 7 días mientras pólizas o recibos sí llegan, o una compañía con pólizas en vigor que ya mandó SIN lleva más de 3 veces su cadencia habitual (mínimo 7 días) sin mandarlo (aviso por compañía, con código, nombre y fecha del último SIN): algo falla en el envío de siniestros.',
     cuando: 'Como mucho una vez al día, en la pasada del respaldo de CIMA (09:00, 14:00, 18:30 UTC)',
   },
   {

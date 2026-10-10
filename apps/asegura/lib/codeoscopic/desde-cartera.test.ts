@@ -381,6 +381,23 @@ test('el garaje solo se marca como supuesto si de verdad lo es', () => {
   assert.ok(r.supuestos.some((s) => s.campo === 'garaje'))
 })
 
+test('los km por defecto de la pantalla viajan como SUPUESTO, no como dato del cliente (10/10/2026)', () => {
+  // Sin nada de la pantalla: la media de siempre, supuesta.
+  const media = preNueva()
+  assert.equal(media.datos.kmAnuales, KM_ANUALES_POR_DEFECTO)
+  assert.equal(media.supuestos.find((s) => s.campo === 'kmAnuales')?.valor, KM_ANUALES_POR_DEFECTO)
+  // Con los 10.000 de la pantalla: ESE valor va al vendor y sigue marcado como supuesto.
+  const pantalla = preNueva({}, { kmAnualesSupuestos: 10000 })
+  assert.equal(pantalla.datos.kmAnuales, 10000)
+  const s = pantalla.supuestos.find((x) => x.campo === 'kmAnuales')
+  assert.equal(s?.valor, 10000)
+  assert.match(String(s?.porque), /no los ha dicho el cliente/)
+  // Un valor que no es un kilometraje no se cuela: manda la media.
+  for (const malo of [0, -5, 1.5, 999999, Number.NaN]) {
+    assert.equal(preNueva({}, { kmAnualesSupuestos: malo }).datos.kmAnuales, KM_ANUALES_POR_DEFECTO, String(malo))
+  }
+})
+
 test('NINGÚN supuesto de la nueva rellena un dato personal', () => {
   const personales: string[] = ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'telefono', 'fechaCarnet', 'sexo']
   for (const s of preNueva({ dni: null, telefono: null }).supuestos) {
