@@ -77,3 +77,16 @@ export function correccionesDeFiguras(
   }
   return out
 }
+
+/**
+ * Cómo se rellena un papel en la pantalla de pedir precio (10/10/2026, «una sola fuente de verdad: la oportunidad»):
+ * - `ficha`: lo ocupa OTRA ficha del riesgo (`oportunidad_figura`): sale de su ficha; aquí solo las condiciones.
+ * - `riesgo`: hay riesgo y el papel NO tiene figura: lo ocupa el tomador del riesgo. Otra persona se ASIGNA en
+ *   «Intervinientes» del riesgo (con «+ Nueva persona»), nunca se teclea suelta aquí: lo tecleado viajaba al vendor
+ *   pero no quedaba en la oportunidad ni en la foto de figuras de la variante.
+ * - `libre`: tarificación suelta, sin riesgo (`?oportunidad=` ausente): como siempre, casilla «es otra persona».
+ */
+export function modoPapel(rol: RolExtra, figuras: Partial<Record<RolExtra, string>>, conRiesgo: boolean): 'ficha' | 'riesgo' | 'libre' {
+  if (figuras[rol]) return 'ficha'
+  return conRiesgo ? 'riesgo' : 'libre'
+}

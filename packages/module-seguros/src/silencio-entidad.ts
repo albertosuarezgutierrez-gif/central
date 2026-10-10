@@ -76,6 +76,16 @@ export type EntidadIngesta = {
   vencidasEnSilencio: number | null
   /** Pólizas suyas que vencen en los próximos 90 días. `null` = no comprobado. */
   vencen90d?: number | null
+  /** Nombre común de la compañía (`companias_dgs.nombre_comun`). Ausente/`null` = no consta. */
+  nombre?: string | null
+  /** Pólizas EN VIGOR (`esCarteraEnVigor`; `vivas` es solo el origen). Ausente/`null` = no se contó. */
+  enVigor?: number | null
+  /** `max(created_at)` de sus ficheros SIN (ISO). Ausente/`null` = nunca mandó SIN o no se leyó. */
+  ultimoSin?: string | null
+  /** Nº de ficheros SIN de la compañía. Ausente/`null` = no se sabe. */
+  sinN?: number | null
+  /** `min(created_at)` de sus ficheros SIN (ISO). Ausente/`null` = no se sabe. */
+  primerSin?: string | null
 }
 
 export type SilencioEntidad = EntidadIngesta & {

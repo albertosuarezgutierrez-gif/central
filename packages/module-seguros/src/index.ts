@@ -221,6 +221,15 @@ export {
   type EntradaCorte,
 } from './corte-siniestros.ts'
 export {
+  corteSiniestrosPorCompania,
+  textoCorteSiniestrosPorCompania,
+  FACTOR_CADENCIA_SIN,
+  MIN_FICHEROS_SIN,
+  type EntradaCortePorCompania,
+  type CompaniaCortada,
+  type CortePorCompania,
+} from './corte-siniestros-compania.ts'
+export {
   veredictoEntidad,
   silencioPorEntidad,
   motivosSilencio,
@@ -1248,11 +1257,11 @@ export type { AhorroFrenteActual, MotivoPrioritario, ObjetivoPrioritario, PrimaA
 export { costePack, cuadroPack, decidirFamiliaAllianz, tienePolizaAllianzEnVigor } from './pack-vehiculos.ts'
 export type { CuadroPack, DecisionFamiliaAllianz, FilaPack, LadoPack, PolizaParaFamilia, PrecioPack } from './pack-vehiculos.ts'
 export {
-  CAMPOS_VEHICULO, ETIQUETA_CAMPO_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
+  CAMPOS_VEHICULO, CILINDRADA_MAXIMA_CC, ETIQUETA_CAMPO_VEHICULO, TIPOS_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
   datosVehiculoVacios, faltanDatosVehiculo, fusionarInfoRiesgo, hoyMadridVehiculo, incoherenciaFechasVehiculo,
-  leerDatosVehiculo, motivoNoConfirmable, textoFaltanVehiculo, validarDatosVehiculoRiesgo,
+  leerDatosVehiculo, motivoNoConfirmable, textoFaltanVehiculo, tipoVehiculoDeTexto, validarDatosVehiculoRiesgo,
 } from './datos-vehiculo-riesgo.ts'
-export type { CambioVehiculo, CampoVehiculo, DatosVehiculoRiesgo, ErrorVehiculo, ValidacionVehiculo } from './datos-vehiculo-riesgo.ts'
+export type { CambioVehiculo, CampoVehiculo, DatosVehiculoRiesgo, ErrorVehiculo, TipoVehiculo, ValidacionVehiculo } from './datos-vehiculo-riesgo.ts'
 export { SIN_IDS_CATALOGO, datosVehiculoDeDocumento } from './datos-vehiculo-documento.ts'
 export type { IdsCatalogoVehiculo, VehiculoLeido } from './datos-vehiculo-documento.ts'
 

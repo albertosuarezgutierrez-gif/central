@@ -12,6 +12,7 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (10/10/2026) F3 solo auto: entrada nueva en CONTEXTO-SESIONES.md (km-auto y modoPapel, sin tocar código) — agente-mecanico — ok (solo docs, sin verificación de tsc por no tocar código)
 - (06/10/2026) fix(tarificador): ramo NULL sin valor por defecto en fichas; SQL 07b/07c marcados como aplicados — agente-mecanico — ok (tsc limpio, 7 tests pass, prisma generate ok)
 - (06/10/2026) helper textoExacto en tarificador-rpa/allianz/comunidades.ts, actualizar abrirComunidades para robustecer detectores de texto con variación CSS (mayúsculas, espacios) — agente-mecanico — ok (tsc limpio, 6/6 pruebas del helper pass)
 - (04/10/2026) crear agente jefe-contabilidad.md, reglas contables en perfil-fiscal/SKILL.md, actualizar CONTEXTO-SESIONES.md — sesión — ok
@@ -59,3 +60,4 @@
 | 03/10/2026 | memoria CIMA #877 | sesión | ok |
 | 06/10/2026 | asegura-portal: 4 ajustes del globo de instalar (InstalarBoton/instalacion) | agente-mecanico | ok |
 | 06/10/2026 | asegura-portal: texto Compartir Chrome iOS (instalacion.tsx) | agente-mecanico | ok |
+| 10/10/2026 | Tarificar/Riesgo /correduria: F1 SeccionCard + botón único, F2 bloque Historial (CONTEXTO-SESIONES entrada 10/10) | agente-mecanico | ok |

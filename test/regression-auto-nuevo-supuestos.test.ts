@@ -34,11 +34,17 @@ test('la pantalla pregunta los tres datos que antes se suponían', () => {
 })
 
 test('los tres viajan al puerto, y solo cuando el corredor los ha dicho', () => {
+  // 10/10/2026: los km viajan YA PARSEADOS por `kmParaCotizar` (lib/correduria/km-auto.ts): como corrección solo
+  // si son DATO del cliente; los 10.000 de partida van como supuesto (`resueltos.kmAnualesSupuestos`).
   assert.match(
     fuente,
-    /if \(kmLeidos !== null\) correccionesFinal\.kmAnuales = kmLeidos/,
-    'los kilómetros viajan YA PARSEADOS y solo si se han tecleado bien',
+    /const km = kmParaCotizar\(\{ texto: kmAnuales, porDefecto: KM_ANUALES_POR_DEFECTO, delRiesgo: kmDelRiesgo, tocado: kmTocado \}\)/,
+    'los kilómetros pasan por el helper puro que separa dato de supuesto',
   )
+  assert.match(fuente, /if \(km\.correccion !== null\) correccionesFinal\.kmAnuales = km\.correccion/, 'como corrección, solo el dato')
+  assert.match(fuente, /\.\.\.\(km\.supuesto !== null \? \{ kmAnualesSupuestos: km\.supuesto \} : \{\}\)/, 'el defecto viaja como supuesto')
+  assert.match(fuente, /kmAnuales: km\.paraRiesgo,/, 'al riesgo solo se anota el dato, nunca el supuesto')
+  assert.doesNotMatch(fuente, /if \(kmLeidos !== null\) correccionesFinal\.kmAnuales = kmLeidos/, 'el defecto no vuelve a viajar como dato del cliente')
   assert.doesNotMatch(
     fuente,
     /correccionesFinal\.kmAnuales = Number\(/,

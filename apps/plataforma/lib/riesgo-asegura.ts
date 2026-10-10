@@ -5,9 +5,9 @@
  * es «0 opciones», es «no se pudo leer».
  */
 import {
-  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda,
+  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda, seguroAnteriorDe,
   type CampoVehiculo, type ClaveDatosRiesgo, type DatosCapitalRiesgo, type DatosComercioRiesgo, type DatosRiesgoLibre, type DatosVehiculoRiesgo, type DatosViviendaRiesgo,
-  type RolFigura, type Diferencia,
+  type RolFigura, type Diferencia, type SeguroAnterior,
 } from '@central/module-seguros'
 
 export type FiguraRiesgo = {
@@ -78,6 +78,28 @@ export type Riesgo = {
    * precarga de la póliza (`dePoliza`, nunca confirmada). `tarifica: false` = ramo que se cotiza fuera.
    */
   datosRiesgo: DatosRiesgoDeRamo | null
+  /**
+   * El historial para su bloque (10/10/2026). `null` = una versión de asegura que aún no lo manda: se dice «no se ha
+   * podido leer», no se pinta un historial vacío. Dentro, `seguroAnterior: null` = ninguno leído (≠ «sin seguro previo»)
+   * y `carnet: null` = el ramo no usa carné.
+   */
+  historial: HistorialRiesgo | null
+}
+
+export type HistorialRiesgo = {
+  seguroAnterior: SeguroAnterior | null
+  carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
+}
+
+/** Lee `historial` sin fiarse: forma rara = `null` («no se sabe»); el seguro anterior pasa por el mismo saneado que al guardarlo. */
+export function leerHistorialRiesgo(bruto: unknown): HistorialRiesgo | null {
+  if (typeof bruto !== 'object' || bruto === null || Array.isArray(bruto)) return null
+  const o = bruto as Record<string, unknown>
+  const c = o.carnet === null || o.carnet === undefined ? null : obj(o.carnet)
+  return {
+    seguroAnterior: seguroAnteriorDe(o.seguroAnterior),
+    carnet: c ? { fecha: txt(c.fecha), conductor: esRolFigura(c.conductor) ? c.conductor : null, legible: c.legible === true } : null,
+  }
 }
 
 export type DatosRiesgoDeRamo =
@@ -173,6 +195,7 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
       }),
       variantes,
       datosRiesgo: leerDatosRiesgoDeRamo(o.datosRiesgo),
+      historial: leerHistorialRiesgo(o.historial),
       datosVehiculo: leerDatosVehiculo(o.datosVehiculo),
       faltanVehiculo: Array.isArray(o.faltanVehiculo)
         ? o.faltanVehiculo.filter((c): c is CampoVehiculo => (CAMPOS_VEHICULO as readonly string[]).includes(c as string))

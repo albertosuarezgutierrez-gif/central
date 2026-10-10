@@ -3,7 +3,10 @@ import { textoVenceCadaAño } from '@/lib/correduria/aniversario'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Trophy } from 'lucide-react'
+import Link from 'next/link'
 import { btnStyle } from '@/components/ui'
+import { destinoTarificar } from '@/lib/correduria/tarificar-oportunidad'
+import TarificarOportunidad from './TarificarOportunidad'
 import { eur } from '@/lib/dinero'
 import {
   RAMOS_OPORTUNIDAD_UI,
@@ -226,7 +229,7 @@ function SinOportunidad({ clienteId, lista }: { clienteId: string; lista: Presup
               <li key={p.tarificacionId} style={{ borderTop: '1px solid var(--border)', paddingTop: 6, overflowWrap: 'anywhere' }}>
                 <b>{rotuloRamo(p.ramo)}</b> <span style={{ color: 'var(--muted)' }}>{fmt(p.creadoAt.slice(0, 10))}</span>
                 <div>{textoSinOportunidad(p)}</div>
-                {ruta && <a href={ruta} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Abrir →</a>}
+                {ruta && <Link href={ruta} prefetch={false} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Abrir →</Link>}
               </li>
             )
           })}
@@ -321,10 +324,16 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
         <button type="button" onClick={onAlternar} aria-expanded={desplegada} style={{ ...btnStyle(desplegada ? 'secundario' : 'primario', 'sm'), minHeight: 44 }}>
           {desplegada ? 'Plegar ▴' : 'Gestionar ▾'}
         </button>
-        {/* El riesgo como pantalla (29/09/2026): intervinientes y presupuestos P1…Pn de ESTE riesgo. */}
-        <a href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, color: 'var(--primary)', textDecoration: 'none' }}>
-          Abrir riesgo →
-        </a>
+        {/* UN solo botón hacia el precio y el riesgo (10/10/2026): abre la pantalla de precio del ramo
+            (confirmación de 0,50 € allí) con las figuras del riesgo; nunca cotiza desde aquí. */}
+        <TarificarOportunidad
+          tomadorId={o.clienteId}
+          destino={destinoTarificar({ ramo: o.ramo, tomadorId: o.clienteId, oportunidadId: o.id, polizaId: null })}
+          riesgoHref={`/correduria/oportunidad/${encodeURIComponent(o.id)}`}
+        />
+        {destinoTarificar({ ramo: o.ramo, tomadorId: o.clienteId, oportunidadId: o.id, polizaId: null }).tipo !== 'no' && (
+          <Link href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} prefetch={false} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Ver riesgo →</Link>
+        )}
       </div>
 
       {desplegada && <SeguimientoOportunidad id={o.id} telefono={telefono} onCambio={onRecargar} />}
@@ -397,7 +406,7 @@ function FilaCerrada({ o, desplegada, onAlternar, onRecargar }: { o: Oportunidad
       {cuando && <> el {cuando}</>}
       {o.estado === 'perdida' && !descartada && o.motivoPerdida && <span style={{ color: 'var(--muted)' }}> · {rotuloMotivo(o.motivoPerdida)}{o.competidor ? ` (${o.competidor})` : ''}</span>}
       {o.presupuestos && o.presupuestos.variantes > 0 && <span style={{ color: 'var(--muted)' }}> · {textoPresupuestos(o.presupuestos)}</span>}
-      {' '}<a href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Abrir riesgo →</a>
+      {' '}<Link href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} prefetch={false} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Ver riesgo →</Link>
       {desplegada && <div style={{ marginTop: 8 }}><SeguimientoOportunidad id={o.id} onCambio={onRecargar} /></div>}
     </li>
   )

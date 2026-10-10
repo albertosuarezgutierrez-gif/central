@@ -1,6 +1,6 @@
 'use client'
 
-// La pantalla del riesgo (29/09/2026): cabecera · datos · intervinientes · pedir precio (bloque único) · presupuestos P1…Pn · historial.
+// La pantalla del riesgo (29/09/2026): cabecera · datos · intervinientes · historial del seguro y del carné · pedir precio (bloque único) · presupuestos P1…Pn · historial de variantes.
 // Tras cualquier cambio de figuras se RELEE el riesgo entero del puerto: lo que se pinta es siempre
 // lo que asegura tiene, nunca una suposición local de cómo quedó.
 
@@ -17,6 +17,7 @@ import DatosRiesgo from './DatosRiesgo'
 import DatosVehiculo from './DatosVehiculo'
 import DuplicarOtroTomador from './DuplicarOtroTomador'
 import FigurasRiesgo from './FigurasRiesgo'
+import HistorialRiesgo from './HistorialRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
@@ -27,7 +28,7 @@ import { fechaEs } from './piezas-riesgo'
 import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
 import { avisoRamoSinTarifa, companiasDisponibles } from '@/lib/presupuestos-companias'
 
-export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
+export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy: string }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
   // Editar una ficha desde el modal de «Editar datos» refresca la página del servidor (router.refresh):
   // el riesgo que llega de nuevo manda sobre el que había, y el aviso «Falta…» se actualiza solo.
@@ -147,6 +148,9 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
         onError={(texto) => setAviso({ ok: false, texto })}
         onEditando={alEditarFiguras}
       />
+
+      {/* Historial (10/10/2026): seguro anterior, siniestros y carné, para verlos antes de pedir precio. Solo lectura. */}
+      <HistorialRiesgo riesgo={riesgo} hoy={hoy} />
 
       {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
           secundario (póliza) y el coste de 0,50€ viven aquí y en ningún otro sitio de la página. */}

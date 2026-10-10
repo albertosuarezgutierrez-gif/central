@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { PERSONA_VACIA, correccionesDeFiguras, figuraCompleta, figuraParaPuerto } from './figuras-form.ts'
+import { PERSONA_VACIA, correccionesDeFiguras, figuraCompleta, figuraParaPuerto, modoPapel } from './figuras-form.ts'
 import { ROLES_EXTRA, type RolExtra } from './variante.ts'
 
 const ROLES_MOTO: readonly RolExtra[] = ['propietario', 'conductor_habitual']
@@ -43,4 +43,14 @@ test('🪤 moto: `conductor` y `propietario` viajan; el ocasional NUNCA, aunque 
   assert.deepEqual(correccionesDeFiguras({ conductor_habitual: 'c-uuid' }, personas, ROLES_MOTO), {
     conductor: { estadoCivil: 'S', fechaCarnet: '2015-01-01' },
   })
+})
+
+test('modoPapel: con riesgo, un papel sin figura NO se teclea suelto (lo ocupa el tomador del riesgo)', () => {
+  const figs = { conductor_habitual: 'c-hijo' }
+  assert.equal(modoPapel('conductor_habitual', figs, true), 'ficha')
+  assert.equal(modoPapel('propietario', figs, true), 'riesgo')
+  assert.equal(modoPapel('conductor_ocasional', figs, true), 'riesgo')
+  // Sin riesgo (tarificación suelta) todo sigue como hoy.
+  assert.equal(modoPapel('propietario', {}, false), 'libre')
+  assert.equal(modoPapel('conductor_ocasional', {}, false), 'libre')
 })

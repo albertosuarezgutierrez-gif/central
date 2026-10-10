@@ -22,6 +22,19 @@ export function admiteDatosVehiculo(ramo: unknown): ramo is 'auto' | 'moto' {
   return ramo === 'auto' || ramo === 'moto'
 }
 
+/** Clase de vehículo (10/10/2026). Cerrada: lo que no encaja es `otro`, nunca texto libre. */
+export const TIPOS_VEHICULO = ['coche', 'moto', 'furgoneta', 'camión', 'otro'] as const
+export type TipoVehiculo = (typeof TIPOS_VEHICULO)[number]
+export const CILINDRADA_MAXIMA_CC = 20000
+
+/** «Camion», " COCHE " → el valor canónico; lo desconocido, `null` (no se adivina). */
+export function tipoVehiculoDeTexto(v: unknown): TipoVehiculo | null {
+  if (typeof v !== 'string') return null
+  const t = v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+  const hallado = TIPOS_VEHICULO.find((x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '') === t)
+  return hallado ?? null
+}
+
 export type DatosVehiculoRiesgo = {
   /** Normalizada: mayúsculas, sin espacios ni guiones. */
   matricula: string | null
@@ -46,6 +59,10 @@ export type DatosVehiculoRiesgo = {
   municipioCirculacion: string | null
   municipioCirculacionId: number | null
   remolqueLigero: boolean | null
+  /** coche | moto | furgoneta | camión | otro. `null` = pendiente (no se deduce del ramo: una moto no es «coche»). */
+  tipoVehiculo: TipoVehiculo | null
+  /** Cilindrada en cc (entero). `null` = pendiente; un 0 no es una cilindrada. */
+  cilindradaCc: number | null
   /** Instante (ISO) en que la corredora dijo «estos datos están bien». Cualquier edición posterior lo borra. */
   confirmadoAt: string | null
 }
@@ -56,7 +73,7 @@ export type CampoVehiculo = Exclude<keyof DatosVehiculoRiesgo, 'confirmadoAt'>
 export const CAMPOS_VEHICULO: readonly CampoVehiculo[] = [
   'matricula', 'marca', 'modelo', 'version', 'codigoVehiculo', 'marcaId', 'modeloId', 'motorId',
   'fechaMatriculacion', 'fechaCompra', 'kmAnuales', 'garaje', 'cpCirculacion', 'municipioCirculacion',
-  'municipioCirculacionId', 'remolqueLigero',
+  'municipioCirculacionId', 'remolqueLigero', 'tipoVehiculo', 'cilindradaCc',
 ]
 
 export const ETIQUETA_CAMPO_VEHICULO: Record<CampoVehiculo, string> = {
@@ -76,13 +93,15 @@ export const ETIQUETA_CAMPO_VEHICULO: Record<CampoVehiculo, string> = {
   municipioCirculacion: 'Municipio de circulación',
   municipioCirculacionId: 'Municipio de circulación (catálogo)',
   remolqueLigero: 'Remolque ligero',
+  tipoVehiculo: 'Tipo de vehículo',
+  cilindradaCc: 'Cilindrada',
 }
 
 export function datosVehiculoVacios(): DatosVehiculoRiesgo {
   return {
     matricula: null, marca: null, modelo: null, version: null, codigoVehiculo: null, marcaId: null, modeloId: null,
     motorId: null, fechaMatriculacion: null, fechaCompra: null, kmAnuales: null, garaje: null, cpCirculacion: null,
-    municipioCirculacion: null, municipioCirculacionId: null, remolqueLigero: null, confirmadoAt: null,
+    municipioCirculacion: null, municipioCirculacionId: null, remolqueLigero: null, tipoVehiculo: null, cilindradaCc: null, confirmadoAt: null,
   }
 }
 
@@ -201,6 +220,26 @@ export function validarDatosVehiculoRiesgo(parcial: unknown, opciones: { hoy?: s
     else mal('remolqueLigero', 'Remolque ligero: sí o no.')
   }
 
+  if (tiene('tipoVehiculo')) {
+    const v = e.tipoVehiculo
+    if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) valor.tipoVehiculo = null
+    else {
+      const t = tipoVehiculoDeTexto(v)
+      if (t === null) mal('tipoVehiculo', `Tipo de vehículo: uno de ${TIPOS_VEHICULO.join(', ')}.`)
+      else valor.tipoVehiculo = t
+    }
+  }
+  if (tiene('cilindradaCc')) {
+    const v = e.cilindradaCc
+    if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) valor.cilindradaCc = null
+    else {
+      // «1.598» = 1598 cc (punto de miles); «125» = 125.
+      const n = typeof v === 'number' ? v : typeof v === 'string' && /^\d{1,3}(\.\d{3})*$|^\d+$/.test(v.trim()) ? Number(v.trim().replace(/\./g, '')) : NaN
+      if (!Number.isInteger(n) || n <= 0 || n > CILINDRADA_MAXIMA_CC) mal('cilindradaCc', `Cilindrada: un número entero de cc (1 a ${CILINDRADA_MAXIMA_CC.toLocaleString('es-ES')}).`)
+      else valor.cilindradaCc = n
+    }
+  }
+
   // Coherencia entre fechas, con lo que venga en esta edición (la comparación con lo ya guardado la hace `aplicarEdicionVehiculo`).
   const fm = valor.fechaMatriculacion, fc = valor.fechaCompra
   if (typeof fm === 'string' && typeof fc === 'string' && fc < fm) mal('fechaCompra', 'La fecha de compra no puede ser anterior a la de matriculación.')
@@ -250,6 +289,8 @@ export function leerDatosVehiculo(bruto: unknown): DatosVehiculoRiesgo | null {
     fechaCompra: s('fechaCompra'), kmAnuales: n('kmAnuales'), garaje: s('garaje'), cpCirculacion: s('cpCirculacion'),
     municipioCirculacion: s('municipioCirculacion'), municipioCirculacionId: n('municipioCirculacionId'),
     remolqueLigero: typeof o.remolqueLigero === 'boolean' ? o.remolqueLigero : null,
+    tipoVehiculo: tipoVehiculoDeTexto(o.tipoVehiculo),
+    cilindradaCc: (() => { const c = n('cilindradaCc'); return c !== null && Number.isInteger(c) && c > 0 && c <= CILINDRADA_MAXIMA_CC ? c : null })(),
     confirmadoAt: iso !== null && RE_ISO.test(iso) ? iso : null,
   }
 }
