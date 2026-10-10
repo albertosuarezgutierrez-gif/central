@@ -61,7 +61,14 @@ export type Riesgo = {
     prima: number | null
   }
   roles: RolFigura[]
+  /** Los papeles de varias personas (asegurados) traen una entrada por ficha. */
   figuras: FiguraRiesgo[]
+  /**
+   * ¿Se pueden escribir los papeles de varias personas (asegurados)? `null` = el ramo no tiene ninguno (auto, moto…).
+   * `sin_migracion` = falta el SQL de figuras multi; `desconocido` = asegura no pudo mirarlo o es una versión que aún
+   * no lo dice (nunca se toma por «disponible»).
+   */
+  figurasMulti: 'disponible' | 'sin_migracion' | 'desconocido' | null
   vinculos: Array<{ clienteId: string; nombre: string; tipo: string }>
   variantes: VarianteRiesgo[]
   /**
@@ -192,6 +199,9 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
       },
       roles: (Array.isArray(o.roles) ? o.roles : []).filter(esRolFigura),
       figuras,
+      figurasMulti: o.figurasMulti === 'disponible' || o.figurasMulti === 'sin_migracion' || o.figurasMulti === 'desconocido'
+        ? o.figurasMulti
+        : o.figurasMulti === null ? null : 'desconocido',
       vinculos: (Array.isArray(o.vinculos) ? o.vinculos : []).flatMap((v) => {
         const x = obj(v)
         return txt(x.clienteId) ? [{ clienteId: x.clienteId as string, nombre: txt(x.nombre) ?? 'Sin nombre', tipo: txt(x.tipo) ?? '' }] : []
