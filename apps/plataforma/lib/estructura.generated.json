@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-10T08:35:04Z",
+  "generadoEn": "2026-10-10T11:04:30Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -449,7 +449,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "rrhh": {
         "estado": "no",
@@ -691,7 +691,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "asegura-portal": {
         "estado": "usado",
@@ -719,7 +719,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "rrhh": {
         "estado": "usado",
@@ -989,7 +989,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 17
+        "evidencias": 19
       },
       "rrhh": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 231
+        "evidencias": 232
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 170
+        "evidencias": 177
       },
       "rrhh": {
         "estado": "no",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 27
+        "evidencias": 31
       },
       "asegura-portal": {
         "estado": "no",
@@ -2501,7 +2501,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 10
       },
       "rrhh": {
         "estado": "no",
@@ -4210,6 +4210,9 @@
       "/api/operador/tarificador/bandeja",
       "/api/operador/tarificador/bandeja/[id]",
       "/api/operador/tarificador/coberturas",
+      "/api/operador/tarificador/emision",
+      "/api/operador/tarificador/emision/autorizar",
+      "/api/operador/tarificador/emision/avisos",
       "/api/operador/tarificador/encolar",
       "/api/operador/tarificador/fichas",
       "/api/operador/tarificador/fichas/[id]",
@@ -4248,6 +4251,8 @@
       "/api/portal/solicitud-datos",
       "/api/portal/solicitud-datos/documento",
       "/api/publico/recaptacion/baja",
+      "/api/tarificador/emision/canje",
+      "/api/tarificador/emision/resultado",
       "/api/tarificador/formador/cierre",
       "/api/tarificador/formador/confirmar",
       "/api/tarificador/formador/conocimiento",
@@ -5241,6 +5246,7 @@
       "/api/correduria/tarificador/bandeja",
       "/api/correduria/tarificador/bandeja/[id]",
       "/api/correduria/tarificador/coberturas",
+      "/api/correduria/tarificador/emision",
       "/api/correduria/tarificador/encolar",
       "/api/correduria/tarificador/fichas",
       "/api/correduria/tarificador/fichas/[id]",
@@ -5819,6 +5825,7 @@
       "seguros.siniestros",
       "seguros.solicitud_cambio_documentos",
       "seguros.solicitud_datos",
+      "seguros.tarificacion_emision_autorizacion",
       "seguros.tarificacion_precios",
       "seguros.tarificacion_trabajo_pasos",
       "seguros.tarificacion_trabajos",
@@ -6849,7 +6856,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1660,
+    "apis": 1666,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
