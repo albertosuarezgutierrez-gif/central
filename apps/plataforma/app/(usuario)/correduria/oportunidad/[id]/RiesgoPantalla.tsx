@@ -22,7 +22,7 @@ import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
 import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
-import { abrirAlCargar, ramoCotizadorEmbebido } from './cotizador-embebido'
+import { abrirAlCargar, bloqueObjetoDeRamo, ramoCotizadorEmbebido } from './cotizador-embebido'
 import PresupuestosCompanias from './PresupuestosCompanias'
 import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs } from './piezas-riesgo'
@@ -36,15 +36,16 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
   useEffect(() => { setRiesgo(inicial) }, [inicial])
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
   const [recargando, setRecargando] = useState(false)
-  // Cotizador EMBEBIDO (moto 07/10/2026, auto 10/10/2026; registro `COTIZADOR_EMBEBIDO`): se abre AQUÍ. Lo que está a
+  // Cotizador EMBEBIDO (moto 07/10/2026, auto y hogar 10/10/2026; registro `COTIZADOR_EMBEBIDO`): se abre AQUÍ. Lo que está a
   // medias arriba lo bloquea, y mientras se paga no se deja editar el riesgo (`ocupado`). Los demás ramos, como siempre.
   const [cotizadorAbierto, setCotizadorAbierto] = useState(false)
-  const [editandoVehiculo, setEditandoVehiculo] = useState(false)
+  // El bloque del objeto (vehículo o vivienda…) con una edición a medias: bloquea el cotizador embebido.
+  const [editandoObjeto, setEditandoObjeto] = useState(false)
   const [editandoFiguras, setEditandoFiguras] = useState(false)
   const [cotizandoEmbebido, setCotizandoEmbebido] = useState(false)
   // La variante recién pedida: «Presupuestos de este riesgo» la abre con sus precios para emitir sin salir.
   const [abrirPrecios, setAbrirPrecios] = useState<string | null>(null)
-  const alEditarVehiculo = useCallback((b: boolean) => setEditandoVehiculo(b), [])
+  const alEditarObjeto = useCallback((b: boolean) => setEditandoObjeto(b), [])
   const alEditarFiguras = useCallback((b: boolean) => setEditandoFiguras(b), [])
   const op = riesgo.oportunidad
 
@@ -139,14 +140,16 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
           ocupado={ocupado}
           onCambio={(texto) => void recargar(texto)}
           onError={(texto) => setAviso({ ok: false, texto })}
-          onEditando={alEditarVehiculo}
+          onEditando={alEditarObjeto}
         />
       ) : (
         <DatosRiesgo
           riesgo={riesgo}
-          ocupado={recargando}
+          // Mientras se paga una cotización embebida (hogar) no se deja editar la vivienda: se cotiza con lo guardado.
+          ocupado={ocupado}
           onCambio={(texto) => void recargar(texto)}
           onError={(texto) => setAviso({ ok: false, texto })}
+          onEditando={alEditarObjeto}
         />
       )}
 
@@ -169,7 +172,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
           <>
             {faltaDatos && (
               <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
-                {faltaDatos} {CotizadorEmbebido ? 'Complétalo arriba, en «Datos del vehículo»: el bloque de precio no lo vuelve a pedir.' : 'Puedes seguir: la pantalla de precio lo pedirá.'}
+                {faltaDatos} {CotizadorEmbebido ? `Complétalo arriba, en «${bloqueObjetoDeRamo(op.ramo)}»: el bloque de precio no lo vuelve a pedir.` : 'Puedes seguir: la pantalla de precio lo pedirá.'}
               </p>
             )}
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
@@ -190,7 +193,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                   <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
                 )}
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {CotizadorEmbebido ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : acciones.principal.nota}
+                  {CotizadorEmbebido ? (esVehiculo ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (fecha de efecto…).') : acciones.principal.nota}
                 </span>
               </div>
               {acciones.secundario && (
@@ -203,7 +206,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
             {/* Escenarios (07/10/2026): otra persona de tomador sin tocar figura a figura. */}
             <DuplicarOtroTomador
               riesgo={riesgo}
-              ocupado={ocupado || editandoFiguras || editandoVehiculo || cotizadorAbierto}
+              ocupado={ocupado || editandoFiguras || editandoObjeto || cotizadorAbierto}
               onCambio={(texto) => void recargar(texto)}
               onError={(texto) => setAviso({ ok: false, texto })}
               onRecargar={() => void recargar()}
@@ -212,7 +215,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
               <div id="pedir-precio-cotizador" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
                 <CotizadorEmbebido
                   riesgo={riesgo}
-                  editandoVehiculo={editandoVehiculo}
+                  editandoObjeto={editandoObjeto}
                   editandoFiguras={editandoFiguras}
                   recargando={recargando}
                   onCotizando={setCotizandoEmbebido}
