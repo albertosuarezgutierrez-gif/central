@@ -347,6 +347,30 @@ function otraMatricula(a: string | null, b: string | null): boolean {
   return x !== null && y !== null && x !== y
 }
 
+/** Ramos cuyo riesgo es un vehículo: se identifica por la MATRÍCULA. */
+const RAMOS_VEHICULO = new Set(['auto', 'moto'])
+/** Ramos cuyo riesgo es un inmueble: se identifica por la DIRECCIÓN del riesgo. */
+const RAMOS_INMUEBLE = new Set(['hogar', 'comunidad', 'comunidades', 'comercio', 'local', 'alquiler'])
+
+/**
+ * Cómo se identifica una póliza ante el cliente (no por su nº de póliza): matrícula en auto/moto,
+ * dirección del riesgo en inmueble, nada en el resto. `null` = no se sabe: la tarjeta no pinta línea
+ * (nunca un relleno). Si el dato ya es el título de la tarjeta no se repite.
+ */
+export function referenciaRiesgo(p: Pick<PolizaFicha, 'tipo' | 'matricula' | 'objeto'>, titulo?: string | null): string | null {
+  const tipo = p.tipo.trim().toLowerCase()
+  const igual = (a: string, b?: string | null) => b != null && a.trim().toLowerCase() === b.trim().toLowerCase()
+  if (RAMOS_VEHICULO.has(tipo)) {
+    const m = p.matricula?.trim() || null
+    return m === null || igual(m, titulo) ? null : `Matrícula ${m}`
+  }
+  if (RAMOS_INMUEBLE.has(tipo)) {
+    const d = p.objeto?.direccion?.trim() || null
+    return d === null || igual(d, titulo) ? null : d
+  }
+  return null
+}
+
 /** Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover. */
 export function estaHuerfana(o: OportunidadDeCliente): boolean {
   return abierta(o) && o.proximaTarea === null && o.aparcadaHasta === null

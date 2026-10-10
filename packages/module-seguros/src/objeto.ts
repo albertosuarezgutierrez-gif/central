@@ -67,6 +67,12 @@ export type ObjetoAsegurado = {
    * `module-seguros-portal`, que llama a `fichaObjeto` y nunca a esto).
    */
   bastidor?: string | null
+  /**
+   * Dirección del riesgo (hogar/comunidad/comercio) SOLO si la compañía o la correduría la dan en
+   * claro. `null`/ausente = no se sabe (cifrada o sin informar): nunca el relleno «Vivienda» ni
+   * localidad+CP que `titulo` usa de respaldo.
+   */
+  direccion?: string | null
 }
 
 export type DatoObjeto = { etiqueta: string; valor: string }
@@ -348,6 +354,7 @@ function objetoInmueble(d: Record<string, unknown>, tipo: string): ObjetoAsegura
   return {
     estado: 'conocido',
     titulo: titulo ?? (tipo.startsWith('comunidad') ? 'Comunidad' : 'Vivienda'),
+    direccion: direccionClara,
     detalle,
     nota: direccionClara !== null
       // Anotada desde /correduria (19/09/2026): se dice que no vino de la compañía.
@@ -373,6 +380,7 @@ function objetoComercio(
     titulo: actividad ?? riesgo,
     detalle: unir([actividad !== null ? riesgo : null, localidad]),
     nota: null,
+    direccion: claro(d.direccion),
   }
 }
 
