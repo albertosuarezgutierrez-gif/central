@@ -1228,7 +1228,15 @@ export {
   type RolFiguraLeido,
   type TomadorFiguras,
 } from './figuras-poliza.ts'
-export { ROLES_FIGURA, ETIQUETA_ROL, rolesDelRamo, esRolFigura, limpiarFiguras, diferenciasVariante, resumenDiferencias, type RolFigura, type FigurasVariante, type Diferencia } from './variantes-riesgo.ts'
+export {
+  ROLES_FIGURA, ROLES_FIGURA_UNICOS, ROLES_FIGURA_MULTIPLES, MAX_ASEGURADOS_PERSONAS, ETIQUETA_ROL, rolesDelRamo, cardinalidadesDelRamo, maxDelRol,
+  esRolFigura, esRolFiguraUnico, esRolMultiple, limpiarFiguras, diferenciasVariante, resumenDiferencias,
+  type RolFigura, type RolFiguraUnico, type RolFiguraMultiple, type CardinalidadRol, type FigurasVariante, type Diferencia,
+} from './variantes-riesgo.ts'
+export {
+  INDICE_FIGURA_ROL_UNICO, INDICE_FIGURA_MULTI, INDICE_FIGURA_VIEJO, estadoFigurasMulti, rolNecesitaMigracion, decidirFiguraMultiple, revisarAseguradoLigero,
+  type EstadoFigurasMulti, type CatalogoFiguras, type DecisionFigura, type AseguradoLigero,
+} from './figuras-multi.ts'
 
 export { ibanValido, normalizarIban } from './iban.ts'
 export { conMarcaCorreo, LOGO_CORREO_URL, PIE_MARCA_CORREO } from './correo-marca.ts'

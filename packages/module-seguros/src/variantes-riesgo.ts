@@ -11,36 +11,85 @@
  * es «no consta», nunca un valor.
  */
 
-export const ROLES_FIGURA = ['tomador', 'propietario', 'conductor_habitual', 'conductor_ocasional'] as const
+export const ROLES_FIGURA = ['tomador', 'propietario', 'conductor_habitual', 'conductor_ocasional', 'asegurado'] as const
 export type RolFigura = (typeof ROLES_FIGURA)[number]
+
+/**
+ * Roles de UNA persona por riesgo (índice único parcial `oportunidad_figura_rol_unico_uq`, 10/10/2026). Sin
+ * fila, el papel lo ocupa el tomador. Son los únicos que viajan en la foto de una variante (`FigurasVariante`).
+ */
+export const ROLES_FIGURA_UNICOS = ['tomador', 'propietario', 'conductor_habitual', 'conductor_ocasional'] as const
+export type RolFiguraUnico = (typeof ROLES_FIGURA_UNICOS)[number]
+/**
+ * Roles de VARIAS personas (asegurados de salud/decesos). Cada una es una FICHA; la misma ficha no entra dos
+ * veces (`oportunidad_figura_multi_uq`). Sin filas NO es «el tomador» ni «ninguno»: es que no consta.
+ * Debe casar con el predicado del índice parcial del SQL `2026-10-10_figuras_multi.sql` (`rol <> 'asegurado'`).
+ */
+export const ROLES_FIGURA_MULTIPLES = ['asegurado'] as const
+export type RolFiguraMultiple = (typeof ROLES_FIGURA_MULTIPLES)[number]
 
 export const ETIQUETA_ROL: Record<RolFigura, string> = {
   tomador: 'Tomador',
   propietario: 'Propietario',
   conductor_habitual: 'Conductor habitual',
   conductor_ocasional: 'Conductor ocasional',
+  asegurado: 'Asegurado',
 }
 
-/** Qué figuras admite cada ramo. Moto: el vendor no tiene conductor ocasional. */
+/** Cuántas personas admite un papel en un ramo. `max: 1` = una (o ninguna: sin fila, el tomador). */
+export type CardinalidadRol = { rol: RolFigura; min: 0 | 1; max: number }
+
+/** Asegurados por póliza que el comparador de salud admite (`risk.insureds`, hasta 10). Decesos: mismo tope. */
+export const MAX_ASEGURADOS_PERSONAS = 10
+
+/**
+ * Los papeles de cada ramo con su cardinalidad: FUENTE ÚNICA (la pantalla y el puerto leen de aquí).
+ * Auto/moto: exactamente los de siempre (moto: el vendor no tiene conductor ocasional). Hogar, vida y comercio:
+ * un asegurado (puede no ser el tomador). Salud y decesos: varios asegurados. El resto: solo tomador.
+ * Beneficiarios de vida: NO son figura (decisión de Alberto, 10/10/2026): cláusula de texto al emitir.
+ */
+export function cardinalidadesDelRamo(ramo: string): readonly CardinalidadRol[] {
+  const uno = (rol: RolFigura, min: 0 | 1 = 0): CardinalidadRol => ({ rol, min, max: 1 })
+  if (ramo === 'auto') return [uno('tomador', 1), uno('propietario'), uno('conductor_habitual'), uno('conductor_ocasional')]
+  if (ramo === 'moto') return [uno('tomador', 1), uno('propietario'), uno('conductor_habitual')]
+  if (ramo === 'hogar' || ramo === 'vida' || ramo === 'comercio') return [uno('tomador', 1), { rol: 'asegurado', min: 0, max: 1 }]
+  if (ramo === 'salud' || ramo === 'decesos') return [uno('tomador', 1), { rol: 'asegurado', min: 0, max: MAX_ASEGURADOS_PERSONAS }]
+  return [uno('tomador', 1)]
+}
+
+/** Qué figuras admite cada ramo (en orden de pantalla). Moto: el vendor no tiene conductor ocasional. */
 export function rolesDelRamo(ramo: string): readonly RolFigura[] {
-  if (ramo === 'auto') return ROLES_FIGURA
-  if (ramo === 'moto') return ['tomador', 'propietario', 'conductor_habitual']
-  return ['tomador']
+  return cardinalidadesDelRamo(ramo).map((c) => c.rol)
+}
+
+/** Máximo de personas de ese papel en ese ramo; 0 = el ramo no lo tiene. */
+export function maxDelRol(ramo: string, rol: RolFigura): number {
+  return cardinalidadesDelRamo(ramo).find((c) => c.rol === rol)?.max ?? 0
 }
 
 export function esRolFigura(v: unknown): v is RolFigura {
   return typeof v === 'string' && (ROLES_FIGURA as readonly string[]).includes(v)
 }
+export function esRolFiguraUnico(v: unknown): v is RolFiguraUnico {
+  return typeof v === 'string' && (ROLES_FIGURA_UNICOS as readonly string[]).includes(v)
+}
+/** Rol de varias personas en la BD (no confundir con «este ramo admite varias»: eso es `maxDelRol`). */
+export function esRolMultiple(v: unknown): v is RolFiguraMultiple {
+  return typeof v === 'string' && (ROLES_FIGURA_MULTIPLES as readonly string[]).includes(v)
+}
 
 /** Foto de figuras de una variante: cliente_id por rol; `null` = la misma persona que el tomador. */
-export type FigurasVariante = Partial<Record<RolFigura, string | null>>
+export type FigurasVariante = Partial<Record<RolFiguraUnico, string | null>>
 
-/** Normaliza lo que llega por el puerto: solo roles conocidos y uuids. Lo demás se descarta. */
+/**
+ * Normaliza lo que llega por el puerto: solo roles de UNA persona y uuids. Lo demás se descarta (los asegurados
+ * no caben en esta forma `rol → cliente_id`; su foto por variante es trabajo pendiente de la fase 2).
+ */
 export function limpiarFiguras(v: unknown): FigurasVariante | null {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
   const out: FigurasVariante = {}
   for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
-    if (!esRolFigura(k)) continue
+    if (!esRolFiguraUnico(k)) continue
     if (x === null) out[k] = null
     else if (typeof x === 'string' && UUID.test(x)) out[k] = x
   }

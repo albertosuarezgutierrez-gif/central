@@ -3,17 +3,20 @@
 // «Intervinientes» del riesgo: una tarjeta por papel (tomador, propietario, conductores). Tocar una
 // abre su selector: el cliente de la oportunidad, sus vínculos y «+ Nueva persona». Cada persona es
 // una FICHA (cliente_id), nunca texto suelto, y se agrupa por su id — dos homónimos no se funden.
+// Los papeles de VARIAS personas (asegurados de salud/decesos; uno en hogar/vida/comercio, 10/10/2026) van en
+// una lista aparte (`BloqueMultiple`): añadir y quitar fichas, con «pendiente de migración» si asegura lo dice.
 
 import { useCallback, useEffect, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import { ROTULO_ROL, textoFaltan, type FiguraRiesgo, type Riesgo } from '@/lib/riesgo-asegura'
 import { interpretarSolicitudesDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
-import type { RolFigura } from '@central/module-seguros'
+import { maxDelRol, type RolFigura } from '@central/module-seguros'
 import NuevaPersona from './NuevaPersona'
 import EditarFichaModal from './EditarFichaModal'
 import PedirDatosFigura from './PedirDatosFigura'
 import { llamarFiguras, motivoDe } from './piezas-riesgo'
 import { ramoConEnlaceDatos } from './variante'
+import { cabeOtro, estadoBloqueMulti, opcionesSinPoner, personasDelRol, repartirRoles } from './figuras-form'
 
 type Opcion = { clienteId: string; nombre: string; detalle: string }
 
@@ -38,8 +41,11 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
   const [abierto, setAbierto] = useState<RolFigura | null>(null)
   const [nueva, setNueva] = useState<RolFigura | null>(null)
   const [editando, setEditando] = useState<RolFigura | null>(null)
+  /** Ficha de un papel múltiple que se está editando (ahí el papel no identifica a la persona: su id sí). */
+  const [editandoFicha, setEditandoFicha] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
-  const aMedias = abierto !== null || nueva !== null || editando !== null || enviando
+  const aMedias = abierto !== null || nueva !== null || editando !== null || editandoFicha !== null || enviando
+  const { unicos, multiples } = repartirRoles(riesgo.roles)
   useEffect(() => { onEditando?.(aMedias) }, [aMedias, onEditando])
   const op = riesgo.oportunidad
   // Los enlaces de datos de este riesgo, UNA lectura para todas las figuras (luego se reparten por persona).
@@ -81,10 +87,29 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
     onCambio(rol === 'tomador' ? `El tomador vuelve a ser ${op.clienteNombre}.` : `${ROTULO_ROL[rol]}: vuelve a ser el mismo que el tomador.`)
   }
 
+  /** Papel de varias personas: AÑADE la ficha (no sustituye a nadie). */
+  async function anadir(rol: RolFigura, o: Opcion) {
+    setEnviando(true)
+    const r = await llamarFiguras('POST', { accion: 'asignar', oportunidadId: op.id, rol, clienteId: o.clienteId })
+    setEnviando(false)
+    if (!r.ok) { onError(`No se ha podido añadir a ${o.nombre} como ${ROTULO_ROL[rol].toLowerCase()}: ${motivoDe(r)}`); return }
+    setAbierto(null)
+    onCambio(`${o.nombre} añadido como ${ROTULO_ROL[rol].toLowerCase()}.`)
+  }
+
+  /** Papel de varias personas: quita ESA ficha (por su id; nunca todas). */
+  async function quitarDeVarios(rol: RolFigura, f: FiguraRiesgo) {
+    setEnviando(true)
+    const r = await llamarFiguras('DELETE', { oportunidadId: op.id, rol, clienteId: f.clienteId })
+    setEnviando(false)
+    if (!r.ok) { onError(`No se ha podido quitar a ${f.nombre}: ${motivoDe(r)}`); return }
+    onCambio(`${f.nombre} ya no figura como ${ROTULO_ROL[rol].toLowerCase()}.`)
+  }
+
   const bloqueado = enviando || ocupado
   // «Pedirle los datos» va en la PRIMERA tarjeta de cada persona (quien es propietario y conductor sale una vez).
   const primeraDe = new Map<string, RolFigura>()
-  for (const rol of riesgo.roles) {
+  for (const rol of unicos) {
     const f = riesgo.figuras.find((x) => x.rol === rol)
     if (f && !primeraDe.has(f.clienteId)) primeraDe.set(f.clienteId, rol)
   }
@@ -99,7 +124,7 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
       </div>
 
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' }}>
-        {riesgo.roles.map((rol) => {
+        {unicos.map((rol) => {
           const f = riesgo.figuras.find((x) => x.rol === rol) ?? null
           const esTomador = rol === 'tomador'
           const nombre = f ? f.nombre : 'El mismo que el tomador'
@@ -181,6 +206,97 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
           )
         })}
       </div>
+
+      {multiples.map((rol) => {
+        const gate = estadoBloqueMulti(riesgo.figurasMulti)
+        const puestas = personasDelRol(riesgo.figuras, rol)
+        const max = maxDelRol(op.ramo, rol)
+        const cabe = cabeOtro(op.ramo, rol, puestas.length)
+        const libres = opcionesSinPoner(opciones, puestas)
+        const abiertoAqui = abierto === rol
+        return (
+          <div key={rol} style={{ border: `1px solid ${abiertoAqui ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 12, padding: 12, display: 'grid', gap: 8, minWidth: 0 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{max > 1 ? `${ROTULO_ROL[rol]}s` : ROTULO_ROL[rol]}</div>
+              {max > 1 && gate.editable && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{puestas.length} de {max} como mucho</div>}
+            </div>
+            {!gate.editable && (
+              <div><Badge tono={gate.pendienteMigracion ? 'aviso' : 'neutral'}>{gate.texto}</Badge></div>
+            )}
+            {gate.editable && puestas.length === 0 && (
+              // Sin filas NO es «el tomador» ni «ninguno»: es que aún no consta ninguno con ficha.
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>Aún no hay ningún {ROTULO_ROL[rol].toLowerCase()} con ficha en este riesgo.</div>
+            )}
+            {puestas.map((f) => {
+              const falta = textoFaltan(f.faltan)
+              const vinculo = f.clienteId === op.clienteId ? 'el cliente' : f.vinculo ? `${f.vinculo} de ${op.clienteNombre}` : 'sin vínculo en su ficha'
+              return (
+                <div key={f.clienteId} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 8, minWidth: 0 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, overflowWrap: 'anywhere' }}>{f.nombre}</div>
+                    <div style={{ fontSize: 13, color: 'var(--muted)' }}>{vinculo}</div>
+                    {falta && <div style={{ marginTop: 4 }}><Badge tono={f.faltan === null ? 'neutral' : 'aviso'}>{falta}</Badge></div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button type="button" disabled={bloqueado} onClick={() => setEditandoFicha(f.clienteId)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, color: 'var(--primary)' }}>
+                      Editar datos
+                    </button>
+                    {gate.editable && (
+                      <button type="button" disabled={bloqueado} onClick={() => void quitarDeVarios(rol, f)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+            {gate.editable && cabe && (
+              <div>
+                <button type="button" disabled={bloqueado} aria-expanded={abiertoAqui}
+                  onClick={() => { setAbierto(abiertoAqui ? null : rol); setNueva(null) }}
+                  style={{ ...btnStyle(abiertoAqui ? 'secundario' : 'sutil', 'sm'), minHeight: 44, color: 'var(--primary)' }}>
+                  {abiertoAqui ? 'Cerrar' : `+ Añadir ${ROTULO_ROL[rol].toLowerCase()}`}
+                </button>
+              </div>
+            )}
+            {gate.editable && !cabe && (
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>En este ramo caben como mucho {max}: quita uno para añadir otro.</div>
+            )}
+            {gate.editable && abiertoAqui && (
+              <div style={{ display: 'grid', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                {libres.map((o) => (
+                  <button key={o.clienteId} type="button" disabled={bloqueado} onClick={() => void anadir(rol, o)}
+                    style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, justifyContent: 'flex-start', whiteSpace: 'normal', textAlign: 'left', height: 'auto' }}>
+                    <span style={{ minWidth: 0 }}>
+                      <strong>{o.nombre}</strong> <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {o.detalle}</span>
+                    </span>
+                  </button>
+                ))}
+                {libres.length === 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>Todas las personas vinculadas ya están puestas: da de alta a otra.</div>
+                )}
+                <button type="button" disabled={bloqueado} onClick={() => setNueva(nueva === rol ? null : rol)}
+                  style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, color: 'var(--primary)', justifyContent: 'flex-start' }}>
+                  + Nueva persona
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {editandoFicha && (() => {
+        const f = riesgo.figuras.find((x) => x.clienteId === editandoFicha)
+        if (!f) return null
+        return (
+          <EditarFichaModal
+            oportunidadId={op.id} clienteId={f.clienteId} nombre={f.nombre}
+            conduce={riesgo.figuras.some((g) => g.clienteId === f.clienteId && conduceEnRiesgo(g.rol, op.ramo, riesgo.figuras))}
+            faltan={f.faltan}
+            refresco={riesgo} onCerrar={() => setEditandoFicha(null)}
+          />
+        )
+      })()}
 
       {editando && (() => {
         const f = riesgo.figuras.find((x) => x.rol === editando)
