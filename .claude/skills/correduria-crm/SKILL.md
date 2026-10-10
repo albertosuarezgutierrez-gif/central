@@ -13,7 +13,7 @@ description: >
 **Lee primero `docs/CORREDURIA-CRM-VISION.md`** (visión dictada por Alberto el 02/09/2026, estado
 real medido, orden de trabajo). Después, según lo que toques:
 
-- Puerto y trastienda → `apps/asegura/CLAUDE.md` («El puerto que sirve la pantalla», «Codeoscopic»).
+- Puerto y trastienda → `apps/asegura/CLAUDE.md` («El puerto que sirve la pantalla», «Codeoscopic»; descubrimiento autónomo de emisiones, cola de revisión, webhook en api.grupoasegura.es). Descuentos por compañía y ramo: `docs/CODEOSCOPIC-PENDIENTES.md`.
 - Pantallas → `apps/plataforma/CLAUDE.md` («La correduría se trabaja DESDE AQUÍ»).
 - **Portal del cliente → `apps/asegura-portal/CLAUDE.md`** (es la fuente de verdad de esa app:
   aislamiento por código, lectura por columnas, calendario). Diseño del calendario en
@@ -24,6 +24,7 @@ real medido, orden de trabajo). Después, según lo que toques:
 - **Ingesta de CIMA (EIAC/TIREA, cuarentena, cobertura de campos, caja negra del webhook y el
   diagnóstico de «la ingesta está muda») → skill `cima-ingesta`.** La regla 6 de aquí abajo dice
   QUÉ no se hace sin spec; el CÓMO de la tubería está allí.
+- Google Contacts (agenda del móvil/WhatsApp) → skill `google-contactos`.
 
 ## 🚨 No romper
 
@@ -34,6 +35,10 @@ real medido, orden de trabajo). Después, según lo que toques:
    anulada (se cambia a mano con nota en `historial_interno`, la verdad es el portal de la compañía). La
    RC se titula solo por la cobertura que ES la RC («RC caballos», `tituloRc()` en `objeto.ts`); el resto
    va al desglose. Detalle en `apps/asegura/CLAUDE.md` § «Prima y vencimiento».
+   - **Etiquetas de códigos CIMA (03/10/2026):** siempre `etiquetaClave()` de `module-seguros` (nunca un
+     mapa a mano en la pantalla). Portal: comisiones, prima neta, mediador, bastidor, IBAN y DNI nunca;
+     beneficiarios solo con nivel iban; el texto libre de suplementos no sale (lleva datos bancarios).
+   - **Duplicados vivos (03/10/2026):** vigía `/api/operador/duplicados/vivos` (señal `duplicados_vivos`, comodines fuera con `esNumeroPolizaComodin`) y bandeja `/correduria/revision` (casos en `operational_events`: `poliza_revision_manual` abre, `poliza_revision_resuelta` cierra). «Son la misma» solo registra: la fusión es por CTE, con OK de Alberto.
 1. **Dos caras, dos apps.** Corredor en `apps/plataforma` (`/correduria`); cliente en
    `apps/asegura-portal` (rol `prisma_asegura_portal` sin BYPASSRLS, secreto propio). Nunca una
    pantalla compartida con permisos. En el portal el aislamiento **lo da el código**, no RLS.
@@ -64,8 +69,9 @@ real medido, orden de trabajo). Después, según lo que toques:
    (32.520 fichas, vencimientos 2013-2018) son volcado histórico = **leads**, jamás «clientes».
 3. **Toda escritura** va por `/api/operador/*` de asegura con `correduriaId` explícito y deja fila en
    `historial_interno`. Reglas puras en `@central/module-seguros` con test.
-4. **Identidad solo documentada** (DNI recibido en la ficha); contacto y dirección libres; el DNI
-   entero no cruza el puerto (enmascarado).
+4. **Identidad acreditada** (cambio de nombre/apellidos/DNI): documento con DNI recibido, o póliza con DNI
+   coincidente, o **motivo obligatorio del corredor** con auditoría; el portal NUNCA la edita. Contacto y
+   dirección libres; el DNI entero no cruza el puerto (enmascarado).
 5. **Autorización para ver seguros ajenos es direccional** y se da desde la ficha de quien autoriza.
 6. **Emisión y conciliación CIMA: spec + OK de Alberto antes de código.** Hoy CIMA empareja por
    número + nombre de compañía y pisa; una emitida sin marcar se duplica o se sobreescribe.
@@ -73,6 +79,27 @@ real medido, orden de trabajo). Después, según lo que toques:
    prevista es el aviso de vencimiento del calendario, que es **informativo** (no asesoramiento) y va
    apagado — regla 13.
 8. `null` ≠ `[]` en recibos, documentos, contactos, relaciones: la pantalla lo dice, no lo colapsa.
+9. **Una oportunidad sin sus tarificaciones enlazadas es una oportunidad a la que no se puede
+   emitir desde la pantalla (29/09/2026).** «Presupuestos de este riesgo» (P1…Pn) y el botón de
+   emitir salen SOLO de `seguros.tarificaciones.oportunidad_id` (`apps/asegura/lib/oportunidad-riesgo.ts`).
+   Apuntar el nº de Avant2 en `info_riesgo.presupuestoCodeoscopic`, o la prima y las ofertas en
+   `prima_bruta`/`info_riesgo.ofertas`, **NO enlaza nada**: la pantalla dice «Aún no se ha pedido precio»
+   y empuja a volver a tarificar, pagando 0,50€ por un precio que ya estaba (0,50€ por cotización).
+   Caso fundacional: la oportunidad `5ca953b0…` del Navara 5655DSM (Antonio Cruz Sánchez) se creó a mano
+   por SQL el 24/09 con el Reale aceptado (40821944) y sus 4 tarificaciones del 21/09 se quedaron con
+   `oportunidad_id = NULL`. Por tanto, **al crear o tocar a mano una oportunidad:** enlaza en el MISMO
+   paso las tarificaciones de ese riesgo
+   (`update seguros.tarificaciones set oportunidad_id = <op> where cliente_id = <cliente> and
+   correduria_id = <corr> and oportunidad_id is null and project_id_codeoscopic in (…)`), y quita de
+   `info_riesgo` cualquier «pendiente» que ya se haya resuelto. Comprobación (tiene que dar 0 filas):
+   `select o.id from seguros.oportunidades o join seguros.tarificaciones t on t.correduria_id = o.correduria_id
+   and t.project_id_codeoscopic::text = o.info_riesgo->>'presupuestoCodeoscopic' where t.oportunidad_id
+   is distinct from o.id`.
+   ✅ (arreglado el mismo día: la cabecera dice «ahora en <compañía>» cuando es la de hoy, campo `aseguradoraActual`) **La cabecera mezclaba dos cosas:** pinta `coalesce(poliza_competencia.aseguradora,
+   aseguradora_ganadora)` al lado de `prima_bruta`. En el caso fundacional salía «Mapfre · 276,69€» cuando
+   Mapfre es la compañía de HOY y 276,69€ es la oferta de **Reale**. Antes de emitir, la compañía se mira en
+   la variante, no en la cabecera. Pendiente de arreglar: el significado de `prima_bruta` no es el mismo
+   en todas las oportunidades, así que no se ha tocado sin mirarlo antes.
 
 ## 🎨 La pantalla son CINCO SECCIONES, no un scroll (03/09/2026)
 
@@ -193,3 +220,59 @@ orden en §9.
     otro proyecto y otro cargo. **Ningún botón público ni vigilancia periódica lo dispara.** Se
     vigila la FECHA (gratis) y se tarifica **una vez**, contra el cupo y el motivo de
     `seguros.codeoscopic_consumo`.
+
+21. **Los datos de una cotización se leen con su LLAVE y su NIVEL, no a ojo (30/09/2026, PR #4103).**
+    - **El precio que se confirma y emite se identifica por compañía + categoría + MODALIDAD**
+      (`encontrarPrecio`, única en las 396 filas medidas). El `producto` NO distingue (tres Mapfre
+      «Autos»; moto 450€/600€ a 2,49€) y «la prima más cercana» tampoco: tras un PATCH el vendor
+      re-tarifica. Sin modalidad exacta → 409, nunca otra en su lugar. Todo llamador de la oferta manda
+      `modalidad`.
+    - **Un TODO RIESGO de coche/moto INCLUYE daños propios** (Alberto: «un todo riesgo sí incluye daños
+      propios»). Lo decide la CATEGORÍA del vendor (`esTodoRiesgo`), y manda sobre su lista de coberturas
+      (Reale marca «Daños propios: false» en sus TR). La «Pérdida total» es una garantía aparte:
+      contradictoria → «no consta».
+    - `garantias` NULL = «aún sin leer» (también si la lectura FALLÓ; se reintenta 7 días), nunca todo
+      `no_consta`: eso la parrilla lo lee como «la compañía no dice».
+    - Cotización RECUPERADA: fallos y supuestos no guardados se DICEN (`null`), nunca `[]`.
+    - Antes de afirmar un dato del vendor, mídelo en `seguros.tarificacion_precios` (coberturas crudas y
+      `tarificaciones.respuesta`): el parser puede estar leyendo bien un dato que la compañía manda mal.
+22. **Bloqueos de compañía (30/09/2026, dictado de Alberto).** Una moto de Manuel Piña se
+    emitió en Allianz desde la web de Avant2 y Allianz la BLOQUEÓ («riesgo condicionado»).
+    - **Todo bloqueo exige que intervenga Alberto.** Allianz contesta SOLO por su intranet (ni correo ni nada):
+      tiene que entrar él. Y no admite robo ni daños si el cliente no tiene OTRA póliza en Allianz: solo la básica.
+    - **Toda retenida Allianz → recordatorio por Telegram**, con esas dos advertencias: cron
+      `correduria-retenidas` (pasada de la MAÑANA, Madrid < 12, manda la lista aunque no haya cambios; la
+      tarde solo si hay cambios) y aviso inmediato al registrar en `/api/correduria/avant2-emision`.
+    - **Solo es bloqueante si la compañía YA nos lo anuncia** (Allianz con la moto de Manuel Piña Franco). Si no
+      avisa, no se recomienda emitir la básica ni ampliar por suplemento: se emite y ya está, hasta que ocurra
+      (Alberto, 30/09/2026). Retirado el aviso preventivo; guardián `test/regression-sin-aviso-emision-escalonada.test.ts`.
+    - Viven en `packages/module-seguros/src/bloqueo-compania.ts` (`textoBloqueoCorredor(motivo, compania)`) y `apps/plataforma/lib/correduria/retenidas-aviso.ts`.
+    - **Y por encima de la modalidad, el `id` del vendor** (`idPrecio`, 30/09/2026 tarde): si el proyecto
+      aún lo trae, se emite ESE. Toda pantalla que abre `<Emision>` le pasa `idPrecio` (cepo en
+      `test/regression-rerate-fecha-y-desempate.test.ts`).
+    - **Nada de IA decidiendo precios o coberturas en vivo.** Las incoherencias las marcan reglas fijas
+      (`revisarCoherenciaCotizacion`, en pantalla + Telegram) y un cambio del lector se prueba gratis con
+      `GET /api/operador/codeoscopic/reproceso` sobre respuestas reales. El vocabulario de coberturas de
+      Codeoscopic es cerrado: un nombre nuevo sale en `coberturasNuevas` y se decide a mano.
+
+22. **Los datos del riesgo viven en info_riesgo por CLAVE DE RAMO (30/09/2026, PR #4127).** En la oportunidad se editan
+    y confirman POR RAMO: `datosVehiculo` (auto/moto), `datosVivienda` (hogar), `datosCapital` (vida/salud/decesos),
+    `datosRiesgoLibre` (RC/comercio/comunidades/otros). Cada clave guarda el campo confirmado (se sella al confirmar,
+    se borra al editar). Se pide precio desde la oportunidad en los 6 ramos tarificables; personas editan datos sin salir
+    (carné si conductor). La VERSIÓN del catálogo (gratis) se elige en el propio bloque «Datos del vehículo» (`SelectorCatalogoVehiculo`: marca→modelo→combustible→versión, sufijo `-moto`, garaje `garajes-moto` en moto) y se guarda con los 7 campos juntos; de ahí «Pedir precio →» va a `rutaVariante` (nunca a retarificar la póliza vieja ni cotiza solo: 0,50€). Editar marca/modelo/versión a mano borra codigoVehiculo. En moto la última tarificación NO manda si el riesgo trae otra moto (`previoPuedeMandar`). Guardián `test/regression-datos-vehiculo-catalogo.test.ts`.
+    Precarga desde polizas.datos_especificos sin confirmar.
+    **Pedir precio desde la oportunidad en todos los ramos (07/10/2026):** el botón PRINCIPAL de la pantalla del riesgo es SIEMPRE
+    pedir precio con los datos de la oportunidad (`accionesPrecio().principal` = `rutaVariante`), con o sin póliza; «Retarificar con
+    los datos de la póliza» (riesgo VIEJO de la póliza) solo es secundario. Dentro de cada bloque de datos hay un «Pedir precio →»
+    (`BotonPedirPrecio`, solo navega; comunidades: ancla a `#presupuestos`). Hogar: `faltan` incluye referencia catastral y
+    `propietarioEsTomador`; sin referencia el buscador del Catastro parte de tipo de vía + calle + nº + municipio (`busquedaCatastroDeVivienda`).
+    Vida guarda `profesion` (CNO-11, 4 cifras) y `fumador` (sin duración); salud/decesos guardan `asegurados` SIN DNI (jsonb en claro; el DNI
+    de la cartera va cifrado). Guardián `test/regression-precio-principal.test.ts`.
+    **Regla única (05/10/2026): el riesgo se rellena UNA vez (documento o corredor) en `info_riesgo.datosVehiculo` y toda
+    pantalla de auto lo lee de ahí; nunca se vuelve a pedir lo que ya consta.** Subir una póliza escribe marca/modelo/versión/
+    matrícula/matriculación (sin confirmar; lo que no viene = null) y, solo con coincidencia EXACTA e inequívoca en el catálogo
+    GRATIS, marcaId/modeloId/motorId/codigoVehiculo (nunca `?registrationPlate=`; catálogo caído = sin ids). AutoNuevo precarga
+    en cascada PARCIAL (`precarga-vehiculo.ts`), el texto sin id va a la caja de búsqueda y una variante retomada manda sobre todo.
+
+## Presupuestos de compañías por bot (tarificador RPA)
+Se piden desde la oportunidad (`/correduria/oportunidad/[id]`); estado, decisiones y plan en `docs/TARIFICADOR-RPA.md`.

@@ -15,6 +15,7 @@ import { fechaCorta, resumirLineas, type LineaVencimiento } from '@/lib/calculad
 import { PORTAL_URL } from '@/lib/sitio'
 import { medir } from '@/lib/medir'
 import EnlaceMedido from '@/components/EnlaceMedido'
+import SiguientePaso from '@/components/SiguientePaso'
 
 const INICIALES: LineaVencimiento[] = [
   { etiqueta: 'Coche', vence: '' },
@@ -122,24 +123,31 @@ export default function CalculadoraVencimientos() {
       </button>
 
       {resumen && resumen.conFecha > 0 && (
-        <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-          <p style={{ margin: '0 0 10px', fontSize: 15 }}>
-            {resumen.proximas > 0 ? (
-              <>
-                Tienes <strong>{resumen.proximas}</strong> {resumen.proximas === 1 ? 'seguro' : 'seguros'} con la fecha de
-                decisión en los próximos 90 días
-                {resumen.urgentes > 0 && <> ({resumen.urgentes} este mes)</>}.
-              </>
-            ) : resumen.pasadas === resumen.conFecha ? (
-              <>Los plazos de este año ya pasaron: la fecha buena es la del vencimiento siguiente.</>
-            ) : (
-              <>Ninguno con la fecha de decisión cerca. Justo por eso se olvidan.</>
-            )}{' '}
-            Aquí esta cuenta se borra al cerrar la página; en tu área la tienes siempre, con la póliza al lado.
-          </p>
-          <EnlaceMedido href={PORTAL_URL} origen="calculadora" className="btn btn-brand" style={{ minHeight: 44 }}>
-            Crear mi área con mi correo
-          </EnlaceMedido>
+        <div>
+          {resumen.proximas > 0 ? (
+            <SiguientePaso
+              contexto={{
+                tipo: 'vencimientos',
+                proximas: resumen.proximas,
+                urgentes: resumen.urgentes,
+              }}
+              anclaFormulario="/#presupuesto"
+            />
+          ) : (
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 15 }}>
+                {resumen.pasadas === resumen.conFecha ? (
+                  <>Los plazos de este año ya pasaron: la fecha buena es la del vencimiento siguiente.</>
+                ) : (
+                  <>Ninguno con la fecha de decisión cerca. Justo por eso se olvidan.</>
+                )}{' '}
+                Aquí esta cuenta se borra al cerrar la página; en tu área la tienes siempre, con la póliza al lado.
+              </p>
+              <EnlaceMedido href={PORTAL_URL} origen="calculadora" className="btn btn-brand" style={{ minHeight: 44 }}>
+                Crear mi área con mi correo
+              </EnlaceMedido>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -3,9 +3,13 @@
 import { useState } from 'react'
 
 import { eur } from '@/lib/dinero'
+import PresupuestosPoliza from '../PresupuestosPoliza'
 import {
+  cuerpoPreparar,
   frasePresupuesto,
   interpretarPreparado,
+  mensajeErrorPreparar,
+  type OcultarPresupuesto,
   type PresupuestoPreparado,
 } from '@/lib/presupuesto-asegura'
 
@@ -24,14 +28,29 @@ import {
 export default function PrepararPresupuesto({
   tarificacionId,
   simulado,
+  ocultar,
+  bloqueado,
+  onPreparado,
+  enviadas,
+  origen,
 }: {
   tarificacionId: string
   /** La cotización de la que sale. Si es simulada, no se podrá enviar nunca. */
   simulado: boolean
+  /** Lo que el corredor quita antes de preparar (lo decide `FiltroGarantias`). `undefined` = nada. */
+  ocultar?: OcultarPresupuesto
+  /** Motivo para NO dejar preparar (p. ej. «has ocultado todas»). `null`/ausente = se puede. */
+  bloqueado?: string | null
+  /** Para que quien lo monta congele sus interruptores: lo preparado ya no cambia. */
+  onPreparado?: () => void
+  /** Cuántas opciones ELIGIÓ el corredor (modo «marcar lo que se manda»). Ausente = modo antiguo de ocultar. */
+  enviadas?: number
+  /** De quién es: con él, tras preparar se ofrecen aquí mismo correo, WhatsApp y PDF. */
+  origen?: { polizaId: string } | { clienteId: string; ramo?: string }
 }) {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [hecho, setHecho] = useState<{ p: PresupuestoPreparado; token: string } | null>(null)
+  const [hecho, setHecho] = useState<{ p: PresupuestoPreparado; token: string | null } | null>(null)
 
   async function preparar() {
     setCargando(true)
@@ -40,13 +59,15 @@ export default function PrepararPresupuesto({
       const res = await fetch('/api/correduria/presupuesto', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tarificacionId }),
+        body: JSON.stringify(cuerpoPreparar({ tarificacionId, ocultar })),
       })
       const r = interpretarPreparado(res.status, await res.json().catch(() => null))
-      if (r.estado === 'ok') setHecho({ p: r.presupuesto, token: r.token })
-      else if (r.estado === 'sin_configurar') {
+      if (r.estado === 'ok') {
+        setHecho({ p: r.presupuesto, token: r.token })
+        onPreparado?.()
+      } else if (r.estado === 'sin_configurar') {
         setError('El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).')
-      } else setError(r.detalle ? `${r.motivo}: ${r.detalle}` : r.motivo)
+      } else setError(mensajeErrorPreparar(r))
     } catch {
       // Un fallo de red NO se pinta como «preparado»: eso dejaría a Alberto
       // creyendo que tiene un presupuesto que no existe.
@@ -56,7 +77,7 @@ export default function PrepararPresupuesto({
     }
   }
 
-  if (hecho) return <Preparado p={hecho.p} token={hecho.token} />
+  if (hecho) return <Preparado p={hecho.p} token={hecho.token} origen={origen} />
 
   return (
     <section style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
@@ -67,14 +88,31 @@ export default function PrepararPresupuesto({
         Congela las opciones de arriba tal y como se le enseñarían. <strong>No manda nada</strong> y{' '}
         <strong>no vuelve a cotizar</strong>: sale de esta misma consulta, que ya está pagada.
       </p>
+      {enviadas === undefined && ocultar && (
+        <p className="muted" style={{ marginTop: 0 }}>
+          Se le ocultarán{' '}
+          {[
+            ocultar.companias.length ? `${ocultar.companias.length} compañía${ocultar.companias.length === 1 ? '' : 's'} (${ocultar.companias.join(', ')})` : null,
+            ocultar.precios.length ? `${ocultar.precios.length} opción${ocultar.precios.length === 1 ? '' : 'es'} suelta${ocultar.precios.length === 1 ? '' : 's'}` : null,
+          ]
+            .filter(Boolean)
+            .join(' y ')}
+          .
+        </p>
+      )}
       <button
         type="button"
         onClick={preparar}
-        disabled={cargando}
-        style={{ minHeight: 44, padding: '0 16px' }}
+        disabled={cargando || !!bloqueado}
+        style={{ minHeight: 44, padding: '0 16px', width: '100%', maxWidth: 420 }}
       >
-        {cargando ? 'Preparando…' : 'Preparar presupuesto'}
+        {cargando ? 'Preparando…' : enviadas === undefined ? 'Preparar presupuesto' : `Preparar presupuesto con ${enviadas} opción${enviadas === 1 ? '' : 'es'}`}
       </button>
+      {bloqueado && (
+        <p className="err" style={{ marginTop: 8 }}>
+          {bloqueado}
+        </p>
+      )}
       {simulado && (
         <p className="muted" style={{ marginTop: 8 }}>
           Ojo: esta cotización es <strong>simulada</strong>. El presupuesto se prepara igual para
@@ -96,13 +134,25 @@ const ROTULO_PAPEL: Record<string, string> = {
   mejor_cubierta: 'la mejor cubierta',
 }
 
-function Preparado({ p, token }: { p: PresupuestoPreparado; token: string }) {
+function Preparado({ p, token, origen }: { p: PresupuestoPreparado; token: string | null; origen?: { polizaId: string } | { clienteId: string; ramo?: string } }) {
   const avisos = frasePresupuesto(p)
   return (
     <section style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+      {p.referencia && (
+        <p style={{ margin: '0 0 6px', fontSize: 15 }}>
+          Referencia <strong>{p.referencia}</strong>
+          <span className="muted" style={{ fontSize: 13 }}> · la que das al cliente y a tu gente (el nº de Avant2 no sale)</span>
+        </p>
+      )}
+      {p.reutilizado && (
+        <p className="muted" style={{ margin: '0 0 6px', fontSize: 13 }}>
+          Ya tenías preparado uno vigente con exactamente estas opciones: es ése, no se ha creado otro.
+        </p>
+      )}
       <p style={{ margin: '0 0 8px' }}>
-        <strong>Presupuesto preparado</strong> · {p.opciones.length} de {p.preciosTotales} precios ·
-        caduca el {new Date(p.venceEl).toLocaleDateString('es-ES')}
+        <strong>{p.reutilizado ? 'Presupuesto ya preparado' : 'Presupuesto preparado'}</strong> · {p.opciones.length} recomendadas
+        {p.enLista !== null ? ` + ${p.enLista} más en su lista` : ''} · de {p.preciosTotales} precios
+        {p.ocultas ? ` · ${p.ocultas} ocultas` : ''} · caduca el {new Date(p.venceEl).toLocaleDateString('es-ES')}
       </p>
 
       {avisos.map((a) => (
@@ -129,10 +179,17 @@ function Preparado({ p, token }: { p: PresupuestoPreparado; token: string }) {
         ))}
       </ul>
 
-      <p className="muted" style={{ marginTop: 0 }}>
-        Queda <strong>preparado, sin enviar</strong>. Para mandárselo, vuelve a la ficha de la póliza →
-        «Presupuestos»: por correo o por WhatsApp, siempre con tu clic.
-      </p>
+      {origen && !p.simulado ? (
+        <PresupuestosPoliza
+          soloId={p.id}
+          {...('polizaId' in origen ? { polizaId: origen.polizaId } : { clienteId: origen.clienteId, ramo: origen.ramo ?? null })}
+        />
+      ) : (
+        <p className="muted" style={{ marginTop: 0 }}>
+          Queda <strong>preparado, sin enviar</strong>. Para mandárselo, ve a «Presupuestos» en la ficha
+          del cliente (u Oportunidades) o de la póliza: por correo o por WhatsApp, siempre con tu clic.
+        </p>
+      )}
     </section>
   )
 }

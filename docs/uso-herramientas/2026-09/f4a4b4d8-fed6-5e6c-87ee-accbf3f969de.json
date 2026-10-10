@@ -1,0 +1,117 @@
+{
+ "sesion": "f4a4b4d8-fed6-5e6c-87ee-accbf3f969de",
+ "inicio": "2026-09-28T05:18:59.775Z",
+ "fin": "2026-09-28T05:53:48.004Z",
+ "llamadas": 216,
+ "categorias": {
+  "otro": {
+   "llamadas": 57,
+   "chars_in": 20668,
+   "chars_out": 55890,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 5,
+    "ScheduleWakeup": 22,
+    "ReadNotifications": 22,
+    "ListAgents": 2,
+    "SubagentHandback": 4
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 10,
+   "chars_in": 826,
+   "chars_out": 169838,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 10
+   }
+  },
+  "bash": {
+   "llamadas": 33,
+   "chars_in": 17280,
+   "chars_out": 56566,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 33
+   }
+  },
+  "sql": {
+   "llamadas": 37,
+   "chars_in": 13351,
+   "chars_out": 111408,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 9881,
+   "tools": {
+    "mcp__Supabase__execute_sql": 37
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 4,
+   "chars_in": 24127,
+   "chars_out": 24975,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 4
+   }
+  },
+  "mcp:Booking-com": {
+   "llamadas": 48,
+   "chars_in": 13244,
+   "chars_out": 880711,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking-com__accommodations_search": 48
+   }
+  },
+  "mcp:Trivago": {
+   "llamadas": 9,
+   "chars_in": 1344,
+   "chars_out": 5987446,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Trivago__trivago-accommodation-radius-search": 9
+   }
+  },
+  "escritura": {
+   "llamadas": 9,
+   "chars_in": 82369,
+   "chars_out": 882853,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 7,
+    "Edit": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 9,
+   "chars_in": 2792,
+   "chars_out": 20551,
+   "errores": 0,
+   "archivos_citados": 6,
+   "chars_citados": 2417490,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 5,
+    "mcp__github__update_pull_request": 1
+   }
+  }
+ }
+}

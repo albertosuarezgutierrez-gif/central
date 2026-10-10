@@ -167,44 +167,51 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 174 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 290 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 169 | 21.315 | 14.669.268 | 0 | 0 |
-| `otro` | 164 | 5.334 | 17.511.194 | 8.187.555 | 0 |
-| `mcp:github` | 153 | 4.321 | 3.792.082 | 45.538.785 | 72 |
-| `lectura-directa` | 153 | 4.114 | 8.731.036 | 0 | 0 |
-| `escritura` | 126 | 2.573 | 41.082.901 | 0 | 0 |
-| `sql` | 106 | 2.178 | 1.005.096 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 94 | 1.042 | 234.913 | 3.193.171 | 12 |
-| `mcp:Booking-com` | 15 | 421 | 1.744.830 | 0 | 0 |
-| `mcp:Vercel` | 34 | 408 | 638.133 | 198.719 | 10 |
-| `mcp:Gmail` | 20 | 276 | 432.672 | 0 | 2 |
-| `mcp:Supabase` | 66 | 205 | 20.934 | 0 | 2 |
-| `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
-| `agente:general-purpose` | 29 | 90 | 60.222 | 1.133.042 | 0 |
+| `bash` | 282 | 38.645 | 31.325.888 | 0 | 0 |
+| `otro` | 278 | 9.425 | 24.693.034 | 14.751.291 | 0 |
+| `lectura-directa` | 251 | 6.563 | 22.295.132 | 0 | 0 |
+| `mcp:github` | 251 | 5.862 | 4.773.424 | 51.247.577 | 90 |
+| `escritura` | 190 | 3.851 | 53.940.707 | 0 | 0 |
+| `sql` | 178 | 3.696 | 1.837.082 | 2.351.230 | 15 |
+| `mcp:Claude_Code_Remote` | 142 | 1.480 | 304.843 | 5.301.463 | 14 |
+| `mcp:Gmail` | 39 | 1.126 | 1.115.270 | 0 | 70 |
+| `mcp:Booking-com` | 27 | 765 | 3.236.630 | 0 | 0 |
+| `mcp:Vercel` | 61 | 604 | 885.822 | 202.197 | 16 |
+| `agente:general-purpose` | 78 | 386 | 253.751 | 7.731.323 | 0 |
+| `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
+| `mcp:Interactive-Brokers--IBKR-` | 7 | 351 | 429.469 | 0 | 0 |
+| `mcp:Supabase` | 110 | 313 | 29.913 | 0 | 4 |
+| `mcp:claude-code-remote` | 23 | 181 | 16.305 | 16.312 | 0 |
+| `agente:agente-architect` | 50 | 168 | 122.256 | 5.319.819 | 0 |
+| `mcp:Google-Drive` | 18 | 123 | 109.510 | 0 | 2 |
+| `agente:agente-mecanico` | 36 | 87 | 62.148 | 4.284.447 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
-| `mcp:Google-Drive` | 10 | 71 | 68.760 | 0 | 2 |
-| `agente:agente-architect` | 20 | 63 | 51.150 | 1.639.814 | 0 |
+| `agente:Explore` | 32 | 74 | 36.887 | 2.118.846 | 0 |
+| `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
+| `agente:rastreador-codigo` | 42 | 70 | 21.539 | 651.535 | 0 |
+| `mcp:Resend` | 7 | 61 | 31.515 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
-| `mcp:Google_Drive` | 8 | 49 | 59.913 | 0 | 12 |
-| `agente:Explore` | 18 | 47 | 23.726 | 1.223.223 | 0 |
+| `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
-| `mcp:OpenSEO` | 2 | 46 | 38.961 | 0 | 0 |
-| `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
-| `mcp:Resend` | 4 | 41 | 11.662 | 0 | 0 |
-| `agente:agente-mecanico` | 13 | 33 | 33.925 | 774.297 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
-| `agente:rastreador-codigo` | 14 | 20 | 7.033 | 97.949 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
+| `agente:general` | 9 | 13 | 8.369 | 512.187 | 0 |
+| `mcp:Supabase_asegura` | 11 | 12 | 2.954 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
-| `agente:general` | 7 | 9 | 5.242 | 231.483 | 0 |
+| `agente:lector-correo` | 3 | 10 | 4.219 | 0 | 0 |
+| `mcp:Google_Calendar` | 2 | 7 | 5.018 | 0 | 0 |
+| `agente:verificador-esceptico` | 5 | 7 | 1.867 | 3.046 | 0 |
+| `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
-| `mcp:Supabase_asegura` | 5 | 5 | 1.947 | 0 | 0 |
 | `mcp:openrouter` | 2 | 5 | 14.639 | 0 | 0 |
+| `agente:Plan` | 2 | 2 | 1.832 | 12.062 | 0 |
+| `mcp:ccd_session` | 2 | 2 | 175 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
-| `mcp:Google_Calendar` | 1 | 1 | 272 | 0 | 0 |
+| `agente:jefe-contabilidad` | 1 | 2 | 418 | 7.630 | 0 |
 <!-- ahorro:fin -->

@@ -16,6 +16,7 @@
  * El SQL crudo NO prefija `seguros.`: la conexión ya trae `?schema=seguros`.
  */
 import { createHash, randomBytes } from 'node:crypto'
+import { after } from 'next/server'
 import {
   DIAS_SOLICITUD,
   MAX_DOCS_SOLICITUD,
@@ -42,10 +43,18 @@ import { clienteOrigenDe, listarCarnets } from './cartera-ficha'
 import { guardarDocumento } from './cartera-documentos'
 import { revisarDocumento } from '@central/module-seguros'
 import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
+import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
+import { oportunidadDesdeFichero } from './oportunidad-documento'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TOKEN = /^[A-Za-z0-9_-]{40,60}$/
 const CARNETS_MOTO = new Set(['A', 'A2', 'A1', 'AM'])
+
+/** El enlace del portal para un token en claro. Solo se construye al crear la solicitud (el token no se guarda). */
+export function urlPortalSolicitud(token: string): string {
+  const base = (process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es').replace(/\/+$/, '')
+  return `${base}/datos/${token}`
+}
 
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex')
@@ -67,14 +76,22 @@ export type SolicitudResumen = {
   documentos: { id: string; tipo: TipoDocSolicitud }[] | null
   /** Lo declarado que no casa con sus papeles. `null` = no se ha podido contrastar. */
   discrepancias: DiscrepanciaSolicitud[] | null
+  /** De quién son los datos: el cliente de la oportunidad o una figura del riesgo (un familiar). */
+  personaId: string
+  tercero: boolean
 }
 
-/** Crea (o devuelve la viva) la solicitud de datos de una oportunidad ABIERTA de moto/coche. */
+/**
+ * Crea (o devuelve la viva) la solicitud de datos de una oportunidad ABIERTA de moto/coche.
+ * `personaId` (29/09/2026): los datos de OTRA persona del riesgo (un familiar que es figura); sin él,
+ * los del cliente. Una viva por persona y oportunidad.
+ */
 export async function crearSolicitud(
   correduriaId: string,
   oportunidadId: string,
   actor: string,
-): Promise<{ ok: true; id: string; token: string | null; nueva: boolean; ramo: RamoSolicitud; caduca: string } | Fallo> {
+  personaId: string | null = null,
+): Promise<{ ok: true; id: string; token: string | null; nueva: boolean; ramo: RamoSolicitud; caduca: string; tercero: boolean } | Fallo> {
   if (!UUID.test(oportunidadId)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
   const db = prismaAsegura()
   const [o] = await db.$queryRaw<{ clienteId: string; ramo: string; estado: string }[]>(Prisma.sql`
@@ -85,43 +102,71 @@ export async function crearSolicitud(
   const ramo = ramoSolicitud(o.ramo)
   if (!ramo) return { ok: false, estado: 'invalido', motivo: 'Por ahora el enlace de datos es solo para moto y coche.', status: 422 }
 
-  const origen = await clienteOrigenDe(correduriaId, o.clienteId)
-  if (!origen) return { ok: false, estado: 'no_encontrado', motivo: 'No se encuentra la ficha del cliente.', status: 404 }
-  const carnets = (await listarCarnets(correduriaId, o.clienteId, origen.cliente.fechaNacimiento)) ?? []
+  if (personaId !== null && !UUID.test(personaId)) return { ok: false, estado: 'invalido', motivo: 'id de persona no válido', status: 422 }
+  const persona = personaId ?? o.clienteId
+  const tercero = persona !== o.clienteId
+  if (tercero) {
+    // Solo de quien FIGURA en este riesgo: el enlace no sirve para pedir datos de cualquiera.
+    const [fig] = await db.$queryRaw<{ n: number }[]>(Prisma.sql`
+      select count(*)::int as n from oportunidad_figura
+      where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid`)
+    if (!fig || fig.n === 0) return { ok: false, estado: 'invalido', motivo: 'Esa persona no figura en este riesgo.', status: 422 }
+  }
+  const campos = await camposParaPersona(correduriaId, persona, ramo)
+  if (!campos) return { ok: false, estado: 'no_encontrado', motivo: 'No se encuentra la ficha de esa persona.', status: 404 }
+  const r = await prismaAsegura().$transaction((tx) =>
+    insertarSolicitud(tx, { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero, estadoOportunidad: o.estado }))
+  // El token solo existe en claro al crearla: una viva no lo puede devolver (solo guardamos su hash).
+  return { ok: true, id: r.id, token: r.token, nueva: r.nueva, ramo, caduca: r.caduca.toISOString(), tercero }
+}
+
+/** Qué se le pide a esa persona según lo que ya hay en su ficha. `null` = no se encuentra la ficha. */
+export async function camposParaPersona(correduriaId: string, personaId: string, ramo: RamoSolicitud): Promise<CampoSolicitud[] | null> {
+  const origen = await clienteOrigenDe(correduriaId, personaId)
+  if (!origen) return null
+  const carnets = (await listarCarnets(correduriaId, personaId, origen.cliente.fechaNacimiento)) ?? []
   const conFecha = carnets.filter((c) => c.fechaExpedicion !== null)
-  const campos = camposSolicitud(ramo, {
+  return camposSolicitud(ramo, {
     dni: origen.cliente.dni !== null,
     fechaNacimiento: origen.cliente.fechaNacimiento !== null,
     codigoPostal: origen.cliente.codigoPostal !== null,
     carnetMoto: conFecha.some((c) => CARNETS_MOTO.has(c.tipo.toUpperCase())),
     carnetCoche: conFecha.some((c) => c.tipo.toUpperCase() === 'B') || origen.cliente.fechaCarnet !== null,
   })
+}
 
+/**
+ * La escritura de la solicitud, DENTRO de la transacción que le pasen (la propia de `crearSolicitud`, o la
+ * del alta de la oportunidad del lead web: así o quedan las dos o ninguna). Una viva por persona y
+ * oportunidad: si ya la hay, la devuelve sin token. `token` en claro solo si es nueva.
+ */
+export async function insertarSolicitud(
+  tx: Prisma.TransactionClient,
+  p: { correduriaId: string; oportunidadId: string; personaId: string; ramo: RamoSolicitud; campos: CampoSolicitud[]; actor: string; tercero: boolean; estadoOportunidad: string },
+): Promise<{ id: string; caduca: Date; nueva: boolean; token: string | null }> {
+  const { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero } = p
+  await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`solicitud:${oportunidadId}:${persona}`}))`)
+  const [viva] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
+    select id::text as id, caduca_at as caduca from solicitud_datos
+    where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid
+      and estado = 'pendiente' and caduca_at > now()`)
+  if (viva) return { id: viva.id, caduca: viva.caduca, nueva: false, token: null }
+  // Una pendiente ya caducada deja sitio (índice «una viva por oportunidad»).
+  await tx.$executeRaw(Prisma.sql`
+    update solicitud_datos set estado = 'anulada'
+    where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid
+      and estado = 'pendiente'`)
   const token = randomBytes(32).toString('base64url')
-  const r = await db.$transaction(async (tx) => {
-    await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`solicitud:${oportunidadId}`}))`)
-    const [viva] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
-      select id::text as id, caduca_at as caduca from solicitud_datos
-      where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
-        and estado = 'pendiente' and caduca_at > now()`)
-    if (viva) return { id: viva.id, caduca: viva.caduca, nueva: false }
-    // Una pendiente ya caducada deja sitio (índice «una viva por oportunidad»).
-    await tx.$executeRaw(Prisma.sql`
-      update solicitud_datos set estado = 'anulada'
-      where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'`)
-    const [n] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
-      insert into solicitud_datos (correduria_id, oportunidad_id, cliente_id, ramo, token_hash, campos, caduca_at, creada_por)
-      values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${o.clienteId}::uuid, ${ramo}, ${hashToken(token)},
-              ${JSON.stringify(campos)}::jsonb, now() + make_interval(days => ${DIAS_SOLICITUD}::int), ${actor})
-      returning id::text as id, caduca_at as caduca`)
-    await tx.$executeRaw(Prisma.sql`
-      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
-      values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'datos_pedidos', cast(${o.estado} as estado_comercial),
-              cast(${o.estado} as estado_comercial), ${JSON.stringify({ solicitudId: n.id, campos: campos.length })}::jsonb, ${actor})`)
-    return { id: n.id, caduca: n.caduca, nueva: true }
-  })
-  // El token solo existe en claro al crearla: una viva no lo puede devolver (solo guardamos su hash).
-  return { ok: true, id: r.id, token: r.nueva ? token : null, nueva: r.nueva, ramo, caduca: r.caduca.toISOString() }
+  const [n] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
+    insert into solicitud_datos (correduria_id, oportunidad_id, cliente_id, ramo, token_hash, campos, caduca_at, creada_por, tercero)
+    values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${persona}::uuid, ${ramo}, ${hashToken(token)},
+            ${JSON.stringify(campos)}::jsonb, now() + make_interval(days => ${DIAS_SOLICITUD}::int), ${actor}, ${tercero})
+    returning id::text as id, caduca_at as caduca`)
+  await tx.$executeRaw(Prisma.sql`
+    insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+    values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'datos_pedidos', cast(${p.estadoOportunidad} as estado_comercial),
+            cast(${p.estadoOportunidad} as estado_comercial), ${JSON.stringify({ solicitudId: n.id, campos: campos.length, tercero })}::jsonb, ${actor})`)
+  return { id: n.id, caduca: n.caduca, nueva: true, token }
 }
 
 function estadoEfectivo(estado: string, caduca: Date): SolicitudResumen['estado'] {
@@ -157,10 +202,17 @@ export async function solicitudesDeOportunidad(correduriaId: string, oportunidad
   try {
     const filas = await prismaAsegura().$queryRaw<{
       id: string; ramo: string; estado: string; caduca: Date; completada: Date | null; campos: CampoSolicitud[]; respuestas: string | null; lecturas: string | null
+      personaId: string; tercero: boolean
     }[]>(Prisma.sql`
-      select id::text as id, ramo, estado, caduca_at as caduca, completada_at as completada, campos, respuestas, lecturas
-      from solicitud_datos where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
-      order by created_at desc limit 10`)
+      select id::text as id, ramo, estado, caduca_at as caduca, completada_at as completada, campos, respuestas, lecturas,
+             cliente_id::text as "personaId", tercero
+      from (
+        select *, row_number() over (partition by cliente_id order by created_at desc) as n
+        from solicitud_datos where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
+      ) s
+      -- Las últimas de CADA persona: un familiar con varios enlaces no puede esconder la del cliente.
+      where s.n <= 5
+      order by created_at desc`)
     return filas.map((f) => {
       const d = descifrarRespuestas(f.respuestas)
       const lecturas = descifrarLecturas(f.lecturas)
@@ -175,6 +227,8 @@ export async function solicitudesDeOportunidad(correduriaId: string, oportunidad
         // `null` = no se ha podido leer qué subió (≠ «no subió nada»).
         documentos: lecturas === null ? null : lecturas.flatMap((l) => (l.tipo === 'ficha' ? [] : [{ id: l.documentoId, tipo: l.tipo }])),
         discrepancias: lecturas === null || d.ilegible ? null : d.respuestas ? contrastarConDocumentos(d.respuestas, lecturas) : [],
+        personaId: f.personaId,
+        tercero: f.tercero,
       }
     })
   } catch (e) {
@@ -195,17 +249,18 @@ export async function anularSolicitud(correduriaId: string, id: string): Promise
 // ─── Lado del portal (por token, sin identidad) ──────────────────────────────
 
 export type SolicitudPublica =
-  | { estado: 'ok'; ramo: RamoSolicitud; campos: CampoSolicitud[] }
+  /** `tercero`: los datos son de otra persona; la página pide el consentimiento y no rellena nada. */
+  | { estado: 'ok'; ramo: RamoSolicitud; campos: CampoSolicitud[]; tercero: boolean }
   | { estado: 'muerta' }
   | { estado: 'completada' }
 
-type FilaToken = { id: string; correduriaId: string; oportunidadId: string; clienteId: string; ramo: string; estado: string; caduca: Date; campos: CampoSolicitud[] }
+type FilaToken = { id: string; correduriaId: string; oportunidadId: string; clienteId: string; ramo: string; estado: string; caduca: Date; campos: CampoSolicitud[]; tercero: boolean }
 
 async function porToken(token: string): Promise<FilaToken | null> {
   if (!TOKEN.test(token)) return null
   const [f] = await prismaAsegura().$queryRaw<FilaToken[]>(Prisma.sql`
     select id::text as id, correduria_id::text as "correduriaId", oportunidad_id::text as "oportunidadId",
-           cliente_id::text as "clienteId", ramo, estado, caduca_at as caduca, campos
+           cliente_id::text as "clienteId", ramo, estado, caduca_at as caduca, campos, tercero
     from solicitud_datos where token_hash = ${hashToken(token)}`)
   return f ?? null
 }
@@ -233,12 +288,15 @@ export async function solicitudPorToken(token: string): Promise<SolicitudPublica
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { estado: 'muerta' }
   const ramo = ramoSolicitud(f.ramo)
   if (!ramo) return { estado: 'muerta' }
+  // Datos de un TERCERO: no se rellena nada. El enlace puede ir al cliente, y el DNI de su padre no
+  // es suyo para verlo (a diferencia del propio, que Alberto decidió traer relleno).
+  if (f.tercero) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: true }
   const id = await identidadFicha(f)
   const campos = conIdentidad(f.campos).map((c) => {
     const actual = c.clave === 'dni' ? id.dni : c.clave === 'fechaNacimiento' ? id.fechaNacimiento : null
     return actual ? { ...c, actual } : c
   })
-  return { estado: 'ok', ramo, campos }
+  return { estado: 'ok', ramo, campos, tercero: false }
 }
 
 export type ResultadoDocSolicitud =
@@ -256,11 +314,21 @@ export type ResultadoDocSolicitud =
 export async function subirDocumentoSolicitud(
   token: string,
   fichero: { nombre: string; mime: string; contenido: Buffer },
+  consentimiento = false,
 ): Promise<ResultadoDocSolicitud> {
   const f = await porToken(token)
   if (!f) return { ok: false, estado: 'muerta' }
   if (f.estado === 'completada') return { ok: false, estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
+  // Documento de un TERCERO (su DNI, su carné): ni se archiva ni lo lee la IA sin su permiso. Se
+  // comprueba ANTES de guardar nada, no solo al enviar el formulario.
+  if (f.tercero && !consentimiento) {
+    return { ok: false, estado: 'invalido', motivo: 'Marca primero la casilla de que eres esa persona o tienes su permiso.' }
+  }
+  if (f.tercero) {
+    await prismaAsegura().$executeRaw(Prisma.sql`
+      update solicitud_datos set consentimiento_at = coalesce(consentimiento_at, now()) where id = ${f.id}::uuid`)
+  }
   const ramo = ramoSolicitud(f.ramo)
   if (!ramo) return { ok: false, estado: 'muerta' }
   // Tipo de fichero ANTES de gastar IA o plaza.
@@ -275,7 +343,9 @@ export async function subirDocumentoSolicitud(
   if (reservada.length === 0) return { ok: false, estado: 'tope', motivo: `Como máximo ${MAX_DOCS_SOLICITUD} documentos por enlace.` }
 
   // Primero se lee (para saber qué es y archivarlo con su tipo); si la IA falla, se archiva como «otro».
-  const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre)
+  const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre, {
+    contrasenas: () => contrasenasDeLaFicha(f.correduriaId, f.clienteId),
+  })
   const leido = lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, conIdentidad(f.campos)) : { tipo: 'otro' as const, valores: {} }
   const g = await guardarDocumento(f.correduriaId, {
     clienteId: f.clienteId,
@@ -287,7 +357,6 @@ export async function subirDocumentoSolicitud(
     subidoPor: 'cliente',
   })
   if (!g.ok) return { ok: false, estado: g.status === 415 ? 'invalido' : 'error', motivo: g.motivo }
-
   await prismaAsegura().$transaction(async (tx) => {
     const [fila] = await tx.$queryRaw<{ lecturas: string | null }[]>(Prisma.sql`
       select lecturas from solicitud_datos where id = ${f.id}::uuid for update`)
@@ -298,6 +367,19 @@ export async function subirDocumentoSolicitud(
     await tx.$executeRaw(Prisma.sql`
       update solicitud_datos set lecturas = ${encryptField(JSON.stringify(nuevas))} where id = ${f.id}::uuid`)
   })
+  // Todo documento de seguro abre o completa su oportunidad (29/09/2026), tras contestar al cliente.
+  // Si es su póliza actual, completa la del presupuesto (misma ficha y ramo: se deduplica). Un DNI,
+  // un carné o los papeles del coche ya están clasificados y no traen datos de seguro: no se relee.
+  if (leido.tipo === 'poliza' || leido.tipo === 'otro') {
+    const { correduriaId, clienteId } = f
+    const fich = { contenido: fichero.contenido, mime: fichero.mime, nombre: fichero.nombre }
+    try {
+      after(() => oportunidadDesdeFichero({ correduriaId, clienteSube: clienteId, origen: 'solicitud', actor: 'el cliente, desde el enlace de datos', fichero: fich }).then(() => undefined))
+    } catch (e) {
+      // Fuera de una petición `after()` lanza: la oportunidad no puede tumbar la subida.
+      console.error('[solicitud-datos] no se pudo programar la oportunidad:', e instanceof Error ? e.message : e)
+    }
+  }
   if (!lectura.ok) console.warn('[solicitud-datos] documento sin leer:', lectura.motivo)
   const aviso = !lectura.ok
     ? 'Guardado. No lo hemos podido leer; rellena los datos a mano.'
@@ -311,6 +393,7 @@ export async function subirDocumentoSolicitud(
 export async function responderSolicitud(
   token: string,
   entrada: Record<string, unknown>,
+  consentimiento = false,
 ): Promise<{ ok: true } | { ok: false; estado: 'muerta' | 'completada' } | { ok: false; estado: 'errores'; errores: Record<string, string> }> {
   const f = await porToken(token)
   if (!f) return { ok: false, estado: 'muerta' }
@@ -318,6 +401,10 @@ export async function responderSolicitud(
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
   const v = validarRespuestas(conIdentidad(f.campos), entrada)
   if (!v.ok) return { ok: false, estado: 'errores', errores: v.errores }
+  // Datos de otra persona: sin su permiso (o ser ella) no se guardan (RGPD, art. 6 y 14).
+  if (f.tercero && consentimiento !== true) {
+    return { ok: false, estado: 'errores', errores: { consentimiento: 'Marca que eres esa persona o que tienes su permiso para dar sus datos.' } }
+  }
 
   const cifradas = encryptField(JSON.stringify(v.respuestas))
   // Lo que decía su ficha al contestar: si corrige DNI o nacimiento, Alberto lo ve como discrepancia.
@@ -327,8 +414,8 @@ export async function responderSolicitud(
   if (id.fechaNacimiento) ficha.fechaNacimiento = id.fechaNacimiento
   const ramoTexto = f.ramo === 'moto' ? 'moto' : 'coche'
   const hecho = await prismaAsegura().$transaction(async (tx) => {
-    const [o] = await tx.$queryRaw<{ estado: string }[]>(Prisma.sql`
-      select estado::text as estado from oportunidades where id = ${f.oportunidadId}::uuid for update`)
+    const [o] = await tx.$queryRaw<{ estado: string; clienteId: string }[]>(Prisma.sql`
+      select estado::text as estado, cliente_id::text as "clienteId" from oportunidades where id = ${f.oportunidadId}::uuid for update`)
     // Oportunidad ya ganada o perdida (o descartada): el enlace muere aquí. Si no, llegaría
     // una tarea «Tarificar» y un aviso sobre algo que Alberto ya cerró.
     if (o && (o.estado === 'ganada' || o.estado === 'perdida')) {
@@ -337,7 +424,8 @@ export async function responderSolicitud(
       return false
     }
     const n = await tx.$executeRaw(Prisma.sql`
-      update solicitud_datos set estado = 'completada', respuestas = ${cifradas}, completada_at = now()
+      update solicitud_datos set estado = 'completada', respuestas = ${cifradas}, completada_at = now(),
+        consentimiento_at = case when tercero then now() else null end
       where id = ${f.id}::uuid and estado = 'pendiente' and caduca_at > now()`)
     if (n === 0) return false
     if (Object.keys(ficha).length > 0) {
@@ -359,12 +447,14 @@ export async function responderSolicitud(
       await tx.$executeRaw(Prisma.sql`
         insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
         values (${f.correduriaId}::uuid, ${f.oportunidadId}::uuid, 'datos_recibidos', cast(${o.estado} as estado_comercial),
-                cast(${nuevo} as estado_comercial), ${JSON.stringify({ solicitudId: f.id })}::jsonb, 'el cliente, por el enlace')`)
+                cast(${nuevo} as estado_comercial), ${JSON.stringify({ solicitudId: f.id, tercero: f.tercero })}::jsonb,
+                ${f.tercero ? 'un tercero, por el enlace (con consentimiento)' : 'el cliente, por el enlace'})`)
       await tx.$executeRaw(Prisma.sql`
         insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
-        values (${f.correduriaId}::uuid, 'tarea', 'alta', 'pendiente', ${`Tarificar ${ramoTexto}: el cliente ha completado sus datos`},
+        values (${f.correduriaId}::uuid, 'tarea', 'alta', 'pendiente',
+                ${f.tercero ? `Tarificar ${ramoTexto}: ya están los datos de la otra persona del riesgo` : `Tarificar ${ramoTexto}: el cliente ha completado sus datos`},
                 ((now() at time zone 'Europe/Madrid')::date + time '23:59:59') at time zone 'Europe/Madrid',
-                ${f.clienteId}::uuid, ${f.oportunidadId}::uuid, 'central:seguimiento')`)
+                ${o.clienteId}::uuid, ${f.oportunidadId}::uuid, 'central:seguimiento')`)
     }
     // Sin los datos: el historial no se puede borrar (supresión RGPD). La recoge el aviso de actividad.
     await tx.$executeRaw(Prisma.sql`

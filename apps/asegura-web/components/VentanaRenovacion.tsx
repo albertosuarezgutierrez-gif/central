@@ -20,6 +20,7 @@ import { calcularVentana, POS, type Ventana } from '@/lib/ventana-renovacion'
 import { PORTAL_URL } from '@/lib/sitio'
 import { medir } from '@/lib/medir'
 import EnlaceMedido from '@/components/EnlaceMedido'
+import SiguientePaso from '@/components/SiguientePaso'
 import { llamarAviso, RAMO_OTRO } from '@/lib/aviso'
 
 /**
@@ -72,6 +73,9 @@ export default function VentanaRenovacion({ ramo: ramoFijo, opciones }: Props) {
   // «Otro seguro» (patinete, mascota, viaje…): no tiene página propia, así que se escribe cuál.
   const [cual, setCual] = useState('')
   const ramo = ramoFijo ?? ramoElegido
+  // Nombre legible para el «siguiente paso» (el slug suelto sale como «de responsabilidad-civil»).
+  // En página de ramo no llegan nombres: se omite antes que inventarlo.
+  const ramoNombre = ramo === RAMO_OTRO ? cual : (opciones?.find((o) => o.slug === ramo)?.nombre ?? '')
   const origen = `ramo_ventana_${ramoFijo ?? 'portada'}`
   const [vence, setVence] = useState('')
   const [hoy, setHoy] = useState<Date | null>(null)
@@ -184,13 +188,33 @@ export default function VentanaRenovacion({ ramo: ramoFijo, opciones }: Props) {
           <Mensaje v={v} />
 
           {AVISO_CORREO_ACTIVO ? (
-            <AvisoPorCorreo ramo={ramo} cual={ramo === RAMO_OTRO ? cual : ''} vence={vence} origen={origen} />
+            <>
+              <AvisoPorCorreo ramo={ramo} cual={ramo === RAMO_OTRO ? cual : ''} vence={vence} origen={origen} />
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                <p style={{ margin: '0 0 10px', fontSize: 14, color: 'var(--muted)' }}>
+                  O si prefieres contactar directamente:
+                </p>
+                <SiguientePaso
+                  contexto={{
+                    tipo: 'ventana',
+                    ramo: ramoNombre,
+                    dias: v.diasHastaLimite,
+                    fase: v.fase,
+                  }}
+                  anclaFormulario="#presupuesto"
+                />
+              </div>
+            </>
           ) : (
-            <div className="hero-cta" style={{ marginTop: 16 }}>
-              <EnlaceMedido href={PORTAL_URL} origen={origen} className="btn btn-brand" style={{ minHeight: 44 }}>
-                Guardar esta fecha en mi área
-              </EnlaceMedido>
-            </div>
+            <SiguientePaso
+              contexto={{
+                tipo: 'ventana',
+                ramo: ramoNombre,
+                dias: v.diasHastaLimite,
+                fase: v.fase,
+              }}
+              anclaFormulario="#presupuesto"
+            />
           )}
         </div>
       )}

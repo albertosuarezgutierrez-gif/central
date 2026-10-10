@@ -7,19 +7,31 @@
 // solo hay que confirmar al tomador y teclear el capital, que el corredor
 // escribe siempre (nunca se supone, ver `desde-cartera-vida.ts` en asegura).
 //
+// Datos del ASEGURADO que sí viajan (`insured.economicOccupation.code` y
+// `insured.smoker`): los pide también lo que el vendor exija en `person-roles`
+// (llega en `faltanInicial` con campo `profesion` / `fumador`). La «duración» se
+// quitó (03/10/2026): `TermLifeRisk_V1` no tiene campo y no afecta al precio.
+// Peso y altura NO se piden: su formato no está documentado; si el vendor los
+// exige, llegan como «dato que falta: weight» y no se puede pedir precio.
+//
 // 🚧 Ver el aviso de `page.tsx`: el `risk` que se manda al vendor NO está
 // verificado. El primer intento real puede fallar con un mensaje que pida un
 // campo distinto — la pantalla lo enseña entero, tal cual lo devuelve Codeoscopic.
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { FlaskConical } from 'lucide-react'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
+import { ConIcono } from '../../../iconos'
+import EnlaceOportunidad from '../../../EnlaceOportunidad'
+import FiltroGarantias from '../../../FiltroGarantias'
+import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import { eur } from '@/lib/dinero'
+import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/vida-nuevo-asegura'
 import { pedirPrecalificacionVida, pedirCotizacionVida } from './acciones'
-
-function euroODash(n: number | null | undefined): string {
-  return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
-}
+import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
+import { FallosTarificacion } from '../../../FallosTarificacion'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -29,10 +41,12 @@ const input: React.CSSProperties = {
 /** Los campos que el corredor puede teclear cuando la ficha no los trae. */
 const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefined> = {
   dni: { etiqueta: 'DNI', tipo: 'text' },
+  email: { etiqueta: 'Correo electrónico', tipo: 'email' },
   nombre: { etiqueta: 'Nombre', tipo: 'text' },
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
 }
 
 type Resultado =
@@ -48,9 +62,10 @@ type Resultado =
       precios: Precio[]
       fallos: Fallo[]
       supuestos: Supuesto[]
+      guardado: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 export default function VidaNuevo({
   clienteId,
@@ -61,6 +76,8 @@ export default function VidaNuevo({
   estadoCivilMotivo,
   consumo,
   simulacion,
+  variante = null,
+  inicial = null,
 }: {
   clienteId: string
   etiquetaCliente: string
@@ -70,15 +87,31 @@ export default function VidaNuevo({
   estadoCivilMotivo: string | null
   consumo: ConsumoPuerto
   simulacion: boolean
+  /** Si se abre desde un riesgo (`?oportunidad=`): la tarificación cuelga de esa oportunidad (regla 9). */
+  variante?: VarianteNueva | null
+  /** Lo que el riesgo ya sabe (`info_riesgo.datosCapital`): precarga; `null` = no se sabe, nunca 0. */
+  inicial?: { capital: number | null; profesion: string | null; fumador: boolean | null } | null
 }) {
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
-  const [capital, setCapital] = useState('')
-  const [duracionAnios, setDuracionAnios] = useState('')
+  const [capital, setCapital] = useState(inicial?.capital != null ? String(inicial.capital) : '')
+  // Datos del asegurado que viajan al vendor. Vacío = «no se sabe» (no se manda), nunca un «no» por defecto.
+  // Precargados de `info_riesgo.datosCapital` si el riesgo los trae (se editan en la oportunidad); `null` = sin dato.
+  const [profesion, setProfesion] = useState(inicial?.profesion ?? '')
+  const [fumador, setFumador] = useState<'' | 'si' | 'no'>(inicial?.fumador === true ? 'si' : inicial?.fumador === false ? 'no' : '')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
+  // Vacía = el defecto del servidor (DIAS_EFECTO_DEFECTO), para que el precio siga valiendo al emitir.
+  const [fechaEfecto, setFechaEfecto] = useState('')
+  const limitesEfecto = limitesFechaEfecto()
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
   const faltaCivil = !estadoCivilId
   const faltaCapital = !capital.trim() || !(Number(capital) > 0)
+  // Lo que el vendor exige del asegurado (person-roles) llega como hueco con el nombre de NUESTRO campo.
+  const exigeProfesion = (faltanInicial ?? []).some((f) => f.campo === 'profesion')
+  const exigeFumador = (faltanInicial ?? []).some((f) => f.campo === 'fumador')
+  const profesionMal = profesion.trim() !== '' && !/^\d{4}$/.test(profesion.trim())
+  const faltaProfesion = (exigeProfesion && profesion.trim() === '') || profesionMal
+  const faltaFumador = exigeFumador && fumador === ''
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
@@ -88,19 +121,36 @@ export default function VidaNuevo({
 
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
-  const faltaAlgo = faltaCivil || faltaCapital || aManoSinRellenar.length > 0
+  // Un hueco que esta pantalla no sabe resolver (p. ej. «dato que falta: weight», o person-roles ilegible) también bloquea: no se paga un 400 evitable.
+  const faltaAlgo = faltaCivil || faltaCapital || faltaProfesion || faltaFumador || aManoSinRellenar.length > 0 || huerfanos.length > 0
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
-  async function cotizar() {
+  // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
+  // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
+  const cotizandoEnVuelo = useRef(false)
+  async function cotizar(forzar = false) {
+    if (cotizandoEnVuelo.current) return
+    cotizandoEnVuelo.current = true
+    try {
+      await cotizarSinGuarda(forzar)
+    } finally {
+      cotizandoEnVuelo.current = false
+    }
+  }
+
+  async function cotizarSinGuarda(forzar: boolean) {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionVida({
+      forzar,
       clienteId,
       resueltos: {
         estadoCivilId,
         capital: Number(capital),
-        ...(duracionAnios.trim() ? { duracionAnios: Number(duracionAnios) } : {}),
+        ...(profesion.trim() ? { profesion: profesion.trim() } : {}),
+        ...(fumador !== '' ? { fumador: fumador === 'si' } : {}),
       },
-      correcciones,
+      correcciones: fechaEfecto !== '' ? { ...correcciones, fechaEfecto } : correcciones,
+      variante: variante ? { oportunidadId: variante.oportunidadId, nota: null } : null,
     })
     switch (r.estado) {
       case 'faltan':
@@ -108,6 +158,9 @@ export default function VidaNuevo({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
       case 'ramo':
@@ -129,6 +182,7 @@ export default function VidaNuevo({
           precios: r.precios,
           fallos: r.fallos,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
       default: {
@@ -154,8 +208,8 @@ export default function VidaNuevo({
           <Campo etiqueta="Capital asegurado (€)" falta={faltaCapital}>
             <input type="number" min={0} step={1000} value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="30000" style={input} />
           </Campo>
-          <Campo etiqueta="Duración (años)" falta={false} ayuda="Nota para el corredor: NO viaja al vendor (la API de vida no documenta ese campo).">
-            <input type="number" min={1} value={duracionAnios} onChange={(e) => setDuracionAnios(e.target.value)} placeholder="10" style={input} />
+          <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
+            <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
           </Campo>
         </div>
       </div>
@@ -172,6 +226,30 @@ export default function VidaNuevo({
               {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
           </Campo>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 8px' }}>
+            Datos del asegurado que viajan al vendor. Déjalos en blanco si no se saben: no se mandan ni se suponen
+            (solo son obligatorios si el vendor los exige).
+          </p>
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+            <Campo
+              etiqueta="Profesión (código CNO-11)"
+              falta={faltaProfesion}
+              faltaTexto={profesionMal ? '4 cifras' : exigeProfesion ? 'la exige el vendor' : undefined}
+              ayuda="Código CNO-11 de 4 cifras (nivel 4 del catálogo), p. ej. 2612. El servidor lo valida contra el catálogo del vendor (gratis) antes de gastar."
+            >
+              <input inputMode="numeric" value={profesion} onChange={(e) => setProfesion(e.target.value)} placeholder="2612" style={input} />
+            </Campo>
+            <Campo etiqueta="¿Fuma?" falta={faltaFumador} faltaTexto={faltaFumador ? 'lo exige el vendor' : undefined}>
+              <select value={fumador} onChange={(e) => setFumador(e.target.value as '' | 'si' | 'no')} style={input}>
+                <option value="">No consta</option>
+                <option value="no">No fuma</option>
+                <option value="si">Fuma</option>
+              </select>
+            </Campo>
+          </div>
         </div>
 
         {aMano.length > 0 && (
@@ -211,7 +289,7 @@ export default function VidaNuevo({
               {huerfanos.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-              Hay que corregirlo en la ficha del cliente. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              Hay que corregirlo en la ficha del cliente: mientras tanto no se puede pedir precio (no se gasta nada).
             </p>
           </div>
         )}
@@ -221,8 +299,8 @@ export default function VidaNuevo({
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
           <p style={{ fontSize: 13 }}>
-            🧪 <strong>No se llama a ninguna compañía.</strong> El precio lo inventa central para poder ver la
-            pantalla funcionando. No cuesta nada y no cuenta contra el tope.
+            <ConIcono i={FlaskConical}><strong>No se llama a ninguna compañía.</strong> El precio lo inventa central para poder ver la
+            pantalla funcionando. No cuesta nada y no cuenta contra el tope.</ConIcono>
           </p>
         ) : (
           <p style={{ fontSize: 13 }}>
@@ -251,11 +329,14 @@ export default function VidaNuevo({
         )}
         {resultado.estado === 'error' && (
           <p style={{ color: 'var(--negative)', fontSize: 13, marginTop: 12, whiteSpace: 'pre-wrap' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}{resultado.mensaje}
+            {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} />}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
+        )}
+        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} clienteId={clienteId} />}
       </div>
     </div>
   )
@@ -293,12 +374,20 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
   )
 }
 
-function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }) {
+function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }) {
+  const propsLista = {
+    precios: r.precios,
+    simulado: r.simulado,
+    puedeEmitir: false,
+    motivoNoEmitir: 'Sin emisión directa en vida',
+    emision: undefined,
+  }
   return (
     <div style={{ marginTop: 12 }}>
+      <EnlaceOportunidad guardado={r.guardado} />
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
-          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>
+          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>
           <p style={{ margin: '4px 0 0', fontSize: 13 }}>
             {r.avisoSimulacion ?? 'Precio inventado por central para probar la pantalla: ninguna compañía lo ha dado y no se ha gastado ni un céntimo.'}
           </p>
@@ -306,7 +395,7 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
       )}
       {simulacion && !r.simulado && (
         <p style={{ color: 'var(--negative)', fontSize: 13, marginBottom: 12 }}>
-          ⚠️ Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
+          Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
           como una cotización REAL y comprueba el consumo antes de volver a pulsar.
         </p>
       )}
@@ -315,49 +404,16 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
         Coste de esta consulta: {r.coste}
         {r.restantesHoy !== null ? <> · quedan hoy {r.restantesHoy}.</> : <> · el libro de consumo no se ha mirado (no hacía falta).</>}
       </p>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
-          <thead>
-            <tr>
-              <th style={th}>Compañía</th><th style={th}>Producto</th><th style={th}>Cobertura</th>
-              <th style={th}>Prima anual</th><th style={th}>Franquicia</th><th style={th}>Firmeza</th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.precios.map((p, i) => (
-              <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}>{p.compania ?? '—'}</td>
-                <td style={td}>{p.producto ?? '—'}</td>
-                <td style={td}>{p.categoria ?? <span style={{ color: 'var(--muted)' }}>sin declarar</span>}</td>
-                <td style={td}>
-                  <strong>{euroODash(p.primaEur)}</strong>
-                  {r.simulado && <> <Badge tono="aviso">simulado</Badge></>}
-                </td>
-                <td style={td}>{p.franquiciaEur === null || p.franquiciaEur === undefined ? <span style={{ color: 'var(--muted)' }}>no la declara</span> : euroODash(p.franquiciaEur)}</td>
-                <td style={td}><Badge tono={p.firmeza === 'firme' ? 'positivo' : 'aviso'} title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Sin emisión directa en este ramo: la lista principal es «Qué verá el cliente»; esta queda
+          plegada por si la cotización guardada no se puede leer. */}
+      {r.simulado ? <ListaPrecios {...propsLista} /> : <ListaPreciosPlegada {...propsLista} titulo={`Ver los ${r.precios.length} precios en lista`} />}
+      {/* Filtro por garantías + ocultar + preparar el presupuesto. Esta respuesta no trae el id de la
+          cotización guardada, así que se usa la última REAL guardada, y solo si es de ahora mismo. */}
+      {!r.simulado && <FiltroGarantias ramo="vida" origen={{ clienteId, ramo: 'vida' }} tarificacionId={null} simulado={false} />}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
       )}
-      {r.fallos.length > 0 && (
-        <details style={{ marginTop: 8 }}>
-          <summary style={{ color: 'var(--muted)', cursor: 'pointer', minHeight: 44, fontSize: 12 }}>
-            {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
-          </summary>
-          <ul style={{ margin: '6px 0 0', fontSize: 13 }}>
-            {r.fallos.map((f, i) => (
-              <li key={`${f.compania}-${i}`}>
-                <strong>{f.compania ?? '—'}</strong>{f.producto ? ` · ${f.producto}` : ''}: {f.motivo ?? 'sin motivo declarado'}
-                {f.tambienDioPrecio && <> <Badge tono="positivo">esta compañía sí dio otro precio</Badge></>}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+      <FallosTarificacion fallos={r.fallos} />
       {r.supuestos.length > 0 && (
         <div style={{ marginTop: 12, borderLeft: '3px solid var(--warning)', paddingLeft: 10 }}>
           <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 4px' }}>Este precio sale con estos supuestos. Si alguno no es cierto, la prima real cambia:</p>
@@ -375,8 +431,5 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
   )
 }
 
-const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', borderBottom: '1px solid var(--border)' }
-const td: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--border)' }
-
 /** Reparos que ESTA pantalla resuelve con un desplegable o una caja. */
-const RESUELTOS_EN_PANTALLA = new Set<string>(['capital', 'duracionAnios', 'fechaEfecto', 'estadoCivil', 'sexo'])
+const RESUELTOS_EN_PANTALLA = new Set<string>(['capital', 'profesion', 'fumador', 'fechaEfecto', 'estadoCivil', 'sexo'])

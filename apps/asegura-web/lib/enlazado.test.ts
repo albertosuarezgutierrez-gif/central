@@ -18,7 +18,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { MARCA_ASEGURA } from '../../../packages/brand/src/marcas/asegura.ts'
 import { ARTICULOS, entradasSitemapBlog } from './articulos.ts'
 import { RAMOS } from './ramos.ts'
-import { INDEXNOW_CLAVE, NAV, NAV_CABECERA, url } from './sitio.ts'
+import { CALCULADORA_HIPOTECA, HERRAMIENTAS, INDEXNOW_CLAVE, NAV, NAV_CABECERA, RAMOS_CON_CALCULADORA_HIPOTECA, url } from './sitio.ts'
 
 test('ningún ramo se queda sin enlace en el pie (nada huérfano)', () => {
   // `Set<string>` explícito: `NAV` es `as const`, así que su `href` es una unión
@@ -37,18 +37,38 @@ test('la NAV no enlaza ramos que no existen (nada roto)', () => {
   }
 })
 
-// 🚨 Medido, no estético: con seis entradas la cabecera desbordaba y lo que se
-// salía de la pantalla era el botón «Área de clientes». Ver el comentario de
-// `NAV_CABECERA` en `sitio.ts`.
-test('la cabecera no crece más allá de lo medido', () => {
-  assert.ok(NAV_CABECERA.length <= 5, `la cabecera lleva ${NAV_CABECERA.length} entradas; se midió el desborde a partir de 6`)
-  for (const n of NAV_CABECERA) assert.ok(n.href.startsWith('/seguros/'))
+// 🚨 Rediseño 30/09/2026: la cabecera es ahora un desplegable con TODAS las
+// entradas de seguros, más herramientas. El cepo es que las HERRAMIENTAS
+// siempre están presentes y tienen el formato correcto. El desborde se midió
+// con Playwright en 6 anchos: 320, 360, 768, 1024, 1280, 1440 px.
+test('las herramientas de la cabecera están todas presentes y con forma correcta', () => {
+  assert.ok(HERRAMIENTAS.length === 3, `HERRAMIENTAS debe tener exactamente 3 entradas; tiene ${HERRAMIENTAS.length}`)
+  const herramientasRequeridas = new Set(['calculadora', 'vencimiento', 'subir'])
+  for (const h of HERRAMIENTAS) {
+    assert.ok(herramientasRequeridas.has(h.key), `herramienta desconocida: ${h.key}`)
+    assert.ok(h.href, `la herramienta ${h.key} no tiene href`)
+    assert.ok(h.texto, `la herramienta ${h.key} no tiene texto`)
+  }
 })
 
 test('cada página de ramo enlaza a sus hermanas y a cambiar-de-correduria', () => {
   const fuente = readFileSync(new URL('../app/seguros/[ramo]/page.tsx', import.meta.url), 'utf8')
   assert.match(fuente, /RAMOS\.filter\(\(r\) => r\.slug !== ramo\.slug\)/, 'la página de ramo ya no enlaza a las hermanas')
   assert.match(fuente, /href="\/cambiar-de-correduria"/, 'la página de ramo ya no enlaza a cambiar-de-correduria')
+})
+
+// 29/09/2026: la calculadora del seguro del banco solo tenía el enlace del pie y
+// Alberto no la encontraba. Sale en la portada y en los ramos que el banco pide
+// con la hipoteca; si alguien quita cualquiera de los dos, esto se pone rojo.
+test('la calculadora del seguro del banco se enlaza desde la portada y desde hogar y vida', () => {
+  assert.ok(existsSync(new URL(`../app${CALCULADORA_HIPOTECA}/page.tsx`, import.meta.url)), 'la ruta de la calculadora no existe')
+  const slugs = new Set(RAMOS.map((r) => r.slug))
+  for (const s of RAMOS_CON_CALCULADORA_HIPOTECA) assert.ok(slugs.has(s), `ramo inexistente en RAMOS_CON_CALCULADORA_HIPOTECA: ${s}`)
+  assert.ok(RAMOS_CON_CALCULADORA_HIPOTECA.includes('hogar') && RAMOS_CON_CALCULADORA_HIPOTECA.includes('vida-y-salud'))
+  const portada = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8')
+  assert.match(portada, /href=\{CALCULADORA_HIPOTECA\}/, 'la portada ya no enlaza la calculadora')
+  const ramo = readFileSync(new URL('../app/seguros/[ramo]/page.tsx', import.meta.url), 'utf8')
+  assert.match(ramo, /RAMOS_CON_CALCULADORA_HIPOTECA\.includes\(ramo\.slug\)[\s\S]{0,900}href=\{CALCULADORA_HIPOTECA\}/, 'la página de ramo ya no enlaza la calculadora')
 })
 
 // El sitemap declaraba `lastModified: new Date()` en las once URL: cada

@@ -7,7 +7,7 @@
 //   1. Config          → si está apagada o incompleta, no hay llamada.
 //   2. Ámbito          → sin correduría no hay libro contra el que contar.
 //   3. Libro           → si no se puede leer, NO se cotiza (fail closed).
-//   4. Tope            → decisión pura, ya probada.
+//   4. Tope            → decisión pura, ya probada (consultas/día y EUROS/mes).
 //   5. Reserva         → se escribe ANTES de llamar.
 //   6. Llamada         → un solo intento.
 //   7. Cierre          → facturable, o descartado CON evidencia.
@@ -24,11 +24,16 @@ import {
   type Topes,
 } from './config.ts'
 import { puedeCotizar, eurCents, type Veredicto, type Consumo } from './contador.ts'
-import { consumoActual, reservar, cerrarFacturable, cerrarDescartado } from './consumo.ts'
+import { consumoActual, reservarSinDuplicado, cerrarFacturable, cerrarDescartado } from './consumo.ts'
+import { huellaCotizacion, MENSAJE_DUPLICADO } from './huella.ts'
 import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
 import { cotizacionSimulada } from './simulacion.ts'
 import { enlazarPresupuestoConOportunidad } from './oportunidad-presupuesto.ts'
+import { aniosDelCuerpo, aplicarTopesHistorial, topesDelMensaje, type TopesHistorial } from '@central/module-seguros'
+import { guardarTopesHistorial, leerTopesHistorial } from './topes-historial.ts'
+import { comprobarTopeEuros } from './tope-euros-bd.ts'
+import { traducirMotoNoApta400 } from './carnet-moto.ts'
 import {
   guardarSinTumbar,
   type ContextoCotizacion,
@@ -59,8 +64,23 @@ export type ResultadoCotizacion =
        * que sí. Un `guardado: true` optimista sería justo la mentira barata.
        */
       guardado: Guardado
+      /** `true` = idéntica a una cotización de los últimos 15 min: se devuelve su copia guardada, sin llamar ni cobrar. */
+      reutilizada?: true
+      /** Años del seguro anterior recortados a un tope aprendido («totalYearsInsured 10→8»). Vacío = ninguno. */
+      ajustesHistorial?: string[]
     }
-  | { ok: false; razon: 'apagado' | 'mal-configurado' | 'sin-libro' | 'tope' | 'vendor'; mensaje: string }
+  | {
+      ok: false
+      razon: 'apagado' | 'mal-configurado' | 'sin-libro' | 'tope' | 'vendor' | 'duplicado'
+      mensaje: string
+      /**
+       * `true` SOLO con PRUEBA de que no hubo cargo (`ErrorCodeoscopic.pruebaQueNoHuboCargo`: auth,
+       * conexión o 400 de validación; consumo `descartado`). Nunca timeout, 5xx ni red: ahí «no se sabe».
+       */
+      sinCargo?: true
+      /** Clase del error del vendor cuando `sinCargo` (la ruta decide 422 vs 502 con ella). */
+      claveVendor?: string
+    }
 
 export type PeticionCotizacion = {
   correduriaId: string
@@ -75,6 +95,13 @@ export type PeticionCotizacion = {
    * guarda y el resultado lo dice (`guardado.estado === 'no_intentada'`).
    */
   contexto?: ContextoCotizacion
+  /**
+   * Recotización EXPLÍCITA: salta la guarda anti-duplicado (15 min). Solo desde el operador y nunca por
+   * defecto; la pantalla lo manda tras avisar de que se cobrará otra vez.
+   */
+  forzar?: boolean
+  /** Interno: esta petición ya es el reintento tras aprender un tope. Uno solo, nunca en bucle. */
+  reintentoTopes?: boolean
 }
 
 /**
@@ -86,6 +113,8 @@ export type DepsCotizar = {
   guardar?: GuardarCotizacion
   /** Colgar el presupuesto de su oportunidad. Con `guardar` doblado y sin esto, no se enlaza (test). */
   enlazar?: typeof enlazarPresupuestoConOportunidad
+  /** Topes aprendidos del historial. Con `guardar` doblado y sin esto, no se tocan (test). */
+  topes?: { leer: () => Promise<TopesHistorial>; guardar: (t: TopesHistorial, mensaje: string) => Promise<void> }
 }
 
 /**
@@ -99,7 +128,7 @@ export type DepsCotizar = {
 async function anotar(
   deps: DepsCotizar,
   p: PeticionCotizacion,
-  extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean },
+  extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean; respuesta?: unknown },
 ): Promise<Guardado> {
   if (!p.contexto) {
     return {
@@ -272,14 +301,36 @@ export async function cotizar(
   const veredicto = puedeCotizar(consumo, config.topes)
   if (!veredicto.permitido) return { ok: false, razon: 'tope', mensaje: veredicto.explicacion }
 
-  // 5 — Reserva ANTES de llamar
+  // 4a — Tope en EUROS del mes (decisión de Alberto, 29/09/2026): aviso a 60 €, bloqueo a 70 € hasta
+  // que amplíe por Telegram. Fail-closed: sin poder leer el gasto del mes, no se llama.
+  const euros = await comprobarTopeEuros(p.correduriaId, COSTE_COTIZACION_CENTS, env)
+  if (!euros.ok) return { ok: false, razon: euros.razon, mensaje: euros.mensaje }
+
+  // 4b — Topes APRENDIDOS del historial del seguro anterior (29/09/2026): el máximo declarado se
+  // recorta a lo que el vendor ya rechazó una vez, para que ese 400 no vuelva a salir.
+  const topes = deps.topes ?? (deps.guardar ? null : { leer: leerTopesHistorial, guardar: guardarTopesHistorial })
+  const recorte = topes ? aplicarTopesHistorial(p.cuerpo, await topes.leer().catch(() => ({}))) : { cuerpo: p.cuerpo, cambios: [] }
+  if (recorte.cambios.length > 0) p = { ...p, cuerpo: recorte.cuerpo }
+
+  // 5 — Reserva ANTES de llamar, con la guarda anti-duplicado en la MISMA transacción (huella del
+  // cuerpo YA recortado: es lo que de verdad viajaría). Sin ella, doble clic = dos cargos de 0,50 €.
   const intentoId = randomUUID()
+  const huella = huellaCotizacion({
+    cuerpo: p.cuerpo,
+    ramo: p.contexto?.ramo,
+    correduriaId: p.correduriaId,
+    oportunidadId: p.contexto?.oportunidadId,
+    polizaId: p.contexto?.polizaId,
+  })
+  let reserva
   try {
-    await reservar({
+    reserva = await reservarSinDuplicado({
       correduriaId: p.correduriaId,
       intentoId,
       motivo: p.motivo,
       solicitadoPor: p.solicitadoPor,
+      huella,
+      forzar: p.forzar === true,
     })
   } catch (e) {
     return {
@@ -289,6 +340,26 @@ export async function cotizar(
         e instanceof Error ? e.message : String(e)
       }`,
     }
+  }
+  if (reserva.resultado === 'reutilizar') {
+    try {
+      return {
+        ok: true,
+        simulado: false,
+        cotizacion: leerCotizacion(reserva.respuesta),
+        coste: eurCents(0),
+        restantesHoy: veredicto.restantesHoy,
+        guardado: { estado: 'guardada', cotizacionId: reserva.cotizacionId },
+        reutilizada: true,
+        ...(recorte.cambios.length > 0 ? { ajustesHistorial: recorte.cambios } : {}),
+      }
+    } catch {
+      // Copia ilegible: se trata como bloqueo (409) y no como razón para pagar otra vez.
+      return { ok: false, razon: 'duplicado', mensaje: MENSAJE_DUPLICADO, sinCargo: true }
+    }
+  }
+  if (reserva.resultado === 'bloquear') {
+    return { ok: false, razon: 'duplicado', mensaje: MENSAJE_DUPLICADO, sinCargo: true }
   }
 
   // 6 — La llamada que cuesta dinero. Un solo intento.
@@ -307,7 +378,7 @@ export async function cotizar(
     // 8 — La copia de los precios. DESPUÉS del cierre, y nunca antes: si
     // guardar tumbara el paso 7, un cargo real de 0,50€ se quedaría sin apuntar
     // en el libro y el tope contaría de menos justo cuando más falta hace.
-    const guardado = await anotar(deps, p, { cotizacion, intentoId, simulado: false })
+    const guardado = await anotar(deps, p, { cotizacion, intentoId, simulado: false, respuesta: crudo })
 
     return {
       ok: true,
@@ -317,6 +388,7 @@ export async function cotizar(
       coste: eurCents(COSTE_COTIZACION_CENTS),
       restantesHoy: veredicto.restantesHoy - 1,
       guardado,
+      ...(recorte.cambios.length > 0 ? { ajustesHistorial: recorte.cambios } : {}),
     }
   } catch (e) {
     if (e instanceof ErrorCodeoscopic && e.pruebaQueNoHuboCargo) {
@@ -324,7 +396,27 @@ export async function cotizar(
         // Si ni el descarte se puede escribir, la reserva se queda abierta y
         // sigue contando. Conservador a propósito.
       })
-      return { ok: false, razon: 'vendor', mensaje: e.message }
+      // Un 400 por años del seguro anterior demasiado altos NO se cobra: se aprende el tope, se
+      // guarda para siempre y se repite UNA vez con el cuerpo recortado. Sin tope legible, o ya
+      // siendo el reintento, el error sale tal cual (y el siguiente clic ya va recortado).
+      if (e.clase === 'validacion' && topes && !p.reintentoTopes) {
+        const aprendidos = topesDelMensaje(e.detalle, aniosDelCuerpo(p.cuerpo))
+        if (Object.keys(aprendidos).length > 0) {
+          await topes.guardar(aprendidos, e.detalle).catch(() => {})
+          const r2 = aplicarTopesHistorial(p.cuerpo, aprendidos)
+          if (r2.cambios.length > 0) {
+            const res = await cotizar({ ...p, cuerpo: r2.cuerpo, reintentoTopes: true }, env, deps)
+            return res.ok ? { ...res, ajustesHistorial: [...recorte.cambios, ...r2.cambios, ...(res.ajustesHistorial ?? [])] } : res
+          }
+        }
+      }
+      return {
+        ok: false,
+        razon: 'vendor',
+        mensaje: (e.clase === 'validacion' ? traducirMotoNoApta400(e.detalle) : null) ?? e.message,
+        sinCargo: true,
+        claveVendor: e.clase,
+      }
     }
 
     // Timeout, 5xx o respuesta ilegible: la reserva se queda ABIERTA y sigue

@@ -19,7 +19,7 @@ export default function TabPendiente({ accion, resumen, vivas, clienteId }: {
   clienteId: string
 }) {
   return (
-    <Tarjeta titulo="🔔 Pendiente">
+    <Tarjeta titulo="Pendiente">
       <div style={{ display: 'grid', gap: 10 }}>
         <SiguienteAccionFicha accion={accion} />
         <PideAccion resumen={resumen} vivas={vivas} clienteId={clienteId} />
@@ -56,7 +56,7 @@ function PideAccion({ resumen, vivas, clienteId }: {
   if (recibos.devueltos !== null && recibos.devueltos > 0) {
     items.push(
       <>
-        🔴 <b>{recibos.devueltos} recibo(s) devuelto(s)</b>: hay dinero que reclamar.{' '}
+        <b>{recibos.devueltos} recibo(s) devuelto(s)</b>: hay dinero que reclamar.{' '}
         <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>ver en sus pólizas →</Link>
       </>,
     )
@@ -64,7 +64,7 @@ function PideAccion({ resumen, vivas, clienteId }: {
   if (siniestrosAbiertos !== null && siniestrosAbiertos > 0) {
     items.push(
       <>
-        🟠 <b>{siniestrosAbiertos} siniestro(s) abierto(s)</b> en tramitación.{' '}
+        <b>{siniestrosAbiertos} siniestro(s) abierto(s)</b> en tramitación.{' '}
         <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>ver siniestros →</Link>
       </>,
     )
@@ -74,7 +74,7 @@ function PideAccion({ resumen, vivas, clienteId }: {
     const p = vivas.find(x => x.id === proximo.polizaId)
     items.push(
       <>
-        🟠 <b>Quedan {proximo.diasHastaLimiteAviso} día(s)</b> para avisar y no renovar
+        <b>Quedan {proximo.diasHastaLimiteAviso} día(s)</b> para avisar y no renovar
         {p && <> {etiquetaPoliza(p)}</>} (hasta el {fmt(proximo.limiteAviso)}; vence el {fmt(proximo.vencimiento)}).{' '}
         {p && <Link href={`/correduria/poliza/${p.id}`}>ver póliza →</Link>}
       </>,
@@ -83,7 +83,7 @@ function PideAccion({ resumen, vivas, clienteId }: {
   if (documentosPendientes !== null && documentosPendientes > 0) {
     items.push(
       <>
-        📎 <b>{documentosPendientes} documento(s) pedido(s)</b> y aún sin recibir.{' '}
+        <b>{documentosPendientes} documento(s) pedido(s)</b> y aún sin recibir.{' '}
         <Link href={`/correduria/cliente/${clienteId}?tab=documentos`}>ver documentos →</Link>
       </>,
     )

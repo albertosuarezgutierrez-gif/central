@@ -173,6 +173,15 @@ export async function cotizarVidaNuevaAsegura(entrada: {
   solicitadoPor?: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
+  /**
+   * VARIANTE de un riesgo (30/09/2026): con `oportunidadId` la tarificación se cuelga de ESA oportunidad
+   * (regla 9) y asegura anota lo usado de vuelta en el riesgo. Sin él, el flujo es el de siempre. `nota` es la
+   * etiqueta libre (≤200).
+   */
+  oportunidadId?: string | null
+  nota?: string | null
+  /** Recotización EXPLÍCITA tras un 409 `duplicado` (0,50€ otra vez): salta la guarda anti-duplicado de asegura. */
+  forzar?: boolean
 }): Promise<RespuestaRetarificar> {
   try {
     const r = await pedir(
@@ -186,6 +195,10 @@ export async function cotizarVidaNuevaAsegura(entrada: {
           solicitadoPor: entrada.solicitadoPor ?? 'plataforma',
           ...(entrada.resueltos ? { resueltos: entrada.resueltos } : {}),
           ...(entrada.correcciones ? { correcciones: entrada.correcciones } : {}),
+          // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
+          ...(entrada.forzar === true ? { forzar: true } : {}),
+          ...(entrada.oportunidadId ? { oportunidadId: entrada.oportunidadId } : {}),
+          ...(entrada.oportunidadId && entrada.nota && entrada.nota.trim() !== '' ? { nota: entrada.nota.trim().slice(0, 200) } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,

@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic'
  * /api/correduria/solicitud-datos — el enlace para que el cliente complete sus datos
  * (24/09/2026). Reenvía al puerto de asegura; el `actor` lo pone el servidor.
  *   GET  ?oportunidadId=              → sus solicitudes (con respuestas)
- *   POST { oportunidadId }            → crea el enlace (url + mensaje solo al crearlo)
+ *   POST { oportunidadId, personaId? } → crea el enlace (url + mensaje solo al crearlo); con
+ *                                       `personaId`, de OTRA persona del riesgo (un familiar)
  *   POST { accion:'anular', id }      → el enlace deja de funcionar
  */
 export async function GET(req: NextRequest) {
@@ -26,7 +27,11 @@ export async function POST(req: NextRequest) {
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const cuerpo = b?.accion === 'anular'
     ? { accion: 'anular', id: typeof b.id === 'string' ? b.id : '' }
-    : { oportunidadId: typeof b?.oportunidadId === 'string' ? b.oportunidadId : '', actor: guarda.session.email }
+    : {
+        oportunidadId: typeof b?.oportunidadId === 'string' ? b.oportunidadId : '',
+        ...(typeof b?.personaId === 'string' && b.personaId.trim() !== '' ? { personaId: b.personaId.trim() } : {}),
+        actor: guarda.session.email,
+      }
   const r = await accionSolicitudDatosAsegura(cuerpo)
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

@@ -8,7 +8,50 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { frasePresupuesto, interpretarPreparado, type PresupuestoPreparado } from './presupuesto-asegura.ts'
+import {
+  cuerpoPreparar,
+  frasePresupuesto,
+  interpretarPreparado,
+  mensajeErrorPreparar,
+  normalizarOcultar,
+  type PresupuestoPreparado,
+} from './presupuesto-asegura.ts'
+
+// ─── Ocultar al cliente antes de preparar (28/09/2026) ───────────────────────
+
+const U1 = '0b0f5a3e-1c2d-4e5f-8a9b-0c1d2e3f4a5b'
+
+test('ocultar vacío o ausente NO viaja: nada oculto', () => {
+  assert.equal(normalizarOcultar(undefined), undefined)
+  assert.equal(normalizarOcultar({ companias: [], precios: [] }), undefined)
+  assert.deepEqual(cuerpoPreparar({ tarificacionId: 't1' }), { tarificacionId: 't1' })
+  assert.deepEqual(cuerpoPreparar({ tarificacionId: 't1', ocultar: { companias: [], precios: [] } }), { tarificacionId: 't1' })
+})
+
+test('ocultar se limpia (recorte, sin duplicados, uuid en minúsculas) y viaja en el cuerpo', () => {
+  const c = cuerpoPreparar({ tarificacionId: 't1', ocultar: { companias: [' Allianz ', 'Allianz'], precios: [U1.toUpperCase()] } })
+  assert.deepEqual(c, { tarificacionId: 't1', ocultar: { companias: ['Allianz'], precios: [U1] } })
+})
+
+test('ocultar MAL formado es null: no se adivina (el cliente vería lo que se quiso quitar)', () => {
+  assert.equal(normalizarOcultar('Allianz'), null)
+  assert.equal(normalizarOcultar({ companias: 'Allianz' }), null)
+  assert.equal(normalizarOcultar({ precios: ['no-es-uuid'] }), null)
+  assert.equal(normalizarOcultar({ companias: [''] }), null)
+  assert.equal(normalizarOcultar({ precios: [3] }), null)
+})
+
+test('todas_ocultas se explica como «lo has quitado todo», no como una avería', () => {
+  assert.match(mensajeErrorPreparar({ motivo: 'todas_ocultas' }), /ocultado todas/)
+  assert.doesNotMatch(mensajeErrorPreparar({ motivo: 'todas_ocultas' }), /todas_ocultas/)
+  assert.equal(mensajeErrorPreparar({ motivo: 'sin_opciones', detalle: 'x' }), 'sin_opciones: x')
+})
+
+test('el 422 todas_ocultas de asegura llega como error con su motivo', () => {
+  const r = interpretarPreparado(422, { estado: 'error', motivo: 'todas_ocultas' })
+  assert.equal(r.estado, 'error')
+  if (r.estado === 'error') assert.equal(r.motivo, 'todas_ocultas')
+})
 
 const OPCION = {
   orden: 1,
@@ -44,6 +87,16 @@ test('el camino feliz devuelve el presupuesto y su enlace', () => {
   assert.equal(r.presupuesto.opciones.length, 1)
   assert.equal(r.presupuesto.preciosTotales, 12)
   assert.equal(r.token, 'a'.repeat(64))
+  // Una asegura anterior no manda `enLista`: eso es «no consta», no «no hay más».
+  assert.equal(r.presupuesto.enLista, null)
+})
+
+test('enLista y ocultas viajan cuando asegura los manda', () => {
+  const r = interpretarPreparado(200, { ...OK, presupuesto: { ...OK.presupuesto, enLista: 28, ocultas: 2 } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.presupuesto.enLista, 28)
+  assert.equal(r.presupuesto.ocultas, 2)
 })
 
 test('un 401 es «los secretos no coinciden», no «no hay presupuestos»', () => {
@@ -64,6 +117,20 @@ test('un «ok» SIN token es un error: un enlace que no existe no se puede ense�
   const { token: _fuera, ...sinToken } = OK
   const r = interpretarPreparado(200, sinToken)
   assert.equal(r.estado, 'error')
+})
+
+test('REUTILIZADO: sin token vale solo si asegura dice que es uno ya preparado, con su referencia', () => {
+  const { token: _fuera, ...sinToken } = OK
+  const r = interpretarPreparado(200, { ...sinToken, presupuesto: { ...OK.presupuesto, reutilizado: true, referencia: 'AS-26-0042' } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.token, null)
+  assert.equal(r.presupuesto.reutilizado, true)
+  assert.equal(r.presupuesto.referencia, 'AS-26-0042')
+  // Una asegura anterior no manda referencia: `null`, nunca un texto inventado.
+  const v = interpretarPreparado(200, OK)
+  assert.equal(v.estado === 'ok' && v.presupuesto.referencia, null)
+  assert.equal(v.estado === 'ok' && v.presupuesto.reutilizado, false)
 })
 
 test('la franquicia NO declarada sigue siendo null, jamás 0', () => {
@@ -186,4 +253,63 @@ test('🪤 las necesidades se leen; ausentes = null (no se puede avisar); solo e
   assert.equal(necesidadesEditables('visto'), true)
   assert.equal(necesidadesEditables('aceptado'), false)
   assert.equal(necesidadesEditables('retirado'), false)
+})
+
+test('cotizacionIdDe: solo con la copia guardada hay de qué preparar el presupuesto', async () => {
+  const { cotizacionIdDe } = await import('./presupuesto-asegura.ts')
+  assert.equal(cotizacionIdDe({ estado: 'guardada', cotizacionId: 't1' }), 't1')
+  assert.equal(cotizacionIdDe({ estado: 'fallo', cotizacionId: 't1' }), null)
+  assert.equal(cotizacionIdDe(null), null)
+  assert.equal(cotizacionIdDe(undefined), null)
+})
+
+test('leerPresupuestoEnLista: el ramo viaja, y si asegura no lo manda es null', async () => {
+  const { leerPresupuestoEnLista } = await import('./presupuesto-asegura.ts')
+  const base = { id: 'a', estado: 'borrador', creadoAt: 'x', venceEl: 'y' }
+  assert.equal(leerPresupuestoEnLista({ ...base, ramo: 'moto' })?.ramo, 'moto')
+  assert.equal(leerPresupuestoEnLista(base)?.ramo, null)
+})
+
+test('filasCoberturas: una fila por garantía con dato; sin clasificar = no consta, nunca «no»', async () => {
+  const { filasCoberturas, leerPresupuestoEnLista } = await import('./presupuesto-asegura.ts')
+  const p = leerPresupuestoEnLista({
+    id: 'a', estado: 'borrador', creadoAt: 'x', venceEl: 'y', ramo: 'moto',
+    detalle: [
+      { id: 'o1', compania: 'Occident', modalidad: 'Terceros básico', primaEur: 217.57, garantias: { danos_propios: 'no', colision_animales: 'si' } },
+      { id: 'o2', compania: 'Allianz', modalidad: null, primaEur: 215.88, garantias: null },
+      { raro: 1 },
+    ],
+  })
+  assert.equal(p?.detalle?.length, 2)
+  const f = filasCoberturas('moto', p!.detalle!)!
+  assert.deepEqual(f.find((x) => x.clave === 'danos_propios')?.estados, ['no', 'no_consta'])
+  assert.deepEqual(f.find((x) => x.clave === 'colision_animales')?.estados, ['si', 'no_consta'])
+  assert.equal(f.some((x) => x.clave === 'lunas'), false, 'moto no tiene lunas')
+  assert.equal(f.some((x) => x.clave === 'robo'), false, 'todo «no consta» no se pinta')
+  assert.equal(filasCoberturas('responsabilidad_civil', p!.detalle!), null)
+  assert.equal(leerPresupuestoEnLista({ id: 'a', estado: 'borrador', creadoAt: 'x', venceEl: 'y' })?.detalle, null)
+})
+
+// ─── El sello de descarga NO retiene el PDF (30/09/2026, revisión PR #4133) ────
+
+test('sello de descarga: si asegura no contesta, se rinde en su tope y dice «no consta»', async () => {
+  const { marcarDescargadoAsegura, SELLO_DESCARGA_MS } = await import('./presupuesto-asegura.ts')
+  assert.ok(SELLO_DESCARGA_MS <= 3_000, 'el tope del sello es corto: el PDF espera por él')
+  const previo = { fetch: globalThis.fetch, secret: process.env.ASEGURA_OPERADOR_SECRET }
+  process.env.ASEGURA_OPERADOR_SECRET = 'test-secreto'
+  // Un asegura colgado: solo suelta si le abortan la señal.
+  globalThis.fetch = ((_u: unknown, init?: RequestInit) =>
+    new Promise((_res, rej) => init?.signal?.addEventListener('abort', () => rej(new Error('abortado'))))) as typeof fetch
+  // `AbortSignal.timeout` no retiene el bucle de eventos: sin esto, node --test acaba antes del aborto.
+  const vivo = setTimeout(() => {}, 2_000)
+  try {
+    const t0 = Date.now()
+    assert.equal(await marcarDescargadoAsegura('id', 'alberto', 50), false)
+    assert.ok(Date.now() - t0 < 1_000, 'el sello no puede quedarse esperando')
+  } finally {
+    clearTimeout(vivo)
+    globalThis.fetch = previo.fetch
+    if (previo.secret === undefined) delete process.env.ASEGURA_OPERADOR_SECRET
+    else process.env.ASEGURA_OPERADOR_SECRET = previo.secret
+  }
 })

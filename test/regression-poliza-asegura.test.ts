@@ -6,7 +6,7 @@ const POLIZA_OK = {
   estado: 'ok',
   poliza: {
     id: 'p1', cliente: { id: 'c1', nombre: 'Jose Suarez Salas' }, tipo: 'hogar', aseguradora: 'Occident',
-    codigoEntidadDgs: 'C0468', numeroPoliza: 'GPDFL0600228', idPolizaEntidad: null, ramoDgs: null, estado: 'activa', situacion: null,
+    codigoEntidadDgs: 'C0468', numeroPoliza: 'GPDFL0000031', idPolizaEntidad: null, ramoDgs: null, estado: 'activa', situacion: null,
     origen: 'cima', viva: true, fechaEfectoInicial: '2015-07-06', fechaInicio: '2026-07-06', fechaVencimiento: '2027-07-06',
     prima: 396.83, primaAnual: 396.83, primaBruta: null, primaMensual: null,
     objeto: { estado: 'no_informado', titulo: null, detalle: null, nota: null },
@@ -78,4 +78,19 @@ test('🚨 sin `retarificacion` → null (asegura vieja); con el veredicto de ho
   assert.equal(basura.estado, 'ok')
   if (basura.estado !== 'ok') return
   assert.equal(basura.poliza.retarificacion, null, 'nunca un veredicto a medias')
+})
+
+test('historial de devoluciones: `null` si no viene (≠ ninguna), filas raras fuera, importe sin inventar', async () => {
+  const { leerHistorialDevoluciones } = await import('../apps/plataforma/lib/poliza-asegura.ts')
+  assert.equal(leerHistorialDevoluciones(undefined), null)
+  assert.deepEqual(leerHistorialDevoluciones([]), [])
+  const h = leerHistorialDevoluciones([
+    { idRecibo: '600000001', fecha: '2026-09-28', fechaEfecto: '2026-09-19', importe: 184.58, motivo: 'RAZONES.REG.', tipoMotivo: 'cuenta', resueltaEn: null, resueltaComo: null },
+    { idRecibo: '600000002', fecha: '2026-08-01', importe: '12', resueltaEn: '2026-08-10', resueltaComo: 'cima:cobrado' },
+    { fecha: '2026-08-01' },
+    'basura',
+  ])
+  assert.equal(h?.length, 2)
+  assert.equal(h?.[1].importe, null, 'un importe que no es número no se convierte')
+  assert.equal(h?.[1].resueltaComo, 'cima:cobrado')
 })

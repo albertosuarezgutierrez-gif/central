@@ -1,0 +1,193 @@
+{
+ "sesion": "31330348-2204-5044-bfb8-94e3bf3c5c03",
+ "inicio": "2026-09-28T11:34:12.049Z",
+ "fin": "2026-09-29T13:06:52.399Z",
+ "llamadas": 1795,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 139,
+   "chars_in": 16910,
+   "chars_out": 2644577,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 60,
+    "Read": 77,
+    "Glob": 2
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 5,
+   "chars_in": 7555,
+   "chars_out": 7312,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 163724,
+   "tools": {
+    "Agent": 5
+   }
+  },
+  "otro": {
+   "llamadas": 223,
+   "chars_in": 106247,
+   "chars_out": 2338645,
+   "errores": 0,
+   "archivos_citados": 31,
+   "chars_citados": 741529,
+   "tools": {
+    "SubagentHandback": 18,
+    "Skill": 3,
+    "ToolSearch": 47,
+    "TaskCreate": 3,
+    "TaskUpdate": 3,
+    "ReadNotifications": 128,
+    "SendUserFile": 4,
+    "SendMessage": 2,
+    "Artifact": 12,
+    "ReportFindings": 2,
+    "TaskStop": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 110,
+   "chars_in": 52642,
+   "chars_out": 225450,
+   "errores": 3,
+   "archivos_citados": 13,
+   "chars_citados": 1811246,
+   "tools": {
+    "mcp__github__list_pull_requests": 3,
+    "mcp__github__pull_request_read": 36,
+    "mcp__github__create_pull_request": 13,
+    "mcp__github__subscribe_pr_activity": 5,
+    "mcp__github__update_pull_request": 11,
+    "mcp__github__actions_list": 8,
+    "mcp__github__add_issue_comment": 6,
+    "mcp__github__merge_pull_request": 12,
+    "mcp__github__get_job_logs": 7,
+    "mcp__github__get_check_run": 1,
+    "mcp__github__add_reply_to_pull_request_comment": 2,
+    "mcp__github__resolve_review_thread": 2,
+    "mcp__github__unsubscribe_pr_activity": 4
+   }
+  },
+  "bash": {
+   "llamadas": 1158,
+   "chars_in": 786131,
+   "chars_out": 4184688,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1158
+   }
+  },
+  "escritura": {
+   "llamadas": 60,
+   "chars_in": 246827,
+   "chars_out": 2336255,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 32,
+    "Edit": 28
+   }
+  },
+  "sql": {
+   "llamadas": 39,
+   "chars_in": 23582,
+   "chars_out": 77740,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 39
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 3,
+   "chars_in": 4279,
+   "chars_out": 48,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__apply_migration": 3
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 38,
+   "chars_in": 5539,
+   "chars_out": 21052,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 826385,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 13,
+    "mcp__Claude_Code_Remote__delete_trigger": 10,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 5,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 10
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 7,
+   "chars_in": 574,
+   "chars_out": 37976,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__filter_project_envs": 1,
+    "mcp__Vercel__get_runtime_errors": 1,
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__list_deployments": 4
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 9,
+   "chars_in": 34494,
+   "chars_out": 35252,
+   "errores": 0,
+   "archivos_citados": 21,
+   "chars_citados": 1710213,
+   "tools": {
+    "Agent": 9
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 2,
+   "chars_in": 4360,
+   "chars_out": 4731,
+   "errores": 0,
+   "archivos_citados": 9,
+   "chars_citados": 253384,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 3785,
+   "chars_out": 3982,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 6148,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 2324,
+   "chars_out": 2544,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 20275,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

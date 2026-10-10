@@ -9,6 +9,7 @@ import {
   coincidenciaBloquea,
   combinarPersonaContacto,
   permiteAutorizar,
+  provinciaPorCp,
   revisarAlta,
   textoPersonaContacto,
   tiposContactoSugeridos,
@@ -18,7 +19,11 @@ import {
   type ResultadoPersonaContacto,
   type TipoRelacion,
 } from '@central/module-seguros'
+import { AlertTriangle, CheckCircle2, CircleHelp, Clock, FileText, Lock, type LucideIcon, Mail, Phone, Plus, StickyNote, Unlock, Users, X } from 'lucide-react'
 import { btnStyle, type Tono } from '@/components/ui'
+import { Ico, FILA } from './iconos'
+import DireccionConfirmable from './DireccionConfirmable'
+import CiudadPorCp from './CiudadPorCp'
 import AccionesContacto from './AccionesContacto'
 import {
   ALCANCE_TEXTO_PORTAL,
@@ -359,13 +364,13 @@ export default function Relaciones({
       {/* Dos huecos distintos, dos frases distintas: ninguno de los dos es «no hay nadie». */}
       {sinLeerVinculos && (
         <div style={pendienteBox}>
-          ⚠️ No se han podido leer los <strong>vínculos declarados</strong>: no significa que no tenga, sino que
+          <Ico i={AlertTriangle} color="var(--warning)" /> No se han podido leer los <strong>vínculos declarados</strong>: no significa que no tenga, sino que
           desde aquí no se ven. Se puede añadir igualmente.
         </div>
       )}
       {sinLeerPolizas && (
         <div style={pendienteBox}>
-          ⚠️ No se ha podido leer <strong>quién interviene en sus pólizas</strong>: la lista puede estar incompleta.
+          <Ico i={AlertTriangle} color="var(--warning)" /> No se ha podido leer <strong>quién interviene en sus pólizas</strong>: la lista puede estar incompleta.
         </div>
       )}
 
@@ -379,8 +384,9 @@ export default function Relaciones({
         <>
           {/* La procedencia se dice UNA vez aquí y cada fila lleva su icono: la
               etiqueta es el dato (un papel es de la compañía, un vínculo es nuestro). */}
-          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-            👪 vínculo anotado por nosotros · 📄 papel en sus pólizas (lo manda la compañía)
+          <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={FILA}><Ico i={Users} /> vínculo anotado por nosotros</span>
+            <span style={FILA}><Ico i={FileText} /> papel en sus pólizas (lo manda la compañía)</span>
           </div>
           {principales.length > 0 && (
             <ul style={listaStyle}>{principales.map(fila)}</ul>
@@ -472,7 +478,7 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
 }) {
   // `null` con `nombreIlegible` es «está cifrado y no abre», que no es lo mismo
   // que no tener nombre. Se dicen las dos cosas, cada una con lo suyo.
-  const nombre = p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre')
+  const nombre = p.nombre ?? (p.nombreIlegible ? 'cifrado' : 'sin nombre')
   const enCurso = ocupado === `nada-${p.fichaId}`
   const r = p.vinculo
   const revisado = r !== null && !permiteAutorizar(r.tipo)
@@ -489,17 +495,17 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
           ? <Link href={`/correduria/cliente/${p.fichaId}`} style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{nombre}</Link>
           : <span style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{nombre}</span>}
         {/* Llamar a ESTA persona, no al titular: es la que conduce el coche. */}
-        {p.telefono && <a href={`tel:${p.telefono.replace(/\s/g, '')}`} style={{ fontSize: 13 }}>📞 {p.telefono}</a>}
+        {p.telefono && <a href={`tel:${p.telefono.replace(/\s/g, '')}`} style={{ ...FILA, fontSize: 13 }}><Ico i={Phone} /> {p.telefono}</a>}
         <AccionesContacto telefono={p.telefono} email={p.email} quien={nombre} />
       </div>
 
       {r && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', minWidth: 0, fontSize: 12 }}>
           {revisado ? (
-            <span style={chip('neutral')}>✅ revisado: no es nada suyo</span>
+            <span style={{ ...chip('neutral'), ...FILA }}><Ico i={CheckCircle2} size={13} /> revisado: no es nada suyo</span>
           ) : (
             <>
-              <span style={chip('info')}>👪 {r.tipo}</span>
+              <span style={{ ...chip('info'), ...FILA }}><Ico i={Users} size={13} /> {r.tipo}</span>
               {/* null = asegura no las contó: no es «0 pólizas». */}
               <span style={{ color: 'var(--muted)' }}>
                 {r.polizasVivas === null ? 'pólizas sin contar' : `${r.polizasVivas} póliza${r.polizasVivas === 1 ? '' : 's'} viva${r.polizasVivas === 1 ? '' : 's'}`}
@@ -512,7 +518,7 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
 
       {p.papeles.length > 0 && renderPapeles && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', minWidth: 0 }}>
-          <span role="img" aria-label="Papel en sus pólizas (lo manda la compañía):" title="Lo manda la compañía" style={{ fontSize: 13, lineHeight: '20px' }}>📄</span>
+          <span title="Papel en sus pólizas (lo manda la compañía)" style={{ lineHeight: '20px' }}><Ico i={FileText} /></span>
           <div style={{ flex: 1, minWidth: 0 }}>{renderPapeles(p)}</div>
         </div>
       )}
@@ -521,13 +527,13 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
           personas (padre e hijo con NIF distinto) o son dos fichas de la misma
           persona. Se dice cuál, y cuando no se sabe, que no se sabe. */}
       {p.homonimia === 'distinta_persona' && (
-        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-          👥 Hay otra persona con este mismo nombre en sus pólizas, con NIF distinto: son dos, no una.
+        <div style={{ ...FILA, fontSize: 11, color: 'var(--muted)' }}>
+          <Ico i={Users} size={12} /> Hay otra persona con este mismo nombre en sus pólizas, con NIF distinto: son dos, no una.
         </div>
       )}
       {p.homonimia === 'sin_distinguir' && (
-        <div style={{ fontSize: 11, color: 'var(--warning)' }}>
-          ⚠️ Otra fila tiene este mismo nombre y no se puede distinguir (falta el NIF): puede ser una ficha
+        <div style={{ ...FILA, fontSize: 11, color: 'var(--warning)' }}>
+          <Ico i={AlertTriangle} size={12} /> Otra fila tiene este mismo nombre y no se puede distinguir (falta el NIF): puede ser una ficha
           duplicada. No se funden desde aquí.
         </div>
       )}
@@ -542,17 +548,17 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
             type="button"
             disabled={enCurso}
             onClick={() => onDeclarar({ id: p.fichaId as string, nombre, tipo: '', polizas: 0 })}
-            style={btnStyle('secundario')}
+            style={{ ...btnStyle('secundario'), ...FILA }}
           >
-            👪 Declarar vínculo
+            <Ico i={Users} /> Declarar vínculo
           </button>
           <button
             type="button"
             disabled={enCurso}
             onClick={() => onSinVinculo(p.fichaId as string)}
-            style={btnStyle('sutil')}
+            style={{ ...btnStyle('sutil'), ...FILA }}
           >
-            {enCurso ? 'anotando…' : '✅ No es nada suyo'}
+            {enCurso ? 'anotando…' : <><Ico i={CheckCircle2} /> No es nada suyo</>}
           </button>
         </div>
       )}
@@ -599,6 +605,7 @@ const ACCESO_CORTO: Record<TonoAcceso, string> = {
   no: 'no',
   duda: 'no consta',
 }
+const ICONO_ACCESO: Record<TonoAcceso, LucideIcon> = { ve: Unlock, espera: Clock, no: Lock, duda: CircleHelp }
 const TONO_CHIP: Record<TonoAcceso, Tono> = { ve: 'positivo', espera: 'aviso', no: 'neutral', duda: 'aviso' }
 
 /**
@@ -611,15 +618,15 @@ function ResumenAcceso({ r, nombreFicha }: { r: RelacionCartera; nombreFicha: st
   const ida = insigniaAcceso(r.autorizacion, r.autorizaVer)
   const vuelta = insigniaAcceso(r.autorizacionInversa, r.puedeVer)
   if (ida.tono === 'no' && vuelta.tono === 'no') {
-    return <span style={{ color: 'var(--muted)' }}>· 🔒 ninguno ve los seguros del otro</span>
+    return <span style={{ ...FILA, color: 'var(--muted)' }}>· <Ico i={Lock} size={12} /> ninguno ve los seguros del otro</span>
   }
   return (
     <>
       <span style={chip(TONO_CHIP[ida.tono])} title={explicarSentidoAcceso(r.autorizacion, r.nombre, nombreFicha, r.autorizaVer)}>
-        {ida.icono} ve los de {nombreFicha}: {ACCESO_CORTO[ida.tono]}
+        <Ico i={ICONO_ACCESO[ida.tono]} size={12} /> ve los de {nombreFicha}: {ACCESO_CORTO[ida.tono]}
       </span>
       <span style={chip(TONO_CHIP[vuelta.tono])} title={explicarSentidoAcceso(r.autorizacionInversa, nombreFicha, r.nombre, r.puedeVer)}>
-        {vuelta.icono} {nombreFicha} ve los suyos: {ACCESO_CORTO[vuelta.tono]}
+        <Ico i={ICONO_ACCESO[vuelta.tono]} size={12} /> {nombreFicha} ve los suyos: {ACCESO_CORTO[vuelta.tono]}
       </span>
     </>
   )
@@ -688,7 +695,7 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
           falta antes un vínculo de verdad.
         </div>
         {r.observaciones && (
-          <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
+          <div style={{ ...FILA, fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}><Ico i={StickyNote} size={12} /> {r.observaciones}</div>
         )}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal', minHeight: 44 }}>
@@ -714,7 +721,7 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
           sentido de vuelta no se pintaba en ninguna parte. Las dos cosas se
           arreglan igual: una insignia por sentido y el botón pegado a la frase
           que dice qué hace. */}
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>🔐 Quién ve los seguros de quién</div>
+      <div style={{ ...FILA, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}><Ico i={Lock} size={12} /> Quién ve los seguros de quién</div>
 
       <Sentido
         otorga={nombreFicha}
@@ -760,7 +767,7 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
       />
 
       {r.observaciones && (
-        <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
+        <div style={{ ...FILA, fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}><Ico i={StickyNote} size={12} /> {r.observaciones}</div>
       )}
 
       <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
@@ -824,9 +831,9 @@ function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar,
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}>
         <span style={{
           fontSize: 11, fontWeight: 700, color, border: `1px solid ${color}`,
-          borderRadius: 999, padding: '2px 8px', whiteSpace: 'nowrap',
+          borderRadius: 999, padding: '2px 8px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4,
         }}>
-          {ins.icono} {ins.etiqueta}
+          <Ico i={ICONO_ACCESO[ins.tono]} size={12} /> {ins.etiqueta}
         </span>
         <span style={{ fontSize: 13, overflowWrap: 'anywhere' }}>
           <strong>{recibe}</strong> → seguros de <strong>{otorga}</strong>
@@ -857,7 +864,7 @@ function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar,
             puede funcionar no se pinta. */}
         {a?.estado === 'pendiente' && (
           <button type="button" disabled={enCurso} onClick={onAvisar} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
-            {avisando ? 'enviando…' : `✉️ Invitar a ${recibe} a confirmarlo por correo`}
+            {avisando ? 'enviando…' : <><Ico i={Mail} /> Invitar a {recibe} a confirmarlo por correo</>}
           </button>
         )}
         {/* Hay algo que retirar mientras no esté cerrada: una PENDIENTE también
@@ -869,7 +876,7 @@ function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar,
             lo que la pantalla acaba de afirmar. */}
         {ve || viva ? (
           <button type="button" disabled={enCurso} onClick={() => onAutorizar(false)} style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
-            🔒 {a?.estado === 'pendiente' ? 'Retirar la autorización anotada' : `Revocar: ${recibe} dejará de ver`}
+            <Ico i={Lock} /> {a?.estado === 'pendiente' ? 'Retirar la autorización anotada' : `Revocar: ${recibe} dejará de ver`}
           </button>
         ) : (
           // Secundario, no primario: autorizar es la excepción, y dos botones
@@ -881,7 +888,7 @@ function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar,
             onClick={() => (formulario === null ? onAutorizar(true) : setAbierto((v) => !v))}
             style={{ ...btnStyle(abierto ? 'sutil' : 'secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
           >
-            {abierto ? 'Cancelar' : <>🔓 Anotar que {otorga} autoriza a {recibe} a ver sus seguros{formulario === null ? '' : '…'}</>}
+            {abierto ? 'Cancelar' : <><Ico i={Unlock} /> Anotar que {otorga} autoriza a {recibe} a ver sus seguros{formulario === null ? '' : '…'}</>}
           </button>
         )}
       </div>
@@ -1051,7 +1058,7 @@ function AnotarAlcance({ r, nombreFicha, enCurso, onAutorizar, esSociedad }: {
           }}
           style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
         >
-          🔓 Anotar la autorización
+          <Ico i={Unlock} /> Anotar la autorización
         </button>
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
@@ -1129,12 +1136,12 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAl
   if (!abierto) {
     return (
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" onClick={() => { setModoAlta(false); setAbierto(true) }} style={btnStyle('secundario')}>➕ Añadir relación</button>
+        <button type="button" onClick={() => { setModoAlta(false); setAbierto(true) }} style={{ ...btnStyle('secundario'), ...FILA }}><Ico i={Plus} /> Añadir relación</button>
         {/* La persona que lleva los seguros de una sociedad casi nunca está en la
             cartera: mandarla a /correduria/cliente/nuevo era perder la ficha,
             volver y buscarla. Desde aquí se crea y se vincula de una vez. */}
         <button type="button" onClick={() => { setModoAlta(true); setAbierto(true) }} style={btnStyle('secundario')}>
-          ➕ Nueva persona de contacto
+          <Ico i={Plus} /> Nueva persona de contacto
         </button>
       </div>
     )
@@ -1209,7 +1216,7 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAl
           <span>Nadie en la cartera con «{busqueda.termino}».</span>
           <div>
             <button type="button" onClick={() => setModoAlta(true)} style={btnStyle('secundario', 'sm')}>
-              ➕ Darla de alta y vincularla a {nombreFicha}
+              <Ico i={Plus} /> Darla de alta y vincularla a {nombreFicha}
             </button>
           </div>
         </div>
@@ -1306,7 +1313,10 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
   onBuscar: () => void
 }) {
   const tipos = tiposContactoSugeridos(tipoPersona)
-  const [f, setF] = useState({ nombre: terminoInicial, apellidos: '', telefono: '', email: '' })
+  const [f, setF] = useState({
+    nombre: terminoInicial, apellidos: '', dni: '', fechaNacimiento: '', telefono: '', email: '',
+    direccion: '', codigoPostal: '', ciudad: '', provincia: '',
+  })
   const [tipo, setTipo] = useState<TipoRelacion>(tipos[0])
   const [observaciones, setObservaciones] = useState('')
   const [trabajando, setTrabajando] = useState(false)
@@ -1320,7 +1330,15 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
   const nombreCompleto = [f.nombre.trim(), f.apellidos.trim()].filter((x) => x !== '').join(' ') || 'esta persona'
 
   function set<K extends keyof typeof f>(k: K, v: string) {
-    setF((prev) => ({ ...prev, [k]: v }))
+    setF((prev) => {
+      const next = { ...prev, [k]: v }
+      // CP completo → su provincia (misma regla que el alta de cliente).
+      if (k === 'codigoPostal' && /^\d{5}$/.test(v.trim())) {
+        const p = provinciaPorCp(v)
+        if (p) next.provincia = p
+      }
+      return next
+    })
   }
 
   async function vincular(id: string): Promise<RespuestaRelaciones> {
@@ -1393,7 +1411,7 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
     <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
       <div style={{ fontSize: 13, fontWeight: 700 }}>Nueva persona de contacto de {nombreFicha}</div>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-        Se crea su <strong>propia ficha</strong> y se vincula a {nombreFicha}. Nace como 🕐 lead —que es lo que
+        Se crea su <strong>propia ficha</strong> y se vincula a {nombreFicha}. Nace como lead —que es lo que
         es— y pasará a cliente sola el día que le vendas algo y CIMA lo confirme.
       </div>
 
@@ -1406,16 +1424,47 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
         </Campo>
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+        <Campo label="DNI / NIE / CIF" ayuda="Con el DNI basta para crear la ficha y es lo primero que se usa para no duplicarla.">
+          <input value={f.dni} onChange={(e) => set('dni', e.target.value)} placeholder="12345678Z" autoComplete="off" style={{ ...campo, ...(campoMal === 'dni' ? malo : {}) }} />
+        </Campo>
+        <Campo label="Fecha de nacimiento">
+          <input type="date" value={f.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} style={{ ...campo, ...(campoMal === 'fechaNacimiento' ? malo : {}) }} />
+        </Campo>
+      </div>
+
       {/* El teléfono y el email no son un adorno: son POR DONDE ENTRARÁ al
           portal el día que se le autorice (la identidad se prueba con un código
           de un solo uso a uno de los dos). Sin ninguno de los dos, ni se le
           puede dar acceso ni se vuelve a encontrar la ficha. */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
-        <Campo label="Teléfono" ayuda="Hace falta el teléfono o el email: es por donde entrará al portal cuando le des acceso.">
+        <Campo label="Teléfono" ayuda="Hace falta el DNI, el teléfono o el email. Teléfono o email son por donde entrará al portal cuando le des acceso.">
           <input type="tel" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} placeholder="600 000 000" style={{ ...campo, ...(campoMal === 'telefono' ? malo : {}) }} />
         </Campo>
         <Campo label="Email">
           <input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="nombre@dominio.es" style={{ ...campo, ...(campoMal === 'email' ? malo : {}) }} />
+        </Campo>
+      </div>
+
+      <Campo label="Dirección">
+        <DireccionConfirmable
+          value={f.direccion}
+          onChange={(v) => set('direccion', v)}
+          codigoPostal={f.codigoPostal}
+          ciudad={f.ciudad}
+          placeholder="Calle, número, piso"
+          style={{ ...campo, ...(campoMal === 'direccion' ? malo : {}) }}
+        />
+      </Campo>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+        <Campo label="Código postal">
+          <input value={f.codigoPostal} onChange={(e) => set('codigoPostal', e.target.value)} inputMode="numeric" maxLength={5} placeholder="41003" style={{ ...campo, ...(campoMal === 'codigoPostal' ? malo : {}) }} />
+        </Campo>
+        <Campo label="Población">
+          <CiudadPorCp cp={f.codigoPostal} ciudad={f.ciudad} onCiudad={(v) => set('ciudad', v)} style={campo} />
+        </Campo>
+        <Campo label="Provincia">
+          <input value={f.provincia} onChange={(e) => set('provincia', e.target.value)} style={{ ...campo, ...(campoMal === 'provincia' ? malo : {}) }} />
         </Campo>
       </div>
 
@@ -1443,7 +1492,7 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
           se ven —y se descubren cuando una tiene las pólizas y la otra el móvil. */}
       {resAlta?.estado === 'conflicto' && (
         <div style={{ fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px', color: 'var(--warning)', background: 'var(--warning-bg)' }}>
-          ⚠️ <strong>Ya hay una ficha con ese dato:</strong>
+          <Ico i={AlertTriangle} /> <strong>Ya hay una ficha con ese dato:</strong>
           <ul style={{ margin: '4px 0', paddingLeft: 18 }}>
             {resAlta.coincidencias.map((c) => (
               <li key={`${c.por}-${c.id}`} style={{ marginBottom: 4 }}>
@@ -1468,10 +1517,10 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
 
       {resAlta && resAlta.estado !== 'ok' && resAlta.estado !== 'conflicto' && (
         <div style={{ fontSize: 13, borderRadius: 8, padding: '8px 10px', color: 'var(--negative)', background: 'var(--negative-bg)' }}>
-          {resAlta.estado === 'invalido' ? `✖ ${textoMotivoAlta(resAlta.motivo)}` :
-            resAlta.estado === 'sin_configurar' ? '⏳ El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET). No se ha creado nada.' :
+          {resAlta.estado === 'invalido' ? <><Ico i={X} /> {textoMotivoAlta(resAlta.motivo)}</> :
+            resAlta.estado === 'sin_configurar' ? <><Ico i={Clock} /> El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET). No se ha creado nada.</> :
             resAlta.estado === 'no_encontrado' ? 'asegura respondió «no encontrado» a un alta: revisa el puerto.' :
-            `⚠️ No se ha podido crear: ${textoMotivoAlta(resAlta.motivo)}`}
+            <><Ico i={AlertTriangle} /> No se ha podido crear: {textoMotivoAlta(resAlta.motivo)}</>}
         </div>
       )}
 
@@ -1505,7 +1554,7 @@ function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta
 
       {reutilizada && (
         <div style={{ fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px', color: 'var(--positive)', background: 'var(--positive-bg)' }}>
-          ✅ {reutilizada} ya estaba en la cartera y se ha vinculado a {nombreFicha} (no se ha creado ninguna ficha
+          <Ico i={CheckCircle2} /> {reutilizada} ya estaba en la cartera y se ha vinculado a {nombreFicha} (no se ha creado ninguna ficha
           nueva). Todavía NO ve nada: el acceso al portal se le da aparte, con «Autorizar» en su fila.
         </div>
       )}

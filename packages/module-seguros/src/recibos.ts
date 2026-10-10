@@ -22,6 +22,12 @@ export type ReciboCrudo = {
   primaTotal: string | null
   fechaEmision: string | null
   fechaVencimiento: string | null
+  /**
+   * `fecha_efecto_actual`: el día en que VENCE LA PRIMA, que es desde donde corre el art. 15 LCS.
+   * NO es `fechaVencimiento`, que en el EIAC es el FIN del periodo que cubre el recibo (un año
+   * después en un anual). Opcional para no romper a quien aún no la manda: sin ella, `null`.
+   */
+  fechaEfecto?: string | null
   formaPago: string | null
 }
 
@@ -31,7 +37,10 @@ export type ReciboResumen = {
   /** `null` = el texto del EIAC no tenía forma de importe. No es 0€. */
   importe: number | null
   fechaEmision: string | null
+  /** Fin del periodo que cubre el recibo. */
   fechaVencimiento: string | null
+  /** Día en que vence la prima (desde aquí corre el art. 15 LCS). `null` = no se sabe. */
+  fechaEfecto: string | null
   formaPago: string | null
 }
 
@@ -125,6 +134,7 @@ export function resumirRecibos(lista: readonly ReciboCrudo[]): RecibosPoliza {
             importe: importeEiac(ultimo.primaTotal),
             fechaEmision: ultimo.fechaEmision,
             fechaVencimiento: ultimo.fechaVencimiento,
+            fechaEfecto: ultimo.fechaEfecto ?? null,
             formaPago: ultimo.formaPago,
           },
   }

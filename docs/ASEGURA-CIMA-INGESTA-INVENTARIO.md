@@ -7,6 +7,54 @@
 > hecho, hay otras prioridades»). Este documento existe para que, el día que toque, no haya que volver a
 > leer el repo entero. Contexto y plan en `docs/TRASPASO-CORREDURIA.md` («INGESTA DE CIMA EN CASA»).
 
+## 🔍 Auditoría «sin huecos ni datos sueltos» (28/09/2026) — qué guarda la ingesta y dónde se pinta
+
+Dictado de Alberto: «audita bien la ingesta de CIMA para que no haya ningún hueco ni dato suelto; importante
+luego pintar esos datos». Se leyó el EIAC campo a campo contra los mappers y los 36 POL + 62 REC + SIN reales
+del Portal CIMA (copia en Drive). Cinco PRs en el repo `asegura`, todos mergeados el 28/09:
+
+| PR | Qué cierra | Migración (escrita contra `public`, aplicada A MANO en `seguros`) |
+|---|---|---|
+| #859 | Intervinientes: **un papel por fila** (la misma persona puede ser propietario y conductor), propietario empresa, asegurado = tomador (sin contacto) | 0100 — índice único `(correduria, poliza, nif_lookup_hash, rol)` |
+| #860 | **PII en claro** en `poliza_recibos.datos_extra` (NIF/nombre/domicilio del pagador en `OtrosDatos`): filtro por id + descripción + forma del valor | 0101 — limpió 154 recibos |
+| #861 | Recibos y cuenta de efectivo: remesa, gestión de cobro, clase/base de comisión, retención IRPF, `datos_extra` del CEF | 0104 |
+| #862 | Siniestros: 16 columnas `*_cima` (declaración, DAA, culpa, recobros, reserva desglosada, convenios, expedientes, riesgo, contacto **cifrado**, vehículos, asistencias, ref. mediador, descripción) + contrarios | 0102 |
+| #864 | Pólizas: fechas de emisión/efecto actual/situación/solicitud, rol **`pagador`**, cobro (IBAN **cifrado** + últimos 4), contrato (producto, duración, mediador…), `riesgos[]` (dirección cifrada), beneficiarios, contacto del tomador y **prima anual L10** | 0103 (+ GRANT de las fechas al rol del portal) |
+
+Reglas que deja, todas con cepo visto en rojo:
+- **Un valor de enum nuevo en BD exige el mismo valor en los enums de Prisma de central** (asegura y
+  asegura-portal) ANTES de que la ingesta lo escriba, o la lectura de esas filas revienta (`pagador`,
+  central#3820).
+- **PII del EIAC: cifrado `v1:` o no se escribe.** Sin clave, el campo se omite; nunca en claro.
+- **Contacto del tomador (L14): solo rellena lo que está a NULL** (dirección como bloque), nunca pisa lo
+  anotado, y **no toca email/teléfono si la ficha ya tiene filas en `cliente_emails`/`cliente_telefonos`**
+  (la columna de `clientes` es el espejo del principal; ~57 fichas tienen el principal solo en la tabla hija).
+  Un email que ya está en otra ficha no se escribe (índice único global → abortaría el fichero entero).
+- **Prima anual (L10):** anualizada si viene; si no, `PrimaTotal` solo cuenta como anual con pago AN/UN o
+  compañía medida en `COMPANIAS_PRIMA_TOTAL_ANUAL` (**C0058 Mapfre** y **C0072 Generali**; C0058 es Mapfre, NO
+  Allianz: asegura#865 corrige los comentarios). Occident (C0468) manda el importe del PERIODO. El resto →
+  `prima_anual` NULL + `primaAnualDudosa` + `primaTotalFichero`. Una compañía nueva entra en la lista solo
+  tras medir sus recibos, nunca multiplicando.
+- **TIREA no reentrega** un fichero ya servido: para que lo viejo gane los campos nuevos hay que reprocesar
+  desde la copia de Drive con el workflow `cima-rescate-lote` (lote cifrado en rama temporal, clave como
+  input; al acabar se borran rama, run y ficheros). Hecho el 28/09 con los 36 POL.
+
+**Foto de ANTES del reproceso (28/09, 09:25 UTC):** 159 pólizas CIMA; 0 con fecha de emisión, riesgos, cobro o
+prima dudosa; papeles: propietario 195 · conductor ocasional 98 · habitual 28 · asegurado 7 · contacto 122 · pagador 0.
+
+**Resultado del reproceso (run 36403813502, 28/09 09:29-09:35 UTC, verde):** 158 de 159 pólizas CIMA
+actualizadas (la que falta, `[nº de póliza retirado]`, llegó por CIMA después de la copia de Drive: coge los campos en su
+próxima entrega); 158 con fechas de emisión/efecto actual, `riesgos[]`, cobro e IBAN (últimos 4); **0 IBAN en
+claro**; papeles: propietario 195→208 · conductor habitual 28→90 · asegurado 7→33 · **pagador 0→26** · contacto
+122→121 · ocasional 98. Prima dudosa: 0 (todas las fraccionadas eran de compañías medidas o traían anualizada).
+⚠️ **C0109 (27 pólizas) no manda NINGÚN importe en sus POL**: `prima_anual` NULL es lo correcto, no un fallo de
+la ingesta; su prima solo se puede sacar de los recibos. Limpieza: logs del run borrados y ficheros del lote
+borrados del contenedor; la rama temporal `cima-lote-2026-09-28` (lote CIFRADO) no se pudo borrar desde la
+sesión (el proxy corta el push de borrado) → borrarla a mano en GitHub, junto con el run (sus inputs llevan la clave).
+
+**Dónde se pinta (central):** figura del cliente en cada póliza en el portal (central#3820); ficha de póliza,
+recibos y siniestros de `/correduria` y ficha de póliza del portal (PR de «pintar datos CIMA», 28/09).
+
 ## Cadena (lo que hay hoy, funcionando)
 
 ```

@@ -1,12 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
+import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
+import { prepararPresupuestoTrasTarificar } from '@/lib/presupuesto-tras-tarificar'
 import {
   prepararRetarificacion,
   respuestaRetarificacion,
   type CuerpoRetarificacion,
 } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
+import { validarRiesgoDePoliza } from '@/lib/oportunidad-riesgo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -129,8 +132,25 @@ export const POST = auditado(async (req: Request) => {
     return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })
   }
 
+  // Dentro del RIESGO de la póliza (29/09/2026): la tarificación se cuelga de ESA oportunidad, que
+  // tiene que ser de esta póliza. Gratis y antes de gastar; si no casa, no se pide precio.
+  const oportunidadId = typeof cuerpo.oportunidadId === 'string' ? cuerpo.oportunidadId.trim() : ''
+  if (oportunidadId !== '') {
+    const v = await validarRiesgoDePoliza(p.peticion.correduriaId, oportunidadId, polizaId)
+    if (!v.ok) {
+      return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: v.motivo, gastado: '0,00€' }, { status: 422 })
+    }
+    const nota = typeof cuerpo.nota === 'string' && cuerpo.nota.trim() !== '' ? cuerpo.nota.trim().slice(0, 200) : null
+    if (p.peticion.contexto) p.peticion.contexto = { ...p.peticion.contexto, oportunidadId, nota }
+  }
+
   // ── La única línea que cuesta dinero, por el único embudo ────────────────
+  // Recotización explícita: salta la guarda anti-duplicado (15 min) SOLO si el operador la pide; nunca por defecto.
+  if (cuerpo.forzar === true) p.peticion.forzar = true
   const r = await cotizar(p.peticion)
+  // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
+  const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)
+  if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => prepararPresupuestoTrasTarificar(aCompletar, solicitadoPor)).then(() => undefined))
 
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })

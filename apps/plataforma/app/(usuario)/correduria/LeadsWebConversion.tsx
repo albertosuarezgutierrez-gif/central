@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { TrendingUp } from 'lucide-react'
+import { Mail, Phone, TrendingUp } from 'lucide-react'
 import Bloque from './Bloque'
 import { Badge, Pendiente, TablaScroll } from '@/components/ui'
+import { Ico } from './iconos'
 import type { ConversionLeadsWeb } from '@/lib/leads-web-conversion-asegura'
 
 /**
@@ -11,8 +12,8 @@ import type { ConversionLeadsWeb } from '@/lib/leads-web-conversion-asegura'
  * gastar en Ads: «necesito saber que convierte antes de meterle presupuesto».
  *
  * ─── Por qué esto es un informe y no una cola de trabajo ────────────────────
- * A diferencia de `Recaptacion` (leads sin vencimiento a los que SÍ hay que
- * llamar), aquí no se pinta contador en la barra de secciones: con 1 lead
+ * A diferencia de una cola de trabajo (como los leads de Vencimientos, a los
+ * que SÍ hay que llamar), aquí no se pinta contador en la barra de secciones: con 1 lead
  * medido el 15/09/2026 (la web lleva 10 días viva) una tasa de conversión
  * sería estadísticamente inútil como aviso — es infraestructura de medición
  * que necesita acumular datos, no un aviso accionable hoy. Los pendientes se
@@ -112,7 +113,7 @@ export default function LeadsWebConversion() {
                       </td>
                       <td style={{ padding: '6px 8px' }}>{p.diasDesdeAlta} día{p.diasDesdeAlta === 1 ? '' : 's'}</td>
                       <td style={{ padding: '6px 8px' }}>
-                        {p.tieneTelefono ? '📞 ' : ''}{p.tieneEmail ? '✉️' : ''}
+                        {p.tieneTelefono ? <Ico i={Phone} /> : null}{p.tieneEmail ? <Ico i={Mail} /> : null}
                         {!p.tieneTelefono && !p.tieneEmail && '—'}
                       </td>
                     </tr>

@@ -25,6 +25,12 @@ import {
   type FicheroParcial,
   type CampoImportanteSinLeer,
   type RenovacionSinLlegar,
+  type EmisionSinAviso,
+  type GrupoVivoDuplicado,
+  type FicheroAnulacionFila,
+  type RenovacionAnuladaPorCompania,
+  type RetrasoAnulacion,
+  type PosiblesBajasPorCompania,
 } from '@central/module-seguros'
 import { cabecerasPuerto } from '../puerto-actor.ts'
 
@@ -94,6 +100,10 @@ function esEntidad(v: unknown): v is EntidadIngesta {
     && numONull(e.diasSinFichero) && numONull(e.huecoMaximo)
     && typeof e.huecosObservados === 'number' && Number.isFinite(e.huecosObservados)
     && numONull(e.vivas) && numONull(e.vencidasEnSilencio) && opcional(e.vencen90d)
+    && opcional(e.enVigor) && opcional(e.sinN)
+    && (e.primerSin === undefined || e.primerSin === null || typeof e.primerSin === 'string')
+    && (e.ultimoSin === undefined || e.ultimoSin === null || typeof e.ultimoSin === 'string')
+    && (e.nombre === undefined || e.nombre === null || typeof e.nombre === 'string')
 }
 
 /**
@@ -229,7 +239,7 @@ function esCobertura(v: unknown): boolean {
   if (typeof v !== 'object' || v === null) return false
   const o = v as Record<string, unknown>
   return entero(o.rutas) && entero(o.rutasNuncaLeidas) &&
-    enteroONulo(o.entidadesObservadas) && Array.isArray(o.porTipo) &&
+    enteroONulo(o.entidadesObservadas) && (o.rutasDescartadas === undefined || enteroONulo(o.rutasDescartadas)) && Array.isArray(o.porTipo) &&
     o.porTipo.every(t => typeof t === 'object' && t !== null &&
       typeof (t as Record<string, unknown>).tipoObjeto === 'string' &&
       entero((t as Record<string, unknown>).rutas) &&
@@ -289,6 +299,74 @@ function esRenovacion(v: unknown): boolean {
 
 function esListaRenovaciones(v: unknown): boolean {
   return Array.isArray(v) && v.every(esRenovacion)
+}
+
+/** Emisiones de Codeoscopic sin aviso del webhook. Todo-o-nada, como las renovaciones. */
+function esEmisionSinAviso(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.proyecto === 'string'
+    && (o.aseguradora === null || typeof o.aseguradora === 'string')
+    && enteroONulo(o.horas)
+}
+
+function esListaEmisionesSinAviso(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esEmisionSinAviso)
+}
+
+/** 🔁 Un grupo de pólizas vivas duplicadas. Todo-o-nada, como las renovaciones. */
+function esGrupoVivoDuplicado(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.entidad === 'string' && o.entidad !== ''
+    && typeof o.ref === 'string' && o.ref !== ''
+    && entero(o.fichas)
+}
+
+function esListaDuplicadas(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esGrupoVivoDuplicado)
+}
+
+/** 📉 Fila por fichero POL (anulaciones en bloque). Todo-o-nada, como las renovaciones. */
+function esFicheroAnulacion(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.entidad === 'string'
+    && (o.entidadNombre === null || typeof o.entidadNombre === 'string')
+    && typeof o.fichero === 'string'
+    && entero(o.polizas) && entero(o.anuladas)
+    && entero(o.impago) && entero(o.otraCompania) && entero(o.siniestralidad) && entero(o.otros)
+    && enteroONulo(o.medianaDiasRetraso)
+}
+
+function esListaFicherosAnulacion(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esFicheroAnulacion)
+}
+
+/** Mediana de retraso de anulación por compañía. `medianaDias: null` = sin fecha legible (válido). */
+function esRetrasoAnulacion(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.entidad === 'string'
+    && (o.entidadNombre === null || typeof o.entidadNombre === 'string')
+    && entero(o.polizas) && enteroONulo(o.medianaDias)
+}
+
+function esListaRetrasoAnulacion(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esRetrasoAnulacion)
+}
+
+/** Posibles bajas por compañía: solo números de póliza (sin datos personales). */
+function esPosiblesBajas(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.entidad === 'string'
+    && (o.entidadNombre === null || typeof o.entidadNombre === 'string')
+    && Array.isArray(o.numeros) && o.numeros.every(n => typeof n === 'string')
+}
+
+function esListaPosiblesBajas(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esPosiblesBajas)
 }
 
 function esCajaNegra(v: unknown): boolean {
@@ -376,6 +454,20 @@ export function interpretarIngesta(
       // 27/09/2026) = no se pide, no es hueco; `null`/ilegible = hueco; `[]` =
       // se miró y no hay ninguna.
       renovacionesSinLlegar: señal<RenovacionSinLlegar[]>(r, 'renovacionesSinLlegar', esListaRenovaciones),
+      // 📭 Mismos tres estados: ausente (`central-asegura` anterior al 28/09/2026)
+      // no se pide; `null`/ilegible = hueco; `[]` = se miró y no hay.
+      emisionesSinAviso: señal<EmisionSinAviso[]>(r, 'emisionesSinAviso', esListaEmisionesSinAviso),
+      // 🔁 Mismos tres estados: ausente (`central-asegura` anterior al 04/10/2026)
+      // no se pide; `null`/ilegible = hueco; `[]` = se miró y no hay.
+      polizasDuplicadas: señal<GrupoVivoDuplicado[]>(r, 'polizasDuplicadas', esListaDuplicadas),
+      // 📉 (06/10/2026) Mismos tres estados: ausente (`central-asegura` anterior) no
+      // se pide; `null`/ilegible = hueco; `[]` = se miró y no hay. El puerto manda
+      // las filas CRUDAS por fichero (`anulacionesPorFichero`); el umbral «en
+      // bloque» lo aplica el módulo.
+      anulacionesPorFichero: señal<FicheroAnulacionFila[]>(r, 'anulacionesPorFichero', esListaFicherosAnulacion),
+      renovacionesAnuladas: señal<RenovacionAnuladaPorCompania[]>(r, 'renovacionesAnuladas', esListaRenovaciones),
+      retrasoAnulacion: señal<RetrasoAnulacion[]>(r, 'retrasoAnulacion', esListaRetrasoAnulacion),
+      posiblesBajas: señal<PosiblesBajasPorCompania[]>(r, 'posiblesBajas', esListaPosiblesBajas),
     }),
     huerfanasTruncadas: huerfanas.estado === 'ok' && huerfanas.truncado,
     huerfanasSinAmbito: huerfanas.estado === 'ok' ? huerfanas.ocultasOtroAmbito : null,
@@ -419,4 +511,32 @@ export async function leerIngestaCima(): Promise<RespuestaIngesta> {
     ? { estado: 'sin_datos', motivo: 'red' }
     : interpretarHuerfanas(listado.status, listado.json)
   return interpretarIngesta(ingesta.status, ingesta.json, huerfanas)
+}
+
+/**
+ * La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`.
+ *
+ * Va delante y separada del texto humano por ` · `. El formato viejo era solo
+ * la firma, así que un `detalle` sin `|` se lee como «no se sabe cuándo se
+ * avisó» → y eso hace sonar (`primera`). Es lo correcto en el primer despliegue:
+ * suena una vez y a partir de ahí ya lleva la cuenta.
+ *
+ * 🚨 La firma NO puede contener `|` ni ` · `: parten la cabecera y la leerían truncada
+ * (avisaría «primera» en cada pasada). Lo vigila el test de ida y vuelta.
+ */
+export function componerCabecera(firma: string, aviso: Date | null, abierta: Date | null): string {
+  return `${firma}|${aviso?.toISOString() ?? ''}|${abierta?.toISOString() ?? ''}`
+}
+
+export function leerCabecera(detalle: string | null): { firma: string | null; aviso: Date | null; abierta: Date | null } {
+  if (detalle === null) return { firma: null, aviso: null, abierta: null }
+  const cabeza = detalle.split(' · ')[0] ?? ''
+  const [f, aviso, abierta] = cabeza.split('|')
+  const fecha = (v: string | undefined): Date | null => {
+    if (!v) return null
+    const d = new Date(v)
+    // Una fecha ilegible NO es «hace poco»: es «no lo sabemos», y eso avisa.
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  return { firma: f || null, aviso: fecha(aviso), abierta: fecha(abierta) }
 }

@@ -1,0 +1,279 @@
+// Emitir por Telegram una póliza NUEVA (cliente sin póliza que sustituir, 29/09/2026) — parte PURA
+// (sin `@/` ni prisma → node --test). La parte con BD y red vive en `correduria-asistente-telegram.ts`.
+//
+// Hermana de `correduria-emision-tg.ts` (que emite un proyecto hecho a mano en Avant2 para una póliza
+// de la cartera). Aquí el proyecto es NUESTRO: la tarificación guardada del cliente. El camino es el
+// mismo que la pantalla de emisión: confirmar precio (`/oferta`, ReRate) → resumen → botón → `/emitir`.
+// Principio que no cambia: **la IA nunca emite ni escribe el resumen**; lo construye esto con lo que
+// devuelve asegura, y el único camino a `/emitir` es el botón de un solo uso que pulsa Alberto.
+import { createHash } from 'node:crypto'
+import type { CambioFiguras, FiguraExigida, Precio } from './retarificar-asegura.ts'
+import { ETIQUETA_CAMPO_FIGURA } from './figuras-emision-texto.ts'
+import { MINUTOS_PROPUESTA } from './correduria-emision-tg.ts'
+import { bloqueoCompania, textoBloqueoCorredor } from '@central/module-seguros'
+
+export type RamoNuevo = 'auto' | 'moto'
+
+export function ramoNuevoValido(v: unknown): RamoNuevo | null {
+  return v === 'auto' || v === 'moto' ? v : null
+}
+
+const normal = (s: string | null | undefined) =>
+  (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+
+export type EleccionPrecio =
+  | { tipo: 'uno'; precio: Precio }
+  | { tipo: 'no'; motivo: string }
+  | { tipo: 'elegir'; precios: Precio[] }
+
+/**
+ * Qué precio de la tarificación guardada quiere Alberto. Por compañía y, si la da, por texto de
+ * modalidad/categoría/producto; la prima desempata («la de 200»). Nunca por posición: con varios
+ * candidatos se pregunta. Solo precios con compañía, categoría y prima legibles.
+ */
+export function elegirPrecioNuevo(precios: Precio[], compania: string, texto: string | null, primaEur: number | null): EleccionPrecio {
+  const c = normal(compania)
+  if (!c) return { tipo: 'no', motivo: 'falta la compañía' }
+  const validos = precios.filter((p) => p.compania && p.categoria && typeof p.primaEur === 'number')
+  let candidatos = validos.filter((p) => normal(p.compania).includes(c))
+  if (candidatos.length === 0) return { tipo: 'no', motivo: `la tarificación guardada no tiene precios de ${compania}` }
+  const t = normal(texto)
+  if (t) {
+    const palabras = t.split(' ').filter((w) => w.length > 1)
+    const conTexto = candidatos.filter((p) => {
+      const hay = normal(`${p.modalidad ?? ''} ${p.categoria ?? ''} ${p.producto ?? ''} ${(p.opciones ?? []).map((o) => o.valor).join(' ')}`)
+      return palabras.every((w) => hay.includes(w))
+    })
+    // Lo que dijo Alberto no se ignora: si no casa con ningún precio, se dice, no se elige otro.
+    if (conTexto.length === 0) return { tipo: 'no', motivo: `ningún precio de ${compania} casa con «${texto}»` }
+    candidatos = conTexto
+  }
+  if (primaEur !== null && Number.isFinite(primaEur)) {
+    const cerca = candidatos.filter((p) => Math.abs((p.primaEur as number) - primaEur) <= Math.max(5, primaEur * 0.03))
+    if (cerca.length === 0) return { tipo: 'no', motivo: `ningún precio de ${compania} se acerca a ${primaEur}€` }
+    candidatos = cerca
+  }
+  return candidatos.length === 1 ? { tipo: 'uno', precio: candidatos[0] } : { tipo: 'elegir', precios: candidatos }
+}
+
+/**
+ * La fecha de efecto que dice Alberto («con efecto el 9 de octubre»). Solo se lee la FORMA (aaaa-mm-dd o
+ * dd/mm/aaaa, y que exista en el calendario): si cabe o no ([hoy, hoy+90]) lo decide asegura con la misma
+ * regla que la pantalla, gratis y antes de llamar a la compañía. `null` = no la ha dicho.
+ */
+export function leerFechaEfecto(v: unknown): { ok: true; fecha: string | null } | { ok: false; motivo: string } {
+  if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) return { ok: true, fecha: null }
+  const s = typeof v === 'string' ? v.trim() : String(v)
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const es = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  const [a, m, d] = iso ? [+iso[1], +iso[2], +iso[3]] : es ? [+es[3], +es[2], +es[1]] : [NaN, NaN, NaN]
+  const t = new Date(Date.UTC(a, m - 1, d))
+  if (!Number.isFinite(t.getTime()) || t.getUTCFullYear() !== a || t.getUTCMonth() !== m - 1 || t.getUTCDate() !== d) {
+    return { ok: false, motivo: `«${s.slice(0, 20)}» no es una fecha de efecto válida (aaaa-mm-dd)` }
+  }
+  return { ok: true, fecha: `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` }
+}
+
+/** La fecha de efecto que trae el precio confirmado (`mainQuote` del ReRate), si la trae. Forma sin verificar: solo el nivel de arriba. */
+export function fechaEfectoDelPrecio(quoteCrudo: unknown): string | null {
+  if (typeof quoteCrudo !== 'object' || quoteCrudo === null) return null
+  const v = (quoteCrudo as Record<string, unknown>).effectiveDate
+  const f = typeof v === 'string' ? v.slice(0, 10) : null
+  return f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : null
+}
+
+export type DecisionEfecto =
+  | { tipo: 'ok'; efecto: string | null; cotizado: string | null; devuelto: string | null }
+  | { tipo: 'no'; motivo: string }
+
+/**
+ * Con qué fecha de efecto puede ir el botón tras confirmar el precio. `/emitir` solo comprueba que la fecha de
+ * la oferta no esté pasada: si la compañía ignoró la fecha pedida y la cotizada sigue VIGENTE, se emitiría con
+ * la cotizada mientras el resumen dice la pedida. Por eso: fecha devuelta distinta → no; sin fecha devuelta, solo
+ * si la cotizada ya pasó (entonces, si no se aplicó la nueva, `/emitir` corta sin enviar nada).
+ */
+export function decidirEfecto(p: { pedida: string | null; cotizada: string | null; cotizadaPasada: boolean; devuelta: string | null }): DecisionEfecto {
+  if (!p.pedida) {
+    // Sin fecha pedida el botón enseña la cotizada: si la compañía devuelve otra (un ReRate anterior del mismo
+    // proyecto la movió), el contrato saldría con la devuelta. Sin devuelta no se puede contrastar (como la web).
+    const cotizada = p.cotizada?.slice(0, 10) ?? null
+    if (p.devuelta && p.devuelta !== cotizada) {
+      return { tipo: 'no', motivo: `la compañía ha confirmado el precio con efecto ${p.devuelta}, no con el ${cotizada ?? 'sin fecha'} de la tarificación guardada` }
+    }
+    return { tipo: 'ok', efecto: p.cotizada, cotizado: null, devuelto: null }
+  }
+  if (p.devuelta && p.devuelta !== p.pedida) {
+    return { tipo: 'no', motivo: `la compañía ha confirmado el precio con efecto ${p.devuelta}, no con el ${p.pedida} que se le pidió` }
+  }
+  if (!p.devuelta && !p.cotizadaPasada) {
+    return { tipo: 'no', motivo: `la compañía no dice con qué fecha de efecto ha confirmado el precio y la cotizada (${p.cotizada ?? 'sin fecha'}) sigue vigente: si no aplicó la nueva, se emitiría con la vieja` }
+  }
+  return { tipo: 'ok', efecto: p.pedida, cotizado: p.cotizada, devuelto: p.devuelta }
+}
+
+/** Lo que Alberto confirma para una póliza NUEVA. Todo sale de asegura; la cuenta llega enmascarada. */
+export interface ResumenEmisionNueva {
+  tipo: 'nuevo'
+  clienteId: string
+  clienteNombre: string | null
+  ramo: RamoNuevo
+  /** Qué vehículo se asegura: sin ella no hay botón (el cliente puede tener dos tarificaciones). */
+  matricula: string
+  /** Cuándo se pidió el precio (de la tarificación guardada). */
+  tarificadaEn: string | null
+  tarificacionId: string
+  projectId: string
+  offerId: string
+  compania: string
+  categoria: string
+  producto: string | null
+  /** Modalidad de la compañía («Incendio + Robo»), si la tarificación guardada la trae. */
+  modalidad?: string | null
+  /** Prima que devolvió la compañía al CONFIRMAR el precio (ReRate), no la de la parrilla. */
+  primaEur: number | null
+  primaParrillaEur: number | null
+  firmeza: string
+  efecto: string | null
+  /** La fecha con la que se COTIZÓ, si Alberto dictó otra (`efecto` es entonces la pedida). */
+  efectoCotizado?: string | null
+  /** La fecha que devolvió la compañía al confirmar el precio; `null` = no la dice. */
+  efectoDevuelto?: string | null
+  caduca: string | null
+  avisos: string[]
+  cuenta: { enmascarada: string; descripcion: string | null }
+  /** Casillas de figuras que Alberto confirma con ESTE botón (segundo paso tras un 409). */
+  figurasConfirmadas: FiguraExigida[]
+  cambiosFiguras: CambioFiguras[]
+  /** El texto de cada casilla que se confirma, el mismo que enseña la pantalla. */
+  casillasFiguras?: string[]
+  /** Lo que el precio SUPUSO y se confirma ahora con el cliente (`avisoAlEmitir`). No es de la compañía. */
+  revisarAlEmitir?: string | null
+  /** DNI del tomador enmascarado («*****335B»): con dos homónimos, es lo que dice de QUIÉN es la ficha. */
+  tomadorDni?: string | null
+  /** El vehículo con el que se pidió el precio. `null` = no consta en la tarificación guardada. */
+  fechaMatriculacion?: string | null
+  kmAnuales?: number | null
+  /** El seguro anterior declarado (da el bonus). `null` = no consta. */
+  anterior?: { companiaCodigo: string; aniosAsegurado: number; aniosSinSiniestros: number } | null
+  /** A qué dirección irá el correo de emisión, o por qué no saldrá. `null` = no se ha podido comprobar. */
+  correo?: CorreoEmision | null
+}
+
+/** El correo que manda asegura al emitir: a la dirección con la que el cliente entra al portal, o ninguno. */
+export type CorreoEmision = { destino: string } | { destino: null; motivo: string }
+
+/** «juan@gmail.com» → «j***@gmail.com». Un valor sin forma de correo no se enseña. */
+export function enmascararEmail(email: string): string | null {
+  const m = email.trim().match(/^([^@\s]+)@([^@\s]+\.[^@\s]+)$/)
+  return m ? `${m[1].slice(0, 1)}***@${m[2]}` : null
+}
+
+/**
+ * PURO: la MISMA regla que `tras-emision.ts` de asegura (sale a `emailInvitacion` salvo que su correo no
+ * lleve a SU ficha o no haya). Con `null` (no se pudo leer el portal) se devuelve `null`: no se afirma nada.
+ */
+export function correoDeEmision(portal: { estado: string; emailInvitacion: string | null } | null): CorreoEmision | null {
+  if (!portal) return null
+  if (portal.estado === 'sin_email') return { destino: null, motivo: 'la ficha no tiene correo' }
+  if (portal.estado === 'ilegible') return { destino: null, motivo: 'su correo está cifrado y no se puede leer' }
+  if (portal.estado === 'ambiguo' || portal.estado === 'resuelve_a_otra') return { destino: null, motivo: 'su correo lleva a otra ficha (duplicado sin resolver)' }
+  if (portal.estado === 'no_comprobado' || !portal.emailInvitacion) return null
+  const destino = enmascararEmail(portal.emailInvitacion)
+  return destino ? { destino } : null
+}
+
+function canonico(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(canonico).join(',')}]`
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>
+    return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${canonico(o[k])}`).join(',')}}`
+  }
+  return JSON.stringify(v ?? null)
+}
+
+export function huellaResumenNuevo(r: ResumenEmisionNueva): string {
+  return createHash('sha256').update(canonico(r)).digest('hex')
+}
+
+/** Un resumen guardado en la fila, ¿es de póliza nueva? (las viejas no traen `tipo`). */
+export function esResumenNuevo(v: unknown): v is ResumenEmisionNueva {
+  return typeof v === 'object' && v !== null && (v as Record<string, unknown>).tipo === 'nuevo'
+}
+
+/** ¿Ha caducado ya el precio confirmado? Sin fecha no se presume caducado (asegura lo vuelve a mirar). */
+export function precioCaducado(caduca: string | null, ahora: Date = new Date()): boolean {
+  if (!caduca) return false
+  const t = Date.parse(caduca)
+  return Number.isFinite(t) && t < ahora.getTime()
+}
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const oNoConsta = (v: string | null) => (v ? esc(v) : '<i>no consta</i>')
+
+function eur(n: number): string {
+  return `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`
+}
+
+function fecha(iso: string | null): string {
+  const m = iso?.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : 'no consta'
+}
+
+/** El resumen encima del botón. Solo datos del puerto; nada escrito por la IA. */
+export function textoResumenNuevo(r: ResumenEmisionNueva): string {
+  const prima = r.primaEur !== null ? eur(r.primaEur) : 'no consta'
+  const cambio = r.primaEur !== null && r.primaParrillaEur !== null && Math.abs(r.primaEur - r.primaParrillaEur) >= 0.01
+    ? ` <i>(en la parrilla salía ${eur(r.primaParrillaEur)})</i>` : ''
+  const figuras = r.cambiosFiguras.length
+    ? [
+        '',
+        '👥 <b>Esta variante cambia personas o CP respecto a la primera del riesgo:</b>',
+        ...r.cambiosFiguras.map((c) => `• ${esc(ETIQUETA_CAMPO_FIGURA[c.campo])}: ${oNoConsta(c.antes)} → ${oNoConsta(c.despues)}`),
+        ...(r.casillasFiguras ?? []).map((c) => `☑️ ${esc(c)}`),
+        'Al pulsar confirmas que es el riesgo REAL: quien conduce, quién es el dueño y dónde duerme el vehículo (arts. 10 y 89 LCS).',
+      ]
+    : []
+  const bloqueo = bloqueoCompania(r.avisos)
+  return [
+    ...(bloqueo !== null
+      ? [`<b>${esc(textoBloqueoCorredor(bloqueo, r.compania))}</b>`, '']
+      : []),
+    `🛡️ <b>Emisión NUEVA lista para confirmar</b> · ${r.ramo === 'moto' ? 'moto' : 'coche'}`,
+    '',
+    `Cliente: ${oNoConsta(r.clienteNombre)}${r.tomadorDni !== undefined ? ` · DNI ${oNoConsta(r.tomadorDni)}` : ''} · vehículo <b>${esc(r.matricula)}</b>`,
+    ...(r.fechaMatriculacion !== undefined
+      ? [`Matriculación <b>${fecha(r.fechaMatriculacion)}</b>${typeof r.kmAnuales === 'number' ? ` · ${r.kmAnuales.toLocaleString('es-ES', { useGrouping: 'always' })} km/año` : ''} <i>(con estos datos se pidió el precio: si no son los reales, no emitas)</i>`]
+      : []),
+    ...(r.anterior !== undefined
+      ? [r.anterior
+        ? `Seguro anterior declarado: compañía ${esc(r.anterior.companiaCodigo)} · ${r.anterior.aniosAsegurado} años asegurado · ${r.anterior.aniosSinSiniestros} sin siniestros`
+        : 'Seguro anterior declarado: <i>no consta</i>']
+      : []),
+    `Tarificado ${fecha(r.tarificadaEn)}`,
+    `<b>${esc(r.compania)}</b> · ${esc(r.categoria)}${r.modalidad ? ` · ${esc(r.modalidad)}` : ''}${r.producto ? ` · ${esc(r.producto)}` : ''}`,
+    `Prima confirmada por la compañía: <b>${prima}</b>${cambio} · ${esc(r.firmeza)}`,
+    `Efecto <b>${fecha(r.efecto)}</b>${!r.efectoCotizado ? ''
+      : r.efectoDevuelto && r.efectoDevuelto === r.efecto
+        ? ` <i>(se cotizó con ${fecha(r.efectoCotizado)}; la compañía ha confirmado el precio con la nueva)</i>`
+        : ` <i>(se cotizó con ${fecha(r.efectoCotizado)}; la nueva se ha PEDIDO y la compañía no la devuelve: si no la aplicó, la emisión se para sola porque la vieja ya pasó)</i>`} · el precio caduca ${fecha(r.caduca)}`,
+    `Cuenta de cargo: ${esc(r.cuenta.enmascarada)}${r.cuenta.descripcion ? ` (${esc(r.cuenta.descripcion)})` : ''}`,
+    ...(r.revisarAlEmitir ? ['', `🔎 ${esc(r.revisarAlEmitir)}`] : []),
+    ...(r.avisos.length ? ['', '⚠️ Avisos de la compañía:', ...r.avisos.map((a) => `• ${esc(a)}`)] : []),
+    ...figuras,
+    '',
+    `Proyecto ${esc(r.projectId)} · precio ${esc(r.offerId)}`,
+    r.correo === undefined
+      ? '📧 Al emitir, el cliente recibe un correo con su nuevo seguro (con el PDF si la compañía ya lo ha mandado; si no, le llega después) y lo ve en su portal.'
+      : r.correo === null
+        ? '📧 <b>No he podido comprobar a qué correo irá el aviso</b>: al emitir puede que se le mande uno con su nuevo seguro.'
+        : 'motivo' in r.correo
+          ? `📧 Al emitir <b>NO</b> se le manda correo: ${esc(r.correo.motivo)}.`
+          : `📧 Al pulsar Emitir le llega un correo a <b>${esc(r.correo.destino)}</b> con compañía, cobertura, efecto y prima (y la póliza en PDF si la compañía ya la ha mandado; si no, después). Pulsar es tu OK a ese correo.`,
+    `⚠️ Emitir es IRREVERSIBLE: crea el contrato con la compañía. El botón vale ${MINUTOS_PROPUESTA} minutos y un solo uso.`,
+  ].join('\n')
+}
+
+/** Qué casillas pide asegura y no están aún confirmadas en este resumen. */
+export function figurasPendientes(exigidas: FiguraExigida[], confirmadas: FiguraExigida[]): FiguraExigida[] {
+  return exigidas.filter((e) => !confirmadas.includes(e))
+}

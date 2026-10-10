@@ -71,8 +71,11 @@ export function normalizarCanal(bruto: string | null | undefined): string | null
  */
 export function canalDeAsunto(asunto: string | null | undefined): string | null {
   const m = (asunto ?? '').match(/\(([^()]{2,40})\)\s*$/)
-  return m ? normalizarCanal(m[1]) : null
+  if (m) return normalizarCanal(m[1])
+  // Aviso de mensaje de Expedia Partner Central: «Te ha escrito X, huésped de Expedia» (05/10/2026).
+  return /hu[eé]sped\s+de\s+expedia\b/i.test(asunto ?? '') ? 'Expedia' : null
 }
+
 
 /** Nombre de piso → slug de PROPS_CALENDARIO (sin acentos, sin may/min). null si no casa. */
 export function propertyIdDePiso(piso: string | null | undefined): string | null {

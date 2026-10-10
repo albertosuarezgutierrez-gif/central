@@ -3,7 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, leerOportunidad, oportunidadesDeCliente } from '@/lib/oportunidad-seguimiento'
+import { cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, leerOportunidad, oportunidadesDeCliente, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
 import type { AccionOportunidad } from '@central/module-seguros'
 import { auditado } from '@/lib/auditoria'
 
@@ -12,10 +12,12 @@ export const dynamic = 'force-dynamic'
 /**
  * Seguimiento de UNA oportunidad (Fase 1 de ASegura OS).
  *   GET  ?id=                     → oportunidad + historial (auditoría) + tareas
- *   GET  ?clienteId=              → las oportunidades de ese cliente (abiertas primero)
+ *   GET  ?clienteId=              → las oportunidades de ese cliente (abiertas primero) con sus precios pedidos,
+ *                                   y `sinOportunidad`: lo tarificado que no cuelga de ninguna (`null` = no se pudo leer)
  *   POST { accion:'crear', clienteId, ramo, estado?, fechaFinVigencia?, aseguradora?, prima?, tipoTarea?, fechaTarea, nota?, actor }
  *        → abre una a mano con su primer paso (409 `duplicada` + id si ya hay una abierta del ramo)
- *   POST { accion:'editar', id, ramo?, fechaFinVigencia?, aseguradora?, prima?, actor } → corrige una abierta
+ *   POST { accion:'editar', id, ramo?, fechaFinVigencia?, aseguradora?, prima?, reprogramar?, actor } → corrige una abierta
+ *        (`reprogramar: true` con vencimiento nuevo → su próxima tarea va a 45 días antes, o se crea)
  *   POST { id, accion, ..., actor } → cambia su estado:
  *        interesado · propuesta_enviada · ganar {polizaGanadaId?}
  *        perder {motivo, detalle?, competidor?, primaCompetidor?} · aparcar {aparcadaHasta, detalle} · reabrir
@@ -34,7 +36,12 @@ export async function GET(req: Request) {
     if (id === '') {
       const lista = await oportunidadesDeCliente(correduria.id, clienteId)
       if (!lista) return NextResponse.json({ estado: 'invalido', motivo: 'clienteId no válido' }, { status: 422 })
-      return NextResponse.json({ estado: 'ok', ...lista })
+      // Un fallo aquí no tumba las oportunidades: se dice que no se pudo leer (`null`), no «no hay».
+      const sinOportunidad = await presupuestosSinOportunidad(correduria.id, clienteId).catch((e) => {
+        registrarErrorCartera('operador/oportunidad:sin-oportunidad', e)
+        return null
+      })
+      return NextResponse.json({ estado: 'ok', ...lista, sinOportunidad })
     }
     const r = await leerOportunidad(correduria.id, id)
     if (!r) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
@@ -57,7 +64,7 @@ export const POST = auditado(async (req: Request) => {
       if (typeof b.clienteId !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta clienteId' }, { status: 422 })
       const r = await crearOportunidad(correduria.id, b.clienteId, {
         ramo: b.ramo, estado: b.estado, fechaFinVigencia: b.fechaFinVigencia, aseguradora: b.aseguradora,
-        prima: b.prima, numeroPoliza: b.numeroPoliza, matricula: b.matricula, vehiculo: b.vehiculo, tipoTarea: b.tipoTarea, fechaTarea: b.fechaTarea, nota: b.nota,
+        prima: b.prima, numeroPoliza: b.numeroPoliza, matricula: b.matricula, vehiculo: b.vehiculo, seguroAnterior: b.seguroAnterior, tipoTarea: b.tipoTarea, fechaTarea: b.fechaTarea, nota: b.nota,
       }, actorDe(b))
       if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo, ...('id' in r ? { id: r.id } : {}) }, { status: r.status })
       return NextResponse.json({ estado: 'ok', id: r.id }, { status: 201 })
@@ -66,9 +73,9 @@ export const POST = auditado(async (req: Request) => {
       if (typeof b.id !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta id' }, { status: 422 })
       const r = await editarOportunidad(correduria.id, b.id, {
         ramo: b.ramo, fechaFinVigencia: b.fechaFinVigencia, aseguradora: b.aseguradora, prima: b.prima,
-      }, actorDe(b))
+      }, actorDe(b), { reprogramar: b.reprogramar === true })
       if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
-      return NextResponse.json({ estado: 'ok', oportunidad: r.oportunidad })
+      return NextResponse.json({ estado: 'ok', oportunidad: r.oportunidad, tarea: r.tarea })
     }
     const accion = ACCIONES.find(a => a === b?.accion)
     if (!b || typeof b.id !== 'string' || !accion) {

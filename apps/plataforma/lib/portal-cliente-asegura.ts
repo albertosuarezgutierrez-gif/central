@@ -62,6 +62,27 @@ export type PortalCartera = {
    * teclear un correo que no recibirá ningún código.
    */
   emailInvitacion: string | null
+  /**
+   * Solo en `ambiguo`/`resuelve_a_otra`: las OTRAS fichas que se quedan su
+   * correo, para enlazarlas. `null` = asegura no lo manda (versión anterior o
+   * no se pudo leer): la pantalla no nombra ninguna, que no es «no hay».
+   */
+  otrasFichas: OtraFicha[] | null
+}
+
+export type OtraFicha = { clienteId: string; nombre: string | null; principal: boolean }
+
+function leerOtrasFichas(v: unknown): OtraFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const r: OtraFicha[] = []
+  for (const x of v) {
+    if (typeof x !== 'object' || x === null) continue
+    const o = x as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    if (id === null) continue
+    r.push({ clienteId: id, nombre: cadena(o.nombre), principal: o.principal === true })
+  }
+  return r
 }
 
 function cadena(v: unknown): string | null {
@@ -102,6 +123,7 @@ export function leerPortal(v: unknown): PortalCartera | null {
     // se lee como `null` —«no se sabe cuál»—, que es justo lo que apaga el
     // canal de WhatsApp en vez de inventarse una dirección.
     emailInvitacion: cadena(o.emailInvitacion),
+    otrasFichas: leerOtrasFichas(o.otrasFichas),
   }
 }
 
@@ -278,7 +300,7 @@ export function explicarPortal(p: PortalCartera): FrasePortal {
       return {
         titulo: 'No se le puede invitar todavía: su correo está en más de una ficha',
         queHacer:
-          'El portal no sabría cuál enseñarle, así que entraría y vería una bóveda VACÍA, sin ningún error: peor que no invitarle. Se arregla resolviendo el duplicado (fusionar o corregir la otra ficha), no reintentando.',
+          'El portal no sabría cuál enseñarle, así que entraría y vería una bóveda VACÍA, sin ningún error: peor que no invitarle. Se arregla resolviendo el duplicado (fusionar o corregir la otra ficha), no reintentando. Tampoco por WhatsApp: el portal se abre con el correo y le llevaría al mismo sitio.',
         accion: 'ninguna',
         tono: 'aviso',
       }
@@ -286,7 +308,7 @@ export function explicarPortal(p: PortalCartera): FrasePortal {
       return {
         titulo: 'No se le puede invitar todavía: su correo lleva a OTRA ficha',
         queHacer:
-          'Con ese correo el portal no le traería aquí, así que entraría y no vería sus pólizas. Revisa si hay una ficha duplicada suya y resuélvela antes de escribirle.',
+          'Con ese correo el portal no le traería aquí, así que entraría y no vería sus pólizas. Si esa otra ficha es él mismo, fusiónalas; si es otra persona, corrige el correo de la que no es. Tampoco por WhatsApp: el portal se abre con el correo y le llevaría a esa otra ficha.',
         accion: 'ninguna',
         tono: 'aviso',
       }
@@ -335,44 +357,44 @@ export function textoIdentidades(identidades: number | null): string {
 export function textoInvitacion(r: RespuestaInvitacion, nombre: string): string {
   switch (r.estado) {
     case 'ok':
-      if (r.yaEntraba === true) return `✅ Enlace reenviado a ${nombre}. No abre ningún acceso nuevo: ya entraba.`
+      if (r.yaEntraba === true) return `Enlace reenviado a ${nombre}. No abre ningún acceso nuevo: ya entraba.`
       if (r.yaEntraba === false) {
         return (
-          `✅ Invitación enviada a ${nombre}. El correo ha salido, pero el acceso lo abre él: hasta que entre con su ` +
+          `Invitación enviada a ${nombre}. El correo ha salido, pero el acceso lo abre él: hasta que entre con su ` +
           'código, aquí seguirá diciendo que todavía no entra nadie.'
         )
       }
-      return `✅ Correo enviado a ${nombre}. asegura no ha dicho si ya entraba antes, así que aquí no se afirma.`
+      return `Correo enviado a ${nombre}. asegura no ha dicho si ya entraba antes, así que aquí no se afirma.`
     case 'sin_email':
-      return `📭 ${nombre} no tiene ningún correo legible en su ficha (o está de baja de correo): añádeselo y vuelve a intentarlo. No se ha enviado nada.`
+      return `${nombre} no tiene ningún correo legible en su ficha (o está de baja de correo): añádeselo y vuelve a intentarlo. No se ha enviado nada.`
     case 'ilegible':
-      return '🔑 No se ha enviado: el correo está guardado cifrado y asegura no lo puede abrir (PII_ENCRYPTION_KEY). Se arregla en Vercel, no llamando al cliente.'
+      return 'No se ha enviado: el correo está guardado cifrado y asegura no lo puede abrir (PII_ENCRYPTION_KEY). Se arregla en Vercel, no llamando al cliente.'
     case 'ambiguo':
-      return `⚠️ No se ha enviado, y es lo correcto: ese correo está en más de una ficha, así que ${nombre} entraría a una bóveda vacía. Resuelve el duplicado primero.`
+      return `No se ha enviado, y es lo correcto: ese correo está en más de una ficha, así que ${nombre} entraría a una bóveda vacía. Resuelve el duplicado primero.`
     case 'resuelve_a_otra':
-      return `⚠️ No se ha enviado, y es lo correcto: con ese correo el portal no le traería a esta ficha, así que ${nombre} entraría y no vería sus pólizas.`
+      return `No se ha enviado, y es lo correcto: con ese correo el portal no le traería a esta ficha, así que ${nombre} entraría y no vería sus pólizas.`
     case 'no_comprobado':
-      return '🕐 No se ha enviado: no se ha podido comprobar si su correo le llevaría a su ficha. Vuelve a intentarlo; no es que no se pueda invitar.'
+      return 'No se ha enviado: no se ha podido comprobar si su correo le llevaría a su ficha. Vuelve a intentarlo; no es que no se pueda invitar.'
     case 'sin_portal':
-      return '⚙️ No se ha enviado: no hay dirección de portal configurada (ASEGURA_PORTAL_URL), así que el correo no tendría a dónde llevar.'
+      return 'No se ha enviado: no hay dirección de portal configurada (ASEGURA_PORTAL_URL), así que el correo no tendría a dónde llevar.'
     case 'error_envio':
-      return `⚠️ El proveedor de correo no aceptó el mensaje, así que a ${nombre} NO le ha llegado. Vuelve a intentarlo.`
+      return `El proveedor de correo no aceptó el mensaje, así que a ${nombre} NO le ha llegado. Vuelve a intentarlo.`
     case 'sin_correo_configurado':
       return (
-        `⚙️ No se ha enviado y NO sirve reintentarlo: ${textoMotivoPortal(r.motivo)} Se arregla en las variables ` +
+        `No se ha enviado y NO sirve reintentarlo: ${textoMotivoPortal(r.motivo)} Se arregla en las variables ` +
         `del proyecto Vercel central-asegura (y hay que redesplegar), no llamando a ${nombre}.`
       )
     case 'remitente_no_verificado':
       return (
-        `⚙️ No se ha enviado y NO sirve reintentarlo: Resend rechaza el remitente porque su dominio no está ` +
+        `No se ha enviado y NO sirve reintentarlo: Resend rechaza el remitente porque su dominio no está ` +
         `verificado. Se arregla en resend.com/domains (y en el DNS del dominio), no llamando a ${nombre}.`
       )
     case 'no_encontrado':
       return 'Esa ficha ya no está en la correduría. No se ha enviado nada.'
     case 'sin_configurar':
-      return `⚙️ No se ha enviado: ${textoMotivoPortal(r.motivo)}`
+      return `No se ha enviado: ${textoMotivoPortal(r.motivo)}`
     default:
-      return `⚠️ No se ha enviado: ${textoMotivoPortal(r.motivo)}`
+      return `No se ha enviado: ${textoMotivoPortal(r.motivo)}`
   }
 }
 

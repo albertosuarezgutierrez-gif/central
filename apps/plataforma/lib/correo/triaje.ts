@@ -7,7 +7,7 @@
 import { prisma } from '@/lib/db'
 import { escapeHtml, tgAviso, tgSend } from '@/lib/telegram'
 import { avisoDeCategoriaCorreo } from '@/lib/telegram/catalogo'
-import { abrirTriaje } from './imap'
+import { abrirTriaje, type CorreoNuevo } from './imap'
 import { clasificar, quizaAutoAprender } from './clasificador'
 import { enrutarHuesped, extraerNumConfirmacion, resolverBookingId } from './huespedes'
 import { esRemitenteDeCanal } from './num-confirmacion'
@@ -20,6 +20,13 @@ import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
 import { pareceContactoPersonal } from './contacto-sugerido'
 import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
+import { MOTIVO_POLIZA_ANULADA, leerCorreoDevolucion, type LecturaCorreoDevolucion } from '@central/module-seguros'
+import { textoPdfPorFilas } from './pdf-filas'
+import { leerResultadosPuerto, textoAvisoDevolucion } from './devolucion-aviso'
+import { registrarDevolucionesAsegura } from '@/lib/correduria-puerto'
+import { urlFichaCliente } from '@/lib/leads-web'
+import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
+import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -89,7 +96,10 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
       let filaId: bigint | null = null
       try {
         // Skip: ya lo cazó un filtro Gmail existente o una pasada anterior de triaje.
-        if (yaEtiquetado(correo.labels)) { stats.saltados++; continue }
+        // Excepción: la factura mensual de Sique Brilla se procesa aunque un filtro Gmail ya la
+        // haya etiquetado (`Facturas/*`); el dedupe por Message-ID de abajo evita avisar dos veces.
+        const facturaSique = esCorreoFacturaSique(correo.from, correo.subject)
+        if (!facturaSique && yaEtiquetado(correo.labels)) { stats.saltados++; continue }
 
         // Dedupe ANTES de actuar: si la fila ya existe (otra pasada), no re-actuamos.
         const ins = await prisma.$queryRaw<{ id: bigint }[]>`
@@ -110,6 +120,15 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           accion = 'sombra'
           stats.sombra++
         } else {
+          // Factura mensual de Sique Brilla → lee el PDF, cuadra con las salidas, guarda y avisa.
+          // Best-effort: un fallo aquí no impide etiquetar el correo como contabilidad.
+          if (facturaSique) {
+            await procesarCorreoFacturaSique(correo).catch(async (e) => {
+              console.error('[triaje] factura Sique Brilla', e instanceof Error ? e.message : 'error')
+              await tgAviso('facturas.siquebrilla-cuadre', '⚠️ Ha llegado la factura de Sique Brilla pero no he podido cuadrarla. Revísala a mano.').catch(() => null)
+            })
+          }
+
           // Etiquetar / archivar.
           if (ruta.etiqueta) { await sesion.etiquetar(correo.uid, ruta.etiqueta); stats.etiquetados++; accion = 'etiquetada' }
           if (ruta.archivar) { await sesion.archivar(correo.uid); stats.archivados++; accion = 'etiquetada_archivada' }
@@ -152,6 +171,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           // Aviso inmediato. El de Agoda lleva texto PROPIO: el correo trae el mensaje del huésped
           // dentro, así que se manda tal cual en vez del resumen genérico — y sobre todo dice que
           // NO se contesta desde Smoobu (para Agoda el hilo no llega al huésped) y da el enlace de YCS.
+          let devolucion: LecturaCorreoDevolucion | null = null
           const avisoAgoda = ruta.aviso === 'inmediato' && c.categoria === 'agoda-huespedes'
             // `extracto` es asunto+cuerpo truncado a 1500 chars: el nombre y el texto del mensaje van
             // al PRINCIPIO y siempre sobreviven; el enlace de YCS va al final y puede caerse. El parser
@@ -162,6 +182,23 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const nombre = avisoAgoda.propertyId ? (ACCESO[avisoAgoda.propertyId]?.nombre ?? null) : null
             await tgAviso('correo.agoda', textoAvisoAgoda(avisoAgoda, nombre ?? undefined))
             stats.avisados++
+          } else if (c.categoria === 'correduria-recibo' && (devolucion = leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: await textoConPdfs(correo), fecha: correo.fecha.toISOString() })) !== null) {
+            // Correo de DEVOLUCIÓN que se sabe leer: se registra en la cartera (marca el recibo,
+            // abre la llamada) y el aviso dice quién, cuánto y hasta cuándo. Si el puerto no contesta,
+            // el aviso sale IGUAL con lo leído del correo y declara que no está registrado.
+            // Las pólizas ya ANULADAS por impago (carta de Allianz) no se registran como devolución:
+            // la anulación la trae CIMA, y una devolución abierta de Allianz (resolución a mano) haría
+            // que el trigger siguiera forzando el recibo a «devuelto» por encima del «anulado».
+            const aRegistrar = devolucion.devoluciones.filter((d) => d.motivo !== MOTIVO_POLIZA_ANULADA)
+            const res = aRegistrar.length > 0
+              ? await registrarDevolucionesAsegura(aRegistrar, correo.messageId)
+              : null
+            const resultados = res?.estado === 'ok' ? leerResultadosPuerto(res.json) : null
+            const fallo = res && res.estado !== 'ok' ? res : null
+            const avisoId = avisoDeCategoriaCorreo(c.categoria)
+            const texto = textoAvisoDevolucion(devolucion, resultados, (id) => urlFichaCliente(id), fallo)
+            const enviado = avisoId ? await tgAviso(avisoId, texto) : await tgSend(texto)
+            if (enviado !== null) stats.avisados++
           } else if (ruta.aviso === 'inmediato') {
             // Un interruptor POR CATEGORÍA (panel /telegram): «avísame de los leads pero no de cada
             // correo de huéspedes» es la distinción real. Una categoría sin id catalogado avisa
@@ -300,4 +337,16 @@ export async function resumenSemanal(): Promise<{ total: number }> {
   ].join('\n')
   await tgAviso('correo.resumen-semanal', msg)
   return { total: triados }
+}
+
+/**
+ * Cuerpo del correo + el texto por filas de sus PDF (Allianz manda la tabla de devueltos/anuladas en
+ * un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO
+ * leído (sin cabecera de tabla), en vez de darlo por una carta sin recibos.
+ */
+async function textoConPdfs(correo: CorreoNuevo): Promise<string> {
+  const base = correo.texto ?? correo.extracto
+  if (!correo.pdfs?.length) return base
+  const textos = await Promise.all(correo.pdfs.map((b) => textoPdfPorFilas(b)))
+  return [base, ...textos.filter((t): t is string => !!t)].join('\n')
 }

@@ -1,26 +1,37 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
+import { Fragment } from 'react'
+import { NECESARIOS_EMISION_AUTO, alertaVencimiento, fechaPintable, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, lineaConductor } from '@central/module-seguros'
 import type { CapitalAsegurado } from '@central/module-seguros'
+import { esEstadoVigente } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import AnulacionPoliza from './AnulacionPoliza'
 import AvisoEmision from './AvisoEmision'
+import CobradoDeNuevo from './CobradoDeNuevo'
+import ClienteSeVa from './ClienteSeVa'
+import WhatsappReciboDevuelto, { type ContextoWhatsappDevuelto } from './WhatsappReciboDevuelto'
 import HistorialRiesgo from './HistorialRiesgo'
 import CimaPoliza from './CimaPoliza'
+import PersonasPoliza, { hayPersonas } from './PersonasPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
+import AbrirRiesgo from './AbrirRiesgo'
 import CartaMediadorPoliza from './CartaMediadorPoliza'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
+import { hayMasDatos } from '@/lib/cima-extra-vista'
 import type { ObjetoFicha } from '@/lib/ficha-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { eur } from '@/lib/dinero'
-import { PageHeader } from '@/components/ui'
+import { bloqueCobro, etiquetaGestionCobro, filasContrato, lugarRiesgo, primaParaPintar, vigenciaRiesgo, type Fila, type RiesgoFicha } from '@/lib/poliza-contrato'
+import { PageHeader, Pagina } from '@/components/ui'
 // Un solo estilo de panel para toda la correduría: el de la ficha del cliente.
 import { Tarjeta, tarjeta, th, td, sub } from '../../cliente/[id]/piezas'
+import { conteoPlural, etiquetaClaseRecibo, rotuloClave, textoFechaSituacion, TITULO_CODIGO_COMPANIA } from '@/lib/recibo-etiquetas'
 import Plegable from './Plegable'
+import MasDatosCima from './MasDatosCima'
 import { PanelAccesos, type Acceso } from '../../Accesos'
 
 export const dynamic = 'force-dynamic'
@@ -38,18 +49,37 @@ export default async function PolizaPage({ params, searchParams }: {
   const [{ id }, sp] = await Promise.all([params, searchParams])
   const v = Array.isArray(sp.v) ? sp.v[0] : sp.v
   const r = await polizaAsegura(id)
-  if (r.estado !== 'ok') return <NoSePudo estado={r} />
+  if (r.estado !== 'ok') return <Pagina ancho="tabla"><NoSePudo estado={r} /></Pagina>
   const p = r.poliza
   const cancelada = p.estado === 'cancelada'
-  const anul = p.viva && !cancelada ? ventanaAnulacion(p.fechaVencimiento) : null
+  // UNA sola lectura del vencimiento (ver `alertaVencimiento`): nunca «venció» + «avisar antes de» a la vez.
+  const venc = p.viva && !cancelada ? alertaVencimiento(p.fechaVencimiento) : null
+  const prima = primaParaPintar(p, p.contrato)
+
+  // Dato principal del riesgo: matrícula (auto/moto) o dirección (hogar/comunidades)
+  const riesgoPrincipal = p.contrato?.riesgos?.[0] as RiesgoFicha | undefined
+  const datoRiesgo = riesgoPrincipal
+    ? (['auto', 'moto'].includes(String(p.tipo).toLowerCase())
+        ? riesgoPrincipal.matricula
+          ? { label: 'Matrícula', valor: riesgoPrincipal.matricula, nota: [riesgoPrincipal.marca, riesgoPrincipal.modelo].filter(Boolean).join(' ') || undefined }
+          : null
+        : admiteDireccionRiesgo(p.tipo)
+        ? riesgoPrincipal.direccion
+          ? { label: 'Dirección', valor: riesgoPrincipal.direccion, nota: [riesgoPrincipal.localidad, riesgoPrincipal.cp].filter(Boolean).join(' ') || undefined }
+          : riesgoPrincipal.direccionIlegible
+            ? { label: 'Dirección', valor: null, nota: 'cifrada, no se puede leer' }
+            : null
+        : null)
+    : null
 
   return (
-    // `minmax(0, 1fr)` NO es decorativo (mismo caso que la ficha de cliente): sin él la pista
-    // implícita de este grid se dimensiona con su contenido más ancho —las tablas de recibos,
-    // coberturas y siniestros, que declaran `minWidth: 560`— y arrastra la página entera fuera
-    // del móvil. El `overflowX: 'auto'` que las envuelve queda anulado, porque para cuando actúa
-    // su contenedor ya ha crecido. Medido en Chromium el 02/09/2026: 590 → 390 con esta línea.
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
+    <Pagina ancho="tabla">
+      {/* `minmax(0, 1fr)` NO es decorativo (mismo caso que la ficha de cliente): sin él la pista
+          implícita de este grid se dimensiona con su contenido más ancho —las tablas de recibos,
+          coberturas y siniestros, que declaran `minWidth: 560`— y arrastra la página entera fuera
+          del móvil. El `overflowX: 'auto'` que las envuelve queda anulado, porque para cuando actúa
+          su contenedor ya ha crecido. Medido en Chromium el 02/09/2026: 590 → 390 con esta línea. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
       <div>
         <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Link href="/correduria">← Correduría</Link>
@@ -62,8 +92,10 @@ export default async function PolizaPage({ params, searchParams }: {
             {p.numeroPoliza && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · nº {p.numeroPoliza}</span>}
           </>}
           sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <span>{p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
-            {p.situacion && <span title="Situación según la compañía (EIAC)">situación: {p.situacion}</span>}
+            <span>{p.bajaVerificada
+              ? `⚪ anulada · baja verificada el ${fmt(p.bajaVerificada.en)}${p.bajaVerificada.por ? ` por ${p.bajaVerificada.por}` : ''} · ${estadoBajaCima(p.bajaVerificada)}`
+              : p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
+            {p.situacion && <SituacionCompania codigo={p.situacion} />}
             {p.retarificable && (
               /* Interna desde el 03/09/2026: la retarificación se pinta en
                  /correduria y ya no salta a asegura, que echaba al login. Sin
@@ -73,6 +105,10 @@ export default async function PolizaPage({ params, searchParams }: {
             )}
           </span>}
         />
+        {/* El riesgo de la póliza (29/09/2026): variantes P1…Pn con las mismas personas o con otro tomador. */}
+        {p.retarificable && !cancelada && (p.retarificacion?.ramo === 'auto' || p.retarificacion?.ramo === 'moto' || p.retarificacion?.ramo === 'hogar') && (
+          <div style={{ marginTop: 8 }}><AbrirRiesgo polizaId={p.id} /></div>
+        )}
       </div>
 
       {/* ── Accesos (24/09/2026, Alberto: «pincho en la póliza y me aparecen coberturas,
@@ -81,15 +117,30 @@ export default async function PolizaPage({ params, searchParams }: {
           lo demás es una baldosa con su dato, y se despliega al pulsarla. */}
       <Sustitucion p={p} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Dato label="Vence" valor={p.fechaVencimiento ? fmt(p.fechaVencimiento) : null} nota={anul ? (anul.enPlazo ? `para no renovar, avisar antes del ${fmt(anul.limiteAviso)}` : 'plazo de aviso pasado: renueva otro año') : cancelada ? 'cancelada' : undefined} color={anul?.enPlazo && anul.diasParaAvisar <= 60 ? 'var(--warning)' : undefined} />
-        <Dato label="Prima" valor={p.prima !== null ? eur(p.prima) : null} nota={p.primaAnual !== null && p.primaBruta !== null && p.primaAnual !== p.primaBruta ? `neta ${eur(p.primaAnual)} · bruta ${eur(p.primaBruta)}` : undefined} />
+      {/* Flex que envuelve y estira (no `auto-fit`): una 5.ª tarjeta o la última de una fila ocupa el
+          ancho que queda en vez de quedarse sola y pequeña. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+        {venc === null
+          // Cancelada, o fila del volcado histórico (no viva): fecha tal cual, sin aviso de renovación.
+          ? <Dato label="Vence" valor={p.fechaVencimiento ? fmt(p.fechaVencimiento) : null} nota={cancelada ? 'cancelada' : undefined} />
+          : venc.estado === 'desconocido'
+            ? <Dato label="Vencimiento" valor="desconocido" />
+            : <Dato
+                label={venc.estado === 'vencido' ? 'Venció el' : 'Vence'}
+                valor={fmt(venc.vencimiento as string)}
+                nota={venc.nota ?? undefined}
+                color={venc.estado === 'en_plazo' && (venc.diasParaAvisar ?? 99) <= 60 ? 'var(--warning)' : undefined}
+              />}
+        {/* `primaAnualDudosa`: la del fichero es la del RECIBO y se dice; nunca se presenta como anual. */}
+        <Dato label={prima.etiqueta} valor={prima.valor} nota={prima.nota} />
         <Dato label="Forma de pago" valor={p.pago ? etiquetaFraccionamiento(p.pago.fraccionamiento) : null} nota={p.pago?.formaCobro ?? undefined} />
-        <Dato label="Efecto inicial" valor={p.fechaEfectoInicial ? fmt(p.fechaEfectoInicial) : null} nota="antigüedad con la compañía (bonus)" />
+<Dato label="Efecto inicial" valor={fechaPintable(p.fechaEfectoInicial)} nota="antigüedad con la compañía (bonus)" />
+        {datoRiesgo && <Dato label={datoRiesgo.label} valor={datoRiesgo.valor} nota={datoRiesgo.nota} />}
       </div>
 
       <PanelAccesos inicial={v ?? null} accesos={accesosPoliza(p, cancelada)} />
-    </div>
+      </div>
+    </Pagina>
   )
 }
 
@@ -101,6 +152,37 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
   const nSiniestros = p.siniestros?.length ?? null
   const abiertos = p.siniestros?.filter(s => s.abierto).length ?? null
   const pedidos = p.listaDocumentos === null ? null : p.listaDocumentos.filter(d => d.estado === 'pedido').length
+  // Un bloque sin ningún dato NO se pinta: «no consta» no es «no tiene».
+  const contrato = filasContrato(p.contrato, p.fechasContrato)
+  const cobro = bloqueCobro(p.contrato)
+  const riesgos = p.contrato?.riesgos ?? []
+  const beneficiarios = p.contrato?.beneficiarios ?? []
+  const extra: (Acceso & { contenido: React.ReactNode })[] = []
+  if (contrato.length > 0 || cobro) {
+    extra.push({
+      id: 'contrato', icono: '📋', titulo: 'Contrato y cobro',
+      detalle: cobro?.filas.find((f) => f.etiqueta === 'Cuenta')?.valor ?? cobro?.filas[0]?.valor ?? null,
+      tono: cobro?.avisoTitular ? 'aviso' : undefined,
+      contenido: (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 12 }}>
+          {contrato.length > 0 && <Tarjeta titulo="Contrato"><Filas filas={contrato} /></Tarjeta>}
+          {cobro && (
+            <Tarjeta titulo="Cobro">
+              <Filas filas={cobro.filas} />
+              {cobro.avisoTitular && <p style={{ ...muted, color: 'var(--warning)', marginTop: 8 }}>⚠️ {cobro.avisoTitular}</p>}
+            </Tarjeta>
+          )}
+        </div>
+      ),
+    })
+  }
+  if (riesgos.length > 0 || beneficiarios.length > 0) {
+    extra.push({
+      id: 'riesgos', icono: '🧩', titulo: 'Riesgos',
+      detalle: riesgos.length > 0 ? `${riesgos.length}` : `${beneficiarios.length} beneficiario(s)`,
+      contenido: <Tarjeta titulo="Riesgos de la póliza"><Riesgos p={p} /></Tarjeta>,
+    })
+  }
   return [
     {
       id: 'asegura', icono: (TIPOS[p.tipo] ?? '📄').split(' ')[0], titulo: 'Qué asegura',
@@ -119,6 +201,7 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
         </Tarjeta>
       ),
     },
+    ...extra,
     {
       id: 'coberturas', icono: '🛡️', titulo: 'Coberturas',
       detalle: p.coberturas.length > 0 ? `${p.coberturas.length}` : 'sin detalle de la compañía',
@@ -126,7 +209,7 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
     },
     {
       id: 'recibos', icono: '🧾', titulo: 'Recibos',
-      detalle: r === null ? 'no informados' : r.devueltos > 0 ? `${r.total} · ${r.devueltos} devuelto(s)` : r.pendientes > 0 ? `${r.total} · ${r.pendientes} al cobro` : `${r.total}`,
+      detalle: r === null ? 'no informados' : r.devueltos > 0 ? `${r.total} · ${conteoPlural(r.devueltos, 'devuelto', 'devueltos')}` : r.pendientes > 0 ? `${r.total} · ${r.pendientes} al cobro` : `${r.total}`,
       tono: r && r.devueltos > 0 ? 'malo' : r && r.pendientes > 0 ? 'aviso' : undefined,
       contenido: <Recibos p={p} />,
     },
@@ -180,6 +263,14 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
         </>
       ),
     },
+    // Personas que manda CIMA (asegura PR 880): sin ninguna (póliza anterior o asegura viejo), no hay acceso.
+    ...(hayPersonas(p.personas)
+      ? [{
+          id: 'personas', icono: '🧑‍🤝‍🧑', titulo: p.personas.vida || p.personas.decesos ? 'Personas y persona asegurada' : 'Personas de la póliza',
+          detalle: p.personas.figuras?.length ? `${p.personas.figuras.length}` : null,
+          contenido: <Tarjeta titulo="Personas de la póliza (CIMA)"><PersonasPoliza p={p.personas} /></Tarjeta>,
+        }]
+      : []),
     {
       id: 'intervinientes', icono: '👥', titulo: 'Intervinientes',
       detalle: p.intervinientes === null ? null : p.intervinientes.length ? `${p.intervinientes.length}` : null,
@@ -215,7 +306,14 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
       id: 'cima', icono: '🔗', titulo: 'CIMA y referencias',
       contenido: (
         <Tarjeta titulo="Lo que dice la compañía por CIMA">
-          <CimaPoliza d={p.datosCompania} vigente={!cancelada} />
+          <CimaPoliza d={p.datosCompania} vigente={!cancelada} contrato={p.contrato} />
+          {p.cimaExtra !== null && (
+            <div style={{ marginTop: 12 }}>
+              <Plegable titulo="Más datos de CIMA" resumen={`${p.cimaExtra.reduce((n, g) => n + g.filas.length, 0)} campos`}>
+                <MasDatosCima grupos={p.cimaExtra} truncado={p.cimaExtraTruncado} />
+              </Plegable>
+            </div>
+          )}
           <div style={{ ...muted, display: 'grid', gap: 4, marginTop: 12 }}>
             <div>Código DGS de la entidad: {p.codigoEntidadDgs ?? '—'}</div>
             <div>Id de póliza en la entidad: {p.idPolizaEntidad ?? '—'}</div>
@@ -239,6 +337,27 @@ const TIPOS: Record<string, string> = {
  * de las 109 vivas: la casa de Rota está en la copia de junio), se enseña la
  * gemela y se dice de dónde sale. Sin gemela informada, no se afirma que no exista.
  */
+function FichaBien({ o }: { o: ObjetoFicha | null | undefined }) {
+  const ficha = o?.estado === 'conocido' ? (o.ficha ?? []) : []
+  if (ficha.length === 0 && !o?.bastidor) return null
+  return (
+    <dl style={{ margin: '6px 0 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 150px), 1fr))', gap: '6px 12px', fontSize: 12 }}>
+      {ficha.map(f => (
+        <div key={f.etiqueta} style={{ minWidth: 0 }}>
+          <dt style={muted}>{f.etiqueta}</dt>
+          <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{f.valor}</dd>
+        </div>
+      ))}
+      {o?.bastidor && (
+        <div style={{ minWidth: 0 }}>
+          <dt style={muted}>Bastidor (solo correduría)</dt>
+          <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{o.bastidor}</dd>
+        </div>
+      )}
+    </dl>
+  )
+}
+
 function Objeto({ p }: { p: Poliza }) {
   const propio = p.objeto
   const conocido = propio !== null && propio.estado === 'conocido' && (propio.titulo || propio.detalle)
@@ -252,7 +371,7 @@ function Objeto({ p }: { p: Poliza }) {
   return (
     <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
       {conocido ? (
-        <div><strong>{propio.titulo}</strong>{propio.detalle && <div style={muted}>{propio.detalle}</div>}{propio.nota && <div style={muted}>{propio.nota}</div>}</div>
+        <div><strong>{propio.titulo}</strong>{propio.detalle && <div style={muted}>{propio.detalle}</div>}{propio.nota && <div style={muted}>{propio.nota}</div>}<FichaBien o={propio} /></div>
       ) : propio?.estado === 'cifrado' ? (
         <div style={muted}>🔒 {propio.nota ?? 'La dirección viene cifrada del CRM y aquí no hay clave para leerla.'}</div>
       ) : (
@@ -260,7 +379,7 @@ function Objeto({ p }: { p: Poliza }) {
       )}
       {!conocido && gemConocida && p.gemela && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-          <div><strong>{gem.titulo}</strong>{gem.detalle && <div style={muted}>{gem.detalle}</div>}</div>
+          <div><strong>{gem.titulo}</strong>{gem.detalle && <div style={muted}>{gem.detalle}</div>}<FichaBien o={gem} /></div>
           <div style={muted}>
             Sale de la copia de esta misma póliza en el volcado de junio (<Link href={`/correduria/poliza/${p.gemela.polizaId}`}>ver</Link>
             {p.gemela.clienteId !== p.cliente.id && <> · cuelga de <Link href={`/correduria/cliente/${p.gemela.clienteId}`}>otra ficha</Link></>}
@@ -408,7 +527,7 @@ function Limites({ detalle }: { detalle: Poliza['coberturas'][number]['detalle']
         <div key={i} style={{ whiteSpace: 'nowrap' }}>
           {l.maximo !== null ? eur(l.maximo) : l.minimo !== null ? eur(l.minimo) : '—'}
           {l.descripcion && <span style={sub}> {l.descripcion}</span>}
-          {!l.descripcion && l.clase && <span style={sub} title="Clase de límite (código EIAC)"> {l.clase}</span>}
+          {!l.descripcion && l.clase && <span style={sub} title={TITULO_CODIGO_COMPANIA}> cód. {l.clase}</span>}
         </div>
       ))}
     </>
@@ -426,22 +545,44 @@ function Franquicia({ texto, detalle }: { texto: string | null; detalle: Poliza[
           {f.minimo !== null || f.maximo !== null ? (
             <span style={sub}> {f.minimo !== null ? `mín. ${eur(f.minimo)}` : ''}{f.minimo !== null && f.maximo !== null ? ' · ' : ''}{f.maximo !== null ? `máx. ${eur(f.maximo)}` : ''}</span>
           ) : null}
-          {f.porcentaje === null && f.minimo === null && f.maximo === null && (f.clase ?? texto ?? '—')}
+          {f.porcentaje === null && f.minimo === null && f.maximo === null && (f.clase ? <span title={TITULO_CODIGO_COMPANIA}>cód. {f.clase}</span> : (texto ?? '—'))}
         </div>
       ))}
     </>
   )
 }
 
+/**
+ * Con quién se abre el WhatsApp de un recibo devuelto: el móvil del tomador y, si no tiene, el de
+ * alguien de su póliza (se dice de quién). `null` = no hay a quién escribir por ahí.
+ */
+function contextoWhatsapp(p: Poliza): ContextoWhatsappDevuelto | null {
+  const ef = contactoEfectivo({ telefono: p.cliente.telefono, email: null }, p.intervinientes)
+  if (!ef.telefono) return null
+  const obj = p.objeto?.estado === 'conocido' ? p.objeto : p.gemela?.objeto?.estado === 'conocido' ? p.gemela.objeto : null
+  const tercero = ef.viaTelefono === 'interviniente'
+  return {
+    clienteId: p.cliente.id, telefono: ef.telefono,
+    quien: tercero && ef.quien ? `${ef.quien.nombre ?? 'otra persona'} (${etiquetaRol(ef.quien.rol).toLowerCase()})` : null,
+    nombre: p.cliente.nombre, aseguradora: p.aseguradora, tipo: p.tipo,
+    riesgo: obj ? { titulo: obj.titulo, detalle: obj.detalle } : null,
+    paraTercero: tercero,
+  }
+}
+
 function Recibos({ p }: { p: Poliza }) {
+  // «El cliente se va» solo sobre una póliza que sigue en vigor y que nadie ha dado ya de baja.
+  const puedeBaja = p.viva && esEstadoVigente(p.estado) && p.bajaVerificada === null
   const r = p.recibos
+  const wa = contextoWhatsapp(p)
+  const enRiesgo = comisionEnRiesgo(p.listaRecibos)
   const titular =
     r === null ? 'asegura no informa recibos'
     : r.total === 0 ? 'la compañía no ha mandado ningún recibo: no se sabe si está pagada'
-    : r.devueltos > 0 ? `🔴 ${r.devueltos} devuelto(s)`
+    : r.devueltos > 0 ? `🔴 ${conteoPlural(r.devueltos, 'devuelto', 'devueltos')}${enRiesgo !== null ? ` · ${eur(enRiesgo)} de comisión en riesgo` : ''}`
     : r.pendientes > 0 ? `🟡 ${r.pendientes} al cobro (emitido, aún sin cargar)`
     : r.cobrados === 0 && r.anulados > 0 ? `⚪ todos anulados (${r.anulados})`
-    : `🟢 ${r.cobrados} cobrado(s)${r.cobradoEur !== null ? ` · ${eur(r.cobradoEur)}` : ''}`
+    : `🟢 ${conteoPlural(r.cobrados, 'cobrado', 'cobrados')}${r.cobradoEur !== null ? ` · ${eur(r.cobradoEur)}` : ''}`
   // Del más reciente al más antiguo (ISO ordena como texto); sin fecha, al final.
   const clave = (x: Poliza['listaRecibos'][number]) => x.fechaEmision ?? x.fechaVencimiento ?? ''
   const ordenados = [...p.listaRecibos].sort((a, b) => clave(b).localeCompare(clave(a)))
@@ -450,37 +591,150 @@ function Recibos({ p }: { p: Poliza }) {
   return (
     <Tarjeta titulo={`Recibos${r && r.total ? ` (${r.total})` : ''}`}>
       <p style={{ margin: '0 0 8px', fontSize: 13 }}>{titular}</p>
-      {recientes.length > 0 && <TablaRecibos lista={recientes} />}
+      {recientes.length > 0 && <TablaRecibos lista={recientes} wa={wa} puedeBaja={puedeBaja} />}
       {/* Los antiguos, plegados y sin montar: una póliza de hace años trae
           decenas de recibos y lo que se consulta es la anualidad en curso. */}
       {antiguos.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <Plegable titulo={`Ver ${antiguos.length} recibo(s) anteriores`}>
-            <TablaRecibos lista={antiguos} />
+            <TablaRecibos lista={antiguos} wa={wa} puedeBaja={puedeBaja} />
           </Plegable>
         </div>
       )}
+      <HistorialDevoluciones lista={p.historialDevoluciones} />
     </Tarjeta>
   )
 }
 
 const RECIBOS_VISIBLES = 12
 
-function TablaRecibos({ lista }: { lista: Poliza['listaRecibos'] }) {
+/** Suma la comisión de los recibos DEVUELTOS que la traen; `null` si ninguno la trae (no es 0€). */
+function comisionEnRiesgo(lista: Poliza['listaRecibos']): number | null {
+  // Solo la POSITIVA: una comisión negativa ya es un extorno (misma regla que el aviso de asegura).
+  const con = lista.filter((x) => x.situacion === 'devuelto' && x.comisionBruta !== null && x.comisionBruta > 0)
+  return con.length ? con.reduce((a, x) => a + (x.comisionBruta ?? 0), 0) : null
+}
+
+/** `manual:cobrado` (botón «Cobrado de nuevo») o `cima:<situación>` (lo resolvió la ingesta). */
+function comoSeResolvio(m: string | null): string {
+  if (m === 'manual:cobrado') return 'cobrado de nuevo (a mano)'
+  if (m === 'manual:baja') return 'el cliente se va: póliza dada de baja (a mano)'
+  if (m?.startsWith('cima:')) return `${m.slice(5).replace(/_/g, ' ')} según CIMA`
+  return m ?? 'resuelta'
+}
+
+/**
+ * Las devoluciones que avisó la compañía por correo, también las ya resueltas: si un cliente devuelve
+ * recibos a menudo, es aquí donde se ve. `null` = no se pudo leer y se dice; `[]` no pinta nada.
+ */
+function HistorialDevoluciones({ lista }: { lista: Poliza['historialDevoluciones'] }) {
+  if (lista === null) return <p style={{ ...sub, marginTop: 10 }}>Historial de devoluciones por correo: no se ha podido leer.</p>
+  if (lista.length === 0) return null
+  const abiertas = lista.filter((d) => d.resueltaEn === null).length
+  return (
+    <div style={{ marginTop: 10 }}>
+      <Plegable titulo={`Historial de devoluciones (${lista.length}${abiertas ? ` · ${abiertas} abierta${abiertas > 1 ? 's' : ''}` : ''})`}>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+          {lista.map((d, i) => (
+            <li key={`${d.idRecibo}-${d.fecha}-${i}`} style={{ marginBottom: 4 }}>
+              {fmt(d.fecha)} · recibo …{d.idRecibo.slice(-4)}{d.importe !== null ? ` · ${eur(d.importe)}` : ''}
+              {d.motivo ? ` · ${d.motivo}` : ''}
+              <div style={sub}>
+                {d.resueltaEn === null ? '🔴 abierta' : `✅ ${comoSeResolvio(d.resueltaComo)} el ${fmt(d.resueltaEn)}`}
+                {d.fechaEfecto ? ` · efecto ${fmt(d.fechaEfecto)}` : ''}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Plegable>
+    </div>
+  )
+}
+
+function TablaRecibos({ lista, wa, puedeBaja }: { lista: Poliza['listaRecibos']; wa: ContextoWhatsappDevuelto | null; puedeBaja: boolean }) {
+  // Columnas nuevas solo si ALGÚN recibo las trae: asegura vieja o recibos anteriores a la ingesta nueva no las tienen.
+  const hayNeta = lista.some((x) => x.primaNeta !== null || x.comisionLiquida !== null)
+  const hayComision = lista.some((x) => x.baseComision !== null || x.comisionBruta !== null || x.claseComision || x.retencionIrpf !== null)
+  // 🚨 El IMPORTE va en 2.ª columna (antes la última): en escritorio la tabla de 10 columnas obligaba a
+  // scroll horizontal y era justo la que quedaba oculta. Efecto→Vence comparten columna y la remesa
+  // pasa al pie de «Cobro»: 6 columnas fijas + 2 opcionales, y por debajo de 768 px cada fila es una ficha.
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table className="tabla-polizas" style={tabla}>
-        <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Emitido</th><th style={th}>Vence</th><th style={th}>Situación</th><th style={th}>Cobro</th><th style={{ ...th, textAlign: 'right' }}>Importe</th></tr></thead>
+      <table className="tabla-polizas" style={{ ...tabla, minWidth: 0 }}>
+        <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Emitido</th><th style={{ ...th, textAlign: 'right' }}>Importe</th><th style={th}>Situación</th><th style={th}>Clase</th><th style={th}>Efecto → vence</th><th style={th}>Cobro</th>{hayComision && <th style={th}>Comisión</th>}{hayNeta && <th style={{ ...th, textAlign: 'right' }}>Prima neta</th>}</tr></thead>
         <tbody>
-          {lista.map(x => (
-            <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
+          {lista.map(x => {
+            const clase = rotuloClave('claseRecibo', x.clase)
+            const claseTexto = etiquetaClaseRecibo(x.clase)
+            const efecto = x.fechaEfecto ? fechaPintable(x.fechaEfecto) : null
+            const vence = x.fechaVencimiento ? fechaPintable(x.fechaVencimiento) : null
+            return (
+            <Fragment key={x.id}>
+            <tr style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
               <td data-label="Emitido" style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
-              <td data-label="Vence" style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
-              <td data-rol="cabeza" style={td}>{ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}</td>
-              <td data-label="Cobro" style={td}>{x.formaPago ?? <span style={muted}>—</span>}</td>
-              <td data-label="Importe" style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>{x.importe === null ? <span style={muted} title="Importe con forma inesperada en el EIAC">ilegible</span> : eur(x.importe)}</td>
+              <td data-label="Importe" style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 600 }}>{x.importe === null ? <span style={muted} title="Importe con forma inesperada en el EIAC">ilegible</span> : eur(x.importe)}</td>
+              <td data-rol="cabeza" style={td}>
+                {ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}
+                {textoFechaSituacion(x.situacion, x.fechaSituacion) && <div style={sub}>{textoFechaSituacion(x.situacion, x.fechaSituacion)}</div>}
+                {/* Solo en DEVUELTO: un «pendiente» no prueba que el banco lo devolviera. */}
+                {x.situacion === 'devuelto' && wa && (
+                  <> <WhatsappReciboDevuelto ctx={wa} importe={x.importe} fechaEfecto={x.fechaEfecto} tipoMotivo={x.devolucionCorreo?.tipoMotivo ?? null} /></>
+                )}
+                {x.situacion === 'devuelto' && x.comisionBruta !== null && x.comisionBruta > 0 && (
+                  <div style={sub} title="Comisión bruta del recibo según CIMA: si no se cobra, la compañía te la descuenta">💸 {eur(x.comisionBruta)} de comisión en riesgo</div>
+                )}
+                {x.devolucionCorreo && (
+                  <div style={sub}>
+                    <span title="CIMA aún no lo trae: lo avisó la compañía por correo">aviso por correo del {fmt(x.devolucionCorreo.fecha)}{x.devolucionCorreo.motivo ? ` · ${x.devolucionCorreo.motivo}` : ''}</span>
+                    <CobradoDeNuevo reciboId={x.id} />
+                  </div>
+                )}
+                {x.situacion === 'devuelto' && puedeBaja && <ClienteSeVa reciboId={x.id} />}
+              </td>
+              <td data-label="Clase" style={td}>
+                {clase?.desconocido ? <span title={TITULO_CODIGO_COMPANIA}>{claseTexto} <span style={sub}>(código de la compañía)</span></span> : claseTexto}
+              </td>
+              <td data-label="Efecto → vence" style={{ ...td, whiteSpace: 'nowrap' }}>{efecto ?? '—'} → {vence ?? '—'}</td>
+              <td data-label="Cobro" style={td}>
+                {x.formaPago ?? <span style={muted}>—</span>}
+                {x.gestionCobro && <div style={sub}>{etiquetaGestionCobro(x.gestionCobro)}</div>}
+                {x.idRemesa && <div style={{ ...sub, wordBreak: 'break-all' }}>remesa {x.idRemesa}</div>}
+              </td>
+              {hayComision && (
+                <td data-label="Comisión" style={td}>
+                  {x.comisionBruta !== null ? <span style={{ whiteSpace: 'nowrap' }}>{eur(x.comisionBruta)}</span>
+                    : x.baseComision !== null ? <span style={{ whiteSpace: 'nowrap' }}>base {eur(x.baseComision)}</span> : <span style={muted}>—</span>}
+                  {x.comisionBruta !== null && x.baseComision !== null && <div style={sub}>base {eur(x.baseComision)}</div>}
+                  {(x.claseComision || x.retencionIrpf !== null) && (
+                    <div style={sub}>
+                      {x.claseComision && <ClaseComision codigo={x.claseComision} />}
+                      {x.claseComision && x.retencionIrpf !== null && ' · '}
+                      {x.retencionIrpf !== null && <span style={{ whiteSpace: 'nowrap' }}>IRPF {eur(x.retencionIrpf)}</span>}
+                    </div>
+                  )}
+                </td>
+              )}
+              {hayNeta && (
+                <td data-label="Prima neta" style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {x.primaNeta === null ? <span style={muted}>—</span> : eur(x.primaNeta)}
+                  {/* `null` = no consta: la línea no existe (no es «0» ni «—»). */}
+                  {x.comisionLiquida !== null && <div style={sub}>com. líquida {eur(x.comisionLiquida)}</div>}
+                </td>
+              )}
             </tr>
-          ))}
+            {/* «Más datos de CIMA» del recibo: plegado y SOLO con datos (null y [] no pintan). En móvil es la parte baja de la misma tarjeta (`.fila-hija`). */}
+            {hayMasDatos(x.cimaExtra) && (
+              <tr className="fila-hija">
+                <td colSpan={6 + (hayComision ? 1 : 0) + (hayNeta ? 1 : 0)} style={{ ...td, paddingTop: 0 }}>
+                  <Plegable titulo="Más datos de CIMA" resumen={`${x.cimaExtra.reduce((n, g) => n + g.filas.length, 0)} campos`}>
+                    <MasDatosCima grupos={x.cimaExtra} truncado={x.cimaExtraTruncado} />
+                  </Plegable>
+                </td>
+              </tr>
+            )}
+            </Fragment>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -515,6 +769,8 @@ function Intervinientes({ p }: { p: Poliza }) {
           {i.email && <> · <a href={`mailto:${i.email}`}>✉️</a></>}
           {/* `poliza` no es una procedencia que decir: es la póliza que se está mirando. */}
           {i.origen !== 'poliza' && <span style={sub}> · {i.origen}</span>}
+          {/* Carné y nacimiento del conductor (CIMA). `null` = no consta: no se pinta. */}
+          {lineaConductor(i) && <div style={muted}>{lineaConductor(i)}</div>}
         </div>
       ))}
       {ef.telefono && ef.quien && <div style={muted}>Si el tomador no contesta: {ef.quien.fichaId ? <Link href={`/correduria/cliente/${ef.quien.fichaId}`}>{ef.quien.nombre}</Link> : ef.quien.nombre} ({etiquetaRol(ef.quien.rol)}) 📞 {ef.telefono}</div>}
@@ -525,9 +781,80 @@ function Intervinientes({ p }: { p: Poliza }) {
   )
 }
 
+/** Lista etiqueta → valor. Solo recibe filas con dato: lo que no consta ni llega aquí. */
+function Filas({ filas }: { filas: Fila[] }) {
+  return (
+    <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'minmax(0, max-content) minmax(0, 1fr)', gap: '6px 12px', fontSize: 13 }}>
+      {filas.map((f) => (
+        <div key={f.etiqueta} style={{ display: 'contents' }}>
+          <dt style={{ color: 'var(--muted)' }}>{f.etiqueta}</dt>
+          <dd style={{ margin: 0, minWidth: 0, overflowWrap: 'anywhere' }}>{f.valor}{f.nota && <div style={sub}>{f.nota}</div>}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+/**
+ * Todos los riesgos que manda CIMA (una póliza puede asegurar dos casas o dos
+ * barcos). La dirección llega YA descifrada de asegura, como la del riesgo
+ * principal; si allí no se pudo descifrar se dice, nunca se manda el cifrado.
+ */
+function Riesgos({ p }: { p: Poliza }) {
+  const riesgos = p.contrato?.riesgos ?? []
+  const beneficiarios = p.contrato?.beneficiarios ?? []
+  return (
+    <div style={{ display: 'grid', gap: 10, fontSize: 13 }}>
+      {riesgos.map((r, i) => {
+        const vig = vigenciaRiesgo(r)
+        const lugar = lugarRiesgo(r)
+        return (
+          <div key={r.id ?? i} style={{ borderTop: i ? '1px solid var(--border)' : undefined, paddingTop: i ? 8 : 0, minWidth: 0 }}>
+            <div>
+              <strong>{r.descripcion ?? (r.tipo ? (TIPOS[r.tipo] ?? r.tipo) : `Riesgo ${r.numeroOrden ?? i + 1}`)}</strong>
+              {r.descripcion && r.tipo && <span style={sub}> · {TIPOS[r.tipo] ?? r.tipo}</span>}
+            </div>
+            {lugar && <div style={{ ...muted, overflowWrap: 'anywhere' }}>{lugar}</div>}
+            {r.direccionIlegible && <div style={muted}>🔒 La dirección de este riesgo viene cifrada y asegura no ha podido leerla.</div>}
+            {vig && <div style={sub}>Vigencia {vig}</div>}
+          </div>
+        )
+      })}
+      {beneficiarios.length > 0 && (
+        <div style={{ borderTop: riesgos.length ? '1px solid var(--border)' : undefined, paddingTop: riesgos.length ? 8 : 0 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Beneficiarios</div>
+          {beneficiarios.map((b, i) => (
+            <div key={i} style={{ overflowWrap: 'anywhere' }}>
+              {b.orden && <span style={sub}>{b.orden}. </span>}
+              {b.descripcion ?? b.prestamo ?? '—'}
+              {b.descripcion && b.prestamo && <span style={sub}> · {b.prestamo}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Situación de la póliza según la compañía (EIAC §13.3.32): «EV» → «En Vigor». Fuera de tabla, el código y se dice. */
+function SituacionCompania({ codigo }: { codigo: string }) {
+  const r = rotuloClave('situacionPoliza', codigo)
+  if (r === null) return null
+  return <span title={r.desconocido ? TITULO_CODIGO_COMPANIA : 'Situación según la compañía (EIAC)'}>situación: {r.texto}{r.desconocido ? ' (código de la compañía)' : ''}</span>
+}
+
+/** Clase de comisión de un recibo: traducida; fuera de tabla, el código con su título. */
+function ClaseComision({ codigo }: { codigo: string }) {
+  const r = rotuloClave('claseComision', codigo)
+  if (r === null) return null
+  return r.desconocido
+    ? <span title={TITULO_CODIGO_COMPANIA}>clase {r.texto} (código de la compañía)</span>
+    : <span title="Clase de comisión (EIAC)">{r.texto}</span>
+}
+
 function Dato({ label, valor, nota, color }: { label: string; valor: string | null; nota?: string; color?: string }) {
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', flex: '1 1 150px', minWidth: 0 }}>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 700, color: color ?? 'var(--text)' }}>{valor ?? <span style={{ color: 'var(--muted)', fontWeight: 400 }} title="La compañía no lo informa">sin dato</span>}</div>
       {nota && <div style={{ fontSize: 11, color: color ?? 'var(--muted)' }}>{nota}</div>}
@@ -562,9 +889,16 @@ function NoSePudo({ estado }: { estado: { estado: 'sin_configurar' } | { estado:
 const tabla: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }
 const muted: React.CSSProperties = { fontSize: 13, color: 'var(--muted)', margin: 0 }
 
+/** Lo que CIMA ha dicho desde que se dio de baja a mano: nada, que la confirma, o que la sigue dando en vigor. */
+function estadoBajaCima(b: NonNullable<Poliza['bajaVerificada']>): string {
+  if (b.estadoCima === null) return 'pendiente de que CIMA la confirme'
+  if (esEstadoVigente(b.estadoCima)) return `⚠️ CIMA la sigue dando en vigor (${b.cimaEn ? fmt(b.cimaEn) : 'sin fecha'}): mira en el portal de la compañía si al final pagó`
+  return `CIMA la confirma (${b.estadoCima.replace(/_/g, ' ')}${b.cimaEn ? `, ${fmt(b.cimaEn)}` : ''})`
+}
+
+/** `dd/mm/aaaa`. Una fecha centinela (1900-01-01, 9999-12-31) o ilegible no es fecha: «—», nunca «01/01/1900». */
 function fmt(iso: string): string {
-  const [y, m, d] = iso.split('-')
-  return d && m && y ? `${d}/${m}/${y}` : iso
+  return fechaPintable(iso) ?? '—'
 }
 
 /* ─── ¿Merece la pena pedir precio? ────────────────────────────────────────

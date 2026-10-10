@@ -10,12 +10,13 @@
 // El SQL crudo no prefija `seguros.`: la conexión ya trae `?schema=seguros`.
 
 import {
-  ESTADOS_ANULACION_ABIERTA, POLIZA_ESTADOS_VIGENTES, resolucionDeAnulacion, siguientePasoAnulacion, transicionAnulacion,
-  validarSolicitudAnulacion, type AccionAnulacion, type EstadoAnulacion, type MotivoAnulacion, type SiguientePasoAnulacion, type TipoAnulacion,
+  ESTADOS_ANULACION_ABIERTA, POLIZA_ESTADOS_VIGENTES, liberaSolaAt, liberadaParaFirma, resolucionDeAnulacion, siguientePasoAnulacion, transicionAnulacion,
+  validarSolicitudAnulacion, type AccionAnulacion, type EstadoAnulacion, type MotivoAnulacion, type OrigenAnulacion, type SiguientePasoAnulacion, type TipoAnulacion,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { bloqueoAccion, esViolacionRetencionPortal, liberarConDeps, MOTIVO_RETENIDA, type DbLiberar, type ResultadoLiberar } from './anulacion-operador'
 
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
 
@@ -36,6 +37,12 @@ export type Anulacion = {
   compania: string | null
   tipo: TipoAnulacion
   solicitadaPor: string
+  /** `portal` = la pidió el cliente (nace retenida 48 h); `corredor` = como siempre. */
+  origen: OrigenAnulacion
+  /** Cuándo la liberó el corredor (o el plazo). `null` = no liberada. */
+  liberadaAt: string | null
+  /** Solo si está RETENIDA: cuándo se libera sola (ISO). `null` = no retenida. */
+  liberaSolaAt: string | null
   motivo: MotivoAnulacion
   motivoTexto: string | null
   fechaEfecto: string
@@ -47,39 +54,47 @@ export type Anulacion = {
   confirmadaAt: string | null
   /** Firmada junto a un presupuesto aceptado cuya póliza nueva aún no consta emitida: no se comunica todavía. */
   esperaEmision: boolean
+  /** Firmada en el portal (firma electrónica con carta guardada): hay justificante que mandar al cliente. */
+  firmaElectronica: boolean
   siguiente: SiguientePasoAnulacion | null
 }
 
 type Fila = {
   id: string; polizaId: string; clienteId: string; nombre: string | null; apellidos: string | null; numeroPoliza: string | null
-  compania: string | null; tipo: TipoAnulacion; solicitadaPor: string; motivo: MotivoAnulacion; motivoTexto: string | null
+  compania: string | null; tipo: TipoAnulacion; solicitadaPor: string; origen: OrigenAnulacion; liberadaAt: Date | null; motivo: MotivoAnulacion; motivoTexto: string | null
   fechaEfecto: string; estado: EstadoAnulacion; creada: Date; firmadaAt: Date | null; firmaNota: string | null
-  comunicadaAt: Date | null; confirmadaAt: Date | null; esperaEmision: boolean
+  comunicadaAt: Date | null; confirmadaAt: Date | null; esperaEmision: boolean; firmaElectronica: boolean
 }
 
 function mapear(f: Fila, hoy: string): Anulacion {
+  const retenida = f.estado === 'solicitada' && !liberadaParaFirma({ origen: f.origen, liberadaAt: f.liberadaAt, createdAt: f.creada }, new Date())
+  const liberaSola = retenida ? liberaSolaAt(f.creada).toISOString() : null
   return {
     id: f.id, polizaId: f.polizaId, clienteId: f.clienteId,
     cliente: [f.nombre, f.apellidos].filter(Boolean).join(' ') || null,
     numeroPoliza: f.numeroPoliza, compania: f.compania, tipo: f.tipo, solicitadaPor: f.solicitadaPor,
+    origen: f.origen, liberadaAt: f.liberadaAt?.toISOString() ?? null, liberaSolaAt: liberaSola,
     motivo: f.motivo, motivoTexto: f.motivoTexto, fechaEfecto: f.fechaEfecto, estado: f.estado,
     creada: f.creada.toISOString(),
     firmadaAt: f.firmadaAt?.toISOString() ?? null, firmaNota: f.firmaNota,
     comunicadaAt: f.comunicadaAt?.toISOString() ?? null, confirmadaAt: f.confirmadaAt?.toISOString() ?? null,
     esperaEmision: f.esperaEmision,
+    firmaElectronica: f.firmaElectronica,
     siguiente: f.esperaEmision && f.estado === 'firmada'
       ? { texto: 'Espera a que la compañía emita la póliza nueva (márcalo en su presupuesto): hasta entonces no se comunica.', alerta: false }
-      : siguientePasoAnulacion({ estado: f.estado, fechaEfecto: f.fechaEfecto, compania: f.compania }, hoy),
+      : siguientePasoAnulacion({ estado: f.estado, fechaEfecto: f.fechaEfecto, compania: f.compania, pedidaPorCliente: liberaSola ? { liberaSolaAt: liberaSola } : null }, hoy),
   }
 }
 
 const SELECT = Prisma.sql`
   select a.id::text as id, a.poliza_id::text as "polizaId", a.cliente_id::text as "clienteId", c.nombre, c.apellidos,
          p.numero_poliza as "numeroPoliza", p.aseguradora as compania, a.tipo, a.solicitada_por as "solicitadaPor",
+         a.origen, a.liberada_at as "liberadaAt",
          a.motivo, a.motivo_texto as "motivoTexto", to_char(a.fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto", a.estado,
          a.created_at as creada, a.firmada_at as "firmadaAt", a.firma_nota as "firmaNota",
          a.comunicada_at as "comunicadaAt", a.confirmada_at as "confirmadaAt",
-         (a.presupuesto_id is not null and not exists (select 1 from presupuesto pr where pr.id = a.presupuesto_id and pr.emitido_at is not null)) as "esperaEmision"
+         (a.presupuesto_id is not null and not exists (select 1 from presupuesto pr where pr.id = a.presupuesto_id and pr.emitido_at is not null)) as "esperaEmision",
+         (a.firma_id is not null and a.carta_texto is not null) as "firmaElectronica"
   from anulacion a join polizas p on p.id = a.poliza_id left join clientes c on c.id = a.cliente_id`
 
 /** Los expedientes de una póliza, el más reciente primero. */
@@ -147,8 +162,9 @@ export type ResultadoAccion =
 export async function accionAnulacion(correduriaId: string, id: string, accion: AccionAnulacion, nota: string | null, actor: string): Promise<ResultadoAccion> {
   if (!UUID.test(id)) return { estado: 'no_encontrada' }
   const db = prismaAsegura()
-  const [a] = await db.$queryRaw<{ estado: EstadoAnulacion; clienteId: string; polizaId: string; esperaEmision: boolean }[]>`
+  const [a] = await db.$queryRaw<{ estado: EstadoAnulacion; clienteId: string; polizaId: string; esperaEmision: boolean; origen: OrigenAnulacion; liberadaAt: Date | null; createdAt: Date }[]>`
     select estado, cliente_id::text as "clienteId", poliza_id::text as "polizaId",
+           origen, liberada_at as "liberadaAt", created_at as "createdAt",
            (presupuesto_id is not null and not exists (select 1 from presupuesto pr where pr.id = anulacion.presupuesto_id and pr.emitido_at is not null)) as "esperaEmision"
     from anulacion where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
   if (!a) return { estado: 'no_encontrada' }
@@ -161,11 +177,16 @@ export async function accionAnulacion(correduriaId: string, id: string, accion: 
     return { estado: 'no_permitida', motivo: accion === 'marcar_comunicada' && a.estado === 'solicitada' ? 'Sin la firma del cliente no se comunica a la compañía.' : `Desde «${a.estado}» no se puede.` }
   }
   const texto = nota?.trim().slice(0, 500) || null
+  // Una baja pedida por el cliente no se da por firmada sin liberar (saltaría la retención por el otro lado) y no se desiste sin decir por qué.
+  const bloqueo = bloqueoAccion(a, accion, texto, new Date())
+  if (bloqueo) return bloqueo
   // Firmar sin decir cómo consta la firma es firmar a ciegas: la nota es obligatoria.
   if (accion === 'marcar_firmada' && !texto) return { estado: 'invalida', motivo: 'Di cómo consta la firma (p. ej. «carta firmada, subida a Documentos»).' }
   const quien = actor.slice(0, 100)
   // `where estado = actual`: si otro clic la movió entre medias, esta no pisa nada.
-  const n = await db.$executeRaw`
+  let n: number
+  try {
+    n = await db.$executeRaw`
     update anulacion set estado = ${nuevo}, updated_at = now(),
       firmada_at    = case when ${nuevo} = 'firmada'    then now() else firmada_at end,
       firma_nota    = case when ${nuevo} = 'firmada'    then ${texto} else firma_nota end,
@@ -173,10 +194,23 @@ export async function accionAnulacion(correduriaId: string, id: string, accion: 
       confirmada_at = case when ${nuevo} = 'confirmada' then now() else confirmada_at end,
       desistida_at  = case when ${nuevo} = 'desistida'  then now() else desistida_at end
     where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = ${a.estado}`
+  } catch (e) {
+    // El CHECK de la BD es la red de seguridad de `bloqueoAccion`: si salta, es un 409 («libérala primero»), no un 500.
+    if (esViolacionRetencionPortal(e)) return { estado: 'no_permitida', motivo: MOTIVO_RETENIDA }
+    throw e
+  }
   if (n === 0) return { estado: 'no_permitida', motivo: 'Ha cambiado mientras tanto: recarga.' }
   anotarCambio({ entidad: 'anulacion', id, campo: 'estado', antes: a.estado, despues: nuevo })
   await historial(correduriaId, a.clienteId, a.polizaId, `Anulación ${nuevo}${texto ? `: ${texto}` : ''} (${quien}).`)
   return { estado: 'hecho', nuevo }
+}
+
+/** «Liberar para firma»: el corredor ya ha hablado con el cliente. Una sola vez; solo las pedidas desde el portal. */
+export async function liberarAnulacion(correduriaId: string, id: string, actor: string): Promise<ResultadoLiberar> {
+  return liberarConDeps(
+    { db: prismaAsegura() as unknown as DbLiberar, anotar: anotarCambio, historial: (c, p, t) => historial(correduriaId, c, p, t) },
+    correduriaId, id, actor,
+  )
 }
 
 async function historial(correduriaId: string, clienteId: string, polizaId: string, texto: string): Promise<void> {

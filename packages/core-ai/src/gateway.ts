@@ -36,11 +36,17 @@ export function gatewayChat(
   opts: {
     system?: string; model?: string; maxTokens?: number; timeoutMs?: number
     cliente?: string; privado?: boolean; cache?: { ambito: string; ttlHoras?: number }
+    /** Categoría del catálogo del Director (`redaccion`, `logica`…): la pasarela elige el modelo de
+     *  esa categoría SIN saltarse OpenRouter (un `model` pinneado sí se lo salta). Opcional; una
+     *  pasarela que no la conoce la ignora. */
+    categoria?: string
   } = {},
 ): Promise<string> {
   return llamar(config, '/api/ai/chat', {
     messages, system: opts.system, model: opts.model, maxTokens: opts.maxTokens,
-    cliente: opts.cliente, privado: opts.privado, cache: opts.cache,
+    cliente: opts.cliente, privado: opts.privado, cache: opts.cache, categoria: opts.categoria,
+    // La pasarela acota el timeout contra el proveedor con este valor (sin él, 25 s por defecto).
+    timeoutMs: opts.timeoutMs,
   }, opts.timeoutMs ?? 25_000)
 }
 

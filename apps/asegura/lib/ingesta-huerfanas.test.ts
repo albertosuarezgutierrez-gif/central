@@ -75,6 +75,19 @@ test('🚨 se queda el ÚLTIMO parte de cada fichero, y la identidad es el NOMBR
   assert.match(bloque, /ORDER BY e\.payload->>'nombreFichero', e\.occurred_at DESC/)
 })
 
+test('🚨 un cierre manual POSTERIOR al último parte apaga el fichero', () => {
+  // El rescate del 24/09/2026 (`ingerir-manual` / `cima-rescate-lote`) metió
+  // los 46 objetos sin emitir parte nuevo, y el aviso los siguió cantando como
+  // pérdida irreversible. El cierre es un `cima_residuo_resuelto_manual` con
+  // el `ficheroId`, y solo cuenta si es POSTERIOR: uno viejo no tapa un parte
+  // nuevo que vuelva a dejar objetos en revisión.
+  const bloque = FUENTE.slice(FUENTE.indexOf('const parciales = await leerONull'))
+  const consulta = bloque.slice(0, bloque.indexOf('`)'))
+  assert.match(consulta, /NOT EXISTS[\s\S]*event_name = 'cima_residuo_resuelto_manual'/)
+  assert.match(consulta, /cf\.id::text = r\.payload->>'ficheroId'/)
+  assert.match(consulta, /r\.occurred_at > u\.occurred_at/)
+})
+
 test('las claves de recuento se suman por SUFIJO, y `zipEntryCount` queda fuera', () => {
   // Las claves son por tipo de objeto (`polizasReview`, `recibosReview`…): con
   // una lista cerrada, un tipo nuevo se perdería en silencio. Y `zipEntryCount`
@@ -97,4 +110,60 @@ test('y viaja de cuántas compañías sale la cifra', () => {
   const bloque = FUENTE.slice(FUENTE.indexOf('const cobertura = await leerONull'))
   assert.match(bloque, /COUNT\(DISTINCT codigo_entidad\)/)
   assert.match(bloque, /entidadesObservadas:/)
+})
+
+test('📭 emisiones sin aviso: emitidas, fuera de las 24 h y SIN ningún evento del webhook', () => {
+  // Caso del 28/09/2026: cuatro emitidas, cero eventos (el receptor daba 401).
+  // Sin el NOT EXISTS la señal cantaría todas las emisiones; sin la ventana de
+  // 30 días, una emisión vieja sin aviso alarmaría para siempre.
+  const bloque = FUENTE.slice(FUENTE.indexOf('const emisionesSinAviso = await leerONull'))
+  const consulta = bloque.slice(0, bloque.indexOf('`, String(HORAS_EMISION_SIN_AVISO))'))
+  assert.match(consulta, /p\.estado = 'emitida'/)
+  assert.match(consulta, /NOT EXISTS[\s\S]*codeoscopic_webhook_events w[\s\S]*w\.project_id_codeoscopic = p\.project_id_codeoscopic/)
+  assert.match(consulta, /p\.updated_at > now\(\) - interval '30 days'/)
+})
+
+test('🔁 duplicadas vivas: solo NO fusionadas, con DGS, por correduría, y sin los pares marcados', () => {
+  // 04/10/2026: tras fusionar 13 pares de Allianz quedaban grupos vivos con el
+  // mismo número y DGS. Sin `merged_into_poliza_id IS NULL` contaría las lápidas
+  // recién fusionadas; sin `correduria_id` en el grupo fundiría dos corredurías;
+  // sin leer las marcas, el par ya decidido volvería a salir cada mañana.
+  const bloque = FUENTE.slice(FUENTE.indexOf('const polizasDuplicadas = await leerONull'))
+  const tramo = bloque.slice(0, bloque.indexOf('const fila = huerfanasRaw[0]'))
+  assert.match(tramo, /leerParesNoDuplicado\(\)/)
+  assert.match(tramo, /if \(noDuplicados === null\) throw/)
+  assert.match(tramo, /gruposVivosDuplicados\(await leerFichasCandidatasDuplicadas\(\), noDuplicados\)/)
+  // La consulta es la COMPARTIDA con la pantalla (un solo criterio).
+  const ch = readFileSync(join(import.meta.dirname, 'cartera-historial.ts'), 'utf8')
+  const lec = ch.slice(ch.indexOf('export async function leerFichasCandidatasDuplicadas'))
+  const where = lec.slice(lec.indexOf('where: {'), lec.indexOf('select: {'))
+  assert.match(where, /mergedIntoPolizaId: null,/)
+  assert.match(where, /codigoEntidadDgs: \{ not: null \},/)
+  // 🚨 Fichas de cliente descartadas fuera, en pantalla Y vigía (la misma consulta).
+  assert.match(where, /cliente: \{ activo: true \},/)
+  assert.match(where, /\.\.\.\(correduriaId \? \{ correduriaId \} : \{\}\)/)
+  // Y viaja en la respuesta (si no, plataforma lo leería como «no se pide»).
+  assert.match(FUENTE, /return \{\s*polizasDuplicadas,/)
+})
+
+test('🔁 pantalla «Duplicadas» = vigía: misma consulta y mismo criterio', () => {
+  const ch = readFileSync(new URL('./cartera-historial.ts', import.meta.url), 'utf8')
+  const tramo = ch.slice(ch.indexOf('export async function duplicadasCartera'))
+  assert.match(FUENTE, /import \{ leerFichasCandidatasDuplicadas \} from '\.\/cartera-historial'/)
+  assert.match(tramo, /polizasDuplicadas\(await leerFichasCandidatasDuplicadas\(correduriaId\), noDuplicados\)/)
+  assert.match(tramo, /if \(noDuplicados === null\) return null/)
+  // Nada de filtros propios de la pantalla (cartera viva…): eso eran dos criterios.
+  assert.doesNotMatch(tramo, /findMany|WHERE_CARTERA_VIVA/)
+})
+
+test('🧯 el parcial se apaga si la cuarentena se reprocesó con sello fiable (>= asegura#877)', () => {
+  const ini = FUENTE.indexOf("e.event_name = 'cima_fichero_persistido_parcial'")
+  const consulta = FUENTE.slice(ini, FUENTE.indexOf('ORDER BY en_revision DESC', ini))
+  assert.match(consulta, /FROM cima_cuarentena_crudo q/)
+  assert.match(consulta, /q\.nombre_fichero = u\.fichero/)
+  assert.match(consulta, /q\.reprocesado_at > u\.occurred_at/)
+  assert.match(consulta, /q\.reprocesado_at >= \$1::timestamptz/)
+  // La fecha de corte es la del merge de #877 y viaja como parámetro.
+  assert.match(FUENTE, /CUARENTENA_SELLO_FIABLE_DESDE = '2026-10-03T15:59:56Z'/)
+  assert.match(FUENTE, /, CUARENTENA_SELLO_FIABLE_DESDE\)\n/)
 })

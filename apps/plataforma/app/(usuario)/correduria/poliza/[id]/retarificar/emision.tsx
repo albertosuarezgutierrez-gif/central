@@ -19,13 +19,29 @@
 // ninguna de las dos se puede deshacer sola.
 
 import { useEffect, useRef, useState } from 'react'
+import { AlertTriangle, CheckCircle2, CircleHelp, Info, OctagonAlert, XCircle } from 'lucide-react'
 import { eur } from '@/lib/dinero'
+import { Ico, FILA } from '../../../iconos'
 import { pedirOferta, pedirEmision, pedirCatalogo, pedirCoberturas } from './acciones'
+import { CSS_RETARIFICADOR } from './estilos'
 import type { RespuestaCoberturas } from '@/lib/retarificar-asegura'
 import { ProductFormWidget } from './ProductFormWidget'
-import type { AvisoCuenta, CuentaConocida, Opcion, SolicitudEmisionVista, TrasEmision } from '@/lib/retarificar-asegura'
+import type {
+  AvisoCuenta,
+  CambioFiguras,
+  CausaBloqueo,
+  CausaDuplicado,
+  FiguraExigida,
+  CuentaConocida,
+  Opcion,
+  SolicitudEmisionVista,
+  TrasEmision,
+} from '@/lib/retarificar-asegura'
 import { lineasTrasEmision } from '@/lib/tras-emision-texto'
+import { ETIQUETA_CAMPO_FIGURA, figurasCompletas, textoCasillaFigura } from '@/lib/figuras-emision-texto'
 import { fechaEs } from '@/lib/ficha-asegura'
+import { cambioDePrecio } from '@/lib/correduria/parrilla-coherencia'
+import { bloqueoCompania, textoBloqueoCorredor } from '@central/module-seguros'
 
 type EstadoPanel =
   | { paso: 'inicio' }
@@ -104,6 +120,43 @@ type EstadoPanel =
   | { paso: 'faltan_producto'; campos: string[]; quoteCrudo: unknown; mensaje: string }
   /** `reintento`: con qué volver a llamar a asegura (sin confirmar) para que
    *  enseñe el estado del proyecto en vez de mandar al ReRate. */
+  /** Cliente NUEVO (28/09/2026): asegura cree que es un duplicado y no ha enviado
+   *  nada. El corredor puede emitir igualmente (`duplicadoConfirmado`). */
+  | {
+      paso: 'duplicado'
+      causa: CausaDuplicado
+      mensaje: string
+      polizas: string[]
+      projectId: string
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
+    }
+  /**
+   * La variante cambia las personas o el CP del riesgo respecto a la primera (29/09/2026,
+   * arts. 10 y 89 LCS). asegura no ha enviado nada; se reenvía con `figurasConfirmadas`
+   * cuando el corredor marca TODAS las casillas exigidas. `opciones` = con qué se llamó,
+   * para que el reenvío no pierda (p. ej.) un `duplicadoConfirmado` ya dado.
+   */
+  | {
+      paso: 'confirmar_figuras'
+      mensaje: string
+      cambios: CambioFiguras[]
+      exigidas: FiguraExigida[]
+      conductorHabitual: string | null
+      projectId: string
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
+      opciones: OpcionesEmitir
+    }
+  /**
+   * Vehículo NUEVO (03/10/2026): el bonus se tarificó SUPUESTO (años sin siniestros al máximo porque no
+   * constaban) y asegura no emite sin verificarlo. No ha enviado nada; se reenvía con `bonusVerificado`.
+   */
+  | { paso: 'bonus_sin_verificar'; mensaje: string; projectId: string; cuenta: CuentaConocida | null; cuentaAviso: AvisoCuenta | null; opciones: OpcionesEmitir }
+  /** asegura se niega antes de enviar y no hay nada que confirmar aquí. */
+  | { paso: 'bloqueado'; causa: CausaBloqueo; mensaje: string }
+  /** Interruptor `CODEOSCOPIC_EMISION_NUEVO` apagado: reintentar no sirve. */
+  | { paso: 'nuevo_apagado'; mensaje: string }
   | {
       paso: 'error'
       mensaje: string
@@ -111,6 +164,33 @@ type EstadoPanel =
       consejo?: string
       reintento?: { projectId: string; cuenta: CuentaConocida | null; cuentaAviso: AvisoCuenta | null }
     }
+
+type OpcionesEmitir = {
+  reintentoConfirmado?: boolean
+  acunarExistente?: boolean
+  duplicadoConfirmado?: boolean
+  figurasConfirmadas?: string[]
+  bonusVerificado?: { fuente: FuenteBonus }
+}
+
+type FuenteBonus = 'certificado' | 'sinco' | 'dato_confirmado'
+const FUENTES_BONUS: { id: FuenteBonus; nombre: string }[] = [
+  { id: 'certificado', nombre: 'Certificado de siniestralidad de la compañía anterior' },
+  { id: 'sinco', nombre: 'Consulta SINCO hecha' },
+  { id: 'dato_confirmado', nombre: 'Dato confirmado por el cliente (por escrito)' },
+]
+
+const TITULO_DUPLICADO: Record<CausaDuplicado, string> = {
+  ya_en_cartera: 'Esta matrícula ya está asegurada en la cartera',
+  ya_emitido: 'A este cliente ya se le emitió una póliza de este ramo hace menos de 30 días',
+}
+
+const TITULO_BLOQUEO: Record<CausaBloqueo, string> = {
+  identidad: 'El DNI del tomador no cuadra con la ficha',
+  proyecto_liberado: 'Este proyecto ya no está enlazado a la póliza que sustituía',
+  cliente_distinto: 'El proyecto es de otro cliente',
+  tomador_fusionado: 'El tomador se fusionó en otra ficha',
+}
 
 function euroODash(n: number | null): string {
   return n === null || !Number.isFinite(n) ? '—' : eur(n)
@@ -131,6 +211,7 @@ const ETIQUETAS_HUECO: Record<string, { etiqueta: string; tipo: string; pista?: 
   nombre: { etiqueta: 'Nombre', tipo: 'text' },
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
   sexo: { etiqueta: 'Sexo (hombre/mujer)', tipo: 'text' },
   estadoCivil: { etiqueta: 'Estado civil', tipo: 'text' },
   telefono: { etiqueta: 'Teléfono móvil', tipo: 'tel' },
@@ -292,7 +373,7 @@ export function CoberturasOferta({ projectId, offerId }: { projectId: string; of
       <ul style={{ margin: '6px 0', paddingLeft: 18, fontSize: 13 }}>
         {r.coberturas.map((c, i) => (
           <li key={i} style={{ overflowWrap: 'anywhere' }}>
-            <span aria-hidden>{c.incluida === true ? '✅ ' : c.incluida === false ? '❌ ' : 'ℹ️ '}</span>
+            <Ico i={c.incluida === true ? CheckCircle2 : c.incluida === false ? XCircle : Info} color={c.incluida === true ? 'var(--positive)' : c.incluida === false ? 'var(--negative)' : undefined} />
             <strong>{c.nombre}</strong>
             {c.incluida === null && !c.texto && <span className="muted"> — sin detalle del vendor</span>}
             {c.texto && <span className="muted"> — {c.texto}</span>}
@@ -309,10 +390,21 @@ export function Emision({
   categoria,
   primaEur,
   producto = null,
+  modalidad = null,
+  idPrecio = null,
   fechaEfecto = null,
   ofertaImportada = null,
+  sustituye = true,
+  ramo = null,
+  familiaAllianz: familiaAllianzPrevia = null,
   onCerrar,
 }: {
+  /**
+   * Pack coche + moto (03/10/2026): `{ valor: true, motivo }` marca de partida «familiares asegurados en Allianz»
+   * (el cliente tiene póliza viva en Allianz o se ha tarifado el pack). `null` = como siempre: sin marcar.
+   * Sigue siendo una casilla que el corredor puede quitar.
+   */
+  familiaAllianz?: { valor: true; motivo: string } | null
   /** Ausente cuando la oferta viene importada de Avant2: ahí no hay cotización nuestra. */
   tarificacionId?: string
   compania: string
@@ -321,11 +413,21 @@ export function Emision({
   /** Producto de la fila pulsada: con varios precios de la misma compañía y nivel
    *  (Reale llegó a 8), asegura desempata por producto y prima (25/09/2026). */
   producto?: string | null
+  /** Modalidad de la compañía («TERCEROS AMPLIADO + Robo + Multas…»): con varios precios de la misma
+   *  compañía y nivel es lo único que dice CUÁL se está emitiendo. `null` = no consta. */
+  modalidad?: string | null
+  /** 🔑 `mainQuote.id` del vendor de la fila pulsada: la identidad del precio (ver `encontrarPrecio`
+   *  de asegura). `null` = no consta; entonces manda la llave compañía + nivel + modalidad. */
+  idPrecio?: string | null
   /** Fecha de efecto con la que se cotizó (aaaa-mm-dd). Arranca el campo de fecha. */
   fechaEfecto?: string | null
   /** Oferta ya aceptada al importar un proyecto hecho en Avant2 (fila 13, 26/09/2026):
    *  el panel arranca en el paso de emitir, sin ReRate. */
   ofertaImportada?: Omit<Extract<EstadoPanel, { paso: 'oferta' }>, 'paso'> | null
+  /** `false` para un cliente NUEVO (sin póliza que sustituir): no hay carta de baja. */
+  sustituye?: boolean
+  /** Ramo de la cotización: el ajuste de descuento solo existe para Allianz coche. */
+  ramo?: string | null
   onCerrar: () => void
 }) {
   const [estado, setEstado] = useState<EstadoPanel>(
@@ -348,8 +450,23 @@ export function Emision({
   // secas, lleva descuento (bonificación de cartera). Por defecto sigue en
   // `false` en asegura (no se inventa un ahorro sin comprobarlo); esta caja
   // es la única forma de decirlo cuando el corredor SÍ lo sabe.
-  const [familiaAllianz, setFamiliaAllianz] = useState(false)
+  const [familiaAllianz, setFamiliaAllianz] = useState(familiaAllianzPrevia?.valor === true)
+  // Casillas del paso `confirmar_figuras`. Nada preseleccionado: se marcan a mano.
+  const [figurasMarcadas, setFigurasMarcadas] = useState<Set<string>>(() => new Set())
+  // Vehículo nuevo con bonus SUPUESTO (03/10/2026): cómo lo ha verificado el corredor antes de emitir.
+  const [fuenteBonus, setFuenteBonus] = useState<FuenteBonus | ''>('')
+  // La oferta desde la que se pulsó «Emitir»: «Volver» del aviso legal regresa a ELLA (con la
+  // cuenta, la fecha y lo tecleado), no cierra el panel entero (decisión 29/09/2026).
+  const ofertaAntesDeEmitir = useRef<Extract<EstadoPanel, { paso: 'oferta' }> | null>(null)
   const esAllianz = compania.trim().toLowerCase().includes('allianz')
+  // Descuento comercial en preemisión (29/09/2026). Vacío = el de siempre (50 % y 50 %: la compañía aplica su máximo); asegura
+  // valida el rango del formulario real (CAP 0-99, venta cruzada 0-100) antes de llamar a nadie.
+  const [dtoCap, setDtoCap] = useState('')
+  const [dtoVentaCruzada, setDtoVentaCruzada] = useState('')
+  const admiteDescuento = esAllianz && ramo === 'auto'
+  // Texto y no `type=number`: un «1,5» o un «-» llegaría como '' y se mandaría el de siempre sin avisar.
+  const dtoValido = (v: string, max: number) => v.trim() === '' || (/^\d{1,3}$/.test(v.trim()) && Number(v) <= max)
+  const descuentoMal = admiteDescuento && (!dtoValido(dtoCap, 99) || !dtoValido(dtoVentaCruzada, 100))
   // Lo que el corredor ha guardado del widget de la Product Form Library (el
   // formulario REAL de la compañía, ver `ProductFormWidget`). `null` mientras
   // no se pulse «Guardar»: sin esto no se manda ningún `product.options`
@@ -412,7 +529,25 @@ export function Emision({
     for (const campo of pendientes) void pedirCatalogoCampo(campo)
   }, [estado])
 
-  async function confirmarPrecio(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
+  // Guarda SÍNCRONA contra el doble clic (07/10/2026): confirmar el precio (ReRate) y emitir (Submit) no son
+  // idempotentes y no se deshacen solos. El estado de React llega tarde (un segundo clic en el mismo tick aún ve el
+  // botón activo); el ref no. Una sola llamada en vuelo a la vez, sea cual sea el paso.
+  const llamadaEnVuelo = useRef(false)
+  async function unaALaVez(f: () => Promise<void>) {
+    if (llamadaEnVuelo.current) return
+    llamadaEnVuelo.current = true
+    try {
+      await f()
+    } finally {
+      llamadaEnVuelo.current = false
+    }
+  }
+
+  function confirmarPrecio(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
+    return unaALaVez(() => confirmarPrecioSinGuarda(conCorrecciones, conProductOptions))
+  }
+
+  async function confirmarPrecioSinGuarda(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
     if (!tarificacionId) {
       setEstado({ paso: 'error', mensaje: 'Este proyecto viene de Avant2: el precio se confirma allí y se vuelve a importar.' })
       return
@@ -429,9 +564,19 @@ export function Emision({
       categoria,
       producto: producto ?? undefined,
       primaEur: primaEur ?? undefined,
+      modalidad: modalidad ?? undefined,
+      idPrecio: idPrecio ?? undefined,
       ...(fechaNueva ? { fechaEfectoCorregida: fechaNueva } : {}),
       ...(Object.keys(limpias).length > 0 ? { correcciones: limpias } : {}),
       ...(conProductOptions ? { productOptions: conProductOptions } : {}),
+      ...(admiteDescuento && (dtoCap.trim() !== '' || dtoVentaCruzada.trim() !== '')
+        ? {
+            descuentos: {
+              ...(dtoCap.trim() !== '' ? { dtoCap: Number(dtoCap) } : {}),
+              ...(dtoVentaCruzada.trim() !== '' ? { dtoVentaCruzada: Number(dtoVentaCruzada) } : {}),
+            },
+          }
+        : {}),
     })
     if (r.estado === 'ok') {
       setEstado({
@@ -491,11 +636,20 @@ export function Emision({
     setEstado({ paso: 'error', mensaje: r.mensaje })
   }
 
-  async function emitir(
+  function emitir(
     projectId: string,
     cuenta: CuentaConocida | null,
     aviso: AvisoCuenta | null,
-    opciones: { reintentoConfirmado?: boolean; acunarExistente?: boolean } = {},
+    opciones: OpcionesEmitir = {},
+  ) {
+    return unaALaVez(() => emitirSinGuarda(projectId, cuenta, aviso, opciones))
+  }
+
+  async function emitirSinGuarda(
+    projectId: string,
+    cuenta: CuentaConocida | null,
+    aviso: AvisoCuenta | null,
+    opciones: OpcionesEmitir = {},
   ) {
     let campos: Record<string, unknown>
     try {
@@ -540,16 +694,56 @@ export function Emision({
     // La máscara que el corredor ha visto y marcado: es lo ÚNICO que autoriza a
     // asegura a mandar la cuenta de la ficha. Un IBAN tecleado la sustituye.
     const cuentaConfirmada = !otraCuenta && cuentaOk && cuenta ? cuenta.enmascarada : null
+    if (estado.paso === 'oferta') ofertaAntesDeEmitir.current = estado
+    // 29/09/2026: la prima que se registra y se compara con el presupuesto firmado es la que ha
+    // CONFIRMADO la compañía, no la estimada de la parrilla (podían diferir sin que nadie lo viera).
+    const primaConfirmada = ofertaAntesDeEmitir.current?.primaEur ?? null
     setEstado({ paso: 'emitiendo' })
     const r = await pedirEmision({
       projectId,
       campos,
-      primaAnual: primaEur,
+      primaAnual: primaConfirmada ?? primaEur,
       cuentaConfirmada,
       reintentoConfirmado: opciones.reintentoConfirmado === true,
       acunarExistente: opciones.acunarExistente === true,
       familiaEnAllianz: esAllianz && familiaAllianz,
+      duplicadoConfirmado: opciones.duplicadoConfirmado === true,
+      ...(opciones.figurasConfirmadas ? { figurasConfirmadas: opciones.figurasConfirmadas } : {}),
+      ...(opciones.bonusVerificado ? { bonusVerificado: opciones.bonusVerificado } : {}),
     })
+    if (r.estado === 'error' && r.causa === 'bonus_sin_verificar') {
+      setEstado({ paso: 'bonus_sin_verificar', mensaje: r.mensaje, projectId, cuenta, cuentaAviso: aviso, opciones })
+      return
+    }
+    if (r.estado === 'confirmar_figuras') {
+      // Un segundo 409 (p. ej. otras exigidas) se repinta con las casillas vacías: lo marcado
+      // antes confirmaba OTRA lista.
+      setFigurasMarcadas(new Set())
+      setEstado({
+        paso: 'confirmar_figuras',
+        mensaje: r.mensaje,
+        cambios: r.cambios,
+        exigidas: r.exigidas,
+        conductorHabitual: r.conductorHabitual,
+        projectId,
+        cuenta,
+        cuentaAviso: aviso,
+        opciones: { ...opciones, figurasConfirmadas: undefined },
+      })
+      return
+    }
+    if (r.estado === 'duplicado') {
+      setEstado({ paso: 'duplicado', causa: r.causa, mensaje: r.mensaje, polizas: r.polizas, projectId, cuenta, cuentaAviso: aviso })
+      return
+    }
+    if (r.estado === 'bloqueado') {
+      setEstado({ paso: 'bloqueado', causa: r.causa, mensaje: r.mensaje })
+      return
+    }
+    if (r.estado === 'nuevo_apagado') {
+      setEstado({ paso: 'nuevo_apagado', mensaje: r.mensaje })
+      return
+    }
     if (r.estado === 'reintento_sin_confirmar') {
       setEstado({
         paso: 'reintento_sin_confirmar',
@@ -605,13 +799,17 @@ export function Emision({
   }
 
   return (
+    // Se envuelve sola: también la montan las altas nuevas, que no traen el CSS
+    // del retarificador (ver `estilos.ts`).
+    <div className="retarificar">
+    <style>{CSS_RETARIFICADOR}</style>
     <div className="card" style={{ marginTop: 12, borderColor: 'var(--brand)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ margin: 0 }}>Emisión · {compania || '—'}</h2>
-          {categoria && (
-            <p className="muted" style={{ margin: '2px 0 0' }}>
-              {categoria}
+          {(categoria || modalidad) && (
+            <p className="muted" style={{ margin: '2px 0 0', overflowWrap: 'anywhere' }}>
+              {[categoria, modalidad && modalidad !== categoria ? modalidad : null].filter(Boolean).join(' · ')}
             </p>
           )}
         </div>
@@ -629,8 +827,8 @@ export function Emision({
           padding: 12,
         }}
       >
-        <p style={{ margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
-          🚨 Esto llama de verdad a Codeoscopic — sin sandbox
+        <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
+          <Ico i={AlertTriangle} /> Esto llama de verdad a Codeoscopic — sin sandbox
         </p>
         <p style={{ margin: '4px 0 0' }}>
           Un solo intento por paso. Si algo sale raro, el mensaje de la compañía se enseña tal cual:
@@ -659,11 +857,37 @@ export function Emision({
                 : 'Déjala vacía para usar la cotizada. Si pones otra, se manda al confirmar el precio y el precio puede variar.'}
             </span>
           </label>
+          {admiteDescuento && (
+            <fieldset style={{ marginTop: 10, border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', minWidth: 0 }}>
+              <legend style={{ fontSize: 13, fontWeight: 600 }}>Descuento comercial (opcional)</legend>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                <label style={{ flex: '1 1 140px' }}>
+                  <span style={{ display: 'block', fontSize: 12 }}>CAP (%) · 0 a 99</span>
+                  <input type="text" inputMode="numeric" placeholder="50" value={dtoCap} aria-invalid={!dtoValido(dtoCap, 99)}
+                    onChange={(e) => setDtoCap(e.target.value)} style={{ minHeight: 44, width: '100%' }} />
+                </label>
+                <label style={{ flex: '1 1 140px' }}>
+                  <span style={{ display: 'block', fontSize: 12 }}>Venta cruzada (%) · 0 a 100</span>
+                  <input type="text" inputMode="numeric" placeholder="50" value={dtoVentaCruzada} aria-invalid={!dtoValido(dtoVentaCruzada, 100)}
+                    onChange={(e) => setDtoVentaCruzada(e.target.value)} style={{ minHeight: 44, width: '100%' }} />
+                </label>
+              </div>
+              <span className="muted" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+                Vacío = 50 % y 50 %: la compañía se queda con el máximo que admita. Un descuento abarata el precio y puede salir de tu comisión:
+                la compañía recalcula al confirmar. Si también rellenas el formulario de la compañía, manda lo que pongas aquí.
+              </span>
+              {descuentoMal && (
+                <span className="err" role="alert" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+                  Solo números enteros: CAP de 0 a 99 y venta cruzada de 0 a 100.
+                </span>
+              )}
+            </fieldset>
+          )}
           <button
             type="button"
             className="primary"
             onClick={() => confirmarPrecio()}
-            disabled={fechaEfecto != null && fecha === ''}
+            disabled={(fechaEfecto != null && fecha === '') || descuentoMal}
             style={{ marginTop: 8, minHeight: 44 }}
           >
             Confirmar precio con la compañía
@@ -698,8 +922,8 @@ export function Emision({
             }}
           />
           {productOptionsRerate !== null && (
-            <p className="ok" style={{ fontSize: 12, margin: '6px 0 0' }}>
-              ✅ {productOptionsRerate.length} opción(es) guardada(s) — pulsa «Reintentar» para confirmar el precio.
+            <p className="ok" style={{ ...FILA, fontSize: 12, margin: '6px 0 0' }}>
+              <Ico i={CheckCircle2} /> {productOptionsRerate.length} opción(es) guardada(s) — pulsa «Reintentar» para confirmar el precio.
             </p>
           )}
           {avisoProductFormRerate && (
@@ -883,11 +1107,17 @@ export function Emision({
             Precio confirmado: <strong>{euroODash(estado.primaEur)}</strong>{' '}
             <span className={`badge ${estado.firmeza === 'firme' ? 'ok' : 'warn'}`}>{estado.firmeza}</span>
           </p>
+          {cambioDePrecio(primaEur, estado.primaEur) && (
+            <p style={{ color: 'var(--warning)', fontWeight: 600 }}>{cambioDePrecio(primaEur, estado.primaEur)}</p>
+          )}
           {estado.caducaEn && (
             <p className="muted">
               Válido hasta el {fechaEs(estado.caducaEn)}: después la compañía no lo emite y habría que confirmar
               otra vez (o pedir precio de nuevo).
             </p>
+          )}
+          {bloqueoCompania(estado.avisos) !== null && (
+            <p style={{ color: 'var(--negative)', fontWeight: 600 }}>{textoBloqueoCorredor(bloqueoCompania(estado.avisos) as string, compania)}</p>
           )}
           {estado.avisos.length > 0 && (
             <ul>
@@ -915,6 +1145,7 @@ export function Emision({
               />
               <span style={{ fontSize: 13 }}>
                 El tomador ya tiene familiares asegurados en Allianz (aplica el descuento)
+                {familiaAllianzPrevia && <span className="muted" style={{ display: 'block', fontSize: 12 }}>Marcado de partida: {familiaAllianzPrevia.motivo}.</span>}
               </span>
             </label>
           )}
@@ -935,8 +1166,8 @@ export function Emision({
               }}
             />
             {productOptions !== null && (
-              <p className="ok" style={{ fontSize: 12, margin: '6px 0 0' }}>
-                ✅ {productOptions.length} opción(es) guardada(s) del formulario — se mandan con la emisión.
+              <p className="ok" style={{ ...FILA, fontSize: 12, margin: '6px 0 0' }}>
+                <Ico i={CheckCircle2} /> {productOptions.length} opción(es) guardada(s) del formulario — se mandan con la emisión.
               </p>
             )}
             {avisoProductForm && (
@@ -954,8 +1185,8 @@ export function Emision({
               JSON con lo que pida la compañía. Si falta algo, la respuesta dirá exactamente qué
               claves espera — no hay que adivinarlas.
             </p>
-            <p className="err" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-              ⚠️ Si la compañía pide una fecha de efecto, tiene que ser <strong>HOY</strong> (o más
+            <p className="err" style={{ ...FILA, fontSize: 12, margin: '4px 0 8px' }}>
+              <Ico i={AlertTriangle} /> Si la compañía pide una fecha de efecto, tiene que ser <strong>HOY</strong> (o más
               tarde) — nunca una fecha pasada de esta cotización. Las compañías no admiten pólizas
               retroactivas.
             </p>
@@ -977,7 +1208,9 @@ export function Emision({
               Emitir la póliza
             </button>
             <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
-              Al emitir, el cliente recibe un correo con su nuevo seguro y la carta de baja de la póliza anterior para firmar en el portal.
+              {sustituye
+                ? 'Al emitir, el cliente recibe un correo con su nuevo seguro y la carta de baja de la póliza anterior para firmar en el portal.'
+                : 'Al emitir, el cliente recibe un correo con su nuevo seguro.'}
             </p>
             {estado.cuenta && !cuentaDecidida(estado.cuenta, cuentaOk, iban) && (
               <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
@@ -1053,7 +1286,7 @@ export function Emision({
 
       {estado.paso === 'emitido' && (
         <div className="ok" style={{ marginTop: 14 }}>
-          ✅ Emitida. {estado.referenciaVendor && <>Referencia de la compañía: {estado.referenciaVendor}. </>}
+          <Ico i={CheckCircle2} /> Emitida. {estado.referenciaVendor && <>Referencia de la compañía: {estado.referenciaVendor}. </>}
           {estado.cuenta ? (
             <>
               Recibo domiciliado en <code>{estado.cuenta.enmascarada}</code>
@@ -1069,7 +1302,173 @@ export function Emision({
 
       {estado.paso === 'emitido_sin_acunar' && (
         <div className="err" style={{ marginTop: 14 }}>
-          ⚠️ {estado.mensaje}
+          <Ico i={AlertTriangle} /> {estado.mensaje}
+        </div>
+      )}
+
+      {estado.paso === 'duplicado' && (
+        <div style={{ marginTop: 14, border: '2px solid var(--warn)', borderRadius: 10, padding: 12 }}>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+            <Ico i={AlertTriangle} /> {TITULO_DUPLICADO[estado.causa]}. No se ha emitido nada.
+          </p>
+          <p style={{ margin: '6px 0 0' }}>{estado.mensaje}</p>
+          {estado.polizas.length > 1 && (
+            <p className="muted" style={{ margin: '6px 0 0', fontSize: 12 }}>
+              {estado.polizas.length} pólizas en vigor con esta matrícula.
+            </p>
+          )}
+          <button
+            type="button"
+            className="ghost"
+            style={{ marginTop: 10, minHeight: 44 }}
+            onClick={() => {
+              const ok = window.confirm(
+                estado.causa === 'ya_en_cartera'
+                  ? '¿Seguro que es otro vehículo o una póliza distinta? Si es el mismo, emitir ahora deja DOS seguros sobre él.'
+                  : '¿Seguro que es una póliza distinta de la emitida hace menos de 30 días? Emitir ahora puede duplicarla.',
+              )
+              if (ok) emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { duplicadoConfirmado: true })
+            }}
+          >
+            Emitir igualmente
+          </button>
+        </div>
+      )}
+
+      {estado.paso === 'bonus_sin_verificar' && (
+        <div style={{ marginTop: 14, border: '2px solid var(--warning)', background: 'var(--warning-bg)', borderRadius: 10, padding: 12, display: 'grid', gap: 10, minWidth: 0 }}>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+            <Ico i={AlertTriangle} /> Bonus supuesto: hay que verificarlo antes de emitir
+          </p>
+          <p style={{ margin: 0 }}>{estado.mensaje}</p>
+          <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>
+            ¿Cómo lo has verificado?
+            <select value={fuenteBonus} onChange={(e) => setFuenteBonus(e.target.value as FuenteBonus | '')} style={{ minHeight: 44, maxWidth: '100%' }}>
+              <option value="">Elige cómo</option>
+              {FUENTES_BONUS.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={fuenteBonus === ''}
+            style={{ minHeight: 44 }}
+            onClick={() => {
+              if (fuenteBonus === '') return
+              emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { ...estado.opciones, bonusVerificado: { fuente: fuenteBonus } })
+            }}
+          >
+            Emitir con el bonus verificado
+          </button>
+        </div>
+      )}
+
+      {estado.paso === 'confirmar_figuras' && (() => {
+        const completas = figurasCompletas(estado.exigidas, figurasMarcadas)
+        return (
+          <div
+            style={{
+              marginTop: 14,
+              border: '2px solid var(--warning)',
+              background: 'var(--warning-bg)',
+              borderRadius: 10,
+              padding: 12,
+              display: 'grid',
+              gap: 10,
+              minWidth: 0,
+            }}
+          >
+            <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+              <Ico i={AlertTriangle} /> Esta variante cambia las personas del riesgo
+            </p>
+            <p style={{ margin: 0 }}>
+              Declarar a otra persona como conductor habitual, o otro código postal, distinto de la realidad es
+              ocultar el riesgo (arts. 10 y 89 de la Ley de Contrato de Seguro): si hay un siniestro, la compañía
+              puede <strong style={{ color: 'var(--negative)' }}>reducir o negar la indemnización</strong>. No se ha
+              emitido nada.
+            </p>
+            {estado.cambios.length > 0 && (
+              <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+                {estado.cambios.map((c) => (
+                  <li key={c.campo} style={{ overflowWrap: 'anywhere' }}>
+                    <span style={{ fontWeight: 600 }}>{ETIQUETA_CAMPO_FIGURA[c.campo]}:</span>{' '}
+                    <s className="muted">{c.antes ?? '—'}</s> → <strong>{c.despues ?? '—'}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div style={{ display: 'grid', gap: 4 }}>
+              {estado.exigidas.map((e) => (
+                <label
+                  key={e}
+                  style={{ display: 'flex', gap: 10, alignItems: 'center', minHeight: 44, cursor: 'pointer' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={figurasMarcadas.has(e)}
+                    onChange={(ev) => {
+                      const siguiente = new Set(figurasMarcadas)
+                      if (ev.target.checked) siguiente.add(e)
+                      else siguiente.delete(e)
+                      setFigurasMarcadas(siguiente)
+                    }}
+                    style={{ width: 22, height: 22, flex: '0 0 auto' }}
+                  />
+                  <span style={{ overflowWrap: 'anywhere' }}>{textoCasillaFigura(e, estado.cambios, estado.conductorHabitual)}</span>
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="primary"
+                style={{ minHeight: 44, maxWidth: '100%' }}
+                disabled={!completas}
+                onClick={() =>
+                  emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, {
+                    ...estado.opciones,
+                    figurasConfirmadas: estado.exigidas.filter((e) => figurasMarcadas.has(e)),
+                  })
+                }
+              >
+                {completas ? `Emitir con ${compania || 'la compañía'}` : 'Marca las casillas para emitir'}
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                style={{ minHeight: 44 }}
+                onClick={() => {
+                  const previa = ofertaAntesDeEmitir.current
+                  if (previa) setEstado(previa)
+                  else onCerrar()
+                }}
+              >
+                {ofertaAntesDeEmitir.current ? 'Volver a la oferta' : 'Volver'}
+              </button>
+            </div>
+            <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+              Queda constancia en el historial del riesgo: quién lo confirmó, cuándo y qué casillas marcó.
+            </p>
+          </div>
+        )
+      })()}
+
+      {estado.paso === 'bloqueado' && (
+        <div className="err" style={{ marginTop: 14 }}>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+            <Ico i={OctagonAlert} /> {TITULO_BLOQUEO[estado.causa]}. No se ha emitido nada.
+          </p>
+          <p style={{ margin: '6px 0 0' }}>{estado.mensaje}</p>
+        </div>
+      )}
+
+      {estado.paso === 'nuevo_apagado' && (
+        <div className="err" style={{ marginTop: 14 }}>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+            <Ico i={OctagonAlert} /> La emisión a clientes nuevos está apagada.
+          </p>
+          <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>
+            No se ha enviado nada. Hasta que se encienda en central-asegura, esta póliza se emite a mano en Avant2.
+          </p>
         </div>
       )}
 
@@ -1078,8 +1477,8 @@ export function Emision({
           {estado.mensaje}
           {estado.quizaEmitido && (
             <>
-              <p style={{ margin: '8px 0 0', fontWeight: 700 }}>
-                ⚠️ Esto NO es un rechazo: Codeoscopic dejó de esperar a la compañía y no se sabe si llegó a
+              <p style={{ ...FILA, margin: '8px 0 0', fontWeight: 700 }}>
+                <Ico i={AlertTriangle} /> Esto NO es un rechazo: Codeoscopic dejó de esperar a la compañía y no se sabe si llegó a
                 emitir. No se ha cobrado nada por el envío.
               </p>
               {estado.consejo && (
@@ -1107,17 +1506,17 @@ export function Emision({
         return (
         <div style={{ marginTop: 14, border: '2px solid var(--warn)', borderRadius: 10, padding: 12 }}>
           {viva ? (
-            <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
-              🛑 La compañía ya tiene una solicitud {viva.veredicto === 'aprobada' ? 'APROBADA' : 'en curso'}
+            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--negative)' }}>
+              <Ico i={OctagonAlert} /> La compañía ya tiene una solicitud {viva.veredicto === 'aprobada' ? 'APROBADA' : 'en curso'}
               {viva.numeroPoliza ? ` · póliza ${viva.numeroPoliza}` : ''} — NO se reenvía
             </p>
           ) : estado.rastro.length > 0 ? (
-            <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
-              🛑 El proyecto YA cuenta una solicitud de emisión en Codeoscopic
+            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--negative)' }}>
+              <Ico i={OctagonAlert} /> El proyecto YA cuenta una solicitud de emisión en Codeoscopic
             </p>
           ) : (
-            <p style={{ margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
-              ⚠️ El último envío acabó sin respuesta clara — no se sabe si la compañía emitió
+            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
+              <Ico i={AlertTriangle} /> El último envío acabó sin respuesta clara — no se sabe si la compañía emitió
             </p>
           )}
           <p style={{ margin: '6px 0 0' }}>{estado.mensaje}</p>
@@ -1140,7 +1539,7 @@ export function Emision({
                     <tr key={s.id ?? i}>
                       <td style={{ padding: '4px 8px' }}><code>{s.id ?? '—'}</code></td>
                       <td style={{ padding: '4px 8px' }}>
-                        {s.veredicto === 'aprobada' ? '🟢 ' : s.veredicto === 'rechazada' ? '🔴 ' : s.veredicto === 'pendiente' ? '🟠 ' : '❔ '}
+                        <Ico i={s.veredicto === 'aprobada' ? CheckCircle2 : s.veredicto === 'rechazada' ? XCircle : s.veredicto === 'pendiente' ? AlertTriangle : CircleHelp} color={s.veredicto === 'aprobada' ? 'var(--positive)' : s.veredicto === 'rechazada' ? 'var(--negative)' : s.veredicto === 'pendiente' ? 'var(--warning)' : undefined} />
                         {s.estadoNombre ?? s.estadoId ?? 'sin estado'}
                         {s.veredicto === 'desconocido' && s.estadoId ? ' (estado no reconocido: míralo en Avant2)' : ''}
                       </td>
@@ -1222,6 +1621,7 @@ export function Emision({
         </div>
         )
       })()}
+    </div>
     </div>
   )
 }

@@ -66,10 +66,11 @@ test('las pólizas donde figura se leen POR ID, vivas, sin fusionar y de tomador
   // 🚨 Las del tomador NO entran por su ficha: en la consulta principal van por id.
   assert.match(
     src,
-    /OR:\s*\[\{\s*clienteId:\s*\{\s*in:\s*todosIds\s*\}\s*\},\s*\{\s*id:\s*\{\s*in:\s*idsDondeFigura\s*\}\s*\}\]/,
+    /OR:\s*\[\{\s*clienteId:\s*\{\s*in:\s*todosIds\s*\}\s*\},\s*\{\s*id:\s*\{\s*in:\s*\[\.\.\.idsDondeFigura,\s*\.\.\.idsFiguraAjena\]\s*\}\s*\}\]/,
     'las pólizas de un tomador ajeno entran por ID; meter su `clienteId` en `todosIds` serviría TODA su cartera',
   )
   assert.doesNotMatch(src, /todosIds\s*=\s*\[[^\]]*tomadoresIds/, '`tomadoresIds` no puede entrar en `todosIds`')
+  assert.doesNotMatch(src, /todosIds\s*=\s*\[[^\]]*tomadoresFiguraAjena/, '`tomadoresFiguraAjena` no puede entrar en `todosIds`')
   assert.doesNotMatch(src, /polizaInterviniente\.findUnique/)
 })
 
@@ -93,4 +94,28 @@ test('la ficha y el parte aceptan las pólizas donde figura, y solo desde la car
   assert.match(lectura, /\.\.\.c\.intervinientes\.flatMap\(\(t\) => t\.polizas\.map\(\(p\) => p\.id\)\)/)
   const ruta = leer('apps/asegura-portal/app/api/siniestros/route.ts')
   assert.match(ruta, /polizasParaParte\(cartera\)\.has\(valor\.polizaId\)/)
+})
+
+// 28/09/2026 — pólizas de otro tomador donde figura una ficha que la identidad ve
+// ENTERA (autorizada o empresa del dueño). Misma frontera: filas SOLO de esas
+// fichas, pólizas SOLO por id, y capadas como interviniente.
+test('la figura de una ficha vista entera se lee solo por esas fichas y por id', () => {
+  const src = leer(LECTURA)
+  assert.match(
+    src,
+    /const fichasVistasEnteras = \[\.\.\.porOtorgante\.keys\(\), \.\.\.representadasIds\]\.filter\(\(id\) => !propiosIds\.includes\(id\)\)/,
+    'solo las fichas autorizadas ENTERAS (sin póliza suelta) o empresas del dueño abren su figura',
+  )
+  const i = src.indexOf('const filasFiguraAjena')
+  assert.ok(i >= 0, 'no encuentro `filasFiguraAjena`')
+  const b = bloque(src.slice(i), 'prisma.polizaInterviniente.findMany(')
+  assert.match(b, /where:\s*\{\s*clienteId:\s*\{\s*in:\s*fichasVistasEnteras\s*\}\s*\}/)
+  assert.match(b, /select:\s*\{\s*polizaId:\s*true,\s*clienteId:\s*true,\s*rol:\s*true\s*\}/)
+  const j = src.indexOf('const polizasFiguraAjena')
+  const p = bloque(src.slice(j), 'await prisma.poliza.findMany(')
+  assert.match(p, /id:\s*\{\s*in:\s*\[\.\.\.new Set\(filasFiguraAjena\.map\(\(f\) => f\.polizaId\)\)\]\s*\}/)
+  assert.match(p, /mergedIntoPolizaId:\s*null/)
+  assert.match(p, /WHERE_CARTERA_VIVA/)
+  // Y no hereda lo de la PERSONA del tomador.
+  assert.match(src, /aPortal\(p, capaInterviniente\(campos\)\)/, 'la póliza de otro tomador se sirve capada como interviniente')
 })

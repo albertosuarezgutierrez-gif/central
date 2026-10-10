@@ -34,17 +34,32 @@ test('el fichero de lectura de cartera existe', () => {
   assert.ok(existsSync(join(ROOT, LECTURA)), `falta ${LECTURA}`)
 })
 
-test('la lectura del portal NO trae tramitador ni perito', () => {
+// ✅ 28/09/2026: la regla de arriba se DEROGÓ para tramitador, perito, reserva y
+// culpa («el seguro es suyo, tiene que saber todo», Alberto). Lo que queda:
+// llegan SOLO a través de `detalleSiniestroCompania`, que descarta lo cifrado.
+test('tramitador y perito llegan SOLO dentro de detalleSiniestroCompania', () => {
   const src = leer(LECTURA)
+  const i = src.indexOf('detalle: detalleSiniestroCompania({')
+  assert.ok(i > 0, 'la lectura tiene que traducir el detalle con detalleSiniestroCompania')
+  const llamada = src.slice(i, src.indexOf('}),', src.indexOf('perito:', i)))
   for (const campo of ['tramitadorNombre', 'tramitadorTelefono', 'peritoNombre', 'peritoTelefono']) {
-    assert.doesNotMatch(
-      src,
-      new RegExp(campo),
-      `${campo} no puede volver a ${LECTURA}: no es un dato que le falte al cliente, ` +
-        'es gestión del corredor (contacto único = Alberto). Si vuelve al `select`, ' +
-        'vuelve a la vista.',
-    )
+    const usos = src.match(new RegExp(`x\\.${campo}\\b`, 'g')) ?? []
+    assert.equal(usos.length, 1, `${campo} se usa una sola vez`)
+    assert.match(llamada, new RegExp(`x\\.${campo}\\b`), `${campo} va dentro de la llamada al traductor`)
   }
+})
+
+test('🚨 los datos de TERCEROS y los cifrados no se piden nunca', () => {
+  // Contacto del siniestro (cifrado: el portal no tiene la clave) y la
+  // referencia interna del mediador. Sin GRANT: declararlos revienta la lectura
+  // entera de `Siniestro` con 42501.
+  const src = leer(LECTURA)
+  const schema = leer('apps/asegura-portal/prisma/schema.prisma')
+  const modelo = schema.slice(schema.indexOf('model Siniestro {'), schema.indexOf('@@map("siniestros")'))
+  for (const col of ['contacto_nombre_cima', 'contacto_telefono_cima', 'contacto_observaciones_cima', 'ref_mediador_cima']) {
+    assert.doesNotMatch(modelo, new RegExp(`@map\\("${col}"\\)`), `${col} no puede declararse en el schema del portal`)
+  }
+  assert.doesNotMatch(src, /contactoNombreCima|contactoTelefonoCima|refMediadorCima/)
 })
 
 test('lo que SÍ cambia la decisión del cliente sigue llegando', () => {
@@ -517,22 +532,15 @@ test('la descripción se pinta ENTERA: nada de recortarla en la vista', () => {
     'la descripción se pinta tal cual: media frase de un siniestro es otro relato')
 })
 
-test('🚨 la tramitación de la compañía llega TRADUCIDA, sin reserva ni culpa', () => {
+test('🚨 la tramitación de la compañía llega TRADUCIDA', () => {
   // El CRM guarda desde el 24/09/2026 las situaciones, acciones y pagos que
-  // manda la compañía por EIAC. Llevan texto libre y FIGURAS (perito,
-  // tramitador): solo pueden llegar a la pantalla pasando por
-  // `tramitacionSiniestro`, que descarta ambas. La reserva y la posición de
-  // culpa no son del cliente y el rol ni tiene GRANT: declararlas en el schema
-  // revienta la lectura ENTERA de `Siniestro` con 42501.
+  // manda la compañía por EIAC. Llevan texto libre y FIGURAS: solo pueden
+  // llegar a la pantalla pasando por `tramitacionSiniestro`. La reserva y la
+  // culpa van desde el 28/09/2026 por `detalleSiniestroCompania`.
   const src = leer(LECTURA)
-  const bloque = src.slice(src.indexOf('prisma.siniestro.findMany'), src.indexOf('orderBy: { fechaHora'))
   for (const campo of ['reservaCima', 'posicionCima']) {
-    assert.doesNotMatch(bloque, new RegExp(campo), `${campo} no puede entrar en el select de siniestros`)
-  }
-  const schema = leer('apps/asegura-portal/prisma/schema.prisma')
-  const modelo = schema.slice(schema.indexOf('model Siniestro {'), schema.indexOf('@@map("siniestros")'))
-  for (const col of ['reserva_cima', 'posicion_cima']) {
-    assert.doesNotMatch(modelo, new RegExp(`@map\\("${col}"\\)`), `${col} no puede declararse en el schema del portal`)
+    const usos = src.match(new RegExp(`x\\.${campo}\\b`, 'g')) ?? []
+    assert.equal(usos.length, 1, `${campo} se usa una sola vez: dentro de detalleSiniestroCompania`)
   }
   const usos = src.match(/x\.(situacionesCima|accionesCima|pagosCima|totalPagosCima|indemnizacionCima)/g) ?? []
   assert.equal(usos.length, 5, 'cada columna de tramitación se usa UNA vez: dentro de `tramitacionSiniestro`')

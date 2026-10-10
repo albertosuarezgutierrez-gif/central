@@ -15,6 +15,11 @@ import {
   TOPE_POLIZAS_TELEGRAM,
   DIAS_GRACIA_RENOVACION,
   textoRenovacionesSinLlegar,
+  HORAS_EMISION_SIN_AVISO,
+  textoEmisionesSinAviso,
+  textoPolizasDuplicadas,
+  cambioDuplicadasEnFirma,
+  type EmisionSinAviso,
   type PolizaHuerfana,
   type FicheroParcial,
   type RenovacionSinLlegar,
@@ -394,13 +399,13 @@ test('y una lista VACÍA sí es «se miró y no hay»', () => {
 
 test('pedir y reprocesar son DOS acciones distintas y no se cuentan juntas', () => {
   const r = repartirHuerfanas([
-    h('C0468', 'M00171', 'BIDP036783'),
-    h('C0468', 'M00171', '549570971', { enCartera: 'viva' }),
+    h('C0468', 'M00171', 'BIDP000029'),
+    h('C0468', 'M00171', '549000025', { enCartera: 'viva' }),
     h('C0468', 'M00171', 'GPAHS2800735', { enCartera: 'viva', recibos: 0, siniestros: 1 }),
   ])!
   assert.equal(r.totalPedir, 1)
   assert.equal(r.totalReprocesar, 2)
-  assert.deepEqual(r.pedir[0]!.polizas, ['BIDP036783'])
+  assert.deepEqual(r.pedir[0]!.polizas, ['BIDP000029'])
 })
 
 test('🗝️ el reparto es por CLAVE DE MEDIADOR, no por compañía', () => {
@@ -426,11 +431,11 @@ test('una fila fusionada (lápida) no es «la tenemos» ni «no la tenemos»', (
 
 test('la misma póliza citada dos veces es UNA póliza que pedir', () => {
   const r = repartirHuerfanas([
-    h('C0468', 'M00171', '548325602', { recibos: 1 }),
-    h('C0468', 'M00171', '548325602', { recibos: 1, siniestros: 2 }),
+    h('C0468', 'M00171', '548000020', { recibos: 1 }),
+    h('C0468', 'M00171', '548000020', { recibos: 1, siniestros: 2 }),
   ])!
   assert.equal(r.totalPedir, 1)
-  assert.deepEqual(r.pedir[0]!.polizas, ['548325602'])
+  assert.deepEqual(r.pedir[0]!.polizas, ['548000020'])
 })
 
 test('una clave de cajón se trata como ausencia, no como una clave más', () => {
@@ -459,14 +464,14 @@ test('«ningún recibo traía prima» sigue siendo null, nunca 0 €', () => {
 
 test('📣 el texto dice QUÉ HACER y con qué números, no «hay 12»', () => {
   const r = repartirHuerfanas([
-    h('C0468', 'M00171', 'BIDP036783', { entidadNombre: 'Occident' }),
-    h('C0468', 'M00171', '548325602', { entidadNombre: 'Occident' }),
+    h('C0468', 'M00171', 'BIDP000029', { entidadNombre: 'Occident' }),
+    h('C0468', 'M00171', '548000020', { entidadNombre: 'Occident' }),
   ])!
   const t = textoHuerfanas(r)
   assert.match(t, /Pídele a/)
   assert.match(t, /Occident \(C0468\) \/ clave M00171/)
-  assert.match(t, /BIDP036783/)
-  assert.match(t, /548325602/)
+  assert.match(t, /BIDP000029/)
+  assert.match(t, /548000020/)
 })
 
 test('sin nombre en companias_dgs se cita el código DGS y no se inventa marca', () => {
@@ -823,9 +828,10 @@ test('firma: «no consta ninguna corrida» y «el cron corre» no dan la misma f
 test('firma: una firma guardada en el formato viejo (sin el cron) no hace sonar un «cambio» falso', () => {
   const hoy = firmaAvisoIngesta(degradada({ horas: 3, procesados: 2 }))
   // Lo que había en el latido antes del 23/09: sin el tramo del cron NI el de
-  // renovaciones (27/09), o sea cinco tramos.
-  const sinRenov = hoy.slice(0, hoy.lastIndexOf(':'))
-  const vieja = sinRenov.slice(0, sinRenov.lastIndexOf(':'))
+  // renovaciones (27/09) NI el de emisiones (28/09) NI el de duplicadas (04/10),
+  // o sea cinco tramos.
+  const quitar = (x: string) => x.slice(0, x.lastIndexOf(':'))
+  const vieja = quitar(quitar(quitar(quitar(quitar(hoy)))))
   assert.equal(vieja.split(':').length, 5)
   assert.equal(normalizarFirmaIngesta(vieja), hoy)
   const d = decidirAvisoIngesta({
@@ -981,9 +987,196 @@ test('firma: «no se pudo mirar» (null) y «ninguna» ([]) no dan la misma firm
 
 test('firma: una firma de seis tramos (antes del 27/09) se lee como «ninguna»', () => {
   const hoy = firmaAvisoIngesta(conRenov([]))
-  const vieja = hoy.slice(0, hoy.lastIndexOf(':'))
+  const sinAnul = hoy.slice(0, hoy.lastIndexOf(':'))
+  const sinDup = sinAnul.slice(0, sinAnul.lastIndexOf(':'))
+  const sinEmis = sinDup.slice(0, sinDup.lastIndexOf(':'))
+  const vieja = sinEmis.slice(0, sinEmis.lastIndexOf(':'))
   assert.equal(vieja.split(':').length, 6)
   assert.equal(normalizarFirmaIngesta(vieja), hoy)
   // Y con Mapfre pendiente, el primer despliegue SÍ suena: nadie lo ha avisado nunca.
   assert.equal(suena(normalizarFirmaIngesta(vieja)!, firmaAvisoIngesta(conRenov([mapfre]))), true)
+})
+
+// ── 📭 Emisiones de Codeoscopic sin aviso de su webhook (28/09/2026) ────────
+// Caso real: cuatro emitidas (17-28/09) y cero avisos, porque el receptor
+// contestaba 401 a un usuario de Basic Auth distinto. Nada lo delataba.
+
+const allianzEmitida: EmisionSinAviso = { proyecto: '40769244', aseguradora: 'Allianz', horas: 262 }
+const realeEmitida: EmisionSinAviso = { proyecto: '40804066', aseguradora: 'Reale', horas: 108 }
+
+test('🚨 una emisión sin aviso del webhook DEGRADA aunque todo lo demás esté limpio', () => {
+  const s = saludIngesta({ cuarentena: [], emisionesSinAviso: [allianzEmitida] })
+  assert.equal(s.estado, 'degradada')
+  assert.match(detalleSalud(s), /1 emisión\(es\) de Codeoscopic sin aviso de su webhook/)
+  assert.match(detalleSalud(s), /40769244 Allianz/)
+})
+
+test('emisiones: lo emitido hace menos de 24 h todavía no cuenta', () => {
+  assert.equal(HORAS_EMISION_SIN_AVISO, 24)
+  const s = saludIngesta({ cuarentena: [], emisionesSinAviso: [{ proyecto: '40842815', aseguradora: 'Allianz', horas: 3 }] })
+  assert.equal(s.estado, 'ok')
+  assert.deepEqual(s.emisionesSinAviso, [])
+})
+
+test('emisiones: horas no legibles cuentan (no se supone que es reciente)', () => {
+  const s = saludIngesta({ cuarentena: [], emisionesSinAviso: [{ proyecto: '1', aseguradora: null, horas: null }] })
+  assert.equal(s.estado, 'degradada')
+})
+
+test('emisiones: el texto corta a 5 y dice cuántas más', () => {
+  const lista = Array.from({ length: 7 }, (_, i) => ({ proyecto: String(i), aseguradora: null, horas: 30 }))
+  assert.match(textoEmisionesSinAviso(lista), /y 2 más/)
+})
+
+test('emisiones `[]` = se miró y no hay: ni alarma ni hueco', () => {
+  const s = saludIngesta({ cuarentena: [], emisionesSinAviso: [] })
+  assert.equal(s.estado, 'ok')
+  assert.deepEqual(s.huecos, [])
+})
+
+test('🚨 emisiones `null` NO es «todas avisan»: es un hueco', () => {
+  const s = saludIngesta({ cuarentena: [], emisionesSinAviso: null })
+  assert.equal(s.estado, 'parcial')
+  assert.match(detalleSalud(s), /aviso de su webhook/)
+})
+
+test('emisiones sin pedir (`undefined`, puerto viejo) no inventa un hueco', () => {
+  const s = saludIngesta({ cuarentena: [] })
+  assert.equal(s.estado, 'ok')
+  assert.equal(s.emisionesSinAviso, undefined)
+})
+
+const conEmis = (emisionesSinAviso: EmisionSinAviso[] | null | undefined) =>
+  saludIngesta({ cuarentena: [f('SIN', 'C0468', 2)], ultimoPull: { horas: 3, procesados: 1 }, emisionesSinAviso })
+
+test('firma: aparece o se resuelve una emisión sin aviso → suena', () => {
+  assert.equal(suena(firmaAvisoIngesta(conEmis([])), firmaAvisoIngesta(conEmis([allianzEmitida]))), true)
+  assert.equal(
+    suena(firmaAvisoIngesta(conEmis([allianzEmitida, realeEmitida])), firmaAvisoIngesta(conEmis([allianzEmitida]))),
+    true,
+  )
+})
+
+test('firma: mismas emisiones con otras horas → misma firma (no repite cada día)', () => {
+  assert.equal(
+    firmaAvisoIngesta(conEmis([allianzEmitida])),
+    firmaAvisoIngesta(conEmis([{ ...allianzEmitida, horas: 300 }])),
+  )
+})
+
+test('firma: «no se pudo mirar» (null) y «ninguna» ([]) no dan la misma firma', () => {
+  assert.notEqual(firmaAvisoIngesta(conEmis(null)), firmaAvisoIngesta(conEmis([])))
+})
+
+test('firma: una firma de siete tramos (antes del 28/09) se lee como «ninguna»', () => {
+  const hoy = firmaAvisoIngesta(conEmis([]))
+  const sinAnul = hoy.slice(0, hoy.lastIndexOf(':'))
+  const sinDup = sinAnul.slice(0, sinAnul.lastIndexOf(':'))
+  const vieja = sinDup.slice(0, sinDup.lastIndexOf(':'))
+  assert.equal(vieja.split(':').length, 7)
+  assert.equal(normalizarFirmaIngesta(vieja), hoy)
+  assert.equal(suena(normalizarFirmaIngesta(vieja)!, firmaAvisoIngesta(conEmis([allianzEmitida]))), true)
+})
+
+test('cobertura: «descartados por privacidad» va aparte y NO es «sin leer»', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: { rutas: 100, rutasNuncaLeidas: 10, rutasDescartadas: 7, entidadesObservadas: 3, porTipo: [{ tipoObjeto: 'POL', rutas: 100, nuncaLeidas: 10 }] },
+  })
+  assert.equal(s.estado, 'ok')
+  assert.ok(s.motivos.some(m => m.includes('10 no se leen nunca')))
+  assert.ok(s.motivos.some(m => m.includes('7 campo(s) descartados por privacidad')))
+})
+
+test('cobertura: sin `rutasDescartadas` (columna aún sin aplicar) no inventa un descartado', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: { rutas: 100, rutasNuncaLeidas: 10, entidadesObservadas: 3, porTipo: [] },
+  })
+  assert.ok(!s.motivos.some(m => m.includes('descartados')))
+})
+
+// ── 🔁 Pólizas vivas duplicadas (04/10/2026) — INFORMATIVA ─────────────────
+// Tras fusionar 13 pares de Allianz quedaban grupos con el mismo número y DGS,
+// unos duplicados de verdad y otros pólizas distintas (clientes distintos). El
+// vigía los cuenta sin ponerse rojo y suena cuando cambian.
+
+const dupAllianz = { entidad: 'C0109', ref: '0ae40684-0000-0000-0000-000000000001', fichas: 2 }
+const dupReale = { entidad: 'C0613', ref: '12bf4c44-0000-0000-0000-000000000002', fichas: 2 }
+
+test('🔁 duplicadas: se informan pero NO degradan ni cuentan como hueco', () => {
+  const s = saludIngesta({ cuarentena: [], polizasDuplicadas: [dupAllianz, dupReale] })
+  assert.equal(s.estado, 'ok')
+  assert.deepEqual(s.huecos, [])
+  assert.equal(s.motivos.some(m => /duplicadas/.test(m)), false)
+  assert.match(detalleSalud(s), /informativo: 🔁 2 grupo\(s\) de pólizas vivas duplicadas/)
+  assert.match(detalleSalud(s), /C0109 1 · C0613 1/)
+})
+
+test('duplicadas: también salen en `degradada` y en `parcial`', () => {
+  const deg = saludIngesta({ cuarentena: [f('SIN', 'C0468', 2)], polizasDuplicadas: [dupAllianz] })
+  assert.equal(deg.estado, 'degradada')
+  assert.match(detalleSalud(deg), /informativo: 🔁 1 grupo/)
+  const par = saludIngesta({ cuarentena: [], rechazos: null, polizasDuplicadas: [dupAllianz] })
+  assert.equal(par.estado, 'parcial')
+  assert.match(detalleSalud(par), /informativo: 🔁 1 grupo/)
+})
+
+test('🚨 duplicadas `null` NO es «ninguna»: es un hueco', () => {
+  const s = saludIngesta({ cuarentena: [], polizasDuplicadas: null })
+  assert.equal(s.estado, 'parcial')
+  assert.match(detalleSalud(s), /pólizas vivas duplicadas/)
+})
+
+test('duplicadas `[]` = ninguna; `undefined` (puerto viejo) = no se pide', () => {
+  assert.equal(saludIngesta({ cuarentena: [], polizasDuplicadas: [] }).estado, 'ok')
+  const viejo = saludIngesta({ cuarentena: [] })
+  assert.equal(viejo.estado, 'ok')
+  assert.equal(viejo.polizasDuplicadas, undefined)
+  assert.equal(textoPolizasDuplicadas([]), '')
+  assert.equal(textoPolizasDuplicadas(undefined), '')
+})
+
+test('duplicadas: un «grupo» de una ficha no es un grupo', () => {
+  const s = saludIngesta({ cuarentena: [], polizasDuplicadas: [{ ...dupAllianz, fichas: 1 }] })
+  assert.deepEqual(s.polizasDuplicadas, [])
+})
+
+const conDup = (polizasDuplicadas: typeof dupAllianz[] | null | undefined) =>
+  saludIngesta({ cuarentena: [], ultimoPull: { horas: 3, procesados: 1 }, polizasDuplicadas })
+
+test('firma: entra, sale o se SUSTITUYE un grupo de duplicadas → suena', () => {
+  assert.equal(suena(firmaAvisoIngesta(conDup([])), firmaAvisoIngesta(conDup([dupAllianz]))), true)
+  assert.equal(suena(firmaAvisoIngesta(conDup([dupAllianz, dupReale])), firmaAvisoIngesta(conDup([dupAllianz]))), true)
+  // Mismo recuento, otro grupo: el número no se mueve, la firma sí.
+  assert.equal(suena(firmaAvisoIngesta(conDup([dupAllianz])), firmaAvisoIngesta(conDup([dupReale]))), true)
+  // Y el orden de llegada no cambia nada.
+  assert.equal(firmaAvisoIngesta(conDup([dupAllianz, dupReale])), firmaAvisoIngesta(conDup([dupReale, dupAllianz])))
+})
+
+test('firma: duplicadas `null` y `[]` no dan la misma firma; el tramo no rompe el recuento de tramos', () => {
+  assert.notEqual(firmaAvisoIngesta(conDup(null)), firmaAvisoIngesta(conDup([])))
+  assert.equal(firmaAvisoIngesta(conDup([dupAllianz, dupReale])).split(':').length, 10)
+})
+
+test('firma: una firma de ocho tramos (antes del 04/10) se lee como «ninguna duplicada»', () => {
+  const hoy = firmaAvisoIngesta(conDup([]))
+  const sinAnul = hoy.slice(0, hoy.lastIndexOf(':'))
+  const vieja = sinAnul.slice(0, sinAnul.lastIndexOf(':'))
+  assert.equal(vieja.split(':').length, 8)
+  assert.equal(normalizarFirmaIngesta(vieja), hoy)
+  assert.equal(suena(normalizarFirmaIngesta(vieja)!, firmaAvisoIngesta(conDup([dupAllianz]))), true)
+})
+
+test('cambioDuplicadasEnFirma: solo mira el tramo de duplicadas', () => {
+  const sin = firmaAvisoIngesta(conDup([]))
+  const con = firmaAvisoIngesta(conDup([dupAllianz]))
+  assert.equal(cambioDuplicadasEnFirma(sin, con), true)
+  assert.equal(cambioDuplicadasEnFirma(con, con), false)
+  // Cambia otra señal y las duplicadas no: no es cambio de duplicadas.
+  const otraCosa = firmaAvisoIngesta(saludIngesta({ cuarentena: [], ultimoPull: { horas: 40, procesados: 0 }, polizasDuplicadas: [dupAllianz] }))
+  assert.equal(cambioDuplicadasEnFirma(con, otraCosa), false)
+  // Nunca avisado: solo si hoy hay algo que contar.
+  assert.equal(cambioDuplicadasEnFirma(null, con), true)
+  assert.equal(cambioDuplicadasEnFirma(null, sin), false)
 })

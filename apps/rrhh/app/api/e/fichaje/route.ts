@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSesionEmpleado } from '@/lib/empleado-tenant'
 import { AuthError } from '@/lib/tenant'
+import { validarUbicacionFichaje } from '@/lib/ubicacion-fichaje'
 import { fichajeActivo, ficharEntrada, ficharSalida, listarFichajes } from '@/lib/fichajes'
 
 export async function GET() {
@@ -16,9 +17,9 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { empresa_id, empleado_id } = await getSesionEmpleado()
-    const { lat, lng } = await req.json().catch(() => ({}))
-    const latN = typeof lat === 'number' ? lat : null
-    const lngN = typeof lng === 'number' ? lng : null
+    const u = validarUbicacionFichaje(await req.json().catch(() => null))
+    if (!u.ok) return NextResponse.json({ error: u.error, codigo: u.codigo }, { status: 400 })
+    const latN = u.ubicacion.lat, lngN = u.ubicacion.lng
     const activo = await fichajeActivo(empresa_id, empleado_id)
     const fichaje = activo
       ? await ficharSalida(empresa_id, empleado_id, latN, lngN)

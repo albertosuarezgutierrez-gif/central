@@ -82,9 +82,15 @@ export function peldanoRancio(p: {
   recordado: boolean
   acusado: boolean
   noRequiereRespuesta: boolean
+  /** Hoy es el día de salida o posterior (hora de Madrid). `undefined` = no se sabe. */
+  estanciaAcabando?: boolean
 }): PeldanoRancio {
   if (p.noRequiereRespuesta) return null
-  if (!p.acusado && p.minutos >= MIN_ACUSE_ESPERA) return 'acuse'
+  // El día de salida ya no se le promete al huésped «te escribimos en cuanto lo tengamos»: se va
+  // hoy y lo que preguntó (casi siempre sobre la llegada o la estancia) ya no tiene arreglo por aquí.
+  // Caso: reserva 154692216, preguntó a las 18:14 si el piso estaba listo y el acuse le llegó a las
+  // 09:14 del día de salida. Alberto sí recibe el recordatorio. Sin fecha fiable se acusa como antes.
+  if (!p.acusado && p.minutos >= MIN_ACUSE_ESPERA && p.estanciaAcabando !== true) return 'acuse'
   if (!p.recordado && p.minutos >= MIN_RECORDATORIO) return 'recordatorio'
   return null
 }
@@ -110,4 +116,34 @@ const ESPERA: Record<Idioma, string> = {
 /** Acuse de ESPERA (peldaño 2), en el idioma del huésped. */
 export function textoEspera(lang: string): string {
   return ESPERA[normalizarIdioma(lang)]
+}
+
+/** Todos los acuses de espera (todos los idiomas), para el cruce anti-eco. */
+export function textosEsperaTodos(): string[] {
+  return Object.values(ESPERA)
+}
+
+/**
+ * ¿Se le respondió al huésped FUERA del agente (Smoobu, Booking, WhatsApp…) desde que se propuso el
+ * borrador? Caso (28/09/2026, reserva 154692216): Alberto contestó a mano y el pendiente siguió vivo,
+ * así que el barrido le volvía a poner el borrador delante y podía mandarle al huésped «lo estamos
+ * revisando» sobre una conversación ya atendida.
+ *
+ * Cuando se crea el pendiente el último mensaje del hilo es del huésped (el orquestador sale si es
+ * del host). Se recorre el hilo desde el final saltando lo automático (nuestros acuses/programados y
+ * las plantillas de Smoobu): si lo primero que aparece es un mensaje del host escrito por una persona,
+ * alguien respondió. Si aparece antes uno del huésped, sigue pendiente. Devuelve el texto de esa
+ * respuesta (para enseñárselo a Alberto al cerrar) o `null`.
+ */
+export function respondidoFuera(
+  historial: { from: 'guest' | 'host'; text: string }[],
+  esAutomatico: (texto: string) => boolean,
+): string | null {
+  for (let i = (historial || []).length - 1; i >= 0; i--) {
+    const m = historial[i]
+    if (!m?.text?.trim()) continue
+    if (m.from === 'guest') return null
+    if (!esAutomatico(m.text)) return m.text
+  }
+  return null
 }

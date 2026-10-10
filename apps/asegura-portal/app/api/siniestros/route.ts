@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { tgSend } from '@central/core-telegram'
-import { normalizarParte, plazoComunicacion, textoAvisoParteNuevo, type ParteEntrada } from '@central/module-seguros-portal'
+import { aplicarRamoAlParte, normalizarParte, plazoComunicacion, textoAvisoParteNuevo, type ParteEntrada } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, polizasParaParte } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
@@ -28,6 +28,64 @@ export const runtime = 'nodejs'
  * Adelantar el 4 al 3 es exactamente el fallo que este fichero existe para
  * evitar, y no se vería en ningún log porque la operación sería un éxito.
  */
+/**
+ * Lo que el aviso a Alberto cuenta de la póliza y su titular, sacado de la cartera
+ * YA autorizada para esta identidad (nunca de una consulta por el id del cuerpo).
+ * Enlace: `PLATAFORMA_URL` (la misma variable que usa `apps/asegura`); sin ella, no
+ * se inventa una URL y el texto dice «míralo en /correduria».
+ */
+function datosDelAviso(
+  cartera: Awaited<ReturnType<typeof carteraDeIdentidad>>,
+  polizaId: string | null,
+  declarada: { compania: string | null; ramo: string | null; numeroPoliza: string | null } | null,
+) {
+  const base = process.env.PLATAFORMA_URL?.trim().replace(/\/+$/, '') || null
+  const enlaceA = (ruta: string) => (base !== null && base.startsWith('https://') ? `${base}${ruta}` : null)
+  if (polizaId !== null) {
+    const grupos = [
+      { otro: false, titulares: cartera.propias },
+      { otro: true, titulares: cartera.autorizadas },
+      { otro: true, titulares: cartera.intervinientes },
+    ]
+    for (const g of grupos) {
+      for (const t of g.titulares) {
+        const p = t.polizas.find((x) => x.id === polizaId)
+        if (!p) continue
+        return {
+          cliente: t.nombre,
+          loDaOtro: g.otro,
+          compania: p.compania,
+          numeroPoliza: p.numeroPoliza,
+          ramo: p.ramo,
+          enlace: enlaceA(`/correduria/poliza/${encodeURIComponent(p.id)}`),
+        }
+      }
+    }
+  }
+  // Sin póliza de cartera: el titular solo si la identidad tiene UNA ficha propia (si
+  // tiene varias, elegir una sería inventar a quién es el parte).
+  const unica = cartera.propias.length === 1 ? cartera.propias[0]! : null
+  return {
+    cliente: unica?.nombre ?? null,
+    loDaOtro: false,
+    compania: declarada?.compania ?? null,
+    numeroPoliza: declarada?.numeroPoliza ?? null,
+    ramo: declarada?.ramo ?? null,
+    enlace: unica ? enlaceA(`/correduria/cliente/${encodeURIComponent(unica.clienteId)}`) : enlaceA('/correduria'),
+  }
+}
+
+/** El ramo de una póliza que YA está en la cartera autorizada de esta identidad. `null` si no aparece. */
+function ramoDePolizaAutorizada(cartera: Awaited<ReturnType<typeof carteraDeIdentidad>>, polizaId: string): string | null {
+  for (const titulares of [cartera.propias, cartera.autorizadas, cartera.intervinientes]) {
+    for (const t of titulares) {
+      const p = t.polizas.find((x) => x.id === polizaId)
+      if (p) return p.ramo
+    }
+  }
+  return null
+}
+
 export async function POST(req: Request) {
   // La identidad SIEMPRE sale de la cookie, nunca del cuerpo de la petición:
   // es lo único que separa la bóveda de una persona de la de otra.
@@ -58,7 +116,7 @@ export async function POST(req: Request) {
   if (!normalizado.ok) {
     return NextResponse.json({ error: 'datos_invalidos', errores: normalizado.errores }, { status: 400 })
   }
-  const valor = normalizado.valor
+  let valor = normalizado.valor
 
   // ─── 3. Pertenencia ────────────────────────────────────────────────────────
   // Sin esto, cualquiera con sesión cuelga un parte de la póliza de otro
@@ -67,14 +125,19 @@ export async function POST(req: Request) {
   // «No existe» y «no es tuya» se responden IGUAL a propósito. Distinguirlas
   // convierte la ruta en un oráculo de uuids válidos de la cartera ajena, que
   // es la información que necesita quien está probando.
+  // Lo que dice el aviso a Alberto de la póliza: SOLO de lo ya autorizado para
+  // esta identidad (la cartera leída aquí abajo o la declarada filtrada por ella).
+  let declarada: { compania: string | null; ramo: string | null; numeroPoliza: string | null } | null = null
+  let cartera: Awaited<ReturnType<typeof carteraDeIdentidad>> | null = null
   if (valor.polizaDeclaradaId !== null) {
     // Póliza aportada por el propio cliente: el filtro por `identidadId` va
     // JUNTO al id, nunca un `findUnique({ where: { id } })` y un `if` después.
     const propia = await prisma.portalPolizaDeclarada.findFirst({
       where: { id: valor.polizaDeclaradaId, identidadId: identidad.id },
-      select: { id: true },
+      select: { id: true, compania: true, ramo: true, numeroPoliza: true },
     })
     if (!propia) return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })
+    declarada = { compania: propia.compania, ramo: propia.ramo, numeroPoliza: propia.numeroPoliza }
   }
 
   if (valor.polizaId !== null) {
@@ -86,11 +149,24 @@ export async function POST(req: Request) {
     // Cuentan las propias y, de las autorizadas, SOLO las que traen el alcance
     // `partes` (`polizasParaParte`): ver una póliza no da derecho a declarar un
     // siniestro en nombre de su tomador (art. 16 LCS; decisión de Alberto, 24/09/2026).
-    const cartera = await carteraDeIdentidad(identidad.id)
+    cartera = await carteraDeIdentidad(identidad.id)
     if (!polizasParaParte(cartera).has(valor.polizaId)) {
       return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })
     }
   }
+
+  // ─── 3b. Ramo ──────────────────────────────────────────────────────────────
+  // El tipo y los campos por ramo se aceptan SOLO con el ramo de la póliza ya
+  // autorizada arriba (cartera leída por identidad o declarada filtrada por
+  // identidad), nunca con un ramo que diga el cuerpo. Sin póliza → sin ramo →
+  // `tipoSiniestro` y `datosRamo` a `null`.
+  const ramo =
+    declarada !== null
+      ? declarada.ramo
+      : valor.polizaId !== null && cartera !== null
+        ? ramoDePolizaAutorizada(cartera, valor.polizaId)
+        : null
+  valor = aplicarRamoAlParte(valor, ramo, entrada)
 
   // Sin `try/catch`: si la BD falla, que salga como error. Un `{ ok: true }` de
   // consuelo dejaría al cliente creyendo que ha declarado un siniestro que no
@@ -102,11 +178,16 @@ export async function POST(req: Request) {
   // 16 LCS; ese cron sigue como red de seguridad. Si Telegram falla, el parte
   // YA está guardado y la respuesta no cambia: el cron lo repetirá mañana.
   try {
+    // Cliente titular, compañía, nº, ramo y enlace a la ficha (03/10/2026). Si algo
+    // de esto falla, el aviso sale igual con lo que haya: el parte ya está guardado.
+    const datos = datosDelAviso(cartera ?? (await carteraDeIdentidad(identidad.id)), valor.polizaId, declarada)
     await tgSend(
       textoAvisoParteNuevo({
+        ...datos,
         parteId: id,
         nombre: identidad.nombre ?? null,
         tipoSiniestro: valor.tipoSiniestro,
+        datosRamo: valor.datosRamo,
         fechaHecho: valor.fechaHecho,
         hayHeridos: valor.hayHeridos,
         hayTerceros: valor.hayTerceros,

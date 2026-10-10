@@ -207,7 +207,7 @@ test('cada desenlace del POST tiene su frase, y ninguna dice que se haya enviado
   const textos = new Set<string>()
   for (const f of FALLOS_INVITACION) {
     const frase = textoInvitacion({ estado: f, motivo: 'motivo del puerto' }, 'Ana')
-    assert.doesNotMatch(frase, /✅/, `${f} no puede leerse como un envío hecho`)
+    assert.doesNotMatch(frase, /^(Correo enviado|Invitación enviada|Enlace reenviado)/, `${f} no puede leerse como un envío hecho`)
     textos.add(frase)
   }
   assert.equal(textos.size, FALLOS_INVITACION.length, 'dos fallos con la misma frase: se han colapsado')
@@ -244,4 +244,25 @@ test('🚨 una env de correo que falta NO invita a reintentar; una avería del p
   const averia = textoInvitacion({ estado: 'error_envio', motivo: 'x' }, 'Ana')
   assert.match(averia, /vuelve a intentarlo/i, 'esta SÍ se reintenta: hubo proveedor y dijo que no')
   assert.notEqual(averia, falta)
+})
+
+test('otrasFichas: se leen con su nombre; ausente o mal formado es `null`, no «no hay»', () => {
+  assert.equal(leerPortal({ estado: 'resuelve_a_otra' })?.otrasFichas, null)
+  assert.equal(leerPortal({ estado: 'resuelve_a_otra', otrasFichas: 'x' })?.otrasFichas, null)
+  const r = leerPortal({
+    estado: 'resuelve_a_otra',
+    otrasFichas: [{ clienteId: 'b', nombre: 'Antonio Antonio', principal: true }, { nombre: 'sin id' }, { clienteId: 'c', nombre: '' }],
+  })
+  assert.deepEqual(r?.otrasFichas, [
+    { clienteId: 'b', nombre: 'Antonio Antonio', principal: true },
+    { clienteId: 'c', nombre: null, principal: false },
+  ])
+})
+
+test('resuelve_a_otra y ambiguo explican que tampoco hay WhatsApp', () => {
+  for (const estado of ['resuelve_a_otra', 'ambiguo'] as const) {
+    const f = explicarPortal({ estado, ultimoAccesoEn: null, identidades: 0, emailInvitacion: null, otrasFichas: null })
+    assert.equal(f.accion, 'ninguna')
+    assert.match(f.queHacer, /Tampoco por WhatsApp/)
+  }
 })

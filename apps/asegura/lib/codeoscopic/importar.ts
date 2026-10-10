@@ -17,8 +17,25 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !=
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 
-/** Ramos que se importan hoy: los de vehículo, que son los que ya emite `/emitir`. */
-const RAMO_DE_LINEA: Record<string, string> = { Car: 'auto', Motorcycle: 'moto' }
+/**
+ * `insuranceLine.id` del vendor → nuestro ramo (`tipo_seguro`). Los ids son los EXACTOS de la referencia
+ * (`docs/CODEOSCOPIC-API-REFERENCIA-2026-09.md` § ramos): `Car`, `Motorcycle`, `Home`, `TermLife`, `Health`,
+ * `Burial` — con esa mayúscula, sin traducir. Lo que no está aquí devuelve `null` (nunca se cae a `auto`).
+ *
+ * Tener ramo NO significa «importable»: `/importar` solo enlaza vehículos (ver `RAMOS_IMPORTABLES`); lo demás
+ * lo usan el descubrimiento y el acuñado de emisiones hechas fuera (`emision-externa.ts`).
+ */
+export const RAMO_DE_LINEA: Readonly<Record<string, string>> = {
+  Car: 'auto',
+  Motorcycle: 'moto',
+  Home: 'hogar',
+  TermLife: 'vida',
+  Health: 'salud',
+  Burial: 'decesos',
+}
+
+/** Los ramos que `/importar` enlaza a una póliza: los de vehículo (cruza matrícula, que es de vehículo). */
+export const RAMOS_IMPORTABLES: readonly string[] = ['auto', 'moto']
 
 export function ramoDeLinea(crudo: unknown): string | null {
   const id = str(obj(obj(crudo).insuranceLine).id)

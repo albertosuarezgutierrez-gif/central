@@ -733,6 +733,9 @@ em { font-style: normal; }
   .tabla-polizas td[data-rol="accion"] { padding-top: 8px !important; border-top: 1px solid var(--border); margin-top: 6px; }
   /* Una celda de acción vacía (fila sin botón) no pinta una raya suelta en la tarjeta. */
   .tabla-polizas td:empty { display: none; }
+  /* Fila hija (p. ej. «Más datos de CIMA» de un recibo): continúa la tarjeta de arriba, no es otra. */
+  .tabla-polizas tr:has(+ tr.fila-hija) { margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: 0 !important; }
+  .tabla-polizas tr.fila-hija { border-top: 0 !important; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 0; }
 }
 
 /* === Armazón como el portal del cliente (24/09/2026) =======================================
@@ -760,3 +763,20 @@ em { font-style: normal; }
   border-bottom: 1px solid color-mix(in oklab, var(--primary) 12%, var(--border)) !important;
 }
 :focus-visible { outline: 3px solid color-mix(in oklab, var(--primary) 50%, transparent); outline-offset: 2px; }
+
+/* Plegable de datos de consulta (DNI y carnés en la ficha): sin el triángulo nativo, con chevron
+   lucide que gira al abrir, igual que el resto de iconos de la correduría. */
+.plegable-dato > summary::-webkit-details-marker { display: none; }
+.plegable-dato > summary .chev { transition: transform .12s ease; }
+.plegable-dato[open] > summary .chev { transform: rotate(90deg); }
+
+/* SeccionCard plegable: sin triángulo nativo, con ▸ que pasa a ▾ (gira 90°) al abrir. */
+details > summary:has(> span > .seccion-chev)::-webkit-details-marker { display: none; }
+details > summary:has(> span > .seccion-chev) { list-style: none; }
+.seccion-chev { display: inline-block; transition: transform .12s ease; }
+details[open] > summary .seccion-chev { transform: rotate(90deg); }
+
+/* Rótulo de un botón que en móvil se queda en solo icono (el botón lleva aria-label). */
+@media (max-width: 480px) {
+  .rotulo-ancho { display: none; }
+}

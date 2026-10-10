@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { reparosPorFila } from '@central/module-seguros'
 import { NextResponse } from 'next/server'
 import { cuentaDeFicha, describirOrigenCuenta } from '@/lib/codeoscopic/cuenta-ficha'
 import { ibanEnmascarado } from '@/lib/codeoscopic/emitir-iban'
@@ -14,7 +15,7 @@ import {
   completarPersonas,
   type ResultadoCompletar,
 } from '@/lib/codeoscopic/emitir'
-import { opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
+import { conDescuentos, descuentosDelCuerpo, opcionesParaReRate, opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import {
   interpretarError400,
   interpretarCamposProducto,
@@ -29,6 +30,7 @@ import { conLibroDeEmision, type GastoEmision } from '@/lib/codeoscopic/libro-em
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada, motivoFechaEfectoInvalida } from '@/lib/codeoscopic/fecha-efecto'
 import { auditado } from '@/lib/auditoria'
+import { tipoDeRamo } from '@/lib/codeoscopic/contexto-emision'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -131,6 +133,14 @@ export const POST = auditado(async (req: Request) => {
   // en `respuesta.ts`): es Codeoscopic quien decide qué lleva cada opción.
   const productOptionsCorredor = Array.isArray(cuerpo.productOptions) ? cuerpo.productOptions : undefined
 
+  // Descuento comercial que el corredor ajusta en preemisión (29/09/2026). Se valida con los
+  // límites del formulario real ANTES de gastar: un valor fuera de rango es un 400 seguro.
+  const lecturaDescuentos = descuentosDelCuerpo(cuerpo.descuentos)
+  if ('reparo' in lecturaDescuentos) {
+    return NextResponse.json({ estado: 'error', causa: 'descuento_invalido', mensaje: lecturaDescuentos.reparo }, { status: 422 })
+  }
+  const descuentosPedidos = lecturaDescuentos.pedidos
+
   // Quién pide el ReRate, para poder explicar la factura línea a línea (igual
   // que `solicitadoPor` en `cotizar()`).
   const actor = cadena(cuerpo.actor) ?? 'plataforma'
@@ -142,11 +152,12 @@ export const POST = auditado(async (req: Request) => {
       poliza_id: string | null
       cliente_id: string | null
       producto: string | null
+      ramo: string | null
     }[]
   >`
     select t.correduria_id::text as correduria_id, t.project_id_codeoscopic,
            t.poliza_id::text as poliza_id, t.cliente_id::text as cliente_id,
-           pol.tipo::text as producto
+           pol.tipo::text as producto, t.ramo
     from tarificaciones t
     left join polizas pol on pol.id = t.poliza_id
     where t.id = ${tarificacionId}::uuid and t.simulado = false
@@ -164,6 +175,30 @@ export const POST = auditado(async (req: Request) => {
         mensaje: 'no se encuentra esa cotización real (o es una simulada, que no se puede confirmar)',
       },
       { status: 404 },
+    )
+  }
+
+  // El ramo del proyecto: el de la póliza que se retarifica o, sin póliza
+  // (cliente NUEVO, 28/09/2026), el de la tarificación por lista blanca del enum.
+  // 🚨 Hasta hoy caía a `'auto'`: un hogar nuevo quedaba grabado como auto y se
+  // habría acuñado como auto. Lo que no mapea corta AQUÍ, antes del ReRate.
+  const producto = t.producto ?? tipoDeRamo(t.ramo)
+  // Descuento pedido en una compañía/ramo sin el campo: se rechaza AQUÍ, antes de tocar el proyecto
+  // del vendor (el PATCH de fecha o de personas invalida sus cotizaciones aunque sea gratis).
+  if (descuentosPedidos && !productOptionsCorredor && !opcionesPorDefecto(compania, producto)) {
+    return NextResponse.json(
+      { estado: 'error', causa: 'descuento_no_disponible', mensaje: 'esta compañía no admite ajustar el descuento en el ReRate (solo está catalogado en Allianz coche, moto y hogar, y en Generali coche, moto y hogar)' },
+      { status: 422 },
+    )
+  }
+  if (!producto) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'ramo_desconocido',
+        mensaje: `el ramo de esta cotización («${t.ramo ?? 'sin ramo'}») no es un tipo de póliza emitible: no se confirma nada con la compañía`,
+      },
+      { status: 422 },
     )
   }
 
@@ -291,21 +326,32 @@ export const POST = auditado(async (req: Request) => {
     // `sugeridos`, para que el corredor lo teclee y esta ruta lo escriba.
     let oferta: Awaited<ReturnType<typeof reRate>> | null = null
     let reparadoDesdeFicha = false
+    // 30/09/2026: lo que no cuadra de la opción elegida viaja con la oferta, delante de los avisos
+    // de la compañía: el panel de emisión es el último sitio donde se puede ver antes de emitir.
+    let reparosElegido: string[] = []
     while (oferta === null) {
+      const modalidad = cadena(cuerpo.modalidad)
       const precio = encontrarPrecio(cotizacion, compania, categoria, {
         producto: cadena(cuerpo.producto),
         primaEur: typeof cuerpo.primaEur === 'number' ? cuerpo.primaEur : null,
+        modalidad,
+        idPrecio: cadena(cuerpo.idPrecio),
       })
       if (!precio) {
+        // 30/09/2026: `null` ya no es solo «caducó»: también «hay varias y no sé cuál es la
+        // elegida». No se confirma otra en su lugar (ver `encontrarPrecio`).
         return NextResponse.json(
           {
             estado: 'error',
             causa: 'otro',
-            mensaje: `el proyecto ${projectId} ya no trae un precio de «${compania}» / «${categoria}» — puede haber caducado`,
+            mensaje:
+              `el proyecto ${projectId} ya no trae exactamente el precio elegido (${[compania, categoria, modalidad].filter(Boolean).join(' · ')}). ` +
+              'Puede haber caducado o haber cambiado al actualizar los datos del proyecto. No se confirma otro en su lugar: vuelve a pedir precio.',
           },
-          { status: 404 },
+          { status: 409 },
         )
       }
+      reparosElegido = reparosPorFila(cotizacion.precios)[cotizacion.precios.indexOf(precio)] ?? []
 
       try {
         // El vendor nunca devuelve `product.options` al cotizar (ver
@@ -325,6 +371,16 @@ export const POST = auditado(async (req: Request) => {
         // que facture), pero la LÍNEA se abre igual: lo conservador es contarla.
         // Un 400 del vendor es `pruebaQueNoHuboCargo` y el embudo la descarta
         // con evidencia; un 5xx o un corte se quedan contados.
+        const opcionesBase = productOptionsCorredor ?? opcionesParaReRate(precio.productOptions, compania, producto)
+        let opcionesRerate = opcionesBase
+        if (descuentosPedidos) {
+          const conDto = conDescuentos(opcionesBase, descuentosPedidos, productOptionsCorredor ? 'formulario' : 'catalogo')
+          // Sin llamar a la compañía: el campo no existe para este producto.
+          if (!conDto.ok) {
+            return NextResponse.json({ estado: 'error', causa: 'descuento_no_disponible', mensaje: conDto.motivo }, { status: 422 })
+          }
+          opcionesRerate = conDto.opciones as typeof opcionesBase
+        }
         const gasto = await conLibroDeEmision(
           { correduriaId: t.correduria_id, operacion: 'rerate', solicitadoPor: actor, projectId },
           () =>
@@ -333,7 +389,7 @@ export const POST = auditado(async (req: Request) => {
               projectId,
               precio.id,
               precio.productId,
-              productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania, t.producto),
+              opcionesRerate,
               fechaEfectoCorregida,
             ),
         )
@@ -422,23 +478,27 @@ export const POST = auditado(async (req: Request) => {
     // (D2) al acuñar la póliza. Esta cotización nació en `tarificaciones` (tabla
     // nueva del 03/09), así que hasta este ReRate no tenía fila ahí.
     //
-    // 🚨 `producto` sale de LA PÓLIZA (`t.producto`, `polizas.tipo`), no de un
-    // literal: hasta el 12/09/2026 esto llevaba `'auto'` fijo, así que un
-    // ReRate de hogar/RC dejaba esta fila de bookkeeping mintiendo sobre el
-    // ramo (nadie la relee hoy para decidir nada, pero es el mismo fallo que
-    // el resto del repo llama «basura con forma de dato»). Sin póliza enlazada
-    // (`t.producto` NULL) cae a `'auto'` — el placeholder de siempre, nunca un
-    // ramo inventado sobre datos que sí existen.
+    // 🚨 `producto` sale de LA PÓLIZA (`t.producto`, `polizas.tipo`) o, sin
+    // póliza, del ramo de la tarificación (`tipoDeRamo`, lista blanca) — nunca
+    // de un literal. Hasta el 28/09/2026 caía a `'auto'` sin póliza, y ahora
+    // esta fila es la que `/emitir` usa para emitir a un cliente NUEVO.
+    //
+    // `cliente_id` + `tarificacion_id` (28/09/2026): con ellos `/emitir` sabe de
+    // quién es un proyecto SIN póliza y de dónde sacar ramo y riesgo. El cliente
+    // no se pisa si ya estaba (coalesce); la tarificación, sí: es la del último ReRate.
     await prisma.$executeRaw`
       insert into codeoscopic_projects (
-        correduria_id, project_id_codeoscopic, producto, poliza_id, aseguradora,
-        accepted_offer_id_codeoscopic, estado
+        correduria_id, project_id_codeoscopic, producto, poliza_id, cliente_id, tarificacion_id,
+        aseguradora, accepted_offer_id_codeoscopic, estado
       ) values (
-        ${t.correduria_id}::uuid, ${projectId}, ${t.producto ?? 'auto'}::tipo_seguro,
-        ${t.poliza_id}::uuid, ${compania}, ${oferta.offerId}, 'preemision'
+        ${t.correduria_id}::uuid, ${projectId}, ${producto}::tipo_seguro,
+        ${t.poliza_id}::uuid, ${t.cliente_id}::uuid, ${tarificacionId}::uuid,
+        ${compania}, ${oferta.offerId}, 'preemision'
       )
       on conflict (correduria_id, project_id_codeoscopic) do update
         set poliza_id = coalesce(codeoscopic_projects.poliza_id, excluded.poliza_id),
+            cliente_id = coalesce(codeoscopic_projects.cliente_id, excluded.cliente_id),
+            tarificacion_id = excluded.tarificacion_id,
             producto = excluded.producto,
             aseguradora = excluded.aseguradora,
             accepted_offer_id_codeoscopic = excluded.accepted_offer_id_codeoscopic,
@@ -454,7 +514,7 @@ export const POST = auditado(async (req: Request) => {
     return NextResponse.json({
       estado: 'ok',
       projectId: projectId,
-      oferta,
+      oferta: reparosElegido.length > 0 ? { ...oferta, avisos: [...reparosElegido.map((m) => `⚠️ ${m}`), ...oferta.avisos] } : oferta,
       // TRES formas, no dos: la cuenta (enmascarada) · un aviso de por qué no
       // hay una utilizable (`ilegible` / `invalida` / `no_comprobada`) · null =
       // se miró y no hay ninguna guardada.

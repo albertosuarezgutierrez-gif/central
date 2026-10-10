@@ -11,7 +11,11 @@ import {
   type ResueltosHogar,
 } from './desde-cartera-hogar.ts'
 import type { ClienteCartera } from './desde-cartera.ts'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
 import { paramsDnploc } from '@central/core-catastro'
+
+// «Hoy» real: la fecha de efecto se valida contra el reloj (≤90 días vista, no pasada).
+const HOY = hoyEnMadrid()
 
 // Persona inventada. Ningún cliente real aquí.
 const CLIENTE: ClienteCartera = {
@@ -54,11 +58,11 @@ const RESUELTOS: ResueltosHogar = {
 }
 
 test('con la gemela completa y los ids resueltos se puede cotizar, y se DICE de dónde sale el riesgo', () => {
-  const p = precalificarHogarCartera(CLIENTE, { numeroPoliza: 'X1', fechaVencimiento: '2027-09-30', hogar: GEMELA }, RESUELTOS, '2026-09-02')
+  const p = precalificarHogarCartera(CLIENTE, { numeroPoliza: 'X1', fechaVencimiento: sumarDias(HOY, 30), hogar: GEMELA }, RESUELTOS, HOY)
   assert.deepEqual(p.faltan, [])
   assert.equal(p.fuenteRiesgo, 'gemela')
   assert.equal(p.datos.cp, '41002') // el del riesgo, NO el del tomador (41003)
-  assert.equal(p.datos.fechaEfecto, '2027-10-01')
+  assert.equal(p.datos.fechaEfecto, sumarDias(HOY, 31))
   // La dirección troceada para el vendor.
   assert.equal(p.datos.tipoViaId, 'Calle')
   assert.equal(p.datos.nombreVia, 'INVENTADA')
@@ -71,7 +75,7 @@ test('con la gemela completa y los ids resueltos se puede cotizar, y se DICE de 
 })
 
 test('🚨 lo que el vendor exige y la ficha NO tiene se supone conservador y se declara UNO POR UNO', () => {
-  const p = precalificarHogarCartera(CLIENTE, { numeroPoliza: 'X1', fechaVencimiento: null, hogar: GEMELA }, RESUELTOS, '2026-09-02')
+  const p = precalificarHogarCartera(CLIENTE, { numeroPoliza: 'X1', fechaVencimiento: null, hogar: GEMELA }, RESUELTOS, HOY)
   const por = Object.fromEntries(p.supuestos.map((s) => [s.campo, s]))
   assert.equal(p.datos.habitaciones, 3) // 76 m²
   assert.ok(/76 m²/.test(por.habitaciones.porque))
@@ -84,7 +88,7 @@ test('🚨 lo que el vendor exige y la ficha NO tiene se supone conservador y se
   assert.equal(por.joyasEnCajaFuerte.optimista, true) // sin joyas ⇒ precio más bajo: optimista
   assert.equal(por.perrosPeligrosos.optimista, true)
   // Nada de esto se supone si NO hay superficie: sin m² no hay habitaciones.
-  const sinM2 = precalificarHogarCartera(CLIENTE, { numeroPoliza: null, fechaVencimiento: null, hogar: { ...GEMELA, metrosCuadrados: null } }, RESUELTOS, '2026-09-02')
+  const sinM2 = precalificarHogarCartera(CLIENTE, { numeroPoliza: null, fechaVencimiento: null, hogar: { ...GEMELA, metrosCuadrados: null } }, RESUELTOS, HOY)
   assert.equal(sinM2.datos.habitaciones, undefined)
   assert.ok(sinM2.faltan.some((f) => f.campo === 'habitaciones'))
 })
@@ -94,7 +98,7 @@ test('🚨 sin riesgo en la póliza ni en la gemela: el Catastro tapa m²/año, 
     CLIENTE,
     { numeroPoliza: null, fechaVencimiento: null, hogar: null },
     RESUELTOS,
-    '2026-09-02',
+    HOY,
     { metrosCuadrados: 80, anioConstruccion: 1990, codigoPostal: null, uso: 'Residencial' },
   )
   assert.equal(p.fuenteRiesgo, 'catastro')
@@ -114,7 +118,7 @@ test('sin póliza (oportunidad nueva): la dirección OFICIAL del Catastro, ya tr
     CLIENTE,
     { numeroPoliza: null, fechaVencimiento: null, hogar: null },
     RESUELTOS,
-    '2026-09-02',
+    HOY,
     {
       metrosCuadrados: 205,
       anioConstruccion: 1964,
@@ -138,7 +142,7 @@ test('con póliza Y catastro a la vez: manda la dirección de la FICHA, no la de
     CLIENTE,
     { numeroPoliza: 'X1', fechaVencimiento: null, hogar: GEMELA },
     RESUELTOS,
-    '2026-09-02',
+    HOY,
     {
       metrosCuadrados: null,
       anioConstruccion: null,
@@ -172,7 +176,7 @@ test('nada personal se supone: sin DNI ni teléfono, faltan', () => {
     { ...CLIENTE, dni: null, telefono: null, nombre: 'Lead' },
     { numeroPoliza: null, fechaVencimiento: null, hogar: GEMELA },
     RESUELTOS,
-    '2026-09-02',
+    HOY,
   )
   const campos = p.faltan.map((f) => f.campo)
   assert.ok(campos.includes('dni') && campos.includes('telefono') && campos.includes('nombre'))
@@ -184,7 +188,7 @@ test('los defectos de la pantalla para los desplegables se declaran como supuest
     CLIENTE,
     { numeroPoliza: null, fechaVencimiento: null, hogar: GEMELA },
     { ...RESUELTOS, propietarioEsTomador: null, supuestos: { ocupacion: true, alarma: true, tipoVia: true } },
-    '2026-09-02',
+    HOY,
   )
   assert.ok(p.supuestos.some((s) => s.campo === 'ocupacion' && s.optimista === true))
   assert.ok(p.supuestos.some((s) => s.campo === 'alarma' && s.optimista === false))
@@ -193,7 +197,7 @@ test('los defectos de la pantalla para los desplegables se declaran como supuest
   assert.equal(p.datos.propietarioEsTomador, true)
   assert.ok(p.supuestos.some((s) => s.campo === 'propietarioEsTomador'))
   // Un id sin resolver no se convierte en supuesto: falta.
-  const sinAlarma = precalificarHogarCartera(CLIENTE, { numeroPoliza: null, fechaVencimiento: null, hogar: GEMELA }, { ...RESUELTOS, alarma: null }, '2026-09-02')
+  const sinAlarma = precalificarHogarCartera(CLIENTE, { numeroPoliza: null, fechaVencimiento: null, hogar: GEMELA }, { ...RESUELTOS, alarma: null }, HOY)
   assert.ok(sinAlarma.faltan.some((f) => f.campo === 'alarma'))
 })
 
@@ -233,4 +237,17 @@ test('elegirRiesgo: la póliza manda si está completa; si no, la gemela; si nin
   assert.equal(elegirRiesgo({ ...GEMELA, fuente: 'poliza' }, GEMELA)?.fuente, 'poliza')
   assert.equal(elegirRiesgo(propia, null)?.fuente, 'poliza')
   assert.equal(elegirRiesgo(null, null), null)
+})
+
+test('la referencia catastral consultada viaja en los datos (address.cadastralReference); sin ella, no se inventa', () => {
+  const con = precalificarHogarCartera(
+    CLIENTE,
+    { numeroPoliza: null, fechaVencimiento: null, hogar: GEMELA },
+    RESUELTOS,
+    HOY,
+    { metrosCuadrados: 80, anioConstruccion: 1990, codigoPostal: null, uso: 'Residencial', referencia: '1234567VK1234A0001XY' },
+  )
+  assert.equal(con.datos.referenciaCatastral, '1234567VK1234A0001XY')
+  const sin = precalificarHogarCartera(CLIENTE, { numeroPoliza: null, fechaVencimiento: null, hogar: GEMELA }, RESUELTOS, HOY)
+  assert.equal(sin.datos.referenciaCatastral, undefined)
 })

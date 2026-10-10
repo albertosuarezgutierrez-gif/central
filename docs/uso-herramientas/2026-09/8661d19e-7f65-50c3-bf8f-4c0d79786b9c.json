@@ -1,0 +1,95 @@
+{
+ "sesion": "8661d19e-7f65-50c3-bf8f-4c0d79786b9c",
+ "inicio": "2026-09-28T05:05:58.537Z",
+ "fin": "2026-09-28T10:19:42.200Z",
+ "llamadas": 146,
+ "categorias": {
+  "bash": {
+   "llamadas": 66,
+   "chars_in": 37037,
+   "chars_out": 243032,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 66
+   }
+  },
+  "otro": {
+   "llamadas": 28,
+   "chars_in": 1418,
+   "chars_out": 287838,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 195677,
+   "tools": {
+    "ToolSearch": 7,
+    "ReadNotifications": 18,
+    "Skill": 2,
+    "AskUserQuestion": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 21,
+   "chars_in": 10188,
+   "chars_out": 33725,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 21
+   }
+  },
+  "mcp:github": {
+   "llamadas": 15,
+   "chars_in": 4661,
+   "chars_out": 38961,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 794329,
+   "tools": {
+    "mcp__github__create_pull_request": 3,
+    "mcp__github__pull_request_read": 7,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__merge_pull_request": 3,
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 14,
+   "chars_in": 1683,
+   "chars_out": 8043,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 791804,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 3,
+    "mcp__Claude_Code_Remote__send_later": 4,
+    "mcp__Claude_Code_Remote__delete_trigger": 4,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 3
+   }
+  },
+  "mcp:ccd_session": {
+   "llamadas": 1,
+   "chars_in": 1589,
+   "chars_out": 348,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__ccd_session__spawn_task": 1
+   }
+  }
+ }
+}

@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server'
 
 import { autorizacionesDeIdentidad } from '@/lib/autorizaciones'
 import { avisosDe, type Avisos } from '@/lib/avisos'
-import { anulacionesPendientes } from '@/lib/anulacion-firma'
+import { avisosLeidosDeIdentidad } from '@/lib/avisos-leidos'
+import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { carnetsDeIdentidad } from '@/lib/carnets'
 import { felicitacionesDeIdentidad } from '@/lib/felicitaciones'
 import { reparosDeMisDatos } from '@/lib/mis-datos'
 import { obligacionesDeIdentidad } from '@/lib/obligaciones'
+import { sinObligacionesDePolizasConBaja } from '@/lib/vencimientos'
 import { peticionesDeIdentidad } from '@/lib/peticiones'
 import { partesAvisoDeIdentidad } from '@/lib/partes-aviso'
 import { polizasNuevasDeIdentidad } from '@/lib/polizas-nuevas'
@@ -39,7 +41,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas, leidos] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -58,6 +60,8 @@ export async function GET() {
     partesAvisoDeIdentidad(identidad.id),
     // Décima: cambios en sus pólizas (precio, fechas, coberturas, baja, documentación nueva).
     polizasModificadasDeIdentidad(identidad.id),
+    // Los ya pulsados. Si no se leen, se enseñan todos: repetir uno leído es mejor que esconder uno que no.
+    avisosLeidosDeIdentidad(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -72,14 +76,20 @@ export async function GET() {
   if (polizasNuevas.status === 'rejected') console.error('[avisos] pólizas nuevas ilegibles', polizasNuevas.reason)
   if (partes.status === 'rejected') console.error('[avisos] partes ilegibles', partes.reason)
   if (polizasModificadas.status === 'rejected') console.error('[avisos] cambios de póliza ilegibles', polizasModificadas.reason)
+  if (leidos.status === 'rejected') console.error('[avisos] avisos leídos ilegibles', leidos.reason)
   // `null` del puente = no se pudo mirar (no «no hay»).
   const firmasLeidas = firmas.status === 'fulfilled' && firmas.value !== null
     ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
     : null
 
+  const obligacionesLeidas = obligaciones.status === 'fulfilled' ? obligaciones.value : null
+  // Una póliza con baja en marcha no «renueva» ni «vence»: sale de los avisos. Sin firmas legibles (`null`) se deja tal cual.
+  const conBaja = firmas.status === 'fulfilled' && firmas.value !== null ? polizasConBajaEnMarcha(firmas.value, { conConfirmadas: true }) : null
+  const obligacionesVisibles = obligacionesLeidas === null ? null : sinObligacionesDePolizasConBaja(obligacionesLeidas, conBaja)
+
   const respuesta: Avisos = avisosDe({
     autorizaciones: autorizaciones.status === 'fulfilled' ? autorizaciones.value : null,
-    obligaciones: obligaciones.status === 'fulfilled' ? obligaciones.value : null,
+    obligaciones: obligacionesVisibles,
     peticiones: peticiones.status === 'fulfilled' ? peticiones.value.recibidas : null,
     datos: datos.status === 'fulfilled' ? datos.value : null,
     carnets: carnets.status === 'fulfilled' ? carnets.value : null,
@@ -88,6 +98,7 @@ export async function GET() {
     polizasNuevas: polizasNuevas.status === 'fulfilled' ? polizasNuevas.value : null,
     partes: partes.status === 'fulfilled' ? partes.value : null,
     polizasModificadas: polizasModificadas.status === 'fulfilled' ? polizasModificadas.value : null,
+    leidos: leidos.status === 'fulfilled' ? leidos.value : null,
     hoy: new Date(),
   })
 

@@ -13,6 +13,12 @@ const TOPE_BASE64 = 3_600_000
  * agente lee del documento (ramo, compañía, vencimiento, prima) para rellenar el
  * formulario de oportunidad. Va en JSON y no en multipart porque el navegador ya
  * lo tiene en base64 tras encoger la foto (`prepararAdjunto`). No guarda nada.
+ *
+ * `tomador: true` (28/09/2026, `/correduria/subir-poliza`): además dice quién es el
+ * tomador y qué fichas tenemos con su DNI o su nombre, para saltar a la suya. El
+ * `sello` (alta cifrada) NO se reenvía al navegador: solo sirve servidor a servidor.
+ *
+ * `clienteId` (29/09/2026): si el PDF tiene contraseña, asegura prueba el DNI de esa ficha.
  */
 export async function POST(req: NextRequest) {
   const guarda = await exigirCorreduria()
@@ -26,10 +32,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'el documento pesa demasiado (máx. ~2,5 MB); sube una foto o un PDF más ligero' }, { status: 413 })
   }
   try {
-    const r = await leerDocumentoOportunidadAsegura({ contenido: Buffer.from(base64, 'base64'), mimeType, nombre: fileName })
-    return NextResponse.json(r.json ?? { error: `HTTP ${r.status}` }, { status: r.status })
+    const r = await leerDocumentoOportunidadAsegura({ contenido: Buffer.from(base64, 'base64'), mimeType, nombre: fileName }, { tomador: b?.tomador === true, clienteId: typeof b?.clienteId === 'string' ? b.clienteId : undefined, crear: b?.crear === true })
+    return NextResponse.json(sinSello(r.json) ?? { error: `HTTP ${r.status}` }, { status: r.status })
   } catch (e) {
     const tiempo = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')
     return NextResponse.json({ error: tiempo ? 'la lectura ha tardado demasiado; prueba con una foto más clara o solo la primera página' : (e instanceof Error ? e.message : String(e)) }, { status: 502 })
   }
+}
+
+function sinSello(json: unknown): unknown {
+  if (json === null || typeof json !== 'object' || Array.isArray(json)) return json
+  const o = json as Record<string, unknown>
+  if (o.tomador === null || typeof o.tomador !== 'object') return json
+  const { sello: _sello, ...tomador } = o.tomador as Record<string, unknown>
+  return { ...o, tomador }
 }

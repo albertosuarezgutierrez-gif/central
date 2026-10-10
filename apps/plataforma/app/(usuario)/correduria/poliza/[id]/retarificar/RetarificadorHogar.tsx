@@ -18,7 +18,9 @@
 // de cotizar propia para hogar.
 
 import { useState } from 'react'
+import { AlertTriangle, FlaskConical, OctagonAlert, Pencil } from 'lucide-react'
 import { eur } from '@/lib/dinero'
+import { Ico, FILA } from '../../../iconos'
 import type {
   Fila,
   Opcion,
@@ -27,8 +29,10 @@ import type {
   Reparo,
   Supuesto,
 } from '@/lib/hogar-retarificar-asegura'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { pedirCotizacion } from './acciones'
 import { pedirLimitesHogar, pedirPrecalificacionHogar } from './acciones-hogar'
+import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import type { RangoCapital, RespuestaLimitesHogar } from '@/lib/retarificar-asegura'
 
 type Grupo = 'donde' | 'como' | 'protecciones' | 'capitales' | 'tomador' | 'cotizacion'
@@ -78,7 +82,7 @@ type Resultado =
       supuestos: Supuesto[]
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 function euroODash(n: number | null | undefined): string {
   return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
@@ -88,13 +92,17 @@ export default function RetarificadorHogar({
   polizaId,
   preInicial,
   referencia,
+  variante = null,
 }: {
   polizaId: string
   preInicial: PrecalificacionHogar
   /** Referencia catastral del piso elegido (pólizas sin m²/año/CP): viaja en cada llamada. */
   referencia?: string
+  /** Variante del riesgo de esta póliza (`?oportunidad=`, 29/09/2026): igual que auto/moto. `null` = retarificar de siempre. */
+  variante?: { oportunidadId: string } | null
 }) {
   const [pre, setPre] = useState(preInicial)
+  const [nota, setNota] = useState('')
   const [resueltos, setResueltos] = useState<Record<string, unknown>>({})
   const [correcciones, setCorrecciones] = useState<Record<string, unknown>>({})
   const [recalculando, setRecalculando] = useState(false)
@@ -190,11 +198,18 @@ export default function RetarificadorHogar({
     }
   }
 
-  async function cotizar() {
+  async function cotizar(forzar = false) {
     setResultado({ estado: 'cotizando' })
     let r: Awaited<ReturnType<typeof pedirCotizacion>>
     try {
-      r = await pedirCotizacion({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones, referencia })
+      r = await pedirCotizacion({
+        polizaId,
+        forzar,
+        resueltos: cuerpoResueltosFinal(),
+        correcciones,
+        referencia,
+        variante: variante ? { oportunidadId: variante.oportunidadId, nota } : null,
+      })
     } catch (e) {
       // Se cortó entre el navegador y plataforma: la cotización pudo llegar a Codeoscopic.
       setResultado({ estado: 'error', mensaje: e instanceof Error ? e.message : String(e), gastoDesconocido: true })
@@ -206,6 +221,9 @@ export default function RetarificadorHogar({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
       case 'ramo':
@@ -252,6 +270,7 @@ export default function RetarificadorHogar({
           polizaId={polizaId}
           catastro={pre.catastro}
           m2Poliza={m2DeLaPoliza(pre)}
+          oportunidadId={variante?.oportunidadId ?? null}
         />
       )}
       {pre.primaActual !== null && (
@@ -350,6 +369,8 @@ export default function RetarificadorHogar({
         )
       })}
 
+      {variante && <NotaVariante nota={nota} onNota={setNota} />}
+
       <div className="card">
         <h2>Pedir precio</h2>
         {pre.ramo.estado !== 'disponible' && (
@@ -377,8 +398,8 @@ export default function RetarificadorHogar({
           </p>
         )}
         {pre.resumen.optimistas.length > 0 && (
-          <p className="muted" style={{ fontSize: 12 }}>
-            ⚠️ {pre.resumen.optimistas.length} de los supuestos ABARATAN el precio (
+          <p className="muted" style={{ ...FILA, fontSize: 12 }}>
+            <Ico i={AlertTriangle} /> {pre.resumen.optimistas.length} de los supuestos ABARATAN el precio (
             {pre.resumen.optimistas.map((f) => f.etiqueta.toLowerCase()).join(', ')}): si el cliente los desmiente,
             la prima real sube.
           </p>
@@ -414,7 +435,7 @@ export default function RetarificadorHogar({
 
         {resultado.estado === 'error' && (
           <p className="err" style={{ marginTop: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}
+            <Ico i={resultado.tope ? OctagonAlert : AlertTriangle} /> {resultado.tope ? 'Tope alcanzado: ' : ''}
             {resultado.mensaje}
             {resultado.gastoDesconocido && (
               <>
@@ -423,6 +444,9 @@ export default function RetarificadorHogar({
               </>
             )}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
         )}
 
         {resultado.estado === 'ok' && <Precios r={resultado} primaActual={pre.primaActual} />}
@@ -442,11 +466,14 @@ function ViviendaCatastro({
   polizaId,
   catastro,
   m2Poliza,
+  oportunidadId,
 }: {
   polizaId: string
   catastro: NonNullable<PrecalificacionHogar['catastro']>
   /** Los m² que declara la póliza (compañía o volcado). `null` = no los trae. */
   m2Poliza: number | null
+  /** Variante del riesgo: cambiar de vivienda no la suelta. */
+  oportunidadId: string | null
 }) {
   const [estado, setEstado] = useState<'libre' | 'guardando' | 'guardada' | { error: string }>(
     catastro.guardada ? 'guardada' : 'libre',
@@ -474,8 +501,8 @@ function ViviendaCatastro({
       </p>
       {resumenVivienda(catastro) && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{resumenVivienda(catastro)}</p>}
       {discrepanciaM2(m2Poliza, catastro) && (
-        <p className="err" style={{ margin: '4px 0 0', fontSize: 13 }}>
-          ⚠️ {discrepanciaM2(m2Poliza, catastro)}
+        <p className="err" style={{ ...FILA, margin: '4px 0 0', fontSize: 13 }}>
+          <Ico i={AlertTriangle} /> {discrepanciaM2(m2Poliza, catastro)}
         </p>
       )}
       <p className="muted" style={{ margin: '4px 0 8px', fontSize: 12 }}>
@@ -492,7 +519,7 @@ function ViviendaCatastro({
             </button>
           )
         )}
-        <a href={`/correduria/poliza/${polizaId}/retarificar?buscar=1`} style={{ fontSize: 13 }}>
+        <a href={`/correduria/poliza/${polizaId}/retarificar?${new URLSearchParams({ buscar: '1', ...(oportunidadId ? { oportunidad: oportunidadId } : {}) }).toString()}`} style={{ fontSize: 13 }}>
           Cambiar de vivienda
         </a>
       </div>
@@ -626,7 +653,7 @@ function RecomendarCapital({
       )}
       {estado !== null && estado !== 'pidiendo' && (estado.estado === 'error' || estado.estado === 'tope' || estado.estado === 'sin_configurar') && (
         <p className="err" style={{ marginTop: 8, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {estado.estado === 'tope' ? '🛑 Tope alcanzado: ' : '⚠️ '}
+          <Ico i={estado.estado === 'tope' ? OctagonAlert : AlertTriangle} /> {estado.estado === 'tope' ? 'Tope alcanzado: ' : ''}
           {estado.mensaje}
           {estado.estado === 'error' && estado.gastoDesconocido && (
             <>
@@ -766,7 +793,7 @@ function FilaFicha({
           title={`Corregir ${fila.etiqueta}`}
           style={{ minWidth: 44, minHeight: 44, flex: '0 0 auto' }}
         >
-          ✏️
+          <Ico i={Pencil} />
         </button>
       )}
     </div>
@@ -919,7 +946,7 @@ function Precios({ r, primaActual }: { r: Extract<Resultado, { estado: 'ok' }>; 
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
         <div className="card" style={{ borderColor: 'var(--warn)', background: 'rgba(217, 119, 6, 0.08)', marginBottom: 12 }}>
-          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warn)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700, color: 'var(--warn)' }}><Ico i={FlaskConical} /> ESTO ES UNA SIMULACIÓN</p>
           <p style={{ margin: '4px 0 0' }}>
             {r.avisoSimulacion ?? 'Precio inventado por central para probar la pantalla: ninguna compañía lo ha dado y no se ha gastado ni un céntimo.'}
           </p>

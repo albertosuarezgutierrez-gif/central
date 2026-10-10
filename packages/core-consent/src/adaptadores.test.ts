@@ -67,3 +67,10 @@ test('cargarGa4 manda el config con el id que se le pasa y pide el script de ese
   assert.deepEqual(config, ['config', 'G-QP5DTDLJ5F'])
   assert.deepEqual(scripts, ['https://www.googletagmanager.com/gtag/js?id=G-QP5DTDLJ5F'])
 })
+
+test('cargarGa4 con parámetros los mete en el MISMO config (el page_view sale ya marcado)', () => {
+  const { dataLayer } = conDomFalso(() => cargarGa4('G-QP5DTDLJ5F', { traffic_type: 'internal' }))
+
+  assert.equal(dataLayer.length, 2, 'js + config, sin un set suelto detrás')
+  assert.deepEqual(Array.from(dataLayer[1] as IArguments), ['config', 'G-QP5DTDLJ5F', { traffic_type: 'internal' }])
+})

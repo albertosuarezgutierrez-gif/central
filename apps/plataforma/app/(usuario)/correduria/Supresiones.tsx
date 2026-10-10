@@ -2,9 +2,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShieldOff } from 'lucide-react'
+import { ShieldOff, TriangleAlert } from 'lucide-react'
 import { Badge, btnStyle } from '@/components/ui'
 import { fechaEs } from '@/lib/ficha-asegura'
+import { ConIcono } from './iconos'
 import Bloque from './Bloque'
 import {
   interpretarEscrituraSupresion,
@@ -234,8 +235,8 @@ export default function Supresiones({ onContador }: {
 
       {ilegibles > 0 && (
         <p style={{ fontSize: 12, color: 'var(--warning)', margin: '0 0 10px' }}>
-          ⚠️ {ilegibles} solicitud{ilegibles === 1 ? '' : 'es'} llegó con una forma que esta pantalla no
-          entiende y no se puede pintar. <strong>Está ahí</strong>: míralas en asegura.
+          <ConIcono i={TriangleAlert}>{ilegibles} solicitud{ilegibles === 1 ? '' : 'es'} llegó con una forma que esta pantalla no
+          entiende y no se puede pintar. <strong>Está ahí</strong>: míralas en asegura.</ConIcono>
         </p>
       )}
 

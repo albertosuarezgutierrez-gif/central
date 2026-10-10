@@ -224,3 +224,44 @@ test('emision.tsx avisa si lo guardado del formulario de la compañía choca con
   )
   assert.match(src, /productOptions !== null && yaTraeProduct/)
 })
+
+// 29/09/2026: el panel de emisión se monta también en las altas nuevas (auto,
+// moto, hogar), que no traen el CSS del retarificador. Sin envolverse solo,
+// «Confirmar precio con la compañía» salía como texto plano y no se podía emitir.
+test('el panel de emisión trae su propio CSS y no depende de la página que lo monte', () => {
+  const pantalla = codigo('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx')
+  assert.match(pantalla, /import \{ CSS_RETARIFICADOR \} from '\.\/estilos'/)
+  assert.match(pantalla, /<div className="retarificar">\s*<style>\{CSS_RETARIFICADOR\}<\/style>\s*<div className="card"/, 'Emision tiene que envolverse en .retarificar con su <style>.')
+  const estilos = codigo('../app/(usuario)/correduria/poliza/[id]/retarificar/estilos.ts')
+  for (const sel of ['.retarificar .card', '.retarificar button.primary', '.retarificar button.ghost', '.retarificar .err', '.retarificar .muted']) {
+    assert.ok(estilos.includes(sel), `falta ${sel} en estilos.ts`)
+  }
+})
+
+// 29/09/2026: se emitía con la prima ESTIMADA de la parrilla aunque la compañía hubiera confirmado
+// otra. Se emite (y se compara con lo firmado) con la confirmada, y la pantalla dice si cambió.
+test('emision.tsx emite con la prima CONFIRMADA por la compañía y avisa del cambio (lee el fuente)', () => {
+  const src = readFileSync(fileURLToPath(new URL('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx', import.meta.url)), 'utf8')
+  assert.match(src, /primaAnual: primaConfirmada \?\? primaEur/)
+  assert.match(src, /const primaConfirmada = ofertaAntesDeEmitir\.current\?\.primaEur \?\? null/)
+  assert.match(src, /cambioDePrecio\(primaEur, estado\.primaEur\)/)
+})
+
+test('emitido_sin_acunar con acunado ya_acunada (03/10/2026): dice que YA está en la cartera, no «no se pudo registrar»', () => {
+  const r = interpretarEmitir(200, {
+    estado: 'emitido_sin_acunar',
+    mensaje: 'no se ha podido registrar en la cartera: Ese proyecto ya tiene póliza acuñada',
+    referenciaVendor: 'P-9',
+    acunado: { ok: false, estado: 'ya_acunada', polizaId: 'pol-1', status: 409 },
+  })
+  assert.equal(r.estado, 'emitido_sin_acunar')
+  if (r.estado !== 'emitido_sin_acunar') return
+  assert.equal(r.yaAcunada, true)
+  assert.match(r.mensaje, /ya la registró el descubrimiento automático/)
+  assert.match(r.mensaje, /dar de baja la anterior y avisar al cliente/)
+  assert.doesNotMatch(r.mensaje, /no se ha podido registrar/)
+  // Sin `ya_acunada`, el mensaje de asegura pasa tal cual.
+  const otro = interpretarEmitir(200, { estado: 'emitido_sin_acunar', mensaje: 'sin código DGS', acunado: { ok: false, estado: 'invalido' } })
+  assert.equal(otro.estado === 'emitido_sin_acunar' && otro.mensaje, 'sin código DGS')
+  assert.equal(otro.estado === 'emitido_sin_acunar' && otro.yaAcunada, undefined)
+})

@@ -1,9 +1,10 @@
 // lib/sivra/agente-huesped/orquestador.ts — procesa el último mensaje del huésped de una reserva.
 import { construirContexto } from './contexto'
-import { detectLang, detectCategory, tipoHueco, vaARecomendador } from './reglas'
+import { detectLang, detectCategory, tipoHueco, vaARecomendador, esAutomatico, esPlantillaHost } from './reglas'
 import { idiomaConocido } from './idiomas'
 import { decidir, type Decision } from './decidir'
 import { decidirAutoEnvio } from './auto'
+import { peticionCambioHorario } from './cambio-horario'
 import { esModoNoche } from './noche'
 import { acusarNocturno } from './noche-guardia'
 import { aprendizajesRelevantes, hechosRelevantes } from './similitud'
@@ -12,7 +13,7 @@ import { enviarAlHuesped } from './enviar'
 import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
 import { logMensaje, registrarGap } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
-import { esEcoPropio } from './atribucion'
+import { esEcoPropio, normalizarTexto } from './atribucion'
 import { importeSospechoso, hablaDePago } from './extras'
 import { intentarCobroAutomatico } from '@/lib/sivra/extras/cobro-auto'
 import { preciosVigentes } from '@/lib/sivra/extras/catalogo'
@@ -44,6 +45,15 @@ export async function procesarMensajeHuesped(
   // La pregunta: la que pasa el llamador (fiable) o, si no, la última del historial.
   const pregunta = (opts.pregunta || ultimoGuest?.text || '').trim()
   const msgId = opts.msgId || ultimoGuest?.id || ''
+  // Diagnóstico de atribución (va a `mensajes_log.emisor_raw`): de dónde vino la pregunta y con qué
+  // señales de Smoobu se decidió que era del huésped. Sin esto no se puede saber por qué un mensaje
+  // del anfitrión escrito fuera de Smoobu se procesa como del huésped.
+  const enHilo = [...ctx0.historial].reverse().find(h => normalizarTexto(h.text) === normalizarTexto(pregunta))
+  const emisorDiag = {
+    origen: opts.msgId?.startsWith('correo:') ? 'correo' : opts.pregunta ? 'sondeo' : 'historial',
+    en_hilo: enHilo ? { from: enHilo.from, ...(enHilo.emisor || {}) } : null,
+    ultimo_del_hilo: ctx0.historial.at(-1)?.from ?? null,
+  }
   if (!pregunta) return { accion: 'sin_mensaje_huesped' }
 
   // Defensa anti-duplicado robusta (independiente del id de Smoobu): si YA ENVIAMOS una respuesta
@@ -60,6 +70,9 @@ export async function procesarMensajeHuesped(
   // /api/threads, que no marca el emisor; y Smoobu a veces tampoco lo etiqueta). El disparo manual se
   // exime a propósito. Esto cubre el caso aunque nuestro envío aún no figure en el historial de Smoobu.
   if (!esManual && esEcoPropio(pregunta, ctx0.enviados)) return { accion: 'eco_propio' }
+  // Plantillas nuestras o de Smoobu que no pasaron por `enviarAlHuesped` (bienvenidas de Smoobu,
+  // avisos de check-in online): el webhook no filtra por asunto como el sondeo, así que se mira aquí.
+  if (!esManual && (esAutomatico('', pregunta) || esPlantillaHost(pregunta, ctx0.guestName))) return { accion: 'eco_plantilla' }
 
   if (!esManual && ultimoGuest?.ts) {
     const tsGuest = new Date(ultimoGuest.ts)
@@ -118,6 +131,8 @@ export async function procesarMensajeHuesped(
       lang,
       aprendizajes: aprendRelev ?? ctx0.aprendizajes,
       hechos: hechosRelev ? hechosRelev.map(h => h.hecho) : ctx0.hechos,
+      // Solo si lo que se contesta ES ese mensaje: el sondeo puede traer uno más nuevo que el historial.
+      preguntaTs: ultimoGuest && normalizarTexto(ultimoGuest.text) === normalizarTexto(pregunta) ? ultimoGuest.ts || undefined : undefined,
     }
 
     // 1-bis) ¿Es el «sí» a un extra que Alberto ya aprobó en este hilo? Entonces la respuesta es el
@@ -178,12 +193,20 @@ export async function procesarMensajeHuesped(
       dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}Habla de un pago (método/datos de cobro) — eso lo autorizas tú; el único cobro automático es el enlace de Stripe.`
     }
 
+    // 2-quater) 🚨 COMPUERTA DE HORARIO (03/10/2026): entrar antes, salir más tarde o guardar maletas fuera
+    // de la estancia NUNCA sale solo (ver `cambio-horario.ts`). Se marca aquí para que el log y el aviso
+    // lo reflejen (needs_human); `decidirAutoEnvio` lo vuelve a exigir por si alguien salta este paso.
+    if (peticionCambioHorario(pregunta, dec.categoria) || peticionCambioHorario(pregunta, categoria)) {
+      dec.needs_human = true
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}Petición de cambio de horario / maletas — la decides tú (semáforo y botones abajo).`
+    }
+
     // 3) ¿Auto-envío o propuesta por Telegram? La regla vive en `auto.ts` (pura y testeada); aquí
     //    solo se ejecuta. Las dos vías y sus guardas están documentadas en ese módulo.
-    const { auto: puedeAuto } = decidirAutoEnvio(dec)
+    const { auto: puedeAuto } = decidirAutoEnvio(dec, pregunta)
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
-      await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
+      await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false, emisor: emisorDiag })
       // Si el envío falló, liberamos el reclamo para reintentar en el próximo sondeo.
       if (!ok) await liberarMensaje(dedupKey)
       // Copia informativa a Telegram de lo que se ha enviado solo (Alberto no tiene que hacer nada).
@@ -193,7 +216,7 @@ export async function procesarMensajeHuesped(
     }
 
     await proponerPorTelegram(ctx, pregunta, dec)
-    await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: dec.needs_human, auto_sent: false, edited: false })
+    await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: dec.needs_human, auto_sent: false, edited: false, emisor: emisorDiag })
     // 4) MODO NOCHE (05/09/2026). Fuera del horario de atención, el borrador se queda en Telegram
     //    hasta que Alberto lo vea — y si escala a las 23:30, el huésped no recibe NADA hasta las
     //    09:00. Ese silencio es indistinguible, desde el código, de una conversación atendida. El

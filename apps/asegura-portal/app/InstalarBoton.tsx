@@ -22,29 +22,57 @@ import { instalar, InstruccionesIOS, useInstalacion } from './instalacion'
  *    antes de saberlo) NO se pinta: un botón que no puede hacer nada es peor
  *    que ninguno.
  *
- * Sin «Ahora no» ni `localStorage`: quien no quiere instalar no lo pulsa, y el
- * botón sigue ahí el día que quiera. Desaparece solo al instalar.
+ * El globo se abre solo UNA vez por visita y «Ahora no»/«Entendido»/Escape recuerdan el descarte en
+ * `localStorage` (sin él, modo privado, se ofrece en cada visita); pulsar fuera lo cierra sin recordarlo. El
+ * botón de la barra sigue ahí siempre: en iOS abre/cierra el globo; en Android/escritorio lanza la
+ * instalación (con el globo abierto también: no es un botón muerto). Desaparece solo al instalar.
  *
  * Por debajo de 480 px el texto se esconde y queda el icono (44×44, con
  * `aria-label`): a 320 px «Instalar» + «Salir» + campana + tema no caben en una
  * fila con la marca, y la barra se saldría de la pantalla sin que ninguna
  * medida de alto lo delatara.
  */
+const CLAVE_DESCARTADO = 'instalar-descartado'
+
 export function InstalarBoton() {
   const estado = useInstalacion()
   const [abierto, setAbierto] = useState(false)
   const raiz = useRef<HTMLDivElement>(null)
   const idGlobo = useId()
+  const visto = useRef(false)
+
+  // Al entrar, UNA vez: el globo se abre solo (iOS no tiene aviso automático y
+  // nadie busca un botón que no sabe que existe). Descartarlo se recuerda; sin
+  // `localStorage` (modo privado) simplemente se ofrece en cada visita.
+  useEffect(() => {
+    if (visto.current || (estado !== 'instalable' && estado !== 'ios')) return
+    visto.current = true
+    try {
+      if (localStorage.getItem(CLAVE_DESCARTADO) === '1') return
+    } catch {}
+    setAbierto(true)
+  }, [estado])
+
+  const cerrar = () => {
+    setAbierto(false)
+    try {
+      localStorage.setItem(CLAVE_DESCARTADO, '1')
+    } catch {}
+  }
+
+  const cerrarSinPersistir = () => {
+    setAbierto(false)
+  }
 
   // Cerrar al pulsar fuera o con Escape: un globo que solo se cierra con su
   // propio botón se queda tapando la póliza.
   useEffect(() => {
     if (!abierto) return
     const fuera = (e: MouseEvent) => {
-      if (raiz.current && !raiz.current.contains(e.target as Node)) setAbierto(false)
+      if (raiz.current && !raiz.current.contains(e.target as Node)) cerrarSinPersistir()
     }
     const tecla = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setAbierto(false)
+      if (e.key === 'Escape') cerrar()
     }
     document.addEventListener('mousedown', fuera)
     document.addEventListener('keydown', tecla)
@@ -66,25 +94,43 @@ export function InstalarBoton() {
         // desaparece y el lector de pantalla solo tiene esto.
         aria-label="Instalar «Mis seguros» en este dispositivo"
         title="Instalar la app"
-        aria-expanded={ios ? abierto : undefined}
-        aria-controls={ios ? idGlobo : undefined}
+        aria-expanded={abierto}
+        aria-controls={idGlobo}
         onClick={() => {
-          if (ios) setAbierto((a) => !a)
-          else void instalar()
+          if (ios) {
+            if (abierto) cerrar()
+            else setAbierto(true)
+          } else {
+            // Con el globo abierto también instala (antes no hacía nada): el globo se cierra sin
+            // persistir el descarte, porque quien pulsa «Instalar» no lo está descartando.
+            cerrarSinPersistir()
+            void instalar()
+          }
         }}
       >
         <IconoInstalar />
         <span className="instalar-texto">Instalar</span>
       </button>
-      {ios && abierto && (
-        <div className="instalar-globo" id={idGlobo} role="dialog" aria-label="Cómo instalar en iPhone o iPad">
+      {abierto && (
+        <div className="instalar-globo" id={idGlobo} role="dialog" aria-label={ios ? 'Cómo instalar en iPhone o iPad' : 'Instalar la app'}>
           <strong>Tenlo a mano</strong>
           <div className="instalar-globo-cuerpo">
-            <p>Añade «Mis seguros» a la pantalla de inicio:</p>
-            <InstruccionesIOS />
+            {ios ? (
+              <>
+                <p>Añade «Mis seguros» a la pantalla de inicio:</p>
+                <InstruccionesIOS />
+              </>
+            ) : (
+              <>
+                <p>Instala «Mis seguros» y ábrela desde un icono, sin buscar el correo.</p>
+                <button type="button" className="instalar-copiar" onClick={() => { cerrar(); void instalar(); }}>
+                  Instalar ahora
+                </button>
+              </>
+            )}
           </div>
-          <button type="button" className="instalar-globo-cerrar" onClick={() => setAbierto(false)}>
-            Entendido
+          <button type="button" className="instalar-globo-cerrar" onClick={cerrar}>
+            {ios ? 'Entendido' : 'Ahora no'}
           </button>
         </div>
       )}

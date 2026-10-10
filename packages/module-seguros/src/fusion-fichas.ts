@@ -104,17 +104,33 @@ export function compararFichas(
 
 /**
  * Quién es quién por el DNI. Solo el índice ciego decide; el nombre no.
- * - `dni_sin_indice`: las dos tienen DNI guardado pero a alguna le falta el
- *   índice, así que no se puede comparar y podrían ser dos personas. NO se
- *   fusiona (se arregla con el backfill del DNI en Mantenimiento).
- * - `sin_comprobar`: al menos una no tiene DNI: decide el corredor.
+ * - `dni_sin_indice`: las dos tienen un DNI LEGIBLE guardado pero a alguna le
+ *   falta el índice, así que no se puede comparar y podrían ser dos personas. NO
+ *   se fusiona (se arregla con el backfill del DNI en Mantenimiento).
+ * - `sin_comprobar`: al menos una no tiene DNI, o lo tiene ILEGIBLE: decide el
+ *   corredor.
+ *
+ * ILEGIBLE (no descifra, o no tiene forma de documento: «X», «PENDIENTE») no es
+ * «legible sin índice»: el backfill nunca le va a poner índice, así que tratarlo
+ * como `dni_sin_indice` bloqueaba la fusión para siempre (934 fichas, 28/09/2026,
+ * «Antonio Antonio» con Antonio Lozano Lanagran). Se trata como «sin comprobar»
+ * y su valor cifrado queda en el registro de la fusión (`seguros.fusionar_clientes`).
+ *
+ * Un DNI CON índice nunca cuenta como ilegible aunque hoy no descifre: se leyó
+ * para indexarlo, y que ahora no abra es una clave mal puesta, no un dato basura.
  */
 export type IdentidadFusion = 'mismo_dni' | 'dni_distinto' | 'dni_sin_indice' | 'sin_comprobar'
 
-export type DniFusion = { hash: string | null; tieneDni: boolean }
+export type DniFusion = { hash: string | null; tieneDni: boolean; ilegible?: boolean }
+
+/** El DNI está, no tiene índice y no se puede leer: nunca lo tendrá. */
+export function dniIlegibleSinIndice(d: DniFusion): boolean {
+  return d.tieneDni && !d.hash && d.ilegible === true
+}
 
 export function identidadFusion(s: DniFusion, a: DniFusion): IdentidadFusion {
   if (s.hash && a.hash) return s.hash === a.hash ? 'mismo_dni' : 'dni_distinto'
+  if (dniIlegibleSinIndice(s) || dniIlegibleSinIndice(a)) return 'sin_comprobar'
   if (s.tieneDni && a.tieneDni) return 'dni_sin_indice'
   return 'sin_comprobar'
 }
@@ -141,4 +157,22 @@ export function revisarElecciones(pedidos: unknown, campos: CampoFusion[]): Revi
     if (!deAbsorbida.includes(g as GrupoFusion)) deAbsorbida.push(g as GrupoFusion)
   }
   return { ok: true, deAbsorbida }
+}
+
+/**
+ * Los grupos de IDENTIDAD que, si difieren, NO se pueden resolver por omisión (05/10/2026). La
+ * fusión de «Estibaliz Slava» con el lead «ESTIBALIZ ESLAVA ANTOLI» (mismo móvil) se quedó con
+ * «Slava» porque nadie eligió: la omisión era «se queda el de la ficha que se conserva». Ahora quien
+ * fusiona tiene que decir, de cada uno, si se queda el de la otra (`deAbsorbida`) o el de esta
+ * (`conservar`).
+ */
+export const GRUPOS_IDENTIDAD_FUSION: readonly GrupoFusion[] = ['nombre', 'apellidos', 'fecha_nacimiento']
+
+/** Los grupos de identidad que difieren y nadie ha decidido. `[]` = se puede fusionar. */
+export function identidadSinDecidir(campos: CampoFusion[], deAbsorbida: readonly string[], conservar: unknown): GrupoFusion[] {
+  const conservados = new Set(Array.isArray(conservar) ? conservar.filter((g): g is string => typeof g === 'string') : [])
+  return campos
+    .filter((c) => c.estado === 'distinto' && GRUPOS_IDENTIDAD_FUSION.includes(c.grupo))
+    .filter((c) => !deAbsorbida.includes(c.grupo) && !conservados.has(c.grupo))
+    .map((c) => c.grupo)
 }

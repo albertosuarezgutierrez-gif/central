@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { escanearNuevasFacturas, verificarPagosPendientes, conciliarConBanco, alertarFacturasAusentes } from '@/lib/agente-facturas/pagos'
+import { tgAviso } from '@/lib/telegram'
 import { resolverCuentaBuzon } from '@/lib/agente-facturas/cuenta-buzon'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { detalleEscaneo, recuentoFiable, type ConteoEscaneo } from '@/lib/agente-facturas/resumen-escaneo'
@@ -102,11 +103,21 @@ export async function GET(req: Request) {
     try { totalConfirmados += await verificarPagosPendientes() } catch { /* continuar */ }
   } else truncado = true
 
+  const erroresConciliacion: string[] = []
   // Conciliación con banco y alertas de justificantes: por cada cuenta real (usan su propia banca).
   for (const cuenta of cuentas) {
     if (!quedaTiempo()) { truncado = true; break }
-    try { totalConciliados += await conciliarConBanco(cuenta.id) } catch { /* continuar */ }
+    try { totalConciliados += await conciliarConBanco(cuenta.id) } catch (e) {
+      // Antes se tragaba en silencio: una conciliación rota dejaba facturas pagadas como pendientes.
+      const msg = String((e as Error)?.message ?? e).slice(0, 200)
+      console.error('[facturas-scan] conciliarConBanco falló:', msg)
+      erroresConciliacion.push(msg)
+    }
     try { totalAlertas += await alertarFacturasAusentes(cuenta.id) } catch { /* continuar */ }
+  }
+
+  if (erroresConciliacion.length > 0) {
+    await tgAviso('facturas.conciliar-gmail', `⚠️ La conciliación factura↔banco ha FALLADO (${erroresConciliacion.length} cuenta(s)): ${erroresConciliacion[0]}`).catch(() => {})
   }
 
   // `escaneo` va aparte de `nuevas`: un 0 con `escaneo:false` no es «no había
@@ -122,6 +133,7 @@ export async function GET(req: Request) {
       recuentoFiable: escaneoOk === true && recuentoFiable(conteo),
       detalle: escaneoOk ? detalleEscaneo(conteo) : escaneoError,
     },
+    erroresConciliacion,
     truncado,
     ms: Date.now() - t0,
     nuevas: totalNuevas, confirmados: totalConfirmados, conciliados: totalConciliados, alertas: totalAlertas,

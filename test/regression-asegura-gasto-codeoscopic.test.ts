@@ -223,9 +223,12 @@ test('🚨 los contadores están SEPARADOS: el libro de cotizar no cuenta el ReR
   const src = FUENTE_LIBRO('apps/asegura/lib/codeoscopic/consumo.ts')
   assert.match(
     src,
-    /motivo not in \(\$\{MOTIVO_RERATE\}, \$\{MOTIVO_SUBMIT\}, \$\{MOTIVO_LIMITES\}\)/,
-    'consumoActual() (el libro de cotizar) tiene que excluir los motivos de emisión',
+    /motivo not in \(\$\{MOTIVO_RERATE\}, \$\{MOTIVO_SUBMIT\}, \$\{MOTIVO_LIMITES\}, \$\{MOTIVO_IMPORTADA_WEB\}\)/,
+    'consumoActual() (el libro de cotizar) tiene que excluir los motivos de emisión y los traídos de la web',
   )
+  // Un presupuesto traído de la web de Avant2 (29/09/2026) lo pagó la web: contarlo aquí restaría
+  // cotizaciones del tope por traer lo que ya estaba hecho.
+  assert.match(src, /export const MOTIVO_IMPORTADA_WEB = 'importada_web'/)
   assert.match(
     src,
     /export async function consumoEmision\(/,
@@ -326,4 +329,32 @@ test('la recomendación de capital de hogar abre su línea en el libro y va detr
     assert.match(src, /cuerpo\.confirmado !== true/, `${f}: sin confirmado:true explícito`)
     assert.doesNotMatch(src, /export\s+(async\s+)?function\s+GET\b|export\s+const\s+GET\b/, `${f}: un GET se dispararía con un prefetch`)
   }
+})
+
+// ─── El tope en EUROS del mes (Alberto, 29/09/2026) ─────────────────────────
+// Aviso a 60 €, bloqueo a 70 € hasta ampliar por Telegram. El modo de fallo que se persigue: que
+// uno de los dos embudos que gastan deje de mirar el tope en euros, o lo mire DESPUÉS de reservar
+// (la reserva ya cuenta como gasto y la llamada saldría igual).
+test('🚨 los DOS embudos que gastan miran el tope en euros ANTES de reservar', () => {
+  for (const [f, reserva] of [
+    ['apps/asegura/lib/codeoscopic/cotizar.ts', 'await reservarSinDuplicado('],
+    ['apps/asegura/lib/codeoscopic/libro-emision.ts', 'await reservarEmision('],
+  ] as const) {
+    const src = FUENTE_LIBRO(f)
+    const iTope = src.indexOf('await comprobarTopeEuros(')
+    const iReserva = src.indexOf(reserva)
+    assert.ok(iTope > 0, `${f}: no comprueba el tope en euros`)
+    assert.ok(iReserva > iTope, `${f}: el tope en euros va ANTES de la reserva`)
+    assert.match(src, /if \(!euros\.ok\) return \{ ok: false/, `${f}: un «no» del tope tiene que cortar la llamada`)
+  }
+})
+
+test('🚨 el tope en euros es fail-closed: un fallo al leer el gasto NO se convierte en 0 €', () => {
+  const src = FUENTE_LIBRO('apps/asegura/lib/codeoscopic/tope-euros-bd.ts')
+  assert.match(src, /razon: 'sin-libro'/, 'sin poder leer el gasto, no se llama')
+  assert.doesNotMatch(
+    src,
+    /catch[\s\S]{0,160}gastadoCents:\s*0/,
+    'un catch que devuelve gastadoCents: 0 sería el tope que se pone verde porque la consulta no devolvió nada',
+  )
 })

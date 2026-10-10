@@ -62,3 +62,14 @@ test('usa tokens en hex: satori no entiende oklch', () => {
   const fuente = readFileSync(ICONO, 'utf8')
   assert.match(fuente, /primario, acentoSuave|acentoSuave, primario/, 'el icono cambió de tokens: revisa que sigan en hex')
 })
+
+// Grosor del «AS» elegido por Alberto el 29/09/2026 («opción 2»): un trazo de 1 unidad del viewBox
+// sobre el relleno. Vive en los dos SVG y en la copia en línea del portal; si uno cambia y los
+// otros no, la marca sale con dos grosores según la pantalla.
+test('el monograma lleva el mismo grosor en todas sus copias', () => {
+  const portal = join(RAIZ, '../asegura-portal')
+  for (const f of [MONOGRAMA, join(portal, 'public/brand/marca-asegura.svg')]) {
+    assert.match(readFileSync(f, 'utf8'), /<svg[^>]*stroke="currentColor"[^>]*stroke-width="1"/, `${f} perdió el grosor elegido`)
+  }
+  assert.match(readFileSync(join(portal, 'app/MarcaAsegura.tsx'), 'utf8'), /strokeWidth=\{1\}/, 'MarcaAsegura.tsx perdió el grosor elegido')
+})

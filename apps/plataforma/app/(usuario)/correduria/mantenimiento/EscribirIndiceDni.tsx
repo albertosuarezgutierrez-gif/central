@@ -1,8 +1,10 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CheckCircle2 } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import type { EscrituraBackfillDni } from '@/lib/correduria-puerto'
+import { ConIcono } from '../iconos'
 import { quedanPorEscribir } from './pendientes'
 
 /**
@@ -104,7 +106,7 @@ function Resultado({ r }: { r: EscrituraBackfillDni }) {
   }
   return (
     <Nota>
-      ✅ Escritos <strong>{r.escritos.toLocaleString('es-ES')}</strong> índices.{' '}
+      <ConIcono i={CheckCircle2} color="var(--positive)">Escritos <strong>{r.escritos.toLocaleString('es-ES')}</strong> índices.</ConIcono>{' '}
       {r.restantes > 0
         ? `Quedan ${r.restantes.toLocaleString('es-ES')}: vuelve a pulsar.`
         : 'No queda ninguno pendiente.'}{' '}

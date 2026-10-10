@@ -1,10 +1,12 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { descripcionDias, enCooldownRenovacion, textoAvisoRenovacionWhatsapp, textoPlazoOposicion, DIAS_PREAVISO_TOMADOR, type Retarificabilidad } from '@central/module-seguros'
+import { fechaPintable, descripcionDias, enCooldownRenovacion, lineaFichaObjeto, textoAvisoRenovacionWhatsapp, textoPlazoOposicion, DIAS_PREAVISO_TOMADOR, type Retarificabilidad } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge, BtnLink, btnStyle, type Tono } from '@/components/ui'
+import { TriangleAlert } from 'lucide-react'
 import { esAccionable, textoListaTruncada, textoVencidasAntiguas } from './secciones'
+import { Ico } from './iconos'
 import AccionesContacto from './AccionesContacto'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from './rotulo-retarificar'
@@ -78,6 +80,8 @@ function ramoEnFrase(tipo: string): string {
 export type ObjetoAsegurado = {
   estado: 'conocido' | 'no_informado' | 'cifrado' | 'sin_objeto'
   titulo: string | null; detalle: string | null; nota: string | null
+  /** Ficha del bien (CIMA); opcional: asegura viejo no la manda. */
+  ficha?: Array<{ etiqueta: string; valor: string }> | null
 }
 
 export type Vencimiento = {
@@ -138,8 +142,8 @@ export type RespVencimientos =
 // Fecha siempre en formato español día/mes/año: "2026-06-03" → "03/06/2026".
 function fmtFecha(iso: string): string {
   if (!iso) return ''
-  const [y, m, d] = iso.split('-')
-  return d && m && y ? `${d}/${m}/${y}` : iso
+  // Centinela (1900-01-01, 9999-12-31) o ilegible: no es una fecha.
+  return fechaPintable(iso) ?? '—'
 }
 
 /**
@@ -177,6 +181,10 @@ function CeldaObjeto({ objeto }: { objeto: ObjetoAsegurado | null }) {
       {objeto.detalle && (
         <div style={{ fontSize: 11, color: 'var(--muted)' }}>{objeto.detalle}</div>
       )}
+      {/* «Matriculación 2018 · Potencia 132…»: NULL en la ficha → no se pinta nada. */}
+      {lineaFichaObjeto(objeto.ficha) && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>{lineaFichaObjeto(objeto.ficha)}</div>
+      )}
     </span>
   )
 }
@@ -210,7 +218,7 @@ function AvisoTruncado({ truncado }: { truncado: boolean | null | undefined }) {
         color: truncado === true ? 'var(--warning)' : 'var(--muted)',
       }}
     >
-      {truncado === true ? '⚠️ ' : ''}{texto}
+      {truncado === true ? <Ico i={TriangleAlert} /> : null}{texto}
     </p>
   )
 }
@@ -348,7 +356,7 @@ export default function Renovaciones({ datos, filtro }: {
       {sinRecibir && (
         <details style={{ margin: '0 0 10px' }}>
           <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, minHeight: 44, color: 'var(--warning)' }}>
-            ⚠️ 
+            <Ico i={TriangleAlert} />{' '}
             {sinRecibir.n === 1 ? '1 póliza con la renovación sin recibir' : `${sinRecibir.n} pólizas con la renovación sin recibir`}
             {sinRecibir.prima > 0 && ` · ${eur(sinRecibir.prima)}`}
             {sinRecibir.sinPrima > 0 && ` · ${sinRecibir.sinPrima} sin prima informada`}

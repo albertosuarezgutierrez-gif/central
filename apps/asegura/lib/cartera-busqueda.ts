@@ -58,6 +58,7 @@ import {
 } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { ordenarPorInteres } from './orden-hallazgos'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 
 /** Un resultado: siempre lleva a la ficha de un cliente. */
@@ -77,6 +78,21 @@ export type Hallazgo = {
   polizasCima: number | null
   /** Vencimiento más lejano. `null` = ninguna póliza informa fecha. */
   ultimoVencimiento: string | null
+  /**
+   * Oportunidades ACTIVAS: abiertas (competencia, en negociación, pendiente del
+   * cliente) y NO aparcadas hoy. `null` = no se pudo contar, NO 0.
+   * La ficha cuenta las aparcadas dentro; aquí van aparte para que un lead
+   * aparcado hasta marzo no parezca trabajo de hoy.
+   */
+  oportunidadesAbiertas: number | null
+  /** Abiertas pero aparcadas (`aparcada_hasta` futura). `null` = no se contó. */
+  oportunidadesAparcadas: number | null
+  /**
+   * La tarea de seguimiento más próxima entre sus oportunidades activas, con el
+   * estado de esa oportunidad. `null` = no hay ninguna pendiente O no se pudo
+   * mirar (entonces `oportunidadesAbiertas` también es `null`).
+   */
+  siguientePaso: SiguientePaso | null
   /** Cartera viva / volcado histórico / no se sabe. Derivado, no del enum. */
   vitalidad: Vitalidad
   /** Otras fichas sin fusionar con su mismo teléfono. `null` = no se miró. */
@@ -88,6 +104,14 @@ export type Hallazgo = {
    * 🚨 `null` = NO se ha podido consultar, que no es «no tiene teléfono».
    */
   contacto: Contacto | null
+}
+
+export type SiguientePaso = {
+  oportunidadId: string
+  estado: string
+  tipo: string
+  /** `YYYY-MM-DD`, en hora de Madrid. */
+  fechaLimite: string
 }
 
 /**
@@ -283,6 +307,9 @@ function hallazgoSinEnriquecer(
     ...base,
     polizasCima: null,
     ultimoVencimiento: null,
+    oportunidadesAbiertas: null,
+    oportunidadesAparcadas: null,
+    siguientePaso: null,
     vitalidad: 'desconocida',
     hermanas: null,
     aviso: null,
@@ -431,23 +458,40 @@ async function porCodigoPostal(correduriaId: string, c: Criterio): Promise<Bloqu
 /**
  * La matrícula vive EN CLARO dentro de `datos_especificos`, así que se busca
  * con SQL crudo sobre el JSON — Prisma no filtra por `->>` con `contains`.
+ *
+ * 🚨 Y también en `oportunidades.info_riesgo` (29/09/2026): el coche de un lead
+ * que aún no es póliza solo está ahí. Buscando solo en pólizas, «5655DSM» decía
+ * «nadie coincide» con su oportunidad abierta, y 1.735 matrículas de leads eran
+ * invisibles. Si la ficha sale por las dos, gana la póliza.
  */
 async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
+  const patron = '%' + c.valor + '%'
   const filas = await db.$queryRaw<
-    { id: string; nombre: string; apellidos: string; tipo: string; matricula: string }[]
+    { id: string; nombre: string; apellidos: string; tipo: string; matricula: string; origen: string }[]
   >`
-    select distinct on (cl.id)
-      cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo,
-      upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g')) as matricula
-    from polizas p
-    join clientes cl on cl.id = p.cliente_id
-    where p.correduria_id = ${correduriaId}::uuid
-      and p.merged_into_poliza_id is null
-      and cl.merged_into_cliente_id is null
-      and cl.activo
-      and upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g'))
-          like ${'%' + c.valor + '%'}
+    select distinct on (m.id) m.id, m.nombre, m.apellidos, m.tipo, m.matricula, m.origen
+    from (
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo, 'poliza' as origen,
+        upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g')) as matricula
+      from polizas p
+      join clientes cl on cl.id = p.cliente_id
+      where p.correduria_id = ${correduriaId}::uuid
+        and p.merged_into_poliza_id is null
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g')) like ${patron}
+      union all
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo, 'oportunidad' as origen,
+        upper(regexp_replace(o.info_riesgo->>'matricula', '[^A-Za-z0-9]', '', 'g')) as matricula
+      from oportunidades o
+      join clientes cl on cl.id = o.cliente_id
+      where o.correduria_id = ${correduriaId}::uuid
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and upper(regexp_replace(o.info_riesgo->>'matricula', '[^A-Za-z0-9]', '', 'g')) like ${patron}
+    ) m
+    order by m.id, m.origen = 'poliza' desc
     limit ${LIMITE}
   `
   const conteos = await polizasDe(filas.map((f) => f.id))
@@ -457,7 +501,7 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
       nombre: `${f.nombre} ${f.apellidos}`.trim(),
       tipo: f.tipo,
       polizas: conteos.get(f.id) ?? 0,
-      porque: `matrícula ${f.matricula}`,
+      porque: f.origen === 'oportunidad' ? `matrícula ${f.matricula} (oportunidad)` : `matrícula ${f.matricula}`,
     }),
   )
   return bloque(c, hallazgos, await coberturaMatricula(correduriaId))
@@ -730,12 +774,18 @@ async function coberturaMatricula(
 ): Promise<{ alcanzables: number; total: number } | null> {
   try {
     const db = prismaAsegura()
+    // Pólizas + oportunidades: las dos fuentes que mira `porMatricula`.
     const filas = await db.$queryRaw<{ con: bigint; total: bigint }[]>`
       select
-        count(*) filter (where datos_especificos->>'matricula' is not null)::bigint as con,
+        count(*) filter (where matricula is not null)::bigint as con,
         count(*)::bigint as total
-      from polizas
-      where correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null
+      from (
+        select datos_especificos->>'matricula' as matricula from polizas
+        where correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null
+        union all
+        select info_riesgo->>'matricula' from oportunidades
+        where correduria_id = ${correduriaId}::uuid
+      ) m
     `
     const f = filas[0]
     return f ? { alcanzables: Number(f.con), total: Number(f.total) } : null
@@ -802,6 +852,50 @@ async function senalesDe(
           ultimoVencimiento: f.ultimo === null ? null : f.ultimo.toISOString().slice(0, 10),
         },
       ]),
+    )
+  } catch {
+    return null
+  }
+}
+
+type OportunidadesFicha = { activas: number; aparcadas: number; siguiente: SiguientePaso | null }
+
+/** `null` = la consulta falló. Un Map vacío = se miró y no hay ninguna. */
+async function oportunidadesDe(
+  correduriaId: string,
+  ids: string[],
+): Promise<Map<string, OportunidadesFicha> | null> {
+  if (ids.length === 0) return new Map()
+  try {
+    const db = prismaAsegura()
+    // Aparcada = `aparcada_hasta` futura; el día que vence vuelve sola al
+    // carril (mismo criterio que leads-competencia.ts).
+    const filas = await db.$queryRaw<
+      { cliente_id: string; activas: number; aparcadas: number; siguiente: SiguientePaso | null }[]
+    >`
+      select o.cliente_id::text as cliente_id,
+             count(*) filter (where o.aparcada_hasta is null or o.aparcada_hasta <= current_date)::int as activas,
+             count(*) filter (where o.aparcada_hasta > current_date)::int as aparcadas,
+             (select json_build_object(
+                       'oportunidadId', o2.id::text, 'estado', o2.estado::text, 'tipo', g.tipo::text,
+                       'fechaLimite', to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD'))
+                from gestiones g
+                join oportunidades o2 on o2.id = g.oportunidad_id and o2.correduria_id = g.correduria_id
+               where o2.correduria_id = ${correduriaId}::uuid
+                 and o2.cliente_id = o.cliente_id
+                 and o2.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+                 and (o2.aparcada_hasta is null or o2.aparcada_hasta <= current_date)
+                 and g.origen_trigger = 'central:seguimiento'
+                 and g.estado::text <> 'cerrada' and g.fecha_limite is not null
+               order by g.fecha_limite limit 1) as siguiente
+      from oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid
+        and o.cliente_id::text = any(${ids}::text[])
+        and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      group by o.cliente_id
+    `
+    return new Map(
+      filas.map((f) => [f.cliente_id, { activas: Number(f.activas), aparcadas: Number(f.aparcadas), siguiente: f.siguiente }]),
     )
   } catch {
     return null
@@ -992,8 +1086,13 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
   const ids = [...new Set(bloques.flatMap((b) => b.hallazgos.map((h) => h.clienteId)))]
   if (ids.length === 0) return
 
-  const contactos = await contactosDe(correduriaId, ids)
-  const crudas = await hermanasDe(correduriaId, ids)
+  // Las tres primeras no dependen entre sí: van a la vez. Cada una ya se
+  // traga su propio fallo y devuelve `null`, así que ninguna tumba a las demás.
+  const [contactos, crudas, oportunidades] = await Promise.all([
+    contactosDe(correduriaId, ids),
+    hermanasDe(correduriaId, ids),
+    oportunidadesDe(correduriaId, ids),
+  ])
   // Las señales se piden también de las hermanas: para poder decir «la otra es
   // la viva» hay que saber si de verdad lo es.
   const todos = [...new Set([...ids, ...(crudas ?? []).map((h) => h.id)])]
@@ -1025,6 +1124,10 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
       const s = senalDe(h.clienteId)
       h.polizasCima = s.polizasCima
       h.ultimoVencimiento = s.ultimoVencimiento
+      const op = oportunidades === null ? null : (oportunidades.get(h.clienteId) ?? { activas: 0, aparcadas: 0, siguiente: null })
+      h.oportunidadesAbiertas = op === null ? null : op.activas
+      h.oportunidadesAparcadas = op === null ? null : op.aparcadas
+      h.siguientePaso = op === null ? null : op.siguiente
       h.vitalidad = vitalidadFicha(s)
       h.hermanas = crudas === null ? null : [...(porFicha.get(h.clienteId)?.values() ?? [])]
       h.aviso = avisoHermanas(h.vitalidad, h.hermanas)
@@ -1040,5 +1143,6 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
               emailIlegible: false,
             })
     }
+    b.hallazgos = ordenarPorInteres(b.hallazgos)
   }
 }

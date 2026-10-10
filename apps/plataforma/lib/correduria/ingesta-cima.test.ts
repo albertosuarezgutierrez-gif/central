@@ -5,7 +5,10 @@ import {
   saludDesdeRespuesta,
   interpretarHuerfanas,
   polizasDe,
+  componerCabecera,
+  leerCabecera,
 } from './ingesta-cima.ts'
+import { saludIngesta, firmaAvisoIngesta, normalizarFirmaIngesta, detalleSalud } from '@central/module-seguros'
 
 const OK = {
   estado: 'ok',
@@ -224,7 +227,7 @@ const HUERFANA = {
   entidad: 'C0468',
   entidadNombre: 'Occident',
   clave: 'M00171',
-  idPolizaEntidad: 'BIDP036783',
+  idPolizaEntidad: 'BIDP000029',
   recibos: 2,
   siniestros: 0,
   prima: 470.76,
@@ -239,7 +242,7 @@ test('el puerto de huérfanas responde bien: la lista llega entera', () => {
   assert.equal(h.estado, 'ok')
   if (h.estado !== 'ok') return
   assert.equal(h.polizas.length, 1)
-  assert.equal(h.polizas[0].idPolizaEntidad, 'BIDP036783')
+  assert.equal(h.polizas[0].idPolizaEntidad, 'BIDP000029')
   assert.equal(h.truncado, false)
   assert.equal(h.ocultasOtroAmbito, 0)
 })
@@ -286,7 +289,7 @@ test('la lista llega hasta la salud, repartida por lo que hay que hacer', () => 
       ocultasOtroAmbito: 0,
       polizas: [
         HUERFANA,
-        { ...HUERFANA, idPolizaEntidad: '549570971', enCartera: 'viva' },
+        { ...HUERFANA, idPolizaEntidad: '549000025', enCartera: 'viva' },
       ],
     } as never,
   )
@@ -446,4 +449,134 @@ test('🚨 renovaciones: una fila ilegible degrada la lista ENTERA a null (hueco
   if (r.estado !== 'ok') return assert.fail('debía ser ok')
   assert.equal(r.salud.renovacionesSinLlegar, null)
   assert.ok(r.salud.huecos.some(h => /renovaciones/.test(h)))
+})
+
+// ── 📭 Emisiones de Codeoscopic sin aviso del webhook (28/09/2026) ───────────
+
+const EMIS = [{ proyecto: '40769244', aseguradora: 'Allianz', horas: 262 }]
+
+test('emisiones sin aviso: el puerto las manda → degradan y viajan a la salud', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], emisionesSinAviso: EMIS })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.estado, 'degradada')
+  assert.deepEqual(r.salud.emisionesSinAviso, EMIS)
+})
+
+test('emisiones sin aviso: puerto viejo (clave ausente) = no se pide, NO es hueco', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.emisionesSinAviso, undefined)
+})
+
+test('🚨 emisiones sin aviso: una fila ilegible degrada la lista ENTERA a null (hueco)', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [],
+    emisionesSinAviso: [...EMIS, { proyecto: 40804066, aseguradora: 'Reale', horas: 1 }],
+  })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.emisionesSinAviso, null)
+  assert.ok(r.salud.huecos.some(h => /webhook/.test(h)))
+})
+
+test('cobertura con rutasDescartadas llega a la salud; una forma rara la degrada a null', () => {
+  const ok = interpretarIngesta(200, { ...OK, cobertura: { ...SENALES.cobertura, rutasDescartadas: 4 } })
+  assert.equal(ok.estado, 'ok')
+  if (ok.estado === 'ok') assert.equal(ok.salud.cobertura?.rutasDescartadas, 4)
+  const mala = interpretarIngesta(200, { ...OK, cobertura: { ...SENALES.cobertura, rutasDescartadas: 'x' } })
+  if (mala.estado === 'ok') assert.equal(mala.salud.cobertura, null)
+})
+
+// ── 🔁 Pólizas vivas duplicadas (04/10/2026) — informativa ──────────────────
+
+const DUP = [{ entidad: 'C0109', ref: '0ae40684-0000-0000-0000-000000000001', fichas: 2 }]
+
+test('duplicadas: el puerto las manda → viajan a la salud SIN degradar', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], polizasDuplicadas: DUP })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  // (`parcial` por las señales que este JSON mínimo no trae; lo que importa es
+  // que las duplicadas NO lo empujen a `degradada` ni abran un hueco.)
+  assert.notEqual(r.salud.estado, 'degradada')
+  assert.equal(r.salud.huecos.some(h => /duplicadas/.test(h)), false)
+  assert.deepEqual(r.salud.polizasDuplicadas, DUP)
+})
+
+test('duplicadas: puerto viejo (clave ausente) = no se pide (`undefined`), NO es hueco', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.polizasDuplicadas, undefined)
+  assert.equal(r.salud.huecos.some(h => /duplicadas/.test(h)), false)
+})
+
+test('🚨 duplicadas: `null` o una fila ilegible degradan la lista ENTERA a null (hueco), nunca a []', () => {
+  for (const polizasDuplicadas of [null, [...DUP, { entidad: 'C0613', ref: 'x', fichas: '2' }]]) {
+    const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], polizasDuplicadas })
+    if (r.estado !== 'ok') return assert.fail('debía ser ok')
+    assert.equal(r.salud.polizasDuplicadas, null)
+    assert.ok(r.salud.huecos.some(h => /duplicadas/.test(h)))
+  }
+})
+
+// ── 📉 Anulaciones (06/10/2026) ─────────────────────────────────────────────
+
+const FICH = [{ entidad: 'C0109', entidadNombre: 'Mapfre', fichero: 'POL_1.xml', polizas: 47, anuladas: 25, impago: 11, otraCompania: 9, siniestralidad: 5, otros: 0, medianaDiasRetraso: null }]
+const ANUL_RENOV = [{ entidad: 'C0109', entidadNombre: 'Mapfre', polizas: 4, vencimientoMasAntiguo: '2026-09-01' }]
+const RETRASO = [{ entidad: 'C0109', entidadNombre: 'Mapfre', polizas: 12, medianaDias: 369 }]
+const BAJAS = [{ entidad: 'C0109', entidadNombre: 'Mapfre', numeros: ['0008414300065'] }]
+const ANUL = { anulacionesPorFichero: FICH, renovacionesAnuladas: ANUL_RENOV, retrasoAnulacion: RETRASO, posiblesBajas: BAJAS }
+
+test('anulaciones: el puerto manda las 4 señales → viajan a la salud', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], ...ANUL })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.deepEqual(r.salud.anulacionesEnBloque, FICH)
+  assert.deepEqual(r.salud.renovacionesAnuladas, ANUL_RENOV)
+  assert.deepEqual(r.salud.retrasoAnulacion, RETRASO)
+  assert.deepEqual(r.salud.posiblesBajas, BAJAS)
+})
+
+test('anulaciones: puerto viejo (claves ausentes) = no se piden (`undefined`), NO es hueco ni 0', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.anulacionesEnBloque, undefined)
+  assert.equal(r.salud.renovacionesAnuladas, undefined)
+  assert.equal(r.salud.retrasoAnulacion, undefined)
+  assert.equal(r.salud.posiblesBajas, undefined)
+  assert.equal(r.salud.huecos.some(h => /anulacion|anulado/i.test(h)), false)
+})
+
+test('🚨 anulaciones: `null` o una fila ilegible degradan CADA lista ENTERA a null (hueco), nunca a []', () => {
+  const malas: Record<string, unknown> = {
+    anulacionesPorFichero: [...FICH, { ...FICH[0], anuladas: '25' }],
+    renovacionesAnuladas: [...ANUL_RENOV, { entidad: 'C0109', polizas: 'dos' }],
+    retrasoAnulacion: [...RETRASO, { entidad: 'C0613', polizas: 1, medianaDias: '3' }],
+    posiblesBajas: [...BAJAS, { entidad: 'C0613', numeros: [123] }],
+  }
+  for (const [clave, mala] of Object.entries(malas)) {
+    for (const valor of [null, mala]) {
+      const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], [clave]: valor })
+      if (r.estado !== 'ok') return assert.fail('debía ser ok')
+      const campo = clave === 'anulacionesPorFichero' ? 'anulacionesEnBloque' : clave
+      assert.equal((r.salud as Record<string, unknown>)[campo], null, `${clave}`)
+    }
+  }
+})
+
+test('cabecera: la firma con señales de anulación sobrevive firma → cabecera → leerCabecera (sin `|` interno)', () => {
+  const salud = saludIngesta({
+    cuarentena: [], ultimoPull: { horas: 2, procesados: 5 },
+    anulacionesPorFichero: [{
+      entidad: 'C0058', entidadNombre: 'Mapfre', fichero: 'POL_1.zip', polizas: 47, anuladas: 25,
+      impago: 11, otraCompania: 9, siniestralidad: 5, otros: 0, medianaDiasRetraso: 437,
+    }],
+    posiblesBajas: [{ entidad: 'C0058', entidadNombre: 'Mapfre', numeros: ['123', '456'] }],
+    renovacionesAnuladas: [{ entidad: 'C0058', entidadNombre: 'Mapfre', polizas: 3, vencimientoMasAntiguo: '2026-07-01' }],
+  })
+  const firma = firmaAvisoIngesta(salud)
+  const aviso = new Date('2026-10-06T08:00:00Z')
+  const abierta = new Date('2026-10-05T08:00:00Z')
+  const guardado = `${componerCabecera(firma, aviso, abierta)} · ${detalleSalud(salud)}`
+  const leido = leerCabecera(guardado)
+  assert.equal(leido.firma, firma)
+  assert.equal(normalizarFirmaIngesta(leido.firma), firma)
+  assert.equal(leido.aviso?.toISOString(), aviso.toISOString())
+  assert.equal(leido.abierta?.toISOString(), abierta.toISOString())
 })

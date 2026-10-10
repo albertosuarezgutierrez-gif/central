@@ -1,9 +1,14 @@
 'use client'
 import { useState } from 'react'
-import { tipoEtiqueta } from '@/lib/solicitudes-tipos'
+import { tipoEtiqueta, tiposPorGrupo } from '@/lib/solicitudes-tipos'
 import AdminShell from '@/components/AdminShell'
 
 type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null; motivo: string | null; estado: string; empleado_nombre: string; tiene_justificante?: boolean }
+
+const GRUPOS = tiposPorGrupo()
+const ESTADOS = ['solicitada', 'aprobada', 'rechazada']
+type Borrador = { tipo: string; fecha_inicio: string; fecha_fin: string; motivo: string; estado: string }
+const campo = 'min-h-[44px] w-full rounded-[10px] border border-line bg-paper px-2 text-sm'
 
 const COLOR: Record<string, string> = { solicitada: 'text-ink-3', aprobada: 'text-ok', rechazada: 'text-alert' }
 
@@ -19,6 +24,34 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
       await recargar()
     }
   }
+  const [editando, setEditando] = useState<string | null>(null)
+  const [borrador, setBorrador] = useState<Borrador | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  function abrirEdicion(s: S) {
+    setError(null); setEditando(s.id)
+    setBorrador({ tipo: s.tipo, fecha_inicio: s.fecha_inicio?.slice(0, 10) ?? '', fecha_fin: s.fecha_fin?.slice(0, 10) ?? '', motivo: s.motivo ?? '', estado: s.estado })
+  }
+  async function guardar(id: string) {
+    if (!borrador) return
+    const r = await fetch(`/api/admin/solicitudes/${id}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(borrador) })
+    if (!r.ok) { setError((await r.json().catch(() => ({}))).error ?? 'No se pudo guardar'); return }
+    setEditando(null); setBorrador(null); await recargar()
+  }
+  async function borrar(s: S) {
+    if (!confirm(`¿Borrar la solicitud de ${tipoEtiqueta(s.tipo)} de ${s.empleado_nombre}? No se puede deshacer.`)) return
+    const r = await fetch(`/api/admin/solicitudes/${s.id}`, { method: 'DELETE' })
+    if (!r.ok) { setAviso('No se pudo borrar la solicitud'); return }
+    await recargar()
+  }
+  // Plegado: se ven siempre las pendientes (hay que resolverlas) y la primera del resto;
+  // lo demás se monta solo al desplegar.
+  const [verTodas, setVerTodas] = useState(false)
+  const idsVisibles = new Set(lista.filter(s => s.estado === 'solicitada').map(s => s.id))
+  const primeraResuelta = lista.find(s => s.estado !== 'solicitada')
+  if (primeraResuelta) idsVisibles.add(primeraResuelta.id)
+  if (editando) idsVisibles.add(editando)
+  const visibles = verTodas ? lista : lista.filter(s => idsVisibles.has(s.id))
+  const plegadas = lista.length - lista.filter(s => idsVisibles.has(s.id)).length
   const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).map(f => f!.slice(0, 10)).join(' → ')
   return (
     <AdminShell activo="solicitudes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
@@ -30,7 +63,7 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
         </div>
       )}
       <ul className="mt-3 grid list-none gap-2 p-0">
-        {lista.map(s => (
+        {visibles.map(s => (
           <li key={s.id} className="rounded-card border border-line bg-card p-3">
             <strong>{s.empleado_nombre}</strong> · {tipoEtiqueta(s.tipo)} {rango(s) && <span>· {rango(s)}</span>}
             <span className={`ml-2 ${COLOR[s.estado] ?? ''}`}>[{s.estado}]</span>
@@ -39,16 +72,56 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
               <a href={`/api/admin/solicitudes/${s.id}/justificante`} target="_blank" rel="noreferrer"
                 className="text-accent text-sm no-underline hover:underline">📎 Ver justificante</a>
             )}
-            {s.estado === 'solicitada' && (
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => resolver(s.id, true)}>Aprobar</button>
-                <button onClick={() => resolver(s.id, false)} className="bg-paper-2 text-ink-2 hover:bg-line">Rechazar</button>
+            {editando === s.id && borrador ? (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className="text-xs text-ink-3">Tipo
+                  <select className={campo} value={borrador.tipo} onChange={e => setBorrador({ ...borrador, tipo: e.target.value })}>
+                    {GRUPOS.map(g => (
+                      <optgroup key={g.grupo.id} label={g.grupo.etiqueta}>
+                        {g.tipos.map(t => <option key={t.id} value={t.id}>{t.etiqueta}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs text-ink-3">Estado
+                  <select className={campo} value={borrador.estado} onChange={e => setBorrador({ ...borrador, estado: e.target.value })}>
+                    {ESTADOS.map(x => <option key={x} value={x}>{x}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs text-ink-3">Desde
+                  <input type="date" className={campo} value={borrador.fecha_inicio} onChange={e => setBorrador({ ...borrador, fecha_inicio: e.target.value })} />
+                </label>
+                <label className="text-xs text-ink-3">Hasta
+                  <input type="date" className={campo} value={borrador.fecha_fin} onChange={e => setBorrador({ ...borrador, fecha_fin: e.target.value })} />
+                </label>
+                <label className="text-xs text-ink-3 sm:col-span-2">Motivo
+                  <textarea className={`${campo} py-2`} rows={2} value={borrador.motivo} onChange={e => setBorrador({ ...borrador, motivo: e.target.value })} />
+                </label>
+                {error && <div className="text-alert text-sm sm:col-span-2">{error}</div>}
+                <div className="flex flex-wrap gap-2 sm:col-span-2">
+                  <button className="min-h-[44px]" onClick={() => guardar(s.id)}>Guardar</button>
+                  <button className="min-h-[44px] bg-paper-2 text-ink-2 hover:bg-line" onClick={() => { setEditando(null); setBorrador(null) }}>Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {s.estado === 'solicitada' && (<>
+                  <button className="min-h-[44px]" onClick={() => resolver(s.id, true)}>Aprobar</button>
+                  <button className="min-h-[44px] bg-paper-2 text-ink-2 hover:bg-line" onClick={() => resolver(s.id, false)}>Rechazar</button>
+                </>)}
+                <button className="min-h-[44px] bg-paper-2 text-ink-2 hover:bg-line" onClick={() => abrirEdicion(s)}>Editar</button>
+                <button className="min-h-[44px] bg-paper-2 text-alert hover:bg-line" onClick={() => borrar(s)}>Borrar</button>
               </div>
             )}
           </li>
         ))}
         {lista.length === 0 && <li className="text-ink-3">Sin solicitudes</li>}
       </ul>
+      {plegadas > 0 && (
+        <button onClick={() => setVerTodas(v => !v)} className="mt-2 min-h-[44px] w-full bg-paper-2 text-ink-2 hover:bg-line">
+          {verTodas ? 'Plegar ▴' : `Ver ${plegadas} solicitud${plegadas > 1 ? 'es' : ''} más ▾`}
+        </button>
+      )}
     </AdminShell>
   )
 }

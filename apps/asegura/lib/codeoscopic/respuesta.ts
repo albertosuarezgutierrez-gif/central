@@ -279,12 +279,24 @@ export function leerCotizacion(raw: unknown): Cotizacion {
   }
 }
 
+/**
+ * «N en firme, M estimados, K condicionados» (30/09/2026). Antes todo lo no firme era «con reparos»,
+ * y un precio solo estimado (lo normal: los 8 del proyecto 40975463) no tiene ningún reparo.
+ */
+export function desgloseFirmeza(precios: readonly { firmeza: Firmeza }[]): string {
+  const n = (f: Firmeza) => precios.filter((p) => p.firmeza === f).length
+  const estimados = n('estimado')
+  const condicionados = n('condicionado')
+  return [
+    `${n('firme')} en firme`,
+    estimados > 0 ? `${estimados} ${estimados === 1 ? 'estimado' : 'estimados'}` : null,
+    condicionados > 0 ? `${condicionados} ${condicionados === 1 ? 'condicionado' : 'condicionados'} por la compañía` : null,
+  ].filter(Boolean).join(', ')
+}
+
 /** Resumen honrado para la UI y para Telegram: dice lo que NO se pudo cotizar. */
 export function resumirCotizacion(c: Cotizacion): string {
-  const firmes = c.precios.filter((p) => p.firmeza === 'firme').length
-  const noFirmes = c.precios.length - firmes
-  const partes = [`${c.precios.length} precios (${firmes} en firme`]
-  partes.push(noFirmes > 0 ? `, ${noFirmes} con reparos)` : ')')
+  const partes = [`${c.precios.length} precios (${desgloseFirmeza(c.precios)})`]
   // Solo se nombran las que NO dieron NINGÚN precio: una compañía que falló en
   // una configuración pero coticé en otra no está «sin precio».
   const mudas = [...new Set(c.fallos.filter((f) => !f.tambienDioPrecio).map((f) => f.compania))]

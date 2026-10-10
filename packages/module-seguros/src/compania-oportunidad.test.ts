@@ -24,8 +24,8 @@ test('mismoSeguro: sin número en un lado cae a la compañía', () => {
   assert.equal(mismoSeguro({ aseguradora: null }, { aseguradora: 'MUSSAP' }), 'no_se')
 })
 test('mismoSeguro: sin número, la matrícula separa dos coches de la misma compañía', () => {
-  assert.equal(mismoSeguro({ aseguradora: 'MUSSAP', matricula: '0194 DRY' }, { aseguradora: 'MUSSAP', matricula: '1234-KLM' }), 'otra')
-  assert.equal(mismoSeguro({ aseguradora: 'Línea Directa', matricula: '0194DRY' }, { aseguradora: 'MUSSAP', matricula: '0194-dry' }), 'misma')
+  assert.equal(mismoSeguro({ aseguradora: 'MUSSAP', matricula: '2222 CCC' }, { aseguradora: 'MUSSAP', matricula: '1234-KLM' }), 'otra')
+  assert.equal(mismoSeguro({ aseguradora: 'Línea Directa', matricula: '2222CCC' }, { aseguradora: 'MUSSAP', matricula: '2222-CCC' }), 'misma')
   // El número, si está en los dos, manda sobre la matrícula.
   assert.equal(mismoSeguro({ aseguradora: null, numeroPoliza: '111222', matricula: 'AAA111' }, { aseguradora: null, numeroPoliza: '111222', matricula: 'BBB222' }), 'misma')
 })

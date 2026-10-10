@@ -203,6 +203,31 @@ export function sustituidasARetirar(
 }
 
 /**
+ * ¿Este recibo DEVUELTO de la vieja es el de un periodo que ya no es suyo? Es la consecuencia
+ * esperada de cambiarse de compañía: la vieja pasa al cobro su renovación, el cliente (o su banco) la
+ * rechaza porque ya paga la nueva, y CIMA la trae `devuelto`. No es un impago ni algo que el cliente
+ * deba pagar: decirle «paga o te quedas sin cobertura» le haría pagar dos veces el mismo coche.
+ *
+ * Caso fundacional (29/09/2026): José, Kona 9833LJC. Mapfre vence el 24/09, Reale empieza el 22/09;
+ * el recibo Mapfre con efecto 24/09 llegó devuelto y el portal le pedía pagarlo.
+ *
+ * El corte es lo que llegue ANTES: el vencimiento de la vieja (su renovación, aunque la nueva empiece
+ * días después) o el inicio de la nueva (cambio anticipado: ese tramo ya lo cubre la nueva). Un
+ * devuelto ANTERIOR al corte es de un periodo que la vieja sí cubrió: deuda real, sigue contando.
+ * Sin fecha de efecto o sin ninguna fecha de corte → `false`: ante la duda, sigue pendiente.
+ */
+export function devueltoPorSustitucion(
+  efectoRecibo: string | null,
+  vieja: { fechaVencimiento: string | null },
+  nueva: { fechaInicio: string | null },
+): boolean {
+  if (efectoRecibo === null) return false
+  const cortes = [vieja.fechaVencimiento, nueva.fechaInicio].filter((f): f is string => f !== null).map((f) => f.slice(0, 10))
+  if (cortes.length === 0) return false
+  return efectoRecibo.slice(0, 10) >= cortes.sort()[0]!
+}
+
+/**
  * La anulación de la VIEJA cuando la sustituta ya está emitida y nadie la ha pedido (la nueva se
  * emitió fuera de nuestro presupuesto: en la web de la compañía o de Codeoscopic). Nace `solicitada`
  * y la FIRMA el cliente en su portal; el correo a la compañía sale después por la cola, como siempre.

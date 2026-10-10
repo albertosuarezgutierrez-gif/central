@@ -5,7 +5,7 @@ import { join } from 'node:path'
 
 // Guardián del VOLCADO HISTÓRICO de la ficha de cliente (21/09/2026). Alberto,
 // con la captura delante: «duplicidad». Eran dos filas del bloque «Volcado
-// histórico» del mismo FORD FOCUS (3935GPY, mismo vencimiento 07/10/2023, sin
+// histórico» del mismo FORD FOCUS (5555HHH, mismo vencimiento 07/10/2023, sin
 // número de póliza) que solo se diferenciaban en la prima: 210,00€ y 201,00€.
 // No era un fallo de la consulta ni un JOIN que multiplica: son dos filas
 // distintas de `seguros.polizas` del volcado de junio de 2026
@@ -71,6 +71,7 @@ test('sin bien conocido la fila va sola: no se funde lo que no se puede distingu
 })
 
 test('el usuario ve que son varias filas del volcado, no una póliza inventada', () => {
-  assert.match(piezas, /🔁 \{grupo\.filas\.length\} filas del volcado/)
-  assert.match(tab, /🔁/, 'la nota del bloque explica el símbolo')
+  assert.match(piezas, /filas del volcado/)
+  assert.match(piezas, /RefreshCw.*grupo\.filas\.length|grupo\.filas\.length.*RefreshCw/, 'el icono de refresh explica que son varias filas')
+  assert.match(tab, /RefreshCw|refresh|repetidas|volcado/, 'la nota del bloque explica el símbolo')
 })

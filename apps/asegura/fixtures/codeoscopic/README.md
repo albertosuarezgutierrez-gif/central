@@ -69,3 +69,10 @@ Salen Mutua Madrileña, Pelayo, RACE-UNACSA, Zurich… con `config.name` de prue
 (`PelayoAutos_Test`, `ZurichTest`, `OccidentAutosTEST`). Es el catálogo del **sandbox**. Las
 compañías realmente contratadas por Alberto son las de `agente-correduria/references/sector.md`
 §4 (Allianz, Mapfre, Reale, Occident, Fidelidade). No inferir la parrilla de producción de aquí.
+
+## `2026-09-29-proyecto-web-moto-avant2.json`
+
+Recorte del `GET /insurances/40956228` REAL (moto tarificada en la web de Avant2 el 29/09/2026),
+con los datos personales sustituidos por valores falsos (`00000000T`, `0000XXX`). Conserva la forma:
+Allianz con `estimate: false` (precio confirmado, 106,77€), Occident y Mapfre con `estimate: true`, el
+aviso de Mapfre «no aparece asociado…» y `appUrls` con `rel: Self`. Lo usa `proyectos-cliente.test.ts`.

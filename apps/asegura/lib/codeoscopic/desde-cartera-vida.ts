@@ -8,7 +8,8 @@
 // una suposición razonada, no un contrato verificado.
 
 import { revisarDatosVida, type DatosVida, type ReparoVida } from './peticion-vida.ts'
-import { partirApellidos, sexoDeSaludo, diaSiguiente, type ClienteCartera } from './desde-cartera.ts'
+import { partirApellidos, sexoDeSaludo, type ClienteCartera } from './desde-cartera.ts'
+import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
 
 function limpio(v: string | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -40,6 +41,10 @@ export type ResueltosVidaNueva = {
    */
   capital: number | null
   duracionAnios: number | null
+  /** Código CNO-11 de la profesión del asegurado. 🚨 Nunca se supone: lo teclea el corredor. */
+  profesion?: string | null
+  /** ¿Fuma? `null` = no se sabe. 🚨 Nunca se supone `false`: abarataría el precio sin base. */
+  fumador?: boolean | null
 }
 
 export function precalificarVidaNueva(
@@ -57,8 +62,8 @@ export function precalificarVidaNueva(
 
   const fechaEfecto = suponer(
     'fechaEfecto',
-    diaSiguiente(hoy),
-    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+    sumarDias(hoy, DIAS_EFECTO_PRESUPUESTO_NUEVO),
+    `no hay ninguna póliza que retarificar: efecto a ${DIAS_EFECTO_PRESUPUESTO_NUEVO} días para que el precio siga valiendo al emitir (con efecto mañana caducaba al día siguiente); si el cliente lo quiere en otra fecha, se pide con la suya`,
   ) as string
 
   const datos: Partial<DatosVida> = {
@@ -72,6 +77,8 @@ export function precalificarVidaNueva(
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
     capital: resueltos.capital ?? undefined,
     duracionAnios: resueltos.duracionAnios ?? undefined,
+    profesion: limpio(resueltos.profesion) ?? undefined,
+    fumador: typeof resueltos.fumador === 'boolean' ? resueltos.fumador : undefined,
     fechaEfecto,
   }
 

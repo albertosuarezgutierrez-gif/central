@@ -32,6 +32,7 @@ import {
 } from './retarificar-asegura.ts'
 import { describirCausaAsegura, MOTIVOS_PUERTO, type MotivoPuerto } from './correduria-puerto.ts'
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { leerSeguroAnteriorImputado, type SeguroAnteriorImputado } from './correduria/seguro-anterior-imputado.ts'
 
 export type { RespuestaRetarificar, RespuestaCatalogo, ConsumoPuerto, Opcion, MotivoPuerto }
 export type { Reparo, Supuesto, Precio, Fallo } from './retarificar-asegura.ts'
@@ -50,6 +51,8 @@ export type PrecalificacionAutoNueva = {
   estadoCivilMotivo: string | null
   consumo: ConsumoPuerto
   simulacion: boolean
+  /** La póliza del cliente propuesta como seguro anterior (vehículo nuevo, 03/10/2026). `null` = asegura no la mandó. */
+  seguroAnterior: SeguroAnteriorImputado | null
 }
 
 export type RespuestaPrecalificacionAutoNueva =
@@ -130,6 +133,7 @@ export function interpretarPrecalificacionAutoNueva(status: number, json: unknow
       estadoCivilMotivo: cadena(r.estadoCivilMotivo),
       consumo: leerConsumo(r.consumo),
       simulacion: r.simulacion === true,
+      seguroAnterior: leerSeguroAnteriorImputado(r.seguroAnterior),
     },
   }
 }
@@ -187,6 +191,20 @@ export async function cotizarAutoNuevaAsegura(entrada: {
   solicitadoPor?: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
+  /**
+   * VARIANTE de un riesgo (29/09/2026): con `oportunidadId` la tarificación se cuelga de ESA
+   * oportunidad. `figuras` (rol → clienteId) dice quién es propietario/conductor; asegura arma
+   * sus datos desde sus fichas. `nota` es la etiqueta libre de Alberto (≤200).
+   */
+  oportunidadId?: string | null
+  /** La póliza que el corredor elige como seguro anterior (id de la candidata). */
+  seguroAnteriorId?: string | null
+  /** `true` = no declarar seguro anterior (de calle). */
+  sinSeguroAnterior?: boolean
+  figuras?: Record<string, string> | null
+  nota?: string | null
+  /** Recotización EXPLÍCITA tras un 409 `duplicado` (0,50€ otra vez): salta la guarda anti-duplicado de asegura. */
+  forzar?: boolean
 }): Promise<RespuestaRetarificar> {
   try {
     const r = await pedir(
@@ -201,6 +219,12 @@ export async function cotizarAutoNuevaAsegura(entrada: {
           solicitadoPor: entrada.solicitadoPor ?? 'plataforma',
           ...(entrada.resueltos ? { resueltos: entrada.resueltos } : {}),
           ...(entrada.correcciones ? { correcciones: entrada.correcciones } : {}),
+          // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
+          ...(entrada.forzar === true ? { forzar: true } : {}),
+          ...(entrada.oportunidadId ? { oportunidadId: entrada.oportunidadId } : {}),
+          ...(entrada.sinSeguroAnterior === true ? { sinSeguroAnterior: true } : entrada.seguroAnteriorId ? { seguroAnteriorId: entrada.seguroAnteriorId } : {}),
+          ...(entrada.oportunidadId && entrada.figuras && Object.keys(entrada.figuras).length > 0 ? { figuras: entrada.figuras } : {}),
+          ...(entrada.oportunidadId && entrada.nota && entrada.nota.trim() !== '' ? { nota: entrada.nota.trim().slice(0, 200) } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,

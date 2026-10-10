@@ -21,7 +21,7 @@ const FILA = {
   tipo: 'auto',
   estado: 'activa',
   aseguradora: 'Mapfre',
-  numeroPoliza: '3021700291186',
+  numeroPoliza: '3021700000001',
   codigoEntidadDgs: 'C0058',
   importRef: null,
   eiacXmlHash: 'abc123',
@@ -38,7 +38,7 @@ test('una póliza de CIMA sale viva, con su código DGS y su estado tal cual', (
     estado: 'activa',
     viva: true,
     ramo: 'auto',
-    numeroPoliza: '3021700291186',
+    numeroPoliza: '3021700000001',
   })
 })
 
@@ -50,7 +50,7 @@ test('`viva` se DERIVA de la fila, no se pone a true por venir de una consulta f
 })
 
 test('el caso de Reale: import_ref del volcado PERO tocada por CIMA → sigue siendo viva', () => {
-  // La `3021700291186` de Reale C0613, el agujero medido el 03/09/2026.
+  // La `3021700000001` de Reale C0613, el agujero medido el 03/09/2026.
   const p = aPolizaCliente({ ...FILA, importRef: 'asegura_app:pol2:15143', eiacXmlHash: 'h' })
   assert.equal(p.viva, true)
 })

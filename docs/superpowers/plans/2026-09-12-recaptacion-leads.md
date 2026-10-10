@@ -391,7 +391,7 @@ const RAMOS_LEGIBLES: Record<string, string> = {
   salud: 'salud',
   decesos: 'decesos',
   comercio: 'comercio',
-  otros: 'comunidades', // el caso real que abrió este trabajo (BIDP023227) es 'otros'
+  otros: 'comunidades', // el caso real que abrió este trabajo ([nº de póliza retirado]) es 'otros'
 }
 
 function ramoLegible(tipo: string): string {

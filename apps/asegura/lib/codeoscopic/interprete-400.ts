@@ -15,7 +15,7 @@
 // decide la cascada del caller (ficha → corredor), y nada personal se supone.
 
 import type { DatosAuto, Reparo } from './peticion-auto.ts'
-import { CLAVE_EMAIL_VENDOR, elementoEmail, type ClaveElementoEmail } from './persona.ts'
+import { CLAVE_EMAIL_VENDOR, elementoEmail, normalizarDocumento, tipoDocumento, type ClaveElementoEmail } from './persona.ts'
 
 /** Los papeles en los que va la persona. `holder` siempre; el resto según ramo. */
 export type Papel = 'holder' | 'owner' | 'primaryDriver' | 'secondaryDriver'
@@ -39,6 +39,7 @@ export type CampoPersona =
   | 'telefono'
   | 'fechaCarnet'
   | 'email'
+  | 'nacionalidad'
 
 export const CAMPOS_PERSONA: readonly CampoPersona[] = [
   'nombreVia',
@@ -55,6 +56,7 @@ export const CAMPOS_PERSONA: readonly CampoPersona[] = [
   'telefono',
   'fechaCarnet',
   'email',
+  'nacionalidad',
 ]
 
 export function esCampoPersona(v: unknown): v is CampoPersona {
@@ -303,7 +305,10 @@ export function aplicarCampoPersona(
     case 'municipioResidenciaId':
       return p
     case 'dni':
-      p.identificationDocument = { ...obj(p.identificationDocument), type: { id: 'Dni' }, id: v.toUpperCase() }
+      p.identificationDocument = { ...obj(p.identificationDocument), type: { id: tipoDocumento(v) }, id: normalizarDocumento(v) }
+      return p
+    case 'nacionalidad':
+      p.nationality = { code: v.toUpperCase() }
       return p
     case 'nombre':
       p.name = v
@@ -366,6 +371,8 @@ export function leerCampoPersona(persona: unknown, campo: CampoPersona): string 
     }
     case 'dni':
       return str(obj(p.identificationDocument).id)
+    case 'nacionalidad':
+      return str(obj(p.nationality).code)
     case 'nombre':
       return str(p.name)
     case 'apellido1':

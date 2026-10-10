@@ -3,8 +3,14 @@ import { Car } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { precalificarAutoNuevaAsegura, catalogoAsegura } from '@/lib/auto-nuevo-asegura'
 import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
+import { interpretarOportunidadesCliente, oportunidadesClienteAsegura } from '@/lib/seguimiento-asegura'
+import { anteriorParaTarificar } from '@/lib/seguro-anterior'
+import { otroVehiculoDelCliente } from '@/lib/correduria/pack-otro-vehiculo'
+import { personaDeFicha, tienePolizaAllianzEnVigor } from '@central/module-seguros'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import AutoNuevo from './AutoNuevo'
+import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
+import { paramTexto } from '../../../oportunidad/[id]/variante'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,8 +38,13 @@ export const maxDuration = 180
 export default async function AutoNuevoPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id: clienteId } = await params
   // `?matricula=` la trae el asistente de Telegram, leída de la póliza: no se teclea otra vez.
-  const mq = (await searchParams).matricula
-  const matriculaInicial = typeof mq === 'string' ? mq.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) : ''
+  const sp = await searchParams
+  const mq = sp.matricula
+  // Variante de un riesgo (29/09/2026): `?oportunidad=` cuelga la tarificación de esa oportunidad
+  // y trae sus figuras (propietario, conductores) desde sus fichas.
+  const carga = await cargarVariante(paramTexto(sp.oportunidad), paramTexto(sp.tarificacion), clienteId, 'auto')
+  const matriculaRiesgo = carga.estado === 'ok' ? carga.riesgo.oportunidad.matricula : null
+  const matriculaInicial = (typeof mq === 'string' ? mq : matriculaRiesgo ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)
 
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
@@ -47,13 +58,24 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         ← Ficha del cliente
       </Link>
       <PageHeader titulo="Presupuesto de auto" icono={<Car size={20} strokeWidth={1.75} />} sub={sub} />
+      {carga.estado === 'ok' && <FranjaVariante variante={carga.variante} />}
     </div>
   )
+
+  if (carga.estado === 'error') {
+    return (
+      <Pagina>
+        {cabecera}
+        <ErrorVariante oportunidadId={carga.oportunidadId} mensaje={carga.mensaje} />
+      </Pagina>
+    )
+  }
+  const variante = carga.estado === 'ok' ? carga.variante : null
 
   // Los dos del carnet NO son bloqueantes a propósito: si no se pueden leer,
   // viaja el supuesto de siempre (B, España) y la pantalla lo dice en el hueco
   // del campo. Bloquear la cotización por ellos sería peor que el problema.
-  const [garajes, civiles, zonasCarnet, tiposCarnet, pre, companiasResp, anteriores] = await Promise.all([
+  const [garajes, civiles, zonasCarnet, tiposCarnet, pre, companiasResp, anteriores, ops] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
     catalogoAsegura({ tipo: 'zonas-carnet' }),
@@ -61,7 +83,12 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
     precalificarAutoNuevaAsegura({ clienteId }),
     companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
     catalogoAsegura({ tipo: 'companias-anteriores' }),
+    // El seguro que tiene hoy, leído de su póliza (29/09/2026). Si no se puede leer, no se precarga.
+    oportunidadesClienteAsegura(clienteId).then((r) => interpretarOportunidadesCliente(r.status, r.json)).catch(() => null),
   ])
+  const anterior = ops?.estado === 'ok'
+    ? anteriorParaTarificar(ops.oportunidades, { ramo: 'auto', oportunidadId: variante?.oportunidadId ?? null })
+    : null
   // `null` = no se ha podido leer el directorio de compañías (puerto caído o sin
   // configurar): la pantalla lo dice y el corredor teclea el código a mano en
   // vez de ver un desplegable vacío sin explicación.
@@ -106,6 +133,7 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         clienteId={clienteId}
         matriculaInicial={matriculaInicial}
         etiquetaCliente={pre.pre.etiquetaCliente}
+        seguroImputado={pre.pre.seguroAnterior}
         faltanInicial={pre.pre.faltan}
         garajes={garajes.estado === 'ok' ? garajes.opciones : []}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}
@@ -117,6 +145,15 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         consumo={pre.pre.consumo}
         simulacion={pre.pre.simulacion}
         companias={companias}
+        variante={variante}
+        datosRiesgo={carga.estado === 'ok' ? carga.riesgo.datosVehiculo : null}
+        anterior={anterior?.estado === 'ok' ? anterior.anterior : null}
+        anteriorAmbiguo={anterior?.estado === 'ambiguo' ? anterior.n : null}
+        // Pack coche + moto (03/10/2026): la otra oportunidad del cliente y, para `insuredFamilyInAllianz`, si tiene
+        // póliza EN VIGOR en Allianz. `null` = no se ha podido leer (nunca «no tiene»).
+        otroVehiculo={ops?.estado === 'ok' ? otroVehiculoDelCliente(ops.oportunidades, 'auto') : null}
+        carteraAllianz={ficha.estado === 'ok' ? tienePolizaAllianzEnVigor(ficha.ficha.polizas) : null}
+        fichaTomador={ficha.estado === 'ok' ? { identidad: ficha.ficha.identidad, documentos: ficha.ficha.documentos, contacto: ficha.ficha.contacto, juridica: personaDeFicha({ tipoPersona: ficha.ficha.identidad?.tipoPersona, dniEnmascarado: ficha.ficha.identidad?.dniEnmascarado, segmento: ficha.ficha.segmento }) === 'juridica' } : null}
       />
     </Pagina>
   )

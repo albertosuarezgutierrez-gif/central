@@ -9,6 +9,8 @@ import type { Retarificabilidad, IncidenciaCalidad } from '@central/module-segur
 import { esReglaCalidad } from '@central/module-seguros'
 import { leerRetarificacion } from './ficha-asegura.ts'
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { interpretarOportunidadesAviso, type LecturaOportunidadesAviso } from './correduria/oportunidades-aviso.ts'
+import { interpretarCola, interpretarResolucion, type ColaRevision, type Resolucion as ResolucionRevision } from './correduria/emisiones-revision.ts'
 
 export type MotivoPuerto = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
 
@@ -21,6 +23,8 @@ export const CAUSAS_ASEGURA: Record<string, string> = {
   esquema: 'falta una tabla o columna en el schema seguros',
   sin_correduria: 'la base responde pero no hay ninguna fila en corredurias',
   otro: 'error no clasificado; mira los logs de central-asegura en Vercel',
+  descuento_invalido: 'el descuento tecleado está fuera de los límites de la compañía; no se ha llamado a nadie',
+  descuento_no_disponible: 'esta compañía o ramo no admite ajustar el descuento; no se ha llamado a nadie',
 }
 
 export function describirCausaAsegura(causa: string | undefined): string | null {
@@ -94,6 +98,12 @@ export type Hallazgo = {
   /** Pólizas por CIMA. `null` = no se contó, NO 0. */
   polizasCima: number | null
   ultimoVencimiento: string | null
+  /** Oportunidades activas (abiertas y no aparcadas). `null` = asegura no lo informa o no pudo contarlas, NO 0. */
+  oportunidadesAbiertas: number | null
+  /** Abiertas pero aparcadas. `null` = no se sabe (asegura anterior o fallo), NO 0. */
+  oportunidadesAparcadas: number | null
+  /** Tarea de seguimiento más próxima. `null` = no hay, o no se pudo mirar. */
+  siguientePaso: SiguientePaso | null
   vitalidad: Vitalidad
   /** `null` = asegura no informa hermanas (versión vieja, o no se pudo mirar).
    *  `[]` = se miró y no hay. Pintarlos igual diría «no hay duplicados». */
@@ -106,6 +116,20 @@ export type Hallazgo = {
    * vez de afirmar que no hay forma de contactar.
    */
   contacto: Contacto | null
+}
+
+export type SiguientePaso = { oportunidadId: string; estado: string; tipo: string; fechaLimite: string }
+
+/** Un paso a medias (sin fecha o sin estado) no se pinta: se descarta entero. */
+function siguientePaso(v: unknown): SiguientePaso | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const oportunidadId = cadena(o.oportunidadId)
+  const estado = cadena(o.estado)
+  const tipo = cadena(o.tipo)
+  const fechaLimite = cadena(o.fechaLimite)
+  if (!oportunidadId || !estado || !tipo || !fechaLimite || !/^\d{4}-\d{2}-\d{2}$/.test(fechaLimite)) return null
+  return { oportunidadId, estado, tipo, fechaLimite }
 }
 
 export type Contacto = {
@@ -215,6 +239,9 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
         porque: cadena(x.porque) ?? '',
         polizasCima: entero(x.polizasCima),
         ultimoVencimiento: cadena(x.ultimoVencimiento),
+        oportunidadesAbiertas: entero(x.oportunidadesAbiertas),
+        oportunidadesAparcadas: entero(x.oportunidadesAparcadas),
+        siguientePaso: siguientePaso(x.siguientePaso),
         vitalidad: vitalidad(x.vitalidad),
         hermanas: hs,
         contacto: interpretarContacto(x.contacto),
@@ -416,7 +443,7 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-async function pedir(path: string): Promise<{ status: number; json: unknown } | null> {
+async function pedir(path: string, timeoutMs = 15_000): Promise<{ status: number; json: unknown } | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
@@ -428,12 +455,12 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
     // pantalla decía «no se pudo llegar a asegura (timeout, DNS o TLS)» — una
     // causa falsa, que manda a mirar el DNS cuando lo roto era el pool. Es el
     // mismo 15 s que usan actividad, comisiones y compañías.
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
 }
 
-async function pedirPost(path: string, body: Record<string, unknown>): Promise<{ status: number; json: unknown } | null> {
+async function pedirPost(path: string, body: Record<string, unknown>, timeoutMs = 15_000): Promise<{ status: number; json: unknown } | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
@@ -441,9 +468,90 @@ async function pedirPost(path: string, body: Record<string, unknown>): Promise<{
     headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
     body: JSON.stringify(body),
     cache: 'no-store',
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
+}
+
+/**
+ * `POST /api/operador/recibos/devolucion` — registra las devoluciones que la compañía avisa por correo.
+ * Tres desenlaces: `ok` (con la respuesta) · `rechazado` (asegura contestó que NO: el lote no se
+ * registró, con su motivo) · `sin_respuesta` (config, red o 5xx: no se sabe cuánto se guardó).
+ */
+export type RegistroDevoluciones =
+  | { estado: 'ok'; json: unknown }
+  | { estado: 'rechazado'; motivo: string }
+  | { estado: 'sin_respuesta'; motivo: string }
+
+export async function registrarDevolucionesAsegura(devoluciones: unknown[], mensajeId: string | null): Promise<RegistroDevoluciones> {
+  try {
+    const r = await pedirPost('/api/operador/recibos/devolucion', { devoluciones, mensajeId })
+    if (r === null) return { estado: 'sin_respuesta', motivo: 'falta ASEGURA_OPERADOR_SECRET' }
+    if (r.status === 200) return { estado: 'ok', json: r.json }
+    const j = (r.json ?? {}) as Record<string, unknown>
+    const motivo = typeof j.motivo === 'string' ? j.motivo : `HTTP ${r.status}`
+    return r.status >= 400 && r.status < 500 ? { estado: 'rechazado', motivo } : { estado: 'sin_respuesta', motivo }
+  } catch {
+    return { estado: 'sin_respuesta', motivo: 'no se pudo llegar a asegura' }
+  }
+}
+
+export type ResolucionDevolucion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo: string }
+
+/** `PATCH /api/operador/recibos/devolucion` — «cobrado de nuevo» a mano. El actor lo pone el servidor. */
+export async function resolverDevolucionAsegura(reciboId: string, actor: string): Promise<ResolucionDevolucion> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/recibos/devolucion`, {
+      method: 'PATCH',
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
+      body: JSON.stringify({ reciboId, actor }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (res.status === 200) return { estado: 'ok' }
+    const j = ((await res.json().catch(() => null)) ?? {}) as Record<string, unknown>
+    return { estado: 'error', motivo: typeof j.motivo === 'string' ? j.motivo : `HTTP ${res.status}` }
+  } catch {
+    return { estado: 'error', motivo: 'no se pudo llegar a asegura' }
+  }
+}
+
+export type BajaDevolucion =
+  | { estado: 'ok'; vence: string | null; llamada: string | null }
+  | { estado: 'sin_configurar' }
+  | { estado: 'rechazado'; motivo: string }
+  | { estado: 'sin_respuesta'; motivo: string }
+
+/**
+ * `PATCH /api/operador/recibos/devolucion {accion:'baja'}` — «el cliente se va». El actor lo pone el
+ * servidor. `sin_respuesta` (red o 5xx) NO es «no se hizo»: la transacción pudo terminar.
+ */
+export async function bajaPorDevolucionAsegura(reciboId: string, motivo: string, nota: string | null, actor: string): Promise<BajaDevolucion> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/recibos/devolucion`, {
+      method: 'PATCH',
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
+      body: JSON.stringify({ reciboId, accion: 'baja', motivo, nota, actor }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
+    const j = ((await res.json().catch(() => null)) ?? {}) as Record<string, unknown>
+    if (res.status === 200 && j.estado === 'ok') {
+      return {
+        estado: 'ok',
+        vence: typeof j.vence === 'string' ? j.vence : null,
+        llamada: typeof j.llamada === 'string' ? j.llamada : null,
+      }
+    }
+    const m = typeof j.motivo === 'string' ? j.motivo : `HTTP ${res.status}`
+    return res.status >= 400 && res.status < 500 ? { estado: 'rechazado', motivo: m } : { estado: 'sin_respuesta', motivo: m }
+  } catch {
+    return { estado: 'sin_respuesta', motivo: 'no se pudo llegar a asegura' }
+  }
 }
 
 export type DescarteRetencion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo?: string }
@@ -569,6 +677,32 @@ export async function diagnosticoProyectoCodeoscopic(projectId: string): Promise
     return interpretarDiagnosticoProyecto(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ─── Presupuestos del cliente en Avant2 (web o plataforma, 29/09/2026) ──────
+
+/**
+ * Lo que contesta asegura, TAL CUAL, con su status: la pantalla distingue «no hay proyectos»
+ * (`ok` con lista vacía) de «no se ha podido mirar» (cualquier otra cosa). Gratis: solo lecturas.
+ * Hasta 11 lecturas al vendor en paralelo, de ahí los 45 s.
+ */
+export async function proyectosAvant2Cliente(clienteId: string): Promise<{ status: number; json: unknown }> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/proyectos-cliente?clienteId=${encodeURIComponent(clienteId)}`, 45_000)
+    return r ?? { status: 503, json: { estado: 'error', mensaje: 'falta ASEGURA_OPERADOR_SECRET' } }
+  } catch {
+    return { status: 502, json: { estado: 'error', mensaje: 'no se pudo llegar a asegura' } }
+  }
+}
+
+/** Trae un proyecto de la web de Avant2 como tarificación. No vuelve a tarificar (0€). */
+export async function traerProyectoAvant2(clienteId: string, projectId: string, solicitadoPor: string): Promise<{ status: number; json: unknown }> {
+  try {
+    const r = await pedirPost('/api/operador/codeoscopic/proyectos-cliente', { clienteId, projectId, solicitadoPor }, 30_000)
+    return r ?? { status: 503, json: { estado: 'error', mensaje: 'falta ASEGURA_OPERADOR_SECRET' } }
+  } catch {
+    return { status: 502, json: { estado: 'error', mensaje: 'se cortó la conexión con asegura: recarga la lista antes de repetir' } }
   }
 }
 
@@ -711,10 +845,14 @@ export type SustitucionPendiente = {
   polizaNueva: { id: string; aseguradora: string; numeroPoliza: string | null } | null
 }
 
+/** Póliza sustituida que sigue viva (posible doble seguro). Sin datos personales. */
+export type DobleSeguroPendiente = { polizaViejaId: string; polizaNuevaId: string; texto: string }
+
 export type Sustituciones =
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: MotivoPuerto }
-  | { estado: 'ok'; filas: SustitucionPendiente[] }
+  /** `dobleSeguro`: `null` = asegura no lo manda o no pudo leerlo (≠ `[]`, ninguno). */
+  | { estado: 'ok'; filas: SustitucionPendiente[]; dobleSeguro: DobleSeguroPendiente[] | null }
 
 function leerRelacionadaPuerto(v: unknown): { id: string; aseguradora: string; numeroPoliza: string | null } | null {
   if (typeof v !== 'object' || v === null) return null
@@ -751,7 +889,15 @@ export function interpretarSustituciones(status: number, json: unknown): Sustitu
         })
         .filter((x): x is SustitucionPendiente => x !== null)
     : []
-  return { estado: 'ok', filas }
+  const dobleSeguro = Array.isArray(o.dobleSeguro)
+    ? o.dobleSeguro.flatMap((f): DobleSeguroPendiente[] => {
+        if (typeof f !== 'object' || f === null) return []
+        const x = f as Record<string, unknown>
+        const polizaViejaId = cadena(x.polizaViejaId), polizaNuevaId = cadena(x.polizaNuevaId), texto = cadena(x.texto)
+        return polizaViejaId && polizaNuevaId && texto ? [{ polizaViejaId, polizaNuevaId, texto }] : []
+      })
+    : null
+  return { estado: 'ok', filas, dobleSeguro }
 }
 
 export async function sustitucionesAsegura(): Promise<Sustituciones> {
@@ -759,6 +905,313 @@ export async function sustitucionesAsegura(): Promise<Sustituciones> {
     const r = await pedir('/api/operador/sustituciones')
     if (r === null) return { estado: 'sin_configurar' }
     return interpretarSustituciones(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Vigía de duplicados vivos (03/10/2026) ─────────────────────────────────
+//
+// `GET /api/operador/duplicados/vivos`: números de póliza repetidos entre filas vivas (sin fusionar, sin
+// comodines). Sin datos personales. 🚨 Un fallo de lectura NUNCA es «0 duplicados»: es `error`.
+
+export type DuplicadosVivosPuerto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'ok'; total: number; muestra: Array<{ numero: string; filas: number; dgs: string | null }> }
+
+export function interpretarDuplicados(status: number, json: unknown): DuplicadosVivosPuerto {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: 'asegura_error' }
+  const total = entero(o.total)
+  // Todo-o-nada: sin total o con una fila ilegible NO se devuelve una cuenta a medias.
+  if (total === null || !Array.isArray(o.muestra)) return { estado: 'error', motivo: 'respuesta_ilegible' }
+  const muestra: Array<{ numero: string; filas: number; dgs: string | null }> = []
+  for (const f of o.muestra) {
+    const x = typeof f === 'object' && f !== null ? (f as Record<string, unknown>) : null
+    const numero = x ? cadena(x.numero) : null
+    const filas = x ? entero(x.filas) : null
+    if (numero === null || filas === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    muestra.push({ numero, filas, dgs: cadena(x?.dgs) })
+  }
+  return { estado: 'ok', total, muestra }
+}
+
+// ── Bandeja de revisión manual de pólizas (03/10/2026) ─────────────────────
+//
+// `GET/POST /api/operador/revision`. Los casos viven en `seguros.operational_events` de asegura.
+// Sin PII: número, compañía, estado, fechas y nº de recibos/siniestros. «Son la misma» NO fusiona:
+// solo registra la decisión (la fusión la aplica una sesión con el método CTE y el OK de Alberto).
+// 🚨 Un fallo de lectura NUNCA es «no hay casos»: es `error`.
+
+export type DecisionRevision = 'misma' | 'distintas' | 'descartar'
+
+export type PolizaRevision = {
+  id: string
+  numeroPoliza: string | null
+  aseguradora: string
+  dgs: string | null
+  estado: string
+  fechaInicio: string | null
+  fechaVencimiento: string | null
+  recibos: number
+  siniestros: number
+}
+
+export type CasoRevision = {
+  casoId: string
+  numero: string
+  motivo: string
+  abiertoAt: string
+  polizas: PolizaRevision[]
+  /** `null` = no se pudo medir (no es «0 sin leer»). */
+  polizasNoLeidas: number | null
+}
+
+export type BandejaRevision =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'ok'; casos: CasoRevision[] }
+
+function leerPolizaRevision(v: unknown): PolizaRevision | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const id = cadena(o.id)
+  const recibos = entero(o.recibos)
+  const siniestros = entero(o.siniestros)
+  if (id === null || recibos === null || siniestros === null) return null
+  return {
+    id, numeroPoliza: cadena(o.numeroPoliza), aseguradora: cadena(o.aseguradora) ?? '', dgs: cadena(o.dgs),
+    estado: cadena(o.estado) ?? '', fechaInicio: cadena(o.fechaInicio), fechaVencimiento: cadena(o.fechaVencimiento),
+    recibos, siniestros,
+  }
+}
+
+export function interpretarRevision(status: number, json: unknown): BandejaRevision {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (o.estado !== 'ok' || !Array.isArray(o.casos)) return { estado: 'error', motivo: o.estado === 'ok' ? 'respuesta_ilegible' : 'asegura_error' }
+  const casos: CasoRevision[] = []
+  for (const f of o.casos) {
+    const x = typeof f === 'object' && f !== null ? (f as Record<string, unknown>) : null
+    const casoId = x ? cadena(x.casoId) : null
+    const polizas = x && Array.isArray(x.polizas) ? x.polizas.map(leerPolizaRevision) : null
+    // Todo-o-nada: un caso ilegible hace ilegible la lista (callar un caso sería decir «no hay»).
+    if (x === null || casoId === null || polizas === null || polizas.some((p) => p === null)) {
+      return { estado: 'error', motivo: 'respuesta_ilegible' }
+    }
+    casos.push({
+      casoId, numero: cadena(x.numero) ?? '', motivo: cadena(x.motivo) ?? '', abiertoAt: cadena(x.abiertoAt) ?? '',
+      polizas: polizas as PolizaRevision[], polizasNoLeidas: entero(x.polizasNoLeidas),
+    })
+  }
+  return { estado: 'ok', casos }
+}
+
+export async function revisionAsegura(): Promise<BandejaRevision> {
+  try {
+    const r = await pedir('/api/operador/revision')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarRevision(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+export type ResolucionBandejaPolizas =
+  | { estado: 'ok' }
+  | { estado: 'sin_configurar' }
+  /** `invalido` 422 · `no_existe` 404 · `ya_resuelto` 409 · `error`: no se sabe si se guardó. */
+  | { estado: 'invalido' | 'no_existe' | 'ya_resuelto' | 'error' }
+
+export async function resolverRevisionAsegura(casoId: string, decision: DecisionRevision, nota?: string): Promise<ResolucionBandejaPolizas> {
+  try {
+    const r = await pedirPost('/api/operador/revision', { casoId, decision, ...(nota ? { nota } : {}) })
+    if (r === null) return { estado: 'sin_configurar' }
+    if (r.status === 200) return { estado: 'ok' }
+    const e = typeof r.json === 'object' && r.json !== null ? (r.json as Record<string, unknown>).estado : null
+    return e === 'invalido' || e === 'no_existe' || e === 'ya_resuelto' ? { estado: e } : { estado: 'error' }
+  } catch {
+    return { estado: 'error' }
+  }
+}
+
+// ── Emisiones RETENIDAS por la compañía («riesgo condicionado», 30/09/2026) ──
+//
+// Alberto emite a veces desde la WEB de Avant2 y la compañía deja la póliza retenida. asegura
+// revisa las que siguen así (`POST /api/operador/codeoscopic/retenidas`) y devuelve qué ha
+// cambiado. 🚨 Un fallo de lectura NUNCA es «0 retenidas»: es `error`, y el cron lo pone en rojo.
+
+export type CambioRetenida = {
+  projectId: string
+  clienteId: string
+  cliente: string
+  compania: string | null
+  antes: string | null
+  despues: string | null
+  numeroPoliza: string | null
+  polizaId: string | null
+  descripcion: string
+}
+
+export type SigueRetenida = { projectId: string; clienteId: string; cliente: string; compania: string | null; desde: string | null }
+
+export type Retenidas =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto | string }
+  | {
+      estado: 'ok'
+      revisadas: number
+      cambios: CambioRetenida[]
+      siguen: SigueRetenida[]
+      errores: { projectId: string; mensaje: string }[]
+    }
+
+export function interpretarRetenidas(status: number, json: unknown): Retenidas {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  const o = typeof json === 'object' && json !== null && !Array.isArray(json) ? (json as Record<string, unknown>) : null
+  if (o?.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (status !== 200 || !o) {
+    return { estado: 'error', motivo: cadena(o?.mensaje) ?? (status === 200 ? 'respuesta_ilegible' : 'asegura_error') }
+  }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: cadena(o.mensaje) ?? 'asegura_error' }
+  // Sin las tres listas no se sabe qué pasó: una respuesta a medias no es «no ha cambiado nada».
+  if (!Array.isArray(o.cambios) || !Array.isArray(o.siguen) || entero(o.revisadas) === null) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  const obj = (v: unknown): Record<string, unknown> | null =>
+    typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
+  const errores: { projectId: string; mensaje: string }[] = Array.isArray(o.errores)
+    ? o.errores.flatMap((e) => {
+        const x = obj(e)
+        return x ? [{ projectId: cadena(x.projectId) ?? '?', mensaje: cadena(x.mensaje) ?? 'sin detalle' }] : []
+      })
+    : []
+  const cambios: CambioRetenida[] = []
+  for (const c of o.cambios) {
+    const x = obj(c)
+    const projectId = cadena(x?.projectId)
+    const clienteId = cadena(x?.clienteId)
+    // Un cambio ilegible no se calla: pasa a errores, para que el aviso no lo pierda en silencio.
+    if (!x || !projectId || !clienteId) {
+      errores.push({ projectId: projectId ?? '?', mensaje: 'cambio con forma desconocida' })
+      continue
+    }
+    cambios.push({
+      projectId,
+      clienteId,
+      cliente: cadena(x.cliente) ?? '(sin nombre)',
+      compania: cadena(x.compania),
+      antes: cadena(x.antes),
+      despues: cadena(x.despues),
+      numeroPoliza: cadena(x.numeroPoliza),
+      polizaId: cadena(x.polizaId),
+      descripcion: cadena(x.descripcion) ?? '',
+    })
+  }
+  const siguen: SigueRetenida[] = o.siguen.flatMap((c) => {
+    const x = obj(c)
+    const projectId = cadena(x?.projectId)
+    const clienteId = cadena(x?.clienteId)
+    if (!x || !projectId || !clienteId) return []
+    return [{ projectId, clienteId, cliente: cadena(x.cliente) ?? '(sin nombre)', compania: cadena(x.compania), desde: cadena(x.desde) }]
+  })
+  // Una fila de `siguen` ilegible no se pierde del recuento: se cuenta con lo que haya.
+  const sinForma = o.siguen.length - siguen.length
+  for (let i = 0; i < sinForma; i++) errores.push({ projectId: '?', mensaje: 'retenida con forma desconocida' })
+  return { estado: 'ok', revisadas: entero(o.revisadas) as number, cambios, siguen, errores }
+}
+
+/** Revisa en Avant2 las emisiones retenidas. POST sin cuerpo (lee Avant2, no tarifica). */
+export async function retenidasAsegura(): Promise<Retenidas> {
+  try {
+    const r = await pedirPost('/api/operador/codeoscopic/retenidas', {}, 55_000)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarRetenidas(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/**
+ * Descubrimiento AUTOMÁTICO de emisiones de Avant2 (03/10/2026). Solo lee el vendor (gratis); asegura
+ * registra lo que puede demostrar y deja el resto en revisión. La lectura de la respuesta es PURA y
+ * vive en `lib/correduria/descubrir-emisiones-aviso.ts`. Timeout largo: asegura puede tardar hasta
+ * ~4 min (su `maxDuration` es 300 y corta su propia pasada a los 240 s).
+ */
+export async function descubrirEmisionesAsegura(): Promise<{ status: number; json: unknown } | null> {
+  return pedirPost('/api/operador/codeoscopic/descubrir-emisiones', {}, 280_000)
+}
+
+/**
+ * Cola de REVISIÓN del descubrimiento (03/10/2026): las emisiones de Avant2 que no se pudieron registrar
+ * solas. La lectura de la respuesta es PURA (`lib/correduria/emisiones-revision.ts`); un fallo es
+ * `error`, nunca «cola vacía».
+ */
+export async function emisionesRevisionAsegura(limite = 50, desde = 0): Promise<ColaRevision> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/emisiones-revision?limite=${limite}&desde=${desde}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarCola(r.status, r.json, desde)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** «Marcar revisada»: idempotente en asegura (`resuelta`/`ya_resuelta`). El actor viaja en `x-actor`. */
+export async function resolverEmisionRevisionAsegura(id: string, nota: string | null): Promise<ResolucionRevision> {
+  try {
+    const r = await pedirPost(`/api/operador/codeoscopic/emisiones-revision/${encodeURIComponent(id)}/resolver`, nota ? { nota } : {})
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarResolucion(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** Vista previa (GET, gratis) de registrar en la intranet una emisión hecha en la web de Avant2. */
+export async function emisionExternaVista(
+  q: { projectId: string; clienteId: string; oportunidadId?: string | null },
+): Promise<{ status: number; json: unknown }> {
+  const qs = new URLSearchParams({ projectId: q.projectId, clienteId: q.clienteId })
+  if (q.oportunidadId) qs.set('oportunidadId', q.oportunidadId)
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/emision-externa?${qs.toString()}`, 45_000)
+    return r ?? { status: 503, json: { estado: 'error', mensaje: 'falta ASEGURA_OPERADOR_SECRET' } }
+  } catch {
+    return { status: 502, json: { estado: 'error', mensaje: 'no se pudo llegar a asegura' } }
+  }
+}
+
+/** Registra la emisión externa. `actor` lo pone el servidor con la sesión. */
+export async function emisionExternaRegistrar(
+  b: { projectId: string; clienteId: string; oportunidadId?: string | null; actor: string },
+): Promise<{ status: number; json: unknown }> {
+  const body: Record<string, unknown> = { projectId: b.projectId, clienteId: b.clienteId, confirmado: true, actor: b.actor }
+  if (b.oportunidadId) body.oportunidadId = b.oportunidadId
+  try {
+    const r = await pedirPost('/api/operador/codeoscopic/emision-externa', body, 45_000)
+    return r ?? { status: 503, json: { estado: 'error', mensaje: 'falta ASEGURA_OPERADOR_SECRET' } }
+  } catch {
+    return { status: 502, json: { estado: 'error', mensaje: 'se cortó la conexión con asegura: no sé si se ha registrado. Recarga la lista antes de repetir' } }
+  }
+}
+
+// ── Oportunidades a 45 días (regla única, 29/09/2026) ──────────────────────
+export async function oportunidadesAvisoAsegura(): Promise<LecturaOportunidadesAviso> {
+  try {
+    const r = await pedir('/api/operador/oportunidades-aviso')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarOportunidadesAviso(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }

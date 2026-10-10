@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { AlertTriangle, Plus, House } from 'lucide-react'
 
 type Inmueble = { refCompleta: string; refParcela: string; planta: string | null; puerta: string | null; codigoPostal: string | null }
 type Precal = {
@@ -86,7 +87,7 @@ export default function HogarCatastro() {
 
 function Resultado({ r, onElegir }: { r: Respuesta; onElegir: (rc: string) => void }) {
   if (r.estado === 'error') {
-    return <Caja tono="error" titulo="⚠️ El Catastro no ha respondido">{r.motivo}. No significa que la vivienda no exista: no se ha podido mirar.</Caja>
+    return <Caja tono="error" titulo={<><AlertTriangle size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom' }} />El Catastro no ha respondido</>}>{r.motivo}. No significa que la vivienda no exista: no se ha podido mirar.</Caja>
   }
   if (r.estado === 'no_encontrado') {
     return <Caja tono="aviso" titulo="No hay nada con esos datos">Se ha consultado y el Catastro no devuelve ningún inmueble. Prueba con la referencia catastral (está en el recibo del IBI).</Caja>
@@ -143,7 +144,7 @@ function Resultado({ r, onElegir }: { r: Respuesta; onElegir: (rc: string) => vo
       )}
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
         Este bloque solo consulta el Catastro (gratis, no gasta nada). Para pedir precio de verdad, busca al
-        cliente y en su ficha usa «➕ Nueva oportunidad ▾ → 🏠 Hogar» — ya está conectado con Codeoscopic. El
+        cliente y en su ficha usa «{<Plus size={14} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 2, marginLeft: 2, verticalAlign: 'text-bottom' }} />} Nueva oportunidad ▾ → {<House size={14} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 2, marginLeft: 2, verticalAlign: 'text-bottom' }} />} Hogar» — ya está conectado con Codeoscopic. El
         recuadro de abajo dice si hogar tarifica hoy para esta organización.
       </p>
     </div>
@@ -159,7 +160,7 @@ function Dato({ label, valor }: { label: string; valor: string | null }) {
   )
 }
 
-function Caja({ tono, titulo, children }: { tono: 'ok' | 'aviso' | 'error' | 'neutro'; titulo: string; children: React.ReactNode }) {
+function Caja({ tono, titulo, children }: { tono: 'ok' | 'aviso' | 'error' | 'neutro'; titulo: React.ReactNode; children: React.ReactNode }) {
   const color = tono === 'error' ? '#d66' : tono === 'aviso' ? '#c96' : tono === 'ok' ? 'var(--positive, #2a7)' : 'var(--border)'
   return (
     <div style={{ border: `1px solid ${color}`, borderRadius: 12, padding: 14 }}>

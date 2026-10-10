@@ -1,5 +1,7 @@
-import { TiraAccesos, type Acceso, type Tono } from '../../Accesos'
-import { TABS_FICHA, type TabFicha } from './tabs'
+import { Shield, Briefcase, Bell, ClipboardList, Users, Paperclip, Mail, FileText, Clock } from 'lucide-react'
+import { TiraAccesos, type Acceso } from '../../Accesos'
+import { TABS_FICHA, type DetalleAcceso, type TabFicha } from './tabs'
+import { Ico } from '../../iconos'
 
 export { tabDeParametro, type TabFicha } from './tabs'
 
@@ -12,35 +14,34 @@ export { tabDeParametro, type TabFicha } from './tabs'
  * repite la llamada al puerto de asegura, y prefetchear nueve serían nueve
  * consultas a la cartera por pasar el ratón por encima.
  *
- * El contador `null` NO se pinta: «no se ha podido leer» no es «0».
+ * El texto de cada baldosa sale de `detallesAccesos` (puro, en `tabs.ts`):
+ * lo que no se ha podido leer no se pinta, y un cero leído se dice.
  */
 
-const ACCESOS: Record<TabFicha, { icono: string; titulo: string }> = {
-  resumen: { icono: '🛡️', titulo: 'Sus seguros' },
-  oportunidades: { icono: '💼', titulo: 'Oportunidades' },
-  pendiente: { icono: '🔔', titulo: 'Pendiente' },
-  polizas: { icono: '📋', titulo: 'Todas las pólizas' },
-  contactos: { icono: '👥', titulo: 'Contactos' },
-  documentos: { icono: '📎', titulo: 'Documentos' },
-  correos: { icono: '✉️', titulo: 'Correos' },
-  notas: { icono: '📝', titulo: 'Notas' },
-  historial: { icono: '🕘', titulo: 'Historial' },
+const ACCESOS: Record<TabFicha, { icono: React.ReactNode; titulo: string }> = {
+  resumen: { icono: <Ico i={Shield} />, titulo: 'Sus seguros' },
+  oportunidades: { icono: <Ico i={Briefcase} />, titulo: 'Oportunidades' },
+  pendiente: { icono: <Ico i={Bell} />, titulo: 'Pendiente' },
+  polizas: { icono: <Ico i={ClipboardList} />, titulo: 'Todas las pólizas' },
+  contactos: { icono: <Ico i={Users} />, titulo: 'Contactos' },
+  documentos: { icono: <Ico i={Paperclip} />, titulo: 'Documentos' },
+  correos: { icono: <Ico i={Mail} />, titulo: 'Correos' },
+  notas: { icono: <Ico i={FileText} />, titulo: 'Notas' },
+  historial: { icono: <Ico i={Clock} />, titulo: 'Historial' },
 }
 
-export type ContadoresTabs = Partial<Record<TabFicha, { n: number | null; tono?: Tono; texto?: (n: number) => string }>>
-
-export default function FichaTabs({ clienteId, activa, contadores }: {
+export default function FichaTabs({ clienteId, activa, detalles }: {
   clienteId: string
   activa: TabFicha
-  contadores: ContadoresTabs
+  detalles: Partial<Record<TabFicha, DetalleAcceso>>
 }) {
   const accesos: (Acceso & { href: string })[] = TABS_FICHA.map(k => {
-    const c = contadores[k]
+    const d = detalles[k]
     return {
       id: k,
       ...ACCESOS[k],
-      detalle: c && c.n !== null && c.n > 0 ? (c.texto ? c.texto(c.n) : String(c.n)) : null,
-      tono: c?.tono,
+      detalle: d?.texto ?? null,
+      tono: d?.tono,
       href: k === 'resumen' ? `/correduria/cliente/${clienteId}` : `/correduria/cliente/${clienteId}?tab=${k}`,
     }
   })

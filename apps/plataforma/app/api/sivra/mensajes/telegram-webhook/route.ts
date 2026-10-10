@@ -12,22 +12,25 @@ import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
 import { tgAvisoBotones } from '@/lib/telegram'
 import { reponerVentanaPin } from '@/lib/domotica/reponer-ventana'
 import { PREFIJO_CALLBACK_DOMOTICA, ACCION_VENTANA, textoResultadoReponer } from '@/lib/domotica/reponer-ventana-puro'
-import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
-import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
+import { confirmarEnviado, confirmarDescartado, confirmarRespondidoFuera, confirmarEsMio, reproponerBorrador, aceptarCambioHorario, negativaListaParaEnviar } from '@/lib/sivra/agente-huesped/telegram-msg'
+import { horaDeCallback } from '@/lib/sivra/agente-huesped/cambio-horario'
+import { aprenderCorreccion, marcarEnviadoLog } from '@/lib/sivra/agente-huesped/aprender'
 import { resolverHecho } from '@/lib/sivra/agente-huesped/hechos'
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
 import { redactarDesdeIdea } from '@/lib/sivra/agente-huesped/redactar'
 import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
-import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
+import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal, aplicarSinIvaExtranjero } from '@/lib/agente-facturas/pagos'
+import { PREFIJO_IVA, interpretarIva } from '@/lib/agente-facturas/anomalia-callbacks'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
-import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, registrarDocumentoTg, albumDeCorreduria, resolverDocumentoDudoso } from '@/lib/correduria-asistente-telegram'
+import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, tarificarDesdeBoton, registrarDocumentoTg, albumDeCorreduria, resolverDocumentoDudoso } from '@/lib/correduria-asistente-telegram'
 import { conCita, esRespuestaACorreduria, pieDeCorreduria, tienePrefijo } from '@/lib/correduria-asistente'
 import { turnoDeNota } from '@/lib/correduria-asistente'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
 import { esPreguntaPatrimonio, esComandoPatrimonio } from '@/lib/patrimonio-chat'
 import { decidirBlogPr } from '@/lib/correduria/blog-pr'
+import { ACCION_BOTON_TOPE, ampliarTopeAvant2 } from '@/lib/correduria/tope-avant2'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -125,6 +128,24 @@ type Pendiente = {
 async function getPendiente(bookingId: string): Promise<Pendiente | null> {
   const rows = await prisma.$queryRaw<Pendiente[]>(Prisma.sql`SELECT * FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId} LIMIT 1`)
   return rows[0] || null
+}
+
+/**
+ * Reclamo ATÓMICO del pendiente (doble pulsación / reintento de Telegram): el primero que borra la
+ * fila gana y es el único que envía; el segundo recibe `null`. Si luego el envío no sale, quien
+ * reclamó DEBE devolverlo con `restaurarPendiente` para que los botones sigan valiendo.
+ */
+async function reclamarPendiente(bookingId: string): Promise<(Pendiente & Record<string, unknown>) | null> {
+  const rows = await prisma.$queryRaw<(Pendiente & Record<string, unknown>)[]>(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId} RETURNING *`)
+  return rows[0] || null
+}
+
+async function restaurarPendiente(p: Pendiente & Record<string, unknown>): Promise<void> {
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, esperando_retoque, idioma, pregunta, hueco_guia, no_requiere_respuesta)
+    VALUES (${p.booking_id}, ${p.property_id}, ${p.borrador}, ${p.categoria}, ${p.tg_message_id}, ${p.esperando_edit === true}, ${p.esperando_retoque === true}, ${p.idioma}, ${p.pregunta}, ${p.hueco_guia === true}, ${p.no_requiere_respuesta === true})
+    ON CONFLICT (booking_id) DO NOTHING
+  `).catch((e) => console.error('[tg] no pude restaurar el pendiente', p.booking_id, e))
 }
 
 export async function POST(req: NextRequest) {
@@ -329,6 +350,21 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         return NextResponse.json({ ok: true })
       }
 
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── IVA dudoso de proveedor extranjero (fiva_sin / fiva_rev) ─────────────
+    // Escribe en facturas_proveedor: solo la PERSONA autorizada (como pago_ y cas_).
+    if (prefix === PREFIJO_IVA) {
+      if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+        await tgAnswerCallback(cb.id, 'No autorizado')
+        return NextResponse.json({ ok: true })
+      }
+      const dec = interpretarIva(action, args)
+      if (!dec) { await tgAnswerCallback(cb.id, 'Botón no válido'); return NextResponse.json({ ok: true }) }
+      if (dec.accion === 'rev') { await tgAnswerCallback(cb.id, 'Ok, queda para revisar'); return NextResponse.json({ ok: true }) }
+      const hecho = await aplicarSinIvaExtranjero(dec.id)
+      await tgAnswerCallback(cb.id, hecho ? '🌍 IVA 0 (extranjero)' : 'Ya tenía IVA, no se toca')
       return NextResponse.json({ ok: true })
     }
 
@@ -794,8 +830,22 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       // Emitir y corregir la ficha escriben en la cartera: exigen que pulse la PERSONA autorizada, no
       // solo que el botón esté en su chat (en un grupo cualquiera podría pulsar). En un chat privado,
       // el id del chat es el de la persona.
-      if ((action === 'emitir' || action === 'corregir' || action === 'oport' || action === 'acc' || action === 'guardar' || action === 'actualizar') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+      if ((action === 'emitir' || action === 'corregir' || action === 'oport' || action === 'acc' || action === 'guardar' || action === 'actualizar' || action === 'tarif') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
         await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
+        return NextResponse.json({ ok: true })
+      }
+      // «Autorizar +30 €» del tope de gasto de Avant2 (`cas_tope:<AAAAMM>-<nivel>`). Mueve el tope de
+      // gasto: solo la PERSONA autorizada, como emitir. Idempotente en asegura (mismo botón = +30 € una vez).
+      if (action === ACCION_BOTON_TOPE) {
+        if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+          await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
+          return NextResponse.json({ ok: true })
+        }
+        const r = await ampliarTopeAvant2(args[0] || '', String(cb.from?.id ?? ''), String(cb.id))
+        await tgAnswerCallback(cb.id, r.toast)
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id, `${escapeHtml(cb.message.text ?? '')}\n\n${r.linea}`).catch(() => {})
+        }
         return NextResponse.json({ ok: true })
       }
       if (action === 'emitir') {
@@ -806,6 +856,17 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         }
         const arg = args[0] || ''
         after(() => emitirDesdeBoton(arg))
+        return NextResponse.json({ ok: true })
+      }
+      // «Pedir precio (0,50€)»: se contesta YA y la cotización (hasta 170 s) corre después de responder a
+      // Telegram. El botón de un solo uso impide que un reenvío del webhook pague dos veces.
+      if (action === 'tarif') {
+        await tgAnswerCallback(cb.id, '⏳ Pido el precio…')
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id, `${escapeHtml(cb.message.text ?? '')}\n\n⏳ <i>Pulsado «Pedir precio»: pidiendo…</i>`).catch(() => {})
+        }
+        const arg = args[0] || ''
+        after(() => tarificarDesdeBoton(arg))
         return NextResponse.json({ ok: true })
       }
       // Guardar baja y sube ficheros (segundos por documento): se contesta el botón ya y se trabaja después.
@@ -935,11 +996,67 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       // propuesta DUPLICADA ya resuelta (mismo mensaje del huésped propuesto dos veces). En vez del
       // críptico "Ya no está disponible", avisamos claro y RETIRAMOS los botones del mensaje pulsado
       // (editar el texto sin reply_markup quita el teclado) para que no vuelva a inducir a error.
-      const eraEnvio = action === 'send' || action === 'grant'
+      const eraEnvio = action === 'send' || action === 'grant' || action === 'chsi' || action === 'chhasta' || action === 'chno'
       await tgAnswerCallback(cb.id, eraEnvio ? 'Ese borrador ya se envió o se gestionó' : 'Ya no está disponible')
       const staleId = cb.message?.message_id
       if (staleId) await tgEditMessage(staleId, '☑️ <i>Este borrador ya se gestionó (enviado o descartado en otro aviso).</i>').catch(() => {})
       return NextResponse.json({ ok: true })
+    }
+
+    // ── Entrada anticipada / salida tardía / maletas (propuesta con semáforo, `cambio-horario.ts`).
+    // Mismo emisor autorizado que el resto de `hsp_` (se comprueba arriba, antes del enrutado).
+    if (action === 'chsi' || action === 'chhasta') {
+      const hora = horaDeCallback(args[1])
+      if (!hora) { await tgAnswerCallback(cb.id, 'Hora no válida'); return NextResponse.json({ ok: true }) }
+      // Reclamo atómico ANTES de enviar: dos pulsaciones seguidas no mandan dos mensajes al huésped.
+      const reclamado = await reclamarPendiente(bookingId)
+      if (!reclamado) { await tgAnswerCallback(cb.id, 'Ya se está gestionando').catch(() => {}); return NextResponse.json({ ok: true }) }
+      let r: Awaited<ReturnType<typeof aceptarCambioHorario>>
+      try { r = await aceptarCambioHorario(reclamado, hora) } catch (e) { await restaurarPendiente(reclamado); throw e }
+      await tgAnswerCallback(cb.id, r.toast).catch(() => {})
+      if (r.fallo) {
+        await restaurarPendiente(reclamado)
+        await tgSend(avisoFalloEnvio(r.fallo.motivo), { html: true })
+        return NextResponse.json({ ok: false, sent: false, motivo: r.fallo.motivo.clase })
+      }
+      if (!r.ok) {
+        await restaurarPendiente(reclamado)
+        await tgSend(r.aviso, { html: true }).catch(() => {})
+        return NextResponse.json({ ok: false, sent: false })
+      }
+      // El mensaje YA salió: nada de lo que sigue puede devolver 500 (Telegram reintentaría el update).
+      await confirmarEnviado(reclamado.tg_message_id, r.enviado || '').catch(() => {})
+      await marcarEnviadoLog(bookingId, r.enviado || '').catch(() => {})
+      await tgSend(r.aviso, { html: true }).catch(() => {})
+      return NextResponse.json({ ok: true, cambioHorario: action })
+    }
+    if (action === 'chno') {
+      // El «no» ya redactado (guardado en `borrador`). Si salió en español con un huésped de otro idioma, no se manda.
+      if (!negativaListaParaEnviar(pend)) {
+        await tgAnswerCallback(cb.id, 'El texto no está en su idioma')
+        await tgSend('🛑 <b>No se ha enviado nada:</b> el «no» no está en el idioma del huésped. Usa ✏️ Modificar.', { html: true }).catch(() => {})
+        return NextResponse.json({ ok: false, sent: false })
+      }
+      const reclamado = await reclamarPendiente(bookingId)
+      if (!reclamado) { await tgAnswerCallback(cb.id, 'Ya se está gestionando').catch(() => {}); return NextResponse.json({ ok: true }) }
+      let res: Awaited<ReturnType<typeof enviarAlHuespedDetallado>>
+      try { res = await enviarAlHuespedDetallado(bookingId, reclamado.borrador || '') } catch (e) { await restaurarPendiente(reclamado); throw e }
+      await tgAnswerCallback(cb.id, res.ok ? 'Enviado ✅' : (res.motivo.reintentable ? 'No se pudo enviar — reintenta' : 'No se pudo enviar — mira el aviso')).catch(() => {})
+      if (!res.ok) {
+        await restaurarPendiente(reclamado)
+        await tgSend(avisoFalloEnvio(res.motivo), { html: true })
+        return NextResponse.json({ ok: false, sent: false, motivo: res.motivo.clase })
+      }
+      await confirmarEnviado(reclamado.tg_message_id, reclamado.borrador || '').catch(() => {})
+      await marcarEnviadoLog(bookingId, reclamado.borrador || '').catch(() => {})
+      return NextResponse.json({ ok: true, cambioHorario: 'no' })
+    }
+    if (action === 'chlimp') {
+      // Solo una NOTA: pendiente de limpieza. No envía nada al huésped y el pendiente sigue vivo
+      // (los botones del aviso original siguen valiendo cuando la limpieza conteste).
+      await tgAnswerCallback(cb.id, 'Anotado: pendiente de limpieza')
+      await tgSend(`🧹 <b>Pendiente de limpieza</b> — reserva ${escapeHtml(bookingId)}\nFalta el OK de la limpieza. <i>No se ha enviado nada al huésped.</i> Cuando te contesten, decide con los botones del aviso original.`, { html: true }).catch(() => {})
+      return NextResponse.json({ ok: true, cambioHorario: 'limpieza' })
     }
 
     if (action === 'send' || action === 'grant') {
@@ -953,15 +1070,11 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         return NextResponse.json({ ok: false, sent: false, motivo: res.motivo.clase })
       }
       await confirmarEnviado(pend.tg_message_id, pend.borrador || '')
-      // Aprobado tal cual (sin corregir): la fila de mensajes_log ya está con edited=false.
-      await prisma.$executeRaw(Prisma.sql`
-        UPDATE mensajes_log SET auto_sent = true
-        WHERE booking_id = ${bookingId}
-          AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
-      `).catch(() => {})
+      // Guarda el texto que salió y si difiere del borrador original de la IA (`edited`).
+      const editado = await marcarEnviadoLog(bookingId, pend.borrador || '')
       // El agente aprende de TODAS las respuestas de Alberto, no solo de las correcciones: un borrador
       // aprobado tal cual es un ejemplo de tono/criterio igual de válido para ese piso (lo lee contexto.ts).
-      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '', huecoGuia: pend.hueco_guia === true })
+      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '', huecoGuia: pend.hueco_guia === true, editado })
       // 🍼 EXTRAS DE PAGO. Si lo que acabas de aprobar cotiza un extra del catálogo a su precio,
       // se registra la OFERTA. Esa fila es lo único que autoriza a mandar después el enlace de pago
       // solo cuando el huésped diga que sí: «el precio lo aprobó Alberto» pasa a ser un hecho de la
@@ -994,6 +1107,25 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       await confirmarDescartado(pend.tg_message_id)
       await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
       return NextResponse.json({ ok: true, skipped: true })
+    }
+    if (action === 'done') {
+      // Alberto ya contestó fuera del agente: se olvida el pendiente (sin recordatorio ni acuse).
+      await tgAnswerCallback(cb.id, 'Cerrado — ya respondido')
+      await confirmarRespondidoFuera(pend.tg_message_id)
+      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
+      return NextResponse.json({ ok: true, respondidoFuera: true })
+    }
+    if (action === 'mine') {
+      // La «pregunta» era un mensaje de Alberto escrito fuera de Smoobu que llegó sin marca de emisor.
+      // Se registra en `mensajes_enviados`: `corregirAtribucion`/`esEcoPropio` lo tratarán como del
+      // host a partir de ahora, y el pendiente se cierra sin enviar nada.
+      if (pend.pregunta) {
+        await prisma.$executeRaw(Prisma.sql`INSERT INTO mensajes_enviados (booking_id, texto) VALUES (${bookingId}, ${pend.pregunta})`).catch(() => {})
+      }
+      await tgAnswerCallback(cb.id, 'Anotado como tuyo')
+      await confirmarEsMio(pend.tg_message_id)
+      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
+      return NextResponse.json({ ok: true, esMio: true })
     }
     if (action === 'edit') {
       await tgAnswerCallback(cb.id, 'Escribe tu idea')
@@ -1064,11 +1196,8 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
           await tgSend(avisoFalloEnvio(res.motivo), { html: true })
           return NextResponse.json({ ok: false, sent: false, motivo: res.motivo.clase })
         }
-        await prisma.$executeRaw(Prisma.sql`
-          UPDATE mensajes_log SET auto_sent = true
-          WHERE booking_id = ${bookingId} AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
-        `).catch(() => {})
-        await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '', huecoGuia: pend.hueco_guia === true })
+        const editado = await marcarEnviadoLog(bookingId!, pend.borrador || '')
+        await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '', huecoGuia: pend.hueco_guia === true, editado })
         await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
         await tgSend(`✅ Enviado al huésped:\n${escapeHtml(pend.borrador || '')}`)
         return NextResponse.json({ ok: true, approved: true })

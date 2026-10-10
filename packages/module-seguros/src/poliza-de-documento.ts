@@ -29,7 +29,7 @@
 
 import { MARCADORES_SIN_DATO } from './documento-auto.ts'
 import { normalizarMatricula } from './matricula.ts'
-import type { Coincidencia } from './cliente-edicion.ts'
+import { normalizarDni, type Coincidencia } from './cliente-edicion.ts'
 
 const SIN_DATO = new Set(MARCADORES_SIN_DATO)
 
@@ -132,11 +132,49 @@ function numero(v: unknown): number | null {
  * nombre se parta — y partir mal un nombre se ve en pantalla, mientras que dar
  * una empresa por persona se cuela entero.
  */
-const FORMAS_SOCIETARIAS =
-  /\b(s\.?l\.?u?\.?|s\.?a\.?u?\.?|s\.?c\.?|s\.?coop\.?|c\.?b\.?|a\.?i\.?e\.?|sociedad|asociacion|asociación|comunidad|fundacion|fundación|ayuntamiento)\b/i
+//
+// Las SIGLAS solo cuentan con sus puntos («S.A.», «S.L.U.», «C.B.»: en cualquier sitio) o al FINAL
+// del nombre («ACME SL», «TRANSPORTES 2 SA»): un «Sa», «Sc» o «Cb» suelto en medio es un apellido
+// («Juan Sa Pérez», revisión PR 4168). Las palabras enteras (sociedad, comunidad…), en cualquier sitio.
+const SIGLAS_CON_PUNTOS = /(^|[\s,(])(s\.\s?l\.(\s?u\.)?|s\.\s?a\.(\s?u\.)?|s\.\s?c\.|s\.\s?coop\.|c\.\s?b\.|a\.\s?i\.\s?e\.)/iu
+const SIGLAS_AL_FINAL = /[\s,]+(s\.?\s?l\.?(\s?[lu]\.?)?|s\.?\s?a\.?(\s?u\.?)?|s\.?\s?c\.?|s\.?\s?coop\.?|c\.?\s?b\.?|a\.?\s?i\.?\s?e\.?)\s*$/iu
+const PALABRAS_SOCIETARIAS = /(^|[^\p{L}])(sociedad|asociaci[oó]n|comunidad|fundaci[oó]n|ayuntamiento)(?![\p{L}])/iu
 
 export function tipoPersonaDeNombre(nombre: string): TipoPersonaDocumento {
-  return FORMAS_SOCIETARIAS.test(nombre) ? 'juridica' : 'fisica'
+  return SIGLAS_CON_PUNTOS.test(nombre) || SIGLAS_AL_FINAL.test(nombre) || PALABRAS_SOCIETARIAS.test(nombre) ? 'juridica' : 'fisica'
+}
+
+/**
+ * El identificador fiscal tal como lo escriben las pólizas: DNI, NIE o CIF, también como NIF-IVA
+ * con el prefijo de país («ESB12345674», «Número de IVA»). Se quita el «ES» y se valida con el
+ * validador de siempre (`normalizarDni`). Lo que no cuadre → `null`.
+ */
+export function identificadorFiscal(v: unknown): { valor: string; tipoPersona: 'fisica' | 'juridica' } | null {
+  const t = texto(v)
+  if (!t || t.length > 30) return null
+  const directo = normalizarDni(t)
+  if (directo.ok) return directo.valor
+  const limpio = t.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  if (!limpio.startsWith('ES')) return null
+  const sinPais = normalizarDni(limpio.slice(2))
+  return sinPais.ok ? sinPais.valor : null
+}
+
+/** El CIF de una persona JURÍDICA (con o sin «ES» delante); un DNI o NIE aquí → `null`. */
+export function cifDeEmpresa(v: unknown): string | null {
+  const r = identificadorFiscal(v)
+  return r && r.tipoPersona === 'juridica' ? r.valor : null
+}
+
+/**
+ * ¿Es empresa el tomador? Por orden: lo dice el lector, o hay CIF (en `cifTomador` o en `dni`) →
+ * sí. Un DNI/NIE VÁLIDO de persona física → no, diga lo que diga el nombre. Si no, el nombre.
+ */
+export function esTomadorEmpresa(e: { tomador: string | null; dni: unknown; cifTomador?: unknown; tomadorEsEmpresa?: boolean | null }): boolean {
+  if (e.tomadorEsEmpresa === true) return true
+  if (cifDeEmpresa(e.cifTomador) || cifDeEmpresa(e.dni)) return true
+  if (identificadorFiscal(e.dni)?.tipoPersona === 'fisica') return false
+  return e.tomador !== null && tipoPersonaDeNombre(e.tomador) === 'juridica'
 }
 
 /**
@@ -177,19 +215,36 @@ export function partirNombre(completo: string): { nombre: string; apellidos: str
  * trae tomador: sin nombre no hay ficha, y **inventarse uno** («Titular del
  * documento», el número de póliza…) crearía una persona que no existe.
  */
-export function prepararAltaDesdeDocumento(l: LecturaPoliza): {
+export function prepararAltaDesdeDocumento(
+  l: LecturaPoliza,
+  /**
+   * Lo que el lector sabe del tomador empresa (`ContactoTomadorLeido`): `tomadorEsEmpresa: true` la
+   * hace jurídica aunque el nombre no lo delate, y `cifTomador` es SU identificador.
+   */
+  opts: { tomadorEsEmpresa?: boolean | null; cifTomador?: string | null } = {},
+): {
   alta: AltaDesdeDocumento | null
   avisos: AvisoDocumento[]
 } {
   const avisos: AvisoDocumento[] = []
   const tomador = texto(l.datos.tomador)
-  const dni = texto(l.datos.dni)
+  const dniLeido = texto(l.datos.dni)
+  const cifLeido = texto(l.datos.cifTomador)
+  // Una EMPRESA se identifica SOLO por su CIF (el de `cifTomador`, o un CIF dejado en `dni`): el DNI
+  // de una persona física que traiga el papel es el de su contacto o su conductor, nunca el suyo.
+  const empresa = tomador !== null && esTomadorEmpresa({
+    tomador,
+    dni: dniLeido,
+    cifTomador: opts.cifTomador ?? cifLeido,
+    tomadorEsEmpresa: opts.tomadorEsEmpresa,
+  })
+  const dni = empresa ? cifDeEmpresa(opts.cifTomador) ?? cifDeEmpresa(cifLeido) ?? cifDeEmpresa(dniLeido) : dniLeido
   if (!dni) avisos.push('sin_dni')
   if (!tomador) {
     avisos.push('sin_nombre')
     return { alta: null, avisos }
   }
-  const tipoPersona = tipoPersonaDeNombre(tomador)
+  const tipoPersona: TipoPersonaDocumento = empresa ? 'juridica' : 'fisica'
   if (tipoPersona === 'juridica') {
     return {
       alta: {

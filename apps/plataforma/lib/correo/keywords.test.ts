@@ -31,7 +31,7 @@ test('🚨 un aviso de recibos de una aseguradora NO se queda en el digest', () 
     ['mediadores@occidentinforma.com', 'Resumen de recibos anulados por impago 00306333 (31.07.2026)'],
     ['mediadores@occidentinforma.com', 'Resumen de recibos próximos a la anulación 00306333 (22.07.2026)'],
     ['mediador@allianz.es', 'Relacion anulacion polizas por impago'],
-    ['dmapcccrecibosoperac@mapfre.com', 'DELEGACIÓN RECIBO Nº 8788253709 PÓLIZA MAPFRE'],
+    ['dmapcccrecibosoperac@mapfre.com', 'DELEGACIÓN RECIBO Nº 8700000036 PÓLIZA MAPFRE'],
   ]
   for (const [from, subject] of casos) {
     assert.equal(clasificarPorKeyword(from, subject)?.categoria, 'correduria-recibo', subject)
@@ -48,7 +48,7 @@ test('🚨 hacen falta las DOS condiciones: aseguradora Y asunto de recibo', () 
   assert.equal(clasificarPorKeyword('servicio@paypal.es', 'Recibo de su pago a IONOS')?.categoria, 'contabilidad')
   // Y un comunicado comercial de una aseguradora sigue siendo correduría de digest.
   assert.equal(clasificarPorKeyword('ccorredor@mapfre.com', 'Nueva oferta Mapfre para colectivos de Salud')?.categoria ?? null, null)
-  assert.equal(clasificarPorKeyword('mediadores@occidentinforma.com', 'Siniestro Diversos 42892775')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('mediadores@occidentinforma.com', 'Siniestro Diversos 42000037')?.categoria, 'correduria')
 })
 
 test('marketing masivo conocido → ruido', () => {

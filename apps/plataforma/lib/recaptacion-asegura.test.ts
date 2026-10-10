@@ -1,86 +1,17 @@
 // apps/plataforma/lib/recaptacion-asegura.test.ts
 //
 // Interpretación PURA del puerto de recaptación de asegura
-// (`GET/POST /api/operador/recaptacion*`). Sin red: solo status+json → tipo.
+// (`POST /api/operador/recaptacion/email-lote` y el contrato de escritura que
+// reutiliza `renovaciones-asegura.ts`). Sin red: solo status+json → tipo.
+//
+// La cola, su agrupación por cliente y el orden por vencimiento se quitaron
+// con el bloque «Recaptación» de /correduria (30/09/2026); sus tests con ellos.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agruparLeadsPorCliente, diasHastaVencimiento, interpretarCola, ordenarPorVencimiento, interpretarEscrituraRecaptacion, type LeadRecaptacion } from './recaptacion-asegura.ts'
+import { interpretarEscrituraRecaptacion, interpretarLoteEmail } from './recaptacion-asegura.ts'
 
-function lead(p: Partial<LeadRecaptacion>): LeadRecaptacion {
-  return {
-    clienteId: 'c1',
-    polizaId: 'p1',
-    cliente: 'Phenix Automocion',
-    ramo: 'auto',
-    ramoLegible: 'auto',
-    aseguradoraAnterior: null,
-    numeroPoliza: null,
-    telefono: '637925553',
-    email: null,
-    prima: null,
-    enCooldown: false,
-    ultimoContactoEn: null,
-    origen: 'sin_vencimiento',
-    mesVencimientoAntiguo: null,
-    diaVencimientoAntiguo: null,
-    ...p,
-  }
-}
-
-test('GET ok interpreta leads y contadores', () => {
-  const json = {
-    estado: 'ok',
-    leads: [
-      {
-        clienteId: 'c1',
-        polizaId: 'p1',
-        cliente: 'Maria Antonia Gutierrez',
-        ramo: 'otros',
-        ramoLegible: 'comunidades',
-        aseguradoraAnterior: 'Plus Ultra',
-        numeroPoliza: 'BIDP023227',
-        telefono: '600111222',
-        email: null,
-        prima: 123.45,
-        enCooldown: false,
-        ultimoContactoEn: null,
-      },
-    ],
-    contadores: { totalCandidatos: 1, contactadosSemana: 0, conAperturaORespuestaSemana: 0 },
-  }
-  const r = interpretarCola(200, json)
-  assert.equal(r.estado, 'ok')
-  if (r.estado !== 'ok') return
-  assert.equal(r.leads.length, 1)
-  assert.equal(r.leads[0].cliente, 'Maria Antonia Gutierrez')
-  assert.equal(r.leads[0].prima, 123.45)
-  assert.equal(r.contadores.totalCandidatos, 1)
-})
-
-test('GET sin_configurar se respeta tal cual', () => {
-  const r = interpretarCola(200, { estado: 'sin_configurar' })
-  assert.deepEqual(r, { estado: 'sin_configurar' })
-})
-
-test('GET con causa la conserva; sin causa no se inventa ninguna', () => {
-  const conCausa = interpretarCola(200, { estado: 'error', causa: 'credenciales' })
-  assert.deepEqual(conCausa, { estado: 'error', motivo: 'asegura_error', causa: 'credenciales' })
-  const sinCausa = interpretarCola(200, { estado: 'error' })
-  assert.deepEqual(sinCausa, { estado: 'error', motivo: 'asegura_error', causa: null })
-})
-
-test('un 401 es secreto_rechazado, no respuesta_ilegible', () => {
-  const r = interpretarCola(401, null)
-  assert.deepEqual(r, { estado: 'error', motivo: 'secreto_rechazado', causa: null })
-})
-
-test('un 200 sin lista de leads es respuesta_ilegible, nunca cola vacía', () => {
-  const r = interpretarCola(200, { estado: 'ok' })
-  assert.deepEqual(r, { estado: 'error', motivo: 'respuesta_ilegible', causa: null })
-})
-
-// ── Escritura (whatsapp/email) ───────────────────────────────────────────────
+// ── Escritura (la reutiliza renovaciones-asegura.ts) ─────────────────────────
 
 test('escritura ok', () => {
   const r = interpretarEscrituraRecaptacion(200, { estado: 'ok' })
@@ -107,141 +38,63 @@ test('escritura error genérico con motivo del puerto', () => {
   assert.deepEqual(r, { estado: 'error', motivo: 'rechazado' })
 })
 
-// ── Agrupación por cliente ───────────────────────────────────────────────────
+// ── Lote diario (cron `recaptacion-email-lote`) ──────────────────────────────
 
-test('agrupa varias pólizas del mismo clienteId en un único grupo', () => {
-  const leads = [
-    lead({ polizaId: 'p1', ramoLegible: 'auto', aseguradoraAnterior: 'Plus Ultra' }),
-    lead({ polizaId: 'p2', ramoLegible: 'auto', aseguradoraAnterior: 'Mapfre' }),
-    lead({ polizaId: 'p3', ramoLegible: 'auto', aseguradoraAnterior: 'Mapfre' }),
-  ]
-  const grupos = agruparLeadsPorCliente(leads)
-  assert.equal(grupos.length, 1)
-  assert.equal(grupos[0].polizas.length, 3)
-  assert.equal(grupos[0].clienteId, 'c1')
-})
-
-test('dos clienteId distintos NUNCA se funden, aunque compartan teléfono', () => {
-  const leads = [
-    lead({ clienteId: 'c1', polizaId: 'p1', telefono: '600111222' }),
-    lead({ clienteId: 'c2', polizaId: 'p2', telefono: '600111222', cliente: 'Otra Persona' }),
-  ]
-  const grupos = agruparLeadsPorCliente(leads)
-  assert.equal(grupos.length, 2)
-})
-
-test('el grupo hereda teléfono/email del primer lead que lo traiga', () => {
-  const leads = [
-    lead({ polizaId: 'p1', telefono: null, email: 'a@b.com' }),
-    lead({ polizaId: 'p2', telefono: '600111222', email: null }),
-  ]
-  const [grupo] = agruparLeadsPorCliente(leads)
-  assert.equal(grupo.telefono, '600111222')
-  assert.equal(grupo.email, 'a@b.com')
-})
-
-test('el grupo está en cooldown si CUALQUIERA de sus pólizas lo está', () => {
-  const leads = [
-    lead({ polizaId: 'p1', enCooldown: false }),
-    lead({ polizaId: 'p2', enCooldown: true, ultimoContactoEn: '2026-09-01' }),
-  ]
-  const [grupo] = agruparLeadsPorCliente(leads)
-  assert.equal(grupo.enCooldown, true)
-  assert.equal(grupo.ultimoContactoEn, '2026-09-01')
-})
-
-// ── Fase 2: leads con vencimiento antiguo (20/09/2026) ───────────────────────
-
-test('un origen desconocido o ausente cae a sin_vencimiento, nunca inventa vencimiento_antiguo', () => {
-  const json = {
-    estado: 'ok',
-    leads: [{ clienteId: 'c1', polizaId: 'p1', cliente: 'X' }],
-    contadores: { totalCandidatos: 1, contactadosSemana: 0, conAperturaORespuestaSemana: 0 },
-  }
-  const r = interpretarCola(200, json)
-  assert.equal(r.estado, 'ok')
-  if (r.estado !== 'ok') return
-  assert.equal(r.leads[0].origen, 'sin_vencimiento')
-  assert.equal(r.leads[0].mesVencimientoAntiguo, null)
-})
-
-test('un puerto inconsistente (sin_vencimiento con mes) no cuela el mes: la invariante se fuerza aquí', () => {
-  const json = {
-    estado: 'ok',
-    leads: [{ clienteId: 'c1', polizaId: 'p1', cliente: 'X', origen: 'sin_vencimiento', mesVencimientoAntiguo: 5 }],
-    contadores: { totalCandidatos: 1, contactadosSemana: 0, conAperturaORespuestaSemana: 0 },
-  }
-  const r = interpretarCola(200, json)
-  assert.equal(r.estado, 'ok')
-  if (r.estado !== 'ok') return
-  assert.equal(r.leads[0].origen, 'sin_vencimiento')
-  assert.equal(r.leads[0].mesVencimientoAntiguo, null)
-})
-
-test('un mes fuera de 1-12 se descarta, no se pinta un mes falso', () => {
-  const json = {
-    estado: 'ok',
-    leads: [{ clienteId: 'c1', polizaId: 'p1', cliente: 'X', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 13 }],
-    contadores: { totalCandidatos: 1, contactadosSemana: 0, conAperturaORespuestaSemana: 0 },
-  }
-  const r = interpretarCola(200, json)
-  assert.equal(r.estado, 'ok')
-  if (r.estado !== 'ok') return
-  assert.equal(r.leads[0].origen, 'vencimiento_antiguo')
-  assert.equal(r.leads[0].mesVencimientoAntiguo, null)
-})
-
-test('el grupo marca tieneVencimientoAntiguo si CUALQUIERA de sus pólizas lo es', () => {
-  const leads = [
-    lead({ polizaId: 'p1', origen: 'sin_vencimiento' }),
-    lead({ polizaId: 'p2', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 3 }),
-  ]
-  const [grupo] = agruparLeadsPorCliente(leads)
-  assert.equal(grupo.tieneVencimientoAntiguo, true)
-})
-
-// ── Orden por vencimiento ────────────────────────────────────────────────────
-
-const HOY = new Date(Date.UTC(2026, 8, 24)) // 24/09/2026
-
-test('diasHastaVencimiento: hoy es 0, pasado salta al año siguiente, sin día = último del mes', () => {
-  assert.equal(diasHastaVencimiento(9, 24, HOY), 0)
-  assert.equal(diasHastaVencimiento(10, 1, HOY), 7)
-  assert.equal(diasHastaVencimiento(9, 23, HOY), 364)
-  // Septiembre sin día NO debe irse al año que viene estando a 24/09.
-  assert.equal(diasHastaVencimiento(9, null, HOY), 6)
-})
-
-test('ordena por el vencimiento más cercano y deja los sin vencimiento al final', () => {
-  const v = (clienteId: string, mesV: number | null, diaV: number | null = null) =>
-    lead({ clienteId, polizaId: clienteId, origen: mesV === null ? 'sin_vencimiento' : 'vencimiento_antiguo', mesVencimientoAntiguo: mesV, diaVencimientoAntiguo: diaV })
-  const grupos = ordenarPorVencimiento(agruparLeadsPorCliente([
-    v('sinFecha', null), v('nov', 11, 2), v('oct', 10, 15), v('sep', 9, 28), v('oct1', 10, 1),
-  ]), HOY)
-  assert.deepEqual(grupos.map((g) => g.clienteId), ['sep', 'oct1', 'oct', 'nov', 'sinFecha'])
-})
-
-test('un cliente con varias pólizas se ordena por la más cercana, y esa va primera', () => {
-  const grupos = ordenarPorVencimiento(agruparLeadsPorCliente([
-    lead({ clienteId: 'a', polizaId: 'a1', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 11, diaVencimientoAntiguo: 1 }),
-    lead({ clienteId: 'a', polizaId: 'a2', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 10, diaVencimientoAntiguo: 1 }),
-    lead({ clienteId: 'b', polizaId: 'b1', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 10, diaVencimientoAntiguo: 20 }),
-  ]), HOY)
-  assert.deepEqual(grupos.map((g) => g.clienteId), ['a', 'b'])
-  assert.equal(grupos[0].polizas[0].polizaId, 'a2')
-})
-
-test('interpretarCola lee el día solo junto al mes de un vencimiento antiguo', () => {
-  const r = interpretarCola(200, {
-    estado: 'ok',
-    leads: [
-      { clienteId: 'c', polizaId: 'p', cliente: 'X', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 10, diaVencimientoAntiguo: 12 },
-      { clienteId: 'd', polizaId: 'q', cliente: 'Y', origen: 'sin_vencimiento', mesVencimientoAntiguo: 10, diaVencimientoAntiguo: 12 },
-    ],
-    contadores: {},
+test('lote ok lee los campos de campaña tal cual', () => {
+  const r = interpretarLoteEmail(200, {
+    estado: 'ok', candidatos: 12, enviados: 10, fallidos: 2, detalleFallos: ['a@x.es: rebote'], descartadosPorSilencio: 1,
+    primerosEnviados: 4, pendientesPrimerEnvio: 0, emailEnviadosTotal: 480, emailAbiertosTotal: 120, enEsperaVentanaSoloCorreo: 35,
   })
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
-  assert.equal(r.leads[0].diaVencimientoAntiguo, 12)
-  assert.equal(r.leads[1].diaVencimientoAntiguo, null)
+  assert.equal(r.primerosEnviados, 4)
+  assert.equal(r.pendientesPrimerEnvio, 0)
+  assert.equal(r.emailEnviadosTotal, 480)
+  assert.equal(r.emailAbiertosTotal, 120)
+  assert.equal(r.enEsperaVentanaSoloCorreo, 35)
+})
+
+test('primerosEnviados 0 medido es 0, no null (pasada solo de seguimientos)', () => {
+  const r = interpretarLoteEmail(200, { estado: 'ok', candidatos: 5, enviados: 5, fallidos: 0, detalleFallos: [], primerosEnviados: 0 })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.primerosEnviados, 0)
+})
+
+test('lote de un asegura viejo: los campos de campaña ausentes son null, nunca 0', () => {
+  const r = interpretarLoteEmail(200, { estado: 'ok', candidatos: 3, enviados: 3, fallidos: 0, detalleFallos: [] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  // Un 0 en `pendientesPrimerEnvio` dispararía «ya se ha escrito a todos».
+  assert.equal(r.primerosEnviados, null)
+  assert.equal(r.pendientesPrimerEnvio, null)
+  assert.equal(r.emailEnviadosTotal, null)
+  assert.equal(r.emailAbiertosTotal, null)
+  assert.equal(r.enEsperaVentanaSoloCorreo, null)
+})
+
+test('el viejo `enEsperaVentana` (leads, no personas) NO se toma por `enEsperaVentanaSoloCorreo`', () => {
+  const r = interpretarLoteEmail(200, { estado: 'ok', candidatos: 1, enviados: 1, fallidos: 0, detalleFallos: [], enEsperaVentana: 40 })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.enEsperaVentanaSoloCorreo, null)
+})
+
+test('lote con campos de campaña no numéricos o rotos: null, nunca 0', () => {
+  const r = interpretarLoteEmail(200, {
+    estado: 'ok', candidatos: 1, enviados: 1, fallidos: 0, detalleFallos: [],
+    primerosEnviados: '1', pendientesPrimerEnvio: '0', emailEnviadosTotal: -4, emailAbiertosTotal: 1.5, enEsperaVentanaSoloCorreo: null,
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.primerosEnviados, null)
+  assert.equal(r.pendientesPrimerEnvio, null)
+  assert.equal(r.emailEnviadosTotal, null)
+  assert.equal(r.emailAbiertosTotal, null)
+  assert.equal(r.enEsperaVentanaSoloCorreo, null)
+})
+
+test('lote sin_configurar (503) y secreto rechazado (401)', () => {
+  assert.deepEqual(interpretarLoteEmail(503, { estado: 'sin_configurar' }), { estado: 'sin_configurar' })
+  assert.deepEqual(interpretarLoteEmail(401, null), { estado: 'error', motivo: 'secreto_rechazado' })
 })

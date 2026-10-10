@@ -1,3 +1,4 @@
+import { Pagina } from '@/components/ui'
 /**
  * Lo que se ve mientras llega la ficha. Cada pestaña es una carga en el servidor que vuelve a pedir
  * la ficha entera a asegura: sin esto, al pulsar una pestaña la pantalla se quedaba congelada
@@ -8,7 +9,8 @@ export default function CargandoFicha() {
     width: ancho, height: alto, borderRadius: 6, background: 'var(--border)', opacity: 0.6,
   })
   return (
-    <div role="status" aria-live="polite" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }}>
+    <Pagina ancho="tabla">
+    <div role="status" aria-live="polite" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 24 }}>
       <span className="solo-lectores">Cargando la ficha del cliente…</span>
       <div style={barra('40%', 22)} />
       <div style={barra('65%')} />
@@ -18,5 +20,6 @@ export default function CargandoFicha() {
       <div style={barra('90%')} />
       <div style={barra('80%')} />
     </div>
+    </Pagina>
   )
 }

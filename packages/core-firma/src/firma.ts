@@ -31,7 +31,7 @@ export function cumpleArt26(e: Evidencia): Art26 {
   const condiciones = {
     a_vinculada_al_firmante: !!e.firmante.id && nombreCoincide(e.nombre_confirmado, e.firmante.nombre),
     b_identifica_al_firmante: !!e.firmante.nombre && (!!e.firmante.email || !!e.firmante.dni),
-    c_control_exclusivo: e.metodo === 'otp_email' || e.metodo === 'sesion_token',
+    c_control_exclusivo: e.metodo === 'otp_email' || e.metodo === 'otp_whatsapp' || e.metodo === 'sesion_token',
     d_integridad_detectable: e.algoritmo === 'SHA-256' && /^[0-9a-f]{64}$/.test(e.doc_hash),
   }
   return { ok: Object.values(condiciones).every(Boolean), condiciones }

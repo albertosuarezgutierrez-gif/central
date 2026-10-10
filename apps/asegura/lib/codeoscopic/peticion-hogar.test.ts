@@ -10,12 +10,17 @@ import {
   type DatosHogar,
 } from './peticion-hogar.ts'
 import { construirPeticionAuto, type DatosAuto } from './peticion-auto.ts'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
+
+// Fecha de efecto válida SIEMPRE (ni pasada ni a >90 días): relativa a hoy, no cableada.
+const FECHA_EFECTO = sumarDias(hoyEnMadrid(), 15)
 
 // Persona inventada: aquí no entra ningún cliente real.
 const BASE: DatosHogar = {
   dni: '00000000t',
   nombre: 'Nombre',
   apellido1: 'Apellido',
+  apellido2: 'Segundo',
   fechaNacimiento: '1985-01-01',
   sexo: 'hombre',
   estadoCivil: 'Married',
@@ -45,14 +50,14 @@ const BASE: DatosHogar = {
   propietarioEsTomador: true,
   capitalContinente: 61000,
   capitalContenido: 7000,
-  fechaEfecto: '2026-10-01',
+  fechaEfecto: FECHA_EFECTO,
 }
 
 test('con los datos mínimos no hay reparos y el cuerpo es EXACTAMENTE el HomeRisk del portal', () => {
   assert.deepEqual(revisarDatosHogar(BASE), [])
   const c = construirPeticionHogar(BASE, 'Home') as any
   assert.deepEqual(c.insuranceLine, { id: 'Home' })
-  assert.equal(c.effectiveDate, '2026-10-01')
+  assert.equal(c.effectiveDate, FECHA_EFECTO)
   assert.deepEqual(c.risk.address, {
     postalCode: '41002',
     town: { id: 12345 },
@@ -203,4 +208,21 @@ test('recomendar capital: los demás datos obligatorios SIGUEN exigiéndose (se 
   const { fechaEfecto: _f, ...sinFecha } = BASE
   void _f
   assert.throws(() => construirPeticionLimitesHogar(sinFecha as any), /fechaEfecto/)
+})
+
+test('🪤 fecha de efecto de hogar: ni pasada ni a más de 90 días, también al pedir capitales', () => {
+  const hoy = hoyEnMadrid()
+  const mal = (f: string, o = {}) => revisarDatosHogar({ ...BASE, fechaEfecto: f }, o).filter((x) => x.campo === 'fechaEfecto')
+  assert.match(mal(sumarDias(hoy, -1))[0].motivo, /anterior a hoy/)
+  assert.match(mal(sumarDias(hoy, 91))[0].motivo, /90 días/)
+  assert.match(mal(sumarDias(hoy, -1), { paraRecomendarCapital: true })[0].motivo, /anterior a hoy/)
+  assert.equal(mal(hoy).length, 0)
+  assert.equal(mal(sumarDias(hoy, 90)).length, 0)
+})
+
+test('hogar: la referencia catastral viaja como address.cadastralReference cuando se conoce', () => {
+  const c = construirPeticionHogar({ ...BASE, referenciaCatastral: '1234567VK1234A0001XY' }, 'Home') as any
+  assert.equal(c.risk.address.cadastralReference, '1234567VK1234A0001XY')
+  const sin = construirPeticionHogar({ ...BASE, referenciaCatastral: null }, 'Home') as any
+  assert.equal('cadastralReference' in sin.risk.address, false)
 })

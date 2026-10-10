@@ -165,6 +165,11 @@ export type AperturaSiniestro = {
   gravedad?: string | null
   /** Referencia que ya haya dado la compañía (si se comunicó por teléfono antes). */
   referencia?: string | null
+  /**
+   * Día (`YYYY-MM-DD`) en que se DECLARÓ a la compañía, si ya se hizo por fuera
+   * (su portal, teléfono). `null` = no se sabe / aún no se ha declarado.
+   */
+  fechaDeclaracion?: string | null
 }
 
 export type AperturaRevisada = {
@@ -179,6 +184,7 @@ export type AperturaRevisada = {
   seConsideraCulpable: boolean | null
   gravedad: 'leve' | 'moderado' | 'grave' | 'muy_grave' | null
   referencia: string | null
+  fechaDeclaracion: string | null
   /** Aviso del art. 16 LCS si la fecha ya pasa de 7 días; no bloquea. */
   aviso: string | null
 }
@@ -209,6 +215,15 @@ export function revisarApertura(
   if (cp !== null && !/^\d{5}$/.test(cp)) return { ok: false, motivo: 'código postal no válido' }
   const gravedad = limpia(a.gravedad, 20)
   if (gravedad !== null && !(GRAVEDADES_SINIESTRO as readonly string[]).includes(gravedad)) return { ok: false, motivo: 'gravedad desconocida' }
+  const fechaDeclaracion = limpia(a.fechaDeclaracion, 10)
+  if (fechaDeclaracion !== null) {
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(fechaDeclaracion) ? new Date(`${fechaDeclaracion}T00:00:00Z`) : new Date(NaN)
+    if (Number.isNaN(d.getTime())) return { ok: false, motivo: 'fecha de declaración no válida' }
+    if (d.getTime() > hoy.getTime()) return { ok: false, motivo: 'la fecha de declaración está en el futuro' }
+    if (d.getTime() < Date.UTC(fecha.getUTCFullYear(), fecha.getUTCMonth(), fecha.getUTCDate())) {
+      return { ok: false, motivo: 'la fecha de declaración es anterior a la del siniestro' }
+    }
+  }
   const plazo = plazoComunicacion(fecha, hoy)
   const aviso =
     plazo && plazo.vencido
@@ -228,6 +243,7 @@ export function revisarApertura(
       seConsideraCulpable: typeof a.seConsideraCulpable === 'boolean' ? a.seConsideraCulpable : null,
       gravedad: gravedad as AperturaRevisada['gravedad'],
       referencia: limpia(a.referencia, 100),
+      fechaDeclaracion,
       aviso,
     },
   }

@@ -2,10 +2,15 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   MOTIVO_DOCUMENTO_REQUERIDO,
+  MOTIVO_CAMBIO_REQUERIDO,
+  completaApellidos,
   coincidenciaBloquea,
   etiquetasIdentidad,
   documentoAcredita,
   documentosAcreditativos,
+  acreditarCambioConDocumento,
+  camposIdentidadTocados,
+  estadoDocumentosIdentidad,
   enmascararDni,
   etiquetaContacto,
   normalizarDni,
@@ -15,6 +20,7 @@ import {
   provinciaPorCp,
   revisarAlta,
   revisarEdicion,
+  nombrePendiente,
   textoHistorialEdicion,
   FUENTES_ORIGEN,
   FUENTES_CANAL,
@@ -23,6 +29,7 @@ import {
   tipoHistorial,
   tipoHistorialAlta,
   textoHistorialAlta,
+  seraPrincipalAlAnadir,
 } from './cliente-edicion.ts'
 import type { DocumentoResumen } from './documentos.ts'
 
@@ -160,6 +167,29 @@ test('alta: nombre + algo por lo que encontrarla; provincia sale del CP; DNI rep
   assert.equal(coincidenciaBloquea([{ id: '1', nombre: 'x', por: 'dni', tipo: 'cliente' }]), true)
 })
 
+test('persona de contacto: solo con DNI se puede crear; DNI inválido falla; con DNI repetido se bloquea', () => {
+  const soloDni = revisarAlta({ nombre: 'Ana', dni: ' 12345678-z ', fuente: 'recomendacion' })
+  assert.equal(soloDni.ok, true)
+  if (soloDni.ok) {
+    assert.equal(soloDni.alta.dni, '12345678Z')
+    assert.equal(soloDni.alta.telefono, null)
+    assert.equal(soloDni.alta.email, null)
+  }
+  const completa = revisarAlta({
+    nombre: 'Ana', dni: '12345678Z', fechaNacimiento: '1980-05-02', direccion: 'Calle Sierpes 1',
+    codigoPostal: '41004', ciudad: 'Sevilla',
+  })
+  assert.equal(completa.ok && completa.alta.fechaNacimiento, '1980-05-02')
+  assert.equal(completa.ok && completa.alta.direccion, 'Calle Sierpes 1')
+  assert.equal(completa.ok && completa.alta.provincia, 'Sevilla')
+  const mal = revisarAlta({ nombre: 'Ana', dni: '12345678A', telefono: '600123456' })
+  assert.equal(mal.ok, false)
+  if (!mal.ok) assert.equal(mal.campo, 'dni')
+  assert.equal(revisarAlta({ nombre: 'Ana', apellidos: 'X' }).ok, false)
+  // NIF ya en la cartera: coincidencia por dni bloquea, no se fuerza.
+  assert.equal(coincidenciaBloquea([{ id: '1', nombre: 'Ana', por: 'dni', tipo: 'lead' }]), true)
+})
+
 test('fuente del alta: vacía = null (no se inventa «otros»), desconocida se rechaza, canal = contacto', () => {
   assert.deepEqual(fuenteOrigen(undefined), { ok: true, valor: null })
   assert.deepEqual(fuenteOrigen('  '), { ok: true, valor: null })
@@ -209,4 +239,122 @@ test('sin clasificar NO es «física»: se queda el rótulo neutro', () => {
   assert.equal(etiquetasIdentidad(null).documento, 'DNI / NIE / CIF')
   assert.equal(etiquetasIdentidad(null).fecha, 'Fecha de nacimiento')
   assert.equal(etiquetasIdentidad('fisica').documento, 'DNI / NIE / CIF')
+})
+
+test('ficha SIN NOMBRE: poner nombre y apellidos no exige documento; lo demás, sí (28/09/2026)', () => {
+  assert.equal(nombrePendiente('(sin nombre)'), true)
+  assert.equal(nombrePendiente('  (Sin  Nombre) '), true)
+  assert.equal(nombrePendiente(''), true)
+  assert.equal(nombrePendiente(null), true)
+  assert.equal(nombrePendiente('Eduardo'), false)
+
+  const ok = revisarEdicion({ identidad: { nombre: 'Eduardo', apellidos: 'Santos' } }, { fichaSinNombre: true })
+  assert.equal(ok.ok, true)
+  if (ok.ok) assert.equal(textoHistorialEdicion(ok, { actor: 'a' }).includes('sin documento'), true)
+  // Con nombre ya puesto, la regla de siempre.
+  assert.deepEqual(revisarEdicion({ identidad: { nombre: 'Eduardo' } }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
+  // DNI o fecha colados en la misma edición: documento.
+  assert.deepEqual(revisarEdicion({ identidad: { nombre: 'Eduardo', dni: '12345678Z' } }, { fichaSinNombre: true }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
+  assert.deepEqual(revisarEdicion({ identidad: { nombre: 'Eduardo', fechaNacimiento: '1/1/1980' } }, { fichaSinNombre: true }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
+  // Solo apellidos dejaría el marcador de nombre: documento.
+  assert.deepEqual(revisarEdicion({ identidad: { apellidos: 'Santos' } }, { fichaSinNombre: true }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
+})
+
+test('🪤 un contacto «nuncaPrincipal» no asciende aunque la ficha no tenga principal (toma de cuenta del portal)', () => {
+  assert.equal(seraPrincipalAlAnadir({ pedido: false, nuncaPrincipal: true, hayPrincipal: false }), false)
+  assert.equal(seraPrincipalAlAnadir({ pedido: true, nuncaPrincipal: true, hayPrincipal: false }), false)
+  assert.equal(seraPrincipalAlAnadir({ pedido: false, nuncaPrincipal: false, hayPrincipal: false }), true)
+  assert.equal(seraPrincipalAlAnadir({ pedido: false, nuncaPrincipal: false, hayPrincipal: true }), false)
+  assert.equal(seraPrincipalAlAnadir({ pedido: true, nuncaPrincipal: false, hayPrincipal: true }), true)
+})
+
+test('PÓLIZA con el DNI de la ficha acredita SOLO nombre y apellidos (Alberto, 05/10/2026)', () => {
+  const poliza = { tipo: 'poliza', estado: 'recibido', dniCoincideFicha: true } as const
+  const dni = { tipo: 'dni', estado: 'recibido', dniCoincideFicha: null } as const
+  // póliza + nombre/apellidos → documento
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['nombre', 'apellidos']), { ok: true, via: 'documento' })
+  // póliza + DNI (o fecha) sin motivo → no acredita, aunque el corredor tenga vía motivo
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['nombre', 'dni'], { permiteMotivo: true }), { ok: false, motivo: 'documento_no_acredita' })
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['fechaNacimiento'], { permiteMotivo: true, motivo: 'x' }), { ok: false, motivo: 'documento_no_acredita' })
+  // póliza + DNI con motivo → se acepta como MOTIVO, no como documento
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['dni'], { permiteMotivo: true, motivo: '  hablado con él por teléfono ' }), { ok: true, via: 'motivo', motivoCambio: 'hablado con él por teléfono' })
+  // el portal no tiene vía motivo: aunque lo mande, no vale
+  assert.deepEqual(acreditarCambioConDocumento(poliza, ['dni'], { motivo: 'hablado con él por teléfono' }), { ok: false, motivo: 'documento_no_acredita' })
+  // DNI-documento acredita todo
+  assert.deepEqual(acreditarCambioConDocumento(dni, ['dni', 'fechaNacimiento', 'nombre']), { ok: true, via: 'documento' })
+  // documento que no acredita (póliza sin DNI coincidente, nulo) → rechazo aunque haya motivo
+  assert.deepEqual(acreditarCambioConDocumento({ ...poliza, dniCoincideFicha: null }, ['nombre'], { permiteMotivo: true, motivo: 'por teléfono' }), { ok: false, motivo: 'documento_no_acredita' })
+  assert.deepEqual(acreditarCambioConDocumento(null, ['nombre']), { ok: false, motivo: 'documento_no_acredita' })
+  assert.deepEqual(camposIdentidadTocados({ nombre: 'A', dni: null }), ['dni', 'nombre'])
+})
+
+test('Documentos: null = no se pudo leer (no se afirma que no haya DNI); [] = revisado y no hay', () => {
+  const d = { id: 'd', tipo: 'dni', estado: 'recibido', nombre: null, mime: null, bytes: null, sha256: null, notas: null,
+    subidoPor: 'corredor', clienteId: 'c', polizaId: null, siniestroId: null, creado: '', revisadoEn: null } as DocumentoResumen
+  assert.equal(estadoDocumentosIdentidad(null), 'no_leidos')
+  assert.equal(estadoDocumentosIdentidad([]), 'ninguno')
+  assert.equal(estadoDocumentosIdentidad([{ ...d, estado: 'pedido' }]), 'ninguno')
+  assert.equal(estadoDocumentosIdentidad([d]), 'hay')
+})
+
+// ─── Completar apellidos no es corregir identidad ────────────────────────────
+
+const CTX = (apellidosActuales: string | null | undefined) => ({ permiteMotivo: true, apellidosActuales })
+
+test('«Slava» → «Slava Antoli» sin documento ni motivo: pasa, y el historial lo dice sin mentir', () => {
+  const r = revisarEdicion({ identidad: { apellidos: 'Slava Antoli' } }, CTX('Slava'))
+  assert.equal(r.ok, true)
+  if (!r.ok) return
+  assert.equal(r.motivoCambio, undefined)
+  assert.deepEqual(r.apellidosCompletados, { antes: 'Slava', despues: 'Slava Antoli' })
+  const t = textoHistorialEdicion(r, { actor: 'alberto' })
+  assert.match(t, /apellidos completados sin documento: "Slava" → "Slava Antoli"/)
+  assert.doesNotMatch(t, /no tenía nombre/)
+})
+
+test('apellidos actuales vacíos o null: rellenarlos no pide motivo; la comparación ignora tildes, mayúsculas y espacios', () => {
+  assert.equal(revisarEdicion({ identidad: { apellidos: 'Slava Antoli' } }, CTX('')).ok, true)
+  assert.equal(revisarEdicion({ identidad: { apellidos: 'Slava Antoli' } }, CTX(null)).ok, true)
+  assert.equal(revisarEdicion({ identidad: { apellidos: 'pérez  garcía' } }, CTX('  Perez ')).ok, true)
+  assert.equal(completaApellidos('Slava', 'SLAVA   Antoli'), true)
+})
+
+test('NO es completar: otro apellido, prefijo pegado, quitar o cambiar palabras, o no saber los actuales', () => {
+  for (const nuevo of ['Pérez', 'Slavaxx', 'Slava', 'Antoli Slava', 'Slavo Antoli']) {
+    const r = revisarEdicion({ identidad: { apellidos: nuevo } }, CTX('Slava'))
+    assert.deepEqual(r.ok ? null : r.motivo, MOTIVO_CAMBIO_REQUERIDO, nuevo)
+  }
+  const quitar = revisarEdicion({ identidad: { apellidos: 'Slava' } }, CTX('Slava Antoli'))
+  assert.deepEqual(quitar.ok ? null : quitar.motivo, MOTIVO_CAMBIO_REQUERIDO)
+  const borrar = revisarEdicion({ identidad: { apellidos: null } }, CTX('Slava'))
+  assert.deepEqual(borrar.ok ? null : borrar.motivo, MOTIVO_CAMBIO_REQUERIDO)
+  // `undefined` = no se sabe lo que hay: el estado conservador.
+  const nose = revisarEdicion({ identidad: { apellidos: 'Slava Antoli' } }, CTX(undefined))
+  assert.deepEqual(nose.ok ? null : nose.motivo, MOTIVO_CAMBIO_REQUERIDO)
+})
+
+test('con cambio de nombre, DNI o fecha a la vez, la regla de siempre; con motivo, vía motivo', () => {
+  const nombre = revisarEdicion({ identidad: { apellidos: 'Slava Antoli', nombre: 'Ana' } }, CTX('Slava'))
+  assert.deepEqual(nombre.ok ? null : nombre.motivo, MOTIVO_CAMBIO_REQUERIDO)
+  const dni = revisarEdicion({ identidad: { apellidos: 'Slava Antoli', dni: '12345678Z' } }, CTX('Slava'))
+  assert.deepEqual(dni.ok ? null : dni.motivo, MOTIVO_CAMBIO_REQUERIDO)
+  // Con motivo informado, sigue la vía del motivo (antes/después).
+  const conMotivo = revisarEdicion({ identidad: { apellidos: 'Slava Antoli' }, motivo: 'segundo apellido por teléfono' }, CTX('Slava'))
+  assert.equal(conMotivo.ok && conMotivo.motivoCambio !== undefined, true)
+})
+
+test('sexo: solo hombre/mujer, ausente no cambia nada, solo-sexo es una edición válida sin documento ni motivo', () => {
+  const ok = revisarEdicion({ sexo: 'mujer' })
+  assert.equal(ok.ok, true)
+  if (ok.ok) {
+    assert.equal(ok.sexo, 'mujer')
+    assert.equal(ok.tocaIdentidad, false)
+    assert.match(textoHistorialEdicion(ok, { actor: 'a@b.es' }), /sexo → mujer/)
+  }
+  const mal = revisarEdicion({ sexo: 'otro' as never })
+  assert.equal(mal.ok, false)
+  const nada = revisarEdicion({})
+  assert.equal(nada.ok, false)
+  const sinSexo = revisarEdicion({ libre: { ciudad: 'Sevilla' } })
+  assert.equal(sinSexo.ok && sinSexo.sexo, undefined)
 })

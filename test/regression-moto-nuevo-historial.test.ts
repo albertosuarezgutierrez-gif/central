@@ -14,12 +14,15 @@ import { join } from 'node:path'
 const RUTA = join(
   import.meta.dirname,
   '..',
-  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx',
+  'apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx',
 )
 const fuente = readFileSync(RUTA, 'utf8')
 
-test('el bloque de "seguro en vigor" existe y es OPT-IN (apagado por defecto)', () => {
-  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(false\)/)
+// 29/09/2026: arranca encendido SOLO si hay una póliza suya leída (`anterior`, de su oportunidad);
+// sin ella sigue apagado. Nunca `useState(true)`: cotizar «asegurado antes» sin saberlo es mentir al vendor.
+test('el bloque de "seguro en vigor" existe y es OPT-IN (apagado salvo póliza leída)', () => {
+  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(anterior !== null\)/)
+  assert.match(fuente, /anterior = null,/, 'sin póliza leída, `anterior` es null → apagado')
   assert.match(fuente, /Sí, tiene un seguro de moto en vigor ahora mismo/)
 })
 
@@ -57,4 +60,31 @@ test('el aviso de las compañías que despistan con ceros (Mapfre) sigue en la a
 test('el desplegable de compañías degrada a texto libre si el directorio no se pudo leer', () => {
   assert.match(fuente, /companias === null \? \(/)
   assert.match(fuente, /Código DGS/)
+})
+
+test('MotoNuevo: los km al año van como corrección solo si se escriben (vacío = supuesto de la media)', () => {
+  const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
+  assert.match(src, /const kmLeidos = kilometrosDesdeTexto\(kmAnuales\)/)
+  assert.match(src, /\.\.\.\(kmLeidos !== null \? \{ kmAnuales: kmLeidos \} : \{\}\),/)
+  // Un km mal escrito apaga el botón: no se paga un precio con un dato que no se ha entendido.
+  assert.match(src, /faltaHistorial \|\| kmInvalido/)
+})
+
+test('MotoNuevo: la moto de la última tarificación se precarga sin pisar lo tecleado, y la media supuesta no pasa a km declarados', () => {
+  const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
+  // Sin variante retomada, la última tarificación no pisa lo que ya hay (30/09/2026: con retomada, manda lo pagado).
+  assert.match(src, /setCodigoVehiculo\(\(c\) => \(retomada \? v\.codigoVehiculo : c \|\| v\.codigoVehiculo\)\)/)
+  assert.match(src, /setMatricula\(\(m\) => \(retomada \? v\.matricula! : m \|\| v\.matricula!\)\)/)
+  assert.match(src, /v\.kmAnuales !== null && v\.kmAnuales !== KM_ANUALES_SUPUESTOS/)
+  // Se puede volver al catálogo: la moto previa no es una trampa.
+  assert.match(src, /Elegir otra moto/)
+})
+
+// 29/09/2026 (Alberto): los años no se teclean. Sin dato se declara el máximo y la compañía lo
+// contrasta con SINCO por el nº de póliza. Si vuelven a nacer vacíos, el botón se apaga y hay que teclearlos.
+test('los años del historial nacen en el máximo (o lo leído), no vacíos', () => {
+  assert.match(fuente, /useState\(String\(historial\.aniosAsegurado\)\)/)
+  assert.match(fuente, /useState\(String\(historial\.aniosSinSiniestros\)\)/)
+  const lib = readFileSync(join(import.meta.dirname, '..', 'packages/module-seguros/src/historial-maximo.ts'), 'utf8')
+  assert.match(lib, /HISTORIAL_MAXIMO = \{ aniosAsegurado: 10, aniosEnCompania: 10, aniosSinSiniestros: 10, siniestrosUltimos5: 0 \}/)
 })

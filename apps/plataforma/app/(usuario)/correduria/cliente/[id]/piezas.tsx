@@ -1,10 +1,12 @@
 import Link from 'next/link'
-import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
+import { Phone, Lock, RefreshCw } from 'lucide-react'
+import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, fechaVencimientoDudosa, lineaFichaObjeto, alertaVencimiento, fechaPintable, type GrupoHistorica } from '@central/module-seguros'
 import EvolucionPrima from '../../EvolucionPrima'
-import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
+import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type PolizaFiguraFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { Badge, type Tono } from '@/components/ui'
+import { Ico } from '../../iconos'
 
 /**
  * Piezas compartidas por las pestañas de la ficha del cliente.
@@ -20,9 +22,9 @@ import { Badge, type Tono } from '@/components/ui'
 // ── Pólizas ─────────────────────────────────────────────────────────────────
 
 export const TIPOS: Record<string, string> = {
-  auto: '🚗 Auto', moto: '🏍️ Moto', hogar: '🏠 Hogar', vida: '🧬 Vida', salud: '🩺 Salud',
-  decesos: '⚱️ Decesos', responsabilidad_civil: '⚖️ R. Civil', comercio: '🏪 Comercio',
-  comunidades: '🏢 Comunidad', otros: '📄 Otros',
+  auto: 'Auto', moto: 'Moto', hogar: 'Hogar', vida: 'Vida', salud: 'Salud',
+  decesos: 'Decesos', responsabilidad_civil: 'R. Civil', comercio: 'Comercio',
+  comunidades: 'Comunidad', otros: 'Otros',
 }
 
 /** Semáforo del estado de una póliza: la FORMA dice vigente/cancelada antes de
@@ -113,9 +115,13 @@ export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes,
                     // NULL = no se sabe cuándo vence, no «no vence».
                     <span style={{ color: 'var(--muted)' }} title="La compañía no ha informado el vencimiento">sin fecha</span>
                   )}
-                  <div style={{ marginTop: 3 }}>
-                    <Badge tono={TONO_ESTADO[p.estado] ?? 'neutral'}>{p.estado.replace(/_/g, ' ')}</Badge>
-                  </div>
+                  {/* El estado del volcado histórico es de hace una década («activa» sobre una fila de 2017
+                      leía como en vigor): solo una póliza de cartera lleva badge de estado. */}
+                  {p.viva && (
+                    <div style={{ marginTop: 3 }}>
+                      <Badge tono={TONO_ESTADO[p.estado] ?? 'neutral'}>{p.estado.replace(/_/g, ' ')}</Badge>
+                    </div>
+                  )}
                   <Anulacion vencimiento={p.fechaVencimiento} viva={p.viva} />
                 </td>
                 <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }} data-label="Prima">
@@ -192,11 +198,11 @@ function Intervinientes({ lista, polizaIds }: { lista: IntervinienteFicha[] | nu
         <div key={`${i.rol}-${n}`}>
           <span style={{ textTransform: 'capitalize' }}>{etiquetaRol(i.rol)}</span>:{' '}
           {i.fichaId ? (
-            <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link>
+            <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? <><Ico i={Lock} size={12} /> cifrado</> : 'sin nombre')}</Link>
           ) : (
-            i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')
+            i.nombre ?? (i.nombreIlegible ? <><Ico i={Lock} size={12} /> cifrado</> : 'sin nombre')
           )}
-          {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`}>📞</a></>}
+          {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`} title="Llamar"><Ico i={Phone} size={12} /></a></>}
         </div>
       ))}
     </div>
@@ -230,7 +236,7 @@ function FilasIguales({ grupo }: { grupo: GrupoHistorica<PolizaFicha & { bien: s
       style={{ ...sub, marginTop: 4 }}
       title="El volcado de junio de 2026 trae estas filas con el mismo ramo, bien, compañía, estado y vencimiento, cambiando solo la prima. No se ha borrado ninguna: se enseñan juntas."
     >
-      🔁 {grupo.filas.length} filas del volcado:{' '}
+      <Ico i={RefreshCw} /> {grupo.filas.length} filas del volcado:{' '}
       {grupo.filas.map((f, i) => (
         <span key={f.id}>
           {i > 0 && ' · '}
@@ -269,7 +275,7 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
     return <span style={{ color: 'var(--muted)' }} title="La versión desplegada de asegura no informa este campo">—</span>
   }
   if (p.objeto.estado === 'cifrado') {
-    return <span style={{ color: 'var(--muted)', fontStyle: 'italic' }} title={p.objeto.nota ?? undefined}>🔒 cifrado</span>
+    return <span style={{ color: 'var(--muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }} title={p.objeto.nota ?? undefined}><Ico i={Lock} size={12} /> cifrado</span>
   }
   if (p.objeto.titulo === null && p.objeto.detalle === null) {
     return (
@@ -295,6 +301,8 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
     <span title={p.objeto.nota ?? undefined}>
       {p.objeto.titulo}
       {p.objeto.detalle && <div style={sub}>{p.objeto.detalle}</div>}
+      {/* Línea de la ficha del bien (CIMA); NULL → se omite. */}
+      {lineaFichaObjeto(p.objeto.ficha) && <div style={sub}>{lineaFichaObjeto(p.objeto.ficha)}</div>}
     </span>
   )
 }
@@ -334,11 +342,14 @@ function CeldaPago({ p }: { p: PolizaFicha }) {
  */
 function Anulacion({ vencimiento, viva }: { vencimiento: string | null; viva: boolean }) {
   if (!viva) return null
-  const v = ventanaAnulacion(vencimiento)
-  if (v === null || v.diasParaAvisar > 60) return null
+  // Una sola lectura (`alertaVencimiento`): con el vencimiento ya pasado o desconocido NO hay plazo de
+  // aviso que contar (antes salía «Vence 05/06/2026 · renueva otro año» sobre una póliza vencida).
+  const a = alertaVencimiento(vencimiento)
+  if (a.estado === 'vencido') return <div style={{ ...sub, color: 'var(--muted)' }}>{a.titular}</div>
+  if (a.estado === 'desconocido' || a.nota === null || (a.diasParaAvisar ?? 0) > 60) return null
   return (
-    <div style={{ ...sub, color: v.enPlazo ? 'var(--warning)' : 'var(--muted)' }} title="Contrato anual: solo se anula al vencimiento, con 30 días de preaviso">
-      {v.enPlazo ? `avisar antes del ${fmt(v.limiteAviso)} para no renovar` : 'plazo de aviso pasado: renueva otro año'}
+    <div style={{ ...sub, color: a.estado === 'en_plazo' ? 'var(--warning)' : 'var(--muted)' }} title="Contrato anual: solo se anula al vencimiento, con 30 días de preaviso">
+      {a.nota}
     </div>
   )
 }
@@ -362,16 +373,16 @@ export function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
       </span>
     )
   }
-  if (r.devueltos > 0) return <span style={{ color: 'var(--negative)' }}>🔴 {r.devueltos} devuelto(s)</span>
-  if (r.pendientes > 0) return <span style={{ color: 'var(--warning)' }} title="Emitido por la compañía y aún sin cargar en cuenta. No es un impago.">🟡 {r.pendientes} al cobro</span>
-  // 🚨 Todos anulados (20 de 109 vivas) se pintaba «🟢 0 cobrado(s)»: cero
+  if (r.devueltos > 0) return <span style={{ color: 'var(--negative)' }}>{r.devueltos} devuelto(s)</span>
+  if (r.pendientes > 0) return <span style={{ color: 'var(--warning)' }} title="Emitido por la compañía y aún sin cargar en cuenta. No es un impago.">{r.pendientes} al cobro</span>
+  // Todos anulados (20 de 109 vivas) se pintaba «0 cobrado(s)»: cero
   // cobros no es estar al día — es una póliza cancelada o sustituida.
   if (r.cobrados === 0 && r.anulados > 0) {
-    return <span style={{ color: 'var(--muted)' }} title="Todos los recibos están anulados: la póliza se canceló o se sustituyó. No hay cobro.">⚪ {r.anulados} anulado(s)</span>
+    return <span style={{ color: 'var(--muted)' }} title="Todos los recibos están anulados: la póliza se canceló o se sustituyó. No hay cobro.">{r.anulados} anulado(s)</span>
   }
   return (
     <span style={{ color: 'var(--muted)' }}>
-      🟢 {r.cobrados} cobrado(s)
+      {r.cobrados} cobrado(s)
       {r.cobradoEur !== null && <div style={sub}>{eur(r.cobradoEur)}</div>}
       {r.ilegibles > 0 && <div style={{ ...sub, color: 'var(--warning)' }}>{r.ilegibles} importe(s) sin poder leer</div>}
     </span>
@@ -392,24 +403,82 @@ function motivoNoRetarificable(p: PolizaFicha): string {
  * bloque y con «No la gestionamos» en cada fila — el mismo chip que ya usa
  * el portal del cliente, para que el corredor no las confunda con una viva.
  *
- * 🚨 `null` ≠ `[]`: `null` es «no se ha podido leer si aportó algo» (falló
+ * IMPORTANTE: `null` ≠ `[]`: `null` es «no se ha podido leer si aportó algo» (falló
  * `portal_vinculo` o la tabla), `[]` es «se ha mirado y no ha aportado
  * ninguna». Colapsarlos en el mismo hueco mudo diría «no hay nada» sobre un
  * fallo de lectura — la regla NULL≠0 del CLAUDE.md raíz.
  */
+/**
+ * Pólizas de OTRO tomador donde este cliente figura (28/09/2026). Alberto: «toda
+ * persona que entre dentro de la póliza automáticamente le aparece». Caso: la
+ * furgoneta de GLOBAL 2 con tomador su conductor — la empresa es propietaria y
+ * asegurada y su ficha no la enseñaba. Se enlaza a la póliza, que es del tomador.
+ */
+export function PolizasDondeFigura({ polizas }: { polizas: PolizaFiguraFicha[] | null }) {
+  if (polizas === null) {
+    return (
+      <Tarjeta titulo="Donde figura en pólizas de otro tomador">
+        <p style={{ color: 'var(--muted)', fontSize: 12, margin: 0 }}>
+          No se han podido leer. No significa que no figure en ninguna.
+        </p>
+      </Tarjeta>
+    )
+  }
+  if (polizas.length === 0) return null
+  return (
+    <Tarjeta titulo={`Donde figura en pólizas de otro tomador (${polizas.length})`}>
+      <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>
+        No es el tomador, pero interviene en ellas (propietario, asegurado, conductor…): también son suyas.
+      </p>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
+          <thead>
+            <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+              <th style={th}>Póliza</th>
+              <th style={th}>Figura como</th>
+              <th style={th}>Tomador</th>
+              <th style={th}>Vence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {polizas.map(p => (
+              <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={td}>
+                  <Link href={`/correduria/poliza/${p.id}`}>
+                    {p.tipo ? (TIPOS[p.tipo] ?? p.tipo) : 'sin ramo'} · {p.aseguradora || 'sin compañía'}
+                  </Link>
+                  <div style={sub}>
+                    {p.numeroPoliza ?? 'sin número'}
+                    {!p.enVigor && ` · ${p.estado || 'sin estado'}`}
+                  </div>
+                </td>
+                <td style={td}>{p.roles.length > 0 ? p.roles.map(etiquetaRol).join(', ') : '—'}</td>
+                <td style={td}>
+                  <Link href={`/correduria/cliente/${p.tomador.id}`}>{p.tomador.nombre || 'sin nombre'}</Link>
+                </td>
+                <td style={td}>{p.fechaVencimiento ? p.fechaVencimiento.split('-').reverse().join('/') : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Tarjeta>
+  )
+}
+
 export function PolizasDeclaradas({ declaradas }: { declaradas: PolizaDeclaradaFicha[] | null }) {
   if (declaradas === null) {
     return (
-      <Tarjeta titulo="📥 Aportadas desde el portal">
+      <Tarjeta titulo="Aportadas desde el portal">
         <p style={{ color: 'var(--muted)', fontSize: 12, margin: 0 }}>
-          ⚠️ No se han podido leer. No significa que no haya aportado ninguna.
+          No se han podido leer. No significa que no haya aportado ninguna.
         </p>
       </Tarjeta>
     )
   }
   if (declaradas.length === 0) return null
   return (
-    <Tarjeta titulo={`📥 Aportadas desde el portal (${declaradas.length})`}>
+    <Tarjeta titulo={`Aportadas desde el portal (${declaradas.length})`}>
       <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>
         Las ha subido el propio cliente en su portal. No las gestiona Grupo ASegura: sirven para
         saber con quién tiene el seguro y cuándo le vence, de cara a ofrecerle cambiarse.
@@ -503,6 +572,12 @@ export function Tarjeta({ titulo, children }: { titulo: string; children: React.
 
 /** Fecha siempre en español: "2026-06-03" → "03/06/2026". */
 export function fmt(iso: string): string {
-  const [y, m, d] = iso.split('-')
-  return d && m && y ? `${d}/${m}/${y}` : iso
+  // Centinela (1900-01-01, 9999-12-31) o ilegible: no es una fecha → «—».
+  return fechaPintable(iso) ?? '—'
+}
+
+/** Bajo un campo de vencimiento: avisa si la fecha ya pasó o está a más de un año (escaneo o tecleo con el año mal). No bloquea. */
+export function AvisoFechaDudosa({ fecha, hoy }: { fecha: string; hoy: string }) {
+  const d = fechaVencimientoDudosa(fecha, hoy)
+  return d ? <span role="status" style={{ fontSize: 12, color: 'var(--warning)' }}>⚠️ {d.texto}</span> : null
 }

@@ -1,8 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
+import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
+import { prepararPresupuestoTrasTarificar } from '@/lib/presupuesto-tras-tarificar'
 import { prepararRetarificacionNuevaAuto, respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
+import { correduriaUnica } from '@/lib/cartera'
+import { anotarVehiculoDeCotizacion, prepararVariante } from '@/lib/oportunidad-riesgo'
+import { anotarBonusTarificacion } from '@/lib/seguro-anterior-candidatas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,13 +36,16 @@ export const maxDuration = 180
  *    `clienteOrigenDe()`, así que un `clienteId` de otra correduría es un
  *    404, no una cotización.
  *
- * A diferencia de una póliza existente, aquí no hay «compañía anterior» que
- * declarar: se cotiza DE CALLE (`aseguradoAntes: false`, ver
- * `precalificarAutoNueva()`), sin el bonus por antigüedad que sí lleva
- * retarificar una póliza real.
+ * 🚗 El vehículo es NUEVO, pero el historial es del CONDUCTOR (03/10/2026, Alberto): ya NO se cotiza
+ * de calle por defecto. Se declara como seguro anterior la mejor póliza de motor que conocemos del
+ * cliente (cartera en vigor + competencia leída de su PDF; regla en `elegirSeguroAnteriorParaImputar`)
+ * y la respuesta dice cuál y por qué (`seguroAnterior`). Si sus años sin siniestros no constan, se
+ * declara el máximo y el precio sale con `bonusSupuesto: true` (condicionado a SINCO/certificado; la
+ * emisión lo exige verificado). El corredor elige otra con `seguroAnteriorId` o la apaga con
+ * `sinSeguroAnterior: true`; si declara el historial a mano (`correcciones.aseguradoAntes`), manda él.
  *
  * ── Cuerpo ──────────────────────────────────────────────────────────────────
- *   { clienteId, confirmado: true, solicitadoPor?, resueltos?, correcciones? }
+ *   { clienteId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, seguroAnteriorId?, sinSeguroAnterior? }
  *
  * ── Respuesta ───────────────────────────────────────────────────────────────
  * La MISMA que `POST /api/operador/codeoscopic/retarificar`, campo por campo
@@ -81,12 +89,34 @@ export const POST = auditado(async (req: Request) => {
       ? cuerpo.solicitadoPor.trim()
       : 'plataforma'
 
+  // VARIANTE de un riesgo (29/09/2026): con `oportunidadId` se cuelga de ESA oportunidad y las
+  // figuras (propietario, conductores) se arman desde sus fichas. Gratis, antes de gastar.
+  const correduria = await correduriaUnica().catch(() => null)
+  // Con `oportunidadId` y sin poder leer la correduría NO se cotiza: seguir sería pagar con el
+  // tomador en todos los papeles y colgarlo de otra oportunidad.
+  if (!correduria && typeof cuerpo.oportunidadId === 'string' && cuerpo.oportunidadId.trim() !== '') {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: 'no se pudo comprobar la variante; no se ha pedido precio', gastado: '0,00€' }, { status: 503 })
+  }
+  const variante = correduria
+    ? await prepararVariante(correduria.id, {
+        tomadorId: clienteId,
+        ramo: 'auto',
+        cuerpo,
+        correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      })
+    : { ok: true as const, v: { contexto: null, correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined } }
+  if (!variante.ok) {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: variante.motivo, gastado: '0,00€' }, { status: 422 })
+  }
+
   const p = await prepararRetarificacionNuevaAuto({
     clienteId,
     solicitadoPor,
     cuerpo: {
       resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
-      correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      correcciones: variante.v.correcciones,
+      ...(typeof cuerpo.seguroAnteriorId === 'string' && cuerpo.seguroAnteriorId.trim() !== '' ? { seguroAnteriorId: cuerpo.seguroAnteriorId.trim() } : {}),
+      ...(cuerpo.sinSeguroAnterior === true ? { sinSeguroAnterior: true } : {}),
     } satisfies CuerpoRetarificacion,
   })
   // Corta ANTES del vendor (422 faltan datos · 404 cliente · 503):
@@ -95,8 +125,29 @@ export const POST = auditado(async (req: Request) => {
     return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })
   }
 
+  if (variante.v.contexto && p.peticion.contexto) {
+    p.peticion.contexto = { ...p.peticion.contexto, ...variante.v.contexto }
+  }
+
   // ── La única línea que cuesta dinero, por el único embudo ────────────────
+  // Recotización explícita: salta la guarda anti-duplicado (15 min) SOLO si el operador la pide; nunca por defecto.
+  if (cuerpo.forzar === true) p.peticion.forzar = true
   const r = await cotizar(p.peticion)
+  // Lo usado para pedir precio se anota en el riesgo (`info_riesgo.datosVehiculo`), DESPUÉS de guardar la
+  // tarificación. Nunca lanza: la cotización ya está pagada (0,50€, no idempotente, regla 20) y un fallo aquí
+  // no puede romperla ni hacer que se repita.
+  if (correduria && variante.v.contexto && r.ok && r.guardado.estado === 'guardada') {
+    await anotarVehiculoDeCotizacion(correduria.id, { oportunidadId: variante.v.contexto.oportunidadId, cuerpo, actor: solicitadoPor })
+  }
+  // Qué seguro anterior se declaró y si el bonus fue SUPUESTO: la emisión lo lee para exigir la
+  // verificación. Nunca lanza (la cotización ya está pagada); si no queda anotado, la emisión lo
+  // tratará como «no se sabe» y pedirá verificación igualmente.
+  if (r.ok && r.guardado.estado === 'guardada' && p.seguroAnterior) {
+    await anotarBonusTarificacion(p.peticion.correduriaId, r.guardado.cotizacionId, { bonusSupuesto: p.seguroAnterior.bonusSupuesto, publico: p.seguroAnterior })
+  }
+  // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
+  const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)
+  if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => prepararPresupuestoTrasTarificar(aCompletar, solicitadoPor)).then(() => undefined))
 
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })

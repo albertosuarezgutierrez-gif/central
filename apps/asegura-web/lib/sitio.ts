@@ -122,15 +122,37 @@ export const AMBITO = {
  * `youtube.com` y `google.com`, así que un perfil entra aquí por la palabra de
  * Alberto. El guardián comprueba la FORMA; que la URL sea suya, no puede.
  *
- * ⏳ Pendiente: la ficha de Google Business (existe y está verificada; falta su
- * URL canónica de Maps). Cuando entre, `geo` también deja de estar bloqueado.
+ * 📍 La ficha de Google Business va en su forma `?cid=`: es el identificador
+ * estable del sitio en Maps. La URL `/maps/place/…/@lat,lng,17z/data=…` que da el
+ * navegador lleva el encuadre del mapa pegado y cambia con cada vista. `cid` es
+ * el ÚNICO parámetro que el guardián admite, y solo en `/maps`.
  */
 export const PERFILES: readonly string[] = [
   // Canal de YouTube. El handle canónico lleva las mayúsculas del monograma
   // («AS» = Alberto Suárez), igual que la marca: YouTube no las distingue, pero
   // en datos estructurados va la forma que el propio canal publica.
   'https://www.youtube.com/@GrupoASegura',
+  // Ficha de Google Business (Maps). CID = 0xc09217e32b3f9bbc de la URL del
+  // sitio, pasado a decimal. Dado por el panel de la ficha el 29/09/2026.
+  'https://www.google.com/maps?cid=13876179666332523452',
 ] as const
+
+/**
+ * Coordenadas del pin de la ficha de Google Business (29/09/2026). Salen de la
+ * propia ficha, no de geocodificar la dirección: `geo` tiene que coincidir con
+ * el pin que Google ya muestra, o la ficha y la web se contradicen.
+ */
+export const GEO = { latitude: 37.3948384, longitude: -5.9904272 } as const
+
+/**
+ * La calculadora del seguro del banco (29/09/2026). Solo con el enlace del pie
+ * no la encontraba nadie (Alberto: «no veo en la web la calculadora del banco»),
+ * así que también sale en la portada y en los dos ramos que el banco pide con
+ * la hipoteca: hogar (daños del inmueble) y vida. En la cabecera no cabe: está
+ * medida al límite (ver `NAV_CABECERA`).
+ */
+export const CALCULADORA_HIPOTECA = '/calculadora-bonificacion-hipoteca'
+export const RAMOS_CON_CALCULADORA_HIPOTECA: readonly string[] = ['hogar', 'vida-y-salud']
 
 /** Navegación principal. El orden es el de prioridad comercial, no el alfabético. */
 export const NAV = [
@@ -140,6 +162,9 @@ export const NAV = [
   { href: '/seguros/flota', texto: 'Flota de vehículos' },
   { href: '/seguros/auto', texto: 'Auto y moto' },
   { href: '/seguros/vida-y-salud', texto: 'Vida y salud' },
+  // 03/10/2026: página de intención de salud (ver `lib/ramos.ts`); al pie,
+  // fuera de la cabecera (`FUERA_DE_CABECERA`).
+  { href: '/seguros/salud-sin-copago', texto: 'Salud sin copago' },
   // 27/09/2026: al pie y fuera de la cabecera (ver `FUERA_DE_CABECERA`).
   { href: '/seguros/decesos', texto: 'Decesos' },
   { href: '/seguros/seguro-perro', texto: 'Seguro de perro' },
@@ -175,30 +200,31 @@ export const NAV = [
   // 26/09/2026: la herramienta de la carta de baja, por el mismo motivo — el pie
   // es lo que la enlaza desde todas las páginas.
   { href: '/carta-baja-seguro', texto: 'Carta para dar de baja un seguro' },
+  // 29/09/2026: la calculadora del seguro del banco, enlazada desde el pie por lo mismo.
+  { href: '/calculadora-bonificacion-hipoteca', texto: 'Calculadora del seguro de la hipoteca' },
+  // 30/09/2026: entrada nueva por otro agente, enlazada desde cabecera pero fuera de ella.
+  { href: '/seguro-hipoteca-banco-obligatorio', texto: '¿Es obligatorio el seguro del banco?' },
+] as const
+
+/**
+ * Herramientas de valor añadido accesibles desde la cabecera (desktop + móvil).
+ * Son enlaces directos a secciones/herramientas de la portada, con máximo 3
+ * en la cabecera (desktop: después de Seguros desplegable; móvil: chips). */
+export const HERRAMIENTAS = [
+  { href: '/calculadora-bonificacion-hipoteca', texto: '¿Seguro del banco?', key: 'calculadora' },
+  { href: '/#vencimiento', texto: '¿Cuándo vence?', key: 'vencimiento' },
+  { href: '/#subir', texto: 'Sube tu póliza', key: 'subir' },
 ] as const
 
 /**
  * Lo que cabe en la CABECERA.
  *
- * 🚨 No es una preferencia: está MEDIDO. Con las seis entradas, la marca
- * (171 px) + la nav (815 px) + el botón (147 px) suman ~1.145 px dentro de un
- * contenedor de 1.104 px, y lo que se salía por la derecha de la pantalla era
- * el botón «Área de clientes» — o sea, justo lo que el cliente viene a pulsar.
- * Se recorta la nav, que es lo que sobra: «Cambiar de correduría» tiene su
- * propia sección en la portada, su enlace en el pie y su página.
+ * 🚨 No es una preferencia: está MEDIDO. El nuevo diseño (30/09/2026) acomoda:
+ * marca (171 px) · Seguros ▾ (70 px) · 3 herramientas (3 × 120 px) · ¿Siniestro? (120 px) · Mis seguros (147 px)
+ * sumando ~800 px que caben en 1.104 px, dejando aire para responsive.
  *
- * ⚠️ Y por eso **responsabilidad civil tampoco entra en la cabecera**: sería la
- * sexta entrada y devolvería el desbordamiento medido. Se enlaza desde el pie y
- * desde las páginas de ramo hermanas, que es donde el enlace además tiene
- * sentido temático. Los cinco ramos de la cabecera son los de más volumen.
- *
- * ⚠️ **Flota (07/09/2026) queda fuera por lo mismo, y el cepo lo cazó**: al
- * meterla en el pie, `enlazado.test.ts` se puso rojo con «la cabecera lleva 6
- * entradas; se midió el desborde a partir de 6». No se sube el tope: el número
- * está medido en píxeles, no elegido. Flota se alcanza desde el pie y desde
- * comercio, que es quien tiene al mismo lector delante —el que decide el seguro
- * del negocio decide el de las furgonetas—, así que el enlace encaja mejor ahí
- * que en una cabecera que no cabe.
+ * Antigua regla (se retiene para referencia histórica): Con los seis ramos,
+ * marca + nav + botón sumaban ~1.145 px dentro de 1.104 px. Se pasó a desplegable.
  */
 const FUERA_DE_CABECERA: readonly string[] = [
   '/seguros/responsabilidad-civil',
@@ -209,6 +235,7 @@ const FUERA_DE_CABECERA: readonly string[] = [
   '/seguros/seguro-perro',
   '/seguros/impago-alquiler',
   '/seguros/patinete-electrico',
+  '/seguros/salud-sin-copago',
 ]
 
 export const NAV_CABECERA = NAV.filter(

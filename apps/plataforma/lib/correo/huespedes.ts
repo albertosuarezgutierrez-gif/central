@@ -22,7 +22,7 @@ const VENTANA_ANCHA_ADELANTE = 540
 // La lógica vive en `num-confirmacion.ts` (puro, con tests): NO mira dentro de los enlaces, que
 // es de donde salió el 🚨 falso del 04/09/2026.
 export function extraerNumConfirmacion(correo: CorreoNuevo): string | null {
-  return extraerNumConfirmacionDe(correo.subject, correo.extracto)
+  return extraerNumConfirmacionDe(correo.subject, correo.extracto, correo.from)
 }
 
 // Extrae el texto de la pregunta del huésped del cuerpo del correo (Booking lo pone tras un marcador).

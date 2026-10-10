@@ -31,9 +31,19 @@ import {
   type TerceroCartera,
 } from '@/lib/siniestros-asegura'
 import Documentos from './Documentos'
+import { ListaPersonasCima } from './PersonaCima'
+import PartesSinVincular, { type PrecargaDesdeParte } from './PartesSinVincular'
 import type { Compania } from '@/lib/companias-asegura'
 import { companiaDeSiniestro, contactoSiniestroDe, tieneAlgoQueEnsenar } from '@/lib/compania-contacto-siniestro'
 import { useCompanias } from './useCompanias'
+import {
+  declaracionTardia,
+  hrefTelefono,
+  textoConvenios,
+  textoDaa,
+  textoResponsabilidad,
+  textoVehiculo,
+} from '@/lib/siniestro-detalle-cima'
 
 /**
  * 🚨 Siniestros DESDE la ficha (cliente o póliza): ver, abrir, anotar el
@@ -69,15 +79,21 @@ export default function Siniestros({
   lista: inicial,
   polizas,
   documentos,
+  clienteId,
 }: {
   lista: SiniestroCartera[] | null
   polizas: PolizaParaSiniestro[]
   /** Documentos de la ficha/póliza (los del siniestro se filtran por `siniestroId`). `null`/ausente = no consultados. */
   documentos?: DocumentoResumen[] | null
+  /** En la ficha de CLIENTE: enseña sus partes del portal sin vincular (y deja registrar desde ellos). */
+  clienteId?: string
 }) {
   const router = useRouter()
   const [lista, setLista] = useState<SiniestroCartera[] | null>(inicial)
   const [formAbierto, setFormAbierto] = useState(false)
+  // Alta DESDE un parte del portal: precarga el formulario y lo deja vinculado.
+  const [precarga, setPrecarga] = useState<PrecargaDesdeParte | null>(null)
+  const [recargaPartes, setRecargaPartes] = useState(0)
   const [mensaje, setMensaje] = useState<Mensaje | null>(null)
   // Directorio de compañías (20/09/2026), para poder enseñar el contacto de
   // siniestros SIN salir de esta pantalla. Mismo hook que `Companias.tsx`
@@ -121,11 +137,34 @@ export default function Siniestros({
     const r = await llamar('POST', body)
     if (r.estado === 'ok') {
       setLista((l) => (l === null ? [r.siniestro] : [r.siniestro, ...l]))
-      setMensaje(r.aviso ? { tono: 'aviso', texto: `Siniestro abierto. ${r.aviso}` } : { tono: 'ok', texto: 'Siniestro abierto.' })
+      const hecho = body.parteId ? 'Siniestro registrado y vinculado al parte del cliente.' : 'Siniestro abierto.'
+      setMensaje(r.aviso ? { tono: 'aviso', texto: `${hecho} ${r.aviso}` } : { tono: 'ok', texto: hecho })
       setFormAbierto(false)
+      setPrecarga(null)
+      setRecargaPartes((n) => n + 1)
       router.refresh()
     }
     return r
+  }
+
+  /** Vincular el parte a un siniestro que ya existe (el 409 `duplicado` del alta lo propone). */
+  async function vincularParte(parteId: string, siniestroId: string): Promise<boolean> {
+    try {
+      const res = await fetch('/api/correduria/partes', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: parteId, accion: 'vincular', siniestroId }),
+      })
+      if (!res.ok) return false
+    } catch {
+      return false
+    }
+    setMensaje({ tono: 'ok', texto: 'Parte vinculado al siniestro que ya mandó la compañía.' })
+    setFormAbierto(false)
+    setPrecarga(null)
+    setRecargaPartes((n) => n + 1)
+    router.refresh()
+    return true
   }
 
   /** Seguimiento, estado o campos del ramo: al `ok` se sustituye la fila por la que devuelve asegura. */
@@ -175,7 +214,7 @@ export default function Siniestros({
           🚨 Siniestros <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>· {resumen}</span>
         </div>
         {elegibles.length > 0 ? (
-          <button type="button" onClick={() => setFormAbierto((v) => !v)} style={{ ...btnStyle(formAbierto ? 'secundario' : 'primario'), minHeight: 44 }}>
+          <button type="button" onClick={() => { setPrecarga(null); setFormAbierto((v) => !v) }} style={{ ...btnStyle(formAbierto ? 'secundario' : 'primario'), minHeight: 44 }}>
             {formAbierto ? 'Cerrar formulario' : '➕ Abrir siniestro'}
           </button>
         ) : (
@@ -192,8 +231,24 @@ export default function Siniestros({
         </div>
       )}
 
+      {clienteId && (
+        <PartesSinVincular
+          clienteId={clienteId}
+          recarga={recargaPartes}
+          onCambio={() => router.refresh()}
+          onRegistrar={(p) => { setPrecarga(p); setFormAbierto(true) }}
+        />
+      )}
+
       {formAbierto && (
-        <FormAbrir polizas={elegibles} onAbrir={abrir} onCancelar={() => setFormAbierto(false)} />
+        <FormAbrir
+          key={precarga?.parteId ?? 'nuevo'}
+          polizas={elegibles}
+          precarga={precarga}
+          onAbrir={abrir}
+          onVincular={vincularParte}
+          onCancelar={() => { setFormAbierto(false); setPrecarga(null) }}
+        />
       )}
 
       {lista === null ? (
@@ -302,6 +357,165 @@ function BloqueTramitacion({ t }: { t: SiniestroCartera['tramitacionCima'] }) {
             </li>
           ))}
         </ol>
+      )}
+    </div>
+  )
+}
+
+// ─── Detalle de la compañía (EXCLUSIVO de CIMA, 28/09/2026) ───────────────────
+//
+// Lo que el EIAC de siniestro trae y la ingesta guarda desde el PR 862 del repo asegura. Cada
+// dato `null` = CIMA no lo manda y NO se pinta (ni «0», ni «sin X»). La PII
+// llega descifrada por asegura; un `v1:` ya lo ha tapado `leerDetalleCima()`.
+// Los códigos TIREA (convenio, clase/estado de expediente) van como código:
+// no hay tabla oficial y no se traducen a ojo.
+
+function BloqueDetalleCima({ s }: { s: SiniestroCartera }) {
+  const d = s.detalleCima
+  if (!d) return null
+  const plazo = declaracionTardia(s.fechaHora ?? s.fecha, d.fechaDeclaracion)
+  const cifras: [string, string][] = []
+  const responsabilidad = textoResponsabilidad(d.responsabilidad)
+  if (responsabilidad) cifras.push(['Responsabilidad (compañía)', responsabilidad])
+  const daa = textoDaa(d.daa)
+  if (daa) cifras.push(['Parte amistoso (DAA)', daa])
+  if (d.totalRecobros !== null) cifras.push(['Recobrado por la compañía', eur(d.totalRecobros)])
+  const convenios = textoConvenios(d.convenios)
+  if (convenios) cifras.push(['Convenio entre compañías', convenios])
+  if (d.refMediador) cifras.push(['Referencia del mediador', d.refMediador])
+  const vehiculo = textoVehiculo(d.vehiculo)
+  const tel = hrefTelefono(d.contactoTelefono)
+  const vc = d.vehiculoContrario
+  const vcTexto = vc ? [vc.marcaModelo, vc.matricula].filter(Boolean).join(' · ') : ''
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+      <div style={etiqueta}>Datos de la compañía (CIMA)</div>
+
+      {d.fechaDeclaracion && (
+        <div>
+          <span style={muted}>Declarado a la compañía el </span>{fechaEs(d.fechaDeclaracion)}
+          {plazo?.tardia && (
+            <span style={{ ...chipAviso, marginLeft: 6 }} title={`El art. 16 LCS da ${DIAS_COMUNICACION_LCS} días desde el hecho para comunicarlo; la compañía puede reclamar los daños de la demora.`}>
+              ⚠️ {plazo.dias} días después del hecho (art. 16 LCS)
+            </span>
+          )}
+        </div>
+      )}
+
+      {cifras.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+          {cifras.map(([label, valor]) => <Dato key={label} label={label} valor={valor} />)}
+        </div>
+      )}
+
+      {d.reservaDesglose && (
+        <div>
+          <div style={etiqueta}>Reserva por coberturas</div>
+          {d.reservaDesglose.coberturas.length > 0 ? (
+            <ul style={listaCima}>
+              {d.reservaDesglose.coberturas.map((c, i) => (
+                <li key={i}>cobertura {c.cobertura}{c.importe !== null ? `: ${eur(c.importe)}` : ''}</li>
+              ))}
+            </ul>
+          ) : (
+            // El texto no seguía el patrón: se enseña tal cual lo manda la compañía.
+            <div style={{ overflowWrap: 'anywhere' }}>{d.reservaDesglose.descripcion}</div>
+          )}
+        </div>
+      )}
+
+      {d.expedientes && (
+        <div>
+          <div style={etiqueta}>Expedientes</div>
+          <ul style={listaCima}>
+            {d.expedientes.map((e, i) => {
+              const importes = [
+                e.importeReserva !== null ? `reserva ${eur(e.importeReserva)}` : null,
+                e.totalPagos !== null ? `pagado ${eur(e.totalPagos)}` : null,
+                e.totalRecobros !== null ? `recobrado ${eur(e.totalRecobros)}` : null,
+              ].filter(Boolean)
+              return (
+                <li key={e.numero ?? i} style={{ overflowWrap: 'anywhere' }}>
+                  {e.numero ?? <span style={muted}>sin número</span>}
+                  {e.clase && <span style={muted}> · clase {e.clase}</span>}
+                  {e.estado && <span style={muted}> · estado {e.estado}</span>}
+                  {e.fechaInicio && <span style={muted}> · desde {fechaEs(e.fechaInicio)}</span>}
+                  {e.fechaFin && <span style={muted}> · hasta {fechaEs(e.fechaFin)}</span>}
+                  {importes.length > 0 && <div>{importes.join(' · ')}</div>}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+
+      {d.riesgo && (
+        <div>
+          <div style={etiqueta}>Riesgo afectado</div>
+          {d.riesgo.descripcion && <div style={{ overflowWrap: 'anywhere' }}>{d.riesgo.descripcion}</div>}
+          {d.riesgo.coberturas.length > 0 && (
+            <ul style={listaCima}>
+              {d.riesgo.coberturas.map((c, i) => (
+                <li key={i}>{c.descripcion ?? <span style={muted}>cobertura sin nombre</span>}{c.capital !== null ? `: ${eur(c.capital)}` : ''}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {(vehiculo || d.vehiculo?.conductorNombre || vc) && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+          {(vehiculo || d.vehiculo?.conductorNombre) && (
+            <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+              <div style={etiqueta}>Vehículo del asegurado</div>
+              {vehiculo && <div>{vehiculo}</div>}
+              {d.vehiculo?.conductorNombre && <div><span style={muted}>conductor </span>{d.vehiculo.conductorNombre}</div>}
+            </div>
+          )}
+          {vc && (
+            <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+              <div style={etiqueta}>Vehículo contrario</div>
+              {vcTexto && <div>{vcTexto}</div>}
+              {vc.conductorNombre && <div><span style={muted}>conductor </span>{vc.conductorNombre}</div>}
+              {vc.otros.map((o, i) => (
+                <div key={i}><span style={muted}>{o.descripcion ?? 'dato'} </span>{o.valor}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {d.asistencias && (
+        <div>
+          <div style={etiqueta}>Asistencias</div>
+          <ul style={listaCima}>
+            {d.asistencias.map((a, i) => (
+              <li key={i} style={{ overflowWrap: 'anywhere' }}>
+                {a.descripcion ?? <span style={muted}>asistencia</span>}
+                {a.prestador && <span style={muted}> · {a.prestador}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(d.contactoNombre || d.contactoTelefono || d.contactoObservaciones) && (
+        <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+          <div style={etiqueta}>Persona de contacto (compañía)</div>
+          {d.contactoNombre && <div>{d.contactoNombre}</div>}
+          {d.contactoTelefono && (
+            <div>{tel ? <a href={tel} style={{ display: 'inline-block', minHeight: 44, lineHeight: '44px' }}>📞 {d.contactoTelefono}</a> : d.contactoTelefono}</div>
+          )}
+          {d.contactoObservaciones && <div style={{ ...muted, whiteSpace: 'pre-wrap' }}>{d.contactoObservaciones}</div>}
+        </div>
+      )}
+
+      {d.descripcion && (
+        <div>
+          <div style={etiqueta}>Descripción de la compañía</div>
+          <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{d.descripcion}</div>
+        </div>
       )}
     </div>
   )
@@ -691,8 +905,20 @@ function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ra
         <Dato label="Actualizado" valor={s.actualizado ? fechaHoraEs(s.actualizado) : null} />
       </div>
 
+      <BloquePartes partes={s.partes} />
+
       <BloqueDanos danos={s.danosCima} />
       <BloqueTramitacion t={s.tramitacionCima} />
+      <BloqueDetalleCima s={s} />
+
+      {/* Terceros que manda la COMPAÑÍA por CIMA (asegura PR 880), con todo: papel, nombre, domicilio,
+          teléfono, email, matrícula, compañía y responsabilidad. `null`/`[]` no se pinta. */}
+      {s.tercerosCima && s.tercerosCima.length > 0 && (
+        <div>
+          <div style={etiqueta}>Terceros (CIMA)</div>
+          <ListaPersonasCima lista={s.tercerosCima} />
+        </div>
+      )}
 
       {propio && (
         <BloqueRamo siniestroId={s.id} ramoPoliza={ramoPoliza} datosRamo={s.datosRamo} onGuardar={onAnotar} />
@@ -901,20 +1127,27 @@ const ETIQUETA_RAMO: Record<string, string> = {
   vida: 'Vida',
 }
 
-function FormAbrir({ polizas, onAbrir, onCancelar }: {
+function FormAbrir({ polizas, precarga, onAbrir, onVincular, onCancelar }: {
   polizas: PolizaParaSiniestro[]
+  /** Registrar DESDE un parte del portal: sus datos de partida y su id (queda vinculado). */
+  precarga: PrecargaDesdeParte | null
   onAbrir: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
+  onVincular: (parteId: string, siniestroId: string) => Promise<boolean>
   onCancelar: () => void
 }) {
-  const [polizaId, setPolizaId] = useState(polizas[0]?.id ?? '')
+  const polizaDelParte = precarga?.polizaId && polizas.some((p) => p.id === precarga.polizaId) ? precarga.polizaId : null
+  const [polizaId, setPolizaId] = useState(polizaDelParte ?? polizas[0]?.id ?? '')
   const poliza = polizas.find((p) => p.id === polizaId) ?? null
   // Solo los tipos del ramo de la póliza (más los generales); si el ramo no se
   // sabe mapear, todos: mejor elegir de más que no poder abrirlo.
   const ramos = ramosSiniestroParaPoliza(poliza?.tipo)
   const tipos = ramos === null ? TIPOS_SINIESTRO : TIPOS_SINIESTRO.filter((t) => ramos.includes(t.ramo))
   const [tipo, setTipo] = useState<string>(tipos[0]?.clave ?? 'otro')
-  const [fechaHora, setFechaHora] = useState('')
-  const [descripcion, setDescripcion] = useState('')
+  const [fechaHora, setFechaHora] = useState(precarga?.fechaHora ?? '')
+  const [descripcion, setDescripcion] = useState(precarga?.descripcion ?? '')
+  const [fechaDeclaracion, setFechaDeclaracion] = useState('')
+  // 409 del alta: la compañía ya lo mandó por CIMA. Se ofrece vincular el parte a ese.
+  const [duplicado, setDuplicado] = useState<string | null>(null)
   const [cp, setCp] = useState('')
   const [ciudad, setCiudad] = useState('')
   const [provincia, setProvincia] = useState('')
@@ -953,7 +1186,10 @@ function FormAbrir({ polizas, onAbrir, onCancelar }: {
         seConsideraCulpable: culpable === '' ? null : culpable === 'si',
         gravedad: gravedad || null,
         referencia: referencia.trim() || null,
+        fechaDeclaracion: fechaDeclaracion || null,
+        parteId: precarga?.parteId ?? null,
       })
+      if (r.estado === 'duplicado') setDuplicado(r.siniestroId)
       if (r.estado !== 'ok') setResultado({ tono: 'error', texto: textoRespuesta(r) })
     } finally {
       setOcupado(false)
@@ -962,7 +1198,13 @@ function FormAbrir({ polizas, onAbrir, onCancelar }: {
 
   return (
     <div style={{ ...pendienteBox, borderStyle: 'solid', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10, marginBottom: 12, color: 'var(--text)' }}>
-      <div style={{ fontWeight: 700 }}>➕ Abrir siniestro</div>
+      <div style={{ fontWeight: 700 }}>{precarga ? '➕ Registrar siniestro desde el parte del cliente' : '➕ Abrir siniestro'}</div>
+      {precarga && (
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Datos de partida del parte (revísalos: es lo que DECLARÓ el cliente). Al guardar queda vinculado.
+          {precarga.polizaId !== null && polizaDelParte === null && ' ⚠️ La póliza del parte no está entre las vivas confirmadas por CIMA: elige la correcta.'}
+        </div>
+      )}
       <Campo label="Póliza">
         <select value={polizaId} onChange={(e) => setPolizaId(e.target.value)} style={campo}>
           {polizas.map((p) => (
@@ -1009,8 +1251,11 @@ function FormAbrir({ polizas, onAbrir, onCancelar }: {
             {GRAVEDADES_SINIESTRO.map((g) => <option key={g} value={g}>{etiquetaGravedad(g)}</option>)}
           </select>
         </Campo>
-        <Campo label="Referencia de la compañía (opcional)" ayuda="Si ya se comunicó por teléfono y dieron número.">
+        <Campo label="Nº de siniestro de la compañía (opcional)" ayuda="Si ya se declaró (teléfono, su portal) y dieron número. Con él, lo que mande CIMA cae sobre este y no se duplica.">
           <input value={referencia} onChange={(e) => setReferencia(e.target.value)} style={campo} maxLength={100} />
+        </Campo>
+        <Campo label="Fecha de declaración a la compañía (opcional)" ayuda="Día en que se declaró por fuera. Vacío = no consta.">
+          <input type="date" value={fechaDeclaracion} onChange={(e) => setFechaDeclaracion(e.target.value)} style={campo} />
         </Campo>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1020,6 +1265,57 @@ function FormAbrir({ polizas, onAbrir, onCancelar }: {
         <button type="button" disabled={ocupado} onClick={onCancelar} style={{ ...btnStyle('sutil'), minHeight: 44 }}>Cancelar</button>
       </div>
       {resultado && <div role="alert" style={cajaMensaje(resultado.tono)}>{resultado.texto}</div>}
+      {duplicado && precarga && (
+        <button
+          type="button"
+          disabled={ocupado}
+          onClick={() => {
+            setOcupado(true)
+            void onVincular(precarga.parteId, duplicado).then((ok) => {
+              setOcupado(false)
+              if (!ok) setResultado({ tono: 'error', texto: 'No se ha podido vincular el parte. Recarga la página.' })
+            })
+          }}
+          style={{ ...btnStyle('primario'), minHeight: 44 }}
+        >
+          🔗 Vincular el parte a ese siniestro
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Parte del cliente (vinculado) ───────────────────────────────────────────
+//
+// Lo que contó el cliente por el portal, DENTRO de su siniestro: un siniestro,
+// un historial. Es su DECLARACIÓN; lo de la compañía va en los bloques de CIMA.
+
+const TEXTO_VINCULO: Record<string, string> = {
+  alta_desde_parte: 'registrado desde este parte',
+  manual: 'vinculado a mano',
+  auto_cima: 'vinculado solo (misma póliza y fecha, único candidato)',
+}
+
+function BloquePartes({ partes }: { partes: SiniestroCartera['partes'] }) {
+  if (partes === null || partes.length === 0) return null
+  return (
+    <div>
+      <div style={etiqueta}>🧾 Parte del cliente (portal)</div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6 }}>
+        {partes.map((p) => (
+          <li key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 8 }}>
+            <div style={{ fontSize: 12, ...muted }}>
+              Hecho {p.fechaHecho ? fechaEs(p.fechaHecho) : 'sin fecha'}{p.horaAproximada ? ` · ${p.horaAproximada} aprox.` : ''}
+              {p.creadoEn ? ` · enviado ${fechaHoraEs(p.creadoEn)}` : ''}
+              {p.vinculo ? ` · ${TEXTO_VINCULO[p.vinculo]}` : ''}
+              {' · '}{p.comunicado ? 'el cliente lo ve como abierto en la compañía' : 'el cliente lo ve como recibido (sin nº de la compañía todavía)'}
+            </div>
+            <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginTop: 4 }}>
+              {p.descripcion ?? <span style={muted}>sin descripción legible</span>}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -1031,6 +1327,7 @@ function textoRespuesta(r: Exclude<RespuestaSiniestro, { estado: 'ok' }>): strin
     case 'invalido': return `No se ha guardado: ${r.motivo}`
     case 'no_encontrado': return `No se encuentra${r.motivo ? `: ${r.motivo}` : ' (la póliza o el siniestro no son de esta correduría).'}`
     case 'sin_configurar': return 'El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET).'
+    case 'duplicado': return `No se ha creado: ${r.motivo}`
     default: return `No se ha podido hacer: ${textoMotivoSiniestro(r.motivo)}`
   }
 }
@@ -1093,6 +1390,7 @@ function cajaMensaje(tono: Mensaje['tono']): React.CSSProperties {
 
 const tarjeta: React.CSSProperties = { border: '1px solid var(--border)', borderRadius: 12, padding: 14 }
 const muted: React.CSSProperties = { color: 'var(--muted)' }
+const listaCima: React.CSSProperties = { margin: '4px 0 0', paddingLeft: 18, fontSize: 13, display: 'grid', gap: 2 }
 const etiqueta: React.CSSProperties = { fontSize: 11, color: 'var(--muted)', fontWeight: 600, marginBottom: 2 }
 const chip: React.CSSProperties = {
   fontSize: 11, padding: '1px 8px', borderRadius: 999, whiteSpace: 'nowrap',

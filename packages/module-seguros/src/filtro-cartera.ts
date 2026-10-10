@@ -17,7 +17,8 @@
 /** Los ramos que existen en el enum `tipo_seguro` del schema `seguros`. */
 export type RamoSeguro =
   | 'auto' | 'moto' | 'hogar' | 'vida' | 'salud'
-  | 'decesos' | 'responsabilidad_civil' | 'comercio' | 'comunidades' | 'accidentes' | 'otros'
+  | 'decesos' | 'responsabilidad_civil' | 'comercio' | 'comunidades' | 'accidentes'
+  | 'empresas' | 'rc_profesional' | 'dyo' | 'flotas' | 'transporte_mercancias' | 'ciberriesgos' | 'decenal' | 'embarcaciones' | 'mascotas' | 'impago_alquiler' | 'viaje' | 'caucion' | 'otros'
 
 /**
  * Los ramos, con su rótulo. El orden es el de la cartera real medida el
@@ -37,6 +38,18 @@ export const RAMOS: readonly { v: RamoSeguro; label: string }[] = [
   { v: 'comercio', label: 'Comercio' },
   { v: 'comunidades', label: 'Comunidades' },
   { v: 'accidentes', label: 'Accidentes' },
+  { v: 'empresas', label: 'Empresas / pymes' },
+  { v: 'rc_profesional', label: 'RC profesional' },
+  { v: 'dyo', label: 'D&O (directivos)' },
+  { v: 'flotas', label: 'Flotas' },
+  { v: 'transporte_mercancias', label: 'Transporte de mercancías' },
+  { v: 'ciberriesgos', label: 'Ciberriesgos' },
+  { v: 'decenal', label: 'Decenal / construcción' },
+  { v: 'embarcaciones', label: 'Embarcaciones' },
+  { v: 'mascotas', label: 'Mascotas' },
+  { v: 'impago_alquiler', label: 'Impago de alquiler' },
+  { v: 'viaje', label: 'Viaje' },
+  { v: 'caucion', label: 'Caución' },
   { v: 'otros', label: 'Otros' },
 ]
 

@@ -41,12 +41,19 @@ test('la campana solo se pinta con sesión VERIFICADA, no con que exista la cook
 
 test('desde la campana NO se acepta ni se revoca nada: enlaza a donde se resuelve', () => {
   const fuente = leer(CAMPANA)
-  // Solo un `fetch`, y es el GET de avisos. Un PATCH/POST desde aquí sería
-  // aceptar sin el alcance ni el texto delante.
+  // Dos `fetch` y ninguno más: el GET de avisos y, desde el 29/09/2026, el
+  // POST que da por LEÍDO un aviso informativo al pulsarlo. Cualquier otra
+  // escritura desde aquí sería aceptar sin el alcance ni el texto delante.
   const fetches = fuente.match(/fetch\(/g) ?? []
-  assert.equal(fetches.length, 1, 'la campana hace más de una llamada: solo puede leer /api/avisos')
+  assert.equal(fetches.length, 2, 'la campana hace otra llamada además de leer avisos y marcar leído')
   assert.match(fuente, /fetch\('\/api\/avisos'/, 'la campana ya no lee /api/avisos')
-  assert.ok(!/method:\s*'(PATCH|POST|DELETE|PUT)'/.test(fuente), 'la campana escribe: eso se hace en la pantalla de cada cosa')
+  assert.match(fuente, /fetch\('\/api\/avisos\/leido'/, 'la campana ya no marca como leído el aviso pulsado')
+  assert.equal((fuente.match(/method:\s*'(PATCH|POST|DELETE|PUT)'/g) ?? []).length, 1, 'la campana escribe algo más que el «leído»')
+  assert.match(fuente, /if \(!a\.descartable\) return/, 'la campana descarta avisos que piden una acción: se irían sin resolverse')
+  const leido = leer('lib/avisos-leidos.ts')
+  assert.match(leido, /await getIdentidad\(\)/, 'el «leído» no saca la identidad de la sesión')
+  assert.match(leido, /esClaveDescartable\(clave\)/, 'el «leído» sella claves de avisos que no son informativos')
+  assert.ok(!/identidad|req\.json\(\)\.then/i.test(leer('app/api/avisos/leido/route.ts').replace(/\/\*[\s\S]*?\*\//g, '').replace(/marcarAvisoLeidoDeSesion/g, '')), 'la ruta del «leído» toca la identidad: tiene que salir de la sesión, no de la petición')
   // Sin los comentarios: el «por qué» de arriba nombra el aceptar para
   // prohibirlo, y un cepo que lee comentarios se pone rojo con la explicación.
   const codigo = fuente.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')

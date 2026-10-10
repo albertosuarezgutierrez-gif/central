@@ -9,8 +9,10 @@ import {
   tonoEstadoSiniestro,
   type BienAsegurado,
   type TramitacionSiniestro,
+  type DetalleSiniestroCompania,
   tonoSituacionRecibo,
   etiquetaSituacionRecibo,
+  fechaDeCobro,
 } from '@central/module-seguros-portal'
 
 import Link from 'next/link'
@@ -18,6 +20,8 @@ import Link from 'next/link'
 import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
+import { etiquetaClaseRecibo, textoSituacionConFecha } from '@/lib/recibo-etiquetas'
+import { ListaCoberturas } from './ListaCoberturas'
 
 /**
  * Las piezas con las que se pinta una póliza, compartidas por la LISTA
@@ -369,7 +373,9 @@ export function lineaRecibos(p: PolizaPortal): string | null {
     else partes.push('Tienes un recibo pendiente')
   }
   if (r.ultimoCobrado) {
-    const cuando = fechaEs(r.ultimoCobrado.fechaEmision)
+    // 🚨 La fecha del COBRO (`fecha_situacion`), no la de emisión (se emitió el 21/05 y se cobró el 13/07).
+    // Sin fecha de cobro no se dice ninguna.
+    const cuando = fechaEs(fechaDeCobro(r.ultimoCobrado))
     const importe = r.ultimoCobrado.importe
     if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
     else if (cuando) partes.push(`último cobrado el ${cuando}`)
@@ -461,6 +467,9 @@ export function RecibosDePoliza({
           const tono = tonoSituacionRecibo(rec.situacion)
           const emision = fechaEs(rec.fechaEmision)
           const vence = fechaEs(rec.fechaVencimiento)
+          const clase = etiquetaClaseRecibo(rec.clase)
+          const efecto = fechaEs(rec.fechaEfecto)
+          const situacionFecha = textoSituacionConFecha(rec.situacion, fechaEs(rec.fechaSituacion))
           return (
             // La `key` es el índice porque `poliza_recibos.id` NO se pide al
             // `select`: traerlo solo para esto sería sacar un identificador de
@@ -482,6 +491,9 @@ export function RecibosDePoliza({
                   : emision
                     ? `Emitido el ${emision}`
                     : 'Sin fecha'}
+                {clase && ` · ${clase}`}
+                {efecto && ` · Efecto el ${efecto}`}
+                {situacionFecha && ` · ${situacionFecha}`}
               </span>
             </li>
           )
@@ -534,16 +546,17 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
       <p className="suave" style={{ margin: '0 0 8px', fontSize: 13 }}>
         {c.total === 1 ? '1 cobertura' : `${c.total} coberturas`}
       </p>
-      <ul className="coberturas">
-        {c.lista.map((nombre, i) => (
-          <li key={`${nombre}-${i}`}>
-            {nombre}
-            {c.capitales?.[i] === 'ilimitado'
-              ? ': ilimitado'
-              : typeof c.capitales?.[i] === 'number' && `: ${eur(c.capitales[i] as number)}`}
-          </li>
-        ))}
-      </ul>
+      <ListaCoberturas
+        filas={c.lista.map((nombre, i) => ({
+          nombre,
+          // `detalle` (capital con su semántica, franquicia, vigencia propia). Sin él, el formato de siempre.
+          capital:
+            c.detalle?.[i]?.capital ??
+            (c.capitales?.[i] === 'ilimitado' ? 'ilimitado' : typeof c.capitales?.[i] === 'number' ? eur(c.capitales[i] as number) : null),
+          franquicia: c.detalle?.[i]?.franquicia ?? null,
+          vigencia: c.detalle?.[i]?.vigencia ?? null,
+        }))}
+      />
       {/* `total > lista.length` = filas informadas SIN descripción ni código.
           Se dice, en vez de dejar que el cliente cuente y le falten: el hueco es
           de la compañía, no una cobertura que le estemos escondiendo. */}
@@ -673,12 +686,103 @@ export function HistorialSiniestros({
                   los hechos. Solo si la manda: callarse es lo correcto, porque
                   la explicación de abajo ya dice que se pregunte al corredor. */}
               {s.tramitacion && <TramitacionCompania t={s.tramitacion} />}
+              {s.detalle && <DetalleCompania d={s.detalle} />}
               <SiniestroExplicado estado={s.estado} fechaHora={s.fechaHora} />
             </li>
           )
         })}
       </ul>
     </>
+  )
+}
+
+/**
+ * TODO lo demás que cuenta la compañía (28/09/2026). Solo se pinta lo que
+ * consta: una fila sin dato no aparece. La reserva lleva su aclaración porque
+ * se lee como «me van a pagar X» y no lo es.
+ */
+function DetalleCompania({ d }: { d: DetalleSiniestroCompania }) {
+  const filas: [string, string][] = []
+  const f = (iso: string | null) => (iso ? fechaEs(new Date(`${iso}T00:00:00Z`)) : null)
+  const declarado = f(d.fechaDeclaracion)
+  if (declarado) filas.push(['Declarado a la compañía', declarado])
+  if (d.culpa) filas.push(['Culpa', d.culpa])
+  if (d.papel) filas.push(['Tu papel', d.papel])
+  if (d.parteAmistoso !== null) filas.push(['Parte amistoso', d.parteAmistoso ? 'Sí' : 'No'])
+  if (d.vehiculo) filas.push(['Vehículo', d.vehiculo])
+  if (d.vehiculoContrario) filas.push(['Vehículo contrario', d.vehiculoContrario])
+  if (d.riesgo?.descripcion) filas.push(['Riesgo afectado', d.riesgo.descripcion])
+  if (d.reserva !== null) filas.push(['Reserva de la compañía', `${eur(d.reserva)} (lo que aparta para el siniestro, no lo que va a pagar)`])
+  if (d.totalRecobrado !== null) filas.push(['Recobrado al contrario', eur(d.totalRecobrado)])
+  const contacto = (c: DetalleSiniestroCompania['tramitador']) =>
+    c ? [c.nombre, c.telefono, c.email].filter(Boolean).join(' · ') : ''
+  if (d.tramitador) filas.push(['Tramitador', contacto(d.tramitador)])
+  if (d.perito) filas.push(['Perito', contacto(d.perito)])
+  const sinFilas = filas.length === 0 && !d.descripcion && !d.asistencias && !d.expedientes && !d.reservaPorCobertura && !d.riesgo?.coberturas.length
+  if (sinFilas) return null
+  return (
+    <div className="siniestro-tramite">
+      <p className="siniestro-tramite-titulo">Detalle del siniestro</p>
+      {d.descripcion && <p className="siniestro-desc">{d.descripcion}</p>}
+      {filas.length > 0 && (
+        <dl className="siniestro-detalle">
+          {filas.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {d.reservaPorCobertura && (
+        <>
+          <p className="siniestro-tramite-titulo">Reserva por cobertura</p>
+          <ul>
+            {d.reservaPorCobertura.map((c, i) => (
+              <li key={i}>{c.cobertura}{c.importe !== null && `: ${eur(c.importe)}`}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {d.asistencias && (
+        <>
+          <p className="siniestro-tramite-titulo">Asistencias prestadas</p>
+          <ul>
+            {d.asistencias.map((a, i) => (
+              <li key={i}>{[a.descripcion, a.prestador].filter(Boolean).join(' · ')}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {d.expedientes && (
+        <>
+          <p className="siniestro-tramite-titulo">Expedientes</p>
+          <ul>
+            {d.expedientes.map((x, i) => (
+              <li key={i}>
+                {[
+                  x.numero && `Nº ${x.numero}`,
+                  f(x.desde) && `desde ${f(x.desde)}`,
+                  f(x.hasta) && `hasta ${f(x.hasta)}`,
+                  x.pagado !== null && `pagado ${eur(x.pagado)}`,
+                  x.recobrado !== null && `recobrado ${eur(x.recobrado)}`,
+                ].filter(Boolean).join(' · ')}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {d.riesgo && d.riesgo.coberturas.length > 0 && (
+        <>
+          <p className="siniestro-tramite-titulo">Coberturas afectadas</p>
+          <ul>
+            {d.riesgo.coberturas.map((c, i) => (
+              <li key={i}>{[c.descripcion, c.capital !== null && eur(c.capital)].filter(Boolean).join(': ')}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   )
 }
 

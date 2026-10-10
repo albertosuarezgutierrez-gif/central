@@ -6,7 +6,7 @@
 //
 //  1. «La compañía manda la matrícula pero no el modelo.» Falso: las 80 pólizas
 //     de auto vivas traen matrícula, marca Y modelo (medido el 02/09/2026, y
-//     confirmado sobre la póliza real de la matrícula `0432GLT`: SMART FORFOUR).
+//     confirmado sobre la póliza real de la matrícula `4545PPP`: SMART FORFOUR).
 //     Lo único que no trae ninguna es la VERSIÓN. Con esa frase, la pantalla
 //     obligaba a teclear de cero un dato que ya estaba en la BD.
 //

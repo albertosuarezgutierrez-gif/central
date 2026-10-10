@@ -6,6 +6,7 @@
 // los combina —lo único que de verdad decide si un huésped recibe un mensaje sin que Alberto lo
 // vea— no tenía ninguno. Aquí es pura y se testea en `auto.test.ts`.
 import type { Decision } from './decidir'
+import { peticionCambioHorario } from './cambio-horario.ts'
 
 export type ViaAuto = 'cortesia' | 'apoyada' | null
 
@@ -24,7 +25,11 @@ export type ViaAuto = 'cortesia' | 'apoyada' | null
  *     nada de si la respuesta estaba respaldada. `apoyada_en_fuente` ya exige que la guía se haya
  *     PODIDO leer y que nada la marque dudosa.
  */
-export function decidirAutoEnvio(dec: Decision): { auto: boolean; via: ViaAuto } {
+export function decidirAutoEnvio(dec: Decision, pregunta: string): { auto: boolean; via: ViaAuto } {
+  // 🚨 COMPUERTA (03/10/2026, decisión de Alberto): entrada anticipada, salida tardía o guardar maletas
+  // NUNCA salen solas, en ningún piso y con ninguna vía (cortesía incluida). Un huésped pidió quedarse
+  // hasta las 15:00, salió automático y prometía un «coste según la hora» que no existe. Siempre Telegram.
+  if (peticionCambioHorario(pregunta, dec.categoria)) return { auto: false, via: null }
   const guardasOk = !dec.needs_human && !!dec.reply && dec.sentimiento !== 'negativo'
   if (!guardasOk) return { auto: false, via: null }
   if (dec.es_cortesia === true) return { auto: true, via: 'cortesia' }

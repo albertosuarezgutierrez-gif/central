@@ -395,6 +395,25 @@ function Parte({
         </details>
       )}
 
+      {/* Lo que contestó por ramo (03/10/2026). Es DECLARACIÓN del cliente: la
+          culpa que diga aquí no es la de la compañía. */}
+      {p.datosRamo.length > 0 && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+            Lo que ha contestado por ramo ({p.datosRamo.length})
+          </summary>
+          <dl style={{ fontSize: 13, lineHeight: 1.5, margin: '6px 0 0', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4 }}>
+            {p.datosRamo.map((l, i) => (
+              <div key={i} style={{ overflowWrap: 'anywhere' }}>
+                <dt style={{ display: 'inline', fontWeight: 600 }}>{l.etiqueta}: </dt>
+                <dd style={{ display: 'inline', margin: 0 }}>{l.valor}</dd>
+              </div>
+            ))}
+          </dl>
+          <p style={{ ...pMuted, marginTop: 6 }}>Es lo que declara el cliente, no lo que diga la compañía.</p>
+        </details>
+      )}
+
       {/* Acciones */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
         <button

@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { exigirAccesoCartera } from '@/lib/session'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
+import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
+import { prepararPresupuestoTrasTarificar } from '@/lib/presupuesto-tras-tarificar'
 import {
   prepararRetarificacion,
   respuestaRetarificacion,
@@ -58,6 +60,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ polizaId: stri
 
   // ── La única línea que cuesta dinero, por el único embudo ────────────────
   const r = await cotizar(p.peticion)
+  // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
+  const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)
+  if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => prepararPresupuestoTrasTarificar(aCompletar, session.nombre ?? 'desconocido')).then(() => undefined))
 
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })

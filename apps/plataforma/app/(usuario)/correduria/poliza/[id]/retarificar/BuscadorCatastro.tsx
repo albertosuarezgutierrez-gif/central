@@ -23,6 +23,7 @@ export function BuscadorCatastro({
   municipio,
   provincia,
   deCliente,
+  oportunidadId = null,
 }: {
   polizaId: string
   direccion: string
@@ -30,8 +31,11 @@ export function BuscadorCatastro({
   provincia: string
   /** La dirección viene precargada de la ficha del cliente: puede no ser la del riesgo. */
   deCliente: boolean
+  /** Variante del riesgo (`?oportunidad=`): buscar la vivienda no la suelta. */
+  oportunidadId?: string | null
 }) {
   const accion = `/correduria/poliza/${polizaId}/retarificar`
+  const conVariante = oportunidadId ? <input type="hidden" name="oportunidad" value={oportunidadId} /> : null
   return (
     <>
       <div className="card">
@@ -41,6 +45,7 @@ export function BuscadorCatastro({
           {deCliente && ' La dirección de abajo es la del CLIENTE: si la vivienda asegurada es otra (segunda residencia, alquiler), cámbiala.'}
         </p>
         <form method="get" action={accion} style={rejilla}>
+          {conVariante}
           <input style={{ ...input, gridColumn: '1 / -1' }} name="direccion" placeholder="Calle San Vicente 40, 2º 14" defaultValue={direccion} />
           <input style={input} name="municipio" placeholder="Municipio" defaultValue={municipio} />
           <input style={input} name="provincia" placeholder="Provincia" defaultValue={provincia} />
@@ -55,6 +60,7 @@ export function BuscadorCatastro({
           Los 20 caracteres del recibo del IBI (la de 14 es la del edificio: no trae m² ni año).
         </p>
         <form method="get" action={accion} style={rejilla}>
+          {conVariante}
           <input style={{ ...input, gridColumn: '1 / -1' }} name="referencia" placeholder="Referencia catastral de 20 caracteres" />
           <button type="submit" className="primary" style={{ gridColumn: '1 / -1', minHeight: 44 }}>
             Usar esta referencia
@@ -66,7 +72,13 @@ export function BuscadorCatastro({
 }
 
 /** El portal tiene varios pisos: elige una persona, nunca el código. */
-export function ElegirPiso({ polizaId, via, inmuebles }: { polizaId: string; via: string; inmuebles: InmuebleCatastro[] }) {
+export function ElegirPiso({ polizaId, via, inmuebles, oportunidadId = null }: {
+  polizaId: string
+  via: string
+  inmuebles: InmuebleCatastro[]
+  /** Variante del riesgo (`?oportunidad=`): elegir el piso no la suelta. */
+  oportunidadId?: string | null
+}) {
   return (
     <div className="card">
       <h2>
@@ -79,7 +91,7 @@ export function ElegirPiso({ polizaId, via, inmuebles }: { polizaId: string; via
         {inmuebles.map((i) => (
           <Link
             key={i.refCompleta}
-            href={`/correduria/poliza/${polizaId}/retarificar?referencia=${encodeURIComponent(i.refCompleta)}`}
+            href={`/correduria/poliza/${polizaId}/retarificar?${new URLSearchParams({ referencia: i.refCompleta, ...(oportunidadId ? { oportunidad: oportunidadId } : {}) }).toString()}`}
             style={{
               display: 'flex',
               alignItems: 'center',

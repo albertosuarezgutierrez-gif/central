@@ -1,5 +1,7 @@
 import type { PolizaDeclaradaFicha, PolizaFicha } from '../ficha-asegura'
 import type { OportunidadDeCliente } from '../seguimiento-asegura'
+import { RAMOS_OPORTUNIDAD, claveMatricula, claveNumeroPoliza, fechaPintable } from '@central/module-seguros'
+import { proximoAniversario } from './aniversario.ts'
 
 /**
  * Los seguros de un cliente en los TRES cubos con los que trabaja una
@@ -33,6 +35,11 @@ export type SeguroCliente =
       oportunidad: OportunidadDeCliente | null
       /** Viene del volcado histórico: su fecha es de hace años, solo vale el día y el mes. */
       historica?: true
+      /**
+       * La póliza a la que ESTA sustituye (cambio de compañía ya emitido). Va dentro de
+       * la tarjeta de la nueva: dos tarjetas del mismo bien se leían como dos seguros.
+       */
+      sustituye?: PolizaFicha
     }
   | { clase: 'oportunidad'; id: string; oportunidad: OportunidadDeCliente }
   | { clase: 'declarada'; id: string; declarada: PolizaDeclaradaFicha }
@@ -71,48 +78,69 @@ function porFecha(a: string | null, b: string | null): number {
 }
 
 /**
- * El próximo aniversario (hoy incluido) de una fecha de vencimiento ya pasada:
- * un seguro anual renueva el mismo día cada año, así que un «vence 24/10/2023»
- * anotado hace años dice «le toca el 24/10/2026». Una fecha futura se devuelve
- * tal cual. `null` si la fecha no se puede leer — no se inventa ninguna.
+ * El vencimiento de una oportunidad, en TRES estados (Alberto, 30/09/2026): fecha futura conocida
+ * (entra por fecha) · fecha pasada · sin fecha. Los dos últimos son «vencimiento desconocido:
+ * preguntar al cliente». NUNCA se proyecta ni se inventa una fecha: un 19/11/2017 no es 2027.
+ * `ultimaFecha` es solo contexto (lo último que se anotó), no un vencimiento.
  */
-export function proximoAniversario(iso: string | null, hoy: Date): string | null {
-  if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null
-  const [a, m, d] = [+iso.slice(0, 4), +iso.slice(5, 7), +iso.slice(8, 10)]
-  if (m < 1 || m > 12 || d < 1 || d > 31) return null
-  const hoyUtc = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate())
-  const en = (anio: number) => {
-    // 29/02 en un año no bisiesto renueva el 28/02; el resto se recorta al último día del mes.
-    const dia = Math.min(d, new Date(Date.UTC(anio, m, 0)).getUTCDate())
-    return Date.UTC(anio, m - 1, dia)
-  }
-  if (en(a) >= hoyUtc) return new Date(en(a)).toISOString().slice(0, 10)
-  let anio = hoy.getUTCFullYear()
-  if (en(anio) < hoyUtc) anio++
-  return new Date(en(anio)).toISOString().slice(0, 10)
+export type EstadoVencimiento =
+  | { estado: 'futuro'; fecha: string }
+  | { estado: 'desconocido'; ultimaFecha: string | null }
+
+/** `YYYY-MM-DD` real (ida y vuelta: un 2026-02-30 no cuenta) o `null`. */
+function diaIso(iso: string | null | undefined): string | null {
+  if (typeof iso !== 'string') return null
+  const dia = iso.trim().slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return null
+  const d = new Date(`${dia}T00:00:00Z`)
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== dia ? null : dia
+}
+
+/** Hoy o después = futuro (vence hoy sigue en vigor hoy). */
+export function estadoVencimiento(iso: string | null | undefined, hoy: Date): EstadoVencimiento {
+  const dia = diaIso(iso)
+  if (dia === null) return { estado: 'desconocido', ultimaFecha: null }
+  // Hoy de MADRID, como el resto de la ficha: entre 00:00 y 02:00 el día UTC sigue siendo ayer.
+  return dia >= hoy.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) ? { estado: 'futuro', fecha: dia } : { estado: 'desconocido', ultimaFecha: dia }
+}
+
+export function fechaFutura(iso: string | null | undefined, hoy: Date): string | null {
+  const e = estadoVencimiento(iso, hoy)
+  return e.estado === 'futuro' ? e.fecha : null
 }
 
 /**
- * La fecha que se enseña para el vencimiento de una OPORTUNIDAD. Si venció hace
- * menos de un año es una renovación que se acaba de pasar: se deja tal cual
- * (atrasada, que es lo que hay que ver). Si es más vieja, el dato es de hace
- * años y lo útil es su próximo aniversario.
+ * El vencimiento que se enseña en la tarjeta de una póliza en Oportunidades: el anotado en su
+ * seguimiento MANDA (lo corrige Alberto cuando el escaneo o el volcado traen mal la fecha, y es
+ * el que dispara el aviso); sin él, el de la póliza. Solo si es futuro: `fecha: null` = desconocido.
  */
-export function vencimientoOportunidad(iso: string | null, hoy: Date): string | null {
-  const proxima = proximoAniversario(iso, hoy)
-  if (proxima === null || iso === null) return proxima
-  const fin = iso.slice(0, 10)
-  const haceUnAnio = new Date(Date.UTC(hoy.getUTCFullYear() - 1, hoy.getUTCMonth(), hoy.getUTCDate())).toISOString().slice(0, 10)
-  return fin > haceUnAnio ? fin : proxima
+export function vencimientoPoliza(s: Extract<SeguroCliente, { clase: 'poliza' }>, hoy: Date): { fecha: string | null; delSeguimiento: boolean } {
+  const anotado = s.oportunidad?.fechaFinVigencia ?? null
+  if (anotado) return { fecha: fechaFutura(anotado, hoy), delSeguimiento: true }
+  return { fecha: fechaFutura(s.poliza.fechaVencimiento, hoy), delSeguimiento: false }
 }
 
 function fechaDe(s: SeguroCliente, hoy: Date): string | null {
-  if (s.clase === 'poliza') {
-    return s.oportunidad?.proximaTarea?.fechaLimite
-      ?? (s.historica ? proximoAniversario(s.poliza.fechaVencimiento, hoy) : s.poliza.fechaVencimiento)
-  }
-  if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? vencimientoOportunidad(s.oportunidad.fechaFinVigencia, hoy)
-  return s.declarada.fechaVencimiento
+  if (s.clase === 'poliza') return s.oportunidad?.proximaTarea?.fechaLimite ?? vencimientoPoliza(s, hoy).fecha
+  if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? fechaFutura(s.oportunidad.fechaFinVigencia, hoy)
+  return fechaFutura(s.declarada.fechaVencimiento, hoy)
+}
+
+/**
+ * El vencimiento de un seguro de OPORTUNIDAD es un aniversario (Alberto, 06/10/2026): el año da
+ * igual y se avisa cada año, así que se ordena y se enseña por su PRÓXIMA ocurrencia de día/mes.
+ * `null` = sin fecha legible (o centinela): sigue siendo «desconocido», nunca se inventa.
+ * Las pólizas CON nosotros no pasan por aquí: su vencimiento es una fecha concreta.
+ */
+export function aniversarioOportunidad(iso: string | null | undefined, hoy: Date): string | null {
+  const dia = diaIso(iso)
+  return dia !== null && fechaPintable(dia) !== null ? proximoAniversario(dia, hoy) : null
+}
+
+function fechaAnualDe(s: SeguroCliente, hoy: Date): string | null {
+  if (s.clase === 'poliza') return s.oportunidad?.proximaTarea?.fechaLimite ?? aniversarioOportunidad(s.oportunidad?.fechaFinVigencia ?? s.poliza.fechaVencimiento, hoy)
+  if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? aniversarioOportunidad(s.oportunidad.fechaFinVigencia, hoy)
+  return aniversarioOportunidad(s.declarada.fechaVencimiento, hoy)
 }
 
 export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy = new Date() }: {
@@ -129,10 +157,13 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
   const historicas: PolizaFicha[] = []
   // Viva perdida a la competencia que el corredor QUITÓ de Oportunidades (se puede recuperar).
   const vivasDescartadas: PolizaFicha[] = []
+  // Viva ya sustituida por otra (cambio de compañía emitido): se pinta DENTRO de la nueva.
+  const sustituidas: PolizaFicha[] = []
 
   for (const p of polizas) {
     if (!p.viva) { historicas.push(p); continue }
     const estado = p.estado.trim()
+    if (p.sustituida && !PERDIDA_A_COMPETENCIA.has(estado) && estado !== 'fin_riesgo') { sustituidas.push(p); continue }
     const s = { clase: 'poliza' as const, id: p.id, poliza: p, oportunidad: null }
     if (estado === 'fin_riesgo') yaNoExiste.push(s)
     else if (PERDIDA_A_COMPETENCIA.has(estado)) {
@@ -144,43 +175,91 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
     // lo contrario — que es como ya la cuenta la cabecera de la ficha.
     else conNosotros.push(s)
   }
+  for (const v of sustituidas) {
+    const nueva = conNosotros.find(s => s.clase === 'poliza' && s.poliza.sustituyeA === v.id && !s.sustituye)
+    // Sin la nueva a la vista (otra ficha, o ya no viva) la vieja se queda con nosotros:
+    // cubre hasta su vencimiento, y su tarjeta dice que está sustituida.
+    if (nueva && nueva.clase === 'poliza') nueva.sustituye = v
+    else conNosotros.push({ clase: 'poliza', id: v.id, poliza: v, oportunidad: null })
+  }
 
-  // Del volcado histórico, la más reciente de cada ramo del que no sepamos nada más
-  // nuevo: ni póliza viva (con nosotros, perdida o en `fin_riesgo`), ni una aportada
-  // desde el portal, ni una oportunidad PERDIDA (su competidor y su fecha son de hoy,
-  // y una de «ya no lo necesita» dice que el riesgo desapareció). Las abiertas no
-  // bloquean: se enganchan a esta tarjeta más abajo.
-  const ramosVivos = new Set<string>([
-    ...conNosotros.flatMap(s => (s.clase === 'poliza' ? [s.poliza.tipo] : [])),
-    ...enCompetencia.map(s => s.poliza.tipo),
-    ...yaNoExiste.flatMap(s => (s.clase === 'poliza' ? [s.poliza.tipo] : [])),
-    ...(declaradas ?? []).flatMap(d => (d.ramo ? [d.ramo] : [])),
+  // El volcado histórico es «otro seguro conocido»: se pinta como oportunidad DERIVADA (no se
+  // escribe en la tabla de oportunidades). Una por BIEN —el mismo coche repetido con otra
+  // prima es un solo seguro—, la de vencimiento más reciente. No sale si de ese bien ya
+  // sabemos algo más nuevo: una póliza viva (con nosotros, perdida o en `fin_riesgo`), una
+  // aportada desde el portal, una oportunidad PERDIDA sin datos con que casarla (misma regla
+  // por ramo de siempre) o CUALQUIER oportunidad (abierta, ganada o perdida) de ese mismo
+  // riesgo —matrícula o nº de póliza—: la derivada duplicaría a la real.
+  // Las abiertas SIN esos datos no bloquean: se enganchan a esta tarjeta más abajo.
+  const coberturas: Bien[] = [
+    ...conNosotros.flatMap(s => (s.clase === 'poliza' ? [bienDe(s.poliza)] : [])),
+    ...enCompetencia.map(s => bienDe(s.poliza)),
+    ...sustituidas.map(bienDe),
+    ...yaNoExiste.flatMap(s => (s.clase === 'poliza' ? [bienDe(s.poliza)] : [])),
+    ...(declaradas ?? []).flatMap(d => (d.ramo ? [{ tipo: d.ramo, matricula: claveMatricula(d.matricula), titulo: null }] : [])),
     ...(oportunidades ?? [])
-      .filter(o => o.estado === 'perdida' && o.motivoPerdida !== 'error_alta')
-      .flatMap(o => (o.ramo ? [o.ramo] : [])),
-  ])
-  // Quitar la tarjeta de un ramo quita el RAMO: si no, la siguiente más vieja del mismo
+      .filter(o => o.estado === 'perdida' && o.motivoPerdida !== 'error_alta' && !tieneClaves(o))
+      .flatMap(o => (o.ramo ? [{ tipo: o.ramo, matricula: null, titulo: null }] : [])),
+  ]
+  // Quitar la tarjeta de un bien quita ese bien: si no, la siguiente más vieja del mismo
   // ramo ocuparía su sitio y «Eliminar» parecería no haber hecho nada.
   const descartadas = [...vivasDescartadas, ...historicas.filter(p => p.leadDescartado)]
-  const ramosDescartados = new Set(descartadas.map(p => p.tipo))
-  const representante = new Map<string, PolizaFicha>()
-  for (const p of historicas) {
-    if (p.estado.trim() === 'fin_riesgo' || ramosVivos.has(p.tipo) || ramosDescartados.has(p.tipo)) continue
-    const previa = representante.get(p.tipo)
-    if (!previa || (p.fechaVencimiento ?? '') > (previa.fechaVencimiento ?? '')) representante.set(p.tipo, p)
+  const bienesDescartados = descartadas.map(bienDe)
+  // Agrupar: primero los que TIENEN matrícula o título (esos sí se distinguen); una fila sin
+  // ninguno de los dos solo se une si el ramo tiene UN único grupo identificado. Con varios
+  // (o ninguno) queda como grupo propio: no puede ser «el mismo» de dos coches a la vez.
+  const grupos: { rep: PolizaFicha; filas: PolizaFicha[] }[] = []
+  const filas = historicas
+    .filter(p => !p.leadDescartado && p.estado.trim() !== 'fin_riesgo')
+    // La más reciente primero; sin fecha, al final.
+    .sort((x, y) => (y.fechaVencimiento ?? '').localeCompare(x.fechaVencimiento ?? ''))
+  for (const p of filas.filter(p => identificado(bienDe(p)))) {
+    const g = grupos.find(g => g.filas.some(f => casaBien(bienDe(f), bienDe(p)) === 'si'))
+    if (g) g.filas.push(p)
+    else grupos.push({ rep: p, filas: [p] })
   }
-  for (const p of representante.values()) {
+  for (const p of filas.filter(p => !identificado(bienDe(p)))) {
+    const delRamo = grupos.filter(g => g.rep.tipo === p.tipo)
+    const propio = delRamo.find(g => g.filas.every(f => !identificado(bienDe(f))))
+    const g = delRamo.length === 1 && identificado(bienDe(delRamo[0].rep)) ? delRamo[0] : propio
+    if (g) g.filas.push(p)
+    else grupos.push({ rep: p, filas: [p] })
+  }
+  // ¿Esta cobertura/descarte tapa a este grupo? Con bien identificado, solo su bien; sin él,
+  // solo si es la ÚNICA candidata del ramo (si hay varias, no se sabe cuál es y no oculta ninguna).
+  const tapa = (c: Bien, g: { filas: PolizaFicha[] }) => {
+    const r = g.filas.map(f => casaBien(c, bienDe(f)))
+    if (r.includes('si')) return true
+    return r.includes('quiza') && grupos.filter(x => x.rep.tipo === g.filas[0].tipo).length === 1
+  }
+  const visibles = grupos.filter(g => !coberturas.some(c => tapa(c, g)) && !bienesDescartados.some(d => tapa(d, g)))
+  const reales = (oportunidades ?? []).filter(o => !(o.estado === 'perdida' && o.motivoPerdida === 'error_alta'))
+  const representante = visibles
+    .filter(g => !reales.some(o => (o.ramo === null || o.ramo === g.rep.tipo) && g.filas.some(f => mismoRiesgo(o, f))))
+    .map(g => g.rep)
+  for (const p of representante) {
     enCompetencia.push({ clase: 'poliza', id: p.id, poliza: p, oportunidad: null, historica: true })
   }
-  const enTarjeta = new Set([...representante.values()].map(p => p.id))
+  const enTarjeta = new Set(representante.map(p => p.id))
   const historicasPlegadas = historicas.filter(p => !enTarjeta.has(p.id) && !p.leadDescartado)
 
   const sueltas: SeguroCliente[] = []
   if (oportunidades) {
     // Las abiertas primero: son las que se enganchan a una póliza perdida del mismo ramo.
     const abiertas = oportunidades.filter(abierta)
-    for (const o of abiertas) {
-      const hueco = enCompetencia.find(s => s.oportunidad === null && o.ramo !== null && s.poliza.tipo === o.ramo)
+    // Las que cuelgan de una póliza concreta, antes: si no, una sin póliza del mismo ramo podría
+    // quedarse la tarjeta de esa póliza y la suya acabaría suelta.
+    const enOrden = [...abiertas.filter(o => o.polizaId != null), ...abiertas.filter(o => o.polizaId == null)]
+    for (const o of enOrden) {
+      // Mismo ramo no basta: dos matrículas distintas son dos coches, y engancharla pintaba
+      // el Ford Mondeo de Pelayo de 2015 en vez del Kalos de MUSSAP (Rafael Campa,
+      // 28/09/2026). Solo la matrícula: la compañía y el nº de la oportunidad son los de la
+      // competencia y difieren de los de nuestra póliza perdida aunque sea el mismo seguro.
+      // La que cuelga de una póliza concreta (renovación, o abierta al anotarle el vencimiento)
+      // va a SU tarjeta: con dos del mismo ramo, casar por ramo la pintaría en la otra.
+      const hueco = enCompetencia.find(s => s.oportunidad === null && o.polizaId != null && s.poliza.id === o.polizaId)
+        ?? enCompetencia.find(s => s.oportunidad === null && o.ramo !== null && s.poliza.tipo === o.ramo
+          && !otraMatricula(o.matricula, s.poliza.matricula))
       if (hueco) hueco.oportunidad = o
       else sueltas.push({ clase: 'oportunidad', id: o.id, oportunidad: o })
     }
@@ -219,11 +298,14 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
     .filter(d => d.yaEnCartera !== true)
     .map(d => ({ clase: 'declarada' as const, id: d.id, declarada: d }))
 
-  const ordenar = (l: SeguroCliente[]) => l.sort((a, b) => porFecha(fechaDe(a, hoy), fechaDe(b, hoy)))
+  const ordenar = (l: SeguroCliente[], anual = false) => {
+    const f = anual ? fechaAnualDe : fechaDe
+    return l.sort((a, b) => porFecha(f(a, hoy), f(b, hoy)))
+  }
 
   return {
     conNosotros: ordenar(conNosotros),
-    oportunidades: ordenar([...enCompetencia, ...sueltas, ...aportadas]),
+    oportunidades: ordenar([...enCompetencia, ...sueltas, ...aportadas], true),
     yaNoExiste,
     historicas: historicasPlegadas,
     descartadas,
@@ -232,8 +314,88 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
   }
 }
 
+/** Lo que identifica un seguro: ramo, matrícula y título del bien. Lo que falta no contradice. */
+type Bien = { tipo: string; matricula: string | null; titulo: string | null }
+
+function bienDe(p: PolizaFicha): Bien {
+  const t = (p.objeto?.titulo ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+  return { tipo: p.tipo, matricula: claveMatricula(p.matricula), titulo: t === '' ? null : t }
+}
+
+const identificado = (b: Bien) => b.matricula !== null || b.titulo !== null
+
+/** ¿Es el mismo bien? `quiza` = mismo ramo pero sin dato común con que compararlos. */
+function casaBien(a: Bien, b: Bien): 'si' | 'no' | 'quiza' {
+  if (a.tipo !== b.tipo) return 'no'
+  if (a.matricula && b.matricula) return a.matricula === b.matricula ? 'si' : 'no'
+  if (a.titulo && b.titulo) return a.titulo === b.titulo ? 'si' : 'no'
+  return 'quiza'
+}
+
+function tieneClaves(o: OportunidadDeCliente): boolean {
+  return claveMatricula(o.matricula) !== null || claveNumeroPoliza(o.numeroPoliza) !== null
+}
+
+/** El MISMO riesgo, por matrícula o nº de póliza (la compañía no basta: cambia al competir). */
+function mismoRiesgo(o: OportunidadDeCliente, p: PolizaFicha): boolean {
+  const m = claveMatricula(o.matricula), n = claveNumeroPoliza(o.numeroPoliza)
+  return (m !== null && m === claveMatricula(p.matricula)) || (n !== null && n === claveNumeroPoliza(p.numeroPoliza))
+}
+
+function otraMatricula(a: string | null, b: string | null): boolean {
+  const x = claveMatricula(a), y = claveMatricula(b)
+  return x !== null && y !== null && x !== y
+}
+
 /** Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover. */
 export function estaHuerfana(o: OportunidadDeCliente): boolean {
   return abierta(o) && o.proximaTarea === null && o.aparcadaHasta === null
 }
 
+
+/**
+ * Los SEGUROS del cliente = lo «con nosotros» (póliza en cartera en vigor, o emitida y pendiente
+ * de CIMA), con la póliza que sustituyen dentro. Es lo ÚNICO que cuenta en «Pólizas vivas»,
+ * recibos, próximo aviso y ramos contratados: las filas del volcado y lo que ya no cubre son
+ * oportunidades, no seguros.
+ */
+export function segurosDeReparto(r: RepartoSeguros): PolizaFicha[] {
+  return r.conNosotros.flatMap(s => (s.clase === 'poliza' ? [s.poliza, ...(s.sustituye ? [s.sustituye] : [])] : []))
+}
+
+/**
+ * Cuántas oportunidades hay que trabajar: las abiertas, las derivadas de pólizas de otras casas
+ * (volcado, canceladas) y lo que aportó el cliente. Una perdida que se reintentará al vencimiento
+ * no es «abierta». `null` = no se pudieron leer las oportunidades: el número sería un suelo, no se dice.
+ */
+export function contarOportunidades(r: RepartoSeguros): number | null {
+  if (!r.oportunidadesLeidas) return null
+  return r.oportunidades.filter(s => !(s.clase === 'oportunidad' && !abierta(s.oportunidad))).length
+}
+
+/** Con qué se precarga el alta de una oportunidad creada desde una fila del volcado. */
+export type PrecargaAlta = {
+  ramo: string
+  aseguradora: string
+  numeroPoliza: string | null
+  matricula: string | null
+  vehiculo: string | null
+  /** SOLO si es futura: una fecha pasada del volcado no se propone. */
+  fechaFinVigencia: string | null
+  /** La fecha del volcado ya pasó: el formulario avisa de que hay que preguntar al cliente. */
+  fechaObsoleta: string | null
+}
+
+export function precargaAlta(p: PolizaFicha, hoy: Date): PrecargaAlta {
+  const v = estadoVencimiento(p.fechaVencimiento, hoy)
+  return {
+    // Un ramo que el alta no admite queda vacío (coherente con el select: «Elige…»).
+    ramo: (RAMOS_OPORTUNIDAD as readonly string[]).includes(p.tipo) ? p.tipo : '',
+    aseguradora: p.aseguradora,
+    numeroPoliza: p.numeroPoliza,
+    matricula: p.matricula,
+    vehiculo: p.objeto?.titulo ?? null,
+    fechaFinVigencia: v.estado === 'futuro' ? v.fecha : null,
+    fechaObsoleta: v.estado === 'desconocido' ? v.ultimaFecha : null,
+  }
+}

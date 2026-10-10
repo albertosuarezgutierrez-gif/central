@@ -29,6 +29,7 @@ import {
   type RecibosPoliza, extraerDetalleCobertura, type DetalleCobertura,
   seguimientoSustitucion, type SeguimientoSustitucion } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
+import { personasDePoliza, type PersonasPoliza } from '@central/module-seguros'
 import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { capitalesHogar, eurDeCapital, type CapitalAsegurado } from '@central/module-seguros'
@@ -39,9 +40,10 @@ import { casosDeRamo, type EjecutorLectura } from './codeoscopic/casos'
 import { estimar, mereceLaPena, type RiesgoAEstimar } from './codeoscopic/horquilla'
 import { elegirRiesgo, hogarDeDatos } from './codeoscopic/desde-cartera-hogar'
 import type { SiniestroFicha } from './cartera-ficha'
-import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
+import { SELECT_SINIESTRO, conTercerosCima, mapSiniestro } from './cartera-siniestros'
 import { historialRiesgo } from './cartera-historial-riesgo'
 import type { EslabonHistorial } from '@central/module-seguros'
+import { contratoCima, type ContratoCima } from './cartera-poliza-contrato'
 
 export type CoberturaFicha = {
   orden: number | null
@@ -92,7 +94,8 @@ export type EstimacionFicha = {
 
 export type FichaPoliza = {
   id: string
-  cliente: { id: string; nombre: string }
+  /** `telefono`: el principal de la ficha, descifrado; `null` = no tiene o no se pudo leer. */
+  cliente: { id: string; nombre: string; telefono: string | null }
   tipo: string
   aseguradora: string
   codigoEntidadDgs: string | null
@@ -125,8 +128,37 @@ export type FichaPoliza = {
   coberturas: CoberturaFicha[]
   recibos: RecibosPoliza
   /** Todos, del más reciente al más antiguo. */
-  listaRecibos: ReciboResumen[]
+  listaRecibos: ReciboFichaPoliza[]
+  /**
+   * Devoluciones que avisó la compañía por correo (`recibo_devolucion`), abiertas Y resueltas, de la
+   * más reciente a la más antigua. Las que trae CIMA ya están en `listaRecibos` como `devuelto`.
+   * `null` = no se pudo leer (≠ `[]`, que es «no ha habido ninguna»).
+   */
+  historialDevoluciones: DevolucionHistorial[] | null
+  /**
+   * Baja VERIFICADA por el corredor desde un recibo devuelto («el cliente se va»), antes de que CIMA
+   * la confirme. `null` = no la hay o no se pudo leer (la póliza se pinta con su `estado`).
+   */
+  bajaVerificada: { en: string; por: string | null; motivo: string | null; estadoCima: string | null; cimaEn: string | null } | null
+  /**
+   * Fechas del contrato que manda CIMA (asegura#864). Cada una `null` = CIMA
+   * aún no la ha mandado para esta póliza, no «no tiene».
+   */
+  fechasContrato: { emision: string | null; efectoActual: string | null; situacion: string | null; solicitud: string | null }
+  /**
+   * Cobro, contrato, riesgos y beneficiarios de `datos_especificos`, por LISTA
+   * BLANCA (`contratoCima`). El IBAN NO cruza: solo sus 4 últimos dígitos.
+   * `null` = la ficha no trae ninguna de esas claves.
+   */
+  contrato: ContratoCima | null
   siniestros: SiniestroFicha[]
+  /**
+   * Personas que manda CIMA (asegura#880): `figuras` de la póliza (papel, nombre, domicilio, teléfono,
+   * email; beneficiario con orden y %) y la persona asegurada + préstamo/modalidad de vida y decesos.
+   * Descifrado en este servidor; el documento NO cruza (solo «consta»). Cada parte
+   * `null` = no consta (póliza ingerida antes de #880, o sin ese bloque).
+   */
+  personas: PersonasPoliza
   intervinientes: IntervinienteFicha[] | null
   /** `null` = no se pudo contar. `0` = la tabla existe y no hay ninguno (hoy: 0 en TODA la base). */
   documentos: number | null
@@ -146,6 +178,9 @@ export type FichaPoliza = {
    * que se leyera, 24/09/2026), NO «la compañía no lo manda».
    */
   datosCompania: DatosCompaniaCima | null
+  /** `datos_especificos.cimaExtra` tal cual (sin PII, denegada en origen). `null` = clave ausente (aún no leído) ≠ `[]`. */
+  cimaExtra: Array<{ ruta: string; valor: string }> | null
+  cimaExtraTruncado: boolean
   /** `retarificacion.retarificable`, mantenido por compatibilidad con quien ya lo lee. */
   retarificable: boolean
   /** Por qué ramo se puede pedir precio (auto/hogar), o por qué no, mirando también la gemela. */
@@ -176,6 +211,48 @@ export type FichaPoliza = {
     sustituidaAt: string | null
     seguimiento: SeguimientoSustitucion
   }
+}
+
+/** El recibo de la lista, con la remesa y la comisión que la ingesta guarda desde asegura#861. */
+export type ReciboFichaPoliza = ReciboResumen & {
+  idRemesa: string | null
+  gestionCobro: string | null
+  claseComision: string | null
+  baseComision: number | null
+  retencionIrpf: number | null
+  /** Comisión bruta del recibo según CIMA. `null` = no la da o no se sabe leer (nunca 0 por defecto). */
+  comisionBruta: number | null
+  /** `clase_recibo` del EIAC (CA/NP/SU…) tal cual. `null` = no consta. */
+  clase: string | null
+  /** Día en que el recibo pasó a su situación actual (cobrado/devuelto/anulado). `null` = no consta. */
+  fechaSituacion: string | null
+  /** Prima neta del recibo (CIMA). `null` = no consta (nunca 0). Solo operador. */
+  primaNeta: number | null
+  /** Comisión líquida del recibo (CIMA). `null` = no consta (nunca 0). Solo operador. */
+  comisionLiquida: number | null
+  /**
+   * La compañía avisó POR CORREO de que el banco lo devolvió y aún no consta el cobro
+   * (`recibo_devolucion`). Es lo único que permite marcarlo «cobrado de nuevo» a mano: una devolución
+   * que trae CIMA la resuelve CIMA. `null` = no hay aviso abierto o no se pudo leer.
+   */
+  devolucionCorreo: { fecha: string; motivo: string | null; tipoMotivo: string | null } | null
+  /** `datos_extra.cimaExtra` del recibo (sin PII, denegada en origen). `null` = clave ausente (aún no leído) ≠ `[]`. Solo operador. */
+  cimaExtra: Array<{ ruta: string; valor: string }> | null
+  cimaExtraTruncado: boolean
+}
+
+export type DevolucionHistorial = {
+  /** Nº de recibo tal cual lo escribió la compañía. */
+  idRecibo: string
+  fecha: string
+  fechaEfecto: string | null
+  importe: number | null
+  motivo: string | null
+  tipoMotivo: string | null
+  /** `null` = sigue abierta. */
+  resueltaEn: string | null
+  /** `cobrado` (a mano), `cima:cobrado`, `cima:anulado`… tal cual se guardó. */
+  resueltaComo: string | null
 }
 
 export type PolizaRelacionada = {
@@ -267,9 +344,23 @@ function descifrar(v: string | null | undefined): string | null {
     return null
   }
 }
+/** Descifrado para las figuras de CIMA: lanza o devuelve `null` si no abre (`figuras-cima.ts` lo trata como ilegible). */
+const descifrarFigura = (v: string): string | null => decryptField(v)
 function ilegible(v: string | null | undefined): boolean {
   return typeof v === 'string' && v.startsWith('v1:') && descifrar(v) === null
 }
+/** `cimaExtra` de `datos_especificos`: `null` si la clave no está (null ≠ []); solo pares {ruta, valor} de texto. */
+function leerCimaExtra(datos: unknown): Array<{ ruta: string; valor: string }> | null {
+  if (!esObjetoPlano(datos) || !Array.isArray(datos.cimaExtra)) return null
+  const out: Array<{ ruta: string; valor: string }> = []
+  for (const it of datos.cimaExtra) {
+    if (it && typeof it === 'object' && typeof (it as { ruta?: unknown }).ruta === 'string' && typeof (it as { valor?: unknown }).valor === 'string') {
+      out.push({ ruta: (it as { ruta: string }).ruta, valor: (it as { valor: string }).valor })
+    }
+  }
+  return out
+}
+
 function esObjetoPlano(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
@@ -305,17 +396,20 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       ramoDgs: true, estado: true, situacion: true, origen: true, importRef: true, eiacXmlHash: true,
       polizaOrigenId: true, sustituidaAt: true,
       fechaEfectoInicial: true, fechaInicio: true, fechaVencimiento: true,
+      fechaEmision: true, fechaEfectoActual: true, fechaSituacion: true, fechaSolicitud: true,
       primaAnual: true, primaBruta: true, primaMensual: true, fraccionamiento: true, datosEspecificos: true,
-      cliente: { select: { id: true, nombre: true, apellidos: true } },
+      cliente: { select: { id: true, nombre: true, apellidos: true, telefono: true } },
       coberturasRel: {
         select: { numeroOrden: true, codigo: true, descripcion: true, capitalAsegurado: true, descripcionCapital: true, franquicia: true, fechaInicio: true, fechaFin: true, modalidadValoracion: true, datosExtra: true },
         orderBy: { numeroOrden: 'asc' },
       },
       recibos: {
-        select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEmision: true, fechaVencimiento: true, formaPago: true },
+        select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEfectoActual: true, fechaEmision: true, fechaVencimiento: true, formaPago: true,
+          idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true, comisionBruta: true,
+          fechaSituacion: true, comisionLiquida: true, datosExtra: true },
         orderBy: { fechaEmision: 'desc' },
       },
-      siniestros: { select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
+      siniestros: { where: { fusionadoEnSiniestroId: null }, select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
     },
   })
   if (!p) return null
@@ -328,7 +422,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         orderBy: [{ rol: 'asc' }, { id: 'asc' }],
         select: {
           id: true, polizaId: true, rol: true, clienteId: true, origen: true, nombre: true, apellidos: true, telefono: true, email: true,
-          nifLookupHash: true,
+          nifLookupHash: true, fechaCarnet: true, fechaNacimiento: true,
           cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
         },
       })
@@ -351,6 +445,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
             emailIlegible: email === null && (ilegible(f.email) || ilegible(f.cliente?.email)),
             fichaId: f.clienteId ?? null, esTomador: f.clienteId === p.cliente.id, origen: String(f.origen),
             personaClave: f.nifLookupHash ? claves.get(f.nifLookupHash) ?? null : null,
+            // Cifrados en la BD: solo salen si se abren (operador); ilegible → `null`, no «sin carné».
+            fechaCarnet: descifrar(f.fechaCarnet), fechaNacimiento: descifrar(f.fechaNacimiento),
           }
         })
       })
@@ -432,6 +528,11 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
   // objeto de hogar y la del volcado sí. Lo que no traiga ninguna sigue a
   // `null` — un 0 aquí torcería la horquilla.
   const riesgoHogar = elegirRiesgo(hogarDeDatos(datos, 'poliza'), hogarDeDatos(datosGemela, 'gemela'))
+  // L10 (28/09/2026): si CIMA no dio la prima ANUAL (fraccionada sin anualizada en
+  // una compañía no medida), lo guardado no se presenta como anual en ninguna parte.
+  const primaDudosa = (p.datosEspecificos as { primaAnualDudosa?: unknown } | null)?.primaAnualDudosa === true
+  const primaAnualF = primaDudosa ? null : num(p.primaAnual)
+  const primaBrutaF = primaDudosa ? null : num(p.primaBruta)
   // Allianz manda prima y renovación solo en el recibo de cartera (27/09/2026).
   const hoyIso = new Date().toISOString()
   const recibosVig = p.recibos.map((r) => ({
@@ -439,7 +540,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     primaTotal: r.primaTotal, fechaVencimiento: fechaIso(r.fechaVencimiento),
   }))
   const prima = primaConRecibos({
-    primaAnual: num(p.primaAnual), primaBruta: num(p.primaBruta),
+    primaAnual: primaAnualF, primaBruta: primaBrutaF,
     fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
   }, recibosVig, hoyIso).prima
   // Solo se estima lo RETARIFICABLE: la pregunta que responde esto es «¿gasto
@@ -465,15 +566,22 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         },
       })
     : null
+  const devolucionesCorreo = await devolucionesCorreoAbiertas(db, correduriaId, p.recibos.map((r) => r.id))
+  const historialDevoluciones = await devolucionesDePoliza(db, correduriaId, p.id, p.recibos.map((r) => r.id))
+  const bajaVerificada = await leerBajaVerificada(db, p.id)
   const recibosCrudos = p.recibos.map((r) => ({
     id: r.id, situacion: r.situacion === null ? null : String(r.situacion), primaTotal: r.primaTotal,
-    fechaEmision: fechaIso(r.fechaEmision), fechaVencimiento: fechaIso(r.fechaVencimiento), formaPago: r.formaPago,
+    fechaEmision: fechaIso(r.fechaEmision), fechaVencimiento: fechaIso(r.fechaVencimiento), fechaEfecto: fechaIso(r.fechaEfectoActual),
+    formaPago: r.formaPago,
   }))
   const fraccionamiento = p.fraccionamiento === null ? null : String(p.fraccionamiento)
 
   return {
     id: p.id,
-    cliente: { id: p.cliente.id, nombre: `${p.cliente.nombre} ${p.cliente.apellidos}`.trim() },
+    cliente: {
+      id: p.cliente.id, nombre: `${p.cliente.nombre} ${p.cliente.apellidos}`.trim(),
+      telefono: descifrar(p.cliente.telefono),
+    },
     tipo: String(p.tipo),
     aseguradora: p.aseguradora,
     codigoEntidadDgs: p.codigoEntidadDgs ?? null,
@@ -488,8 +596,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     fechaInicio: fechaIso(p.fechaInicio),
     fechaVencimiento: vencimientoConRecibos(fechaIso(p.fechaVencimiento), recibosVig, hoyIso),
     prima,
-    primaAnual: num(p.primaAnual),
-    primaBruta: num(p.primaBruta),
+    primaAnual: primaAnualF,
+    primaBruta: primaBrutaF,
     primaMensual: num(p.primaMensual),
     objeto: objetoAsegurado({ tipo: String(p.tipo), datos, coberturas: coberturasTexto.length ? coberturasTexto : null }),
     historialRiesgo: historial,
@@ -512,12 +620,34 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       modalidad: c.modalidadValoracion ?? null, detalle: extraerDetalleCobertura(c.datosExtra),
     })),
     recibos: resumirRecibos(recibosCrudos),
-    listaRecibos: recibosCrudos.map((r) => ({
-      id: r.id, situacion: (r.situacion ?? '').trim() || 'sin_informar', importe: importeEiac(r.primaTotal),
-      fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, formaPago: etiquetaFormaPago(r.formaPago),
-    })),
-    siniestros: p.siniestros.map(mapSiniestro),
+    listaRecibos: p.recibos.map((x, i) => {
+      const r = recibosCrudos[i]
+      return {
+        id: r.id, situacion: (r.situacion ?? '').trim() || 'sin_informar', importe: importeEiac(r.primaTotal),
+        fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, fechaEfecto: r.fechaEfecto ?? null, formaPago: etiquetaFormaPago(r.formaPago),
+        idRemesa: texto(x.idRemesa), gestionCobro: texto(x.gestionCobro), claseComision: texto(x.claseComision),
+        baseComision: num(x.baseComision), retencionIrpf: num(x.retencionIrpf), comisionBruta: importeEiac(x.comisionBruta),
+        clase: texto(x.claseRecibo), fechaSituacion: fechaIso(x.fechaSituacion),
+        primaNeta: importeEiac(x.primaNeta), comisionLiquida: importeEiac(x.comisionLiquida),
+        devolucionCorreo: devolucionesCorreo.get(r.id) ?? null,
+        cimaExtra: leerCimaExtra(x.datosExtra),
+        cimaExtraTruncado: esObjetoPlano(x.datosExtra) && x.datosExtra.cimaExtraTruncado === true,
+      }
+    }),
+    historialDevoluciones,
+    bajaVerificada,
+    fechasContrato: {
+      emision: fechaIso(p.fechaEmision), efectoActual: fechaIso(p.fechaEfectoActual),
+      situacion: fechaIso(p.fechaSituacion), solicitud: fechaIso(p.fechaSolicitud),
+    },
+    contrato: contratoCima(p.datosEspecificos, descifrar),
+    siniestros: await conTercerosCima(correduriaId, p.siniestros.map(mapSiniestro)),
+    // Personas de CIMA (asegura#880): figuras, persona asegurada de vida/decesos. Descifradas AQUÍ;
+    // del documento solo «consta». Todo `null` si la póliza es anterior a #880.
+    personas: personasDePoliza(p.datosEspecificos, descifrarFigura),
     datosCompania: leerDatosCompaniaCima(p.datosEspecificos),
+    cimaExtra: leerCimaExtra(p.datosEspecificos),
+    cimaExtraTruncado: esObjetoPlano(p.datosEspecificos) && p.datosEspecificos.cimaExtraTruncado === true,
     evolucionPrima: evolucionPrima({
       fechaInicio: fechaIso(p.fechaInicio),
       fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
@@ -534,7 +664,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       fraccionamiento,
       formaCobro: etiquetaFormaPago(p.recibos[0]?.formaPago ?? null),
       recargo: recargoFraccionamiento({
-        fraccionamiento, primaAnual: num(p.primaAnual), vencimiento: fechaIso(p.fechaVencimiento),
+        fraccionamiento, primaAnual: primaAnualF, vencimiento: fechaIso(p.fechaVencimiento),
         recibos: recibosCrudos.map((r) => ({ importe: importeEiac(r.primaTotal), fechaEmision: r.fechaEmision, situacion: r.situacion })),
       }),
     },
@@ -548,5 +678,64 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       sustituidaAt: fechaIso(p.sustituidaAt),
       seguimiento: seguimientoSustitucion({ polizaOrigenId: p.polizaOrigenId ?? null, idPolizaEntidad: p.idPolizaEntidad ?? null }),
     },
+  }
+}
+
+/** Devoluciones avisadas por correo y aún abiertas, por id de recibo. Un fallo de lectura → mapa vacío (no se ofrece el botón). */
+async function devolucionesCorreoAbiertas(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  reciboIds: string[],
+): Promise<Map<string, { fecha: string; motivo: string | null; tipoMotivo: string | null }>> {
+  const out = new Map<string, { fecha: string; motivo: string | null; tipoMotivo: string | null }>()
+  if (reciboIds.length === 0) return out
+  try {
+    const filas = await db.$queryRaw<{ reciboId: string; fecha: string; motivo: string | null; tipoMotivo: string | null }[]>`
+      select recibo_id::text as "reciboId", to_char(fecha_devolucion, 'YYYY-MM-DD') as fecha, motivo, tipo_motivo as "tipoMotivo"
+      from recibo_devolucion
+      where correduria_id = ${correduriaId}::uuid and resuelta_at is null and recibo_id = any(${reciboIds}::uuid[])`
+    for (const f of filas) out.set(f.reciboId, { fecha: f.fecha, motivo: f.motivo, tipoMotivo: f.tipoMotivo })
+  } catch (e) {
+    console.error('[cartera-poliza] devoluciones por correo no leídas:', e instanceof Error ? e.message : e)
+  }
+  return out
+}
+
+/** Todas las devoluciones avisadas por correo de esta póliza (por póliza o por sus recibos). */
+async function devolucionesDePoliza(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  polizaId: string,
+  reciboIds: string[],
+): Promise<DevolucionHistorial[] | null> {
+  try {
+    const filas = await db.$queryRaw<{ idRecibo: string; fecha: string; fechaEfecto: string | null; importe: string | null; motivo: string | null
+      tipoMotivo: string | null; resueltaEn: string | null; resueltaComo: string | null }[]>`
+      select id_recibo as "idRecibo", to_char(fecha_devolucion, 'YYYY-MM-DD') as fecha, to_char(fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto",
+             importe::text as importe, motivo, tipo_motivo as "tipoMotivo",
+             to_char(resuelta_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "resueltaEn", resuelta_motivo as "resueltaComo"
+      from recibo_devolucion
+      where correduria_id = ${correduriaId}::uuid
+        and (poliza_id = ${polizaId}::uuid or recibo_id = any(${reciboIds}::uuid[]))
+      order by fecha_devolucion desc, created_at desc
+      limit 50`
+    return filas.map((f) => ({ ...f, importe: f.importe === null ? null : (Number.isFinite(Number(f.importe)) ? Number(f.importe) : null) }))
+  } catch (e) {
+    console.error('[cartera-poliza] historial de devoluciones no leído:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+async function leerBajaVerificada(db: ReturnType<typeof prismaAsegura>, polizaId: string): Promise<FichaPoliza['bajaVerificada']> {
+  try {
+    // `estadoCima` = lo último que CIMA escribió DESPUÉS de la baja (NULL = aún no ha dicho nada).
+    const [b] = await db.$queryRaw<{ en: string; por: string | null; motivo: string | null; estadoCima: string | null; cimaEn: string | null }[]>`
+      select to_char(baja_verificada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as en, baja_verificada_por as por, baja_motivo as motivo,
+             baja_estado_cima as "estadoCima", to_char(baja_cima_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "cimaEn"
+      from polizas where id = ${polizaId}::uuid and baja_verificada_at is not null`
+    return b ?? null
+  } catch (err) {
+    console.error('[cartera-poliza] baja verificada no leída:', err instanceof Error ? err.message : err)
+    return null
   }
 }

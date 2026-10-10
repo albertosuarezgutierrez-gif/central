@@ -15,7 +15,7 @@ import { retencion } from './retencion.ts'
 export type PolizaAccion = PolizaResumible & {
   tipo: string
   aseguradora: string
-  recibos: (PolizaResumible['recibos'] & { ultimo: { situacion: string; fechaVencimiento: string | null } | null }) | null
+  recibos: (PolizaResumible['recibos'] & { ultimo: { situacion: string; fechaVencimiento: string | null; fechaEfecto?: string | null } | null }) | null
 }
 
 export type DeclaradaAccion = { ramo: string | null; compania: string | null; fechaVencimiento: string | null }
@@ -77,7 +77,9 @@ export function siguienteAccion(e: EntradaSiguienteAccion): SiguienteAccion {
     if (p.recibos === null) { falta.push(`recibos de ${ramo(p.tipo)} ${p.aseguradora}`); continue }
     const u = p.recibos.ultimo
     if (!u || u.situacion !== 'devuelto') continue
-    const r = retencion(u.fechaVencimiento, 'devuelto', e.hoy)
+    // El reloj corre desde que vence la PRIMA (fecha de efecto del recibo), no desde el fin del
+    // periodo que cubre (`fechaVencimiento`, un año después en un anual). Sin ella: `sin_fecha`.
+    const r = retencion(u.fechaEfecto ?? null, 'devuelto', e.hoy)
     if (r.estado === 'suspendida') {
       return {
         estado: 'accion', tipo: 'recibo_sin_cobertura', urgente: true, polizaId: p.id,

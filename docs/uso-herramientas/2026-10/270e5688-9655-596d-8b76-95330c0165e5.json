@@ -1,0 +1,110 @@
+{
+ "sesion": "270e5688-9655-596d-8b76-95330c0165e5",
+ "inicio": "2026-10-05T10:50:38.592Z",
+ "fin": "2026-10-05T11:37:03.018Z",
+ "llamadas": 144,
+ "categorias": {
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 5258,
+   "chars_out": 5627,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 77554,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 1400,
+   "chars_out": 1620,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 993798,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "otro": {
+   "llamadas": 19,
+   "chars_in": 21389,
+   "chars_out": 46573,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2,
+    "WebSearch": 13,
+    "SubagentHandback": 4
+   }
+  },
+  "bash": {
+   "llamadas": 106,
+   "chars_in": 52474,
+   "chars_out": 413600,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 106
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 6,
+   "chars_in": 619,
+   "chars_out": 77542,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 5,
+    "Grep": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 2757,
+   "chars_out": 2943,
+   "errores": 0,
+   "archivos_citados": 6,
+   "chars_citados": 1032507,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 7,
+   "chars_in": 81068,
+   "chars_out": 165231,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 7
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 2477,
+   "chars_out": 91,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 1,
+   "chars_in": 73,
+   "chars_out": 239,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1
+   }
+  }
+ }
+}

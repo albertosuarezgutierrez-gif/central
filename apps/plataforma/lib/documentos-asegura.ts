@@ -40,6 +40,9 @@ export function leerDocumento(v: unknown): DocumentoResumen | null {
     siniestroId: cadena(o.siniestroId),
     creado: o.creado,
     revisadoEn: cadena(o.revisadoEn),
+    // Solo pólizas de la ficha (05/10/2026): `true` = su DNI es el de la ficha y acredita la
+    // identidad. Cualquier otra cosa (ausente, versión anterior de asegura) = no se sabe → `null`.
+    ...(o.tipo === 'poliza' ? { dniCoincideFicha: typeof o.dniCoincideFicha === 'boolean' ? o.dniCoincideFicha : null } : {}),
   }
 }
 
@@ -111,7 +114,20 @@ export async function subirDocumentoAsegura(form: FormData, actor?: string): Pro
     method: 'POST',
     headers: h,
     body: form,
-    signal: AbortSignal.timeout(60_000),
+    // Lo subido a una ficha se lee con IA para abrir su oportunidad (asegura: hasta 120 s).
+    signal: AbortSignal.timeout(115_000),
+  })
+  return { status: res.status, json: await res.json().catch(() => null) }
+}
+
+/** Vuelve a leer un documento YA guardado en una ficha y abre (o completa) su oportunidad. */
+export async function oportunidadDocumentoAsegura(id: string, actor?: string): Promise<{ status: number; json: unknown }> {
+  const h = await cabeceras(actor)
+  if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
+  const res = await fetch(`${urlAsegura()}/api/operador/documentos/${encodeURIComponent(id)}`, {
+    method: 'POST',
+    headers: h,
+    signal: AbortSignal.timeout(115_000),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
 }
@@ -184,12 +200,16 @@ export async function descargarDocumentoAsegura(id: string): Promise<Response | 
  */
 export async function leerDocumentoOportunidadAsegura(
   f: { contenido: Buffer; mimeType: string; nombre: string },
-  opts: { tomador?: boolean } = {},
+  opts: { tomador?: boolean; clienteId?: string; crear?: boolean } = {},
 ): Promise<{ status: number; json: unknown }> {
   const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   const form = new FormData()
   form.set('fichero', new Blob([new Uint8Array(f.contenido)], { type: f.mimeType }), f.nombre)
+  // PDF con contraseña: asegura prueba el DNI de esta ficha (sin devolverlo nunca).
+  if (opts.clienteId) form.set('clienteId', opts.clienteId)
+  // Abre la oportunidad y guarda el fichero (pantalla «Subir póliza»): el dato no se puede perder.
+  if (opts.crear) form.set('crear', '1')
   // `tomador=1`: quién es y si ya tiene ficha (solo lo pide el asistente de Telegram, servidor a servidor).
   const res = await fetch(`${urlAsegura()}/api/operador/leer-documento${opts.tomador ? '?tomador=1' : ''}`, {
     method: 'POST',

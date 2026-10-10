@@ -14,6 +14,7 @@
  */
 
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { leerResumenPresupuestos, leerSinOportunidad, type PresupuestoSinOportunidad, type ResumenPresupuestos } from './correduria/presupuestos-oportunidad.ts'
 import {
   MOTIVOS_PERDIDA,
   MOTIVO_DESCARTE,
@@ -21,12 +22,14 @@ import {
   TIPOS_TAREA,
   mensajeRenovacionLeadWhatsapp,
   puedeWhatsappLead,
+  seguroAnteriorDe,
   type CanalLead,
   type ContactoMovil,
   type EstadoOportunidad,
   type MotivoPerdida,
   type PasoLead,
   type RamoOportunidad,
+  type SeguroAnterior,
   type TipoTarea,
   type VentanaLead,
 } from '@central/module-seguros'
@@ -280,15 +283,51 @@ export type OportunidadDeCliente = Oportunidad & {
   /** El coche (auto/moto), si se leyó al abrirla. */
   matricula: string | null
   vehiculo: string | null
+  /** Lo que da el bonus (auto/moto), leído de su póliza al abrirla. `null` = no consta. */
+  seguroAnterior: SeguroAnterior | null
   /** `null` = no consta: nunca 0,00€. */
   prima: number | null
   creada: string
   /** `null` = no tiene tarea pendiente: una abierta así está huérfana y se dice. */
   proximaTarea: { tipo: string; fechaLimite: string } | null
+  /** La póliza de la que cuelga; `null` = ninguna o asegura aún no lo manda (se casa por ramo). */
+  polizaId?: string | null
+  /** Lo pedido para este riesgo (P1…Pn) y su presupuesto al cliente; `null` = asegura no lo manda. */
+  presupuestos?: ResumenPresupuestos | null
+  /**
+   * Emisión hecha FUERA (web de Avant2) que cuelga de esta oportunidad (30/09/2026). `null` = no hay,
+   * o asegura aún no lo manda / forma desconocida: en ese caso la tarjeta no afirma nada nuevo.
+   * `riesgo_condicionado` = emitida pero RETENIDA por la compañía: no está en vigor.
+   */
+  emision?: EmisionOportunidad | null
+}
+
+export type EmisionOportunidad = {
+  projectId: string
+  estado: 'riesgo_condicionado' | 'rechazada' | 'emitida'
+  compania: string | null
+  desde: string
+}
+
+const ESTADOS_EMISION_OPORTUNIDAD = ['riesgo_condicionado', 'rechazada', 'emitida'] as const
+
+/** Puro. Cualquier forma que no se entienda es `null` (nada que pintar), nunca un estado inventado. */
+export function leerEmisionOportunidad(v: unknown): EmisionOportunidad | null {
+  const e = objeto(v)
+  if (!e) return null
+  const projectId = texto(e.projectId)
+  const estado = uno(ESTADOS_EMISION_OPORTUNIDAD, e.estado)
+  const desde = texto(e.desde)
+  if (!projectId || !estado || !desde) return null
+  return { projectId, estado, compania: texto(e.compania), desde }
 }
 
 export type OportunidadesCliente =
-  | { estado: 'ok'; oportunidades: OportunidadDeCliente[]; truncado: boolean; descartadas: number }
+  | {
+      estado: 'ok'; oportunidades: OportunidadDeCliente[]; truncado: boolean; descartadas: number
+      /** Lo tarificado que no cuelga de ninguna oportunidad; `null` = no se pudo leer. */
+      sinOportunidad?: PresupuestoSinOportunidad[] | null
+    }
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string }
 
@@ -326,12 +365,16 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
       numeroPoliza: texto(r.numeroPoliza),
       matricula: texto(r.matricula),
       vehiculo: texto(r.vehiculo),
+      seguroAnterior: seguroAnteriorDe(r.seguroAnterior),
       prima: numero(r.prima),
       creada,
       proximaTarea: ptTipo && ptFecha ? { tipo: ptTipo, fechaLimite: ptFecha } : null,
+      polizaId: texto(r.polizaId),
+      presupuestos: leerResumenPresupuestos(r.presupuestos),
+      emision: leerEmisionOportunidad(r.emision),
     })
   }
-  return { estado: 'ok', oportunidades, truncado: o.truncado === true, descartadas }
+  return { estado: 'ok', oportunidades, truncado: o.truncado === true, descartadas, sinOportunidad: leerSinOportunidad(o.sinOportunidad) }
 }
 
 /** Qué pasa con la respuesta de «abrir oportunidad», en palabras. */
@@ -398,10 +441,26 @@ export function rotuloMotivo(m: string | null): string | null {
 
 const ROTULO_RAMO: Record<RamoOportunidad, string> = {
   auto: 'Auto', moto: 'Moto', hogar: 'Hogar', vida: 'Vida', salud: 'Salud', decesos: 'Decesos',
-  responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes', otros: 'Otros',
+  responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes',
+  empresas: 'Empresas / pymes', rc_profesional: 'RC profesional', dyo: 'D&O (directivos)', flotas: 'Flotas', transporte_mercancias: 'Transporte de mercancías', ciberriesgos: 'Ciberriesgos', decenal: 'Decenal / construcción', embarcaciones: 'Embarcaciones', mascotas: 'Mascotas', impago_alquiler: 'Impago de alquiler', viaje: 'Viaje', caucion: 'Caución',
+  otros: 'Otros',
 }
 export const RAMOS_OPORTUNIDAD_UI: readonly { valor: RamoOportunidad; rotulo: string }[] =
   RAMOS_OPORTUNIDAD.map((valor) => ({ valor, rotulo: ROTULO_RAMO[valor] }))
+/** Ramo válido de `?ramo=` para preseleccionar en el alta; `null` si no es uno conocido. */
+export function ramoInicialValido(v: string | null | undefined): RamoOportunidad | null {
+  return RAMOS_OPORTUNIDAD.find((r) => r === v) ?? null
+}
+/** Ramos que se trabajan con ofertas de compañías (sin tarificador): los de RAMOS_OPORTUNIDAD que no están entre los tarificables. */
+export function ramosConOfertas(tarificables: readonly { etiqueta: string }[]): readonly { valor: RamoOportunidad; rotulo: string }[] {
+  const precio = new Set(tarificables.map((t) => t.etiqueta.toLowerCase()))
+  return RAMOS_OPORTUNIDAD_UI.filter((r) => !precio.has(r.valor))
+}
+/** URL de «oportunidad nueva» de una ficha; sin ramo, el alta se abre sin ramo preseleccionado («Otro ramo»). */
+export function urlOportunidadNueva(clienteId: string, ramo?: RamoOportunidad | null): string {
+  const base = `/correduria/cliente/${clienteId}?tab=oportunidades&oportunidad=nueva`
+  return ramo ? `${base}&ramo=${ramo}` : base
+}
 export function rotuloRamo(r: string | null): string {
   return r === null ? 'Sin ramo' : (ROTULO_RAMO as Record<string, string>)[r] ?? r
 }
@@ -495,13 +554,16 @@ export function colaLlamadas(leads: readonly LeadVencimiento[]): LeadVencimiento
 
 /**
  * El WhatsApp de seguimiento de un lead, o `null` si no se le puede escribir
- * por ahí (Alberto, 23/09/2026: es la vía preferente; lo abre y lo envía él).
- * Mismo régimen que el correo (LSSI art. 21): solo a quien FUE cliente. Que
- * el número sea un móvil lo decide `BotonWhatsapp`, que no pinta nada si no.
+ * por ahí. Lo abre Alberto y lo envía él desde su teléfono.
+ *
+ * 🚨 A TODOS con teléfono desde el 30/09/2026 (decisión de Alberto, asumiendo
+ * el riesgo LSSI art. 21 que se le explicó; ver `puedeWhatsappLead`). Quien
+ * pidió la baja ya llega sin teléfono (`wa_opt_out_at` lo quita en asegura).
+ * Que el número sea un móvil lo decide `BotonWhatsapp`, que no pinta nada si no.
  */
 export function whatsappDeLead(l: LeadVencimiento): { telefono: string; mensaje: string } | null {
   if (l.telefono === null || l.canal === 'sin_canal_permitido') return null
-  if (!puedeWhatsappLead({ fueCliente: l.fueCliente, tieneTelefono: true })) return null
+  if (!puedeWhatsappLead({ tieneTelefono: true })) return null
   const mes = Number(l.vencimientoEstimado.slice(5, 7))
   return {
     telefono: l.telefono,
@@ -535,11 +597,73 @@ export const RESULTADOS_LLAMADA_UI = [
 ] as const
 export type ResultadoLlamadaUI = (typeof RESULTADOS_LLAMADA_UI)[number]['valor']
 
+/**
+ * Las respuestas a un WhatsApp de seguimiento (30/09/2026). Se registran por el
+ * mismo camino que una llamada (`canal: 'whatsapp'`): una transacción que deja
+ * el registro, cambia el estado y pone la siguiente tarea.
+ */
+export const RESPUESTAS_WHATSAPP_UI = [
+  { valor: 'quiere_precio', rotulo: 'Quiere estudio' },
+  { valor: 'otro_dia', rotulo: 'Que le llame' },
+  { valor: 'no_interesa', rotulo: 'No le interesa / ya renovó' },
+  { valor: 'numero_equivocado', rotulo: 'Número equivocado' },
+  { valor: 'baja', rotulo: 'Pidió la baja' },
+] as const
+export type RespuestaWhatsappUI = (typeof RESPUESTAS_WHATSAPP_UI)[number]['valor']
+
+/** En qué punto está un lead para quien le escribe por WhatsApp. */
+export type TramoLead = 'por_enviar' | 'esperando' | 'respondio'
+
+/**
+ * Por enviar = nadie le ha escrito ni llamado en este ciclo · Esperando = se le
+ * contactó y no hay respuesta registrada · Respondió = contestó, o ya está
+ * interesado / con propuesta. Así, al mandarle el WhatsApp sale de «Por
+ * enviar» y la lista principal solo tiene a quien falta.
+ */
+export function tramoLead(l: Pick<LeadVencimiento, 'intentos' | 'respondioAntes' | 'estado'>): TramoLead {
+  if (l.respondioAntes || l.estado === 'en_negociacion' || l.estado === 'pendiente_cliente') return 'respondio'
+  return l.intentos > 0 ? 'esperando' : 'por_enviar'
+}
+
+/** Días desde el último contacto (`null` = no consta). A partir de 3 sin respuesta, toca llamar. */
+export const DIAS_SIN_RESPUESTA_LLAMAR = 3
+/** Minúsculas, sin tildes ni signos: «Gutiérrez-Alcalá» casa con «gutierrez alcala». */
+function normalizarBusqueda(t: string): string {
+  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9ñ@.]+/g, ' ').trim()
+}
+
+/**
+ * ¿Casa el lead con lo tecleado en el buscador? (30/09/2026, Alberto: «un buscador aquí»).
+ * Busca en nombre, compañía, ramo, correo y teléfono; cada palabra tiene que aparecer en alguno
+ * («maria mapfre» = María con Mapfre). El teléfono se compara solo por dígitos y a partir de 3,
+ * para que «600 12» encuentre «+34 600123456». Vacío = todos.
+ */
+export function leadCoincide(
+  l: Pick<LeadVencimiento, 'cliente' | 'aseguradora' | 'ramo' | 'email' | 'telefono'>,
+  consulta: string,
+): boolean {
+  const q = normalizarBusqueda(consulta)
+  if (q === '') return true
+  const texto = normalizarBusqueda([l.cliente, l.aseguradora, l.ramo, l.ramo ? rotuloRamo(l.ramo) : null, l.email].filter(Boolean).join(' '))
+  const digitosTel = (l.telefono ?? '').replace(/\D/g, '')
+  // Los dígitos juntos («600 12» → «60012») solo si la consulta es SOLO un número: con
+  // palabras («garcía 600») cada una tiene que aparecer, o casaría cualquiera con ese 600.
+  const digitosQ = consulta.replace(/\D/g, '')
+  if (/^[\d\s+().-]+$/.test(consulta.trim()) && digitosQ.length >= 3 && digitosTel.includes(digitosQ)) return true
+  return q.split(' ').every((palabra) => texto.includes(palabra) || (/^\d{3,}$/.test(palabra) && digitosTel.includes(palabra)))
+}
+
+export function diasSinRespuesta(ultimoContactoEn: string | null, ahora: Date = new Date()): number | null {
+  if (!ultimoContactoEn) return null
+  const t = Date.parse(ultimoContactoEn)
+  return Number.isNaN(t) ? null : Math.max(0, Math.floor((ahora.getTime() - t) / 86_400_000))
+}
+
 // ─── Red (solo desde rutas API de plataforma) ────────────────────────────────
 
 export type Reenvio = { status: number; json: unknown }
 
-async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
+async function llamar(path: string, init: RequestInit, timeoutMs = 15_000): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   const base = (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
@@ -548,7 +672,7 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
       ...init,
       headers: { ...(await cabecerasPuerto(secret)), ...(init.body ? { 'content-type': 'application/json' } : {}) },
       cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {
@@ -604,6 +728,58 @@ export function interpretarContactosMovil(status: number, j: unknown): { contact
   return { contactos, clientesSinLeer: typeof o.clientesSinLeer === 'number' ? o.clientesSinLeer : 0 }
 }
 
+/** Cola de revisión de la sincronización con Google Contacts (50 por página, cursor `despuesDe`). */
+export function revisionesGoogleAsegura(despuesDe: string | null): Promise<Reenvio> {
+  return llamar(`/api/operador/google-contactos/revision${despuesDe ? `?despuesDe=${encodeURIComponent(despuesDe)}` : ''}`, { method: 'GET' })
+}
+export function resolverRevisionGoogleAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/revision', { method: 'POST', body: JSON.stringify(body) })
+}
+/** MOTE de la ficha (solo para la agenda de Google de Alberto; AISLADO: nunca en correos/portal/PDF). */
+export function moteClienteAsegura(clienteId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/cliente/mote?clienteId=${encodeURIComponent(clienteId)}`, { method: 'GET' })
+}
+export function guardarMoteClienteAsegura(body: { clienteId: string; mote: string | null; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/mote', { method: 'PUT', body: JSON.stringify(body) })
+}
+/** «Ordenar agenda»: informe SOLO LECTURA de la agenda de Google (lee la agenda entera: hasta ~2 min). */
+export function ordenarAgendaGoogleAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/ordenar', { method: 'GET' }, 115_000)
+}
+/** Estado de la conexión con Google Contacts (cuenta, simulada, activada). */
+export function estadoGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos', { method: 'GET' })
+}
+/** Simulación SOLO LECTURA (lee la agenda entera de Google: hasta ~2 min). */
+export function simularGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/simular', { method: 'POST', body: '{}' }, 115_000)
+}
+/** «Simulación revisada: sincroniza». El `actor` lo pone quien llama desde la SESIÓN. */
+export function activarGoogleContactosAsegura(actor: string): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/activar', { method: 'POST', body: JSON.stringify({ actor }) })
+}
+/** Ticket de un solo uso (2 min) para arrancar el OAuth de Google desde el panel: asegura devuelve la URL de `conectar`. */
+export function ticketGoogleContactosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/ticket', { method: 'POST', body: '{}' })
+}
+/** Revoca en Google y borra token y vínculos; con `borrarContactos` borra antes los que CREÓ el CRM. */
+export function desconectarGoogleContactosAsegura(borrarContactos: boolean): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/desconectar', { method: 'POST', body: JSON.stringify({ borrarContactos }) }, 115_000)
+}
+
+/** Estado de la conexión de WhatsApp (Embedded Signup / Coexistence) y qué variables faltan en asegura. */
+export function conexionWhatsappAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/conexion', { method: 'GET' })
+}
+/** Cierre del Embedded Signup: asegura canjea el `code`, suscribe la WABA y pide las syncs (varias llamadas a Meta). */
+export function altaWhatsappAsegura(body: { code: string; waba_id: string; phone_number_id: string; business_id: string | null }): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/alta', { method: 'POST', body: JSON.stringify(body) }, 55_000)
+}
+/** El Telegram del evento de conexión `eventoAt` ya salió: asegura lo marca. */
+export function whatsappAvisadoAsegura(eventoAt: string): Promise<Reenvio> {
+  return llamar('/api/operador/whatsapp/conexion', { method: 'POST', body: JSON.stringify({ accion: 'avisado', eventoAt }) })
+}
+
 export function tareasHoyAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/tareas-hoy', { method: 'GET' })
 }
@@ -623,6 +799,8 @@ export type LecturaDocumentoOportunidad =
       /** El coche, si es de auto (`null` = no consta). */
       matricula?: string | null
       vehiculo?: string | null
+      /** Lo que da el bonus (auto/moto): años sin siniestros, siniestros en 5 años… `null` = el documento no lo dice. */
+      seguroAnterior?: SeguroAnterior | null
       /** Pólizas EN VIGOR de nuestra cartera con ese número: con alguna, ya es nuestra. `null` = no se ha podido mirar. */
       enCartera?: PolizaNuestra[] | null
       /** Solo si se pidió (`?tomador=1`). */
@@ -690,6 +868,7 @@ export function interpretarLecturaOportunidad(status: number, json: unknown): Le
   const extra = {
     matricula: txt(o.matricula),
     vehiculo: txt(o.vehiculo),
+    seguroAnterior: seguroAnteriorDe(o.seguroAnterior),
     enCartera: Array.isArray(o.enCartera)
       ? o.enCartera.flatMap((x): PolizaNuestra[] => {
           const p = x !== null && typeof x === 'object' ? (x as Record<string, unknown>) : null
@@ -750,6 +929,10 @@ export type SolicitudDatos = {
   documentos: { id: string; tipo: string }[] | null
   /** Lo declarado que no casa con sus papeles. `null` = no se ha podido contrastar (≠ «todo cuadra»). */
   discrepancias: { clave: string; declarado: string; documento: string; tipoDocumento: string }[] | null
+  /** De quién son los datos (29/09/2026): la ficha de la persona. `null` = asegura no lo dice. */
+  personaId: string | null
+  /** `true` = de OTRA persona del riesgo (un familiar), no del cliente. `null` = asegura no lo dice. */
+  tercero: boolean | null
 }
 
 export type SolicitudesDatos = { estado: 'ok'; solicitudes: SolicitudDatos[] } | { estado: 'error'; motivo: string }
@@ -794,7 +977,8 @@ export function interpretarSolicitudesDatos(status: number, json: unknown): Soli
           return [{ clave, declarado: String(dd?.declarado ?? ''), documento: String(dd?.documento ?? ''), tipoDocumento: texto(dd?.tipoDocumento) ?? 'otro' }]
         })
       : null
-    solicitudes.push({ id, ramo, estado, caduca: texto(s.caduca) ?? '', completada: texto(s.completada), campos, respuestas, ilegible: s.ilegible === true, documentos, discrepancias })
+    const tercero = typeof s.tercero === 'boolean' ? s.tercero : null
+    solicitudes.push({ id, ramo, estado, caduca: texto(s.caduca) ?? '', completada: texto(s.completada), campos, respuestas, ilegible: s.ilegible === true, documentos, discrepancias, personaId: texto(s.personaId), tercero })
   }
   return { estado: 'ok', solicitudes }
 }
@@ -810,9 +994,64 @@ export function valorLegible(campo: SolicitudDatos['campos'][number], v: string 
   return f ? `${f[3]}/${f[2]}/${f[1]}` : v
 }
 
+/**
+ * Lead web de auto/moto recién dado de alta (06/10/2026): abre su oportunidad y crea el enlace de datos
+ * en UNA llamada (`/api/operador/solicitud-datos/lead-web`). Timeout de 8 s: el aviso de Telegram espera
+ * por esto y nunca debe perderse; si no llega a tiempo, sale sin enlace. La respuesta lleva el token en
+ * la URL: no se loguea.
+ */
+export const TIMEOUT_ENLACE_LEAD_MS = 8_000
+export function solicitudLeadWebAsegura(body: { clienteId: string; ramo: 'auto' | 'moto' }): Promise<Reenvio> {
+  return llamar('/api/operador/solicitud-datos/lead-web', { method: 'POST', body: JSON.stringify(body) }, TIMEOUT_ENLACE_LEAD_MS)
+}
 export function solicitudesDatosAsegura(oportunidadId: string): Promise<Reenvio> {
   return llamar(`/api/operador/solicitud-datos?oportunidadId=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
 }
 export function accionSolicitudDatosAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/solicitud-datos', { method: 'POST', body: JSON.stringify(body) })
+}
+
+// ─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──
+export function borradoresPresupuestoAsegura(clienteId: string, ramo: string): Promise<Reenvio> {
+  return llamar(`/api/operador/borrador-presupuesto?clienteId=${encodeURIComponent(clienteId)}&ramo=${encodeURIComponent(ramo)}`, { method: 'GET' })
+}
+export function guardarBorradorPresupuestoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/borrador-presupuesto', { method: 'POST', body: JSON.stringify(body) })
+}
+export function borrarBorradorPresupuestoAsegura(clienteId: string, ramo: string, oportunidadId: string | null): Promise<Reenvio> {
+  const q = `clienteId=${encodeURIComponent(clienteId)}&ramo=${encodeURIComponent(ramo)}${oportunidadId ? `&oportunidadId=${encodeURIComponent(oportunidadId)}` : ''}`
+  return llamar(`/api/operador/borrador-presupuesto?${q}`, { method: 'DELETE' })
+}
+
+// ─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────
+export function riesgoAsegura(oportunidadId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/oportunidad/riesgo?id=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
+}
+/**
+ * Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de
+ * datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`). Gratis: no pide precio.
+ */
+export function datosRiesgoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/riesgo', { method: 'PATCH', body: JSON.stringify(body) })
+}
+export function figuraAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/figuras', { method: 'POST', body: JSON.stringify(body) })
+}
+export function quitarFiguraAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/figuras', { method: 'DELETE', body: JSON.stringify(body) })
+}
+
+/** Dos variantes del mismo riesgo: qué cambia y el precio de cada compañía en las dos. Gratis. */
+export function compararVariantesAsegura(oportunidadId: string, a: string, b: string): Promise<Reenvio> {
+  const q = new URLSearchParams({ id: oportunidadId, a, b })
+  return llamar(`/api/operador/oportunidad/comparar?${q.toString()}`, { method: 'GET' })
+}
+/** Abre (o devuelve la abierta) la oportunidad de retarificar una póliza. Gratis: no pide precio. */
+export function riesgoDePolizaAsegura(body: { polizaId: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/de-poliza', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/** «Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis. */
+export function traspasarOportunidadAsegura(body: { oportunidadId: string; nuevoClienteId: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/traspasar', { method: 'POST', body: JSON.stringify(body) })
 }

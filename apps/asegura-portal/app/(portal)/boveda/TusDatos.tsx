@@ -81,17 +81,21 @@ export function TusDatos({ inicial }: { inicial: Solicitud[] }) {
   }
 
   async function retirar(id: string) {
-    const r = await fetch('/api/supresion', {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id }),
-    })
-    if (!r.ok) {
-      setError('No hemos podido retirarla. Inténtalo de nuevo en un momento.')
-      return
+    try {
+      const r = await fetch('/api/supresion', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!r.ok) {
+        setError('No hemos podido retirarla. Inténtalo de nuevo en un momento.')
+        return
+      }
+      const datos = (await r.json()) as { solicitud: Solicitud }
+      setSolicitudes((prev) => prev.map((s) => (s.id === datos.solicitud.id ? datos.solicitud : s)))
+    } catch {
+      setError('No hemos podido retirarla: revisa tu conexión e inténtalo de nuevo.')
     }
-    const datos = (await r.json()) as { solicitud: Solicitud }
-    setSolicitudes((prev) => prev.map((s) => (s.id === datos.solicitud.id ? datos.solicitud : s)))
   }
 
   return (

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
 import { RAMOS, RAMOS_PRODUCTO } from '@/lib/ramos'
 import { COMPANIAS, COMPANIAS_EN_CARTERA } from '@/lib/companias'
-import { PORTAL_URL, url } from '@/lib/sitio'
+import { CALCULADORA_HIPOTECA, PERFILES, PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
 import PanelDemo from '@/components/PanelDemo'
 import Cifras from '@/components/Cifras'
@@ -112,6 +112,39 @@ function IconoRamo({ slug }: { slug: string }) {
 const GARANTIAS = ['Sin coste para ti', 'Sin compromiso', `Corredor inscrito en la DGSFP`] as const
 
 
+/**
+ * El alta «avísame antes de que venza» (`AvisoPorCorreo` en VentanaRenovacion)
+ * solo está viva con `NEXT_PUBLIC_AVISOS_CORREO=1`. Sin ella el componente
+ * ofrece guardar la fecha en el área, y la portada NO puede prometer un aviso
+ * por correo que no sale: el copy sigue a la misma bandera.
+ */
+const AVISO_ACTIVO = process.env.NEXT_PUBLIC_AVISOS_CORREO === '1'
+
+/** Ficha de Google Business: la URL sale de `PERFILES`, no se copia aquí. */
+const FICHA_GOOGLE = PERFILES.find((p) => p.includes('google.com/maps'))
+
+/** Las tres herramientas de la primera pantalla. Cada una es un enlace medido `hero_<herramienta>`. */
+const HERRAMIENTAS = [
+  {
+    href: CALCULADORA_HIPOTECA,
+    origen: 'hero_hipoteca',
+    titulo: '¿Te compensa el seguro del banco?',
+    texto: 'Calcula su coste real con tu hipoteca.',
+  },
+  {
+    href: '#vencimiento',
+    origen: 'hero_vencimiento',
+    titulo: AVISO_ACTIVO ? '¿Cuándo vence tu seguro? Te avisamos antes' : '¿Cuándo vence tu seguro?',
+    texto: AVISO_ACTIVO ? 'Apunta la fecha y te escribimos a tiempo.' : 'Mira tu margen para decidir.',
+  },
+  {
+    href: '#subir',
+    origen: 'hero_subir',
+    titulo: 'Sube tu póliza y la revisamos',
+    texto: 'Un PDF o una foto, sin teclear.',
+  },
+] as const
+
 const PASOS = [
   {
     titulo: 'Nos cuentas qué quieres mirar',
@@ -200,6 +233,26 @@ export default function Home() {
               <br />
               <span className="destaca">Y contrólalos.</span>
             </h1>
+            {/* Tres herramientas visibles sin scroll, justo bajo el titular.
+                `EnlaceMedido` es un `<a>` normal: admite `#ancla` y rutas
+                internas (navega con href, sin router). */}
+            <nav
+              aria-label="Herramientas"
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 210px), 1fr))', gap: 10, marginTop: 20 }}
+            >
+              {HERRAMIENTAS.map((h) => (
+                <EnlaceMedido
+                  key={h.origen}
+                  href={h.href}
+                  origen={h.origen}
+                  className="tarjeta"
+                  style={{ padding: '12px 14px', minHeight: 44, borderRadius: 'var(--radio)' }}
+                >
+                  <strong style={{ display: 'block', fontSize: 15, lineHeight: 1.3 }}>{h.titulo}</strong>
+                  <span className="tenue" style={{ display: 'block', fontSize: 13, marginTop: 2 }}>{h.texto}</span>
+                </EnlaceMedido>
+              ))}
+            </nav>
             {/*
               Una línea más corto que la primera versión (06/09/2026), y no por
               estilo: la frase acababa en «…quien te coge el teléfono cuando hay
@@ -208,7 +261,7 @@ export default function Home() {
               los botones flotantes. Lo que sobra en un hero no es neutro: ocupa
               el sitio donde el visitante decide.
             */}
-            <p className="lead" style={{ marginTop: 28 }}>
+            <p className="lead" style={{ marginTop: 24 }}>
               Soy {MEDIADOR.identidad.nombre}, corredor de seguros en toda España. Tu intranet guarda las
               pólizas de cualquier compañía, te dice qué cubre cada una y te apunta en el calendario hasta
               cuándo puedes decidir si la renuevas. Sin coste y sin cambiar de correduría.
@@ -302,9 +355,29 @@ export default function Home() {
           `lib/ramos.ts` entero (todo el copy) en el bundle del cliente. */}
       <section className="seccion" id="vencimiento" aria-label="Cuándo vence tu seguro">
         <div className="wrap">
+          {AVISO_ACTIVO && (
+            <div className="seccion-tit" style={{ marginBottom: 'var(--e5)' }}>
+              <p className="antetitulo">Aviso de vencimiento</p>
+              <h2 className="display">
+                Te avisamos antes de que <span className="destaca">venza tu seguro.</span>
+              </h2>
+              <p className="lead">
+                Elige el seguro y la fecha de vencimiento, deja tu correo y te escribimos antes de que se cierre el
+                plazo para decidir. No hace falta ser cliente.
+              </p>
+            </div>
+          )}
           <VentanaRenovacion
             opciones={RAMOS.filter((r) => ramoTieneVentana(r.slug)).map((r) => ({ slug: r.slug, nombre: r.nombre }))}
           />
+          <Link href={CALCULADORA_HIPOTECA} className="tarjeta" style={{ marginTop: 'var(--e6)' }}>
+            <h3>¿El banco te pide su seguro por la hipoteca?</h3>
+            <p>Calcula lo que te cuesta de verdad: la prima que te cobra menos lo que te bonifica en el interés.</p>
+            <span className="tarjeta-mas">
+              Abrir la calculadora
+              <Flecha />
+            </span>
+          </Link>
         </div>
       </section>
 
@@ -446,6 +519,29 @@ export default function Home() {
               No es un comparador automático. Detrás de cada presupuesto hay una persona con nombre, con clave de
               registro en la DGSFP y con un domicilio en el que se le puede encontrar.
             </p>
+            {/* Lo que nos separa de un comparador, sin cifras ni superlativos de
+                precio. El plazo de 24 h laborables lo aprobó Alberto. */}
+            <ul className="garantias" style={{ marginTop: 20 }}>
+              <li>
+                <Check />
+                Te atiende un corredor colegiado, no un call center
+              </li>
+              <li>
+                <Check />
+                Revisión gratuita de tu póliza
+              </li>
+              <li>
+                <Check />
+                Te respondemos en 24 h laborables
+              </li>
+            </ul>
+            {FICHA_GOOGLE && (
+              <p style={{ margin: '16px 0 0' }}>
+                <a href={FICHA_GOOGLE} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', minHeight: 44, lineHeight: '44px' }}>
+                  Lee nuestras reseñas en Google
+                </a>
+              </p>
+            )}
           </div>
           <div>
             <div className="credencial">

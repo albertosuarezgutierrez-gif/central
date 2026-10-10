@@ -48,7 +48,7 @@ test('una CANCELADA no cuenta como viva — 42 de las 109 de CIMA lo están', ()
     poliza({ id: 'c', confirmadaCima: false }),
     poliza({ id: 'd', viva: false }),
   ])
-  assert.deepEqual(r.conteo, { vivas: 1, pendientesCima: 1, canceladas: 1, historicas: 1, total: 4 })
+  assert.deepEqual(r.conteo, { vivas: 1, pendientesCima: 1, canceladas: 1, sustituidas: 0, historicas: 1, total: 4 })
 })
 
 // ── Recibos: la distinción que da sentido a todo el helper ───────────────────
@@ -220,9 +220,27 @@ test('una fecha basura no rompe: se trata como «sin fecha», no como un vencimi
 
 test('una ficha vacía no afirma nada: cero pólizas, ningún próximo, recibos a null', () => {
   const r = resumen([])
-  assert.deepEqual(r.conteo, { vivas: 0, pendientesCima: 0, canceladas: 0, historicas: 0, total: 0 })
+  assert.deepEqual(r.conteo, { vivas: 0, pendientesCima: 0, canceladas: 0, sustituidas: 0, historicas: 0, total: 0 })
   assert.equal(r.recibos.devueltos, null)
   assert.equal(r.recibos.pendientes, null)
   assert.equal(r.proximo, null)
   assert.equal(r.vivasSinFechaVencimiento, 0)
+})
+
+// ── Sustituida por otra (28/09/2026) ─────────────────────────────────────────
+// La moto de Allianz (vence 01/11/2026) ya pasada a Occident: contaba como viva y
+// la cabecera y el «siguiente paso» avisaban de su vencimiento.
+test('una sustituida no es viva ni manda el próximo vencimiento', () => {
+  const vieja = poliza({ id: 'allianz', sustituida: true, fechaVencimiento: '2026-11-01' })
+  const nueva = poliza({ id: 'occident', fechaVencimiento: '2027-11-01' })
+  assert.equal(clasificarPolizaFicha(vieja), 'sustituida')
+  const r = resumen([vieja, nueva])
+  assert.equal(r.conteo.vivas, 1)
+  assert.equal(r.conteo.sustituidas, 1)
+  assert.equal(r.proximo?.polizaId, 'occident')
+})
+
+test('cancelada o sin CIMA mandan sobre «sustituida»', () => {
+  assert.equal(clasificarPolizaFicha(poliza({ id: 'x', sustituida: true, estado: 'cancelada' })), 'cancelada')
+  assert.equal(clasificarPolizaFicha(poliza({ id: 'y', sustituida: true, confirmadaCima: false })), 'pendiente_cima')
 })

@@ -90,3 +90,12 @@ test('un piso desconocido no se fuerza a ninguno de los cuatro', () => {
   assert.equal(propertyIdDePiso('Piso que no existe'), null)
   assert.equal(propertyIdDePiso(null), null)
 })
+
+// Correo REAL (05/10/2026): aviso de mensaje de huésped de Expedia Partner Central.
+test('canal Expedia por asunto «huésped de Expedia» (con espacio inicial y salto final) ', () => {
+  assert.equal(canalDeAsunto(' Te ha escrito Reka Bekesi, huésped de Expedia\n'), 'Expedia')
+})
+
+test('«Busto Reform» con espacios/saltos casa con prop_busto_reform', () => {
+  assert.equal(propertyIdDePiso(' Busto \n Reform\n'), 'prop_busto_reform')
+})

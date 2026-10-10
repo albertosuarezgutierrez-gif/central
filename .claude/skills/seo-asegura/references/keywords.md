@@ -86,3 +86,48 @@ se comprueba en Search Console cuando exista, no se vuelve a tocar el código.
   y contradecía el §1), pero una SERP genérica de precio la ganan los comparadores con Ads.
 - **Nombres de compañías como reclamo** («seguro Mapfre barato»). Además de la trampa del precio,
   usar su marca en el copy es un problema de permisos: sin permiso, texto y nunca el logo.
+
+## 5. Pasada mensual OpenSEO — 01/10/2026
+
+| Consulta | Vol/mes | KD | Intención | Top-5 (dominios) | Página nuestra |
+|---|---|---|---|---|---|
+| seguro de vida hipoteca | 2.400 | 0 | comercial | santalucia #1, mapfre #4, polizamedica #9 | /calculadora-bonificacion-hipoteca (parcial) + /seguros/vida-y-salud |
+| seguro de salud sin copago | 2.900 | 1 | — | caser #6, ECI #7, rastreator #10 | falta (solo /seguros/vida-y-salud) |
+| seguro decesos | 4.400 | 14 | — | santalucia #1, caser #3, mapfre #4 | /seguros/decesos |
+| seguro decesos precio | 1.600 | 0 | transaccional | — | /seguros/decesos (no hablar de precio: RDL 3/2020) |
+| seguro impago alquiler | 3.600 | 10 | — | occident #2, mapfre #4, caser #6 | /seguros/impago-alquiler |
+| seguro responsabilidad civil autonomos | 1.000 | 0 | — | occident #1, mapfre #3, caser #8 | /seguros/responsabilidad-civil-autonomos |
+| seguro perro obligatorio | 880 | 0 | — | — | /seguros/seguro-perro |
+| corredor de seguros | 1.600 | 3 | — | allianz #1, ECI #8 | portada |
+| seguro comunidad de propietarios | 590 | 1 | — | santalucia #2, mapfre #3, allianz #8 | /seguros/comunidades |
+| dar de baja seguro coche | 390 | 0 | transaccional | — | /carta-baja-seguro + blog /dar-de-baja-seguro-coche |
+| correduria de seguros | 6.600 | 34 | — | — | — |
+| seguro de hogar | 8.100 | 29 | — | — | — |
+| seguro mascotas | 4.400 | 58 | — | — | — |
+| seguro de salud | 12.100 | 90 | — | — | — |
+
+🚨 **No perseguir genéricas KD>50** (correduria, seguro de hogar, seguro mascotas, seguro de salud).
+
+**Hipoteca — volumen bajo:** seguro hogar hipoteca 70, seguro vida hipoteca obligatorio 70, seguro hogar hipoteca obligatorio 30 KD13, cambiar seguro vida/hogar hipoteca 10, cancelar seguro vida hipoteca 10.
+
+### Search Console sept/2026
+
+- Portada: 389 impr, pos 32,8, 9 clics
+- `/blog/preaviso-un-mes-no-renovar-seguro`: 363 impr, pos 7,0, 0 clics
+- `/blog/como-dar-de-baja-un-seguro-a-tiempo`: 202 impr, pos 10,3, 1 clic
+- `/blog/siniestro-hogar-fuga-agua-que-hacer`: 116 impr, pos 7,9, — clics
+- URLs viejas aún indexadas: http://grupoasegura.es/ (pos 32,4), `/mejoramos-tu-seguro/` (54,4), clientes.grupoasegura.es (52 impr)
+
+### GA4 sept/2026 (solo quien acepta cookies, es un SUELO)
+
+- 71 sesiones (50 directo, 19 orgánico, 2 asistentes IA)
+- 0 eventos clave (generate_lead aún sin marcar como evento clave en GA4)
+
+### Google Business Profile
+
+- Categoría: Corredor de seguros
+- Reseñas: 1
+- Fotos: 3
+- Servicios: 12
+
+**Crédito aprox gastado en la pasada:** ≈ keyword_metrics 28 kw + 1 serp_competitors + 1 business_profile

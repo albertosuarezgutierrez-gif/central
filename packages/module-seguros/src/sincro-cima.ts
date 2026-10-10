@@ -25,6 +25,11 @@
  *                   28/09/2026): se toma el de CIMA sin preguntar. Solo con las
  *                   mismas palabras, cada una a UNA letra como mucho y al menos
  *                   la mitad idénticas: «Maria Lopez»/«Mario Lopes» sigue preguntando.
+ *   - `normalizar`→ es la MISMA fecha escrita en otro formato en la ficha («1980/3/4»
+ *                   frente a «1980-03-04», 03/10/2026): se reescribe en ISO sin preguntar.
+ *                   Antes de declarar un conflicto se normalizan los dos lados
+ *                   (`mismoValorNormalizado`): nombre como conjunto de palabras, fecha a ISO,
+ *                   teléfono sin 34, email en minúsculas. Normalizados iguales = NO es conflicto.
  *   - `discrepa`  → los dos lo tienen y NO coinciden: decide Alberto.
  *   - (nada)      → coinciden, o CIMA no lo trae: no hay nada que hacer.
  *
@@ -77,7 +82,7 @@ export type DatosCima = {
 
 export type DiferenciaCima = {
   campo: CampoCima
-  accion: 'rellenar' | 'anadir' | 'completar' | 'formatear' | 'corregir' | 'discrepa'
+  accion: 'rellenar' | 'anadir' | 'completar' | 'formatear' | 'corregir' | 'normalizar' | 'discrepa'
   /** Lo que tiene la ficha (para enseñarlo); `null` en `rellenar`. */
   ficha: string | null
   /** El valor que se escribiría, ya normalizado (en `formatear`, el de la ficha en «Nombre Propio»). */
@@ -214,6 +219,22 @@ export function fechaCima(v: string | null): string | null {
   return null
 }
 
+/**
+ * Fecha a `YYYY-MM-DD` aceptando también `YYYY/M/D`, `D-M-YYYY`, `D.M.YYYY`… (año de 4 cifras) y un ISO con hora.
+ * Fecha imposible (31/02) → `null`. Más laxa que `fechaCima`, que decide qué es un hueco bien formado.
+ */
+export function fechaIsoFlexible(v: string | null): string | null {
+  if (!v) return null
+  const t = v.trim()
+  const a = /^(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})(?:$|[T\s])/.exec(t)
+  const b = a ? null : /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(t)
+  const [y, m, d] = a ? [a[1], a[2], a[3]] : b ? [b[3], b[2], b[1]] : [null, null, null]
+  if (!y || !m || !d) return null
+  const iso = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+  const f = new Date(`${iso}T00:00:00Z`)
+  return Number.isFinite(f.getTime()) && f.toISOString().slice(0, 10) === iso ? iso : null
+}
+
 /** Teléfono comparable: solo los 9 dígitos nacionales si lo es; si no, los dígitos. */
 export function claveTelefono(v: string): string {
   const d = v.replace(/\D/g, '')
@@ -223,7 +244,45 @@ export function claveTelefono(v: string): string {
 }
 
 function claveEmail(v: string): string {
-  return v.trim().toLowerCase()
+  return v.trim().toLowerCase().replace(/\s+/g, '')
+}
+
+/**
+ * ¿Es el MISMO dato una vez normalizados los dos lados? Nombre: conjunto de palabras sin tildes ni
+ * mayúsculas (`mismoNombre`); fechas: a ISO; teléfono: dígitos sin el 34; email: minúsculas y sin espacios.
+ * Un lado vacío nunca coincide. Lo usa `compararConCima` y se prueba aparte.
+ */
+export function mismoValorNormalizado(campo: CampoCima, a: string | null, b: string | null): boolean {
+  if (a === null || b === null) return false
+  switch (campo) {
+    case 'nombre': return mismoNombre(a, b)
+    case 'fechaNacimiento':
+    case 'fechaCarnet': {
+      const x = fechaIsoFlexible(a)
+      return x !== null && x === fechaIsoFlexible(b)
+    }
+    case 'telefono': {
+      const x = claveTelefono(a)
+      return x !== '' && x === claveTelefono(b)
+    }
+    case 'email': {
+      const x = claveEmail(a)
+      return x !== '' && x === claveEmail(b)
+    }
+  }
+}
+
+/** Por qué se copió algo solo (para el resumen del cron, sin valores). `null` = no se copia solo. */
+export function motivoCopiadoCima(accion: DiferenciaCima['accion']): 'hueco' | 'nuevo' | 'mas_completo' | 'formato' | 'errata' | null {
+  switch (accion) {
+    case 'rellenar': return 'hueco'
+    case 'anadir': return 'nuevo'
+    case 'completar': return 'mas_completo'
+    case 'formatear':
+    case 'normalizar': return 'formato'
+    case 'corregir': return 'errata'
+    case 'discrepa': return null
+  }
 }
 
 /**
@@ -231,6 +290,32 @@ function claveEmail(v: string): string {
  * Para teléfono/email se compara el PRIMERO que manda CIMA contra TODOS los de
  * la ficha: si ya lo tiene en cualquier posición, no hay diferencia.
  */
+/** Categorías/clases de vehículo de CIMA que son moto o ciclomotor. */
+const CLASES_MOTO = new Set(['MO', 'MT', 'CI'])
+
+/**
+ * ¿La fecha de carné de esta póliza es la del carné B? Solo si es un COCHE.
+ * El `tipo` de la póliza NO basta: CIMA manda las motos en el ramo de autos
+ * (DGS 241) y 11 pólizas vivas con moto estaban como `tipo = 'auto'` (28/09/2026,
+ * BMW C 400 GT de 0007001052485): su fecha es la del carné A y se comparaba
+ * con el B. Manda el vehículo (`categoriaVehiculo`/`claseVehiculo`), en la
+ * raíz o en cualquier riesgo; ante una moto, no es del B.
+ */
+export function esPolizaDeCoche(tipo: string | null | undefined, datosEspecificos: unknown): boolean {
+  if (String(tipo) !== 'auto') return false
+  const d = datosEspecificos && typeof datosEspecificos === 'object' ? (datosEspecificos as Record<string, unknown>) : {}
+  const riesgos = Array.isArray(d.riesgos) ? d.riesgos : []
+  for (const r of [d, ...riesgos]) {
+    if (!r || typeof r !== 'object') continue
+    const o = r as Record<string, unknown>
+    for (const k of ['categoriaVehiculo', 'claseVehiculo']) {
+      const v = o[k]
+      if (typeof v === 'string' && CLASES_MOTO.has(v.trim().toUpperCase())) return false
+    }
+  }
+  return true
+}
+
 export function compararConCima(ficha: FichaParaCima, cima: DatosCima): DiferenciaCima[] {
   const out: DiferenciaCima[] = []
 
@@ -252,7 +337,11 @@ export function compararConCima(ficha: FichaParaCima, cima: DatosCima): Diferenc
   if (nac && !ficha.fechaNacimientoIlegible) {
     const propia = fechaCima(ficha.fechaNacimiento)
     // Una fecha guardada en un formato raro NO es un hueco: se enseña tal cual y decide Alberto.
-    if (!propia && ficha.fechaNacimiento?.trim()) out.push({ campo: 'fechaNacimiento', accion: 'discrepa', ficha: ficha.fechaNacimiento.trim(), cima: nac })
+    // Salvo que sea la MISMA fecha en otro formato: entonces se reescribe en ISO sin preguntar.
+    if (!propia && ficha.fechaNacimiento?.trim()) {
+      const accion = mismoValorNormalizado('fechaNacimiento', ficha.fechaNacimiento, nac) ? 'normalizar' : 'discrepa'
+      out.push({ campo: 'fechaNacimiento', accion, ficha: ficha.fechaNacimiento.trim(), cima: nac })
+    }
     else if (!propia) out.push({ campo: 'fechaNacimiento', accion: 'rellenar', ficha: null, cima: nac })
     else if (propia !== nac) out.push({ campo: 'fechaNacimiento', accion: 'discrepa', ficha: propia, cima: nac })
   }
@@ -261,7 +350,11 @@ export function compararConCima(ficha: FichaParaCima, cima: DatosCima): Diferenc
   if (car && ficha.carnets !== null && !ficha.carnets.some((f) => f === null)) {
     const propias = ficha.carnets.map(fechaCima).filter((f): f is string => f !== null)
     if (ficha.carnets.length === 0) out.push({ campo: 'fechaCarnet', accion: 'rellenar', ficha: null, cima: car })
-    else if (!propias.some((p) => aUnDia(p, car))) out.push({ campo: 'fechaCarnet', accion: 'discrepa', ficha: propias.join(' · ') || null, cima: car })
+    else if (!propias.some((p) => aUnDia(p, car))) {
+      // Un único B guardado en otro formato y de la misma fecha: se reescribe en ISO. Con varios no se sabe cuál tocar.
+      const raro = ficha.carnets.length === 1 && propias.length === 0 && mismoValorNormalizado('fechaCarnet', ficha.carnets[0], car)
+      out.push({ campo: 'fechaCarnet', accion: raro ? 'normalizar' : 'discrepa', ficha: propias.join(' · ') || ficha.carnets.filter((c): c is string => c !== null).join(' · ') || null, cima: car })
+    }
   }
 
   const tel = cima.telefonos.map((t) => t.trim()).find((t) => claveTelefono(t).length >= 9)

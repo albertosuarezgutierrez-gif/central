@@ -53,8 +53,8 @@ test('🪤 retirar un presupuesto aceptado desiste su anulación en la MISMA tra
 })
 
 test('🪤 lo firmado cita lo que el cliente tuvo delante: recuento del presupuesto y versión vigente de los textos', () => {
-  assert.match(src, /count\(\*\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id\) as "nOpciones"/)
-  assert.match(src, /count\(distinct lower\(trim\(x\.compania\)\)\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id\) as "nCompanias"/)
+  assert.match(src, /count\(\*\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id and x\.oculta_at is null\) as "nOpciones"/)
+  assert.match(src, /count\(distinct lower\(trim\(x\.compania\)\)\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id and x\.oculta_at is null\) as "nCompanias"/)
   assert.match(src, /versionTextos: VERSION_TEXTOS_LEGALES/)
   assert.match(src, /informacionMediador: `\$\{MEDIADOR\.identidad\.portal\}\/legal\/mediador`/)
 })
@@ -63,4 +63,38 @@ test('🪤 lo firmado cita las necesidades guardadas, y solo se reescriben antes
   assert.match(src, /necesidades: f\.necesidades,/)
   const pres = readFileSync(new URL('./presupuesto.ts', import.meta.url), 'utf8')
   assert.match(pres, /where: \{ id: fila\.id, correduriaId, aceptadoAt: null, retiradoAt: null \},\s*data: \{ necesidades: v\.valor/)
+})
+
+// ─── «Revisa tus datos» (28/09/2026) ──────────────────────────────────────────
+const ruta = readFileSync(new URL('../app/api/portal/presupuesto/route.ts', import.meta.url), 'utf8')
+
+test('🪤 aceptar SIN la casilla se rechaza en el SERVIDOR, antes de tocar la BD o gastar el código', () => {
+  const casilla = firmar.indexOf("if (datos.datosConfirmados !== true) return { estado: 'sin_confirmar_datos' }")
+  const baseIdx = firmar.indexOf('await base(correduriaId')
+  const gasto = firmar.indexOf('set firma_otp_intentos = firma_otp_intentos + 1')
+  assert.ok(casilla > 0 && casilla < baseIdx && casilla < gasto, 'la casilla va lo primero')
+  // El puente solo acepta un `true` literal: un «sí», un 1 o un campo ausente no confirman.
+  assert.match(ruta, /datosConfirmados: b\.datosConfirmados === true,/)
+})
+
+test('🪤 datos ilegibles o avisados como incorrectos → NO se autoriza (preparar ni firmar)', () => {
+  const datosDe = src.slice(src.indexOf('function datosDe'), src.indexOf('export type ResultadoPreparar'))
+  assert.match(datosDe, /if \(f\.datosEnRevision\) return \{ estado: 'datos_en_revision'/)
+  assert.match(datosDe, /d\.estado === 'ok' \? d : \{ estado: 'sin_datos'/)
+  const prep = src.slice(src.indexOf('export async function prepararAceptacion'), src.indexOf('export type ResultadoCodigo'))
+  const corte = prep.indexOf("if (d.estado !== 'ok') return d")
+  assert.ok(corte > 0 && corte < prep.indexOf('componer('), 'preparar corta antes de componer')
+  const cierre = firmar.indexOf("if (dc.estado !== 'ok') return dc")
+  assert.ok(cierre > 0 && cierre < firmar.indexOf('set firma_otp_intentos = firma_otp_intentos + 1'), 'se cierra antes de gastar el código')
+})
+
+test('🪤 los datos confirmados van DENTRO del documento firmado (y por tanto de su huella) y en el evento', () => {
+  // Tras el documento van la cuenta (solo su máscara) y los datos con el texto EXACTO de la casilla marcada.
+  assert.match(src, /\}\) \+ '\\n\\n' \+ lineaCuentaDocumento\(cuenta\) \+ '\\n\\n' \+ anexoDatosFirmados\(datos, confirmacion, via\)/)
+  // La casilla sale de la puerta por origen, y un origen desconocido no compone (no se firma nada).
+  const comp = src.slice(src.indexOf('function componer'), src.indexOf('type SinFicha'))
+  assert.match(comp, /const confirmacion = textoAutorizacionDe\(\{ origen: f\.origen, conIpid: !!f\.ipidHuella/)
+  assert.match(comp, /if \(via === null \|\| confirmacion === null\) return null/)
+  assert.match(comp, /confirmacionDatos: confirmacion,/)
+  assert.match(firmar, /datosConfirmados: true, datosHuella: c\.datos\.huella/)
 })

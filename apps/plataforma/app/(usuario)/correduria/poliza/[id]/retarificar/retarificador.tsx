@@ -16,6 +16,8 @@
 // aquí para que la copia sea UNA y no dos.
 
 import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, Check, Clipboard, Clock, FlaskConical, OctagonAlert, X } from 'lucide-react'
+import { Ico, FILA } from '../../../iconos'
 import {
   borrarBorrador,
   claveBorradorRetarificar,
@@ -24,13 +26,15 @@ import {
 } from '@/lib/correduria/borrador-local'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
+import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision, CoberturasOferta } from './emision'
-import PrepararPresupuesto from './PrepararPresupuesto'
+import FiltroGarantias from '../../../FiltroGarantias'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import { fechaEfectoInicial, fechaEfectoPorDefecto } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
 import { SelectorBuscable } from '../../../SelectorBuscable'
+import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import {
   agruparPrecios,
   defensaDeCartera,
@@ -44,6 +48,7 @@ import {
 
 import type { ContextoDefensa } from '@/lib/contexto-defensa'
 import { fechaEs } from '@/lib/ficha-asegura'
+import { FallosTarificacion } from '../../../FallosTarificacion'
 export type { ContextoDefensa }
 
 /**
@@ -165,7 +170,8 @@ type Resultado =
        * que es la defensa de cartera dicha por la propia compañía.
        */
       fallos: Fallo[] | null
-      supuestos: Supuesto[]
+      /** `null` = cotización recuperada: los supuestos no se guardan con ella (30/09/2026). */
+      supuestos: Supuesto[] | null
       /** Qué pasó con la COPIA en `seguros.tarificaciones`. Sin `cotizacionId`
        *  (dentro, si `estado==='guardada'`) no hay a qué proyecto pedirle el
        *  ReRate/Submit reales: `cotizacionIdDe()` lo extrae con cuidado. */
@@ -187,7 +193,7 @@ type Resultado =
    * existir — y la pantalla tiene que decir «no sé si ha salido», nunca «no se
    * ha gastado».
    */
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; duplicado?: boolean }
 
 // `Precio`, `Fallo`, `Supuesto` y `Reparo` se importan de
 // `@/lib/retarificar-asegura`, que es quien lee la respuesta del puerto: el
@@ -196,15 +202,19 @@ type Resultado =
 // es exactamente lo que pasó con `primaAnual`/`primaEur` en asegura.
 
 /**
- * El resumen honrado de una cotización, a partir de solo sus precios (sin
- * fallos: la cotización GUARDADA no los persiste, ver `apps/asegura/lib/
- * codeoscopic/cotizaciones.ts`). Mismo criterio que `resumirCotizacion()` de
- * asegura, recortado a lo que hay.
+ * El resumen honrado de una cotización, a partir de solo sus precios. Mismo
+ * criterio que `resumirCotizacion()` de asegura, recortado a lo que hay.
  */
 function resumenDePrecios(precios: Precio[]): string {
-  const firmes = precios.filter((p) => p.firmeza === 'firme').length
-  const noFirmes = precios.length - firmes
-  return `${precios.length} precios (${firmes} en firme${noFirmes > 0 ? `, ${noFirmes} con reparos)` : ')'}`
+  const n = (f: string) => precios.filter((p) => p.firmeza === f).length
+  const estimados = n('estimado')
+  const condicionados = n('condicionado')
+  const detalle = [
+    `${n('firme')} en firme`,
+    estimados > 0 ? `${estimados} ${estimados === 1 ? 'estimado' : 'estimados'}` : null,
+    condicionados > 0 ? `${condicionados} ${condicionados === 1 ? 'condicionado' : 'condicionados'} por la compañía` : null,
+  ].filter(Boolean).join(', ')
+  return `${precios.length} precios (${detalle})`
 }
 
 /**
@@ -213,9 +223,9 @@ function resumenDePrecios(precios: Precio[]): string {
  * aparte para «lo que ya había» frente a «lo que se acaba de pagar».
  *
  * 🚨 El `coste` NO dice «0,50€»: sería mentir sobre un cargo que no ha pasado
- * ahora. Y los `fallos` van `null`, no `[]`: no se persisten, así que lo
- * honrado es «no se guardaron», nunca «ninguna compañía rechazó». Los
- * `supuestos` sí van vacíos: son de la petición, no de la respuesta.
+ * ahora. Los `fallos` se guardan desde el 29/09/2026; en una cotización
+ * anterior llegan `null` = «no se guardaron», nunca «ninguna compañía
+ * rechazó». Los `supuestos` sí van vacíos: son de la petición, no de la respuesta.
  */
 function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
   return {
@@ -227,7 +237,7 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
     resumen: resumenDePrecios(g.precios),
     precios: g.precios,
     fallos: g.fallos,
-    supuestos: [],
+    supuestos: null,
     guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
     projectId: g.projectId,
     fechaEfecto: g.fechaEfecto,
@@ -334,8 +344,11 @@ export default function Retarificador({
   primaActualEur,
   ramo,
   vencimientoFiable = null,
+  variante = null,
 }: {
   polizaId: string
+  /** Variante del riesgo de esta póliza (`?oportunidad=`, 29/09/2026). `null` = retarificar de siempre. */
+  variante?: { oportunidadId: string } | null
   /**
    * Vencimiento de la póliza actual SOLO si es fiable (viva por CIMA, no
    * cancelada, no emitida nuestra con fecha provisional). `null` = no lo es o no
@@ -423,6 +436,7 @@ export default function Retarificador({
    *  un hogar NO es el de un coche). `null` = no consta. */
   ramo: string | null
 }) {
+  const [nota, setNota] = useState('')
   // Borrador local (localStorage) de esta póliza — ver `leerBorrador`/
   // `guardarBorrador`/`borrarBorrador` arriba.
   const claveBorrador = claveBorradorRetarificar(polizaId)
@@ -831,10 +845,11 @@ export default function Retarificador({
    * No hay reintento automático en ningún camino: `POST /insurances` no es
    * idempotente y repetir crea otro proyecto y otro cargo.
    */
-  async function cotizar() {
+  async function cotizar(forzar = false) {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacion({
       polizaId,
+      forzar,
       resueltos: {
         codigoVehiculo,
         garaje,
@@ -851,6 +866,7 @@ export default function Retarificador({
       // por eso `forzarNuevo` es exactamente `guardadaDescartada`, y no un
       // `true` fijo que volvería a permitir el doble cargo por accidente.
       forzarNuevo: guardadaDescartada,
+      variante: variante ? { oportunidadId: variante.oportunidadId, nota } : null,
     })
 
     switch (r.estado) {
@@ -860,6 +876,9 @@ export default function Retarificador({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'duplicado_cotizacion':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, duplicado: true })
         return
       case 'proyecto_vigente':
         // El guardián de asegura ha cortado SIN cobrar: ya hay un precio pagado
@@ -1022,6 +1041,7 @@ export default function Retarificador({
         />
       )}
       {simulacion && <BannerSimulacion />}
+      {variante && <NotaVariante nota={nota} onNota={setNota} />}
 
       {/* ── Paso 1 · el vehículo ───────────────────────────────────────────── */}
       <Paso n={1} titulo="El vehículo" sub="Lo único que hay que elegir es la versión.">
@@ -1462,7 +1482,7 @@ export default function Retarificador({
 
         {simulacion ? (
           <div style={CAJA_SIMULACION}>
-            <strong style={{ color: 'var(--warn)' }}>🧪 No se llama a ninguna compañía.</strong>{' '}
+            <strong style={{ ...FILA, color: 'var(--warn)' }}><Ico i={FlaskConical} /> No se llama a ninguna compañía.</strong>{' '}
             El precio lo inventa central para poder ver la pantalla funcionando. No cuesta nada, no
             se toca el libro de consumo y no se puede enseñar a un cliente.
           </div>
@@ -1540,9 +1560,12 @@ export default function Retarificador({
 
         {resultado.estado === 'error' && (
           <p className="err" style={{ marginTop: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}
+            <Ico i={resultado.tope ? OctagonAlert : AlertTriangle} /> {resultado.tope ? 'Tope alcanzado: ' : ''}
             {resultado.mensaje}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.duplicado && (
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
         )}
 
         {resultado.estado === 'ok' && (
@@ -1553,6 +1576,7 @@ export default function Retarificador({
             sinCarteraPorque={sinCarteraPorque}
             primaActualEur={primaActualEur}
             ramo={ramo}
+            polizaId={polizaId}
           />
         )}
       </div>
@@ -1569,6 +1593,7 @@ function Precios({
   sinCarteraPorque,
   primaActualEur,
   ramo,
+  polizaId,
 }: {
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
@@ -1578,6 +1603,7 @@ function Precios({
   /** Lo que paga HOY. `null` = la póliza no lo trae; no se pinta 0. */
   primaActualEur: number | null
   ramo: string | null
+  polizaId: string
 }) {
   // Qué fila tiene abierto el panel de emisión real (ver emision.tsx). `null` =
   // ninguna. Vive aquí, no en el padre: es puro estado de pantalla, no algo
@@ -1632,8 +1658,8 @@ function Precios({
             marginBottom: 12,
           }}
         >
-          <p style={{ margin: 0, fontWeight: 800, fontSize: 18, color: 'var(--warn)' }}>
-            🧪 ESTO ES UNA SIMULACIÓN
+          <p style={{ ...FILA, margin: 0, fontWeight: 800, fontSize: 18, color: 'var(--warn)' }}>
+            <Ico i={FlaskConical} /> ESTO ES UNA SIMULACIÓN
           </p>
           <p style={{ margin: '4px 0 0' }}>
             {r.avisoSimulacion ??
@@ -1646,8 +1672,8 @@ function Precios({
       {/* La pantalla se pintó en simulación y la respuesta NO viene marcada:
           se trata como REAL. La duda sobre el dinero se resuelve siempre así. */}
       {simulacion && !r.simulado && (
-        <div className="err" style={{ marginBottom: 12 }}>
-          ⚠️ Esta pantalla se abrió en modo simulación, pero la respuesta{' '}
+        <div className="err" style={{ ...FILA, marginBottom: 12 }}>
+          <Ico i={AlertTriangle} /> Esta pantalla se abrió en modo simulación, pero la respuesta{' '}
           <strong>no viene marcada como simulada</strong>: trátala como una cotización REAL y
           comprueba el consumo antes de volver a pulsar.
         </div>
@@ -1689,8 +1715,8 @@ function Precios({
           compañía los nombra a su manera (el «Todo Riesgo» de un hogar no es el
           de un coche). Cuando eso pasa, el módulo lo dice y aquí se pinta. */}
       {comparativa.avisoEscala && (
-        <p className="muted" style={{ marginTop: 8 }}>
-          ⚠️ {comparativa.avisoEscala}
+        <p className="muted" style={{ ...FILA, marginTop: 8 }}>
+          <Ico i={AlertTriangle} /> {comparativa.avisoEscala}
         </p>
       )}
 
@@ -1808,6 +1834,7 @@ function Precios({
                     const id = `${p.compania}-${p.producto}-${fila.indice}`
                     const logo = logoCompania(p.compania)
                     const producto = nombreProductoSinCia(p.compania, p.producto)
+                    const modalidad = r.precios[fila.indice]?.modalidad ?? null
                     const abrirCierra = abierta === id
                     const emisionDeshabilitada =
                       r.simulado || cotizacionIdDe(r.guardado) === null
@@ -1833,6 +1860,11 @@ function Precios({
                                 <div className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
                                   {producto}
                                 </div>
+                              )}
+                              {/* 30/09/2026: con tres Mapfre «Autos» en la misma fila de nivel, la
+                                  modalidad es lo único que dice CUÁL es (y es lo que se emite). */}
+                              {modalidad && modalidad !== p.categoria && (
+                                <div style={{ fontSize: 11, overflowWrap: 'anywhere' }}>{modalidad}</div>
                               )}
                             </div>
                           </div>
@@ -1930,7 +1962,7 @@ function Precios({
                             }
                             onClick={() => setAbierta(abrirCierra ? null : id)}
                           >
-                            {abrirCierra ? '✕' : '✓'}
+                            <Ico i={abrirCierra ? X : Check} />
                           </button>
                         </td>
                       </tr>
@@ -1956,7 +1988,10 @@ function Precios({
             categoria={p.categoria ?? ''}
             primaEur={p.primaEur ?? null}
             producto={p.producto ?? null}
+            modalidad={p.modalidad ?? null}
+            idPrecio={p.id ?? null}
             fechaEfecto={r.fechaEfecto}
+            ramo={ramo}
             onCerrar={() => setAbierta(null)}
           />
         )
@@ -1969,7 +2004,9 @@ function Precios({
           ofrece el botón en vez de ofrecer uno que falla al pulsarlo. */}
       <EnlaceOportunidad guardado={r.guardado} />
       {cotizacionIdDe(r.guardado) !== null && (
-        <PrepararPresupuesto
+        <FiltroGarantias
+          ramo={ramo ?? 'auto'}
+          origen={{ polizaId }}
           tarificacionId={cotizacionIdDe(r.guardado) as string}
           simulado={r.simulado}
         />
@@ -1982,44 +2019,19 @@ function Precios({
         </p>
       )}
 
-      {/* Las compañías que NO dieron precio: sin ellas, «5 precios» se lee como
-          «esto es el mercado entero». Cerrado por defecto (regla de rendimiento). */}
       {/* Sin esta lista, «5 precios» se lee como «esto es el mercado entero».
-          `null` (recuperada) se DICE: es lo contrario de «ninguna falló». */}
-      {r.fallos === null ? (
-        <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-          De esta cotización recuperada <strong>no se guardó qué compañías no dieron precio</strong>,
-          así que arriba no está el mercado entero: solo lo que sí se guardó. Esa lista —donde la
-          compañía dice cosas como «la matrícula ya está asegurada aquí»— solo existe en el momento
-          de pedirla.
-        </p>
-      ) : (
-      r.fallos.length > 0 && (
-        <details style={{ marginTop: 8 }}>
-          <summary className="muted" style={{ cursor: 'pointer', minHeight: 44, fontSize: 12 }}>
-            {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
-          </summary>
-          <ul style={{ margin: '6px 0 0' }}>
-            {r.fallos.map((f, i) => (
-              <li key={`${f.compania}-${i}`}>
-                <strong>{f.compania ?? '—'}</strong>
-                {f.producto ? ` · ${f.producto}` : ''}: {f.motivo ?? 'sin motivo declarado'}
-                {f.tambienDioPrecio && (
-                  <>
-                    {' '}
-                    <span className="badge ok">esta compañía sí dio otro precio</span>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )
-      )}
+          `null` (recuperada sin fallos guardados) lo dice el propio componente. */}
+      <FallosTarificacion fallos={r.fallos} />
 
       {/* Los supuestos, OTRA VEZ y al lado del precio: son la letra pequeña de
           esa cifra, y verlos antes de pulsar no basta. */}
-      {r.supuestos.length > 0 && (
+      {r.supuestos === null && (
+        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+          De esta cotización recuperada <strong>no se guardaron los supuestos</strong> con los que se pidió el precio
+          (garaje, historial, código postal…): compruébalos con el cliente antes de prometer la prima.
+        </p>
+      )}
+      {r.supuestos !== null && r.supuestos.length > 0 && (
         <div
           style={{
             marginTop: 12,
@@ -2108,8 +2120,8 @@ function BannerRecuperada({
       className="card"
       style={{ borderColor: 'var(--ok)', borderWidth: 2, background: 'rgba(22, 163, 74, 0.08)' }}
     >
-      <p style={{ margin: 0, fontWeight: 800, color: 'var(--ok)' }}>
-        📋 Cotización recuperada ({cuando})
+      <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--ok)' }}>
+        <Ico i={Clipboard} /> Cotización recuperada ({cuando})
       </p>
       <p style={{ margin: '4px 0 0' }}>
         Ya se pidió precio para esta póliza y sigue guardado — <strong>no se ha vuelto a cobrar</strong>.
@@ -2143,8 +2155,8 @@ function BannerCaducada({ guardadaPrevia }: { guardadaPrevia: TarificacionGuarda
     : fecha.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
   return (
     <div className="card" style={{ borderColor: 'var(--danger)', borderWidth: 2, background: 'var(--negative-bg)' }}>
-      <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
-        ⏳ La cotización del {cuando} ha caducado
+      <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+        <Ico i={Clock} /> La cotización del {cuando} ha caducado
       </p>
       <p style={{ margin: '4px 0 0' }}>
         Se pidió con fecha de efecto <strong>{guardadaPrevia.fechaEfecto ?? '(sin fecha)'}</strong>, que ya ha
@@ -2166,8 +2178,8 @@ function BannerSimulacion() {
         background: 'rgba(217, 119, 6, 0.08)',
       }}
     >
-      <p style={{ margin: 0, fontWeight: 800, fontSize: 18, color: 'var(--warn)' }}>
-        🧪 Modo simulación
+      <p style={{ ...FILA, margin: 0, fontWeight: 800, fontSize: 18, color: 'var(--warn)' }}>
+        <Ico i={FlaskConical} /> Modo simulación
       </p>
       <p style={{ margin: '4px 0 0' }}>
         Los precios que salgan aquí <strong>los inventamos nosotros</strong>: no se llama a ninguna
@@ -2566,6 +2578,7 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  nacionalidad: { etiqueta: 'Nacionalidad (código ISO de 3 letras, p. ej. ESP)', tipo: 'text' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
   // Lo que el SUBMIT exige y la ficha puede no traer (12/09/2026): se teclea
   // ANTES de pagar. Hasta hoy `nombreVia` caía en «no se arregla desde esta

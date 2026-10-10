@@ -246,8 +246,13 @@ async function leerPdfConContrasena(
     // (como `pdf-parse`, importado con `require` más abajo). Mismo patrón que
     // `apps/rrhh/lib/distribuir-nominas.ts`: sin worker (no hay hilos en
     // serverless) y sin eval (lo bloquea el sandbox de Vercel).
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+    const [pdfjsLib, worker] = await Promise.all([
+      import('pdfjs-dist/legacy/build/pdf.mjs'),
+      import('pdfjs-dist/legacy/build/pdf.worker.mjs'),
+    ])
+    // `workerSrc = ''` rompía pdfjs 4 en Node («Setting up fake worker failed», medido el
+    // 29/09/2026): el fake worker se busca en `globalThis.pdfjsWorker`.
+    ;(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = worker
     const doc = await pdfjsLib.getDocument({
       data: new Uint8Array(buffer),
       password,

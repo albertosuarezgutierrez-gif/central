@@ -65,6 +65,10 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
           <p className="mt-1 text-xs font-semibold uppercase tracking-widest opacity-80">{branding.nombre}</p>
         )}
         <span className="mt-1 rounded-full bg-white/20 px-3 py-0.5 text-xs font-medium text-white">Portal del empleado</span>
+        <button type="button" className="min-h-[44px] bg-transparent px-3 text-xs text-white/80 underline"
+          onClick={async () => { await fetch('/api/e/salir', { method: 'POST' }); location.href = '/e/entrar' }}>
+          Salir de este dispositivo
+        </button>
       </header>
       <div className="p-4">
 

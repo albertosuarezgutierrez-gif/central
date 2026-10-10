@@ -20,7 +20,7 @@ const leer = (f: string) => readFileSync(path.join(DIR, f), 'utf8')
 test('la cabecera se monta FUERA de las pestañas y lleva los contadores de alarma', () => {
   const page = leer('page.tsx')
   // Montada sin condición de pestaña: se ve en las siete.
-  assert.match(page, /<Cabecera ficha=\{ficha\} resumen=\{resumen\} \/>/)
+  assert.match(page, /<Cabecera ficha=\{ficha\} resumen=\{resumen\}[^>]*\/>/)
   assert.doesNotMatch(page, /tab === '\w+' && \(?\s*<Cabecera/, 'la cabecera no puede colgar de una pestaña')
 
   const cab = leer('Cabecera.tsx')
@@ -45,7 +45,7 @@ test('la fecha grande del quinto tile es el LÍMITE DE AVISO, no el vencimiento'
   // vencimiento como fecha de acción deja creer que hay 30 días más de los que
   // hay — el plazo ya se pasó cuando el cliente mira el calendario.
   const cab = leer('Cabecera.tsx')
-  assert.match(cab, /valor=\{fmt\(proximo\.limiteAviso\)\}/)
+  assert.match(cab, /valor=\{fmt\((?:proximo|a)\.limiteAviso(?: as string)?\)\}/)
   assert.match(cab, /Hay que avisar antes del/)
   assert.ok(cab.includes('vence el ${fmt(proximo.vencimiento)}'), 'el vencimiento se dice, pero debajo')
 })
@@ -63,8 +63,11 @@ test('un ?tab= desconocido cae en «Resumen» en vez de dejar la ficha en blanco
 })
 
 test('un contador nulo NO se pinta (0 diría «se miró y no hay»)', () => {
+  // Desde el 28/09/2026 el texto sale de `detallesAccesos` (probado abajo con
+  // valores): la baldosa solo pinta lo que esa función devuelve.
   const tabs = leer('FichaTabs.tsx')
-  assert.match(tabs, /c\.n !== null && c\.n > 0/)
+  assert.match(tabs, /detalle: d\?\.texto \?\? null/)
+  assert.doesNotMatch(leer('page.tsx'), /length \?\? 0|\?\? 0\b/)
 })
 
 test('las pestañas no se prefetchean: cada una repite la llamada al puerto', () => {
@@ -93,4 +96,35 @@ test('los siniestros del cliente siguen alcanzables: se montan en la pestaña P�
   const page = leer('page.tsx')
   const bloque = page.slice(page.indexOf("tab === 'polizas'"), page.indexOf("tab === 'contactos'"))
   assert.match(bloque, /<Siniestros\b/)
+})
+
+test('los accesos dicen algo: contactos cuenta teléfonos, correos y personas; null no es 0', async () => {
+  const { detallesAccesos } = await import('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts')
+  const base = {
+    conNosotros: 1, oportunidadesAbiertas: 0, pendiente: { estado: 'nada' as const }, polizas: 1,
+    telefonos: 2, emails: 1, personas: 3, documentos: 0, documentosPedidos: 0, correos: 0, notas: 2, historial: 5,
+  }
+  const d = detallesAccesos(base)
+  assert.equal(d.contactos?.texto, '2 teléfonos · 1 correo · 3 personas')
+  assert.equal(d.oportunidades?.texto, 'ninguna abierta')
+  assert.equal(d.pendiente?.texto, 'al día')
+  assert.equal(d.notas?.texto, '2 notas')
+  assert.equal(d.historial?.texto, '5 anotaciones')
+  // Lo que no se pudo leer NO se pinta como cero.
+  const n = detallesAccesos({ ...base, telefonos: null, emails: null, personas: null, oportunidadesAbiertas: null, correos: null, notas: null, historial: null, documentos: null, documentosPedidos: null, pendiente: { estado: 'sin_comprobar' } })
+  for (const k of ['contactos', 'oportunidades', 'correos', 'notas', 'historial', 'documentos', 'pendiente'] as const) {
+    assert.equal(n[k], undefined, `${k} sin leer no puede pintarse`)
+  }
+  assert.equal(detallesAccesos({ ...base, telefonos: 0, emails: 0, personas: 0 }).contactos?.texto, 'sin teléfono ni correo')
+  assert.equal(detallesAccesos({ ...base, pendiente: { estado: 'accion', urgente: true } }).pendiente?.tono, 'malo')
+})
+
+test('contarPersonas: pólizas + vínculos declarados, sin contar dos veces; null si falta una lista', async () => {
+  const { contarPersonas } = await import('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts')
+  // Antonio Lozano: nadie en su póliza y 3 vínculos (empresa, Manuel y uno sin nombre).
+  assert.equal(contarPersonas([], Array.from({ length: 3 }, (_, i) => ({ relacionadoId: `r${i}` }))), 3)
+  // Quien sale en una póliza Y tiene vínculo declarado es UNA persona.
+  assert.equal(contarPersonas([{ fichaId: 'a' }, { fichaId: null }], [{ relacionadoId: 'a' }, { relacionadoId: 'b' }]), 3)
+  assert.equal(contarPersonas(null, []), null)
+  assert.equal(contarPersonas([], null), null)
 })

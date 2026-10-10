@@ -111,6 +111,10 @@ export async function pedirCotizacion(entrada: {
   referencia?: string
   /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetarificar.forzarNuevo`. */
   forzarNuevo?: boolean
+  /** Variante del riesgo de esta póliza (`?oportunidad=`): la tarificación se cuelga de él. */
+  variante?: { oportunidadId: string; nota?: string | null } | null
+  /** Recotización EXPLÍCITA tras el aviso de duplicado (0,50€ otra vez). */
+  forzar?: boolean
 }): Promise<RespuestaRetarificar> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
@@ -123,6 +127,9 @@ export async function pedirCotizacion(entrada: {
     catastro: entrada.catastro ?? null,
     referencia: entrada.referencia,
     forzarNuevo: entrada.forzarNuevo === true,
+    forzar: entrada.forzar === true,
+    oportunidadId: entrada.variante?.oportunidadId ?? null,
+    nota: entrada.variante?.nota ?? null,
   })
 }
 
@@ -138,11 +145,15 @@ export async function pedirOferta(entrada: {
   categoria: string
   producto?: string
   primaEur?: number
+  modalidad?: string
+  idPrecio?: string
   fechaEfectoCorregida?: string
   /** Respuesta del corredor a un `faltan_vendor` anterior (campo nuestro → valor). */
   correcciones?: Record<string, string>
   /** Lo guardado del Product Form Library tras un `faltan_producto` anterior. */
   productOptions?: unknown[]
+  /** Descuento comercial ajustado (Allianz coche). */
+  descuentos?: { dtoCap?: number; dtoVentaCruzada?: number }
 }): Promise<RespuestaOferta> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
@@ -181,6 +192,12 @@ export async function pedirEmision(entrada: {
   /** El corredor confirma que el tomador YA tiene familiares asegurados en
    *  Allianz (bonificación real). Ver `emitirAsegura`. */
   familiaEnAllianz?: boolean
+  /** Cliente NUEVO: confirma un 409 `ya_en_cartera`/`ya_emitido`. Ver `emitirAsegura`. */
+  duplicadoConfirmado?: boolean
+  /** Casillas marcadas tras un 409 `confirmar_figuras` (arts. 10 y 89 LCS). Ver `emitirAsegura`. */
+  figurasConfirmadas?: string[]
+  /** Vehículo nuevo con bonus SUPUESTO (03/10/2026): cómo lo verificó el corredor. Ver `emitirAsegura`. */
+  bonusVerificado?: { fuente: 'certificado' | 'sinco' | 'dato_confirmado'; nota?: string | null } | null
 }): Promise<RespuestaEmitir> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
@@ -193,6 +210,13 @@ export async function pedirEmision(entrada: {
     reintentoConfirmado: entrada.reintentoConfirmado === true,
     acunarExistente: entrada.acunarExistente === true,
     familiaEnAllianz: entrada.familiaEnAllianz === true,
+    duplicadoConfirmado: entrada.duplicadoConfirmado === true,
+    ...(Array.isArray(entrada.figurasConfirmadas)
+      ? { figurasConfirmadas: entrada.figurasConfirmadas.filter((x): x is string => typeof x === 'string') }
+      : {}),
+    ...(entrada.bonusVerificado && ['certificado', 'sinco', 'dato_confirmado'].includes(entrada.bonusVerificado.fuente)
+      ? { bonusVerificado: { fuente: entrada.bonusVerificado.fuente, nota: entrada.bonusVerificado.nota ?? null } }
+      : {}),
   })
 }
 

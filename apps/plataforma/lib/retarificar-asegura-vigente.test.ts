@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { interpretarRetarificacion } from './retarificar-asegura.ts'
+import { ramoVariante, retarificaEnRiesgo } from '../app/(usuario)/correduria/oportunidad/[id]/variante.ts'
 
 // El 409 con el que asegura corta «Pedir precio» cuando ya hay un proyecto
 // vigente sin emitir (guardián de reutilización, PR #2790). Forma real del
@@ -93,4 +94,82 @@ test('con un precio real ya pagado en pantalla, «Pedir precio» está apagado',
   )
   const puede = /const puedePulsar =[\s\S]*?\n\n/.exec(PANTALLA)?.[0] ?? ''
   assert.match(puede, /!precioPagadoEnPantalla/, '`puedePulsar` tiene que apagar el botón con un precio pagado a la vista.')
+})
+
+// ─── Variante del riesgo de la póliza (29/09/2026) ───────────────────────────
+test('el 422 `causa: variante` es un corte sin gasto con su mensaje, no «faltan datos» vacío', () => {
+  const r = interpretarRetarificacion(422, { estado: 'error', causa: 'variante', mensaje: 'Ese riesgo no es de esta póliza.', gastado: '0,00€' })
+  assert.equal(r.estado, 'error')
+  if (r.estado !== 'error') return
+  assert.equal(r.mensaje, 'Ese riesgo no es de esta póliza.')
+  assert.equal(r.gastoDesconocido, false)
+  // Un 422 normal sigue siendo el de los datos que faltan.
+  assert.equal(interpretarRetarificacion(422, { faltan: [], gastado: '0,00€' }).estado, 'faltan')
+})
+
+test('`oportunidadId` y `nota` viajan en el cuerpo del puerto, la nota solo con riesgo', () => {
+  const cuerpo = LIB.slice(LIB.indexOf('/api/operador/codeoscopic/retarificar'))
+  assert.match(cuerpo, /p\.oportunidadId \? \{ oportunidadId: p\.oportunidadId \}/)
+  assert.match(cuerpo, /p\.oportunidadId && p\.nota/)
+})
+
+// ─── Hogar, igual que auto/moto (29/09/2026) ─────────────────────────────────
+// Hasta hoy la pantalla de hogar no leía `?oportunidad=`: «Retarificar con las mismas personas»
+// abría el formulario de hogar y la tarificación NO se colgaba del riesgo, sin que nada fallara.
+const PAGINA = codigo('../app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx')
+const HOGAR = codigo('../app/(usuario)/correduria/poliza/[id]/retarificar/RetarificadorHogar.tsx')
+
+test('hogar: la variante del riesgo se carga ANTES de las dos ramas de hogar y llega a las dos', () => {
+  const carga = PAGINA.indexOf('cargarRiesgoDePoliza(')
+  assert.ok(carga > 0, 'la página tiene que leer `?oportunidad=` con `cargarRiesgoDePoliza`')
+  const catastro = PAGINA.indexOf("String(p.tipo).toLowerCase() === 'hogar'")
+  const hogar = PAGINA.indexOf("if (ramo === 'hogar')")
+  assert.ok(catastro > 0 && hogar > 0, 'las dos ramas de hogar siguen en la página')
+  assert.ok(carga < catastro && carga < hogar, 'la variante se lee antes de hogar: si no, hogar cotiza sin colgarse del riesgo')
+  const montajes = PAGINA.match(/<RetarificadorHogar[\s\S]*?\/>/g) ?? []
+  assert.equal(montajes.length, 2, 'hogar se monta en dos sitios (con y sin Catastro)')
+  for (const m of montajes) assert.match(m, /variante=\{oportunidadVariante \?/, 'cada RetarificadorHogar recibe la variante')
+})
+
+test('hogar: «Pedir precio» manda `oportunidadId` y `nota` como auto/moto', () => {
+  const i = HOGAR.indexOf('pedirCotizacion({')
+  assert.ok(i > 0)
+  const llamada = HOGAR.slice(i, HOGAR.indexOf('})', i))
+  assert.match(llamada, /variante: variante \? \{ oportunidadId: variante\.oportunidadId, nota \} : null/)
+  assert.match(HOGAR, /\{variante && <NotaVariante nota=\{nota\} onNota=\{setNota\} \/>\}/)
+})
+
+test('asegura valida el riesgo de la póliza antes de gastar SIN mirar el ramo (vale para hogar)', () => {
+  const ruta = codigo('../../asegura/app/api/operador/codeoscopic/retarificar/route.ts')
+  const desde = ruta.indexOf("const oportunidadId = typeof cuerpo.oportunidadId === 'string'")
+  const valida = ruta.indexOf('validarRiesgoDePoliza(', desde)
+  const gasta = ruta.indexOf('await cotizar(p.peticion)')
+  assert.ok(desde > 0 && valida > desde && gasta > valida, 'validar el riesgo va antes de `cotizar`')
+  const tramo = ruta.slice(ruta.indexOf("if (p.estado === 'corte')"), gasta)
+  assert.doesNotMatch(tramo, /\bramo\b|tipo ===/, 'la validación no puede quedar detrás de una condición de ramo')
+  assert.match(tramo, /causa: 'variante'[\s\S]*gastado: '0,00€'[\s\S]*status: 422/)
+  assert.match(tramo, /contexto = \{ \.\.\.p\.peticion\.contexto, oportunidadId, nota \}/)
+})
+
+test('el riesgo de una póliza de hogar se retarifica dentro de él Y hogar-nuevo ya cuelga su presupuesto del riesgo', () => {
+  for (const r of ['auto', 'moto', 'hogar']) assert.equal(retarificaEnRiesgo(r), true, r)
+  for (const r of ['vida', 'decesos', '']) assert.equal(retarificaEnRiesgo(r), false, r)
+  // 30/09/2026: hogar-nuevo lee `?oportunidad=` (y vida/salud/decesos también): «Con otro tomador» y «Nueva
+  // variante» cuelgan la tarificación del riesgo (regla 9). Solo los ramos que se cotizan fuera quedan sin ruta.
+  for (const r of ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos']) assert.equal(ramoVariante(r), r, r)
+  for (const r of ['responsabilidad_civil', 'comercio', 'comunidades', 'otros', '']) assert.equal(ramoVariante(r), null, r)
+})
+
+test('422 validacion CON gastado 0,00€ = «no se ha cobrado»; 502 con/sin gastado; timeout/5xx = no se sabe', () => {
+  const v = interpretarRetarificacion(422, { error: 'moto no apta', causa: 'validacion', gastado: '0,00€' })
+  assert.equal(v.estado, 'error')
+  assert.equal(v.estado === 'error' && v.gastoDesconocido, false)
+  const sin422 = interpretarRetarificacion(422, { error: 'moto no apta', causa: 'validacion' })
+  assert.equal(sin422.estado === 'error' && sin422.gastoDesconocido, true)
+  const c502 = interpretarRetarificacion(502, { error: 'x', razon: 'vendor', gastado: '0,00€' })
+  assert.equal(c502.estado === 'error' && c502.gastoDesconocido, false)
+  const s502 = interpretarRetarificacion(502, { error: 'timeout', razon: 'vendor' })
+  assert.equal(s502.estado === 'error' && s502.gastoDesconocido, true)
+  const s503 = interpretarRetarificacion(500, { error: 'boom' })
+  assert.equal(s503.estado === 'error' && s503.gastoDesconocido, true)
 })

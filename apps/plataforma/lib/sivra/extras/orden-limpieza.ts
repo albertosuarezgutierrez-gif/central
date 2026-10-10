@@ -75,7 +75,7 @@ export async function enviarOrdenLimpieza(
  * La fecha es la de ENTRADA del huésped: es el día en el que la cuna tiene que estar puesta, y es
  * el día en el que la limpieza abre su pantalla.
  */
-async function crearTareaIntranet(
+export async function crearTareaIntranet(
   d: DatosOrden & { propertyId: string },
 ): Promise<string | null> {
   const fecha = (d.checkIn || '').slice(0, 10)

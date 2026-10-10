@@ -3,8 +3,13 @@ import { Home } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { consultarHogar, normalizarReferencia } from '@/lib/correduria-hogar'
 import { precalificarHogarNuevoAsegura } from '@/lib/hogar-nuevo-asegura'
+import { direccionDeFicha } from '@/lib/hogar-direccion-ficha'
 import { Pagina, PageHeader, cardStyle, CardHeader, btnStyle } from '@/components/ui'
 import Formulario from './Formulario'
+import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
+import { paramTexto, viviendaDeRiesgo } from '../../../oportunidad/[id]/variante'
+import { busquedaCatastroDeVivienda, inicialesHogarDeRiesgo } from '@central/module-seguros'
+import { catalogoAsegura } from '@/lib/retarificar-asegura'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,6 +60,15 @@ export default async function HogarNuevoPage({
   const provincia = cadena(sp.provincia) ?? 'SEVILLA'
   const referenciaParam = cadena(sp.referencia)
 
+  // Variante de un riesgo (30/09/2026): `?oportunidad=` cuelga la tarificación de esa oportunidad (regla 9) y
+  // precarga lo que el riesgo ya sabe de la vivienda (`info_riesgo.datosVivienda`). Se conserva en TODOS los
+  // enlaces y formularios de esta pantalla: perderlo a mitad del buscador cotizaría sin enlazar (0,50€ tirados).
+  const carga = await cargarVariante(paramTexto(sp.oportunidad), null, clienteId, 'hogar')
+  const variante = carga.estado === 'ok' ? carga.variante : null
+  const vivienda = carga.estado === 'ok' ? viviendaDeRiesgo(carga.riesgo) : null
+  const oportunidad = variante?.oportunidadId ?? null
+  const conOportunidad = (q: Record<string, string>) => new URLSearchParams(oportunidad ? { ...q, oportunidad } : q).toString()
+
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
   const sub = nombreCliente
@@ -67,11 +81,26 @@ export default async function HogarNuevoPage({
         ← Ficha del cliente
       </Link>
       <PageHeader titulo="Presupuesto de hogar" icono={<Home size={20} strokeWidth={1.75} />} sub={sub} />
+      {variante && <FranjaVariante variante={variante} />}
     </div>
   )
 
+  if (carga.estado === 'error') {
+    return (
+      <Pagina>
+        {cabecera}
+        <ErrorVariante oportunidadId={carga.oportunidadId} mensaje={carga.mensaje} />
+      </Pagina>
+    )
+  }
+
   // ── Paso 1: resolver una referencia catastral ────────────────────────────
-  let referencia: string | null = referenciaParam ? normalizarReferencia(referenciaParam) : null
+  // Prioridad: lo que pide la URL > lo que el riesgo ya tiene anotado > la búsqueda por dirección.
+  let referencia: string | null = referenciaParam
+    ? normalizarReferencia(referenciaParam)
+    : vivienda?.referenciaCatastral
+      ? normalizarReferencia(vivienda.referenciaCatastral)
+      : null
 
   if (direccion && referencia === null) {
     const r = await consultarHogar({ por: 'direccion', direccion, municipio, provincia })
@@ -86,7 +115,7 @@ export default async function HogarNuevoPage({
               {r.inmuebles.map((i) => (
                 <Link
                   key={i.refCompleta}
-                  href={`/correduria/cliente/${clienteId}/hogar-nuevo?referencia=${encodeURIComponent(i.refCompleta)}`}
+                  href={`/correduria/cliente/${clienteId}/hogar-nuevo?${conOportunidad({ referencia: i.refCompleta })}`}
                   style={{ ...btnStyle('secundario'), textDecoration: 'none' }}
                 >
                   Pl. {i.planta ?? '?'} · Pta. {i.puerta ?? '?'}
@@ -94,7 +123,7 @@ export default async function HogarNuevoPage({
               ))}
             </div>
           </div>
-          <FormularioBuscar clienteId={clienteId} direccion={direccion} municipio={municipio} provincia={provincia} />
+          <FormularioBuscar clienteId={clienteId} direccion={direccion} municipio={municipio} provincia={provincia} oportunidad={oportunidad} />
         </Pagina>
       )
     }
@@ -123,7 +152,7 @@ export default async function HogarNuevoPage({
                 {parecidas.map((c) => (
                   <Link
                     key={c.direccion}
-                    href={`/correduria/cliente/${clienteId}/hogar-nuevo?${new URLSearchParams({ direccion: c.direccion, municipio, provincia }).toString()}`}
+                    href={`/correduria/cliente/${clienteId}/hogar-nuevo?${conOportunidad({ direccion: c.direccion, municipio, provincia })}`}
                     style={{ ...btnStyle('secundario'), textDecoration: 'none', minHeight: 44, display: 'flex', alignItems: 'center' }}
                   >
                     {c.etiqueta}
@@ -132,24 +161,55 @@ export default async function HogarNuevoPage({
               </div>
             )}
           </div>
-          <FormularioBuscar clienteId={clienteId} direccion={direccion} municipio={municipio} provincia={provincia} />
+          <FormularioBuscar clienteId={clienteId} direccion={direccion} municipio={municipio} provincia={provincia} oportunidad={oportunidad} />
         </Pagina>
       )
     }
   }
 
   // ── Sin dirección ni referencia todavía: el buscador ─────────────────────
+  // Sin nada que buscar aún, se parte de la dirección de su ficha (la de auto suele estar): se
+  // PROPONE y se avisa de que puede no ser la vivienda. Consultar el Catastro sigue siendo un clic.
   if (referencia === null) {
+    const deFicha = ficha.estado === 'ok' ? direccionDeFicha(ficha.ficha.contacto) : null
+    // Sin referencia, el buscador parte de la calle del riesgo (tipo de vía + calle + número + municipio y provincia),
+    // no solo de su texto libre. El nombre del tipo de vía es del catálogo (gratis); si no se lee, se sigue sin él.
+    const tipoViaNombre = vivienda?.tipoViaId && vivienda.nombreVia
+      ? await catalogoAsegura({ tipo: 'vias' }).then((c) => (c.estado === 'ok' ? c.opciones.find((o) => o.id === vivienda.tipoViaId)?.nombre ?? null : null)).catch(() => null)
+      : null
+    const busca = busquedaCatastroDeVivienda(vivienda, tipoViaNombre)
     return (
       <Pagina>
         {cabecera}
-        <FormularioBuscar clienteId={clienteId} direccion="" municipio={municipio} provincia={provincia} />
+        {deFicha && (
+          <p style={{ ...cardStyle, fontSize: 13, marginBottom: 14 }}>
+            📍 Dirección de su ficha. Confírmala al hablar con él: ¿vive ahí? ¿es propietario o inquilino (entonces es contenido)?
+          </p>
+        )}
+        <FormularioBuscar
+          clienteId={clienteId}
+          oportunidad={oportunidad}
+          // Sin referencia catastral pero con la dirección del riesgo, se parte de ella (mejor que la de la ficha).
+          direccion={busca.direccion ?? deFicha?.direccion ?? ''}
+          // Con dirección de la ficha pero sin municipio, el campo sale VACÍO: el «SEVILLA» por defecto
+          // se leería como dato del cliente junto a su calle.
+          municipio={busca.municipio ?? (deFicha ? (deFicha.municipio ?? '') : municipio)}
+          provincia={busca.provincia ?? (deFicha ? (deFicha.provincia ?? '') : provincia)}
+        />
       </Pagina>
     )
   }
 
   // ── Paso 2: precalificar la ficha (gratis) con la referencia resuelta ────
-  const pre = await precalificarHogarNuevoAsegura({ clienteId, referencia })
+  // Con `?oportunidad=`, lo que el riesgo ya sabe de la vivienda entra como lo declarado (catálogos → `resueltos`,
+  // el resto → `correcciones`); sin ella, o sin datos, la precalificación es la de siempre.
+  const iniciales = inicialesHogarDeRiesgo(vivienda)
+  const hayIniciales = Object.keys(iniciales.resueltos).length + Object.keys(iniciales.correcciones).length > 0
+  const pre = await precalificarHogarNuevoAsegura({
+    clienteId,
+    referencia,
+    ...(hayIniciales ? { resueltos: iniciales.resueltos, correcciones: iniciales.correcciones } : {}),
+  })
 
   if (pre.estado !== 'ok') {
     const tono = pre.estado === 'sin_configurar' ? 'var(--muted)' : 'var(--negative)'
@@ -163,7 +223,7 @@ export default async function HogarNuevoPage({
             ? `No se ha podido precalificar: ${pre.mensaje}`
             : `No se ha podido precalificar la ficha de hogar: ${pre.mensaje}`}
         </div>
-        <FormularioBuscar clienteId={clienteId} direccion="" municipio={municipio} provincia={provincia} />
+        <FormularioBuscar clienteId={clienteId} direccion="" municipio={municipio} provincia={provincia} oportunidad={oportunidad} />
       </Pagina>
     )
   }
@@ -172,7 +232,7 @@ export default async function HogarNuevoPage({
   return (
     <Pagina>
       {cabecera}
-      <Formulario clienteId={clienteId} referencia={referencia} preInicial={pre.pre} />
+      <Formulario clienteId={clienteId} referencia={referencia} preInicial={pre.pre} variante={variante} iniciales={hayIniciales ? iniciales : null} />
     </Pagina>
   )
 }
@@ -183,11 +243,14 @@ function FormularioBuscar({
   direccion,
   municipio,
   provincia,
+  oportunidad,
 }: {
   clienteId: string
   direccion: string
   municipio: string
   provincia: string
+  /** La oportunidad de la variante: viaja en los dos formularios (GET) para no perderla al buscar. */
+  oportunidad: string | null
 }) {
   const accion = `/correduria/cliente/${clienteId}/hogar-nuevo`
   return (
@@ -195,6 +258,7 @@ function FormularioBuscar({
       <div style={cardStyle}>
         <CardHeader title="Por dirección" sub="El Catastro da m², año de construcción, uso y CP — gratis y sin preguntar al cliente." />
         <form method="get" action={accion} style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+          {oportunidad && <input type="hidden" name="oportunidad" value={oportunidad} />}
           <input style={{ ...input, gridColumn: '1 / -1' }} name="direccion" placeholder="Calle San Vicente 40, 2º 14" defaultValue={direccion} autoFocus />
           <input style={input} name="municipio" placeholder="Municipio" defaultValue={municipio} />
           <input style={input} name="provincia" placeholder="Provincia" defaultValue={provincia} />
@@ -204,6 +268,7 @@ function FormularioBuscar({
       <div style={cardStyle}>
         <CardHeader title="Por referencia catastral" sub="Los 20 caracteres del recibo del IBI (la de 14 es la del edificio: no trae m² ni año)." />
         <form method="get" action={accion} style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+          {oportunidad && <input type="hidden" name="oportunidad" value={oportunidad} />}
           <input style={{ ...input, gridColumn: '1 / -1' }} name="referencia" placeholder="Referencia catastral de 20 caracteres" />
           <button type="submit" style={{ ...btnStyle('primario'), gridColumn: '1 / -1' }}>Consultar Catastro</button>
         </form>

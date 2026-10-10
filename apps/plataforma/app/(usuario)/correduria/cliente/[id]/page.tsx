@@ -10,15 +10,19 @@ import CorreosCliente from './CorreosCliente'
 import DescartarCliente from './DescartarCliente'
 import FichasDuplicadas from './FichasDuplicadas'
 import FichaTabs, { tabDeParametro } from './FichaTabs'
+import { contarPersonas, detallesAccesos } from './tabs'
 import TabContactos from './TabContactos'
 import TabPolizas from './TabPolizas'
 import TabPendiente from './TabPendiente'
 import NotasCliente from './NotasCliente'
 import OportunidadesCliente from './OportunidadesCliente'
+import PresupuestosPoliza from '../../poliza/[id]/PresupuestosPoliza'
+import PresupuestosAvant2 from './PresupuestosAvant2'
 import SegurosCliente from './SegurosCliente'
 import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
+import { Pagina } from '@/components/ui'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
-import { ESTADOS_ABIERTOS, repartirSegurosCliente } from '@/lib/correduria/seguros-cliente'
+import { contarOportunidades, precargaAlta, repartirSegurosCliente, segurosDeReparto } from '@/lib/correduria/seguros-cliente'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,7 +51,7 @@ export const dynamic = 'force-dynamic'
  */
 export default async function FichaCorreduriaPage({ params, searchParams }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string | string[] }>
+  searchParams: Promise<{ tab?: string | string[]; subir?: string | string[] }>
 }) {
   const [{ id }, sp] = await Promise.all([params, searchParams])
   // Las oportunidades van en paralelo con la ficha: deciden el cubo «oportunidad» y el
@@ -59,7 +63,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       .catch(() => ({ estado: 'error' as const, motivo: 'red' })),
   ])
 
-  if (r.estado !== 'ok') return <NoSePudo estado={r} />
+  if (r.estado !== 'ok') return <Pagina ancho="tabla"><NoSePudo estado={r} /></Pagina>
 
   const { ficha } = r
   const tab = tabDeParametro(sp.tab)
@@ -67,19 +71,26 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   // La clasificación es PURA y vive en `@central/module-seguros` con test: qué
   // cuenta como viva decide el titular de la cabecera, el contador de la
   // pestaña y qué tabla la pinta, y las tres tienen que decir lo mismo.
-  const porClase: Record<ClasePolizaFicha, PolizaFicha[]> = { viva: [], pendiente_cima: [], cancelada: [], historica: [] }
+  const porClase: Record<ClasePolizaFicha, PolizaFicha[]> = { viva: [], pendiente_cima: [], cancelada: [], sustituida: [], historica: [] }
   for (const p of ficha.polizas) porClase[clasificarPolizaFicha(p)].push(p)
 
   const oportunidades: OportunidadDeCliente[] | null = ops.estado === 'ok' ? ops.oportunidades : null
-  const reparto = repartirSegurosCliente({ polizas: ficha.polizas, declaradas: ficha.declaradas, oportunidades })
-  const abiertas = oportunidades === null ? null : oportunidades.filter(o => (ESTADOS_ABIERTOS as readonly string[]).includes(o.estado)).length
+  const hoy = new Date()
+  const reparto = repartirSegurosCliente({ polizas: ficha.polizas, declaradas: ficha.declaradas, oportunidades, hoy })
+  // Seguro = póliza en cartera en vigor; TODO lo demás (volcado, canceladas, lo que dice el cliente)
+  // es oportunidad. Los contadores de la ficha cuentan solo seguros; las oportunidades, las abiertas
+  // más las derivadas de otras casas. `null` = no se pudieron leer: no se pinta un número.
+  const seguros = segurosDeReparto(reparto)
+  const nOportunidades = contarOportunidades(reparto)
+  // Con qué se precarga el alta al crear la oportunidad desde una fila del volcado.
+  const precargas = Object.fromEntries(reparto.oportunidades.flatMap(s => (s.clase === 'poliza' && s.historica ? [[s.id, precargaAlta(s.poliza, hoy)] as const] : [])))
 
   // Pólizas de CARTERA VIVA de la ficha (`esCarteraViva` en asegura). Es la
   // guarda del descarte: con una sola viva, la persona es un cliente de hoy.
   const vivas = ficha.polizas.filter(p => p.viva).length
 
   const resumen = resumenFicha({
-    polizas: ficha.polizas,
+    polizas: seguros,
     siniestros: ficha.siniestros,
     documentos: ficha.documentos,
   })
@@ -112,14 +123,18 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   // para cuando actúa su contenedor ya ha crecido. Y el desbordamiento NO se ve en `body`: como
   // `LayoutShell` declara `overflowY: 'auto'`, CSS le activa también el eje X y es él quien
   // scrollea. Medido en Chromium el 02/09/2026: 910 → 390 px solo con esta línea.
+  // `<Pagina>` (26/09/2026 → 28/09/2026): sin él la ficha no tenía padding y salía pegada al menú
+  // lateral; es el mismo contenedor —y el mismo ancho— que la lista de la correduría, así que al
+  // entrar en un cliente el borde izquierdo no salta. `gap` 24: con 16 los bloques se leían juntos.
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
+    <Pagina ancho="tabla">
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 24 }}>
       {/* Si la ficha está DESCARTADA se dice arriba del todo, antes que nada:
           está fuera del buscador y de la cartera, y nadie más la ve. `activo`
           a `null` (asegura sin el campo) no pinta nada — no se afirma. */}
       <DescartarCliente zona="aviso" clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
 
-      <Cabecera ficha={ficha} resumen={resumen} />
+      <Cabecera ficha={ficha} resumen={resumen} seguros={seguros} />
 
       {/* La misma persona en otra ficha (mismo DNI): se avisa y se ofrece fusionar eligiendo campo a campo. */}
       <FichasDuplicadas clienteId={ficha.id} />
@@ -127,30 +142,40 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {/* Los seguros primero (Alberto: «vendemos seguros»): tres cubos de tarjetas que se
           pinchan enteras. Los accesos van debajo en la ficha y arriba en cada sección. */}
       {tab === 'resumen' && (
-        <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={new Date()} />
+        <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={hoy} />
       )}
 
       <FichaTabs
         clienteId={ficha.id}
         activa={tab}
-        contadores={{
-          resumen: { n: reparto.conNosotros.length, texto: n => `${n} con nosotros` },
-          oportunidades: { n: abiertas, texto: n => `${n} abierta(s)` },
-          pendiente: accion.estado === 'accion' && accion.urgente ? { n: 1, tono: 'malo', texto: () => 'urgente' } : undefined,
-          polizas: { n: ficha.polizas.length, texto: n => `${n} en total` },
-          contactos: { n: personas === null ? null : personas.length },
-          documentos: { n: resumen.documentosPendientes, tono: 'aviso', texto: n => `${n} pedido(s)` },
-          correos: { n: ficha.correos === null ? null : ficha.correos.length },
-        }}
+        detalles={detallesAccesos({
+          conNosotros: reparto.conNosotros.length,
+          oportunidadesAbiertas: nOportunidades,
+          pendiente: accion.estado === 'accion' ? { estado: 'accion', urgente: accion.urgente } : accion,
+          polizas: seguros.length,
+          telefonos: ficha.contactos === null ? null : ficha.contactos.telefonos.length,
+          emails: ficha.contactos === null ? null : ficha.contactos.emails.length,
+          personas: contarPersonas(personas, ficha.relaciones),
+          documentos: ficha.documentos === null ? null : ficha.documentos.length,
+          documentosPedidos: resumen.documentosPendientes,
+          correos: ficha.correos === null ? null : ficha.correos.length,
+          notas: ficha.notas === null ? null : ficha.notas.lista.length + (ficha.notas.antigua ? 1 : 0),
+          historial: ficha.historial === null ? null : ficha.historial.length,
+        })}
       />
 
+      {/* Una sola lista (29/09/2026): cada oportunidad dice sus precios pedidos y en qué punto está
+          con el cliente; debajo, lo enviado (para mandar y seguir) y lo de Avant2 aún sin traer. */}
       {tab === 'oportunidades' && (
-        <Tarjeta titulo="💼 Oportunidades">
+        <Tarjeta titulo="Oportunidades y presupuestos">
           <OportunidadesCliente
             clienteId={ficha.id}
             telefono={contacto.telefono ?? null}
+            precargas={precargas}
             polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
           />
+          <PresupuestosPoliza clienteId={ficha.id} titulo="Presupuestos al cliente" />
+          <PresupuestosAvant2 clienteId={ficha.id} />
         </Tarjeta>
       )}
 
@@ -159,11 +184,12 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {/* Todas las pólizas en tabla, con los siniestros del cliente: la vista de consulta. */}
       {tab === 'polizas' && (
         <>
-          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} />
+          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} figuraEn={ficha.figuraEn} />
           <Siniestros
             lista={ficha.siniestros}
             polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
             documentos={ficha.documentos}
+            clienteId={ficha.id}
           />
         </>
       )}
@@ -172,20 +198,20 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
 
       {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
       {tab === 'documentos' && (
-        <Tarjeta titulo="📎 Documentos">
-          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} />
+        <Tarjeta titulo="Documentos">
+          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} tipoInicial={sp.subir === 'poliza' ? 'poliza' : undefined} />
         </Tarjeta>
       )}
 
       {/* `null` ≠ «no se le ha escrito»: lo dice el propio componente. */}
       {tab === 'correos' && (
-        <Tarjeta titulo="✉️ Correos enviados">
+        <Tarjeta titulo="Correos enviados">
           <CorreosCliente correos={ficha.correos} />
         </Tarjeta>
       )}
 
       {tab === 'notas' && (
-        <Tarjeta titulo="📝 Notas">
+        <Tarjeta titulo="Notas">
           <NotasCliente clienteId={ficha.id} notas={ficha.notas} />
         </Tarjeta>
       )}
@@ -198,6 +224,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           una acción sobre la FICHA, no sobre lo que se esté mirando. */}
       <DescartarCliente clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
     </div>
+    </Pagina>
   )
 }
 
@@ -225,7 +252,7 @@ function NoSePudo({ estado }: { estado: { estado: 'sin_configurar' } | { estado:
           </>
         ) : estado.estado === 'sin_configurar' ? (
           <>
-            <h2 style={{ marginTop: 0, fontSize: 16 }}>⏳ El puerto con asegura no está conectado</h2>
+            <h2 style={{ marginTop: 0, fontSize: 16 }}>El puerto con asegura no está conectado</h2>
             <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
               Falta <code>ASEGURA_OPERADOR_SECRET</code> en este proyecto. No significa que el
               cliente no exista: significa que desde aquí no se puede mirar.
@@ -233,7 +260,7 @@ function NoSePudo({ estado }: { estado: { estado: 'sin_configurar' } | { estado:
           </>
         ) : (
           <>
-            <h2 style={{ marginTop: 0, fontSize: 16 }}>⚠️ No se ha podido leer la ficha</h2>
+            <h2 style={{ marginTop: 0, fontSize: 16 }}>No se ha podido leer la ficha</h2>
             <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
               {MOTIVOS[estado.motivo] ?? 'motivo desconocido.'} No lo leas como «este cliente no
               tiene nada».

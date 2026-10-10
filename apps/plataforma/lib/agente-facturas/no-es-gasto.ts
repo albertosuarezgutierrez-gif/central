@@ -29,7 +29,7 @@ export interface SospechaIngreso {
   /** Qué lo ha activado, para poder decirlo en pantalla. `null` si no hay sospecha. */
   motivo: string | null
   /** Por qué no es un gasto: cambia el texto de la ficha, porque el motivo es distinto. */
-  tipo: 'ingreso_correduria' | 'ya_descontado' | null
+  tipo: 'ingreso_correduria' | 'ya_descontado' | 'indemnizacion' | null
 }
 
 /**
@@ -87,6 +87,21 @@ const SENALES_RETROCESION: Array<[RegExp, string]> = [
 ]
 
 /**
+ * Indemnizaciones de seguros: dinero que la aseguradora le PAGA a Alberto, no un gasto.
+ *
+ * Caso fundacional (octubre 2026): Occident «Prestación de seguro» 2.032 € entró como gasto de
+ * categoría SEGURO. Es una indemnización cobrada (un siniestro), así que contarla como gasto
+ * invierte el signo. Misma lógica que las liquidaciones de mediador: vocabulario del siniestro
+ * pagado, que no aparece en un recibo/prima que te cobran.
+ */
+const SENALES_INDEMNIZACION: Array<[RegExp, string]> = [
+  [/\bprestaci[oó]n(?:es)?\s+(?:de\s+)?(?:del\s+)?seguros?\b/i, 'es una prestación de seguro (indemnización cobrada)'],
+  [/\bindemnizaci[oó]n(?:es)?\s+(?:de|del|por)\s+(?:el\s+)?siniestros?\b/i, 'es una indemnización de siniestro (dinero cobrado, no un gasto)'],
+  [/\bliquidaci[oó]n\s+(?:de|del)\s+siniestros?\b/i, 'es una liquidación de siniestro (indemnización cobrada)'],
+  [/\bpago\s+(?:de|del)\s+siniestros?\b/i, 'es un pago de siniestro (indemnización cobrada)'],
+]
+
+/**
  * ¿Este documento parece un ingreso de la correduría en vez de un gasto?
  *
  * Se mira el concepto y el nombre del proveedor, que es donde el extractor deja el título del
@@ -100,6 +115,10 @@ export function pareceIngresoDeCorreduria(f: {
   const texto = `${f.proveedor ?? ''} ${f.concepto ?? ''}`
   for (const [re, motivo] of [...SENALES_LIQUIDACION, ...SENALES_RETROCESION]) {
     if (re.test(texto)) return { esSospechoso: true, motivo, tipo: 'ingreso_correduria' }
+  }
+
+  for (const [re, motivo] of SENALES_INDEMNIZACION) {
+    if (re.test(texto)) return { esSospechoso: true, motivo, tipo: 'indemnizacion' }
   }
 
   // La comisión de la plataforma exige LAS DOS señales: quién la emite y que sea la comisión.

@@ -10,7 +10,7 @@ const persona = (p: Partial<PersonaDePolizas>): PersonaDePolizas => ({
   fichaId: null,
   telefono: null,
   email: null,
-  papeles: [{ rol: 'conductor', polizas: ['2922BNJ'] }],
+  papeles: [{ rol: 'conductor', polizas: ['3434NNN'] }],
   relacionDeclarada: null,
   homonimia: null,
   ...p,

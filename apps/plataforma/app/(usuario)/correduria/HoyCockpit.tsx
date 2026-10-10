@@ -2,18 +2,21 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, Phone } from 'lucide-react'
+import { Check, Phone, TriangleAlert } from 'lucide-react'
 import { etiquetaActividad, riesgoActividad, type EmbudoPortal, type EventoActividad } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import { interpretarActividad } from '@/lib/actividad-asegura'
-import { colaLlamadas, TIPOS_TAREA_UI, type LeadsVencimientos, type TareasDeHoy } from '@/lib/seguimiento-asegura'
+import { TIPOS_TAREA_UI, type TareasDeHoy } from '@/lib/seguimiento-asegura'
 import type { VistaIngesta } from '@/lib/correduria/ingesta-pantalla'
+import { resumirTarea } from '@/lib/correduria/resumen-tarea'
 import { agregarContadores, type Contador, type Destino } from './secciones'
 import { cuandoTarea, lineaEstadoIngesta, sinInvitar } from './hoy-cockpit'
+import { ConIcono } from './iconos'
 import PerdidasCartera from './PerdidasCartera'
 import Aprobaciones from './Aprobaciones'
 import Anulaciones from './Anulaciones'
 import CartasMediador from './CartasMediador'
+import BajasPue from './BajasPue'
 
 /**
  * El cockpit de «Hoy» (pieza 1-4 de ASegura OS, maqueta aprobada el
@@ -49,12 +52,11 @@ function cifraC(c: Contador | null | undefined): string {
 }
 
 export default function HoyCockpit({
-  ingesta, nIncidencias, nRecaptacion, nBlog, onIr, onContadorTareas,
+  ingesta, nIncidencias, nBlog, onIr, onContadorTareas,
 }: {
   ingesta: VistaIngesta | null
   /** Todas las colas de los bloques de debajo (las mismas que el badge de la pestaña, menos las tareas). */
   nIncidencias: Contador | null | undefined
-  nRecaptacion: N
   nBlog: N
   onIr: (s: Destino) => void
   onContadorTareas: (n: number | null) => void
@@ -66,6 +68,7 @@ export default function HoyCockpit({
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nAprobaciones, setNAprobaciones] = useState<N>(undefined)
+  const [nBajasPue, setNBajasPue] = useState<N>(undefined)
   // El bloque del portal va PLEGADO y se lee al abrirlo: es la consulta más pesada de Hoy
   // (feed + embudo) y no pide ninguna acción; lo accionable ya llega por Telegram y por las colas.
   const [verPortal, setVerPortal] = useState(false)
@@ -82,9 +85,10 @@ export default function HoyCockpit({
 
   useEffect(() => {
     cargarTareas()
-    fetch('/api/correduria/leads-competencia?dias=90')
+    // Solo el número (cacheado 5 min): la lista entera eran ~1,4 MB de BD por visita.
+    fetch('/api/correduria/contador?c=llamadas')
       .then(r => (r.ok ? r.json() : null))
-      .then((d: LeadsVencimientos | null) => setLlamadas(d?.estado === 'ok' ? colaLlamadas(d.leads).length : null))
+      .then((d: { estado?: string; n?: number | null } | null) => setLlamadas(d?.estado === 'ok' && typeof d.n === 'number' ? d.n : null))
       .catch(() => setLlamadas(null))
   }, [cargarTareas])
 
@@ -116,7 +120,7 @@ export default function HoyCockpit({
 
   const hoy = hoyMadrid()
   const nTareas: N = tareas === null ? undefined : tareas.estado === 'ok' ? tareas.tareas.length : null
-  const nOk = nRecaptacion === undefined || nBlog === undefined || nAprobaciones === undefined ? undefined : agregarContadores([nRecaptacion, nBlog, nAprobaciones])
+  const nOk = nBlog === undefined || nAprobaciones === undefined || nBajasPue === undefined ? undefined : agregarContadores([nBlog, nAprobaciones, nBajasPue])
   const estado = lineaEstadoIngesta(ingesta)
   const colorEstado = estado.tono === 'ok' ? 'var(--positive)' : estado.tono === 'malo' ? 'var(--negative)' : estado.tono === 'aviso' ? 'var(--warning)' : 'var(--muted)'
   const vencidas = tareas?.estado === 'ok' ? tareas.tareas.filter(t => cuandoTarea(t.fechaLimite, hoy).vencida).length : 0
@@ -163,17 +167,27 @@ export default function HoyCockpit({
         )}
         {tareas?.estado === 'ok' && (verTodas ? tareas.tareas : tareas.tareas.slice(0, MOSTRAR_TAREAS)).map(t => {
           const c = cuandoTarea(t.fechaLimite, hoy)
+          // Un párrafo entero ocupaba diez renglones por fila: en la lista va el titular y el resto, plegado.
+          const r = resumirTarea(t.observaciones)
           return (
             <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) auto', gap: 10, alignItems: 'center', padding: '6px 0', borderTop: '1px solid var(--border)' }}>
-              <button type="button" disabled={ocupado !== null} onClick={() => void cerrar(t.id)} aria-label={`Marcar hecha: ${t.observaciones}`} title="Marcar hecha" style={{ ...btnStyle('secundario'), width: 44, padding: 0 }}>
+              <button type="button" disabled={ocupado !== null} onClick={() => void cerrar(t.id)} aria-label={`Marcar hecha: ${r.titulo}`} title="Marcar hecha" style={{ ...btnStyle('secundario'), width: 44, padding: 0 }}>
                 <Check size={18} strokeWidth={1.75} />
               </button>
-              <Link href={`/correduria/oportunidad/${t.oportunidadId}`} style={{ display: 'grid', gap: 2, minWidth: 0, color: 'var(--text)', textDecoration: 'none' }}>
-                <span style={{ fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>{rotuloTipo(t.tipo)} · {t.observaciones.split('\n')[0] || '(sin descripción)'}</span>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {t.cliente ?? '(ficha sin nombre)'}{t.ramo ? ` · ${t.ramo}` : ''}{t.prioridad === 'alta' ? ' · prioridad alta' : ''}
-                </span>
-              </Link>
+              <div style={{ display: 'grid', minWidth: 0 }}>
+                <Link href={`/correduria/oportunidad/${t.oportunidadId}`} style={{ display: 'grid', gap: 2, minWidth: 0, color: 'var(--text)', textDecoration: 'none' }}>
+                  <span style={{ ...DOS_LINEAS, fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>{rotuloTipo(t.tipo)} · {r.titulo || '(sin descripción)'}</span>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    {t.cliente ?? '(ficha sin nombre)'}{t.ramo ? ` · ${t.ramo}` : ''}{t.prioridad === 'alta' ? ' · prioridad alta' : ''}
+                  </span>
+                </Link>
+                {r.detalle && (
+                  <details>
+                    <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--primary)' }}>Ver detalle</summary>
+                    <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.detalle}</p>
+                  </details>
+                )}
+              </div>
               <span style={{ fontSize: 13, fontWeight: 600, color: c.vencida ? 'var(--negative)' : 'var(--text)' }}>{c.texto}</span>
             </div>
           )
@@ -183,7 +197,7 @@ export default function HoyCockpit({
             {verTodas ? 'Ver menos' : `Ver las ${tareas.tareas.length - MOSTRAR_TAREAS} restantes`}
           </button>
         )}
-        {tareas?.estado === 'ok' && tareas.truncado && <p style={NOTA}>⚠️ Hay más tareas de las que se ven: la lista llegó recortada.</p>}
+        {tareas?.estado === 'ok' && tareas.truncado && <p style={NOTA}><ConIcono i={TriangleAlert}>Hay más tareas de las que se ven: la lista llegó recortada.</ConIcono></p>}
         {tareas?.estado === 'ok' && tareas.descartadas > 0 && <p style={NOTA}>{tareas.descartadas} tarea(s) no se han podido leer y no se muestran.</p>}
         {error && <p role="alert" style={{ ...NOTA, color: 'var(--negative)' }}>{error}</p>}
       </section>
@@ -191,12 +205,12 @@ export default function HoyCockpit({
       <PerdidasCartera />
       <Anulaciones />
       <CartasMediador />
+      <BajasPue onContador={setNBajasPue} />
 
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}
       <section id="esperan-ok" style={{ display: 'grid', gap: 6 }}>
         <h2 style={TITULO}>Esperan tu OK{nOk && nOk.n > 0 ? ` · ${cifraC(nOk)}` : ''}</h2>
         <Aprobaciones onContador={setNAprobaciones} />
-        <FilaOk n={nRecaptacion} titulo="Leads para recaptar" sub="Correo solo a quien fue cliente (LSSI 21.2); tú decides a quién se envía." onClick={() => onIr('clientes')} />
         <FilaOk n={nBlog} titulo="Artículos del blog" sub="Escritos y pendientes de publicar." onClick={() => onIr('redes')} />
         {nOk && nOk.n === 0 && !nOk.parcial && <p style={NOTA}>Nada esperando tu OK.</p>}
         {nOk === null && <p style={{ ...NOTA, color: 'var(--negative)' }}>No se ha podido comprobar qué espera tu OK. No significa que no haya nada.</p>}
@@ -263,3 +277,5 @@ const CELDA: React.CSSProperties = { display: 'grid', gap: 2, padding: '12px 14p
 const NUM: React.CSSProperties = { fontSize: 24, fontWeight: 800, lineHeight: 1.1 }
 const TITULO: React.CSSProperties = { margin: 0, fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }
 const NOTA: React.CSSProperties = { margin: 0, fontSize: 13, color: 'var(--muted)' }
+/** Red de seguridad por si el titular aún es largo: nunca más de dos renglones en la lista. */
+const DOS_LINEAS: React.CSSProperties = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }

@@ -203,16 +203,16 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
           where: { ...basePoliza, estado: { in: estadosVigentes }, fechaVencimiento: null },
         }),
         db.poliza.count({ where: basePoliza }),
-        db.siniestro.count({ where: { correduriaId, estado: { in: ['abierto', 'en_tramitacion'] } } }),
+        db.siniestro.count({ where: { correduriaId, fusionadoEnSiniestroId: null, estado: { in: ['abierto', 'en_tramitacion'] } } }),
         db.poliza.count({
           where: {
-            ...basePoliza, estado: { in: estadosVigentes },
+            ...basePoliza, estado: { in: estadosVigentes }, sustituidaAt: null,
             fechaVencimiento: { gte: hoy, lte: limite(DIAS_PREAVISO_TOMADOR) },
           },
         }),
         db.poliza.count({
           where: {
-            ...basePoliza, estado: { in: estadosVigentes },
+            ...basePoliza, estado: { in: estadosVigentes }, sustituidaAt: null,
             fechaVencimiento: { gte: hoy, lte: limite(2 * DIAS_PREAVISO_TOMADOR) },
           },
         }),
@@ -284,6 +284,8 @@ export async function vencimientosProximos(
       correduriaId,
       mergedIntoPolizaId: null,
       estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
+      // Sustituida por otra (cambio de compañía emitido): no se renueva, no es renovación a trabajar.
+      sustituidaAt: null,
       // 🚨 Allianz no avanza `fecha_vencimiento` al renovar: solo manda el
       // recibo anual (27/09/2026). Una fecha de hace más de una anualidad con un
       // recibo CA/NP COBRADO que acaba dentro de la ventana es una renovación de

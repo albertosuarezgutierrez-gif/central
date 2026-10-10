@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { leerOferta, encontrarPrecio, redactarPersona, redactarCrudoVendor, huecosPersonaParaEmitir, direccionIncompleta } from './emitir.ts'
-import type { Cotizacion } from './respuesta.ts'
+import { leerCotizacion, type Cotizacion } from './respuesta.ts'
+import { readFileSync } from 'node:fs'
 
 // `leerOferta` es defensiva a propósito: la forma de `POST .../offers` no
 // está verificada contra el fabricante (sin fixture, sin sandbox). Estos
@@ -44,6 +45,12 @@ test('leerOferta: sin estimate pero con avisos → condicionado', () => {
   })
   assert.equal(o.firmeza, 'condicionado')
   assert.deepEqual(o.avisos, ['riesgo condicionado'])
+})
+
+test('leerOferta: un mensaje solo informativo no condiciona el precio (misma regla que la parrilla, 30/09/2026)', () => {
+  const o = leerOferta({ mainQuote: { id: 'OF1', estimate: false, messages: [{ type: 'info', text: 'Precio válido 30 días' }] } })
+  assert.equal(o.firmeza, 'firme')
+  assert.deepEqual(o.avisos, ['Precio válido 30 días'])
 })
 
 test('leerOferta: sin id reconocible, lanza con el crudo en el mensaje', () => {
@@ -260,6 +267,88 @@ test('encontrarPrecio: con varios precios del mismo nivel desempata por producto
     ],
   }
   assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { producto: 'Reale Auto Plus', primaEur: 330 })?.id, 'C')
-  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { primaEur: 305 })?.id, 'B')
-  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros')?.id, 'A')
+  // 30/09/2026: sin modalidad ya no se adivina por «la prima más cercana» ni se coge la primera.
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { primaEur: 305 }), null)
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros'), null)
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { producto: 'Reale Auto Básico' })?.id, 'A')
+})
+
+test('encontrarPrecio: tras re-tarificar (+1 %) sigue siendo la MODALIDAD elegida, no la de prima más cercana (Mapfre moto, 30/09/2026)', () => {
+  const base = {
+    franquiciaEur: null, entradaEur: null, meses: null, formaPago: null,
+    frecuenciaPago: null, referenciaVendor: null, firmeza: 'estimado' as const, avisos: [],
+    requiereReRate: true, productId: 1, productOptions: null, expiraEn: null, opciones: null, ofertaId: null, quoteCrudo: null,
+  }
+  const cat = 'Terceros Ampliado'
+  const fila = (id: string, modalidad: string, primaEur: number) =>
+    ({ ...base, id, compania: 'Mapfre', producto: 'Mapfre Motos', categoria: cat, modalidad, primaEur })
+  // Primas reales del 28-29/09 subidas un 1 % (lo que hace el vendor tras un PATCH del proyecto).
+  const cotizacion: Cotizacion = {
+    projectId: '1', fechaEfecto: null, insuranceLineId: 'Motorcycle', fallos: [],
+    precios: [
+      fila('F450', 'TERCEROS AMPLIADO – Franquicia 450€', 453.75),
+      fila('F600', 'TERCEROS AMPLIADO – Franquicia 600€', 451.24),
+    ],
+  }
+  const elegida = { producto: 'Mapfre Motos', primaEur: 449.26, modalidad: 'TERCEROS AMPLIADO – Franquicia 450€' }
+  assert.equal(encontrarPrecio(cotizacion, 'Mapfre', cat, elegida)?.id, 'F450')
+  // Sin modalidad, la prima (449,26€) no casa con ninguna: no se confirma la de 600€ en su lugar.
+  assert.equal(encontrarPrecio(cotizacion, 'Mapfre', cat, { producto: 'Mapfre Motos', primaEur: 449.26 }), null)
+  // Una modalidad que ya no está en el proyecto tampoco se sustituye por otra.
+  assert.equal(encontrarPrecio(cotizacion, 'Mapfre', cat, { modalidad: 'TERCEROS AMPLIADO – Franquicia 300€' }), null)
+  // Mayúsculas y espacios de más no cambian la llave.
+  assert.equal(encontrarPrecio(cotizacion, 'mapfre', cat, { modalidad: '  terceros ampliado –  franquicia 600€ ' })?.id, 'F600')
+})
+
+test('encontrarPrecio: confirmar DOS veces el mismo precio no da 409 (fixture real con los mainQuotes del ReRate, 30/09/2026)', () => {
+  const crudo = JSON.parse(readFileSync(new URL('../../fixtures/codeoscopic/2026-09-26-proyecto-web-avant2.json', import.meta.url), 'utf8'))
+  const c = leerCotizacion(crudo)
+  // Tres «Allianz Terceros Ampliado»: el de la tarificación (sin caducidad) y dos que dejó el ReRate.
+  assert.equal(c.precios.filter((p) => p.compania === 'Allianz' && p.modalidad === 'Allianz Terceros Ampliado').length, 3)
+  const p = encontrarPrecio(c, 'Allianz', 'Terceros Ampliado', { producto: 'Allianz Autos 2025', primaEur: 435.37, modalidad: 'Allianz Terceros Ampliado' })
+  assert.equal(p?.id, 'Q2024306544')
+  // Aunque no llegue la prima: el de la tarificación es el único sin caducidad.
+  assert.equal(encontrarPrecio(c, 'Allianz', 'Terceros Ampliado', { modalidad: 'Allianz Terceros Ampliado' })?.id, 'Q2024306544')
+})
+
+test('encontrarPrecio: el id del vendor MANDA sobre la descripción, y uno ajeno no se acepta (30/09/2026)', () => {
+  const base = {
+    franquiciaEur: null, entradaEur: null, meses: null, formaPago: null,
+    frecuenciaPago: null, referenciaVendor: null, firmeza: 'estimado' as const, avisos: [],
+    requiereReRate: true, productId: 1, productOptions: null, expiraEn: null, opciones: null, ofertaId: null, quoteCrudo: null,
+  }
+  const fila = (id: string, compania: string, categoria: string, modalidad: string, primaEur: number) =>
+    ({ ...base, id, compania, producto: `${compania} Autos`, categoria, modalidad, primaEur })
+  const cotizacion: Cotizacion = {
+    projectId: '1', fechaEfecto: null, insuranceLineId: 'Car', fallos: [],
+    precios: [
+      // Dos filas con la MISMA descripción: sin el id no hay forma de saber cuál se pulsó.
+      fila('Q1', 'Reale', 'Terceros', 'Terceros Básico', 300),
+      fila('Q2', 'Reale', 'Terceros', 'Terceros Básico', 320),
+      fila('Q9', 'Mapfre', 'Terceros', 'Terceros Básico', 280),
+    ],
+  }
+  const desc = { modalidad: 'Terceros Básico' }
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', desc), null)
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { ...desc, idPrecio: 'Q2' })?.id, 'Q2')
+  // La prima re-tarificada no importa: el id es la identidad.
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { ...desc, idPrecio: 'Q1', primaEur: 999 })?.id, 'Q1')
+  // Un id que es de OTRA compañía es una incoherencia: no se emite ni ese ni otro.
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { ...desc, idPrecio: 'Q9' }), null)
+  // Un id que el proyecto ya no trae (el vendor renumeró) cae a la llave descriptiva.
+  assert.equal(encontrarPrecio(cotizacion, 'Mapfre', 'Terceros', { ...desc, idPrecio: 'Q404' })?.id, 'Q9')
+})
+
+test('encontrarPrecio: un id repetido no desempata; y un id cuya modalidad no es la pulsada no se emite', () => {
+  const base = {
+    franquiciaEur: null, entradaEur: null, meses: null, formaPago: null,
+    frecuenciaPago: null, referenciaVendor: null, firmeza: 'estimado' as const, avisos: [],
+    requiereReRate: true, productId: 1, productOptions: null, expiraEn: null, opciones: null, ofertaId: null, quoteCrudo: null,
+  }
+  const fila = (id: string, modalidad: string, primaEur: number) =>
+    ({ ...base, id, compania: 'Mapfre', producto: 'Mapfre Motos', categoria: 'TA', modalidad, primaEur })
+  const c: Cotizacion = { projectId: '1', fechaEfecto: null, insuranceLineId: 'Motorcycle', fallos: [], precios: [fila('Q1', 'F450', 450), fila('Q1', 'F600', 440)] }
+  assert.equal(encontrarPrecio(c, 'Mapfre', 'TA', { idPrecio: 'Q1', modalidad: 'F600' })?.modalidad, 'F600')
+  const c2: Cotizacion = { ...c, precios: [fila('Q1', 'F450', 450), fila('Q2', 'F600', 440)] }
+  assert.equal(encontrarPrecio(c2, 'Mapfre', 'TA', { idPrecio: 'Q1', modalidad: 'F600' }), null)
 })

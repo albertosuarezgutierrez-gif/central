@@ -122,6 +122,18 @@ export const AVISOS: AvisoTelegram[] = [
 
   // ── 🏦 Banca y contable ───────────────────────────────────────────────────
   {
+    id: 'finanzas.banca-frescura', categoria: 'finanzas',
+    titulo: 'Cuenta o tarjeta sin movimientos nuevos',
+    que: 'Una línea por cuenta activa con más de 3 días sin movimiento nuevo (alias, últimos 4 del IBAN, último movimiento) y el recuento de cuentas ocultas con movimientos.',
+    cuando: 'Todos los días a las 07:00 (solo si hay alguna parada; máx. 1 al día)',
+  },
+  {
+    id: 'finanzas.gasto-pico', categoria: 'finanzas',
+    titulo: 'Gasto recurrente disparado',
+    que: 'Proveedores con 3+ cargos en 6 meses cuyo gasto de los últimos 30 días supera el doble de su media mensual previa.',
+    cuando: 'Todos los días a las 07:00 (solo si hay pico; máx. 1 al día)',
+  },
+  {
     id: 'finanzas.tarjeta-importada', categoria: 'finanzas',
     titulo: 'Extracto de tarjeta importado',
     que: 'Resumen del mes de la tarjeta: total, clasificados, deducible y top de gastos.',
@@ -161,7 +173,19 @@ export const AVISOS: AvisoTelegram[] = [
     id: 'finanzas.resumen-mensual', categoria: 'finanzas',
     titulo: 'Cierre de mes',
     que: 'El mes anterior narrado: resultado, P&L por piso y las cifras de /banca.',
-    cuando: 'Día 1 de cada mes a las 10:00',
+    cuando: 'Día 5 de cada mes a las 10:00',
+  },
+  {
+    id: 'finanzas.cierre-negocios', categoria: 'finanzas',
+    titulo: 'Cierre de mes por negocio',
+    que: 'Gastos, ingresos e IVA por negocio, lo pendiente de conciliar y los cargos sin factura (no deducibles).',
+    cuando: 'Día 5 de cada mes a las 10:00',
+  },
+  {
+    id: 'finanzas.suscripciones', categoria: 'finanzas',
+    titulo: 'Revisión de suscripciones',
+    que: 'Gastos recurrentes (≥3 de los últimos 4 meses) con coste mensual y anual: ¿sigue valiendo?',
+    cuando: 'Día 5 de cada mes a las 10:00',
   },
   {
     id: 'finanzas.resumen-semanal-gastos', categoria: 'finanzas',
@@ -189,6 +213,12 @@ export const AVISOS: AvisoTelegram[] = [
   },
 
   // ── 🧾 Facturas y pagos ───────────────────────────────────────────────────
+  {
+    id: 'facturas.siquebrilla-cuadre', categoria: 'facturas',
+    titulo: 'Factura mensual de Sique Brilla: cuadre',
+    que: 'Cuando llega su factura por correo la leo, cuadro los cambios por piso con las salidas del mes y te digo si cuadra o dónde está la discrepancia.',
+    cuando: 'Al llegar la factura (1 vez al mes)',
+  },
   {
     id: 'facturas.bandeja', categoria: 'facturas',
     titulo: 'Facturas nuevas por revisar',
@@ -252,7 +282,7 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'facturas.pagos-resumen-semanal', categoria: 'facturas',
     titulo: 'Pagos pendientes de la semana',
-    que: 'Lo que queda por pagar, con botón para pagarlo todo.',
+    que: 'Solo lo que exige transferencia a mano (lo domiciliado o de tarjeta va en una línea resumen), con botón para pagarlo.',
     cuando: 'Semanal',
   },
   {
@@ -565,10 +595,40 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 06:35, y solo si hay alguna pendiente',
   },
   {
+    id: 'correduria.sustitucion-doble-seguro', categoria: 'correduria',
+    titulo: 'Póliza sustituida que sigue viva (posible doble seguro)',
+    que: 'Pólizas ya sustituidas por otra de otra compañía cuya vieja sigue en vigor (vencimiento o recibos posteriores al efecto de la nueva): hay que pedir su anulación.',
+    cuando: 'Todos los días a las 06:35, junto al seguimiento de sustituciones, y solo si hay alguna',
+  },
+  {
+    id: 'correduria.emision-retenida', categoria: 'correduria',
+    titulo: 'Emisiones retenidas por la compañía (riesgo condicionado)',
+    que: 'Pólizas emitidas desde Avant2 que la compañía dejó retenidas y que han cambiado: liberadas (ya en cartera) o rechazadas, más cuántas siguen retenidas.',
+    cuando: 'A las 07:40 y 13:40, y solo si ha cambiado alguna',
+  },
+  {
+    id: 'correduria.emisiones-descubiertas', categoria: 'correduria',
+    titulo: 'Emisiones de Avant2 descubiertas solas',
+    que: 'Pólizas emitidas en Avant2 que se han registrado solas en la cartera, emisiones nuevas que no se pueden registrar sin ti (tomador sin ficha o con varias, ramo que no se acuña, estado desconocido) y averías del descubrimiento (credenciales rechazadas, más de 6 h sin una pasada buena). Sin datos personales: solo cifras.',
+    cuando: 'Cada 30 min de 7 a 23 h, solo si hay algo nuevo o se rompe; recordatorio a las 7:10 si la cola sigue con algo',
+  },
+  {
+    id: 'correduria.baja-pue', categoria: 'correduria',
+    titulo: 'Bajas de Allianz para tramitar en el PUE',
+    que: 'Anulaciones firmadas por el cliente de pólizas de Allianz, que no se comunican por correo sino a mano en su extranet (PUE): cliente, póliza, fecha, operativa y enlaces al PUE y a la ficha.',
+    cuando: 'De lunes a viernes a las 07:50, y solo si hay alguna pendiente',
+  },
+  {
     id: 'correduria.recaptacion-lote', categoria: 'correduria',
     titulo: 'Recaptación por email · lote diario',
     que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',
     cuando: 'Todos los días a las 07:00, y solo si hubo candidatos o el envío falló',
+  },
+  {
+    id: 'correduria.recaptacion-fin', categoria: 'correduria',
+    titulo: 'Recaptación por email · fin de campaña',
+    que: 'Ya se ha escrito a todos los leads solo-correo que están en ventana: aperturas acumuladas, cuántas personas esperan todavía su ventana y qué direcciones fallan. Es la señal para analizar la campaña.',
+    cuando: 'Una vez al terminar cada campaña (como mucho 1 cada 60 días)',
   },
   {
     id: 'correduria.cima-diferencias', categoria: 'correduria',
@@ -589,6 +649,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'A las 09:00, 14:00 y 18:30 UTC, solo si Actions no ha traído CIMA',
   },
   {
+    id: 'correduria.cima-siniestros-corte', categoria: 'correduria',
+    titulo: 'CIMA: se cortan los siniestros',
+    que: 'No entra ningún fichero de siniestros (SIN) desde hace más de 7 días mientras pólizas o recibos sí llegan, o una compañía con pólizas en vigor que ya mandó SIN lleva más de 3 veces su cadencia habitual (mínimo 7 días) sin mandarlo (aviso por compañía, con código, nombre y fecha del último SIN): algo falla en el envío de siniestros.',
+    cuando: 'Como mucho una vez al día, en la pasada del respaldo de CIMA (09:00, 14:00, 18:30 UTC)',
+  },
+  {
     id: 'correduria.cima-liq', categoria: 'correduria',
     titulo: 'Liquidaciones de comisiones (CIMA)',
     que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',
@@ -601,10 +667,34 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:50, y solo cuando ha entrado alguno',
   },
   {
+    id: 'correduria.seguimiento-presupuesto', categoria: 'correduria',
+    titulo: 'Presupuesto enviado sin abrir o sin elegir',
+    que: 'Un cliente al que se le mandó un presupuesto y no consta que lo haya abierto (48 h), o que lo abrió y no ha elegido (72 h): qué garantías miró y qué compañías comparó, con el enlace a su ficha. Un aviso por etapa y presupuesto. Si no se puede leer el seguimiento, lo dice.',
+    cuando: 'A las 10:12, 15:12 y 20:12 (hora de Madrid en verano), solo si hay alguno',
+  },
+  {
     id: 'correduria.actividad-cliente', categoria: 'correduria',
     titulo: 'Actividad de un cliente en el portal',
     que: 'Lo que hace un cliente en su intranet: entrar, pedir el código y no entrar, cambiar su dirección, dar un parte o pedir que se borren sus datos. Un mensaje por pasada, agrupado por cliente, con el enlace a su ficha y sin datos de contacto. La póliza declarada y la sugerencia no van aquí: el portal ya las avisa al instante.',
     cuando: 'Cada 5 minutos, y solo cuando ha pasado algo',
+  },
+  {
+    id: 'correduria.tarificador-verificacion', categoria: 'correduria',
+    titulo: 'El bot de presupuestos necesita una verificación',
+    que: 'Un portal de compañía (Generali…) ha pedido un código SMS o una verificación y el bot se ha parado: hay que entrar en su portal, validar y pulsar Reintentar. Un aviso por trabajo, solo con la compañía y el ramo (sin datos del cliente).',
+    cuando: 'Cada 10 minutos, y solo cuando algún trabajo se ha parado así',
+  },
+  {
+    id: 'correduria.tope-avant2', categoria: 'correduria',
+    titulo: 'Gasto de Avant2 (tarificar): aviso a 60 € y bloqueo a 70 €',
+    que: 'Lo gastado en el mes en Avant2 (cada tarificación, ReRate, límites de hogar o envío cuenta 0,50€). Un aviso al cruzar 60€ y, al llegar al tope (70€, o el ampliado), el BLOQUEO con el botón «Autorizar +30€». ⚠️ Si lo silencias, el botón de desbloqueo no te llega y no se puede tarificar hasta reactivarlo.',
+    cuando: 'Cada 5 minutos, solo cuando se cruza 60€ (una vez al mes) o se bloquea',
+  },
+  {
+    id: 'correduria.whatsapp-conexion', categoria: 'correduria',
+    titulo: 'WhatsApp de la correduría desconectado o reconectado',
+    que: 'Cuando Meta corta la conexión del WhatsApp Business con el CRM (p. ej. la app del móvil lleva 14 días sin abrirse, se cambió el número o se desconectó desde el móvil), la da de baja o la recupera. Sin datos personales: solo el estado y el motivo. Mientras esté desconectado NO entran mensajes en el CRM. Si lo silencias, el estado sigue en /correduria/ajustes/whatsapp.',
+    cuando: 'Cada 10 minutos, solo cuando cambia la conexión',
   },
   {
     id: 'correduria.fuga-cartera', categoria: 'correduria',

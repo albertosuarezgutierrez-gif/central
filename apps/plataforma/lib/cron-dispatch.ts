@@ -45,6 +45,16 @@ export const CRON_JOBS: CronJob[] = [
   // renovaciones — comparten sección «Hoy» de /correduria y es cómodo que sus
   // avisos lleguen juntos. Digest diario mientras algo siga sin confirmar CIMA.
   { path: '/api/cron/correduria-sustituciones', schedule: '35 6 * * *' },
+  // Emisiones RETENIDAS por la compañía («riesgo condicionado», 30/09/2026): dos veces al día.
+  // Solo avisa por Telegram si ha CAMBIADO alguna (liberada / rechazada).
+  { path: '/api/cron/correduria-retenidas', schedule: '40 7,13 * * *' },
+  // Descubrimiento AUTOMÁTICO de emisiones de Avant2 (03/10/2026): cada 30 min de 05:10 a 21:40 UTC
+  // (07:10-23:40 en verano, 06:10-22:40 en invierno). Solo LEE el vendor (gratis): registra lo que se
+  // puede demostrar por documento y deja el resto en revisión. Avisa solo si hay algo nuevo o si se rompe.
+  { path: '/api/cron/correduria-descubrir-emisiones', schedule: '10,40 5-21 * * *' },
+  // Bajas de ALLIANZ pendientes de tramitar en el PUE (30/09/2026): Allianz no las recibe por correo.
+  // Solo avisa por Telegram si hay alguna `firmada` sin tramitar. Ver docs/ALLIANZ-PUE.md.
+  { path: '/api/cron/correduria-bajas-pue', schedule: '50 7 * * 1-5' },
   // Recaptación por email de leads solo-email (sin teléfono usable): 07:00,
   // antes del vigía de latidos de las 07:45. Manda hasta 25/día por Resend con
   // baja de un clic (LSSI art. 21); a quien tiene teléfono se le sigue
@@ -52,7 +62,7 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/recaptacion-email-lote', schedule: '0 7 * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
-  { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },
+  { path: '/api/cron/resumen-mensual', schedule: '0 8 5 * *' },
   { path: '/api/cron/facturas-conciliar-gmail', schedule: '30 6 * * *' },
   { path: '/api/cron/contable-proactivo', schedule: '0 9 * * 1' },
   { path: '/api/cron/concursos-ingesta', schedule: '30 */6 * * *' },
@@ -184,6 +194,21 @@ export const CRON_JOBS: CronJob[] = [
   // Cada 5 min: es un aviso de «acaba de pasar», no un resumen. La marca de
   // agua NO avanza si el Telegram no sale. Ver el fichero de la ruta.
   { path: '/api/cron/correduria-actividad', schedule: '*/5 * * * *' },
+  // Tope de gasto de Avant2 en EUROS (03/10/2026, decisión de Alberto 29/09): manda por Telegram el
+  // aviso de 60 € y cada BLOQUEO (70 €…) con el botón «Autorizar +30 €». Cada 5 min: mientras el
+  // bloqueo no llega, no se tarifica. asegura decide y anota; este job solo avisa y marca.
+  { path: '/api/cron/correduria-tope-avant2', schedule: '*/5 * * * *' },
+  // WhatsApp de la correduría (05/10/2026): aviso por Telegram cuando Meta desconecta (PARTNER_REMOVED,
+  // p. ej. 14 días sin abrir la app del móvil), da de baja o reconecta el número. asegura decide y guarda.
+  { path: '/api/cron/correduria-whatsapp-conexion', schedule: '*/10 * * * *' },
+  // Verificación humana del tarificador (08/10/2026): un portal (Generali…) pide un código SMS/OTP y el trabajo
+  // acaba `requiere_humano`. Avisa a Alberto UNA vez por trabajo (marca en asegura, solo si el Telegram salió)
+  // para que entre en el portal, valide y pulse Reintentar. Sin datos personales en el mensaje.
+  { path: '/api/cron/tarificador-verificacion', schedule: '*/10 * * * *' },
+  // Seguimiento de presupuestos enviados (28/09/2026): 08:12, 13:12 y 18:12 UTC — horario de oficina
+  // para que el «¿le llamas?» llegue cuando se puede llamar. Asegura decide qué toca (48 h sin abrir,
+  // 72 h sin elegir, un aviso por etapa); este job solo avisa y marca lo avisado.
+  { path: '/api/cron/correduria-seguimiento-presupuestos', schedule: '12 8,13,18 * * *' },
   // Detector de cambios de la cartera (Fase 2 ASegura OS): 45 min después de cada pull de CIMA.
   { path: '/api/cron/correduria-eventos', schedule: '15 6,12 * * *' },
   // Blog de grupoasegura.es: un artículo cada dos semanas (día 1 y 15, 08:00 UTC).

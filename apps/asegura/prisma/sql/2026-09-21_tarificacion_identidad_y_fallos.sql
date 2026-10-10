@@ -1,6 +1,8 @@
 -- Identidad del precio y fallos de la cotización (21/09/2026).
 --
--- ⛔ **NO EJECUTADA.** Escrita para que la decida Alberto. Mientras no se aplique,
+-- ✅ **APLICADA el 29/09/2026** (Alberto: «guarda toda la información»), junto con
+-- `2026-09-29b_tarificacion_respuesta.sql`. Lo que sigue es el razonamiento original.
+-- (Antes: ⛔ NO EJECUTADA, escrita para que la decida Alberto.) Mientras no se aplicaba,
 -- el código NO la usa: `lib/codeoscopic/tarificacion-guardada.ts` y
 -- `lib/codeoscopic/cotizaciones.ts` siguen leyendo y escribiendo exactamente las
 -- mismas columnas de siempre, y `apps/plataforma` lee los campos nuevos como

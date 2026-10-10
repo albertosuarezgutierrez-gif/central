@@ -1,5 +1,5 @@
 'use client'
-import { Plus, Wrench, Building2, MoreHorizontal, FileUp } from 'lucide-react'
+import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, BookUser, Bot, MessageCircle, ClipboardCheck } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 
 /**
@@ -25,7 +25,10 @@ import { btnStyle } from '@/components/ui'
  * «Subir póliza», que es lo que se hace con el móvil en la mano cuando llega un
  * lead por WhatsApp o por correo.
  *
- * Sigue habiendo UNA sola acción visible, y por el mismo motivo de siempre:
+ * Desde el 30/09/2026 hay un SEGUNDO acceso, «Vencimientos», que en móvil es solo
+ * un icono (44px) para no volver a las dos filas de botones.
+ *
+ * Sigue habiendo UNA sola acción con rótulo en móvil, y por el mismo motivo de siempre:
  * dos botones `md` con rótulo no caben en una fila de 390px. Compañías y
  * Mantenimiento son de consulta/de cuando toca, y el segundo ni siquiera es
  * trabajo comercial: es una pasada de limpieza de datos.
@@ -45,11 +48,16 @@ import { btnStyle } from '@/components/ui'
 export default function AccionesCabecera() {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-      {/* Enlace a una ruta de PLATAFORMA que redirige: la pantalla vive en
-          asegura, pero su URL no se resuelve aquí (sería código de servidor en
-          un bundle de cliente). Ver `subir-poliza/page.tsx`. */}
+      {/* Pantalla de PLATAFORMA (desde el 28/09/2026 ya no redirige a asegura). */}
       <a href="/correduria/subir-poliza" style={{ ...btnStyle('primario'), textDecoration: 'none' }}>
         <FileUp size={15} strokeWidth={1.75} aria-hidden /> Subir póliza
+      </a>
+
+      {/* Acceso directo a los leads de Vencimientos (Alberto, 30/09/2026: «es la que más voy a
+          usar»). En móvil solo el icono (`.rotulo-ancho` esconde el texto por debajo de 480px):
+          dos botones con rótulo no caben en una fila de 390px, que es por lo que había UNA acción. */}
+      <a href="/correduria/vencimientos?c=leads" aria-label="Vencimientos" title="Vencimientos: leads por fecha" style={{ ...btnStyle('secundario'), minWidth: 44, textDecoration: 'none' }}>
+        <CalendarClock size={15} strokeWidth={1.75} aria-hidden /> <span className="rotulo-ancho">Vencimientos</span>
       </a>
 
       <details style={{ position: 'relative' }}>
@@ -106,6 +114,33 @@ export default function AccionesCabecera() {
             style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
           >
             <Wrench size={15} strokeWidth={1.75} aria-hidden /> Mantenimiento
+          </a>
+          {/* Conexión, simulación y cola de revisión de Google Contacts (05/10/2026). */}
+          <a
+            href="/correduria/google-contactos"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <BookUser size={15} strokeWidth={1.75} aria-hidden /> Google Contactos
+          </a>
+          {/* Conexión del WhatsApp Business (Coexistence, Embedded Signup) con el CRM (05/10/2026). */}
+          <a
+            href="/correduria/ajustes/whatsapp"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <MessageCircle size={15} strokeWidth={1.75} aria-hidden /> WhatsApp Business
+          </a>
+          {/* Salud del bot de Allianz, renovaciones de comunidades y cambios de tarifa (07/10/2026). */}
+          <a
+            href="/correduria/tarificador"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <Bot size={15} strokeWidth={1.75} aria-hidden /> Tarificador (bot)
+          </a>
+          <a
+            href="/correduria/revision"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <ClipboardCheck size={15} strokeWidth={1.75} aria-hidden /> Revisión manual
           </a>
         </div>
       </details>

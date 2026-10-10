@@ -129,6 +129,13 @@ test('los prefijos de clasificación son constantes compartidas, no texto a mano
   // sin que fallara nada.
   assert.match(FUENTE, /PREFIJO_HISTORIAL_CONTACTO_PROPIO/)
   assert.match(FUENTE, /PREFIJO_HISTORIAL_SUGERENCIA/)
+  // 30/09/2026: la cotización con precios que no cuadran sale como `cotizacion_incoherente` (→ Telegram).
+  assert.match(FUENTE, /PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE/)
+  assert.match(SQL, /then 'cotizacion_incoherente'/)
+  // 06/10/2026: el carné que el cliente cambia en el portal sale como `carnet` (→ muro y Telegram).
+  assert.match(FUENTE, /PREFIJO_HISTORIAL_CARNET_PROPIO/)
+  assert.match(SQL, /then 'carnet'/)
+  assert.match(SQL, /not like \$\{prefCarnet\}/)
   assert.equal(
     SQL.includes("'El cliente actualizó desde el portal"),
     false,

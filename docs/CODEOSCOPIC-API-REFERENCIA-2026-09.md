@@ -60,7 +60,7 @@ En el Notion enlazado desde el portal hay una página «Entornos de test», pero
 - Token: `POST https://api-int.codeoscopic.io/oauth2/token`, con `Content-Type: application/x-www-form-urlencoded`
   - Body: `grant_type=client_credentials&client_id=...&client_secret=...` (los tres obligatorios; `grant_type` solo admite `client_credentials`)
   - Respuesta: `access_token`*, `expires_in`* (en el ejemplo, **360 s**), `refresh_expires_in`* (siempre `0`: no hay refresh), `token_type`* (`Bearer`), `not-before-policy`, `scope`*
-- Las credenciales se piden a soporteapi@avant2.es (el spec también da soporteapi@codeoscopic.com y apisupport@codeoscopic.com).
+- Las credenciales las crea y entrega Juan Manuel Fernández, Product Manager API (juan.fernandez@codeoscopic.com, 91 075 84 98 ext. 606), o se piden a soporteapi@codeoscopic.com (el spec también da apisupport@codeoscopic.com). El portal enlaza soporteapi@avant2.es: rebota desde 2026; no usar.
 - Prohibido usar las credenciales en el navegador: el token se gestiona siempre en el backend.
 
 **Cabeceras:**
@@ -164,6 +164,12 @@ Común a los dos: `insuranceLine`*, `effectiveDate`*, `holder`* (`NaturalPerson_
 **`MotorcycleRisk_V1`**: `registrationPlate`, `registrationDate`, `purchaseDate`, `vehicle`* (`code`* Base7), `installedAccessories[]`, `circulationAddress`*, `garageType`*, `kilometersPerYear`, `primaryDriver`*, `owner`*, `drivingExperience`* (`id`), `previouslyInsured`*, `previousInsurance`, `previousMotorcycle` (obligatorio si `drivingExperience` = `OtherMotorcycle`; `code`* Base7).
 
 **`previousInsurance`** (`MotorPreviousInsurance_V1`, igual en los dos): `previousCompany.code`* (DGS), `registrationPlate`*, `policyNumber`*, `totalYearsInsured`*, `yearsInPreviousCompany`*, `yearsWithoutAccidents`*, `lastFiveYearsAccidents` (mínimo 0, máximo `totalYearsInsured`, tope 5).
+
+🔎 **Leído en el OpenAPI del portal (29/09/2026, `static/fdb74c4d.yaml`):**
+- `previousInsurance.registrationPlate` = *«The registration plate number of the vehicle insured in the previous policy.»* Es la matrícula del vehículo de la póliza ANTERIOR, no la del riesgo. Los ejemplos repiten la misma (mismo vehículo), y por eso el código la copiaba siempre: con vehículo nuevo la compañía no encuentra el historial y el bonus no se aplica (caso 2121NST, PR #3992 → campo `matriculaAnterior`).
+- La API **no documenta** quién verifica el bonus (ni SINCO, ni TIREA, ni CICOS), ni ningún indicador de «bonus verificado». El rechazo llega como texto libre de cada compañía en `MainQuote_V1.messages[]` (`type` success/info/warning/error). Ejemplo real: Mapfre, «01- El cliente identificado no aparece asociado a una póliza de otra compañía».
+- `MotorPreviousInsurance_V1` no tiene campo de tipo de vehículo: si vale el historial de un coche para una moto no está documentado (pendiente de preguntar a soporteapi@codeoscopic.com).
+- `/car/insurance-companies` y `/motorcycle/insurance-companies` son la misma operación (`motor.getInsuranceCompanies` / `_1`, schema `InsuranceCompany_V1`); `/insurance-companies` = todas las de la DGS.
 
 ### 4.3 Tabla comparativa
 

@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { hoyEnMadrid } from './fecha-efecto.ts'
 import {
   precalificarAuto,
   precalificarAutoNueva,
@@ -158,10 +159,10 @@ test('si la póliza ya venció, se cotiza para mañana y se dice por qué', () =
   assert.match(s!.porque, /venció el 2026-01-10/)
 })
 
-test('sin vencimiento en la ficha NO se inventa uno: se cotiza para mañana y se explica', () => {
+test('sin vencimiento en la ficha NO se inventa uno: efecto a 15 días (no caduca mañana) y se explica', () => {
   const r = pre({}, { fechaVencimiento: null })
-  assert.equal(r.datos.fechaEfecto, '2026-09-02')
-  assert.match(r.supuestos.find((x) => x.campo === 'fechaEfecto')!.porque, /no tiene fecha de vencimiento/)
+  assert.equal(r.datos.fechaEfecto, '2026-09-16')
+  assert.match(r.supuestos.find((x) => x.campo === 'fechaEfecto')!.porque, /no consta el vencimiento/)
 })
 
 // ─── Los supuestos se ven, que es el punto de todo esto ─────────────────────
@@ -218,14 +219,21 @@ test('presumir cero siniestros iguala los años y evita el 400 del detalle de si
   assert.deepEqual(r.faltan.filter((f) => !(HUECOS_EMISION as readonly string[]).includes(f.campo)), [])
 })
 
-// ─── Los supuestos que NO son optimistas tiran a la baja ─────────────────────
+// ─── El historial se declara al máximo ──────────────────────────────────────
 
-test('sin fecha de inicio se presume UN año asegurado — el supuesto más caro', () => {
+test('sin fecha de inicio se declara el MÁXIMO (Alberto, 29/09/2026: la compañía lo contrasta con SINCO)', () => {
   const r = pre({}, { fechaEfectoInicial: null })
-  assert.equal(r.datos.aniosAsegurado, 1)
+  assert.equal(r.datos.aniosAsegurado, 10)
+  assert.equal(r.datos.aniosEnCompania, 10)
   const s = r.supuestos.find((x) => x.campo === 'aniosAsegurado')
-  assert.match(s!.porque, /solo puede mejorar/)
-  assert.notEqual(s!.optimista, true)
+  assert.match(s!.porque, /SINCO/)
+  assert.equal(s!.optimista, true, 'declarar el máximo es un supuesto optimista y se dice')
+})
+
+test('con nosotros poco tiempo: años en la compañía reales, asegurado al máximo', () => {
+  const r = pre({}, { fechaEfectoInicial: '2024-03-01' })
+  assert.equal(r.datos.aniosAsegurado, 10)
+  assert.ok((r.datos.aniosEnCompania as number) < 10)
 })
 
 test('los años asegurado salen de la fecha real cuando la hay', () => {
@@ -253,6 +261,12 @@ test('los apellidos se parten dejando el ÚLTIMO como segundo apellido', () => {
   assert.deepEqual(partirApellidos('de la Torre Ruiz'), { primero: 'de la Torre', segundo: 'Ruiz' })
   assert.deepEqual(partirApellidos('Pérez'), { primero: 'Pérez', segundo: null })
   assert.deepEqual(partirApellidos(null), { primero: null, segundo: null })
+  assert.deepEqual(partirApellidos('García de la Torre'), { primero: 'García', segundo: 'de la Torre' })
+  assert.deepEqual(partirApellidos('de la Rosa García'), { primero: 'de la Rosa', segundo: 'García' })
+  assert.deepEqual(partirApellidos('De la Rosa'), { primero: 'De la Rosa', segundo: null })
+  assert.deepEqual(partirApellidos('Martín del Río'), { primero: 'Martín', segundo: 'del Río' })
+  assert.deepEqual(partirApellidos('Van Der Berg'), { primero: 'Van Der', segundo: 'Berg' })
+  assert.deepEqual(partirApellidos('García de'), { primero: 'García de', segundo: null })
 })
 
 test('el tratamiento del CRM da el sexo: 1 hombre, 2 mujer, y el resto NO se adivina', () => {
@@ -347,15 +361,17 @@ test('se cotiza DE CALLE: sin compañía anterior, sin años asegurado, nunca se
   assert.equal(r.faltan.some((f) => f.campo === 'polizaAnterior'), false)
 })
 
-test('la fecha de efecto es SIEMPRE mañana, y se marca como supuesto', () => {
+test('la fecha de efecto es a 15 días (el presupuesto sigue valiendo al emitir), y se marca como supuesto', () => {
   const r = preNueva()
-  const manana = '2026-09-02'
-  assert.equal(r.datos.fechaEfecto, manana)
-  assert.ok(r.supuestos.some((s) => s.campo === 'fechaEfecto'))
+  assert.equal(r.datos.fechaEfecto, '2026-09-16')
+  assert.match(r.supuestos.find((s) => s.campo === 'fechaEfecto')!.porque, /15 días/)
+  // Moto nueva, igual: con «mañana» la cotización caducaba al día siguiente (29/09/2026).
+  assert.equal(precalificarMotoNueva(CLIENTE, RESUELTOS_MOTO_NUEVA, HOY).datos.fechaEfecto, '2026-09-16')
 })
 
-test('sin matrícula no se puede cotizar: la teclea el corredor, no sale de ninguna póliza', () => {
-  assert.ok(preNueva({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'))
+test('vehículo NUEVO sin matrícula (03/10/2026): se cotiza con versión + matriculación prevista; sin versión, falta', () => {
+  assert.equal(preNueva({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'), false)
+  assert.ok(preNueva({}, { matricula: null, codigoVehiculo: null }).faltan.some((f) => f.campo === 'matricula'))
 })
 
 test('el garaje solo se marca como supuesto si de verdad lo es', () => {
@@ -385,7 +401,7 @@ const RESUELTOS_MOTO_NUEVA: ResueltosMotoNueva = {
 }
 
 function preMoto(c: Partial<ClienteCartera> = {}, r: Partial<ResueltosMotoNueva> = {}) {
-  return precalificarMotoNueva({ ...CLIENTE, ...c }, { ...RESUELTOS_MOTO_NUEVA, ...r }, HOY)
+  return precalificarMotoNueva({ ...CLIENTE, ...c }, { ...RESUELTOS_MOTO_NUEVA, ...r }, hoyEnMadrid())
 }
 
 test('moto: sin póliza previa, con todo resuelto no falta nada', () => {
@@ -405,6 +421,8 @@ test('moto: sin experiencia de conducción, se supone ThisMotorcycle y se marca 
   const r = preMoto()
   assert.equal(r.datos.experienciaConduccion, 'ThisMotorcycle')
   assert.ok(r.supuestos.some((s) => s.campo === 'experienciaConduccion'))
+  // Suponer «ya ha llevado ESTA moto» abarata: es un supuesto OPTIMISTA, como el carnet B.
+  assert.equal(r.supuestos.find((s) => s.campo === 'experienciaConduccion')!.optimista, true)
   assert.equal(r.faltan.length, 0)
 })
 
@@ -416,8 +434,9 @@ test('moto: con experiencia elegida, NO se supone nada', () => {
   assert.ok(r.faltan.some((f) => f.campo === 'motoAnteriorCodigo'))
 })
 
-test('moto: sin matrícula no se puede cotizar', () => {
-  assert.ok(preMoto({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'))
+test('moto NUEVA sin matrícula (03/10/2026): se cotiza con versión + matriculación prevista; sin versión, falta', () => {
+  assert.equal(preMoto({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'), false)
+  assert.ok(preMoto({}, { matricula: null, codigoVehiculo: null }).faltan.some((f) => f.campo === 'matricula'))
 })
 
 test('moto: NINGÚN supuesto rellena un dato personal', () => {
@@ -431,7 +450,7 @@ test('moto: NINGÚN supuesto rellena un dato personal', () => {
 
 const POLIZA_MOTO: PolizaCartera = {
   ...POLIZA,
-  numeroPoliza: '031698897',
+  numeroPoliza: '031600009',
   codigoEntidadDgs: 'C0109',
   matricula: '1234ABC',
   vehiculo: { marca: 'HONDA', modelo: 'NTV 700', versiones: [] },
@@ -455,7 +474,7 @@ test('moto de cartera: la póliza actual es la ANTERIOR (bonus por antigüedad),
   assert.deepEqual(r.faltan, [])
   assert.equal(r.datos.aseguradoAntes, true)
   assert.equal(r.datos.companiaAnteriorCodigo, 'C0109')
-  assert.equal(r.datos.polizaAnterior, '031698897')
+  assert.equal(r.datos.polizaAnterior, '031600009')
   assert.equal(r.datos.aniosAsegurado, 10)
   assert.equal(r.datos.matricula, '1234ABC')
 })
@@ -533,3 +552,15 @@ test('moto SIN carné de moto en la ficha: B con la fecha del conductor, DECLARA
   assert.match(String(s?.porque), /carné de moto/)
 })
 
+
+test('cliente nuevo sin fecha «del conductor»: el carné B de la ficha se usa, no se pide (auto y moto)', () => {
+  // Caso Manuel Piña (28/09/2026): su ficha tiene el carné B con fecha y el bot se la pedía.
+  const sinConductor = { fechaCarnet: null, carnets: [{ tipo: 'B', fechaExpedicion: '2001-03-15' }] } as Partial<ClienteCartera>
+  const moto = preMoto(sinConductor)
+  assert.equal(moto.datos.fechaCarnet, '2001-03-15')
+  assert.equal(moto.datos.tipoCarnet, 'B')
+  assert.ok(!moto.faltan.includes('fechaCarnet' as never))
+  assert.equal(preNueva(sinConductor).datos.fechaCarnet, '2001-03-15')
+  // Sin carné B con fecha, sigue faltando: no se inventa.
+  assert.equal(preMoto({ fechaCarnet: null, carnets: [] }).datos.fechaCarnet, undefined)
+})

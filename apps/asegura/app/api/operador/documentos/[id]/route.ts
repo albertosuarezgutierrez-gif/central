@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
-import { aseguraConfigurada } from '@/lib/asegura-db'
+import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { borrarDocumento, leerDocumento, marcarRevisado } from '@/lib/cartera-documentos'
 import { auditado } from '@/lib/auditoria'
+import { oportunidadDesdeFichero } from '@/lib/oportunidad-documento'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// El POST lee el documento con IA para abrir su oportunidad (hasta ~60 s).
+export const maxDuration = 120
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -59,6 +61,39 @@ export const PATCH = auditado(async (req: Request, ctx: Ctx) => {
   const ok = await marcarRevisado(correduria.id, id, por)
   if (!ok) return NextResponse.json({ error: 'no existe, no es de esta correduría o aún está pedido' }, { status: 404 })
   return NextResponse.json({ estado: 'ok' })
+})
+
+/**
+ * POST — vuelve a leer un documento YA guardado en una ficha y abre (o completa) su oportunidad
+ * (29/09/2026): el botón «Leer para oportunidad» de lo subido antes de que esto fuera automático.
+ */
+export const POST = auditado(async (req: Request, ctx: Ctx) => {
+  if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const { id } = await ctx.params
+  if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
+  const correduria = await correduriaUnica()
+  if (!correduria) return NextResponse.json({ estado: 'error' }, { status: 500 })
+  const fila = await prismaAsegura().documento.findFirst({
+    where: { id, correduriaId: correduria.id },
+    select: { clienteId: true, polizaId: true, siniestroId: true },
+  }).catch(() => null)
+  if (!fila) return NextResponse.json({ error: 'no existe' }, { status: 404 })
+  if (!fila.clienteId || fila.polizaId || fila.siniestroId) {
+    return NextResponse.json({ error: 'solo se leen para oportunidad los documentos de una ficha' }, { status: 422 })
+  }
+  const d = await leerDocumento(correduria.id, id)
+  if (!d) return NextResponse.json({ error: 'el documento no tiene fichero' }, { status: 404 })
+  const oportunidad = await oportunidadDesdeFichero({
+    correduriaId: correduria.id,
+    clienteSube: fila.clienteId,
+    origen: 'ficha',
+    actor: req.headers.get('x-actor') ?? 'corredor',
+    // Lo leído se guarda con ESTE documento (05/10/2026): sin esto, releer un documento subido antes
+    // de que existiera `extraccion` lo dejaba en NULL para siempre (4 de 5 pólizas de Estibaliz).
+    documentoId: id,
+    fichero: { contenido: d.contenido, mime: d.mime, nombre: d.nombre },
+  })
+  return NextResponse.json({ estado: 'ok', oportunidad })
 })
 
 /** DELETE — el corredor se equivocó de ficha. */

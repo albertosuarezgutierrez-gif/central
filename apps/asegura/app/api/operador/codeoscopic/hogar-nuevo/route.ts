@@ -1,12 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
+import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
+import { prepararPresupuestoTrasTarificar } from '@/lib/presupuesto-tras-tarificar'
 import { prepararRetarificacionNuevaHogar } from '@/lib/retarificar-cartera'
 import { respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
 import { direccionDesdeCatastro, type CatastroHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
 import { paramsDnploc } from '@central/core-catastro'
 import { bajarCatastro } from '@central/core-catastro/http'
 import { auditado } from '@/lib/auditoria'
+import { correduriaUnica } from '@/lib/cartera'
+import { anotarViviendaDeCotizacion, prepararVariante } from '@/lib/oportunidad-riesgo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -110,6 +114,7 @@ export const POST = auditado(async (req: Request) => {
       anioConstruccion: datos.anioConstruccion,
       codigoPostal: datos.codigoPostal,
       uso: datos.uso,
+      referencia,
       direccion: direccionDesdeCatastro(paramsDnploc(datos.direccion)),
     }
   } catch (e) {
@@ -131,12 +136,32 @@ export const POST = auditado(async (req: Request) => {
       ? cuerpo.solicitadoPor.trim()
       : 'plataforma'
 
+  // VARIANTE de un riesgo (30/09/2026): con `oportunidadId` la tarificación se cuelga de ESA oportunidad (regla 9:
+  // sin ese enlace la pantalla dice «aún no se ha pedido precio» y empuja a pagar otra vez). Gratis, antes de gastar.
+  // Sin `oportunidadId` el camino es el de siempre, idéntico.
+  const oportunidadPedida = typeof cuerpo.oportunidadId === 'string' && cuerpo.oportunidadId.trim() !== ''
+  const correduria = oportunidadPedida ? await correduriaUnica().catch(() => null) : null
+  if (!correduria && oportunidadPedida) {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: 'no se pudo comprobar la variante; no se ha pedido precio', gastado: '0,00€' }, { status: 503 })
+  }
+  const variante = correduria
+    ? await prepararVariante(correduria.id, {
+        tomadorId: clienteId,
+        ramo: 'hogar',
+        cuerpo,
+        correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      })
+    : { ok: true as const, v: { contexto: null, correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined } }
+  if (!variante.ok) {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: variante.motivo, gastado: '0,00€' }, { status: 422 })
+  }
+
   const p = await prepararRetarificacionNuevaHogar({
     clienteId,
     solicitadoPor,
     cuerpo: {
       resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
-      correcciones: esObjeto(cuerpo.correcciones) ? cuerpo.correcciones : undefined,
+      correcciones: variante.v.correcciones,
     } satisfies CuerpoRetarificacion,
     catastro,
   })
@@ -146,8 +171,27 @@ export const POST = auditado(async (req: Request) => {
     return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })
   }
 
+  if (variante.v.contexto && p.peticion.contexto) {
+    p.peticion.contexto = { ...p.peticion.contexto, ...variante.v.contexto }
+  }
+
   // ── La única línea que cuesta dinero, por el único embudo ────────────────
+  // Recotización explícita: salta la guarda anti-duplicado (15 min) SOLO si el operador la pide; nunca por defecto.
+  if (cuerpo.forzar === true) p.peticion.forzar = true
   const r = await cotizar(p.peticion)
+  // Lo usado para pedir precio se anota en el riesgo (`info_riesgo.datosVivienda`), DESPUÉS de guardar la
+  // tarificación. Nunca lanza: la cotización ya está pagada (0,50€, no idempotente, regla 20).
+  if (correduria && variante.v.contexto && r.ok && r.guardado.estado === 'guardada') {
+    await anotarViviendaDeCotizacion(correduria.id, {
+      oportunidadId: variante.v.contexto.oportunidadId,
+      cuerpo: { ...cuerpo, referencia },
+      catastro: { metrosCuadrados: catastro.metrosCuadrados, anioConstruccion: catastro.anioConstruccion, codigoPostal: catastro.codigoPostal },
+      actor: solicitadoPor,
+    })
+  }
+  // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
+  const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)
+  if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => prepararPresupuestoTrasTarificar(aCompletar, solicitadoPor)).then(() => undefined))
 
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })

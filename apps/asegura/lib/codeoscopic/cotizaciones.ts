@@ -28,6 +28,8 @@
 
 import { prisma } from '../tenant.ts'
 import type { Cotizacion } from './respuesta.ts'
+import { sobreOpciones } from './coberturas.ts'
+import { PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE, revisarCoherenciaCotizacion } from '@central/module-seguros'
 
 /** Por qué puerta entró la cotización. Es el CHECK de la tabla, en TypeScript. */
 export type PuertaCotizacion = 'corredor' | 'agente' | 'web'
@@ -51,6 +53,16 @@ export type ContextoCotizacion = {
   /** De dónde salió, si salió de la cartera. `null` = no venía de una póliza. */
   polizaId?: string | null
   clienteId?: string | null
+  /**
+   * El riesgo (oportunidad) del que es VARIANTE esta cotización (29/09/2026). Con él se cuelga de
+   * esa oportunidad aunque el tomador sea otra persona (un familiar). Sin él, la de siempre: la
+   * primera abierta del cliente para ese ramo.
+   */
+  oportunidadId?: string | null
+  /** Foto de figuras de la variante (rol → cliente_id). NULL = no consta. */
+  figuras?: Record<string, string | null> | null
+  /** Etiqueta libre del corredor («a nombre del padre»). */
+  nota?: string | null
 }
 
 /**
@@ -81,6 +93,11 @@ export type EntradaCotizacion = {
   simulado: boolean
   /** El cuerpo EXACTO que viajó (o que habría viajado, al simular). */
   peticion: unknown
+  /**
+   * La respuesta ENTERA del vendor, tal cual (29/09/2026). Se guarda para poder contrastar el
+   * parser sin volver a pagar. Ausente/`undefined` = simulada o quien llama no la tiene → NULL.
+   */
+  respuesta?: unknown
   cotizacion: Cotizacion
   solicitadoPor: string
 }
@@ -224,6 +241,8 @@ export async function guardarCotizacion(
   const r = riesgoDePeticion(e.peticion)
   const efecto = fechaEfecto(e)
   const peticionJson = JSON.stringify(e.peticion ?? null)
+  // NULL ≠ []: `fallos` [] solo si el vendor de verdad no devolvió errores. Una simulada no los tiene.
+  const fallosJson = e.simulado ? null : jsonParaPostgres(e.cotizacion.fallos ?? [])
 
   return enTransaccion(async (tx) => {
     const filas = await tx.$queryRaw<{ id: string }[]>`
@@ -232,7 +251,7 @@ export async function guardarCotizacion(
         ramo, puerta, poliza_id, cliente_id, fecha_efecto, peticion,
         codigo_postal, municipio_id, metros_cuadrados, anio_construccion,
         capital_continente, capital_contenido, tipo_vivienda, uso, ocupacion,
-        solicitado_por
+        solicitado_por, figuras, nota, fallos
       ) values (
         ${e.correduriaId}::uuid,
         ${e.intentoId}::uuid,
@@ -253,7 +272,10 @@ export async function guardarCotizacion(
         ${r.tipoVivienda},
         ${r.uso},
         ${r.ocupacion},
-        ${e.solicitadoPor}
+        ${e.solicitadoPor},
+        ${e.contexto.figuras ? JSON.stringify(e.contexto.figuras) : null}::jsonb,
+        ${e.contexto.nota ?? null},
+        ${fallosJson}::jsonb
       )
       returning id::text as id
     `
@@ -262,12 +284,19 @@ export async function guardarCotizacion(
     // transacción entera se deshaga: nunca una cabecera suelta.
     if (!id) throw new Error('cotizacion_sin_id: el insert de la cabecera no devolvió fila')
 
+    // `oferta_id` (29/09/2026): la oferta de la que sale el precio. Con ella se leen
+    // después sus coberturas GRATIS (`coberturas-tarificacion.ts`). NULL = no la tiene.
+    // `opciones` (28/09/2026): con qué opciones tarificó el vendor ESTE precio (asistencia
+    // estándar o ampliada…). La cotización casi nunca las trae (medido: 0 de 280); entonces NULL,
+    // y el cron `coberturas-backfill` las lee de la oferta (`GET …/offers/{id}`, gratis).
+    const leidasAt = new Date().toISOString()
     for (const p of e.cotizacion.precios) {
       await tx.$executeRaw`
         insert into seguros.tarificacion_precios (
           tarificacion_id, compania, producto, modalidad, categoria,
           prima_eur, entrada_eur, franquicia_eur, firmeza, requiere_rerate,
-          referencia_vendor, avisos
+          referencia_vendor, avisos, oferta_id, opciones,
+          id_precio, forma_pago, frecuencia_pago, meses
         ) values (
           ${id}::uuid,
           ${p.compania},
@@ -280,13 +309,51 @@ export async function guardarCotizacion(
           ${p.firmeza},
           ${p.requiereReRate},
           ${p.referenciaVendor},
-          ${JSON.stringify(p.avisos ?? [])}::jsonb
+          ${JSON.stringify(p.avisos ?? [])}::jsonb,
+          ${p.ofertaId ?? null},
+          ${p.opciones === null ? null : JSON.stringify(sobreOpciones(p.opciones, leidasAt))}::jsonb,
+          ${typeof p.id === 'string' && p.id.trim() !== '' ? p.id.trim() : null},
+          ${p.formaPago ?? null},
+          ${p.frecuenciaPago ?? null},
+          ${typeof p.meses === 'number' && Number.isFinite(p.meses) ? Math.round(p.meses) : null}::int
         )
       `
     }
 
     return id
   })
+}
+
+/**
+ * JSON apto para una columna `jsonb`: Postgres rechaza el carácter nulo (`\u0000`) dentro de un
+ * texto, y un solo carácter así tumbaría la escritura entera. Se quita; el resto va tal cual.
+ */
+export function jsonParaPostgres(v: unknown): string {
+  return JSON.stringify(v, (_k, x) => (typeof x === 'string' ? x.replace(/\u0000/g, '') : x))
+}
+
+/**
+ * La respuesta ENTERA del vendor, en una escritura APARTE y que no lanza (29/09/2026). Va fuera de
+ * la transacción de la cotización a propósito: es un respaldo para contrastar el parser, y un fallo
+ * al guardarla no puede dejar sin copia un precio ya pagado. Si falla, se dice en el log.
+ */
+export async function guardarRespuestaCruda(
+  e: { correduriaId: string; cotizacionId: string; respuesta: unknown },
+  enTransaccion: EnTransaccion = transaccionPrisma,
+): Promise<boolean> {
+  if (e.respuesta === undefined) return false
+  try {
+    const json = jsonParaPostgres(e.respuesta)
+    const n = await enTransaccion((tx) => tx.$executeRaw`
+      update seguros.tarificaciones
+      set respuesta = ${json}::jsonb
+      where id = ${e.cotizacionId}::uuid and correduria_id = ${e.correduriaId}::uuid and respuesta is null
+    `)
+    return n > 0
+  } catch (err) {
+    console.warn('[cotizaciones] no se pudo guardar la respuesta cruda del vendor:', motivoDe(err))
+    return false
+  }
 }
 
 /** El texto de un error, sin suponer que sea un `Error`. */
@@ -310,10 +377,52 @@ export async function guardarSinTumbar(
   enTransaccion: EnTransaccion = transaccionPrisma,
 ): Promise<Guardado> {
   try {
-    return { estado: 'guardada', cotizacionId: await guardarCotizacion(e, enTransaccion) }
+    const cotizacionId = await guardarCotizacion(e, enTransaccion)
+    if (!e.simulado && e.respuesta !== undefined) {
+      await guardarRespuestaCruda({ correduriaId: e.correduriaId, cotizacionId, respuesta: e.respuesta }, enTransaccion)
+    }
+    if (!e.simulado) await anotarIncoherencias(e, enTransaccion)
+    return { estado: 'guardada', cotizacionId }
   } catch (err) {
     return { estado: 'no_guardada', motivo: motivoDe(err) }
   }
+}
+
+/**
+ * 30/09/2026: si los precios que acaban de llegar no cuadran (`revisarCoherenciaCotizacion`),
+ * se deja UNA nota en la ficha con el prefijo que el muro de actividad reconoce, y de ahí sale
+ * el Telegram (`correduria-actividad`). Como la respuesta cruda: escritura aparte que NO lanza —
+ * un fallo aquí no puede dejar sin copia un precio ya pagado. Sin ficha (ni la de la póliza) no
+ * hay dónde anotarla: queda en el log y la parrilla la sigue marcando.
+ */
+export async function anotarIncoherencias(
+  e: Pick<EntradaCotizacion, 'correduriaId' | 'contexto' | 'cotizacion'>,
+  enTransaccion: EnTransaccion = transaccionPrisma,
+): Promise<number> {
+  const reparos = revisarCoherenciaCotizacion(e.cotizacion.precios)
+  if (reparos.length === 0) return 0
+  const lineas = reparos.slice(0, 6).map((r) => `• ${r.mensaje}`)
+  if (reparos.length > 6) lineas.push(`• … y ${reparos.length - 6} más`)
+  const textoNota = `${PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE} (proyecto ${e.cotizacion.projectId}):\n${lineas.join('\n')}`
+  try {
+    await enTransaccion(async (tx) => {
+      await tx.$executeRaw`
+        insert into seguros.historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
+        select ${e.correduriaId}::uuid, q.cliente_id, ${e.contexto.polizaId ?? null}::uuid,
+               cast('gestion' as seguros.tipo_historial_interno), ${textoNota}
+        from (
+          select coalesce(${e.contexto.clienteId ?? null}::uuid,
+                          (select p.cliente_id from seguros.polizas p
+                           where p.id = ${e.contexto.polizaId ?? null}::uuid and p.correduria_id = ${e.correduriaId}::uuid)) as cliente_id
+        ) q
+        where q.cliente_id is not null
+      `
+    })
+  } catch (err) {
+    console.warn('[cotizaciones] no se pudo anotar la cotización incoherente:', motivoDe(err))
+  }
+  console.warn(`[cotizaciones] proyecto ${e.cotizacion.projectId}: ${reparos.length} reparo(s) de coherencia`)
+  return reparos.length
 }
 
 /** Firma de lo que el embudo llama. Existe para poder doblarla en un test. */
