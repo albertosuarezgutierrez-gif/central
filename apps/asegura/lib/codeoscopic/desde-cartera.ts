@@ -517,6 +517,18 @@ export type ResueltosAutoNueva = {
   /** Id del catálogo `car/garage-types`. */
   garaje: string | null
   garajeEsSupuesto?: boolean
+  /**
+   * Los km que la PANTALLA propone por defecto sin que el cliente los haya dicho (10/10/2026: auto-nuevo
+   * nace en 10.000). Viajan al vendor igual que antes, pero DECLARADOS COMO SUPUESTO: mandarlos como
+   * corrección los convertía en dato del cliente (`supuestosVigentes` retiraba el supuesto) y la emisión
+   * no pedía verificarlos. Si el corredor los declara, van en `correcciones.kmAnuales` y esto no cuenta.
+   */
+  kmAnualesSupuestos?: number | null
+}
+
+/** Los km supuestos que propone la pantalla, si son un kilometraje plausible; si no, `null` (manda la media). */
+export function kmSupuestosDePantalla(v: unknown): number | null {
+  return typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= 200000 ? v : null
 }
 
 export function precalificarAutoNueva(
@@ -583,11 +595,17 @@ export function precalificarAutoNueva(
       'no se ha preguntado dónde se expidió el carnet; se supone España',
     ) as string,
 
-    kmAnuales: suponer(
-      'kmAnuales',
-      KM_ANUALES_POR_DEFECTO,
-      'no se ha preguntado; se usa la media declarada habitual',
-    ) as number,
+    kmAnuales: (kmSupuestosDePantalla(resueltos.kmAnualesSupuestos) !== null
+      ? suponer(
+          'kmAnuales',
+          kmSupuestosDePantalla(resueltos.kmAnualesSupuestos),
+          'no se ha preguntado; se usan los km por defecto de la pantalla, no los ha dicho el cliente',
+        )
+      : suponer(
+          'kmAnuales',
+          KM_ANUALES_POR_DEFECTO,
+          'no se ha preguntado; se usa la media declarada habitual',
+        )) as number,
 
     // ── Circulación: se supone que el coche duerme donde vive el tomador ──
     cpCirculacion: limpio(cliente.codigoPostal) ?? undefined,
