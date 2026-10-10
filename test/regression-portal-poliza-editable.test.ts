@@ -431,7 +431,8 @@ test('las dos ramas del alta escriben datosRamo, y el PATCH distingue ausente de
   // Y el ramo con el que se valida sale de la BD, no del cuerpo: se lee con el
   // mismo filtro por identidadId que todo lo demás.
   assert.match(patch, /ramoGuardado: actual\.ramo/)
-  assert.match(patch, /findFirst\(\{\s*where: \{ id, identidadId: identidad\.id \}/)
+  // (desde el 10/10/2026 también sin las eliminadas: una póliza quitada no se corrige)
+  assert.match(patch, /findFirst\(\{\s*where: \{ id, identidadId: identidad\.id(, \.\.\.DECLARADA_NO_ELIMINADA)? \}/)
 })
 
 // ── 8. La referencia catastral es COLUMNA, y solo la del INMUEBLE ────────────

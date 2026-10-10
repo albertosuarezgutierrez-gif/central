@@ -44,6 +44,7 @@ import { SELECT_SINIESTRO, conTercerosCima, mapSiniestro } from './cartera-sinie
 import type { DetalleCimaSiniestro } from './siniestro-detalle-cima'
 import type { TerceroFicha } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { DECLARADA_VIVA } from './declaradas-eliminadas'
 import { emailDeFicha } from './email-ficha'
 import { identidadesDeCliente } from './vinculos-portal'
 import { normalizarNumeroPoliza, describirBien, type BienAsegurado } from '@central/module-seguros-portal'
@@ -674,7 +675,7 @@ async function listarDeclaradas(
     if (identidadIds.length === 0) return []
     const db = prismaAsegura()
     const filas = await db.portalPolizaDeclarada.findMany({
-      where: { identidadId: { in: identidadIds } },
+      where: { identidadId: { in: identidadIds }, ...DECLARADA_VIVA },
       select: {
         id: true, compania: true, numeroPoliza: true, ramo: true, primaAnual: true,
         fechaVencimiento: true, matricula: true, procedencia: true, confirmadaPorUsuario: true,

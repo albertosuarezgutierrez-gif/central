@@ -93,6 +93,7 @@ import { decryptField } from '@central/module-seguros-pii'
 import { identidadesTitulares, TITULAR_TIPO_VISIBLE_A_TERCERO, type DeclaradaDeTitular } from './declaradas-de-titular'
 import { datosPolizaCima, primaAnualDudosa, type DatosPolizaCima } from './datos-poliza-cima'
 import { prisma } from './db'
+import { DECLARADA_NO_ELIMINADA } from './declaradas-eliminadas'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
 import { camposDeInterviniente, capaInterviniente, figuraEnPropias, figurasDeFichasVistas, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
 import { empresasDeFichas } from './representacion'
@@ -1340,7 +1341,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       titulares.size === 0
         ? []
         : await prisma.portalPolizaDeclarada.findMany({
-            where: { identidadId: { in: [...titulares.keys()] }, titularTipo: TITULAR_TIPO_VISIBLE_A_TERCERO },
+            where: { identidadId: { in: [...titulares.keys()] }, titularTipo: TITULAR_TIPO_VISIBLE_A_TERCERO, ...DECLARADA_NO_ELIMINADA },
             select: { id: true, identidadId: true, compania: true, ramo: true, fechaVencimiento: true, documentoNombre: true },
             orderBy: { creadaEn: 'desc' },
             take: 200,

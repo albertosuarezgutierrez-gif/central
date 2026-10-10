@@ -21,6 +21,7 @@ import {
 
 import { carteraALaVista, carteraDeIdentidad, type CarteraPortal, type PolizaPortal } from './cartera-lectura'
 import { prisma } from './db'
+import { DECLARADA_NO_ELIMINADA } from './declaradas-eliminadas'
 import { avanzarRecordatoriosRecurrentesDeIdentidad } from './recordatorios'
 import { getIdentidad } from './session'
 
@@ -191,8 +192,10 @@ export async function sincronizarObligacionesDeIdentidad(
  * siempre.
  */
 async function opsDeDeclaradas(identidadId: string, hoy: Date = new Date()) {
+  // Sin las que la persona QUITÓ: de esas no se avisa (y, al no estar en `avisables`, la poda de
+  // abajo se lleva cualquier obligación suya que hubiera quedado).
   const declaradas = await prisma.portalPolizaDeclarada.findMany({
-    where: { identidadId },
+    where: { identidadId, ...DECLARADA_NO_ELIMINADA },
     select: {
       id: true,
       compania: true,
@@ -345,7 +348,7 @@ export type ReparosDeclaradas = { sinFecha: number; sinConfirmar: number }
 
 export async function reparosDeclaradasDeIdentidad(identidadId: string): Promise<ReparosDeclaradas> {
   const declaradas = await prisma.portalPolizaDeclarada.findMany({
-    where: { identidadId },
+    where: { identidadId, ...DECLARADA_NO_ELIMINADA },
     select: { fechaVencimiento: true, confirmadaPorUsuario: true },
   })
 

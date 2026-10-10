@@ -45,6 +45,7 @@ import {
 } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
+import { DECLARADA_VIVA } from './declaradas-eliminadas'
 import { vinculosPorIdentidad } from './vinculos-portal'
 
 export type LeadPortal = Lead & {
@@ -91,6 +92,7 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
   try {
     const db = prismaAsegura()
     const filas = await db.portalPolizaDeclarada.findMany({
+      where: { ...DECLARADA_VIVA },
       select: {
         id: true,
         identidadId: true,

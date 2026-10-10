@@ -11,6 +11,7 @@ import { escaparHtml, notaParteMandadoWhatsapp } from '@central/module-seguros-p
 
 import { carteraDeIdentidad } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
+import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { rateLimit } from '@/lib/rate-limit'
 import { requireIdentidad } from '@/lib/session'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
@@ -25,7 +26,7 @@ export type ResultadoMandado =
 /** La compañía de la póliza del parte, leída con la identidad de la sesión. `null` = no se sabe. */
 async function companiaDelParte(identidadId: string, polizaId: string | null, declaradaId: string | null): Promise<string | null> {
   if (declaradaId) {
-    const d = await prisma.portalPolizaDeclarada.findFirst({ where: { id: declaradaId, identidadId }, select: { compania: true } })
+    const d = await prisma.portalPolizaDeclarada.findFirst({ where: { id: declaradaId, identidadId, ...DECLARADA_NO_ELIMINADA }, select: { compania: true } })
     return d?.compania?.trim() || null
   }
   if (polizaId) {
