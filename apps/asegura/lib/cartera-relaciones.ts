@@ -44,6 +44,7 @@ import {
   type TituloRepresentacion,
 } from '@central/module-seguros-portal'
 import { prismaAsegura } from './asegura-db'
+import { contarFiguras } from './relaciones-figura'
 import { anotarCambio } from './auditoria'
 
 /**
@@ -147,6 +148,12 @@ export type RelacionCartera = RelacionFicha & {
   tipoOtorgante: TipoOtorgante | null
   /** Pólizas vivas (de CIMA) del relacionado. `null` = no se pudo contar. */
   polizasVivas: number | null
+  /**
+   * Pólizas vivas de OTRO tomador donde el relacionado FIGURA como interviniente
+   * (propietario, conductor…). No es cliente por eso: aparte de `polizasVivas`.
+   * `null` = no se pudo contar. Se cuenta por `cliente_id` (sin DNI: coste de lote).
+   */
+  polizasFigura: number | null
   /**
    * La autorización de LA FICHA hacia el relacionado. `null` = no hay ninguna
    * anotada — nunca «no se pudo leer»: si la consulta falla, `listarRelaciones`
@@ -319,6 +326,29 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
       _count: { _all: true },
     })
     const nVivas = new Map(vivas.map((v) => [v.clienteId, v._count._all]))
+    // Dónde FIGURAN (no toman): dos consultas por lote, sin N+1. Si fallan, `null` = «no se contó».
+    let nFigura: Map<string, number> | null = null
+    try {
+      const filasFigura = await db.polizaInterviniente.findMany({
+        where: { correduriaId, clienteId: { in: ids } },
+        select: { polizaId: true, clienteId: true },
+      })
+      const polizasFigura =
+        filasFigura.length === 0
+          ? []
+          : await db.poliza.findMany({
+              where: {
+                AND: [
+                  { id: { in: [...new Set(filasFigura.map((f) => f.polizaId))] }, correduriaId, mergedIntoPolizaId: null },
+                  WHERE_CARTERA_VIVA,
+                ],
+              },
+              select: { id: true, clienteId: true },
+            })
+      nFigura = contarFiguras({ filas: filasFigura, polizasVivas: polizasFigura })
+    } catch {
+      nFigura = null
+    }
     const porId = new Map(otros.map((o) => [o.id, o]))
     return rel
       .map((r): RelacionCartera | null => {
@@ -337,6 +367,7 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
           tipoCliente: String(o.tipo),
           tipoOtorgante,
           polizasVivas: nVivas.get(o.id) ?? 0,
+          polizasFigura: nFigura === null ? null : (nFigura.get(o.id) ?? 0),
           autorizacion: resumirAutorizacion(autorizaciones.get(clavePar(clienteId, r.relacionadoId)) ?? [], hoy),
           autorizacionInversa: resumirAutorizacion(autorizaciones.get(clavePar(r.relacionadoId, clienteId)) ?? [], hoy),
         }

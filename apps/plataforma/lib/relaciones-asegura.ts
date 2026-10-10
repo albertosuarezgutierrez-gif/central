@@ -154,6 +154,11 @@ export type RelacionCartera = RelacionFicha & {
   tipoOtorgante: TipoOtorgantePortal | null
   /** Pólizas vivas del relacionado. `null` = asegura no las contó (NO es 0). */
   polizasVivas: number | null
+  /**
+   * Pólizas vivas de otro tomador donde el relacionado FIGURA (no es cliente por eso).
+   * `null`/`undefined` = asegura no las contó (puerto viejo): NO es 0.
+   */
+  polizasFigura?: number | null
   /** La autorización de la ficha hacia el relacionado. `null` = no hay ninguna. */
   autorizacion: AutorizacionCartera | null
   /**
@@ -352,6 +357,7 @@ export function leerRelacion(v: unknown): RelacionCartera | null {
         ? (o.tipoOtorgante as TipoOtorgantePortal)
         : null,
     polizasVivas: enteroONull(o.polizasVivas),
+    polizasFigura: 'polizasFigura' in o ? enteroONull(o.polizasFigura) : undefined,
     autorizacion: leerAutorizacion(o.autorizacion),
     // `undefined` a propósito cuando la clave no viene: ese hueco es «no lo sé».
     autorizacionInversa: 'autorizacionInversa' in o ? leerAutorizacion(o.autorizacionInversa) : undefined,
@@ -561,4 +567,17 @@ export function borrarRelacionAsegura(body: Record<string, unknown>): Promise<Re
  */
 export function avisarAccesoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/cliente/relaciones/aviso', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/**
+ * El texto de la fila de relación. Solo tomadora → el de siempre («2 pólizas vivas»);
+ * si además figura en pólizas de otro tomador → «0 como tomadora · 1 donde figura».
+ * `polizasFigura` `null`/`undefined`/0 no cambia el texto (no se afirma lo que no se contó).
+ */
+export function textoPolizasRelacion(polizasVivas: number | null, polizasFigura: number | null | undefined): string {
+  if (polizasVivas === null) return 'pólizas sin contar'
+  if (polizasFigura === null || polizasFigura === undefined || polizasFigura <= 0) {
+    return `${polizasVivas} póliza${polizasVivas === 1 ? '' : 's'} viva${polizasVivas === 1 ? '' : 's'}`
+  }
+  return `${polizasVivas} como tomadora · ${polizasFigura} donde figura`
 }
