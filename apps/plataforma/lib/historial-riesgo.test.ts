@@ -5,11 +5,13 @@ import { antiguedadAnios, filasHistorial, type FilaHistorial } from './historial
 import { interpretarRiesgo, leerHistorialRiesgo, type HistorialRiesgo } from './riesgo-asegura.ts'
 
 const HOY = '2026-10-10'
-const vacio: HistorialRiesgo = { seguroAnterior: null, carnet: { fecha: null, conductor: null, legible: true } }
+const SIN_DECLARAR = { aniosAsegurado: null, aniosEnCompania: null }
+const vacio: HistorialRiesgo = { seguroAnterior: null, historialDeclarado: SIN_DECLARAR, carnet: { fecha: null, conductor: null, legible: true } }
 const sa = (x: Record<string, unknown>) => ({ codigoDgs: null, fechaEfecto: null, aniosSinSiniestros: null, siniestrosUltimos5: null, ...x }) as HistorialRiesgo['seguroAnterior']
 
-function filas(h: HistorialRiesgo | null, compania: string | null = null): FilaHistorial[] {
-  const r = filasHistorial(h, { compania, hoy: HOY })
+type Entrada = Omit<HistorialRiesgo, 'historialDeclarado'> & { historialDeclarado?: Partial<HistorialRiesgo['historialDeclarado']> }
+function filas(h: Entrada | null, compania: string | null = null): FilaHistorial[] {
+  const r = filasHistorial(h === null ? null : { ...h, historialDeclarado: { ...SIN_DECLARAR, ...h.historialDeclarado } }, { compania, hoy: HOY })
   assert.equal(r.estado, 'ok')
   return r.estado === 'ok' ? r.filas : []
 }
@@ -21,7 +23,7 @@ test('historial: sin historial del puerto = sin_leer, no un historial vacío', (
 
 test('historial: TODO null = pendiente en cada fila; jamás 0, «ninguno» ni años', () => {
   const fs = filas(vacio)
-  assert.equal(fs.length, 5)
+  assert.equal(fs.length, 6)
   for (const f of fs) {
     assert.equal(f.estado, 'pendiente', f.clave)
     assert.equal(f.texto, 'sin dato', f.clave)
@@ -44,11 +46,39 @@ test('historial: con valor = dato; los siniestros dan aviso, los años limpios n
   assert.equal(fila(filas({ seguroAnterior: sa({ aniosSinSiniestros: 1 }), carnet: null }), 'aniosSinSiniestros').texto, '1 año')
 })
 
-test('historial: años asegurado no tiene fuente — siempre pendiente, ni 0 ni el máximo de 10', () => {
-  const f = fila(filas({ seguroAnterior: sa({ aniosSinSiniestros: 9, siniestrosUltimos5: 0 }), carnet: null }), 'aniosAsegurado')
-  assert.equal(f.estado, 'pendiente')
-  assert.equal(f.texto, 'sin dato')
-  assert.doesNotMatch(f.nota ?? '', /\d/)
+test('historial: años asegurado / en compañía sin valor guardado = pendiente, ni 0 ni el máximo de 10', () => {
+  const fs = filas({ seguroAnterior: sa({ aniosSinSiniestros: 9, siniestrosUltimos5: 0 }), carnet: null })
+  for (const k of ['aniosAsegurado', 'aniosEnCompania'] as const) {
+    assert.equal(fila(fs, k).estado, 'pendiente', k)
+    assert.equal(fila(fs, k).texto, 'sin dato', k)
+    assert.doesNotMatch(fila(fs, k).nota ?? '', /\d/, k)
+  }
+})
+
+test('historial: años asegurado / en compañía — tres estados (null · 0 · dato), leídos de historialDeclarado', () => {
+  const fs = filas({ seguroAnterior: null, historialDeclarado: { aniosAsegurado: 0, aniosEnCompania: 6 }, carnet: null })
+  const a = fila(fs, 'aniosAsegurado')
+  assert.deepEqual([a.estado, a.texto], ['revisado', 'menos de 1 año'])
+  const c = fila(fs, 'aniosEnCompania')
+  assert.deepEqual([c.estado, c.texto], ['dato', '6 años'])
+  assert.equal(fila(filas({ seguroAnterior: null, historialDeclarado: { aniosAsegurado: 1 }, carnet: null }), 'aniosAsegurado').texto, '1 año')
+  assert.equal(fila(filas({ seguroAnterior: null, historialDeclarado: { aniosAsegurado: 1 }, carnet: null }), 'aniosEnCompania').estado, 'pendiente')
+})
+
+test('historial: SOLO años declarados ≠ seguro anterior — ni «parcial» ni dato en esa fila', () => {
+  const s = fila(filas({ seguroAnterior: null, historialDeclarado: { aniosAsegurado: 7, aniosEnCompania: 3 }, carnet: null }), 'seguroAnterior')
+  assert.deepEqual([s.estado, s.texto], ['pendiente', 'sin dato'])
+  // Aunque una fila vieja los traiga DENTRO de seguroAnterior, el lector no los toma por un seguro anterior.
+  const leido = leerHistorialRiesgo({ seguroAnterior: { aniosAsegurado: 7, aniosEnCompania: 3 } })
+  assert.equal(leido?.seguroAnterior, null)
+  assert.deepEqual(leido?.historialDeclarado, SIN_DECLARAR, 'los de dentro de seguroAnterior no cuentan como declarados')
+})
+
+test('leerHistorialRiesgo: historialDeclarado saneado — 0 viaja, basura es null (no 0), sin la clave = sin dato', () => {
+  const d = leerHistorialRiesgo({ seguroAnterior: null, historialDeclarado: { aniosAsegurado: 0, aniosEnCompania: -2 } })?.historialDeclarado
+  assert.deepEqual(d, { aniosAsegurado: 0, aniosEnCompania: null })
+  assert.deepEqual(leerHistorialRiesgo({ historialDeclarado: { aniosAsegurado: 'x' } })?.historialDeclarado, SIN_DECLARAR)
+  assert.deepEqual(leerHistorialRiesgo({ seguroAnterior: null })?.historialDeclarado, SIN_DECLARAR, 'asegura vieja sin la clave')
 })
 
 test('historial: el seguro anterior sale de la compañía de HOY o de lo leído; sin nada, pendiente', () => {
@@ -61,7 +91,7 @@ test('historial: el seguro anterior sale de la compañía de HOY o de lo leído;
   assert.equal(c.texto, 'compañía C0058')
 })
 
-test('historial: seguro anterior PARCIAL (fecha/años sin compañía ni póliza) no es «ninguna póliza leída»', () => {
+test('historial: seguro anterior PARCIAL (fecha/años sin siniestros sin compañía ni póliza) no es «ninguna póliza leída»', () => {
   const p = fila(filas({ seguroAnterior: sa({ fechaEfecto: '2025-01-01' }), carnet: null }), 'seguroAnterior')
   assert.deepEqual([p.estado, p.texto], ['dato', 'seguro anterior parcial'])
   assert.doesNotMatch(p.nota ?? '', /ninguna póliza/)

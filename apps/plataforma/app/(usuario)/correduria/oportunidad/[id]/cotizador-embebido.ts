@@ -1,16 +1,47 @@
-// Reglas PURAS del cotizador de moto EMBEBIDO en la oportunidad (07/10/2026, Fase 1 «la oportunidad es la única
-// página»). El cotizador lee el vehículo y las figuras del RIESGO; si eso cambia mientras está abierto, lo que
-// tiene en memoria es el riesgo ANTERIOR y pagar 0,50€ con él sería cotizar otra moto u otras personas.
+// Reglas PURAS del cotizador EMBEBIDO en la oportunidad (07/10/2026 moto, 10/10/2026 auto; Fase 1 «la oportunidad
+// es la única página»). El cotizador lee el vehículo y las figuras del RIESGO; si eso cambia mientras está abierto,
+// lo que tiene en memoria es el riesgo ANTERIOR y pagar 0,50€ con él sería cotizar otro vehículo u otras personas.
 // Lo cubre `cotizador-embebido.test.ts`.
+//
+// QUÉ ramos se cotizan dentro de la oportunidad lo decide `RAMOS_COTIZADOR_EMBEBIDO` (aquí, puro) y QUÉ componente
+// los monta, `COTIZADOR_EMBEBIDO` (`cotizadores-embebidos.tsx`, que el tipo obliga a tener completo). Un ramo que no
+// está en la lista sigue como siempre: enlace a su pantalla `…-nuevo?oportunidad=` (`rutaVariante`).
 
 import type { Riesgo } from '@/lib/riesgo-asegura'
+import { ramoVariante, rutaVariante, type RamoVarianteNuevo } from './variante.ts'
+
+/** Los ramos con cotizador embebido en el bloque «Pedir precio» del riesgo. Añadir uno = alta en `COTIZADOR_EMBEBIDO`. */
+export const RAMOS_COTIZADOR_EMBEBIDO = ['auto', 'moto'] as const satisfies readonly RamoVarianteNuevo[]
+export type RamoCotizadorEmbebido = (typeof RAMOS_COTIZADOR_EMBEBIDO)[number]
+
+export function ramoCotizadorEmbebido(ramo: string | null | undefined): RamoCotizadorEmbebido | null {
+  return typeof ramo === 'string' && (RAMOS_COTIZADOR_EMBEBIDO as readonly string[]).includes(ramo) ? (ramo as RamoCotizadorEmbebido) : null
+}
+
+/** El ancla del bloque «Pedir precio» de la pantalla del riesgo. Llegar con ella ABRE el cotizador embebido (gratis). */
+export const ANCLA_PEDIR_PRECIO = 'pedir-precio'
+
+/**
+ * A dónde se va a pedir precio de una oportunidad: con cotizador embebido, a la PROPIA oportunidad (`#pedir-precio`);
+ * si no, a la pantalla de precio del ramo (`…-nuevo?oportunidad=`). Ninguna de las dos cotiza: allí se confirma (0,50€).
+ */
+export function rutaPedirPrecio(ramo: RamoVarianteNuevo, tomadorId: string, oportunidadId: string): string {
+  return ramoCotizadorEmbebido(ramo)
+    ? `/correduria/oportunidad/${encodeURIComponent(oportunidadId)}#${ANCLA_PEDIR_PRECIO}`
+    : rutaVariante(ramo, tomadorId, oportunidadId)
+}
+
+/** ¿Hay que abrir el cotizador embebido al cargar la pantalla? Solo si se llega con el ancla y el ramo lo tiene. */
+export function abrirAlCargar(hash: string, ramo: string): boolean {
+  return hash === `#${ANCLA_PEDIR_PRECIO}` && ramoCotizadorEmbebido(ramoVariante(ramo)) !== null
+}
 
 /**
  * Huella de lo que el cotizador usa del riesgo: el vehículo (sin el sello de confirmación, que no cambia ningún
  * dato), los papeles y quién ocupa cada uno (con lo que le falta en su ficha). Dos lecturas con la misma huella
  * cotizan lo mismo. Las variantes NO entran: pedir precio añade una y eso no hace viejas las condiciones.
  */
-export function firmaRiesgoMoto(r: Riesgo): string {
+export function firmaRiesgoVehiculo(r: Riesgo): string {
   const d = r.datosVehiculo
   const vehiculo = d === null ? null : Object.fromEntries(Object.entries(d).filter(([k]) => k !== 'confirmadoAt').sort(([a], [b]) => a.localeCompare(b)))
   const figuras = [...r.figuras]
@@ -19,6 +50,9 @@ export function firmaRiesgoMoto(r: Riesgo): string {
   // El cliente de la oportunidad entra: sin figura «tomador», el tomador ES él (`tomadorDelRiesgo`).
   return JSON.stringify({ oportunidad: r.oportunidad.id, cliente: r.oportunidad.clienteId, ramo: r.oportunidad.ramo, roles: [...r.roles].sort(), vehiculo, figuras })
 }
+
+/** @deprecated nombre de cuando solo había moto: es la misma huella para cualquier vehículo. */
+export const firmaRiesgoMoto = firmaRiesgoVehiculo
 
 /**
  * Por qué AHORA no se puede pedir precio desde el cotizador embebido (`null` = nada lo impide). Orden: lo que el

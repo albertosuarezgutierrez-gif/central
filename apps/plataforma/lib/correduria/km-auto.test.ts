@@ -1,9 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
-import { kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from './km-auto.ts'
+import { KM_AUTO_POR_DEFECTO, kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from './km-auto.ts'
 
-const D = 10000
+const D = KM_AUTO_POR_DEFECTO
+
+test('los km de partida de la pantalla de coche son 10.000 (Alberto, 25/09/2026) y NO la media del supuesto', () => {
+  assert.equal(KM_AUTO_POR_DEFECTO, 10000)
+  assert.notEqual(KM_AUTO_POR_DEFECTO, KM_ANUALES_SUPUESTOS)
+})
 const base = { porDefecto: D, delRiesgo: false, tocado: false }
 
 test('los 10.000 de partida, sin tocar, viajan como SUPUESTO y no se anotan en el riesgo', () => {

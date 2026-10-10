@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { MOTIVO_DESCARTE, aplicarAccion, seguroAnteriorDe, validarAltaOportunidad, validarEdicionOportunidad } from './oportunidad-seguimiento.ts'
+import { MOTIVO_DESCARTE, aplicarAccion, historialDeclaradoDe, seguroAnteriorDe, validarAltaOportunidad, validarEdicionOportunidad } from './oportunidad-seguimiento.ts'
 
 const hoy = new Date(Date.UTC(2026, 8, 24))
 
@@ -67,4 +67,38 @@ test('pendiente_cliente: solo cuando el alta la abre el servidor (lead web)', ()
   const r = validarAltaOportunidad(d, hoy, { desdeServidor: true })
   assert.ok(r.ok && r.alta.estado === 'pendiente_cliente')
   assert.equal(validarAltaOportunidad({ ...d, estado: 'ganada' }, hoy, { desdeServidor: true }).ok, false, 'ni el servidor la abre ganada')
+})
+
+test('edición del historial: null = sin dato, 0 = dato, basura = error (nunca 0), solo las claves enviadas', () => {
+  const ok = (hd: unknown) => { const r = validarEdicionOportunidad({ historialDeclarado: hd }); return r.ok ? r.cambios.historial : r }
+  assert.deepEqual(ok({ aniosAsegurado: 7, aniosEnCompania: 0 }), { aniosAsegurado: 7, aniosEnCompania: 0 })
+  assert.deepEqual(ok({ aniosAsegurado: null }), { aniosAsegurado: null }, 'null quita el dato')
+  assert.deepEqual(ok({ aniosEnCompania: '' }), { aniosEnCompania: null }, 'vacío = sin dato')
+  assert.deepEqual(ok({ aniosEnCompania: '4' }), { aniosEnCompania: 4 })
+  // Merge sin pisar: las claves no enviadas NO aparecen (ni como null) y las que no son del historial se ignoran.
+  const solo = ok({ aniosAsegurado: 3, aniosSinSiniestros: 9, codigoDgs: 'C0058' }) as Record<string, unknown>
+  assert.deepEqual(solo, { aniosAsegurado: 3 })
+  assert.equal('aniosEnCompania' in solo, false)
+  for (const malo of [-1, 1.5, 'abc', 101, true, {}]) {
+    const r = validarEdicionOportunidad({ historialDeclarado: { aniosAsegurado: malo } })
+    assert.equal(r.ok, false, String(malo))
+  }
+  assert.equal(validarEdicionOportunidad({ historialDeclarado: 'x' }).ok, false)
+  assert.equal(validarEdicionOportunidad({ historialDeclarado: [] }).ok, false)
+  assert.equal(validarEdicionOportunidad({ historialDeclarado: {} }).ok, false, 'sin nada que cambiar')
+  const mixto = validarEdicionOportunidad({ prima: 100, historialDeclarado: { aniosAsegurado: 2 } })
+  assert.equal(mixto.ok && mixto.cambios.prima === 100 && mixto.cambios.historial?.aniosAsegurado === 2, true)
+  // La clave vieja ya no es la vía: mandar los años dentro de `seguroAnterior` no escribe nada.
+  assert.equal(validarEdicionOportunidad({ seguroAnterior: { aniosAsegurado: 2 } } as never).ok, false, 'sin nada que cambiar')
+})
+
+test('historial declarado FUERA del seguro anterior: solo años ≠ un seguro anterior leído', () => {
+  assert.equal(seguroAnteriorDe({ aniosAsegurado: 5, aniosEnCompania: 2 }), null, 'solo años = ningún seguro anterior')
+  const conAnios = seguroAnteriorDe({ codigoDgs: 'C0058', aniosAsegurado: 5 }) as Record<string, unknown>
+  assert.equal('aniosAsegurado' in conAnios, false, 'el saneado del seguro anterior no arrastra los años')
+  // Tres estados: null pendiente · 0 revisado · dato. Basura = null, nunca 0.
+  assert.deepEqual(historialDeclaradoDe(undefined), { aniosAsegurado: null, aniosEnCompania: null })
+  assert.deepEqual(historialDeclaradoDe({ aniosAsegurado: 0, aniosEnCompania: 6 }), { aniosAsegurado: 0, aniosEnCompania: 6 })
+  assert.deepEqual(historialDeclaradoDe({ aniosAsegurado: -2, aniosEnCompania: 'x' }), { aniosAsegurado: null, aniosEnCompania: null })
+  assert.deepEqual(historialDeclaradoDe([3]), { aniosAsegurado: null, aniosEnCompania: null })
 })

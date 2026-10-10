@@ -10,7 +10,7 @@ import { ETIQUETA_ROL } from '@central/module-seguros'
 import type { HistorialRiesgo } from './riesgo-asegura.ts'
 
 export type EstadoFila = 'pendiente' | 'revisado' | 'dato' | 'no_aplica'
-export type ClaveFila = 'seguroAnterior' | 'aniosAsegurado' | 'aniosSinSiniestros' | 'siniestrosUltimos5' | 'carnet'
+export type ClaveFila = 'seguroAnterior' | 'aniosAsegurado' | 'aniosEnCompania' | 'aniosSinSiniestros' | 'siniestrosUltimos5' | 'carnet'
 export type FilaHistorial = {
   clave: ClaveFila
   etiqueta: string
@@ -63,6 +63,12 @@ function filaSeguroAnterior(h: HistorialRiesgo, compania: string | null): FilaHi
   return { clave: 'seguroAnterior', etiqueta: 'Seguro anterior', estado: 'dato', texto: poliza ? `${quien} · póliza ${poliza}` : quien, nota: null, tono: 'neutro' }
 }
 
+/** Años asegurado / en compañía: `null` = sin dato (nunca 0 ni el máximo de 10); `0` = revisado; con valor = dato. */
+function filaAnios(clave: 'aniosAsegurado' | 'aniosEnCompania', etiqueta: string, v: number | null | undefined): FilaHistorial {
+  if (v === null || v === undefined) return { clave, etiqueta, estado: 'pendiente', texto: 'sin dato', nota: 'se declara al pedir precio', tono: 'neutro' }
+  return { clave, etiqueta, estado: v === 0 ? 'revisado' : 'dato', texto: v === 0 ? 'menos de 1 año' : anios(v), nota: null, tono: 'neutro' }
+}
+
 function filaSiniestros(clave: 'aniosSinSiniestros' | 'siniestrosUltimos5', etiqueta: string, v: number | null | undefined): FilaHistorial {
   if (v === null || v === undefined) return { clave, etiqueta, estado: 'pendiente', texto: 'sin dato', nota: 'el papel no lo dice', tono: 'neutro' }
   if (clave === 'aniosSinSiniestros') {
@@ -94,14 +100,18 @@ function filaCarnet(c: HistorialRiesgo['carnet'], hoy: string): FilaHistorial {
 /**
  * Las filas del bloque. `h === null` (asegura aún no manda el historial) = `sin_leer`: se dice, no se pinta un historial
  * vacío. `compania` es la compañía de HOY solo si asegura dice que lo es (`aseguradoraActual`); la de nuestra oferta no cuenta.
- * «Años asegurado» no tiene fuente guardada: siempre `pendiente` (se declara al pedir precio), nunca un 0 ni los 10 del máximo.
+ * «Años asegurado» / «en la compañía» salen de `historialDeclarado` (lo tecleado en este bloque: POST `editar` de asegura,
+ * guardado en `poliza_competencia.historialDeclarado`, FUERA de `seguroAnterior`); sin valor, `pendiente`, nunca un 0 ni los
+ * 10 del máximo. Por eso unos años declarados NO cuentan para la fila «Seguro anterior» (ni como «parcial»).
  */
 export function filasHistorial(h: HistorialRiesgo | null, opciones: { compania: string | null; hoy: string }): { estado: 'sin_leer' } | { estado: 'ok'; filas: FilaHistorial[] } {
   if (h === null) return { estado: 'sin_leer' }
   const sa = h.seguroAnterior
+  const hd = h.historialDeclarado
   const filas: FilaHistorial[] = [
     filaSeguroAnterior(h, opciones.compania),
-    { clave: 'aniosAsegurado', etiqueta: 'Años asegurado', estado: 'pendiente', texto: 'sin dato', nota: 'se declara al pedir precio', tono: 'neutro' },
+    filaAnios('aniosAsegurado', 'Años asegurado', hd?.aniosAsegurado),
+    filaAnios('aniosEnCompania', 'Años en la compañía', hd?.aniosEnCompania),
     filaSiniestros('aniosSinSiniestros', 'Años sin siniestros', sa?.aniosSinSiniestros),
     filaSiniestros('siniestrosUltimos5', 'Siniestros en los últimos 5 años', sa?.siniestrosUltimos5),
     filaCarnet(h.carnet, opciones.hoy),

@@ -341,6 +341,16 @@ export type SeguroAnterior = {
   fechaVencimiento?: string | null
 }
 
+/**
+ * Historial DECLARADO a mano en la pantalla «Historial» (10/10/2026). Vive en `poliza_competencia.historialDeclarado`,
+ * FUERA de `seguroAnterior` a propósito: dentro, un `{aniosAsegurado}` sin compañía se tomaba por un seguro anterior
+ * leído (bloqueaba la precarga desde la póliza, «tiene seguro actual» sin compañía, «parcial» en la pantalla).
+ * `null` = pendiente (no se sabe), `0` = revisado (menos de un año), número = dato.
+ */
+export type HistorialDeclaradoRiesgo = { aniosAsegurado: number | null; aniosEnCompania: number | null }
+
+export const CLAVES_HISTORIAL_DECLARADO = ['aniosAsegurado', 'aniosEnCompania'] as const
+
 function entero(v: unknown, max: number): number | null {
   const n = typeof v === 'string' && /^\d{1,3}$/.test(v.trim()) ? Number(v.trim()) : v
   return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= max ? n : null
@@ -376,22 +386,54 @@ export function seguroAnteriorDe(v: unknown): SeguroAnterior | null {
   return Object.values(todo).every(x => x === null) ? null : todo
 }
 
+/** Sanea `historialDeclarado`: siempre las dos claves; un 0 SÍ viaja (revisado); lo que no es entero 0-100, `null` (nunca 0). */
+export function historialDeclaradoDe(v: unknown): HistorialDeclaradoRiesgo {
+  const o = v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {}
+  return { aniosAsegurado: entero(o.aniosAsegurado, 100), aniosEnCompania: entero(o.aniosEnCompania, 100) }
+}
+
 export type EdicionValida = {
   ramo?: RamoOportunidad
   fechaFinVigencia?: string | null
   aseguradora?: string | null
   prima?: number | null
+  /**
+   * Historial declarado (10/10/2026), en `poliza_competencia.historialDeclarado` (NUNCA en `seguroAnterior`): SOLO las
+   * claves presentes se tocan (`undefined` = no tocar, `null` = volver a «sin dato», número ≥0 = dato, 0 incluido).
+   */
+  historial?: { aniosAsegurado?: number | null; aniosEnCompania?: number | null }
+}
+
+/** Entero ≥0 (≤100) o `null` si viene vacío; `'invalido'` si es otra cosa (nunca se convierte en 0). */
+function aniosEditados(v: unknown): number | null | 'invalido' {
+  if (vacio(v)) return null
+  const n = entero(v, 100)
+  return n === null ? 'invalido' : n
 }
 
 /**
  * Lo que se corrige a mano de una oportunidad ABIERTA: ramo, vencimiento,
- * compañía y prima actuales. `undefined` = no tocar; `null`/'' = borrar. El
+ * compañía y prima actuales (y el historial declarado: años asegurado y años
+ * en la compañía). `undefined` = no tocar; `null`/'' = borrar. El
  * estado NO se edita aquí: para eso están las acciones, que exigen su motivo.
  */
 export function validarEdicionOportunidad(
-  d: { ramo?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown },
+  d: { ramo?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; historialDeclarado?: unknown },
 ): { ok: true; cambios: EdicionValida } | { ok: false; motivo: string } {
   const out: EdicionValida = {}
+  if (d.historialDeclarado !== undefined) {
+    const hd = d.historialDeclarado
+    if (hd === null || typeof hd !== 'object' || Array.isArray(hd)) return { ok: false, motivo: 'El historial declarado no es un objeto.' }
+    const o = hd as Record<string, unknown>
+    const historial: NonNullable<EdicionValida['historial']> = {}
+    for (const k of CLAVES_HISTORIAL_DECLARADO) {
+      if (o[k] === undefined) continue
+      const v = aniosEditados(o[k])
+      if (v === 'invalido') return { ok: false, motivo: `${k === 'aniosAsegurado' ? 'Los años asegurado' : 'Los años en la compañía'} deben ser un entero de 0 a 100 (vacío = sin dato).` }
+      historial[k] = v
+    }
+    if (Object.keys(historial).length > 0) out.historial = historial
+  }
   if (d.ramo !== undefined) {
     const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
     if (!ramo) return { ok: false, motivo: 'Ramo no válido.' }

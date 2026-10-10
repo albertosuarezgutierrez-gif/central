@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
  *                                   y `sinOportunidad`: lo tarificado que no cuelga de ninguna (`null` = no se pudo leer)
  *   POST { accion:'crear', clienteId, ramo, estado?, fechaFinVigencia?, aseguradora?, prima?, tipoTarea?, fechaTarea, nota?, actor }
  *        → abre una a mano con su primer paso (409 `duplicada` + id si ya hay una abierta del ramo)
- *   POST { accion:'editar', id, ramo?, fechaFinVigencia?, aseguradora?, prima?, reprogramar?, actor } → corrige una abierta
+ *   POST { accion:'editar', id, ramo?, fechaFinVigencia?, aseguradora?, prima?, historialDeclarado?:{aniosAsegurado?,aniosEnCompania?}, reprogramar?, actor } → corrige una abierta
  *        (`reprogramar: true` con vencimiento nuevo → su próxima tarea va a 45 días antes, o se crea)
  *   POST { id, accion, ..., actor } → cambia su estado:
  *        interesado · propuesta_enviada · ganar {polizaGanadaId?}
@@ -72,7 +72,7 @@ export const POST = auditado(async (req: Request) => {
     if (b?.accion === 'editar') {
       if (typeof b.id !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta id' }, { status: 422 })
       const r = await editarOportunidad(correduria.id, b.id, {
-        ramo: b.ramo, fechaFinVigencia: b.fechaFinVigencia, aseguradora: b.aseguradora, prima: b.prima,
+        ramo: b.ramo, fechaFinVigencia: b.fechaFinVigencia, aseguradora: b.aseguradora, prima: b.prima, historialDeclarado: b.historialDeclarado,
       }, actorDe(b), { reprogramar: b.reprogramar === true })
       if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
       return NextResponse.json({ estado: 'ok', oportunidad: r.oportunidad, tarea: r.tarea })

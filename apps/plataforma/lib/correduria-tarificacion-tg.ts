@@ -13,9 +13,14 @@ import { normalizarDni, normalizarFechaNacimiento, normalizarTelefono, enmascara
 import { formatoMatricula, normalizarMatricula } from '@central/module-seguros/matricula'
 import type { Opcion, Reparo, RespuestaRetarificar, Supuesto } from './retarificar-asegura.ts'
 import { eur } from './dinero.ts'
+import { KM_AUTO_POR_DEFECTO, kmParaCotizar } from './correduria/km-auto.ts'
 import { garajePorDefecto, SOLO_PARA_EL_PRECIO } from './supuestos-presupuesto.ts'
 
 export type RamoTarif = 'auto' | 'moto'
+
+/** Los km de partida de la pantalla de coche (`AutoNuevo`): si Alberto no dice km, van como SUPUESTO, nunca como dato.
+ *  Una sola constante en `correduria/km-auto.ts`; se re-exporta para quien ya la importaba de aquí. */
+export { KM_AUTO_POR_DEFECTO }
 
 /** Pedir precio de verdad son 0,50€ por llamada: tope propio del asistente, contado antes de reclamar el botón. */
 export const MAX_TARIFICACIONES_DIA = 10
@@ -369,8 +374,13 @@ export function construirCuerpo(r: Resuelto): CuerpoTarif {
   }
   const correcciones: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(r.persona)) if (v !== undefined && v !== '') correcciones[k] = v
-  // Los km van como corrección (la pantalla de coche hace igual): tapan el supuesto de la media.
+  // Km: una cifra dicha es DATO (corrección). Sin cifra, en coche van los 10.000 de la pantalla como SUPUESTO
+  // (`resueltos.kmAnualesSupuestos`, vía `kmParaCotizar`); nunca como dato del cliente. En moto, nada (media de asegura).
   if (r.kmAnuales !== null) correcciones.kmAnuales = r.kmAnuales
+  else if (r.ramo === 'auto') {
+    const km = kmParaCotizar({ texto: String(KM_AUTO_POR_DEFECTO), porDefecto: KM_AUTO_POR_DEFECTO, delRiesgo: false, tocado: false })
+    if (km.supuesto !== null) resueltos.kmAnualesSupuestos = km.supuesto
+  }
   // El efecto dicho tapa el de por defecto (y su supuesto): asegura acepta `fechaEfecto` como corrección.
   if (r.fechaEfecto) correcciones.fechaEfecto = r.fechaEfecto
   if (r.historial) {

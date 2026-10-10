@@ -41,6 +41,7 @@ import {
   precargaDePoliza,
   ramoTarificable,
   rolesDelRamo,
+  historialDeclaradoDe,
   seguroAnteriorDe,
   type CampoVehiculo,
   type ClaveDatosRiesgo,
@@ -49,6 +50,7 @@ import {
   type FigurasVariante,
   type RamoCapital,
   type RolFigura,
+  type HistorialDeclaradoRiesgo,
   type SeguroAnterior,
 } from '@central/module-seguros'
 
@@ -134,9 +136,12 @@ export type Riesgo = {
    * (`poliza_competencia.seguroAnterior`, ya saneado); `null` = no se ha leído ninguno. `carnet`: solo en auto/moto
    * (`null` = el ramo no lo usa); `fecha` aaaa-mm-dd o tal cual la guarda la ficha, `null` = la ficha no la tiene;
    * `legible: false` = no se pudo leer la ficha del conductor (no es «sin carné»). Sin DNI ni IBAN.
+   * `historialDeclarado`: años asegurado / en la compañía tecleados en la pantalla (`poliza_competencia.historialDeclarado`,
+   * FUERA de `seguroAnterior`: unos años sin compañía no son un seguro anterior leído); `null` = sin dato, `0` = revisado.
    */
   historial: {
     seguroAnterior: SeguroAnterior | null
+    historialDeclarado: HistorialDeclaradoRiesgo
     carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
   }
 }
@@ -179,13 +184,15 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       id: string; cliente_id: string; nombre: string | null; apellidos: string | null; tipo: string; estado: string
       poliza_id: string | null; info_riesgo: Record<string, unknown> | null; fecha_fin_vigencia: Date | null
       aseguradora: string | null; aseguradora_actual: boolean; prima: string | null; seguro_anterior: unknown
+      historial_declarado: unknown
     }>
   >`
     select o.id::text as id, o.cliente_id::text as cliente_id, c.nombre, c.apellidos, o.tipo::text as tipo,
            o.estado::text as estado, o.poliza_id::text as poliza_id, o.info_riesgo, o.fecha_fin_vigencia,
            coalesce(o.poliza_competencia->>'aseguradora', o.aseguradora_ganadora) as aseguradora,
            (o.poliza_competencia->>'aseguradora') is not null as aseguradora_actual,
-           o.prima_bruta::text as prima, o.poliza_competencia->'seguroAnterior' as seguro_anterior
+           o.prima_bruta::text as prima, o.poliza_competencia->'seguroAnterior' as seguro_anterior,
+           o.poliza_competencia->'historialDeclarado' as historial_declarado
     from seguros.oportunidades o
     join seguros.clientes c on c.id = o.cliente_id and c.correduria_id = o.correduria_id
     where o.id = ${oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`
@@ -312,6 +319,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
   const carnetElegido = rolCarnet ? carnetPorRol.get(rolCarnet)! : null
   const historial: Riesgo['historial'] = {
     seguroAnterior: seguroAnteriorDe(op.seguro_anterior),
+    historialDeclarado: historialDeclaradoDe(op.historial_declarado),
     carnet: conVehiculo ? { fecha: carnetElegido?.fecha ?? null, conductor: rolCarnet, legible: carnetElegido?.legible ?? false } : null,
   }
 
