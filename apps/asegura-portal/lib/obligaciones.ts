@@ -310,12 +310,13 @@ async function opsDeDeclaradas(identidadId: string, hoy: Date = new Date()) {
   // confirmarla: en los tres casos su vencimiento deja de ser algo que podamos
   // afirmar, y una fila que sobrevive es un aviso que se manda sobre un dato
   // que ya no existe. Solo se podan las DECLARADAS; las de la cartera tienen
-  // su propia poda más arriba. Esto borra TODOS los tipos de la póliza que ya
-  // no es avisable —«poliza» y «recibo» si lo tuviera— y es correcto: ninguno
-  // de los dos se puede seguir afirmando sin un vencimiento fiable.
+  // su propia poda más arriba. Esto borra SOLO las derivadas de la póliza («poliza» y
+  // «recibo»): ninguna se puede seguir afirmando sin un vencimiento fiable. Los
+  // recordatorios propios del cliente colgados de ella (ITV, mantenimiento…)
+  // NO se tocan: su fecha la puso él, no sale de la póliza.
   ops.push(
     prisma.portalObligacion.deleteMany({
-      where: { identidadId, polizaDeclaradaId: { not: null, notIn: avisables } },
+      where: { identidadId, tipo: { in: ['poliza', 'recibo'] }, polizaDeclaradaId: { not: null, notIn: avisables } },
     }),
   )
 

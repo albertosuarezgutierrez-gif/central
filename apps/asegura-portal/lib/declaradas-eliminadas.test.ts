@@ -18,6 +18,7 @@ import {
   DECLARADA_NO_ELIMINADA,
   fotoHistorial,
   guardarObligaciones,
+  cuentaElegidasVivas,
   obligacionesParaRestaurar,
   SELECT_HISTORIAL,
   valorHistorial,
@@ -153,4 +154,20 @@ test('un recordatorio cuyo bien ya no es de la identidad vuelve SUELTO, no se pi
   assert.equal(sin[0].bienId, null)
   const con = obligacionesParaRestaurar(json, { identidadId: IDENTIDAD, polizaDeclaradaId: POLIZA, bienesValidos: new Set([BIEN]) })
   assert.equal(con[0].bienId, BIEN)
+})
+
+test('restaurar CONSERVA creadaAt de la obligación (ida y vuelta)', () => {
+  const json = JSON.parse(JSON.stringify(guardarObligaciones([fila()])))
+  const [o] = obligacionesParaRestaurar(json, { identidadId: IDENTIDAD, polizaDeclaradaId: POLIZA, bienesValidos: new Set() })
+  assert.equal(o.creadaAt?.toISOString(), '2026-09-01T10:00:00.000Z')
+})
+
+test('cuentaElegidasVivas: una declarada eliminada NO cuenta (la lista dice lo mismo que el QR)', () => {
+  const filas = [
+    { polizaId: 'c1', polizaDeclaradaId: null },
+    { polizaId: null, polizaDeclaradaId: 'd1' },
+    { polizaId: null, polizaDeclaradaId: 'd2' },
+  ]
+  assert.equal(cuentaElegidasVivas(filas, new Set(['d1'])), 2)
+  assert.equal(cuentaElegidasVivas(filas, new Set(['d1', 'd2'])), 3)
 })

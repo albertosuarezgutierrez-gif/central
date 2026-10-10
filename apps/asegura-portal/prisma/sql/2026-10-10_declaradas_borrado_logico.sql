@@ -3,7 +3,8 @@
 -- ⚠️ SIN APLICAR. 🚨 Se aplica ANTES del merge/despliegue de asegura-portal que la usa: el
 -- `schema.prisma` del portal ya declara `eliminada_en` y el modelo del historial, y sin ellos
 -- CUALQUIER consulta a `portal_poliza_declarada` cae con 42703 (columna inexistente) — la bóveda
--- entera, la hoja QR, los partes y el calendario. Orden seguro: aplicar este SQL → merge.
+-- entera, la hoja QR, los partes y el calendario. Afecta a asegura-portal **y a apps/asegura**
+-- (sus lectores y `export-rgpd.ts` también caen con 42703 sin la columna). Orden seguro: aplicar este SQL → merge.
 -- Es ADITIVA: el código viejo sigue funcionando sobre ella (no lee la columna ni la tabla nueva).
 --
 -- ── Por qué ──────────────────────────────────────────────────────────────────

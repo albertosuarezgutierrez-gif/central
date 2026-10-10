@@ -250,6 +250,7 @@ export function obligacionesParaRestaurar(
   avisadaPushAt: Date | null
   repiteCadaMeses: number | null
   bienId: string | null
+  creadaAt?: Date
 }[] {
   if (!Array.isArray(json)) return []
   const out = []
@@ -266,6 +267,7 @@ export function obligacionesParaRestaurar(
     // Un bien que ya no existe (o no es de esta identidad) haría fallar la FK de la fila ENTERA:
     // se suelta el bien y se conserva el recordatorio.
     const bienId = typeof r.bienId === 'string' && destino.bienesValidos.has(r.bienId) ? r.bienId : null
+    const creadaAt = fechaIsoONull(r.creadaAt)
     out.push({
       id: r.id,
       identidadId: destino.identidadId,
@@ -280,6 +282,8 @@ export function obligacionesParaRestaurar(
       avisadaPushAt: fechaIsoONull(r.avisadaPushAt),
       repiteCadaMeses: repite,
       bienId,
+      // Conserva la antigüedad original; si el JSON no la trae, la BD pone `now()`.
+      ...(creadaAt ? { creadaAt } : {}),
     })
   }
   return out
@@ -306,3 +310,11 @@ export const TEXTO_CONFIRMAR_QUITAR =
 export const TEXTO_ELIMINADAS =
   'Las que has quitado de tu bóveda. No te avisamos de ellas mientras estén aquí; si la recuperas, ' +
   'vuelve tal como estaba, con sus recordatorios.'
+
+/** Cuenta la selección de una hoja descontando las aportadas que ya no están vivas. */
+export function cuentaElegidasVivas(
+  filas: readonly { polizaId: string | null; polizaDeclaradaId: string | null }[],
+  declaradasVivas: ReadonlySet<string>,
+): number {
+  return filas.filter((f) => f.polizaDeclaradaId === null || declaradasVivas.has(f.polizaDeclaradaId)).length
+}
