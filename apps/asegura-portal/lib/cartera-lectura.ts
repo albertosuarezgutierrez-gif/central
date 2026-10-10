@@ -94,7 +94,7 @@ import { identidadesTitulares, TITULAR_TIPO_VISIBLE_A_TERCERO, type DeclaradaDeT
 import { datosPolizaCima, primaAnualDudosa, type DatosPolizaCima } from './datos-poliza-cima'
 import { prisma } from './db'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
-import { camposDeInterviniente, capaInterviniente, figuraEnPropias, figurasDeFichasVistas, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
+import { camposDeInterviniente, capaInterviniente, figuraEnPropias, figuraYaServidaEnPropias, figurasDeFichasVistas, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
 import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
@@ -373,6 +373,13 @@ export type TitularPortal = {
     rolesPorPoliza: Record<string, string[]>
   }
   polizas: PolizaPortal[]
+  /**
+   * Presente SOLO en `autorizadas` de ficha entera: ids de pólizas PROPIAS de quien mira
+   * donde esta ficha figura como interviniente y que por eso no se repiten en su bloque
+   * (ya se sirven en `propias`). Solo para el aviso «Figura en N póliza(s) que ya está(n)
+   * en las tuyas»; sin roles ni datos nuevos. `undefined` = ninguna.
+   */
+  figuraEnTusPolizas?: string[]
   /**
    * Presente SOLO en `autorizadas` abiertas ENTERAS por consentimiento: las que
    * el titular añadió en su portal (`identidadesTitulares`). `undefined` = esta
@@ -1383,6 +1390,18 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       const r = rolesSuyos.get(p.id)
       if (r !== undefined) p.figura = r
     }
+  }
+
+  // Aviso «figura en N que ya están en las tuyas»: solo cruza lo ya leído (filas de las fichas
+  // vistas enteras + las pólizas que `propias` ya sirve); no lee nada nuevo.
+  const yaEnPropias = figuraYaServidaEnPropias({
+    filas: filasFiguraAjena,
+    fichasVistas: fichasVistasEnteras,
+    polizasPropiasIds: propias.flatMap((t) => t.polizas.map((p) => p.id)),
+  })
+  for (const t of autorizadas) {
+    const ids = yaEnPropias.get(t.clienteId)
+    if (ids !== undefined && ids.length > 0) t.figuraEnTusPolizas = ids
   }
 
   // Las pólizas donde FIGURA, agrupadas por tomador. La regla (qué abre, con qué
