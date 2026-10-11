@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(11/10/2026)** — Caso autorizada sin acceso al portal (cliente 83fae58b, lead; propietaria en póliza d6d05e93, tomador 722315d3). No era fallo de código: su ficha no tiene correo → sin portal_vinculo/identidad → no entra al portal. Su correo propio debe ser distinto del del tomador (si no sale «ambiguo» o vería sus 14 pólizas). La autorización existente va de ella al tomador (al revés) y la póliza se dedupe en el bloque de ella por diseño (`intervinientes.ts`, `tomadoresYaServidos`).
+Hecho: PR #4491 mergeado (aviso «Figura en N póliza(s) que ya está(n) en las tuyas» en el portal; «0 como tomadora · N donde figura» en CRM relaciones).
+Pendiente: Alberto da el correo propio de 83fae58b para añadirlo a su ficha (`anadirContacto`); invitación al portal solo con su OK.
+
 **(11/10/2026)** — SQL fase 2 (apps/asegura/prisma/sql/2026-10-10_figuras_multi.sql) APLICADO en Supabase `central` tras deploy de asegura (a92bb757); verificado: índices rol_unico_uq y multi_uq, sin rol_uq, check con `asegurado`, filas intactas. Pendiente de Alberto: regrabar Allianz Hogar y Auto hasta la pantalla de precio (bots gratis > Avant2).
 
 **(11/10/2026)** — agentes-entrenador (pasada semanal): 0 PRs de prompt. Poda de la bitácora (~25 entradas) y feedback de pricing `oscilantes` cerrado sin acción de prompt (motor). Pendientes de CÓDIGO/Alberto, no de prompt: veto de suplantación SPCX/VST en `precios-guardia.ts` (falso positivo ×2, verificado en IBKR) y `canal-aviso.sh` sin soporte de payloads >128 KB. Backlog PRs `claude/*`: 7 abiertos, sin crecimiento.
