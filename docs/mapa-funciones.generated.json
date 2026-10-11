@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-10T20:16:57Z",
-  "sha": "7d7bd7ed9ab73ef121c92a0b6cc9ee81750fb588",
+  "generadoEn": "2026-10-11T08:36:18Z",
+  "sha": "4d06b469c27e608f5187fff9f83c0b1920d2989c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -96705,6 +96705,45 @@
       "hash": "877758968283"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PedirEmision.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PedirEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "guardarPendiente",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "id: string",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "hayPendiente",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "id: string",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "PedirEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ trabajoId, compania, nombreCompania, ramo, clienteId, primaOferta }: { trabajoId: string compania: string nombreCompania: string ramo: string clienteId: string /** Prima anual de la oferta del bot: se enseña si el presupuesto no da una pr",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [
+        "lucide",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "4c7e653079fd"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PedirPrecioAuto.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -97023,17 +97062,17 @@
           "nombre": "PresupuestosCompanias",
           "kind": "function",
           "exportada": true,
-          "params": "{ oportunidadId, ramo, riesgoLibre = null }: { oportunidadId: string ramo: string /** Capital y dirección del bloque «Datos del riesgo» de la oportunidad: siembran los campos vacíos del formulario. */ riesgoLibre?: RiesgoLibreParaBots | nul",
+          "params": "{ oportunidadId, clienteId, ramo, riesgoLibre = null }: { oportunidadId: string clienteId: string ramo: string /** Capital y dirección del bloque «Datos del riesgo» de la oportunidad: siembran los campos vacíos del formulario. */ riesgoLibr",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "TarjetaTrabajo",
           "kind": "function",
           "exportada": false,
-          "params": "{ t, nombre, anterior = false }: { t: TrabajoCompania; nombre: string; anterior?: boolean }",
+          "params": "{ t, nombre, clienteId, anterior = false }: { t: TrabajoCompania; nombre: string; clienteId?: string; anterior?: boolean }",
           "retorno": null,
-          "linea": 347
+          "linea": 349
         },
         {
           "nombre": "Recomendacion",
@@ -97041,7 +97080,7 @@
           "exportada": false,
           "params": "{ oportunidadId, clave }: { oportunidadId: string; clave: string }",
           "retorno": null,
-          "linea": 398,
+          "linea": 407,
           "resumen": "«Recomendación» (08/10/2026): la compañía que mejor encaja (puntos, motivos, reservas), las ofertas con errores de calidad (salen con aviso y NO se recomiendan) y «Descargar propuesta (PDF)». 🚨 SOLO "
         }
       ],
@@ -97050,7 +97089,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "219e07b37d3f"
+      "hash": "5f5b61c89ec6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PropuestaEscenarios.tsx",
@@ -97131,7 +97170,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa7ab2cc7a53"
+      "hash": "b0c667ce8b48"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SelectorCatalogoVehiculo.tsx",
@@ -157947,6 +157986,81 @@
       "hash": "a64274c14d7e"
     },
     {
+      "ruta": "apps/plataforma/lib/tarificador-emision-boton.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Botón «Pedir emisión» del tarificador (11/10/2026) — lo PURO: cuándo se ve, a qué presupuesto apunta y cómo se cuenta la respuesta del API. Sin red ni envs: importable desde 'use client'. El servidor (asegura) re-comprueba TODO; esto solo evita ofrecer el botón donde seguro no vale y traduce los 403",
+      "exporta": [
+        "visibilidadEmision",
+        "candidatosPresupuesto",
+        "primaDeCompania",
+        "leerRespuestaEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "clave",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "compania: string, ramo: string",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "visibilidadEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaVisibilidad",
+          "retorno": "Visibilidad",
+          "linea": 37
+        },
+        {
+          "nombre": "claveCia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: string",
+          "retorno": null,
+          "linea": 53
+        },
+        {
+          "nombre": "candidatosPresupuesto",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: readonly PresupuestoEnLista[], b: { compania: string; ramo: string; clienteId?: string | null }",
+          "retorno": "PresupuestoEnLista[]",
+          "linea": 59,
+          "resumen": "Presupuestos de la lista a los que puede apuntar el botón de ESTE trabajo: aceptados y firmados, del mismo ramo (un ramo desconocido NO vale) y, si la lista trae las opciones, con alguna de esa compañ"
+        },
+        {
+          "nombre": "primaDeCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PresupuestoEnLista, compania: string",
+          "retorno": "number | null",
+          "linea": 68,
+          "resumen": "Prima de la opción de esa compañía si es INEQUÍVOCA (una sola opción con prima); si no, `null`."
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown>",
+          "linea": 75
+        },
+        {
+          "nombre": "leerRespuestaEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaEmision",
+          "linea": 78,
+          "resumen": "Traduce el POST de `/api/correduria/tarificador/emision`. 202 = pedida (queda esperando el OK en Telegram)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "21b8e240bd5b"
+    },
+    {
       "ruta": "apps/plataforma/lib/tarificador-fichas-asegura.ts",
       "ambito": "apps/plataforma",
       "resumen": "Fichas de producto del tarificador — la RED (solo servidor, 07/10/2026). Mismo puente que `tarificador-asegura.ts` (ASEGURA_URL / ASEGURA_OPERADOR_SECRET, `cabecerasPuerto`: Bearer + x-actor), en fichero aparte para no pisar a quien edita aquel. El secreto NO sale de aquí: el navegador habla con `/a",
@@ -204671,7 +204785,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4524,
-    "funciones": 16156
+    "archivos": 4526,
+    "funciones": 16166
   }
 }
