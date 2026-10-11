@@ -107,3 +107,50 @@ jobs:
             pnpm exec prisma generate
           fi
           pnpm exec tsc --noEmit -p tsconfig.json
+
+  # ── Build de plataforma (NO requerido por el ruleset) ───────────────────────
+  # El typecheck no ve lo que solo rompe `next build` (p. ej. `node:crypto` importado en
+  # un componente cliente: PR #4483 → arreglo #4504, llegó a producción). Este job corre
+  # el build real con env FICTICIAS. Mismo filtro que typecheck (scripts/ci-app-afectada.mjs:
+  # apps/plataforma, los packages que consume y este workflow); fuera de eso, verde sin gastar.
+  build-plataforma:
+    name: Build · plataforma
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: ¿El PR toca plataforma?
+        id: afecta
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            if git show HEAD^1:scripts/ci-app-afectada.mjs > "$RUNNER_TEMP/afectada.mjs" 2>/dev/null; then
+              node "$RUNNER_TEMP/afectada.mjs" apps/plataforma HEAD^1
+            else
+              echo "afecta=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "afecta=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: pnpm/action-setup@v4
+        if: steps.afecta.outputs.afecta != 'false'
+      - uses: actions/setup-node@v4
+        if: steps.afecta.outputs.afecta != 'false'
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install
+        if: steps.afecta.outputs.afecta != 'false'
+        run: pnpm install --no-frozen-lockfile
+      - name: Prisma generate + next build
+        if: steps.afecta.outputs.afecta != 'false'
+        working-directory: apps/plataforma
+        # Solo valores de mentira: se verifica que el código compila, no que funcione en runtime.
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+        run: |
+          pnpm exec prisma generate
+          pnpm exec next build
