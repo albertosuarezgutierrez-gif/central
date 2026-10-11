@@ -12,9 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(11/10/2026)** — Caso Nieves (cliente 83fae58b, lead): autorizada/propietaria del 8022KXY (póliza d6d05e93, tomador Víctor 722315d3). No era fallo de código: la ficha de Nieves no tiene correo → sin portal_vinculo/identidad → no entra al portal. Su correo propio debe ser distinto del de Víctor (si no sale «ambiguo» o vería sus 14 pólizas). La autorización existente va Nieves→Víctor (al revés) y la póliza se dedupe en el bloque de Nieves por diseño (`intervinientes.ts`, `tomadoresYaServidos`).
+**(11/10/2026)** — Caso autorizada sin acceso al portal (cliente 83fae58b, lead; propietaria en póliza d6d05e93, tomador 722315d3). No era fallo de código: su ficha no tiene correo → sin portal_vinculo/identidad → no entra al portal. Su correo propio debe ser distinto del del tomador (si no sale «ambiguo» o vería sus 14 pólizas). La autorización existente va de ella al tomador (al revés) y la póliza se dedupe en el bloque de ella por diseño (`intervinientes.ts`, `tomadoresYaServidos`).
 Hecho: PR #4491 mergeado (aviso «Figura en N póliza(s) que ya está(n) en las tuyas» en el portal; «0 como tomadora · N donde figura» en CRM relaciones).
-Pendiente: Alberto da el correo propio de Nieves para añadirlo a su ficha (`anadirContacto`); invitación al portal solo con su OK.
+Pendiente: Alberto da el correo propio de 83fae58b para añadirlo a su ficha (`anadirContacto`); invitación al portal solo con su OK.
 
 **(11/10/2026)** — SQL fase 2 (apps/asegura/prisma/sql/2026-10-10_figuras_multi.sql) APLICADO en Supabase `central` tras deploy de asegura (a92bb757); verificado: índices rol_unico_uq y multi_uq, sin rol_uq, check con `asegurado`, filas intactas. Pendiente de Alberto: regrabar Allianz Hogar y Auto hasta la pantalla de precio (bots gratis > Avant2).
 
