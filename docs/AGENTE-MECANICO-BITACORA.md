@@ -65,3 +65,4 @@
 | 06/10/2026 | asegura-portal: 4 ajustes del globo de instalar (InstalarBoton/instalacion) | agente-mecanico | ok |
 | 06/10/2026 | asegura-portal: texto Compartir Chrome iOS (instalacion.tsx) | agente-mecanico | ok |
 | 10/10/2026 | Tarificar/Riesgo /correduria: F1 SeccionCard + botón único, F2 bloque Historial (CONTEXTO-SESIONES entrada 10/10) | agente-mecanico | ok |
+| 11/10/2026 | solo docs: CONTEXTO-SESIONES (entrada SQL figuras multi aplicado + «→ aplicado 11/10» en entrada 10/10), esta bitácora | agente-mecanico | ok |
